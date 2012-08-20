@@ -1,0 +1,41 @@
+ifneq ($(TARGET_SIMULATOR),true)
+
+LOCAL_PATH:= $(call my-dir)
+
+# akmd2
+SMARTCOMPASS_LIB=libAK8975
+
+include $(CLEAR_VARS)
+LOCAL_C_INCLUDES := \
+	$(KERNEL_HEADERS) \
+	$(LOCAL_PATH)/$(SMARTCOMPASS_LIB)
+
+LOCAL_SRC_FILES:= \
+	AK8975Driver.c \
+	DispMessage.c \
+	FileIO.c \
+	Measure.c \
+	main.c \
+	misc.c
+
+LOCAL_CFLAGS += -Wall
+#LOCAL_CFLAGS += -DAKM_LOG_ENABLE
+#LOCAL_CFLAGS += -DENABLE_AKMDEBUG=1
+#LOCAL_CFLAGS += -DOUTPUT_STDOUT=1
+#LOCAL_CFLAGS += -DDBG_LEVEL=2
+
+LOCAL_LDFLAGS += \
+	-L$(LOCAL_PATH)/$(SMARTCOMPASS_LIB) -lAK8975
+
+LOCAL_MODULE := akmd8975
+
+LOCAL_MODULE_TAGS := optional
+
+LOCAL_FORCE_STATIC_EXECUTABLE := false
+LOCAL_STATIC_LIBRARIES :=
+LOCAL_SHARED_LIBRARIES := libc libm libz libutils libcutils
+include $(BUILD_EXECUTABLE)
+
+
+endif  # TARGET_SIMULATOR != true
+
