@@ -59,8 +59,8 @@
 #define RIL_SIM_POWER_PROPERTY1  "ril.sim.power1"
 #define RIL_MAIN_SIM_PROPERTY  "persist.msms.phone_default"
 #define RIL_ASSERT  "ril.assert"
-#define RIL_SIM_PIN  "ril.sim.pin"
-#define RIL_SIM_PIN1  "ril.sim.pin1"
+#define RIL_SIM_PIN_PROPERTY  "ril.sim.pin"
+#define RIL_SIM_PIN_PROPERTY1  "ril.sim.pin1"
 #define RIL_MODEM_RESET_PROPERTY "persist.sys.sprd.modemreset"
 #define RIL_STK_PROFILE_PREFIX  "ril.stk.proflie_"
 #define RIL_SIM0_STATE  "gsm.sim.state0"
@@ -1624,14 +1624,14 @@ error:
 
 static void requestNetworkRegistration(int channelID,  void *data, size_t datalen, RIL_Token t)
 {
-    RIL_NetworkList *network;
+    char *network;
     char *cmd;
     int err;
-    network = (RIL_NetworkList *)data;
+    network = (char *)data;
     ATResponse *p_response = NULL;
 
     if (network) {
-        asprintf(&cmd, "AT+COPS=1,2,\"%s\",%d", network->operatorNumeric, network->act);
+        asprintf(&cmd, "AT+COPS=1,2,\"%s\"", network);
         err = at_send_command(ATch_type[channelID], cmd, &p_response);
         if (err != 0 || p_response->success == 0)
             goto error;
@@ -2608,14 +2608,14 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
         if(s_dualSimMode) {
             if(s_sim_num == 0) {
                 if(pin != NULL)
-                    property_set(RIL_SIM_PIN, pin);
+                    property_set(RIL_SIM_PIN_PROPERTY, pin);
             } else if (s_sim_num == 1) {
                 if(pin != NULL)
-                    property_set(RIL_SIM_PIN1, pin);
+                    property_set(RIL_SIM_PIN_PROPERTY1, pin);
             }
         } else {
             if(pin != NULL)
-                property_set(RIL_SIM_PIN, pin);
+                property_set(RIL_SIM_PIN_PROPERTY, pin);
         }
 out:
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
@@ -4713,9 +4713,9 @@ getSIMStatus(int channelID)
             extern int s_sim_num;
             if(s_dualSimMode) {
                 if(s_sim_num == 0)
-                    property_get(RIL_SIM_PIN, prop, "");
+                    property_get(RIL_SIM_PIN_PROPERTY, prop, "");
                 else if (s_sim_num == 1)
-                    property_get(RIL_SIM_PIN1, prop, "");
+                    property_get(RIL_SIM_PIN_PROPERTY1, prop, "");
                 if(strlen(prop) != 4) {
                     goto out;
                 } else {
@@ -4731,7 +4731,7 @@ getSIMStatus(int channelID)
                     goto done;
                 }
             } else {
-                property_get(RIL_SIM_PIN, prop, "");
+                property_get(RIL_SIM_PIN_PROPERTY, prop, "");
                 if(strlen(prop) != 4) {
                     goto out;
                 } else {

@@ -49,7 +49,7 @@
     {RIL_REQUEST_SET_CLIR, dispatchInts, responseVoid},
     {RIL_REQUEST_QUERY_CALL_FORWARD_STATUS, dispatchCallForward, responseCallForwards},
     {RIL_REQUEST_SET_CALL_FORWARD, dispatchCallForward, responseVoid},
-    {RIL_REQUEST_QUERY_CALL_WAITING, dispatchInts, responseCallWaitings},
+    {RIL_REQUEST_QUERY_CALL_WAITING, dispatchInts, responseInts},
     {RIL_REQUEST_SET_CALL_WAITING, dispatchInts, responseVoid},
     {RIL_REQUEST_SMS_ACKNOWLEDGE, dispatchInts, responseVoid},
     {RIL_REQUEST_GET_IMEI, dispatchVoid, responseString},
@@ -61,7 +61,7 @@
     {RIL_REQUEST_CHANGE_BARRING_PASSWORD, dispatchStrings, responseVoid},
     {RIL_REQUEST_QUERY_NETWORK_SELECTION_MODE, dispatchVoid, responseInts},
     {RIL_REQUEST_SET_NETWORK_SELECTION_AUTOMATIC, dispatchVoid, responseVoid},
-    {RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL, dispatchNetworkList, responseVoid},
+    {RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL, dispatchStrings, responseVoid},
     {RIL_REQUEST_QUERY_AVAILABLE_NETWORKS , dispatchVoid, responseStrings},
     {RIL_REQUEST_DTMF_START, dispatchString, responseVoid},
     {RIL_REQUEST_DTMF_STOP, dispatchVoid, responseVoid},
@@ -122,34 +122,84 @@
     {RIL_REQUEST_ISIM_AUTHENTICATION, dispatchString, responseString},
     {RIL_REQUEST_ACKNOWLEDGE_INCOMING_GSM_SMS_WITH_PDU, dispatchStrings, responseVoid},
     {RIL_REQUEST_STK_SEND_ENVELOPE_WITH_STATUS, dispatchString, responseSIM_IO},
-	{RIL_REQUEST_VOICE_RADIO_TECH, dispatchVoiceRadioTech, responseInts},
-    {RIL_REQUEST_VIDEOPHONE_DIAL, dispatchVideoPhoneDial, responseVoid},
-    {RIL_REQUEST_VIDEOPHONE_CODEC, dispatchVideoPhoneCodec, responseVoid},
-    {RIL_REQUEST_VIDEOPHONE_HANGUP, dispatchInts, responseVoid},
-    {RIL_REQUEST_VIDEOPHONE_ANSWER, dispatchVoid, responseVoid},
-    {RIL_REQUEST_VIDEOPHONE_FALLBACK, dispatchVoid, responseVoid},
-    {RIL_REQUEST_VIDEOPHONE_STRING, dispatchString, responseVoid},
-    {RIL_REQUEST_VIDEOPHONE_LOCAL_MEDIA, dispatchInts, responseVoid},
-    {RIL_REQUEST_VIDEOPHONE_RECORD_VIDEO, dispatchInts, responseVoid},
-    {RIL_REQUEST_VIDEOPHONE_RECORD_AUDIO, dispatchInts, responseVoid},
-    {RIL_REQUEST_VIDEOPHONE_SET_VOICERECORDTYPE, dispatchInts, responseVoid},
-    {RIL_REQUEST_VIDEOPHONE_TEST, dispatchInts, responseVoid},
-    {RIL_REQUEST_GET_CURRENT_VIDEOCALLS, dispatchVoid, responseCallList},
-    {RIL_REQUEST_VIDEOPHONE_CONTROL_AUDIO, dispatchInts, responseVoid},
-    {RIL_REQUEST_VIDEOPHONE_CONTROL_IFRAME, dispatchInts, responseVoid},
-    {RIL_REQUEST_MBBMS_GSM_AUTHEN, dispatchString, responseString},
-    {RIL_REQUEST_MBBMS_USIM_AUTHEN, dispatchStrings, responseString},
-    {RIL_REQUEST_MBBMS_SIM_TYPE, dispatchVoid, responseString},
-    {RIL_REQUEST_GPRS_ATTACH, dispatchVoid, responseVoid},
-    {RIL_REQUEST_GPRS_DETACH, dispatchVoid, responseVoid},
-    {RIL_REQUEST_GET_SIM_CAPACITY, dispatchVoid, responseStrings},
-    {RIL_REQUEST_QUERY_COLP, dispatchVoid, responseInts},
-    {RIL_REQUEST_QUERY_COLR, dispatchVoid, responseInts},
-    {RIL_REQUEST_MMI_ENTER_SIM, dispatchString, responseInts},
-    {RIL_REQUEST_END_ALL_CONNECTIONS, dispatchVoid, responseVoid},
-    {RIL_REQUEST_GET_REMAIN_TIMES, dispatchInts, responseInts},
-    {RIL_REQUEST_SET_CMMS, dispatchInts, responseVoid},
-    {RIL_REQUEST_SIM_POWER, dispatchInts, responseVoid}
-
+    {RIL_REQUEST_VOICE_RADIO_TECH, dispatchVoiceRadioTech, responseInts}
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+    ,{RIL_REQUEST_IMS_REGISTRATION_STATE, dispatchVoid, responseInts}
+    ,{RIL_REQUEST_IMS_SEND_SMS, dispatchImsSendSms, responseImsSendSms}
+    ,{RIL_REQUEST_GET_DATA_CALL_PROFILE, dispatchInts, responseDataCallProfile}
+    ,{RIL_REQUEST_SET_UICC_SUBSCRIPTION, dispatchSetUiccSub, responseVoid}
+    ,{RIL_REQUEST_SET_DATA_SUBSCRIPTION, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_GET_UICC_SUBSCRIPTION, dispatchVoid, responseGetUiccSub}
+    ,{RIL_REQUEST_GET_DATA_SUBSCRIPTION, dispatchVoid, responseInts}
+    ,{RIL_REQUEST_SET_SUBSCRIPTION_MODE, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_SET_TRANSMIT_POWER, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_SETUP_QOS, dispatchString, responseString}
+    ,{RIL_REQUEST_RELEASE_QOS, dispatchString, responseString}
+    ,{RIL_REQUEST_GET_QOS_STATUS, dispatchString, responseString}
+    ,{RIL_REQUEST_MODIFY_QOS, dispatchString, responseString}
+    ,{RIL_REQUEST_SUSPEND_QOS, dispatchString, responseString}
+    ,{RIL_REQUEST_RESUME_QOS, dispatchString, responseString}
+#endif
+#if defined (RIL_SPRD_EXTENSION)
+    ,{RIL_REQUEST_VIDEOPHONE_DIAL, dispatchVideoPhoneDial, responseVoid}
+    ,{RIL_REQUEST_VIDEOPHONE_CODEC, dispatchVideoPhoneCodec, responseVoid}
+    ,{RIL_REQUEST_VIDEOPHONE_HANGUP, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_VIDEOPHONE_ANSWER, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_VIDEOPHONE_FALLBACK, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_VIDEOPHONE_STRING, dispatchString, responseVoid}
+    ,{RIL_REQUEST_VIDEOPHONE_LOCAL_MEDIA, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_VIDEOPHONE_RECORD_VIDEO, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_VIDEOPHONE_RECORD_AUDIO, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_VIDEOPHONE_SET_VOICERECORDTYPE, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_VIDEOPHONE_TEST, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_GET_CURRENT_VIDEOCALLS, dispatchVoid, responseCallList}
+    ,{RIL_REQUEST_VIDEOPHONE_CONTROL_AUDIO, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_VIDEOPHONE_CONTROL_IFRAME, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_MBBMS_GSM_AUTHEN, dispatchString, responseString}
+    ,{RIL_REQUEST_MBBMS_USIM_AUTHEN, dispatchStrings, responseString}
+    ,{RIL_REQUEST_MBBMS_SIM_TYPE, dispatchVoid, responseString}
+    ,{RIL_REQUEST_GPRS_ATTACH, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_GPRS_DETACH, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_GET_SIM_CAPACITY, dispatchVoid, responseStrings}
+    ,{RIL_REQUEST_QUERY_COLP, dispatchVoid, responseInts}
+    ,{RIL_REQUEST_QUERY_COLR, dispatchVoid, responseInts}
+    ,{RIL_REQUEST_MMI_ENTER_SIM, dispatchString, responseInts}
+    ,{RIL_REQUEST_END_ALL_CONNECTIONS, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_GET_REMAIN_TIMES, dispatchInts, responseInts}
+    ,{RIL_REQUEST_SET_CMMS, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_SIM_POWER, dispatchInts, responseVoid}
+#endif
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+    ,{RIL_REQUEST_SET_CELL_BROADCAST_CONFIG, dispatchSetCBConf, responseVoid}
+    ,{RIL_REQUEST_GET_CELL_BROADCAST_CONFIG, dispatchVoid, responseSetCBConf}
+    ,{RIL_REQUEST_CRFM_LINE_SMS_COUNT_MSG, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_CRFM_LINE_SMS_READ_MSG, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_SEND_ENCODED_USSD, dispatchSendUssd, responseVoid}
+    ,{RIL_REQUEST_SET_PDA_MEMORY_STATUS, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_GET_PHONEBOOK_STORAGE_INFO, dispatchInts, responseInts}
+    ,{RIL_REQUEST_GET_PHONEBOOK_ENTRY, dispatchGetPB, responseGetPB}
+    ,{RIL_REQUEST_ACCESS_PHONEBOOK_ENTRY, dispatchAccessPB, responseInts}
+    ,{RIL_REQUEST_DIAL_VIDEO_CALL, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_CALL_DEFLECTION, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_READ_SMS_FROM_SIM, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_USIM_PB_CAPA, dispatchVoid, responseInts}
+    ,{RIL_REQUEST_LOCK_INFO, dispatchInts, responseLockInfo}
+    ,{RIL_REQUEST_SEND_MOBILE_TRACKER_SMS, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_DIAL_EMERGENCY_CALL, dispatchEccDial, responseVoid}
+    ,{RIL_REQUEST_GET_STOREAD_MSG_COUNT, dispatchVoid, responseInts}
+    ,{RIL_REQUEST_STK_SIM_INIT_EVENT, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_GET_LINE_ID, dispatchVoid, responseInts}
+    ,{RIL_REQUEST_SET_LINE_ID, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_GET_SERIAL_NUMBER, dispatchVoid, responseInts}
+    ,{RIL_REQUEST_GET_MANUFACTURE_DATE_NUMBER, dispatchVoid, responseInts}
+    ,{RIL_REQUEST_GET_BARCODE_NUMBER, dispatchVoid, responseInts}
+    ,{RIL_REQUEST_UICC_GBA_AUTHENTICATE_BOOTSTRAP, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_UICC_GBA_AUTHENTICATE_NAF, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_SIM_APDU, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_SIM_OPEN_CHANNEL, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_SIM_CLOSE_CHANNEL, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_SIM_TRANSMIT_CHANNEL, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_SIM_AUTH, dispatchVoid, responseVoid}
+#endif
 
 
