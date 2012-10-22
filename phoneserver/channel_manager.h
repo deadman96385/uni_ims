@@ -1,0 +1,114 @@
+
+/*
+ *
+ * channel_manager.h: channel manager implementation for the phoneserver
+ *
+ *
+ */
+
+#ifndef channel_manager_H
+
+#define channel_manager_H
+
+/* link itsAdapter */
+#include "adapter.h"
+/* link itsCmux */
+#include "cmux.h"
+/* link itsCmux_config */
+#include "config.h"
+/* link itsPty */
+#include "pty.h"
+/* link itsReceive_thread */
+#include "receive_thread.h"
+/* link itsRedirect_table */
+//#include "redirect_table.h"
+/* link itsSend_thread */
+#include "send_thread.h"
+#include "os_api.h"
+struct chnmng_ops {
+
+	/* Operations */
+#if defined CONFIG_SINGLE_SIM
+	/*## operation free_cmux(cmux_struct) */
+	void (*channel_manager_free_cmux) (void *const chnmng,
+					   const struct cmux_t * cmux);
+
+	/*## operation get_cmux(cmd_type) */
+	struct cmux_t *(*channel_manager_get_cmux) (void *const chnmng,
+						    const AT_CMD_TYPE_T * type,
+						    int block);
+#elif defined CONFIG_DUAL_SIM
+	/*## operation free_cmux(cmux_struct) */
+	void (*channel_manager_free_cmux) (void *const chnmng,
+					   const struct cmux_t * cmux, REQUEST_TYPE_T request);
+
+	/*## operation get_cmux(cmd_type) */
+	struct cmux_t *(*channel_manager_get_cmux) (void *const chnmng,
+						    const AT_CMD_TYPE_T * type,
+						    int block, REQUEST_TYPE_T request);
+#endif
+};
+struct channel_manager_t {
+	void *me;
+	char itsBuffer[CHN_NUM][4 + SERIAL_BUFFSIZE];	/*## link itsBuffer PHS_MUX_NUM+PTY_CHN_NUM */
+	struct cmux_t itsCmux[MUX_NUM];	/*## link itsCmux  11 */
+	struct chns_config_t *itschns_config;	/*## link itsCmux_config */
+	struct pty_t itsPty[PTY_CHN_NUM];	/*## link itsPty */
+	struct pty_t itsMngPty;
+	struct receive_thread_t itsReceive_thread[PHS_MUX_NUM];	/*## link itsReceive_thread  5 */
+
+	//struct redirect_table_t itsRedirect_table;            /*## link itsRedirect_table */
+	struct send_thread_t itsSend_thread[PTY_CHN_NUM];	/*## link itsSend_thread  3 */
+	sem get_mux_lock;
+	sem block_lock;
+	sem array_lock;
+	int block_count;
+	struct chnmng_ops *ops;
+	sem gsm_sem;
+	sem csm_sem;
+	sem psm_sem;
+	sem miscm_sem;
+	sem indm_sem;
+#if defined CONFIG_SINGLE_SIM
+	pty_t *gsm_wait_array[GSM_WAIT_NUM];
+	pty_t *csm_wait_array[CSM_WAIT_NUM];
+	pty_t *psm_wait_array[PSM_WAIT_NUM];
+	pty_t *stm_wait_array[STMM_WAIT_NUM];
+	pty_t *ssm_wait_array[GSM_WAIT_NUM];
+	pty_t *smsm_wait_array[GSM_WAIT_NUM];
+	pty_t *smstm_wait_array[GSM_WAIT_NUM];
+	pty_t *stkm_wait_array[GSM_WAIT_NUM];
+	pty_t *pbkm_wait_array[GSM_WAIT_NUM];
+	pty_t *nwm_wait_array[GSM_WAIT_NUM];
+	pty_t *simm_wait_array[GSM_WAIT_NUM];
+#elif defined CONFIG_DUAL_SIM
+	pty_t *sim1_wait_array[SIM1_WAIT_NUM];
+	pty_t *sim2_wait_array[SIM2_WAIT_NUM];
+	pty_t *sim3_wait_array[SIM3_WAIT_NUM];
+	pty_t *sim4_wait_array[SIM4_WAIT_NUM];
+	int sms_flag;
+#endif
+
+};
+
+/* Operations */
+struct pty_t *channel_manager_get_default_ind_pty(void);
+struct pty_t *channel_manager_get_eng_ind_pty(void);
+
+#if defined CONFIG_SINGLE_SIM
+/*## operation free_cmux(cmux_struct) */
+void channel_manager_free_cmux(const struct cmux_t *cmux);
+
+/*## operation get_cmux(cmd_type) */
+struct cmux_t *channel_manager_get_cmux(const AT_CMD_TYPE_T type, int block);
+#elif defined CONFIG_DUAL_SIM
+/*## operation free_cmux(cmux_struct) */
+void channel_manager_free_cmux(const struct cmux_t *cmux, REQUEST_TYPE_T request);
+
+/*## operation get_cmux(cmd_type) */
+struct cmux_t *channel_manager_get_cmux(const AT_CMD_TYPE_T type, int block, REQUEST_TYPE_T request);
+#endif
+
+void channel_manager_modem_reset(void);
+
+#endif /*  */
