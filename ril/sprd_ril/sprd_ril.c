@@ -4560,6 +4560,59 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 break;
             }
 
+        case RIL_REQUEST_SET_CELL_BROADCAST_CONFIG:
+            {
+                ALOGD("RIL_REQUEST_SET_CELL_BROADCAST_CONFIG");
+                break;
+            }
+
+        case RIL_REQUEST_GET_CELL_BROADCAST_CONFIG:
+            {
+                ALOGD("RIL_REQUEST_GET_CELL_BROADCAST_CONFIG");
+                break;
+            }
+
+        case RIL_REQUEST_SEND_ENCODED_USSD:
+            {
+                ALOGD("RIL_REQUEST_SEND_ENCODED_USSD");
+                break;
+            }
+
+        case RIL_REQUEST_GET_PHONEBOOK_STORAGE_INFO:
+            {
+                ALOGD("RIL_REQUEST_GET_PHONEBOOK_STORAGE_INFO");
+                break;
+            }
+
+        case RIL_REQUEST_GET_PHONEBOOK_ENTRY:
+            {
+                ALOGD("RIL_REQUEST_GET_PHONEBOOK_ENTRY");
+                break;
+            }
+
+        case RIL_REQUEST_ACCESS_PHONEBOOK_ENTRY:
+            {
+                ALOGD("RIL_REQUEST_ACCESS_PHONEBOOK_ENTRY");
+                break;
+            }
+
+        case RIL_REQUEST_USIM_PB_CAPA:
+            {
+                ALOGD("RIL_REQUEST_USIM_PB_CAPA");
+                break;
+            }
+
+        case RIL_REQUEST_LOCK_INFO:
+            {
+                ALOGD("RIL_REQUEST_LOCK_INFO");
+                break;
+            }
+
+        case RIL_REQUEST_STK_SIM_INIT_EVENT:
+            {
+                ALOGD("RIL_REQUEST_STK_SIM_INIT_EVENT");
+                break;
+            }
         default:
             RIL_onRequestComplete(t, RIL_E_REQUEST_NOT_SUPPORTED, NULL, 0);
             break;
