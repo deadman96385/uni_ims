@@ -311,15 +311,15 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
 }
 
 #ifdef CONFIG_VETH
-void ip_hex_to_str(int in, char *out)
+void ip_hex_to_str(unsigned long in, char *out)
 {
     int i;
-    int mid;
+    unsigned long mid;
     char str[10];
 
     for(i=3; i >= 0; i--) {
         mid = (in & (0xff << 8*i)) >> 8*i;
-        sprintf(str,"%d", mid);
+        sprintf(str,"%lu", mid);
         if(i == 3){
             strncpy(out, str, sizeof(out));
             out[sizeof(out)-1] = '\0';
