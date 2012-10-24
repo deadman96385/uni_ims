@@ -392,7 +392,7 @@ static const char *readline(struct ATChannels *ATch)
             if(count == 0) {
                 ALOGD("atchannel: EOF reached");
             } else {
-                ALOGD("atchannel: read error %s", strerror(errno));
+                //ALOGD("atchannel: read error %s", strerror(errno));
             }
             return NULL;
         }
