@@ -183,7 +183,8 @@
     ,{RIL_REQUEST_CALL_DEFLECTION, dispatchVoid, responseVoid}
     ,{RIL_REQUEST_READ_SMS_FROM_SIM, dispatchVoid, responseVoid}
     ,{RIL_REQUEST_USIM_PB_CAPA, dispatchVoid, responseInts}
-    ,{RIL_REQUEST_LOCK_INFO, dispatchInts, responseLockInfo}
+//    ,{RIL_REQUEST_LOCK_INFO, dispatchInts, responseLockInfo}
+    ,{RIL_REQUEST_LOCK_INFO, dispatchInts, responseInts}
     ,{RIL_REQUEST_SEND_MOBILE_TRACKER_SMS, dispatchVoid, responseVoid}
     ,{RIL_REQUEST_DIAL_EMERGENCY_CALL, dispatchEccDial, responseVoid}
     ,{RIL_REQUEST_GET_STOREAD_MSG_COUNT, dispatchVoid, responseInts}
