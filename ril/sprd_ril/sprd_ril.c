@@ -5922,6 +5922,62 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             ALOGD("[sms]RIL_UNSOL_SIM_SMS_STORAGE_FULL");
             RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_SMS_STORAGE_FULL, NULL, 0);
         }
+    } else if (strStartsWith(s, "+SPUSATDISPLAY:")) {
+        char *tmp;
+        char *data;
+        RIL_SSReleaseComplete *response = NULL;
+
+        ALOGD("RIL_UNSOL_RELEASE_COMPLETE_MESSAGE");
+        response = (RIL_SSReleaseComplete *)malloc(sizeof(RIL_SSReleaseComplete));
+        if (response == NULL) goto out;
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+        err = at_tok_nextstr(&tmp, &data);
+        if (err < 0) {
+            ALOGD("%s fail", s);
+            goto out;
+        }
+        response->dataLen = strlen(data);
+        response->size = sizeof(RIL_SSReleaseComplete) + response->dataLen;
+        response->params = RIL_PARAM_SSDI_STATUS| RIL_PARAM_SSDI_DATA;
+        response->status = 0;
+        strcpy(response->data, data);
+        RIL_onUnsolicitedResponse(RIL_UNSOL_RELEASE_COMPLETE_MESSAGE, response,sizeof(RIL_SSReleaseComplete));
+        free(response);
+    } else if (strStartsWith(s, "+SPUSATDISPLAY:")) {
+        int response;
+        char *tmp;
+
+        ALOGD("RIL_UNSOL_STK_SEND_SMS_RESULT");
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+
+        err = at_tok_nextint(&tmp, &response);
+        if (err < 0) {
+            ALOGD("%s fail", s);
+            goto out;
+        }
+        // 0x0000: SMS SEND OK
+        // 0x8016: "SMS SEND FAIL - MEMORY NOT AVAILABLE"
+        // 0x802A: SMS SEND FAIL RETRY
+        // any other value: SMS SEND GENERIC FAIL
+        RIL_onUnsolicitedResponse(RIL_UNSOL_STK_SEND_SMS_RESULT, &response, sizeof(response));
+    } else if (strStartsWith(s, "+SPUSATCALLCTRL:")) {
+        char *response = NULL;
+        char *tmp;
+
+        ALOGD("RIL_UNSOL_STK_CALL_CONTROL_RESULT");
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+        err = at_tok_nextstr(&tmp, &response);
+        if (err < 0) {
+            ALOGD("%s fail", s);
+            goto out;
+        }
+        RIL_onUnsolicitedResponse(RIL_UNSOL_STK_CALL_CONTROL_RESULT, response, sizeof(response));
     }
 out:
     free(line);
