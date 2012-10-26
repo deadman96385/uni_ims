@@ -4604,13 +4604,72 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_LOCK_INFO:
             {
+                char  cmd[12] = {0};
+                int   type = 0;
+                char *line = NULL;
+                int   result = 0;
+                RIL_SIM_Lockinfo *p_lock = NULL;
+                RIL_SIM_Lockinfo_Response lock_info = {0};
+
                 ALOGD("RIL_REQUEST_LOCK_INFO");
+                p_lock = (RIL_SIM_Lockinfo *)data;
+                lock_info.lock_type = p_lock->lock_type;
+                p_response = NULL;
+                switch (p_lock->lock_type){
+                  case 3: // LOCK_SIM
+                    type = 0;
+                    lock_info.lock_key = 1; // PIN
+                    break;
+                  case 9: // LOCK_PIN2
+                    type = 1;
+                    lock_info.lock_key = 3; // PIN2
+                    break;
+                  case 10: // LOCK_PUK2
+                    type = 3;
+                    lock_info.lock_key = 4; // PUK2
+                    break;
+                  default:
+                    ALOGD("RIL_REQUEST_LOCK_INFO: unsupport lock type!!");
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    return;
+                }
+                sprintf(cmd, "AT+XX=%d", type);
+                err = at_send_command_singleline(ATch_type[channelID], cmd, "+XX:",
+                                                 &p_response);
+                if (err < 0 || p_response->success == 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                } else {
+                    line = p_response->p_intermediates->line;
+                    ALOGD("RIL_REQUEST_LOCK_INFO: err=%d line=%s", err, line);
+                    err = at_tok_start(&line);
+                    if (err == 0) err = at_tok_nextint(&line, &result);
+                    if (err == 0) {
+                        lock_info.num_lock_type = 1;
+                        lock_info.num_of_retry = result;
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, &lock_info, sizeof(RIL_SIM_Lockinfo_Response));
+                    }
+                    else {
+                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    }
+                }
                 break;
             }
 
         case RIL_REQUEST_STK_SIM_INIT_EVENT:
             {
+                char *cmd;
+
                 ALOGD("RIL_REQUEST_STK_SIM_INIT_EVENT");
+                p_response = NULL;
+                asprintf(&cmd, "AT+SPUSATCHECKFDN=1");
+                err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                free(cmd);
+                if (err < 0 || p_response->success == 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                }
+                at_response_free(p_response);
                 break;
             }
         default:
