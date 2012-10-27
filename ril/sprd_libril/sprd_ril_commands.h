@@ -171,7 +171,7 @@
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     ,{RIL_REQUEST_SET_CELL_BROADCAST_CONFIG, dispatchSetCBConf, responseVoid}
-    ,{RIL_REQUEST_GET_CELL_BROADCAST_CONFIG, dispatchVoid, responseSetCBConf}
+    ,{RIL_REQUEST_GET_CELL_BROADCAST_CONFIG, dispatchVoid, responseGetCBConf}
     ,{RIL_REQUEST_CRFM_LINE_SMS_COUNT_MSG, dispatchVoid, responseVoid}
     ,{RIL_REQUEST_CRFM_LINE_SMS_READ_MSG, dispatchVoid, responseVoid}
     ,{RIL_REQUEST_SEND_ENCODED_USSD, dispatchSendUssd, responseVoid}

@@ -292,7 +292,7 @@ static int responseSimRefresh(Parcel &p, void *response, size_t responselen);
 static int responseImsSendSms(Parcel &p, void *response, size_t responselen);
 static int responseDataCallProfile(Parcel &p, void *response, size_t responselen);
 static int responseGetUiccSub(Parcel &p, void *response, size_t responselen);
-static int responseSetCBConf(Parcel &p, void *response, size_t responselen);
+static int responseGetCBConf(Parcel &p, void *response, size_t responselen);
 static int responseGetPB(Parcel &p, void *response, size_t responselen);
 static int responseSS(Parcel &p, void *response, size_t responselen);
 static int responseLockInfo(Parcel &p, void *response, size_t responselen);
@@ -1429,12 +1429,100 @@ static void dispatchSetUiccSub(Parcel& p, RequestInfo *pRI)
 
 static void dispatchSetCBConf(Parcel& p, RequestInfo *pRI)
 {
-    /*FIXME*/
+    RIL_CB_ConfigArgs cbs;
+    int32_t t;
+    status_t status;
+
+    memset(&cbs, 0, sizeof(cbs));
+
+    /* note we only check status at the end */
+
+    status = p.readInt32(&t);
+    cbs.bCBEnabled = (int)t;
+
+    status = p.readInt32(&t);
+    cbs.selectedId = (int)t;
+
+    status = p.readInt32(&t);
+    cbs.msgIdMaxCount = (int)t;
+
+    status = p.readInt32(&t);
+    cbs.msgIdCount = (int)t;
+
+    cbs.msgIDs = strdupReadString(p);
+
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+
+    startRequest;
+    appendPrintBuf("%sbCBEnabled=%d,selectedId=%d,msgIdMaxCount=%d,msgIdCount=%d,%s", printBuf,
+        cbs.bCBEnabled, cbs.selectedId, cbs.msgIdMaxCount, cbs.msgIdCount,
+        (char*)cbs.msgIDs);
+    closeRequest;
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    s_callbacks.onRequest(pRI->pCI->requestNumber, &cbs, sizeof(cbs), pRI);
+
+#ifdef MEMSET_FREED
+    memsetString(cbs.msgIDs);
+#endif
+
+    free(cbs.msgIDs);
+
+#ifdef MEMSET_FREED
+    memset(&cbs, 0, sizeof(cbs));
+#endif
+
+    return;
+invalid:
+    invalidCommandBlock(pRI);
+    return;
 }
 
 static void dispatchSendUssd(Parcel& p, RequestInfo *pRI)
 {
-    /*FIXME*/
+    RIL_EncodedUSSD ussd;
+    int32_t t;
+    status_t status;
+
+    memset(&ussd, 0, sizeof(ussd));
+
+    /* note we only check status at the end */
+    ussd.encodedUSSD = strdupReadString(p);
+
+    status = p.readInt32(&t);
+    ussd.ussdLength = (int)t;
+
+    status = p.readInt32(&t);
+    ussd.dcsCode = (int)t;
+
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+
+    startRequest;
+    appendPrintBuf("%sencodedUSSD=%s,ussdLength=%d,dcsCode=%d", printBuf,
+        ussd.encodedUSSD, ussd.ussdLength, ussd.dcsCode);
+    closeRequest;
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    s_callbacks.onRequest(pRI->pCI->requestNumber, &ussd, sizeof(ussd), pRI);
+
+#ifdef MEMSET_FREED
+    memsetString(ussd.encodedUSSD);
+#endif
+
+    free(ussd.encodedUSSD);
+
+#ifdef MEMSET_FREED
+    memset(&ussd, 0, sizeof(ussd));
+#endif
+
+    return;
+invalid:
+    invalidCommandBlock(pRI);
+    return;
 }
 
 static void dispatchGetPB(Parcel& p, RequestInfo *pRI)
@@ -2679,9 +2767,30 @@ static int responseGetUiccSub(Parcel &p, void *response, size_t responselen)
     return 0;
 }
 
-static int responseSetCBConf(Parcel &p, void *response, size_t responselen)
+static int responseGetCBConf(Parcel &p, void *response, size_t responselen)
 {
-    /*FIXME*/
+/*
+    int num = responselen / sizeof(RIL_GSM_BroadcastSmsConfigInfo *);
+    p.writeInt32(num);
+
+    startResponse;
+    RIL_GSM_BroadcastSmsConfigInfo **p_cur =
+                (RIL_GSM_BroadcastSmsConfigInfo **) response;
+    for (int i = 0; i < num; i++) {
+        p.writeInt32(p_cur[i]->fromServiceId);
+        p.writeInt32(p_cur[i]->toServiceId);
+        p.writeInt32(p_cur[i]->fromCodeScheme);
+        p.writeInt32(p_cur[i]->toCodeScheme);
+        p.writeInt32(p_cur[i]->selected);
+
+        appendPrintBuf("%s [%d: fromServiceId=%d, toServiceId=%d, \
+                fromCodeScheme=%d, toCodeScheme=%d, selected =%d]",
+                printBuf, i, p_cur[i]->fromServiceId, p_cur[i]->toServiceId,
+                p_cur[i]->fromCodeScheme, p_cur[i]->toCodeScheme,
+                p_cur[i]->selected);
+    }
+    closeResponse;
+*/
     return 0;
 }
 
