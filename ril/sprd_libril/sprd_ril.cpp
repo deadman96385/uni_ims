@@ -3078,7 +3078,6 @@ static void processCommandsCallback(int fd, short flags, void *param) {
 
             if(s_dualSimMode) {
                 if(pCI->requestNumber == RIL_REQUEST_SEND_SMS
-                        || pCI->requestNumber == RIL_REQUEST_SET_CMMS
                         || pCI->requestNumber == RIL_REQUEST_QUERY_FACILITY_LOCK
                         || pCI->requestNumber == RIL_REQUEST_SET_FACILITY_LOCK
                         || pCI->requestNumber == RIL_REQUEST_QUERY_CALL_FORWARD_STATUS
@@ -3088,8 +3087,11 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                         || pCI->requestNumber == RIL_REQUEST_QUERY_CALL_WAITING
                         || pCI->requestNumber == RIL_REQUEST_SET_CALL_WAITING
                         || pCI->requestNumber == RIL_REQUEST_QUERY_CLIP
+#if defined (RIL_SPRD_EXTENSION)
+                        || pCI->requestNumber == RIL_REQUEST_SET_CMMS
                         || pCI->requestNumber == RIL_REQUEST_QUERY_COLP
                         || pCI->requestNumber == RIL_REQUEST_QUERY_COLR
+#endif
                         || pCI->requestNumber == RIL_REQUEST_SETUP_DATA_CALL
                         || pCI->requestNumber == RIL_REQUEST_DEACTIVATE_DATA_CALL)
                     list_add_tail(&sms_cmd_list, cmd_item);
@@ -3128,8 +3130,11 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                         || pCI->requestNumber == RIL_REQUEST_QUERY_CALL_WAITING
                         || pCI->requestNumber == RIL_REQUEST_SET_CALL_WAITING
                         || pCI->requestNumber == RIL_REQUEST_QUERY_CLIP
+#if defined (RIL_SPRD_EXTENSION)
                         || pCI->requestNumber == RIL_REQUEST_QUERY_COLP
-                        || pCI->requestNumber == RIL_REQUEST_QUERY_COLR)
+                        || pCI->requestNumber == RIL_REQUEST_QUERY_COLR
+#endif
+                        || pCI->requestNumber == RIL_REQUEST_QUERY_CLIP)
                     list_add_tail(&sms_cmd_list, cmd_item);
                 else if(pCI->requestNumber == RIL_REQUEST_SCREEN_STATE
                     || pCI->requestNumber == RIL_REQUEST_DTMF

@@ -72,6 +72,7 @@ struct ATChannels *ATch_type[MAX_CHANNELS];
 static char creg_response[100] = "";
 static char cgreg_response[100] = "";
 static int s_channel_open = 0;
+static int s_sms_ready = 0;
 
 struct listnode
 {
@@ -202,6 +203,7 @@ static pthread_mutex_t s_channel_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t s_call_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t s_screen_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t s_list_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t s_sms_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int s_port = -1;
 static const char * s_device_path = NULL;
@@ -1717,9 +1719,11 @@ static void sendCallStateChanged(void *param)
 
 static void sendVideoCallStateChanged(void *param)
 {
+#if defined (RIL_SPRD_EXTENSION)
     RIL_onUnsolicitedResponse (
             RIL_UNSOL_RESPONSE_VIDEOCALL_STATE_CHANGED,
             NULL, 0);
+#endif
 }
 
 static void requestGetCurrentCalls(int channelID, void *data, size_t datalen, RIL_Token t, int bVideoCall)
@@ -1889,7 +1893,11 @@ error:
             goto error1;
         if(errorNum != 322)
             goto error1;
+#if defined (RIL_SPRD_EXTENSION)
         RIL_onRequestComplete(t, RIL_E_SMS_SAVE_FAIL_FULL, NULL, 0);
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+#endif
         at_response_free(p_response);
         return;
     }
@@ -3119,7 +3127,16 @@ static void getSmsState(int channelID)
             goto error;
     }
 out:
-    RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_SMS_READY, NULL, 0);
+    pthread_mutex_lock(&s_sms_ready_mutex);
+    if(s_sms_ready == 0) {
+        s_sms_ready = 1;
+#if defined (RIL_SPRD_EXTENSION)
+            RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_SMS_READY, NULL, 0);
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+            RIL_onUnsolicitedResponse (RIL_UNSOL_DEVICE_READY_NOTI, NULL, 0);
+#endif
+    }
+    pthread_mutex_unlock(&s_sms_ready_mutex);
 error:
     at_response_free(p_response);
 }
@@ -3305,7 +3322,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
      */
     if (sState == RADIO_STATE_OFF
             && !(request == RIL_REQUEST_RADIO_POWER
+#if defined (RIL_SPRD_EXTENSION)
                 || request == RIL_REQUEST_SIM_POWER
+#endif
                 || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
                 || request == RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE
                 || request == RIL_REQUEST_STK_SEND_ENVELOPE_COMMAND
@@ -3370,24 +3389,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_GET_CURRENT_CALLS:
             requestGetCurrentCalls(channelID, data, datalen, t, 0);
             break;
-        case RIL_REQUEST_GET_CURRENT_VIDEOCALLS:
-            requestGetCurrentCalls(channelID, data, datalen, t, 1);
-            break;
         case RIL_REQUEST_DIAL:
             requestDial(channelID, data, datalen, t);
             break;
         case RIL_REQUEST_HANGUP:
             requestHangup(channelID, data, datalen, t);
-            break;
-        case RIL_REQUEST_END_ALL_CONNECTIONS:
-            p_response = NULL;
-            err = at_send_command(ATch_type[channelID], "ATH", &p_response);
-            if (err < 0 || p_response->success == 0) {
-                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-            } else {
-                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-            }
-            at_response_free(p_response);
             break;
         case RIL_REQUEST_HANGUP_WAITING_OR_BACKGROUND:
             /* 3GPP 22.030 6.5.5
@@ -3520,15 +3526,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_RADIO_POWER:
             requestRadioPower(channelID, data, datalen, t);
             break;
-        case RIL_REQUEST_SIM_POWER:
-            requestSIMPower(channelID, data, datalen, t);
-            break;
-        case RIL_REQUEST_GPRS_ATTACH:
-            attachGPRS(channelID, data, datalen, t);
-            break;
-        case RIL_REQUEST_GPRS_DETACH:
-            detachGPRS(channelID, data, datalen, t);
-            break;
         case RIL_REQUEST_DTMF_START:
             {
                 char c = ((char *)data)[0];
@@ -3596,9 +3593,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     break;
 	        }
             }
-	case RIL_REQUEST_SET_CMMS:
-            requestSetCmms(channelID, data, datalen, t);
-            break;
         case RIL_REQUEST_SEND_SMS:
             requestSendSMS(channelID, data, datalen, t);
             break;
@@ -3960,64 +3954,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 at_response_free(p_response);
                 break;
             }
-
-        case  RIL_REQUEST_QUERY_COLP:
-            {
-                p_response = NULL;
-                int response[2] = {0, 0};
-
-                err = at_send_command_singleline(ATch_type[channelID], "AT+COLP?",
-                        "+COLP: ", &p_response);
-                if (err >= 0 && p_response->success) {
-                    char *line = p_response->p_intermediates->line;
-                    err = at_tok_start(&line);
-                    if (err >= 0) {
-                        err = at_tok_nextint(&line, &response[0]);
-                        if (err >= 0)
-                            err = at_tok_nextint(&line, &response[1]);
-                    }
-                    if (err >= 0) {
-                        RIL_onRequestComplete(t, RIL_E_SUCCESS, &response[1],
-                                sizeof(response[1]));
-                    } else {
-                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                    }
-                } else {
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                }
-                at_response_free(p_response);
-                break;
-            }
-        case  RIL_REQUEST_QUERY_COLR:
-            {
-                p_response = NULL;
-                int response[2] = {0, 0};
-
-                err = at_send_command_singleline(ATch_type[channelID], "AT+COLR?",
-                        "+COLR: ", &p_response);
-                if (err >= 0 && p_response->success) {
-                    char *line = p_response->p_intermediates->line;
-                    err = at_tok_start(&line);
-                    if (err >= 0) {
-                        err = at_tok_nextint(&line, &response[0]);
-                        if (err >= 0)
-                            err = at_tok_nextint(&line, &response[1]);
-                    }
-                    if (err >= 0) {
-                        RIL_onRequestComplete(t, RIL_E_SUCCESS, &response[1],
-                                sizeof(response[1]));
-                    } else {
-                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                    }
-                } else {
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                }
-
-                at_response_free(p_response);
-                break;
-            }
         case RIL_REQUEST_QUERY_CALL_WAITING:
             {
+#if defined (RIL_SPRD_EXTENSION)
                 p_response = NULL;
                 int c = ((int *)data)[0];
                 int errNum = 0xff;
@@ -4096,6 +4035,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 }
                 at_response_free(p_response);
                 break;
+#endif
             }
         case RIL_REQUEST_SET_CALL_WAITING:
             {
@@ -4137,7 +4077,288 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_GSM_GET_BROADCAST_SMS_CONFIG:
             requestGetSmsBroadcastConfig(channelID,data, datalen, t);
             break;
+        case RIL_REQUEST_STK_GET_PROFILE:
+            {
+                char *cmd;
 
+                p_response = NULL;
+                asprintf(&cmd, "AT+SPUSATPROFILE?");
+                err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                free(cmd);
+                if (err < 0 || p_response->success == 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS,
+                            p_response->p_intermediates->line, sizeof(char *));
+                }
+                at_response_free(p_response);
+                break;
+            }
+        case RIL_REQUEST_STK_SET_PROFILE:
+            break;
+        case RIL_REQUEST_STK_SEND_ENVELOPE_COMMAND:
+            {
+                char *cmd;
+
+                p_response = NULL;
+                asprintf(&cmd, "AT+SPUSATENVECMD=\"%s\"", (char*)(data));
+                err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                free(cmd);
+                if (err < 0 || p_response->success == 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                }
+                at_response_free(p_response);
+                break;
+            }
+        case RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE:
+            {
+                char *cmd;
+
+                p_response = NULL;
+                asprintf(&cmd, "AT+SPUSATTERMINAL=\"%s\"", (char*)(data));
+                err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                free(cmd);
+                if (err < 0 || p_response->success == 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                }
+                at_response_free(p_response);
+                break;
+            }
+        case RIL_REQUEST_STK_HANDLE_CALL_SETUP_REQUESTED_FROM_SIM:
+            {
+                char *cmd;
+                p_response = NULL;
+                int value = ((int *)data)[0];
+                if (value == 0) {
+                    ALOGD(" cancel STK call ");
+                    s_isstkcall = 0;
+                    asprintf(&cmd, "AT+SPUSATCALLSETUP=0");
+                    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                    free(cmd);
+                    if (err < 0 || p_response->success == 0) {
+                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    } else {
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                    }
+                    at_response_free(p_response);
+                } else {
+                    ALOGD(" confirm STK call ");
+                    s_isstkcall = 1;
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                }
+                break;
+            }
+        case RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING:
+            {
+                char *cmd;
+                int response = 0;
+                p_response = NULL;
+                ALOGD("[stk]send RIL_REQUEST_STK_SET_PROFILE");
+                asprintf(&cmd, "AT+SPUSATPROFILE?");
+                err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                free(cmd);
+                ALOGD("[stk]RIL_REQUEST_STK_SET_PROFILE: err=%d succ=%d", err, p_response->success);
+                if (err < 0 || p_response->success == 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                }
+                break;
+            }
+        case RIL_REQUEST_GET_SMSC_ADDRESS:
+            {
+                char *cmd;
+                char *sc_line;
+
+                p_response = NULL;
+                ALOGD("[sms]RIL_REQUEST_GET_SMSC_ADDRESS");
+                asprintf(&cmd, "AT+CSCA?");
+                err = at_send_command_singleline(ATch_type[channelID], cmd, "+CSCA:",
+                        &p_response);
+                free(cmd);
+                if (err >= 0 && p_response->success) {
+                    char *line = p_response->p_intermediates->line;
+                    err = at_tok_start(&line);
+                    if (err >= 0) {
+                        err = at_tok_nextstr(&line, &sc_line);
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, sc_line,
+                                strlen(sc_line));
+                    } else {
+                        ALOGD("[sms]at_tok_start fail");
+                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    }
+                } else {
+                    ALOGD("[sms]RIL_REQUEST_GET_SMSC_ADDRESS fail");
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                }
+                at_response_free(p_response);
+                break;
+            }
+        case RIL_REQUEST_SET_SMSC_ADDRESS:
+            {
+                char *cmd;
+
+                p_response = NULL;
+                ALOGD("[sms]RIL_REQUEST_SET_SMSC_ADDRESS");
+                asprintf(&cmd, "AT+CSCA=\"%s\"", (char*)(data));
+                err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                free(cmd);
+                if (err < 0 || p_response->success == 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                }
+                at_response_free(p_response);
+                break;
+            }
+        case RIL_REQUEST_REPORT_SMS_MEMORY_STATUS:
+            {
+                char *cmd;
+
+                p_response = NULL;
+                asprintf(&cmd, "AT+SPSMSFULL=%d", !((int *)data)[0]);
+                err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                free(cmd);
+                if (err < 0 || p_response->success == 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                }
+                at_response_free(p_response);
+                break;
+            }
+
+#if defined (RIL_SPRD_EXTENSION)
+        case RIL_REQUEST_GET_CURRENT_VIDEOCALLS:
+            requestGetCurrentCalls(channelID, data, datalen, t, 1);
+            break;
+        case RIL_REQUEST_END_ALL_CONNECTIONS:
+            p_response = NULL;
+            err = at_send_command(ATch_type[channelID], "ATH", &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        case RIL_REQUEST_SIM_POWER:
+            requestSIMPower(channelID, data, datalen, t);
+            break;
+        case RIL_REQUEST_GPRS_ATTACH:
+            attachGPRS(channelID, data, datalen, t);
+            break;
+        case RIL_REQUEST_GPRS_DETACH:
+            detachGPRS(channelID, data, datalen, t);
+            break;
+	case RIL_REQUEST_SET_CMMS:
+            requestSetCmms(channelID, data, datalen, t);
+            break;
+        case  RIL_REQUEST_QUERY_COLP:
+            {
+                p_response = NULL;
+                int response[2] = {0, 0};
+
+                err = at_send_command_singleline(ATch_type[channelID], "AT+COLP?",
+                        "+COLP: ", &p_response);
+                if (err >= 0 && p_response->success) {
+                    char *line = p_response->p_intermediates->line;
+                    err = at_tok_start(&line);
+                    if (err >= 0) {
+                        err = at_tok_nextint(&line, &response[0]);
+                        if (err >= 0)
+                            err = at_tok_nextint(&line, &response[1]);
+                    }
+                    if (err >= 0) {
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, &response[1],
+                                sizeof(response[1]));
+                    } else {
+                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    }
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                }
+                at_response_free(p_response);
+                break;
+            }
+        case  RIL_REQUEST_QUERY_COLR:
+            {
+                p_response = NULL;
+                int response[2] = {0, 0};
+
+                err = at_send_command_singleline(ATch_type[channelID], "AT+COLR?",
+                        "+COLR: ", &p_response);
+                if (err >= 0 && p_response->success) {
+                    char *line = p_response->p_intermediates->line;
+                    err = at_tok_start(&line);
+                    if (err >= 0) {
+                        err = at_tok_nextint(&line, &response[0]);
+                        if (err >= 0)
+                            err = at_tok_nextint(&line, &response[1]);
+                    }
+                    if (err >= 0) {
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, &response[1],
+                                sizeof(response[1]));
+                    } else {
+                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    }
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                }
+
+                at_response_free(p_response);
+                break;
+            }
+        case RIL_REQUEST_VIDEOPHONE_CONTROL_AUDIO:
+            {
+                char *cmd;
+                p_response = NULL;
+                asprintf(&cmd, "AT"AT_PREFIX"DVTSEND=%d", ((int *)data)[0]);
+                err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                if (err < 0 || p_response->success == 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                }
+                at_response_free(p_response);
+                free(cmd);
+                break;
+            }
+
+        case RIL_REQUEST_VIDEOPHONE_CONTROL_IFRAME:
+            {
+                char *cmd;
+                p_response = NULL;
+                asprintf(&cmd, "AT"AT_PREFIX"DVTLFRAME=%d,%d", ((int *)data)[0], ((int *)data)[1]);
+                err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                if (err < 0 || p_response->success == 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                }
+                at_response_free(p_response);
+                free(cmd);
+                break;
+            }
+        case RIL_REQUEST_VIDEOPHONE_SET_VOICERECORDTYPE:
+            {
+                char *cmd;
+                p_response = NULL;
+                asprintf(&cmd, "AT+SPRUDLV=%d", ((int *)data)[0]);
+                err = at_send_command(ATch_type[channelID], cmd, &p_response);
+
+                if (err < 0 || p_response->success == 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                }
+                at_response_free(p_response);
+                break;
+            }
         case RIL_REQUEST_VIDEOPHONE_DIAL:
             requestVideoPhoneDial(channelID, data, datalen, t);
             break;
@@ -4308,145 +4529,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 free(cmd);
                 break;
             }
-        case RIL_REQUEST_STK_GET_PROFILE:
-            {
-                char *cmd;
-
-                p_response = NULL;
-                asprintf(&cmd, "AT+SPUSATPROFILE?");
-                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                free(cmd);
-                if (err < 0 || p_response->success == 0) {
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                } else {
-                    RIL_onRequestComplete(t, RIL_E_SUCCESS,
-                            p_response->p_intermediates->line, sizeof(char *));
-                }
-                at_response_free(p_response);
-                break;
-            }
-        case RIL_REQUEST_STK_SET_PROFILE:
-            break;
-        case RIL_REQUEST_STK_SEND_ENVELOPE_COMMAND:
-            {
-                char *cmd;
-
-                p_response = NULL;
-                asprintf(&cmd, "AT+SPUSATENVECMD=\"%s\"", (char*)(data));
-                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                free(cmd);
-                if (err < 0 || p_response->success == 0) {
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                } else {
-                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-                }
-                at_response_free(p_response);
-                break;
-            }
-        case RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE:
-            {
-                char *cmd;
-
-                p_response = NULL;
-                asprintf(&cmd, "AT+SPUSATTERMINAL=\"%s\"", (char*)(data));
-                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                free(cmd);
-                if (err < 0 || p_response->success == 0) {
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                } else {
-                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-                }
-                at_response_free(p_response);
-                break;
-            }
-        case RIL_REQUEST_STK_HANDLE_CALL_SETUP_REQUESTED_FROM_SIM:
-            {
-                char *cmd;
-                p_response = NULL;
-                int value = ((int *)data)[0];
-                if (value == 0) {
-                    ALOGD(" cancel STK call ");
-                    s_isstkcall = 0;
-                    asprintf(&cmd, "AT+SPUSATCALLSETUP=0");
-                    err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                    free(cmd);
-                    if (err < 0 || p_response->success == 0) {
-                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                    } else {
-                        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-                    }
-                    at_response_free(p_response);
-                } else {
-                    ALOGD(" confirm STK call ");
-                    s_isstkcall = 1;
-                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-                }
-                break;
-            }
-        case RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING:
-            {
-                char *cmd;
-                int response = 0;
-                p_response = NULL;
-                ALOGD("[stk]send RIL_REQUEST_STK_SET_PROFILE");
-                asprintf(&cmd, "AT+SPUSATPROFILE?");
-                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                free(cmd);
-                ALOGD("[stk]RIL_REQUEST_STK_SET_PROFILE: err=%d succ=%d", err, p_response->success);
-                if (err < 0 || p_response->success == 0) {
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                } else {
-                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-                }
-                break;
-            }
-        case RIL_REQUEST_VIDEOPHONE_CONTROL_AUDIO:
-            {
-                char *cmd;
-                p_response = NULL;
-                asprintf(&cmd, "AT"AT_PREFIX"DVTSEND=%d", ((int *)data)[0]);
-                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                if (err < 0 || p_response->success == 0) {
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                } else {
-                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-                }
-                at_response_free(p_response);
-                free(cmd);
-                break;
-            }
-
-        case RIL_REQUEST_VIDEOPHONE_CONTROL_IFRAME:
-            {
-                char *cmd;
-                p_response = NULL;
-                asprintf(&cmd, "AT"AT_PREFIX"DVTLFRAME=%d,%d", ((int *)data)[0], ((int *)data)[1]);
-                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                if (err < 0 || p_response->success == 0) {
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                } else {
-                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-                }
-                at_response_free(p_response);
-                free(cmd);
-                break;
-            }
-		case RIL_REQUEST_VIDEOPHONE_SET_VOICERECORDTYPE:
-    		{
-                char *cmd;
-                p_response = NULL;
-                asprintf(&cmd, "AT+SPRUDLV=%d", ((int *)data)[0]);
-                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-    
-                if (err < 0 || p_response->success == 0) {
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                } else {
-                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-                }
-                at_response_free(p_response);
-                break;
-            }
-
         case RIL_REQUEST_MBBMS_GSM_AUTHEN:
             {
                 char *cmd;
@@ -4561,52 +4643,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 }
                 break;
             }
-        case RIL_REQUEST_GET_SMSC_ADDRESS:
-            {
-                char *cmd;
-                char *sc_line;
 
-                p_response = NULL;
-                ALOGD("[sms]RIL_REQUEST_GET_SMSC_ADDRESS");
-                asprintf(&cmd, "AT+CSCA?");
-                err = at_send_command_singleline(ATch_type[channelID], cmd, "+CSCA:",
-                        &p_response);
-                free(cmd);
-                if (err >= 0 && p_response->success) {
-                    char *line = p_response->p_intermediates->line;
-                    err = at_tok_start(&line);
-                    if (err >= 0) {
-                        err = at_tok_nextstr(&line, &sc_line);
-                        RIL_onRequestComplete(t, RIL_E_SUCCESS, sc_line,
-                                strlen(sc_line));
-                    } else {
-                        ALOGD("[sms]at_tok_start fail");
-                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                    }
-                } else {
-                    ALOGD("[sms]RIL_REQUEST_GET_SMSC_ADDRESS fail");
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                }
-                at_response_free(p_response);
-                break;
-            }
-        case RIL_REQUEST_SET_SMSC_ADDRESS:
-            {
-                char *cmd;
-
-                p_response = NULL;
-                ALOGD("[sms]RIL_REQUEST_SET_SMSC_ADDRESS");
-                asprintf(&cmd, "AT+CSCA=\"%s\"", (char*)(data));
-                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                free(cmd);
-                if (err < 0 || p_response->success == 0) {
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                } else {
-                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-                }
-                at_response_free(p_response);
-                break;
-            }
         case RIL_REQUEST_GET_SIM_CAPACITY:
             {
                 char *cmd;
@@ -4679,24 +4716,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 at_response_free(p_response);
                 break;
             }
-
-        case RIL_REQUEST_REPORT_SMS_MEMORY_STATUS:
-            {
-                char *cmd;
-
-                p_response = NULL;
-                asprintf(&cmd, "AT+SPSMSFULL=%d", !((int *)data)[0]);
-                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                free(cmd);
-                if (err < 0 || p_response->success == 0) {
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                } else {
-                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-                }
-                at_response_free(p_response);
-                break;
-            }
-
+#endif
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_SET_CELL_BROADCAST_CONFIG:
             requestSetCellBroadcastConfig(channelID, data, datalen, t);
             break;
@@ -4804,6 +4825,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 at_response_free(p_response);
                 break;
             }
+#endif
         default:
             RIL_onRequestComplete(t, RIL_E_REQUEST_NOT_SUPPORTED, NULL, 0);
             break;
@@ -5538,8 +5560,18 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         err = at_tok_nextint(&tmp, &sms_rd);
         if (err < 0) goto out;
 
-        if(sms_rd == 12)
-            RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_SMS_READY, NULL, 0);
+        if(sms_rd == 12) {
+            pthread_mutex_lock(&s_sms_ready_mutex);
+            if(s_sms_ready == 0) {
+                s_sms_ready = 1;
+#if defined (RIL_SPRD_EXTENSION)
+                RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_SMS_READY, NULL, 0);
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+                RIL_onUnsolicitedResponse (RIL_UNSOL_DEVICE_READY_NOTI, NULL, 0);
+#endif
+            }
+            pthread_mutex_unlock(&s_sms_ready_mutex);
+        }
     } else if (strStartsWith(s, "+CMT:")) {
         RIL_onUnsolicitedResponse (
                 RIL_UNSOL_RESPONSE_NEW_SMS,
@@ -5617,7 +5649,6 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             ALOGD("error parse location");
             goto out;
         }
-//        RIL_requestTimedCallback (receiveSMS, (void *)location, NULL);
         ALOGD("[unsl]cmti: location = %d", location);
         RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_NEW_SMS_ON_SIM, &location, sizeof(location));
     } else if (strStartsWith(s, "+SPUSATENDSESSIONIND")) {
@@ -5691,10 +5722,6 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         }
         ALOGD("[stk unsl]SPUSATREFRESH result = %d %d %d", response[0], response[1], response[2]);
         RIL_onUnsolicitedResponse(RIL_UNSOL_SIM_REFRESH, &response, sizeof(response));
-        // Sim reset
-//        if (response[0] == 2) {
-//            RIL_requestTimedCallback(resetModem, NULL, NULL);
-//        }
     } else if (strStartsWith(s, "+CSSI:")) {
         RIL_SuppSvcNotification *response = NULL;
         int code = 0;
@@ -5807,7 +5834,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                     RIL_UNSOL_ON_USSD,
                     &response[0], 1*sizeof(char*));
         }
-    }else if (strStartsWith(s, AT_PREFIX"DTVTDATA:")){
+    }
+#if defined (RIL_SPRD_EXTENSION)
+    else if (strStartsWith(s, AT_PREFIX"DTVTDATA:")) {
         char *response = NULL;
         char *tmp;
 
@@ -5944,7 +5973,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             goto out;
         }
         RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_RECORD_VIDEO,&response,sizeof(response));
-    } else if (strStartsWith(s, "^DSCI:")) {
+    }
+#endif
+    else if (strStartsWith(s, "^DSCI:")) {
         RIL_VideoPhone_DSCI *response = NULL;
         response = (RIL_VideoPhone_DSCI *)alloca(sizeof(RIL_VideoPhone_DSCI));
         char *tmp;
@@ -5980,6 +6011,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 NULL, 0);
             goto out;
         } else if(response->type == 1) {
+#if defined (RIL_SPRD_EXTENSION)
             RIL_onUnsolicitedResponse (
                 RIL_UNSOL_RESPONSE_VIDEOCALL_STATE_CHANGED,
                 NULL, 0);
@@ -6015,13 +6047,16 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                         response->num_type, response->bs_type, response->cause);
                 RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DSCI, response, sizeof(RIL_VideoPhone_DSCI));
             }
+#endif
         }
-    } else if (strStartsWith(s,AT_PREFIX"DVTRING:")
+    }
+#if defined (RIL_SPRD_EXTENSION)
+    else if (strStartsWith(s,AT_PREFIX"DVTRING:")
             || strStartsWith(s,AT_PREFIX"DVTCLOSED")) {
         RIL_onUnsolicitedResponse (
             RIL_UNSOL_RESPONSE_VIDEOCALL_STATE_CHANGED,
             NULL, 0);
-    } else if (strStartsWith(s, AT_PREFIX"VTMDSTRT")){
+    } else if (strStartsWith(s, AT_PREFIX"VTMDSTRT")) {
         int response;
         int index = 0;
         char *tmp;
@@ -6039,7 +6074,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
         ALOGD("onUnsolicited(), "AT_PREFIX"VTMDSTRT:, response[0]: %d", response);
         RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_MEDIA_START, &response, sizeof(response));
-    } else if (strStartsWith(s, "^SMOF:")) {
+    }
+#endif
+    else if (strStartsWith(s, "^SMOF:")) {
 	char *tmp;
         int value;
 
@@ -6054,7 +6091,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             ALOGD("[sms]RIL_UNSOL_SIM_SMS_STORAGE_FULL");
             RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_SMS_STORAGE_FULL, NULL, 0);
         }
-    } else if (strStartsWith(s, "+SPUSATDISPLAY:")) {
+    }
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+    else if (strStartsWith(s, "+SPUSATDISPLAY:")) {
         char *tmp;
         char *data;
         RIL_SSReleaseComplete *response = NULL;
@@ -6111,6 +6150,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         }
         RIL_onUnsolicitedResponse(RIL_UNSOL_STK_CALL_CONTROL_RESULT, response, sizeof(response));
     }
+#endif
 out:
     free(line);
 }

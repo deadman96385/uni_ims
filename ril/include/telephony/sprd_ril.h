@@ -36,12 +36,7 @@ extern "C" {
 ///////
 // [NAM] Temp code - 2012.01.13. may be global feature issue.
 #define GLOBALCONFIG_RIL_VT_SUPPORT 1
-#undef GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION
-#define GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION 1
 ///////
-
-#undef RIL_SPRD_EXTENSION
-#define RIL_SPRD_EXTENSION 1
 
 typedef void * RIL_Token;
 
