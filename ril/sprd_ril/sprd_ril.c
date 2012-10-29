@@ -3144,139 +3144,64 @@ error:
 static void requestSetCellBroadcastConfig(int channelID,  void *data, size_t datalen, RIL_Token t)
 {
 
-    ATResponse    *p_response = NULL;
-    int           err;
-    char*         cmd;
+    ATResponse        *p_response = NULL;
+    int                err;
+    char              *cmd;
+    RIL_CB_ConfigArgs *cbDataPtr = (RIL_CB_ConfigArgs *)data;
 
     ALOGD("Reference-ril. requestSetCellBroadcastConfig enter");
-
-/*
-    RIL_GSM_BroadcastSmsConfigInfo **gsmBciPtrs = ( RIL_GSM_BroadcastSmsConfigInfo* *)data;
-    int  i =0 ,j=0;
-    RIL_GSM_BroadcastSmsConfigInfo gsmBci;
-    char pre_colon = 0x22;
-    int count = datalen/sizeof(RIL_GSM_BroadcastSmsConfigInfo*);
-    int channelLen =0;
-    int langLen = 0;
-    int len = 0;
-    char *channel;
-    char *lang;
-    char  get_char[10] ={0};
-    char comma = 0x2c;
-    int enable = 0;
-    char tmp[20] = {0};
-    char quotes = 0x22;
-
-    ALOGD("Reference-ril. requestSetSmsBroadcastConfig %d ,count %d", datalen,count);
-
-    channel = malloc(datalen*16);
-    lang = malloc(datalen*16);
-    memset(channel,0,datalen*16);
-    memset(lang,0,datalen*16);
-
-    for(i=0;i<count;i++){
-        gsmBci =*(RIL_GSM_BroadcastSmsConfigInfo *)(gsmBciPtrs[i]);
-        if(i == 0){
-            enable = gsmBci.selected;
-        }
-        memset(tmp, 0,20);
-        setSmsBroadcastConfigData(gsmBci.fromServiceId,i,1,channel,&len,tmp);
-        memcpy(channel+channelLen,tmp,strlen(tmp));
-        channelLen += len;
-        ALOGI("Reference-ril. requestSetSmsBroadcastConfig channel %s ,%d ",channel, channelLen);
-
-        memset(tmp, 0,20);
-        setSmsBroadcastConfigData(gsmBci.toServiceId,i,0,channel,&len,tmp);
-        memcpy(channel+channelLen,tmp,strlen(tmp));
-        channelLen += len;
-        ALOGI("Reference-ril. requestSetSmsBroadcastConfig channel %s ,%d",channel, channelLen);
-
-        memset(tmp, 0,20);
-        setSmsBroadcastConfigData(gsmBci.fromCodeScheme,i,1,lang,&len,tmp);
-        memcpy(lang+langLen,tmp,strlen(tmp));
-        langLen += len;
-        ALOGI("Reference-ril. requestSetSmsBroadcastConfig lang %s, %d",lang, langLen);
-
-        memset(tmp, 0,20);
-        setSmsBroadcastConfigData(gsmBci.toCodeScheme,i,0,lang,&len,tmp);
-        memcpy(lang+langLen,tmp,strlen(tmp));
-        langLen += len;
-        ALOGI("Reference-ril. requestSetSmsBroadcastConfig lang %s, %d",lang,langLen);
-    }
-    if(langLen == 0)
-    {
-        sprintf(lang,"%c",quotes);
-    }
-    if(channelLen == 1)
-    {
-        sprintf(channel+channelLen,"%c",quotes);
-    }
-    if(channelLen == 0) {
-        sprintf(channel,"%c",quotes);
-    }
-    asprintf(&cmd, "AT+CSCB=%d%c%s%c%c%s%c",enable,comma,channel,quotes,comma,lang,quotes);
+    asprintf(&cmd, "AT+CSCB=%d,%d,%d,%d,\"%s\"",
+             cbDataPtr->bCBEnabled, cbDataPtr->selectedId, cbDataPtr->msgIdMaxCount,
+             cbDataPtr->msgIdCount, cbDataPtr->msgIDs);
     ALOGI("Reference-ril. requestSetSmsBroadcastConfig cmd %s",cmd);
-
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
-    free(channel);
-    free(lang);
-    free(cmd);
     ALOGI( "requestSetCellBroadcastConfig err %d ,success %d",err,p_response->success);
     if (err < 0 || p_response->success == 0) {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     } else {
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
+    free(cmd);
     at_response_free(p_response);
-*/
 }
 
 static void requestGetCellBroadcastConfig(int channelID,  void *data, size_t datalen, RIL_Token t)
 {
     ATResponse *p_response = NULL;
-    int err;
-    char* response;
+    int         err;
+    char       *response;
 
     ALOGD("Reference-ril. requestGetCellBroadcastConfig enter");
-/*
     err = at_send_command_singleline(ATch_type[channelID], "AT+CSCB=?", "+CSCB:", &p_response);
-
     if (err < 0 || p_response->success == 0) {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     } else {
         response = p_response->p_intermediates->line;
         RIL_onRequestComplete(t, RIL_E_SUCCESS, response, sizeof(response));
     }
-
     at_response_free(p_response);
-*/
 }
 
 static void requestSendEncodedUSSD(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     ATResponse  *p_response = NULL;
-    char *ussdHexRequest;
     int err;
     char *cmd;
-    int len;
+    RIL_EncodedUSSD *p_ussd = (RIL_EncodedUSSD *)data;
 
     ALOGD("Reference-ril. requestSendEncodedUSSD enter");
-/*
+
     ussdRun = 1;
-    ussdHexRequest = (char *)(data);
-    asprintf(&cmd, "AT+CUSD=1,\"%s\",15", ussdHexRequest);
+    asprintf(&cmd, "AT+CUSD=1,\"%s\",%d", p_ussd->encodedUSSD, p_ussd->dcsCode);
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (err < 0 || p_response->success == 0) {
         ussdRun = 0;
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-        free(cmd);
-        at_response_free(p_response);
     } else {
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-        free(cmd);
-        at_response_free(p_response);
     }
-*/
+    free(cmd);
+    at_response_free(p_response);
 }
 
 /*** Callback methods from the RIL library to us ***/
@@ -4727,7 +4652,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
 
         case RIL_REQUEST_SEND_ENCODED_USSD:
-            ALOGD("RIL_REQUEST_SEND_ENCODED_USSD");
             requestSendEncodedUSSD(channelID, data, datalen, t);
             break;
 

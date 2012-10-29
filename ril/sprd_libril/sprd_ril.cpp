@@ -2769,28 +2769,30 @@ static int responseGetUiccSub(Parcel &p, void *response, size_t responselen)
 
 static int responseGetCBConf(Parcel &p, void *response, size_t responselen)
 {
-/*
-    int num = responselen / sizeof(RIL_GSM_BroadcastSmsConfigInfo *);
-    p.writeInt32(num);
+    if (response == NULL) {
+        ALOGE("responseGetCBConf: invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    if (responselen != sizeof(RIL_CB_ConfigArgs)) {
+        ALOGE("responseGetCBConf: invalid response length was %d expected %d",
+                (int)responselen, (int)sizeof (RIL_CB_ConfigArgs));
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    RIL_CB_ConfigArgs *p_cur = (RIL_CB_ConfigArgs *) response;
+    p.writeInt32(p_cur->bCBEnabled);
+    p.writeInt32(p_cur->selectedId);
+    p.writeInt32(p_cur->msgIdMaxCount);
+    p.writeInt32(p_cur->msgIdCount);
+    writeStringToParcel(p, p_cur->msgIDs);
 
     startResponse;
-    RIL_GSM_BroadcastSmsConfigInfo **p_cur =
-                (RIL_GSM_BroadcastSmsConfigInfo **) response;
-    for (int i = 0; i < num; i++) {
-        p.writeInt32(p_cur[i]->fromServiceId);
-        p.writeInt32(p_cur[i]->toServiceId);
-        p.writeInt32(p_cur[i]->fromCodeScheme);
-        p.writeInt32(p_cur[i]->toCodeScheme);
-        p.writeInt32(p_cur[i]->selected);
-
-        appendPrintBuf("%s [%d: fromServiceId=%d, toServiceId=%d, \
-                fromCodeScheme=%d, toCodeScheme=%d, selected =%d]",
-                printBuf, i, p_cur[i]->fromServiceId, p_cur[i]->toServiceId,
-                p_cur[i]->fromCodeScheme, p_cur[i]->toCodeScheme,
-                p_cur[i]->selected);
-    }
+    appendPrintBuf("%sbCBEnabled=%d, selectedId=%d,msgIdMaxCount=%d,msgIdCount=%d,msgIDs=%s",
+                   printBuf, p_cur->bCBEnabled, p_cur->selectedId, p_cur->msgIdMaxCount,
+                   p_cur->msgIdCount,p_cur->msgIDs);
     closeResponse;
-*/
+
     return 0;
 }
 
