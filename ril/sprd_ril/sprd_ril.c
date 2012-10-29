@@ -3141,6 +3141,7 @@ error:
     at_response_free(p_response);
 }
 
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 static void requestSetCellBroadcastConfig(int channelID,  void *data, size_t datalen, RIL_Token t)
 {
 
@@ -3203,6 +3204,7 @@ static void requestSendEncodedUSSD(int channelID, void *data, size_t datalen, RI
     free(cmd);
     at_response_free(p_response);
 }
+#endif
 
 /*** Callback methods from the RIL library to us ***/
 
