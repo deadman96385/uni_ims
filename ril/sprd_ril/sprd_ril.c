@@ -2408,6 +2408,73 @@ error1:
     return;
 }
 
+static void requestSendSSSMS(int channelID, void *data, size_t datalen, RIL_Token t)
+{
+    int err, count = 0;
+    const char *smsc;
+    const char *pdu;
+    int tpLayerLength;
+    char *cmd1, *cmd2;
+    RIL_SMS_Response response;
+    ATResponse *p_response = NULL;
+    char * line;
+
+    memset(&response, 0, sizeof(RIL_SMS_Response));
+    smsc = ((const char **)data)[0];
+    pdu = ((const char **)data)[1];
+
+    tpLayerLength = strlen(pdu)/2;
+
+    /* "NULL for default SMSC" */
+    if (smsc == NULL) {
+        smsc= "00";
+    }
+
+    asprintf(&cmd1, "AT+CMGS=%d", tpLayerLength);
+    asprintf(&cmd2, "%s%s", smsc, pdu);
+
+retry:
+    err = at_send_command_sms(ATch_type[channelID], cmd1, cmd2, "+CMGS:", &p_response);
+    if (err != 0 || p_response->success == 0)
+        goto error;
+
+    /* FIXME fill in messageRef and ackPDU */
+
+    line = p_response->p_intermediates->line;
+    err = at_tok_start(&line);
+    if(err < 0)
+        goto error1;
+    err = at_tok_nextint(&line, &response.messageRef);
+    if(err < 0)
+        goto error1;
+
+    free(cmd1);
+    free(cmd2);
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(RIL_SMS_Response));
+    at_response_free(p_response);
+    return;
+error:
+    line = p_response->finalResponse;
+    err = at_tok_start(&line);
+    if (err < 0)
+        goto error1;
+    err = at_tok_nextint(&line, &response.errorCode);
+    if (err < 0)
+        goto error1;
+    if(response.errorCode == 98 || response.errorCode == 47
+        || response.errorCode == 42 || response.errorCode == 41
+        || response.errorCode == 27)
+        if(count < 3) {
+            count++;
+            goto retry;
+        }
+error1:
+    free(cmd1);
+    free(cmd2);
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+    return;
+}
 
 static void requestSMSAcknowledge(int channelID, void *data, size_t datalen, RIL_Token t)
 {
@@ -3521,7 +3588,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 	        }
             }
         case RIL_REQUEST_SEND_SMS:
+#if defined (RIL_SPRD_EXTENSION)
             requestSendSMS(channelID, data, datalen, t);
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+            requestSendSSSMS(channelID, data, datalen, t);
+#endif
             break;
         case RIL_REQUEST_SETUP_DATA_CALL:
             requestSetupDataCall(channelID, data, datalen, t);
