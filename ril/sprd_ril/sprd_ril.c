@@ -1026,6 +1026,66 @@ static void onDataCallListChanged(void *param)
     putChannel(channelID);
 }
 
+static void onClass2SmsReceived(void *param)
+{
+    int err, channelID, skip;
+    char *cmd, *line;
+    int index = *((int*)param);
+    ATResponse *p_response = NULL;
+    int sim_type;
+    char *file_path, *sms_pdu;
+
+    channelID = getChannel();
+    err = at_send_command_singleline(ATch_type[channelID], "AT^CARDMODE", "^CARDMODE:", &p_response);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+    line = p_response->p_intermediates->line;
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &sim_type);
+    if (err < 0) goto error;
+
+    if(sim_type == 1)  //sim
+        asprintf(&file_path, "3F007F10");
+    else if(sim_type == 2)  //usim
+	asprintf(&file_path, "3F007FFF");
+    else
+	goto error;
+
+    asprintf(&cmd, "AT+CRSM=178,28476,%d,4,176,0,\"%s\"", index, file_path);
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CRSM:", &p_response);
+    putChannel(channelID);
+    free(cmd);
+    free(file_path);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+
+    line = p_response->p_intermediates->line;
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &skip);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &skip);
+    if (err < 0) goto error;
+
+    if (at_tok_hasmore(&line)) {
+        err = at_tok_nextstr(&line, &sms_pdu);
+        if (err < 0) goto error;
+    }
+    sms_pdu += 1;  //skip the status byte
+    RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_NEW_SMS,
+                sms_pdu, strlen(sms_pdu));
+     at_response_free(p_response);
+    return;
+error:
+    at_response_free(p_response);
+}
+
 static void requestDataCallList(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     requestOrSendDataCallList(channelID, -1, &t);
@@ -5647,7 +5707,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             goto out;
         }
         ALOGD("[unsl]cmti: location = %d", location);
+#if defined (RIL_SPRD_EXTENSION)
         RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_NEW_SMS_ON_SIM, &location, sizeof(location));
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+        RIL_requestTimedCallback (onClass2SmsReceived, &location, NULL);
+#endif
     } else if (strStartsWith(s, "+SPUSATENDSESSIONIND")) {
         ALOGD("[stk unsl]RIL_UNSOL_STK_SESSION_END");
         RIL_onUnsolicitedResponse (RIL_UNSOL_STK_SESSION_END, NULL, 0);
