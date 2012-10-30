@@ -5653,6 +5653,10 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             }
             if(value == 1)
                 RIL_requestTimedCallback (onSimAbsent, NULL, NULL);
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+            else if(value == 5)
+                RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_PB_READY, NULL, 0);
+#endif
         }
     } else if (strStartsWith(s, "+CBM:")) {
 
