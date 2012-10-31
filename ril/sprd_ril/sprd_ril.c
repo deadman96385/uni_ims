@@ -3277,10 +3277,16 @@ static void requestSetCellBroadcastConfig(int channelID,  void *data, size_t dat
     char              *cmd;
     RIL_CB_ConfigArgs *cbDataPtr = (RIL_CB_ConfigArgs *)data;
 
-    ALOGD("Reference-ril. requestSetCellBroadcastConfig enter");
-    asprintf(&cmd, "AT+CSCB=%d,%d,%d,%d,\"%s\"",
-             cbDataPtr->bCBEnabled, cbDataPtr->selectedId, cbDataPtr->msgIdMaxCount,
-             cbDataPtr->msgIdCount, cbDataPtr->msgIDs);
+    ALOGD("Reference-ril. requestSetCellBroadcastConfig selectedId = %d", cbDataPtr->selectedId);
+    if (cbDataPtr->selectedId == 1) { // Configure all IDs
+        asprintf(&cmd, "AT+CSCB=%d,\"1000\",\"\"", !(cbDataPtr->bCBEnabled));
+    } else if (cbDataPtr->selectedId == 2) { // Configure special IDs
+        asprintf(&cmd, "AT+CSCB=%d,\"%s\",\"\"",
+                 !(cbDataPtr->bCBEnabled), cbDataPtr->msgIDs);
+    } else {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        goto error;
+    }
     ALOGI("Reference-ril. requestSetSmsBroadcastConfig cmd %s",cmd);
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     ALOGI( "requestSetCellBroadcastConfig err %d ,success %d",err,p_response->success);
@@ -3289,6 +3295,7 @@ static void requestSetCellBroadcastConfig(int channelID,  void *data, size_t dat
     } else {
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
+error:
     free(cmd);
     at_response_free(p_response);
 }
@@ -3298,14 +3305,36 @@ static void requestGetCellBroadcastConfig(int channelID,  void *data, size_t dat
     ATResponse *p_response = NULL;
     int         err;
     char       *response;
+    char *line = NULL;
+    int   result = 0;
+    RIL_CB_ConfigArgs  cbsPtr = {0};
 
     ALOGD("Reference-ril. requestGetCellBroadcastConfig enter");
-    err = at_send_command_singleline(ATch_type[channelID], "AT+CSCB=?", "+CSCB:", &p_response);
+    err = at_send_command_singleline(ATch_type[channelID], "AT+CSCB?", "+CSCB:", &p_response);
     if (err < 0 || p_response->success == 0) {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     } else {
-        response = p_response->p_intermediates->line;
-        RIL_onRequestComplete(t, RIL_E_SUCCESS, response, sizeof(response));
+        line = p_response->p_intermediates->line;
+        ALOGD("requestGetCellBroadcastConfig: err=%d line=%s", err, line);
+        err = at_tok_start(&line);
+        if (err == 0) err = at_tok_nextint(&line, &result);
+        if (err == 0) {
+            err = at_tok_nextstr(&line, &response);
+            if (err == 0) {
+                cbsPtr.bCBEnabled = result;
+                cbsPtr.msgIdMaxCount = 1000;
+                if (0 == strcmp(response, "1000")) {
+                    cbsPtr.selectedId = 1;
+                } else {
+                    cbsPtr.selectedId = 2;
+                    cbsPtr.msgIDs = response;
+                }
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, &cbsPtr, sizeof(RIL_CB_ConfigArgs));
+                free(response);
+            }
+        } else {
+            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        }
     }
     at_response_free(p_response);
 }
@@ -6178,7 +6207,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         response->size = sizeof(RIL_SSReleaseComplete) + response->dataLen;
         response->params = RIL_PARAM_SSDI_STATUS| RIL_PARAM_SSDI_DATA;
         response->status = 0;
-        strcpy(response->data, data);
+        response->data = data;
         RIL_onUnsolicitedResponse(RIL_UNSOL_RELEASE_COMPLETE_MESSAGE, response,sizeof(RIL_SSReleaseComplete));
         free(response);
     } else if (strStartsWith(s, "+SPUSATDISPLAY:")) {
