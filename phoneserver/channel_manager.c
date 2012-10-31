@@ -833,8 +833,12 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
         me->itsCmux[i].ops->cmux_free(&me->itsCmux[i]);
         fd = open(muxname, O_RDWR);
         if(fd < 0) {
-            PHS_LOGD("Phoneserver exit: open mux:/dev/ts0710mux%d failed!\n ",i);
-            exit(1);
+            if(i > 14) {
+                continue;
+            } else {
+                PHS_LOGD("Phoneserver exit: open mux:/dev/ts0710mux%d failed!\n ",i);
+                exit(1);
+	    }
         }
     }
     //while(1);
