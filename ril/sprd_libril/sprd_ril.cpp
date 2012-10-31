@@ -1534,11 +1534,6 @@ static void dispatchAccessPB(Parcel& p, RequestInfo *pRI)
 {
     /*FIXME*/
 }
-
-static void dispatchEccDial(Parcel& p, RequestInfo *pRI)
-{
-    /*FIXME*/
-}
 #endif
 
 #if defined (RIL_SPRD_EXTENSION)
