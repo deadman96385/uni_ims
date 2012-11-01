@@ -3339,9 +3339,10 @@ static void requestGetCellBroadcastConfig(int channelID,  void *data, size_t dat
     char       *response;
     char *line = NULL;
     int   result = 0;
-    RIL_CB_ConfigArgs  cbsPtr = {0};
+    RIL_CB_ConfigArgs  cbsPtr;
 
     ALOGD("Reference-ril. requestGetCellBroadcastConfig enter");
+    memset(&cbsPtr, 0, sizeof(RIL_CB_ConfigArgs));
     err = at_send_command_singleline(ATch_type[channelID], "AT+CSCB?", "+CSCB:", &p_response);
     if (err < 0 || p_response->success == 0) {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -4885,9 +4886,10 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 char *line = NULL;
                 int   result = 0;
                 RIL_SIM_Lockinfo *p_lock = NULL;
-                RIL_SIM_Lockinfo_Response lock_info = {0};
+                RIL_SIM_Lockinfo_Response lock_info;
 
                 ALOGD("RIL_REQUEST_LOCK_INFO");
+                memset(&lock_info, 0, sizeof(RIL_SIM_Lockinfo_Response));
                 p_lock = (RIL_SIM_Lockinfo *)data;
                 lock_info.lock_type = p_lock->lock_type;
                 p_response = NULL;
