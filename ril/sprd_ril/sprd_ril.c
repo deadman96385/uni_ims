@@ -74,6 +74,8 @@ static char cgreg_response[100] = "";
 static int s_channel_open = 0;
 static int s_sms_ready = 0;
 
+#define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
+
 struct listnode
 {
     char data;
@@ -233,6 +235,18 @@ static void pollSIMState (void *param);
 static void attachGPRS(int channelID, void *data, size_t datalen, RIL_Token t);
 static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t);
 static void setRadioState(int channelID, RIL_RadioState newState);
+
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+typedef struct {
+    int mcc;
+    char *long_name;
+    char *short_name;
+} rilnet_tz_entry_t;
+
+static rilnet_tz_entry_t rilnet_tz_entry[] = {
+#include "rilnet_tz_entry.h"
+};
+#endif
 
 void list_init(struct listnode *node)
 {
@@ -1028,13 +1042,17 @@ static void onDataCallListChanged(void *param)
 
 static void onClass2SmsReceived(void *param)
 {
-    int err, channelID, skip;
+    int err, skip;
     char *cmd, *line;
-    int index = *((int*)param);
     ATResponse *p_response = NULL;
-    int sim_type;
+    int sim_type, channelID;
     char *file_path, *sms_pdu;
+    int *p_index = (int *)param;
 
+    if(p_index == NULL) {
+        ALOGE("class2 sms index is NULL!");
+        return;
+    }
     channelID = getChannel();
     err = at_send_command_singleline(ATch_type[channelID], "AT^CARDMODE", "^CARDMODE:", &p_response);
     if (err < 0 || p_response->success == 0) {
@@ -1054,9 +1072,8 @@ static void onClass2SmsReceived(void *param)
     else
 	goto error;
 
-    asprintf(&cmd, "AT+CRSM=178,28476,%d,4,176,0,\"%s\"", index, file_path);
+    asprintf(&cmd, "AT+CRSM=178,28476,%d,4,176,0,\"%s\"", *p_index, file_path);
     err = at_send_command_singleline(ATch_type[channelID], cmd, "+CRSM:", &p_response);
-    putChannel(channelID);
     free(cmd);
     free(file_path);
     if (err < 0 || p_response->success == 0) {
@@ -1080,9 +1097,13 @@ static void onClass2SmsReceived(void *param)
     sms_pdu += 1;  //skip the status byte
     RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_NEW_SMS,
                 sms_pdu, strlen(sms_pdu));
-     at_response_free(p_response);
+    free(p_index);
+    at_response_free(p_response);
+    putChannel(channelID);
     return;
 error:
+    free(p_index);
+    putChannel(channelID);
     at_response_free(p_response);
 }
 
@@ -1709,28 +1730,6 @@ error:
     free(cmd);
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
-}
-
-static void receiveSMS(void *param)
-{
-    int location = (int)param;
-    char *cmd;
-    int channelID;
-
-    channelID = getChannel();
-    ALOGD("[cmti]receiveSMS channelID = %d", channelID);
-
-    if(channelID == 0) {
-        ALOGD("channel is busy");
-        RIL_requestTimedCallback (receiveSMS, param, &TIMEVAL_SIMPOLL);
-    } else {
-        asprintf(&cmd, "AT+CMGR=%d", location);
-        /* request the sms in a specific location */
-        at_send_command(ATch_type[channelID],  cmd, NULL);
-        free(cmd);
-    }
-    putChannel(channelID);
-    return;
 }
 
 static void resetModem(void * param)
@@ -5554,6 +5553,52 @@ static void waitForClose()
     pthread_mutex_unlock(&s_state_mutex);
 }
 
+static void onNitzReceived(void *param)
+{
+    int i, err;
+    char *nitz_str = NULL;
+    ATResponse *p_response = NULL;
+    char *line;
+    int channelID, mcc;
+    char *raw_str = (char *)param;
+
+    if(!raw_str) {
+        ALOGE("nitz received, but raw str is NULL");
+        return;
+    }
+
+    channelID = getChannel();
+    err = at_send_command_singleline(ATch_type[channelID], "AT+CCED=0,1", "+CCED:", &p_response);
+    putChannel(channelID);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+    line = p_response->p_intermediates->line;
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &mcc);
+    if (err < 0) goto error;
+
+    for(i = 0; i < (int)NUM_ELEMS(rilnet_tz_entry); i++) {
+        if(mcc == rilnet_tz_entry[i].mcc)
+            asprintf(&nitz_str, "%s,%s", raw_str, rilnet_tz_entry[i].long_name);
+    }
+    if(i >= (int)NUM_ELEMS(rilnet_tz_entry))
+        asprintf(&nitz_str, "%s", raw_str);
+
+    RIL_onUnsolicitedResponse (
+            RIL_UNSOL_NITZ_TIME_RECEIVED,
+            nitz_str, strlen(nitz_str));
+    free(raw_str);
+    if(nitz_str)
+        free(nitz_str);
+    return;
+error:
+    free(raw_str);
+    at_response_free(p_response);
+}
+
 /**
  * Called by atchannel when an unsolicited line appears
  * This is called on atchannel's reader thread. AT commands may
@@ -5596,19 +5641,25 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         /*NITZ time */
         char *response;
         char *tmp;
+        char *raw_str;
 
         line = strdup(s);
         tmp = line;
         at_tok_start(&tmp);
 
         err = at_tok_nextstr(&tmp, &response);
-
         if (err != 0) {
             ALOGE("invalid NITZ line %s\n", s);
         } else {
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+            raw_str = (char *)malloc(sizeof(response));
+            memcpy(raw_str, response, sizeof(response));
+            RIL_requestTimedCallback (onNitzReceived, raw_str, NULL);
+#elif defined (RIL_SPRD_EXTENSION)
             RIL_onUnsolicitedResponse (
                     RIL_UNSOL_NITZ_TIME_RECEIVED,
                     response, strlen(response));
+#endif
         }
     } else if (strStartsWith(s,"+CRING:")
             || strStartsWith(s,"RING")
@@ -5757,6 +5808,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         int location;
         char *response = NULL;
         char *tmp;
+        int *p_index;
 
         line = strdup(s);
         tmp = line;
@@ -5782,7 +5834,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 #if defined (RIL_SPRD_EXTENSION)
         RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_NEW_SMS_ON_SIM, &location, sizeof(location));
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-        RIL_requestTimedCallback (onClass2SmsReceived, &location, NULL);
+        p_index = (int *)malloc(sizeof(int));
+        memcpy(p_index, &location, sizeof(int));
+        RIL_requestTimedCallback (onClass2SmsReceived, p_index, NULL);
 #endif
     } else if (strStartsWith(s, "+SPUSATENDSESSIONIND")) {
         ALOGD("[stk unsl]RIL_UNSOL_STK_SESSION_END");
