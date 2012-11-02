@@ -29,6 +29,7 @@
 #define PROP_PHONE_COUNT  "persist.msms.phone_count"
 #define PHONE_APP   "com.android.phone"
 #define ENG_APP   "/system/bin/engservice"
+#define NVITEMD_APP   "/system/bin/nvitemd"
 #define PROP_TTYDEV  "persist.ttydev"
 static char ttydev[12];
 static int ttydev_fd;
@@ -61,6 +62,27 @@ static int get_task_pid(char *name)
         }
     }
     return -1;
+}
+
+static int kill_nvitemd(void)
+{
+    pid_t pid;
+
+    pid = get_task_pid(NVITEMD_APP);
+    MONITOR_LOGD("restart %s (%d)!\n", NVITEMD_APP, pid);
+    if (pid > 0)
+        kill(pid, SIGTERM);
+
+    property_set("ctl.stop", "nvitemd");
+
+    return 0;
+}
+
+static int start_nvitemd(void)
+{
+    property_set("ctl.start", "nvitemd");
+
+    return 0;
 }
 
 static int kill_engservice(void)
@@ -122,6 +144,8 @@ void assert_handler(int sig_num)
         property_set(RIL_SIM_POWER_PROPERTY, "0");
     }
 
+    kill_nvitemd();
+
     kill_engservice();
 
     /*kill phoneserver*/
@@ -165,6 +189,10 @@ void reset_handler(int sig_num)
     sleep(1);
 
     start_engservice();
+
+    sleep(2);
+
+    start_nvitemd();
 }
 
 int main(int argc, char **argv)
@@ -226,6 +254,10 @@ int main(int argc, char **argv)
     start_phser();
 
     start_engservice();
+    
+    sleep(1);
+
+    start_nvitemd();
 
     while(1) pause();
 }
