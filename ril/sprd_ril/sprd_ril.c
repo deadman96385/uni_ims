@@ -5553,6 +5553,7 @@ static void waitForClose()
     pthread_mutex_unlock(&s_state_mutex);
 }
 
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 static void onNitzReceived(void *param)
 {
     int i, err;
@@ -5598,6 +5599,7 @@ error:
     free(raw_str);
     at_response_free(p_response);
 }
+#endif
 
 /**
  * Called by atchannel when an unsolicited line appears
