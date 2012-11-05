@@ -402,7 +402,9 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
                 }
 
                 //sprintf(cmd, "ifconfig veth%d %s netmask 255.255.255.0 up", cid-1,ip);
-                sprintf(cmd, "ifconfig veth%d %s mtu 1400 netmask 255.255.255.255 up -noarp", cid-1,ip);
+                sprintf(cmd, "ifconfig veth%d %s mtu 1400 netmask 255.255.255.255 up", cid-1,ip);
+                system(cmd);
+                sprintf(cmd, "ip link set veth%d arp off", cid-1);
                 system(cmd);
                 sprintf(cmd, "setprop net.veth%d.ip %s", cid-1,ip);
                 system(cmd);
