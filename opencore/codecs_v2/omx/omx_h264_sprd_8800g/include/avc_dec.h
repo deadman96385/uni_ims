@@ -36,8 +36,11 @@
 #include <binder/MemoryHeapIon.h>
 #define SPRD_ION_DEV "/dev/ion"
 
-
 #define SPRD_VSP_DRIVER "/dev/sprd_vsp"
+#define LOG_TAG "VSP"
+#include <utils/Log.h>
+#define  SCI_TRACE_LOW   ALOGI
+
 
 using namespace android;
 
@@ -119,9 +122,6 @@ class AvcDecoder_OMX
             iDecoder_int_buffer_ptr = NULL;
 	     iDecoder_ext_cache_buffer_ptr = NULL;
 	 	iStream_buffer_ptr = NULL;
-            iVsp_fd = -1;
-            iVsp_addr = NULL;	
-//	     iHold_VSP = 0;
          iDecH264WasSw = OMX_FALSE;
         };
 
@@ -177,18 +177,12 @@ private:
        void *iDecoder_int_buffer_ptr;
 	void *iDecoder_ext_cache_buffer_ptr;
 	void *iStream_buffer_ptr;
-       OMX_S32 iVsp_fd;
-       void *iVsp_addr;
        OMX_BOOL iExternalBufferWasSet;
        OMX_BOOL iStreamBufferWasSet;
 
          sp<MemoryHeapIon> iDecExtPmemHeap;
          OMX_U32  iDecExtVAddr;
          OMX_U32  iDecExtPhyAddr;
-//         sp<MemoryHeapPmem> iStreamPmemHeap;
-//	 OMX_U32  iStreamVAddr;
-//	 OMX_U32  iStreamPhyAddr;
-//	 OMX_U32  iHold_VSP;
 
 	 OMX_BOOL iBufferAllocFail;	 
 };

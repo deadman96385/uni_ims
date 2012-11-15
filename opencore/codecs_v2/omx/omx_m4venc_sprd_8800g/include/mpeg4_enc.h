@@ -38,12 +38,16 @@
 #include "mp4_basic.h"
 
 #include <sys/ioctl.h>
-#include "sprd_vsp.h"
+//#include "sprd_vsp.h"
 
 #include <binder/MemoryHeapIon.h>
 #define SPRD_ION_DEV "/dev/ion"
 
 #define SPRD_VSP_DRIVER "/dev/sprd_vsp"
+
+#define LOG_TAG "VSP"
+#include <utils/Log.h>
+#define  SCI_TRACE_LOW   ALOGI
 
 using namespace android;
 
@@ -80,6 +84,8 @@ typedef enum
     COMBINE_MODE_WITH_ERR_RES
 
 } MP4EncodingMode;
+
+//typedef enum {IVOP, PVOP, BVOP, SVOP, NVOP} VOP_TYPE_E;
 
 class Mpeg4Encoder_OMX
 {
@@ -186,10 +192,7 @@ class Mpeg4Encoder_OMX
         uint8*  iEncExtBuf;
         uint8*  iEncExtBuf_phy;		
 	sp<MemoryHeapIon> iEncExtPmemHeap;
-
- 	OMX_S32 iVsp_fd;
-        void *iVsp_addr;
-
+	
 	OMX_U32 iLogCount;		
 };
 

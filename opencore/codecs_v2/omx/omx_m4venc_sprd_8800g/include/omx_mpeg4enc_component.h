@@ -32,11 +32,11 @@
 #include "mpeg4_enc.h"
 #endif
 
-#if !defined(CHIP_8810)	
-#include "vsp_drv_sc8800g.h"
-#else
-#include "vsp_drv_sc8810.h"
-#endif
+//#if !defined(CHIP_8810)	
+//#include "vsp_drv_sc8800g.h"
+//#else
+//#include "vsp_drv_sc8810.h"
+//#endif
 
 
 // data structures for tunneling buffers

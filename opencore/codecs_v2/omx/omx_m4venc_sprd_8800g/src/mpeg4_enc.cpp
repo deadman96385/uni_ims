@@ -43,14 +43,15 @@
 #include <binder/MemoryHeapBase.h>
 
 
+
 #include "mmcodec.h"
 #include "mpeg4enc.h"
 #include "video_common.h"
-#if !defined(CHIP_8810)
-#include "vsp_drv_sc8800g.h"
-#else
-#include "vsp_drv_sc8810.h"
-#endif
+//#if !defined(CHIP_8810)	
+//#include "vsp_drv_sc8800g.h"
+//#else
+//#include "vsp_drv_sc8810.h"
+//#endif
 #include "mp4_basic.h"
 #include "mp4enc_mode.h"
 
@@ -125,12 +126,12 @@ void RGBA8888toYUV420(unsigned char *pIn, unsigned char *pOut, int height, int w
        int    i32_y00, i32_y01, i32_y10, i32_y11;
        int    i32_u00, i32_u01, i32_u10, i32_u11;
        int    i32_v00, i32_v01, i32_v10, i32_v11;
-
+	
     	pu8_rgbn_data   = pIn;
-
+	
     	pu8_y_data = pOut;
     	pu8_uv_data = pOut + height*width ;
-
+	
 	for(row = height; row != 0; row-=2 ){
 		/* Current Y plane row pointers */
         	pu8_yn = pu8_y_data;
@@ -140,7 +141,7 @@ void RGBA8888toYUV420(unsigned char *pIn, unsigned char *pOut, int height, int w
         	pu8_uv = pu8_uv_data;
 
         	pu8_rgbn = pu8_rgbn_data;
-
+		
 		for(col = width; col != 0; col-=2){
 		 		/* Get four RGB 565 samples from input data */
             			u32_pix1 = *( (unsigned int *) pu8_rgbn);
@@ -187,7 +188,7 @@ void RGBA8888toYUV420(unsigned char *pIn, unsigned char *pOut, int height, int w
             			/* Store chroma data */
             			pu8_uv[0] = (unsigned char)((i32_u00 + i32_u01 + i32_u10 + i32_u11 + 2) >> 2);
             			pu8_uv[1] = (unsigned char)((i32_v00 + i32_v01 + i32_v10 + i32_v11 + 2) >> 2);
-
+						
            			 /* Prepare for next column */
             			pu8_rgbn += 2*RGBA_32_SIZE;
             			 /* Update current Y plane line pointer*/
@@ -195,14 +196,14 @@ void RGBA8888toYUV420(unsigned char *pIn, unsigned char *pOut, int height, int w
             			/* Update next Y plane line pointer*/
             			pu8_ys += 2;
             			/* Update U plane line pointer*/
-            			pu8_uv +=2;
+            			pu8_uv +=2;										
 			}
 		/* Prepare pointers for the next row */
 		pu8_y_data += width*2;
 		pu8_uv_data += width;
 		pu8_rgbn_data += width*2*RGBA_32_SIZE;
 	}
-
+		
 }
 
 
@@ -211,16 +212,15 @@ Mpeg4Encoder_OMX::Mpeg4Encoder_OMX(class OmxComponentBase *pComp)
     SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mpeg4Encoder_OMX\n");
 
     ipOMXComponent = pComp;
-
+	
     iModTimeInitialized = OMX_FALSE;
-
+	
     iInitialized = OMX_FALSE;
     iYUVIn = NULL;
     iVIDInterBuf = NULL;
     iEncExtBuf = NULL;
-    iVsp_fd	 = -1;
     iLogCount	= 0;
-
+	
     // Create a default VOL header
     oscl_memset(iVolHeader, 0, DEFAULT_VOL_HEADER_LENGTH);
     oscl_memcpy(iVolHeader, (OsclAny*)DEFAULT_VOL_HEADER, DEFAULT_VOL_HEADER_LENGTH);
@@ -232,40 +232,16 @@ Mpeg4Encoder_OMX::Mpeg4Encoder_OMX(class OmxComponentBase *pComp)
 
 }
 
-static int VSP_reset_cb(int fd)
-{
-	//SCI_TRACE_LOW("VSP_reset_cb\n");
-	ioctl(fd,VSP_RESET,NULL);
-	return 0;
-}
-
-
-static int  vsp_acqure(int iVsp_fd)
-{
-   // SCI_TRACE_LOW("vsp_acqure\n");
-    int ret;
-    ret =  ioctl(iVsp_fd,VSP_ACQUAIRE,NULL);
-    if(ret){
-		SCI_TRACE_LOW("mp4enc VSP hardware timeout try again %d\n",ret);
-		ret =  ioctl(iVsp_fd,VSP_ACQUAIRE,NULL);
-		if(ret){
-   			 SCI_TRACE_LOW("mp4enc VSP hardware timeout give up %d\n",ret);
-			 return 1;
-		}
-    }
-    return 0;
-}
-
 static OMX_ERRORTYPE  Mp4EncGetProfileLevelId(
         OMX_U32 mode,
         OMX_U32 omxProfile,
         OMX_U32 omxLevel,
-        OMX_U8* pProfileLevelId)
+        OMX_U8* pProfileLevelId) 
 {
     uint8 profileLevelId = 0;
 
     SCI_TRACE_LOW("Mp4EncGetProfileLevelId: %d/%d/%d", mode, omxProfile, omxLevel);
-
+    
     if (mode == H263_MODE) {
 
         omxProfile = OMX_VIDEO_H263ProfileBaseline;
@@ -401,7 +377,7 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
             return OMX_ErrorUnsupportedSetting;
         }
     }
-
+	
     if(iEncodeMode==MODE_H263)
     {
 	encInfo.is_h263 = 1;
@@ -409,7 +385,7 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
     }else
     {
 	encInfo.is_h263 = 0;
-	encConfig.h263En = 0;
+	encConfig.h263En = 0;	
     }
 
     //Set the profile level of encoder
@@ -427,8 +403,8 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
     iFrameOrientation = aInputOrientationType.nRotation;
 
     encInfo.frame_height = ((iSrcHeight + 15) >> 4) << 4;
-    encInfo.frame_width = ((iSrcWidth+ 15) >> 4) << 4;
-
+    encInfo.frame_width = ((iSrcWidth+ 15) >> 4) << 4; 
+	
     if ((OMX_COLOR_FormatYUV420SemiPlanar == aInputParam.eColorFormat)||(OMX_COLOR_FormatAndroidOpaque == aInputParam.eColorFormat))
     {
         SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit aInputParam.eColorFormat %d \n",aInputParam.eColorFormat);
@@ -465,15 +441,15 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
 	 	int ret,phy_addr, buffer_size;
 	 	ret = iYUVInPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
 	 	if(ret) SCI_TRACE_LOW("iDecExtPmemHeap get_phy_addr_from_ion fail %d",ret);
-
+		
 		iYUVIn_phy =(uint8 *)phy_addr;
 		SCI_TRACE_LOW("Mpeg4Encoder_OMX yuvin mem pmempool %x,%x,%x,%x\n",iYUVInPmemHeap->getHeapID(),iYUVInPmemHeap->base(),phy_addr,buffer_size);
 	 	iYUVIn =(uint8 *) iYUVInPmemHeap->base();
     	}else
     	{
     		SCI_TRACE_LOW("Mpeg4Encoder_OMX yuvin mem pmempool  error\n");
-		return OMX_ErrorInsufficientResources;
-    	}
+		return OMX_ErrorInsufficientResources;	
+    	}		
     }
 
     iBps = aEncodeParam.nBitrate;
@@ -481,7 +457,7 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
     encConfig.FrameRate = iSrcFrameRate>>16;
     encConfig.QP_IVOP = aQuantType.nQpI;
     encConfig.QP_PVOP = aQuantType.nQpP;
-
+		
     switch (aRateControlType.eControlRate)
     {
         case OMX_Video_ControlRateDisable:
@@ -512,14 +488,14 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
 
      if(encInfo.frame_width>176)
 	 	encConfig.vbv_buf_size = encConfig.targetBitRate;
-
+	 	
      iVBVSize = encConfig.vbv_buf_size;
 
     //IPPPPPPPPPP, indicates I-frame followed by all P-frames
     if (0xFFFFFFFF == aEncodeMpeg4Param.nPFrames)
     {
-	//iIFrameInterval = -1;
-	iIFrameInterval = 15;
+	//iIFrameInterval = -1;	
+	iIFrameInterval = 15;	
     }
     else
     {
@@ -537,7 +513,7 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
     if (0 == (aEncodeMpeg4Param.nAllowedPictureTypes &
               (OMX_VIDEO_PictureTypeI | OMX_VIDEO_PictureTypeP)))
     {
-        SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit aEncodeMpeg4Param.nAllowedPictureTypes error\n");
+        SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit aEncodeMpeg4Param.nAllowedPictureTypes error\n");    
         return OMX_ErrorUnsupportedSetting;
     }
 
@@ -547,16 +523,16 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
     }
 
     if ((aEncodeMpeg4Param.nTimeIncRes << 16) > iSrcFrameRate)
-    {
+    { 
         iTimeIncRes = aEncodeMpeg4Param.nTimeIncRes;
-    }
+    } 
     else
     {
         //Default value
        iTimeIncRes = 1000;
     }
     encInfo.time_scale = iTimeIncRes;
-
+	
     if (iSrcFrameRate > 0)
     {
          iTickPerSrc = (iTimeIncRes << 16) / iSrcFrameRate;
@@ -568,27 +544,12 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
     //Checking the range of parameters that the encoder can't support here
     // and return OMX_ErrorUnsupportedSetting
 
-    /***** Initlaize the encoder *****/
-
-
-    if((iVsp_fd = open(SPRD_VSP_DRIVER,O_RDWR))<0)
-    {
-        SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit open vsp error\n");
-	return OMX_ErrorInsufficientResources;
-    }else
-    {
-        iVsp_addr = mmap(NULL,SPRD_VSP_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,iVsp_fd,0);
-	SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit  vsp addr %x\n",iVsp_addr);
-    }
-
-    VSP_SetVirtualBaseAddr((uint32)iVsp_addr);
-    VSP_reg_reset_callback(VSP_reset_cb,iVsp_fd);
-
+    /***** Initlaize the encoder *****/	
     uint32 vidInterBufSize = (encInfo.frame_width/16)*7*4*2+14*4+6*4*3+68   +200 +4;
     iVIDInterBuf = (uint8*) oscl_malloc(vidInterBufSize);
     if (NULL == iVIDInterBuf)
     {
-       	     SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit iVIDInterBuf alloc error\n");
+       	     SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit iVIDInterBuf alloc error\n");       
             return OMX_ErrorInsufficientResources;
     }
     uint32 vidExtBufSize = encInfo.frame_width* encInfo.frame_height*3/2*2  + ONEFRAME_BITSTREAM_BFR_SIZE + 300;
@@ -599,54 +560,44 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
 	 	int ret,phy_addr, buffer_size;
 	 	ret = iEncExtPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
 	 	if(ret) SCI_TRACE_LOW("iDecExtPmemHeap get_phy_addr_from_ion fail %d",ret);
-
+		
 		iEncExtBuf_phy =(uint8 *)phy_addr;
 		SCI_TRACE_LOW("Mpeg4Encoder_OMX ext mem pmempool %x,%x,%x,%x\n",iEncExtPmemHeap->getHeapID(),iEncExtPmemHeap->base(),phy_addr,buffer_size);
 	 	iEncExtBuf =(uint8 *) iEncExtPmemHeap->base();
     	}else
     	{
     		SCI_TRACE_LOW("Mpeg4Encoder_OMX ext  mem pmempool  error\n");
-		return OMX_ErrorInsufficientResources;
+		return OMX_ErrorInsufficientResources;	
     	}
     }
     MMCodecBuffer 	InterMemBfr,ExtaMemBfr;
-
+	
     InterMemBfr.common_buffer_ptr = (uint8 *)(((int) iVIDInterBuf+3)&(~0x3));
     InterMemBfr.size = vidInterBufSize-4;
     ExtaMemBfr.common_buffer_ptr = iEncExtBuf;
     ExtaMemBfr.common_buffer_ptr_phy = iEncExtBuf_phy;
     ExtaMemBfr.size	= vidExtBufSize;
-    SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit: h263 %d,width %d,height %d,tiemscale %d,iIFrameInterval %d\n",encInfo.is_h263,encInfo.frame_width,encInfo.frame_height,encInfo.time_scale,iIFrameInterval);
-
-    int vsp_stat = vsp_acqure(iVsp_fd);
-    if(vsp_stat)
-    {
-	return OMX_ErrorInsufficientResources;
-     }
-    ioctl(iVsp_fd,VSP_ENABLE,NULL);
-    ioctl(iVsp_fd,VSP_RESET,NULL);
-
+    SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit: h263 %d,width %d,height %d,tiemscale %d,iIFrameInterval %d\n",encInfo.is_h263,encInfo.frame_width,encInfo.frame_height,encInfo.time_scale,iIFrameInterval);  	
+    		
     MMEncRet ret =  MP4EncInit(&InterMemBfr, &ExtaMemBfr,&encInfo);
     int status;
     if(ret == MMENC_OK)
         status = 	PV_TRUE;
     else
-	status = 	PV_FALSE;
+	status = 	PV_FALSE;		
     if (PV_FALSE == status)
     {
-        ioctl(iVsp_fd,VSP_DISABLE,NULL);
-        ioctl(iVsp_fd,VSP_RELEASE,NULL);
         iInitialized = OMX_FALSE;
-        SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit MP4EncInit error\n");
+        SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit MP4EncInit error\n");  		
         return OMX_ErrorBadParameter;
     }
     //encConfig.RateCtrlEnable = 0;
-    SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit: RateCtrlEnable %d,targetBitRate %d,FrameRate %d,QP_IVOP %d,QP_PVOP %d,profileAndLevel %d\n",encConfig.RateCtrlEnable,encConfig.targetBitRate,encConfig.FrameRate,encConfig.QP_IVOP,encConfig.QP_PVOP,encConfig.profileAndLevel);
+    SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit: RateCtrlEnable %d,targetBitRate %d,FrameRate %d,QP_IVOP %d,QP_PVOP %d,profileAndLevel %d\n",encConfig.RateCtrlEnable,encConfig.targetBitRate,encConfig.FrameRate,encConfig.QP_IVOP,encConfig.QP_PVOP,encConfig.profileAndLevel);  		
     MP4EncSetConf(&encConfig);
-
+	
     iInitialized = OMX_TRUE;
     iNextModTime = 0;
-
+	
     iEncSycFrame = OMX_TRUE;
     iFrameTypeCounter = 0;
 
@@ -663,14 +614,11 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
 	MMEncOut encOut;
 
 	MP4EncGenHeader(&encOut);
-
+	
         iVolHeaderSize = encOut.strmSize;
         oscl_memcpy(iVolHeader, (OsclAny*)encOut.pOutBuf, iVolHeaderSize);
     }
-
-    ioctl(iVsp_fd,VSP_DISABLE,NULL);
-    ioctl(iVsp_fd,VSP_RELEASE,NULL);
-
+	
     //Updating the profile and level from the encoder after initialization
     if (MODE_MPEG4 == iEncMode)
     {
@@ -682,8 +630,8 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
     {
             aProfileLevel->eLevel = OMX_VIDEO_H263Level10;
     }
-
-    SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit ok\n");
+	
+    SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncInit ok\n");  
     return OMX_ErrorNone;
 
 }
@@ -706,11 +654,11 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4UpdateBitRate(OMX_U32 aEncodedBitRate)
     if (OMX_TRUE == iInitialized)
     {
     	MMEncConfig config;
-   	MP4EncGetConf(&config);
+   	MP4EncGetConf(&config);	
     	config.targetBitRate = aEncodedBitRate;
 	iBps = aEncodedBitRate;
-	int vid_pitch = ((iSrcWidth + 15) >> 4) << 4;
-	if(vid_pitch>176){
+	int vid_pitch = ((iSrcWidth + 15) >> 4) << 4;	
+	if(vid_pitch>176){	
 		config.vbv_buf_size = aEncodedBitRate;
 		iVBVSize  = aEncodedBitRate;
 	}else{
@@ -718,7 +666,7 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4UpdateBitRate(OMX_U32 aEncodedBitRate)
 		iVBVSize  = aEncodedBitRate*0.5;
 	}
     	MP4EncSetConf(&config);
-	Status = OMX_TRUE;
+	Status = OMX_TRUE;	
     }
     return  Status;
 }
@@ -733,10 +681,10 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4UpdateFrameRate(OMX_U32 aEncodeFramerate)
     if (OMX_TRUE == iInitialized)
     {
         MMEncConfig config;
-   	MP4EncGetConf(&config);
+   	MP4EncGetConf(&config);	
         config.FrameRate = (aEncodeFramerate / (1 << 16));
     	MP4EncSetConf(&config);
-	Status = OMX_TRUE;
+	Status = OMX_TRUE;	
     }
     return Status;
 
@@ -750,7 +698,7 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4UpdateIFrameInterval(OMX_U32 aIntraPeriod)
     if (OMX_TRUE == iInitialized)
     {
          iIFrameInterval = aIntraPeriod;
-	 Status = OMX_TRUE;
+	 Status = OMX_TRUE;	
     }
     return Status;
 
@@ -805,14 +753,14 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
     *aSyncFlag = OMX_FALSE;
     *aBufferOverRun = OMX_FALSE;
 
-   // SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo  %x,%x,%d,%d\n",aInBuffer,aInBuffer_phy,aInBufSize,(int32) (aInTimeStamp / 1000));
-
+   // SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo  %x,%x,%d,%d\n",aInBuffer,aInBuffer_phy,aInBufSize,(int32) (aInTimeStamp / 1000));	
+	
     if (OMX_FALSE == iModTimeInitialized)
     {
         if( -12 != getpriority(PRIO_PROCESS, 0)){
 	  	setpriority(PRIO_PROCESS, 0, -12);//@jgdu
-        }
-
+        }   
+		
         iNextModTime = aInTimeStamp/1000;
         iModTimeInitialized = OMX_TRUE;
 	 iBs_remain_len = 0;
@@ -822,19 +770,19 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
     }
 
     iBs_remain_len += iLastPicBytesEncoded*8 - (aInTimeStamp-iLastPicTime)*MAX((iBps-2000),2000)/1000000;
-    if(iLogCount%4==0){
+    if(iLogCount%4==0){	
     	SCI_TRACE_LOW("Mp4Enc [%d,%lld,%d][%lld,%lld] %d",iLastPicBytesEncoded*8,(aInTimeStamp-iLastPicTime)*MAX((iBps-2000),2000)/1000000,iBs_remain_len,aInTimeStamp,(aInTimeStamp-iLastPicTime),iFrameTypeCounter);
     }
     iLogCount++;
-
-    if(iBs_remain_len>=(OMX_S32)iVBVSize)
+	
+    if(iBs_remain_len>=(OMX_S32)iVBVSize) 
 		iBs_remain_len = iVBVSize;
     if(iBs_remain_len<0)
 		iBs_remain_len = 0;
-/*
+/*	
     if((((iSrcWidth + 15) >> 4) << 4)>176)
 		iBs_remain_len =  iVBVSize/5;
-*/
+*/	
 
     /* Input Buffer Size Check
      * Input buffer size should be equal to one frame, otherwise drop the frame
@@ -868,8 +816,8 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
 
     // iNextModTime is in milliseconds (although it's a 64 bit value) whereas
     // aInTimestamp is in microseconds
-
-    OMX_U32 intervalms = (iTickPerSrc*1000/iTimeIncRes);
+ 
+    OMX_U32 intervalms = (iTickPerSrc*1000/iTimeIncRes);	
 
 #if 0
     SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo, iNextModTime=%lld,aInTimeStamp=%lld,iPreSrcDitherms=%lld, interval=%d. \n",
@@ -887,61 +835,48 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
 
         if((static_cast<OmxComponentMpeg4EncAO * > (ipOMXComponent)->iStoreMetaDataBuffer))
         {
-       	        OMX_U32 type = *(OMX_U32 *) aInBuffer;
-        	if(type == kMetadataBufferTypeGrallocSource){
-			GraphicBufferMapper &mapper = GraphicBufferMapper::get();
-			buffer_handle_t buf = *((buffer_handle_t *) (aInBuffer + 4));
-    			int width = ((iSrcWidth + 15) >> 4) << 4;
-    			int height = ((iSrcHeight + 15) >> 4) << 4;
-    			Rect bounds(width, height);
-    			void *vaddr;
-    			if(mapper.lock(buf, GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_NEVER, bounds, &vaddr))
-    			{
-            			SCI_TRACE_LOW("Mpeg4Encoder_OMX mapper.lock fail %x",buf);
-            			return OMX_FALSE;
-    			}
-			//todo format conversion for MetaDataBuffer
-			SCI_TRACE_LOW("OMX_COLOR_FormatAndroidOpaque %x",vaddr);
-			CopyToYUVIn((uint8 *)vaddr, iSrcWidth, iSrcHeight,((iSrcWidth + 15) >> 4) << 4, ((iSrcHeight + 15) >> 4) << 4);
-			if(mapper.unlock(buf))
-			{
-            			SCI_TRACE_LOW("Mpeg4Encoder_OMX mapper.unlock fail %x",buf);
-				return OMX_FALSE;
-			}
-                	iVideoIn = iYUVIn;
-			iVideoIn_phy = iYUVIn_phy;
-        	}else if(type == kMetadataBufferTypeCameraSource){
-        		sp<IMemory> frame = (IMemory *)(*((int *)(aInBuffer + 4)));
-		        int  phy_addr;
-	 		ssize_t offset = 0;
-    	 		size_t size = 0;
-    		        sp<IMemoryHeap> heap = frame->getMemory(&offset, &size);
-	                int fd = heap->getHeapID();
-
-		        int ret,heap_phy_addr, heap_size;
-	                ret = MemoryHeapIon::Get_phy_addr_from_ion(fd,&heap_phy_addr, &heap_size);
-	                if(ret){
-				SCI_TRACE_LOW("Get_phy_addr_from_ion fail %d",ret);
-				return OMX_FALSE;
-	                }
-			phy_addr = heap_phy_addr+offset;
-    	 		SCI_TRACE_LOW("Camera meta: ID = %d, base = %p, offset = %p, size = %d pointer %p,phy addr %p", heap->getHeapID(), heap->base(), offset, size, frame->pointer(),phy_addr);
-        		iVideoIn = (uint8*) frame->pointer();
-			iVideoIn_phy =(uint8*) phy_addr;
-        	}else{
+		GraphicBufferMapper &mapper = GraphicBufferMapper::get();        
+		OMX_U32 type = *(OMX_U32 *) aInBuffer;
+		if(type != kMetadataBufferTypeGrallocSource)
+		{
 			SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo kMetadataBufferTypeGrallocSource err %d\n",type);
-    	 		return OMX_FALSE;
-        	}
+    	 		return OMX_FALSE;			
+		}
+		buffer_handle_t buf = *((buffer_handle_t *) (aInBuffer + 4));	
+    		int width = ((iSrcWidth + 15) >> 4) << 4;
+    		int height = ((iSrcHeight + 15) >> 4) << 4;
+    		Rect bounds(width, height);
+    		void *vaddr;
+    		if(mapper.lock(buf, GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_NEVER, bounds, &vaddr))
+    		{
+            		SCI_TRACE_LOW("Mpeg4Encoder_OMX mapper.lock fail %x",buf);
+            		return OMX_FALSE;			
+    		}
+		//todo format conversion for MetaDataBuffer
+		SCI_TRACE_LOW("OMX_COLOR_FormatAndroidOpaque %x",vaddr);
+		CopyToYUVIn((uint8 *)vaddr, iSrcWidth, iSrcHeight,((iSrcWidth + 15) >> 4) << 4, ((iSrcHeight + 15) >> 4) << 4);
+		if(mapper.unlock(buf))
+		{
+            		SCI_TRACE_LOW("Mpeg4Encoder_OMX mapper.unlock fail %x",buf);	
+			return OMX_FALSE;			
+		}
+              iVideoIn = iYUVIn;
+		iVideoIn_phy = iYUVIn_phy;		
         }
         else
         {
-        	if((iSrcWidth & 0xF) || (iSrcHeight & 0xF) ||(!(static_cast<OmxComponentMpeg4EncAO * > (ipOMXComponent))->iNumberOfPmemBuffers)) { /* iSrcWidth or iSrcHeight is not multiple of 16 or buffer allocated not by component*/
+        	if((iSrcWidth & 0xF) || (iSrcHeight & 0xF)){ /* iSrcWidth or iSrcHeight is not multiple of 16 */
                 	CopyToYUVIn(aInBuffer, iSrcWidth, iSrcHeight,((iSrcWidth + 15) >> 4) << 4, ((iSrcHeight + 15) >> 4) << 4);
                 	iVideoIn = iYUVIn;
-			iVideoIn_phy = iYUVIn_phy;
-        	}else{
-              		iVideoIn = aInBuffer;
-			iVideoIn_phy = (uint8*)(static_cast<OmxComponentMpeg4EncAO * > (ipOMXComponent))->FindPhyAddr((uint32)aInBuffer);
+			iVideoIn_phy = iYUVIn_phy;					
+        	}else{		
+              	iVideoIn = aInBuffer;
+			if((static_cast<OmxComponentMpeg4EncAO * > (ipOMXComponent))->iNumberOfPmemBuffers){//buffer allocated by component
+				iVideoIn_phy = (uint8*)(static_cast<OmxComponentMpeg4EncAO * > (ipOMXComponent))->FindPhyAddr((uint32)aInBuffer);				
+			}else{
+				//LOGI("aInBuffer_phy %x",aInBuffer_phy);
+				iVideoIn_phy = aInBuffer_phy;
+			}
         	}
          }
 
@@ -968,8 +903,8 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
 	        //SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo IVOP %d,%d,%d\n",iFrameTypeCounter,iIFrameInterval,(int32) (aInTimeStamp / 1000));
 	}else
 	{
-		iPredType = PVOP;
-	        //SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo PVOP %d,%d,%d\n",iFrameTypeCounter,iIFrameInterval,(int32) (aInTimeStamp / 1000));
+		iPredType = PVOP;		
+	        //SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo PVOP %d,%d,%d\n",iFrameTypeCounter,iIFrameInterval,(int32) (aInTimeStamp / 1000));		
 	}
         /* with backward-P or B-Vop this timestamp must be re-ordered */
         *aOutTimeStamp = aInTimeStamp;
@@ -985,20 +920,10 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
 	vid_in.p_src_v = vid_in.p_src_u + (vid_height * vid_pitch>>2);
 	vid_in.p_src_y_phy = iVideoIn_phy;
 	vid_in.p_src_u_phy = iVideoIn_phy + vid_height * vid_pitch;
-	vid_in.p_src_v_phy = vid_in.p_src_u_phy + (vid_height * vid_pitch>>2);
+	vid_in.p_src_v_phy = vid_in.p_src_u_phy + (vid_height * vid_pitch>>2);	
 
-	int vsp_stat = vsp_acqure(iVsp_fd);
-	if(vsp_stat)
-	{
-	    *aOutputLength = 0;
-            return OMX_FALSE;
-	}
-        ioctl(iVsp_fd,VSP_ENABLE,NULL);
-        ioctl(iVsp_fd,VSP_RESET,NULL);
         MMEncRet ret =  MP4EncStrmEncode(&vid_in, &vid_out);
-        ioctl(iVsp_fd,VSP_DISABLE,NULL);
-        ioctl(iVsp_fd,VSP_RELEASE,NULL);
-
+	
 	Size =  vid_out.strmSize;
 	if(ret == MMENC_OK)
 		status = 	PV_TRUE;
@@ -1020,7 +945,7 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
         {
             // iPreSrcDitherms:  if pre src is later than the expect time, >0; else, <0.
             iPreSrcDitherms = (aInTimeStamp/1000 - iNextModTime);
-            if( ( iPreSrcDitherms > (OMX_TICKS)(intervalms<<1) ) ||
+            if( ( iPreSrcDitherms > (OMX_TICKS)(intervalms<<1) ) || 
                 ( iPreSrcDitherms + (OMX_TICKS)(intervalms<<1) < 0) )
             {
                 /* reset the dither if it's too large. */
@@ -1039,7 +964,7 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
             {
             	if ((OMX_U32) Size > *aOutputLength) // overrun buffer is used by the encoder
             	{
-            		SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo buffer overrun:%x,%d,%d\n",vid_out.pOutBuf,Size,*aOutputLength);
+            		SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo buffer overrun:%x,%d,%d\n",vid_out.pOutBuf,Size,*aOutputLength);    
                 	*aOverBufferPointer = vid_out.pOutBuf;
                 	*aBufferOverRun = OMX_TRUE;
             	}else
@@ -1056,19 +981,19 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
                     //Its an I Frame, mark the sync flag as true
                     *aSyncFlag = OMX_TRUE;
                 }
-		*aOutputLength = Size;
+		*aOutputLength = Size;		
             }
-	    //SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo encode ok %d\n",Size);
+	    //SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo encode ok %d\n",Size);   
 	     iLastPicTime = aInTimeStamp;
-	     iLastPicBytesEncoded = *aOutputLength;
+	     iLastPicBytesEncoded = *aOutputLength;	 	
             return OMX_TRUE;
         }
         else
         {
             *aOutputLength = 0;
 //	     iLastPicTime = aInTimeStamp;
-	     iLastPicBytesEncoded = *aOutputLength;
-    	    SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo encode error\n");
+	     iLastPicBytesEncoded = *aOutputLength;				
+    	    SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo encode error\n");        
             return OMX_FALSE;
         }
     }
@@ -1076,7 +1001,7 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
     {
         *aOutputLength = 0;
 //	 iLastPicTime = aInTimeStamp;
-	 iLastPicBytesEncoded = *aOutputLength;
+	 iLastPicBytesEncoded = *aOutputLength;			
 	 SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo frame skip %lld ms,%lld us,%d ms\n",iNextModTime,aInTimeStamp,intervalms);
         return OMX_TRUE;
     }
@@ -1109,14 +1034,6 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncDeinit()
 	    oscl_free(iVIDInterBuf);
 	    iVIDInterBuf = NULL;
 	}
-
-	 if(iVsp_fd>=0)
-	 {
-	     munmap(iVsp_addr,SPRD_VSP_MAP_SIZE);
-	     close(iVsp_fd);
-	     iVsp_fd = -1;
-	 }
-
     }
     return OMX_ErrorNone;
 }
@@ -1139,7 +1056,7 @@ void Mpeg4Encoder_OMX::CopyToYUVIn(uint8 *YUV, Int width, Int height, Int width_
     }
 
     UChar *y_src = YUV;
-    UChar *y_dst = iYUVIn;
+    UChar *y_dst = iYUVIn;	
     for(int i=0;i<height;i++)
     {
     	oscl_memcpy(y_dst, y_src, width);
@@ -1148,7 +1065,7 @@ void Mpeg4Encoder_OMX::CopyToYUVIn(uint8 *YUV, Int width, Int height, Int width_
     }
 
     UChar *uv_src = YUV +width*height ;
-    UChar *uv_dst = iYUVIn + width_16*height_16;
+    UChar *uv_dst = iYUVIn + width_16*height_16;	
     for(int i=0;i<height/2;i++)
     {
     	oscl_memcpy(uv_dst, uv_src, width);

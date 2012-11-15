@@ -38,53 +38,7 @@
 #include "mmcodec.h"
 #include "h264dec.h"
 #include "video_common.h"
-#if !defined(CHIP_8810)
-#include "vsp_drv_sc8800g.h"
-#else
-#include "vsp_drv_sc8810.h"
-#endif
 using namespace android;
-
-/*************************************/
-/* functions needed for video engine */
-/*************************************/
-static int VSP_reset_cb(int fd)
-{
-	//SCI_TRACE_LOW("VSP_reset_cb\n");
-//	ioctl(fd,VSP_ENABLE,NULL);
-	return 0;
-}
-
-static int VSP_Start_CQM_cb(int fd)
-{
-//	SCI_TRACE_LOW("VSP_Start_CQM_cb: E\n");
-	ioctl(fd,VSP_START,NULL);
-//	SCI_TRACE_LOW("VSP_Start_CQM_cb: X\n");
-	return 0;
-}
-
-static int VSP_Acquaire_cb(int fd)
-{
-	int ret ;
-//	SCI_TRACE_LOW("VSP_Acquaire_cb: E\n");
-
-	ret =  ioctl(fd,VSP_ACQUAIRE,NULL);
-	if(ret)
-	{
-		SCI_TRACE_LOW("avcdec VSP hardware timeout try again %d\n",ret);	
-		ret =  ioctl(fd,VSP_ACQUAIRE,NULL);
-		if(ret)
-		{
-			SCI_TRACE_LOW("avcdec VSP hardware timeout give up %d\n",ret);
-		 	return 1;
-		}		 
-	}	
-	
-	ioctl(fd,VSP_ENABLE,NULL);
-	ioctl(fd,VSP_RESET,NULL);
-//	SCI_TRACE_LOW("VSP_Acquaire_cb: X\n");
-	return 0;
-}
  
 static int VSP_bind_cb(void *userdata, void *pHeader)
 {
@@ -185,11 +139,11 @@ int AvcDecoder_OMX::ActivateSPS_OMX(void* aUserData, uint width,uint height, uin
 	uint32 mb_y = height/16;
 	uint32 ext_buffer_size;
         SCI_TRACE_LOW("AvcDecoder_OMX::ActivateSPS_OMX width %d,height %d\n",width,height);
+	if (!pAvcDecoder_OMX->iDecH264WasSw)
+	{
 #if !defined(CHIP_8810)		
 		ext_buffer_size =  mb_x*32 + 512 ;// +mb_x*mb_y*62*4 + mb_x*mb_y*1+ (16+1)*(3+7+18)*4 + 1024 ;
 #else
-//	ext_buffer_size = mb_x*mb_y*256*8 + 4000*4 + mb_x*32 + (2+mb_y)*mb_x*352 + 
-//			17*4 + 17*4 + 17*4 + 17*(7*4+ 20496 + mb_x*mb_y*16*(4+4+1+1+4+4)) + mb_x*mb_y*1 + 10*1024+500*1024;
 	ext_buffer_size = 100*40*4 /*vld_cabac_table_ptr*/
 				+ mb_x*32 /*ipred_top_line_buffer*/
 				//+ 500*1024 /*frame_bistrm_ptr*/
@@ -220,13 +174,11 @@ int AvcDecoder_OMX::ActivateSPS_OMX(void* aUserData, uint width,uint height, uin
     		SCI_TRACE_LOW("AvcDecoder_OMX ext mem pmempool  error\n");
 		return OMX_FALSE;	
     	}
+	}
 #if !defined(CHIP_8810)		
 	ext_buffer_size = mb_x*mb_y*62*4 + mb_x*mb_y*1+ (16+1)*(3+7+18)*4 + 1024;
 #else
-	//ext_buffer_size = mb_x*mb_y*256*8 + 4000*4 + mb_x*32 + (2+mb_y)*mb_x*352 + 
-	//		17*4 + 17*4 + 17*4 + 17*(7*4+ 20496 + mb_x*mb_y*16*(4+4+1+1+4+4)) + mb_x*mb_y*1 + 10*1024;
 	ext_buffer_size =// mb_x*mb_y*256*16 /*ping pong cmd_data, cmd_info*/
-				//mb_x*mb_y*256*8 /*cmd_data, cmd_info*/
 				+ (2*+mb_y)*mb_x*8 /*MB_INFO*/
 				+ (mb_x*mb_y*16) /*i4x4pred_mode_ptr*/
 				+ (mb_x*mb_y*16) /*direct_ptr*/
@@ -238,7 +190,6 @@ int AvcDecoder_OMX::ActivateSPS_OMX(void* aUserData, uint width,uint height, uin
 				+10*1024; //rsv
 #endif
         pAvcDecoder_OMX->iDecoder_ext_cache_buffer_ptr = oscl_malloc(ext_buffer_size+4);
-        //LOGI("iDecoder_ext_cache_buffer_ptr %x,%x",pAvcDecoder_OMX->iDecoder_ext_cache_buffer_ptr,ext_buffer_size);
         if(pAvcDecoder_OMX->iDecoder_ext_cache_buffer_ptr==NULL)
         {
             pAvcDecoder_OMX->iBufferAllocFail = OMX_TRUE;
@@ -248,9 +199,7 @@ int AvcDecoder_OMX::ActivateSPS_OMX(void* aUserData, uint width,uint height, uin
         pAvcDecoder_OMX->iExternalBufferWasSet = OMX_TRUE;
         codec_buf.common_buffer_ptr =(uint8 *)( ((int)pAvcDecoder_OMX->iDecoder_ext_cache_buffer_ptr+3)&(~0x3));
         codec_buf.size = ext_buffer_size;
-        //#if !defined(CHIP_8810)
         H264DecMemCacheInit(&codec_buf);
-//#endif
     }	
 
 
@@ -299,17 +248,6 @@ OMX_BOOL AvcDecoder_OMX::InitializeVideoDecode_OMX()
         iStreamBufferWasSet = OMX_TRUE;
     }
 
-    if (iVsp_fd == -1)
-    {
-    	if((iVsp_fd = open(SPRD_VSP_DRIVER,O_RDWR))<0)
-    	{
-			return OMX_FALSE;
-    	}else
-    	{
-        	iVsp_addr = mmap(NULL,SPRD_VSP_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,iVsp_fd,0);
-		}
-    }	
-    SCI_TRACE_LOW("AvcDecoder_OMX::InitializeVideoDecode vsp addr %x\n",iVsp_addr);	
 
     MMCodecBuffer codec_buf;
     MMDecVideoFormat video_format;	
@@ -330,12 +268,7 @@ OMX_BOOL AvcDecoder_OMX::InitializeVideoDecode_OMX()
     video_format.frame_width = 0;
     video_format.frame_height = 0;	
     video_format.p_extra = NULL;
-//    video_format.p_extra_phy = NULL;	
     video_format.i_extra = 0;
-    VSP_SetVirtualBaseAddr((uint32)iVsp_addr);
-    VSP_reg_reset_callback(VSP_reset_cb,iVsp_fd);
-    VSP_reg_start_cqm_callback(VSP_Start_CQM_cb);
-    VSP_reg_acquaire_callback(VSP_Acquaire_cb);	
     H264Dec_RegBufferCB(VSP_bind_cb,VSP_unbind_cb,(void *)this);
     H264Dec_RegSPSCB( AvcDecoder_OMX::ActivateSPS_OMX);
 
@@ -470,8 +403,6 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
         return OMX_FALSE; 
     }
 
-
-
     GraphicBufferMapper &mapper = GraphicBufferMapper::get();
     if((static_cast<OpenmaxAvcAO * > (ipOMXComponent))->iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX]){
     	int width = aPortParam->format.video.nStride;
@@ -510,31 +441,12 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
     ((uint8 *) iStream_buffer_ptr)[3] = 0x1;
     oscl_memcpy((void *)iStream_buffer_ptr+4, pNalBuffer,NalSize);
     dec_in.pStream = (uint8 *) iStream_buffer_ptr;
-//    dec_in.pStream_phy = (uint8 *) iStreamPhyAddr;
     dec_in.dataLen = NalSize+4;
     dec_in.beLastFrm = 0;
     dec_in.expected_IVOP = iSkipToIDR;
     dec_in.beDisplayed = 1;
     dec_in.err_pkt_num = 0;
 
-#if 0
-    if(!iHold_VSP)
-    {
-    	int ret  =  ioctl(iVsp_fd,VSP_ACQUAIRE,NULL);
-    	if(ret){
-		SCI_TRACE_LOW("avcdec VSP hardware timeout try again %d\n",ret);	
-		ret =  ioctl(iVsp_fd,VSP_ACQUAIRE,NULL);
-		if(ret){
-   			 SCI_TRACE_LOW("avcdec VSP hardware timeout give up %d\n",ret);
-		 	 return OMX_FALSE;
-		}		 
-    	}
-	iHold_VSP = 1;
-	ioctl(iVsp_fd,VSP_ENABLE,NULL);
-	ioctl(iVsp_fd,VSP_RESET,NULL);	
-    }
-    //ioctl(iVsp_fd,VSP_ENABLE,NULL);
-#endif
     dec_out.frameEffective = 0;	
 
 #if PROFILING_ON
@@ -547,9 +459,6 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
         OMX_U32 EndTime = OsclTickCount::TickCount();
         iTotalTicks += (EndTime - StartTime);
 #endif
-
-   // ioctl(iVsp_fd,VSP_DISABLE,NULL);
-   // ioctl(iVsp_fd,VSP_RELEASE,NULL);	
 
     if((static_cast<OpenmaxAvcAO * > (ipOMXComponent))->iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX]){
 	if(mapper.unlock((const native_handle_t*)aOutBuffer->pBuffer))
@@ -600,8 +509,6 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
         iNewSPSActivation = OMX_FALSE;
      }
  
-
-
     if (Status == MMDEC_OK)
     {
         //iSkipToIDR = OMX_FALSE;
@@ -620,9 +527,6 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
             *need_new_pic = OMX_TRUE;
 			iSkipToIDR = OMX_FALSE;
 
-//	     iHold_VSP = 0;
-//	     ioctl(iVsp_fd,VSP_DISABLE,NULL);
-//             ioctl(iVsp_fd,VSP_RELEASE,NULL);
 		}
 		return OMX_TRUE;
     }else
@@ -645,22 +549,13 @@ OMX_ERRORTYPE AvcDecoder_OMX::AvcDecDeinit_OMX()
 	oscl_free(iDecoder_int_buffer_ptr);
 	iDecoder_int_buffer_ptr = NULL;
     }
-  //  if(iHold_VSP&&(iVsp_fd>=0))	
-    if(iVsp_fd>=0)			
-    {
- 	ioctl(iVsp_fd,VSP_DISABLE,NULL);
-        ioctl(iVsp_fd,VSP_RELEASE,NULL);	   	
-    }
-    if(iVsp_fd>=0)
-    {
-       munmap(iVsp_addr,SPRD_VSP_MAP_SIZE);	
-	ioctl(iVsp_fd,VSP_DISABLE,NULL); 	
-	close(iVsp_fd);	
-	iVsp_fd = -1;
-    }
+    H264DecRelease();
     if(iExternalBufferWasSet)
     {
-        iDecExtPmemHeap.clear();
+		if (!iDecH264WasSw)
+    	{
+        	iDecExtPmemHeap.clear();
+    	}
 	 if(iDecoder_ext_cache_buffer_ptr)
 	 {
 		oscl_free(iDecoder_ext_cache_buffer_ptr);
@@ -785,8 +680,6 @@ AVCDec_Status AvcDecoder_OMX::GetNextFullNAL_OMX(uint8** aNalBuffer, int* aNalSi
 void AvcDecoder_OMX::ResetDecoder()
 {
     SCI_TRACE_LOW("AvcDecoder_OMX::ResetDecoder\n");
-    if(iVsp_fd>=0)
-		VSP_reset_cb(iVsp_fd);
     ReleaseReferenceBuffers();
 }
 

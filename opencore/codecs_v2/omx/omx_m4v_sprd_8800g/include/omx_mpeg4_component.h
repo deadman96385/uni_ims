@@ -50,11 +50,11 @@ enum
     MODE_MPEG4
 };
 
-#if !defined(CHIP_8810)
-#include "vsp_drv_sc8800g.h"
-#else
-#include "vsp_drv_sc8810.h"
-#endif
+//#if !defined(CHIP_8810)
+//#include "vsp_drv_sc8800g.h"
+//#else
+//#include "vsp_drv_sc8810.h"
+//#endif
 using namespace android;
 #define MPEG4_PMEM_HEAP_NUM 20
 

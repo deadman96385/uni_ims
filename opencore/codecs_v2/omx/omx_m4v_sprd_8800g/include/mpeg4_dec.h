@@ -34,6 +34,11 @@
 
 #define SPRD_VSP_DRIVER "/dev/sprd_vsp"
 
+#define LOG_TAG "VSP"
+#include <utils/Log.h>
+#define  SCI_TRACE_LOW   ALOGI
+
+
 using namespace android;
 
 #if !defined(CHIP_8810)		
@@ -65,7 +70,7 @@ class Mpeg4Decoder_OMX
 
         OMX_S32 InitializeVideoDecode(OMX_S32* aWidth, OMX_S32* aHeight,
                                       OMX_U8** aBuffer, OMX_S32* aSize, OMX_S32 mode,
-                                      OMX_BOOL aDeBlocking);
+                                      OMX_BOOL aDeBlocking, OMX_BOOL *notSupport);
 
         OMX_ERRORTYPE Mp4DecInit();
 
@@ -98,14 +103,13 @@ class Mpeg4Decoder_OMX
 #endif
 
 	int iDecoder_sw_flag;
+	int iDecoder_sw_vt_flag;
 
     private:
 
        void *iDecoder_int_buffer_ptr;
 	void *iDecoder_ext_cache_buffer_ptr;
 	void *iStream_buffer_ptr;
-       OMX_S32 iVsp_fd;
-       void *iVsp_addr;
        OMX_BOOL iExternalBufferWasSet;
        OMX_BOOL iStreamBufferWasSet;
 

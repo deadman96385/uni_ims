@@ -2096,7 +2096,8 @@ OMX_ERRORTYPE OpenmaxMpeg4AO::ComponentInit()
 	    SCI_TRACE_LOW("DeBlocking %d",DeBlocking);
 		
             //Pass dummy pointers during initializations
-            if (OMX_TRUE != ipMpegDecoderObject->InitializeVideoDecode(&Width, &Height, &Buff, &Size, iDecMode, DeBlocking))
+             OMX_BOOL notSupport = OMX_FALSE;
+            if (OMX_TRUE != ipMpegDecoderObject->InitializeVideoDecode(&Width, &Height, &Buff, &Size, iDecMode, DeBlocking, &notSupport))
             {
                 Status = OMX_ErrorInsufficientResources;
             }
