@@ -1,0 +1,7 @@
+/*mpeg4dec_acdc_pred.h*/
+#ifndef _MPEG4DEC_ACDC_PRED_H_
+#define _MPEG4DEC_ACDC_PRED_H_
+
+void mpeg4dec_acdc_pred ();
+
+#endif
