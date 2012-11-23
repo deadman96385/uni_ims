@@ -174,6 +174,8 @@ static int getSmsChannel();
 extern const char * requestToString(int request);
 static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_Token t);
 static void getSmsState(int channelID) ;
+static void convertBinToHex(char *bin_ptr, int length, char *hex_ptr);
+static int convertHexToBin(const char *hex_ptr, int length, char *bin_ptr);
 
 /*** Static Variables ***/
 static const RIL_RadioFunctions s_callbacks = {
@@ -2467,6 +2469,86 @@ error1:
     return;
 }
 
+#define BIT0 (1 << 0)
+#define BIT1 (1 << 1)
+#define BIT2 (1 << 2)
+#define BIT3 (1 << 3)
+#define BIT4 (1 << 4)
+#define BIT5 (1 << 5)
+#define BIT6 (1 << 6)
+#define BIT7 (1 << 7)
+
+#define	TP_VPF_NOT_PRESENT	0x00
+#define	TP_VPF_ENHANCE		0x01
+#define	TP_VPF_RELATIVE		0x10
+#define	TP_VPF_ABSOLUTE		0x11
+
+int is_long_sms(char *pdu, int *max_num, int *seq_num)
+{
+    char *p = pdu;
+    int tp_vp, tp_udhl;
+    char elem_id;
+    int elem_length;
+    int addr_length;
+
+    //first octet
+    if(!(*p & BIT6)) {
+        return 0;
+    } else {
+        switch(*p & (BIT4 | BIT3)) {
+            case TP_VPF_RELATIVE:
+                tp_vp = 1;
+                break;
+            case TP_VPF_ENHANCE:
+            case TP_VPF_ABSOLUTE:
+                tp_vp = 7;
+                break;
+            case TP_VPF_NOT_PRESENT:
+            default:
+                tp_vp = 0;
+        }
+        //TP_DA
+        p += 2;
+        //TP_PID
+        addr_length =  (*p + 1)/2;
+        p += (addr_length + 2);
+        //TP_VP
+        p += 2;
+        //TP_UDL
+        p += tp_vp;
+        //TP_UDHL
+        p += 1;
+        tp_udhl = *p;
+        //the first element
+        p += 1;
+        while(tp_udhl >= 5) {
+            elem_id = *p;
+            if(0x00 != elem_id && 0x08 != elem_id) {
+                //element identifier octet
+                p += 1;
+                elem_length = *p;
+                //the next element identifier octet
+                p += (elem_length + 1);
+            } else {
+                //element identifier octet
+                p += 1;
+                elem_length = *p;
+                if(0x00 == elem_id)
+                    p += 2;
+                else if(0x08 == elem_id)
+                    p += 3;
+                //max number of concatenated sms
+                *max_num = *p;
+                //sequence number of current sms
+                *seq_num = *(p+1);
+                return 1;
+            }
+            tp_udhl -= (elem_length + 2);
+        }
+        return 0;
+    }
+}
+
 static void requestSendSSSMS(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     int err, count = 0;
@@ -2477,6 +2559,8 @@ static void requestSendSSSMS(int channelID, void *data, size_t datalen, RIL_Toke
     RIL_SMS_Response response;
     ATResponse *p_response = NULL;
     char * line;
+    int max_num, seq_num;
+    char *pdu_bin;
 
     memset(&response, 0, sizeof(RIL_SMS_Response));
     smsc = ((const char **)data)[0];
@@ -2488,6 +2572,21 @@ static void requestSendSSSMS(int channelID, void *data, size_t datalen, RIL_Toke
     if (smsc == NULL) {
         smsc= "00";
     }
+
+    pdu_bin = (char *)malloc(tpLayerLength);
+    if(!convertHexToBin(pdu, strlen(pdu), pdu_bin)) {
+        if(is_long_sms(pdu_bin, &max_num, &seq_num)) {
+            ALOGD("is a long sms, max_num = %d, seq_num = %d", max_num, seq_num);
+            if(seq_num == 1) {
+                at_send_command( ATch_type[channelID], "AT+CMMS=1", NULL);
+            } else if(seq_num == max_num) {
+                at_send_command( ATch_type[channelID], "AT+CMMS=0", NULL);
+            }
+        } else {
+            ALOGD("is not a long sms");
+        }
+    }
+    free(pdu_bin);
 
     asprintf(&cmd1, "AT+CMGS=%d", tpLayerLength);
     asprintf(&cmd2, "%s%s", smsc, pdu);
@@ -3036,6 +3135,42 @@ static void convertBinToHex(char *bin_ptr, int length, char *hex_ptr)
         }
         hex_ptr++;
     }
+}
+
+static int convertHexToBin(const char *hex_ptr, int length, char *bin_ptr)
+{
+    char *dest_ptr = bin_ptr;
+    int i;
+    char ch;
+
+    if (hex_ptr == NULL || bin_ptr == NULL) {
+        return -1;
+    }
+
+    for(i = 0; i < length; i += 2) {
+        ch = hex_ptr[i];
+        if(ch >= '0' && ch <= '9')
+            *dest_ptr = (char)((ch - '0') << 4);
+        else if(ch >= 'a' && ch <= 'f')
+            *dest_ptr = (char)((ch - 'a' + 10) << 4);
+        else if(ch >= 'A' && ch <= 'F')
+            *dest_ptr = (char)((ch - 'A' + 10) << 4);
+        else
+            return -1;
+
+        ch = hex_ptr[i+1];
+        if(ch >= '0' && ch <= '9')
+            *dest_ptr |= (char)(ch - '0');
+        else if(ch >= 'a' && ch <= 'f')
+            *dest_ptr |= (char)(ch - 'a' + 10);
+        else if(ch >= 'A' && ch <= 'F')
+            *dest_ptr |= (char)(ch - 'A' + 10);
+        else
+            return -1;
+
+        dest_ptr++;
+    }
+    return 0;
 }
 
 static void requestSendUSSD(int channelID, void *data, size_t datalen, RIL_Token t)
