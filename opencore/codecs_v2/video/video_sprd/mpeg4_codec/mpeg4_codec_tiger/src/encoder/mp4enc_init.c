@@ -233,7 +233,7 @@ PUBLIC void Mp4Enc_InitSession(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode)
 {
 	uint32 total_mb_num_x;
 	uint32 total_mb_num_y;
-	int32 size;
+	int32 size = 0;
 
 	/*MB number in hor and in ver and total MB number*/
 	pVop_mode->OrgFrameWidth = pVol_mode->VolWidth;
@@ -243,6 +243,7 @@ PUBLIC void Mp4Enc_InitSession(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode)
 	pVop_mode->MBNum  = total_mb_num_x * total_mb_num_y;
 	pVop_mode->FrameWidth  = total_mb_num_x * MB_SIZE;
 	pVop_mode->FrameHeight = total_mb_num_y * MB_SIZE;	
+	size = pVop_mode->FrameWidth *pVop_mode->FrameHeight ;
 
 	if(pVop_mode->short_video_header)
 	{
@@ -289,31 +290,33 @@ PUBLIC void Mp4Enc_InitSession(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode)
 	}
 }
 #endif
-	pVop_mode->pYUVRecFrame->imgY = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size);
+	pVop_mode->pYUVRecFrame->imgY = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size+(size>>1));
 	if (!pVop_mode->uv_interleaved)
 	{
-		pVop_mode->pYUVRecFrame->imgU = (uint8 *)Mp4Enc_ExtraMemAlloc(size>>2);
-		pVop_mode->pYUVRecFrame->imgV = (uint8 *)Mp4Enc_ExtraMemAlloc(size>>2);
+		pVop_mode->pYUVRecFrame->imgU = (uint8 *)(pVop_mode->pYUVRecFrame->imgY+size);
+		pVop_mode->pYUVRecFrame->imgV = (uint8 *)(pVop_mode->pYUVRecFrame->imgU+(size>>2));
 		//pVop_mode->pYUVRecFrame->imgU = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size);
 		//pVop_mode->pYUVRecFrame->imgV = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size);
 	}else
 	{
-		pVop_mode->pYUVRecFrame->imgU = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size>>1);
+		pVop_mode->pYUVRecFrame->imgU = (uint8 *)(pVop_mode->pYUVRecFrame->imgY+size);
 		pVop_mode->pYUVRecFrame->imgV = NULL;
 	}
-
-	pVop_mode->pYUVRefFrame->imgY = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size);
+	pVop_mode->pYUVRefFrame->imgY = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size+(size>>1));
 	if (!pVop_mode->uv_interleaved)
 	{
-		pVop_mode->pYUVRefFrame->imgU = (uint8 *)Mp4Enc_ExtraMemAlloc(size>>2);
-		pVop_mode->pYUVRefFrame->imgV = (uint8 *)Mp4Enc_ExtraMemAlloc(size>>2);
+		pVop_mode->pYUVRefFrame->imgU = (uint8 *)(pVop_mode->pYUVRefFrame->imgY+size);
+		pVop_mode->pYUVRefFrame->imgV = (uint8 *)(pVop_mode->pYUVRefFrame->imgU+(size>>2));
 		//pVop_mode->pYUVRefFrame->imgU = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size);
 		//pVop_mode->pYUVRefFrame->imgV = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size);
 	}else
 	{
-		pVop_mode->pYUVRefFrame->imgU = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size>>1);
+		pVop_mode->pYUVRefFrame->imgU =  (uint8 *)(pVop_mode->pYUVRefFrame->imgY+size);
 		pVop_mode->pYUVRefFrame->imgV = NULL;
 	}
+
+	SCI_TRACE_LOW("pVop_mode->pYUVRefFrame->imgY  U V %x %x %x",pVop_mode->pYUVRefFrame->imgY ,pVop_mode->pYUVRefFrame->imgU,\
+	pVop_mode->pYUVRefFrame->imgV);
 #if defined(_SIMULATION_) 
 {
 //@modified by leon 20120525
@@ -341,6 +344,9 @@ PUBLIC void Mp4Enc_InitSession(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode)
 	pVop_mode->pYUVRefFrame->imgYAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(pVop_mode->pYUVRefFrame->imgY) ;//>> 8;
 	pVop_mode->pYUVRefFrame->imgUAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(pVop_mode->pYUVRefFrame->imgU);// >> 8;
 	pVop_mode->pYUVRefFrame->imgVAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(pVop_mode->pYUVRefFrame->imgV);// >> 8;
+	SCI_TRACE_LOW("pVop_mode->pYUVRefFrame->imgY  U V phy %x %x %x",pVop_mode->pYUVRefFrame->imgYAddr,pVop_mode->pYUVRefFrame->imgUAddr,\
+	pVop_mode->pYUVRefFrame->imgVAddr);
+
 #else
 	pVop_mode->pYUVRecFrame->imgYAddr = (uint32)pVop_mode->pYUVRecFrame->imgY ;//>> 8;
 	pVop_mode->pYUVRecFrame->imgUAddr = (uint32)pVop_mode->pYUVRecFrame->imgU ;//>> 8;

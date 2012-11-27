@@ -132,11 +132,15 @@ MMEncRet MP4EncSetConf(MMEncConfig *pConf)
 	
 	pVop_mode->FrameRate			= pConf->FrameRate;	
 	pVop_mode->targetBitRate		= pConf->targetBitRate;
-	pVop_mode->RateCtrlEnable		= pConf->RateCtrlEnable;
+	pVop_mode->RateCtrlEnable		= pConf->RateCtrlEnable = 0;
 	
 	pVop_mode->StepI				= pConf->QP_IVOP;
 	pVop_mode->StepP				= pConf->QP_PVOP;
-
+SCI_TRACE_LOW("pVop_mode->short_video_header %d",pVop_mode->short_video_header);
+SCI_TRACE_LOW("pVop_mode->targetBitRate %d",pVop_mode->targetBitRate);
+SCI_TRACE_LOW("pVop_mode->RateCtrlEnable %d",pVop_mode->RateCtrlEnable);
+SCI_TRACE_LOW("pVop_mode->StepI %d",pVop_mode->StepI);
+SCI_TRACE_LOW("pVop_mode->StepP %d",pVop_mode->StepP);
 	return MMENC_OK;
 }
 
@@ -258,7 +262,8 @@ MMEncRet MP4EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr, MME
 			(1<<5) | (1<<4) |(0<<3) | (1<<2) | (1<<1) | (1<<0);
 		VSP_WRITE_REG(VSP_GLB_REG_BASE+GLB_CFG0_OFF, cmd, "GLB_CFG0: init the global register, little endian");
 
-		cmd = (0 << 16) |((uint32)0xffff);
+		//cmd = (0 << 16) |((uint32)0xffff);
+		cmd = (1<< 31)|(1 << 30)|(TIME_OUT_CLK);
 		VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_VSP_TIME_OUT_OFF, cmd, "DCAM_VSP_TIME_OUT: disable hardware timer out");
 
 		cmd =vop_mode_ptr->uv_interleaved ?0:1;//00: uv_interleaved, two plane, 1: three plane
@@ -329,12 +334,20 @@ MMEncRet MP4EncStrmEncode(MMEncIn *pInput, MMEncOut *pOutput)
 			(1<<5) | (1<<4) |(0<<3) | (1<<2) | (1<<1) | (1<<0);
 	VSP_WRITE_REG(VSP_GLB_REG_BASE+GLB_CFG0_OFF, cmd, "GLB_CFG0: little endian");
 
-	cmd = (0 << 16) |((uint32)0xffff);
+	//cmd = (0 << 16) |((uint32)0xffff);
+	cmd = (1<< 31)|(1 << 30)|(TIME_OUT_CLK);
 	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_VSP_TIME_OUT_OFF, cmd, "DCAM_VSP_TIME_OUT: disable hardware timer out");
-         cmd =pVop_mode->uv_interleaved ?0:1;//00: uv_interleaved, two plane, 1: three plane
-         cmd = (cmd<<27);
-	VSP_WRITE_REG(VSP_AXIM_REG_BASE+AXIM_GAP_ENDIAN_OFF, cmd, "configure AXIM register: GAP: 0, frame_mode: UVUV, Little endian");
-
+    
+    cmd =pVop_mode->uv_interleaved ?0:1;//00: uv_interleaved, two plane, 1: three plane
+    cmd = (cmd<<27);
+	cmd |= 0x1ff;
+	VSP_WRITE_REG(VSP_AXIM_REG_BASE+AXIM_GAP_ENDIAN_OFF, cmd , "configure AXIM register: GAP: 0, frame_mode: UVUV, Little endian");
+		//if(2 ==vop_mode_ptr->uv_interleaved )//vu_interleaved
+	{
+		cmd |= ((1<<21)|(1<<18));
+		VSP_WRITE_REG(VSP_AXIM_REG_BASE+AXIM_GAP_ENDIAN_OFF, cmd , "configure AXIM register: GAP: 0, frame_mode: UVUV, Little endian");
+	}
+		
 	//now, for uv_interleaved
 #if _CMODEL_ //for RTL simulation
 	cmd = (720*576)>>2; //word unit, updated by xwluo@20111205 for 720x576 supported, from 352*288
@@ -342,9 +355,11 @@ MMEncRet MP4EncStrmEncode(MMEncIn *pInput, MMEncOut *pOutput)
 	cmd = (pVop_mode->FrameWidth) * (pVop_mode->FrameHeight)>>2; //word unit
 #endif
 	cmd = (pVop_mode->FrameWidth) * (pVop_mode->FrameHeight)>>2; //word unit //?????leon
+	//cmd = (pVop_mode->pYUVSrcFrame->imgUAddr-pVop_mode->pYUVSrcFrame->imgYAddr)>>2;
 	VSP_WRITE_REG(VSP_AXIM_REG_BASE+AXIM_UV_OFFSET_OFF, cmd, "configure uv offset");
-
-	VSP_WRITE_REG(VSP_AXIM_REG_BASE+AHBM_V_ADDR_OFFSET, cmd/4, "configure uv offset");
+	cmd = (pVop_mode->FrameWidth) * (pVop_mode->FrameHeight)>>4;
+	//cmd = (pVop_mode->pYUVSrcFrame->imgVAddr-pVop_mode->pYUVSrcFrame->imgUAddr)>>2;
+	VSP_WRITE_REG(VSP_AXIM_REG_BASE+AHBM_V_ADDR_OFFSET,cmd, "configure uv offset");
 //	pVop_mode->mbline_num_slice	= 1;
 	pVop_mode->intra_mb_dis		= 30;	
 	
@@ -367,7 +382,8 @@ MMEncRet MP4EncStrmEncode(MMEncIn *pInput, MMEncOut *pOutput)
 
 	frame_type 				= Mp4Enc_JudgeFrameType (&g_rc_par, &g_stat_rc);
 	pVop_mode->VopPredType	= (pInput->vopType == IVOP)?IVOP:frame_type;
-	frame_skip				= (frame_type == NVOP) ? 1 : 0;
+	pInput->vopType = pVop_mode->VopPredType;
+	//frame_skip				= (frame_type == NVOP) ? 1 : 0;
 	
 	//PRINTF("g_nFrame_enc %d ", g_nFrame_enc);
 	if(!frame_skip)
@@ -412,7 +428,7 @@ FRAME_ENC:
 #ifdef _DEBUG_
       		dump_input_yuv();
 #endif
-		if(IVOP == frame_type)
+		if(IVOP == pVop_mode->VopPredType)
 		{
 		#if defined(SIM_IN_WIN)
 			FPRINTF(g_rgstat_fp, "\nNo.%d Frame:\t I VOP\n", g_nFrame_enc);

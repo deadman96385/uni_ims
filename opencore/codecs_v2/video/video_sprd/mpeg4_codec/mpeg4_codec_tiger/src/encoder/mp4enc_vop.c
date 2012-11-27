@@ -205,7 +205,7 @@ PUBLIC int32 Mp4Enc_EncIVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
 
 	pVop_mode->mb_x = 0;
 	pVop_mode->mb_y = 0;
-
+	pVop_mode->bCoded = 1;
 	if(is_short_header)
 	{
 		g_rc_par.nbits_hdr_mv += Mp4Enc_EncH263PicHeader(pVop_mode);
@@ -214,7 +214,7 @@ PUBLIC int32 Mp4Enc_EncIVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
 		g_rc_par.nbits_hdr_mv += Mp4Enc_EncVOPHeader(pVop_mode, time_stamp);	
 	}
 
-	pVop_mode->bCoded = 1;
+
 	Mp4Enc_VspFrameInit(pVop_mode);
 #if _CMODEL_ //for RTL simulation
 
@@ -331,7 +331,7 @@ PUBLIC int32 Mp4Enc_EncPVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
 	int32 left_intramb_dis = pVop_mode->intra_mb_dis;
 	VOL_MODE_T *pVol_mode = Mp4Enc_GetVolmode();
 	int32 nbits_hdr_mv = 0;
-	
+
 	if(pVop_mode->RateCtrlEnable)
 	{
 		Mp4Enc_UpdatePVOP_StepSize(pVop_mode, &g_stat_rc, &g_rc_par);
@@ -342,6 +342,7 @@ PUBLIC int32 Mp4Enc_EncPVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
 	memset(pVop_mode->pMbModeAbv, 0, total_mb_num_x*sizeof(ENC_MB_MODE_T));	
 
 	pVop_mode->MBNumOneVP = 0;	
+	pVop_mode->bCoded = 1;
 
 	if(is_short_header)
 	{
@@ -350,7 +351,6 @@ PUBLIC int32 Mp4Enc_EncPVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
 	{
 		g_rc_par.nbits_hdr_mv += Mp4Enc_EncVOPHeader(pVop_mode, time_stamp);	
 	}
-	pVop_mode->bCoded = 1;
 	Mp4Enc_VspFrameInit(pVop_mode);
 #if _CMODEL_ //for RTL simulation
 	nbits_hdr_mv = g_rc_par.nbits_hdr_mv;

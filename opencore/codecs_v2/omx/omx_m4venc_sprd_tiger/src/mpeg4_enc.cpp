@@ -576,7 +576,7 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
     }
 	 
     //Set the profile level of encoder
-   // encConfig.profileAndLevel = 0;  //todo
+    encConfig.profileAndLevel = 0;  //todo
 
 
     if ((aEncodeMpeg4Param.nTimeIncRes << 16) > iSrcFrameRate)

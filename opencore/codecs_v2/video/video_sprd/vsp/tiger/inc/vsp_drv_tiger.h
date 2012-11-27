@@ -51,7 +51,7 @@ extern "C"
 #ifdef _VSP_LINUX_
 #define LOG_TAG "VSP"
 #include <utils/Log.h>
-#define  SCI_TRACE_LOW   
+#define  SCI_TRACE_LOW   ALOGD
 #define SCI_MEMSET  memset
 #define SCI_MEMCPY	memcpy
 #define SCI_ASSERT(...) 
