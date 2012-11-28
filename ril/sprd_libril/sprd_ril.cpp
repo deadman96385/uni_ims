@@ -298,7 +298,6 @@ static int responseSS(Parcel &p, void *response, size_t responselen);
 static int responseLockInfo(Parcel &p, void *response, size_t responselen);
 #endif
 #if defined (RIL_SPRD_EXTENSION)
-static int responseCallWaitings(Parcel &p, void *response, size_t responselen);
 static int responseDSCI(Parcel &p, void *response, size_t responselen);
 #endif
 
@@ -2811,40 +2810,6 @@ static int responseLockInfo(Parcel &p, void *response, size_t responselen)
 #endif
 
 #if defined (RIL_SPRD_EXTENSION)
-static int responseCallWaitings(Parcel &p, void *response, size_t responselen) {
-    int num;
-
-    if (response == NULL && responselen != 0) {
-        ALOGE("invalid response: NULL");
-        return RIL_ERRNO_INVALID_RESPONSE;
-    }
-
-    if (responselen % sizeof(RIL_CallWaitingInfo *) != 0) {
-        ALOGE("invalid response length %d expected multiple of %d",
-                (int)responselen, (int)sizeof(RIL_CallWaitingInfo *));
-        return RIL_ERRNO_INVALID_RESPONSE;
-    }
-
-    /* number of call info's */
-    num = responselen / sizeof(RIL_CallWaitingInfo *);
-    p.writeInt32(num);
-
-    startResponse;
-    for (int i = 0 ; i < num ; i++) {
-        RIL_CallWaitingInfo *p_cur = ((RIL_CallWaitingInfo **) response)[i];
-
-        p.writeInt32(p_cur->status);
-        p.writeInt32(p_cur->serviceClass);
-        appendPrintBuf("%s[%s,cls=%d],", printBuf,
-            (p_cur->status==1)?"enable":"disable",
-             p_cur->serviceClass);
-    }
-    removeLastChar;
-    closeResponse;
-
-    return 0;
-}
-
 static int responseDSCI(Parcel &p, void *response, size_t responselen) {
     if (response == NULL) {
         ALOGE("invalid response: NULL");

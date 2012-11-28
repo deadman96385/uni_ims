@@ -4271,8 +4271,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     }
                     if (err >= 0) {
                         RIL_onRequestComplete(t, RIL_E_SUCCESS,
-                                validCount ? waitingList : NULL,
-                                validCount * sizeof (RIL_CallWaitingInfo *));
+                                validCount ? waitingPool : NULL,
+                                validCount * sizeof (RIL_CallWaitingInfo));
                     } else {
                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                     }
