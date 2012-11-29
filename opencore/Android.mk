@@ -8,23 +8,20 @@ include $(LOCAL_PATH)/Config.mk
 include $(PV_TOP)/build_config/opencore_dynamic/Android_opencore_common.mk
 include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_sharedlibrary.mk
 #ifeq ($(strip $(BUILD_SPRD_OMX)),true)
-
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcdec_sprd_8825_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4vdec_sprd_8825_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4venc_sprd_8825_sharedlibrary.mk
-endif
-
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
 include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcdec_sprd_8810_sharedlibrary.mk
 include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4vdec_sprd_8810_sharedlibrary.mk
 include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4venc_sprd_8810_sharedlibrary.mk
-endif
-
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8800)
+else
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
+include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcdec_sprd_8825_sharedlibrary.mk
+include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4vdec_sprd_8825_sharedlibrary.mk
+include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4venc_sprd_8825_sharedlibrary.mk
+else
 include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcdec_sprd_8800g_sharedlibrary.mk
 include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4vdec_sprd_8800g_sharedlibrary.mk
 include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4venc_sprd_8800g_sharedlibrary.mk
+endif
 endif
 #else
 #include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcdec_sharedlibrary.mk

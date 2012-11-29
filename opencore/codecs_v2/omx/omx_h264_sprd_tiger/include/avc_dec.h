@@ -39,7 +39,7 @@
 #define SPRD_VSP_DRIVER "/dev/sprd_vsp"
 #define LOG_TAG "VSP"
 #include <utils/Log.h>
-#define  SCI_TRACE_LOW   
+#define  SCI_TRACE_LOW   ALOGD
 
 
 using namespace android;
