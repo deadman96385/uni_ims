@@ -3527,6 +3527,98 @@ static void requestSendEncodedUSSD(int channelID, void *data, size_t datalen, RI
     free(cmd);
     at_response_free(p_response);
 }
+
+static void requestGetPhonebookStorageInfo(channelID, data, datalen, t)
+{
+    ATResponse *p_response = NULL;
+    int err;
+    char *cmd;
+    char *line;
+    int response[5] = {0};
+
+    asprintf(&cmd, "AT+CPBS=\"%s\"",((char**)data)[0]);
+    at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", NULL);
+    err = at_send_command_singleline(ATch_type[channelID], "AT+CPBS?", "+CPBS:", &p_response);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+
+    line = p_response->p_intermediates->line;
+
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &response[0]);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &response[1]);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &response[2]);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &response[3]);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &response[4]);
+    if (err < 0) goto error;
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, response, sizeof(response));
+    at_response_free(p_response);
+    free(cmd);
+
+    return;
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+    free(cmd);
+}
+
+static void requestUsimPbCapa(channelID, data, datalen, t)
+{
+    ATResponse *p_response = NULL;
+    RIL_Usim_PB_Capa *pbCapa;
+    int err;
+    int dataLen;
+    int fileId;
+    char *cmd;
+    char *line;
+    int response[MAX_DATA_LEN] = {0};
+
+    pbCapa = (RIL_Usim_PB_Capa *)alloca(sizeof(RIL_Usim_PB_Capa));
+    memset(pbCapa, 0, sizeof(RIL_Usim_PB_Capa));
+    for (fileId=0; fileId<MAX_3GPP_TYPE; fileId++) {
+        memset(response, 0, sizeof(response));
+        asprintf(&cmd, "AT+CPBCAPA=%d", fileId+1);
+        err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBCAPA:", &p_response);
+        if (err < 0 || p_response->success == 0) {
+            goto error;
+        }
+
+        line = p_response->p_intermediates->line;
+
+        err = at_tok_start(&line);
+        if (err < 0) goto error;
+
+        for (dataLen=0; dataLen<MAX_DATA_LEN; dataLen++) {
+            err = at_tok_nextint(&line, &response[dataLen]);
+            if (err < 0) goto error;
+            pbCapa->response[fileId][dataLen] = response[dataLen];
+        }
+    }
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, pbCapa, sizeof(RIL_Usim_PB_Capa));
+    at_response_free(p_response);
+    free(cmd);
+
+    return;
+
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+    free(cmd);
+}
+
 #endif
 
 /*** Callback methods from the RIL library to us ***/
@@ -4990,10 +5082,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
 
         case RIL_REQUEST_GET_PHONEBOOK_STORAGE_INFO:
-            {
-                ALOGD("RIL_REQUEST_GET_PHONEBOOK_STORAGE_INFO");
-                break;
-            }
+            requestGetPhonebookStorageInfo(channelID, data, datalen, t);
+            break;
 
         case RIL_REQUEST_GET_PHONEBOOK_ENTRY:
             {
@@ -5008,10 +5098,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
 
         case RIL_REQUEST_USIM_PB_CAPA:
-            {
-                ALOGD("RIL_REQUEST_USIM_PB_CAPA");
-                break;
-            }
+            requestUsimPbCapa(channelID, data, datalen, t);
+            break;
 
         case RIL_REQUEST_LOCK_INFO:
             {

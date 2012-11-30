@@ -38,6 +38,9 @@ extern "C" {
 #define GLOBALCONFIG_RIL_VT_SUPPORT 1
 ///////
 
+#define MAX_3GPP_TYPE 13
+#define MAX_DATA_LEN 4
+
 typedef void * RIL_Token;
 
 typedef enum {
@@ -1176,6 +1179,9 @@ typedef struct {
    int cause;
 } RIL_VideoPhone_DSCI;
 
+typedef struct {
+    int response[MAX_3GPP_TYPE][MAX_DATA_LEN];
+} RIL_Usim_PB_Capa;
 /**
  * RIL_REQUEST_GET_SIM_STATUS
  *
