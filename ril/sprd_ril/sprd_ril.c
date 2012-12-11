@@ -119,6 +119,23 @@ struct channel_description dual_descriptions[DUAL_MAX_CHANNELS] = {
     { 0, -1, "", "", CHANNEL_IDLE, PTHREAD_MUTEX_INITIALIZER},
 };
 
+struct storage_information {
+    int fileId;
+    char name[32];
+};
+
+struct storage_information storage_info[4] = {
+    { 1, "AND"},
+    { 2, "SDN"},
+    { 3, "FDN"},
+    { 4, "MSISDN"},
+};
+
+struct pb_entry_data {
+    char data[128];
+    int  type;
+};
+
 #define MAX_PDP 3
 
 enum pdp_state {
@@ -3574,6 +3591,152 @@ error:
     free(cmd);
 }
 
+
+static void requestGetPhonebookEntry(channelID, data, datalen, t)
+{
+    ATResponse *p_response = NULL;
+    int err;
+    int count;
+    int i;
+    char *cmd;
+    char *line;
+    RIL_SIM_GET_PB_ENTRY *p_args;
+    RIL_SIM_PB_Response *pbResponse;
+    pb_entry_data pb_data;
+    int response[2] = {0};
+
+    p_args = (RIL_SIM_GET_PB_ENTRY*)data;
+    pbResponse = (RIL_SIM_PB_Response*)alloca(sizeof(RIL_SIM_PB_Response));
+    memset(pbResponse, 0, sizeof(RIL_SIM_PB_Response));
+    memset(&pb_data, 0, sizeof(pb_entry_data));
+
+    asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[p_args->fileid].name);
+    at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", NULL);
+    free(cmd);
+    asprintf(&cmd, "AT^SCPBR=%d",p_args->index);
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "^SCPBR:", &p_response);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+
+    line = p_response->p_intermediates->line;
+
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &response[0]);
+    if (err < 0) goto error;
+    pbResponse->recordIndex = response[0];
+
+    err = at_tok_nextint(&line, &response[1]);
+    if (err < 0) goto error;
+    pbResponse->nextIndex = response[1];
+
+    pbResponse->alphaTags = alloca(NUM_OF_ALPHA*sizeof(char*));
+    for (count=0; count<NUM_OF_ALPHA; count++) {
+        if (at_tok_hasmore(&line)) {
+            err = at_tok_nextstr(&line, &pb_data.data);
+            if (err < 0) goto error;
+            err = at_tok_nextint(&line, &pb_data.type);
+            if (err < 0) goto error;
+            pbResponse->lengthAlphas[count] = strlen(pb_data.data);
+            pbResponse->dataTypeAlphas[count] = pb_data.type;
+            memcpy(pbResponse->alphaTags[count],pb_data.data,sizeof(pb_data.data));
+        } else {
+            for (i=0; i<2; i++) {
+                skipNextComma(&line);
+            }
+        }
+    }
+
+    pbResponse->numbers = alloca(NUM_OF_NUMBER*sizeof(char*));
+    for (count=0; count<NUM_OF_NUMBER; count++) {
+        if (at_tok_hasmore(&line)) {
+            err = at_tok_nextstr(&line, &pb_data.data);
+            if (err < 0) goto error;
+            err = at_tok_nextint(&line, &pb_data.type);
+            if (err < 0) goto error;
+            pbResponse->lengthNumbers[count] = strlen(pb_data.data);
+            pbResponse->dataTypeNumbers[count] = pb_data.type;
+            memcpy(pbResponse->numbers[count],pb_data.data,sizeof(pb_data.data));
+        } else {
+            for (i=0; i<2; i++) {
+                skipNextComma(&line);
+            }
+        }
+    }
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, pbResponse, sizeof(RIL_SIM_PB_Response));
+    at_response_free(p_response);
+    free(cmd);
+
+    return;
+
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+    free(cmd);
+}
+
+
+static void requestAccessPhonebookEntry(channelID, data, datalen, t)
+{
+    ATResponse *p_response = NULL;
+    int err;
+    char *cmd;
+    char *line;
+    RIL_SIM_ACCESS_PB_ENTRY *p_args;
+    int operindex = 0;
+
+    p_args = (RIL_SIM_ACCESS_PB_ENTRY*)data;
+    asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[p_args->fileid].name);
+    at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", NULL);
+    free(cmd);
+
+    asprintf(&cmd, "AT^SPBW=%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,
+                   \"%s\",%d,\"%s\",%d,\"%s\",%d,\"%s\",%d",
+                   p_args->index,
+                   p_args->number? p_args->number : "",
+                   p_args->number? 0 : "",
+                   p_args->anr? p_args->anr : "",
+                   p_args->anr? 0 : "",
+                   p_args->anrA? p_args->anrA : "",
+                   p_args->anrA? 0 : "",
+                   p_args->anrB? p_args->anrB : "",
+                   p_args->anrB? 0 : "",
+                   p_args->anrC? p_args->anrC : "",
+                   p_args->anrC? 0 : "",
+                   p_args->alphaTag? p_args->alphaTag : "",
+                   p_args->alphaTag? p_args->alphaTagDCS : "",
+                   p_args->email? p_args->email : "",
+                   p_args->email? 0 : "",
+                   p_args->sne? p_args->sne : "",
+                   p_args->sne? p_args->sneDCS : "");
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "^SPBW:", &p_response);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+
+    line = p_response->p_intermediates->line;
+
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &operindex);
+    if (err < 0) goto error;
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, &operindex, sizeof(operindex));
+    at_response_free(p_response);
+    free(cmd);
+
+    return;
+
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+    free(cmd);
+}
+
 static void requestUsimPbCapa(channelID, data, datalen, t)
 {
     ATResponse *p_response = NULL;
@@ -5086,16 +5249,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
 
         case RIL_REQUEST_GET_PHONEBOOK_ENTRY:
-            {
-                ALOGD("RIL_REQUEST_GET_PHONEBOOK_ENTRY");
-                break;
-            }
+            requestGetPhonebookEntry(channelID, data, datalen, t);
+            break;
 
         case RIL_REQUEST_ACCESS_PHONEBOOK_ENTRY:
-            {
-                ALOGD("RIL_REQUEST_ACCESS_PHONEBOOK_ENTRY");
-                break;
-            }
+            requestAccessPhonebookEntry(channelID, data, datalen, t);
+            break;
 
         case RIL_REQUEST_USIM_PB_CAPA:
             requestUsimPbCapa(channelID, data, datalen, t);

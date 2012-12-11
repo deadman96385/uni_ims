@@ -705,6 +705,65 @@ typedef enum {
   RIL_APPTYPE_ISIM    = 5
 } RIL_AppType;
 
+typedef enum {
+    INDEX_NAME   = 0,
+    INDEX_EMAIL  = 1,
+    INDEX_SNE    = 2,
+    NUM_OF_ALPHA = 3
+} INDEX_TEXT_RIL_SIM_PB_Respone;
+
+typedef enum {
+    INDEX_NUMBER  = 0,
+    INDEX_ANR     = 1,
+    INDEX_ANRA    = 2,
+    INDEX_ANRB    = 3,
+    INDEX_ANRC    = 4,
+    NUM_OF_NUMBER = 5
+} INDEX_NUM_RIL_SIM_PB_Response;
+
+typedef struct {
+    int    lengthAlphas[NUM_OF_ALPHA];
+    int    dataTypeAlphas[NUM_OF_ALPHA];
+    char   *alphaTags[NUM_OF_ALPHA];
+    int    lengthNumbers[NUM_OF_NUMBER];
+    int    dataTypeNumbers[NUM_OF_NUMBER];
+    char   *numbers[NUM_OF_NUMBER];
+    int    recordIndex;
+    int    nextIndex;
+} RIL_SIM_PB_Response;
+
+typedef struct {
+    int command;
+    int fileid;
+    char *path;
+    int index;
+    int p1;
+    int p2;
+    int p3;
+    char *data;
+    char *pin2;
+} RIL_SIM_GET_PB_ENTRY;
+
+typedef struct {
+    int command;
+    int fileid;
+    int index;
+    char *alphaTag;
+    int alphaTagDCS;
+    int alphaTagLength;
+    char *number;
+    char *email;
+    int emailLength;
+    char *anr;
+    char *anrA;
+    char *anrB;
+    char *anrC;
+    char *sne;
+    int sneLength;
+    int sneDCS;
+    char *pin2;
+} RIL_SIM_ACCESS_PB_ENTRY;
+
 typedef struct
 {
   RIL_AppType      app_type;
