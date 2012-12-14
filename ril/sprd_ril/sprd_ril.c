@@ -3554,7 +3554,10 @@ static void requestGetPhonebookStorageInfo(channelID, data, datalen, t)
     int response[5] = {0};
 
     asprintf(&cmd, "AT+CPBS=\"%s\"",((char**)data)[0]);
-    at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", NULL);
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", NULL);
+    if (err < 0) {
+        goto error;
+    }
     err = at_send_command_singleline(ATch_type[channelID], "AT+CPBS?", "+CPBS:", &p_response);
     if (err < 0 || p_response->success == 0) {
         goto error;
@@ -3611,7 +3614,10 @@ static void requestGetPhonebookEntry(channelID, data, datalen, t)
     memset(&pb_data, 0, sizeof(pb_entry_data));
 
     asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[p_args->fileid].name);
-    at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", NULL);
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", NULL);
+    if (err < 0) {
+        goto error;
+    }
     free(cmd);
     asprintf(&cmd, "AT^SCPBR=%d",p_args->index);
     err = at_send_command_singleline(ATch_type[channelID], cmd, "^SCPBR:", &p_response);
@@ -3690,7 +3696,10 @@ static void requestAccessPhonebookEntry(channelID, data, datalen, t)
 
     p_args = (RIL_SIM_ACCESS_PB_ENTRY*)data;
     asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[p_args->fileid].name);
-    at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", NULL);
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", NULL);
+    if (err < 0) {
+        goto error;
+    }
     free(cmd);
 
     asprintf(&cmd, "AT^SPBW=%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,
