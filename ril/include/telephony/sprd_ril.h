@@ -5008,6 +5008,19 @@ typedef struct {
     char* data;     // @field message itself
 } RIL_SSReleaseComplete;
 
+typedef struct {
+   int   call_type;
+   int   result;
+   int   is_alpha;
+   int   alpha_len;
+   char *alpha_data;
+   int   pre_type;
+   int   ton;
+   int   npi;
+   int   num_len;
+   char *number;
+} RIL_StkCallControlResult;
+
 #define RIL_PARAM_SSDI_STATUS	1
 #define RIL_PARAM_SSDI_DATA 		2
 

@@ -296,6 +296,8 @@ static int responseGetCBConf(Parcel &p, void *response, size_t responselen);
 static int responseGetPB(Parcel &p, void *response, size_t responselen);
 static int responseSS(Parcel &p, void *response, size_t responselen);
 static int responseLockInfo(Parcel &p, void *response, size_t responselen);
+static int responsemsg(Parcel &p, void *response, size_t responselen);
+static int responseCCresult(Parcel &p, void *response, size_t responselen);
 #endif
 #if defined (RIL_SPRD_EXTENSION)
 static int responseDSCI(Parcel &p, void *response, size_t responselen);
@@ -2799,6 +2801,69 @@ static int responseGetPB(Parcel &p, void *response, size_t responselen)
 static int responseSS(Parcel &p, void *response, size_t responselen)
 {
     /*FIXME*/
+    return 0;
+}
+
+static int responsemsg(Parcel &p, void *response, size_t responselen)
+{
+    if (response == NULL) {
+        ALOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+    if (responselen != sizeof(RIL_SSReleaseComplete)) {
+        ALOGE("invalid response length was %d expected %d",
+                (int)responselen, (int)sizeof (RIL_SSReleaseComplete));
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    RIL_SSReleaseComplete *p_cur = (RIL_SSReleaseComplete *) response;
+    p.writeInt32(p_cur->size);
+    p.writeInt32(p_cur->dataLen);
+    p.writeInt32(p_cur->params);
+    p.writeInt32(p_cur->status);
+    writeStringToParcel(p, p_cur->data);
+
+    startResponse;
+    appendPrintBuf("%ssize=%d, dataLen=%d,params=%d,status=%d,data=%s",
+                   printBuf, p_cur->size, p_cur->dataLen, p_cur->params,
+                   p_cur->status,p_cur->data);
+    closeResponse;
+
+    return 0;
+}
+
+static int responseCCresult(Parcel &p, void *response, size_t responselen)
+{
+    if (response == NULL) {
+        ALOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+    if (responselen != sizeof(RIL_StkCallControlResult)) {
+        ALOGE("invalid response length was %d expected %d",
+                (int)responselen, (int)sizeof (RIL_StkCallControlResult));
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    RIL_StkCallControlResult *p_cur = (RIL_StkCallControlResult *) response;
+    p.writeInt32(p_cur->call_type);
+    p.writeInt32(p_cur->result);
+    p.writeInt32(p_cur->is_alpha);
+    p.writeInt32(p_cur->alpha_len);
+    writeStringToParcel(p, p_cur->alpha_data);
+    p.writeInt32(p_cur->pre_type);
+    p.writeInt32(p_cur->ton);
+    p.writeInt32(p_cur->npi);
+    p.writeInt32(p_cur->num_len);
+    writeStringToParcel(p, p_cur->number);
+
+    startResponse;
+    appendPrintBuf("%scall_type=%d, result=%d,is_alpha=%d,alpha_len=%d,alpha_data=%s \
+                    pre_type=%d,ton=%d,npi=%d,num_len=%d,number=%s",
+                   printBuf, p_cur->call_type, p_cur->result, p_cur->is_alpha,
+                   p_cur->alpha_len,p_cur->alpha_data,p_cur->pre_type,p_cur->ton,
+                   p_cur->npi,p_cur->num_len,p_cur->number);
+    closeResponse;
+
     return 0;
 }
 
