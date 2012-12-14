@@ -705,33 +705,7 @@ typedef enum {
   RIL_APPTYPE_ISIM    = 5
 } RIL_AppType;
 
-typedef enum {
-    INDEX_NAME   = 0,
-    INDEX_EMAIL  = 1,
-    INDEX_SNE    = 2,
-    NUM_OF_ALPHA = 3
-} INDEX_TEXT_RIL_SIM_PB_Respone;
-
-typedef enum {
-    INDEX_NUMBER  = 0,
-    INDEX_ANR     = 1,
-    INDEX_ANRA    = 2,
-    INDEX_ANRB    = 3,
-    INDEX_ANRC    = 4,
-    NUM_OF_NUMBER = 5
-} INDEX_NUM_RIL_SIM_PB_Response;
-
-typedef struct {
-    int    lengthAlphas[NUM_OF_ALPHA];
-    int    dataTypeAlphas[NUM_OF_ALPHA];
-    char   *alphaTags[NUM_OF_ALPHA];
-    int    lengthNumbers[NUM_OF_NUMBER];
-    int    dataTypeNumbers[NUM_OF_NUMBER];
-    char   *numbers[NUM_OF_NUMBER];
-    int    recordIndex;
-    int    nextIndex;
-} RIL_SIM_PB_Response;
-
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 typedef struct {
     int command;
     int fileid;
@@ -763,6 +737,7 @@ typedef struct {
     int sneDCS;
     char *pin2;
 } RIL_SIM_ACCESS_PB_ENTRY;
+#endif
 
 typedef struct
 {

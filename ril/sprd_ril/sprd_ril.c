@@ -119,23 +119,6 @@ struct channel_description dual_descriptions[DUAL_MAX_CHANNELS] = {
     { 0, -1, "", "", CHANNEL_IDLE, PTHREAD_MUTEX_INITIALIZER},
 };
 
-struct storage_information {
-    int fileId;
-    char name[32];
-};
-
-struct storage_information storage_info[4] = {
-    { 1, "AND"},
-    { 2, "SDN"},
-    { 3, "FDN"},
-    { 4, "MSISDN"},
-};
-
-struct pb_entry_data {
-    char data[128];
-    int  type;
-};
-
 #define MAX_PDP 3
 
 enum pdp_state {
@@ -256,6 +239,21 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t);
 static void setRadioState(int channelID, RIL_RadioState newState);
 
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+
+#define  SPACE 0x20
+
+struct storage_information {
+    int fileId;
+    char name[32];
+};
+
+struct storage_information storage_info[4] = {
+    { 1, "AND"},
+    { 2, "SDN"},
+    { 3, "FDN"},
+    { 4, "MSISDN"},
+};
+
 typedef struct {
     int mcc;
     char *long_name;
@@ -3545,7 +3543,7 @@ static void requestSendEncodedUSSD(int channelID, void *data, size_t datalen, RI
     at_response_free(p_response);
 }
 
-static void requestGetPhonebookStorageInfo(channelID, data, datalen, t)
+static void requestGetPhonebookStorageInfo(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     ATResponse *p_response = NULL;
     int err;
@@ -3595,7 +3593,7 @@ error:
 }
 
 
-static void requestGetPhonebookEntry(channelID, data, datalen, t)
+static void requestGetPhonebookEntry(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     ATResponse *p_response = NULL;
     int err;
@@ -3605,13 +3603,11 @@ static void requestGetPhonebookEntry(channelID, data, datalen, t)
     char *line;
     RIL_SIM_GET_PB_ENTRY *p_args;
     RIL_SIM_PB_Response *pbResponse;
-    pb_entry_data pb_data;
     int response[2] = {0};
 
     p_args = (RIL_SIM_GET_PB_ENTRY*)data;
     pbResponse = (RIL_SIM_PB_Response*)alloca(sizeof(RIL_SIM_PB_Response));
     memset(pbResponse, 0, sizeof(RIL_SIM_PB_Response));
-    memset(&pb_data, 0, sizeof(pb_entry_data));
 
     asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[p_args->fileid].name);
     err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", NULL);
@@ -3638,16 +3634,15 @@ static void requestGetPhonebookEntry(channelID, data, datalen, t)
     if (err < 0) goto error;
     pbResponse->nextIndex = response[1];
 
-    pbResponse->alphaTags = alloca(NUM_OF_ALPHA*sizeof(char*));
     for (count=0; count<NUM_OF_ALPHA; count++) {
+        pbResponse->alphaTags[count] = (char*)alloca(sizeof(char*));
+        memset(pbResponse->alphaTags[count], 0, sizeof(char*));
         if (at_tok_hasmore(&line)) {
-            err = at_tok_nextstr(&line, &pb_data.data);
+            err = at_tok_nextstr(&line, &pbResponse->alphaTags[count]);
             if (err < 0) goto error;
-            err = at_tok_nextint(&line, &pb_data.type);
+            err = at_tok_nextint(&line, &pbResponse->dataTypeAlphas[count]);
             if (err < 0) goto error;
-            pbResponse->lengthAlphas[count] = strlen(pb_data.data);
-            pbResponse->dataTypeAlphas[count] = pb_data.type;
-            memcpy(pbResponse->alphaTags[count],pb_data.data,sizeof(pb_data.data));
+            pbResponse->lengthAlphas[count] = strlen(pbResponse->alphaTags[count]);
         } else {
             for (i=0; i<2; i++) {
                 skipNextComma(&line);
@@ -3655,16 +3650,15 @@ static void requestGetPhonebookEntry(channelID, data, datalen, t)
         }
     }
 
-    pbResponse->numbers = alloca(NUM_OF_NUMBER*sizeof(char*));
     for (count=0; count<NUM_OF_NUMBER; count++) {
+        pbResponse->numbers[count] = (char*)alloca(sizeof(char*));
+        memset(pbResponse->numbers[count], 0, sizeof(char*));
         if (at_tok_hasmore(&line)) {
-            err = at_tok_nextstr(&line, &pb_data.data);
+            err = at_tok_nextstr(&line, &pbResponse->numbers[count]);
             if (err < 0) goto error;
-            err = at_tok_nextint(&line, &pb_data.type);
+            err = at_tok_nextint(&line, &pbResponse->dataTypeNumbers[count]);
             if (err < 0) goto error;
-            pbResponse->lengthNumbers[count] = strlen(pb_data.data);
-            pbResponse->dataTypeNumbers[count] = pb_data.type;
-            memcpy(pbResponse->numbers[count],pb_data.data,sizeof(pb_data.data));
+            pbResponse->lengthNumbers[count] = strlen(pbResponse->numbers[count]);
         } else {
             for (i=0; i<2; i++) {
                 skipNextComma(&line);
@@ -3685,7 +3679,7 @@ error:
 }
 
 
-static void requestAccessPhonebookEntry(channelID, data, datalen, t)
+static void requestAccessPhonebookEntry(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     ATResponse *p_response = NULL;
     int err;
@@ -3702,25 +3696,25 @@ static void requestAccessPhonebookEntry(channelID, data, datalen, t)
     }
     free(cmd);
 
-    asprintf(&cmd, "AT^SPBW=%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,
+    asprintf(&cmd, "AT^SPBW=%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,\
                    \"%s\",%d,\"%s\",%d,\"%s\",%d,\"%s\",%d",
                    p_args->index,
                    p_args->number? p_args->number : "",
-                   p_args->number? 0 : "",
+                   p_args->number? 0 : SPACE,
                    p_args->anr? p_args->anr : "",
-                   p_args->anr? 0 : "",
+                   p_args->anr? 0 : SPACE,
                    p_args->anrA? p_args->anrA : "",
-                   p_args->anrA? 0 : "",
+                   p_args->anrA? 0 : SPACE,
                    p_args->anrB? p_args->anrB : "",
-                   p_args->anrB? 0 : "",
+                   p_args->anrB? 0 : SPACE,
                    p_args->anrC? p_args->anrC : "",
-                   p_args->anrC? 0 : "",
+                   p_args->anrC? 0 : SPACE,
                    p_args->alphaTag? p_args->alphaTag : "",
-                   p_args->alphaTag? p_args->alphaTagDCS : "",
+                   p_args->alphaTag? p_args->alphaTagDCS : SPACE,
                    p_args->email? p_args->email : "",
-                   p_args->email? 0 : "",
+                   p_args->email? 0 : SPACE,
                    p_args->sne? p_args->sne : "",
-                   p_args->sne? p_args->sneDCS : "");
+                   p_args->sne? p_args->sneDCS : SPACE);
     err = at_send_command_singleline(ATch_type[channelID], cmd, "^SPBW:", &p_response);
     if (err < 0 || p_response->success == 0) {
         goto error;
@@ -3746,7 +3740,7 @@ error:
     free(cmd);
 }
 
-static void requestUsimPbCapa(channelID, data, datalen, t)
+static void requestUsimPbCapa(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     ATResponse *p_response = NULL;
     RIL_Usim_PB_Capa *pbCapa;
