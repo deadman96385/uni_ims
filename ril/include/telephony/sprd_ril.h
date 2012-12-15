@@ -705,40 +705,6 @@ typedef enum {
   RIL_APPTYPE_ISIM    = 5
 } RIL_AppType;
 
-#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-typedef struct {
-    int command;
-    int fileid;
-    char *path;
-    int index;
-    int p1;
-    int p2;
-    int p3;
-    char *data;
-    char *pin2;
-} RIL_SIM_GET_PB_ENTRY;
-
-typedef struct {
-    int command;
-    int fileid;
-    int index;
-    char *alphaTag;
-    int alphaTagDCS;
-    int alphaTagLength;
-    char *number;
-    char *email;
-    int emailLength;
-    char *anr;
-    char *anrA;
-    char *anrB;
-    char *anrC;
-    char *sne;
-    int sneLength;
-    int sneDCS;
-    char *pin2;
-} RIL_SIM_ACCESS_PB_ENTRY;
-#endif
-
 typedef struct
 {
   RIL_AppType      app_type;

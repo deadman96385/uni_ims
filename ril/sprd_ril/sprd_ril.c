@@ -239,21 +239,6 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t);
 static void setRadioState(int channelID, RIL_RadioState newState);
 
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-
-#define  SPACE 0x20
-
-struct storage_information {
-    int fileId;
-    char name[32];
-};
-
-struct storage_information storage_info[4] = {
-    { 1, "AND"},
-    { 2, "SDN"},
-    { 3, "FDN"},
-    { 4, "MSISDN"},
-};
-
 typedef struct {
     int mcc;
     char *long_name;
@@ -3552,8 +3537,8 @@ static void requestGetPhonebookStorageInfo(int channelID, void *data, size_t dat
     int response[5] = {0};
 
     asprintf(&cmd, "AT+CPBS=\"%s\"",((char**)data)[0]);
-    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", NULL);
-    if (err < 0) {
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", &p_response);
+    if (err < 0 || p_response->success == 0) {
         goto error;
     }
     err = at_send_command_singleline(ATch_type[channelID], "AT+CPBS?", "+CPBS:", &p_response);
@@ -3601,17 +3586,18 @@ static void requestGetPhonebookEntry(int channelID, void *data, size_t datalen, 
     int i;
     char *cmd;
     char *line;
-    RIL_SIM_GET_PB_ENTRY *p_args;
+    RIL_SIM_PB *p_args;
     RIL_SIM_PB_Response *pbResponse;
     int response[2] = {0};
+    char* storage_info[4] = {"AND","SDN","FDN","MSISDN"};
 
-    p_args = (RIL_SIM_GET_PB_ENTRY*)data;
+    p_args = (RIL_SIM_PB*)data;
     pbResponse = (RIL_SIM_PB_Response*)alloca(sizeof(RIL_SIM_PB_Response));
     memset(pbResponse, 0, sizeof(RIL_SIM_PB_Response));
 
-    asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[p_args->fileid].name);
-    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", NULL);
-    if (err < 0) {
+    asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[p_args->fileid]);
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", &p_response);
+    if (err < 0 || p_response->success == 0) {
         goto error;
     }
     free(cmd);
@@ -3635,8 +3621,6 @@ static void requestGetPhonebookEntry(int channelID, void *data, size_t datalen, 
     pbResponse->nextIndex = response[1];
 
     for (count=0; count<NUM_OF_ALPHA; count++) {
-        pbResponse->alphaTags[count] = (char*)alloca(sizeof(char*));
-        memset(pbResponse->alphaTags[count], 0, sizeof(char*));
         if (at_tok_hasmore(&line)) {
             err = at_tok_nextstr(&line, &pbResponse->alphaTags[count]);
             if (err < 0) goto error;
@@ -3651,8 +3635,6 @@ static void requestGetPhonebookEntry(int channelID, void *data, size_t datalen, 
     }
 
     for (count=0; count<NUM_OF_NUMBER; count++) {
-        pbResponse->numbers[count] = (char*)alloca(sizeof(char*));
-        memset(pbResponse->numbers[count], 0, sizeof(char*));
         if (at_tok_hasmore(&line)) {
             err = at_tok_nextstr(&line, &pbResponse->numbers[count]);
             if (err < 0) goto error;
@@ -3685,13 +3667,14 @@ static void requestAccessPhonebookEntry(int channelID, void *data, size_t datale
     int err;
     char *cmd;
     char *line;
-    RIL_SIM_ACCESS_PB_ENTRY *p_args;
+    RIL_SIM_ACCESS_PB *p_args;
     int operindex = 0;
+    char* storage_info[4] = {"AND","SDN","FDN","MSISDN"};
 
-    p_args = (RIL_SIM_ACCESS_PB_ENTRY*)data;
-    asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[p_args->fileid].name);
-    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", NULL);
-    if (err < 0) {
+    p_args = (RIL_SIM_ACCESS_PB*)data;
+    asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[p_args->fileid]);
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", &p_response);
+    if (err < 0 || p_response->success == 0) {
         goto error;
     }
     free(cmd);
@@ -3700,21 +3683,21 @@ static void requestAccessPhonebookEntry(int channelID, void *data, size_t datale
                    \"%s\",%d,\"%s\",%d,\"%s\",%d,\"%s\",%d",
                    p_args->index,
                    p_args->number? p_args->number : "",
-                   p_args->number? 0 : SPACE,
+                   p_args->number? 0 : 0x20,
                    p_args->anr? p_args->anr : "",
-                   p_args->anr? 0 : SPACE,
+                   p_args->anr? 0 : 0x20,
                    p_args->anrA? p_args->anrA : "",
-                   p_args->anrA? 0 : SPACE,
+                   p_args->anrA? 0 : 0x20,
                    p_args->anrB? p_args->anrB : "",
-                   p_args->anrB? 0 : SPACE,
+                   p_args->anrB? 0 : 0x20,
                    p_args->anrC? p_args->anrC : "",
-                   p_args->anrC? 0 : SPACE,
+                   p_args->anrC? 0 : 0x20,
                    p_args->alphaTag? p_args->alphaTag : "",
-                   p_args->alphaTag? p_args->alphaTagDCS : SPACE,
+                   p_args->alphaTag? p_args->alphaTagDCS : 0x20,
                    p_args->email? p_args->email : "",
-                   p_args->email? 0 : SPACE,
+                   p_args->email? 0 : 0x20,
                    p_args->sne? p_args->sne : "",
-                   p_args->sne? p_args->sneDCS : SPACE);
+                   p_args->sne? p_args->sneDCS : 0x20);
     err = at_send_command_singleline(ATch_type[channelID], cmd, "^SPBW:", &p_response);
     if (err < 0 || p_response->success == 0) {
         goto error;
