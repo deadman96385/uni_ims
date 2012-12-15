@@ -1528,12 +1528,161 @@ invalid:
 
 static void dispatchGetPB(Parcel& p, RequestInfo *pRI)
 {
-    /*FIXME*/
+    RIL_SIM_PB simPB;
+    int32_t t;
+    int size;
+    status_t status;
+
+    memset (&simPB, 0, sizeof(simPB));
+
+    // note we only check status at the end
+
+    status = p.readInt32(&t);
+    simPB.command = (int)t;
+
+    status = p.readInt32(&t);
+    simPB.fileid = (int)t;
+
+    status = p.readInt32(&t);
+    simPB.index = (int)t;
+
+    simPB.pin2 = strdupReadString(p);
+
+    startRequest;
+    appendPrintBuf("%scommand=%d,fileid=%d,index=%d,pin2=%s", printBuf,
+        simPB.command, simPB.fileid, simPB.index, (char*)simPB.pin2);
+    closeRequest;
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+
+    s_callbacks.onRequest(pRI->pCI->requestNumber, &simPB, sizeof(simPB), pRI);
+
+#ifdef MEMSET_FREED
+    memsetString (simPB.pin2);
+#endif
+
+    free (simPB.pin2);
+
+#ifdef MEMSET_FREED
+    memset(&simPB, 0, sizeof(simPB));
+#endif
+
+    return;
+invalid:
+    invalidCommandBlock(pRI);
+    return;
 }
 
 static void dispatchAccessPB(Parcel& p, RequestInfo *pRI)
 {
-    /*FIXME*/
+    RIL_SIM_ACCESS_PB simAccessPB;
+    int32_t t;
+    int size;
+    status_t status;
+
+    memset (&simAccessPB, 0, sizeof(simAccessPB));
+
+    // note we only check status at the end
+
+    status = p.readInt32(&t);
+    simAccessPB.command = (int)t;
+
+    status = p.readInt32(&t);
+    simAccessPB.fileid = (int)t;
+
+    status = p.readInt32(&t);
+    simAccessPB.index = (int)t;
+
+    simAccessPB.alphaTag = strdupReadString(p);
+
+    status = p.readInt32(&t);
+    simAccessPB.alphaTagDCS = (int)t;
+
+    status = p.readInt32(&t);
+    simAccessPB.alphaTagLength = (int)t;
+
+    simAccessPB.number = strdupReadString(p);
+    simAccessPB.email = strdupReadString(p);
+
+    status = p.readInt32(&t);
+    simAccessPB.emailLength = (int)t;
+
+    simAccessPB.anr = strdupReadString(p);
+    simAccessPB.anrA = strdupReadString(p);
+    simAccessPB.anrB = strdupReadString(p);
+    simAccessPB.anrC = strdupReadString(p);
+    simAccessPB.sne = strdupReadString(p);
+
+    status = p.readInt32(&t);
+    simAccessPB.sneLength = (int)t;
+
+    status = p.readInt32(&t);
+    simAccessPB.sneDCS = (int)t;
+
+    simAccessPB.pin2 = strdupReadString(p);
+
+    startRequest;
+    appendPrintBuf("%scommand=%d,fileid=%d,index=%d,alphaTag=%s,alphaTagDCS=%d,alphaTagLength=%d,number=%s,email=%s,emailLength=%d,anr=%s,anrA=%s,anrB=%s,anrC=%s,sne=%s,sneLength=%d,sneDCS=%d,pin2=%s", 
+    printBuf,
+    simAccessPB.command,
+    simAccessPB.fileid,
+    simAccessPB.index,
+    (char*)simAccessPB.alphaTag,
+    simAccessPB.alphaTagDCS,
+    simAccessPB.alphaTagLength,
+    (char*)simAccessPB.number,
+    (char*)simAccessPB.email,
+    simAccessPB.emailLength,
+    (char*)simAccessPB.anr,
+    (char*)simAccessPB.anrA,
+    (char*)simAccessPB.anrB,
+    (char*)simAccessPB.anrC,
+    (char*)simAccessPB.sne,
+    simAccessPB.sneLength,
+    simAccessPB.sneDCS,
+    (char*)simAccessPB.pin2);
+    closeRequest;
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+
+    s_callbacks.onRequest(pRI->pCI->requestNumber, &simAccessPB, sizeof(simAccessPB), pRI);
+
+#ifdef MEMSET_FREED
+    memsetString (simAccessPB.alphaTag);
+    memsetString (simAccessPB.number);
+    memsetString (simAccessPB.email);
+    memsetString (simAccessPB.anr);
+    memsetString (simAccessPB.anrA);
+    memsetString (simAccessPB.anrB);
+    memsetString (simAccessPB.anrC);
+    memsetString (simAccessPB.sne);
+    memsetString (simAccessPB.pin2);
+#endif
+
+    free (simAccessPB.alphaTag);
+    free (simAccessPB.number);
+    free (simAccessPB.email);
+    free (simAccessPB.anr);
+    free (simAccessPB.anrA);
+    free (simAccessPB.anrB);
+    free (simAccessPB.anrC);
+    free (simAccessPB.sne);
+    free (simAccessPB.pin2);
+
+#ifdef MEMSET_FREED
+    memset(&simAccessPB, 0, sizeof(simAccessPB));
+#endif
+
+    return;
+invalid:
+    invalidCommandBlock(pRI);
+    return;
 }
 #endif
 
@@ -2794,7 +2943,54 @@ static int responseGetCBConf(Parcel &p, void *response, size_t responselen)
 
 static int responseGetPB(Parcel &p, void *response, size_t responselen)
 {
-    /*FIXME*/
+    if (response == NULL && responselen != 0) {
+        ALOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    if (responselen % sizeof(RIL_SIM_PB_Response) != 0) {
+        ALOGE("invalid response length %d expected multiple of %d",
+                (int)responselen, (int)sizeof(RIL_SIM_PB_Response));
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    int num = responselen / sizeof(RIL_SIM_PB_Response);
+    p.writeInt32(num);
+
+    RIL_SIM_PB_Response *p_cur = (RIL_SIM_PB_Response *) response;
+    startResponse;
+    int i,j;
+    for (i = 0; i < num; i++) {
+        for (j = 0; j < NUM_OF_ALPHA; j++) {
+            p.writeInt32(p_cur[i].lengthAlphas[j]);
+        }
+
+        for (j = 0; j < NUM_OF_ALPHA; j++) {
+            p.writeInt32(p_cur[i].dataTypeAlphas[j]);
+        }
+
+        for (j = 0; j < NUM_OF_ALPHA; j++) {
+            writeStringToParcel(p, p_cur[i].alphaTags[j]);
+        }
+
+        for (j = 0; j < NUM_OF_NUMBER; j++) {
+            p.writeInt32(p_cur[i].lengthNumbers[j]);
+        }
+
+        for (j = 0; j < NUM_OF_NUMBER; j++) {
+            p.writeInt32(p_cur[i].dataTypeNumbers[j]);
+        }
+
+        for (j = 0; j < NUM_OF_NUMBER; j++) {
+            writeStringToParcel(p, p_cur[i].numbers[j]);
+        }
+
+        p.writeInt32(p_cur[i].recordIndex);
+        p.writeInt32(p_cur[i].nextIndex);
+    }
+    removeLastChar;
+    closeResponse;
+
     return 0;
 }
 
