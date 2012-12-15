@@ -3535,8 +3535,10 @@ static void requestGetPhonebookStorageInfo(int channelID, void *data, size_t dat
     char *cmd;
     char *line;
     int response[5] = {0};
+    char* storage_info[4] = {"AND","SDN","FDN","MSISDN"};
+    int fileid = ((int *)data)[0];
 
-    asprintf(&cmd, "AT+CPBS=\"%s\"",((char**)data)[0]);
+    asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[fileid]);
     err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", &p_response);
     if (err < 0 || p_response->success == 0) {
         goto error;
