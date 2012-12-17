@@ -8,7 +8,7 @@ LOCAL_C_INCLUDES :=$(LOCAL_PATH)/../include
 LOCAL_SRC_FILES:= \
     sprd_ril.cpp \
     ril_event.cpp\
-    thrmgr.cpp
+    sprd_thread_pool.cpp
 
 LOCAL_SHARED_LIBRARIES := \
     libutils \
@@ -39,7 +39,7 @@ include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES:= \
     sprd_ril.cpp\
-    thrmgr.cpp
+    sprd_thread_pool.cpp
 
 LOCAL_STATIC_LIBRARIES := \
     libutils_static \

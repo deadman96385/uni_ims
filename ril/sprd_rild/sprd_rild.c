@@ -23,7 +23,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <telephony/thrmgr.h>
 #include <utils/Log.h>
 #include <cutils/properties.h>
 #include <cutils/sockets.h>
@@ -66,11 +65,6 @@ static struct RIL_Env s_rilEnv = {
 };
 
 extern void RIL_startEventLoop();
-//add
-//extern threadpool_t *thrmgr_new(int max_threads, int idle_timeout, void (*handler)(void *));
-//extern void thrmgr_destroy(threadpool_t *threadpool);
-//extern void CommandThread(void *arg);
-
 static int make_argv(char * args, char ** argv)
 {
     // Note: reserve argv[0]

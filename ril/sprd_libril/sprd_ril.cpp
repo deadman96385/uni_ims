@@ -18,7 +18,7 @@
 #define LOG_TAG "RILC"
 
 #include <hardware_legacy/power.h>
-#include <telephony/thrmgr.h>
+#include <telephony/sprd_thread_pool.h>
 #include <telephony/sprd_ril.h>
 #include <telephony/ril_cdma_sms.h>
 #include <cutils/sockets.h>
@@ -3394,7 +3394,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                 cmd_item = (&other_cmd_list)->next) {
             do {
                 ALOGI("PCC  alloc one command p_record\n");
-                ret = thrmgr_dispatch(threadpool_d, cmd_item->user_data);
+                ret = thread_pool_dispatch(threadpool_d, CommandThread, cmd_item->user_data);
                 if(!ret) {
                     ALOGE("dispatch a new thread unsuccess\n");
                     sleep(1);
@@ -3880,7 +3880,7 @@ RIL_register (const RIL_RadioFunctions *callbacks, int sim_num) {
     list_init(&sms_cmd_list);
     list_init(&other_cmd_list);
 
-    threadpool_d = thrmgr_new(THR_MAX, 10000, CommandThread);
+    threadpool_d = thread_pool_init(THR_MAX, 10000);
     if(threadpool_d->thr_max==THR_MAX){
         ALOGI("Ril.cpp: %d CommandThread create",threadpool_d->thr_max);
     }
