@@ -168,8 +168,13 @@ static SIM_Status getSIMStatus(int channelID);
 static int getCardStatus(int channelID, RIL_CardStatus_v6 **pp_card_status);
 static void freeCardStatus(RIL_CardStatus_v6 *p_card_status);
 static void onDataCallListChanged(void *param);
+#if defined (RIL_SPRD_EXTENSION)
 static void putChannel(int channel);
 static int getChannel();
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+void putChannel(int channel);
+int getChannel();
+#endif
 static int getSmsChannel();
 extern const char * requestToString(int request);
 static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_Token t);
@@ -3224,7 +3229,11 @@ static void requestVideoPhoneDial(int channelID, void *data, size_t datalen, RIL
 }
 
 /* release Channel */
+#if defined (RIL_SPRD_EXTENSION)
 static void putChannel(int channel)
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+void putChannel(int channel)
+#endif
 {
     struct channel_description *descriptions;
 
@@ -3253,7 +3262,11 @@ done1:
 }
 
 /* Return channel ID */
+#if defined (RIL_SPRD_EXTENSION)
 static int getChannel()
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+int getChannel()
+#endif
 {
     int ret=0;
     int channel;
@@ -3791,11 +3804,16 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 {
     ATResponse *p_response;
     int err;
-    int channelID;
+    int channelID = -1;
 
     ALOGD("onRequest: %s sState=%d", requestToString(request), sState);
 
+#if defined (RIL_SPRD_EXTENSION)
     channelID = getChannel();
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+    if(request != RIL_REQUEST_OEM_HOOK_RAW)
+        channelID = getChannel();
+#endif
 
     /* Ignore all requests except RIL_REQUEST_GET_SIM_STATUS
      * when RADIO_STATE_UNAVAILABLE.
@@ -5251,7 +5269,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_LOCK_INFO:
             {
                 char  cmd[12] = {0};
-                int   type = 0;
+                int   type = -1;
                 char *line = NULL;
                 int   result = 0;
                 RIL_SIM_Lockinfo *p_lock = NULL;
@@ -5278,8 +5296,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                   default:
                     ALOGD("RIL_REQUEST_LOCK_INFO: unsupport lock type!!");
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                    return;
                 }
+		if(type == -1)
+                    break;
                 sprintf(cmd, "AT+XX=%d", type);
                 err = at_send_command_singleline(ATch_type[channelID], cmd, "+XX:",
                                                  &p_response);
@@ -5325,8 +5344,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
     }
 
+#if defined (RIL_SPRD_EXTENSION)
     putChannel(channelID);
-
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+    if(request != RIL_REQUEST_OEM_HOOK_RAW)
+        putChannel(channelID);
+#endif
 }
 
 /**
