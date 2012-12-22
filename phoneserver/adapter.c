@@ -29,6 +29,11 @@
 #include "ps_service.h"
 #include "config.h"
 #include "channel_manager.h"
+#include <cutils/properties.h>
+
+#define RIL_SIM1_ABSENT_PROPERTY  "ril.sim1.absent"
+
+static int sim1_absent =-1, sim2_exist = -1;
 
 struct cmd_table {
     AT_CMD_ID_T cmd_id;
@@ -466,8 +471,7 @@ const struct ind_table at_ind_cvt_table[] = {
     {AT_CMD_SIND_IND, AT_CMD_STR("+SIND:"), cvt_generic_cmd_ind},
     {AT_CMD_ECSQ_IND, AT_CMD_STR("+ECSQ:"), cvt_ecsq_cmd_ind},
     {AT_CMD_ECEER_IND, AT_CMD_STR("+ECEER:"), cvt_eceer_cmd_ind},
-    {AT_CMD_ECIND_IND, AT_CMD_STR("+ECIND: 3,2"), cvt_generic_cmd_ind},
-    {AT_CMD_ECIND_IND, AT_CMD_STR("+ECIND: 3,1"), cvt_generic_cmd_ind},
+    {AT_CMD_ECIND_IND, AT_CMD_STR("+ECIND: 3"), cvt_ecind_cmd_ind},
     {AT_CMD_ECIND_IND, AT_CMD_STR("+ECIND:"), cvt_ecind0_cmd_ind},
     {AT_CMD_ESATCAPCNF_IND, AT_CMD_STR("+ESATCAPCNF"), cvt_generic_cmd_ind},
     {AT_CMD_ESATPROCMDIND_IND, AT_CMD_STR("+ESATPROCMDIND"),
@@ -1216,6 +1220,81 @@ int cvt_generic_cmd_ind(AT_CMD_IND_T * ind)
         ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
     }else
         PHS_LOGE("ind string size > 300\n");
+    if(ind_eng_pty != NULL)
+        if (ind_eng_pty->ops && ind->len < MAX_AT_CMD_LEN)
+            ind_eng_pty->ops->pty_write(ind_eng_pty, ind_str, strlen(ind_str));
+
+    return AT_RESULT_OK;
+}
+
+int cvt_ecind_cmd_ind(AT_CMD_IND_T * ind)
+{
+    char ind_str[MAX_AT_CMD_LEN];
+    char *tmp;
+    int err;
+    int skip, sim_status;
+    pid_t pid1, pid2;
+    char prop[5];
+
+#if defined CONFIG_SINGLE_SIM
+    pty_t *ind_pty = adapter_get_default_ind_pty();
+    pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
+#elif defined CONFIG_DUAL_SIM
+    pty_t *ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
+    pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
+#endif
+    memset(ind_str, 0, MAX_AT_CMD_LEN);
+    if (ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
+        snprintf(ind_str, sizeof(ind_str), "%s%s%s", "\r\n", ind->ind_str, "\n");
+        ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+#if defined CONFIG_DUAL_SIM
+        property_get(RIL_SIM1_ABSENT_PROPERTY, prop, "0");
+        if(strcmp(prop, "0") == 0) {
+            tmp = ind->ind_str;
+            err = at_tok_start(&tmp, ':');
+            if (err < 0) {
+                PHS_LOGD("parse cmd error\n");
+                return AT_RESULT_OK;
+            }
+            /*skip type value */
+            err = at_tok_nextint(&tmp, &skip);
+            if (err < 0) {
+                return AT_RESULT_OK;
+            }
+            if (0 == at_tok_nextint(&tmp, &sim_status)) {
+                if(sim_status == 1) {   /* sim is absent */
+                    if((mux_type)(ind->recv_cmux->type) == INDM_SIM1) {
+                        sim1_absent = 1;
+                        if(sim2_exist == 1) {
+                            /*restart rild*/
+                            property_set(RIL_SIM1_ABSENT_PROPERTY, "1");
+                            property_set("ctl.stop", "ril-daemon");
+                            property_set("ctl.stop", "ril-daemon1");
+                            property_set("ctl.start", "ril-daemon");
+                            property_set("ctl.start", "ril-daemon1");
+                        }
+                    }
+                } else if(sim_status == 0 || sim_status == 3) {  /* sim is exist */
+                    if((mux_type)(ind->recv_cmux->type) == INDM_SIM2) {
+                        sim2_exist = 1;
+                        if(sim1_absent == 1) {
+                            /*restart rild*/
+                            property_set(RIL_SIM1_ABSENT_PROPERTY, "1");
+                            property_set("ctl.stop", "ril-daemon");
+                            property_set("ctl.stop", "ril-daemon1");
+                            property_set("ctl.start", "ril-daemon");
+                            property_set("ctl.start", "ril-daemon1");
+                        }
+                    }
+                }
+            }
+        }
+#endif
+#endif
+    } else
+        PHS_LOGE("ind string size > 300\n");
+
     if(ind_eng_pty != NULL)
         if (ind_eng_pty->ops && ind->len < MAX_AT_CMD_LEN)
             ind_eng_pty->ops->pty_write(ind_eng_pty, ind_str, strlen(ind_str));

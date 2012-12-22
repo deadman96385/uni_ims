@@ -258,6 +258,7 @@ int cvt_cops_set_cmd_req0(AT_CMD_REQ_T * req);
 int cvt_cops_set_cmd_req1(AT_CMD_REQ_T * req);
 int cvt_cops_set_cmd_req2(AT_CMD_REQ_T * req);
 int cvt_cops_set_cmd_req4(AT_CMD_REQ_T * req);
+int cvt_ecind_cmd_ind(AT_CMD_IND_T * ind);
 int cvt_ecind0_cmd_ind(AT_CMD_IND_T * ind);
 int cvt_eceer_cmd_ind(AT_CMD_IND_T * ind);
 #endif /*  */
