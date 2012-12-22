@@ -65,6 +65,8 @@
 #define RIL_STK_PROFILE_PREFIX  "ril.stk.proflie_"
 #define RIL_SIM0_STATE  "gsm.sim.state0"
 #define RIL_SIM_ABSENT_PROPERTY "persist.sys.sim.absence"
+#define RIL_SIM1_ABSENT_PROPERTY "ril.sim1.absent"  /* this property will be
+						       set by phoneserver */
 
 int s_dualSimMode = 0;
 
@@ -6945,6 +6947,7 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
     int opt;
     pthread_attr_t attr;
     char phoneCount[5];
+    char prop[5];
 
     if(0 == property_get(SIM_MODE_PROPERTY, phoneCount, "1")) {
         s_dualSimMode = 0;
@@ -6973,6 +6976,15 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
     pthread_attr_init (&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     if(s_dualSimMode){
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+        property_get(RIL_SIM1_ABSENT_PROPERTY, prop, "0");
+	if(!strcmp(prop, "1")) {
+            if(s_sim_num == 0)
+                s_sim_num = 1;
+	    else if(s_sim_num == 1)
+                s_sim_num = 0;
+	}
+#endif
         ret = pthread_create(&s_tid_mainloop, &attr, mainLoop, &s_sim_num);
         ALOGD("RIL enter dual sim card mode!");
     } else {
