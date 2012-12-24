@@ -170,13 +170,8 @@ static SIM_Status getSIMStatus(int channelID);
 static int getCardStatus(int channelID, RIL_CardStatus_v6 **pp_card_status);
 static void freeCardStatus(RIL_CardStatus_v6 *p_card_status);
 static void onDataCallListChanged(void *param);
-#if defined (RIL_SPRD_EXTENSION)
-static void putChannel(int channel);
-static int getChannel();
-#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 void putChannel(int channel);
 int getChannel();
-#endif
 static int getSmsChannel();
 extern const char * requestToString(int request);
 static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_Token t);
@@ -3231,11 +3226,7 @@ static void requestVideoPhoneDial(int channelID, void *data, size_t datalen, RIL
 }
 
 /* release Channel */
-#if defined (RIL_SPRD_EXTENSION)
-static void putChannel(int channel)
-#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 void putChannel(int channel)
-#endif
 {
     struct channel_description *descriptions;
 
@@ -3264,11 +3255,7 @@ done1:
 }
 
 /* Return channel ID */
-#if defined (RIL_SPRD_EXTENSION)
-static int getChannel()
-#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 int getChannel()
-#endif
 {
     int ret=0;
     int channel;
