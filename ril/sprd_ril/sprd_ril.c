@@ -4190,6 +4190,23 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 RIL_onUnsolicitedResponse (
                         RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED,
                         NULL, 0);
+                // transfer rilconstan to at
+                int type = 0;
+                switch(((int *)data)[0]) {
+                case 0: //NETWORK_MODE_WCDMA_PREF
+                    type = 2;
+                    break;
+                case 1://NETWORK_MODE_GSM_ONLY
+                    type = 13;
+                    break;
+                case 2://NETWORK_MODE_WCDMA_ONLY
+                    type = 15;
+                    break;
+                }
+                if (0 == type) {
+                    ALOGE("set prefeered network failed, type incorrect: %d", ((int *)data)[0]);
+                    break;
+                }
                 if(s_dualSimMode) {
                     char prop[10];
                     extern int s_sim_num;
@@ -4200,7 +4217,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                             at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", NULL);
                         else
                             at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", NULL);
-                        asprintf(&cmd, "AT^SYSCONFIG=%d,3,2,4", ((int *)data)[0]);
+                        asprintf(&cmd, "AT^SYSCONFIG=%d,3,2,4", type);
                         err = at_send_command(ATch_type[channelID], cmd, &p_response);
                         free(cmd);
                         if (err < 0 || p_response->success == 0) {
@@ -4217,7 +4234,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                         property_get(RIL_SIM0_STATE, prop, "ABSENT");
                         ALOGD(" RIL_SIM0_STATE = %s", prop);
                         if(!strcmp(prop, "ABSENT")) {
-                            asprintf(&cmd, "AT^SYSCONFIG=%d,3,2,4", ((int *)data)[0]);
+                            asprintf(&cmd, "AT^SYSCONFIG=%d,3,2,4", type);
                             err = at_send_command(ATch_type[channelID], cmd, &p_response);
                             free(cmd);
                             if (err < 0 || p_response->success == 0) {
@@ -4230,7 +4247,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                         }
                     }
                 } else {
-                    asprintf(&cmd, "AT^SYSCONFIG=%d,3,2,4", ((int *)data)[0]);
+                    asprintf(&cmd, "AT^SYSCONFIG=%d,3,2,4", type);
                     err = at_send_command(ATch_type[channelID], cmd, &p_response);
                     free(cmd);
                     if (err < 0 || p_response->success == 0) {
@@ -4259,6 +4276,19 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     err = at_tok_start(&line);
                     if (err >= 0) {
                         err = at_tok_nextint(&line, &response);
+                        // transfer at to rilconstant
+                        int type = 0;
+                        switch(response) {
+                        case 2:
+                            type = 0;//NETWORK_MODE_WCDMA_PREF
+                            break;
+                        case 13:
+                            type = 1;//NETWORK_MODE_GSM_ONLY
+                            break;
+                        case 15:
+                            type = 2;//NETWORK_MODE_WCDMA_ONLY
+                            break;
+                        }
                         RIL_onRequestComplete(t, RIL_E_SUCCESS, &response,
                                 sizeof(response));
                     }
