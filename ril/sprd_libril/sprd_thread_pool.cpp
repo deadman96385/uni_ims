@@ -116,7 +116,11 @@ void *thread_pool_worker(void *data)
 		}
 
 		worker = threadpool->queue_head;
-		threadpool->queue_head = worker->next;
+		if(worker)
+			threadpool->queue_head = worker->next;
+		else
+			threadpool->queue_head = NULL;
+
 		if (pthread_mutex_unlock(&(threadpool->pool_mutex)) != 0) {
 			/* Fatal error */
 			ALOGE("Fatal: mutex unlock failed!");
