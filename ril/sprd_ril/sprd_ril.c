@@ -968,13 +968,50 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 {
     int onOff;
     int autoAttach;
-    char prop[10];
     int err, i;
     ATResponse *p_response = NULL;
+    char sim_prop[5];
+    char data_prop[5];
+    extern int s_sim_num;
 
     assert (datalen >= sizeof(int *));
     onOff = ((int *)data)[0];
+
+#if defined (RIL_SPRD_EXTENSION)
     autoAttach = ((int *)data)[1];
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+    if(s_dualSimMode) {
+        property_get(RIL_SIM1_ABSENT_PROPERTY, sim_prop, "0");
+        property_get(RIL_DATA_PREFER_PROPERTY, data_prop, "0");
+        ALOGD(" requetRadioPower sim_prop = %s", sim_prop);
+        ALOGD(" requetRadioPower data_prop = %s", data_prop);
+        if(!strcmp(sim_prop, "1")) {
+            if (s_sim_num == 0) {
+                if(!strcmp(data_prop, "1"))
+                    autoAttach = 1;
+                else
+                    autoAttach = 0;
+            } else if (s_sim_num == 1) {
+                if(!strcmp(data_prop, "0"))
+                    autoAttach = 1;
+                else
+                    autoAttach = 0;
+            }
+        } else {
+            if (s_sim_num == 0) {
+                if(!strcmp(data_prop, "0"))
+                    autoAttach = 1;
+                else
+                    autoAttach = 0;
+            } else if (s_sim_num == 1) {
+                if(!strcmp(data_prop, "1"))
+                    autoAttach = 1;
+                else
+                    autoAttach = 0;
+            }
+        }
+    }
+#endif
 
     if (onOff == 0) {
         /*clear the array to ensure strcmp(creg_response/cgreg_response, s)
