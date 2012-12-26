@@ -67,14 +67,14 @@ struct chns_config_t chns_data = {.pty = {
 	{.dev_str = "/dev/CHNPTY6",.index = 6,.type = IND_SIM3,.prority = 1}, /*## attribute ind_pty */
 	{.dev_str = "/dev/CHNPTY7",.index = 7,.type = AT_SIM3,.prority = 1},	/*## attribute at_pty */
 	{.dev_str = "/dev/CHNPTY8",.index = 8,.type = AT_SIM3,.prority = 1},	/*## attribute at_pty */
-
+#if 0
 	{.dev_str = "/dev/CHNPTY9",.index = 9,.type = IND_SIM4,.prority = 1}, /*## attribute ind_pty */
 	{.dev_str = "/dev/CHNPTY10",.index = 10,.type = AT_SIM4,.prority = 1}, /*## attribute at_pty */
 	{.dev_str = "/dev/CHNPTY11",.index = 11,.type = AT_SIM4,.prority = 1}, /*## attribute at_pty */
-
-	{.dev_str = "/dev/CHNPTY12",.index = 12,.type = AT_SIM1,.prority = 1}, /*## attribute at_pty */
-	{.dev_str = "/dev/CHNPTY13",.index = 13,.type = AT_SIM1,.prority = 1}, /*## attribute at_pty */
-	{.dev_str = "/dev/CHNPTY14",.index = 14,.type = AT_SIM2,.prority = 1}, /*## attribute at_pty */
+#endif
+	{.dev_str = "/dev/CHNPTY12",.index = 9,.type = AT_SIM1,.prority = 1}, /*## attribute at_pty */
+	{.dev_str = "/dev/CHNPTY13",.index = 10,.type = AT_SIM1,.prority = 1}, /*## attribute at_pty */
+	{.dev_str = "/dev/CHNPTY14",.index = 11,.type = AT_SIM2,.prority = 1}, /*## attribute at_pty */
 
 }, .mux = {
 	{.dev_str = "/dev/ts0710mux0",.index = 0,.type = INDM_SIM1,.prority = 20}, /*## attribute misc_mux */
@@ -88,10 +88,11 @@ struct chns_config_t chns_data = {.pty = {
 	{.dev_str = "/dev/ts0710mux6",.index = 6,.type = INDM_SIM3,.prority = 20}, /*## attribute misc_mux */
 	{.dev_str = "/dev/ts0710mux7",.index = 7,.type = ATM1_SIM3,.prority = 20},
 	{.dev_str = "/dev/ts0710mux8",.index = 8,.type = ATM2_SIM3,.prority = 20},
-
+#if 0
 	{.dev_str = "/dev/ts0710mux9",.index = 9,.type = INDM_SIM4,.prority = 20}, /*## attribute misc_mux */
 	{.dev_str = "/dev/ts0710mux10",.index = 10,.type = ATM1_SIM4,.prority = 20},
 	{.dev_str = "/dev/ts0710mux11",.index = 11,.type = ATM2_SIM4,.prority = 20},
+#endif
 },
 #endif
 #ifndef CONFIG_VETH
