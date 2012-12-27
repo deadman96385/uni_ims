@@ -626,6 +626,11 @@ OMX_ERRORTYPE OmxComponentMpeg4EncAO::FreeBuffer(
 	return Vaddr - iPmemBase + iPmemBasePhy;
  }
 
+OMX_COLOR_FORMATTYPE OmxComponentMpeg4EncAO:: Get_eColorFormat_of_input()
+{
+    ComponentPortType *pOutPort = (ComponentPortType*) ipPorts[OMX_PORT_INPUTPORT_INDEX];
+        return pOutPort->PortParam.format.video.eColorFormat;
+}
 
 OMX_ERRORTYPE OmxComponentMpeg4EncAO::ConstructComponent(OMX_PTR pAppData, OMX_PTR pProxy)
 {
