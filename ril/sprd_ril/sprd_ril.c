@@ -241,6 +241,7 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t);
 static void setRadioState(int channelID, RIL_RadioState newState);
 
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+#define RIL_DATA_PREFER_PROPERTY  "persist.sys.dataprefer.simid"
 typedef struct {
     int mcc;
     char *long_name;
