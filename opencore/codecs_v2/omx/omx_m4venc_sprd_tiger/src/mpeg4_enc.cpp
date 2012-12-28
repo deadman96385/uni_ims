@@ -887,6 +887,7 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
     /* Input Buffer Size Check
      * Input buffer size should be equal to one frame, otherwise drop the frame
      * as it is a corrupt data and don't encode it */
+     iVideoFormat = static_cast<OmxComponentMpeg4EncAO * > (ipOMXComponent)->Get_eColorFormat_of_input();
     if (OMX_COLOR_FormatYUV420SemiPlanar == iVideoFormat)
     {
         if (aInBufSize < (OMX_U32)((iSrcWidth * iSrcHeight * 3) >> 1))
@@ -931,53 +932,48 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
         {
 		GraphicBufferMapper &mapper = GraphicBufferMapper::get();        
 		OMX_U32 type = *(OMX_U32 *) aInBuffer;
-		if(type != kMetadataBufferTypeGrallocSource)
-		{
-			SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo kMetadataBufferTypeGrallocSource err %d\n",type);
-    	 		return OMX_FALSE;			
-		}
-		buffer_handle_t buf = *((buffer_handle_t *) (aInBuffer + 4));	
-    		int width = ((iSrcWidth + 15) >> 4) << 4;
-    		int height = ((iSrcHeight + 15) >> 4) << 4;
-    		Rect bounds(width, height);
-    		void *vaddr;
-    		if(mapper.lock(buf, GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_NEVER, bounds, &vaddr))
-    		{
-            		SCI_TRACE_LOW("Mpeg4Encoder_OMX mapper.lock fail %x",buf);
-            		return OMX_FALSE;			
-    		}
-		//todo format conversion for MetaDataBuffer
-		SCI_TRACE_LOW("OMX_COLOR_FormatAndroidOpaque %x",vaddr);
-		CopyToYUVIn((uint8 *)vaddr, iSrcWidth, iSrcHeight,((iSrcWidth + 15) >> 4) << 4, ((iSrcHeight + 15) >> 4) << 4);
-		if(mapper.unlock(buf))
-		{
-            		SCI_TRACE_LOW("Mpeg4Encoder_OMX mapper.unlock fail %x",buf);	
-			return OMX_FALSE;			
-		}
-              iVideoIn = iYUVIn;
-		iVideoIn_phy = iYUVIn_phy;		
+	            if(type == kMetadataBufferTypeGrallocSource){
+	            GraphicBufferMapper &mapper = GraphicBufferMapper::get();
+	            buffer_handle_t buf = *((buffer_handle_t *) (aInBuffer + 4));
+	                int width = ((iSrcWidth + 15) >> 4) << 4;
+	                int height = ((iSrcHeight + 15) >> 4) << 4;
+	                Rect bounds(width, height);
+	                void *vaddr;
+	                if(mapper.lock(buf, GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_NEVER, bounds, &vaddr))
+	                {
+	                        SCI_TRACE_LOW("Mpeg4Encoder_OMX mapper.lock fail %x",buf);
+	                        return OMX_FALSE;
+	                }
+	            //todo format conversion for MetaDataBuffer
+	            SCI_TRACE_LOW("OMX_COLOR_FormatAndroidOpaque %x",vaddr);
+	            CopyToYUVIn((uint8 *)vaddr, iSrcWidth, iSrcHeight,((iSrcWidth + 15) >> 4) << 4, ((iSrcHeight + 15) >> 4) << 4);
+	            if(mapper.unlock(buf))
+	            {
+	                        SCI_TRACE_LOW("Mpeg4Encoder_OMX mapper.unlock fail %x",buf);
+	                return OMX_FALSE;
+	            }
+	                    iVideoIn = iYUVIn;
+	            iVideoIn_phy = iYUVIn_phy;
+	            }else if(type == kMetadataBufferTypeCameraSource){	             
+	            	iVideoIn = (uint8*)(*((int *) aInBuffer + 2));
+			iVideoIn_phy = (uint8*)(*((int *) aInBuffer + 1));
+			SCI_TRACE_LOW("wxz: Mp4EncodeVideo in: 0x%x, in phy: 0x%x.", (int)iVideoIn, (int)iVideoIn_phy);
+	            }else{
+	            SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo kMetadataBufferTypeGrallocSource err %d\n",type);
+	                 return OMX_FALSE;
+	            }		
         }
         else
-        {
-        	if((iSrcWidth & 0xF) || (iSrcHeight & 0xF)){ /* iSrcWidth or iSrcHeight is not multiple of 16 */
-                	CopyToYUVIn(aInBuffer, iSrcWidth, iSrcHeight,((iSrcWidth + 15) >> 4) << 4, ((iSrcHeight + 15) >> 4) << 4);
-                	iVideoIn = iYUVIn;
-			iVideoIn_phy = iYUVIn_phy;	
-			SCI_TRACE_LOW("copy from aInBuffer %x",aInBuffer);
-			SCI_TRACE_LOW("iVideoIn(vir) %x, iVideoIn_phy %x",iVideoIn,iVideoIn_phy);	
-        	}else{		
-              	iVideoIn = aInBuffer;
-			if((static_cast<OmxComponentMpeg4EncAO * > (ipOMXComponent))->iNumberOfPmemBuffers){//buffer allocated by component
-				iVideoIn_phy = (uint8*)(static_cast<OmxComponentMpeg4EncAO * > (ipOMXComponent))->FindPhyAddr((uint32)aInBuffer);				
-				SCI_TRACE_LOW("(buffer allocated by component) iVideoIn(vir) %x, iVideoIn_phy %x",iVideoIn,iVideoIn_phy);	
-			}else{
-				//LOGI("aInBuffer_phy %x",aInBuffer_phy);
-				iVideoIn_phy = aInBuffer_phy;
-				SCI_TRACE_LOW("iVideoIn(vir) %x, iVideoIn_phy %x",iVideoIn,iVideoIn_phy);
-			}
-        	}
+        {        	
+        	if((iSrcWidth & 0xF) || (iSrcHeight & 0xF) ||(!(static_cast<OmxComponentMpeg4EncAO * > (ipOMXComponent))->iNumberOfPmemBuffers)) { /* iSrcWidth or iSrcHeight is not multiple of 16 or buffer allocated not by component*/
+	                    CopyToYUVIn(aInBuffer, iSrcWidth, iSrcHeight,((iSrcWidth + 15) >> 4) << 4, ((iSrcHeight + 15) >> 4) << 4);
+	                    iVideoIn = iYUVIn;
+	            iVideoIn_phy = iYUVIn_phy;
+	            }else{
+	            	iVideoIn = aInBuffer;
+	            	iVideoIn_phy = (uint8*)(static_cast<OmxComponentMpeg4EncAO * > (ipOMXComponent))->FindPhyAddr((uint32)aInBuffer);
+	            }
          }
-
 
 #if PROFILING_ON
         //End ticks for color conversion time

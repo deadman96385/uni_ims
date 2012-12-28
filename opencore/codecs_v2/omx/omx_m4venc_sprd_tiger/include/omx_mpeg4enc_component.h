@@ -127,6 +127,7 @@ OSCL_IMPORT_REF OMX_ERRORTYPE SetParameter(
 
 
          uint32 FindPhyAddr(uint32 Vaddr); 
+	 OMX_COLOR_FORMATTYPE Get_eColorFormat_of_input();
 	 int  iNumberOfPmemBuffers;
 	 MemoryHeapIon * iMemHeapBae;
 	 //sp<MemoryHeapBase> iMasterHeap; 
