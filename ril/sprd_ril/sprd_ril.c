@@ -36,6 +36,7 @@
 #include <signal.h>
 #include <ctype.h>
 #include <telephony/sprd_ril.h>
+#include <semaphore.h>
 
 #define LOG_TAG "RIL"
 #include <utils/Log.h>
@@ -214,6 +215,7 @@ static pthread_mutex_t s_sms_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int s_port = -1;
 static const char * s_device_path = NULL;
 static int          s_device_socket = 0;
+static sem_t w_sem;
 
 /* trigger change to this with s_state_cond */
 static int s_closed = 0;
@@ -3912,7 +3914,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 char *p_buffer;
                 int buffer_size;
 
+                sem_wait(&w_sem);
                 int result = getCardStatus(channelID, &p_card_status);
+                sem_post(&w_sem);
                 if (result == RIL_E_SUCCESS) {
                     p_buffer = (char *)p_card_status;
                     buffer_size = sizeof(*p_card_status);
@@ -5990,6 +5994,7 @@ static void initializeCallback(void *param)
     putChannel(channelID);
 
     list_init(&dtmf_char_list);
+    sem_post(&w_sem);
 }
 
 static void waitForClose()
@@ -6935,6 +6940,7 @@ mainLoop(void *param)
         fd = -1;
         s_closed = 0;
         init_channels();
+        sem_wait(&w_sem);
 again:
         sim_num = sim_save;
         for(i = 0; i < channel_nums; i++)
@@ -7030,6 +7036,7 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
     }
     pthread_attr_init (&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    sem_init(&w_sem, 0, 1);
     if(s_dualSimMode){
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         property_get(RIL_SIM1_ABSENT_PROPERTY, prop, "0");
