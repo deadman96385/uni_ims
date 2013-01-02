@@ -3445,6 +3445,62 @@ error:
 }
 
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+static char* strReplace(char **str, char flag)
+{
+    char **tmp = NULL;
+    char **src = NULL;
+    char *ret = NULL;
+    int count = 0;
+    char buf[512] = {0};
+
+    if (*str == NULL)
+        return NULL;
+
+    tmp = str;
+    if (flag == ',') {
+        if (!strchr(*str, ',') && !strchr(*str, ';')) {
+            return *str;
+        }
+        while(**tmp != '\0') {
+            if (**tmp == ',') {
+                buf[count++] = 'P';
+                (*tmp)++;
+                continue;
+            }
+            if (**tmp == ';') {
+               buf[count++] = 'W';
+               (*tmp)++;
+               continue;
+            }
+            buf[count++] = **tmp;
+            (*tmp)++;
+        }
+        buf[count] = '\0';
+    } else if (flag == 'P') {
+        if (!strchr(*str, 'P') && !strchr(*str, 'W')) {
+            return *str;
+        }
+        while(**tmp != '\0') {
+            if (**tmp == 'P') {
+                buf[count++] = ',';
+                (*tmp)++;
+                continue;
+            }
+            if (**tmp == 'W') {
+               buf[count++] = ';';
+               (*tmp)++;
+               continue;
+            }
+            buf[count++] = **tmp;
+            (*tmp)++;
+        }
+        buf[count] = '\0';
+    }
+    memcpy(*str, buf, strlen(buf)+1);
+    ret = *str;
+    return ret;
+}
+
 static void requestEccDial(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     RIL_Dial *p_dial;
@@ -3577,7 +3633,7 @@ static void requestGetPhonebookStorageInfo(int channelID, void *data, size_t dat
     char *cmd;
     char *line;
     int response[5] = {0};
-    char* storage_info[4] = {"AND","SDN","FDN","MSISDN"};
+    char* storage_info[4] = {"SM","SN","FD","ON"};//AND:SM,SDN:SN,FDN:FD,MSISDN:ON
     int fileid = ((int *)data)[0];
 
     asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[fileid]);
@@ -3633,7 +3689,7 @@ static void requestGetPhonebookEntry(int channelID, void *data, size_t datalen, 
     RIL_SIM_PB *p_args;
     RIL_SIM_PB_Response *pbResponse;
     int response[2] = {0};
-    char* storage_info[4] = {"AND","SDN","FDN","MSISDN"};
+    char* storage_info[4] = {"SM","SN","FD","ON"};//AND:SM,SDN:SN,FDN:FD,MSISDN:ON
 
     p_args = (RIL_SIM_PB*)data;
     pbResponse = (RIL_SIM_PB_Response*)alloca(sizeof(RIL_SIM_PB_Response));
@@ -3682,6 +3738,8 @@ static void requestGetPhonebookEntry(int channelID, void *data, size_t datalen, 
         if (at_tok_hasmore(&line)) {
             err = at_tok_nextstr(&line, &pbResponse->numbers[count]);
             if (err < 0) goto error;
+            err = strReplace(&pbResponse->numbers[count],'P');
+            if (err == NULL) goto error;
             err = at_tok_nextint(&line, &pbResponse->dataTypeNumbers[count]);
             if (err < 0) goto error;
             pbResponse->lengthNumbers[count] = strlen(pbResponse->numbers[count]);
@@ -3713,7 +3771,7 @@ static void requestAccessPhonebookEntry(int channelID, void *data, size_t datale
     char *line;
     RIL_SIM_ACCESS_PB *p_args;
     int operindex = 0;
-    char* storage_info[4] = {"AND","SDN","FDN","MSISDN"};
+    char* storage_info[4] = {"SM","SN","FD","ON"};//AND:SM,SDN:SN,FDN:FD,MSISDN:ON
 
     p_args = (RIL_SIM_ACCESS_PB*)data;
     asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[p_args->fileid]);
@@ -3726,15 +3784,15 @@ static void requestAccessPhonebookEntry(int channelID, void *data, size_t datale
     asprintf(&cmd, "AT^SPBW=%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,\
                    \"%s\",%d,\"%s\",%d,\"%s\",%d,\"%s\",%d",
                    p_args->index,
-                   p_args->number? p_args->number : "",
+                   p_args->number? strReplace(p_args->number,',') : "",
                    p_args->number? 0 : 0x20,
-                   p_args->anr? p_args->anr : "",
+                   p_args->anr? strReplace(p_args->anr,',') : "",
                    p_args->anr? 0 : 0x20,
-                   p_args->anrA? p_args->anrA : "",
+                   p_args->anrA? strReplace(p_args->anrA,',') : "",
                    p_args->anrA? 0 : 0x20,
-                   p_args->anrB? p_args->anrB : "",
+                   p_args->anrB? strReplace(p_args->anrB,',') : "",
                    p_args->anrB? 0 : 0x20,
-                   p_args->anrC? p_args->anrC : "",
+                   p_args->anrC? strReplace(p_args->anrC,',') : "",
                    p_args->anrC? 0 : 0x20,
                    p_args->alphaTag? p_args->alphaTag : "",
                    p_args->alphaTag? p_args->alphaTagDCS : 0x20,
