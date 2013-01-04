@@ -3398,8 +3398,10 @@ static RIL_AppType getSimType(int channelID)
             if(err < 0) goto error;
             if(card_type == 1)
                 ret = RIL_APPTYPE_USIM;
-            else
+            else if(card_type == 0)
                 ret = RIL_APPTYPE_SIM;
+            else
+                ret = RIL_APPTYPE_UNKNOWN;
 
             at_response_free(p_response);
             return ret;
