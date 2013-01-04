@@ -12,15 +12,23 @@ void sprd_DataSwitch(int request, void *data, size_t datalen, RIL_Token t)
 
 	channelID = getChannel();
 
-	asprintf(&cmd, "AT+CGATT=1");
-	err = at_send_command(ATch_type[channelID], cmd, &p_response);
+	err = at_send_command(ATch_type[channelID], "AT+SPSSSGFD", &p_response);
 	if (err < 0 || p_response->success == 0) {
 		RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+		at_response_free(p_response);
 	} else {
-		RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+		at_response_free(p_response);
+		p_response = NULL;
+		asprintf(&cmd, "AT+CGATT=1");
+		err = at_send_command(ATch_type[channelID], cmd, &p_response);
+		if (err < 0 || p_response->success == 0) {
+			RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+		} else {
+			RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+		}
+		free(cmd);
+		at_response_free(p_response);
 	}
-	free(cmd);
-	at_response_free(p_response);
 
 	putChannel(channelID);
 }
