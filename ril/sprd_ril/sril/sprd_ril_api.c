@@ -124,7 +124,7 @@ int sprd_DebugScreen(char **testbuffer)
 	char *mm_str, *gmm_str;
 
 	channelID = getChannel();
-	err = at_send_command_singleline(ATch_type[channelID], "AT+DBGSCRN", "+DEGSCRN:", &p_response);
+	err = at_send_command_singleline(ATch_type[channelID], "AT+DBGSCRN?", "+DBGSCRN:", &p_response);
 	if (err < 0 || p_response->success == 0) {
 		goto error;
 	} else {
