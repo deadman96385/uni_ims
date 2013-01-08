@@ -557,7 +557,7 @@ class OmxComponentBase : public OsclActiveObject
         OMX_STATETYPE       iState;
 
         CoreDescriptorType* ipCoreDescriptor;
-        OMX_U32             iNumInputBuffer;
+        OMX_S32             iNumInputBuffer;
 
         OMX_U8*             ipFrameDecodeBuffer;
         OMX_BOOL            iPartialFrameAssembly;
@@ -573,7 +573,7 @@ class OmxComponentBase : public OsclActiveObject
         OMX_BOOL            iNewInBufferRequired;
         OMX_BOOL            iNewOutBufRequired;
         OMX_U32             iTempConsumedLength;
-        OMX_U32             iOutBufferCount;
+        OMX_S32             iOutBufferCount;
 
         OMX_BOOL            iCodecReady;
         OMX_U8*             ipInputCurrBuffer;
