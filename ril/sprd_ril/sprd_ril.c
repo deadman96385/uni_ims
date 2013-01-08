@@ -71,6 +71,7 @@
 
 int s_dualSimMode = 0;
 
+
 struct ATChannels *ATch_type[MAX_CHANNELS];
 static char creg_response[100] = "";
 static char cgreg_response[100] = "";
@@ -3740,8 +3741,8 @@ static void requestGetPhonebookEntry(int channelID, void *data, size_t datalen, 
         if (at_tok_hasmore(&line)) {
             err = at_tok_nextstr(&line, &pbResponse->numbers[count]);
             if (err < 0) goto error;
-            err = strReplace(&pbResponse->numbers[count],'P');
-            if (err == NULL) goto error;
+            if (strReplace(&pbResponse->numbers[count],'P') == NULL)
+                goto error;
             err = at_tok_nextint(&line, &pbResponse->dataTypeNumbers[count]);
             if (err < 0) goto error;
             pbResponse->lengthNumbers[count] = strlen(pbResponse->numbers[count]);
@@ -3786,15 +3787,15 @@ static void requestAccessPhonebookEntry(int channelID, void *data, size_t datale
     asprintf(&cmd, "AT^SPBW=%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,\
                    \"%s\",%d,\"%s\",%d,\"%s\",%d,\"%s\",%d",
                    p_args->index,
-                   p_args->number? strReplace(p_args->number,',') : "",
+                   p_args->number? strReplace(&p_args->number,',') : "",
                    p_args->number? 0 : 0x20,
-                   p_args->anr? strReplace(p_args->anr,',') : "",
+                   p_args->anr? strReplace(&p_args->anr,',') : "",
                    p_args->anr? 0 : 0x20,
-                   p_args->anrA? strReplace(p_args->anrA,',') : "",
+                   p_args->anrA? strReplace(&p_args->anrA,',') : "",
                    p_args->anrA? 0 : 0x20,
-                   p_args->anrB? strReplace(p_args->anrB,',') : "",
+                   p_args->anrB? strReplace(&p_args->anrB,',') : "",
                    p_args->anrB? 0 : 0x20,
-                   p_args->anrC? strReplace(p_args->anrC,',') : "",
+                   p_args->anrC? strReplace(&p_args->anrC,',') : "",
                    p_args->anrC? 0 : 0x20,
                    p_args->alphaTag? p_args->alphaTag : "",
                    p_args->alphaTag? p_args->alphaTagDCS : 0x20,
@@ -6386,7 +6387,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             ALOGD("%s fail", s);
             goto out;
         }
+#if defined (RIL_SPRD_EXTENSION)
         RIL_onUnsolicitedResponse (RIL_UNSOL_STK_EVENT_NOTIFY, response, sizeof(response));
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, sizeof(response));
+#endif
     } else if (strStartsWith(s, "+SPUSATSETUPCALL:")) {
         char *response = NULL;
         char *tmp;
@@ -6400,7 +6405,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             ALOGD("%s fail", s);
             goto out;
         }
+#if defined (RIL_SPRD_EXTENSION)
         RIL_onUnsolicitedResponse (RIL_UNSOL_STK_CALL_SETUP, response, sizeof(response));
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, sizeof(response));
+#endif
     } else if (strStartsWith(s, "+SPUSATREFRESH:")) {
         int response[3];
         char *tmp;
