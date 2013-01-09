@@ -804,7 +804,10 @@ OMX_ERRORTYPE OmxComponentBase::FlushPort(OMX_S32 PortIndex)
             }
             (*(ipCallbacks->EmptyBufferDone))
             (pHandle, iCallbackData, pInputBuff);
-            iNumInputBuffer--;
+           	if (iNumInputBuffer)
+    		{
+        		iNumInputBuffer--;
+    		}
         }
 
         //Release the current buffer that is being processed by the component.
@@ -812,7 +815,10 @@ OMX_ERRORTYPE OmxComponentBase::FlushPort(OMX_S32 PortIndex)
         {
             (*(ipCallbacks->EmptyBufferDone))
             (pHandle, iCallbackData, ipInputBuffer);
-            iNumInputBuffer--;
+            if (iNumInputBuffer)
+    		{
+       			iNumInputBuffer--;
+    		}
 
             iIsInputBufferEnded = OMX_TRUE;
             iInputCurrLength = 0;
