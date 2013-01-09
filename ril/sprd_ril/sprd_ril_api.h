@@ -21,10 +21,20 @@ extern int getChannel();
 extern struct ATChannels *ATch_type[MAX_CHANNELS];
 
 typedef enum {
-	BANDGSM900	 = 0,
-	BANDDCS1800 = 1,
-	BANDPCS1900 = 2,
-	BANDGSM850	 = 3, 
+	BANDGSM900	= 0,
+	BANDDCS1800	= 1,
+	BANDPCS1900	= 2,
+	BANDGSM850	= 3,
+	BANDGSM900_DCS1800	= 4,
+	BANDGSM850_GSM900	= 5,
+	BANDGSM850_DCS1800	= 6,
+	BANDGSM850_PCS1900	= 7,
+	BANDGSM900_PCS1900	= 8,
+	BANDGSM850_GSM900_DCS1800	= 9,
+	BANDGSM850_GSM900_PCS1900	= 10,
+	BANDDCS1800_PCS1900	= 11,
+	BANDGSM850_DCS1800_PCS1900	= 12,
+	BANDGSM900_DCS1800_PCS1900	= 13,
 	BANDALLGSM = 14,
 	BANDINVALID = -1,
 } BAND_TYPE_T;
@@ -32,7 +42,7 @@ typedef enum {
 void sprd_DataSwitch(int request, void *data, size_t datalen, RIL_Token t);
 void sprd_IMEISimOut(int request, void *data, size_t datalen, RIL_Token t);
 int sprd_BandSelect(BAND_TYPE_T band_type);
-void sprd_GetCurrentBand(BAND_TYPE_T *band_type);
+BAND_TYPE_T sprd_GetCurrentBand(void);
 int sprd_DebugScreen(char **testbuffer);
 
 #endif

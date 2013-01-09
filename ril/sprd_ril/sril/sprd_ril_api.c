@@ -81,18 +81,19 @@ int sprd_BandSelect(BAND_TYPE_T band_type)
 
 }
 
-void sprd_GetCurrentBand(BAND_TYPE_T *band_type)
+BAND_TYPE_T sprd_GetCurrentBand(void)
 {
 	int err;
 	ATResponse  *p_response = NULL;
 	char *line;
 	int value;
 	int channelID;
+	BAND_TYPE_T band_type = BANDINVALID;
 
 	channelID = getChannel();
 	err = at_send_command_singleline(ATch_type[channelID], "AT+SBAND?", "+SBAND:", &p_response);
 	if (err < 0 || p_response->success == 0) {
-		*band_type = BANDINVALID;
+		goto error;
 	} else {
 		line = p_response->p_intermediates->line;
 		err = at_tok_start(&line);
@@ -101,14 +102,15 @@ void sprd_GetCurrentBand(BAND_TYPE_T *band_type)
 		err = at_tok_nextint(&line, &value);
 		if (err < 0) goto error;
 
-		*band_type = value;
+		band_type = value;
 	}
 	at_response_free(p_response);
 	putChannel(channelID);
-	return;
+	return band_type;
 error:
 	at_response_free(p_response);
 	putChannel(channelID);
+	return band_type;
 }
 
 int sprd_DebugScreen(char **testbuffer)
@@ -638,7 +640,7 @@ void sril_GetCurrentBand(int request, void *data, size_t datalen, RIL_Token t)
 	pTmpRsp++;	// Line[1]
 	pTmpRsp->line = 1;
 	pTmpRsp->reverse = 0;
-	sprd_GetCurrentBand(&band_type);
+	band_type = sprd_GetCurrentBand();
 	if(band_type == BANDINVALID)
 		sprintf(tmp, "Band: UNKNOWN");
 	else
