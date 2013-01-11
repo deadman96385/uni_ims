@@ -971,7 +971,7 @@ error:
 static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     int onOff;
-    int autoAttach;
+    int autoAttach = -1;
     int err, i;
     ATResponse *p_response = NULL;
     char sim_prop[5];
@@ -6177,8 +6177,8 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             ALOGE("invalid NITZ line %s\n", s);
         } else {
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-            raw_str = (char *)malloc(sizeof(response));
-            memcpy(raw_str, response, sizeof(response));
+            raw_str = (char *)malloc(strlen(response) + 1);
+            memcpy(raw_str, response, strlen(response) + 1);
             RIL_requestTimedCallback (onNitzReceived, raw_str, NULL);
 #elif defined (RIL_SPRD_EXTENSION)
             RIL_onUnsolicitedResponse (
