@@ -230,6 +230,7 @@ static cmux_t *find_type_cmux(struct channel_manager_t *const me, mux_type type)
 {
     cmux_t *mux = NULL;
     int i;
+
     sem_lock(&me->get_mux_lock);
     for (i = 0; i < MUX_NUM; i++) {
         if (me->itsCmux[i].type == (int)type && me->itsCmux[i].in_use == 0) {
@@ -299,47 +300,43 @@ static cmux_t *find_cmux(struct channel_manager_t *const me, AT_CMD_TYPE_T type)
     return mux;
 }
 #elif defined CONFIG_DUAL_SIM
-static cmux_t *find_cmux(struct channel_manager_t *const me, AT_CMD_TYPE_T type, REQUEST_TYPE_T request)
+static cmux_t *find_cmux(struct channel_manager_t *const me, AT_CMD_TYPE_T type)
 {
     cmux_t *mux = NULL;
 
     switch (type) {
-        case AT_CMD_TYPE_SIM1:
-            PHS_LOGD("TYPE: AT_CMD_TYPE_SIM1\n");
-            if(request == SMS_REQ || request == PS_REQ)
-                return find_type_cmux(me, ATM1_SIM1);
-            if(request == OTHER_REQ)
-                return find_type_cmux(me, ATM2_SIM1);
-            if((mux = find_type_cmux(me, ATM2_SIM1)) || (mux = find_type_cmux(me, ATM1_SIM1)))
-                return mux;
-            break;
-        case AT_CMD_TYPE_SIM2:
-            PHS_LOGD("TYPE: AT_CMD_TYPE_SIM2\n");
-            if(request == SMS_REQ || request == PS_REQ)
-                return find_type_cmux(me, ATM1_SIM2);
-            if(request == OTHER_REQ)
-                return find_type_cmux(me, ATM2_SIM2);
-            if((mux = find_type_cmux(me, ATM2_SIM2))|| (mux = find_type_cmux(me, ATM1_SIM2)))
-                return mux;
-            break;
-        case AT_CMD_TYPE_SIM3:
-            PHS_LOGD("TYPE: AT_CMD_TYPE_SIM3\n");
-            if(request == SMS_REQ || request == PS_REQ)
-                return find_type_cmux(me, ATM1_SIM3);
-            if(request == OTHER_REQ)
-                return find_type_cmux(me, ATM2_SIM3);
-            if((mux = find_type_cmux(me, ATM2_SIM3))|| (mux = find_type_cmux(me, ATM1_SIM3)))
-                return mux;
-            break;
-        case AT_CMD_TYPE_SIM4:
-            PHS_LOGD("TYPE: AT_CMD_TYPE_SIM4\n");
-            if(request == SMS_REQ || request == PS_REQ)
-                return find_type_cmux(me, ATM1_SIM4);
-            if(request == OTHER_REQ)
-                return find_type_cmux(me, ATM2_SIM4);
-            if((mux = find_type_cmux(me, ATM2_SIM4))|| (mux = find_type_cmux(me, ATM1_SIM4)))
-                return mux;
-            break;
+        case AT_CMD_TYPE_SLOW1:
+		PHS_LOGD("TYPE: AT_CMD_TYPE_SLOW1\n");
+		return find_type_cmux(me, ATM1_SIM1);
+		break;
+        case AT_CMD_TYPE_NORMAL1:
+		PHS_LOGD("TYPE: AT_CMD_TYPE_NORMAL1\n");
+		return find_type_cmux(me, ATM2_SIM1);
+		break;
+        case AT_CMD_TYPE_SLOW2:
+		PHS_LOGD("TYPE: AT_CMD_TYPE_SLOW2\n");
+		return find_type_cmux(me, ATM1_SIM2);
+		break;
+        case AT_CMD_TYPE_NORMAL2:
+		PHS_LOGD("TYPE: AT_CMD_TYPE_NORMAL2\n");
+		return find_type_cmux(me, ATM2_SIM2);
+		break;
+        case AT_CMD_TYPE_SLOW3:
+		PHS_LOGD("TYPE: AT_CMD_TYPE_SLOW3\n");
+		return find_type_cmux(me, ATM1_SIM3);
+		break;
+        case AT_CMD_TYPE_NORMAL3:
+		PHS_LOGD("TYPE: AT_CMD_TYPE_NORMAL3\n");
+		return find_type_cmux(me, ATM2_SIM3);
+		break;
+        case AT_CMD_TYPE_SLOW4:
+		PHS_LOGD("TYPE: AT_CMD_TYPE_SLOW4\n");
+		return find_type_cmux(me, ATM1_SIM4);
+		break;
+        case AT_CMD_TYPE_NORMAL4:
+		PHS_LOGD("TYPE: AT_CMD_TYPE_NORMAL4\n");
+		return find_type_cmux(me, ATM2_SIM4);
+		break;
         default:
             PHS_LOGD(" CHNMNG find_cmux invalid cmd type! \n");
     }
@@ -409,6 +406,45 @@ static pty_t **get_mux_wait_array(struct channel_manager_t *const me,
             return NULL;
     }
 }
+#elif defined CONFIG_DUAL_SIM
+static pty_t **get_mux_wait_array(struct channel_manager_t *const me,
+				  AT_CMD_TYPE_T type, int *array_size)
+{
+    switch (type) {
+        case AT_CMD_TYPE_SLOW1:
+            *array_size = SLOW1_WAIT_NUM;
+            return me->slow1_wait_array;
+        case AT_CMD_TYPE_NORMAL1:
+            *array_size = NORMAL1_WAIT_NUM;
+            return me->normal1_wait_array;
+
+        case AT_CMD_TYPE_SLOW2:
+            *array_size = SLOW2_WAIT_NUM;
+            return me->slow2_wait_array;
+        case AT_CMD_TYPE_NORMAL2:
+            *array_size = NORMAL2_WAIT_NUM;
+            return me->normal2_wait_array;
+
+        case AT_CMD_TYPE_SLOW3:
+            *array_size = SLOW3_WAIT_NUM;
+            return me->slow3_wait_array;
+        case AT_CMD_TYPE_NORMAL3:
+            *array_size = NORMAL3_WAIT_NUM;
+            return me->normal3_wait_array;
+
+        case AT_CMD_TYPE_SLOW4:
+            *array_size = SLOW4_WAIT_NUM;
+            return me->slow4_wait_array;
+        case AT_CMD_TYPE_NORMAL4:
+            *array_size = NORMAL4_WAIT_NUM;
+            return me->normal4_wait_array;
+
+        default:
+            PHS_LOGE(" CHNMNG find_cmux invalid cmd type! \n");
+            return NULL;
+    }
+}
+#endif
 
 static void remove_wait_array(pty_t ** wait_array, pty_t * pty, int array_size)
 {
@@ -419,41 +455,6 @@ static void remove_wait_array(pty_t ** wait_array, pty_t * pty, int array_size)
     }
     wait_array[array_size - 1] = NULL;
 }
-#elif defined CONFIG_DUAL_SIM
-static pty_t **get_mux_wait_array(struct channel_manager_t *const me,
-				  AT_CMD_TYPE_T type, int *array_size)
-{
-    switch (type) {
-        case AT_CMD_TYPE_SIM1:
-            *array_size = SIM1_WAIT_NUM;
-            return me->sim1_wait_array;
-        case AT_CMD_TYPE_SIM2:
-            *array_size = SIM2_WAIT_NUM;
-            return me->sim2_wait_array;
-
-        case AT_CMD_TYPE_SIM3:
-            *array_size = SIM3_WAIT_NUM;
-            return me->sim3_wait_array;
-
-        case AT_CMD_TYPE_SIM4:
-            *array_size = SIM4_WAIT_NUM;
-            return me->sim4_wait_array;
-        default:
-            PHS_LOGE(" CHNMNG find_cmux invalid cmd type! \n");
-            return NULL;
-    }
-}
-
-static void remove_wait_array(pty_t ** wait_array, pty_t * pty, int array_size, int base)
-{
-    int i;
-    for (i = base; i < (array_size - 1); i++) {
-        wait_array[i] = wait_array[i + 1];
-    }
-    wait_array[array_size - 1] = NULL;
-}
-#endif
-
 static int add_wait_array(pty_t ** wait_array, pty_t * pty, int array_size)
 {
     int i;
@@ -477,7 +478,6 @@ static void print_array(pty_t ** pty, int array_size)
 }
 
 /*## operation getdfcmux(cmd_type) */
-#if defined CONFIG_SINGLE_SIM
 static cmux_t *chnmng_get_cmux(void *const chnmng, const AT_CMD_TYPE_T type,
 			       int block)
 {
@@ -505,11 +505,10 @@ static cmux_t *chnmng_get_cmux(void *const chnmng, const AT_CMD_TYPE_T type,
         PHS_LOGD("After add wait array\n");
         print_array(wait_array, array_size);
         sem_unlock(&me->array_lock);
-    }
-
-    else {
+    } else {
         mux = find_cmux(me, type);
     }
+
     while (mux == NULL && block) {
         if (index == 0) {
             mux = find_cmux(me, type);
@@ -556,26 +555,27 @@ static void chnmng_free_cmux(void *const chnmng, struct cmux_t *cmux)
     int type = cmux->cmd_type;
     struct channel_manager_t *me = (struct channel_manager_t *)chnmng;
     pty_t **wait_array = get_mux_wait_array(me, type, &array_size);
-    pty_t *pty = wait_array[0];
+    pty_t *pty = NULL;
     pid_t tid = gettid();
-    cmux->ops->cmux_free(cmux);
+
     sem_lock(&me->array_lock);
+    pty = wait_array[0];
     if (pty != NULL) {
         PHS_LOGD("CHNMNG enter channel_manager_free_cmux pty=%p \n", pty);
         if (pty == cmux->pty) {
-            //PDEBUG("[%d] select thread tid [%d] run...\n", tid, wait_array[0]->tid);
             PHS_LOGD("[%d] Before remove wait array\n", tid);
             print_array(wait_array, array_size);
             remove_wait_array(wait_array, pty, array_size);
             PHS_LOGD("[%d] After remove wait array\n", tid);
             print_array(wait_array, array_size);
-        }
-
-        else {
+        } else {
             PHS_LOGD("free cmux error\n");
         }
     }
+    sem_lock(&me->get_mux_lock);
+    cmux->ops->cmux_free(cmux);
     select_send_thread_run(me, cmux->cmd_type);
+    sem_unlock(&me->get_mux_lock);
     sem_unlock(&me->array_lock);
     PHS_LOGD("CHNMNG Leave channel_manager_free_cmux cmux=%s \n", cmux->name);
 }
@@ -586,6 +586,13 @@ void channel_manager_free_cmux(const struct cmux_t *cmux)
     chnmng_free_cmux(chnmng.me, (struct cmux_t *)cmux);
 }
 
+/*## operation get_cmux(cmd_type) */
+struct cmux_t *channel_manager_get_cmux(const AT_CMD_TYPE_T type, int block)
+{
+    return chnmng_get_cmux(chnmng.me, type, block);
+}
+
+#if defined CONFIG_SINGLE_SIM
 struct pty_t *channel_manager_get_default_ind_pty(void)
 {
     return &(chnmng.itsPty[0]);
@@ -595,154 +602,7 @@ struct pty_t *channel_manager_get_eng_ind_pty(void)
 {
     return &(chnmng.itsPty[4]);
 }
-
-/*## operation get_cmux(cmd_type) */
-struct cmux_t *channel_manager_get_cmux(const AT_CMD_TYPE_T type, int block)
-{
-    return chnmng_get_cmux(chnmng.me, type, block);
-}
 #elif defined CONFIG_DUAL_SIM
-static cmux_t *chnmng_get_cmux(void *const chnmng, const AT_CMD_TYPE_T type,
-			       int block, REQUEST_TYPE_T request)
-{
-    cmux_t *mux = NULL;
-    pid_t tid;
-    pty_t *pty = NULL;
-    pty_t **wait_array = NULL;
-    int array_size = 0;
-    int not_found = 0;
-    tid = gettid();
-    struct channel_manager_t *me = (struct channel_manager_t *)chnmng;
-    PHS_LOGD("Send thread TID [%d] CHNMNG enter channel_manager_get_cmux \n",
-            tid);
-    pty = find_pty(me, tid);
-    int index = 0;
-
-    //find free cmux
-    PHS_LOGD("Before add wait array pty=%p\n", pty);
-    wait_array = get_mux_wait_array(me, type, &array_size);
-    if (block) {
-        sem_lock(&me->array_lock);
-        PHS_LOGD("Before add wait array\n");
-        print_array(wait_array, array_size);
-        index = add_wait_array(wait_array, pty, array_size);
-        pty->wait_flag = 1;
-        if(request == SMS_REQ)
-            pty->sms = 1;
-        PHS_LOGD("After add wait array\n");
-        print_array(wait_array, array_size);
-        sem_unlock(&me->array_lock);
-    } else {
-        mux = find_cmux(me, type, request);
-    }
-    while (mux == NULL && block) {
-        sem_lock(&me->array_lock);
-        if(request != SMS_REQ || me->sms_flag == 0 )
-            mux = find_cmux(me, type, request);
-        if (mux) {
-            if(request == SMS_REQ)
-                me->sms_flag = 1;
-            pty->wait_flag = 0;
-            sem_unlock(&me->array_lock);
-            break;
-        }
-        PHS_LOGD
-            ("Send thread TID [%d] CHNMNG block at channel_manager_get_cmux!\n",
-             tid);
-        if(request == SMS_REQ) {
-            if(me->sms_flag == 1) {
-                sem_unlock(&me->array_lock);
-                sem_lock(&me->block_lock);
-            } else {
-                sem_unlock(&me->array_lock);
-                usleep(20*1000);
-            }
-        } else {
-            sem_unlock(&me->array_lock);
-            sem_lock(&pty->get_mux_lock);
-        }
-    }
-    if (mux) {
-        mux->pty = pty;
-        mux->cmd_type = type;
-        PHS_LOGD
-            ("Send thread TID [%d] CHNMNG Leave channel_manager_get_cmux:%s \n",
-             tid, mux->name);
-    }
-    return mux;
-}
-
-void select_send_thread_run(struct channel_manager_t *const me,
-			    AT_CMD_TYPE_T type)
-{
-    int array_size;
-    int i;
-    pty_t *pty = NULL;
-
-    PHS_LOGD("Enter select_send_thread_run\n");
-    pty_t **wait_array = get_mux_wait_array(me, type, &array_size);
-    for(i=0;i<array_size;i++) {
-        pty = wait_array[i];
-        if(pty && pty->wait_flag == 1 && pty->sms != 1)
-            break;
-        else
-            pty = NULL;
-    }
-    if (pty != NULL) {
-        PHS_LOGD("select thread tid [%d] run...\n", wait_array[i]->tid);
-        sem_unlock(&pty->get_mux_lock);
-    }
-    PHS_LOGD("Leave select_send_thread_run\n");
-}
-
-/*## operation free_cmux(cmux_struct) */
-static void chnmng_free_cmux(void *const chnmng, struct cmux_t *cmux, REQUEST_TYPE_T request)
-{
-    PHS_LOGD("CHNMNG enter channel_manager_free_cmux cmux=%s \n", cmux->name);
-    int array_size = 0;
-    int type = cmux->cmd_type;
-    struct channel_manager_t *me = (struct channel_manager_t *)chnmng;
-    pty_t **wait_array = get_mux_wait_array(me, type, &array_size);
-    //pty_t *pty = wait_array[0];
-    pty_t *pty = NULL;
-    int i;
-    pid_t tid = gettid();
-    cmux->ops->cmux_free(cmux);
-    sem_lock(&me->array_lock);
-    for(i=0; i< array_size; i++) {
-        pty = wait_array[i];
-        if(pty == cmux->pty)
-            break;
-    }
-    if (pty != NULL) {
-        PHS_LOGD("CHNMNG enter channel_manager_free_cmux pty=%p \n", pty);
-        if (pty == cmux->pty) {
-            PHS_LOGD("[%d] Before remove wait array\n", tid);
-            print_array(wait_array, array_size);
-            if(pty->sms == 1)
-                pty->sms = 0;
-            remove_wait_array(wait_array, pty, array_size, i);
-            PHS_LOGD("[%d] After remove wait array\n", tid);
-            print_array(wait_array, array_size);
-        }else {
-            PHS_LOGD("free cmux error\n");
-        }
-    }
-    if(request == SMS_REQ) {
-        me->sms_flag = 0;
-        sem_unlock(&me->block_lock);
-    }
-    select_send_thread_run(me, cmux->cmd_type);
-    sem_unlock(&me->array_lock);
-    PHS_LOGD("CHNMNG Leave channel_manager_free_cmux cmux=%s \n", cmux->name);
-}
-
-/*## operation free_cmux(cmux_struct) */
-void channel_manager_free_cmux(const struct cmux_t *cmux, REQUEST_TYPE_T request)
-{
-    chnmng_free_cmux(chnmng.me, (struct cmux_t *)cmux, request);
-}
-
 struct pty_t *channel_manager_get_sim1_ind_pty(void)
 {
     return &(chnmng.itsPty[0]);
@@ -766,11 +626,6 @@ struct pty_t *channel_manager_get_sim4_ind_pty(void)
 struct pty_t *channel_manager_get_eng_ind_pty(void)
 {
     return &(chnmng.itsPty[12]);
-}
-/*## operation get_cmux(cmd_type) */
-struct cmux_t *channel_manager_get_cmux(const AT_CMD_TYPE_T type, int block, REQUEST_TYPE_T request)
-{
-    return chnmng_get_cmux(chnmng.me, type, block, request);
 }
 #endif
 
@@ -842,8 +697,7 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
 	    }
         }
     }
-    //while(1);
-    //      open("/dev/ts0710mux0",O_RDWR);  //temp
+
     for (i = 0; i < PHS_MUX_NUM; i++) {
         index = chns_data.mux[i].index;
         me->itsCmux[index].buffer = chnmng_find_buffer(&chnmng);
@@ -886,10 +740,6 @@ static void chnmng_pty_Init(struct channel_manager_t *const me)
         sem_init(&me->itsPty[i].get_mux_lock, 0, 0);
         me->itsPty[i].ops->pty_clear_wait_resp_flag(&me->itsPty[i]);
         me->itsPty[i].type = RESERVE;
-#if defined CONFIG_DUAL_SIM
-        me->itsPty[i].wait_flag= 0;
-        me->itsPty[i].sms = 0;
-#endif
     }
     for (i = 0; i < PTY_CHN_NUM; i++) {
         index = chns_data.pty[i].index;
@@ -965,18 +815,8 @@ static void channel_manager_init(void)
     chnmng.ops = &chnmng_operaton;
     sem_init(&chnmng.get_mux_lock, 0, 1);
 
-#if defined CONFIG_SINGLE_SIM
-    sem_init(&chnmng.block_lock, 0, 1);
-#elif defined CONFIG_DUAL_SIM
-    sem_init(&chnmng.block_lock, 0, 0);
-#endif
-
     sem_init(&chnmng.array_lock, 0, 1);
     chnmng.block_count = 0;
-
-#if defined CONFIG_DUAL_SIM
-    chnmng.sms_flag = 0;
-#endif
 
     chnmng_buffer_Init(chnmng.me);
     chnmng_cmux_Init(chnmng.me);
@@ -987,6 +827,7 @@ extern int findInBuf(unsigned char *buf, int len, char *needle);
 extern int cvt_ppp_up_rsp(char *rsp_str, int len);
 extern int cvt_ppp_down_rsp(char *rsp_str, int len);
 extern void ps_service_init(void);
+extern sem sms_lock;
 
 int main(int argc, char *argv[])
 {
@@ -999,6 +840,7 @@ int main(int argc, char *argv[])
 
     PHS_LOGD("chnmng start phone server!\n");
     PHS_LOGD("\n Phoneserver version: %s \n",version_string);
+    sem_init(&sms_lock, 0, 1);
     ps_service_init();
     channel_manager_init();
 #ifdef CONFIG_VETH

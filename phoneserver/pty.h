@@ -48,10 +48,6 @@ struct pty_t {
 	sem_t write_lock;	/*## write_lock  to avoid multi access */
 	struct pty_ops *ops;
 	struct cmux_t *mux;
-#if defined CONFIG_DUAL_SIM
-	int wait_flag;
-	int sms;
-#endif
 	int cmgs_cmgw_set_result;
 };
 struct pty_ops *pty_get_operations(void);

@@ -55,10 +55,14 @@ typedef enum mux_type_t { CSM, PSM, GSM,NWM,SIMM,SSM,PBKM,STKM, SMSM,SMSTM,INDM,
 } mux_type;
 #elif defined CONFIG_DUAL_SIM
 
-#define SIM1_WAIT_NUM						4
-#define SIM2_WAIT_NUM						4
-#define SIM3_WAIT_NUM						4
-#define SIM4_WAIT_NUM						4
+#define SLOW1_WAIT_NUM						4
+#define NORMAL1_WAIT_NUM					4
+#define SLOW2_WAIT_NUM						4
+#define NORMAL2_WAIT_NUM					4
+#define SLOW3_WAIT_NUM						4
+#define NORMAL3_WAIT_NUM					4
+#define SLOW4_WAIT_NUM						4
+#define NORMAL4_WAIT_NUM					4
 
 #define PTY_CHN_NUM  						12	//send thread number
 #define INDPTY_NUM						4

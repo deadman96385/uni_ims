@@ -152,7 +152,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
 {
     cmux_t *mux;
     char *at_in_str, *out;
-    char buffer[50], error_str[20];
+    char buffer[50], error_str[30];
     char at_cmd_str[MAX_AT_CMD_LEN];
     int cid, ppp_index;
     int err, ret;
@@ -204,11 +204,8 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
         return AT_RESULT_NG;
     }
 #endif
-#if defined CONFIG_SINGLE_SIM
-    mux = adapter_get_cmux(AT_CMD_TYPE_PS, TRUE);
-#elif defined CONFIG_DUAL_SIM
-    mux = adapter_ps_get_cmux(req->cmd_type, TRUE);
-#endif
+
+    mux = adapter_get_cmux(req->cmd_type, TRUE);
     ppp_info[ppp_index].state = PPP_STATE_ACTING;
     PHS_LOGD("PPP_STATE_ACTING\n");
     ppp_info[ppp_index].pty = req->recv_pty;
@@ -624,20 +621,13 @@ int cvt_ppp_down_rsp(char *rsp_str, int len)
             ppp_info[ppp_index].state = PPP_STATE_DEACTING;
 #if defined CONFIG_SINGLE_SIM
             ind_pty = adapter_get_default_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-            ind_pty = channel_manager_get_sim1_ind_pty();
-#endif
             if(ind_pty != NULL)
             {
                 sprintf(cgev_str,"\r\n+CGEV:NW DEACT IP,%s,%d\r",ppp_info[ppp_index].ipladdr,ppp_info[ppp_index].cid);
                 adapter_pty_write(ind_pty, cgev_str, strlen(cgev_str));
             }
             PHS_LOGD("phoneserver send CGDEACT to make sure modem disconnect!\n");
-#if defined CONFIG_SINGLE_SIM
             mux = adapter_get_cmux(AT_CMD_TYPE_PS, TRUE);
-#elif defined CONFIG_DUAL_SIM
-            mux = adapter_get_cmux(AT_CMD_TYPE_SIM1, TRUE);
-#endif
             sprintf(at_cmd_str, "AT+CGACT=0,%d\r", ppp_index+1);
             adapter_cmux_register_callback(mux,
                     (void *)cvt_cgact_deact_rsp1,
@@ -647,6 +637,7 @@ int cvt_ppp_down_rsp(char *rsp_str, int len)
             adapter_free_cmux_for_ps(mux);
             mutex_unlock(&ps_service_mutex);
             PHS_LOGD("PPP_STATE_IDLE\n");
+#endif
             break;
             /*here maybe do more to deactive pdp and notify rild */
         case PPP_STATE_DESTING:
@@ -664,8 +655,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
     int status, tmp_cid;		/*first parameter */
     int err;
     char cmd[MAX_CMD], at_cmd_str[MAX_AT_CMD_LEN], 
-           cgev_str[MAX_AT_CMD_LEN];
-    pty_t *ind_pty = NULL;
+            cgev_str[MAX_AT_CMD_LEN];
     char *at_in_str;
     char prop[10];
 
@@ -687,48 +677,18 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
         return AT_RESULT_NG;
     }
 
-#ifndef CONFIG_VETH
-#if defined CONFIG_SINGLE_SIM
-    ind_pty = adapter_get_default_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-    if(req->cmd_type == AT_CMD_TYPE_SIM1)
-        ind_pty = channel_manager_get_sim1_ind_pty();
-    else if(req->cmd_type == AT_CMD_TYPE_SIM2)
-        ind_pty = channel_manager_get_sim2_ind_pty();
-    else if(req->cmd_type == AT_CMD_TYPE_SIM3)
-        ind_pty = channel_manager_get_sim3_ind_pty();
-    else if(req->cmd_type == AT_CMD_TYPE_SIM4)
-        ind_pty = channel_manager_get_sim4_ind_pty();
-    else
-        PHS_LOGD("cvt_cgact_deact_req:get_ind_pty error\n");
-#endif
-#endif
-
     mutex_lock(&ps_service_mutex);
-#if defined CONFIG_SINGLE_SIM
-    mux = adapter_get_cmux(AT_CMD_TYPE_PS, TRUE);
-#elif defined CONFIG_DUAL_SIM
-    mux = adapter_ps_get_cmux(req->cmd_type, TRUE);
-#endif
+    mux = adapter_get_cmux(req->cmd_type, TRUE);
     //if ((tmp_cid <= 3) && (ppp_info[tmp_cid - 1].state == PPP_STATE_ACTIVE)) { 	/*deactivate PDP connection */
     if (tmp_cid <= 3) {	/*deactivate PDP connection */
         ppp_info[tmp_cid-1].state = PPP_STATE_DESTING;
-#ifndef CONFIG_VETH
-        ps_service_stop_ppp(tmp_cid -1);
-        ps_service_ppp_up_notify(tmp_cid -1);
-#endif
         PHS_LOGD("PPP_STATE_DEACTING\n");
         ppp_info[tmp_cid-1].state = PPP_STATE_DEACTING;
         ppp_info[tmp_cid - 1].cmux = mux;
         snprintf(at_cmd_str,sizeof(at_cmd_str), "AT+CGACT=0,%d\r",tmp_cid);
         adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp2, (int)req->recv_pty);
-#if defined CONFIG_SINGLE_SIM
         adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
                 req->timeout);
-#elif defined CONFIG_DUAL_SIM
-        adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
-                req->timeout, PS_REQ);
-#endif
         ppp_info[tmp_cid - 1].state = PPP_STATE_IDLE;
 
 #ifdef CONFIG_VETH
@@ -742,24 +702,12 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
         sprintf(cmd, "setprop net.veth%d.dns2 \"\"", tmp_cid-1);
         system(cmd);
 #endif
-#ifndef CONFIG_VETH
-        if(ind_pty != NULL)
-        {
-            snprintf(cgev_str, sizeof(cgev_str), "\r\n+CGEV:ME DEACT IP,%s,%d\r",ppp_info[tmp_cid-1].ipladdr,tmp_cid);
-            adapter_pty_write(ind_pty, cgev_str, strlen(cgev_str));
-        }
-#endif
     } else {
         snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+CGACT=0,%d\r", tmp_cid);
         adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp,
                 (int)req->recv_pty);
-#if defined CONFIG_SINGLE_SIM
         adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
                 req->timeout);
-#elif defined CONFIG_DUAL_SIM
-        adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
-                req->timeout, PS_REQ);
-#endif
     }
     mutex_unlock(&ps_service_mutex);
     return AT_RESULT_PROGRESS;
@@ -843,18 +791,10 @@ int cvt_cgact_act_req(AT_CMD_REQ_T * req)
         return AT_RESULT_NG;
     }
 
-#if defined CONFIG_SINGLE_SIM
     mux = adapter_get_cmux(req->cmd_type, TRUE);
-#elif defined CONFIG_DUAL_SIM
-    mux = adapter_ps_get_cmux(req->cmd_type, TRUE);
-#endif
     adapter_cmux_register_callback(mux, cvt_cgact_act_rsp,
             (int)req->recv_pty);
-#if defined CONFIG_SINGLE_SIM
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
-#elif defined CONFIG_DUAL_SIM
-    adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout, PS_REQ);
-#endif
     return AT_RESULT_PROGRESS;
 }
 
@@ -887,11 +827,7 @@ int cvt_cgdcont_read_req(AT_CMD_REQ_T * req)
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_cgdcont_read_rsp,
             (int)req->recv_pty);
-#if defined CONFIG_SINGLE_SIM
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
-#elif defined CONFIG_DUAL_SIM
-    adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout, DEFAULT_REQ);
-#endif
     return AT_RESULT_PROGRESS;
 }
 
@@ -1084,11 +1020,7 @@ end_req:
         return AT_RESULT_NG;
     }
 #endif
-#if defined CONFIG_SINGLE_SIM
-    mux = adapter_get_cmux(AT_CMD_TYPE_PS, TRUE);
-#elif defined CONFIG_DUAL_SIM
-    mux = adapter_ps_get_cmux(req->cmd_type, TRUE);
-#endif
+    mux = adapter_get_cmux(req->cmd_type, TRUE);
     mutex_unlock(&ps_service_mutex);
 
     snprintf(at_str, sizeof(at_str), "AT+CGDCONT=%d,\"%s\",\"%s\",\"%s\",%s,%s\r", tmp_cid, ip,
@@ -1101,11 +1033,7 @@ end_req:
 
     adapter_cmux_register_callback(mux, cvt_cgdcont_set_rsp,
             (int)req->recv_pty);
-#if defined CONFIG_SINGLE_SIM
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
-#elif defined CONFIG_DUAL_SIM
-    adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout, PS_REQ);
-#endif
     return AT_RESULT_PROGRESS;
 }
 
@@ -1122,82 +1050,5 @@ int cvt_cgdcont_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
         return AT_RESULT_OK;
     }
     return AT_RESULT_NG;
-}
-
-#if defined CONFIG_SINGLE_SIM
-int cvt_disconnect_all_pdp()
-#elif defined CONFIG_DUAL_SIM
-int cvt_disconnect_all_pdp(AT_CMD_REQ_T * req)
-#endif
-{
-    cmux_t *mux = NULL;
-    int status, tmp_cid;
-    char cmd[MAX_CMD], at_cmd_str[MAX_AT_CMD_LEN],
-           cgev_str[MAX_AT_CMD_LEN];
-    pty_t *ind_pty = NULL;
-    char prop[10];
-
-#if defined CONFIG_SINGLE_SIM
-    ind_pty = adapter_get_default_ind_pty();
-    mutex_lock(&ps_service_mutex);
-    mux = adapter_get_cmux(AT_CMD_TYPE_PS, TRUE);
-#elif defined CONFIG_DUAL_SIM
-    if(req->cmd_type == AT_CMD_TYPE_SIM1)
-        ind_pty = channel_manager_get_sim1_ind_pty();
-    else if(req->cmd_type == AT_CMD_TYPE_SIM2)
-        ind_pty = channel_manager_get_sim2_ind_pty();
-    if(req->cmd_type == AT_CMD_TYPE_SIM3)
-        ind_pty = channel_manager_get_sim3_ind_pty();
-    if(req->cmd_type == AT_CMD_TYPE_SIM4)
-        ind_pty = channel_manager_get_sim4_ind_pty();
-    else
-        PHS_LOGD("cvt_disconnect_all_pdp:get_ind_pty error\n");
-
-    mutex_lock(&ps_service_mutex);
-    mux = adapter_ps_get_cmux(req->cmd_type, TRUE);
-#endif
-
-    for(tmp_cid = 1; tmp_cid <= 3;tmp_cid ++)
-    {
-#ifndef CONFIG_VETH
-        if (ppp_info[tmp_cid - 1].state == PPP_STATE_ACTIVE)
-        {
-            ppp_info[tmp_cid-1].state = PPP_STATE_DESTING;
-
-            ps_service_stop_ppp(tmp_cid -1);
-            ps_service_ppp_up_notify(tmp_cid -1);
-#endif
-            PHS_LOGD("PPP_STATE_DEACTING\n");
-            ppp_info[tmp_cid-1].state = PPP_STATE_DEACTING;
-            ppp_info[tmp_cid - 1].cmux = mux;
-            snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+CGACT=0,%d\r",tmp_cid);
-            adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp3, 0);
-            adapter_cmux_write_for_ps(mux, at_cmd_str, strlen(at_cmd_str),CGACT_TIMEOUT);
-            ppp_info[tmp_cid - 1].state = PPP_STATE_IDLE;
-
-#ifdef CONFIG_VETH
-            usleep(200*1000);
-            sprintf(cmd, "ifconfig veth%d %s down", tmp_cid-1, "0.0.0.0");
-            system(cmd);
-            sprintf(cmd, "setprop net.veth%d.ip %s", tmp_cid-1,"0.0.0.0");
-            system(cmd);
-            sprintf(cmd, "setprop net.veth%d.dns1 \"\"", tmp_cid-1);
-            system(cmd);
-            sprintf(cmd, "setprop net.veth%d.dns2 \"\"", tmp_cid-1);
-            system(cmd);
-#endif
-#ifndef CONFIG_VETH
-            if(ind_pty != NULL)
-            {
-                snprintf(cgev_str, sizeof(cgev_str), "\r\n+CGEV:NW DEACT IP,%s,%d\r",ppp_info[tmp_cid-1].ipladdr,tmp_cid);
-                adapter_pty_write(ind_pty, cgev_str, strlen(cgev_str));
-            }
-        }
-#endif
-    }
-    adapter_free_cmux_for_ps(mux);
-    mutex_unlock(&ps_service_mutex);
-
-    return 0;
 }
 

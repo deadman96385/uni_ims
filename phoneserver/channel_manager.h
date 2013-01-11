@@ -28,7 +28,6 @@
 struct chnmng_ops {
 
 	/* Operations */
-#if defined CONFIG_SINGLE_SIM
 	/*## operation free_cmux(cmux_struct) */
 	void (*channel_manager_free_cmux) (void *const chnmng,
 					   const struct cmux_t * cmux);
@@ -37,16 +36,6 @@ struct chnmng_ops {
 	struct cmux_t *(*channel_manager_get_cmux) (void *const chnmng,
 						    const AT_CMD_TYPE_T * type,
 						    int block);
-#elif defined CONFIG_DUAL_SIM
-	/*## operation free_cmux(cmux_struct) */
-	void (*channel_manager_free_cmux) (void *const chnmng,
-					   const struct cmux_t * cmux, REQUEST_TYPE_T request);
-
-	/*## operation get_cmux(cmd_type) */
-	struct cmux_t *(*channel_manager_get_cmux) (void *const chnmng,
-						    const AT_CMD_TYPE_T * type,
-						    int block, REQUEST_TYPE_T request);
-#endif
 };
 struct channel_manager_t {
 	void *me;
@@ -60,7 +49,6 @@ struct channel_manager_t {
 	//struct redirect_table_t itsRedirect_table;            /*## link itsRedirect_table */
 	struct send_thread_t itsSend_thread[PTY_CHN_NUM];	/*## link itsSend_thread  3 */
 	sem get_mux_lock;
-	sem block_lock;
 	sem array_lock;
 	int block_count;
 	struct chnmng_ops *ops;
@@ -82,11 +70,14 @@ struct channel_manager_t {
 	pty_t *nwm_wait_array[GSM_WAIT_NUM];
 	pty_t *simm_wait_array[GSM_WAIT_NUM];
 #elif defined CONFIG_DUAL_SIM
-	pty_t *sim1_wait_array[SIM1_WAIT_NUM];
-	pty_t *sim2_wait_array[SIM2_WAIT_NUM];
-	pty_t *sim3_wait_array[SIM3_WAIT_NUM];
-	pty_t *sim4_wait_array[SIM4_WAIT_NUM];
-	int sms_flag;
+	pty_t *slow1_wait_array[SLOW1_WAIT_NUM];
+	pty_t *normal1_wait_array[NORMAL1_WAIT_NUM];
+	pty_t *slow2_wait_array[SLOW2_WAIT_NUM];
+	pty_t *normal2_wait_array[NORMAL2_WAIT_NUM];
+	pty_t *slow3_wait_array[SLOW3_WAIT_NUM];
+	pty_t *normal3_wait_array[NORMAL3_WAIT_NUM];
+	pty_t *slow4_wait_array[SLOW4_WAIT_NUM];
+	pty_t *normal4_wait_array[NORMAL4_WAIT_NUM];
 #endif
 
 };
@@ -95,19 +86,11 @@ struct channel_manager_t {
 struct pty_t *channel_manager_get_default_ind_pty(void);
 struct pty_t *channel_manager_get_eng_ind_pty(void);
 
-#if defined CONFIG_SINGLE_SIM
 /*## operation free_cmux(cmux_struct) */
 void channel_manager_free_cmux(const struct cmux_t *cmux);
 
 /*## operation get_cmux(cmd_type) */
 struct cmux_t *channel_manager_get_cmux(const AT_CMD_TYPE_T type, int block);
-#elif defined CONFIG_DUAL_SIM
-/*## operation free_cmux(cmux_struct) */
-void channel_manager_free_cmux(const struct cmux_t *cmux, REQUEST_TYPE_T request);
-
-/*## operation get_cmux(cmd_type) */
-struct cmux_t *channel_manager_get_cmux(const AT_CMD_TYPE_T type, int block, REQUEST_TYPE_T request);
-#endif
 
 void channel_manager_modem_reset(void);
 
