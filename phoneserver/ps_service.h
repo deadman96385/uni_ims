@@ -62,11 +62,6 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req);
 int cvt_cgact_act_req(AT_CMD_REQ_T * req);
 int cvt_cgact_deact_rsp2(AT_CMD_RSP_T * rsp, int user_data);
 int cvt_cgact_deact_rsp1(AT_CMD_RSP_T * rsp, int user_data);
-#if defined CONFIG_SINGLE_SIM
-int cvt_disconnect_all_pdp(void);
-#elif defined CONFIG_DUAL_SIM
-int cvt_disconnect_all_pdp(AT_CMD_REQ_T * req);
-#endif
 int cvt_cgdcont_set_rsp(AT_CMD_RSP_T * rsp, int user_data);
 #ifdef CONFIG_VETH
 int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data);

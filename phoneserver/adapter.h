@@ -10,15 +10,6 @@
 
 #define adapter_H
 
-#if defined CONFIG_DUAL_SIM
-typedef enum request_type_t
-    { DEFAULT_REQ,
-       SMS_REQ,
-       PS_REQ,
-       OTHER_REQ
-}REQUEST_TYPE_T;
-#endif
-
 #define AT_RESULT_OK 0
 #define AT_RESULT_NG -1
 #define AT_RESULT_TIMEOUT -2
@@ -32,6 +23,7 @@ typedef enum request_type_t
 
 #define TRUE 1
 #define FALSE 0
+
 //#define phoneserver_log PDEBUG
 typedef enum at_cmd_enum_t {
 	AT_CMD_GENERIC_CMD =  0,
@@ -80,7 +72,7 @@ typedef enum at_cmd_enum_t {
 	AT_CMD_CFUN, AT_CMD_CTZU, AT_CMD_CTZR, AT_CMD_CCWE, AT_CMD_CACM,
 	AT_CMD_CAMM, AT_CMD_CAOC, AT_CMD_CPUC, AT_CMD_CGSN, AT_CMD_CIMI,
 	AT_CMD_CGMR,
-
+	AT_CMD_SNVM_SET,
 	AT_CMD_UNKNOWN,
 
 	AT_CMD_CCCM_IND, AT_CMD_CRING_IND, AT_CMD_CSSI_IND,
@@ -105,7 +97,11 @@ typedef enum at_cmd_type_t
 	AT_CMD_TYPE_STK,
 	AT_CMD_TYPE_STM,
 #if defined CONFIG_DUAL_SIM
-	AT_CMD_TYPE_SIM1,AT_CMD_TYPE_SIM2,AT_CMD_TYPE_SIM3,AT_CMD_TYPE_SIM4,
+	AT_CMD_TYPE_SLOW, AT_CMD_TYPE_NORMAL,
+	AT_CMD_TYPE_SLOW1, AT_CMD_TYPE_NORMAL1,
+	AT_CMD_TYPE_SLOW2, AT_CMD_TYPE_NORMAL2,
+	AT_CMD_TYPE_SLOW3, AT_CMD_TYPE_NORMAL3,
+	AT_CMD_TYPE_SLOW4, AT_CMD_TYPE_NORMAL4,
 #endif
 	AT_CMD_TYPE_INVALID
 } AT_CMD_TYPE_T;
@@ -153,15 +149,11 @@ extern struct pty_t *channel_manager_get_sim4_ind_pty(void);
 #endif
 
 int strStartsWith(const char *line, const char *prefix);
+
 /*
 API block start
 */
 cmux_t *adapter_get_cmux(int type, int wait);
-#if defined CONFIG_DUAL_SIM
-cmux_t *adapter_sms_get_cmux(int type, int wait);
-cmux_t *adapter_ps_get_cmux(int type, int wait);
-cmux_t *adapter_other_get_cmux(int type, int wait);
-#endif
 void adapter_free_cmux(cmux_t * mux);
 void adapter_free_cmux_for_ps(cmux_t * mux);
 void adapter_wakeup_cmux(cmux_t * mux);
@@ -174,22 +166,14 @@ int adapter_pty_end_cmd(pty_t * pty);
 int adapter_cmux_deregister_callback(cmux_t * mux);
 int adapter_cmd_is_end(char *str, int len);
 int adapter_get_rsp_type(char *str, int len);
+int adapter_cmux_write(cmux_t * mux_t, char *buf, int len, int to);
 
 #if defined CONFIG_SINGLE_SIM
-
-int adapter_cmux_write(cmux_t * mux_t, char *buf, int len, int to);
 pty_t *adapter_get_default_ind_pty(void);
 pty_t *adapter_get_eng_ind_pty(void);
-
 #elif defined CONFIG_DUAL_SIM
-
-int adapter_cmux_write(cmux_t * mux_t, char *buf, int len, int to, REQUEST_TYPE_T request);
 pty_t *adapter_get_ind_pty(mux_type_t type);
 pty_t *adapter_get_eng_ind_pty(mux_type_t type);
-int cvt_chld_cmd_req(AT_CMD_REQ_T * req);
-int cvt_dtmf_cmd_req(AT_CMD_REQ_T * req);
-int cvt_ps_cmd_req(AT_CMD_REQ_T * req);
-int cvt_ps_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data);
 #endif
 
 /*pty call this function to deliver a command */
@@ -261,4 +245,7 @@ int cvt_cops_set_cmd_req4(AT_CMD_REQ_T * req);
 int cvt_ecind_cmd_ind(AT_CMD_IND_T * ind);
 int cvt_ecind0_cmd_ind(AT_CMD_IND_T * ind);
 int cvt_eceer_cmd_ind(AT_CMD_IND_T * ind);
+int cvt_snvm_set_req(AT_CMD_REQ_T * req);
+int cvt_snvm_set_rsp(AT_CMD_RSP_T * rsp, int user_data);
+
 #endif /*  */
