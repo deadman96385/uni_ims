@@ -3938,6 +3938,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_STK_SEND_ENVELOPE_COMMAND
                 || request == RIL_REQUEST_GET_SIM_STATUS
                 || request == RIL_REQUEST_SIM_IO
+                || request == RIL_REQUEST_SET_SMSC_ADDRESS
+                || request == RIL_REQUEST_GET_SMSC_ADDRESS
                 || request == RIL_REQUEST_BASEBAND_VERSION
                 || request == RIL_REQUEST_GET_IMEI
                 || request == RIL_REQUEST_GET_IMEISV)
@@ -4721,7 +4723,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             requestSmsBroadcastActivation(channelID,data, datalen, t);
             break;
         case RIL_REQUEST_GSM_SET_BROADCAST_SMS_CONFIG:
+#if defined (RIL_SPRD_EXTENSION)
             requestSetSmsBroadcastConfig(channelID,data, datalen, t);
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+            requestSetCellBroadcastConfig(channelID, data, datalen, t);
+#endif
             break;
         case RIL_REQUEST_GSM_GET_BROADCAST_SMS_CONFIG:
             requestGetSmsBroadcastConfig(channelID,data, datalen, t);
@@ -4833,9 +4839,14 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     char *line = p_response->p_intermediates->line;
                     err = at_tok_start(&line);
                     if (err >= 0) {
+#if defined (RIL_SPRD_EXTENSION)
                         err = at_tok_nextstr(&line, &sc_line);
                         RIL_onRequestComplete(t, RIL_E_SUCCESS, sc_line,
                                 strlen(sc_line));
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS,line,
+                                strlen(line));
+#endif
                     } else {
                         ALOGD("[sms]at_tok_start fail");
                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -4853,7 +4864,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
                 p_response = NULL;
                 ALOGD("[sms]RIL_REQUEST_SET_SMSC_ADDRESS");
+#if defined (RIL_SPRD_EXTENSION)
                 asprintf(&cmd, "AT+CSCA=\"%s\"", (char*)(data));
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+                asprintf(&cmd, "AT+CSCA=%s", (char*)(data));
+#endif
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 free(cmd);
                 if (err < 0 || p_response->success == 0) {
