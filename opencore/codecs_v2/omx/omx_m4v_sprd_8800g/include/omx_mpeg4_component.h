@@ -50,14 +50,6 @@ enum
     MODE_MPEG4
 };
 
-//#if !defined(CHIP_8810)
-//#include "vsp_drv_sc8800g.h"
-//#else
-//#include "vsp_drv_sc8810.h"
-//#endif
-using namespace android;
-#define MPEG4_PMEM_HEAP_NUM 20
-
 // data structures for tunneling buffers
 typedef struct PLATFORM_PRIVATE_PMEM_INFO
 {
@@ -145,7 +137,6 @@ static OSCL_EXPORT_REF OMX_ERRORTYPE OpenmaxMpeg4AOUseBuffer(
 //	
 	void ResetComponent();
         void ReleaseReferenceBuffers();
-	OSCL_IMPORT_REF char *get_omx_name();
 
 	OMX_BUFFERHEADERTYPE *ipOutputBufferForRendering;
 	OMX_BOOL iFlushOutputStatus;

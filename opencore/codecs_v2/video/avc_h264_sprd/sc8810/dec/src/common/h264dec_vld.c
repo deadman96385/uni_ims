@@ -181,12 +181,6 @@ PUBLIC int pred_non_zero_count (DEC_MB_CACHE_T *mb_cache_ptr, int blkIndex)
 	return pred_nnz&31;
 }
 
-#define LUMA_DC			0
-#define LUMA_AC_I16		1
-#define LUMA_AC			2
-#define CHROMA_DC		3
-#define CHROMA_AC		4
-
 int32 get_cabac_cbf_ctx(DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T * mb_cache_ptr, int cat,  int blk_id )
 {
 	int		na;				//left block's nnz

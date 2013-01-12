@@ -28,16 +28,15 @@
     {
 #endif
 		
-PUBLIC void *Mp4Dec_ExtraMemAlloc(uint32 mem_size);
-PUBLIC void *Mp4Dec_ExtraMemAlloc_64WordAlign(uint32 mem_size);
-PUBLIC void *Mp4Dec_InterMemAlloc(uint32 mem_size);
-PUBLIC void Mp4Dec_FreeMem(void); 
-PUBLIC void Mp4Dec_InitInterMem(MMCodecBuffer *pBuffer);
-#ifdef _VSP_LINUX_
-PUBLIC uint8 *Mp4Dec_ExtraMem_V2Phy(uint8 *vAddr);
-PUBLIC void *Mp4Dec_ExtraMemCacheAlloc(uint32 mem_size);
-PUBLIC void *Mp4Dec_ExtraMemCacheAlloc_64WordAlign(uint32 mem_size);
-#endif
+void Mp4Dec_InitInterMem(MMCodecBuffer *pBuffer);
+void Mp4Dec_FreeExtraMem(void); 
+void Mp4Dec_FreeMem(void); 
+
+void *Mp4Dec_InterMemAlloc(uint32 need_size, int32 aligned_byte_num);
+void *Mp4Dec_ExtraMemAlloc(uint32 need_size, int32 aligned_byte_num, int32 type);
+
+uint8 *Mp4Dec_ExtraMem_V2P(uint8 *vAddr, int32 type);
+MMDecRet Mp4Dec_ExtraMem_GetInfo(MMCodecBuffer *pBuffer, int32 type);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

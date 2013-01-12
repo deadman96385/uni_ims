@@ -27,7 +27,7 @@ extern   "C"
 {
 #endif
 
-PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(uint8 *bitstrm_ptr, uint32 bitstrm_len);
+PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(uint8 *bitstrm_ptr, uint32 bitstrm_len, MMDecOutput *dec_output_ptr);
 PUBLIC MMDecRet H264Dec_FirstPartOfSliceHeader (DEC_SLICE_T *curr_slice_ptr, DEC_IMAGE_PARAMS_T *img_ptr);
 PUBLIC MMDecRet H264Dec_RestSliceHeader (DEC_IMAGE_PARAMS_T *img_ptr, DEC_SLICE_T *curr_slice_ptr);
 

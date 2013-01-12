@@ -55,6 +55,8 @@ int32 s_vsp_fd = -1;
 /*************************************/
 PUBLIC int32 VSP_OPEN_Dev (int reg_irq_flag)
 {
+ 	int ret =0;
+	
 	if (-1 == s_vsp_fd)
 	{
 		SCI_TRACE_LOW("open SPRD_VSP_DRIVER ");	
@@ -68,12 +70,7 @@ PUBLIC int32 VSP_OPEN_Dev (int reg_irq_flag)
 	        	s_vsp_Vaddr_base = (uint32)mmap(NULL,SPRD_VSP_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,s_vsp_fd,0);
 		}
 	}
-	
-    	if(s_vsp_fd > 0)
-    	{
-			if(reg_irq_flag)
-				ioctl(s_vsp_fd,VSP_REG_IRQ,NULL);
-    	}
+
     	SCI_TRACE_LOW("vsp addr %x\n",s_vsp_Vaddr_base);	
 
 	return 0;
@@ -81,11 +78,11 @@ PUBLIC int32 VSP_OPEN_Dev (int reg_irq_flag)
 
 PUBLIC void VSP_CLOSE_Dev(int unreg_irq_flag)
 {
+
+	int ret = 0;
+
 	if(s_vsp_fd > 0)
-	{
-		if(unreg_irq_flag)
-			ioctl(s_vsp_fd,VSP_UNREG_IRQ,NULL);
-	
+	{	
 		munmap(s_vsp_fd,SPRD_VSP_MAP_SIZE);	
 		close(s_vsp_fd);	
 	}

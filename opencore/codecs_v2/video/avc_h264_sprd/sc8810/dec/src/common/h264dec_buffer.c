@@ -30,36 +30,28 @@ PUBLIC void H264Dec_init_img_buffer (DEC_IMAGE_PARAMS_T *img_ptr)
 
 	if (img_ptr->VSP_used)
 	{
-		img_ptr->vld_cabac_table_ptr = (uint32 *)H264Dec_ExtraMemAlloc_64WordAlign (100*40*sizeof(uint32));
-		img_ptr->ipred_top_line_buffer = (uint8 *)H264Dec_ExtraMemAlloc_64WordAlign (mb_num_x*32);
-		img_ptr->frame_bistrm_buf[0] = (uint8 *)H264Dec_ExtraMemAlloc_64WordAlign (H264DEC_FRM_STRM_BUF_SIZE);
-		img_ptr->frame_bistrm_buf[1] = (uint8 *)H264Dec_ExtraMemAlloc_64WordAlign (H264DEC_FRM_STRM_BUF_SIZE);
-#if 0		
-		g_vsp_cmd_data_base = (uint32 *) H264Dec_ExtraMemAlloc_64WordAlign(total_mb_num * 256 * 6);
-		g_vsp_cmd_info_base = (uint32 *) H264Dec_ExtraMemAlloc_64WordAlign(total_mb_num * 256*2);
-	
-		img_ptr->cmd_data_buf[0]= (uint32 *) H264Dec_ExtraMemCacheAlloc(total_mb_num * 256 * 6);
-		img_ptr->cmd_data_buf[1]= (uint32 *) H264Dec_ExtraMemCacheAlloc(total_mb_num * 256 * 6);
-		img_ptr->cmd_info_buf[0] = (uint32 *) H264Dec_ExtraMemCacheAlloc(total_mb_num * 256*2);
-		img_ptr->cmd_info_buf[1] = (uint32 *) H264Dec_ExtraMemCacheAlloc(total_mb_num * 256*2);
-#endif
-		img_ptr->cmd_data_buf[0]= (uint32 *) H264Dec_ExtraMemAlloc_64WordAlign(total_mb_num * 256 * 6);
-		img_ptr->cmd_data_buf[1]= (uint32 *) H264Dec_ExtraMemAlloc_64WordAlign(total_mb_num * 256 * 6);
-		img_ptr->cmd_info_buf[0] = (uint32 *) H264Dec_ExtraMemAlloc_64WordAlign(total_mb_num * 256*2);
-		img_ptr->cmd_info_buf[1] = (uint32 *) H264Dec_ExtraMemAlloc_64WordAlign(total_mb_num * 256*2);
+		img_ptr->vld_cabac_table_ptr = (uint32 *)H264Dec_ExtraMemAlloc (100*40*sizeof(uint32), 256, HW_NO_CACHABLE);
+		img_ptr->ipred_top_line_buffer = (uint8 *)H264Dec_ExtraMemAlloc (mb_num_x*32, 256, HW_NO_CACHABLE);
+
+		img_ptr->cmd_data_buf[0]= (uint32 *) H264Dec_ExtraMemAlloc(total_mb_num * 256 * 6, 256, HW_CACHABLE);
+		img_ptr->cmd_info_buf[0] = (uint32 *) H264Dec_ExtraMemAlloc(total_mb_num * 256*2, 256, HW_CACHABLE);
+		img_ptr->frame_bistrm_buf[0] = (uint8 *)H264Dec_ExtraMemAlloc (H264DEC_FRM_STRM_BUF_SIZE, 256, HW_CACHABLE);
+		img_ptr->cmd_data_buf[1]= (uint32 *) H264Dec_ExtraMemAlloc(total_mb_num * 256 * 6, 256, HW_CACHABLE);
+		img_ptr->cmd_info_buf[1] = (uint32 *) H264Dec_ExtraMemAlloc(total_mb_num * 256*2, 256, HW_CACHABLE);
+		img_ptr->frame_bistrm_buf[1] = (uint8 *)H264Dec_ExtraMemAlloc (H264DEC_FRM_STRM_BUF_SIZE, 256, HW_CACHABLE);
 	}else
 	{
-		g_halfPixTemp = (int16 *)H264Dec_ExtraMemCacheAlloc_4WordAlign(24*16*sizeof(int16));
+		g_halfPixTemp = (int16 *)H264Dec_ExtraMemAlloc(24*16*sizeof(int16), 16, SW_CACHABLE);
 	}
 
-	H264Dec_ExtraMemCacheAlloc (2*mb_num_x*sizeof(DEC_MB_INFO_T)); //for posy = -1 mb.
-	img_ptr->mb_info = (DEC_MB_INFO_T *)H264Dec_ExtraMemCacheAlloc ((uint32)total_mb_num*sizeof(DEC_MB_INFO_T));
-	img_ptr->i4x4pred_mode_ptr = (int8 *)H264Dec_ExtraMemCacheAlloc (total_mb_num*sizeof(int8)*16);
-	img_ptr->direct_ptr = (int8 *)H264Dec_ExtraMemCacheAlloc (total_mb_num*sizeof(int8)*16);
-	img_ptr->nnz_ptr= (int8 *)H264Dec_ExtraMemCacheAlloc (total_mb_num*sizeof(int8)*24);	/// 16 y  + 4 u +4v
-	img_ptr->mvd_ptr[0] = (int16 *)H264Dec_ExtraMemCacheAlloc (total_mb_num*sizeof(int16)*16*2);
-	img_ptr->mvd_ptr[1] = (int16 *)H264Dec_ExtraMemCacheAlloc (total_mb_num*sizeof(int16)*16*2);
-	img_ptr->slice_nr_ptr = (int32 *)H264Dec_ExtraMemCacheAlloc (total_mb_num*sizeof(int32));
+	H264Dec_ExtraMemAlloc (2*mb_num_x*sizeof(DEC_MB_INFO_T), 4, SW_CACHABLE); //for posy = -1 mb.
+	img_ptr->mb_info = (DEC_MB_INFO_T *)H264Dec_ExtraMemAlloc ((uint32)total_mb_num*sizeof(DEC_MB_INFO_T), 4, SW_CACHABLE);
+	img_ptr->i4x4pred_mode_ptr = (int8 *)H264Dec_ExtraMemAlloc (total_mb_num*sizeof(int8)*16, 4, SW_CACHABLE);
+	img_ptr->direct_ptr = (int8 *)H264Dec_ExtraMemAlloc (total_mb_num*sizeof(int8)*16, 4, SW_CACHABLE);
+	img_ptr->nnz_ptr= (int8 *)H264Dec_ExtraMemAlloc (total_mb_num*sizeof(int8)*24, 4, SW_CACHABLE);	/// 16 y  + 4 u +4v
+	img_ptr->mvd_ptr[0] = (int16 *)H264Dec_ExtraMemAlloc (total_mb_num*sizeof(int16)*16*2, 4, SW_CACHABLE);
+	img_ptr->mvd_ptr[1] = (int16 *)H264Dec_ExtraMemAlloc (total_mb_num*sizeof(int16)*16*2, 4, SW_CACHABLE);
+	img_ptr->slice_nr_ptr = (int32 *)H264Dec_ExtraMemAlloc (total_mb_num*sizeof(int32), 4, SW_CACHABLE);
 
 	return;
 }
@@ -81,21 +73,21 @@ PUBLIC void H264Dec_init_dpb (DEC_IMAGE_PARAMS_T *img_ptr, DEC_SPS_T *sps_ptr)
 		//each storable_picture buffer is bonding to a frame store
 		if (dpb_ptr->fs[i] == PNULL)
 		{
-			dpb_ptr->fs[i] = (DEC_FRAME_STORE_T *)H264Dec_ExtraMemCacheAlloc (sizeof(DEC_FRAME_STORE_T));
-			dpb_ptr->fs[i]->frame = (DEC_STORABLE_PICTURE_T *)H264Dec_ExtraMemCacheAlloc(sizeof(DEC_STORABLE_PICTURE_T));
-			dpb_ptr->fs[i]->frame->mv_ptr[0] = (int16 *)H264Dec_ExtraMemCacheAlloc((frm_size_in_blk << 1) * sizeof(int16));
-			dpb_ptr->fs[i]->frame->mv_ptr[1] = (int16 *)H264Dec_ExtraMemCacheAlloc((frm_size_in_blk << 1) * sizeof(int16));
-			dpb_ptr->fs[i]->frame->ref_idx_ptr[0] = (int8 *)H264Dec_ExtraMemCacheAlloc_4WordAlign(frm_size_in_blk);
-			dpb_ptr->fs[i]->frame->ref_idx_ptr[1] = (int8 *)H264Dec_ExtraMemCacheAlloc_4WordAlign(frm_size_in_blk);
-			dpb_ptr->fs[i]->frame->ref_pic_id_ptr[0] = (int32 *)H264Dec_ExtraMemCacheAlloc(frm_size_in_blk * sizeof(int32));
-			dpb_ptr->fs[i]->frame->ref_pic_id_ptr[1] = (int32 *)H264Dec_ExtraMemCacheAlloc(frm_size_in_blk * sizeof(int32));
+			dpb_ptr->fs[i] = (DEC_FRAME_STORE_T *)H264Dec_ExtraMemAlloc (sizeof(DEC_FRAME_STORE_T), 4, SW_CACHABLE);
+			dpb_ptr->fs[i]->frame = (DEC_STORABLE_PICTURE_T *)H264Dec_ExtraMemAlloc(sizeof(DEC_STORABLE_PICTURE_T), 4, SW_CACHABLE);
+			dpb_ptr->fs[i]->frame->mv_ptr[0] = (int16 *)H264Dec_ExtraMemAlloc((frm_size_in_blk << 1) * sizeof(int16), 4, SW_CACHABLE);
+			dpb_ptr->fs[i]->frame->mv_ptr[1] = (int16 *)H264Dec_ExtraMemAlloc((frm_size_in_blk << 1) * sizeof(int16), 4, SW_CACHABLE);
+			dpb_ptr->fs[i]->frame->ref_idx_ptr[0] = (int8 *)H264Dec_ExtraMemAlloc(frm_size_in_blk, 16, SW_CACHABLE);
+			dpb_ptr->fs[i]->frame->ref_idx_ptr[1] = (int8 *)H264Dec_ExtraMemAlloc(frm_size_in_blk, 16, SW_CACHABLE);
+			dpb_ptr->fs[i]->frame->ref_pic_id_ptr[0] = (int32 *)H264Dec_ExtraMemAlloc(frm_size_in_blk * sizeof(int32), 4, SW_CACHABLE);
+			dpb_ptr->fs[i]->frame->ref_pic_id_ptr[1] = (int32 *)H264Dec_ExtraMemAlloc(frm_size_in_blk * sizeof(int32), 4, SW_CACHABLE);
 
 #ifndef YUV_THREE_PLANE
 			if (!img_ptr->VSP_used)	//sw
 			{
-				dpb_ptr->fs[i]->frame->imgYUV[0] = (uint8 *)H264Dec_ExtraMemCacheAlloc(ext_frm_size);
-				dpb_ptr->fs[i]->frame->imgYUV[1] = (uint8 *)H264Dec_ExtraMemCacheAlloc(ext_frm_size>>2);
-				dpb_ptr->fs[i]->frame->imgYUV[2] = (uint8 *)H264Dec_ExtraMemCacheAlloc(ext_frm_size>>2);
+				dpb_ptr->fs[i]->frame->imgYUV[0] = (uint8 *)H264Dec_ExtraMemAlloc(ext_frm_size, 4, SW_CACHABLE);
+				dpb_ptr->fs[i]->frame->imgYUV[1] = (uint8 *)H264Dec_ExtraMemAlloc(ext_frm_size>>2, 4, SW_CACHABLE);
+				dpb_ptr->fs[i]->frame->imgYUV[2] = (uint8 *)H264Dec_ExtraMemAlloc(ext_frm_size>>2, 4, SW_CACHABLE);
 			}
 #endif			
 			
@@ -104,8 +96,8 @@ PUBLIC void H264Dec_init_dpb (DEC_IMAGE_PARAMS_T *img_ptr, DEC_SPS_T *sps_ptr)
 			dpb_ptr->fs[i]->frame->imgU = PNULL;
 			dpb_ptr->fs[i]->frame->pBufferHeader = PNULL;
 #else
-			dpb_ptr->fs[i]->frame->imgY = (uint8 *)H264Dec_ExtraMemAlloc_64WordAlign(frm_size);
-			dpb_ptr->fs[i]->frame->imgU = (uint8 *)H264Dec_ExtraMemAlloc_64WordAlign(frm_size/2);
+			dpb_ptr->fs[i]->frame->imgY = (uint8 *)H264Dec_ExtraMemAlloc(frm_size, 256, HW_NO_CACHABLE);
+			dpb_ptr->fs[i]->frame->imgU = (uint8 *)H264Dec_ExtraMemAlloc(frm_size/2, 256, HW_NO_CACHABLE);
 #endif
 			dpb_ptr->fs[i]->frame->imgV = PNULL;
 			dpb_ptr->fs[i]->frame->imgYAddr = (uint32)dpb_ptr->fs[i]->frame->imgY>>8;  //y;
@@ -627,12 +619,12 @@ LOCAL void H264Dec_insert_picture_in_dpb (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr,
 	int32 used_size = dpb_ptr->used_size;
 	DEC_FRAME_STORE_T *curr_fs_ptr = dpb_ptr->fs[MAX_REF_FRAME_NUMBER];
 	DEC_FRAME_STORE_T *tmp_fs_ptr;
-	
+
 	if (picture_ptr->used_for_reference)
 	{
 		curr_fs_ptr->is_reference = 1;
 #ifdef _VSP_LINUX_
-		if(!g_image_ptr->VSP_used)
+//		if(!g_image_ptr->VSP_used)
 		{
 		if(curr_fs_ptr->frame->pBufferHeader!=NULL)
 			(*VSP_bindCb)(g_user_data,curr_fs_ptr->frame->pBufferHeader);

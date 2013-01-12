@@ -29,7 +29,7 @@
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
 
-PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(uint8 *bitstrm_ptr, uint32 bitstrm_len)
+PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(uint8 *bitstrm_ptr, uint32 bitstrm_len, MMDecOutput *dec_output_ptr)
 {
 	uint32 tmpVar;
 	int32 ret = 0;
@@ -82,6 +82,11 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(uint8 *bitstrm_ptr, uint32 bitstrm
 		break;
 	case NALU_TYPE_SPS:
 		H264Dec_process_sps (img_ptr);
+		if(dec_output_ptr)
+		{
+			dec_output_ptr->frame_width = (g_sps_ptr->pic_width_in_mbs_minus1+1) * 16;
+			dec_output_ptr->frame_height= (g_sps_ptr->pic_height_in_map_units_minus1+1) *(2-(uint8)g_sps_ptr->frame_mbs_only_flag) *16;
+		}
 		break;
 	case NALU_TYPE_SEI:
 		H264Dec_interpret_sei_message ();

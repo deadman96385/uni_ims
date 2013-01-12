@@ -22,7 +22,6 @@
     extern   "C" 
     {
 #endif
-
 int32 g_firstBsm_init;/*BSM init*/
 DEC_VOP_MODE_T *g_dec_vop_mode_ptr;
 DEC_FRM_BFR g_FrmYUVBfr[DEC_YUV_BUFFER_NUM];

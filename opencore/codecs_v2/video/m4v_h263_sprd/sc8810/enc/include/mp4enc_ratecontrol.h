@@ -41,7 +41,7 @@
 #define	RC_MIN_QUANT			4
 
 #define	RC_MAX_QP_I				28
-#define	RC_MIN_QP_I				6
+#define	RC_MIN_QP_I				4//6
 
 #define	IVOP_SKIP_MARGIN		50
 #define	PVOP_SKIP_MARGIN		80

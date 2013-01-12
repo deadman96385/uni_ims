@@ -45,7 +45,8 @@
 #include <sys/ioctl.h>
 
 #include <binder/MemoryHeapBase.h>
-
+//#include <binder/MemoryHeapPmem.h>
+#include <linux/android_pmem.h>
 
 #include "mmcodec.h"
 #include "mpeg4dec.h"
@@ -53,73 +54,71 @@
 // from m4v_config_parser.h
 OSCL_IMPORT_REF int16 iGetM4VConfigInfo(uint8 *buffer, int32 length, int32 *width, int32 *height, int32 *, int32 *);
 
-//using android::sp;
 using namespace android;
-
-void little_to_big_endian(char *p,unsigned int  count)
-{
-       unsigned int *pInt =(unsigned int *) p;
-       unsigned int value;   
-       for(int i=0;i<(count+3)/4;i++)
-	{
-		value = pInt[i];
-		value = ((value&0xff)<<24)|((value&0xff00)<<8)|((value&0xff0000)>>8)|((value&0xff000000)>>24);
-		 pInt[i] = value;
-       	}
-}
 
 int VSP_bind_cb(void *userdata, void *pHeader,int flag)
 {
-	//SCI_TRACE_LOW("VSP DPB::VSP_bind_cb %x,%x\n",((OMX_BUFFERHEADERTYPE *)pHeader)->pBuffer,pHeader);
 	Mpeg4Decoder_OMX *pMpeg4Decoder_OMX = (Mpeg4Decoder_OMX *)userdata;
         BufferCtrlStruct *pBCTRL = (BufferCtrlStruct *)(((OMX_BUFFERHEADERTYPE *)pHeader)->pOutputPortPrivate);
+	OMX_MP4DEC_INFO ("%s: %x,%x,%d\n", __FUNCTION__, ((OMX_BUFFERHEADERTYPE *)pHeader)->pBuffer,pHeader,pBCTRL->iRefCount);
+        
         pBCTRL->iRefCount++;
 	return 0;
 }
 
 int VSP_unbind_cb(void *userdata, void *pHeader,int flag)
 {
-	//SCI_TRACE_LOW("VSP DPB::VSP_unbind_cb %x,%x\n",((OMX_BUFFERHEADERTYPE *)pHeader)->pBuffer,pHeader);
-	Mpeg4Decoder_OMX *pMpeg4Decoder_OMX = (Mpeg4Decoder_OMX *)userdata;
-        BufferCtrlStruct *pBCTRL = (BufferCtrlStruct *)(((OMX_BUFFERHEADERTYPE *)pHeader)->pOutputPortPrivate);
+    Mpeg4Decoder_OMX *pMpeg4Decoder_OMX = (Mpeg4Decoder_OMX *)userdata;
+    BufferCtrlStruct *pBCTRL = (BufferCtrlStruct *)(((OMX_BUFFERHEADERTYPE *)pHeader)->pOutputPortPrivate);
+
+    OMX_MP4DEC_INFO("%s: ref frame: 0x%x, %x; cnt=%d, isinQueue=%d", __FUNCTION__, 
+            ((OMX_BUFFERHEADERTYPE *)pHeader)->pBuffer, pHeader,
+            pBCTRL->iRefCount,pBCTRL->iIsBufferInComponentQueue
+    );
+
+    if (pBCTRL->iRefCount  > 0)
+    {   
         pBCTRL->iRefCount--;
-	if ( pBCTRL->iRefCount == 0)
+    }
+
+    if ( pBCTRL->iRefCount == 0  )
+    {
+        // if a buffer's ref count is 0 - it means that it is available.
+        pMpeg4Decoder_OMX->ipOMXComponent->iNumAvailableOutputBuffers++;
+
+        if(OMX_FALSE == pBCTRL->iIsBufferInComponentQueue)
         {
-            pMpeg4Decoder_OMX->ipOMXComponent->iNumAvailableOutputBuffers++;
-	    if(OMX_FALSE == pBCTRL->iIsBufferInComponentQueue)
-	    {
-	        //SCI_TRACE_LOW("VSP_unbind_cb  OMX_FALSE == pBCTRL->iIsBufferInComponentQueue %x\n",pHeader);
-	    	QueueType *pOutputQueue = pMpeg4Decoder_OMX->ipOMXComponent->GetOutputQueue();
-		Queue(pOutputQueue,(void *)pHeader);
-		pBCTRL->iIsBufferInComponentQueue = OMX_TRUE;
-	    }
-            // posssibly reschedule the component?
+            // push back the buffer to queue.
+            QueueType *pOutputQueue = pMpeg4Decoder_OMX->ipOMXComponent->GetOutputQueue();
+            Queue(pOutputQueue,(void *)pHeader);
+            pBCTRL->iIsBufferInComponentQueue = OMX_TRUE;
         }
-	return 0;
+    }
+
+    return 0;
 }
 
 void Mpeg4Decoder_OMX::ReleaseReferenceBuffers()
 {
-	SCI_TRACE_LOW("Mpeg4Decoder_OMX::ReleaseReferenceBuffers\n");
-	MP4DecReleaseRefBuffers();
+    OMX_MP4DEC_INFO("%s, %d", __FUNCTION__, __LINE__); 
+    MP4DecReleaseRefBuffers();
 }
 
 OMX_BOOL Mpeg4Decoder_OMX::FlushOutput_OMX( OMX_BUFFERHEADERTYPE **aOutBufferForRendering)
 { 
-	SCI_TRACE_LOW("Mpeg4Decoder_OMX::FlushOutput_OMX\n"); 
-	return (OMX_BOOL)MP4DecGetLastDspFrm((void **)aOutBufferForRendering);
+    OMX_MP4DEC_INFO("%s, %d", __FUNCTION__, __LINE__); 
+    return (OMX_BOOL)MP4DecGetLastDspFrm((void **)aOutBufferForRendering);
 }
 
 void Mpeg4Decoder_OMX::ResetDecoder()
 {
-	SCI_TRACE_LOW("Mpeg4Decoder_OMX::ResetDecoder\n");
-	ReleaseReferenceBuffers();
+    OMX_MP4DEC_INFO("%s, %d", __FUNCTION__, __LINE__); 
+    ReleaseReferenceBuffers();
 }
 	
-
 Mpeg4Decoder_OMX::Mpeg4Decoder_OMX(OmxComponentBase *pComp)
 {
-    SCI_TRACE_LOW("Mpeg4Decoder_OMX::Mpeg4Decoder_OMX\n");
+    OMX_MP4DEC_INFO("%s, %d", __FUNCTION__, __LINE__); 
     ipOMXComponent = pComp;
     CodecMode = MPEG4_MODE; // this can change
     iReferenceYUVWasSet = OMX_FALSE;
@@ -128,7 +127,7 @@ Mpeg4Decoder_OMX::Mpeg4Decoder_OMX(OmxComponentBase *pComp)
     iExternalBufferWasSet = OMX_FALSE;
     iStreamBufferWasSet = OMX_FALSE;
 
-	iSkipToIDR = OMX_TRUE;
+    iSkipToIDR = OMX_TRUE;
 	
     iFrameSize = 0;
     iDisplay_Width = 0;
@@ -165,15 +164,13 @@ Mpeg4Decoder_OMX::Mpeg4Decoder_OMX(OmxComponentBase *pComp)
     iDecoder_sw_vt_flag	 = 0;
 }
 
-
 /* Initialization routine */
 OMX_ERRORTYPE Mpeg4Decoder_OMX::Mp4DecInit()
 {
-    SCI_TRACE_LOW("Mpeg4Decoder_OMX::Mp4DecInit\n");
+    OMX_MP4DEC_INFO ("%s, %d", __FUNCTION__, __LINE__); 
     Mpeg4InitCompleteFlag = OMX_FALSE;
     return OMX_ErrorNone;
 }
-
 
 void dump_yuv( OMX_U8* pBuffer,OMX_U32 aInBufSize)
 {
@@ -181,37 +178,6 @@ void dump_yuv( OMX_U8* pBuffer,OMX_U32 aInBufSize)
 	fwrite(pBuffer,1,aInBufSize,fp);
 	fclose(fp);
 }
-/*
-#include <stdio.h>
-#include <stdarg.h>
-int g_frame_num =0;
-extern "C"{
-void  SCI_PRINTF(const char* format,...)
-{
-    FILE *log_fp;
-    va_list args;
-
-if(g_frame_num>=3)
-	return;
-    va_start(args, format);
-
- 
-    log_fp = fopen("/data/vsp_log.txt", "a+");
-    if (log_fp == NULL)
-	{
-		printf("vsp can not open log file\n");
-		return;
-    	}
-
-    vfprintf(log_fp, format, args);
-    fclose(log_fp);
- 
-    va_end(args);
-	
-}
-}
-*/
-
 extern int g_mpeg4_dec_err_flag;
 
 OMX_BOOL  SearchMpeg4VOP(uint8_t *pStream, int strmLen)
@@ -223,10 +189,10 @@ OMX_BOOL  SearchMpeg4VOP(uint8_t *pStream, int strmLen)
     {
 	if (tempPos[0] == 0x00 && tempPos[1] == 0x00)
 	{
-		if (tempPos[2] == 0x01 && tempPos[3] == 0xB6) /* MPEG4 VOP start code */
-		{
-			return OMX_TRUE;
-		}
+            if (tempPos[2] == 0x01 && tempPos[3] == 0xB6) /* MPEG4 VOP start code */
+            {
+                return OMX_TRUE;
+            }
 	}
 	tempPos++;
     }
@@ -261,24 +227,23 @@ OMX_BOOL Mpeg4Decoder_OMX::Mp4DecodeVideo(OMX_BOOL *need_new_pic,OMX_BUFFERHEADE
     {
     	*notSupport = OMX_TRUE;
 	 iBufferAllocFail = OMX_FALSE;	
-	 SCI_TRACE_LOW("Mpeg4Decoder_OMX dec not support because of buffer alloc fail\n");
+	 OMX_MP4DEC_ERR ("%s: dec not support because of buffer alloc fail", __FUNCTION__);
 	 return OMX_FALSE;
     }
 	
-   //SCI_TRACE_LOW("Mpeg4Decoder_OMX::Mp4DecodeVideo %d aInBufSize %5d marker %d::buffer %x,%x,%x,%x,%x,%x\n", (*aFrameCount),*aInBufSize,aMarkerFlag,(*aInputBuf)[0],(*aInputBuf)[1],(*aInputBuf)[2],(*aInputBuf)[3],(*aInputBuf)[4],(*aInputBuf)[5]);
+   OMX_MP4DEC_DEBUG ("%s: %d aInBufSize %5d marker %d::buffer %x,%x,%x,%x,%x,%x\n", __FUNCTION__, (*aFrameCount),*aInBufSize,aMarkerFlag,(*aInputBuf)[0],(*aInputBuf)[1],(*aInputBuf)[2],(*aInputBuf)[3],(*aInputBuf)[4],(*aInputBuf)[5]);
 	
     if ((Mpeg4InitCompleteFlag == OMX_FALSE) && (MPEG4_MODE == CodecMode))
     {
         if (!aMarkerFlag)
         {
             InitSize = GetVideoHeader(0, *aInputBuf, *aInBufSize);
-        }
-        else
+        }else
         {
             InitSize = *aInBufSize;
         }	
 	 
-        if (PV_TRUE != InitializeVideoDecode(&iDisplay_Width, &iDisplay_Height,aInputBuf, (OMX_S32*)&InitSize, MODE_MPEG4, aDeBlocking, notSupport))
+        if (OMX_TRUE != InitializeVideoDecode(&iDisplay_Width, &iDisplay_Height,aInputBuf, (OMX_S32*)&InitSize, MODE_MPEG4, aDeBlocking, notSupport))
         {
             *aInBufSize -= InitSize;
 	     *aInputBuf += InitSize;
@@ -311,26 +276,44 @@ OMX_BOOL Mpeg4Decoder_OMX::Mp4DecodeVideo(OMX_BOOL *need_new_pic,OMX_BUFFERHEADE
         aPortParam->format.video.nStride = min_stride;
         aPortParam->format.video.nSliceHeight = min_sliceheight;
 
+#ifndef MP4CODEC_NO_PMEM
         if (!((min_stride <= 720 && min_sliceheight <= 576) || (min_stride <= 576 && min_sliceheight <= 720)))
         {
             iDecoder_sw_flag = OMX_TRUE;
-
-#ifdef YUV_THREE_PLANE
-            aPortParam->format.video.nFrameWidth +=32;
-            aPortParam->format.video.nFrameHeight +=32;
-            aPortParam->format.video.nStride +=32;
-            aPortParam->format.video.nSliceHeight +=32;
-#endif
         }else if((min_stride <= 320 && min_sliceheight <= 240) ||(min_stride <= 240 && min_sliceheight <= 320) )
-	{
-		iDecoder_sw_vt_flag = OMX_TRUE;
-	}
+        {
+            iDecoder_sw_vt_flag = OMX_TRUE;
+        }
+#else
+        if((min_stride <= 320 && min_sliceheight <= 240) ||(min_stride <= 240 && min_sliceheight <= 320) )
+        {
+            iDecoder_sw_vt_flag = OMX_TRUE;
+        } else 
+        {
+            iDecoder_sw_flag = OMX_TRUE;
+        }
+#endif
 
         // finally, compute the new minimum buffer size.
 
         // Decoder components always output YUV420 format
-        aPortParam->nBufferSize = (aPortParam->format.video.nSliceHeight * aPortParam->format.video.nStride * 3) >> 1;
-
+#ifdef YUV_THREE_PLANE
+        if(iDecoder_sw_flag)
+        {
+            aPortParam->format.video.nFrameWidth +=32;
+            aPortParam->format.video.nFrameHeight +=32;
+            aPortParam->format.video.nStride +=32;
+            aPortParam->format.video.nSliceHeight +=32;
+        }
+#endif
+        aPortParam->nBufferSize = (aPortParam->format.video.nSliceHeight * aPortParam->format.video.nStride * 3) >> 1 ;
+ #ifdef YUV_THREE_PLANE
+        if(iDecoder_sw_flag )
+        {
+            aPortParam->nBufferSize +=  8;// 8 extra byte for mc loading of V.
+        }
+ #endif
+ 
         iFrameSize = (aPortParam->format.video.nSliceHeight * aPortParam->format.video.nStride);
         iData_Width = aPortParam->format.video.nFrameWidth;
         iData_Height = aPortParam->format.video.nFrameHeight;
@@ -342,7 +325,6 @@ OMX_BOOL Mpeg4Decoder_OMX::Mp4DecodeVideo(OMX_BOOL *need_new_pic,OMX_BUFFERHEADE
 
         return OMX_TRUE;
     }
-
 
     if ((*(OMX_S32*)aInBufSize) <= 0)
     {
@@ -375,25 +357,43 @@ OMX_BOOL Mpeg4Decoder_OMX::Mp4DecodeVideo(OMX_BOOL *need_new_pic,OMX_BUFFERHEADE
         aPortParam->format.video.nStride = min_stride;
         aPortParam->format.video.nSliceHeight = min_sliceheight;
 
+#ifndef MP4CODEC_NO_PMEM
         if (!((min_stride <= 720 && min_sliceheight <= 576) || (min_stride <= 576 && min_sliceheight <= 720)))
         {
             iDecoder_sw_flag = OMX_TRUE;
+        }else if((min_stride <= 320 && min_sliceheight <= 240) ||(min_stride <= 240 && min_sliceheight <= 320) )
+        {
+            iDecoder_sw_vt_flag = OMX_TRUE;
+        }
+#else
+        if((min_stride <= 320 && min_sliceheight <= 240) ||(min_stride <= 240 && min_sliceheight <= 320) )
+        {
+            iDecoder_sw_vt_flag = OMX_TRUE;
+        }else
+        {
+            iDecoder_sw_flag = OMX_TRUE;
+        }
+#endif
 
+        // finally, compute the new minimum buffer size.
+
+        // Decoder components always output YUV420 format
 #ifdef YUV_THREE_PLANE
+        if(iDecoder_sw_flag)
+        {
             aPortParam->format.video.nFrameWidth +=32;
             aPortParam->format.video.nFrameHeight +=32;
             aPortParam->format.video.nStride +=32;
             aPortParam->format.video.nSliceHeight +=32;
+        }
 #endif
-        }else if((min_stride <= 320 && min_sliceheight <= 240) ||(min_stride <= 240 && min_sliceheight <= 320) )
-	{
-		iDecoder_sw_vt_flag = OMX_TRUE;
-	}
-		
-        // finally, compute the new minimum buffer size.
-
-        // Decoder components always output YUV420 format
-        aPortParam->nBufferSize = (aPortParam->format.video.nSliceHeight * aPortParam->format.video.nStride * 3) >> 1;
+        aPortParam->nBufferSize = (aPortParam->format.video.nSliceHeight * aPortParam->format.video.nStride * 3) >> 1 ;
+ #ifdef YUV_THREE_PLANE
+        if(iDecoder_sw_flag )
+        {
+            aPortParam->nBufferSize +=  8;// 8 extra byte for mc loading of V.
+        }
+ #endif
 
         iFrameSize = (aPortParam->format.video.nSliceHeight * aPortParam->format.video.nStride);
         iData_Width = aPortParam->format.video.nFrameWidth;
@@ -401,195 +401,209 @@ OMX_BOOL Mpeg4Decoder_OMX::Mp4DecodeVideo(OMX_BOOL *need_new_pic,OMX_BUFFERHEADE
 
         // in case of h263 - port reconfig is pretty common - we'll alos have to do SetReferenceYUV later
 
-       CheckPortReConfig(aOutBuffer, OldWidth, OldHeight, aResizeFlag, aFrameCount);
+        CheckPortReConfig(aOutBuffer, OldWidth, OldHeight, aResizeFlag, aFrameCount);
         return OMX_TRUE;
     }
 
-
     if(!iExternalBufferWasSet)
     {
-       if( -12 != getpriority(PRIO_PROCESS, 0)){
-	  	setpriority(PRIO_PROCESS, 0, -12);//@jgdu
-       }   
-    	MMCodecBuffer codec_buf;
-        uint32 Frm_width_align = aPortParam->format.video.nStride;
-	uint32 Frm_height_align = aPortParam->format.video.nSliceHeight;
-	uint32 mb_x = Frm_width_align/16;
+        if( -12 != getpriority(PRIO_PROCESS, 0)){
+            setpriority(PRIO_PROCESS, 0, -12);//@jgdu
+        }
         
-	uint32 mb_y = Frm_height_align/16;
-	uint32 total_mb_num = mb_x * mb_y;
-	uint32 frm_size = (total_mb_num * 256);
-	uint32 ext_buffer_size;
-	 SCI_TRACE_LOW("Mpeg4Decoder_OMX::Mp4DecodeVideo width %d,height %d, sw_vt_flag %d, sw_flag %d\n",aPortParam->format.video.nFrameWidth,aPortParam->format.video.nFrameHeight, iDecoder_sw_vt_flag, iDecoder_sw_flag);
+        OMX_MP4DEC_INFO ("%s: width %d,height %d, sw_vt_flag %d, sw_flag %d\n", __FUNCTION__, aPortParam->format.video.nFrameWidth,aPortParam->format.video.nFrameHeight, iDecoder_sw_vt_flag, iDecoder_sw_flag);
 
-#if defined(CHIP_8810)
-	if (iDecoder_sw_flag ||iDecoder_sw_vt_flag)
+        MMCodecBuffer extra_mem[3];
+	uint32 extra_mem_size[3];
+	uint32 mb_num_x = (aPortParam->format.video.nStride + 15)>>4;
+	uint32 mb_num_y = (aPortParam->format.video.nSliceHeight + 15)>>4;
+	uint32 mb_num_total = mb_num_x * mb_num_y;
+	uint32 frm_size = (mb_num_total * 256);    
+
+        if (iDecoder_sw_flag ||iDecoder_sw_vt_flag)
 	{
-		ext_buffer_size = 0;	//no used, xwluo@2012.07.03
+            extra_mem_size[HW_NO_CACHABLE] = 0;	
+            extra_mem_size[HW_CACHABLE] = 0;
 	}else
 	{
-		ext_buffer_size = mb_x*4*8*sizeof(int16);	//pTopCoeff
-		ext_buffer_size += 1000*1024;	//MP4DEC_FRM_STRM_BUF_SIZE
-		ext_buffer_size += frm_size*8;	//cmd data and info
+            extra_mem_size[HW_NO_CACHABLE] = mb_num_x*4*8*sizeof(int16);	//pTopCoeff
+            extra_mem_size[HW_CACHABLE] = 1000*1024;	//MP4DEC_FRM_STRM_BUF_SIZE
+            extra_mem_size[HW_CACHABLE] += frm_size*8;	//cmd data and info
 		
-		if(aDeBlocking)
-		{
-			ext_buffer_size += ((frm_size*3*3)>>1); //reconstruction frame buffer
-		}
-		ext_buffer_size += 10*1024;	//misc
+            if(aDeBlocking)
+            {
+		extra_mem_size[HW_NO_CACHABLE] += ((frm_size*3*3)>>1); //reconstruction frame buffer
+            }
+            extra_mem_size[HW_NO_CACHABLE] += 10*1024;	//misc
+            extra_mem_size[HW_CACHABLE] += 10*1024;	//misc
 	}
-#else
-	if(aDeBlocking)
-	{
-		ext_buffer_size = Frm_width_align*Frm_height_align*3/2*3 + mb_x*4*8*2  + 512;
-	}else
-	{
-		ext_buffer_size =  mb_x*4*8*2  + 512;
-	}
-#endif
 
-	if (ext_buffer_size)
+        //NO CACHABLE
+	if (extra_mem_size[HW_NO_CACHABLE])
 	{
-		iDecExtPmemHeap = new MemoryHeapIon(SPRD_ION_DEV, ext_buffer_size, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);	
-	     	int fd = iDecExtPmemHeap->getHeapID();
-		if(fd>=0)
-		{
-	 		int ret,phy_addr, buffer_size;
-	 		ret = iDecExtPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
-	 		if(ret) SCI_TRACE_LOW("iDecExtPmemHeap get_phy_addr_from_ion fail %d",ret);
+            iDecExtPmemHeap = new MemoryHeapIon(SPRD_ION_DEV, extra_mem_size[HW_NO_CACHABLE], MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);	
+            int fd = iDecExtPmemHeap->getHeapID();
+            if(fd>=0)
+            {
+                int ret,phy_addr, buffer_size;
+                ret = iDecExtPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
+	 	if(ret) 
+                {
+                    OMX_MP4DEC_ERR ("iDecExtPmemHeap get_phy_addr_from_ion fail %d",ret);
+                }
 			
-	    		iDecExtPhyAddr =(OMX_U32)phy_addr;
-	    		SCI_TRACE_LOW("Mpeg4Decoder_OMX ext mem pmempool %x,%x,%x,%x\n",iDecExtPmemHeap->getHeapID(),iDecExtPmemHeap->base(),phy_addr,buffer_size);
-	    	 	iDecExtVAddr = (OMX_U32)iDecExtPmemHeap->base();
-	    		codec_buf.common_buffer_ptr =(uint8 *) iDecExtVAddr;
-	    		codec_buf.common_buffer_ptr_phy = (void *)iDecExtPhyAddr;
-	    		codec_buf.size = ext_buffer_size;
+	    	iDecExtPhyAddr =(OMX_U32)phy_addr;
+	    	OMX_MP4DEC_DEBUG ("%s: ext mem pmempool %x,%x,%x,%x\n", __FUNCTION__, iDecExtPmemHeap->getHeapID(),iDecExtPmemHeap->base(),phy_addr,buffer_size);
+                iDecExtVAddr = (OMX_U32)iDecExtPmemHeap->base();
+                extra_mem[HW_NO_CACHABLE].common_buffer_ptr =(uint8 *) iDecExtVAddr;
+                extra_mem[HW_NO_CACHABLE].common_buffer_ptr_phy = (void *)iDecExtPhyAddr;
+                extra_mem[HW_NO_CACHABLE].size = extra_mem_size[HW_NO_CACHABLE];
+            }else
+            {
+		iBufferAllocFail = OMX_TRUE;
+		OMX_MP4DEC_ERR ("%s: ext mem pmempool  error", __FUNCTION__);
+	    	return OMX_FALSE;	
+            }
+        }
 
-			MP4DecMemInit(&codec_buf);
-		}else
-		{
-			iBufferAllocFail = OMX_TRUE;
-			SCI_TRACE_LOW("Mpeg4Decoder_OMX ext mem pmempool  error\n");
-	    		return OMX_FALSE;	
-		}
+    //CACHABLE
+        if (extra_mem_size[HW_CACHABLE])
+        {
+            iCMDbufferPmemHeap = new MemoryHeapIon(SPRD_ION_DEV, extra_mem_size[HW_CACHABLE], 0, (1<<31)|ION_HEAP_CARVEOUT_MASK);	
+            int fd = iCMDbufferPmemHeap->getHeapID();
+            if(fd>=0)
+            {
+                int ret,phy_addr, buffer_size;
+                ret = iCMDbufferPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
+	 	if (ret)
+                {
+                    OMX_MP4DEC_ERR ("iDecExtPmemHeap get_phy_addr_from_ion fail %d",ret);
+                }
+			
+                iCMDbufferPhyAddr =(OMX_U32)phy_addr;
+	    	OMX_MP4DEC_DEBUG ("%s: ext mem pmempool %x,%x,%x,%x", __FUNCTION__, iCMDbufferPmemHeap->getHeapID(),iCMDbufferPmemHeap->base(),phy_addr,buffer_size);
+                iCMDbufferVAddr = (OMX_U32)iCMDbufferPmemHeap->base();
+                extra_mem[HW_CACHABLE].common_buffer_ptr =(uint8 *) iCMDbufferVAddr;
+                extra_mem[HW_CACHABLE].common_buffer_ptr_phy = (void *)iCMDbufferPhyAddr;
+                extra_mem[HW_CACHABLE].size = extra_mem_size[HW_CACHABLE];
+            }else
+            {
+                iBufferAllocFail = OMX_TRUE;
+                OMX_MP4DEC_ERR ("%s: ext mem pmempool  error", __FUNCTION__);
+                return OMX_FALSE;	
+            }
 	}	        
-
 	
     	//alloc cacheable ext buf 
-#if !defined(CHIP_8810)		
-    	ext_buffer_size = mb_x*mb_y*6*4*2 +mb_x*mb_y+ mb_x*3*2+mb_x*mb_y*4 + mb_x*mb_y*4*6 + 512;
-#else
-	ext_buffer_size = total_mb_num * 6 * 2* sizeof(int32); 	//mb_info
-	ext_buffer_size += 4 * 8 * sizeof(int16);				//pLeftCoeff
-	ext_buffer_size += 6 * 64 * sizeof(int16);				//coef_block
-	
-	ext_buffer_size += 1024;		
+	extra_mem_size[SW_CACHABLE] = mb_num_total * 6 * 2* sizeof(int32); 	//mb_info
+	extra_mem_size[SW_CACHABLE] += 4 * 8 * sizeof(int16);				//pLeftCoeff
+	extra_mem_size[SW_CACHABLE] += 6 * 64 * sizeof(int16);				//coef_block	
+	extra_mem_size[SW_CACHABLE] += 1024;		
 	if (iDecoder_sw_flag)
 	{
-		int32 ext_size_y = (mb_x * 16 + 16*2) * (mb_y * 16 + 16*2);
-		int32 ext_size_c = ext_size_y >> 2;
-		int32 i;
+            int32 ext_size_y = (mb_num_x * 16 + 16*2) * (mb_num_y * 16 + 16*2);
+            int32 ext_size_c = ext_size_y >> 2;
+            int32 i;
 	
-		ext_buffer_size += 4*8*mb_x*sizeof(int16);	//pTopCoeff
-		ext_buffer_size += ((( 64*4*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrY 
-		ext_buffer_size += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrU
-		ext_buffer_size += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrV 
-	#ifndef YUV_THREE_PLANE	
-		for (i = 0; i < 3; i++)
-		{			
-			ext_buffer_size += ((( ext_size_y + 255) >>8)<<8);	//imgYUV[0]
-			ext_buffer_size += ((( ext_size_c + 255) >>8)<<8);	//imgYUV[1]
-			ext_buffer_size += ((( ext_size_c + 255) >>8)<<8);	//imgYUV[2]
-		}
-	#endif	
+            extra_mem_size[SW_CACHABLE] += 4*8*mb_num_x*sizeof(int16);	//pTopCoeff
+            extra_mem_size[SW_CACHABLE] += ((( 64*4*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrY 
+            extra_mem_size[SW_CACHABLE] += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrU
+            extra_mem_size[SW_CACHABLE] += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrV 
+#ifndef YUV_THREE_PLANE	
+            for (i = 0; i < 3; i++)
+            {			
+		extra_mem_size[SW_CACHABLE] += ((( ext_size_y + 255) >>8)<<8);	//imgYUV[0]
+		extra_mem_size[SW_CACHABLE] += ((( ext_size_c + 255) >>8)<<8);	//imgYUV[1]
+		extra_mem_size[SW_CACHABLE] += ((( ext_size_c + 8 +255) >>8)<<8);	//imgYUV[2]// 8 extra byte for mc loading of V.  
+            }
+#endif	
 	}else if ( iDecoder_sw_vt_flag)
 	{
-		int32 ext_size_y = (mb_x * 16 + 16*2) * (mb_y * 16 + 16*2);
-		int32 ext_size_c = ext_size_y >> 2;
-		int32 i;
+            int32 ext_size_y = (mb_num_x * 16 + 16*2) * (mb_num_y * 16 + 16*2);
+            int32 ext_size_c = ext_size_y >> 2;
+            int32 i;
 
-		ext_buffer_size += total_mb_num * 1 * sizeof(uint8);		//mbdec_stat_ptr @Simon.Wang for vt
-		ext_buffer_size += 4*8*mb_x*sizeof(int16);	//pTopCoeff
-		ext_buffer_size += total_mb_num * (sizeof(uint32) + 6 *sizeof(uint32));	//dc_store,dp
-		ext_buffer_size += ((( 64*4*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrY 
-		ext_buffer_size += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrU
-		ext_buffer_size += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrV 
+            extra_mem_size[SW_CACHABLE] += mb_num_total * 1 * sizeof(uint8);		//mbdec_stat_ptr @Simon.Wang for vt
+            extra_mem_size[SW_CACHABLE] += 4*8*mb_num_x*sizeof(int16);	//pTopCoeff
+            extra_mem_size[SW_CACHABLE] += mb_num_total * (sizeof(uint32) + 6 *sizeof(uint32));	//dc_store,dp
+            extra_mem_size[SW_CACHABLE] += ((( 64*4*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrY 
+            extra_mem_size[SW_CACHABLE] += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrU
+            extra_mem_size[SW_CACHABLE] += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrV 
 
-		for (i = 0; i < 5; i++)	// 3+2. 2 for disp YUV.
-		{			
-			ext_buffer_size += ((( ext_size_y + 255) >>8)<<8);	//imgYUV[0]
-			ext_buffer_size += ((( ext_size_c + 255) >>8)<<8);	//imgYUV[1]
-			ext_buffer_size += ((( ext_size_c + 255) >>8)<<8);	//imgYUV[2]
-		}	
-		//if(aDeBlocking)
-		if (1)
-		{
-			ext_buffer_size +=  ((( ext_size_y + 255) >>8)<<8);	//reconstruction frame buffer
-		}
-		
+            for (i = 0; i < 5; i++)	// 3+2. 2 for disp YUV.
+            {			
+		extra_mem_size[SW_CACHABLE] += ((( ext_size_y + 255) >>8)<<8);	//imgYUV[0]
+		extra_mem_size[SW_CACHABLE] += ((( ext_size_c + 255) >>8)<<8);	//imgYUV[1]
+		extra_mem_size[SW_CACHABLE] += ((( ext_size_c + 255) >>8)<<8);	//imgYUV[2]
+            }	
+
+            //if(aDeBlocking)
+            if (1)
+            {
+		extra_mem_size[SW_CACHABLE] +=  ((( ext_size_y + 255) >>8)<<8);	//reconstruction frame buffer
+            }
 	}else
 	{
-		ext_buffer_size += total_mb_num * 1 * sizeof(uint8);		//mbdec_stat_ptr
-		ext_buffer_size += mb_x * 4 * sizeof(int16);			//pTopLeftDCLine
-		ext_buffer_size += total_mb_num * (sizeof(uint32) + 6 *sizeof(uint32));	//dc_store,dp
-		//ext_buffer_size += frm_size *4;			//cmd
-		//ext_buffer_size += frm_size *8;			//ping pong cmd buffer
+            extra_mem_size[SW_CACHABLE] += mb_num_total * 1 * sizeof(uint8);		//mbdec_stat_ptr
+            extra_mem_size[SW_CACHABLE] += mb_num_x * 4 * sizeof(int16);			//pTopLeftDCLine
+            extra_mem_size[SW_CACHABLE] += mb_num_total * (sizeof(uint32) + 6 *sizeof(uint32));	//dc_store,dp
 	}
-#endif
-    	iDecoder_ext_cache_buffer_ptr = oscl_malloc(ext_buffer_size+4);
+    
+    	iDecoder_ext_cache_buffer_ptr = oscl_malloc(extra_mem_size[SW_CACHABLE]+4);
     	if(iDecoder_ext_cache_buffer_ptr==NULL)
     	{
-    		iBufferAllocFail = OMX_TRUE;    	
-    		SCI_TRACE_LOW("Mpeg4Decoder_OMX iDecoder_ext_cache_buffer_ptr alloc  error\n");
-		return OMX_FALSE;	    	
+            iBufferAllocFail = OMX_TRUE;    	
+            OMX_MP4DEC_ERR ("%s: iDecoder_ext_cache_buffer_ptr alloc  error", __FUNCTION__);
+            return OMX_FALSE;	    	
     	}
-    	codec_buf.common_buffer_ptr =(uint8 *)( ((int)iDecoder_ext_cache_buffer_ptr+3)&(~0x3));
-    	codec_buf.size = ext_buffer_size;
+    	extra_mem[SW_CACHABLE].common_buffer_ptr =(uint8 *)( ((int)iDecoder_ext_cache_buffer_ptr+3)&(~0x3));
+    	extra_mem[SW_CACHABLE].size = extra_mem_size[SW_CACHABLE];
 
-		MP4DecMemCacheInit(&codec_buf);
-		iExternalBufferWasSet = OMX_TRUE;	
+        MP4DecMemInit(extra_mem);
+        iExternalBufferWasSet = OMX_TRUE;	
     }
 	
     int picPhyAddr =  (static_cast<OpenmaxMpeg4AO * > (ipOMXComponent))->FindPhyAddr((uint32)aOutBuffer->pBuffer);	 
     if(!picPhyAddr)
     {
-        SCI_TRACE_LOW("Mpeg4Decoder_OMX FindPhyAddr failed");
+        OMX_MP4DEC_ERR ("Mpeg4Decoder_OMX FindPhyAddr failed");
         return OMX_FALSE; 
     }	
 
     GraphicBufferMapper &mapper = GraphicBufferMapper::get();
-    if((static_cast<OpenmaxMpeg4AO * > (ipOMXComponent))->iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX]){
+    if((static_cast<OpenmaxMpeg4AO * > (ipOMXComponent))->iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX])
+    {
     	int width = aPortParam->format.video.nStride;
     	int height = aPortParam->format.video.nSliceHeight;
     	Rect bounds(width, height);
     	void *vaddr;
         int usage;
         if(iDecoder_sw_flag){
-		usage = GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_OFTEN;
+            usage = GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_OFTEN;
 	}else{
-		usage = GRALLOC_USAGE_SW_WRITE_RARELY;
+            usage = GRALLOC_USAGE_SW_WRITE_RARELY;
 	}
     	if(mapper.lock((const native_handle_t*)aOutBuffer->pBuffer, usage, bounds, &vaddr))
     	{
-            SCI_TRACE_LOW("Mpeg4Decoder_OMX mapper.lock fail %x",aOutBuffer->pBuffer);
+            OMX_MP4DEC_ERR ("%s: mapper.lock fail %x", __FUNCTION__, aOutBuffer->pBuffer);
             return OMX_FALSE;			
     	}
 	MP4DecSetCurRecPic((uint8*)(vaddr),(uint8*)picPhyAddr,(void *)(aOutBuffer)); 
-    }else{	
-    	//SCI_TRACE_LOW("VSP DPB::Mpeg4Decoder_OMX::Mp4DecodeVideo set cur pic  %x,%x,%x\n",aOutBuffer->pBuffer,aOutBuffer,picPhyAddr);
+    }else
+    {	
     	MP4DecSetCurRecPic((uint8*)(aOutBuffer->pBuffer),(uint8*)picPhyAddr,(void *)(aOutBuffer)); 
     }
-#if PROFILING_ON
-    OMX_U32 StartTime = OsclTickCount::TickCount();
-#endif
+//#if PROFILING_ON
+//    OMX_U32 StartTime = OsclTickCount::TickCount();
+//#endif
 
     MMDecInput dec_in;
     MMDecOutput dec_out;
 	
     if(*aInBufSize > MPEG4_DECODER_STREAM_BUFFER_SIZE)
     {
-    	    SCI_TRACE_LOW("Mpeg4Decoder_OMX input stream too big %d\n",*aInBufSize);
-	    return OMX_FALSE;
+        OMX_MP4DEC_ERR ("%s: input stream too big %d\n", __FUNCTION__, *aInBufSize);
+        return OMX_FALSE;
     }
 
     oscl_memcpy((void *)iStream_buffer_ptr, *aInputBuf,*aInBufSize);
@@ -600,33 +614,33 @@ OMX_BOOL Mpeg4Decoder_OMX::Mp4DecodeVideo(OMX_BOOL *need_new_pic,OMX_BUFFERHEADE
     dec_in.beDisplayed = 1;
     dec_in.err_pkt_num = 0;
   
-    int ret;
-
     dec_out.VopPredType = -1;
     dec_out.frameEffective = 0;	
     MMDecRet decRet =	MP4DecDecode(&dec_in,&dec_out);
     Status =  (decRet == MMDEC_OK)?OMX_TRUE : OMX_FALSE;
 
-    if((static_cast<OpenmaxMpeg4AO * > (ipOMXComponent))->iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX]){
+    if((static_cast<OpenmaxMpeg4AO * > (ipOMXComponent))->iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX])
+    {
 	if(mapper.unlock((const native_handle_t*)aOutBuffer->pBuffer))
 	{
-            SCI_TRACE_LOW("Mpeg4Decoder_OMX mapper.unlock fail %x",aOutBuffer->pBuffer);	
+            OMX_MP4DEC_ERR ("%s: mapper.unlock fail %x", __FUNCTION__, aOutBuffer->pBuffer);	
 	}
     }
 
-   if(aMarkerFlag)
+    if(aMarkerFlag)
+    {
    	    *aInBufSize = 0;
-   else
-   {
+    }else
+    {
      	*aInBufSize = dec_in.dataLen;	//todo jgdu
-   }
+    }
    // advance input buffer ptr
    *aInputBuf += (InputSize - *aInBufSize);
 		
-#if PROFILING_ON
-    OMX_U32 EndTime = OsclTickCount::TickCount();
-    iTotalTicks += (EndTime - StartTime);
-#endif
+//#if PROFILING_ON
+//    OMX_U32 EndTime = OsclTickCount::TickCount();
+//    iTotalTicks += (EndTime - StartTime);
+//#endif
 
     if (Status == OMX_TRUE)
     {
@@ -634,53 +648,51 @@ OMX_BOOL Mpeg4Decoder_OMX::Mp4DecodeVideo(OMX_BOOL *need_new_pic,OMX_BUFFERHEADE
         //printf("Frame number %d\n", ++FrameCount);
 #endif
 
-	if(dec_out.frameEffective){
-		*aOutBufferForRendering = (OMX_BUFFERHEADERTYPE *)dec_out.pBufferHeader;
-	}	
-	else
+	if(dec_out.frameEffective)
+        {
+            *aOutBufferForRendering = (OMX_BUFFERHEADERTYPE *)dec_out.pBufferHeader;
+	}else
+        {
 		*aOutBufferForRendering = NULL;
+        }
         *aOutputLength = (iFrameSize * 3) >> 1;
         (*aFrameCount)++;
-       //SCI_TRACE_LOW("Mpeg4Decoder_OMX dec %d\n",(*aFrameCount));
+       OMX_MP4DEC_DEBUG ("%s: dec %d\n", __FUNCTION__, (*aFrameCount));
 	   
 	if(dec_out.VopPredType!=NVOP)
 	{
-       *need_new_pic = OMX_TRUE;
-	   	iSkipToIDR = OMX_FALSE;
+            *need_new_pic = OMX_TRUE;
+            iSkipToIDR = OMX_FALSE;
 	}
 	//g_frame_num++;
-#if 0	
-	if((dec_out.VopPredType!=NVOP)&&((*aFrameCount)<=100))
-	{
-		SCI_TRACE_LOW("1---Mpeg4Decoder_OMX: aFrameCount = %d\n ",(*aFrameCount));
-		dump_yuv(aOutBuffer->pBuffer,*aOutputLength);
-	}
-#endif
-/*		
-	if(dec_out.frameEffective)
-	SCI_TRACE_LOW("VSP DPB::Mpeg4Decoder_OMX::Mp4DecodeVideo succeed %d,%x,%x,%d,%d\n",dec_out.frameEffective,(*aOutBufferForRendering)->pBuffer,*aOutBufferForRendering,(*aFrameCount), *aInBufSize);
-	else
-	SCI_TRACE_LOW("VSP DPB::Mpeg4Decoder_OMX::Mp4DecodeVideo succeed %d,%x,%x,%d,%d\n",dec_out.frameEffective,0,0,(*aFrameCount), *aInBufSize);	
-*/	
-    }
-    else
+    } else
     {
         *aOutBufferForRendering = NULL;
         //*aInBufSize = InputSize;
         *aOutputLength = 0;
-        SCI_TRACE_LOW("Mpeg4Decoder_OMX dec err %d,%x",(*aFrameCount),g_mpeg4_dec_err_flag);	
+        OMX_MP4DEC_ERR ("%s: dec err %d,%x", __FUNCTION__, (*aFrameCount),g_mpeg4_dec_err_flag);	
     }
     return Status;
 }
 
 int Mpeg4Decoder_OMX::g_mpeg4_dec_inst_num = 0;
 
+int Mpeg4Decoder_OMX::FlushCache_OMX (void* aUserData,int* vaddr,int* paddr,int size)
+{
+    OMX_MP4DEC_DEBUG ("%s: vaddr: 0x%x, paddr: 0x%x, size: 0x%x \n",__FUNCTION__, vaddr,paddr,size);
+
+    Mpeg4Decoder_OMX* pMpeg4Decoder_OMX = (Mpeg4Decoder_OMX*)aUserData;
+    int ret = pMpeg4Decoder_OMX->iCMDbufferPmemHeap->flush_ion_buffer((void *)vaddr,(void* )paddr,size);
+
+    return ret;
+}
+
 OMX_S32 Mpeg4Decoder_OMX::InitializeVideoDecode(
     OMX_S32* aWidth, OMX_S32* aHeight, OMX_U8** aBuffer, OMX_S32* aSize, OMX_S32 mode, OMX_BOOL aDeBlocking , OMX_BOOL *notSupport)
 {
     MMCodecBuffer codec_buf;
     MMDecVideoFormat video_format;
-    OMX_S32 notOK = PV_TRUE;
+    OMX_S32 notOK = OMX_TRUE;
     CodecMode = MPEG4_MODE;
 	
     if (mode == MODE_H263)
@@ -688,7 +700,7 @@ OMX_S32 Mpeg4Decoder_OMX::InitializeVideoDecode(
         CodecMode = H263_MODE;
     }
 	
-    SCI_TRACE_LOW("Mpeg4Decoder_OMX::InitializeVideoDecode, iDecoder_sw_flag: %d\n", iDecoder_sw_flag);
+    OMX_MP4DEC_INFO ("%s: iDecoder_sw_flag: %d", __FUNCTION__, iDecoder_sw_flag);
 
      if(!iStreamBufferWasSet)
      {
@@ -696,7 +708,7 @@ OMX_S32 Mpeg4Decoder_OMX::InitializeVideoDecode(
         if(iStream_buffer_ptr==NULL)
         {
             iBufferAllocFail = OMX_TRUE;
-            SCI_TRACE_LOW("AvcDecoder_OMX: iStream_buffer_ptr alloc  error\n");
+            OMX_MP4DEC_ERR ("%s: iStream_buffer_ptr alloc  error", __FUNCTION__);
             return OMX_FALSE;
         }
         iStreamBufferWasSet = OMX_TRUE;
@@ -707,8 +719,8 @@ OMX_S32 Mpeg4Decoder_OMX::InitializeVideoDecode(
     	if(iDecoder_int_buffer_ptr==NULL)
     	{
     		iBufferAllocFail = OMX_TRUE;    	
-    		SCI_TRACE_LOW("Mpeg4Decoder_OMX iDecoder_int_buffer_ptr alloc  error\n");
-		return PV_FALSE;	    	
+    		OMX_MP4DEC_ERR ("%s: iDecoder_int_buffer_ptr alloc  error", __FUNCTION__);
+		return OMX_FALSE;	    	
     	}
     }
     codec_buf.int_buffer_ptr =(uint8 *)( ((int)iDecoder_int_buffer_ptr+3)&(~0x3));
@@ -718,21 +730,23 @@ OMX_S32 Mpeg4Decoder_OMX::InitializeVideoDecode(
     {
         oscl_memcpy((void *)iStream_buffer_ptr,*aBuffer,*aSize);
 	video_format.p_extra =(void *) iStream_buffer_ptr;
-//	video_format.p_extra_phy=(void *) iStreamPhyAddr;	
 	uint32 first_32bits = ((*aBuffer)[0]<<24)|((*aBuffer)[1]<<16)|((*aBuffer)[2]<<8)|(*aBuffer)[3];
 	if((first_32bits>>11) == 0x10)
 	{
-		if((first_32bits>>10) == 0x20)
-			CodecMode = H263_MODE;
-		else
+            if((first_32bits>>10) == 0x20)
+            {
+		CodecMode = H263_MODE;
+            }else
+            {
 			CodecMode = FLV_MODE;
+            } 
 	}
-    }else{
+    }else
+    {
 	video_format.p_extra = NULL;
-//	video_format.p_extra_phy = NULL;
     }
 
-    SCI_TRACE_LOW("Mp4 stream  mode %d\n",CodecMode);	
+    OMX_MP4DEC_INFO ("Mp4 stream  mode %d\n",CodecMode);	
 	
     if(CodecMode == H263_MODE)
     {
@@ -748,12 +762,13 @@ OMX_S32 Mpeg4Decoder_OMX::InitializeVideoDecode(
     video_format.frame_width = 0;
     video_format.frame_height = 0;
     
-	MP4DecRegBufferCB(VSP_bind_cb,VSP_unbind_cb,(void *)this);
+    MP4DecRegBufferCB(VSP_bind_cb,VSP_unbind_cb,(void *)this);
+    MP4Dec_RegFlushCacheCB( Mpeg4Decoder_OMX::FlushCache_OMX);
 	
-     	video_format.uv_interleaved = 1;// todo jgdu
-	notOK = MP4DecInit(&codec_buf,&video_format);
+    video_format.uv_interleaved = 1;// todo jgdu
+    notOK = MP4DecInit(&codec_buf,&video_format);
 
-	MP4DecSetPostFilter(aDeBlocking);
+    MP4DecSetPostFilter(aDeBlocking);
 
     if(!notOK)
     {
@@ -766,28 +781,29 @@ OMX_S32 Mpeg4Decoder_OMX::InitializeVideoDecode(
     	    *aWidth = video_format.frame_width;
 	    *aHeight = video_format.frame_height;
 	    if(!(*aWidth)||!(*aHeight))
-	    	return PV_FALSE;
+	    	return OMX_FALSE;
     	}
-	return PV_TRUE;
+	return OMX_TRUE;
     }else
     {
     	if (notOK == MMDEC_NOT_SUPPORTED )
     	{
     		*notSupport = OMX_TRUE;
     	}
-    	return PV_FALSE;
+    	return OMX_FALSE;
     }
-    
 }
 
 OMX_ERRORTYPE Mpeg4Decoder_OMX::Mp4DecDeinit()
 {
     OMX_BOOL Status;
 
-    SCI_TRACE_LOW("Mpeg4Decoder_OMX::Mp4DecDeinit\n");
+    OMX_MP4DEC_INFO ("%s", __FUNCTION__);
     // at this point - the buffers have been freed already
     ipRefCtrPreviousReferenceBuffer = NULL;
-    iReferenceYUVWasSet = OMX_FALSE;   
+    iReferenceYUVWasSet = OMX_FALSE;  
+    
+    MP4DecRelease();
 
     if( iDecoder_int_buffer_ptr)
     {
@@ -795,17 +811,32 @@ OMX_ERRORTYPE Mpeg4Decoder_OMX::Mp4DecDeinit()
 	iDecoder_int_buffer_ptr = NULL;
     }
 
-	MP4DecRelease();
     if(iExternalBufferWasSet)
     {
-        iDecExtPmemHeap.clear();
+        if (!(iDecoder_sw_flag ||iDecoder_sw_vt_flag))
+        {
+            iDecExtPmemHeap.clear();
+            if(iDecExtVAddr)
+            {
+                iDecExtVAddr = NULL;
+            }
+                
+            iCMDbufferPmemHeap.clear();
+            if(iCMDbufferVAddr)
+            {
+                iCMDbufferVAddr = NULL;
+            }
+        }
+            
 	 if(iDecoder_ext_cache_buffer_ptr)
 	 {
 	 	oscl_free(iDecoder_ext_cache_buffer_ptr);
 		iDecoder_ext_cache_buffer_ptr = NULL;
 	 }
+     
 	 iExternalBufferWasSet = OMX_FALSE;		
     }		
+    
    if(iStreamBufferWasSet)
    {
 	iStreamBufferWasSet = OMX_FALSE; 	
@@ -815,7 +846,8 @@ OMX_ERRORTYPE Mpeg4Decoder_OMX::Mp4DecDeinit()
             oscl_free(iStream_buffer_ptr);
             iStream_buffer_ptr = NULL;
         }
-   }
+    }
+   
     return OMX_ErrorNone;
 }
 
@@ -828,7 +860,7 @@ OMX_S32 Mpeg4Decoder_OMX::GetVideoHeader(int32 aLayer, uint8* aBuf, int32 aMaxSi
 
     uint8 *tmp_bs = aBuf;
 
-    SCI_TRACE_LOW("Mpeg4Decoder_OMX::GetVideoHeader\n");
+    OMX_MP4DEC_INFO ("%s", __FUNCTION__);
 	
     oscl_memcpy(my_sc, tmp_bs, 4);
     my_sc[3] &= 0xf0;
@@ -870,26 +902,13 @@ OMX_S32 Mpeg4Decoder_OMX::GetVideoHeader(int32 aLayer, uint8* aBuf, int32 aMaxSi
 // Check for resizeflag and whether Reference YUV buff needs to set.
 void Mpeg4Decoder_OMX::CheckPortReConfig(OMX_BUFFERHEADERTYPE* aOutBuffer, OMX_S32 OldWidth, OMX_S32 OldHeight, OMX_BOOL *aResizeFlag, OMX_S32* aFrameCount)
 {
-    SCI_TRACE_LOW("Mpeg4Decoder_OMX::CheckPortReConfig\n");
+    OMX_MP4DEC_INFO ("%s", __FUNCTION__);
 	
     if ((iData_Width != OldWidth) || (iData_Height != OldHeight))
     {
-    	 SCI_TRACE_LOW("Mpeg4Decoder_OMX::CheckPortReConfig old [%d,%d] new [%d,%d]\n",OldWidth,OldHeight,iData_Width,iData_Height);
+    	 OMX_MP4DEC_INFO ("%s: old [%d,%d] new [%d,%d]", __FUNCTION__, OldWidth,OldHeight,iData_Width,iData_Height);
         *aResizeFlag = OMX_TRUE;
     }
-    /*
-    else if (NULL != aOutBuffer)
-    {
-        // if there'll be no port reconfig - the current output YUV buffer is good enough
-        PVSetReferenceYUV(&VideoCtrl, (uint8*)(aOutBuffer->pBuffer));
-        // take care of ref count for the buffer
-        BufferCtrlStruct *pBCTRL = (BufferCtrlStruct *)(aOutBuffer->pOutputPortPrivate);
-        pBCTRL->iRefCount++;
-        ipRefCtrPreviousReferenceBuffer = &(pBCTRL->iRefCount);
-
-        iReferenceYUVWasSet = OMX_TRUE;
-    }
-    */
     *aFrameCount = 1;
 }
 

@@ -123,7 +123,6 @@ void H264Dec_Config_WP_info(DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T *mb_info_
 						foo2();
 					}
 				#endif
-					wp_cmd[blk4x4_id] = ((offset1&0xff)<<24) | ((offset0&0xff)<<16) | ((weight1&0xff)<<8) | (weight0&0xff);//lsw for debug 8 bits is not enough for weight since it can be 128 
 				}else //one-dir
 				{
 					if (mc_ref_idx_fw >= 0)//list 0
@@ -140,10 +139,8 @@ void H264Dec_Config_WP_info(DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T *mb_info_
 					{
 						w128_flag |= (1<<blk4x4_id);
 					}
-							
-					wp_cmd[blk4x4_id] = ((offset1&0xff)<<24) | ((offset0&0xff)<<16) | ((weight1&0xff)<<8) | (weight0&0xff);
 				}
-
+				wp_cmd[blk4x4_id] = ((offset1&0xff)<<24) | ((offset0&0xff)<<16) | ((weight1&0xff)<<8) | (weight0&0xff);//lsw for debug 8 bits is not enough for weight since it can be 128 
 				blk4x4_id++;
 			}
 			

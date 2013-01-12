@@ -302,6 +302,216 @@ void decode_mb_cavlc_hw (DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_pt
 	}
 }
 
+#define DECODE_SIGNIFICANCE( coefs, sig_off, last_off ) \
+        for(last= 0; last < coefs; last++) { \
+            uint8 *sig_ctx = significant_coeff_ctx_base + sig_off; \
+            if( get_cabac( CC, sig_ctx )) { \
+                uint8 *last_ctx = last_coeff_ctx_base + last_off; \
+                index[coeff_count++] = last; \
+                if( get_cabac( CC, last_ctx ) ) { \
+                    last= max_coeff; \
+                    break; \
+                } \
+            } \
+        }\
+        if( last == max_coeff -1 ) {\
+            index[coeff_count++] = last;\
+        }
+		
+static int32 readCoeff4x4_CABAC_hw(DEC_MB_INFO_T * currMB, DEC_MB_CACHE_T *mb_cache_ptr, int cat, int32 n, int32 max_coeff)
+{
+    DEC_IMAGE_PARAMS_T *img_ptr = g_image_ptr;
+    int index[64];
+    int last;
+    int k, coeff_count = 0;
+    int node_ctx = 0;
+
+    uint8 *significant_coeff_ctx_base;
+    uint8 *last_coeff_ctx_base;
+    uint8 *abs_level_m1_ctx_base;
+    int8 *pNnzRef = mb_cache_ptr->nnz_cache;
+
+#define CC &cc
+    CABACContext cc;
+    cc.range     = img_ptr->cabac.range;
+    cc.low       = img_ptr->cabac.low;
+
+    /* cat: 0-> DC 16x16  n = 0
+     *      1-> AC 16x16  n = luma4x4idx
+     *      2-> Luma4x4   n = luma4x4idx
+     *      3-> DC Chroma n = iCbCr
+     *      4-> AC Chroma n = 4 * iCbCr + chroma4x4idx
+     *      5-> Luma8x8   n = 4 * luma8x8idx
+     */
+
+    /* read coded block flag */
+    if( cat != 5 ) 
+    {
+	if( get_cabac( CC, &img_ptr->cabac_state[85 + get_cabac_cbf_ctx( currMB, mb_cache_ptr, cat, n ) ] ) == 0 ) 
+	{
+            if( cat == 1 || cat == 2 || cat == 4)
+		pNnzRef [g_blk_order_map_tbl[n]] = 0;
+	    img_ptr->cabac.range     = cc.range;
+	    img_ptr->cabac.low       = cc.low;
+	    return 0;
+	}
+    }
+
+    significant_coeff_ctx_base = img_ptr->cabac_state + significant_coeff_flag_offset[cat];
+    last_coeff_ctx_base = img_ptr->cabac_state + last_coeff_flag_offset[cat];
+    abs_level_m1_ctx_base = img_ptr->cabac_state + coeff_abs_level_m1_offset[cat];
+
+    if( cat == 5 ) 
+    {
+	const uint8 *sig_off = significant_coeff_flag_offset_8x8;
+	DECODE_SIGNIFICANCE( 63, sig_off[last], last_coeff_flag_offset_8x8[last] );
+
+    	//	n = n << 2; //start of 8x8 block
+	pNnzRef [g_blk_order_map_tbl[n++]] = coeff_count;
+	pNnzRef [g_blk_order_map_tbl[n++]] = coeff_count;
+	pNnzRef [g_blk_order_map_tbl[n++]] = coeff_count;
+	pNnzRef [g_blk_order_map_tbl[n++]] = coeff_count;
+    }else 
+    {
+	DECODE_SIGNIFICANCE( max_coeff - 1, last, last );
+
+        if( cat == 0 )
+        {
+    	    mb_cache_ptr->vld_dc_coded_flag |=  (1 << 8);
+        }else if( cat == 1 || cat == 2 )
+        {
+    	    pNnzRef [g_blk_order_map_tbl[n]] = coeff_count;
+        }else if( cat == 3 )
+        {
+    	    mb_cache_ptr->vld_dc_coded_flag |=  (1 << (9+n));
+        }else //if( cat == 4 )
+        {
+            //assert( cat == 4 );
+    	    pNnzRef [g_blk_order_map_tbl[n]] = coeff_count;
+        }
+    }
+		
+    k = coeff_count;
+    for( k--; k >= 0; k-- ) 
+    {
+	uint8 *ctx = coeff_abs_level1_ctx[node_ctx] + abs_level_m1_ctx_base;
+
+       	if( get_cabac( CC, ctx ) == 0 ) 
+	{
+    	    node_ctx = coeff_abs_level_transition[0][node_ctx];
+            /*block[j] =*/get_cabac_bypass_sign( CC, -1);
+        } else 
+        {
+	    int coeff_abs = 2;
+	    ctx = coeff_abs_levelgt1_ctx[node_ctx] + abs_level_m1_ctx_base;
+	    node_ctx = coeff_abs_level_transition[1][node_ctx];
+
+	    while( coeff_abs < 15 && get_cabac( CC, ctx ) ) 
+	    {
+		coeff_abs++;
+	    }
+
+	    if( coeff_abs >= 15 ) 
+	    {
+		int j = 0;
+		while( get_cabac_bypass( CC ) ) 
+		{
+		    j++;
+                }
+
+                //coeff_abs=1;
+		while( j-- ) 
+		{
+		    /*coeff_abs += coeff_abs +*/ get_cabac_bypass( CC );
+		}
+		//	coeff_abs+= 14;
+	    }
+
+            /*block[j] =*/ get_cabac_bypass_sign( CC, -1);
+        }
+    }
+
+    img_ptr->cabac.range = cc.range;
+    img_ptr->cabac.low     = cc.low;
+
+    return coeff_count;
+}
+
+void decode_mb_cabac_hw (DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+{	
+    int32 uv;
+    int32 maxCoeff, numCoeff;
+    int32 blk4x4, blk8x8;
+    int32 blkIndex;
+    int32 blk_type;
+    int32 cbp;
+
+    mb_cache_ptr->vld_dc_coded_flag = (mb_cache_ptr->vld_dc_coded_flag & 0xff);
+
+    if (mb_info_ptr->mb_type == I16MB)
+    {
+        //luma dc
+        readCoeff4x4_CABAC_hw (mb_info_ptr, mb_cache_ptr, LUMA_DC, 0, 16);
+
+        //for luma ac
+	blk_type = LUMA_AC_I16;
+	maxCoeff = 15;    
+    }else
+    {
+        blk_type = LUMA_AC;
+	maxCoeff = 16;
+    }
+
+    cbp = mb_info_ptr->cbp;
+    
+    // luma ac
+    for (blkIndex = 0, blk8x8= 0; blk8x8 < 4; blk8x8++)
+    {
+	if (cbp & (1 << blk8x8))
+	{
+	    for (blk4x4 = 0; blk4x4 < 4; blk4x4++, blkIndex++)
+	    {					
+		if (readCoeff4x4_CABAC_hw (mb_info_ptr, mb_cache_ptr, blk_type, blkIndex, maxCoeff))
+                {
+		    mb_cache_ptr->cbp_luma_iqt |= (1<< blkIndex);
+                }
+	    }
+	}else
+        {
+            blkIndex += 4;
+        }
+    }
+
+    if (cbp > 15)
+    {
+        //chroma dc
+        for (uv = 0; uv < 2; uv++)
+        {			
+            if (readCoeff4x4_CABAC_hw (mb_info_ptr, mb_cache_ptr,  CHROMA_DC, uv, 4))
+            {
+                mb_cache_ptr->cbp_uv |= 0xf << (4*uv);	
+            }
+        }
+    }
+
+    if (cbp > 31)
+    {
+        //chroma ac
+	for (blkIndex = 0, uv = 0; uv < 2; uv++)
+	{	
+            for (blk4x4 = 0; blk4x4 < 4; blk4x4++, blkIndex++)
+            {	
+		if (readCoeff4x4_CABAC_hw (mb_info_ptr, mb_cache_ptr, CHROMA_AC, blkIndex + 16, 15))
+		{
+		    mb_cache_ptr->cbp_uv |= (0x1 << blkIndex);
+		}
+	    }
+	}
+    }
+		
+    mb_info_ptr->dc_coded_flag = (mb_cache_ptr->vld_dc_coded_flag >> 8) & 0x7;
+}
+
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

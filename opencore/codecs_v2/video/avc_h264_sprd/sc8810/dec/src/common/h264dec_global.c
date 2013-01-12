@@ -108,6 +108,12 @@ uint32 s_row;
 
 int32 g_need_back_last_word;
 int32 g_back_last_word;
+
+#ifdef _DEBUG_TIME_
+struct timeval tpstart;
+struct timeval tpend1;
+struct timeval tpend2;
+#endif
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
