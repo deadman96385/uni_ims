@@ -129,8 +129,17 @@ void H264Dec_ReleaseRefBuffers()
 	if(g_old_slice_ptr)
 	        g_old_slice_ptr->frame_num = -1;	
 
-	g_image_ptr->is_first_frame = TRUE;
+	
 
+#if 1
+        SCI_TRACE_LOW("---H264Dec_ReleaseRefBuffers, 1,%d",g_image_ptr->is_previous_cmd_done);
+        if(g_image_ptr->VSP_used &&    !g_image_ptr->is_previous_cmd_done)
+        {
+            VSP_START_CQM();
+            g_image_ptr->is_previous_cmd_done = TRUE;
+        }
+        SCI_TRACE_LOW("---H264Dec_ReleaseRefBuffers, 2,%d",g_image_ptr->is_previous_cmd_done);
+#endif
 //	SCI_TRACE_LOW("H264Dec_ReleaseRefBuffers, X\n");
 }
 
@@ -169,6 +178,12 @@ FunctionType_SPS VSP_spsCb = NULL;
 void H264Dec_RegSPSCB(FunctionType_SPS spsCb)
 {
 	VSP_spsCb = spsCb;
+}
+
+FunctionType_FlushCache VSP_fluchCacheCb = NULL;
+void  H264Dec_RegFlushCacheCB( FunctionType_FlushCache fluchCacheCb)
+{
+   	VSP_fluchCacheCb = fluchCacheCb;   
 }
 #endif
 
@@ -231,7 +246,7 @@ MMDecRet H264DecInit(MMCodecBuffer * buffer_ptr,MMDecVideoFormat * pVideoFormat)
 			data = *bfr_ptr++;
 			
 			sequenceParameterSetLength = (tmp<<8)|data;
-			 ret = H264Dec_Read_SPS_PPS_SliceHeader(bfr_ptr, sequenceParameterSetLength);
+			 ret = H264Dec_Read_SPS_PPS_SliceHeader(bfr_ptr, sequenceParameterSetLength,NULL);
 			 
 			 bfr_ptr += sequenceParameterSetLength;
 		}
@@ -245,7 +260,7 @@ MMDecRet H264DecInit(MMCodecBuffer * buffer_ptr,MMDecVideoFormat * pVideoFormat)
 			data = *bfr_ptr++;
 			
 			pictureParameterSetLength = (tmp<<8)|data;
-			H264Dec_Read_SPS_PPS_SliceHeader(bfr_ptr, pictureParameterSetLength);
+			H264Dec_Read_SPS_PPS_SliceHeader(bfr_ptr, pictureParameterSetLength, NULL);
 			
 			bfr_ptr += pictureParameterSetLength;
 		}
@@ -274,6 +289,10 @@ PUBLIC MMDecRet H264DecDecode(MMDecInput *dec_input_ptr, MMDecOutput *dec_output
 	int32 last_slice = 0;
 	int32 start_code_len = 0, slice_len_sum = 0, rbsp_len = 0;
 
+#ifdef _DEBUG_TIME_
+	gettimeofday(&tpstart,NULL);
+#endif
+
 	SCI_ASSERT(NULL != dec_input_ptr);
 	SCI_ASSERT(NULL != dec_output_ptr);
 
@@ -284,7 +303,7 @@ PUBLIC MMDecRet H264DecDecode(MMDecInput *dec_input_ptr, MMDecOutput *dec_output
     img_ptr->return_pos = 0;
  	img_ptr->return_pos1 = 0;	
    	img_ptr->return_pos2 = 0;
-	
+		
  	if((dec_input_ptr->expected_IVOP) && (img_ptr->curr_mb_nr == 0))
 	{
 		g_searching_IDR_pic = TRUE;
@@ -339,8 +358,8 @@ PUBLIC MMDecRet H264DecDecode(MMDecInput *dec_input_ptr, MMDecOutput *dec_output
 				last_slice = 1;
 			}
 		}
-		
-		ret = H264Dec_Read_SPS_PPS_SliceHeader (g_nalu_ptr->buf, g_nalu_ptr->len);
+        
+		ret = H264Dec_Read_SPS_PPS_SliceHeader (g_nalu_ptr->buf, g_nalu_ptr->len, dec_output_ptr);
 		
 	#if _H264_PROTECT_ & _LEVEL_LOW_
 		if (img_ptr->error_flag)
@@ -402,10 +421,10 @@ PUBLIC MMDecRet H264DecDecode(MMDecInput *dec_input_ptr, MMDecOutput *dec_output
 					memcpy(img_ptr->frame_bistrm_ptr+g_stream_offset, g_nalu_ptr->buf, (((rbsp_len+3)>>2)<<2));						
 				}
 					
-				H264Dec_InitBitstream(((void *)H264Dec_ExtraMem_V2Phy(img_ptr->frame_bistrm_ptr+g_stream_offset)), rbsp_len);
+				H264Dec_InitBitstream(/*((void *)H264Dec_ExtraMem_V2P((img_ptr->frame_bistrm_ptr+g_stream_offset), HW_CACHABLE)),*/ rbsp_len);
 				g_stream_offset += rbsp_len;
 			}
-			
+
 			ret = H264Dec_decode_one_slice_data (dec_output_ptr, img_ptr);
 		}
 

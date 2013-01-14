@@ -141,7 +141,7 @@ LOCAL void H264Dec_decode_IPCM_MB_hw(DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T 
 	int32 i,j;
 	int32 bit_offset;
 	int32 comp;
-
+	
 	bit_offset  = (bitstrm->bitsLeft & 0x7);
 	if(bit_offset)
 	{
@@ -170,7 +170,37 @@ LOCAL void H264Dec_decode_IPCM_MB_hw(DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T 
 				READ_FLC(bitstrm, 32);
 			}
 		}
-	}	
+	}
+
+	H264Dec_set_IPCM_nnz(mb_cache_ptr);
+
+	mb_cache_ptr->cbp_iqt = 0;
+	mb_cache_ptr->cbp_mbc = 0xffffff;
+
+	//for cabac
+	mb_info_ptr->c_ipred_mode = 0;
+	mb_info_ptr->cbp = 0x3f;
+	mb_info_ptr->skip_flag = 1;
+	//For CABAC decoding of Dquant
+	if (img_ptr->is_cabac)
+	{
+		uint32 nStuffedBits;
+
+		last_dquant=0;
+		mb_info_ptr->dc_coded_flag = 7;
+		nStuffedBits = ff_init_cabac_decoder(img_ptr);
+
+		if (nStuffedBits)
+		{
+			uint32 cmd = (nStuffedBits<<24) | 1;
+
+			VSP_WRITE_REG_CQM(VSP_BSM_REG_BASE+BSM_CFG2_OFF, cmd, "BSM_CFG2: flush N bits");	
+#if _CMODEL_
+			flush_nbits(nStuffedBits);
+#endif
+			VSP_WRITE_CMD_INFO((VSP_BSM << CQM_SHIFT_BIT) | (1<<24) | BSM_CFG2_WOFF);
+		}
+	}
 }
 
 LOCAL void H264Dec_read_intraMB_context_hw (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
@@ -303,8 +333,7 @@ PUBLIC void H264Dec_start_vld_macroblock (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_IN
 	uint32 nnz_cb, nnz_cr;
 	uint32 vsp_mb_type, vsp_lmb_type, vsp_tmb_type;
 	int32 left_mb_avail, top_mb_avail;
-	int32 cbp = mb_info_ptr->cbp;
-	int8 *nnz_ref_ptr = mb_cache_ptr->nnz_cache;
+	int8 *nnz_ref_ptr;
 	uint32 cmd;
 	uint32 flush_bits = img_ptr->bitstrm_ptr->bitcnt - img_ptr->bitstrm_ptr->bitcnt_before_vld;
 
@@ -337,11 +366,38 @@ PUBLIC void H264Dec_start_vld_macroblock (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_IN
 			}
 		}
 	}
+
+	if (img_ptr->is_cabac)
+	{
+	//	DecodingEnvironment* dep = &img_ptr->de_cabac;
+		CABACContext *c = &(img_ptr->cabac);
+		cmd = ((c->range << 16) | (c->low & 0x1ff)); 
+
+		VSP_WRITE_REG_CQM(VSP_VLD_REG_BASE+HVLD_ARTHI_BS_STATE_OFFSET, cmd, "configure bistream status");
+
+		cmd = ( (mb_info_ptr - img_ptr->frame_width_in_mbs)->dc_coded_flag <<4) |((mb_info_ptr - 1)->dc_coded_flag);
+		VSP_WRITE_REG_CQM(VSP_VLD_REG_BASE+HVLD_CODED_DC_FLAG_OFFSET, cmd, "configure decode_dc_flag");
+		mb_cache_ptr->vld_dc_coded_flag = cmd;
+
+		VSP_WRITE_CMD_INFO((VSP_VLD << CQM_SHIFT_BIT) | (2<<24) |(HVLD_CODED_DC_FLAG_WOFF<<8) |HVLD_ARTHI_BS_STATE_WOFF);
+	}
 	
 	vsp_mb_type	=	vsp_mbtype_map[mb_info_ptr->mb_type];
 	vsp_lmb_type	=	vsp_mbtype_map[(mb_info_ptr-1)->mb_type];
 	vsp_tmb_type	=	vsp_mbtype_map[img_ptr->abv_mb_info->mb_type];
 
+	//configure mb information
+	left_mb_avail = mb_cache_ptr->mb_avail_a;
+	top_mb_avail = mb_cache_ptr->mb_avail_b;
+
+	//require to configure entropy decoding type, and left/top MB type
+	cmd = (img_ptr->is_cabac << 31) | (vsp_lmb_type << 20) | (vsp_tmb_type << 22) |
+		  ((top_mb_avail<<17) | (left_mb_avail << 16) | (mb_info_ptr->cbp << 8) | (vsp_mb_type << 0));
+	
+	VSP_WRITE_REG_CQM(VSP_VLD_REG_BASE+HVLD_MB_INFO_OFFSET, cmd, "configure mb information");
+
+	//configure nnz	
+	nnz_ref_ptr = mb_cache_ptr->nnz_cache;
 	up_nnz_y	= (nnz_ref_ptr[4]<<24) | (nnz_ref_ptr[5]<<16) | (nnz_ref_ptr[6]<<8) | (nnz_ref_ptr[7]);
 	left_nnz_y	= 	(nnz_ref_ptr[CTX_CACHE_WIDTH_X1 + 3] << 24)  | 
 					(nnz_ref_ptr[CTX_CACHE_WIDTH_X2 + 3] << 16)  |
@@ -355,18 +411,6 @@ PUBLIC void H264Dec_start_vld_macroblock (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_IN
 					(nnz_ref_ptr[CTX_CACHE_WIDTH_X5 + 9] << 16) |
 				 	(nnz_ref_ptr[CTX_CACHE_WIDTH_X6 + 7] << 8)   |
 				 	(nnz_ref_ptr[CTX_CACHE_WIDTH_X7 + 7]);
-
-	//configure mb information
-	left_mb_avail = mb_cache_ptr->mb_avail_a;
-	top_mb_avail = mb_cache_ptr->mb_avail_b;
-
-	//require to configure entropy decoding type, and left/top MB type
-	cmd = (img_ptr->is_cabac << 31) | (vsp_lmb_type << 20) | (vsp_tmb_type << 22) |
-		  ((top_mb_avail<<17) | (left_mb_avail << 16) | (cbp << 8) | (vsp_mb_type << 0));
-	
-	VSP_WRITE_REG_CQM(VSP_VLD_REG_BASE+HVLD_MB_INFO_OFFSET, cmd, "configure mb information");
-
-	//configure nnz	
 	VSP_WRITE_REG_CQM(VSP_VLD_REG_BASE+HVLD_TOP_NNZ_Y_OFFSET,	up_nnz_y, "configure up_nnz_y");
 	VSP_WRITE_REG_CQM(VSP_VLD_REG_BASE+HVLD_LEFT_NNZ_Y_OFFSET,	left_nnz_y, "configure left_nnz_y");
 	VSP_WRITE_REG_CQM(VSP_VLD_REG_BASE+HVLD_TL_NNZ_CB_OFFSET,	nnz_cb, "configure nnz_cb");
@@ -390,20 +434,9 @@ PUBLIC void H264Dec_start_vld_macroblock (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_IN
 
 		sw_vld_mb (mb_info_ptr, mb_cache_ptr);
 		H264Dec_ComputeCBPIqtMbc (mb_info_ptr, mb_cache_ptr);
-
 	}else
 	{
-		mb_cache_ptr->cbp_iqt = 0;
-		mb_cache_ptr->cbp_mbc = 0xffffff;
-
-		//for cabac
-		mb_info_ptr->c_ipred_mode = 0;
-		mb_info_ptr->cbp = 0x3f;
-	
 		H264Dec_decode_IPCM_MB_hw(img_ptr, mb_info_ptr, mb_cache_ptr, img_ptr->bitstrm_ptr);
-		H264Dec_set_IPCM_nnz(mb_cache_ptr);
-
-		mb_info_ptr->skip_flag = 1;		
 	}
 
 	img_ptr->bitstrm_ptr->bitcnt_before_vld = img_ptr->bitstrm_ptr->bitcnt;

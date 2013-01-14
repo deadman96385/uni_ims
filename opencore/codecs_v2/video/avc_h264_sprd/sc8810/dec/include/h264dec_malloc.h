@@ -28,18 +28,16 @@
     {
 #endif
 		
-PUBLIC void *H264Dec_ExtraMemAlloc(uint32 mem_size);
-PUBLIC void *H264Dec_ExtraMemAlloc_64WordAlign(uint32 mem_size);
-PUBLIC void *H264Dec_InterMemAlloc(uint32 mem_size);
-PUBLIC void *H264Dec_InterMemAlloc_4WordAlign(uint32 mem_size);
-PUBLIC void H264Dec_FreeExtraMem(void); 
-PUBLIC void H264Dec_FreeMem(void); 
-PUBLIC void H264Dec_InitInterMem(MMCodecBuffer *pBuffer);
-#ifdef _VSP_LINUX_
-PUBLIC uint8 *H264Dec_ExtraMem_V2Phy(uint8 *vAddr);
-PUBLIC void *H264Dec_ExtraMemCacheAlloc(uint32 mem_size);
-PUBLIC void *H264Dec_ExtraMemCacheAlloc_4WordAlign(uint32 mem_size);
-#endif
+void H264Dec_InitInterMem(MMCodecBuffer *pBuffer);
+void H264Dec_FreeExtraMem(void); 
+void H264Dec_FreeMem(void); 
+
+void *H264Dec_InterMemAlloc(uint32 need_size, int32 aligned_byte_num);
+void *H264Dec_ExtraMemAlloc(uint32 need_size, int32 aligned_byte_num, int32 type);
+
+uint8 *H264Dec_ExtraMem_V2P(uint8 *vAddr, int32 type);
+MMDecRet H264Dec_ExtraMem_GetInfo(MMCodecBuffer *pBuffer, int32 type);
+
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

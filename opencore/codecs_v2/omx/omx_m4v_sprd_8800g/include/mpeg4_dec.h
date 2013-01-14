@@ -32,27 +32,24 @@
 #include <binder/MemoryHeapIon.h>
 #define SPRD_ION_DEV "/dev/ion"
 
-#define SPRD_VSP_DRIVER "/dev/sprd_vsp"
-
 #define LOG_TAG "VSP"
 #include <utils/Log.h>
-#define  SCI_TRACE_LOW   ALOGI
+
+//#define  SCI_TRACE_LOW   LOGI
+#define OMX_MP4DEC_DEBUG //LOGD
+#define OMX_MP4DEC_INFO  ALOGI
+#define OMX_MP4DEC_ERR  ALOGE
 
 
 using namespace android;
 
-#if !defined(CHIP_8810)		
-#define MPEG4_DECODER_INTERNAL_BUFFER_SIZE 2*1024
-#else
 #define MPEG4_DECODER_INTERNAL_BUFFER_SIZE 10*1024
-#endif
 #define MPEG4_DECODER_STREAM_BUFFER_SIZE 1024*1024
 
-#define PMEM_DRIVER "/dev/pmem_adsp"
 
 
-#define PV_TRUE  1
-#define PV_FALSE 0
+//#define PV_TRUE  1
+//#define PV_FALSE 0
 
 typedef enum
 {
@@ -87,7 +84,7 @@ class Mpeg4Decoder_OMX
 	void ReleaseReferenceBuffers();
 
 	OMX_BOOL FlushOutput_OMX( OMX_BUFFERHEADERTYPE **aOutBufferForRendering);
-
+		static int FlushCache_OMX(void* aUserData, int *vadr,int *paddr,int size);
 	void ResetDecoder();
 
         OMX_S32 GetVideoHeader(int32 aLayer, uint8 *aBuf, int32 aMaxSize);
@@ -116,9 +113,10 @@ class Mpeg4Decoder_OMX
        sp<MemoryHeapIon> iDecExtPmemHeap;
        OMX_U32  iDecExtVAddr;
        OMX_U32  iDecExtPhyAddr;
-//	 sp<MemoryHeapPmem> iStreamPmemHeap;
-//	 OMX_U32  iStreamVAddr;
-//	 OMX_U32  iStreamPhyAddr;
+       
+        sp<MemoryHeapIon> iCMDbufferPmemHeap;
+         OMX_U32  iCMDbufferVAddr;
+         OMX_U32  iCMDbufferPhyAddr;
 
 	 OMX_BOOL iSkipToIDR;
 

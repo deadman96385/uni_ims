@@ -189,13 +189,15 @@ PUBLIC void MP4Dec_JudgeDecMode (DEC_VOP_MODE_T * vop_mode_ptr)
 	{
 		vop_mode_ptr->VSP_used = 0;
 		vop_mode_ptr->VT_used = 1;
-	}else if ((aligned_frm_width <= 720 && aligned_frm_height <=576) ||
-		(aligned_frm_width <= 576 && aligned_frm_height <= 720))
-	{
+	}
+#ifndef MP4CODEC_NO_PMEM
+        else if ((aligned_frm_width <= 720 && aligned_frm_height <=576) ||
+		(aligned_frm_width <= 576 && aligned_frm_height <= 720)) {
 		vop_mode_ptr->VSP_used = 1;
 		vop_mode_ptr->VT_used = 0;		
-	}else 
-	{
+	}
+#endif
+        else {
 		vop_mode_ptr->VSP_used = 0;
 		vop_mode_ptr->VT_used = 0;
 	}
@@ -217,15 +219,27 @@ PUBLIC void Mp4Dec_output_one_frame (MMDecOutput *dec_output_ptr, DEC_VOP_MODE_T
 	Mp4DecStorablePic *pic = PNULL;
 	VOP_PRED_TYPE_E VopPredType = vop_mode_ptr->VopPredType;//pre_vop_type;
 
-	if(vop_mode_ptr->VT_used)
+	if(!vop_mode_ptr->VSP_used)
 	{
-		if(vop_mode_ptr->post_filter_en)
+		if(vop_mode_ptr->VT_used )
 		{
-			write_display_frame( vop_mode_ptr, vop_mode_ptr->pCurDispFrame->pDecFrame);
+			if(vop_mode_ptr->post_filter_en)
+			{
+				write_display_frame( vop_mode_ptr, vop_mode_ptr->pCurDispFrame->pDecFrame);
+			}
+			else
+			{
+				write_display_frame(vop_mode_ptr,vop_mode_ptr->pCurRecFrame->pDecFrame);
+			}
 		}
 		else
 		{
-			write_display_frame(vop_mode_ptr,vop_mode_ptr->pCurRecFrame->pDecFrame);
+#ifndef YUV_THREE_PLANE
+			if(VopPredType != BVOP)
+			{
+				write_display_frame(vop_mode_ptr,vop_mode_ptr->pCurRecFrame->pDecFrame);
+			}
+#endif
 		}
 	}
 		
@@ -279,9 +293,7 @@ PUBLIC void Mp4Dec_output_one_frame (MMDecOutput *dec_output_ptr, DEC_VOP_MODE_T
 
 					memcpy (pic->pDecFrame->imgY, vop_mode_ptr->pFrdRefFrame->pDecFrame->imgY, size_y);
 					memcpy (pic->pDecFrame->imgU, vop_mode_ptr->pFrdRefFrame->pDecFrame->imgU, size_y>>1);
-				}else
-				{
-					write_display_frame(vop_mode_ptr,pic->pDecFrame);
+
 				}
 #else
 				if (VopPredType == BVOP && (vop_mode_ptr->pFrdRefFrame->pDecFrame != NULL))

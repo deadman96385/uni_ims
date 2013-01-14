@@ -41,9 +41,9 @@ PUBLIC void Mp4Dec_StartMcaOneDir_vt (DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_BFR_T
 	int32 dst_width;
 
 	//set mv range
-	vop_mode_ptr->mv_x_max = (total_mb_num_x - pos_x) << 5;
+	vop_mode_ptr->mv_x_max = ((total_mb_num_x - pos_x) << 5)-1;
 	vop_mode_ptr->mv_x_min = (-pos_x - 1) << 5;
-	vop_mode_ptr->mv_y_max = (vop_mode_ptr->MBNumY - pos_y) << 5; 
+	vop_mode_ptr->mv_y_max = ((vop_mode_ptr->MBNumY - pos_y) << 5)-1; 
 	vop_mode_ptr->mv_y_min = (-pos_y - 1) << 5;
 
 	//Directly output to memory. 
@@ -185,9 +185,9 @@ PUBLIC void Mp4Dec_DecMV_sw(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode
 		int32 dst_width;
 
 		//set mv range
-		vop_mode_ptr->mv_x_max = (total_mb_num_x - pos_x) << 5;
+		vop_mode_ptr->mv_x_max = ((total_mb_num_x - pos_x) << 5)-1;
 		vop_mode_ptr->mv_x_min = (-pos_x - 1) << 5;
-		vop_mode_ptr->mv_y_max = (vop_mode_ptr->MBNumY - pos_y) << 5; 
+		vop_mode_ptr->mv_y_max = ((vop_mode_ptr->MBNumY - pos_y) << 5)-1; 
 		vop_mode_ptr->mv_y_min = (-pos_y - 1) << 5;
 
 		if (mb_mode_ptr->CBP)	//has resi coeff

@@ -235,7 +235,7 @@ OMX_ERRORTYPE OpenmaxAvcAO::AllocateBuffer(
 	    		if(nSizeBytes_64word<=0)
 				return OMX_ErrorInsufficientResources;
 			//	nSizeBytes_64word = 176*144*3/2;//in stagefight it may be 0
-			SCI_TRACE_LOW("OpenmaxAvcAO::AllocateBuffer dec_sw %d", ipAvcDec->iDecH264WasSw);
+			OMX_H264DEC_INFO ("OpenmaxAvcAO::AllocateBuffer dec_sw %d", ipAvcDec->iDecH264WasSw);
                     if(!ipAvcDec->iDecH264WasSw){
 			   iMemHeapBae =  new MemoryHeapIon(SPRD_ION_DEV, nSizeBytes_64word*pBaseComponentPort->PortParam.nBufferCountActual,MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
 			   iIonHeap = iMemHeapBae;
@@ -247,20 +247,23 @@ OMX_ERRORTYPE OpenmaxAvcAO::AllocateBuffer(
 			if(fd>=0){
 				int ret,phy_addr, buffer_size;
 				ret = iIonHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
-				if(ret) SCI_TRACE_LOW("get_phy_addr_from_ion fail %d",ret);
+				if(ret) 
+                                {    
+                                    OMX_H264DEC_ERR ("%s: get_phy_addr_from_ion fail", __FUNCTION__);
+                                }
 				iPmemBasePhy = phy_addr;
 				iPmemBase  =(uint32) iIonHeap->getBase();
-				SCI_TRACE_LOW("OpenmaxAvcAO::AllocateBuffer pmemmpool num = %d,size = %d:%x,%x,%x,%x\n",pBaseComponentPort->PortParam.nBufferCountActual,nSizeBytes_64word,fd,iPmemBase,phy_addr,buffer_size);				
+				OMX_H264DEC_INFO ("OpenmaxAvcAO::AllocateBuffer pmemmpool num = %d,size = %d:%x,%x,%x,%x\n",pBaseComponentPort->PortParam.nBufferCountActual,nSizeBytes_64word,fd,iPmemBase,phy_addr,buffer_size);				
 			}else
 			{
-				SCI_TRACE_LOW("OpenmaxAvcAO::AllocateBuffer pmempool error %d %d\n",nSizeBytes_64word,pBaseComponentPort->PortParam.nBufferCountActual);
+				OMX_H264DEC_ERR ("%s, %d: pmempool error %d %d\n", __FUNCTION__, __LINE__, nSizeBytes_64word,pBaseComponentPort->PortParam.nBufferCountActual);
 				return OMX_ErrorInsufficientResources;
 			}
 	    	}
 			
 	        if(iNumberOfPmemBuffers>=pBaseComponentPort->PortParam.nBufferCountActual)
 	        {       
-	        	SCI_TRACE_LOW("OpenmaxAvcAO::AllocateBuffer iNumberOfPmemHeaps>=nBufferCountActual %d %d\n",iNumberOfPmemBuffers,pBaseComponentPort->PortParam.nBufferCountActual);
+	        	OMX_H264DEC_ERR ("%s, %d: iNumberOfPmemHeaps>=nBufferCountActual %d %d\n",__FUNCTION__, __LINE__, iNumberOfPmemBuffers,pBaseComponentPort->PortParam.nBufferCountActual);
 			return OMX_ErrorInsufficientResources;	
 	        }
 		pBaseComponentPort->pBuffer[ii]->pBuffer = (OMX_BYTE)(iPmemBase + iNumberOfPmemBuffers*nSizeBytes_64word);	
@@ -297,7 +300,7 @@ OMX_ERRORTYPE OpenmaxAvcAO::AllocateBuffer(
 		 }
 		 pInfo->pmem_fd = (uint32)(iMemHeapBae);
 		 pInfo->offset =  (uint32)pBaseComponentPort->pBuffer[ii]->pBuffer - iPmemBase + iPmemBasePhy;
-		 SCI_TRACE_LOW("pInfo->offset %x",pInfo->offset);
+		 OMX_H264DEC_INFO ("pInfo->offset %x",pInfo->offset);
 		 pList->nEntries = 1;
 		 pList->entryList = pEntry;
 		 pList->entryList->type = PLATFORM_PRIVATE_PMEM;
@@ -430,7 +433,7 @@ OMX_ERRORTYPE OpenmaxAvcAO::FreeBuffer(
 			iNumberOfPmemBuffers = 0;
 			if(iIonHeap!=NULL)
 				iIonHeap.clear();
-			SCI_TRACE_LOW("OpenmaxAvcAO::FreeBuffer pmempool clear\n");
+			OMX_H264DEC_INFO ("OpenmaxAvcAO::FreeBuffer pmempool clear\n");
                 }
 		PLATFORM_PRIVATE_LIST *pList = (PLATFORM_PRIVATE_LIST *)pBaseComponentPort->pBuffer[ii]->pPlatformPrivate;
 		if(pList)
@@ -646,7 +649,7 @@ OMX_ERRORTYPE OpenmaxAvcAO::UseBuffer(
             {
                 if(!iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX])
             	  {
-            	      SCI_TRACE_LOW("OpenmaxAvcAO call use buffer on output port when iUseAndroidNativeBuffer disenabled");
+            	      OMX_H264DEC_ERR ("%s: call use buffer on output port when iUseAndroidNativeBuffer disenabled", __FUNCTION__);
                     return OMX_ErrorInsufficientResources;            	  	
             	  }else
             	  {
@@ -668,7 +671,7 @@ OMX_ERRORTYPE OpenmaxAvcAO::UseBuffer(
 			native_handle_t *pNativeHandle = (native_handle_t *)pBaseComponentPort->pBuffer[ii]->pBuffer;
 			struct private_handle_t *private_h = (struct private_handle_t *)pNativeHandle;
 		 	pInfo->offset =  (uint32)(private_h->phyaddr);
-		 	SCI_TRACE_LOW("pInfo->offset %x",pInfo->offset);
+		 	OMX_H264DEC_INFO ("pInfo->offset %x",pInfo->offset);
 		 	pList->nEntries = 1;
 		 	pList->entryList = pEntry;
 		 	pList->entryList->type = PLATFORM_PRIVATE_PMEM;
@@ -732,19 +735,19 @@ OSCL_EXPORT_REF OMX_ERRORTYPE OpenmaxAvcAO::OpenmaxAvcAOGetExtensionIndex(
 	
     if(strcmp(cParameterName, SPRD_INDEX_PARAM_ENABLE_ANB) == 0)
     {
-    		SCI_TRACE_LOW("OpenmaxMpeg4AO::%s",SPRD_INDEX_PARAM_ENABLE_ANB);
-		*pIndexType = (OMX_INDEXTYPE) OMX_IndexParamEnableAndroidBuffers;
-		return OMX_ErrorNone;
+        OMX_H264DEC_DEBUG ("%s: %s",__FUNCTION__, SPRD_INDEX_PARAM_ENABLE_ANB);
+        *pIndexType = (OMX_INDEXTYPE) OMX_IndexParamEnableAndroidBuffers;
+        return OMX_ErrorNone;
     }else if (strcmp(cParameterName, SPRD_INDEX_PARAM_GET_ANB) == 0)
     {
-     		SCI_TRACE_LOW("OpenmaxMpeg4AO::%s",SPRD_INDEX_PARAM_GET_ANB);   
-		*pIndexType = (OMX_INDEXTYPE) OMX_IndexParamGetAndroidNativeBuffer;
-		return OMX_ErrorNone;
-    }	else if (strcmp(cParameterName, SPRD_INDEX_PARAM_USE_ANB) == 0)
+        OMX_H264DEC_DEBUG ("%s, %s",__FUNCTION__, SPRD_INDEX_PARAM_GET_ANB);   
+        *pIndexType = (OMX_INDEXTYPE) OMX_IndexParamGetAndroidNativeBuffer;
+        return OMX_ErrorNone;
+    }else if (strcmp(cParameterName, SPRD_INDEX_PARAM_USE_ANB) == 0)
     {
-     		SCI_TRACE_LOW("OpenmaxMpeg4AO::%s",SPRD_INDEX_PARAM_USE_ANB);     
-		*pIndexType = OMX_IndexParamUseAndroidNativeBuffer2;
-		return OMX_ErrorNone;
+        OMX_H264DEC_DEBUG ("%s: %s",__FUNCTION__, SPRD_INDEX_PARAM_USE_ANB);     
+        *pIndexType = OMX_IndexParamUseAndroidNativeBuffer2;
+        return OMX_ErrorNone;
     }
 	
     return OMX_ErrorNotImplemented;
@@ -755,39 +758,43 @@ OSCL_EXPORT_REF OMX_ERRORTYPE OpenmaxAvcAO::GetParameter(
     OMX_IN  OMX_INDEXTYPE nParamIndex,
     OMX_INOUT OMX_PTR ComponentParameterStructure)
 {
-	OMX_ERRORTYPE ret = OMX_ErrorNone;
-       OpenmaxAvcAO* pOpenmaxAOType = (OpenmaxAvcAO*)((OMX_COMPONENTTYPE*)hComponent)->pComponentPrivate;
-	//SCI_TRACE_LOW("OpenmaxMpeg4AO::GetParameter");	   
-    	if (NULL == pOpenmaxAOType)
-    	{
-            return OMX_ErrorBadParameter;
-    	}
-       switch (nParamIndex) {
-	    case OMX_IndexParamEnableAndroidBuffers:
-	    {
-			EnableAndroidNativeBuffersParams *peanbp = (EnableAndroidNativeBuffersParams *)ComponentParameterStructure;			
-			peanbp->enable = iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX];
-			SCI_TRACE_LOW("OpenmaxMpeg4AO::GetParameter OMX_IndexParamEnableAndroidBuffers %d",peanbp->enable);			
-	    }
-			break;
-	    case OMX_IndexParamGetAndroidNativeBuffer:
-	    {
-			GetAndroidNativeBufferUsageParams *pganbp;
+    OMX_H264DEC_DEBUG("%s, %d", __FUNCTION__, __LINE__);	   
+    
+    OMX_ERRORTYPE ret = OMX_ErrorNone;
+    OpenmaxAvcAO* pOpenmaxAOType = (OpenmaxAvcAO*)((OMX_COMPONENTTYPE*)hComponent)->pComponentPrivate;
 
-    			pganbp = (GetAndroidNativeBufferUsageParams *)ComponentParameterStructure;
-			if(ipAvcDec->iDecH264WasSw)
-    				pganbp->nUsage = GRALLOC_USAGE_PRIVATE_0|GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_OFTEN;
-			else
-				pganbp->nUsage = GRALLOC_USAGE_PRIVATE_0;
-		       SCI_TRACE_LOW("OpenmaxMpeg4AO::GetParameter OMX_IndexParamGetAndroidNativeBuffer %x",pganbp->nUsage);	
-	    }		
-			break;
-	    default:
-			ret = OmxComponentVideo::GetParameter(hComponent,nParamIndex,ComponentParameterStructure);
-			break;
-       }
+    if (NULL == pOpenmaxAOType)
+    {
+        return OMX_ErrorBadParameter;
+    }
+    
+    switch (nParamIndex) 
+    {
+        case OMX_IndexParamEnableAndroidBuffers:
+        {
+            EnableAndroidNativeBuffersParams *peanbp = (EnableAndroidNativeBuffersParams *)ComponentParameterStructure;			
+            peanbp->enable = iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX];
+            OMX_H264DEC_DEBUG ("%s: OMX_IndexParamEnableAndroidBuffers %d", __FUNCTION__, peanbp->enable);			
+        }
+            break;
+        case OMX_IndexParamGetAndroidNativeBuffer:
+        {
+            GetAndroidNativeBufferUsageParams *pganbp;
+
+            pganbp = (GetAndroidNativeBufferUsageParams *)ComponentParameterStructure;
+            if(ipAvcDec->iDecH264WasSw)
+                pganbp->nUsage = GRALLOC_USAGE_PRIVATE_0|GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_OFTEN;
+            else
+                pganbp->nUsage = GRALLOC_USAGE_PRIVATE_0;
+            OMX_H264DEC_DEBUG ("%s: OMX_IndexParamGetAndroidNativeBuffer %x",__FUNCTION__, pganbp->nUsage);	
+        }		
+            break;
+        default:
+            ret = OmxComponentVideo::GetParameter(hComponent,nParamIndex,ComponentParameterStructure);
+            break;
+     }
 	
-	return ret;
+    return ret;
 }
 
 OSCL_EXPORT_REF OMX_ERRORTYPE OpenmaxAvcAO::SetParameter(
@@ -795,56 +802,65 @@ OSCL_EXPORT_REF OMX_ERRORTYPE OpenmaxAvcAO::SetParameter(
     OMX_IN  OMX_INDEXTYPE nParamIndex,
     OMX_IN  OMX_PTR ComponentParameterStructure)
 {
-	OMX_ERRORTYPE ret = OMX_ErrorNone;
-       OpenmaxAvcAO* pOpenmaxAOType = (OpenmaxAvcAO*)((OMX_COMPONENTTYPE*)hComponent)->pComponentPrivate;
-	//SCI_TRACE_LOW("OpenmaxMpeg4AO::SetParameter");	
-    	if (NULL == pOpenmaxAOType)
-    	{
-            return OMX_ErrorBadParameter;
-    	}	
-	switch (nParamIndex) {
-	    case OMX_IndexParamEnableAndroidBuffers:
-	    {
-			EnableAndroidNativeBuffersParams *peanbp = (EnableAndroidNativeBuffersParams *)ComponentParameterStructure;
-			ComponentPortType *pOutPort = (ComponentPortType*) ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
-			if (peanbp->enable == OMX_FALSE) {
-        			SCI_TRACE_LOW("OpenmaxMpeg4AO::disable AndroidNativeBuffer");
-        			iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX] = OMX_FALSE;
-				if(ipAvcDec->iDecH264WasSw){
+    OMX_H264DEC_DEBUG ("%s, %d", __FUNCTION__, __LINE__);	
+    
+    OMX_ERRORTYPE ret = OMX_ErrorNone;
+    OpenmaxAvcAO* pOpenmaxAOType = (OpenmaxAvcAO*)((OMX_COMPONENTTYPE*)hComponent)->pComponentPrivate;
+
+    if (NULL == pOpenmaxAOType)
+    {
+        return OMX_ErrorBadParameter;
+    }	
+
+    switch (nParamIndex) 
+    {
+        case OMX_IndexParamEnableAndroidBuffers:
+        {
+            EnableAndroidNativeBuffersParams *peanbp = (EnableAndroidNativeBuffersParams *)ComponentParameterStructure;
+            ComponentPortType *pOutPort = (ComponentPortType*) ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
+            if (peanbp->enable == OMX_FALSE) {
+                OMX_H264DEC_INFO ("OpenmaxMpeg4AO::disable AndroidNativeBuffer");
+                iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX] = OMX_FALSE;
+                if(ipAvcDec->iDecH264WasSw){
 #ifdef YUV_THREE_PLANE
-					pOutPort->VideoParam[0].eColorFormat = OMX_COLOR_FormatYUV420Planar;
-    					pOutPort->PortParam.format.video.eColorFormat = OMX_COLOR_FormatYUV420Planar;
+                    pOutPort->VideoParam[0].eColorFormat = OMX_COLOR_FormatYUV420Planar;
+                    pOutPort->PortParam.format.video.eColorFormat = OMX_COLOR_FormatYUV420Planar;
 #else
-					pOutPort->VideoParam[0].eColorFormat = (OMX_COLOR_FORMATTYPE)0x7FA30C00; //modified by jgdu	
-    					pOutPort->PortParam.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)0x7FA30C00;	
+                    pOutPort->VideoParam[0].eColorFormat = (OMX_COLOR_FORMATTYPE)0x7FA30C00; //modified by jgdu	
+                    pOutPort->PortParam.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)0x7FA30C00;	
 #endif
-				}else{
-					pOutPort->VideoParam[0].eColorFormat = (OMX_COLOR_FORMATTYPE)0x7FA30C00; //modified by jgdu	
-    					pOutPort->PortParam.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)0x7FA30C00;
-				}
-    			} else {
-        			SCI_TRACE_LOW("OpenmaxMpeg4AO::enable AndroidNativeBuffer");
-        			iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX] = OMX_TRUE;
-				if(ipAvcDec->iDecH264WasSw){	
+                }else
+                {
+                    pOutPort->VideoParam[0].eColorFormat = (OMX_COLOR_FORMATTYPE)0x7FA30C00; //modified by jgdu	
+                    pOutPort->PortParam.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)0x7FA30C00;
+                }
+            } else
+            {
+        	OMX_H264DEC_INFO("OpenmaxMpeg4AO::enable AndroidNativeBuffer");
+        	iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX] = OMX_TRUE;
+		if(ipAvcDec->iDecH264WasSw)
+                {	
 #ifdef YUV_THREE_PLANE
-					pOutPort->VideoParam[0].eColorFormat = (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YV12;
-    					pOutPort->PortParam.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YV12;
+		    pOutPort->VideoParam[0].eColorFormat = (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YV12;
+    		    pOutPort->PortParam.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YV12;
 #else
-					pOutPort->VideoParam[0].eColorFormat = (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YCbCr_420_SP;
-    					pOutPort->PortParam.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YCbCr_420_SP;
+		    pOutPort->VideoParam[0].eColorFormat = (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YCbCr_420_SP;
+                    pOutPort->PortParam.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YCbCr_420_SP;
 #endif
-				}else{
-					pOutPort->VideoParam[0].eColorFormat = (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YCbCr_420_SP;
-    					pOutPort->PortParam.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YCbCr_420_SP;
-				}
-    			}
-	    }	
-			break;
-	    default:
-			ret = OmxComponentVideo::SetParameter(hComponent,nParamIndex,ComponentParameterStructure);
-			break;
-	}
-	return ret;	
+                }else
+                {
+                    pOutPort->VideoParam[0].eColorFormat = (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YCbCr_420_SP;
+    		    pOutPort->PortParam.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YCbCr_420_SP;
+		}
+    	    }
+        }	
+            break;
+        default:
+            ret = OmxComponentVideo::SetParameter(hComponent,nParamIndex,ComponentParameterStructure);
+            break;
+    }
+
+    return ret;	
 }
 
 static bool getPlatformPhyAddr(void *platformPrivate, int *phy) {
@@ -872,24 +888,24 @@ static bool getPlatformPhyAddr(void *platformPrivate, int *phy) {
 
  uint32 OpenmaxAvcAO:: FindPhyAddr(uint32 Vaddr)
  {
-       ComponentPortType* pBaseComponentPort;
-	OMX_U32 ii;
-	int phy = 0;
-	pBaseComponentPort = ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
-    	for (ii = 0; ii < pBaseComponentPort->PortParam.nBufferCountActual; ii++)
-    	{
-    		if(pBaseComponentPort->pBuffer[ii]->pBuffer == (OMX_U8*)Vaddr)
-        	{
-        		getPlatformPhyAddr(pBaseComponentPort->pBuffer[ii],&phy);
-			break;
-    		}
-    	
+    ComponentPortType* pBaseComponentPort;
+    OMX_U32 ii;
+    int phy = 0;
+    pBaseComponentPort = ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
+    for (ii = 0; ii < pBaseComponentPort->PortParam.nBufferCountActual; ii++)
+    {
+    	if(pBaseComponentPort->pBuffer[ii]->pBuffer == (OMX_U8*)Vaddr)
+       	{
+            getPlatformPhyAddr(pBaseComponentPort->pBuffer[ii],&phy);
+            break;
     	}
-	//SCI_TRACE_LOW("find phy addr 0x%x",phy);
-	if((0 == phy)&&ipAvcDec->iDecH264WasSw)
-		return Vaddr;
-	return phy;
-	//return Vaddr - iPmemBase + iPmemBasePhy;
+    }
+
+    OMX_H264DEC_DEBUG ("find phy addr 0x%x",phy);
+    if((0 == phy)&&ipAvcDec->iDecH264WasSw)
+	return Vaddr;
+
+    return phy;
  }
  
 OMX_ERRORTYPE OpenmaxAvcAO::ConstructComponent(OMX_PTR pAppData, OMX_PTR pProxy)
@@ -1146,7 +1162,7 @@ OMX_ERRORTYPE OpenmaxAvcAO::ConstructComponent(OMX_PTR pAppData, OMX_PTR pProxy)
 
     if(AvcDecoder_OMX::g_h264_dec_inst_num>=1)
     {
- 	SCI_TRACE_LOW("AvcDecoder_OMX more than 1 inst\n");   	
+ 	OMX_H264DEC_ERR ("AvcDecoder_OMX more than 1 inst\n");   	
     	//return OMX_ErrorInsufficientResources;
     }		
     AvcDecoder_OMX::g_h264_dec_inst_num++;
@@ -1158,9 +1174,7 @@ OMX_ERRORTYPE OpenmaxAvcAO::ConstructComponent(OMX_PTR pAppData, OMX_PTR pProxy)
         return OMX_ErrorInsufficientResources;
     }
 
-
 #if PROXY_INTERFACE
-
     ((ProxyApplication_OMX*)ipComponentProxy)->ComponentSendCommand = BaseComponentSendCommand;
     ((ProxyApplication_OMX*)ipComponentProxy)->ComponentGetParameter = BaseComponentGetParameter;
     ((ProxyApplication_OMX*)ipComponentProxy)->ComponentSetParameter = BaseComponentSetParameter;
@@ -1173,7 +1187,6 @@ OMX_ERRORTYPE OpenmaxAvcAO::ConstructComponent(OMX_PTR pAppData, OMX_PTR pProxy)
     ((ProxyApplication_OMX*)ipComponentProxy)->ComponentFreeBuffer = OpenmaxAvcAOFreeBuffer;//BaseComponentFreeBuffer;
     ((ProxyApplication_OMX*)ipComponentProxy)->ComponentEmptyThisBuffer = BaseComponentEmptyThisBuffer;
     ((ProxyApplication_OMX*)ipComponentProxy)->ComponentFillThisBuffer = BaseComponentFillThisBuffer;
-
 #endif
 
     return OMX_ErrorNone;
@@ -1421,20 +1434,22 @@ void OpenmaxAvcAO::ProcessData()
 void OpenmaxAvcAO::pop_output_buffer_from_queue(OMX_BUFFERHEADERTYPE *pTargetBuffer)
 {
     BufferCtrlStruct *pBCTRL = (BufferCtrlStruct *)pTargetBuffer->pOutputPortPrivate;
-    if(pBCTRL->iIsBufferInComponentQueue == OMX_TRUE){
-	SCI_TRACE_LOW("pop_output_buffer_from_queue %x",pTargetBuffer);
+    if(pBCTRL->iIsBufferInComponentQueue == OMX_TRUE)
+    {
+	OMX_H264DEC_DEBUG ("pop_output_buffer_from_queue %x",pTargetBuffer);
     	QueueType* pOutputQueue = ipPorts[OMX_PORT_OUTPUTPORT_INDEX]->pBufferQueue;
     	OMX_BUFFERHEADERTYPE *pOutputBuffer;
     	int QueueNumElem = GetQueueNumElem(pOutputQueue);
     	for(int i=0;i< QueueNumElem;i++)
     	{
-        	pOutputBuffer = (OMX_BUFFERHEADERTYPE*) DeQueue(pOutputQueue);
-		if(pTargetBuffer==pOutputBuffer)	
-	   		break;
-		else
-	    		Queue(pOutputQueue, (void*)pOutputBuffer);	
+            pOutputBuffer = (OMX_BUFFERHEADERTYPE*) DeQueue(pOutputQueue);
+	    if(pTargetBuffer==pOutputBuffer)	
+	   	break;
+	    else
+	    	Queue(pOutputQueue, (void*)pOutputBuffer);	
     	}	
-    }else if(pBCTRL->iRefCount == 0){
+    }else if(pBCTRL->iRefCount == 0)
+    {
     	iNumAvailableOutputBuffers++;
     }
 }
@@ -1457,7 +1472,6 @@ void OpenmaxAvcAO::DecodeWithoutMarker()
     OMX_U32 TempInputBufferSize = (2 * sizeof(uint8) * (ipPorts[OMX_PORT_INPUTPORT_INDEX]->PortParam.nBufferSize));
     OMX_U32 CurrWidth =  ipPorts[OMX_PORT_OUTPUTPORT_INDEX]->PortParam.format.video.nFrameWidth;
     OMX_U32 CurrHeight = ipPorts[OMX_PORT_OUTPUTPORT_INDEX]->PortParam.format.video.nFrameHeight;
-
 
     if ((!iIsInputBufferEnded) || ((iEndofStream) || (0 != iTempInputBufferLength)))
     {
@@ -1740,7 +1754,7 @@ void OpenmaxAvcAO::DecodeWithMarker()
 {
     PVLOGGER_LOGMSG(PVLOGMSG_INST_HLDBG, iLogger, PVLOGMSG_NOTICE, (0, "OpenmaxAvcAO : DecodeWithMarker IN"));
     if(iLogCount%8==0){	
-    	SCI_TRACE_LOW("OMXAvc::Dec %d,%d,%d,%d,%x:%d\n",iOutBufferCount,iNewOutBufRequired,iNumAvailableOutputBuffers,GetQueueNumElem( ipPorts[OMX_PORT_OUTPUTPORT_INDEX]->pBufferQueue),ipOutputBuffer,iFrameCount);		
+    	OMX_H264DEC_INFO ("OMXAvc::Dec %d,%d,%d,%d,%x:%d\n",iOutBufferCount,iNewOutBufRequired,iNumAvailableOutputBuffers,GetQueueNumElem( ipPorts[OMX_PORT_OUTPUTPORT_INDEX]->pBufferQueue),ipOutputBuffer,iFrameCount);		
     }
     iLogCount++;
 	
@@ -1849,7 +1863,7 @@ void OpenmaxAvcAO::DecodeWithMarker()
     	    OMX_BOOL  need_new_pic = OMX_TRUE;
 	    OMX_U32  OutputLength = 0;	
 	    OMX_BOOL notSupport = OMX_FALSE;	
-	   // SCI_TRACE_LOW("VSP DPB::ipOutputBufferForRendering begin %x,%x,%x\n ",ipOutputBuffer->pBuffer,ipOutputBuffer,(int)iFrameTimestamp);//.nHighPart,ipOutputBufferForRendering->nTimeStamp.nLowPart);	
+	    OMX_H264DEC_DEBUG ("VSP DPB::ipOutputBufferForRendering begin %x,%x,%x\n ",ipOutputBuffer->pBuffer,ipOutputBuffer,(int)iFrameTimestamp);//.nHighPart,ipOutputBufferForRendering->nTimeStamp.nLowPart);	
 		
             iDecodeReturn = ipAvcDec->AvcDecodeVideo_OMX(&need_new_pic,ipOutputBuffer,&OutputLength, &ipOutputBufferForRendering,
                             &(ipFrameDecodeBuffer),
@@ -1879,12 +1893,13 @@ void OpenmaxAvcAO::DecodeWithMarker()
                 OMX_COMPONENTTYPE* pHandle = (OMX_COMPONENTTYPE*) ipAppPriv->CompHandle;
                 if(ipAvcDec->iDecH264WasSw){
 #ifdef YUV_THREE_PLANE
-                    	SCI_TRACE_LOW("AvcDecoder_OMX AllocateBuffer reset eColorFormat");
+                    	OMX_H264DEC_INFO ("AvcDecoder_OMX AllocateBuffer reset eColorFormat");
                     	ComponentPortType *pOutPort = (ComponentPortType*) ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
 		      	if(!iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX]){
                     		pOutPort->VideoParam[0].eColorFormat = OMX_COLOR_FormatYUV420Planar;
 		      		pOutPort->PortParam.format.video.eColorFormat = OMX_COLOR_FormatYUV420Planar;
-		      	}else{
+		      	}else
+		      	{
 		      		pOutPort->VideoParam[0].eColorFormat = (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YV12;
     				pOutPort->PortParam.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)HAL_PIXEL_FORMAT_YV12;
 		      	}
@@ -1907,7 +1922,6 @@ void OpenmaxAvcAO::DecodeWithMarker()
                  0,
                  NULL);
             }
-
 
 	     if(notSupport)
 	     {
@@ -1949,7 +1963,6 @@ void OpenmaxAvcAO::DecodeWithMarker()
                  0,
                  NULL);
             }
-
 
             if (0 == iInputCurrLength)
             {
@@ -2094,7 +2107,7 @@ void OpenmaxAvcAO::DecodeWithMarker()
         //Send the output buffer back when it has some data in it
         if (ipOutputBufferForRendering)
         {
-            //SCI_TRACE_LOW("VSP DPB::ipOutputBufferForRendering end %x,%x,%x,%d,%d\n ",ipOutputBufferForRendering->pBuffer,ipOutputBufferForRendering,(int)ipOutputBufferForRendering->nTimeStamp,ipOutputBufferForRendering->nOffset,ipOutputBufferForRendering->nFilledLen);//.nHighPart,ipOutputBufferForRendering->nTimeStamp.nLowPart);        
+            OMX_H264DEC_DEBUG ("VSP DPB::ipOutputBufferForRendering end %x,%x,%x,%d,%d ",ipOutputBufferForRendering->pBuffer,ipOutputBufferForRendering,(int)ipOutputBufferForRendering->nTimeStamp,ipOutputBufferForRendering->nOffset,ipOutputBufferForRendering->nFilledLen);//.nHighPart,ipOutputBufferForRendering->nTimeStamp.nLowPart);        
             pop_output_buffer_from_queue(ipOutputBufferForRendering);	
 	     ReturnOutputBuffer(ipOutputBufferForRendering, pOutPort);
             ipOutputBufferForRendering = NULL;
@@ -2125,10 +2138,6 @@ void OpenmaxAvcAO::DecodeWithMarker()
     return;
 }
 
-
-
-
-
 //Component object constructor
 OpenmaxAvcAO::OpenmaxAvcAO()
 {
@@ -2140,7 +2149,6 @@ OpenmaxAvcAO::OpenmaxAvcAO()
     }
     PVLOGGER_LOGMSG(PVLOGMSG_INST_HLDBG, iLogger, PVLOGMSG_NOTICE, (0, "OpenmaxAvcAO : constructed"));
 }
-
 
 //Component object destructor
 OpenmaxAvcAO::~OpenmaxAvcAO()
@@ -2238,37 +2246,39 @@ OMX_ERRORTYPE OpenmaxAvcAO::GetConfig(
        switch (nIndex) {
 	    case OMX_IndexConfigCommonOutputCrop:
 	    {
-	    		OMX_CONFIG_RECTTYPE *rectParams = (OMX_CONFIG_RECTTYPE *)pComponentConfigStructure;
+                OMX_CONFIG_RECTTYPE *rectParams = (OMX_CONFIG_RECTTYPE *)pComponentConfigStructure;
 
-            		if (rectParams->nPortIndex != OMX_PORT_OUTPUTPORT_INDEX) {
-                		return OMX_ErrorUndefined;
-            		}
-			ComponentPortType *pOutPort = (ComponentPortType*) ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
+            	if (rectParams->nPortIndex != OMX_PORT_OUTPUTPORT_INDEX) {
+                    return OMX_ErrorUndefined;
+            	}
+		ComponentPortType *pOutPort = (ComponentPortType*) ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
 
-			if(ipAvcDec->iDecH264WasSw){
+		if(ipAvcDec->iDecH264WasSw)
+                {
 #ifdef 	YUV_THREE_PLANE
-            			rectParams->nLeft = 24;
-            			rectParams->nTop = 24;
-            			rectParams->nWidth = pOutPort->PortParam.format.video.nFrameWidth;
-            			rectParams->nHeight = pOutPort->PortParam.format.video.nFrameHeight;		
+            	    rectParams->nLeft = 24;
+            	    rectParams->nTop = 24;
+            	    rectParams->nWidth = pOutPort->PortParam.format.video.nFrameWidth;
+            	    rectParams->nHeight = pOutPort->PortParam.format.video.nFrameHeight;		
 #else
-            			rectParams->nLeft = 0;
-            			rectParams->nTop = 0;
-            			rectParams->nWidth = pOutPort->PortParam.format.video.nFrameWidth;
-            			rectParams->nHeight = pOutPort->PortParam.format.video.nFrameHeight ;
+            	    rectParams->nLeft = 0;
+            	    rectParams->nTop = 0;
+            	    rectParams->nWidth = pOutPort->PortParam.format.video.nFrameWidth;
+            	    rectParams->nHeight = pOutPort->PortParam.format.video.nFrameHeight ;
 #endif                        
-			}else{
-            			rectParams->nLeft = 0;
-            			rectParams->nTop = 0;
-            			rectParams->nWidth = pOutPort->PortParam.format.video.nFrameWidth;
-            			rectParams->nHeight = pOutPort->PortParam.format.video.nFrameHeight ;
-			}
-			SCI_TRACE_LOW("OpenmaxAvcAO OMX_IndexConfigCommonOutputCrop %d,%d,%d,%d",rectParams->nLeft,rectParams->nTop,rectParams->nWidth,rectParams->nHeight);	
+                }else
+                {
+            	    rectParams->nLeft = 0;
+            	    rectParams->nTop = 0;
+            	    rectParams->nWidth = pOutPort->PortParam.format.video.nFrameWidth;
+            	    rectParams->nHeight = pOutPort->PortParam.format.video.nFrameHeight ;
+                }
+		OMX_H264DEC_INFO("OpenmaxAvcAO OMX_IndexConfigCommonOutputCrop %d,%d,%d,%d",rectParams->nLeft,rectParams->nTop,rectParams->nWidth,rectParams->nHeight);	
 	    }	
-			break;
+		break;
 	    default:
-			ret = OmxComponentVideo::GetConfig(hComponent,nIndex,pComponentConfigStructure);
-			break;
+		ret = OmxComponentVideo::GetConfig(hComponent,nIndex,pComponentConfigStructure);
+		break;
        }
 	
 	return ret;
@@ -2277,68 +2287,87 @@ OMX_ERRORTYPE OpenmaxAvcAO::GetConfig(
 /* This routine will reset the decoder library and some of the associated flags*/
 void OpenmaxAvcAO::ResetComponent()
 {
-	OMX_BOOL status;
-	SCI_TRACE_LOW(" OpenmaxAvcAO::ResetComponent::IN\n");
-	// reset decoder
-	if (ipAvcDec)
-	{
-		// flush output buffer
-		do{
-			ComponentPortType*  pOutPort = ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
-			ipOutputBufferForRendering = NULL;
-			SCI_TRACE_LOW("Seeklog :::iFlushOutputStatus% d\n",(int)status);
-			status = ipAvcDec->FlushOutput_OMX(&ipOutputBufferForRendering);
-			if (OMX_FALSE != status)
-			{
-				// this is the case where Flush succeeded (i.e. there is one output buffer left)
-				if (ipOutputBufferForRendering)
-				{
-					pop_output_buffer_from_queue(ipOutputBufferForRendering);	
-					ReturnOutputBuffer(ipOutputBufferForRendering, pOutPort);
-					//  ipOutputBufferForRendering = NULL;
-				}
+    OMX_H264DEC_INFO ("%s, %d", __FUNCTION__, __LINE__);
+    // reset decoder
+    if (ipAvcDec)
+    {
+#if 1
+        OMX_BOOL status;
+        QueueType *pOutputQueue = GetOutputQueue();
+        BufferCtrlStruct *pBCTRL;
 
-				PVLOGGER_LOGMSG(PVLOGMSG_INST_HLDBG, iLogger, PVLOGMSG_NOTICE, (0, "OpenmaxAvcAO : DecodeWithMarker OUT"));
-				RunIfNotReady();
-			}
-		}while(ipOutputBufferForRendering);
+        // flush output buffer
+        do
+        {
+            ipOutputBufferForRendering = NULL;
+            status = ipAvcDec->FlushOutput_OMX(&ipOutputBufferForRendering);
+            OMX_H264DEC_INFO("%s, flush, status=%d, buf=%x\n", __FUNCTION__, (int)status, ipOutputBufferForRendering);
 
-		ipAvcDec->ResetDecoder();
-	}
+            if ( (OMX_FALSE != status) && (ipOutputBufferForRendering) )
+            {
+                // this is the case where Flush succeeded (i.e. there is one output buffer left)
+                pBCTRL = (BufferCtrlStruct *)ipOutputBufferForRendering->pOutputPortPrivate;
+                if ( pBCTRL->iRefCount == 0 )
+                {
+                    // if a buffer's ref count is 0 - it means that it is available.
+                    iNumAvailableOutputBuffers++;
+
+                    if(OMX_FALSE == pBCTRL->iIsBufferInComponentQueue)
+                    {
+                        // push back the buffer to queue.
+                        Queue(pOutputQueue,(void *)ipOutputBufferForRendering);
+                        pBCTRL->iIsBufferInComponentQueue = OMX_TRUE;
+                    }
+                }
+            }
+        }while(ipOutputBufferForRendering);
+#endif
+
+        ipAvcDec->ResetDecoder();
+
+        RunIfNotReady();
+    }
 }
 
 void OpenmaxAvcAO::ReleaseReferenceBuffers()
 {
     if (ipAvcDec)
     {
-	#if 1
-		OMX_BOOL status;
-	
-    	// flush output buffer
-		do{
-			ComponentPortType*  pOutPort = ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
-			ipOutputBufferForRendering = NULL;
-			SCI_TRACE_LOW("Seeklog :::iFlushOutputStatus% d\n",(int)status);
-			status = ipAvcDec->FlushOutput_OMX(&ipOutputBufferForRendering);
-			SCI_TRACE_LOW("Seeklog :::iFlushOutputStatus% d\n",(int)status);
-			SCI_TRACE_LOW("ipOutputBufferForRendering :addr:: %x\n",ipOutputBufferForRendering);
-			if (OMX_FALSE != status)
-			{
-				// this is the case where Flush succeeded (i.e. there is one output buffer left)
-				if (ipOutputBufferForRendering)
-				{
-					pop_output_buffer_from_queue(ipOutputBufferForRendering);	
-					ReturnOutputBuffer(ipOutputBufferForRendering, pOutPort);
-					//  ipOutputBufferForRendering = NULL;
-				}
+#if 1
+        OMX_BOOL status;
+        QueueType *pOutputQueue = GetOutputQueue();
+        BufferCtrlStruct *pBCTRL;
 
-				PVLOGGER_LOGMSG(PVLOGMSG_INST_HLDBG, iLogger, PVLOGMSG_NOTICE, (0, "OpenmaxAvcAO : DecodeWithMarker OUT"));
-				RunIfNotReady();
-			SCI_TRACE_LOW("ipOutputBufferForRendering :addr:: %x\n",ipOutputBufferForRendering);
-			}
-		}while(ipOutputBufferForRendering);
-	#endif	
+        // flush output buffer
+        do
+        {
+            ipOutputBufferForRendering = NULL;
+            status = ipAvcDec->FlushOutput_OMX(&ipOutputBufferForRendering);
+            OMX_H264DEC_INFO("%s, flush, status=%d, buf=%x\n", __FUNCTION__, (int)status, ipOutputBufferForRendering);
+
+            if ( (OMX_FALSE != status) && (ipOutputBufferForRendering) )
+            {
+                // this is the case where Flush succeeded (i.e. there is one output buffer left)
+                pBCTRL = (BufferCtrlStruct *)ipOutputBufferForRendering->pOutputPortPrivate;
+                if ( pBCTRL->iRefCount == 0 )
+                {
+                    // if a buffer's ref count is 0 - it means that it is available.
+                    iNumAvailableOutputBuffers++;
+
+                    if(OMX_FALSE == pBCTRL->iIsBufferInComponentQueue)
+                    {
+                        // push back the buffer to queue.
+                        Queue(pOutputQueue,(void *)ipOutputBufferForRendering);
+                        pBCTRL->iIsBufferInComponentQueue = OMX_TRUE;
+                    }
+                }
+            }
+        }while(ipOutputBufferForRendering);
+#endif
+
         ipAvcDec->ReleaseReferenceBuffers();
+
+        RunIfNotReady();
     }
 }
 

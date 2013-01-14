@@ -35,10 +35,12 @@ PUBLIC void Mp4Enc_InitVolVopPara(VOL_MODE_T *vol_mode_ptr, ENC_VOP_MODE_T *vop_
 	vol_mode_ptr->bRoundingControlDisable	= TRUE;
 	vol_mode_ptr->InitialRoundingType		= 0;
 	vol_mode_ptr->PbetweenI				= 28;//28;
+#if 0
 	if (vop_mode_ptr->big_size_flag)
 	{
 		vol_mode_ptr->PbetweenI		= 10;
 	}
+#endif
 	vol_mode_ptr->GOVperiod				= 0;
 	vol_mode_ptr->bAllowSkippedPMBs		= 1;
 	vol_mode_ptr->bReversibleVlc			= FALSE;

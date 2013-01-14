@@ -39,6 +39,7 @@ int pred_non_zero_count (DEC_MB_CACHE_T *mb_cache_ptr, int blkIndex);
 int32 get_cabac_cbf_ctx(DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T * mb_cache_ptr, int cat,  int blk_id );
 
 void decode_mb_cavlc_hw (DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+void decode_mb_cabac_hw (DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
 
 void decode_mb_cabac_sw (DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
 void decode_mb_cavlc_sw (DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);

@@ -30,17 +30,25 @@ PUBLIC MMDecRet Mp4Dec_frm_level_sync_hw_sw_pipeline (MMDecInput *dec_input_ptr,
 	
 	SCI_TRACE_LOW ("Mp4Dec_frm_level_sync_hw_sw_pipeline: Current frame type: %s\n", vop_mode_ptr->VopPredType == IVOP? "IVOP"  : vop_mode_ptr->VopPredType == PVOP ? "PVOP":"BVOP"); 
 	
-	if(!vop_mode_ptr->is_first_frame && !vop_mode_ptr->is_previous_B_VOP)
+	if( !vop_mode_ptr->is_previous_cmd_done)
 	{
 		SCI_TRACE_LOW ("Mp4Dec_frm_level_sync_hw_sw_pipeline: Wait for previous vsp done. Frame %d\n", g_nFrame_dec ==0 ? 0 : g_nFrame_dec -1); 
-		VSP_START_CQM();			
+		VSP_START_CQM();	
 	}
 	
-	vop_mode_ptr->is_first_frame = FALSE;
 
 	memcpy(vop_mode_ptr->frame_bistrm_ptr,dec_input_ptr->pStream,dec_input_ptr->dataLen);
 			
-	ret = Mp4Dec_VspFrameInit(vop_mode_ptr,((uint32)(Mp4Dec_ExtraMem_V2Phy(vop_mode_ptr->frame_bistrm_ptr))));
+	ret = Mp4Dec_VspFrameInit(vop_mode_ptr,((uint32)(Mp4Dec_ExtraMem_V2P(vop_mode_ptr->frame_bistrm_ptr, HW_CACHABLE))));
+
+//flush cache
+	if(VSP_fluchCacheCb)
+	{
+    	    MMCodecBuffer IonBuffer;
+	    Mp4Dec_ExtraMem_GetInfo(&IonBuffer, HW_CACHABLE);
+            
+    	    int ret = (*VSP_fluchCacheCb)(g_user_data,(int *)(IonBuffer.common_buffer_ptr),(int *)(IonBuffer.common_buffer_ptr_phy),IonBuffer.size);          
+	}
 
 	cmd = VSP_READ_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, "DCAM_CFG: readout DCAM CFG");
 	cmd |= (1<<8)|(1<<9);
@@ -48,12 +56,12 @@ PUBLIC MMDecRet Mp4Dec_frm_level_sync_hw_sw_pipeline (MMDecInput *dec_input_ptr,
 
 	if (vop_mode_ptr->VopPredType == BVOP)
 	{
-//		SCI_TRACE_LOW ("Mp4Dec_frm_level_sync_hw_sw_pipeline: Wait for current frame vsp done. Frame %d\n", g_nFrame_dec); 
+		SCI_TRACE_LOW ("Mp4Dec_frm_level_sync_hw_sw_pipeline: Wait for current frame vsp done. Frame %d\n", g_nFrame_dec); 
 		VSP_START_CQM();
-		vop_mode_ptr->is_previous_B_VOP = TRUE;
+		vop_mode_ptr->is_previous_cmd_done = TRUE;
 	}else
 	{
-		vop_mode_ptr->is_previous_B_VOP = FALSE;
+		vop_mode_ptr->is_previous_cmd_done = FALSE;
 	}
 	
 	Mp4Dec_output_one_frame (dec_output_ptr, vop_mode_ptr);	
@@ -70,7 +78,16 @@ PUBLIC MMDecRet Mp4Dec_frm_level_sync_hw_sw_normal (MMDecInput *dec_input_ptr, M
 	
 	memcpy (vop_mode_ptr->frame_bistrm_ptr, dec_input_ptr->pStream, dec_input_ptr->dataLen);
 
-	ret = Mp4Dec_VspFrameInit(vop_mode_ptr, ((uint32)(Mp4Dec_ExtraMem_V2Phy(vop_mode_ptr->frame_bistrm_ptr))));
+	ret = Mp4Dec_VspFrameInit(vop_mode_ptr, ((uint32)(Mp4Dec_ExtraMem_V2P(vop_mode_ptr->frame_bistrm_ptr, HW_CACHABLE))));
+
+    //flush cache
+	if(VSP_fluchCacheCb)
+	{
+    	    MMCodecBuffer IonBuffer;
+	    Mp4Dec_ExtraMem_GetInfo(&IonBuffer, HW_CACHABLE);
+            
+    	    int ret = (*VSP_fluchCacheCb)(g_user_data,(int *)(IonBuffer.common_buffer_ptr),(int *)(IonBuffer.common_buffer_ptr_phy),IonBuffer.size);          
+	}
 
 	cmd = VSP_READ_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, "DCAM_CFG: readout DCAM CFG");
 	cmd |= (1<<8)|(1<<9);

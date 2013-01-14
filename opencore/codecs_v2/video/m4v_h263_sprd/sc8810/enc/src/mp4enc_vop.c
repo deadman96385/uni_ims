@@ -403,9 +403,17 @@ PUBLIC int32 Mp4Enc_EncPVOP_BIG_SIZE(ENC_VOP_MODE_T *vop_mode_ptr, int32 time_st
 	
 	if(vop_mode_ptr->RateCtrlEnable)
 	{
+#if 0
 		Mp4Enc_UpdatePVOP_StepSize(vop_mode_ptr, &g_stat_rc, &g_rc_par);
+#else
+		Mp4Enc_UpdateIVOP_StepSize(vop_mode_ptr, &g_stat_rc);
+#endif
 	}
+#if 0
 	vop_mode_ptr->StepSize = Qp = vop_mode_ptr->StepP;
+#else
+	vop_mode_ptr->StepSize = Qp = vop_mode_ptr->StepI;
+#endif
 
 	vop_mode_ptr->intra_mb_num = 0;
 	vop_mode_ptr->MBNumOneVP = 0;

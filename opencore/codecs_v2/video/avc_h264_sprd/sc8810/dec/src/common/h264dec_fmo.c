@@ -283,7 +283,7 @@ LOCAL BOOLEAN H264Dec_FmoGenerateMbToSliceGroupMap(DEC_IMAGE_PARAMS_T *img_ptr)
 	mb_num = (sps_ptr->pic_height_in_map_units_minus1+1)*(sps_ptr->pic_width_in_mbs_minus1+1);
 	if (g_MbToSliceGroupMap == PNULL)
 	{
-		g_MbToSliceGroupMap = (int8 *)H264Dec_ExtraMemCacheAlloc((uint32)(mb_num)*sizeof(int8));
+		g_MbToSliceGroupMap = (int8 *)H264Dec_ExtraMemAlloc((uint32)(mb_num)*sizeof(int8), 4, SW_CACHABLE);
 	}
 #if FMO_TRACE
 	FPRINTF(pFmoFile, "Decode Frame Num: %d, Slice group number: %d\n", g_nFrame_dec, pps_ptr->num_slice_groups_minus1+1);	

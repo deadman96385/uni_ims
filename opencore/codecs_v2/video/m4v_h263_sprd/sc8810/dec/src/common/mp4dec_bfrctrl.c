@@ -82,7 +82,7 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(DEC_VOP_MODE_T *vop_mode_ptr)
 	//SCI_TRACE_LOW("Mp4Dec_InitYUVBfr : VT_used %d, post_filter_en %d  ", vop_mode_ptr->VT_used , vop_mode_ptr->post_filter_en);
 	if(vop_mode_ptr->VT_used && vop_mode_ptr->post_filter_en)
 	{
-		g_dbk_tmp_frm_ptr = (uint8 *)Mp4Dec_ExtraMemCacheAlloc_64WordAlign((uint32)ext_size_y * sizeof(uint8));
+		g_dbk_tmp_frm_ptr = (uint8 *)Mp4Dec_ExtraMemAlloc((uint32)ext_size_y * sizeof(uint8), 256, SW_CACHABLE);
 
 		SCI_TRACE_LOW("Mp4Dec_InitYUVBfr : g_dbk_tmp_frm_ptr is %x", g_dbk_tmp_frm_ptr);
 
@@ -102,15 +102,15 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(DEC_VOP_MODE_T *vop_mode_ptr)
 		
 		if (need_malloc_decY)
 		{			
-	        	pDecFrame->imgY = (uint8 *)Mp4Dec_ExtraMemAlloc_64WordAlign((uint32)size_y * sizeof(uint8));  //y
+	        	pDecFrame->imgY = (uint8 *)Mp4Dec_ExtraMemAlloc((uint32)size_y * sizeof(uint8), 256, HW_NO_CACHABLE);  //y
 			if (vop_mode_ptr->uv_interleaved) //two plane
 			{
-				pDecFrame->imgU = (uint8 *)Mp4Dec_ExtraMemAlloc_64WordAlign(2*(uint32)size_c * sizeof(uint8));  //uv
+				pDecFrame->imgU = (uint8 *)Mp4Dec_ExtraMemAlloc(2*(uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //uv
 				pDecFrame->imgV = PNULL;
 			}else //three plane
 			{
-		        	pDecFrame->imgU = (uint8 *)Mp4Dec_ExtraMemAlloc_64WordAlign((uint32)size_c * sizeof(uint8));  //u
-		        	pDecFrame->imgV = (uint8 *)Mp4Dec_ExtraMemAlloc_64WordAlign((uint32)size_c * sizeof(uint8));  //v
+		        	pDecFrame->imgU = (uint8 *)Mp4Dec_ExtraMemAlloc((uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //u
+		        	pDecFrame->imgV = (uint8 *)Mp4Dec_ExtraMemAlloc((uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //v
 		        	if( NULL == pDecFrame->imgV )
 		        	{
 		            		return MMDEC_MEMORY_ERROR;
@@ -122,9 +122,9 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(DEC_VOP_MODE_T *vop_mode_ptr)
 		        }
 			
 		#ifdef _VSP_LINUX_
-			pDecFrame->imgYAddr = (uint32)Mp4Dec_ExtraMem_V2Phy(pDecFrame->imgY) >> 8;  //y
-			pDecFrame->imgUAddr = (uint32)Mp4Dec_ExtraMem_V2Phy(pDecFrame->imgU) >> 8;  //u
-			pDecFrame->imgVAddr = (uint32)Mp4Dec_ExtraMem_V2Phy(pDecFrame->imgV) >> 8;  //v
+			pDecFrame->imgYAddr = (uint32)Mp4Dec_ExtraMem_V2P(pDecFrame->imgY, HW_NO_CACHABLE) >> 8;  //y
+			pDecFrame->imgUAddr = (uint32)Mp4Dec_ExtraMem_V2P(pDecFrame->imgU, HW_NO_CACHABLE) >> 8;  //u
+			pDecFrame->imgVAddr = (uint32)Mp4Dec_ExtraMem_V2P(pDecFrame->imgV, HW_NO_CACHABLE) >> 8;  //v
 		#else
 			pDecFrame->imgYAddr = (uint32)pDecFrame->imgY >> 8;  //y
 			pDecFrame->imgUAddr = (uint32)pDecFrame->imgU >> 8;  //u
@@ -134,9 +134,9 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(DEC_VOP_MODE_T *vop_mode_ptr)
 
 		if (need_malloc_decYUV)
 		{
-			pDecFrame->imgYUV[0] = (uint8 *)Mp4Dec_ExtraMemCacheAlloc_64WordAlign((uint32)ext_size_y * sizeof(uint8));  //y
-			pDecFrame->imgYUV[1] = (uint8 *)Mp4Dec_ExtraMemCacheAlloc_64WordAlign((uint32)ext_size_c * sizeof(uint8));  //u
-       	 		pDecFrame->imgYUV[2] = (uint8 *)Mp4Dec_ExtraMemCacheAlloc_64WordAlign((uint32)ext_size_c * sizeof(uint8));  //v
+			pDecFrame->imgYUV[0] = (uint8 *)Mp4Dec_ExtraMemAlloc((uint32)ext_size_y * sizeof(uint8), 256, SW_CACHABLE);  //y
+			pDecFrame->imgYUV[1] = (uint8 *)Mp4Dec_ExtraMemAlloc((uint32)ext_size_c * sizeof(uint8), 256, SW_CACHABLE);  //u
+       	 		pDecFrame->imgYUV[2] = (uint8 *)Mp4Dec_ExtraMemAlloc((uint32)(ext_size_c + 8) * sizeof(uint8), 256, SW_CACHABLE);  //v // 8 extra byte for mc loading of V.  
 
 			if( NULL == pDecFrame->imgYUV[0] ||(NULL == pDecFrame->imgYUV[1]) || (NULL == pDecFrame->imgYUV[2]))
        			{
@@ -159,15 +159,15 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(DEC_VOP_MODE_T *vop_mode_ptr)
 			
 			if (need_malloc_dispY)
 			{
-				pDecFrame->imgY = (uint8 *)Mp4Dec_ExtraMemAlloc_64WordAlign((uint32)size_y * sizeof(uint8));  //y
+				pDecFrame->imgY = (uint8 *)Mp4Dec_ExtraMemAlloc((uint32)size_y * sizeof(uint8), 256, HW_NO_CACHABLE);  //y
 				if (vop_mode_ptr->uv_interleaved) //two plane
 				{
-					pDecFrame->imgU = (uint8 *)Mp4Dec_ExtraMemAlloc_64WordAlign(2*(uint32)size_c * sizeof(uint8));  //uv
+					pDecFrame->imgU = (uint8 *)Mp4Dec_ExtraMemAlloc(2*(uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //uv
 					pDecFrame->imgV = PNULL;
 				}else //three plane
 				{
-	        		pDecFrame->imgU = (uint8 *)Mp4Dec_ExtraMemAlloc_64WordAlign((uint32)size_c * sizeof(uint8));  //u
-	            	pDecFrame->imgV = (uint8 *)Mp4Dec_ExtraMemAlloc_64WordAlign((uint32)size_c * sizeof(uint8));  //v
+	        		pDecFrame->imgU = (uint8 *)Mp4Dec_ExtraMemAlloc((uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //u
+	            	pDecFrame->imgV = (uint8 *)Mp4Dec_ExtraMemAlloc((uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //v
 
 	        		if( NULL == pDecFrame->imgV )
 	        		{
@@ -186,9 +186,9 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(DEC_VOP_MODE_T *vop_mode_ptr)
 
 			if(need_malloc_dispYUV)
 			{
-				pDecFrame->imgYUV[0] = (uint8 *)Mp4Dec_ExtraMemCacheAlloc_64WordAlign((uint32)ext_size_y * sizeof(uint8));  //y
-				pDecFrame->imgYUV[1] = (uint8 *)Mp4Dec_ExtraMemCacheAlloc_64WordAlign((uint32)ext_size_c * sizeof(uint8));  //u
-	       	 		pDecFrame->imgYUV[2] = (uint8 *)Mp4Dec_ExtraMemCacheAlloc_64WordAlign((uint32)ext_size_c * sizeof(uint8));  //v
+				pDecFrame->imgYUV[0] = (uint8 *)Mp4Dec_ExtraMemAlloc((uint32)ext_size_y * sizeof(uint8), 256, SW_CACHABLE);  //y
+				pDecFrame->imgYUV[1] = (uint8 *)Mp4Dec_ExtraMemAlloc((uint32)ext_size_c * sizeof(uint8), 256, SW_CACHABLE);  //u
+	       	 		pDecFrame->imgYUV[2] = (uint8 *)Mp4Dec_ExtraMemAlloc((uint32)ext_size_c * sizeof(uint8), 256, SW_CACHABLE);  //v
 
 				SCI_TRACE_LOW("Mp4Dec_InitYUVBfr : imgYUV is %x, %x, %x", pDecFrame->imgYUV[0],pDecFrame->imgYUV[1],pDecFrame->imgYUV[2]);	
 

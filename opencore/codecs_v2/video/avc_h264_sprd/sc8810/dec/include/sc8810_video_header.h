@@ -36,6 +36,15 @@
 #include <arm_neon.h>
 #endif
 
+//#define _DEBUG_TIME_
+
+#ifdef _DEBUG_TIME_
+#include "sys/time.h"
+extern struct timeval tpstart;
+extern  struct timeval tpend1;
+extern struct timeval tpend2;
+#endif
+
 //define the protect level for error bitstream
 #define _LEVEL_LOW_			(1<<0)		//for common case
 #define _LEVEL_MEDIUM_			(1<<1)		//for reserved

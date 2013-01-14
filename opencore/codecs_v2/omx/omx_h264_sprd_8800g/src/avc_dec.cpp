@@ -44,71 +44,59 @@ static int VSP_bind_cb(void *userdata, void *pHeader)
 {
 	AvcDecoder_OMX *pAvcDecoder_OMX = (AvcDecoder_OMX *)userdata;
         BufferCtrlStruct *pBCTRL = (BufferCtrlStruct *)(((OMX_BUFFERHEADERTYPE *)pHeader)->pOutputPortPrivate);
-	//SCI_TRACE_LOW("VSP DPB::VSP_bind_cb %x,%x,%d\n",((OMX_BUFFERHEADERTYPE *)pHeader)->pBuffer,pHeader,pBCTRL->iRefCount);
-/*	
-        if (pBCTRL->iRefCount == 0)
-        {
-	    	if(OMX_TRUE == pBCTRL->iIsBufferInComponentQueue)
-	    	{
-	        	SCI_TRACE_LOW("VSP_bind_cb  OMX_TRUE == pBCTRL->iIsBufferInComponentQueue\n");
-	    		QueueType *pOutputQueue = pAvcDecoder_OMX->ipOMXComponent->GetOutputQueue();
-			while(1)
-			{
-				OMX_BUFFERHEADERTYPE *pHeaderTmp = (OMX_BUFFERHEADERTYPE*) DeQueue(pOutputQueue);
-				if(pHeaderTmp == (OMX_BUFFERHEADERTYPE *)pHeader )
-				{
-					break;
-				}else
-				{
-					Queue(pOutputQueue,(void *)pHeaderTmp);
-				}
-			}
-			pBCTRL->iIsBufferInComponentQueue = OMX_FALSE;
+	OMX_H264DEC_INFO ("%s: %x,%x,%d\n", __FUNCTION__, ((OMX_BUFFERHEADERTYPE *)pHeader)->pBuffer,pHeader,pBCTRL->iRefCount);
 
-			if( pAvcDecoder_OMX->ipOMXComponent->iNumAvailableOutputBuffers)
-	        	{
-       				pAvcDecoder_OMX->ipOMXComponent->iNumAvailableOutputBuffers--;
-	        	}			
-	    	}			 
-    	}	
- */   	
         pBCTRL->iRefCount++;	
 	return 0;
 }
 
 static int VSP_unbind_cb(void *userdata, void *pHeader)
 {
-	AvcDecoder_OMX *pAvcDecoder_OMX = (AvcDecoder_OMX *)userdata;
-        BufferCtrlStruct *pBCTRL = (BufferCtrlStruct *)(((OMX_BUFFERHEADERTYPE *)pHeader)->pOutputPortPrivate);
+    AvcDecoder_OMX *pAvcDecoder_OMX = (AvcDecoder_OMX *)userdata;
+    BufferCtrlStruct *pBCTRL = (BufferCtrlStruct *)(((OMX_BUFFERHEADERTYPE *)pHeader)->pOutputPortPrivate);
 
-	if (pBCTRL->iRefCount  == 0)
-		return 0;
-	
+    OMX_H264DEC_INFO ("%s: ref frame: 0x%x, %x; cnt=%d, isinQueue=%d", __FUNCTION__, 
+            ((OMX_BUFFERHEADERTYPE *)pHeader)->pBuffer, pHeader,
+            pBCTRL->iRefCount,pBCTRL->iIsBufferInComponentQueue
+    );
+
+    if (pBCTRL->iRefCount  > 0)
+    {   
         pBCTRL->iRefCount--;
-	//SCI_TRACE_LOW("VSP DPB::VSP_unbind_cb %x,%x,%d\n",((OMX_BUFFERHEADERTYPE *)pHeader)->pBuffer,pHeader,pBCTRL->iRefCount);	
-	if(pAvcDecoder_OMX->pCurrentBufferHdr!=pHeader)
-	{
-		if ( pBCTRL->iRefCount == 0)
-        	{
-            		pAvcDecoder_OMX->ipOMXComponent->iNumAvailableOutputBuffers++;
-	    		if(OMX_FALSE == pBCTRL->iIsBufferInComponentQueue)
-	    		{
-	        		SCI_TRACE_LOW("VSP_unbind_cb  OMX_FALSE == pBCTRL->iIsBufferInComponentQueue\n");
-	    			QueueType *pOutputQueue = pAvcDecoder_OMX->ipOMXComponent->GetOutputQueue();
-				Queue(pOutputQueue,(void *)pHeader);
-				pBCTRL->iIsBufferInComponentQueue = OMX_TRUE;
-	    		}
-		}			
-                // posssibly reschedule the component?
+    }
+
+    if ( pBCTRL->iRefCount == 0)
+    {
+         // if a buffer's ref count is 0 - it means that it is available.
+        pAvcDecoder_OMX->ipOMXComponent->iNumAvailableOutputBuffers++;
+
+        if(OMX_FALSE == pBCTRL->iIsBufferInComponentQueue)
+        {
+            // push back the buffer to queue.
+            QueueType *pOutputQueue = pAvcDecoder_OMX->ipOMXComponent->GetOutputQueue();
+            Queue(pOutputQueue,(void *)pHeader);
+            pBCTRL->iIsBufferInComponentQueue = OMX_TRUE;
         }
-	return 0;
+    }
+
+    return 0;
 }
 
 int AvcDecoder_OMX::g_h264_dec_inst_num = 0;
 
+int AvcDecoder_OMX::FlushCache_OMX(void* aUserData,int* vaddr,int* paddr,int size)
+{
+    OMX_H264DEC_DEBUG ("%s: vaddr: 0x%x, paddr: 0x%x, size: 0x%x \n",__FUNCTION__, vaddr,paddr,size);
+
+    AvcDecoder_OMX* pAvcDecoder_OMX = (AvcDecoder_OMX*)aUserData;
+    int ret = pAvcDecoder_OMX->iCMDbufferPmemHeap->flush_ion_buffer((void *)vaddr,(void* )paddr,size);
+
+    return ret;
+}
+
 int AvcDecoder_OMX::ActivateSPS_OMX(void* aUserData, uint width,uint height, uint aNumBuffers)
 {
-    SCI_TRACE_LOW("ActivateSPS_OMX %d,%d,%d\n",width,height,aNumBuffers);
+    OMX_H264DEC_INFO ("%s: width: %d,%d,%d\n", __FUNCTION__, width, height, aNumBuffers);
 	
     AvcDecoder_OMX* pAvcDecoder_OMX = (AvcDecoder_OMX*)aUserData;
 
@@ -119,92 +107,132 @@ int AvcDecoder_OMX::ActivateSPS_OMX(void* aUserData, uint width,uint height, uin
 
     pAvcDecoder_OMX->ReleaseReferenceBuffers();
 
-   if((pAvcDecoder_OMX->iReconfigWidth!=width) || (pAvcDecoder_OMX->iReconfigHeight != height))
-   {
-     	if( -12 != getpriority(PRIO_PROCESS, 0)){
+    if((pAvcDecoder_OMX->iReconfigWidth !=width) || (pAvcDecoder_OMX->iReconfigHeight != height))
+    {
+     	if( -12 != getpriority(PRIO_PROCESS, 0))
+        {
 		 setpriority(PRIO_PROCESS, 0, -12);//@jgdu
-    	}  
+    	} 
+        
         if(pAvcDecoder_OMX->iExternalBufferWasSet)
     	{
-            pAvcDecoder_OMX->iDecExtPmemHeap.clear();
+            if (!pAvcDecoder_OMX->iDecH264WasSw)
+            {
+                pAvcDecoder_OMX->iDecExtPmemHeap.clear();
+                if(pAvcDecoder_OMX->iDecExtVAddr)
+                {
+                    pAvcDecoder_OMX->iDecExtVAddr = NULL;
+                }
+                
+                pAvcDecoder_OMX->iCMDbufferPmemHeap.clear();
+                if(pAvcDecoder_OMX->iCMDbufferVAddr)
+                {
+                    pAvcDecoder_OMX->iCMDbufferVAddr = NULL;
+                }
+            }
+            
             if(pAvcDecoder_OMX->iDecoder_ext_cache_buffer_ptr)
             {
                 oscl_free(pAvcDecoder_OMX->iDecoder_ext_cache_buffer_ptr);
                 pAvcDecoder_OMX->iDecoder_ext_cache_buffer_ptr = NULL;
             }
+			
             pAvcDecoder_OMX->iExternalBufferWasSet = OMX_FALSE;
-    	}	
-   	MMCodecBuffer codec_buf;
-	uint32 mb_x = width/16;
-	uint32 mb_y = height/16;
-	uint32 ext_buffer_size;
-        SCI_TRACE_LOW("AvcDecoder_OMX::ActivateSPS_OMX width %d,height %d\n",width,height);
+            OMX_H264DEC_DEBUG ("%s, %d", __FUNCTION__, __LINE__);
+    	}
+        
+   	MMCodecBuffer extra_mem[3];
+	uint32 extra_mem_size;
+	uint32 mb_num_x = (width + 15)>>4;
+	uint32 mb_num_y = (height + 15)>>4;
+	uint32 mb_num_total = mb_num_x * mb_num_y;
+	uint32 frm_size = (mb_num_total * 256);
+    
 	if (!pAvcDecoder_OMX->iDecH264WasSw)
 	{
-#if !defined(CHIP_8810)		
-		ext_buffer_size =  mb_x*32 + 512 ;// +mb_x*mb_y*62*4 + mb_x*mb_y*1+ (16+1)*(3+7+18)*4 + 1024 ;
-#else
-	ext_buffer_size = 100*40*4 /*vld_cabac_table_ptr*/
-				+ mb_x*32 /*ipred_top_line_buffer*/
-				//+ 500*1024 /*frame_bistrm_ptr*/
-				+ 1000*1024 /*frame_bistrm_buf[2]*/
-				//+ mb_x*mb_y*256*(6+2) /*vsp_cmd_data, vsp_cmd_info*/
-				+ mb_x*mb_y*256*(6+2)*2 /*vsp_cmd_data, vsp_cmd_info*/
-				+ 10*1024; //rsv
-#endif
+            extra_mem_size = 100*40*4 /*vld_cabac_table_ptr*/
+		+ mb_num_x*32 /*ipred_top_line_buffer*/
+		+ 10*1024; //rsv
 
-        pAvcDecoder_OMX->iDecExtPmemHeap = new MemoryHeapIon(SPRD_ION_DEV, ext_buffer_size, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+            pAvcDecoder_OMX->iDecExtPmemHeap = new MemoryHeapIon(SPRD_ION_DEV, extra_mem_size, MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+            int fd = pAvcDecoder_OMX->iDecExtPmemHeap->getHeapID();
+	    if(fd>=0){
+	        int ret,phy_addr, buffer_size;
+                ret = pAvcDecoder_OMX->iDecExtPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
+                if(ret)
+                {
+                    OMX_H264DEC_ERR ("%s, %d: iDecExtPmemHeap get_phy_addr_from_ion fail", __FUNCTION__, __LINE__);
+                }
 
- 	 int fd = pAvcDecoder_OMX->iDecExtPmemHeap->getHeapID();
-	 if(fd>=0){
-	 	int ret,phy_addr, buffer_size;
-	 	ret = pAvcDecoder_OMX->iDecExtPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
-	 	if(ret) SCI_TRACE_LOW("iDecExtPmemHeap get_phy_addr_from_ion fail %d",ret);
-
-		pAvcDecoder_OMX->iDecExtPhyAddr =(OMX_U32)phy_addr;
-		SCI_TRACE_LOW("AvcDecoder_OMX ext mem pmempool %x,%x,%x,%x\n",pAvcDecoder_OMX->iDecExtPmemHeap->getHeapID(),pAvcDecoder_OMX->iDecExtPmemHeap->base(),phy_addr,buffer_size);
-	 	pAvcDecoder_OMX->iDecExtVAddr = (OMX_U32)pAvcDecoder_OMX->iDecExtPmemHeap->base();
-		codec_buf.common_buffer_ptr =(uint8 *)pAvcDecoder_OMX-> iDecExtVAddr;
-		codec_buf.common_buffer_ptr_phy = (void *)pAvcDecoder_OMX->iDecExtPhyAddr;
-		codec_buf.size = ext_buffer_size;
-		H264DecMemInit(&codec_buf);
-    	}else
-    	{
+                pAvcDecoder_OMX->iDecExtPhyAddr =(OMX_U32)phy_addr;
+                OMX_H264DEC_DEBUG("AvcDecoder_OMX ext mem pmempool %x,%x,%x,%x\n",pAvcDecoder_OMX->iDecExtPmemHeap->getHeapID(),pAvcDecoder_OMX->iDecExtPmemHeap->base(),phy_addr,buffer_size);
+                pAvcDecoder_OMX->iDecExtVAddr = (OMX_U32)pAvcDecoder_OMX->iDecExtPmemHeap->base();
+                extra_mem[HW_NO_CACHABLE].common_buffer_ptr =(uint8 *)pAvcDecoder_OMX-> iDecExtVAddr;
+                extra_mem[HW_NO_CACHABLE].common_buffer_ptr_phy = (void *)pAvcDecoder_OMX->iDecExtPhyAddr;
+                extra_mem[HW_NO_CACHABLE].size = extra_mem_size;
+    	    }else
+    	    {
     		pAvcDecoder_OMX->iBufferAllocFail = OMX_TRUE;
-    		SCI_TRACE_LOW("AvcDecoder_OMX ext mem pmempool  error\n");
+    		OMX_H264DEC_ERR ("%s, %d: ext mem pmempool  error\n", __FUNCTION__, __LINE__);
 		return OMX_FALSE;	
-    	}
-	}
-#if !defined(CHIP_8810)		
-	ext_buffer_size = mb_x*mb_y*62*4 + mb_x*mb_y*1+ (16+1)*(3+7+18)*4 + 1024;
-#else
-	ext_buffer_size =// mb_x*mb_y*256*16 /*ping pong cmd_data, cmd_info*/
-				+ (2*+mb_y)*mb_x*8 /*MB_INFO*/
-				+ (mb_x*mb_y*16) /*i4x4pred_mode_ptr*/
-				+ (mb_x*mb_y*16) /*direct_ptr*/
-				+ (mb_x*mb_y*24) /*nnz_ptr*/
-				+ (mb_x*mb_y*2*16*2*2) /*mvd*/
-				+ 3*4*17 /*fs, fs_ref, fs_ltref*/
-				+ 17*(7*4+(23+150*2*17)*4+mb_x*mb_y*16*(2*2*2 + 1 + 1 + 4 + 4)+((mb_x*16+48)*(mb_y*16+48)*3/2)) /*dpb_ptr*/
-				+ mb_x*mb_y /*g_MbToSliceGroupMap*/
-				+10*1024; //rsv
-#endif
-        pAvcDecoder_OMX->iDecoder_ext_cache_buffer_ptr = oscl_malloc(ext_buffer_size+4);
+    	    }
+                
+            /////////////////////CMD BUFFER
+            extra_mem_size = 1000*1024 /*frame_bistrm_buf[2]*/
+	        + frm_size*(6+2)*2; /*vsp_cmd_data, vsp_cmd_info*/
+	
+            pAvcDecoder_OMX->iCMDbufferPmemHeap = new MemoryHeapIon(SPRD_ION_DEV, extra_mem_size, 0, (1<<31)|ION_HEAP_CARVEOUT_MASK);
+            fd = pAvcDecoder_OMX->iCMDbufferPmemHeap->getHeapID();
+            if(fd>=0){
+                int ret,phy_addr, buffer_size;
+                ret = pAvcDecoder_OMX->iCMDbufferPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
+                if(ret)
+                {
+                    OMX_H264DEC_ERR("%s, %d: get_phy_addr_from_ion fail", __FUNCTION__, __LINE__);
+                }
+
+                pAvcDecoder_OMX->iCMDbufferPhyAddr =(OMX_U32)phy_addr;
+                OMX_H264DEC_DEBUG("iCMDbufferPmemHeap pmempool %x,%x,%x,%x\n",pAvcDecoder_OMX->iCMDbufferPmemHeap->getHeapID(),pAvcDecoder_OMX->iCMDbufferPmemHeap->base(),phy_addr,buffer_size);
+
+                pAvcDecoder_OMX->iCMDbufferVAddr= (OMX_U32)pAvcDecoder_OMX->iCMDbufferPmemHeap->base();
+                extra_mem[HW_CACHABLE].common_buffer_ptr =(uint8 *)pAvcDecoder_OMX-> iCMDbufferVAddr;
+                extra_mem[HW_CACHABLE].common_buffer_ptr_phy = (void *)pAvcDecoder_OMX->iCMDbufferPhyAddr;
+                extra_mem[HW_CACHABLE].size = extra_mem_size;
+            
+                OMX_H264DEC_DEBUG ("iCMDbufferPmemHeap allocate successful!");
+            }else
+    	    {
+                pAvcDecoder_OMX->iBufferAllocFail = OMX_TRUE;
+                OMX_H264DEC_ERR("AvcDecoder_OMX ext mem pmempool  error");
+                return OMX_FALSE;	
+    	    }
+        }//if (!pAvcDecoder_OMX->iDecH264WasSw)
+
+	extra_mem_size = (2+mb_num_y)*mb_num_x*8 /*MB_INFO*/
+            + (mb_num_total*16) /*i4x4pred_mode_ptr*/
+            + (mb_num_total*16) /*direct_ptr*/
+            + (mb_num_total*24) /*nnz_ptr*/
+            + (mb_num_total*2*16*2*2) /*mvd*/
+            + (mb_num_total*4) /*slice_nr_ptr*/
+            + 3*4*17 /*fs, fs_ref, fs_ltref*/
+            + 17*(7*4+(23+150*2*17)*4+mb_num_total*16*(2*2*2 + 1 + 1 + 4 + 4)+((mb_num_x*16+48)*(mb_num_y*16+48)*3/2)) /*dpb_ptr*/
+            + mb_num_total /*g_MbToSliceGroupMap*/
+            +10*1024; //rsv
+        pAvcDecoder_OMX->iDecoder_ext_cache_buffer_ptr = oscl_malloc(extra_mem_size+4);
         if(pAvcDecoder_OMX->iDecoder_ext_cache_buffer_ptr==NULL)
         {
             pAvcDecoder_OMX->iBufferAllocFail = OMX_TRUE;
-            SCI_TRACE_LOW("AvcDecoder_OMX iDecoder_ext_cache_buffer_ptr alloc  error\n");
+            OMX_H264DEC_ERR ("%s: iDecoder_ext_cache_buffer_ptr alloc  error\n", __FUNCTION__);
             return OMX_FALSE;
         }
+        extra_mem[SW_CACHABLE].common_buffer_ptr =(uint8 *)( ((int)pAvcDecoder_OMX->iDecoder_ext_cache_buffer_ptr+3)&(~0x3));
+        extra_mem[SW_CACHABLE].size = extra_mem_size;
+
+        H264DecMemInit(extra_mem);
         pAvcDecoder_OMX->iExternalBufferWasSet = OMX_TRUE;
-        codec_buf.common_buffer_ptr =(uint8 *)( ((int)pAvcDecoder_OMX->iDecoder_ext_cache_buffer_ptr+3)&(~0x3));
-        codec_buf.size = ext_buffer_size;
-        H264DecMemCacheInit(&codec_buf);
     }	
 
-
     pAvcDecoder_OMX->MaxNumFs = aNumBuffers;
-
     pAvcDecoder_OMX->iReconfigWidth = width;
     pAvcDecoder_OMX->iReconfigHeight = height;
 
@@ -214,7 +242,7 @@ int AvcDecoder_OMX::ActivateSPS_OMX(void* aUserData, uint width,uint height, uin
     pAvcDecoder_OMX->iReconfigSliceHeight = height;
     pAvcDecoder_OMX->FrameSize = width*height*3/2;   
 
-    if (pAvcDecoder_OMX->MaxWidth <width)
+    if (pAvcDecoder_OMX->MaxWidth < width)
     {
         pAvcDecoder_OMX->MaxWidth = width;
     }
@@ -231,7 +259,8 @@ int AvcDecoder_OMX::ActivateSPS_OMX(void* aUserData, uint width,uint height, uin
 /* initialize video decoder */
 OMX_BOOL AvcDecoder_OMX::InitializeVideoDecode_OMX()
 {
-    SCI_TRACE_LOW("AvcDecoder_OMX::InitializeVideoDecode_OMX\n");
+    OMX_H264DEC_INFO ("%s, %d", __FUNCTION__, __LINE__);
+    
     MaxWidth = 0;
     MaxHeight = 0;
     MaxNumFs = 0;	
@@ -242,22 +271,21 @@ OMX_BOOL AvcDecoder_OMX::InitializeVideoDecode_OMX()
         if(iStream_buffer_ptr==NULL)
         {
             iBufferAllocFail = OMX_TRUE;
-            SCI_TRACE_LOW("AvcDecoder_OMX: iStream_buffer_ptr alloc  error\n");
+            OMX_H264DEC_ERR ("AvcDecoder_OMX: iStream_buffer_ptr alloc  error\n");
             return OMX_FALSE;
         }
         iStreamBufferWasSet = OMX_TRUE;
     }
-
 
     MMCodecBuffer codec_buf;
     MMDecVideoFormat video_format;	
     if(!iDecoder_int_buffer_ptr)
     {
         iDecoder_int_buffer_ptr = oscl_malloc(H264_DECODER_INTERNAL_BUFFER_SIZE+4);
-        if(iDecoder_int_buffer_ptr==NULL)
+        if(iDecoder_int_buffer_ptr == NULL)
         {
             iBufferAllocFail = OMX_TRUE;
-            SCI_TRACE_LOW("AvcDecoder_OMX::InitializeVideoDecode cannot malloc VID internal buff \n");
+            OMX_H264DEC_ERR ("%s: cannot malloc VID internal buff", __FUNCTION__);
             return OMX_FALSE;
         }
     }		
@@ -271,6 +299,7 @@ OMX_BOOL AvcDecoder_OMX::InitializeVideoDecode_OMX()
     video_format.i_extra = 0;
     H264Dec_RegBufferCB(VSP_bind_cb,VSP_unbind_cb,(void *)this);
     H264Dec_RegSPSCB( AvcDecoder_OMX::ActivateSPS_OMX);
+    H264Dec_RegFlushCacheCB( AvcDecoder_OMX::FlushCache_OMX);
 
     MMDecRet ret = H264DecInit(&codec_buf,&video_format);
 		
@@ -282,15 +311,14 @@ OMX_BOOL AvcDecoder_OMX::InitializeVideoDecode_OMX()
 
 OMX_BOOL AvcDecoder_OMX::FlushOutput_OMX(OMX_BUFFERHEADERTYPE **aOutBufferForRendering)
 {
-   	 SCI_TRACE_LOW("AvcDecoder_OMX::FlushOutput_OMX\n");
-	return (OMX_BOOL)H264Dec_GetLastDspFrm((void **)aOutBufferForRendering);
+    OMX_H264DEC_INFO ("%s, %d", __FUNCTION__, __LINE__);
+    return (OMX_BOOL)H264Dec_GetLastDspFrm((void **)aOutBufferForRendering);
 }
-
 
 /* Initialization routine */
 OMX_ERRORTYPE AvcDecoder_OMX::AvcDecInit_OMX()
 {
-    SCI_TRACE_LOW("AvcDecoder_OMX::AvcDecInit_OMX\n");
+    OMX_H264DEC_INFO ("%s, %d", __FUNCTION__, __LINE__);
     if (OMX_FALSE == InitializeVideoDecode_OMX())
     {
         return OMX_ErrorInsufficientResources;
@@ -306,6 +334,10 @@ OMX_ERRORTYPE AvcDecoder_OMX::AvcDecInit_OMX()
     iReconfigSliceHeight = 0;
 
     iBufferAllocFail = OMX_FALSE;	
+
+#ifdef H264CODEC_NO_PMEM
+    iDecH264WasSw = OMX_TRUE;
+#endif
 
     return OMX_ErrorNone;
 }
@@ -325,7 +357,7 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
         OMX_S32* iFrameCount, OMX_BOOL aMarkerFlag, OMX_BOOL *aResizeFlag, OMX_BOOL *notSupport)
 {
 
-//   SCI_TRACE_LOW("AvcDecoder_OMX::AvcDecodeVideo_OMX %d,%d: %x,%x,%x,%x,%x,%x\n",*aInBufSize,aMarkerFlag,(*aInputBuf)[0],(*aInputBuf)[1],(*aInputBuf)[2],(*aInputBuf)[3],(*aInputBuf)[4],(*aInputBuf)[5]);
+   OMX_H264DEC_DEBUG ("%s: %d,%d: %x,%x,%x,%x,%x,%x\n",__FUNCTION__, *aInBufSize,aMarkerFlag,(*aInputBuf)[0],(*aInputBuf)[1],(*aInputBuf)[2],(*aInputBuf)[3],(*aInputBuf)[4],(*aInputBuf)[5]);
 	
     MMDecRet Status;
     uint8* pNalBuffer;
@@ -347,7 +379,7 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
     {
     	*notSupport = OMX_TRUE;
 	 iBufferAllocFail = OMX_FALSE;	
-	 SCI_TRACE_LOW("AvcDecoder_OMX dec not support because of buffer alloc fail\n");
+	 OMX_H264DEC_ERR ("%s: dec not support because of buffer alloc fail", __FUNCTION__);
 	 return OMX_FALSE;
     }		
 	
@@ -358,10 +390,10 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
     	{
     	  offset = 3 ;
     	}
-		if(*(*aInputBuf+2)==0&& *(*aInputBuf+3)==1)
-		{
-	      offset = 4 ;
-		}
+        if(*(*aInputBuf+2)==0&& *(*aInputBuf+3)==1)
+        {
+            offset = 4 ;
+        }
     }
     if (!aMarkerFlag)
     {
@@ -370,8 +402,7 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
         {    
                 return OMX_FALSE;
         }
-    }
-    else
+    }else
     {
         pNalBuffer = *aInputBuf+ offset;
         NalSize = *aInBufSize- offset;
@@ -382,56 +413,61 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
     int nal_unit_type = pNalBuffer[0] & 0x1f;
     if(7 == nal_unit_type)//sps
     {
-        if( !iDecH264WasSw && (0x64 == pNalBuffer[1] /*hp*/ || 0x4d == pNalBuffer[1] /*mp*/ || OldStride > 720 || OldSliceHeight > 576) /*D1*/)
-        {    
+        OMX_H264DEC_INFO ("%s, sps data, iDecH264WasSw=%d, header=0x%x,%x", __FUNCTION__, iDecH264WasSw,  pNalBuffer[0], pNalBuffer[1] );
+
+        if( !iDecH264WasSw && (0x64 == pNalBuffer[1] /*hp*/ /* ||0x4d == pNalBuffer[1]*/ /*mp*/ || OldStride > 720 || OldSliceHeight > 576) /*D1*/)
+        {
             *aResizeFlag = OMX_TRUE;
             iDecH264WasSw = OMX_TRUE;
 #ifdef YUV_THREE_PLANE
             aPortParam->format.video.nStride +=48;
-	     aPortParam->format.video.nSliceHeight +=48;
-            aPortParam->nBufferSize = (aPortParam->format.video.nSliceHeight * aPortParam->format.video.nStride * 3) >> 1;
+            aPortParam->format.video.nSliceHeight +=48;
 #endif
-            SCI_TRACE_LOW("resize flag set true for sofeware decoder!, stride:%d, height:%d, size:%d",
-            aPortParam->format.video.nStride, aPortParam->format.video.nSliceHeight, aPortParam->nBufferSize);
+            OMX_H264DEC_INFO("resize flag set true for sofeware decoder!, stride:%d, height:%d",
+                aPortParam->format.video.nStride, aPortParam->format.video.nSliceHeight);
         }
     }
 
     int picPhyAddr = (static_cast<OpenmaxAvcAO * > (ipOMXComponent))->FindPhyAddr((uint32)aOutBuffer->pBuffer);
     if(!picPhyAddr)
     {
-        SCI_TRACE_LOW("AvcDecoder_OMX FindPhyAddr failed");
+        OMX_H264DEC_ERR ("AvcDecoder_OMX FindPhyAddr failed");
         return OMX_FALSE; 
     }
 
     GraphicBufferMapper &mapper = GraphicBufferMapper::get();
-    if((static_cast<OpenmaxAvcAO * > (ipOMXComponent))->iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX]){
+    if((static_cast<OpenmaxAvcAO * > (ipOMXComponent))->iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX])
+    {
     	int width = aPortParam->format.video.nStride;
     	int height = aPortParam->format.video.nSliceHeight;
     	Rect bounds(width, height);
     	void *vaddr;
 	int usage;
-	if(iDecH264WasSw){
+	if(iDecH264WasSw)
+        {
 		usage = GRALLOC_USAGE_SW_READ_OFTEN|GRALLOC_USAGE_SW_WRITE_OFTEN;
-	}else{
+	}else
+	{
 		usage = GRALLOC_USAGE_SW_WRITE_RARELY;
 	}
     	if(mapper.lock((const native_handle_t*)aOutBuffer->pBuffer, usage, bounds, &vaddr))
     	{
-            SCI_TRACE_LOW("AvcDecoder_OMX mapper.lock fail %x",aOutBuffer->pBuffer);
+            OMX_H264DEC_ERR ("%s: mapper.lock fail %x", __FUNCTION__, aOutBuffer->pBuffer);
             return OMX_FALSE;			
     	}	
 	H264Dec_SetCurRecPic((uint8*)(vaddr),(uint8*)picPhyAddr,(void *)(aOutBuffer)); 
-    }else{	
-       //SCI_TRACE_LOW("VSP DPB::AvcDecoder_OMX::AvcDecodeVideo_OMX set cur pic  %x,%x,%x\n",aOutBuffer->pBuffer,aOutBuffer,picPhyAddr);
+    }else
+    {	
+       OMX_H264DEC_DEBUG ("%s: set cur pic  %x,%x,%x\n", __FUNCTION__, aOutBuffer->pBuffer,aOutBuffer,picPhyAddr);
        H264Dec_SetCurRecPic((uint8*)(aOutBuffer->pBuffer),(uint8*)picPhyAddr,(void *)(aOutBuffer)); 
     }
 
     MMDecInput dec_in;
     MMDecOutput dec_out;
 	
-    if(NalSize>H264_DECODER_STREAM_BUFFER_SIZE)
+    if(NalSize > H264_DECODER_STREAM_BUFFER_SIZE)
     {
-    	    SCI_TRACE_LOW("AvcDecoder_OMX input stream too big %d\n",NalSize);
+    	    OMX_H264DEC_ERR ("%s: input stream too big %d\n", __FUNCTION__, NalSize);
 	    return OMX_FALSE;
     }
     
@@ -449,21 +485,21 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
 
     dec_out.frameEffective = 0;	
 
-#if PROFILING_ON
-        OMX_U32 StartTime = OsclTickCount::TickCount();
-#endif
+//#if PROFILING_ON
+//    OMX_U32 StartTime = OsclTickCount::TickCount();
+//#endif
 
     Status = H264DecDecode(&dec_in,&dec_out);
 
-#if PROFILING_ON
-        OMX_U32 EndTime = OsclTickCount::TickCount();
-        iTotalTicks += (EndTime - StartTime);
-#endif
+//#if PROFILING_ON
+//        OMX_U32 EndTime = OsclTickCount::TickCount();
+//        iTotalTicks += (EndTime - StartTime);
+//#endif
 
     if((static_cast<OpenmaxAvcAO * > (ipOMXComponent))->iUseAndroidNativeBuffer[OMX_PORT_OUTPUTPORT_INDEX]){
 	if(mapper.unlock((const native_handle_t*)aOutBuffer->pBuffer))
 	{
-            SCI_TRACE_LOW("AvcDecoder_OMX mapper.unlock fail %x",aOutBuffer->pBuffer);	
+            OMX_H264DEC_ERR ("%s: mapper.unlock fail %x", __FUNCTION__, aOutBuffer->pBuffer);	
 	}
     }
 	
@@ -474,7 +510,8 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
 
 	aPortParam->format.video.nFrameWidth = iReconfigWidth;
 	aPortParam->format.video.nFrameHeight = iReconfigHeight;
-        if( !iDecH264WasSw){
+        if( !iDecH264WasSw)
+        {
             aPortParam->format.video.nStride = iReconfigStride;
             aPortParam->format.video.nSliceHeight = iReconfigSliceHeight;
         }else
@@ -491,20 +528,19 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
 	 // Decoder components always output YUV420 format
 	aPortParam->nBufferSize = (aPortParam->format.video.nSliceHeight * aPortParam->format.video.nStride * 3) >> 1;
 
-
 	if ((OldStride != aPortParam->format.video.nStride) || (OldSliceHeight !=  aPortParam->format.video.nSliceHeight))
 	{
-		  *aResizeFlag = OMX_TRUE;
+             *aResizeFlag = OMX_TRUE;
 	}
 
 	// make sure that the number of buffers that the decoder requires is less than what we allocated
 	// we should have at least 2 more than the decoder (one for omx component and one for downstream)
 	if (MaxNumFs + 2 > aPortParam->nBufferCountActual)
 	{
-		 // even if buffers are the correct size - we must do port reconfig because of buffer count
-		 *aResizeFlag = OMX_TRUE;
-		// adjust only buffer count min - nBufferCountActual still needs to be preserved until port becomes disabled
-		aPortParam->nBufferCountMin = MaxNumFs + 2;
+            // even if buffers are the correct size - we must do port reconfig because of buffer count
+            *aResizeFlag = OMX_TRUE;
+            // adjust only buffer count min - nBufferCountActual still needs to be preserved until port becomes disabled
+            aPortParam->nBufferCountMin = MaxNumFs + 2;
 	}
         iNewSPSActivation = OMX_FALSE;
      }
@@ -514,57 +550,113 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
         //iSkipToIDR = OMX_FALSE;
         if (!iAvcActiveFlag)
             iAvcActiveFlag = OMX_TRUE;
-			
-		if(dec_out.frameEffective)
-		{
-			*aOutBufferForRendering = (OMX_BUFFERHEADERTYPE *)dec_out.pBufferHeader;
-			*aOutputLength = FrameSize;
-		}
+
+        if(dec_out.frameEffective)
+        {
+            *aOutBufferForRendering = (OMX_BUFFERHEADERTYPE *)dec_out.pBufferHeader;
+            *aOutputLength = FrameSize;
+        }
         (*iFrameCount)++;
 
-		if(dec_out.reqNewBuf)	
-		{
+        if(dec_out.reqNewBuf)	
+        {
             *need_new_pic = OMX_TRUE;
-			iSkipToIDR = OMX_FALSE;
+            iSkipToIDR = OMX_FALSE;
+        }
 
-		}
-		return OMX_TRUE;
+        return OMX_TRUE;
     }else
     {
        iSkipToIDR = OMX_TRUE;
-       SCI_TRACE_LOW("AvcDecoder_OMX dec err %d\n",(*iFrameCount));    
-       if(Status == MMDEC_NOT_SUPPORTED){
-		*notSupport = OMX_TRUE;
-		SCI_TRACE_LOW("AvcDecoder_OMX dec format not support\n");
+       OMX_H264DEC_ERR ("%s: dec err %d\n", __FUNCTION__, (*iFrameCount));    
+       if(Status == MMDEC_NOT_SUPPORTED)
+        {
+            *notSupport = OMX_TRUE;
+            OMX_H264DEC_ERR ("%s: dec format not support", __FUNCTION__);
        }
+
+    if(7 == nal_unit_type)//sps
+    	{
+		aPortParam->format.video.nFrameWidth = dec_out.frame_width;
+		aPortParam->format.video.nFrameHeight = dec_out.frame_height;
+	        if( !iDecH264WasSw){
+	            aPortParam->format.video.nStride =  dec_out.frame_width;
+	            aPortParam->format.video.nSliceHeight = dec_out.frame_height;
+	        }else
+	        {
+#ifdef YUV_THREE_PLANE
+	            aPortParam->format.video.nStride = dec_out.frame_width+48;
+	            aPortParam->format.video.nSliceHeight = dec_out.frame_height+48;
+#else
+	            aPortParam->format.video.nStride = dec_out.frame_width;
+	            aPortParam->format.video.nSliceHeight = dec_out.frame_height;
+#endif
+	        }
+		 // finally, compute the new minimum buffer size.
+		 // Decoder components always output YUV420 format
+		aPortParam->nBufferSize = (aPortParam->format.video.nSliceHeight * aPortParam->format.video.nStride * 3) >> 1;
+
+			OMX_H264DEC_INFO ("%d, %d",aPortParam->format.video.nStride,aPortParam->format.video.nSliceHeight);
+		if ((OldStride != aPortParam->format.video.nStride) || (OldSliceHeight !=  aPortParam->format.video.nSliceHeight))
+		{
+			  *aResizeFlag = OMX_TRUE;
+		}
+
+		// make sure that the number of buffers that the decoder requires is less than what we allocated
+		// we should have at least 2 more than the decoder (one for omx component and one for downstream)
+		if (MaxNumFs + 2 > aPortParam->nBufferCountActual)
+		{
+			 // even if buffers are the correct size - we must do port reconfig because of buffer count
+			 *aResizeFlag = OMX_TRUE;
+			// adjust only buffer count min - nBufferCountActual still needs to be preserved until port becomes disabled
+			aPortParam->nBufferCountMin = MaxNumFs + 2;
+		}		
+    	}
+	
     	return  OMX_FALSE;
     }
 }
 
-
 OMX_ERRORTYPE AvcDecoder_OMX::AvcDecDeinit_OMX()
 {
-    SCI_TRACE_LOW("AvcDecoder_OMX::AvcDecDeinit_OMX\n");
-    if( iDecoder_int_buffer_ptr){
+    OMX_H264DEC_INFO ("%s, %d", __FUNCTION__, __LINE__);
+    
+    H264DecRelease();
+    
+    if( iDecoder_int_buffer_ptr)
+    {
 	oscl_free(iDecoder_int_buffer_ptr);
 	iDecoder_int_buffer_ptr = NULL;
     }
-    H264DecRelease();
+    
     if(iExternalBufferWasSet)
     {
-		if (!iDecH264WasSw)
-    	{
-        	iDecExtPmemHeap.clear();
-    	}
-	 if(iDecoder_ext_cache_buffer_ptr)
-	 {
-		oscl_free(iDecoder_ext_cache_buffer_ptr);
-		iDecoder_ext_cache_buffer_ptr = NULL;
-	 }	
-	 iExternalBufferWasSet = OMX_FALSE;	
-    }		
-   if(iStreamBufferWasSet)
-   {
+        if (!iDecH264WasSw)
+        {
+            iDecExtPmemHeap.clear();
+            if(iDecExtVAddr)
+            {
+                iDecExtVAddr = NULL;
+            }
+                
+            iCMDbufferPmemHeap.clear();
+            if(iCMDbufferVAddr)
+            {
+                iCMDbufferVAddr = NULL;
+            }
+        }
+        
+        if(iDecoder_ext_cache_buffer_ptr)
+        {
+            oscl_free(iDecoder_ext_cache_buffer_ptr);
+            iDecoder_ext_cache_buffer_ptr = NULL;
+        }
+			
+        iExternalBufferWasSet = OMX_FALSE;
+    }
+    		
+    if(iStreamBufferWasSet)
+    {
         iStreamBufferWasSet = OMX_FALSE;
 
         if(iStream_buffer_ptr)
@@ -572,11 +664,10 @@ OMX_ERRORTYPE AvcDecoder_OMX::AvcDecDeinit_OMX()
             oscl_free(iStream_buffer_ptr);
             iStream_buffer_ptr = NULL;
         }
-   }
+    }
    
     return OMX_ErrorNone;
 }
-
 
 /* ======================================================================== */
 /*  Function : PVAVCAnnexBGetNALUnit()                                      */
@@ -595,10 +686,9 @@ OMX_ERRORTYPE AvcDecoder_OMX::AvcDecDeinit_OMX()
     }
    }"
 */
-static  AVCDec_Status PVAVCAnnexBGetNALUnit(uint8 *bitstream, uint8 **nal_unit,
-        int *size)
+static  AVCDec_Status PVAVCAnnexBGetNALUnit(uint8 *bitstream, uint8 **nal_unit, int *size)
 {
-    //SCI_TRACE_LOW(" PVAVCAnnexBGetNALUnit\n");
+    OMX_H264DEC_INFO ("%s, %d", __FUNCTION__, __LINE__);
     int i, j, FoundStartCode = 0;
     int end;
 
@@ -655,7 +745,7 @@ static  AVCDec_Status PVAVCAnnexBGetNALUnit(uint8 *bitstream, uint8 **nal_unit,
 
 AVCDec_Status AvcDecoder_OMX::GetNextFullNAL_OMX(uint8** aNalBuffer, int* aNalSize, OMX_U8* aInputBuf, OMX_U32* aInBufSize)
 {
-   // SCI_TRACE_LOW(" AvcDecoder_OMX::GetNextFullNAL_OMX\n");
+    OMX_H264DEC_INFO ("%s, %d", __FUNCTION__, __LINE__);
     uint8* pBuff = aInputBuf;
     OMX_U32 InputSize;
 
@@ -679,19 +769,19 @@ AVCDec_Status AvcDecoder_OMX::GetNextFullNAL_OMX(uint8** aNalBuffer, int* aNalSi
 
 void AvcDecoder_OMX::ResetDecoder()
 {
-    SCI_TRACE_LOW("AvcDecoder_OMX::ResetDecoder\n");
+    OMX_H264DEC_INFO ("%s, %d", __FUNCTION__, __LINE__);
     ReleaseReferenceBuffers();
 }
 
 void AvcDecoder_OMX::ReleaseReferenceBuffers()
 {
-        SCI_TRACE_LOW("AvcDecoder_OMX::ReleaseReferenceBuffers\n");
-	H264Dec_ReleaseRefBuffers();
+    OMX_H264DEC_INFO ("%s, %d", __FUNCTION__, __LINE__);
+    H264Dec_ReleaseRefBuffers();
 }
 
 void AvcDecoder_OMX::CalculateBufferParameters(OMX_PARAM_PORTDEFINITIONTYPE* aPortParam)
 {
-    SCI_TRACE_LOW("AvcDecoder_OMX::CalculateBufferParameters\n");
+   OMX_H264DEC_INFO ("%s, %d", __FUNCTION__, __LINE__);
     // If decoder has decoded the parameters, retain the updated values from the decoder
     // and do not recalculate
     if (OMX_FALSE == iAvcActiveFlag)

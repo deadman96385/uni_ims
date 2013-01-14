@@ -395,9 +395,8 @@ typedef struct dec_vop_mode_tag
 	int16 VT_used;
 
 	int32 is_work_mode_set;
-			
-	uint16 is_first_frame;
-	uint16 is_previous_B_VOP;
+
+	int32 is_previous_cmd_done;
 		
 	uint32 *cmd_data_buf[2];
 	uint32 * cmd_info_buf[2];

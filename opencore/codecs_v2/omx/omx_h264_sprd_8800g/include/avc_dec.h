@@ -36,21 +36,20 @@
 #include <binder/MemoryHeapIon.h>
 #define SPRD_ION_DEV "/dev/ion"
 
-#define SPRD_VSP_DRIVER "/dev/sprd_vsp"
 #define LOG_TAG "VSP"
 #include <utils/Log.h>
-#define  SCI_TRACE_LOW   ALOGI
 
+//#define  SCI_TRACE_LOW   LOGI
+#define OMX_H264DEC_DEBUG //LOGD
+#define OMX_H264DEC_INFO  ALOGI
+#define OMX_H264DEC_ERR  ALOGE
 
 using namespace android;
 
-#if !defined(CHIP_8810)	
+	
 #define H264_DECODER_INTERNAL_BUFFER_SIZE (70*1024+256*512*480/256)//170*1024 
-#else
-#define H264_DECODER_INTERNAL_BUFFER_SIZE (200*1024) 
-#endif
+
 #define H264_DECODER_STREAM_BUFFER_SIZE 1024*1024
-#define PMEM_DRIVER "/dev/pmem_adsp"
 
 
 /**
@@ -163,7 +162,7 @@ class AvcDecoder_OMX
         AVCDec_Status GetNextFullNAL_OMX(uint8** aNalBuffer, int* aNalSize, OMX_U8* aInputBuf, OMX_U32* aInBufSize);
 
         static int ActivateSPS_OMX(void* aUserData, uint width,uint height, uint aNumBuffers);
-
+        static int FlushCache_OMX(void* aUserData, int *vadr,int *paddr,int size);
         void ResetDecoder(); // for repositioning
 
         void ReleaseReferenceBuffers();
@@ -183,6 +182,10 @@ private:
          sp<MemoryHeapIon> iDecExtPmemHeap;
          OMX_U32  iDecExtVAddr;
          OMX_U32  iDecExtPhyAddr;
+
+         sp<MemoryHeapIon> iCMDbufferPmemHeap;
+         OMX_U32  iCMDbufferVAddr;
+         OMX_U32  iCMDbufferPhyAddr;
 
 	 OMX_BOOL iBufferAllocFail;	 
 };

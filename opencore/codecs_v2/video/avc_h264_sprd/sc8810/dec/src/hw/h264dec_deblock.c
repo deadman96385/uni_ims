@@ -473,6 +473,7 @@ PUBLIC void H264Dec_BS_and_Para (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T *mb_
 		BS[0] = BS[1] = BS[2] = BS[3] = 0x0;
 	}else
 	{
+#if 0
 		if (img_ptr->curr_slice_ptr->LFDisableIdc == 2)
 		{
 			mb_cache_ptr->top_edge_filter_flag = mb_cache_ptr->mb_avail_b;
@@ -491,6 +492,11 @@ PUBLIC void H264Dec_BS_and_Para (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T *mb_
 			BS_and_Para_interMB_hor (img_ptr, mb_info_ptr, mb_cache_ptr);
 			BS_and_Para_interMB_ver (img_ptr, mb_info_ptr, mb_cache_ptr);		
 		}
+#else
+		uint32 *BS = (uint32 *)(mb_cache_ptr->BS);	
+		BS[0] = BS[2] = 0x33334444;
+		BS[2] = BS[3] = 0x33333333;
+#endif
 	}
 
 	H264Dec_Config_DBK (img_ptr, mb_info_ptr, mb_cache_ptr);

@@ -23,269 +23,154 @@
     {
 #endif
 
-//extra memory
-LOCAL uint32 s_used_extra_mem = 0x0;
-LOCAL uint32 s_extra_mem_size = 0x1000000;	//16Mbyte
+#define H264_MALLOC_PRINT   //LOGD
 
-//inter memory
-LOCAL uint32 s_used_inter_mem = 0x0;
-LOCAL uint32 s_inter_mem_size = 0x400000;	//4Mbyte
-
-LOCAL uint8 *s_extra_mem_bfr_ptr = NULL;
-LOCAL uint8 *s_inter_mem_bfr_ptr = NULL;
-
-#ifdef _VSP_LINUX_
-LOCAL uint8 *s_extra_mem_bfr_phy_ptr = NULL;
-PUBLIC uint8 *H264Dec_ExtraMem_V2Phy(uint8 *vAddr)
+typedef struct codec_buf_tag
 {
-	return (vAddr-s_extra_mem_bfr_ptr)+s_extra_mem_bfr_phy_ptr;
+    uint32 used_size;
+    uint32 total_size;
+    uint8* v_base;  //virtual address
+    uint8* p_base;  //physical address    
+}CODEC_BUF_T;
+
+CODEC_BUF_T s_inter_mem, s_extra_mem[MAX_MEM_TYPE];
+
+/*****************************************************************************
+ ** Note:	Alloc the internal memory for h264 decoder. 
+ *****************************************************************************/
+PUBLIC void *H264Dec_InterMemAlloc(uint32 need_size, int32 aligned_byte_num)
+{
+	uint32 CurrAddr, AlignedAddr;
+		
+	CurrAddr = (uint32)(s_inter_mem.v_base) + s_inter_mem.used_size;
+	AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
+	need_size += (AlignedAddr - CurrAddr);
+
+	if((0 == need_size)||(need_size> (s_inter_mem.total_size-s_inter_mem.used_size)))
+	{
+            SCI_TRACE_LOW("%s  failed, total_size:%d, used_size: %d, need_size:%d\n", __FUNCTION__, s_inter_mem.total_size, s_inter_mem.used_size,need_size);	
+            return NULL; //lint !e527
+	}
+	
+	s_inter_mem.used_size+= need_size;
+
+	return (void *)AlignedAddr;
 }
 
-LOCAL uint8 *s_extra_mem_cache_bfr_ptr = NULL;
-LOCAL uint8 *s_extra_mem_cache_bfr_phy_ptr = NULL;
-LOCAL uint32 s_used_extra_mem_cache = 0x0;
-LOCAL uint32 s_extra_mem_cache_size = 0x1000000;	//16Mbyte
-
-PUBLIC void *H264Dec_ExtraMemCacheAlloc(uint32 mem_size)
+/*****************************************************************************
+ ** Note:	Alloc the external memory for h264 decoder. 
+ *****************************************************************************/
+PUBLIC void *H264Dec_ExtraMemAlloc(uint32 need_size, int32 aligned_byte_num, int32 type)
 {
-	uint8 *pMem;
-	mem_size = ((mem_size + 3) &(~3));
+	uint32 CurrAddr, AlignedAddr;
+		
+	CurrAddr = (uint32)s_extra_mem[type].v_base + s_extra_mem[type].used_size;
+	AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
+	need_size += (AlignedAddr - CurrAddr);
 
-//	SCI_TRACE_LOW("H264Dec_ExtraMemCacheAlloc: mem_size:%d\n", mem_size);
+	H264_MALLOC_PRINT("%s: mem_size:%d\n", __FUNCTION__, need_size);
 
-	if((0 == mem_size)||(mem_size> (s_extra_mem_cache_size-s_used_extra_mem_cache)))
+	if((0 == need_size)||(need_size >  (s_extra_mem[type].total_size-s_extra_mem[type].used_size)))
 	{
-        SCI_TRACE_LOW("H264Dec_ExtraMemCacheAlloc failed,required=%d,total=%d,used=%d",
-                        mem_size,s_extra_mem_cache_size,s_used_extra_mem_cache);
+            SCI_TRACE_LOW("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, s_extra_mem[type].total_size, s_extra_mem[type].used_size,need_size, type);	
+            return NULL;
+	}
+	
+	s_extra_mem[type].used_size += need_size;
+	
+	return (void *)AlignedAddr;
+}
+
+/*****************************************************************************
+ ** Note:	 mapping from virtual to physical address
+ *****************************************************************************/
+PUBLIC uint8 *H264Dec_ExtraMem_V2P(uint8 *vAddr, int32 type)
+{
+    if (type >= MAX_MEM_TYPE)
+    {
+        SCI_TRACE_LOW("%s, memory type is error!", __FUNCTION__);
         return NULL;
-	}
-	
-	pMem = s_extra_mem_cache_bfr_ptr + s_used_extra_mem_cache;
-	s_used_extra_mem_cache += mem_size;
-	
-	return pMem;
+    }else
+    {
+	return ((vAddr-s_extra_mem[type].v_base)+s_extra_mem[type].p_base);
+    }
 }
 
 /*****************************************************************************
- **	Name : 			Mp4Dec_ExtraMemCacheAlloc_4WordAlign
- ** Description:	Alloc the common memory for mp4 decoder. 
- ** Author:			Xiaowei Luo
- **	Note:
+ **	Note:               for cache flushing operation
  *****************************************************************************/
-PUBLIC void *H264Dec_ExtraMemCacheAlloc_4WordAlign(uint32 mem_size)
+PUBLIC MMDecRet H264Dec_ExtraMem_GetInfo(MMCodecBuffer *pBuffer, int32 type)
 {
-	uint32 CurrAddr, _4WordAlignAddr;
-		
-	CurrAddr = (uint32)s_extra_mem_cache_bfr_ptr + s_used_extra_mem_cache;
+    pBuffer->common_buffer_ptr = s_extra_mem[type].v_base;
+    pBuffer->common_buffer_ptr_phy = s_extra_mem[type].p_base;
+    pBuffer->size = s_extra_mem[type].total_size;
 
-	_4WordAlignAddr = ((CurrAddr + 15) >>4)<<4;
-
-	mem_size += (_4WordAlignAddr - CurrAddr);
-
-//	SCI_TRACE_LOW("H264Dec_ExtraMemCacheAlloc_4WordAlign: mem_size:%d\n", mem_size);
-
-	if((0 == mem_size)||(mem_size>  (s_extra_mem_cache_size-s_used_extra_mem_cache)))
-	{
-//        SCI_TRACE_LOW("Mp4Dec_ExtraMemCacheAlloc_64WordAlign failed,required=%d,total=%d,used=%d",
-//                       mem_size,s_extra_mem_size,s_used_extra_mem);
-        return NULL;
-	}
-	
-	s_used_extra_mem_cache += mem_size;
-	
-	return (void *)_4WordAlignAddr;
-}
-
-MMDecRet H264DecMemCacheInit(MMCodecBuffer *pBuffer)
-{
-	s_extra_mem_cache_bfr_ptr = pBuffer->common_buffer_ptr;
-	s_extra_mem_cache_bfr_phy_ptr = pBuffer->common_buffer_ptr_phy;
-	s_extra_mem_cache_size = pBuffer->size;
-//	SCI_MEMSET(s_extra_mem_cache_bfr_ptr, 0, s_extra_mem_cache_size);
-
-//	SCI_TRACE_LOW("H264DecMemCacheInit: mem_size:%0x, %d\n", s_extra_mem_cache_bfr_ptr, s_extra_mem_cache_size);
-
-	//reset memory used count
-	s_used_extra_mem_cache = 0;
-
-	return MMDEC_OK;
-}
-
-#endif
-
-/*****************************************************************************
- **	Name : 			H264Dec_ExtraMemAlloc
- ** Description:	Alloc the common memory for h264 decoder. 
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void *H264Dec_ExtraMemAlloc(uint32 mem_size)
-{
-	uint8 *pMem;
-	mem_size = ((mem_size + 3) &(~3));
-
-//	SCI_TRACE_LOW("H264Dec_ExtraMemAlloc: mem_size:%d\n", mem_size);
-
-	if((0 == mem_size)||(mem_size> (s_extra_mem_size-s_used_extra_mem)))
-	{
-                SCI_TRACE_LOW("H264Dec_ExtraMemAlloc  failed %d,%d,%d\n",s_used_extra_mem,s_extra_mem_size,mem_size);
-		SCI_ASSERT(0);
-		return 0; //lint !e527
-	}
-	
-	pMem = s_extra_mem_bfr_ptr + s_used_extra_mem;
-	s_used_extra_mem += mem_size;
-
-	//SCI_TRACE_LOW("H264Dec_ExtraMemAlloc s_used_inter_mem %d\n",s_used_extra_mem);	
-	return pMem;
+    return MMDEC_OK;
 }
 
 /*****************************************************************************
- **	Name : 			H264Dec_ExtraMemAlloc_64WordAlign
- ** Description:	Alloc the common memory for h264 decoder. 
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void *H264Dec_ExtraMemAlloc_64WordAlign(uint32 mem_size)
-{
-	uint32 CurrAddr, _64WordAlignAddr;
-		
-	CurrAddr = (uint32)s_extra_mem_bfr_ptr + s_used_extra_mem;
-
-	_64WordAlignAddr = ((CurrAddr + 255) >>8)<<8;
-
-	mem_size += (_64WordAlignAddr - CurrAddr);
-
-//	SCI_TRACE_LOW("H264Dec_ExtraMemAlloc_64WordAlign: mem_size:%d\n", mem_size);
-
-	if((0 == mem_size)||(mem_size> (s_extra_mem_size-s_used_extra_mem)))
-	{
-                SCI_TRACE_LOW("H264Dec_ExtraMemAlloc_64WordAlign   failed %d,%d,%d\n",s_used_extra_mem,s_extra_mem_size,mem_size);	
-		SCI_ASSERT(0);
-		return 0; //lint !e527
-	}
-	
-	s_used_extra_mem += mem_size;
-
- 	//SCI_TRACE_LOW("H264Dec_ExtraMemAlloc_64WordAlign s_used_inter_mem %d\n",s_used_extra_mem);	
-	return (void *)_64WordAlignAddr;
-}
-/*****************************************************************************
- **	Name : 			H264Dec_InterMemAlloc
- ** Description:	Alloc the common memory for h264 decoder. 
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void *H264Dec_InterMemAlloc(uint32 mem_size)
-{
-	uint8 *pMem;
-	mem_size = ((mem_size + 3) &(~3));
-
-//	SCI_TRACE_LOW("Mp4Dec_InterMemAlloc: mem_size:%d\n", mem_size);
-
-	if((0 == mem_size)||(mem_size> (s_inter_mem_size-s_used_inter_mem)))
-	{
-		SCI_TRACE_LOW("H264Dec_InterMemAlloc  failed %d,%d,%d\n",s_used_inter_mem,s_inter_mem_size,mem_size);	
-		SCI_ASSERT(0);
-		return 0; //lint !e527
-	}
-	
-	pMem = s_inter_mem_bfr_ptr + s_used_inter_mem;
-	s_used_inter_mem += mem_size;
-	//SCI_TRACE_LOW("H264Dec_InterMemAlloc s_used_inter_mem %d\n",s_used_inter_mem);
-	return pMem;
-}
-
-/*****************************************************************************
- **	Name : 			H264Dec_InterMemAlloc_4WordAlign
- ** Description:	Alloc the common memory for h264 decoder. 
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void *H264Dec_InterMemAlloc_4WordAlign(uint32 mem_size)
-{
-	uint32 CurrAddr, _4WordAlignAddr;
-		
-	CurrAddr = (uint32)s_inter_mem_bfr_ptr + s_used_inter_mem;
-
-	_4WordAlignAddr = ((CurrAddr + 15) >>4)<<4;
-
-	mem_size += (_4WordAlignAddr - CurrAddr);
-
-//	SCI_TRACE_LOW("H264Dec_ExtraMemAlloc_64WordAlign: mem_size:%d\n", mem_size);
-
-	if((0 == mem_size)||(mem_size> (s_inter_mem_size-s_used_inter_mem)))
-	{
-              SCI_TRACE_LOW("H264Dec_ExtraMemAlloc_64WordAlign   failed %d,%d,%d\n", s_used_inter_mem, s_inter_mem_size,mem_size);	
-		SCI_ASSERT(0);
-		return 0; //lint !e527
-	}
-	
-	s_used_inter_mem += mem_size;
-
- 	//SCI_TRACE_LOW("H264Dec_ExtraMemAlloc_64WordAlign s_used_inter_mem %d\n",s_used_extra_mem);	
-	return (void *)_4WordAlignAddr;
-}
-
-/*****************************************************************************
- **	Name : 			H264Dec_MemFree
- ** Description:	Free the common memory for h264 decoder.  
- ** Author:			Xiaowei Luo
- **	Note:
+ ** Note:	Free the common memory for h264 decoder.  
  *****************************************************************************/
 PUBLIC void H264Dec_FreeMem(void) 
 { 
-	s_used_inter_mem = 0;
-	s_used_extra_mem = 0;
+	s_inter_mem.used_size = 0;
+	H264Dec_FreeExtraMem();
 }
 
 /*****************************************************************************
- **	Name : 			H264Dec_FreeExtraMem
- ** Description:	Free the common memory for h264 decoder.  
- ** Author:			Xiaowei Luo
- **	Note:
+ ** Note:	Free the common memory for h264 decoder.  
  *****************************************************************************/
 PUBLIC void H264Dec_FreeExtraMem(void) 
-{ 
-	s_used_extra_mem = 0;
-	SCI_TRACE_LOW("H264Dec_FreeExtraMem\n");
+{
+    int32 type;
+
+    for (type = 0; type < MAX_MEM_TYPE; type++)
+    {
+	s_extra_mem[type].used_size = 0;
+    }
+        
+    H264_MALLOC_PRINT("%s\n", __FUNCTION__);
 }
 
+/*****************************************************************************
+ ** Note:	initialize internal memory
+ *****************************************************************************/
 PUBLIC void H264Dec_InitInterMem(MMCodecBuffer *dec_buffer_ptr)
 {
-	s_inter_mem_bfr_ptr = dec_buffer_ptr->int_buffer_ptr;
-	s_inter_mem_size = dec_buffer_ptr->int_size;
-	SCI_MEMSET(s_inter_mem_bfr_ptr, 0, s_inter_mem_size);
+    s_inter_mem.used_size = 0;
+    s_inter_mem.v_base = dec_buffer_ptr->int_buffer_ptr;
+    s_inter_mem.total_size = dec_buffer_ptr->int_size;
+    SCI_MEMSET(s_inter_mem.v_base, 0, s_inter_mem.total_size);
 
-//	SCI_TRACE_LOW("H264Dec_InitInterMem: inter_mem_size:%d\n", s_inter_mem_size);
+    H264_MALLOC_PRINT("%s: inter_mem_size:%d\n", __FUNCTION__, s_inter_mem.total_size);
 	
-	//reset memory used count
-	s_used_inter_mem = 0;
+    return;	
 }
 
-/*****************************************************************************/
-//  Description:   Init mpeg4 decoder	memory
-//	Global resource dependence: 
-//  Author:        
-//	Note:           
-/*****************************************************************************/
-MMDecRet H264DecMemInit(MMCodecBuffer *pBuffer)
+/*****************************************************************************
+ ** Note:	initialize extra memory, physical continuous and no-cachable 
+*****************************************************************************/
+PUBLIC MMDecRet H264DecMemInit(MMCodecBuffer pBuffer[])
 {
-	s_extra_mem_bfr_ptr = pBuffer->common_buffer_ptr;
-#ifdef _VSP_LINUX_
-	s_extra_mem_bfr_phy_ptr = pBuffer->common_buffer_ptr_phy;
-#endif		
-	s_extra_mem_size = pBuffer->size;
-//	SCI_MEMSET(s_extra_mem_bfr_ptr, 0, s_extra_mem_size);
+    int32 type;
 
-//	SCI_TRACE_LOW("H264Dec_ExtraMemAlloc: extra_mem_size:%d\n", s_extra_mem_size);
-	
-	//reset memory used count
-	s_used_extra_mem = 0;
+    for (type = 0; type < MAX_MEM_TYPE; type++)
+    {
+	s_extra_mem[type].used_size = 0;
+	s_extra_mem[type].v_base = pBuffer[type].common_buffer_ptr;
+	s_extra_mem[type].p_base = pBuffer[type].common_buffer_ptr_phy;
 
-	return MMDEC_OK;
+	s_extra_mem[type].total_size = pBuffer[type].size;
+
+#if 0   //NOT NEED
+	SCI_MEMSET(s_extra_mem[type].v_base, 0, s_extra_mem[type].total_size);
+#endif
+
+	H264_MALLOC_PRINT("%s: extra_mem_size:%d\n", __FUNCTION__, s_extra_mem[type].total_size);
+    }
+
+    return MMDEC_OK;
 }
-
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

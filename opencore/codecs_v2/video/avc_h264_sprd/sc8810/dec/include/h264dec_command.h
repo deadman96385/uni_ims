@@ -26,7 +26,7 @@ extern   "C"
 {
 #endif
 
-MMDecRet H264Dec_InitBitstream(void *pOneFrameBitstream, int32 length);
+MMDecRet H264Dec_InitBitstream(/*void *pOneFrameBitstream,*/ int32 length);
 MMDecRet H264Dec_init_slice_VSP(DEC_IMAGE_PARAMS_T *img_ptr, DEC_SLICE_T *curr_slice_ptr);
 void H264Dec_SeqLevelConfig (DEC_IMAGE_PARAMS_T *img_ptr);
 MMDecRet h264Dec_PicLevelSendRefAddressCommmand (DEC_IMAGE_PARAMS_T *img_ptr);

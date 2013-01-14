@@ -589,9 +589,9 @@ LOCAL void Mp4Dec_DecSecondPartitionInterErrRes(DEC_VOP_MODE_T *vop_mode_ptr, in
 			}
 
 			//set mv range
-			vop_mode_ptr->mv_x_max = (total_mb_num_x - mb_x) << 5;
+			vop_mode_ptr->mv_x_max = ((total_mb_num_x - mb_x) << 5) -1;
 			vop_mode_ptr->mv_x_min = (-mb_x - 1) << 5;
-			vop_mode_ptr->mv_y_max = (vop_mode_ptr->MBNumY - mb_y) << 5; 
+			vop_mode_ptr->mv_y_max =( (vop_mode_ptr->MBNumY - mb_y) << 5) -1; 
 			vop_mode_ptr->mv_y_min = (-mb_y - 1) << 5;
 
 

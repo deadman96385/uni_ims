@@ -25,6 +25,15 @@
     extern   "C" 
     {
 #endif
+
+typedef enum
+{
+    HW_NO_CACHABLE = 0, /*physical continuous and no-cachable, only for VSP writing and reading */
+    HW_CACHABLE,    /*physical continuous and cachable, for software writing and VSP reading */
+    SW_CACHABLE,    /*only for software writing and reading*/
+    MAX_MEM_TYPE
+} CODEC_BUF_TYPE;
+
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
@@ -43,7 +52,7 @@ MMDecRet H264DecInit(MMCodecBuffer * pBuffer,MMDecVideoFormat * pVideoFormat);
 //  Author:        
 //	Note:           
 /*****************************************************************************/
-PUBLIC MMDecRet H264DecMemInit(MMCodecBuffer *pBuffer);
+PUBLIC MMDecRet H264DecMemInit(MMCodecBuffer pBuffer[]);
 
 /*****************************************************************************/
 //  Description: Decode one vop	
@@ -95,8 +104,9 @@ int H264Dec_GetLastDspFrm(void **pOutput);
 void H264Dec_SetCurRecPic(uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader/*, int32 iDecH264WasSw*/);
 //typedef int (*FunctionType_SPS)(void* aUserData, uint width,uint height, uint aNumBuffers, uint profile);
 typedef int (*FunctionType_SPS)(void* aUserData, uint width,uint height, uint aNumBuffers);
+typedef int (*FunctionType_FlushCache)(void* aUserData, int* vaddr,int* paddr,int size);
 void H264Dec_RegSPSCB(FunctionType_SPS spsCb);
-MMDecRet H264DecMemCacheInit(MMCodecBuffer * pBuffer);
+void H264Dec_RegFlushCacheCB( FunctionType_FlushCache fluchCacheCb);
 
 #endif
 

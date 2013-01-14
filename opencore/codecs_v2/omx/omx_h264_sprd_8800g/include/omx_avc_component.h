@@ -50,11 +50,6 @@
 // If there is need for more than 10 - there will be a port reconfiguration
 
 
-//#if !defined(CHIP_8810)	
-//#include "vsp_drv_sc8800g.h"
-//#else
-//#include "vsp_drv_sc8810.h"
-//#endif
 
 using namespace android;
 

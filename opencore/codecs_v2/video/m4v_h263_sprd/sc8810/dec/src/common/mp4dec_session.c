@@ -54,14 +54,13 @@ PUBLIC void Mp4Dec_InitDecoderPara(DEC_VOP_MODE_T *vop_mode_ptr)
 	vop_mode_ptr->bInitSuceess = FALSE;
 	vop_mode_ptr->is_need_init_vsp_quant_tab = FALSE;
 	vop_mode_ptr->is_need_init_vsp_huff_tab = TRUE;
-	vop_mode_ptr->is_first_frame = TRUE;
-	vop_mode_ptr->is_previous_B_VOP = FALSE;
+	vop_mode_ptr->is_previous_cmd_done = TRUE;
 	vop_mode_ptr->is_work_mode_set = FALSE;
 
-    vop_mode_ptr->pCurDispFrame = (Mp4DecStorablePic *)Mp4Dec_InterMemAlloc(sizeof(Mp4DecStorablePic));
-	vop_mode_ptr->pCurRecFrame = (Mp4DecStorablePic *)Mp4Dec_InterMemAlloc(sizeof(Mp4DecStorablePic));
-	vop_mode_ptr->pBckRefFrame = (Mp4DecStorablePic *)Mp4Dec_InterMemAlloc(sizeof(Mp4DecStorablePic));
-	vop_mode_ptr->pFrdRefFrame = (Mp4DecStorablePic *)Mp4Dec_InterMemAlloc(sizeof(Mp4DecStorablePic));
+    vop_mode_ptr->pCurDispFrame = (Mp4DecStorablePic *)Mp4Dec_InterMemAlloc(sizeof(Mp4DecStorablePic), 4);
+	vop_mode_ptr->pCurRecFrame = (Mp4DecStorablePic *)Mp4Dec_InterMemAlloc(sizeof(Mp4DecStorablePic), 4);
+	vop_mode_ptr->pBckRefFrame = (Mp4DecStorablePic *)Mp4Dec_InterMemAlloc(sizeof(Mp4DecStorablePic), 4);
+	vop_mode_ptr->pFrdRefFrame = (Mp4DecStorablePic *)Mp4Dec_InterMemAlloc(sizeof(Mp4DecStorablePic), 4);
 
 	vop_mode_ptr->pCurDispFrame->bfrId = 0xFF;
 	vop_mode_ptr->pCurRecFrame->bfrId = 0xFF;
@@ -156,13 +155,13 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(DEC_VOP_MODE_T *vop_mode_ptr)
 	vop_mode_ptr->iStartInFrameUV = (vop_mode_ptr->FrameExtendWidth >>1) * UVEXTENTION_SIZE + UVEXTENTION_SIZE;
 
     /*MB mode for a frame*/
-    vop_mode_ptr->pMbMode = (DEC_MB_MODE_T *)Mp4Dec_ExtraMemCacheAlloc(sizeof(DEC_MB_MODE_T) * total_mb_num);
+    vop_mode_ptr->pMbMode = (DEC_MB_MODE_T *)Mp4Dec_ExtraMemAlloc(sizeof(DEC_MB_MODE_T) * total_mb_num, 4, SW_CACHABLE);
     if(NULL == vop_mode_ptr->pMbMode)
     {
         return MMDEC_MEMORY_ERROR;
     }
 	
-    vop_mode_ptr->pMbMode_prev = (DEC_MB_MODE_T *)Mp4Dec_ExtraMemCacheAlloc(sizeof(DEC_MB_MODE_T) * total_mb_num);
+    vop_mode_ptr->pMbMode_prev = (DEC_MB_MODE_T *)Mp4Dec_ExtraMemAlloc(sizeof(DEC_MB_MODE_T) * total_mb_num, 4, SW_CACHABLE);
     if(NULL == vop_mode_ptr->pMbMode)
     {
         return MMDEC_MEMORY_ERROR;
@@ -170,7 +169,7 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(DEC_VOP_MODE_T *vop_mode_ptr)
 
 	if (vop_mode_ptr->VSP_used || vop_mode_ptr->VT_used)	
 	{
-	vop_mode_ptr->mbdec_stat_ptr = (uint8 *)Mp4Dec_ExtraMemCacheAlloc ( total_mb_num * sizeof(uint8));
+	vop_mode_ptr->mbdec_stat_ptr = (uint8 *)Mp4Dec_ExtraMemAlloc ( total_mb_num * sizeof(uint8), 4, SW_CACHABLE);
 		if(NULL == vop_mode_ptr->mbdec_stat_ptr)
 		{
 		    return MMDEC_MEMORY_ERROR;
@@ -182,7 +181,7 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(DEC_VOP_MODE_T *vop_mode_ptr)
 	{
 		uint32 i;
 
-		g_dec_dc_store = (int32 **)Mp4Dec_ExtraMemCacheAlloc(sizeof (int32 *) * total_mb_num);
+		g_dec_dc_store = (int32 **)Mp4Dec_ExtraMemAlloc(sizeof (int32 *) * total_mb_num, 4, SW_CACHABLE);
 		if( NULL == g_dec_dc_store )
 		{
 			return MMDEC_MEMORY_ERROR;
@@ -190,7 +189,7 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(DEC_VOP_MODE_T *vop_mode_ptr)
 
 		for (i = 0; i < total_mb_num; i++)
 		{
-			g_dec_dc_store[i] = (int32 *) Mp4Dec_ExtraMemCacheAlloc(sizeof (int32) * 6);
+			g_dec_dc_store[i] = (int32 *) Mp4Dec_ExtraMemAlloc(sizeof (int32) * 6, 4, SW_CACHABLE);
 			if(NULL == g_dec_dc_store[i])
 			{
 		                return MMDEC_MEMORY_ERROR;
@@ -203,41 +202,41 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(DEC_VOP_MODE_T *vop_mode_ptr)
 	{
 
 	    //should be 64 word aligned
-	    vop_mode_ptr->pTopCoeff = (int16 *)Mp4Dec_ExtraMemAlloc_64WordAlign( sizeof(int16) * (uint8)(vop_mode_ptr->MBNumX) * 4 * 8);
+	    vop_mode_ptr->pTopCoeff = (int16 *)Mp4Dec_ExtraMemAlloc( sizeof(int16) * (uint8)(vop_mode_ptr->MBNumX) * 4 * 8, 256, HW_NO_CACHABLE);
 	    if(NULL == vop_mode_ptr->pTopCoeff)
 	    {
 	        return MMDEC_MEMORY_ERROR;
 	    }
 
-		vop_mode_ptr->frame_bistrm_ptr = (uint8 *)Mp4Dec_ExtraMemAlloc_64WordAlign( sizeof(uint8) * MP4DEC_FRM_STRM_BUF_SIZE);
+		vop_mode_ptr->frame_bistrm_ptr = (uint8 *)Mp4Dec_ExtraMemAlloc( sizeof(uint8) * MP4DEC_FRM_STRM_BUF_SIZE, 256, HW_CACHABLE);
 		
 	//for sw vld
-	    vop_mode_ptr->pTopLeftDCLine = (int16 *)Mp4Dec_ExtraMemCacheAlloc( sizeof(int16)* mb_num_x * 4);
+	    vop_mode_ptr->pTopLeftDCLine = (int16 *)Mp4Dec_ExtraMemAlloc( sizeof(int16)* mb_num_x * 4, 4, SW_CACHABLE);
 	    if(NULL == vop_mode_ptr->pTopLeftDCLine)
 	    {
 	        return MMDEC_MEMORY_ERROR;
 	    }
 	}else
 	{
-		vop_mode_ptr->pTopCoeff = (int16 *)Mp4Dec_ExtraMemCacheAlloc( sizeof(int16) * (uint8)(vop_mode_ptr->MBNumX) * 4 * 8);
+		vop_mode_ptr->pTopCoeff = (int16 *)Mp4Dec_ExtraMemAlloc( sizeof(int16) * (uint8)(vop_mode_ptr->MBNumX) * 4 * 8, 4, SW_CACHABLE);
 	    	SCI_ASSERT(NULL != vop_mode_ptr->pTopCoeff);
 
-		vop_mode_ptr->mb_cache_ptr->pMBBfrY = (int8 *)Mp4Dec_ExtraMemCacheAlloc_64WordAlign(sizeof(int8) * BLOCK_SQUARE_SIZE*4 );
+		vop_mode_ptr->mb_cache_ptr->pMBBfrY = (int8 *)Mp4Dec_ExtraMemAlloc(sizeof(int8) * BLOCK_SQUARE_SIZE*4, 256, SW_CACHABLE);
    		SCI_ASSERT(NULL != vop_mode_ptr->mb_cache_ptr->pMBBfrY);
 	
-   		vop_mode_ptr->mb_cache_ptr->pMBBfrU = (int8 *)Mp4Dec_ExtraMemCacheAlloc_64WordAlign(sizeof(int8) * BLOCK_SQUARE_SIZE );
+   		vop_mode_ptr->mb_cache_ptr->pMBBfrU = (int8 *)Mp4Dec_ExtraMemAlloc(sizeof(int8) * BLOCK_SQUARE_SIZE, 256, SW_CACHABLE);
    		SCI_ASSERT(NULL != vop_mode_ptr->mb_cache_ptr->pMBBfrU);
 	
-   		vop_mode_ptr->mb_cache_ptr->pMBBfrV = (int8 *)Mp4Dec_ExtraMemCacheAlloc_64WordAlign(sizeof(int8) * BLOCK_SQUARE_SIZE );
+   		vop_mode_ptr->mb_cache_ptr->pMBBfrV = (int8 *)Mp4Dec_ExtraMemAlloc(sizeof(int8) * BLOCK_SQUARE_SIZE, 256, SW_CACHABLE);
    		SCI_ASSERT(NULL != vop_mode_ptr->mb_cache_ptr->pMBBfrV);
 	}
 
-	vop_mode_ptr->pLeftCoeff = (int16 *)Mp4Dec_ExtraMemCacheAlloc(sizeof(int16) * 4 * 8);
+	vop_mode_ptr->pLeftCoeff = (int16 *)Mp4Dec_ExtraMemAlloc(sizeof(int16) * 4 * 8, 4, SW_CACHABLE);
 	SCI_ASSERT(NULL != vop_mode_ptr->pLeftCoeff );
 	
 	for (i = 0; i < BLOCK_CNT; i++)
 	{
-		vop_mode_ptr->coef_block[i] = (int16 *)Mp4Dec_ExtraMemCacheAlloc(sizeof(int16) * BLOCK_SQUARE_SIZE);
+		vop_mode_ptr->coef_block[i] = (int16 *)Mp4Dec_ExtraMemAlloc(sizeof(int16) * BLOCK_SQUARE_SIZE, 4, SW_CACHABLE);
 		SCI_ASSERT(NULL != vop_mode_ptr->coef_block[i]);
 
 		if (i < 4)
@@ -367,53 +366,20 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(DEC_VOP_MODE_T *vop_mode_ptr)
 			vop_mode_ptr->inter_dct_cfg =  0x170;//((1 << 8 ) | ((int)(!1) << 7) | (1 << 6) | (1 << 5) | (1 << 4) | (0 << 1) |(0 << 0));
 		}
 
-#if 0
-	        g_cmd_data_base = (uint32 *) Mp4Dec_ExtraMemCacheAlloc_64WordAlign(3*(vop_mode_ptr->MBNum)*256);
-		//g_cmd_info_base = (uint32 *) Mp4Dec_ExtraMemCacheAlloc_64WordAlign((vop_mode_ptr->MBNum)*256);
-		//g_vsp_cmd_data_base = (uint32 *) Mp4Dec_ExtraMemAlloc_64WordAlign(3*(vop_mode_ptr->MBNum)*256);
-		//g_vsp_cmd_info_base = (uint32 *) Mp4Dec_ExtraMemAlloc_64WordAlign((vop_mode_ptr->MBNum)*256);
-		if(NULL == g_cmd_data_base)
-		{
-		    return MMDEC_MEMORY_ERROR;
-		}
-		g_cmd_info_base = (uint32 *) Mp4Dec_ExtraMemCacheAlloc_64WordAlign((vop_mode_ptr->MBNum)*256);
-			//SCI_TRACE_LOW("g_cmd_info_base : %x\n", g_cmd_info_base);
-		if(NULL == g_cmd_info_base)
-		{
-		    return MMDEC_MEMORY_ERROR;
-		}
-#else
 		for(i = 0; i< 2; i++)
 		{
-			vop_mode_ptr->cmd_data_buf[i]= (uint32 *) Mp4Dec_ExtraMemAlloc_64WordAlign(3*(vop_mode_ptr->MBNum)*256);
+			vop_mode_ptr->cmd_data_buf[i]= (uint32 *) Mp4Dec_ExtraMemAlloc(3*(vop_mode_ptr->MBNum)*256, 256, HW_CACHABLE);
 
 			if(NULL == vop_mode_ptr->cmd_data_buf[i])
 			{
 			    return MMDEC_MEMORY_ERROR;
 			}
-			vop_mode_ptr->cmd_info_buf[i] = (uint32 *) Mp4Dec_ExtraMemAlloc_64WordAlign((vop_mode_ptr->MBNum)*256);
+			vop_mode_ptr->cmd_info_buf[i] = (uint32 *) Mp4Dec_ExtraMemAlloc((vop_mode_ptr->MBNum)*256, 256, HW_CACHABLE);
 			if(NULL == vop_mode_ptr->cmd_info_buf[i])
 			{
 			    return MMDEC_MEMORY_ERROR;
 			}
 		}
-	
-#endif
-
-#if 0
-		g_vsp_cmd_data_base = (uint32 *) Mp4Dec_ExtraMemAlloc_64WordAlign(3*(vop_mode_ptr->MBNum)*256);
-			//SCI_TRACE_LOW("g_vsp_cmd_data_base : %x\n", g_vsp_cmd_data_base);
-		if(NULL == g_vsp_cmd_data_base)
-		{
-		    return MMDEC_MEMORY_ERROR;
-		}
-		g_vsp_cmd_info_base = (uint32 *) Mp4Dec_ExtraMemAlloc_64WordAlign((vop_mode_ptr->MBNum)*256);
-			//SCI_TRACE_LOW("g_vsp_cmd_info_base : %x\n", g_vsp_cmd_info_base);
-		if(NULL == g_vsp_cmd_info_base)
-		{
-		    return MMDEC_MEMORY_ERROR;
-		}
-#endif
 	}
 
 	return MMDEC_OK;

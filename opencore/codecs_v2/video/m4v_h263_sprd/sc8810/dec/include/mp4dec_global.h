@@ -133,6 +133,7 @@ extern DEC_FRM_BFR g_rec_buf;
 extern FunctionType_BufCB VSP_bindCb;
 extern FunctionType_BufCB VSP_unbindCb;
 extern void *g_user_data;
+extern FunctionType_FlushCache VSP_fluchCacheCb ;
 #endif
 
 /**---------------------------------------------------------------------------*

@@ -64,6 +64,12 @@ void MP4DecRegBufferCB(FunctionType_BufCB bindCb,FunctionType_BufCB unbindCb,voi
 	g_user_data = userdata;
 }
 
+FunctionType_FlushCache VSP_fluchCacheCb = NULL;
+void  MP4Dec_RegFlushCacheCB( FunctionType_FlushCache fluchCacheCb)
+{
+   	VSP_fluchCacheCb = fluchCacheCb;   
+}
+
 void MP4DecReleaseRefBuffers()
 {
 	int i;
@@ -104,6 +110,17 @@ void MP4DecReleaseRefBuffers()
 	        vop_mode_ptr->pBckRefFrame->pDecFrame = NULL;
 	}
 	g_nFrame_dec = 0;
+
+#if 1
+        SCI_TRACE_LOW("---MP4DecReleaseRefBuffers, 1,%d",vop_mode_ptr->is_previous_cmd_done);
+        if(vop_mode_ptr->VSP_used &&  !vop_mode_ptr->is_previous_cmd_done)
+        {
+            VSP_START_CQM();
+	    vop_mode_ptr->is_previous_cmd_done = 1;
+        }
+        SCI_TRACE_LOW("---MP4DecReleaseRefBuffers, 2,%d",vop_mode_ptr->is_previous_cmd_done);
+#endif
+
 }
 
 int MP4DecGetLastDspFrm(void **pOutput)
@@ -178,7 +195,7 @@ PUBLIC MMDecRet MP4DecInit(MMCodecBuffer *pBuffer, MMDecVideoFormat *video_forma
 	
 	Mp4Dec_InitGlobal();
 
-	vop_mode_ptr = (DEC_VOP_MODE_T *)Mp4Dec_InterMemAlloc(sizeof(DEC_VOP_MODE_T));
+	vop_mode_ptr = (DEC_VOP_MODE_T *)Mp4Dec_InterMemAlloc(sizeof(DEC_VOP_MODE_T), 4);
 	SCI_ASSERT(NULL != vop_mode_ptr);	
 	Mp4Dec_SetVopmode(vop_mode_ptr);
 
@@ -193,26 +210,26 @@ PUBLIC MMDecRet MP4DecInit(MMCodecBuffer *pBuffer, MMDecVideoFormat *video_forma
 	vop_mode_ptr->VT_used = 0;
 
 	//for H263 plus header
-	h263_plus_head_info_ptr = (H263_PLUS_HEAD_INFO_T *)Mp4Dec_InterMemAlloc(sizeof(H263_PLUS_HEAD_INFO_T));
+	h263_plus_head_info_ptr = (H263_PLUS_HEAD_INFO_T *)Mp4Dec_InterMemAlloc(sizeof(H263_PLUS_HEAD_INFO_T), 4);
 	SCI_ASSERT(NULL != h263_plus_head_info_ptr);
 	Mp4Dec_SetH263PlusHeadInfo(h263_plus_head_info_ptr);
 
-	vop_mode_ptr->bitstrm_ptr = (DEC_BS_T *)Mp4Dec_InterMemAlloc(sizeof(DEC_BS_T));	
+	vop_mode_ptr->bitstrm_ptr = (DEC_BS_T *)Mp4Dec_InterMemAlloc(sizeof(DEC_BS_T), 4);	
 	SCI_ASSERT(NULL != vop_mode_ptr->bitstrm_ptr);
 	
-	vop_mode_ptr->pMbMode_B = (DEC_MB_MODE_T *)Mp4Dec_InterMemAlloc(sizeof(DEC_MB_MODE_T));
+	vop_mode_ptr->pMbMode_B = (DEC_MB_MODE_T *)Mp4Dec_InterMemAlloc(sizeof(DEC_MB_MODE_T), 4);
 	SCI_ASSERT(NULL != vop_mode_ptr->pMbMode_B);
 
-	 vop_mode_ptr->mb_cache_ptr = (DEC_MB_BFR_T *)Mp4Dec_InterMemAlloc(sizeof(DEC_MB_BFR_T));
+	 vop_mode_ptr->mb_cache_ptr = (DEC_MB_BFR_T *)Mp4Dec_InterMemAlloc(sizeof(DEC_MB_BFR_T), 4);
 	SCI_ASSERT(NULL != vop_mode_ptr->mb_cache_ptr);
 
- 	vop_mode_ptr->IntraQuantizerMatrix = (uint8 *)Mp4Dec_InterMemAlloc(sizeof(uint8)*BLOCK_SQUARE_SIZE);
+ 	vop_mode_ptr->IntraQuantizerMatrix = (uint8 *)Mp4Dec_InterMemAlloc(sizeof(uint8)*BLOCK_SQUARE_SIZE, 4);
 	SCI_ASSERT(NULL != vop_mode_ptr->IntraQuantizerMatrix);
 
-	 vop_mode_ptr->InterQuantizerMatrix = (uint8 *)Mp4Dec_InterMemAlloc(sizeof(uint8)*BLOCK_SQUARE_SIZE);
+	 vop_mode_ptr->InterQuantizerMatrix = (uint8 *)Mp4Dec_InterMemAlloc(sizeof(uint8)*BLOCK_SQUARE_SIZE, 4);
 	SCI_ASSERT(NULL != vop_mode_ptr->InterQuantizerMatrix);
 
-	vop_mode_ptr->dbk_para = (DBK_PARA_T *)Mp4Dec_InterMemAlloc(sizeof(DBK_PARA_T));
+	vop_mode_ptr->dbk_para = (DBK_PARA_T *)Mp4Dec_InterMemAlloc(sizeof(DBK_PARA_T), 4);
 		
 	Mp4Dec_InitDecoderPara(vop_mode_ptr);
 
@@ -257,6 +274,7 @@ PUBLIC MMDecRet MP4DecDecode(MMDecInput *dec_input_ptr, MMDecOutput *dec_output_
 
 	g_mpeg4_dec_err_flag = 0;
 
+        
 	SCI_TRACE_LOW("MP4DecDecode: E");
 
     if(!Mp4Dec_GetCurRecFrameBfr(vop_mode_ptr))
@@ -264,7 +282,9 @@ PUBLIC MMDecRet MP4DecDecode(MMDecInput *dec_input_ptr, MMDecOutput *dec_output_
         memset(dec_output_ptr,0,sizeof(MMDecOutput));
         dec_output_ptr->frameEffective = 0;
 		g_mpeg4_dec_err_flag |= 1;
-        return MMDEC_OUTPUT_BUFFER_OVERFLOW;
+        //return MMDEC_OUTPUT_BUFFER_OVERFLOW;
+        ret = MMDEC_OUTPUT_BUFFER_OVERFLOW;
+	goto MPEG4_DEC_CQM_ERROR;	
     }
 
 	vop_mode_ptr->sw_vld_flag = FALSE;
@@ -275,7 +295,7 @@ FLV_RE_DEC:
 	vop_mode_ptr->return_pos1 = 0;
 	vop_mode_ptr->return_pos2 = 0;
 
-	if (vop_mode_ptr->VSP_used || vop_mode_ptr->VT_used)
+//	if (vop_mode_ptr->VSP_used || vop_mode_ptr->VT_used)
 	{
 		Mp4Dec_VerifyBitstrm(dec_input_ptr->pStream, dec_input_ptr->dataLen);
 
@@ -284,7 +304,9 @@ FLV_RE_DEC:
 			vop_mode_ptr->error_flag = FALSE;
 			vop_mode_ptr->return_pos2 |= (1<<5);
 			g_mpeg4_dec_err_flag |= (1<<8);
-			return MMDEC_STREAM_ERROR;
+			//return MMDEC_STREAM_ERROR;
+			ret = MMDEC_STREAM_ERROR;
+			goto MPEG4_DEC_CQM_ERROR;			
 		}
 	}
 	Mp4Dec_InitBitstream_sw(vop_mode_ptr->bitstrm_ptr, dec_input_ptr->pStream, dec_input_ptr->dataLen);
@@ -298,7 +320,9 @@ FLV_RE_DEC:
 #ifdef _VSP_LINUX_							
 			dec_output_ptr->VopPredType = NVOP;
 #endif
-			return MMDEC_OK;
+			//return MMDEC_OK;
+			ret = MMDEC_OK;
+			goto MPEG4_DEC_CQM_ERROR;
 		}
 	}else
 	{
@@ -327,7 +351,8 @@ FLV_RE_DEC:
 	{
 		//modified by xwluo, 20100511
 		g_mpeg4_dec_err_flag |= 1<<1;		
-		return ret;
+		//return ret;
+		goto MPEG4_DEC_CQM_ERROR;
 	}else if (!vop_mode_ptr->is_work_mode_set)
 	{
 		MP4Dec_JudgeDecMode(vop_mode_ptr);
@@ -341,7 +366,9 @@ FLV_RE_DEC:
 			g_nFrame_dec++;
 	    }
 		g_mpeg4_dec_err_flag |= 1<<2;			
-		return MMDEC_FRAME_SEEK_IVOP;
+		//return MMDEC_FRAME_SEEK_IVOP;
+		ret = MMDEC_FRAME_SEEK_IVOP;
+		goto MPEG4_DEC_CQM_ERROR;		
 	}
 
 	dec_output_ptr->frameEffective = FALSE;
@@ -354,7 +381,9 @@ FLV_RE_DEC:
 		if( MMDEC_OK != Mp4Dec_InitSessionDecode(vop_mode_ptr) )
 		{
 			g_mpeg4_dec_err_flag |= 1<<3;		        
-			return MMDEC_MEMORY_ERROR;
+			//return MMDEC_MEMORY_ERROR;
+			ret = MMDEC_MEMORY_ERROR;
+			goto MPEG4_DEC_CQM_ERROR;
 		}
 		vop_mode_ptr->bInitSuceess = TRUE;
 	}
@@ -367,13 +396,17 @@ FLV_RE_DEC:
 #ifdef _VSP_LINUX_		
 			dec_output_ptr->VopPredType = NVOP;
 #endif		
-			return MMDEC_OK;
+			//return MMDEC_OK;
+			ret = MMDEC_OK;
+			goto MPEG4_DEC_CQM_ERROR;
 		}
 		
 		if(!Mp4Dec_GetCurRecFrameBfr(vop_mode_ptr))
 		{
-			g_mpeg4_dec_err_flag |= 1<<4;			
-			return MMDEC_OUTPUT_BUFFER_OVERFLOW;
+			g_mpeg4_dec_err_flag |= 1<<4;
+			//return MMDEC_OUTPUT_BUFFER_OVERFLOW;
+			ret = MMDEC_OUTPUT_BUFFER_OVERFLOW;
+			goto MPEG4_DEC_CQM_ERROR;
 		}
 		
 		if (vop_mode_ptr->post_filter_en)
@@ -383,7 +416,9 @@ FLV_RE_DEC:
 				if(!Mp4Dec_GetCurDispFrameBfr(vop_mode_ptr))
 				{
 					g_mpeg4_dec_err_flag |= 1<<5;					
-					return MMDEC_OUTPUT_BUFFER_OVERFLOW;
+					//return MMDEC_OUTPUT_BUFFER_OVERFLOW;
+					ret = MMDEC_OUTPUT_BUFFER_OVERFLOW;
+					goto MPEG4_DEC_CQM_ERROR;
 				}
 			}
 		}else //for fpga verification
@@ -405,7 +440,9 @@ FLV_RE_DEC:
 	}
 #endif	
 		
-		return MMDEC_OK;
+		//return MMDEC_OK;
+		ret = MMDEC_OK;
+		goto MPEG4_DEC_CQM_ERROR;
 	}
 
 	s_hw_error_flag = 0;
@@ -414,7 +451,8 @@ FLV_RE_DEC:
 	if(ret != MMDEC_OK)
 	{
 		g_mpeg4_dec_err_flag |= 1<<6;		
-		return ret;
+		//return ret;
+		goto MPEG4_DEC_CQM_ERROR;
 	}
 		
 
@@ -446,7 +484,9 @@ FLV_RE_DEC:
 				}
 				g_mpeg4_dec_err_flag |= 1<<7;	
 //				SCI_TRACE_LOW("leon %s,%d",__FUNCTION__,__LINE__);
-				return MMDEC_ERROR;
+				//return MMDEC_ERROR;
+				ret = MMDEC_ERROR;
+				goto MPEG4_DEC_CQM_ERROR;
 			}
 		}		
 
@@ -464,7 +504,9 @@ FLV_RE_DEC:
 	{
 		SCI_TRACE_LOW ("frame not coded!\n");
        	MPEG4_DecReleaseDispBfr(vop_mode_ptr->pCurDispFrame->pDecFrame->imgY);
-		return MMDEC_OK;
+		//return MMDEC_OK;
+		ret = MMDEC_OK;
+		goto MPEG4_DEC_CQM_ERROR;
 	}else
 	{
 //		SCI_TRACE_LOW ("\t B VOP\t%d\n", dec_input_ptr->dataLen);
@@ -542,8 +584,22 @@ FLV_RE_DEC:
 	if(ret != MMDEC_OK)
 	{
 		g_mpeg4_dec_err_flag |= 1<<10;		
+		goto MPEG4_DEC_CQM_ERROR;
 	}
 	return ret;
+
+
+MPEG4_DEC_CQM_ERROR:
+#if 1
+        SCI_TRACE_LOW("---MP4DecDecode, 1,%d",vop_mode_ptr->is_previous_cmd_done);
+        if(vop_mode_ptr->VSP_used &&  !vop_mode_ptr->is_previous_cmd_done)
+        {
+            VSP_START_CQM();
+	    vop_mode_ptr->is_previous_cmd_done = 1;
+        }
+        SCI_TRACE_LOW("---MP4DecDecode, 2,%d",vop_mode_ptr->is_previous_cmd_done);
+	return ret;	
+#endif	
 }
 
 /*****************************************************************************/

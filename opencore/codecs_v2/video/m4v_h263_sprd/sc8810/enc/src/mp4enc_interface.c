@@ -241,12 +241,7 @@ MMEncRet MP4EncStrmEncode(MMEncIn *pInput, MMEncOut *pOutput)
 	vop_mode_ptr->mbline_num_slice	= 1;
 	vop_mode_ptr->intra_mb_dis		= 30;	
 	vop_mode_ptr->sliceNumber = 0;	
-	
-	if (vop_mode_ptr->big_size_flag)
-	{
-		vop_mode_ptr->RateCtrlEnable = FALSE;
-	}
-	
+
 	if(!vop_mode_ptr->bInitRCSuceess)
 	{
 		Mp4Enc_InitRateCtrl(&g_rc_par, &g_stat_rc);
@@ -320,14 +315,6 @@ FRAME_ENC:
 #endif
 
 #endif
-
-	 //optimize for android 4.0 8810 encoder can not meet the requirement of D1 30Hz 
-	 if(vop_mode_ptr->big_size_flag){
-	 	if((IVOP != vop_mode_ptr->VopPredType)&&(0==g_nFrame_enc%3)){
-			vop_mode_ptr->VopPredType = NVOP;
-	 	}
-	 }
-	 //optimize for android 4.0 8810 encoder end
 
 		if(IVOP == vop_mode_ptr->VopPredType)
 		{
@@ -414,7 +401,7 @@ FRAME_ENC:
 			g_stat_rc.is_pfrm_skipped = FALSE;
 
 
-			if (IVOP == vop_mode_ptr->VopPredType)
+			if ( ( IVOP == vop_mode_ptr->VopPredType) || (vop_mode_ptr->big_size_flag) )
 			{
 				Mp4Enc_ResetRCModel (vop_mode_ptr, &g_stat_rc, &g_rc_par);
 			}

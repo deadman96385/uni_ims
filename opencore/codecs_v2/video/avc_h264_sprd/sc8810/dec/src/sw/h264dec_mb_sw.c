@@ -207,6 +207,10 @@ LOCAL void H264Dec_decode_IPCM_MB_sw(DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T 
 	int32 i,j;
 	int32 bit_offset;
 	int32 comp;
+	int32 *i4x4pred_mode_cache = (int32 *)(mb_cache_ptr->i4x4pred_mode_cache);
+		
+	i4x4pred_mode_cache[4] = i4x4pred_mode_cache[7] =
+	i4x4pred_mode_cache[10] = i4x4pred_mode_cache[13] = 0x02020202;	
 
 	bit_offset  = (bitstrm->bitsLeft & 0x7);
 	if(bit_offset)
@@ -247,6 +251,18 @@ LOCAL void H264Dec_decode_IPCM_MB_sw(DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T 
 	}
 
 	H264Dec_set_IPCM_nnz(mb_cache_ptr);
+
+	mb_info_ptr->qp = 0;
+	mb_info_ptr->cbp = 0x3f;
+	mb_info_ptr->skip_flag = 1;
+        
+	//for CABAC decoding of Dquant
+	if (g_active_pps_ptr->entropy_coding_mode_flag)
+	{
+		last_dquant = 0;
+		mb_info_ptr->dc_coded_flag = 7;
+		ff_init_cabac_decoder(img_ptr);	//arideco_start_decoding(img_ptr);
+	}
 }
 
 LOCAL void FilterPixel_I8x8 (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T *mb_info_ptr,DEC_MB_CACHE_T *mb_cache_ptr, int blkidx_8x8, uint8 *pRec, int32 pitch)
@@ -680,24 +696,7 @@ LOCAL void H264Dec_read_intraMB_context_sw (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_
 		H264Dec_decode_intra_mb (img_ptr, mb_info_ptr, mb_cache_ptr);
 	}else
 	{
-		int32 *i4x4pred_mode_cache = (int32 *)(mb_cache_ptr->i4x4pred_mode_cache);
-		
-		i4x4pred_mode_cache[4] = i4x4pred_mode_cache[7] =
-		i4x4pred_mode_cache[10] = i4x4pred_mode_cache[13] = 0x02020202;	
-
-		mb_info_ptr->qp = 0;
-		mb_info_ptr->cbp = 0x3f;
-		H264Dec_decode_IPCM_MB_sw(img_ptr, mb_info_ptr, mb_cache_ptr, img_ptr->bitstrm_ptr);
-		
-		mb_info_ptr->skip_flag = 1;
-		
-		//for CABAC decoding of Dquant
-		if (g_active_pps_ptr->entropy_coding_mode_flag)
-		{
-			last_dquant = 0;
-			mb_info_ptr->dc_coded_flag = 7;
-			ff_init_cabac_decoder(img_ptr);	//arideco_start_decoding(img_ptr);
-		}
+		H264Dec_decode_IPCM_MB_sw(img_ptr, mb_info_ptr, mb_cache_ptr, img_ptr->bitstrm_ptr);		
 	}
 }
 

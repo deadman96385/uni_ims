@@ -47,32 +47,32 @@ PUBLIC void H264Dec_init_global_para (void)
 	VSP_Init_CModel();
 #endif //_CMODEL_
 
-	g_sps_array_ptr = (DEC_SPS_T *)H264Dec_InterMemAlloc (sizeof(DEC_SPS_T) * MAX_SPS);
-    g_pps_array_ptr = (DEC_PPS_T *)H264Dec_InterMemAlloc (sizeof(DEC_PPS_T) * MAX_PPS);
-	g_sps_ptr = (DEC_SPS_T *)H264Dec_InterMemAlloc (sizeof(DEC_SPS_T));
-	g_sps_ptr->vui_seq_parameters =  (DEC_VUI_T *)H264Dec_InterMemAlloc (sizeof(DEC_VUI_T));
-	g_pps_ptr = (DEC_PPS_T *)H264Dec_InterMemAlloc (sizeof(DEC_PPS_T));
-	g_dpb_ptr = (DEC_DECODED_PICTURE_BUFFER_T *)H264Dec_InterMemAlloc (sizeof(DEC_DECODED_PICTURE_BUFFER_T));
+	g_sps_array_ptr = (DEC_SPS_T *)H264Dec_InterMemAlloc (sizeof(DEC_SPS_T) * MAX_SPS, 4);
+    g_pps_array_ptr = (DEC_PPS_T *)H264Dec_InterMemAlloc (sizeof(DEC_PPS_T) * MAX_PPS, 4);
+	g_sps_ptr = (DEC_SPS_T *)H264Dec_InterMemAlloc (sizeof(DEC_SPS_T), 4);
+	g_sps_ptr->vui_seq_parameters =  (DEC_VUI_T *)H264Dec_InterMemAlloc (sizeof(DEC_VUI_T), 4);
+	g_pps_ptr = (DEC_PPS_T *)H264Dec_InterMemAlloc (sizeof(DEC_PPS_T), 4);
+	g_dpb_ptr = (DEC_DECODED_PICTURE_BUFFER_T *)H264Dec_InterMemAlloc (sizeof(DEC_DECODED_PICTURE_BUFFER_T), 4);
 #ifdef _VSP_LINUX_
 	g_dpb_ptr->used_size = 0;
 #endif
 	g_active_sps_ptr = NULL;
 	g_active_pps_ptr = NULL;
 
-	g_old_slice_ptr = (DEC_OLD_SLICE_PARAMS_T *)H264Dec_InterMemAlloc (sizeof(DEC_OLD_SLICE_PARAMS_T));
-	g_nalu_ptr = (DEC_NALU_T *)H264Dec_InterMemAlloc (sizeof(DEC_NALU_T));
+	g_old_slice_ptr = (DEC_OLD_SLICE_PARAMS_T *)H264Dec_InterMemAlloc (sizeof(DEC_OLD_SLICE_PARAMS_T), 4);
+	g_nalu_ptr = (DEC_NALU_T *)H264Dec_InterMemAlloc (sizeof(DEC_NALU_T), 4);
 
-	g_image_ptr = (DEC_IMAGE_PARAMS_T *)H264Dec_InterMemAlloc(sizeof(DEC_IMAGE_PARAMS_T));
-	g_image_ptr->bitstrm_ptr = (DEC_BS_T *)H264Dec_InterMemAlloc(sizeof(DEC_BS_T));
-	g_curr_slice_ptr = (DEC_SLICE_T *)H264Dec_InterMemAlloc(sizeof(DEC_SLICE_T));
+	g_image_ptr = (DEC_IMAGE_PARAMS_T *)H264Dec_InterMemAlloc(sizeof(DEC_IMAGE_PARAMS_T), 4);
+	g_image_ptr->bitstrm_ptr = (DEC_BS_T *)H264Dec_InterMemAlloc(sizeof(DEC_BS_T), 4);
+	g_curr_slice_ptr = (DEC_SLICE_T *)H264Dec_InterMemAlloc(sizeof(DEC_SLICE_T), 4);
 
-	g_no_reference_picture_ptr = (DEC_STORABLE_PICTURE_T *)H264Dec_InterMemAlloc(sizeof(DEC_STORABLE_PICTURE_T));
+	g_no_reference_picture_ptr = (DEC_STORABLE_PICTURE_T *)H264Dec_InterMemAlloc(sizeof(DEC_STORABLE_PICTURE_T), 4);
 
-	g_mb_cache_ptr = (DEC_MB_CACHE_T *)H264Dec_InterMemAlloc_4WordAlign(sizeof(DEC_MB_CACHE_T));
+	g_mb_cache_ptr = (DEC_MB_CACHE_T *)H264Dec_InterMemAlloc (sizeof(DEC_MB_CACHE_T), 16);
 	
-	g_dpb_ptr->fs = (DEC_FRAME_STORE_T **)H264Dec_InterMemAlloc (sizeof(DEC_FRAME_STORE_T*)*(MAX_REF_FRAME_NUMBER+1));
-	g_dpb_ptr->fs_ref = (DEC_FRAME_STORE_T **)H264Dec_InterMemAlloc (sizeof(DEC_FRAME_STORE_T*)*(MAX_REF_FRAME_NUMBER+1));
-	g_dpb_ptr->fs_ltref = (DEC_FRAME_STORE_T **)H264Dec_InterMemAlloc (sizeof(DEC_FRAME_STORE_T*)*(MAX_REF_FRAME_NUMBER+1));
+	g_dpb_ptr->fs = (DEC_FRAME_STORE_T **)H264Dec_InterMemAlloc (sizeof(DEC_FRAME_STORE_T*)*(MAX_REF_FRAME_NUMBER+1), 4);
+	g_dpb_ptr->fs_ref = (DEC_FRAME_STORE_T **)H264Dec_InterMemAlloc (sizeof(DEC_FRAME_STORE_T*)*(MAX_REF_FRAME_NUMBER+1), 4);
+	g_dpb_ptr->fs_ltref = (DEC_FRAME_STORE_T **)H264Dec_InterMemAlloc (sizeof(DEC_FRAME_STORE_T*)*(MAX_REF_FRAME_NUMBER+1), 4);
 
 	//init global vars
 	g_dec_ref_pic_marking_buffer_size = 0;
@@ -82,7 +82,7 @@ PUBLIC void H264Dec_init_global_para (void)
 	g_firstBsm_init_h264 = TRUE;
 	g_old_pps_id = -1; //initialize to a impossible value
 	last_dquant = 0;
-
+	 
 	for (i = 0; i < MAX_REF_FRAME_NUMBER+1; i++)
 	{
 		g_list[0][i] = g_no_reference_picture_ptr;
@@ -109,7 +109,7 @@ PUBLIC void H264Dec_init_global_para (void)
 	g_image_ptr->not_supported = FALSE;
 	g_image_ptr->is_need_init_vsp_hufftab = TRUE;
 	g_image_ptr->cmd_buf_idx = 0;
-	g_image_ptr->is_first_frame = TRUE;
+	g_image_ptr->is_previous_cmd_done = TRUE;
 
 	g_no_reference_picture_ptr->used_for_reference = 0;
 	g_no_reference_picture_ptr->is_long_term = 0;

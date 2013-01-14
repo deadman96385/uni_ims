@@ -184,7 +184,7 @@ PUBLIC void H264Dec_use_parameter_set (DEC_IMAGE_PARAMS_T *img_ptr, int32 pps_id
 		read_b8mode = decode_cabac_mb_sub_type;
 		if (img_ptr->VSP_used)
 		{
-		//	sw_vld_mb= decode_mb_cabac_hw;	
+			sw_vld_mb= decode_mb_cabac_hw;	
 		}else
 		{
 			sw_vld_mb= decode_mb_cabac_sw;	
@@ -439,8 +439,12 @@ LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, DEC_IMAGE_PARAMS_T *im
         img_ptr->error_flag |= ER_BSM_ID;
         img_ptr->return_pos1 |= (1<<17);
         return MMDEC_STREAM_ERROR;
-    }else if (sps_ptr->profile_idc == 0x64/*hp*/ || sps_ptr->profile_idc == 0x4d/*mp*/
-		|| sps_ptr->pic_width_in_mbs_minus1 > 44 || sps_ptr->pic_height_in_map_units_minus1 > 35)	/*D1*/{
+    }else 
+#ifndef H264CODEC_NO_PMEM
+    if (sps_ptr->profile_idc == 0x64/*hp*/ /*|| sps_ptr->profile_idc == 0x4d*//*mp*/
+		|| sps_ptr->pic_width_in_mbs_minus1 > 44 || sps_ptr->pic_height_in_map_units_minus1 > 35)	/*D1*/
+#endif
+    {
         img_ptr->VSP_used = 0;
 
         img_ptr->b8_mv_pred_func[4] = H264Dec_mv_prediction_P8x8_8x8_sw;
@@ -455,9 +459,8 @@ LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, DEC_IMAGE_PARAMS_T *im
         H264Dec_init_intra16x16Pred_function ();
         H264Dec_init_intraChromaPred_function ();
     }
-#if 1
-	else
-	{
+#ifndef H264CODEC_NO_PMEM
+    else {
 		img_ptr->VSP_used = 1;
 
 		img_ptr->b8_mv_pred_func[4] = H264Dec_mv_prediction_P8x8_8x8_hw;
@@ -600,7 +603,7 @@ LOCAL MMDecRet H264Dec_interpret_pps (DEC_PPS_T *pps_ptr, DEC_IMAGE_PARAMS_T *im
 
 		if (pps_ptr->slice_group_map_type == 6)
 		{
-			SCI_ASSERT(NULL != (pps_ptr->slice_group_id = (uint8 *)H264Dec_InterMemAlloc(SIZE_SLICE_GROUP_ID*sizeof(uint8))));
+			SCI_ASSERT(NULL != (pps_ptr->slice_group_id = (uint8 *)H264Dec_InterMemAlloc(SIZE_SLICE_GROUP_ID*sizeof(uint8), 4)));
 		}
 
 		if (pps_ptr->slice_group_map_type == 0)

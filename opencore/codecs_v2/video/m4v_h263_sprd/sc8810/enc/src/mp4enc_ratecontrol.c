@@ -88,7 +88,10 @@ PUBLIC int32 Mp4Enc_JudgeFrameType(RateCtrlPara *rc_par_ptr, RCMode *rc_mode_ptr
 		rc_par_ptr->p_count--;
 		vop_type = PVOP;	
 	}
-	
+
+
+    //---added by miller for bitrate control. @2012.11.16.
+#if 0
 	if (g_enc_vop_mode_ptr->RateCtrlEnable)
 	{
 		/*skip test according to vop type*/
@@ -112,6 +115,7 @@ PUBLIC int32 Mp4Enc_JudgeFrameType(RateCtrlPara *rc_par_ptr, RCMode *rc_mode_ptr
 			rc_mode_ptr->skipNextFrame = FALSE;
 		}
 	}	
+#endif
 
 	return vop_type;
 }
@@ -547,7 +551,7 @@ PUBLIC void Mp4Enc_UpdatePVOP_StepSize(ENC_VOP_MODE_T *vop_mode_ptr, RCMode *rc_
 PUBLIC void Mp4Enc_UpdateIVOP_StepSize(ENC_VOP_MODE_T *vop_mode_ptr, RCMode * rc_mode_ptr)
 {
 	int32 Qp = 0;
-	int32 total_bits_cur = rc_mode_ptr->Rf;
+	int32 total_bits_cur = rc_mode_ptr->B;//rc_mode_ptr->Rf;
 	int32 Stepsize_IVOP = vop_mode_ptr->StepI;
 
 	if (rc_mode_ptr->FirstGOP)

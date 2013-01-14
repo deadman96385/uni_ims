@@ -443,7 +443,7 @@ typedef struct img_parameter_tag
 	int32	cod_counter;
 	
 	int8	redundant_pic_cnt;
-	int8	error_flag;
+	int8 	rsv;
 	uint16	num_dec_mb;
 
 	uint16	width;
@@ -454,6 +454,8 @@ typedef struct img_parameter_tag
 
 	uint16 	start_in_frameY;
 	uint16 	start_in_frameUV;
+
+	int32	error_flag;
 	
 	int32	curr_mb_nr;
 	int32	slice_nr;
@@ -582,15 +584,14 @@ typedef struct img_parameter_tag
 
 	int32 dist_scale_factor[16];
 	int32 *slice_nr_ptr;
-
-	uint32 is_first_frame;
-
 	
 	uint32 *cmd_data_buf[2];
 	uint32 * cmd_info_buf[2];
 	uint32 cmd_buf_idx; 
 
 	uint8 *frame_bistrm_buf[2];
+
+	uint32 is_previous_cmd_done;
 }DEC_IMAGE_PARAMS_T;
 
 #define H264DEC_FRM_STRM_BUF_SIZE (500*1024)

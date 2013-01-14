@@ -25,14 +25,24 @@
     extern   "C" 
     {
 #endif
+
+typedef enum
+{
+    HW_NO_CACHABLE = 0, /*physical continuous and no-cachable, only for VSP writing and reading */
+    HW_CACHABLE,    /*physical continuous and cachable, for software writing and VSP reading */
+    SW_CACHABLE,    /*only for software writing and reading*/
+    MAX_MEM_TYPE
+} CODEC_BUF_TYPE;
+
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
 #ifdef _VSP_LINUX_
 void MP4DecSetPostFilter(int en);
 typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader,int flag);
-
+typedef int (*FunctionType_FlushCache)(void* aUserData, int* vaddr,int* paddr,int size);
 void MP4DecRegBufferCB(FunctionType_BufCB bindCb,FunctionType_BufCB unbindCb,void *userdata);
+void MP4Dec_RegFlushCacheCB( FunctionType_FlushCache fluchCacheCb);
 void MP4DecReleaseRefBuffers();
 int MP4DecGetLastDspFrm(void **pOutput);
 void MP4DecSetCurRecPic(uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader);

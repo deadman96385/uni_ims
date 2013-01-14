@@ -171,6 +171,7 @@ extern FunctionType_BufCB VSP_bindCb;
 extern FunctionType_BufCB VSP_unbindCb;
 extern void *g_user_data;
 extern FunctionType_SPS VSP_spsCb;
+extern FunctionType_FlushCache VSP_fluchCacheCb ;
 #endif
 
 //cavlc
@@ -208,10 +209,18 @@ extern const int8 run7_vlc_tbl[96][2];
 //cabac
 extern const int8 cabac_context_init_I[460][2];
 extern const int8 cabac_context_init_PB[3][460][2];
-extern const uint8 ff_h264_norm_shift[512];
 extern const uint8 ff_h264_mlps_state[4*64];
 extern const uint8 ff_h264_lps_range[4*2*64];  ///< rangeTabLPS
 extern const uint8 ff_h264_mps_state[2*64];     ///< transIdxMPS
+
+extern const int32 significant_coeff_flag_offset[6];
+extern const int32 last_coeff_flag_offset[6];
+extern const int32 coeff_abs_level_m1_offset[6];
+extern const uint8 significant_coeff_flag_offset_8x8[63];
+extern const uint8 last_coeff_flag_offset_8x8[63];
+extern const  uint8 coeff_abs_level1_ctx[8];
+extern const uint8 coeff_abs_levelgt1_ctx[8];
+extern const uint8 coeff_abs_level_transition[2][8]; 
 
 extern int32 g_need_back_last_word;
 extern int32 g_back_last_word;
