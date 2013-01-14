@@ -6379,10 +6379,8 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RIL_requestTimedCallback (onClass2SmsReceived, p_index, NULL);
 #endif
     } else if (strStartsWith(s, "+SPUSATENDSESSIONIND")) {
-#if defined (RIL_SPRD_EXTENSION)
         ALOGD("[stk unsl]RIL_UNSOL_STK_SESSION_END");
         RIL_onUnsolicitedResponse (RIL_UNSOL_STK_SESSION_END, NULL, 0);
-#endif
     }  else if (strStartsWith(s, "+SPUSATPROCMDIND:")) {
         char *response = NULL;
         char *tmp;
