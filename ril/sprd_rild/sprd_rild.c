@@ -35,8 +35,6 @@
 #define LIB_PATH_PROPERTY   "rild.libpath"
 #define LIB_ARGS_PROPERTY   "rild.libargs"
 #define MAX_LIB_ARGS        16
-#define SIM_MODE_PROPERTY  "persist.msms.phone_count"
-int s_dualSimMode = 0;
 
 static void usage(const char *argv0)
 {
@@ -125,15 +123,6 @@ int main(int argc, char **argv)
     if(califlag == 1) {
     	ALOGD("RIL: Calibration mode,RIL goto sleep!\n");
     	goto done;
-    }
-
-    if(0 == property_get(SIM_MODE_PROPERTY, phoneCount, "1")) {
-		s_dualSimMode = 0;
-    } else {
-		if(!strcmp(phoneCount, "2"))
-			s_dualSimMode = 1;
-		else
-			s_dualSimMode = 0;
     }
 
     for (i = 1; i < argc ;) {

@@ -55,13 +55,15 @@
 #define MT_CALL 1
 
 #define SIM_MODE_PROPERTY  "persist.msms.phone_count"
+#define RIL_MAIN_SIM_PROPERTY  "persist.msms.phone_default"
 #define RIL_SIM_POWER_OFF_PROPERTY  "sys.power.off"
 #define RIL_SIM_POWER_PROPERTY  "ril.sim.power"
 #define RIL_SIM_POWER_PROPERTY1  "ril.sim.power1"
-#define RIL_MAIN_SIM_PROPERTY  "persist.msms.phone_default"
+#define RIL_SIM_POWER_PROPERTY2  "ril.sim.power2"
 #define RIL_ASSERT  "ril.assert"
 #define RIL_SIM_PIN_PROPERTY  "ril.sim.pin"
 #define RIL_SIM_PIN_PROPERTY1  "ril.sim.pin1"
+#define RIL_SIM_PIN_PROPERTY2  "ril.sim.pin2"
 #define RIL_MODEM_RESET_PROPERTY "persist.sys.sprd.modemreset"
 #define RIL_STK_PROFILE_PREFIX  "ril.stk.proflie_"
 #define RIL_SIM0_STATE  "gsm.sim.state0"
@@ -71,7 +73,8 @@
 #define RIL_SIM_TYPE  "ril.ICC_TYPE"
 #define RIL_SIM_TYPE1  "ril.ICC_TYPE_1"
 
-int s_dualSimMode = 0;
+int s_multiSimMode = 0;
+
 
 
 struct ATChannels *ATch_type[MAX_CHANNELS];
@@ -121,7 +124,7 @@ struct channel_description single_descriptions[MAX_CHANNELS] = {
     { 3, -1, "Channel3", "/dev/CHNPTY3", CHANNEL_IDLE, PTHREAD_MUTEX_INITIALIZER},
 };
 
-struct channel_description dual_descriptions[DUAL_MAX_CHANNELS] = {
+struct channel_description multi_descriptions[MULTI_MAX_CHANNELS] = {
     { 0, -1, "", "", CHANNEL_IDLE, PTHREAD_MUTEX_INITIALIZER},
     { 0, -1, "", "", CHANNEL_IDLE, PTHREAD_MUTEX_INITIALIZER},
     { 0, -1, "", "", CHANNEL_IDLE, PTHREAD_MUTEX_INITIALIZER},
@@ -1000,7 +1003,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 #if defined (RIL_SPRD_EXTENSION)
     autoAttach = ((int *)data)[1];
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-    if(s_dualSimMode) {
+    if(s_multiSimMode) {
         property_get(RIL_SIM1_ABSENT_PROPERTY, sim_prop, "0");
         property_get(RIL_DATA_PREFER_PROPERTY, data_prop, "0");
         ALOGD(" requetRadioPower sim_prop = %s", sim_prop);
@@ -1056,7 +1059,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 
         setRadioState(channelID, RADIO_STATE_OFF);
     } else if (onOff > 0 && sState == RADIO_STATE_OFF) {
-        if(s_dualSimMode) {
+        if(s_multiSimMode) {
             if(autoAttach == 1)
                 err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
             else
@@ -2990,13 +2993,16 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
         } else
             goto out;
 
-        if(s_dualSimMode) {
+        if(s_multiSimMode) {
             if(s_sim_num == 0) {
                 if(pin != NULL)
                     property_set(RIL_SIM_PIN_PROPERTY, pin);
             } else if (s_sim_num == 1) {
                 if(pin != NULL)
                     property_set(RIL_SIM_PIN_PROPERTY1, pin);
+            } else if (s_sim_num == 2) {
+                if(pin != NULL)
+                    property_set(RIL_SIM_PIN_PROPERTY2, pin);
             }
         } else {
             if(pin != NULL)
@@ -3408,13 +3414,13 @@ void putChannel(int channel)
 {
     struct channel_description *descriptions;
 
-    if(s_dualSimMode)
-        descriptions = dual_descriptions;
+    if(s_multiSimMode)
+        descriptions = multi_descriptions;
     else
         descriptions = single_descriptions;
 
-    if(s_dualSimMode) {
-        if(channel < 1 || channel >= DUAL_MAX_CHANNELS )
+    if(s_multiSimMode) {
+        if(channel < 1 || channel >= MULTI_MAX_CHANNELS )
             return;
     } else {
         if(channel < 1 || channel >= MAX_CHANNELS)
@@ -3440,15 +3446,15 @@ int getChannel()
     struct channel_description *descriptions;
     int channel_num;
 
-    if(s_dualSimMode) {
-        descriptions = dual_descriptions;
-        channel_num = DUAL_MAX_CHANNELS;
+    if(s_multiSimMode) {
+        descriptions = multi_descriptions;
+        channel_num = MULTI_MAX_CHANNELS;
     } else {
         descriptions = single_descriptions;
         channel_num = MAX_CHANNELS;
     }
 
-    if(s_dualSimMode)
+    if(s_multiSimMode)
         pthread_mutex_lock(&s_channel_mutex);
     for (;;) {
         if(!s_channel_open) {
@@ -3463,7 +3469,7 @@ int getChannel()
                 descriptions[channel].state = CHANNEL_BUSY;
                 ALOGD("get Channel ID '%d'", descriptions[channel].channelID);
                 pthread_mutex_unlock(&descriptions[channel].mutex);
-                if(s_dualSimMode)
+                if(s_multiSimMode)
                     pthread_mutex_unlock(&s_channel_mutex);
                 return channel;
             }
@@ -3471,7 +3477,7 @@ int getChannel()
         }
         usleep(5000);
     }
-    if(s_dualSimMode)
+    if(s_multiSimMode)
         pthread_mutex_unlock(&s_channel_mutex);
     return ret;
 }
@@ -3482,8 +3488,8 @@ static int getSmsChannel()
     struct channel_description *descriptions;
     int channel_num;
 
-    if(s_dualSimMode) {
-        descriptions = dual_descriptions;
+    if(s_multiSimMode) {
+        descriptions = multi_descriptions;
         channel_num = 2;
     } else {
         descriptions = single_descriptions;
@@ -4474,7 +4480,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     ALOGE("set prefeered network failed, type incorrect: %d", ((int *)data)[0]);
                     break;
                 }
-                if(s_dualSimMode) {
+                if(s_multiSimMode) {
                     char prop[10];
                     extern int s_sim_num;
 
@@ -5844,11 +5850,13 @@ getSIMStatus(int channelID)
         property_get(RIL_ASSERT, property, "0");
         if(!strcmp(property, "1")) {
             extern int s_sim_num;
-            if(s_dualSimMode) {
+            if(s_multiSimMode) {
                 if(s_sim_num == 0)
                     property_get(RIL_SIM_PIN_PROPERTY, prop, "");
                 else if (s_sim_num == 1)
                     property_get(RIL_SIM_PIN_PROPERTY1, prop, "");
+                else if (s_sim_num == 2)
+                    property_get(RIL_SIM_PIN_PROPERTY2, prop, "");
                 if(strlen(prop) != 4) {
                     goto out;
                 } else {
@@ -6251,7 +6259,7 @@ static void initializeCallback(void *param)
     at_send_command(ATch_type[channelID], "AT+SPDVTDCI="VT_DCI, NULL);
 
     /*power on sim card */
-    if(s_dualSimMode) {
+    if(s_multiSimMode) {
         char prop[10];
         extern int s_sim_num;
         if(s_sim_num == 0) {
@@ -6264,6 +6272,12 @@ static void initializeCallback(void *param)
             property_get(RIL_SIM_POWER_PROPERTY1, prop, "0");
             if(!strcmp(prop, "0")) {
                 property_set(RIL_SIM_POWER_PROPERTY1, "1");
+                at_send_command(ATch_type[channelID], "AT+SFUN=2", NULL);
+            }
+        } else if (s_sim_num == 2) {
+            property_get(RIL_SIM_POWER_PROPERTY2, prop, "0");
+            if(!strcmp(prop, "0")) {
+                property_set(RIL_SIM_POWER_PROPERTY2, "1");
                 at_send_command(ATch_type[channelID], "AT+SFUN=2", NULL);
             }
         }
@@ -7301,8 +7315,8 @@ static void onATReaderClosed()
     int channel_nums;
 
     ALOGI("AT channel closed\n");
-    if(s_dualSimMode)
-        channel_nums = DUAL_MAX_CHANNELS;
+    if(s_multiSimMode)
+        channel_nums = MULTI_MAX_CHANNELS;
     else
         channel_nums = MAX_CHANNELS;
 
@@ -7325,8 +7339,8 @@ static void onATTimeout()
     int channel_nums;
 
     ALOGI("AT channel timeout; closing\n");
-    if(s_dualSimMode)
-        channel_nums = DUAL_MAX_CHANNELS;
+    if(s_multiSimMode)
+        channel_nums = MULTI_MAX_CHANNELS;
     else
         channel_nums = MAX_CHANNELS;
 
@@ -7368,9 +7382,9 @@ mainLoop(void *param)
 
     if(param)
         sim_num= *((int*)param);
-    if(s_dualSimMode) {
-        descriptions = dual_descriptions;
-        channel_nums = DUAL_MAX_CHANNELS;
+    if(s_multiSimMode) {
+        descriptions = multi_descriptions;
+        channel_nums = MULTI_MAX_CHANNELS;
     } else {
         descriptions = single_descriptions;
         channel_nums = MAX_CHANNELS;
@@ -7379,7 +7393,7 @@ mainLoop(void *param)
     AT_DUMP("== ", "entering mainLoop()", -1 );
     at_set_on_reader_closed(onATReaderClosed);
     at_set_on_timeout(onATTimeout);
-    if(s_dualSimMode) {
+    if(s_multiSimMode) {
         sim_num = 3*sim_num;
         sim_save = sim_num;
     }
@@ -7394,12 +7408,12 @@ again:
         for(i = 0; i < channel_nums; i++)
         {
             /* open TTY device, and attach it to channel */
-            if(s_dualSimMode) {
+            if(s_multiSimMode) {
                 sprintf(str,"/dev/CHNPTY%d",sim_num);
-                strcpy(dual_descriptions[i].ttyName , str);
-                dual_descriptions[i].channelID = sim_num;
+                strcpy(descriptions[i].ttyName , str);
+                descriptions[i].channelID = sim_num;
                 sprintf(str,"Channel%d",sim_num);
-                strcpy(dual_descriptions[i].name , str);
+                strcpy(descriptions[i].name , str);
             }
 
             fd = open (descriptions[i].ttyName, O_RDWR | O_NONBLOCK);
@@ -7459,17 +7473,17 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
     char prop[5];
 
     if(0 == property_get(SIM_MODE_PROPERTY, phoneCount, "1")) {
-        s_dualSimMode = 0;
+        s_multiSimMode = 0;
     } else {
-        if(!strcmp(phoneCount, "2"))
-            s_dualSimMode = 1;
+        if(strcmp(phoneCount, "1"))
+            s_multiSimMode = 1;
         else
-            s_dualSimMode = 0;
+            s_multiSimMode = 0;
     }
 
     s_rilenv = env;
 
-    if(s_dualSimMode) {
+    if(s_multiSimMode) {
         while ( -1 != (opt = getopt(argc, argv, "n:"))) {
             switch (opt) {
                 case 'n':
@@ -7485,7 +7499,7 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
     pthread_attr_init (&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     sem_init(&w_sem, 0, 1);
-    if(s_dualSimMode){
+    if(s_multiSimMode){
         simNum = s_sim_num;
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         property_get(RIL_SIM1_ABSENT_PROPERTY, prop, "0");
@@ -7494,7 +7508,7 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
 	}
 #endif
         ret = pthread_create(&s_tid_mainloop, &attr, mainLoop, &simNum);
-        ALOGD("RIL enter dual sim card mode!");
+        ALOGD("RIL enter multi sim card mode!");
     } else {
         ret = pthread_create(&s_tid_mainloop, &attr, mainLoop, NULL);
         ALOGD("RIL enter single sim card mode!");

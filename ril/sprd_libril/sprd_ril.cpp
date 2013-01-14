@@ -202,8 +202,7 @@ static size_t s_lastNITZTimeDataSize;
 
 #define SIM_MODE_PROPERTY  "persist.msms.phone_count"
 
-static int s_dualSimMode;
-static int s_sim_num;
+static int s_multiSimMode;
 
 
 #if RILC_LOG
@@ -3299,7 +3298,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
 
             pCI = &(s_commands[request]);
 
-            if(s_dualSimMode) {
+            if(s_multiSimMode) {
                 if(pCI->requestNumber == RIL_REQUEST_SEND_SMS
                         || pCI->requestNumber == RIL_REQUEST_QUERY_FACILITY_LOCK
                         || pCI->requestNumber == RIL_REQUEST_SET_FACILITY_LOCK
@@ -3786,15 +3785,13 @@ RIL_register (const RIL_RadioFunctions *callbacks, int sim_num) {
     int count;
 
     if(0 == property_get(SIM_MODE_PROPERTY, phoneCount, "1")) {
-		s_dualSimMode = 0;
+        s_multiSimMode = 0;
     } else {
-		if(!strcmp(phoneCount, "2"))
-			s_dualSimMode = 1;
-		else
-			s_dualSimMode = 0;
+        if(strcmp(phoneCount, "1"))
+            s_multiSimMode = 1;
+        else
+            s_multiSimMode = 0;
     }
-
-    s_sim_num = sim_num;
 
     if (callbacks == NULL) {
         ALOGE("RIL_register: RIL_RadioFunctions * null");
@@ -3910,7 +3907,7 @@ RIL_register (const RIL_RadioFunctions *callbacks, int sim_num) {
     s_fdListen = ret;
 
 #else
-    if(s_dualSimMode) {
+    if(s_multiSimMode) {
         switch (sim_num) {
             case 1:
 		s_name_ril = "rild1";

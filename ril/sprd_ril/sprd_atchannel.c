@@ -421,8 +421,8 @@ static void onReaderClosed()
         int channel;
         int channel_nums;
 
-        if(s_dualSimMode)
-            channel_nums = DUAL_MAX_CHANNELS;
+        if(s_multiSimMode)
+            channel_nums = MULTI_MAX_CHANNELS;
         else
             channel_nums = MAX_CHANNELS;
 
@@ -446,8 +446,8 @@ static void *readerLoop(void *arg)
     fd_set rfds;
     int channel_nums;
 
-    if(s_dualSimMode)
-            channel_nums = DUAL_MAX_CHANNELS;
+    if(s_multiSimMode)
+            channel_nums = MULTI_MAX_CHANNELS;
     else
             channel_nums = MAX_CHANNELS;
 
@@ -607,8 +607,8 @@ void init_channels(void)
     int i;
     int channel_nums;
 
-    if(s_dualSimMode)
-            channel_nums = DUAL_MAX_CHANNELS;
+    if(s_multiSimMode)
+            channel_nums = MULTI_MAX_CHANNELS;
     else
             channel_nums = MAX_CHANNELS;
 
@@ -629,8 +629,8 @@ struct ATChannels *at_open(int fd, int channelID, char *name, ATUnsolHandler h)
     int i= channelID;
     int channel_nums;
 
-    if(s_dualSimMode)
-            channel_nums = DUAL_MAX_CHANNELS;
+    if(s_multiSimMode)
+            channel_nums = MULTI_MAX_CHANNELS;
     else
             channel_nums = MAX_CHANNELS;
 
@@ -698,8 +698,8 @@ void stop_reader(void)
         int channel;
         int channel_nums;
 
-    if(s_dualSimMode)
-            channel_nums = DUAL_MAX_CHANNELS;
+    if(s_multiSimMode)
+            channel_nums = MULTI_MAX_CHANNELS;
     else
             channel_nums = MAX_CHANNELS;
 
