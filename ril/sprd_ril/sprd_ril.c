@@ -7097,6 +7097,7 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
     int ret;
     int fd = -1;
     int opt;
+    int simNum;
     pthread_attr_t attr;
     char phoneCount[5];
     char prop[5];
@@ -7129,16 +7130,14 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     sem_init(&w_sem, 0, 1);
     if(s_dualSimMode){
+        simNum = s_sim_num;
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         property_get(RIL_SIM1_ABSENT_PROPERTY, prop, "0");
 	if(!strcmp(prop, "1")) {
-            if(s_sim_num == 0)
-                s_sim_num = 1;
-	    else if(s_sim_num == 1)
-                s_sim_num = 0;
+        simNum = s_sim_num>0 ? 0 : 1;
 	}
 #endif
-        ret = pthread_create(&s_tid_mainloop, &attr, mainLoop, &s_sim_num);
+        ret = pthread_create(&s_tid_mainloop, &attr, mainLoop, &simNum);
         ALOGD("RIL enter dual sim card mode!");
     } else {
         ret = pthread_create(&s_tid_mainloop, &attr, mainLoop, NULL);
