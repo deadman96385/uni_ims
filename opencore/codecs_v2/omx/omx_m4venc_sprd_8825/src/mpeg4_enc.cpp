@@ -277,7 +277,7 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
     }
 
     // allocate iYUVIn
-    if (((iSrcWidth & 0xF) || (iSrcHeight & 0xF)) || OMX_COLOR_FormatYUV420Planar != iVideoFormat) /* Not multiple of 16 */
+    if (((iSrcWidth & 0xF) || (iSrcHeight & 0xF))) /* Not multiple of 16 */
     {
 	iYUVInPmemHeap = new MemoryHeapIon(SPRD_ION_DEV,(((((iSrcWidth + 15) >> 4) * ((iSrcHeight + 15) >> 4)) * 3) << 7),MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
  	 int fd = iYUVInPmemHeap->getHeapID();
@@ -331,10 +331,24 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
             return OMX_ErrorUnsupportedSetting;
     }
 
-     if(encInfo.frame_width>176)
-	 	encConfig.vbv_buf_size = encConfig.targetBitRate;
-	 	
-     iVBVSize = encConfig.vbv_buf_size;
+#if 1
+    if(encConfig.FrameRate > 1)
+    {
+        iAverageFrameBits = encConfig.targetBitRate /encConfig.FrameRate;;
+    }
+    else
+    {
+        iAverageFrameBits = encConfig.targetBitRate/20;         //default 20fps.
+    }
+    iLastFrameBitsEncoded = iAverageFrameBits;
+#endif
+
+    if(encInfo.frame_width>176)
+    {
+        // the VBV delay = 1s, 2s.
+        encConfig.vbv_buf_size = encConfig.targetBitRate;   //(encConfig.targetBitRate<<1);
+    }
+    iVBVSize = encConfig.vbv_buf_size;
 
     //IPPPPPPPPPP, indicates I-frame followed by all P-frames
     if (0xFFFFFFFF == aEncodeMpeg4Param.nPFrames)
@@ -610,10 +624,15 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
 		
         iNextModTime = aInTimeStamp/1000;
         iModTimeInitialized = OMX_TRUE;
-	 iBs_remain_len =  (OMX_S32)(iVBVSize>>1);  // init vbv buffer half full to avoid larger frame at begin.
+        iLastPicTime = aInTimeStamp;
+        iPreSrcDitherms = 0;
+        iFlagAdjustSrcDither = OMX_FALSE;
+        //
+        iCycleAdaptFrmCnt = 0;
+        iCycleAdaptInterval = 0;
+        iSrcCycleAdaptms = ( iSrcFrameRate > 0)? ( (1000<<16)/iSrcFrameRate):50;  //default 20fps.
 
-	 iLastPicTime = aInTimeStamp;
-	 iPreSrcDitherms = 0;
+        iBs_remain_len =  (OMX_S32)(iVBVSize>>1);  // init vbv buffer half full to avoid larger frame at begin.
     }
 
     /* Input Buffer Size Check
@@ -646,15 +665,51 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
     int Size;
     bool status;
 
-    OMX_U32 intervalms =  ( iSrcFrameRate > 0)? ( (1000<<16)/iSrcFrameRate):50;     //default 20fps.
+    OMX_U32 intervalms =  (OMX_U32)(iSrcCycleAdaptms);
     OMX_S32 bits_consumed  = 0;
 
 
+
+#if 0
+    // Auto adapt to get the frame cycle of source.
+    if(iCycleAdaptFrmCnt < 10)
+    {
+        OMX_TICKS curInterval = aInTimeStamp - iLastPicTime;
+
+        if( (curInterval < iCycleAdaptInterval + 3000) &&
+            (curInterval + 3000 >  iCycleAdaptInterval)
+          )
+        {
+            iCycleAdaptFrmCnt++;
+            if(iCycleAdaptFrmCnt >= 10)
+            {
+                // Cycle adapt is ok. adjust the cycle.
+                iSrcCycleAdaptms = (OMX_U32)((aInTimeStamp - iCycleAdaptFirstFrmTime)/iCycleAdaptFrmCnt/1000);
+
+                SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo, iSrcCycleAdaptms=%ld",iSrcCycleAdaptms );
+            }
+        }
+        else
+        {
+            // start the new auto adaptor.
+            iCycleAdaptFirstFrmTime = aInTimeStamp;
+            iCycleAdaptInterval = curInterval;
+            iCycleAdaptFrmCnt = 0;
+        }
+    }
+#endif
+    iLastPicTime = aInTimeStamp;
+
+
+    // iNextModTime is in milliseconds (although it's a 64 bit value) whereas
+    // aInTimestamp is in microseconds
+    //if((iNextModTime * 1000) < aInTimeStamp + intervalms*1000)
+    //if((iNextModTime * 1000) < aInTimeStamp + 15*1000)
     if( (iNextModTime * 1000) <= aInTimeStamp + (iPreSrcDitherms + 15)*1000 )
     {
         // estimate the bit consumed by APP.
-        // bits_consumed =  (OMX_S32)( intervalms*MAX(iBps,2000)/1000);
-        bits_consumed =  (OMX_S32)( (aInTimeStamp-iLastPicTime)*MAX((iBps-2000),2000)/1000000);
+        bits_consumed =  (OMX_S32)( intervalms*MAX(iBps,2000)/1000);
+        // bits_consumed =  (OMX_S32)( (aInTimeStamp-iLastPicTime)*MAX(iBps,2000)/1000000); 
         iBs_remain_len -=  bits_consumed;
         if(iBs_remain_len<0)
         {
@@ -782,21 +837,42 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
 
         if (status == OMX_TRUE)
         {
+            *aOutTimeStamp = iNextModTime*1000;
+            // iPreSrcDitherms:  if pre src is later than the expect time, >0; else, <0.
             iPreSrcDitherms = (aInTimeStamp/1000 - iNextModTime);
-            if( ( iPreSrcDitherms > (OMX_TICKS)(intervalms<<1) ) || 
-                ( iPreSrcDitherms + (OMX_TICKS)(intervalms<<1) < 0) )
+            if( iPreSrcDitherms > (OMX_TICKS)(intervalms>>1) )
             {
-                /* reset the dither if it's too large. */
-                OMX_MP4ENC_INFO("Mpeg4Encoder_OMX::Mp4EncodeVideo,iPreSrcDitherms=%lld, interval=%d. \n", iPreSrcDitherms, intervalms);
-                iPreSrcDitherms = 0;
-                iNextModTime = (OMX_TICKS)((OMX_S32)( aInTimeStamp/1000)  + intervalms);
+                /* iNextModTime it's too large., setup the flag adjust the modetime.*/
+                 iFlagAdjustSrcDither = OMX_TRUE;
+            }
+            else if( iPreSrcDitherms <= 1 )
+            {
+                iFlagAdjustSrcDither = OMX_FALSE;
+            }
+
+            if(iFlagAdjustSrcDither > 0)
+            {
+#if 1
+                if( iPreSrcDitherms > (OMX_TICKS)(intervalms>>1) )
+                {
+                    // adjust the mode time quickly,  the timestamp of source should be checked.
+                    // or some frames dropped.
+                    //iPreSrcDitherms = 0;
+                    //iNextModTime = (OMX_TICKS)((OMX_S32)( aInTimeStamp/1000)  + intervalms);
+                    iNextModTime += (OMX_TICKS)( intervalms + (intervalms>>2) );
+                }
+                else
+#endif
+                {
+                    // adjust the src dither slowly. For source dither or  slight frame drop.
+                    iNextModTime += (OMX_TICKS)(intervalms) + 1; //2
+                }
             }
             else
             {
                  // this is time in milliseconds
                 iNextModTime += (OMX_TICKS)(intervalms);
             }
-            iLastPicTime = aInTimeStamp;
 
             iFrameTypeCounter++;
             if (Size > 0)
@@ -830,6 +906,8 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
             {
                 iBs_remain_len = iVBVSize;
             }
+            iLastFrameBitsEncoded = (Size<<3);
+
             return OMX_TRUE;
         }
         else

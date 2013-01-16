@@ -783,7 +783,15 @@ OMX_S32 Mpeg4Decoder_OMX::InitializeVideoDecode(
     }
 
     OMX_MP4DEC_INFO ("Mp4 stream  mode %d\n",CodecMode);	
-	
+
+#ifdef MPEG4_ES_DUMP
+    fp_es = fopen(fn_es, "wb");
+    if (fp_es != NULL)
+    {
+        fwrite(video_format.p_extra, 1, video_format.i_extra, fp_es);
+    }
+#endif
+
     if(CodecMode == H263_MODE)
     {
     	video_format.video_std = ITU_H263;

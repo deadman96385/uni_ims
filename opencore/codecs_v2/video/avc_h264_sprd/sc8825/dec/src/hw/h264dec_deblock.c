@@ -473,7 +473,7 @@ PUBLIC void H264Dec_BS_and_Para (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T *mb_
 		BS[0] = BS[1] = BS[2] = BS[3] = 0x0;
 	}else
 	{
-#if 0
+#if 1
 		if (img_ptr->curr_slice_ptr->LFDisableIdc == 2)
 		{
 			mb_cache_ptr->top_edge_filter_flag = mb_cache_ptr->mb_avail_b;

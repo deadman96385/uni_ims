@@ -148,8 +148,10 @@ typedef enum {
 void  VSP_SetVirtualBaseAddr(uint32 vsp_Vaddr_base);
 #endif
 
-int32 VSP_OPEN_Dev (int );
-void VSP_CLOSE_Dev(int );
+int32 VSP_OPEN_Dev ( );
+void VSP_CLOSE_Dev( );
+void VSP_GET_DEV_FREQ(int32*  vsp_clk_ptr);
+void VSP_CONFIG_DEV_FREQ(int32*  vsp_clk_ptr);
 void VSP_START_CQM(void);
 int32 VSP_ACQUIRE_Dev(void);
 void VSP_RELEASE_Dev(void);

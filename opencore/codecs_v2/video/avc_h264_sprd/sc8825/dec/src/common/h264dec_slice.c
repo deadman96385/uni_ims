@@ -624,8 +624,10 @@ LOCAL void H264Dec_output_one_frame (DEC_IMAGE_PARAMS_T *img_ptr, MMDecOutput * 
     if (out != cur)
     {
         dpb_ptr->delayed_pic_ptr = out;
+        dec_out->frameEffective = (prev == out) ? 0 : 1;
+        
         //flush one frame from dpb and re-organize the delayed_pic buffer
-        if(/*out_of_order ||*/ pics > img_ptr->has_b_frames)
+        if(/*out_of_order ||*/ pics > img_ptr->has_b_frames || dec_out->frameEffective)
         {
             for(i = out_idx; dpb_ptr->delayed_pic[i]; i++)
             {
@@ -634,9 +636,9 @@ LOCAL void H264Dec_output_one_frame (DEC_IMAGE_PARAMS_T *img_ptr, MMDecOutput * 
             dpb_ptr->delayed_pic_num--;
         }
             
-        dec_out->frameEffective = (prev == out) ? 0 : 1;
     }
 
+    dec_out->reqNewBuf = 1;				
     if (dec_out->frameEffective)
     {
         if (img_ptr->VSP_used)
@@ -657,25 +659,24 @@ LOCAL void H264Dec_output_one_frame (DEC_IMAGE_PARAMS_T *img_ptr, MMDecOutput * 
         dec_out->pOutFrameU = out->imgU;
         dec_out->pOutFrameV = out->imgV;
         dec_out->pBufferHeader = out->pBufferHeader;
-    }
-    dec_out->reqNewBuf = 1;				
 
-    for (i = 0; i < /*dpb_ptr->used_size*/(MAX_REF_FRAME_NUMBER+1); i++)
-    {
-        if (out == dpb_ptr->fs[i]->frame)
+        for (i = 0; i < /*dpb_ptr->used_size*/(MAX_REF_FRAME_NUMBER+1); i++)
         {
-            if(dpb_ptr->fs[i]->is_reference == DELAYED_PIC_REF)
+            if (out == dpb_ptr->fs[i]->frame)
             {
-                dpb_ptr->fs[i]->is_reference = 0;
-
-                if(dpb_ptr->fs[i]->frame->pBufferHeader!=NULL)
+                if(dpb_ptr->fs[i]->is_reference == DELAYED_PIC_REF)
                 {
-                    (*VSP_unbindCb)(g_user_data,dpb_ptr->fs[i]->frame->pBufferHeader);
-                    dpb_ptr->fs[i]->frame->pBufferHeader = NULL;
+                    dpb_ptr->fs[i]->is_reference = 0;
+
+                    if(dpb_ptr->fs[i]->frame->pBufferHeader!=NULL)
+                    {
+                        (*VSP_unbindCb)(g_user_data,dpb_ptr->fs[i]->frame->pBufferHeader);
+                        dpb_ptr->fs[i]->frame->pBufferHeader = NULL;
+                    }
                 }
             }
         }
-    }
+    }   
 
     SCI_TRACE_LOW("out poc: %d, effective: %d\t", out->poc, dec_out->frameEffective);
 

@@ -53,7 +53,7 @@ int32 s_vsp_fd = -1;
 /*************************************/
 /* functions needed for video engine */
 /*************************************/
-PUBLIC int32 VSP_OPEN_Dev (int reg_irq_flag)
+PUBLIC int32 VSP_OPEN_Dev ()
 {
  	int ret =0;
 	
@@ -76,7 +76,7 @@ PUBLIC int32 VSP_OPEN_Dev (int reg_irq_flag)
 	return 0;
 }
 
-PUBLIC void VSP_CLOSE_Dev(int unreg_irq_flag)
+PUBLIC void VSP_CLOSE_Dev()
 {
 
 	int ret = 0;
@@ -87,6 +87,19 @@ PUBLIC void VSP_CLOSE_Dev(int unreg_irq_flag)
 		close(s_vsp_fd);	
 	}
 }
+
+PUBLIC void VSP_GET_DEV_FREQ(int32*  vsp_clk_ptr)
+{
+	if(s_vsp_fd > 0)
+		 ioctl(s_vsp_fd,VSP_GET_FREQ,vsp_clk_ptr);
+}
+
+PUBLIC void VSP_CONFIG_DEV_FREQ(int32*  vsp_clk_ptr)
+{
+	if(s_vsp_fd > 0)
+		 ioctl(s_vsp_fd,VSP_CONFIG_FREQ,vsp_clk_ptr);
+}
+
 
 PUBLIC void VSP_START_CQM (void)
 {	

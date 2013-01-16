@@ -193,7 +193,7 @@ MMDecRet H264DecInit(MMCodecBuffer * buffer_ptr,MMDecVideoFormat * pVideoFormat)
 	SCI_ASSERT(NULL != buffer_ptr);
 	SCI_ASSERT(NULL != pVideoFormat);
 
-	if (VSP_OPEN_Dev(1) < 0)
+	if (VSP_OPEN_Dev() < 0)
 	{
 		return ret;
 	}
@@ -473,7 +473,7 @@ MMDecRet H264DecRelease(void)
 {
 	H264Dec_FreeMem();
 
-	VSP_CLOSE_Dev(1);
+	VSP_CLOSE_Dev();
 	
 #if _CMODEL_
 	VSP_Delete_CModel();

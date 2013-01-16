@@ -186,7 +186,7 @@ PUBLIC MMDecRet MP4DecInit(MMCodecBuffer *pBuffer, MMDecVideoFormat *video_forma
 	DEC_VOP_MODE_T *vop_mode_ptr = NULL;
 	H263_PLUS_HEAD_INFO_T *h263_plus_head_info_ptr = NULL;
 
-	if (VSP_OPEN_Dev(1) < 0)
+	if (VSP_OPEN_Dev() < 0)
 	{
 		return MMDEC_ERROR;
 	};
@@ -667,7 +667,7 @@ MMDecRet MP4DecRelease(void)
 {
 	Mp4Dec_FreeMem();
 	
-	VSP_CLOSE_Dev(1);
+	VSP_CLOSE_Dev();
 	
 #if _CMODEL_
 	VSP_Delete_CModel();

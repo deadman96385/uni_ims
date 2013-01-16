@@ -500,6 +500,35 @@ PUBLIC void H264Dec_init_picture (DEC_IMAGE_PARAMS_T *img_ptr)
 	}
 #endif
 
+#if 1   //current decoded picture has been in delayed_pic[]
+	if(fs->is_reference == DELAYED_PIC_REF)
+        {
+                int32 out_idx;
+    		
+        	fs->is_reference = 0;
+
+                if(fs->frame->pBufferHeader!=NULL)
+                {
+            	    (*VSP_unbindCb)(g_user_data,fs->frame->pBufferHeader);
+                    fs->frame->pBufferHeader = NULL;
+                }
+
+		for (i = 0; i < g_dpb_ptr->delayed_pic_num; i++)
+		{
+			if (fs->frame == g_dpb_ptr->delayed_pic[i])
+			{
+				out_idx = i;
+				break;
+			}
+		}
+
+		for(i = out_idx; dpb_ptr->delayed_pic[i]; i++)
+                {
+			dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
+		}
+		dpb_ptr->delayed_pic_num--;        
+        }
+#endif
 	fs->disp_status = 0;
 	g_dec_picture_ptr = fs->frame;
 
