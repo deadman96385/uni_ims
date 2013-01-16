@@ -15,6 +15,7 @@
 ** limitations under the License.
 */
 
+
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
@@ -77,6 +78,7 @@ static char creg_response[100] = "";
 static char cgreg_response[100] = "";
 static int s_channel_open = 0;
 static int s_sms_ready = 0;
+static int simNum;
 
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 
@@ -7097,7 +7099,6 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
     int ret;
     int fd = -1;
     int opt;
-    int simNum;
     pthread_attr_t attr;
     char phoneCount[5];
     char prop[5];
