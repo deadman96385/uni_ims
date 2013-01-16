@@ -25,6 +25,7 @@
 
 #define RIL_SIM_POWER_PROPERTY  "ril.sim.power"
 #define RIL_SIM_POWER_PROPERTY1  "ril.sim.power1"
+#define RIL_SIM_POWER_PROPERTY2  "ril.sim.power2"
 #define RIL_ASSERT  "ril.assert"
 #define PROP_PHONE_COUNT  "persist.msms.phone_count"
 #define PHONE_APP   "com.android.phone"
@@ -34,7 +35,7 @@
 static char ttydev[12];
 static int ttydev_fd;
 
-static int s_dualSimMode = 0;
+static int s_multiSimMode = 0;
 
 /* helper function to get pid from process name */
 static int get_task_pid(char *name)
@@ -111,7 +112,7 @@ static int start_engservice(void)
 
 static int start_phser()
 {
-    if(s_dualSimMode) {
+    if(s_multiSimMode > 1) {
         property_set("ctl.start", "phoneserver_2sim");
     } else {
         property_set("ctl.start", "phoneserver");
@@ -122,7 +123,7 @@ static int start_phser()
 
 static int kill_phser()
 {
-    if(s_dualSimMode) {
+    if(s_multiSimMode > 1) {
         property_set("ctl.stop", "phoneserver_2sim");
     } else {
         property_set("ctl.stop", "phoneserver");
@@ -137,7 +138,11 @@ void assert_handler(int sig_num)
     int status;
 
     property_set(RIL_ASSERT, "1");
-    if(s_dualSimMode) {
+    if(s_multiSimMode == 3) {
+        property_set(RIL_SIM_POWER_PROPERTY, "0");
+        property_set(RIL_SIM_POWER_PROPERTY1, "0");
+        property_set(RIL_SIM_POWER_PROPERTY2, "0");
+    } else if(s_multiSimMode == 2) {
         property_set(RIL_SIM_POWER_PROPERTY, "0");
         property_set(RIL_SIM_POWER_PROPERTY1, "0");
     } else {
@@ -165,7 +170,8 @@ void assert_handler(int sig_num)
 
 void reset_handler(int sig_num)
 {
-    char mux_mode_swap[]="echo 1 > /proc/mux_mode";
+    char mux_2sim_mode[]="busybox echo 1 > /proc/mux_mode";
+    char mux_3sim_mode[]="busybox echo 2 > /proc/mux_mode";
     char path[32];
 
     /* open ttydev */
@@ -174,9 +180,12 @@ void reset_handler(int sig_num)
     if (ttydev_fd < 0)
         MONITOR_LOGE("Failed to open %s!\n", path);
 
-    if(s_dualSimMode) {
-        MONITOR_LOGD("restart enter dual sim card mode!\n");
-        system(mux_mode_swap);
+    if(s_multiSimMode == 3) {
+        MONITOR_LOGD("enter %d sim card mode!\n", s_multiSimMode);
+        system(mux_3sim_mode);
+    } else if(s_multiSimMode == 2) {
+        MONITOR_LOGD("enter %d sim card mode!\n", s_multiSimMode);
+        system(mux_2sim_mode);
     }
 
     /*make sure the condition mux needed is OK*/
@@ -201,17 +210,20 @@ int main(int argc, char **argv)
     struct sigaction reset_act;
     int ret;
     int str;
-    char mux_mode_swap[]="echo 1 > /proc/mux_mode";
+    char mux_2sim_mode[]="busybox echo 1 > /proc/mux_mode";
+    char mux_3sim_mode[]="busybox echo 2 > /proc/mux_mode";
     char phoneCount[5];
     char path[32];
 
     if(0 == property_get(PROP_PHONE_COUNT, phoneCount, "1")) {
-        s_dualSimMode = 0;
+        s_multiSimMode = 1;
     } else {
-        if(!strcmp(phoneCount, "2"))
-            s_dualSimMode = 1;
+        if(!strcmp(phoneCount, "3"))
+            s_multiSimMode = 3;
+        else if(!strcmp(phoneCount, "2"))
+            s_multiSimMode = 2;
         else
-            s_dualSimMode = 0;
+            s_multiSimMode = 1;
     }
 
     property_get(PROP_TTYDEV, ttydev, "ttyNK3");
@@ -241,9 +253,12 @@ int main(int argc, char **argv)
     if (ttydev_fd < 0)
         MONITOR_LOGE("Failed to open %s!\n", path);
 
-    if(s_dualSimMode) {
-        MONITOR_LOGD("enter dual sim card mode!\n");
-        system(mux_mode_swap);
+    if(s_multiSimMode == 3) {
+        MONITOR_LOGD("enter %d sim card mode!\n", s_multiSimMode);
+        system(mux_3sim_mode);
+    } else if(s_multiSimMode == 2) {
+        MONITOR_LOGD("enter %d sim card mode!\n", s_multiSimMode);
+        system(mux_2sim_mode);
     }
 
     /*make sure the condition mux needed is OK*/
