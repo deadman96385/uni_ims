@@ -3053,8 +3053,10 @@ static void requestSetSmsBroadcastConfig(int channelID,  void *data, size_t data
     char*         cmd;
 
     RIL_GSM_BroadcastSmsConfigInfo **gsmBciPtrs = ( RIL_GSM_BroadcastSmsConfigInfo* *)data;
-    int  i =0 ,j=0;
     RIL_GSM_BroadcastSmsConfigInfo gsmBci;
+    int enable = 0;
+#if defined (RIL_SPRD_EXTENSION)
+    int  i =0 ,j=0;
     char pre_colon = 0x22;
     int count = datalen/sizeof(RIL_GSM_BroadcastSmsConfigInfo*);
     int channelLen =0;
@@ -3064,7 +3066,6 @@ static void requestSetSmsBroadcastConfig(int channelID,  void *data, size_t data
     char *lang;
     char  get_char[10] ={0};
     char comma = 0x2c;
-    int enable = 0;
     char tmp[20] = {0};
     char quotes = 0x22;
 
@@ -3129,6 +3130,32 @@ static void requestSetSmsBroadcastConfig(int channelID,  void *data, size_t data
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
     at_response_free(p_response);
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+    gsmBci =*(RIL_GSM_BroadcastSmsConfigInfo *)(gsmBciPtrs[0]);
+    enable = gsmBci.selected;
+    ALOGD("requestSetSmsBroadcastConfig enable = %d", enable);
+    ALOGD("requestSetSmsBroadcastConfig fromServiceId = %d", gsmBci.fromServiceId);
+    ALOGD("requestSetSmsBroadcastConfig toServiceId = %d", gsmBci.toServiceId);
+    if (gsmBci.fromServiceId == 0 && gsmBci.toServiceId == 999) {
+        asprintf(&cmd, "AT+CSCB=%d,\"1000\",\"\"", !enable);
+    }
+    if (gsmBci.fromServiceId == gsmBci.toServiceId) {
+        asprintf(&cmd, "AT+CSCB=%d,\"%d\",\"\"", !enable, gsmBci.fromServiceId);
+    }
+
+    ALOGI("requestSetSmsBroadcastConfig cmd %s",cmd);
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    ALOGI( "requestSetSmsBroadcastConfig err %d ,success %d",err,p_response->success);
+    if (err < 0 || p_response->success == 0) {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    } else {
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    }
+error:
+    free(cmd);
+    at_response_free(p_response);
+}
+#endif
 }
 
 static void requestGetSmsBroadcastConfig(int channelID,  void *data, size_t datalen, RIL_Token t)
@@ -3159,7 +3186,11 @@ static void requestSmsBroadcastActivation(int channelID,  void *data, size_t dat
     ALOGI("Reference-ril."
             " datalen: %d ,active %d\n", datalen,active[0]);
 
+#if defined (RIL_SPRD_EXTENSION)
     asprintf(&cmd, "AT+CSCB=%d", active[0]);
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+    asprintf(&cmd, "AT+CSCB=%d", !active[0]);
+#endif
 
     err = at_send_command(ATch_type[channelID], cmd,&p_response);
     free(cmd);
@@ -4736,11 +4767,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             requestSmsBroadcastActivation(channelID,data, datalen, t);
             break;
         case RIL_REQUEST_GSM_SET_BROADCAST_SMS_CONFIG:
-#if defined (RIL_SPRD_EXTENSION)
             requestSetSmsBroadcastConfig(channelID,data, datalen, t);
-#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-            requestSetCellBroadcastConfig(channelID, data, datalen, t);
-#endif
             break;
         case RIL_REQUEST_GSM_GET_BROADCAST_SMS_CONFIG:
             requestGetSmsBroadcastConfig(channelID,data, datalen, t);
@@ -5395,10 +5422,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-        case RIL_REQUEST_SET_CELL_BROADCAST_CONFIG:
-            requestSetCellBroadcastConfig(channelID, data, datalen, t);
-            break;
-
         case RIL_REQUEST_GET_CELL_BROADCAST_CONFIG:
             requestGetCellBroadcastConfig(channelID,data, datalen, t);
             break;
