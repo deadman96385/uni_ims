@@ -984,20 +984,37 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 #if defined (RIL_SPRD_EXTENSION)
     autoAttach = ((int *)data)[1];
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+    char sim_prop[5];
     char data_prop[5];
     if(s_dualSimMode) {
+        property_get(RIL_SIM1_ABSENT_PROPERTY, sim_prop, "0");
         property_get(RIL_DATA_PREFER_PROPERTY, data_prop, "0");
+        ALOGD(" requetRadioPower sim_prop = %s", sim_prop);
         ALOGD(" requetRadioPower data_prop = %s", data_prop);
-        if (s_sim_num == 0) {
-            if(!strcmp(data_prop, "0"))
-                autoAttach = 1;
-            else
-                autoAttach = 0;
-        } else if (s_sim_num == 1) {
-            if(!strcmp(data_prop, "1"))
-                autoAttach = 1;
-            else
-                autoAttach = 0;
+        if(!strcmp(sim_prop,"1")) {
+            if (s_sim_num == 0) {
+                if(!strcmp(data_prop, "1"))
+                    autoAttach = 1;
+                else
+                    autoAttach = 0;
+            } else if (s_sim_num == 1) {
+                if(!strcmp(data_prop, "0"))
+                    autoAttach = 1;
+                else
+                    autoAttach = 0;
+            }
+        } else {
+            if (s_sim_num == 0) {
+                if(!strcmp(data_prop, "0"))
+                    autoAttach = 1;
+                else
+                    autoAttach = 0;
+            } else if (s_sim_num == 1) {
+                if(!strcmp(data_prop, "1"))
+                    autoAttach = 1;
+                else
+                    autoAttach = 0;
+            }
         }
     }
 #endif
