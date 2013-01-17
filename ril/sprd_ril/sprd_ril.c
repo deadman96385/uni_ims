@@ -15,7 +15,6 @@
 ** limitations under the License.
 */
 
-
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
@@ -976,6 +975,8 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
     int autoAttach = -1;
     int err, i;
     ATResponse *p_response = NULL;
+    char sim_prop[5];
+    char data_prop[5];
     extern int s_sim_num;
 
     assert (datalen >= sizeof(int *));
@@ -984,14 +985,12 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 #if defined (RIL_SPRD_EXTENSION)
     autoAttach = ((int *)data)[1];
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-    char sim_prop[5];
-    char data_prop[5];
     if(s_dualSimMode) {
         property_get(RIL_SIM1_ABSENT_PROPERTY, sim_prop, "0");
         property_get(RIL_DATA_PREFER_PROPERTY, data_prop, "0");
         ALOGD(" requetRadioPower sim_prop = %s", sim_prop);
         ALOGD(" requetRadioPower data_prop = %s", data_prop);
-        if(!strcmp(sim_prop,"1")) {
+        if(!strcmp(sim_prop, "1")) {
             if (s_sim_num == 0) {
                 if(!strcmp(data_prop, "1"))
                     autoAttach = 1;
@@ -2130,14 +2129,13 @@ static void requestRegistrationState(int channelID, int request, void *data,
 {
     int err;
     int response[4] = { -1, -1, -1, -1 };
-    char *responseStr[4] = { NULL, NULL, NULL, NULL };
+    char *responseStr[15] = {NULL};
     ATResponse *p_response = NULL;
     const char *cmd;
     const char *prefix;
     char *line, *p;
     int commas;
     int skip;
-    int count = 1;
     int para,i;
 
     if (request == RIL_REQUEST_VOICE_REGISTRATION_STATE) {
@@ -2192,7 +2190,6 @@ static void requestRegistrationState(int channelID, int request, void *data,
         case 0: /* +CREG: <stat> */
             err = at_tok_nextint(&line, &response[0]);
             if (err < 0) goto error;
-            count = 1;
             break;
 
         case 1: /* +CREG: <n>, <stat> */
@@ -2200,7 +2197,6 @@ static void requestRegistrationState(int channelID, int request, void *data,
             if (err < 0) goto error;
             err = at_tok_nextint(&line, &response[0]);
             if (err < 0) goto error;
-            count = 1;
             break;
 
         case 2: /* +CREG: <stat>, <lac>, <cid> */
@@ -2210,7 +2206,6 @@ static void requestRegistrationState(int channelID, int request, void *data,
             if (err < 0) goto error;
             err = at_tok_nexthexint(&line, &response[2]);
             if (err < 0) goto error;
-            count = 3;
             break;
         case 3: /* +CREG: <n>, <stat>, <lac>, <cid> */
             err = at_tok_nextint(&line, &skip);
@@ -2221,7 +2216,6 @@ static void requestRegistrationState(int channelID, int request, void *data,
             if (err < 0) goto error;
             err = at_tok_nexthexint(&line, &response[2]);
             if (err < 0) goto error;
-            count = 3;
             break;
             /* special case for CGREG, there is a fourth parameter
              * that is the network type (unknown/gprs/edge/umts)
@@ -2237,13 +2231,20 @@ static void requestRegistrationState(int channelID, int request, void *data,
             if (err < 0) goto error;
             err = at_tok_nexthexint(&line, &response[3]);
             if (err < 0) goto error;
-            count = 4;
             break;
         default:
             goto error;
     }
 
+#if defined (RIL_SPRD_EXTENSION)
     asprintf(&responseStr[0], "%d", response[0]);
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+    if(8 == response[0])
+        asprintf(&responseStr[0], "14");
+    else
+        asprintf(&responseStr[0], "%d", response[0]);
+#endif
+
     if (response[1] != -1) {
         asprintf(&responseStr[1], "%x", response[1]);
     }
@@ -2251,12 +2252,20 @@ static void requestRegistrationState(int channelID, int request, void *data,
         asprintf(&responseStr[2], "%x", response[2]);
     }
 
-    if (count == 4) {
+    if (response[3] != -1) {
         response[3] = mapCgregResponse(response[3]);
         asprintf(&responseStr[3], "%d", response[3]);
     }
-    RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, count*sizeof(char*));
+
+    if (request == RIL_REQUEST_VOICE_REGISTRATION_STATE) {
+        asprintf(&responseStr[7], "0");
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, 15*sizeof(char*));
+    } else if (request == RIL_REQUEST_DATA_REGISTRATION_STATE) {
+        asprintf(&responseStr[5], "3");
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, 6*sizeof(char*));
+    }
     at_response_free(p_response);
+
     free(responseStr[0]);
     if (responseStr[1] != NULL)
         free(responseStr[1]);
@@ -2266,6 +2275,12 @@ static void requestRegistrationState(int channelID, int request, void *data,
 
     if (responseStr[3] != NULL)
         free(responseStr[3]);
+
+    if (responseStr[5] != NULL)
+        free(responseStr[5]);
+
+    if (responseStr[7] != NULL)
+        free(responseStr[7]);
 
     return;
 error:
