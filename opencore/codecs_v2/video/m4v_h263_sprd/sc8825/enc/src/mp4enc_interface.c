@@ -190,7 +190,7 @@ MMEncRet MP4EncRelease(void)
 {
 // 	Mp4_CommonMemFree();
 	Mp4Enc_MemFree();
-	VSP_CLOSE_Dev(0);
+	VSP_CLOSE_Dev();
 
 // 	g_bVspInited = FALSE;
 #if _CMODEL_
@@ -261,7 +261,7 @@ MMEncRet MP4EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr, MME
 
 	Mp4Enc_InitSession(vol_mode_ptr, vop_mode_ptr); 
 SCI_TRACE_LOW("b4 open VSP_OPEN_Dev() ");
-	if (VSP_OPEN_Dev(1) < 0)
+	if (VSP_OPEN_Dev() < 0)
 	{
 		init_return = MMENC_ERROR;
 		SCI_TRACE_LOW("VSP_OPEN_Dev() ");

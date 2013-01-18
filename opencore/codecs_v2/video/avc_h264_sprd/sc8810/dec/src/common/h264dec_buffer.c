@@ -785,16 +785,6 @@ LOCAL void H264Dec_reorder_short_term (DEC_STORABLE_PICTURE_T **ref_picture_list
 	int32 c_idx, n_idx;
 	DEC_STORABLE_PICTURE_T *pic_lx_ptr;
 
-#if 0//_H264_PROTECT_ & _LEVEL_HIGH_   //removed by xwluo@2012.04.23
-	if (pic_num_lx < 0)
-	{
-		SCI_TRACE_LOW("H264Dec_reorder_short_term: pic_num_lx: %d\n", pic_num_lx);
-		g_image_ptr->error_flag |= ER_GET_SHORT_REF_ID;
-		g_image_ptr->return_pos |= (1<<5);
-		return;
-	}
-#endif
-
 	pic_lx_ptr = H264Dec_get_short_term_pic (pic_num_lx);
 
 	for (c_idx = (num_ref_idx_lX_active_minus1+1); c_idx > *ref_idx_lx; c_idx--)

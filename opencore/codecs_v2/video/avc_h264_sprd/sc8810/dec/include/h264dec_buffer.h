@@ -88,7 +88,7 @@ typedef struct frame_store_tag
 	DEC_STORABLE_PICTURE_T *frame;
 }DEC_FRAME_STORE_T;
 
-#define MAX_DELAYED_PIC_NUM	5
+#define MAX_DELAYED_PIC_NUM	10 //5
 
 //decoded picture buffer
 typedef struct decoded_picture_buffer

@@ -288,10 +288,22 @@ PUBLIC MMDecRet H264Dec_Picture_Level_Sync (DEC_IMAGE_PARAMS_T *img_ptr)
 #endif
 
 	if(!img_ptr->is_previous_cmd_done)
-	{ 
+	{
+#ifdef _DEBUG_TIME_
+	gettimeofday(&tpstart,NULL);
+#endif
+	
             SCI_TRACE_LOW("%s, %d, polling PREVIOUS cqm", __FUNCTION__, __LINE__);
             VSP_START_CQM();
             img_ptr->is_previous_cmd_done = TRUE;
+ #ifdef _DEBUG_TIME_
+	gettimeofday(&tpend1,NULL);
+
+	cur_time = tpend1.tv_usec-tpstart.tv_usec;
+	if(cur_time < 0)	cur_time += 1000000;
+	SCI_TRACE_LOW("polling cmd-done  time frameNO %d %lld",g_nFrame_dec_h264,cur_time);
+#endif
+            
 	}
 
 	if (H264Dec_VSPInit () != MMDEC_OK)
@@ -326,10 +338,22 @@ PUBLIC MMDecRet H264Dec_Picture_Level_Sync (DEC_IMAGE_PARAMS_T *img_ptr)
 //flush cache
 	if(VSP_fluchCacheCb)
 	{
+#ifdef _DEBUG_TIME_
+	gettimeofday(&tpstart,NULL);
+#endif
+
     	    MMCodecBuffer IonBuffer;
 	    H264Dec_ExtraMem_GetInfo(&IonBuffer, HW_CACHABLE);
             
     	    int ret = (*VSP_fluchCacheCb)(g_user_data,(int *)(g_cmd_data_base),(int *)(H264Dec_ExtraMem_V2P(g_cmd_data_base, HW_CACHABLE)),IonBuffer.size/2);          
+
+#ifdef _DEBUG_TIME_
+	gettimeofday(&tpend1,NULL);
+
+	cur_time = tpend1.tv_usec-tpstart.tv_usec;
+	if(cur_time < 0)	cur_time += 1000000;
+	SCI_TRACE_LOW("cache flush  time frameNO %d %lld",g_nFrame_dec_h264,cur_time);
+#endif
 	}
 	//now, can enable cmd-exe
 	cmd = VSP_READ_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, "DCAM_CFG: readout DCAM CFG");
