@@ -1366,7 +1366,6 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     char *cmd;
     int err;
     char response[20];
-    char * responseStr[3];
     ATResponse *p_response = NULL;
     int index = -1;
     char qos_state[10];
@@ -1452,9 +1451,6 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     requestOrSendDataCallList(channelID, index+1, &t);
 
     at_response_free(p_response);
-    free(responseStr[0]);
-    free(responseStr[1]);
-    free(responseStr[2]);
 
     return;
 error:
