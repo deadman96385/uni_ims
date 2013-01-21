@@ -573,6 +573,7 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
         {
             *notSupport = OMX_TRUE;
             OMX_H264DEC_ERR ("%s: dec format not support", __FUNCTION__);
+			return  OMX_FALSE;
        }
 
     if(7 == nal_unit_type)//sps

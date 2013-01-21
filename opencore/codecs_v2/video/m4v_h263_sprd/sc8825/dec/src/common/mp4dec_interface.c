@@ -76,20 +76,22 @@ void MP4DecReleaseRefBuffers()
 	DEC_VOP_MODE_T *vop_mode_ptr = Mp4Dec_GetVopmode();
 	if(!vop_mode_ptr)
 		return;
-	if (!vop_mode_ptr->post_filter_en)
+
+
+	for(i = 0; i < DEC_YUV_BUFFER_NUM; i++)
 	{
-		for(i = 0; i < DEC_YUV_BUFFER_NUM; i++)
+		if(g_FrmYUVBfr[i].bRef)
 		{
-			if(g_FrmYUVBfr[i].bRef)
+			g_FrmYUVBfr[i].bRef = FALSE;
+			if(g_FrmYUVBfr[i].pBufferHeader!=NULL)
 			{
-				g_FrmYUVBfr[i].bRef = FALSE;
-				if(g_FrmYUVBfr[i].pBufferHeader!=NULL){
-				 	(*VSP_unbindCb)(g_user_data,g_FrmYUVBfr[i].pBufferHeader,1);
-				 	//g_FrmYUVBfr[i].pBufferHeader = NULL;
-				}
+			 	(*VSP_unbindCb)(g_user_data,g_FrmYUVBfr[i].pBufferHeader,1);
+			 	//g_FrmYUVBfr[i].pBufferHeader = NULL;
 			}
 		}
-	}else
+	}
+
+    if (vop_mode_ptr->post_filter_en)
 	{
 		for(i = 0; i < DISP_YUV_BUFFER_NUM; i++)
 		{
