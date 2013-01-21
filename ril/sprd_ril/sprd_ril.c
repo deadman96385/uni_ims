@@ -2132,7 +2132,6 @@ static void requestRegistrationState(int channelID, int request, void *data,
     char *line, *p;
     int commas;
     int skip;
-    int para,i;
 
     if (request == RIL_REQUEST_VOICE_REGISTRATION_STATE) {
         cmd = "AT+CREG?";
@@ -3122,14 +3121,12 @@ static void requestSetSmsBroadcastConfig(int channelID,  void *data, size_t data
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     free(channel);
     free(lang);
-    free(cmd);
     ALOGI( "requestSetSmsBroadcastConfig err %d ,success %d",err,p_response->success);
     if (err < 0 || p_response->success == 0) {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     } else {
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
-    at_response_free(p_response);
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     gsmBci =*(RIL_GSM_BroadcastSmsConfigInfo *)(gsmBciPtrs[0]);
     enable = gsmBci.selected;
@@ -3151,11 +3148,10 @@ static void requestSetSmsBroadcastConfig(int channelID,  void *data, size_t data
     } else {
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
+#endif
 error:
     free(cmd);
     at_response_free(p_response);
-}
-#endif
 }
 
 static void requestGetSmsBroadcastConfig(int channelID,  void *data, size_t datalen, RIL_Token t)
@@ -4727,6 +4723,62 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     } else {
                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                     }
+                }
+                at_response_free(p_response);
+                break;
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+                p_response = NULL;
+                int c = ((int *)data)[0];
+                int errNum = 0xff;
+                char *cmd, *line;
+                ATLine *p_cur;
+                int mode, serviceClass;
+                int response[2] = {0, 0};
+
+                if (c == 0) {
+                    asprintf(&cmd, "AT+CCWA=1,2");
+                }else {
+                    asprintf(&cmd, "AT+CCWA=1,2,%d", c);
+                }
+                err = at_send_command_multiline(ATch_type[channelID], cmd, "+CCWA: ",
+                        &p_response);
+                free(cmd);
+                if (err >= 0 && p_response->success) {
+                    for (p_cur = p_response->p_intermediates
+                            ; p_cur != NULL
+                            ; p_cur = p_cur->p_next
+                        ) {
+                        line = p_cur->line;
+                        err = at_tok_start(&line);
+                        if (err >= 0) {
+                            err = at_tok_nextint(&line, &mode);
+                            if (err >= 0) {
+                                err = at_tok_nextint(&line, &serviceClass);
+                                if(err >= 0) {
+                                    response[0] = mode;
+                                    response[1] |= serviceClass;
+                                }
+                            }
+                        }
+                    }
+                    if(response[1] == 0)
+                        response[1] = 7;
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS,
+                               response, sizeof (response));
+                } else {
+                    if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
+                        line = p_response->finalResponse;
+                        err = at_tok_start(&line);
+                        if (err >= 0) {
+                            err = at_tok_nextint(&line,&errNum);
+                            if (err >= 0 && (errNum == 70 || errNum == 3))
+                                RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
+                            else
+                                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                        } else
+                            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    } else
+                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 }
                 at_response_free(p_response);
                 break;
