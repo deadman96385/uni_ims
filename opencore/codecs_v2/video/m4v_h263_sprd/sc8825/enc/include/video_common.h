@@ -59,7 +59,7 @@ extern   "C"
 	#define _DEBUG_		1
 #else
 	#define RUN_IN_PLATFORM
-	#define _DEBUG_     0
+	//#define _DEBUG_     0
 #endif
 
 #if defined(SIM_IN_WIN)&&!defined(_LIB)

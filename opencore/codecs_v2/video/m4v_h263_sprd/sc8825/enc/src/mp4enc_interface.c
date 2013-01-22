@@ -238,7 +238,7 @@ MMEncRet MP4EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr, MME
 	Mp4Enc_SetVolmode(vol_mode_ptr);
 
 	vop_mode_ptr = (ENC_VOP_MODE_T *)Mp4Enc_InterMemAlloc(sizeof(ENC_VOP_MODE_T)); 
-#ifdef _DEBUG_
+#if _DEBUG_
 	vop_mode_ptr->bits = (FILE *)fopen("/data/outbits","wb");
 	vop_mode_ptr->yuv_in = (FILE *)fopen("/data/test1.yuv","rb");
 	SCI_TRACE_LOW("MP4EncInit open file to store the outputbits");
@@ -536,7 +536,7 @@ FRAME_ENC:
 		pOutput->strmSize = (VSP_READ_REG(VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "read total bits") + 7 ) >>3;
 		pOutput->pOutBuf = pVop_mode->pOneFrameBitstream;
 		
-#ifdef _DEBUG_
+#if _DEBUG_
 	if(pVop_mode->bits != NULL)
 	{
 		SCI_TRACE_LOW("strmSize %d pOutBuf %x g_nFrame_enc %d",pOutput->strmSize,pOutput->pOutBuf,g_nFrame_enc);

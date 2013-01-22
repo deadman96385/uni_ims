@@ -670,7 +670,7 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
 
 
 
-#if 0
+#if 1
     // Auto adapt to get the frame cycle of source.
     if(iCycleAdaptFrmCnt < 10)
     {
@@ -684,9 +684,14 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
             if(iCycleAdaptFrmCnt >= 10)
             {
                 // Cycle adapt is ok. adjust the cycle.
-                iSrcCycleAdaptms = (OMX_U32)((aInTimeStamp - iCycleAdaptFirstFrmTime)/iCycleAdaptFrmCnt/1000);
+                uint32 i_new_src_cycle_ms;
+                i_new_src_cycle_ms  = (OMX_U32)((aInTimeStamp - iCycleAdaptFirstFrmTime)/iCycleAdaptFrmCnt/1000);
+                if(i_new_src_cycle_ms > iSrcCycleAdaptms)
+                {
+                    iSrcCycleAdaptms = i_new_src_cycle_ms;
+                }
 
-                SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo, iSrcCycleAdaptms=%ld",iSrcCycleAdaptms );
+                OMX_MP4ENC_INFO("Mpeg4Encoder_OMX::Mp4EncodeVideo, iSrcCycleAdaptms=%ld",iSrcCycleAdaptms );
             }
         }
         else
@@ -837,7 +842,17 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
 
         if (status == OMX_TRUE)
         {
-            *aOutTimeStamp = iNextModTime*1000;
+            if(iCycleAdaptFrmCnt > 10)
+            {
+                // adapt success, use modetime.
+                *aOutTimeStamp = iNextModTime*1000;
+            }
+            else
+            {
+                // adapt failed, use real source time.
+                *aOutTimeStamp = aInTimeStamp;
+            }
+
             // iPreSrcDitherms:  if pre src is later than the expect time, >0; else, <0.
             iPreSrcDitherms = (aInTimeStamp/1000 - iNextModTime);
             if( iPreSrcDitherms > (OMX_TICKS)(intervalms>>1) )

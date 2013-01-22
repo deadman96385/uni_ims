@@ -530,6 +530,12 @@ PUBLIC MMDecRet Mp4Dec_DecBVOP_hw(DEC_VOP_MODE_T *vop_mode_ptr)
 			mb_mode_bvop_ptr->videopacket_num = (uint8)(vop_mode_ptr->sliceNumber);
 
 			Mp4Dec_VspMBInit(pos_x, pos_y);
+
+			//set mv range
+			vop_mode_ptr->mv_x_max = ((total_mb_num_x - pos_x) << 5) -1;
+			vop_mode_ptr->mv_x_min = (-pos_x - 1) << 5;
+			vop_mode_ptr->mv_y_max = ((vop_mode_ptr->MBNumY - pos_y) << 5)-1; 
+			vop_mode_ptr->mv_y_min = (-pos_y - 1) << 5;
 			
 			if(MODE_NOT_CODED == pCoMb_mode->dctMd)
 			{
