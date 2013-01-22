@@ -78,6 +78,7 @@ static char cgreg_response[100] = "";
 static int s_channel_open = 0;
 static int s_sms_ready = 0;
 static int simNum;
+static int s_socket_connected = 0;
 
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 
@@ -3622,6 +3623,9 @@ static void requestGetCellBroadcastConfig(int channelID,  void *data, size_t dat
     char *line = NULL;
     int   result = 0;
     RIL_CB_ConfigArgs  cbsPtr;
+    int i, commas = 0;
+    char *p, *str;
+    char tmp[5];
 
     ALOGD("Reference-ril. requestGetCellBroadcastConfig enter");
     memset(&cbsPtr, 0, sizeof(RIL_CB_ConfigArgs));
@@ -3641,11 +3645,24 @@ static void requestGetCellBroadcastConfig(int channelID,  void *data, size_t dat
                 if (0 == strcmp(response, "1000")) {
                     cbsPtr.selectedId = 1;
                 } else {
+                    for (p = response ; *p != '\0' ;p++) {
+                        if (*p == ',') commas++;
+                    }
+                    str = (char*)alloca(4*(commas + 1) + 1);
+                    for(i = 0; i < (commas + 1); i++) {
+                        at_tok_nextint(&response, &result);
+                        if(i == 0) {
+                            sprintf(str, "%04x", result);
+                        } else {
+                            sprintf(tmp, "%04x", result);
+                            strcat(str, tmp);
+                        }
+                    }
                     cbsPtr.selectedId = 2;
-                    cbsPtr.msgIDs = response;
+                    cbsPtr.msgIdCount = commas + 1;
+                    cbsPtr.msgIDs = str;
                 }
                 RIL_onRequestComplete(t, RIL_E_SUCCESS, &cbsPtr, sizeof(RIL_CB_ConfigArgs));
-                free(response);
             }
         } else {
             RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -5616,6 +5633,9 @@ static void onCancel (RIL_Token t)
 
 static const char * getVersion(void)
 {
+    pthread_mutex_lock(&s_sms_ready_mutex);
+    s_socket_connected = 1;
+    pthread_mutex_unlock(&s_sms_ready_mutex);
     return "android reference-ril 1.0";
 }
 
@@ -6366,13 +6386,15 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
         if(sms_rd == 12) {
             pthread_mutex_lock(&s_sms_ready_mutex);
-            if(s_sms_ready == 0) {
-                s_sms_ready = 1;
+            if(s_socket_connected) {
+                if(s_sms_ready == 0) {
+                    s_sms_ready = 1;
 #if defined (RIL_SPRD_EXTENSION)
-                RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_SMS_READY, NULL, 0);
+                    RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_SMS_READY, NULL, 0);
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-                RIL_onUnsolicitedResponse (RIL_UNSOL_DEVICE_READY_NOTI, NULL, 0);
+                    RIL_onUnsolicitedResponse (RIL_UNSOL_DEVICE_READY_NOTI, NULL, 0);
 #endif
+                }
             }
             pthread_mutex_unlock(&s_sms_ready_mutex);
         }
