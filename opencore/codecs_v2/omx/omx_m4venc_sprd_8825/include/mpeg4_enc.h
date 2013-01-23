@@ -30,6 +30,7 @@
 #include "mp4_basic.h"
 
 #include <sys/ioctl.h>
+#include "ion_sprd.h"
 
 #include <binder/MemoryHeapIon.h>
 #define SPRD_ION_DEV "/dev/ion"
