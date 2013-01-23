@@ -4458,8 +4458,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                             type = 2;//NETWORK_MODE_WCDMA_ONLY
                             break;
                         }
-                        RIL_onRequestComplete(t, RIL_E_SUCCESS, &response,
-                                sizeof(response));
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, &type,
+                                sizeof(type));
                     }
                 } else {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
