@@ -23,6 +23,7 @@ LOCAL_C_INCLUDES := \
  	$(PV_TOP)/extern_libs_v2/khronos/openmax/include \
  	$(PV_TOP)/codecs_v2/video/m4v_h263_sprd/sc8810/enc/include \
  	$(PV_INCLUDES) \
+	$(TARGET_OUT_INTERMEDIATES)/KERNEL/usr/include/video \
 	$(TOP)/frameworks/native/include/media/hardware
 
 
