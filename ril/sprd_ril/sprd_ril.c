@@ -6938,7 +6938,52 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         }
     }
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-    else if (strStartsWith(s, "+SPUSATDISPLAY:")) {
+    else if (strStartsWith(s, "+SPUSATSMS:")) {
+        char *response = NULL;
+        char *tmp;
+
+        ALOGD("STK_SEND_SMS");
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+        err = at_tok_nextstr(&tmp, &response);
+        if (err < 0) {
+            ALOGD("%s fail", s);
+            goto out;
+        }
+
+        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, sizeof(response));
+    } else if (strStartsWith(s, "+SPUSATSS:")) {
+        char *response = NULL;
+        char *tmp;
+
+        ALOGD("STK_SEND_SS");
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+        err = at_tok_nextstr(&tmp, &response);
+        if (err < 0) {
+            ALOGD("%s fail", s);
+            goto out;
+        }
+
+        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, sizeof(response));
+    } else if (strStartsWith(s, "+SPUSATUSSD:")) {
+        char *response = NULL;
+        char *tmp;
+
+        ALOGD("STK_SEND_USSD");
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+        err = at_tok_nextstr(&tmp, &response);
+        if (err < 0) {
+            ALOGD("%s fail", s);
+            goto out;
+        }
+
+        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, sizeof(response));
+    } else if (strStartsWith(s, "+SPUSATDISPLAY:")) {
         char *tmp;
         char *data;
         RIL_SSReleaseComplete *response = NULL;
