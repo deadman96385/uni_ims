@@ -1036,7 +1036,7 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
 
         if (status == PV_TRUE)
         {
-            if(iCycleAdaptFrmCnt > 10)
+            if(iCycleAdaptFrmCnt >= 10)
             {
                 // adapt success, use modetime.
                 *aOutTimeStamp = iNextModTime*1000;
