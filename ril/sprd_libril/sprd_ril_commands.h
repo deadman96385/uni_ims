@@ -64,7 +64,7 @@
 #ifdef RIL_SPRD_EXTENSION
     {RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL, dispatchNetworkList, responseVoid},
 #else
-    {RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL, dispatchStrings, responseVoid},
+    {RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL, dispatchString, responseVoid},
 #endif
     {RIL_REQUEST_QUERY_AVAILABLE_NETWORKS , dispatchVoid, responseStrings},
     {RIL_REQUEST_DTMF_START, dispatchString, responseVoid},

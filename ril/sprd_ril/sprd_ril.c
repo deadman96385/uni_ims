@@ -1699,10 +1699,15 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
         err = at_tok_nextstr(&line, &(cur[2]));
         if (err < 0) continue;
 
+#if defined (RIL_SPRD_EXTENSION)
         err = at_tok_nextint(&line, &act);
         if (err < 0) continue;
 
         cur[4] = actStr[act];
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+        err = at_tok_nextstr(&line, &(cur[4]));
+        if (err < 0) continue;
+#endif
 
         cur += 5;
     }
@@ -2075,6 +2080,76 @@ error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
 }
+
+static void requestSsSignalStrength(int channelID, void *data, size_t datalen, RIL_Token t)
+{
+    ATResponse *p_response = NULL;
+    int err;
+    RIL_SignalStrength_v6 response_v6;
+    char *line;
+    int csq, rat;
+
+    memset(&response_v6, -1, sizeof(response_v6));
+    err = at_send_command_singleline(ATch_type[channelID], "AT+SPSCSQ", "+SPSCSQ:", &p_response);
+
+    if (err < 0 || p_response->success == 0) {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        goto error;
+    }
+
+    line = p_response->p_intermediates->line;
+
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &csq);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &(response_v6.GW_SignalStrength.bitErrorRate));
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &rat);
+    if (err < 0) goto error;
+
+    if(rat == 0) {
+        /* convert GSM rssi to asu*/
+        if(csq <= 5 || csq == 99)
+            csq = 1;
+        else if(csq <= 7)
+            csq = 4;
+        else if(csq <= 9)
+            csq = 7;
+        else if(csq <= 12)
+            csq = 10;
+        else if(csq > 12)
+            csq = 14;
+    } else if(rat == 1) {
+        /* convert UMTS rssi to asu*/
+        if(csq <= 1 || csq == 99)
+            csq = 1;
+        else if(csq <= 4)
+            csq = 4;
+        else if(csq <= 7)
+            csq = 7;
+        else if(csq <= 11)
+            csq = 10;
+        else if(csq > 11)
+            csq = 14;
+    } else
+        goto error;
+
+    response_v6.GW_SignalStrength.signalStrength = csq;
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, &response_v6, sizeof(RIL_SignalStrength_v6));
+    at_response_free(p_response);
+    return;
+
+error:
+    ALOGE("requestSsSignalStrength must never return an error when radio is on");
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+}
+
 
 /* Mapping <Act> response to following data:
  * Ref:\frameworks\base\telephony\java\android\telephony\ServiceState.java
@@ -4185,7 +4260,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
 
         case RIL_REQUEST_SIGNAL_STRENGTH:
+#if defined (RIL_SPRD_EXTENSION)
             requestSignalStrength(channelID, data, datalen, t);
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+            requestSsSignalStrength(channelID, data, datalen, t);
+#endif
             break;
         case RIL_REQUEST_GET_NEIGHBORING_CELL_IDS:
 	    requestNeighboaringCellIds(channelID, data, datalen, t);
@@ -6265,6 +6344,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         return;
     }
 
+#if defined (RIL_SPRD_EXTENSION)
     if (strStartsWith(s, "+CSQ:")) {
         RIL_SignalStrength_v6 response_v6;
         char *tmp;
@@ -6284,8 +6364,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RIL_onUnsolicitedResponse(
                 RIL_UNSOL_SIGNAL_STRENGTH,
                 &response_v6, sizeof(RIL_SignalStrength_v6));
-
-    } else if (strStartsWith(s, "+CTZV:")) {
+    } else
+#endif
+    if (strStartsWith(s, "+CTZV:")) {
         /*NITZ time */
         char *response;
         char *tmp;
@@ -6428,13 +6509,24 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 #endif
         }
     } else if (strStartsWith(s, "+CBM:")) {
+        char *pdu_bin = NULL;
 
         ALOGD("Reference-ril. CBM   >>>>>> sss %s ,len  %d", s,strlen(s));
         ALOGD("Reference-ril. CBM   >>>>>> %s ,len  %d", sms_pdu,strlen(sms_pdu));
+#if defined (RIL_SPRD_EXTENSION)
         RIL_onUnsolicitedResponse (
                 RIL_UNSOL_RESPONSE_NEW_BROADCAST_SMS,
                 sms_pdu, strlen(sms_pdu));
-
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+        pdu_bin = (char *)alloca(strlen(sms_pdu)/2);
+        memset(pdu_bin, 0, strlen(sms_pdu)/2);
+        if(!convertHexToBin(sms_pdu, strlen(sms_pdu), pdu_bin)) {
+            RIL_onUnsolicitedResponse (
+                    RIL_UNSOL_RESPONSE_NEW_BROADCAST_SMS,
+                    pdu_bin, strlen(sms_pdu)/2);
+        } else
+            ALOGE("Convert hex to bin failed for SMSCB");
+#endif
     } else if (strStartsWith(s, "+CDS:")) {
         RIL_onUnsolicitedResponse (
                 RIL_UNSOL_RESPONSE_NEW_SMS_STATUS_REPORT,
@@ -7085,6 +7177,58 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             goto out;
         }
         RIL_onUnsolicitedResponse(RIL_UNSOL_STK_CALL_CONTROL_RESULT, response, sizeof(RIL_StkCallControlResult));
+    } else if (strStartsWith(s, "+SPSCSQ:")) {
+        RIL_SignalStrength_v6 response_v6;
+        char *tmp;
+        int csq, rat;
+
+        memset(&response_v6, -1, sizeof(RIL_SignalStrength_v6));
+        line = strdup(s);
+        tmp = line;
+
+        at_tok_start(&tmp);
+
+        err = at_tok_nextint(&tmp, &csq);
+        if (err < 0) goto out;
+
+        err = at_tok_nextint(&tmp, &(response_v6.GW_SignalStrength.bitErrorRate));
+        if (err < 0) goto out;
+
+        err = at_tok_nextint(&tmp, &rat);
+        if (err < 0) goto out;
+
+        if(rat == 0) {
+            /* convert GSM rssi to asu*/
+            if(csq <= 5 || csq == 99)
+                csq = 1;
+            else if(csq <= 7)
+                csq = 4;
+            else if(csq <= 9)
+                csq = 7;
+            else if(csq <= 12)
+                csq = 10;
+            else if(csq > 12)
+                csq = 14;
+        } else if(rat == 1) {
+            /* convert UMTS rssi to asu*/
+            if(csq <= 1 || csq == 99)
+                csq = 1;
+            else if(csq <= 4)
+                csq = 4;
+            else if(csq <= 7)
+                csq = 7;
+            else if(csq <= 11)
+                csq = 10;
+            else if(csq > 11)
+                csq = 14;
+        } else
+            goto out;
+
+        response_v6.GW_SignalStrength.signalStrength = csq;
+
+        RIL_onUnsolicitedResponse(
+                RIL_UNSOL_SIGNAL_STRENGTH,
+                &response_v6, sizeof(RIL_SignalStrength_v6));
     }
 #endif
 out:
