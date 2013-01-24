@@ -27,6 +27,9 @@
 #include "at_tok.h"
 #include <cutils/properties.h>
 
+#define SYS_IFCONFIG_UP "sys.ifconfig.up"
+#define SYS_IFCONFIG_DOWN "sys.ifconfig.down"
+#define SYS_NO_ARP "sys.data.noarp"
 struct ppp_info_struct ppp_info[MAX_PPP_NUM];
 mutex ps_service_mutex;
 
@@ -398,11 +401,13 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
                     strlcpy(ppp_info[cid-1].dns2addr,ppp_info[cid-1].userdns2addr,sizeof(ppp_info[cid-1].dns2addr));
                 }
 
-                //sprintf(cmd, "ifconfig veth%d %s netmask 255.255.255.0 up", cid-1,ip);
-                sprintf(cmd, "ifconfig veth%d %s mtu 1400 netmask 255.255.255.255 up", cid-1,ip);
-                system(cmd);
-                sprintf(cmd, "ip link set veth%d arp off", cid-1);
-                system(cmd);
+                /* set property */
+                sprintf(link, "veth%d %s mtu 1400 netmask 255.255.255.255 up", cid-1, ip);
+                property_set(SYS_IFCONFIG_UP, link);
+                sprintf(link, "link set veth%d arp off", cid-1);
+                property_set(SYS_NO_ARP, link);
+		/* start data_on */
+                property_set("ctl.start", "data_on");
                 sprintf(cmd, "setprop net.veth%d.ip %s", cid-1,ip);
                 system(cmd);
                 if(dns1_hex != 0x0)
@@ -693,8 +698,11 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
 
 #ifdef CONFIG_VETH
         usleep(200*1000);
-        sprintf(cmd, "ifconfig veth%d %s down", tmp_cid-1, "0.0.0.0");
-        system(cmd);
+        /* set property */
+        sprintf(link, "veth%d %s down", tmp_cid-1, "0.0.0.0");
+        property_set(SYS_IFCONFIG_DOWN, link);
+	/* start data_off */
+        property_set("ctl.start", "data_off");
         sprintf(cmd, "setprop net.veth%d.ip %s", tmp_cid-1,"0.0.0.0");
         system(cmd);
         sprintf(cmd, "setprop net.veth%d.dns1 \"\"", tmp_cid-1);
