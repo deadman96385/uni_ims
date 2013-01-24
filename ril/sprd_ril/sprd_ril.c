@@ -6635,30 +6635,33 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, sizeof(response));
 #endif
     } else if (strStartsWith(s, "+SPUSATREFRESH:")) {
-        int response[3];
         char *tmp;
+        int result = 0;
+        RIL_SimRefreshResponse_v7 *response = NULL;
 
         ALOGD("[stk unsl]SPUSATREFRESH");
+        response = (RIL_SimRefreshResponse_v7 *)alloca(sizeof(RIL_SimRefreshResponse_v7));
+        if (response == NULL) goto out;
         line = strdup(s);
         tmp = line;
         at_tok_start(&tmp);
-        err = at_tok_nextint(&tmp, &(response[0]));
+        err = at_tok_nextint(&tmp, &result);
         if (err < 0) {
             ALOGD("%s fail", s);
             goto out;
         }
-        err = at_tok_nextint(&tmp, &(response[1]));
+        err = at_tok_nextint(&tmp, &response->ef_id);
         if (err < 0) {
             ALOGD("%s fail", s);
             goto out;
         }
-        err = at_tok_nextint(&tmp, &(response[2]));
+        err = at_tok_nextstr(&tmp, &response->aid);
         if (err < 0) {
             ALOGD("%s fail", s);
             goto out;
         }
-        ALOGD("[stk unsl]SPUSATREFRESH result = %d %d %d", response[0], response[1], response[2]);
-        RIL_onUnsolicitedResponse(RIL_UNSOL_SIM_REFRESH, &response, sizeof(response));
+        response->result = result;
+        RIL_onUnsolicitedResponse(RIL_UNSOL_SIM_REFRESH, response, sizeof(RIL_SimRefreshResponse_v7));
     } else if (strStartsWith(s, "+CSSI:")) {
         RIL_SuppSvcNotification *response = NULL;
         int code = 0;
