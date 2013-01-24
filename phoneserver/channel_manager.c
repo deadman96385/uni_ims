@@ -29,10 +29,6 @@
 #include <sys/time.h>
 #include <getopt.h>
 #include "version.h"
-#include "cutils/properties.h"
-
-#define SYS_SYMLINK_PTY "sys.symlink.pty"
-#define SYS_SYMLINK_NOTI "sys.symlink.notify"
 
 struct channel_manager_t chnmng;
 
@@ -196,41 +192,16 @@ static int create_communication_channel(char *slave_name)
     int pty_master = -1;
     int pty_slave = -1;
     char pty_name[16];
-    char link[64];
-    char noti[10];
-    int count = 0;
-
-    memset(link, 0, sizeof(link));
-    memset(noti, 0, sizeof(noti));
     if (!get_pty(&pty_master, &pty_slave, &pty_name[0], getuid())) {
         PHS_LOGE("CHNMNG: Couldn't allocate pseudo-tty");
         return -1;
     }
     //create symlink for Application,link pty_name to slave_name
     unlink(slave_name);
-    /* set notify */
-    property_set(SYS_SYMLINK_NOTI, "1");
-    /* set the property */
-    sprintf(link, "%s  %s", pty_name, slave_name);
-    property_set(SYS_SYMLINK_PTY, link);
-    /* start pty_symlink  */
-    property_set("ctl.stop", "pty_symlink");
-    property_set("ctl.start", "pty_symlink");
-    /* get notify, the flag will be cleared if create symlink finished */
-    property_get(SYS_SYMLINK_NOTI, noti, "1");
-    while(!strcmp(noti, "1")) {
-        if(count > 20) {
-            count = 0;
-            property_set("ctl.stop", "pty_symlink");
-            property_set("ctl.start", "pty_symlink");
-        }
-        usleep(5000);
-        PHS_LOGD("CHNMNG wait the notify to be cleared");
-	property_get(SYS_SYMLINK_NOTI, noti, "1");
-	count++;
+    if (symlink(pty_name, slave_name) != 0) {
+        PHS_LOGE("CHNMNG: Can't create symbolic link %s -> %s\n",
+                slave_name, pty_name);
     }
-    PHS_LOGD("CHNMNG finish create sysmlink\n");
-
     return pty_master;
 }
 
