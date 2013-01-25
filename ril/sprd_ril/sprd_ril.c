@@ -68,6 +68,8 @@
 #define RIL_SIM_ABSENT_PROPERTY "persist.sys.sim.absence"
 #define RIL_SIM1_ABSENT_PROPERTY "ril.sim1.absent"  /* this property will be
 						       set by phoneserver */
+#define RIL_SIM_TYPE  "ril.ICC_TYPE"
+#define RIL_SIM_TYPE1  "ril.ICC_TYPE_1"
 
 int s_dualSimMode = 0;
 
@@ -6493,6 +6495,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         char *tmp;
         int type;
         int value;
+        int card_type;
 
         line = strdup(s);
         tmp = line;
@@ -6505,13 +6508,48 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             if (at_tok_hasmore(&tmp)) {
                 err = at_tok_nextint(&tmp, &value);
                 if (err < 0) goto out;
-            }
-            if(value == 1)
-                RIL_requestTimedCallback (onSimAbsent, NULL, NULL);
+                if(value == 1) {
+                    RIL_requestTimedCallback (onSimAbsent, NULL, NULL);
+                }
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-            else if(value == 5)
-                RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_PB_READY, NULL, 0);
+                else if(value == 5) {
+                    RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_PB_READY, NULL, 0);
+                } else if(value == 6) {
+                    extern int s_sim_num;
+                    if (at_tok_hasmore(&tmp)) {
+                        char prop[5];
+                        err = at_tok_nextint(&tmp, &card_type);
+                        if (err < 0) goto out;
+                        if(card_type == 0) {
+                            if(s_sim_num == 0) {
+                                property_get(RIL_SIM_TYPE, prop, "0");
+                                if(!strcmp(prop, "0"))
+                                    property_set(RIL_SIM_TYPE, "1");
+                            } else if(s_sim_num == 1) {
+                                property_get(RIL_SIM_TYPE1, prop, "0");
+                                if(!strcmp(prop, "0"))
+                                    property_set(RIL_SIM_TYPE1, "1");
+                            }
+                        } else if(card_type == 1) {
+                            if(s_sim_num == 0) {
+                                property_get(RIL_SIM_TYPE, prop, "0");
+                                if(!strcmp(prop, "0"))
+                                    property_set(RIL_SIM_TYPE, "2");
+                            } else if(s_sim_num == 1) {
+                                property_get(RIL_SIM_TYPE1, prop, "0");
+                                if(!strcmp(prop, "0"))
+                                    property_set(RIL_SIM_TYPE1, "2");
+                            }
+                        } else {
+                            if(s_sim_num == 0)
+                                property_set(RIL_SIM_TYPE, "0");
+                            else if(s_sim_num == 1)
+                                property_set(RIL_SIM_TYPE1, "0");
+                        }
+                    }
+                }
 #endif
+            }
         }
     } else if (strStartsWith(s, "+CBM:")) {
         char *pdu_bin = NULL;
