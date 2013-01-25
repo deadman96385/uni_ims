@@ -3720,21 +3720,26 @@ static void requestGetCellBroadcastConfig(int channelID,  void *data, size_t dat
                 if (0 == strcmp(response, "1000")) {
                     cbsPtr.selectedId = 1;
                 } else {
-                    for (p = response ; *p != '\0' ;p++) {
-                        if (*p == ',') commas++;
-                    }
-                    str = (char*)alloca(4*(commas + 1) + 1);
-                    for(i = 0; i < (commas + 1); i++) {
-                        at_tok_nextint(&response, &result);
-                        if(i == 0) {
-                            sprintf(str, "%04x", result);
-                        } else {
-                            sprintf(tmp, "%04x", result);
-                            strcat(str, tmp);
+                    if(*response == '\0') {
+                        str = NULL;
+                        cbsPtr.msgIdCount = 0;
+                    } else {
+                        for (p = response; *p != '\0' ; p++) {
+                            if (*p == ',') commas++;
                         }
+                        str = (char*)alloca(4*(commas + 1) + 1);
+                        for(i = 0; i < (commas + 1); i++) {
+                            at_tok_nextint(&response, &result);
+                            if(i == 0) {
+                                sprintf(str, "%04x", result);
+                            } else {
+                                sprintf(tmp, "%04x", result);
+                                strcat(str, tmp);
+                            }
+                        }
+                        cbsPtr.msgIdCount = commas + 1;
                     }
                     cbsPtr.selectedId = 2;
-                    cbsPtr.msgIdCount = commas + 1;
                     cbsPtr.msgIDs = str;
                 }
                 RIL_onRequestComplete(t, RIL_E_SUCCESS, &cbsPtr, sizeof(RIL_CB_ConfigArgs));
