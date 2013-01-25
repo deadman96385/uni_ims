@@ -60,9 +60,6 @@ sem sms_lock;
 
 extern struct ppp_info_struct ppp_info[];
 
-int cvt_ecsq_cmd_ind(AT_CMD_IND_T * ind);
-int cvt_csq_cmd_ind(AT_CMD_IND_T * ind);
-
 #if defined CONFIG_SINGLE_SIM
 const struct cmd_table at_cmd_cvt_table[] = {
     {AT_CMD_CGDCONT_READ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGDCONT?;"),
@@ -162,6 +159,8 @@ const struct cmd_table at_cmd_cvt_table[] = {
         cvt_csq_test_req, 5},
     {AT_CMD_CSQ_ACTION, AT_CMD_TYPE_NW, AT_CMD_STR("AT+CSQ"),
         cvt_csq_action_req, 5},
+    {AT_CMD_CSQ_ACTION, AT_CMD_TYPE_NW, AT_CMD_STR("AT+SPSCSQ"),
+        cvt_spscsq_action_req, 5},
     {AT_CMD_CPOL, AT_CMD_TYPE_NW, AT_CMD_STR("AT+CPOL"),
         cvt_generic_cmd_req, 5},
     {AT_CMD_COPS, AT_CMD_TYPE_NW, AT_CMD_STR("AT+COPS=0"),
@@ -396,6 +395,8 @@ const struct cmd_table at_cmd_cvt_table[] = {
         cvt_csq_test_req, 5},
     {AT_CMD_CSQ_ACTION, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CSQ"),
         cvt_csq_action_req, 5},
+    {AT_CMD_CSQ_ACTION, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+SPSCSQ"),
+        cvt_spscsq_action_req, 5},
     {AT_CMD_CPOL, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CPOL"),
         cvt_generic_cmd_req, 5},
     {AT_CMD_COPS, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+COPS=0"),
@@ -618,6 +619,7 @@ const struct ind_table at_ind_cvt_table[] = {
     {AT_CMD_CGREG_IND, AT_CMD_STR("+CGREG:"), cvt_generic_cmd_ind},
     {AT_CMD_CUSD_IND, AT_CMD_STR("+CUSD:"), cvt_generic_cmd_ind},
     {AT_CMD_CSQ_IND, AT_CMD_STR("+CSQ:"), cvt_csq_cmd_ind},
+    {AT_CMD_CSQ_IND, AT_CMD_STR("+SPSCSQ:"), cvt_spscsq_cmd_ind},
     {AT_CMD_CCCM_IND, AT_CMD_STR("+CCCM:"), cvt_generic_cmd_ind},
     {AT_CMD_CRING_IND, AT_CMD_STR("+CRING:"), cvt_generic_cmd_ind},
     {AT_CMD_CSSI_IND, AT_CMD_STR("+CSSI:"), cvt_generic_cmd_ind},
@@ -1565,6 +1567,68 @@ int cvt_csq_cmd_ind(AT_CMD_IND_T * ind)
     return AT_RESULT_OK;
 }
 
+int cvt_spscsq_cmd_ind(AT_CMD_IND_T * ind)
+{
+    int err;
+    int rssi=12;
+    int ber=0, rat;
+    char *at_in_str;
+    char ind_str[MAX_AT_CMD_LEN];
+
+#if defined CONFIG_SINGLE_SIM
+    pty_t *ind_pty = adapter_get_default_ind_pty();
+    pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
+#elif defined CONFIG_DUAL_SIM
+    pty_t *ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
+    pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
+#endif
+    at_in_str = ind->ind_str;
+    err = at_tok_start(&at_in_str, ':');
+    if (err < 0) {
+        return AT_RESULT_NG;
+    }
+
+    /*skip cause value */
+    err = at_tok_nextint(&at_in_str, &rssi);
+    if (err < 0) {
+        return AT_RESULT_NG;
+    }
+
+    err = at_tok_nextint(&at_in_str, &ber);
+    if (err < 0) {
+        return AT_RESULT_NG;
+    }
+
+    err = at_tok_nextint(&at_in_str, &rat);
+    if (err < 0) {
+        return AT_RESULT_NG;
+    }
+
+    if (rssi <= 31) {
+        rssi = rssi;
+    } else if(rssi >= 100 && rssi < 103) {
+        rssi = 0;
+    } else if(rssi >= 103 && rssi < 165) {
+        rssi = ((rssi - 103) + 1)/ 2;    //add 1 for compensation
+    } else if (rssi >= 165 && rssi <= 191) {
+        rssi = 31;
+    } else {
+        rssi = 99;
+    }
+
+    if(ber > 99) ber = 99;
+    snprintf(ind_str, sizeof(ind_str), "\r\n+SPSCSQ: %d,%d,%d\r\n", rssi,ber,rat);
+    if (ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
+        ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
+    } else {
+        PHS_LOGE("ind string size > 300\n");
+    }
+    if(ind_eng_pty != NULL && ind->len < MAX_AT_CMD_LEN)
+        if (ind_eng_pty->ops && ind->len < MAX_AT_CMD_LEN)
+            ind_eng_pty->ops->pty_write(ind_eng_pty, ind_str, strlen(ind_str));
+    return AT_RESULT_OK;
+}
+
 int cvt_ecsq_cmd_ind(AT_CMD_IND_T * ind)
 {
     int err;
@@ -2234,6 +2298,85 @@ int cvt_csq_action_rsp(AT_CMD_RSP_T * rsp, int user_data)
     }
 
     else {
+        return AT_RESULT_NG;
+    }
+    return AT_RESULT_OK;
+}
+
+int cvt_spscsq_action_req(AT_CMD_REQ_T * req)
+{
+    cmux_t *mux;
+    if (req == NULL) {
+        return AT_RESULT_NG;
+    }
+    mux = adapter_get_cmux(req->cmd_type, TRUE);
+    adapter_cmux_register_callback(mux, cvt_spscsq_action_rsp,
+            (int)req->recv_pty);
+    adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
+    return AT_RESULT_PROGRESS;
+}
+
+int cvt_spscsq_action_rsp(AT_CMD_RSP_T * rsp, int user_data)
+{
+    int ret;
+    char *input = rsp->rsp_str;
+    int len = rsp->len;
+    int rssi_3g = 0, rssi_2g = 0, ber, rat;
+    char rsp_str[MAX_AT_CMD_LEN];
+
+    memset(rsp_str, 0, MAX_AT_CMD_LEN);
+    if (rsp == NULL) {
+        return AT_RESULT_NG;
+    }
+    if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
+#if defined CONFIG_SINGLE_SIM
+        pty_t *ind_pty = adapter_get_default_ind_pty();
+        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
+#elif defined CONFIG_DUAL_SIM
+        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+#endif
+        if(ind_pty && ind_pty->ops)
+            ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
+        if(ind_eng_pty && ind_eng_pty->ops)
+            ind_eng_pty->ops->pty_write(ind_eng_pty, rsp->rsp_str, rsp->len);
+    }
+    if (findInBuf(input, len, "+SPSCSQ")) {
+
+        /*get the 3g rssi value and then convert into 2g rssi */
+        if (0 == at_tok_start(&input, ':')) {
+            ret = at_tok_nextint(&input, &rssi_3g);
+
+            if (rssi_3g <= 31) {
+                rssi_2g = rssi_3g;
+            } else if (rssi_3g >= 100 && rssi_3g < 103) {
+                rssi_2g = 0;
+            } else if(rssi_3g >= 103 && rssi_3g < 165) {
+                rssi_2g = ((rssi_3g - 103) + 1) / 2;
+            } else if (rssi_3g >= 165 && rssi_3g <= 191) {
+                rssi_2g = 31;
+            } else {
+                rssi_2g = 99;
+            }
+
+            ret = at_tok_nextint(&input, &ber);
+            if(ber > 99)
+            {
+                ber = 99;
+            }
+
+            ret = at_tok_nextint(&input, &rat);
+
+            snprintf(rsp_str, sizeof(rsp_str), "+SPSCSQ:%d,%d,%d\r", rssi_2g, ber, rat);
+        }
+        adapter_pty_write((pty_t *) user_data, rsp_str,
+                strlen(rsp_str));
+    } else if (adapter_cmd_is_end(rsp->rsp_str, rsp->len) == TRUE) {
+        adapter_cmux_deregister_callback(rsp->recv_cmux);
+        adapter_pty_write((pty_t *) user_data, rsp->rsp_str, rsp->len);
+        adapter_pty_end_cmd((pty_t *) user_data);
+        adapter_free_cmux(rsp->recv_cmux);
+    } else {
         return AT_RESULT_NG;
     }
     return AT_RESULT_OK;

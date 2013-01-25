@@ -195,6 +195,9 @@ int cvt_generic_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data);
 int cvt_generic_cmd_ind(AT_CMD_IND_T * ind);
 int cvt_null_cmd_ind(AT_CMD_IND_T * ind);
 int cvt_sind_cmd_ind(AT_CMD_IND_T * ind);
+int cvt_ecsq_cmd_ind(AT_CMD_IND_T * ind);
+int cvt_csq_cmd_ind(AT_CMD_IND_T * ind);
+int cvt_spscsq_cmd_ind(AT_CMD_IND_T * ind);
 
 /*add by wz 09 -03 -11 */
 int cvt_ccwa_cmd_req(AT_CMD_REQ_T * req);
@@ -211,6 +214,8 @@ int cvt_cusd_cmd_req(AT_CMD_REQ_T * req);
 int cvt_cusd_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data);
 int cvt_csq_action_req(AT_CMD_REQ_T * req);
 int cvt_csq_action_rsp(AT_CMD_RSP_T * rsp, int user_data);
+int cvt_spscsq_action_req(AT_CMD_REQ_T * req);
+int cvt_spscsq_action_rsp(AT_CMD_RSP_T * rsp, int user_data);
 int cvt_csq_test_req(AT_CMD_REQ_T * req);
 int cvt_csq_test_rsp(AT_CMD_RSP_T * rsp, int user_data);
 int cvt_epin_test_req(AT_CMD_REQ_T * req);
