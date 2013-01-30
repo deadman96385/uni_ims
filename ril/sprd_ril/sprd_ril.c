@@ -818,6 +818,7 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
     int response[2] = {0};
     int serviceClass = 0;
     char *cmd, *line;
+    int errNum = -1;
 
     if (datalen != 5 * sizeof(char *))
         goto error;
@@ -868,6 +869,17 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
     return;
 
 error:
+    if(strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
+        line = p_response->finalResponse;
+        err = at_tok_start(&line);
+        if (err >= 0) {
+            err = at_tok_nextint(&line, &errNum);
+            if(err >= 0) {
+                if(errNum == 11 || errNum == 12)
+                    setRadioState(channelID, RADIO_STATE_SIM_LOCKED_OR_ABSENT);
+            }
+        }
+    }
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
 }
