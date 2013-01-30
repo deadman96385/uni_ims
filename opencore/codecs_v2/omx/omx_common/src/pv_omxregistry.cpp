@@ -112,6 +112,7 @@ OMX_ERRORTYPE Mpeg4Register(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 
@@ -191,6 +192,7 @@ OMX_ERRORTYPE H263Register(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 
@@ -266,6 +268,7 @@ OMX_ERRORTYPE AvcRegister(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 
@@ -341,6 +344,7 @@ OMX_ERRORTYPE WmvRegister(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 
@@ -417,6 +421,7 @@ OMX_ERRORTYPE RvRegister(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 
@@ -494,6 +499,7 @@ OMX_ERRORTYPE AacRegister(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 
@@ -574,6 +580,7 @@ OMX_ERRORTYPE AmrRegister(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 
@@ -651,6 +658,7 @@ OMX_ERRORTYPE Mp3Register(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 
@@ -728,6 +736,7 @@ OMX_ERRORTYPE WmaRegister(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 
@@ -805,6 +814,7 @@ OMX_ERRORTYPE RaRegister(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 
@@ -882,6 +892,7 @@ OMX_ERRORTYPE AmrEncRegister(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 
@@ -961,6 +972,7 @@ OMX_ERRORTYPE Mpeg4EncRegister(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 
@@ -1038,6 +1050,7 @@ OMX_ERRORTYPE H263EncRegister(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 
@@ -1118,6 +1131,7 @@ OMX_ERRORTYPE AvcEncRegister(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 
@@ -1197,6 +1211,7 @@ OMX_ERRORTYPE AacEncRegister(OMXGlobalData *data)
 
     if (MAX_SUPPORTED_COMPONENTS == ii)
     {
+        oscl_free(pCRT); // free allocated memory
         return OMX_ErrorInsufficientResources;
     }
 

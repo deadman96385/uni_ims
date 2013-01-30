@@ -3705,7 +3705,7 @@ OSCL_EXPORT_REF OMX_ERRORTYPE OmxComponentAudio::SetParameter(
         case OMX_IndexParamAudioInit:
         {
             /*Check Structure Header*/
-            CheckHeader(ComponentParameterStructure, sizeof(OMX_PORT_PARAM_TYPE));
+            ErrorType = CheckHeader(ComponentParameterStructure, sizeof(OMX_PORT_PARAM_TYPE));
             if (ErrorType != OMX_ErrorNone)
             {
                 PVLOGGER_LOGMSG(PVLOGMSG_INST_HLDBG, iLogger, PVLOGMSG_NOTICE, (0, "OmxComponentAudio : SetParameter error audio init failed"));
@@ -4420,7 +4420,7 @@ OSCL_EXPORT_REF OMX_ERRORTYPE OmxComponentVideo::SetParameter(
         case OMX_IndexParamVideoInit:
         {
             /*Check Structure Header*/
-            CheckHeader(ComponentParameterStructure, sizeof(OMX_PORT_PARAM_TYPE));
+            ErrorType = CheckHeader(ComponentParameterStructure, sizeof(OMX_PORT_PARAM_TYPE));
             if (ErrorType != OMX_ErrorNone)
             {
                 PVLOGGER_LOGMSG(PVLOGMSG_INST_HLDBG, iLogger, PVLOGMSG_NOTICE, (0, "OmxComponentVideo : SetParameter error video init check header failed"));
