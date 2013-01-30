@@ -198,6 +198,8 @@ OSCL_IMPORT_REF int16 iDecodeVOLHeader(uint8 *buffer, int32 length, int32 *width
 OSCL_IMPORT_REF int16 iGetM4VConfigInfo(uint8 *buffer, int32 length, int32 *width, int32 *height, int32 *, int32 *);
 int16 DecodeUserData(mp4StreamType *pStream);
 OSCL_IMPORT_REF int16 iDecodeShortHeader(mp4StreamType *psBits, int32 *width, int32 *height, int32 *, int32 *);
+OSCL_IMPORT_REF int16 iDecodeFlvH263Header(mp4StreamType *psBits, int32 *width, int32 *height, int32
+*, int32 *);
 OSCL_IMPORT_REF int16 iGetAVCConfigInfo(uint8 *buffer, int32 length, int32 *width, int32 *height, int32 *, int32 *, int32 *profile, int32 *level);
 
 int32 FindNAL(uint8** nal_pnt, uint8* buffer, int32 length);

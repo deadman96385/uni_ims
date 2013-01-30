@@ -752,22 +752,29 @@ decode_vol:
     }
     else
     {
-        /* SHORT_HEADER */
-        ShowBits(psBits, SHORT_VIDEO_START_MARKER_LENGTH, &codeword);
-        if (codeword == SHORT_VIDEO_START_MARKER)
-        {
-            iM4VConfigInfo->iShortHeader = 1;
-            return (iDecodeShortHeader(psBits, &iWidth, &iHeight, (int32*)&(iM4VConfigInfo->iFrameWidth[0]), (int32*)&(iM4VConfigInfo->iFrameHeight[0])));
+        uint32 first_32bits;
 
+        ShowBits(psBits, 32, &first_32bits);
+        if((first_32bits>>11) == 0x10)
+        {
+            /* SHORT_HEADER */
+            ShowBits(psBits, SHORT_VIDEO_START_MARKER_LENGTH, &codeword);
+            if (codeword == SHORT_VIDEO_START_MARKER)
+            {
+                iM4VConfigInfo->iShortHeader = 1;
+                return (iDecodeShortHeader(psBits, &iWidth, &iHeight, (int32*)&(iM4VConfigInfo->iFrameWidth[0]), (int32*)&(iM4VConfigInfo->iFrameHeight[0])));
+            }
+            else
+            {
+                return (iDecodeFlvH263Header(psBits, &iWidth, &iHeight, (int32*)&(iM4VConfigInfo->iFrameWidth[0]), (int32*)&(iM4VConfigInfo->iFrameHeight[0])));
+            }
         }
         else
         {
-            {
-                /* Search for VOL_HEADER */
-                if (SearchVOLHeader(psBits) != 0)
-                    return MP4_INVALID_VOL_PARAM;
-                goto decode_vol;
-            }
+            /* Search for VOL_HEADER */
+            if (SearchVOLHeader(psBits) != 0)
+            return MP4_INVALID_VOL_PARAM;
+            goto decode_vol;
         }
     }
 
@@ -954,7 +961,72 @@ int16 iDecodeShortHeader(mp4StreamType *psBits,
     return 0;
 }
 
+OSCL_EXPORT_REF
+int16 iDecodeFlvH263Header(mp4StreamType *psBits,
+                         int32 *width,
+                         int32 *height,
+                         int32 *display_width,
+                         int32 *display_height)
+{
+    uint32 codeword;
 
+    /* picture header */
+    ReadBits(psBits, 17, &codeword);
+    if (codeword != 1) {
+        return MP4_INVALID_VOL_PARAM;//-1;
+    }
+    ReadBits(psBits, 5, &codeword);
+    if (codeword != 0 && codeword != 1) {
+        return MP4_INVALID_VOL_PARAM;// -1;
+    }
+
+    ReadBits(psBits, 8, &codeword); /* picture timestamp */
+    ReadBits(psBits, 3, &codeword);/*format*/
+
+    //LOGI("flv format: %d", codeword);
+    switch (codeword) {
+        case 0:
+            ReadBits(psBits, 8, (uint32*)display_width);
+            ReadBits(psBits, 8, (uint32*)display_height);
+        break;
+        case 1:
+            ReadBits(psBits, 16, (uint32*)display_width);
+            ReadBits(psBits, 16, (uint32*)display_height);
+        break;
+        case 2:
+            *display_width = 352;
+            *display_height = 288;
+        break;
+        case 3:
+            *display_width = 176;
+            *display_height = 144;
+        break;
+        case 4:
+            *display_width = 128;
+            *display_height = 96;
+        break;
+        case 5:
+            *display_width = 320;
+            *display_height = 240;
+        break;
+        case 6:
+            *display_width = 160;
+            *display_height = 120;
+        break;
+        default:
+            *display_width = *display_height = 0;
+        break;
+    }
+
+    *width = (*display_width + 15) & -16;
+    *height = (*display_height + 15) & -16;
+
+    ReadBits(psBits, 2, &codeword);	/*picture type*/
+    ReadBits(psBits, 1, &codeword); /* deblocking flag */
+    ReadBits(psBits, 5, &codeword);	/*StepSize*/
+
+    return 0;
+}
 
 int16 ShowBits(
     mp4StreamType *pStream,           /* Input Stream */
