@@ -24,7 +24,7 @@
 #if defined CONFIG_SINGLE_SIM
 #define CHN_NUM 						18	//  number of channel buffer
 #elif defined CONFIG_DUAL_SIM
-#define CHN_NUM 						21	//  number of channel buffer
+#define CHN_NUM 						27	//  number of channel buffer
 #endif
 #define SERIAL_BUFFSIZE   					(8*1024)	// channel buffer size
 #define MAX_AT_RESPONSE 					(8 * 1024)
@@ -64,9 +64,9 @@ typedef enum mux_type_t { CSM, PSM, GSM,NWM,SIMM,SSM,PBKM,STKM, SMSM,SMSTM,INDM,
 #define SLOW4_WAIT_NUM						4
 #define NORMAL4_WAIT_NUM					4
 
-#define PTY_CHN_NUM  						12	//send thread number
+#define PTY_CHN_NUM  						15	//send thread number
 #define INDPTY_NUM						4
-#define PHS_MUX_NUM  						9	//Receive thread number
+#define PHS_MUX_NUM  						12	//Receive thread number
 
 
 typedef enum mux_type_t { ATM1_SIM1,ATM2_SIM1,ATM1_SIM2,ATM2_SIM2,
