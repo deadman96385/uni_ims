@@ -1980,6 +1980,38 @@ static void requestDial(int channelID, void *data, size_t datalen, RIL_Token t)
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
 }
 
+static void requestEccDial(int channelID, void *data, size_t datalen, RIL_Token t)
+{
+    RIL_Dial *p_dial;
+    char *cmd;
+    const char *clir;
+    char *category = NULL;
+    int ret;
+
+    p_dial = (RIL_Dial *)data;
+
+    switch (p_dial->clir) {
+        case 1: clir = "I"; break;  /*invocation*/
+        case 2: clir = "i"; break;  /*suppression*/
+        default:
+        case 0: clir = ""; break;   /*subscription default*/
+    }
+
+    category = strchr(p_dial->address, '/');
+    if(category)
+        *category = '@';
+
+    asprintf(&cmd, "ATD%s,#%s;", p_dial->address, clir);
+    wait4android_audio_ready("ATD");
+    ret = at_send_command(ATch_type[channelID], cmd, NULL);
+
+    free(cmd);
+
+    /* success or failure is ignored by the upper layer here.
+       it will call GET_CURRENT_CALLS and determine success that way */
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+}
+
 static void requestWriteSmsToSim(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     RIL_SMS_WriteArgs *p_args;
@@ -3647,38 +3679,6 @@ static char* strReplace(char **str, char flag)
     return ret;
 }
 
-static void requestEccDial(int channelID, void *data, size_t datalen, RIL_Token t)
-{
-    RIL_Dial *p_dial;
-    char *cmd;
-    const char *clir;
-    char *category = NULL;
-    int ret;
-
-    p_dial = (RIL_Dial *)data;
-
-    switch (p_dial->clir) {
-        case 1: clir = "I"; break;  /*invocation*/
-        case 2: clir = "i"; break;  /*suppression*/
-        default:
-        case 0: clir = ""; break;   /*subscription default*/
-    }
-
-    category = strchr(p_dial->address, '/');
-    if(category)
-        *category = '@';
-
-    asprintf(&cmd, "ATD%s,#%s;", p_dial->address, clir);
-    wait4android_audio_ready("ATD");
-    ret = at_send_command(ATch_type[channelID], cmd, NULL);
-
-    free(cmd);
-
-    /* success or failure is ignored by the upper layer here.
-       it will call GET_CURRENT_CALLS and determine success that way */
-    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-}
-
 static void requestSetCellBroadcastConfig(int channelID,  void *data, size_t datalen, RIL_Token t)
 {
 
@@ -4161,11 +4161,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_DIAL:
             requestDial(channelID, data, datalen, t);
             break;
-#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_DIAL_EMERGENCY_CALL:
             requestEccDial(channelID, data, datalen, t);
             break;
-#endif
         case RIL_REQUEST_HANGUP:
             requestHangup(channelID, data, datalen, t);
             break;
