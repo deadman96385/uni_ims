@@ -4161,9 +4161,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_DIAL:
             requestDial(channelID, data, datalen, t);
             break;
+#if defined (RIL_SPRD_EXTENSION) || (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_DIAL_EMERGENCY_CALL:
             requestEccDial(channelID, data, datalen, t);
             break;
+#endif
         case RIL_REQUEST_HANGUP:
             requestHangup(channelID, data, datalen, t);
             break;

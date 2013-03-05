@@ -4699,6 +4699,7 @@ requestToString(int request) {
         case RIL_REQUEST_USIM_PB_CAPA: return "USIM_PB_CAPA";
         case RIL_REQUEST_LOCK_INFO: return "LOCK_INFO";
         case RIL_REQUEST_SEND_MOBILE_TRACKER_SMS: return "SEND_MOBILE_TRACKER_SMS";
+        case RIL_REQUEST_DIAL_EMERGENCY_CALL: return "DIAL_EMERGENCY_CALL";
         case RIL_REQUEST_GET_STOREAD_MSG_COUNT: return "GET_STOREAD_MSG_COUNT";	
         case RIL_REQUEST_STK_SIM_INIT_EVENT: return "STK_SIM_INIT_EVENT";
         case RIL_REQUEST_GET_LINE_ID: return "GET_LINE_ID";	
