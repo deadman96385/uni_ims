@@ -1,3 +1,4 @@
+ifneq ($(TARGET_SIMULATOR),true)
 #ifneq ($(BUILD_WITHOUT_PV),true)
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
@@ -75,3 +76,4 @@ endif
 endif
 
 #endif
+endif
