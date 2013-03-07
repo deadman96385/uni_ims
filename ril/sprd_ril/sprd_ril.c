@@ -187,6 +187,7 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
 static void getSmsState(int channelID) ;
 static void convertBinToHex(char *bin_ptr, int length, char *hex_ptr);
 static int convertHexToBin(const char *hex_ptr, int length, char *bin_ptr);
+int parsePdu(char *pdu);
 
 /*** Static Variables ***/
 static const RIL_RadioFunctions s_callbacks = {
@@ -488,8 +489,10 @@ static inline int all_calls(int channelID, int do_mute)
     int countCalls;
 
     if (at_send_command_multiline(ATch_type[channelID], "AT+CLCC", "+CLCC:", &p_response) != 0 ||
-            p_response->success == 0)
+            p_response->success == 0) {
+        at_response_free(p_response);
         return -1;
+    }
 
     /* total the calls */
     for (countCalls = 0, p_cur = p_response->p_intermediates; p_cur != NULL; p_cur = p_cur->p_next)
@@ -531,18 +534,19 @@ static void deactivateDataConnection(int channelID, void *data, size_t datalen, 
     ATResponse *p_response = NULL;
     const char *cid_ptr = NULL;
     int cid;
-    char *cmd;
+    char cmd[30];
 
     cid_ptr = ((const char **)data)[0];
     cid = atoi(cid_ptr);
+    if(cid < 1)
+        goto error1;
 
     ALOGD("Try to deactivated modem ..., cid=%d", cid);
     if (pdp[cid - 1].cid == cid) {
-        asprintf(&cmd, "AT+CGACT=0,%d", cid);
+        snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", cid);
         err = at_send_command(ATch_type[channelID], cmd, &p_response);
         if (err < 0 || p_response->success == 0)
             goto error;
-        free(cmd);
 
         putPDP(cid - 1);
     }
@@ -554,10 +558,10 @@ static void deactivateDataConnection(int channelID, void *data, size_t datalen, 
 error:
     if (pdp[cid - 1].cid == cid)
         putPDP(cid - 1);
+error1:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
     return;
-
 }
 
 static int clccStateToRILState(int state, RIL_CallState *p_state)
@@ -696,18 +700,19 @@ static void requestCallForward(int channelID, RIL_CallForwardInfo *data, size_t 
     int err;
     int errNum = 0xff;
     char *cmd, *line;
+    int ret = -1;
 
     if (datalen != sizeof(*data))
         goto error1;
     if (data->serviceClass == 0) {
         if (data->status == 2) {
-            asprintf(&cmd, "AT+CCFC=%d,%d,\"%s\",129",
+            ret = asprintf(&cmd, "AT+CCFC=%d,%d,\"%s\",129",
                 data->reason,
                 data->status,
                 data->number ? data->number : "");
         } else {
             if (data->timeSeconds != 0 && data->status == 3) {
-                asprintf(&cmd, "AT+CCFC=%d,%d,\"%s\",%d,,\"\",,%d",
+                ret = asprintf(&cmd, "AT+CCFC=%d,%d,\"%s\",%d,,\"\",,%d",
                         data->reason,
                         data->status,
                         data->number ? data->number : "",
@@ -715,7 +720,7 @@ static void requestCallForward(int channelID, RIL_CallForwardInfo *data, size_t 
                         data->timeSeconds);
 
             } else {
-                asprintf(&cmd, "AT+CCFC=%d,%d,\"%s\",%d",
+                ret = asprintf(&cmd, "AT+CCFC=%d,%d,\"%s\",%d",
                         data->reason,
                         data->status,
                         data->number ? data->number : "",
@@ -724,14 +729,14 @@ static void requestCallForward(int channelID, RIL_CallForwardInfo *data, size_t 
         }
     } else {
         if (data->status == 2) {
-            asprintf(&cmd, "AT+CCFC=%d,%d,\"%s\",129,%d",
+            ret = asprintf(&cmd, "AT+CCFC=%d,%d,\"%s\",129,%d",
                 data->reason,
                 data->status,
                 data->number ? data->number : "",
                 data->serviceClass);
         } else {
             if (data->timeSeconds != 0 && data->status == 3) {
-                asprintf(&cmd, "AT+CCFC=%d,%d,\"%s\",%d,%d,\"\",,%d",
+                ret = asprintf(&cmd, "AT+CCFC=%d,%d,\"%s\",%d,%d,\"\",,%d",
                         data->reason,
                         data->status,
                         data->number ? data->number : "",
@@ -739,7 +744,7 @@ static void requestCallForward(int channelID, RIL_CallForwardInfo *data, size_t 
                         data->serviceClass,
                         data->timeSeconds);
             } else {
-                asprintf(&cmd, "AT+CCFC=%d,%d,\"%s\",%d,%d",
+                ret = asprintf(&cmd, "AT+CCFC=%d,%d,\"%s\",%d,%d",
                         data->reason,
                         data->status,
                         data->number ? data->number : "",
@@ -748,9 +753,13 @@ static void requestCallForward(int channelID, RIL_CallForwardInfo *data, size_t 
             }
         }
     }
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error1;
+    }
     err = at_send_command_multiline (ATch_type[channelID],  cmd, "+CCFC:", &p_response);
     free(cmd);
-
     if (err < 0 || p_response->success == 0)
         goto error;
 
@@ -822,36 +831,41 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
     int serviceClass = 0;
     char *cmd, *line;
     int errNum = -1;
+	int ret = -1;
 
     if (datalen != 5 * sizeof(char *))
         goto error;
 
     serviceClass = atoi(data[3]);
     if (serviceClass == 0) {
-        asprintf(&cmd, "AT+CLCK=\"%s\",%c,\"%s\"",
+        ret = asprintf(&cmd, "AT+CLCK=\"%s\",%c,\"%s\"",
                 data[0], *data[1], data[2]);
     } else {
-        asprintf(&cmd, "AT+CLCK=\"%s\",%c,\"%s\",%s",
+        ret = asprintf(&cmd, "AT+CLCK=\"%s\",%c,\"%s\",%s",
                 data[0], *data[1], data[2], data[3]);
+    }
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error1;
     }
     ALOGD("requestFacilityLock: %s", cmd);
 
-    if (*data[1] == '2')
+    if (*data[1] == '2') {
         err = at_send_command_singleline(ATch_type[channelID],  cmd, "+CLCK: ",
                 &p_response);
-    else {
+        free(cmd);
+    } else {
         err = at_send_command(ATch_type[channelID],  cmd, &p_response);
+        free(cmd);
         if (err < 0 || p_response->success == 0) {
-            free(cmd);
             goto error;
         }
         result = 1;
-        free(cmd);
         RIL_onRequestComplete(t, RIL_E_SUCCESS, &result, sizeof(result));
         at_response_free(p_response);
         return;
     }
-    free(cmd);
 
     if (err < 0 || p_response->success == 0)
         goto error;
@@ -883,6 +897,7 @@ error:
             }
         }
     }
+error1:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
 }
@@ -898,7 +913,12 @@ static void requestChangeFacilityLock(int channelID,  char **data, size_t datale
     if (datalen != 3 * sizeof(char *))
         goto error;
 
-    asprintf(&cmd, "AT+CPWD=\"%s\",\"%s\",\"%s\"", data[0], data[1], data[2]);
+    err = asprintf(&cmd, "AT+CPWD=\"%s\",\"%s\",\"%s\"", data[0], data[1], data[2]);
+    if(err < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error;
+    }
     ALOGD("requestChangeFacilityLock: %s", cmd);
 
     err = at_send_command(ATch_type[channelID],  cmd, &p_response);
@@ -1106,17 +1126,22 @@ static void onDataCallListChanged(void *param)
 
 static void onClass2SmsReceived(void *param)
 {
-    int err, skip;
-    char *cmd, *line;
-    ATResponse *p_response = NULL;
-    int sim_type, channelID;
-    char *file_path, *sms_pdu;
-    int *p_index = (int *)param;
-
-    if(p_index == NULL) {
-        ALOGE("class2 sms index is NULL!");
+    if(param == NULL)
+    {
+        ALOGD("onClass2SmsReceived: param is null");
         return;
     }
+
+    int err, skip;
+    char *line;
+    ATResponse *p_response = NULL;
+    int sim_type, channelID;
+    char *sms_pdu;
+    char buf[256] = {0};
+    int sms_length;
+    int pdu_length;
+    int simtype[4] = {0x3F007F10, 0x3F007FFF, 0x3F007FFF, 0x3F007F10};
+
     channelID = getChannel();
     err = at_send_command_singleline(ATch_type[channelID], "AT^CARDMODE", "^CARDMODE:", &p_response);
     if (err < 0 || p_response->success == 0) {
@@ -1129,21 +1154,20 @@ static void onClass2SmsReceived(void *param)
     err = at_tok_nextint(&line, &sim_type);
     if (err < 0) goto error;
 
-    if(sim_type == 1)  //sim
-        asprintf(&file_path, "3F007F10");
-    else if(sim_type == 2)  //usim
-	asprintf(&file_path, "3F007FFF");
-    else
-	goto error;
-
-    asprintf(&cmd, "AT+CRSM=178,28476,%d,4,176,0,\"%s\"", *p_index, file_path);
-    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CRSM:", &p_response);
-    free(cmd);
-    free(file_path);
+    if(sim_type < 1 || sim_type > 4)
+    {
+          // 1 : sim
+          // 2 : usim
+          // 3 : test usim
+          // 4 : test sim
+          goto error;
+    }
+    sprintf(buf,"AT+CRSM=178,28476,%d,4,176,0,\"%x\"", *(int*)param, simtype[sim_type-1]);
+    ALOGD("buf : %s", buf);
+    err = at_send_command_singleline(ATch_type[channelID], buf, "+CRSM:", &p_response);
     if (err < 0 || p_response->success == 0) {
         goto error;
     }
-
     line = p_response->p_intermediates->line;
     err = at_tok_start(&line);
     if (err < 0) goto error;
@@ -1158,15 +1182,24 @@ static void onClass2SmsReceived(void *param)
         err = at_tok_nextstr(&line, &sms_pdu);
         if (err < 0) goto error;
     }
-    sms_pdu += 1;  //skip the status byte
+    ALOGD("pdu : %s", sms_pdu);
+    pdu_length = strlen(sms_pdu);
+    if(!convertHexToBin(sms_pdu, pdu_length, buf))
+    {
+        sms_length = parsePdu(buf);  //sms bin length
+        ALOGD("sms binary length = %d", sms_length);
+    } else {
+        ALOGD("convert class2 sms from hex to bin failed ");
+        goto error;
+    }
+    sms_length = 2*sms_length; //sms hex length
+    if(sms_length > pdu_length)
+        goto error;
+    sms_pdu[sms_length] = '\0';
+    ALOGD("pdu : %s", sms_pdu);
     RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_NEW_SMS,
-                sms_pdu, strlen(sms_pdu));
-    free(p_index);
-    at_response_free(p_response);
-    putChannel(channelID);
-    return;
+                &sms_pdu[2], sms_length - 2);  //skip the status
 error:
-    free(p_index);
     putChannel(channelID);
     at_response_free(p_response);
 }
@@ -1255,7 +1288,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
         char *type;
         char *apn;
         char *address;
-        char *cmd;
+        char cmd[30] = {0};
         char prop[20];
         const int   dnslist_sz = 50;
         char*       dnslist = alloca(dnslist_sz);
@@ -1296,29 +1329,26 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
         if (err < 0)
             goto error;
 
-        asprintf(&cmd, "veth%d", i);
+        snprintf(cmd, sizeof(cmd), "veth%d", i);
         responses[i].ifname = alloca(strlen(cmd) + 1);
         strcpy(responses[i].ifname, cmd);
-        free(cmd);
 
-        asprintf(&cmd, "net.veth%d.ip", i);
+        snprintf(cmd, sizeof(cmd), "net.veth%d.ip", i);
         property_get(cmd, prop, NULL);
         responses[i].addresses = alloca(strlen(prop) + 1);
         responses[i].gateways = alloca(strlen(prop) + 1);
         strcpy(responses[i].addresses, prop);
         strcpy(responses[i].gateways, prop);
-        free(cmd);
 
         dnslist[0] = 0;
         for (nn = 0; nn < 2; nn++) {
-            asprintf(&cmd, "net.veth%d.dns%d", i, nn+1);
+            snprintf(cmd, sizeof(cmd), "net.veth%d.dns%d", i, nn+1);
             property_get(cmd, prop, NULL);
 
             /* Append the DNS IP address */
             strlcat(dnslist, separator, dnslist_sz);
             strlcat(dnslist, prop, dnslist_sz);
             separator = " ";
-            free(cmd);
         }
         responses[i].dnses = dnslist;
 
@@ -1381,7 +1411,7 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     const char *username = NULL;
     const char *password = NULL;
     const char *authtype = NULL;
-    char *cmd;
+    char cmd[128] = {0};
     int err;
     char response[20];
     ATResponse *p_response = NULL;
@@ -1419,34 +1449,28 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
 
         ATch_type[channelID]->nolog = 0;
 
-        asprintf(&cmd, "AT+CGACT=0,%d", index+1);
-        err = at_send_command(ATch_type[channelID], cmd, NULL);
-        free(cmd);
+        snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
+        at_send_command(ATch_type[channelID], cmd, NULL);
 
-        asprintf(&cmd, "AT+CGDCONT=%d,\"%s\",\"%s\",\"\",0,0", index+1, pdp_type, apn);
+        snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"%s\",\"%s\",\"\",0,0", index+1, pdp_type, apn);
         err = at_send_command(ATch_type[channelID], cmd, &p_response);
         if (err < 0 || p_response->success == 0){
-            free(cmd);
             s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
             goto error;
         }
-        free(cmd);
 
-        asprintf(&cmd, "AT+CGPCO=0,\"%s\",\"%s\",%d,%d", username, password,index+1,atoi(authtype));
-        err = at_send_command(ATch_type[channelID], cmd, NULL);
-        free(cmd);
+        snprintf(cmd, sizeof(cmd), "AT+CGPCO=0,\"%s\",\"%s\",%d,%d", username, password,index+1,atoi(authtype));
+        at_send_command(ATch_type[channelID], cmd, NULL);
 
         /* Set required QoS params to default */
         property_get("persist.sys.qosstate", qos_state, "0");
         if(!strcmp(qos_state, "0")) {
-            asprintf(&cmd, "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
-            err = at_send_command(ATch_type[channelID], cmd, NULL);
-            free(cmd);
+            snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
+            at_send_command(ATch_type[channelID], cmd, NULL);
         }
 
-        asprintf(&cmd, "AT+CGDATA=\"PPP\",%d", index+1);
+        snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"PPP\",%d", index+1);
         err = at_send_command(ATch_type[channelID], cmd, &p_response);
-        free(cmd);
         if (err < 0 || p_response->success == 0) {
             if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
                 line = p_response->finalResponse;
@@ -1582,6 +1606,9 @@ void requestLastCallFailCause(int channelID, void *data, size_t datalen, RIL_Tok
         case 8:
             response = CALL_FAIL_CALL_BARRED;
             break;
+        case 241:
+            response = CALL_FAIL_FDN_BLOCKED;
+            break;
         default:
             response = CALL_FAIL_ERROR_UNSPECIFIED;
     }
@@ -1614,10 +1641,7 @@ static void requestBasebandVersion(int channelID, void *data, size_t datalen, RI
         if(i < 4) {
             if(at_tok_start(&line) == 0) {
                 skipWhiteSpace(&line);
-                if(i == 0)
-                    strcpy(response, line);
-                else
-                    strcat(response, line);
+                strcat(response, line);
 
                 strcat(response,"|");
             } else
@@ -1627,7 +1651,7 @@ static void requestBasebandVersion(int channelID, void *data, size_t datalen, RI
             strcat(response, line);
         }
     }
-    if(response == NULL) {
+    if(strlen(response) == 0) {
         ALOGE("requestBasebandVersion: Parameter parse error!");
         goto error;
     }
@@ -1772,7 +1796,7 @@ error:
 
 static void requestNetworkRegistration(int channelID,  void *data, size_t datalen, RIL_Token t)
 {
-    char *cmd;
+    char cmd[128] = {0};
     int err;
 #ifdef RIL_SPRD_EXTENSION
     RIL_NetworkList *network = (RIL_NetworkList *)data;
@@ -1783,9 +1807,9 @@ static void requestNetworkRegistration(int channelID,  void *data, size_t datale
 
     if (network) {
 #ifdef RIL_SPRD_EXTENSION
-        asprintf(&cmd, "AT+COPS=1,2,\"%s\",%d", network->operatorNumeric, network->act);
+        snprintf(cmd, sizeof(cmd), "AT+COPS=1,2,\"%s\",%d", network->operatorNumeric, network->act);
 #else
-        asprintf(&cmd, "AT+COPS=1,2,\"%s\"", network);
+        snprintf(cmd, sizeof(cmd), "AT+COPS=1,2,\"%s\"", network);
 #endif
         err = at_send_command(ATch_type[channelID], cmd, &p_response);
         if (err != 0 || p_response->success == 0)
@@ -1793,13 +1817,11 @@ static void requestNetworkRegistration(int channelID,  void *data, size_t datale
     } else
         goto error;
 
-    free(cmd);
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     at_response_free(p_response);
     return;
 
 error:
-    free(cmd);
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
 }
@@ -1870,9 +1892,9 @@ static void requestGetCurrentCalls(int channelID, void *data, size_t datalen, RI
     int needRepoll = 0;
 
     err = at_send_command_multiline (ATch_type[channelID],"AT+CLCC", "+CLCC:", &p_response);
-
     if (err != 0 || p_response->success == 0) {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        at_response_free(p_response);
         return;
     }
 
@@ -1921,24 +1943,21 @@ static void requestGetCurrentCalls(int channelID, void *data, size_t datalen, RI
 
     at_response_free(p_response);
 #ifdef POLL_CALL_STATE
-    if (countValidCalls) {
+    if (countValidCalls)
     /* We don't seem to get a "NO CARRIER" message from
      * smd, so we're forced to poll until the call ends.
      */
 #else
-        if (needRepoll) {
+    if (needRepoll)
 #endif
-            if (bVideoCall == 0){
-                RIL_requestTimedCallback (sendCallStateChanged, NULL, &TIMEVAL_CALLSTATEPOLL);
-            } else {
-                RIL_requestTimedCallback (sendVideoCallStateChanged, NULL, &TIMEVAL_CALLSTATEPOLL);
-            }
+    {
+        if (bVideoCall == 0) {
+            RIL_requestTimedCallback (sendCallStateChanged, NULL, &TIMEVAL_CALLSTATEPOLL);
+        } else {
+            RIL_requestTimedCallback (sendVideoCallStateChanged, NULL, &TIMEVAL_CALLSTATEPOLL);
         }
-
-        return;
-error:
-        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-        at_response_free(p_response);
+    }
+    return;
 }
 
 static void requestDial(int channelID, void *data, size_t datalen, RIL_Token t)
@@ -1946,6 +1965,7 @@ static void requestDial(int channelID, void *data, size_t datalen, RIL_Token t)
     RIL_Dial *p_dial;
     char *cmd;
     const char *clir;
+    int err;
     int ret;
 
     p_dial = (RIL_Dial *)data;
@@ -1955,9 +1975,8 @@ static void requestDial(int channelID, void *data, size_t datalen, RIL_Token t)
         ALOGD(" setup STK call ");
         s_isstkcall = 0;
         wait4android_audio_ready("ATD");
-        asprintf(&cmd, "AT+SPUSATCALLSETUP=1");
-        at_send_command(ATch_type[channelID], cmd, NULL);
-        free(cmd);
+        err = at_send_command(ATch_type[channelID], "AT+SPUSATCALLSETUP=1", NULL);
+        if (err != 0) goto error;
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
         return;
     }
@@ -1969,15 +1988,23 @@ static void requestDial(int channelID, void *data, size_t datalen, RIL_Token t)
         case 0: clir = ""; break;   /*subscription default*/
     }
 
-    asprintf(&cmd, "ATD%s%s;", p_dial->address, clir);
+    ret = asprintf(&cmd, "ATD%s%s;", p_dial->address, clir);
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error;
+    }
     wait4android_audio_ready("ATD");
-    ret = at_send_command(ATch_type[channelID], cmd, NULL);
-
+    err = at_send_command(ATch_type[channelID], cmd, NULL);
     free(cmd);
+    if (err != 0) goto error;
 
     /* success or failure is ignored by the upper layer here.
        it will call GET_CURRENT_CALLS and determine success that way */
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    return;
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
 }
 
 static void requestEccDial(int channelID, void *data, size_t datalen, RIL_Token t)
@@ -1986,7 +2013,7 @@ static void requestEccDial(int channelID, void *data, size_t datalen, RIL_Token 
     char *cmd;
     const char *clir;
     char *category = NULL;
-    int ret;
+    int ret, err;
 
     p_dial = (RIL_Dial *)data;
 
@@ -2001,15 +2028,23 @@ static void requestEccDial(int channelID, void *data, size_t datalen, RIL_Token 
     if(category)
         *category = '@';
 
-    asprintf(&cmd, "ATD%s,#%s;", p_dial->address, clir);
+    ret = asprintf(&cmd, "ATD%s,#%s;", p_dial->address, clir);
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error;
+    }
     wait4android_audio_ready("ATD");
-    ret = at_send_command(ATch_type[channelID], cmd, NULL);
-
+    err = at_send_command(ATch_type[channelID], cmd, NULL);
     free(cmd);
+    if (err != 0) goto error;
 
     /* success or failure is ignored by the upper layer here.
        it will call GET_CURRENT_CALLS and determine success that way */
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    return;
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
 }
 
 static void requestWriteSmsToSim(int channelID, void *data, size_t datalen, RIL_Token t)
@@ -2022,6 +2057,7 @@ static void requestWriteSmsToSim(int channelID, void *data, size_t datalen, RIL_
     const char *smsc;
     char *line = NULL;
     int errorNum;
+    int ret;
 
     p_args = (RIL_SMS_WriteArgs *)data;
 
@@ -2033,8 +2069,19 @@ static void requestWriteSmsToSim(int channelID, void *data, size_t datalen, RIL_
         smsc= "00";
     }
 
-    asprintf(&cmd, "AT+CMGW=%d,%d", length, p_args->status);
-    asprintf(&cmd1, "%s%s", smsc, p_args->pdu);
+    ret = asprintf(&cmd, "AT+CMGW=%d,%d", length, p_args->status);
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error1;
+    }
+    ret = asprintf(&cmd1, "%s%s", smsc, p_args->pdu);
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        free(cmd);
+        cmd1 = NULL;
+        goto error1;
+    }
 
     err = at_send_command_sms(ATch_type[channelID], cmd, cmd1, "+CMGW:", &p_response);
     free(cmd);
@@ -2071,9 +2118,8 @@ error1:
 static void requestHangup(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     int *p_line;
-
     int ret;
-    char *cmd;
+    char cmd[20] = {0};
     ATResponse *p_response = NULL;
 
     p_line = (int *)data;
@@ -2081,7 +2127,7 @@ static void requestHangup(int channelID, void *data, size_t datalen, RIL_Token t
     /* 3GPP 22.030 6.5.5
      * "Releases a specific active call X"
      */
-    asprintf(&cmd, "AT+CHLD=7%d", p_line[0]);
+    snprintf(cmd, sizeof(cmd), "AT+CHLD=7%d", p_line[0]);
     all_calls(channelID, 1);
     ret = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (ret < 0 || p_response->success == 0) {
@@ -2090,7 +2136,6 @@ static void requestHangup(int channelID, void *data, size_t datalen, RIL_Token t
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
     at_response_free(p_response);
-    free(cmd);
 }
 
 static void requestSignalStrength(int channelID, void *data, size_t datalen, RIL_Token t)
@@ -2251,12 +2296,17 @@ static void requestRegistrationState(int channelID, int request, void *data,
     int err;
     int response[4] = { -1, -1, -1, -1 };
     char *responseStr[15] = {NULL};
+    char res[5][20];
     ATResponse *p_response = NULL;
     const char *cmd;
     const char *prefix;
     char *line, *p;
     int commas;
     int skip;
+    int i;
+
+    for(i = 0; i < 4; i++)
+        responseStr[i] = res[i];
 
     if (request == RIL_REQUEST_VOICE_REGISTRATION_STATE) {
         cmd = "AT+CREG?";
@@ -2357,51 +2407,37 @@ static void requestRegistrationState(int channelID, int request, void *data,
     }
 
 #if defined (RIL_SPRD_EXTENSION)
-    asprintf(&responseStr[0], "%d", response[0]);
+    sprintf(res[0], "%d", response[0]);
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     if(8 == response[0])
-        asprintf(&responseStr[0], "14");
+        sprintf(res[0], "14");
     else
-        asprintf(&responseStr[0], "%d", response[0]);
+        sprintf(res[0], "%d", response[0]);
 #endif
 
     if (response[1] != -1) {
-        asprintf(&responseStr[1], "%x", response[1]);
+        sprintf(res[1], "%x", response[1]);
     }
+
     if (response[2] != -1) {
-        asprintf(&responseStr[2], "%x", response[2]);
+        sprintf(res[2], "%x", response[2]);
     }
 
     if (response[3] != -1) {
         response[3] = mapCgregResponse(response[3]);
-        asprintf(&responseStr[3], "%d", response[3]);
+        sprintf(res[3], "%d", response[3]);
     }
 
     if (request == RIL_REQUEST_VOICE_REGISTRATION_STATE) {
-        asprintf(&responseStr[7], "0");
+        sprintf(res[4], "0");
+        responseStr[7] = res[4];
         RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, 15*sizeof(char*));
     } else if (request == RIL_REQUEST_DATA_REGISTRATION_STATE) {
-        asprintf(&responseStr[5], "3");
+        sprintf(res[4], "3");
+        responseStr[5] = res[4];
         RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, 6*sizeof(char*));
     }
     at_response_free(p_response);
-
-    free(responseStr[0]);
-    if (responseStr[1] != NULL)
-        free(responseStr[1]);
-
-    if (responseStr[2] != NULL)
-        free(responseStr[2]);
-
-    if (responseStr[3] != NULL)
-        free(responseStr[3]);
-
-    if (responseStr[5] != NULL)
-        free(responseStr[5]);
-
-    if (responseStr[7] != NULL)
-        free(responseStr[7]);
-
     return;
 error:
     ALOGE("requestRegistrationState must never return an error when radio is on");
@@ -2446,6 +2482,7 @@ static void requestNeighboaringCellIds(int channelID, void *data, size_t datalen
         if (err < 0 || cell_id_number == 0)
             goto error;
     } else {
+        at_response_free(p_response);
         err = at_send_command_singleline(ATch_type[channelID], "AT+Q3GNCELL",
 		    "+Q3GNCELL:", &p_response);
         if (err != 0 || p_response->success == 0)
@@ -2582,13 +2619,12 @@ error:
 
 static void requestSetCmms(int channelID, void *data, size_t datalen, RIL_Token t)
 {
-    char* cmd;
+    char cmd[20] = {0};
     int enable = ((int *)data)[0];
 
-    asprintf(&cmd, "AT+CMMS=%d",enable);
+    snprintf(cmd, sizeof(cmd), "AT+CMMS=%d",enable);
     at_send_command( ATch_type[channelID], cmd, NULL);
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-    free(cmd);
 }
 
 static void requestSendSMS(int channelID, void *data, size_t datalen, RIL_Token t)
@@ -2601,6 +2637,7 @@ static void requestSendSMS(int channelID, void *data, size_t datalen, RIL_Token 
     RIL_SMS_Response response;
     ATResponse *p_response = NULL;
     char * line;
+    int ret;
 
     memset(&response, 0, sizeof(RIL_SMS_Response));
     smsc = ((const char **)data)[0];
@@ -2613,8 +2650,19 @@ static void requestSendSMS(int channelID, void *data, size_t datalen, RIL_Token 
         smsc= "00";
     }
 
-    asprintf(&cmd1, "AT+CMGS=%d", tpLayerLength);
-    asprintf(&cmd2, "%s%s", smsc, pdu);
+    ret = asprintf(&cmd1, "AT+CMGS=%d", tpLayerLength);
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd1 = NULL;
+        goto error1;
+    }
+    ret = asprintf(&cmd2, "%s%s", smsc, pdu);
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        free(cmd1);
+        cmd2 = NULL;
+        goto error1;
+    }
 
     err = at_send_command_sms(ATch_type[channelID], cmd1, cmd2, "+CMGS:", &p_response);
     free(cmd1);
@@ -2736,6 +2784,59 @@ int is_long_sms(char *pdu, int *max_num, int *seq_num)
     }
 }
 
+int parsePdu(char *pdu)
+{
+    char *p = pdu + 1; // Skip status
+    int smsc_len;
+    int tp_udl = 0;
+    int addr_length;
+    int sms_length;
+    int dcs_type; // 0000 0000 7bit, 0000 0100 8bit, 0000 1000 16bit
+
+    if(*p == 0xFF)
+        smsc_len = 0;
+    else
+        smsc_len = *p;
+
+    //TPDU
+    //TP_OA: just skip the first octet
+    p += smsc_len + 2;
+
+    //TP_PID
+    //TP_DCS
+    addr_length =  (*p + 1) >> 1;
+    p += (addr_length + 3);
+
+    dcs_type = *p & 0x0C;
+    ALOGD("dcs_type : %d", dcs_type);
+
+    //TP_TS
+    //TP_UDL
+    p += 8;
+
+    switch(dcs_type)
+    {
+         case 0:
+             tp_udl = *p - ((*p)>>3);
+             ALOGD("gsm7bit : %d", tp_udl);
+             break;
+         case 4:
+         case 8:
+             tp_udl = *p;
+             ALOGD("8bit : %d", tp_udl);
+             break;
+         default :
+             ALOGD("DCS is error, this code might be never called");
+    }
+    sms_length = 15 + smsc_len + addr_length + tp_udl;
+
+    /**************************************************************/
+    /*  SCA  *  PDU  *  OA  *  PID  *  DCS  *  TS  *  UDL  *  UD  */
+    /*  1~10 *   1   * 2~12 *   1   *   1   *   7  *   1   * 0~140*/
+    /**************************************************************/
+    return sms_length;
+}
+
 static void requestSendSSSMS(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     int err, count = 0;
@@ -2748,6 +2849,7 @@ static void requestSendSSSMS(int channelID, void *data, size_t datalen, RIL_Toke
     char * line;
     int max_num, seq_num;
     char *pdu_bin;
+    int ret;
 
     memset(&response, 0, sizeof(RIL_SMS_Response));
     smsc = ((const char **)data)[0];
@@ -2775,8 +2877,19 @@ static void requestSendSSSMS(int channelID, void *data, size_t datalen, RIL_Toke
     }
     free(pdu_bin);
 
-    asprintf(&cmd1, "AT+CMGS=%d", tpLayerLength);
-    asprintf(&cmd2, "%s%s", smsc, pdu);
+    ret = asprintf(&cmd1, "AT+CMGS=%d", tpLayerLength);
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd1 = NULL;
+        goto error2;
+    }
+    ret = asprintf(&cmd2, "%s%s", smsc, pdu);
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        free(cmd1);
+        cmd2 = NULL;
+        goto error2;
+    }
 
 retry:
     err = at_send_command_sms(ATch_type[channelID], cmd1, cmd2, "+CMGS:", &p_response);
@@ -2816,6 +2929,7 @@ error:
 error1:
     free(cmd1);
     free(cmd2);
+error2:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
     return;
@@ -2899,18 +3013,23 @@ static void  requestSIM_IO(int channelID, void *data, size_t datalen, RIL_Token 
         ALOGI("Reference-ril. requestSIM_IO pin2 %s",p_args->pin2);
     }
     if (p_args->data == NULL) {
-        asprintf(&cmd, "AT+CRSM=%d,%d,%d,%d,%d,%c,\"%s\"",
+        err = asprintf(&cmd, "AT+CRSM=%d,%d,%d,%d,%d,%c,\"%s\"",
                 p_args->command, p_args->fileid,
                 p_args->p1, p_args->p2, p_args->p3,pad_data,p_args->path);
 
     } else {
-        asprintf(&cmd, "AT+CRSM=%d,%d,%d,%d,%d,\"%s\",\"%s\"",
+        err = asprintf(&cmd, "AT+CRSM=%d,%d,%d,%d,%d,\"%s\",\"%s\"",
                 p_args->command, p_args->fileid,
                 p_args->p1, p_args->p2, p_args->p3, p_args->data,p_args->path);
     }
+    if(err < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error;
+    }
 
     err = at_send_command_singleline(ATch_type[channelID], cmd, "+CRSM:", &p_response);
-
+    free(cmd);
     if (err < 0 || p_response->success == 0) {
         goto error;
     }
@@ -2933,14 +3052,10 @@ static void  requestSIM_IO(int channelID, void *data, size_t datalen, RIL_Token 
 
     RIL_onRequestComplete(t, RIL_E_SUCCESS, &sr, sizeof(sr));
     at_response_free(p_response);
-    free(cmd);
-
     return;
 error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
-    free(cmd);
-
 }
 
 static void requestGetIMEISV(int channelID, void *data, size_t datalen, RIL_Token t)
@@ -3000,18 +3115,23 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
     int           err;
     char*         cmd = NULL;
     const char**  strings = (const char**)data;
+    int ret;
 
     if ( datalen == 2*sizeof(char*) ) {
-        asprintf(&cmd, "AT+CPIN=%s", strings[0]);
+        ret = asprintf(&cmd, "AT+CPIN=%s", strings[0]);
     } else if ( datalen == 3*sizeof(char*) ) {
-        asprintf(&cmd, "AT+CPIN=%s,%s", strings[0], strings[1]);
+        ret = asprintf(&cmd, "AT+CPIN=%s,%s", strings[0], strings[1]);
     } else
         goto error;
 
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error;
+    }
+
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
-
     free(cmd);
-
     if (err < 0 || p_response->success == 0) {
         goto error;
     } else {
@@ -3055,83 +3175,103 @@ error:
 
 static void  requestVerifySimPuk2(int channelID, void*  data, size_t  datalen, RIL_Token  t)
 {
-    ATResponse   *p_response = NULL;
-    int           err;
-    char*         cmd = NULL;
-    const char**  strings = (const char**)data;;
+    ATResponse *p_response = NULL;
+    int err;
+    char *cmd = NULL;
+    const char **strings = (const char**)data;
+    int ret;
 
-    if ( datalen == 3*sizeof(char*) ) {
-        asprintf(&cmd, "ATD**052*%s*%s*%s#",strings[0],strings[1],strings[1]);
+    if (datalen == 3*sizeof(char*) ) {
+        ret = asprintf(&cmd, "ATD**052*%s*%s*%s#",strings[0],strings[1],strings[1]);
     } else
         goto error;
 
-    err = at_send_command(ATch_type[channelID], cmd, &p_response);
-
-    free(cmd);
-
-    if (err < 0 || p_response->success == 0) {
-error:
-        RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
-    } else {
-        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-        if(getSIMStatus(channelID) == SIM_READY) {
-            setRadioState(channelID, RADIO_STATE_SIM_READY);
-        }
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error;
     }
-    at_response_free(p_response);
 
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    free(cmd);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    at_response_free(p_response);
+    if(getSIMStatus(channelID) == SIM_READY) {
+        setRadioState(channelID, RADIO_STATE_SIM_READY);
+    }
+    return;
+error:
+    RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+    at_response_free(p_response);
 }
 
 
 static void  requestEnterSimPin(int channelID, void*  data, size_t  datalen, RIL_Token  t)
 {
     ATResponse   *p_response = NULL;
-    int           err;
-    char*         cmd = NULL;
-    const char**  strings = (const char**)data;;
-
+    int err;
+    char *cmd = NULL;
+    const char **strings = (const char**)data;
+    int ret;
 
     if ( datalen == 3*sizeof(char*) ) {
-        asprintf(&cmd, "AT+CPWD=\"SC\",\"%s\",\"%s\"", strings[0], strings[1]);
+        ret = asprintf(&cmd, "AT+CPWD=\"SC\",\"%s\",\"%s\"", strings[0], strings[1]);
     } else
         goto error;
 
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error;
+    }
+
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     free(cmd);
-
     if (err < 0 || p_response->success == 0) {
-error:
-        RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
-    } else {
-        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+        goto error;
     }
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     at_response_free(p_response);
-
+    return;
+error:
+    RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+    at_response_free(p_response);
 }
 
 static void  requestEnterSimPin2(int channelID, void*  data, size_t  datalen, RIL_Token  t)
 {
     ATResponse   *p_response = NULL;
-    int           err;
-    char*         cmd = NULL;
-    const char**  strings = (const char**)data;;
+    int err;
+    char *cmd = NULL;
+    const char **strings = (const char**)data;
+    int ret;
 
     if ( datalen == 3*sizeof(char*) ) {
-        asprintf(&cmd, "AT+CPWD=\"P2\",\"%s\",\"%s\"", strings[0], strings[1]);
+        ret = asprintf(&cmd, "AT+CPWD=\"P2\",\"%s\",\"%s\"", strings[0], strings[1]);
     } else
         goto error;
 
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error;
+    }
+
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     free(cmd);
+    if (err < 0 || p_response->success == 0)
+        goto error;
 
-    if (err < 0 || p_response->success == 0) {
-error:
-        RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
-    } else {
-        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-    }
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     at_response_free(p_response);
-
+    return;
+error:
+    RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+    at_response_free(p_response);
 }
 
 static int setSmsBroadcastConfigValue(int value ,char * out_value)
@@ -3178,6 +3318,7 @@ static void requestSetSmsBroadcastConfig(int channelID,  void *data, size_t data
     ATResponse    *p_response = NULL;
     int           err;
     char*         cmd;
+    int ret = -1;
 
     RIL_GSM_BroadcastSmsConfigInfo **gsmBciPtrs = ( RIL_GSM_BroadcastSmsConfigInfo* *)data;
     RIL_GSM_BroadcastSmsConfigInfo gsmBci;
@@ -3198,8 +3339,8 @@ static void requestSetSmsBroadcastConfig(int channelID,  void *data, size_t data
 
     ALOGD("Reference-ril. requestSetSmsBroadcastConfig %d ,count %d", datalen,count);
 
-    channel = malloc(datalen*16);
-    lang = malloc(datalen*16);
+    channel = alloca(datalen*16);
+    lang = alloca(datalen*16);
     memset(channel,0,datalen*16);
     memset(lang,0,datalen*16);
 
@@ -3243,18 +3384,24 @@ static void requestSetSmsBroadcastConfig(int channelID,  void *data, size_t data
     if(channelLen == 0) {
         sprintf(channel,"%c",quotes);
     }
-    asprintf(&cmd, "AT+CSCB=%d%c%s%c%c%s%c",enable,comma,channel,quotes,comma,lang,quotes);
+    ret = asprintf(&cmd, "AT+CSCB=%d%c%s%c%c%s%c",enable,comma,channel,quotes,comma,lang,quotes);
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        return;
+    }
     ALOGI("Reference-ril. requestSetSmsBroadcastConfig cmd %s",cmd);
 
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
-    free(channel);
-    free(lang);
+    free(cmd);
     ALOGI( "requestSetSmsBroadcastConfig err %d ,success %d",err,p_response->success);
     if (err < 0 || p_response->success == 0) {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     } else {
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
+    at_response_free(p_response);
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     gsmBci =*(RIL_GSM_BroadcastSmsConfigInfo *)(gsmBciPtrs[0]);
     enable = gsmBci.selected;
@@ -3262,24 +3409,28 @@ static void requestSetSmsBroadcastConfig(int channelID,  void *data, size_t data
     ALOGD("requestSetSmsBroadcastConfig fromServiceId = %d", gsmBci.fromServiceId);
     ALOGD("requestSetSmsBroadcastConfig toServiceId = %d", gsmBci.toServiceId);
     if (gsmBci.fromServiceId == 0 && gsmBci.toServiceId == 999) {
-        asprintf(&cmd, "AT+CSCB=%d,\"1000\",\"\"", !enable);
+        ret = asprintf(&cmd, "AT+CSCB=%d,\"1000\",\"\"", !enable);
     }
     if (gsmBci.fromServiceId == gsmBci.toServiceId) {
-        asprintf(&cmd, "AT+CSCB=%d,\"%d\",\"\"", !enable, gsmBci.fromServiceId);
+        ret = asprintf(&cmd, "AT+CSCB=%d,\"%d\",\"\"", !enable, gsmBci.fromServiceId);
     }
-
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        return;
+    }
     ALOGI("requestSetSmsBroadcastConfig cmd %s",cmd);
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    free(cmd);
     ALOGI( "requestSetSmsBroadcastConfig err %d ,success %d",err,p_response->success);
     if (err < 0 || p_response->success == 0) {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     } else {
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
-#endif
-error:
-    free(cmd);
     at_response_free(p_response);
+#endif
 }
 
 static void requestGetSmsBroadcastConfig(int channelID,  void *data, size_t datalen, RIL_Token t)
@@ -3289,14 +3440,12 @@ static void requestGetSmsBroadcastConfig(int channelID,  void *data, size_t data
     char* response;
 
     err = at_send_command_singleline(ATch_type[channelID], "AT+CSCB=?", "+CSCB:", &p_response);
-
     if (err < 0 || p_response->success == 0) {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     } else {
         response = p_response->p_intermediates->line;
-        RIL_onRequestComplete(t, RIL_E_SUCCESS, response, sizeof(response));
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, response, strlen(response) + 1);
     }
-
     at_response_free(p_response);
 }
 
@@ -3304,20 +3453,18 @@ static void requestSmsBroadcastActivation(int channelID,  void *data, size_t dat
 {
     ATResponse   *p_response = NULL;
     int           err;
-    char*         cmd = NULL;
+    char cmd[20] = {0};
     int   *active = (int*)data;
 
     ALOGI("Reference-ril."
             " datalen: %d ,active %d\n", datalen,active[0]);
-
 #if defined (RIL_SPRD_EXTENSION)
-    asprintf(&cmd, "AT+CSCB=%d", active[0]);
+    snprintf(cmd, sizeof(cmd), "AT+CSCB=%d", active[0]);
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-    asprintf(&cmd, "AT+CSCB=%d", !active[0]);
+    snprintf(cmd, sizeof(cmd), "AT+CSCB=%d", !active[0]);
 #endif
 
     err = at_send_command(ATch_type[channelID], cmd,&p_response);
-    free(cmd);
     ALOGI( "requestSmsBroadcastActivation err %d ,success %d",err,p_response->success);
     if (err < 0 || p_response->success == 0) {
 error:
@@ -3326,7 +3473,6 @@ error:
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
     at_response_free(p_response);
-
 }
 
 static void convertBinToHex(char *bin_ptr, int length, char *hex_ptr)
@@ -3398,22 +3544,26 @@ static void requestSendUSSD(int channelID, void *data, size_t datalen, RIL_Token
     int err;
     char *cmd;
     int len;
+    int ret;
 
     ussdRun = 1;
     ussdHexRequest = (char *)(data);
-    asprintf(&cmd, "AT+CUSD=1,\"%s\",15", ussdHexRequest);
+    ret = asprintf(&cmd, "AT+CUSD=1,\"%s\",15", ussdHexRequest);
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        return;
+    }
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    free(cmd);
     if (err < 0 || p_response->success == 0) {
         ussdRun = 0;
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-        free(cmd);
-        at_response_free(p_response);
     } else {
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-        free(cmd);
-        at_response_free(p_response);
     }
-
+    at_response_free(p_response);
 }
 
 static void requestVideoPhoneDial(int channelID, void *data, size_t datalen, RIL_Token t)
@@ -3422,23 +3572,31 @@ static void requestVideoPhoneDial(int channelID, void *data, size_t datalen, RIL
     ATResponse   *p_response = NULL;
     int err;
     char *cmd;
+    int ret;
 
     p_dial = (RIL_VideoPhone_Dial *)data;
 
 #ifdef NEW_AT
-    asprintf(&cmd, "ATD=%s", p_dial->address);
+    ret = asprintf(&cmd, "ATD=%s", p_dial->address);
 #else
-    asprintf(&cmd, "AT^DVTDIAL=\"%s\"", p_dial->address);
+    ret = asprintf(&cmd, "AT^DVTDIAL=\"%s\"", p_dial->address);
 #endif
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        return;
+    }
+
     wait4android_audio_ready("ATD_VIDEO");
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     free(cmd);
-
     if (err < 0 || p_response->success == 0) {
-        RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     } else {
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
+    at_response_free(p_response);
 }
 
 /* release Channel */
@@ -3554,8 +3712,8 @@ static RIL_AppType getSimType(int channelID)
            int err;
            ATResponse *p_response = NULL;
            char *line;
-	   RIL_AppType ret = RIL_APPTYPE_UNKNOWN ;
-	   int skip, card_type;
+            RIL_AppType ret = RIL_APPTYPE_UNKNOWN ;
+            int skip, card_type;
 
             err = at_send_command_singleline(ATch_type[channelID], "AT+EUICC?", "+EUICC:",
                                              &p_response);
@@ -3686,16 +3844,23 @@ static void requestSetCellBroadcastConfig(int channelID,  void *data, size_t dat
     int                err;
     char              *cmd;
     RIL_CB_ConfigArgs *cbDataPtr = (RIL_CB_ConfigArgs *)data;
+    int ret;
 
     ALOGD("Reference-ril. requestSetCellBroadcastConfig selectedId = %d", cbDataPtr->selectedId);
     if (cbDataPtr->selectedId == 1) { // Configure all IDs
-        asprintf(&cmd, "AT+CSCB=%d,\"1000\",\"\"", !(cbDataPtr->bCBEnabled));
+        ret = asprintf(&cmd, "AT+CSCB=%d,\"1000\",\"\"", !(cbDataPtr->bCBEnabled));
     } else if (cbDataPtr->selectedId == 2) { // Configure special IDs
-        asprintf(&cmd, "AT+CSCB=%d,\"%s\",\"\"",
+        ret = asprintf(&cmd, "AT+CSCB=%d,\"%s\",\"\"",
                  !(cbDataPtr->bCBEnabled), cbDataPtr->msgIDs);
     } else {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-        goto error;
+        return;
+    }
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        return;
     }
     ALOGI("Reference-ril. requestSetSmsBroadcastConfig cmd %s",cmd);
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
@@ -3705,7 +3870,6 @@ static void requestSetCellBroadcastConfig(int channelID,  void *data, size_t dat
     } else {
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
-error:
     free(cmd);
     at_response_free(p_response);
 }
@@ -3777,11 +3941,18 @@ static void requestSendEncodedUSSD(int channelID, void *data, size_t datalen, RI
     int err;
     char *cmd;
     RIL_EncodedUSSD *p_ussd = (RIL_EncodedUSSD *)data;
+    int ret;
 
     ALOGD("Reference-ril. requestSendEncodedUSSD enter");
 
     ussdRun = 1;
-    asprintf(&cmd, "AT+CUSD=1,\"%s\",%d", p_ussd->encodedUSSD, p_ussd->dcsCode);
+    ret = asprintf(&cmd, "AT+CUSD=1,\"%s\",%d", p_ussd->encodedUSSD, p_ussd->dcsCode);
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        return;
+    }
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (err < 0 || p_response->success == 0) {
         ussdRun = 0;
@@ -3797,14 +3968,38 @@ static void requestGetPhonebookStorageInfo(int channelID, void *data, size_t dat
 {
     ATResponse *p_response = NULL;
     int err;
-    char *cmd;
+    char cmd[20] = {0};
     char *line;
     int response[5] = {0};
-    char* storage_info[4] = {"SM","SN","FD","ON"};//AND:SM,SDN:SN,FDN:FD,MSISDN:ON
+    char* storage_info[4] = {"SM","SN","FD","ON"};//ADN:SM,SDN:SN,FDN:FD,MSISDN:ON
     int fileid = ((int *)data)[0];
+    int fileidIndex = 0;
 
-    asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[fileid]);
-    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", &p_response);
+    switch(fileid)
+    {
+        case 0x6F3A : //EF_ADN
+            fileidIndex = 0;
+        break;
+
+        case 0x6F49 : //EF_SDN
+            fileidIndex = 1;
+        break;
+
+        case 0x6F3B : //EF_FDN
+            fileidIndex = 2;
+        break;
+
+        case 0x6F40 : //EF_MSISDN
+            fileidIndex = 3;
+        break;
+
+        default:
+            ALOGD("requestGetPhonebookStorageInfo invalid fileid");
+        break;
+    }
+
+    snprintf(cmd, sizeof(cmd), "AT+CPBS=\"%s\"",storage_info[fileidIndex]);
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (err < 0 || p_response->success == 0) {
         goto error;
     }
@@ -3814,6 +4009,16 @@ static void requestGetPhonebookStorageInfo(int channelID, void *data, size_t dat
     }
 
     line = p_response->p_intermediates->line;
+
+/*    response[0] - Total slot count.
+                 The number of the total phonebook memory.
+                 according to Phone book storage.
+   response[1] - Used slot count.
+                 The number of the used phonebook memory.
+   response[2] - First index.
+   response[3] - Maximum byte of phonebook entry text field.
+   resopnse[4] - Maximum byte of phonebook entry number field.
+*/
 
     err = at_tok_start(&line);
     if (err < 0) goto error;
@@ -3833,15 +4038,19 @@ static void requestGetPhonebookStorageInfo(int channelID, void *data, size_t dat
     err = at_tok_nextint(&line, &response[4]);
     if (err < 0) goto error;
 
+    ALOGD("CONTACT+requestGetPhonebookStorageInfo");
+    ALOGD("Total = %d", response[0]);
+    ALOGD("Used slot count = %d", response[1]);
+    ALOGD("First index = %d", response[2]);
+    ALOGD("Max Length String = %d", response[3]);
+    ALOGD("Max Length Num = %d", response[4]);
+
     RIL_onRequestComplete(t, RIL_E_SUCCESS, response, sizeof(response));
     at_response_free(p_response);
-    free(cmd);
-
     return;
 error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
-    free(cmd);
 }
 
 
@@ -3851,24 +4060,49 @@ static void requestGetPhonebookEntry(int channelID, void *data, size_t datalen, 
     int err;
     int count;
     int i;
-    char *cmd;
+    char cmd[30] = {0};
     char *line;
     RIL_SIM_PB *p_args;
     RIL_SIM_PB_Response *pbResponse;
     int response[2] = {0};
-    char* storage_info[4] = {"SM","SN","FD","ON"};//AND:SM,SDN:SN,FDN:FD,MSISDN:ON
+    char* storage_info[4] = {"SM","SN","FD","ON"};//ADN:SM,SDN:SN,FDN:FD,MSISDN:ON
+    int fileidIndex = 0;												 // CONTACT_Init_JEM #2 
 
     p_args = (RIL_SIM_PB*)data;
+
+    switch(p_args->fileid)
+    {
+        case 0x6F3A : //EF_ADN
+            fileidIndex = 0;
+        break;
+
+        case 0x6F49 : //EF_SDN
+            fileidIndex = 1;
+        break;
+
+        case 0x6F3B : //EF_FDN
+            fileidIndex = 2;
+        break;
+
+        case 0x6F40 : //EF_MSISDN
+            fileidIndex = 3;
+        break;
+
+        default:
+            ALOGD("requestGetPhonebookStorageInfo invalid fileid");
+        break;
+    }
+
     pbResponse = (RIL_SIM_PB_Response*)alloca(sizeof(RIL_SIM_PB_Response));
     memset(pbResponse, 0, sizeof(RIL_SIM_PB_Response));
 
-    asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[p_args->fileid]);
-    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", &p_response);
+    snprintf(cmd, sizeof(cmd), "AT+CPBS=\"%s\"",storage_info[fileidIndex]);
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (err < 0 || p_response->success == 0) {
         goto error;
     }
-    free(cmd);
-    asprintf(&cmd, "AT^SCPBR=%d",p_args->index);
+
+    snprintf(cmd, sizeof(cmd), "AT^SCPBR=%d",p_args->index);
     err = at_send_command_singleline(ATch_type[channelID], cmd, "^SCPBR:", &p_response);
     if (err < 0 || p_response->success == 0) {
         goto error;
@@ -3887,20 +4121,6 @@ static void requestGetPhonebookEntry(int channelID, void *data, size_t datalen, 
     if (err < 0) goto error;
     pbResponse->nextIndex = response[1];
 
-    for (count=0; count<NUM_OF_ALPHA; count++) {
-        if (at_tok_hasmore(&line)) {
-            err = at_tok_nextstr(&line, &pbResponse->alphaTags[count]);
-            if (err < 0) goto error;
-            err = at_tok_nextint(&line, &pbResponse->dataTypeAlphas[count]);
-            if (err < 0) goto error;
-            pbResponse->lengthAlphas[count] = strlen(pbResponse->alphaTags[count]);
-        } else {
-            for (i=0; i<2; i++) {
-                skipNextComma(&line);
-            }
-        }
-    }
-
     for (count=0; count<NUM_OF_NUMBER; count++) {
         if (at_tok_hasmore(&line)) {
             err = at_tok_nextstr(&line, &pbResponse->numbers[count]);
@@ -3917,16 +4137,37 @@ static void requestGetPhonebookEntry(int channelID, void *data, size_t datalen, 
         }
     }
 
+    for (count=0; count<NUM_OF_ALPHA; count++) {
+        if (at_tok_hasmore(&line)) {
+            err = at_tok_nextstr(&line, &pbResponse->alphaTags[count]);
+            if (err < 0) goto error;
+            err = at_tok_nextint(&line, &pbResponse->dataTypeAlphas[count]);
+            if (err < 0) goto error;
+            pbResponse->lengthAlphas[count] = strlen(pbResponse->alphaTags[count]);
+        } else {
+            for (i=0; i<2; i++) {
+                skipNextComma(&line);
+            }
+        }
+    }
+
+    ALOGD("CONTACT+requestGetPhonebookEntry");
+    ALOGD("Index = %d", pbResponse->recordIndex);
+    ALOGD("Next Index = %d", pbResponse->nextIndex);
+    ALOGD("alphaTags = %s", pbResponse->alphaTags[0]);
+    ALOGD("dataTypeAlphas = %d", pbResponse->dataTypeAlphas[0]);
+    ALOGD("lengthAlphas = %d", pbResponse->lengthAlphas[0]);
+    ALOGD("numbers = %s", pbResponse->numbers[0]);
+    ALOGD("dataTypeNumbers = %d", pbResponse->dataTypeNumbers[0]);
+    ALOGD("lengthNumbers = %d", pbResponse->lengthNumbers[0]);
+
     RIL_onRequestComplete(t, RIL_E_SUCCESS, pbResponse, sizeof(RIL_SIM_PB_Response));
     at_response_free(p_response);
-    free(cmd);
-
     return;
 
 error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
-    free(cmd);
 }
 
 
@@ -3938,17 +4179,48 @@ static void requestAccessPhonebookEntry(int channelID, void *data, size_t datale
     char *line;
     RIL_SIM_ACCESS_PB *p_args;
     int operindex = 0;
-    char* storage_info[4] = {"SM","SN","FD","ON"};//AND:SM,SDN:SN,FDN:FD,MSISDN:ON
+    char* storage_info[4] = {"SM","SN","FD","ON"};//ADN:SM,SDN:SN,FDN:FD,MSISDN:ON
+    int fileidIndex = 0;
+    int ret;
 
     p_args = (RIL_SIM_ACCESS_PB*)data;
-    asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[p_args->fileid]);
-    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBS:", &p_response);
+
+    switch(p_args->fileid)
+    {
+        case 0x6F3A : //EF_ADN
+            fileidIndex = 0;
+        break;
+
+        case 0x6F49 : //EF_SDN
+            fileidIndex = 1;
+        break;
+
+        case 0x6F3B : //EF_FDN
+            fileidIndex = 2;
+        break;
+
+        case 0x6F40 : //EF_MSISDN
+            fileidIndex = 3;
+        break;
+
+        default:
+            ALOGD("requestGetPhonebookStorageInfo invalid fileid");
+        break;
+    }
+
+    ret = asprintf(&cmd, "AT+CPBS=\"%s\"",storage_info[fileidIndex]);
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error;
+    }
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    free(cmd);
     if (err < 0 || p_response->success == 0) {
         goto error;
     }
-    free(cmd);
 
-    asprintf(&cmd, "AT^SPBW=%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,\
+    ret = asprintf(&cmd, "AT^SCPBW=%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,\"%s\",%d,\
                    \"%s\",%d,\"%s\",%d,\"%s\",%d,\"%s\",%d",
                    p_args->index,
                    p_args->number? strReplace(&p_args->number,',') : "",
@@ -3967,7 +4239,13 @@ static void requestAccessPhonebookEntry(int channelID, void *data, size_t datale
                    p_args->email? 0 : 0x20,
                    p_args->sne? p_args->sne : "",
                    p_args->sne? p_args->sneDCS : 0x20);
-    err = at_send_command_singleline(ATch_type[channelID], cmd, "^SPBW:", &p_response);
+    if(ret < 0) {
+        ALOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error;
+    }
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "^SCPBW:", &p_response);
+    free(cmd);
     if (err < 0 || p_response->success == 0) {
         goto error;
     }
@@ -3980,16 +4258,15 @@ static void requestAccessPhonebookEntry(int channelID, void *data, size_t datale
     err = at_tok_nextint(&line, &operindex);
     if (err < 0) goto error;
 
+    ALOGD("CONTACT+requestAccessPhonebookEntry");
+    ALOGD("Index = %d", operindex);
+
     RIL_onRequestComplete(t, RIL_E_SUCCESS, &operindex, sizeof(operindex));
     at_response_free(p_response);
-    free(cmd);
-
     return;
-
 error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
-    free(cmd);
 }
 
 static void requestUsimPbCapa(int channelID, void *data, size_t datalen, RIL_Token t)
@@ -3999,7 +4276,7 @@ static void requestUsimPbCapa(int channelID, void *data, size_t datalen, RIL_Tok
     int err;
     int dataLen;
     int fileId;
-    char *cmd;
+    char cmd[30] = {0};
     char *line;
     int response[MAX_DATA_LEN] = {0};
 
@@ -4007,7 +4284,7 @@ static void requestUsimPbCapa(int channelID, void *data, size_t datalen, RIL_Tok
     memset(pbCapa, 0, sizeof(RIL_Usim_PB_Capa));
     for (fileId=0; fileId<MAX_3GPP_TYPE; fileId++) {
         memset(response, 0, sizeof(response));
-        asprintf(&cmd, "AT+CPBCAPA=%d", fileId+1);
+        snprintf(cmd, sizeof(cmd), "AT+CPBCAPA=%d", fileId+1);
         err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPBCAPA:", &p_response);
         if (err < 0 || p_response->success == 0) {
             goto error;
@@ -4024,17 +4301,12 @@ static void requestUsimPbCapa(int channelID, void *data, size_t datalen, RIL_Tok
             pbCapa->response[fileId][dataLen] = response[dataLen];
         }
     }
-
     RIL_onRequestComplete(t, RIL_E_SUCCESS, pbCapa, sizeof(RIL_Usim_PB_Capa));
     at_response_free(p_response);
-    free(cmd);
-
     return;
-
 error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
-    free(cmd);
 }
 
 #endif
@@ -4261,7 +4533,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_SEPARATE_CONNECTION:
             {
-                char  cmd[12];
+                char  cmd[20] = {0};
                 int   party = ((int*)data)[0];
                 p_response = NULL;
 
@@ -4270,7 +4542,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                  * It's sufficient for us to just make sure it's single digit.)
 		 */
                 if (party > 0 && party < 10) {
-                    sprintf(cmd, "AT+CHLD=2%d", party);
+                    snprintf(cmd, sizeof(cmd), "AT+CHLD=2%d", party);
                     err = at_send_command(ATch_type[channelID], cmd, &p_response);
                     if (err < 0 || p_response->success == 0) {
                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -4307,7 +4579,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_DTMF_START:
             {
                 char c = ((char *)data)[0];
-                char *cmd;
+                char cmd[30];
                 struct listnode *cmd_item = NULL;
 
                 cmd_item = (struct listnode* )malloc(sizeof(struct listnode));
@@ -4318,50 +4590,47 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 cmd_item->data = ((char *)data)[0];
                 list_add_tail(&dtmf_char_list, cmd_item);
 
-                asprintf(&cmd, "AT+SDTMF=1,\"%c\",1", (int)c);
+                sprintf(cmd, "AT+SDTMF=1,\"%c\",1", (int)c);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 } else {
                     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                 }
-                free(cmd);
                 at_response_free(p_response);
                 break;
             }
         case RIL_REQUEST_DTMF:
             {
                 char c = ((char *)data)[0];
-                char *cmd;
+                char cmd[20] = {0};
 
-                asprintf(&cmd, "AT+VTS=%c", (int)c);
+                snprintf(cmd, sizeof(cmd), "AT+VTS=%c", (int)c);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 } else {
                     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                 }
-                free(cmd);
                 at_response_free(p_response);
                 break;
             }
         case RIL_REQUEST_DTMF_STOP:
             {
-                char *cmd;
+                char cmd[20] = {0};
                 struct listnode *cmd_item = NULL;
                 char c;
 
                 cmd_item = (&dtmf_char_list)->next;
                 if(cmd_item != (&dtmf_char_list)) {
                     c = cmd_item->data;
-                    asprintf(&cmd, "AT+VTS=%c", (int)c);
+                    snprintf(cmd, sizeof(cmd), "AT+VTS=%c", (int)c);
                     err = at_send_command(ATch_type[channelID], cmd, &p_response);
                     if (err < 0 || p_response->success == 0) {
                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                     } else {
                         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                     }
-                    free(cmd);
                     at_response_free(p_response);
                     list_remove(cmd_item);
                     free(cmd_item);
@@ -4397,15 +4666,13 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_GET_IMSI:
             p_response = NULL;
             err = at_send_command_numeric(ATch_type[channelID], "AT+CIMI", &p_response);
-
             if (err < 0 || p_response->success == 0) {
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
             } else {
                 RIL_onRequestComplete(t, RIL_E_SUCCESS,
-                        p_response->p_intermediates->line, sizeof(char *));
+                        p_response->p_intermediates->line, strlen(p_response->p_intermediates->line)+1);
             }
             at_response_free(p_response);
-
             getSmsState(channelID);
             break;
 
@@ -4417,7 +4684,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
             } else {
                 RIL_onRequestComplete(t, RIL_E_SUCCESS,
-                        p_response->p_intermediates->line, sizeof(char *));
+                        p_response->p_intermediates->line, strlen(p_response->p_intermediates->line)+1);
             }
             at_response_free(p_response);
             break;
@@ -4437,7 +4704,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_CANCEL_USSD:
             p_response = NULL;
             err = at_send_command(ATch_type[channelID], "AT+CUSD=2", &p_response);
-
             if (err < 0 || p_response->success == 0) {
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
             } else {
@@ -4451,7 +4717,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_SET_PREFERRED_NETWORK_TYPE:
             {
-                char *cmd;
+                char cmd[30] = {0};
 
                 p_response = NULL;
                 /* AT^SYSCONFIG=<mode>,<acqorder>,<roam>,<srvdomain>
@@ -4490,9 +4756,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                             at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", NULL);
                         else
                             at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", NULL);
-                        asprintf(&cmd, "AT^SYSCONFIG=%d,3,2,4", type);
+                        snprintf(cmd, sizeof(cmd), "AT^SYSCONFIG=%d,3,2,4", type);
                         err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                        free(cmd);
                         if (err < 0 || p_response->success == 0) {
                             RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                         } else {
@@ -4507,9 +4772,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                         property_get(RIL_SIM0_STATE, prop, "ABSENT");
                         ALOGD(" RIL_SIM0_STATE = %s", prop);
                         if(!strcmp(prop, "ABSENT")) {
-                            asprintf(&cmd, "AT^SYSCONFIG=%d,3,2,4", type);
+                            snprintf(cmd, sizeof(cmd), "AT^SYSCONFIG=%d,3,2,4", type);
                             err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                            free(cmd);
                             if (err < 0 || p_response->success == 0) {
                                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                             } else {
@@ -4520,9 +4784,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                         }
                     }
                 } else {
-                    asprintf(&cmd, "AT^SYSCONFIG=%d,3,2,4", type);
+                    snprintf(cmd, sizeof(cmd), "AT^SYSCONFIG=%d,3,2,4", type);
                     err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                    free(cmd);
                     if (err < 0 || p_response->success == 0) {
                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                     } else {
@@ -4536,14 +4799,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_GET_PREFERRED_NETWORK_TYPE:
             {
-                char *cmd;
                 int response = 0;
 
                 p_response = NULL;
-                asprintf(&cmd, "AT^SYSCONFIG?");
-                err = at_send_command_singleline(ATch_type[channelID], cmd,
+                err = at_send_command_singleline(ATch_type[channelID], "AT^SYSCONFIG?",
                         "^SYSCONFIG:", &p_response);
-                free(cmd);
                 if (err >= 0 && p_response->success) {
                     char *line = p_response->p_intermediates->line;
                     err = at_tok_start(&line);
@@ -4632,11 +4892,10 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             {
                 p_response = NULL;
                 int n = ((int *)data)[0];
-                char *cmd;
+                char cmd[20] = {0};
 
-                asprintf(&cmd, "AT+CLIR=%d", n);
+                snprintf(cmd, sizeof(cmd), "AT+CLIR=%d", n);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                free(cmd);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 } else {
@@ -4678,11 +4937,10 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_DELETE_SMS_ON_SIM:
             {
-                char * cmd;
+                char cmd[20] = {0};
                 p_response = NULL;
-                asprintf(&cmd, "AT+CMGD=%d", ((int *)data)[0]);
+                snprintf(cmd, sizeof(cmd), "AT+CMGD=%d", ((int *)data)[0]);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                free(cmd);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 } else {
@@ -4708,10 +4966,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         case RIL_REQUEST_SET_MUTE:
             {
-                char *cmd;
-                asprintf(&cmd, "AT+CMUT=%d", ((int *)data)[0]);
-                err = at_send_command(ATch_type[channelID], cmd, NULL);
-                free(cmd);
+                char cmd[20] = {0};
+                snprintf(cmd, sizeof(cmd), "AT+CMUT=%d", ((int *)data)[0]);
+                at_send_command(ATch_type[channelID], cmd, NULL);
                 RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                 break;
             }
@@ -4772,18 +5029,17 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 p_response = NULL;
                 int c = ((int *)data)[0];
                 int errNum = 0xff;
-                char *cmd, *line;
+                char cmd[30] = {0};
+                char *line;
                 ATLine *p_cur;
 
                 if (c == 0) {
-                    asprintf(&cmd, "AT+CCWA=1,2");
+                    snprintf(cmd, sizeof(cmd), "AT+CCWA=1,2");
                 }else {
-                    asprintf(&cmd, "AT+CCWA=1,2,%d", c);
+                    snprintf(cmd, sizeof(cmd), "AT+CCWA=1,2,%d", c);
                 }
                 err = at_send_command_multiline(ATch_type[channelID], cmd, "+CCWA: ",
                         &p_response);
-                free(cmd);
-
                 if (err >= 0 && p_response->success) {
                     int waitingCount = 0;
                     int validCount = 0;
@@ -4851,19 +5107,19 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 p_response = NULL;
                 int c = ((int *)data)[0];
                 int errNum = 0xff;
-                char *cmd, *line;
+                char cmd[30] = {0};
+                char *line;
                 ATLine *p_cur;
                 int mode, serviceClass;
                 int response[2] = {0, 0};
 
                 if (c == 0) {
-                    asprintf(&cmd, "AT+CCWA=1,2");
+                    snprintf(cmd, sizeof(cmd), "AT+CCWA=1,2");
                 }else {
-                    asprintf(&cmd, "AT+CCWA=1,2,%d", c);
+                    snprintf(cmd, sizeof(cmd), "AT+CCWA=1,2,%d", c);
                 }
                 err = at_send_command_multiline(ATch_type[channelID], cmd, "+CCWA: ",
                         &p_response);
-                free(cmd);
                 if (err >= 0 && p_response->success) {
                     for (p_cur = p_response->p_intermediates
                             ; p_cur != NULL
@@ -4910,17 +5166,16 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 p_response = NULL;
                 int enable = ((int *)data)[0];
                 int c = ((int *)data)[1];
-                char *cmd;
+                char cmd[40] = {0};
 
                 if (c == 0) {
-                    asprintf(&cmd, "AT+CCWA=1,%d", enable);
+                    snprintf(cmd, sizeof(cmd), "AT+CCWA=1,%d", enable);
                 }else {
-                    asprintf(&cmd, "AT+CCWA=1,%d,%d", enable, c);
+                    snprintf(cmd, sizeof(cmd), "AT+CCWA=1,%d,%d", enable, c);
                 }
 
                 err = at_send_command(ATch_type[channelID], cmd,
                         &p_response);
-                free(cmd);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 } else {
@@ -4947,17 +5202,15 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         case RIL_REQUEST_STK_GET_PROFILE:
             {
-                char *cmd;
+                char * line;
 
                 p_response = NULL;
-                asprintf(&cmd, "AT+SPUSATPROFILE?");
-                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                free(cmd);
+                err = at_send_command(ATch_type[channelID], "AT+SPUSATPROFILE?", &p_response);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 } else {
-                    RIL_onRequestComplete(t, RIL_E_SUCCESS,
-                            p_response->p_intermediates->line, sizeof(char *));
+                    line = p_response->p_intermediates->line;
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, line, strlen(line)+1);
                 }
                 at_response_free(p_response);
                 break;
@@ -4967,9 +5220,16 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_STK_SEND_ENVELOPE_COMMAND:
             {
                 char *cmd;
+                int ret;
 
                 p_response = NULL;
-                asprintf(&cmd, "AT+SPUSATENVECMD=\"%s\"", (char*)(data));
+                ret = asprintf(&cmd, "AT+SPUSATENVECMD=\"%s\"", (char*)(data));
+                if(ret < 0) {
+                    ALOGE("Failed to allocate memory");
+                    cmd = NULL;
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    break;
+                }
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 free(cmd);
                 if (err < 0 || p_response->success == 0) {
@@ -4983,9 +5243,16 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE:
             {
                 char *cmd;
+                int ret;
 
                 p_response = NULL;
-                asprintf(&cmd, "AT+SPUSATTERMINAL=\"%s\"", (char*)(data));
+                ret = asprintf(&cmd, "AT+SPUSATTERMINAL=\"%s\"", (char*)(data));
+                if(ret < 0) {
+                    ALOGE("Failed to allocate memory");
+                    cmd = NULL;
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    break;
+                }
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 free(cmd);
                 if (err < 0 || p_response->success == 0) {
@@ -4998,15 +5265,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
         case RIL_REQUEST_STK_HANDLE_CALL_SETUP_REQUESTED_FROM_SIM:
             {
-                char *cmd;
                 p_response = NULL;
                 int value = ((int *)data)[0];
                 if (value == 0) {
                     ALOGD(" cancel STK call ");
                     s_isstkcall = 0;
-                    asprintf(&cmd, "AT+SPUSATCALLSETUP=0");
-                    err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                    free(cmd);
+                    err = at_send_command(ATch_type[channelID], "AT+SPUSATCALLSETUP=0", &p_response);
                     if (err < 0 || p_response->success == 0) {
                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                     } else {
@@ -5022,13 +5286,10 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
         case RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING:
             {
-                char *cmd;
                 int response = 0;
                 p_response = NULL;
                 ALOGD("[stk]send RIL_REQUEST_STK_SET_PROFILE");
-                asprintf(&cmd, "AT+SPUSATPROFILE?");
-                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                free(cmd);
+                err = at_send_command(ATch_type[channelID], "AT+SPUSATPROFILE?", &p_response);
                 ALOGD("[stk]RIL_REQUEST_STK_SET_PROFILE: err=%d succ=%d", err, p_response->success);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -5039,15 +5300,17 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
         case RIL_REQUEST_GET_SMSC_ADDRESS:
             {
-                char *cmd;
                 char *sc_line;
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+                char  sc_temp[50] = {0};
+                char ch;
+                unsigned int i,j = 0;
+#endif
 
                 p_response = NULL;
                 ALOGD("[sms]RIL_REQUEST_GET_SMSC_ADDRESS");
-                asprintf(&cmd, "AT+CSCA?");
-                err = at_send_command_singleline(ATch_type[channelID], cmd, "+CSCA:",
+                err = at_send_command_singleline(ATch_type[channelID], "AT+CSCA?", "+CSCA:",
                         &p_response);
-                free(cmd);
                 if (err >= 0 && p_response->success) {
                     char *line = p_response->p_intermediates->line;
                     err = at_tok_start(&line);
@@ -5057,8 +5320,47 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                         RIL_onRequestComplete(t, RIL_E_SUCCESS, sc_line,
                                 strlen(sc_line));
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-                        RIL_onRequestComplete(t, RIL_E_SUCCESS,line,
-                                strlen(line));
+                        line++;
+                        for ( i = 0; i < strlen(line); i++ )
+                        {
+                            ch = *(line+i);
+                            if( ch == '\"' || ch == ','){
+                                sc_temp[j] = ch;
+                                if( ch == ',' ){
+                                    i++;
+                                    j++;
+                                    while(*(line+i) != '\0'){
+                                        sc_temp[j] = *(line+i);
+                                        i++;
+                                        j++;
+                                    }
+                                    break;
+                                }
+                                j++;
+                            }
+                            else{
+                                if(ch >= '0' && ch <= '9')
+                                    sc_temp[j] = (char)((ch - '0') << 4);
+                                else if(ch >= 'a' && ch <= 'f')
+                                    sc_temp[j] = (char)((ch - 'a' + 10) << 4);
+                                else if(ch >= 'A' && ch <= 'F')
+                                    sc_temp[j] = (char)((ch - 'A' + 10) << 4);
+
+
+                                ch = *(line+i+1);
+                                if(ch >= '0' && ch <= '9')
+                                    sc_temp[j] |= (char)(ch - '0');
+                                else if(ch >= 'a' && ch <= 'f')
+                                    sc_temp[j] |= (char)(ch - 'a' + 10);
+                                else if(ch >= 'A' && ch <= 'F')
+                                    sc_temp[j] |= (char)(ch - 'A' + 10);
+                                i++;
+                                j++;
+                            }
+
+                        }
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, sc_temp,
+                                strlen(sc_temp));
 #endif
                     } else {
                         ALOGD("[sms]at_tok_start fail");
@@ -5074,14 +5376,36 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_SET_SMSC_ADDRESS:
             {
                 char *cmd;
-
-                p_response = NULL;
-                ALOGD("[sms]RIL_REQUEST_SET_SMSC_ADDRESS");
-#if defined (RIL_SPRD_EXTENSION)
-                asprintf(&cmd, "AT+CSCA=\"%s\"", (char*)(data));
-#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-                asprintf(&cmd, "AT+CSCA=%s", (char*)(data));
+                int ret;
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+                char str_temp[50] = {0};
+                char *cp;
+                unsigned int i;
 #endif
+                p_response = NULL;
+                ALOGD("[sms]RIL_REQUEST_SET_SMSC_ADDRESS (%s)", (char*)(data));
+#if defined (RIL_SPRD_EXTENSION)
+                ret = asprintf(&cmd, "AT+CSCA=\"%s\"", (char*)(data));
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+                cp = str_temp;
+                for(i = 0 ; i< strlen((char*)data); i++)
+                {
+                    if( *((char*)data + i) != '\"' && *((char*)data+i) != ',' && *((char*)data+i) != '\0'){
+                        cp += sprintf(cp,"%X",*((char*)data+i));
+                    }
+                    else if( *((char*)data+i) == ','){
+                        break;
+                    }
+                }
+
+                ret = asprintf(&cmd, "AT+CSCA=\"%s\"", str_temp);
+#endif
+                if(ret < 0) {
+                    ALOGE("Failed to allocate memory");
+                    cmd = NULL;
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    break;
+                }
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 free(cmd);
                 if (err < 0 || p_response->success == 0) {
@@ -5094,12 +5418,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
         case RIL_REQUEST_REPORT_SMS_MEMORY_STATUS:
             {
-                char *cmd;
+                char cmd[30] = {0};
 
                 p_response = NULL;
-                asprintf(&cmd, "AT+SPSMSFULL=%d", !((int *)data)[0]);
+                snprintf(cmd, sizeof(cmd), "AT+SPSMSFULL=%d", !((int *)data)[0]);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                free(cmd);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 } else {
@@ -5192,9 +5515,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
         case RIL_REQUEST_VIDEOPHONE_CONTROL_AUDIO:
             {
-                char *cmd;
+                char cmd[30] = {0};
                 p_response = NULL;
-                asprintf(&cmd, "AT"AT_PREFIX"DVTSEND=%d", ((int *)data)[0]);
+                snprintf(cmd, sizeof(cmd), "AT"AT_PREFIX"DVTSEND=%d", ((int *)data)[0]);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -5202,15 +5525,14 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                 }
                 at_response_free(p_response);
-                free(cmd);
                 break;
             }
 
         case RIL_REQUEST_VIDEOPHONE_CONTROL_IFRAME:
             {
-                char *cmd;
+                char cmd[50] = {0};
                 p_response = NULL;
-                asprintf(&cmd, "AT"AT_PREFIX"DVTLFRAME=%d,%d", ((int *)data)[0], ((int *)data)[1]);
+                snprintf(cmd, sizeof(cmd), "AT"AT_PREFIX"DVTLFRAME=%d,%d", ((int *)data)[0], ((int *)data)[1]);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -5218,16 +5540,14 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                 }
                 at_response_free(p_response);
-                free(cmd);
                 break;
             }
         case RIL_REQUEST_VIDEOPHONE_SET_VOICERECORDTYPE:
             {
-                char *cmd;
+                char cmd[30] = {0};
                 p_response = NULL;
-                asprintf(&cmd, "AT+SPRUDLV=%d", ((int *)data)[0]);
+                snprintf(cmd, sizeof(cmd), "AT+SPRUDLV=%d", ((int *)data)[0]);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
-
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 } else {
@@ -5241,13 +5561,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         case RIL_REQUEST_VIDEOPHONE_CODEC:
             {
-                char *cmd;
+                char cmd[30] = {0};
                 p_response = NULL;
                 RIL_VideoPhone_Codec* p_codec = (RIL_VideoPhone_Codec*)data;
-                asprintf(&cmd, "AT"AT_PREFIX"DVTCODEC=%d", p_codec->type);
+                snprintf(cmd, sizeof(cmd), "AT"AT_PREFIX"DVTCODEC=%d", p_codec->type);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                free(cmd);
-
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 } else {
@@ -5264,10 +5582,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 if (reason < 0){
                     err = at_send_command(ATch_type[channelID], "ATH", &p_response);
                 } else {
-                    char *cmd;
-                    asprintf(&cmd, "ATH%d", ((int *)data)[0]);
+                    char cmd[20] = {0};
+                    snprintf(cmd, sizeof(cmd), "ATH%d", ((int *)data)[0]);
                     err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                    free(cmd);
                 }
 #else
                 err = at_send_command(ATch_type[channelID], "AT^DVTEND", &p_response);
@@ -5315,10 +5632,16 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_VIDEOPHONE_STRING:
             {
                 char *cmd;
+                int ret;
                 p_response = NULL;
-                asprintf(&cmd, "AT"AT_PREFIX"DVTSTRS=\"%s\"", (char*)(data));
+                ret = asprintf(&cmd, "AT"AT_PREFIX"DVTSTRS=\"%s\"", (char*)(data));
+                if(ret < 0) {
+                    ALOGE("Failed to allocate memory");
+                    cmd = NULL;
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    break;
+                }
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
-
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 } else {
@@ -5330,16 +5653,16 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
         case RIL_REQUEST_VIDEOPHONE_LOCAL_MEDIA:
             {
-                char *cmd;
+                char cmd[50] = {0};
                 p_response = NULL;
                 int datatype = ((int*)data)[0];
                 int sw = ((int*)data)[1];
 
                 if ((datalen/sizeof(int)) >2){
                     int indication = ((int*)data)[2];
-                    asprintf(&cmd, "AT"AT_PREFIX"DVTSEND=%d,%d,%d", datatype, sw, indication);
+                    snprintf(cmd, sizeof(cmd), "AT"AT_PREFIX"DVTSEND=%d,%d,%d", datatype, sw, indication);
                 } else {
-                    asprintf(&cmd, "AT"AT_PREFIX"DVTSEND=%d,%d", datatype, sw);
+                    snprintf(cmd, sizeof(cmd), "AT"AT_PREFIX"DVTSEND=%d,%d", datatype, sw);
                 }
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 if (err < 0 || p_response->success == 0) {
@@ -5348,14 +5671,13 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                 }
                 at_response_free(p_response);
-                free(cmd);
                 break;
             }
         case RIL_REQUEST_VIDEOPHONE_RECORD_VIDEO:
             {
-                char *cmd;
+                char cmd[30];
                 p_response = NULL;
-                asprintf(&cmd, "AT"AT_PREFIX"DVTRECA=%d", ((int *)data)[0]);
+                snprintf(cmd, sizeof(cmd), "AT"AT_PREFIX"DVTRECA=%d", ((int *)data)[0]);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -5363,20 +5685,19 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                 }
                 at_response_free(p_response);
-                free(cmd);
                 break;
             }
         case RIL_REQUEST_VIDEOPHONE_RECORD_AUDIO:
             {
-                char *cmd;
+                char cmd[40];
                 p_response = NULL;
                 int on = ((int*)data)[0];
                 int mode = ((int*)data)[1];
 
                 if (datalen > 1) {
-                    asprintf(&cmd, "AT^DAUREC=%d,%d", on, mode);
+                    snprintf(cmd, sizeof(cmd), "AT^DAUREC=%d,%d", on, mode);
                 } else {
-                    asprintf(&cmd, "AT^DAUREC=%d", ((int *)data)[0]);
+                    snprintf(cmd, sizeof(cmd), "AT^DAUREC=%d", ((int *)data)[0]);
                 }
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 if (err < 0 || p_response->success == 0) {
@@ -5385,17 +5706,16 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                 }
                 at_response_free(p_response);
-                free(cmd);
                 break;
             }
         case RIL_REQUEST_VIDEOPHONE_TEST:
             {
-                char *cmd;
+                char cmd[40];
                 p_response = NULL;
                 int flag = ((int*)data)[0];
                 int value = ((int*)data)[1];
 
-                asprintf(&cmd, "AT"AT_PREFIX"DVTTEST=%d,%d", flag, value);
+                snprintf(cmd, sizeof(cmd), "AT"AT_PREFIX"DVTTEST=%d,%d", flag, value);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -5403,23 +5723,28 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                 }
                 at_response_free(p_response);
-                free(cmd);
                 break;
             }
         case RIL_REQUEST_MBBMS_GSM_AUTHEN:
             {
                 char *cmd;
                 char *line;
+                int ret;
                 p_response = NULL;
                 ALOGD("[MBBMS]send RIL_REQUEST_MBBMS_GSM_AUTHEN");
-                asprintf(&cmd, "AT^MBAU=\"%s\"",(char*)(data));
+                ret = asprintf(&cmd, "AT^MBAU=\"%s\"",(char*)(data));
+                if(ret < 0) {
+                    ALOGE("Failed to allocate memory");
+                    cmd = NULL;
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    break;
+                }
                 err = at_send_command_singleline(ATch_type[channelID], cmd, "^MBAU:",
                         &p_response);
                 free(cmd);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 } else {
-
                     line = p_response->p_intermediates->line;
                     ALOGD("[MBBMS]RIL_REQUEST_MBBMS_GSM_AUTHEN: err=%d line=%s", err, line);
                     err = at_tok_start(&line);
@@ -5438,9 +5763,16 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             {
                 char *cmd;
                 char *line;
+                int ret;
                 p_response = NULL;
                 ALOGD("[MBBMS]send RIL_REQUEST_MBBMS_USIM_AUTHEN");
-                asprintf(&cmd, "AT^MBAU=\"%s\",\"%s\"",((char **)(data))[0], ((char **)(data))[1]);
+                ret = asprintf(&cmd, "AT^MBAU=\"%s\",\"%s\"",((char **)(data))[0], ((char **)(data))[1]);
+                if(ret < 0) {
+                    ALOGE("Failed to allocate memory");
+                    cmd = NULL;
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    break;
+                }
                 err = at_send_command_singleline(ATch_type[channelID], cmd, "^MBAU:",
                         &p_response);
                 free(cmd);
@@ -5466,7 +5798,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         {
             RIL_AppType app_type = RIL_APPTYPE_UNKNOWN;
             int card_type = 0;
-            char * str;
+            char str[15];
 
             ALOGD("[MBBMS]RIL_REQUEST_MBBMS_SIM_TYPE");
             app_type = getSimType(channelID);
@@ -5476,15 +5808,14 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 card_type = 1;
             else
                 card_type = 0;
-            asprintf(&str, "%d", card_type);
+            snprintf(str, sizeof(str), "%d", card_type);
             ALOGD("[MBBMS]RIL_REQUEST_MBBMS_SIM_TYPE, card_type =%s", str);
             RIL_onRequestComplete(t, RIL_E_SUCCESS, str, strlen(str));
-            free(str);
             break;
         }
         case RIL_REQUEST_GET_REMAIN_TIMES:
             {
-                char  cmd[12];
+                char  cmd[20] = {0};
                 int   type = ((int*)data)[0];
                 char *line;
                 int result;
@@ -5492,49 +5823,46 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 p_response = NULL;
                 ALOGD("[MBBMS]send RIL_REQUEST_GET_REMAIN_TIMES, type:%d",type);
                 if (type >= 0 && type < 4) {
-                    sprintf(cmd, "AT+XX=%d", type);
-
+                    snprintf(cmd, sizeof(cmd), "AT+XX=%d", type);
                     err = at_send_command_singleline(ATch_type[channelID], cmd, "+XX:",
                             &p_response);
-
                     if (err < 0 || p_response->success == 0) {
                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                     } else {
-
                         line = p_response->p_intermediates->line;
 
                         ALOGD("[MBBMS]RIL_REQUEST_GET_REMAIN_TIMES: err=%d line=%s", err, line);
 
                         err = at_tok_start(&line);
-
-                        if (err == 0) err = at_tok_nextint(&line, &result);
                         if (err == 0) {
-                            RIL_onRequestComplete(t, RIL_E_SUCCESS, &result, sizeof(result));
-                        }
-                        else {
-                            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                            err = at_tok_nextint(&line, &result);
+                            if (err == 0) {
+                                RIL_onRequestComplete(t, RIL_E_SUCCESS, &result, sizeof(result));
+                            } else {
+                                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                            }
                         }
                     }
+                    at_response_free(p_response);
                 } else {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 }
                 break;
             }
-
         case RIL_REQUEST_GET_SIM_CAPACITY:
             {
-                char *cmd;
                 char *line, *skip;
                 int response[2] = {-1, -1};
                 char *responseStr[2] = {NULL, NULL};
-                int result = 0;
+                char res[2][20];
+                int i, result = 0;
+
+                for(i = 0; i < 2; i++)
+                    responseStr[i] = res[i];
 
                 p_response = NULL;
-                asprintf(&cmd, "AT+CPMS?");
-                err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPMS:",
+                err = at_send_command_singleline(ATch_type[channelID], "AT+CPMS?", "+CPMS:",
                         &p_response);
-                free(cmd);
-
                 if (err >= 0 && p_response->success) {
                     line = p_response->p_intermediates->line;
                     ALOGD("[sms]RIL_REQUEST_GET_SIM_CAPACITY: err=%d line=%s", err, line);
@@ -5553,16 +5881,10 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     }
                     ALOGD("[sms]RIL_REQUEST_GET_SIM_CAPACITY: result=%d resp0=%d resp1=%d", result, response[0], response[1]);
                     if (result == 1) {
-                        asprintf(&responseStr[0], "%d", response[0]);
-                        asprintf(&responseStr[1], "%d", response[1]);
-                        ALOGD("[sms]RIL_REQUEST_GET_SIM_CAPACITY: str resp0=%s resp1=%s", responseStr[0], responseStr[1]);
+                        sprintf(res[0], "%d", response[0]);
+                        sprintf(res[1], "%d", response[1]);
+                        ALOGD("[sms]RIL_REQUEST_GET_SIM_CAPACITY: str resp0=%s resp1=%s", res[0], res[1]);
                         RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, 2*sizeof(char*));
-                        if (responseStr[0] != NULL) {
-                            free(responseStr[0]);
-                        }
-                        if (responseStr[1] != NULL) {
-                            free(responseStr[1]);
-                        }
                     } else {
                         ALOGD("[sms]RIL_REQUEST_GET_SIM_CAPACITY fail");
                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -5578,13 +5900,19 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_MMI_ENTER_SIM:
             {
                 char *cmd;
+                int ret;
 
                 p_response = NULL;
                 ALOGD("[SIM]send RIL_REQUEST_MMI_ENTER_SIM");
-                asprintf(&cmd, "ATD%s",(char*)(data));
+                ret = asprintf(&cmd, "ATD%s",(char*)(data));
+                if(ret < 0) {
+                    ALOGE("Failed to allocate memory");
+                    cmd = NULL;
+                    RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+                    break;
+                }
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 free(cmd);
-
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
                 } else {
@@ -5621,7 +5949,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_LOCK_INFO:
             {
-                char  cmd[12] = {0};
+                char  cmd[20] = {0};
                 int   type = -1;
                 char *line = NULL;
                 int   result = 0;
@@ -5650,9 +5978,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     ALOGD("RIL_REQUEST_LOCK_INFO: unsupport lock type!!");
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 }
-		if(type == -1)
+                if(type == -1)
                     break;
-                sprintf(cmd, "AT+XX=%d", type);
+                snprintf(cmd, sizeof(cmd), "AT+XX=%d", type);
                 err = at_send_command_singleline(ATch_type[channelID], cmd, "+XX:",
                                                  &p_response);
                 if (err < 0 || p_response->success == 0) {
@@ -5676,13 +6004,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_STK_SIM_INIT_EVENT:
             {
-                char *cmd;
-
                 ALOGD("RIL_REQUEST_STK_SIM_INIT_EVENT");
                 p_response = NULL;
-                asprintf(&cmd, "AT+SPUSATCHECKFDN=1");
-                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                free(cmd);
+                err = at_send_command(ATch_type[channelID], "AT+SPUSATCHECKFDN=1", &p_response);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 } else {
@@ -5845,6 +6169,7 @@ getSIMStatus(int channelID)
         /* add for modem reboot */
         char property[10] = "";
         char *cmd;
+        int res;
         char prop[10] = "";
         ATResponse   *p_response1 = NULL;
         property_get(RIL_ASSERT, property, "0");
@@ -5860,7 +6185,12 @@ getSIMStatus(int channelID)
                 if(strlen(prop) != 4) {
                     goto out;
                 } else {
-                    asprintf(&cmd, "AT+CPIN=%s", prop);
+                    res = asprintf(&cmd, "AT+CPIN=%s", prop);
+                    if(res < 0) {
+                        ALOGE("Failed to allocate memory");
+                        cmd = NULL;
+                        goto out;
+                    }
                     err = at_send_command(ATch_type[channelID], cmd, &p_response1);
                     free(cmd);
                     if(err < 0 || p_response1->success == 0) {
@@ -5876,7 +6206,12 @@ getSIMStatus(int channelID)
                 if(strlen(prop) != 4) {
                     goto out;
                 } else {
-                    asprintf(&cmd, "AT+CPIN=%s", prop);
+                    res = asprintf(&cmd, "AT+CPIN=%s", prop);
+                    if(res < 0) {
+                        ALOGE("Failed to allocate memory");
+                        cmd = NULL;
+                        goto out;
+                    }
                     err = at_send_command(ATch_type[channelID], cmd, &p_response1);
                     free(cmd);
                     if(err < 0 || p_response1->success == 0) {
@@ -6315,7 +6650,7 @@ static void waitForClose()
 static void onNitzReceived(void *param)
 {
     int i, err;
-    char *nitz_str = NULL;
+    char nitz_str[128];
     ATResponse *p_response = NULL;
     char *line;
     int channelID, mcc;
@@ -6340,18 +6675,25 @@ static void onNitzReceived(void *param)
     if (err < 0) goto error;
 
     for(i = 0; i < (int)NUM_ELEMS(rilnet_tz_entry); i++) {
-        if(mcc == rilnet_tz_entry[i].mcc)
-            asprintf(&nitz_str, "%s,%s", raw_str, rilnet_tz_entry[i].long_name);
+        if(mcc == rilnet_tz_entry[i].mcc) {
+            ALOGD("nitz matched mcc = %d", mcc);
+            if(*(rilnet_tz_entry[i].long_name) == '\0') {
+                snprintf(nitz_str, sizeof(nitz_str), "%s,%d", raw_str, mcc);
+                ALOGD("long_name is empty, nitz_str = %s", nitz_str);
+            } else {
+                snprintf(nitz_str, sizeof(nitz_str), "%s,%s", raw_str, rilnet_tz_entry[i].long_name);
+                ALOGD("nitz_str = %s", nitz_str);
+            }
+            break;
+        }
     }
     if(i >= (int)NUM_ELEMS(rilnet_tz_entry))
-        asprintf(&nitz_str, "%s", raw_str);
+        snprintf(nitz_str, sizeof(nitz_str), "%s", raw_str);
 
     RIL_onUnsolicitedResponse (
             RIL_UNSOL_NITZ_TIME_RECEIVED,
             nitz_str, strlen(nitz_str));
     free(raw_str);
-    if(nitz_str)
-        free(nitz_str);
     return;
 error:
     free(raw_str);

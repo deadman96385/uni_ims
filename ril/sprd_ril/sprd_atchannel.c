@@ -1006,7 +1006,6 @@ int at_handshake(struct ATChannels *ATch)
 {
     int i;
     int err = 0;
-    char *cmd;
 
     if (0 != pthread_equal(s_tid_reader, pthread_self())) {
         /* cannot be called from reader thread */
@@ -1015,19 +1014,15 @@ int at_handshake(struct ATChannels *ATch)
 
     pthread_mutex_lock(&mutex[ATch->channelID]);
 
-    asprintf(&cmd, "ATE0Q0V1");
-
     for (i = 0 ; i < HANDSHAKE_RETRY_COUNT ; i++) {
         /* some stacks start with verbose off */
-        err = at_send_command_full_nolock (ATch, cmd, NO_RESULT,
+        err = at_send_command_full_nolock (ATch, "ATE0Q0V1", NO_RESULT,
                     NULL, NULL, HANDSHAKE_TIMEOUT_MSEC, NULL);
-
         if (err == 0) {
             break;
         }
     }
 
-    free(cmd);
 #if 0
     if (err == 0) {
         /* pause for a bit to let the input buffer drain any unmatched OK's
