@@ -3138,9 +3138,9 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
         /* add for modem reboot */
         const char *pin = NULL;
         extern int s_sim_num;
-        if ( datalen == sizeof(char*) ) {
+        if ( datalen == 2*sizeof(char*) ) {
             pin = strings[0];
-        } else if ( datalen == 2*sizeof(char*) ) {
+        } else if ( datalen == 3*sizeof(char*) ) {
             pin = strings[1];
         } else
             goto out;
