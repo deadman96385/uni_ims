@@ -581,7 +581,7 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
 
 	// make sure that the number of buffers that the decoder requires is less than what we allocated
 	// we should have at least 2 more than the decoder (one for omx component and one for downstream)
-	if (MaxNumFs + 2 > aPortParam->nBufferCountActual)
+	if (MaxNumFs + 2 > aPortParam->nBufferCountMin)
 	{
             // even if buffers are the correct size - we must do port reconfig because of buffer count
             *aResizeFlag = OMX_TRUE;
@@ -651,7 +651,7 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
 
 		// make sure that the number of buffers that the decoder requires is less than what we allocated
 		// we should have at least 2 more than the decoder (one for omx component and one for downstream)
-		if (MaxNumFs + 2 > aPortParam->nBufferCountActual)
+		if (MaxNumFs + 2 > aPortParam->nBufferCountMin)
 		{
 			 // even if buffers are the correct size - we must do port reconfig because of buffer count
 			 *aResizeFlag = OMX_TRUE;
