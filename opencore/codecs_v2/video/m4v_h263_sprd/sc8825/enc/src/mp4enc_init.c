@@ -39,7 +39,7 @@ PUBLIC void Mp4Enc_InitVolVopPara(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mo
 	pVol_mode->ProfileAndLevel			= 0;	
 	pVol_mode->bRoundingControlDisable	= TRUE;
 	pVol_mode->InitialRoundingType		= 0;
-	pVol_mode->PbetweenI				= 15;//300;//28;
+	pVol_mode->PbetweenI				= 300;//15;//28;
 	pVol_mode->GOVperiod				= 0;
 	pVol_mode->bAllowSkippedPMBs		= 1;
 	pVol_mode->bReversibleVlc			= FALSE;
@@ -51,7 +51,7 @@ PUBLIC void Mp4Enc_InitVolVopPara(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mo
 	pVol_mode->bAdvPredDisable			= TRUE;
 	pVol_mode->ClockRate				= frame_rate;
 	pVol_mode->fAUsage					= RECTANGLE;
-	pVol_mode->FrameHz					= 15; //30; //modidied by lxw,@0807
+	pVol_mode->FrameHz					= 30; //15; //modidied by lxw,@0807
 	pVol_mode->MVRadiusPerFrameAwayFromRef = 8;
 
 	pVop_mode->OrgFrameWidth			= pVol_mode->VolWidth ;
@@ -71,8 +71,8 @@ PUBLIC void Mp4Enc_InitVolVopPara(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mo
 	pVol_mode->bResyncMarkerDisable		= 0;//modified by lxw,@20090803
 	pVop_mode->mbline_num_slice			= 1;
 	pVop_mode->intra_mb_dis				= 30;
-	pVop_mode->StepI					= 12;
-	pVop_mode->StepP					= 12;
+	pVop_mode->StepI					= 10;
+	pVop_mode->StepP					= 10;
 
 	pVop_mode->bInitRCSuceess			= FALSE;
 }

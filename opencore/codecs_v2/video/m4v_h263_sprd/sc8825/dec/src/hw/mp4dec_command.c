@@ -524,7 +524,7 @@ PUBLIC void Mp4Dec_VerifyBitstrm(uint8 *pStream, int32 strmLen)
 //     uint32  packetLen; 
     	DEC_VOP_MODE_T *vop_mode_ptr = Mp4Dec_GetVopmode();
 
- 	if (vop_mode_ptr->video_std == VSP_MPEG4) //only verify MPEG4 bitstrm
+ 	if (vop_mode_ptr->video_std != VSP_FLV_V1) //for MPEG4 and ITU_H263 bitstrm
 	{
 		while (tempPos < pStreamEnd)
 		{

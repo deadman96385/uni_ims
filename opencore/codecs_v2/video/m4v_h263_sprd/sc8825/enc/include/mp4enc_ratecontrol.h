@@ -34,14 +34,14 @@
 //unit is ()%
 #define RC_SAFETY_MARGIN 		10
 
-#define RC_MAX_Q_INCREASE		25
+#define RC_MAX_Q_INCREASE		26
 #define	RC_MAX_Q_I_INCREASE		40
 
 #define	RC_MAX_QUANT			28
-#define	RC_MIN_QUANT			4
+#define	RC_MIN_QUANT			1
 
 #define	RC_MAX_QP_I				16
-#define	RC_MIN_QP_I				6
+#define	RC_MIN_QP_I				2
 
 #define	IVOP_SKIP_MARGIN		40
 #define	PVOP_SKIP_MARGIN		80
@@ -51,7 +51,7 @@
 
 #define	COMPLEX_RATIO			50
 
-//#define	RE_ENC_SHEME
+#define	RE_ENC_SHEME
 
 typedef struct
 {
@@ -74,7 +74,7 @@ typedef struct
 
 	int		skip_cnt;
 	int		total_bits; //for whole sequence
-	int		is_pfrm_skipped;
+//	int		is_pfrm_skipped;
 	int		p_count;
 
 	int		bit_rate;
@@ -94,6 +94,7 @@ typedef struct _RCMode  /* for rate control */
 	BOOLEAN		be_scene_cut;	//is scene change;
 	BOOLEAN		be_skip_frame;	//the frame should be skipped;
 	int8		Qp_type;		//according to encoder result, to judge the QP type, large, small or too small
+	int32       need_to_skip;
 	int32		Ec_actual_Q8;	//actual Ec of current frame;
 	
 	int32		X1;				// 1st order coefficient
@@ -125,6 +126,9 @@ typedef struct _RCMode  /* for rate control */
 	int32		B;				// current buffer level
 //	BOOLEAN		NrFlag;
 	BOOLEAN		skipNextFrame;						// TRUE if buffer is 80% full
+
+	int		is_pfrm_skipped;
+
 	BOOLEAN		FirstGOP;
 	int32		iPVopQP;
 	int32		rgQp[RC_MAX_SLIDING_WINDOW];		// quantization levels for the past frames
@@ -137,6 +141,10 @@ typedef struct _RCMode  /* for rate control */
 	
 //	double		EcI[10];							//store the last 5 I frame's complexity.
 	int32		EcP_Q8[RC_MAX_SLIDING_WINDOW];
+	int32 BytesPerMb;
+	int32 delta_Qp_4Clip;
+	int32 delta_Qp_4IncQc0;
+	int32 delta_Qp_4IncQc1;
 }RCMode;
 
 PUBLIC void Mp4Enc_InitRateCtrl(RateCtrlPara *rc_par_ptr, RCMode *rc_mode_ptr);

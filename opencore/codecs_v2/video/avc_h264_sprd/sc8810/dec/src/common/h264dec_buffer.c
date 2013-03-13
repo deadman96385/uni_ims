@@ -624,11 +624,8 @@ LOCAL void H264Dec_insert_picture_in_dpb (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr,
 	{
 		curr_fs_ptr->is_reference = 1;
 #ifdef _VSP_LINUX_
-//		if(!g_image_ptr->VSP_used)
-		{
 		if(curr_fs_ptr->frame->pBufferHeader!=NULL)
 			(*VSP_bindCb)(g_user_data,curr_fs_ptr->frame->pBufferHeader);
-		}
 #endif
 		if (picture_ptr->is_long_term)
 		{

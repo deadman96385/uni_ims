@@ -424,6 +424,14 @@ MMEncRet MP4EncStrmEncode(MMEncIn *pInput, MMEncOut *pOutput)
 	SCI_TRACE_LOW("g_nFrame_enc %d frame_type %d ", g_nFrame_enc,pVop_mode->VopPredType);
 	if(!frame_skip)
 	{	
+		g_stat_rc.be_re_enc		= FALSE;
+		g_stat_rc.be_skip_frame = FALSE;
+#ifdef RE_ENC_SHEME
+FRAME_ENC:
+#endif
+
+	        SCI_TRACE_LOW("g_nFrame_enc %d frame_type %d, g_stat_rc.B %d ", g_nFrame_enc,pVop_mode->VopPredType, g_stat_rc.B );
+
 		if (Mp4Enc_VSPInit(pVop_mode) != MMENC_OK)
 		{
 			return MMENC_ERROR;
@@ -443,12 +451,7 @@ MMEncRet MP4EncStrmEncode(MMEncIn *pInput, MMEncOut *pOutput)
 		//cmd = (pVop_mode->pYUVSrcFrame->imgVAddr-pVop_mode->pYUVSrcFrame->imgUAddr)>>2;
 		VSP_WRITE_REG(VSP_AXIM_REG_BASE+AHBM_V_ADDR_OFFSET,cmd, "configure uv offset");
 	
-		g_stat_rc.be_re_enc		= FALSE;
-		g_stat_rc.be_skip_frame = FALSE;
 
-#ifdef RE_ENC_SHEME
-FRAME_ENC:
-#endif
 		Mp4Enc_InitRCFrame (&g_rc_par);
 		
 		Mp4Enc_InitBitStream(pVop_mode);
@@ -568,7 +571,7 @@ FRAME_ENC:
 #ifdef RE_ENC_SHEME
 			Mp4Enc_AnalyzeEncResult(&g_stat_rc, g_rc_par.nbits_total, pVop_mode->VopPredType, Ec_Q8);
 
-			if (g_stat_rc.be_re_enc)
+			if (g_stat_rc.be_re_enc && !((pVop_mode->FrameWidth == 1280) && (pVop_mode->FrameHeight == 720)/*720p*/))
 			{
 				if (g_stat_rc.be_scene_cut)
 				{
@@ -579,6 +582,8 @@ FRAME_ENC:
 				PRINTF("\t bisTotalCur: %d, frame re-encoded\n", g_rc_par.nbits_total);
 
 				g_re_enc_frame_number++;
+
+            	VSP_RELEASE_Dev();
 
 				goto FRAME_ENC;
 			}

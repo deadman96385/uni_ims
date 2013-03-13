@@ -49,15 +49,49 @@ PUBLIC void Mp4Enc_InitRateCtrl(RateCtrlPara *rc_par_ptr, RCMode *rc_mode_ptr)
 	rc_par_ptr->p_between_i			= pVol_mode->PbetweenI;
 	rc_par_ptr->p_count				= 0;
 
-	rc_mode_ptr->B					= 0; 
 	rc_mode_ptr->FirstGOP			= TRUE; 
 
 //	rc_mode_ptr->Ns					= enc_ctr_ptr->samp_rate;
 	rc_mode_ptr->Rs					= rc_par_ptr->bit_rate; 
-	rc_mode_ptr->Bs					= rc_mode_ptr->Rs / 2;
+	rc_mode_ptr->Bs					= pVop_mode->vbv_buf_size;
+
+	rc_mode_ptr->Nc 			= 0;
 	
 	/* average bits to be removed from the buffer */
 	rc_mode_ptr->Rp					= rc_mode_ptr->Rs / (rc_par_ptr->frame_rate);
+	rc_mode_ptr->BytesPerMb = rc_mode_ptr->Rp/(8*pVop_mode->FrameWidth*pVop_mode->FrameHeight/256);
+
+	if(rc_mode_ptr->BytesPerMb <= 3)
+	{
+		rc_mode_ptr->delta_Qp_4Clip = 4;
+		rc_mode_ptr->delta_Qp_4IncQc0 = 2;
+		rc_mode_ptr->delta_Qp_4IncQc1 = 3;
+	}
+	else if(rc_mode_ptr->BytesPerMb <= 5)
+	{
+		rc_mode_ptr->delta_Qp_4Clip = 3;
+		rc_mode_ptr->delta_Qp_4IncQc0 = 2;
+		rc_mode_ptr->delta_Qp_4IncQc1 = 2;
+	}
+	else if(rc_mode_ptr->BytesPerMb <= 7)
+	{
+		rc_mode_ptr->delta_Qp_4Clip = 3;
+		rc_mode_ptr->delta_Qp_4IncQc0 = 1;
+		rc_mode_ptr->delta_Qp_4IncQc1 = 2;
+	}
+	else if(rc_mode_ptr->BytesPerMb <= 9)
+	{
+		rc_mode_ptr->delta_Qp_4Clip = 2;
+		rc_mode_ptr->delta_Qp_4IncQc0 = 1;
+		rc_mode_ptr->delta_Qp_4IncQc1 = 2;
+	}
+	else
+	{
+		rc_mode_ptr->delta_Qp_4Clip = 2;
+		rc_mode_ptr->delta_Qp_4IncQc0 = 1;
+		rc_mode_ptr->delta_Qp_4IncQc1 = 1;
+	}
+		
 
 #if defined(SIM_IN_WIN)
 	g_rgstat_fp		= fopen ("..\\seq\\rc_stat.txt", "w");
@@ -105,7 +139,7 @@ PUBLIC int32 Mp4Enc_JudgeFrameType(RateCtrlPara *rc_par_ptr, RCMode *rc_mode_ptr
 //		rc_mode_ptr->Nr--;
 
 		/*decrease current buffer level*/
-		rc_mode_ptr->B -= rc_mode_ptr->Rp;
+//		rc_mode_ptr->B -= rc_mode_ptr->Rp;
 
 		vop_type = NVOP;
 	}else
@@ -137,16 +171,16 @@ PUBLIC void Mp4Enc_InitRCGOP(RateCtrlPara *rc_par_ptr)
 
 PUBLIC void Mp4Enc_ResetRCModel(ENC_VOP_MODE_T *pVop_mode, RCMode *rc_mode_ptr, RateCtrlPara *rc_par_ptr) 
 {
-	uint32 i;
-	uint32 SumQP = 0;    
-	int32 frame_rate;
-	int32 p_between_i = rc_par_ptr->p_between_i;
+//	uint32 i;
+//	uint32 SumQP = 0;    
+//	int32 frame_rate;
+//	int32 p_between_i = rc_par_ptr->p_between_i;
 	uint32 nbit_fst_frame = rc_par_ptr->nbits_total;
 
-	for (i = 0; i < RC_MAX_SLIDING_WINDOW; i++)
-	{
-		rc_mode_ptr->EcP_Q8[i] = 0;
-	}
+//	for (i = 0; i < RC_MAX_SLIDING_WINDOW; i++)
+//	{
+//		rc_mode_ptr->EcP_Q8[i] = 0;
+//	}
 
 //	rc_mode_ptr->Ts = (p_between_i + 1) / frame_rate;	
 
@@ -154,8 +188,8 @@ PUBLIC void Mp4Enc_ResetRCModel(ENC_VOP_MODE_T *pVop_mode, RCMode *rc_mode_ptr, 
 //	rc_mode_ptr->X2 = 0.0;	
 //	rc_mode_ptr->Nr = p_between_i;
 
-	rc_mode_ptr->Nc_prev_gop = rc_mode_ptr->Nc;
-	rc_mode_ptr->Nc = 0;
+//	rc_mode_ptr->Nc_prev_gop = rc_mode_ptr->Nc;
+//	rc_mode_ptr->Nc = 0;
 //	rc_mode_ptr->Hp = 500; // guess of header bits
 //	rc_mode_ptr->Hc = 500; // guess of header bits
 
@@ -173,7 +207,7 @@ PUBLIC void Mp4Enc_ResetRCModel(ENC_VOP_MODE_T *pVop_mode, RCMode *rc_mode_ptr, 
 	/* total number of bits available for this segment */
 //	rc_mode_ptr->Rr = (uint32) (rc_mode_ptr->Ts * rc_mode_ptr->Rs) - rc_mode_ptr->Rf;	
 
-	rc_mode_ptr->B += nbit_fst_frame;	
+//	rc_mode_ptr->B += nbit_fst_frame;	
 	rc_mode_ptr->T = rc_mode_ptr->Rp;
 
 	PRINTF ("\t QP: %d\n", pVop_mode->StepI);
@@ -191,7 +225,7 @@ void RCModelEstimator (RCMode* rc_mode_ptr, uint32 n_windowSize)
 {
 	uint32 i;
 	BOOLEAN estimateX2;
-	int32 oneSampleQ;
+	int32 oneSampleQ = 0;
 	int32 a00_Q0  = 0; //4
 	int32 a01_Q26 = 0; //16 bit
 	int32 a11_Q26 = 0;
@@ -239,7 +273,7 @@ void RCModelEstimator (RCMode* rc_mode_ptr, uint32 n_windowSize)
 
 		if (!rc_mode_ptr->rgRejected[i])
 		{
-			rc_mode_ptr->X1 += (rc_mode_ptr->rgQp[i] * rc_mode_ptr->rgRp[i]) / n_realSize;
+			rc_mode_ptr->X1 += (rc_mode_ptr->rgQp[i] * rc_mode_ptr->rgRp[i]) / (int32)n_realSize;
 		}
 	}
 
@@ -266,7 +300,7 @@ void RCModelEstimator (RCMode* rc_mode_ptr, uint32 n_windowSize)
 		// solve the equation of AX = B
 
 		/*CMatrix2x2D AInv = A.inverse ();*/
-		det_Q16 = (a00_Q0 * a11_Q26 >> 10) - (((a01_Q26 >> 14) * (a01_Q26 >> 14)) >> 8);
+		det_Q16 = ((a00_Q0 * a11_Q26) >> 10) - (((a01_Q26 >> 14) * (a01_Q26 >> 14)) >> 8);
 
 		if (det_Q16 != 0)
 		{
@@ -303,13 +337,13 @@ PUBLIC void Mp4Enc_UpdateRCModel(ENC_VOP_MODE_T *pVop_mode,	RCMode *rc_mode_ptr,
 	rc_mode_ptr->Rc				= tot_bits_cur;								// total bits used for the current frame 
 	rc_par_ptr->total_bits		+= rc_mode_ptr->Rc;
 	rc_par_ptr->nbits_total_seq	+= rc_mode_ptr->Rf;
-	rc_mode_ptr->B				+= rc_mode_ptr->Rc - rc_mode_ptr->Rp;		// update buffer fullness
+//	rc_mode_ptr->B				+= rc_mode_ptr->Rc - rc_mode_ptr->Rp;		// update buffer fullness
 //	rc_mode_ptr->Rr				-= rc_mode_ptr->Rc;							// update the remaining bits
 
-	if (rc_mode_ptr->B < 0)
-	{
-		rc_mode_ptr->B = 0;
-	}
+//	if (rc_mode_ptr->B < 0)
+//	{
+//		rc_mode_ptr->B = 0;
+//	}
 
 #if defined(SIM_IN_WIN)
 	FPRINTF("\t BitsTotalCurr=%d\n\t complex: %f\n\t buffer fullness: %f\n", 
@@ -344,7 +378,7 @@ PUBLIC void Mp4Enc_UpdateRCModel(ENC_VOP_MODE_T *pVop_mode,	RCMode *rc_mode_ptr,
 				   ((rc_mode_ptr->Ec_Q8 * RC_MAX_SLIDING_WINDOW) / rc_mode_ptr->Ep_Q8)	: 
 				   ((rc_mode_ptr->Ep_Q8 * RC_MAX_SLIDING_WINDOW) / rc_mode_ptr->Ec_Q8);
 
-	n_windowSize = IClip(1, rc_mode_ptr->Nc, n_windowSize);
+	n_windowSize = IClip(1, (uint32)rc_mode_ptr->Nc, n_windowSize);
 	
 	for (i = 0; i < RC_MAX_SLIDING_WINDOW; i++) 
 	{
@@ -358,7 +392,7 @@ PUBLIC void Mp4Enc_UpdateRCModel(ENC_VOP_MODE_T *pVop_mode,	RCMode *rc_mode_ptr,
 int32 Qp_FirstPinGop(ENC_VOP_MODE_T *pVop_mode, RCMode *rc_mode_ptr)
 {
 	int32 Qp;
-	int32 Qp_sum = 0;
+//	int32 Qp_sum = 0;
 
 	if (rc_mode_ptr->be_re_enc)
 	{
@@ -379,7 +413,7 @@ int32 Qp_FirstPinGop(ENC_VOP_MODE_T *pVop_mode, RCMode *rc_mode_ptr)
 		}
 	}else
 	{
-		Qp = pVop_mode->StepI + 2;
+		Qp = pVop_mode->StepI;
 	}
 
 	Qp = mmax(Qp, (pVop_mode->StepI * (100 - RC_MAX_Q_INCREASE) + 99)/100);
@@ -416,7 +450,7 @@ void GetTargetBits(RCMode *rc_mode_ptr, int32 Ec_Q8)
 	}else if (((rc_mode_ptr->B - rc_mode_ptr->Rp + rc_mode_ptr->T)*100) < (RC_SAFETY_MARGIN * rc_mode_ptr->Bs))
 	{
 		// to avoid possible underflow
-		rc_mode_ptr->T = rc_mode_ptr->Rp - rc_mode_ptr->B + ((RC_SAFETY_MARGIN * rc_mode_ptr->Bs)/100);
+		rc_mode_ptr->T = rc_mode_ptr->Rp - rc_mode_ptr->B + (( (RC_SAFETY_MARGIN + 5)* rc_mode_ptr->Bs)/100);
 	}
 
 	// min bits number limitation for quality
@@ -475,7 +509,7 @@ PUBLIC void Mp4Enc_UpdatePVOP_StepSize(ENC_VOP_MODE_T *pVop_mode, RCMode *rc_mod
 	GetTargetBits (rc_mode_ptr, Ec_Q8);
 	
 	// Quantization level calculation
-	dtmp_QN4 = (Ec_Q8 * rc_mode_ptr->X1 >> 10) * (Ec_Q8 * rc_mode_ptr->X1 >> 10) +
+	dtmp_QN4 = ((Ec_Q8 * rc_mode_ptr->X1) >> 10) * ((Ec_Q8 * rc_mode_ptr->X1) >> 10) +
 		((rc_mode_ptr->X2 >> 4) * (Ec_Q8 >> 4) * ((rc_mode_ptr->T - rc_mode_ptr->Hp) >>2));
 
 	// to use last p frame's EC to predict current p frame's EC
@@ -489,10 +523,10 @@ PUBLIC void Mp4Enc_UpdatePVOP_StepSize(ENC_VOP_MODE_T *pVop_mode, RCMode *rc_mod
 
 		utmp = sqrt_simple(utmp);
 
-		tmp = ssign(dtmp_QN4) * utmp;
+		tmp = ssign(dtmp_QN4) * (int32)utmp;
 		
 	//	tmp = sqrt(dtmp_QN4) - (rc_mode_ptr->X1 * Ec_Q8 >> 10);
-		tmp -= (rc_mode_ptr->X1 * Ec_Q8 >> 10);
+		tmp -= ((rc_mode_ptr->X1 * Ec_Q8) >> 10);
 
 		if (tmp != 0)   //to avoid devided by 0
 		{
@@ -502,11 +536,14 @@ PUBLIC void Mp4Enc_UpdatePVOP_StepSize(ENC_VOP_MODE_T *pVop_mode, RCMode *rc_mod
 		{
 			Qc = rc_mode_ptr->Qp;
 		}
-	//	if (rc_mode_ptr->is_pfrm_skipped) //sync from 8810
-	//	{
-	//		Qc = mmax(Qc, rc_mode_ptr->Qp);  //if previous frame is skipped, qp for current frame should >= previous QP
-	//	}
+	
 	}
+	if (rc_mode_ptr->is_pfrm_skipped) //sync from 8810
+	{
+		Qc = mmax(Qc, rc_mode_ptr->Qp);  //if previous frame is skipped, qp for current frame should >= previous QP
+	}
+
+	SCI_TRACE_LOW("%d, rc_mode_ptr->Qc: %d, qp_type: %d, rc_mode_ptr->be_re_enc: %d", __LINE__, rc_mode_ptr->Qc, rc_mode_ptr->Qp_type, rc_mode_ptr->be_re_enc);
 
 	if (rc_mode_ptr->be_re_enc)
 	{
@@ -526,13 +563,31 @@ PUBLIC void Mp4Enc_UpdatePVOP_StepSize(ENC_VOP_MODE_T *pVop_mode, RCMode *rc_mod
 			break;
 		}
 	}
-
-	Qc = mmin((rc_mode_ptr->Qp * (100 + RC_MAX_Q_INCREASE) + 99)/100, Qc); //control variation
+{
+	Qc = mmin((rc_mode_ptr->Qp * (100 + RC_MAX_Q_INCREASE) + 50)/100, Qc); //control variation
 	Qc = mmin(Qc, RC_MAX_QUANT); //clipping
 
-	Qc = mmax((rc_mode_ptr->Qp * (100 - RC_MAX_Q_INCREASE) + 99)/100, Qc); //control variation
+	Qc = mmax((rc_mode_ptr->Qp * (100 - RC_MAX_Q_INCREASE) + 50)/100, Qc); //control variation
 	Qc = mmax(Qc, RC_MIN_QUANT); //clipping
 
+//	Qc = Clip3(rc_mode_ptr->Qp -3, rc_mode_ptr->Qp+rc_mode_ptr->delta_Qp_4Clip, Qc);
+		
+}
+
+	if(rc_mode_ptr->need_to_skip < 0)
+	{
+
+	}
+	else
+	{
+		//rc_mode_ptr->Qp = Qc;
+		Qc = mmin(Qc + rc_mode_ptr->delta_Qp_4IncQc0,rc_mode_ptr->Qp+rc_mode_ptr->delta_Qp_4IncQc1);
+		Qc =  Clip3(RC_MIN_QUANT, RC_MAX_QUANT, Qc );
+	}
+
+    Qc = Clip3(rc_mode_ptr->Qp -3, rc_mode_ptr->Qp+rc_mode_ptr->delta_Qp_4Clip, Qc);
+    rc_mode_ptr->Qp = Qc;
+	rc_mode_ptr->need_to_skip--;
 	pVop_mode->StepP = rc_mode_ptr->Qc = Qc;
 
 	PRINTF("\t QP: %d\n", rc_mode_ptr->Qc);
@@ -551,7 +606,7 @@ PUBLIC void Mp4Enc_UpdateIVOP_StepSize(ENC_VOP_MODE_T *pVop_mode, RCMode * rc_mo
 	{
 		Qp = pVop_mode->StepI;
 		rc_mode_ptr->FirstGOP = FALSE;			
-	//	rc_mode_ptr->Qp = Qp;
+		rc_mode_ptr->Qp = Qp;
 	}else
 	{
 		if (rc_mode_ptr->be_scene_cut)
@@ -567,9 +622,11 @@ PUBLIC void Mp4Enc_UpdateIVOP_StepSize(ENC_VOP_MODE_T *pVop_mode, RCMode * rc_mo
 				Qp = Stepsize_IVOP + 4;
 				break;
 			case 2:
-				Qp = Stepsize_IVOP + 2;
+				Qp = Stepsize_IVOP + 3;
 				break;
 			case 3:
+				Qp = Stepsize_IVOP +2;
+			case 4:
 				Qp = Stepsize_IVOP -2;
 				break;	
 			default:
@@ -583,6 +640,10 @@ PUBLIC void Mp4Enc_UpdateIVOP_StepSize(ENC_VOP_MODE_T *pVop_mode, RCMode * rc_mo
 			}else if(total_bits_cur < ((rc_mode_ptr->Bs * 89) >> 8)) //0.35
 			{
 				Qp = Stepsize_IVOP - 1;
+			}
+			else if(total_bits_cur < (rc_mode_ptr->Bs >>1)) //0.35
+			{
+				Qp = Stepsize_IVOP ;
 			}else if(total_bits_cur < ((rc_mode_ptr->Bs * 153) >> 8)) //0.6
 			{
 				Qp = Stepsize_IVOP + 1;
@@ -591,14 +652,14 @@ PUBLIC void Mp4Enc_UpdateIVOP_StepSize(ENC_VOP_MODE_T *pVop_mode, RCMode * rc_mo
 				Qp = Stepsize_IVOP + 2;
 			}
 
-			Qp = mmax(Qp, (rc_mode_ptr->Qp * (100 - RC_MAX_Q_INCREASE) + 99)/100);
-			Qp = mmin(Qp, (rc_mode_ptr->Qp * (100 + RC_MAX_Q_INCREASE) + 99)/100);
 		}
+		Qp = mmax(Qp, (rc_mode_ptr->Qp * (100 - RC_MAX_Q_INCREASE) + 50)/100);
+		Qp = mmin(Qp, (rc_mode_ptr->Qp * (100 + RC_MAX_Q_INCREASE) + 50)/100);
 	}
 
 	Qp = mmax(Qp, RC_MIN_QP_I);
 	Qp = mmin(Qp, RC_MAX_QP_I);
-
+	rc_mode_ptr->need_to_skip--;
 	pVop_mode->StepI = rc_mode_ptr->Qc = Qp;
 }
 
@@ -624,19 +685,37 @@ PUBLIC void Mp4Enc_AnalyzeEncResult(RCMode *rc_mode_ptr, int32 total_bits_cur, i
 		{
 			rc_mode_ptr->be_re_enc	= TRUE;
 			rc_mode_ptr->Qp_type	= 0; //max qp for IVOP
-		}else if (total_bits_cur > ((205 * rc_mode_ptr->Bs)>>8)) //0.8
+		}else if (total_bits_cur > ((217 * rc_mode_ptr->Bs)>>8)) //0.85
 		{
 			rc_mode_ptr->be_re_enc	= TRUE;
 			rc_mode_ptr->Qp_type	= 1; //QP increased by 4
-		}else if (total_bits_cur > ((166 * rc_mode_ptr->Bs)>>8)) //0.65
+		}else if (total_bits_cur > ((205 * rc_mode_ptr->Bs)>>8)) //0.8
+		{
+			rc_mode_ptr->be_re_enc	= 2;
+			rc_mode_ptr->Qp_type	= 2; //Qp increased by 2
+		}else if (total_bits_cur > ((192 * rc_mode_ptr->Bs)>>8)) //0.75
 		{
 			rc_mode_ptr->be_re_enc	= 1;
-			rc_mode_ptr->Qp_type	= 2; //Qp increased by 2
+			rc_mode_ptr->Qp_type	= 3; //Qp increased by 2
+		}else if (total_bits_cur < rc_mode_ptr->Bs/3) //0.75
+		{
+			rc_mode_ptr->be_re_enc	= 1;
+			rc_mode_ptr->Qp_type	= 4; //Qp increased by 2
 		}
+		
 
 		if (rc_mode_ptr->be_re_enc)
 		{
-			rc_mode_ptr->be_re_enc = (rc_mode_ptr->Qc == RC_MAX_QP_I) ? FALSE : TRUE;
+			//rc_mode_ptr->be_re_enc = (rc_mode_ptr->Qc == RC_MAX_QP_I) ? FALSE : TRUE;
+			if ((((rc_mode_ptr->Qc + 1)*100) <= (rc_mode_ptr->Qp * (RC_MAX_Q_I_INCREASE + 100))) &&
+				(rc_mode_ptr->Qc < RC_MAX_QP_I))
+			{
+				rc_mode_ptr->be_re_enc = 1;
+			}
+			else
+			{
+				rc_mode_ptr->be_re_enc = 0;
+			}
 		}
 	}else if (be_scene_cut)
 	{
@@ -649,7 +728,8 @@ PUBLIC void Mp4Enc_AnalyzeEncResult(RCMode *rc_mode_ptr, int32 total_bits_cur, i
 
 		if ((rc_mode_ptr->B * 100) > (IVOP_SKIP_MARGIN * rc_mode_ptr->Bs))
 		{
-			rc_mode_ptr->be_skip_frame = TRUE;
+//			rc_mode_ptr->be_skip_frame = TRUE;
+			rc_mode_ptr->need_to_skip = (38-rc_mode_ptr->Qp)>>2;
 		}else
 		{
 			rc_mode_ptr->be_re_enc = TRUE;
@@ -659,26 +739,27 @@ PUBLIC void Mp4Enc_AnalyzeEncResult(RCMode *rc_mode_ptr, int32 total_bits_cur, i
 		target_bits = rc_mode_ptr->T;
 		rc_mode_ptr->Ec_actual_Q8 = Ec_Q8;
 
-		if (total_bits_cur < (target_bits/2))
+		if (total_bits_cur < (target_bits*5/8))
 		{
 			//use the new Ec_Q8, and re-encode the frame, or use the actual Ec to compute the Qp
 			if (rc_mode_ptr->B < (rc_mode_ptr->Bs/3))
 			{
-				if (((rc_mode_ptr->Qc -1) * 100) >= (rc_mode_ptr->Qp * (100 - RC_MAX_Q_INCREASE)))
+				if ((((rc_mode_ptr->Qc -1) * 100) >= (rc_mode_ptr->Qp * (100 - RC_MAX_Q_INCREASE))) && (rc_mode_ptr->Qc > RC_MIN_QUANT))
 				{
 					rc_mode_ptr->be_re_enc = TRUE;
 					rc_mode_ptr->Qp_type = (total_bits_cur < (target_bits/3)) ? 0 : 1;
 				}
 			}
-		}else if (total_bits_cur < (target_bits*3/2))
+		}else if (total_bits_cur < (target_bits*11/8))
 		{
 			//nothing to do
 		}else
 		{
-			if ((rc_mode_ptr->B + total_bits_cur) > rc_mode_ptr->Bs)
+			if (((rc_mode_ptr->B + total_bits_cur) > rc_mode_ptr->Bs) && (rc_mode_ptr->B > rc_mode_ptr->Bs/2))
 			{
 				//buffer fullness is high, skip the frame
-				rc_mode_ptr->be_skip_frame = TRUE;
+//				rc_mode_ptr->be_skip_frame = TRUE;
+				rc_mode_ptr->need_to_skip = (38-rc_mode_ptr->Qp)>>2;
 			}else
 			{
 				if (rc_mode_ptr->B > rc_mode_ptr->Bs/4)
@@ -696,10 +777,7 @@ PUBLIC void Mp4Enc_AnalyzeEncResult(RCMode *rc_mode_ptr, int32 total_bits_cur, i
 		}
 	}
 
-	if (rc_mode_ptr->be_skip_frame)
-	{
-		rc_mode_ptr->B -= rc_mode_ptr->Rp;
-	}
+//SCI_TRACE_LOW("%s, %d, rc_mode_ptr->be_re_enc: %d", __FUNCTION__, __LINE__, rc_mode_ptr->be_re_enc);
 
 	if (rc_mode_ptr->be_re_enc || rc_mode_ptr->be_skip_frame)
 	{

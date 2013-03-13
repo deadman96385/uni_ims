@@ -40,7 +40,7 @@ typedef struct
 	int leftPixX;
 	int leftPixY;
 } MEA_FETCH_REF;
-#if 0
+#if 1
 #define MB_NB					256  //250
 
 #define MB_SAD_THRESHOLD		0  //10 
@@ -59,7 +59,7 @@ typedef struct
 #define MAX_MV_X_H263			15 //15
 #define MAX_MV_Y_H263			15 //15
 #define MAX_SAD					0x7FFFFFFF
-#define MAX_SEARCH_CYCLE		9 //7
+#define MAX_SEARCH_CYCLE		7 //7
 #endif
 //#define PREFILTER_EN			
 #define PRED_EN

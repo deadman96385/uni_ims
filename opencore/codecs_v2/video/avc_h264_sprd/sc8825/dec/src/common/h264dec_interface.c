@@ -159,6 +159,12 @@ int H264Dec_GetLastDspFrm(void **pOutput)
 	if (dpb_ptr->delayed_pic_num)
 	{
 		*pOutput = dpb_ptr->delayed_pic[0]->pBufferHeader;
+
+        if(dpb_ptr->delayed_pic[0]->pBufferHeader !=NULL)
+        {
+        	(*VSP_unbindCb)(g_user_data,dpb_ptr->delayed_pic[0]->pBufferHeader);
+            dpb_ptr->delayed_pic[0]->pBufferHeader = NULL;
+        }
 		
 		for(i =0; i < dpb_ptr->delayed_pic_num; i++)
 		{
@@ -303,7 +309,7 @@ PUBLIC MMDecRet H264DecDecode(MMDecInput *dec_input_ptr, MMDecOutput *dec_output
     img_ptr->return_pos = 0;
  	img_ptr->return_pos1 = 0;	
    	img_ptr->return_pos2 = 0;
-		
+	
  	if((dec_input_ptr->expected_IVOP) && (img_ptr->curr_mb_nr == 0))
 	{
 		g_searching_IDR_pic = TRUE;
@@ -419,7 +425,6 @@ PUBLIC MMDecRet H264DecDecode(MMDecInput *dec_input_ptr, MMDecOutput *dec_output
 				}else
 				{
 					memcpy(img_ptr->frame_bistrm_ptr+g_stream_offset, g_nalu_ptr->buf, (((rbsp_len+3)>>2)<<2));						
-				//	SCI_TRACE_LOW("bitstreamimg_ptr->frame_bistrm_ptr+g_stream_offset %x,g_stream_offset%x",img_ptr->frame_bistrm_ptr+g_stream_offset,g_stream_offset);
 				}
 					
 				H264Dec_InitBitstream(/*((void *)H264Dec_ExtraMem_V2P((img_ptr->frame_bistrm_ptr+g_stream_offset), HW_CACHABLE)),*/ rbsp_len);
@@ -479,7 +484,6 @@ MMDecRet H264DecRelease(void)
 	VSP_Delete_CModel();
 #endif
 
-	
 	return MMDEC_OK;
 }
 

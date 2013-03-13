@@ -145,7 +145,14 @@ void itrans_4x4 (int16 *coff, uint8 *pred, int32 width_p, uint8 *rec, int32 widt
 		dst [0 * width_r] = m0; 
 		dst [1 * width_r] = m1;
 		dst [2 * width_r] = m2;
-		dst [3 * width_r] = m3;		
+		dst [3 * width_r] = m3;	
+		
+#if 0 //for debug
+		ref [0 * width_p] = m0;
+		ref [1 * width_p] = m1;
+		ref [2 * width_p] = m2;
+		ref [3 * width_p] = m3;
+#endif
 
 		/*point to next column*/
 		src += 1;

@@ -577,6 +577,16 @@ OMX_ERRORTYPE OpenmaxMpeg4AO::FreeBuffer(
                 // deallocate the BufferCtrlStruct
                 if (OMX_DirOutput == pBaseComponentPort->PortParam.eDir)
                 {
+                    PLATFORM_PRIVATE_LIST *pList = (PLATFORM_PRIVATE_LIST *)pBaseComponentPort->pBuffer[ii]->pPlatformPrivate;
+                    if(pList)
+                    {
+                        PLATFORM_PRIVATE_ENTRY *pEntry = pList->entryList ;
+                        PLATFORM_PRIVATE_PMEM_INFO *pInfo =(PLATFORM_PRIVATE_PMEM_INFO *) pEntry->entry;
+                        delete pList;
+                        delete pEntry;
+                        delete pInfo;
+                    }
+                    
                     if (pBuffer->pOutputPortPrivate)
                     {
                         oscl_free(pBuffer->pOutputPortPrivate);
@@ -1240,7 +1250,7 @@ OMX_ERRORTYPE OpenmaxMpeg4AO::ConstructComponent(OMX_PTR pAppData, OMX_PTR pProx
     if(Mpeg4Decoder_OMX::g_mpeg4_dec_inst_num>=1)
     {
  	OMX_MP4DEC_INFO ("Mpeg4Decoder_OMX more than 1 inst\n");   	
-    	//return OMX_ErrorInsufficientResources;
+    	return OMX_ErrorInsufficientResources;
     }	
     Mpeg4Decoder_OMX::g_mpeg4_dec_inst_num++;	
     //modified by jgdu
@@ -1585,9 +1595,12 @@ void OpenmaxMpeg4AO::DecodeWithoutMarker()
                     iNewInBufferRequired = OMX_TRUE;
                     iEndofStream = OMX_FALSE;
 
-                    ipOutputBuffer->nFlags |= OMX_BUFFERFLAG_EOS;
-                    ReturnOutputBuffer(ipOutputBuffer, pOutPort);
-                    ipOutputBuffer = NULL;
+                    if (NULL != ipOutputBuffer)
+                    {
+                        ipOutputBuffer->nFlags |= OMX_BUFFERFLAG_EOS;
+                        ReturnOutputBuffer(ipOutputBuffer, pOutPort);
+                        ipOutputBuffer = NULL;
+                    }
 
                     PVLOGGER_LOGMSG(PVLOGMSG_INST_HLDBG, iLogger, PVLOGMSG_NOTICE, (0, "OpenmaxMpeg4AO : DecodeWithoutMarker OUT"));
 

@@ -106,7 +106,7 @@ void MP4DecReleaseRefBuffers()
 			}
 		}
 	}
-	if (!vop_mode_ptr->post_filter_en)
+//	if (!vop_mode_ptr->post_filter_en)
 	{
 		vop_mode_ptr->pFrdRefFrame->pDecFrame = NULL;
 	        vop_mode_ptr->pBckRefFrame->pDecFrame = NULL;
@@ -300,6 +300,20 @@ FLV_RE_DEC:
 
 //	if (vop_mode_ptr->VSP_used || vop_mode_ptr->VT_used)
 	{
+    		if(VSP_MPEG4 != vop_mode_ptr->video_std)
+                {
+                    uint8 *pStream = dec_input_ptr->pStream;
+
+    	    	    uint32 first_32bits = (pStream[0]<<24) | (pStream[1]<<16) | (pStream[2]<<8) | (pStream[3]);
+    	            if((first_32bits>>11) == 0x10)
+    	            {
+    	        	if((first_32bits>>10) == 0x20)
+    	            	    vop_mode_ptr->video_std = VSP_ITU_H263;
+    	                else
+    	            	    vop_mode_ptr->video_std = VSP_FLV_V1;
+    	            }
+    	        }
+
 		Mp4Dec_VerifyBitstrm(dec_input_ptr->pStream, dec_input_ptr->dataLen);
 
 		if (vop_mode_ptr->error_flag)
@@ -329,18 +343,6 @@ FLV_RE_DEC:
 		}
 	}else
 	{
-		if(VSP_ITU_H263 == vop_mode_ptr->video_std)
-	    {
-	    	uint32 first_32bits = Mp4Dec_Show32Bits(vop_mode_ptr->bitstrm_ptr);
-	        if((first_32bits>>11) == 0x10)
-	        {
-	        	if((first_32bits>>10) == 0x20)
-	            	vop_mode_ptr->video_std = VSP_ITU_H263;
-	            else
-	            	vop_mode_ptr->video_std = VSP_FLV_V1;
-	        }
-	    }
-
 		if(VSP_ITU_H263 == vop_mode_ptr->video_std)
 		{
 			ret = Mp4Dec_DecH263Header(vop_mode_ptr);

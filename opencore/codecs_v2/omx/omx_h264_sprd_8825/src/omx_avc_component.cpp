@@ -486,6 +486,15 @@ OMX_ERRORTYPE OpenmaxAvcAO::FreeBuffer(
                 // deallocate the BufferCtrlStruct
                 if (OMX_DirOutput == pBaseComponentPort->PortParam.eDir)
                 {
+                    PLATFORM_PRIVATE_LIST *pList = (PLATFORM_PRIVATE_LIST *)pBaseComponentPort->pBuffer[ii]->pPlatformPrivate;
+                    if(pList)
+                    {
+                        PLATFORM_PRIVATE_ENTRY *pEntry = pList->entryList ;
+                        PLATFORM_PRIVATE_PMEM_INFO *pInfo =(PLATFORM_PRIVATE_PMEM_INFO *) pEntry->entry;
+                        delete pList;
+                        delete pEntry;
+                        delete pInfo;
+                    }
                     if (pBuffer->pOutputPortPrivate)
                     {
                         oscl_free(pBuffer->pOutputPortPrivate);
@@ -1168,7 +1177,7 @@ OMX_ERRORTYPE OpenmaxAvcAO::ConstructComponent(OMX_PTR pAppData, OMX_PTR pProxy)
     if(AvcDecoder_OMX::g_h264_dec_inst_num>=1)
     {
  	OMX_H264DEC_ERR ("AvcDecoder_OMX more than 1 inst\n");   	
-    	//return OMX_ErrorInsufficientResources;
+    	return OMX_ErrorInsufficientResources;
     }		
     AvcDecoder_OMX::g_h264_dec_inst_num++;
 	
