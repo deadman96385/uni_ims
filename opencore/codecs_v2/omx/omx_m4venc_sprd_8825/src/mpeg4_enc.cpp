@@ -668,16 +668,19 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
     OMX_U32 intervalms =  (OMX_U32)(iSrcCycleAdaptms);
     OMX_S32 bits_consumed  = 0;
 
-
-
 #if 1
+    OMX_MP4ENC_INFO("Mpeg4Encoder_OMX::Mp4EncodeVideo, iNextModTime=%lld,aInTimeStamp=%lld,iPreSrcDitherms=%lld, interval=%d:%d. \n",
+        iNextModTime,aInTimeStamp/1000,iPreSrcDitherms, 
+        (OMX_U32)((aInTimeStamp-iLastPicTime)/1000),  intervalms);
+#endif
+
+#if 0
     // Auto adapt to get the frame cycle of source.
     if(iCycleAdaptFrmCnt < 10)
     {
         OMX_TICKS curInterval = aInTimeStamp - iLastPicTime;
-
-        if( (curInterval < iCycleAdaptInterval + 3000) &&
-            (curInterval + 3000 >  iCycleAdaptInterval)
+        if( (curInterval < iCycleAdaptInterval + 10000) &&
+            (curInterval + 10000 >  iCycleAdaptInterval)
           )
         {
             iCycleAdaptFrmCnt++;
@@ -690,6 +693,8 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
                 {
                     iSrcCycleAdaptms = i_new_src_cycle_ms;
                 }
+                // else,  the new source frame cycle is less then the target frame cycle, use the target frame cycle 
+                // and discard some of the source frames.
 
                 OMX_MP4ENC_INFO("Mpeg4Encoder_OMX::Mp4EncodeVideo, iSrcCycleAdaptms=%ld",iSrcCycleAdaptms );
             }
@@ -762,11 +767,31 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
         }
         else
         {
-        	if((iSrcWidth & 0xF) || (iSrcHeight & 0xF) ||(!(static_cast<OmxComponentMpeg4EncAO * > (ipOMXComponent))->iNumberOfPmemBuffers)) { /* iSrcWidth or iSrcHeight is not multiple of 16 or buffer allocated not by component*/
+        	if((iSrcWidth & 0xF) || (iSrcHeight & 0xF)) { /* iSrcWidth or iSrcHeight is not multiple of 16 */
                 	CopyToYUVIn(aInBuffer, iSrcWidth, iSrcHeight,((iSrcWidth + 15) >> 4) << 4, ((iSrcHeight + 15) >> 4) << 4);
                 	iVideoIn = iYUVIn;
 			iVideoIn_phy = iYUVIn_phy;					
-        	}else{		
+        	}
+            else if ((!(static_cast<OmxComponentMpeg4EncAO * > (ipOMXComponent))->iNumberOfPmemBuffers)) {  /* buffer allocated not by component*/
+                if (iYUVIn == NULL)
+                {
+                    iYUVInPmemHeap = new MemoryHeapIon(SPRD_ION_DEV,(((((iSrcWidth + 15) >> 4) * ((iSrcHeight + 15) >> 4)) * 3) << 7),MemoryHeapBase::NO_CACHING, ION_HEAP_CARVEOUT_MASK);
+ 	            int fd = iYUVInPmemHeap->getHeapID();
+	            if(fd>=0){
+	 	        int ret,phy_addr, buffer_size;
+	 	        ret = iYUVInPmemHeap->get_phy_addr_from_ion(&phy_addr, &buffer_size);
+	 	        if(ret) OMX_MP4ENC_ERR("iDecExtPmemHeap get_phy_addr_from_ion fail %d",ret);
+		
+		        iYUVIn_phy =(uint8 *)phy_addr;
+		
+	 	        iYUVIn =(uint8 *) iYUVInPmemHeap->base();
+    	                }
+                    }
+                	CopyToYUVIn(aInBuffer, iSrcWidth, iSrcHeight,((iSrcWidth + 15) >> 4) << 4, ((iSrcHeight + 15) >> 4) << 4);
+                	iVideoIn = iYUVIn;
+			iVideoIn_phy = iYUVIn_phy;            
+                }
+            else{
               	iVideoIn = aInBuffer;
 				iVideoIn_phy = (uint8*)(static_cast<OmxComponentMpeg4EncAO * > (ipOMXComponent))->FindPhyAddr((uint32)aInBuffer);				
         	    }
@@ -855,9 +880,9 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
 
             // iPreSrcDitherms:  if pre src is later than the expect time, >0; else, <0.
             iPreSrcDitherms = (aInTimeStamp/1000 - iNextModTime);
-            if( iPreSrcDitherms > (OMX_TICKS)(intervalms>>1) )
+            if( iPreSrcDitherms > (OMX_TICKS)(intervalms>>2) )
             {
-                /* iNextModTime it's too large., setup the flag adjust the modetime.*/
+                /* iNextModTime is too small, set the flag to speed up the modetime.*/
                  iFlagAdjustSrcDither = OMX_TRUE;
             }
             else if( iPreSrcDitherms <= 1 )
@@ -867,19 +892,20 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
 
             if(iFlagAdjustSrcDither > 0)
             {
-#if 1
                 if( iPreSrcDitherms > (OMX_TICKS)(intervalms>>1) )
                 {
-                    // adjust the mode time quickly,  the timestamp of source should be checked.
+                    // speed up the mode time quickly,  the timestamp of source should be checked.
                     // or some frames dropped.
-                    //iPreSrcDitherms = 0;
-                    //iNextModTime = (OMX_TICKS)((OMX_S32)( aInTimeStamp/1000)  + intervalms);
+#if 1
+                    iPreSrcDitherms = 0;
+                    iNextModTime = (OMX_TICKS)((OMX_S32)( aInTimeStamp/1000)  + intervalms);
+#else
                     iNextModTime += (OMX_TICKS)( intervalms + (intervalms>>2) );
+#endif
                 }
                 else
-#endif
                 {
-                    // adjust the src dither slowly. For source dither or  slight frame drop.
+                    // speed up the mode time slowly. For source dither or  slight frame drop.
                     iNextModTime += (OMX_TICKS)(intervalms) + 1; //2
                 }
             }
