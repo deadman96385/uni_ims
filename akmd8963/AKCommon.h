@@ -25,12 +25,12 @@
 #include <string.h>    //memset
 #include <unistd.h>
 #include <stdarg.h>    //va_list
-#include <utils/Log.h> //LOGV
+#include <utils/Log.h> //ALOGV
 #include <errno.h>     //errno
 
 /*** Constant definition ******************************************************/
-#undef LOG_TAG
-#define LOG_TAG "AKMD2"
+#undef ALOG_TAG
+#define ALOG_TAG "AKMD2"
 
 #define DBG_LEVEL0	0	// Critical
 #define DBG_LEVEL1	1	// Notice
@@ -87,7 +87,7 @@
 	  : ((void)0))
 #else
 #define AKMDEBUG(level, format, ...) \
-	LOGD_IF(((level) <= DBG_LEVEL), (format), ##__VA_ARGS__)
+	ALOGD_IF(((level) <= DBG_LEVEL), (format), ##__VA_ARGS__)
 #endif
 #else
 #define AKMDEBUG(level, format, ...)
@@ -109,25 +109,25 @@
 	fprintf(stderr, (format), ##__VA_ARGS__)
 #else
 #define AKMDUMP(format, ...) \
-	LOGD((format), ##__VA_ARGS__)
+	ALOGD((format), ##__VA_ARGS__)
 #endif
 
 /***** Log output ********************************************/
-#ifdef AKM_LOG_ENABLE
-#define AKM_LOG(format, ...)	LOGD((format), ##__VA_ARGS__)
+#ifdef AKM_ALOG_ENABLE
+#define AKM_ALOG(format, ...)	ALOGD((format), ##__VA_ARGS__)
 #else
-#define AKM_LOG(format, ...)
+#define AKM_ALOG(format, ...)
 #endif
 
 /***** Error output *******************************************/
 #define AKMERROR \
 	((g_opmode == 0) \
-	  ? (LOGE("%s:%d Error.", __FUNCTION__, __LINE__)) \
+	  ? (ALOGE("%s:%d Error.", __FUNCTION__, __LINE__)) \
 	  : (fprintf(stderr, "%s:%d Error.\n", __FUNCTION__, __LINE__)))
 
 #define AKMERROR_STR(api) \
 	((g_opmode == 0) \
-	  ? (LOGE("%s:%d %s Error (%s).", \
+	  ? (ALOGE("%s:%d %s Error (%s).", \
 	  		  __FUNCTION__, __LINE__, (api), strerror(errno))) \
 	  : (fprintf(stderr, "%s:%d %s Error (%s).\n", \
 	  		  __FUNCTION__, __LINE__, (api), strerror(errno))))

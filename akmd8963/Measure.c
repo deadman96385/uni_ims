@@ -841,7 +841,7 @@ void MeasureSNGLoop(AK8963PRMS* prms)
 				} else if (ret == AKRET_VNORM_ERROR) {
 					AKMDEBUG(DBG_LEVEL3, "Data normalizeation was failed.\n");*/
 				} else {
-					LOGE("GetMagneticVector has failed (0x%04X).\n", ret);
+					ALOGE("GetMagneticVector has failed (0x%04X).\n", ret);
 				}
 				measuring = 0;
 			}
@@ -978,7 +978,7 @@ int16 GetMagneticVector(
 					&hofl,
 					&cb
 				);
-	AKM_LOG("%s: ST1, HXH&HXL, HYH&HYL, HZH&HZL, ST2,"
+	AKM_ALOG("%s: ST1, HXH&HXL, HYH&HYL, HZH&HZL, ST2,"
 			" hdata[0].u.x, hdata[0].u.y, hdata[0].u.z,"
 			" asax, asay, asaz ="
 			" %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n",

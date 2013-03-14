@@ -102,11 +102,11 @@ int16_t AKD_TxData(
 	char buf[RWBUF_SIZE];
 
 	if (s_fdDev < 0) {
-		LOGE("%s: Device file is not opened.", __FUNCTION__);
+		ALOGE("%s: Device file is not opened.", __FUNCTION__);
 		return AKD_FAIL;
 	}
 	if (numberOfBytesToWrite > (RWBUF_SIZE-2)) {
-		LOGE("%s: Tx size is too large.", __FUNCTION__);
+		ALOGE("%s: Tx size is too large.", __FUNCTION__);
 		return AKD_FAIL;
 	}
 
@@ -155,11 +155,11 @@ int16_t AKD_RxData(
 	memset(data, 0, numberOfBytesToRead);
 
 	if (s_fdDev < 0) {
-		LOGE("%s: Device file is not opened.", __FUNCTION__);
+		ALOGE("%s: Device file is not opened.", __FUNCTION__);
 		return AKD_FAIL;
 	}
 	if (numberOfBytesToRead > (RWBUF_SIZE-1)) {
-		LOGE("%s: Rx size is too large.", __FUNCTION__);
+		ALOGE("%s: Rx size is too large.", __FUNCTION__);
 		return AKD_FAIL;
 	}
 
@@ -192,7 +192,7 @@ int16_t AKD_RxData(
  */
 int16_t AKD_ResetAK8963(void) {
 	if (s_fdDev < 0) {
-		LOGE("Magnetometer is not opened.\n");
+		ALOGE("Magnetometer is not opened.\n");
 		return AKD_FAIL;
 	}
 	if (ioctl(s_fdDev, ECS_IOCTL_RESET, NULL) < 0) {
@@ -214,7 +214,7 @@ int16_t AKD_GetMagneticData(BYTE data[SENSOR_DATA_SIZE])
 	memset(data, 0, SENSOR_DATA_SIZE);
 
 	if (s_fdDev < 0) {
-		LOGE("%s: Device file is not opened.", __FUNCTION__);
+		ALOGE("%s: Device file is not opened.", __FUNCTION__);
 		return AKD_FAIL;
 	}
 
@@ -273,7 +273,7 @@ int AKD_GetCloseStatus(int* status)
 int16_t AKD_SetMode(const BYTE mode)
 {
 	if (s_fdDev < 0) {
-		LOGE("%s: Device file is not opened.", __FUNCTION__);
+		ALOGE("%s: Device file is not opened.", __FUNCTION__);
 		return AKD_FAIL;
 	}
 
@@ -294,7 +294,7 @@ int16_t AKD_SetMode(const BYTE mode)
 int16_t AKD_GetDelay(int64_t delay[AKM_NUM_SENSORS])
 {
 	if (s_fdDev < 0) {
-		LOGE("%s: Device file is not opened.\n", __FUNCTION__);
+		ALOGE("%s: Device file is not opened.\n", __FUNCTION__);
 		return AKD_FAIL;
 	}
 	if (ioctl(s_fdDev, ECS_IOCTL_GET_DELAY, delay) < 0) {
@@ -312,7 +312,7 @@ int16_t AKD_GetLayout(int16_t* layout)
 	char tmp;
 
 	if (s_fdDev < 0) {
-		LOGE("%s: Device file is not opened.", __FUNCTION__);
+		ALOGE("%s: Device file is not opened.", __FUNCTION__);
 		return AKD_FAIL;
 	}
 
@@ -333,7 +333,7 @@ int16_t AKD_GetOutbit(int16_t* outbit)
 	char tmp;
 
 	if (s_fdDev < 0) {
-		LOGE("%s: Device file is not opened.", __FUNCTION__);
+		ALOGE("%s: Device file is not opened.", __FUNCTION__);
 		return AKD_FAIL;
 	}
 
