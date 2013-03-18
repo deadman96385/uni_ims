@@ -1862,7 +1862,28 @@ static void onSimAbsent(void *param)
             setRadioState(channelID, RADIO_STATE_SIM_LOCKED_OR_ABSENT);
         putChannel(channelID);
     }
+    RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,
+                                    NULL, 0);
 }
+
+static void onSimPresent(void *param)
+{
+    int channelID;
+    char prop[10];
+
+    if (sState == RADIO_STATE_SIM_LOCKED_OR_ABSENT) {
+        channelID = getChannel();
+        property_get(RIL_SIM_ABSENT_PROPERTY, prop, "0");
+        if(!strcmp(prop, "1"))
+            at_send_command(ATch_type[channelID], "AT+SPATASSERT=1", NULL);
+        else
+            setRadioState(channelID, RADIO_STATE_SIM_NOT_READY);
+        putChannel(channelID);
+    }
+    RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,
+                                    NULL, 0);
+}
+
 static void sendCallStateChanged(void *param)
 {
     RIL_onUnsolicitedResponse (
@@ -6878,6 +6899,8 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 if (err < 0) goto out;
                 if(value == 1) {
                     RIL_requestTimedCallback (onSimAbsent, NULL, NULL);
+                } else if (value == 100) {
+                    RIL_requestTimedCallback (onSimPresent, NULL, NULL);
                 }
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
                 else if(value == 5) {
