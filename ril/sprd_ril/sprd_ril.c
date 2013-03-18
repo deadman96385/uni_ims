@@ -4349,55 +4349,73 @@ error:
 static void
 onRequest (int request, void *data, size_t datalen, RIL_Token t)
 {
-    ATResponse *p_response;
-    int err;
-    int channelID = -1;
+   ATResponse *p_response;
+   int err;
+   int channelID = -1;
 
-    ALOGD("onRequest: %s sState=%d", requestToString(request), sState);
+   ALOGD("onRequest: %s sState=%d", requestToString(request), sState);
 
 #if defined (RIL_SPRD_EXTENSION)
-    channelID = getChannel();
+   channelID = getChannel();
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-    if(request != RIL_REQUEST_OEM_HOOK_RAW)
-        channelID = getChannel();
+   if(request != RIL_REQUEST_OEM_HOOK_RAW)
+       channelID = getChannel();
 #endif
 
-    /* Ignore all requests except RIL_REQUEST_GET_SIM_STATUS
-     * when RADIO_STATE_UNAVAILABLE.
-     */
-    if (sState == RADIO_STATE_UNAVAILABLE
-            && !(request == RIL_REQUEST_GET_SIM_STATUS
-                || request == RIL_REQUEST_GET_IMEI
-                || request == RIL_REQUEST_GET_IMEISV)
-       ) {
-        RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
-        putChannel(channelID);
-        return;
-    }
+   /* Ignore all requests except RIL_REQUEST_GET_SIM_STATUS
+    * when RADIO_STATE_UNAVAILABLE.
+    */
+   if (sState == RADIO_STATE_UNAVAILABLE    //如果当前radio state为UNAVAILABLE，其他request将被滤掉
+           && !(request == RIL_REQUEST_GET_SIM_STATUS
+               || request == RIL_REQUEST_GET_IMEI
+               || request == RIL_REQUEST_GET_IMEISV
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+               || request == RIL_REQUEST_SIM_IO
+               || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING    //irine_add_for_stk_cmd
+               || request == RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE
+               || request == RIL_REQUEST_STK_SEND_ENVELOPE_COMMAND
+               || request == RIL_REQUEST_GET_SMSC_ADDRESS
+               || request == RIL_REQUEST_SET_SMSC_ADDRESS
+               || request == RIL_REQUEST_USIM_PB_CAPA
+               || request == RIL_REQUEST_GET_PHONEBOOK_STORAGE_INFO
+#endif
+               )
+      ) {
+       RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
+       putChannel(channelID);
+       return;
+   }
 
-    /* Ignore all non-power requests when RADIO_STATE_OFF
-     * (except RIL_REQUEST_GET_SIM_STATUS)
-     */
-    if (sState == RADIO_STATE_OFF
-            && !(request == RIL_REQUEST_RADIO_POWER
+   /* Ignore all non-power requests when RADIO_STATE_OFF
+    * (except RIL_REQUEST_GET_SIM_STATUS)
+    */
+   if (sState == RADIO_STATE_OFF   //如果当前radio state为STATE_OFF，其他request将被滤掉
+           && !(request == RIL_REQUEST_RADIO_POWER
 #if defined (RIL_SPRD_EXTENSION)
-                || request == RIL_REQUEST_SIM_POWER
+               || request == RIL_REQUEST_SIM_POWER
 #endif
-                || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
-                || request == RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE
-                || request == RIL_REQUEST_STK_SEND_ENVELOPE_COMMAND
-                || request == RIL_REQUEST_GET_SIM_STATUS
-                || request == RIL_REQUEST_SIM_IO
-                || request == RIL_REQUEST_SET_SMSC_ADDRESS
-                || request == RIL_REQUEST_GET_SMSC_ADDRESS
-                || request == RIL_REQUEST_BASEBAND_VERSION
-                || request == RIL_REQUEST_GET_IMEI
-                || request == RIL_REQUEST_GET_IMEISV)
-       ) {
-        RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
-        putChannel(channelID);
-        return;
-    }
+               || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
+               || request == RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE
+               || request == RIL_REQUEST_STK_SEND_ENVELOPE_COMMAND
+               || request == RIL_REQUEST_GET_SIM_STATUS
+               || request == RIL_REQUEST_SIM_IO
+               || request == RIL_REQUEST_SET_SMSC_ADDRESS
+               || request == RIL_REQUEST_GET_SMSC_ADDRESS
+               || request == RIL_REQUEST_BASEBAND_VERSION
+               || request == RIL_REQUEST_GET_IMEI
+               || request == RIL_REQUEST_GET_IMEISV
+               || request == RIL_REQUEST_GET_REMAIN_TIMES
+               || request == RIL_REQUEST_ENTER_SIM_PIN
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+               || request == RIL_REQUEST_USIM_PB_CAPA
+               || request == RIL_REQUEST_GET_PHONEBOOK_STORAGE_INFO
+#endif
+               )
+      ) {
+       RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
+       putChannel(channelID);
+       return;
+   }
 
     switch (request) {
         case RIL_REQUEST_BASEBAND_VERSION:
