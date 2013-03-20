@@ -27,6 +27,10 @@
 #include "at_tok.h"
 #include <cutils/properties.h>
 
+#define SYS_IFCONFIG_UP "sys.ifconfig.up"
+#define SYS_IFCONFIG_DOWN "sys.ifconfig.down"
+#define SYS_NO_ARP "sys.data.noarp"
+
 struct ppp_info_struct ppp_info[MAX_PPP_NUM];
 mutex ps_service_mutex;
 
@@ -308,18 +312,18 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
 }
 
 #ifdef CONFIG_VETH
-void ip_hex_to_str(unsigned long in, char *out)
+void ip_hex_to_str(unsigned int in, char *out, int out_size)
 {
     int i;
-    unsigned long mid;
+    unsigned int mid;
     char str[10];
 
     for(i=3; i >= 0; i--) {
         mid = (in & (0xff << 8*i)) >> 8*i;
-        sprintf(str,"%lu", mid);
+        sprintf(str,"%u", mid);
         if(i == 3){
-            strncpy(out, str, sizeof(out));
-            out[sizeof(out)-1] = '\0';
+            strncpy(out, str, out_size);
+            out[out_size-1] = '\0';
         } else {
             strcat(out, str);
         }
@@ -339,6 +343,7 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
     char ip[IP_ADD_SIZE],dns1[IP_ADD_SIZE], dns2[IP_ADD_SIZE];
     char cmd[MAX_CMD * 2];
     char prop[10];
+    char linker[128] = {0};
 
     if (rsp == NULL) {
         PHS_LOGD("leave cvt_ipconf_rsp:AT_RESULT_NG\n");
@@ -369,19 +374,19 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
             if (err < 0) {
                 break;
             }
-            ip_hex_to_str(ip_hex,ip);
+            ip_hex_to_str(ip_hex,ip,sizeof(ip));
             err = at_tok_nexthexint(&input, &dns1_hex);	//dns1
             if (err < 0) {
                 break;
             }
             else if(dns1_hex != 0x0) {
-                ip_hex_to_str(dns1_hex,dns1);
+                ip_hex_to_str(dns1_hex,dns1,sizeof(dns1));
             }
             err = at_tok_nexthexint(&input, &dns2_hex);	//dns2
             if (err < 0) {
                 break;
             } else if(dns2_hex != 0x0) {
-                ip_hex_to_str(dns2_hex,dns2);
+                ip_hex_to_str(dns2_hex,dns2,sizeof(dns2));
             }
             if ((cid <= MAX_PPP_NUM) && (cid >=1)){
                 /*Save ppp info */
@@ -398,11 +403,14 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
                     strlcpy(ppp_info[cid-1].dns2addr,ppp_info[cid-1].userdns2addr,sizeof(ppp_info[cid-1].dns2addr));
                 }
 
-                //sprintf(cmd, "ifconfig veth%d %s netmask 255.255.255.0 up", cid-1,ip);
-                sprintf(cmd, "ifconfig veth%d %s mtu 1400 netmask 255.255.255.255 up", cid-1,ip);
-                system(cmd);
-                sprintf(cmd, "ip link set veth%d arp off", cid-1);
-                system(cmd);
+                /* set property */
+                snprintf(linker, sizeof(linker), "veth%d %s mtu 1400 netmask 255.255.255.255 up", cid-1, ip);
+                property_set(SYS_IFCONFIG_UP, linker);
+                snprintf(linker, sizeof(linker), "link set veth%d arp off", cid-1);
+                property_set(SYS_NO_ARP, linker);
+                /* start data_on */
+                property_set("ctl.start", "data_on");
+
                 sprintf(cmd, "setprop net.veth%d.ip %s", cid-1,ip);
                 system(cmd);
                 if(dns1_hex != 0x0)
@@ -658,6 +666,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
             cgev_str[MAX_AT_CMD_LEN];
     char *at_in_str;
     char prop[10];
+    char linker[64] = {0};
 
     if (req == NULL) {
         return AT_RESULT_NG;
@@ -693,8 +702,12 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
 
 #ifdef CONFIG_VETH
         usleep(200*1000);
-        sprintf(cmd, "ifconfig veth%d %s down", tmp_cid-1, "0.0.0.0");
-        system(cmd);
+        /* set property */
+        snprintf(linker, sizeof(linker), "veth%d %s down", tmp_cid-1, "0.0.0.0");
+        property_set(SYS_IFCONFIG_DOWN, linker);
+        /* start data_off */
+        property_set("ctl.start", "data_off");
+
         sprintf(cmd, "setprop net.veth%d.ip %s", tmp_cid-1,"0.0.0.0");
         system(cmd);
         sprintf(cmd, "setprop net.veth%d.dns1 \"\"", tmp_cid-1);
@@ -925,7 +938,7 @@ int cvt_cgdcont_set_req(AT_CMD_REQ_T * req)
 {
     cmux_t *mux;
     int len, tmp_cid = 0;
-    char *input = req->cmd_str;
+    char *input;
     char at_str[200], ip[30], net[30], ipladdr[30], hcomp[30], dcomp[30];
     char *out;
     int err = 0, ret = 0;
@@ -934,6 +947,7 @@ int cvt_cgdcont_set_req(AT_CMD_REQ_T * req)
     if (req == NULL) {
         return AT_RESULT_NG;
     }
+    input = req->cmd_str;
 
     memset(at_str, 0, 200);
     memset(ip, 0, 30);

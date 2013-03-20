@@ -23,15 +23,12 @@
 #define MONITOR_LOGD(x...) do {} while(0)
 #endif
 
-#define RIL_SIM_POWER_PROPERTY  "ril.sim.power"
-#define RIL_SIM_POWER_PROPERTY1  "ril.sim.power1"
-#define RIL_SIM_POWER_PROPERTY2  "ril.sim.power2"
-#define RIL_ASSERT  "ril.assert"
 #define PROP_PHONE_COUNT  "persist.msms.phone_count"
 #define PHONE_APP   "com.android.phone"
 #define ENG_APP   "/system/bin/engservice"
-#define NVITEMD_APP   "/system/bin/nvitemd"
 #define PROP_TTYDEV  "persist.ttydev"
+#define PHONE_APP_PROP  "sys.phone.app"
+
 static char ttydev[12];
 static int ttydev_fd;
 
@@ -53,27 +50,24 @@ static int get_task_pid(char *name)
             int fd, ret;
             sprintf(cmdline, "/proc/%d/cmdline", pid);
             fd = open(cmdline, O_RDONLY);
-            if (fd <= 0) continue;
+            if (fd < 0) continue;
             ret = read(fd, cmdline, 1023);
             close(fd);
             if (ret < 0) ret = 0;
             cmdline[ret] = 0;
-            if (strcmp(name, cmdline) == 0)
-            return pid;
+            if (strcmp(name, cmdline) == 0) {
+                closedir(d);
+                return pid;
+            }
         }
     }
+    closedir(d);
     return -1;
 }
 
+
 static int kill_nvitemd(void)
 {
-    pid_t pid;
-
-    pid = get_task_pid(NVITEMD_APP);
-    MONITOR_LOGD("restart %s (%d)!\n", NVITEMD_APP, pid);
-    if (pid > 0)
-        kill(pid, SIGTERM);
-
     property_set("ctl.stop", "nvitemd");
 
     return 0;
@@ -135,19 +129,10 @@ static int kill_phser()
 void assert_handler(int sig_num)
 {
     pid_t pid;
-    int status;
+    char pid_str[32] = {0};
 
-    property_set(RIL_ASSERT, "1");
-    if(s_multiSimMode == 3) {
-        property_set(RIL_SIM_POWER_PROPERTY, "0");
-        property_set(RIL_SIM_POWER_PROPERTY1, "0");
-        property_set(RIL_SIM_POWER_PROPERTY2, "0");
-    } else if(s_multiSimMode == 2) {
-        property_set(RIL_SIM_POWER_PROPERTY, "0");
-        property_set(RIL_SIM_POWER_PROPERTY1, "0");
-    } else {
-        property_set(RIL_SIM_POWER_PROPERTY, "0");
-    }
+    /* kill mediaserver */
+    property_set("ctl.stop", "mediaserver");
 
     kill_nvitemd();
 
@@ -164,8 +149,11 @@ void assert_handler(int sig_num)
     /*kill com.android.phone*/
     pid = get_task_pid(PHONE_APP);
     MONITOR_LOGD("restart %s (%d)!\n", PHONE_APP, pid);
-    if (pid > 0)
-        kill(pid, SIGTERM);
+    if (pid > 0) {
+        snprintf(pid_str, sizeof(pid_str), "%d", pid);
+        property_set(PHONE_APP_PROP, pid_str);
+        property_set("ctl.start", "kill_phone");
+    }
 }
 
 void reset_handler(int sig_num)
@@ -198,6 +186,9 @@ void reset_handler(int sig_num)
     sleep(1);
 
     start_engservice();
+
+    /* start mediaserver */
+    property_set("ctl.start", "mediaserver");
 
     sleep(2);
 
