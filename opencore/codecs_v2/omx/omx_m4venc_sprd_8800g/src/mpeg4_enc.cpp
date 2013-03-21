@@ -847,15 +847,14 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
     //iLogCount++;
 #endif
 
-
-#if 1
+#if 0
     // Auto adapt to get the frame cycle of source.
     if(iCycleAdaptFrmCnt < 10)
     {
         OMX_TICKS curInterval = aInTimeStamp - iLastPicTime;
 
-        if( (curInterval < iCycleAdaptInterval + 3000) &&
-            (curInterval + 3000 >  iCycleAdaptInterval)
+        if( (curInterval < iCycleAdaptInterval + 10000) &&
+            (curInterval + 10000 >  iCycleAdaptInterval)
           )
         {
             iCycleAdaptFrmCnt++;
@@ -868,6 +867,8 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
                 {
                     iSrcCycleAdaptms = i_new_src_cycle_ms;
                 }
+                // else,  the new source frame cycle is less then the target frame cycle, use the target frame cycle 
+                // and discard some of the source frames.
 
                 SCI_TRACE_LOW("Mpeg4Encoder_OMX::Mp4EncodeVideo, iSrcCycleAdaptms=%ld",iSrcCycleAdaptms );
             }
@@ -1049,9 +1050,9 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
 
             // iPreSrcDitherms:  if pre src is later than the expect time, >0; else, <0.
             iPreSrcDitherms = (aInTimeStamp/1000 - iNextModTime);
-            if( iPreSrcDitherms > (OMX_TICKS)(intervalms>>1) )
+            if( iPreSrcDitherms > (OMX_TICKS)(intervalms>>2) )
             {
-                /* iNextModTime it's too large., setup the flag adjust the modetime.*/
+                /* iNextModTime is too small, set the flag to speed up the modetime.*/
                  iFlagAdjustSrcDither = OMX_TRUE;
             }
             else if( iPreSrcDitherms <= 1 )
@@ -1061,24 +1062,26 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
 
             if(iFlagAdjustSrcDither > 0)
             {
-#if 1
                 if( iPreSrcDitherms > (OMX_TICKS)(intervalms>>1) )
                 {
-                    // adjust the mode time quickly,  the timestamp of source should be checked.
+                    // speed up the mode time quickly,  the timestamp of source should be checked.
                     // or some frames dropped.
-                    //iPreSrcDitherms = 0;
-                    //iNextModTime = (OMX_TICKS)((OMX_S32)( aInTimeStamp/1000)  + intervalms);
+#if 1
+                    iPreSrcDitherms = 0;
+                    iNextModTime = (OMX_TICKS)((OMX_S32)( aInTimeStamp/1000)  + intervalms);
+#else
                     iNextModTime += (OMX_TICKS)( intervalms + (intervalms>>2) );
+#endif
                 }
                 else
-#endif
                 {
-                    // adjust the src dither slowly. For source dither or  slight frame drop.
+                    // speed up the mode time slowly. For source dither or  slight frame drop.
                     iNextModTime += (OMX_TICKS)(intervalms) + 1; //2
                 }
             }
             else
             {
+                 // this is time in milliseconds
                 iNextModTime += (OMX_TICKS)(intervalms);
             }
 
