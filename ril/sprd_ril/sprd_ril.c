@@ -4382,6 +4382,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             && !(request == RIL_REQUEST_RADIO_POWER
 #if defined (RIL_SPRD_EXTENSION)
                 || request == RIL_REQUEST_SIM_POWER
+                || request == RIL_REQUEST_GET_REMAIN_TIMES
 #endif
                 || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
                 || request == RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE
@@ -4391,6 +4392,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SET_SMSC_ADDRESS
                 || request == RIL_REQUEST_GET_SMSC_ADDRESS
                 || request == RIL_REQUEST_BASEBAND_VERSION
+                || request == RIL_REQUEST_ENTER_SIM_PIN
                 || request == RIL_REQUEST_GET_IMEI
                 || request == RIL_REQUEST_GET_IMEISV)
        ) {
