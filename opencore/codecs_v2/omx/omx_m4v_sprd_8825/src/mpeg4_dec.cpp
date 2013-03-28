@@ -62,6 +62,7 @@ static const char* const fn_es = "/data/video/input.mpeg4";
 #include "mmcodec.h"
 #include "mpeg4dec.h"
 #include "mp4_basic.h"
+#include "ion_sprd.h"
 // from m4v_config_parser.h
 OSCL_IMPORT_REF int16 iGetM4VConfigInfo(uint8 *buffer, int32 length, int32 *width, int32 *height, int32 *, int32 *);
 
@@ -715,12 +716,17 @@ int Mpeg4Decoder_OMX::g_mpeg4_dec_inst_num = 0;
 
 int Mpeg4Decoder_OMX::FlushCache_OMX (void* aUserData,int* vaddr,int* paddr,int size)
 {
+#if (ION_DRIVER_VERSION == 1)
+    //for bug#134992 : in kernel 3.4 , ION_DRIVER_VERSION == 1
+    return 0; 
+#else 
     OMX_MP4DEC_DEBUG ("%s: vaddr: 0x%x, paddr: 0x%x, size: 0x%x \n",__FUNCTION__, vaddr,paddr,size);
 
     Mpeg4Decoder_OMX* pMpeg4Decoder_OMX = (Mpeg4Decoder_OMX*)aUserData;
     int ret = pMpeg4Decoder_OMX->iCMDbufferPmemHeap->flush_ion_buffer((void *)vaddr,(void* )paddr,size);
 
     return ret;
+#endif
 }
 
 OMX_S32 Mpeg4Decoder_OMX::InitializeVideoDecode(

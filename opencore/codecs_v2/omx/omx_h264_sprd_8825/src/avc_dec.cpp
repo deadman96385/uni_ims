@@ -51,6 +51,7 @@ static const char* const fn_es = "/data/video/input.h264";
 #include "mmcodec.h"
 #include "h264dec.h"
 #include "video_common.h"
+#include "ion_sprd.h"
 using namespace android;
  
 static int VSP_bind_cb(void *userdata, void *pHeader)
@@ -99,12 +100,17 @@ int AvcDecoder_OMX::g_h264_dec_inst_num = 0;
 
 int AvcDecoder_OMX::FlushCache_OMX(void* aUserData,int* vaddr,int* paddr,int size)
 {
+#if (ION_DRIVER_VERSION == 1)
+    //for bug#134992 : in kernel 3.4 , ION_DRIVER_VERSION == 1
+    return 0; 
+#else 
     OMX_H264DEC_DEBUG ("%s: vaddr: 0x%x, paddr: 0x%x, size: 0x%x \n",__FUNCTION__, vaddr,paddr,size);
 
     AvcDecoder_OMX* pAvcDecoder_OMX = (AvcDecoder_OMX*)aUserData;
     int ret = pAvcDecoder_OMX->iCMDbufferPmemHeap->flush_ion_buffer((void *)vaddr,(void* )paddr,size);
 
     return ret;
+#endif
 }
 
 int AvcDecoder_OMX::ActivateSPS_OMX(void* aUserData, uint width,uint height, uint aNumBuffers)
