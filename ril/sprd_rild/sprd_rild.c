@@ -35,6 +35,7 @@
 #define LIB_PATH_PROPERTY   "rild.libpath"
 #define LIB_ARGS_PROPERTY   "rild.libargs"
 #define MAX_LIB_ARGS        16
+#define SIM_MODE_PROPERTY  "persist.msms.phone_count"
 
 static void usage(const char *argv0)
 {
@@ -108,6 +109,8 @@ int main(int argc, char **argv)
     int i, rc, fd;
     int califlag = 0;
     char phoneCount[5];
+    int simMode;
+    int current_sim;
 
     memset(cmdline, 0, 1024);
     fd = open("/proc/cmdline", O_RDONLY);
@@ -123,6 +126,28 @@ int main(int argc, char **argv)
     if(califlag == 1) {
     	ALOGD("RIL: Calibration mode,RIL goto sleep!\n");
     	goto done;
+    }
+
+    if(0 == property_get(SIM_MODE_PROPERTY, phoneCount, "1")) {
+        simMode = 1;
+    } else {
+        if(!strcmp(phoneCount, "3"))  //3sim mode
+            simMode = 3;
+        else if(!strcmp(phoneCount, "2"))  //2sim mode
+            simMode = 2;
+        else
+            simMode = 1;  //1sim mode
+    }
+
+    current_sim = atoi(argv[5]);  //indicate current is which sim
+    if(simMode == 3) {
+        if(current_sim == 0) {  //3sim: the first start the second & third rild
+            property_set("ctl.start", "ril-daemon1");
+            property_set("ctl.start", "ril-daemon2");
+        }
+    } else if(simMode == 2) {
+        if(current_sim == 0)  //2sim: the first start the second rild
+            property_set("ctl.start", "ril-daemon1");
     }
 
     for (i = 1; i < argc ;) {

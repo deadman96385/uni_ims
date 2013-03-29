@@ -25,7 +25,6 @@
 
 #define PROP_PHONE_COUNT  "persist.msms.phone_count"
 #define PHONE_APP   "com.android.phone"
-#define ENG_APP   "/system/bin/engservice"
 #define PROP_TTYDEV  "persist.ttydev"
 #define PHONE_APP_PROP  "sys.phone.app"
 
@@ -82,13 +81,7 @@ static int start_nvitemd(void)
 
 static int kill_engservice(void)
 {
-    pid_t pid;
-
-    pid = get_task_pid(ENG_APP);
-    MONITOR_LOGD("restart %s (%d)!\n", ENG_APP, pid);
-    if (pid > 0)
-        kill(pid, SIGTERM);
-
+    property_set("ctl.stop", "engservice");
     property_set("ctl.stop", "engmodemclient");
     property_set("ctl.stop", "engpcclient");
 
@@ -260,7 +253,7 @@ int main(int argc, char **argv)
     start_phser();
 
     start_engservice();
-    
+
     sleep(1);
 
     start_nvitemd();
