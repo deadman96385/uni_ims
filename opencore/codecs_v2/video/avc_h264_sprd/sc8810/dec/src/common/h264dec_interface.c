@@ -109,9 +109,15 @@ void H264Dec_ReleaseRefBuffers()
 			}
 
 			dpb_ptr->delayed_pic[i] = NULL;
+                        dpb_ptr->delayed_pic_num --;
 		}
 		H264Dec_flush_dpb(dpb_ptr);
 	}
+    
+    if( 0 != dpb_ptr->delayed_pic_num )
+    {
+        SCI_TRACE_LOW("H264Dec_ReleaseRefBuffers delayed_pic_num is %d\n", dpb_ptr->delayed_pic_num);
+    }
 
 	for (i = 0; i < 16; i++)
 	{

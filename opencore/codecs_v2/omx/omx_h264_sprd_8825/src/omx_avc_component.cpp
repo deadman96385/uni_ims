@@ -1462,9 +1462,6 @@ void OpenmaxAvcAO::pop_output_buffer_from_queue(OMX_BUFFERHEADERTYPE *pTargetBuf
 	    else
 	    	Queue(pOutputQueue, (void*)pOutputBuffer);	
     	}	
-    }else if(pBCTRL->iRefCount == 0)
-    {
-    	iNumAvailableOutputBuffers++;
     }
 }
 
@@ -2307,38 +2304,6 @@ void OpenmaxAvcAO::ResetComponent()
     // reset decoder
     if (ipAvcDec)
     {
-#if 1
-        OMX_BOOL status;
-        QueueType *pOutputQueue = GetOutputQueue();
-        BufferCtrlStruct *pBCTRL;
-
-        // flush output buffer
-        do
-        {
-            ipOutputBufferForRendering = NULL;
-            status = ipAvcDec->FlushOutput_OMX(&ipOutputBufferForRendering);
-            OMX_H264DEC_INFO("%s, flush, status=%d, buf=%x\n", __FUNCTION__, (int)status, ipOutputBufferForRendering);
-
-            if ( (OMX_FALSE != status) && (ipOutputBufferForRendering) )
-            {
-                // this is the case where Flush succeeded (i.e. there is one output buffer left)
-                pBCTRL = (BufferCtrlStruct *)ipOutputBufferForRendering->pOutputPortPrivate;
-                if ( pBCTRL->iRefCount == 0 )
-                {
-                    // if a buffer's ref count is 0 - it means that it is available.
-                    iNumAvailableOutputBuffers++;
-
-                    if(OMX_FALSE == pBCTRL->iIsBufferInComponentQueue)
-                    {
-                        // push back the buffer to queue.
-                        Queue(pOutputQueue,(void *)ipOutputBufferForRendering);
-                        pBCTRL->iIsBufferInComponentQueue = OMX_TRUE;
-                    }
-                }
-            }
-        }while(ipOutputBufferForRendering);
-#endif
-
         ipAvcDec->ResetDecoder();
 
         RunIfNotReady();
@@ -2349,38 +2314,6 @@ void OpenmaxAvcAO::ReleaseReferenceBuffers()
 {
     if (ipAvcDec)
     {
-#if 1
-        OMX_BOOL status;
-        QueueType *pOutputQueue = GetOutputQueue();
-        BufferCtrlStruct *pBCTRL;
-
-        // flush output buffer
-        do
-        {
-            ipOutputBufferForRendering = NULL;
-            status = ipAvcDec->FlushOutput_OMX(&ipOutputBufferForRendering);
-            OMX_H264DEC_INFO("%s, flush, status=%d, buf=%x\n", __FUNCTION__, (int)status, ipOutputBufferForRendering);
-
-            if ( (OMX_FALSE != status) && (ipOutputBufferForRendering) )
-            {
-                // this is the case where Flush succeeded (i.e. there is one output buffer left)
-                pBCTRL = (BufferCtrlStruct *)ipOutputBufferForRendering->pOutputPortPrivate;
-                if ( pBCTRL->iRefCount == 0 )
-                {
-                    // if a buffer's ref count is 0 - it means that it is available.
-                    iNumAvailableOutputBuffers++;
-
-                    if(OMX_FALSE == pBCTRL->iIsBufferInComponentQueue)
-                    {
-                        // push back the buffer to queue.
-                        Queue(pOutputQueue,(void *)ipOutputBufferForRendering);
-                        pBCTRL->iIsBufferInComponentQueue = OMX_TRUE;
-                    }
-                }
-            }
-        }while(ipOutputBufferForRendering);
-#endif
-
         ipAvcDec->ReleaseReferenceBuffers();
 
         RunIfNotReady();
