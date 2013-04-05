@@ -335,112 +335,7 @@ static int getPDP(void)
 
 #if 0
 #define WRITE_PPP_OPTION(option) write(fd, option, strlen(option))
-#endif
-
-static void wait4android_audio_ready(const char *prefix)
-{
-#if 1
-    char buf[128];
-    static int android_modem_mode = -1;
-    static int ril_audio_ipc_0 = -1, ril_audio_ipc_1 = -1;
-    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-    struct timeval tv;
-    int retval;
-    fd_set rfds;
-#define RIL_AUDIO_MODEM_IPC_TIMEOUT   (10*1000) /* 10 seconds */
-    int do_ril_sync = 1;
-    ALOGW("< %s > wait4android_audio_ready start.", prefix);
-    pthread_mutex_lock(&lock);
-    if (android_modem_mode < 0) android_modem_mode = open("/sys/class/modem/mode", O_RDWR);
-    if (android_modem_mode >= 0) {
-        do {
-			buf[0] = -1;
-            lseek(android_modem_mode, 0, SEEK_SET);
-            read(android_modem_mode, buf, sizeof(buf) - 1);
-            // if (strncmp(buf, "waiting", 7)) break;
-			if (strtol(buf, NULL, 10) != 4/* AudioSystem::MODE_WAITING */) break;
-            ALOGW("\n\n\n\n!!!!!!!!!! My God !!! your speed is so quick !!!!!!!!!!\n\n\n\n");
-            usleep(100*1000);
-        } while (1);
-        if ((strncmp(buf, "incall", 6) == 0) &&
-                ((strncmp(prefix, "ATD", 3) == 0) || (strncmp(prefix, "ATA", 3) == 0))) do_ril_sync = 0;
-        ALOGW("1111111111111111 %s %s 1111111111111111", buf, prefix);
-    } else ALOGW("< %s > Failed to open /sys/class/modem/mode", prefix);
-    if (do_ril_sync) {
-        if (ril_audio_ipc_0 < 0) ril_audio_ipc_0 = open("/dev/pipe/ril.audio.0", O_RDWR);
-        if (ril_audio_ipc_1 < 0) ril_audio_ipc_1 = open("/dev/pipe/ril.audio.1", O_RDWR);
-        if (ril_audio_ipc_0 >= 0 && ril_audio_ipc_1 >= 0) {
-            ALOGW("< %s > write ril ipc to /dev/pipe/ril.audio.0", prefix);
-            write(ril_audio_ipc_0, "ril->audio : sync start", 24);
-            FD_ZERO(&rfds);
-            FD_SET(ril_audio_ipc_1, &rfds);
-            tv.tv_sec = RIL_AUDIO_MODEM_IPC_TIMEOUT / 1000;
-            tv.tv_usec = (RIL_AUDIO_MODEM_IPC_TIMEOUT % 1000) * 1000;
-            retval = select(ril_audio_ipc_1 + 1, &rfds, NULL, NULL, &tv);
-            if (retval == -1) {
-                ALOGW("================== [ BUG pipe error ] ==================");
-            } else if (retval) {
-                ALOGW("< %s > read audio ipc from /dev/pipe/ril.audio.1", prefix);
-                read(ril_audio_ipc_1, buf, sizeof(buf) - 1);
-                ALOGW("< %s > %s", buf, prefix);
-            } else {
-                ALOGW("================== [ ril pipe %dms timeout, so force passed ] ==================", RIL_AUDIO_MODEM_IPC_TIMEOUT);
-            }
-        } else {
-            ALOGW("< %s > Failed to open /dev/pipe/ril.audio.0 & /dev/pipe/ril.audio.1", prefix);
-        }
-    } else {
-        ALOGW("< %s > you are ATD or ATA another call, ignore ril <-> audio sync signal", prefix);
-    }
-    pthread_mutex_unlock(&lock);
-    ALOGW("< %s > wait4android_audio_ready done.", prefix);
-#else
-    char buf[16];
-    int android_fd;
-    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-
-    android_fd = open("/sys/class/modem/mode", O_RDWR);
-    pthread_mutex_lock(&lock);
-    if (android_fd >= 0) {
-        read(android_fd, buf, sizeof(buf) - 1);
-        buf[sizeof(buf) - 1] = 0;
-        close(android_fd);
-        if (strncmp(buf, "ringtone", 8) == 0) {
-            /* in ringtone, we should do some sync with alsa */
-            ALOGW("!!! syncing with android audio !!!");
-            property_set("ril.modem.audio.controling", "1");
-            usleep(1000);
-            for (;;) {
-                property_get("ril.modem.audio.controling", buf, "1");
-                if (buf[0] == '0') {
-                    ALOGW("--- synced ---");
-                    break;
-                }
-                ALOGW("--- syncing ---");
-                usleep(120*1000);
-            }
-        }
-    }
-    pthread_mutex_unlock(&lock);
-#endif
-}
-
-static void wait4modem_audio_release(const char *prefix)
-{
-    static int ril_audio_ipc_2 = -1;
-    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-    ALOGW("< %s > wait4modem_audio_release start.", prefix);
-    pthread_mutex_lock(&lock);
-    if (ril_audio_ipc_2 < 0) ril_audio_ipc_2 = open("/dev/pipe/ril.audio.2", O_RDWR);
-    if (ril_audio_ipc_2 >= 0) {
-        ALOGW("< %s > write ril ipc to /dev/pipe/ril.audio.2", prefix);
-        write(ril_audio_ipc_2, "ril->audio : modem has released audio codec", 44);
-    } else {
-        ALOGW("< %s > Failed to open /dev/pipe/ril.audio.2", prefix);
-    }
-    pthread_mutex_unlock(&lock);
-    ALOGW("< %s > wait4modem_audio_release done.", prefix);
-}
+#endif  
 
 static void process_calls(int _calls)
 {
@@ -1995,7 +1890,7 @@ static void requestDial(int channelID, void *data, size_t datalen, RIL_Token t)
     if (s_isstkcall == 1) {
         ALOGD(" setup STK call ");
         s_isstkcall = 0;
-        wait4android_audio_ready("ATD");
+//      wait4android_audio_ready("ATD");
         err = at_send_command(ATch_type[channelID], "AT+SPUSATCALLSETUP=1", NULL);
         if (err != 0) goto error;
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
@@ -2015,7 +1910,7 @@ static void requestDial(int channelID, void *data, size_t datalen, RIL_Token t)
         cmd = NULL;
         goto error;
     }
-    wait4android_audio_ready("ATD");
+//  wait4android_audio_ready("ATD");
     err = at_send_command(ATch_type[channelID], cmd, NULL);
     free(cmd);
     if (err != 0) goto error;
@@ -2055,7 +1950,7 @@ static void requestEccDial(int channelID, void *data, size_t datalen, RIL_Token 
         cmd = NULL;
         goto error;
     }
-    wait4android_audio_ready("ATD");
+//  wait4android_audio_ready("ATD");
     err = at_send_command(ATch_type[channelID], cmd, NULL);
     free(cmd);
     if (err != 0) goto error;
@@ -3609,7 +3504,7 @@ static void requestVideoPhoneDial(int channelID, void *data, size_t datalen, RIL
         return;
     }
 
-    wait4android_audio_ready("ATD_VIDEO");
+//  wait4android_audio_ready("ATD_VIDEO");
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     free(cmd);
     if (err < 0 || p_response->success == 0) {
@@ -4513,7 +4408,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         case RIL_REQUEST_ANSWER:
             p_response = NULL;
-            wait4android_audio_ready("ATA");
+//          wait4android_audio_ready("ATA");
             err = at_send_command(ATch_type[channelID], "ATA", &p_response);
             if (err < 0 || p_response->success == 0) {
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -5624,7 +5519,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_VIDEOPHONE_ANSWER:
             {
                 p_response = NULL;
-                wait4android_audio_ready("ATA_VIDEO");
+//              wait4android_audio_ready("ATA_VIDEO");
 #ifdef NEW_AT
                 err = at_send_command(ATch_type[channelID], "ATA", &p_response);
 #else
