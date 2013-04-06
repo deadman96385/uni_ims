@@ -1239,7 +1239,7 @@ void OmxComponentMpeg4EncAO::ProcessData()
 
 
             //Chk whether output data has been generated or not
-            if (OutputLength > 0)
+//            if (OutputLength > 0)
             {
                 //offset not required in our case, set it to zero
                 ipOutputBuffer->nOffset = 0;
@@ -1323,7 +1323,8 @@ void OmxComponentMpeg4EncAO::ProcessData()
         }
 
         //Send the output buffer back after decode
-        if ((ipOutputBuffer->nFilledLen > 0) && (OMX_FALSE == iNewOutBufRequired))
+//        if ((ipOutputBuffer->nFilledLen > 0) && (OMX_FALSE == iNewOutBufRequired))
+        if( OMX_FALSE == iNewOutBufRequired )
         {
             //Attach the end of frame flag while sending out the last piece of output buffer
             ipOutputBuffer->nFlags |= OMX_BUFFERFLAG_ENDOFFRAME;
