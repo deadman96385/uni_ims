@@ -3092,10 +3092,11 @@ static int responseDSCI(Parcel &p, void *response, size_t responselen) {
     p.writeInt32(p_cur->num_type);
     p.writeInt32(p_cur->bs_type);
     p.writeInt32(p_cur->cause);
+    p.writeInt32(p_cur->location);
 
     startResponse;
-    appendPrintBuf("%sstatus=%d, type=%s,number=%s,cause=%d", printBuf,
-        p_cur->stat,(p_cur->type==0)?"voice":"video", p_cur->number, p_cur->cause);
+    appendPrintBuf("%sstatus=%d, type=%s,number=%s,cause=%d,location=%d", printBuf,
+        p_cur->stat,(p_cur->type==0)?"voice":"video", p_cur->number, p_cur->cause, p_cur->location);
     closeResponse;
 
     return 0;

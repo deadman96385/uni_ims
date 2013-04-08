@@ -7313,10 +7313,23 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                     ALOGD("%s fail", s);
                     goto out;
                 }
-                ALOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d",
-                        response->id, response->id, response->stat, response->type, response->mpty, response->number,
-                        response->num_type, response->bs_type, response->cause);
-                RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DSCI, response, sizeof(RIL_VideoPhone_DSCI));
+                if (at_tok_hasmore(&tmp)) {
+                    err = at_tok_nextint(&tmp, &response->location);
+                    if (err < 0) {
+                        ALOGD("%s fail", s);
+                        goto out;
+                    }
+                    ALOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d, location: %d",
+                            response->id, response->id, response->stat, response->type, response->mpty, response->number,
+                            response->num_type, response->bs_type, response->cause, response->location);
+                    RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DSCI, response, sizeof(RIL_VideoPhone_DSCI));
+                } else {
+                    response->location = 0;
+                    ALOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d",
+                            response->id, response->id, response->stat, response->type, response->mpty, response->number,
+                            response->num_type, response->bs_type, response->cause);
+                    RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DSCI, response, sizeof(RIL_VideoPhone_DSCI));
+                }
             }
 #endif
         }

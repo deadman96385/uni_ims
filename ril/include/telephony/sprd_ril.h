@@ -1177,6 +1177,7 @@ typedef struct {
    int num_type;
    int bs_type;
    int cause;
+   int location; // if  cause = 57 and location <= 2, it mean current sim hasn't start vt service
 } RIL_VideoPhone_DSCI;
 
 typedef struct {
