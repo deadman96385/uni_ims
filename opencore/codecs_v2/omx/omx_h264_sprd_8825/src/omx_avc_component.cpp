@@ -1174,12 +1174,12 @@ OMX_ERRORTYPE OpenmaxAvcAO::ConstructComponent(OMX_PTR pAppData, OMX_PTR pProxy)
         ipAvcDec = NULL;
     }
 
-    if(AvcDecoder_OMX::g_h264_dec_inst_num>=1)
+    AvcDecoder_OMX::g_h264_dec_inst_num++;
+    if(AvcDecoder_OMX::g_h264_dec_inst_num>1)
     {
  	OMX_H264DEC_ERR ("AvcDecoder_OMX more than 1 inst\n");   	
     	return OMX_ErrorInsufficientResources;
     }		
-    AvcDecoder_OMX::g_h264_dec_inst_num++;
 	
     ipAvcDec = OSCL_NEW(AvcDecoder_OMX, (this));
 

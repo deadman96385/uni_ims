@@ -1247,12 +1247,12 @@ OMX_ERRORTYPE OpenmaxMpeg4AO::ConstructComponent(OMX_PTR pAppData, OMX_PTR pProx
         ipMpegDecoderObject = NULL;
     }
     ipMpegDecoderObject = OSCL_NEW(Mpeg4Decoder_OMX, ((OmxComponentBase*)this));
-    if(Mpeg4Decoder_OMX::g_mpeg4_dec_inst_num>=1)
+    Mpeg4Decoder_OMX::g_mpeg4_dec_inst_num++;	
+    if(Mpeg4Decoder_OMX::g_mpeg4_dec_inst_num>1)
     {
  	OMX_MP4DEC_INFO ("Mpeg4Decoder_OMX more than 1 inst\n");   	
     	return OMX_ErrorInsufficientResources;
     }	
-    Mpeg4Decoder_OMX::g_mpeg4_dec_inst_num++;	
     //modified by jgdu
     //oscl_memset(&(ipMpegDecoderObject->VideoCtrl), 0, sizeof(VideoDecControls));
 
