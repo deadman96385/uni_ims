@@ -339,7 +339,7 @@ void Mp4Dec_H263IqIntraBlock(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mod
 	{
 	        int32 start_pos = 0;
             
-	        if (VSP_MPEG4 == vop_mode_ptr->video_std)
+	        if (0 == nonCoeffPos[0])
                 {
                         start_pos = 1;
                 }
