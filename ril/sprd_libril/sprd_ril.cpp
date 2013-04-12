@@ -543,16 +543,13 @@ dispatchString (Parcel& p, RequestInfo *pRI) {
     printRequest(pRI->token, pRI->pCI->requestNumber);
 
     s_callbacks.onRequest(pRI->pCI->requestNumber, string8,
-                       sizeof(char *), pRI);
+                       strlen(string8)+1, pRI);
 
 #ifdef MEMSET_FREED
     memsetString(string8);
 #endif
 
     free(string8);
-    return;
-invalid:
-    invalidCommandBlock(pRI);
     return;
 }
 
@@ -2557,7 +2554,7 @@ static int responseRilSignalStrength(Parcel &p,
             p.writeInt32(p_cur->LTE_SignalStrength.rssnr);
             p.writeInt32(p_cur->LTE_SignalStrength.cqi);
         } else {
-            memset(&p_cur->LTE_SignalStrength, sizeof (RIL_LTE_SignalStrength), 0);
+            memset(&p_cur->LTE_SignalStrength, 0, sizeof (RIL_LTE_SignalStrength));
         }
 
         startResponse;
@@ -2673,7 +2670,7 @@ static int responseCdmaCallWaiting(Parcel &p, void *response,
 }
 
 static int responseSimRefresh(Parcel &p, void *response, size_t responselen) {
-    if (response == NULL && responselen != 0) {
+    if (response == NULL || responselen != 0) {
         ALOGE("responseSimRefresh: invalid response: NULL");
         return RIL_ERRNO_INVALID_RESPONSE;
     }
@@ -3582,6 +3579,7 @@ static void debugCallback (int fd, short flags, void *param) {
 
     if (recv(acceptFD, &number, sizeof(int), 0) != sizeof(int)) {
         ALOGE ("error reading on socket: number of Args: \n");
+        close(acceptFD);
         return;
     }
     args = (char **) malloc(sizeof(char*) * number);
@@ -3591,6 +3589,7 @@ static void debugCallback (int fd, short flags, void *param) {
         if (recv(acceptFD, &len, sizeof(int), 0) != sizeof(int)) {
             ALOGE ("error reading on socket: Len of Args: \n");
             freeDebugCallbackArgs(i, args);
+            close(acceptFD);
             return;
         }
         // +1 for null-term
@@ -3599,6 +3598,7 @@ static void debugCallback (int fd, short flags, void *param) {
             != (int)sizeof(char) * len) {
             ALOGE ("error reading on socket: Args[%d] \n", i);
             freeDebugCallbackArgs(i, args);
+            close(acceptFD);
             return;
         }
         char * buf = args[i];

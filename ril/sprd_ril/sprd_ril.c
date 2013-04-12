@@ -6780,7 +6780,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
     } else if (strStartsWith(s, "+ECIND:")) {
         char *tmp;
         int type;
-        int value;
+        int value = 0;
         int card_type;
 
         line = strdup(s);
@@ -7135,7 +7135,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
         RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DATA,response,strlen(response) * sizeof(char*));
     } else if (strStartsWith(s, AT_PREFIX"DVTCODECRI:")) {
-        int response[3];
+        int response[4];
         int index = 0;
         int iLen = 1;
         char *tmp;
@@ -7229,7 +7229,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             ALOGD("%s fail", s);
             goto out;
         }
-        RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_RELEASING,response,strlen(response) * sizeof(char*));
+        RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_RELEASING, response, strlen(response)+1);
     } else if (strStartsWith(s, AT_PREFIX"DVTRECARI")) {
         int response;
         char *tmp;
