@@ -1260,10 +1260,6 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
 
     at_response_free(p_response);
 
-    for(i = 0; i < n; i++) {
-        if(responses[i].active == 1)
-            count++;
-    }
 
     if(cid > 0) {
         ALOGD("requestOrSendDataCallList is called by SetupDataCall!");
@@ -1279,6 +1275,24 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
             return;
         }
     }
+
+    for(i = 0; i < n; i++) {
+        if(responses[i].active == 1) {
+            if (count != i) {
+                responses[count].status = responses[i].status;
+                responses[count].suggestedRetryTime = responses[i].suggestedRetryTime;
+                responses[count].cid = responses[i].cid;
+                responses[count].active = responses[i].active;
+                responses[count].type = responses[i].type;
+                responses[count].ifname = responses[i].ifname;
+                responses[count].addresses = responses[i].addresses;
+                responses[count].gateways = responses[i].gateways;
+                responses[count].dnses = responses[i].dnses;
+            }
+            count++;
+        }
+    }
+
 
     if (t != NULL)
         RIL_onRequestComplete(*t, RIL_E_SUCCESS, responses,
