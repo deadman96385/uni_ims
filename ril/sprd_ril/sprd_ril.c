@@ -6524,6 +6524,7 @@ static void initializeCallback(void *param)
     at_send_command(ATch_type[channelID], "AT"AT_PREFIX"DVTTYPE=1", NULL);
     at_send_command(ATch_type[channelID], "AT+SPVIDEOTYPE=3", NULL);
     at_send_command(ATch_type[channelID], "AT+SPDVTDCI="VT_DCI, NULL);
+    at_send_command(ATch_type[channelID], "AT+SPDVTTEST=2,650", NULL);
 
     /*power on sim card */
     if(s_multiSimMode) {
