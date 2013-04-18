@@ -538,7 +538,8 @@ OMX_ERRORTYPE OpenmaxMpeg4AO::FreeBuffer(
 			PLATFORM_PRIVATE_PMEM_INFO *pInfo =(PLATFORM_PRIVATE_PMEM_INFO *) pEntry->entry;
 			delete pList;
 			delete pEntry;
-			delete pInfo;		
+			delete pInfo;
+			pBaseComponentPort->pBuffer[ii]->pPlatformPrivate = NULL;
 		}
              }
             pBuffer->pBuffer = NULL;
@@ -572,6 +573,16 @@ OMX_ERRORTYPE OpenmaxMpeg4AO::FreeBuffer(
                 // deallocate the BufferCtrlStruct
                 if (OMX_DirOutput == pBaseComponentPort->PortParam.eDir)
                 {
+                    PLATFORM_PRIVATE_LIST *pList = (PLATFORM_PRIVATE_LIST *)pBaseComponentPort->pBuffer[ii]->pPlatformPrivate;
+                    if(pList)
+                    {
+                        PLATFORM_PRIVATE_ENTRY *pEntry = pList->entryList ;
+                        PLATFORM_PRIVATE_PMEM_INFO *pInfo =(PLATFORM_PRIVATE_PMEM_INFO *) pEntry->entry;
+                        delete pList;
+                        delete pEntry;
+                        delete pInfo;
+                        pBaseComponentPort->pBuffer[ii]->pPlatformPrivate = NULL;
+                    }
                     if (pBuffer->pOutputPortPrivate)
                     {
                         oscl_free(pBuffer->pOutputPortPrivate);
