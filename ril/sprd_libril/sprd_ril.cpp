@@ -2631,6 +2631,7 @@ static int responseCdmaCallWaiting(Parcel &p, void *response,
         return RIL_ERRNO_INVALID_RESPONSE;
     }
 
+
     if (responselen < sizeof(RIL_CDMA_CallWaiting_v6)) {
         ALOGW("Upgrade to ril version %d\n", RIL_VERSION);
     }
@@ -2670,7 +2671,7 @@ static int responseCdmaCallWaiting(Parcel &p, void *response,
 }
 
 static int responseSimRefresh(Parcel &p, void *response, size_t responselen) {
-    if (response == NULL || responselen != 0) {
+    if (response == NULL || responselen == 0) {
         ALOGE("responseSimRefresh: invalid response: NULL");
         return RIL_ERRNO_INVALID_RESPONSE;
     }
