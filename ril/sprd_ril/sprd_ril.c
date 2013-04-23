@@ -2235,8 +2235,6 @@ static void requestRegistrationState(int channelID, int request, void *data,
     int skip;
     int i;
 
-    for(i = 0; i < 4; i++)
-        responseStr[i] = res[i];
 
     if (request == RIL_REQUEST_VOICE_REGISTRATION_STATE) {
         cmd = "AT+CREG?";
@@ -2344,18 +2342,22 @@ static void requestRegistrationState(int channelID, int request, void *data,
     else
         sprintf(res[0], "%d", response[0]);
 #endif
+    responseStr[0] = res[0];
 
     if (response[1] != -1) {
         sprintf(res[1], "%x", response[1]);
+        responseStr[1] = res[1];
     }
 
     if (response[2] != -1) {
         sprintf(res[2], "%x", response[2]);
+        responseStr[2] = res[2];
     }
 
     if (response[3] != -1) {
         response[3] = mapCgregResponse(response[3]);
         sprintf(res[3], "%d", response[3]);
+        responseStr[3] = res[3];
     }
 
     if (request == RIL_REQUEST_VOICE_REGISTRATION_STATE) {
