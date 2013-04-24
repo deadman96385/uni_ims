@@ -238,7 +238,9 @@ OMX_BOOL Mpeg4Decoder_OMX::Mp4DecodeVideo(OMX_BOOL *need_new_pic,OMX_BUFFERHEADE
     if(iBufferAllocFail)
     {
     	*notSupport = OMX_TRUE;
-	 iBufferAllocFail = OMX_FALSE;	
+#if 0 //buzilla 108794, 138373
+	 iBufferAllocFail = OMX_FALSE;
+#endif
 	 OMX_MP4DEC_ERR ("%s: dec not support because of buffer alloc fail", __FUNCTION__);
 	 return OMX_FALSE;
     }

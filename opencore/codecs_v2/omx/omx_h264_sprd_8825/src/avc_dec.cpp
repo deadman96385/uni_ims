@@ -411,7 +411,9 @@ OMX_BOOL AvcDecoder_OMX::AvcDecodeVideo_OMX(OMX_BOOL *need_new_pic,OMX_BUFFERHEA
     if(iBufferAllocFail)
     {
     	*notSupport = OMX_TRUE;
-	 iBufferAllocFail = OMX_FALSE;	
+#if 0 //bugzilla 108794, 138373
+	 iBufferAllocFail = OMX_FALSE;
+#endif
 	 OMX_H264DEC_ERR ("%s: dec not support because of buffer alloc fail", __FUNCTION__);
 	 return OMX_FALSE;
     }		
