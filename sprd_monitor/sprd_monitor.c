@@ -151,8 +151,8 @@ void assert_handler(int sig_num)
 
 void reset_handler(int sig_num)
 {
-    char mux_2sim_mode[]="busybox echo 1 > /proc/mux_mode";
-    char mux_3sim_mode[]="busybox echo 2 > /proc/mux_mode";
+    char mux_2sim_mode[]="echo 1 > /proc/mux_mode";
+    char mux_3sim_mode[]="echo 2 > /proc/mux_mode";
     char path[32];
 
     /* open ttydev */
@@ -194,8 +194,8 @@ int main(int argc, char **argv)
     struct sigaction reset_act;
     int ret;
     int str;
-    char mux_2sim_mode[]="busybox echo 1 > /proc/mux_mode";
-    char mux_3sim_mode[]="busybox echo 2 > /proc/mux_mode";
+    char mux_2sim_mode[]="echo 1 > /proc/mux_mode";
+    char mux_3sim_mode[]="echo 2 > /proc/mux_mode";
     char phoneCount[5];
     char path[32];
 
