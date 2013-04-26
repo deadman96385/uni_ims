@@ -155,7 +155,7 @@ extern int32 s_vsp_fd ;
 	tmp=(*((volatile uint32*)(reg_addr-VSP_REG_BASE_ADDR+s_vsp_Vaddr_base)))&msk_data;\
     while(tmp != msked_data)\
 {\
-	tmp=(*((volatile uint32*)(reg_addr)))&msk_data;\
+	tmp=(*((volatile uint32*)(reg_addr-VSP_REG_BASE_ADDR+s_vsp_Vaddr_base)))&msk_data;\
 }\
 }
 /**---------------------------------------------------------------------------

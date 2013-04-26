@@ -82,6 +82,8 @@ MMEncRet MP4EncGenHeader(MMEncOut *pOutput)
     pOutput->pOutBuf = (uint8 *)share_ram->bs_start_addr ;
     pOutput->strmSize = share_ram->bs_used_len;
 
+    VSP_RELEASE_Dev();
+    
     return MMENC_OK;
 }
 
@@ -219,9 +221,9 @@ MMEncRet MP4EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,MMCo
     VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x10, share_ram->malloc_mem1_start_addr,"shareRAM 0x10: VSP_MEM1_ST_ADDR");
     VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x14, share_ram->total_mem1_size,"shareRAM 0x14: VSP_MEM1_SIZE");
     
-    share_ram->bs_start_addr = (uint32 )pBitstreamBfr->common_buffer_ptr_phy;
+    share_ram->bs_start_addr = (uint32 )pBitstreamBfr->common_buffer_ptr;
     share_ram->bs_buffer_size=pBitstreamBfr->size;
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x18, share_ram->bs_start_addr,"shareRAM 0x18: STREAM_BUF_ADDR");
+    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x18,  (uint32 )pBitstreamBfr->common_buffer_ptr_phy,"shareRAM 0x18: STREAM_BUF_ADDR");
     VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x1c, share_ram->bs_buffer_size,"shareRAM 0x1c: bs_buffer_size");
 
     share_ram->standard = (pVideoFormat->is_h263)? STREAM_ID_H263: STREAM_ID_MPEG4;
@@ -237,6 +239,8 @@ MMEncRet MP4EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,MMCo
     VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x58, MP4ENC_INIT,"Call  MP4ENC_INIT function.");		
 
     ret = (MMDecRet)OR_VSP_START();
+
+    VSP_RELEASE_Dev();
 	
     return ret;
 }
@@ -270,7 +274,9 @@ MMEncRet MP4EncStrmEncode(MMEncIn *pInput, MMEncOut *pOutput)
 
     pOutput->pOutBuf =  (uint8 *)share_ram->bs_start_addr ;
     pOutput->strmSize = share_ram->bs_used_len;
-				
+
+    VSP_RELEASE_Dev();
+
     return MMENC_OK;
 }
 
