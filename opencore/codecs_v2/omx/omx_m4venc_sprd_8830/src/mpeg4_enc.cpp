@@ -418,7 +418,7 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
         InterMemBfr.common_buffer_ptr =(uint8 *)iORBuf_v;
         InterMemBfr.size = buffer_size;
             
-        OMX_MP4ENC_DEBUG ("iCMDbufferPmemHeap allocate successful!");
+        OMX_MP4ENC_DEBUG ("iORbufferPmemHeap allocate successful!");
     }else
     {
         iBufferAllocFail = OMX_TRUE;

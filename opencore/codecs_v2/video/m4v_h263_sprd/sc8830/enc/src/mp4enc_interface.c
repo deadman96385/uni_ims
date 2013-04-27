@@ -203,7 +203,7 @@ MMEncRet MP4EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,MMCo
 #endif
 
     //Load firmware to ddr
-    memcpy(OR_addr_vitual_ptr, mp4enc_code, MP4DEC_OR_DATA_SIZE);
+    memcpy(OR_addr_vitual_ptr, mp4enc_code, MP4ENC_OR_DATA_SIZE);
 
     if(OR_VSP_RST()<0)
     {

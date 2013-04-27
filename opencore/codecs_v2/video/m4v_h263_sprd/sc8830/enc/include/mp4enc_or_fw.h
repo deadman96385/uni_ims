@@ -24,9 +24,9 @@
     {
 #endif
 
-#define	MP4DEC_OR_DATA_SIZE (32000)    //byte unit
+#define	MP4ENC_OR_DATA_SIZE (32000)    //byte unit
 
-static const uint32 mp4enc_code[MP4DEC_OR_DATA_SIZE/4] = 
+static const uint32 mp4enc_code[MP4ENC_OR_DATA_SIZE/4] = 
 {
 0xd7e117f0,
 0x18408000,
