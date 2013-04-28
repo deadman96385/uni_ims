@@ -27,7 +27,7 @@ include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4venc_sprd_8825_sha
 else
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcdec_sprd_8830_sharedlibrary.mk
-#include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcenc_sprd_8825_sharedlibrary.mk
+include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcenc_sprd_8830_sharedlibrary.mk
 include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4vdec_sprd_8830_sharedlibrary.mk
 include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4venc_sprd_8830_sharedlibrary.mk
 else
