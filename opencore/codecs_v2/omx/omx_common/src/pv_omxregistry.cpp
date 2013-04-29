@@ -1284,13 +1284,14 @@ OMX_ERRORTYPE OmxComponentFactoryDynamicCreate(OMX_OUT OMX_HANDLETYPE* pHandle, 
     // if everything is OK, the AO factory should have returned OMX_ErrorNone
     if (returnStatus != OMX_ErrorNone)
     {
-        lib->Close();
+        //lib->Close();
 
         // If this is the last time to close the library, delete the
         // OsclSharedLibrary object and be sure to set aOmxLib back to NULL
-        aRefCount--;
+        //aRefCount--;
         if (0 == aRefCount)
         {
+            lib->Close();
             OSCL_DELETE(lib);
             aOmxLib = NULL;
         }

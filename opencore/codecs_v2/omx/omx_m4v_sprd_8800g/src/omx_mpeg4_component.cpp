@@ -1246,8 +1246,8 @@ OMX_ERRORTYPE OpenmaxMpeg4AO::ConstructComponent(OMX_PTR pAppData, OMX_PTR pProx
     Mpeg4Decoder_OMX::g_mpeg4_dec_inst_num++;    
     if(Mpeg4Decoder_OMX::g_mpeg4_dec_inst_num>1)
     {
- 	OMX_MP4DEC_INFO ("Mpeg4Decoder_OMX more than 1 inst\n");   	
-    	//return OMX_ErrorInsufficientResources;
+        OMX_MP4DEC_INFO ("Mpeg4Decoder_OMX more than 1 inst\n");
+        return OMX_ErrorInsufficientResources;
     }	
     	
     //modified by jgdu
