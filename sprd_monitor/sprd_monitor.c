@@ -232,10 +232,10 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    //sprintf(path, "/dev/%s", ttydev);
-    //ttydev_fd = open(path, O_RDWR);
-    //if (ttydev_fd < 0)
-    //    MONITOR_LOGE("Failed to open %s!\n", path);
+    sprintf(path, "/dev/%s", ttydev);
+    ttydev_fd = open(path, O_RDWR);
+    if (ttydev_fd < 0)
+        MONITOR_LOGE("Failed to open %s!\n", path);
 
     if(s_multiSimMode == 3) {
         MONITOR_LOGD("enter %d sim card mode!\n", s_multiSimMode);
