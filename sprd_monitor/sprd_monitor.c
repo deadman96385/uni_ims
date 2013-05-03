@@ -125,7 +125,8 @@ void assert_handler(int sig_num)
     char pid_str[32] = {0};
 
     /* kill mediaserver */
-    property_set("ctl.stop", "mediaserver");
+    MONITOR_LOGD(" stop mediaserver");
+    property_set("ctl.stop", "media");
 
     kill_nvitemd();
 
@@ -181,7 +182,8 @@ void reset_handler(int sig_num)
     start_engservice();
 
     /* start mediaserver */
-    property_set("ctl.start", "mediaserver");
+    MONITOR_LOGD(" start mediaserver");
+    property_set("ctl.start", "media");
 
     sleep(2);
 
