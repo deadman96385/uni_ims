@@ -99,21 +99,47 @@ static int start_engservice(void)
 
 static int start_phser()
 {
-    if(s_multiSimMode > 1) {
-        property_set("ctl.start", "phoneserver_2sim");
-    } else {
-        property_set("ctl.start", "phoneserver");
-    }
+    property_set("ctl.start", "phoneserver_vlx");
 
     return 0;
 }
 
 static int kill_phser()
 {
-    if(s_multiSimMode > 1) {
-        property_set("ctl.stop", "phoneserver_2sim");
+    property_set("ctl.stop", "phoneserver_vlx");
+
+    return 0;
+}
+
+static int stop_rild(void)
+{
+	/* stop rild */
+    if(s_multiSimMode == 3) {
+        property_set("ctl.stop", "ril-daemon");
+        property_set("ctl.stop", "ril-daemon1");
+        property_set("ctl.stop", "ril-daemon2");
+    } else if(s_multiSimMode == 2) {
+        property_set("ctl.stop", "ril-daemon");
+        property_set("ctl.stop", "ril-daemon1");
     } else {
-        property_set("ctl.stop", "phoneserver");
+        property_set("ctl.stop", "ril-daemon");
+    }
+
+    return 0;
+}
+
+static int start_rild(void)
+{
+    /* start rild */
+    if(s_multiSimMode == 3) {
+        property_set("ctl.start", "ril-daemon");
+        property_set("ctl.start", "ril-daemon1");
+        property_set("ctl.start", "ril-daemon2");
+    } else if(s_multiSimMode == 2) {
+        property_set("ctl.start", "ril-daemon");
+        property_set("ctl.start", "ril-daemon1");
+    } else {
+        property_set("ctl.start", "ril-daemon");
     }
 
     return 0;
@@ -123,10 +149,6 @@ void assert_handler(int sig_num)
 {
     pid_t pid;
     char pid_str[32] = {0};
-
-    /* kill mediaserver */
-    MONITOR_LOGD(" stop mediaserver");
-    property_set("ctl.stop", "media");
 
     kill_nvitemd();
 
@@ -139,6 +161,9 @@ void assert_handler(int sig_num)
     /* close ttydev */
     if (ttydev_fd >= 0)
         close(ttydev_fd);
+
+    MONITOR_LOGD("stop rild!\n");
+    stop_rild();
 
     /*kill com.android.phone*/
     pid = get_task_pid(PHONE_APP);
@@ -181,9 +206,12 @@ void reset_handler(int sig_num)
 
     start_engservice();
 
-    /* start mediaserver */
-    MONITOR_LOGD(" start mediaserver");
-    property_set("ctl.start", "media");
+    MONITOR_LOGD("restart rild!\n");
+    start_rild();
+
+    /* restart mediaserver */
+    MONITOR_LOGD("restart mediaserver");
+    property_set("ctl.restart", "media");
 
     sleep(2);
 
@@ -253,6 +281,9 @@ int main(int argc, char **argv)
     MONITOR_LOGD("start phoneserver!\n");
     /*start phoneserver*/
     start_phser();
+
+    MONITOR_LOGD("start rild!\n");
+    start_rild();
 
     start_engservice();
 

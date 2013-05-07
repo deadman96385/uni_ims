@@ -35,7 +35,6 @@
 #define LIB_PATH_PROPERTY   "rild.libpath"
 #define LIB_ARGS_PROPERTY   "rild.libargs"
 #define MAX_LIB_ARGS        16
-#define SIM_MODE_PROPERTY  "persist.msms.phone_count"
 
 static void usage(const char *argv0)
 {
@@ -43,7 +42,7 @@ static void usage(const char *argv0)
     exit(-1);
 }
 
-extern void RIL_register (const RIL_RadioFunctions *callbacks, int sim_num);
+extern void RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv);
 
 extern void RIL_onRequestComplete(RIL_Token t, RIL_Errno e,
                            void *response, size_t responselen);
@@ -99,18 +98,16 @@ void switchUser() {
 int main(int argc, char **argv)
 {
     const char * rilLibPath = NULL;
+    const char * rilModem = NULL;
+    const char * rilCurrentSim = NULL;
     char **rilArgv;
     void *dlHandle;
     const RIL_RadioFunctions *(*rilInit)(const struct RIL_Env *, int, char **);
     const RIL_RadioFunctions *funcs;
-    char libPath[PROPERTY_VALUE_MAX];
     unsigned char hasLibArgs = 0;
     char cmdline[1024];
     int i, rc, fd;
     int califlag = 0;
-    char phoneCount[5];
-    int simMode;
-    int current_sim;
 
     memset(cmdline, 0, 1024);
     fd = open("/proc/cmdline", O_RDONLY);
@@ -128,156 +125,24 @@ int main(int argc, char **argv)
     	goto done;
     }
 
-    if(0 == property_get(SIM_MODE_PROPERTY, phoneCount, "1")) {
-        simMode = 1;
-    } else {
-        if(!strcmp(phoneCount, "3"))  //3sim mode
-            simMode = 3;
-        else if(!strcmp(phoneCount, "2"))  //2sim mode
-            simMode = 2;
-        else
-            simMode = 1;  //1sim mode
-    }
-
-    current_sim = atoi(argv[5]);  //indicate current is which sim
-    if(simMode == 3) {
-        if(current_sim == 0) {  //3sim: the first start the second & third rild
-            property_set("ctl.start", "ril-daemon1");
-            property_set("ctl.start", "ril-daemon2");
-        }
-    } else if(simMode == 2) {
-        if(current_sim == 0)  //2sim: the first start the second rild
-            property_set("ctl.start", "ril-daemon1");
-    }
-
     for (i = 1; i < argc ;) {
         if (0 == strcmp(argv[i], "-l") && (argc - i > 1)) {
             rilLibPath = argv[i + 1];
             i += 2;
-        } else if (0 == strcmp(argv[i], "--")) {
-            i++;
-            hasLibArgs = 1;
+        } else if (0 == strcmp(argv[i], "-m") && (argc - i > 1)) {
+            rilModem = argv[i + 1];
+            i += 2;
+        } else if (0 == strcmp(argv[i], "-n") && (argc - i > 1)) {
+            rilCurrentSim = argv[i + 1];
             break;
         } else {
             usage(argv[0]);
         }
     }
 
-    if (rilLibPath == NULL) {
-        if ( 0 == property_get(LIB_PATH_PROPERTY, libPath, NULL)) {
-            // No lib sepcified on the command line, and nothing set in props.
-            // Assume "no-ril" case.
-            goto done;
-        } else {
-            rilLibPath = libPath;
-        }
-    }
-
-    /* special override when in the emulator */
-#if 1
-    {
-        static char*  arg_overrides[3];
-        static char   arg_device[32];
-        int           done = 0;
-
-#define  REFERENCE_RIL_PATH  "/system/lib/libreference-ril_sp.so"
-
-        /* first, read /proc/cmdline into memory */
-        char          buffer[1024], *p, *q;
-        int           len;
-        int           fd = open("/proc/cmdline",O_RDONLY);
-
-        if (fd < 0) {
-            ALOGD("could not open /proc/cmdline:%s", strerror(errno));
-            goto OpenLib;
-        }
-
-        do {
-            len = read(fd,buffer,sizeof(buffer)); }
-        while (len == -1 && errno == EINTR);
-
-        if (len < 0) {
-            ALOGD("could not read /proc/cmdline:%s", strerror(errno));
-            close(fd);
-            goto OpenLib;
-        }
-        close(fd);
-
-        if (strstr(buffer, "android.qemud=") != NULL)
-        {
-            /* the qemud daemon is launched after rild, so
-            * give it some time to create its GSM socket
-            */
-            int  tries = 5;
-#define  QEMUD_SOCKET_NAME    "qemud"
-
-            while (1) {
-                int  fd;
-
-                sleep(1);
-
-                fd = socket_local_client(
-                            QEMUD_SOCKET_NAME,
-                            ANDROID_SOCKET_NAMESPACE_RESERVED,
-                            SOCK_STREAM );
-
-                if (fd >= 0) {
-                    close(fd);
-                    snprintf( arg_device, sizeof(arg_device), "%s/%s",
-                                ANDROID_SOCKET_DIR, QEMUD_SOCKET_NAME );
-
-                    arg_overrides[1] = "-s";
-                    arg_overrides[2] = arg_device;
-                    done = 1;
-                    break;
-                }
-                ALOGD("could not connect to %s socket: %s",
-                    QEMUD_SOCKET_NAME, strerror(errno));
-                if (--tries == 0)
-                    break;
-            }
-            if (!done) {
-                ALOGE("could not connect to %s socket (giving up): %s",
-                    QEMUD_SOCKET_NAME, strerror(errno));
-                while(1)
-                    sleep(0x00ffffff);
-            }
-        }
-
-        /* otherwise, try to see if we passed a device name from the kernel */
-        if (!done) do {
-#define  KERNEL_OPTION  "android.ril="
-#define  DEV_PREFIX     "/dev/"
-
-            p = strstr( buffer, KERNEL_OPTION );
-            if (p == NULL)
-                break;
-
-            p += sizeof(KERNEL_OPTION)-1;
-            q  = strpbrk( p, " \t\n\r" );
-            if (q != NULL)
-                *q = 0;
-
-            snprintf( arg_device, sizeof(arg_device), DEV_PREFIX "%s", p );
-            arg_device[sizeof(arg_device)-1] = 0;
-            arg_overrides[1] = "-d";
-            arg_overrides[2] = arg_device;
-            done = 1;
-
-        } while (0);
-
-        if (done) {
-            argv = arg_overrides;
-            argc = 3;
-            i    = 1;
-            hasLibArgs = 1;
-            rilLibPath = REFERENCE_RIL_PATH;
-
-            ALOGD("overriding with %s %s", arg_overrides[1], arg_overrides[2]);
-        }
-    }
+    rilArgv = argv + 2;
+    argc = argc - 2;
 OpenLib:
-#endif
     switchUser();
 
     dlHandle = dlopen(rilLibPath, RTLD_NOW);
@@ -296,23 +161,9 @@ OpenLib:
         exit(-1);
     }
 
-    if (hasLibArgs) {
-        rilArgv = argv + i - 1;
-        argc = argc -i + 1;
-    } else {
-        static char * newArgv[MAX_LIB_ARGS];
-        static char args[PROPERTY_VALUE_MAX];
-        rilArgv = newArgv;
-        property_get(LIB_ARGS_PROPERTY, args, "");
-        argc = make_argv(args, rilArgv);
-    }
-
-    // Make sure there's a reasonable argv[0]
-    //rilArgv[0] = argv[0];
-
-    ALOGD("Rild: rilArgv[0]=%s,rilArgv[1]=%s,rilArgv[2]=%s,argc=%d",rilArgv[0],rilArgv[1],rilArgv[2],argc);
+    ALOGD("Rild: rilArgv[1]=%s,rilArgv[2]=%s,rilArgv[3]=%s,rilArgv[4]=%s",rilArgv[1],rilArgv[2],rilArgv[3],rilArgv[4]);
     funcs = rilInit(&s_rilEnv, argc, rilArgv);
-    RIL_register(funcs, atoi(rilArgv[2]));
+    RIL_register(funcs, argc, rilArgv);
 
 done:
 

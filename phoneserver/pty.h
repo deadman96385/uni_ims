@@ -41,7 +41,7 @@ struct pty_t {
 	pid_t tid;
 	int used;
 	int type;		/*##  type */
-	char *name;
+	char name[30];
 	int wait_resp;		/*## flag for wait_resp */
 	sem_t receive_lock;	/*## write_lock  to avoid multi access */
 	sem_t get_mux_lock;

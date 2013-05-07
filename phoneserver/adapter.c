@@ -33,6 +33,7 @@
 
 #define RIL_SIM1_ABSENT_PROPERTY  "ril.sim1.absent"
 
+extern int multiSimMode;
 static int sim1_absent =-1, sim2_exist = -1;
 
 struct cmd_table {
@@ -60,8 +61,7 @@ sem sms_lock;
 
 extern struct ppp_info_struct ppp_info[];
 
-#if defined CONFIG_SINGLE_SIM
-const struct cmd_table at_cmd_cvt_table[] = {
+const struct cmd_table single_at_cmd_cvt_table[] = {
     {AT_CMD_CGDCONT_READ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGDCONT?;"),
         cvt_generic_cmd_req, 10},
     {AT_CMD_CGDCONT_READ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGDCONT?"),
@@ -291,8 +291,8 @@ const struct cmd_table at_cmd_cvt_table[] = {
         50},
     //  NULL,
 };
-#elif defined CONFIG_DUAL_SIM
-const struct cmd_table at_cmd_cvt_table[] = {
+
+const struct cmd_table multi_at_cmd_cvt_table[] = {
     {AT_CMD_CGDCONT_READ, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGDCONT?"),
         cvt_cgdcont_read_req, 5},
     {AT_CMD_CGDCONT_TEST, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGDCONT=?"),
@@ -512,104 +512,6 @@ const struct cmd_table at_cmd_cvt_table[] = {
         cvt_generic_cmd_req, 50},
     //  NULL,
 };
-#endif
-const struct cmd_table at_cmd_cvt_table_ext[] = {
-    {AT_CMD_CGDCONT_READ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGDCONT?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGDCONT_TEST, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGDCONT=?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGDCONT_SET, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGDCONT=4"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGDCONT_SET, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGDCONT="),
-        cvt_not_support_cmd_req, 5},
-
-    {AT_CMD_CGQMIN, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGQMIN?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGQMIN, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGQMIN=?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGQMIN, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGQMIN=4"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGQMIN, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGQMIN="),
-        cvt_not_support_cmd_req, 5},
-
-
-    {AT_CMD_CGQREQ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGQREQ?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGQREQ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGQREQ=?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGQREQ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGQREQ=4"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGQREQ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGQREQ="),
-        cvt_not_support_cmd_req, 5},
-
-
-    {AT_CMD_CGEQMIN, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQMIN?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGEQMIN, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQMIN=?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGEQMIN, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQMIN=4"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGEQMIN, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQMIN="),
-        cvt_not_support_cmd_req, 5},
-
-    {AT_CMD_CGEQREQ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQREQ?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGEQREQ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQREQ=?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGEQREQ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQREQ=4"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGEQREQ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQREQ="),
-        cvt_not_support_cmd_req, 5},
-
-    {AT_CMD_CGEQNEG, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQNEG?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGEQNEG, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQNEG=?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGEQNEG, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQNEG=4"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGEQNEG, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQNEG="),
-        cvt_not_support_cmd_req, 5},
-
-    {AT_CMD_CGPADDR, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGPADDR=?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGPADDR, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGPADDR=4"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGPADDR, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGPADDR="),
-        cvt_not_support_cmd_req, 5},
-
-    {AT_CMD_CGATT, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGATT"),
-        cvt_generic_cmd_req, 50},
-
-    {AT_CMD_CGDATA_TEST, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGDATA=?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGDATA_SET, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGDATA=\"ppp\",4"),
-        cvt_atd_active_req, 250},
-    {AT_CMD_CGDATA_SET, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGDATA="),
-        cvt_not_support_cmd_req, 5},
-
-    {AT_CMD_CGACT_READ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGACT?"),
-        cvt_cgact_query_cmd_req, 5},
-    {AT_CMD_CGACT_SET, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGACT=1,4"),
-        cvt_generic_cmd_req, 150},
-    {AT_CMD_CGACT_SET, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGACT=0,4"),
-        cvt_generic_cmd_req, 150},
-    {AT_CMD_CGACT_TEST, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGACT=?"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGACT_SET, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGACT="),
-        cvt_not_support_cmd_req, 5},
-
-    {AT_CMD_ATD_SET, AT_CMD_TYPE_STM, AT_CMD_STR("ATD*99"),
-        cvt_atd_active_req, 250},
-    {AT_CMD_ATDT_SET, AT_CMD_TYPE_STM, AT_CMD_STR("ATDT*99"),
-        cvt_atd_active_req, 250},
-
-    {AT_CMD_ATH_SET, AT_CMD_TYPE_CS, AT_CMD_STR("ATH"),
-        cvt_ath_cmd_req, 50},
-    {AT_CMD_CEER, AT_CMD_TYPE_GEN, AT_CMD_STR("AT+CEER"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_UNKNOWN, AT_CMD_TYPE_STM, AT_CMD_STR("AT"), cvt_not_support_cmd_req,
-        50},
-};
 
 const struct ind_table at_ind_cvt_table[] = {
     {AT_CMD_CCWA_IND, AT_CMD_STR("+CCWA:"), cvt_generic_cmd_ind},
@@ -724,17 +626,19 @@ int phoneserver_deliver_indicate_default(const cmux_t * cmux, char *cmd,
 {
     int ret;
     char ind_str[MAX_AT_CMD_LEN];
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;	
 
     memset(ind_str, 0, MAX_AT_CMD_LEN);
     ret = phoneserver_deliver_indicate(cmux, cmd, len);
     if (ret != AT_RESULT_OK) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         snprintf(ind_str, sizeof(ind_str), "%s%s%s", "\r\n", cmd, "\n");
         if(ind_pty && ind_pty->ops && len < MAX_AT_CMD_LEN)
             ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
@@ -780,20 +684,27 @@ int phoneserver_deliver_at_cmd(const pty_t * pty, char *cmd, int len)
         return AT_RESULT_OK;
     }
 
-    if(pty->type == STMAT)
-    {
-        return phoneserver_deliver_at_cmd_ext(pty, cmd, len);
-    }
-
     /* find command router */
     i = 0;
-    count = sizeof(at_cmd_cvt_table) / sizeof(at_cmd_cvt_table[0]);
-    for (i = 0; i < count; i++) {
-        if (!strncasecmp
-                (at_cmd_cvt_table[i].cmd_str, cmd,
-                 at_cmd_cvt_table[i].len)) {
-            item = (struct cmd_table *)&at_cmd_cvt_table[i];
-            break;
+    if(multiSimMode == 1) {
+        count = sizeof(multi_at_cmd_cvt_table) / sizeof(multi_at_cmd_cvt_table[0]);
+        for (i = 0; i < count; i++) {
+            if (!strncasecmp
+                    (multi_at_cmd_cvt_table[i].cmd_str, cmd,
+                     multi_at_cmd_cvt_table[i].len)) {
+                item = (struct cmd_table *)&multi_at_cmd_cvt_table[i];
+                break;
+            }
+        }
+    } else {
+        count = sizeof(single_at_cmd_cvt_table) / sizeof(single_at_cmd_cvt_table[0]);
+        for (i = 0; i < count; i++) {
+            if (!strncasecmp
+                    (single_at_cmd_cvt_table[i].cmd_str, cmd,
+                     single_at_cmd_cvt_table[i].len)) {
+                item = (struct cmd_table *)&single_at_cmd_cvt_table[i];
+                break;
+            }
         }
     }
     if (item == NULL) {
@@ -802,46 +713,46 @@ int phoneserver_deliver_at_cmd(const pty_t * pty, char *cmd, int len)
         return AT_RESULT_NG;
     }
 
-#if defined CONFIG_SINGLE_SIM
-    cmd_req.cmd_type = item->cmd_type;
-#elif defined CONFIG_DUAL_SIM
-    switch (pty->type){
-        case AT_SIM1:
-            if(item->cmd_type == AT_CMD_TYPE_SLOW)
-                cmd_req.cmd_type = AT_CMD_TYPE_SLOW1;
-            else if(item->cmd_type == AT_CMD_TYPE_NORMAL)
-                cmd_req.cmd_type = AT_CMD_TYPE_NORMAL1;
-            else
-                PHS_LOGE("wrong cmd_type!");
-            break;
-        case AT_SIM2:
-            if(item->cmd_type == AT_CMD_TYPE_SLOW)
-                cmd_req.cmd_type = AT_CMD_TYPE_SLOW2;
-            else if(item->cmd_type == AT_CMD_TYPE_NORMAL)
-                cmd_req.cmd_type = AT_CMD_TYPE_NORMAL2;
-            else
-                PHS_LOGE("wrong cmd_type!");
-            break;
-        case AT_SIM3:
-            if(item->cmd_type == AT_CMD_TYPE_SLOW)
-                cmd_req.cmd_type = AT_CMD_TYPE_SLOW3;
-            else if(item->cmd_type == AT_CMD_TYPE_NORMAL)
-                cmd_req.cmd_type = AT_CMD_TYPE_NORMAL3;
-            else
-                PHS_LOGE("wrong cmd_type!");
-            break;
-        case AT_SIM4:
-            if(item->cmd_type == AT_CMD_TYPE_SLOW)
-                cmd_req.cmd_type = AT_CMD_TYPE_SLOW4;
-            else if(item->cmd_type == AT_CMD_TYPE_NORMAL)
-                cmd_req.cmd_type = AT_CMD_TYPE_NORMAL4;
-            else
-                PHS_LOGE("wrong cmd_type!");
-            break;
-        default:
-            PHS_LOGE("AT command is written to the error PTY channel!pty->type=%d\n",pty->type);
+    if(multiSimMode == 1) {
+        switch (pty->type){
+            case AT_SIM1:
+                if(item->cmd_type == AT_CMD_TYPE_SLOW)
+                    cmd_req.cmd_type = AT_CMD_TYPE_SLOW1;
+                else if(item->cmd_type == AT_CMD_TYPE_NORMAL)
+                    cmd_req.cmd_type = AT_CMD_TYPE_NORMAL1;
+                else
+                   PHS_LOGE("wrong cmd_type!");
+                break;
+            case AT_SIM2:
+                if(item->cmd_type == AT_CMD_TYPE_SLOW)
+                    cmd_req.cmd_type = AT_CMD_TYPE_SLOW2;
+                else if(item->cmd_type == AT_CMD_TYPE_NORMAL)
+                    cmd_req.cmd_type = AT_CMD_TYPE_NORMAL2;
+                else
+                    PHS_LOGE("wrong cmd_type!");
+                break;
+            case AT_SIM3:
+                if(item->cmd_type == AT_CMD_TYPE_SLOW)
+                    cmd_req.cmd_type = AT_CMD_TYPE_SLOW3;
+                else if(item->cmd_type == AT_CMD_TYPE_NORMAL)
+                    cmd_req.cmd_type = AT_CMD_TYPE_NORMAL3;
+                else
+                    PHS_LOGE("wrong cmd_type!");
+                break;
+            case AT_SIM4:
+                if(item->cmd_type == AT_CMD_TYPE_SLOW)
+                    cmd_req.cmd_type = AT_CMD_TYPE_SLOW4;
+                else if(item->cmd_type == AT_CMD_TYPE_NORMAL)
+                    cmd_req.cmd_type = AT_CMD_TYPE_NORMAL4;
+                else
+                    PHS_LOGE("wrong cmd_type!");
+                break;
+            default:
+                PHS_LOGE("AT command is written to the error PTY channel!pty->type=%d\n",pty->type);
+        }
+    } else {
+        cmd_req.cmd_type = item->cmd_type;
     }
-#endif
 
     /* call router */
     cmd_req.recv_pty = (pty_t *) pty;
@@ -862,115 +773,29 @@ int phoneserver_deliver_at_cmd(const pty_t * pty, char *cmd, int len)
     }
 }
 
-int phoneserver_deliver_at_cmd_ext(const pty_t * pty, char *cmd, int len)
-{
-    AT_CMD_REQ_T cmd_req;
-    int ret;
-    struct cmd_table *item = NULL;
-    int i, count;
-    char *str_tmp;
-    pty_t *ptyp = (pty_t *) pty;
-    if (pty == NULL || cmd == NULL) {
-        return AT_RESULT_NG;
-    }
-
-    /* find command router */
-    i = 0;
-    count = sizeof(at_cmd_cvt_table_ext) / sizeof(at_cmd_cvt_table_ext[0]);
-    for (i = 0; i < count; i++) {
-        if (!strncasecmp
-                (at_cmd_cvt_table_ext[i].cmd_str, cmd,
-                 at_cmd_cvt_table_ext[i].len)) {
-            item = (struct cmd_table *)&at_cmd_cvt_table_ext[i];
-            break;
-        }
-    }
-    if (item == NULL) {
-        PHS_LOGD("Can not find a correct command router for cmd: %s\n", cmd);
-        adapter_pty_write_error((pty_t *) pty, CME_ERROR_NOT_SUPPORT);
-        return AT_RESULT_NG;
-    }
-
-#if defined CONFIG_SINGLE_SIM
-    cmd_req.cmd_type = item->cmd_type;
-#elif defined CONFIG_DUAL_SIM
-    switch (pty->type){
-        case AT_SIM1:
-            if(item->cmd_type == AT_CMD_TYPE_SLOW)
-                cmd_req.cmd_type = AT_CMD_TYPE_SLOW1;
-            else if(item->cmd_type == AT_CMD_TYPE_NORMAL)
-                cmd_req.cmd_type = AT_CMD_TYPE_NORMAL1;
-            else
-                PHS_LOGE("wrong cmd_type!");
-            break;
-        case AT_SIM2:
-            if(item->cmd_type == AT_CMD_TYPE_SLOW)
-                cmd_req.cmd_type = AT_CMD_TYPE_SLOW2;
-            else if(item->cmd_type == AT_CMD_TYPE_NORMAL)
-                cmd_req.cmd_type = AT_CMD_TYPE_NORMAL2;
-            else
-                PHS_LOGE("wrong cmd_type!");
-            break;
-        case AT_SIM3:
-            if(item->cmd_type == AT_CMD_TYPE_SLOW)
-                cmd_req.cmd_type = AT_CMD_TYPE_SLOW3;
-            else if(item->cmd_type == AT_CMD_TYPE_NORMAL)
-                cmd_req.cmd_type = AT_CMD_TYPE_NORMAL3;
-            else
-                PHS_LOGE("wrong cmd_type!");
-            break;
-        case AT_SIM4:
-            if(item->cmd_type == AT_CMD_TYPE_SLOW)
-                cmd_req.cmd_type = AT_CMD_TYPE_SLOW4;
-            else if(item->cmd_type == AT_CMD_TYPE_NORMAL)
-                cmd_req.cmd_type = AT_CMD_TYPE_NORMAL4;
-            else
-                PHS_LOGE("wrong cmd_type!");
-            break;
-        default:
-            PHS_LOGE("AT command is written to the error PTY channel!pty->type=%d\n",pty->type);
-    }
-#endif
-
-    /* call router */
-    cmd_req.recv_pty = (pty_t *) pty;
-    cmd_req.cmd_str = cmd;
-    cmd_req.len = len;
-    cmd_req.cmd_id = item->cmd_id;
-    cmd_req.timeout = item->timeout;
-    ret = item->cvt_func(&cmd_req);
-    if (ret < 0) {
-        PHS_LOGD("phoneserver_deliver_at_cmd_ext failed\n ");
-        adapter_pty_write_error((pty_t *)pty,CME_ERROR_NOT_SUPPORT);
-        return AT_RESULT_NG;
-    } else if (ret > 0) {
-        pty->ops->pty_set_wait_resp_flag((void *const)pty);
-        return AT_RESULT_PROGRESS;
-    } else {
-        return ret;
-    }
-}
-
 int phoneserver_deliver_at_rsp(const cmux_t * cmux, char *rsp, int len)
 {
     int ret = AT_RESULT_NG;
     AT_CMD_RSP_T rsp_req;
     pid_t tid;
     tid = gettid();
+
     if (cmux == NULL || rsp == NULL) {
         PHS_LOGE("cmux is NULL || rsp is NULL\n");
         return AT_RESULT_NG;
     }
-
-#if defined CONFIG_SINGLE_SIM
-    if (cmux->type == INDM)
-#elif defined CONFIG_DUAL_SIM
-    if ((cmux->type == INDM_SIM1)	|| (cmux->type == INDM_SIM2) ||
-            (cmux->type == INDM_SIM3) || (cmux->type == INDM_SIM4) )
-#endif
-    {
-        PHS_LOGD("[%d] INDM\n", tid);
-        return phoneserver_deliver_indicate_default(cmux, rsp, len);
+    
+    if(multiSimMode == 1) {
+        if ((cmux->type == INDM_SIM1)	|| (cmux->type == INDM_SIM2) ||
+                (cmux->type == INDM_SIM3) || (cmux->type == INDM_SIM4) ) {
+            PHS_LOGD("[%d] INDM\n", tid);
+            return phoneserver_deliver_indicate_default(cmux, rsp, len);
+        }
+    } else {
+        if (cmux->type == INDM) {
+            PHS_LOGD("[%d] INDM\n", tid);
+            return phoneserver_deliver_indicate_default(cmux, rsp, len);
+        }
     }
 
     /* here shall lock*/
@@ -1258,7 +1083,6 @@ int cvt_generic_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
     return AT_RESULT_OK;
 }
 
-#if defined CONFIG_DUAL_SIM
 pty_t *adapter_get_ind_pty(mux_type_t type)
 {
     pty_t *ind_pty=NULL;
@@ -1275,40 +1099,38 @@ pty_t *adapter_get_ind_pty(mux_type_t type)
     return ind_pty;
 }
 
-pty_t *adapter_get_eng_ind_pty(mux_type_t type)
+pty_t *adapter_multi_get_eng_ind_pty(mux_type_t type)
 {
     pty_t *ind_pty = NULL;
     if (type == INDM_SIM1 || type == ATM1_SIM1 || type == ATM2_SIM1)
-        ind_pty = channel_manager_get_eng_ind_pty();
+        ind_pty = channel_manager_multi_get_eng_ind_pty();
     return ind_pty;
 }
-
-#elif defined CONFIG_SINGLE_SIM
 
 pty_t *adapter_get_default_ind_pty(void)
 {
     return channel_manager_get_default_ind_pty();
 }
 
-pty_t *adapter_get_eng_ind_pty(void)
+pty_t *adapter_single_get_eng_ind_pty(void)
 {
-    return channel_manager_get_eng_ind_pty();
+    return channel_manager_single_get_eng_ind_pty();
 }
-
-#endif
-
 
 int cvt_generic_cmd_ind(AT_CMD_IND_T * ind)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     char ind_str[MAX_AT_CMD_LEN];
 
-#if defined CONFIG_SINGLE_SIM
-    pty_t *ind_pty = adapter_get_default_ind_pty();
-    pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-    pty_t *ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
-    pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
-#endif
+    if(multiSimMode == 1) {
+        ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
+        ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
+    } else {
+        ind_pty = adapter_get_default_ind_pty();
+        ind_eng_pty = adapter_single_get_eng_ind_pty();
+    }
+
     memset(ind_str, 0, MAX_AT_CMD_LEN);
     if (ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
         snprintf(ind_str, sizeof(ind_str), "%s%s%s", "\r\n", ind->ind_str, "\n");
@@ -1324,6 +1146,8 @@ int cvt_generic_cmd_ind(AT_CMD_IND_T * ind)
 
 int cvt_ecind_cmd_ind(AT_CMD_IND_T * ind)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     char ind_str[MAX_AT_CMD_LEN];
     char *tmp;
     int err;
@@ -1331,61 +1155,62 @@ int cvt_ecind_cmd_ind(AT_CMD_IND_T * ind)
     pid_t pid1, pid2;
     char prop[5];
 
-#if defined CONFIG_SINGLE_SIM
-    pty_t *ind_pty = adapter_get_default_ind_pty();
-    pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-    pty_t *ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
-    pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
-#endif
+    if(multiSimMode == 1) {
+        ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
+        ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
+    } else {
+        ind_pty = adapter_get_default_ind_pty();
+        ind_eng_pty = adapter_single_get_eng_ind_pty();
+    }
+
     memset(ind_str, 0, MAX_AT_CMD_LEN);
     if (ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
         snprintf(ind_str, sizeof(ind_str), "%s%s%s", "\r\n", ind->ind_str, "\n");
         ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-#if defined CONFIG_DUAL_SIM
-        property_get(RIL_SIM1_ABSENT_PROPERTY, prop, "0");
-        if(strcmp(prop, "0") == 0) {
-            tmp = ind->ind_str;
-            err = at_tok_start(&tmp, ':');
-            if (err < 0) {
-                PHS_LOGD("parse cmd error\n");
-                return AT_RESULT_OK;
-            }
-            /*skip type value */
-            err = at_tok_nextint(&tmp, &skip);
-            if (err < 0) {
-                return AT_RESULT_OK;
-            }
-            if (0 == at_tok_nextint(&tmp, &sim_status)) {
-                if(sim_status == 1) {   /* sim is absent */
-                    if((mux_type)(ind->recv_cmux->type) == INDM_SIM1) {
-                        sim1_absent = 1;
-                        if(sim2_exist == 1) {
-                            /*restart rild*/
-                            property_set(RIL_SIM1_ABSENT_PROPERTY, "1");
-                            property_set("ctl.stop", "ril-daemon");
-                            property_set("ctl.stop", "ril-daemon1");
-                            property_set("ctl.start", "ril-daemon");
-                            property_set("ctl.start", "ril-daemon1");
+        if(multiSimMode == 1) {
+            property_get(RIL_SIM1_ABSENT_PROPERTY, prop, "0");
+            if(strcmp(prop, "0") == 0) {
+                tmp = ind->ind_str;
+                err = at_tok_start(&tmp, ':');
+                if (err < 0) {
+                    PHS_LOGD("parse cmd error\n");
+                    return AT_RESULT_OK;
+                }
+                /*skip type value */
+                err = at_tok_nextint(&tmp, &skip);
+                if (err < 0) {
+                    return AT_RESULT_OK;
+                }
+                if (0 == at_tok_nextint(&tmp, &sim_status)) {
+                    if(sim_status == 1) {   /* sim is absent */
+                        if((mux_type)(ind->recv_cmux->type) == INDM_SIM1) {
+                            sim1_absent = 1;
+                            if(sim2_exist == 1) {
+                                /*restart rild*/
+                                property_set(RIL_SIM1_ABSENT_PROPERTY, "1");
+                                property_set("ctl.stop", "ril-daemon");
+                                property_set("ctl.stop", "ril-daemon1");
+                                property_set("ctl.start", "ril-daemon");
+                                property_set("ctl.start", "ril-daemon1");
+                            }
                         }
-                    }
-                } else if(sim_status == 0 || sim_status == 3) {  /* sim is exist */
-                    if((mux_type)(ind->recv_cmux->type) == INDM_SIM2) {
-                        sim2_exist = 1;
-                        if(sim1_absent == 1) {
-                            /*restart rild*/
-                            property_set(RIL_SIM1_ABSENT_PROPERTY, "1");
-                            property_set("ctl.stop", "ril-daemon");
-                            property_set("ctl.stop", "ril-daemon1");
-                            property_set("ctl.start", "ril-daemon");
-                            property_set("ctl.start", "ril-daemon1");
+                    } else if(sim_status == 0 || sim_status == 3) {  /* sim is exist */
+                        if((mux_type)(ind->recv_cmux->type) == INDM_SIM2) {
+                            sim2_exist = 1;
+                            if(sim1_absent == 1) {
+                                /*restart rild*/
+                                property_set(RIL_SIM1_ABSENT_PROPERTY, "1");
+                                property_set("ctl.stop", "ril-daemon");
+                                property_set("ctl.stop", "ril-daemon1");
+                                property_set("ctl.start", "ril-daemon");
+                                property_set("ctl.start", "ril-daemon1");
+                            }
                         }
                     }
                 }
             }
-        }
-#endif
+    	}
 #endif
     } else
         PHS_LOGE("ind string size > 300\n");
@@ -1399,19 +1224,22 @@ int cvt_ecind_cmd_ind(AT_CMD_IND_T * ind)
 
 int cvt_ecind0_cmd_ind(AT_CMD_IND_T * ind)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int err;
     int call_id;
     int call_status;
     char *at_in_str;
     char ind_str[MAX_AT_CMD_LEN];
 
-#if defined CONFIG_SINGLE_SIM
-    pty_t *ind_pty = adapter_get_default_ind_pty();
-    pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-    pty_t *ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
-    pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
-#endif
+    if(multiSimMode == 1) {
+        ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
+        ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
+    } else {
+        ind_pty = adapter_get_default_ind_pty();
+        ind_eng_pty = adapter_single_get_eng_ind_pty();
+    }
+
     memset(ind_str, 0, MAX_AT_CMD_LEN);
     if (ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
         snprintf(ind_str, sizeof(ind_str), "%s%s%s", "\r\n", ind->ind_str, "\n");
@@ -1456,19 +1284,21 @@ int cvt_ecind0_cmd_ind(AT_CMD_IND_T * ind)
 
 int cvt_eceer_cmd_ind(AT_CMD_IND_T * ind)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int err;
     int call_id;
     int call_status;
     char *at_in_str;
     char ind_str[MAX_AT_CMD_LEN];
 
-#if defined CONFIG_SINGLE_SIM
-    pty_t *ind_pty = adapter_get_default_ind_pty();
-    pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-    pty_t *ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
-    pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
-#endif
+    if(multiSimMode == 1) {
+        ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
+        ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
+    } else {
+        ind_pty = adapter_get_default_ind_pty();
+        ind_eng_pty = adapter_single_get_eng_ind_pty();
+    }
     memset(ind_str, 0, MAX_AT_CMD_LEN);
     snprintf(ind_str, sizeof(ind_str), "%s%s%s", "\r\n", ind->ind_str, "\n");
 
@@ -1512,19 +1342,21 @@ int cvt_eceer_cmd_ind(AT_CMD_IND_T * ind)
 
 int cvt_csq_cmd_ind(AT_CMD_IND_T * ind)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int err;
     int rssi=12;
     int ber=0;
     char *at_in_str;
     char ind_str[MAX_AT_CMD_LEN];
 
-#if defined CONFIG_SINGLE_SIM
-    pty_t *ind_pty = adapter_get_default_ind_pty();
-    pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-    pty_t *ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
-    pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
-#endif
+    if(multiSimMode == 1) {
+        ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
+        ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
+    } else {
+        ind_pty = adapter_get_default_ind_pty();
+        ind_eng_pty = adapter_single_get_eng_ind_pty();
+    }
     at_in_str = ind->ind_str;
     err = at_tok_start(&at_in_str, ':');
     if (err < 0) {
@@ -1569,19 +1401,21 @@ int cvt_csq_cmd_ind(AT_CMD_IND_T * ind)
 
 int cvt_spscsq_cmd_ind(AT_CMD_IND_T * ind)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int err;
     int rssi=12;
     int ber=0, rat;
     char *at_in_str;
     char ind_str[MAX_AT_CMD_LEN];
 
-#if defined CONFIG_SINGLE_SIM
-    pty_t *ind_pty = adapter_get_default_ind_pty();
-    pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-    pty_t *ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
-    pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
-#endif
+    if(multiSimMode == 1) {
+        ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
+        ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
+    } else {
+        ind_pty = adapter_get_default_ind_pty();
+        ind_eng_pty = adapter_single_get_eng_ind_pty();
+    }
     at_in_str = ind->ind_str;
     err = at_tok_start(&at_in_str, ':');
     if (err < 0) {
@@ -1631,17 +1465,18 @@ int cvt_spscsq_cmd_ind(AT_CMD_IND_T * ind)
 
 int cvt_ecsq_cmd_ind(AT_CMD_IND_T * ind)
 {
+    pty_t *ind_pty = NULL;
     int err;
     int rssi=12;
     int ber=0;
     char *at_in_str;
     char ind_str[MAX_AT_CMD_LEN];
 
-#if defined CONFIG_SINGLE_SIM
-    pty_t *ind_pty = adapter_get_default_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-    pty_t *ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
-#endif
+    if(multiSimMode == 1) {
+        ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
+    } else {
+        ind_pty = adapter_get_default_ind_pty();
+    }
     at_in_str = ind->ind_str;
     err = at_tok_start(&at_in_str, ':');
     if (err < 0) {
@@ -1784,18 +1619,12 @@ int adapter_cmux_write(cmux_t * mux, char *buf, int len, int to)
             &timeout);
     mux->cp_blked += 1;
     if (err == ETIMEDOUT) {
-        if (mux->cp_blked > 2) {
-
-#if SPREAD_EVENT
-            channel_manager_modem_reset();
-#endif /*  */
-        }
         seconds = time((time_t *) NULL);
         PHS_LOGD("[%d] timeout (%d)\n", tid, seconds);
         adapter_cmux_deregister_callback(mux);
         if(to >= 0)
         {
-            if (mux->pty){
+            if (mux->pty) {
                 adapter_pty_write_error(mux->pty,
                         CME_ERROR_NOT_SUPPORT);
                 adapter_pty_end_cmd(mux->pty);
@@ -1956,18 +1785,20 @@ int cvt_ccwa_cmd_req(AT_CMD_REQ_T * req)
 int cvt_ccwa_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
     int ret;
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
 
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -2004,18 +1835,20 @@ int cvt_clip_cmd_req(AT_CMD_REQ_T * req)
 int cvt_clip_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
     int ret;
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
 
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -2052,18 +1885,20 @@ int cvt_colp_cmd_req(AT_CMD_REQ_T * req)
 int cvt_colp_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
     int ret;
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
 
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -2099,18 +1934,20 @@ int cvt_creg_cmd_req(AT_CMD_REQ_T * req)
 int cvt_creg_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
     int ret;
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
 
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -2146,18 +1983,20 @@ int cvt_cgreg_cmd_req(AT_CMD_REQ_T * req)
 int cvt_cgreg_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
     int ret;
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
 
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -2194,17 +2033,20 @@ int cvt_cusd_cmd_req(AT_CMD_REQ_T * req)
 int cvt_cusd_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
     int ret;
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
+
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -2238,6 +2080,8 @@ int cvt_csq_action_req(AT_CMD_REQ_T * req)
 
 int cvt_csq_action_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int ret;
     char *input = rsp->rsp_str;
     int len = rsp->len;
@@ -2249,13 +2093,13 @@ int cvt_csq_action_rsp(AT_CMD_RSP_T * rsp, int user_data)
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -2318,6 +2162,8 @@ int cvt_spscsq_action_req(AT_CMD_REQ_T * req)
 
 int cvt_spscsq_action_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int ret;
     char *input = rsp->rsp_str;
     int len = rsp->len;
@@ -2329,13 +2175,13 @@ int cvt_spscsq_action_rsp(AT_CMD_RSP_T * rsp, int user_data)
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -2399,18 +2245,20 @@ int cvt_csq_test_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
     int ret;
     char tmp[200] = { "+CSQ:(0-31,100-191,199),(0-7,99)" };
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
 
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -2465,6 +2313,8 @@ int cvt_epin_test_req(AT_CMD_REQ_T * req)
 
 int cvt_epin_test_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int ret;
     int epin = 0;
     char *input = rsp->rsp_str;
@@ -2482,13 +2332,13 @@ int cvt_epin_test_rsp(AT_CMD_RSP_T * rsp, int user_data)
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -2537,19 +2387,21 @@ int cvt_cmgs_cmgw_test_req(AT_CMD_REQ_T * req)
 
 int cvt_cmgs_cmgw_test_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int ret;
 
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -2698,18 +2550,20 @@ int cvt_cmgs_cmgw_set_req(AT_CMD_REQ_T * req)
 int cvt_cmgs_cmgw_set_rsp1(AT_CMD_RSP_T * rsp, int user_data)
 {
     int ret;
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
 
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -2726,6 +2580,8 @@ int cvt_cmgs_cmgw_set_rsp1(AT_CMD_RSP_T * rsp, int user_data)
 
 int cvt_cmgs_cmgw_set_rsp2(AT_CMD_RSP_T * rsp, int user_data)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int ret;
     pty_t *pty = (pty_t *) user_data;
 
@@ -2733,13 +2589,13 @@ int cvt_cmgs_cmgw_set_rsp2(AT_CMD_RSP_T * rsp, int user_data)
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -2764,6 +2620,8 @@ int cvt_cmgs_cmgw_set_rsp2(AT_CMD_RSP_T * rsp, int user_data)
 
 int cvt_cmgs_cmgw_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int ret;
     pty_t *pty = (pty_t *) user_data;
 
@@ -2771,13 +2629,13 @@ int cvt_cmgs_cmgw_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -2960,19 +2818,21 @@ int cvt_echupvt_set_req(AT_CMD_REQ_T * req)
 
 int cvt_echupvt_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int ret;
 
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -3006,19 +2866,21 @@ int cvt_atd_active_req(AT_CMD_REQ_T * req)
 
 int cvt_atd_active_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int ret;
 
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -3064,18 +2926,20 @@ int cvt_ath_cmd_req(AT_CMD_REQ_T * req)
 
 int cvt_ath_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int ret;
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -3140,18 +3004,20 @@ int cvt_evts_set_req(AT_CMD_REQ_T * req)
 
 int cvt_evts_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int ret;
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -3221,19 +3087,21 @@ int cvt_eband_set_req(AT_CMD_REQ_T * req)
 
 int cvt_eband_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int ret;
 
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -3266,6 +3134,8 @@ int cvt_eband_query_req(AT_CMD_REQ_T * req)
 
 int cvt_eband_query_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int ret;
     char tmp[20];
 
@@ -3274,13 +3144,13 @@ int cvt_eband_query_rsp(AT_CMD_RSP_T * rsp, int user_data)
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)
@@ -3351,6 +3221,8 @@ int cvt_snvm_set_req(AT_CMD_REQ_T * req)
 
 int cvt_snvm_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
     int ret;
     pty_t *pty = (pty_t *) user_data;
 
@@ -3358,13 +3230,13 @@ int cvt_snvm_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
         return AT_RESULT_NG;
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
-#if defined CONFIG_SINGLE_SIM
-        pty_t *ind_pty = adapter_get_default_ind_pty();
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty();
-#elif defined CONFIG_DUAL_SIM
-        pty_t *ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
-        pty_t *ind_eng_pty = adapter_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
-#endif
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
         if(ind_pty && ind_pty->ops)
             ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
         if(ind_eng_pty && ind_eng_pty->ops)

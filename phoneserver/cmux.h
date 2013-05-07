@@ -48,7 +48,7 @@ struct cmux_t {
 	int wait_resp;		/*## flag for wait_resp */
 	int in_use;
 	int (*callback) (AT_CMD_RSP_T * resp_req, int usdata);
-	char *name;
+	char name[30];
 	struct cmux_ops *ops;
 	sem cmux_lock;
 	mutex mutex_timeout;

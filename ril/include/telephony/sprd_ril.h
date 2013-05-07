@@ -5203,7 +5203,7 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
  *
  * @param callbacks user-specifed callback function
  */
-void RIL_register (const RIL_RadioFunctions *callbacks, int sim_num);
+void RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv);
 
 
 /**

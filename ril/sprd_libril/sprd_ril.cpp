@@ -200,9 +200,13 @@ static UserCallbackInfo *s_last_wake_timeout_info = NULL;
 static void *s_lastNITZTimeData = NULL;
 static size_t s_lastNITZTimeDataSize;
 
-#define SIM_MODE_PROPERTY  "persist.msms.phone_count"
+#define TD_SIM_NUM  "ro.modem.t.msms.count"
+#define W_SIM_NUM  "ro.modem.w.msms.count"
+#define VLX_SIM_NUM  "ro.modem.vlx.msms.count"
 
 static int s_multiSimMode;
+const char * s_modem = NULL;
+static int s_sim_num;
 
 
 #if RILC_LOG
@@ -3777,22 +3781,54 @@ extern "C" void RIL_setcallbacks (const RIL_RadioFunctions *callbacks) {
 }
 
 extern "C" void
-RIL_register (const RIL_RadioFunctions *callbacks, int sim_num) {
+RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
     int ret;
     int flags;
-    const char *s_name_ril;
-    const char *s_name_ril_debug;
+    char s_name_ril[20] = {0};
+    char s_name_ril_debug[20] = {0};
     pthread_attr_t attr;
+    int opt;
     char phoneCount[5];
     int count;
 
-    if(0 == property_get(SIM_MODE_PROPERTY, phoneCount, "1")) {
-        s_multiSimMode = 0;
-    } else {
+    optind = 0;  // reset getopt
+    while ( -1 != (opt = getopt(argc, argv, "m:n:"))) {
+        switch (opt) {
+            case 'm':
+                s_modem = optarg;
+                break;
+            case 'n':
+                s_sim_num = atoi(optarg);
+                break;
+            default:
+                ALOGE("libril parse parameter error");
+                break;
+        }
+    }
+
+    ALOGD("it's %s modem rild%d libril", s_modem, s_sim_num);
+
+    if(!strcmp(s_modem, "t")) {
+        property_get(TD_SIM_NUM, phoneCount, "");
         if(strcmp(phoneCount, "1"))
             s_multiSimMode = 1;
         else
             s_multiSimMode = 0;
+    } else if(!strcmp(s_modem, "w")) {
+        property_get(W_SIM_NUM, phoneCount, "");
+        if(strcmp(phoneCount, "1"))
+            s_multiSimMode = 1;
+        else
+            s_multiSimMode = 0;
+    } else if(!strcmp(s_modem, "vlx")) {
+        property_get(VLX_SIM_NUM, phoneCount, "");
+        if(strcmp(phoneCount, "1"))
+            s_multiSimMode = 1;
+        else
+            s_multiSimMode = 0;
+    } else {
+        ALOGE("Invalid modem type");
+        exit(-1);
     }
 
     if (callbacks == NULL) {
@@ -3909,30 +3945,24 @@ RIL_register (const RIL_RadioFunctions *callbacks, int sim_num) {
     s_fdListen = ret;
 
 #else
-    if(s_multiSimMode) {
-        switch (sim_num) {
-            case 1:
-		s_name_ril = "rild1";
-	    	s_name_ril_debug = "rild_debug1";
-		break;
-            case 2:
-	    	s_name_ril = "rild2";
-	    	s_name_ril_debug = "rild_debug2";
-		break;
-            case 3:
-	    	s_name_ril = "rild3";
-	    	s_name_ril_debug = "rild_debug3";
-		break;
-            default:
-           case 0:
-	    	s_name_ril = "rild";
-	    	s_name_ril_debug = "rild_debug";
-		break;
-        }
+    if(strcmp(s_modem, "vlx")) {
+            if(s_sim_num > 0) {
+                snprintf(s_name_ril, sizeof(s_name_ril), "%srild%d", s_modem, s_sim_num);
+                snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "%srild-debug%d", s_modem, s_sim_num);
+            } else {
+                snprintf(s_name_ril, sizeof(s_name_ril), "%srild", s_modem);
+                snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "%srild-debug", s_modem);
+            }
     } else {
-        s_name_ril = "rild";
-        s_name_ril_debug = "rild_debug";
+            if(s_sim_num > 0) {
+                snprintf(s_name_ril, sizeof(s_name_ril), "rild%d", s_sim_num);
+                snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "rild-debug%d", s_sim_num);
+            } else {
+                snprintf(s_name_ril, sizeof(s_name_ril), "rild");
+                snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "rild-debug");
+            }
     }
+
     s_fdListen = android_get_control_socket(s_name_ril);
     if (s_fdListen < 0) {
         ALOGE("Failed to get socket ' %s '", s_name_ril);

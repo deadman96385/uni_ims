@@ -20,9 +20,7 @@ struct ppp_info_struct {
 	char userdns1addr[IP_ADD_SIZE];	/* Primary MS DNS entries */
 	char userdns2addr[IP_ADD_SIZE];	/*secondary MS DNS entries */
 	char ipladdr[IP_ADD_SIZE];	/* IP address local */
-#ifndef CONFIG_VETH
 	char ipraddr[IP_ADD_SIZE];	/* IP address remote */
-#endif
 	int state;
 	cmux_t *cmux;
 	pty_t *pty;
@@ -63,7 +61,5 @@ int cvt_cgact_act_req(AT_CMD_REQ_T * req);
 int cvt_cgact_deact_rsp2(AT_CMD_RSP_T * rsp, int user_data);
 int cvt_cgact_deact_rsp1(AT_CMD_RSP_T * rsp, int user_data);
 int cvt_cgdcont_set_rsp(AT_CMD_RSP_T * rsp, int user_data);
-#ifdef CONFIG_VETH
 int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data);
-#endif /*CONFIG_VETH*/
 #endif /*  */

@@ -32,13 +32,19 @@
 #include <private/android_filesystem_config.h>
 #include "cutils/properties.h"
 
-#define SYS_SYMLINK_PTY "sys.symlink.pty"
-#define SYS_SYMLINK_NOTI "sys.symlink.notify"
+#define VLX_SIM_NUM  "ro.modem.vlx.msms.count"
+#define TD_SIM_NUM  "ro.modem.t.msms.count"
+#define W_SIM_NUM  "ro.modem.w.msms.count"
 
+#define MUX_VLX_DEV  "ro.modem.vlx.tty"
+#define MUX_TD_DEV  "ro.modem.t.tty"
+#define MUX_W_DEV  "ro.modem.w.tty"
+
+const char *modem = NULL;
+int multiSimMode;
 struct channel_manager_t chnmng;
 
-#if defined CONFIG_SINGLE_SIM
-struct chns_config_t chns_data = {.pty = {
+struct chns_config_t single_chns_data = {.pty = {
 	{.dev_str = "/dev/CHNPTY0",.index = 0,.type = IND,.prority = 1}, 	/*## attribute ind_pty */
 	{.dev_str = "/dev/CHNPTY1",.index = 1,.type = AT,.prority = 1},
 	{.dev_str = "/dev/CHNPTY2",.index = 2,.type = AT,.prority = 1},		/*## attribute at_pty */
@@ -46,21 +52,22 @@ struct chns_config_t chns_data = {.pty = {
 	{.dev_str = "/dev/CHNPTY12",.index = 4,.type = AT,.prority = 1},	/*## attribute at_pty */
 	{.dev_str = "/dev/CHNPTY13",.index = 5,.type = AT,.prority = 1},	/*## attribute at_pty */
 },.mux = {
-	{.dev_str = "/dev/ts0710mux0",.index = 0,.type = INDM,.prority = 20},	/*## attribute misc_mux */
-	{.dev_str = "/dev/ts0710mux1",.index = 1,.type = SIMM,.prority = 20},	/*## attribute sim_mux */
-	{.dev_str = "/dev/ts0710mux2",.index = 2,.type = SSM,.prority = 20},	/*## attribute ss_mux */
-	{.dev_str = "/dev/ts0710mux3",.index = 3,.type = PBKM,.prority = 20},	/*## attribute pbk_mux */
-	{.dev_str = "/dev/ts0710mux4",.index = 4,.type = STMM,.prority = 20},	/*## attribute stm_mux */
-	{.dev_str = "/dev/ts0710mux5",.index = 5,.type = GSM,.prority = 20},	/*## attribute gsm_mux */
-	{.dev_str = "/dev/ts0710mux6",.index = 6,.type = CSM,.prority = 20},	/*## attribute cs_mux */
-	{.dev_str = "/dev/ts0710mux7",.index = 7,.type = PSM,.prority = 20},	/*## attribute ps_mux */
-	{.dev_str = "/dev/ts0710mux8",.index = 8,.type = NWM,.prority = 20},	/*## attribute nw_mux */
-	{.dev_str = "/dev/ts0710mux9",.index = 9,.type = STKM,.prority = 20},	/*## attribute stk_mux */
-	{.dev_str = "/dev/ts0710mux10",.index = 10,.type = SMSM,.prority = 20},	/*## attribute smsm_mux */
+	{.dev_str = "",.index = 0,.type = INDM,.prority = 20},	/*## attribute misc_mux */
+	{.dev_str = "",.index = 1,.type = SIMM,.prority = 20},	/*## attribute sim_mux */
+	{.dev_str = "",.index = 2,.type = SSM,.prority = 20},	/*## attribute ss_mux */
+	{.dev_str = "",.index = 3,.type = PBKM,.prority = 20},	/*## attribute pbk_mux */
+	{.dev_str = "",.index = 4,.type = STMM,.prority = 20},	/*## attribute stm_mux */
+	{.dev_str = "",.index = 5,.type = GSM,.prority = 20},	/*## attribute gsm_mux */
+	{.dev_str = "",.index = 6,.type = CSM,.prority = 20},	/*## attribute cs_mux */
+	{.dev_str = "",.index = 7,.type = PSM,.prority = 20},	/*## attribute ps_mux */
+	{.dev_str = "",.index = 8,.type = NWM,.prority = 20},	/*## attribute nw_mux */
+	{.dev_str = "",.index = 9,.type = STKM,.prority = 20},	/*## attribute stk_mux */
+	{.dev_str = "",.index = 10,.type = SMSM,.prority = 20},	/*## attribute smsm_mux */
 	//{.dev_str = "/dev/ts0710mux15",.index = 15,.type = SMSTM,.prority = 20},	/*## attribute smstm_mux */
 },
-#elif defined CONFIG_DUAL_SIM
-struct chns_config_t chns_data = {.pty = {
+};
+
+struct chns_config_t multi_chns_data = {.pty = {
 	{.dev_str = "/dev/CHNPTY0",.index = 0,.type = IND_SIM1,.prority = 1},/*## attribute ind_pty */
 	{.dev_str = "/dev/CHNPTY1",.index = 1,.type = AT_SIM1,.prority = 1}, /*## attribute at_pty */
 	{.dev_str = "/dev/CHNPTY2",.index = 2,.type = AT_SIM1,.prority = 1}, /*## attribute at_pty */
@@ -82,26 +89,22 @@ struct chns_config_t chns_data = {.pty = {
 	{.dev_str = "/dev/CHNPTY14",.index = 14,.type = AT_SIM2,.prority = 1}, /*## attribute at_pty */
 
 }, .mux = {
-	{.dev_str = "/dev/ts0710mux0",.index = 0,.type = INDM_SIM1,.prority = 20}, /*## attribute misc_mux */
-	{.dev_str = "/dev/ts0710mux1",.index = 1,.type = ATM1_SIM1,.prority = 20},
-	{.dev_str = "/dev/ts0710mux2",.index = 2,.type = ATM2_SIM1,.prority = 20},
+	{.dev_str = "",.index = 0,.type = INDM_SIM1,.prority = 20}, /*## attribute misc_mux */
+	{.dev_str = "",.index = 1,.type = ATM1_SIM1,.prority = 20},
+	{.dev_str = "",.index = 2,.type = ATM2_SIM1,.prority = 20},
 
-	{.dev_str = "/dev/ts0710mux3",.index = 3,.type = INDM_SIM2,.prority = 20}, /*## attribute misc_mux */
-	{.dev_str = "/dev/ts0710mux4",.index = 4,.type = ATM1_SIM2,.prority = 20},
-	{.dev_str = "/dev/ts0710mux5",.index = 5,.type = ATM2_SIM2,.prority = 20},
+	{.dev_str = "",.index = 3,.type = INDM_SIM2,.prority = 20}, /*## attribute misc_mux */
+	{.dev_str = "",.index = 4,.type = ATM1_SIM2,.prority = 20},
+	{.dev_str = "",.index = 5,.type = ATM2_SIM2,.prority = 20},
 
-	{.dev_str = "/dev/ts0710mux6",.index = 6,.type = INDM_SIM3,.prority = 20}, /*## attribute misc_mux */
-	{.dev_str = "/dev/ts0710mux7",.index = 7,.type = ATM1_SIM3,.prority = 20},
-	{.dev_str = "/dev/ts0710mux8",.index = 8,.type = ATM2_SIM3,.prority = 20},
+	{.dev_str = "",.index = 6,.type = INDM_SIM3,.prority = 20}, /*## attribute misc_mux */
+	{.dev_str = "",.index = 7,.type = ATM1_SIM3,.prority = 20},
+	{.dev_str = "",.index = 8,.type = ATM2_SIM3,.prority = 20},
 
-	{.dev_str = "/dev/ts0710mux9",.index = 9,.type = INDM_SIM4,.prority = 20}, /*## attribute misc_mux */
-	{.dev_str = "/dev/ts0710mux10",.index = 10,.type = ATM1_SIM4,.prority = 20},
-	{.dev_str = "/dev/ts0710mux11",.index = 11,.type = ATM2_SIM4,.prority = 20},
+	{.dev_str = "",.index = 9,.type = INDM_SIM4,.prority = 20}, /*## attribute misc_mux */
+	{.dev_str = "",.index = 10,.type = ATM1_SIM4,.prority = 20},
+	{.dev_str = "",.index = 11,.type = ATM2_SIM4,.prority = 20},
 },
-#endif
-#ifndef CONFIG_VETH
-	.itsMngPty = {.dev_str = "/dev/PTY_mng",.index = 0,.type = IND,.prority = 20},
-#endif
 };
 /*
  * get_pty - get a pty master/slave pair and chown the slave side
@@ -251,12 +254,10 @@ static cmux_t *find_type_cmux(struct channel_manager_t *const me, mux_type type)
     return mux;
 }
 
-#if defined CONFIG_SINGLE_SIM
-static cmux_t *find_cmux(struct channel_manager_t *const me, AT_CMD_TYPE_T type)
+static cmux_t *single_find_cmux(struct channel_manager_t *const me, AT_CMD_TYPE_T type)
 {
     cmux_t *mux = NULL;
 
-    //int cmd_type =type;
     switch (type) {
         case AT_CMD_TYPE_GEN:
             PHS_LOGD("TYPE: GSM\n");
@@ -303,12 +304,12 @@ static cmux_t *find_cmux(struct channel_manager_t *const me, AT_CMD_TYPE_T type)
             return find_type_cmux(me, STMM);
             break;
         default:
-            PHS_LOGD(" CHNMNG find_cmux invalid cmd type! \n");
+            PHS_LOGD(" CHNMNG single_find_cmux invalid cmd type! \n");
     }
     return mux;
 }
-#elif defined CONFIG_DUAL_SIM
-static cmux_t *find_cmux(struct channel_manager_t *const me, AT_CMD_TYPE_T type)
+
+static cmux_t *multi_find_cmux(struct channel_manager_t *const me, AT_CMD_TYPE_T type)
 {
     cmux_t *mux = NULL;
 
@@ -346,30 +347,35 @@ static cmux_t *find_cmux(struct channel_manager_t *const me, AT_CMD_TYPE_T type)
 		return find_type_cmux(me, ATM2_SIM4);
 		break;
         default:
-            PHS_LOGD(" CHNMNG find_cmux invalid cmd type! \n");
+            PHS_LOGD(" CHNMNG multi_find_cmux invalid cmd type! \n");
     }
     return mux;
 }
-#endif
 
 pty_t *find_pty(struct channel_manager_t * const me, pid_t tid)
 {
     int i = 0;
-    for (; i < PTY_CHN_NUM; i++) {
+    int pty_chn_num;
+
+    if(multiSimMode == 1)
+        pty_chn_num = MULTI_PTY_CHN_NUM;
+    else
+        pty_chn_num = SINGLE_PTY_CHN_NUM;
+
+    for (; i < pty_chn_num; i++) {
         if (me->itsSend_thread[i].tid == tid)
             break;
     }
-    if(i >= PTY_CHN_NUM)
+    if(i >= pty_chn_num)
         return NULL;
-#if defined CONFIG_SINGLE_SIM
-    return &me->itsPty[i];
-#elif defined CONFIG_DUAL_SIM
-    return me->itsSend_thread[i].pty;
-#endif
+
+    if(multiSimMode == 1)
+        return me->itsSend_thread[i].pty;
+    else
+        return &me->itsPty[i];
 }
 
-#if defined CONFIG_SINGLE_SIM
-static pty_t **get_mux_wait_array(struct channel_manager_t *const me,
+static pty_t **single_get_mux_wait_array(struct channel_manager_t *const me,
 				  AT_CMD_TYPE_T type, int *array_size)
 {
     switch (type) {
@@ -412,12 +418,12 @@ static pty_t **get_mux_wait_array(struct channel_manager_t *const me,
             *array_size = STMM_WAIT_NUM;
             return me->stm_wait_array;
         default:
-            PHS_LOGD(" CHNMNG find_cmux invalid cmd type! \n");
+            PHS_LOGD(" CHNMNG single_get_mux_wait_array invalid cmd type! \n");
             return NULL;
     }
 }
-#elif defined CONFIG_DUAL_SIM
-static pty_t **get_mux_wait_array(struct channel_manager_t *const me,
+
+static pty_t **multi_get_mux_wait_array(struct channel_manager_t *const me,
 				  AT_CMD_TYPE_T type, int *array_size)
 {
     switch (type) {
@@ -450,11 +456,10 @@ static pty_t **get_mux_wait_array(struct channel_manager_t *const me,
             return me->normal4_wait_array;
 
         default:
-            PHS_LOGE(" CHNMNG find_cmux invalid cmd type! \n");
+            PHS_LOGE(" CHNMNG multi_get_mux_wait_array invalid cmd type! \n");
             return NULL;
     }
 }
-#endif
 
 static void remove_wait_array(pty_t ** wait_array, pty_t * pty, int array_size)
 {
@@ -506,7 +511,10 @@ static cmux_t *chnmng_get_cmux(void *const chnmng, const AT_CMD_TYPE_T type,
 
     //find free cmux
     PHS_LOGD("Before add wait array pty=%p\n", pty);
-    wait_array = get_mux_wait_array(me, type, &array_size);
+    if(multiSimMode == 1)
+        wait_array = multi_get_mux_wait_array(me, type, &array_size);
+    else
+        wait_array = single_get_mux_wait_array(me, type, &array_size);
     if (block) {
         sem_lock(&me->array_lock);
         PHS_LOGD("Before add wait array\n");
@@ -516,12 +524,18 @@ static cmux_t *chnmng_get_cmux(void *const chnmng, const AT_CMD_TYPE_T type,
         print_array(wait_array, array_size);
         sem_unlock(&me->array_lock);
     } else {
-        mux = find_cmux(me, type);
+        if(multiSimMode == 1)
+            mux = multi_find_cmux(me, type);
+        else
+            mux = single_find_cmux(me, type);
     }
 
     while (mux == NULL && block) {
         if (index == 0) {
-            mux = find_cmux(me, type);
+            if(multiSimMode == 1)
+                mux = multi_find_cmux(me, type);
+            else
+                mux = single_find_cmux(me, type);
         }
         if (mux)
             break;
@@ -530,7 +544,10 @@ static cmux_t *chnmng_get_cmux(void *const chnmng, const AT_CMD_TYPE_T type,
              tid);
         sem_lock(&pty->get_mux_lock);
         if (mux == 0) {
-            mux = find_cmux(me, type);
+            if(multiSimMode == 1)
+                mux = multi_find_cmux(me, type);
+            else
+                mux = single_find_cmux(me, type);
         }
     }
     if (mux) {
@@ -547,8 +564,14 @@ void select_send_thread_run(struct channel_manager_t *const me,
 			    AT_CMD_TYPE_T type)
 {
     int array_size;
+    pty_t **wait_array = NULL;
+
     PHS_LOGD("Enter select_send_thread_run\n");
-    pty_t **wait_array = get_mux_wait_array(me, type, &array_size);
+    if(multiSimMode == 1)
+        wait_array = multi_get_mux_wait_array(me, type, &array_size);
+    else
+        wait_array = single_get_mux_wait_array(me, type, &array_size);
+
     pty_t *pty = wait_array[0];
     if (pty != NULL) {
         PHS_LOGD("select thread tid [%d] run...\n", wait_array[0]->tid);
@@ -564,9 +587,14 @@ static void chnmng_free_cmux(void *const chnmng, struct cmux_t *cmux)
     int array_size = 0;
     int type = cmux->cmd_type;
     struct channel_manager_t *me = (struct channel_manager_t *)chnmng;
-    pty_t **wait_array = get_mux_wait_array(me, type, &array_size);
+    pty_t **wait_array = NULL;
     pty_t *pty = NULL;
     pid_t tid = gettid();
+
+    if(multiSimMode == 1)
+        wait_array = multi_get_mux_wait_array(me, type, &array_size);
+    else
+        wait_array = single_get_mux_wait_array(me, type, &array_size);
 
     sem_lock(&me->array_lock);
     pty = wait_array[0];
@@ -602,17 +630,16 @@ struct cmux_t *channel_manager_get_cmux(const AT_CMD_TYPE_T type, int block)
     return chnmng_get_cmux(chnmng.me, type, block);
 }
 
-#if defined CONFIG_SINGLE_SIM
 struct pty_t *channel_manager_get_default_ind_pty(void)
 {
     return &(chnmng.itsPty[0]);
 }
 
-struct pty_t *channel_manager_get_eng_ind_pty(void)
+struct pty_t *channel_manager_single_get_eng_ind_pty(void)
 {
     return &(chnmng.itsPty[4]);
 }
-#elif defined CONFIG_DUAL_SIM
+
 struct pty_t *channel_manager_get_sim1_ind_pty(void)
 {
     return &(chnmng.itsPty[0]);
@@ -633,15 +660,9 @@ struct pty_t *channel_manager_get_sim4_ind_pty(void)
     return &(chnmng.itsPty[9]);
 }
 
-struct pty_t *channel_manager_get_eng_ind_pty(void)
+struct pty_t *channel_manager_multi_get_eng_ind_pty(void)
 {
     return &(chnmng.itsPty[12]);
-}
-#endif
-
-void channel_manager_modem_reset(void)
-{
-    //notify modem manager to reset modem
 }
 
 struct chnmng_ops chnmng_operaton = {
@@ -656,9 +677,16 @@ void chnmng_buffer_Init(struct channel_manager_t *const me)
 
 char *chnmng_find_buffer(struct channel_manager_t *const me)
 {
+    int chn_num;
     char *ret = NULL;
     int i = 0;
-    for (i = 0; i < CHN_NUM; i++) {
+
+    if(multiSimMode == 1)
+        chn_num = MULTI_CHN_NUM;
+    else
+        chn_num = SINGLE_CHN_NUM;
+
+    for (i = 0; i < chn_num; i++) {
         if (me->itsBuffer[i][0] == 0) {
             me->itsBuffer[i][0] = 1;
             ret = &me->itsBuffer[i][4];
@@ -669,30 +697,38 @@ char *chnmng_find_buffer(struct channel_manager_t *const me)
     return ret;
 }
 
-static void chnmng_cmux_reset(struct channel_manager_t *const me)
-{
-    int i, index;
-    for (i = 0; i < PHS_MUX_NUM; i++) {
-        index = chns_data.mux[i].index;
-        me->itsCmux[index].muxfd =
-            open(me->itsCmux[index].name, O_RDWR);
-    }
-}
-
 /*## operation initialize all cmux objects*/
 static void chnmng_cmux_Init(struct channel_manager_t *const me)
 {
+    char prop[20] = {0};
     thread_sched_param sched;
     int tid = 0;
     int policy = 0;
     int index;
-    char muxname[20];
+    char muxname[20] = {0};
     int i = 0;
     int fd;
+    int phs_mux_num;
+    int size;
+    struct chns_config_t chns_data;
 
     memset(me->itsCmux, 0, sizeof(struct cmux_t) * MUX_NUM);
+
+    if(!strcmp(modem, "t")) {
+        property_get(MUX_TD_DEV, prop, "/dev/stty_td");
+    } else if(!strcmp(modem, "w")) {
+        property_get(MUX_W_DEV, prop, "/dev/stty_w");
+    } else if(!strcmp(modem, "vlx")) {
+        property_get(MUX_VLX_DEV, prop, "/dev/ts0710mux");
+    } else {
+        PHS_LOGE("Wrong modem parameter");
+	exit(-1);
+    }
+
+    PHS_LOGD("cmux_Init: mux device is %s", prop);
+
     for (i = 0; i < MUX_NUM; i++) {
-        snprintf(muxname, sizeof(muxname), "%s%d", "/dev/ts0710mux", i);
+        snprintf(muxname, sizeof(muxname), "%s%d", prop, i);
         PHS_LOGD("CHNMNG: open mux:%s !\n ",muxname);
         me->itsCmux[i].type = RESERVE;
         me->itsCmux[i].ops = cmux_get_operations();
@@ -702,16 +738,27 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
             if(i > 14) {
                 continue;
             } else {
-                PHS_LOGD("Phoneserver exit: open mux:/dev/ts0710mux%d failed!\n ",i);
-                exit(1);
+                PHS_LOGD("Phoneserver exit: open %s failed!\n ", muxname);
+                exit(-1);
 	    }
         }
     }
 
-    for (i = 0; i < PHS_MUX_NUM; i++) {
+    if(multiSimMode == 1) {
+        phs_mux_num = MULTI_PHS_MUX_NUM;
+        chns_data = multi_chns_data;
+    } else {
+        phs_mux_num = SINGLE_PHS_MUX_NUM;
+        chns_data = single_chns_data;
+    }
+
+    for (i = 0; i < phs_mux_num; i++) {
         index = chns_data.mux[i].index;
         me->itsCmux[index].buffer = chnmng_find_buffer(&chnmng);
-        me->itsCmux[index].name = chns_data.mux[i].dev_str;
+        snprintf(muxname, sizeof(muxname), "%s%d", prop, i);
+        size = sizeof(me->itsCmux[index].name);
+        strncpy(me->itsCmux[index].name, muxname, size);
+        me->itsCmux[index].name[size - 1] = '\0';
         me->itsCmux[index].type = chns_data.mux[i].type;
         me->itsCmux[index].muxfd =open(me->itsCmux[index].name, O_RDWR);
         if(me->itsCmux[index].muxfd < 0) {
@@ -734,16 +781,41 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
 /*## operation initialize all pty objects */
 static void chnmng_pty_Init(struct channel_manager_t *const me)
 {
+    int pty_chn_num;
     int i = 0;
     char *buff = 0;
     thread_sched_param sched;
     int tid = 0;
     int policy = 0;
     int index;
-    memset(&me->itsPty, 0, sizeof(struct pty_t) * PTY_CHN_NUM);
+    struct chns_config_t chns_data;
+    char pre_ptyname[20] = {0};
+    char ptyname[20] = {0};
+    int size;
+
+    memset(&me->itsPty, 0, sizeof(struct pty_t) * MULTI_PTY_CHN_NUM);
+
+    if(!strcmp(modem, "t")) {
+        strcpy(pre_ptyname, "/dev/CHNPTYT");
+    } else if(!strcmp(modem, "w")) {
+         strcpy(pre_ptyname, "/dev/CHNPTYW");
+    } else if(!strcmp(modem, "vlx")) {
+         strcpy(pre_ptyname, "/dev/CHNPTY");
+    } else {
+        PHS_LOGE("Wrong modem parameter");
+	exit(-1);
+    }
+
+    if(multiSimMode == 1) {
+        pty_chn_num = MULTI_PTY_CHN_NUM;
+        chns_data = multi_chns_data;
+    } else {
+        pty_chn_num = SINGLE_PTY_CHN_NUM;
+        chns_data = single_chns_data;
+    }
 
     /*set attris to default value */
-    for (i = 0; i < PTY_CHN_NUM; i++) {
+    for (i = 0; i < pty_chn_num; i++) {
         me->itsPty[i].ops = pty_get_operations();
         sem_init(&me->itsPty[i].write_lock, 0, 1);
         sem_init(&me->itsPty[i].receive_lock, 0, 1);
@@ -751,9 +823,12 @@ static void chnmng_pty_Init(struct channel_manager_t *const me)
         me->itsPty[i].ops->pty_clear_wait_resp_flag(&me->itsPty[i]);
         me->itsPty[i].type = RESERVE;
     }
-    for (i = 0; i < PTY_CHN_NUM; i++) {
+    for (i = 0; i < pty_chn_num; i++) {
         index = chns_data.pty[i].index;
-        me->itsPty[index].name = chns_data.pty[i].dev_str;
+        snprintf(ptyname, sizeof(ptyname), "%s%d", pre_ptyname, i);
+        size = sizeof(me->itsPty[index].name);
+        strncpy(me->itsPty[index].name, ptyname, size);
+        me->itsPty[index].name[size - 1] = '\0';
         me->itsPty[index].type = chns_data.pty[i].type;
         me->itsPty[index].pty_fd =create_communication_channel(me->itsPty[index].name);
         buff = chnmng_find_buffer(&chnmng);
@@ -765,25 +840,29 @@ static void chnmng_pty_Init(struct channel_manager_t *const me)
         me->itsSend_thread[i].pty = &me->itsPty[index];
         me->itsSend_thread[i].ops = send_thread_get_operations();
     }
-#ifndef CONFIG_VETH
-    me->itsMngPty.name = chns_data.itsMngPty.dev_str;
-    //me->itsMngPty.ops = pty_get_operations();
-    me->itsMngPty.pty_fd = create_communication_channel(me->itsMngPty.name);
-    buff = chnmng_find_buffer(&chnmng);
-    if (buff == NULL) {
-        PHS_LOGE(" ERROR chnmng_pty_Init no buffer!\n");
-    }
-    me->itsMngPty.buffer = buff;
-#endif
 }
 
 void chnmng_start_thread(struct channel_manager_t *const me)
 {
+    int phs_mux_num;
+    int pty_chn_num;
     int i = 0;
     int tid = 0;
     int policy = 0;
     thread_sched_param sched;
-    for (i = 0; i < PHS_MUX_NUM; i++) {
+    struct chns_config_t chns_data;
+
+    if(multiSimMode == 1) {
+        phs_mux_num = MULTI_PHS_MUX_NUM;
+        pty_chn_num = MULTI_PTY_CHN_NUM;
+        chns_data = multi_chns_data;
+    } else {
+        phs_mux_num = SINGLE_PHS_MUX_NUM;
+        pty_chn_num = SINGLE_PTY_CHN_NUM;
+        chns_data = single_chns_data;
+    }
+
+    for (i = 0; i < phs_mux_num; i++) {  //receive thread
         tid =thread_creat(&me->itsReceive_thread[i].thread, NULL,
                 (void *)me->itsReceive_thread[i].ops->receive_data,
                 (void *)&(me->itsReceive_thread[i]));
@@ -800,7 +879,7 @@ void chnmng_start_thread(struct channel_manager_t *const me)
         }
     }
 
-    for (i = 0; i < PTY_CHN_NUM; i++) {
+    for (i = 0; i < pty_chn_num; i++) {  //send thread
         tid =thread_creat(&me->itsSend_thread[i].thread, NULL,
                 (void *)me->itsSend_thread[i].ops->send_data,
                 (void *)&(me->itsSend_thread[i]));
@@ -836,62 +915,52 @@ static void channel_manager_init(void)
 
     chnmng_start_thread(chnmng.me);
 }
-extern int findInBuf(unsigned char *buf, int len, char *needle);
-extern int cvt_ppp_up_rsp(char *rsp_str, int len);
-extern int cvt_ppp_down_rsp(char *rsp_str, int len);
+
 extern void ps_service_init(void);
 extern sem sms_lock;
 
+static void usage(const char *argv)
+{
+    PHS_LOGE("Usage: %s -m <modem>", argv);
+    PHS_LOGE("modem: t (td modem)");
+    PHS_LOGE("modem: w (wcdma modem)");
+    PHS_LOGE("modem: vlx (vlx modem)");
+    exit(-1);
+}
+
 int main(int argc, char *argv[])
 {
-    int str;
-    char buffer[SERIAL_BUFFSIZE];
-    int received = 0, rc = 0;
-    char const QUIT[] = "QUIT";
-    char const PPPUP[] = "+PPPUP";
-    char const PPPDOWN[] = "+PPPDOWN";
+    char prop[5];
 
     PHS_LOGD("chnmng start phone server!\n");
-    PHS_LOGD("\n Phoneserver version: %s \n",version_string);
+    PHS_LOGD("Phoneserver version: %s \n",version_string);
+
+    if (0 == strcmp(argv[1], "-m") && (argc > 2)) {
+        modem = argv[2];
+    } else {
+        usage(argv[0]);
+    }
+
+    if(!strcmp(modem, "t")) {
+        property_get(TD_SIM_NUM, prop, "");
+    } else if(!strcmp(modem, "w")) {
+        property_get(W_SIM_NUM, prop, "");
+    } else if(!strcmp(modem, "vlx")) {
+        property_get(VLX_SIM_NUM, prop, "");
+    } else {
+	usage(argv[0]);
+    }
+
+    PHS_LOGD("Current modem is %s, Current sim is %s", modem, prop);
+
+    if(strcmp(prop, "1"))
+        multiSimMode = 1;
+    else
+        multiSimMode = 0;
+
     sem_init(&sms_lock, 0, 1);
     ps_service_init();
     channel_manager_init();
-#ifdef CONFIG_VETH
     while(1)
         pause();
-#else
-    memset(buffer, 0, SERIAL_BUFFSIZE);
-    while (1) {
-        PHS_LOGD("PTY_mng Waiting for command\n");
-
-        //memset(buffer,0,SERIAL_BUFFSIZE);
-        received +=
-            read(chnmng.itsMngPty.pty_fd, buffer + received,
-                    SERIAL_BUFFSIZE);
-        PHS_LOGD("PTY_mng  after read command\n");
-        if (findInBuf((unsigned char *)buffer, received, "\r")) {	//end of CMD
-            //adapter process
-            *(buffer + received) = '\0';
-            PHS_LOGD
-                ("CHNMNG PTY_mng Received %d bytes command[%s]\n",
-                 received, buffer);
-            received = 0;
-
-            //sizeof(COMMAND)-1 is used because in the end of the defined command there is a 0x00
-            if (!strncasecmp(QUIT, buffer, sizeof(QUIT) - 1)) {
-
-                //close all open mux
-                chnmng_cmux_reset(chnmng.me);
-            }
-            if (!strncasecmp(PPPUP, buffer, sizeof(PPPUP) - 1)) {
-                PHS_LOGD("PTY_mng: PPPUP:\n");
-                cvt_ppp_up_rsp(buffer, strlen(buffer));
-            }
-            if (!strncasecmp(PPPDOWN, buffer, sizeof(PPPDOWN) - 1)) {
-                PHS_LOGD("PTY_mng: PPPDOWN:\n");
-                cvt_ppp_down_rsp(buffer, strlen(buffer));
-            }
-        }
-    }
-#endif
 }

@@ -96,21 +96,18 @@ typedef enum at_cmd_type_t
 	AT_CMD_TYPE_NW, AT_CMD_TYPE_PBK, AT_CMD_TYPE_SIM, AT_CMD_TYPE_GEN,
 	AT_CMD_TYPE_STK,
 	AT_CMD_TYPE_STM,
-#if defined CONFIG_DUAL_SIM
 	AT_CMD_TYPE_SLOW, AT_CMD_TYPE_NORMAL,
 	AT_CMD_TYPE_SLOW1, AT_CMD_TYPE_NORMAL1,
 	AT_CMD_TYPE_SLOW2, AT_CMD_TYPE_NORMAL2,
 	AT_CMD_TYPE_SLOW3, AT_CMD_TYPE_NORMAL3,
 	AT_CMD_TYPE_SLOW4, AT_CMD_TYPE_NORMAL4,
-#endif
 	AT_CMD_TYPE_INVALID
 } AT_CMD_TYPE_T;
 
 typedef struct pty_t pty_t;
 typedef struct cmux_t cmux_t;
-#if defined CONFIG_DUAL_SIM
 typedef enum mux_type_t mux_type_t;
-#endif
+
 typedef struct at_cmd_req_t {
 	pty_t *recv_pty;
 	char *cmd_str;
@@ -141,12 +138,11 @@ typedef struct at_cmd_ind_t {
 #define ETIMEOUT -1234
 
 extern int g_esqopt_value;
-#if defined CONFIG_DUAL_SIM
+
 extern struct pty_t *channel_manager_get_sim1_ind_pty(void);
 extern struct pty_t *channel_manager_get_sim2_ind_pty(void);
 extern struct pty_t *channel_manager_get_sim3_ind_pty(void);
 extern struct pty_t *channel_manager_get_sim4_ind_pty(void);
-#endif
 
 int strStartsWith(const char *line, const char *prefix);
 
@@ -168,17 +164,14 @@ int adapter_cmd_is_end(char *str, int len);
 int adapter_get_rsp_type(char *str, int len);
 int adapter_cmux_write(cmux_t * mux_t, char *buf, int len, int to);
 
-#if defined CONFIG_SINGLE_SIM
 pty_t *adapter_get_default_ind_pty(void);
-pty_t *adapter_get_eng_ind_pty(void);
-#elif defined CONFIG_DUAL_SIM
+pty_t *adapter_single_get_eng_ind_pty(void);
+
 pty_t *adapter_get_ind_pty(mux_type_t type);
-pty_t *adapter_get_eng_ind_pty(mux_type_t type);
-#endif
+pty_t *adapter_multi_get_eng_ind_pty(mux_type_t type);
 
 /*pty call this function to deliver a command */
 int phoneserver_deliver_at_cmd(const pty_t * pty, char *cmd, int len);
-int phoneserver_deliver_at_cmd_ext(const pty_t * pty, char *cmd, int len);
 
 /*mux call this function to deliver a response or indicator */
 int phoneserver_deliver_at_rsp(const cmux_t * cmux, char *rsp, int len);

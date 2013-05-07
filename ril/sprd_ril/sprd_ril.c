@@ -54,7 +54,14 @@
 #define MO_CALL 0
 #define MT_CALL 1
 
-#define SIM_MODE_PROPERTY  "persist.msms.phone_count"
+#define TD_SIM_NUM  "ro.modem.t.msms.count"
+#define W_SIM_NUM  "ro.modem.w.msms.count"
+#define VLX_SIM_NUM  "ro.modem.vlx.msms.count"
+
+#define ETH_TD  "ro.modem.t.eth"
+#define ETH_W  "ro.modem.w.eth"
+#define ETH_VLX  "ro.modem.vlx.eth"
+
 #define RIL_MAIN_SIM_PROPERTY  "persist.msms.phone_default"
 #define RIL_SIM_POWER_OFF_PROPERTY  "sys.power.off"
 #define RIL_SIM_POWER_PROPERTY  "ril.sim.power"
@@ -74,7 +81,7 @@
 #define RIL_SIM_TYPE1  "ril.ICC_TYPE_1"
 
 int s_multiSimMode = 0;
-
+static const char * s_modem = NULL;
 
 
 struct ATChannels *ATch_type[MAX_CHANNELS];
@@ -118,10 +125,10 @@ struct channel_description
 };
 
 struct channel_description single_descriptions[MAX_CHANNELS] = {
-    { 0, -1, "Unsol", "/dev/CHNPTY0", CHANNEL_IDLE, PTHREAD_MUTEX_INITIALIZER},
-    { 1, -1, "Channel1", "/dev/CHNPTY1", CHANNEL_IDLE, PTHREAD_MUTEX_INITIALIZER},
-    { 2, -1, "Channel2", "/dev/CHNPTY2", CHANNEL_IDLE, PTHREAD_MUTEX_INITIALIZER},
-    { 3, -1, "Channel3", "/dev/CHNPTY3", CHANNEL_IDLE, PTHREAD_MUTEX_INITIALIZER},
+    { 0, -1, "Unsol", "", CHANNEL_IDLE, PTHREAD_MUTEX_INITIALIZER},
+    { 1, -1, "Channel1", "", CHANNEL_IDLE, PTHREAD_MUTEX_INITIALIZER},
+    { 2, -1, "Channel2", "", CHANNEL_IDLE, PTHREAD_MUTEX_INITIALIZER},
+    { 3, -1, "Channel3", "", CHANNEL_IDLE, PTHREAD_MUTEX_INITIALIZER},
 };
 
 struct channel_description multi_descriptions[MULTI_MAX_CHANNELS] = {
@@ -1184,7 +1191,8 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
         char *apn;
         char *address;
         char cmd[30] = {0};
-        char prop[20];
+        char eth[20] = {0};
+        char prop[20] = {0};
         const int   dnslist_sz = 50;
         char*       dnslist = alloca(dnslist_sz);
         const char* separator = "";
@@ -1224,11 +1232,22 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
         if (err < 0)
             goto error;
 
-        snprintf(cmd, sizeof(cmd), "veth%d", i);
+        if(!strcmp(s_modem, "t")) {
+            property_get(ETH_TD, eth, "seth_td");
+        } else if(!strcmp(s_modem, "w")) {
+            property_get(ETH_W, eth, "seth_w");
+        } else if(!strcmp(s_modem, "vlx")) {
+            property_get(ETH_VLX, eth, "veth");
+        } else {
+            ALOGE("Unknown modem type, exit");
+            exit(-1);
+        }
+
+        snprintf(cmd, sizeof(cmd), "%s%d", eth, i);
         responses[i].ifname = alloca(strlen(cmd) + 1);
         strcpy(responses[i].ifname, cmd);
 
-        snprintf(cmd, sizeof(cmd), "net.veth%d.ip", i);
+        snprintf(cmd, sizeof(cmd), "net.%s%d.ip", eth, i);
         property_get(cmd, prop, NULL);
         responses[i].addresses = alloca(strlen(prop) + 1);
         responses[i].gateways = alloca(strlen(prop) + 1);
@@ -1237,7 +1256,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
 
         dnslist[0] = 0;
         for (nn = 0; nn < 2; nn++) {
-            snprintf(cmd, sizeof(cmd), "net.veth%d.dns%d", i, nn+1);
+            snprintf(cmd, sizeof(cmd), "net.%s%d.dns%d", eth, i, nn+1);
             property_get(cmd, prop, NULL);
 
             /* Append the DNS IP address */
@@ -7690,6 +7709,7 @@ mainLoop(void *param)
 
     if(param)
         sim_num= *((int*)param);
+
     if(s_multiSimMode) {
         descriptions = multi_descriptions;
         channel_nums = MULTI_MAX_CHANNELS;
@@ -7715,10 +7735,20 @@ again:
         sim_num = sim_save;
         for(i = 0; i < channel_nums; i++)
         {
+            if(!strcmp(s_modem, "vlx")) {
+                sprintf(str,"/dev/CHNPTY%d",sim_num);
+            } else if(!strcmp(s_modem, "t")) {
+                sprintf(str,"/dev/CHNPTYT%d",sim_num);
+            } else if(!strcmp(s_modem, "w")) {
+                sprintf(str,"/dev/CHNPTYW%d",sim_num);
+            } else {
+                ALOGE("Invalid tty device");
+                exit(-1);
+            }
+            strcpy(descriptions[i].ttyName , str);
+
             /* open TTY device, and attach it to channel */
             if(s_multiSimMode) {
-                sprintf(str,"/dev/CHNPTY%d",sim_num);
-                strcpy(descriptions[i].ttyName , str);
                 descriptions[i].channelID = sim_num;
                 sprintf(str,"Channel%d",sim_num);
                 strcpy(descriptions[i].name , str);
@@ -7780,40 +7810,56 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
     char phoneCount[5];
     char prop[5];
 
-    if(0 == property_get(SIM_MODE_PROPERTY, phoneCount, "1")) {
-        s_multiSimMode = 0;
-    } else {
+    s_rilenv = env;
+
+    while ( -1 != (opt = getopt(argc, argv, "m:n:"))) {
+        switch (opt) {
+            case 'm':
+                s_modem = optarg;
+                break;
+            case 'n':
+                s_sim_num = atoi(optarg);
+                break;
+            default:
+                usage(argv[0]);
+                break;
+        }
+    }
+
+    ALOGD("rild connect %s modem, current is rild%d\n", s_modem, s_sim_num);
+
+    if(!strcmp(s_modem, "t")) {
+        property_get(TD_SIM_NUM, phoneCount, "");
         if(strcmp(phoneCount, "1"))
             s_multiSimMode = 1;
         else
             s_multiSimMode = 0;
+    } else if(!strcmp(s_modem, "w")) {
+        property_get(W_SIM_NUM, phoneCount, "");
+        if(strcmp(phoneCount, "1"))
+            s_multiSimMode = 1;
+        else
+            s_multiSimMode = 0;
+    } else if(!strcmp(s_modem, "vlx")) {
+        property_get(VLX_SIM_NUM, phoneCount, "");
+        if(strcmp(phoneCount, "1"))
+            s_multiSimMode = 1;
+        else
+            s_multiSimMode = 0;
+    } else {
+        usage(argv[0]);
     }
 
-    s_rilenv = env;
-
-    if(s_multiSimMode) {
-        while ( -1 != (opt = getopt(argc, argv, "n:"))) {
-            switch (opt) {
-                case 'n':
-                    s_sim_num = atoi(optarg);
-                    ALOGD("sim card %d channel will be established!\n", s_sim_num);
-                    break;
-                default:
-                    usage(argv[0]);
-                    break;
-            }
-        }
-    }
     pthread_attr_init (&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     sem_init(&w_sem, 0, 1);
-    if(s_multiSimMode){
+    if(s_multiSimMode) {
         simNum = s_sim_num;
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         property_get(RIL_SIM1_ABSENT_PROPERTY, prop, "0");
-	if(!strcmp(prop, "1")) {
-        simNum = s_sim_num>0 ? 0 : 1;
-	}
+        if(!strcmp(prop, "1")) {
+            simNum = s_sim_num>0 ? 0 : 1;
+        }
 #endif
         ret = pthread_create(&s_tid_mainloop, &attr, mainLoop, &simNum);
         ALOGD("RIL enter multi sim card mode!");
