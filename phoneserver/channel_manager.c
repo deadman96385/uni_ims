@@ -49,8 +49,8 @@ struct chns_config_t single_chns_data = {.pty = {
 	{.dev_str = "/dev/CHNPTY1",.index = 1,.type = AT,.prority = 1},
 	{.dev_str = "/dev/CHNPTY2",.index = 2,.type = AT,.prority = 1},		/*## attribute at_pty */
 	{.dev_str = "/dev/CHNPTY3",.index = 3,.type = AT,.prority = 1},		/*## attribute at_pty */
-	{.dev_str = "/dev/CHNPTY12",.index = 4,.type = AT,.prority = 1},	/*## attribute at_pty */
-	{.dev_str = "/dev/CHNPTY13",.index = 5,.type = AT,.prority = 1},	/*## attribute at_pty */
+	{.dev_str = "/dev/CHNPTY12",.index = 12,.type = AT,.prority = 1},	/*## attribute at_pty */
+	{.dev_str = "/dev/CHNPTY13",.index = 13,.type = AT,.prority = 1},	/*## attribute at_pty */
 },.mux = {
 	{.dev_str = "",.index = 0,.type = INDM,.prority = 20},	/*## attribute misc_mux */
 	{.dev_str = "",.index = 1,.type = SIMM,.prority = 20},	/*## attribute sim_mux */
@@ -754,27 +754,27 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
 
     for (i = 0; i < phs_mux_num; i++) {
         index = chns_data.mux[i].index;
-        me->itsCmux[index].buffer = chnmng_find_buffer(&chnmng);
-        snprintf(muxname, sizeof(muxname), "%s%d", prop, i);
-        size = sizeof(me->itsCmux[index].name);
-        strncpy(me->itsCmux[index].name, muxname, size);
-        me->itsCmux[index].name[size - 1] = '\0';
-        me->itsCmux[index].type = chns_data.mux[i].type;
-        me->itsCmux[index].muxfd =open(me->itsCmux[index].name, O_RDWR);
-        if(me->itsCmux[index].muxfd < 0) {
-            PHS_LOGD("Phoneserver exit: open mux:%s failed!\n", me->itsCmux[index].name);
+        me->itsCmux[i].buffer = chnmng_find_buffer(&chnmng);
+        snprintf(muxname, sizeof(muxname), "%s%d", prop, index);
+        size = sizeof(me->itsCmux[i].name);
+        strncpy(me->itsCmux[i].name, muxname, size);
+        me->itsCmux[i].name[size - 1] = '\0';
+        me->itsCmux[i].type = chns_data.mux[i].type;
+        me->itsCmux[i].muxfd =open(me->itsCmux[i].name, O_RDWR);
+        if(me->itsCmux[i].muxfd < 0) {
+            PHS_LOGD("Phoneserver exit: open mux:%s failed!\n", me->itsCmux[i].name);
             exit(1);
         }
-        PHS_LOGD("CHNMNG: open mux:%s fd=%d  !\n ",	me->itsCmux[index].name, me->itsCmux[index].muxfd);
+        PHS_LOGD("CHNMNG: open mux:%s fd=%d  !\n ",	me->itsCmux[i].name, me->itsCmux[i].muxfd);
         sem_init(&me->itsReceive_thread[i].resp_cmd_lock, 0, 1);
         sem_init(&me->itsCmux[i].cmux_lock, 0, 0);
         cond_init(&me->itsCmux[i].cond_timeout, NULL);
         mutex_init(&me->itsCmux[i].mutex_timeout, NULL);
-        me->itsReceive_thread[i].mux = &me->itsCmux[index];
+        me->itsReceive_thread[i].mux = &me->itsCmux[i];
         me->itsReceive_thread[i].ops = receive_thread_get_operations();
 
         PHS_LOGD("CHNMNG: after open mux:%s fd=%d  !\n ",
-                me->itsCmux[index].name, me->itsCmux[index].muxfd);
+                me->itsCmux[i].name, me->itsCmux[i].muxfd);
     }
 }
 
@@ -825,19 +825,19 @@ static void chnmng_pty_Init(struct channel_manager_t *const me)
     }
     for (i = 0; i < pty_chn_num; i++) {
         index = chns_data.pty[i].index;
-        snprintf(ptyname, sizeof(ptyname), "%s%d", pre_ptyname, i);
-        size = sizeof(me->itsPty[index].name);
-        strncpy(me->itsPty[index].name, ptyname, size);
-        me->itsPty[index].name[size - 1] = '\0';
-        me->itsPty[index].type = chns_data.pty[i].type;
-        me->itsPty[index].pty_fd =create_communication_channel(me->itsPty[index].name);
+        snprintf(ptyname, sizeof(ptyname), "%s%d", pre_ptyname, index);
+        size = sizeof(me->itsPty[i].name);
+        strncpy(me->itsPty[i].name, ptyname, size);
+        me->itsPty[i].name[size - 1] = '\0';
+        me->itsPty[i].type = chns_data.pty[i].type;
+        me->itsPty[i].pty_fd =create_communication_channel(me->itsPty[i].name);
         buff = chnmng_find_buffer(&chnmng);
         if (buff == NULL) {
             PHS_LOGE("ERROR chnmng_pty_Init no buffer!\n");
         }
-        me->itsPty[index].buffer = buff;
+        me->itsPty[i].buffer = buff;
         sem_init(&me->itsSend_thread[i].req_cmd_lock, 0, 1);
-        me->itsSend_thread[i].pty = &me->itsPty[index];
+        me->itsSend_thread[i].pty = &me->itsPty[i];
         me->itsSend_thread[i].ops = send_thread_get_operations();
     }
 }
