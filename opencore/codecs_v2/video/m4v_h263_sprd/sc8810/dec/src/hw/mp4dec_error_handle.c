@@ -1052,7 +1052,7 @@ void MCABfr2RecFrm(DEC_VOP_MODE_T *vop_mode_ptr)
 	uint32 *pMb_y = (uint32 *)(vop_mode_ptr->pCurRecFrame->pDecFrame->imgY + mb_addr);
 #ifdef _VSP_LINUX_
        extern uint32 s_vsp_Vaddr_base;
-	uint32 *pMcaBfr = (uint32*)(0x20c05000-VSP_DCAM_BASE+s_vsp_Vaddr_base);
+	uint32 *pMcaBfr = (uint32*)(0x20c05000+s_vsp_Vaddr_base);
 #else
 	uint32 *pMcaBfr = (uint32*)0x20c05000;
 #endif

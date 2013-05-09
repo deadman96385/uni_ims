@@ -56,6 +56,7 @@ PUBLIC int32 VSP_OPEN_Dev (void)
 	    	}else
 	    	{
 	        	s_vsp_Vaddr_base = (uint32)mmap(NULL,SPRD_VSP_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,s_vsp_fd,0);
+				s_vsp_Vaddr_base -= VSP_DCAM_BASE;
 		}
 	}
     		
@@ -111,17 +112,14 @@ uint32 *g_cmd_info_ptr;
 uint32 *g_cmd_data_base;
 uint32 *g_cmd_info_base;
 
-PUBLIC  int32 vsp_read_reg_poll_normal(uint32 reg_addr, uint32 msk,uint32 exp_value, uint32 time, char *pstring)
+PUBLIC  int32 vsp_read_reg_poll_normal(uint32 reg_addr, uint32 msk,uint32 exp_value, int32 time, char *pstring)
 {
-	uint32 vsp_time_out_cnt = 0;
-	
-	while ((*(volatile uint32*)(reg_addr-VSP_DCAM_BASE+s_vsp_Vaddr_base) & msk) != exp_value)
+	while ((*(volatile uint32*)(reg_addr+s_vsp_Vaddr_base) & msk) != exp_value)
 	{
-		if (vsp_time_out_cnt > time)
+		if (time -- < 0)
 		{
 			return 1;
 		}
-		vsp_time_out_cnt++;
 	}
 
 	return 0;
