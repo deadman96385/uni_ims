@@ -886,9 +886,9 @@ OMX_ERRORTYPE OmxComponentMpeg4EncAO::ConstructComponent(OMX_PTR pAppData, OMX_P
     //OMX_VIDEO_PARAM_QUANTIZATIONTYPE settings of output port
     SetHeader(&pOutPort->VideoQuantType, sizeof(OMX_VIDEO_PARAM_QUANTIZATIONTYPE));
     pOutPort->VideoQuantType.nPortIndex = OMX_PORT_OUTPUTPORT_INDEX;
-    pOutPort->VideoQuantType.nQpI = 6;
-    pOutPort->VideoQuantType.nQpP = 6;
-    pOutPort->VideoQuantType.nQpB = 6;
+    pOutPort->VideoQuantType.nQpI = 15;
+    pOutPort->VideoQuantType.nQpP = 16;
+    pOutPort->VideoQuantType.nQpB = 16;
 
 
     //OMX_VIDEO_PARAM_VBSMCTYPE settings of output port

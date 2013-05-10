@@ -162,11 +162,11 @@ extern uint32 s_vsp_Vaddr_base;
 
 //PUBLIC void vsp_write_cmd_info(uint32 cmd_info);
 #else
-PUBLIC  int32 vsp_read_reg_poll_normal(uint32 reg_addr, uint32 msk,uint32 exp_value, uint32 time, char *pstring);
+PUBLIC  int32 vsp_read_reg_poll_normal(uint32 reg_addr, uint32 msk,uint32 exp_value, int32 time, char *pstring);
 
 //normal mode
-#define VSP_WRITE_REG(reg_addr, value, pstring) *(volatile uint32 *)(reg_addr-VSP_DCAM_BASE+s_vsp_Vaddr_base)  = (value) //vsp_write_register_normal(reg_addr, value, pstring)
-#define VSP_READ_REG(reg_addr, pstring)		(*(volatile uint32 *)(reg_addr-VSP_DCAM_BASE+s_vsp_Vaddr_base)) //vsp_read_register_normal(reg_addr, pstring)
+#define VSP_WRITE_REG(reg_addr, value, pstring) *(volatile uint32 *)(reg_addr+s_vsp_Vaddr_base)  = (value) //vsp_write_register_normal(reg_addr, value, pstring)
+#define VSP_READ_REG(reg_addr, pstring)		(*(volatile uint32 *)(reg_addr+s_vsp_Vaddr_base)) //vsp_read_register_normal(reg_addr, pstring)
 #define VSP_READ_REG_POLL(reg_addr, msk, exp_value, time, pstring) vsp_read_reg_poll_normal(reg_addr, msk, exp_value, time, pstring)
 
 //command queue mode
