@@ -99,14 +99,14 @@ static int start_engservice(void)
 
 static int start_phser()
 {
-    property_set("ctl.start", "phoneserver_vlx");
+    property_set("ctl.start", "phoneserver_w");
 
     return 0;
 }
 
 static int kill_phser()
 {
-    property_set("ctl.stop", "phoneserver_vlx");
+    property_set("ctl.stop", "phoneserver_w");
 
     return 0;
 }
@@ -115,14 +115,14 @@ static int stop_rild(void)
 {
 	/* stop rild */
     if(s_multiSimMode == 3) {
-        property_set("ctl.stop", "ril-daemon");
-        property_set("ctl.stop", "ril-daemon1");
-        property_set("ctl.stop", "ril-daemon2");
+        property_set("ctl.stop", "wril-daemon");
+        property_set("ctl.stop", "wril-daemon1");
+        property_set("ctl.stop", "wril-daemon2");
     } else if(s_multiSimMode == 2) {
-        property_set("ctl.stop", "ril-daemon");
-        property_set("ctl.stop", "ril-daemon1");
+        property_set("ctl.stop", "wril-daemon");
+        property_set("ctl.stop", "wril-daemon1");
     } else {
-        property_set("ctl.stop", "ril-daemon");
+        property_set("ctl.stop", "wril-daemon");
     }
 
     return 0;
@@ -132,14 +132,14 @@ static int start_rild(void)
 {
     /* start rild */
     if(s_multiSimMode == 3) {
-        property_set("ctl.start", "ril-daemon");
-        property_set("ctl.start", "ril-daemon1");
-        property_set("ctl.start", "ril-daemon2");
+        property_set("ctl.start", "wril-daemon");
+        property_set("ctl.start", "wril-daemon1");
+        property_set("ctl.start", "wril-daemon2");
     } else if(s_multiSimMode == 2) {
-        property_set("ctl.start", "ril-daemon");
-        property_set("ctl.start", "ril-daemon1");
+        property_set("ctl.start", "wril-daemon");
+        property_set("ctl.start", "wril-daemon1");
     } else {
-        property_set("ctl.start", "ril-daemon");
+        property_set("ctl.start", "wril-daemon");
     }
 
     return 0;

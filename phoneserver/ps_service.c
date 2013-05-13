@@ -29,7 +29,6 @@
 
 #define ETH_TD  "ro.modem.t.eth"
 #define ETH_W  "ro.modem.w.eth"
-#define ETH_VLX  "ro.modem.vlx.eth"
 
 #define SYS_IFCONFIG_UP "sys.ifconfig.up"
 #define SYS_IFCONFIG_DOWN "sys.ifconfig.down"
@@ -278,11 +277,9 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
                 }
 
                 if(!strcmp(modem, "t")) {
-                    property_get(ETH_TD, prop, "seth_td");
+                    property_get(ETH_TD, prop, "veth");
                 } else if(!strcmp(modem, "w")) {
-                    property_get(ETH_W, prop, "seth_w");
-                } else if(!strcmp(modem, "vlx")) {
-                    property_get(ETH_VLX, prop, "veth");
+                    property_get(ETH_W, prop, "veth");
                 } else {
                     PHS_LOGE("Unknown modem type, exit");
                     exit(-1);
@@ -430,11 +427,9 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
 
         usleep(200*1000);
         if(!strcmp(modem, "t")) {
-            property_get(ETH_TD, prop, "seth_td");
+            property_get(ETH_TD, prop, "veth");
         } else if(!strcmp(modem, "w")) {
-            property_get(ETH_W, prop, "seth_w");
-        } else if(!strcmp(modem, "vlx")) {
-            property_get(ETH_VLX, prop, "veth");
+            property_get(ETH_W, prop, "veth");
         } else {
             PHS_LOGE("Unknown modem type, exit");
             exit(-1);
