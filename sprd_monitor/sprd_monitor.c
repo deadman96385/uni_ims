@@ -81,18 +81,18 @@ static int start_nvitemd(void)
 
 static int kill_engservice(void)
 {
-    property_set("ctl.stop", "engservice");
-    property_set("ctl.stop", "engmodemclient");
-    property_set("ctl.stop", "engpcclient");
+    property_set("ctl.stop", "engservicew");
+    property_set("ctl.stop", "engmodemclientw");
+    property_set("ctl.stop", "engpcclientw");
 
     return 0;
 }
 
 static int start_engservice(void)
 {
-    property_set("ctl.start", "engservice");
-    property_set("ctl.start", "engmodemclient");
-    property_set("ctl.start", "engpcclient");
+    property_set("ctl.start", "engservicew");
+    property_set("ctl.start", "engmodemclientw");
+    property_set("ctl.start", "engpcclientw");
 
     return 0;
 }
