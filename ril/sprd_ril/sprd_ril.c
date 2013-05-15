@@ -5311,9 +5311,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 p_response = NULL;
                 ALOGD("[stk]send RIL_REQUEST_STK_SET_PROFILE");
                 err = at_send_command(ATch_type[channelID], "AT+SPUSATPROFILE?", &p_response);
-                ALOGD("[stk]RIL_REQUEST_STK_SET_PROFILE: err=%d succ=%d", err, p_response->success);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    ALOGD("[stk]RIL_REQUEST_STK_SET_PROFILE: err=%d", err);
                 } else {
                     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                 }
