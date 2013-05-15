@@ -1329,6 +1329,100 @@ error:
     at_response_free(p_response);
 }
 
+static void convertFailCause(int cause)
+{
+    int failCause = cause;
+
+    switch(failCause) {
+        case MN_GPRS_ERR_NO_SATISFIED_RESOURCE:
+        case MN_GPRS_ERR_INSUFF_RESOURCE:
+        case MN_GPRS_ERR_MEM_ALLOC:
+        case MN_GPRS_ERR_LLC_SND_FAILURE:
+        case MN_GPRS_ERR_OPERATION_NOT_ALLOWED:
+        case MN_GPRS_ERR_SPACE_NOT_ENOUGH:
+        case MN_GPRS_ERR_TEMPORARILY_BLOCKED:
+            s_lastPdpFailCause = PDP_FAIL_INSUFFICIENT_RESOURCES;
+            break;
+        case MN_GPRS_ERR_SERVICE_OPTION_OUTOF_ORDER:
+        case MN_GPRS_ERR_OUT_OF_ORDER_SERVICE_OPTION:
+            s_lastPdpFailCause = PDP_FAIL_SERVICE_OPTION_OUT_OF_ORDER;
+            break;
+        case MN_GPRS_ERR_PDP_AUTHENTICATION_FAILED:
+        case MN_GPRS_ERR_AUTHENTICATION_FAILURE:
+            s_lastPdpFailCause = PDP_FAIL_USER_AUTHENTICATION;
+            break;
+        case MN_GPRS_ERR_NO_NSAPI:
+        case MN_GPRS_ERR_PDP_TYPE:
+        case MN_GPRS_ERR_PDP_ID:
+        case MN_GPRS_ERR_NSAPI:
+        case MN_GPRS_ERR_UNKNOWN_PDP_ADDR_OR_TYPE:
+        case MN_GPRS_ERR_INVALID_TI:
+            s_lastPdpFailCause = PDP_FAIL_UNKNOWN_PDP_ADDRESS_TYPE;
+            break;
+        case MN_GPRS_ERR_SERVICE_OPTION_NOT_SUPPORTED:
+        case MN_GPRS_ERR_UNSUPPORTED_SERVICE_OPTION:
+        case MN_GPRS_ERR_FEATURE_NOT_SUPPORTED:
+        case MN_GPRS_ERR_QOS_NOT_ACCEPTED:
+        case MN_GPRS_ERR_ATC_PARAM:
+        case MN_GPRS_ERR_PERMENANT_PROBLEM:
+        case MN_GPRS_ERR_READ_TYPE:
+        case MN_GPRS_ERR_STARTUP_FAILURE:
+            s_lastPdpFailCause = PDP_FAIL_SERVICE_OPTION_NOT_SUPPORTED;
+            break;
+        case MN_GPRS_ERR_ACTIVE_REJCET:
+        case MN_GPRS_ERR_REQUEST_SERVICE_OPTION_NOT_SUBSCRIBED:
+        case MN_GPRS_ERR_UNSUBSCRIBED_SERVICE_OPTION:
+            s_lastPdpFailCause = PDP_FAIL_SERVICE_OPTION_NOT_SUBSCRIBED;
+            break;
+        case MN_GPRS_ERR_ACTIVATION_REJ_GGSN:
+            s_lastPdpFailCause = PDP_FAIL_ACTIVATION_REJECT_GGSN;
+            break;
+        case MN_GPRS_ERR_ACTIVATION_REJ:
+        case MN_GPRS_ERR_MODIFY_REJ:
+            s_lastPdpFailCause = PDP_FAIL_ACTIVATION_REJECT_UNSPECIFIED;
+        case MN_GPRS_ERR_MISSING_OR_UNKOWN_APN:
+        case MN_GPRS_ERR_UNKNOWN_APN:
+            s_lastPdpFailCause = PDP_FAIL_MISSING_UKNOWN_APN;
+            break;
+        case MN_GPRS_ERR_SAME_PDP_CONTEXT:
+        case MN_GPRS_ERR_NSAPI_ALREADY_USED:
+            s_lastPdpFailCause = PDP_FAIL_NSAPI_IN_USE;
+            break;
+        case MN_GPRS_ERR_OPERATOR_DETERMINE_BAR:
+            s_lastPdpFailCause = PDP_FAIL_OPERATOR_BARRED;
+            break;
+        case MN_GPRS_ERR_INCORRECT_MSG:
+        case MN_GPRS_ERR_SYNTACTICAL_ERROR_IN_TFT_OP:
+        case MN_GPRS_ERR_SEMANTIC_ERROR_IN_PACKET_FILTER:
+        case MN_GPRS_ERR_SYNTAX_ERROR_IN_PACKET_FILTER:
+        case MN_GPRS_ERR_PDP_CONTEXT_WO_TFT_ALREADY_ACT:
+        case MN_GPRS_ERR_CONTEXT_CAUSE_CONDITIONAL_IE_ERROR:
+        case MN_GPRS_ERR_UNIMPLE_MSG_TYPE:
+        case MN_GPRS_ERR_UNIMPLE_IE:
+        case MN_GPRS_ERR_INCOMP_MSG_PROTO_STAT:
+        case MN_GPRS_ERR_SEMANTIC_ERROR_IN_TFT_OP:
+        case MN_GPRS_ERR_INCOMPAT_MSG_TYP_PROTO_STAT:
+        case MN_GPRS_ERR_UNKNOWN_PDP_CONTEXT:
+        case MN_GPRS_ERR_NO_PDP_CONTEXT:
+        case MN_GPRS_ERR_PDP_CONTEXT_ACTIVATED:
+        case MN_GPRS_ERR_INVALID_MAND_INFO:
+        case MN_GPRS_ERR_PRIMITIVE:
+            s_lastPdpFailCause = PDP_FAIL_PROTOCOL_ERRORS;
+            break;
+        case MN_GPRS_ERR_SENDER:
+        case MN_GPRS_ERR_RETRYING:
+        case MN_GPRS_ERR_UNKNOWN_ERROR:
+        case MN_GPRS_ERR_REGULAR_DEACTIVATION:
+        case MN_GPRS_ERR_REACTIVATION_REQD:
+        case MN_GPRS_ERR_SM_ERR_UNSPECIFIED:
+        case MN_GPRS_ERR_UNSPECIFIED:
+            s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+            break;
+        default:
+            s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+    }
+}
+
 static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     const char *apn = NULL;
@@ -1343,6 +1437,7 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     char qos_state[10];
     char *line = NULL;
     const  char *pdp_type;
+    int failCause;
 
     apn = ((const char **)data)[2];
     username = ((const char **)data)[3];
@@ -1399,8 +1494,15 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
             if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
                 line = p_response->finalResponse;
                 err = at_tok_start(&line);
-                if (err >= 0)
-                    err = at_tok_nextint(&line,&s_lastPdpFailCause);
+                if (err >= 0) {
+                    err = at_tok_nextint(&line,&failCause);
+                    if (err >= 0) {
+                        convertFailCause(failCause);
+                    } else {
+                        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+                        goto error;
+                    }
+                }
             } else
                 s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
 
@@ -1440,54 +1542,8 @@ void requestLastDataFailCause(int channelID, void *data, size_t datalen, RIL_Tok
 {
     int response = PDP_FAIL_ERROR_UNSPECIFIED;
 
-    switch(s_lastPdpFailCause) {
-        case 534:
-            response = PDP_FAIL_OPERATOR_BARRED;  /* no retry */
-            break;
-        case 533:
-            response = PDP_FAIL_MISSING_UKNOWN_APN; /* no retry */
-            break;
-        case 15:
-            response = PDP_FAIL_UNKNOWN_PDP_ADDRESS_TYPE; /* no retry */
-            break;
-        case 149:
-            response = PDP_FAIL_USER_AUTHENTICATION; /* no retry */
-            break;
-        case 132:
-            response = PDP_FAIL_SERVICE_OPTION_NOT_SUPPORTED;  /* no retry */
-            break;
-        case 133:
-            response = PDP_FAIL_SERVICE_OPTION_NOT_SUBSCRIBED;    /* no retry */
-            break;
-        case 134:
-            response = PDP_FAIL_SERVICE_OPTION_OUT_OF_ORDER;  /* no retry */
-            break;
-        case 21:
-            response = PDP_FAIL_NSAPI_IN_USE;  /* no retry */
-            break;
-        case 11:
-        case 12:
-        case 13:
-        case 14:
-        case 16:
-        case 17:
-        case 18:
-        case 19:
-        case 20:
-        case 22:
-        case 23:
-        case 24:
-        case 25:
-        case 535:
-            response = PDP_FAIL_PROTOCOL_ERRORS;     /* no retry */
-            break;
-        case 101:
-        case 102:
-            response = PDP_FAIL_INSUFFICIENT_RESOURCES;   /* retry */
-            break;
-        default:
-            response = PDP_FAIL_ERROR_UNSPECIFIED;  /* retry */
-    }
+    response = s_lastPdpFailCause;
+
     RIL_onRequestComplete(t, RIL_E_SUCCESS, &response,
             sizeof(int));
 }
