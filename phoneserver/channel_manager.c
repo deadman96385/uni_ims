@@ -32,11 +32,9 @@
 #include <private/android_filesystem_config.h>
 #include "cutils/properties.h"
 
-#define VLX_SIM_NUM  "ro.modem.vlx.msms.count"
-#define TD_SIM_NUM  "ro.modem.t.msms.count"
-#define W_SIM_NUM  "ro.modem.w.msms.count"
+#define TD_SIM_NUM  "ro.modem.t.count"
+#define W_SIM_NUM  "ro.modem.w.count"
 
-#define MUX_VLX_DEV  "ro.modem.vlx.tty"
 #define MUX_TD_DEV  "ro.modem.t.tty"
 #define MUX_W_DEV  "ro.modem.w.tty"
 
@@ -715,11 +713,9 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
     memset(me->itsCmux, 0, sizeof(struct cmux_t) * MUX_NUM);
 
     if(!strcmp(modem, "t")) {
-        property_get(MUX_TD_DEV, prop, "/dev/stty_td");
+        property_get(MUX_TD_DEV, prop, "/dev/ts0710mux");
     } else if(!strcmp(modem, "w")) {
-        property_get(MUX_W_DEV, prop, "/dev/stty_w");
-    } else if(!strcmp(modem, "vlx")) {
-        property_get(MUX_VLX_DEV, prop, "/dev/ts0710mux");
+        property_get(MUX_W_DEV, prop, "/dev/ts0710mux");
     } else {
         PHS_LOGE("Wrong modem parameter");
 	exit(-1);
@@ -799,8 +795,6 @@ static void chnmng_pty_Init(struct channel_manager_t *const me)
         strcpy(pre_ptyname, "/dev/CHNPTYT");
     } else if(!strcmp(modem, "w")) {
          strcpy(pre_ptyname, "/dev/CHNPTYW");
-    } else if(!strcmp(modem, "vlx")) {
-         strcpy(pre_ptyname, "/dev/CHNPTY");
     } else {
         PHS_LOGE("Wrong modem parameter");
 	exit(-1);
@@ -924,7 +918,6 @@ static void usage(const char *argv)
     PHS_LOGE("Usage: %s -m <modem>", argv);
     PHS_LOGE("modem: t (td modem)");
     PHS_LOGE("modem: w (wcdma modem)");
-    PHS_LOGE("modem: vlx (vlx modem)");
     exit(-1);
 }
 
@@ -945,8 +938,6 @@ int main(int argc, char *argv[])
         property_get(TD_SIM_NUM, prop, "");
     } else if(!strcmp(modem, "w")) {
         property_get(W_SIM_NUM, prop, "");
-    } else if(!strcmp(modem, "vlx")) {
-        property_get(VLX_SIM_NUM, prop, "");
     } else {
 	usage(argv[0]);
     }

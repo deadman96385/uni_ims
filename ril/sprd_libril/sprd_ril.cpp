@@ -200,9 +200,8 @@ static UserCallbackInfo *s_last_wake_timeout_info = NULL;
 static void *s_lastNITZTimeData = NULL;
 static size_t s_lastNITZTimeDataSize;
 
-#define TD_SIM_NUM  "ro.modem.t.msms.count"
-#define W_SIM_NUM  "ro.modem.w.msms.count"
-#define VLX_SIM_NUM  "ro.modem.vlx.msms.count"
+#define TD_SIM_NUM  "ro.modem.t.count"
+#define W_SIM_NUM  "ro.modem.w.count"
 
 static int s_multiSimMode;
 const char * s_modem = NULL;
@@ -3820,12 +3819,6 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
             s_multiSimMode = 1;
         else
             s_multiSimMode = 0;
-    } else if(!strcmp(s_modem, "vlx")) {
-        property_get(VLX_SIM_NUM, phoneCount, "");
-        if(strcmp(phoneCount, "1"))
-            s_multiSimMode = 1;
-        else
-            s_multiSimMode = 0;
     } else {
         ALOGE("Invalid modem type");
         exit(-1);
@@ -3945,30 +3938,20 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
     s_fdListen = ret;
 
 #else
-    if(strcmp(s_modem, "vlx")) {
-            if(s_sim_num > 0) {
+    if(s_sim_num > 0) {
 #if 0
-                snprintf(s_name_ril, sizeof(s_name_ril), "%srild%d", s_modem, s_sim_num);
-                snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "%srild-debug%d", s_modem, s_sim_num);
+        snprintf(s_name_ril, sizeof(s_name_ril), "%srild%d", s_modem, s_sim_num);
+        snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "%srild-debug%d", s_modem, s_sim_num);
 #endif
-                snprintf(s_name_ril, sizeof(s_name_ril), "rild%d", s_sim_num);
-                snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "rild-debug%d", s_sim_num);
-            } else {
-#if 0
-                snprintf(s_name_ril, sizeof(s_name_ril), "%srild", s_modem);
-                snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "%srild-debug", s_modem);
-#endif
-                snprintf(s_name_ril, sizeof(s_name_ril), "rild");
-                snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "rild-debug");
-            }
+        snprintf(s_name_ril, sizeof(s_name_ril), "rild%d", s_sim_num);
+        snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "rild-debug%d", s_sim_num);
     } else {
-            if(s_sim_num > 0) {
-                snprintf(s_name_ril, sizeof(s_name_ril), "rild%d", s_sim_num);
-                snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "rild-debug%d", s_sim_num);
-            } else {
-                snprintf(s_name_ril, sizeof(s_name_ril), "rild");
-                snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "rild-debug");
-            }
+#if 0
+        snprintf(s_name_ril, sizeof(s_name_ril), "%srild", s_modem);
+        snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "%srild-debug", s_modem);
+#endif
+        snprintf(s_name_ril, sizeof(s_name_ril), "rild");
+        snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "rild-debug");
     }
 
     s_fdListen = android_get_control_socket(s_name_ril);

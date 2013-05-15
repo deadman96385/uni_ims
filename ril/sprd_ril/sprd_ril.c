@@ -54,13 +54,11 @@
 #define MO_CALL 0
 #define MT_CALL 1
 
-#define TD_SIM_NUM  "ro.modem.t.msms.count"
-#define W_SIM_NUM  "ro.modem.w.msms.count"
-#define VLX_SIM_NUM  "ro.modem.vlx.msms.count"
+#define TD_SIM_NUM  "ro.modem.t.count"
+#define W_SIM_NUM  "ro.modem.w.count"
 
 #define ETH_TD  "ro.modem.t.eth"
 #define ETH_W  "ro.modem.w.eth"
-#define ETH_VLX  "ro.modem.vlx.eth"
 
 #define RIL_MAIN_SIM_PROPERTY  "persist.msms.phone_default"
 #define RIL_SIM_POWER_OFF_PROPERTY  "sys.power.off"
@@ -1233,11 +1231,9 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
             goto error;
 
         if(!strcmp(s_modem, "t")) {
-            property_get(ETH_TD, eth, "seth_td");
+            property_get(ETH_TD, eth, "veth");
         } else if(!strcmp(s_modem, "w")) {
-            property_get(ETH_W, eth, "seth_w");
-        } else if(!strcmp(s_modem, "vlx")) {
-            property_get(ETH_VLX, eth, "veth");
+            property_get(ETH_W, eth, "veth");
         } else {
             ALOGE("Unknown modem type, exit");
             exit(-1);
@@ -7735,9 +7731,7 @@ again:
         sim_num = sim_save;
         for(i = 0; i < channel_nums; i++)
         {
-            if(!strcmp(s_modem, "vlx")) {
-                sprintf(str,"/dev/CHNPTY%d",sim_num);
-            } else if(!strcmp(s_modem, "t")) {
+            if(!strcmp(s_modem, "t")) {
                 sprintf(str,"/dev/CHNPTYT%d",sim_num);
             } else if(!strcmp(s_modem, "w")) {
                 sprintf(str,"/dev/CHNPTYW%d",sim_num);
@@ -7836,12 +7830,6 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
             s_multiSimMode = 0;
     } else if(!strcmp(s_modem, "w")) {
         property_get(W_SIM_NUM, phoneCount, "");
-        if(strcmp(phoneCount, "1"))
-            s_multiSimMode = 1;
-        else
-            s_multiSimMode = 0;
-    } else if(!strcmp(s_modem, "vlx")) {
-        property_get(VLX_SIM_NUM, phoneCount, "");
         if(strcmp(phoneCount, "1"))
             s_multiSimMode = 1;
         else
