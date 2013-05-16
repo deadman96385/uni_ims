@@ -1831,17 +1831,12 @@ static void resetModem(void * param)
 static void onSimAbsent(void *param)
 {
     int channelID;
-    char prop[10];
 
-    if(sState == RADIO_STATE_SIM_READY) {
-        channelID = getChannel();
-        property_get(RIL_SIM_ABSENT_PROPERTY, prop, "0");
-        if(!strcmp(prop, "1"))
-            at_send_command(ATch_type[channelID], "AT+SPATASSERT=1", NULL);
-        else
-            setRadioState(channelID, RADIO_STATE_SIM_LOCKED_OR_ABSENT);
-        putChannel(channelID);
-    }
+    channelID = getChannel();
+    setRadioState(channelID, RADIO_STATE_SIM_LOCKED_OR_ABSENT);
+    at_send_command(ATch_type[channelID], "AT+SPATASSERT=1", NULL);
+    putChannel(channelID);
+
     RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,
                                     NULL, 0);
 }
@@ -1849,15 +1844,10 @@ static void onSimAbsent(void *param)
 static void onSimPresent(void *param)
 {
     int channelID;
-    char prop[10];
 
     if (sState == RADIO_STATE_SIM_LOCKED_OR_ABSENT) {
         channelID = getChannel();
-        property_get(RIL_SIM_ABSENT_PROPERTY, prop, "0");
-        if(!strcmp(prop, "1"))
-            at_send_command(ATch_type[channelID], "AT+SPATASSERT=1", NULL);
-        else
-            setRadioState(channelID, RADIO_STATE_SIM_NOT_READY);
+        setRadioState(channelID, RADIO_STATE_SIM_NOT_READY);
         putChannel(channelID);
     }
     RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,
@@ -6885,7 +6875,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
     } else if (strStartsWith(s, "+ECIND:")) {
         char *tmp;
         int type;
-        int value = 0;
+        int value = 0, cause = -1;
         int card_type;
 
         line = strdup(s);
@@ -6900,7 +6890,12 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 err = at_tok_nextint(&tmp, &value);
                 if (err < 0) goto out;
                 if(value == 1) {
-                    RIL_requestTimedCallback (onSimAbsent, NULL, NULL);
+                    if (at_tok_hasmore(&tmp)) {
+                        err = at_tok_nextint(&tmp, &cause);
+                        if (err < 0) goto out;
+                        if(cause == 2)
+                            RIL_requestTimedCallback (onSimAbsent, NULL, NULL);
+                    }
                 } else if (value == 100) {
                     RIL_requestTimedCallback (onSimPresent, NULL, NULL);
                 }
