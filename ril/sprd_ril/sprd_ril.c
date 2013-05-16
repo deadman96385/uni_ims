@@ -3094,9 +3094,16 @@ static void  requestScreeState(int channelID, int status, RIL_Token t)
     if (!status) {
         /* Suspend */
         at_send_command(ATch_type[channelID], "AT+CCED=2,8", NULL);
+        at_send_command(ATch_type[channelID], "AT+CREG=1", NULL);
+        at_send_command(ATch_type[channelID], "AT+CGREG=1", NULL);
     } else {
         /* Resume */
         at_send_command(ATch_type[channelID], "AT+CCED=1,8", NULL);
+        at_send_command(ATch_type[channelID], "AT+CREG=2", NULL);
+        at_send_command(ATch_type[channelID], "AT+CGREG=2", NULL);
+        RIL_onUnsolicitedResponse (
+                RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED,
+                NULL, 0);
     }
     pthread_mutex_unlock(&s_screen_mutex);
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
@@ -4382,7 +4389,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_BASEBAND_VERSION
                 || request == RIL_REQUEST_ENTER_SIM_PIN
                 || request == RIL_REQUEST_GET_IMEI
-                || request == RIL_REQUEST_GET_IMEISV)
+                || request == RIL_REQUEST_GET_IMEISV
+                || request == RIL_REQUEST_SCREEN_STATE)
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
         putChannel(channelID);
