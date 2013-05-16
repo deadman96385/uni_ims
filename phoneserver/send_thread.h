@@ -14,15 +14,7 @@
 
 #include "os_api.h"
 #include "pty.h"
-struct send_thread_ops {
 
-	/*## operation deliver_cmd_req(char*,pty_type) */
-	void (*send_thread_deliver_cmd_req) (void *const me, char *cmd_str,
-					     int len);
-
-	/*## operation send_at_cmd() */
-	void *(*send_data) (void *const me);
-};
 struct send_thread_t {
 	void *me;
 
@@ -35,6 +27,16 @@ struct send_thread_t {
 	struct send_thread_ops *ops;
 	char end_char;
 	pid_t tid;
+};
+
+struct send_thread_ops {
+
+	/*## operation deliver_cmd_req(char*,pty_type) */
+	void (*send_thread_deliver_cmd_req) (struct send_thread_t *const me, char *cmd_str,
+					     int len);
+
+	/*## operation send_at_cmd() */
+	void *(*send_data) (struct send_thread_t *const me);
 };
 struct send_thread_ops *send_thread_get_operations(void);
 

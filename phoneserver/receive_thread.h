@@ -15,15 +15,7 @@
 /*----------------------------------------------------------------------------*/
 /* receive_thread.h                                                                  */
 /*----------------------------------------------------------------------------*/
-struct receive_thread_ops {
 
-/* Operations */
-
-/*## operation get_at_cmd() */
-	void (*receive_thread_deliver_cmd_resp) (void *const me, char *cmd_str,
-						 int len);
-	void *(*receive_data) (void *const me);
-};
 struct receive_thread_t {
 
     /***    User explicit entries    ***/
@@ -37,6 +29,16 @@ struct receive_thread_t {
 	thread_t thread;
 	pid_t tid;
 	struct receive_thread_ops *ops;
+};
+
+struct receive_thread_ops {
+
+/* Operations */
+
+/*## operation get_at_cmd() */
+	void (*receive_thread_deliver_cmd_resp) (void *const me, char *cmd_str,
+						 int len);
+	void *(*receive_data) (struct receive_thread_t *const me);
 };
 struct receive_thread_ops *receive_thread_get_operations(void);
 

@@ -593,6 +593,7 @@ int phoneserver_deliver_indicate(const cmux_t * cmux, char *cmd, int len)
     AT_CMD_IND_T cmd_ind;
     struct ind_table *item = NULL;
     int i, count;
+
     if (cmux == NULL || cmd == NULL) {
         return AT_RESULT_NG;
     }
@@ -673,6 +674,7 @@ int phoneserver_deliver_at_cmd(const pty_t * pty, char *cmd, int len)
     int i, count;
     char *str_tmp;
     pty_t *ptyp = (pty_t *) pty;
+
     if (pty == NULL || cmd == NULL) {
         return AT_RESULT_NG;
     }
@@ -1132,11 +1134,12 @@ int cvt_generic_cmd_ind(AT_CMD_IND_T * ind)
     }
 
     memset(ind_str, 0, MAX_AT_CMD_LEN);
-    if (ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
+    if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
         snprintf(ind_str, sizeof(ind_str), "%s%s%s", "\r\n", ind->ind_str, "\n");
         ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
     }else
-        PHS_LOGE("ind string size > 300\n");
+        PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
+
     if(ind_eng_pty != NULL)
         if (ind_eng_pty->ops && ind->len < MAX_AT_CMD_LEN)
             ind_eng_pty->ops->pty_write(ind_eng_pty, ind_str, strlen(ind_str));
@@ -1164,7 +1167,7 @@ int cvt_ecind_cmd_ind(AT_CMD_IND_T * ind)
     }
 
     memset(ind_str, 0, MAX_AT_CMD_LEN);
-    if (ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
+    if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
         snprintf(ind_str, sizeof(ind_str), "%s%s%s", "\r\n", ind->ind_str, "\n");
         ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
@@ -1213,7 +1216,7 @@ int cvt_ecind_cmd_ind(AT_CMD_IND_T * ind)
     	}
 #endif
     } else
-        PHS_LOGE("ind string size > 300\n");
+        PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
 
     if(ind_eng_pty != NULL)
         if (ind_eng_pty->ops && ind->len < MAX_AT_CMD_LEN)
@@ -1241,11 +1244,11 @@ int cvt_ecind0_cmd_ind(AT_CMD_IND_T * ind)
     }
 
     memset(ind_str, 0, MAX_AT_CMD_LEN);
-    if (ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
+    if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
         snprintf(ind_str, sizeof(ind_str), "%s%s%s", "\r\n", ind->ind_str, "\n");
         ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
     } else {
-        PHS_LOGE("ind string size > 300\n");
+        PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
     }
     if(ind_eng_pty != NULL)
         if (ind_eng_pty->ops && ind->len < MAX_AT_CMD_LEN)
@@ -1329,10 +1332,10 @@ int cvt_eceer_cmd_ind(AT_CMD_IND_T * ind)
         }
     }
 
-    if (ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
+    if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
         ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
     } else {
-        PHS_LOGE("ind string size > 300\n");
+        PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
     }
     if(ind_eng_pty != NULL)
         if (ind_eng_pty->ops && ind->len < MAX_AT_CMD_LEN)
@@ -1388,12 +1391,12 @@ int cvt_csq_cmd_ind(AT_CMD_IND_T * ind)
 
     if(ber > 99) ber = 99;
     snprintf(ind_str, sizeof(ind_str), "\r\n+CSQ: %d,%d\r\n", rssi,ber);
-    if (ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
+    if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
         ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
     } else {
-        PHS_LOGE("ind string size > 300\n");
+        PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
     }
-    if(ind_eng_pty != NULL && ind->len < MAX_AT_CMD_LEN)
+    if(ind_eng_pty != NULL)
         if (ind_eng_pty->ops && ind->len < MAX_AT_CMD_LEN)
             ind_eng_pty->ops->pty_write(ind_eng_pty, ind_str, strlen(ind_str));
     return AT_RESULT_OK;
@@ -1452,12 +1455,12 @@ int cvt_spscsq_cmd_ind(AT_CMD_IND_T * ind)
 
     if(ber > 99) ber = 99;
     snprintf(ind_str, sizeof(ind_str), "\r\n+SPSCSQ: %d,%d,%d\r\n", rssi,ber,rat);
-    if (ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
+    if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
         ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
     } else {
-        PHS_LOGE("ind string size > 300\n");
+        PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
     }
-    if(ind_eng_pty != NULL && ind->len < MAX_AT_CMD_LEN)
+    if(ind_eng_pty != NULL)
         if (ind_eng_pty->ops && ind->len < MAX_AT_CMD_LEN)
             ind_eng_pty->ops->pty_write(ind_eng_pty, ind_str, strlen(ind_str));
     return AT_RESULT_OK;
@@ -1505,10 +1508,10 @@ int cvt_ecsq_cmd_ind(AT_CMD_IND_T * ind)
 
     if(ber > 99) ber = 99;
     snprintf(ind_str, sizeof(ind_str), "\r\n+ECSQ: %d,%d\r\n",rssi,ber);
-    if (ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
+    if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
         ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
     } else {
-        PHS_LOGE("ind string size > 300\n");
+        PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
     }
     return AT_RESULT_OK;
 }
@@ -2083,8 +2086,8 @@ int cvt_csq_action_rsp(AT_CMD_RSP_T * rsp, int user_data)
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
     int ret;
-    char *input = rsp->rsp_str;
-    int len = rsp->len;
+    char *input;
+    int len;
     int rssi_3g = 0, rssi_2g = 0, ber;
     char rsp_str[MAX_AT_CMD_LEN];
 
@@ -2092,6 +2095,8 @@ int cvt_csq_action_rsp(AT_CMD_RSP_T * rsp, int user_data)
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
+    input = rsp->rsp_str;
+    len = rsp->len;
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
         if(multiSimMode == 1) {
             ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
@@ -2109,39 +2114,33 @@ int cvt_csq_action_rsp(AT_CMD_RSP_T * rsp, int user_data)
 
         /*get the 3g rssi value and then convert into 2g rssi */
         if (0 == at_tok_start(&input, ':')) {
-            ret = at_tok_nextint(&input, &rssi_3g);
+            if(0 == at_tok_nextint(&input, &rssi_3g)) {
+                if (rssi_3g <= 31) {
+                    rssi_2g = rssi_3g;
+                } else if (rssi_3g >= 100 && rssi_3g < 103) {
+                    rssi_2g = 0;
+                } else if(rssi_3g >= 103 && rssi_3g < 165) {
+                    rssi_2g = ((rssi_3g - 103) + 1) / 2;
+                } else if (rssi_3g >= 165 && rssi_3g <= 191) {
+                    rssi_2g = 31;
+                } else {
+                    rssi_2g = 99;
+                }
 
-            if (rssi_3g <= 31) {
-                rssi_2g = rssi_3g;
-            } else if (rssi_3g >= 100 && rssi_3g < 103) {
-                rssi_2g = 0;
-            } else if(rssi_3g >= 103 && rssi_3g < 165) {
-                rssi_2g = ((rssi_3g - 103) + 1) / 2;
-            } else if (rssi_3g >= 165 && rssi_3g <= 191) {
-                rssi_2g = 31;
-            } else {
-                rssi_2g = 99;
+                if(0 == at_tok_nextint(&input, &ber)) {
+                    if(ber > 99) ber = 99;
+                }
+                snprintf(rsp_str, sizeof(rsp_str), "+CSQ:%d,%d\r", rssi_2g, ber);
+                adapter_pty_write((pty_t *) user_data, rsp_str,
+                        strlen(rsp_str));
             }
-
-            ret = at_tok_nextint(&input, &ber);
-            if(ber > 99)
-            {
-                ber = 99;
-            }
-            snprintf(rsp_str, sizeof(rsp_str), "+CSQ:%d,%d\r", rssi_2g, ber);
         }
-        adapter_pty_write((pty_t *) user_data, rsp_str,
-                strlen(rsp_str));
-    }
-
-    else if (adapter_cmd_is_end(rsp->rsp_str, rsp->len) == TRUE) {
+    } else if (adapter_cmd_is_end(rsp->rsp_str, rsp->len) == TRUE) {
         adapter_cmux_deregister_callback(rsp->recv_cmux);
         adapter_pty_write((pty_t *) user_data, rsp->rsp_str, rsp->len);
         adapter_pty_end_cmd((pty_t *) user_data);
         adapter_free_cmux(rsp->recv_cmux);
-    }
-
-    else {
+    } else {
         return AT_RESULT_NG;
     }
     return AT_RESULT_OK;
@@ -2165,8 +2164,8 @@ int cvt_spscsq_action_rsp(AT_CMD_RSP_T * rsp, int user_data)
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
     int ret;
-    char *input = rsp->rsp_str;
-    int len = rsp->len;
+    char *input;
+    int len;
     int rssi_3g = 0, rssi_2g = 0, ber, rat;
     char rsp_str[MAX_AT_CMD_LEN];
 
@@ -2174,6 +2173,8 @@ int cvt_spscsq_action_rsp(AT_CMD_RSP_T * rsp, int user_data)
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
+    input = rsp->rsp_str;
+    len = rsp->len;
     if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
         if(multiSimMode == 1) {
             ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
@@ -2317,14 +2318,16 @@ int cvt_epin_test_rsp(AT_CMD_RSP_T * rsp, int user_data)
     pty_t *ind_eng_pty = NULL;
     int ret;
     int epin = 0;
-    char *input = rsp->rsp_str;
-    int len = rsp->len;
+    char *input;
+    int len;
     char rsp_str[MAX_AT_CMD_LEN];
 
     memset(rsp_str, 0, MAX_AT_CMD_LEN);
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
+    len = rsp->len;
+    input = rsp->rsp_str;
     if (user_data != (int)&epin_rsp) {
         return AT_RESULT_NG;
     }
@@ -2345,7 +2348,9 @@ int cvt_epin_test_rsp(AT_CMD_RSP_T * rsp, int user_data)
             ind_eng_pty->ops->pty_write(ind_eng_pty, rsp->rsp_str, rsp->len);
     }
     if (findInBuf(input, len, "+XX")) {
-        at_tok_start(&input, ':');
+        ret = at_tok_start(&input, ':');
+        if(ret < 0)
+            return AT_RESULT_NG;
         if (0 == at_tok_nextint(&input, &epin)) {
             if (epin_rsp.rsp_index < 4) {
                 epin_rsp.rsp[epin_rsp.rsp_index] = epin;
@@ -2801,14 +2806,20 @@ int cvt_echupvt_set_req(AT_CMD_REQ_T * req)
     cmux_t *mux;
     int ret;
     char tmp[200] = { 0 };
-    char *str_tmp = req->cmd_str;
+    char *str_tmp;
     char *str = 0;
+
     if (req == NULL) {
         return AT_RESULT_NG;
     }
+    str_tmp = req->cmd_str;
     mux = adapter_get_cmux(req->cmd_type, TRUE);
-    at_tok_start(&str_tmp, '=');
+    ret = at_tok_start(&str_tmp, '=');
+    if(ret < 0)
+        return AT_RESULT_NG;
     ret = at_tok_nextstr(&str_tmp, &str);
+    if(ret < 0)
+        return AT_RESULT_NG;
     snprintf(tmp, sizeof(tmp),"%s%s", "AT+CHUPVT=", str);
     adapter_cmux_register_callback(mux, cvt_echupvt_set_rsp,
             (int)req->recv_pty);
@@ -2853,6 +2864,7 @@ int cvt_echupvt_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
 int cvt_atd_active_req(AT_CMD_REQ_T * req)
 {
     cmux_t *mux;
+
     if (req == NULL || req->recv_pty->type != STMAT) {
         return AT_RESULT_NG;
     }
@@ -2906,6 +2918,7 @@ int cvt_atd_active_rsp(AT_CMD_RSP_T * rsp, int user_data)
 int cvt_ath_cmd_req(AT_CMD_REQ_T * req)
 {
     cmux_t *mux;
+
     if (req == NULL) {
         return AT_RESULT_NG;
     }
@@ -2929,6 +2942,7 @@ int cvt_ath_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
     int ret;
+
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
@@ -2961,13 +2975,15 @@ int cvt_evts_set_req(AT_CMD_REQ_T * req)
     cmux_t *mux;
     int ret;
     char tmp[200] = { 0 };
-    char *str_tmp = req->cmd_str;
+    char *str_tmp;
     int p1 = 0;
     int err;
     char *p2=NULL;
+
     if (req == NULL) {
         return AT_RESULT_NG;
     }
+    str_tmp = req->cmd_str;
     err = at_tok_start(&str_tmp, '=');
     if(err < 0)
     {
@@ -2980,7 +2996,11 @@ int cvt_evts_set_req(AT_CMD_REQ_T * req)
         return AT_RESULT_NG;
     }
 
-    at_tok_nextstr(&str_tmp, &p2);
+    err = at_tok_nextstr(&str_tmp, &p2);
+    if(err < 0)
+    {
+        return AT_RESULT_NG;
+    }
     memset(tmp, 0, 200);
     if(p1 == 0)
     {
@@ -3007,6 +3027,7 @@ int cvt_evts_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
     int ret;
+
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
@@ -3040,12 +3061,13 @@ int cvt_eband_set_req(AT_CMD_REQ_T * req)
     cmux_t *mux;
     int ret;
     char tmp[30] = { 0 };
-    char *str_tmp = req->cmd_str;
+    char *str_tmp;
     int p1 = 0;
 
     if (req == NULL) {
         return AT_RESULT_NG;
     }
+    str_tmp = req->cmd_str;
     memset(tmp, 0, 30);
     if (!strncasecmp("AT+EBAND=?", str_tmp, strlen("AT+EBAND=?"))) {
 
@@ -3056,8 +3078,12 @@ int cvt_eband_set_req(AT_CMD_REQ_T * req)
         return AT_RESULT_OK;
 
     }
-    at_tok_start(&str_tmp, '=');
-    at_tok_nextint(&str_tmp, &p1);
+    ret = at_tok_start(&str_tmp, '=');
+    if(ret < 0)
+        return AT_RESULT_NG;
+    ret = at_tok_nextint(&str_tmp, &p1);
+    if(ret < 0)
+        return AT_RESULT_NG;
 
     switch (p1) {
         case 0:
@@ -3261,7 +3287,7 @@ int cvt_snvm_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
 
 int cvt_snvm_edit_callback(pty_t * pty, char *cmd, int len, int user_data)
 {
-    int ret=AT_RESULT_OK;
+    int ret = AT_RESULT_OK;
 
     cmux_t *mux = (cmux_t *) (user_data);
     PHS_LOGD("\n enter cvt_snvm_edit_callback!\n");

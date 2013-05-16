@@ -30,11 +30,11 @@ struct chnmng_ops {
 	/* Operations */
 	/*## operation free_cmux(cmux_struct) */
 	void (*channel_manager_free_cmux) (void *const chnmng,
-					   const struct cmux_t * cmux);
+					   struct cmux_t * cmux);
 
 	/*## operation get_cmux(cmd_type) */
 	struct cmux_t *(*channel_manager_get_cmux) (void *const chnmng,
-						    const AT_CMD_TYPE_T * type,
+						    const AT_CMD_TYPE_T type,
 						    int block);
 };
 struct channel_manager_t {
@@ -82,6 +82,7 @@ struct channel_manager_t {
 /* Operations */
 struct pty_t *channel_manager_get_default_ind_pty(void);
 struct pty_t *channel_manager_single_get_eng_ind_pty(void);
+struct pty_t *channel_manager_multi_get_eng_ind_pty(void);
 
 /*## operation free_cmux(cmux_struct) */
 void channel_manager_free_cmux(const struct cmux_t *cmux);

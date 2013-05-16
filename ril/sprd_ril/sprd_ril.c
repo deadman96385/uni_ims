@@ -5317,6 +5317,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 } else {
                     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                 }
+                at_response_free(p_response);
                 break;
             }
         case RIL_REQUEST_GET_SMSC_ADDRESS:
@@ -7032,7 +7033,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             goto out;
         }
 
-        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, sizeof(response));
+        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, strlen(response) + 1);
     } else if (strStartsWith(s, "+SPUSATDISPLAY:")) {
         char *response = NULL;
         char *tmp;
@@ -7047,9 +7048,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             goto out;
         }
 #if defined (RIL_SPRD_EXTENSION)
-        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_EVENT_NOTIFY, response, sizeof(response));
+        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_EVENT_NOTIFY, response, strlen(response) + 1);
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, sizeof(response));
+        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, strlen(response) + 1);
 #endif
     } else if (strStartsWith(s, "+SPUSATSETUPCALL:")) {
         char *response = NULL;
@@ -7065,9 +7066,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             goto out;
         }
 #if defined (RIL_SPRD_EXTENSION)
-        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_CALL_SETUP, response, sizeof(response));
+        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_CALL_SETUP, response, strlen(response) + 1);
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, sizeof(response));
+        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, strlen(response) + 1);
 #endif
     } else if (strStartsWith(s, "+SPUSATREFRESH:")) {
         char *tmp;
@@ -7237,7 +7238,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             }
         }
 
-        RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DATA,response,strlen(response) * sizeof(char*));
+        RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DATA, response, strlen(response) + 1);
     } else if (strStartsWith(s, AT_PREFIX"DVTCODECRI:")) {
         int response[4];
         int index = 0;
@@ -7281,7 +7282,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             ALOGD("%s fail", s);
             goto out;
         }
-        RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_STRING,response,strlen(response) * sizeof(char*));
+        RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_STRING,response,strlen(response) + 1);
     } else if (strStartsWith(s, AT_PREFIX"DVTSENDRI")) {
         int response[3];
         char *tmp;
@@ -7495,7 +7496,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             goto out;
         }
 
-        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, sizeof(response));
+        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, strlen(response) + 1);
     } else if (strStartsWith(s, "+SPUSATSS:")) {
         char *response = NULL;
         char *tmp;
@@ -7510,7 +7511,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             goto out;
         }
 
-        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, sizeof(response));
+        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, strlen(response) + 1);
     } else if (strStartsWith(s, "+SPUSATUSSD:")) {
         char *response = NULL;
         char *tmp;
@@ -7525,7 +7526,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             goto out;
         }
 
-        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, sizeof(response));
+        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, strlen(response) + 1);
     } else if (strStartsWith(s, "+SPUSATDISPLAY:")) {
         char *tmp;
         char *data;
