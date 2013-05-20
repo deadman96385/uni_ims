@@ -25,7 +25,7 @@
 
 const int32 s_Enc_BlkOffset[] = {0, 8, 128, 136};
 const uint8 s_MbType[] = {3, 4, 0, 1, 2};
-
+#if _CMODEL_ //for RTL simulation
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
@@ -180,7 +180,7 @@ void Mp4Enc_VlcInterMB(ENC_VOP_MODE_T  *pVop_mode, ENC_MB_MODE_T *pMb_mode)
 
 	if(!pMb_mode->bSkip)
 	{
-		g_rc_par.nbits_hdr_mv += Mp4Enc_EncMVVP(pVop_mode, pMb_mode);
+		/*g_rc_par.nbits_hdr_mv +=*/ Mp4Enc_EncMVVP(pVop_mode, pMb_mode);
 		
 		//zcz: inter MB don't do DC prediction, so don't need these parameters
 		pVop_mode->pMBCache->bTopMBAvail = FALSE;
@@ -189,7 +189,7 @@ void Mp4Enc_VlcInterMB(ENC_VOP_MODE_T  *pVop_mode, ENC_MB_MODE_T *pMb_mode)
 		Mp4Enc_ConfigVLC(pVop_mode, pMb_mode);
 	}
 }
-
+#endif
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

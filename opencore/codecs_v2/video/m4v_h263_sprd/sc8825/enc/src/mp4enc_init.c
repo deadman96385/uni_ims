@@ -25,12 +25,17 @@
     {
 #endif
 
-MP4_LOCAL void Mp4Enc_SetMVInfo(void);
-MP4_LOCAL void Mp4Enc_InitHuffmanTable(ENC_VOP_MODE_T *pVop_mode);
+MP4_LOCAL void Mp4Enc_SetMVInfo(MP4EncHandle* mp4Handle);
+MP4_LOCAL void Mp4Enc_InitHuffmanTable(MP4EncHandle* mp4Handle);
 MP4_LOCAL void Mp4Enc_InitBitCount(void);
 
-PUBLIC void Mp4Enc_InitVolVopPara(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode, uint32 frame_rate)
-{   	
+PUBLIC void Mp4Enc_InitVolVopPara(MP4EncHandle* mp4Handle, uint32 frame_rate)
+{
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
+	
+	int i ;
 	/*set to default value*/
 	pVol_mode->bNot8Bit					= FALSE;
 	pVol_mode->QuantPrecision			= 5;
@@ -39,7 +44,7 @@ PUBLIC void Mp4Enc_InitVolVopPara(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mo
 	pVol_mode->ProfileAndLevel			= 0;	
 	pVol_mode->bRoundingControlDisable	= TRUE;
 	pVol_mode->InitialRoundingType		= 0;
-	pVol_mode->PbetweenI				= 300;//15;//28;
+	pVol_mode->PbetweenI				= (pVop_mode->FrameRate -1);//15;//28;
 	pVol_mode->GOVperiod				= 0;
 	pVol_mode->bAllowSkippedPMBs		= 1;
 	pVol_mode->bReversibleVlc			= FALSE;
@@ -75,6 +80,13 @@ PUBLIC void Mp4Enc_InitVolVopPara(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mo
 	pVop_mode->StepP					= 10;
 
 	pVop_mode->bInitRCSuceess			= FALSE;
+	
+	pVop_mode->Need_MinQp_flag = FALSE;
+
+	for (i= 0;i< 8;i++)
+	{
+		pVop_mode->QP_last[i] = 31 ; 
+	}
 }
 
 /*****************************************************************************
@@ -84,14 +96,18 @@ PUBLIC void Mp4Enc_InitVolVopPara(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mo
  **	Note:	
  *****************************************************************************/
 //uint32 s_MbLineTbl[] =  
-void Mp4Enc_InitH263(VOL_MODE_T  *pVol_mode, ENC_VOP_MODE_T  *pVop_mode)
+void Mp4Enc_InitH263(MP4EncHandle* mp4Handle)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
+	
 	pVol_mode->QuantizerType = Q_H263;
 	
 	pVop_mode->GOBResync = TRUE;
 	pVop_mode->bAlternateScan = 0;
 
-	g_enc_frame_skip_number = 0;
+	vd->g_enc_frame_skip_number = 0;
 	
 	switch(pVop_mode->FrameWidth)
 	{
@@ -130,9 +146,12 @@ void Mp4Enc_InitH263(VOL_MODE_T  *pVol_mode, ENC_VOP_MODE_T  *pVop_mode)
  ** Author:			Xiaowei Luo
  **	Note:	
  *****************************************************************************/
-MP4_LOCAL void Mp4Enc_SetMVInfo(void)
+MP4_LOCAL void Mp4Enc_SetMVInfo(MP4EncHandle* mp4Handle)
 {
-	ENC_VOP_MODE_T *pVop_mode = Mp4Enc_GetVopmode();
+	//ENC_VOP_MODE_T *pVop_mode = Mp4Enc_GetVopmode();
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
 	MV_INFO_T *mvInfoForward = &(pVop_mode->mvInfoForward);
 
 	if(pVop_mode->SearchRangeForward <= 512)
@@ -158,8 +177,11 @@ MP4_LOCAL void Mp4Enc_SetMVInfo(void)
  ** Author:			Xiaowei Luo
  **	Note:	
  *****************************************************************************/
-void Mp4Enc_InitVOEncoder(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode)
+void Mp4Enc_InitVOEncoder(MP4EncHandle* mp4Handle)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
 	uint32 clock_rate;
 	uint32 num_bits_time_incr;
 
@@ -167,7 +189,7 @@ void Mp4Enc_InitVOEncoder(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode)
 // 	pVop_mode->ClipTable = Mp4_SetClipTable();
 	
 	
-	Mp4Enc_SetMVInfo();
+	Mp4Enc_SetMVInfo(mp4Handle);
 	
 	clock_rate = pVol_mode->ClockRate-1;
 	
@@ -203,8 +225,12 @@ void Mp4Enc_InitVOEncoder(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode)
  ** Author:			Xiaowei Luo
  **	Note:	
  *****************************************************************************/
-MP4_LOCAL void Mp4Enc_InitHuffmanTable(ENC_VOP_MODE_T *pVop_mode)
+MP4_LOCAL void Mp4Enc_InitHuffmanTable(MP4EncHandle* mp4Handle)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
+	
 	pVop_mode->pQuant_pa = g_quant_pa;
 	pVop_mode->pDC_scaler = g_DC_scaler;
  	pVop_mode->pMcbpc_intra_tab = g_mcbpc_intra_tab;
@@ -229,8 +255,11 @@ MP4_LOCAL uint8 Mp4Enc_Compute_log2(int32 uNum)
 	return logLen;		
 }
 
-PUBLIC void Mp4Enc_InitSession(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode)
+PUBLIC void Mp4Enc_InitSession(MP4EncHandle* mp4Handle)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode =  vd->g_enc_vop_mode_ptr;
 	uint32 total_mb_num_x;
 	uint32 total_mb_num_y;
 	int32 size = 0;
@@ -247,7 +276,7 @@ PUBLIC void Mp4Enc_InitSession(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode)
 //SCI_TRACE_LOW("frmae size %d",size);
 	if(pVop_mode->short_video_header)
 	{
-		Mp4Enc_InitH263(pVol_mode, pVop_mode);
+		Mp4Enc_InitH263(mp4Handle);
 		pVop_mode->mbline_num_slice = pVop_mode->MBLineOneGOB;
 	}else
 	{
@@ -264,13 +293,13 @@ PUBLIC void Mp4Enc_InitSession(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode)
 		}
 	}
 //SCI_TRACE_LOW("mbline_num_slice %x pVop_mode->short_video_header %x",pVop_mode->mbline_num_slice,pVop_mode->short_video_header);
-	pVop_mode->pMbModeCur = (ENC_MB_MODE_T *)Mp4Enc_InterMemAlloc(sizeof(ENC_MB_MODE_T) * total_mb_num_x);
-	pVop_mode->pMbModeAbv = (ENC_MB_MODE_T *)Mp4Enc_InterMemAlloc(sizeof(ENC_MB_MODE_T) * total_mb_num_x);	
-	pVop_mode->pMBCache = (ENC_MB_BFR_T *)Mp4Enc_InterMemAlloc(sizeof(ENC_MB_BFR_T));
+	pVop_mode->pMbModeCur = (ENC_MB_MODE_T *)Mp4Enc_InterMemAlloc(mp4Handle,sizeof(ENC_MB_MODE_T) * total_mb_num_x);
+	pVop_mode->pMbModeAbv = (ENC_MB_MODE_T *)Mp4Enc_InterMemAlloc(mp4Handle,sizeof(ENC_MB_MODE_T) * total_mb_num_x);	
+	pVop_mode->pMBCache = (ENC_MB_BFR_T *)Mp4Enc_InterMemAlloc(mp4Handle,sizeof(ENC_MB_BFR_T));
 
-	pVop_mode->pYUVSrcFrame = (Mp4EncStorablePic *)Mp4Enc_InterMemAlloc(sizeof(Mp4EncStorablePic));
-	pVop_mode->pYUVRecFrame = (Mp4EncStorablePic *)Mp4Enc_InterMemAlloc(sizeof(Mp4EncStorablePic));
-	pVop_mode->pYUVRefFrame = (Mp4EncStorablePic *)Mp4Enc_InterMemAlloc(sizeof(Mp4EncStorablePic));
+	pVop_mode->pYUVSrcFrame = (Mp4EncStorablePic *)Mp4Enc_InterMemAlloc(mp4Handle,sizeof(Mp4EncStorablePic));
+	pVop_mode->pYUVRecFrame = (Mp4EncStorablePic *)Mp4Enc_InterMemAlloc(mp4Handle,sizeof(Mp4EncStorablePic));
+	pVop_mode->pYUVRefFrame = (Mp4EncStorablePic *)Mp4Enc_InterMemAlloc(mp4Handle,sizeof(Mp4EncStorablePic));
 #if defined(_SIMULATION_) 
 {	
 	/*backward reference frame and forward reference frame after extention*/
@@ -291,7 +320,7 @@ PUBLIC void Mp4Enc_InitSession(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode)
 	}
 }
 #endif
-	pVop_mode->pYUVRecFrame->imgY = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size+(size>>1));
+	pVop_mode->pYUVRecFrame->imgY = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(mp4Handle,size+(size>>1));
 	if (!pVop_mode->uv_interleaved)
 	{
 		pVop_mode->pYUVRecFrame->imgU = (uint8 *)(pVop_mode->pYUVRecFrame->imgY+size);
@@ -305,7 +334,7 @@ PUBLIC void Mp4Enc_InitSession(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode)
 	}
 //SCI_TRACE_LOW("pVop_mode->pYUVRecFrame->imgY  U V %x %x %x",pVop_mode->pYUVRecFrame->imgY ,pVop_mode->pYUVRecFrame->imgU,\
 	pVop_mode->pYUVRecFrame->imgV);
-	pVop_mode->pYUVRefFrame->imgY = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size+(size>>1));
+	pVop_mode->pYUVRefFrame->imgY = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(mp4Handle,size+(size>>1));
 	if (!pVop_mode->uv_interleaved)
 	{
 		pVop_mode->pYUVRefFrame->imgU = (uint8 *)(pVop_mode->pYUVRefFrame->imgY+size);
@@ -340,13 +369,13 @@ PUBLIC void Mp4Enc_InitSession(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode)
 #endif
 
 #ifdef _VSP_LINUX_	
-	pVop_mode->pYUVRecFrame->imgYAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(pVop_mode->pYUVRecFrame->imgY) ;//>> 8;
-	pVop_mode->pYUVRecFrame->imgUAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(pVop_mode->pYUVRecFrame->imgU) ;//>> 8;
-	pVop_mode->pYUVRecFrame->imgVAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(pVop_mode->pYUVRecFrame->imgV) ;//>> 8;
+	pVop_mode->pYUVRecFrame->imgYAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(mp4Handle,pVop_mode->pYUVRecFrame->imgY) ;//>> 8;
+	pVop_mode->pYUVRecFrame->imgUAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(mp4Handle,pVop_mode->pYUVRecFrame->imgU) ;//>> 8;
+	pVop_mode->pYUVRecFrame->imgVAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(mp4Handle,pVop_mode->pYUVRecFrame->imgV) ;//>> 8;
 
-	pVop_mode->pYUVRefFrame->imgYAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(pVop_mode->pYUVRefFrame->imgY) ;//>> 8;
-	pVop_mode->pYUVRefFrame->imgUAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(pVop_mode->pYUVRefFrame->imgU);// >> 8;
-	pVop_mode->pYUVRefFrame->imgVAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(pVop_mode->pYUVRefFrame->imgV);// >> 8;
+	pVop_mode->pYUVRefFrame->imgYAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(mp4Handle,pVop_mode->pYUVRefFrame->imgY) ;//>> 8;
+	pVop_mode->pYUVRefFrame->imgUAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(mp4Handle,pVop_mode->pYUVRefFrame->imgU);// >> 8;
+	pVop_mode->pYUVRefFrame->imgVAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(mp4Handle,pVop_mode->pYUVRefFrame->imgV);// >> 8;
 //SCI_TRACE_LOW("pVop_mode->pYUVRecFrame->imgY  U V phy  %x %x %x",pVop_mode->pYUVRecFrame->imgYAddr,pVop_mode->pYUVRecFrame->imgUAddr,\
 //	pVop_mode->pYUVRecFrame->imgVAddr);
 //	SCI_TRACE_LOW("pVop_mode->pYUVRefFrame->imgY  U V phy %x %x %x",pVop_mode->pYUVRefFrame->imgYAddr,pVop_mode->pYUVRefFrame->imgUAddr,\
@@ -380,12 +409,12 @@ PUBLIC void Mp4Enc_InitSession(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode)
 		pVop_mode->time_inc_resolution_in_vol_length = Mp4Enc_Compute_log2(pVol_mode->ClockRate);
 	}
 
-	Mp4Enc_InitHuffmanTable(pVop_mode);
+	Mp4Enc_InitHuffmanTable(mp4Handle);
 
-	Mp4Enc_InitVOEncoder(pVol_mode, pVop_mode);
+	Mp4Enc_InitVOEncoder(mp4Handle);
 
 	//initialize the one frame bitstream buffer.
-	pVop_mode->pOneFrameBitstream = (uint8 *)Mp4Enc_ExtraMemAlloc(ONEFRAME_BITSTREAM_BFR_SIZE);  //allocate BITSTREAM_BFR_SIZE for one frame encoded bitstream.
+	pVop_mode->pOneFrameBitstream = (uint8 *)Mp4Enc_ExtraMemAlloc(mp4Handle,ONEFRAME_BITSTREAM_BFR_SIZE);  //allocate BITSTREAM_BFR_SIZE for one frame encoded bitstream.
 	pVop_mode->OneframeStreamLen = ONEFRAME_BITSTREAM_BFR_SIZE;
 }
 

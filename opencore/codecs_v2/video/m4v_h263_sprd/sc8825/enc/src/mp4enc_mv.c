@@ -23,7 +23,7 @@
     extern   "C" 
     {
 #endif
-
+#if _CMODEL_ //for RTL simulation
 MP4_LOCAL void Mp4Enc_ScaleMV(int32 *vlc, int32 *residual, int32 diff_mv_component, const MV_INFO_T *pMv_dir)
 {
 	uint32 abs_diff_mv_component;
@@ -382,7 +382,7 @@ uint32 Mp4Enc_EncMVVP(ENC_VOP_MODE_T *vop_mode_ptr, ENC_MB_MODE_T *mb_mode_ptr)
 #undef JudegeLeftBndry
 #undef JudgeTopBndry
 #undef JudgeRightBndry
-
+#endif
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

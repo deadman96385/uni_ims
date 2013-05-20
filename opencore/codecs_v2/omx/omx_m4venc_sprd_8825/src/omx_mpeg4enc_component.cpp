@@ -1239,7 +1239,7 @@ void OmxComponentMpeg4EncAO::ProcessData()
 
 
             //Chk whether output data has been generated or not
-//            if (OutputLength > 0)
+            if (OutputLength > 0)
             {
                 //offset not required in our case, set it to zero
                 ipOutputBuffer->nOffset = 0;

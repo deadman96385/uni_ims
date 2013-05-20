@@ -21,7 +21,8 @@
 #include "mp4_basic.h"
 
 #include "mmcodec.h"
-
+#include "mpeg4enc.h"
+//#include "mp4enc_ratecontrol.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -195,6 +196,9 @@ typedef struct enc_vop_mode_tag
 	int8 QuantPrecision;
 	int8 QuantizerType;	
 
+	int8 QP_last[8];
+	int8 Need_MinQp_flag;
+	
 	int8 bCoded;
 	int8 error_flag;
 	uint8 MB_in_VOP_length;
@@ -268,6 +272,114 @@ typedef struct enc_mca_command_tag
 	uint32 MCA_CMD[33];
 	uint32 Valid_Cmd_Num;
 }ENC_MCA_CMD_T;
+
+typedef struct
+{
+	int reaction_delay_factor;
+	int averaging_period;
+	int buffer;
+
+	int bytes_per_sec;
+	double target_framesize;
+
+	double time;
+	int total_size;
+	int rtn_quant;
+
+	double sequence_quality;
+	double avg_framesize;
+	double quant_error[31];
+
+	double fq_error;
+}
+rc_single_t;
+
+typedef struct
+{
+	int fincr;
+	int fbase;
+
+	int min_quant[3];
+	int max_quant[3];
+
+	int type;
+	int quant;
+	int length;
+}xvid_plg_data_t;
+
+typedef struct tagMp4EncObject
+{
+	MP4EncHandle *mp4EncHandle;
+
+	VOL_MODE_T *g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *g_enc_vop_mode_ptr;
+
+	rc_single_t *g_rc_ptr;
+	xvid_plg_data_t *g_rc_data_ptr;
+
+	//old version rate control  
+//	RCMode	g_stat_rc;		// Rate control mode status
+//	int		g_stat;
+//	RateCtrlPara g_rc_par;
+	int32 g_stat_rc_nvop_cnt;
+	
+	uint8 *g_enc_yuv_src_frame[3];   // current source frame
+
+	int32 g_enc_last_modula_time_base;
+	int32 g_enc_tr;
+	BOOLEAN g_enc_is_prev_frame_encoded_success;
+//	int32 g_re_enc_frame_number;
+
+	uint32 g_nFrame_enc;
+
+	uint32 g_enc_frame_skip_number;
+
+	//for mpeg-4 time
+//	uint32 g_enc_first_frame;
+//	uint32 g_enc_last_frame; //encoder first and last frame number
+//	int32 g_enc_vop_time_incr;	
+//	uint32 g_enc_bits_modulo_base;
+//	int32 g_enc_modulo_base_disp;		//of the most recently displayed I/Pvop
+//	int32 g_enc_modulo_base_decd;		//of the most recently decoded I/Pvop
+
+//	uint8 *g_pEnc_output_bs_buffer;  //the pointer to the output encoded bistream buffer.
+
+	uint16 g_enc_p_frame_count;
+
+	uint32 g_ME_SearchCount;
+	uint32 g_HW_CMD_START;
+
+//	uint32 *g_cmd_data_ptr;
+//	uint32 *g_cmd_info_ptr;
+//	uint32 *g_cmd_data_base;
+//	uint32 *g_cmd_info_base;
+
+	
+   //for  memory management
+
+
+	uint32 s_Mp4EncExtraMemUsed;
+	uint32 s_Mp4EncExtraMemSize ; // = 0x400000;  //16M
+
+	uint32 s_Mp4EncInterMemUsed ;
+	uint32 s_Mp4EncInterMemSize ; //50kbyte; // = 0x400000;
+
+
+		
+	uint8 *s_pEnc_Extra_buffer ; 
+	uint8 *s_pEnc_Inter_buffer ;
+	uint8 *s_extra_mem_bfr_phy_ptr;
+	
+	uint32 s_vsp_Vaddr_base ;
+	int32 s_vsp_fd ;
+
+#ifdef _DEBUG_TIME_
+	struct timeval tpstart;
+	struct timeval tpend1;
+	struct timeval tpend2;
+#endif
+
+}Mp4EncObject;
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

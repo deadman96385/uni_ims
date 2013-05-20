@@ -25,14 +25,16 @@
     extern   "C" 
     {
 #endif
-PUBLIC MMEncRet Mp4Enc_VSPInit (ENC_VOP_MODE_T * vop_mode_ptr)
+PUBLIC MMEncRet Mp4Enc_VSPInit (MP4EncHandle* mp4Handle )
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	ENC_VOP_MODE_T * vop_mode_ptr= vd->g_enc_vop_mode_ptr;
 	uint32 cmd;
 
-	int vsp_stat = VSP_ACQUIRE_Dev();
+	int vsp_stat = VSP_ACQUIRE_Dev(mp4Handle);
 	if(vsp_stat)
 	{
-		VSP_RELEASE_Dev();
+		VSP_RELEASE_Dev(mp4Handle);
 		SCI_TRACE_LOW("VSP_ACQUIRE_Dev()  ERR");
 		return MMENC_ERROR;
 	}
@@ -40,31 +42,32 @@ PUBLIC MMEncRet Mp4Enc_VSPInit (ENC_VOP_MODE_T * vop_mode_ptr)
 //	VSP_WRITE_REG(VSP_AHBM_REG_BASE+AHBM_ENDAIN_SEL_OFFSET, 0x5, "ENDAIN_SEL: 0x5 for little endian system");	
 
 	/*clear time_out int_raw flag, if timeout occurs*/
-	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_INT_CLR_OFF, V_BIT_12, "DCAM_INT_CLR: clear time_out int_raw flag");
+	VSP_WRITE_REG(mp4Handle,VSP_DCAM_REG_BASE+DCAM_INT_CLR_OFF, V_BIT_12, "DCAM_INT_CLR: clear time_out int_raw flag");
 
 	/*init dcam command*/
-	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, (0<<4) | (1<<3), "DCAM_CFG: configure DCAM register");
+	VSP_WRITE_REG(mp4Handle,VSP_DCAM_REG_BASE+DCAM_CFG_OFF, (0<<4) | (1<<3), "DCAM_CFG: configure DCAM register");
 		
 	/*init vsp command*/	
 			
 	cmd = (1<<17) |(0<<15) |(1<<14)|(1<<13)|(1<<12) | ((!vop_mode_ptr->short_video_header)<<8) | (1<<7) | (0<<6) | 
 			(1<<5) | (1<<4) |(0<<3) | (1<<2) | (1<<1) | (1<<0);
-	VSP_WRITE_REG(VSP_GLB_REG_BASE+GLB_CFG0_OFF, cmd, "GLB_CFG0: init the global register, little endian");
+	VSP_WRITE_REG(mp4Handle,VSP_GLB_REG_BASE+GLB_CFG0_OFF, cmd, "GLB_CFG0: init the global register, little endian");
 
 	cmd = (1 << 31) |(1 << 30) |(TIME_OUT_CLK);
-	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_VSP_TIME_OUT_OFF, cmd, "DCAM_VSP_TIME_OUT: disable hardware timer out");
+	VSP_WRITE_REG(mp4Handle,VSP_DCAM_REG_BASE+DCAM_VSP_TIME_OUT_OFF, cmd, "DCAM_VSP_TIME_OUT: disable hardware timer out");
 
 	cmd =vop_mode_ptr->uv_interleaved ?0:1;//00: uv_interleaved, two plane, 1: three plane
     	cmd = (cmd<<27);
 	cmd |= 0x0101;
-	VSP_WRITE_REG(VSP_AXIM_REG_BASE+AXIM_GAP_ENDIAN_OFF, cmd , "configure AXIM register: GAP: 0, frame_mode: UVUV, Little endian");
+	VSP_WRITE_REG(mp4Handle,VSP_AXIM_REG_BASE+AXIM_GAP_ENDIAN_OFF, cmd , "configure AXIM register: GAP: 0, frame_mode: UVUV, Little endian");
 		//if(2 ==vop_mode_ptr->uv_interleaved )//vu_interleaved
 	{
 		cmd |= ((1<<21)|(1<<18));
-		VSP_WRITE_REG(VSP_AXIM_REG_BASE+AXIM_GAP_ENDIAN_OFF, cmd , "configure AXIM register: GAP: 0, frame_mode: UVUV, Little endian");
+		VSP_WRITE_REG(mp4Handle,VSP_AXIM_REG_BASE+AXIM_GAP_ENDIAN_OFF, cmd , "configure AXIM register: GAP: 0, frame_mode: UVUV, Little endian");
 	}
 	return MMENC_OK;
 }
+#if _CMODEL_ //for RTL simulation
 void Mp4Enc_MeaCommand(ENC_VOP_MODE_T *pVop_mode, MOTION_VECTOR_T *pmvPred, uint32 bIsIVop, uint32 mb_pos_x)
 {
 	uint32 cfg, ref_offset;	
@@ -165,7 +168,7 @@ PUBLIC void Mp4Enc_CheckMBCStatus(ENC_VOP_MODE_T *vop_mode_ptr)
 	
 	VSP_WRITE_REG(VSP_MBC_REG_BASE+MBC_ST0_OFF, V_BIT_5, "clear MBC done flag");
 }
-
+ 
 /*****************************************************************************
  **	Name : 			Mp4Enc_ConfigDctQuantMB
  ** Description:	config command to do dct and quant of one mb.
@@ -356,26 +359,31 @@ void Mp4Enc_VspMBInit(ENC_VOP_MODE_T *pVop_mode, uint32 mb_pos_x)
 		pMb_mode->bSkip = FALSE;	
 	}
 }
-
+#endif //#if _CMODEL_
 //////////////////////////////////////////////////////////////////////////
 ///sync
 //////////////////////////////////////////////////////////////////////////
-void Mp4Enc_Picture_Level_Sync()
+void Mp4Enc_Picture_Level_Sync(MP4EncHandle* mp4Handle)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
 	int ret=2;
 	int delay_time = 0;
 	uint32 nbits_header_mv = 0;
 	struct timespec slptm;
+	//ENC_VOP_MODE_T *pVop_mode = Mp4Enc_GetVopmode();
 	
 #ifdef _DEBUG_TIME_
        long long  cur_time;
 #endif
-	g_HW_CMD_START = 0;
+	vd->g_HW_CMD_START = 0;
 
 #ifdef _DEBUG_TIME_
 	gettimeofday(&tpstart,NULL);
 #endif
-	VSP_START_CQM();	
+	if(NVOP != pVop_mode->VopPredType)
+		VSP_START_CQM(mp4Handle);	
 #ifdef _DEBUG_TIME_
 	gettimeofday(&tpend1,NULL);
 
@@ -385,15 +393,15 @@ void Mp4Enc_Picture_Level_Sync()
 	SCI_TRACE_LOW("cur frame  Hw  time frameNO %lld",cur_time);
 #endif	
 
-	g_rc_par.sad = (VSP_READ_REG(VSP_DCAM_REG_BASE+DCAM_MP4ENC_CTRL_OFF, "read total sad")>>1);
-	nbits_header_mv = VSP_READ_REG(VSP_DCAM_REG_BASE+DCAM_MP4ENC_HEADER_STAT_OFF, "read nbits_hdr_mv");
-	g_rc_par.nbits_hdr_mv += nbits_header_mv;
+	//g_rc_par.sad = (VSP_READ_REG(VSP_DCAM_REG_BASE+DCAM_MP4ENC_CTRL_OFF, "read total sad")>>1);
+	nbits_header_mv = VSP_READ_REG(mp4Handle,VSP_DCAM_REG_BASE+DCAM_MP4ENC_HEADER_STAT_OFF, "read nbits_hdr_mv");
+	//g_rc_par.nbits_hdr_mv += nbits_header_mv;
 	//VSP_READ_REG_POLL(VSP_AXIM_REG_BASE+AXIM_STS_OFF, V_BIT_0, 0, TIME_OUT_CLK, "AXIM_STS: polling AXI idle status");		
-       VSP_WRITE_REG(VSP_DCAM_REG_BASE,0,"reset VSP_DCAM_BASE");
+       VSP_WRITE_REG(mp4Handle,VSP_DCAM_REG_BASE,0,"reset VSP_DCAM_BASE");
 //SCI_TRACE_LOW("sad %x nbits_header_mv %x",g_rc_par.sad ,nbits_header_mv);
-	VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG2_OFF, V_BIT_1, "clear bsm-fifo"); 
+	VSP_WRITE_REG(mp4Handle,VSP_BSM_REG_BASE+BSM_CFG2_OFF, V_BIT_1, "clear bsm-fifo"); 
 
-	VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "polling BSMW inactive status");
+	VSP_READ_REG_POLL(mp4Handle,VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "polling BSMW inactive status");
 
 //       VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_INT_CLR_OFF, V_BIT_16, "DCAM_INT_CLR: clear MP4 encoding done interrupt flag");
 #if 0

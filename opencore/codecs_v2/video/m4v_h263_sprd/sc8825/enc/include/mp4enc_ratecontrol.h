@@ -28,7 +28,7 @@
     extern   "C" 
     {
 #endif
-
+#define NVOP_ENABLE
 #define RC_MAX_SLIDING_WINDOW	8
 
 //unit is ()%
@@ -94,9 +94,8 @@ typedef struct _RCMode  /* for rate control */
 	BOOLEAN		be_scene_cut;	//is scene change;
 	BOOLEAN		be_skip_frame;	//the frame should be skipped;
 	int8		Qp_type;		//according to encoder result, to judge the QP type, large, small or too small
-	int32       need_to_skip;
 	int32		Ec_actual_Q8;	//actual Ec of current frame;
-	
+	int32 nvop_cnt;
 	int32		X1;				// 1st order coefficient
 	int32		X2;				// 2nd order coefficient
 	int32		Rs;				// bit rate for sequence. e.g. 24000 bits/sec	
@@ -141,23 +140,24 @@ typedef struct _RCMode  /* for rate control */
 	
 //	double		EcI[10];							//store the last 5 I frame's complexity.
 	int32		EcP_Q8[RC_MAX_SLIDING_WINDOW];
-	int32 BytesPerMb;
-	int32 delta_Qp_4Clip;
-	int32 delta_Qp_4IncQc0;
-	int32 delta_Qp_4IncQc1;
 }RCMode;
 
 PUBLIC void Mp4Enc_InitRateCtrl(RateCtrlPara *rc_par_ptr, RCMode *rc_mode_ptr);
-PUBLIC int32 Mp4Enc_JudgeFrameType(RateCtrlPara *rc_par_ptr, RCMode *rc_mode_ptr);
+//PUBLIC int32 Mp4Enc_JudgeFrameType(RateCtrlPara *rc_par_ptr, RCMode *rc_mode_ptr);
 PUBLIC void Mp4Enc_InitRCFrame(RateCtrlPara	*rc_par_ptr);
 PUBLIC void Mp4Enc_InitRCGOP(RateCtrlPara *rc_par_ptr);
-PUBLIC void Mp4Enc_ResetRCModel(ENC_VOP_MODE_T *pVop_mode, RCMode *rc_mode_ptr, RateCtrlPara *rc_par_ptr); 
-PUBLIC void Mp4Enc_UpdateRCModel(ENC_VOP_MODE_T *pVop_mode,	RCMode *rc_mode_ptr, RateCtrlPara *rc_par_ptr, int32 Ec_Q8);
+//PUBLIC void Mp4Enc_ResetRCModel(ENC_VOP_MODE_T *pVop_mode, RCMode *rc_mode_ptr, RateCtrlPara *rc_par_ptr); 
+//PUBLIC void Mp4Enc_UpdateRCModel(ENC_VOP_MODE_T *pVop_mode,	RCMode *rc_mode_ptr, RateCtrlPara *rc_par_ptr, int32 Ec_Q8);
 
-PUBLIC void Mp4Enc_UpdatePVOP_StepSize(ENC_VOP_MODE_T *pVop_mode, RCMode *rc_mode_ptr, RateCtrlPara *rc_par_ptr);
-PUBLIC void Mp4Enc_UpdateIVOP_StepSize(ENC_VOP_MODE_T *pVop_mode, RCMode * pRCMode);
-PUBLIC void Mp4Enc_AnalyzeEncResult(RCMode *rc_mode_ptr, int32 total_bits_cur, int32 vop_type, int32 Ec_Q8);
+//PUBLIC void Mp4Enc_UpdatePVOP_StepSize(ENC_VOP_MODE_T *pVop_mode, RCMode *rc_mode_ptr, RateCtrlPara *rc_par_ptr);
+//PUBLIC void Mp4Enc_UpdateIVOP_StepSize(ENC_VOP_MODE_T *pVop_mode, RCMode * pRCMode);
+//PUBLIC void Mp4Enc_AnalyzeEncResult(RCMode *rc_mode_ptr, int32 total_bits_cur, int32 vop_type, int32 Ec_Q8);
 
+
+PUBLIC int rc_single_create(ENC_VOP_MODE_T * vop_mode_ptr, rc_single_t * rc, xvid_plg_data_t * data);
+PUBLIC int rc_single_before(rc_single_t * rc, xvid_plg_data_t * data);
+PUBLIC int rc_single_after(rc_single_t * rc, xvid_plg_data_t * data);
+PUBLIC void Update_lastQp(int8 *QP_last,int n);
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

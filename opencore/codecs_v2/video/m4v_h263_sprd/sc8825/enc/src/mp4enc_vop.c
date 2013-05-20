@@ -24,7 +24,19 @@
     {
 #endif
 
-void Mp4Enc_init_MEA(ENC_VOP_MODE_T *pVop_mode)
+PUBLIC VOP_PRED_TYPE_E Mp4Enc_JudgeFrameType(uint16 iPCount, BOOLEAN bIs_prev_frame_success)
+{
+	return PVOP;
+	if((0== iPCount) || (!bIs_prev_frame_success))
+	{
+		return IVOP;
+	}else
+	{
+		return PVOP;
+	}
+}
+
+void Mp4Enc_init_MEA(MP4EncHandle* mp4Handle,ENC_VOP_MODE_T *pVop_mode)
 {
 	uint32 uCfg;
 	uint32 meEna = FALSE; 
@@ -59,7 +71,7 @@ void Mp4Enc_init_MEA(ENC_VOP_MODE_T *pVop_mode)
 		uCfg = (prefilterEn<<24)|	(8<<16)|(MAX_MV_Y<<8)|(MAX_MV_X<<0);
 	}
 
-	VSP_WRITE_REG(VSP_MEA_REG_BASE+MEA_CFG0_OFF, uCfg, "pre-filter, configure Y and X search range");   //Y and X search range
+	VSP_WRITE_REG(mp4Handle,VSP_MEA_REG_BASE+MEA_CFG0_OFF, uCfg, "pre-filter, configure Y and X search range");   //Y and X search range
 
 	meEna = bIsIVop ? FALSE : TRUE; 
 	uCfg = (MB_SAD_THRESHOLD<<16)|		//sad threshold for stopping search
@@ -70,12 +82,12 @@ void Mp4Enc_init_MEA(ENC_VOP_MODE_T *pVop_mode)
 		(intraEn<<1)			|		//intra sad disable, 
 		(meEna<<0);						//motion estimation enable
 		
-	VSP_WRITE_REG(VSP_MEA_REG_BASE+MEA_CFG1_OFF, uCfg, "MEA_CFG1_OFF: disable hardware pipeline");
+	VSP_WRITE_REG(mp4Handle,VSP_MEA_REG_BASE+MEA_CFG1_OFF, uCfg, "MEA_CFG1_OFF: disable hardware pipeline");
 
 	
 	//mea register configure
-	VSP_WRITE_REG(VSP_MEA_REG_BASE+MEA_CFG4_OFF, ((MB_NB/2+1)<<16)|(MB_NB/2+1), "configure increased and reduced sad");
-	VSP_WRITE_REG(VSP_MEA_REG_BASE+MEA_CFG5_OFF, (2*MB_NB), "intra sad increased value");
+	VSP_WRITE_REG(mp4Handle,VSP_MEA_REG_BASE+MEA_CFG4_OFF, ((MB_NB/2+1)<<16)|(MB_NB/2+1), "configure increased and reduced sad");
+	VSP_WRITE_REG(mp4Handle,VSP_MEA_REG_BASE+MEA_CFG5_OFF, (2*MB_NB), "intra sad increased value");
 
 	
 #if _CMODEL_
@@ -84,8 +96,11 @@ void Mp4Enc_init_MEA(ENC_VOP_MODE_T *pVop_mode)
 
 }
 
-PUBLIC void Mp4Enc_VspFrameInit(ENC_VOP_MODE_T *vop_mode_ptr)
+PUBLIC void Mp4Enc_VspFrameInit(MP4EncHandle* mp4Handle)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	//VOL_MODE_T *vop_mode_ptr = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *vop_mode_ptr= vd->g_enc_vop_mode_ptr;
 	uint32 cmd;	
 	uint32 frm_offset = 0;
 
@@ -96,44 +111,47 @@ PUBLIC void Mp4Enc_VspFrameInit(ENC_VOP_MODE_T *vop_mode_ptr)
 
 //	VSP_WRITE_REG(VSP_MBC_REG_BASE+MBC_CFG_OFF, MBC_RUN_AUTO_MODE, "MBC_CFG: mpeg4 use auto_mode");
 	/*init AHBM, current frame, forward reference frame, backward reference frame*/	
-	open_vsp_iram();
-	VSP_WRITE_REG(VSP_MEMO10_ADDR+ 0, MAPaddr( vop_mode_ptr->pYUVRecFrame->imgYAddr),"configure reconstruct frame Y");
-	VSP_WRITE_REG(VSP_MEMO10_ADDR+ 4, MAPaddr( vop_mode_ptr->pYUVRefFrame->imgYAddr),"configure reference frame Y");
-	VSP_WRITE_REG(VSP_MEMO10_ADDR+ 16, MAPaddr( vop_mode_ptr->pYUVSrcFrame->imgYAddr+frm_offset),"configure source frame Y");
+	open_vsp_iram(mp4Handle);
+	VSP_WRITE_REG(mp4Handle,VSP_MEMO10_ADDR+ 0, MAPaddr( vop_mode_ptr->pYUVRecFrame->imgYAddr),"configure reconstruct frame Y");
+	VSP_WRITE_REG(mp4Handle,VSP_MEMO10_ADDR+ 4, MAPaddr( vop_mode_ptr->pYUVRefFrame->imgYAddr),"configure reference frame Y");
+	VSP_WRITE_REG(mp4Handle,VSP_MEMO10_ADDR+ 16, MAPaddr( vop_mode_ptr->pYUVSrcFrame->imgYAddr+frm_offset),"configure source frame Y");
 //	SCI_TRACE_LOW("configure source frame Y %x",vop_mode_ptr->pYUVSrcFrame->imgYAddr+frm_offset);
-	close_vsp_iram();
+	close_vsp_iram(mp4Handle);
 
 	cmd = (JPEG_FW_YUV420 << 24) | (vop_mode_ptr->MBNumY << 12) | vop_mode_ptr->MBNumX;
-	VSP_WRITE_REG(VSP_GLB_REG_BASE+GLB_CFG1_OFF, cmd, "GLB_CFG1: configure max_y and max_X");
+	VSP_WRITE_REG(mp4Handle,VSP_GLB_REG_BASE+GLB_CFG1_OFF, cmd, "GLB_CFG1: configure max_y and max_X");
 
 	cmd = (vop_mode_ptr->FrameHeight << 16) | (vop_mode_ptr->FrameWidth);
-	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_SRC_SIZE_OFF, cmd, "DCAM_DCAM_SRC_SZIE: configure frame width and height");
+	VSP_WRITE_REG(mp4Handle,VSP_DCAM_REG_BASE+DCAM_SRC_SIZE_OFF, cmd, "DCAM_DCAM_SRC_SZIE: configure frame width and height");
 
-	configure_huff_tab(g_mp4_enc_huff_tbl, 128);
+	configure_huff_tab(mp4Handle,g_mp4_enc_huff_tbl, 128);
 
-	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_INT_RAW_OFF, 0, "DCAM_INT_RAW: clear int_raw flag");
+	VSP_WRITE_REG(mp4Handle,VSP_DCAM_REG_BASE+DCAM_INT_RAW_OFF, 0, "DCAM_INT_RAW: clear int_raw flag");
 
 	//vlc
 	cmd = ((vop_mode_ptr->MBNumX * vop_mode_ptr->MBNumY)  & 0x1ffff);
-	VSP_WRITE_REG(VSP_VLC_REG_BASE+VLC_CFG_OFF, cmd, "VLC_CFG_OFF: total mcu number");
+	VSP_WRITE_REG(mp4Handle,VSP_VLC_REG_BASE+VLC_CFG_OFF, cmd, "VLC_CFG_OFF: total mcu number");
 
 	cmd = (vop_mode_ptr->MB_in_VOP_length<<15) | (vop_mode_ptr->mvInfoForward.FCode<<12) |
 		(vop_mode_ptr->VopPredType<<9) | (vop_mode_ptr->mbline_num_slice<<6) | 
 		(vop_mode_ptr->short_video_header<<5) | (vop_mode_ptr->StepSize);
-	VSP_WRITE_REG(VSP_GLB_CTRL_REG_BASE+MP4ENC_GLB_CTRL_OFFSET, cmd, "MP4 enc global ctrl ");
+	VSP_WRITE_REG(mp4Handle,VSP_GLB_CTRL_REG_BASE+MP4ENC_GLB_CTRL_OFFSET, cmd, "MP4 enc global ctrl ");
 
 	//cfg MEA cfg
-	Mp4Enc_init_MEA(vop_mode_ptr);
+	Mp4Enc_init_MEA(mp4Handle,vop_mode_ptr);
 
 	/*init dcam command*/
-	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, (1<<10) |(0<<4) | (1<<3), "DCAM_CFG: configure DCAM register,switch buffer to hardware");
-	VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_MP4ENC_CTRL_OFF, 1, "start full hardware encoding");
-	g_HW_CMD_START = 1;
+	VSP_WRITE_REG(mp4Handle,VSP_DCAM_REG_BASE+DCAM_CFG_OFF, (1<<10) |(0<<4) | (1<<3), "DCAM_CFG: configure DCAM register,switch buffer to hardware");
+if(vop_mode_ptr->VopPredType !=NVOP)
+{
+	VSP_WRITE_REG(mp4Handle,VSP_DCAM_REG_BASE+DCAM_MP4ENC_CTRL_OFF, 1, "start full hardware encoding");
+	vd->g_HW_CMD_START = 1;
+}
 //SCI_TRACE_LOW("start full hardware encoding");
 	//dbk.
-	VSP_WRITE_REG(VSP_DBK_REG_BASE+DBK_CFG_OFF, (0<<2)|(DBK_RUN_FREE_MODE), "DBK_CFG: disable post-filter and free_run_mode");
-	VSP_WRITE_REG(VSP_DBK_REG_BASE+DBK_CTR1_OFF, 1 , "DBK_CTR1: configure DBK configure finished");
-	VSP_WRITE_REG(VSP_DBK_REG_BASE+DBK_VDB_BUF_ST_OFF, V_BIT_0, "DBK_VDB_BUF_ST: init ping buffer to be available");
+	VSP_WRITE_REG(mp4Handle,VSP_DBK_REG_BASE+DBK_CFG_OFF, (0<<2)|(DBK_RUN_FREE_MODE), "DBK_CFG: disable post-filter and free_run_mode");
+	VSP_WRITE_REG(mp4Handle,VSP_DBK_REG_BASE+DBK_CTR1_OFF, 1 , "DBK_CTR1: configure DBK configure finished");
+	VSP_WRITE_REG(mp4Handle,VSP_DBK_REG_BASE+DBK_VDB_BUF_ST_OFF, V_BIT_0, "DBK_VDB_BUF_ST: init ping buffer to be available");
 
 #if _CMODEL_
 	init_mea();
@@ -144,19 +162,25 @@ PUBLIC void Mp4Enc_VspFrameInit(ENC_VOP_MODE_T *vop_mode_ptr)
 	//VSP_WRITE_REG(VSP_VLC_REG_BASE+VLC_CFG_OFF, cmd, "VLC_CFG_OFF: total mcu number");
 }
 
-MP4_LOCAL void Mp4Enc_ExchangeMbModePerLine(ENC_VOP_MODE_T *pVop_mode)
+MP4_LOCAL void Mp4Enc_ExchangeMbModePerLine(MP4EncHandle* mp4Handle)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
 	ENC_MB_MODE_T *pMb_modeTemp;
 
 	pMb_modeTemp = pVop_mode->pMbModeAbv;
 	pVop_mode->pMbModeAbv = pVop_mode->pMbModeCur;
 	pVop_mode->pMbModeCur = pMb_modeTemp;
 }
-PUBLIC int32 Mp4Enc_EncNVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
+PUBLIC int32 Mp4Enc_EncNVOP(MP4EncHandle* mp4Handle, int32 time_stamp)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
 	int32 Qp;	
 	BOOLEAN is_short_header = pVop_mode->short_video_header;
-	VOL_MODE_T *vol_mode_ptr = Mp4Enc_GetVolmode();
+	
 
 		
 	pVop_mode->StepSize = Qp = pVop_mode->StepI;
@@ -171,19 +195,22 @@ PUBLIC int32 Mp4Enc_EncNVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
 	}else
 #endif	
 	{
-		g_rc_par.nbits_hdr_mv += (int)Mp4Enc_EncVOPHeader(pVop_mode, time_stamp);	
+		/*g_rc_par.nbits_hdr_mv +=*/ (int)Mp4Enc_EncVOPHeader(mp4Handle, time_stamp);	
 	}
 
 	/*stuffing to byte align*/
-	Mp4Enc_ByteAlign(is_short_header);
-	Mp4Enc_Picture_Level_Sync();	
+	Mp4Enc_ByteAlign(mp4Handle,is_short_header);
+	Mp4Enc_Picture_Level_Sync(mp4Handle);	
 	
 	return 1;
 
 }
 
-PUBLIC int32 Mp4Enc_EncIVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
+PUBLIC int32 Mp4Enc_EncIVOP(MP4EncHandle* mp4Handle,int32 time_stamp)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
 	int32 Qp;	
 	uint32 mb_pos_x, mb_me_x;
 	uint32 mb_pos_y;
@@ -192,12 +219,12 @@ PUBLIC int32 Mp4Enc_EncIVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
 	uint32 total_mb_num_y =  pVop_mode->MBNumY;
 	BOOLEAN is_short_header = pVop_mode->short_video_header;
 	int	 left_mbline_slice = pVop_mode->mbline_num_slice;
-	VOL_MODE_T *pVol_mode = Mp4Enc_GetVolmode();
+	//VOL_MODE_T *pVol_mode = Mp4Enc_GetVolmode();
 	int32 nbits_hdr_mv = 0;
 	
 	if(pVop_mode->RateCtrlEnable)
 	{
-		Mp4Enc_UpdateIVOP_StepSize(pVop_mode, &g_stat_rc);
+		//Mp4Enc_UpdateIVOP_StepSize(pVop_mode, &g_stat_rc);
 	}
 		
 	pVop_mode->StepSize = Qp = pVop_mode->StepI;
@@ -209,14 +236,14 @@ PUBLIC int32 Mp4Enc_EncIVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
 	pVop_mode->bCoded = 1;
 	if(is_short_header)
 	{
-		g_rc_par.nbits_hdr_mv += Mp4Enc_EncH263PicHeader(pVop_mode);
+		/*g_rc_par.nbits_hdr_mv += */Mp4Enc_EncH263PicHeader(mp4Handle);
 	}else
 	{
-		g_rc_par.nbits_hdr_mv += Mp4Enc_EncVOPHeader(pVop_mode, time_stamp);	
+		/*g_rc_par.nbits_hdr_mv += */Mp4Enc_EncVOPHeader(mp4Handle, time_stamp);	
 	}
 
 
-	Mp4Enc_VspFrameInit(pVop_mode);
+	Mp4Enc_VspFrameInit(mp4Handle);
 #if _CMODEL_ //for RTL simulation
 
 	nbits_hdr_mv = g_rc_par.nbits_hdr_mv;
@@ -240,10 +267,10 @@ PUBLIC int32 Mp4Enc_EncIVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
 			{		
 				int32 GQUANT = pVop_mode->StepSize;	
 
-				g_rc_par.nbits_hdr_mv += Mp4Enc_EncGOBHeader(pVop_mode, GQUANT);
+				g_rc_par.nbits_hdr_mv += Mp4Enc_EncGOBHeader(mp4Handle, GQUANT);
 			}else
 			{
-				g_rc_par.nbits_hdr_mv += Mp4Enc_ReSyncHeader(pVop_mode, Qp, time_stamp);
+				g_rc_par.nbits_hdr_mv += Mp4Enc_ReSyncHeader(mp4Handle, Qp, time_stamp);
 			}
 				
 			left_mbline_slice = pVop_mode->mbline_num_slice;
@@ -304,13 +331,16 @@ PUBLIC int32 Mp4Enc_EncIVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
 		FPRINTF(g_pPureSadFile, "%08x, %08d\n", 0 ,nbits_hdr_mv);
 	}	
 #endif
-	Mp4Enc_Picture_Level_Sync();	
+	Mp4Enc_Picture_Level_Sync(mp4Handle);	
 	
 	return 1;
 }
 
-PUBLIC void Mp4Enc_UpdateRefFrame(ENC_VOP_MODE_T *pVop_mode)
+PUBLIC void Mp4Enc_UpdateRefFrame(MP4EncHandle* mp4Handle)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
 	Mp4EncStorablePic *pTmp = PNULL;
 
 	pTmp = pVop_mode->pYUVRefFrame;
@@ -318,8 +348,11 @@ PUBLIC void Mp4Enc_UpdateRefFrame(ENC_VOP_MODE_T *pVop_mode)
 	pVop_mode->pYUVRecFrame = pTmp;
 }
 
-PUBLIC int32 Mp4Enc_EncPVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
+PUBLIC int32 Mp4Enc_EncPVOP(MP4EncHandle* mp4Handle,int32 time_stamp,int32 * intra_mb_num)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
 	int32  Qp = pVop_mode->StepP;	
 	uint32 mb_pos_x, mb_me_x;
 	uint32 mb_pos_y;
@@ -330,12 +363,12 @@ PUBLIC int32 Mp4Enc_EncPVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
 	BOOLEAN  is_short_header = pVop_mode->short_video_header;
 	int32 left_mbline_slice = pVop_mode->mbline_num_slice;
 	int32 left_intramb_dis = pVop_mode->intra_mb_dis;
-	VOL_MODE_T *pVol_mode = Mp4Enc_GetVolmode();
+	//VOL_MODE_T *pVol_mode = Mp4Enc_GetVolmode();
 	int32 nbits_hdr_mv = 0;
 
 	if(pVop_mode->RateCtrlEnable)
 	{
-		Mp4Enc_UpdatePVOP_StepSize(pVop_mode, &g_stat_rc, &g_rc_par);
+		//Mp4Enc_UpdatePVOP_StepSize(pVop_mode, &g_stat_rc, &g_rc_par);
 	}
 	pVop_mode->StepSize = Qp = pVop_mode->StepP;
 //SCI_TRACE_LOW("g_nFrame_enc %d P qp %d",g_nFrame_enc,pVop_mode->StepP);	
@@ -347,12 +380,12 @@ PUBLIC int32 Mp4Enc_EncPVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
 
 	if(is_short_header)
 	{
-		g_rc_par.nbits_hdr_mv += Mp4Enc_EncH263PicHeader(pVop_mode);
+		/*g_rc_par.nbits_hdr_mv +=*/ Mp4Enc_EncH263PicHeader(mp4Handle);
 	}else
 	{
-		g_rc_par.nbits_hdr_mv += Mp4Enc_EncVOPHeader(pVop_mode, time_stamp);	
+		/*g_rc_par.nbits_hdr_mv += */Mp4Enc_EncVOPHeader(mp4Handle, time_stamp);	
 	}
-	Mp4Enc_VspFrameInit(pVop_mode);
+	Mp4Enc_VspFrameInit(mp4Handle);
 #if _CMODEL_ //for RTL simulation
 	nbits_hdr_mv = g_rc_par.nbits_hdr_mv;
 	Mp4Enc_Init_MEA_Fetch(pVop_mode);
@@ -471,7 +504,7 @@ PUBLIC int32 Mp4Enc_EncPVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp)
 	}	
 
 #endif
-	Mp4Enc_Picture_Level_Sync();	
+	Mp4Enc_Picture_Level_Sync(mp4Handle);	
 
 	return 1;
 }

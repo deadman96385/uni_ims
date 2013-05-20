@@ -28,7 +28,7 @@
 #endif
 
 #include "mp4_basic.h"
-
+#include"mpeg4enc.h"
 #include <sys/ioctl.h>
 #include "ion_sprd.h"
 
@@ -121,7 +121,7 @@ class Mpeg4Encoder_OMX
 
         void CopyToYUVIn(uint8* YUV, int width, int height, int width_16, int height_16);
 
-
+	MP4EncHandle*    mHandle;
         OMX_BOOL             iInitialized;
         OMX_COLOR_FORMATTYPE iVideoFormat;
 

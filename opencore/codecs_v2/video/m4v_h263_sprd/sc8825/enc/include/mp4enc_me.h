@@ -79,7 +79,7 @@ typedef struct
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
 void Mp4Enc_JudgeMBMode(ENC_MB_MODE_T * pmbmd);
-void Mp4Enc_init_MEA(ENC_VOP_MODE_T *pVop_mode);
+void Mp4Enc_init_MEA(MP4EncHandle* mp4Handle,ENC_VOP_MODE_T *pVop_mode);
 void Mp4Enc_Init_MEA_Fetch(ENC_VOP_MODE_T *pVop_mode);
 void Mp4Enc_MEA_Fetch_cfg (ENC_VOP_MODE_T *pVop_mode);
 void Mp4Enc_Update_MEA_Fetch_Y(ENC_VOP_MODE_T * pVop_mode);

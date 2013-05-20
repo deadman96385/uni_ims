@@ -17,6 +17,6 @@
 #ifndef _MP4ENC_BFR_CTRL_H_
 #define _MP4ENC_BFR_CTRL_H_
 
-int32 Mp4Enc_InitYUVBfr(ENC_VOP_MODE_T *vop_mode_ptr);
+int32 Mp4Enc_InitYUVBfr(MP4EncHandle* mp4Handle);
 
 #endif //_MP4ENC_BFR_CTRL_H_
