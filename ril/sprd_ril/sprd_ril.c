@@ -3085,6 +3085,47 @@ error:
     at_response_free(p_response);
 }
 
+static void onQuerySignalStrength(void *param)
+{
+    int channelID;
+    ATResponse *p_response = NULL;
+    int err;
+    RIL_SignalStrength_v6 response_v6;
+    char *line;
+
+    ALOGE("query signal strength when screen on");
+    channelID = getChannel();
+    memset(&response_v6, -1, sizeof(response_v6));
+    err = at_send_command_singleline(ATch_type[channelID], "AT+CSQ", "+CSQ:", &p_response);
+
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+
+    line = p_response->p_intermediates->line;
+
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &(response_v6.GW_SignalStrength.signalStrength));
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &(response_v6.GW_SignalStrength.bitErrorRate));
+    if (err < 0) goto error;
+
+    RIL_onUnsolicitedResponse(
+              RIL_UNSOL_SIGNAL_STRENGTH,
+              &response_v6, sizeof(RIL_SignalStrength_v6));
+    putChannel(channelID);
+    at_response_free(p_response);
+    return;
+
+error:
+    ALOGE("onQuerySignalStrength fail");
+    putChannel(channelID);
+    at_response_free(p_response);
+}
+
 static void  requestScreeState(int channelID, int status, RIL_Token t)
 {
     int err;
@@ -3101,6 +3142,9 @@ static void  requestScreeState(int channelID, int status, RIL_Token t)
         at_send_command(ATch_type[channelID], "AT+CCED=1,8", NULL);
         at_send_command(ATch_type[channelID], "AT+CREG=2", NULL);
         at_send_command(ATch_type[channelID], "AT+CGREG=2", NULL);
+        if (sState == RADIO_STATE_SIM_READY) {
+            RIL_requestTimedCallback (onQuerySignalStrength, NULL, NULL);
+        }
         RIL_onUnsolicitedResponse (
                 RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED,
                 NULL, 0);
