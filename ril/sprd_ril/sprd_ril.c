@@ -83,8 +83,6 @@ static const char * s_modem = NULL;
 
 
 struct ATChannels *ATch_type[MAX_CHANNELS];
-static char creg_response[100] = "";
-static char cgreg_response[100] = "";
 static int s_channel_open = 0;
 static int s_sms_ready = 0;
 static int simNum;
@@ -957,14 +955,6 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 #endif
 
     if (onOff == 0) {
-        /*clear the array to ensure strcmp(creg_response/cgreg_response, s)
-         * is different between enter and exit airfly mode
-         * due to modem is not stable to unsolicited +CREG +CGREG
-         */
-
-        memset(creg_response, 0, sizeof(creg_response));
-        memset(cgreg_response, 0, sizeof(cgreg_response));
-
         /* The system ask to shutdown the radio */
         err = at_send_command(ATch_type[channelID], "AT+SFUN=5", &p_response);
         if (err < 0 || p_response->success == 0)
@@ -6841,18 +6831,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
     } else if (strStartsWith(s,"+CREG:")
             || strStartsWith(s,"+CGREG:")
             ) {
-        if (strStartsWith(s,"+CREG:") && strcmp(creg_response, s)) {
-            strncpy(creg_response, s, 100);
-            RIL_onUnsolicitedResponse (
-                    RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED,
-                    NULL, 0);
-        }
-        if (strStartsWith(s,"+CGREG") && strcmp(cgreg_response, s)) {
-            strncpy(cgreg_response, s, 100);
-            RIL_onUnsolicitedResponse (
-                    RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED,
-                    NULL, 0);
-        }
+        RIL_onUnsolicitedResponse (
+                RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED,
+                NULL, 0);
     } else if (strStartsWith(s,"^CEND:")) {
         char *p;
         char *tmp;
