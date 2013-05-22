@@ -17,7 +17,8 @@
 #define	BOOT_CODE_SIZE 0x100        //word unit
 
 static const uint32 bootcode[BOOT_CODE_SIZE]={
-/*0x18000000,
+#ifdef OR_CACHE_OFF
+0x18000000,
 0xa8204005,
 0xc0000811,
 0xc1400000,
@@ -161,7 +162,8 @@ static const uint32 bootcode[BOOT_CODE_SIZE]={
 0x84c10008,
 0x9c210100,
 0x24000000,
-0x15000000,*///no cache
+0x15000000,//no cache
+#else
 0x18000000,
 0xa8204005,
 0xc0000811,
@@ -307,6 +309,7 @@ static const uint32 bootcode[BOOT_CODE_SIZE]={
 0x9c210100,
 0x24000000,
 0x15000000,
+#endif
 };
 /**---------------------------------------------------------------------------
 **                         Compiler Flag                                      *
