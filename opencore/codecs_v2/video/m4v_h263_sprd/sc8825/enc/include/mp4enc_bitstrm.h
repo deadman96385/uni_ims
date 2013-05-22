@@ -34,7 +34,7 @@
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
-void Mp4Enc_InitBitStream(ENC_VOP_MODE_T *pVop_mode);
+void Mp4Enc_InitBitStream(MP4EncHandle* mp4Handle);
 
 /*****************************************************************************
  **	Name : 			Mp4Enc_OutputBits
@@ -42,7 +42,7 @@ void Mp4Enc_InitBitStream(ENC_VOP_MODE_T *pVop_mode);
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
-uint32 Mp4Enc_OutputBits(uint32 val, uint32 nbits);
+uint32 Mp4Enc_OutputBits(MP4EncHandle* mp4Handle,uint32 val, uint32 nbits);
 
 void Mp4Enc_OutputBits_for_vlc (uint32 val, uint32 nbits);
 
@@ -52,7 +52,7 @@ void Mp4Enc_OutputBits_for_vlc (uint32 val, uint32 nbits);
  ** Author:			Xiaowei Luo
  **	Note:           now, only support mpeg4, @2007.06.19
  *****************************************************************************/
-uint32 Mp4Enc_ByteAlign(BOOLEAN is_short_header);
+uint32 Mp4Enc_ByteAlign(MP4EncHandle* mp4Handle,BOOLEAN is_short_header);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

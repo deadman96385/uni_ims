@@ -157,6 +157,7 @@ typedef struct
 	int32	frame_height;				//frame Height
 	int32	time_scale;
 	int32	uv_interleaved;				//tmp add
+	int32   framerate;
 }MMEncVideoInfo;
 
 // Encoder config structure 
@@ -203,6 +204,7 @@ typedef struct
 {
     uint8	*pOutBuf;					//Output buffer
     int32	strmSize;					//encoded stream size, if 0, should skip this frame.
+    uint8	*pRecYUV;
 } MMEncOut;
 
 /**---------------------------------------------------------------------------*

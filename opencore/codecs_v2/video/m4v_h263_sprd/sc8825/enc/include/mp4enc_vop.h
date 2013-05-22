@@ -27,11 +27,16 @@
     {
 #endif
 
-PUBLIC void Mp4Enc_VspFrameInit(ENC_VOP_MODE_T *vop_mode_ptr);
-PUBLIC void Mp4Enc_UpdateRefFrame(ENC_VOP_MODE_T *pVop_mode);
-PUBLIC int32 Mp4Enc_EncIVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp);
-PUBLIC int32 Mp4Enc_EncPVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp);
-PUBLIC int32 Mp4Enc_EncNVOP(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp);
+PUBLIC void Mp4Enc_VspFrameInit(MP4EncHandle* mp4Handle);
+PUBLIC void Mp4Enc_UpdateRefFrame(MP4EncHandle* mp4Handle);
+PUBLIC int32 Mp4Enc_EncIVOP(MP4EncHandle* mp4Handle, int32 time_stamp);
+
+PUBLIC int32 Mp4Enc_EncPVOP(MP4EncHandle* mp4Handle, int32 time_stamp, int32 * intra_mb_num);
+PUBLIC int32 Mp4Enc_EncNVOP(MP4EncHandle* mp4Handle, int32 time_stamp);
+
+PUBLIC VOP_PRED_TYPE_E Mp4Enc_JudgeFrameType(uint16 iPCount, BOOLEAN bIs_prev_frame_success);
+
+
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

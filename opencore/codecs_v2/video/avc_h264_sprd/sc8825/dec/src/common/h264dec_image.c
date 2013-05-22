@@ -477,11 +477,8 @@ PUBLIC void H264Dec_init_picture (DEC_IMAGE_PARAMS_T *img_ptr)
 		if (g_active_sps_ptr->gaps_in_frame_num_value_allowed_flag == 0)
 		{
 			/*advanced error concealment would be called here to combat unitentional loss of pictures*/
-			if (img_ptr->type != I_SLICE)
-			{
-				SCI_TRACE_LOW("an unintentional loss of picture occures!\n");
-				img_ptr->error_flag |= ER_BSM_ID;
-			}
+			SCI_TRACE_LOW("an unintentional loss of picture occures!\n");
+			img_ptr->error_flag |= ER_BSM_ID;
 			return;
 		}
 		H264Dec_fill_frame_num_gap(img_ptr, dpb_ptr);

@@ -257,7 +257,7 @@ SCI_TRACE_LOW("configure reconstruct frame Y %x",vop_mode_ptr->pCurRecFrame->pDe
 
 	if (!vop_mode_ptr->bReversibleVlc || (vop_mode_ptr->VopPredType == BVOP))
 	{
-		if (vop_mode_ptr->is_need_init_vsp_huff_tab)
+	//	if (vop_mode_ptr->is_need_init_vsp_huff_tab)
 		{
 			configure_huff_tab((uint32 *)g_mp4_dec_huff_tbl, 152);
 
@@ -274,7 +274,7 @@ SCI_TRACE_LOW("configure reconstruct frame Y %x",vop_mode_ptr->pCurRecFrame->pDe
 	// quantMode = (vop_mode_ptr->QuantizerType == Q_H263) ? 1 : 0;
 	if(Q_MPEG == vop_mode_ptr->QuantizerType)
 	{
-		if (vop_mode_ptr->is_need_init_vsp_quant_tab)
+	//	if (vop_mode_ptr->is_need_init_vsp_quant_tab)
 		{
 			VSP_Mp4DctFillQuantTblBfr(vop_mode_ptr);
 			vop_mode_ptr->is_need_init_vsp_quant_tab = FALSE;

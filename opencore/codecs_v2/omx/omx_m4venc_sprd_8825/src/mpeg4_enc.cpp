@@ -402,8 +402,15 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
     // and return OMX_ErrorUnsupportedSetting
 
     /***** Initlaize the encoder *****/
-
-    uint32 vidInterBufSize = (encInfo.frame_width/16)*7*4*2+14*4+6*4*3+68   +200 +4;
+   mHandle = (MP4EncHandle*) oscl_malloc(sizeof(MP4EncHandle));
+    if (NULL == mHandle)
+    {
+       	     ALOGE("Mpeg4Encoder_OMX::Mp4EncInit  mHandle alloc error\n");       
+            return OMX_ErrorInsufficientResources;
+    }
+	
+    uint32 vidInterBufSize = (encInfo.frame_width/16)*7*4*2+14*4+6*4*3+68   +200 +4+512 \
+		                         	+200; //FOR Mp4EncObject
     iVIDInterBuf = (uint8*) oscl_malloc(vidInterBufSize);
     if (NULL == iVIDInterBuf)
     {
@@ -443,7 +450,7 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
     fp_es = fopen(fn_es, "wb");
 #endif	
 		
-    MMEncRet ret =  MP4EncInit(&InterMemBfr, &ExtaMemBfr,&encInfo);
+    MMEncRet ret =  MP4EncInit(mHandle,&InterMemBfr, &ExtaMemBfr,&encInfo);
     int status;
     if(ret == MMENC_OK)
         status = 	OMX_TRUE;
@@ -458,7 +465,7 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
     }
     //encConfig.RateCtrlEnable = 0;
     OMX_MP4ENC_INFO("Mpeg4Encoder_OMX::Mp4EncInit: RateCtrlEnable %d,targetBitRate %d,FrameRate %d,QP_IVOP %d,QP_PVOP %d,profileAndLevel %d\n",encConfig.RateCtrlEnable,encConfig.targetBitRate,encConfig.FrameRate,encConfig.QP_IVOP,encConfig.QP_PVOP,encConfig.profileAndLevel);  		
-    MP4EncSetConf(&encConfig);
+    MP4EncSetConf(mHandle,&encConfig);
 	
     iInitialized = OMX_TRUE;
     iNextModTime = 0;
@@ -474,7 +481,7 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncInit(OMX_S32 iEncMode,
 
 	MMEncOut encOut;
 
-	MP4EncGenHeader(&encOut);
+	MP4EncGenHeader(mHandle,&encOut);
 	
         iVolHeaderSize = encOut.strmSize;
         oscl_memcpy(iVolHeader, (OsclAny*)encOut.pOutBuf, iVolHeaderSize);
@@ -522,7 +529,7 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4UpdateBitRate(OMX_U32 aEncodedBitRate)
     if (OMX_TRUE == iInitialized)
     {
     	MMEncConfig config;
-   	MP4EncGetConf(&config);	
+   	MP4EncGetConf(mHandle,&config);	
     	config.targetBitRate = aEncodedBitRate;
 	iBps = aEncodedBitRate;
 	int vid_pitch = ((iSrcWidth + 15) >> 4) << 4;	
@@ -533,7 +540,7 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4UpdateBitRate(OMX_U32 aEncodedBitRate)
 		config.vbv_buf_size = aEncodedBitRate*0.5;
 		iVBVSize  = aEncodedBitRate*0.5;
 	}
-    	MP4EncSetConf(&config);
+    	MP4EncSetConf(mHandle,&config);
 	Status = OMX_TRUE;	
     }
     return  Status;
@@ -549,9 +556,9 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4UpdateFrameRate(OMX_U32 aEncodeFramerate)
     if (OMX_TRUE == iInitialized)
     {
         MMEncConfig config;
-   	MP4EncGetConf(&config);	
+   	MP4EncGetConf(mHandle,&config);	
         config.FrameRate = (aEncodeFramerate / (1 << 16));
-    	MP4EncSetConf(&config);
+    	MP4EncSetConf(mHandle,&config);
 	Status = OMX_TRUE;	
     }
     return Status;
@@ -837,7 +844,7 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
 	vid_in.p_src_v_phy = vid_in.p_src_u_phy + (vid_height * vid_pitch>>2);	
 
         OMX_U32 Start_encode = OsclTickCount::TickCount();
-        MMEncRet ret =  MP4EncStrmEncode(&vid_in, &vid_out);
+        MMEncRet ret =  MP4EncStrmEncode(mHandle,&vid_in, &vid_out);
         OMX_U32 Stop_encode = OsclTickCount::TickCount();
         OMX_MP4ENC_INFO("MP4EncStrmEncode consumed %dms, return %d, size = %d\n", Stop_encode-Start_encode, ret, vid_out.strmSize);
         
@@ -932,7 +939,7 @@ OMX_BOOL Mpeg4Encoder_OMX::Mp4EncodeVideo(OMX_U8*    aOutBuffer,
            // if (Size > 0)
             {
                // *aOutTimeStamp = ((OMX_TICKS) vid_out.timestamp * 1000);  //converting millisec to microsec
-                if (iPredType == IVOP)
+                if (vid_in.vopType == IVOP)
                 {
                     //Its an I Frame, mark the sync flag as true
                     *aSyncFlag = OMX_TRUE;
@@ -978,7 +985,7 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncDeinit()
 
     if (OMX_TRUE == iInitialized)
     {
-        MP4EncRelease();
+        MP4EncRelease(mHandle);
         iInitialized = OMX_FALSE;
 
         if (iYUVIn)
@@ -997,6 +1004,12 @@ OMX_ERRORTYPE Mpeg4Encoder_OMX::Mp4EncDeinit()
 	{
 	    oscl_free(iVIDInterBuf);
 	    iVIDInterBuf = NULL;
+	}
+
+	if(mHandle)
+	{
+		oscl_free(mHandle);
+		mHandle = NULL;
 	}
     }
     return OMX_ErrorNone;

@@ -20,7 +20,7 @@ LOCAL_SRC_FILES := \
 	src/mp4enc_trace.c \
 	src/mp4enc_vlc.c \
 	src/mp4enc_vop.c \
-	../../../vsp/sc8825/src/vsp_drv_sc8825.c
+	../../../vsp/sc8825/src/vsp_drv_sc8825_enc.c
 
 
 LOCAL_MODULE := libsprdm4vencoder

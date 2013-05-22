@@ -28,8 +28,8 @@
     {
 #endif
 
-PUBLIC void Mp4Enc_InitVolVopPara(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode, uint32 frame_rate);
-PUBLIC void Mp4Enc_InitSession(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode);
+PUBLIC void Mp4Enc_InitVolVopPara(MP4EncHandle* mp4Handle, uint32 frame_rate);
+PUBLIC void Mp4Enc_InitSession(MP4EncHandle* mp4Handle);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

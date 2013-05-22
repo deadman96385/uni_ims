@@ -26,6 +26,29 @@
     extern   "C" 
     {
 #endif
+
+/* Application controls, this structed shall be allocated */
+/*    and initialized in the application.                 */
+typedef struct tagMP4EncHandle
+{
+
+    void *videoEncoderData;     /* this is an internal pointer that is only used */
+    /* in the encoder library.   */
+#ifdef PV_MEMORY_POOL
+    int32 size;
+#endif
+
+
+        void *userdata;
+
+
+
+
+        int g_mpeg4_enc_err_flag;
+} MP4EncHandle;
+
+
+
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
@@ -36,7 +59,7 @@
 //  Author:        
 //	Note:           
 /*****************************************************************************/
-MMEncRet MP4EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr, MMEncVideoInfo *pVideoFormat);
+MMEncRet MP4EncInit(MP4EncHandle* mp4Handle,MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr, MMEncVideoInfo *pVideoFormat);
 
 /*****************************************************************************/
 //  Description:   Generate mpeg4 header
@@ -44,7 +67,7 @@ MMEncRet MP4EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr, MME
 //  Author:        
 //	Note:           
 /*****************************************************************************/
-MMEncRet MP4EncGenHeader(MMEncOut *pOutput);
+MMEncRet MP4EncGenHeader(MP4EncHandle* mp4Handle,MMEncOut *pOutput);
 
 /*****************************************************************************/
 //  Description:   Set mpeg4 encode config
@@ -52,7 +75,7 @@ MMEncRet MP4EncGenHeader(MMEncOut *pOutput);
 //  Author:        
 //	Note:           
 /*****************************************************************************/
-MMEncRet MP4EncSetConf(MMEncConfig *pConf);
+MMEncRet MP4EncSetConf(MP4EncHandle* mp4Handle,MMEncConfig *pConf);
 
 /*****************************************************************************/
 //  Description:   Get mpeg4 encode config
@@ -60,7 +83,7 @@ MMEncRet MP4EncSetConf(MMEncConfig *pConf);
 //  Author:        
 //	Note:           
 /*****************************************************************************/
-MMEncRet MP4EncGetConf(MMEncConfig *pConf);
+MMEncRet MP4EncGetConf(MP4EncHandle* mp4Handle,MMEncConfig *pConf);
 
 /*****************************************************************************/
 //  Description:   Encode one vop	
@@ -68,7 +91,7 @@ MMEncRet MP4EncGetConf(MMEncConfig *pConf);
 //  Author:        
 //	Note:           
 /*****************************************************************************/
-MMEncRet MP4EncStrmEncode (MMEncIn *pInput, MMEncOut *pOutput);
+MMEncRet MP4EncStrmEncode (MP4EncHandle* mp4Handle,MMEncIn *pInput, MMEncOut *pOutput);
 
 /*****************************************************************************/
 //  Description:   Close mpeg4 encoder	
@@ -76,7 +99,7 @@ MMEncRet MP4EncStrmEncode (MMEncIn *pInput, MMEncOut *pOutput);
 //  Author:        
 //	Note:           
 /*****************************************************************************/
-MMEncRet MP4EncRelease(void);
+MMEncRet MP4EncRelease(MP4EncHandle* mp4Handle);
 
 /*****************************************************************************/
 //  Description: check whether VSP can used for video encoding or not
@@ -85,7 +108,7 @@ MMEncRet MP4EncRelease(void);
 //	Note: return VSP status:
 //        1: dcam is idle and can be used for vsp   0: dcam is used by isp           
 /*****************************************************************************/
-BOOLEAN MPEG4ENC_VSP_Available (void);
+BOOLEAN MPEG4ENC_VSP_Available (MP4EncHandle* mp4Handle);
 
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **

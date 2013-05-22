@@ -25,18 +25,20 @@
 #endif
 
 FILE* output_yuv = NULL;
-void dump_input_yuv()
+void dump_input_yuv(MP4EncHandle* mp4Handle)
 {
-	
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
         int length = 0;
 	int i = 0;
-        int width = g_enc_vop_mode_ptr->FrameWidth;
-	int height = g_enc_vop_mode_ptr->FrameHeight;
-	unsigned char * src_y = g_enc_vop_mode_ptr->pYUVSrcFrame->imgY;
+        int width = pVop_mode->FrameWidth;
+	int height = pVop_mode->FrameHeight;
+	unsigned char * src_y = pVop_mode->pYUVSrcFrame->imgY;
 	unsigned char * src_u= src_y+width*height;//g_enc_vop_mode_ptr->pYUVSrcFrame->imgU;
 	unsigned char * src_v = src_y+width*height*5/4;//g_enc_vop_mode_ptr->pYUVSrcFrame->imgV;
 	
-	if(g_nFrame_enc == 1)
+	if(vd->g_nFrame_enc == 1)
 	{
 		output_yuv = fopen("/data/input.yuv","wb");  
 	}
@@ -49,17 +51,18 @@ void dump_input_yuv()
 		fwrite(src_v,1,width*height/4,output_yuv);
 	}
 		
-	if(g_nFrame_enc == 2)
+	if(vd->g_nFrame_enc == 2)
 	{
 		fclose(output_yuv );
 	}
 }
 
 
-void read_one_frame_yuv(uint8* ptr,void* file,uint32 size)
+void read_one_frame_yuv(MP4EncHandle* mp4Handle,uint8* ptr,void* file,uint32 size)
 {	
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
 	fread(ptr,1,size,(FILE *)file);
-	if(g_nFrame_enc == 100)
+	if(vd->g_nFrame_enc == 100)
 	{
 		fseek((FILE *)file,0,SEEK_SET);
 	}
@@ -71,37 +74,38 @@ void read_one_frame_yuv(uint8* ptr,void* file,uint32 size)
 //  Author:        
 //	Note:           
 /*****************************************************************************/
-MMEncRet MP4EncGenHeader(MMEncOut *pOutput)
+MMEncRet MP4EncGenHeader(MP4EncHandle* mp4Handle,MMEncOut *pOutput)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
 	uint32 NumBits = 0;
-	VOL_MODE_T *pVol_mode = Mp4Enc_GetVolmode();
-	ENC_VOP_MODE_T *pVop_mode = Mp4Enc_GetVopmode();
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
 
 	SCI_ASSERT(NULL != pVol_mode);
 	SCI_ASSERT(NULL != pVop_mode);
 	
 	if(!pVop_mode->short_video_header)   //MPEG-4 case
 	{	
-		if (Mp4Enc_VSPInit(pVop_mode) != MMENC_OK)
+		if (Mp4Enc_VSPInit(mp4Handle) != MMENC_OK)
 		{
 			return MMENC_ERROR;
 		}
-        Mp4Enc_InitBitStream(pVop_mode);
-		NumBits = Mp4Enc_EncSequenceHeader(pVol_mode, pVop_mode);		
-		NumBits += Mp4Enc_EncVOHeader(pVop_mode);	
-		NumBits += Mp4Enc_EncVOLHeader(pVol_mode, pVop_mode);
+        	Mp4Enc_InitBitStream(mp4Handle);
+		NumBits = Mp4Enc_EncSequenceHeader(mp4Handle);		
+		NumBits += Mp4Enc_EncVOHeader(mp4Handle);	
+		NumBits += Mp4Enc_EncVOLHeader(mp4Handle);
 
 	//	NumBits += Mp4Enc_OutputLeftBits();	
 		
 		//clear bsm-fifo, polling inactive status reg
-		VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG2_OFF, V_BIT_1, "clear bsm-fifo"); 
+		VSP_WRITE_REG(mp4Handle,VSP_BSM_REG_BASE+BSM_CFG2_OFF, V_BIT_1, "clear bsm-fifo"); 
 	#if _CMODEL_
 		clear_bsm_fifo();
 	#endif
-		VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "polling BSMW inactive status");
+		VSP_READ_REG_POLL(mp4Handle,VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "polling BSMW inactive status");
 
-		pOutput->strmSize = (VSP_READ_REG(VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "read total bits") + 7 ) >>3;	
-        VSP_RELEASE_Dev();
+		pOutput->strmSize = (VSP_READ_REG(mp4Handle,VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "read total bits") + 7 ) >>3;	
+        	VSP_RELEASE_Dev(mp4Handle);
 	}else
 	{
 		pOutput->strmSize = 0;
@@ -125,10 +129,11 @@ MMEncRet MP4EncGenHeader(MMEncOut *pOutput)
 //  Author:        
 //	Note:           
 /*****************************************************************************/
-MMEncRet MP4EncSetConf(MMEncConfig *pConf)
+MMEncRet MP4EncSetConf(MP4EncHandle* mp4Handle,MMEncConfig *pConf)
 {
-	VOL_MODE_T *pVol_mode = Mp4Enc_GetVolmode();
-	ENC_VOP_MODE_T *pVop_mode = Mp4Enc_GetVopmode();
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
 
 	SCI_ASSERT(NULL != pConf);
 	SCI_ASSERT(NULL != pVol_mode);
@@ -140,9 +145,17 @@ MMEncRet MP4EncSetConf(MMEncConfig *pConf)
 	pVop_mode->FrameRate			= pConf->FrameRate;	
 	pVop_mode->targetBitRate		= pConf->targetBitRate;
 	pVop_mode->RateCtrlEnable		= pConf->RateCtrlEnable ;
+
+	if(pVol_mode->short_video_header) //for VT
+	{
+		pVop_mode->StepI				= 12;
+		pVop_mode->StepP				= 12;
+	}else
+	{
+		pVop_mode->StepI				= pConf->QP_IVOP;
+		pVop_mode->StepP				= pConf->QP_PVOP;
+	}
 	
-	pVop_mode->StepI				= pConf->QP_IVOP;
-	pVop_mode->StepP				= pConf->QP_PVOP;
 	pVop_mode->vbv_buf_size			= pConf->vbv_buf_size;
 SCI_TRACE_LOW("pVop_mode->short_video_header %d",pVop_mode->short_video_header);
 SCI_TRACE_LOW("pVop_mode->targetBitRate %d",pVop_mode->targetBitRate);
@@ -158,10 +171,11 @@ SCI_TRACE_LOW("pVop_mode->StepP %d",pVop_mode->StepP);
 //  Author:        
 //	Note:           
 /*****************************************************************************/
-MMEncRet MP4EncGetConf(MMEncConfig *pConf)
-{
-	VOL_MODE_T *pVol_mode = Mp4Enc_GetVolmode();
-	ENC_VOP_MODE_T *pVop_mode = Mp4Enc_GetVopmode();
+MMEncRet MP4EncGetConf(MP4EncHandle* mp4Handle,MMEncConfig *pConf)
+{	
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
 
 	SCI_ASSERT(NULL != pConf);
 	SCI_ASSERT(NULL != pVol_mode);
@@ -186,11 +200,12 @@ MMEncRet MP4EncGetConf(MMEncConfig *pConf)
 //  Author:        
 //	Note:           
 /*****************************************************************************/
-MMEncRet MP4EncRelease(void)
+MMEncRet MP4EncRelease(MP4EncHandle* mp4Handle)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
 // 	Mp4_CommonMemFree();
-	Mp4Enc_MemFree();
-	VSP_CLOSE_Dev();
+	Mp4Enc_MemFree(mp4Handle);
+	VSP_CLOSE_Dev(mp4Handle);
 
 // 	g_bVspInited = FALSE;
 #if _CMODEL_
@@ -211,16 +226,17 @@ void MPEG4Enc_close(void)
 //  Author:        
 //	Note:           
 /*****************************************************************************/
-MMEncRet MP4EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr, MMEncVideoInfo *pVideoFormat)
+MMEncRet MP4EncInit(MP4EncHandle* mp4Handle,MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr, MMEncVideoInfo *pVideoFormat)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+
 	uint16 frame_width = pVideoFormat->frame_width;
 	uint16 frame_height = pVideoFormat->frame_height;
 	VOL_MODE_T  *vol_mode_ptr = NULL;
 	ENC_VOP_MODE_T  *vop_mode_ptr = NULL;
 	MMEncRet init_return = MMENC_OK;
 	
-	s_vsp_fd = -1;
-	s_vsp_Vaddr_base = 0;
+
 
 
 	if(pExtaMemBfr->size < 200 * 1024)
@@ -232,36 +248,54 @@ MMEncRet MP4EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr, MME
 	VSP_Init_CModel();
 #endif //_CMODEL_
 
-	Mp4Enc_InitMem(pInterMemBfr, pExtaMemBfr);
+        vd = (Mp4EncObject *) (pInterMemBfr->common_buffer_ptr);
+        memset(vd, 0, sizeof(Mp4EncObject));
+        mp4Handle->videoEncoderData = (void *) vd;
+	vd->mp4EncHandle = mp4Handle;
 
-	vol_mode_ptr = (VOL_MODE_T *)Mp4Enc_InterMemAlloc(sizeof(VOL_MODE_T));	
-	Mp4Enc_SetVolmode(vol_mode_ptr);
+        pInterMemBfr->common_buffer_ptr += sizeof(Mp4EncObject);
+        pInterMemBfr->size -= sizeof(Mp4EncObject);
 
-	vop_mode_ptr = (ENC_VOP_MODE_T *)Mp4Enc_InterMemAlloc(sizeof(ENC_VOP_MODE_T)); 
+
+	Mp4Enc_InitMem(mp4Handle,pInterMemBfr, pExtaMemBfr);
+
+	vol_mode_ptr = (VOL_MODE_T *)Mp4Enc_InterMemAlloc(mp4Handle,sizeof(VOL_MODE_T));	
+//	Mp4Enc_SetVolmode(vol_mode_ptr);
+	vd->g_enc_vol_mode_ptr = vol_mode_ptr;
+
+	vop_mode_ptr = (ENC_VOP_MODE_T *)Mp4Enc_InterMemAlloc(mp4Handle,sizeof(ENC_VOP_MODE_T)); 
 #if _DEBUG_
 	vop_mode_ptr->bits = (FILE *)fopen("/data/outbits","wb");
 	vop_mode_ptr->yuv_in = (FILE *)fopen("/data/test1.yuv","rb");
 	SCI_TRACE_LOW("MP4EncInit open file to store the outputbits");
 #endif
-	Mp4Enc_SetVopmode(vop_mode_ptr);
+	//Mp4Enc_SetVopmode(vop_mode_ptr);
+	vd->g_enc_vop_mode_ptr = vop_mode_ptr;
 
+	vd->g_rc_ptr = (rc_single_t *)Mp4Enc_InterMemAlloc( mp4Handle,sizeof(rc_single_t));
+	vd->g_rc_data_ptr = (xvid_plg_data_t *)Mp4Enc_InterMemAlloc(mp4Handle,sizeof(xvid_plg_data_t));
+	
 	vop_mode_ptr->short_video_header = vol_mode_ptr->short_video_header  = pVideoFormat->is_h263;
 	vop_mode_ptr->uv_interleaved = pVideoFormat->uv_interleaved;
+	vop_mode_ptr->FrameRate = pVideoFormat->framerate;
 	//vop_mode_ptr->uv_interleaved = 0;//debug
 	vol_mode_ptr->VolWidth = frame_width;
 	vol_mode_ptr->VolHeight = frame_height;
 
-	g_enc_last_modula_time_base = 0;
-	g_enc_tr = 0;
-	g_HW_CMD_START=0;
-	g_enc_is_prev_frame_encoded_success = FALSE;
-	g_enc_p_frame_count = 0;	
+	vd->s_vsp_fd = -1;
+	vd->s_vsp_Vaddr_base = 0;
+	
+	vd->g_enc_last_modula_time_base = 0;
+	vd->g_enc_tr = 0;
+	vd->g_HW_CMD_START=0;
+	vd->g_enc_is_prev_frame_encoded_success = FALSE;
+	vd->g_enc_p_frame_count = 0;	
 
-	Mp4Enc_InitVolVopPara(vol_mode_ptr, vop_mode_ptr, pVideoFormat->time_scale);		
+	Mp4Enc_InitVolVopPara(mp4Handle, pVideoFormat->time_scale);		
 
-	Mp4Enc_InitSession(vol_mode_ptr, vop_mode_ptr); 
+	Mp4Enc_InitSession(mp4Handle); 
 SCI_TRACE_LOW("b4 open VSP_OPEN_Dev() ");
-	if (VSP_OPEN_Dev() < 0)
+	if (VSP_OPEN_Dev(mp4Handle) < 0)
 	{
 		init_return = MMENC_ERROR;
 		SCI_TRACE_LOW("VSP_OPEN_Dev() ");
@@ -325,14 +359,15 @@ SCI_TRACE_LOW(" open VSP_OPEN_Dev() successful");
 //  Author:        
 //	Note:           
 /*****************************************************************************/
-MMEncRet MP4EncStrmEncode(MMEncIn *pInput, MMEncOut *pOutput)
+MMEncRet MP4EncStrmEncode(MP4EncHandle* mp4Handle,MMEncIn *pInput, MMEncOut *pOutput)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
 	uint32 cmd;
 	int32 ret;
 	VOP_PRED_TYPE_E frame_type;
-	VOL_MODE_T *pVol_mode = Mp4Enc_GetVolmode();
-	ENC_VOP_MODE_T *pVop_mode = Mp4Enc_GetVopmode();
-	BOOLEAN *pIs_prev_frame_success = &g_enc_is_prev_frame_encoded_success;
+	VOL_MODE_T *pVol_mode = vd->g_enc_vol_mode_ptr;
+	ENC_VOP_MODE_T *pVop_mode= vd->g_enc_vop_mode_ptr;
+	BOOLEAN *pIs_prev_frame_success = &(vd->g_enc_is_prev_frame_encoded_success);
 	uint32 frame_width = pVop_mode->FrameWidth;
 	uint32 frame_height = pVop_mode->FrameHeight;
 	uint32 frame_size = frame_width * frame_height;
@@ -399,45 +434,72 @@ MMEncRet MP4EncStrmEncode(MMEncIn *pInput, MMEncOut *pOutput)
 	
 	if(!pVop_mode->bInitRCSuceess)
 	{
-		Mp4Enc_InitRateCtrl(&g_rc_par, &g_stat_rc);
+		//Mp4Enc_InitRateCtrl(&g_rc_par, &g_stat_rc);
+		rc_single_create( pVop_mode, vd->g_rc_ptr, vd->g_rc_data_ptr);
 		pVop_mode->bInitRCSuceess = TRUE;
-		g_nFrame_enc = 0;	
-		g_enc_last_modula_time_base = pInput->time_stamp / (int32)pVol_mode->ClockRate; //the first frame
+		vd->g_nFrame_enc = 0;	
+		vd->g_stat_rc_nvop_cnt = -1;
+		vd->g_enc_last_modula_time_base = pInput->time_stamp / (int32)pVol_mode->ClockRate; //the first frame
 	}
-	g_nFrame_enc++;
-	if(g_nFrame_enc == 11)
+	vd->g_nFrame_enc++;
+	if(vd->g_nFrame_enc == 11)
 	{
-		g_nFrame_enc = g_nFrame_enc;
+		vd->g_nFrame_enc = vd->g_nFrame_enc;
 	}
 
-	if(pInput->vopType == IVOP)
+	rc_single_before(vd->g_rc_ptr, vd->g_rc_data_ptr);
+
+	if(pVop_mode->QP_last[0] +pVop_mode->QP_last[1] +pVop_mode->QP_last[2] +pVop_mode->QP_last[3] +
+		pVop_mode->QP_last[4] +pVop_mode->QP_last[5] +pVop_mode->QP_last[6] +pVop_mode->QP_last[7]  < 16)
+		{
+
+		pVop_mode->Need_MinQp_flag =1;
+
+	}
+	else
 	{
-		g_rc_par.p_count = 0;
+		pVop_mode->Need_MinQp_flag =0;
 	}
 
-	g_stat_rc.B				= pInput->bs_remain_len;
-	frame_type 				= Mp4Enc_JudgeFrameType (&g_rc_par, &g_stat_rc);
-	pVop_mode->VopPredType	= (pInput->vopType == IVOP)?IVOP:frame_type;
-	pInput->vopType = pVop_mode->VopPredType;
-	//frame_skip				= (pVop_mode->VopPredType == NVOP) ? 1 : 0;
+
 	
-	SCI_TRACE_LOW("g_nFrame_enc %d frame_type %d ", g_nFrame_enc,pVop_mode->VopPredType);
+	SCI_TRACE_LOW("g_nFrame_enc %d frame_type %d ", vd->g_nFrame_enc,pVop_mode->VopPredType);
 	if(!frame_skip)
 	{	
-		g_stat_rc.be_re_enc		= FALSE;
-		g_stat_rc.be_skip_frame = FALSE;
+
+		//frame_type  = (int32)Mp4Enc_JudgeFrameType(g_enc_p_frame_count,g_enc_is_prev_frame_encoded_success);
+		frame_type  = PVOP;
+#ifdef NVOP_ENABLE
+	if(pVop_mode->FrameWidth == 1280){
+		if(pInput->time_stamp > (vd->g_nFrame_enc+3)*30 && ( vd->g_stat_rc_nvop_cnt < 0))
+		{
+			frame_type = NVOP;
+
+			vd->g_stat_rc_nvop_cnt  = 4;
+			SCI_TRACE_LOW("g_nFrame_enc %d:pInput->time_stamp %d %d",vd->g_nFrame_enc,pInput->time_stamp,vd->g_nFrame_enc*33);
+              
+		}
+		else
+		{
+			vd->g_stat_rc_nvop_cnt--;
+		}
+	}
+#endif
+	pVop_mode->VopPredType	= (pInput->vopType == IVOP)?IVOP:frame_type;
+	pInput->vopType = pVop_mode->VopPredType;
+	
 #ifdef RE_ENC_SHEME
 FRAME_ENC:
 #endif
 
-	        SCI_TRACE_LOW("g_nFrame_enc %d frame_type %d, g_stat_rc.B %d ", g_nFrame_enc,pVop_mode->VopPredType, g_stat_rc.B );
+	        SCI_TRACE_LOW("g_nFrame_enc %d frame_type %d ", vd->g_nFrame_enc,pVop_mode->VopPredType );
 
-		if (Mp4Enc_VSPInit(pVop_mode) != MMENC_OK)
+		if (Mp4Enc_VSPInit(mp4Handle) != MMENC_OK)
 		{
 			return MMENC_ERROR;
 		}
 		
-		VSP_WRITE_REG(VSP_DCAM_REG_BASE+DCAM_INT_MASK_OFF, (1<<16), "DCAM_INT_MASK: enable MP4 ENC DONE INT bit");
+		VSP_WRITE_REG(mp4Handle,VSP_DCAM_REG_BASE+DCAM_INT_MASK_OFF, (1<<16), "DCAM_INT_MASK: enable MP4 ENC DONE INT bit");
 		//now, for uv_interleaved
 #if _CMODEL_ //for RTL simulation
 		cmd = (720*576)>>2; //word unit, updated by xwluo@20111205 for 720x576 supported, from 352*288
@@ -446,15 +508,12 @@ FRAME_ENC:
 #endif
 		cmd = (pVop_mode->FrameWidth) * (pVop_mode->FrameHeight)>>2; //word unit //?????leon
 		//cmd = (pVop_mode->pYUVSrcFrame->imgUAddr-pVop_mode->pYUVSrcFrame->imgYAddr)>>2;
-		VSP_WRITE_REG(VSP_AXIM_REG_BASE+AXIM_UV_OFFSET_OFF, cmd, "configure uv offset");
+		VSP_WRITE_REG(mp4Handle,VSP_AXIM_REG_BASE+AXIM_UV_OFFSET_OFF, cmd, "configure uv offset");
 		cmd = (pVop_mode->FrameWidth) * (pVop_mode->FrameHeight)>>4;
 		//cmd = (pVop_mode->pYUVSrcFrame->imgVAddr-pVop_mode->pYUVSrcFrame->imgUAddr)>>2;
-		VSP_WRITE_REG(VSP_AXIM_REG_BASE+AHBM_V_ADDR_OFFSET,cmd, "configure uv offset");
-	
-
-		Mp4Enc_InitRCFrame (&g_rc_par);
-		
-		Mp4Enc_InitBitStream(pVop_mode);
+		VSP_WRITE_REG(mp4Handle,VSP_AXIM_REG_BASE+AHBM_V_ADDR_OFFSET,cmd, "configure uv offset");
+			
+		Mp4Enc_InitBitStream(mp4Handle);
 
 #if defined(_SIMULATION_) 
 		memcpy(g_enc_vop_mode_ptr->pYUVSrcFrame->imgY, pInput->pInBuf, frame_size);
@@ -485,7 +544,7 @@ FRAME_ENC:
 #endif
 
 #if _DEBUG_
-      		dump_input_yuv();
+      		dump_input_yuv(mp4Handle);
 #endif
 
 #if 0
@@ -503,10 +562,15 @@ FRAME_ENC:
 			FPRINTF(g_rgstat_fp, "\nNo.%d Frame:\t I VOP\n", g_nFrame_enc);
 		//	FPRINTF(g_fp_trace_fw,"\t I VOP\n");
 		#endif
-			PRINTF ("No.%d Frame:\t IVOP\n", g_nFrame_enc);
-			Mp4Enc_InitRCGOP (&g_rc_par);
-			ret = Mp4Enc_EncIVOP(pVop_mode, pInput->time_stamp);				
-		    g_enc_p_frame_count = pVol_mode->PbetweenI;
+			//pVop_mode->StepI = g_rc_data_ptr->quant >0? MAX(g_rc_data_ptr->quant -2,2)  :2;
+			pVop_mode->StepI = vd->g_rc_data_ptr->quant >0? vd->g_rc_data_ptr->quant :1;
+			PRINTF ("No.%d Frame:\t IVOP rtn_quant %d \n", vd->g_nFrame_enc,pVop_mode->StepI);
+			//Mp4Enc_InitRCGOP (&g_rc_par);
+			ret = Mp4Enc_EncIVOP(mp4Handle, pInput->time_stamp);				
+		    vd->g_enc_p_frame_count = pVol_mode->PbetweenI;
+
+			Update_lastQp(pVop_mode->QP_last,8);
+			pVop_mode->QP_last[7] = pVop_mode->StepI;
 		}
 		else if (PVOP == pVop_mode->VopPredType)
 		{
@@ -514,19 +578,44 @@ FRAME_ENC:
 			FPRINTF(g_rgstat_fp, "\nNo.%d Frame:\t P VOP\n", g_nFrame_enc);
 //			FPRINTF(g_fp_trace_fw,"\t P VOP\n");
 		#endif
-			PRINTF ("No.%d Frame:\t PVOP\n", g_nFrame_enc);
+			PRINTF ("No.%d Frame:\t PVOP\n", vd->g_nFrame_enc);
+			int32 intra_mb_num = 0;
+			pVop_mode->StepP = vd->g_rc_data_ptr->quant >0? vd->g_rc_data_ptr->quant :1;
+			
+			Update_lastQp(pVop_mode->QP_last,8);
+			pVop_mode->QP_last[7] = pVop_mode->StepP;
 
-			g_enc_p_frame_count--;
+			if(pVop_mode->Need_MinQp_flag == 1)
+			{
+				pVop_mode->StepP = 1;
+			}
+			
 
-			ret = Mp4Enc_EncPVOP(pVop_mode, pInput->time_stamp);
+			
+				ret = Mp4Enc_EncPVOP( mp4Handle, pInput->time_stamp, & intra_mb_num);
+
+			if(intra_mb_num > ((pVop_mode->MBNumX  -2)*(pVop_mode->MBNumY -2))/2)
+			{
+				ret = 0;
+				frame_type = IVOP;
+			}
+			else
+			{
+			vd->g_enc_p_frame_count--;
+				}
 		}
 		else
 		{
-			g_enc_p_frame_count--;
-
-			ret = Mp4Enc_EncNVOP(pVop_mode, pInput->time_stamp);
+			vd->g_enc_p_frame_count--;
+			PRINTF ("No.%d Frame:\t NVOP\n", vd->g_nFrame_enc);
+			ret = Mp4Enc_EncNVOP(mp4Handle, pInput->time_stamp);
+		}
+		if(ret == 0)
+		{
+			goto FRAME_ENC;
 		}
 
+	
 		(*pIs_prev_frame_success) = ret;
 	
 		//clear bsm-fifo, polling inactive status reg
@@ -536,22 +625,28 @@ FRAME_ENC:
 	#endif
 // 		VSP_READ_REG_POLL(VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "polling BSMW inactive status");
 
-		pOutput->strmSize = (VSP_READ_REG(VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "read total bits") + 7 ) >>3;
+		pOutput->strmSize = (VSP_READ_REG(mp4Handle,VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "read total bits") + 7 ) >>3;
 		pOutput->pOutBuf = pVop_mode->pOneFrameBitstream;
+		pOutput->pRecYUV = pVop_mode->pYUVRecFrame->imgY;
+
+		vd->g_rc_data_ptr->quant = pVop_mode->StepSize;
+		vd->g_rc_data_ptr->length = pOutput->strmSize;
+		vd->g_rc_data_ptr->type = pVop_mode->VopPredType + 1;
+		rc_single_after(vd->g_rc_ptr, vd->g_rc_data_ptr);
 		
 #if _DEBUG_
 	if(pVop_mode->bits != NULL)
 	{
-		SCI_TRACE_LOW("strmSize %d pOutBuf %x g_nFrame_enc %d",pOutput->strmSize,pOutput->pOutBuf,g_nFrame_enc);
+		SCI_TRACE_LOW("strmSize %d pOutBuf %x g_nFrame_enc %d",pOutput->strmSize,pOutput->pOutBuf,vd->g_nFrame_enc);
 		fwrite(pOutput->pOutBuf,1,pOutput->strmSize,(FILE *)(pVop_mode->bits));
-		if(g_nFrame_enc == 300)
+		if(vd->g_nFrame_enc == 10)
 		{
 			fclose((FILE *)(pVop_mode->bits));
 			pVop_mode->bits = NULL;
 		}
 	}
 #endif
-		g_rc_par.nbits_total = pOutput->strmSize<<3;
+		//g_rc_par.nbits_total = pOutput->strmSize<<3;
 
 
 #ifndef _CMODEL_
@@ -562,50 +657,8 @@ FRAME_ENC:
    	 VSP_WRITE_REG(VSP_RESET_ADDR,V_BIT_15,"reset VSP_RESET_ADDR");
 	VSP_WRITE_REG(VSP_RESET_ADDR,0,"reset VSP_RESET_ADDR");
 #endif
-		if (pVop_mode->RateCtrlEnable)
-		{
-			int32 Ec_Q8 = (g_rc_par.sad/pVop_mode->MBNum);
-
-			if (Ec_Q8 < 256)  //to avoid devided by zero
-				Ec_Q8 = 256;
-#ifdef RE_ENC_SHEME
-			Mp4Enc_AnalyzeEncResult(&g_stat_rc, g_rc_par.nbits_total, pVop_mode->VopPredType, Ec_Q8);
-
-			if (g_stat_rc.be_re_enc && !((pVop_mode->FrameWidth == 1280) && (pVop_mode->FrameHeight == 720)/*720p*/))
-			{
-				if (g_stat_rc.be_scene_cut)
-				{
-					pVop_mode->VopPredType = IVOP;
-					g_rc_par.p_count = g_rc_par.p_between_i;
-				}
-
-				PRINTF("\t bisTotalCur: %d, frame re-encoded\n", g_rc_par.nbits_total);
-
-				g_re_enc_frame_number++;
-
-            	VSP_RELEASE_Dev();
-
-				goto FRAME_ENC;
-			}
-
-			if (g_stat_rc.be_skip_frame)
-			{
-				pOutput->strmSize = 0;
-				PRINTF("\t bitsTotalCur: %d, frame skipped\n", g_rc_par.nbits_total);
-					VSP_RELEASE_Dev();
-				return MMENC_OK;
-			}
-#endif
-
-			if (IVOP == pVop_mode->VopPredType)
-			{
-				Mp4Enc_ResetRCModel (pVop_mode, &g_stat_rc, &g_rc_par);
-			}
-			else
-			{						
-				Mp4Enc_UpdateRCModel (pVop_mode, &g_stat_rc, &g_rc_par, Ec_Q8);
-			}
-		}
+		
+		
 
 #if 0 //_DEBUG_
 #if defined(SIM_IN_WIN) && defined(MPEG4_ENC)
@@ -633,18 +686,19 @@ FRAME_ENC:
 #endif
 		
 		//update ref frame
-		Mp4Enc_UpdateRefFrame(pVop_mode);
+		if(NVOP != pVop_mode->VopPredType)
+			Mp4Enc_UpdateRefFrame(mp4Handle);
 	}else
 	{
 		pOutput->strmSize = 0;
-		PRINTF ("No. %d Frame:\t skipped\n\n", g_nFrame_enc);
+		PRINTF ("No. %d Frame:\t skipped\n\n", vd->g_nFrame_enc);
 
 	#if defined(SIM_IN_WIN)
-		FPRINTF (g_rgstat_fp, "No. %d Frame:\t skipped\n\n", g_nFrame_enc);
+		FPRINTF (g_rgstat_fp, "No. %d Frame:\t skipped\n\n", vd->g_nFrame_enc);
 	#endif
 	}
 
-	VSP_RELEASE_Dev();		
+	VSP_RELEASE_Dev(mp4Handle);		
 	
 	return MMENC_OK;
 }
@@ -656,11 +710,12 @@ FRAME_ENC:
 //	Note: return VSP status:
 //        1: dcam is idle and can be used for vsp   0: dcam is used by isp           
 /*****************************************************************************/
-BOOLEAN MPEG4ENC_VSP_Available(void)
+BOOLEAN MPEG4ENC_VSP_Available(MP4EncHandle* mp4Handle)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
 	int dcam_cfg;
 
-	dcam_cfg = VSP_READ_REG(VSP_DCAM_BASE+DCAM_CFG_OFF, "DCAM_CFG: read dcam configure register");
+	dcam_cfg = VSP_READ_REG(mp4Handle,VSP_DCAM_BASE+DCAM_CFG_OFF, "DCAM_CFG: read dcam configure register");
 
 	if (((dcam_cfg >> 3) & 1) == 0)
 		return TRUE;

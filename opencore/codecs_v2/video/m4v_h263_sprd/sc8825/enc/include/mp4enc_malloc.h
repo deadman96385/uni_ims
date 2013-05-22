@@ -27,13 +27,13 @@
     {
 #endif
 
-PUBLIC void *Mp4Enc_ExtraMemAlloc(uint32 mem_size);
-PUBLIC void *Mp4Enc_ExtraMemAlloc_64WordAlign(uint32 mem_size);
-PUBLIC void *Mp4Enc_InterMemAlloc(uint32 mem_size);
-PUBLIC void Mp4Enc_MemFree(void);
-PUBLIC void Mp4Enc_InitMem(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr);
+PUBLIC void *Mp4Enc_ExtraMemAlloc(MP4EncHandle* mp4Handle,uint32 mem_size);
+PUBLIC void *Mp4Enc_ExtraMemAlloc_64WordAlign(MP4EncHandle* mp4Handle,uint32 mem_size);
+PUBLIC void *Mp4Enc_InterMemAlloc(MP4EncHandle* mp4Handle,uint32 mem_size);
+PUBLIC void Mp4Enc_MemFree(MP4EncHandle* mp4Handle);
+PUBLIC void Mp4Enc_InitMem(MP4EncHandle* mp4Handle,MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr);
 #ifdef _VSP_LINUX_
-PUBLIC uint8 *Mp4Enc_ExtraMem_V2Phy(uint8 *vAddr);
+PUBLIC uint8 *Mp4Enc_ExtraMem_V2Phy(MP4EncHandle* mp4Handle,uint8 *vAddr);
 #endif
 
 /**---------------------------------------------------------------------------*

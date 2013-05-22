@@ -22,7 +22,7 @@
     extern   "C" 
     {
 #endif
-
+#if _CMODEL_ //for RTL simulation
 uint32 Mp4Enc_OutputMCBPC_Intra(ENC_VOP_MODE_T *pVop_mode, int32 cbpc, uint32 mode)
 {
 	uint32 index;
@@ -112,7 +112,7 @@ uint32 Mp4Enc_OutputMV(ENC_VOP_MODE_T *pVop_mode, int32 mvint)
 	
 	return NumBits;
 }
-
+#endif //#if _CMODEL_ 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

@@ -25,7 +25,7 @@
     {
 #endif
 
-MMEncRet Mp4Enc_VSPInit (ENC_VOP_MODE_T * vop_mode_ptr);
+MMEncRet Mp4Enc_VSPInit (MP4EncHandle* mp4Handle );
 void Mp4Enc_MeaCommand(ENC_VOP_MODE_T *pVop_mode, MOTION_VECTOR_T *pmvPred, uint32 bIsIVop, uint32 mb_pos_x);
 void Mp4Enc_MbcCommand (int mb_x, int mb_y, int bInter, int cbp);
 PUBLIC void Mp4Enc_CheckMBCStatus(ENC_VOP_MODE_T *vop_mode_ptr);
@@ -33,7 +33,7 @@ void Mp4Enc_VspMBInit(ENC_VOP_MODE_T *pVop_mode, uint32 mb_pos_x);
 void Mp4Enc_ConfigDctQuantMB(ENC_VOP_MODE_T *pVop_mode, ENC_MB_MODE_T *pMb_mode);
 void Mp4Enc_ConfigIqIdctMB(ENC_VOP_MODE_T *pVop_mode, ENC_MB_MODE_T *pMb_mode);
 void Mp4Enc_ConfigVLC(ENC_VOP_MODE_T *pVop_mode, ENC_MB_MODE_T *pMb_mode);
-void Mp4Enc_Picture_Level_Sync();
+void Mp4Enc_Picture_Level_Sync(MP4EncHandle* mp4Handle);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

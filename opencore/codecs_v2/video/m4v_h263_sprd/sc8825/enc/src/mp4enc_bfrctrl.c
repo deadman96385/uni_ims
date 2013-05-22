@@ -23,8 +23,10 @@
     extern   "C" 
     {
 #endif
-PUBLIC int32 Mp4Enc_InitYUVBfr(ENC_VOP_MODE_T *vop_mode_ptr)
+PUBLIC int32 Mp4Enc_InitYUVBfr(MP4EncHandle* mp4Handle)
 {
+	Mp4EncObject*vd = (Mp4EncObject *) mp4Handle->videoEncoderData;
+	ENC_VOP_MODE_T *vop_mode_ptr = vd->g_enc_vop_mode_ptr;
 	uint32 size;
 //	uint32 uv_offset;
 // 	uint8 *bfr_gap_ptr;
@@ -34,27 +36,27 @@ PUBLIC int32 Mp4Enc_InitYUVBfr(ENC_VOP_MODE_T *vop_mode_ptr)
 	/*backward reference frame and forward reference frame after world-aligned*/
 	size = (vop_mode_ptr->FrameWidth) * (vop_mode_ptr->FrameHeight);
 
-	vop_mode_ptr->pYUVRecFrame->imgY = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size);
+	vop_mode_ptr->pYUVRecFrame->imgY = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(mp4Handle,size);
 // 	bfr_gap_ptr = (uint8 *)Mp4Enc_ExtraMemAlloc(uv_offset - size);
 	if (!vop_mode_ptr->uv_interleaved)
 	{
-		vop_mode_ptr->pYUVRecFrame->imgU = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size>>2);
-		vop_mode_ptr->pYUVRecFrame->imgV = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size>>2);
+		vop_mode_ptr->pYUVRecFrame->imgU = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(mp4Handle,size>>2);
+		vop_mode_ptr->pYUVRecFrame->imgV = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(mp4Handle,size>>2);
 	}else
 	{
-		vop_mode_ptr->pYUVRecFrame->imgU = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size>>1);
+		vop_mode_ptr->pYUVRecFrame->imgU = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(mp4Handle,size>>1);
 		vop_mode_ptr->pYUVRecFrame->imgV = NULL;
 	}
 
-	vop_mode_ptr->pYUVRefFrame->imgY = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size);
+	vop_mode_ptr->pYUVRefFrame->imgY = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(mp4Handle,size);
 // 	bfr_gap_ptr = (uint8 *)Mp4Enc_ExtraMemAlloc(uv_offset - size);
 	if (!vop_mode_ptr->uv_interleaved)
 	{
-		vop_mode_ptr->pYUVRefFrame->imgU = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size>>2);
-		vop_mode_ptr->pYUVRefFrame->imgV = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size>>2);
+		vop_mode_ptr->pYUVRefFrame->imgU = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(mp4Handle,size>>2);
+		vop_mode_ptr->pYUVRefFrame->imgV = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(mp4Handle,size>>2);
 	}else
 	{
-		vop_mode_ptr->pYUVRefFrame->imgU = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(size>>1);
+		vop_mode_ptr->pYUVRefFrame->imgU = (uint8 *)Mp4Enc_ExtraMemAlloc_64WordAlign(mp4Handle,size>>1);
 		vop_mode_ptr->pYUVRefFrame->imgV = NULL;
 	}
 #if defined(_SIMULATION_) 
@@ -64,13 +66,13 @@ PUBLIC int32 Mp4Enc_InitYUVBfr(ENC_VOP_MODE_T *vop_mode_ptr)
 
 
 #ifdef _VSP_LINUX_	
-	vop_mode_ptr->pYUVRecFrame->imgYAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(vop_mode_ptr->pYUVRecFrame->imgY) ;//>> 8;
-	vop_mode_ptr->pYUVRecFrame->imgUAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(vop_mode_ptr->pYUVRecFrame->imgU) ;//>> 8;
-	vop_mode_ptr->pYUVRecFrame->imgVAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(vop_mode_ptr->pYUVRecFrame->imgV) ;//>> 8;
+	vop_mode_ptr->pYUVRecFrame->imgYAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(mp4Handle,vop_mode_ptr->pYUVRecFrame->imgY) ;//>> 8;
+	vop_mode_ptr->pYUVRecFrame->imgUAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(mp4Handle,vop_mode_ptr->pYUVRecFrame->imgU) ;//>> 8;
+	vop_mode_ptr->pYUVRecFrame->imgVAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(mp4Handle,vop_mode_ptr->pYUVRecFrame->imgV) ;//>> 8;
 
-	vop_mode_ptr->pYUVRefFrame->imgYAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(vop_mode_ptr->pYUVRefFrame->imgY) ;//>> 8;
-	vop_mode_ptr->pYUVRefFrame->imgUAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(vop_mode_ptr->pYUVRefFrame->imgU) ;//>> 8;
-	vop_mode_ptr->pYUVRefFrame->imgVAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(vop_mode_ptr->pYUVRefFrame->imgV) ;//>> 8;
+	vop_mode_ptr->pYUVRefFrame->imgYAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(mp4Handle,vop_mode_ptr->pYUVRefFrame->imgY) ;//>> 8;
+	vop_mode_ptr->pYUVRefFrame->imgUAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(mp4Handle,vop_mode_ptr->pYUVRefFrame->imgU) ;//>> 8;
+	vop_mode_ptr->pYUVRefFrame->imgVAddr = (uint32)Mp4Enc_ExtraMem_V2Phy(mp4Handle,vop_mode_ptr->pYUVRefFrame->imgV) ;//>> 8;
 #else
 	vop_mode_ptr->pYUVRecFrame->imgYAddr = (uint32)vop_mode_ptr->pYUVRecFrame->imgY ;//>> 8;
 	vop_mode_ptr->pYUVRecFrame->imgUAddr = (uint32)vop_mode_ptr->pYUVRecFrame->imgU ;//>> 8;

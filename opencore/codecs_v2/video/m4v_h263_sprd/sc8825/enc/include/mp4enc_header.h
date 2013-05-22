@@ -28,13 +28,13 @@
     {
 #endif
 
-int32 Mp4Enc_EncH263PicHeader(ENC_VOP_MODE_T *pVop_mode);
-uint32 Mp4Enc_EncSequenceHeader(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode);
-uint32 Mp4Enc_EncVOHeader( ENC_VOP_MODE_T *pVop_mode);
-uint32 Mp4Enc_EncVOLHeader(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode);
-uint32 Mp4Enc_EncVOPHeader(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp);
-uint32 Mp4Enc_EncGOBHeader(ENC_VOP_MODE_T *pVop_mode, int32 gob_quant);
-uint32 Mp4Enc_ReSyncHeader(ENC_VOP_MODE_T * pVop_mode, int Qp, int32 time_stamp);
+int32 Mp4Enc_EncH263PicHeader(MP4EncHandle* mp4Handle);
+uint32 Mp4Enc_EncSequenceHeader(MP4EncHandle* mp4Handle);
+uint32 Mp4Enc_EncVOHeader( MP4EncHandle* mp4Handle);
+uint32 Mp4Enc_EncVOLHeader(MP4EncHandle* mp4Handle);
+uint32 Mp4Enc_EncVOPHeader(MP4EncHandle* mp4Handle, int32 time_stamp);
+uint32 Mp4Enc_EncGOBHeader(MP4EncHandle* mp4Handle, int32 gob_quant);
+uint32 Mp4Enc_ReSyncHeader(MP4EncHandle* mp4Handle,int Qp, int32 time_stamp);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

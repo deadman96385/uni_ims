@@ -55,7 +55,7 @@
 #include "vsp_dbk.h"
 #include "vsp_mca.h"
 #include "vsp_bsm.h"
-#include "vsp_drv_sc8825.h"
+#include "vsp_drv_sc8825_enc.h"
 #include "vsp_vld.h"
 #include "vsp_vlc.h"
 #include "vsp_mea.h"

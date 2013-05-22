@@ -22,7 +22,7 @@
     extern   "C" 
     {
 #endif
-
+#if _CMODEL_ //for RTL simulation
 void Mp4Enc_JudgeMBMode(ENC_MB_MODE_T * pMb_mode)
 {
 	uint32 mea_result;
@@ -46,7 +46,7 @@ void Mp4Enc_JudgeMBMode(ENC_MB_MODE_T * pMb_mode)
 		
 		pMv[3] = pMv[2] = pMv[1] = pMv[0];
 
-		g_rc_par.sad += (2*MB_NB);
+		//g_rc_par.sad += (2*MB_NB);
 	}
 	else if (pMb_mode->dctMd == INTER)  //one mv
 	{
@@ -59,7 +59,7 @@ void Mp4Enc_JudgeMBMode(ENC_MB_MODE_T * pMb_mode)
 
 		pMv[3] = pMv[2] = pMv[1] = pMv[0];
 
-		g_rc_par.sad += ((mea_mv>>16)&0xFFFF);
+		//g_rc_par.sad += ((mea_mv>>16)&0xFFFF);
 	}
 	else //four mv
 	{
@@ -68,23 +68,23 @@ void Mp4Enc_JudgeMBMode(ENC_MB_MODE_T * pMb_mode)
 		mea_mv = (int32)VSP_READ_REG(VSP_MEA_REG_BASE+MEA_MV0_OFF, "read 0th block's sad and mv of interMB8x8 from mea");
 		pMv[0].y = (int16)((mea_mv << 16) >> 24);
 		pMv[0].x = (int16)((mea_mv << 24) >> 24);
-		g_rc_par.sad += ((mea_mv>>16)&0xFFFF);
+		//g_rc_par.sad += ((mea_mv>>16)&0xFFFF);
 
 		mea_mv = (int32)VSP_READ_REG(VSP_MEA_REG_BASE+MEA_MV1_OFF, "read 1th block's sad and mv of interMB8x8 from mea");
 		pMv[1].y = (int16)((mea_mv << 16) >> 24);
 		pMv[1].x = (int16)((mea_mv << 24) >> 24);
-		g_rc_par.sad += ((mea_mv>>16)&0xFFFF);
+		//g_rc_par.sad += ((mea_mv>>16)&0xFFFF);
 
 		mea_mv = (int32)VSP_READ_REG(VSP_MEA_REG_BASE+MEA_MV2_OFF, "read 2th block's sad and mv of interMB8x8 from mea");
 		pMv[2].y = (int16)((mea_mv << 16) >> 24);
 		pMv[2].x = (int16)((mea_mv << 24) >> 24);
-		g_rc_par.sad += ((mea_mv>>16)&0xFFFF);
+		//g_rc_par.sad += ((mea_mv>>16)&0xFFFF);
 
 		mea_mv = (int32)VSP_READ_REG(VSP_MEA_REG_BASE+MEA_MV3_OFF, "read 3th block's sad and mv of interMB8x8 from mea");
 		pMv[3].y = (int16)((mea_mv << 16) >> 24);
 		pMv[3].x = (int16)((mea_mv << 24) >> 24);
 
-		g_rc_par.sad += ((mea_mv>>16)&0xFFFF);
+		//g_rc_par.sad += ((mea_mv>>16)&0xFFFF);
 	}
 }
 
@@ -236,7 +236,7 @@ PUBLIC void Mp4Enc_MVprediction(ENC_VOP_MODE_T *pVop_mode, uint32 mb_pos_x)
 	pMb_mode->mvPred.x = Mp4_GetMedianofThree(candidate_mv[0].x, candidate_mv[1].x, candidate_mv[2].x);
 	pMb_mode->mvPred.y = Mp4_GetMedianofThree(candidate_mv[0].y, candidate_mv[1].y, candidate_mv[2].y);
 }
-
+#endif
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
