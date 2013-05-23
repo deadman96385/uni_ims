@@ -4372,6 +4372,37 @@ error:
 
 #endif
 
+static void requestSendAT(int channelID, void *data, size_t datalen, RIL_Token t)
+{
+    char *at_cmd = (char *)data;
+    int i, err;
+    ATResponse *p_response = NULL;
+    char buf[1024] = {0};
+    ATLine *p_cur = NULL;
+
+    if(at_cmd == NULL) {
+        ALOGE("Invalid AT command");
+        return;
+    }
+
+    err = at_send_command_multiline(ATch_type[channelID], at_cmd, "", &p_response);
+    if (err < 0 || p_response->success == 0) {
+        strlcat(buf, p_response->finalResponse, sizeof(buf));
+        strlcat(buf, "\r\n", sizeof(buf));
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, buf, strlen(buf)+1);
+    } else {
+        p_cur = p_response->p_intermediates;
+        for (i=0; p_cur != NULL; p_cur = p_cur->p_next,i++) {
+            strlcat(buf, p_cur->line, sizeof(buf));
+            strlcat(buf, "\r\n", sizeof(buf));
+        }
+        strlcat(buf, p_response->finalResponse, sizeof(buf));
+        strlcat(buf, "\r\n", sizeof(buf));
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, buf, strlen(buf)+1);
+    }
+    at_response_free(p_response);
+}
+
 /*** Callback methods from the RIL library to us ***/
 
 /**
@@ -4435,7 +4466,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_ENTER_SIM_PIN
                 || request == RIL_REQUEST_GET_IMEI
                 || request == RIL_REQUEST_GET_IMEISV
-                || request == RIL_REQUEST_SCREEN_STATE)
+                || request == RIL_REQUEST_SCREEN_STATE
+                || request == RIL_REQUEST_SEND_AT)
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
         putChannel(channelID);
@@ -6081,6 +6113,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 break;
             }
 #endif
+        case RIL_REQUEST_SEND_AT:
+            requestSendAT(channelID,data, datalen, t);
+            break;
         default:
             RIL_onRequestComplete(t, RIL_E_REQUEST_NOT_SUPPORTED, NULL, 0);
             break;
