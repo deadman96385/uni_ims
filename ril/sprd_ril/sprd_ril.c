@@ -727,9 +727,11 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
     int result;
     int response[2] = {0};
     int serviceClass = 0;
+    int status;
     char *cmd, *line;
     int errNum = -1;
-	int ret = -1;
+    int ret = -1;
+    ATLine *p_cur;
 
     if (datalen != 5 * sizeof(char *))
         goto error;
@@ -750,7 +752,7 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
     ALOGD("requestFacilityLock: %s", cmd);
 
     if (*data[1] == '2') {
-        err = at_send_command_singleline(ATch_type[channelID],  cmd, "+CLCK: ",
+        err = at_send_command_multiline(ATch_type[channelID], cmd, "+CLCK: ",
                 &p_response);
         free(cmd);
     } else {
@@ -768,17 +770,26 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
     if (err < 0 || p_response->success == 0)
         goto error;
 
-    line = p_response->p_intermediates->line;
+    for (p_cur = p_response->p_intermediates
+            ; p_cur != NULL
+            ; p_cur = p_cur->p_next
+        ) {
+        line = p_cur->line;
 
-    err = at_tok_start(&line);
-    if (err < 0) goto error;
-
-    err = at_tok_nextint(&line, &response[0]);
-    if (err < 0) goto error;
-    if (at_tok_hasmore(&line)) {
-        err = at_tok_nextint(&line, &response[1]);
+        err = at_tok_start(&line);
         if (err < 0) goto error;
+
+        err = at_tok_nextint(&line, &status);
+        if (err < 0) goto error;
+        if (at_tok_hasmore(&line)) {
+            err = at_tok_nextint(&line, &serviceClass);
+            if (err < 0) goto error;
+        }
+
+        response[0] = status;
+        response[1] |= serviceClass;
     }
+
     RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(response));
     at_response_free(p_response);
     return;
