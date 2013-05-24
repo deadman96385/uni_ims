@@ -35,6 +35,7 @@
 #define LIB_PATH_PROPERTY   "rild.libpath"
 #define LIB_ARGS_PROPERTY   "rild.libargs"
 #define MAX_LIB_ARGS        16
+#define RIL_AT_TEST_PROPERTY  "persist.sys.sprd.attest"
 
 static void usage(const char *argv0)
 {
@@ -108,6 +109,7 @@ int main(int argc, char **argv)
     char cmdline[1024];
     int i, rc, fd;
     int califlag = 0;
+    char prop[5];
 
     memset(cmdline, 0, 1024);
     fd = open("/proc/cmdline", O_RDONLY);
@@ -123,6 +125,12 @@ int main(int argc, char **argv)
     if(califlag == 1) {
     	ALOGD("RIL: Calibration mode,RIL goto sleep!\n");
     	goto done;
+    }
+
+    property_get(RIL_AT_TEST_PROPERTY, prop, "0");
+    if(!strcmp(prop, "1")) {
+        ALOGD("RIL: AT test mode,RIL goto sleep!\n");
+        goto done;
     }
 
     for (i = 1; i < argc ;) {
