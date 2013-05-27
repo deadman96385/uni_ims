@@ -404,6 +404,8 @@ typedef struct dec_vop_mode_tag
 
 	DBK_PARA_T * dbk_para;
 	
+	BOOLEAN is_expect_IVOP;
+	
 }DEC_VOP_MODE_T;
 
 typedef struct h263_plus_header_info_tag 

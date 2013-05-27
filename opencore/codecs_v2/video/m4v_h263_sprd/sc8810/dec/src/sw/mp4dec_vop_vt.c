@@ -212,12 +212,13 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP_vt(DEC_VOP_MODE_T *vop_mode_ptr)
   	SCI_TRACE_LOW("Mp4Dec_DecPVOP_vt: E\n");
 	Mp4Dec_ExchangeMBMode (vop_mode_ptr);
 	mb_mode_ptr = vop_mode_ptr->pMbMode;
-
+	
     //ref frame 
-    vop_mode_ptr->YUVRefFrame0[0] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[0];
-    vop_mode_ptr->YUVRefFrame0[1] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[1];
-	vop_mode_ptr->YUVRefFrame0[2] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[2];
-		
+        if(vop_mode_ptr->is_expect_IVOP == FALSE){
+	    vop_mode_ptr->YUVRefFrame0[0] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[0];
+	    vop_mode_ptr->YUVRefFrame0[1] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[1];
+	    vop_mode_ptr->YUVRefFrame0[2] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[2];
+    	}	
 	ppxlcRecGobY = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[0] + vop_mode_ptr->iStartInFrameY;
 	ppxlcRecGobU = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[1] + vop_mode_ptr->iStartInFrameUV;
 	ppxlcRecGobV = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[2] + vop_mode_ptr->iStartInFrameUV;
@@ -323,6 +324,9 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP_vt(DEC_VOP_MODE_T *vop_mode_ptr)
 				Mp4Dec_DecIntraMBTexture_sw(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);
 			}else if (mb_mode_ptr->CBP)
 			{
+				if (vop_mode_ptr->pBckRefFrame->pDecFrame == NULL){					
+					continue;
+				}
 				Mp4Dec_DecInterMBTexture_sw(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);				
 			}
 
