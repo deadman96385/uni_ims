@@ -404,6 +404,28 @@ issueLocalRequest(int request, void *data, int len) {
     pRI->local = 1;
     pRI->token = 0xffffffff;        // token is not used in this context
 
+    if (request < 1
+#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+#if defined (RIL_SPRD_EXTENSION)
+        || (request > RIL_REQUEST_LAST && request < RIL_SPRD_REQUEST_BASE)
+        || (request > RIL_SPRD_REQUEST_LAST && request < RIL_OEM_REQUEST_BASE)
+#else
+        || (request > RIL_REQUEST_LAST && request < RIL_OEM_REQUEST_BASE)
+#endif
+        || (request > RIL_OEM_REQUEST_LAST)
+#else
+#if defined (RIL_SPRD_EXTENSION)
+        || (request > RIL_REQUEST_LAST && request < RIL_SPRD_REQUEST_BASE)
+        || (request > RIL_SPRD_REQUEST_LAST)
+#else
+        || request >= (int)NUM_ELEMS(s_commands)
+#endif
+#endif
+    ) {
+        ALOGE("invalid request %d", request);
+        exit(-1);
+    }
+
 #if defined (RIL_SPRD_EXTENSION)
     if(request > RIL_SPRD_REQUEST_BASE && request <= RIL_SPRD_REQUEST_LAST)
         request = request - RIL_SPRD_REQUEST_BASE + RIL_REQUEST_LAST;
