@@ -361,7 +361,7 @@ FLV_RE_DEC:
 		MP4Dec_JudgeDecMode(vop_mode_ptr);
 		vop_mode_ptr->is_work_mode_set = TRUE;
 	}
-
+/*
 	if(dec_input_ptr->expected_IVOP && (vop_mode_ptr->VopPredType != IVOP))
 	{
         if (g_nFrame_dec)
@@ -373,12 +373,13 @@ FLV_RE_DEC:
 		ret = MMDEC_FRAME_SEEK_IVOP;
 		goto MPEG4_DEC_CQM_ERROR;		
 	}
-
+*/
+	vop_mode_ptr->is_expect_IVOP  = dec_input_ptr->expected_IVOP;
 	dec_output_ptr->frameEffective = FALSE;
 	dec_output_ptr->pOutFrameY = PNULL;
 	dec_output_ptr->pOutFrameU = PNULL;
 	dec_output_ptr->pOutFrameV = PNULL;
-	
+
 	if(!vop_mode_ptr->bInitSuceess)
 	{
 		if( MMDEC_OK != Mp4Dec_InitSessionDecode(vop_mode_ptr) )
@@ -458,7 +459,6 @@ FLV_RE_DEC:
 		goto MPEG4_DEC_CQM_ERROR;
 	}
 		
-
 	if(IVOP == vop_mode_ptr->VopPredType)
 	{
 //		SCI_TRACE_LOW ("\t I VOP\t%d frame_num %d\n", dec_input_ptr->dataLen,g_nFrame_dec); 
@@ -474,8 +474,9 @@ FLV_RE_DEC:
 		FPRINTF (g_fp_trace_fw, "\nnframe: %d, frame type: PVOP\n", g_nFrame_dec);
 	#endif //_TRACE_	
 	
-		if (vop_mode_ptr->post_filter_en)
+		if (vop_mode_ptr->post_filter_en  && vop_mode_ptr->is_expect_IVOP  == FALSE)
 		{ //jgdu
+		
 			if (vop_mode_ptr->pBckRefFrame->pDecFrame == PNULL)
 			{
 				if( (PNULL != vop_mode_ptr->pCurDispFrame) && 
@@ -493,7 +494,7 @@ FLV_RE_DEC:
 			}
 		}		
 
-		ret = g_Mp4Dec_PVOP(vop_mode_ptr); 	
+		ret = g_Mp4Dec_PVOP(vop_mode_ptr); 
 	}else if(SVOP == vop_mode_ptr->VopPredType)
 	{
 		SCI_TRACE_LOW ("\t S VOP, Don't SUPPORTED!\n"); 

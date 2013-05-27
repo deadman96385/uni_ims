@@ -101,7 +101,7 @@ PUBLIC MMDecRet Mp4Dec_InitVop(DEC_VOP_MODE_T *vop_mode_ptr, MMDecInput *dec_inp
 	vop_mode_ptr->err_pos_ptr	= dec_input_ptr->err_pkt_pos;
 	vop_mode_ptr->err_MB_num	= vop_mode_ptr->MBNum;
 
-	if(IVOP != vop_mode_ptr->VopPredType)
+	if(IVOP != vop_mode_ptr->VopPredType  && vop_mode_ptr->is_expect_IVOP  == FALSE)
 	{
 		if (vop_mode_ptr->pBckRefFrame->pDecFrame == NULL)
 		{	
@@ -201,7 +201,6 @@ PUBLIC void MP4Dec_JudgeDecMode (DEC_VOP_MODE_T * vop_mode_ptr)
 		vop_mode_ptr->VSP_used = 0;
 		vop_mode_ptr->VT_used = 0;
 	}
-
 	SCI_TRACE_LOW("%s, vsp_used: %d, VT_used: %d", __FUNCTION__, vop_mode_ptr->VSP_used, vop_mode_ptr->VT_used);
 }
 

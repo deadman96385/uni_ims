@@ -101,7 +101,7 @@ int VSP_unbind_cb(void *userdata, void *pHeader,int flag)
 void Mpeg4Decoder_OMX::ReleaseReferenceBuffers()
 {
     OMX_MP4DEC_INFO("%s, %d", __FUNCTION__, __LINE__); 
-    MP4DecReleaseRefBuffers();
+    MP4DecReleaseRefBuffers();    
 }
 
 OMX_BOOL Mpeg4Decoder_OMX::FlushOutput_OMX( OMX_BUFFERHEADERTYPE **aOutBufferForRendering)
@@ -114,6 +114,7 @@ void Mpeg4Decoder_OMX::ResetDecoder()
 {
     OMX_MP4DEC_INFO("%s, %d", __FUNCTION__, __LINE__); 
     ReleaseReferenceBuffers();
+   iSkipToIDR = OMX_TRUE ;
 }
 	
 Mpeg4Decoder_OMX::Mpeg4Decoder_OMX(OmxComponentBase *pComp)
@@ -410,7 +411,7 @@ OMX_BOOL Mpeg4Decoder_OMX::Mp4DecodeVideo(OMX_BOOL *need_new_pic,OMX_BUFFERHEADE
         if( -12 != getpriority(PRIO_PROCESS, 0)){
             setpriority(PRIO_PROCESS, 0, -12);//@jgdu
         }
-        
+
         OMX_MP4DEC_INFO ("%s: width %d,height %d, sw_vt_flag %d, sw_flag %d\n", __FUNCTION__, aPortParam->format.video.nFrameWidth,aPortParam->format.video.nFrameHeight, iDecoder_sw_vt_flag, iDecoder_sw_flag);
 
         MMCodecBuffer extra_mem[3];

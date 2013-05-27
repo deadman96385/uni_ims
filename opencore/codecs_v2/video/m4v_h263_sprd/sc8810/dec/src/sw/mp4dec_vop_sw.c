@@ -290,11 +290,11 @@ PUBLIC MMDecRet Mp4Dec_DecIVOP_sw(DEC_VOP_MODE_T *vop_mode_ptr)
 	int32 total_mb_num_y = vop_mode_ptr->MBNumY;
 	MMDecRet ret = MMDEC_OK;
 	uint8 *ppxlcRecGobY, *ppxlcRecGobU, *ppxlcRecGobV;//leon
-	
+
 	ppxlcRecGobY = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[0] + vop_mode_ptr->iStartInFrameY;
 	ppxlcRecGobU = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[1] + vop_mode_ptr->iStartInFrameUV;
 	ppxlcRecGobV = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[2] + vop_mode_ptr->iStartInFrameUV;
-	
+
 	for(pos_y = 0; pos_y < total_mb_num_y; pos_y++)
 	{
 	        mb_cache_ptr->mb_addr[0] = ppxlcRecGobY;
@@ -387,9 +387,11 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP_sw(DEC_VOP_MODE_T *vop_mode_ptr)
 	Mp4Dec_ExchangeMBMode (vop_mode_ptr);
 
         //ref frame 
-       vop_mode_ptr->YUVRefFrame0[0] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[0];
-       vop_mode_ptr->YUVRefFrame0[1] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[1];
-	vop_mode_ptr->YUVRefFrame0[2] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[2];
+        if(vop_mode_ptr->is_expect_IVOP == FALSE){
+	       vop_mode_ptr->YUVRefFrame0[0] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[0];
+	       vop_mode_ptr->YUVRefFrame0[1] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[1];
+	       vop_mode_ptr->YUVRefFrame0[2] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[2];
+        }
 		
 	ppxlcRecGobY = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[0] + vop_mode_ptr->iStartInFrameY;
 	ppxlcRecGobU = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[1] + vop_mode_ptr->iStartInFrameUV;
@@ -447,6 +449,9 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP_sw(DEC_VOP_MODE_T *vop_mode_ptr)
 				Mp4Dec_DecIntraMBTexture_sw(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);
 			}else if (mb_mode_ptr->CBP)
 			{
+				if (vop_mode_ptr->pBckRefFrame->pDecFrame == NULL){					
+					return MMDEC_STREAM_ERROR;
+				}
 				Mp4Dec_DecInterMBTexture_sw(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);				
 			}
 
