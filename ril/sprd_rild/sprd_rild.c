@@ -37,6 +37,13 @@
 #define MAX_LIB_ARGS        16
 #define RIL_AT_TEST_PROPERTY  "persist.sys.sprd.attest"
 
+static int modem;
+#define RILLOGI(fmt, args...) ALOGI("[%c] " fmt, modem,  ## args)
+#define RILLOGD(fmt, args...) ALOGD("[%c] " fmt, modem,  ## args)
+#define RILLOGV(fmt, args...) ALOGV("[%c] " fmt, modem,  ## args)
+#define RILLOGW(fmt, args...) ALOGW("[%c] " fmt, modem,  ## args)
+#define RILLOGE(fmt, args...) ALOGE("[%c] " fmt, modem,  ## args)
+
 static void usage(const char *argv0)
 {
     fprintf(stderr, "Usage: %s -l <ril impl library> [-- <args for impl library>]\n", argv0);
@@ -111,28 +118,6 @@ int main(int argc, char **argv)
     int califlag = 0;
     char prop[5];
 
-    memset(cmdline, 0, 1024);
-    fd = open("/proc/cmdline", O_RDONLY);
-    if(fd > 0) {
-		rc = read(fd, cmdline, sizeof(cmdline));
-		if(rc > 0) {
-			if(strstr(cmdline, "calibration") != NULL)
-				califlag = 1;
-		}
-		close(fd);
-    }
-
-    if(califlag == 1) {
-    	ALOGD("RIL: Calibration mode,RIL goto sleep!\n");
-    	goto done;
-    }
-
-    property_get(RIL_AT_TEST_PROPERTY, prop, "0");
-    if(!strcmp(prop, "1")) {
-        ALOGD("RIL: AT test mode,RIL goto sleep!\n");
-        goto done;
-    }
-
     for (i = 1; i < argc ;) {
         if (0 == strcmp(argv[i], "-l") && (argc - i > 1)) {
             rilLibPath = argv[i + 1];
@@ -150,6 +135,31 @@ int main(int argc, char **argv)
 
     rilArgv = argv + 2;
     argc = argc - 2;
+
+    modem = *rilModem;
+
+    memset(cmdline, 0, 1024);
+    fd = open("/proc/cmdline", O_RDONLY);
+    if(fd > 0) {
+        rc = read(fd, cmdline, sizeof(cmdline));
+        if(rc > 0) {
+            if(strstr(cmdline, "calibration") != NULL)
+            califlag = 1;
+        }
+        close(fd);
+    }
+
+    if(califlag == 1) {
+        RILLOGD("RIL: Calibration mode,RIL goto sleep!\n");
+        goto done;
+    }
+
+    property_get(RIL_AT_TEST_PROPERTY, prop, "0");
+    if(!strcmp(prop, "1")) {
+        RILLOGD("RIL: AT test mode,RIL goto sleep!\n");
+        goto done;
+    }
+
 OpenLib:
     switchUser();
 
@@ -169,7 +179,7 @@ OpenLib:
         exit(-1);
     }
 
-    ALOGD("Rild: rilArgv[1]=%s,rilArgv[2]=%s,rilArgv[3]=%s,rilArgv[4]=%s",rilArgv[1],rilArgv[2],rilArgv[3],rilArgv[4]);
+    RILLOGD("Rild: rilArgv[1]=%s,rilArgv[2]=%s,rilArgv[3]=%s,rilArgv[4]=%s",rilArgv[1],rilArgv[2],rilArgv[3],rilArgv[4]);
     funcs = rilInit(&s_rilEnv, argc, rilArgv);
     RIL_register(funcs, argc, rilArgv);
 

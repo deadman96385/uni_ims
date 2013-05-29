@@ -66,7 +66,7 @@ void  AT_DUMP(const char*  prefix, const char*  buff, int  len)
 {
     if (len < 0)
         len = strlen(buff);
-    ALOGD("%.*s", len, buff);
+    RILLOGD("%.*s", len, buff);
 }
 #endif
 
@@ -285,7 +285,7 @@ static void processLine(struct ATChannels *ATch)
         break;
 
         default: /* this should never be reached */
-            ALOGE("Unsupported AT command type %d\n", ATch->s_type);
+            RILLOGE("Unsupported AT command type %d\n", ATch->s_type);
             handleUnsolicited(ATch);
         break;
     }
@@ -364,7 +364,7 @@ static const char *readline(struct ATChannels *ATch)
 
     while (p_eol == NULL) {
         if (0 == MAX_AT_RESPONSE - (p_read - ATch->s_ATBuffer)) {
-            ALOGE("ERROR: Input line exceeded buffer\n");
+            RILLOGE("ERROR: Input line exceeded buffer\n");
             /* ditch buffer and start over again */
             ATch->s_ATBufferCur = ATch->s_ATBuffer;
             *ATch->s_ATBufferCur = '\0';
@@ -390,9 +390,9 @@ static const char *readline(struct ATChannels *ATch)
         } else if (count <= 0) {
             /* read error encountered or EOF reached */
             if(count == 0) {
-                ALOGD("atchannel: EOF reached");
+                RILLOGD("atchannel: EOF reached");
             } else {
-                //ALOGD("atchannel: read error %s", strerror(errno));
+                //RILLOGD("atchannel: read error %s", strerror(errno));
             }
             return NULL;
         }
@@ -406,9 +406,9 @@ static const char *readline(struct ATChannels *ATch)
                               /* and there will be a \0 at *p_read */
     if (!ATch->nolog) {
         if (!ATch->name)
-            ALOGD("AT< %s\n", ATch->line);
+            RILLOGD("AT< %s\n", ATch->line);
         else
-            ALOGD("%s: AT< %s\n", ATch->name, ATch->line);
+            RILLOGD("%s: AT< %s\n", ATch->name, ATch->line);
     }
 
     return ATch->line;
@@ -517,9 +517,9 @@ static int writeline (struct ATChannels *ATch, const char *s)
 
     if (!ATch->nolog) {
         if (ATch->name)
-            ALOGD("%s: AT> %s\n", ATch->name, s);
+            RILLOGD("%s: AT> %s\n", ATch->name, s);
         else
-            ALOGD("AT> %s\n", s);
+            RILLOGD("AT> %s\n", s);
     }
 
     AT_DUMP( ">> ", s, strlen(s) );
@@ -559,7 +559,7 @@ static int writeCtrlZ (struct ATChannels *ATch, const char *s)
         return AT_ERROR_CHANNEL_CLOSED;
     }
 
-    ALOGD("AT> %s^Z\n", s);
+    RILLOGD("AT> %s^Z\n", s);
 
     AT_DUMP( ">* ", s, strlen(s) );
 
@@ -637,7 +637,7 @@ struct ATChannels *at_open(int fd, int channelID, char *name, ATUnsolHandler h)
     ATch = &ATChannel[i];
 
     if (i == channel_nums) {
-        ALOGE ("channelID exceeded MAX_CHANNELS in at_open\n");
+        RILLOGE ("channelID exceeded MAX_CHANNELS in at_open\n");
         return NULL;
     }
     if (name)
