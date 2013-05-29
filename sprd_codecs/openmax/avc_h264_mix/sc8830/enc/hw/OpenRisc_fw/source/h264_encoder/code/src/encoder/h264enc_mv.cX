@@ -1,0 +1,87 @@
+
+#include "sc6800x_video_header.h"
+
+void H264Enc_mb_predict_mv (ENC_IMAGE_PARAMS_T *img_ptr, ENC_MB_MODE_T *mb_info_ptr, ENC_MB_CACHE_T *mb_cache_ptr,
+							int32 idx, int32 width, int32 mvp[2], int8 ignoreD)
+{
+	int32 i8 = x264_scan8[idx];
+	int32 ref = mb_cache_ptr->ref[i8];
+	int32 ref_a = mb_cache_ptr->ref[i8-1];
+	int16 *mv_a = mb_cache_ptr->mv[i8-1];
+	int32 ref_b = mb_cache_ptr->ref[i8-8];
+	int16 *mv_b = mb_cache_ptr->mv[i8-8];
+	int32 ref_c = mb_cache_ptr->ref[i8-8+width];
+	int16 *mv_c = mb_cache_ptr->mv[i8-8+width];
+	int32 count;
+
+	if ( (idx&0x3) == 3 || (width == 2 && (idx&0x3) == 2) || (ref_c == -2) )	// idx = 0~15, width in 4x4 block
+	{
+		if(!ignoreD)
+		{
+			ref_c = mb_cache_ptr->ref[i8 -8-1];
+			mv_c = mb_cache_ptr->mv[i8-8-1];
+		}
+	}
+
+	if (mb_info_ptr->i_partition == D_16x8)
+	{
+		if (idx == 0 && ref_b== ref)
+		{
+			mvp[0] = mv_b[0];
+			mvp[1] = mv_b[1];
+			return;
+		}else if (idx != 0 && ref_a == ref)
+		{
+			mvp[0] = mv_a[0];
+			mvp[1] = mv_a[1];
+			return;
+		}
+	}else if (mb_info_ptr->i_partition == D_8x16)
+	{
+		if (idx == 0 && ref_a == ref)
+		{
+			mvp[0] = mv_a[0];
+			mvp[1] = mv_a[1];
+			return;
+		}else if (idx != 0 && ref_c == ref)
+		{
+			mvp[0] = mv_c[0];
+			mvp[1] = mv_c[1];
+			return;
+		}
+	}
+
+	count = 0;
+	if (ref_a == ref)	count++;
+	if (ref_b == ref)	count++;
+	if (ref_c == ref)	count++;
+
+	if (count > 1)
+	{
+		mvp[0] = MEDIAN(mv_a[0], (int16)(mv_b[0]&(ignoreD?0xfffc:0xffff)), (int16)(mv_c[0]&(ignoreD?0xfffc:0xffff)));
+		mvp[1] = MEDIAN(mv_a[1], (int16)(mv_b[1]&(ignoreD?0xfffc:0xffff)), (int16)(mv_c[1]&(ignoreD?0xfffc:0xffff)));
+	}else if (count == 1)
+	{
+		if (ref_a == ref)
+		{
+			mvp[0] = mv_a[0];
+			mvp[1] = mv_a[1];
+		}else if (ref_b == ref)
+		{
+			mvp[0] = (int16)(mv_b[0]&(ignoreD?0xfffc:0xffff));
+			mvp[1] = (int16)(mv_b[1]&(ignoreD?0xfffc:0xffff));
+		}else 
+		{
+			mvp[0] = (int16)(mv_c[0]&(ignoreD?0xfffc:0xffff));
+			mvp[1] = (int16)(mv_c[1]&(ignoreD?0xfffc:0xffff));
+		}
+	}else if (ref_b == -2 && ref_c == -2 && ref_a != -2)
+	{
+		mvp[0] = mv_a[0];
+		mvp[1] = mv_a[1];
+	}else
+	{
+		mvp[0] = MEDIAN(mv_a[0], (int16)(mv_b[0]&(ignoreD?0xfffc:0xffff)), (int16)(mv_c[0]&(ignoreD?0xfffc:0xffff)));
+		mvp[1] = MEDIAN(mv_a[1], (int16)(mv_b[1]&(ignoreD?0xfffc:0xffff)), (int16)(mv_c[1]&(ignoreD?0xfffc:0xffff)));
+	}
+}

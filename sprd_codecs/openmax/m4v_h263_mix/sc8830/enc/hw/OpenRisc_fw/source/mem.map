@@ -1,0 +1,727 @@
+Archive member included because of file (symbol)
+
+/opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__udivsi3.o)
+                              /tmp/ccU6Mi2M.o (__udivsi3)
+/opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__divsi3.o)
+                              /tmp/ccTBlRHn.o (__divsi3)
+/opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__umodsi3.o)
+                              /tmp/ccU6Mi2M.o (__umodsi3)
+/opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__modsi3.o)
+                              /tmp/ccTBlRHn.o (__modsi3)
+/opt/or32-new/or32-elf/lib//libg.a(lib_a-memcpy.o)
+                              /tmp/cca8oN2g.o (memcpy)
+/opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+                              /tmp/cca8oN2g.o (memset)
+
+Allocating common symbols
+Common symbol       size              file
+
+D                   0x4               /tmp/cca8oN2g.o
+g_enc_vop_time_incr
+                    0x4               /tmp/ccTBlRHn.o
+b                   0x4               /tmp/cca8oN2g.o
+g_anti_shake        0x14              /tmp/ccTBlRHn.o
+x                   0x40              /tmp/cca8oN2g.o
+fp                  0x4               /tmp/cca8oN2g.o
+flen                0x8               /tmp/cca8oN2g.o
+g_enc_modulo_base_disp
+                    0x4               /tmp/ccTBlRHn.o
+g_enc_tr            0x4               /tmp/ccTBlRHn.o
+weightscale4x4      0x60              /tmp/ccUbxuRf.o
+g_pEnc_output_bs_buffer
+                    0x4               /tmp/ccTBlRHn.o
+A                   0x4               /tmp/cca8oN2g.o
+or_addr_offset      0x4               /tmp/ccXRmmey.o
+s_frm_ram_bck_ptr   0x4               /tmp/ccXRmmey.o
+g_rc_par            0x5c              /tmp/ccTBlRHn.o
+g_ME_SearchCount    0x4               /tmp/ccTBlRHn.o
+g_enc_vol_mode_ptr  0x4               /tmp/ccTBlRHn.o
+g_re_enc_frame_number
+                    0x4               /tmp/ccTBlRHn.o
+g_enc_vop_mode_ptr  0x4               /tmp/ccTBlRHn.o
+B                   0x4               /tmp/cca8oN2g.o
+filename            0xc8              /tmp/cca8oN2g.o
+g_enc_frame_skip_number
+                    0x4               /tmp/ccTBlRHn.o
+C                   0x4               /tmp/cca8oN2g.o
+g_enc_is_prev_frame_encoded_success
+                    0x1               /tmp/ccTBlRHn.o
+i                   0x4               /tmp/cca8oN2g.o
+g_enc_yuv_src_frame
+                    0xc               /tmp/ccTBlRHn.o
+g_enc_last_frame    0x4               /tmp/ccTBlRHn.o
+g_enc_last_modula_time_base
+                    0x4               /tmp/ccTBlRHn.o
+g_mea_fetch         0x18              /tmp/ccTBlRHn.o
+g_enc_p_frame_count
+                    0x2               /tmp/ccTBlRHn.o
+c                   0x4               /tmp/cca8oN2g.o
+g_stat              0x4               /tmp/ccTBlRHn.o
+g_enc_bits_modulo_base
+                    0x4               /tmp/ccTBlRHn.o
+d                   0x4               /tmp/cca8oN2g.o
+g_enc_first_frame   0x4               /tmp/ccTBlRHn.o
+s_glb_reg_bck_ptr   0x4               /tmp/ccXRmmey.o
+g_nFrame_enc        0x4               /tmp/ccTBlRHn.o
+weightscale8x8      0x80              /tmp/ccUbxuRf.o
+g_stat_rc           0xc4              /tmp/ccTBlRHn.o
+or1200_print        0x1               /tmp/ccTBlRHn.o
+a                   0x4               /tmp/cca8oN2g.o
+g_enc_modulo_base_decd
+                    0x4               /tmp/ccTBlRHn.o
+len                 0x4               /tmp/cca8oN2g.o
+g_stream_offset     0x4               /tmp/ccUbxuRf.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+vectors          0x00000000         0x06000000
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD /tmp/ccUbxuRf.o
+LOAD /tmp/cc9mlrki.o
+LOAD /tmp/cc8JxfVk.o
+LOAD /tmp/ccTBlRHn.o
+LOAD /tmp/cc02jmIq.o
+LOAD /tmp/ccBxwjYt.o
+LOAD /tmp/ccert0qx.o
+LOAD /tmp/ccFGOo2A.o
+LOAD /tmp/ccKy3uOE.o
+LOAD /tmp/cc9qHCMI.o
+LOAD /tmp/ccU6Mi2M.o
+LOAD /tmp/ccFowpJR.o
+LOAD /tmp/ccmgJvvW.o
+LOAD /tmp/ccHuvRl1.o
+LOAD /tmp/cceLznj6.o
+LOAD /tmp/ccvXHUub.o
+LOAD /tmp/cca8oN2g.o
+LOAD /tmp/ccLWBVGm.o
+LOAD /tmp/cckmw6ms.o
+LOAD /tmp/ccXRmmey.o
+LOAD /opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a
+LOAD /opt/or32-new/or32-elf/lib//libg.a
+LOAD /opt/or32-new/or32-elf/lib//libm.a
+
+.MAIN_FUNC      0x00000000      0x494
+ *(MAIN_FUNC)
+ MAIN_FUNC      0x00000000      0x494 /tmp/ccXRmmey.o
+                0x00000000                main
+
+.vectors
+ *(.vectors)
+
+.text           0x00000494     0x5d14
+                0x00000494                _stext = .
+ *(.text)
+ .text          0x00000494        0x0 /tmp/ccUbxuRf.o
+ .text          0x00000494       0xf8 /tmp/cc9mlrki.o
+                0x00000494                Mp4Enc_InitBitStream
+                0x0000049c                Mp4Enc_OutputBits
+                0x00000500                Mp4Enc_ByteAlign
+ .text          0x0000058c      0x140 /tmp/cc8JxfVk.o
+                0x0000058c                Mp4Enc_MeaCommand
+                0x00000594                Mp4Enc_MbcCommand
+                0x0000059c                Mp4Enc_CheckMBCStatus
+                0x000005b8                Mp4Enc_ConfigDctQuantMB
+                0x00000624                Mp4Enc_ConfigIqIdctMB
+                0x000006b4                Mp4Enc_ConfigVLC
+                0x000006bc                Mp4Enc_VspMBInit
+                0x000006c4                Mp4Enc_Picture_Level_Sync
+ .text          0x000006cc      0x48c /tmp/ccTBlRHn.o
+                0x000006cc                Mp4Enc_GetVolmode
+                0x000006dc                Mp4Enc_SetVolmode
+                0x000006ec                Mp4Enc_GetVopmode
+                0x000006fc                Mp4Enc_SetVopmode
+                0x0000070c                SharedRAM_Init
+                0x000007b8                ORSC_Init
+                0x00000aec                BSM_Init
+ .text          0x00000b58      0x870 /tmp/cc02jmIq.o
+                0x00000b58                Mp4Enc_InitVOPHeader
+                0x00000c58                Mp4Enc_EncH263PicHeader
+                0x00000e60                Mp4Enc_EncSequenceHeader
+                0x00000f20                Mp4Enc_EncVOHeader
+                0x00000f6c                Mp4Enc_EncVOLHeader
+                0x000011b0                Mp4Enc_EncVOPHeader
+                0x00001280                Mp4Enc_EncGOBHeader
+                0x00001304                Mp4Enc_ReSyncHeader
+ .text          0x000013c8      0x650 /tmp/ccBxwjYt.o
+                0x000013c8                Mp4Enc_InitVolVopPara
+                0x000014cc                Mp4Enc_InitH263
+                0x000015c4                Mp4Enc_SetMVInfo
+                0x00001654                Mp4Enc_InitVOEncoder
+                0x000016f0                Mp4Enc_InitHuffmanTable
+                0x0000173c                Mp4Enc_Compute_log2
+                0x00001770                Mp4Enc_InitSession
+ .text          0x00001a18      0x5e0 /tmp/ccert0qx.o
+                0x00001a18                MP4EncGenHeader
+                0x00001b20                MP4EncSetConf
+                0x00001b94                MP4EncGetConf
+                0x00001c04                MP4EncRelease
+                0x00001c20                MPEG4Enc_close
+                0x00001c28                MP4EncInit
+                0x00001d40                MP4EncStrmEncode
+                0x00001ff0                MPEG4ENC_VSP_Available
+ .text          0x00001ff8      0x1fc /tmp/ccFGOo2A.o
+                0x00001ff8                Mp4Enc_ExtraMemAlloc
+                0x00002068                Mp4Enc_ExtraMemAlloc_64WordAlign
+                0x000020e4                Mp4Enc_InterMemAlloc
+                0x00002154                Mp4Enc_MemFree
+                0x00002184                Mp4Enc_InitMem
+ .text          0x000021f4      0x43c /tmp/ccKy3uOE.o
+                0x000021f4                Mp4Enc_beZeroMV
+                0x00002224                Mp4Enc_GetNeighborMBPred
+                0x00002324                Mp4Enc_EncMBHeadOfIVOP
+                0x000023a8                Mp4Enc_EncMBHeadOfPVOP
+                0x000024d4                Mp4Enc_VlcIntraMB
+                0x00002594                Mp4Enc_VlcInterMB
+ .text          0x00002630      0x3cc /tmp/cc9qHCMI.o
+                0x00002630                Mp4Enc_JudgeMBMode
+                0x000026a0                Mp4Enc_Init_MEA_Fetch
+                0x00002704                Mp4Enc_Update_MEA_Fetch_Y
+                0x0000278c                Mp4Enc_Update_MEA_Fetch_X
+                0x00002828                Mp4Enc_init_MEA
+                0x00002830                Mp4Enc_MVprediction
+ .text          0x000029fc      0x8e8 /tmp/ccU6Mi2M.o
+                0x000029fc                Mp4Enc_ScaleMV
+                0x00002b30                Mp4Enc_SendDiffMV
+                0x00002c54                Mp4Enc_Get8x8MVPredAtBndry
+                0x00002e3c                Mp4Enc_Get8x8MVPredNotAtBndry
+                0x00002f30                Mp4Enc_Get8x8MVPred
+                0x00002fac                Mp4Enc_Get16x16MVPred
+                0x000030b4                Mp4Enc_EncMVVP
+ .text          0x000032e4     0x1028 /tmp/ccFowpJR.o
+                0x000032e4                Mp4Enc_InitRateCtrl
+                0x000033bc                Mp4Enc_JudgeFrameType
+                0x0000341c                Mp4Enc_InitRCFrame
+                0x00003444                Mp4Enc_InitRCGOP
+                0x00003468                Mp4Enc_ResetRCModel
+                0x00003500                RCModelEstimator
+                0x00003788                Mp4Enc_UpdateRCModel
+                0x000038fc                Qp_FirstPinGop
+                0x000039f8                GetTargetBits
+                0x00003bac                sqrt_simple
+                0x00003bf4                Mp4Enc_UpdatePVOP_StepSize
+                0x00003e40                Mp4Enc_UpdateIVOP_StepSize
+                0x00004040                Mp4Enc_AnalyzeEncResult
+ .text          0x0000430c        0x0 /tmp/ccmgJvvW.o
+ .text          0x0000430c       0x18 /tmp/ccHuvRl1.o
+                0x0000430c                Mp4Enc_Trace_MBC_result_one_macroblock
+                0x00004314                Mp4Enc_Trace_MEA_result_one_macroblock
+                0x0000431c                Mp4Enc_Trace_OneBlkIDctCoef_forASICCompare
+ .text          0x00004324      0x13c /tmp/cceLznj6.o
+                0x00004324                Mp4Enc_OutputMCBPC_Intra
+                0x00004364                Mp4Enc_OutputCBPY
+                0x00004390                Mp4Enc_OutputMCBPC_Inter
+                0x000043cc                Mp4Enc_OutputMV
+ .text          0x00004460      0x668 /tmp/ccvXHUub.o
+                0x00004460                Mp4Enc_VspFrameInit
+                0x00004468                Mp4Enc_ExchangeMbModePerLine
+                0x0000447c                Mp4Enc_EncIVOP
+                0x00004790                Mp4Enc_UpdateRefFrame
+                0x000047a4                Mp4Enc_EncPVOP
+ .text          0x00004ac8     0x125c /tmp/cca8oN2g.o
+                0x00004ac8                md5
+                0x00005a8c                Get_MD5_Code
+ .text          0x00005d24       0x40 /tmp/ccLWBVGm.o
+                0x00005d24                Mp4_GetMedianofThree
+ .text          0x00005d64        0x0 /tmp/cckmw6ms.o
+ .text          0x00005d64        0x8 /tmp/ccXRmmey.o
+                0x00005d64                foo_bar
+ .text          0x00005d6c       0xfc /opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__udivsi3.o)
+                0x00005d6c                __udivsi3
+ .text          0x00005e68       0x64 /opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__divsi3.o)
+                0x00005e68                __divsi3
+ .text          0x00005ecc       0x20 /opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__umodsi3.o)
+                0x00005ecc                __umodsi3
+ .text          0x00005eec       0x5c /opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__modsi3.o)
+                0x00005eec                __modsi3
+ .text          0x00005f48      0x110 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memcpy.o)
+                0x00005f48                memcpy
+ .text          0x00006058      0x140 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+                0x00006058                memset
+                0x00006198                _etext = .
+                0x00006198                __CTOR_LIST__ = .
+                0x00006198        0x4 LONG 0x0 (((__CTOR_END__ - __CTOR_LIST__) / 0x4) - 0x2)
+ *(.ctors)
+                0x0000619c        0x4 LONG 0x0
+                0x000061a0                __CTOR_END__ = .
+                0x000061a0                __DTOR_LIST__ = .
+                0x000061a0        0x4 LONG 0x0 (((__DTOR_END__ - __DTOR_LIST__) / 0x4) - 0x2)
+ *(.dtors)
+                0x000061a4        0x4 LONG 0x0
+                0x000061a8                __DTOR_END__ = .
+ *(.lit)
+ *(.shdata)
+                0x000061a8                _endtext = .
+
+.rodata         0x000061a8      0x5dd
+ *(.rodata)
+ .rodata        0x000061a8       0x18 /tmp/ccKy3uOE.o
+                0x000061a8                s_Enc_BlkOffset
+                0x000061b8                s_MbType
+ .rodata        0x000061c0      0x480 /tmp/ccmgJvvW.o
+                0x000061c0                g_msk
+                0x00006244                g_quant_pa
+                0x000062c4                g_DC_scaler
+                0x00006380                g_mcbpc_intra_tab
+                0x000063a0                g_cbpy_tab
+                0x000063c0                g_mcbpc_inter_tab
+                0x000063fc                g_mv_tab
+                0x00006440                g_mp4_enc_huff_tbl
+ .rodata        0x00006640       0x40 /tmp/cckmw6ms.o
+                0x00006640                g_dc_scaler_table_y
+                0x00006660                g_dc_scaler_table_c
+ .rodata        0x00006680       0x14 /tmp/ccXRmmey.o
+ *(.rodata.*)
+ .rodata.str1.1
+                0x00006694       0xf1 /tmp/cc9qHCMI.o
+
+.data           0x00006788      0xa00
+                0x00006788                sdata = .
+                0x00006788                _sdata = .
+ *(.data)
+ .data          0x00006788        0x0 /tmp/ccUbxuRf.o
+ .data          0x00006788        0x0 /tmp/cc9mlrki.o
+ .data          0x00006788        0x0 /tmp/cc8JxfVk.o
+ .data          0x00006788        0x0 /tmp/ccTBlRHn.o
+ .data          0x00006788        0x0 /tmp/cc02jmIq.o
+ .data          0x00006788        0x0 /tmp/ccBxwjYt.o
+ .data          0x00006788        0x0 /tmp/ccert0qx.o
+ .data          0x00006788        0x0 /tmp/ccFGOo2A.o
+ .data          0x00006788        0x0 /tmp/ccKy3uOE.o
+ .data          0x00006788        0x0 /tmp/cc9qHCMI.o
+ .data          0x00006788        0x0 /tmp/ccU6Mi2M.o
+ .data          0x00006788        0x0 /tmp/ccFowpJR.o
+ .data          0x00006788      0xa00 /tmp/ccmgJvvW.o
+                0x00006788                g_vlc_hw_tbl
+ .data          0x00007188        0x0 /tmp/ccHuvRl1.o
+ .data          0x00007188        0x0 /tmp/cceLznj6.o
+ .data          0x00007188        0x0 /tmp/ccvXHUub.o
+ .data          0x00007188        0x0 /tmp/cca8oN2g.o
+ .data          0x00007188        0x0 /tmp/ccLWBVGm.o
+ .data          0x00007188        0x0 /tmp/cckmw6ms.o
+ .data          0x00007188        0x0 /tmp/ccXRmmey.o
+ .data          0x00007188        0x0 /opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__udivsi3.o)
+ .data          0x00007188        0x0 /opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__divsi3.o)
+ .data          0x00007188        0x0 /opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__umodsi3.o)
+ .data          0x00007188        0x0 /opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__modsi3.o)
+ .data          0x00007188        0x0 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memcpy.o)
+ .data          0x00007188        0x0 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+                0x00007188                edata = .
+                0x00007188                _edata = .
+
+.bss            0x00007188      0x3e8
+                0x00007188                _bss_start = .
+ *(.bss)
+ .bss           0x00007188        0x0 /tmp/ccUbxuRf.o
+ .bss           0x00007188        0x0 /tmp/cc9mlrki.o
+ .bss           0x00007188        0x0 /tmp/cc8JxfVk.o
+ .bss           0x00007188        0x0 /tmp/ccTBlRHn.o
+ .bss           0x00007188        0x0 /tmp/cc02jmIq.o
+ .bss           0x00007188        0x0 /tmp/ccBxwjYt.o
+ .bss           0x00007188        0x0 /tmp/ccert0qx.o
+ .bss           0x00007188       0x18 /tmp/ccFGOo2A.o
+                0x00007188                s_Mp4EncExtraMemUsed
+                0x0000718c                s_Mp4EncExtraMemSize
+                0x00007190                s_Mp4EncInterMemUsed
+                0x00007194                s_Mp4EncInterMemSize
+                0x00007198                s_pEnc_Extra_buffer
+                0x0000719c                s_pEnc_Inter_buffer
+ .bss           0x000071a0        0x0 /tmp/ccKy3uOE.o
+ .bss           0x000071a0        0x0 /tmp/cc9qHCMI.o
+ .bss           0x000071a0        0x0 /tmp/ccU6Mi2M.o
+ .bss           0x000071a0        0x0 /tmp/ccFowpJR.o
+ .bss           0x000071a0        0x0 /tmp/ccmgJvvW.o
+ .bss           0x000071a0        0x0 /tmp/ccHuvRl1.o
+ .bss           0x000071a0        0x0 /tmp/cceLznj6.o
+ .bss           0x000071a0        0x0 /tmp/ccvXHUub.o
+ .bss           0x000071a0        0x0 /tmp/cca8oN2g.o
+ .bss           0x000071a0        0x0 /tmp/ccLWBVGm.o
+ .bss           0x000071a0        0x0 /tmp/cckmw6ms.o
+ .bss           0x000071a0        0x0 /tmp/ccXRmmey.o
+ .bss           0x000071a0        0x0 /opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__udivsi3.o)
+ .bss           0x000071a0        0x0 /opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__divsi3.o)
+ .bss           0x000071a0        0x0 /opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__umodsi3.o)
+ .bss           0x000071a0        0x0 /opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a(__modsi3.o)
+ .bss           0x000071a0        0x0 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memcpy.o)
+ .bss           0x000071a0        0x0 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+ *(COMMON)
+ COMMON         0x000071a0       0xe4 /tmp/ccUbxuRf.o
+                0x000071a0                weightscale4x4
+                0x00007200                weightscale8x8
+                0x00007280                g_stream_offset
+ COMMON         0x00007284      0x1a4 /tmp/ccTBlRHn.o
+                0x00007284                g_enc_vop_time_incr
+                0x00007288                g_anti_shake
+                0x0000729c                g_enc_modulo_base_disp
+                0x000072a0                g_enc_tr
+                0x000072a4                g_pEnc_output_bs_buffer
+                0x000072a8                g_rc_par
+                0x00007304                g_ME_SearchCount
+                0x00007308                g_enc_vol_mode_ptr
+                0x0000730c                g_re_enc_frame_number
+                0x00007310                g_enc_vop_mode_ptr
+                0x00007314                g_enc_frame_skip_number
+                0x00007318                g_enc_is_prev_frame_encoded_success
+                0x0000731c                g_enc_yuv_src_frame
+                0x00007328                g_enc_last_frame
+                0x0000732c                g_enc_last_modula_time_base
+                0x00007330                g_mea_fetch
+                0x00007348                g_enc_p_frame_count
+                0x0000734c                g_stat
+                0x00007350                g_enc_bits_modulo_base
+                0x00007354                g_enc_first_frame
+                0x00007358                g_nFrame_enc
+                0x0000735c                g_stat_rc
+                0x00007420                or1200_print
+                0x00007424                g_enc_modulo_base_decd
+ COMMON         0x00007428      0x13c /tmp/cca8oN2g.o
+                0x00007428                D
+                0x0000742c                b
+                0x00007430                x
+                0x00007470                fp
+                0x00007474                flen
+                0x0000747c                A
+                0x00007480                B
+                0x00007484                filename
+                0x0000754c                C
+                0x00007550                i
+                0x00007554                c
+                0x00007558                d
+                0x0000755c                a
+                0x00007560                len
+ COMMON         0x00007564        0xc /tmp/ccXRmmey.o
+                0x00007564                or_addr_offset
+                0x00007568                s_frm_ram_bck_ptr
+                0x0000756c                s_glb_reg_bck_ptr
+                0x00007570                _bss_end = .
+OUTPUT(mp4enc elf32-or32)
+
+.debug_abbrev   0x00000000     0x1be8
+ .debug_abbrev  0x00000000       0x5a /tmp/ccUbxuRf.o
+ .debug_abbrev  0x0000005a      0x154 /tmp/cc9mlrki.o
+ .debug_abbrev  0x000001ae      0x1d8 /tmp/cc8JxfVk.o
+ .debug_abbrev  0x00000386      0x20a /tmp/ccTBlRHn.o
+ .debug_abbrev  0x00000590      0x166 /tmp/cc02jmIq.o
+ .debug_abbrev  0x000006f6      0x1a1 /tmp/ccBxwjYt.o
+ .debug_abbrev  0x00000897      0x1a2 /tmp/ccert0qx.o
+ .debug_abbrev  0x00000a39      0x109 /tmp/ccFGOo2A.o
+ .debug_abbrev  0x00000b42      0x190 /tmp/ccKy3uOE.o
+ .debug_abbrev  0x00000cd2      0x168 /tmp/cc9qHCMI.o
+ .debug_abbrev  0x00000e3a      0x1a8 /tmp/ccU6Mi2M.o
+ .debug_abbrev  0x00000fe2      0x212 /tmp/ccFowpJR.o
+ .debug_abbrev  0x000011f4       0x97 /tmp/ccmgJvvW.o
+ .debug_abbrev  0x0000128b       0xcc /tmp/ccHuvRl1.o
+ .debug_abbrev  0x00001357       0xfb /tmp/cceLznj6.o
+ .debug_abbrev  0x00001452      0x21e /tmp/ccvXHUub.o
+ .debug_abbrev  0x00001670      0x1d2 /tmp/cca8oN2g.o
+ .debug_abbrev  0x00001842       0x91 /tmp/ccLWBVGm.o
+ .debug_abbrev  0x000018d3       0x61 /tmp/cckmw6ms.o
+ .debug_abbrev  0x00001934      0x170 /tmp/ccXRmmey.o
+ .debug_abbrev  0x00001aa4       0xa8 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memcpy.o)
+ .debug_abbrev  0x00001b4c       0x9c /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_info     0x00000000     0xce24
+ .debug_info    0x00000000       0xf3 /tmp/ccUbxuRf.o
+ .debug_info    0x000000f3      0x88b /tmp/cc9mlrki.o
+ .debug_info    0x0000097e      0xc05 /tmp/cc8JxfVk.o
+ .debug_info    0x00001583     0x116a /tmp/ccTBlRHn.o
+ .debug_info    0x000026ed      0xd5b /tmp/cc02jmIq.o
+ .debug_info    0x00003448      0xcfb /tmp/ccBxwjYt.o
+ .debug_info    0x00004143     0x12d1 /tmp/ccert0qx.o
+ .debug_info    0x00005414      0x34f /tmp/ccFGOo2A.o
+ .debug_info    0x00005763      0xabd /tmp/ccKy3uOE.o
+ .debug_info    0x00006220      0xc3a /tmp/cc9qHCMI.o
+ .debug_info    0x00006e5a      0xc34 /tmp/ccU6Mi2M.o
+ .debug_info    0x00007a8e     0x1293 /tmp/ccFowpJR.o
+ .debug_info    0x00008d21      0x26e /tmp/ccmgJvvW.o
+ .debug_info    0x00008f8f      0x7bb /tmp/ccHuvRl1.o
+ .debug_info    0x0000974a      0x9c3 /tmp/cceLznj6.o
+ .debug_info    0x0000a10d      0xff9 /tmp/ccvXHUub.o
+ .debug_info    0x0000b106      0xb50 /tmp/cca8oN2g.o
+ .debug_info    0x0000bc56      0x138 /tmp/ccLWBVGm.o
+ .debug_info    0x0000bd8e       0xa0 /tmp/cckmw6ms.o
+ .debug_info    0x0000be2e      0xda6 /tmp/ccXRmmey.o
+ .debug_info    0x0000cbd4      0x13c /opt/or32-new/or32-elf/lib//libg.a(lib_a-memcpy.o)
+ .debug_info    0x0000cd10      0x114 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_line     0x00000000     0x7aea
+ .debug_line    0x00000000       0xac /tmp/ccUbxuRf.o
+ .debug_line    0x000000ac      0x227 /tmp/cc9mlrki.o
+ .debug_line    0x000002d3      0x2d6 /tmp/cc8JxfVk.o
+ .debug_line    0x000005a9      0x86f /tmp/ccTBlRHn.o
+ .debug_line    0x00000e18      0x73c /tmp/cc02jmIq.o
+ .debug_line    0x00001554      0x869 /tmp/ccBxwjYt.o
+ .debug_line    0x00001dbd      0x6f0 /tmp/ccert0qx.o
+ .debug_line    0x000024ad      0x309 /tmp/ccFGOo2A.o
+ .debug_line    0x000027b6      0x484 /tmp/ccKy3uOE.o
+ .debug_line    0x00002c3a      0x590 /tmp/cc9qHCMI.o
+ .debug_line    0x000031ca      0x779 /tmp/ccU6Mi2M.o
+ .debug_line    0x00003943      0xd2a /tmp/ccFowpJR.o
+ .debug_line    0x0000466d       0xad /tmp/ccmgJvvW.o
+ .debug_line    0x0000471a      0x12d /tmp/ccHuvRl1.o
+ .debug_line    0x00004847      0x267 /tmp/cceLznj6.o
+ .debug_line    0x00004aae      0x6df /tmp/ccvXHUub.o
+ .debug_line    0x0000518d     0x1c7c /tmp/cca8oN2g.o
+ .debug_line    0x00006e09       0xf5 /tmp/ccLWBVGm.o
+ .debug_line    0x00006efe       0x9e /tmp/cckmw6ms.o
+ .debug_line    0x00006f9c      0x71b /tmp/ccXRmmey.o
+ .debug_line    0x000076b7      0x204 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memcpy.o)
+ .debug_line    0x000078bb      0x22f /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_pubnames
+                0x00000000     0x1259
+ .debug_pubnames
+                0x00000000       0x4c /tmp/ccUbxuRf.o
+ .debug_pubnames
+                0x0000004c       0x90 /tmp/cc9mlrki.o
+ .debug_pubnames
+                0x000000dc      0x110 /tmp/cc8JxfVk.o
+ .debug_pubnames
+                0x000001ec      0x2e9 /tmp/ccTBlRHn.o
+ .debug_pubnames
+                0x000004d5      0x115 /tmp/cc02jmIq.o
+ .debug_pubnames
+                0x000005ea       0xf3 /tmp/ccBxwjYt.o
+ .debug_pubnames
+                0x000006dd       0xe8 /tmp/ccert0qx.o
+ .debug_pubnames
+                0x000007c5      0x15d /tmp/ccFGOo2A.o
+ .debug_pubnames
+                0x00000922      0x100 /tmp/ccKy3uOE.o
+ .debug_pubnames
+                0x00000a22       0xe5 /tmp/cc9qHCMI.o
+ .debug_pubnames
+                0x00000b07       0xfb /tmp/ccU6Mi2M.o
+ .debug_pubnames
+                0x00000c02      0x17f /tmp/ccFowpJR.o
+ .debug_pubnames
+                0x00000d81       0xab /tmp/ccmgJvvW.o
+ .debug_pubnames
+                0x00000e2c       0xab /tmp/ccHuvRl1.o
+ .debug_pubnames
+                0x00000ed7       0xb0 /tmp/cceLznj6.o
+ .debug_pubnames
+                0x00000f87       0xc5 /tmp/ccvXHUub.o
+ .debug_pubnames
+                0x0000104c       0x8c /tmp/cca8oN2g.o
+ .debug_pubnames
+                0x000010d8       0x65 /tmp/ccLWBVGm.o
+ .debug_pubnames
+                0x0000113d       0x42 /tmp/cckmw6ms.o
+ .debug_pubnames
+                0x0000117f       0xa0 /tmp/ccXRmmey.o
+ .debug_pubnames
+                0x0000121f       0x1d /opt/or32-new/or32-elf/lib//libg.a(lib_a-memcpy.o)
+ .debug_pubnames
+                0x0000123c       0x1d /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_pubtypes
+                0x00000000     0x1f0a
+ .debug_pubtypes
+                0x00000000       0x1c /tmp/ccUbxuRf.o
+ .debug_pubtypes
+                0x0000001c      0x1c4 /tmp/cc9mlrki.o
+ .debug_pubtypes
+                0x000001e0      0x1d6 /tmp/cc8JxfVk.o
+ .debug_pubtypes
+                0x000003b6      0x264 /tmp/ccTBlRHn.o
+ .debug_pubtypes
+                0x0000061a      0x215 /tmp/cc02jmIq.o
+ .debug_pubtypes
+                0x0000082f      0x215 /tmp/ccBxwjYt.o
+ .debug_pubtypes
+                0x00000a44      0x298 /tmp/ccert0qx.o
+ .debug_pubtypes
+                0x00000cdc       0x43 /tmp/ccFGOo2A.o
+ .debug_pubtypes
+                0x00000d1f      0x1c4 /tmp/ccKy3uOE.o
+ .debug_pubtypes
+                0x00000ee3      0x1e7 /tmp/cc9qHCMI.o
+ .debug_pubtypes
+                0x000010ca      0x1c4 /tmp/ccU6Mi2M.o
+ .debug_pubtypes
+                0x0000128e      0x23d /tmp/ccFowpJR.o
+ .debug_pubtypes
+                0x000014cb       0xa5 /tmp/ccmgJvvW.o
+ .debug_pubtypes
+                0x00001570      0x1c4 /tmp/ccHuvRl1.o
+ .debug_pubtypes
+                0x00001734      0x1c4 /tmp/cceLznj6.o
+ .debug_pubtypes
+                0x000018f8      0x23d /tmp/ccvXHUub.o
+ .debug_pubtypes
+                0x00001b35       0xfb /tmp/cca8oN2g.o
+ .debug_pubtypes
+                0x00001c30       0x1c /tmp/ccLWBVGm.o
+ .debug_pubtypes
+                0x00001c4c       0x1c /tmp/cckmw6ms.o
+ .debug_pubtypes
+                0x00001c68      0x268 /tmp/ccXRmmey.o
+ .debug_pubtypes
+                0x00001ed0       0x1d /opt/or32-new/or32-elf/lib//libg.a(lib_a-memcpy.o)
+ .debug_pubtypes
+                0x00001eed       0x1d /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_str      0x00000000     0x2529
+ .debug_str     0x00000000       0xf2 /tmp/ccUbxuRf.o
+                                0x131 (size before relaxing)
+ .debug_str     0x000000f2      0x5ab /tmp/cc9mlrki.o
+                                0x6f7 (size before relaxing)
+ .debug_str     0x0000069d      0x2ec /tmp/cc8JxfVk.o
+                                0x968 (size before relaxing)
+ .debug_str     0x00000989      0x638 /tmp/ccTBlRHn.o
+                                0xd62 (size before relaxing)
+ .debug_str     0x00000fc1      0x15b /tmp/cc02jmIq.o
+                                0x9da (size before relaxing)
+ .debug_str     0x0000111c      0x14f /tmp/ccBxwjYt.o
+                                0x98d (size before relaxing)
+ .debug_str     0x0000126b      0x2d4 /tmp/ccert0qx.o
+                                0xd23 (size before relaxing)
+ .debug_str     0x0000153f      0x13c /tmp/ccFGOo2A.o
+                                0x2ad (size before relaxing)
+ .debug_str     0x0000167b      0x150 /tmp/ccKy3uOE.o
+                                0x7b0 (size before relaxing)
+ .debug_str     0x000017cb      0x180 /tmp/cc9qHCMI.o
+                                0x959 (size before relaxing)
+ .debug_str     0x0000194b      0x15f /tmp/ccU6Mi2M.o
+                                0x823 (size before relaxing)
+ .debug_str     0x00001aaa      0x249 /tmp/ccFowpJR.o
+                                0xbe7 (size before relaxing)
+ .debug_str     0x00001cf3       0x41 /tmp/ccmgJvvW.o
+                                0x1e1 (size before relaxing)
+ .debug_str     0x00001d34       0xac /tmp/ccHuvRl1.o
+                                0x6d9 (size before relaxing)
+ .debug_str     0x00001de0       0x93 /tmp/cceLznj6.o
+                                0x6fe (size before relaxing)
+ .debug_str     0x00001e73       0xde /tmp/ccvXHUub.o
+                                0xaf4 (size before relaxing)
+ .debug_str     0x00001f51      0x3c6 /tmp/cca8oN2g.o
+                                0x4d3 (size before relaxing)
+ .debug_str     0x00002317       0x45 /tmp/ccLWBVGm.o
+                                0x146 (size before relaxing)
+ .debug_str     0x0000235c       0x31 /tmp/cckmw6ms.o
+                                 0xf2 (size before relaxing)
+ .debug_str     0x0000238d       0xad /tmp/ccXRmmey.o
+                                0xa3b (size before relaxing)
+ .debug_str     0x0000243a       0xa9 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memcpy.o)
+                                0x14a (size before relaxing)
+ .debug_str     0x000024e3       0x46 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+                                0x137 (size before relaxing)
+
+.comment        0x00000000       0x51
+ .comment       0x00000000       0x51 /tmp/ccUbxuRf.o
+                                 0x52 (size before relaxing)
+ .comment       0x00000000       0x52 /tmp/cc9mlrki.o
+ .comment       0x00000000       0x52 /tmp/cc8JxfVk.o
+ .comment       0x00000000       0x52 /tmp/ccTBlRHn.o
+ .comment       0x00000000       0x52 /tmp/cc02jmIq.o
+ .comment       0x00000000       0x52 /tmp/ccBxwjYt.o
+ .comment       0x00000000       0x52 /tmp/ccert0qx.o
+ .comment       0x00000000       0x52 /tmp/ccFGOo2A.o
+ .comment       0x00000000       0x52 /tmp/ccKy3uOE.o
+ .comment       0x00000000       0x52 /tmp/cc9qHCMI.o
+ .comment       0x00000000       0x52 /tmp/ccU6Mi2M.o
+ .comment       0x00000000       0x52 /tmp/ccFowpJR.o
+ .comment       0x00000000       0x52 /tmp/ccmgJvvW.o
+ .comment       0x00000000       0x52 /tmp/ccHuvRl1.o
+ .comment       0x00000000       0x52 /tmp/cceLznj6.o
+ .comment       0x00000000       0x52 /tmp/ccvXHUub.o
+ .comment       0x00000000       0x52 /tmp/cca8oN2g.o
+ .comment       0x00000000       0x52 /tmp/ccLWBVGm.o
+ .comment       0x00000000       0x52 /tmp/cckmw6ms.o
+ .comment       0x00000000       0x52 /tmp/ccXRmmey.o
+ .comment       0x00000000       0x52 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memcpy.o)
+ .comment       0x00000000       0x52 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_frame    0x00000000      0xadc
+ .debug_frame   0x00000000       0x48 /tmp/cc9mlrki.o
+ .debug_frame   0x00000048       0xa8 /tmp/cc8JxfVk.o
+ .debug_frame   0x000000f0       0xa4 /tmp/ccTBlRHn.o
+ .debug_frame   0x00000194      0x10c /tmp/cc02jmIq.o
+ .debug_frame   0x000002a0       0xb4 /tmp/ccBxwjYt.o
+ .debug_frame   0x00000354       0xe0 /tmp/ccert0qx.o
+ .debug_frame   0x00000434       0x88 /tmp/ccFGOo2A.o
+ .debug_frame   0x000004bc       0xb4 /tmp/ccKy3uOE.o
+ .debug_frame   0x00000570       0x98 /tmp/cc9qHCMI.o
+ .debug_frame   0x00000608       0xe8 /tmp/ccU6Mi2M.o
+ .debug_frame   0x000006f0      0x190 /tmp/ccFowpJR.o
+ .debug_frame   0x00000880       0x40 /tmp/ccHuvRl1.o
+ .debug_frame   0x000008c0       0x74 /tmp/cceLznj6.o
+ .debug_frame   0x00000934       0x98 /tmp/ccvXHUub.o
+ .debug_frame   0x000009cc       0x68 /tmp/cca8oN2g.o
+ .debug_frame   0x00000a34       0x20 /tmp/ccLWBVGm.o
+ .debug_frame   0x00000a54       0x40 /tmp/ccXRmmey.o
+ .debug_frame   0x00000a94       0x20 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memcpy.o)
+ .debug_frame   0x00000ab4       0x28 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_loc      0x00000000     0x48ed
+ .debug_loc     0x00000000      0x128 /tmp/cc9mlrki.o
+ .debug_loc     0x00000128      0x11d /tmp/cc8JxfVk.o
+ .debug_loc     0x00000245      0x3c2 /tmp/ccTBlRHn.o
+ .debug_loc     0x00000607      0x8c0 /tmp/cc02jmIq.o
+ .debug_loc     0x00000ec7      0x30d /tmp/ccBxwjYt.o
+ .debug_loc     0x000011d4      0x5c7 /tmp/ccert0qx.o
+ .debug_loc     0x0000179b      0x13a /tmp/ccFGOo2A.o
+ .debug_loc     0x000018d5      0x55f /tmp/ccKy3uOE.o
+ .debug_loc     0x00001e34      0x367 /tmp/cc9qHCMI.o
+ .debug_loc     0x0000219b      0x9ea /tmp/ccU6Mi2M.o
+ .debug_loc     0x00002b85      0xe82 /tmp/ccFowpJR.o
+ .debug_loc     0x00003a07      0x3a8 /tmp/cceLznj6.o
+ .debug_loc     0x00003daf      0x545 /tmp/ccvXHUub.o
+ .debug_loc     0x000042f4       0xca /tmp/cca8oN2g.o
+ .debug_loc     0x000043be       0x5f /tmp/ccLWBVGm.o
+ .debug_loc     0x0000441d      0x1aa /tmp/ccXRmmey.o
+ .debug_loc     0x000045c7      0x19f /opt/or32-new/or32-elf/lib//libg.a(lib_a-memcpy.o)
+ .debug_loc     0x00004766      0x187 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_aranges  0x00000000      0x268
+ .debug_aranges
+                0x00000000       0x20 /tmp/cc9mlrki.o
+ .debug_aranges
+                0x00000020       0x20 /tmp/cc8JxfVk.o
+ .debug_aranges
+                0x00000040       0x20 /tmp/ccTBlRHn.o
+ .debug_aranges
+                0x00000060       0x20 /tmp/cc02jmIq.o
+ .debug_aranges
+                0x00000080       0x20 /tmp/ccBxwjYt.o
+ .debug_aranges
+                0x000000a0       0x20 /tmp/ccert0qx.o
+ .debug_aranges
+                0x000000c0       0x20 /tmp/ccFGOo2A.o
+ .debug_aranges
+                0x000000e0       0x20 /tmp/ccKy3uOE.o
+ .debug_aranges
+                0x00000100       0x20 /tmp/cc9qHCMI.o
+ .debug_aranges
+                0x00000120       0x20 /tmp/ccU6Mi2M.o
+ .debug_aranges
+                0x00000140       0x20 /tmp/ccFowpJR.o
+ .debug_aranges
+                0x00000160       0x20 /tmp/ccHuvRl1.o
+ .debug_aranges
+                0x00000180       0x20 /tmp/cceLznj6.o
+ .debug_aranges
+                0x000001a0       0x20 /tmp/ccvXHUub.o
+ .debug_aranges
+                0x000001c0       0x20 /tmp/cca8oN2g.o
+ .debug_aranges
+                0x000001e0       0x20 /tmp/ccLWBVGm.o
+ .debug_aranges
+                0x00000200       0x28 /tmp/ccXRmmey.o
+ .debug_aranges
+                0x00000228       0x20 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memcpy.o)
+ .debug_aranges
+                0x00000248       0x20 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_ranges   0x00000000      0x1a0
+ .debug_ranges  0x00000000       0x20 /tmp/ccTBlRHn.o
+ .debug_ranges  0x00000020       0x50 /tmp/ccBxwjYt.o
+ .debug_ranges  0x00000070       0x68 /tmp/ccert0qx.o
+ .debug_ranges  0x000000d8       0x30 /tmp/ccKy3uOE.o
+ .debug_ranges  0x00000108       0x18 /tmp/ccFowpJR.o
+ .debug_ranges  0x00000120       0x50 /tmp/ccvXHUub.o
+ .debug_ranges  0x00000170       0x30 /tmp/ccXRmmey.o

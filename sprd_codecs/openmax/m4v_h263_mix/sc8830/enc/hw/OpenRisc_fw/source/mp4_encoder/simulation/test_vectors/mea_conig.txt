@@ -1,0 +1,4 @@
+0x160 		 // Width
+0x120 		 // Height
+9 		 // Search Rounds
+6 		 // QP

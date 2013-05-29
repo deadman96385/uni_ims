@@ -8,42 +8,6 @@ include $(LOCAL_PATH)/Config.mk
 
 include $(PV_TOP)/build_config/opencore_dynamic/Android_opencore_common.mk
 include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_sharedlibrary.mk
-#ifeq ($(strip $(BUILD_SPRD_OMX)),true)
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8810)
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcdec_sprd_8810_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4vdec_sprd_8810_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4venc_sprd_8810_sharedlibrary.mk
-else
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc7710)
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcdec_sprd_8810_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4vdec_sprd_8810_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4venc_sprd_8810_sharedlibrary.mk
-else
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8825)
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcdec_sprd_8825_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcenc_sprd_8825_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4vdec_sprd_8825_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4venc_sprd_8825_sharedlibrary.mk
-else
-ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcdec_sprd_8830_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcenc_sprd_8830_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4vdec_sprd_8830_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4venc_sprd_8830_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_vp8dec_sprd_8830_sharedlibrary.mk
-else
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcdec_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4vdec_sharedlibrary.mk
-include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4venc_sharedlibrary.mk
-endif
-endif
-endif
-endif
-#else
-#include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_avcdec_sharedlibrary.mk
-#include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4vdec_sharedlibrary.mk
-#include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_m4venc_sharedlibrary.mk
-#endif
 
 ifneq ($(BUILD_WITHOUT_PV),true)
 include $(PV_TOP)/build_config/opencore_dynamic/Android_omx_aacdec_sharedlibrary.mk

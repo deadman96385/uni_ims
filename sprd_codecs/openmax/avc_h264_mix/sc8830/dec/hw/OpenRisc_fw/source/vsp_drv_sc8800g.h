@@ -1,0 +1,287 @@
+/******************************************************************************
+ ** File Name:      vsp_drv_sc8800g.h                                         *
+ ** Author:         Xiaowei Luo                                               *
+ ** DATE:           01/07/2010                                                *
+ ** Copyright:      2010 Spreatrum, Incoporated. All Rights Reserved.         *
+ ** Description:    														  *
+ *****************************************************************************/
+/******************************************************************************
+ **                   Edit    History                                         *
+ **---------------------------------------------------------------------------* 
+ ** DATE          NAME            DESCRIPTION                                 * 
+ ** 06/11/2009    Xiaowei Luo     Create.                                     *
+ *****************************************************************************/
+#ifndef _VSP_DRV_SC8800G_H_
+#define _VSP_DRV_SC8800G_H_
+/*----------------------------------------------------------------------------*
+**                        Dependencies                                        *
+**---------------------------------------------------------------------------*/
+
+/**---------------------------------------------------------------------------*
+**                        Compiler Flag                                       *
+**---------------------------------------------------------------------------*/
+#ifdef __cplusplus
+extern "C"
+{
+#endif 
+#include "sci_types.h"
+#if SIM_IN_WIN
+#include "vsp_vld.h"
+#include "vsp_global.h"
+#include "vsp_ahbm.h"
+#include "vsp_bsm.h"
+#include "vsp_dcam.h"
+#include "vsp_vlc.h"
+#include "vsp_mca.h"
+#include "vsp_mea.h"
+#include "vsp_dbk.h"
+#include "vsp_mbc.h"
+#include "vsp_dct.h"
+#include "vsp_ppa.h"
+#include "vsp_parser.h"
+
+#endif
+#include "vsp_global_define.h"
+
+/*----------------------------------------------------------------------------*
+**                            Macro Definitions                               *
+**---------------------------------------------------------------------------*/
+#if SIM_IN_WIN
+#define TIME_OUT_CLK			0x1ffff
+
+#define IS_TIME_OUT				1
+#define NOT_TIME_OUT			0
+
+#define MID_SHIFT_BIT			29 //28	//shift bit of module id
+
+
+extern uint32 *g_cmd_data_ptr;
+extern uint32 *g_cmd_info_ptr;
+#endif
+
+typedef enum{
+	VSP_GLB = 0,
+	VSP_BSM,
+	VSP_VLD,
+	//VSP_VLC,
+	VSP_RAM10,
+	VSP_DCT,
+	VSP_MCA,
+	VSP_MBC,
+	VSP_DBK
+	}VSP_MODULE_ID;
+
+/*standard*/
+typedef enum {
+	    ITU_H263 =0,   	
+		
+		VSP_MPEG4,
+		VSP_JPEG,
+		FLV_H263,	
+		
+		VSP_H264,
+		VSP_RV8,
+		VSP_RV9,
+		
+		
+		VSP_VP8,
+		VSP_WEBP, 
+		
+		VSP_VC1,
+		VSP_AVS ,
+		}VIDEO_STD_E;//weihu
+
+#if SIM_IN_WIN
+
+#define VSP_INTRA		0
+#define VSP_INTER		1
+
+#define VSP_STD_ZIGZAG		0
+#define VSP_HOR_ZIGZAG		1
+#define VSP_VER_ZIGZAG		2
+
+PUBLIC void VSP_Reset (void);
+PUBLIC void configure_huff_tab (uint32 *pHuff_tab, int32 n);
+PUBLIC void flush_unalign_bytes (int32 nbytes);
+PUBLIC void CMD_DONE_INT_PROC(void);
+PUBLIC void TIMEOUT_INT_PROC(void);
+
+extern uint32 g_cmd_done_init;
+
+
+#if !defined(_VSP_)
+PUBLIC void write_register(uint32 reg_addr, int32 value, char *pstring);
+PUBLIC uint32 read_register (uint32 reg_addr, int8 *pString);
+PUBLIC int32 read_reg_poll(uint32 addr, uint32 msk,uint32 exp_value, uint32 time, char *pstring);
+
+PUBLIC void vsp_write_register(uint32 reg_addr, int32 value, char *pstring);
+PUBLIC uint32 vsp_read_register (uint32 reg_addr, int8 *pString);
+PUBLIC void vsp_read_reg_poll(uint32 reg_addr,uint32 shift, uint32 msk_data,uint32 msked_data, char *pstring);
+
+PUBLIC void vsp_write_cmd_info(uint32 cmd_info);
+#else
+PUBLIC __inline void write_vld_cabac_bfr(uint32 addr, int32 value, char *pstring)	
+{
+	*(uint32 *)(addr)  = (value);
+}
+
+PUBLIC __inline void write_register(uint32 reg_addr, int32 value, char *pstring)	
+{
+	*(volatile uint32 *)(reg_addr)  = (value);
+}
+
+PUBLIC __inline uint32 read_register(uint32 reg_addr, char *pstring)	
+{
+	return (*(volatile uint32 *)(reg_addr));
+}
+
+PUBLIC __inline int32 read_reg_poll(uint32 reg_addr, uint32 msk,uint32 exp_value, uint32 time, char *pstring)
+{
+	uint32 vsp_time_out_cnt = 0;
+	
+	while ((*(volatile uint32*)reg_addr & msk) != exp_value)
+	{
+		if (vsp_time_out_cnt > time)
+		{
+			return 1;
+		}
+		vsp_time_out_cnt++;
+	}
+
+	return 0;
+}
+
+PUBLIC __inline void vsp_write_register(uint32 reg_addr, int32 value, char *pstring)	
+{	
+	* g_cmd_data_ptr ++ = (value);
+}
+
+PUBLIC __inline uint32 vsp_read_register (uint32 reg_addr, int8 *pString)
+{
+	uint32 value = 0;
+	return value;
+}
+
+PUBLIC __inline void vsp_read_reg_poll(uint32 reg_addr, uint32 shift, uint32 msk_data,uint32 msked_data, char *pstring)
+{
+
+	uint32 value =  (shift<<24) | ((msk_data&0xfff)<<12) | (msked_data&0xfff);
+	* g_cmd_data_ptr ++ = (value);
+}
+
+PUBLIC __inline void vsp_write_cmd_info(uint32 cmd_info)
+{
+	* g_cmd_info_ptr++ = cmd_info;
+}
+
+PUBLIC __inline int32 READ_REG_MBC_ST0_REG(uint32 addr, uint32 msk,uint32 exp_value, char *pstring)
+{
+	int32 mbc_st0 = READ_REG(VSP_MBC_REG_BASE+MBC_ST0_OFF, "MBC_ST0: read regist");
+
+	exp_value = mbc_st0 & msk;
+	
+	return exp_value;	
+}
+#endif //!defined(_VSP_)
+
+#endif
+
+#if SIM_IN_WIN
+#define WRITE_VLD_CABAC_BFR(addr, value, pstring) write_vld_cabac_bfr(addr, value, pstring)
+
+#define WRITE_REG(reg_addr, value, pstring) write_register(reg_addr, value, pstring)
+#define READ_REG(reg_addr, pstring)		read_register(reg_addr, pstring)
+#define READ_REG_POLL(reg_addr, msk, exp_value, time, pstring) read_reg_poll(reg_addr, msk, exp_value, time, pstring)
+
+#define VSP_WRITE_REG(reg_addr, value, pstring) vsp_write_register(reg_addr, value, pstring)
+#define VSP_READ_REG(reg_addr, pstring)		vsp_read_register(reg_addr, pstring)
+#define VSP_READ_REG_POLL(reg_addr,shift, msk_data, msked_data, pstring) vsp_read_reg_poll(reg_addr,shift, msk_data, msked_data, pstring)
+#define VSP_WRITE_CMD_INFO(cmd_info)	vsp_write_cmd_info(cmd_info);
+
+#define OR1200_WRITE_REG(reg_addr, value, pstring) if(sw_wr_bsm)\
+{\
+    fprintf(g_fp_global_tv,"1_%08x_%08x   //%s\n",reg_addr,value,pstring);\
+    fprintf(g_fp_global_tv_pxp,"1%08x%08x\n",reg_addr,value);\
+}                                                                                                 
+                                                     
+												    
+#define OR1200_READ_REG(reg_addr, pstring)	if(sw_wr_bsm)\
+{\
+   fprintf(g_fp_global_tv,"0_%08x_00000000   //%s\n",reg_addr,pstring);\
+   fprintf(g_fp_global_tv_pxp,"0%08x00000000\n",reg_addr);\
+}
+#define OR1200_READ_REG_POLL(reg_addr, msk_data, msked_data, pstring) if(sw_wr_bsm)\
+{\
+   fprintf(g_fp_global_tv,"2_%08x_%08x_%08x   //%s\n",reg_addr,msk_data,msked_data,pstring);\
+   fprintf(g_fp_global_tv_pxp,"2%08x%08x%08x\n",reg_addr,msk_data,msked_data);\
+}
+#else
+#define OR1200_WRITE_REG(reg_addr, value, pstring)  *((volatile uint*)(reg_addr))=(int)(value)
+
+#define OR1200_READ_REG(reg_addr, pstring) *((volatile uint*)(reg_addr))
+#define OR1200_READ_REG_POLL(reg_addr, msk_data, msked_data, pstring) \
+{\
+	uint tmp;\
+	tmp=(*((volatile uint*)(reg_addr)))&msk_data;\
+    while(tmp != msked_data)\
+{\
+	tmp=(*((volatile uint*)(reg_addr)))&msk_data;\
+}\
+}
+#endif
+#if SIM_IN_WIN
+//allow software to access the vsp buffer
+PUBLIC __inline void open_vsp_iram (void)
+{
+	uint32 cmd;
+
+	cmd = READ_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, "DCAM_CFG: readout DCAM CFG");	
+	cmd = cmd | ((1<<4) | (1<<3));		
+	WRITE_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, cmd, "DCAM_CFG: configure DCAM register");
+	
+	READ_REG_POLL(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, 1<<7, 1<<7, TIME_OUT_CLK, "DCAM_CFG: polling dcam clock status");
+}
+
+//allow hardware to access the vsp buffer
+PUBLIC __inline void close_vsp_iram (void)
+{
+	uint32 cmd;
+	
+	cmd = READ_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, "DCAM_CFG: readout DCAM CFG");
+	//cmd = (0<<4) | (1<<3);	
+	cmd = (cmd & ~0x10) | (1 << 3);
+	WRITE_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, cmd, "DCAM_CFG: configure DCAM register");
+	
+	READ_REG_POLL (VSP_DCAM_REG_BASE+DCAM_CFG_OFF, 0, 0, TIME_OUT_CLK, "DCAM_CFG: polling dcam clock status");
+}
+#endif
+/**---------------------------------------------------------------------------*
+**                         Compiler Flag                                      *
+**---------------------------------------------------------------------------*/
+#ifdef __cplusplus
+}
+#endif 
+/**---------------------------------------------------------------------------*/
+// End 
+#endif //_VSP_DRV_SC8800G_H_
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

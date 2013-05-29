@@ -1,0 +1,79 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: mpeg4fw - Win32 Debug--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\DOCUME~1\william.wei\LOCALS~1\Temp\RSP790.tmp" with contents
+[
+/nologo /MLd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /FR"Debug/" /Fp"Debug/mpeg4fw.pch" /YX /Fo"Debug/" /Fd"Debug/" /FD /GZ /c 
+"F:\ormnt\m4d\main.c"
+"F:\ormnt\m4d\mp4dec_table.c"
+]
+Creating command line "cl.exe @C:\DOCUME~1\william.wei\LOCALS~1\Temp\RSP790.tmp" 
+Creating temporary file "C:\DOCUME~1\william.wei\LOCALS~1\Temp\RSP791.tmp" with contents
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /incremental:yes /pdb:"Debug/mpeg4fw.pdb" /debug /machine:I386 /out:"Debug/mpeg4fw.exe" /pdbtype:sept 
+.\Debug\main.obj
+.\Debug\mp4_common_table.obj
+.\Debug\mp4dec_bfrctrl.obj
+.\Debug\mp4dec_bitstream.obj
+.\Debug\mp4dec_global.obj
+.\Debug\mp4dec_header.obj
+.\Debug\mp4dec_interface.obj
+.\Debug\mp4dec_main.obj
+.\Debug\mp4dec_malloc.obj
+.\Debug\mp4dec_session.obj
+.\Debug\mp4dec_table.obj
+]
+Creating command line "link.exe @C:\DOCUME~1\william.wei\LOCALS~1\Temp\RSP791.tmp"
+<h3>Output Window</h3>
+Compiling...
+main.c
+f:\ormnt\m4d\main.c(23) : error C2143: syntax error : missing ')' before '('
+f:\ormnt\m4d\main.c(23) : error C2143: syntax error : missing ')' before '('
+f:\ormnt\m4d\main.c(23) : error C2091: function returns function
+f:\ormnt\m4d\main.c(23) : error C2143: syntax error : missing ')' before 'string'
+f:\ormnt\m4d\main.c(23) : error C2091: function returns function
+f:\ormnt\m4d\main.c(23) : error C2143: syntax error : missing '{' before 'string'
+f:\ormnt\m4d\main.c(23) : error C2059: syntax error : '<Unknown>'
+f:\ormnt\m4d\main.c(23) : error C2059: syntax error : ')'
+f:\ormnt\m4d\main.c(23) : error C2059: syntax error : ')'
+f:\ormnt\m4d\main.c(23) : error C2059: syntax error : ')'
+mp4dec_table.c
+f:\ormnt\m4d\mp4dec_table.c(196) : error C2061: syntax error : identifier '__attribute__'
+f:\ormnt\m4d\mp4dec_table.c(196) : error C2059: syntax error : ';'
+f:\ormnt\m4d\mp4dec_table.c(196) : error C2143: syntax error : missing ')' before 'constant'
+f:\ormnt\m4d\mp4dec_table.c(196) : error C2143: syntax error : missing ')' before 'constant'
+f:\ormnt\m4d\mp4dec_table.c(219) : error C2061: syntax error : identifier '__attribute__'
+f:\ormnt\m4d\mp4dec_table.c(219) : error C2059: syntax error : ';'
+f:\ormnt\m4d\mp4dec_table.c(219) : error C2143: syntax error : missing ')' before 'constant'
+f:\ormnt\m4d\mp4dec_table.c(219) : error C2143: syntax error : missing ')' before 'constant'
+Error executing cl.exe.
+Creating temporary file "C:\DOCUME~1\william.wei\LOCALS~1\Temp\RSP792.tmp" with contents
+[
+/nologo /o"Debug/mpeg4fw.bsc" 
+.\Debug\main.sbr
+.\Debug\mp4_common_table.sbr
+.\Debug\mp4dec_bfrctrl.sbr
+.\Debug\mp4dec_bitstream.sbr
+.\Debug\mp4dec_global.sbr
+.\Debug\mp4dec_header.sbr
+.\Debug\mp4dec_interface.sbr
+.\Debug\mp4dec_main.sbr
+.\Debug\mp4dec_malloc.sbr
+.\Debug\mp4dec_session.sbr
+.\Debug\mp4dec_table.sbr]
+Creating command line "bscmake.exe @C:\DOCUME~1\william.wei\LOCALS~1\Temp\RSP792.tmp"
+Creating browse info file...
+<h3>Output Window</h3>
+
+
+
+<h3>Results</h3>
+mpeg4fw.exe - 18 error(s), 0 warning(s)
+</pre>
+</body>
+</html>
