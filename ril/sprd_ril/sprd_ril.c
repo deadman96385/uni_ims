@@ -4471,7 +4471,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
     if (sState == RADIO_STATE_UNAVAILABLE
             && !(request == RIL_REQUEST_GET_SIM_STATUS
                 || request == RIL_REQUEST_GET_IMEI
-                || request == RIL_REQUEST_GET_IMEISV)
+                || request == RIL_REQUEST_GET_IMEISV
+                || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
         putChannel(channelID);
@@ -4499,7 +4500,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_GET_IMEI
                 || request == RIL_REQUEST_GET_IMEISV
                 || request == RIL_REQUEST_SCREEN_STATE
-                || request == RIL_REQUEST_SEND_AT)
+                || request == RIL_REQUEST_SEND_AT
+                || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
         putChannel(channelID);
