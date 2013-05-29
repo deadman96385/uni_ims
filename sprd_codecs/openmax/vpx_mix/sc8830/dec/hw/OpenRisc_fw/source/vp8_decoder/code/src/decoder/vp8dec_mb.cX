@@ -1,0 +1,51 @@
+
+#include "vp8dec_mode.h"
+#include "vp8_blockd.h"
+#include "vp8_recon.h"
+#include "vp8_reconintra.h"
+#include "vp8_reconintra4x4.h"
+#include "vp8_reconinter.h"
+#include "sc8810_video_header.h"
+
+//skip_recon_mb() is Modified: Instead of writing the result to predictor buffer and then copying it
+// to dst buffer, we can write the result directly to dst buffer. This eliminates unnecessary copy.
+void skip_recon_mb(VP8D_COMP *pbi, MACROBLOCKD *xd)
+{
+    if (xd->frame_type == KEY_FRAME  ||  xd->mbmi.ref_frame == INTRA_FRAME)
+    {
+
+        vp8_build_intra_predictors_mbuv_s(xd);
+        vp8_build_intra_predictors_mby_s(xd);
+
+    }
+    else
+    {
+		skip_flag = 1;
+        vp8_build_inter_predictors_mb_s(xd);
+//		mca_module(xd);//weihu //just for verification, no output
+	}
+}
+
+void reconstruct_mb(VP8D_COMP *pbi, MACROBLOCKD *xd)
+{
+    if (xd->frame_type == KEY_FRAME  ||  xd->mbmi.ref_frame == INTRA_FRAME)
+    {
+        vp8_build_intra_predictors_mbuv(xd);
+
+        if (xd->mbmi.mode != B_PRED)
+        {
+            vp8_build_intra_predictors_mby(xd);
+            vp8_recon16x16mb(xd);
+        }
+        else
+        {
+            vp8_recon_intra4x4mb(xd);
+        }
+    }
+    else
+    {	
+        vp8_build_inter_predictors_mb(xd);
+        vp8_recon16x16mb(xd);
+//		mca_module(xd);//weihu//just for verification, no output
+    }
+}

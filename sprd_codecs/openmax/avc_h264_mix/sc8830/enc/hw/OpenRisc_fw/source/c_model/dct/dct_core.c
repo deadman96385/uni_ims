@@ -1,0 +1,393 @@
+/******************************************************************************
+ ** File Name:    dct_core.c		                                          *
+ ** Author:       Xiaowei Luo                                                 *
+ ** DATE:         12/14/2006                                                  *
+ ** Copyright:    2006 Spreatrum, Incoporated. All Rights Reserved.           *
+ ** Description:                                                              *
+ *****************************************************************************/
+/******************************************************************************
+ **                   Edit    History                                         *
+ **---------------------------------------------------------------------------* 
+ ** DATE          NAME            DESCRIPTION                                 * 
+ ** 12/14/2006    Xiaowei Luo     Create.                                     *
+ *****************************************************************************/
+/*----------------------------------------------------------------------------*
+**                        Dependencies                                        *
+**---------------------------------------------------------------------------*/
+#include "sc6800x_video_header.h"
+/**---------------------------------------------------------------------------*
+**                        Compiler Flag                                       *
+**---------------------------------------------------------------------------*/
+#ifdef   __cplusplus
+    extern   "C" 
+    {
+#endif
+
+void nzFlag(int32 coef_pos, int32 level, int32 blk_idx)
+{
+	int32 *noneZeroflag_ptr = vsp_dct_io_1 + 192 + 4*blk_idx;
+
+	if(level != 0)
+	{
+		g_dct_reg_ptr->DCT_OUT_CBP |= (1<<(5-blk_idx));
+
+		if (coef_pos < 16)
+		{
+			*noneZeroflag_ptr = *noneZeroflag_ptr | (1 << coef_pos);
+		}else if (coef_pos < 32)
+		{
+			*(noneZeroflag_ptr+1) = *(noneZeroflag_ptr+1) | (1 << (coef_pos-16));
+		}else if (coef_pos < 48)
+		{
+			*(noneZeroflag_ptr+2) = *(noneZeroflag_ptr+2) | (1 << (coef_pos-32));
+		}else //coef_pos < 64
+		{
+			*(noneZeroflag_ptr+3) = *(noneZeroflag_ptr+3) | (1 << (coef_pos-48));
+		}
+#if 0	
+		if(coef_pos < 12)
+		{
+			*noneZeroflag_ptr = *noneZeroflag_ptr | (1 << coef_pos);
+		}else if(coef_pos < 16)
+		{
+			*noneZeroflag_ptr = *noneZeroflag_ptr | (1 << (coef_pos+4));
+		}else if(coef_pos < 28)
+		{
+			*(noneZeroflag_ptr+1) = *(noneZeroflag_ptr+1) | (1 << (coef_pos-16));
+		}else if(coef_pos < 32)
+		{
+			*(noneZeroflag_ptr+1) = *(noneZeroflag_ptr+1) | (1 << (coef_pos-16+4));
+		}else if(coef_pos < (32+12))
+		{
+			*(noneZeroflag_ptr+2) = *(noneZeroflag_ptr+2) | (1 << (coef_pos-32));
+		}else if(coef_pos < (32+16))
+		{
+			*(noneZeroflag_ptr+2) = *(noneZeroflag_ptr+2) | (1 << (coef_pos-32+4));
+		}else if(coef_pos < (32+28))
+		{
+			*(noneZeroflag_ptr+3) = *(noneZeroflag_ptr+3) | (1 << (coef_pos-32-16));
+		}else if(coef_pos < (32+32))
+		{
+			*(noneZeroflag_ptr+3) = *(noneZeroflag_ptr+3) | (1 << (coef_pos-32-16+4));
+		}	
+#endif	
+	} //if(level != 0)
+}
+
+void quant(int16 *pDct, int32 Inter_mode_en, int32 standard, int32 blk_idx)
+{
+	int32 shift_bits;
+	int32 shift_val;
+	int32 qp;
+	int32 coeff;
+	int32 absCoeff;
+	int32 level;
+	int32 sign;
+	int32 start_pos;
+	int32 i;	
+	int32 *noneZeroflag_ptr = vsp_dct_io_1 + 192 + 4*blk_idx;
+
+	memset(noneZeroflag_ptr, 0, 4*sizeof(int32));
+
+	if(standard != VSP_JPEG)
+	{
+		if(!Inter_mode_en)//intra
+		{
+			int32 Y_inv_shift	= (g_dct_reg_ptr->Y_Quan_para >> 16 )  & 0xfff;
+			int32 Y_shift		= (g_dct_reg_ptr->Y_Quan_para >> 0 )   & 0xf;
+			int32 C_inv_shift	= (g_dct_reg_ptr->UV_Quan_para >> 16 ) & 0xfff;
+			int32 C_shift		= (g_dct_reg_ptr->UV_Quan_para >> 0 )  & 0xf;
+		
+			if(blk_idx < 4)
+			{
+				shift_val  = Y_inv_shift;
+				shift_bits = Y_shift;
+			}else
+			{
+				shift_val  = C_inv_shift;
+				shift_bits = C_shift;
+			}
+
+			pDct [0] = IClip(1, 254, (uint8)(((pDct[0] * shift_val+ (1 << (shift_bits + 11)))/(1 << (12 + shift_bits)))));
+
+			if (pDct [0] != 0)
+			{
+				*noneZeroflag_ptr = 1;
+			}
+
+			start_pos = 1;
+		}else
+		{
+			start_pos = 0;
+		}	//if(!Inter_mode_en)
+
+		shift_val  = (g_dct_reg_ptr->DCT_Quan_Para >> 9 ) & 0xfff;
+		shift_bits = (g_dct_reg_ptr->DCT_Quan_Para >> 0 ) & 0xf;
+		qp		   = (g_dct_reg_ptr->DCT_Quan_Para >> 4 ) & 0x1f;
+		
+		for(i = start_pos; i < 64; i++ )
+		{
+			coeff = pDct [i];
+
+			if(coeff < 0)
+			{
+				sign = -1;
+				absCoeff = -coeff;
+			}else
+			{
+				sign = 1;
+				absCoeff = coeff;
+			}
+			
+			//why?
+			if(!Inter_mode_en)//intra
+			{
+				level = (absCoeff * shift_val)>>(12+shift_bits);
+			}else
+			{
+				level = (((absCoeff - qp / 2) * shift_val) / (1<<12)) / (1<<shift_bits);
+				//level = ((absCoeff - qp / 2) * shift_val) >>(12+shift_bits);
+			}
+
+			if (standard == VSP_ITU_H263)
+				pDct[i] = (int16)(IClip(-127, 127, sign * level));
+			else
+				pDct [i] = (int16)(IClip(-2048, 2047, sign * level));
+			
+			nzFlag(i, level, blk_idx);
+		}//for(i = 
+	}else //JPEG
+	{
+		uint16 *quant_tbl_ptr = (uint16 *)vsp_quant_tab;
+		int32 y_blk_num = g_block_num_in_one_mcu-2;
+		int32 quant_val = 0, quant_shift = 0;
+
+		if(blk_idx >= y_blk_num)
+		{
+			quant_tbl_ptr += 64;
+		}
+			
+		for (i = 0; i < 64; i++)
+		{
+		#if defined(JPEG_ENC)
+			quant_shift	= (quant_tbl_ptr[jpeg_fw_ASIC_DCT_Matrix[i]]&0xF) + 11;
+			quant_val = ((quant_tbl_ptr[jpeg_fw_ASIC_DCT_Matrix[i]]>>4) & 0xfff) ;
+		#endif
+
+			if(pDct [i] >= 0)
+			{
+				pDct [i] = (short)((pDct[i] * quant_val + (1<<(quant_shift-1)))>>quant_shift);
+			}
+			else
+			{
+				pDct [i] = -(pDct [i] );
+				pDct [i] = (short)((-1)*((pDct[i] * quant_val + (1<<(quant_shift-1)))>>quant_shift));
+			}
+			
+			nzFlag(i, pDct [i], blk_idx);
+		}
+	}
+}
+
+void iquant(int16 *pDct, int32 Inter_mode_en, int32 blk_idx)
+{
+	int32 qp;
+	int32 QPModify;
+	int32 start_pos;
+	uint16 *quant_tbl_ptr = (uint16 *)vsp_quant_tab;
+	int32 quan_type; //0: with quant table, 1: without quant table
+	int32 i, sum = 0, k;
+	int16 coeff;
+	int32 sign;
+	int32 standard;
+
+	standard = (g_glb_reg_ptr->VSP_CFG0>>8)&0x7;
+
+	quan_type = (g_dct_reg_ptr->DCT_CONFIG >> 6) & 0x01;
+	qp = (g_dct_reg_ptr->Mpeg4_dequant_para>>16) & 0x1f;
+	QPModify = (qp & 0x01) - 1;
+
+	if(standard != VSP_JPEG)
+	{
+		if(!Inter_mode_en) //intra mb
+		{
+			int32 dc_scaler_y = (g_dct_reg_ptr->Mpeg4_dequant_para>>0) & 0x3f;
+			int32 dc_scaler_c = (g_dct_reg_ptr->Mpeg4_dequant_para>>8) & 0x3f;
+
+			if(blk_idx < 4)
+			{
+				pDct[0] = pDct[0] * dc_scaler_y;
+			}else
+			{
+				pDct[0] = pDct[0] * dc_scaler_c;
+			}
+
+			start_pos = 1;
+		}else
+		{
+			start_pos = 0;
+		}
+
+		if(quan_type == 0)
+		{
+			quant_tbl_ptr = (uint16 *)vsp_quant_tab;
+
+			if(Inter_mode_en) //inter
+			{
+				quant_tbl_ptr += 64;
+			}
+		}
+
+		if(!Inter_mode_en) //intra
+		{
+			sum ^= pDct[0];
+			k = 0;
+		}else
+		{
+			k = 1;
+		}
+	}else
+	{
+		start_pos = 0; 
+		quan_type = 0;
+
+		if(g_block_num_in_one_mcu > 1) //not 400 format
+		{
+			int32 y_blk_num = g_block_num_in_one_mcu-2;
+
+			if(blk_idx >= y_blk_num)
+			{
+				quant_tbl_ptr += 64;
+			}
+		}
+	}
+	
+	for (i = start_pos; i < 64; i++)
+	{
+		coeff = pDct[i];
+		if (coeff != 0) 
+		{	
+			sign = 1;
+			if (coeff < 0)
+			{
+				coeff = -coeff;
+				sign = -1;
+			}
+
+			if(standard != VSP_JPEG)
+			{
+				if(quan_type == 1) //h.263 quant mode, without quant table
+				{
+					pDct [i] = sign * (qp * (2 * coeff + 1) + QPModify);
+					
+				}else
+				{
+					int32 IQCoeff;
+
+					IQCoeff = ((2 * coeff + k)* quant_tbl_ptr[g_ASIC_DCT_Matrix[i]] * qp)>>4;
+					pDct [i] = (int16)(IQCoeff * sign);
+				}
+			}else
+			{
+			#if defined(JPEG_DEC)
+				pDct [i] = pDct [i] * quant_tbl_ptr [jpeg_fw_ASIC_DCT_Matrix[i]];
+			#endif
+			}
+			
+			pDct [i] = IClip(-2048, 2047, pDct [i]); 
+
+			if(standard != VSP_JPEG)
+			{
+				if(quan_type == 0)
+				{
+					sum ^= pDct [i];
+				}
+			}			
+		}		
+	}
+
+	if(standard != VSP_JPEG)
+	{
+		if(quan_type == 0) //for mismatch
+		{
+			if((sum & 1) == 0)
+			{
+				pDct[63] ^= 1;
+				pDct [63] = IClip(-2048, 2047, pDct [63]);
+			}
+		}
+	}
+}
+
+static int g_postrans [8] = 
+{
+	0, 4, 2, 6, 1, 5, 3, 7
+};
+
+//change between asic and normal order of one block 64 coefficients.
+PUBLIC void blk_asic_normal_change (int16 * pBlk_src, int16 *pBlk_dst)
+{
+	int i;
+	int16 val;
+	int index;
+
+	for (i = 0; i < 64; i++)
+	{		
+		index = g_postrans [i&7] * 8 + g_postrans [(i>>3)];
+		
+		val = pBlk_src[i];
+		pBlk_dst [index] = val;
+	}	
+}
+
+//get normal order coeff block through asic_nzflag
+PUBLIC void get_normal_order_coeffBlk (int32 * pDCTIOBuf, int iblk, int16 *pBlk_dst)
+{
+	int32 *pNZFlag = pDCTIOBuf + 192+4*iblk;
+	int32 asicNzFlag0, asicNzFlag1;
+	int32 asicNZFlag16;
+	int16 *pBlk_asic;
+	int32 asic_index, normal_index;
+
+	asicNZFlag16 = (((pNZFlag[0]>>16)&0xf)<<12)|(pNZFlag[0]&0xfff);
+	asicNzFlag0 = asicNZFlag16;
+
+	asicNZFlag16 = (((pNZFlag[1]>>16)&0xf)<<12)|(pNZFlag[1]&0xfff);
+	asicNzFlag0 |= (asicNZFlag16<<16);
+
+	asicNZFlag16 = (((pNZFlag[2]>>16)&0xf)<<12)|(pNZFlag[2]&0xfff);
+	asicNzFlag1 = asicNZFlag16;
+
+	asicNZFlag16 = (((pNZFlag[3]>>16)&0xf)<<12)|(pNZFlag[3]&0xfff);
+	asicNzFlag1 |= (asicNZFlag16<<16);
+
+	pBlk_asic = (int16 *)pDCTIOBuf + 64*iblk;
+
+	for(asic_index = 0; asic_index <64; asic_index++)
+	{
+		int32 current_coeff_not_zero = TRUE;
+		normal_index = g_postrans [asic_index&7] * 8 + g_postrans [(asic_index>>3)];
+
+		if(asic_index < 32)
+		{
+			current_coeff_not_zero = (asicNzFlag0>>asic_index)&0x01;
+		}else
+		{
+			current_coeff_not_zero = (asicNzFlag1>>asic_index)&0x01;
+		}
+		
+		if(current_coeff_not_zero)
+		{
+			pBlk_dst[normal_index] = pBlk_asic[asic_index];
+		}
+	}
+}
+
+/**---------------------------------------------------------------------------*
+**                         Compiler Flag                                      *
+**---------------------------------------------------------------------------*/
+#ifdef   __cplusplus
+    }
+#endif
+/**---------------------------------------------------------------------------*/
+// End 

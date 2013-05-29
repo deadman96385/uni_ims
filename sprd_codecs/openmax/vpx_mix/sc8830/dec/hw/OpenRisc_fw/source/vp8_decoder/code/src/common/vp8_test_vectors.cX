@@ -1,0 +1,1614 @@
+
+#include "vp8_test_vectors.h"
+#include "vp8_mode_count.h"
+#include "vp8_entropy_mode.h"
+#include "buffer_global.h"
+//#include "vp8dec_detokenize.h"
+
+#define HEX
+
+#ifdef MCA_TV_SPLIT
+void MCASplitInit()
+{
+	if( (g_nFrame_dec%FRAME_X) == 0 )
+	{
+		unsigned char s[100];
+		sprintf(s, "../../test_vectors/mca/frame_%03d/ref_frame.txt", g_nFrame_dec);
+        assert(NULL != (g_fp_ref_frm0_tv = fopen(s, "w")));
+		sprintf(s, "../../test_vectors/mca/frame_%03d/mca_in_luma.txt", g_nFrame_dec);
+		assert(NULL != (g_fp_vp8_mca_in_luma_tv = fopen(s, "w")));
+		sprintf(s, "../../test_vectors/mca/frame_%03d/mca_in_chroma.txt", g_nFrame_dec);
+		assert(NULL != (g_fp_vp8_mca_in_chroma_tv = fopen(s, "w")));
+		sprintf(s, "../../test_vectors/mca/frame_%03d/mca_hor_out.txt", g_nFrame_dec);
+		assert(NULL != (g_fp_mca_hor_tv = fopen(s, "w")));
+		sprintf(s, "../../test_vectors/mca/frame_%03d/mca_out.txt", g_nFrame_dec);
+		assert(NULL != (g_fp_mca_tv = fopen(s, "w")));
+		sprintf(s, "../../test_vectors/mca/frame_%03d/mca_para.txt", g_nFrame_dec);
+		assert(NULL != (g_fp_mca_para_tv = fopen(s, "w")));
+	}
+}
+
+void MCASplitDeinit()
+{
+	if( ((g_nFrame_dec%FRAME_X) == (FRAME_X-1)) || ((g_nFrame_dec+1) == g_input->frame_num_dec) )
+	{
+		fclose(g_fp_ref_frm0_tv);
+		fclose(g_fp_vp8_mca_in_luma_tv);
+		fclose(g_fp_vp8_mca_in_chroma_tv);
+		fclose(g_fp_mca_hor_tv);
+		fclose(g_fp_mca_tv);
+		fclose(g_fp_mca_para_tv);
+	}
+}
+#endif
+
+void Print_Stream_Offset(int offset, uint8* comment)
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_COUNT)
+{
+//	FPRINTF_VLD (g_fp_vp8_bs_off_tv, "Frame_num=%d\n", g_nFrame_dec);
+
+	FPRINTF_VLD (g_fp_vp8_bs_off_tv, "offset_slice=%d, offset_bits=%d\n", offset, 0);
+	//FPRINTF_VLD (g_fp_vp8_bs_off_tv, "\t\t//%s\n", comment);
+}
+}
+
+
+void Print_Frame_Header_CFG()
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_FW)
+{
+	//uint i;
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "//frame_cnt=%d\n", g_nFrame_dec);
+
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "work_mode=%x\n", 0);	// 1 : encode, 0 : decode
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "standard=%x\n", 2);	// 2:VP8, 4:H264
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "max_mb_x=%x\n", ((g_fh_reg_ptr->FH_CFG1+15)&0x3fff)>>4);
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "max_mb_y=%x\n", (((g_fh_reg_ptr->FH_CFG1>>14)+15)&0x3fff)>>4);
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "max_mb_num=%x\n", ((((g_fh_reg_ptr->FH_CFG1>>14)+15)&0x3fff)>>4) * (((g_fh_reg_ptr->FH_CFG1+15)&0x3fff)>>4));
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "key_frame=%x\n", !(g_fh_reg_ptr->FH_CFG0&0x1));
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "mb_no_skip_coeff=%x\n", (g_fh_reg_ptr->FH_CFG0>>31));
+//FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "segmentation_enabled=%x\n", (g_fh_reg_ptr->FH_CFG2>>0)&0x1);
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "update_mb_segmentation_map=%x\n", (g_fh_reg_ptr->FH_CFG2>>1)&0x1);
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "dct_part_nbr=%x\n", 1<<((g_fh_reg_ptr->FH_CFG0>>19)&0x3));
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "ref_sign_bias=%x\n", ((g_fh_reg_ptr->FH_CFG0>>28)&0x3)<<2);
+	//FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "ref_sign_bias_alternate=%x\n", (g_fh_reg_ptr->FH_CFG0>>29)&0x1);
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "prob_intra=%x\n", (g_fh_reg_ptr->FH_CFG8>>8)&0xff);
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "prob_last=%x\n", (g_fh_reg_ptr->FH_CFG8>>16)&0xff);
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "prob_gf=%x\n", (g_fh_reg_ptr->FH_CFG8>>24)&0xff);
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "prob_skip_false=%x\n", (g_fh_reg_ptr->FH_CFG8>>0)&0xff);
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "dct_part_offset=%x\n", g_fh_reg_ptr->FH_CFG11 + ((bs_start_addr-BS_START_ADDR)&0x7));
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "base_address=%x\n", ((bs_start_addr-BS_START_ADDR)&~7));	// DWORD aligned, residue put to dct_part_offset
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "bd_range=%x\n", (g_fh_reg_ptr->FH_CFG12>>0)&0xff);
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "bd_value=%x\n", (g_fh_reg_ptr->FH_CFG12>>8)&0xffff);
+	FPRINTF_VLD (g_fp_vp8_fh_cfg_tv, "bd_count=%x\n", (g_fh_reg_ptr->FH_CFG12>>24)&0xff);
+}
+}
+
+
+void Print_PPA_CFG(MACROBLOCKD *xd, VP8_COMMON *pc)
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_FW)
+{
+	int z;
+	int QIndex;
+	int baseline_filter_level;
+//	FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "//frame_cnt=%d\n", g_nFrame_dec);
+	
+	FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "work_mode=%x\n", 0);	// 1 : encode, 0 : decode
+	FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "standard=%x\n", 2);	// 2:VP8, 4:H264
+	FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "max_mb_x=%x\n", ((g_fh_reg_ptr->FH_CFG1+15)&0x3fff)>>4);
+	FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "max_mb_y=%x\n", (((g_fh_reg_ptr->FH_CFG1>>14)+15)&0x3fff)>>4);
+	FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "max_mb_num=%x\n", ((((g_fh_reg_ptr->FH_CFG1>>14)+15)&0x3fff)>>4) * (((g_fh_reg_ptr->FH_CFG1+15)&0x3fff)>>4));
+	FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "frame_type=%x\n", (g_fh_reg_ptr->FH_CFG0&0x1));
+	FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "filter_type=%x\n", pc->filter_type);
+	FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "sharpness_level=%x\n", pc->sharpness_level);
+	FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "mode_ref_lf_delta_enabled=%x\n", xd->mode_ref_lf_delta_enabled);
+
+	for(z=0; z<MAX_MB_SEGMENTS; z++)	// For 4 segment_id
+	{
+		if (xd->segmentation_enabled)
+		{
+			// Abs Value
+			if (xd->mb_segement_abs_delta == SEGMENT_ABSDATA)
+			{
+				QIndex = xd->segment_feature_data[MB_LVL_ALT_Q][z];
+				baseline_filter_level = xd->segment_feature_data[MB_LVL_ALT_LF][z];
+			}
+			// Delta Value
+			else
+			{
+				QIndex = pc->base_qindex + xd->segment_feature_data[MB_LVL_ALT_Q][z];
+				QIndex = (QIndex >= 0) ? ((QIndex <= MAXQ) ? QIndex : MAXQ) : 0;    // Clamp to valid range
+				baseline_filter_level = pc->filter_level + xd->segment_feature_data[MB_LVL_ALT_LF][z];
+				baseline_filter_level = (baseline_filter_level >= 0) ? ((baseline_filter_level <= MAX_LOOP_FILTER) ? baseline_filter_level : MAX_LOOP_FILTER) : 0;  // Clamp to valid range
+			}
+		}
+		else
+		{
+			QIndex = pc->base_qindex;
+			baseline_filter_level = pc->filter_level;
+		}
+		
+		FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "QP_Y1_DC_%02d=%x\n", z, pc->Y1dequant[QIndex][0][0]);
+		FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "QP_Y1_AC_%02d=%x\n", z, pc->Y1dequant[QIndex][0][1]);
+		FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "QP_Y2_DC_%02d=%x\n", z, pc->Y2dequant[QIndex][0][0]);
+		FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "QP_Y2_AC_%02d=%x\n", z, pc->Y2dequant[QIndex][0][1]);
+		FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "QP_UV_DC_%02d=%x\n", z, pc->UVdequant[QIndex][0][0]);
+		FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "QP_UV_AC_%02d=%x\n", z, pc->UVdequant[QIndex][0][1]);
+		FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "baseline_fl_%02d=%x\n", z, baseline_filter_level);
+		FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "ref_lf_deltas_%02d=%x\n", z, xd->ref_lf_deltas[z]);
+		FPRINTF_VLD (g_fp_vp8_ppa_cfg_tv, "mode_lf_deltas_%02d=%x\n", z, xd->mode_lf_deltas[z]);
+	}
+}
+}
+
+
+void Print_tbuf_Probs(VP8D_COMP *pbi)
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_FW)
+{
+	int i, j, k;
+	uint32 temp = 0;
+    VP8_COMMON *const pc = & pbi->common;
+    MACROBLOCKD *const xd  = & pbi->mb;
+	vp8_prob *mvc = (vp8_prob *)pc->fc.mvc;
+	//int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	//int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+	//FPRINTF (g_fp_vp8_prob_tv, "frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+//	FPRINTF_VLD (g_fp_vp8_prob_tv, "frame_cnt=%d\n", g_nFrame_dec);
+
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", (*((uint32*)xd->mb_segment_tree_probs))&0x00ffffff);
+//	temp |= (((xd->mb_segment_tree_probs[2]&0xff)<<16) | ((xd->mb_segment_tree_probs[1]&0xff)<<8) | (xd->mb_segment_tree_probs[0]&0xff));
+//	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", temp);
+//	temp = 0;
+
+	for(i=0; i<6; i++)
+	{
+		for(j=0; j<4; j++)
+			temp |= ((vp8_mode_contexts[i][j]&0xff)<<(j*8));
+		FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", temp);
+		temp = 0;
+	}
+ 
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", (*((uint32*)vp8_mbsplit_probs))&0x00ffffff);
+
+	for(i=0; i<5; i++)
+		FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", (*((uint32*)vp8_sub_mv_ref_prob2[i]))&0x00ffffff);
+
+	for(i=0; i<2; i++)
+	{
+		for(j=0; j<4; j++)
+		{
+			FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", *((uint32*)mvc));
+			mvc+=4;
+		}
+		FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", (*((uint32*)mvc))&0x00ffffff);
+		mvc+=3;
+	}
+
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", *((uint32*)pc->kf_ymode_prob));
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", *((uint32*)pc->fc.ymode_prob));
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", (*((uint32*)pc->kf_uv_mode_prob))&0x00ffffff);
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", (*((uint32*)pc->fc.uv_mode_prob))&0x00ffffff);
+	for(i=0; i<10; i++)
+		for(j=0; j<10; j++)
+		{
+			FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", *((uint32*)(pc->kf_bmode_prob[i][j]+0)));
+			FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", *((uint32*)(pc->kf_bmode_prob[i][j]+4)));
+			FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", (*((uint32*)(pc->kf_bmode_prob[i][j]+8)))&0x000000ff);
+		}
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", *((uint32*)(pc->fc.bmode_prob+0)));
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", *((uint32*)(pc->fc.bmode_prob+4)));
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", (*((uint32*)(pc->fc.bmode_prob+8)))&0x000000ff);
+
+	for(k=0; k<4; k++)
+		for(i=0; i<8; i++)
+			for(j=0; j<3; j++)
+			{
+				FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", *((uint32*)(pc->fc.coef_probs[k][i][j]+0)));
+				FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", *((uint32*)(pc->fc.coef_probs[k][i][j]+4)));
+				FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", (*((uint32*)(pc->fc.coef_probs[k][i][j]+8)))&0x00ffffff);
+			}
+
+	//FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", (*((uint32*)vp8d_token_extra_bits2[DCT_VAL_CATEGORY1].Probs))&0x0000ffff);
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", 0x0000009F);	// Pcat1
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", 0x000091A5);	// Pcat2
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", 0x008C94AD);	// Pcat3
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", 0x878C9BB0);	// Pcat4
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", 0x00000000);	// Pcat4
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", 0x868D9DB4);	// Pcat5
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", 0x00000082);	// Pcat5
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", 0xE6F3FEFE);	// Pcat6
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", 0x8C99B1C4);	// Pcat6
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", 0x00818285);	// Pcat6
+	FPRINTF_VLD (g_fp_vp8_prob_tv, "%08x\n", g_fh_reg_ptr->FH_CFG8);
+}
+}
+
+
+void Print_Partition_Buf(MACROBLOCKD* xd)
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_FW)
+{
+	int z;
+	uint32 temp = 0;
+	int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+	
+	FPRINTF_VLD (g_fp_vp8_part_buf_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+
+	if (xd->mbmi.ref_frame == INTRA_FRAME) // Intra MB
+	{
+		FPRINTF_VLD (g_fp_vp8_part_buf_tv, "%08x", temp);
+		temp |= (xd->mbmi.segment_id << 0);		// [1:0]
+		temp |= (xd->mbmi.mb_skip_coeff << 2);	// [2]
+		temp |= (0 << 3);						// [3]		Is_inter_MB
+		temp |= (xd->mbmi.mode << 4);			// [7:4]	Intra_y_mode
+		temp |= (xd->mbmi.uv_mode << 8);		// [9:8]	Intra_uv_mode
+		// 6'b0
+		temp |= (mb_row << 16);					// [22:16]	mb_y
+		temp |= (mb_col << 23);					// [29:23]	mb_x
+		FPRINTF_VLD (g_fp_vp8_part_buf_tv, "%08x\n", temp);
+		temp = 0;
+
+		FPRINTF_VLD (g_fp_vp8_part_buf_tv, "%08x", g_isyn_buf_ptr->ISYN_CFG3);
+		FPRINTF_VLD (g_fp_vp8_part_buf_tv, "%08x\n", g_isyn_buf_ptr->ISYN_CFG2);
+
+		for(z=0; z<7; z++)
+		{
+			FPRINTF_VLD (g_fp_vp8_part_buf_tv, "%08x", temp);
+			FPRINTF_VLD (g_fp_vp8_part_buf_tv, "%08x\n", temp);
+		}
+	}
+	else
+	{
+		FPRINTF_VLD (g_fp_vp8_part_buf_tv, "%08x", temp);
+		temp |= (xd->mbmi.segment_id << 0);		// [1:0]
+		temp |= (xd->mbmi.mb_skip_coeff << 2);	// [2]
+		temp |= (1 << 3);						// [3]		Is_inter_MB
+		temp |= ((xd->mbmi.mode) << 4);			// [7:4]	mv_mode
+		if (xd->mbmi.mode == SPLITMV)
+			temp |= (xd->mbmi.partitioning << 8);	// [9:8]	mv_split_mode
+		temp |= (xd->mbmi.ref_frame << 10);		// [11:10]	ref_frame
+		// 4'b0
+		temp |= (mb_row << 16);					// [22:16]	mb_y
+		temp |= (mb_col << 23);					// [29:23]	mb_x
+		FPRINTF_VLD (g_fp_vp8_part_buf_tv, "%08x\n", temp);
+		temp = 0;
+
+		for(z=0; z<16; z+=2)
+		{
+			temp |= ( ((xd->mode_info_context->bmi[z+1].mv.as_mv.row&0x1fff)<<0) |
+				((xd->mode_info_context->bmi[z+1].mv.as_mv.col&0x1fff)<<13) );
+			//temp |= (g_mca_reg_ptr->VP8_MCA_MV[z+1]&0xffffff);
+			if (xd->mbmi.mode == SPLITMV)
+				temp |= ((xd->mode_info_context->bmi[z+1].mode) << 28);
+			FPRINTF_VLD (g_fp_vp8_part_buf_tv, "%08x", temp);
+			temp = 0;
+			temp |= ( ((xd->mode_info_context->bmi[z].mv.as_mv.row&0x1fff)<<0) |
+				((xd->mode_info_context->bmi[z].mv.as_mv.col&0x1fff)<<13) );
+			//temp |= (g_mca_reg_ptr->VP8_MCA_MV[z]&0xffffff);
+			if (xd->mbmi.mode == SPLITMV)
+				temp |= ((xd->mode_info_context->bmi[z].mode) << 28);
+			FPRINTF_VLD (g_fp_vp8_part_buf_tv, "%08x\n", temp);
+			temp = 0;
+		}
+	}
+}
+}
+
+
+int little_endian_map[4] = {1, 0, 3, 2};
+void Print_VLD_Out(MACROBLOCKD *xd)
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_DCT)
+{
+	int i, block_y, block_x, id, need_hadamard_trans;
+	int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+	unsigned __int64 temp = 0;
+	uint32 shift;
+	
+	FPRINTF_VLD (g_fp_vld_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+
+	need_hadamard_trans= (xd->mbmi.mode != B_PRED && xd->mbmi.mode != SPLITMV);
+	for( block_y=0; block_y<4; block_y++)	// y
+	{
+		for( i=0; i<4; i++)
+		{
+			for( block_x=0; block_x<4; block_x++)
+			{
+				id = block_x+block_y*4;
+#ifdef HEX
+				FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[id].qcoeff[i*4+3])&0xffff);
+				FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[id].qcoeff[i*4+2])&0xffff);
+				FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[id].qcoeff[i*4+1])&0xffff);
+				FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[id].qcoeff[i*4+0])&0xffff);
+#else
+				FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[id].qcoeff[i*4+3]));
+				FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[id].qcoeff[i*4+2]));
+				FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[id].qcoeff[i*4+1]));
+				FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[id].qcoeff[i*4+0]));
+#endif
+/*				if(need_hadamard_trans && i==0)
+#ifdef HEX
+					FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[24].qcoeff[id])&0xffff);
+#else
+					FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[24].qcoeff[id]));
+#endif
+				else
+#ifdef HEX
+					FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[id].qcoeff[i*4])&0xffff);
+#else
+					FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[id].qcoeff[i*4]));
+#endif*/
+				FPRINTF_VLD (g_fp_vld_tv, "\n");
+			}
+		}
+	}
+
+	for( block_y=0; block_y<4; block_y++)	// uv
+	{
+		for( i=0; i<4; i++)
+		{
+			for( block_x=0; block_x<2; block_x++)
+			{
+				id = 16+block_x+block_y*2;
+#ifdef HEX
+				FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[id].qcoeff[i*4+3])&0xffff);
+				FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[id].qcoeff[i*4+2])&0xffff);
+				FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[id].qcoeff[i*4+1])&0xffff);
+				FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[id].qcoeff[i*4+0])&0xffff);
+#else
+				FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[id].qcoeff[i*4+3]));
+				FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[id].qcoeff[i*4+2]));
+				FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[id].qcoeff[i*4+1]));
+				FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[id].qcoeff[i*4+0]));
+#endif
+				FPRINTF_VLD (g_fp_vld_tv, "\n");
+			}
+		}
+	}
+
+	for( i=0; i<4; i++)		// Y DC
+	{
+#ifdef HEX
+		FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[24].qcoeff[i*4+3])&0xffff);
+		FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[24].qcoeff[i*4+2])&0xffff);
+		FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[24].qcoeff[i*4+1])&0xffff);
+		FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[24].qcoeff[i*4+0])&0xffff);
+#else
+		FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[24].qcoeff[i*4+3]));
+		FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[24].qcoeff[i*4+2]));
+		FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[24].qcoeff[i*4+1]));
+		FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[24].qcoeff[i*4+0]));
+#endif
+		FPRINTF_VLD (g_fp_vld_tv, "\n");
+	}
+
+	for( i=0; i<2; i++)		// UV DC
+	{
+#ifdef HEX
+		FPRINTF_VLD (g_fp_vld_tv, "%04x", 0);
+		FPRINTF_VLD (g_fp_vld_tv, "%04x", 0);
+		FPRINTF_VLD (g_fp_vld_tv, "%04x", 0);
+		FPRINTF_VLD (g_fp_vld_tv, "%04x", 0);
+		/*FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[19+i*4].qcoeff[0])&0xffff);
+		FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[18+i*4].qcoeff[0])&0xffff);
+		FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[17+i*4].qcoeff[0])&0xffff);
+		FPRINTF_VLD (g_fp_vld_tv, "%04x", (xd->block[16+i*4].qcoeff[0])&0xffff);*/
+#else
+		FPRINTF_VLD (g_fp_vld_tv, "%4d", 0);
+		FPRINTF_VLD (g_fp_vld_tv, "%4d", 0);
+		FPRINTF_VLD (g_fp_vld_tv, "%4d", 0);
+		FPRINTF_VLD (g_fp_vld_tv, "%4d", 0);
+		/*FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[19+i*4].qcoeff[0]));
+		FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[18+i*4].qcoeff[0]));
+		FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[17+i*4].qcoeff[0]));
+		FPRINTF_VLD (g_fp_vld_tv, "%4d", (xd->block[16+i*4].qcoeff[0]));*/
+#endif
+		FPRINTF_VLD (g_fp_vld_tv, "\n");
+	}
+
+		
+	for( block_y=0; block_y<4; block_y++)	// y nz-flag
+	{
+		for( i=0; i<4; i++)
+		{
+			for( block_x=0; block_x<4; block_x++)
+			{
+				id = block_x+block_y*4;
+				shift = 4*block_x + i*16;
+
+				temp |= ((__int64)(xd->block[id].qcoeff[i*4+0] != 0) << (shift+0));
+				temp |= ((__int64)(xd->block[id].qcoeff[i*4+1] != 0) << (shift+1));
+				temp |= ((__int64)(xd->block[id].qcoeff[i*4+2] != 0) << (shift+2));
+				temp |= ((__int64)(xd->block[id].qcoeff[i*4+3] != 0) << (shift+3));
+			}
+		}
+		FPRINTF_VLD (g_fp_vld_tv, "%016I64x\n", (__int64)temp);
+		temp = 0;
+	}
+
+	for( block_y=0; block_y<4; block_y++)	// uv nz-flag
+	{
+		for( i=0; i<4; i++)
+		{
+			for( block_x=0; block_x<2; block_x++)
+			{
+				id = 16+block_x+block_y*2;
+				shift = 4*block_x + ((block_y%2)*4+i)*8;
+				
+				temp |= ((__int64)(xd->block[id].qcoeff[i*4+0] != 0) << (shift+0));
+				temp |= ((__int64)(xd->block[id].qcoeff[i*4+1] != 0) << (shift+1));
+				temp |= ((__int64)(xd->block[id].qcoeff[i*4+2] != 0) << (shift+2));
+				temp |= ((__int64)(xd->block[id].qcoeff[i*4+3] != 0) << (shift+3));
+			}
+		}
+		if(block_y%2)
+		{
+			FPRINTF_VLD (g_fp_vld_tv, "%016I64x\n", (__int64)temp);
+			temp = 0;
+		}
+	}
+
+	// YUV DC nz-flag
+	for( i=0; i<16; i++)
+		temp |= ((__int64)(xd->block[24].qcoeff[i] != 0) << i);
+	/*for( i=0; i<2; i++)
+	{
+		temp |= ((__int64)(xd->block[16+4*i].qcoeff[0] != 0) << (32+16*i));
+		temp |= ((__int64)(xd->block[17+4*i].qcoeff[0] != 0) << (33+16*i));
+		temp |= ((__int64)(xd->block[18+4*i].qcoeff[0] != 0) << (34+16*i));
+		temp |= ((__int64)(xd->block[19+4*i].qcoeff[0] != 0) << (35+16*i));
+	}*/
+	FPRINTF_VLD (g_fp_vld_tv, "%016I64x\n", (__int64)temp);
+	temp = 0;
+}
+}
+
+
+void Print_REF_Frame(YV12_BUFFER_CONFIG *frame_to_show, FILE *fp)
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_MCA)
+{
+	int block_x, offset;//, block_y, mb_offset;
+	int mb_row;
+	int mb_col;
+
+	FPRINTF_MCA (fp, "//frame_cnt=%d, width=%d, height=%d\n", g_nFrame_dec, frame_to_show->y_width, frame_to_show->y_height);
+	for( mb_row=0; mb_row<frame_to_show->y_height; mb_row++)
+	{
+		for( mb_col=0; mb_col<frame_to_show->y_width; mb_col+=8)
+		{
+			for( block_x=7; block_x>=0; block_x--)
+			{
+				offset = mb_row*frame_to_show->y_stride + mb_col + block_x;
+#ifdef HEX
+				FPRINTF_MCA (fp, "%02x", (frame_to_show->y_buffer[offset]&0xff));
+#else
+				FPRINTF_MCA (fp, "%4d", (frame_to_show->y_buffer[offset]));
+#endif
+			}
+			FPRINTF_MCA (fp, "\n");
+		}
+	}
+	for( mb_row=0; mb_row<frame_to_show->uv_height; mb_row++)
+	{
+		for( mb_col=0; mb_col<frame_to_show->uv_width; mb_col+=4)
+		{
+			for( block_x=3; block_x>=0; block_x--)
+			{
+				offset = mb_row*frame_to_show->uv_stride + mb_col + block_x;
+#ifdef HEX
+				FPRINTF_MCA (fp, "%02x", (frame_to_show->v_buffer[offset]&0xff));
+				FPRINTF_MCA (fp, "%02x", (frame_to_show->u_buffer[offset]&0xff));
+#else
+				FPRINTF_MCA (fp, "%4d", (frame_to_show->v_buffer[offset]));
+				FPRINTF_MCA (fp, "%4d", (frame_to_show->u_buffer[offset]));
+#endif
+			}
+			FPRINTF_MCA (fp, "\n");
+		}
+	}
+/*	for( mb_row=0; mb_row<frame_to_show->uv_height; mb_row++)
+	{
+		for( mb_col=0; mb_col<frame_to_show->uv_width; mb_col+=8)
+		{
+			for( block_x=7; block_x>=0; block_x--)
+			{
+				offset = mb_row*frame_to_show->uv_stride + mb_col + block_x;
+#ifdef HEX
+				FPRINTF_MCA (fp, "%02x", (frame_to_show->v_buffer[offset]&0xff));
+#else
+				FPRINTF_MCA (fp, "%4d", (frame_to_show->v_buffer[offset]));
+#endif
+			}
+			FPRINTF_MCA (fp, "\n");
+		}
+	}*/
+}
+}
+
+
+void Print_MCA_In(MACROBLOCKD *xd, uint32 filter_type)
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_MCA)
+{
+	int i, j, block_y, block_x;
+	int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+	int pre_stride = xd->block[0].pre_stride;
+	int xoffset[4];
+    int yoffset[4];
+	unsigned char *ptr[4];
+
+	if (xd->mbmi.ref_frame == INTRA_FRAME)	// Intra
+		return;
+
+	// scan order in reading order
+	FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+	FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+	/*if (xd->mbmi.ref_frame == INTRA_FRAME)	// Intra
+    {
+		for( block_y=0; block_y<36; block_y++)	// y
+#ifdef HEX
+			FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "%072x\n", 0);
+#else
+			FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "%036d\n", 0);
+#endif
+		for( i=0; i<2; i++)
+		for( block_y=0; block_y<18; block_y++)	// uv
+#ifdef HEX
+			FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "%036x\n", 0);
+#else
+			FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "%018d\n", 0);
+#endif
+	}
+	else*/ if(xd->mbmi.mode != SPLITMV)	// 16x16
+	{
+		xoffset[0] = ((xd->mbmi.mv.as_mv.col & 7)!=0);
+		yoffset[0] = ((xd->mbmi.mv.as_mv.row & 7)!=0);
+        ptr[0] = xd->pre.y_buffer + (xd->mbmi.mv.as_mv.row >> 3) * pre_stride + (xd->mbmi.mv.as_mv.col >> 3);
+		ptr[0] = ptr[0] - (2*filter_type*yoffset[0]*pre_stride) - 2*filter_type*xoffset[0];
+		xoffset[0] = 16+(1+4*filter_type)*xoffset[0];
+		yoffset[0] = 16+(1+4*filter_type)*yoffset[0];
+		//FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "mv_x = %d, mv_y = %d\n", (xd->mbmi.mv.as_mv.col>>3), (xd->mbmi.mv.as_mv.row>>3));
+
+		for( block_y=0; block_y<36; block_y++)		// y
+		{
+			for( block_x=0; block_x<36; block_x++)
+			{
+				if( (block_y < yoffset[0]) && (block_x < xoffset[0]) )
+#ifdef HEX
+					FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "%02x", (ptr[0])[block_x + block_y*pre_stride]);
+#else
+					FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "%4d", (ptr[0])[block_x + block_y*pre_stride]);
+#endif
+				else
+#ifdef HEX
+					FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "%02x", 0);
+#else
+					FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "%4d", 0);
+#endif
+			}
+			FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "\n");
+		}
+
+		pre_stride >>= 1;
+		ptr[0] = xd->pre.u_buffer;
+		ptr[1] = xd->pre.v_buffer;
+		for(i=0; i<2; i++)	// uv
+		{
+			xoffset[i] = ((xd->block[16].bmi.mv.as_mv.col & 7)!=0);
+			yoffset[i] = ((xd->block[16].bmi.mv.as_mv.row & 7)!=0);
+			ptr[i] += (xd->block[16].bmi.mv.as_mv.row >> 3) * pre_stride + (xd->block[16].bmi.mv.as_mv.col >> 3);
+			ptr[i] = ptr[i] - (2*filter_type*yoffset[i]*pre_stride) - 2*filter_type*xoffset[i];
+			xoffset[i] = 8+(1+4*filter_type)*xoffset[i];
+			yoffset[i] = 8+(1+4*filter_type)*yoffset[i];
+			//FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "mv_x = %d, mv_y = %d\n", (xd->block[16].bmi.mv.as_mv.col>>3), (xd->block[16].bmi.mv.as_mv.row>>3));
+			
+			for( block_y=0; block_y<18; block_y++)
+			{
+				for( block_x=0; block_x<18; block_x++)
+				{
+					if( (block_y < yoffset[i]) && (block_x < xoffset[i]) )
+#ifdef HEX
+						FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "%02x", (ptr[i])[block_x + block_y*pre_stride]);
+#else
+						FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "%4d", (ptr[i])[block_x + block_y*pre_stride]);
+#endif
+					else
+#ifdef HEX
+						FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "%02x", 0);
+#else
+						FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "%4d", 0);
+#endif
+				}
+				FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "\n");
+			}
+		}
+	}
+	else if(xd->mbmi.partitioning < 3)
+	{
+		const int bbb[4] = {0, 2, 8, 10};
+		BLOCKD *d[2];
+
+		for (i = 0; i < 4; i+=2)		// y
+		{
+			for(j=0; j<2; j++)
+			{
+				d[j] = &xd->block[bbb[i+j]];
+				xoffset[j] = (((d[j])->bmi.mv.as_mv.col & 7)!=0);
+				yoffset[j] = (((d[j])->bmi.mv.as_mv.row & 7)!=0);
+				ptr[j] = *((d[j])->base_pre) + (d[j])->pre + ((d[j])->bmi.mv.as_mv.row >> 3) * (d[j])->pre_stride + ((d[j])->bmi.mv.as_mv.col >> 3);
+				ptr[j] = ptr[j] - (2*filter_type*yoffset[j]*(d[j])->pre_stride) - 2*filter_type*xoffset[j];
+				xoffset[j] = 8+(1+4*filter_type)*xoffset[j];
+				yoffset[j] = 8+(1+4*filter_type)*yoffset[j];
+			}
+			//FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "Block %d, mv_x = %d, mv_y = %d\n", i, (d->bmi.mv.as_mv.col>>3), (d->bmi.mv.as_mv.row>>3));
+		
+			for( block_y=0; block_y<18; block_y++)
+			{
+				for (j=0; j<2; j++)
+				{
+					for( block_x=0; block_x<18; block_x++)
+					{
+						if( (block_y < yoffset[j]) && (block_x < xoffset[j]) )
+#ifdef HEX
+							FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "%02x", (ptr[j])[block_x + block_y*(d[j])->pre_stride]);
+#else
+							FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "%4d", (ptr[j])[block_x + block_y*(d[j])->pre_stride]);
+#endif
+						else
+#ifdef HEX
+							FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "%02x", 0);
+#else
+							FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "%4d", 0);
+#endif
+					}
+				}
+				FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "\n");
+			}
+		}
+
+		for (i = 16; i < 24; i+=2)		// uv
+		{
+			for(j=0; j<2; j++)
+			{
+				d[j] = &xd->block[i+j];
+				xoffset[j] = (((d[j])->bmi.mv.as_mv.col & 7)!=0);
+				yoffset[j] = (((d[j])->bmi.mv.as_mv.row & 7)!=0);
+				ptr[j] = *((d[j])->base_pre) + (d[j])->pre + ((d[j])->bmi.mv.as_mv.row >> 3) * (d[j])->pre_stride + ((d[j])->bmi.mv.as_mv.col >> 3);
+				ptr[j] = ptr[j] - (2*filter_type*yoffset[j]*(d[j])->pre_stride) - 2*filter_type*xoffset[j];
+				xoffset[j] = 4+(1+4*filter_type)*xoffset[j];
+				yoffset[j] = 4+(1+4*filter_type)*yoffset[j];
+			}
+			//FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "Block %d, mv_x = %d, mv_y = %d\n", i, (d->bmi.mv.as_mv.col>>3), (d->bmi.mv.as_mv.row>>3));
+			//FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "Block %d, mv_x = %d, mv_y = %d\n", i+1, (d2->bmi.mv.as_mv.col>>3), (d2->bmi.mv.as_mv.row>>3));
+			
+			for( block_y=0; block_y<9; block_y++)
+			{
+				for (j=0; j<2; j++)
+				{
+					for( block_x=0; block_x<9; block_x++)
+					{
+						if( (block_y < yoffset[j]) && (block_x < xoffset[j]) )
+#ifdef HEX
+							FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "%02x", (ptr[j])[block_x + block_y*(d[j])->pre_stride]);
+#else
+							FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "%4d", (ptr[j])[block_x + block_y*(d[j])->pre_stride]);
+#endif
+						else
+#ifdef HEX
+							FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "%02x", 0);
+#else
+							FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "%4d", 0);
+#endif
+					}
+				}
+				FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "\n");
+			}
+		}
+	}
+	else
+	{
+		BLOCKD *d[4];
+		for (i = 0; i < 16; i+=4)		// y
+		{
+			for(j=0; j<4; j++)
+			{
+				d[j] = &xd->block[i+j];
+				xoffset[j] = (((d[j])->bmi.mv.as_mv.col & 7)!=0);
+				yoffset[j] = (((d[j])->bmi.mv.as_mv.row & 7)!=0);
+				ptr[j] = *((d[j])->base_pre) + (d[j])->pre + ((d[j])->bmi.mv.as_mv.row >> 3) * (d[j])->pre_stride + ((d[j])->bmi.mv.as_mv.col >> 3);
+				ptr[j] = ptr[j] - (2*filter_type*yoffset[j]*(d[j])->pre_stride) - 2*filter_type*xoffset[j];
+				xoffset[j] = 4+(1+4*filter_type)*xoffset[j];
+				yoffset[j] = 4+(1+4*filter_type)*yoffset[j];
+			}
+			//FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "Block %d, mv_x = %d, mv_y = %d\n", i, (d->bmi.mv.as_mv.col>>3), (d->bmi.mv.as_mv.row>>3));
+			//FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "Block %d, mv_x = %d, mv_y = %d\n", i+1, (d2->bmi.mv.as_mv.col>>3), (d2->bmi.mv.as_mv.row>>3));
+			
+			for( block_y=0; block_y<9; block_y++)
+			{
+				for (j=0; j<4; j++)
+				{
+					for( block_x=0; block_x<9; block_x++)
+					{
+						if( (block_y < yoffset[j]) && (block_x < xoffset[j]) )
+#ifdef HEX
+							FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "%02x", (ptr[j])[block_x + block_y*(d[j])->pre_stride]);
+#else
+							FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "%4d", (ptr[j])[block_x + block_y*(d[j])->pre_stride]);
+#endif
+						else
+#ifdef HEX
+							FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "%02x", 0);
+#else
+							FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "%4d", 0);
+#endif
+					}
+				}
+				FPRINTF_MCA (g_fp_vp8_mca_in_luma_tv, "\n");
+			}
+		}
+
+		for (i = 16; i < 24; i+=2)		// uv
+		{
+			for(j=0; j<2; j++)
+			{
+				d[j] = &xd->block[i+j];
+				xoffset[j] = (((d[j])->bmi.mv.as_mv.col & 7)!=0);
+				yoffset[j] = (((d[j])->bmi.mv.as_mv.row & 7)!=0);
+				ptr[j] = *((d[j])->base_pre) + (d[j])->pre + ((d[j])->bmi.mv.as_mv.row >> 3) * (d[j])->pre_stride + ((d[j])->bmi.mv.as_mv.col >> 3);
+				ptr[j] = ptr[j] - (2*filter_type*yoffset[j]*(d[j])->pre_stride) - 2*filter_type*xoffset[j];
+				xoffset[j] = 4+(1+4*filter_type)*xoffset[j];
+				yoffset[j] = 4+(1+4*filter_type)*yoffset[j];
+			}
+			//FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "Block %d, mv_x = %d, mv_y = %d\n", i, (d->bmi.mv.as_mv.col>>3), (d->bmi.mv.as_mv.row>>3));
+			//FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "Block %d, mv_x = %d, mv_y = %d\n", i+1, (d2->bmi.mv.as_mv.col>>3), (d2->bmi.mv.as_mv.row>>3));
+			
+			for( block_y=0; block_y<9; block_y++)
+			{
+				for (j=0; j<2; j++)
+				{
+					for( block_x=0; block_x<9; block_x++)
+					{
+						if( (block_y < yoffset[j]) && (block_x < xoffset[j]) )
+#ifdef HEX
+							FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "%02x", (ptr[j])[block_x + block_y*(d[j])->pre_stride]);
+#else
+							FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "%4d", (ptr[j])[block_x + block_y*(d[j])->pre_stride]);
+#endif
+						else
+#ifdef HEX
+							FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "%02x", 0);
+#else
+							FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "%4d", 0);
+#endif
+					}
+				}
+				FPRINTF_MCA (g_fp_vp8_mca_in_chroma_tv, "\n");
+			}
+		}
+	}
+}
+}
+
+
+void Print_IQIT_Out(MACROBLOCKD *xd, int idct_zero)
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_DCT)
+{
+	int i, block_x, offset;
+	int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+	//int block_y, id;
+	
+	// IQ
+	/*FPRINTF_DCT (g_fp_vp8_iq_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+
+	for( block_y=0; block_y<4; block_y++)
+	{
+		for( i=0; i<4; i++)
+		{
+			for( block_x=0; block_x<4; block_x++)
+			{
+				id = little_endian_map[block_x]+block_y*4;
+				//id = block_x+block_y*4;	// 64-bits per line
+#ifdef HEX
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%04x", idct_zero?0:(xd->block[id].dqcoeff[i*4+3])&0xffff);
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%04x", idct_zero?0:(xd->block[id].dqcoeff[i*4+2])&0xffff);
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%04x", idct_zero?0:(xd->block[id].dqcoeff[i*4+1])&0xffff);
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%04x", idct_zero?0:(xd->block[id].dqcoeff[i*4])&0xffff);
+#else
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%4d", idct_zero?0:(xd->block[id].dqcoeff[i*4+3]));
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%4d", idct_zero?0:(xd->block[id].dqcoeff[i*4+2]));
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%4d", idct_zero?0:(xd->block[id].dqcoeff[i*4+1]));
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%4d", idct_zero?0:(xd->block[id].dqcoeff[i*4]));
+#endif
+				if(block_x%2)
+					FPRINTF_DCT (g_fp_vp8_iq_tv, "\n");
+			}
+		}
+	}
+
+	for( block_y=0; block_y<4; block_y++)
+	{
+		for( i=0; i<4; i++)
+		{
+			for( block_x=1; block_x>=0; block_x--)	// for( block_x=0; block_x<2; block_x++)	// 64-bits per line
+			{
+				id = 16+block_x+block_y*2;
+#ifdef HEX
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%04x", idct_zero?0:(xd->block[id].dqcoeff[i*4+3])&0xffff);
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%04x", idct_zero?0:(xd->block[id].dqcoeff[i*4+2])&0xffff);
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%04x", idct_zero?0:(xd->block[id].dqcoeff[i*4+1])&0xffff);
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%04x", idct_zero?0:(xd->block[id].dqcoeff[i*4+0])&0xffff);
+#else
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%4d", idct_zero?0:(xd->block[id].dqcoeff[i*4+3]));
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%4d", idct_zero?0:(xd->block[id].dqcoeff[i*4+2]));
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%4d", idct_zero?0:(xd->block[id].dqcoeff[i*4+1]));
+				FPRINTF_DCT (g_fp_vp8_iq_tv, "%4d", idct_zero?0:(xd->block[id].dqcoeff[i*4+0]));
+#endif
+				//FPRINTF_DCT (g_fp_vp8_iq_tv, "\n");	// 64-bits per line
+			}
+			FPRINTF_DCT (g_fp_vp8_iq_tv, "\n");
+		}
+	}*/
+
+
+	// IT
+	FPRINTF_DCT (g_fp_idct_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+	
+#ifdef MBC_TV
+	for( i=0; i<384; i+=8)
+	{
+		for( block_x=7; block_x>=0; block_x--)
+#else
+	for( i=0; i<384; i+=4)	// i+=8 for 64-bits per line
+	{
+		for( block_x=3; block_x>=0; block_x--)	// block_x=7 for 64-bits per line
+#endif
+		{
+			offset = block_x + i;
+#ifdef HEX
+			FPRINTF_DCT (g_fp_idct_tv, "%04x", idct_zero?0:(xd->diff[offset]&0xffff));
+#else
+			FPRINTF_DCT (g_fp_idct_tv, "%4d", idct_zero?0:(xd->diff[offset]));
+#endif
+		}
+		FPRINTF_DCT (g_fp_idct_tv, "\n");
+	}
+
+#ifndef MBC_TV
+	// 14 lines of zeros
+	for(i=0; i<14; i++)
+		FPRINTF_DCT (g_fp_idct_tv, "%016x\n", 0);
+#endif
+}
+}
+
+
+void Print_MCA_HOR(int *FDtata, uint32 output_height, uint32 output_width)	// six-tap & bilinear
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_MCA)
+{
+	uint i, j;
+	//int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	//int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+
+	// type: 0-16x16, 1-16x8, 2-8x16, 3-8x8, 4-4x4
+	//FPRINTF_MCA (g_fp_mca_hor_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d, block_id=%d, type=%d\n", g_nFrame_dec, mb_col, mb_row, block_id, type);
+
+	for(i=0; i<output_height; i++)
+	{
+		for(j=0; j<output_width; j++)
+		{
+#ifdef HEX
+			FPRINTF_MCA (g_fp_mca_hor_tv, "%02x", FDtata[i*output_width+j]&0xff);
+#else
+			FPRINTF_MCA (g_fp_mca_hor_tv, "%4d", FDtata[i*output_width+j]);
+#endif
+		}
+		FPRINTF_MCA (g_fp_mca_hor_tv, "\n");
+	}
+}
+}
+
+void Print_PRED_Out(MACROBLOCKD *xd, int idct_zero)
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_MCA)
+{
+	int i, block_x, block_y, offset;
+	int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+
+#ifndef MBC_TV
+	if(xd->mbmi.ref_frame == INTRA_FRAME)
+		return;
+#endif
+	
+	FPRINTF_MCA (g_fp_mca_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+	
+	if(idct_zero)
+	{
+		for( block_y=0; block_y<16; block_y++)
+		{
+			for( block_x=7; block_x>=0; block_x--)
+			{
+				offset = block_y*xd->dst.y_stride + block_x;
+#ifdef HEX
+				FPRINTF_MCA (g_fp_mca_tv, "%02x", (xd->dst.y_buffer[offset]&0xff));
+#else
+				FPRINTF_MCA (g_fp_mca_tv, "%4d", (xd->dst.y_buffer[offset]));
+#endif
+			}
+			FPRINTF_MCA (g_fp_mca_tv, "\n");
+
+			for( block_x=15; block_x>=8; block_x--)
+			{
+				offset = block_y*xd->dst.y_stride + block_x;
+#ifdef HEX
+				FPRINTF_MCA (g_fp_mca_tv, "%02x", (xd->dst.y_buffer[offset]&0xff));
+#else
+				FPRINTF_MCA (g_fp_mca_tv, "%4d", (xd->dst.y_buffer[offset]));
+#endif
+			}
+			FPRINTF_MCA (g_fp_mca_tv, "\n");
+		}
+
+		for( block_y=0; block_y<8; block_y++)
+		{
+			for( block_x=7; block_x>=0; block_x--)
+			{
+				offset = block_y*xd->dst.uv_stride + block_x;
+#ifdef HEX
+				FPRINTF_MCA (g_fp_mca_tv, "%02x", (xd->dst.u_buffer[offset]&0xff));
+#else
+				FPRINTF_MCA (g_fp_mca_tv, "%4d", (xd->dst.u_buffer[offset]));
+#endif
+			}
+			FPRINTF_MCA (g_fp_mca_tv, "\n");
+		}
+
+		for( block_y=0; block_y<8; block_y++)
+		{
+			for( block_x=7; block_x>=0; block_x--)
+			{
+				offset = block_y*xd->dst.uv_stride + block_x;
+#ifdef HEX
+				FPRINTF_MCA (g_fp_mca_tv, "%02x", (xd->dst.v_buffer[offset]&0xff));
+#else
+				FPRINTF_MCA (g_fp_mca_tv, "%4d", (xd->dst.v_buffer[offset]));
+#endif
+			}
+			FPRINTF_MCA (g_fp_mca_tv, "\n");
+		}
+	}
+	else
+	{
+		for( i=0; i<384; i+=8)
+		{
+			for( block_x=7; block_x>=0; block_x--)
+			{
+				offset = block_x + i;
+#ifdef HEX
+				FPRINTF_MCA (g_fp_mca_tv, "%02x", (xd->predictor[offset]&0xff));
+#else
+				FPRINTF_MCA (g_fp_mca_tv, "%4d", (xd->predictor[offset]));
+#endif
+			}
+			FPRINTF_MCA (g_fp_mca_tv, "\n");
+		}
+	}
+}
+}
+
+
+void Print_REC_Out(MACROBLOCKD *xd)
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_MBC)
+{
+	int block_x, block_y, offset;
+	int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+	
+	FPRINTF_MBC (g_fp_mbc_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+	
+	for( block_y=0; block_y<16; block_y++)
+	{
+		for( block_x=7; block_x>=0; block_x--)
+		{
+			offset = block_y*xd->dst.y_stride + block_x;
+#ifdef HEX
+			FPRINTF_MBC (g_fp_mbc_tv, "%02x", (xd->dst.y_buffer[offset]&0xff));
+#else
+			FPRINTF_MBC (g_fp_mbc_tv, "%4d", (xd->dst.y_buffer[offset]));
+#endif
+		}
+		FPRINTF_MBC (g_fp_mbc_tv, "\n");
+
+		for( block_x=15; block_x>=8; block_x--)
+		{
+			offset = block_y*xd->dst.y_stride + block_x;
+#ifdef HEX
+			FPRINTF_MBC (g_fp_mbc_tv, "%02x", (xd->dst.y_buffer[offset]&0xff));
+#else
+			FPRINTF_MBC (g_fp_mbc_tv, "%4d", (xd->dst.y_buffer[offset]));
+#endif
+		}
+		FPRINTF_MBC (g_fp_mbc_tv, "\n");
+	}
+
+	for( block_y=0; block_y<8; block_y++)
+	{
+		for( block_x=7; block_x>=0; block_x--)
+		{
+			offset = block_y*xd->dst.uv_stride + block_x;
+#ifdef HEX
+			FPRINTF_MBC (g_fp_mbc_tv, "%02x", (xd->dst.u_buffer[offset]&0xff));
+#else
+			FPRINTF_MBC (g_fp_mbc_tv, "%4d", (xd->dst.u_buffer[offset]));
+#endif
+		}
+		FPRINTF_MBC (g_fp_mbc_tv, "\n");
+	}
+
+	for( block_y=0; block_y<8; block_y++)
+	{
+		for( block_x=7; block_x>=0; block_x--)
+		{
+			offset = block_y*xd->dst.uv_stride + block_x;
+#ifdef HEX
+			FPRINTF_MBC (g_fp_mbc_tv, "%02x", (xd->dst.v_buffer[offset]&0xff));
+#else
+			FPRINTF_MBC (g_fp_mbc_tv, "%4d", (xd->dst.v_buffer[offset]));
+#endif
+		}
+		FPRINTF_MBC (g_fp_mbc_tv, "\n");
+	}
+}
+}
+
+
+void Print_DBK_Out()
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_DBK)
+{
+	uint32 i, j;
+	uint32 temp;
+
+	int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+	char * dbk_out_buf = (char*)vsp_dbk_out_bfr;
+	
+	FPRINTF_DBK (g_fp_dbk_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+
+	for(i=0; i<108; i++)
+	{
+		//if(!skip)
+		//{
+			for(j=0; j<4; j++)
+			{
+				temp = dbk_out_buf[i*8+7-j]&0xff;
+				FPRINTF_DBK(g_fp_dbk_tv, "%02x", temp);
+			}			  
+			for(j=0; j<4; j++)
+			{
+				temp = dbk_out_buf[i*8+3-j]&0xff;
+				FPRINTF_DBK(g_fp_dbk_tv, "%02x", temp);
+			}
+		/*}
+		else
+		{
+			FPRINTF_DBK(g_fp_dbk_tv, "%016x", 0);
+		}*/
+		FPRINTF_DBK(g_fp_dbk_tv,"\n");
+		if(i==59)	// Y
+		{
+			for(j=0; j<4; j++)
+			{
+				FPRINTF_DBK(g_fp_dbk_tv, "%016x\n", 0);
+			}
+			//i++;
+		}
+		if((i==83)||(i==107))	// UV
+		{
+			for(j=0;j<8;j++)
+			{
+				FPRINTF_DBK(g_fp_dbk_tv, "%016x\n", 0);
+			}
+		}
+	}
+}
+}
+
+
+void Print_DBK_Frame(YV12_BUFFER_CONFIG *frame_to_show)
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_DBK)
+{
+	int block_x, offset;//, block_y, mb_offset;
+	int mb_row;
+	int mb_col;
+	//int mb_x_max = frame_to_show->y_width / 16;
+	//int mb_y_max = frame_to_show->y_height / 16;
+	
+	// Print In MB
+	/*for( mb_row=0; mb_row<mb_y_max; mb_row++)
+	{
+		for( mb_col=0; mb_col<mb_x_max; mb_col++)
+		{
+			FPRINTF_DBK (g_fp_dbk_mb_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+			mb_offset = 16*mb_col + 16*mb_row*frame_to_show->y_stride;
+			for( block_y=0; block_y<16; block_y++)
+			{
+				for( block_x=7; block_x>=0; block_x--)
+				{
+					offset = mb_offset + block_y*frame_to_show->y_stride + block_x;
+#ifdef HEX
+					FPRINTF_DBK (g_fp_dbk_mb_tv, "%02x", (frame_to_show->y_buffer[offset]&0xff));
+#else
+					FPRINTF_DBK (g_fp_dbk_mb_tv, "%4d", (frame_to_show->y_buffer[offset]));
+#endif
+				}
+				FPRINTF_DBK (g_fp_dbk_mb_tv, "\n");
+				
+				for( block_x=15; block_x>=8; block_x--)
+				{
+					offset = mb_offset + block_y*frame_to_show->y_stride + block_x;
+#ifdef HEX
+					FPRINTF_DBK (g_fp_dbk_mb_tv, "%02x", (frame_to_show->y_buffer[offset]&0xff));
+#else
+					FPRINTF_DBK (g_fp_dbk_mb_tv, "%4d", (frame_to_show->y_buffer[offset]));
+#endif
+				}
+				FPRINTF_DBK (g_fp_dbk_mb_tv, "\n");
+			}
+			mb_offset = 8*mb_col + 8*mb_row*frame_to_show->uv_stride;
+			for( block_y=0; block_y<8; block_y++)
+			{
+				for( block_x=7; block_x>=0; block_x--)
+				{
+					offset = mb_offset + block_y*frame_to_show->uv_stride + block_x;
+#ifdef HEX
+					FPRINTF_DBK (g_fp_dbk_mb_tv, "%02x", (frame_to_show->u_buffer[offset]&0xff));
+#else
+					FPRINTF_DBK (g_fp_dbk_mb_tv, "%4d", (frame_to_show->u_buffer[offset]));
+#endif
+				}
+				FPRINTF_DBK (g_fp_dbk_mb_tv, "\n");
+			}
+			mb_offset = 8*mb_col + 8*mb_row*frame_to_show->uv_stride;
+			for( block_y=0; block_y<8; block_y++)
+			{
+				for( block_x=7; block_x>=0; block_x--)
+				{
+					offset = mb_offset + block_y*frame_to_show->uv_stride + block_x;
+#ifdef HEX
+					FPRINTF_DBK (g_fp_dbk_mb_tv, "%02x", (frame_to_show->v_buffer[offset]&0xff));
+#else
+					FPRINTF_DBK (g_fp_dbk_mb_tv, "%4d", (frame_to_show->v_buffer[offset]));
+#endif
+				}
+				FPRINTF_DBK (g_fp_dbk_mb_tv, "\n");
+			}
+		}
+	}*/
+
+	FPRINTF_DBK (g_fp_rec_frm_tv, "//frame_cnt=%d, width=%d, height=%d\n", g_nFrame_dec, frame_to_show->y_width, frame_to_show->y_height);
+	// Print In Frame
+	for( mb_row=0; mb_row<frame_to_show->y_height; mb_row++)
+	{
+		for( mb_col=0; mb_col<frame_to_show->y_width; mb_col+=8)
+		{
+			for( block_x=7; block_x>=0; block_x--)
+			{
+				offset = mb_row*frame_to_show->y_stride + mb_col + block_x;
+#ifdef HEX
+				FPRINTF_DBK (g_fp_rec_frm_tv, "%02x", (frame_to_show->y_buffer[offset]&0xff));
+#else
+				FPRINTF_DBK (g_fp_rec_frm_tv, "%4d", (frame_to_show->y_buffer[offset]));
+#endif
+			}
+			FPRINTF_DBK (g_fp_rec_frm_tv, "\n");
+		}
+	}
+	for( mb_row=0; mb_row<frame_to_show->uv_height; mb_row++)
+	{
+		for( mb_col=0; mb_col<frame_to_show->uv_width; mb_col+=4)
+		{
+			for( block_x=3; block_x>=0; block_x--)
+			{
+				offset = mb_row*frame_to_show->uv_stride + mb_col + block_x;
+#ifdef HEX
+				FPRINTF_DBK (g_fp_rec_frm_tv, "%02x", (frame_to_show->v_buffer[offset]&0xff));
+				FPRINTF_DBK (g_fp_rec_frm_tv, "%02x", (frame_to_show->u_buffer[offset]&0xff));
+#else
+				FPRINTF_DBK (g_fp_rec_frm_tv, "%4d", (frame_to_show->v_buffer[offset]));
+				FPRINTF_DBK (g_fp_rec_frm_tv, "%4d", (frame_to_show->u_buffer[offset]));
+#endif
+			}
+			FPRINTF_DBK (g_fp_rec_frm_tv, "\n");
+		}
+	}
+
+	// Three Plane
+	/*for( mb_row=0; mb_row<frame_to_show->uv_height; mb_row++)
+	{
+		for( mb_col=0; mb_col<frame_to_show->uv_width; mb_col+=8)
+		{
+			for( block_x=7; block_x>=0; block_x--)
+			{
+				offset = mb_row*frame_to_show->uv_stride + mb_col + block_x;
+#ifdef HEX
+				FPRINTF_DBK (g_fp_rec_frm_tv, "%02x", (frame_to_show->u_buffer[offset]&0xff));
+#else
+				FPRINTF_DBK (g_fp_rec_frm_tv, "%4d", (frame_to_show->u_buffer[offset]));
+#endif
+			}
+			FPRINTF_DBK (g_fp_rec_frm_tv, "\n");
+		}
+	}
+	for( mb_row=0; mb_row<frame_to_show->uv_height; mb_row++)
+	{
+		for( mb_col=0; mb_col<frame_to_show->uv_width; mb_col+=8)
+		{
+			for( block_x=7; block_x>=0; block_x--)
+			{
+				offset = mb_row*frame_to_show->uv_stride + mb_col + block_x;
+#ifdef HEX
+				FPRINTF_DBK (g_fp_rec_frm_tv, "%02x", (frame_to_show->v_buffer[offset]&0xff));
+#else
+				FPRINTF_DBK (g_fp_rec_frm_tv, "%4d", (frame_to_show->v_buffer[offset]));
+#endif
+			}
+			FPRINTF_DBK (g_fp_rec_frm_tv, "\n");
+		}
+	}*/
+}
+}
+
+void Print_ISYN_Buf()
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_FW)
+{
+	uint i;
+	uint32 size = sizeof(VSP_ISYN_BUF_T) / 4;
+	uint32* ptr = (uint32 *)g_isyn_buf_ptr;
+	int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+	
+	FPRINTF_VLD (g_fp_vp8_isyn_buf_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+	//FPRINTF_PPA (g_fp_vp8_isyn_buf_tv, "MB=%d\n", mb_num);
+	//FPRINTF_PPA (g_fp_vp8_isyn_buf_tv, "Frame_num=%d\n", g_nFrame_dec);
+	for(i=0; i<size; i+=2)
+	{
+		FPRINTF_VLD (g_fp_vp8_isyn_buf_tv, "%08x", ptr[i+1]);
+		FPRINTF_VLD (g_fp_vp8_isyn_buf_tv, "%08x\n", ptr[i]);
+	}
+	for(i=0; i<8; i++)
+		FPRINTF_PPA (g_fp_vp8_isyn_buf_tv, "%016x\n", 0);
+}
+}
+
+void Print_PPA_Line_Buf()
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_FW)
+{
+	uint i;
+	uint32 size = sizeof(VSP_PPA_LINE_BUF_T) / 4;
+	uint32* ptr = (uint32 *)g_ppal_buf_ptr;
+	int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+	
+	FPRINTF_VLD (g_fp_vp8_ppal_buf_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+	//FPRINTF_PPA (g_fp_vp8_ppal_buf_tv, "MB=%d\n", mb_num);
+	//FPRINTF_PPA (g_fp_vp8_ppal_buf_tv, "Frame_num=%d\n", g_nFrame_dec);
+	for(i=0; i<size; i++)
+	{
+		FPRINTF_VLD (g_fp_vp8_ppal_buf_tv, "%08x\n", ptr[i]);
+	}
+}
+}
+
+void Print_DBK_Buf()
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_MBC)
+{
+	uint i;
+	uint32 temp = 0;
+	int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+	int mb_row_max = (g_glb_reg_ptr->VSP_CFG1 >> 12) & 0x1FF;
+	int mb_col_max = (g_glb_reg_ptr->VSP_CFG1 >> 0) & 0x1FF;
+	
+	FPRINTF_PPA (g_fp_dbk_para_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+	//FPRINTF_PPA (g_fp_dbk_tv, "Frame_num=%d\n", g_nFrame_dec);
+	
+	temp |= (mb_row&0x7f);
+	temp |= ((mb_col&0x7f) << 8);
+	temp |= ((((mb_col+1)==mb_col_max)&&((mb_row+1)==mb_row_max)) << 31);
+	FPRINTF_PPA (g_fp_dbk_para_tv, "%08x\n", temp);
+	//if(!skip)
+		FPRINTF_PPA (g_fp_dbk_para_tv, "%08x\n", g_dbk_reg_ptr->VP8DBK_CFG0);
+	//else
+	//	FPRINTF_PPA (g_fp_dbk_para_tv, "%08x\n", 0);
+	for(i=0; i<6; i++)
+		FPRINTF_PPA (g_fp_dbk_para_tv, "%08x\n", 0);
+}
+}
+
+
+void Print_MBC_Buf()
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_MBC)
+{
+	int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+
+	FPRINTF_PPA (g_fp_mbc_para_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+	//FPRINTF_PPA (g_fp_mbc_para_tv, "Frame_num=%d\n", g_nFrame_dec);
+	
+	FPRINTF_PPA (g_fp_mbc_para_tv, "%08x\n", g_mbc_reg_ptr->VP8_CFG0);
+	FPRINTF_PPA (g_fp_mbc_para_tv, "%08x\n", g_mbc_reg_ptr->MBC_CMD1);
+	FPRINTF_PPA (g_fp_mbc_para_tv, "%08x\n", g_mbc_reg_ptr->MBC_CMD2);
+	FPRINTF_PPA (g_fp_mbc_para_tv, "%08x\n", g_mbc_reg_ptr->VP8_CFG1);
+}
+}
+
+
+void Print_MCA_Buf(MACROBLOCKD *xd)
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_MCA)
+{
+	uint i;
+	uint32 ref_frame = xd->mbmi.ref_frame;	// ((g_isyn_buf_ptr->ISYN_CFG0>>25) & 0x3);
+	uint32 size = 16;
+	uint32* ptr = (uint32 *)&g_mca_reg_ptr->VP8_MCA_MV[0];
+	int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+	
+	if(ref_frame == INTRA_FRAME)
+		return;
+
+	FPRINTF_PPA (g_fp_mca_para_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+	//FPRINTF_PPA (g_fp_mca_para_tv, "MB=%d\n", mb_num);
+	
+	// 56-bit per line, 25 lines
+//	if(ref_frame != INTRA_FRAME)
+		FPRINTF_PPA (g_fp_mca_para_tv, "%07x", 0x0550000);		// predflag_x_Lx
+//	else
+//		FPRINTF_PPA (g_fp_mca_para_tv, "%07x", 0);		// predflag_x_Lx
+	FPRINTF_PPA (g_fp_mca_para_tv, "%07x\n", g_mca_reg_ptr->VP8_MCA_CFG0);
+
+//	if(ref_frame != INTRA_FRAME)
+	{
+		for(i=0; i<4; i++)
+		{
+			FPRINTF_PPA (g_fp_mca_para_tv, "%07x", (ref_frame-1)<<24);
+			FPRINTF_PPA (g_fp_mca_para_tv, "%07x\n", 0x0);
+			//FPRINTF_PPA (g_fp_mca_para_tv, "%014x\n", 0x0);
+		}
+
+		for(i=0; i<size; i+=2)
+		{
+			FPRINTF_PPA (g_fp_mca_para_tv, "%07x", ptr[i+1]);
+			FPRINTF_PPA (g_fp_mca_para_tv, "%07x\n", ptr[i]);
+		}
+	}
+	/*else
+	{
+		for(i=0; i<4; i++)
+			FPRINTF_PPA (g_fp_mca_para_tv, "%014x\n", 0x0);
+
+		for(i=0; i<size; i+=2)
+			FPRINTF_PPA (g_fp_mca_para_tv, "%014x\n", 0x0);
+	}*/
+	for(i=0; i<12; i++)
+		FPRINTF_PPA (g_fp_mca_para_tv, "%014x\n", 0x0);
+}
+}
+
+
+void Print_DCT_Buf(MACROBLOCKD *xd, VP8_COMMON *pc)
+{
+if(g_vector_enable_flag&VECTOR_ENABLE_DCT)
+{
+	int z;
+	//int QIndex;
+	int mb_row = (g_glb_reg_ptr->VSP_CTRL0 >> 8) & 0xFF;
+	int mb_col = (g_glb_reg_ptr->VSP_CTRL0 >> 0) & 0xFF;
+	
+	FPRINTF_PPA (g_fp_dct_para_tv, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_dec, mb_col, mb_row);
+	//FPRINTF_PPA (g_fp_dct_para_tv, "MB=%d\n", mb_num);
+	//FPRINTF (g_fp_dct_para_tv, "Frame_num=%d\n", g_nFrame_dec);
+
+	/*for(z=0; z<4; z++)	// For 4 segment_id
+	{
+		if (xd->segmentation_enabled)
+		{
+			// Abs Value
+			if (xd->mb_segement_abs_delta == SEGMENT_ABSDATA)
+				QIndex = xd->segment_feature_data[MB_LVL_ALT_Q][z];
+			// Delta Value
+			else
+			{
+				QIndex = pc->base_qindex + xd->segment_feature_data[MB_LVL_ALT_Q][z];
+				QIndex = (QIndex >= 0) ? ((QIndex <= MAXQ) ? QIndex : MAXQ) : 0;    // Clamp to valid range
+			}
+		}
+		else
+			QIndex = pc->base_qindex;
+
+		g_dct_reg_ptr->vp8_qp[2*z] |= (pc->Y1dequant[QIndex][0][0] & 0x1ff);			// QP_Y1_DC
+		g_dct_reg_ptr->vp8_qp[2*z] |= ((pc->Y2dequant[QIndex][0][0] & 0x1ff) << 9);		// QP_Y2_DC
+		g_dct_reg_ptr->vp8_qp[2*z] |= ((pc->UVdequant[QIndex][0][0] & 0x1ff) << 18);	// QP_UV_DC
+		g_dct_reg_ptr->vp8_qp[2*z+1] |= (pc->Y1dequant[QIndex][0][1] & 0x1ff);			// QP_Y1_AC
+		g_dct_reg_ptr->vp8_qp[2*z+1] |= ((pc->Y2dequant[QIndex][0][1] & 0x1ff) << 9);	// QP_Y2_AC
+		g_dct_reg_ptr->vp8_qp[2*z+1] |= ((pc->UVdequant[QIndex][0][1] & 0x1ff) << 18);	// QP_UV_AC
+	}*/
+	g_dct_reg_ptr->vp8_qp[0] |= ((xd->block[0].dequant[0][1] & 0x1ff) << 0);	// QP_Y1_AC
+	g_dct_reg_ptr->vp8_qp[0] |= ((xd->block[0].dequant[0][0] & 0x1ff) << 9);	// QP_Y1_DC
+	g_dct_reg_ptr->vp8_qp[1] |= ((xd->block[16].dequant[0][1] & 0x1ff) << 0);	// QP_UV_AC
+	g_dct_reg_ptr->vp8_qp[1] |= ((xd->block[16].dequant[0][0] & 0x1ff) << 9);	// QP_UV_DC
+	g_dct_reg_ptr->vp8_qp[2] |= ((xd->block[24].dequant[0][1] & 0x1ff) << 0);	// QP_Y2_AC
+	g_dct_reg_ptr->vp8_qp[2] |= ((xd->block[24].dequant[0][0] & 0x1ff) << 9);	// QP_Y2_DC
+	
+	
+	FPRINTF_PPA (g_fp_dct_para_tv, "%08x\n", g_dct_reg_ptr->iict_cfg1);
+	FPRINTF_PPA (g_fp_dct_para_tv, "%08x\n", g_dct_reg_ptr->vp8_qp[0]);
+	FPRINTF_PPA (g_fp_dct_para_tv, "%08x\n", g_isyn_buf_ptr->ISYN_CFG1);	// cbp_blk[24:0]
+	FPRINTF_PPA (g_fp_dct_para_tv, "%08x\n", g_dct_reg_ptr->vp8_qp[1]);
+	FPRINTF_PPA (g_fp_dct_para_tv, "%08x\n", g_dct_reg_ptr->vp8_qp[2]);
+	for(z=0; z<5; z++)
+		FPRINTF_PPA (g_fp_dct_para_tv, "%08x\n", 0);
+}
+}
+
+
+// xd->mbmi.mode > 9, [3:0] ???????
+// xd->mode_info_context->bmi[z].mode > 13, [3:0] ???????
+void Write_BUF_REG(int mb_row, int mb_col, MACROBLOCKD* xd, VP8_COMMON *pc)
+{
+	int z;
+
+	// Write Input Syntax Buffer
+	memset(g_isyn_buf_ptr, 0, sizeof(VSP_ISYN_BUF_T));	
+	g_isyn_buf_ptr->ISYN_CFG0 |= (xd->mbmi.segment_id);
+	g_isyn_buf_ptr->ISYN_CFG0 |= (mb_row << 3);
+	g_isyn_buf_ptr->ISYN_CFG0 |= (mb_col << 10);
+	g_isyn_buf_ptr->ISYN_CFG0 |= (xd->mbmi.mb_skip_coeff << 17);
+	g_isyn_buf_ptr->ISYN_CFG0 |= (xd->mbmi.mode << 18);
+	//g_isyn_buf_ptr->ISYN_CFG0 |= (xd->mbmi.dc_diff << 24);
+	g_isyn_buf_ptr->ISYN_CFG0 |= (xd->mbmi.ref_frame << 25);
+	g_isyn_buf_ptr->ISYN_CFG0 |= ((((mb_col+1)==pc->mb_cols)&&((mb_row+1)==pc->mb_rows)) << 31);
+	
+	if (xd->mbmi.ref_frame == INTRA_FRAME) // Intra MB
+	{
+		g_isyn_buf_ptr->ISYN_CFG0 |= (xd->mbmi.uv_mode << 29);
+		if (xd->mbmi.mode == B_PRED)
+		{
+			for(z=0; z<8; z++)
+				g_isyn_buf_ptr->ISYN_CFG2 |= (xd->mode_info_context->bmi[z].mode << (4*z));		// xd->block[z].bmi.mode
+			for(z=0; z<8; z++)
+				g_isyn_buf_ptr->ISYN_CFG3 |= (xd->mode_info_context->bmi[z+8].mode << (4*z));
+		}
+		/*else
+		{
+			g_isyn_buf_ptr->ISYN_CFG2 = 0;
+			g_isyn_buf_ptr->ISYN_CFG3 = 0;
+		}*/
+	}
+	else
+	{
+		uint32* ptr = (uint32 *)&g_isyn_buf_ptr->ISYN_CFG4;
+
+		if (xd->mbmi.mode == SPLITMV)
+		{
+			g_isyn_buf_ptr->ISYN_CFG0 |= (xd->mbmi.partitioning << 27);
+			for(z=0; z<16; z++)
+			{
+				g_isyn_buf_ptr->ISYN_CFG2 |= ((xd->mode_info_context->bmi[z].mode-LEFT4X4) << (2*z));
+			}
+		}
+
+		for(z=0; z<16; z++)
+		{
+			(*ptr) |= ( (((xd->mode_info_context->bmi[z].mv.as_mv.row>>1)&0xfff)<<0) | (((xd->mode_info_context->bmi[z].mv.as_mv.col>>1)&0xfff)<<12) );
+			ptr++;
+		}
+	}
+
+	// PPA Line Buffer
+	memset(g_ppal_buf_ptr, 0, sizeof(VSP_PPA_LINE_BUF_T));
+	g_ppal_buf_ptr->PPAL_CFG0 |= (xd->mbmi.ref_frame << 0);
+	g_ppal_buf_ptr->PPAL_CFG0 |= (xd->mbmi.mb_skip_coeff << 2);
+	if (xd->mbmi.ref_frame == INTRA_FRAME) // Intra MB
+	{
+		g_ppal_buf_ptr->PPAL_CFG1 |= (xd->mode_info_context->bmi[12].mode << 0);
+		g_ppal_buf_ptr->PPAL_CFG1 |= (xd->mode_info_context->bmi[13].mode << 4);
+		g_ppal_buf_ptr->PPAL_CFG1 |= (xd->mode_info_context->bmi[14].mode << 8);
+		g_ppal_buf_ptr->PPAL_CFG1 |= (xd->mode_info_context->bmi[15].mode << 12);
+	}	
+	else
+	{
+		g_ppal_buf_ptr->PPAL_CFG2 |= ( (((xd->mode_info_context->bmi[12].mv.as_mv.row>>1)&0xfff)<<0) | (((xd->mode_info_context->bmi[12].mv.as_mv.col>>1)&0xfff)<<12) );
+		g_ppal_buf_ptr->PPAL_CFG3 |= ( (((xd->mode_info_context->bmi[13].mv.as_mv.row>>1)&0xfff)<<0) | (((xd->mode_info_context->bmi[13].mv.as_mv.col>>1)&0xfff)<<12) );
+		g_ppal_buf_ptr->PPAL_CFG4 |= ( (((xd->mode_info_context->bmi[14].mv.as_mv.row>>1)&0xfff)<<0) | (((xd->mode_info_context->bmi[14].mv.as_mv.col>>1)&0xfff)<<12) );
+		g_ppal_buf_ptr->PPAL_CFG5 |= ( (((xd->mode_info_context->bmi[15].mv.as_mv.row>>1)&0xfff)<<0) | (((xd->mode_info_context->bmi[15].mv.as_mv.col>>1)&0xfff)<<12) );
+	}
+	
+	// MBC Parameter Buffer
+	g_mbc_reg_ptr->VP8_CFG0 = 0;
+	g_mbc_reg_ptr->MBC_CMD1 = 0;
+	g_mbc_reg_ptr->MBC_CMD2 = 0;
+	g_mbc_reg_ptr->VP8_CFG1 = 0;
+	g_mbc_reg_ptr->VP8_CFG0 |= (xd->mbmi.ref_frame == INTRA_FRAME);
+	g_mbc_reg_ptr->VP8_CFG0 |= (((((mb_col>0)&&(mb_row>0))<<3) | ((mb_col>0)<<2) | ((mb_row>0)<<1) | ((mb_row > 0) && (mb_col < (pc->mb_cols - 1)))) << 2);
+	g_mbc_reg_ptr->VP8_CFG0 |= (((xd->mbmi.mode==B_PRED)?0:1) << 6);
+	g_mbc_reg_ptr->VP8_CFG0 |= (xd->mbmi.uv_mode << 8);
+	g_mbc_reg_ptr->VP8_CFG0 |= (mb_row << 10);
+	g_mbc_reg_ptr->VP8_CFG0 |= ((((mb_col+1)==pc->mb_cols)&&((mb_row+1)==pc->mb_rows)) << 31);
+	if(xd->mbmi.ref_frame == INTRA_FRAME)
+	{
+		if (xd->mbmi.mode == B_PRED)
+		{
+			for(z=0; z<8; z++)
+				g_mbc_reg_ptr->MBC_CMD1 |= (xd->mode_info_context->bmi[z].mode << (4*z));		// xd->block[z].bmi.mode
+			for(z=0; z<8; z++)
+				g_mbc_reg_ptr->MBC_CMD2 |= (xd->mode_info_context->bmi[z+8].mode << (4*z));
+		}
+		else
+			g_mbc_reg_ptr->MBC_CMD1 |= xd->mbmi.mode;	// 16x16 if applies
+	}
+	g_mbc_reg_ptr->VP8_CFG1 |= (mb_col << 24);
+	if((xd->mbmi.mode != B_PRED && xd->mbmi.mode != SPLITMV && xd->mbmi.mb_skip_coeff != 1))	// if Y2 DC present, set MBC's Y1 AC CPB to 1
+		g_mbc_reg_ptr->VP8_CFG1 |= (0xffff);
+
+	// MCA Parameter Buffer
+	memset((void*)&g_mca_reg_ptr->VP8_MCA_MV[0], 0, 16*sizeof(uint32));
+	g_mca_reg_ptr->VP8_MCA_CFG0 = 0;
+	g_mca_reg_ptr->VP8_MCA_CFG0 |= (mb_row << 0);
+	g_mca_reg_ptr->VP8_MCA_CFG0 |= (mb_col << 7);
+	g_mca_reg_ptr->VP8_MCA_CFG0 |= ((xd->mbmi.ref_frame == INTRA_FRAME) << 14);
+	if (xd->mbmi.ref_frame != INTRA_FRAME)
+	{
+		//g_mca_reg_ptr->VP8_MCA_CFG0 |= ((xd->mbmi.mode-NEARESTMV) << 16);
+		if (xd->mbmi.mode == SPLITMV)
+		{
+			if(xd->mbmi.partitioning < 3)
+				g_mca_reg_ptr->VP8_MCA_CFG0 |= ((xd->mbmi.partitioning+1) << 15);	// partitioning, 0-16x8, 1-8x16, 2-8x8, 3-4x4
+			else
+			{
+				g_mca_reg_ptr->VP8_MCA_CFG0 |= (xd->mbmi.partitioning << 15);
+				g_mca_reg_ptr->VP8_MCA_CFG0 |= (xd->mbmi.partitioning << 17);
+				g_mca_reg_ptr->VP8_MCA_CFG0 |= (xd->mbmi.partitioning << 19);
+				g_mca_reg_ptr->VP8_MCA_CFG0 |= (xd->mbmi.partitioning << 21);
+				g_mca_reg_ptr->VP8_MCA_CFG0 |= (xd->mbmi.partitioning << 23);
+			}
+		}
+		else
+		{
+			//g_mca_reg_ptr->VP8_MCA_CFG0 |= (0 << 15);	// mb_mode, 0-16x16, 1-16x8, 2-8x16, 3-8x8
+		}
+		for(z=0; z<16; z++)
+		{
+			g_mca_reg_ptr->VP8_MCA_MV[z] = ( (((xd->mode_info_context->bmi[z].mv.as_mv.row>>1)&0xfff)<<0) |
+				(((xd->mode_info_context->bmi[z].mv.as_mv.col>>1)&0xffff)<<12) );	// xd->block[z].bmi.mv.as_mv.
+		}
+	}
+
+	// DCT Parameter Buffer
+	g_dct_reg_ptr->iict_cfg1 = 0;
+	for(z=0; z<3; z++)
+		g_dct_reg_ptr->vp8_qp[z] = 0;
+	g_dct_reg_ptr->iict_cfg1 |= mb_row;
+	g_dct_reg_ptr->iict_cfg1 |= (mb_col << 7);
+	g_dct_reg_ptr->iict_cfg1 |= ((xd->mbmi.mode != B_PRED && xd->mbmi.mode != SPLITMV && xd->mbmi.mb_skip_coeff != 1) << 14);
+	g_dct_reg_ptr->iict_cfg1 |= ((xd->mbmi.ref_frame == INTRA_FRAME) << 16);
+	g_dct_reg_ptr->iict_cfg1 |= (xd->mbmi.mb_skip_coeff << 17);
+	//g_dct_reg_ptr->iict_cfg1 |= (xd->mbmi.segment_id << 19);
+}

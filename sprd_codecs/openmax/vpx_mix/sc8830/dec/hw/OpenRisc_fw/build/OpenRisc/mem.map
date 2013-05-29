@@ -1,0 +1,892 @@
+Archive member included because of file (symbol)
+
+/opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+                              /tmp/cc2XPzeV.o (memset)
+
+Allocating common symbols
+Common symbol       size              file
+
+g_input             0x4               /tmp/ccGg5qiW.o
+D                   0x4               /tmp/cc2XPzeV.o
+video_size_get      0x4               /tmp/ccGg5qiW.o
+g_list0_map_addr    0x10              /tmp/ccGg5qiW.o
+b                   0x4               /tmp/cc2XPzeV.o
+s_inter_mem_size    0x4               /tmp/ccOa421t.o
+x                   0x40              /tmp/cc2XPzeV.o
+vld_table_addr      0x4               /tmp/ccGg5qiW.o
+flen                0x8               /tmp/cc2XPzeV.o
+s_extra_mem_size    0x4               /tmp/ccOa421t.o
+frame_buf_size      0x4               /tmp/ccGg5qiW.o
+bs_buffer_length    0x4               /tmp/ccGg5qiW.o
+weightscale4x4      0x60              /tmp/ccGg5qiW.o
+total_inter_malloc_size
+                    0x4               /tmp/ccGg5qiW.o
+A                   0x4               /tmp/cc2XPzeV.o
+or_addr_offset      0x4               /tmp/ccGg5qiW.o
+g_nFrame_dec        0x4               /tmp/ccGg5qiW.o
+g_fh_reg_ptr        0x4               /tmp/ccK0lIQ3.o
+cpu_will_be_reset   0x4               /tmp/ccGg5qiW.o
+B                   0x4               /tmp/cc2XPzeV.o
+file_end            0x4               /tmp/ccGg5qiW.o
+s_used_extra_mem    0x4               /tmp/ccOa421t.o
+ptrOutBfr           0x4               /tmp/ccGg5qiW.o
+g_streamLen         0x4               /tmp/ccGg5qiW.o
+s_extra_mem_bfr_ptr
+                    0x4               /tmp/ccOa421t.o
+C                   0x4               /tmp/cc2XPzeV.o
+i                   0x4               /tmp/cc2XPzeV.o
+s_inter_mem_bfr_ptr
+                    0x4               /tmp/ccOa421t.o
+g_stream_type       0x4               /tmp/ccGg5qiW.o
+int_handlers        0x100             /tmp/cc6tjEir.o
+c                   0x4               /tmp/cc2XPzeV.o
+g_extra_malloced_size
+                    0x4               /tmp/ccGg5qiW.o
+timer_ticks         0x4               /tmp/ccu2YFOK.o
+total_extra_malloc_size
+                    0x4               /tmp/ccGg5qiW.o
+d                   0x4               /tmp/cc2XPzeV.o
+g_not_first_reset   0x4               /tmp/ccGg5qiW.o
+s_glb_reg_bck_ptr   0x4               /tmp/ccqaYsfF.o
+ptrInbfr            0x4               /tmp/ccGg5qiW.o
+s_used_inter_mem    0x4               /tmp/ccOa421t.o
+extra_malloc_mem_start_addr
+                    0x4               /tmp/ccGg5qiW.o
+weightscale8x8      0x80              /tmp/ccGg5qiW.o
+video_buffer_malloced
+                    0x4               /tmp/ccGg5qiW.o
+optr                0x4               /tmp/ccqaYsfF.o
+or1200_print        0x1               /tmp/ccGg5qiW.o
+g_inter_malloced_size
+                    0x4               /tmp/ccGg5qiW.o
+g_pOutBfr           0x4               /tmp/ccGg5qiW.o
+s_bFisrtUnit        0x4               /tmp/ccGg5qiW.o
+a                   0x4               /tmp/cc2XPzeV.o
+inter_malloc_mem_start_addr
+                    0x4               /tmp/ccGg5qiW.o
+input_buffer_update
+                    0x4               /tmp/ccGg5qiW.o
+bs_start_addr       0x4               /tmp/ccGg5qiW.o
+len                 0x4               /tmp/cc2XPzeV.o
+g_stream_offset     0x4               /tmp/ccGg5qiW.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+vectors          0x00000000         0x06000000
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD /tmp/cc0swFIh.o
+LOAD /tmp/cc6tjEir.o
+LOAD /tmp/cc84bKZA.o
+LOAD /tmp/ccu2YFOK.o
+LOAD /tmp/cc2XPzeV.o
+LOAD /tmp/cciSyve6.o
+LOAD /tmp/ccyMxDjh.o
+LOAD /tmp/ccQtfWFs.o
+LOAD /tmp/cce2AcmE.o
+LOAD /tmp/ccQL4BlQ.o
+LOAD /tmp/ccquO3o2.o
+LOAD /tmp/ccaeyuMe.o
+LOAD /tmp/ccOAZIer.o
+LOAD /tmp/ccayUuJD.o
+LOAD /tmp/ccEb7noQ.o
+LOAD /tmp/ccsZpAj3.o
+LOAD /tmp/ccMfZhCg.o
+LOAD /tmp/ccOY5C1t.o
+LOAD /tmp/ccy46KRH.o
+LOAD /tmp/ccaoVt9V.o
+LOAD /tmp/ccY9uVVa.o
+LOAD /tmp/ccA9qxaq.o
+LOAD /tmp/ccm4jM7F.o
+LOAD /tmp/ccGg5qiW.o
+LOAD /tmp/ccG2zb1c.o
+LOAD /tmp/ccOa421t.o
+LOAD /tmp/ccCMoryL.o
+LOAD /tmp/ccK0lIQ3.o
+LOAD /tmp/ccOsNehm.o
+LOAD /tmp/ccqaYsfF.o
+LOAD /opt/or32-new/lib/gcc/or32-elf/4.5.1-or32-1.0rc4//libgcc.a
+LOAD /opt/or32-new/or32-elf/lib//libg.a
+
+.MAIN_FUNC      0x00000000      0x494
+ *(MAIN_FUNC)
+ MAIN_FUNC      0x00000000      0x494 /tmp/ccqaYsfF.o
+                0x00000000                main
+
+.vectors
+ *(.vectors)
+
+.text           0x00000494     0x4d28
+                0x00000494                _stext = .
+ *(.text)
+ .text          0x00000494       0x70 /tmp/cc0swFIh.o
+                0x00000494                add_handler
+                0x000004bc                default_exception_handler_c
+ .text          0x00000504      0x1f4 /tmp/cc6tjEir.o
+                0x00000504                int_init
+                0x00000544                int_add
+                0x000005a8                int_disable
+                0x000005f8                int_enable
+                0x00000644                int_main
+ .text          0x000006f8      0x11c /tmp/cc84bKZA.o
+                0x000006f8                memcpy
+                0x0000072c                strlen
+                0x00000764                memchr
+                0x000007c0                rand
+ .text          0x00000814      0x128 /tmp/ccu2YFOK.o
+                0x00000814                mtspr
+                0x00000820                mfspr
+                0x0000082c                sim_putc
+                0x00000840                report
+                0x00000850                exit
+                0x00000860                cpu_enable_user_interrupts
+                0x00000878                cpu_enable_timer
+                0x000008a0                cpu_disable_timer
+                0x000008d4                cpu_timer_tick
+                0x00000900                cpu_reset_timer_ticks
+                0x00000924                cpu_get_timer_ticks
+                0x00000934                cpu_sleep_10ms
+ .text          0x0000093c     0x125c /tmp/cc2XPzeV.o
+                0x0000093c                md5
+                0x00001900                Get_MD5_Code
+ .text          0x00001b98      0x540 /tmp/cciSyve6.o
+                0x00001b98                vp8_update_mode_info_border
+                0x00001c28                vp8_de_alloc_frame_buffers
+                0x00001d50                vp8_alloc_frame_buffers
+                0x00001eb4                vp8_setup_version
+                0x00001f7c                vp8_remove_common
+                0x00001f94                vp8_init_frame_buffers
+ .text          0x000020d8        0x0 /tmp/ccyMxDjh.o
+ .text          0x000020d8        0x0 /tmp/ccQtfWFs.o
+ .text          0x000020d8       0x2c /tmp/cce2AcmE.o
+                0x000020d8                vp8_default_coef_probs
+ .text          0x00002104      0x17c /tmp/ccQL4BlQ.o
+                0x00002104                vp8_mv_cont
+                0x00002178                vp8_init_mbmode_probs
+                0x000021fc                vp8_default_bmode_probs
+                0x00002258                vp8_kf_default_bmode_probs
+ .text          0x00002280        0x0 /tmp/ccquO3o2.o
+ .text          0x00002280       0x80 /tmp/ccaeyuMe.o
+                0x00002280                vp8_create_common
+ .text          0x00002300        0x0 /tmp/ccOAZIer.o
+ .text          0x00002300        0x0 /tmp/ccayUuJD.o
+ .text          0x00002300      0x1c4 /tmp/ccEb7noQ.o
+                0x00002300                vp8_dc_quant
+                0x00002344                vp8_dc2quant
+                0x0000238c                vp8_dc_uv_quant
+                0x000023e0                vp8_ac_yquant
+                0x00002420                vp8_ac2quant
+                0x00002480                vp8_ac_uv_quant
+ .text          0x000024c4      0x1bc /tmp/ccsZpAj3.o
+                0x000024c4                vp8_setup_intra_recon
+ .text          0x00002680      0x1bc /tmp/ccMfZhCg.o
+                0x00002680                vp8_swap_yv12_buffer
+                0x000026d4                vp8_copy_yv12_buffer
+ .text          0x0000283c       0xd0 /tmp/ccOY5C1t.o
+                0x000028ec                vp8_tokens_from_tree
+ .text          0x0000290c      0x20c /tmp/ccy46KRH.o
+                0x0000290c                vp8_yv12_de_alloc_frame_buffer
+                0x0000293c                vp8_yv12_alloc_frame_buffer
+                0x00002a30                vp8_yv12_init_frame_buffer
+                0x00002a90                vp8_yv12_black_frame_buffer
+ .text          0x00002b18      0x17c /tmp/ccaoVt9V.o
+                0x00002b18                vp8dx_start_decode_c
+                0x00002b5c                vp8dx_stop_decode_c
+                0x00002b64                vp8dx_decode_bool
+                0x00002c30                vp8_decode_value
+ .text          0x00002c94      0x214 /tmp/ccY9uVVa.o
+                0x00002c94                vp8_read_bmode
+                0x00002cb4                vp8_read_ymode
+                0x00002cd4                vp8_kfread_ymode
+                0x00002cf4                vp8_read_uv_mode
+                0x00002d14                vp8_read_mb_features
+                0x00002dc4                vp8_kfread_modes
+ .text          0x00002ea8       0xa4 /tmp/ccA9qxaq.o
+                0x00002ea8                vp8cx_init_de_quantizer
+ .text          0x00002f4c      0xae0 /tmp/ccm4jM7F.o
+                0x00002fe4                vp8_decode_frame
+ .text          0x00003a2c        0x0 /tmp/ccGg5qiW.o
+ .text          0x00003a2c      0x2c8 /tmp/ccG2zb1c.o
+                0x00003a2c                vp8dx_create_decompressor
+                0x00003b1c                vp8dx_receive_compressed_data
+                0x00003ce0                VP8Dec_SetCurRecPic
+ .text          0x00003cf4      0x280 /tmp/ccOa421t.o
+                0x00003cf4                vp8dec_ExtraMemAlloc
+                0x00003d64                vp8dec_ExtraMemAlloc_64WordAlign
+                0x00003de0                vp8dec_InterMemAlloc
+                0x00003e50                vp8dec_ExtraMemFree
+                0x00003e84                vp8dec_InterMemFree
+                0x00003eb8                vp8dec_FreeMem
+                0x00003ee8                vp8dec_InitInterMem
+                0x00003f2c                VP8DecMemInit
+ .text          0x00003f74      0x36c /tmp/ccCMoryL.o
+                0x00003f74                read_mvcomponent
+                0x0000409c                vp8_decode_mode_mvs
+ .text          0x000042e0      0xcac /tmp/ccK0lIQ3.o
+                0x000042e0                SharedRAM_Init
+                0x00004384                ORSC_Init
+                0x00004934                BSM_Init
+                0x000049d4                BitstreamReadBits
+                0x00004a30                BITSTREAMSHOWBYTE
+                0x00004a74                Write_tbuf_Probs
+ .text          0x00004f8c       0x74 /tmp/ccOsNehm.o
+                0x00004f8c                vp8_treed_read
+ .text          0x00005000       0x6c /tmp/ccqaYsfF.o
+                0x00005000                foo_bar
+                0x00005008                OR_VSP_BIND
+                0x0000502c                OR_VSP_UNBIND
+ .text          0x0000506c      0x140 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+                0x0000506c                memset
+                0x000051ac                _etext = .
+                0x000051ac                __CTOR_LIST__ = .
+                0x000051ac        0x4 LONG 0x0 (((__CTOR_END__ - __CTOR_LIST__) / 0x4) - 0x2)
+ *(.ctors)
+                0x000051b0        0x4 LONG 0x0
+                0x000051b4                __CTOR_END__ = .
+                0x000051b4                __DTOR_LIST__ = .
+                0x000051b4        0x4 LONG 0x0 (((__DTOR_END__ - __DTOR_LIST__) / 0x4) - 0x2)
+ *(.dtors)
+                0x000051b8        0x4 LONG 0x0
+                0x000051bc                __DTOR_END__ = .
+ *(.lit)
+ *(.shdata)
+                0x000051bc                _endtext = .
+
+.rodata         0x000051bc     0x3aec
+ *(.rodata)
+ .rodata        0x000051bc      0x420 /tmp/ccyMxDjh.o
+                0x000051bc                vp8_coef_update_probs
+ .rodata        0x000055dc     0x1200 /tmp/ccQtfWFs.o
+                0x000055dc                default_coef_counts
+ .rodata        0x000067dc      0x4e0 /tmp/cce2AcmE.o
+                0x000067dc                vp8_default_zig_zag1d
+                0x0000681c                vp8_mb_feature_data_bits
+                0x00006824                vp8_coef_tree
+                0x0000683c                vp8_coef_encodings
+ .rodata        0x00006cbc      0x680 /tmp/ccQL4BlQ.o
+                0x00006cbc                vp8_bmode_encodings
+                0x00006d0c                vp8_ymode_encodings
+                0x00006d34                vp8_kf_ymode_encodings
+                0x00006d5c                vp8_uv_mode_encodings
+                0x00006d7c                vp8_mbsplit_encodings
+                0x00006d9c                vp8_mv_ref_encoding_array
+                0x00006dc4                vp8_sub_mv_ref_encoding_array
+                0x00006de4                vp8_small_mvencodings
+                0x00006e24                vp8_ymode_prob
+                0x00006e28                vp8_kf_ymode_prob
+                0x00006e2c                vp8_uv_mode_prob
+                0x00006e30                vp8_kf_uv_mode_prob
+                0x00006e34                vp8_bmode_prob
+                0x00006e40                vp8_kf_bmode_prob
+                0x000071c4                vp8_sub_mv_ref_prob2
+                0x000071d4                vp8_mbsplits
+                0x000072d4                vp8_mbsplit_count
+                0x000072e4                vp8_mbsplit_probs
+                0x000072e8                vp8_bmode_tree
+                0x000072fc                vp8_ymode_tree
+                0x00007304                vp8_kf_ymode_tree
+                0x0000730c                vp8_uv_mode_tree
+                0x00007314                vp8_mbsplit_tree
+                0x0000731c                vp8_mv_ref_tree
+                0x00007324                vp8_sub_mv_ref_tree
+                0x0000732c                vp8_small_mvtree
+ .rodata        0x0000733c       0x50 /tmp/ccquO3o2.o
+                0x0000733c                vp8_mv_update_probs
+                0x00007364                vp8_default_mv_context
+ .rodata        0x0000738c      0xfa0 /tmp/ccOAZIer.o
+                0x0000738c                vp8_kf_default_bmode_counts
+ .rodata        0x0000832c       0x60 /tmp/ccayUuJD.o
+                0x0000832c                vp8_mode_contexts
+ .rodata        0x0000838c      0x400 /tmp/ccEb7noQ.o
+ .rodata        0x0000878c      0x400 /tmp/ccaoVt9V.o
+                0x0000878c                vp8dx_bitreader_norm
+ *(.rodata.*)
+ .rodata.str1.1
+                0x00008b8c      0x11c /tmp/cc0swFIh.o
+
+.data           0x00008ca8       0xd4
+                0x00008ca8                sdata = .
+                0x00008ca8                _sdata = .
+ *(.data)
+ .data          0x00008ca8       0xcc /tmp/cc0swFIh.o
+                0x00008ca8                exception_strings
+                0x00008d24                except_handlers
+ .data          0x00008d74        0x0 /tmp/cc6tjEir.o
+ .data          0x00008d74        0x4 /tmp/cc84bKZA.o
+ .data          0x00008d78        0x0 /tmp/ccu2YFOK.o
+ .data          0x00008d78        0x0 /tmp/cc2XPzeV.o
+ .data          0x00008d78        0x0 /tmp/cciSyve6.o
+ .data          0x00008d78        0x0 /tmp/ccyMxDjh.o
+ .data          0x00008d78        0x0 /tmp/ccQtfWFs.o
+ .data          0x00008d78        0x0 /tmp/cce2AcmE.o
+ .data          0x00008d78        0x0 /tmp/ccQL4BlQ.o
+ .data          0x00008d78        0x0 /tmp/ccquO3o2.o
+ .data          0x00008d78        0x0 /tmp/ccaeyuMe.o
+ .data          0x00008d78        0x0 /tmp/ccOAZIer.o
+ .data          0x00008d78        0x0 /tmp/ccayUuJD.o
+ .data          0x00008d78        0x0 /tmp/ccEb7noQ.o
+ .data          0x00008d78        0x0 /tmp/ccsZpAj3.o
+ .data          0x00008d78        0x0 /tmp/ccMfZhCg.o
+ .data          0x00008d78        0x0 /tmp/ccOY5C1t.o
+ .data          0x00008d78        0x0 /tmp/ccy46KRH.o
+ .data          0x00008d78        0x0 /tmp/ccaoVt9V.o
+ .data          0x00008d78        0x0 /tmp/ccY9uVVa.o
+ .data          0x00008d78        0x0 /tmp/ccA9qxaq.o
+ .data          0x00008d78        0x0 /tmp/ccm4jM7F.o
+ .data          0x00008d78        0x4 /tmp/ccGg5qiW.o
+                0x00008d78                g_readFileSize
+ .data          0x00008d7c        0x0 /tmp/ccG2zb1c.o
+ .data          0x00008d7c        0x0 /tmp/ccOa421t.o
+ .data          0x00008d7c        0x0 /tmp/ccCMoryL.o
+ .data          0x00008d7c        0x0 /tmp/ccK0lIQ3.o
+ .data          0x00008d7c        0x0 /tmp/ccOsNehm.o
+ .data          0x00008d7c        0x0 /tmp/ccqaYsfF.o
+ .data          0x00008d7c        0x0 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+                0x00008d7c                edata = .
+                0x00008d7c                _edata = .
+
+.bss            0x00008d7c      0x300
+                0x00008d7c                _bss_start = .
+ *(.bss)
+ .bss           0x00008d7c        0x0 /tmp/cc0swFIh.o
+ .bss           0x00008d7c        0x0 /tmp/cc6tjEir.o
+ .bss           0x00008d7c        0x4 /tmp/cc84bKZA.o
+ .bss           0x00008d80        0x0 /tmp/ccu2YFOK.o
+ .bss           0x00008d80        0x0 /tmp/cc2XPzeV.o
+ .bss           0x00008d80        0x0 /tmp/cciSyve6.o
+ .bss           0x00008d80        0x0 /tmp/ccyMxDjh.o
+ .bss           0x00008d80        0x0 /tmp/ccQtfWFs.o
+ .bss           0x00008d80        0x0 /tmp/cce2AcmE.o
+ .bss           0x00008d80        0x0 /tmp/ccQL4BlQ.o
+ .bss           0x00008d80        0x0 /tmp/ccquO3o2.o
+ .bss           0x00008d80        0x0 /tmp/ccaeyuMe.o
+ .bss           0x00008d80        0x0 /tmp/ccOAZIer.o
+ .bss           0x00008d80        0x0 /tmp/ccayUuJD.o
+ .bss           0x00008d80        0x0 /tmp/ccEb7noQ.o
+ .bss           0x00008d80        0x0 /tmp/ccsZpAj3.o
+ .bss           0x00008d80        0x0 /tmp/ccMfZhCg.o
+ .bss           0x00008d80        0x0 /tmp/ccOY5C1t.o
+ .bss           0x00008d80        0x0 /tmp/ccy46KRH.o
+ .bss           0x00008d80        0x0 /tmp/ccaoVt9V.o
+ .bss           0x00008d80        0x0 /tmp/ccY9uVVa.o
+ .bss           0x00008d80        0x0 /tmp/ccA9qxaq.o
+ .bss           0x00008d80        0x0 /tmp/ccm4jM7F.o
+ .bss           0x00008d80        0x0 /tmp/ccGg5qiW.o
+ .bss           0x00008d80        0x0 /tmp/ccG2zb1c.o
+ .bss           0x00008d80        0x0 /tmp/ccOa421t.o
+ .bss           0x00008d80        0x0 /tmp/ccCMoryL.o
+ .bss           0x00008d80        0x0 /tmp/ccK0lIQ3.o
+ .bss           0x00008d80        0x0 /tmp/ccOsNehm.o
+ .bss           0x00008d80        0x8 /tmp/ccqaYsfF.o
+                0x00008d80                s_unbind_cnt
+                0x00008d84                s_bind_cnt
+ .bss           0x00008d88        0x0 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+ *(COMMON)
+ COMMON         0x00008d88      0x100 /tmp/cc6tjEir.o
+                0x00008d88                int_handlers
+ COMMON         0x00008e88        0x4 /tmp/ccu2YFOK.o
+                0x00008e88                timer_ticks
+ COMMON         0x00008e8c       0x70 /tmp/cc2XPzeV.o
+                0x00008e8c                D
+                0x00008e90                b
+                0x00008e94                x
+                0x00008ed4                flen
+                0x00008edc                A
+                0x00008ee0                B
+                0x00008ee4                C
+                0x00008ee8                i
+                0x00008eec                c
+                0x00008ef0                d
+                0x00008ef4                a
+                0x00008ef8                len
+ COMMON         0x00008efc      0x15c /tmp/ccGg5qiW.o
+                0x00008efc                g_input
+                0x00008f00                video_size_get
+                0x00008f04                g_list0_map_addr
+                0x00008f14                vld_table_addr
+                0x00008f18                frame_buf_size
+                0x00008f1c                bs_buffer_length
+                0x00008f20                weightscale4x4
+                0x00008f80                total_inter_malloc_size
+                0x00008f84                or_addr_offset
+                0x00008f88                g_nFrame_dec
+                0x00008f8c                cpu_will_be_reset
+                0x00008f90                file_end
+                0x00008f94                ptrOutBfr
+                0x00008f98                g_streamLen
+                0x00008f9c                g_stream_type
+                0x00008fa0                g_extra_malloced_size
+                0x00008fa4                total_extra_malloc_size
+                0x00008fa8                g_not_first_reset
+                0x00008fac                ptrInbfr
+                0x00008fb0                extra_malloc_mem_start_addr
+                0x00008fb4                weightscale8x8
+                0x00009034                video_buffer_malloced
+                0x00009038                or1200_print
+                0x0000903c                g_inter_malloced_size
+                0x00009040                g_pOutBfr
+                0x00009044                s_bFisrtUnit
+                0x00009048                inter_malloc_mem_start_addr
+                0x0000904c                input_buffer_update
+                0x00009050                bs_start_addr
+                0x00009054                g_stream_offset
+ COMMON         0x00009058       0x18 /tmp/ccOa421t.o
+                0x00009058                s_inter_mem_size
+                0x0000905c                s_extra_mem_size
+                0x00009060                s_used_extra_mem
+                0x00009064                s_extra_mem_bfr_ptr
+                0x00009068                s_inter_mem_bfr_ptr
+                0x0000906c                s_used_inter_mem
+ COMMON         0x00009070        0x4 /tmp/ccK0lIQ3.o
+                0x00009070                g_fh_reg_ptr
+ COMMON         0x00009074        0x8 /tmp/ccqaYsfF.o
+                0x00009074                s_glb_reg_bck_ptr
+                0x00009078                optr
+                0x0000907c                _bss_end = .
+OUTPUT(vp8dec elf32-or32)
+
+.debug_abbrev   0x00000000     0x203e
+ .debug_abbrev  0x00000000       0xc1 /tmp/cc0swFIh.o
+ .debug_abbrev  0x000000c1      0x12c /tmp/cc6tjEir.o
+ .debug_abbrev  0x000001ed       0xbf /tmp/cc84bKZA.o
+ .debug_abbrev  0x000002ac      0x1ab /tmp/ccu2YFOK.o
+ .debug_abbrev  0x00000457       0xde /tmp/cc2XPzeV.o
+ .debug_abbrev  0x00000535      0x1b3 /tmp/cciSyve6.o
+ .debug_abbrev  0x000006e8       0x77 /tmp/ccyMxDjh.o
+ .debug_abbrev  0x0000075f       0x6a /tmp/ccQtfWFs.o
+ .debug_abbrev  0x000007c9      0x105 /tmp/cce2AcmE.o
+ .debug_abbrev  0x000008ce      0x17a /tmp/ccQL4BlQ.o
+ .debug_abbrev  0x00000a48       0x95 /tmp/ccquO3o2.o
+ .debug_abbrev  0x00000add       0xde /tmp/ccaeyuMe.o
+ .debug_abbrev  0x00000bbb       0x6a /tmp/ccOAZIer.o
+ .debug_abbrev  0x00000c25       0x54 /tmp/ccayUuJD.o
+ .debug_abbrev  0x00000c79       0xac /tmp/ccEb7noQ.o
+ .debug_abbrev  0x00000d25       0x98 /tmp/ccsZpAj3.o
+ .debug_abbrev  0x00000dbd      0x162 /tmp/ccMfZhCg.o
+ .debug_abbrev  0x00000f1f       0xd2 /tmp/ccOY5C1t.o
+ .debug_abbrev  0x00000ff1       0xfc /tmp/ccy46KRH.o
+ .debug_abbrev  0x000010ed      0x175 /tmp/ccaoVt9V.o
+ .debug_abbrev  0x00001262      0x183 /tmp/ccY9uVVa.o
+ .debug_abbrev  0x000013e5      0x101 /tmp/ccA9qxaq.o
+ .debug_abbrev  0x000014e6      0x1e0 /tmp/ccm4jM7F.o
+ .debug_abbrev  0x000016c6       0x8e /tmp/ccGg5qiW.o
+ .debug_abbrev  0x00001754      0x13f /tmp/ccG2zb1c.o
+ .debug_abbrev  0x00001893      0x10d /tmp/ccOa421t.o
+ .debug_abbrev  0x000019a0      0x1b0 /tmp/ccCMoryL.o
+ .debug_abbrev  0x00001b50      0x1db /tmp/ccK0lIQ3.o
+ .debug_abbrev  0x00001d2b       0x9a /tmp/ccOsNehm.o
+ .debug_abbrev  0x00001dc5      0x1dd /tmp/ccqaYsfF.o
+ .debug_abbrev  0x00001fa2       0x9c /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_info     0x00000000     0xb254
+ .debug_info    0x00000000      0x11e /tmp/cc0swFIh.o
+ .debug_info    0x0000011e      0x1a4 /tmp/cc6tjEir.o
+ .debug_info    0x000002c2      0x1a0 /tmp/cc84bKZA.o
+ .debug_info    0x00000462      0x368 /tmp/ccu2YFOK.o
+ .debug_info    0x000007ca      0x256 /tmp/cc2XPzeV.o
+ .debug_info    0x00000a20      0xaf0 /tmp/cciSyve6.o
+ .debug_info    0x00001510      0x191 /tmp/ccyMxDjh.o
+ .debug_info    0x000016a1      0x1dd /tmp/ccQtfWFs.o
+ .debug_info    0x0000187e      0x955 /tmp/cce2AcmE.o
+ .debug_info    0x000021d3      0xd52 /tmp/ccQL4BlQ.o
+ .debug_info    0x00002f25      0x11e /tmp/ccquO3o2.o
+ .debug_info    0x00003043      0x73f /tmp/ccaeyuMe.o
+ .debug_info    0x00003782      0x180 /tmp/ccOAZIer.o
+ .debug_info    0x00003902       0x61 /tmp/ccayUuJD.o
+ .debug_info    0x00003963      0x328 /tmp/ccEb7noQ.o
+ .debug_info    0x00003c8b      0x1ab /tmp/ccsZpAj3.o
+ .debug_info    0x00003e36      0x7f7 /tmp/ccMfZhCg.o
+ .debug_info    0x0000462d      0x141 /tmp/ccOY5C1t.o
+ .debug_info    0x0000476e      0x2e5 /tmp/ccy46KRH.o
+ .debug_info    0x00004a53      0x3ed /tmp/ccaoVt9V.o
+ .debug_info    0x00004e40      0xeb2 /tmp/ccY9uVVa.o
+ .debug_info    0x00005cf2      0x9e6 /tmp/ccA9qxaq.o
+ .debug_info    0x000066d8      0xd16 /tmp/ccm4jM7F.o
+ .debug_info    0x000073ee      0x352 /tmp/ccGg5qiW.o
+ .debug_info    0x00007740      0xb23 /tmp/ccG2zb1c.o
+ .debug_info    0x00008263      0x39a /tmp/ccOa421t.o
+ .debug_info    0x000085fd      0xca4 /tmp/ccCMoryL.o
+ .debug_info    0x000092a1      0xe64 /tmp/ccK0lIQ3.o
+ .debug_info    0x0000a105      0x18c /tmp/ccOsNehm.o
+ .debug_info    0x0000a291      0xeaf /tmp/ccqaYsfF.o
+ .debug_info    0x0000b140      0x114 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_line     0x00000000     0x7af0
+ .debug_line    0x00000000       0xe5 /tmp/cc0swFIh.o
+ .debug_line    0x000000e5      0x1bf /tmp/cc6tjEir.o
+ .debug_line    0x000002a4      0x1a3 /tmp/cc84bKZA.o
+ .debug_line    0x00000447      0x24a /tmp/ccu2YFOK.o
+ .debug_line    0x00000691     0x1b79 /tmp/cc2XPzeV.o
+ .debug_line    0x0000220a      0x55e /tmp/cciSyve6.o
+ .debug_line    0x00002768       0xe0 /tmp/ccyMxDjh.o
+ .debug_line    0x00002848       0xe3 /tmp/ccQtfWFs.o
+ .debug_line    0x0000292b      0x16f /tmp/cce2AcmE.o
+ .debug_line    0x00002a9a      0x279 /tmp/ccQL4BlQ.o
+ .debug_line    0x00002d13       0xca /tmp/ccquO3o2.o
+ .debug_line    0x00002ddd      0x195 /tmp/ccaeyuMe.o
+ .debug_line    0x00002f72       0xcc /tmp/ccOAZIer.o
+ .debug_line    0x0000303e       0x7e /tmp/ccayUuJD.o
+ .debug_line    0x000030bc      0x264 /tmp/ccEb7noQ.o
+ .debug_line    0x00003320      0x19a /tmp/ccsZpAj3.o
+ .debug_line    0x000034ba      0x2e0 /tmp/ccMfZhCg.o
+ .debug_line    0x0000379a      0x178 /tmp/ccOY5C1t.o
+ .debug_line    0x00003912      0x2ed /tmp/ccy46KRH.o
+ .debug_line    0x00003bff      0x2bf /tmp/ccaoVt9V.o
+ .debug_line    0x00003ebe      0x3d7 /tmp/ccY9uVVa.o
+ .debug_line    0x00004295      0x1fe /tmp/ccA9qxaq.o
+ .debug_line    0x00004493      0xb0c /tmp/ccm4jM7F.o
+ .debug_line    0x00004f9f       0xc8 /tmp/ccGg5qiW.o
+ .debug_line    0x00005067      0x444 /tmp/ccG2zb1c.o
+ .debug_line    0x000054ab      0x3c5 /tmp/ccOa421t.o
+ .debug_line    0x00005870      0x43e /tmp/ccCMoryL.o
+ .debug_line    0x00005cae     0x1319 /tmp/ccK0lIQ3.o
+ .debug_line    0x00006fc7      0x139 /tmp/ccOsNehm.o
+ .debug_line    0x00007100      0x7c1 /tmp/ccqaYsfF.o
+ .debug_line    0x000078c1      0x22f /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_frame    0x00000000      0xa1c
+ .debug_frame   0x00000000       0x40 /tmp/cc0swFIh.o
+ .debug_frame   0x00000040       0x90 /tmp/cc6tjEir.o
+ .debug_frame   0x000000d0       0x58 /tmp/cc84bKZA.o
+ .debug_frame   0x00000128       0xe0 /tmp/ccu2YFOK.o
+ .debug_frame   0x00000208       0x68 /tmp/cc2XPzeV.o
+ .debug_frame   0x00000270       0xbc /tmp/cciSyve6.o
+ .debug_frame   0x0000032c       0x28 /tmp/cce2AcmE.o
+ .debug_frame   0x00000354       0x68 /tmp/ccQL4BlQ.o
+ .debug_frame   0x000003bc       0x28 /tmp/ccaeyuMe.o
+ .debug_frame   0x000003e4       0xa0 /tmp/ccEb7noQ.o
+ .debug_frame   0x00000484       0x28 /tmp/ccsZpAj3.o
+ .debug_frame   0x000004ac       0x40 /tmp/ccMfZhCg.o
+ .debug_frame   0x000004ec       0x48 /tmp/ccOY5C1t.o
+ .debug_frame   0x00000534       0x74 /tmp/ccy46KRH.o
+ .debug_frame   0x000005a8       0x78 /tmp/ccaoVt9V.o
+ .debug_frame   0x00000620       0xa8 /tmp/ccY9uVVa.o
+ .debug_frame   0x000006c8       0x2c /tmp/ccA9qxaq.o
+ .debug_frame   0x000006f4       0x5c /tmp/ccm4jM7F.o
+ .debug_frame   0x00000750       0x58 /tmp/ccG2zb1c.o
+ .debug_frame   0x000007a8       0xd0 /tmp/ccOa421t.o
+ .debug_frame   0x00000878       0x54 /tmp/ccCMoryL.o
+ .debug_frame   0x000008cc       0x90 /tmp/ccK0lIQ3.o
+ .debug_frame   0x0000095c       0x30 /tmp/ccOsNehm.o
+ .debug_frame   0x0000098c       0x68 /tmp/ccqaYsfF.o
+ .debug_frame   0x000009f4       0x28 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_loc      0x00000000     0x2fbf
+ .debug_loc     0x00000000       0x9d /tmp/cc0swFIh.o
+ .debug_loc     0x0000009d      0x171 /tmp/cc6tjEir.o
+ .debug_loc     0x0000020e      0x143 /tmp/cc84bKZA.o
+ .debug_loc     0x00000351       0xe0 /tmp/ccu2YFOK.o
+ .debug_loc     0x00000431       0xca /tmp/cc2XPzeV.o
+ .debug_loc     0x000004fb      0x2ba /tmp/cciSyve6.o
+ .debug_loc     0x000007b5       0x42 /tmp/cce2AcmE.o
+ .debug_loc     0x000007f7       0xb7 /tmp/ccQL4BlQ.o
+ .debug_loc     0x000008ae       0x4d /tmp/ccaeyuMe.o
+ .debug_loc     0x000008fb      0x1af /tmp/ccEb7noQ.o
+ .debug_loc     0x00000aaa       0xac /tmp/ccsZpAj3.o
+ .debug_loc     0x00000b56       0xfc /tmp/ccMfZhCg.o
+ .debug_loc     0x00000c52      0x117 /tmp/ccOY5C1t.o
+ .debug_loc     0x00000d69      0x1c8 /tmp/ccy46KRH.o
+ .debug_loc     0x00000f31      0x281 /tmp/ccaoVt9V.o
+ .debug_loc     0x000011b2      0x30d /tmp/ccY9uVVa.o
+ .debug_loc     0x000014bf       0x7f /tmp/ccA9qxaq.o
+ .debug_loc     0x0000153e      0x618 /tmp/ccm4jM7F.o
+ .debug_loc     0x00001b56      0x1b2 /tmp/ccG2zb1c.o
+ .debug_loc     0x00001d08      0x1f6 /tmp/ccOa421t.o
+ .debug_loc     0x00001efe      0x362 /tmp/ccCMoryL.o
+ .debug_loc     0x00002260      0x8e9 /tmp/ccK0lIQ3.o
+ .debug_loc     0x00002b49       0xa4 /tmp/ccOsNehm.o
+ .debug_loc     0x00002bed      0x24b /tmp/ccqaYsfF.o
+ .debug_loc     0x00002e38      0x187 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_pubnames
+                0x00000000     0x10ac
+ .debug_pubnames
+                0x00000000       0x6c /tmp/cc0swFIh.o
+ .debug_pubnames
+                0x0000006c       0x68 /tmp/cc6tjEir.o
+ .debug_pubnames
+                0x000000d4       0x3c /tmp/cc84bKZA.o
+ .debug_pubnames
+                0x00000110       0xf9 /tmp/ccu2YFOK.o
+ .debug_pubnames
+                0x00000209       0x78 /tmp/cc2XPzeV.o
+ .debug_pubnames
+                0x00000281       0xb4 /tmp/cciSyve6.o
+ .debug_pubnames
+                0x00000335       0x2c /tmp/ccyMxDjh.o
+ .debug_pubnames
+                0x00000361       0x2a /tmp/ccQtfWFs.o
+ .debug_pubnames
+                0x0000038b       0x8d /tmp/cce2AcmE.o
+ .debug_pubnames
+                0x00000418      0x2cc /tmp/ccQL4BlQ.o
+ .debug_pubnames
+                0x000006e4       0x45 /tmp/ccquO3o2.o
+ .debug_pubnames
+                0x00000729       0x28 /tmp/ccaeyuMe.o
+ .debug_pubnames
+                0x00000751       0x32 /tmp/ccOAZIer.o
+ .debug_pubnames
+                0x00000783       0x28 /tmp/ccayUuJD.o
+ .debug_pubnames
+                0x000007ab       0x7f /tmp/ccEb7noQ.o
+ .debug_pubnames
+                0x0000082a       0x2c /tmp/ccsZpAj3.o
+ .debug_pubnames
+                0x00000856       0x44 /tmp/ccMfZhCg.o
+ .debug_pubnames
+                0x0000089a       0x2b /tmp/ccOY5C1t.o
+ .debug_pubnames
+                0x000008c5       0x94 /tmp/ccy46KRH.o
+ .debug_pubnames
+                0x00000959       0x87 /tmp/ccaoVt9V.o
+ .debug_pubnames
+                0x000009e0       0x90 /tmp/ccY9uVVa.o
+ .debug_pubnames
+                0x00000a70       0x2e /tmp/ccA9qxaq.o
+ .debug_pubnames
+                0x00000a9e       0x27 /tmp/ccm4jM7F.o
+ .debug_pubnames
+                0x00000ac5      0x288 /tmp/ccGg5qiW.o
+ .debug_pubnames
+                0x00000d4d       0x6a /tmp/ccG2zb1c.o
+ .debug_pubnames
+                0x00000db7      0x15a /tmp/ccOa421t.o
+ .debug_pubnames
+                0x00000f11       0x3f /tmp/ccCMoryL.o
+ .debug_pubnames
+                0x00000f50       0x92 /tmp/ccK0lIQ3.o
+ .debug_pubnames
+                0x00000fe2       0x25 /tmp/ccOsNehm.o
+ .debug_pubnames
+                0x00001007       0x88 /tmp/ccqaYsfF.o
+ .debug_pubnames
+                0x0000108f       0x1d /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_pubtypes
+                0x00000000     0x12f6
+ .debug_pubtypes
+                0x00000000       0x12 /tmp/cc0swFIh.o
+ .debug_pubtypes
+                0x00000012       0x1b /tmp/cc6tjEir.o
+ .debug_pubtypes
+                0x0000002d       0x1d /tmp/cc84bKZA.o
+ .debug_pubtypes
+                0x0000004a       0x12 /tmp/ccu2YFOK.o
+ .debug_pubtypes
+                0x0000005c       0x27 /tmp/cc2XPzeV.o
+ .debug_pubtypes
+                0x00000083      0x177 /tmp/cciSyve6.o
+ .debug_pubtypes
+                0x000001fa       0x1f /tmp/ccyMxDjh.o
+ .debug_pubtypes
+                0x00000219       0x12 /tmp/ccQtfWFs.o
+ .debug_pubtypes
+                0x0000022b      0x125 /tmp/cce2AcmE.o
+ .debug_pubtypes
+                0x00000350      0x12c /tmp/ccQL4BlQ.o
+ .debug_pubtypes
+                0x0000047c       0x3d /tmp/ccquO3o2.o
+ .debug_pubtypes
+                0x000004b9       0xfd /tmp/ccaeyuMe.o
+ .debug_pubtypes
+                0x000005b6       0x12 /tmp/ccOAZIer.o
+ .debug_pubtypes
+                0x000005c8       0x12 /tmp/ccEb7noQ.o
+ .debug_pubtypes
+                0x000005da       0x29 /tmp/ccsZpAj3.o
+ .debug_pubtypes
+                0x00000603       0xfd /tmp/ccMfZhCg.o
+ .debug_pubtypes
+                0x00000700       0x3a /tmp/ccOY5C1t.o
+ .debug_pubtypes
+                0x0000073a       0x29 /tmp/ccy46KRH.o
+ .debug_pubtypes
+                0x00000763       0x23 /tmp/ccaoVt9V.o
+ .debug_pubtypes
+                0x00000786      0x1df /tmp/ccY9uVVa.o
+ .debug_pubtypes
+                0x00000965      0x14f /tmp/ccA9qxaq.o
+ .debug_pubtypes
+                0x00000ab4      0x160 /tmp/ccm4jM7F.o
+ .debug_pubtypes
+                0x00000c14       0x48 /tmp/ccGg5qiW.o
+ .debug_pubtypes
+                0x00000c5c      0x176 /tmp/ccG2zb1c.o
+ .debug_pubtypes
+                0x00000dd2       0x50 /tmp/ccOa421t.o
+ .debug_pubtypes
+                0x00000e22      0x173 /tmp/ccCMoryL.o
+ .debug_pubtypes
+                0x00000f95      0x169 /tmp/ccK0lIQ3.o
+ .debug_pubtypes
+                0x000010fe       0x52 /tmp/ccOsNehm.o
+ .debug_pubtypes
+                0x00001150      0x189 /tmp/ccqaYsfF.o
+ .debug_pubtypes
+                0x000012d9       0x1d /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_aranges  0x00000000      0x328
+ .debug_aranges
+                0x00000000       0x20 /tmp/cc0swFIh.o
+ .debug_aranges
+                0x00000020       0x20 /tmp/cc6tjEir.o
+ .debug_aranges
+                0x00000040       0x20 /tmp/cc84bKZA.o
+ .debug_aranges
+                0x00000060       0x20 /tmp/ccu2YFOK.o
+ .debug_aranges
+                0x00000080       0x20 /tmp/cc2XPzeV.o
+ .debug_aranges
+                0x000000a0       0x20 /tmp/cciSyve6.o
+ .debug_aranges
+                0x000000c0       0x20 /tmp/cce2AcmE.o
+ .debug_aranges
+                0x000000e0       0x20 /tmp/ccQL4BlQ.o
+ .debug_aranges
+                0x00000100       0x20 /tmp/ccaeyuMe.o
+ .debug_aranges
+                0x00000120       0x20 /tmp/ccEb7noQ.o
+ .debug_aranges
+                0x00000140       0x20 /tmp/ccsZpAj3.o
+ .debug_aranges
+                0x00000160       0x20 /tmp/ccMfZhCg.o
+ .debug_aranges
+                0x00000180       0x20 /tmp/ccOY5C1t.o
+ .debug_aranges
+                0x000001a0       0x20 /tmp/ccy46KRH.o
+ .debug_aranges
+                0x000001c0       0x20 /tmp/ccaoVt9V.o
+ .debug_aranges
+                0x000001e0       0x20 /tmp/ccY9uVVa.o
+ .debug_aranges
+                0x00000200       0x20 /tmp/ccA9qxaq.o
+ .debug_aranges
+                0x00000220       0x20 /tmp/ccm4jM7F.o
+ .debug_aranges
+                0x00000240       0x20 /tmp/ccG2zb1c.o
+ .debug_aranges
+                0x00000260       0x20 /tmp/ccOa421t.o
+ .debug_aranges
+                0x00000280       0x20 /tmp/ccCMoryL.o
+ .debug_aranges
+                0x000002a0       0x20 /tmp/ccK0lIQ3.o
+ .debug_aranges
+                0x000002c0       0x20 /tmp/ccOsNehm.o
+ .debug_aranges
+                0x000002e0       0x28 /tmp/ccqaYsfF.o
+ .debug_aranges
+                0x00000308       0x20 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_str      0x00000000     0x203f
+ .debug_str     0x00000000      0x145 /tmp/cc0swFIh.o
+                                0x171 (size before relaxing)
+ .debug_str     0x00000145       0x69 /tmp/cc6tjEir.o
+                                0x131 (size before relaxing)
+ .debug_str     0x000001ae       0x61 /tmp/cc84bKZA.o
+                                0x133 (size before relaxing)
+ .debug_str     0x0000020f       0xe0 /tmp/ccu2YFOK.o
+                                0x1c0 (size before relaxing)
+ .debug_str     0x000002ef       0x98 /tmp/cc2XPzeV.o
+                                0x192 (size before relaxing)
+ .debug_str     0x00000387      0x6a5 /tmp/cciSyve6.o
+                                0x908 (size before relaxing)
+ .debug_str     0x00000a2c       0xac /tmp/ccyMxDjh.o
+                                0x2ac (size before relaxing)
+ .debug_str     0x00000ad8       0x7d /tmp/ccQtfWFs.o
+                                0x333 (size before relaxing)
+ .debug_str     0x00000b55       0xbe /tmp/cce2AcmE.o
+                                0x8ad (size before relaxing)
+ .debug_str     0x00000c13      0x2e4 /tmp/ccQL4BlQ.o
+                                0xae0 (size before relaxing)
+ .debug_str     0x00000ef7       0x65 /tmp/ccquO3o2.o
+                                0x1eb (size before relaxing)
+ .debug_str     0x00000f5c       0x46 /tmp/ccaeyuMe.o
+                                0x677 (size before relaxing)
+ .debug_str     0x00000fa2       0x58 /tmp/ccOAZIer.o
+                                0x2a4 (size before relaxing)
+ .debug_str     0x00000ffa       0x4c /tmp/ccayUuJD.o
+                                0x10c (size before relaxing)
+ .debug_str     0x00001046       0xbb /tmp/ccEb7noQ.o
+                                0x307 (size before relaxing)
+ .debug_str     0x00001101       0x57 /tmp/ccsZpAj3.o
+                                0x24b (size before relaxing)
+ .debug_str     0x00001158       0xa9 /tmp/ccMfZhCg.o
+                                0x6da (size before relaxing)
+ .debug_str     0x00001201       0x57 /tmp/ccOY5C1t.o
+                                0x18a (size before relaxing)
+ .debug_str     0x00001258       0xd0 /tmp/ccy46KRH.o
+                                0x2d1 (size before relaxing)
+ .debug_str     0x00001328      0x119 /tmp/ccaoVt9V.o
+                                0x40c (size before relaxing)
+ .debug_str     0x00001441      0x252 /tmp/ccY9uVVa.o
+                                0xb2f (size before relaxing)
+ .debug_str     0x00001693       0x53 /tmp/ccA9qxaq.o
+                                0x85f (size before relaxing)
+ .debug_str     0x000016e6       0xa0 /tmp/ccm4jM7F.o
+                                0x9a5 (size before relaxing)
+ .debug_str     0x00001786      0x270 /tmp/ccGg5qiW.o
+                                0x3b4 (size before relaxing)
+ .debug_str     0x000019f6       0xfa /tmp/ccG2zb1c.o
+                                0x91f (size before relaxing)
+ .debug_str     0x00001af0      0x286 /tmp/ccOa421t.o
+                                0x3de (size before relaxing)
+ .debug_str     0x00001d76       0x8e /tmp/ccCMoryL.o
+                                0x966 (size before relaxing)
+ .debug_str     0x00001e04       0xc7 /tmp/ccK0lIQ3.o
+                                0xb14 (size before relaxing)
+ .debug_str     0x00001ecb       0x4d /tmp/ccOsNehm.o
+                                0x1d8 (size before relaxing)
+ .debug_str     0x00001f18       0x9f /tmp/ccqaYsfF.o
+                                0xc66 (size before relaxing)
+ .debug_str     0x00001fb7       0x88 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+                                0x137 (size before relaxing)
+
+.comment        0x00000000       0x51
+ .comment       0x00000000       0x51 /tmp/cc0swFIh.o
+                                 0x52 (size before relaxing)
+ .comment       0x00000000       0x52 /tmp/cc6tjEir.o
+ .comment       0x00000000       0x52 /tmp/cc84bKZA.o
+ .comment       0x00000000       0x52 /tmp/ccu2YFOK.o
+ .comment       0x00000000       0x52 /tmp/cc2XPzeV.o
+ .comment       0x00000000       0x52 /tmp/cciSyve6.o
+ .comment       0x00000000       0x52 /tmp/ccyMxDjh.o
+ .comment       0x00000000       0x52 /tmp/ccQtfWFs.o
+ .comment       0x00000000       0x52 /tmp/cce2AcmE.o
+ .comment       0x00000000       0x52 /tmp/ccQL4BlQ.o
+ .comment       0x00000000       0x52 /tmp/ccquO3o2.o
+ .comment       0x00000000       0x52 /tmp/ccaeyuMe.o
+ .comment       0x00000000       0x52 /tmp/ccOAZIer.o
+ .comment       0x00000000       0x52 /tmp/ccayUuJD.o
+ .comment       0x00000000       0x52 /tmp/ccEb7noQ.o
+ .comment       0x00000000       0x52 /tmp/ccsZpAj3.o
+ .comment       0x00000000       0x52 /tmp/ccMfZhCg.o
+ .comment       0x00000000       0x52 /tmp/ccOY5C1t.o
+ .comment       0x00000000       0x52 /tmp/ccy46KRH.o
+ .comment       0x00000000       0x52 /tmp/ccaoVt9V.o
+ .comment       0x00000000       0x52 /tmp/ccY9uVVa.o
+ .comment       0x00000000       0x52 /tmp/ccA9qxaq.o
+ .comment       0x00000000       0x52 /tmp/ccm4jM7F.o
+ .comment       0x00000000       0x52 /tmp/ccGg5qiW.o
+ .comment       0x00000000       0x52 /tmp/ccG2zb1c.o
+ .comment       0x00000000       0x52 /tmp/ccOa421t.o
+ .comment       0x00000000       0x52 /tmp/ccCMoryL.o
+ .comment       0x00000000       0x52 /tmp/ccK0lIQ3.o
+ .comment       0x00000000       0x52 /tmp/ccOsNehm.o
+ .comment       0x00000000       0x52 /tmp/ccqaYsfF.o
+ .comment       0x00000000       0x52 /opt/or32-new/or32-elf/lib//libg.a(lib_a-memset.o)
+
+.debug_ranges   0x00000000      0x250
+ .debug_ranges  0x00000000       0x30 /tmp/ccu2YFOK.o
+ .debug_ranges  0x00000030       0x30 /tmp/ccMfZhCg.o
+ .debug_ranges  0x00000060       0x20 /tmp/ccOY5C1t.o
+ .debug_ranges  0x00000080       0x18 /tmp/ccaoVt9V.o
+ .debug_ranges  0x00000098       0x48 /tmp/ccY9uVVa.o
+ .debug_ranges  0x000000e0       0x80 /tmp/ccm4jM7F.o
+ .debug_ranges  0x00000160       0x18 /tmp/ccG2zb1c.o
+ .debug_ranges  0x00000178       0x38 /tmp/ccCMoryL.o
+ .debug_ranges  0x000001b0       0x18 /tmp/ccK0lIQ3.o
+ .debug_ranges  0x000001c8       0x88 /tmp/ccqaYsfF.o
