@@ -171,7 +171,7 @@ void assert_handler(int sig_num)
     if (pid > 0) {
         snprintf(pid_str, sizeof(pid_str), "%d", pid);
         property_set(PHONE_APP_PROP, pid_str);
-        property_set("ctl.start", "kill_phone");
+        property_set("ctl.start", "kill_w_phone");
     }
 }
 
