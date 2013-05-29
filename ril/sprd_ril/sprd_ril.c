@@ -1556,12 +1556,12 @@ void requestLastCallFailCause(int channelID, void *data, size_t datalen, RIL_Tok
     pthread_mutex_lock(&s_call_mutex);
     switch(call_fail_cause) {
         case 1:
-        case 3:
         case 22:
         case 28:
             response = CALL_FAIL_UNOBTAINABLE_NUMBER;
             break;
         case 0:
+        case 3:
         case 16:
         case 301:
             response = CALL_FAIL_NORMAL;
