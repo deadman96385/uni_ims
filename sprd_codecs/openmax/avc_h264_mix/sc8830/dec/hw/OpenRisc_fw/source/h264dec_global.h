@@ -76,11 +76,12 @@ extern int32	g_searching_IDR_pic;
 extern int32	g_pre_mb_is_intra4;	//????
 
 extern int32	g_nFrame_dec_h264;
-
+extern void  *display_array_BH[16];
 extern unsigned char *display_array_Y[16];
 extern unsigned char *display_array_UV[16];
 extern int32	display_array_len;
 extern int32 g_dispFrmNum;
+extern int   frame_dec_finish;
 
 extern int32	g_firstBsm_init_h264;/*BSM init*/
 

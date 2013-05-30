@@ -39,6 +39,7 @@ uint32 BitstreamReadBits (DEC_BS_T * stream, int32 nbits);
 PUBLIC uint32 READ_UE_V (DEC_BS_T * stream);
 PUBLIC int32 READ_SE_V (DEC_BS_T * stream);
 PUBLIC int32 H264Dec_Long_SEV (DEC_BS_T * stream);
+PUBLIC int32 H264Dec_Long_UEV (DEC_BS_T * stream);
 PUBLIC void H264Dec_flush_left_byte (void);
 void fillStreamBfr (DEC_BS_T * stream);
 #ifdef PARSER_CMODEL

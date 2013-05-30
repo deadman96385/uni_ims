@@ -1,5 +1,0 @@
-frm_cnt=32
-0xb0 		 // Width
-0x90 		 // Height
-9 		 // Search Rounds
-6 		 // QP

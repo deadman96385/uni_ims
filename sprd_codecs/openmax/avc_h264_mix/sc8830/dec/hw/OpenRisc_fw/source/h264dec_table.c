@@ -26,7 +26,7 @@
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
-		
+#if SIM_IN_WIN		
 int8 g_ICBP_TBL[6] = {0, 16, 32, 15, 31, 47};
 
 uint8 g_QP_SCALER_CR_TBL[52]=
@@ -92,7 +92,7 @@ uint8 g_blk_order_map_tbl[16+2 * 4] =
 	6 *6+1, 6 *6+2, 7 *6+1, 7 *6+2,  //U's 4 block4x4
     6 *6+4, 6 *6+5, 7 *6+4, 7 *6+5, 
 };
-
+#endif
 uint32 g_huff_tab_token[69] __attribute__((aligned(8))) = 
 {
 	0x0041c701, 0x4100c641, 0x8200c500, 0x0000c400, 0x42c4c302, 0x01c38242, 0xc3824182, 0xc3820000, 
@@ -105,7 +105,7 @@ uint32 g_huff_tab_token[69] __attribute__((aligned(8))) =
 	0xd04f500f, 0x8f0f0f4f, 0x4f8fcf8f, 0x0e4e8fcf, 0xcf8ed010, 0x8e8e9050, 0x4e0e1090, 0x0d0e00d0, 
 	0x10d00000, 0x90900000, 0x50500000, 0x0f100000, 0x4dcf0000
 };
-
+#if SIM_IN_WIN
 /*block order map from decoder order to context cache order*/
 WORD_ALIGN uint8 g_block_order_map_tbl[16+2*4] = 
 {
@@ -469,6 +469,7 @@ WORD_ALIGN const int32 g_msk[33] =
 	0x0fffffff, 0x1fffffff, 0x3fffffff, 0x7fffffff,
 	0xffffffff
 };
+#endif
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

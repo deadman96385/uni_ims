@@ -1508,31 +1508,31 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (MMDecOutput *dec_output_ptr, DEC_
 		H264Dec_exit_picture (img_ptr);
 
 //		H264Dec_display_control ();
+    frame_dec_finish=TRUE;
 
 		if(display_array_len>0)
 		{
+			g_dispFrmNum++;
 			dec_output_ptr->frameEffective = TRUE;
 			dec_output_ptr->pOutFrameY = display_array_Y[0];
 			dec_output_ptr->pOutFrameU = display_array_UV[0];
-			dec_output_ptr->pOutFrameV = display_array_UV[0];
-
+			//dec_output_ptr->pOutFrameV = display_array_UV[0];//g_dec_picture_ptr->imgV;
+			OR_VSP_UNBIND(display_array_BH[0]);
 			display_array_len--;
 			for(i =0;i<display_array_len; i++)
 			{
+				display_array_BH[i]=display_array_BH[i+1];
 				display_array_Y[i] = display_array_Y[i+1];
 				display_array_UV[i] = display_array_UV[i+1];
 			}
-
 		}
 
-
-
-//		dec_output_ptr->frameEffective = TRUE;
+		
 		dec_output_ptr->frame_width = img_ptr->width;
 		dec_output_ptr->frame_height = img_ptr->height;
-//		dec_output_ptr->pOutFrameY = g_dec_picture_ptr->imgY;
-//		dec_output_ptr->pOutFrameU = g_dec_picture_ptr->imgU;
-//		dec_output_ptr->pOutFrameV = g_dec_picture_ptr->imgV;
+		
+
+		
 			
 		g_dec_picture_ptr = NULL;//weihu for output
 		g_nFrame_dec_h264++;

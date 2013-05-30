@@ -259,10 +259,119 @@ PUBLIC void H264Dec_InterpretSEIMessage (void)
 	return;
 }
 
-LOCAL void H264Dec_ReadVUI (DEC_SPS_T *sps_ptr)
+/*LOCAL void H264Dec_ReadVUI (DEC_SPS_T *sps_ptr)
 {
 	//TBD
 	return;
+}*/
+LOCAL int32 H264Dec_ReadHRDParameters(DEC_HRD_PARAM_T *hrd_ptr)
+{	
+	uint32 SchedSelIdx;
+	DEC_BS_T *stream = g_image_ptr->bitstrm_ptr;
+
+  	hrd_ptr->cpb_cnt_minus1 = READ_UE_V (stream);
+  	hrd_ptr->bit_rate_scale = READ_FLC (stream, 4);
+  	hrd_ptr->cpb_size_scale = READ_FLC (stream, 4);
+
+  	for( SchedSelIdx = 0; SchedSelIdx <= hrd_ptr->cpb_cnt_minus1; SchedSelIdx++ )
+  	{
+    		hrd_ptr->bit_rate_value_minus1[ SchedSelIdx ]  = READ_UE_V (stream);
+    		hrd_ptr->cpb_size_value_minus1[ SchedSelIdx ] = H264Dec_Long_UEV (stream);
+    		hrd_ptr->cbr_flag[ SchedSelIdx ]                         = READ_FLC  (stream,1);
+  	}
+
+  	hrd_ptr->initial_cpb_removal_delay_length_minus1  = READ_FLC (stream, 5);
+  	hrd_ptr->cpb_removal_delay_length_minus1            = READ_FLC (stream, 5);
+ 	hrd_ptr->dpb_output_delay_length_minus1              = READ_FLC (stream, 5);
+  	hrd_ptr->time_offset_length                                 = READ_FLC (stream,5);
+
+  	return 0;
+}
+
+LOCAL void H264Dec_ReadVUI (DEC_VUI_T *vui_seq_parameters_ptr)
+{	
+	DEC_BS_T *stream = g_image_ptr->bitstrm_ptr;
+   	vui_seq_parameters_ptr->aspect_ratio_info_present_flag = READ_FLC  (stream,1);
+    	if (vui_seq_parameters_ptr->aspect_ratio_info_present_flag)
+    	{
+      		vui_seq_parameters_ptr->aspect_ratio_idc = READ_FLC  (stream, 8);
+      		if (255 == vui_seq_parameters_ptr->aspect_ratio_idc)
+      		{
+        		vui_seq_parameters_ptr->sar_width = READ_FLC  (stream,16);
+        		vui_seq_parameters_ptr->sar_height = READ_FLC  (stream,16);
+      		}
+  	}
+
+    	vui_seq_parameters_ptr->overscan_info_present_flag     = READ_FLC  (stream,1);
+    	if (vui_seq_parameters_ptr->overscan_info_present_flag)
+    	{
+      		vui_seq_parameters_ptr->overscan_appropriate_flag    = READ_FLC  (stream,1);
+    	}
+
+    	vui_seq_parameters_ptr->video_signal_type_present_flag = READ_FLC  (stream,1);
+    	if (vui_seq_parameters_ptr->video_signal_type_present_flag)
+    	{
+      		vui_seq_parameters_ptr->video_format                    = READ_FLC  (stream,3);
+      		vui_seq_parameters_ptr->video_full_range_flag           = READ_FLC  (stream,1);
+      		vui_seq_parameters_ptr->colour_description_present_flag = READ_FLC  (stream,1);
+      		if(vui_seq_parameters_ptr->colour_description_present_flag)
+      		{
+        		vui_seq_parameters_ptr->colour_primaries              = READ_FLC  (stream,8);
+        		vui_seq_parameters_ptr->transfer_characteristics      = READ_FLC  (stream,8);
+        		vui_seq_parameters_ptr->matrix_coefficients           = READ_FLC  (stream,8);
+      		}
+    	}
+		
+    	vui_seq_parameters_ptr->chroma_location_info_present_flag = READ_FLC  (stream,1);
+    	if(vui_seq_parameters_ptr->chroma_location_info_present_flag)
+    	{
+      		vui_seq_parameters_ptr->chroma_sample_loc_type_top_field     = READ_UE_V  (stream);
+      		vui_seq_parameters_ptr->chroma_sample_loc_type_bottom_field  = READ_UE_V  (stream);
+    	}
+		
+    	vui_seq_parameters_ptr->timing_info_present_flag          = READ_FLC  (stream,1);
+    	if (vui_seq_parameters_ptr->timing_info_present_flag)
+    	{
+      		vui_seq_parameters_ptr->num_units_in_tick               = READ_FLC  (stream, 32);
+      		vui_seq_parameters_ptr->time_scale                      = READ_FLC  (stream, 32);
+      		vui_seq_parameters_ptr->fixed_frame_rate_flag           = READ_FLC  (stream,1);
+    	}
+		
+    	vui_seq_parameters_ptr->nal_hrd_parameters_present_flag   = READ_FLC  (stream,1);
+    	if (vui_seq_parameters_ptr->nal_hrd_parameters_present_flag)
+    	{
+      		H264Dec_ReadHRDParameters (&(vui_seq_parameters_ptr->nal_hrd_parameters));
+    	}
+		
+    	vui_seq_parameters_ptr->vcl_hrd_parameters_present_flag   = READ_FLC  (stream,1);
+    	if (vui_seq_parameters_ptr->vcl_hrd_parameters_present_flag)
+    	{
+      		H264Dec_ReadHRDParameters (&(vui_seq_parameters_ptr->vcl_hrd_parameters));
+    	}
+		
+    	if (vui_seq_parameters_ptr->nal_hrd_parameters_present_flag || vui_seq_parameters_ptr->vcl_hrd_parameters_present_flag)
+    	{
+      		vui_seq_parameters_ptr->low_delay_hrd_flag             =  READ_FLC  (stream,1);
+    	}
+		
+    	vui_seq_parameters_ptr->pic_struct_present_flag          =  READ_FLC  (stream,1);
+    	vui_seq_parameters_ptr->bitstream_restriction_flag       =  READ_FLC  (stream,1);
+    	if (vui_seq_parameters_ptr->bitstream_restriction_flag)
+    	{
+      		vui_seq_parameters_ptr->motion_vectors_over_pic_boundaries_flag =  READ_FLC  (stream,1);
+      		vui_seq_parameters_ptr->max_bytes_per_pic_denom                 =  READ_UE_V (stream);
+      		vui_seq_parameters_ptr->max_bits_per_mb_denom                   =  READ_UE_V (stream);
+      		vui_seq_parameters_ptr->log2_max_mv_length_horizontal           =  READ_UE_V (stream);
+      		vui_seq_parameters_ptr->log2_max_mv_length_vertical             =  READ_UE_V (stream);
+      		vui_seq_parameters_ptr->num_reorder_frames                      =  READ_UE_V (stream);
+      		vui_seq_parameters_ptr->max_dec_frame_buffering                 =  READ_UE_V (stream);
+    	}
+		else
+		{
+			vui_seq_parameters_ptr->num_reorder_frames=0;
+		}
+
+  	return;	
 }
 
 const int8 ZZ_SCAN[16]  =
@@ -452,10 +561,11 @@ LOCAL void H264Dec_interpret_sps (DEC_SPS_T *sps_ptr)
 	}
 
 	sps_ptr->vui_parameters_present_flag = READ_FLC(stream, 1);
-
+  sps_ptr->vui_seq_parameters->num_reorder_frames=0;
 	if (sps_ptr->vui_parameters_present_flag)
 	{
-		H264Dec_ReadVUI (sps_ptr);
+	    //	H264Dec_ReadVUI (sps_ptr);
+		H264Dec_ReadVUI (sps_ptr->vui_seq_parameters);
 	}
 
 	if(g_image_ptr->error_flag)

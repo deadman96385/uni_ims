@@ -198,14 +198,14 @@ LOCAL void H264Dec_unmark_for_reference (DEC_FRAME_STORE_T *fs_ptr)
 	fs_ptr->is_long_term = 0;
 	fs_ptr->is_short_term = 0;
 
-	if(fs_ptr->frame->pBufferHeader!=NULL)
+/*	if(fs_ptr->frame->pBufferHeader!=NULL)
 	{	
 		if(!fs_ptr->is_reference)
 		{
 			OR_VSP_UNBIND(fs_ptr->frame->pBufferHeader);
 			fs_ptr->frame->pBufferHeader = NULL;
 		}
-	}
+	}*/
 
 
 	return;
@@ -265,7 +265,7 @@ LOCAL void H264Dec_output_one_frame_from_dpb ()
 	}
 
 	frame = fs[pos]->frame;
-
+  display_array_BH[display_array_len]=frame->pBufferHeader;
 	display_array_Y[display_array_len] = frame->imgY;
 	display_array_UV[display_array_len++] = frame->imgU;
  
@@ -273,6 +273,8 @@ LOCAL void H264Dec_output_one_frame_from_dpb ()
 #if SIM_IN_WIN
 #if FPGA_AUTO_VERIFICATION
 #else
+	PRINTF ("\ndisplay array: %3d\t frame poc %d\t display_array_len %d\t addr_index %d\t", g_dispFrmNum, poc, display_array_len, frame->DPB_addr_index);
+    
 	write_out_frame(frame);//weihu true output
 #endif
 #endif
@@ -837,12 +839,13 @@ LOCAL void H264Dec_insert_picture_in_dpb (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr,
 	//DEC_FRAME_STORE_T *curr_fs_ptr;
 	DEC_FRAME_STORE_T *tmp_fs_ptr;
 
+	
+    if(curr_fs_ptr->frame->pBufferHeader!=NULL)
+		OR_VSP_BIND(curr_fs_ptr->frame->pBufferHeader);
+
 	if (picture_ptr->used_for_reference)
 	{
 		curr_fs_ptr->is_reference = 1;
-
-		if(curr_fs_ptr->frame->pBufferHeader!=NULL)
-			OR_VSP_BIND(curr_fs_ptr->frame->pBufferHeader);
 		
 		if (picture_ptr->is_long_term)
 		{

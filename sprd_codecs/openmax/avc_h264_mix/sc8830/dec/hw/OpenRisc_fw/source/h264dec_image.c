@@ -83,14 +83,14 @@ PUBLIC void h264Dec_remove_frame_from_dpb (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr
 	}
 
 
-	if(tmp_fs_ptr->frame->pBufferHeader!=NULL)
+/*	if(tmp_fs_ptr->frame->pBufferHeader!=NULL)
 	{	
 		if(tmp_fs_ptr->is_reference)
 		{
 			OR_VSP_UNBIND(tmp_fs_ptr->frame->pBufferHeader);
 			tmp_fs_ptr->frame->pBufferHeader = NULL;
 		}
-	}
+	}*/
 
 
 	//initialize the frame store

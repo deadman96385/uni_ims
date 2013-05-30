@@ -1,3 +1,0 @@
-./vp8_decoder/code/src/main.c: In function ‘main’:
-./vp8_decoder/code/src/main.c:131:35: warning: assignment makes pointer from integer without a cast
-./vp8_decoder/code/src/main.c:140:10: warning: assignment makes pointer from integer without a cast

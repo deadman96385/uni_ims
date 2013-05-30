@@ -79,11 +79,11 @@ int32 g_firstBsm_init_h264;/*BSM init*/
 volatile int32 	g_stream_offset;
 volatile int32	g_slice_datalen;//weihu
 //int8	load_vld_table_en=1;//weihu
-
+void  *display_array_BH[16];
 unsigned char *display_array_Y[16];
 unsigned char *display_array_UV[16];
 int32	display_array_len;
-
+int   frame_dec_finish;
 
 uint8 g_lengthSizeMinusOne;
 

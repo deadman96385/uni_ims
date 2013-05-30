@@ -65,6 +65,7 @@ PUBLIC void ARM_VSP_BIND()
     if(buffer_num)
     {
 	buffer_header = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x6c,"bind_buffer_header");
+	if(VSP_bindCb!=NULL)
         (*VSP_bindCb)(g_user_data,(void *)buffer_header);
     }
 }
@@ -78,6 +79,7 @@ PUBLIC void ARM_VSP_UNBIND()
     for(i =0; i < buffer_num; i++)
     {
 	buffer_header = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x74+i*4,"unbind_buffer_header");
+	if(VSP_unbindCb!=NULL)
         (*VSP_unbindCb)(g_user_data,(void *)buffer_header);
     }
 }
