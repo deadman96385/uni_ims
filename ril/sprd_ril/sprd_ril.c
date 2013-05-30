@@ -1842,11 +1842,11 @@ static void onSimAbsent(void *param)
 
     channelID = getChannel();
     setRadioState(channelID, RADIO_STATE_SIM_LOCKED_OR_ABSENT);
-    at_send_command(ATch_type[channelID], "AT+SPATASSERT=1", NULL);
     putChannel(channelID);
 
     RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,
                                     NULL, 0);
+    RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_DROP, NULL, 0);
 }
 
 static void onSimPresent(void *param)
