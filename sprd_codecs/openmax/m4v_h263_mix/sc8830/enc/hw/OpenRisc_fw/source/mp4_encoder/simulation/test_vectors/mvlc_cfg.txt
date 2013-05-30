@@ -1,3 +1,0 @@
-frm_cnt=32
-mb_x_max=b
-mb_y_max=9

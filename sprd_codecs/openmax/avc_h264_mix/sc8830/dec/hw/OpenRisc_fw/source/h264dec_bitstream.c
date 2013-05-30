@@ -300,6 +300,48 @@ PUBLIC int32 READ_SE_V (DEC_BS_T * stream)
 	return ret;
 }
 
+PUBLIC int32 H264Dec_Long_UEV (DEC_BS_T * stream)
+{
+	uint32 tmp;
+	int32 leading_zero = 0;
+	int32 ret;
+	
+	OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,"BSM_rdy");	
+    OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, (16<<24),"BSM_rd n bits");
+#if SIM_IN_WIN
+	OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_RDATA_OFF,"BSM_rd dara");
+#endif
+	tmp = SHOW_FLC (stream, 16);
+	
+	if (tmp == 0)
+	{
+		READ_FLC (stream, 16);
+		leading_zero = 16;
+		
+		do {
+			tmp = READ_FLC (stream, 1);
+			leading_zero++;
+			
+			if (leading_zero > 32)//weihu ?//>=16
+			{
+				g_image_ptr->error_flag = TRUE;
+				return 0;
+			}
+		} while(!tmp);
+		
+		leading_zero--;
+		tmp = READ_FLC (stream, leading_zero);		
+		
+		ret = (1 << leading_zero) + tmp - 1;
+		
+			
+		return ret;
+	}else
+	{
+		return READ_UE_V (stream);
+	}
+}
+
 PUBLIC int32 H264Dec_Long_SEV (DEC_BS_T * stream)
 {
 	uint32 tmp;

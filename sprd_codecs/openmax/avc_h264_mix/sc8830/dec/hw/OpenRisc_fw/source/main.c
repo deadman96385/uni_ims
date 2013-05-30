@@ -221,9 +221,11 @@ void main()
 
 
 					
+          OR1200_WRITE_REG(SHARE_RAM_BASE_ADDR+0xb4, frame_dec_finish,"dec a frame");
 
-					if( ret ||dec_output.frameEffective)
+					if( (MMDEC_ERROR == ret) ||frame_dec_finish)//dec_output.frameEffective
 					{ 
+						frame_dec_finish=0;
 						OR1200_WRITE_REG(SHARE_RAM_BASE_ADDR+0x70,((s_bind_cnt <<16)| s_unbind_cnt),"unbind_buffer_number");
 
 						OR1200_WRITE_REG(SHARE_RAM_BASE_ADDR+0x5c,ret," Write output of OR function");
@@ -278,6 +280,9 @@ void main()
 				s_frm_ram_bck_ptr = (uint32 *)(dec_malloc_bfr.int_buffer_ptr - FRM_RAM_BCK_SIZE);
 				s_glb_reg_bck_ptr =  (uint32 *)(dec_malloc_bfr.int_buffer_ptr - FRM_RAM_BCK_SIZE - GLB_REG_BCK_SIZE);
 				
+				g_nFrame_dec_h264 = 0;
+ 	      g_dispFrmNum = 0;
+	      display_array_len=0;
 				
 				ret = H264DecInit(&dec_malloc_bfr,& video_format);			
 			}
@@ -289,6 +294,57 @@ void main()
 			break;
 
 		case H264DEC_GETLAST:
+					{
+				MMDecOutput  dec_output;
+				
+				//unbind
+				H264Dec_flush_dpb(g_curr_slice_ptr->p_Dpb);
+				
+				if(g_dpb_layer[0]->used_size != 0)
+					H264Dec_flush_dpb(g_dpb_layer[0]);
+				else if(g_dpb_layer[1]->used_size != 0)
+					H264Dec_flush_dpb(g_dpb_layer[1]);
+				
+				
+				
+				s_unbind_cnt = 0;
+				s_bind_cnt = 0;
+						 
+				//display   
+				if(display_array_len>0)
+				{	
+					dec_output.frameEffective = TRUE;
+					dec_output.pOutFrameY = display_array_Y[0];//g_dec_picture_ptr->imgY;
+					dec_output.pOutFrameU = display_array_UV[0];//g_dec_picture_ptr->imgU;
+					//dec_output.pOutFrameV = display_array_UV[0];//g_dec_picture_ptr->imgV;
+					OR_VSP_UNBIND(display_array_BH[0]);
+					display_array_len--;
+					for(i=0;i<display_array_len;i++)//weihu for display
+					{
+						display_array_BH[i]=display_array_BH[i+1];
+						display_array_Y[i]=display_array_Y[i+1];
+						display_array_UV[i]=display_array_UV[i+1];
+					}
+				}
+				else
+				{
+				  dec_output.frameEffective = FALSE;
+				  
+				 
+				}
+				
+				OR1200_WRITE_REG(SHARE_RAM_BASE_ADDR+0x70,((s_bind_cnt <<16)| s_unbind_cnt),"unbind_buffer_number");   
+
+				OR1200_WRITE_REG(SHARE_RAM_BASE_ADDR+0x4c, dec_output.frameEffective,"display en");
+				//OR1200_WRITE_REG(SHARE_RAM_BASE_ADDR+0x5c,ret," Write output of OR function");
+				if(dec_output.frameEffective)
+				{ 								
+						OR1200_WRITE_REG(SHARE_RAM_BASE_ADDR+0x2c, dec_output.pOutFrameY,"display frame_Y_addr");
+						OR1200_WRITE_REG(SHARE_RAM_BASE_ADDR+0x30, dec_output.pOutFrameU,"display frame_UV_addr");											
+				}
+
+			}
+
 			break;
 
                 case H264DEC_CROP_PARAM:

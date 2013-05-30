@@ -41,7 +41,8 @@ PUBLIC void ARM_VSP_BIND(MP4Handle *mp4Handle)
     if(buffer_num)
     {
 	buffer_header = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x6c,"bind_buffer_header");
-        (*mp4Handle->VSP_bindCb)(mp4Handle->userdata,(void *)buffer_header, 0);
+	if(*mp4Handle->VSP_bindCb!=NULL)
+		(*mp4Handle->VSP_bindCb)(mp4Handle->userdata,(void *)buffer_header, 0);
     }
 }
 
@@ -53,7 +54,8 @@ PUBLIC void ARM_VSP_UNBIND(MP4Handle *mp4Handle)
     for(i =0; i < buffer_num; i++)
     {
 	buffer_header = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x74+i*4,"unbind_buffer_header");
-        (*mp4Handle->VSP_unbindCb)(mp4Handle->userdata,(void *)buffer_header, 0);
+	if(*mp4Handle->VSP_unbindCb !=NULL)
+		(*mp4Handle->VSP_unbindCb)(mp4Handle->userdata,(void *)buffer_header, 0);
     }
 }
 

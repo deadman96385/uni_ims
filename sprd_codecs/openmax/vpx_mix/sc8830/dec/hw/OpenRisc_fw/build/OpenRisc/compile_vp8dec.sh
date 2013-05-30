@@ -56,8 +56,11 @@ sed -e '/0x/d' -e '/static/r tmp1.txt' ${DST}/${OUT}_or_fw.h > tmp2.txt
 mv tmp2.txt ${DST}/${OUT}_or_fw.h
 
 rm tmp1.txt
-
+rm mem.map
+rm vp8dec.bin
+rm log
 rm ${OUT}
+
 #cd ../build/
 
 

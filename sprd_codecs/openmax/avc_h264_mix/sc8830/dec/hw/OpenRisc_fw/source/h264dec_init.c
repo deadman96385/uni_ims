@@ -56,6 +56,7 @@ PUBLIC void H264Dec_init_global_para (void)
 	SCI_ASSERT(NULL != (g_pps_array_ptr = (DEC_PPS_T *)H264Dec_InterMemAlloc (sizeof(DEC_PPS_T) * MAX_PPS)));
 
 	SCI_ASSERT(NULL != (g_sps_ptr = (DEC_SPS_T *)H264Dec_InterMemAlloc (sizeof(DEC_SPS_T))));
+	g_sps_ptr->vui_seq_parameters = (DEC_VUI_T *)H264Dec_InterMemAlloc (sizeof(DEC_VUI_T));//weihu
 	SCI_ASSERT(NULL != (g_pps_ptr = (DEC_PPS_T *)H264Dec_InterMemAlloc (sizeof(DEC_PPS_T))));
 #if _MVC_
 	SCI_ASSERT(NULL != (g_dpb_layer[0] = (DEC_DECODED_PICTURE_BUFFER_T *)H264Dec_InterMemAlloc (sizeof(DEC_DECODED_PICTURE_BUFFER_T))));
@@ -239,6 +240,7 @@ PUBLIC void H264Dec_VSPInit (void)
 
 PUBLIC void H264Dec_init_vld_table (void)
 {
+#if SIM_IN_WIN
 	/*total Zero Chroma DC*/
 	g_totZero_Chroma_DC [0] = g_totZero_Chroma_DC1_tbl;
 	g_totZero_Chroma_DC [1] = g_totZero_Chroma_DC2_tbl;
@@ -252,7 +254,7 @@ PUBLIC void H264Dec_init_vld_table (void)
 	g_run_zeroLeft [4] = g_run_zeroLeft5_tbl;
 	g_run_zeroLeft [5] = g_run_zeroLeft6_tbl;
 
-#if SIM_IN_WIN
+
 	context	= (int *)H264Dec_InterMemAlloc (sizeof(int) * 308);
 #else
 	context = (int *)(CABAC_CONTEXT_BASE_ADDR);
