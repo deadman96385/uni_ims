@@ -741,7 +741,7 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
     ATLine *p_cur;
 
     if (datalen != 5 * sizeof(char *))
-        goto error;
+        goto error1;
 
     serviceClass = atoi(data[3]);
     if (serviceClass == 0) {
