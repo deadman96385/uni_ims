@@ -14,7 +14,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8810_video_header.h"
+#include "sc8825_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -44,7 +44,7 @@ LOCAL void H264Dec_FmoGenerateType0MbMap(DEC_IMAGE_PARAMS_T *img_ptr, DEC_PPS_T 
 		{
 			for (j = 0; j <= pps_ptr->run_length_minus1[iGroup] && ((i+j)<mb_num); j++)
 			{
-				g_MbToSliceGroupMap[i+j] = (int8)iGroup;
+				g_MbToSliceGroupMap[i+j] = (uint8)iGroup;
 			}
 		}	
 	} while(i < mb_num);
@@ -74,7 +74,7 @@ LOCAL void H264Dec_FmoGenerateType1MbMap (DEC_IMAGE_PARAMS_T *img_ptr, DEC_PPS_T
 
 	for (i = 0; i < mb_num; i++)
 	{
-		g_MbToSliceGroupMap[i] = (int8)((i%img_ptr->frame_width_in_mbs)+(((i/img_ptr->frame_width_in_mbs)*(pps_ptr->num_slice_groups_minus1+1))/2))
+		g_MbToSliceGroupMap[i] = /*(int8)*/((i%img_ptr->frame_width_in_mbs)+(((i/img_ptr->frame_width_in_mbs)*(pps_ptr->num_slice_groups_minus1+1))/2))
 			%(pps_ptr->num_slice_groups_minus1+1);
 	}
 
@@ -209,10 +209,10 @@ LOCAL void H264Dec_FmoGenerateType4MbMap (DEC_IMAGE_PARAMS_T *img_ptr, DEC_PPS_T
 	{
 		if (i < (int32)sizeOfUpperLeftGroup)
 		{
-			g_MbToSliceGroupMap[i] = (int8)(pps_ptr->slice_group_change_direction_flag);
+			g_MbToSliceGroupMap[i] = (uint8)(pps_ptr->slice_group_change_direction_flag);
 		}else
 		{
-			g_MbToSliceGroupMap[i] = (int8)(1-pps_ptr->slice_group_change_direction_flag);
+			g_MbToSliceGroupMap[i] = (uint8)(1-pps_ptr->slice_group_change_direction_flag);
 		}
 	}
 
@@ -268,7 +268,7 @@ LOCAL void H264Dec_FmoGenerateType6MbMap (DEC_IMAGE_PARAMS_T *img_ptr, DEC_PPS_T
 
 	for (i = 0; i < mb_num; i++)
 	{
-		g_MbToSliceGroupMap[i] = (int8)(pps_ptr->slice_group_id[i]);
+		g_MbToSliceGroupMap[i] = (uint8)(pps_ptr->slice_group_id[i]);
 	}
 
 	return;
@@ -283,7 +283,7 @@ LOCAL BOOLEAN H264Dec_FmoGenerateMbToSliceGroupMap(DEC_IMAGE_PARAMS_T *img_ptr)
 	mb_num = (sps_ptr->pic_height_in_map_units_minus1+1)*(sps_ptr->pic_width_in_mbs_minus1+1);
 	if (g_MbToSliceGroupMap == PNULL)
 	{
-		g_MbToSliceGroupMap = (int8 *)H264Dec_ExtraMemCacheAlloc((uint32)(mb_num)*sizeof(int8));
+		g_MbToSliceGroupMap = (int8 *)H264Dec_ExtraMemAlloc((uint32)(mb_num)*sizeof(int8), 4, SW_CACHABLE);
 	}
 #if FMO_TRACE
 	FPRINTF(pFmoFile, "Decode Frame Num: %d, Slice group number: %d\n", g_nFrame_dec, pps_ptr->num_slice_groups_minus1+1);	

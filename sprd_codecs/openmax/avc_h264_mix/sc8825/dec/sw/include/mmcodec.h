@@ -145,11 +145,11 @@ typedef struct
 	int32	frameEffective;
 
 	int32	err_MB_num;		//error MB number
-#ifdef _VSP_LINUX_					
+//#ifdef _VSP_LINUX_					
 	void *pBufferHeader;
 	int reqNewBuf;
         int32 mPicId;
-#endif	
+//#endif	
 }MMDecOutput;
 
 // Encoder video format structure

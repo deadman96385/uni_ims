@@ -14,7 +14,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8810_video_header.h"
+#include "sc8825_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -74,6 +74,16 @@ readB8_typeInfo_func read_b8mode;
 BS_and_Para_interMB_func BS_and_Para_interMB_hor;
 BS_and_Para_interMB_func BS_and_Para_interMB_ver;
 readMB_typeInfo_CABAC_func readMB_typeInfo_CABAC;
+
+#ifdef _VSP_LINUX_
+#include "h264dec.h"
+DEC_STORABLE_PICTURE_T g_rec_buf;
+FunctionType_BufCB VSP_bindCb;
+FunctionType_BufCB VSP_unbindCb;
+void *g_user_data;
+FunctionType_SPS VSP_spsCb;
+FunctionType_FlushCacheCB VSP_fluchCacheCb ;
+#endif
 
 //sw
 //uint8 g_ClipTab_264 [CLIP_TAB_SIZE];

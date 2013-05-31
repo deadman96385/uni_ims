@@ -14,7 +14,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8810_video_header.h"
+#include "sc8825_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -125,7 +125,7 @@ PUBLIC uint32 READ_UE_V (DEC_BS_T * stream)
 
 	BITSTREAMFLUSHBITS(stream, leading_zero * 2 + 1);
 
-	info = (tmp >> (32 - 2 * leading_zero -1)) & g_h264_msk [leading_zero];
+	info = (tmp >> (32 - 2 * leading_zero -1)) & g_msk [leading_zero];
 	ret = (1 << leading_zero) + info - 1;
 
 	return ret;
@@ -170,7 +170,7 @@ PUBLIC int32 READ_SE_V (DEC_BS_T * stream)
 
 	BITSTREAMFLUSHBITS (stream, leading_zero * 2 + 1);
 
-	info = (tmp >> (32 - 2 * leading_zero -1)) & g_h264_msk [leading_zero];
+	info = (tmp >> (32 - 2 * leading_zero -1)) & g_msk [leading_zero];
 
 	tmp = (1 << leading_zero) + info - 1;
 	ret = (tmp + 1) / 2;

@@ -14,7 +14,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8810_video_header.h"
+#include "sc8825_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -82,7 +82,7 @@ PUBLIC void h264Dec_remove_frame_from_dpb (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr
 	{	
 		if(tmp_fs_ptr->is_reference)
 		{
-			(*avc_unbindCb)(avc_user_data,tmp_fs_ptr->frame->pBufferHeader);
+			(*VSP_unbindCb)(g_user_data,tmp_fs_ptr->frame->pBufferHeader);
 			tmp_fs_ptr->frame->pBufferHeader = NULL;
 		}
 	}
@@ -500,6 +500,35 @@ PUBLIC void H264Dec_init_picture (DEC_IMAGE_PARAMS_T *img_ptr)
 	}
 #endif
 
+#if 1   //current decoded picture has been in delayed_pic[]
+	if(fs->is_reference == DELAYED_PIC_REF)
+	{
+		int32 out_idx;
+    		
+		fs->is_reference = 0;
+
+		if(fs->frame->pBufferHeader!=NULL)
+		{
+			(*VSP_unbindCb)(g_user_data,fs->frame->pBufferHeader);
+			fs->frame->pBufferHeader = NULL;
+		}
+
+		for (i = 0; i < g_dpb_ptr->delayed_pic_num; i++)
+		{
+			if (fs->frame == g_dpb_ptr->delayed_pic[i])
+			{
+				out_idx = i;
+				break;
+			}
+		}
+
+		for(i = out_idx; dpb_ptr->delayed_pic[i]; i++)
+		{
+			dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
+		}
+		dpb_ptr->delayed_pic_num--;        
+	}
+#endif
 	fs->disp_status = 0;
 	g_dec_picture_ptr = fs->frame;
 
@@ -537,7 +566,8 @@ PUBLIC void H264Dec_init_picture (DEC_IMAGE_PARAMS_T *img_ptr)
 	dec_picture_ptr->non_existing = 0;
 #ifdef _VSP_LINUX_
 	dec_picture_ptr->pBufferHeader= g_rec_buf.pBufferHeader;
-        dec_picture_ptr->mPicId = g_rec_buf.mPicId;
+    dec_picture_ptr->mPicId = g_rec_buf.mPicId;
+	SCI_TRACE_LOW("%s, %d, dec_picture_ptr->mPicId: %d, imgY: %0x", __FUNCTION__, __LINE__, dec_picture_ptr->mPicId, g_rec_buf.imgY);
 	if (img_ptr->VSP_used)
 	{
 	#if 0
@@ -548,9 +578,9 @@ PUBLIC void H264Dec_init_picture (DEC_IMAGE_PARAMS_T *img_ptr)
 		dec_picture_ptr->imgV = dec_picture_ptr->imgU + (size_y>>2);
 			
 		dec_picture_ptr->imgYAddr = g_rec_buf.imgYAddr;
-		dec_picture_ptr->imgUAddr = dec_picture_ptr->imgYAddr + (size_y>>8);
-		dec_picture_ptr->imgVAddr = dec_picture_ptr->imgUAddr + (size_y>>10);
-	#endif	
+		dec_picture_ptr->imgUAddr = dec_picture_ptr->imgYAddr + (size_y);
+		dec_picture_ptr->imgVAddr = dec_picture_ptr->imgUAddr + (size_y>>2);
+        #endif
 	}else
 	{
 #ifdef YUV_THREE_PLANE
@@ -560,8 +590,6 @@ PUBLIC void H264Dec_init_picture (DEC_IMAGE_PARAMS_T *img_ptr)
 		int32 size_y = img_ptr->width * img_ptr->height;
 		int32 uv_format = 0;	//0: uv, 1: vu
 #endif	
-
-//			(*avc_bindCb)(avc_user_data,&(g_rec_buf.imgY));
 
 		if (uv_format == 0)	//uv
 		{

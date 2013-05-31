@@ -14,7 +14,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8810_video_header.h"
+#include "sc8825_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -29,7 +29,7 @@
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
 
-PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(uint8 *bitstrm_ptr, uint32 bitstrm_len)
+PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(uint8 *bitstrm_ptr, uint32 bitstrm_len, MMDecOutput *dec_output_ptr)
 {
 	uint32 tmpVar;
 	int32 ret = 0;
@@ -37,16 +37,12 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(uint8 *bitstrm_ptr, uint32 bitstrm
 	DEC_IMAGE_PARAMS_T *img_ptr = g_image_ptr;
 	DEC_BS_T *stream = img_ptr->bitstrm_ptr;
 
-//LOGI("%s, %d", __FUNCTION__, __LINE__);
-
 	H264Dec_InitBitstream_sw(stream, bitstrm_ptr, bitstrm_len);
 
 	tmpVar = READ_FLC(stream, 8);
 	nal_ptr->nal_unit_type = tmpVar & 0x1f;
 	nal_ptr->nal_reference_idc = ((tmpVar>>5)&0x3);
 	nal_ptr->frobidden_bit = ((tmpVar>>7)&0x1);
-
-//    LOGI("%s, %d,nal_ptr->nal_unit_type: %d ", __FUNCTION__, __LINE__, nal_ptr->nal_unit_type);
 	
 	/*jump to corresponding NALU type decode*/
 	g_ready_to_decode_slice = FALSE;
@@ -55,8 +51,6 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(uint8 *bitstrm_ptr, uint32 bitstrm
 	case NALU_TYPE_IDR:
 		g_ready_to_decode_slice = TRUE;
 		ret = H264Dec_process_slice (img_ptr, nal_ptr);
-
-//        LOGI("%s, %d,img_ptr->error_flag: %d, ret: %d ", __FUNCTION__, __LINE__, img_ptr->error_flag, ret);
 
 		if ((g_curr_slice_ptr->start_mb_nr == 0) && (!img_ptr->error_flag))
 		{
@@ -95,9 +89,6 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(uint8 *bitstrm_ptr, uint32 bitstrm
 	default:
 		PRINTF ("nalu type error!\n");
 	}
-
-//LOGI("%s, %d, ret: %d", __FUNCTION__, __LINE__, ret);
-
 	return ret;
 }
 
@@ -169,7 +160,9 @@ PUBLIC MMDecRet H264Dec_FirstPartOfSliceHeader (DEC_SLICE_T *curr_slice_ptr, DEC
 	img_ptr->type = curr_slice_ptr->picture_type = ((tmp > 4) ? (tmp - 5) : tmp);
 	if (img_ptr->type == P_SLICE || img_ptr->type == B_SLICE)
 	{
-//		H264Dec_register_deblock_func (img_ptr);
+    #if 0
+		H264Dec_register_deblock_func (img_ptr);
+    #endif
 	}
 
 //	if (img_ptr->is_cabac)

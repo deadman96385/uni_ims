@@ -13,7 +13,7 @@
  ** DATE           NAME             DESCRIPTION                               *
  ** 03/29/2010     Xiaowei.Luo      Create.                                   *
  ******************************************************************************/
-#include "sc8810_video_header.h"
+#include "sc8825_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -26,9 +26,8 @@ void init_contexts (DEC_IMAGE_PARAMS_T *img_ptr)
 {
 	int i;
 
-        
 	/* calculate pre-state */
-    for( i= 0; i < 460; i++ ) 
+	for( i= 0; i < 460; i++ ) 
 	{
 		int pre;
 			
@@ -41,6 +40,13 @@ void init_contexts (DEC_IMAGE_PARAMS_T *img_ptr)
 			img_ptr->cabac_state[i] = 2 * ( 63 - pre ) + 0;
 		else
 			img_ptr->cabac_state[i] = 2 * ( pre - 64 ) + 1;
+	}
+
+	if (img_ptr->VSP_used)
+	{
+#if 0
+		H264Dec_init_CABAC_VSP(img_ptr);
+#endif
 	}
 }
 /**---------------------------------------------------------------------------*

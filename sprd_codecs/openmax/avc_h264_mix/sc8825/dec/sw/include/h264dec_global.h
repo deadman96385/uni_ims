@@ -118,7 +118,7 @@ extern const uint8 * g_run_zeroLeft [6];
 extern const uint8 g_b8_offset[4];
 extern const uint8 g_b4_offset[4];
 extern const uint8 g_b8map[16];
-extern const uint32 g_h264_msk[33];
+extern const uint32 g_msk[33];
 
 extern const int8 g_inverse_zigzag_tbl[16];
 extern const int8 g_inverse_zigzag_cabac_I16_ac_tbl[15];
@@ -167,10 +167,11 @@ extern uint32 s_row;
 #ifdef _VSP_LINUX_
 #include "h264dec.h"
 extern DEC_STORABLE_PICTURE_T g_rec_buf;
-extern FunctionType_Bind_CB avc_bindCb;
-extern FunctionType_UnBind_CB avc_unbindCb;
-extern void *avc_user_data;
+extern FunctionType_BufCB VSP_bindCb;
+extern FunctionType_BufCB VSP_unbindCb;
+extern void *g_user_data;
 extern FunctionType_SPS VSP_spsCb;
+extern FunctionType_FlushCacheCB VSP_fluchCacheCb ;
 #endif
 
 //cavlc
@@ -208,10 +209,18 @@ extern const int8 run7_vlc_tbl[96][2];
 //cabac
 extern const int8 cabac_context_init_I[460][2];
 extern const int8 cabac_context_init_PB[3][460][2];
-extern const uint8 ff_h264_norm_shift[512];
 extern const uint8 ff_h264_mlps_state[4*64];
 extern const uint8 ff_h264_lps_range[4*2*64];  ///< rangeTabLPS
 extern const uint8 ff_h264_mps_state[2*64];     ///< transIdxMPS
+
+extern const int32 significant_coeff_flag_offset[6];
+extern const int32 last_coeff_flag_offset[6];
+extern const int32 coeff_abs_level_m1_offset[6];
+extern const uint8 significant_coeff_flag_offset_8x8[63];
+extern const uint8 last_coeff_flag_offset_8x8[63];
+extern const  uint8 coeff_abs_level1_ctx[8];
+extern const uint8 coeff_abs_levelgt1_ctx[8];
+extern const uint8 coeff_abs_level_transition[2][8]; 
 
 extern int32 g_need_back_last_word;
 extern int32 g_back_last_word;

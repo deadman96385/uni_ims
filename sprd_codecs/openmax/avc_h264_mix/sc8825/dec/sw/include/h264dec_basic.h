@@ -49,8 +49,8 @@ extern   "C"
 #ifdef _VSP_LINUX_
 #define SIZE_SLICE_GROUP_ID		960 //512x480
 #else
-#define SIZE_SLICE_GROUP_ID		396	//for CIF size// should be sufficient for HUGE pictures, need one int per MB in a picture
-#endif
+#define SIZE_SLICE_GROUP_ID		3600	//for 720P size// should be sufficient for HUGE pictures, need one int per MB in a picture
+#endif                                                                     //MODIFIED By Leon.Li@20120925
 
 #define INVALID_REF_ID	(-135792468)
 
@@ -185,37 +185,22 @@ extern   "C"
 #define VERT_PRED_8     2
 #define PLANE_8         3
 
-
 /*mv predict type*/
 #define MVPRED_MEDIAN   0
 #define MVPRED_L        1
 #define MVPRED_U        2
 #define MVPRED_UR       3
 
-/*block type for CAVLC*/
-//#define LUMA_16DC       0
-//#define LUMA_16AC       1
-//#define LUMA_8x8        2
-//#define LUMA_8x4        3
-//#define LUMA_4x8        4
-//#define LUMA_4x4        5
-//#define CHROMA_DC       6
-//#define CHROMA_AC       7
-
 #define IS_DIRECT(MB)   ((MB)->mb_type==0     && (img_ptr->type==B_SLICE ))
 #define IS_P8x8(MB)     ((MB)->mb_type==P8x8)
 #define IS_INTERMV(MB)  ((MB)->mb_type!=I4MB_264  && (MB)->mb_type!=I16MB  && (MB)->mb_type!=0 && (MB)->mb_type!=IPCM)
 
-//--- block types for CABAC ----
-//#define MB_TYPE_LUMA_16DC       0
-//#define MB_TYPE_LUMA_16AC       1
-//#define MB_TYPE_LUMA_8x8        2
-//#define MB_TYPE_LUMA_8x4        3
-//#define MB_TYPE_LUMA_4x8        4
-//#define MB_TYPE_LUMA_4x4        5
-//#define MB_TYPE_CHROMA_DC       6
-//#define MB_TYPE_CHROMA_AC       7
-//#define NUM_BLOCK_TYPES 8
+//--- block category for CABAC ----
+#define LUMA_DC			0
+#define LUMA_AC_I16		1
+#define LUMA_AC			2
+#define CHROMA_DC		3
+#define CHROMA_AC		4
 
 //sw
 typedef void (*MC4xN_LUMA)(uint8 * pFref, uint8 * pPred, int32 width, int32 N);

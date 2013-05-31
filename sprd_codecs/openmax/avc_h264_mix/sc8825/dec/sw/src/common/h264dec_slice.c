@@ -14,7 +14,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8810_video_header.h"
+#include "sc8825_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -48,7 +48,6 @@ PUBLIC int32 get_unit (uint8 *pInStream, int32 frm_bs_len, int32 *slice_unit_len
 //		ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5], ptr[6], ptr[7], ptr[8], ptr[9], ptr[10], ptr[11], ptr[12], ptr[13], ptr[14], ptr[15]);
 
 	//start code
-#if 1	
 	while ((data = *ptr++) == 0x00)
 	{
 		len++;
@@ -56,7 +55,6 @@ PUBLIC int32 get_unit (uint8 *pInStream, int32 frm_bs_len, int32 *slice_unit_len
 	len++;
 	*start_code_len = len;
 	declen += len;
-#endif	
 //	g_nalu_ptr->buf += (*start_code_len);
 
 	byte_rest = (uint32)pInStream;
@@ -331,9 +329,7 @@ PUBLIC int32 H264Dec_process_slice (DEC_IMAGE_PARAMS_T *img_ptr, DEC_NALU_T *nal
 	img_ptr->idr_flag = (nalu_ptr->nal_unit_type == NALU_TYPE_IDR);
 	img_ptr->nal_reference_idc = (nalu_ptr->nal_reference_idc);
 
-//LOGI("%s, %d", __FUNCTION__, __LINE__);
 	H264Dec_FirstPartOfSliceHeader (curr_slice_ptr, img_ptr);
-//    		LOGI("%s, %d, img_ptr->error_flag: %d", __FUNCTION__, __LINE__, img_ptr->error_flag);
 
 	/*if picture parameter set id changed, FMO will change, and neighbour 4x4 block
 	position infomation(available, position) will change*/
@@ -348,7 +344,6 @@ PUBLIC int32 H264Dec_process_slice (DEC_IMAGE_PARAMS_T *img_ptr, DEC_NALU_T *nal
 #if _H264_PROTECT_ & _LEVEL_LOW_
 		if(img_ptr->error_flag)
 		{
-//		LOGI("%s, %d", __FUNCTION__, __LINE__);
 			img_ptr->return_pos1 |= (1<<25);
 			return -1;
 		}
@@ -356,27 +351,22 @@ PUBLIC int32 H264Dec_process_slice (DEC_IMAGE_PARAMS_T *img_ptr, DEC_NALU_T *nal
 		init_dequant_tables(img_ptr);
 	}
 
-//LOGI("%s, %d", __FUNCTION__, __LINE__);
 	H264Dec_RestSliceHeader (img_ptr, curr_slice_ptr);
 
-//LOGI("%s, %d", __FUNCTION__, __LINE__);
 	if (H264Dec_FMO_init(img_ptr) == FALSE || img_ptr->error_flag)
 	{
 #if _H264_PROTECT_ & _LEVEL_LOW_	
 		img_ptr->error_flag |= ER_BSM_ID;
         	img_ptr->return_pos1 |= (1<<26);
 #endif
-//LOGI("%s, %d", __FUNCTION__, __LINE__);
 		return -1;
 	}
 
 	new_picture = H264Dec_is_new_picture (img_ptr);
 	img_ptr->is_new_pic = new_picture;
-//LOGI("%s, %d", __FUNCTION__, __LINE__);
 
 	if (new_picture)
 	{
-//	LOGI("%s, %d", __FUNCTION__, __LINE__);
 		H264Dec_init_picture (img_ptr);
 	#if _H264_PROTECT_ & _LEVEL_LOW_
 		if(img_ptr->error_flag )
@@ -390,11 +380,10 @@ PUBLIC int32 H264Dec_process_slice (DEC_IMAGE_PARAMS_T *img_ptr, DEC_NALU_T *nal
 	{
 		curr_header = SOS;
 	}
-//LOGI("%s, %d", __FUNCTION__, __LINE__);
 
 	H264Dec_init_list (img_ptr, img_ptr->type);
 	H264Dec_reorder_list (img_ptr, curr_slice_ptr);
-//LOGI("%s, %d", __FUNCTION__, __LINE__);
+
 	if (img_ptr->is_cabac)
 	{
 		ff_init_cabac_decoder(img_ptr);	//arideco_start_decoding (img_ptr);
@@ -406,7 +395,6 @@ PUBLIC int32 H264Dec_process_slice (DEC_IMAGE_PARAMS_T *img_ptr, DEC_NALU_T *nal
 //		h264Dec_PicLevelSendRefAddressCommmand (img_ptr);
 //	}
 	img_ptr->curr_mb_nr = curr_slice_ptr->start_mb_nr;
-
 	return curr_header;
 }
 
@@ -555,301 +543,148 @@ LOCAL void H264Dec_fill_wp_params (DEC_IMAGE_PARAMS_T *img_ptr, DEC_PPS_T *activ
 
 void dump_yuv( uint8* pBuffer,int32 aInBufSize)
 {
-	FILE *fp = fopen("/data/video_frm132.yuv","ab");
+	FILE *fp = fopen("/data/video.yuv","ab");
 	fwrite(pBuffer,1,aInBufSize,fp);
 	fclose(fp);
-}
-
-void dump_yuv1( uint8* pBuffer,int32 aInBufSize)
-{
-	FILE *fp = fopen("/data/video_frm133.yuv","ab");
-	fwrite(pBuffer,1,aInBufSize,fp);
-	fclose(fp);
-}
-
-void dump_yuv2( uint8* pBuffer,int32 aInBufSize)
-{
-	FILE *fp = fopen("/data/video_frm134.yuv","ab");
-	fwrite(pBuffer,1,aInBufSize,fp);
-	fclose(fp);
-}
-
-void dump_yuv_all( uint8* pBuffer,int32 aInBufSize)
-{
-	FILE *fp = fopen("/data/video_dec.yuv","ab");
-	fwrite(pBuffer,1,aInBufSize,fp);
-	fclose(fp);
-}
-
-void dump_yuv_all1( uint8* pBuffer,int32 aInBufSize)
-{
-	FILE *fp = fopen("/data/video_dec_out.yuv","ab");
-	fwrite(pBuffer,1,aInBufSize,fp);
-	fclose(fp);
-}
-
-LOCAL void H264Dec_output_one_frame_BP (DEC_IMAGE_PARAMS_T *img_ptr, MMDecOutput * dec_out)
-{
-	DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr= g_dpb_ptr;
-	DEC_STORABLE_PICTURE_T *prev = dpb_ptr->delayed_pic[0];
-	DEC_STORABLE_PICTURE_T *cur = g_dec_picture_ptr;
-	DEC_STORABLE_PICTURE_T *out ;
-	int32 i;
-#if 0
- 	for (i = 0; i < dpb_ptr->used_size; i++)
-	{
-		if (cur == dpb_ptr->fs[i]->frame)
-		{ 
-			if(dpb_ptr->fs[i]->is_reference == 0)
-			{
-				dpb_ptr->fs[i]->is_reference = DELAYED_PIC_REF;
-
-#ifdef _VSP_LINUX_
-				if(dpb_ptr->fs[i]->frame->pBufferHeader!=NULL)
-				{
-//					SCI_TRACE_LOW("bind in output_frame_func\t");
-					(*avc_bindCb)(avc_user_data,dpb_ptr->fs[i]->frame->pBufferHeader);
-				}
-#endif
-			}
-		}
-	}
-#endif
-
-		
-	
-#ifdef _VSP_LINUX_	
-	dec_out->reqNewBuf = 1;				
-#endif	
-	dec_out->frame_width = img_ptr->width;
-	dec_out->frame_height = img_ptr->height;
-	
-	if(!img_ptr->is_first_frame)
-	{
-		out = prev;
-		dec_out->frameEffective =  1;
-		dec_out->pOutFrameY = out->imgY;
-		dec_out->pOutFrameU = out->imgU;
-		dec_out->pOutFrameV = out->imgV;
-#ifdef _VSP_LINUX_	
-		dec_out->pBufferHeader = out->pBufferHeader;
-#endif		
-	}else
-	{
-		dec_out->frameEffective =  0;
-		dec_out->pOutFrameY = PNULL;
-		dec_out->pOutFrameU = PNULL;
-		dec_out->pOutFrameV = PNULL;
-#ifdef _VSP_LINUX_	
-		dec_out->pBufferHeader = NULL;
-/*
-	 	for (i = 0; i < dpb_ptr->used_size; i++)
-		{
-			if (cur == dpb_ptr->fs[i]->frame)
-			{ 
-				//SCI_TRACE_LOW("bind in output_frame_func\t");
-				(*avc_bindCb)(avc_user_data,dpb_ptr->fs[i]->frame->pBufferHeader);
-			}
-		}		
-*/
-#endif				
-	}
-//	SCI_TRACE_LOW("H264Dec_output_one_frame_BP:at frame num %d,  out put valid : %d, frame:%x ,header:%x\n",g_nFrame_dec_h264,dec_out->frameEffective,out,out?out->pBufferHeader:0 );
-//	SCI_TRACE_LOW("H264Dec_output_one_frame_BP:decode picture : %x,header: %x\n",g_dec_picture_ptr,g_dec_picture_ptr->pBufferHeader );
-
-	dpb_ptr->delayed_pic[0] = cur;
-	dpb_ptr->delayed_pic_num = 1;
-
-		for (i = 0; i < /*dpb_ptr->used_size*/(MAX_REF_FRAME_NUMBER+1); i++)
-		{
-			if (out == dpb_ptr->fs[i]->frame)
-			{
-				if(dpb_ptr->fs[i]->is_reference == DELAYED_PIC_REF)
-				{
-					dpb_ptr->fs[i]->is_reference = 0;
-
-#ifdef _VSP_LINUX_
-					if(dpb_ptr->fs[i]->frame->pBufferHeader!=NULL)
-					{
-//						SCI_TRACE_LOW("unbind in output_frame_func\t");
-						(*avc_unbindCb)(avc_user_data,dpb_ptr->fs[i]->frame->pBufferHeader);
-						dpb_ptr->fs[i]->frame->pBufferHeader = NULL;
-					}
-#endif
-				}
-			}
-		}
-
-	for (i = 0; i < dpb_ptr->used_size; i++)
-	{
-		if (cur == dpb_ptr->fs[i]->frame)
-		{ 
-			//if(dpb_ptr->fs[i]->is_reference == 0)
-			{
-				//dpb_ptr->fs[i]->is_reference = DELAYED_PIC_REF;
-
-#if 0//def _VSP_LINUX_
-				if(dpb_ptr->fs[i]->frame->pBufferHeader!=NULL)
-				{
-//					SCI_TRACE_LOW("bind in output_frame_func\t");
-					(*avc_bindCb)(avc_user_data,dpb_ptr->fs[i]->frame->pBufferHeader);
-				}
-#endif
-			}
-		}
-	}
-
-	img_ptr->is_first_frame = FALSE;
 }
 
 LOCAL void H264Dec_output_one_frame (DEC_IMAGE_PARAMS_T *img_ptr, MMDecOutput * dec_out)
 {
-	DEC_VUI_T *vui_seq_parameters_ptr = g_sps_ptr->vui_seq_parameters;
-	DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr= g_dpb_ptr;
-	DEC_STORABLE_PICTURE_T *prev = dpb_ptr->delayed_pic_ptr;
-	DEC_STORABLE_PICTURE_T *cur = g_dec_picture_ptr;
-	DEC_STORABLE_PICTURE_T *out = cur;
-	int i, pics, cross_idr, out_of_order, out_idx;
+    DEC_VUI_T *vui_seq_parameters_ptr = g_sps_ptr->vui_seq_parameters;
+    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr= g_dpb_ptr;
+    DEC_STORABLE_PICTURE_T *prev = dpb_ptr->delayed_pic_ptr;
+    DEC_STORABLE_PICTURE_T *cur = g_dec_picture_ptr;
+    DEC_STORABLE_PICTURE_T *out = cur;
+    int i, pics, cross_idr, out_of_order, out_idx;
 
-	if(vui_seq_parameters_ptr->bitstream_restriction_flag && (img_ptr->has_b_frames < vui_seq_parameters_ptr->num_reorder_frames))
-	{
-		img_ptr->has_b_frames = vui_seq_parameters_ptr->num_reorder_frames;
+    if(vui_seq_parameters_ptr->bitstream_restriction_flag && (img_ptr->has_b_frames < vui_seq_parameters_ptr->num_reorder_frames))
+    {
+        img_ptr->has_b_frames = vui_seq_parameters_ptr->num_reorder_frames;
 //		s->low_delay = 0;
-    	}
+    }
 
 	//SCI_TRACE_LOW("dec poc: %d\t", cur->poc);
 
-	dpb_ptr->delayed_pic[dpb_ptr->delayed_pic_num++] = cur;
-	pics = dpb_ptr->delayed_pic_num;
-	for (i = 0; i < dpb_ptr->used_size; i++)
-	{
-		if (cur == dpb_ptr->fs[i]->frame)
-		{
-			if(dpb_ptr->fs[i]->is_reference == 0)
-			{
-				dpb_ptr->fs[i]->is_reference = DELAYED_PIC_REF;
+    dpb_ptr->delayed_pic[dpb_ptr->delayed_pic_num++] = cur;
 
-#if 0//def _VSP_LINUX_
-				if(dpb_ptr->fs[i]->frame->pBufferHeader!=NULL)
-				{
-//					SCI_TRACE_LOW("bind in output_frame_func\t");
-					(*avc_bindCb)(avc_user_data,dpb_ptr->fs[i]->frame->pBufferHeader);
-				}
-#endif
-			}
-		}
-	}
+    for (i = 0; i < dpb_ptr->used_size; i++)
+    {
+        if (cur == dpb_ptr->fs[i]->frame)
+        {
+            if(dpb_ptr->fs[i]->is_reference == 0)
+            {
+                dpb_ptr->fs[i]->is_reference = DELAYED_PIC_REF;
 
-	cross_idr = 0;
-	for(i=0; i < dpb_ptr->delayed_pic_num; i++)
-	{
-		if(dpb_ptr->delayed_pic[i]->idr_flag || (dpb_ptr->delayed_pic[i]->poc == 0))
-		{
-	    		cross_idr = 1;
-		}
-	}
+                if(dpb_ptr->fs[i]->frame->pBufferHeader!=NULL)
+                {
+                    (*VSP_bindCb)(g_user_data,dpb_ptr->fs[i]->frame->pBufferHeader);
+                }
+            }
+        }
+    }
+        
+    cross_idr = 0;
+    for(i = 0; i < dpb_ptr->delayed_pic_num; i++)
+    {
+        if(dpb_ptr->delayed_pic[i]->idr_flag || (dpb_ptr->delayed_pic[i]->poc == 0))
+        {
+            cross_idr = 1;
+        }
+    }
 
-	//find the smallest POC frame in dpb buffer
-	out = dpb_ptr->delayed_pic[0];
-	out_idx = 0;
-	for(i=1; (i< MAX_DELAYED_PIC_NUM) && dpb_ptr->delayed_pic[i] && !dpb_ptr->delayed_pic[i]->idr_flag; i++)
-	{
-		if(dpb_ptr->delayed_pic[i]->poc < out->poc)
-		{
-	   		out = dpb_ptr->delayed_pic[i];
-	   		out_idx = i;
-		}
-	}
-	
-	out_of_order = !cross_idr && prev && (out->poc < prev->poc);
-	if(vui_seq_parameters_ptr->bitstream_restriction_flag && img_ptr->has_b_frames >= vui_seq_parameters_ptr->num_reorder_frames)
-	{
-	}else if(prev && pics <= img_ptr->has_b_frames)
-	{
-		out = prev;
-	}else if((out_of_order && (pics-1) == img_ptr->has_b_frames && pics < 15/*why 15?, xwluo@20120316 */)  ||
-		((g_sps_ptr->profile_idc != 0x42/*!bp*/)&&(img_ptr->low_delay) && ((!cross_idr && prev && out->poc > (prev->poc + 2)) || cur->slice_type == B_SLICE)))
-    	{
-		img_ptr->low_delay = 0;
-        	img_ptr->has_b_frames++;
-        	out = prev;
-	} else if(out_of_order)
-    	{
-    		out = prev;
-    	}
-	dpb_ptr->delayed_pic_ptr = out;
+    //find the smallest POC frame in dpb buffer
+    out = dpb_ptr->delayed_pic[0];
+    out_idx = 0;
+    for(i = 1; (i < MAX_DELAYED_PIC_NUM) && dpb_ptr->delayed_pic[i] && !dpb_ptr->delayed_pic[i]->idr_flag; i++)
+    {
+        if(dpb_ptr->delayed_pic[i]->poc < out->poc)
+        {
+            out = dpb_ptr->delayed_pic[i];
+            out_idx = i;
+        }
+    }
 
-	//flush one frame from dpb and re-organize the delayed_pic buffer
-	if(/*out_of_order ||*/ pics > img_ptr->has_b_frames)
-	{
-		for(i=out_idx; dpb_ptr->delayed_pic[i]; i++)
-		{
-	    		dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
-		}
-		dpb_ptr->delayed_pic_num--;
-	}
+    pics = dpb_ptr->delayed_pic_num;
+    out_of_order = !cross_idr && prev && (out->poc < prev->poc);
+    if(vui_seq_parameters_ptr->bitstream_restriction_flag && img_ptr->has_b_frames >= vui_seq_parameters_ptr->num_reorder_frames)
+    {
+    }else if(prev && pics <= img_ptr->has_b_frames)
+    {
+        out = prev;
+    }else if((out_of_order && (pics-1) == img_ptr->has_b_frames && pics < 15/*why 15?, xwluo@20120316 */)  ||
+        ((g_sps_ptr->profile_idc != 0x42/*!bp*/)&&(img_ptr->low_delay) && ((!cross_idr && prev && out->poc > (prev->poc + 2)) || cur->slice_type == B_SLICE)))
+    {
+        img_ptr->low_delay = 0;
+        img_ptr->has_b_frames++;
+        out = prev;
+    } else if(out_of_order)
+    {
+        out = prev;
+    }
 
-	dec_out->frameEffective = (prev == out) ? 0 : 1;
-#ifdef _VSP_LINUX_	
-	dec_out->reqNewBuf = 1;				
-#endif
-	if (dec_out->frameEffective)
-	{
-	    if (img_ptr->VSP_used)
+    if (out != cur)
+    {
+        dpb_ptr->delayed_pic_ptr = out;
+        dec_out->frameEffective = (prev == out) ? 0 : 1;
+        
+        //flush one frame from dpb and re-organize the delayed_pic buffer
+        if(/*out_of_order ||*/ pics > img_ptr->has_b_frames || dec_out->frameEffective)
+        {
+            for(i = out_idx; dpb_ptr->delayed_pic[i]; i++)
+            {
+                dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
+            }
+            dpb_ptr->delayed_pic_num--;
+        }
+            
+    }
+
+    dec_out->reqNewBuf = 1;				
+    if (dec_out->frameEffective)
+    {
+        if (img_ptr->VSP_used)
         {
         #if 0
-        	dec_out->frame_width = img_ptr->width;
-			dec_out->frame_height = img_ptr->height;
-	#endif		
+            dec_out->frame_width = img_ptr->width;
+            dec_out->frame_height = img_ptr->height;
+        #endif
         }else
-		{
-		#ifndef YUV_THREE_PLANE
-			dec_out->frame_width = img_ptr->width;
-			dec_out->frame_height = img_ptr->height;
-		#else
-			dec_out->frame_width = img_ptr->ext_width;
-			dec_out->frame_height = img_ptr->ext_height;
-		#endif
-		}	
-		dec_out->pOutFrameY = out->imgY;
-		dec_out->pOutFrameU = out->imgU;
-		dec_out->pOutFrameV = out->imgV;
-#ifdef _VSP_LINUX_	
-		dec_out->pBufferHeader = out->pBufferHeader;
-                dec_out->mPicId = out->mPicId;
+        {
+#ifndef YUV_THREE_PLANE
+            dec_out->frame_width = img_ptr->width;
+            dec_out->frame_height = img_ptr->height;
+#else
+            dec_out->frame_width = img_ptr->ext_width;
+            dec_out->frame_height = img_ptr->ext_height;
 #endif
+        }	
+        dec_out->pOutFrameY = out->imgY;
+        dec_out->pOutFrameU = out->imgU;
+        dec_out->pOutFrameV = out->imgV;
+        dec_out->pBufferHeader = out->pBufferHeader;
+        dec_out->mPicId = out->mPicId;
 
-		for (i = 0; i < /*dpb_ptr->used_size*/MAX_REF_FRAME_NUMBER; i++)
-		{
-			if (out == dpb_ptr->fs[i]->frame)
-			{
-				if(dpb_ptr->fs[i]->is_reference == DELAYED_PIC_REF)
-				{
-					dpb_ptr->fs[i]->is_reference = 0;
+        for (i = 0; i < /*dpb_ptr->used_size*/(MAX_REF_FRAME_NUMBER+1); i++)
+        {
+            if (out == dpb_ptr->fs[i]->frame)
+            {
+                if(dpb_ptr->fs[i]->is_reference == DELAYED_PIC_REF)
+                {
+                    dpb_ptr->fs[i]->is_reference = 0;
 
-#ifdef _VSP_LINUX_
-					if(dpb_ptr->fs[i]->frame->pBufferHeader!=NULL)
-					{
-//						SCI_TRACE_LOW("unbind in output_frame_func\t");
-						(*avc_unbindCb)(avc_user_data,dpb_ptr->fs[i]->frame->pBufferHeader);
-						dpb_ptr->fs[i]->frame->pBufferHeader = NULL;
-					}
-#endif
-				}
-			}
-		}
-//		SCI_TRACE_LOW("out poc: %d\t", out->poc);
-	}else
-	{	
-//		SCI_TRACE_LOW("out poc: %d\n", out->poc);
-	}
+                    if(dpb_ptr->fs[i]->frame->pBufferHeader!=NULL)
+                    {
+                        (*VSP_unbindCb)(g_user_data,dpb_ptr->fs[i]->frame->pBufferHeader);
+                        dpb_ptr->fs[i]->frame->pBufferHeader = NULL;
+                    }
+                }
+            }
+        }
+    }   
 
-//	for (i = 0; i < 16; i++)
-//	{
-//		SCI_TRACE_LOW("dpb_ptr->fs[%d]->is_reference =  %d", i, dpb_ptr->fs[i]->is_reference);
-//	}
+    SCI_TRACE_LOW("out poc: %d, effective: %d\t", out->poc, dec_out->frameEffective);
 
-	return;
+    return;
 }
 
 PUBLIC MMDecRet H264Dec_decode_one_slice_data (MMDecOutput *dec_output_ptr, DEC_IMAGE_PARAMS_T *img_ptr)
@@ -882,7 +717,7 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (MMDecOutput *dec_output_ptr, DEC_
 	{
 		img_ptr->mbc_cfg_cmd = 0;
 	}
-//LOGI("%s, %d", __FUNCTION__, __LINE__);		
+		
 	if (curr_slice_ptr->picture_type == I_SLICE)
 	{
 		img_ptr->list_count = 0;
@@ -983,20 +818,11 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (MMDecOutput *dec_output_ptr, DEC_
 		{
 		#if 0
 			ret = H264Dec_Picture_Level_Sync (img_ptr);
-			H264Dec_exit_picture (img_ptr);
-			H264Dec_output_one_frame_BP(img_ptr,dec_output_ptr);			
-		
-			if (img_ptr->fmo_used)
-			{
-  		  	 	H264Dec_deblock_one_frame (img_ptr);
-			}
 		#endif	
-		}else
-		{	
-			H264Dec_exit_picture (img_ptr);	
-
-			H264Dec_output_one_frame(img_ptr,dec_output_ptr);
-		}		
+		}
+		
+		H264Dec_exit_picture (img_ptr);	
+		H264Dec_output_one_frame(img_ptr,dec_output_ptr);
 
 		g_dec_picture_ptr = NULL;
 		g_nFrame_dec_h264++;

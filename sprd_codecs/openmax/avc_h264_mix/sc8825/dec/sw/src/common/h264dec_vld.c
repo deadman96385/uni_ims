@@ -11,7 +11,7 @@
  ** DATE          NAME            DESCRIPTION                                 * 
  ** 03/29/2010    Xiaowei.Luo     Create.                                     *
  *****************************************************************************/
-#include "sc8810_video_header.h"
+#include "sc8825_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -87,7 +87,7 @@ PUBLIC int32 get_vlc_s16 (DEC_BS_T *stream, const int16 tbl[][2], uint32 bits)
 	{
 		flush_bits = bits;
 		val16 <<= (bits);
-		idx = (val16 >> (30+n)) & g_h264_msk[-n];
+		idx = (val16 >> (30+n)) & g_msk[-n];
 		idx += code;
 		code = tbl[idx][0];
 		n = tbl[idx][1];
@@ -117,7 +117,7 @@ PUBLIC int32 get_vlc_s8 (DEC_BS_T *stream, const int8 tbl[][2], uint32 bits)
 	{
 		flush_bits = bits;
 		val16 <<= (bits);
-		idx = (val16 >> (30+n)) & g_h264_msk[-n];
+		idx = (val16 >> (30+n)) & g_msk[-n];
 		idx += code;
 		code = tbl[idx][0];
 		n = tbl[idx][1];
@@ -180,12 +180,6 @@ PUBLIC int pred_non_zero_count (DEC_MB_CACHE_T *mb_cache_ptr, int blkIndex)
 
 	return pred_nnz&31;
 }
-
-#define LUMA_DC			0
-#define LUMA_AC_I16		1
-#define LUMA_AC			2
-#define CHROMA_DC		3
-#define CHROMA_AC		4
 
 int32 get_cabac_cbf_ctx(DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T * mb_cache_ptr, int cat,  int blk_id )
 {

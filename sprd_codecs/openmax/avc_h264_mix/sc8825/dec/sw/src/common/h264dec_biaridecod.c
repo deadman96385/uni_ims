@@ -13,7 +13,7 @@
  ** DATE           NAME             DESCRIPTION                               *
  ** 03/29/2010     Xiaowei.Luo      Create.                                   *
  ******************************************************************************/
-#include "sc8810_video_header.h"
+#include "sc8825_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -22,8 +22,9 @@
     {
 #endif
 
-#define CABAC_BITS 16
-#define CABAC_MASK ((1<<CABAC_BITS)-1)
+#define B_BITS    10  // Number of bits to represent the whole coding interval
+#define HALF      (1 << (B_BITS-1))
+#define QUARTER   (1 << (B_BITS-2))
 
 uint32 ff_init_cabac_decoder(DEC_IMAGE_PARAMS_T *img_ptr)
 {
@@ -39,115 +40,109 @@ uint32 ff_init_cabac_decoder(DEC_IMAGE_PARAMS_T *img_ptr)
 		READ_FLC(stream, nStuffedBits);	//flush
 	}
 	
-    	c->low =  ((READ_FLC(stream, 24))<<2) + 2;
+    	c->low =  READ_FLC(stream, (B_BITS-1));
     	c->range= 0x1FE;
 
-	return (nStuffedBits+24);
+	return (nStuffedBits+(B_BITS-1));
 }
 
 uint32 get_cabac (CABACContext *c, uint8 * const state)
 {
-	int32 s = *state;
-	int32 RangeLPS = ff_h264_lps_range[2*(c->range&0xc0)+s];
-	int32 bit, lps_mask;
+    int32 s = *state;
+    int32 RangeLPS = ff_h264_lps_range[2*(c->range&0xc0)+s];
+    int32 bit, lps_mask;
 
-	c->range -= RangeLPS;
-	lps_mask = ((c->range<<(CABAC_BITS+1)) - c->low)>>31;
+    c->range -= RangeLPS;
+    lps_mask = (c->low < c->range) ? 0 : -1;//((c->range<<(CABAC_BITS+1)) - c->low)>>31;
 
-	c->low -= (c->range<<(CABAC_BITS+1)) & lps_mask;
-	c->range += (RangeLPS - c->range) & lps_mask;
+    c->low -= (c->range & lps_mask);
+    c->range += (RangeLPS - c->range) & lps_mask;
 
-	s ^= lps_mask;
-	*state = (ff_h264_mlps_state+128)[s];
-	bit = s&1;
+    s ^= lps_mask;
+    *state = (ff_h264_mlps_state+128)[s];
+    bit = s&1;
 
-	lps_mask = ff_h264_norm_shift[c->range];
-	c->range <<= lps_mask;
-	c->low <<= lps_mask;
-	if (!(c->low & CABAC_MASK))
-	{
-		//	refill2(c);
-		int32	i, x;
+    while (c->range < QUARTER)
+    {
+        uint32 val;
+        DEC_BS_T * stream = g_image_ptr->bitstrm_ptr;
 
-		x = c->low ^ (c->low - 1);
-		i = 7 - ff_h264_norm_shift[x>>(CABAC_BITS-1)];
+    	val = ((*stream->rdptr >> (stream->bitsLeft - 1)) & 0x1);
+    	stream->bitcnt++;
+    	stream->bitsLeft--;
 
-		x =-CABAC_MASK;
-		x += (READ_BITS(g_image_ptr->bitstrm_ptr, 16)<<1);
+    	if (!stream->bitsLeft)
+    	{
+    		stream->bitsLeft = 32;
+    		stream->rdptr++;
+    	}
 
-		c->low += (x<<i);
-	}
+    	/* Shift in next bit and add to value */
+    	c->low = ((c->low << 1) | val);
 
-	return bit;	
+    	/* Double range */
+    	c->range <<= 1;
+    }
+	
+    return (bit);
 }
 
 int32 get_cabac_bypass(CABACContext *c)
 {
-	int range;
-	
-	c->low += c->low;
+    DEC_BS_T * stream = g_image_ptr->bitstrm_ptr;
+    uint32 bit = 0;
 
-	if(!(c->low & CABAC_MASK))
-    	{
-		//refill(c);
-		c->low += (READ_BITS(g_image_ptr->bitstrm_ptr, 16))<<1;
-		c->low -= CABAC_MASK;		
-    	}
+    c->low = (c->low << 1) | (READ_BITS1(stream));
 
-	range= c->range<<(CABAC_BITS+1);
-    	if(c->low < range)
-	{
-       	return 0;
-	}else
-	{
-		c->low -= range;
-        	return 1;
-    	}
+    if (c->low >= c->range)
+    {
+		bit = 1;
+		c->low -= c->range;
+    }
+
+    return (bit);
 }
 
 int32 get_cabac_bypass_sign(CABACContext *c, int val)
 {
-	int range, mask;
+    DEC_BS_T * stream = g_image_ptr->bitstrm_ptr;
 
-	c->low += c->low;
+    c->low = (c->low << 1) | (READ_BITS1(stream));
 
-	if(!(c->low & CABAC_MASK))
-    	{
-		//refill(c);
-		c->low += (READ_BITS(g_image_ptr->bitstrm_ptr, 16))<<1;
-		c->low -= CABAC_MASK;		
-    	}
+    if ( c->low >= c->range)
+    {
+        c->low -= c->range;
+    }else
+    {
+		val = -val;
+    }
 
-	range= c->range<<(CABAC_BITS+1);
-	c->low -= range;
-	mask= c->low >> 31;
-	range &= mask;
-	c->low += range;
-    	return (val^mask)-mask;
+    return (val);
 }
 
 int32 get_cabac_terminate (DEC_IMAGE_PARAMS_T *img_ptr)
 {
-	CABACContext *c = &img_ptr->cabac;
-	c->range -= 2;
-	if (c->low < c->range<<(CABAC_BITS+1))
-	{
-		int32 shift = (uint32)(c->range - 0x100) >> 31;
-		c->range <<= shift;
-		c->low <<= shift;
+    CABACContext *c = &img_ptr->cabac;
 
-		if (!(c->low & CABAC_MASK))
-		{
-		//refill
-			c->low += (READ_BITS(g_image_ptr->bitstrm_ptr, 16))<<1;
-			c->low -= CABAC_MASK;			
-		}
-		
-		return 0;
-	}else
-	{
+    c->range -= 2;
+    if (c->low >= c->range)
+    {
 		return 1;
-	}
+    }else
+    {
+		while (c->range < QUARTER)
+		{
+			DEC_BS_T * stream = img_ptr->bitstrm_ptr;
+
+			/* Double range */
+			c->range <<= 1;
+
+			/* Shift in next bit and add to value */
+			c->low = (c->low << 1) | (READ_BITS1(stream));
+		}
+
+		return 0;
+    }
 }
 
 /**---------------------------------------------------------------------------*

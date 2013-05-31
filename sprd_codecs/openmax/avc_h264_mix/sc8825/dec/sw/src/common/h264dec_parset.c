@@ -14,7 +14,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8810_video_header.h"
+#include "sc8825_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -46,7 +46,6 @@ LOCAL void H264Dec_active_sps (DEC_SPS_T *sps_ptr, DEC_IMAGE_PARAMS_T *img_ptr)
 	img_ptr->ext_height = img_ptr->height + Y_EXTEND_SIZE * 2;
 	img_ptr->start_in_frameY = img_ptr->ext_width * Y_EXTEND_SIZE + Y_EXTEND_SIZE;
 	img_ptr->start_in_frameUV = (img_ptr->ext_width>>1) * UV_EXTEND_SIZE + UV_EXTEND_SIZE;
-//LOGI("%s, %d,img_ptr->width: %d, img_ptr->height: %d", __FUNCTION__, __LINE__, img_ptr->width, img_ptr->height);
 
 	if (!img_ptr->VSP_used)
 	{
@@ -71,12 +70,10 @@ LOCAL void H264Dec_active_sps (DEC_SPS_T *sps_ptr, DEC_IMAGE_PARAMS_T *img_ptr)
 		mb_cache_ptr->blk4x4_offset[blk4x4Idx++] = 4 + 4 * img_ptr->ext_width/2;
 	}else
 	{
-#if _H264_PROTECT_ & _LEVEL_HIGH_
+#if 0 //_H264_PROTECT_ & _LEVEL_HIGH_
 		if ((sps_ptr->pic_width_in_mbs_minus1 < 3 || sps_ptr->pic_height_in_map_units_minus1 < 3) /*64x64*/
-		||(sps_ptr->pic_width_in_mbs_minus1 > 44 || sps_ptr->pic_height_in_map_units_minus1 >  35) /*768x576*/)  
+		||(sps_ptr->pic_width_in_mbs_minus1 > 79 || sps_ptr->pic_height_in_map_units_minus1 >  44) /*1280x720*/)  
 		{
-//		LOGI("%s, %d", __FUNCTION__, __LINE__);
-
 			img_ptr->error_flag |= ER_BSM_ID;
 			img_ptr->return_pos1 |= (1<<12);
 			return;
@@ -92,7 +89,7 @@ LOCAL void H264Dec_active_sps (DEC_SPS_T *sps_ptr, DEC_IMAGE_PARAMS_T *img_ptr)
 	    	g_MbToSliceGroupMap = NULL;
 		if(VSP_spsCb)
 		{
-			int ret = (*VSP_spsCb)(avc_user_data,img_ptr->width,img_ptr->height,sps_ptr->num_ref_frames);
+			int ret = (*VSP_spsCb)(g_user_data,img_ptr->width,img_ptr->height,sps_ptr->num_ref_frames);
 			if(!ret)
 			{
 			#if _H264_PROTECT_ & _LEVEL_LOW_
@@ -107,8 +104,6 @@ LOCAL void H264Dec_active_sps (DEC_SPS_T *sps_ptr, DEC_IMAGE_PARAMS_T *img_ptr)
 			img_ptr->error_flag |= ER_BSM_ID;
 			img_ptr->return_pos1 |= (1<<14);
 		#endif	
-//        		LOGI("%s, %d", __FUNCTION__, __LINE__);
-
 			return;
 		}
 #endif
@@ -191,7 +186,9 @@ PUBLIC void H264Dec_use_parameter_set (DEC_IMAGE_PARAMS_T *img_ptr, int32 pps_id
 		read_b8mode = decode_cabac_mb_sub_type;
 		if (img_ptr->VSP_used)
 		{
-		//	sw_vld_mb= decode_mb_cabac_hw;	
+		#if 0
+			sw_vld_mb= decode_mb_cabac_hw;	
+        #endif        
 		}else
 		{
 			sw_vld_mb= decode_mb_cabac_sw;	
@@ -355,7 +352,6 @@ LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, DEC_IMAGE_PARAMS_T *im
 {
 	int32 reserved_zero;
 	DEC_BS_T *stream = img_ptr->bitstrm_ptr;
-//LOGI("%s, %d", __FUNCTION__, __LINE__);
 
 	sps_ptr->profile_idc = READ_FLC(stream, 8);
 
@@ -446,14 +442,14 @@ LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, DEC_IMAGE_PARAMS_T *im
     	img_ptr->not_supported = TRUE;
         img_ptr->error_flag |= ER_BSM_ID;
         img_ptr->return_pos1 |= (1<<17);
+	    SCI_TRACE_LOW("MMDEC_STREAM_ERROR");
         return MMDEC_STREAM_ERROR;
     }else
 #if 0    
-    if (sps_ptr->profile_idc == 0x64/*hp*/ || sps_ptr->profile_idc == 0x4d/*mp*/
-		|| sps_ptr->pic_width_in_mbs_minus1 > 44 || sps_ptr->pic_height_in_map_units_minus1 > 35)	/*D1*/
+//    if (sps_ptr->profile_idc == 0x64/*hp*/ /*|| sps_ptr->profile_idc == 0x4d*//*mp*/
+//		|| sps_ptr->pic_width_in_mbs_minus1 > 79 || sps_ptr->pic_height_in_map_units_minus1 > 44)	/*D1*/
 #endif		
-	{
-		
+    {
         img_ptr->VSP_used = 0;
 
         img_ptr->b8_mv_pred_func[4] = H264Dec_mv_prediction_P8x8_8x8_sw;
@@ -469,8 +465,7 @@ LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, DEC_IMAGE_PARAMS_T *im
         H264Dec_init_intraChromaPred_function ();
     }
 #if 0
-	else
-	{
+    else {
 		img_ptr->VSP_used = 1;
 
 		img_ptr->b8_mv_pred_func[4] = H264Dec_mv_prediction_P8x8_8x8_hw;
@@ -546,9 +541,6 @@ LOCAL void H264Dec_make_sps_availabe (int32 sps_id, DEC_SPS_T *sps_ptr)
 	int32 *src_ptr = (int32 *)sps_ptr;
 	int32 *dst_ptr = (int32 *)(&g_sps_array_ptr[sps_id]);
 	uint32 sps_size = sizeof(DEC_SPS_T)/4;
-
-//    LOGI("%s, %d", __FUNCTION__, __LINE__);
-
 #if 0
 	int32 i;
 	for (i = 0; i < sps_size; i++)
@@ -567,8 +559,6 @@ PUBLIC MMDecRet H264Dec_process_sps (DEC_IMAGE_PARAMS_T *img_ptr)
 	DEC_SPS_T *sps_ptr = g_sps_ptr;
 	MMDecRet ret;
 
-//LOGI("%s, %d", __FUNCTION__, __LINE__);
-
 	memset(sps_ptr, 0, sizeof(DEC_SPS_T)-(6*16+2*64+4));
 	memset(sps_ptr->ScalingList4x4,16,6*16);
 	memset(sps_ptr->ScalingList8x8,16,2*64);
@@ -576,18 +566,13 @@ PUBLIC MMDecRet H264Dec_process_sps (DEC_IMAGE_PARAMS_T *img_ptr)
 	ret = H264Dec_interpret_sps (sps_ptr, img_ptr);
 	if (ret != MMDEC_OK)
 	{
-//	LOGI("%s, %d", __FUNCTION__, __LINE__);
-
 		return ret;
 	}
-//LOGI("%s, %d", __FUNCTION__, __LINE__);
-
+	
 	H264Dec_make_sps_availabe (sps_ptr->seq_parameter_set_id, sps_ptr);
 
 	if (g_active_sps_ptr && (sps_ptr->seq_parameter_set_id == g_active_sps_ptr->seq_parameter_set_id))
 	{
-//	LOGI("%s, %d", __FUNCTION__, __LINE__);
-
 		g_old_pps_id = -1;
 	}
 
@@ -595,8 +580,6 @@ PUBLIC MMDecRet H264Dec_process_sps (DEC_IMAGE_PARAMS_T *img_ptr)
 	img_ptr->low_delay = 1;
 	img_ptr->has_b_frames = !img_ptr->low_delay;
 
-//LOGI("%s, %d, g_active_sps_ptr: %0x", __FUNCTION__, __LINE__, g_active_sps_ptr);
-	
 	return MMDEC_OK;
 }
 
@@ -631,7 +614,7 @@ LOCAL MMDecRet H264Dec_interpret_pps (DEC_PPS_T *pps_ptr, DEC_IMAGE_PARAMS_T *im
 
 		if (pps_ptr->slice_group_map_type == 6)
 		{
-			SCI_ASSERT(NULL != (pps_ptr->slice_group_id = (uint8 *)H264Dec_InterMemAlloc(SIZE_SLICE_GROUP_ID*sizeof(uint8))));
+			SCI_ASSERT(NULL != (pps_ptr->slice_group_id = (uint8 *)H264Dec_InterMemAlloc(SIZE_SLICE_GROUP_ID*sizeof(uint8), 4)));
 		}
 
 		if (pps_ptr->slice_group_map_type == 0)

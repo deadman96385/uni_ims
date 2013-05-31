@@ -38,8 +38,8 @@ PUBLIC void H264Dec_InitBitstream_sw (DEC_BS_T * stream, void *pOneFrameBitstrea
 
 //big endian
 #define BITSTREAMSHOWBITS(bitstream, nBits) \
-((nBits) <= bitstream->bitsLeft) ? (((bitstream->rdptr[0]) >> (bitstream->bitsLeft - (nBits))) & g_h264_msk [(nBits)]) : \
-	((((bitstream->rdptr[0])  << ((nBits) - bitstream->bitsLeft)) | ((bitstream->rdptr[1]) >> (32 - (nBits) + bitstream->bitsLeft))) & g_h264_msk[(nBits)]) 
+((nBits) <= bitstream->bitsLeft) ? (((bitstream->rdptr[0]) >> (bitstream->bitsLeft - (nBits))) & g_msk [(nBits)]) : \
+	((((bitstream->rdptr[0])  << ((nBits) - bitstream->bitsLeft)) | ((bitstream->rdptr[1]) >> (32 - (nBits) + bitstream->bitsLeft))) & g_msk[(nBits)]) 
 
 #define BITSTREAMFLUSHBITS(stream, nbits) \
 { \

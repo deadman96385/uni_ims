@@ -11,7 +11,7 @@
  ** DATE          NAME            DESCRIPTION                                 * 
  ** 03/29/2010    Xiaowei.Luo     Create.                                     *
  *****************************************************************************/
-#include "sc8810_video_header.h"
+#include "sc8825_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -1327,6 +1327,58 @@ DECLARE_ASM_CONST (4, int8, run7_vlc_tbl[96][2]) =
 	{0xa, 1},{0xa, 1},{0xa, 1},{0xa, 1},{0xa, 1},{0xa, 1},{0xa, 1},{0xa, 1},
 };
 
+DECLARE_ASM_CONST (4, int32, significant_coeff_flag_offset[6]) = 
+{
+         105+0, 105+15, 105+29, 105+44, 105+47, 402 
+};
+
+DECLARE_ASM_CONST (4, int32, last_coeff_flag_offset[6]) = 
+{
+        166+0, 166+15, 166+29, 166+44, 166+47, 417,
+};
+
+DECLARE_ASM_CONST (4, int32,coeff_abs_level_m1_offset[6]) = 
+{
+        227+0, 227+10, 227+20, 227+30, 227+39, 426
+};
+
+DECLARE_ASM_CONST (4, uint8, significant_coeff_flag_offset_8x8[63]) = 
+{
+        0, 1, 2, 3, 4, 5, 5, 4, 4, 3, 3, 4, 4, 4, 5, 5,
+        4, 4, 4, 4, 3, 3, 6, 7, 7, 7, 8, 9,10, 9, 8, 7,
+        7, 6,11,12,13,11, 6, 7, 8, 9,14,10, 9, 8, 6,11,
+        12,13,11, 6, 9,14,10, 9,11,12,13,11,14,10,12 
+};
+
+DECLARE_ASM_CONST (4, uint8, last_coeff_flag_offset_8x8[63]) = 
+{
+	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    	3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4,
+    	5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8
+};
+	
+/* node ctx: 0..3: abslevel1 (with abslevelgt1 == 0).
+  * 4..7: abslevelgt1 + 3 (and abslevel1 doesn't matter).
+  * map node ctx => cabac ctx for level=1 */
+DECLARE_ASM_CONST (4, uint8, coeff_abs_level1_ctx[8]) = 
+{ 
+        1, 2, 3, 4, 0, 0, 0, 0 
+};
+	
+    /* map node ctx => cabac ctx for level>1 */
+DECLARE_ASM_CONST (4, uint8, coeff_abs_levelgt1_ctx[8]) = 
+{ 
+        5, 5, 5, 5, 6, 7, 8, 9 
+};
+	
+DECLARE_ASM_CONST (4, uint8, coeff_abs_level_transition[2][8]) = 
+{
+        /* update node ctx after decoding a level=1 */
+	{ 1, 2, 3, 3, 4, 5, 6, 7 },
+        /* update node ctx after decoding a level>1 */
+	{ 4, 4, 4, 4, 5, 6, 7, 7 }
+};
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

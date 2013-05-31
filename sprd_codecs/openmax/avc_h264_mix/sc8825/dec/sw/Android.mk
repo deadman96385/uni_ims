@@ -31,18 +31,18 @@ LOCAL_SRC_FILES := \
 	src/sw/h264dec_mc4_neon.s	\
 	src/sw/h264dec_mc8_neon.s	\
 	src/sw/h264dec_mc16_neon.s \
-	src/sw/h264dec_mem_neon.s	\
 	src/sw/h264dec_mv_sw.c \
 	src/sw/h264dec_slice_sw.c \
 	src/sw/h264dec_vld_sw.c    \
 	src/common/h264dec_bitstream_neon.s \
+	src/common/h264dec_mem_neon.s	\
 	src/common/h264dec_vld_table.c \
 	src/sw/h264dec_wp_neon.s	\
 
 LOCAL_MODULE := libomx_avcdec_sw_sprd
 LOCAL_MODULE_TAGS := optional
 
-LOCAL_CFLAGS :=  -fno-strict-aliasing -D_VSP_LINUX_  -D_VSP_  -DCHIP_ENDIAN_LITTLE -DITRANS_ASSEMBLY -DCHIP_8810 
+LOCAL_CFLAGS :=  -fno-strict-aliasing -D_VSP_LINUX_  -D_VSP_  -DCHIP_ENDIAN_LITTLE -DITRANS_ASSEMBLY -DCHIP_8825 
 #LOCAL_CFLAGS += -DYUV_THREE_PLANE
 LOCAL_ARM_MODE := arm
 

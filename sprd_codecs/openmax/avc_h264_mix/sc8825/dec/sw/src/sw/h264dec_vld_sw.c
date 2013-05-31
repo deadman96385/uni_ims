@@ -11,7 +11,7 @@
  ** DATE          NAME            DESCRIPTION                                 * 
  ** 03/29/2010    Xiaowei.Luo     Create.                                     *
  *****************************************************************************/
-#include "sc8810_video_header.h"
+#include "sc8825_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -460,75 +460,6 @@ void decode_mb_cavlc_sw (DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_pt
 	}
 }
 
-#define	LUMA_DC			0
-#define LUMA_AC_I16		1
-#define LUMA_AC			2
-#define CHROMA_DC		3
-#define CHROMA_AC		4
-
-/******************************************************************
-			derive nc according to block type, block id
-*******************************************************************/
-
-	static const int significant_coeff_flag_offset[2][6] = 
-	{
-		{ 105+0, 105+15, 105+29, 105+44, 105+47, 402 },
-		{ 277+0, 277+15, 277+29, 277+44, 277+47, 436 }
-    	};
-
-	static const int last_coeff_flag_offset[2][6] = 
-	{
-		{ 166+0, 166+15, 166+29, 166+44, 166+47, 417 },
-		{ 338+0, 338+15, 338+29, 338+44, 338+47, 451 }
-    	};
-
-	static const int coeff_abs_level_m1_offset[6] = 
-	{
-		227+0, 227+10, 227+20, 227+30, 227+39, 426
-	};
-
-	static const uint8 significant_coeff_flag_offset_8x8[2][63] = 
-	{
-		{ 
-			0, 1, 2, 3, 4, 5, 5, 4, 4, 3, 3, 4, 4, 4, 5, 5,
-			4, 4, 4, 4, 3, 3, 6, 7, 7, 7, 8, 9,10, 9, 8, 7,
-			7, 6,11,12,13,11, 6, 7, 8, 9,14,10, 9, 8, 6,11,
-			12,13,11, 6, 9,14,10, 9,11,12,13,11,14,10,12 
-		},
-      		{ 
-      			0, 1, 1, 2, 2, 3, 3, 4, 5, 6, 7, 7, 7, 8, 4, 5,
-			6, 9,10,10, 8,11,12,11, 9, 9,10,10, 8,11,12,11,
-			9, 9,10,10, 8,11,12,11, 9, 9,10,10, 8,13,13, 9,
-			9,10,10, 8,13,13, 9, 9,10,10,14,14,14,14,14 
-		}
-	};
-
-	const uint8 last_coeff_flag_offset_8x8[63] = 
-	{
-		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	    	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-	    	3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4,
-	    	5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8
-	};
-	
-    /* node ctx: 0..3: abslevel1 (with abslevelgt1 == 0).
-     * 4..7: abslevelgt1 + 3 (and abslevel1 doesn't matter).
-     * map node ctx => cabac ctx for level=1 */
-	static const uint8 coeff_abs_level1_ctx[8] = { 1, 2, 3, 4, 0, 0, 0, 0 };
-	
-    /* map node ctx => cabac ctx for level>1 */
-	static const uint8 coeff_abs_levelgt1_ctx[8] = { 5, 5, 5, 5, 6, 7, 8, 9 };
-	
-	static const uint8 coeff_abs_level_transition[2][8] = 
-	{
-    /* update node ctx after decoding a level=1 */
-		{ 1, 2, 3, 3, 4, 5, 6, 7 },
-    /* update node ctx after decoding a level>1 */
-		{ 4, 4, 4, 4, 5, 6, 7, 7 }
-	};
-
-#define MB_FIELD	0
-
 #define DECODE_SIGNIFICANCE( coefs, sig_off, last_off ) \
         for(last= 0; last < coefs; last++) { \
             uint8 *sig_ctx = significant_coeff_ctx_base + sig_off; \
@@ -598,13 +529,13 @@ static int32 readCoeff4x4_CABAC_sw(DEC_MB_INFO_T * currMB, DEC_MB_CACHE_T *mb_ca
 		}
 	}
 
-	significant_coeff_ctx_base = img_ptr->cabac_state + significant_coeff_flag_offset[MB_FIELD][cat];
-	last_coeff_ctx_base = img_ptr->cabac_state + last_coeff_flag_offset[MB_FIELD][cat];
+	significant_coeff_ctx_base = img_ptr->cabac_state + significant_coeff_flag_offset[cat];
+	last_coeff_ctx_base = img_ptr->cabac_state + last_coeff_flag_offset[cat];
 	abs_level_m1_ctx_base = img_ptr->cabac_state + coeff_abs_level_m1_offset[cat];
 
     if( cat == 5 ) 
 	{
-		const uint8 *sig_off = significant_coeff_flag_offset_8x8[MB_FIELD];
+		const uint8 *sig_off = significant_coeff_flag_offset_8x8;
 
 		DECODE_SIGNIFICANCE( 63, sig_off[last], last_coeff_flag_offset_8x8[last] );
     } else 

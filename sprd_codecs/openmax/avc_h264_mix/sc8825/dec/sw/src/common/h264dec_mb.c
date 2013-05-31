@@ -14,7 +14,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8810_video_header.h"
+#include "sc8825_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -496,7 +496,7 @@ PUBLIC void H264Dec_start_macroblock (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T
 			mb_cache_ptr->vld_dc_coded_flag = (img_ptr->abv_mb_info->dc_coded_flag << 4) | ((mb_info_ptr - 1)->dc_coded_flag);
 		}
 	}
-	
+
 	return;
 }
 
