@@ -166,5 +166,5 @@ void H264Dec_GetOneDspFrm (AVCHandle *avcHandle, MMDecOutput * pOutput, int req_
     }
 #endif
 /**---------------------------------------------------------------------------*/
-#endif //_H264_DEC_H_
+#endif
 // End

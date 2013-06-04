@@ -14,10 +14,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "vsp_drv_sc8830.h"
-#include "vsp_h264_dec.h"
-#include "h264dec_or_fw.h"
-#include "h264dec.h"
+#include "sc8810_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -31,108 +28,47 @@ FunctionType_BufCB VSP_unbindCb = NULL;
 void *g_user_data = NULL;
 FunctionType_MallocCB VSP_mallocCb = NULL;
 
-H264DEC_SHARE_RAM s_h264dec_share_ram;
 
-PUBLIC void H264Dec_SetCurRecPic(AVCHandle *avcHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader, int32 picId)
-{
-    H264DEC_SHARE_RAM *share_ram = &s_h264dec_share_ram;
-
-    share_ram->rec_buf_Y=  (uint32)pFrameY;
-    share_ram->rec_buf_Y_addr= (uint32)pFrameY_phy;
-    share_ram->rec_buf_header =(uint32) pBufferHeader;	
-}
-
-//void H264Dec_RegBufferCB(FunctionType_BufCB bindCb,FunctionType_BufCB unbindCb,void *userdata)
-//{
-//    VSP_bindCb = bindCb;
-//    VSP_unbindCb = unbindCb;
-//    g_user_data = userdata;
-//}
-
-//void H264Dec_RegMallocCB(FunctionType_MallocCB mallocCb)
-//{
-//    VSP_mallocCb = mallocCb;
-//}
 
 /*************************************/
 /* functions needed for android platform */
 /*************************************/
-PUBLIC void ARM_VSP_BIND()
+
+PUBLIC void OR_VSP_BIND(void *pHeader)
 {
-    uint32 buffer_header;
-    int32 buffer_num,i;
-    buffer_num =  (VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x70,"bind_buffer_number")) >> 16;
-    if(buffer_num)
-    {
-	buffer_header = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x6c,"bind_buffer_header");
-	if(VSP_bindCb!=NULL)
-        (*VSP_bindCb)(g_user_data,(void *)buffer_header);
-    }
+	 (*VSP_bindCb)(g_user_data,pHeader);
 }
 
-PUBLIC void ARM_VSP_UNBIND()
+PUBLIC void OR_VSP_UNBIND(void *pHeader)
 {
-    uint32 buffer_header;
-    int32 buffer_num,i;
-    
-    buffer_num =  (VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x70,"unbind_buffer_number")) & 0xffff;
-    for(i =0; i < buffer_num; i++)
-    {
-	buffer_header = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x74+i*4,"unbind_buffer_header");
-	if(VSP_unbindCb!=NULL)
-        (*VSP_unbindCb)(g_user_data,(void *)buffer_header);
-    }
+   	(*VSP_unbindCb)(g_user_data,pHeader);
 }
+
 
 void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
 {
-    int ret;
-    
-    OR_VSP_RST();
-
-    // Send H264DEC_RELEASE signal to Openrisc.
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x58, H264DEC_RELEASE,"Call  H264Dec_ReleaseRefBuffers function.");	
-
-    OR_VSP_START();
-
-    // Call unbind callback function. 
-    ARM_VSP_UNBIND();
-
-    VSP_RELEASE_Dev();
 }
 
 MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, uint8 **pOutput, int32 *picId)
 {
-    int ret;
-    
-    OR_VSP_RST();
-
-    // Send GetLastDspFrm signal to Openrisc.
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x58, H264DEC_GETLAST,"Call  H264DEC_GETLAST function.");	
-
-    ret = OR_VSP_START();	//ret  is buffer header.
-
-    // Get bool value of H264Dec_GetLastDspFrm function of OR.
-    // If output is TRUE. 
-    //Get address of unbind buffer.
-    // Call unbind callback function. 
-    // else return NULL
-    if(ret)
-    {
-	* pOutput = (void *)ret;
-	 ARM_VSP_UNBIND();
-
-             VSP_RELEASE_Dev();
-
-	 return MMDEC_OK;
-    }else
-    {
-	* pOutput = NULL;
-
-            VSP_RELEASE_Dev();
-
+	* pOutput = NULL;         
 	return MMDEC_ERROR;
-    }
+
+}
+
+
+
+
+PUBLIC void H264Dec_SetCurRecPic(AVCHandle *avcHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader, int32 picId)
+{
+	 int i; 
+	g_rec_buf.imgY =  pFrameY;
+
+	g_rec_buf.imgYAddr = (uint32)pFrameY_phy;
+
+	g_rec_buf.pBufferHeader = pBufferHeader;	
+
+	 g_rec_buf.mPicId = picId;
 }
 
 MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int *nal_type, int *nal_ref_idc)
@@ -155,87 +91,44 @@ MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int
     return MMDEC_ERROR;
 }
 
+
+
 MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 {
-#if 1
-    H264DEC_SHARE_RAM *share_ram = &s_h264dec_share_ram;
+	DEC_SPS_T *sps_ptr = &(g_sps_array_ptr[0]);
+    	int32 aligned_width =  (sps_ptr->pic_width_in_mbs_minus1 + 1) * 16;
+        int32 aligned_height = (sps_ptr->pic_height_in_map_units_minus1 + 1) * 16;
 
-//    	AVCDecObject *vd = (AVCDecObject *) avcHandle->videoDecoderData;
-//        DEC_SPS_T *sps_ptr = &(vd->g_sps_array_ptr[0]);
-//        DEC_SPS_T *sps_ptr = &(g_sps_array_ptr[0]);
-
-//    storage_t *pStorage;
-
-//    SCI_TRACE_LOW("H264DecGetInfo#");
-
-    if (/*decInst == NULL ||*/ pDecInfo == NULL)
+    if ( pDecInfo == NULL)
     {
-        ALOGI("H264SwDecGetInfo# ERROR: decInst or pDecInfo is NULL");
+  //      ALOGI("H264SwDecGetInfo# ERROR: decInst or pDecInfo is NULL");
         return(MMDEC_PARAM_ERROR);
     }
 
+    pDecInfo->picWidth        = aligned_width;
+    pDecInfo->picHeight       = aligned_height;
 
-//    pStorage = &(((decContainer_t *)decInst)->storage);
+    if (sps_ptr->frame_cropping_flag)
+    {
+        pDecInfo->croppingFlag = 1;
+        pDecInfo->cropParams.cropLeftOffset = 2 * sps_ptr->frame_crop_left_offset;
+        pDecInfo->cropParams.cropOutWidth = aligned_width -
+                 2 * (sps_ptr->frame_crop_left_offset +
+                      sps_ptr->frame_crop_right_offset);
+         pDecInfo->cropParams.cropTopOffset = 2 * sps_ptr->frame_crop_top_offset;
+         pDecInfo->cropParams.cropOutHeight= aligned_height -
+                  2 * (sps_ptr->frame_crop_top_offset +
+                       sps_ptr->frame_crop_bottom_offset);
+    }
+    else
+    {
+        pDecInfo->croppingFlag = 0;
+        pDecInfo->cropParams.cropLeftOffset = 0;
+         pDecInfo->cropParams.cropOutWidth  = 0;
+        pDecInfo->cropParams.cropTopOffset = 0;
+         pDecInfo->cropParams.cropOutHeight= 0;
+    }
 
-//    LOGI("%s, %d, g_active_sps_ptr: %0x, g_active_pps_ptr: %0x", __FUNCTION__, __LINE__, g_active_sps_ptr, g_active_pps_ptr);
-
-//    if (pStorage->activeSps == NULL || pStorage->activePps == NULL)
-//    if (sps_ptr == NULL /*|| g_active_pps_ptr == NULL*/)
-//    {
-//        ALOGI("H264SwDecGetInfo# ERROR: Headers not decoded yet");
-//        return(MMDEC_ERROR);
-//    }
-
-#ifdef H264DEC_TRACE
-    sprintf(((decContainer_t*)decInst)->str,
-        "H264SwDecGetInfo# decInst %p  pDecInfo %p", decInst, (void*)pDecInfo);
-    ALOGI(((decContainer_t*)decInst)->str);
-#endif
-
-    /* h264bsdPicWidth and -Height return dimensions in macroblock units,
-     * picWidth and -Height in pixels */
-    pDecInfo->picWidth        = share_ram->pic_width;
-    pDecInfo->picHeight       = share_ram->pic_height;
-//    pDecInfo->videoRange      = h264bsdVideoRange(pStorage);
-//    pDecInfo->matrixCoefficients = h264bsdMatrixCoefficients(pStorage);
-
-#if 1
-//    h264bsdCroppingParams(pStorage,
-//        &pDecInfo->croppingFlag,
-//        &pDecInfo->cropParams.cropLeftOffset,
-//        &pDecInfo->cropParams.cropOutWidth,
-//        &pDecInfo->cropParams.cropTopOffset,
-//      &pDecInfo->cropParams.cropOutHeight);
-        OR_VSP_RST();
-
-        // Send H264DecInit signal to Openrisc.
-        VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x58, H264DEC_CROP_PARAM,"Call  H264DEC_CROP_PARAM function.");		
-
-        OR_VSP_START();
-
-        pDecInfo->croppingFlag = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0xb4, "croppingFlag");
-        pDecInfo->cropParams.cropLeftOffset = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0xb8, "leftOffset");
-        pDecInfo->cropParams.cropOutWidth = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0xbc, "width");
-        pDecInfo->cropParams.cropTopOffset = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0xc0, "topOffset");
-        pDecInfo->cropParams.cropOutHeight = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0xc4, "height");
-           
-        VSP_RELEASE_Dev();
-
-    /* sample aspect ratio */
-//    h264bsdSampleAspectRatio(pStorage,
-//                             &pDecInfo->parWidth,
-//                             &pDecInfo->parHeight);
-#endif
-    /* profile */
-//    pDecInfo->profile = sps_ptr->profile_idc;//h264bsdProfile(pStorage);
-
-//    SCI_TRACE_LOW("H264DecGetInfo# OK");
-
-#else
-    pDecInfo->picWidth        = 320;
-    pDecInfo->picHeight       = 240;
-     pDecInfo->profile = 0x42;
-#endif
 
     return(MMDEC_OK);
 
@@ -243,147 +136,267 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 
 MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideoFormat * pVideoFormat)
 {
-    MMDecRet ret;
-    uint32 * OR_addr_vitual_ptr;
-    H264DEC_SHARE_RAM *share_ram = &s_h264dec_share_ram;
 
-    ALOGE("%s, %d", __FUNCTION__, __LINE__);
+SCI_TRACE_LOW("%s, %d.", __FUNCTION__, __LINE__);	
+	MMDecRet ret = MMDEC_ERROR;
+	SCI_ASSERT(NULL != buffer_ptr);
+	SCI_ASSERT(NULL != pVideoFormat);
 
-VSP_mallocCb = avcHandle->VSP_extMemCb;
-VSP_bindCb = avcHandle->VSP_bindCb;
-VSP_unbindCb = avcHandle->VSP_unbindCb;
-g_user_data = avcHandle->userdata;
+	VSP_mallocCb = avcHandle->VSP_extMemCb;
+	VSP_bindCb = avcHandle->VSP_bindCb;
+	VSP_unbindCb = avcHandle->VSP_unbindCb;
+	g_user_data = avcHandle->userdata;
 
-    OR_addr_ptr = (uint32 *)(buffer_ptr->common_buffer_ptr_phy);
-    OR_addr_vitual_ptr = (uint32 *)(buffer_ptr->common_buffer_ptr);
+	if (VSP_OPEN_Dev() < 0)
+	{
+		return ret;
+	}
+
+	// Physical memory as internal memory.
+	H264Dec_InitInterMem (buffer_ptr);
+	H264Dec_init_vld_table ();
+	H264Dec_init_global_para ();
+
+	//copy cavlc tbl to phy addr of g_cavlc_tbl_ptr.
+	memcpy(g_cavlc_tbl_ptr, g_huff_tab_token, sizeof(uint32)*69);
 	
-#ifndef _FPGA_TEST_
-    if(VSP_OPEN_Dev()<0)
-    {
-	return MMDEC_HW_ERROR;
-    }	
-#endif
-
-    //Load firmware to ddr
-    memcpy(OR_addr_vitual_ptr, H264dec_OR_data, H264dec_OR_DATA_SIZE);
-
-    if(OR_VSP_RST()<0)
-    {
-	return MMDEC_HW_ERROR;
-    }
-
-    //Function related share ram configuration.
-    share_ram->malloc_mem0_start_addr=H264DEC_OR_INTER_START_ADDR;	// Addr in Openrisc space. 
-    share_ram->total_mem0_size=H264DEC_OR_INTER_MALLOC_SIZE;	
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+8, share_ram->malloc_mem0_start_addr,"shareRAM 8 VSP_MEM0_ST_ADDR");//OPENRISC ddr_start_addr+code size
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0xc, share_ram->total_mem0_size,"shareRAM c CODE_RUN_SIZE");//OPENRISC text+heap+stack
-
-    // Set video_buffer_malloced to 0 before decoding.
-    share_ram->video_buffer_malloced = 0;
-    share_ram->video_size_got = 0;
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x0, (share_ram->video_buffer_malloced) <<16, "shareRAM 0 video_buffer_malloced");
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x4, (share_ram->video_size_got) <<31, "shareRAM 4 video_size_get");
-		
-    // Send H264DecInit signal to Openrisc.
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x58, H264DEC_INIT,"Call  H264DEC_INIT function.");		
-
-    ret = (MMDecRet)OR_VSP_START();
-
-        VSP_RELEASE_Dev();
-	
-    return ret;
+	if (g_image_ptr->error_flag)
+	{
+		return MMDEC_ERROR;
+	}
+	return MMDEC_OK;
 }
+
+
+
+
+
+PUBLIC MMDecRet H264DecDecode_NALU(MMDecInput *dec_input_ptr, MMDecOutput *dec_output_ptr)
+
+{
+	int i;		
+	MMDecRet ret = MMDEC_ERROR;
+	DEC_IMAGE_PARAMS_T *img_ptr = g_image_ptr;
+	DEC_SLICE_T *curr_slice_ptr = g_curr_slice_ptr;
+	
+
+
+	
+	
+  
+	curr_slice_ptr->next_header = -1;
+	img_ptr->error_flag = FALSE;
+
+ 	if((dec_input_ptr->expected_IVOP) && (img_ptr->curr_mb_nr == 0))
+	{
+		g_searching_IDR_pic = TRUE;
+	}	
+	
+
+
+	ret = H264Dec_Read_SPS_PPS_SliceHeader ();//g_nalu_ptr->buf, g_nalu_ptr->len);//weihu
+	
+	if (img_ptr->error_flag == TRUE)
+	{
+//		OR1200_WRITE_REG(SHARE_RAM_BASE_ADDR + 0xe8, 0x77777777, "FPGA test");
+
+		return MMDEC_ERROR;
+	}
+	
+	if (g_ready_to_decode_slice)
+	{
+
+#if _MVC_
+		DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = g_curr_slice_ptr->p_Dpb;
+#else
+		DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = g_dpb_ptr;
+#endif
+		DEC_STORABLE_PICTURE_T *pframe;
+	#if 0
+		if ((img_ptr->curr_mb_nr == 0) || (img_ptr->num_dec_mb == img_ptr->frame_size_in_mbs))
+	#else
+		if (img_ptr->is_new_pic)
+	#endif
+		{
+			//H264Dec_VSPInit ();			
+			
+			if (img_ptr->is_need_init_vsp_hufftab && img_ptr->is_new_pic)//分不分cabac和cavlc
+			{			
+				uint32 vld_table_addr;
+
+				vld_table_addr = H264Dec_GetPhyAddr(g_cavlc_tbl_ptr);	
+				//load_vld_table_en=1;
+				
+				OR1200_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0xc, vld_table_addr/8,"ddr vlc table start addr");
+				OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_SIZE_SET_OFF, 0x45,"ddr VLC table size");
+				//img_ptr->is_need_init_vsp_hufftab = FALSE;
+			}	
+
+
+		}			
+
+		//OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, 0x6,"BSM_OP clr BSM");//clr
+		//OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, 0x80000000|(g_stream_offset),"BSM_cfg1 stream buffer offset");//byte align
+		//OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, 0x80000000|(g_slice_datalen+128),"BSM_cfg0 stream buffer size");//打开BSM load data//真实sps/pps/slice nalu size+16dw,注意word对齐
+	
+        //配置frame start address ram
+		OR1200_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR, (g_dec_picture_ptr->imgYAddr)>>3,"current Y addr");//g_dpb_layer[g_curr_slice_ptr->view_id]->fs[img_ptr->DPB_addr_index-17*g_curr_slice_ptr->view_id]->frame->imgYAddr
+		OR1200_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+4, (g_dec_picture_ptr->imgUAddr)>>3,"current UV addr");//0x480000+//g_dpb_layer[g_curr_slice_ptr->view_id]->fs[img_ptr->DPB_addr_index-17*g_curr_slice_ptr->view_id]->frame->imgUAddr
+		OR1200_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+8, (g_dec_picture_ptr->direct_mb_info_Addr)>>3,"current info addr");//0x6a0000+//g_dpb_layer[g_curr_slice_ptr->view_id]->fs[img_ptr->DPB_addr_index-17*g_curr_slice_ptr->view_id]->frame->direct_mb_info
+		for(i=0;i<g_image_ptr->num_ref_idx_l0_active;i++)//16
+			//for(i=0;i<32;i++)
+		{
+//			pframe = dpb_ptr->fs[g_list0_map_addr[i]]->frame;
+			pframe = g_list0[i];
+			OR1200_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x80+i*4,(pframe->imgYAddr)>>3,"ref L0 Y addr");//g_dpb_layer[0]->fs[g_list0_map_addr[i]]->frame->imgYAddr
+			OR1200_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x100+i*4,(pframe->imgUAddr)>>3,"ref L0 UV addr");//0x480000+
+			OR1200_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x180+i*4,(pframe->direct_mb_info_Addr)>>3,"ref L0 info addr");//0x6a0000+
+			
+		}
+		for(i=0;i<g_image_ptr->num_ref_idx_l1_active;i++)//16
+			//for(i=0;i<32;i++)
+		{
+			//pframe = dpb_ptr->fs[g_list1_map_addr[i]]->frame;
+			pframe = g_list1[i];
+			OR1200_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0xc0+i*4,(pframe->imgYAddr)>>3,"ref L1 Y addr");
+			OR1200_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x140+i*4,(pframe->imgUAddr)>>3,"ref L1 UV addr");//0x480000+
+			OR1200_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x1c0+i*4,(pframe->direct_mb_info_Addr)>>3,"ref L1 info addr");//0x6a0000+
+			
+		}
+	
+		ret = H264Dec_decode_one_slice_data (dec_output_ptr, img_ptr);
+
+		
+	}
+
+	H264Dec_flush_left_byte ();
+
+	//need IVOP but not found IDR,then return seek ivop
+	if(dec_input_ptr->expected_IVOP && g_searching_IDR_pic)
+	{
+		return MMDEC_FRAME_SEEK_IVOP;
+	}
+
+	if (img_ptr->error_flag)
+	{
+//		OR1200_WRITE_REG(SHARE_RAM_BASE_ADDR + 0xe8, 0x7777ffff, "FPGA test");
+		return MMDEC_ERROR;
+	}else
+	{
+		return MMDEC_OK;
+	}
+}
+
+int32 b_video_buffer_malloced = 0;
 
 PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, MMDecOutput *dec_output_ptr)
 {
     MMDecRet ret;
     int32 i;
-    uint32 img_size_reg;
-    H264DEC_SHARE_RAM *share_ram = &s_h264dec_share_ram;
+    uint32 bs_buffer_length, bs_start_addr;
 
-    if(OR_VSP_RST()<0)
+	frame_dec_finish=0;	
+
+    if(ARM_VSP_RST()<0)
     {
 	return MMDEC_HW_ERROR;
     }
+SCI_TRACE_LOW("%s, %d.", __FUNCTION__, __LINE__);
+	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL: software access.");	
+	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_MODE_OFF, STREAM_ID_H264,"VSP_MODE");
+	g_image_ptr->is_need_init_vsp_hufftab = TRUE;				
 
-    //Function related share ram configuration.		
-    if(share_ram->video_size_got && !share_ram->video_buffer_malloced)
-    {
-	//Send direct mb info address to OR.
-	for( i =0; i<17; i++)
+
+   	 // Bitstream.
+   	 bs_start_addr=((uint32)dec_input_ptr->pStream_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
+  	 bs_buffer_length=dec_input_ptr->dataLen;
+  	 g_stream_offset=0;
+
+   
+
+	OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, 0x08000000,0x00000000,"BSM_clr enable");//check bsm is idle	
+	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
+	OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, 0x6,"BSM_OP clr BSM");//clr BSM
+
+			
+	OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, (g_stream_offset|0xc0000000),"BSM_cfg1 check startcode");//byte align
+	OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, (0x80000000|bs_buffer_length),"BSM_cfg0 stream buffer size");//BSM load data
+  	OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG1_OFF, 0x00000004,0x00000004,"startcode found");//check bsm is idle	
+
+	//Get start code length of first NALU.
+	g_slice_datalen=OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_NAL_LEN,"get NAL_LEN");			
+	g_stream_offset+=g_slice_datalen;
+	OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, 0,"BSM_cfg1 check startcode disable");
+	while(g_stream_offset<bs_buffer_length)
 	{
-	    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR + 0x70 + i*4, share_ram->direct_mb_info_addr[i], "direct_mb_info_addr");
-        }
+		// Find the next start code and get length of NALU.
+		OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, 0x08000000,0x00000000,"BSM_clr enable");//check bsm is idle	
+		OR1200_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
+		OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, 0x6,"BSM_OP clr BSM");//clr BSM
+		OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, (g_stream_offset|0xc0000000),"BSM_cfg1 check startcode");//byte align
+		OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, (0x80000000|bs_buffer_length),"BSM_cfg0 stream buffer size");//BSM load data
+		OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG1_OFF, 0x00000004,0x00000004,"startcode found");//check bsm is idle	
+		// Get length of NALU and net bitstream length.
+		g_slice_datalen=OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_NAL_LEN,"get NAL_LEN");
+		g_nalu_ptr->len=OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_NAL_DATA_LEN,"get NAL_DATA_LEN");
+		OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, 0,"BSM_cfg1 check startcode disable");
+        
 
-	share_ram->video_buffer_malloced = 1;
-    }
+		// Configure BSM for decoding.
+		OR1200_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
+		OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, 0x6,"BSM_OP clr BSM");//clr BSM
+		OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, 0x80000000|(g_stream_offset),"BSM_cfg1 stream buffer offset");//point to the start of NALU.
+		OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, 0x80000000|(bs_buffer_length+128)&0xfffffffc,"BSM_cfg0 stream buffer size");// BSM load data. Add 16 DW for BSM fifo loading.
 
-    //expected_IVOP
-    share_ram->expected_IVOP = (dec_input_ptr->expected_IVOP)? 1: 0;
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x0, (share_ram->expected_IVOP<<28)|(share_ram->video_buffer_malloced<<16),"shareRAM 0x0 bit 28: expected_IVOP");//expected_IVOP
+		ret = H264DecDecode_NALU(dec_input_ptr, dec_output_ptr);
+					
+		g_stream_offset += g_slice_datalen;//dec_input_ptr->dataLen;
 
-    // Bitstream.
-    share_ram->bs_start_addr=((uint32)dec_input_ptr->pStream_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
-    share_ram->bs_buffer_size=dec_input_ptr->dataLen;
-    share_ram->bs_used_len=0;
 
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x18, share_ram->bs_start_addr,"shareRAM 0x18 STREAM_BUF_ADDR");//
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x1c, share_ram->bs_buffer_size,"shareRAM 0x1c STREAM_BUF_SIZE");
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x20, share_ram->bs_used_len,"shareRAM 0x20 stream_len");//	
 
-    // Rec Buffer.
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x60, share_ram->rec_buf_Y,"shareRame 0x60: rec buffer virtual address.");
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x64, share_ram->rec_buf_Y_addr,"shareRame 0x64: rec buffer physical address.");
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x68, share_ram->rec_buf_header,"shareRame 0x68: rec buffer header.");
 
-    // Send H264DecDecode signal to Openrisc.
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x58, H264DEC_DECODE,"Call  H264DecDecode function.");		
+					
 
-    // Get output of H264DecDecode function of OR.
-    ret = (MMDecRet)OR_VSP_START();
+		if( (MMDEC_ERROR ==ret) ||frame_dec_finish)//dec_output.frameEffective
+		{ 
+									
 
-    img_size_reg = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x4, "image size");
-    share_ram->pic_width =(img_size_reg) & 0xfff;
-    share_ram->pic_height=(img_size_reg >>12) & 0xfff;
-    share_ram->video_size_got = (img_size_reg>>31) & 0x1;
-    share_ram->frameY_addr=VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x2c, "display frame_Y_addr");
-    share_ram->frameUV_addr=VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x30, "display frame_UV_addr");
-    share_ram->frame_output_en=(VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x4c, "display en"))&0x1;
 
-    dec_output_ptr->frameEffective = share_ram->frame_output_en;
- //   if(dec_output_ptr->frameEffective)
-    {
-	dec_output_ptr->pOutFrameY = (uint8 *)share_ram->frameY_addr;
-	dec_output_ptr->pOutFrameU = (uint8 *)share_ram->frameUV_addr;
-	dec_output_ptr->frame_width = share_ram->pic_width;
-	dec_output_ptr->frame_height = share_ram->pic_height;
+	//		ALOGE("%s, %d", __FUNCTION__, __LINE__);
+	//		ALOGE("pic_width : %d, pic_height :%d",dec_output_ptr->frame_width,dec_output_ptr->frame_height);				
+	
+			break;	//break loop.					
+		}
+					
 
-ALOGE("%s, %d", __FUNCTION__, __LINE__);
-ALOGE("pic_width : %d, pic_height :%d", share_ram->pic_width,share_ram->pic_height);
-    }
+	}
 
-    ARM_VSP_BIND();
-    ARM_VSP_UNBIND();
 
-    if(share_ram->video_size_got && !share_ram->video_buffer_malloced)
+
+    if(!b_video_buffer_malloced && g_sps_ptr->pic_height_in_map_units_minus1/* && g_sps_ptr->profile_idc != 0x42*/)
     {
         // Malloc direct mb info buffers
 	uint32 malloc_buffer_num;
 	uint32 malloc_buffer_size;
 
-	malloc_buffer_num = VSP_READ_REG(SHARE_RAM_BASE_ADDR+ 0x10, "Number of direct mb info buffer when parsing sps. W by or");
-	malloc_buffer_size = VSP_READ_REG(SHARE_RAM_BASE_ADDR+ 0x14,"buffer size of each direct mb info buffer when parsing sps. W by or.");
+	malloc_buffer_num = 17;
+	malloc_buffer_size =  ((g_sps_ptr->pic_height_in_map_units_minus1+1) * (g_sps_ptr->pic_width_in_mbs_minus1+1))  * 80;
 
-    ALOGE("%s, %d", __FUNCTION__, __LINE__);
+   	 ALOGE("%s, %d", __FUNCTION__, __LINE__);
 
-	VSP_mallocCb (g_user_data, share_ram->direct_mb_info_addr, malloc_buffer_num, malloc_buffer_size);
+	VSP_mallocCb (g_user_data, direct_mb_info_addr, malloc_buffer_num, malloc_buffer_size);
+
+	b_video_buffer_malloced = 1;
     }
 
-            VSP_RELEASE_Dev();
+          VSP_RELEASE_Dev();
  
     // Return output.		
     return ret;
 }
+
+
+
 
 PUBLIC MMDecRet H264_DecReleaseDispBfr(AVCHandle *avcHandle, uint8 *pBfrAddr)
 {
@@ -405,4 +418,4 @@ MMDecRet H264DecRelease(AVCHandle *avcHandle)
     }
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End

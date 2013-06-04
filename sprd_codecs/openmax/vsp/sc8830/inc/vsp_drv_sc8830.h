@@ -82,13 +82,32 @@ extern "C"
 /* -----------------------------------------------------------------------
 ** Control Register Address on ARM
 ** ----------------------------------------------------------------------- */
+#define	SHARE_RAM_SIZE 0x100
+#define	GLB_REG_SIZE 0x200
+#define	PPA_SLICE_INFO_SIZE 0x200
+#define	DCT_IQW_TABLE_SIZE 0x400
+#define	FRAME_ADDR_TABLE_SIZE 0x200
+#define	VLC_TABLE0_SIZE 2624
+#define	VLC_TABLE1_SIZE 1728
+#define	BSM_CTRL_REG_SIZE 0x1000
+
+#define	FRAME_BUF_SIZE 0x20000//dword//1MB//0x40000
+
+
 #define	VSP_REG_BASE_ADDR 0x60900000//AHB
 
 #define	AHB_CTRL_BASE_ADDR VSP_REG_BASE_ADDR+0x0
 #define	SHARE_RAM_BASE_ADDR VSP_REG_BASE_ADDR+0x200
 #define	OR_BOOTROM_BASE_ADDR VSP_REG_BASE_ADDR+0x400
-#define	GLB_REG_BASE_ADDR VSP_REG_BASE_ADDR+0x1000
-#define	BSM_CTRL_REG_BASE_ADDR VSP_REG_BASE_ADDR+0x8000
+#define	GLB_REG_BASE_ADDR (VSP_REG_BASE_ADDR+0x1000)
+#define	PPA_SLICE_INFO_BASE_ADDR (VSP_REG_BASE_ADDR+0x1200)
+#define	DCT_IQW_TABLE_BASE_ADDR (VSP_REG_BASE_ADDR+0x1400)
+#define	FRAME_ADDR_TABLE_BASE_ADDR (VSP_REG_BASE_ADDR+0x1800)
+#define	CABAC_CONTEXT_BASE_ADDR (VSP_REG_BASE_ADDR+0x1a00)
+#define	VLC_TABLE0_BASE_ADDR (VSP_REG_BASE_ADDR+0x2000)
+#define	VLC_TABLE1_BASE_ADDR (VSP_REG_BASE_ADDR+0x3000)
+#define	BSM_CTRL_REG_BASE_ADDR (VSP_REG_BASE_ADDR+0x8000)
+
 
 //ahb ctrl
 #define ARM_ACCESS_CTRL_OFF 0x0
@@ -105,7 +124,7 @@ extern "C"
 #define VSP_INT_SYS_OFF 0x0             //from VSP
 #define VSP_INT_MASK_OFF 0x04
 #define VSP_INT_CLR_OFF 0x08
-#define VSP_INT_RAW_OFF 0x08
+#define VSP_INT_RAW_OFF 0x0c
 #define AXIM_ENDIAN_OFF 0x10
 #define AXIM_PAUSE_OFF 0x18
 #define AXIM_STS_OFF 0x1c
@@ -134,6 +153,48 @@ extern "C"
 #define MCU_START_OFF 0x80//ro
 #define CLR_START_OFF 0x84//wo
 #define MCU_SLEEP_OFF 0x88//wo
+#define VSP_DBG_STS0_OFF 0x100//mbx mby
+
+
+//bsm reg
+
+#define BSM_CFG0_OFF 0x0
+#define BSM_CFG1_OFF 0x4
+#define BSM_OP_OFF 0x8
+#define BSM_WDATA_OFF 0xc
+#define BSM_RDATA_OFF 0x10
+#define TOTAL_BITS_OFF 0x14
+#define BSM_DBG0_OFF 0x18
+#define BSM_DBG1_OFF 0x1c
+#define BSM_RDY_OFF 0x20
+#define USEV_RD_OFF 0x24
+#define USEV_RDATA_OFF 0x28
+#define DSTUF_NUM_OFF 0x2c
+#define BSM_NAL_LEN 0x34
+#define BSM_NAL_DATA_LEN 0x38
+
+//IQW_TABLE
+#define INTER4x4Y_OFF 0x00
+#define INTER4x4U_OFF 0x10
+#define INTER4x4V_OFF 0x20
+#define INTRA4x4Y_OFF 0x40
+#define INTRA4x4U_OFF 0x50
+#define INTRA4x4V_OFF 0x60
+#define INTER8x8_OFF 0x80
+#define INTRA8x8_OFF 0x100
+
+typedef enum{
+	VSP_GLB = 0,
+	VSP_BSM,
+	VSP_VLD,
+	//VSP_VLC,
+	VSP_RAM10,
+	VSP_DCT,
+	VSP_MCA,
+	VSP_MBC,
+	VSP_DBK
+	}VSP_MODULE_ID;
+
 
 /* -----------------------------------------------------------------------
 ** Structs
@@ -154,12 +215,17 @@ extern int32 s_vsp_fd ;
 	uint32 tmp;uint32 cnt;\
 	tmp=(*((volatile uint32*)(reg_addr-VSP_REG_BASE_ADDR+s_vsp_Vaddr_base)))&msk_data;\
 	cnt = 0;    \
-    while(tmp != msked_data && cnt < 0x1ffff)\
+    while(tmp != msked_data && cnt < 0x1ffffff)\
 {\
 	tmp=(*((volatile uint32*)(reg_addr-VSP_REG_BASE_ADDR+s_vsp_Vaddr_base)))&msk_data;\
 	cnt++;  \
 }\
 }
+
+#define OR1200_WRITE_REG VSP_WRITE_REG
+
+#define OR1200_READ_REG VSP_READ_REG
+#define OR1200_READ_REG_POLL VSP_READ_REG_POLL
 /**---------------------------------------------------------------------------
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

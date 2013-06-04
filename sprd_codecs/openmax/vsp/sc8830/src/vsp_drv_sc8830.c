@@ -243,6 +243,32 @@ SCI_TRACE_LOW("%s, %d, ret: %d", __FUNCTION__, __LINE__, ret);
 
 	return ret;
 }
+PUBLIC int32 ARM_VSP_RST ()
+{
+#ifndef _FPGA_TEST_
+	// Acqurire VSP device. 
+	if(VSP_ACQUIRE_Dev()<0)
+	{
+		return MMDEC_HW_ERROR;
+	}		
+#endif
+
+#ifndef _FPGA_TEST_
+	VSP_RESET_Dev();
+#else
+	VSP_WRITE_REG(0x60d01004, (1<<11)|(1<<4),"openrisc rst");	
+	VSP_WRITE_REG(0x60d02004, (1<<4),"openrisc rst");	//Reset VSP 
+#endif
+
+	VSP_WRITE_REG(AHB_CTRL_BASE_ADDR+ARM_ACCESS_CTRL_OFF, 0,"RAM_ACC_by arm");
+	VSP_READ_REG_POLL(AHB_CTRL_BASE_ADDR+ARM_ACCESS_STATUS_OFF, 0x00000003, 0x00000000, "ARM_ACCESS_STATUS_OFF");
+
+    	VSP_WRITE_REG(AHB_CTRL_BASE_ADDR+ARM_INT_MASK_OFF, 0,"arm int mask set");	// Disable Openrisc interrrupt . TBD.	    	
+	VSP_WRITE_REG(GLB_REG_BASE_ADDR+AXIM_ENDIAN_OFF, 0x30828,"axim endian set"); // VSP and OR endian.
+
+	return MMDEC_OK;
+
+}
 	
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
