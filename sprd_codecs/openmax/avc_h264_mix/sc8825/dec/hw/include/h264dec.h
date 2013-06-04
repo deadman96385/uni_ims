@@ -89,7 +89,7 @@ typedef struct tagAVCHandle
 
 	FunctionType_BufCB VSP_bindCb;
 	FunctionType_BufCB VSP_unbindCb;
-        FunctionType_FlushCacheCB VSP_fluchCacheCb;
+        FunctionType_FlushCacheCB VSP_flushCacheCb;
         FunctionType_SPS VSP_spsCb;
 
 }AVCHandle;

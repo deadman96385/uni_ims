@@ -436,12 +436,12 @@ memcpy((uint32)g_cmd_info_ptr+4,(uint32)g_cmd_info_base,4*(g_cmd_info_ptr - g_cm
 #ifdef _DEBUG_TIME_
 	gettimeofday(&tpstart,NULL);
 #endif
-	if(VSP_fluchCacheCb)
+	if(VSP_flushCacheCb)
 	{
 	    MMCodecBuffer IonBuffer;
 	    H264Dec_ExtraMem_GetInfo(&IonBuffer, HW_CACHABLE);
             
-    	int ret = (*VSP_fluchCacheCb)(g_user_data,(int *)(g_cmd_data_base),(int *)(H264Dec_ExtraMem_V2P(g_cmd_data_base, HW_CACHABLE)),IonBuffer.size/2);          
+    	int ret = (*VSP_flushCacheCb)(g_user_data,(int *)(g_cmd_data_base),(int *)(H264Dec_ExtraMem_V2P(g_cmd_data_base, HW_CACHABLE)),IonBuffer.size/2);          
         SCI_TRACE_LOW("ION flush");
 	}
 	

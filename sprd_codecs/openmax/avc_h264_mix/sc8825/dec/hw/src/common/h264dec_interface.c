@@ -334,7 +334,7 @@ VSP_spsCb = avcHandle->VSP_spsCb;
 VSP_bindCb = avcHandle->VSP_bindCb;
 VSP_unbindCb = avcHandle->VSP_unbindCb;
 g_user_data = avcHandle->userdata;
-VSP_fluchCacheCb = avcHandle->VSP_fluchCacheCb;
+VSP_flushCacheCb = avcHandle->VSP_flushCacheCb;
 
 	H264Dec_init_global_para ();
 	H264Dec_init_vld_table ();

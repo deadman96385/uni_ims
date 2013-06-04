@@ -82,7 +82,7 @@ FunctionType_BufCB VSP_bindCb;
 FunctionType_BufCB VSP_unbindCb;
 void *g_user_data;
 FunctionType_SPS VSP_spsCb;
-FunctionType_FlushCacheCB VSP_fluchCacheCb ;
+FunctionType_FlushCacheCB VSP_flushCacheCb ;
 #endif
 
 

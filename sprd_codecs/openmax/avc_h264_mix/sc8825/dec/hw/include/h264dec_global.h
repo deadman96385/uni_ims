@@ -171,7 +171,7 @@ extern FunctionType_BufCB VSP_bindCb;
 extern FunctionType_BufCB VSP_unbindCb;
 extern void *g_user_data;
 extern FunctionType_SPS VSP_spsCb;
-extern FunctionType_FlushCacheCB VSP_fluchCacheCb ;
+extern FunctionType_FlushCacheCB VSP_flushCacheCb ;
 #endif
 
 //cavlc
