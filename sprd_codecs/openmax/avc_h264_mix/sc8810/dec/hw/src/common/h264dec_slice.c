@@ -26,7 +26,7 @@
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
-#if 1//def WIN32
+#ifdef WIN32
 PUBLIC int32 get_unit (uint8 *pInStream, int32 frm_bs_len, int32 *slice_unit_len, int32 *start_code_len)
 {
 	int32 len = 0;
