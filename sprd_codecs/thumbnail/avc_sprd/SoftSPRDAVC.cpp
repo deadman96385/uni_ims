@@ -99,7 +99,7 @@ SoftSPRDAVC::SoftSPRDAVC(
         const OMX_CALLBACKTYPE *callbacks,
         OMX_PTR appData,
         OMX_COMPONENTTYPE **component)
-    : SimpleSoftOMXComponent(name, callbacks, appData, component),
+    : SprdSimpleOMXComponent(name, callbacks, appData, component),
       mHandle(new tagvideoDecControls),
       iStream_buffer_ptr(NULL),
       mInputBufferCount(0),
@@ -312,7 +312,7 @@ OMX_ERRORTYPE SoftSPRDAVC::internalGetParameter(
         }
 
         default:
-            return SimpleSoftOMXComponent::internalGetParameter(index, params);
+            return SprdSimpleOMXComponent::internalGetParameter(index, params);
     }
 }
 
@@ -350,7 +350,7 @@ OMX_ERRORTYPE SoftSPRDAVC::internalSetParameter(
         }
 
         default:
-            return SimpleSoftOMXComponent::internalSetParameter(index, params);
+            return SprdSimpleOMXComponent::internalSetParameter(index, params);
     }
 }
 
@@ -782,7 +782,7 @@ int32 SoftSPRDAVC::bindFrame(/*int32_t index,*/ uint8 **yuv) {
 
 }  // namespace android
 
-android::SoftOMXComponent *createSoftOMXComponent(
+android::SprdOMXComponent *createSprdOMXComponent(
         const char *name, const OMX_CALLBACKTYPE *callbacks,
         OMX_PTR appData, OMX_COMPONENTTYPE **component) {
     return new android::SoftSPRDAVC(name, callbacks, appData, component);

@@ -18,13 +18,13 @@
 
 #define SOFT_SPRD_MPEG4_H_
 
-#include "SimpleSoftOMXComponent.h"
+#include "SprdSimpleOMXComponent.h"
 
 struct tagvideoDecControls;
 
 namespace android {
 
-struct SoftSPRDMPEG4 : public SimpleSoftOMXComponent {
+struct SoftSPRDMPEG4 : public SprdSimpleOMXComponent {
     SoftSPRDMPEG4(const char *name,
             const OMX_CALLBACKTYPE *callbacks,
             OMX_PTR appData,

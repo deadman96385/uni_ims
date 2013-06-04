@@ -18,7 +18,7 @@
 
 #define SOFT_AVC_SPRD_H_
 
-#include "SimpleSoftOMXComponent.h"
+#include "SprdSimpleOMXComponent.h"
 #include <utils/KeyedVector.h>
 
 #include "avc_dec_api.h"
@@ -26,7 +26,7 @@
 
 namespace android {
 
-struct SoftSPRDAVC : public SimpleSoftOMXComponent {
+struct SoftSPRDAVC : public SprdSimpleOMXComponent {
     SoftSPRDAVC(const char *name,
             const OMX_CALLBACKTYPE *callbacks,
             OMX_PTR appData,

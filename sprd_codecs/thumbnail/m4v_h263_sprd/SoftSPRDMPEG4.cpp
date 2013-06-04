@@ -95,7 +95,7 @@ SoftSPRDMPEG4::SoftSPRDMPEG4(
         const OMX_CALLBACKTYPE *callbacks,
         OMX_PTR appData,
         OMX_COMPONENTTYPE **component)
-    : SimpleSoftOMXComponent(name, callbacks, appData, component),
+    : SprdSimpleOMXComponent(name, callbacks, appData, component),
       mMode(MODE_MPEG4),
       mHandle(new tagvideoDecControls),
       mInputBufferCount(0),
@@ -111,10 +111,10 @@ SoftSPRDMPEG4::SoftSPRDMPEG4(
       mNumSamplesOutput(0),
       mOutputPortSettingsChange(NONE),
       mCodecExtraBufferMalloced(false) {
-    if (!strcmp(name, "OMX.sprd.h263.decoder")) {
+    if (!strcmp(name, "OMX.sprd.soft.h263.decoder")) {
         mMode = MODE_H263;
     } else {
-        CHECK(!strcmp(name, "OMX.sprd.mpeg4.decoder"));
+        CHECK(!strcmp(name, "OMX.sprd.soft.mpeg4.decoder"));
     }
 
     initPorts();
@@ -291,7 +291,7 @@ OMX_ERRORTYPE SoftSPRDMPEG4::internalGetParameter(
         }
 
         default:
-            return SimpleSoftOMXComponent::internalGetParameter(index, params);
+            return SprdSimpleOMXComponent::internalGetParameter(index, params);
     }
 }
 
@@ -337,7 +337,7 @@ OMX_ERRORTYPE SoftSPRDMPEG4::internalSetParameter(
         }
 
         default:
-            return SimpleSoftOMXComponent::internalSetParameter(index, params);
+            return SprdSimpleOMXComponent::internalSetParameter(index, params);
     }
 }
 
@@ -826,7 +826,7 @@ int SoftSPRDMPEG4::extMemoryAlloc(void *decCtrl, unsigned int width,unsigned int
 
 }  // namespace android
 
-android::SoftOMXComponent *createSoftOMXComponent(
+android::SprdOMXComponent *createSprdOMXComponent(
         const char *name, const OMX_CALLBACKTYPE *callbacks,
         OMX_PTR appData, OMX_COMPONENTTYPE **component) {
     return new android::SoftSPRDMPEG4(name, callbacks, appData, component);
