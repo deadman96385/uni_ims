@@ -47,6 +47,17 @@ PUBLIC void OR_VSP_UNBIND(void *pHeader)
 
 void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
 {
+    int32 i;
+
+    H264Dec_flush_dpb(g_dpb_layer[0]);
+
+    SCI_TRACE_LOW("%s, %d, display_array_len: %d", __FUNCTION__, __LINE__, display_array_len);
+    for(i =0;i<display_array_len; i++)
+    {
+		OR_VSP_UNBIND(display_array_BH[i]);
+	}
+
+    display_array_len = 0;
 }
 
 MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, uint8 **pOutput, int32 *picId)
