@@ -349,6 +349,46 @@ OMX_ERRORTYPE SoftSPRDAVC::internalSetParameter(
             return OMX_ErrorNone;
         }
 
+        case OMX_IndexParamPortDefinition:
+        {
+            OMX_PARAM_PORTDEFINITIONTYPE *defParams =
+                (OMX_PARAM_PORTDEFINITIONTYPE *)params;
+
+            if (defParams->nPortIndex > 1
+                    || defParams->nSize
+                            != sizeof(OMX_PARAM_PORTDEFINITIONTYPE)) {
+                return OMX_ErrorUndefined;
+            }
+
+            PortInfo *port = editPortInfo(defParams->nPortIndex);
+
+            if (defParams->nBufferSize != port->mDef.nBufferSize) {
+                CHECK_GE(defParams->nBufferSize, port->mDef.nBufferSize);
+                port->mDef.nBufferSize = defParams->nBufferSize;
+            }
+
+            if (defParams->nBufferCountActual
+                    != port->mDef.nBufferCountActual) {
+                CHECK_GE(defParams->nBufferCountActual,
+                         port->mDef.nBufferCountMin);
+
+                port->mDef.nBufferCountActual = defParams->nBufferCountActual;
+            }
+
+            memcpy(&port->mDef.format.video, &defParams->format.video, sizeof(OMX_VIDEO_PORTDEFINITIONTYPE));
+            if(defParams->nPortIndex == kOutputPortIndex) {
+                port->mDef.format.video.nStride = port->mDef.format.video.nFrameWidth;
+                port->mDef.format.video.nSliceHeight = port->mDef.format.video.nFrameHeight;
+                mWidth = port->mDef.format.video.nFrameWidth;
+                mHeight = port->mDef.format.video.nFrameHeight;
+                mCropWidth = mWidth;
+                mCropHeight = mHeight;
+                port->mDef.nBufferSize =(((mWidth + 15) & -16)* ((mHeight + 15) & -16) * 3) / 2;
+            }
+
+            return OMX_ErrorNone;
+        }
+
         default:
             return SprdSimpleOMXComponent::internalSetParameter(index, params);
     }
