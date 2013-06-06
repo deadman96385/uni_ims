@@ -96,16 +96,6 @@ typedef enum
     MMENC_HW_ERROR = -6 
 } MMEncRet;
 
-/*standard*/
-typedef enum {
-		ITU_H263 = 0, 
-		MPEG4,  
-		JPEG,
-		FLV_V1,
-		H264,
-		RV8,
-		RV9
-		}VIDEO_STANDARD_E;
 
 // decoder video format structure
 typedef struct
