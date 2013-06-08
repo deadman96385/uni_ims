@@ -354,6 +354,7 @@ SCI_TRACE_LOW("%s, %d.", __FUNCTION__, __LINE__);
         
 
 		// Configure BSM for decoding.
+        OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, 0x08000000,0x00000000,"BSM_clr enable");//check bsm is idle	
 		OR1200_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
 		OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, 0x6,"BSM_OP clr BSM");//clr BSM
 		OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, 0x80000000|(g_stream_offset),"BSM_cfg1 stream buffer offset");//point to the start of NALU.
