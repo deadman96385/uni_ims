@@ -14,12 +14,10 @@
 #ifndef H264ENC_H
 #define H264ENC_H
 
-
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
 #include "mmcodec.h"
-#include "vsp_h264_enc.h"
 
 /**---------------------------------------------------------------------------*
  **                             Compiler Flag                                 *
@@ -28,15 +26,8 @@
     extern   "C" 
     {
 #endif
-
 #define H264ENC_INTERNAL_BUFFER_SIZE (H264ENC_OR_RUN_SIZE+H264ENC_OR_INTER_MALLOC_SIZE)  
 #define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)  //for bitstream size of one encoded frame.
-
-typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader);
-typedef int (*FunctionType_MallocCB)(uint32 * buffer_array, uint32 buffer_num, uint32 buffer_size);
-
-typedef enum {IVOP, PVOP, BVOP, SVOP, NVOP} VOP_PRED_TYPE_E;
-
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
