@@ -55,7 +55,6 @@ int32 s_vsp_fd = -1;
 /*************************************/
 PUBLIC int32 VSP_OPEN_Dev ()
 {
- 	int ret =0;
 	
 	if (-1 == s_vsp_fd)
 	{
@@ -70,6 +69,11 @@ PUBLIC int32 VSP_OPEN_Dev ()
 	        	s_vsp_Vaddr_base = (uint32)mmap(NULL,SPRD_VSP_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,s_vsp_fd,0);
 		}
 	}
+	else
+	{
+	    SCI_TRACE_LOW("VSP_OPEN_Dev, vsp has alreadry opened, retrun failed.");
+	    return -1;
+	}
 
     	SCI_TRACE_LOW("vsp addr %x\n",s_vsp_Vaddr_base);	
 
@@ -79,12 +83,11 @@ PUBLIC int32 VSP_OPEN_Dev ()
 PUBLIC void VSP_CLOSE_Dev()
 {
 
-	int ret = 0;
-
 	if(s_vsp_fd > 0)
 	{	
 		munmap(s_vsp_fd,SPRD_VSP_MAP_SIZE);	
-		close(s_vsp_fd);	
+		close(s_vsp_fd);
+		s_vsp_fd = -1;
 	}
 }
 
