@@ -313,6 +313,7 @@ MMEncRet H264EncStrmEncode(MMEncIn *pInput, MMEncOut *pOutput)
 		return MMDEC_HW_ERROR;
 	}
 	SCI_TRACE_LOW("%s, %d.", __FUNCTION__, __LINE__);
+	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+AXIM_ENDIAN_OFF, 0x30868,"axim endian set, vu format"); // VSP and OR endian.
 	OR1200_WRITE_REG(GLB_REG_BASE_ADDR + 0x20, H264|(1<<4), "ORSC: VSP_MODE: Set standard and work mode");
 	OR1200_WRITE_REG(GLB_REG_BASE_ADDR + 0x28, 0, "ORSC: RAM_ACC_SEL: SETTING_RAM_ACC_SEL=0(SW)");	
 
