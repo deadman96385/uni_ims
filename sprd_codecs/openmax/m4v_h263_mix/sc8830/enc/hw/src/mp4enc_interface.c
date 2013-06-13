@@ -268,6 +268,8 @@ MMEncRet MP4EncStrmEncode(MMEncIn *pInput, MMEncOut *pOutput)
 
     OR_VSP_RST();	
 
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+AXIM_ENDIAN_OFF, 0x30868,"axim endian set, vu format"); // VSP and OR endian.
+
     //Function related share ram configuration.
     share_ram->frameY_addr = (uint32)pInput->p_src_y_phy;
     share_ram->frameUV_addr = (uint32)pInput->p_src_u_phy;
