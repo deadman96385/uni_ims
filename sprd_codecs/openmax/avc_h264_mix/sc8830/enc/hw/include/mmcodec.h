@@ -17,10 +17,9 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-
+#include "sci_types.h"
 #define LOG_TAG "VSP"
 #include <utils/Log.h>
-
 /**---------------------------------------------------------------------------*
 **                             Compiler Flag                                  *
 **----------------------------------------------------------------------------*/
@@ -29,38 +28,11 @@
     {
 #endif
 
-typedef unsigned char	uint8; 
-typedef signed char		int8; 
-//typedef unsigned char	Bool; 
-typedef signed short	int16;
-typedef unsigned short	uint16;
-typedef signed int		int32;
-typedef unsigned int	uint32;
-
-#ifdef TRUE
-#undef TRUE
-#endif
-	
-#ifdef FALSE
-#undef FALSE
-#endif
-	
-#define TRUE   1   /* Boolean true value. */
-#define FALSE  0   /* Boolean false value. */
-	
-#ifndef NULL
-#define NULL  0
-#endif
-
-
-#define PUBLIC
-#define	LOCAL		static
-
-#define  SCI_TRACE_LOW   ALOGE
-
 /**---------------------------------------------------------------------------*
  **                         Data Structures                                   *
  **---------------------------------------------------------------------------*/
+
+#define  SCI_TRACE_LOW   ALOGE
 
 typedef enum
 {
