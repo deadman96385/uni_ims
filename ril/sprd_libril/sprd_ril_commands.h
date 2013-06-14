@@ -174,6 +174,7 @@
     ,{RIL_REQUEST_SIM_POWER, dispatchInts, responseVoid}
     ,{RIL_REQUEST_DIAL_EMERGENCY_CALL, dispatchDial, responseVoid}
     ,{RIL_REQUEST_SEND_AT, dispatchString, responseString}
+    ,{RIL_REQUEST_SET_SPEED_MODE, dispatchInts, responseVoid}
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     ,{RIL_REQUEST_SET_CELL_BROADCAST_CONFIG, dispatchSetCBConf, responseVoid}

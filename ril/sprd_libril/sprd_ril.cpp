@@ -4735,6 +4735,7 @@ requestToString(int request) {
         case RIL_REQUEST_SIM_POWER: return "SIM_POWER";
         case RIL_REQUEST_DIAL_EMERGENCY_CALL: return "DIAL_EMERGENCY_CALL";
         case RIL_REQUEST_SEND_AT: return "SEND_AT";
+        case RIL_REQUEST_SET_SPEED_MODE: return "SET_SPEED_MODE";
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_SET_CELL_BROADCAST_CONFIG: return "SET_CELL_BROADCAST_CONFIG";

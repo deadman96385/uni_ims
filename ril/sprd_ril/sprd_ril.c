@@ -84,6 +84,7 @@
 						       set by phoneserver */
 #define RIL_SIM_TYPE  "ril.ICC_TYPE"
 #define RIL_SIM_TYPE1  "ril.ICC_TYPE_1"
+#define RIL_SET_SPEED_MODE_COUNT  "ril.sim.speed_count"
 
 int modem;
 int s_multiSimMode = 0;
@@ -2628,6 +2629,82 @@ static void requestSetCmms(int channelID, void *data, size_t datalen, RIL_Token 
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
 }
 
+
+static void requestSetSpeedMode(int channelID, void *data, size_t datalen, RIL_Token t)
+{
+    char cmd[20] = {0};
+    int enable = ((int *)data)[0];
+    char prop[5] = {0};
+    int fd = -1;
+    int n = -1;
+    int lockFd = -1;
+    int speedCount = 0;
+    int i;
+
+    RILLOGD("requestSetSpeedMode  enable = %d", enable);
+    for(i=0; i<3; i++) {
+        lockFd = open("/data/local/tmp/rilLock", O_RDWR | O_CREAT | O_EXCL);
+        RILLOGD("requestSetSpeedMode  lockFd = %d", lockFd);
+        if (lockFd >= 0) {
+            fd = open("/sys/module/ipc_sdio/parameters/sdio_tx_wait_time", O_RDWR);
+            if (fd >= 0) {
+                if (enable == 1) {
+                    property_get(RIL_SET_SPEED_MODE_COUNT, prop, "0");
+                    RILLOGD("requestSetSpeedMode   prop = %s", prop);
+					speedCount = atoi(prop);
+                    if (speedCount == 0) {
+                        property_set(RIL_SET_SPEED_MODE_COUNT, "1");
+                        n = write(fd, "0", 2);
+                        if (n < 0) {
+                            perror("write");
+                            goto out;
+                        }
+                    } else if(speedCount == 1) {
+                       property_set(RIL_SET_SPEED_MODE_COUNT, "2");
+                       goto out;
+                    } else if(speedCount == 2) {
+                       property_set(RIL_SET_SPEED_MODE_COUNT, "3");
+                       goto out;
+                    }
+                } else {
+                    property_get(RIL_SET_SPEED_MODE_COUNT, prop, "0");
+                    RILLOGD("requestSetSpeedMode   prop = %s", prop);
+					speedCount = atoi(prop);
+                    if (speedCount == 1) {
+                        property_set(RIL_SET_SPEED_MODE_COUNT, "0");
+                        n = write(fd, "10", 3);
+                        if (n < 0) {
+                            perror("write");
+                            goto out;
+                        }
+                    } else if(speedCount == 2) {
+                        property_set(RIL_SET_SPEED_MODE_COUNT, "1");
+                        goto out;
+                    } else if(speedCount == 3) {
+                        property_set(RIL_SET_SPEED_MODE_COUNT, "2");
+                        goto out;
+                    }
+                }
+                snprintf(cmd, sizeof(cmd), "AT+SPTEST=16,1,%d",enable);
+                at_send_command( ATch_type[channelID], cmd, NULL);
+            }
+            break;
+        } else {
+            RILLOGD("requestSetSpeedMode  errno = %d", errno);
+            usleep(500000);
+        }
+    }
+out:
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    if (lockFd >= 0) {
+        close(lockFd);
+        RILLOGD("requestSetSpeedMode  delete rilLock");
+        unlink("/data/local/tmp/rilLock");
+    }
+    if (fd >= 0)
+        close(fd);
+}
+
 static void requestSendSMS(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     int err;
@@ -4501,6 +4578,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_GET_IMEISV
                 || request == RIL_REQUEST_SCREEN_STATE
                 || request == RIL_REQUEST_SEND_AT
+                || request == RIL_REQUEST_SET_SPEED_MODE
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
@@ -5586,8 +5664,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_GPRS_DETACH:
             detachGPRS(channelID, data, datalen, t);
             break;
-	case RIL_REQUEST_SET_CMMS:
+       case RIL_REQUEST_SET_CMMS:
             requestSetCmms(channelID, data, datalen, t);
+            break;
+       case RIL_REQUEST_SET_SPEED_MODE:
+            requestSetSpeedMode(channelID, data, datalen, t);
             break;
         case  RIL_REQUEST_QUERY_COLP:
             {
