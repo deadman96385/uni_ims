@@ -164,12 +164,14 @@ void ProxyApplication_OMX::PVThreadLogoff(PVMainProxy_OMX& proxy)
 /* Unpack the message and call the appropriate OpenMAX API*/
 void ProxyApplication_OMX::ProcessMessage(TPVCommandId cmdid, OsclAny* cmd)
 {
-    iNumMessage++;
+	iNumMessage++;
 
 	if(cmd == NULL)
 	{
-      ALOGI("ProxyApplication_OMX::ProcessMessage cmdid %d",cmdid);
+		ALOGI("ProxyApplication_OMX::ProcessMessage cmd==NULL");
+		return;
 	}
+	ALOGI("ProxyApplication_OMX::ProcessMessage cmdid %d",cmdid);
     switch (cmdid)
     {
         case GET_PARAMS:
