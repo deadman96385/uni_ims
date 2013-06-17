@@ -2146,7 +2146,7 @@ OSCL_EXPORT_REF bool PVMFOMXBaseDecNode::SendInputBufferToOMXComponent()
 
         // To add robustness to 3gpp playback of AVC file, we don't allow in-band SPS/PPS
         // If there's one, it's likely that this is a corrupted NAL
-        if (((PVMFOMXDecPort*)iInPort)->iFormat == PVMF_MIME_H264_VIDEO_MP4)
+        if ( iInPort && ((PVMFOMXDecPort*)iInPort)->iFormat == PVMF_MIME_H264_VIDEO_MP4)
         {
             uint8 *temp_nal = (uint8 *)frag.getMemFragPtr();
             uint32 nal_type = temp_nal[0] & 0x1F ;
