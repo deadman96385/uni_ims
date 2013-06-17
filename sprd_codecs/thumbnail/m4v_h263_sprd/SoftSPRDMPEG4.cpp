@@ -646,8 +646,8 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
 //        bufferSize= dec_in.dataLen;
         ALOGI("%s, %d, bufferSize: %d, inHeader->nFilledLen: %d", __FUNCTION__, __LINE__, bufferSize, inHeader->nFilledLen);
         CHECK_LE(bufferSize, inHeader->nFilledLen);
-        inHeader->nOffset += inHeader->nFilledLen - bufferSize;
-        inHeader->nFilledLen = bufferSize;
+        inHeader->nOffset += bufferSize;
+        inHeader->nFilledLen -= bufferSize;
 
         ALOGI("%s, %d, inHeader->nOffset: %d,inHeader->nFilledLen: %d ", __FUNCTION__, __LINE__, inHeader->nOffset, inHeader->nFilledLen);
 
@@ -672,6 +672,11 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
 
             ALOGI("%s, %d, outHeader->nFilledLen: %d", __FUNCTION__, __LINE__, outHeader->nFilledLen);
  //           dump_yuv(outHeader->pBuffer, outHeader->nFilledLen);
+        }else {
+            ALOGE("%s, %d, frameEffective=0, return error.", __FUNCTION__, __LINE__);
+            notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
+            mSignalledError = true;
+            return;
         }
 
         List<BufferInfo *>::iterator it = outQueue.begin();
@@ -684,7 +689,7 @@ void SoftSPRDMPEG4::onQueueFilled(OMX_U32 portIndex) {
         outQueue.erase(it);
         outInfo = NULL;
 
-        if (dec_out.frameEffective)
+        //if (dec_out.frameEffective)
         {
             notifyFillBufferDone(outHeader);
             outHeader = NULL;
