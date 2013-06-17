@@ -794,6 +794,8 @@ bool PVMFOMXVideoDecNode::NegotiateComponentParameters(OMX_PTR aOutputParameters
     // otherwise, used Width/Height from the config parser utility
     // set the width/height based on port parameters (this may change during port reconfig)
 
+    if ((PVMFOMXDecPort*)iInPort == NULL)
+        return false;
 
     /* Get the display dimensions from mp4ffparser outport */
     ((PVMFOMXDecPort*)iInPort)->getDisplayDimension(&iYUVWidth, &iYUVHeight);
@@ -1334,6 +1336,10 @@ PVMFStatus PVMFOMXVideoDecNode::InitDecoder(PVMFSharedMediaDataPtr& DataIn)
     uint8 *tmp_ptr;
     PVMFFormatType Format = PVMF_MIME_FORMAT_UNKNOWN;
     PVMFStatus status = PVMFSuccess;
+
+    if ((PVMFOMXDecPort*)iInPort==NULL)
+	return PVMFFailure;
+
     uint8* initbuffer = ((PVMFOMXDecPort*)iInPort)->getTrackConfig();
     int32 initbufsize = (int32)((PVMFOMXDecPort*)iInPort)->getTrackConfigSize();
 
@@ -1342,10 +1348,9 @@ PVMFStatus PVMFOMXVideoDecNode::InitDecoder(PVMFSharedMediaDataPtr& DataIn)
     // NOTE: the component may not start decoding without providing the Output buffer to it,
     //      here, we're sending input/config buffers. Output buffers are sent as well outside this method.
 
-    if (iInPort != NULL)
-    {
-        Format = ((PVMFOMXDecPort*)iInPort)->iFormat;
-    }
+
+    Format = ((PVMFOMXDecPort*)iInPort)->iFormat;
+
     if (Format == PVMF_MIME_H264_VIDEO ||
             Format == PVMF_MIME_H264_VIDEO_MP4)
     {
