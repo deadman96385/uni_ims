@@ -45,6 +45,41 @@ extern "C"
 /*----------------------------------------------------------------------------*
 **                            Macro Definitions                               *
 **---------------------------------------------------------------------------*/
+/*
+	Bit define, for video
+*/
+#define V_BIT_0               0x00000001
+#define V_BIT_1               0x00000002
+#define V_BIT_2               0x00000004
+#define V_BIT_3               0x00000008
+#define V_BIT_4               0x00000010
+#define V_BIT_5               0x00000020
+#define V_BIT_6               0x00000040
+#define V_BIT_7               0x00000080
+#define V_BIT_8               0x00000100
+#define V_BIT_9               0x00000200
+#define V_BIT_10              0x00000400
+#define V_BIT_11              0x00000800
+#define V_BIT_12              0x00001000
+#define V_BIT_13              0x00002000
+#define V_BIT_14              0x00004000
+#define V_BIT_15              0x00008000
+#define V_BIT_16              0x00010000
+#define V_BIT_17              0x00020000
+#define V_BIT_18              0x00040000
+#define V_BIT_19              0x00080000
+#define V_BIT_20              0x00100000
+#define V_BIT_21              0x00200000
+#define V_BIT_22              0x00400000
+#define V_BIT_23              0x00800000
+#define V_BIT_24              0x01000000
+#define V_BIT_25              0x02000000
+#define V_BIT_26              0x04000000
+#define V_BIT_27              0x08000000
+#define V_BIT_28              0x10000000
+#define V_BIT_29              0x20000000
+#define V_BIT_30              0x40000000 
+#define V_BIT_31              0x80000000
 
 /* ------------------------------------------------------------------------
 ** Constants
@@ -207,6 +242,15 @@ extern uint32 * OR_addr_ptr;
 
 extern uint32 s_vsp_Vaddr_base;
 extern int32 s_vsp_fd ;
+
+int32 VSP_OPEN_Dev ( );
+void VSP_CLOSE_Dev( );
+void VSP_GET_DEV_FREQ(int32*  vsp_clk_ptr);
+void VSP_CONFIG_DEV_FREQ(int32*  vsp_clk_ptr);
+void VSP_START_CQM(void);
+int32 VSP_POLL_COMPLETE(void);
+int32 VSP_ACQUIRE_Dev(void);
+void VSP_RELEASE_Dev(void);
 
 #define VSP_WRITE_REG(reg_addr, value, pstring) (*(volatile uint32 *)(reg_addr-VSP_REG_BASE_ADDR +s_vsp_Vaddr_base)  = (value))   
 #define VSP_READ_REG(reg_addr, pstring)	((*(volatile uint32 *)(reg_addr-VSP_REG_BASE_ADDR+s_vsp_Vaddr_base)))

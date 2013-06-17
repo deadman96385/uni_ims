@@ -83,6 +83,15 @@ PUBLIC void VSP_START_Dev(void)
 	ioctl(s_vsp_fd,VSP_START,NULL);
 }
 
+PUBLIC int32 VSP_POLL_COMPLETE(void)
+{
+	int ret ;
+
+	ioctl(s_vsp_fd,VSP_COMPLETE,&ret);
+
+         return ret;
+}
+
 PUBLIC int VSP_ACQUIRE_Dev(void)
 {	
 	int ret ;
@@ -109,6 +118,9 @@ PUBLIC int VSP_ACQUIRE_Dev(void)
 		}		 
 	}	
 
+	ioctl(s_vsp_fd,VSP_ENABLE,NULL);
+	ioctl(s_vsp_fd,VSP_RESET,NULL);
+
 SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
 	
 	return 0;
@@ -122,7 +134,9 @@ PUBLIC void VSP_RELEASE_Dev(void)
 	{
 //	SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
 
+		ioctl(s_vsp_fd,VSP_DISABLE,NULL);
 		ioctl(s_vsp_fd,VSP_RELEASE,NULL);
+        
         SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
 
 	}
@@ -254,7 +268,7 @@ PUBLIC int32 ARM_VSP_RST ()
 #endif
 
 #ifndef _FPGA_TEST_
-	VSP_RESET_Dev();
+//	VSP_RESET_Dev();
 #else
 	VSP_WRITE_REG(0x60d01004, (1<<11)|(1<<4),"openrisc rst");	
 	VSP_WRITE_REG(0x60d02004, (1<<4),"openrisc rst");	//Reset VSP 

@@ -34,9 +34,6 @@ typedef struct storable_picture
 	int32	pic_num;
 	int32	long_term_pic_num;
 	int32	long_term_frame_idx;
-#if SIM_IN_WIN
-	int32   ref_pic_num [150][2][17]; //[150][2][33];      //[MAX_NUM_SLICES][6][MAX_LIST_SIZE]
-#endif	
 	int8	is_long_term;
 	int8	used_for_reference;
 	int8	chroma_vector_adjustment;
@@ -61,14 +58,7 @@ typedef struct storable_picture
 	uint8	*imgY;		//should be 64 word alignment
 	uint8	*imgU;
 	uint8	*imgV;
-#if SIM_IN_WIN
-	int16	*mv[2];
-	int8	*ref_idx[2];
-	int32	*ref_pic_id[2]; 
-	int32	mc_ref_pic_num;
-#else
     int32   *direct_mb_info;
-#endif
 	uint32	imgYAddr;	//frame address which are configured to VSP,  imgYAddr = ((uint32)imgY >> 8), 64 word aligment
 	uint32	imgUAddr;	//imgUAddr = ((uint32)imgU>>8)
 	uint32	imgVAddr;	//imgVAddr = ((uint32)imgV>>8)
@@ -131,11 +121,7 @@ typedef struct decoded_picture_buffer
 }DEC_DECODED_PICTURE_BUFFER_T;
 
 PUBLIC void H264Dec_init_img_buffer (DEC_IMAGE_PARAMS_T *img_ptr);
-#if _MVC_
 PUBLIC void	H264Dec_init_dpb (DEC_IMAGE_PARAMS_T *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, int type);
-#else
-PUBLIC void	H264Dec_init_dpb (DEC_IMAGE_PARAMS_T *img_ptr);
-#endif
 PUBLIC void H264Dec_store_picture_in_dpb (DEC_IMAGE_PARAMS_T *img_ptr, DEC_STORABLE_PICTURE_T *picture_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr);
 PUBLIC void H264Dec_reorder_list (void);
 PUBLIC void H264Dec_reorder_list_mvc (void);

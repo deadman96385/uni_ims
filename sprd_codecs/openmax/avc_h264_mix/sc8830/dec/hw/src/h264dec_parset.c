@@ -22,11 +22,6 @@
     extern   "C" 
     {
 #endif
-#if FPGA_AUTO_VERIFICATION
-#else
-//extern int32  video_size_get;//weihu
-//extern int32  video_buffer_malloced;
-#endif
 
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
@@ -53,13 +48,8 @@ PUBLIC uint32 uvlc_startcode_follows (DEC_IMAGE_PARAMS_T *img_ptr)
 	int32 byte_offset;
 	int32 bit_offset;	
 	uint32 nDecTotalBits;
-#if SIM_IN_WIN
-	DEC_BS_T * stream = g_image_ptr->bitstrm_ptr;
-	nDecTotalBits = stream->bitcnt;
-#else
 	OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,"BSM_rdy");
 	nDecTotalBits =OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF,"BSM flushed bits cnt");
-#endif
 	
 	byte_offset = nDecTotalBits/8;
 	bit_offset = nDecTotalBits&0x7;
@@ -71,11 +61,7 @@ PUBLIC uint32 uvlc_startcode_follows (DEC_IMAGE_PARAMS_T *img_ptr)
 
 	//OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,"BSM_rdy");	
     OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, ((8-bit_offset)<<24),"BSM_rd n bits");
-#if SIM_IN_WIN	
-	tmp = SHOW_FLC(stream, (8-bit_offset));
-#else
 	tmp = SHOW_FLC(NULL, (8-bit_offset));
-#endif
 	if (tmp == (1<<(7-bit_offset)))
 	{
 		return TRUE;
@@ -520,11 +506,8 @@ LOCAL void H264Dec_interpret_sps (DEC_SPS_T *sps_ptr)
 	sps_ptr->pic_height_in_map_units_minus1 = READ_UE_V(stream);
 
 	
-#if SIM_IN_WIN
-#else
 	//if(!video_buffer_malloced)//¶¯Ì¬·ÖÅäÄÚ´æ
 	//   frame_buf_size=(g_sps_ptr->pic_height_in_map_units_minus1+1)*(g_sps_ptr->pic_width_in_mbs_minus1+1)*256;
-#endif
 	//OR1200_WRITE_REG(GLB_REG_BASE_ADDR+IMG_SIZE_OFF, (((g_sps_ptr->pic_height_in_map_units_minus1+1)&0xff)<<8)|(g_sps_ptr->pic_width_in_mbs_minus1+1)&0xff,"IMG_SIZE");
 	sps_ptr->frame_mbs_only_flag = READ_FLC(stream, 1);
 
@@ -573,11 +556,6 @@ LOCAL void H264Dec_interpret_sps (DEC_SPS_T *sps_ptr)
 		sps_ptr->valid = FALSE;	
 		return;
 	}
-#if FPGA_AUTO_VERIFICATION
-#else	
-//	if(!video_buffer_malloced)
-//		video_size_get=1;//weihu
-#endif
 
 	sps_ptr->valid = TRUE;
 
@@ -711,33 +689,7 @@ PUBLIC void H264Dec_ProcessSPS (void)
 #endif
 	return;
 }
-#if FPGA_AUTO_VERIFICATION
-#else
-#if SIM_IN_WIN//james
-FILE *p_out_mvc[2];
-void OpenOutputFiles(int view0_id, int view1_id)
-{
-  char out_ViewFileName[2][255], chBuf[255], *pch;  
 
-  if (strlen(g_input->outfile)>0)
-
-  {
-    strcpy(chBuf, g_input->outfile);
-    pch = strrchr(chBuf, '.');
-    if(pch)
-      *pch = '\0';
-    if (strcmp("nul", chBuf))
-    {
-      sprintf(out_ViewFileName[0], "%s_ViewId%04d.yuv", chBuf, view0_id);
-      sprintf(out_ViewFileName[1], "%s_ViewId%04d.yuv", chBuf, view1_id);
-
-      p_out_mvc[0]=fopen(out_ViewFileName[0], "wb");
-      p_out_mvc[1]=fopen(out_ViewFileName[1], "wb");
-    }
-  }
-}
-#endif
-#endif
 #if _MVC_
 void ProcessSubsetSPS (void)
 {
@@ -756,21 +708,11 @@ void ProcessSubsetSPS (void)
     PRINTF("Warning: num_views:%d is greater than 2, only decode baselayer!\n", subset_sps->num_views_minus1+1);
     subset_sps->Valid = 0;
     subset_sps->sps.valid = 0;
-#if FPGA_AUTO_VERIFICATION
-#else
     g_input->DecodeAllLayers = 0;
-#endif
   }
   //else if(subset_sps->num_views_minus1==1 && (subset_sps->view_id[0]!=0 || subset_sps->view_id[1]!=1))
   //{
   //}
-#if FPGA_AUTO_VERIFICATION
-#else
-#if SIM_IN_WIN//james
-  if(subset_sps->view_id)
-    OpenOutputFiles(subset_sps->view_id[0], subset_sps->view_id[1]);
-#endif
-#endif
 
   if (subset_sps->Valid)
   {
@@ -792,9 +734,6 @@ void ProcessSubsetSPS (void)
 LOCAL void H264Dec_interpret_pps (DEC_PPS_T *pps_ptr)
 {
 	int32 i;
-#if SIM_IN_WIN
-	int32 NumberBitsPerSliceGroupId;
-#endif
 	DEC_BS_T *stream = g_image_ptr->bitstrm_ptr;
 	
 	pps_ptr->pic_parameter_set_id = READ_UE_V(stream);
@@ -972,22 +911,12 @@ PUBLIC void H264Dec_ProcessPPS (void)
 
 	return;
 }
+
 #if _MVC_
-void no_mem_exit(char *where)
-{
-	{
-		PRINTF("no memory %s", where);
-	}
-//   snPRINTF(errortext, ET_SIZE, "Could not allocate memory: %s",where);
-//   error (errortext, 100);
-}
 static void free_pointer(void *pointer)
 {
   if (pointer != NULL)
   {
-#if SIM_IN_WIN
-    free(pointer);
-#endif
     pointer = NULL;
   }
 }
@@ -1263,6 +1192,7 @@ void mvc_vui_parameters_extension(MVCVUI_t *pMVCVUI, DEC_BS_T *stream)
     }
   }
 }
+
 void reset_subset_sps(subset_seq_parameter_set_rbsp_t *subset_sps)
 {
   int i, j;
@@ -1343,6 +1273,7 @@ void reset_subset_sps(subset_seq_parameter_set_rbsp_t *subset_sps)
     subset_sps->mvc_vui_parameters_present_flag = 0;
   }
 }
+
 int GetBaseViewId(subset_seq_parameter_set_rbsp_t **subset_sps)
 {
   subset_seq_parameter_set_rbsp_t *curr_subset_sps;
@@ -1364,6 +1295,7 @@ int GetBaseViewId(subset_seq_parameter_set_rbsp_t **subset_sps)
     *subset_sps = curr_subset_sps;
   return iBaseViewId;
 }
+
 void get_max_dec_frame_buf_size(DEC_SPS_T *sps)
 {
   int pic_size = (sps->pic_width_in_mbs_minus1 + 1) * (sps->pic_height_in_map_units_minus1 + 1) * (sps->frame_mbs_only_flag?1:2) * 384;

@@ -163,11 +163,7 @@ typedef struct
 typedef struct 
 {
 	int8	valid;									//indicates the parameter set is valid
-#if _MVC_
 	uint8	profile_idc;							//u(8)
-#else
-	uint8	profile_idc;							//u(8)
-#endif
 	int8	constrained_set0_flag;					//u(1)
 	int8	constrained_set1_flag;					//u(1)
 
@@ -296,151 +292,6 @@ typedef struct
 
 #endif
 
-/********************************************
-			|          |          |
-			|	D	   |       B  |   C
-			-----------|----------|------
-			|          |
-				A	   |  curr    |
-			|          |		  |
-			|          |		  |
-			--------------------------
-********************************************/
-
-/***********************************************************
-*: denote the top or the left or top right reference
-?: denote no data
--2: denote the reference is not available
-
-nnz_ref[6x8] layout
-the up 6x5 used for Y, and the bottom 3x6 used for U and V
-
-  ? * * * * ? 
-  *         
-  *         
-  *         
-  *         
-  ? * * ? * *
-  *     *
-  *     *
-
-  i4x4Pred_mode_ref[6x5] lay out: need top and left prediction
-  ? * * * * ?
-  *         
-  *         
-  *         
-  *         
-
-  refIdxCache[6x5] lay out: used for mv predict(need top, left, and up right), 
-                            and deblocking(need top, or left)
-  ? * * * * * ?
-  *          -2
-  *          -2
-  *          -2
-  *          -2
-
-  mv_cache[6x5x2] lay out: used for mv predict, need top, left, (up right/up left)
-                           motion compensation: need current block's mv
-						   deblocking: need top or left block's motion vector
-  * * * * * * ? 
-  *          -2
-  *          -2
-  *          -2
-  *          -2
-  ***********************************************************/
-typedef struct mb_info_tag
-{
-	int8	ref_pic[4];
-
-	int8	mb_type;
-	int8	is_skipped;
-	int8	is_intra;
-	int8	qp;
-
-	int8	qp_c;
-	int8	slice_nr;
-	int8	c_ipred_mode;
-	int8	cbp;
-
-	int8	mb_avail_a;
-	int8	mb_avail_b;
-	int8	mb_avail_c;
-	int8	mb_avail_d;
-
-	int8	dc_coded_flag;
-	int8	LFDisableIdc;
-	int8	LFAlphaC0Offset;
-	int8	LFBetaOffset;
-//	int8	resv1;	//for word align
-
-	int32	skip_flag;
-
-	int8	b8mode[4];
-	int8	b8pdir[4];
-
-	int16	mvd[2][6*5*2];
-	int8	nnz_ref[6*8];
-	int8	i4x4pred_mode_ref[6*5+2];  ///2 for word aligned
-}DEC_MB_INFO_T;
-
-typedef struct mb_data_cache_tag
-{
-	int8	i16mode;
-	int8	all_zero_ref;
-	int8	is_direct;	
-	uint8	cbp_uv;
-	
-	uint32		cbp_iqt;			//[25:0]: cbp for iqt
-	uint32		cbp_mbc;			//[23:0]: cbp for mbc
-	
-	int8	top_edge_filter_flag;
-	int8	left_edge_filter_flag;
-	int16	resv; //for word-align
-	
-	int8	ref_pic_cache[6*5+2];
-	int8  direct_cache[6*5+2];
-
-	uint32	BS[8];
-
-	int8	mbc_b8pdir[4];
-
-	//for direct mb
-	int32 direct_pdir;
-	int32 fw_rFrame;
-	int32 fw_mv_xy;
-	int32 bw_rFrame;
-	int32 bw_mv_xy;
-
-	int8	ref_idx_cache_direct[2][16];	//used for mv predict and deblocking
-	int16	mv_cache_direct[2][16*2];
-	int32	ref_pic_id_cache_direct[2][16];
-
-	int8 *curr_ref_idx_ptr[2];
-	int16 *curr_mv_ptr[2];
-	int8	ref_idx_cache[2][6*5+2];	//used for mv predict and deblocking lsw move this array into mb_cache_ptr is a better way of this 
-	int16	mv_cache[2][6*5*2];
-
-	int8 moving_block[16];//b-slice, direct type = 1
-
-	int16  coff_Y[16 * 4*4];		//coff_Y[16 * 4*4];
-	int16   coff_UV[2][4 * 4*4];
-
-	//for cabac decoding
-	uint32		coded_dc_flag;		//[0]			coded_flag_y_dc_a    neighbour MB's dc info
-											//[1]			coded_flag_u_dc_a
-											//[2]			coded_flag_v_dc_a
-											
-											//[4]			coded_flag_y_dc_b
-											//[5]			coded_flag_u_dc_b
-											//[6]			coded_flag_v_dc_b
-
-											//[8]			coded_dc_flag_y		current MB's dc info
-											//[9]			coded_dc_flag_u
-											//[10]			coded_dc_flag_v
-
-
-}DEC_MB_CACHE_T;
-
 //! struct for context management
 #if 0
 typedef struct
@@ -452,17 +303,6 @@ typedef struct
 #else
 typedef 	uint8 BiContextType;	//(state<<1)|MPS
 #endif
-
-//--- block types for CABAC ----
-//#define LUMA_16DC       0
-//#define LUMA_16AC       1
-//#define LUMA_8x8        2
-//#define LUMA_8x4        3
-//#define LUMA_4x8        4
-//#define LUMA_4x4        5
-//#define CHROMA_DC       6
-//#define CHROMA_AC       7
-#define NUM_BLOCK_TYPES 8
 
 /**********************************************************************
  * C O N T E X T S   F O R   T M L   S Y N T A X   E L E M E N T S
@@ -528,6 +368,7 @@ typedef struct nalunitHeadermvcext_tag
    int8 iPrefixNALU;      
 } NALUnitHeaderMVCExt_t;
 #endif
+
 typedef struct 
 {
 	int8	ei_flag;			//!< 0 if the partArr[0] contains valid information
@@ -610,8 +451,6 @@ typedef struct dec_ref_pic_marking_tag
 	int32	long_term_frame_idx;
 	int32	max_long_term_frame_idx_plus1;
 }DEC_DEC_REF_PIC_MARKING_T;
-
-typedef void (*mv_prediction_subMB)(DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int32 cache_offset, int32 b8);
 
 #if _MVC_
 /*typedef struct frame_format
@@ -763,7 +602,6 @@ typedef struct img_parameter_tag
 	int32	last_has_mmco_5;	
 	int32 	last_pic_bottom_field;
 
-	DEC_MB_INFO_T *mb_info;
 
 	uint8	*ipred_top_line_buffer;
 	uint32 	*vld_cabac_table_ptr;
@@ -779,23 +617,12 @@ typedef struct img_parameter_tag
 	int32 list_count;
 
 	DEC_BS_T *bitstrm_ptr;
-
-	mv_prediction_subMB b8_mv_pred_func[4];
 	
-	uint32 mbc_cfg_cmd;
 	int32 is_need_init_vsp_hufftab;
 
 }DEC_IMAGE_PARAMS_T;
-#if SIM_IN_WIN
- #define NALU_BUFFER_SIZE	(500 * 1024)
-//#else
-// #define NALU_BUFFER_SIZE	0//weihu for malloc
-#endif
 typedef struct nalu_tag
 {
-#if SIM_IN_WIN
-	uint8	buf[NALU_BUFFER_SIZE]; //can hold a whole nalu (except start code)
-#endif
 	int32	len;
 	
 	int8	nal_unit_type;	//!< NALU_TYPE_xxxx
@@ -803,13 +630,6 @@ typedef struct nalu_tag
 	int8	frobidden_bit;	//!< should be always FALSE
 	int8	resv; //for world aligned
 }DEC_NALU_T;
-
-typedef uint32 (*nal_startcode_follows_func)(DEC_IMAGE_PARAMS_T *img_ptr);
-typedef int32 (*readRefFrame_func) (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T *curr_mb_ptr, int32 blk_id, int32 list);
-typedef void (*readMVD_xy_func)(DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T *curr_mb_ptr, int32 sub_blk_id);
-typedef void (*direct_mv_func) (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-typedef int8 (*pred_skip_bslice_func) (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-typedef int8 (*MC8x8_direct_func)(DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr, uint8 b8, int32 cache_offset);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

@@ -46,14 +46,10 @@ DEC_PPS_T	*g_pps_array_ptr;
 DEC_IMAGE_PARAMS_T		*g_image_ptr;
 DEC_SLICE_T				*g_curr_slice_ptr;
 DEC_OLD_SLICE_PARAMS_T	*g_old_slice_ptr;
-DEC_MB_CACHE_T			*g_mb_cache_ptr;
+//DEC_MB_CACHE_T			*g_mb_cache_ptr;
 uint32 					*g_cavlc_tbl_ptr;
 
-#if _MVC_
 DEC_DECODED_PICTURE_BUFFER_T	 *g_dpb_layer[2];
-#else
-DEC_DECODED_PICTURE_BUFFER_T	*g_dpb_ptr;
-#endif
 
 DEC_STORABLE_PICTURE_T	*g_dec_picture_ptr;
 DEC_STORABLE_PICTURE_T	*g_list0[MAX_REF_FRAME_NUMBER+MAX_REF_FRAME_NUMBER];//weihu//+1
@@ -78,7 +74,7 @@ int32	g_searching_IDR_pic;
 int32	g_pre_mb_is_intra4;	
 int32	g_nFrame_dec_h264;
 int32 	g_dispFrmNum;
-int32 g_firstBsm_init_h264;/*BSM init*/
+//int32 g_firstBsm_init_h264;/*BSM init*/
 int32 	g_stream_offset;
 int32	g_slice_datalen;//weihu
 //int8	load_vld_table_en=1;//weihu
@@ -89,9 +85,9 @@ uint32 display_array_mPicId[16];
 int32	display_array_len;
 int   frame_dec_finish;
 
-uint8 g_lengthSizeMinusOne;
+//uint8 g_lengthSizeMinusOne;
 
-int32 last_dquant;
+//int32 last_dquant;
 
 char weightscale4x4[6][4][4];//6 6*2+2=14*16=224B
 char weightscale8x8[2][8][8];////2 2*2+2=6*64=384B
@@ -132,6 +128,7 @@ char weightscale8x8_inter_default[64] = {
 		24,25,27,28,30,32,33,35
 };
 
+#if 0
 const uint8 *g_totZero_Chroma_DC [3];
 const uint8 * g_run_zeroLeft [6];
 
@@ -141,7 +138,7 @@ readMVD_xy_func readMVD_xy;
 direct_mv_func direct_mv;
 pred_skip_bslice_func pred_skip_bslice;
 MC8x8_direct_func MC8x8_direct;
-
+#endif
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

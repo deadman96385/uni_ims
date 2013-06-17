@@ -360,70 +360,6 @@ LOCAL void H264Dec_POC(DEC_IMAGE_PARAMS_T *img_ptr)
 	}
 }
 
-LOCAL void H264Dec_fill_frame_num_gap (DEC_IMAGE_PARAMS_T *img_ptr)
-{
-	int32 curr_frame_num;
-	int32 unused_short_term_frm_num;
-	int tmp1 = img_ptr->delta_pic_order_cnt[0];
-	int tmp2 = img_ptr->delta_pic_order_cnt[1];
-#if _MVC_
-	DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = g_curr_slice_ptr->p_Dpb;
-#endif
-
-	PRINTF("a gap in frame number is found, try to fill it.\n");
-
-	unused_short_term_frm_num = H264Dec_Divide ((img_ptr->pre_frame_num+1), img_ptr->max_frame_num);
-	curr_frame_num = img_ptr->frame_num;
-
-	while (curr_frame_num != unused_short_term_frm_num)
-	{
-		DEC_STORABLE_PICTURE_T *picture_ptr;
-#if _MVC_
-		DEC_FRAME_STORE_T *frame_store_ptr = H264Dec_get_one_free_pic_buffer (dpb_ptr);
-#else
-		DEC_FRAME_STORE_T *frame_store_ptr = H264Dec_get_one_free_pic_buffer (g_dpb_ptr);
-#endif
-
-		if (img_ptr->error_flag)
-		{
-			return;
-		}
-
-		frame_store_ptr->disp_status = 1;//for error //1
-
-		picture_ptr = frame_store_ptr->frame;
-		picture_ptr->pic_num = unused_short_term_frm_num;
-		picture_ptr->frame_num = unused_short_term_frm_num;
-		picture_ptr->non_existing = 1;
-		picture_ptr->used_for_reference = 1;
-		picture_ptr->is_long_term = 0;
-		picture_ptr->idr_flag = 0;
-		picture_ptr->adaptive_ref_pic_buffering_flag = 0;
-#if _MVC_
-	    picture_ptr->view_id = g_curr_slice_ptr->view_id;
-#endif
-
-		img_ptr->frame_num = unused_short_term_frm_num;
-		if (g_active_sps_ptr->pic_order_cnt_type!=0)
-		{
-		  H264Dec_POC(img_ptr);
-		}
-		picture_ptr->frame_poc=img_ptr->framepoc;
-		picture_ptr->poc=img_ptr->framepoc;
-
-		H264Dec_store_picture_in_dpb (img_ptr, picture_ptr, g_curr_slice_ptr->p_Dpb);
-
-		img_ptr->pre_frame_num = unused_short_term_frm_num;
-		unused_short_term_frm_num = H264Dec_Divide (unused_short_term_frm_num+1, img_ptr->max_frame_num);
-		g_nFrame_dec_h264++;//weihu
-	}
-
-	img_ptr->frame_num = curr_frame_num;
-	img_ptr->delta_pic_order_cnt[0] = tmp1;
-	img_ptr->delta_pic_order_cnt[1] = tmp2;
-
-}
-
 LOCAL int dumppoc(DEC_IMAGE_PARAMS_T *img)
 {
 #if 0
@@ -453,123 +389,8 @@ LOCAL int dumppoc(DEC_IMAGE_PARAMS_T *img)
 #endif
     return 0;
 }
+
 #if _MVC_
-/*int init_img_data(ImageData *p_ImgData, DEC_SPS_T *sps)
-{
-  InputParameters *p_Inp = p_Vid->p_Inp;
-  int memory_size = 0;
-  int nplane;
-  
-  // allocate memory for reference frame buffers: p_ImgData->frm_data
-  p_ImgData->format           = p_Inp->output;
-  p_ImgData->format.width[0]  = p_Vid->width;    
-  p_ImgData->format.width[1]  = p_Vid->width_cr;
-  p_ImgData->format.width[2]  = p_Vid->width_cr;
-  p_ImgData->format.height[0] = p_Vid->height;  
-  p_ImgData->format.height[1] = p_Vid->height_cr;
-  p_ImgData->format.height[2] = p_Vid->height_cr;
-  p_ImgData->format.yuv_format          = (ColorFormat) sps->chroma_format_idc;
-  p_ImgData->format.auto_crop_bottom    = p_Inp->output.auto_crop_bottom;
-  p_ImgData->format.auto_crop_right     = p_Inp->output.auto_crop_right;
-  p_ImgData->format.auto_crop_bottom_cr = p_Inp->output.auto_crop_bottom_cr;
-  p_ImgData->format.auto_crop_right_cr  = p_Inp->output.auto_crop_right_cr;
-  p_ImgData->frm_stride[0]    = p_Vid->width;
-  p_ImgData->frm_stride[1]    = p_ImgData->frm_stride[2] = p_Vid->width_cr;
-  p_ImgData->top_stride[0] = p_ImgData->bot_stride[0] = p_ImgData->frm_stride[0] << 1;
-  p_ImgData->top_stride[1] = p_ImgData->top_stride[2] = p_ImgData->bot_stride[1] = p_ImgData->bot_stride[2] = p_ImgData->frm_stride[1] << 1;
-
-  if( sps->separate_colour_plane_flag )
-  {
-    for( nplane=0; nplane < MAX_PLANE; nplane++ )
-    {
-      memory_size += get_mem2Dpel(&(p_ImgData->frm_data[nplane]), p_Vid->height, p_Vid->width);
-    }
-  }
-  else
-  {
-    memory_size += get_mem2Dpel(&(p_ImgData->frm_data[0]), p_Vid->height, p_Vid->width);
-
-    if (p_Vid->yuv_format != YUV400)
-    {
-      int i, j, k;
-      memory_size += get_mem2Dpel(&(p_ImgData->frm_data[1]), p_Vid->height_cr, p_Vid->width_cr);
-      memory_size += get_mem2Dpel(&(p_ImgData->frm_data[2]), p_Vid->height_cr, p_Vid->width_cr);
-
-      if (sizeof(imgpel) == sizeof(unsigned char))
-      {
-        for (k = 1; k < 3; k++)
-          fast_memset(p_ImgData->frm_data[k][0], 128, p_Vid->height_cr * p_Vid->width_cr * sizeof(imgpel));
-      }
-      else
-      {
-        imgpel mean_val;
-
-        for (k = 1; k < 3; k++)
-        {
-          mean_val = (imgpel) ((p_Vid->max_pel_value_comp[k] + 1) >> 1);
-
-          for (j = 0; j < p_Vid->height_cr; j++)
-          {
-            for (i = 0; i < p_Vid->width_cr; i++)
-              p_ImgData->frm_data[k][j][i] = mean_val;
-          }
-        }
-      }
-    }
-  }
-
-  if (!p_Vid->active_sps->frame_mbs_only_flag)
-  {
-    // allocate memory for field reference frame buffers
-    memory_size += init_top_bot_planes(p_ImgData->frm_data[0], p_Vid->height, &(p_ImgData->top_data[0]), &(p_ImgData->bot_data[0]));
-
-    if (p_Vid->yuv_format != YUV400)
-    {
-      memory_size += 4*(sizeof(imgpel**));
-
-      memory_size += init_top_bot_planes(p_ImgData->frm_data[1], p_Vid->height_cr, &(p_ImgData->top_data[1]), &(p_ImgData->bot_data[1]));
-      memory_size += init_top_bot_planes(p_ImgData->frm_data[2], p_Vid->height_cr, &(p_ImgData->top_data[2]), &(p_ImgData->bot_data[2]));
-    }
-  }
-
-  return memory_size;
-}*/
-void process_picture_in_dpb_s(DEC_STORABLE_PICTURE_T *p_pic)
-{
-	//InputParameters *p_Inp = p_Vid->p_Inp;
-	ImageData *p_img_out = &g_image_ptr->tempData3;
-	int32***  d_img;
-	//int i;
-
-	if(g_image_ptr->tempData3.frm_data[0] == NULL)
-		;//init_img_data( &(g_image_ptr->tempData3), g_active_sps_ptr);
-
-	/*if (p_pic->structure == FRAME)
-	{*/
-		d_img = p_img_out->frm_data;
-	/*}
-	else //If reference picture is a field, then frm_data will actually contain field data and therefore top/bottom stride is set accordingly.
-	{
-		if (p_pic->structure == TOP_FIELD)
-		{
-			d_img = p_img_out->top_data;
-		}
-		else
-		{
-			d_img = p_img_out->bot_data;
-		}
-	}*/
-
-	/*for(i=0; i<p_pic->size_y; i++)
-		memcpy(d_img[0][i], p_pic->imgY[i], p_pic->size_x*sizeof(imgpel));
-	if (p_Vid->yuv_format != YUV400)
-	{
-		for(i=0; i<p_pic->size_y_cr; i++)
-			memcpy(d_img[1][i], p_pic->imgUV[0][i], p_pic->size_x_cr * sizeof(imgpel));
-		for(i=0; i<p_pic->size_y_cr; i++)
-			memcpy(d_img[2][i], p_pic->imgUV[1][i], p_pic->size_x_cr * sizeof(imgpel));
-	}*/
-}
 LOCAL void init_mvc_picture(void)
 {
 	int i;
@@ -603,26 +424,16 @@ LOCAL void init_mvc_picture(void)
 
 PUBLIC void H264Dec_init_picture (DEC_IMAGE_PARAMS_T *img_ptr)
 {
-#if _MVC_
 	DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = g_curr_slice_ptr->p_Dpb;
-#else
-	DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = g_dpb_ptr;
-#endif
 	DEC_STORABLE_PICTURE_T *dec_picture_ptr = NULL;
 	DEC_FRAME_STORE_T *fs = NULL;
  	
 
-#if SIM_IN_WIN	
-	int32 i;
-	//init the slice nr;
-	for(i = 0; i < img_ptr->frame_size_in_mbs; i++)
-	{
-		(img_ptr->mb_info+i)->slice_nr = -1;
-	}
-#endif
 
 	if (g_dec_picture_ptr)//weihu
 	{
+	SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+
 		// this may only happen on slice loss
 		H264Dec_exit_picture (img_ptr);
 		
@@ -700,14 +511,6 @@ PUBLIC void H264Dec_init_picture (DEC_IMAGE_PARAMS_T *img_ptr)
 			init_mvc_picture();//g_curr_slice_ptr);
 	}
 #endif
-#if SIM_IN_WIN
-	memset(dec_picture_ptr->mv[0], 0, (img_ptr->frame_size_in_mbs << 5) * sizeof(int16));
-	memset(dec_picture_ptr->mv[1], 0, (img_ptr->frame_size_in_mbs << 5) * sizeof(int16));
-    memset(dec_picture_ptr->ref_idx[0], -1, (img_ptr->frame_size_in_mbs << 4) * sizeof(char));
-	memset(dec_picture_ptr->ref_idx[1], -1, (img_ptr->frame_size_in_mbs << 4) * sizeof(char));
-	memset(dec_picture_ptr->ref_pic_id[0], -2147483648, (img_ptr->frame_size_in_mbs << 4) * sizeof(int32));
-	memset(dec_picture_ptr->ref_pic_id[1], -2147483648, (img_ptr->frame_size_in_mbs << 4) * sizeof(int32));
-#endif
 	{
 	int32 i;
 	int32 size_y = img_ptr->width * img_ptr->height;
@@ -740,13 +543,9 @@ PUBLIC void H264Dec_exit_picture (DEC_IMAGE_PARAMS_T *img_ptr)
 		img_ptr->pre_frame_num = 0;
 	}
 
-#if SIM_IN_WIN
-	PRINTF ("\ndecode frame: %3d\t%s\tview_id %d\tframe poc %d\t", g_nFrame_dec_h264, (g_curr_slice_ptr->picture_type == I_SLICE)?"I_SLICE":
-		(g_curr_slice_ptr->picture_type == P_SLICE)?"P_SLICE": "B_SLICE", g_curr_slice_ptr->view_id, dec_picture_ptr->frame_poc);
-#endif
-
 	return;
 }
+
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

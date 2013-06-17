@@ -12,7 +12,6 @@ LOCAL_SRC_FILES := \
 	src/h264dec_image.c \
 	src/h264dec_init.c \
 	src/h264dec_interface.c \
-	src/h264dec_main.c \
 	src/h264dec_malloc.c \
 	src/h264dec_parset.c \
 	src/h264dec_slice.c \
