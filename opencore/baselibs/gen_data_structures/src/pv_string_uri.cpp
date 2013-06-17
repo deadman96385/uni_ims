@@ -99,7 +99,7 @@ OSCL_EXPORT_REF bool PVStringUri::PersentageToEscapedEncoding(char* aUrl, uint32
     TempUrlBuffer[Url_Tmp_Counter] = '\0';
     if (TempUrlBuffer && *TempUrlBuffer)
     {
-        oscl_memset(aUrl, 0, sizeof(aUrl));
+        oscl_memset(aUrl, 0, strlen(aUrl));
         oscl_strncpy(aUrl, TempUrlBuffer, (Url_Tmp_Counter));
         aUrl[oscl_strlen(TempUrlBuffer)] = '\0';
         aUrlMaxOutLength = Url_Tmp_Counter;
@@ -169,7 +169,7 @@ OSCL_EXPORT_REF bool PVStringUri::IllegalCharactersToEscapedEncoding(char* aUrl,
     TempUrlBuffer[Url_Tmp_Counter] = '\0';
     if (TempUrlBuffer && *TempUrlBuffer)
     {
-        oscl_memset(aUrl, 0, sizeof(aUrl));
+        oscl_memset(aUrl, 0, strlen(aUrl));
         oscl_strncpy(aUrl, TempUrlBuffer, Url_Tmp_Counter);
         aUrl[oscl_strlen(TempUrlBuffer)] = '\0';
 

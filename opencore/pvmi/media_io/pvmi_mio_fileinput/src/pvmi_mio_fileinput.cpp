@@ -1555,7 +1555,7 @@ PVMFStatus PvmiMIOFileInput::DoInit()
             return PVMFErrNoMemory;
         }
 
-        oscl_memset(fileData, 0, sizeof(fileData));
+        oscl_memset(fileData, 0, sizeof(fileSize));
         // Read the whole file to data buffer then go back to front
         iInputFile.Read((OsclAny*)fileData, sizeof(uint8), fileSize);
         iInputFile.Seek(fileStart, Oscl_File::SEEKSET);
