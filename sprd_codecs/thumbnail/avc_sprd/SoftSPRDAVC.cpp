@@ -384,6 +384,7 @@ OMX_ERRORTYPE SoftSPRDAVC::internalSetParameter(
                 mCropWidth = mWidth;
                 mCropHeight = mHeight;
                 port->mDef.nBufferSize =(((mWidth + 15) & -16)* ((mHeight + 15) & -16) * 3) / 2;
+                mPictureSize = port->mDef.nBufferSize;
             }
 
             return OMX_ErrorNone;
