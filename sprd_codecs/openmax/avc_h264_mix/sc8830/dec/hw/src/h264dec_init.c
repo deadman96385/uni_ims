@@ -47,10 +47,6 @@ PUBLIC void H264Dec_init_global_para (void)
 {
  	int32 i,j;
 
-#if SIM_IN_WIN
-	g_stream_offset = 0;
-	VSP_Init_CModel();
-#endif //_CMODEL_
 
 	SCI_ASSERT(NULL != (g_sps_array_ptr = (DEC_SPS_T *)H264Dec_InterMemAlloc (sizeof(DEC_SPS_T) * MAX_SPS)));
 	SCI_ASSERT(NULL != (g_pps_array_ptr = (DEC_PPS_T *)H264Dec_InterMemAlloc (sizeof(DEC_PPS_T) * MAX_PPS)));
@@ -77,11 +73,7 @@ PUBLIC void H264Dec_init_global_para (void)
 //	SCI_ASSERT(NULL != (g_nalu_ptr->buf = (uint8 *)H264Dec_InterMemAlloc (sizeof(uint8)*NALU_BUFFER_SIZE)));
     
 	SCI_ASSERT(NULL != (g_image_ptr = (DEC_IMAGE_PARAMS_T *)H264Dec_InterMemAlloc(sizeof(DEC_IMAGE_PARAMS_T))));
-#if SIM_IN_WIN
-	memset(g_image_ptr,0,sizeof(DEC_IMAGE_PARAMS_T));
-#else
     memset(g_image_ptr,0,sizeof(DEC_IMAGE_PARAMS_T));
-#endif
 
 	SCI_ASSERT(NULL != (g_image_ptr->bitstrm_ptr = (DEC_BS_T *)H264Dec_InterMemAlloc(sizeof(DEC_BS_T))));
 	SCI_ASSERT(NULL != (g_curr_slice_ptr = (DEC_SLICE_T *)H264Dec_InterMemAlloc(sizeof(DEC_SLICE_T)))); 
@@ -93,7 +85,7 @@ PUBLIC void H264Dec_init_global_para (void)
 
 	SCI_ASSERT(NULL != (g_no_reference_picture_ptr = (DEC_STORABLE_PICTURE_T *)H264Dec_InterMemAlloc(sizeof(DEC_STORABLE_PICTURE_T))));
     //memset1(g_no_reference_picture_ptr,0,sizeof(DEC_STORABLE_PICTURE_T));
-	SCI_ASSERT(NULL != (g_mb_cache_ptr = (DEC_MB_CACHE_T *)H264Dec_InterMemAlloc(sizeof(DEC_MB_CACHE_T))));
+//	SCI_ASSERT(NULL != (g_mb_cache_ptr = (DEC_MB_CACHE_T *)H264Dec_InterMemAlloc(sizeof(DEC_MB_CACHE_T))));
 
 	SCI_ASSERT(NULL != (g_cavlc_tbl_ptr = (uint32 *)H264Dec_InterMemAlloc(sizeof(uint32)*69)));
 
@@ -110,9 +102,9 @@ PUBLIC void H264Dec_init_global_para (void)
 	g_ready_to_decode_slice = FALSE;
 	g_searching_IDR_pic = 1;
 	g_nFrame_dec_h264 = 0;
-	g_firstBsm_init_h264 = TRUE;
+//	g_firstBsm_init_h264 = TRUE;
 	g_old_pps_id = -1; //initialize to a impossible value
-	last_dquant = 0;
+//	last_dquant = 0;
 #if _MVC_	
 	last_profile_idc=0;
 #endif 
@@ -174,12 +166,6 @@ PUBLIC void H264Dec_init_global_para (void)
 	for (i = 0; i < (MAX_REF_FRAME_NUMBER+MAX_REF_FRAME_NUMBER); i++)//weihu//+1
 	{
 		g_list0[i] = g_no_reference_picture_ptr;
-#if SIM_IN_WIN
-        g_list0[i]->imgY=0;
-		g_list0[i]->imgU=0;
-		g_list0[i]->imgV=0;
-
-#endif
 	}
 
 	g_image_ptr->dec_ref_pic_marking_buffer = g_dec_ref_pic_marking_buffer;
@@ -225,47 +211,9 @@ PUBLIC void H264Dec_init_global_para (void)
 	return;
 }
 
-#if SIM_IN_WIN
-PUBLIC void H264Dec_VSPInit (void)
-{
-	int cmd;
-
-	VSP_Reset();
-	
-	/*clear time_out int_raw flag, if timeout occurs*/
-	WRITE_REG(VSP_DCAM_REG_BASE+DCAM_INT_CLR_OFF, (1<<12), "DCAM_INT_CLR: clear time_out int_raw flag");
-	
-	/*init dcam command*/
-	WRITE_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, (0<<4) | (1<<3), "DCAM_CFG: configure DCAM register,switch buffer to hardware");
-		
-	cmd = (1 << 16) |((uint32)TIME_OUT_CLK);
-	WRITE_REG(VSP_DCAM_REG_BASE+DCAM_VSP_TIME_OUT_OFF, cmd, "DCAM_VSP_TIME_OUT: enable hardware timer out, normal mode");
-	
-	return;
-}
-#endif
-
 PUBLIC void H264Dec_init_vld_table (void)
 {
-#if SIM_IN_WIN
-	/*total Zero Chroma DC*/
-	g_totZero_Chroma_DC [0] = g_totZero_Chroma_DC1_tbl;
-	g_totZero_Chroma_DC [1] = g_totZero_Chroma_DC2_tbl;
-	g_totZero_Chroma_DC [2] = g_totZero_Chroma_DC3_tbl;
-
-	/*run before*/
-	g_run_zeroLeft [0] = g_run_zeroLeft1_tbl;
-	g_run_zeroLeft [1] = g_run_zeroLeft2_tbl;
-	g_run_zeroLeft [2] = g_run_zeroLeft3_tbl;
-	g_run_zeroLeft [3] = g_run_zeroLeft4_tbl;
-	g_run_zeroLeft [4] = g_run_zeroLeft5_tbl;
-	g_run_zeroLeft [5] = g_run_zeroLeft6_tbl;
-
-
-	context	= (int *)H264Dec_InterMemAlloc (sizeof(int) * 308);
-#else
 	//context = (int *)(CABAC_CONTEXT_BASE_ADDR);
-#endif
 }
 
 /**---------------------------------------------------------------------------*

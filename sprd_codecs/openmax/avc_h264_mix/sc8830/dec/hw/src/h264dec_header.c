@@ -53,31 +53,20 @@ void nal_unit_header_mvc_extension(NALUnitHeaderMVCExt_t *NaluHeaderMVCExt, DEC_
 }
 #endif
 
-PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader()//uint8 *bitstrm_ptr, uint32 bitstrm_len)//weihu
+void dump_bs( uint8* pBuffer,int32 aInBufSize)
+{
+	FILE *fp = fopen("/data/video_es.m4v","ab");
+	fwrite(pBuffer,1,aInBufSize,fp);
+	fclose(fp);
+}
+
+PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(MMDecInput *dec_input_ptr)//uint8 *bitstrm_ptr, uint32 bitstrm_len)//weihu
 {
 	uint32 tmpVar;
 	int32 ret = 0;
 	DEC_NALU_T	*nal_ptr = g_nalu_ptr;
 
-#if SIM_IN_WIN
-	DEC_BS_T *stream = g_image_ptr->bitstrm_ptr;
-	uint8 *bitstrm_ptr=g_nalu_ptr->buf; 
-	uint32 bitstrm_len=g_nalu_ptr->len;
-
-
-	H264Dec_InitBitstream_sw(stream, bitstrm_ptr, bitstrm_len);
-	
-	if ((g_nFrame_dec_h264 == 45) )//(g_image_ptr->mb_x == 2) && (g_image_ptr->mb_y == 3))
-	{
-		PRINTF("");
-	}
-
-
-
-	tmpVar = READ_FLC(stream, 8);
-#else
     tmpVar = READ_FLC(NULL, 8);
-#endif
 
 	SCI_TRACE_LOW("%s, %d, %d.", __FUNCTION__, __LINE__, tmpVar);
 
@@ -87,24 +76,13 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader()//uint8 *bitstrm_ptr, uint32 bits
 
 #if _MVC_
 	g_curr_slice_ptr->svc_extension_flag = -1;
-#if FPGA_AUTO_VERIFICATION
-	if( nal_ptr->nal_unit_type == NALU_TYPE_PREFIX || nal_ptr->nal_unit_type == NALU_TYPE_SLC_EXT)
-#else
+
 	if(g_input->DecodeAllLayers == 1 && nal_ptr->nal_unit_type == NALU_TYPE_PREFIX || nal_ptr->nal_unit_type == NALU_TYPE_SLC_EXT)
-#endif
 	{
-#if SIM_IN_WIN
-		g_curr_slice_ptr->svc_extension_flag = READ_FLC(stream, 1);
-#else
 		g_curr_slice_ptr->svc_extension_flag = READ_FLC(NULL, 1);
-#endif
 		if (!g_curr_slice_ptr->svc_extension_flag)//MVC
 		{
-#if SIM_IN_WIN
-			nal_unit_header_mvc_extension(&g_curr_slice_ptr->NaluHeaderMVCExt, stream);
-#else
             nal_unit_header_mvc_extension(&g_curr_slice_ptr->NaluHeaderMVCExt, NULL);
-#endif
 			g_curr_slice_ptr->NaluHeaderMVCExt.iPrefixNALU = (nal_ptr->nal_unit_type == NALU_TYPE_PREFIX);
 		}
 	}
@@ -203,11 +181,7 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader()//uint8 *bitstrm_ptr, uint32 bits
 		break;
 	case NALU_TYPE_SUB_SPS:
       //PRINTF ("Found NALU_TYPE_SUB_SPS\n");
-#if FPGA_AUTO_VERIFICATION
-      if(1) 
-#else
       if (g_input->DecodeAllLayers== 1)
-#endif
       {
         ProcessSubsetSPS();
       }
@@ -310,6 +284,7 @@ PUBLIC void H264Dec_FirstPartOfSliceHeader (DEC_SLICE_T *curr_slice_ptr, DEC_IMA
 		return;
 	}
 }
+
 #if _MVC_
 LOCAL void H264Dec_ref_pic_list_mvc_reordering(DEC_IMAGE_PARAMS_T *img_ptr)
 {

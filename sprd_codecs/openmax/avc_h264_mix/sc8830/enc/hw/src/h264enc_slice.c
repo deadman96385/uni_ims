@@ -380,335 +380,40 @@ PUBLIC int32 h264enc_slice_write (ENC_IMAGE_PARAMS_T *img_ptr)
 	//OR1200_READ_REG_POLL(ORSC_BSM_CTRL_OFF + 0x20, V_BIT_0, 0x00000001, "ORSC: Polling BSM_RDY");
 	//OR1200_READ_REG_POLL(ORSC_BSM_CTRL_OFF+0x18, V_BIT_27, 0x00000000, "ORSC: Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
 	//OR1200_WRITE_REG(ORSC_BSM_CTRL_OFF + 0x08, 0x06, "ORSC: BSM_OPERATE: BSM_CLR & COUNT_CLR"); // Move data remain in fifo to external memeory
-	OR1200_WRITE_REG(ORSC_VSP_GLB_OFF + 0x04, 0, "ORSC: VSP_INT_MASK: MBW_FMR_DONE"); // enable HW INT
+
+#define USE_INTERRUPT
+
+#ifdef USE_INTERRUPT	
+	OR1200_WRITE_REG(VSP_REG_BASE_ADDR+ARM_INT_MASK_OFF,V_BIT_2,"ARM_INT_MASK, only enable VSP ACC init");//enable int //
+#endif
+	OR1200_WRITE_REG(ORSC_VSP_GLB_OFF+VSP_INT_MASK_OFF,V_BIT_1 | V_BIT_5,"VSP_INT_MASK, enable vlc_slice_done, time_out");//enable int //frame done/timeout
+
 	OR1200_WRITE_REG(ORSC_VSP_GLB_OFF + 0x28, 0x1, "ORSC: RAM_ACC_SEL: SETTING_RAM_ACC_SEL=1(HW)");
 	OR1200_WRITE_REG(ORSC_VSP_GLB_OFF + 0x30, 0x5|((img_ptr->sh.i_first_mb==0)<<3), "ORSC: VSP_START: ENCODE_START=1");
 //	OR1200_WRITE_REG(ORSC_VSP_GLB_OFF + 0x84, 0x1, "ORSC: CLR_START: Write 1 to clear IMCU_START");
 //	OR1200_WRITE_REG(ORSC_VSP_GLB_OFF + 0x88, 0x1, "ORSC: MCU_SLEEP: Set MCU_SLEEP=1");
 	//asm("l.mtspr\t\t%0,%1,0": : "r" (SPR_PMR), "r" (SPR_PMR_SME));//MCU_SLEEP
 
-#ifdef SIM_IN_WIN
-	or1200_print = 0;
-	FPRINTF_ORSC(g_vsp_glb_reg_fp,"//***********************************frame num=%d slice id=%d\n", g_nFrame_enc, img_ptr->slice_nr);
 
-	for (i_mb_y = start_mb_y; i_mb_y < img_ptr->frame_height_in_mbs; i_mb_y++)
 	{
-		img_ptr->mb_y = i_mb_y;
-
-		if ((i_mb_y == 0) && (g_nFrame_enc == 0))
-		{
-			printf("");
-		}
-
-		memset (mea_window_buf, 0, (32*96 + 16)*sizeof(uint32));
-
-		ConfigureMeaFetch (i_mb_y, start_mb_x, is_i_frame);
-
-		for (i_mb_x = start_mb_x; i_mb_x <img_ptr->frame_width_in_mbs; i_mb_x++)
-		{
-			int32 mb_spos = VSP_READ_REG(VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "read total bits");
-
-#ifdef TV_OUT
-			//jzy		
-			int i,j;
-			memset(dct_out_buf,0,432*sizeof(short));
-			memset(idct_in_buf,0,432*sizeof(short));
-#endif
-				
-			img_ptr->mb_x = i_mb_x;
-			img_ptr->curr_mb_nr = mb_xy = i_mb_y * img_ptr->frame_width_in_mbs + i_mb_x;
-
-			if (img_ptr->sh.i_type != SLICE_TYPE_I)
-			{
-				FPRINTF_ME (g_me_trace_fp, "\nmb_y: %d, mb_x: %d\n", i_mb_y, i_mb_x);
-//				FPRINTF (g_bit_stat_fp, "\nframe: %d, mb_y: %d, mb_x: %d\n", g_nFrame_enc, i_mb_y, i_mb_x);			
-				FPRINTF (g_hvlc_event_fp, "\nframe: %d, mb_y: %d, mb_x: %d\n", g_nFrame_enc, i_mb_y, i_mb_x);
-			}
-
-			if ((i_mb_y == 0) && (i_mb_x == 64) && (g_nFrame_enc == 1))
-			{
-				printf("");
-			}
-			
-			mb_info_ptr = img_ptr->mb_info+mb_xy;
-			mb_info_ptr->addr_idx = img_ptr->pYUVRefFrame->addr_idx;
-
-			//load cache
-			H264Enc_start_macroblock (img_ptr, mb_info_ptr, mb_cache_ptr);
-
-			//analyse parameters
-			H264Enc_AnalyseStart( img_ptr, mb_info_ptr, mb_cache_ptr);
-
-			//encode this macroblock ->be carefull it can change the mb type to P_SKIP if needed
- 			h264enc_macroblock_encode(img_ptr, mb_info_ptr, mb_cache_ptr);
-
-			if (mb_info_ptr->type == I_4x4)//here need to perform I 4x4 prediction
-			{
-				uint8 blkIdx;
-				int16 *dct_src_ptr;
-				int16 *dct_dst_ptr;
-				int16 *dct_vlc_ptr;
-				int16 *idct_src_ptr;
-				int16 *idct_dst_ptr;
-				uint32 tmp_vlc_bfr[128];
-				int8   cbp_luma = 0;
-				int8 blk_nnz[16] = {0};
-				uint8 blk_x, blk_y;
-
-				uint32 qp_per,qp_rem;
-
-				////////////////////luma encoding//////////////////////
-				for(blkIdx=0; blkIdx<16; blkIdx++)
-				{
-					uint8 zScanOrder[16] =
-					{
-						0,  1,  4,  5,
-						2,  3,  6,  7,
-						8,  9, 12, 13,
-					   10, 11, 14, 15
-					};
-
-					IntraPred_get_ref_blk (blkIdx);	
-			//		h264enc_block_encode (img_ptr, mb_info_ptr, mb_cache_ptr, blkIdx);
-
-					//////////////////////FOR SOFTWARE SIMULATION///////////////////////////
-
-					{
-						blk_x = blkIdx%4;
-						blk_y = (blkIdx>>2);
-
-						dct_src_ptr = (int16 *)vsp_dct_io_0 +  + 4*blk_x + 64*blk_y;;
-						dct_dst_ptr = (int16 *)vsp_dct_io_1 + zScanOrder[blkIdx]*16;
-						dct_vlc_ptr = (int16 *)tmp_vlc_bfr + zScanOrder[blkIdx]*16;
-						
-						trans4x4 (dct_src_ptr, 16, dct_dst_ptr, 16);
-
-						qp_per = g_qpPerRem_tbl[mb_info_ptr->qp][0];
-						qp_rem = g_qpPerRem_tbl[mb_info_ptr->qp][1];
-						
-						//quant/scan
-						quant4x4(dct_dst_ptr, qp_per, qp_rem, 1);
-#ifdef TV_OUT
-						//jzy
-						for(i=0; i<4; i++)
-						{
-							for(j=0; j<4; j++)
-							{
-								dct_out_buf[ 4*blk_x + 64*blk_y+j+16*i]= dct_dst_ptr[i+4*j];
-							}
-						}
-#endif
-						zigzag4x4_full(dct_dst_ptr, dct_vlc_ptr);
-						
-						blk_nnz[zScanOrder[blkIdx]] = get_nnz4x4(dct_dst_ptr, 0);
-						
-						mb_cache_ptr->nnz[x264_scan8[zScanOrder[blkIdx]]] = blk_nnz[zScanOrder[blkIdx]];
-						
-						if (blk_nnz[zScanOrder[blkIdx]] > 0)
-						{
-							mb_info_ptr->i_cbp_luma |= (1<<(zScanOrder[blkIdx]/4));
-						}
-						
-						idct_src_ptr = (int16 *)vsp_dct_io_1 + zScanOrder[blkIdx]*16;
-						idct_dst_ptr = (int16 *)vsp_dct_io_0 + zScanOrder[blkIdx]*16;
-#ifdef TV_OUT
-						for(i=0; i<4; i++)
-						{
-							for(j=0; j<4; j++)
-							{
-								idct_in_buf[4*blk_x + 64*blk_y+i+16*j]= idct_src_ptr[i+4*j];
-							}
-						}
-#endif
-						dequant4x4(idct_src_ptr, qp_per, qp_rem);
-						
-						idct4x4(idct_src_ptr, 4, idct_dst_ptr, 4);
-					
-					}
-
-					{				
-						uint32 i,j;
-		
-						int16 * pSrc = (int16 *)vsp_dct_io_0 + zScanOrder[blkIdx] * 16;
-						uint8 * pRef = (uint8 *)vsp_mea_out_bfr + 4*blk_x + 64*blk_y;
-						uint8 * pDst = (uint8 *)mea_out_buf0 + 4*blk_x + 64*blk_y;
-												
-						for(j=0; j<4; j++)
-						{
-							for (i=0; i<4; i++)
-							{
-								pDst[i+j*16] = IClip(0, 255, (int32)pSrc[i+j*4] + (int32)pRef[i+j*16]);
-							}
-						}
-					}
-				}
-
-				memcpy (vsp_dct_io_0, tmp_vlc_bfr, 128*sizeof(uint32));
-			}
-
-			mb_info_ptr->cavlc_start_bits = mb_info_ptr->cavlc_end_bits = 0;
-			mb_info_ptr->mb_type_val = 0;
-#ifdef TV_OUT
-			FPRINTF_VLC (g_vlc_offset_fp, "//frame_cnt=%d, mb_x=%d, mb_y=%d\n", g_nFrame_enc, g_mode_dcs_ptr->mb_x, g_mode_dcs_ptr->mb_y);
-#endif
-			if (P_SKIP == mb_info_ptr->type)
-			{
-//				FPRINTF(g_bit_stat_fp, "mb skipped\n");
-				i_skip++;
-				skip_mb_num++;
-#ifdef RC_BU
-				rc_bu_paras.BU_skip_MB++;
-#endif
-#ifdef TV_OUT
-				//PrintfCavlcOffset(mb_info_ptr, "P_SKIP");
-#endif
-			}
-			else
-			{
-				int bits_0, bits_1;
-
-				bits_0 = g_bsm_reg_ptr->TOTAL_BITS;
-
-				mb_info_ptr->cavlc_start_bits = g_bsm_reg_ptr->TOTAL_BITS;	// WHOLE MB
-				if (img_ptr->sh.i_type != SLICE_TYPE_I)
-				{
-					WRITE_UE_V (i_skip);	//skip run
-					i_skip = 0;
-#ifdef TV_OUT
-					mb_info_ptr->cavlc_end_bits = g_bsm_reg_ptr->TOTAL_BITS;
-					PrintfCavlcOffset(mb_info_ptr, "skip_run");
-					mb_info_ptr->cavlc_start_bits = g_bsm_reg_ptr->TOTAL_BITS;
-#endif
-				}
-
-				h264enc_macroblock_write_cavlc (img_ptr, mb_info_ptr, mb_cache_ptr);
-
-				bits_1 = g_bsm_reg_ptr->TOTAL_BITS;
-
-//				FPRINTF (g_bit_stat_fp, "mb bits number: %d\n", bits_1-bits_0);
-			}
-
-#ifdef SLICE_SIZE
-//			if (img_ptr->slice_sz >= SLICE_SIZE)
-//				img_ptr->slice_end = 1;
-#else
-			{
-				int MB_SC = (img_ptr->frame_height_in_mbs / SLICE_MB)*(img_ptr->frame_width_in_mbs);
-				if ((img_ptr->curr_mb_nr!=0)&&((img_ptr->curr_mb_nr+1)%MB_SC == 0))
-					img_ptr->slice_end = 1;
-			}
-#endif
-
-#ifdef TV_OUT
-#ifdef ONE_FRAME
-			if(img_ptr->frame_num>FRAME_X)
-#endif
-			{
-				PrintfSrcMB (mea_src_buf0, mb_info_ptr);
-				PrintfMBCBufParam(img_ptr, mb_info_ptr, mb_cache_ptr);
-				PrintfVLCParaBuf(img_ptr, mb_info_ptr, mb_cache_ptr);
-//				PrintfPPALineBuf(img_ptr, mb_info_ptr, mb_cache_ptr);
-				PrintfDCTParaBuf(img_ptr, mb_info_ptr, mb_cache_ptr, dct_out_buf);
-				PrintfPred(mb_info_ptr);
-				PrintfDCTIn(mb_info_ptr);
-				PrintfDCTOut(mb_info_ptr, dct_out_buf);
-				PrintfnCValue(mb_cache_ptr);
-				//PrintfCavlcOffset(mb_info_ptr, NULL);
-			}
-#endif
-			H264Enc_start_iqt_macroblock (img_ptr, mb_info_ptr, mb_cache_ptr);
-
-#ifdef TV_OUT
-#ifdef ONE_FRAME
-			if(img_ptr->frame_num>FRAME_X)
-#endif
-			{
-			//PrintfIDCTIn(idct_in_buf);
-			PrintfIDCTOut(mb_info_ptr);
-			}
-#endif
-			memset(slice_info, 0, 120*sizeof(int));
-			prepare_slice_info(img_ptr, mb_info_ptr, mb_cache_ptr, slice_info);
-			dbk_ppa_module(slice_info);
-#ifdef TV_OUT
-#ifdef ONE_FRAME
-			if(img_ptr->frame_num>FRAME_X)
-#endif
-			PrintfDBKParaBuf(img_ptr, slice_info);
-#endif
-			H264Enc_CheckMBCStatus (img_ptr, mb_info_ptr, mb_cache_ptr);
-
-//			//save cache
-	 		h264enc_macroblock_cache_save(img_ptr, mb_info_ptr, mb_cache_ptr);
-
-			if (i_mb_x < img_ptr->frame_width_in_mbs - 1)
-			{
-				ConfigureMeaFetch (i_mb_y, i_mb_x+1, is_i_frame);
-			}
-
-			if (img_ptr->slice_end)
-				goto slice_end;
-		}
-		start_mb_x = 0;	// Next line starts from MB_X = 0
-	}
-
-slice_end:
-	if (i_skip > 0)
-	{
-		mb_info_ptr->cavlc_start_bits = g_bsm_reg_ptr->TOTAL_BITS;
-		WRITE_UE_V (i_skip);	//last skip run
-#ifdef TV_OUT
-		mb_info_ptr->cavlc_end_bits = g_bsm_reg_ptr->TOTAL_BITS;
-		PrintfCavlcOffset(mb_info_ptr, "skip_run");
-#endif
-	}
-
-	//rbsp_slice trailing_bits
-//	mb_info_ptr->cavlc_start_bits = g_bsm_reg_ptr->TOTAL_BITS;
-	H264Enc_rbsp_trailing ();
-#ifdef TV_OUT
-//	mb_info_ptr->cavlc_end_bits = g_bsm_reg_ptr->TOTAL_BITS;
-//	PrintfCavlcOffset(mb_info_ptr, "Stop bit and byte align");
-	FPRINTF_VLC (g_bsm_totalbits_fp, "%08x\n", g_bsm_reg_ptr->TOTAL_BITS);
-	PrintBSMOut(img_ptr);
-#endif
-
-	if( (img_ptr->curr_mb_nr+1) < img_ptr->frame_size_in_mbs)
-		img_ptr->sh.i_first_mb = img_ptr->curr_mb_nr+1;
-	else
-		img_ptr->sh.i_first_mb = 0;
-
-#if !defined(_LIB)
-	printf ("\tskipped mb number: %d", skip_mb_num);
-	fprintf(stat_out,"\tskipped mb number: %d", skip_mb_num);
-#endif
-
-	OR1200_READ_REG_POLL(ORSC_VSP_GLB_OFF+0x0C, V_BIT_2, V_BIT_2, "ORSC: Polling VSP_INT_RAW: MBW_FMR_DONE"); // check HW INT
-	OR1200_WRITE_REG(ORSC_VSP_GLB_OFF+0x08, V_BIT_2, "ORSC: VSP_INT_CLR: MBW_FMR_DONE"); // clear HW INT
-
-	OR1200_READ_REG_POLL(ORSC_VSP_GLB_OFF+0x0C, V_BIT_1, V_BIT_1, "ORSC: Polling VLC_FRM_DONE"); //check vlc is done
-	OR1200_WRITE_REG(ORSC_VSP_GLB_OFF+0x08, V_BIT_1, "ORSC: VSP_INT_CLR: VLC_FRM_DONE"); // clear HW INT
-	OR1200_READ_REG_POLL(ORSC_BSM_CTRL_OFF+0x18, V_BIT_27, 0x00000000, "ORSC: Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
-	OR1200_WRITE_REG(ORSC_BSM_CTRL_OFF+0x08, 0x2, "ORSC: BSM_OPERATE: BSM_CLR");
-	OR1200_READ_REG_POLL(ORSC_BSM_CTRL_OFF+0x18, V_BIT_31, V_BIT_31, "ORSC: Polling BSM_DBG0: BSM inactive"); //check bsm is idle
-	OR1200_READ_REG_POLL(ORSC_VSP_GLB_OFF+0x1C, V_BIT_1, 0x0, "ORSC: Polling AXIM_STS: not Axim_wch_busy"); //check all data has written to DDR
-
-	i_frame_size = VSP_READ_REG(VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "read total bits");
-#else	// !SIM_IN_WIN
-	{
+#ifdef USE_INTERRUPT
+        uint32 tmp = VSP_POLL_COMPLETE();
+        SCI_TRACE_LOW("%s, %d, tmp1: %0x", __FUNCTION__, __LINE__, tmp);
+#else	
 		//ÖÐ¶Ï»½ÐÑ
 		uint32 tmp = OR1200_READ_REG(ORSC_VSP_GLB_OFF+0x0C, "ORSC: Check VSP_INT_RAW");
 		while ((tmp&0x32)==0)	// not (VLC_FRM_DONE|VLC_ERR|TIME_OUT)
 			tmp = OR1200_READ_REG(ORSC_VSP_GLB_OFF+0x0C, "ORSC: Check VSP_INT_RAW");
+#endif
 		if(tmp&0x30)	// (VLC_ERR|TIME_OUT)
 		{
-            img_ptr->error_flag=1;
-			OR1200_WRITE_REG(ORSC_VSP_GLB_OFF+0x08, 0x2e,"ORSC: VSP_INT_CLR: clear BSM_frame error int"); // (VLC_FRM_DONE|MBW_FMR_DONE|PPA_FRM_DONE|TIME_OUT)
+                        img_ptr->error_flag=1;
+//			OR1200_WRITE_REG(ORSC_VSP_GLB_OFF+0x08, 0x2e,"ORSC: VSP_INT_CLR: clear BSM_frame error int"); // (VLC_FRM_DONE|MBW_FMR_DONE|PPA_FRM_DONE|TIME_OUT)
 		}
 		else if((tmp&V_BIT_1)==V_BIT_1)	// VLC_FRM_DONE
 		{
 			img_ptr->error_flag=0;
-			OR1200_WRITE_REG(ORSC_VSP_GLB_OFF+0x08, V_BIT_1,"ORSC: VSP_INT_CLR: clear VLC_FRM_DONE");
+//			OR1200_WRITE_REG(ORSC_VSP_GLB_OFF+0x08, V_BIT_1,"ORSC: VSP_INT_CLR: clear VLC_FRM_DONE");
 		}
 		OR1200_READ_REG_POLL(ORSC_BSM_CTRL_OFF+0x18, V_BIT_27, 0x00000000, "ORSC: Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
 		OR1200_WRITE_REG(ORSC_BSM_CTRL_OFF+0x08, 0x2, "ORSC: BSM_OPERATE: BSM_CLR");
@@ -723,7 +428,6 @@ slice_end:
 		else
 			img_ptr->sh.i_first_mb = 0;
 	}
-#endif	// SIM_IN_WIN
 
 #ifdef RC_BU
 	if(g_h264_enc_config->RateCtrlEnable)

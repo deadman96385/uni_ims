@@ -359,9 +359,7 @@ PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_fo
 			OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, (g_stream_offset),"BSM_cfg1 stream buffer offset & destuff disable");//point to the start of NALU.
 			OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, 0x80000000|(bs_buffer_length+128)&0xfffffffc,"BSM_cfg0 stream buffer size");// BSM load data. Add 16 DW for BSM fifo loading.
 
-			SCI_TRACE_LOW("%s, %d.", __FUNCTION__, __LINE__);
 			is_init_success = Mp4Dec_DecMp4Header(vop_mode_ptr, video_format_ptr->i_extra);
-			SCI_TRACE_LOW("%s, %d.", __FUNCTION__, __LINE__);
 		 	if(MMDEC_OK == is_init_success)
 			{
 				video_format_ptr->frame_width = vop_mode_ptr->OrgFrameWidth;
@@ -392,58 +390,55 @@ PUBLIC void mpeg4_decode_vop(DEC_VOP_MODE_T *vop_mode_ptr)
 	int VopPredType=vop_mode_ptr->VopPredType;
     int resyn_bits=VopPredType?vop_mode_ptr->mvInfoForward.FCode - 1:0;
 
+    OR1200_WRITE_REG(VSP_REG_BASE_ADDR+0x14,0x4,"VSP_INT_MASK");//enable int //frame done/error/timeout
 
-	while(!pic_end)
-	{	
-		tmp=OR1200_READ_REG(GLB_REG_BASE_ADDR+VSP_INT_RAW_OFF, "check interrupt type");
-		if(tmp&0x30)
+    while (!pic_end)
+    {
+    	tmp=OR1200_READ_REG(GLB_REG_BASE_ADDR+VSP_DBG_STS0_OFF, "read mbx mby");
+        vop_mode_ptr->mb_y=tmp&0xff;
+		vop_mode_ptr->mb_x=(tmp>>8)&0xff;
+
+		SCI_TRACE_LOW("%s, %d, vop_mode_ptr->mb_y: %d, vop_mode_ptr->mb_x: %d", __FUNCTION__, __LINE__, vop_mode_ptr->mb_y, vop_mode_ptr->mb_x);
+
+		if(vop_mode_ptr->mb_y==(vop_mode_ptr->MBNumY-1)&&vop_mode_ptr->mb_x==(vop_mode_ptr->MBNumX-1))
 		{
-			vop_mode_ptr->error_flag=1;
-
-			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_CLR_OFF, 0x1ff,"clear BSM_frame done int");
-			//OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL");
-			pic_end=1;//weihu
-		}
-		else if((tmp&0x00000004)==0x00000004)
+			SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+			pic_end=1;
+		}else
 		{
-		    
-			vop_mode_ptr->error_flag=0;
-			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_CLR_OFF, 0x1ff,"clear BSM_frame done int");
-			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL");
-			pic_end=0;
-            
-			tmp=OR1200_READ_REG(GLB_REG_BASE_ADDR+VSP_DBG_STS0_OFF, "read mbx mby");
-			
-			vop_mode_ptr->mb_y=tmp&0xff;
-           		vop_mode_ptr->mb_x=(tmp>>8)&0xff;
-
-			if(vop_mode_ptr->mb_y==(vop_mode_ptr->MBNumY-1)&&vop_mode_ptr->mb_x==(vop_mode_ptr->MBNumX-1))
-			{
-				pic_end=1;
-			}else
-			{
-
-				if(vop_mode_ptr->video_std!=ITU_H263)
-				{	
-					if(!vop_mode_ptr->bResyncMarkerDisable)
-					{
-						if(Mp4Dec_CheckResyncMarker(resyn_bits))
-						{	
-							Mp4Dec_GetVideoPacketHeader(vop_mode_ptr,&SliceInfo, resyn_bits);
-						}
-					}
-				}else if(VopPredType!=BVOP)
+			if(vop_mode_ptr->video_std!=ITU_H263)
+			{	
+				if(!vop_mode_ptr->bResyncMarkerDisable)
 				{
-					SliceInfo.GobNum++;
-					Mp4Dec_DecGobHeader(vop_mode_ptr,&SliceInfo);
+					if(Mp4Dec_CheckResyncMarker(resyn_bits))
+					{	
+						Mp4Dec_GetVideoPacketHeader(vop_mode_ptr,&SliceInfo, resyn_bits);
+					}
 				}
+			}else if(VopPredType!=BVOP)
+			{
+				Mp4Dec_DecGobHeader(vop_mode_ptr,&SliceInfo);
+				SliceInfo.GobNum++;
 			}
+            
+			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_MASK_OFF,V_BIT_2 | V_BIT_4 | V_BIT_5,"VSP_INT_MASK, enable mbw_slice_done, vld_err, time_out");//enable int //frame done/error/timeout
+			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 1,"RAM_ACC_SEL");//change ram access to vsp hw
+			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_START_OFF,0xa|g_is_need_init_vsp_hufftab,"VSP_START");//start vsp   vld/vld_table//load_vld_table_en
 
-		
+			tmp = VSP_POLL_COMPLETE();
+			if(tmp&0x30)
+			{
+				vop_mode_ptr->error_flag=1;
+        		pic_end=1;//weihu
+			}else if((tmp&0x00000004)==0x00000004)
+        	{
+        		vop_mode_ptr->error_flag=0;
+			}
+        	//OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_CLR_OFF, 0x1ff,"clear BSM_frame done int");
+			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL");
 		}
-	}	
+    }
 }
-
 
 int16 MP4DecDecodeShortHeader(mp4StreamType *psBits,
                          int32 *width,
@@ -490,7 +485,6 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         {
         	return MMDEC_HW_ERROR;
          }
-        SCI_TRACE_LOW("%s, %d.", __FUNCTION__, __LINE__);
 		
 	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL: software access.");	
 	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_MODE_OFF, vop_mode_ptr->video_std,"VSP_MODE");
@@ -753,9 +747,6 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
 			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,((1<<29)/vop_mode_ptr->time_pp),"VSP_CFG5");
 		}
 
-		OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_MASK_OFF,0x0,"VSP_INT_MASK");//enable int
-		OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 1,"RAM_ACC_SEL");//change ram access to vsp hw
-		OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_START_OFF,0xa|g_is_need_init_vsp_hufftab,"VSP_START");//start vsp   vld/vld_table//load_vld_table_en
 	//	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+MCU_SLEEP_OFF,0x1,"MCU_SLEEP");//MCU_SLEEP
 	#if SIM_IN_WIN
 		FPRINTF(g_fp_global_tv,"//***********************************frame num=%d slice id=%d\n",g_nFrame_dec,0);

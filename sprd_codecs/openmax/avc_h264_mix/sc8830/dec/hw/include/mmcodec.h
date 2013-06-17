@@ -127,7 +127,8 @@ typedef struct
 // Decoder input structure
 typedef struct
 {
-    uint8		*pStream_phy;          	// Pointer to stream to be decoded
+    uint8		*pStream;          	// Pointer to stream to be decoded
+    uint8		*pStream_phy;          	// Pointer to stream to be decoded, phy
     uint32		dataLen;           	// Number of bytes to be decoded
 	int32		beLastFrm;			// whether the frame is the last frame.  1: yes,   0: no
 

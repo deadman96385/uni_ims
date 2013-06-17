@@ -141,12 +141,6 @@ MMDecRet Mp4Dec_DecGobHeader(DEC_VOP_MODE_T *vop_mode_ptr,SLICEINFO *SliceInfo)
 			{
 				OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,((1<<29)/vop_mode_ptr->time_pp),"VSP_CFG5");
 			}
-			
-			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_MASK_OFF,0x0,"VSP_INT_MASK");//enable int
-			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 1,"RAM_ACC_SEL");//change ram access to vsp hw
-			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_START_OFF,0xa,"VSP_START");//start vsp   vld/vld_table//load_vld_table_en
-			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+MCU_SLEEP_OFF,0x1,"MCU_SLEEP");//MCU_SLEEP
-			
 		}
 	}
 	
@@ -1754,13 +1748,6 @@ PUBLIC MMDecRet Mp4Dec_GetVideoPacketHeader(DEC_VOP_MODE_T *vop_mode_ptr, SLICEI
 		OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,((1<<29)/vop_mode_ptr->time_pp),"VSP_CFG5");
 		
 	}
-	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_MASK_OFF,0x0,"VSP_INT_MASK");//enable int
-	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 1,"RAM_ACC_SEL");//change ram access to vsp hw
-	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_START_OFF,0xa,"VSP_START");//start vsp   vld/vld_table//load_vld_table_en
-	//OR1200_WRITE_REG(GLB_REG_BASE_ADDR+MCU_SLEEP_OFF,0x1,"MCU_SLEEP");//MCU_SLEEP
-	//FPRINTF(g_fp_global_tv,"//***********************************frame num=%d slice id=%d\n",g_nFrame_dec,SliceInfo->SliceNum);
-	//OR1200_Vaild=0;
-	
 
 	return MMDEC_OK;
 }

@@ -44,33 +44,12 @@ extern   "C"
 #define PART_NOT_AVAIL	-2
 #define CONTEXT_CACHE_WIDTH	6
 
-#define NO_INTRA_PMODE	9	//!< #intra prediction modes
-
 #define EOS		1	//!< End Of Sequence
 #define SOP		2	//!< Start Of Picture
 #define	SOS		3	//!< Start Of Slice
 
 #define	SINT_MAX	0x7fffffff
 #define UINT_MAX	0xffffffff
-
-/*define MB type*/
-#define	P8x8		8
-#define I4MB_264	9
-#define	I16MB		10
-#define	IBLOCK_264	11
-#define	SI4MB		12
-#define	I8MB		13
-#define	IPCM		14
-#define	MAXMODE		15
-
-#define	PMB16x16	1
-#define	PMB16x8		2
-#define PMB8x16		3
-
-#define PMB8X8_BLOCK8X8	4
-#define PMB8X8_BLOCK8X4	5
-#define	PMB8X8_BLOCK4X8	6
-#define	PMB8X8_BLOCK4X4	7
 
 //nalu type
 #define NALU_TYPE_SLICE		1
@@ -102,43 +81,6 @@ extern   "C"
 #define	P_SLICE		1
 #define B_SLICE		2
 #define I_SLICE		0
-
-#define NO_INTRA_PMODE  9        //!< #intra prediction modes
-/* 4x4 intra prediction modes */
-#define VERT_PRED             0
-#define HOR_PRED              1
-#define DC_PRED               2
-#define DIAG_DOWN_LEFT_PRED   3
-#define DIAG_DOWN_RIGHT_PRED  4
-#define VERT_RIGHT_PRED       5
-#define HOR_DOWN_PRED         6
-#define VERT_LEFT_PRED        7
-#define HOR_UP_PRED           8
-
-//define MB type
-//#define P8x8    8
-//#define I4MB_264    9
-//#define I16MB   10
-//#define IBLOCK_264  11
-//#define SI4MB   12
-//#define I8MB    13
-//#define IPCM    14
-//#define MAXMODE 15
-
-#define IS_DIRECT(MB)   ((MB)->mb_type==0     && (img_ptr->type==B_SLICE ))
-#define IS_P8x8(MB)     ((MB)->mb_type==P8x8)
-#define IS_INTERMV(MB)  ((MB)->mb_type!=I4MB_264  && (MB)->mb_type!=I16MB  && (MB)->mb_type!=0 && (MB)->mb_type!=IPCM)
-
-//--- block types for CABAC ----
-#define MB_TYPE_LUMA_16DC       0
-#define MB_TYPE_LUMA_16AC       1
-//#define MB_TYPE_LUMA_8x8        2
-//#define MB_TYPE_LUMA_8x4        3
-//#define MB_TYPE_LUMA_4x8        4
-#define MB_TYPE_LUMA_4x4        5
-#define MB_TYPE_CHROMA_DC       6
-#define MB_TYPE_CHROMA_AC       7
-#define NUM_BLOCK_TYPES 8
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

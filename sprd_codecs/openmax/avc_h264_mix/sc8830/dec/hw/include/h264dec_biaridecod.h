@@ -26,15 +26,7 @@ extern   "C"
 {
 #endif
 
-uint32 arideco_start_decoding(DEC_IMAGE_PARAMS_T *img_ptr);
 void biari_init_context (DEC_IMAGE_PARAMS_T *img_ptr, BiContextType *ctx, const int* ini);
-uint32 biari_decode_symbol (DEC_IMAGE_PARAMS_T *img_ptr, BiContextType *bi_ctx_ptr);
-uint32 biari_decode_final (DEC_IMAGE_PARAMS_T *img_ptr);
-uint32 unary_bin_max_decode (DEC_IMAGE_PARAMS_T *img_ptr, BiContextType *bi_ctx_ptr, int32 ctx_offset, uint32 max_symbol);
-uint32 unary_bin_decode (DEC_IMAGE_PARAMS_T *img_ptr, BiContextType *bi_ctx_ptr, int32 ctx_offset);
-uint32 unary_exp_golomb_mv_decode (DEC_IMAGE_PARAMS_T *img_ptr, BiContextType *bi_ctx_ptr, uint32 max_bin);
-uint32 biari_decode_symbol_eq_prob(DEC_IMAGE_PARAMS_T *img_ptr);
-uint32 exp_golomb_decode_eq_prob(DEC_IMAGE_PARAMS_T *img_ptr, int32 k);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
