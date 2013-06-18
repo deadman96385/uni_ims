@@ -95,6 +95,23 @@ LOCAL void H264Dec_active_sps (DEC_SPS_T *sps_ptr)
 	{
 		g_active_sps_ptr = sps_ptr;
 
+//                if(!b_video_buffer_malloced && g_sps_ptr->pic_height_in_map_units_minus1/* && g_sps_ptr->profile_idc != 0x42*/)
+                if (VSP_mallocCb)                               
+                {
+                    // Malloc direct mb info buffers
+                	uint32 malloc_buffer_num;
+                	uint32 malloc_buffer_size;
+
+                	malloc_buffer_num = 17;
+                	malloc_buffer_size =  ((g_sps_ptr->pic_height_in_map_units_minus1+1) * (g_sps_ptr->pic_width_in_mbs_minus1+1))  * 80;
+
+                   	 ALOGE("%s, %d", __FUNCTION__, __LINE__);
+
+                	VSP_mallocCb (g_user_data, direct_mb_info_addr, malloc_buffer_num, malloc_buffer_size);
+
+//                	b_video_buffer_malloced = 1;
+                }
+
 		img_ptr->max_frame_num = (1<<(sps_ptr->log2_max_frame_num_minus4+4));
 		img_ptr->frame_width_in_mbs = (sps_ptr->pic_width_in_mbs_minus1+1);
 		img_ptr->pic_height_in_map_units = (sps_ptr->pic_height_in_map_units_minus1+1);

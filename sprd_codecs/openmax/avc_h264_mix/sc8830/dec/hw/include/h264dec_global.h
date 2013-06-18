@@ -28,6 +28,14 @@ extern   "C"
 {
 #endif
 
+#ifdef _VSP_LINUX_
+#include "h264dec.h"
+extern FunctionType_BufCB VSP_bindCb;
+extern FunctionType_BufCB VSP_unbindCb;
+extern void *g_user_data;
+extern FunctionType_MallocCB VSP_mallocCb;
+#endif
+
 extern INPUT_PARA_T *g_input;
 extern DEC_STORABLE_PICTURE_T g_rec_buf;
 extern DEC_SPS_T	*g_sps_ptr;

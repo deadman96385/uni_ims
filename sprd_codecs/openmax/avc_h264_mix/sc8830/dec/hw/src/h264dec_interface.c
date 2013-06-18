@@ -273,7 +273,7 @@ PUBLIC MMDecRet H264DecDecode_NALU(MMDecInput *dec_input_ptr, MMDecOutput *dec_o
 	}
 }
 
-int32 b_video_buffer_malloced = 0;
+//int32 b_video_buffer_malloced = 0;
 
 PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, MMDecOutput *dec_output_ptr)
 {
@@ -343,7 +343,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 			break;	//break loop.					
 		}
 	}
-
+#if 0
     if(!b_video_buffer_malloced && g_sps_ptr->pic_height_in_map_units_minus1/* && g_sps_ptr->profile_idc != 0x42*/)
     {
         // Malloc direct mb info buffers
@@ -359,7 +359,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
 	b_video_buffer_malloced = 1;
     }
-
+#endif
           VSP_RELEASE_Dev();
  
     return ret;

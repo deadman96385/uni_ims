@@ -1,5 +1,5 @@
 /******************************************************************************
- ** File Name:      hdvsp.h                                         *
+ ** File Name:      vsp_drv_sc8830.h                                         *
  ** Author:         william wei                                               *
  ** DATE:           09/29/2012                                                *
  ** Copyright:      2012 Spreatrum, Incoporated. All Rights Reserved.         *

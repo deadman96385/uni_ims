@@ -89,6 +89,8 @@ PUBLIC int32 VSP_POLL_COMPLETE(void)
 
 	ioctl(s_vsp_fd,VSP_COMPLETE,&ret);
 
+        SCI_TRACE_LOW("%s, %d, tmp1: %0x", __FUNCTION__, __LINE__, ret);
+
          return ret;
 }
 
