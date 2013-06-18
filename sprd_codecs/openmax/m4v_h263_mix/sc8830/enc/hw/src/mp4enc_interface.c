@@ -14,10 +14,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "vsp_drv_sc8830.h"
-#include "vsp_mp4_enc.h"
-#include "mp4enc_or_fw.h"
-#include "mpeg4enc.h"
+#include "sc8810_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -26,39 +23,7 @@
     {
 #endif
 
-FunctionType_BufCB VSP_bindCb = NULL;
-FunctionType_BufCB VSP_unbindCb = NULL;
-void *g_user_data = NULL;
-FunctionType_MallocCB VSP_mallocCb = NULL;
 
-MP4ENC_SHARE_RAM s_mp4enc_share_ram;
-
-/*************************************/
-/* functions needed for android platform */
-/*************************************/
-PUBLIC void ARM_VSP_BIND()
-{
-    uint32 buffer_header;
-    int32 buffer_num,i;
-    buffer_num =  (VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x70,"bind_buffer_number")) >> 16;
-    if(buffer_num)
-    {
-	buffer_header = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x6c,"bind_buffer_header");
-        (*VSP_bindCb)(g_user_data,(void *)buffer_header);
-    }
-}
-
-PUBLIC void ARM_VSP_UNBIND()
-{
-    uint32 buffer_header;
-    int32 buffer_num,i;
-    buffer_num =  (VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x70,"unbind_buffer_number")) & 0xffff;
-    for(i =0; i < buffer_num; i++)
-    {
-	buffer_header = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x74+i*4,"unbind_buffer_header");
-        (*VSP_unbindCb)(g_user_data,(void *)buffer_header);
-    }
-}
 
 /*****************************************************************************/
 //  Description:   Generate mpeg4 header
@@ -68,25 +33,85 @@ PUBLIC void ARM_VSP_UNBIND()
 /*****************************************************************************/
 MMEncRet MP4EncGenHeader(MMEncOut *pOutput)
 {
-    MP4ENC_SHARE_RAM *share_ram = &s_mp4enc_share_ram;
-                            ALOGI("%s, %d", __FUNCTION__, __LINE__);
+	uint32 NumBits = 0;
+	VOL_MODE_T *pVol_mode = Mp4Enc_GetVolmode();
+	ENC_VOP_MODE_T *pVop_mode = Mp4Enc_GetVopmode();
 
-    OR_VSP_RST();	
+	uint8 video_type =pVol_mode->short_video_header ?STREAM_ID_H263: STREAM_ID_MPEG4 ;
 
-    // Send MP4ENC_HEADER signal to Openrisc.
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x58, MP4ENC_HEADER,"Call  MP4ENC_HEADER function.");	
+	if(ARM_VSP_RST()<0)
+	{
+		return MMDEC_HW_ERROR;
+	}
+				
+	OR1200_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF,( 1 << 4) |video_type, "ORSC: VSP_MODE: Set standard, work mode and manual mode");
+		
+	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL: software access.");	
 
-    OR_VSP_START();	
+	BSM_Init();
+	
 
-    share_ram->bs_used_len =  VSP_READ_REG(SHARE_RAM_BASE_ADDR +0x20, "SHARE_RAM_BASE_ADDR 0x20:bs_used_len ");
+	SCI_ASSERT(NULL != pVol_mode);
+	SCI_ASSERT(NULL != pVop_mode);
+#ifdef _LIB
+	memset(pVop_mode->pOneFrameBitstream, 0, pVop_mode->OneframeStreamLen);
+#endif
+	if(!pVop_mode->short_video_header)   //MPEG-4 case
+	{	
+		NumBits = Mp4Enc_EncSequenceHeader(pVol_mode, pVop_mode);
+		NumBits += Mp4Enc_EncVOHeader(pVop_mode);	
+		NumBits += Mp4Enc_EncVOLHeader(pVol_mode, pVop_mode);
+	//	NumBits += Mp4Enc_OutputLeftBits();	
+#ifdef SIM_IN_WIN
+		pVop_mode->stm_offset += ((g_bsm_reg_ptr->TOTAL_BITS + 7) >> 3);		
+		//clear bsm-fifo, polling inactive status reg
+		VSP_WRITE_REG(VSP_BSM_REG_BASE+BSM_CFG2_OFF, V_BIT_1, "clear bsm-fifo"); 
+	#if _CMODEL_
+		clear_bsm_fifo();
+	#endif
+		READ_REG_POLL(VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "polling BSMW inactive status");
+		{
+//			OR1200_READ_REG_POLL(GLB_REG_BASE_ADDR, V_BIT_1, V_BIT_1, "ORSC: Polling VLC_FRM_DONE "); //check vlc frame done
+			OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+0x18, V_BIT_27, 0x00000000, "ORSC: Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
+			OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + 0x08, 0x2, "ORSC: BSM_OPERATE: BSM_CLR");
+			OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+0x18, V_BIT_31, V_BIT_31, "ORSC: Polling BSM_DBG0: BSM inactive"); //check bsm is idle
+		}
+		pOutput->strmSize = (VSP_READ_REG(VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "read total bits") + 7 ) >>3;
+		pOutput->strmSize = (pOutput->strmSize+7)&0xfffffff8; // DWORD aligned
+#else
+		{
+//			OR1200_READ_REG_POLL(GLB_REG_BASE_ADDR, V_BIT_1, V_BIT_1, "ORSC: Polling VLC_FRM_DONE "); //check vlc frame done
+			OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+0x18, V_BIT_27, 0x00000000, "ORSC: Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
+			OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + 0x08, 0x2, "ORSC: BSM_OPERATE: BSM_CLR");
+			OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+0x18, V_BIT_31, V_BIT_31, "ORSC: Polling BSM_DBG0: BSM inactive"); //check bsm is idle
+		}
+		//OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+0x08, V_BIT_1, "clear bsm-fifo");
+		//OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+0x00, V_BIT_31, V_BIT_31, "polling BSMW inactive status");
+		//pVop_mode->stm_offset = (OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+0x14,"ORSC_SHARE: read total bits") + 7) >> 3;
+		//pVop_mode->stm_offset += OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+0x2c,"ORSC: DSTUF_NUM");
+		//pVop_mode->stm_offset = (pVop_mode->stm_offset+7)&0xfffffff8; // DWORD aligned
 
-    pOutput->pOutBuf = (uint8 *)share_ram->bs_start_addr ;
-    pOutput->strmSize = share_ram->bs_used_len;
+		pOutput->strmSize = (OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+0x14,"ORSC_SHARE: read total bits") + 7) >> 3;
+#endif
+		
+	}else
+	{
+		pOutput->strmSize = 0;
+	}
+#ifdef OUTPUT_TEST_VECTOR
+	if (!pVop_mode->short_video_header)
+	{
+		if(g_fp_bsm_total_bits_tv != NULL)
+			fprintf(g_fp_bsm_total_bits_tv, "%08x\n", NumBits);
+	}
+#endif
 
-    VSP_RELEASE_Dev();
-                              ALOGI("%s, %d, pOutput->strmSize: %d", __FUNCTION__, __LINE__, pOutput->strmSize);
-  
-    return MMENC_OK;
+	pOutput->pOutBuf = pVop_mode->pOneFrameBitstream;
+
+
+ 	//VSP_RELEASE_Dev();
+
+	return MMENC_OK;
 }
 
 /*****************************************************************************/
@@ -97,32 +122,24 @@ MMEncRet MP4EncGenHeader(MMEncOut *pOutput)
 /*****************************************************************************/
 MMEncRet MP4EncSetConf(MMEncConfig *pConf)
 {
-    MP4ENC_SHARE_RAM *share_ram = &s_mp4enc_share_ram;
+	VOL_MODE_T *pVol_mode = Mp4Enc_GetVolmode();
+	ENC_VOP_MODE_T *pVop_mode = Mp4Enc_GetVopmode();
+
+	SCI_ASSERT(NULL != pConf);
+	SCI_ASSERT(NULL != pVol_mode);
+	SCI_ASSERT(NULL != pVop_mode);
+
+	pVol_mode->short_video_header	= pConf->h263En;
+	pVol_mode->ProfileAndLevel		= pConf->profileAndLevel;
 	
-    share_ram->mp4enc_short_video_header	= pConf->h263En;
-    share_ram->mp4enc_ProfileAndLevel		= pConf->profileAndLevel;
+	pVop_mode->FrameRate			= pConf->FrameRate;	
+	pVop_mode->targetBitRate		= pConf->targetBitRate;
+	pVop_mode->RateCtrlEnable		= pConf->RateCtrlEnable;
 	
-    share_ram->mp4enc_FrameRate			= pConf->FrameRate;	
-    share_ram->mp4enc_targetBitRate		= pConf->targetBitRate;
-    share_ram->mp4enc_RateCtrlEnable		= pConf->RateCtrlEnable;
-	
-    share_ram->mp4enc_StepI				= pConf->QP_IVOP;
-    share_ram->mp4enc_StepP				= pConf->QP_PVOP;
+	pVop_mode->StepI				= pConf->QP_IVOP;
+	pVop_mode->StepP				= pConf->QP_PVOP;
 
-    OR_VSP_RST();	
-
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR + 0x60, (share_ram->mp4enc_StepP <<24)|(share_ram->mp4enc_StepI<<16)|(share_ram->mp4enc_RateCtrlEnable<<8)|(share_ram->mp4enc_short_video_header),"config");
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR + 0x64, (share_ram->mp4enc_FrameRate),"SHARE_RAM_BASE_ADDR 0x64:mp4enc_FrameRate ");
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR + 0x68, (share_ram->mp4enc_targetBitRate),"SHARE_RAM_BASE_ADDR 0x68: mp4enc_targetBitRate");
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR + 0x6c, (share_ram->mp4enc_ProfileAndLevel), "SHARE_RAM_BASE_ADDR 0x6c:mp4enc_ProfileAndLevel");
-
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x58, MP4ENC_SETCONF,"Call  MP4ENC_SETCONF function.");	
-
-    OR_VSP_START();	
-    VSP_RELEASE_Dev();
-    
-
-    return MMENC_OK;
+	return MMENC_OK;
 }
 
 /*****************************************************************************/
@@ -133,42 +150,24 @@ MMEncRet MP4EncSetConf(MMEncConfig *pConf)
 /*****************************************************************************/
 MMEncRet MP4EncGetConf(MMEncConfig *pConf)
 {
-    MP4ENC_SHARE_RAM *share_ram = &s_mp4enc_share_ram;
-    uint32 tmp;	
+	VOL_MODE_T *pVol_mode = Mp4Enc_GetVolmode();
+	ENC_VOP_MODE_T *pVop_mode = Mp4Enc_GetVopmode();
 
-    SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+	SCI_ASSERT(NULL != pConf);
+	SCI_ASSERT(NULL != pVol_mode);
+	SCI_ASSERT(NULL != pVop_mode);
 
-    OR_VSP_RST();	
-    
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x58, MP4ENC_GETCONF,"Call  MP4ENC_GETCONF function.");	
-
-    OR_VSP_START();	
-
-    tmp = VSP_READ_REG(SHARE_RAM_BASE_ADDR + 0x60, "config");
-    share_ram->mp4enc_short_video_header 	= tmp & 0x1;
-    share_ram->mp4enc_RateCtrlEnable		=( tmp >>8) & 0x1;
-    share_ram->mp4enc_StepI				= (tmp >>16)&0Xff;
-    share_ram->mp4enc_StepP				= (tmp >>24)&0xff;
-
-    share_ram->mp4enc_FrameRate		= VSP_READ_REG(SHARE_RAM_BASE_ADDR + 0x64, "SHARE_RAM_BASE_ADDR 0x64:mp4enc_FrameRate ");
-    share_ram->mp4enc_targetBitRate		= VSP_READ_REG(SHARE_RAM_BASE_ADDR + 0x68, "SHARE_RAM_BASE_ADDR 0x68: mp4enc_targetBitRate");
-    share_ram->mp4enc_ProfileAndLevel	= VSP_READ_REG(SHARE_RAM_BASE_ADDR + 0x6c,  "SHARE_RAM_BASE_ADDR 0x6c:mp4enc_ProfileAndLevel");
-
-    pConf->QP_IVOP                          = share_ram->mp4enc_StepI;
-    pConf->QP_PVOP                          = share_ram->mp4enc_StepP;
+	pConf->QP_IVOP = pVop_mode->StepI;
+	pConf->QP_PVOP = pVop_mode->StepP;
 	
-    pConf->h263En                               = share_ram->mp4enc_short_video_header;
-    pConf->profileAndLevel                  = share_ram->mp4enc_ProfileAndLevel;
+	pConf->h263En = pVol_mode->short_video_header;
+	pConf->profileAndLevel = pVol_mode->ProfileAndLevel;
 
-    pConf->targetBitRate 			= share_ram->mp4enc_targetBitRate;
-    pConf->FrameRate 				= share_ram->mp4enc_FrameRate;	
-    pConf->RateCtrlEnable 			= share_ram->mp4enc_RateCtrlEnable; 
-
-    VSP_RELEASE_Dev();
-
-    SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+	pConf->targetBitRate = pVop_mode->targetBitRate;
+	pConf->FrameRate = pVop_mode->FrameRate;	
+	pConf->RateCtrlEnable = pVop_mode->RateCtrlEnable; 
 	
-    return MMENC_OK;
+	return MMENC_OK;
 }
 
 /*****************************************************************************/
@@ -179,9 +178,14 @@ MMEncRet MP4EncGetConf(MMEncConfig *pConf)
 /*****************************************************************************/
 MMEncRet MP4EncRelease(void)
 {
-#ifndef _FPGA_TEST_
-	VSP_CLOSE_Dev();
+// 	Mp4_CommonMemFree();
+	Mp4Enc_MemFree();
+
+// 	g_bVspInited = FALSE;
+#if _CMODEL_
+	VSP_Delete_CModel();
 #endif
+
 	return MMENC_OK;
 }
 
@@ -198,13 +202,12 @@ void MPEG4Enc_close(void)
 /*****************************************************************************/
 MMEncRet MP4EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat)
 {
-    MMDecRet ret;
-    uint32 * OR_addr_vitual_ptr;
-    MP4ENC_SHARE_RAM *share_ram = &s_mp4enc_share_ram;
+	uint16 frame_width = pVideoFormat->frame_width;
+	uint16 frame_height = pVideoFormat->frame_height;
+	VOL_MODE_T  *vol_mode_ptr = NULL;
+	ENC_VOP_MODE_T  *vop_mode_ptr = NULL;
+	MMEncRet init_return;
 
-    OR_addr_ptr = (uint32 *)(pInterMemBfr->common_buffer_ptr_phy);
-    OR_addr_vitual_ptr = (uint32 *)(pInterMemBfr->common_buffer_ptr);
-    
 #ifndef _FPGA_TEST_
     if(VSP_OPEN_Dev()<0)
     {
@@ -212,49 +215,73 @@ MMEncRet MP4EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,MMCo
     }	
 #endif
 
-    //Load firmware to ddr
-    memcpy(OR_addr_vitual_ptr, mp4enc_code, MP4ENC_OR_DATA_SIZE);
+	OR1200_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF, STREAM_ID_MPEG4|(1<<4), "ORSC: VSP_MODE: Set standard and work mode");
 
-    if(OR_VSP_RST()<0)
-    {
-	return MMDEC_HW_ERROR;
-    }
 
-    //Function related share ram configuration.
-    share_ram->malloc_mem0_start_addr=MP4ENC_OR_INTER_START_ADDR;	// Addr in Openrisc space. 
-    share_ram->total_mem0_size=MP4ENC_OR_INTER_MALLOC_SIZE;	
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+8, share_ram->malloc_mem0_start_addr,"shareRAM 8 VSP_MEM0_ST_ADDR");//OPENRISC ddr_start_addr+code size
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0xc, share_ram->total_mem0_size,"shareRAM c CODE_RUN_SIZE");//OPENRISC text+heap+stack
+	Mp4Enc_InitMem(pInterMemBfr, pExtaMemBfr);
+	vol_mode_ptr = (VOL_MODE_T *)Mp4Enc_InterMemAlloc(sizeof(VOL_MODE_T));	
+	Mp4Enc_SetVolmode(vol_mode_ptr);
+	vop_mode_ptr = (ENC_VOP_MODE_T *)Mp4Enc_InterMemAlloc(sizeof(ENC_VOP_MODE_T)); 
+	Mp4Enc_SetVopmode(vop_mode_ptr);
+
+	g_vlc_hw_ptr = (uint32 *) Mp4Enc_InterMemAlloc(320*8);
+
+	memcpy(g_vlc_hw_ptr, g_vlc_hw_tbl, (320*8));
 	
-    share_ram->malloc_mem1_start_addr = (uint32 )(pExtaMemBfr->common_buffer_ptr_phy);
-    share_ram->total_mem1_size= pExtaMemBfr->size;
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x10, share_ram->malloc_mem1_start_addr,"shareRAM 0x10: VSP_MEM1_ST_ADDR");
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x14, share_ram->total_mem1_size,"shareRAM 0x14: VSP_MEM1_SIZE");
-    
-    share_ram->bs_start_addr = (uint32 )pBitstreamBfr->common_buffer_ptr;
-    share_ram->bs_buffer_size=pBitstreamBfr->size;
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x18,  (uint32 )pBitstreamBfr->common_buffer_ptr_phy,"shareRAM 0x18: STREAM_BUF_ADDR");
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x1c, share_ram->bs_buffer_size,"shareRAM 0x1c: bs_buffer_size");
-
-    share_ram->standard = (pVideoFormat->is_h263)? STREAM_ID_H263: STREAM_ID_MPEG4;
-    share_ram->b_anti_shake = 0; // DISABLE anti-shark.
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+ 0x0, (share_ram->b_anti_shake <<17)|(share_ram->standard),"SHARE_RAM_BASE_ADDR 0x0: config.");
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+ 0x40, (pVideoFormat->time_scale), "SHARE_RAM_BASE_ADDR 0x40: time_scale.");
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+ 0x4, (pVideoFormat->frame_height <<12)|(pVideoFormat->frame_width),"SHARE_RAM_BASE_ADDR 0x4: image size");
-
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+ 0x44, 0, ""); // Anti-shake disabled.
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+ 0x50, 0, ""); // Anti-shake disabled.
+	vop_mode_ptr->short_video_header = vol_mode_ptr->short_video_header  = pVideoFormat->is_h263;
+	vop_mode_ptr->uv_interleaved = pVideoFormat->uv_interleaved = 1;
 	
-    // Send MP4ENC_INIT signal to Openrisc.
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x58, MP4ENC_INIT,"Call  MP4ENC_INIT function.");		
+	vol_mode_ptr->VolWidth = frame_width;
+	vol_mode_ptr->VolHeight = frame_height;
 
-    ret = (MMDecRet)OR_VSP_START();
+	g_enc_last_modula_time_base = 0;
+	g_enc_tr = 0;
+	g_enc_is_prev_frame_encoded_success = FALSE;
+	g_enc_p_frame_count = 0;	
+	g_nFrame_enc = 0;
 
-    VSP_RELEASE_Dev();
+	g_anti_shake.enable_anti_shake = 0;
+	g_anti_shake.shift_x = 0;
+	g_anti_shake.shift_y = 0;
+	g_anti_shake.input_width = frame_width;
+	g_anti_shake.input_height= frame_height;
 	
-    return ret;
+	or1200_print = 1;//for or1200 cmd
+
+	Mp4Enc_InitVolVopPara(vol_mode_ptr, vop_mode_ptr, pVideoFormat->time_scale);
+	Mp4Enc_InitSession(vol_mode_ptr, vop_mode_ptr); 
+
+	
+	vop_mode_ptr->pOneFrameBitstream = pBitstreamBfr->common_buffer_ptr;
+	vop_mode_ptr->OneFrameBitstream_addr_phy = (uint32)pBitstreamBfr->common_buffer_ptr_phy;
+	vop_mode_ptr->OneframeStreamLen = pBitstreamBfr->size;
+	return MMENC_OK;
 }
 
+
+
+#if defined(_LIB)
+void Mp4_WriteRecFrame_LIB(uint8 *pRec_Y, uint8 *pRec_U, uint8 *pRec_V, uint32 frame_width, uint32 frame_height)
+{
+	uint32 size = frame_width * frame_height;
+	FILE *rec_file = fopen("D:\\james.chen\\rec_file.yuv", "ab");
+	fwrite(pRec_Y,1,size, rec_file);
+	
+	/*if (!g_uv_interleaved)
+	{
+		size = size>>2;
+		fwrite(pRec_U,1,size, rec_file);
+		fwrite(pRec_V,1,size, rec_file);
+	}else*/
+	{
+		size = size>>1;
+		fwrite(pRec_U,1,size, rec_file);
+	}
+	
+	fclose(rec_file);
+	return;
+}
+#endif
 /*****************************************************************************/
 //  Description:   Encode one vop	
 //	Global resource dependence: 
@@ -263,35 +290,177 @@ MMEncRet MP4EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,MMCo
 /*****************************************************************************/
 MMEncRet MP4EncStrmEncode(MMEncIn *pInput, MMEncOut *pOutput)
 {
-    MP4ENC_SHARE_RAM *share_ram = &s_mp4enc_share_ram;
-    SCI_TRACE_LOW("%s, %d, pInput->vopType: %d", __FUNCTION__, __LINE__, pInput->vopType);
+	int32 ret;
+	VOP_PRED_TYPE_E frame_type;
+	VOL_MODE_T *pVol_mode = Mp4Enc_GetVolmode();
+	ENC_VOP_MODE_T *pVop_mode = Mp4Enc_GetVopmode();
+	BOOLEAN *pIs_prev_frame_success = &g_enc_is_prev_frame_encoded_success;
+	uint32 frame_width = pVop_mode->FrameWidth;
+	uint32 frame_height = pVop_mode->FrameHeight;
+	uint32 frame_size = frame_width * frame_height;
+	BOOLEAN frame_skip = FALSE;
+	uint8 video_type =pVol_mode->short_video_header ?STREAM_ID_H263: STREAM_ID_MPEG4 ;
 
-    OR_VSP_RST();	
+	or1200_print = 1;
 
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+AXIM_ENDIAN_OFF, 0x30868,"axim endian set, vu format"); // VSP and OR endian.
+	if(ARM_VSP_RST()<0)
+	{
+		return MMDEC_HW_ERROR;
+	}
 
-    //Function related share ram configuration.
-    share_ram->frameY_addr = (uint32)pInput->p_src_y_phy;
-    share_ram->frameUV_addr = (uint32)pInput->p_src_u_phy;
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x2c, share_ram->frameY_addr,"SHARE_RAM_BASE_ADDR 0x2c:frameY_addr " );
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x30, share_ram->frameUV_addr,"SHARE_RAM_BASE_ADDR 0x30:frameUV_addr " );
+	 OR1200_WRITE_REG(GLB_REG_BASE_ADDR+AXIM_ENDIAN_OFF, 0x30868,"axim endian set, vu format"); // VSP and OR endian.
+				
+	OR1200_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF,( 1 << 4) |video_type, "ORSC: VSP_MODE: Set standard, work mode and manual mode");
+		
+	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL: software access.");	
+
+	pVop_mode->mbline_num_slice	= 5;//pVop_mode->FrameHeight/MB_SIZE;
+	pVop_mode->intra_mb_dis		= 30;	
+
+	if(!pVop_mode->bInitRCSuceess)
+	{
+		Mp4Enc_InitRateCtrl(&g_rc_par, &g_stat_rc);
+		pVop_mode->bInitRCSuceess = TRUE;
+	}
+
+	if(pInput->vopType == IVOP)
+	{
+		g_rc_par.p_count = 0;
+	}
+
+	frame_type 				= pInput->vopType;//Mp4Enc_JudgeFrameType (&g_rc_par, &g_stat_rc);
+	pVop_mode->VopPredType	= (pInput->vopType == IVOP)?IVOP:frame_type;
+	frame_skip				= (frame_type == NVOP) ? 1 : 0;
+
+	pVop_mode->pYUVSrcFrame->imgY = pInput->p_src_y_phy;
+	pVop_mode->pYUVSrcFrame->imgYAddr = (uint32)pVop_mode->pYUVSrcFrame->imgY / 8;
+	pVop_mode->pYUVSrcFrame->imgU = pInput->p_src_u_phy;
+	pVop_mode->pYUVSrcFrame->imgUAddr = (uint32)pVop_mode->pYUVSrcFrame->imgU / 8;			
 	
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x3c,pInput->time_stamp,"SHARE_RAM_BASE_ADDR 0x3c:time_stamp ");
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x70,pInput->vopType, "SHARE_RAM_BASE_ADDR 0x70: mp4enc_vopType");
-    
-    VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x58, MP4ENC_ENCODE,"Call  MP4ENC_ENCODE function.");	
+	PRINTF("%d ", g_nFrame_enc);
+	g_nFrame_enc++;
+	
+	if(!frame_skip)
+	{	
+		g_stat_rc.be_re_enc		= FALSE;
+		g_stat_rc.be_skip_frame = FALSE;
 
-    OR_VSP_START();	
+#ifdef RE_ENC_SHEME
+FRAME_ENC:
+#endif
+		Mp4Enc_InitRCFrame (&g_rc_par);
 
-    share_ram->bs_used_len =  VSP_READ_REG(SHARE_RAM_BASE_ADDR +0x20, "SHARE_RAM_BASE_ADDR 0x20:bs_used_len ");
 
-    pOutput->pOutBuf =  (uint8 *)share_ram->bs_start_addr ;
-    pOutput->strmSize = share_ram->bs_used_len;
 
-    VSP_RELEASE_Dev();
-                              ALOGI("%s, %d, pOutput->strmSize: %d", __FUNCTION__, __LINE__, pOutput->strmSize);
+		if(IVOP == frame_type)
+		{
 
-    return MMENC_OK;
+			Mp4Enc_InitRCGOP (&g_rc_par);
+			ret = Mp4Enc_EncIVOP(pVop_mode, pInput->time_stamp);
+		    g_enc_p_frame_count = pVol_mode->PbetweenI;
+		}
+		else
+		{
+
+			g_enc_p_frame_count--;
+
+			ret = Mp4Enc_EncPVOP(pVop_mode, pInput->time_stamp);
+		}
+
+		(*pIs_prev_frame_success) = ret;
+
+		//OR1200_READ_REG_POLL(GLB_REG_BASE_ADDR, V_BIT_1, V_BIT_1, "ORSC: Polling VLC_FRM_DONE "); //check vlc frame done
+		OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+0x18, V_BIT_27, 0x00000000, "ORSC: Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
+		OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + 0x08, 0x2, "ORSC: BSM_OPERATE: BSM_CLR");
+		OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+0x18, V_BIT_31, V_BIT_31, "ORSC: Polling BSM_DBG0: BSM inactive"); //check bsm is idle
+		
+
+		//pVop_mode->stm_offset += (OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+0x14,"ORSC_SHARE: read total bits") + 7)>>3;
+
+		//pVop_mode->stm_offset += pOutput->strmSize;
+
+		//pVop_mode->stm_offset += OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+0x2c,"ORSC: DSTUF_NUM");
+		//pVop_mode->stm_offset = (pVop_mode->stm_offset+7)&0xfffffff8; // DWORD aligned
+		//OR1200_WRITE_REG(SHARE_RAM_BASE_ADDR+0x20, pVop_mode->stm_offset,"shareRAM 0x20 stream_len");
+		//g_rc_par.nbits_total = pVop_mode->stm_offset<<3;
+
+		pOutput->strmSize = (OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+0x14,"ORSC_SHARE: read total bits") + 7)>>3;
+
+		pOutput->pOutBuf = pVop_mode->pOneFrameBitstream;
+
+		g_rc_par.sad = 10000;
+
+		g_rc_par.nbits_total = pOutput->strmSize<<3;
+
+		if (pVop_mode->RateCtrlEnable)
+		{
+			int32 Ec_Q8 = (g_rc_par.sad/pVop_mode->MBNum);
+
+#ifdef RE_ENC_SHEME
+			Mp4Enc_AnalyzeEncResult(&g_stat_rc, g_rc_par.nbits_total, frame_type, Ec_Q8);
+
+			if (g_stat_rc.be_re_enc)
+			{
+				if (g_stat_rc.be_scene_cut)
+				{
+					frame_type = IVOP;
+					g_rc_par.p_count = g_rc_par.p_between_i;
+				}
+
+				PRINTF("\t bisTotalCur: %d, frame re-encoded\n", g_rc_par.nbits_total);
+
+				g_re_enc_frame_number++;
+
+				goto FRAME_ENC;
+			}
+
+			if (g_stat_rc.be_skip_frame)
+			{
+				pOutput->strmSize = 0;
+				PRINTF("\t bitsTotalCur: %d, frame skipped\n", g_rc_par.nbits_total);
+				 VSP_RELEASE_Dev();
+				return MMENC_OK;
+			}
+#endif
+
+			if (IVOP == frame_type)
+			{
+				Mp4Enc_ResetRCModel (pVop_mode, &g_stat_rc, &g_rc_par);
+			}
+			else
+			{						
+				Mp4Enc_UpdateRCModel (pVop_mode, &g_stat_rc, &g_rc_par, Ec_Q8);
+			}
+		}
+
+	
+		//update ref frame
+		Mp4Enc_UpdateRefFrame(pVop_mode);
+	}else
+	{
+		pOutput->strmSize = 0;		
+	}
+
+
+	    VSP_RELEASE_Dev();
+
+
+		
+	return MMENC_OK;
+}
+
+/*****************************************************************************/
+//  Description: check whether VSP can used for video encoding or not
+//	Global resource dependence: 
+//  Author:        
+//	Note: return VSP status:
+//        1: dcam is idle and can be used for vsp   0: dcam is used by isp           
+/*****************************************************************************/
+BOOLEAN MPEG4ENC_VSP_Available(void)
+{
+
+	return TRUE;
+
 }
 
 /**---------------------------------------------------------------------------*
