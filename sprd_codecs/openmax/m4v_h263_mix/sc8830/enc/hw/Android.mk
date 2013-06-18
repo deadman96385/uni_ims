@@ -2,7 +2,16 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := \
+	src/mp4enc_bitstrm.c \
+	src/mp4enc_global.c \
+	src/mp4enc_header.c \
+	src/mp4enc_init.c \
 	src/mp4enc_interface.c \
+	src/mp4enc_malloc.c \
+	src/mp4enc_ratecontrol.c \
+	src/mp4enc_table.c \
+	src/mp4enc_trace.c \
+	src/mp4enc_vop.c \
 	../../../../vsp/sc8830/src/vsp_drv_sc8830.c
 
 
