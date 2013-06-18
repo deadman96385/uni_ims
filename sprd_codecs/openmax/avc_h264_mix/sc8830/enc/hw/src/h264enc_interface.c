@@ -49,8 +49,8 @@ MMEncRet H264EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,MMC
 	g_mb_cache_ptr = (ENC_MB_CACHE_T *)h264enc_extra_mem_alloc(sizeof(ENC_MB_CACHE_T));
 #endif
 
-	img_ptr->width = pVideoFormat->frame_width;
-	img_ptr->height = pVideoFormat->frame_height;
+	img_ptr->width = (pVideoFormat->frame_width + 15)&(~15);
+	img_ptr->height = (pVideoFormat->frame_height+15)&(~15);
 // 	img_ptr->i_frame = 0;
 	img_ptr->frame_num = 0;
 	img_ptr->i_idr_pic_id = 0;
