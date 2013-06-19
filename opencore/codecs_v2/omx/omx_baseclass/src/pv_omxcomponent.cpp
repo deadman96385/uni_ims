@@ -1792,6 +1792,7 @@ OMX_ERRORTYPE OmxComponentBase::SendCommand(
                 if (OMX_ErrorNone != ErrMsgHandler)
                 {
                     PVLOGGER_LOGMSG(PVLOGMSG_INST_HLDBG, iLogger, PVLOGMSG_NOTICE, (0, "OmxComponentBase : SendCommand error component init"));
+                    oscl_free(Message);
                     return OMX_ErrorInsufficientResources;
                 }
                 for (ii = 0; ii < iNumPorts; ii++)
@@ -1847,6 +1848,7 @@ OMX_ERRORTYPE OmxComponentBase::SendCommand(
             if ((nParam != -1) && ((OMX_U32) nParam >= iNumPorts))
             {
                 PVLOGGER_LOGMSG(PVLOGMSG_INST_HLDBG, iLogger, PVLOGMSG_NOTICE, (0, "OmxComponentBase : SendCommand error bad port index"));
+                oscl_free(Message);
                 return OMX_ErrorBadPortIndex;
             }
 
@@ -2039,12 +2041,16 @@ OMX_ERRORTYPE OmxComponentBase::SendCommand(
     if (OMX_ErrorNone != Queue(pMessageQueue, Message))
     {
         PVLOGGER_LOGMSG(PVLOGMSG_INST_HLDBG, iLogger, PVLOGMSG_NOTICE, (0, "OmxComponentBase : SendCommand error, Queuing command failed"));
+        if(Message != NULL)
+            oscl_free(Message);
         return OMX_ErrorInsufficientResources;
     }
 
     RunIfNotReady();
 
     PVLOGGER_LOGMSG(PVLOGMSG_INST_HLDBG, iLogger, PVLOGMSG_NOTICE, (0, "OmxComponentBase : SendCommand OUT"));
+    if(Message != NULL)
+        oscl_free(Message);
     return ErrMsgHandler;
 }
 

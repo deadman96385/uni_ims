@@ -3229,7 +3229,8 @@ PVMFStatus PVMFOMXAudioDecNode::DoCapConfigVerifyParameters(PvmiKvp* aParameters
     OMX_ERRORTYPE Err = OMX_ErrorNone;
     //  uint32 ii;
     // call once to find out the number of components that can fit the role
-    Err = OMX_MasterGetComponentsOfRole(aInputParameters.cComponentRole, &num_comps, NULL);
+    if(NULL != aInputParameters.cComponentRole)
+        Err = OMX_MasterGetComponentsOfRole(aInputParameters.cComponentRole, &num_comps, NULL);
 
     if ((num_comps > 0) && (OMX_ErrorNone == Err))
     {
@@ -4058,6 +4059,14 @@ PVMFStatus PVMFOMXAudioDecNode::DoCapConfigGetParametersSync(PvmiKeyType aIdenti
 
             // allocate a placeholder
             CompOfRole = (OMX_STRING *)oscl_malloc(num_comps * sizeof(OMX_STRING));
+            if (CompOfRole == NULL)
+            {
+                oscl_free(aParameters);
+                oscl_free(memblock);
+                oscl_free(memblockomx);
+                PVLOGGER_LOGMSG(PVLOGMSG_INST_HLDBG, iLogger, PVLOGMSG_ERR, (0, "PVMFOMXVideoDecNode::DoCapConfigGetParametersSync() Memory allocation for omx component strings failed"));
+                return PVMFErrNoMemory;
+            }
 
             for (ii = 0; ii < num_comps; ii++)
             {
