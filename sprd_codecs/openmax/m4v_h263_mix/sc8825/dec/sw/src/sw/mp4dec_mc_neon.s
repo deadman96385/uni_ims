@@ -516,8 +516,8 @@ col				.req			r10
 
 FrameExtendWidth	.req			r11
 
-write_display_frame1:	@FUNCTION
-			.global 		write_display_frame1
+write_display_frame:	@FUNCTION
+			.global 		write_display_frame
 
 			push			{r4 - r11, r14}
 

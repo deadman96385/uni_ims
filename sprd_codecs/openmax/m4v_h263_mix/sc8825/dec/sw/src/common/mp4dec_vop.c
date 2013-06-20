@@ -334,7 +334,7 @@ PUBLIC void Mp4Dec_output_one_frame (MP4DecObject *vd, MMDecOutput *dec_output_p
 			dec_output_ptr->frameEffective = 1;
 			dec_output_ptr->err_MB_num = vop_mode_ptr->err_MB_num;
 
-                        dump_yuv(dec_output_ptr->pOutFrameY, dec_output_ptr->frame_width * dec_output_ptr->frame_height * 3/2);
+                   //     dump_yuv(dec_output_ptr->pOutFrameY, dec_output_ptr->frame_width * dec_output_ptr->frame_height * 3/2);
 #ifndef _VSP_LINUX_				
 //			pic->pDecFrame->bDisp = TRUE; 
 #endif

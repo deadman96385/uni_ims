@@ -24,7 +24,7 @@
 #endif
 
 #ifndef YUV_THREE_PLANE
-#if 1//ndef _NEON_OPT_
+#ifndef _NEON_OPT_
 PUBLIC void write_display_frame(DEC_VOP_MODE_T *vop_mode_ptr,DEC_FRM_BFR *pDecFrame)
 {
 	int16 FrameWidth= vop_mode_ptr->FrameWidth;
@@ -56,8 +56,8 @@ PUBLIC void write_display_frame(DEC_VOP_MODE_T *vop_mode_ptr,DEC_FRM_BFR *pDecFr
 	FrameWidth >>= 1;
 	FrameExtendWidth >>= 1;
 
-	pSrc_u = pDecFrame->imgYUV[2] + iStartInFrameUV;
-	pSrc_v = pDecFrame->imgYUV[1] + iStartInFrameUV;
+	pSrc_u = pDecFrame->imgYUV[1] + iStartInFrameUV;
+	pSrc_v = pDecFrame->imgYUV[2] + iStartInFrameUV;
 	pDst_u = pDecFrame->imgU;
         pDst_v = pDecFrame->imgV;
 	for (row = 0; row < FrameHeight; row++)
