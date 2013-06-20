@@ -85,9 +85,9 @@ typedef struct
 	int32	frame_height;
 	int32	i_extra;
 	void 	*p_extra;
-#ifdef _VSP_LINUX_					
-//	void *p_extra_phy;
-#endif			
+//#ifdef _VSP_LINUX_					
+	void *p_extra_phy;
+//#endif			
 	int32	uv_interleaved;				//tmp add
 }MMDecVideoFormat;
 

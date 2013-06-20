@@ -189,9 +189,20 @@ PUBLIC void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *he
 {
     	MP4DecObject *vd = (MP4DecObject *) mp4Handle->videoDecoderData;
 	DEC_VOP_MODE_T *vop_mode_ptr = vd->vop_mode_ptr;
-	
+
+	vop_mode_ptr->FrameWidth  = (int16)(((vop_mode_ptr->OrgFrameWidth  + 15) >> 4) << 4);
+	vop_mode_ptr->FrameHeight = (int16)(((vop_mode_ptr->OrgFrameHeight + 15) >> 4) << 4);
+
+    	vop_mode_ptr->FrameExtendWidth  = vop_mode_ptr->FrameWidth  + 2 * YEXTENTION_SIZE;
+	vop_mode_ptr->FrameExtendHeight = vop_mode_ptr->FrameHeight + 2 * YEXTENTION_SIZE;
+
+#ifndef YUV_THREE_PLANE
+        *width = vop_mode_ptr->FrameWidth;
+    	*height = vop_mode_ptr->FrameHeight;
+#else
     	*width = vop_mode_ptr->FrameExtendWidth;
     	*height = vop_mode_ptr->FrameExtendHeight;
+#endif        
 
         SCI_TRACE_LOW("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
 }
