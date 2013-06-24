@@ -2,7 +2,30 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := \
+	src/vp8_alloc_common.c \
+	src/vp8_coef_update_probs.c \
+	src/vp8dec_dboolhuff.c \
+	src/vp8dec_demode.c \
+	src/vp8dec_dequant.c \
+	src/vp8dec_frame.c \
+	src/vp8dec_global.c \
 	src/vp8dec_interface.c \
+	src/vp8dec_malloc.c \
+	src/vp8dec_mv.c \
+	src/vp8dec_reg.c \
+	src/vp8dec_treereader.c \
+	src/vp8_default_coef_counts.c \
+	src/vp8_entropy.c \
+	src/vp8_entropy_mode.c \
+	src/vp8_entropy_mv.c \
+	src/vp8_init.c \
+	src/vp8_mode_context.c \
+	src/vp8_mode_count.c \
+	src/vp8_quant_common.c \
+	src/vp8_setup_intra_recon.c \
+	src/vp8_swap_yv12buffer.c \
+	src/vp8_treecoder.c \
+	src/vp8_yv12config.c \
 	../../../../vsp/sc8830/src/vsp_drv_sc8830.c
 
 

@@ -1,107 +1,432 @@
-/******************************************************************************
- ** File Name:    h264dec_interface.c                                         *
- ** Author:       Xiaowei.Luo                                                 *
- ** DATE:         03/29/2010                                                  *
- ** Copyright:    2010 Spreatrum, Incoporated. All Rights Reserved.           *
- ** Description:                                                              *
- *****************************************************************************/
-/******************************************************************************
- **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
- ** 03/29/2010    Xiaowei.Luo     Create.                                     *
- *****************************************************************************/
-/*----------------------------------------------------------------------------*
-**                        Dependencies                                        *
-**---------------------------------------------------------------------------*/
-#include "vsp_drv_sc8830.h"
-#include "vsp_vp8_dec.h"
-#include "vp8dec_or_fw.h"
-#include "vp8dec.h"
-/**---------------------------------------------------------------------------*
-**                        Compiler Flag                                       *
-**---------------------------------------------------------------------------*/
-#ifdef   __cplusplus
-    extern   "C" 
-    {
+#include "video_common.h"
+#include "vpx_codec.h"
+#include "vp8_init.h"
+#include "vp8_swap_yv12buffer.h"
+#include "vp8_yv12extend.h"
+#include "vp8dec_basic.h"
+#include "vp8dec_mode.h"
+#include "vp8dec_malloc.h"
+#include "vp8dec_dequant.h"//weihu
+#include "sc8810_video_header.h"//weihu
+
+#ifdef SIM_IN_WIN
+#include "vp8_segmentation_common.h"
+#include "common_global.h"//weihu
+#include "vp8dbk_trace.h"//weihu
+#include "vp8dbk_global.h"
+#include "vp8_test_vectors.h"	//derek
 #endif
 
-//FunctionType_BufCB VSP_bindCb = NULL;
-//FunctionType_BufCB VSP_unbindCb = NULL;
-//void *g_user_data = NULL;
-//FunctionType_MallocCB VSP_mallocCb = NULL;
+extern int vp8_decode_frame(VP8D_COMP *pbi);//weihu
 
-VP8DEC_SHARE_RAM s_vp8dec_share_ram;
-
-/*************************************/
-/* functions needed for android platform */
-/*************************************/
-PUBLIC void ARM_VSP_BIND(VPXHandle *vpxHandle)
+#ifdef SIM_IN_WIN
+void vp8dx_initialize()
 {
-    uint32 buffer_header;
-    int32 buffer_num,i;
-    buffer_num =  (VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x70,"bind_buffer_number")) >> 16;
-    if(buffer_num)
+    static int init_done = 0;
+
+    if (!init_done)
     {
-	buffer_header = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x6c,"bind_buffer_header");
-        (*vpxHandle->VSP_bindCb)(vpxHandle->userdata,(void *)buffer_header, 0);
+		InitVp8DBKTrace();
+        init_done = 1;
     }
 }
 
-PUBLIC void ARM_VSP_UNBIND(VPXHandle *vpxHandle)
+LOCAL void write_out_frame(VP8_COMMON *common, FILE *fp, int input_width, int input_height)
 {
-    uint32 buffer_header;
-    int32 buffer_num,i;
-    
-    buffer_num =  (VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x70,"unbind_buffer_number")) & 0xffff;
-    for(i =0; i < buffer_num; i++)
+    unsigned char *src = common->frame_to_show->y_buffer;
+	int out_width;
+	int out_height;
+	
+	//	input_width = (input_width + 15)&0xfffffff0;
+	//	input_height = (input_height + 15)&0xfffffff0;
+	
+	if (input_width & 0xffff)
+		out_width = input_width;
+	else
+		out_width = common->frame_to_show->y_width;
+	
+	if (input_height & 0xffff)
+		out_height = input_height;
+	else
+		out_height = common->frame_to_show->y_height;
+
+    do
     {
-	buffer_header = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x74+i*4,"unbind_buffer_header");
-        (*vpxHandle->VSP_unbindCb)(vpxHandle->userdata,(void *)buffer_header, 0);
+        fwrite(src, out_width, 1,  fp);
+        src += common->frame_to_show->y_stride;
     }
+    while (--out_height);
+	
+    src = common->frame_to_show->u_buffer;
+	
+	if (input_width & 0xffff)
+		out_width = (input_width+1)>>1;
+	else
+		out_width = common->frame_to_show->uv_width;
+	
+	if (input_height & 0xffff)
+		out_height = (input_height+1)>>1;
+	else
+		out_height = common->frame_to_show->uv_height;
+	
+    do
+    {
+        fwrite(src, out_width, 1,  fp);
+        src += common->frame_to_show->uv_stride;
+    }
+    while (--out_height);
+	
+    src = common->frame_to_show->v_buffer;
+	
+	if (input_height & 0xffff)
+		out_height = (input_height+1)>>1;
+	else
+		out_height = common->frame_to_show->uv_height;
+	
+    do
+    {
+        fwrite(src, out_width, 1, fp);
+        src += common->frame_to_show->uv_stride;
+    }
+    while (--out_height);
+    
+}
+#endif
+
+VP8D_PTR vp8dx_create_decompressor(VP8D_CONFIG *oxcf)
+{
+    VP8D_COMP *pbi = vp8dec_InterMemAlloc(sizeof(VP8D_COMP));
+
+    if (!pbi)
+        return NULL;
+
+//    vpx_memset(pbi, 0, sizeof(VP8D_COMP));
+	vpx_memset(&pbi->mb, 0, sizeof(MACROBLOCKD));
+	pbi->common.new_frame.buffer_alloc = 0;
+	pbi->common.new_frame.addr_idx = 0;
+	pbi->common.new_frame.pBufferHeader = NULL;
+	pbi->common.last_frame.buffer_alloc = 0;
+	pbi->common.last_frame.addr_idx = 0;
+	pbi->common.last_frame.pBufferHeader = NULL;
+	pbi->common.golden_frame.buffer_alloc = 0;
+	pbi->common.golden_frame.addr_idx = 0;
+	pbi->common.golden_frame.pBufferHeader = NULL;
+	pbi->common.alt_ref_frame.buffer_alloc = 0;
+	pbi->common.alt_ref_frame.addr_idx = 0;
+	pbi->common.alt_ref_frame.pBufferHeader = NULL;
+	pbi->common.FRAME_ADDR_4 = 0;
+	pbi->common.ref_count[0] = 0;
+	pbi->common.ref_count[1] = 0;
+	pbi->common.ref_count[2] = 0;
+	pbi->common.ref_count[3] = 0;
+
+	pbi->common.buffer_pool [0] =NULL;
+	pbi->common.buffer_pool [1] =NULL;
+	pbi->common.buffer_pool [2] =NULL;
+	pbi->common.buffer_pool [3] =NULL;
+
+#ifdef SIM_IN_WIN
+	pbi->common.above_context[Y1CONTEXT] = 0;
+    pbi->common.above_context[UCONTEXT]  = 0;
+    pbi->common.above_context[VCONTEXT]  = 0;
+    pbi->common.above_context[Y2CONTEXT] = 0;
+    pbi->common.mip = 0;
+	pbi->common.y_rec = 0;
+	pbi->common.uv_rec = 0;
+#endif
+	pbi->common.refresh_golden_frame = 0;
+	pbi->common.refresh_alt_ref_frame = 0;
+//	pbi->common.copy_buffer_to_gf = 0;
+//	pbi->common.copy_buffer_to_arf = 0;
+	pbi->common.y1dc_delta_q = 0;
+	pbi->common.y2dc_delta_q = 0;
+	pbi->common.uvdc_delta_q = 0;
+	pbi->common.y2ac_delta_q = 0;
+	pbi->common.uvac_delta_q = 0;
+	pbi->common.Width = 0;
+	pbi->common.Height = 0;
+
+#ifdef SIM_IN_WIN
+    vp8dx_initialize();
+	VSP_Init_CModel();
+#endif
+    vp8_create_common(&pbi->common);
+
+    //vp8cx_init_de_quantizer() is first called here. Add check in frame_init_dequantizer() to avoid
+    // unnecessary calling of vp8cx_init_de_quantizer() for every frame.
+    vp8cx_init_de_quantizer(pbi);
+    return (VP8D_PTR) pbi;
+}
+
+extern void Get_MD5_Code(uint8 *img, uint32 datalen, uint8 *code);
+int vp8dx_receive_compressed_data(VPXHandle *vpxHandle, unsigned long size, const unsigned char *source, int64 time_stamp)
+{
+    VP8D_COMP *pbi = (VP8D_COMP *) (vpxHandle->videoDecoderData);
+    VP8_COMMON *cm = &pbi->common;
+    int retcode = 0;
+
+    pbi->Source = source;
+    pbi->source_sz = size;
+
+#ifdef MCA_TV_SPLIT
+	MCASplitInit();
+#endif
+
+	// Find a  place in buffer pool to save pBufferHeader of new picture.
+	{
+		int buffer_index;
+		for(buffer_index = 0; buffer_index <4; buffer_index ++)
+		{
+			if(cm->ref_count[buffer_index] == 0)
+			{
+				cm->buffer_pool[buffer_index] = cm->new_frame.pBufferHeader;
+				break;
+			}
+		}
+
+		if(buffer_index == 4)
+			return -1;
+	
+	}
+	
+    retcode = vp8_decode_frame(pbi);
+
+    if (retcode < 0)
+    {
+        return retcode;
+    }
+
+#ifdef TV_OUT
+#ifdef ONE_FRAME
+	if(g_nFrame_dec==FRAME_X)
+#endif
+	{
+#ifdef MCA_TV_SPLIT
+		Print_REF_Frame(&cm->last_frame, g_fp_ref_frm0_tv);
+		Print_REF_Frame(&cm->golden_frame, g_fp_ref_frm0_tv);
+		Print_REF_Frame(&cm->alt_ref_frame, g_fp_ref_frm0_tv);
+#else
+//		Print_REF_Frame(&cm->last_frame, g_fp_ref_frm0_tv);
+//		Print_REF_Frame(&cm->golden_frame, g_fp_ref_frm1_tv);
+//		Print_REF_Frame(&cm->alt_ref_frame, g_fp_ref_frm2_tv);
+#endif
+	}
+#endif
+
+
+	// If any buffer copy / swapping is signaled it should be done here.
+    if (cm->copy_buffer_to_arf != 0)
+    {
+        if (cm->copy_buffer_to_arf == 1)
+			vp8_copy_yv12_buffer(vpxHandle,cm, &cm->last_frame, &cm->alt_ref_frame);
+			//vp8_yv12_copy_frame(&cm->last_frame, &cm->alt_ref_frame);
+        else if (cm->copy_buffer_to_arf == 2)
+			vp8_copy_yv12_buffer(vpxHandle,cm, &cm->golden_frame, &cm->alt_ref_frame);
+            //vp8_yv12_copy_frame(&cm->golden_frame, &cm->alt_ref_frame);
+    }
+	
+    if (cm->copy_buffer_to_gf != 0)
+    {
+        if (cm->copy_buffer_to_gf == 1)
+			vp8_copy_yv12_buffer(vpxHandle,cm, &cm->last_frame, &cm->golden_frame);
+			//vp8_yv12_copy_frame(&cm->last_frame, &cm->golden_frame);
+        else if (cm->copy_buffer_to_gf == 2)
+			vp8_copy_yv12_buffer(vpxHandle,cm, &cm->alt_ref_frame, &cm->golden_frame);
+            //vp8_yv12_copy_frame(&cm->alt_ref_frame, &cm->golden_frame);
+    }
+#if 0
+    if (cm->refresh_last_frame == 1)
+    {
+        vp8_swap_yv12_buffer(&cm->last_frame, &cm->new_frame);
+        cm->frame_to_show = &cm->last_frame;
+    }
+    else
+    {
+        cm->frame_to_show = &cm->new_frame;
+    }
+#endif
+
+#ifdef SIM_IN_WIN
+//	if (!pbi->b_multithreaded_lf)
+    {
+//        struct vpx_usec_timer lpftimer;
+//        vpx_usec_timer_start(&lpftimer);
+        // Apply the loop filter if appropriate.
+
+        //if (cm->filter_level > 0)
+        {
+			vp8_dbk_frame(cm, &pbi->mb, cm->filter_level);
+        }
+    }
+#endif // SIM_IN_WIN
+
+#ifdef TV_OUT
+#ifdef ONE_FRAME
+	if(g_nFrame_dec==FRAME_X)
+#endif
+		Print_DBK_Frame(cm->frame_to_show);
+#endif
+
+#ifdef SIM_IN_WIN
+    vp8_yv12_extend_frame_borders(cm->frame_to_show);
+#endif
+
+    // If any buffer copy / swapping is signaled it should be done here.
+    /*if (cm->copy_buffer_to_arf)
+    {
+        if (cm->copy_buffer_to_arf == 1)
+        {
+            if (cm->refresh_last_frame)
+                vp8_yv12_copy_frame(&cm->new_frame, &cm->alt_ref_frame);
+            else
+                vp8_yv12_copy_frame(&cm->last_frame, &cm->alt_ref_frame);
+        }
+        else if (cm->copy_buffer_to_arf == 2)
+            vp8_yv12_copy_frame(&cm->golden_frame, &cm->alt_ref_frame);
+    }
+
+    if (cm->copy_buffer_to_gf)
+    {
+        if (cm->copy_buffer_to_gf == 1)
+        {
+            if (cm->refresh_last_frame)
+                vp8_yv12_copy_frame(&cm->new_frame, &cm->golden_frame);
+            else
+                vp8_yv12_copy_frame(&cm->last_frame, &cm->golden_frame);
+        }
+        else if (cm->copy_buffer_to_gf == 2)
+            vp8_yv12_copy_frame(&cm->alt_ref_frame, &cm->golden_frame);
+    }*/
+
+	// Should the golden or alternate reference frame be refreshed?
+    if (cm->refresh_golden_frame == 1)
+		vp8_copy_yv12_buffer(vpxHandle,cm, &cm->new_frame, &cm->golden_frame);
+		//vp8_copy_yv12_buffer(cm, cm->frame_to_show, &cm->golden_frame);
+		//vp8_yv12_copy_frame(cm->frame_to_show, &cm->golden_frame);
+	
+    if (cm->refresh_alt_ref_frame == 1)
+		vp8_copy_yv12_buffer(vpxHandle,cm, &cm->new_frame, &cm->alt_ref_frame);
+        //vp8_yv12_copy_frame(cm->frame_to_show, &cm->alt_ref_frame);
+
+		
+    if (cm->refresh_last_frame == 1)
+    {
+    	vp8_copy_yv12_buffer(vpxHandle,cm, &cm->new_frame, &cm->last_frame);
+   //     vp8_swap_yv12_buffer(&cm->last_frame, &cm->new_frame);
+        cm->frame_to_show = &cm->last_frame;
+    }
+    else
+    {
+        cm->frame_to_show = &cm->new_frame;
+    }
+#ifdef SIM_IN_WIN
+#ifndef _LIB
+	if(cm->show_frame)
+		write_out_frame(cm, s_pDec_recon_yuv_file, cm->Width, cm->Height);
+#endif
+#endif
+
+#if 0
+	if(cm->refresh_alt_ref_frame || cm->refresh_golden_frame || cm->refresh_last_frame)
+	{
+		if(cm->new_frame.pBufferHeader != NULL)
+			{
+				OR_VSP_BIND(cm->new_frame.pBufferHeader);
+			}
+	}
+#endif
+	
+//	vp8_check_yv12_buffer(cm, &cm->new_frame);	// Must check here, derek
+
+	// Compute MD5
+#ifdef SIM_IN_WIN
+	// copy frame, cause buffer has borders
+	{
+		int32 i, j;
+		for(i=0; i<cm->frame_to_show->y_height; i++)
+		{
+			memcpy(&cm->y_rec[i*cm->frame_to_show->y_width], &cm->frame_to_show->y_buffer[i*cm->frame_to_show->y_stride], cm->frame_to_show->y_width);
+		}
+		for(j=0; j<cm->frame_to_show->uv_height; j++)
+		{
+			for(i=0; i<cm->frame_to_show->uv_width; i++)
+			{
+				cm->uv_rec[2*i+j*cm->frame_to_show->y_width] = cm->frame_to_show->u_buffer[i+j*cm->frame_to_show->uv_stride];
+				cm->uv_rec[2*i+1+j*cm->frame_to_show->y_width] = cm->frame_to_show->v_buffer[i+j*cm->frame_to_show->uv_stride];
+			}
+		}
+		//Get_MD5_Code(cm->y_rec, cm->frame_to_show->y_width*cm->frame_to_show->y_height, cm->ycode);
+		//Get_MD5_Code(cm->uv_rec, cm->frame_to_show->uv_width*cm->frame_to_show->uv_height*2, cm->uvcode);
+		/*{
+			FILE *fp_md5 = fopen("md5_result.txt", "a");
+			fprintf(fp_md5, "%016I64x", *((__int64*)&cm->ycode[8]));
+			fprintf(fp_md5, "%016I64x\n", *((__int64*)&cm->ycode[0]));
+			fprintf(fp_md5, "%016I64x", *((__int64*)&cm->uvcode[8]));
+			fprintf(fp_md5, "%016I64x\n", *((__int64*)&cm->uvcode[0]));
+			fclose(fp_md5);
+		}*/
+	}
+#else
+	//Get_MD5_Code(cm->frame_to_show->y_buffer, cm->frame_to_show->y_width*cm->frame_to_show->y_height, cm->ycode);
+	//Get_MD5_Code(cm->frame_to_show->u_buffer, cm->frame_to_show->uv_width*cm->frame_to_show->uv_height*2, cm->uvcode);
+#ifdef FPGA_AUTO_VERIFICATION
+	{
+		uint32 tmp;
+		//OR1200_WRITE_REG(ORSC_SHARERAM_OFF+0x4c, 1, "ORSC_SHARE: Output_en = 1");//weihu
+		//OR1200_WRITE_REG(ORSC_SHARERAM_OFF+0x2c, cm->ycode+or_addr_offset, "ORSC_SHARE: Frame_Y_ADDR");
+		//OR1200_WRITE_REG(ORSC_SHARERAM_OFF+0x30, cm->uvcode+or_addr_offset, "ORSC_SHARE: Frame_UV_ADDR");
+		//OR1200_WRITE_REG(ORSC_SHARERAM_OFF+0x2c, (uint32)cm->frame_to_show->y_buffer+or_addr_offset, "ORSC_SHARE: Frame_Y_ADDR");
+		//OR1200_WRITE_REG(ORSC_SHARERAM_OFF+0x30, (uint32)cm->frame_to_show->u_buffer+or_addr_offset, "ORSC_SHARE: Frame_UV_ADDR");
+		//OR1200_WRITE_REG(ORSC_SHARERAM_OFF+0x34, cm->frame_to_show->uv_width*cm->frame_to_show->uv_height*2, "ORSC_SHARE: UV_FRAME_BUF_SIZE");//weihu
+		//tmp = OR1200_READ_REG(ORSC_SHARERAM_OFF+0x00, "ORSC_SHARE: MODE_CFG");
+		//OR1200_WRITE_REG(ORSC_SHARERAM_OFF+0x00, tmp&0x7fffffff, "ORSC_SHARE: MODE_CFG Stop");
+		//OR1200_WRITE_REG(ORSC_VSP_GLB_OFF+0x2c, 0,"ORSC: VSP_INT_GEN Done_int_gen");
+		//OR1200_WRITE_REG(ORSC_VSP_GLB_OFF+0x2c, 1,"ORSC: VSP_INT_GEN Done_int_gen");
+	}
+#endif
+#endif
+
+    // Update data structures that monitors GF useage
+    //vpx_memset(cm->gf_active_flags, 1, (cm->mb_rows * cm->mb_cols));
+    //cm->gf_active_count = cm->mb_rows * cm->mb_cols;
+
+#ifdef MCA_TV_SPLIT
+	MCASplitDeinit();
+#endif
+    return retcode;
+}
+
+
+PUBLIC void OR_VSP_BIND(VPXHandle *vpxHandle, void *pHeader)
+{
+	 (*vpxHandle->VSP_bindCb)(vpxHandle->userdata,(void *)pHeader, 0);
+}
+
+PUBLIC void OR_VSP_UNBIND(VPXHandle *vpxHandle, void *pHeader)
+{
+	(*vpxHandle->VSP_unbindCb)(vpxHandle->userdata,(void *)pHeader, 0);
 }
 
 
 
 PUBLIC void VP8DecSetCurRecPic(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader)
 {
-	VP8DEC_SHARE_RAM *share_ram = &s_vp8dec_share_ram;
+	VP8D_COMP *pbi = (VP8D_COMP *)(vpxHandle->videoDecoderData) ;
+    	VP8_COMMON *cm = &pbi->common;
+	 YV12_BUFFER_CONFIG *rec_frame = &cm->new_frame;
 
-	share_ram->rec_buf_Y=  (uint32)pFrameY;
+        rec_frame->buffer_alloc =   pFrameY_phy;		
+        rec_frame->y_buffer = rec_frame->buffer_alloc ;
 
-	share_ram->rec_buf_Y_addr= (uint32)pFrameY_phy;
-
-	share_ram->rec_buf_header =(uint32) pBufferHeader;
+	rec_frame->y_buffer_virtual = (uint32)pFrameY;	
+	
+	rec_frame->pBufferHeader = pBufferHeader;
 	
 }
-
-//void VP8Dec_RegBufferCB(FunctionType_BufCB bindCb,FunctionType_BufCB unbindCb,void *userdata)
-//{
-//	VSP_bindCb = bindCb;
-//	VSP_unbindCb = unbindCb;
-//	g_user_data = userdata;
-//}
-
-
-//void VP8Dec_RegMallocCB(FunctionType_MallocCB mallocCb)
-//{
-//	VSP_mallocCb = mallocCb;
-//}
 
 
 MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer * buffer_ptr)
 {
-	MMDecRet ret;
-	uint32 * OR_addr_vitual_ptr;
-	VP8DEC_SHARE_RAM *share_ram = &s_vp8dec_share_ram;
-
-ALOGI("%s, %d", __FUNCTION__, __LINE__);
-
-	OR_addr_ptr = (uint32 *)(buffer_ptr->common_buffer_ptr_phy);
-	OR_addr_vitual_ptr = (uint32 *)(buffer_ptr->common_buffer_ptr);
-
-ALOGI("%s, %d", __FUNCTION__, __LINE__);
-	
 #ifndef _FPGA_TEST_
 	// Open VSP device
 	if(VSP_OPEN_Dev()<0)
@@ -112,201 +437,72 @@ ALOGI("%s, %d", __FUNCTION__, __LINE__);
 	TEST_VSP_ENABLE();	
 #endif
 
-	//Load firmware to ddr
-	memcpy(OR_addr_vitual_ptr, vp8dec_code, VP8DEC_OR_DATA_SIZE);
+	vp8dec_InitInterMem (buffer_ptr);
 
+
+	g_fh_reg_ptr = (VSP_FH_REG_T *)vp8dec_InterMemAlloc(sizeof(VSP_FH_REG_T));
+				
+	vpxHandle->videoDecoderData= vp8dx_create_decompressor(/*&oxcf*/NULL);
 	
-	if(OR_VSP_RST()<0)
-	{
-		return MMDEC_HW_ERROR;
-	}
-
-
-	//Function related share ram configuration.
-	share_ram->malloc_mem0_start_addr=VP8DEC_OR_INTER_START_ADDR;	// Addr in Openrisc space. 
-	share_ram->total_mem0_size=VP8DEC_OR_INTER_MALLOC_SIZE;	
-	VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+8, share_ram->malloc_mem0_start_addr,"shareRAM 8 VSP_MEM0_ST_ADDR");//OPENRISC ddr_start_addr+code size
-	VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0xc, share_ram->total_mem0_size,"shareRAM c CODE_RUN_SIZE");//OPENRISC text+heap+stack
-
-	
-	// Send VP8DEC_INIT signal to Openrisc.
-	VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x58, VP8DEC_INIT,"Call  VP8DEC_INIT function.");		
-
-	ret = (MMDecRet)OR_VSP_START();
-
-	VSP_RELEASE_Dev();
-	
-	return ret;
+	return MMDEC_OK;
 }
 
-
-#if 0
-MMDecRet VP8DecHeader(MMDecInput *dec_input_ptr,MMDecVideoFormat * pVideoFormat)
-{
-	MMDecRet ret;
-	int32 i;
-	uint32 img_size_reg;
-	VP8DEC_SHARE_RAM *share_ram = &s_vp8dec_share_ram;
-
-	if(OR_VSP_RST()<0)
-	{
-		return MMDEC_HW_ERROR;
-	}
-
-	// Bitstream.
-	share_ram->bs_start_addr=((uint32)dec_input_ptr->pStream_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
-	share_ram->bs_buffer_size=dec_input_ptr->dataLen;
-	share_ram->bs_used_len=0;
-
-	VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x18, share_ram->bs_start_addr,"shareRAM 0x18 STREAM_BUF_ADDR");//
-	VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x1c, share_ram->bs_buffer_size,"shareRAM 0x1c STREAM_BUF_SIZE");
-	VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x20, share_ram->bs_used_len,"shareRAM 0x20 stream_len");//	
-
-
-
-	// Send VP8DEC_DECODE signal to Openrisc.
-	VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x58, VP8DEC_HEADER,"Call  VP8DEC_DECODE function.");		
-
-	// Get output of VP8DEC_DECODE function of OR.
-	ret = (MMDecRet)OR_VSP_START();
-
-	if(ret)
-		return ret;
-
-
-	img_size_reg = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x4, "image size");
-	share_ram->pic_width =(img_size_reg) & 0xfff;
-	share_ram->pic_height=(img_size_reg >>12) & 0xfff;
-
-	
-	pVideoFormat->frame_width = share_ram->pic_width;
-	pVideoFormat->frame_height = share_ram->pic_height;
-
-	VSP_RELEASE_Dev();
-
- 
-	// Return output.		
-	return ret;
-
-}
-#endif
-
-LOCAL MMDecRet VP8DecFrameHeader(uint8 * bs_ptr)
-{
-	uint8 * data = bs_ptr;
-	int32 frame_type;
-	VP8DEC_SHARE_RAM *share_ram = &s_vp8dec_share_ram;
-	
-	 frame_type = (data[0] & 1);
-
-   	 data += 3;
-
-	  if (frame_type  == 0) // 0: KEY_FRAME
-	 {
-       		 int32 Width = share_ram->pic_width;
-        	 int32 Height = share_ram->pic_height;
-
-
-        	// vet via sync code
-       		 if (data[0] != 0x9d || data[1] != 0x01 || data[2] != 0x2a)
-		{
-			return MMDEC_STREAM_ERROR ;
-		}
-
-        	share_ram->pic_width = (data[3] | (data[4] << 8)) & 0x3fff;
-      		 // pc->horiz_scale = data[4] >> 6;
-       		share_ram->pic_height = (data[5] | (data[6] << 8)) & 0x3fff;
-       		// pc->vert_scale = data[6] >> 6;
-  	        data += 7;
-
-		 if ( (Width !=share_ram->pic_width) || (Height !=share_ram->pic_height) )	// Resolution Changed
-		 {
-	        	 if (share_ram->pic_width <= 0)
-	            	{
-	             		 share_ram->pic_width = Width;
-				return MMDEC_PARAM_ERROR ;
-			 }
-
-	  		 if (share_ram->pic_height <= 0)
-	            	{
-	                	share_ram->pic_height = Height;
-				return MMDEC_PARAM_ERROR ;
-			}
-			
-			return 	MMDEC_MEMORY_ALLOCED;
-		 }     
-   	 }
-
-	  return MMDEC_OK;
-}
 
 PUBLIC MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *dec_input_ptr, MMDecOutput *dec_output_ptr)
 {
+
 	MMDecRet ret;
-	int32 i;
-	uint32 img_size_reg;
-	VP8DEC_SHARE_RAM *share_ram = &s_vp8dec_share_ram;
-
-	ret =  VP8DecFrameHeader(dec_input_ptr->pStream);
-
-    		dec_output_ptr->frame_width = (((share_ram->pic_width + 15)>>4)<<4);
-		dec_output_ptr->frame_height = (((share_ram->pic_height+ 15)>>4)<<4);
+	uint32 bs_buffer_length, bs_start_addr;
+	VP8D_COMP *pbi = (VP8D_COMP *) (vpxHandle->videoDecoderData);
+    	VP8_COMMON *cm = &pbi->common;
 
 
-	if(MMDEC_OK !=ret)
-		return ret;
-
-	if(OR_VSP_RST()<0)
-	{
+	  if(ARM_VSP_RST()<0)
+	 {
 		return MMDEC_HW_ERROR;
-	}
+	  }
 
-	// Bitstream.
-	share_ram->bs_start_addr=((uint32)dec_input_ptr->pStream_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
-	share_ram->bs_buffer_size=dec_input_ptr->dataLen;
-	share_ram->bs_used_len=0;
+	  SCI_TRACE_LOW("%s, %d",__FUNCTION__, __LINE__);
+	  SCI_TRACE_LOW("pBufferHeader %x,pOutFrameY %x,frame_width %d,frame_height %d", dec_output_ptr->pBufferHeader, dec_output_ptr->pOutFrameY, dec_output_ptr->frame_width,dec_output_ptr->frame_height );
 
-	VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x18, share_ram->bs_start_addr,"shareRAM 0x18 STREAM_BUF_ADDR");//
-	VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x1c, share_ram->bs_buffer_size,"shareRAM 0x1c STREAM_BUF_SIZE");
-	VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x20, share_ram->bs_used_len,"shareRAM 0x20 stream_len");//	
+	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL: software access.");	
+	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_MODE_OFF,V_BIT_6 | STREAM_ID_VP8,"VSP_MODE");
 
-	// Rec Buffer.
-	VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x60,share_ram->rec_buf_Y,"shareRame 0x60: rec buffer virtual address.");
-	VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x64,share_ram->rec_buf_Y_addr,"shareRame 0x64: rec buffer physical address.");
-	VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x68,share_ram->rec_buf_header,"shareRame 0x68: rec buffer header.");
-
-	// Send VP8DEC_DECODE signal to Openrisc.
-	VSP_WRITE_REG(SHARE_RAM_BASE_ADDR+0x58, VP8DEC_DECODE,"Call  VP8DEC_DECODE function.");		
-
-	// Get output of VP8DEC_DECODE function of OR.
-	ret = (MMDecRet)OR_VSP_START();
+	  // Bitstream.
+   	 bs_start_addr=((uint32)dec_input_ptr->pStream_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
+  	 bs_buffer_length=dec_input_ptr->dataLen;
+  	 g_stream_offset=0;
 
 
-	img_size_reg = VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x4, "image size");
-	share_ram->pic_width =(img_size_reg) & 0xfff;
-	share_ram->pic_height=(img_size_reg >>12) & 0xfff;
-	share_ram->frameY_addr=VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x2c, "display frame_Y_addr");
-	share_ram->frameUV_addr=VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x30, "display frame_UV_addr");
-	share_ram->frame_output_en=(VSP_READ_REG(SHARE_RAM_BASE_ADDR+0x4c, "display en"))&0x1;
-        share_ram->pBufferHeader = (VSP_READ_REG(SHARE_RAM_BASE_ADDR+0xb4, "pBufferHeader"));
+	OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, 0x08000000,0x00000000,"BSM_clr enable");//check bsm is idle	
+	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
+	OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, 0x6,"BSM_OP clr BSM");//clr BSM
+	OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, /*(g_stream_offset)*/0,"BSM_cfg1 stream buffer offset & destuff disable");//point to the start of NALU.
+	OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, 0x80000000|(bs_buffer_length+128)&0xfffffffc,"BSM_cfg0 stream buffer size");// BSM load data. Add 16 DW for BSM fifo loading.
 
-	dec_output_ptr->frameEffective = share_ram->frame_output_en;
+
+	ret = vp8dx_receive_compressed_data(vpxHandle,  bs_buffer_length,(uint8 *)dec_input_ptr->pStream , 0);
+
+	SCI_TRACE_LOW("%s, %d, ret is %d",__FUNCTION__, __LINE__, ret);
+
+
+	dec_output_ptr->frameEffective = (cm->show_frame && (ret ==MMDEC_OK ) );
+	dec_output_ptr->frame_width =  (((cm->Width+ 15)>>4)<<4);
+	dec_output_ptr->frame_height = (((cm->Height+ 15)>>4)<<4);
+
+	SCI_TRACE_LOW("%s, %d, frameEffective is %d,frame_width %d,frame_height %d",__FUNCTION__, __LINE__, dec_output_ptr->frameEffective, dec_output_ptr->frame_width,dec_output_ptr->frame_height);
 	if(dec_output_ptr->frameEffective)
 	{
-	        dec_output_ptr->pBufferHeader = (void *)share_ram->pBufferHeader;
-		dec_output_ptr->pOutFrameY = (uint8 *)share_ram->frameY_addr;
-		dec_output_ptr->pOutFrameU = (uint8 *)share_ram->frameUV_addr;
-		dec_output_ptr->frame_width =  (((share_ram->pic_width + 15)>>4)<<4);
-		dec_output_ptr->frame_height = (((share_ram->pic_height+ 15)>>4)<<4);
+	        dec_output_ptr->pBufferHeader = (void *)(cm->frame_to_show->pBufferHeader);
+		dec_output_ptr->pOutFrameY = (uint8 *)(cm->frame_to_show->y_buffer_virtual);
+		dec_output_ptr->pOutFrameU = (uint8 *)(cm->frame_to_show->u_buffer_virtual);
 	}
 
-	 ARM_VSP_BIND(vpxHandle);
-	 ARM_VSP_UNBIND(vpxHandle);
+	SCI_TRACE_LOW("pBufferHeader %x,pOutFrameY %x", dec_output_ptr->pBufferHeader, dec_output_ptr->pOutFrameY );
 
 	 VSP_RELEASE_Dev();
 
- 
-	// Return output.		
+ 	// Return output.		
 	return ret;
 }
 
@@ -320,11 +516,5 @@ MMDecRet VP8DecRelease(VPXHandle *vpxHandle)
 	return MMDEC_OK;
 }
 
-/**---------------------------------------------------------------------------*
-**                         Compiler Flag                                      *
-**---------------------------------------------------------------------------*/
-#ifdef   __cplusplus
-    }
-#endif
-/**---------------------------------------------------------------------------*/
-// End 
+
+
