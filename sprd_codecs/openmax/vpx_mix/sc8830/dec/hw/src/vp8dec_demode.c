@@ -103,7 +103,12 @@ void vp8_kfread_modes(VP8D_COMP *pbi)
 	//OR1200_READ_REG_POLL(ORSC_BSM_CTRL_OFF+0x18, V_BIT_27, 0x00000000, "ORSC: Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
 	//OR1200_WRITE_REG(ORSC_BSM_CTRL_OFF+0x08, 0x06, "ORSC: BSM_OPERATE: BSM_CLR & COUNT_CLR"); // Move data remain in fifo to external memeory
 	//OR1200_WRITE_REG(ORSC_BSM_CTRL_OFF+0x00, 0x80000000|(bs_buffer_length+0x30)&0xfffffffc, "ORSC: BSM_CFG0 stream buffer size"); // Set each time after BSM clear
+#if 1
+	OR1200_WRITE_REG(VSP_REG_BASE_ADDR+ARM_INT_MASK_OFF,V_BIT_2,"ARM_INT_MASK, only enable VSP ACC init");//enable int //
+	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_MASK_OFF,V_BIT_2 | V_BIT_4 | V_BIT_5,"VSP_INT_MASK, enable mbw_slice_done, vld_err, time_out");//enable int //frame done/error/timeout
+#else	
 	OR1200_WRITE_REG(ORSC_VSP_GLB_OFF + 0x04, 0, "ORSC: VSP_INT_MASK: BSM_FRM_DONE"); // enable HW INT
+#endif
 	OR1200_WRITE_REG(ORSC_VSP_GLB_OFF + 0x28, 0x1, "ORSC: RAM_ACC_SEL: SETTING_RAM_ACC_SEL=1(HW)");
 	OR1200_WRITE_REG(ORSC_VSP_GLB_OFF + 0x30, 0xa, "ORSC: VSP_START: DECODE_START=1");
 	//	OR1200_WRITE_REG(ORSC_VSP_GLB_OFF + 0x84, 0x1, "ORSC: CLR_START: Write 1 to clear IMCU_START");

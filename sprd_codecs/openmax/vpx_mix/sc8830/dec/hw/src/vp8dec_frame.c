@@ -1096,9 +1096,15 @@ int vp8_decode_frame(VP8D_COMP *pbi)
 #else
 	{
 		//ÖÐ¶Ï»½ÐÑ
+#if 1
+		uint32 tmp = VSP_POLL_COMPLETE();
+		 SCI_TRACE_LOW("%s, %d, tmp1: %0x", __FUNCTION__, __LINE__, tmp);
+#else
+		
 		uint32 tmp = OR1200_READ_REG(ORSC_VSP_GLB_OFF+0x0C, "ORSC: Check VSP_INT_RAW");
 		while ((tmp&0x35)==0)	// not (MBW_FMR_DONE|VLC_ERR|TIME_OUT)
 			tmp = OR1200_READ_REG(ORSC_VSP_GLB_OFF+0x0C, "ORSC: Check VSP_INT_RAW");	
+#endif
 		if(tmp&0x31)	// (VLC_ERR|TIME_OUT)
 		{
             pc->error_flag=1;
