@@ -1740,7 +1740,7 @@ PUBLIC MMDecRet Mp4Dec_GetVideoPacketHeader(DEC_VOP_MODE_T *vop_mode_ptr, SLICEI
 	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG4_OFF,((vop_mode_ptr->time_pp&0xffff)<<16|(vop_mode_ptr->time_bp&0xffff)),"VSP_CFG4");	
 	//OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG3_OFF,vop_mode_ptr->time_pp&0xffff,"VSP_CFG3");
 	
-	if(g_nFrame_dec ==0)
+	if(vop_mode_ptr->time_pp ==0)
 	{
 		OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,0,"VSP_CFG5");
 	}else
