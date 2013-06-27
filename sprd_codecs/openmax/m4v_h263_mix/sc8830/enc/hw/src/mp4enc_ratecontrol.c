@@ -181,7 +181,7 @@ void RCModelEstimator (RCMode* rc_mode_ptr, uint32 n_windowSize)
 {
 	uint32 i;
 	BOOLEAN estimateX2;
-	int32 oneSampleQ;
+	int32 oneSampleQ = 0;
 	int32 a00_Q0  = 0; //4
 	int32 a01_Q26 = 0; //16 bit
 	int32 a11_Q26 = 0;
