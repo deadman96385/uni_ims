@@ -3137,6 +3137,7 @@ PVMFStatus PVMFOMXAudioDecNode::DoCapConfigVerifyParameters(PvmiKvp* aParameters
     aInputs.iMimeType = iNodeConfig.iMimeType;
     aInputParameters.inBytes = aInputs.inBytes;
     aInputParameters.inPtr = aInputs.inPtr;
+    aInputParameters.cComponentRole = NULL;
 
     if (aInputs.inBytes == 0 || aInputs.inPtr == NULL)
     {
