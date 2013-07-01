@@ -4788,7 +4788,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_DTMF_START:
             {
                 char c = ((char *)data)[0];
-                char cmd[30];
+                char cmd[30] = {0};
                 struct listnode *cmd_item = NULL;
 
                 cmd_item = (struct listnode* )malloc(sizeof(struct listnode));
@@ -4799,7 +4799,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 cmd_item->data = ((char *)data)[0];
                 list_add_tail(&dtmf_char_list, cmd_item);
 
-                sprintf(cmd, "AT+SDTMF=1,\"%c\",1", (int)c);
+                sprintf(cmd, "AT+SDTMF=1,\"%c\",0", (int)c);
+                err = at_send_command(ATch_type[channelID], cmd, NULL);
+                if (err < 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                }
+                sprintf(cmd, "AT+EVTS=1,%c", (int)c);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 if (err < 0 || p_response->success == 0) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -4833,7 +4838,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 cmd_item = (&dtmf_char_list)->next;
                 if(cmd_item != (&dtmf_char_list)) {
                     c = cmd_item->data;
-                    snprintf(cmd, sizeof(cmd), "AT+VTS=%c", (int)c);
+                    err = at_send_command(ATch_type[channelID], "AT+SDTMF=0", NULL);
+                    if (err < 0) {
+                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    }
+                    snprintf(cmd, sizeof(cmd), "AT+EVTS=0,%c", (int)c);
                     err = at_send_command(ATch_type[channelID], cmd, &p_response);
                     if (err < 0 || p_response->success == 0) {
                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);

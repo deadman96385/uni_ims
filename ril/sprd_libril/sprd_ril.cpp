@@ -3350,6 +3350,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     list_add_tail(&sms_cmd_list, cmd_item);
                 else if(pCI->requestNumber == RIL_REQUEST_SCREEN_STATE
                     || pCI->requestNumber == RIL_REQUEST_DTMF
+                    || pCI->requestNumber == RIL_REQUEST_DTMF_START
                     || pCI->requestNumber == RIL_REQUEST_DTMF_STOP) {
                     pthread_mutex_lock(&s_listMutex);
                     for(cmd = (&sms_cmd_list)->next; cmd != (&sms_cmd_list); cmd = cmd->next) {
@@ -3359,6 +3360,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                         pCI = &(s_commands[request]);
                         if(pCI->requestNumber != RIL_REQUEST_SCREEN_STATE
                             && pCI->requestNumber != RIL_REQUEST_DTMF
+                            && pCI->requestNumber != RIL_REQUEST_DTMF_START
                             && pCI->requestNumber != RIL_REQUEST_DTMF_STOP) {
                             cmd_item->next = cmd;
                             cmd_item->prev = cmd->prev;
@@ -3391,6 +3393,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     list_add_tail(&sms_cmd_list, cmd_item);
                 else if(pCI->requestNumber == RIL_REQUEST_SCREEN_STATE
                     || pCI->requestNumber == RIL_REQUEST_DTMF
+                    || pCI->requestNumber == RIL_REQUEST_DTMF_START
                     || pCI->requestNumber == RIL_REQUEST_DTMF_STOP) {
                     pthread_mutex_lock(&s_listMutex);
                     for(cmd = (&sms_cmd_list)->next; cmd != (&sms_cmd_list); cmd = cmd->next) {
@@ -3400,6 +3403,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                         pCI = &(s_commands[request]);
                         if(pCI->requestNumber != RIL_REQUEST_SCREEN_STATE
                             && pCI->requestNumber != RIL_REQUEST_DTMF
+                            && pCI->requestNumber != RIL_REQUEST_DTMF_START
                             && pCI->requestNumber != RIL_REQUEST_DTMF_STOP) {
                             cmd_item->next = cmd;
                             cmd_item->prev = cmd->prev;
