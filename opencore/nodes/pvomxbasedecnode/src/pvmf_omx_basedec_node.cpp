@@ -1914,7 +1914,7 @@ OSCL_EXPORT_REF bool PVMFOMXBaseDecNode::SendInputBufferToOMXComponent()
         return false;
     }
 
-    if ((((PVMFOMXDecPort*)iInPort)->iFormat == PVMF_MIME_H264_VIDEO_RAW) &&
+    if (iInPort && (((PVMFOMXDecPort*)iInPort)->iFormat == PVMF_MIME_H264_VIDEO_RAW) &&
             !(iOMXComponentUsesFullAVCFrames && iOMXComponentUsesNALStartCodes) &&
             (iCurrFragNum == 0))
     {
@@ -2206,7 +2206,7 @@ OSCL_EXPORT_REF bool PVMFOMXBaseDecNode::SendInputBufferToOMXComponent()
 
             if (iFirstPieceOfPartialFrame == true)
             {
-                if (iOMXComponentUsesNALStartCodes == true && (((PVMFOMXDecPort*)iInPort)->iFormat != PVMF_MIME_H264_VIDEO_RAW))
+                if (iInPort && iOMXComponentUsesNALStartCodes == true && (((PVMFOMXDecPort*)iInPort)->iFormat != PVMF_MIME_H264_VIDEO_RAW))
                 {
                     oscl_memcpy(input_buf->pBufHdr->pBuffer + input_buf->pBufHdr->nFilledLen,
                                 (void *) NAL_START_CODE,
@@ -2363,7 +2363,7 @@ OSCL_EXPORT_REF bool PVMFOMXBaseDecNode::SendInputBufferToOMXComponent()
         }
 
         // determine framesize for MP3
-        if (((PVMFOMXDecPort*)iInPort)->iFormat == PVMF_MIME_MP3 && iComputeSamplesPerFrame)
+        if (iInPort && ((PVMFOMXDecPort*)iInPort)->iFormat == PVMF_MIME_MP3 && iComputeSamplesPerFrame)
         {
             if (PVMFSuccess != RetrieveMP3FrameLength(input_buf->pBufHdr->pBuffer + input_buf->pBufHdr->nOffset))
             {
