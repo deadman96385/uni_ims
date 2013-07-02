@@ -593,6 +593,8 @@ static void InterpretSubsetSPS (DEC_SPS_T *sps_ptr, int *curr_seq_set_id)
   if ((sps=(DEC_SPS_T *)H264Dec_InterMemAlloc(1*sizeof (DEC_SPS_T)))== NULL)//calloc (1, sizeof (DEC_SPS_T))) == NULL)
   {
      PRINTF("InterpretSubsetSPS: alloc sps failed!");//no_mem_exit ("AllocSPS: SPS");
+     g_image_ptr->error_flag=TRUE;//for error
+     return;// err
   }
 
 
