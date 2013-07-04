@@ -1,18 +1,32 @@
-
-#ifndef VP8DEC_MALLOC_H
-#define VP8DEC_MALLOC_H
+/******************************************************************************
+** File Name:      vp8dec_malloc.h                                           *
+** Author:         Xiaowei Luo                                               *
+** DATE:           07/04/2013                                                *
+** Copyright:      2013 Spreatrum, Incoporated. All Rights Reserved.         *
+** Description:    common define for video codec.	     			          *
+*****************************************************************************/
+/******************************************************************************
+**                   Edit    History                                         *
+**---------------------------------------------------------------------------*
+** DATE          NAME            DESCRIPTION                                 *
+** 11/20/2007    Xiaowei Luo     Create.                                     *
+*****************************************************************************/
+#ifndef _VP8DEC_MALLOC_H_
+#define _VP8DEC_MALLOC_H_
 
 #include "mmcodec.h"
-#include "sci_types.h"
 
-PUBLIC void *vp8dec_ExtraMemAlloc(uint32 mem_size);
-PUBLIC void *vp8dec_ExtraMemAlloc_64WordAlign(uint32 mem_size);
-PUBLIC void *vp8dec_InterMemAlloc(uint32 mem_size);
-PUBLIC void vp8dec_ExtraMemFree(uint32 mem_size);
-PUBLIC void vp8dec_InterMemFree(uint32 mem_size);
-PUBLIC void vp8dec_FreeMem(void) ;
-PUBLIC void vp8dec_InitInterMem(MMCodecBuffer *dec_buffer_ptr);
-MMDecRet VP8DecMemInit(MMCodecBuffer *pBuffer);
-PUBLIC uint32 VP8Dec_GetPhyAddr(void * vitual_ptr);
+void Vp8Dec_InitInterMem(VPXDecObject *vo, MMCodecBuffer *pBuffer);
+void *Vp8Dec_InterMemAlloc(VPXDecObject *vo, uint32 need_size, int32 aligned_byte_num);
+void Vp8Dec_FreeInterMem(VPXDecObject *vo);
+uint8 *Vp8Dec_InterMem_V2P(VPXDecObject *vo, uint8 *vAddr);
 
+/**---------------------------------------------------------------------------*
+**                         Compiler Flag                                      *
+**---------------------------------------------------------------------------*/
+#ifdef   __cplusplus
+}
+#endif
+/**---------------------------------------------------------------------------*/
+// End
 #endif //VP8DEC_MALLOC_H

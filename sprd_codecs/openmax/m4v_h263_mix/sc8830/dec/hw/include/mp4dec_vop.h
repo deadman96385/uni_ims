@@ -8,8 +8,8 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 12/14/2006    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4DEC_VOP_H_
@@ -17,31 +17,30 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "mp4_basic.h"
+#include "mp4dec_basic.h"
 #include "mp4dec_mode.h"
 #include "mp4dec_bitstream.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 
-void Mp4Dec_exit_picture(DEC_VOP_MODE_T *vop_mode_ptr);
 
-MMDecRet Mp4Dec_InitVop(DEC_VOP_MODE_T *vop_mode_ptr, MMDecInput * dec_input_ptr);
-
-
-void Mp4Dec_output_one_frame (MMDecOutput *dec_output_ptr, DEC_VOP_MODE_T *vop_mode_ptr);
+MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput * dec_input_ptr);
+MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo);
+void Mp4Dec_output_one_frame (Mp4DecObject *vo, MMDecOutput *dec_output_ptr);
+void Mp4Dec_exit_picture(Mp4DecObject *vo);
 
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif  //_MP4DEC_VOP_H_

@@ -18,7 +18,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "mp4_basic.h"
+#include "mp4enc_basic.h"
 #include "mp4enc_mode.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
@@ -28,13 +28,13 @@
     {
 #endif
 
-int32 Mp4Enc_EncH263PicHeader(ENC_VOP_MODE_T *pVop_mode);
-uint32 Mp4Enc_EncSequenceHeader(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode);
-uint32 Mp4Enc_EncVOHeader( ENC_VOP_MODE_T *pVop_mode);
-uint32 Mp4Enc_EncVOLHeader(VOL_MODE_T *pVol_mode, ENC_VOP_MODE_T *pVop_mode);
-uint32 Mp4Enc_EncVOPHeader(ENC_VOP_MODE_T *pVop_mode, int32 time_stamp);
-uint32 Mp4Enc_EncGOBHeader(ENC_VOP_MODE_T *pVop_mode, int32 gob_quant);
-uint32 Mp4Enc_ReSyncHeader(ENC_VOP_MODE_T * pVop_mode, int Qp, int32 time_stamp);
+int32 Mp4Enc_EncH263PicHeader(Mp4EncObject*vo);
+uint32 Mp4Enc_EncSequenceHeader(Mp4EncObject*vo);
+uint32 Mp4Enc_EncVOHeader(Mp4EncObject*vo);
+uint32 Mp4Enc_EncVOLHeader(Mp4EncObject*vo);
+uint32 Mp4Enc_EncVOPHeader(Mp4EncObject*vo, int32 time_stamp);
+uint32 Mp4Enc_EncGOBHeader(Mp4EncObject*vo, int32 gob_quant);
+uint32 Mp4Enc_ReSyncHeader(Mp4EncObject*vo, int Qp, int32 time_stamp);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

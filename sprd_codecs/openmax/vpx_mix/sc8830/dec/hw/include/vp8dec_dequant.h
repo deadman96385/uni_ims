@@ -1,12 +1,29 @@
+/******************************************************************************
+** File Name:      vp8dec_dequant.h                                           *
+** Author:         Xiaowei Luo                                               *
+** DATE:           07/04/2013                                                *
+** Copyright:      2013 Spreatrum, Incoporated. All Rights Reserved.         *
+** Description:    common define for video codec.	     			          *
+*****************************************************************************/
+/******************************************************************************
+**                   Edit    History                                         *
+**---------------------------------------------------------------------------*
+** DATE          NAME            DESCRIPTION                                 *
+** 11/20/2007    Xiaowei Luo     Create.                                     *
+*****************************************************************************/
+#ifndef _VP8DEC_DEQUANT_H_
+#define _VP8DEC_DEQUANT_H_
 
-#ifndef VP8DEC_DEQUANT_H
-#define VP8DEC_DEQUANT_H
-
-#include "vp8_blockd.h"
 #include "vp8dec_mode.h"
 
-void vp8cx_init_de_quantizer(VP8D_COMP *pbi);
-void de_quantand_idct(VP8D_COMP *pbi, MACROBLOCKD *xd);
-void mb_init_dequantizer(VP8D_COMP *pbi, MACROBLOCKD *xd);
+void vp8cx_init_de_quantizer(VPXDecObject *vo);
 
+/**---------------------------------------------------------------------------*
+**                         Compiler Flag                                      *
+**---------------------------------------------------------------------------*/
+#ifdef   __cplusplus
+}
+#endif
+/**---------------------------------------------------------------------------*/
+// End
 #endif //VP8DEC_DEQUANT_H

@@ -1,62 +1,47 @@
+/******************************************************************************
+** File Name:      vp8dec_global.h                                           *
+** Author:         Xiaowei Luo                                               *
+** DATE:           07/04/2013                                                *
+** Copyright:      2013 Spreatrum, Incoporated. All Rights Reserved.         *
+** Description:    common define for video codec.	     			          *
+*****************************************************************************/
+/******************************************************************************
+**                   Edit    History                                         *
+**---------------------------------------------------------------------------*
+** DATE          NAME            DESCRIPTION                                 *
+** 11/20/2007    Xiaowei Luo     Create.                                     *
+*****************************************************************************/
+#ifndef _VP8DEC_GLOBAL_H_
+#define _VP8DEC_GLOBAL_H_
 
+#include "vp8dec_mode.h"
 
-#ifndef VP8DEC_GLOBAL_H
-#define VP8DEC_GLOBAL_H
+extern const int dc_qlookup[QINDEX_RANGE];
+extern const int ac_qlookup[QINDEX_RANGE];
 
-#include "vp8dec_reg.h" //derek
+extern const int vp8_mb_feature_data_bits[MB_LVL_MAX];
+extern const vp8_prob vp8_coef_update_probs [BLOCK_TYPES] [COEF_BANDS] [PREV_COEF_CONTEXTS] [vp8_coef_tokens-1];
+extern const vp8_prob default_coef_probs [BLOCK_TYPES][COEF_BANDS][PREV_COEF_CONTEXTS][ENTROPY_NODES];
+extern const vp8_prob vp8_ymode_prob[VP8_YMODES-1];
+extern const vp8_prob vp8_kf_ymode_prob[VP8_YMODES-1];
+extern const vp8_prob vp8_uv_mode_prob[VP8_UV_MODES-1];
+extern const vp8_prob vp8_kf_uv_mode_prob[VP8_UV_MODES-1];
+extern const vp8_prob vp8_bmode_prob[VP8_BINTRAMODES-1];
+extern const vp8_prob vp8_kf_bmode_prob[VP8_BINTRAMODES] [VP8_BINTRAMODES] [VP8_BINTRAMODES-1];
+extern const vp8_prob vp8_sub_mv_ref_prob2 [SUBMVREF_COUNT][VP8_SUBMVREFS-1];
+extern const vp8_prob vp8_mbsplit_probs [VP8_NUMMBSPLITS-1];
+extern const int vp8_mode_contexts[6][4];
+extern const MV_CONTEXT vp8_mv_update_probs[2], vp8_default_mv_context[2];
+extern const vp8_prob vp8_mbsplit_probs [VP8_NUMMBSPLITS-1];
+extern const vp8_prob vp8_sub_mv_ref_prob2 [SUBMVREF_COUNT][VP8_SUBMVREFS-1];
 
-extern unsigned int g_nFrame_dec;
-extern unsigned int g_stream_offset;
-extern unsigned char* y_buffer;
-extern unsigned char* u_buffer;
-extern unsigned char* v_buffer;
-
-extern uint32 g_readFileSize;
-
-extern char weightscale4x4[6][4][4];//6 6*2+2=14*16=224B
-extern char weightscale8x8[2][8][8];//2 2*2+2=6*64=384B
-extern char g_list0_map_addr[16];//weihu
-
-extern unsigned char or1200_print;
-
-
-PUBLIC extern INPUT_PARA_T *g_input;
-PUBLIC extern int	g_stream_type;
-
-extern uint32 inter_malloc_mem_start_addr;
-extern uint32 total_inter_malloc_size;
-extern uint32 extra_malloc_mem_start_addr;
-extern uint32 total_extra_malloc_size;
-extern uint32 frame_buf_size;
-extern uint32 bs_start_addr;
-extern uint32 vld_table_addr;
-extern uint32 input_buffer_update;
-extern uint32 cpu_will_be_reset;
-extern uint32 g_not_first_reset;
-extern uint32 video_size_get;
-extern uint32 video_buffer_malloced;
-//extern uint32 rate_control_en;
-//extern uint32 target_rate;
-extern uint32 file_end;
-extern uint32 s_bFisrtUnit;
-extern uint32 or_addr_offset;
-
-#if defined(SIM_IN_WIN)
-	#if defined(MPEG4_ENC)
-		extern FILE *s_pEnc_input_src_file;
-		extern FILE *s_pEnc_output_bs_file;
-		extern FILE *s_pEnc_output_recon_file;
-	#else
-		extern FILE *s_pDec_input_bs_file; //file pointer of H.264 bit stream
-		extern FILE *s_pDec_recon_yuv_file; //file pointer of decoded and filtered YUV sequence
-	#endif //#if defined(MPEG4_ENC)
-#else 
-	extern uint8 *ptrInbfr;
-	extern uint8 videoStream[];
-	extern int g_streamLen;
-	extern uint8 *ptrOutBfr;
-	extern uint8 *g_pOutBfr;
-#endif 	//#if defined(SIM_IN_WIN)
-
+/**---------------------------------------------------------------------------*
+**                         Compiler Flag                                      *
+**---------------------------------------------------------------------------*/
+#ifdef   __cplusplus
+}
+#endif
+/**---------------------------------------------------------------------------*/
+// End
 #endif //VP8DEC_GLOBAL_H
 

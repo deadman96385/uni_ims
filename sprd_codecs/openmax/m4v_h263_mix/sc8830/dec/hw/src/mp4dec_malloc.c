@@ -7,161 +7,104 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 01/23/2007    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8810_video_header.h"
+#include "mp4dec_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 
-//for mp4 decoder memory. 4Mbyte,extra
-LOCAL uint32 s_used_extra_mem = 0x0;
-LOCAL uint32 s_extra_mem_size = 0x1000000;  //16M
+#define MP4DEC_MALLOC_PRINT   //ALOGD
 
-//for mp4 decoder memory. 4Mbyte,inter
-LOCAL uint32 s_used_inter_mem = 0x0;
-LOCAL uint32 s_inter_mem_size = 0x400000;
-
-LOCAL uint8 *s_extra_mem_bfr_ptr = NULL;
-LOCAL uint8 *s_inter_mem_bfr_ptr = NULL;
-
-LOCAL uint8 *s_inter_mem_bfr_start = NULL;
-LOCAL uint32 s_inter_mem_phy_addr = 0;
-
-/*****************************************************************************
- **	Name : 			Mp4Dec_ExtraMemAlloc
- ** Description:	Alloc the common memory for mp4 decoder. 
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void *Mp4Dec_ExtraMemAlloc(uint32 mem_size)
+LOCAL void Init_Mem (Mp4DecObject *vo, MMCodecBuffer *pMem, int32 type)
 {
-	uint8 *pMem;
-	mem_size = ((mem_size + 3) &(~3));
+    int32 dw_aligned = (((uint32)(pMem->common_buffer_ptr) + 7) & (~7)) - ((uint32)(pMem->common_buffer_ptr));
 
-	if((0 == mem_size)||(mem_size> (s_extra_mem_size-s_used_extra_mem)))
-	{
-		SCI_ASSERT(0);
-		return 0;
-	}
-	
-	pMem = s_extra_mem_bfr_ptr + s_used_extra_mem;
-	s_used_extra_mem += mem_size;
-	
-	return pMem;
+    vo->mem[type].used_size = 0;
+    vo->mem[type].v_base = pMem->common_buffer_ptr + dw_aligned;
+    vo->mem[type].p_base = (uint32)(pMem->common_buffer_ptr_phy) + dw_aligned;
+    vo->mem[type].total_size = pMem->size - dw_aligned;
+    SCI_MEMSET(vo->mem[type].v_base, 0, vo->mem[type].total_size);
+
+    MP4DEC_MALLOC_PRINT("%s: dw_aligned, %d, v_base: %0x, p_base: %0x, mem_size:%d\n",
+                        __FUNCTION__, dw_aligned, vo->mem[type].v_base, vo->mem[type].p_base, vo->mem[type].total_size);
 }
 
-/*****************************************************************************
- **	Name : 			Mp4Dec_ExtraMemAlloc_64WordAlign
- ** Description:	Alloc the common memory for mp4 decoder. 
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void *Mp4Dec_ExtraMemAlloc_64WordAlign(uint32 mem_size)
+PUBLIC void Mp4Dec_InitInterMem (Mp4DecObject *vo, MMCodecBuffer *pInterMemBfr)
 {
-	uint32 CurrAddr, _64WordAlignAddr;
-		
-	CurrAddr = (uint32)s_extra_mem_bfr_ptr + s_used_extra_mem;
-
-	_64WordAlignAddr = ((CurrAddr + 255) >>8)<<8;
-
-	mem_size += (_64WordAlignAddr - CurrAddr);
-
-	if((0 == mem_size)||(mem_size> (s_extra_mem_size-s_used_extra_mem)))
-	{
-		SCI_ASSERT(0);
-		return 0;
-	}
-	
-	s_used_extra_mem += mem_size;
-	
-	return (void *)_64WordAlignAddr;
-}
-/*****************************************************************************
- **	Name : 			Mp4Dec_InterMemAlloc
- ** Description:	Alloc the common memory for mp4 decoder. 
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void *Mp4Dec_InterMemAlloc(uint32 mem_size)
-{
-	uint8 *pMem;
-	mem_size = ((mem_size + 7) &(~7));
-
-	if((0 == mem_size)||(mem_size> (s_inter_mem_size-s_used_inter_mem)))
-	{
-		SCI_ASSERT(0);
-		return 0;
-	}
-	
-	pMem = s_inter_mem_bfr_ptr + s_used_inter_mem;
-	s_used_inter_mem += mem_size;
-	
-	return pMem;
-}
-
-/*****************************************************************************
- **	Name : 			Mp4Dec_MemFree
- ** Description:	Free the common memory for mp4 decoder.  
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void Mp4Dec_FreeMem(void) 
-{ 
-	s_used_inter_mem = 0;
-	s_used_extra_mem = 0;
-}
-
-PUBLIC void Mp4Dec_InitInterMem(MMCodecBuffer *dec_buffer_ptr)
-{
-	s_inter_mem_bfr_start = dec_buffer_ptr->common_buffer_ptr;
-	s_inter_mem_bfr_ptr = s_inter_mem_bfr_start;
-	s_inter_mem_size = dec_buffer_ptr->size;
-	s_inter_mem_phy_addr = (uint32)dec_buffer_ptr->common_buffer_ptr_phy;
-	SCI_MEMSET(s_inter_mem_bfr_ptr, 0, s_inter_mem_size);
-	
-	//reset memory used count
-	s_used_inter_mem = 0;
-}
-
-
-PUBLIC uint32  Mp4Dec_GetPhyAddr(void * vitual_ptr)
-{
-	return (((uint32)vitual_ptr - (uint32)s_inter_mem_bfr_start) + s_inter_mem_phy_addr);
+    Init_Mem(vo, pInterMemBfr, INTER_MEM);
 }
 
 /*****************************************************************************/
 //  Description:   Init mpeg4 decoder	memory
-//	Global resource dependence: 
-//  Author:        
-//	Note:           
+//	Global resource dependence:
+//  Author:
+//	Note:
 /*****************************************************************************/
-MMDecRet MP4DecMemInit(MP4Handle *mp4Handle, MMCodecBuffer *pBuffer)
+PUBLIC MMDecRet MP4DecMemInit(MP4Handle *mp4Handle, MMCodecBuffer *pBuffer)
 {
-	s_extra_mem_bfr_ptr = pBuffer->common_buffer_ptr_phy;
-	s_extra_mem_size = pBuffer->size;
-	//SCI_MEMSET(s_extra_mem_bfr_ptr, 0, s_extra_mem_size);
+    Mp4DecObject *vo = (Mp4DecObject *) mp4Handle->videoDecoderData;
 
-	//reset memory used count
-	s_used_extra_mem = 0;
+    Init_Mem(vo, pBuffer, EXTRA_MEM);
 
-	return MMDEC_OK;
+    return MMDEC_OK;
 }
 
+/*****************************************************************************
+ ** Note:	Alloc the needed memory
+ *****************************************************************************/
+PUBLIC void *Mp4Dec_MemAlloc (Mp4DecObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type)
+{
+    CODEC_BUF_T *pMem = &(vo->mem[type]);
+    uint32 CurrAddr, AlignedAddr;
+
+    CurrAddr = (uint32)(pMem->v_base) + pMem->used_size;
+    AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
+    need_size += (AlignedAddr - CurrAddr);
+
+    MP4DEC_MALLOC_PRINT("%s: mem_size:%d, AlignedAddr: %0x, type: %d\n", __FUNCTION__, need_size, AlignedAddr, type);
+
+    if((0 == need_size)||(need_size >  (pMem->total_size -pMem->used_size)))
+    {
+        ALOGE("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, pMem->total_size, pMem->used_size,need_size, type);
+        return NULL;
+    }
+
+    pMem->used_size += need_size;
+
+    return (void *)AlignedAddr;
+}
+
+/*****************************************************************************
+ ** Note:	 mapping from virtual to physical address
+ *****************************************************************************/
+PUBLIC uint32 Mp4Dec_MemV2P(Mp4DecObject *vo, uint8 *vAddr, int32 type)
+{
+    if (type >= MAX_MEM_TYPE)
+    {
+        ALOGE ("%s, memory type is error!", __FUNCTION__);
+        return NULL;
+    } else
+    {
+        CODEC_BUF_T *pMem = &(vo->mem[type]);
+
+        return ((uint32)(vAddr-pMem->v_base)+pMem->p_base);
+    }
+}
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End

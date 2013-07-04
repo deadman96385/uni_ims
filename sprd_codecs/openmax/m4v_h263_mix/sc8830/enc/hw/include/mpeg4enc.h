@@ -7,8 +7,8 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 3/15/2007     			      Create.                                     *
  *****************************************************************************/
 #ifndef MPEG4ENC_H
@@ -18,76 +18,82 @@
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
 #include "mmcodec.h"
-#include "vsp_mp4_enc.h"
 
 /**---------------------------------------------------------------------------*
  **                             Compiler Flag                                 *
  **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 
-#define MP4ENC_INTERNAL_BUFFER_SIZE (MP4ENC_OR_RUN_SIZE+MP4ENC_OR_INTER_MALLOC_SIZE)  
-#define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)  //for bitstream size of one encoded frame.
+//#define MP4ENC_INTERNAL_BUFFER_SIZE (MP4ENC_OR_RUN_SIZE+MP4ENC_OR_INTER_MALLOC_SIZE)
+//#define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)  //for bitstream size of one encoded frame.
+
+typedef struct tagMP4Handle
+{
+    void            *videoEncoderData;
+//    int             videoEncoderInit;
+    void *userData;
+
+} MP4Handle;
+
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-//  Description:   Init mpeg4 encoder 
-//	Global resource dependence: 
-//  Author:        
-//	Note:           
+//  Description:   Init mpeg4 encoder
+//	Global resource dependence:
+//  Author:
+//	Note:
 /*****************************************************************************/
-MMEncRet MP4EncInit(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat);
+MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat);
 /*****************************************************************************/
 //  Description:   Generate mpeg4 header
-//	Global resource dependence: 
-//  Author:        
-//	Note:           
+//	Global resource dependence:
+//  Author:
+//	Note:
 /*****************************************************************************/
-MMEncRet MP4EncGenHeader(MMEncOut *pOutput);
+MMEncRet MP4EncGenHeader(MP4Handle *mp4Handle, MMEncOut *pOutput);
 
 /*****************************************************************************/
 //  Description:   Set mpeg4 encode config
-//	Global resource dependence: 
-//  Author:        
-//	Note:           
+//	Global resource dependence:
+//  Author:
+//	Note:
 /*****************************************************************************/
-MMEncRet MP4EncSetConf(MMEncConfig *pConf);
+MMEncRet MP4EncSetConf(MP4Handle *mp4Handle, MMEncConfig *pConf);
 
 /*****************************************************************************/
 //  Description:   Get mpeg4 encode config
-//	Global resource dependence: 
-//  Author:        
-//	Note:           
+//	Global resource dependence:
+//  Author:
+//	Note:
 /*****************************************************************************/
-MMEncRet MP4EncGetConf(MMEncConfig *pConf);
+MMEncRet MP4EncGetConf(MP4Handle *mp4Handle, MMEncConfig *pConf);
 
 /*****************************************************************************/
-//  Description:   Encode one vop	
-//	Global resource dependence: 
-//  Author:        
-//	Note:           
+//  Description:   Encode one vop
+//	Global resource dependence:
+//  Author:
+//	Note:
 /*****************************************************************************/
-MMEncRet MP4EncStrmEncode (MMEncIn *pInput, MMEncOut *pOutput);
+MMEncRet MP4EncStrmEncode (MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutput);
 
 /*****************************************************************************/
-//  Description:   Close mpeg4 encoder	
-//	Global resource dependence: 
-//  Author:        
-//	Note:           
+//  Description:   Close mpeg4 encoder
+//	Global resource dependence:
+//  Author:
+//	Note:
 /*****************************************************************************/
-MMEncRet MP4EncRelease(void);
-
-
+MMEncRet MP4EncRelease(MP4Handle *mp4Handle);
 
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **
 **----------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
 #endif

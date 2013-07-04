@@ -8,8 +8,8 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 01/23/2007    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4ENC_MALLOC_H_
@@ -17,29 +17,26 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "mp4_basic.h"
+#include "mp4enc_basic.h"
 #include "mp4enc_mode.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 
-PUBLIC void *Mp4Enc_ExtraMemAlloc(uint32 mem_size);
-PUBLIC void *Mp4Enc_ExtraMemAlloc_64WordAlign(uint32 mem_size);
-PUBLIC void *Mp4Enc_InterMemAlloc(uint32 mem_size);
-PUBLIC void Mp4Enc_MemFree(void);
-PUBLIC void Mp4Enc_InitMem(MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr);
-PUBLIC uint32 Mp4ENC_GetPhyAddr(void * vitual_ptr);
+void Mp4Enc_InitMem (Mp4EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr);
+void *Mp4Enc_MemAlloc (Mp4EncObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type);
+uint8 *Mp4Enc_ExtraMem_V2P(Mp4EncObject *vo, uint8 *vAddr, int32 type);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif // _MP4ENC_MALLOC_H_

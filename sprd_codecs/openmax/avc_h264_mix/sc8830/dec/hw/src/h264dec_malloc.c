@@ -1,198 +1,97 @@
 /******************************************************************************
  ** File Name:    h264dec_malloc.c                                             *
  ** Author:       Xiaowei.Luo                                                 *
- ** DATE:         03/29/2010                                                  *
- ** Copyright:    2010 Spreatrum, Incoporated. All Rights Reserved.           *
+ ** DATE:         06/09/2013                                                  *
+ ** Copyright:    2013 Spreatrum, Incoporated. All Rights Reserved.           *
  ** Description:                                                              *
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
- ** 03/29/2010    Xiaowei.Luo     Create.                                     *
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
+ ** 06/09/2013    Xiaowei.Luo     Create.                                     *
  *****************************************************************************/
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8810_video_header.h"
+#include "h264dec_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 
-//extra memory
-LOCAL uint32 s_used_extra_mem;// = 0x0;
-LOCAL uint32 s_extra_mem_size;// = 0x1000000;	//16Mbyte
-
-//inter memory
-LOCAL uint32 s_used_inter_mem;// = 0x0;
-LOCAL uint32 s_inter_mem_size;// = 0x400000;	//4Mbyte
-
-LOCAL uint8 *s_extra_mem_bfr_ptr = NULL;
-LOCAL uint8 *s_inter_mem_bfr_ptr = NULL;
-LOCAL uint8 *s_inter_mem_bfr_start = NULL;
-LOCAL uint32 s_inter_mem_phy_addr = 0;
-
-
-/*****************************************************************************
- **	Name : 			H264Dec_ExtraMemAlloc
- ** Description:	Alloc the common memory for h264 decoder. 
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void *H264Dec_ExtraMemAlloc(uint32 mem_size)
-{
-	uint8 *pMem;
-	mem_size = ((mem_size + 7) &(~7));//3 //dword align //weihu
-
-	if((0 == mem_size)||(mem_size> (s_extra_mem_size-s_used_extra_mem)))
-	{
-		SCI_ASSERT(0);
-		return 0;
-	}
-	
-	pMem = s_extra_mem_bfr_ptr + s_used_extra_mem;
-	s_used_extra_mem += mem_size;
-	
-	return pMem;
-}
-
-/*****************************************************************************
- **	Name : 			H264Dec_ExtraMemAlloc_64WordAlign
- ** Description:	Alloc the common memory for h264 decoder. 
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void *H264Dec_ExtraMemAlloc_64WordAlign(uint32 mem_size)
-{
-	uint32 CurrAddr, _64WordAlignAddr;
-		
-	CurrAddr = (uint32)s_extra_mem_bfr_ptr + s_used_extra_mem;
-
-	_64WordAlignAddr = ((CurrAddr + 255) >>8)<<8;
-
-	mem_size += (_64WordAlignAddr - CurrAddr);
-
-	if((0 == mem_size)||(mem_size> (s_extra_mem_size-s_used_extra_mem)))
-	{
-		SCI_ASSERT(0);
-		return 0;
-	}
-	
-	s_used_extra_mem += mem_size;
-	
-	return (void *)_64WordAlignAddr;
-}
 /*****************************************************************************
  **	Name : 			H264Dec_InterMemAlloc
- ** Description:	Alloc the common memory for h264 decoder. 
+ ** Description:	Alloc the common memory for h264 decoder.
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
-PUBLIC void *H264Dec_InterMemAlloc(uint32 mem_size)
+PUBLIC void *H264Dec_InterMemAlloc(H264DecObject *vo, uint32 need_size, int32 aligned_byte_num)
 {
-	uint8 *pMem;
-	mem_size = ((mem_size + 7) &(~7));//3 //dword align //weihu
+    uint32 CurrAddr, AlignedAddr;
 
 
-	SCI_TRACE_LOW("%s: left mem size : %d, need mem size : %d", __FUNCTION__,(s_inter_mem_size-s_used_inter_mem), mem_size);
-	
-	if((0 == mem_size)||(mem_size> (s_inter_mem_size-s_used_inter_mem)))
-	{
-		SCI_ASSERT(0);
-		return 0;
-	}
-	
-	pMem = s_inter_mem_bfr_ptr + s_used_inter_mem;
-	s_used_inter_mem += mem_size;
-	
-	return pMem;
-}
+    aligned_byte_num = 8;
 
-PUBLIC void H264Dec_InterMemFree(uint32 mem_size)
-{
-	//uint8 *pMem;
-	mem_size = ((mem_size + 7) &(~7));//3 //dword align //weihu
-	
-	if((0 == mem_size)||(mem_size>s_used_inter_mem))
-	{
-		SCI_ASSERT(0);
-		//return 0;
-	}
-	
-	s_used_inter_mem -= mem_size;
-	//pMem = s_inter_mem_bfr_ptr + s_used_inter_mem;	
-	
-	//return pMem;
-}
-/*****************************************************************************
- **	Name : 			H264Dec_MemFree
- ** Description:	Free the common memory for h264 decoder.  
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void H264Dec_FreeMem(void) 
-{ 
-	s_used_inter_mem = 0;
-	s_used_extra_mem = 0;
+    CurrAddr = (uint32)(vo->s_inter_mem.v_base) + vo->s_inter_mem.used_size;
+    AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
+    need_size += (AlignedAddr - CurrAddr);
+
+//    SCI_TRACE_LOW("%s: left mem size : %d, need mem size : %d", __FUNCTION__,(vo->s_inter_mem.total_size-vo->s_inter_mem.used_size), need_size);
+
+    if((0 == need_size)||(need_size> (vo->s_inter_mem.total_size-vo->s_inter_mem.used_size)))
+    {
+        SCI_TRACE_LOW("%s  failed, total_size:%d, used_size: %d, need_size:%d\n",
+                      __FUNCTION__, vo->s_inter_mem.total_size, vo->s_inter_mem.used_size,need_size);
+        return NULL; //lint !e527
+    }
+
+    vo->s_inter_mem.used_size+= need_size;
+
+    return (void *)AlignedAddr;
 }
 
 /*****************************************************************************
- **	Name : 			H264Dec_FreeExtraMem
- ** Description:	Free the common memory for h264 decoder.  
+ **	Name : 			H264Dec_FreeInterMem
+ ** Description:	Free the common memory for h264 decoder.
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
-PUBLIC void H264Dec_FreeExtraMem(void) 
-{ 
-	s_used_extra_mem = 0;
-}
-
-PUBLIC void H264Dec_InitInterMem(MMCodecBuffer *dec_buffer_ptr)
+PUBLIC void H264Dec_FreeInterMem(H264DecObject *vo)
 {
-	s_inter_mem_bfr_start = dec_buffer_ptr->common_buffer_ptr;
-	s_inter_mem_bfr_ptr = s_inter_mem_bfr_start;
-	s_inter_mem_size = dec_buffer_ptr->size;
-	s_inter_mem_phy_addr = (uint32)dec_buffer_ptr->common_buffer_ptr_phy;
-	SCI_MEMSET(s_inter_mem_bfr_ptr, 0, s_inter_mem_size);
-	
-	//reset memory used count
-	s_used_inter_mem = 0;
+    vo->s_inter_mem.used_size = 0;
 }
 
-PUBLIC uint32 H264Dec_GetPhyAddr(void * vitual_ptr)
+PUBLIC void H264Dec_InitInterMem(H264DecObject *vo, MMCodecBuffer *dec_buffer_ptr)
 {
-	return (((uint32)vitual_ptr - (uint32)s_inter_mem_bfr_start) + s_inter_mem_phy_addr);
+    vo->s_inter_mem.used_size = 0;
+    vo->s_inter_mem.v_base = dec_buffer_ptr->common_buffer_ptr;
+    vo->s_inter_mem.p_base = dec_buffer_ptr->common_buffer_ptr_phy;
+    vo->s_inter_mem.total_size = dec_buffer_ptr->size;
+    SCI_MEMSET(vo->s_inter_mem.v_base, 0, vo->s_inter_mem.total_size);
+
+    SCI_TRACE_LOW("%s: inter_mem_size:%d\n", __FUNCTION__, vo->s_inter_mem.total_size);
+
+    return;
 }
 
-/*****************************************************************************/
-//  Description:   Init mpeg4 decoder	memory
-//	Global resource dependence: 
-//  Author:        
-//	Note:           
-/*****************************************************************************/
-PUBLIC MMDecRet H264DecMemInit(AVCHandle *avcHandle, MMCodecBuffer *pBuffer)
+/*****************************************************************************
+ ** Note:	 mapping from virtual to physical address
+ *****************************************************************************/
+PUBLIC uint8 *H264Dec_InterMem_V2P(H264DecObject *vo, uint8 *vAddr)
 {
-	s_extra_mem_bfr_ptr = pBuffer->common_buffer_ptr;
-	s_extra_mem_size = pBuffer->size;
-	SCI_MEMSET(s_extra_mem_bfr_ptr, 0, s_extra_mem_size);
-	
-	//reset memory used count
-	s_used_extra_mem = 0;
-
-	return MMDEC_OK;
+    return ((vAddr-vo->s_inter_mem.v_base)+ vo->s_inter_mem.p_base);
 }
-
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
-		
+// End
+

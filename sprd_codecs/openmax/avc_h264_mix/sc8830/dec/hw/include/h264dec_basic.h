@@ -7,8 +7,8 @@
 *****************************************************************************/
 /******************************************************************************
 **                   Edit    History                                         *
-**---------------------------------------------------------------------------* 
-** DATE          NAME            DESCRIPTION                                 * 
+**---------------------------------------------------------------------------*
+** DATE          NAME            DESCRIPTION                                 *
 ** 11/20/2007    Xiaowei Luo     Create.                                     *
 *****************************************************************************/
 #ifndef _H264DEC_BASIC_H_
@@ -22,27 +22,26 @@
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-extern   "C" 
+extern   "C"
 {
 #endif
+
+#define _MVC_		1
 
 #define DISPLAY_LIST_SIZE	10
 
 #define DEC_REF_PIC_MARKING_COMMAND_NUM	50
-	
+
 #define MAX_REF_FRAME_NUMBER	16
 // #define	MAX_REF_FRAME_BUF_NUM	16  //5
 
 #define MAX_PPS	256
 #define MAX_SPS	32
 
-#define SIZE_SLICE_GROUP_ID		396	//for CIF size// should be sufficient for HUGE pictures, need one int per MB in a picture
-
 #define INVALID_REF_ID	(-135792468)
 
 #define LIST_NOT_USED -1 //FIXME rename?
 #define PART_NOT_AVAIL	-2
-#define CONTEXT_CACHE_WIDTH	6
 
 #define EOS		1	//!< End Of Sequence
 #define SOP		2	//!< Start Of Picture
@@ -78,16 +77,30 @@ extern   "C"
 #define NALU_PRIORITY_DISPOSABLE	0
 
 //slice type
-#define	P_SLICE		1
+#define P_SLICE		1
 #define B_SLICE		2
 #define I_SLICE		0
+
+typedef enum {
+    FREXT_CAVLC444 = 44,       //!< YUV 4:4:4/14 "CAVLC 4:4:4"
+    BASELINE       = 66,       //!< YUV 4:2:0/8  "Baseline"
+    MAIN           = 77,       //!< YUV 4:2:0/8  "Main"
+    EXTENDED       = 88,       //!< YUV 4:2:0/8  "Extended"
+    FREXT_HP       = 100,      //!< YUV 4:2:0/8  "High"
+    FREXT_Hi10P    = 110,      //!< YUV 4:2:0/10 "High 10"
+    FREXT_Hi422    = 122,      //!< YUV 4:2:2/10 "High 4:2:2"
+    FREXT_Hi444    = 244,      //!< YUV 4:4:4/14 "High 4:4:4"
+    MVC_HIGH       = 118,      //!< YUV 4:2:0/8  "Multiview High"
+    STEREO_HIGH    = 128       //!< YUV 4:2:0/8  "Stereo High"
+}
+ProfileIDC;
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif  //_H264DEC_BASIC_H_

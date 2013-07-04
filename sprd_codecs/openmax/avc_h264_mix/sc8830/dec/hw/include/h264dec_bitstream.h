@@ -7,8 +7,8 @@
 *****************************************************************************/
 /******************************************************************************
 **                   Edit    History                                         *
-**---------------------------------------------------------------------------* 
-** DATE          NAME            DESCRIPTION                                 * 
+**---------------------------------------------------------------------------*
+** DATE          NAME            DESCRIPTION                                 *
 ** 11/20/2007    Xiaowei Luo     Create.                                     *
 *****************************************************************************/
 #ifndef _H264DEC_BITSTREAM_H_
@@ -18,40 +18,37 @@
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
 #include "video_common.h"
-#include "vsp_drv_sc8830.h"
- #include "h264dec_global.h"
+#include "h264dec_global.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-extern   "C" 
+extern   "C"
 {
 #endif
 
-uint32 BitstreamReadBits (DEC_BS_T * stream, int32 nbits);
-PUBLIC uint32 READ_UE_V (DEC_BS_T * stream);
-PUBLIC int32 READ_SE_V (DEC_BS_T * stream);
-PUBLIC int32 H264Dec_Long_SEV (DEC_BS_T * stream);
-PUBLIC int32 H264Dec_Long_UEV (DEC_BS_T * stream);
-PUBLIC void H264Dec_flush_left_byte (void);
-void fillStreamBfr (DEC_BS_T * stream);
+uint32 show_bits (H264DecObject *vo, int32 nbits);
+uint32 read_bits (H264DecObject *vo, int32 nbits);
+uint32 ue_v (H264DecObject *vo);
+int32 se_v (H264DecObject *vo);
+int32 long_ue_v (H264DecObject *vo);
+int32 long_se_v (H264DecObject *vo);
 
-#define BITSTREAMSHOWBITS(bitstream, nbits) OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_RDATA_OFF,"BSM_rd dara") 
-#define BITSTREAMFLUSHBITS(stream, nbits) \
-	    OR1200_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, (nbits<<24)|0x1,"BSM_flush n bits")
+#define SHOW_FLC(nbits)    show_bits(vo, nbits)
+#define READ_FLC(nbits)	read_bits(vo, nbits)
+#define UE_V()    ue_v(vo)
+#define SE_V()   se_v(vo)
+#define Long_SE_V()    long_se_v(vo)
+#define Long_UE_V()    long_ue_v(vo)
 
-
-
-#define SHOW_FLC(stream, nbits)	BITSTREAMSHOWBITS(stream, nbits)
-#define READ_FLC(stream, nbits)	BitstreamReadBits(stream, nbits)
-
+void H264Dec_flush_left_byte (H264DecObject *vo);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif  //_H264DEC_BITSTREAM_H_

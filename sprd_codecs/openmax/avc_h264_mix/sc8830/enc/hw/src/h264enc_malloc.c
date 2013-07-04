@@ -1,107 +1,98 @@
-#include "sc6800x_video_header.h"
-
-LOCAL uint32 s_H264EncExtraMemUsed = 0x0;
-LOCAL uint32 s_H264EncExtraMemSize = 0x0;
-
-LOCAL uint32 s_H264EncInterMemUsed = 0x0;
-LOCAL uint32 s_H264EncInterMemSize = 0x0;
-
-LOCAL uint8 *s_pEnc_Extra_buffer = NULL;
-LOCAL uint8 *s_pEnc_Inter_buffer = NULL;
-
-LOCAL uint8 *s_pEnc_Inter_buffer_start = NULL;
-LOCAL uint32 s_H264EncInterMemPhy = 0x0;
-
-
-PUBLIC void *h264enc_extra_mem_alloc (uint32 mem_size)
+/******************************************************************************
+ ** File Name:    h264enc_malloc.c                                             *
+ ** Author:       Xiaowei Luo                                                 *
+ ** DATE:         06/17/2013                                                  *
+ ** Copyright:    2013 Spreatrum, Incoporated. All Rights Reserved.           *
+ ** Description:                                                              *
+ *****************************************************************************/
+/******************************************************************************
+ **                   Edit    History                                         *
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
+ ** 01/23/2007    Xiaowei Luo     Create.                                     *
+ *****************************************************************************/
+/*----------------------------------------------------------------------------*
+**                        Dependencies                                        *
+**---------------------------------------------------------------------------*/
+#include "h264enc_video_header.h"
+/**---------------------------------------------------------------------------*
+**                        Compiler Flag                                       *
+**---------------------------------------------------------------------------*/
+#ifdef   __cplusplus
+extern   "C"
 {
-	uint8 *mem_ptr;
+#endif
 
-	mem_size = ((mem_size + 7) &(~7));	//dword align //weihu
-	//mem_size = ((mem_size + 3) &(~3));	//word align
+#define H264ENC_MALLOC_PRINT   //ALOGD
 
-	if ( (0 == mem_size) || (mem_size > (s_H264EncExtraMemSize- s_H264EncExtraMemUsed)) )
-	{
-		SCI_ASSERT(0);
-		return 0;
-	}
+PUBLIC void H264Enc_InitMem (H264EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr)
+{
+    MMCodecBuffer *pMem = pInterMemBfr;
+    int32 type;
 
-	mem_ptr = s_pEnc_Extra_buffer + s_H264EncExtraMemUsed;
-	s_H264EncExtraMemUsed += mem_size;
+    for (type = 0; type < MAX_MEM_TYPE; type++)
+    {
+        int32 dw_aligned = (((uint32)(pMem->common_buffer_ptr) + 7) & (~7)) - ((uint32)(pMem->common_buffer_ptr));
 
-	return mem_ptr;
+        vo->mem[type].used_size = 0;
+        vo->mem[type].v_base = pMem->common_buffer_ptr;
+        vo->mem[type].p_base = pMem->common_buffer_ptr_phy;
+        vo->mem[type].total_size = pMem->size;
+        SCI_MEMSET(vo->mem[type].v_base, 0, vo->mem[type].total_size);
+
+        H264ENC_MALLOC_PRINT("%s: mem_size:%d\n", __FUNCTION__, vo->mem[type].total_size);
+
+        pMem = pExtraMemBfr;
+    }
 }
 
 /*****************************************************************************
- **	Name : 			H264Dec_ExtraMemAlloc_64WordAlign
- ** Description:	Alloc the common memory for h264 decoder. 
- ** Author:			Xiaowei Luo
- **	Note:
+ ** Note:	Alloc the needed memory
  *****************************************************************************/
-PUBLIC void *H264Enc_ExtraMemAlloc_64WordAlign(uint32 mem_size)
+PUBLIC void *H264Enc_MemAlloc (H264EncObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type)
 {
-	uint32 CurrAddr, _64WordAlignAddr;
-		
-	CurrAddr = (uint32)s_pEnc_Extra_buffer + s_H264EncExtraMemUsed;
+    CODEC_BUF_T *pMem = &(vo->mem[type]);
+    uint32 CurrAddr, AlignedAddr;
 
-	_64WordAlignAddr = ((CurrAddr + 255) >>8)<<8;
+    CurrAddr = (uint32)(pMem->v_base) + pMem->used_size;
+    AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
+    need_size += (AlignedAddr - CurrAddr);
 
-	mem_size += (_64WordAlignAddr - CurrAddr);
+    H264ENC_MALLOC_PRINT("%s: mem_size:%d\n", __FUNCTION__, need_size);
 
-	if((0 == mem_size)||(mem_size> (s_H264EncExtraMemSize-s_H264EncExtraMemUsed)))
-	{
-		SCI_ASSERT(0);
-		return 0;
-	}
-	
-	s_H264EncExtraMemUsed += mem_size;
-	
-	return (void *)_64WordAlignAddr;
+    if((0 == need_size)||(need_size >  (pMem->total_size -pMem->used_size)))
+    {
+        ALOGE("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, pMem->total_size, pMem->used_size,need_size, type);
+        return NULL;
+    }
+
+    pMem->used_size += need_size;
+
+    return (void *)AlignedAddr;
 }
 
-PUBLIC void *h264enc_inter_mem_alloc (uint32 mem_size)
+/*****************************************************************************
+ ** Note:	 mapping from virtual to physical address
+ *****************************************************************************/
+PUBLIC uint8 *H264Enc_ExtraMem_V2P(H264EncObject *vo, uint8 *vAddr, int32 type)
 {
-	uint8 *mem_ptr;
+    if (type >= MAX_MEM_TYPE)
+    {
+        ALOGE ("%s, memory type is error!", __FUNCTION__);
+        return NULL;
+    } else
+    {
+        CODEC_BUF_T *pMem = &(vo->mem[type]);
 
-	mem_size = ((mem_size + 7) &(~7));	//dword align //weihu
-	//mem_size = ((mem_size + 3) &(~3));	//word align
-
-	if ( (0 == mem_size) || (mem_size > (s_H264EncInterMemSize- s_H264EncInterMemUsed)) )
-	{
-		SCI_ASSERT(0);
-		return 0;
-	}
-
-	mem_ptr = s_pEnc_Inter_buffer + s_H264EncInterMemUsed;
-	s_H264EncInterMemUsed += mem_size;
-
-	return mem_ptr;
+        return ((vAddr-pMem->v_base)+pMem->p_base);
+    }
 }
-
-PUBLIC void h264enc_mem_free (void)
-{
-	s_H264EncExtraMemUsed = 0;
-	s_H264EncInterMemUsed = 0;
+/**---------------------------------------------------------------------------*
+**                         Compiler Flag                                      *
+**---------------------------------------------------------------------------*/
+#ifdef   __cplusplus
 }
-
-PUBLIC 	void h264enc_mem_init (MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr)
-{
-	s_pEnc_Inter_buffer_start = pInterMemBfr->common_buffer_ptr;
-	s_pEnc_Inter_buffer = s_pEnc_Inter_buffer_start;
-	s_H264EncInterMemSize = pInterMemBfr->size;
-	s_H264EncInterMemPhy = (uint32)pInterMemBfr->common_buffer_ptr_phy;
-
-	s_pEnc_Extra_buffer = (uint8	*)pExtraMemBfr->common_buffer_ptr_phy;
-	s_H264EncExtraMemSize = pExtraMemBfr->size;
-
-	s_H264EncExtraMemUsed = 0;
-	s_H264EncInterMemUsed = 0;	
-}
-
-
-PUBLIC uint32 H264ENC_GetPhyAddr(void * vitual_ptr)
-{
-	return (((uint32)vitual_ptr - (uint32)s_pEnc_Inter_buffer_start) + s_H264EncInterMemPhy);
-}
-
+#endif
+/**---------------------------------------------------------------------------*/
+// End
 

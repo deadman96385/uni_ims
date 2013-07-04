@@ -1,205 +1,95 @@
 /******************************************************************************
- ** File Name:    mp4dec_malloc.c                                             *
+ ** File Name:    vp8dec_malloc.c                                             *
  ** Author:       Xiaowei Luo                                                 *
- ** DATE:         01/23/2007                                                  *
+ ** DATE:         07/04/2013                                                  *
  ** Copyright:    2006 Spreatrum, Incoporated. All Rights Reserved.           *
  ** Description:                                                              *
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
- ** 01/23/2007    Xiaowei Luo     Create.                                     *
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
+ ** 07/04/2013    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-//#include "sc8800g_video_header.h"
-#include "sci_types.h"
-#include "mmcodec.h"
-#include "video_common.h"
-
+#include "vp8dec_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 
-//extra memory
-LOCAL uint32 s_used_extra_mem;// = 0x0;
-LOCAL uint32 s_extra_mem_size;// = 0x1000000;	//16Mbyte
-
-//inter memory
-LOCAL uint32 s_used_inter_mem;// = 0x0;
-LOCAL uint32 s_inter_mem_size;// = 0x400000;	//4Mbyte
-
-LOCAL uint8 *s_extra_mem_bfr_ptr;
-LOCAL uint8 *s_inter_mem_bfr_ptr;
-LOCAL uint8 *s_inter_mem_bfr_start = NULL;
-LOCAL uint32 s_inter_mem_phy_addr = 0;
-
 /*****************************************************************************
- **	Name : 			vp8Dec_ExtraMemAlloc
- ** Description:	Alloc the common memory for vp8 decoder. 
+ **	Name : 			Vp8Dec_InterMemAlloc
+ ** Description:	Alloc the common memory for h264 decoder.
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
-PUBLIC void *vp8dec_ExtraMemAlloc(uint32 mem_size)
+PUBLIC void *Vp8Dec_InterMemAlloc(VPXDecObject *vo, uint32 need_size, int32 aligned_byte_num)
 {
-	uint8 *pMem;
+    uint32 CurrAddr, AlignedAddr;
 
-	mem_size = ((mem_size + 7) &(~7));	//dword align //weihu
-	//mem_size = ((mem_size + 3) &(~3));	//word align
+    aligned_byte_num = 8;
 
-	if((0 == mem_size)||(mem_size> (s_extra_mem_size-s_used_extra_mem)))
-	{
-		SCI_ASSERT(0);
-		return 0;
-	}
-	
-	pMem = s_extra_mem_bfr_ptr + s_used_extra_mem;
-	s_used_extra_mem += mem_size;
-	
-	return pMem;
+    CurrAddr = (uint32)(vo->s_inter_mem.v_base) + vo->s_inter_mem.used_size;
+    AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
+    need_size += (AlignedAddr - CurrAddr);
+
+//    SCI_TRACE_LOW("%s: left mem size : %d, need mem size : %d", __FUNCTION__,(vo->s_inter_mem.total_size-vo->s_inter_mem.used_size), need_size);
+
+    if((0 == need_size)||(need_size> (vo->s_inter_mem.total_size-vo->s_inter_mem.used_size)))
+    {
+        SCI_TRACE_LOW("%s  failed, total_size:%d, used_size: %d, need_size:%d\n",
+                      __FUNCTION__, vo->s_inter_mem.total_size, vo->s_inter_mem.used_size,need_size);
+        return NULL; //lint !e527
+    }
+
+    vo->s_inter_mem.used_size+= need_size;
+
+    return (void *)AlignedAddr;
 }
 
 /*****************************************************************************
- **	Name : 			vp8Dec_ExtraMemAlloc_64WordAlign
- ** Description:	Alloc the common memory for vp8 decoder. 
+ **	Name : 			Vp8Dec_FreeInterMem
+ ** Description:	Free the common memory for h264 decoder.
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
-PUBLIC void *vp8dec_ExtraMemAlloc_64WordAlign(uint32 mem_size)
+PUBLIC void Vp8Dec_FreeInterMem(VPXDecObject *vo)
 {
-	uint32 CurrAddr, _64WordAlignAddr;
-		
-	CurrAddr = (uint32)s_extra_mem_bfr_ptr + s_used_extra_mem;
-
-	_64WordAlignAddr = ((CurrAddr + 255) >>8)<<8;
-
-	mem_size += (_64WordAlignAddr - CurrAddr);
-
-	if((0 == mem_size)||(mem_size> (s_extra_mem_size-s_used_extra_mem)))
-	{
-		SCI_ASSERT(0);
-		return 0;
-	}
-	
-	s_used_extra_mem += mem_size;
-	
-	return (void *)_64WordAlignAddr;
+    vo->s_inter_mem.used_size = 0;
 }
+
+PUBLIC void Vp8Dec_InitInterMem(VPXDecObject *vo, MMCodecBuffer *dec_buffer_ptr)
+{
+    vo->s_inter_mem.used_size = 0;
+    vo->s_inter_mem.v_base = dec_buffer_ptr->common_buffer_ptr;
+    vo->s_inter_mem.p_base = dec_buffer_ptr->common_buffer_ptr_phy;
+    vo->s_inter_mem.total_size = dec_buffer_ptr->size;
+    SCI_MEMSET(vo->s_inter_mem.v_base, 0, vo->s_inter_mem.total_size);
+
+    SCI_TRACE_LOW("%s: inter_mem_size:%d\n", __FUNCTION__, vo->s_inter_mem.total_size);
+
+    return;
+}
+
 /*****************************************************************************
- **	Name : 			vp8Dec_InterMemAlloc
- ** Description:	Alloc the common memory for vp8 decoder. 
- ** Author:			Xiaowei Luo
- **	Note:
+ ** Note:	 mapping from virtual to physical address
  *****************************************************************************/
-PUBLIC void *vp8dec_InterMemAlloc(uint32 mem_size)
+PUBLIC uint8 *Vp8Dec_InterMem_V2P(VPXDecObject *vo, uint8 *vAddr)
 {
-	uint8 *pMem;
-
-	mem_size = ((mem_size + 7) &(~7));	//dword align //weihu
-	//mem_size = ((mem_size + 3) &(~3));	//word align
-
-	if((0 == mem_size)||(mem_size> (s_inter_mem_size-s_used_inter_mem)))
-	{
-		SCI_ASSERT(0);
-		return 0;
-	}
-	
-	pMem = s_inter_mem_bfr_ptr + s_used_inter_mem;
-	s_used_inter_mem += mem_size;
-	
-	return pMem;
-}
-
-PUBLIC void vp8dec_ExtraMemFree(uint32 mem_size)
-{
-	mem_size = ((mem_size + 7) &(~7));	//dword align //weihu
-	//mem_size = ((mem_size + 3) &(~3));	//word align
-	
-	if((0 == mem_size)||(mem_size>s_used_extra_mem))
-	{
-		SCI_ASSERT(0);
-		//return 0;
-	}
-	s_used_extra_mem -= mem_size;
-}
-
-PUBLIC void vp8dec_InterMemFree(uint32 mem_size)
-{
-	//uint8 *pMem;
-
-	mem_size = ((mem_size + 7) &(~7));	//dword align //weihu
-	//mem_size = ((mem_size + 3) &(~3));	//word align
-	
-	if((0 == mem_size)||(mem_size>s_used_inter_mem))
-	{
-		SCI_ASSERT(0);
-		//return 0;
-	}
-	
-	s_used_inter_mem -= mem_size;
-	//pMem = s_inter_mem_bfr_ptr + s_used_inter_mem;	
-	
-	//return pMem;
-}
-/*****************************************************************************
- **	Name : 			vp8Dec_MemFree
- ** Description:	Free the common memory for vp8 decoder.  
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void vp8dec_FreeMem(void) 
-{ 
-	s_used_inter_mem = 0;
-	s_used_extra_mem = 0;
-}
-
-PUBLIC void vp8dec_InitInterMem(MMCodecBuffer *dec_buffer_ptr)
-{
-	s_inter_mem_bfr_start = dec_buffer_ptr->common_buffer_ptr;
-	s_inter_mem_bfr_ptr = s_inter_mem_bfr_start;
-	s_inter_mem_size = dec_buffer_ptr->size;
-	s_inter_mem_phy_addr = (uint32)dec_buffer_ptr->common_buffer_ptr_phy;
-	SCI_MEMSET(s_inter_mem_bfr_ptr, 0, s_inter_mem_size);
-	
-	//reset memory used count
-	s_used_inter_mem = 0;
-}
-
-PUBLIC uint32 VP8Dec_GetPhyAddr(void * vitual_ptr)
-{
-	return (((uint32)vitual_ptr - (uint32)s_inter_mem_bfr_start) + s_inter_mem_phy_addr);
-}
-
-/*****************************************************************************/
-//  Description:   Init mpeg4 decoder	memory
-//	Global resource dependence: 
-//  Author:        
-//	Note:           
-/*****************************************************************************/
-MMDecRet VP8DecMemInit(MMCodecBuffer *pBuffer)
-{
-	s_extra_mem_bfr_ptr = pBuffer->common_buffer_ptr;
-	s_extra_mem_size = pBuffer->size;
-	// memset to 0 when malloc
-//	SCI_MEMSET(s_extra_mem_bfr_ptr, 0, s_extra_mem_size);
-	
-	//reset memory used count
-	s_used_extra_mem = 0;
-
-	return MMDEC_OK;
+    return ((vAddr-vo->s_inter_mem.v_base)+ vo->s_inter_mem.p_base);
 }
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End

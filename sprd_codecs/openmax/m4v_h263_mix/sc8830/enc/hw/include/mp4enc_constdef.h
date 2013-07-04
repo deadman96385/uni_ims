@@ -8,8 +8,8 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 12/14/2006    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4ENC_CONSTDEF_H_
@@ -22,8 +22,8 @@
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 /*----------------------------------------------------------------------------*
 **                            Mcaro Definitions                               *
@@ -77,7 +77,7 @@
 #define NUMBITS_VOP_QUANTIZER			5
 #define NUMBITS_VOP_FCODE				3
 
-// Video Packet	overhead, 
+// Video Packet	overhead,
 #define	NUMBITS_VP_RESYNC_MARKER		17
 #define	ENC_RESYNC_MARKER				0x1
 #define	NUMBITS_VP_QUANTIZER			NUMBITS_VOP_QUANTIZER
@@ -88,7 +88,7 @@
 #define NUMBITS_VOP_VERTICAL_SPA_REF	13
 #define NUMBITS_VOP_HORIZONTAL_SPA_REF	13
 
-// for Data Partitioning 
+// for Data Partitioning
 #define	NUMBITS_DP_MOTION_MARKER		17
 #define	MOTION_MARKER					0x1F001
 #define	NUMBITS_DP_DC_MARKER			19
@@ -98,9 +98,9 @@
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 
 #endif	//_MP4ENC_CONSTDEF_H_

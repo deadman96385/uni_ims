@@ -7,20 +7,20 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 12/14/2006    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8810_video_header.h"
+#include "mp4dec_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 
 #define PRINTF_HEAD_INFO	//PRINTF
@@ -30,501 +30,471 @@
 **----------------------------------------------------------------------------*/
 /*****************************************************************************
  **	Name : 			Mp4Dec_DecGobHeader
- ** Description:	get the header of Gob. 
+ ** Description:	get the header of Gob.
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
-MMDecRet Mp4Dec_DecGobHeader(DEC_VOP_MODE_T *vop_mode_ptr,SLICEINFO *SliceInfo)
-
+MMDecRet Mp4Dec_DecGobHeader(Mp4DecObject *vo)
 {
-	uint32 tmp_var, tmp_var2;
-	int32 mb_num;
-	int32 gob_number = SliceInfo->GobNum;
-	int32 temp;
-#if SIM_IN_WIN
-	OR1200_Vaild=1;
-	OR1200_READ_REG_POLL(GLB_REG_BASE_ADDR+VSP_INT_SYS_OFF, 0x00000004,0x00000004,"BSM_frame done int");//check HW int	
-	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_CLR_OFF, 0x4,"clear BSM_frame done int");
-	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL");
-	OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, 0x08000000,0x00000000,"BSM_clr enable");//check bsm is idle	
-#endif
-	
+    DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
+    uint32 tmp_var, tmp_var2;
+    int32 mb_num;
+    SLICEINFO *slice_info = &(vo->SliceInfo);
+    int32 gob_number = slice_info->GobNum;
+    int32 temp;
+    uint32 cmd;
 
+    if(gob_number > 0)
+    {
+        tmp_var = Mp4Dec_ShowBits(GOB_RESYNC_MARKER_LENGTH);
+        tmp_var2 = Mp4Dec_ShowBitsByteAlign_H263(vo, GOB_RESYNC_MARKER_LENGTH);
 
-	if(gob_number > 0)
-	{
-	  #if SIM_IN_WIN
-		if(READ_REG_POLL(VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_3, V_BIT_3, TIME_OUT_CLK,
-			"polling bsm fifo fifo depth >= 8 words for gob header"))
-		{
-			vop_mode_ptr->error_flag = TRUE;
-			return MMDEC_STREAM_ERROR;
-		}
-	#endif
+        if((GOB_RESYNC_MARKER == tmp_var) || (GOB_RESYNC_MARKER == tmp_var2))
+        {
+            if(GOB_RESYNC_MARKER == tmp_var2)
+            {
+                Mp4Dec_ByteAlign_Startcode(vo);
+            }
 
-		tmp_var = Mp4Dec_ShowBits(GOB_RESYNC_MARKER_LENGTH); 
-		tmp_var2 = Mp4Dec_ShowBitsByteAlign_H263(GOB_RESYNC_MARKER_LENGTH);
+            Mp4Dec_FlushBits(GOB_RESYNC_MARKER_LENGTH);
 
-		if((GOB_RESYNC_MARKER == tmp_var) || (GOB_RESYNC_MARKER == tmp_var2))
-		{
-			if(GOB_RESYNC_MARKER == tmp_var2)
-			{
-				Mp4Dec_ByteAlign_Startcode();
-			}
-			
-			Mp4Dec_FlushBits(GOB_RESYNC_MARKER_LENGTH);
-#if SIM_IN_WIN
-			FPRINTF(LENTH,"offset_slice=%d,",(g_stream_offset+((jpeg_bsmr.total_bit_cnt)>>3)));
-             temp=jpeg_bsmr.total_bit_cnt;
-			//PPAParaBuf->is_last_mb=1;
-#endif		
-			//tmp_var bit[6:2] is gob_number and bit[1:0] is "gob_frame_id"
-			tmp_var = Mp4Dec_ReadBits(7);	
-			SliceInfo->GobNum = (int8)(tmp_var>>2); 
-			vop_mode_ptr->mb_y		= SliceInfo->GobNum * SliceInfo->NumMbLineInGob;
-			if (vop_mode_ptr->mb_y >= SliceInfo->Max_MBy)
-			{
-				vop_mode_ptr->error_flag = TRUE;
-				return MMDEC_STREAM_ERROR;
-			}
-				
-			vop_mode_ptr->StepSize = (int8)Mp4Dec_ReadBits((uint32)((uint8)vop_mode_ptr->QuantPrecision));//, "quant_scale"
-			vop_mode_ptr->StepSize = IClip(1, 31, vop_mode_ptr->StepSize);
-				
-	        SliceInfo->VopQuant=vop_mode_ptr->StepSize;
-			mb_num = vop_mode_ptr->mb_y * vop_mode_ptr->MBNumX;
+            //tmp_var bit[6:2] is gob_number and bit[1:0] is "gob_frame_id"
+            tmp_var = Mp4Dec_ReadBits(7);
+            slice_info->GobNum = (int8)(tmp_var>>2);
+            vop_mode_ptr->mb_y		= slice_info->GobNum * slice_info->NumMbLineInGob;
+            if (vop_mode_ptr->mb_y >= slice_info->Max_MBy)
+            {
+                vop_mode_ptr->error_flag = TRUE;
+                return MMDEC_STREAM_ERROR;
+            }
 
-# if SIM_IN_WIN
-			//set skipped MB "NOT DECODED" status, for EC later
-			if (mb_num < vop_mode_ptr->mbnumDec)
-			{
-				int32 mb_pos;
-				for (mb_pos = mb_num; mb_pos < vop_mode_ptr->mbnumDec; mb_pos++)
-				{
-					vop_mode_ptr->mbdec_stat_ptr[mb_pos] = NOT_DECODED;
-				}
-				vop_mode_ptr->error_flag = TRUE;
-				vop_mode_ptr->err_MB_num += (vop_mode_ptr->mbnumDec - mb_num);
-				return MMDEC_STREAM_ERROR;
-			}else
-			{
-				int32 mb_pos;
-				for (mb_pos = vop_mode_ptr->mbnumDec; mb_pos < mb_num; mb_pos++)
-				{
-					vop_mode_ptr->mbdec_stat_ptr[mb_pos] = NOT_DECODED;
-				}
-			}
-#endif
+            vop_mode_ptr->StepSize = (int8)Mp4Dec_ReadBits((uint32)((uint8)vop_mode_ptr->QuantPrecision));//, "quant_scale"
+            vop_mode_ptr->StepSize = IClip(1, 31, vop_mode_ptr->StepSize);
 
-			vop_mode_ptr->mbnumDec = mb_num;
-			vop_mode_ptr->mb_y	   = mb_num / vop_mode_ptr->MBNumX;
-			vop_mode_ptr->mb_x	   = mb_num - vop_mode_ptr->mb_y * vop_mode_ptr->MBNumX;
-            
-			SliceInfo->FirstMBx=vop_mode_ptr->mb_x;
-			SliceInfo->FirstMBy=vop_mode_ptr->mb_y;
+            slice_info->VopQuant=vop_mode_ptr->StepSize;
+            mb_num = vop_mode_ptr->mb_y * vop_mode_ptr->MBNumX;
 
-			vop_mode_ptr->sliceNumber++;
-			SliceInfo->SliceNum++;
-			
-			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG0_OFF, ((0x0)<<31)|((SliceInfo->VopQuant&0x3f)<<25)|((SliceInfo->SliceNum&0x1ff)<<16)|((SliceInfo->Max_MBX*SliceInfo->Max_MBy)<<3)|SliceInfo->VOPCodingType&0x7,"VSP_CFG0");
-			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG1_OFF, (SliceInfo->NumMbsInGob&0x1ff)<<20|(SliceInfo->NumMbLineInGob&0x7)<<29 ,"VSP_CFG1");
-			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG2_OFF,(BVOP == vop_mode_ptr->VopPredType?0:1)<<31|(1-SliceInfo->VopRoundingType)<<30|((SliceInfo->Max_MBX*SliceInfo->FirstMBy+SliceInfo->FirstMBx)&0x1fff)<<16|
-				(SliceInfo->FirstMBy&0x7f)<<8|(SliceInfo->FirstMBx&0x7f),"VSP_CFG2");
-			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG3_OFF,(SliceInfo->ShortHeader|SliceInfo->DataPartition<<1|((SliceInfo->IsRvlc&(SliceInfo->VOPCodingType!=BVOP))<<2)|
-				SliceInfo->IntraDCThr<<3|SliceInfo->VOPFcodeFwd<<6|SliceInfo->VOPFcodeBck<<9|0<<12|SliceInfo->QuantType<<13),"VSP_CFG3");
-			OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG4_OFF,(vop_mode_ptr->time_pp&0xffff<<16|vop_mode_ptr->time_bp&0xffff),"VSP_CFG4");	
-			
-			if(vop_mode_ptr->time_pp==0)
-			{
-				OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,0,"VSP_CFG5");
-			}else
-			{
-				OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,((1<<29)/vop_mode_ptr->time_pp),"VSP_CFG5");
-			}
-		}
-	}
-	
-	//FPRINTF(g_fp_global_tv,"//***********************************frame num=%d slice id=%d\n",g_nFrame_dec,SliceInfo->SliceNum);
-	//OR1200_Vaild=0;
+            vop_mode_ptr->mbnumDec = mb_num;
+            vop_mode_ptr->mb_y	   = mb_num / vop_mode_ptr->MBNumX;
+            vop_mode_ptr->mb_x	   = mb_num - vop_mode_ptr->mb_y * vop_mode_ptr->MBNumX;
 
-	return MMDEC_OK;
+            slice_info->FirstMBx=vop_mode_ptr->mb_x;
+            slice_info->FirstMBy=vop_mode_ptr->mb_y;
+
+            vop_mode_ptr->sliceNumber++;
+            slice_info->SliceNum++;
+
+            cmd = ((0x0)<<31)|
+                ((slice_info->VopQuant&0x3f)<<25)|
+                ((slice_info->SliceNum&0x1ff)<<16)|
+                ((slice_info->Max_MBX*slice_info->Max_MBy)<<3)|
+                slice_info->VOPCodingType&0x7;
+            VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG0_OFF, cmd,"VSP_CFG0");
+
+            cmd = (slice_info->NumMbsInGob&0x1ff)<<20|(slice_info->NumMbLineInGob&0x7)<<29;
+            VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG1_OFF, cmd, "VSP_CFG1");
+
+            cmd = (BVOP == vop_mode_ptr->VopPredType?0:1)<<31|
+                (1-slice_info->VopRoundingType)<<30|
+                ((slice_info->Max_MBX*slice_info->FirstMBy+slice_info->FirstMBx)&0x1fff)<<16|
+                (slice_info->FirstMBy&0x7f)<<8|
+                (slice_info->FirstMBx&0x7f);
+            VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG2_OFF, cmd, "VSP_CFG2");
+
+            cmd = slice_info->ShortHeader|
+                slice_info->DataPartition<<1|
+                ((slice_info->IsRvlc&(slice_info->VOPCodingType!=BVOP))<<2)|
+                slice_info->IntraDCThr<<3|slice_info->VOPFcodeFwd<<6|
+                slice_info->VOPFcodeBck<<9|0<<12|
+                slice_info->QuantType<<13;
+            VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG3_OFF, cmd, "VSP_CFG3");
+
+            cmd = (vop_mode_ptr->time_pp&0xffff<<16|vop_mode_ptr->time_bp&0xffff);
+            VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG4_OFF, cmd, "VSP_CFG4");
+
+            if(vop_mode_ptr->time_pp==0)
+            {
+                VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,0,"VSP_CFG5");
+            } else
+            {
+                VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,((1<<29)/vop_mode_ptr->time_pp),"VSP_CFG5");
+            }
+        }
+    }
+
+    return MMDEC_OK;
 }
 
 
 /*****************************************************************************
  **	Name : 			Mp4Dec_DecVolHeader
- ** Description:	get the header of VoVol.Mp4 
+ ** Description:	get the header of VoVol.Mp4
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
-MMDecRet Mp4Dec_DecVolHeader(DEC_VOP_MODE_T *vop_mode_ptr)
+MMDecRet Mp4Dec_DecVolHeader(Mp4DecObject *vo)
 {
-	int32 tmpVar;
-	BOOLEAN is_object_layer_indentifier;
-	uint8 vol_verid;
-	uint32 vol_priority;  
-	BOOLEAN vol_ctrl_para;
-	uint32 aspect_ration_info;
-	uint8 fAUsage;
-	uint32 marker;
-	BOOLEAN is_fixed_frame_rate;
-	BOOLEAN is_complexity_estimation_disable;
-	
-	tmpVar = Mp4Dec_ReadBits(VOL_START_CODE_LENGTH); //"vol_start_code"
-	if(tmpVar != DEC_VOL_START_CODE)
-	{
-		PRINTF_HEAD_INFO("bitstream does not start with DEC_VOL_START_CODE\n");
-		return MMDEC_STREAM_ERROR;
-	}
+    DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
+    int32 tmpVar;
+    BOOLEAN is_object_layer_indentifier;
+    uint8 vol_verid;
+    uint32 vol_priority;
+    BOOLEAN vol_ctrl_para;
+    uint32 aspect_ration_info;
+    uint8 fAUsage;
+    uint32 marker;
+    BOOLEAN is_fixed_frame_rate;
+    BOOLEAN is_complexity_estimation_disable;
 
-	vop_mode_ptr->intra_acdc_pred_disable = FALSE;
-	
-	//tmp_var bit[13:1] is "VOL identifier","Vol random access" and "Vol type indication"
-	//and bit[0] is "is object layer identifier"
-	tmpVar = Mp4Dec_ReadBits(14); 
-	is_object_layer_indentifier = (tmpVar & 0x01);
-	if(is_object_layer_indentifier)	
-	{
-		//tmp_var 
-		//bit[6:3] is "video object layer verid"
-		//bit[2:0] is "video object layer priority"
-		tmpVar = Mp4Dec_ReadBits(7);
-		vol_verid = (uint8)(tmpVar>>3);
-		vol_priority = (uint32)(tmpVar&0x03);
-	}else
-	{
-		vol_verid = 1;
-		vol_priority = 1;
-	}
+    tmpVar = Mp4Dec_ReadBits(VOL_START_CODE_LENGTH); //"vol_start_code"
+    if(tmpVar != DEC_VOL_START_CODE)
+    {
+        PRINTF_HEAD_INFO("bitstream does not start with DEC_VOL_START_CODE\n");
+        return MMDEC_STREAM_ERROR;
+    }
 
-	aspect_ration_info = Mp4Dec_ReadBits(4); //"aspect_ration_info"
+    vop_mode_ptr->intra_acdc_pred_disable = FALSE;
 
-	if(15 == aspect_ration_info)
-	{
-		//tmp_var
-		//bit[15:8] is "par width" 
-		//bit[7:0] is "par height"
-		tmpVar = Mp4Dec_ReadBits(16);
-	}
+    //tmp_var bit[13:1] is "VOL identifier","Vol random access" and "Vol type indication"
+    //and bit[0] is "is object layer identifier"
+    tmpVar = Mp4Dec_ReadBits(14);
+    is_object_layer_indentifier = (tmpVar & 0x01);
+    if(is_object_layer_indentifier)
+    {
+        //tmp_var
+        //bit[6:3] is "video object layer verid"
+        //bit[2:0] is "video object layer priority"
+        tmpVar = Mp4Dec_ReadBits(7);
+        vol_verid = (uint8)(tmpVar>>3);
+        vol_priority = (uint32)(tmpVar&0x03);
+    } else
+    {
+        vol_verid = 1;
+        vol_priority = 1;
+    }
 
-	vol_ctrl_para = (BOOLEAN)Mp4Dec_ReadBits(1); //"vol control parameter"
-	if(vol_ctrl_para)
-	{
-	//	uint32 chroma_format;
-	//	uint32 low_delay;
-		uint32 vbv_parameter;
-		
-		//tmp_var 
-		//bit[3:2] is "chroma_format"
-		//bit[1] is "low_delay"
-		//bit[0] is "vbv_parameter"
-		tmpVar = Mp4Dec_ReadBits(4); 
-		vbv_parameter = (tmpVar&0x01);
-		
-		if(1 == vbv_parameter)
-		{	
-			//for speed up.xiaowei.luo@2007.07.27	
-			//total bits is 79	
-			Mp4Dec_ReadBits(31);
-			Mp4Dec_ReadBits(31);
-			Mp4Dec_ReadBits(17);  			
-		}
-	}
+    aspect_ration_info = Mp4Dec_ReadBits(4); //"aspect_ration_info"
+
+    if(15 == aspect_ration_info)
+    {
+        //tmp_var
+        //bit[15:8] is "par width"
+        //bit[7:0] is "par height"
+        tmpVar = Mp4Dec_ReadBits(16);
+    }
+
+    vol_ctrl_para = (BOOLEAN)Mp4Dec_ReadBits(1); //"vol control parameter"
+    if(vol_ctrl_para)
+    {
+        //	uint32 chroma_format;
+        //	uint32 low_delay;
+        uint32 vbv_parameter;
+
+        //tmp_var
+        //bit[3:2] is "chroma_format"
+        //bit[1] is "low_delay"
+        //bit[0] is "vbv_parameter"
+        tmpVar = Mp4Dec_ReadBits(4);
+        vbv_parameter = (tmpVar&0x01);
+
+        if(1 == vbv_parameter)
+        {
+            //for speed up.xiaowei.luo@2007.07.27
+            //total bits is 79
+            Mp4Dec_ReadBits(31);
+            Mp4Dec_ReadBits(31);
+            Mp4Dec_ReadBits(17);
+        }
+    }
 
     fAUsage = (ALPHA_USAGE_E)Mp4Dec_ReadBits(2); // "video object layer shape"
 
-	marker = Mp4Dec_ReadBits(1); //"marker"
-	if(marker != 1)
-	{
-		return MMDEC_STREAM_ERROR;
-	}
+    marker = Mp4Dec_ReadBits(1); //"marker"
+    if(marker != 1)
+    {
+        return MMDEC_STREAM_ERROR;
+    }
 
-	tmpVar = Mp4Dec_ReadBits(16); //"vop time increment resolution"
-	vop_mode_ptr->time_inc_resolution = tmpVar;
+    tmpVar = Mp4Dec_ReadBits(16); //"vop time increment resolution"
+    vop_mode_ptr->time_inc_resolution = tmpVar;
 
 //	assert((vop_mode_ptr->time_inc_resolution >= 1) && (vop_mode_ptr->time_inc_resolution < 65536));
 
-	marker = Mp4Dec_ReadBits(1); //, "marker"
-	if(marker != 1)
-	{
-		return MMDEC_STREAM_ERROR;
-	}
-	
-	/*when vop time increment resolution is power of 2, the bits for time increment is not correct*/
-	
-	if(1 == tmpVar)
-	{
-		vop_mode_ptr->NumBitsTimeIncr = 1;
-	}else
-	{
-		uint8 NumBitsTimeIncr = vop_mode_ptr->NumBitsTimeIncr;
-		tmpVar -= 1;
-		for(NumBitsTimeIncr = 1; NumBitsTimeIncr < 16; NumBitsTimeIncr++)
-		{
-			if(1 == tmpVar)
-			{
-				break;
-			}
-			tmpVar = (tmpVar >> 1);
-		}
-		//*(int*)(0x800002fc)=0x12345678;
-		vop_mode_ptr->NumBitsTimeIncr = NumBitsTimeIncr;
-	}
-	
-	is_fixed_frame_rate = (BOOLEAN)Mp4Dec_ReadBits(1);//, "fixed vop rate"
-	if(is_fixed_frame_rate)
-	{
-		uint32 uiFixedVOPTimeIncrement;
-		uiFixedVOPTimeIncrement = Mp4Dec_ReadBits(vop_mode_ptr->NumBitsTimeIncr);//, "fixed vop time increment"
-	}
+    marker = Mp4Dec_ReadBits(1); //, "marker"
+    if(marker != 1)
+    {
+        return MMDEC_STREAM_ERROR;
+    }
 
-	if(RECTANGLE == fAUsage)
-	{
-		//tmp_var 
-		//bit[28] is "marker"
-		//bit[27:15] is "video object layer width"
-		//bit[14] is "marker"
-		//bit[13:1] is "video object layer height"
-		//bit[0] is "marker"
-		tmpVar = Mp4Dec_ReadBits(29); 
-		vop_mode_ptr->OrgFrameWidth = ((tmpVar>>15)&0x1FFF);
-		vop_mode_ptr->OrgFrameHeight = ((tmpVar>>1)&0x1FFF);
+    /*when vop time increment resolution is power of 2, the bits for time increment is not correct*/
 
-		if (!vop_mode_ptr->OrgFrameHeight || !vop_mode_ptr->OrgFrameWidth)
-		{
-			return MMDEC_STREAM_ERROR;
-		}
+    if(1 == tmpVar)
+    {
+        vop_mode_ptr->NumBitsTimeIncr = 1;
+    } else
+    {
+        uint8 NumBitsTimeIncr = vop_mode_ptr->NumBitsTimeIncr;
+        tmpVar -= 1;
+        for(NumBitsTimeIncr = 1; NumBitsTimeIncr < 16; NumBitsTimeIncr++)
+        {
+            if(1 == tmpVar)
+            {
+                break;
+            }
+            tmpVar = (tmpVar >> 1);
+        }
+        //*(int*)(0x800002fc)=0x12345678;
+        vop_mode_ptr->NumBitsTimeIncr = NumBitsTimeIncr;
+    }
 
-		PRINTF_HEAD_INFO("frame width = %d, frame height = %d\n", vop_mode_ptr->OrgFrameWidth, vop_mode_ptr->OrgFrameHeight);
-	}else
-	{
-		PRINTF_HEAD_INFO("fAUsage is not RECTANGLE!\n");
-		return MMDEC_NOT_SUPPORTED;
-	}
+    is_fixed_frame_rate = (BOOLEAN)Mp4Dec_ReadBits(1);//, "fixed vop rate"
+    if(is_fixed_frame_rate)
+    {
+        uint32 uiFixedVOPTimeIncrement;
+        uiFixedVOPTimeIncrement = Mp4Dec_ReadBits(vop_mode_ptr->NumBitsTimeIncr);//, "fixed vop time increment"
+    }
 
-	vop_mode_ptr->bInterlace = (BOOLEAN)Mp4Dec_ReadBits(1); 
-	if(vop_mode_ptr->bInterlace)
-	{
-		PRINTF_HEAD_INFO("interlacing!\n");	
-		return MMDEC_NOT_SUPPORTED;
-	}
+    if(RECTANGLE == fAUsage)
+    {
+        //tmp_var
+        //bit[28] is "marker"
+        //bit[27:15] is "video object layer width"
+        //bit[14] is "marker"
+        //bit[13:1] is "video object layer height"
+        //bit[0] is "marker"
+        tmpVar = Mp4Dec_ReadBits(29);
+        vop_mode_ptr->OrgFrameWidth = ((tmpVar>>15)&0x1FFF);
+        vop_mode_ptr->OrgFrameHeight = ((tmpVar>>1)&0x1FFF);
 
-	tmpVar = Mp4Dec_ReadBits(1); //"obmc_disable"
-	
-	if(1 == vol_verid)
-	{
-		vop_mode_ptr->sprite_enable = (BOOLEAN)Mp4Dec_ReadBits(1);//, "sprite usage"
-	}else
-	{
-		vop_mode_ptr->sprite_enable = (BOOLEAN)Mp4Dec_ReadBits(2);//, "sprite usage"
-	}
+        if (!vop_mode_ptr->OrgFrameHeight || !vop_mode_ptr->OrgFrameWidth)
+        {
+            return MMDEC_STREAM_ERROR;
+        }
+
+        PRINTF_HEAD_INFO("frame width = %d, frame height = %d\n", vop_mode_ptr->OrgFrameWidth, vop_mode_ptr->OrgFrameHeight);
+    } else
+    {
+        PRINTF_HEAD_INFO("fAUsage is not RECTANGLE!\n");
+        return MMDEC_NOT_SUPPORTED;
+    }
+
+    vop_mode_ptr->bInterlace = (BOOLEAN)Mp4Dec_ReadBits(1);
+    if(vop_mode_ptr->bInterlace)
+    {
+        PRINTF_HEAD_INFO("interlacing!\n");
+        return MMDEC_NOT_SUPPORTED;
+    }
+
+    tmpVar = Mp4Dec_ReadBits(1); //"obmc_disable"
+
+    if(1 == vol_verid)
+    {
+        vop_mode_ptr->sprite_enable = (BOOLEAN)Mp4Dec_ReadBits(1);//, "sprite usage"
+    } else
+    {
+        vop_mode_ptr->sprite_enable = (BOOLEAN)Mp4Dec_ReadBits(2);//, "sprite usage"
+    }
 
     if((1 == vop_mode_ptr->sprite_enable) || (2 == vop_mode_ptr->sprite_enable)) //sprite_static or sprite_gmc
-	{
+    {
 #if 1
-		PRINTF_HEAD_INFO("sprite is not supported!\n");
-		return MMDEC_NOT_SUPPORTED;
+        PRINTF_HEAD_INFO("sprite is not supported!\n");
+        return MMDEC_NOT_SUPPORTED;
 #else
-		int low_latency_sprite_enable;
-		
-		PRINTF ("GMC!\n");
-		
-		if (vop_mode_ptr->sprite_enable != 2)
-		{
-			int sprite_width;
-			int sprite_height;
-			int sprite_left_coord;
-			int sprite_top_coord;
-			sprite_width = Mp4Dec_ReadBits (13);		/* sprite_width */
-			Mp4Dec_ReadBits(1);
-			sprite_height = Mp4Dec_ReadBits (13);	/* sprite_height */
-			Mp4Dec_ReadBits(1);  //marker
-			sprite_left_coord = Mp4Dec_ReadBits(13);	/* sprite_left_coordinate */
-			Mp4Dec_ReadBits(1);  //marker
-			sprite_top_coord = Mp4Dec_ReadBits (13);	/* sprite_top_coordinate */
-			Mp4Dec_ReadBits(1);  //marker
-		}
+        int low_latency_sprite_enable;
 
-		vop_mode_ptr->sprite_warping_points = Mp4Dec_ReadBits (6);		/* no_of_sprite_warping_points */
-		vop_mode_ptr->sprite_warping_accuracy = Mp4Dec_ReadBits (2);		/* sprite_warping_accuracy */
-		vop_mode_ptr->sprite_brightness_change = Mp4Dec_ReadBits (1);		/* brightness_change */
+        PRINTF ("GMC!\n");
 
-		if (vop_mode_ptr->sprite_enable != 2)  //!=gmc
-		{
-			low_latency_sprite_enable = Mp4Dec_ReadBits(1);		/* low_latency_sprite_enable */
-		}
-		
-		PRINTF ("warping point: %d\n", vop_mode_ptr->sprite_warping_points);
+        if (vop_mode_ptr->sprite_enable != 2)
+        {
+            int sprite_width;
+            int sprite_height;
+            int sprite_left_coord;
+            int sprite_top_coord;
+            sprite_width = Mp4Dec_ReadBits (13);		/* sprite_width */
+            Mp4Dec_ReadBits(1);
+            sprite_height = Mp4Dec_ReadBits (13);	/* sprite_height */
+            Mp4Dec_ReadBits(1);  //marker
+            sprite_left_coord = Mp4Dec_ReadBits(13);	/* sprite_left_coordinate */
+            Mp4Dec_ReadBits(1);  //marker
+            sprite_top_coord = Mp4Dec_ReadBits (13);	/* sprite_top_coordinate */
+            Mp4Dec_ReadBits(1);  //marker
+        }
+
+        vop_mode_ptr->sprite_warping_points = Mp4Dec_ReadBits (6);		/* no_of_sprite_warping_points */
+        vop_mode_ptr->sprite_warping_accuracy = Mp4Dec_ReadBits (2);		/* sprite_warping_accuracy */
+        vop_mode_ptr->sprite_brightness_change = Mp4Dec_ReadBits (1);		/* brightness_change */
+
+        if (vop_mode_ptr->sprite_enable != 2)  //!=gmc
+        {
+            low_latency_sprite_enable = Mp4Dec_ReadBits(1);		/* low_latency_sprite_enable */
+        }
+
+        PRINTF ("warping point: %d\n", vop_mode_ptr->sprite_warping_points);
 #endif
-	}
+    }
 
-	tmpVar = (BOOLEAN)Mp4Dec_ReadBits(1);//, "not 8 bit"
+    tmpVar = (BOOLEAN)Mp4Dec_ReadBits(1);//, "not 8 bit"
 
-	if(tmpVar)
-	{
-		PRINTF_HEAD_INFO("be not 8 bit not supported!\n");
-		return MMDEC_NOT_SUPPORTED;
-	}else
-	{
-		vop_mode_ptr->QuantPrecision = 5;
-	}
+    if(tmpVar)
+    {
+        PRINTF_HEAD_INFO("be not 8 bit not supported!\n");
+        return MMDEC_NOT_SUPPORTED;
+    } else
+    {
+        vop_mode_ptr->QuantPrecision = 5;
+    }
 
 #if 0 //removed in 6600L platform. XiaoweiLuo@20090514
-	if(EIGHT_BIT == fAUsage)
-	{
-		PRINTF_HEAD_INFO("grayscale is not supported!\n");
-		return MMDEC_NOT_SUPPORTED;
-	}
-#endif	
+    if(EIGHT_BIT == fAUsage)
+    {
+        PRINTF_HEAD_INFO("grayscale is not supported!\n");
+        return MMDEC_NOT_SUPPORTED;
+    }
+#endif
 
-	vop_mode_ptr->QuantizerType = (QUANTIZER_E)Mp4Dec_ReadBits(1);//"quant type"
-	if(Q_MPEG == vop_mode_ptr->QuantizerType)
-	{	
-		PRINTF_HEAD_INFO("MPEG quantization mode!\n");
-		vop_mode_ptr->bLoadIntraQMatrix = (BOOLEAN)Mp4Dec_ReadBits(1);//"load intra quant mat"
-		if(vop_mode_ptr->bLoadIntraQMatrix)
-		{
-			uint8 QMatrixElement;
-			uint8 j, i = 0;
-             
-			do 
-			{
-				#if SIM_IN_WIN
-				  READ_REG_POLL (VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_3, V_BIT_3, TIME_OUT_CLK,
-					"polling bsm fifo depth >= 8 words for matrix quant table");			
-                  #endif
-				QMatrixElement = (uint8)Mp4Dec_ReadBits(8);//"intra quant mat"
-				vop_mode_ptr->IntraQuantizerMatrix[g_standard_zigzag[i]] = QMatrixElement;
-				i++;
-			}while((0 != QMatrixElement) && (i < BLOCK_SQUARE_SIZE));
+    vop_mode_ptr->QuantizerType = (QUANTIZER_E)Mp4Dec_ReadBits(1);//"quant type"
+    if(Q_MPEG == vop_mode_ptr->QuantizerType)
+    {
+        vo->is_need_init_vsp_quant_tab = TRUE;
 
-			if(0 == QMatrixElement)
-			{
-				i--;//NOTE!
+        PRINTF_HEAD_INFO("MPEG quantization mode!\n");
+        vop_mode_ptr->bLoadIntraQMatrix = (BOOLEAN)Mp4Dec_ReadBits(1);//"load intra quant mat"
+        if(vop_mode_ptr->bLoadIntraQMatrix)
+        {
+            uint8 QMatrixElement;
+            uint8 j, i = 0;
 
-				for (j = i; (j < BLOCK_SQUARE_SIZE)&&((i-1) < BLOCK_SQUARE_SIZE); j++)
-				{
-					vop_mode_ptr->IntraQuantizerMatrix[g_standard_zigzag[j]] = 
-					vop_mode_ptr->IntraQuantizerMatrix[g_standard_zigzag[i-1]];
-				}	
-			}
-		}else
-		{
-			memcpy(vop_mode_ptr->IntraQuantizerMatrix, (char*)(g_default_intra_qmatrix), BLOCK_SQUARE_SIZE * sizeof (uint8));
-		}
+            do
+            {
+                QMatrixElement = (uint8)Mp4Dec_ReadBits(8);//"intra quant mat"
+                vop_mode_ptr->IntraQuantizerMatrix[g_standard_zigzag[i]] = QMatrixElement;
+                i++;
+            } while((0 != QMatrixElement) && (i < BLOCK_SQUARE_SIZE));
 
-		vop_mode_ptr->bLoadInterQMatrix = (BOOLEAN)Mp4Dec_ReadBits(1);//"load inter quant mat"
-		if (vop_mode_ptr->bLoadInterQMatrix)
-		{
-			uint8 QMatrixElement;
-			uint8 j, i = 0;
-			
-			do 
-			{
-				#if SIM_IN_WIN
-				READ_REG_POLL (VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_3, V_BIT_3, TIME_OUT_CLK,
-					"polling bsm fifo depth >= 8 words for matrix quant table");
-                  #endif
-				QMatrixElement = (uint8)Mp4Dec_ReadBits(8);//"inter quant mat"
-				vop_mode_ptr->InterQuantizerMatrix [g_standard_zigzag[i]] = QMatrixElement;
-				i++;			
-			}while((QMatrixElement != 0) && (i < BLOCK_SQUARE_SIZE));
+            if(0 == QMatrixElement)
+            {
+                i--;//NOTE!
 
-			if(0 == QMatrixElement)
-			{
-				i--;//NOTE!
-				
-				for (j = i; (j < BLOCK_SQUARE_SIZE)&&((i-1) < BLOCK_SQUARE_SIZE); j++)
-				{
-					vop_mode_ptr->InterQuantizerMatrix [g_standard_zigzag[j]] = 
-						vop_mode_ptr->InterQuantizerMatrix[g_standard_zigzag[i-1]];
-				}	
-			}					
-		}else
-		{
-			memcpy (vop_mode_ptr->InterQuantizerMatrix, (char*)(g_default_inter_qmatrix), BLOCK_SQUARE_SIZE * sizeof (uint8));
-		}
-	}
+                for (j = i; (j < BLOCK_SQUARE_SIZE)&&((i-1) < BLOCK_SQUARE_SIZE); j++)
+                {
+                    vop_mode_ptr->IntraQuantizerMatrix[g_standard_zigzag[j]] =
+                        vop_mode_ptr->IntraQuantizerMatrix[g_standard_zigzag[i-1]];
+                }
+            }
+        } else
+        {
+            memcpy(vop_mode_ptr->IntraQuantizerMatrix, (char*)(g_default_intra_qmatrix), BLOCK_SQUARE_SIZE * sizeof (uint8));
+        }
 
-	if(1 != vol_verid)
-	{
-		vop_mode_ptr->bQuarter_pel = (BOOLEAN)Mp4Dec_ReadBits(1);//"quarter sample"	
-	}else
-	{
-		vop_mode_ptr->bQuarter_pel = FALSE;
-	}
+        vop_mode_ptr->bLoadInterQMatrix = (BOOLEAN)Mp4Dec_ReadBits(1);//"load inter quant mat"
+        if (vop_mode_ptr->bLoadInterQMatrix)
+        {
+            uint8 QMatrixElement;
+            uint8 j, i = 0;
 
-	if(vop_mode_ptr->bQuarter_pel)
-	{
-		PRINTF_HEAD_INFO("Using quarter pel.\n");
+            do
+            {
+                QMatrixElement = (uint8)Mp4Dec_ReadBits(8);//"inter quant mat"
+                vop_mode_ptr->InterQuantizerMatrix [g_standard_zigzag[i]] = QMatrixElement;
+                i++;
+            } while((QMatrixElement != 0) && (i < BLOCK_SQUARE_SIZE));
 
-		PRINTF_HEAD_INFO("quarter pel is not supported!\n");
-		return MMDEC_NOT_SUPPORTED;
-	}
+            if(0 == QMatrixElement)
+            {
+                i--;//NOTE!
 
-	is_complexity_estimation_disable = (BOOLEAN)Mp4Dec_ReadBits(1);//"complexity estimation disable"
+                for (j = i; (j < BLOCK_SQUARE_SIZE)&&((i-1) < BLOCK_SQUARE_SIZE); j++)
+                {
+                    vop_mode_ptr->InterQuantizerMatrix [g_standard_zigzag[j]] =
+                        vop_mode_ptr->InterQuantizerMatrix[g_standard_zigzag[i-1]];
+                }
+            }
+        } else
+        {
+            memcpy (vop_mode_ptr->InterQuantizerMatrix, (char*)(g_default_inter_qmatrix), BLOCK_SQUARE_SIZE * sizeof (uint8));
+        }
+    }
 
-	if(is_complexity_estimation_disable)
-	{
-		PRINTF_HEAD_INFO("complexity estimation disable.\n");
-	}else
-	{
-		PRINTF_HEAD_INFO("complexity estimation is not supported!\n");
-		return MMDEC_NOT_SUPPORTED;
-	}
+    if(1 != vol_verid)
+    {
+        vop_mode_ptr->bQuarter_pel = (BOOLEAN)Mp4Dec_ReadBits(1);//"quarter sample"
+    } else
+    {
+        vop_mode_ptr->bQuarter_pel = FALSE;
+    }
 
-	vop_mode_ptr->bResyncMarkerDisable = (BOOLEAN)Mp4Dec_ReadBits(1);//"resync marker disable"
-	if(vop_mode_ptr->bResyncMarkerDisable)
-	{
-		PRINTF_HEAD_INFO("not using resync marker.\n");
-	}else
-	{
-		PRINTF_HEAD_INFO("Using resync marker.\n");
-	}
+    if(vop_mode_ptr->bQuarter_pel)
+    {
+        PRINTF_HEAD_INFO("Using quarter pel.\n");
 
-	vop_mode_ptr->bDataPartitioning = (BOOLEAN)Mp4Dec_ReadBits(1);//"data partitioned"
+        PRINTF_HEAD_INFO("quarter pel is not supported!\n");
+        return MMDEC_NOT_SUPPORTED;
+    }
 
-	if(vop_mode_ptr->bDataPartitioning)
-	{
-		PRINTF_HEAD_INFO("Using data partition.\n");
-		vop_mode_ptr->bReversibleVlc = (BOOLEAN)Mp4Dec_ReadBits(1);//"reversible vlc"
-		if(vop_mode_ptr->bReversibleVlc)
-		{
-			PRINTF_HEAD_INFO("Using reversible vlc.\n");
-		}
-	}else
-	{
-		PRINTF_HEAD_INFO("not using data partition.\n");
-		vop_mode_ptr->bReversibleVlc = FALSE;
-	}
+    is_complexity_estimation_disable = (BOOLEAN)Mp4Dec_ReadBits(1);//"complexity estimation disable"
 
-	if(1 != vol_verid)
-	{
-		BOOLEAN is_new_pred_enable;
-		BOOLEAN is_reduced_resolution_vop_enable;
-		is_new_pred_enable = (BOOLEAN)Mp4Dec_ReadBits(1);//"newpred enable"
-		if(is_new_pred_enable)
-		{
-			PRINTF_HEAD_INFO("newpred is supported!\n");
-			return MMDEC_NOT_SUPPORTED;
-		}else
-		{
-			PRINTF_HEAD_INFO("newpred: OFF.\n\n");
-		}
+    if(is_complexity_estimation_disable)
+    {
+        PRINTF_HEAD_INFO("complexity estimation disable.\n");
+    } else
+    {
+        PRINTF_HEAD_INFO("complexity estimation is not supported!\n");
+        return MMDEC_NOT_SUPPORTED;
+    }
 
-		is_reduced_resolution_vop_enable = (BOOLEAN)Mp4Dec_ReadBits(1);//"reduced resolution vop enable"	
-	}
+    vop_mode_ptr->bResyncMarkerDisable = (BOOLEAN)Mp4Dec_ReadBits(1);//"resync marker disable"
+    if(vop_mode_ptr->bResyncMarkerDisable)
+    {
+        PRINTF_HEAD_INFO("not using resync marker.\n");
+    } else
+    {
+        PRINTF_HEAD_INFO("Using resync marker.\n");
+    }
 
-	tmpVar = /*(VOL_TYPE_E)*/Mp4Dec_ReadBits(1);//"scalability"
+    vop_mode_ptr->bDataPartitioning = (BOOLEAN)Mp4Dec_ReadBits(1);//"data partitioned"
+
+    if(vop_mode_ptr->bDataPartitioning)
+    {
+        PRINTF_HEAD_INFO("Using data partition.\n");
+        vop_mode_ptr->bReversibleVlc = (BOOLEAN)Mp4Dec_ReadBits(1);//"reversible vlc"
+        if(vop_mode_ptr->bReversibleVlc)
+        {
+            PRINTF_HEAD_INFO("Using reversible vlc.\n");
+        }
+    } else
+    {
+        PRINTF_HEAD_INFO("not using data partition.\n");
+        vop_mode_ptr->bReversibleVlc = FALSE;
+    }
+
+    if(1 != vol_verid)
+    {
+        BOOLEAN is_new_pred_enable;
+        BOOLEAN is_reduced_resolution_vop_enable;
+        is_new_pred_enable = (BOOLEAN)Mp4Dec_ReadBits(1);//"newpred enable"
+        if(is_new_pred_enable)
+        {
+            PRINTF_HEAD_INFO("newpred is supported!\n");
+            return MMDEC_NOT_SUPPORTED;
+        } else
+        {
+            PRINTF_HEAD_INFO("newpred: OFF.\n\n");
+        }
+
+        is_reduced_resolution_vop_enable = (BOOLEAN)Mp4Dec_ReadBits(1);//"reduced resolution vop enable"
+    }
+
+    tmpVar = /*(VOL_TYPE_E)*/Mp4Dec_ReadBits(1);//"scalability"
 
 
-	if(tmpVar)
-	{
-		PRINTF_HEAD_INFO("scalability is not supported!\n");
-		return MMDEC_NOT_SUPPORTED;
-	}	
+    if(tmpVar)
+    {
+        PRINTF_HEAD_INFO("scalability is not supported!\n");
+        return MMDEC_NOT_SUPPORTED;
+    }
 
-	return MMDEC_OK;
+    return MMDEC_OK;
 }
 
 /*****************************************************************************
@@ -533,137 +503,137 @@ MMDecRet Mp4Dec_DecVolHeader(DEC_VOP_MODE_T *vop_mode_ptr)
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
- MMDecRet Mp4Dec_DecVopHeader(DEC_VOP_MODE_T *vop_mode_ptr)
+MMDecRet Mp4Dec_DecVopHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_mode_ptr)
 {
-	uint32 tmp_var;
-	int32 time_base = 0;
-	int32 time_increment;
+    uint32 tmp_var;
+    int32 time_base = 0;
+    int32 time_increment;
     int32 lenth=9;
 
-	tmp_var = Mp4Dec_ReadBits(VOP_START_CODE_LENGTH);//"vop_start_code"
+    tmp_var = Mp4Dec_ReadBits(VOP_START_CODE_LENGTH);//"vop_start_code"
     lenth+=VOP_START_CODE_LENGTH;
-	
-	if(DEC_VOP_START_CODE != tmp_var)
-	{
-		PRINTF_HEAD_INFO("Bitstream does not start with DEC_VOP_START_CODE\n");
-		vop_mode_ptr->error_flag = TRUE;
-		return MMDEC_STREAM_ERROR;
-	}
-	
-	//tmp_var 
-	//bit[2:1] is "vop_prediction_type"
-	//bit[0] is "modulo_time_base"
-	tmp_var = Mp4Dec_ReadBits(3);
-	vop_mode_ptr->VopPredType = (tmp_var>>1); 	
-	tmp_var = (tmp_var & 0x01);
 
-	while(1 == tmp_var)
-	{
-		tmp_var = Mp4Dec_ReadBits(1);//"modulo_time_base"
-		time_base++;
-	}
+    if(DEC_VOP_START_CODE != tmp_var)
+    {
+        PRINTF_HEAD_INFO("Bitstream does not start with DEC_VOP_START_CODE\n");
+        vop_mode_ptr->error_flag = TRUE;
+        return MMDEC_STREAM_ERROR;
+    }
 
-	lenth+=time_base;
+    //tmp_var
+    //bit[2:1] is "vop_prediction_type"
+    //bit[0] is "modulo_time_base"
+    tmp_var = Mp4Dec_ReadBits(3);
+    vop_mode_ptr->VopPredType = (tmp_var>>1);
+    tmp_var = (tmp_var & 0x01);
 
-	tmp_var = Mp4Dec_ReadBits(1);//"marker_bit"
+    while(1 == tmp_var)
+    {
+        tmp_var = Mp4Dec_ReadBits(1);//"modulo_time_base"
+        time_base++;
+    }
 
-	time_increment = (int32)Mp4Dec_ReadBits(vop_mode_ptr->NumBitsTimeIncr);//"vop_time_increment"
+    lenth+=time_base;
 
-	lenth+=vop_mode_ptr->NumBitsTimeIncr;
+    tmp_var = Mp4Dec_ReadBits(1);//"marker_bit"
 
-	/*compute time_bp and time_pp for direct MV computation*/
-	if(vop_mode_ptr->VopPredType != BVOP)
-	{
-	   //*(int*)(0x800002fc)=0x12345678;
-		vop_mode_ptr->last_time_base = vop_mode_ptr->time_base;
-		vop_mode_ptr->time_base += time_base;
-	    //*(int*)(0x800002fc)=0x12345678;
-		vop_mode_ptr->time = vop_mode_ptr->time_base * vop_mode_ptr->time_inc_resolution + time_increment;
-		//*(int*)(0x800012fc)=0x12345678;
-		vop_mode_ptr->time_pp = (int32)(vop_mode_ptr->time - vop_mode_ptr->last_non_b_time);
-		//*(int*)(0x800002fc)=0x12345678;
-		vop_mode_ptr->last_non_b_time = vop_mode_ptr->time;
-	}else
-	{
-		if (vop_mode_ptr->time_pp == 0)
-	    	{
-	        	return MMDEC_ERROR;            
-		}
+    time_increment = (int32)Mp4Dec_ReadBits(vop_mode_ptr->NumBitsTimeIncr);//"vop_time_increment"
 
-		vop_mode_ptr->time = (vop_mode_ptr->last_time_base + time_base) * vop_mode_ptr->time_inc_resolution + time_increment;
-		vop_mode_ptr->time_bp = vop_mode_ptr->time_pp - (int32)(vop_mode_ptr->last_non_b_time - vop_mode_ptr->time);
-	}
-	
-	//tmp_var 
-	//bit[1] is "marker_bit"
-	//bit[0] is "vop_coded"
-	PRINTF("poc=%d",vop_mode_ptr->time);
-	tmp_var = Mp4Dec_ReadBits(2);
+    lenth+=vop_mode_ptr->NumBitsTimeIncr;
 
-	vop_mode_ptr->bCoded = (BOOLEAN)(tmp_var & 0x01);
-	if(!vop_mode_ptr->bCoded)
-	{
-		vop_mode_ptr->VopPredType = NVOP;
-		return MMDEC_OK;
-	}
+    /*compute time_bp and time_pp for direct MV computation*/
+    if(vop_mode_ptr->VopPredType != BVOP)
+    {
+        //*(int*)(0x800002fc)=0x12345678;
+        vop_mode_ptr->last_time_base = vop_mode_ptr->time_base;
+        vop_mode_ptr->time_base += time_base;
+        //*(int*)(0x800002fc)=0x12345678;
+        vop_mode_ptr->time = vop_mode_ptr->time_base * vop_mode_ptr->time_inc_resolution + time_increment;
+        //*(int*)(0x800012fc)=0x12345678;
+        vop_mode_ptr->time_pp = (int32)(vop_mode_ptr->time - vop_mode_ptr->last_non_b_time);
+        //*(int*)(0x800002fc)=0x12345678;
+        vop_mode_ptr->last_non_b_time = vop_mode_ptr->time;
+    } else
+    {
+        if (vop_mode_ptr->time_pp == 0)
+        {
+            return MMDEC_ERROR;
+        }
 
-	if((PVOP == vop_mode_ptr->VopPredType) || ((SVOP == vop_mode_ptr->VopPredType) &&(vop_mode_ptr->sprite_enable == 2)))
-	{
-		vop_mode_ptr->RoundingControl = (int32)Mp4Dec_ReadBits(1);//"vop_rounding_type"
+        vop_mode_ptr->time = (vop_mode_ptr->last_time_base + time_base) * vop_mode_ptr->time_inc_resolution + time_increment;
+        vop_mode_ptr->time_bp = vop_mode_ptr->time_pp - (int32)(vop_mode_ptr->last_non_b_time - vop_mode_ptr->time);
+    }
+
+    //tmp_var
+    //bit[1] is "marker_bit"
+    //bit[0] is "vop_coded"
+    PRINTF("poc=%d",vop_mode_ptr->time);
+    tmp_var = Mp4Dec_ReadBits(2);
+
+    vop_mode_ptr->bCoded = (BOOLEAN)(tmp_var & 0x01);
+    if(!vop_mode_ptr->bCoded)
+    {
+        vop_mode_ptr->VopPredType = NVOP;
+        return MMDEC_OK;
+    }
+
+    if((PVOP == vop_mode_ptr->VopPredType) || ((SVOP == vop_mode_ptr->VopPredType) &&(vop_mode_ptr->sprite_enable == 2)))
+    {
+        vop_mode_ptr->RoundingControl = (int32)Mp4Dec_ReadBits(1);//"vop_rounding_type"
         lenth+=1;
 
-	}
-	vop_mode_ptr->IntraDcSwitchThr = (int32)Mp4Dec_ReadBits(3);//"intra_dc_vlc_thr"
-	
-	if(vop_mode_ptr->bInterlace)
-	{
-		PRINTF_HEAD_INFO("interlace does not be supported\n");
-		vop_mode_ptr->error_flag = TRUE;
-		return MMDEC_STREAM_ERROR;
-	}
+    }
+    vop_mode_ptr->IntraDcSwitchThr = (int32)Mp4Dec_ReadBits(3);//"intra_dc_vlc_thr"
 
-	if ( vop_mode_ptr->sprite_enable == 2 && vop_mode_ptr->VopPredType == SVOP) 
-	{
-		PRINTF_HEAD_INFO("GMC NOT SUPPORTED!\n");
-		vop_mode_ptr->error_flag = TRUE;
-		return MMDEC_STREAM_ERROR;
-	}
+    if(vop_mode_ptr->bInterlace)
+    {
+        PRINTF_HEAD_INFO("interlace does not be supported\n");
+        vop_mode_ptr->error_flag = TRUE;
+        return MMDEC_STREAM_ERROR;
+    }
 
-	vop_mode_ptr->StepSize = (uint8)Mp4Dec_ReadBits(vop_mode_ptr->QuantPrecision);//, "vop_quant"
+    if ( vop_mode_ptr->sprite_enable == 2 && vop_mode_ptr->VopPredType == SVOP)
+    {
+        PRINTF_HEAD_INFO("GMC NOT SUPPORTED!\n");
+        vop_mode_ptr->error_flag = TRUE;
+        return MMDEC_STREAM_ERROR;
+    }
 
-	lenth+=vop_mode_ptr->QuantPrecision;
+    vop_mode_ptr->StepSize = (uint8)Mp4Dec_ReadBits(vop_mode_ptr->QuantPrecision);//, "vop_quant"
+
+    lenth+=vop_mode_ptr->QuantPrecision;
 
     if(IVOP != vop_mode_ptr->VopPredType)
-	{
-		MV_INFO_T *pMvInfo = &(vop_mode_ptr->mvInfoForward);
-		pMvInfo->FCode = (uint8)Mp4Dec_ReadBits(3);//"vop_fcode_forward"
-		pMvInfo->ScaleFactor = 1 << (pMvInfo->FCode - 1);
-		pMvInfo->Range = 16 << (pMvInfo->FCode);
-        
-		lenth+=3;
-    
-	}//else
-	///{
-      //vop_mode_ptr->mvInfoForward.FCode=0;
-	//}
+    {
+        MV_INFO_T *pMvInfo = &(vop_mode_ptr->mvInfoForward);
+        pMvInfo->FCode = (uint8)Mp4Dec_ReadBits(3);//"vop_fcode_forward"
+        pMvInfo->ScaleFactor = 1 << (pMvInfo->FCode - 1);
+        pMvInfo->Range = 16 << (pMvInfo->FCode);
 
-	if(BVOP == vop_mode_ptr->VopPredType)
-	{
-		MV_INFO_T *pMvInfo = &(vop_mode_ptr->mvInfoBckward);
-		pMvInfo->FCode = (uint8)Mp4Dec_ReadBits(3);//"vop_fcode_backward"
-		pMvInfo->ScaleFactor = 1 << (pMvInfo->FCode - 1);
-		pMvInfo->Range = 16 << (pMvInfo->FCode);
+        lenth+=3;
 
-		lenth+=3;
-	}//else
-	//{
-	///	//vop_mode_ptr->mvInfoBckward.FCode=0;
+    }//else
+    ///{
+    //vop_mode_ptr->mvInfoForward.FCode=0;
+    //}
 
-	//}
+    if(BVOP == vop_mode_ptr->VopPredType)
+    {
+        MV_INFO_T *pMvInfo = &(vop_mode_ptr->mvInfoBckward);
+        pMvInfo->FCode = (uint8)Mp4Dec_ReadBits(3);//"vop_fcode_backward"
+        pMvInfo->ScaleFactor = 1 << (pMvInfo->FCode - 1);
+        pMvInfo->Range = 16 << (pMvInfo->FCode);
+
+        lenth+=3;
+    }//else
+    //{
+    ///	//vop_mode_ptr->mvInfoBckward.FCode=0;
+
+    //}
 
 
 
-	return MMDEC_OK;
+    return MMDEC_OK;
 }
 
 /*****************************************************************************
@@ -672,138 +642,136 @@ MMDecRet Mp4Dec_DecVolHeader(DEC_VOP_MODE_T *vop_mode_ptr)
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
- MMDecRet Mp4Dec_DecVoHeader(DEC_VOP_MODE_T *vop_mode_ptr)
+MMDecRet Mp4Dec_DecVoHeader(Mp4DecObject *vo)
 {
-	MMDecRet ret = MMDEC_OK;
-	int32 is_visual_object_identifier;
-	int32 visual_object_verid;
-	int32 visual_object_priority;
-	int32 visual_object_type;
+    DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
+    MMDecRet ret = MMDEC_OK;
+    int32 is_visual_object_identifier;
+    int32 visual_object_verid;
+    int32 visual_object_priority;
+    int32 visual_object_type;
 
-	Mp4Dec_FlushBits(32);
-	is_visual_object_identifier = Mp4Dec_ReadBits(1);
+    Mp4Dec_FlushBits(32);
+    is_visual_object_identifier = Mp4Dec_ReadBits(1);
 
-	if(is_visual_object_identifier)
-	{
-		visual_object_verid = Mp4Dec_ReadBits(4);
-		visual_object_priority = Mp4Dec_ReadBits(3);
-	}else
-	{
-		visual_object_verid = 1;
-	}
+    if(is_visual_object_identifier)
+    {
+        visual_object_verid = Mp4Dec_ReadBits(4);
+        visual_object_priority = Mp4Dec_ReadBits(3);
+    } else
+    {
+        visual_object_verid = 1;
+    }
 
-	visual_object_type = Mp4Dec_ReadBits(4);
+    visual_object_type = Mp4Dec_ReadBits(4);
 
-	if((visual_object_type == 1) || (visual_object_type == 2))
-	{
-		/*video signal type*/
-		int32 video_signal_type;
-		int32 video_format;
-		int32 video_range;
-		int32 colour_description;
-		int32 colour_primaries;
-		int32 transfer_charachteristics;
-		int32 matrix_coefficient;
+    if((visual_object_type == 1) || (visual_object_type == 2))
+    {
+        /*video signal type*/
+        int32 video_signal_type;
+        int32 video_format;
+        int32 video_range;
+        int32 colour_description;
+        int32 colour_primaries;
+        int32 transfer_charachteristics;
+        int32 matrix_coefficient;
 
-		video_signal_type = Mp4Dec_ReadBits(1);
+        video_signal_type = Mp4Dec_ReadBits(1);
 
-		if(video_signal_type)
-		{
-			video_format = Mp4Dec_ReadBits(3);
-			video_range = Mp4Dec_ReadBits(1);
-			colour_description = Mp4Dec_ReadBits(1);
+        if(video_signal_type)
+        {
+            video_format = Mp4Dec_ReadBits(3);
+            video_range = Mp4Dec_ReadBits(1);
+            colour_description = Mp4Dec_ReadBits(1);
 
-			if(colour_description)
-			{
-				colour_primaries = Mp4Dec_ReadBits(8);
-				transfer_charachteristics = Mp4Dec_ReadBits(8);
-				matrix_coefficient = Mp4Dec_ReadBits(8);
-			}
-		}
-	}
+            if(colour_description)
+            {
+                colour_primaries = Mp4Dec_ReadBits(8);
+                transfer_charachteristics = Mp4Dec_ReadBits(8);
+                matrix_coefficient = Mp4Dec_ReadBits(8);
+            }
+        }
+    }
 
-	return ret;
+    return ret;
 }
 
 /*****************************************************************************
  **	Name : 			Mp4Dec_DecGOV
- ** Description:	Decode the GOV information. 
+ ** Description:	Decode the GOV information.
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
- MMDecRet Mp4Dec_DecGOV(DEC_VOP_MODE_T *vop_mode_ptr)
+MMDecRet Mp4Dec_DecGOV(Mp4DecObject *vo)
 {
-	uint32 tmp_var;
-	uint32 times;
-	uint32 closed_gov;
-	uint32 broken_link;
+    DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
+    uint32 tmp_var;
+    uint32 times;
+    uint32 closed_gov;
+    uint32 broken_link;
 
-	tmp_var = (uint32)Mp4Dec_ReadBits(32); // "group_start_code"
+    tmp_var = (uint32)Mp4Dec_ReadBits(32); // "group_start_code"
 
-	if(tmp_var != GROUP_START_CODE)
-	{
-		PRINTF_HEAD_INFO("\nBitstream does not start with GROUP_START_CODE\n");
-		vop_mode_ptr->error_flag = TRUE;
-		return MMDEC_STREAM_ERROR;
-	}
-	
-	//tmp_var
-	//bit[20:16], "Hour"
-	//bit[15:9], "Minute"
-	//bit[8], "Marker_bit"
-	//bit[7:2], "Second"
-	//bit[1], "closed_gov"
-	//bit[0], "broken_link"
-	tmp_var = (uint32)Mp4Dec_ReadBits(21);
-	
-	times = (tmp_var>>16) * 3600; 
-	times += ((tmp_var>>9)&0x3F) * 60;
-	times += ((tmp_var>>2)&0x3F);
+    if(tmp_var != GROUP_START_CODE)
+    {
+        PRINTF_HEAD_INFO("\nBitstream does not start with GROUP_START_CODE\n");
+        vop_mode_ptr->error_flag = TRUE;
+        return MMDEC_STREAM_ERROR;
+    }
 
-	closed_gov = ((tmp_var>>1)&0x01);
-	broken_link = (tmp_var&0x01);
+    //tmp_var
+    //bit[20:16], "Hour"
+    //bit[15:9], "Minute"
+    //bit[8], "Marker_bit"
+    //bit[7:2], "Second"
+    //bit[1], "closed_gov"
+    //bit[0], "broken_link"
+    tmp_var = (uint32)Mp4Dec_ReadBits(21);
 
-	if((closed_gov == 0)&&(broken_link == 1))
-	{
-		PRINTF_HEAD_INFO("closed_gov = 0\nbroken_link = 1\n");
-		vop_mode_ptr->error_flag = TRUE;
-		return MMDEC_STREAM_ERROR;
-	}
+    times = (tmp_var>>16) * 3600;
+    times += ((tmp_var>>9)&0x3F) * 60;
+    times += ((tmp_var>>2)&0x3F);
 
-	/**/
-	Mp4Dec_ByteAlign_Mp4();
-	while((tmp_var = Mp4Dec_ShowBits(USER_DATA_START_CODE_LENGTH)) == USER_DATA_START_CODE)
-	{
-		#if SIM_IN_WIN
-		READ_REG_POLL (VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_3, V_BIT_3, TIME_OUT_CLK,
-			"polling bsm fifo depth >= 8 words for user data");
-        #endif
-		Mp4Dec_FlushBits(USER_DATA_START_CODE_LENGTH);
-		
-		while((tmp_var = Mp4Dec_ShowBits(NUMBITS_START_CODE_PREFIX)) != START_CODE_PREFIX)
-		{
-			Mp4Dec_FlushBits(8);
-		}
-	} 
+    closed_gov = ((tmp_var>>1)&0x01);
+    broken_link = (tmp_var&0x01);
 
-	return MMDEC_OK;
+    if((closed_gov == 0)&&(broken_link == 1))
+    {
+        PRINTF_HEAD_INFO("closed_gov = 0\nbroken_link = 1\n");
+        vop_mode_ptr->error_flag = TRUE;
+        return MMDEC_STREAM_ERROR;
+    }
+
+    /**/
+    Mp4Dec_ByteAlign_Mp4(vo);
+    while((tmp_var = Mp4Dec_ShowBits(USER_DATA_START_CODE_LENGTH)) == USER_DATA_START_CODE)
+    {
+        Mp4Dec_FlushBits(USER_DATA_START_CODE_LENGTH);
+
+        while((tmp_var = Mp4Dec_ShowBits(NUMBITS_START_CODE_PREFIX)) != START_CODE_PREFIX)
+        {
+            Mp4Dec_FlushBits(8);
+        }
+    }
+
+    return MMDEC_OK;
 }
 
 /*****************************************************************************
  **	Name : 			Mp4Dec_DecVoSeqHeader
- ** Description:	Decode the vo sequence header. 
+ ** Description:	Decode the vo sequence header.
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
-MMDecRet Mp4Dec_DecVoSeqHeader(DEC_VOP_MODE_T *vop_mode_ptr)
+MMDecRet Mp4Dec_DecVoSeqHeader(Mp4DecObject *vo)
 {
-	int32 ret = MMDEC_OK;
-	int32 profile_level_indication;
+    int32 ret = MMDEC_OK;
+    int32 profile_level_indication;
 
-	Mp4Dec_FlushBits(32);
-	profile_level_indication = Mp4Dec_ReadBits(8);
+    Mp4Dec_FlushBits(32);
+    profile_level_indication = Mp4Dec_ReadBits(8);
 
-	return ret;
+    return ret;
 }
 
 
@@ -813,138 +781,123 @@ MMDecRet Mp4Dec_DecVoSeqHeader(DEC_VOP_MODE_T *vop_mode_ptr)
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
-MMDecRet Mp4Dec_DecMp4Header(DEC_VOP_MODE_T *vop_mode_ptr, uint32 uOneFrameLen)
+MMDecRet Mp4Dec_DecMp4Header(Mp4DecObject *vo, uint32 uOneFrameLen)
 {
-	MMDecRet ret = MMDEC_OK;
-	uint32 uStartCode;
-	uint32 uTmpVar;
-#if SIM_IN_WIN
-	uint32 nDecTotalBits = VSP_READ_REG(VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
-  #else
-  	uint32 nDecTotalBits = OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
-  #endif
-  
-	while(((nDecTotalBits>>3)/* + 4*/) < uOneFrameLen)
-	{
-		#if SIM_IN_WIN
-		READ_REG_POLL (VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_3, V_BIT_3, TIME_OUT_CLK,
-			"polling bsm fifo depth >= 8 words for sequence header");
-		#endif
-		Mp4Dec_ByteAlign_Startcode();
+    DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
+    MMDecRet ret = MMDEC_OK;
+    uint32 uStartCode;
+    uint32 uTmpVar;
+    uint32 nDecTotalBits = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
 
-		uStartCode = Mp4Dec_ShowBits(32);
+    while(((nDecTotalBits>>3)/* + 4*/) < uOneFrameLen)
+    {
+        Mp4Dec_ByteAlign_Startcode(vo);
 
-		if(DEC_VOP_START_CODE == uStartCode)
-		{
-			ret = Mp4Dec_DecVopHeader(vop_mode_ptr);
-			vop_mode_ptr->find_vop_header = 1;
+        uStartCode = Mp4Dec_ShowBits(32);
 
-			break;
-		}else if(VISOBJSEQ_STOP_CODE == uStartCode)
-		{
-			Mp4Dec_ReadBits(32);
-		}else if(VISOBJ_START_CODE == uStartCode)
-		{
-			ret = Mp4Dec_DecVoHeader(vop_mode_ptr);
-		}else if(VIDOBJ_START_CODE == ((uStartCode>>5)<<5))
-		{
-			Mp4Dec_ReadBits(32);
-		}else if(VIDOBJLAY_START_CODE == ((uStartCode>>4)<<4))
-		{
-			ret = Mp4Dec_DecVolHeader(vop_mode_ptr);
+        if(DEC_VOP_START_CODE == uStartCode)
+        {
+            ret = Mp4Dec_DecVopHeader(vo, vop_mode_ptr);
+            vop_mode_ptr->find_vop_header = 1;
 
-		}else if(GRPOFVOP_START_CODE == uStartCode)
-		{
-			ret = Mp4Dec_DecGOV(vop_mode_ptr);
-		}else if(VISOBJSEQ_STOP_CODE == uStartCode)
-		{
-			ret = Mp4Dec_DecVoSeqHeader(vop_mode_ptr);
-		}else if(USERDATA_START_CODE == uStartCode)
-		{
+            break;
+        } else if(VISOBJSEQ_STOP_CODE == uStartCode)
+        {
+            Mp4Dec_ReadBits(32);
+        } else if(VISOBJ_START_CODE == uStartCode)
+        {
+            ret = Mp4Dec_DecVoHeader(vo);
+        } else if(VIDOBJ_START_CODE == ((uStartCode>>5)<<5))
+        {
+            Mp4Dec_ReadBits(32);
+        } else if(VIDOBJLAY_START_CODE == ((uStartCode>>4)<<4))
+        {
+            ret = Mp4Dec_DecVolHeader(vo);
+
+        } else if(GRPOFVOP_START_CODE == uStartCode)
+        {
+            ret = Mp4Dec_DecGOV(vo);
+        } else if(VISOBJSEQ_STOP_CODE == uStartCode)
+        {
+            ret = Mp4Dec_DecVoSeqHeader(vo);
+        } else if(USERDATA_START_CODE == uStartCode)
+        {
             Mp4Dec_FlushBits(32);
             nDecTotalBits += 32;
-            while( ( (uTmpVar = Mp4Dec_ShowBits(24)) != START_CODE_PREFIX )  && 
-                    ( (nDecTotalBits>>3) < uOneFrameLen ) 
-            )
+            while( ( (uTmpVar = Mp4Dec_ShowBits(24)) != START_CODE_PREFIX )  &&
+                    ( (nDecTotalBits>>3) < uOneFrameLen )
+                 )
             {
                 Mp4Dec_FlushBits(8);
                 nDecTotalBits += 8;
-              #if SIM_IN_WIN
-				READ_REG_POLL (VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_3, V_BIT_3, TIME_OUT_CLK,
-					"polling bsm fifo depth >= 8 words for user data");
-			#endif
-			}
-		}else
-		{
-			//skip 8 bits
-			Mp4Dec_FlushBits(8);
-		}
-#if SIM_IN_WIN
-		nDecTotalBits = VSP_READ_REG(VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
-#else
-        nDecTotalBits=OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
-#endif
-		if(ret != MMDEC_OK)
-		{
-			break;
-		}
-	}
+            }
+        } else
+        {
+            //skip 8 bits
+            Mp4Dec_FlushBits(8);
+        }
+        nDecTotalBits=VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
+        if(ret != MMDEC_OK)
+        {
+            break;
+        }
+    }
 
-	return ret;
+    return ret;
 }
 
 
- MMDecRet Mp4Dec_DecH263PicInfo(DEC_VOP_MODE_T *vop_mode_ptr, int32 source_format)
+MMDecRet Mp4Dec_DecH263PicInfo(DEC_VOP_MODE_T *vop_mode_ptr, int32 source_format)
 {
-	switch(source_format)
-	{
-	case 1: //SQCIF
-		vop_mode_ptr->NumMBInGob = 8;
-		vop_mode_ptr->NumGobInVop = 6;		
-		vop_mode_ptr->num_mbline_gob = 1;
-		vop_mode_ptr->OrgFrameWidth = 128;
-		vop_mode_ptr->OrgFrameHeight = 96;
-		break;
-	case 2://QCIF
-		vop_mode_ptr->NumMBInGob = 11;
-		vop_mode_ptr->NumGobInVop = 9;			
-		vop_mode_ptr->num_mbline_gob = 1;		
-		vop_mode_ptr->OrgFrameWidth = 176;
-		vop_mode_ptr->OrgFrameHeight = 144;
-		break;
-	case 3://CIF
-		vop_mode_ptr->NumMBInGob = 22;
-		vop_mode_ptr->NumGobInVop = 18;			
-		vop_mode_ptr->num_mbline_gob = 1;		
-		vop_mode_ptr->OrgFrameWidth = 352;
-		vop_mode_ptr->OrgFrameHeight = 288;
-		break;
-	case 4:///4CIF
-		vop_mode_ptr->NumMBInGob = 88;
-		vop_mode_ptr->NumGobInVop = 18;			
-		vop_mode_ptr->num_mbline_gob = 2;		
-		vop_mode_ptr->OrgFrameWidth = 704;
-		vop_mode_ptr->OrgFrameHeight = 576;
-		break;
-	case 5:///16CIF
-		vop_mode_ptr->NumMBInGob = 352;
-		vop_mode_ptr->NumGobInVop = 18;			
-		vop_mode_ptr->num_mbline_gob = 4;		
-		vop_mode_ptr->OrgFrameWidth = 1408;
-		vop_mode_ptr->OrgFrameHeight = 1152;
-		break;
-	case 7: //Special,for asic romcode verification
-		PRINTF_HEAD_INFO("extent profile, not supported!\n");
-		return MMDEC_NOT_SUPPORTED;
+    switch(source_format)
+    {
+    case 1: //SQCIF
+        vop_mode_ptr->NumMBInGob = 8;
+        vop_mode_ptr->NumGobInVop = 6;
+        vop_mode_ptr->num_mbline_gob = 1;
+        vop_mode_ptr->OrgFrameWidth = 128;
+        vop_mode_ptr->OrgFrameHeight = 96;
+        break;
+    case 2://QCIF
+        vop_mode_ptr->NumMBInGob = 11;
+        vop_mode_ptr->NumGobInVop = 9;
+        vop_mode_ptr->num_mbline_gob = 1;
+        vop_mode_ptr->OrgFrameWidth = 176;
+        vop_mode_ptr->OrgFrameHeight = 144;
+        break;
+    case 3://CIF
+        vop_mode_ptr->NumMBInGob = 22;
+        vop_mode_ptr->NumGobInVop = 18;
+        vop_mode_ptr->num_mbline_gob = 1;
+        vop_mode_ptr->OrgFrameWidth = 352;
+        vop_mode_ptr->OrgFrameHeight = 288;
+        break;
+    case 4:///4CIF
+        vop_mode_ptr->NumMBInGob = 88;
+        vop_mode_ptr->NumGobInVop = 18;
+        vop_mode_ptr->num_mbline_gob = 2;
+        vop_mode_ptr->OrgFrameWidth = 704;
+        vop_mode_ptr->OrgFrameHeight = 576;
+        break;
+    case 5:///16CIF
+        vop_mode_ptr->NumMBInGob = 352;
+        vop_mode_ptr->NumGobInVop = 18;
+        vop_mode_ptr->num_mbline_gob = 4;
+        vop_mode_ptr->OrgFrameWidth = 1408;
+        vop_mode_ptr->OrgFrameHeight = 1152;
+        break;
+    case 7: //Special,for asic romcode verification
+        PRINTF_HEAD_INFO("extent profile, not supported!\n");
+        return MMDEC_NOT_SUPPORTED;
 //		break;
-	default:
-		{				
-			PRINTF_HEAD_INFO("H.263 source format not legal\n");
-			return MMDEC_STREAM_ERROR;		
-		}
-	}
+    default:
+    {
+        PRINTF_HEAD_INFO("H.263 source format not legal\n");
+        return MMDEC_STREAM_ERROR;
+    }
+    }
 
-	return MMDEC_OK;
+    return MMDEC_OK;
 }
 
 /* H.263 source formats */
@@ -977,279 +930,279 @@ MMDecRet Mp4Dec_DecMp4Header(DEC_VOP_MODE_T *vop_mode_ptr, uint32 uOneFrameLen)
 #define PCT_PB                          6
 
 
-static MMDecRet Mp4Dec_DecH263PlusHeader(DEC_VOP_MODE_T *vop_mode_ptr)
+static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_mode_ptr)
 {
-	H263_PLUS_HEAD_INFO_T *h263_plus = Mp4Dec_GetH263PlusHeadInfo();
-	int32 tmp;
-	
-	//PRINTF_HEAD_INFO("\n----------EXTENDED_PTYPE----------");
+    H263_PLUS_HEAD_INFO_T *h263_plus = vo->g_h263_plus_head_info_ptr;
+    int32 tmp;
+
+    //PRINTF_HEAD_INFO("\n----------EXTENDED_PTYPE----------");
     h263_plus->plus_type = 1;
     h263_plus->UFEP = Mp4Dec_ReadBits(3);
-	//PRINTF_HEAD_INFO("\nUFEP: %d", h263_plus->UFEP);
+    //PRINTF_HEAD_INFO("\nUFEP: %d", h263_plus->UFEP);
     if(h263_plus->UFEP == 1)
-    {   
-		/* OPPTYPE */
-		//PRINTF_HEAD_INFO("\n----------OPTIONAL PLUS PTYPE----------");
-		h263_plus->source_format = Mp4Dec_ReadBits(3);
+    {
+        /* OPPTYPE */
+        //PRINTF_HEAD_INFO("\n----------OPTIONAL PLUS PTYPE----------");
+        h263_plus->source_format = Mp4Dec_ReadBits(3);
         //PRINTF_HEAD_INFO("\nsource_format: %d", h263_plus->source_format);
-		
-		/* optional custom picture clock frequency */
-		h263_plus->optional_custom_PCF = Mp4Dec_ReadBits(1);
+
+        /* optional custom picture clock frequency */
+        h263_plus->optional_custom_PCF = Mp4Dec_ReadBits(1);
 //        PRINTF_HEAD_INFO("\noptional_custom_PCF: %d", h263_plus->optional_custom_PCF);
-		if(h263_plus->optional_custom_PCF)
-		{
-		#if 0 //Removed for support Intel H.263.
+        if(h263_plus->optional_custom_PCF)
+        {
+#if 0 //Removed for support Intel H.263.
 //			PRINTF_HEAD_INFO("error: Optional custom picture clock frequency is not supported in this version\n");
-			vop_mode_ptr->error_flag = TRUE;
-		#endif
-		}
-		
-		h263_plus->mv_outside_frame = Mp4Dec_ReadBits(1);
+            vop_mode_ptr->error_flag = TRUE;
+#endif
+        }
+
+        h263_plus->mv_outside_frame = Mp4Dec_ReadBits(1);
 //        PRINTF_HEAD_INFO("\nmv_outside_frame: %d", h263_plus->mv_outside_frame);
-		
-		h263_plus->long_vectors = (h263_plus->mv_outside_frame ? 1 : 0);
-		h263_plus->syntax_arith_coding = Mp4Dec_ReadBits(1);
+
+        h263_plus->long_vectors = (h263_plus->mv_outside_frame ? 1 : 0);
+        h263_plus->syntax_arith_coding = Mp4Dec_ReadBits(1);
 //        PRINTF_HEAD_INFO("\nsyntax_arith_coding: %d", h263_plus->syntax_arith_coding);
-		
-		h263_plus->adv_pred_mode = Mp4Dec_ReadBits(1);
+
+        h263_plus->adv_pred_mode = Mp4Dec_ReadBits(1);
 //        PRINTF_HEAD_INFO("\nadv_pred_mode: %d", h263_plus->adv_pred_mode);
-		
-		h263_plus->mv_outside_frame = (h263_plus->adv_pred_mode ? 1 : h263_plus->mv_outside_frame);
-		
-		h263_plus->overlapping_MC = (h263_plus->adv_pred_mode ? 1 : 0);
-		h263_plus->use_4mv = (h263_plus->adv_pred_mode ? 1 : 0);
-		h263_plus->pb_frame = 0;
-		h263_plus->advanced_intra_coding = Mp4Dec_ReadBits (1);
+
+        h263_plus->mv_outside_frame = (h263_plus->adv_pred_mode ? 1 : h263_plus->mv_outside_frame);
+
+        h263_plus->overlapping_MC = (h263_plus->adv_pred_mode ? 1 : 0);
+        h263_plus->use_4mv = (h263_plus->adv_pred_mode ? 1 : 0);
+        h263_plus->pb_frame = 0;
+        h263_plus->advanced_intra_coding = Mp4Dec_ReadBits (1);
 //        PRINTF_HEAD_INFO("\nadvanced_intra_coding: %d", h263_plus->advanced_intra_coding);
-		
-		h263_plus->deblocking_filter_mode = Mp4Dec_ReadBits (1);
+
+        h263_plus->deblocking_filter_mode = Mp4Dec_ReadBits (1);
 //        PRINTF_HEAD_INFO("\ndeblocking_filter_mode: %d", h263_plus->deblocking_filter_mode);
-		
-		h263_plus->mv_outside_frame = (h263_plus->deblocking_filter_mode ? 1 : h263_plus->mv_outside_frame);
-		h263_plus->use_4mv = (h263_plus->deblocking_filter_mode ? 1 : h263_plus->use_4mv);
-		
-		h263_plus->slice_structured_mode = Mp4Dec_ReadBits (1);
+
+        h263_plus->mv_outside_frame = (h263_plus->deblocking_filter_mode ? 1 : h263_plus->mv_outside_frame);
+        h263_plus->use_4mv = (h263_plus->deblocking_filter_mode ? 1 : h263_plus->use_4mv);
+
+        h263_plus->slice_structured_mode = Mp4Dec_ReadBits (1);
         PRINTF_HEAD_INFO("\nslice_structured_mode: %d", h263_plus->slice_structured_mode);
-		
-		if(h263_plus->slice_structured_mode)
-		{
+
+        if(h263_plus->slice_structured_mode)
+        {
 //			PRINTF_HEAD_INFO("error: Slice structured mode is not supported in this version\n");
-			vop_mode_ptr->error_flag = TRUE;
-			return MMDEC_NOT_SUPPORTED;
-		}
-		
-		h263_plus->reference_picture_selection_mode = Mp4Dec_ReadBits (1);
+            vop_mode_ptr->error_flag = TRUE;
+            return MMDEC_NOT_SUPPORTED;
+        }
+
+        h263_plus->reference_picture_selection_mode = Mp4Dec_ReadBits (1);
         PRINTF_HEAD_INFO("\nreference_picture_selection_mode: %d", h263_plus->reference_picture_selection_mode);
-		
-		h263_plus->independently_segmented_decoding_mode = Mp4Dec_ReadBits (1);
+
+        h263_plus->independently_segmented_decoding_mode = Mp4Dec_ReadBits (1);
 //        PRINTF_HEAD_INFO("\nindependently_segmented_decoding_mode: %d", h263_plus->independently_segmented_decoding_mode);
-		
-		if(h263_plus->independently_segmented_decoding_mode)
-		{
+
+        if(h263_plus->independently_segmented_decoding_mode)
+        {
 //			PRINTF_HEAD_INFO("error: Independently segmented decoding mode is not supported in this version\n");
-			vop_mode_ptr->error_flag = TRUE;
-			return MMDEC_NOT_SUPPORTED;
-		}
-		
-		h263_plus->alternative_inter_VLC_mode = Mp4Dec_ReadBits (1);
+            vop_mode_ptr->error_flag = TRUE;
+            return MMDEC_NOT_SUPPORTED;
+        }
+
+        h263_plus->alternative_inter_VLC_mode = Mp4Dec_ReadBits (1);
 //        PRINTF_HEAD_INFO("\nalternative_inter_VLC_mode: %d", h263_plus->alternative_inter_VLC_mode);
-		
-		h263_plus->modified_quantization_mode = Mp4Dec_ReadBits (1);
+
+        h263_plus->modified_quantization_mode = Mp4Dec_ReadBits (1);
 //        PRINTF_HEAD_INFO("\nmodified_quantization_mode: %d", h263_plus->modified_quantization_mode);
-		
-		tmp = Mp4Dec_ReadBits (4);
+
+        tmp = Mp4Dec_ReadBits (4);
 //        PRINTF_HEAD_INFO("\nspare, reserve, reserve, reserve: %d", tmp);
-		
-		if (tmp != 8)
-		{                         /* OPPTYPE : bit15=1, bit16,bit17,bit18=0 */
-			PRINTF_HEAD_INFO("error: The last 4 bits of OPPTYPE is expected to be 1000\n");
-			vop_mode_ptr->error_flag = TRUE;
-			return MMDEC_NOT_SUPPORTED;
-		}
+
+        if (tmp != 8)
+        {   /* OPPTYPE : bit15=1, bit16,bit17,bit18=0 */
+            PRINTF_HEAD_INFO("error: The last 4 bits of OPPTYPE is expected to be 1000\n");
+            vop_mode_ptr->error_flag = TRUE;
+            return MMDEC_NOT_SUPPORTED;
+        }
     }
-	
+
     if ((h263_plus->UFEP == 1) || (h263_plus->UFEP == 0))
     {
-		if (h263_plus->UFEP == 0)
-		{
-			//			PRINTF_HEAD_INFO("error: do not supported in this version\n");
-			//			vop_mode_ptr->error_flag = TRUE;
-			//return MMDEC_NOT_SUPPORTED;
-		}
-		
-		/* MMPTYPE */
-		//PRINTF_HEAD_INFO("\n----------MANDATORY PLUS PTYPE----------");
-		vop_mode_ptr->VopPredType = (VOP_PRED_TYPE_E)Mp4Dec_ReadBits (3);
+        if (h263_plus->UFEP == 0)
+        {
+            //			PRINTF_HEAD_INFO("error: do not supported in this version\n");
+            //			vop_mode_ptr->error_flag = TRUE;
+            //return MMDEC_NOT_SUPPORTED;
+        }
+
+        /* MMPTYPE */
+        //PRINTF_HEAD_INFO("\n----------MANDATORY PLUS PTYPE----------");
+        vop_mode_ptr->VopPredType = (VOP_PRED_TYPE_E)Mp4Dec_ReadBits (3);
 //        PRINTF_HEAD_INFO("\npict_type: %d", vop_mode_ptr->VopPredType);
-		
-		if(vop_mode_ptr->VopPredType > PVOP)
-		{
-			PRINTF_HEAD_INFO("error: do not supported in this version\n");
-			vop_mode_ptr->error_flag = TRUE;
-			return MMDEC_NOT_SUPPORTED;
-		}
-		
+
+        if(vop_mode_ptr->VopPredType > PVOP)
+        {
+            PRINTF_HEAD_INFO("error: do not supported in this version\n");
+            vop_mode_ptr->error_flag = TRUE;
+            return MMDEC_NOT_SUPPORTED;
+        }
+
         h263_plus->pb_frame = 0;
-		
-		h263_plus->reference_picture_resampling_mode = Mp4Dec_ReadBits (1);
+
+        h263_plus->reference_picture_resampling_mode = Mp4Dec_ReadBits (1);
         PRINTF_HEAD_INFO("\nreference_picture_resampling_mode: %d", h263_plus->reference_picture_resampling_mode);
-		if(h263_plus->reference_picture_resampling_mode)
-		{
-			PRINTF_HEAD_INFO("error: Reference picture resampling mode is not supported in this version\n");
-			vop_mode_ptr->error_flag = TRUE;
-			return MMDEC_NOT_SUPPORTED;
-		}
-		
-		h263_plus->reduced_resolution_update_mode = Mp4Dec_ReadBits (1);
+        if(h263_plus->reference_picture_resampling_mode)
+        {
+            PRINTF_HEAD_INFO("error: Reference picture resampling mode is not supported in this version\n");
+            vop_mode_ptr->error_flag = TRUE;
+            return MMDEC_NOT_SUPPORTED;
+        }
+
+        h263_plus->reduced_resolution_update_mode = Mp4Dec_ReadBits (1);
         PRINTF_HEAD_INFO("\nreduced_resolution_update_mode: %d", h263_plus->reduced_resolution_update_mode);
-		if (h263_plus->reduced_resolution_update_mode)
-		{
-			PRINTF_HEAD_INFO("error: Reduced resolution update mode is not supported in this version\n");
-			vop_mode_ptr->error_flag = TRUE;
-			return MMDEC_NOT_SUPPORTED;
-		}
-		
-		h263_plus->rtype = Mp4Dec_ReadBits (1);      /* rounding type */
-		PRINTF_HEAD_INFO("\nrounding_type: %d", h263_plus->rtype);
-		
-		tmp = Mp4Dec_ReadBits (3);
+        if (h263_plus->reduced_resolution_update_mode)
+        {
+            PRINTF_HEAD_INFO("error: Reduced resolution update mode is not supported in this version\n");
+            vop_mode_ptr->error_flag = TRUE;
+            return MMDEC_NOT_SUPPORTED;
+        }
+
+        h263_plus->rtype = Mp4Dec_ReadBits (1);      /* rounding type */
+        PRINTF_HEAD_INFO("\nrounding_type: %d", h263_plus->rtype);
+
+        tmp = Mp4Dec_ReadBits (3);
         PRINTF_HEAD_INFO("\nreserve, reserve, spare: %d", tmp);
-		if (tmp != 1)
-		{                         /* MPPTYPE : bit7,bit8=0  bit9=1 */
-			PRINTF_HEAD_INFO("error: do not supported in this version\n");
-			vop_mode_ptr->error_flag = TRUE;
-			return MMDEC_NOT_SUPPORTED;
-		}
+        if (tmp != 1)
+        {   /* MPPTYPE : bit7,bit8=0  bit9=1 */
+            PRINTF_HEAD_INFO("error: do not supported in this version\n");
+            vop_mode_ptr->error_flag = TRUE;
+            return MMDEC_NOT_SUPPORTED;
+        }
     } else
     {
-		/* UFEP is neither 001 nor 000 */
-		PRINTF_HEAD_INFO("error: UFEP should be either 001 or 000.\n");
-		vop_mode_ptr->error_flag = TRUE;
-		return MMDEC_NOT_SUPPORTED;
+        /* UFEP is neither 001 nor 000 */
+        PRINTF_HEAD_INFO("error: UFEP should be either 001 or 000.\n");
+        vop_mode_ptr->error_flag = TRUE;
+        return MMDEC_NOT_SUPPORTED;
     }
-	
+
     tmp = Mp4Dec_ReadBits (1);
-	PRINTF_HEAD_INFO("\nCPM: %d", tmp);
+    PRINTF_HEAD_INFO("\nCPM: %d", tmp);
     if (tmp)
     {
-		PRINTF_HEAD_INFO("error: CPM not supported in this version\n");
-		vop_mode_ptr->error_flag = TRUE;
+        PRINTF_HEAD_INFO("error: CPM not supported in this version\n");
+        vop_mode_ptr->error_flag = TRUE;
     }
-	
+
     if (h263_plus->UFEP && (h263_plus->source_format == SF_CUSTOM))
     {
-		uint32 CP_PAR_code;
-		/* Read custom picture format */
+        uint32 CP_PAR_code;
+        /* Read custom picture format */
 
-		CP_PAR_code = Mp4Dec_ReadBits(4);
+        CP_PAR_code = Mp4Dec_ReadBits(4);
 
-		if (CP_PAR_code != PAR_CIF)
-		{ 
-		#if 0 //Removed for supporting Intel H.263 format
-			PRINTF_HEAD_INFO("error: do not supported in this version\n");
-			vop_mode_ptr->error_flag = TRUE;
-		#endif
-		}
+        if (CP_PAR_code != PAR_CIF)
+        {
+#if 0 //Removed for supporting Intel H.263 format
+            PRINTF_HEAD_INFO("error: do not supported in this version\n");
+            vop_mode_ptr->error_flag = TRUE;
+#endif
+        }
 
-		tmp=Mp4Dec_ReadBits(9);
+        tmp=Mp4Dec_ReadBits(9);
 
-		vop_mode_ptr->OrgFrameWidth = (tmp + 1 ) * 4;
-		PRINTF_HEAD_INFO("\nCP_picture_width_indication: %d", vop_mode_ptr->OrgFrameWidth);
-		tmp = Mp4Dec_ReadBits(1);
-		if(!tmp)
-		{
-			PRINTF_HEAD_INFO("error: The 14th bit of Custom Picture Format(CPFMT) should be 1\n");
-			vop_mode_ptr->error_flag = TRUE;
-		}
+        vop_mode_ptr->OrgFrameWidth = (tmp + 1 ) * 4;
+        PRINTF_HEAD_INFO("\nCP_picture_width_indication: %d", vop_mode_ptr->OrgFrameWidth);
+        tmp = Mp4Dec_ReadBits(1);
+        if(!tmp)
+        {
+            PRINTF_HEAD_INFO("error: The 14th bit of Custom Picture Format(CPFMT) should be 1\n");
+            vop_mode_ptr->error_flag = TRUE;
+        }
 
-		tmp = Mp4Dec_ReadBits (9);
-		vop_mode_ptr->OrgFrameHeight = tmp * 4;
-		PRINTF_HEAD_INFO("\nCP_picture_height_indication: %d", vop_mode_ptr->OrgFrameHeight);
+        tmp = Mp4Dec_ReadBits (9);
+        vop_mode_ptr->OrgFrameHeight = tmp * 4;
+        PRINTF_HEAD_INFO("\nCP_picture_height_indication: %d", vop_mode_ptr->OrgFrameHeight);
 
-		if ((vop_mode_ptr->OrgFrameWidth%16) || (vop_mode_ptr->OrgFrameHeight%16))
-		{
-			PRINTF_HEAD_INFO ("error: only factor of 16 custom source format supported\n");
-			vop_mode_ptr->error_flag = TRUE;
-		}
+        if ((vop_mode_ptr->OrgFrameWidth%16) || (vop_mode_ptr->OrgFrameHeight%16))
+        {
+            PRINTF_HEAD_INFO ("error: only factor of 16 custom source format supported\n");
+            vop_mode_ptr->error_flag = TRUE;
+        }
 
-		if (CP_PAR_code == EXTENDED_PAR)
-		{
-			/*uint32 PAR_width = */Mp4Dec_ReadBits (8);
-			/*uint32 PAR_height = */Mp4Dec_ReadBits (8);
-		}
-	}else
-	{
-		Mp4Dec_DecH263PicInfo(vop_mode_ptr, h263_plus->source_format);
-	}
-    
-    if (h263_plus->optional_custom_PCF)
-    {  
-		int32 clock_conversion_code = 0;
-		int32 clock_divisor = 0;
-		int32 extended_temporal_reference = 0;
-
-		PRINTF_HEAD_INFO ("\noptional_custom_PCF \n");
-		if(h263_plus->UFEP)
-		{
-			clock_conversion_code = Mp4Dec_ReadBits(1);
-			PRINTF_HEAD_INFO ("\nclock_conversion_code: ");
-			clock_divisor = Mp4Dec_ReadBits(7);
-			PRINTF_HEAD_INFO ("\nclock_divisor: ");
-        
-			h263_plus->CP_clock_frequency = (int32) (1800 / (/*(float)*/ clock_divisor * (8 + clock_conversion_code)) * 1000);
-		}
-		/* regardless of the value of UFEP */
-		extended_temporal_reference = Mp4Dec_ReadBits(2);
-		PRINTF_HEAD_INFO ("\nextended_temporal_reference: %d", extended_temporal_reference);
-      
-		h263_plus->temp_ref = (extended_temporal_reference<<8) + h263_plus->temp_ref;
-
-		if (PCT_B == vop_mode_ptr->VopPredType)
-		{
-			h263_plus->true_b_trb = h263_plus->temp_ref - h263_plus->prev_non_disposable_temp_ref;
-		} else
-		{
-			h263_plus->trd = h263_plus->temp_ref - h263_plus->prev_non_disposable_temp_ref;
-		}
-
-		if (h263_plus->trd < 0)
-		{
-			h263_plus->trd += 1024;
-		}
+        if (CP_PAR_code == EXTENDED_PAR)
+        {
+            /*uint32 PAR_width = */Mp4Dec_ReadBits (8);
+            /*uint32 PAR_height = */Mp4Dec_ReadBits (8);
+        }
+    } else
+    {
+        Mp4Dec_DecH263PicInfo(vop_mode_ptr, h263_plus->source_format);
     }
-	
+
+    if (h263_plus->optional_custom_PCF)
+    {
+        int32 clock_conversion_code = 0;
+        int32 clock_divisor = 0;
+        int32 extended_temporal_reference = 0;
+
+        PRINTF_HEAD_INFO ("\noptional_custom_PCF \n");
+        if(h263_plus->UFEP)
+        {
+            clock_conversion_code = Mp4Dec_ReadBits(1);
+            PRINTF_HEAD_INFO ("\nclock_conversion_code: ");
+            clock_divisor = Mp4Dec_ReadBits(7);
+            PRINTF_HEAD_INFO ("\nclock_divisor: ");
+
+            h263_plus->CP_clock_frequency = (int32) (1800 / (/*(float)*/ clock_divisor * (8 + clock_conversion_code)) * 1000);
+        }
+        /* regardless of the value of UFEP */
+        extended_temporal_reference = Mp4Dec_ReadBits(2);
+        PRINTF_HEAD_INFO ("\nextended_temporal_reference: %d", extended_temporal_reference);
+
+        h263_plus->temp_ref = (extended_temporal_reference<<8) + h263_plus->temp_ref;
+
+        if (PCT_B == vop_mode_ptr->VopPredType)
+        {
+            h263_plus->true_b_trb = h263_plus->temp_ref - h263_plus->prev_non_disposable_temp_ref;
+        } else
+        {
+            h263_plus->trd = h263_plus->temp_ref - h263_plus->prev_non_disposable_temp_ref;
+        }
+
+        if (h263_plus->trd < 0)
+        {
+            h263_plus->trd += 1024;
+        }
+    }
+
     if (h263_plus->UFEP && h263_plus->long_vectors)
     {
-		if (Mp4Dec_ReadBits(1)) 
-		{
-			h263_plus->unlimited_unrestricted_motion_vectors = 0;
-			PRINTF_HEAD_INFO("\nunlimited_unrestricted_motion_vectors indicator: 0");
-		}
-		else 
-		{
-			Mp4Dec_FlushBits(1);
-			h263_plus->unlimited_unrestricted_motion_vectors = 1;
-			PRINTF_HEAD_INFO("\nunlimited_unrestricted_motion_vectors indicator: 1");
-		}
+        if (Mp4Dec_ReadBits(1))
+        {
+            h263_plus->unlimited_unrestricted_motion_vectors = 0;
+            PRINTF_HEAD_INFO("\nunlimited_unrestricted_motion_vectors indicator: 0");
+        }
+        else
+        {
+            Mp4Dec_FlushBits(1);
+            h263_plus->unlimited_unrestricted_motion_vectors = 1;
+            PRINTF_HEAD_INFO("\nunlimited_unrestricted_motion_vectors indicator: 1");
+        }
     }
     if (h263_plus->UFEP && h263_plus->slice_structured_mode)
     {
-		PRINTF_HEAD_INFO("error: do not supported in this version\n");
-		vop_mode_ptr->error_flag = TRUE;   
-		return MMDEC_NOT_SUPPORTED;
+        PRINTF_HEAD_INFO("error: do not supported in this version\n");
+        vop_mode_ptr->error_flag = TRUE;
+        return MMDEC_NOT_SUPPORTED;
     }
-	
+
     if (h263_plus->reference_picture_resampling_mode)
     {
         /* reading RPRP info is not implemented */
         PRINTF_HEAD_INFO("error: RPRP reading is not implemented in this version\n");
-		vop_mode_ptr->error_flag = TRUE;
-		return MMDEC_NOT_SUPPORTED;
-	}
-    
-	vop_mode_ptr->StepSize = (int8)Mp4Dec_ReadBits(5);
+        vop_mode_ptr->error_flag = TRUE;
+        return MMDEC_NOT_SUPPORTED;
+    }
 
-	return MMDEC_OK;
+    vop_mode_ptr->StepSize = (int8)Mp4Dec_ReadBits(5);
+
+    return MMDEC_OK;
 }
 
 
@@ -1260,165 +1213,165 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(DEC_VOP_MODE_T *vop_mode_ptr)
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
- 
- 
-PUBLIC MMDecRet Mp4Dec_DecH263Header(DEC_VOP_MODE_T *vop_mode_ptr,SLICEINFO SliceInfor)
+
+
+PUBLIC MMDecRet Mp4Dec_DecH263Header(Mp4DecObject *vo)
 {
-	uint32 tmpVar;
-	BOOLEAN *pIs_stop_decode_vol = &g_dec_is_stop_decode_vol;
-	MMDecRet ret;
-# if SIM_IN_WIN
-	READ_REG_POLL (VSP_BSM_REG_BASE+BSM_DEBUG_OFF, V_BIT_3, V_BIT_3, TIME_OUT_CLK,
-		"polling bsm fifo depth >= 8 words for h263 header");
-#endif
-	tmpVar = Mp4Dec_ShowBits(SHORT_VIDEO_START_MARKER_LENGTH);
+    DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
+    uint32 tmpVar;
+    BOOLEAN *pIs_stop_decode_vol = &(vo->g_dec_is_stop_decode_vol);
+    MMDecRet ret;
+    SLICEINFO *slice_info = &(vo->SliceInfo);
 
-	if(SHORT_VIDEO_START_MARKER != tmpVar)
-	{
-		if(SHORT_VIDEO_END_MARKER == tmpVar)
-		{		
-			(*pIs_stop_decode_vol) = TRUE;
-			PRINTF("end of sequence!\n");	
-			return MMDEC_ERROR;		
-		}else
-		{
-			return MMDEC_STREAM_ERROR;
-		}
-	}
+    tmpVar = Mp4Dec_ShowBits(SHORT_VIDEO_START_MARKER_LENGTH);
 
-	Mp4Dec_FlushBits(SHORT_VIDEO_START_MARKER_LENGTH);
-	
-	//tmpVar 
-	//bit[8:1] is "h263_temporal_reference"
-	//bit[0] is "h263_marker_bit"
-	tmpVar = Mp4Dec_ReadBits(9);
-	if(!(tmpVar & 0x01))
+    if(SHORT_VIDEO_START_MARKER != tmpVar)
     {
-		PRINTF_HEAD_INFO("This is not a legal H.263 bitstream\n");
-		return MMDEC_STREAM_ERROR;		
+        if(SHORT_VIDEO_END_MARKER == tmpVar)
+        {
+            (*pIs_stop_decode_vol) = TRUE;
+            PRINTF("end of sequence!\n");
+            return MMDEC_ERROR;
+        } else
+        {
+            return MMDEC_STREAM_ERROR;
+        }
     }
 
-	//tmpVar 
-	//bit[6] is "h263_bitstream_type"
-	//bit[5] is "h263_split_screen_indicator"
-	//bit[4] is "h263_document_freeze_camera"
-	//bit[3] is "h263_freeze_picture_release"
-	//bit[2:0] is "source_format"
-	tmpVar = Mp4Dec_ReadBits(7);
-	if(tmpVar>>3)
-	{
-		PRINTF_HEAD_INFO("This is not a legal H.263 bitstream\n");
-		return MMDEC_NOT_SUPPORTED;
+    Mp4Dec_FlushBits(SHORT_VIDEO_START_MARKER_LENGTH);
+
+    //tmpVar
+    //bit[8:1] is "h263_temporal_reference"
+    //bit[0] is "h263_marker_bit"
+    tmpVar = Mp4Dec_ReadBits(9);
+    if(!(tmpVar & 0x01))
+    {
+        PRINTF_HEAD_INFO("This is not a legal H.263 bitstream\n");
+        return MMDEC_STREAM_ERROR;
     }
 
-	tmpVar = (tmpVar & 0x07);
-	if((tmpVar != (uint32)g_dec_pre_vop_format) && (!g_dec_is_first_frame))
-	{
-		g_dec_is_changed_format = TRUE;
-	}
+    //tmpVar
+    //bit[6] is "h263_bitstream_type"
+    //bit[5] is "h263_split_screen_indicator"
+    //bit[4] is "h263_document_freeze_camera"
+    //bit[3] is "h263_freeze_picture_release"
+    //bit[2:0] is "source_format"
+    tmpVar = Mp4Dec_ReadBits(7);
+    if(tmpVar>>3)
+    {
+        PRINTF_HEAD_INFO("This is not a legal H.263 bitstream\n");
+        return MMDEC_NOT_SUPPORTED;
+    }
 
-	g_dec_pre_vop_format = tmpVar;
+    tmpVar = (tmpVar & 0x07);
+    if((tmpVar != (uint32)vo->g_dec_pre_vop_format) && (!vo->g_dec_is_first_frame))
+    {
+        vo->g_dec_is_changed_format = TRUE;
+    }
 
-	if(tmpVar == EXTENDED_PTYPE)
-	{
-		ret = Mp4Dec_DecH263PlusHeader(vop_mode_ptr);
+    vo->g_dec_pre_vop_format = tmpVar;
 
-		if(ret != MMDEC_OK)
-		{
-			return ret;
-		}
-		
-		if(IVOP != vop_mode_ptr->VopPredType)
-		{
-			vop_mode_ptr->mvInfoForward.FCode = 1;
-		}
-	}else
-	{
-		H263_PLUS_HEAD_INFO_T *h263_plus = Mp4Dec_GetH263PlusHeadInfo();
+    if(tmpVar == EXTENDED_PTYPE)
+    {
+        ret = Mp4Dec_DecH263PlusHeader(vo, vop_mode_ptr);
 
-		ret = Mp4Dec_DecH263PicInfo(vop_mode_ptr, tmpVar);		
-		
-		if(ret != MMDEC_OK)
-		{
-			return ret;
-		}
+        if(ret != MMDEC_OK)
+        {
+            return ret;
+        }
 
-		//tmpVar 
-		//bit[10] is "picture_coding_type"
-		//bit[9:6] is "four_reserved_zero_bits"
-		//bit[5:1] is "vop_quant"
-		//bit[0] is "zero_bit"
-		tmpVar = Mp4Dec_ReadBits(11);
-		
-		vop_mode_ptr->VopPredType = (tmpVar>>10);
+        if(IVOP != vop_mode_ptr->VopPredType)
+        {
+            vop_mode_ptr->mvInfoForward.FCode = 1;
+        }
+    } else
+    {
+        H263_PLUS_HEAD_INFO_T *h263_plus = vo->g_h263_plus_head_info_ptr;
 
-		if(IVOP != vop_mode_ptr->VopPredType)
-		{
-			vop_mode_ptr->mvInfoForward.FCode = 1;
-		}
+        ret = Mp4Dec_DecH263PicInfo(vop_mode_ptr, tmpVar);
 
-		if((tmpVar >> 9)&0x01) //unrestricted mv is ON
-		{
-			h263_plus->long_vectors = TRUE;
-			PRINTF_HEAD_INFO("unrestricted mv is ON\n");
-		}else
-		{
-			h263_plus->long_vectors = FALSE;
-		}
+        if(ret != MMDEC_OK)
+        {
+            return ret;
+        }
 
-		//tmpVar = Mp4Dec_ReadBits(3);//"three_reserved_zero_bits"
-		if((tmpVar>>6)&0x07)
-		{
-			PRINTF_HEAD_INFO("three_reserved_zero_bits are not zero\n");
-	//		return MMDEC_STREAM_ERROR;		
-		}
+        //tmpVar
+        //bit[10] is "picture_coding_type"
+        //bit[9:6] is "four_reserved_zero_bits"
+        //bit[5:1] is "vop_quant"
+        //bit[0] is "zero_bit"
+        tmpVar = Mp4Dec_ReadBits(11);
 
-		vop_mode_ptr->StepSize = (uint8)((tmpVar>>1)&0x1F);
+        vop_mode_ptr->VopPredType = (tmpVar>>10);
 
-		if((tmpVar)&0x01)
-		{
-			PRINTF_HEAD_INFO("zero_bit is not zero\n");
-			return MMDEC_STREAM_ERROR;		
-		}
-	}
+        if(IVOP != vop_mode_ptr->VopPredType)
+        {
+            vop_mode_ptr->mvInfoForward.FCode = 1;
+        }
 
-	if(g_dec_is_first_frame || g_dec_is_changed_format)
-	{
-		vop_mode_ptr->QuantPrecision = 5;
-		vop_mode_ptr->bCoded = TRUE;
-		vop_mode_ptr->RoundingControl = 0;
-		vop_mode_ptr->IntraDcSwitchThr = 0;
-		vop_mode_ptr->bInterlace = FALSE;		
-		
-		PRINTF_HEAD_INFO("frame width = %d, frame height = %d\n", vop_mode_ptr->OrgFrameWidth, vop_mode_ptr->OrgFrameHeight);
-	}
+        if((tmpVar >> 9)&0x01) //unrestricted mv is ON
+        {
+            h263_plus->long_vectors = TRUE;
+            PRINTF_HEAD_INFO("unrestricted mv is ON\n");
+        } else
+        {
+            h263_plus->long_vectors = FALSE;
+        }
+
+        //tmpVar = Mp4Dec_ReadBits(3);//"three_reserved_zero_bits"
+        if((tmpVar>>6)&0x07)
+        {
+            PRINTF_HEAD_INFO("three_reserved_zero_bits are not zero\n");
+            //		return MMDEC_STREAM_ERROR;
+        }
+
+        vop_mode_ptr->StepSize = (uint8)((tmpVar>>1)&0x1F);
+
+        if((tmpVar)&0x01)
+        {
+            PRINTF_HEAD_INFO("zero_bit is not zero\n");
+            return MMDEC_STREAM_ERROR;
+        }
+    }
+
+    if(vo->g_dec_is_first_frame || vo->g_dec_is_changed_format)
+    {
+        vop_mode_ptr->QuantPrecision = 5;
+        vop_mode_ptr->bCoded = TRUE;
+        vop_mode_ptr->RoundingControl = 0;
+        vop_mode_ptr->IntraDcSwitchThr = 0;
+        vop_mode_ptr->bInterlace = FALSE;
+
+        PRINTF_HEAD_INFO("frame width = %d, frame height = %d\n", vop_mode_ptr->OrgFrameWidth, vop_mode_ptr->OrgFrameHeight);
+    }
 
 
-	tmpVar = Mp4Dec_ReadBits(1);
-	if(tmpVar)
-	{
-		uint32 pei;
-		
-		pei = Mp4Dec_ReadBits(8);//"psupp"
+    tmpVar = Mp4Dec_ReadBits(1);
+    if(tmpVar)
+    {
+        uint32 pei;
 
-		while(1 == (tmpVar = Mp4Dec_ReadBits(1)))//"pei"
-		{		
-			pei = Mp4Dec_ReadBits(8);	//"psupp"	
-		}
-	}
+        pei = Mp4Dec_ReadBits(8);//"psupp"
 
-	vop_mode_ptr->GobNum = 0;
-	SliceInfor.NumMbLineInGob=0;
+        while(1 == (tmpVar = Mp4Dec_ReadBits(1)))//"pei"
+        {
+            pei = Mp4Dec_ReadBits(8);	//"psupp"
+        }
+    }
 
-	return MMDEC_OK;
+    vop_mode_ptr->GobNum = 0;
+    slice_info->NumMbLineInGob=0;
+
+    return MMDEC_OK;
 }
 
-PUBLIC MMDecRet Mp4Dec_FlvH263PicHeader(DEC_VOP_MODE_T *vop_mode_ptr)
+PUBLIC MMDecRet Mp4Dec_FlvH263PicHeader(Mp4DecObject *vo)
 {
-	int32 format, width, height;
-	DEC_VOP_MODE_T *s = vop_mode_ptr;
-	    
-	/* picture header */
+    DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
+    int32 format, width, height;
+    DEC_VOP_MODE_T *s = vop_mode_ptr;
+
+    /* picture header */
     if (Mp4Dec_ReadBits(17) != 1) {
         PRINTF("Bad picture start code\n");
         return MMDEC_STREAM_ERROR;//-1;
@@ -1431,13 +1384,13 @@ PUBLIC MMDecRet Mp4Dec_FlvH263PicHeader(DEC_VOP_MODE_T *vop_mode_ptr)
     s->h263_flv = format+1;
     s->picture_number = Mp4Dec_ReadBits(8); /* picture timestamp */
     format = Mp4Dec_ReadBits(3);
-		
-	if((format != (int32)g_dec_pre_vop_format) && (!g_dec_is_first_frame))
-	{
-		g_dec_is_changed_format = TRUE;
-	}
 
-	g_dec_pre_vop_format = format;
+    if((format != (int32)vo->g_dec_pre_vop_format) && (!vo->g_dec_is_first_frame))
+    {
+        vo->g_dec_is_changed_format = TRUE;
+    }
+
+    vo->g_dec_pre_vop_format = format;
 
     switch (format) {
     case 0:
@@ -1476,7 +1429,7 @@ PUBLIC MMDecRet Mp4Dec_FlvH263PicHeader(DEC_VOP_MODE_T *vop_mode_ptr)
     s->OrgFrameWidth = width;
     s->OrgFrameHeight = height;
 
-	PRINTF("\tWidth:%d, Height:%d\n", width, height);
+    PRINTF("\tWidth:%d, Height:%d\n", width, height);
 
     s->VopPredType = IVOP + Mp4Dec_ReadBits(2);
 
@@ -1487,109 +1440,102 @@ PUBLIC MMDecRet Mp4Dec_FlvH263PicHeader(DEC_VOP_MODE_T *vop_mode_ptr)
 
     s->unrestricted_mv = 1;
     s->h263_long_vectors = 0;
-    
+
     /* PEI */
     while (Mp4Dec_ReadBits(1) != 0)
-	{
+    {
         Mp4Dec_FlushBits(8);
     }
     s->mvInfoForward.FCode = 1;
 
-	if(g_dec_is_first_frame || g_dec_is_changed_format)
-	{
-		vop_mode_ptr->bCoded = TRUE;
-		vop_mode_ptr->RoundingControl = 0;
-		
-	//	PRINTF_HEAD_INFO("frame width = %d, frame height = %d\n", vop_mode_ptr->OrgFrameWidth, vop_mode_ptr->OrgFrameHeight);
-	}
+    if(vo->g_dec_is_first_frame || vo->g_dec_is_changed_format)
+    {
+        vop_mode_ptr->bCoded = TRUE;
+        vop_mode_ptr->RoundingControl = 0;
+
+        //	PRINTF_HEAD_INFO("frame width = %d, frame height = %d\n", vop_mode_ptr->OrgFrameWidth, vop_mode_ptr->OrgFrameHeight);
+    }
 
     return MMDEC_OK;
 }
 
 
 
-PUBLIC BOOLEAN Mp4Dec_CheckResyncMarker(uint32 uAddbit)
+PUBLIC BOOLEAN Mp4Dec_CheckResyncMarker(Mp4DecObject *vo, uint32 uAddbit)
 {
-	uint32 uCode;
-	uint32 nStuffBits;
-	uint32	bitsLeft;
-	BOOLEAN	is_rsc;
-	uint32 nBitsResyncmarker = 17 + uAddbit;
-#if SIM_IN_WIN
-	uint32 nDecTotalBits = VSP_READ_REG(VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
-#else
-   	uint32 nDecTotalBits = OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
-#endif
-	bitsLeft = 32 - (nDecTotalBits % 32);
+    uint32 uCode;
+    uint32 nStuffBits;
+    uint32	bitsLeft;
+    BOOLEAN	is_rsc;
+    uint32 nBitsResyncmarker = 17 + uAddbit;
+    uint32 nDecTotalBits = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
 
-	nStuffBits = bitsLeft & 0x7;
-	if(nStuffBits == 0)
-	{
-		nStuffBits = 8;
-	}
+    bitsLeft = 32 - (nDecTotalBits % 32);
 
-	uCode = Mp4Dec_ShowBits(nStuffBits);
+    nStuffBits = bitsLeft & 0x7;
+    if(nStuffBits == 0)
+    {
+        nStuffBits = 8;
+    }
 
-	if(uCode == (((uint32)1 << (nStuffBits - 1)) - 1))
-	{
-		is_rsc = (Mp4Dec_ShowBitsByteAlign (nBitsResyncmarker) == DEC_RESYNC_MARKER) ? TRUE : FALSE;
+    uCode = Mp4Dec_ShowBits(nStuffBits);
 
-			//flush stuffing bits for resync start code
-		if(is_rsc)				
-		{   
+    if(uCode == (((uint32)1 << (nStuffBits - 1)) - 1))
+    {
+        is_rsc = (Mp4Dec_ShowBitsByteAlign (vo, nBitsResyncmarker) == DEC_RESYNC_MARKER) ? TRUE : FALSE;
 
-			//OR1200_READ_REG_POLL(GLB_REG_BASE_ADDR+VSP_INT_SYS_OFF, 0x00000004,0x00000004,"BSM_frame done int");//check HW int	
-			//OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_CLR_OFF, 0x4,"clear BSM_frame done int");
-			//OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL");
-			//OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, 0x08000000,0x00000000,"BSM_clr enable");//check bsm is idle	
-			Mp4Dec_ByteAlign_Mp4();
-		}
-		
-		return is_rsc;
-	}
+        //flush stuffing bits for resync start code
+        if(is_rsc)
+        {
 
-	return FALSE;
+            //OR1200_READ_REG_POLL(GLB_REG_BASE_ADDR+VSP_INT_SYS_OFF, 0x00000004,0x00000004,"BSM_frame done int");//check HW int
+            //OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_CLR_OFF, 0x4,"clear BSM_frame done int");
+            //OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL");
+            //OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, 0x08000000,0x00000000,"BSM_clr enable");//check bsm is idle
+            Mp4Dec_ByteAlign_Mp4(vo);
+        }
+
+        return is_rsc;
+    }
+
+    return FALSE;
 }
 
 
-PUBLIC BOOLEAN Mp4Dec_DetectResyncMarker(uint32 uAddbit)
+PUBLIC BOOLEAN Mp4Dec_DetectResyncMarker(Mp4DecObject *vo, uint32 uAddbit)
 {
-	uint32 bit32_tmp; //czzheng
-	uint32 uCode;
-	uint32 nStuffBits;
-	uint32	bitsLeft;
-	BOOLEAN	is_rsc;
-	uint32 nBitsResyncmarker = 17 + uAddbit;
-#if SIM_IN_WIN
-	uint32 nDecTotalBits = VSP_READ_REG(VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
-#else
-   	uint32 nDecTotalBits = OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
-#endif
-	bit32_tmp = Mp4Dec_ShowBits(32); //czzheng
+    uint32 bit32_tmp; //czzheng
+    uint32 uCode;
+    uint32 nStuffBits;
+    uint32	bitsLeft;
+    BOOLEAN	is_rsc;
+    uint32 nBitsResyncmarker = 17 + uAddbit;
+    uint32 nDecTotalBits = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
+    bit32_tmp = Mp4Dec_ShowBits(32); //czzheng
 
-	bitsLeft = 32 - (nDecTotalBits % 32);
+    bitsLeft = 32 - (nDecTotalBits % 32);
 
-	nStuffBits = bitsLeft & 0x7;
-	if(nStuffBits == 0)
-	{
-		nStuffBits = 8;
-	}
+    nStuffBits = bitsLeft & 0x7;
+    if(nStuffBits == 0)
+    {
+        nStuffBits = 8;
+    }
 
-	uCode = Mp4Dec_ShowBits(nStuffBits);
+    uCode = Mp4Dec_ShowBits(nStuffBits);
 
-	if(uCode == (((uint32)1 << (nStuffBits - 1)) - 1))
-	{
-		is_rsc = (Mp4Dec_ShowBitsByteAlign (nBitsResyncmarker) == DEC_RESYNC_MARKER) ? TRUE : FALSE;
+    if(uCode == (((uint32)1 << (nStuffBits - 1)) - 1))
+    {
+        is_rsc = (Mp4Dec_ShowBitsByteAlign (vo, nBitsResyncmarker) == DEC_RESYNC_MARKER) ? TRUE : FALSE;
 
-			//flush stuffing bits for resync start code
-		//if(is_rsc)				
-		//{
-		//	Mp4Dec_ByteAlign_Mp4();
-		//}
-		return is_rsc;
-	}
+        //flush stuffing bits for resync start code
+        //if(is_rsc)
+        //{
+        //	Mp4Dec_ByteAlign_Mp4();
+        //}
+        return is_rsc;
+    }
 
-	return FALSE;
+    return FALSE;
 }
 
 
@@ -1601,227 +1547,116 @@ PUBLIC BOOLEAN Mp4Dec_DetectResyncMarker(uint32 uAddbit)
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
-PUBLIC MMDecRet Mp4Dec_GetVideoPacketHeader(DEC_VOP_MODE_T *vop_mode_ptr, SLICEINFO *SliceInfo,uint32 uAddBits)
+PUBLIC MMDecRet Mp4Dec_GetVideoPacketHeader(Mp4DecObject *vo, uint32 uAddBits)
 {
-	int32	tmp_var;
-	int32	hec;
-	int		mb_num;
-	BOOLEAN	is_fake_rsc_mbnum;
-# if SIM_IN_WIN
-	OR1200_Vaild=1;
-
-	OR1200_READ_REG_POLL(GLB_REG_BASE_ADDR+VSP_INT_SYS_OFF, 0x00000004,0x00000004,"BSM_frame done int");//check HW int	
-	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_CLR_OFF, 0x4,"clear BSM_frame done int");
-    OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL");
-#endif
-	OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, 0x08000000,0x00000000,"BSM_clr enable");//check bsm is idle	
-
-	Mp4Dec_ReadBits(17 + uAddBits);//,"resync_marker"
-	
-	/*parsing packet header*/
-	mb_num	= Mp4Dec_ReadBits(vop_mode_ptr->MB_in_VOP_length);//,"macro_block_num"	
-	is_fake_rsc_mbnum	= ((mb_num == 0) || (mb_num >= vop_mode_ptr->MBNum))  ? 1 : 0;
-
-	if (is_fake_rsc_mbnum)
-	{ 
-		vop_mode_ptr->error_flag = 1;
-		return MMDEC_STREAM_ERROR;
-	}
-	vop_mode_ptr->StepSize		= (int8)Mp4Dec_ReadBits(vop_mode_ptr->QuantPrecision);//,"quant_scale"
-	SliceInfo->VopQuant=vop_mode_ptr->StepSize;
-	
-	hec = Mp4Dec_ReadBits(1);//,"header_extension_code"
-	
-	if(hec)
-	{
-		int32 bits;
-		
-		tmp_var = (int32)Mp4Dec_ReadBits(1);//,"modulo_time_base"
-		while(tmp_var == 1)
-		{
-			tmp_var = (int32) Mp4Dec_ReadBits(1);	//,"modulo_time_base"
-		}
-		
-		bits = (int32)vop_mode_ptr->time_inc_resolution_in_vol_length; 
-		if(bits < 1)
-		{
-			bits = 1;
-		}
-		
-		Mp4Dec_ReadBits(1);//,"marker_bit"
-		
-		tmp_var = (int32)Mp4Dec_ReadBits(bits);//,"vop_time_increment"
-		
-		//tmp_var
-		//bit[5], "marker_bit"
-		//bit[4:3],"vop_prediction_type"
-		//bit[2:0],"intra_dc_vlc_thr"
-		Mp4Dec_ReadBits(6);
-
-		
-		
-		if(IVOP != vop_mode_ptr->VopPredType)
-		{
-			MV_INFO_T *pMvInfo = &(vop_mode_ptr->mvInfoForward);
-			pMvInfo->FCode = (uint8)Mp4Dec_ReadBits(3);//"vop_fcode_forward"
-			pMvInfo->ScaleFactor = 1 << (pMvInfo->FCode - 1);
-			pMvInfo->Range = 16 << (pMvInfo->FCode);
-			SliceInfo->VOPFcodeFwd=pMvInfo->FCode;
-		}
-		
-		if(BVOP == vop_mode_ptr->VopPredType)
-		{
-			MV_INFO_T *pMvInfo = &(vop_mode_ptr->mvInfoBckward);
-			pMvInfo->FCode = (uint8)Mp4Dec_ReadBits(3);//"vop_fcode_backward"
-			pMvInfo->ScaleFactor = 1 << (pMvInfo->FCode - 1);
-			pMvInfo->Range = 16 << (pMvInfo->FCode);
-            SliceInfo->VOPFcodeBck=pMvInfo->FCode;
-		}
-	}
-
-#if SIM_IN_WIN
-
-	if (vop_mode_ptr->err_left > 0)
-	{
-		Mp4Dec_UpdateErrInfo (vop_mode_ptr);
-	}
-
-	//set skipped MB "NOT DECODED" status, for EC later
-	if (mb_num < vop_mode_ptr->mbnumDec)
-	{
-		int32 mb_pos;
-		for (mb_pos = mb_num; mb_pos < vop_mode_ptr->mbnumDec; mb_pos++)
-		{
-			vop_mode_ptr->mbdec_stat_ptr[mb_pos] = NOT_DECODED;
-		}
-		vop_mode_ptr->error_flag = TRUE;
-		vop_mode_ptr->err_MB_num += (vop_mode_ptr->mbnumDec - mb_num);
-		return MMDEC_STREAM_ERROR;
-	}else
-	{
-		int32 mb_pos;
-		for (mb_pos = vop_mode_ptr->mbnumDec; mb_pos < mb_num; mb_pos++)
-		{
-			vop_mode_ptr->mbdec_stat_ptr[mb_pos] = NOT_DECODED;
-		}
-	}
-	
-	vop_mode_ptr->mbnumDec = mb_num;
-	SliceInfo->FirstMBNum=mb_num;
-	
-	if (vop_mode_ptr->VopPredType != BVOP)
-	{
-		vop_mode_ptr->mb_y = mb_num / vop_mode_ptr->MBNumX;
-		vop_mode_ptr->mb_x = mb_num - vop_mode_ptr->mb_y * vop_mode_ptr->MBNumX;
-
-	}
-
-	
-	{
-		SliceInfo->FirstMBx=vop_mode_ptr->mb_x;
-		SliceInfo->FirstMBy=vop_mode_ptr->mb_y;
-
-	}
-#else
-	
-    SliceInfo->FirstMBx=((vop_mode_ptr->mb_x==(SliceInfo->Max_MBX-1))?0:(vop_mode_ptr->mb_x+1));
-	SliceInfo->FirstMBy=((vop_mode_ptr->mb_x==(SliceInfo->Max_MBX-1))?(vop_mode_ptr->mb_y+1):vop_mode_ptr->mb_y);
-
-#endif
-	vop_mode_ptr->sliceNumber++;
-    SliceInfo->SliceNum++;
+    DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
+    int32	tmp_var;
+    int32	hec;
+    int		mb_num;
+    BOOLEAN	is_fake_rsc_mbnum;
+    SLICEINFO *slice_info = &(vo->SliceInfo);
 
 
-	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG0_OFF, ((0x0)<<31)|((SliceInfo->VopQuant&0x3f)<<25)|((SliceInfo->SliceNum&0x1ff)<<16)|((SliceInfo->Max_MBX*SliceInfo->Max_MBy)<<3)|SliceInfo->VOPCodingType&0x7,"VSP_CFG0");
-	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG1_OFF, (SliceInfo->NumMbsInGob&0x1ff)<<20|(SliceInfo->NumMbLineInGob&0x7)<<29 ,"VSP_CFG1");
-	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG2_OFF,(BVOP == vop_mode_ptr->VopPredType?0:1)<<31|(1-SliceInfo->VopRoundingType)<<30|((SliceInfo->Max_MBX*SliceInfo->FirstMBy+SliceInfo->FirstMBx)&0x1fff)<<16|(SliceInfo->FirstMBy&0x7f)<<8|(SliceInfo->FirstMBx&0x7f),"VSP_CFG2");
-	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG3_OFF,(SliceInfo->ShortHeader|SliceInfo->DataPartition<<1|((SliceInfo->IsRvlc&(SliceInfo->VOPCodingType!=BVOP))<<2)|
-		SliceInfo->IntraDCThr<<3|SliceInfo->VOPFcodeFwd<<6|SliceInfo->VOPFcodeBck<<9|0<<12|SliceInfo->QuantType<<13),"VSP_CFG3");
-	OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG4_OFF,((vop_mode_ptr->time_pp&0xffff)<<16|(vop_mode_ptr->time_bp&0xffff)),"VSP_CFG4");	
-	//OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG3_OFF,vop_mode_ptr->time_pp&0xffff,"VSP_CFG3");
-	
-	if(vop_mode_ptr->time_pp ==0)
-	{
-		OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,0,"VSP_CFG5");
-	}else
-	{
-		OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,((1<<29)/vop_mode_ptr->time_pp),"VSP_CFG5");
-		
-	}
+    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, 0x08000000,0x00000000, TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
 
-	return MMDEC_OK;
+    Mp4Dec_ReadBits(17 + uAddBits);//,"resync_marker"
+
+    /*parsing packet header*/
+    mb_num	= Mp4Dec_ReadBits(vop_mode_ptr->MB_in_VOP_length);//,"macro_block_num"
+    is_fake_rsc_mbnum	= ((mb_num == 0) || (mb_num >= vop_mode_ptr->MBNum))  ? 1 : 0;
+
+    if (is_fake_rsc_mbnum)
+    {
+        vop_mode_ptr->error_flag = 1;
+        return MMDEC_STREAM_ERROR;
+    }
+    vop_mode_ptr->StepSize		= (int8)Mp4Dec_ReadBits(vop_mode_ptr->QuantPrecision);//,"quant_scale"
+    slice_info->VopQuant=vop_mode_ptr->StepSize;
+
+    hec = Mp4Dec_ReadBits(1);//,"header_extension_code"
+
+    if(hec)
+    {
+        int32 bits;
+
+        tmp_var = (int32)Mp4Dec_ReadBits(1);//,"modulo_time_base"
+        while(tmp_var == 1)
+        {
+            tmp_var = (int32) Mp4Dec_ReadBits(1);	//,"modulo_time_base"
+        }
+
+        bits = (int32)vop_mode_ptr->time_inc_resolution_in_vol_length;
+        if(bits < 1)
+        {
+            bits = 1;
+        }
+
+        Mp4Dec_ReadBits(1);//,"marker_bit"
+
+        tmp_var = (int32)Mp4Dec_ReadBits(bits);//,"vop_time_increment"
+
+        //tmp_var
+        //bit[5], "marker_bit"
+        //bit[4:3],"vop_prediction_type"
+        //bit[2:0],"intra_dc_vlc_thr"
+        Mp4Dec_ReadBits(6);
+
+
+
+        if(IVOP != vop_mode_ptr->VopPredType)
+        {
+            MV_INFO_T *pMvInfo = &(vop_mode_ptr->mvInfoForward);
+            pMvInfo->FCode = (uint8)Mp4Dec_ReadBits(3);//"vop_fcode_forward"
+            pMvInfo->ScaleFactor = 1 << (pMvInfo->FCode - 1);
+            pMvInfo->Range = 16 << (pMvInfo->FCode);
+            slice_info->VOPFcodeFwd=pMvInfo->FCode;
+        }
+
+        if(BVOP == vop_mode_ptr->VopPredType)
+        {
+            MV_INFO_T *pMvInfo = &(vop_mode_ptr->mvInfoBckward);
+            pMvInfo->FCode = (uint8)Mp4Dec_ReadBits(3);//"vop_fcode_backward"
+            pMvInfo->ScaleFactor = 1 << (pMvInfo->FCode - 1);
+            pMvInfo->Range = 16 << (pMvInfo->FCode);
+            slice_info->VOPFcodeBck=pMvInfo->FCode;
+        }
+    }
+
+
+    slice_info->FirstMBx=((vop_mode_ptr->mb_x==(slice_info->Max_MBX-1))?0:(vop_mode_ptr->mb_x+1));
+    slice_info->FirstMBy=((vop_mode_ptr->mb_x==(slice_info->Max_MBX-1))?(vop_mode_ptr->mb_y+1):vop_mode_ptr->mb_y);
+
+    vop_mode_ptr->sliceNumber++;
+    slice_info->SliceNum++;
+
+
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG0_OFF, ((0x0)<<31)|((slice_info->VopQuant&0x3f)<<25)|((slice_info->SliceNum&0x1ff)<<16)|((slice_info->Max_MBX*slice_info->Max_MBy)<<3)|slice_info->VOPCodingType&0x7,"VSP_CFG0");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG1_OFF, (slice_info->NumMbsInGob&0x1ff)<<20|(slice_info->NumMbLineInGob&0x7)<<29 ,"VSP_CFG1");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG2_OFF,(BVOP == vop_mode_ptr->VopPredType?0:1)<<31|(1-slice_info->VopRoundingType)<<30|((slice_info->Max_MBX*slice_info->FirstMBy+slice_info->FirstMBx)&0x1fff)<<16|(slice_info->FirstMBy&0x7f)<<8|(slice_info->FirstMBx&0x7f),"VSP_CFG2");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG3_OFF,(slice_info->ShortHeader|slice_info->DataPartition<<1|((slice_info->IsRvlc&(slice_info->VOPCodingType!=BVOP))<<2)|
+                  slice_info->IntraDCThr<<3|slice_info->VOPFcodeFwd<<6|slice_info->VOPFcodeBck<<9|0<<12|slice_info->QuantType<<13),"VSP_CFG3");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG4_OFF,((vop_mode_ptr->time_pp&0xffff)<<16|(vop_mode_ptr->time_bp&0xffff)),"VSP_CFG4");
+    //OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG3_OFF,vop_mode_ptr->time_pp&0xffff,"VSP_CFG3");
+
+    if(vop_mode_ptr->time_pp ==0)
+    {
+        VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,0,"VSP_CFG5");
+    } else
+    {
+        VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,((1<<29)/vop_mode_ptr->time_pp),"VSP_CFG5");
+
+    }
+
+    return MMDEC_OK;
 }
 
-PUBLIC BOOLEAN Mp4Dec_SearchResynCode(DEC_VOP_MODE_T * vop_mode_ptr)
-{
-	int32	rsc_len;
-	BOOLEAN	rsc_fnd;
-	int32	dec_len;
-	int32	nbits_dec_total;
-	BOOLEAN	is_short_header;
 
-	is_short_header = (vop_mode_ptr->video_std != VSP_MPEG4) ? TRUE : FALSE;
-
-	if (vop_mode_ptr->bResyncMarkerDisable && !is_short_header)
-	{
-		rsc_fnd = FALSE;
-		return rsc_fnd;
-	}
-	
-	rsc_len = 17;	
-	
-	if ((vop_mode_ptr->VopPredType == PVOP) && !is_short_header)
-	{
-		rsc_len += (vop_mode_ptr->mvInfoForward.FCode - 1);
-	}
-	
-	if (!is_short_header)
-	{
-		Mp4Dec_ByteAlign_Startcode ();
-	}
-
-	for(;;)
-	{
-		#if SIM_IN_WIN
-		  nbits_dec_total = VSP_READ_REG(VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
-      #else
-          nbits_dec_total = OR1200_READ_REG(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
-      #endif
-		dec_len = nbits_dec_total >> 3;
-
-		/*searching to frame end*/
-		if (dec_len >= vop_mode_ptr->frame_len + 3)
-		{
-			rsc_fnd = FALSE;
-			break;
-		}
-
-		rsc_fnd = (Mp4Dec_ShowBits (rsc_len) == DEC_RESYNC_MARKER) ? TRUE : FALSE;
-
-		if (rsc_fnd)
-		{
-			break;
-		}
-		else
-		{
-			if (!is_short_header)
-			{
-				Mp4Dec_ReadBits (8);
-			}else
-			{
-				Mp4Dec_ReadBits (1);
-			}
-		}
-	}	
-	
-	return rsc_fnd;
-}
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End

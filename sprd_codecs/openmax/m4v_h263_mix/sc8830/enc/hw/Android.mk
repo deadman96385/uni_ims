@@ -10,7 +10,6 @@ LOCAL_SRC_FILES := \
 	src/mp4enc_malloc.c \
 	src/mp4enc_ratecontrol.c \
 	src/mp4enc_table.c \
-	src/mp4enc_trace.c \
 	src/mp4enc_vop.c \
 	../../../../vsp/sc8830/src/vsp_drv_sc8830.c
 

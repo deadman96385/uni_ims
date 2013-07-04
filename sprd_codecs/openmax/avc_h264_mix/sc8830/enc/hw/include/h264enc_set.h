@@ -1,10 +1,43 @@
+/******************************************************************************
+ ** File Name:      h264enc_set.h                                           *
+ ** Author:         Xiaowei Luo                                               *
+ ** DATE:           01/23/2007                                                *
+ ** Copyright:      2006 Spreatrum, Incoporated. All Rights Reserved.         *
+ ** Description:                                                                           *
+ *****************************************************************************/
+/******************************************************************************
+ **                   Edit    History                                         *
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
+ ** 01/23/2007    Xiaowei Luo     Create.                                     *
+ *****************************************************************************/
 #ifndef _H264ENC_SET_H_
-#define	_H264ENC_SET_H_
+#define _H264ENC_SET_H_
+/*----------------------------------------------------------------------------*
+**                        Dependencies                                        *
+**---------------------------------------------------------------------------*/
+
+/**---------------------------------------------------------------------------*
+**                        Compiler Flag                                       *
+**---------------------------------------------------------------------------*/
+#ifdef   __cplusplus
+extern   "C"
+{
+#endif
 
 void h264enc_sps_init (ENC_IMAGE_PARAMS_T *img_ptr);
-void h264enc_pps_init (ENC_IMAGE_PARAMS_T *img_ptr);
-void h264enc_sps_write (ENC_SPS_T *sps);
-void h264enc_pps_write (ENC_PPS_T *pps);
-void h264enc_sei_version_write(ENC_IMAGE_PARAMS_T *img_ptr);
+void h264enc_pps_init (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr);
+void h264enc_sps_write (H264EncObject *vo, ENC_SPS_T *sps);
+void h264enc_pps_write (H264EncObject *vo, ENC_PPS_T *pps);
+void h264enc_sei_version_write(H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr);
 
-#endif //_H264ENC_SET_H_
+/**---------------------------------------------------------------------------*
+**                         Compiler Flag                                      *
+**---------------------------------------------------------------------------*/
+#ifdef   __cplusplus
+}
+#endif
+/**---------------------------------------------------------------------------*/
+// End
+#endif // _H264ENC_SET_H_
+

@@ -1,12 +1,42 @@
+/******************************************************************************
+ ** File Name:      h264enc_malloc.h                                           *
+ ** Author:         Xiaowei Luo                                               *
+ ** DATE:           06/18/2013                                                *
+ ** Copyright:      2006 Spreatrum, Incoporated. All Rights Reserved.         *
+ ** Description:    This file defines the malloc function interfaces of       *
+ **					h264 encoder												  *
+ *****************************************************************************/
+/******************************************************************************
+ **                   Edit    History                                         *
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
+ ** 06/18/2013    Xiaowei Luo     Create.                                     *
+ *****************************************************************************/
 #ifndef _H264ENC_MALLOC_H_
 #define _H264ENC_MALLOC_H_
+/*----------------------------------------------------------------------------*
+**                        Dependencies                                        *
+**---------------------------------------------------------------------------*/
 
-PUBLIC void *h264enc_extra_mem_alloc (uint32 mem_size);
-PUBLIC void *h264enc_inter_mem_alloc (uint32 mem_size);
-PUBLIC void h264enc_mem_free (void);
-PUBLIC 	void h264enc_mem_init (MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr);
-PUBLIC void *H264Enc_ExtraMemAlloc_64WordAlign(uint32 mem_size);
-PUBLIC uint32 H264ENC_GetPhyAddr(void * vitual_ptr);
+/**---------------------------------------------------------------------------*
+**                        Compiler Flag                                       *
+**---------------------------------------------------------------------------*/
+#ifdef   __cplusplus
+extern   "C"
+{
+#endif
 
+void H264Enc_InitMem (H264EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr);
+void *H264Enc_MemAlloc (H264EncObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type);
+uint8 *H264Enc_ExtraMem_V2P(H264EncObject *vo, uint8 *vAddr, int32 type);
 
-#endif //_H264ENC_MALLOC_H_
+/**---------------------------------------------------------------------------*
+**                         Compiler Flag                                      *
+**---------------------------------------------------------------------------*/
+#ifdef   __cplusplus
+}
+#endif
+/**---------------------------------------------------------------------------*/
+// End
+#endif // _H264ENC_MALLOC_H_
+

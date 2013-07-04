@@ -8,7 +8,7 @@ LOCAL_SRC_FILES := \
 	src/h264enc_interface.c \
 	src/h264enc_malloc.c \
 	src/h264enc_rc.c \
-	src/h264enc_reg.c \
+	src/h264enc_init.c \
 	src/h264enc_set.c \
 	src/h264enc_slice.c \
 	src/h264enc_table.c \
@@ -25,6 +25,6 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \
-	$(TOP)/vendor/sprd/proprietories-source/sprd_codecs/openmax/vsp/sc8830/inc \
+	$(TOP)/vendor/sprd/proprietories-source/sprd_codecs/openmax/vsp/sc8830/inc 
 
 include $(BUILD_SHARED_LIBRARY)

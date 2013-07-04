@@ -2,13 +2,11 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := \
-	src/mp4_common_table.c \
 	src/mp4dec_bfrctrl.c \
 	src/mp4dec_bitstream.c \
 	src/mp4dec_global.c \
 	src/mp4dec_header.c \
 	src/mp4dec_interface.c \
-	src/mp4dec_main.c \
 	src/mp4dec_malloc.c \
 	src/mp4dec_session.c \
 	src/mp4dec_table.c \

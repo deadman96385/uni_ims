@@ -8,8 +8,8 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 12/14/2006    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4DEC_BITSTREAM_H_
@@ -18,49 +18,42 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "mp4_basic.h"
+#include "mp4dec_basic.h"
 #include "mp4dec_global.h"
 #include "mp4dec_mode.h"
 #include "vsp_drv_sc8830.h"
 
-
-
-#if SIM_IN_WIN
-#include "bsm_global.h"
-#include "common_global.h"
-#include "vsp_bsm.h"
-#endif //_CMODEL_
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 /*----------------------------------------------------------------------------*
 **                            Mcaro Definitions                               *
 **---------------------------------------------------------------------------*/
 
+uint32 show_bits (Mp4DecObject *vo, uint32 nbits);
+void flush_bits (Mp4DecObject *vo, uint32 nbits);
+uint32 read_bits (Mp4DecObject *vo, uint32 nbits);
 
 
+#define Mp4Dec_FlushBits(nbits) flush_bits(vo, nbits)
+#define Mp4Dec_ShowBits(nbits) show_bits(vo, nbits)
+#define Mp4Dec_ReadBits(nbits) read_bits(vo, nbits)
 
-
-PUBLIC void Mp4Dec_FlushBits(uint32 nbits);
-PUBLIC uint32 Mp4Dec_ShowBits(uint32 nbits);
-PUBLIC void Mp4Dec_InitBitstream(void *pOneFrameBitstream, int32 length);
-PUBLIC uint32 Mp4Dec_ByteAlign_Mp4(void);
-PUBLIC uint32 Mp4Dec_ReadBits(uint32 nbits);
-PUBLIC uint32 Mp4Dec_ShowBitsByteAlign(int32 nbits);
-PUBLIC uint32 Mp4Dec_ByteAlign_Startcode(void);
-PUBLIC uint32 Mp4Dec_ShowBitsByteAlign_H263(int32 nbits);
-PUBLIC void Mp4Dec_VerifyBitstrm(uint8 *pStream, int32 strmLen);
+uint32 Mp4Dec_ByteAlign_Startcode(Mp4DecObject *vo);
+uint32 Mp4Dec_ByteAlign_Mp4(Mp4DecObject *vo);
+uint32 Mp4Dec_ShowBitsByteAlign(Mp4DecObject *vo, int32 nbits);
+uint32 Mp4Dec_ShowBitsByteAlign_H263(Mp4DecObject *vo, int32 nbits);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif  //_MP4DEC_BITSTREAM_H_

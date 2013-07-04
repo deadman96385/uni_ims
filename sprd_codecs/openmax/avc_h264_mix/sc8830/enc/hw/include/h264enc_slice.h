@@ -1,9 +1,40 @@
-
+/******************************************************************************
+ ** File Name:      h264enc_slice.h                                           *
+ ** Author:         Xiaowei Luo                                               *
+ ** DATE:           06/18/2013                                                *
+ ** Copyright:      2013 Spreatrum, Incoporated. All Rights Reserved.         *
+ ** Description:                                                                                       *
+ *****************************************************************************/
+/******************************************************************************
+ **                   Edit    History                                         *
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
+ ** 01/23/2007    Xiaowei Luo     Create.                                     *
+ *****************************************************************************/
 #ifndef _H264ENC_SLICE_H_
 #define _H264ENC_SLICE_H_
+/*----------------------------------------------------------------------------*
+**                        Dependencies                                        *
+**---------------------------------------------------------------------------*/
 
-PUBLIC int32 h264enc_slicetype_decide(ENC_IMAGE_PARAMS_T *img_ptr);
-PUBLIC void h264enc_slice_init (ENC_IMAGE_PARAMS_T *img_ptr, int32 nal_type, int32 slice_type, int32 global_qp);
-PUBLIC int32 h264enc_slice_write (ENC_IMAGE_PARAMS_T *img_ptr);
-
+/**---------------------------------------------------------------------------*
+**                        Compiler Flag                                       *
+**---------------------------------------------------------------------------*/
+#ifdef   __cplusplus
+extern   "C"
+{
 #endif
+
+void h264enc_slice_init (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr, int32 nal_type, int32 slice_type, int32 global_qp);
+int32 h264enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr);
+
+/**---------------------------------------------------------------------------*
+**                         Compiler Flag                                      *
+**---------------------------------------------------------------------------*/
+#ifdef   __cplusplus
+}
+#endif
+/**---------------------------------------------------------------------------*/
+// End
+#endif // _H264ENC_SLICE_H_
+
