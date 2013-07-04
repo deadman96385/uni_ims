@@ -1389,6 +1389,7 @@ static void convertFailCause(int cause)
         case MN_GPRS_ERR_ACTIVATION_REJ:
         case MN_GPRS_ERR_MODIFY_REJ:
             s_lastPdpFailCause = PDP_FAIL_ACTIVATION_REJECT_UNSPECIFIED;
+            break;
         case MN_GPRS_ERR_MISSING_OR_UNKOWN_APN:
         case MN_GPRS_ERR_UNKNOWN_APN:
             s_lastPdpFailCause = PDP_FAIL_MISSING_UKNOWN_APN;
