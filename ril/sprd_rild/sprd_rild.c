@@ -136,6 +136,11 @@ int main(int argc, char **argv)
     rilArgv = argv + 2;
     argc = argc - 2;
 
+    if (rilModem == NULL) {
+        ALOGD("rilModem == NULL  exit");
+        exit(-1);
+    }
+
     modem = *rilModem;
 
     memset(cmdline, 0, 1024);
