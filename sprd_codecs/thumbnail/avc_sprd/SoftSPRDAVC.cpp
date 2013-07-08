@@ -231,7 +231,10 @@ status_t SoftSPRDAVC::initDecoder() {
 
     MMCodecBuffer codec_buf;
     MMDecVideoFormat video_format;
-    
+   
+    codec_buf.common_buffer_ptr = NULL;
+    codec_buf.common_buffer_ptr_phy = NULL;
+    codec_buf.size = 0; 
     codec_buf.int_buffer_ptr = (uint8 *)( mCodecInterBuffer);
     codec_buf.int_size = mCodecInterBufferSize;
 
