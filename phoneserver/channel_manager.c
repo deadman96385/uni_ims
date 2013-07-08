@@ -28,6 +28,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <getopt.h>
+#include <cutils/sockets.h>
 #include "version.h"
 #include <private/android_filesystem_config.h>
 #include "cutils/properties.h"
@@ -921,9 +922,42 @@ static void usage(const char *argv)
     exit(-1);
 }
 
+int soc_client = -1;
+static void *detect_at_no_response(void *par)
+{
+    int soc_fd;
+    char socket_name[10];
+
+    if(!strcmp(modem, "t")) {
+        strcpy(socket_name, "phstd");
+    } else if(!strcmp(modem, "w")) {
+         strcpy(socket_name, "phsw");
+    } else {
+        PHS_LOGE("Wrong modem parameter");
+	exit(-1);
+    }
+    soc_fd = socket_local_server(socket_name,
+			ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+    if (soc_fd < 0) {
+        PHS_LOGE("%s: cannot create socket %s", __func__, socket_name);
+        exit(-1);
+    }
+
+   for(; ;) {
+        PHS_LOGD("%s: waiting for socket client ...", __func__);
+        if ( (soc_client = accept(soc_fd, NULL, NULL)) == -1)
+        {
+            PHS_LOGE("%s: accept error", __func__);
+            continue;
+        }
+        ALOGD("%s: accept soc_client=%d", __func__, soc_client);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     char prop[5];
+    pthread_t tid;
 
     PHS_LOGD("chnmng start phone server!\n");
     PHS_LOGD("Phoneserver version: %s \n",version_string);
@@ -950,8 +984,12 @@ int main(int argc, char *argv[])
         multiSimMode = 0;
 
     sem_init(&sms_lock, 0, 1);
+
+    pthread_create(&tid, NULL, (void*)detect_at_no_response, NULL);
+
     ps_service_init();
     channel_manager_init();
+
     while(1)
         pause();
 }

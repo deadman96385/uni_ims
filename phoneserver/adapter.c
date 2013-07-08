@@ -32,9 +32,12 @@
 #include <cutils/properties.h>
 
 #define RIL_SIM1_ABSENT_PROPERTY  "ril.sim1.absent"
+#define BLOCKED_MAX_COUNT 5
 
 extern int multiSimMode;
 static int sim1_absent =-1, sim2_exist = -1;
+extern const char *modem;
+extern int soc_client;
 
 struct cmd_table {
     AT_CMD_ID_T cmd_id;
@@ -56,7 +59,6 @@ struct ind_table {
 static int tem_value = 0;
 static int rsp_tem[4] = { 0 };
 static int g_call_status_array[10] = {0};
-static int cp_blked = 0;
 sem sms_lock;
 
 extern struct ppp_info_struct ppp_info[];
@@ -1592,12 +1594,13 @@ int adapter_cmux_register_callback(cmux_t * mux, void *fn, int user_data)
 
 int adapter_cmux_write(cmux_t * mux, char *buf, int len, int to)
 {
-    int ret;
+    int ret, res;
     pid_t tid;
     tid = gettid();
     int seconds;
     struct timespec timeout;
     char str[MAX_AT_CMD_LEN];
+    char block_str[20] = {0};
 
     memset(str, 0, MAX_AT_CMD_LEN);
 
@@ -1620,8 +1623,26 @@ int adapter_cmux_write(cmux_t * mux, char *buf, int len, int to)
     PHS_LOGD("[%d] before timeout (%d)\n", tid, seconds);
     int err = thread_cond_timedwait(&mux->cond_timeout, &mux->mutex_timeout,
             &timeout);
-    mux->cp_blked += 1;
     if (err == ETIMEDOUT) {
+        mux->cp_blked += 1;
+        if(mux->cp_blked > BLOCKED_MAX_COUNT) {
+            mux->cp_blked = 0;
+            if(!strcmp(modem, "t")) {
+                ALOGD("TD modem AT no response");
+                strcpy(block_str, "TD Modem Blocked");
+            } else if(!strcmp(modem, "w")) {
+                ALOGD("W modem AT no response");
+                strcpy(block_str, "W Modem Blocked");
+            } else {
+                PHS_LOGE("Wrong modem parameter");
+	        exit(-1);
+            }
+            if(soc_client > 0) {
+                res = write(soc_client, block_str, strlen(block_str)+1);
+                ALOGD("write %d bytes to soc_client:%d to info modem is blocked",
+                                     res, soc_client);
+            }
+        }
         seconds = time((time_t *) NULL);
         PHS_LOGD("[%d] timeout (%d)\n", tid, seconds);
         adapter_cmux_deregister_callback(mux);
@@ -1649,12 +1670,13 @@ int adapter_cmux_write(cmux_t * mux, char *buf, int len, int to)
 
 int adapter_cmux_write_for_ps(cmux_t * mux, char *buf, int len, int to)
 {
-    int ret;
+    int ret, res;
     pid_t tid;
     tid = gettid();
     int seconds;
     struct timespec timeout;
     char str[MAX_AT_CMD_LEN];
+    char block_str[20] = {0};
 
     memset(str, 0, MAX_AT_CMD_LEN);
 
@@ -1673,8 +1695,26 @@ int adapter_cmux_write_for_ps(cmux_t * mux, char *buf, int len, int to)
     PHS_LOGD("[%d] before timeout (%d)\n", tid, seconds);
     int err = thread_cond_timedwait(&mux->cond_timeout, &mux->mutex_timeout,
             &timeout);
-    mux->cp_blked += 1;
     if (err == ETIMEDOUT) {
+        mux->cp_blked += 1;
+        if(mux->cp_blked > BLOCKED_MAX_COUNT) {
+            mux->cp_blked = 0;
+            if(!strcmp(modem, "t")) {
+                ALOGD("TD modem AT no response");
+                strcpy(block_str, "TD Modem Blocked");
+            } else if(!strcmp(modem, "w")) {
+                ALOGD("W modem AT no response");
+                strcpy(block_str, "W Modem Blocked");
+            } else {
+                PHS_LOGE("Wrong modem parameter");
+	        exit(-1);
+            }
+            if(soc_client > 0) {
+                res = write(soc_client, block_str, strlen(block_str)+1);
+                ALOGD("write %d bytes to soc_client:%d to info modem is blocked",
+                                     res, soc_client);
+            }
+        }
         seconds = time((time_t *) NULL);
         PHS_LOGD("[%d] timeout (%d)\n", tid, seconds);
         adapter_cmux_deregister_callback(mux);
