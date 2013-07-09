@@ -275,6 +275,9 @@ typedef struct enc_img_parameter_tag
     uint32	error_flag;
 //	uint16	i_mb_count;
 
+    uint16      orig_width;
+    uint16      orig_height;
+
     uint16	width;
     uint16	height;
 

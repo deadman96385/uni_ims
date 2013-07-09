@@ -70,20 +70,27 @@ void h264enc_sps_init (ENC_IMAGE_PARAMS_T *img_ptr)
     sps->b_frame_mbs_only = 1;
     sps->b_mb_adaptive_frame_field = 0;
     sps->b_direct8x8_inference = 0;
-#if CROP_1080P
-//    if(img_ptr->frame_height_in_mbs == 68)
-    if (img_ptr->height & 0xf != 0) //only consider 1920x1080 and 960x540
+
+    if ((img_ptr->orig_height & 0xf) != 0) //only consider 1920x1080 and 960x540
     {
         sps->b_crop = 1;
 
         sps->frame_crop_left_offset = 0;
         sps->frame_crop_right_offset = 0;
         sps->frame_crop_top_offset = 0;
-        sps->frame_crop_bottom_offset = (img_ptr->frame_height_in_mbs * 16 - img_ptr->height)/2;
-    }
-    else
-#endif
+        sps->frame_crop_bottom_offset = (img_ptr->height - img_ptr->orig_height)/2;
+    }else
+    {
         sps->b_crop = 0;
+
+        sps->frame_crop_left_offset = 0;
+        sps->frame_crop_right_offset = 0;
+        sps->frame_crop_top_offset = 0;
+        sps->frame_crop_bottom_offset = 0;
+    }
+
+    SCI_TRACE_LOW("%s, %d, orig_height: %d, height: %d, b_crop: %d, frame_crop_left_offset: %d, frame_crop_right_offset: %d, frame_crop_top_offset: %d, frame_crop_bottom_offset: %d",
+            __FUNCTION__, __LINE__, img_ptr->orig_height, img_ptr->height, sps->b_crop, sps->frame_crop_left_offset, sps->frame_crop_right_offset, sps->frame_crop_top_offset, sps->frame_crop_bottom_offset);
     sps->i_num_ref_frames = 1;
 }
 

@@ -63,8 +63,11 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecB
     vo->g_vlc_hw_ptr = (uint8 *)H264Enc_MemAlloc(vo, 406*8, 8, INTER_MEM);
     memcpy(vo->g_vlc_hw_ptr, g_vlc_hw_tbl, (406*8));
 
-    img_ptr->width = (pVideoFormat->frame_width + 15)&(~15);
-    img_ptr->height = (pVideoFormat->frame_height+15)&(~15);
+    img_ptr->orig_width = pVideoFormat->frame_width;
+    img_ptr->orig_height = pVideoFormat->frame_height;
+
+    img_ptr->width = (img_ptr->orig_width + 15)&(~15);
+    img_ptr->height = (img_ptr->orig_height + 15)&(~15);
 
 // 	img_ptr->i_frame = 0;
     img_ptr->frame_num = 0;
