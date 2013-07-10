@@ -33,6 +33,7 @@
 #define SYS_IFCONFIG_UP "sys.ifconfig.up"
 #define SYS_IFCONFIG_DOWN "sys.ifconfig.down"
 #define SYS_NO_ARP "sys.data.noarp"
+#define RETRY_MAX_COUNT 1000
 
 struct ppp_info_struct ppp_info[MAX_PPP_NUM];
 mutex ps_service_mutex;
@@ -217,6 +218,7 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
     char cmd[MAX_CMD * 2];
     char prop[10];
     char linker[128] = {0};
+    int count = 0;
 
     if (rsp == NULL) {
         PHS_LOGD("leave cvt_ipconf_rsp:AT_RESULT_NG\n");
@@ -291,6 +293,17 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
                 property_set(SYS_NO_ARP, linker);
                 /* start data_on */
                 property_set("ctl.start", "data_on");
+                /* wait up to 10s for data_on execute complete */
+                do {
+                    property_get(SYS_IFCONFIG_UP, linker, "");
+                    if(!strcmp(linker, "done"))
+                        break;
+                    count++;
+                    PHS_LOGD("wait data_on exec %d times...", count);
+                    usleep(10*1000);
+                }while(count < RETRY_MAX_COUNT);
+
+                PHS_LOGD("data_on execute done");
 
                 sprintf(cmd, "setprop net.%s%d.ip %s", prop, cid-1,ip);
                 system(cmd);
@@ -392,6 +405,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
     char *at_in_str;
     char prop[10];
     char linker[64] = {0};
+    int count = 0;
 
     if (req == NULL) {
         return AT_RESULT_NG;
@@ -439,6 +453,18 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
         property_set(SYS_IFCONFIG_DOWN, linker);
         /* start data_off */
         property_set("ctl.start", "data_off");
+
+        /* wait up to 10s for data_off execute complete */
+        do {
+            property_get(SYS_IFCONFIG_DOWN, linker, "");
+            if(!strcmp(linker, "done"))
+                break;
+            count++;
+            PHS_LOGD("wait data_off exec %d times...", count);
+            usleep(10*1000);
+         }while(count < RETRY_MAX_COUNT);
+
+        PHS_LOGD("data_off execute done");
 
         sprintf(cmd, "setprop net.%s%d.ip %s", prop, tmp_cid-1,"0.0.0.0");
         system(cmd);
