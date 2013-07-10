@@ -310,6 +310,7 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 #endif
     /* profile */
     pDecInfo->profile = sps_ptr->profile_idc;//h264bsdProfile(pStorage);
+    pDecInfo->numRefFrames = sps_ptr->num_ref_frames;
 
 //    SCI_TRACE_LOW("H264DecGetInfo# OK");
 

@@ -67,6 +67,7 @@ typedef enum
         uint32 parHeight;
         uint32 croppingFlag;
         CropParams cropParams;
+        uint32 numRefFrames;
     } H264SwDecInfo;
 
     /* Application controls, this structed shall be allocated */
