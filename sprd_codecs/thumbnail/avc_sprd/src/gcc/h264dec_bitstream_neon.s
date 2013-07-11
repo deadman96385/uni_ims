@@ -4,7 +4,7 @@
 					
 			.arm
 
-			.extern	g_image_ptr
+@//			.extern	g_image_ptr
 @//typedef struct bitstream
 @//{
 @//	uint32 bitcnt;
@@ -37,7 +37,8 @@ READ_UE_V:	@FUNCTION
 		ldr		bitcnt, [str_ptr, #4]
 
 		mov		code, code, lsl r14
-		orr		code, code, bitcnt, lsr bitsLeft
+		orrs		code, code, bitcnt, lsr bitsLeft
+                beq         read_ue_v_skip
 
 		clz		r14, code	@//calc leading zero
 		cmp		r14, #16
@@ -62,9 +63,9 @@ READ_UE_V:	@FUNCTION
 		b		read_ue_v_exit
 read_ue_v_skip:
 		ldr		bitcnt, [r0, #error_flag_POSITION]
-		mov		r0, #0
 		orr		bitcnt, bitcnt, #ER_BS_UE
 		strb		bitcnt, [r0, #error_flag_POSITION]
+		mov		r0, #0
 read_ue_v_exit:		
 		pop		{r4, pc}
 		@ENDFUNC
@@ -88,7 +89,8 @@ READ_SE_V: 	@FUNCTION
 		ldr		bitcnt, [str_ptr, #4]
 
 		mov		code, code, lsl r14
-		orr		code, code, bitcnt, lsr bitsLeft
+		orrs		code, code, bitcnt, lsr bitsLeft
+		beq          read_se_v_skip
 
 		clz		r14, code	@//calc leading zero
 		cmp		r14, #16
@@ -118,9 +120,9 @@ READ_SE_V: 	@FUNCTION
 		b 		read_se_v_exit
 read_se_v_skip:
 		ldr		bitcnt, [r0, #error_flag_POSITION]	
-		mov		r0, #0
 		orr		bitcnt, bitcnt, #ER_BS_SE
 		str		bitcnt, [r0, #error_flag_POSITION]
+		mov		r0, #0
 read_se_v_exit:		
 		pop		{r4, pc}
 		@ENDFUNC

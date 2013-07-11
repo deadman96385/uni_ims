@@ -7,8 +7,8 @@
 *****************************************************************************/
 /******************************************************************************
 **                   Edit    History                                         *
-**---------------------------------------------------------------------------* 
-** DATE          NAME            DESCRIPTION                                 * 
+**---------------------------------------------------------------------------*
+** DATE          NAME            DESCRIPTION                                 *
 ** 11/20/2007    Xiaowei Luo     Create.                                     *
 *****************************************************************************/
 #ifndef _H264DEC_HEADER_H_
@@ -23,21 +23,20 @@
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-extern   "C" 
+extern   "C"
 {
 #endif
 
-PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecContext *img_ptr, uint8 *bitstrm_ptr, uint32 bitstrm_len, MMDecOutput *dec_output_ptr);
-PUBLIC MMDecRet H264Dec_FirstPartOfSliceHeader (DEC_SLICE_T *curr_slice_ptr, H264DecContext *img_ptr);
-PUBLIC MMDecRet H264Dec_RestSliceHeader (H264DecContext *img_ptr, DEC_SLICE_T *curr_slice_ptr);
-
+int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecContext *img_ptr, uint8 *bitstrm_ptr, uint32 bitstrm_len, MMDecOutput *dec_output_ptr);
+MMDecRet H264Dec_FirstPartOfSliceHeader (DEC_SLICE_T *curr_slice_ptr, H264DecContext *img_ptr);
+MMDecRet H264Dec_RestSliceHeader (H264DecContext *img_ptr, DEC_SLICE_T *curr_slice_ptr);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif  //_H264DEC_HEADER_H_

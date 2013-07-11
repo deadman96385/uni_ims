@@ -7,8 +7,8 @@
 *****************************************************************************/
 /******************************************************************************
 **                   Edit    History                                         *
-**---------------------------------------------------------------------------* 
-** DATE          NAME            DESCRIPTION                                 * 
+**---------------------------------------------------------------------------*
+** DATE          NAME            DESCRIPTION                                 *
 ** 11/20/2007    Xiaowei Luo     Create.                                     *
 *****************************************************************************/
 #ifndef _H264DEC_BUFFER_H_
@@ -23,7 +23,7 @@
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-extern   "C" 
+extern   "C"
 {
 #endif
 
@@ -33,13 +33,13 @@ PUBLIC void H264Dec_store_picture_in_dpb (H264DecContext *img_ptr, DEC_DECODED_P
 PUBLIC void H264Dec_reorder_list (H264DecContext *img_ptr, DEC_SLICE_T *curr_slice_ptr);
 PUBLIC void H264Dec_init_list (H264DecContext *img_ptr, int32 curr_slice_type);
 PUBLIC void H264Dec_flush_dpb (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr);
-	
+
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif  //_H264DEC_BUFFER_H_

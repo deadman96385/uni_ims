@@ -28,18 +28,18 @@ namespace android {
 
 struct SoftSPRDAVC : public SprdSimpleOMXComponent {
     SoftSPRDAVC(const char *name,
-            const OMX_CALLBACKTYPE *callbacks,
-            OMX_PTR appData,
-            OMX_COMPONENTTYPE **component);
+                const OMX_CALLBACKTYPE *callbacks,
+                OMX_PTR appData,
+                OMX_COMPONENTTYPE **component);
 
 protected:
     virtual ~SoftSPRDAVC();
 
     virtual OMX_ERRORTYPE internalGetParameter(
-            OMX_INDEXTYPE index, OMX_PTR params);
+        OMX_INDEXTYPE index, OMX_PTR params);
 
     virtual OMX_ERRORTYPE internalSetParameter(
-            OMX_INDEXTYPE index, const OMX_PTR params);
+        OMX_INDEXTYPE index, const OMX_PTR params);
 
     virtual OMX_ERRORTYPE getConfig(OMX_INDEXTYPE index, OMX_PTR params);
 
@@ -61,10 +61,9 @@ private:
         OUTPUT_FRAMES_FLUSHED,
     };
 
-    tagvideoDecControls *mHandle;
+    tagAVCHandle *mHandle;
 
     uint8_t *iStream_buffer_ptr;
-
 
     size_t mInputBufferCount;
 
@@ -78,11 +77,6 @@ private:
     uint32_t mCropLeft, mCropTop;
     uint32_t mCropWidth, mCropHeight;
 
-#if 0
-    uint8_t *mFirstPicture;
-    int32_t mFirstPictureId;
-#endif
-
     int32_t mPicId;  // Which output picture is for which input buffer?
 
     // OMX_BUFFERHEADERTYPE may be overkill, but it is convenient
@@ -91,6 +85,8 @@ private:
     bool mHeadersDecoded;
 
     EOSStatus mEOSStatus;
+
+    bool mStopDecode;
 
     enum OutputPortSettingChange {
         NONE,
@@ -106,19 +102,11 @@ private:
     void updatePortDefinitions();
     bool drainAllOutputBuffers();
     void drainOneOutputBuffer(int32_t picId, uint8_t *data);
-#if 0    
-    void saveFirstOutputBuffer(int32_t pidId, uint8_t *data);
-#endif
     bool handleCropRectEvent(const CropParams* crop);
     bool handlePortSettingChangeEvent(const H264SwDecInfo *info);
 
     static int32_t ActivateSPSWrapper(void *userData, unsigned int width,unsigned int height, unsigned int numBuffers) ;
-//    static int32_t BindFrameWrapper(void *userData/*, int32_t index*/, uint8_t **yuv);
-//    static void UnbindFrame(void *userData, int32_t index);
-
     int activateSPS(unsigned int width,unsigned int height, unsigned int numBuffers);
-
-    int32 bindFrame(/*int32_t index,*/ uint8 **yuv); 
 
     DISALLOW_EVIL_CONSTRUCTORS(SoftSPRDAVC);
 };
