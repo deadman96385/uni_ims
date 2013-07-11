@@ -4581,6 +4581,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SEND_AT
                 || request == RIL_REQUEST_SET_SPEED_MODE
                 || request == RIL_REQUEST_DELETE_SMS_ON_SIM
+                || request == RIL_REQUEST_GET_IMSI
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
