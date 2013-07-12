@@ -7155,6 +7155,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                     }
                 } else if (value == 100) {
                     RIL_requestTimedCallback (onSimPresent, NULL, NULL);
+                } else if (value == 0 || value == 2) {
+                    if(sState == RADIO_STATE_OFF) {
+                        RILLOGD("RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED  RADIO_STATE_OFF");
+                        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
+                    }
                 }
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
                 else if(value == 5) {
