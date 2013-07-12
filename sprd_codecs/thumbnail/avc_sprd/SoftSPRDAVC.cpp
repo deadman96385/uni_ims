@@ -29,8 +29,8 @@
 
 namespace android {
 
-#define H264_DECODER_INTERNAL_BUFFER_SIZE (2000*1024) 
-#define H264_DECODER_STREAM_BUFFER_SIZE 1024*1024
+#define H264_DECODER_INTERNAL_BUFFER_SIZE (2000*1024)
+#define H264_DECODER_STREAM_BUFFER_SIZE (3*1024*1024)
 
 static const CodecProfileLevel kProfileLevels[] = {
     { OMX_VIDEO_AVCProfileBaseline, OMX_VIDEO_AVCLevel1  },
@@ -95,12 +95,12 @@ static void InitOMXParams(T *params) {
 }
 
 SoftSPRDAVC::SoftSPRDAVC(
-        const char *name,
-        const OMX_CALLBACKTYPE *callbacks,
-        OMX_PTR appData,
-        OMX_COMPONENTTYPE **component)
+    const char *name,
+    const OMX_CALLBACKTYPE *callbacks,
+    OMX_PTR appData,
+    OMX_COMPONENTTYPE **component)
     : SprdSimpleOMXComponent(name, callbacks, appData, component),
-      mHandle(new tagvideoDecControls),
+      mHandle(new tagAVCHandle),
       iStream_buffer_ptr(NULL),
       mInputBufferCount(0),
       mWidth(320),
@@ -110,34 +110,27 @@ SoftSPRDAVC::SoftSPRDAVC(
       mCropTop(0),
       mCropWidth(mWidth),
       mCropHeight(mHeight),
-#if 0      
-      mFirstPicture(NULL),
-      mFirstPictureId(-1),
-#endif      
       mPicId(0),
       mHeadersDecoded(false),
       mEOSStatus(INPUT_DATA_AVAILABLE),
+      mStopDecode(false),
       mOutputPortSettingsChange(NONE),
       mSignalledError(false),
-      mCodecExtraBufferMalloced(false){
-//      LOGI("%s, %d, mWidth: %d,mHeight:%d, mPictureSize: %d ", __FUNCTION__, __LINE__, mWidth,mHeight, mPictureSize );
+      mCodecExtraBufferMalloced(false) {
     initPorts();
     CHECK_EQ(initDecoder(), (status_t)OK);
 }
 
 SoftSPRDAVC::~SoftSPRDAVC() {
-#if 0    
-    H264SwDecRelease(mHandle);
-#else
     H264DecRelease(mHandle);
-#endif
+    delete mHandle;
     mHandle = NULL;
-free(iStream_buffer_ptr);
-iStream_buffer_ptr = NULL;
+    free(iStream_buffer_ptr);
+    iStream_buffer_ptr = NULL;
     free(mCodecInterBuffer);
     mCodecInterBuffer = NULL;
 
-     if (mCodecExtraBufferMalloced)
+    if (mCodecExtraBufferMalloced)
     {
         free(mCodecExtraBuffer);
         mCodecExtraBuffer = NULL;
@@ -153,8 +146,6 @@ iStream_buffer_ptr = NULL;
     List<BufferInfo *> &inQueue = getPortQueue(kInputPortIndex);
     CHECK(outQueue.empty());
     CHECK(inQueue.empty());
-
-//    delete[] mFirstPicture;
 }
 
 void SoftSPRDAVC::initPorts() {
@@ -217,12 +208,10 @@ void SoftSPRDAVC::initPorts() {
 }
 
 status_t SoftSPRDAVC::initDecoder() {
-    // Force decoder to output buffers in display order.
-#if 0    
-    if (H264SwDecInit(&mHandle, 0) == H264SWDEC_OK) {
-        return OK;
-    }
-#else
+    memset(mHandle, 0, sizeof(tagAVCHandle));
+
+    mHandle->userdata = (void *)this;
+    mHandle->VSP_extMemCb = ActivateSPSWrapper;
 
     iStream_buffer_ptr = (uint8 *)malloc(H264_DECODER_STREAM_BUFFER_SIZE);
 
@@ -231,211 +220,204 @@ status_t SoftSPRDAVC::initDecoder() {
 
     MMCodecBuffer codec_buf;
     MMDecVideoFormat video_format;
-   
+
     codec_buf.common_buffer_ptr = NULL;
-    codec_buf.common_buffer_ptr_phy = NULL;
-    codec_buf.size = 0; 
-    codec_buf.int_buffer_ptr = (uint8 *)( mCodecInterBuffer);
+    codec_buf.size = 0;
+    codec_buf.int_buffer_ptr = (uint8 *)(mCodecInterBuffer);
     codec_buf.int_size = mCodecInterBufferSize;
 
     video_format.video_std = H264;
     video_format.frame_width = 0;
-    video_format.frame_height = 0;	
+    video_format.frame_height = 0;
     video_format.p_extra = NULL;
     video_format.i_extra = 0;
 
     ALOGI("%s, %d", __FUNCTION__, __LINE__);
     MMDecRet ret = H264DecInit(mHandle, &codec_buf,&video_format);
-
-    //    H264Dec_RegBufferCB(BindFrameWrapper,UnbindFrame,(void *)this);
-    H264Dec_RegSPSCB(mHandle,  ActivateSPSWrapper,(void *)this);
-
     if (ret == MMDEC_OK)
     {
-        return OK;        
+        return OK;
     }
-#endif    
 
     return UNKNOWN_ERROR;
 }
 
 OMX_ERRORTYPE SoftSPRDAVC::internalGetParameter(
-        OMX_INDEXTYPE index, OMX_PTR params) {
+    OMX_INDEXTYPE index, OMX_PTR params) {
     switch (index) {
-        case OMX_IndexParamVideoPortFormat:
-        {
-            OMX_VIDEO_PARAM_PORTFORMATTYPE *formatParams =
-                (OMX_VIDEO_PARAM_PORTFORMATTYPE *)params;
+    case OMX_IndexParamVideoPortFormat:
+    {
+        OMX_VIDEO_PARAM_PORTFORMATTYPE *formatParams =
+            (OMX_VIDEO_PARAM_PORTFORMATTYPE *)params;
 
-            if (formatParams->nPortIndex > kOutputPortIndex) {
-                return OMX_ErrorUndefined;
-            }
-
-            if (formatParams->nIndex != 0) {
-                return OMX_ErrorNoMore;
-            }
-
-            if (formatParams->nPortIndex == kInputPortIndex) {
-                formatParams->eCompressionFormat = OMX_VIDEO_CodingAVC;
-                formatParams->eColorFormat = OMX_COLOR_FormatUnused;
-                formatParams->xFramerate = 0;
-            } else {
-                CHECK(formatParams->nPortIndex == kOutputPortIndex);
-
-                formatParams->eCompressionFormat = OMX_VIDEO_CodingUnused;
-                formatParams->eColorFormat = OMX_COLOR_FormatYUV420Planar;
-                formatParams->xFramerate = 0;
-            }
-
-            return OMX_ErrorNone;
+        if (formatParams->nPortIndex > kOutputPortIndex) {
+            return OMX_ErrorUndefined;
         }
 
-        case OMX_IndexParamVideoProfileLevelQuerySupported:
-        {
-                ALOGI("%s, %d", __FUNCTION__, __LINE__);
-
-            OMX_VIDEO_PARAM_PROFILELEVELTYPE *profileLevel =
-                    (OMX_VIDEO_PARAM_PROFILELEVELTYPE *) params;
-
-            if (profileLevel->nPortIndex != kInputPortIndex) {
-                ALOGE("Invalid port index: %ld", profileLevel->nPortIndex);
-                return OMX_ErrorUnsupportedIndex;
-            }
-
-            size_t index = profileLevel->nProfileIndex;
-            size_t nProfileLevels =
-                    sizeof(kProfileLevels) / sizeof(kProfileLevels[0]);
-            if (index >= nProfileLevels) {
-                return OMX_ErrorNoMore;
-            }
-
-            profileLevel->eProfile = kProfileLevels[index].mProfile;
-            profileLevel->eLevel = kProfileLevels[index].mLevel;
-            return OMX_ErrorNone;
+        if (formatParams->nIndex != 0) {
+            return OMX_ErrorNoMore;
         }
 
-        default:
-            return SprdSimpleOMXComponent::internalGetParameter(index, params);
+        if (formatParams->nPortIndex == kInputPortIndex) {
+            formatParams->eCompressionFormat = OMX_VIDEO_CodingAVC;
+            formatParams->eColorFormat = OMX_COLOR_FormatUnused;
+            formatParams->xFramerate = 0;
+        } else {
+            CHECK(formatParams->nPortIndex == kOutputPortIndex);
+
+            formatParams->eCompressionFormat = OMX_VIDEO_CodingUnused;
+            formatParams->eColorFormat = OMX_COLOR_FormatYUV420Planar;
+            formatParams->xFramerate = 0;
+        }
+
+        return OMX_ErrorNone;
+    }
+
+    case OMX_IndexParamVideoProfileLevelQuerySupported:
+    {
+        ALOGI("%s, %d", __FUNCTION__, __LINE__);
+
+        OMX_VIDEO_PARAM_PROFILELEVELTYPE *profileLevel =
+            (OMX_VIDEO_PARAM_PROFILELEVELTYPE *) params;
+
+        if (profileLevel->nPortIndex != kInputPortIndex) {
+            ALOGE("Invalid port index: %ld", profileLevel->nPortIndex);
+            return OMX_ErrorUnsupportedIndex;
+        }
+
+        size_t index = profileLevel->nProfileIndex;
+        size_t nProfileLevels =
+            sizeof(kProfileLevels) / sizeof(kProfileLevels[0]);
+        if (index >= nProfileLevels) {
+            return OMX_ErrorNoMore;
+        }
+
+        profileLevel->eProfile = kProfileLevels[index].mProfile;
+        profileLevel->eLevel = kProfileLevels[index].mLevel;
+        return OMX_ErrorNone;
+    }
+
+    default:
+        return SprdSimpleOMXComponent::internalGetParameter(index, params);
     }
 }
 
 OMX_ERRORTYPE SoftSPRDAVC::internalSetParameter(
-        OMX_INDEXTYPE index, const OMX_PTR params) {
+    OMX_INDEXTYPE index, const OMX_PTR params) {
     switch (index) {
-        case OMX_IndexParamStandardComponentRole:
-        {
-            const OMX_PARAM_COMPONENTROLETYPE *roleParams =
-                (const OMX_PARAM_COMPONENTROLETYPE *)params;
+    case OMX_IndexParamStandardComponentRole:
+    {
+        const OMX_PARAM_COMPONENTROLETYPE *roleParams =
+            (const OMX_PARAM_COMPONENTROLETYPE *)params;
 
-            if (strncmp((const char *)roleParams->cRole,
-                        "video_decoder.avc",
-                        OMX_MAX_STRINGNAME_SIZE - 1)) {
-                return OMX_ErrorUndefined;
-            }
-
-            return OMX_ErrorNone;
+        if (strncmp((const char *)roleParams->cRole,
+                    "video_decoder.avc",
+                    OMX_MAX_STRINGNAME_SIZE - 1)) {
+            return OMX_ErrorUndefined;
         }
 
-        case OMX_IndexParamVideoPortFormat:
-        {
-            OMX_VIDEO_PARAM_PORTFORMATTYPE *formatParams =
-                (OMX_VIDEO_PARAM_PORTFORMATTYPE *)params;
+        return OMX_ErrorNone;
+    }
 
-            if (formatParams->nPortIndex > kOutputPortIndex) {
-                return OMX_ErrorUndefined;
-            }
+    case OMX_IndexParamVideoPortFormat:
+    {
+        OMX_VIDEO_PARAM_PORTFORMATTYPE *formatParams =
+            (OMX_VIDEO_PARAM_PORTFORMATTYPE *)params;
 
-            if (formatParams->nIndex != 0) {
-                return OMX_ErrorNoMore;
-            }
-
-            return OMX_ErrorNone;
+        if (formatParams->nPortIndex > kOutputPortIndex) {
+            return OMX_ErrorUndefined;
         }
 
-        case OMX_IndexParamPortDefinition:
-        {
-            OMX_PARAM_PORTDEFINITIONTYPE *defParams =
-                (OMX_PARAM_PORTDEFINITIONTYPE *)params;
-
-            if (defParams->nPortIndex > 1
-                    || defParams->nSize
-                            != sizeof(OMX_PARAM_PORTDEFINITIONTYPE)) {
-                return OMX_ErrorUndefined;
-            }
-
-            PortInfo *port = editPortInfo(defParams->nPortIndex);
-
-            if (defParams->nBufferSize != port->mDef.nBufferSize) {
-                CHECK_GE(defParams->nBufferSize, port->mDef.nBufferSize);
-                port->mDef.nBufferSize = defParams->nBufferSize;
-            }
-
-            if (defParams->nBufferCountActual
-                    != port->mDef.nBufferCountActual) {
-                CHECK_GE(defParams->nBufferCountActual,
-                         port->mDef.nBufferCountMin);
-
-                port->mDef.nBufferCountActual = defParams->nBufferCountActual;
-            }
-
-            memcpy(&port->mDef.format.video, &defParams->format.video, sizeof(OMX_VIDEO_PORTDEFINITIONTYPE));
-            if(defParams->nPortIndex == kOutputPortIndex) {
-                port->mDef.format.video.nStride = port->mDef.format.video.nFrameWidth;
-                port->mDef.format.video.nSliceHeight = port->mDef.format.video.nFrameHeight;
-                mWidth = port->mDef.format.video.nFrameWidth;
-                mHeight = port->mDef.format.video.nFrameHeight;
-                mCropWidth = mWidth;
-                mCropHeight = mHeight;
-                port->mDef.nBufferSize =(((mWidth + 15) & -16)* ((mHeight + 15) & -16) * 3) / 2;
-                mPictureSize = port->mDef.nBufferSize;
-            }
-
-            return OMX_ErrorNone;
+        if (formatParams->nIndex != 0) {
+            return OMX_ErrorNoMore;
         }
 
-        default:
-            return SprdSimpleOMXComponent::internalSetParameter(index, params);
+        return OMX_ErrorNone;
+    }
+
+    case OMX_IndexParamPortDefinition:
+    {
+        OMX_PARAM_PORTDEFINITIONTYPE *defParams =
+            (OMX_PARAM_PORTDEFINITIONTYPE *)params;
+
+        if (defParams->nPortIndex > 1
+                || defParams->nSize
+                != sizeof(OMX_PARAM_PORTDEFINITIONTYPE)) {
+            return OMX_ErrorUndefined;
+        }
+
+        PortInfo *port = editPortInfo(defParams->nPortIndex);
+
+        if (defParams->nBufferSize != port->mDef.nBufferSize) {
+            CHECK_GE(defParams->nBufferSize, port->mDef.nBufferSize);
+            port->mDef.nBufferSize = defParams->nBufferSize;
+        }
+
+        if (defParams->nBufferCountActual
+                != port->mDef.nBufferCountActual) {
+            CHECK_GE(defParams->nBufferCountActual,
+                     port->mDef.nBufferCountMin);
+
+            port->mDef.nBufferCountActual = defParams->nBufferCountActual;
+        }
+
+        memcpy(&port->mDef.format.video, &defParams->format.video, sizeof(OMX_VIDEO_PORTDEFINITIONTYPE));
+        if(defParams->nPortIndex == kOutputPortIndex) {
+            port->mDef.format.video.nStride = port->mDef.format.video.nFrameWidth;
+            port->mDef.format.video.nSliceHeight = port->mDef.format.video.nFrameHeight;
+            mWidth = port->mDef.format.video.nFrameWidth;
+            mHeight = port->mDef.format.video.nFrameHeight;
+            mCropWidth = mWidth;
+            mCropHeight = mHeight;
+            port->mDef.nBufferSize =(((mWidth + 15) & -16)* ((mHeight + 15) & -16) * 3) / 2;
+            mPictureSize = port->mDef.nBufferSize;
+        }
+
+        return OMX_ErrorNone;
+    }
+
+    default:
+        return SprdSimpleOMXComponent::internalSetParameter(index, params);
     }
 }
 
 OMX_ERRORTYPE SoftSPRDAVC::getConfig(
-        OMX_INDEXTYPE index, OMX_PTR params) {
+    OMX_INDEXTYPE index, OMX_PTR params) {
     switch (index) {
-        case OMX_IndexConfigCommonOutputCrop:
-        {
-            OMX_CONFIG_RECTTYPE *rectParams = (OMX_CONFIG_RECTTYPE *)params;
+    case OMX_IndexConfigCommonOutputCrop:
+    {
+        OMX_CONFIG_RECTTYPE *rectParams = (OMX_CONFIG_RECTTYPE *)params;
 
-            if (rectParams->nPortIndex != 1) {
-                return OMX_ErrorUndefined;
-            }
-
-            rectParams->nLeft = mCropLeft;
-            rectParams->nTop = mCropTop;
-            rectParams->nWidth = mCropWidth;
-            rectParams->nHeight = mCropHeight;
-
-            return OMX_ErrorNone;
+        if (rectParams->nPortIndex != 1) {
+            return OMX_ErrorUndefined;
         }
 
-        default:
-            return OMX_ErrorUnsupportedIndex;
+        rectParams->nLeft = mCropLeft;
+        rectParams->nTop = mCropTop;
+        rectParams->nWidth = mCropWidth;
+        rectParams->nHeight = mCropHeight;
+
+        return OMX_ErrorNone;
+    }
+
+    default:
+        return OMX_ErrorUnsupportedIndex;
     }
 }
 
 void dump_bs( uint8* pBuffer,int32 aInBufSize)
 {
-	FILE *fp = fopen("/data/video_es.m4v","ab");
-	fwrite(pBuffer,1,aInBufSize,fp);
-	fclose(fp);
+    FILE *fp = fopen("/data/video_es.m4v","ab");
+    fwrite(pBuffer,1,aInBufSize,fp);
+    fclose(fp);
 }
 
 void dump_yuv( uint8* pBuffer,int32 aInBufSize)
 {
-	FILE *fp = fopen("/data/video.yuv","ab");
-	fwrite(pBuffer,1,aInBufSize,fp);
-	fclose(fp);
+    FILE *fp = fopen("/data/video.yuv","ab");
+    fwrite(pBuffer,1,aInBufSize,fp);
+    fclose(fp);
 }
-
 
 void SoftSPRDAVC::onQueueFilled(OMX_U32 portIndex) {
     if (mSignalledError || mOutputPortSettingsChange != NONE) {
@@ -448,9 +430,8 @@ void SoftSPRDAVC::onQueueFilled(OMX_U32 portIndex) {
 
     List<BufferInfo *> &inQueue = getPortQueue(kInputPortIndex);
     List<BufferInfo *> &outQueue = getPortQueue(kOutputPortIndex);
-//    H264SwDecRet ret = H264SWDEC_PIC_RDY;
     bool portSettingsChanged = false;
-    while ((mEOSStatus != INPUT_DATA_AVAILABLE || !inQueue.empty())
+    while (!mStopDecode && (mEOSStatus != INPUT_DATA_AVAILABLE || !inQueue.empty())
             && outQueue.size() == kNumOutputBuffers) {
 
         if (mEOSStatus == INPUT_EOS_SEEN) {
@@ -475,23 +456,31 @@ void SoftSPRDAVC::onQueueFilled(OMX_U32 portIndex) {
         header->nFlags = inHeader->nFlags;
         mPicToHeaderMap.add(mPicId, header);
         inQueue.erase(inQueue.begin());
-        
-        ALOGI("%s, %d, mPicId: %d, header: %0x, header->nTimeStamp: %d, header->nFlags: %d", __FUNCTION__, __LINE__, mPicId, header, header->nTimeStamp, header->nFlags);
 
-#if 1
+        ALOGI("%s, %d, mPicId: %d, header: %0x, header->nTimeStamp: %lld, header->nFlags: %d", __FUNCTION__, __LINE__, mPicId, header, header->nTimeStamp, header->nFlags);
+
         MMDecInput dec_in;
         MMDecOutput dec_out;
 
         int32 iSkipToIDR = 1;
+        int32 add_startcode_len = 0;
 
-    ((uint8 *) iStream_buffer_ptr)[0] = 0x0;
-    ((uint8 *) iStream_buffer_ptr)[1] = 0x0;
-    ((uint8 *) iStream_buffer_ptr)[2] = 0x0;
-    ((uint8 *) iStream_buffer_ptr)[3] = 0x1;
-    memcpy((void *)iStream_buffer_ptr+4, inHeader->pBuffer + inHeader->nOffset,inHeader->nFilledLen);
-    dec_in.pStream = (uint8 *) iStream_buffer_ptr;
-    dec_in.dataLen = inHeader->nFilledLen+4;
-    
+        dec_in.pStream = (uint8 *) iStream_buffer_ptr;
+        dec_in.dataLen = inHeader->nFilledLen;
+        if (!memcmp((uint8 *)(inHeader->pBuffer + inHeader->nOffset), "\x00\x00\x00\x01", 4))
+        {
+            ALOGI("%s, %d", __FUNCTION__, __LINE__);
+            
+            ((uint8 *) iStream_buffer_ptr)[0] = 0x0;
+            ((uint8 *) iStream_buffer_ptr)[1] = 0x0;
+            ((uint8 *) iStream_buffer_ptr)[2] = 0x0;
+            ((uint8 *) iStream_buffer_ptr)[3] = 0x1;
+
+            add_startcode_len = 4; 
+            dec_in.dataLen += add_startcode_len;
+        }
+        memcpy((void *)iStream_buffer_ptr+add_startcode_len, inHeader->pBuffer + inHeader->nOffset, inHeader->nFilledLen);
+
         dec_in.beLastFrm = 0;
         dec_in.expected_IVOP = iSkipToIDR;
         dec_in.beDisplayed = 1;
@@ -499,35 +488,32 @@ void SoftSPRDAVC::onQueueFilled(OMX_U32 portIndex) {
 
         dec_out.frameEffective = 0;
 
-        ALOGI("%s, %d, dec_in.dataLen: %d, mPicId: %d", __FUNCTION__, __LINE__, dec_in.dataLen, mPicId);
+//        ALOGI("%s, %d, dec_in.dataLen: %d, mPicId: %d", __FUNCTION__, __LINE__, dec_in.dataLen, mPicId);
         OMX_BUFFERHEADERTYPE *header_tmp = NULL;
-//        header_tmp = mPicToHeaderMap.valueFor(mPicId);
 
-    BufferInfo *outInfo = *outQueue.begin();
-    OMX_BUFFERHEADERTYPE *outHeader = outInfo->mHeader;
-    header_tmp = mPicToHeaderMap.valueFor(mPicId);
-    outHeader->nTimeStamp = header_tmp->nTimeStamp;
-    outHeader->nFlags = header_tmp->nFlags;
-    outHeader->nFilledLen = mPictureSize;
+        BufferInfo *outInfo = *outQueue.begin();
+        OMX_BUFFERHEADERTYPE *outHeader = outInfo->mHeader;
+        header_tmp = mPicToHeaderMap.valueFor(mPicId);
+        outHeader->nTimeStamp = header_tmp->nTimeStamp;
+        outHeader->nFlags = header_tmp->nFlags;
+        outHeader->nFilledLen = mPictureSize;
 
-//    LOGI("%s, %d, header: %0x, mPictureSize: %d", __FUNCTION__, __LINE__, header_tmp, mPictureSize);
+        uint8 *yuv = (uint8 *)(outHeader->pBuffer + outHeader->nOffset);
+//        ALOGI("%s, %d, yuv: %0x, mPicId: %d, outHeader->pBuffer: %0x, outHeader->nOffset: %d, outHeader->nFlags: %d, outHeader->nTimeStamp: %lld",
+//              __FUNCTION__, __LINE__, yuv, mPicId,outHeader->pBuffer, outHeader->nOffset, outHeader->nFlags, outHeader->nTimeStamp);
+        H264Dec_SetCurRecPic(mHandle, yuv, mPicId);
 
-    uint8 *yuv = (uint8 *)(outHeader->pBuffer + outHeader->nOffset);
-    ALOGI("%s, %d, yuv: %0x, mPicId: %d, outHeader->pBuffer: %0x, outHeader->nOffset: %d, outHeader->nFlags: %d, outHeader->nTimeStamp: %d", 
-        __FUNCTION__, __LINE__, yuv, mPicId,outHeader->pBuffer, outHeader->nOffset, outHeader->nFlags, outHeader->nTimeStamp);
-    H264Dec_SetCurRecPic(mHandle, yuv, mPicId);
+#if 0
+        dump_bs( dec_in.pStream, dec_in.dataLen);
+#endif
 
-//        dump_bs( dec_in.pStream, dec_in.dataLen);
-        
         MMDecRet decRet = H264DecDecode(mHandle, &dec_in,&dec_out);
         ALOGI("%s, %d, decRet: %d, dec_out.frameEffective: %d", __FUNCTION__, __LINE__, decRet, dec_out.frameEffective);
 
-//        mHeadersDecoded = true;
         H264SwDecInfo decoderInfo;
-       // CHECK(H264DecGetInfo(/*mHandle,*/ &decoderInfo) == MMDEC_OK);
 
-       //modified for bug#154484 and bug#154498
-       decRet = H264DecGetInfo(mHandle, &decoderInfo);
+        //modified for bug#154484 and bug#154498
+        decRet = H264DecGetInfo(mHandle, &decoderInfo);
         if (decRet)
         {
             ALOGE("%s, %d, H264DecGetInfo error! decRet: %d", __FUNCTION__, __LINE__, decRet);
@@ -541,11 +527,10 @@ void SoftSPRDAVC::onQueueFilled(OMX_U32 portIndex) {
         }
 
         if (decoderInfo.croppingFlag &&
-            handleCropRectEvent(&decoderInfo.cropParams)) {
+                handleCropRectEvent(&decoderInfo.cropParams)) {
             portSettingsChanged = true;
         }
-#endif
-        
+
         inInfo->mOwnedByUs = false;
         notifyEmptyBufferDone(inHeader);
 
@@ -555,35 +540,18 @@ void SoftSPRDAVC::onQueueFilled(OMX_U32 portIndex) {
             return;
         }
 
-#if 0
-        if (mFirstPicture && !outQueue.empty()) {
-            drainOneOutputBuffer(mFirstPictureId, mFirstPicture);
-            delete[] mFirstPicture;
-            mFirstPicture = NULL;
-            mFirstPictureId = -1;
-        }
-#endif        
-#if 1
-        while (!outQueue.empty() &&
-                mHeadersDecoded &&
-                /*H264SwDecNextPicture(mHandle, &decodedPicture, 0)
-                    == H264SWDEC_PIC_RDY*/
-                    dec_out.frameEffective) {
-
+        while (!outQueue.empty() && mHeadersDecoded && dec_out.frameEffective) {
             ALOGI("%s, %d, dec_out.pOutFrameY: %0x, dec_out.mPicId: %d", __FUNCTION__, __LINE__, dec_out.pOutFrameY, dec_out.mPicId);
             int32_t picId = dec_out.mPicId;//decodedPicture.picId;
             uint8_t *data = dec_out.pOutFrameY;//(uint8_t *) decodedPicture.pOutputPicture;
             drainOneOutputBuffer(picId, data);
             dec_out.frameEffective = false;
+            mStopDecode = true;
         }
-#endif        
     }
 }
 
 bool SoftSPRDAVC::handlePortSettingChangeEvent(const H264SwDecInfo *info) {
-//    LOGI("%s, %d, mWidth: %d, mHeight: %d,  info->picWidth: %d,info->picHeight:%d, mPictureSize:%d ",
-//                __FUNCTION__, __LINE__,mWidth, mHeight,  info->picWidth, info->picHeight, mPictureSize);
-
     if (mWidth != info->picWidth || mHeight != info->picHeight) {
         mWidth  = info->picWidth;
         mHeight = info->picHeight;
@@ -602,34 +570,23 @@ bool SoftSPRDAVC::handlePortSettingChangeEvent(const H264SwDecInfo *info) {
 
 bool SoftSPRDAVC::handleCropRectEvent(const CropParams *crop) {
     if (mCropLeft != crop->cropLeftOffset ||
-        mCropTop != crop->cropTopOffset ||
-        mCropWidth != crop->cropOutWidth ||
-        mCropHeight != crop->cropOutHeight) {
+            mCropTop != crop->cropTopOffset ||
+            mCropWidth != crop->cropOutWidth ||
+            mCropHeight != crop->cropOutHeight) {
         mCropLeft = crop->cropLeftOffset;
         mCropTop = crop->cropTopOffset;
         mCropWidth = crop->cropOutWidth;
         mCropHeight = crop->cropOutHeight;
 
         notify(OMX_EventPortSettingsChanged, 1,
-                OMX_IndexConfigCommonOutputCrop, NULL);
+               OMX_IndexConfigCommonOutputCrop, NULL);
 
         return true;
     }
     return false;
 }
 
-#if 0
-void SoftSPRDAVC::saveFirstOutputBuffer(int32_t picId, uint8_t *data) {
-    CHECK(mFirstPicture == NULL);
-    mFirstPictureId = picId;
-
-    mFirstPicture = new uint8_t[mPictureSize];
-    memcpy(mFirstPicture, data, mPictureSize);
-}
-#endif
-
 void SoftSPRDAVC::drainOneOutputBuffer(int32_t picId, uint8_t* data) {
-
     List<BufferInfo *> &outQueue = getPortQueue(kOutputPortIndex);
     BufferInfo *outInfo = *outQueue.begin();
     outQueue.erase(outQueue.begin());
@@ -639,21 +596,15 @@ void SoftSPRDAVC::drainOneOutputBuffer(int32_t picId, uint8_t* data) {
     outHeader->nFlags = header->nFlags;
     outHeader->nFilledLen = mPictureSize;
 
-//    LOGI("%s, %d, header: %0x, mPictureSize: %d", __FUNCTION__, __LINE__, header, mPictureSize);
-    ALOGI("%s, %d, out: %0x, outHeader->pBuffer: %0x, outHeader->nOffset: %d, outHeader->nFlags: %d, outHeader->nTimeStamp: %d", 
-        __FUNCTION__, __LINE__, outHeader->pBuffer + outHeader->nOffset, outHeader->pBuffer, outHeader->nOffset, outHeader->nFlags, outHeader->nTimeStamp);
+//    ALOGI("%s, %d, out: %0x, outHeader->pBuffer: %0x, outHeader->nOffset: %d, outHeader->nFlags: %d, outHeader->nTimeStamp: %lld",
+//          __FUNCTION__, __LINE__, outHeader->pBuffer + outHeader->nOffset, outHeader->pBuffer, outHeader->nOffset, outHeader->nFlags, outHeader->nTimeStamp);
 
-
-//    LOGI("%s, %d, outHeader->nTimeStamp: %d, outHeader->nFlags: %d, mPictureSize: %d", __FUNCTION__, __LINE__, outHeader->nTimeStamp, outHeader->nFlags, mPictureSize);
- //   LOGI("%s, %d, out: %0x", __FUNCTION__, __LINE__, outHeader->pBuffer + outHeader->nOffset);
-#if 0    
-    memcpy(outHeader->pBuffer + outHeader->nOffset,
-            data, mPictureSize);
-#endif
     mPicToHeaderMap.removeItem(picId);
     delete header;
 
-//    dump_yuv(data, mPictureSize);
+#if 0
+    dump_yuv(data, mPictureSize);
+#endif
     outInfo->mOwnedByUs = false;
     notifyFillBufferDone(outHeader);
 }
@@ -662,8 +613,6 @@ bool SoftSPRDAVC::drainAllOutputBuffers() {
     ALOGI("%s, %d", __FUNCTION__, __LINE__);
 
     List<BufferInfo *> &outQueue = getPortQueue(kOutputPortIndex);
-#if 1    
-//    H264SwDecPicture decodedPicture;
     int32_t picId;
     uint8 *yuv;
 
@@ -672,13 +621,9 @@ bool SoftSPRDAVC::drainAllOutputBuffers() {
         outQueue.erase(outQueue.begin());
         OMX_BUFFERHEADERTYPE *outHeader = outInfo->mHeader;
         if (mHeadersDecoded &&
-            MMDEC_OK == H264Dec_GetLastDspFrm(mHandle, &yuv, &picId) ) {
+                MMDEC_OK == H264Dec_GetLastDspFrm(mHandle, &yuv, &picId) ) {
 
             CHECK(mPicToHeaderMap.indexOfKey(picId) >= 0);
-
-//            memcpy(outHeader->pBuffer + outHeader->nOffset,
- //               decodedPicture.pOutputPicture,
-//                mPictureSize);
 
             OMX_BUFFERHEADERTYPE *header = mPicToHeaderMap.valueFor(picId);
             outHeader->nTimeStamp = header->nTimeStamp;
@@ -696,7 +641,6 @@ bool SoftSPRDAVC::drainAllOutputBuffers() {
         outInfo->mOwnedByUs = false;
         notifyFillBufferDone(outHeader);
     }
-#endif
     return true;
 }
 
@@ -708,23 +652,23 @@ void SoftSPRDAVC::onPortFlushCompleted(OMX_U32 portIndex) {
 
 void SoftSPRDAVC::onPortEnableCompleted(OMX_U32 portIndex, bool enabled) {
     switch (mOutputPortSettingsChange) {
-        case NONE:
-            break;
+    case NONE:
+        break;
 
-        case AWAITING_DISABLED:
-        {
-            CHECK(!enabled);
-            mOutputPortSettingsChange = AWAITING_ENABLED;
-            break;
-        }
+    case AWAITING_DISABLED:
+    {
+        CHECK(!enabled);
+        mOutputPortSettingsChange = AWAITING_ENABLED;
+        break;
+    }
 
-        default:
-        {
-            CHECK_EQ((int)mOutputPortSettingsChange, (int)AWAITING_ENABLED);
-            CHECK(enabled);
-            mOutputPortSettingsChange = NONE;
-            break;
-        }
+    default:
+    {
+        CHECK_EQ((int)mOutputPortSettingsChange, (int)AWAITING_ENABLED);
+        CHECK(enabled);
+        mOutputPortSettingsChange = NONE;
+        break;
+    }
     }
 }
 
@@ -743,32 +687,16 @@ void SoftSPRDAVC::updatePortDefinitions() {
 
     def->nBufferSize =
         (def->format.video.nFrameWidth
-            * def->format.video.nFrameHeight * 3) / 2;
+         * def->format.video.nFrameHeight * 3) / 2;
 }
 
 // static
 int32_t SoftSPRDAVC::ActivateSPSWrapper(
-        void *userData, unsigned int width,unsigned int height, unsigned int numBuffers) {
+    void *userData, unsigned int width,unsigned int height, unsigned int numBuffers) {
     return static_cast<SoftSPRDAVC *>(userData)->activateSPS(width, height, numBuffers);
 }
 
-#if 0
-// static
-int32_t SoftSPRDAVC::BindFrameWrapper(
-        void *userData/*, int32_t index*/, uint8_t **yuv) {
-
-    return static_cast<SoftSPRDAVC *>(userData)->bindFrame(/*index,*/ yuv);
-}
-
-// static
-void SoftSPRDAVC::UnbindFrame(void *userData, int32_t index) {
-}
-#endif
-
 int SoftSPRDAVC::activateSPS(unsigned int width,unsigned int height, unsigned int numBuffers) {
-#if 1
-
-
     MMCodecBuffer ExtraBuffer[MAX_MEM_TYPE];
     uint32 mb_x = width/16;
     uint32 mb_y = height/16;
@@ -777,14 +705,14 @@ int SoftSPRDAVC::activateSPS(unsigned int width,unsigned int height, unsigned in
     ALOGI("%s, %d, mPictureSize: %d", __FUNCTION__, __LINE__, mPictureSize);
 
     mCodecExtraBufferSize = (2*+mb_y)*mb_x*8 /*MB_INFO*/
-				+ (mb_x*mb_y*16) /*i4x4pred_mode_ptr*/
-				+ (mb_x*mb_y*16) /*direct_ptr*/
-				+ (mb_x*mb_y*24) /*nnz_ptr*/
-				+ (mb_x*mb_y*2*16*2*2) /*mvd*/
-				+ 3*4*17 /*fs, fs_ref, fs_ltref*/
-				+ 17*(7*4+(23+150*2*17)*4+mb_x*mb_y*16*(2*2*2 + 1 + 1 + 4 + 4)+((mb_x*16+48)*(mb_y*16+48)*3/2)) /*dpb_ptr*/
-				+ mb_x*mb_y /*g_MbToSliceGroupMap*/
-				+10*1024; //rsv
+                            + (mb_x*mb_y*16) /*i4x4pred_mode_ptr*/
+                            + (mb_x*mb_y*16) /*direct_ptr*/
+                            + (mb_x*mb_y*24) /*nnz_ptr*/
+                            + (mb_x*mb_y*2*16*2*2) /*mvd*/
+                            + 3*4*17 /*fs, fs_ref, fs_ltref*/
+                            + 17*(7*4+(23+150*2*17)*4+mb_x*mb_y*16*(2*2*2 + 1 + 1 + 4 + 4)+((mb_x*16+48)*(mb_y*16+48)*3/2)) /*dpb_ptr*/
+                            + mb_x*mb_y /*g_MbToSliceGroupMap*/
+                            +10*1024; //rsv
     if (mCodecExtraBufferMalloced)
     {
         free(mCodecExtraBuffer);
@@ -799,35 +727,14 @@ int SoftSPRDAVC::activateSPS(unsigned int width,unsigned int height, unsigned in
     H264DecMemInit(mHandle, ExtraBuffer);
 
     mHeadersDecoded = true;
-#endif
-    return 1;
-}
-
-#if 0
-int32 SoftSPRDAVC::bindFrame(/*int32_t index,*/ uint8 **yuv) {
-    List<BufferInfo *> &outQueue = getPortQueue(kOutputPortIndex);
-    BufferInfo *outInfo = *outQueue.begin();
-    outQueue.erase(outQueue.begin());
-    OMX_BUFFERHEADERTYPE *outHeader = outInfo->mHeader;
-    OMX_BUFFERHEADERTYPE *header = mPicToHeaderMap.valueFor(mPicId);
-    outHeader->nTimeStamp = header->nTimeStamp;
-    outHeader->nFlags = header->nFlags;
-    outHeader->nFilledLen = mPictureSize;
-
-    *yuv = (uint8 *)(outHeader->pBuffer + outHeader->nOffset);
-
-    LOGI("%s, %d, header->nTimeStamp: %d, header->nFlags: %d, mPictureSize: %d", __FUNCTION__, __LINE__, header->nTimeStamp, header->nFlags, mPictureSize);
-
-    LOGI("%s, %d,  yuv:%0x, mPicId: %d", __FUNCTION__, __LINE__, *yuv, mPicId);
 
     return 1;
 }
-#endif
 
 }  // namespace android
 
 android::SprdOMXComponent *createSprdOMXComponent(
-        const char *name, const OMX_CALLBACKTYPE *callbacks,
-        OMX_PTR appData, OMX_COMPONENTTYPE **component) {
+    const char *name, const OMX_CALLBACKTYPE *callbacks,
+    OMX_PTR appData, OMX_COMPONENTTYPE **component) {
     return new android::SoftSPRDAVC(name, callbacks, appData, component);
 }

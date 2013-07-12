@@ -7,8 +7,8 @@
 *****************************************************************************/
 /******************************************************************************
 **                   Edit    History                                         *
-**---------------------------------------------------------------------------* 
-** DATE          NAME            DESCRIPTION                                 * 
+**---------------------------------------------------------------------------*
+** DATE          NAME            DESCRIPTION                                 *
 ** 11/20/2007    Xiaowei Luo     Create.                                     *
 *****************************************************************************/
 #ifndef _H264DEC_BASIC_H_
@@ -22,7 +22,7 @@
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-extern   "C" 
+extern   "C"
 {
 #endif
 
@@ -32,31 +32,19 @@ extern   "C"
 
 #define DEC_REF_PIC_MARKING_COMMAND_NUM	50
 
-#if 1//hw	
 #define MAX_REF_FRAME_NUMBER	16
 #define	MAX_REF_FRAME_BUF_NUM	16  //5
 
 #define MAX_PPS	256
 #define MAX_SPS	32
-#else
-#define MAX_REF_FRAME_NUMBER	5
-#define	MAX_REF_FRAME_BUF_NUM	5  //5
 
-#define MAX_PPS	10
-#define MAX_SPS	5
-#endif
-
-#ifdef _VSP_LINUX_
 #define SIZE_SLICE_GROUP_ID		960 //512x480
-#else
-#define SIZE_SLICE_GROUP_ID		396	//for CIF size// should be sufficient for HUGE pictures, need one int per MB in a picture
-#endif
 
 #define INVALID_REF_ID	(-135792468)
 
 #define LIST_NOT_USED -1 //FIXME rename?
 #define PART_NOT_AVAIL	-2
-#define MB_SIZE						16 
+#define MB_SIZE						16
 #define MB_CHROMA_SIZE				8
 #define MB_LUMA_CACHE_WIDTH			16
 #define MB_LUMA_CACHE_HEIGHT		16
@@ -226,8 +214,8 @@ extern   "C"
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif  //_H264DEC_BASIC_H_

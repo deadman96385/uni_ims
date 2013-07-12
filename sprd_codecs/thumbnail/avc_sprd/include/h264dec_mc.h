@@ -28,9 +28,9 @@ void H264Dec_mc_8x4 (H264DecContext *img_ptr, uint8 *pPredMBY, uint8 **pRefFrame
 	void MC_luma##size##_yhalf (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPred, int32 N);\
 	void MC_luma##size##_xyqpix (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPred, int32 N);
 
-	DECLARE_MC_FUN(4xN);
-	DECLARE_MC_FUN(8xN);
-	DECLARE_MC_FUN(16xN);
+DECLARE_MC_FUN(4xN);
+DECLARE_MC_FUN(8xN);
+DECLARE_MC_FUN(16xN);
 
 #undef DECLARE_MC_FUN
 

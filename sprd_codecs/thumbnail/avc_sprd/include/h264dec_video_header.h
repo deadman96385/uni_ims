@@ -1,5 +1,5 @@
 /******************************************************************************
- ** File Name:      sc8810_video_header.h                                           *
+ ** File Name:      h264dec_video_header.h                                           *
  ** Author:         Xiaowei Luo                                               *
  ** DATE:           02/07/2010                                                *
  ** Copyright:      2010 Spreatrum, Incoporated. All Rights Reserved.         *
@@ -7,27 +7,27 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 4/23/2007    Binggo Zhou     Create.                                      *
  *****************************************************************************/
 #ifndef _SC8810_VIDEO_HEADER_H_
 #define _SC8810_VIDEO_HEADER_H_
 
 #ifdef __ICC
-    #define DECLARE_ALIGNED(n,t,v)      t v __attribute__ ((aligned (n)))
-    #define DECLARE_ASM_CONST(n,t,v)    const t __attribute__ ((aligned (n))) v
+#define DECLARE_ALIGNED(n,t,v)      t v __attribute__ ((aligned (n)))
+#define DECLARE_ASM_CONST(n,t,v)    const t __attribute__ ((aligned (n))) v
 #elif defined(__GNUC__)
-    #define DECLARE_ALIGNED(n,t,v)      t v __attribute__ ((aligned (n)))
-    #define DECLARE_ASM_CONST(n,t,v)    const t v  __attribute__ ((aligned (n)))
+#define DECLARE_ALIGNED(n,t,v)      t v __attribute__ ((aligned (n)))
+#define DECLARE_ASM_CONST(n,t,v)    const t v  __attribute__ ((aligned (n)))
 #elif defined(_MSC_VER)
-    #define DECLARE_ALIGNED(n,t,v)      __declspec(align(n)) t v
-    #define DECLARE_ASM_CONST(n,t,v)    __declspec(align(n)) static const t v
+#define DECLARE_ALIGNED(n,t,v)      __declspec(align(n)) t v
+#define DECLARE_ASM_CONST(n,t,v)    __declspec(align(n)) static const t v
 #elif defined(HAVE_INLINE_ASM)
-    #error The asm code needs alignment, but we do not know how to do it for this compiler.
+#error The asm code needs alignment, but we do not know how to do it for this compiler.
 #else
-    #define DECLARE_ALIGNED(n,t,v)      t v
-    #define DECLARE_ASM_CONST(n,t,v)    static const t v
+#define DECLARE_ALIGNED(n,t,v)      t v
+#define DECLARE_ASM_CONST(n,t,v)    static const t v
 #endif
 
 #ifndef WIN32
@@ -59,7 +59,6 @@
 #include "h264dec_header.h"
 #include "h264dec_slice.h"
 #include "h264dec_parset.h"
-#include "h264dec_command.h"
 #include "h264dec_image.h"
 #include "h264dec_mb.h"
 #include "h264dec_deblock.h"
@@ -73,26 +72,21 @@
 #include "h264dec_isqt.h"
 #include "h264dec_mc.h"
 
-#ifndef _VSP_LINUX_
-#include "os_api.h"
-#endif
-
 #ifdef _VSP_LINUX_
 #define LOG_TAG "VSP"
 #include <utils/Log.h>
 #define  SCI_TRACE_LOW   ALOGI
 #define SCI_MEMSET  memset
 #define SCI_MEMCPY	memcpy
-#define SCI_ASSERT(...) 
-
-#endif 
+#define SCI_ASSERT(...)
+#endif
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif  //_SC8810_VIDEO_HEADER_H_
