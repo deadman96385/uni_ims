@@ -8,8 +8,8 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 01/23/2007    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4DEC_MALLOC_H_
@@ -17,34 +17,28 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "mp4_basic.h"
+#include "mp4dec_basic.h"
 #include "mp4dec_mode.h"
 #include "mmcodec.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
-		
-PUBLIC void *Mp4Dec_ExtraMemAlloc(VIDEO_DATA_T *vd, uint32 mem_size);
-PUBLIC void *Mp4Dec_ExtraMemAlloc_64WordAlign(VIDEO_DATA_T *vd, uint32 mem_size);
-PUBLIC void *Mp4Dec_InterMemAlloc(VIDEO_DATA_T *vd, uint32 mem_size);
-PUBLIC void Mp4Dec_FreeMem(VIDEO_DATA_T *vd); 
-PUBLIC void Mp4Dec_InitInterMem(VIDEO_DATA_T *vd, MMCodecBuffer *pBuffer);
-#ifdef _VSP_LINUX_
-PUBLIC uint8 *Mp4Dec_ExtraMem_V2Phy(VIDEO_DATA_T *vd, uint8 *vAddr);
-PUBLIC void *Mp4Dec_ExtraMemCacheAlloc(VIDEO_DATA_T *vd, uint32 mem_size);
-PUBLIC void *Mp4Dec_ExtraMemCacheAlloc_64WordAlign(VIDEO_DATA_T *vd, uint32 mem_size);
-#endif
+
+void *Mp4Dec_ExtraMemAlloc(Mp4DecObject *vd, uint32 mem_size, int32 aligned_byte_num);
+void *Mp4Dec_InterMemAlloc(Mp4DecObject *vd, uint32 mem_size, int32 aligned_byte_num);
+void Mp4Dec_FreeMem(Mp4DecObject *vd);
+void Mp4Dec_InitInterMem(Mp4DecObject *vd, MMCodecBuffer *pBuffer);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif // _MP4DEC_MALLOC_H_

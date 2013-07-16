@@ -8,8 +8,8 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 12/14/2006    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4DEC_DATAPARTITION_H_
@@ -17,32 +17,29 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "mp4_basic.h"
+#include "mp4dec_basic.h"
 #include "mp4dec_mode.h"
 #include "mp4dec_global.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
-PUBLIC MMDecRet Mp4Dec_DecIVOPErrResDataPartitioning(VIDEO_DATA_T *vd, DEC_VOP_MODE_T *vop_mode_ptr);
-PUBLIC MMDecRet Mp4Dec_DecPVOPErrResDataPartitioning(VIDEO_DATA_T *vd, DEC_VOP_MODE_T *vop_mode_ptr);
-PUBLIC void Mp4Dec_RvlcIntraTCOEF(DEC_VOP_MODE_T *vop_mode_ptr, int16 *iDCTCoefQ,int32 iCoefStart);
-PUBLIC void Mp4Dec_RvlcInterTCOEF(DEC_VOP_MODE_T *vop_mode_ptr, int16 *iDCTCoefQ);
-PUBLIC void Mp4Dec_GetSecondPartitionMBHeaderIVOP(DEC_VOP_MODE_T *vop_mode_ptr,DEC_MB_MODE_T *mb_mode_ptr);
-PUBLIC void Mp4Dec_GetSecondPartitionMBHeaderPVOP(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode_ptr, int32 mb_num);
-PUBLIC void Mp4Dec_DecSecondPartitionIntraErrRes_vt(VIDEO_DATA_T *vd, DEC_VOP_MODE_T *vop_mode_ptr, int32 start_mb_no);
-PUBLIC void Mp4Dec_DecSecondPartitionInterErrRes_vt(VIDEO_DATA_T *vd, DEC_VOP_MODE_T *vop_mode_ptr, int32 start_mb_no);
-PUBLIC int32 Mp4Dec_RvlcIntraTCOEF_vt(DEC_VOP_MODE_T *vop_mode_ptr, int16 * iDCTCoefQ, int32 iCoefStart,char *pNonCoeffPos);
-PUBLIC void Mp4Dec_RvlcInterTCOEF_vt(DEC_VOP_MODE_T *vop_mode_ptr, int16 *iDCTCoefQ, int32 iQP, DEC_BS_T *pBitstrm);
+
+MMDecRet Mp4Dec_DecIVOPErrResDataPartitioning(DEC_VOP_MODE_T *vop_mode_ptr);
+MMDecRet Mp4Dec_DecPVOPErrResDataPartitioning(DEC_VOP_MODE_T *vop_mode_ptr);
+void Mp4Dec_GetSecondPartitionMBHeaderIVOP(DEC_VOP_MODE_T *vop_mode_ptr,DEC_MB_MODE_T *mb_mode_ptr);
+void Mp4Dec_GetSecondPartitionMBHeaderPVOP(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode_ptr, int32 mb_num);
+int32 Mp4Dec_RvlcIntraTCOEF(DEC_VOP_MODE_T *vop_mode_ptr, int16 * iDCTCoefQ, int32 iCoefStart,char *pNonCoeffPos);
+void Mp4Dec_RvlcInterTCOEF(DEC_VOP_MODE_T *vop_mode_ptr, int16 *iDCTCoefQ, int32 iQP, DEC_BS_T *pBitstrm);
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif //_MP4DEC_DATAPARTITION_H_

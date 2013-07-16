@@ -1,45 +1,49 @@
 /******************************************************************************
- ** File Name:    mp4_common_func.c                                           *
+ ** File Name:    mp4dec_global_internal.c                                           *
  ** Author:       Xiaowei Luo                                                 *
- ** DATE:         10/13/2009                                                  *
- ** Copyright:    2009 Spreatrum, Incoporated. All Rights Reserved.           *
+ ** DATE:         12/14/2006                                                  *
+ ** Copyright:    2006 Spreatrum, Incoporated. All Rights Reserved.           *
  ** Description:                                                              *
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
- ** 10/13/2009    Xiaowei Luo     Create.                                     *
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
+ ** 12/14/2006    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "sc8810_video_header.h"
+#include "mp4dec_video_header.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 
-#define PIX_SORT(_a, _b) {if (_a > _b) PIX_SWAP(_a, _b);}
-#define PIX_SWAP(_a, _b) {int32 temp = _a; _a = _b; _b = temp;}
-
-PUBLIC  int32 Mp4_GetMedianofThree(int32 a0, int32 a1, int32 a2)
+const int8 *Mp4Dec_GetDqTable(void)
 {
-	PIX_SORT(a0,a1);
-	PIX_SORT(a1,a2);
-	PIX_SORT(a0,a1);
-
-	return a1;
+    return g_dec_dq_tab;
 }
+
+#if _DEBUG_
+void foo(void)
+{
+    ;
+}
+#endif //_DEBUG_
+
+#if defined(SIM_IN_WIN32)
+double  g_psnr[3] = {0, 0, 0};
+#endif
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End

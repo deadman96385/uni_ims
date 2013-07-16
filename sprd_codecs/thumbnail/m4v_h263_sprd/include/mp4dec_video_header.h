@@ -1,5 +1,5 @@
 /******************************************************************************
- ** File Name:      sc8810_video_header.h                                           *
+ ** File Name:      mp4dec_video_header.h                                           *
  ** Author:         Xiaowei Luo                                               *
  ** DATE:           02/07/2010                                                *
  ** Copyright:      2010 Spreatrum, Incoporated. All Rights Reserved.         *
@@ -7,27 +7,27 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 4/23/2007    Binggo Zhou     Create.                                      *
  *****************************************************************************/
-#ifndef _SC8810_VIDEO_HEADER_H_
-#define _SC8810_VIDEO_HEADER_H_
+#ifndef _MP4DEC_VIDEO_HEADER_H_
+#define _MP4DEC_VIDEO_HEADER_H_
 
 #ifdef __ICC
-    #define DECLARE_ALIGNED(n,t,v)      t v __attribute__ ((aligned (n)))
-    #define DECLARE_ASM_CONST(n,t,v)    const t __attribute__ ((aligned (n))) v
+#define DECLARE_ALIGNED(n,t,v)      t v __attribute__ ((aligned (n)))
+#define DECLARE_ASM_CONST(n,t,v)    const t __attribute__ ((aligned (n))) v
 #elif defined(__GNUC__)
-    #define DECLARE_ALIGNED(n,t,v)      t v __attribute__ ((aligned (n)))
-    #define DECLARE_ASM_CONST(n,t,v)    const t v  __attribute__ ((aligned (n)))
+#define DECLARE_ALIGNED(n,t,v)      t v __attribute__ ((aligned (n)))
+#define DECLARE_ASM_CONST(n,t,v)    const t v  __attribute__ ((aligned (n)))
 #elif defined(_MSC_VER)
-    #define DECLARE_ALIGNED(n,t,v)      /*__declspec(align(n))*/ t v
-    #define DECLARE_ASM_CONST(n,t,v)    /*__declspec(align(n))*/ const t v
+#define DECLARE_ALIGNED(n,t,v)      /*__declspec(align(n))*/ t v
+#define DECLARE_ASM_CONST(n,t,v)    /*__declspec(align(n))*/ const t v
 #elif defined(HAVE_INLINE_ASM)
-    #error The asm code needs alignment, but we do not know how to do it for this compiler.
+#error The asm code needs alignment, but we do not know how to do it for this compiler.
 #else
-    #define DECLARE_ALIGNED(n,t,v)      t v
-    #define DECLARE_ASM_CONST(n,t,v)    const t v
+#define DECLARE_ALIGNED(n,t,v)      t v
+#define DECLARE_ASM_CONST(n,t,v)    const t v
 #endif
 
 #ifndef WIN32
@@ -38,22 +38,18 @@
 #define INTRA_IDCT_ASSEMBLY
 #define INTER_IDCT_ASSEMBLY
 //#define MC_ASSEMBLY
-     
+
 #endif
 
 #include "sci_types.h"
 #include "mmcodec.h"
 #include "video_common.h"
-#include "mp4_basic.h"
-#include "mp4_common_func.h"
-#include "mp4_global.h"
-
+#include "mp4dec_basic.h"
 #include "mp4dec_global.h"
 #include "mp4dec_bfrctrl.h"
 #include "mp4dec_bitstream.h"
 #include "mp4dec_datapartitioning.h"
 #include "mp4dec_mode.h"
-#include "mp4dec_command.h"
 
 #include "mp4dec_header.h"
 #include "mp4dec_malloc.h"
@@ -65,7 +61,6 @@
 #include "mp4dec_vld.h"
 #include "mp4dec_rvld.h"
 #include "mp4dec_block.h"
-#include "mp4dec_error_handle.h"
 #include "mpeg4dec.h"
 
 #ifndef _VSP_LINUX_
@@ -77,9 +72,9 @@
 int gettimeofday(struct timeval *tv,struct timezone *tz);
 
 /*typedef struct timeval {
-long tv_sec; 
-long tv_usec; 
-}timeval; 
+long tv_sec;
+long tv_usec;
+}timeval;
 */
 extern long recMb_time;
 #endif
@@ -91,16 +86,16 @@ extern long recMb_time;
 #define  SCI_TRACE_LOW   ALOGI
 #define SCI_MEMSET  memset
 #define SCI_MEMCPY	memcpy
-#define SCI_ASSERT(...) 
+#define SCI_ASSERT(...)
 
-#endif 
+#endif
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
-#endif  //_SC8810_VIDEO_HEADER_H_
+// End
+#endif  //_MP4DEC_VIDEO_HEADER_H_

@@ -724,7 +724,7 @@ int SoftSPRDAVC::activateSPS(unsigned int width,unsigned int height, unsigned in
     ExtraBuffer[SW_CACHABLE].common_buffer_ptr = mCodecExtraBuffer;
     ExtraBuffer[SW_CACHABLE].size = mCodecExtraBufferSize;
 
-    H264DecMemInit(mHandle, ExtraBuffer);
+    H264DecMemInit(((SoftSPRDAVC *)this)->mHandle, ExtraBuffer);
 
     mHeadersDecoded = true;
 

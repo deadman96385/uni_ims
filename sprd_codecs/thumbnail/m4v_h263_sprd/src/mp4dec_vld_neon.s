@@ -44,7 +44,7 @@ copy_64byte_f0:
 			pop	{r0 - r4, pc}
 			@ENDFUNC
 @/*
-@int32 Mp4Dec_VlcDecIntraTCOEF_sw(DEC_VOP_MODE_T *vop_mode_ptr, int16 *iCoefQ, int32 iCoefStart,char *pNonCoeffPos)
+@int32 Mp4Dec_VlcDecIntraTCOEF(DEC_VOP_MODE_T *vop_mode_ptr, int16 *iCoefQ, int32 iCoefStart,char *pNonCoeffPos)
 @	input:
 @		r0: vop_mode_ptr
 @		r1: iCoefQ
@@ -83,8 +83,8 @@ nonCoeffNum_f1		.req	r7
 .equ 	INTRA_MAX_LEVEL,	0x104
 .equ 	INTRA_MAX_RUN,		0x108
 
-Mp4Dec_VlcDecIntraTCOEF_sw:	@FUNCTION
-		.global	Mp4Dec_VlcDecIntraTCOEF_sw
+Mp4Dec_VlcDecIntraTCOEF:	@FUNCTION
+		.global	Mp4Dec_VlcDecIntraTCOEF
 
 		push	{r4 - r12, r14}
 	
@@ -354,7 +354,7 @@ VLD_END_f1:
 
 
 @/*
-@void Mp4Dec_VlcDecInterTCOEF_Mpeg_sw(DEC_VOP_MODE_T *vop_mode_ptr, int16 *iDCTCoef, int32 iQP, DEC_BS_T * pBitstrm)
+@void Mp4Dec_VlcDecInterTCOEF_Mpeg(DEC_VOP_MODE_T *vop_mode_ptr, int16 *iDCTCoef, int32 iQP, DEC_BS_T * pBitstrm)
 @	input:
 @		r0: vop_mode_ptr
 @		r1: iDCTCoef
@@ -401,8 +401,8 @@ bCoefQAllZero_f2	.req	r3
 
 .equ	Q_H263,	0
 
-Mp4Dec_VlcDecInterTCOEF_Mpeg_sw:		@FUNCTION
-		.global	Mp4Dec_VlcDecInterTCOEF_Mpeg_sw
+Mp4Dec_VlcDecInterTCOEF_Mpeg:		@FUNCTION
+		.global	Mp4Dec_VlcDecInterTCOEF_Mpeg
 
 		push	{r4 - r12, r14}
 		sub	sp, sp, #8

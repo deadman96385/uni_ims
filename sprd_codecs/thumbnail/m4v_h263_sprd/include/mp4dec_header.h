@@ -8,8 +8,8 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 12/14/2006    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4DEC_HEADER_H_
@@ -17,15 +17,15 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "mp4_basic.h"
+#include "mp4dec_basic.h"
 #include "mp4dec_mode.h"
 #include "mp4dec_global.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 /*----------------------------------------------------------------------------*
 **                            Mcaro Definitions                               *
@@ -41,17 +41,17 @@
 
 
 /**/
-#define SHORT_VIDEO_START_MARKER		0x20 
-#define SHORT_VIDEO_END_MARKER			0x3F  
-#define SHORT_VIDEO_START_MARKER_LENGTH	22   
-  
+#define SHORT_VIDEO_START_MARKER		0x20
+#define SHORT_VIDEO_END_MARKER			0x3F
+#define SHORT_VIDEO_START_MARKER_LENGTH	22
 
-#define DEC_VO_START_CODE				0x8  
+
+#define DEC_VO_START_CODE				0x8
 #define DEC_VOL_START_CODE				0x12	/* 25-MAR-97 JDL : according to WD2 */
 #define VOL_START_CODE_LENGTH			28
 
 #define DEC_VOP_START_CODE				0x1B6	/* 25-MAR-97 JDL : according to WD2 */
-#define VOP_START_CODE_LENGTH			32	
+#define VOP_START_CODE_LENGTH			32
 
 #define GROUP_START_CODE				0x01B3	/* 05-05-1997 Minhua Zhou */
 #define GROUP_START_CODE_LENGTH			32		/* 10.12.97 Luis Ducla-Soares */
@@ -65,8 +65,8 @@
 #define EOB_CODE						1
 #define EOB_CODE_LENGTH					32
 
-#define GOB_RESYNC_MARKER				0x01 
-#define GOB_RESYNC_MARKER_LENGTH		17  
+#define GOB_RESYNC_MARKER				0x01
+#define GOB_RESYNC_MARKER_LENGTH		17
 
 #define DEC_DC_MARKER					438273	/* 09.10.97 LDS: according to WD4.0 */
 #define DC_MARKER_LENGTH				19
@@ -83,9 +83,9 @@
 #define GRPOFVOP_START_CODE		0x000001b3
 #define VISOBJ_START_CODE		0x000001b5
 
-PUBLIC MMDecRet Mp4Dec_DecH263Header(VIDEO_DATA_T *vd, DEC_VOP_MODE_T *vop_mode_ptr);
+PUBLIC MMDecRet Mp4Dec_DecH263Header(Mp4DecObject *vd);
 PUBLIC MMDecRet Mp4Dec_DecMp4Header(DEC_VOP_MODE_T *vop_mode_ptr, uint32 uOneFrameLen);
-PUBLIC MMDecRet Mp4Dec_FlvH263PicHeader(VIDEO_DATA_T *vd, DEC_VOP_MODE_T *vop_mode_ptr);
+PUBLIC MMDecRet Mp4Dec_FlvH263PicHeader(Mp4DecObject *vd);
 PUBLIC MMDecRet Mp4Dec_DecGobHeader(DEC_VOP_MODE_T *vop_mode_ptr);
 PUBLIC MMDecRet Mp4Dec_GetVideoPacketHeader(DEC_VOP_MODE_T *vop_mode_ptr, uint32 uAddBits);
 PUBLIC BOOLEAN Mp4Dec_CheckResyncMarker(DEC_VOP_MODE_T *vop_mode_ptr, uint32 uAddbit);
@@ -95,8 +95,8 @@ PUBLIC BOOLEAN Mp4Dec_SearchResynCode(DEC_VOP_MODE_T * vop_mode_ptr);
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif //_MP4DEC_HEADER_H_

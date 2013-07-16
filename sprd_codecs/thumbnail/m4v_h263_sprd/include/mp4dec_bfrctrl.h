@@ -9,8 +9,8 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 12/14/2006    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 
@@ -19,14 +19,8 @@
 
 #include "mp4dec_mode.h"
 
-MMDecRet Mp4Dec_InitYUVBfr(VIDEO_DATA_T *vd, DEC_VOP_MODE_T *vop_mode_ptr);
-BOOLEAN Mp4Dec_GetCurRecFrameBfr(VIDEO_DATA_T *vd, DEC_VOP_MODE_T *vop_mode_ptr);
-BOOLEAN Mp4Dec_GetCurDispFrameBfr(VIDEO_DATA_T *vd, DEC_VOP_MODE_T *vop_mode_ptr);
-DEC_FRM_BFR* Mp4Dec_GetDispFrameBfr(VIDEO_DATA_T *vd, Mp4DecStorablePic *rec_pic);
-void Mp4Dec_SetRefFlag();
-void Mp4Dec_SetDspFlag();
-MMDecRet MPEG4_DecReleaseDispBfr(VIDEO_DATA_T *vd, uint8 *pBfrAddr);
-
-DEC_FRM_BFR* Mp4Dec_GetRecFrm(VIDEO_DATA_T *vd, uint8 *pBfrAddr);
+MMDecRet Mp4Dec_InitYUVBfr(Mp4DecObject *vd);
+BOOLEAN Mp4Dec_GetCurRecFrameBfr(Mp4DecObject *vd);
+MMDecRet MPEG4_DecReleaseDispBfr(Mp4DecObject *vd, uint8 *pBfrAddr);
 
 #endif //_MP4DEC_BFR_CTRL_H_

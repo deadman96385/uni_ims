@@ -1,5 +1,5 @@
 /******************************************************************************
- ** File Name:      mp4_basic.h                                               *
+ ** File Name:      mp4dec_basic.h                                               *
  ** Author:         Xiaowei Luo                                               *
  ** DATE:           12/14/2006                                                *
  ** Copyright:      2006 Spreatrum, Incoporated. All Rights Reserved.         *
@@ -7,12 +7,12 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 12/14/2006    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
-#ifndef _MP4_BASIC_H_ 
-#define _MP4_BASIC_H_
+#ifndef _MP4DEC_BASIC_H_
+#define _MP4DEC_BASIC_H_
 
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
@@ -22,13 +22,13 @@
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 /*----------------------------------------------------------------------------*
 **                            Mcaro Definitions                               *
 **---------------------------------------------------------------------------*/
-#define MP4_LOCAL static 
+#define MP4_LOCAL static
 
 #ifdef TRANSPARENT
 #undef TRANSPARENT
@@ -43,7 +43,7 @@
 #define NOT_IN_TABLE	-1
 #endif
 #ifndef	TCOEF_ESCAPE
-#define TCOEF_ESCAPE	102	
+#define TCOEF_ESCAPE	102
 #endif
 
 #define RC_MPEG4		1
@@ -53,13 +53,16 @@
 #define DEFAULT_DC_VALUE		1024
 
 #define ESCAPE				7167
-#define TCOEF_RVLC_ESCAPE	169 	
+#define TCOEF_RVLC_ESCAPE	169
 
 #define DEC_YUV_BUFFER_NUM   3
 #define DISP_YUV_BUFFER_NUM   2
 
 //for quantizer mode
-typedef enum {Q_H263,Q_MPEG} QUANTIZER_E; 
+typedef enum {
+    Q_H263,Q_MPEG
+}
+QUANTIZER_E;
 //for vop prediction type
 typedef enum {IVOP, PVOP, BVOP, SVOP, NVOP} VOP_PRED_TYPE_E;
 
@@ -76,8 +79,8 @@ typedef enum {B_FORWARD, B_BACKWARD} SHAPE_BPRED_DIR_E;
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif // _MP4DEC_BASIC_H_

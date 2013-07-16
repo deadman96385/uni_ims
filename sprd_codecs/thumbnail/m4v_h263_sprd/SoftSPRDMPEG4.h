@@ -19,25 +19,24 @@
 #define SOFT_SPRD_MPEG4_H_
 
 #include "SprdSimpleOMXComponent.h"
-
-struct tagvideoDecControls;
+#include "m4v_h263_dec_api.h"
 
 namespace android {
 
 struct SoftSPRDMPEG4 : public SprdSimpleOMXComponent {
     SoftSPRDMPEG4(const char *name,
-            const OMX_CALLBACKTYPE *callbacks,
-            OMX_PTR appData,
-            OMX_COMPONENTTYPE **component);
+                  const OMX_CALLBACKTYPE *callbacks,
+                  OMX_PTR appData,
+                  OMX_COMPONENTTYPE **component);
 
 protected:
     virtual ~SoftSPRDMPEG4();
 
     virtual OMX_ERRORTYPE internalGetParameter(
-            OMX_INDEXTYPE index, OMX_PTR params);
+        OMX_INDEXTYPE index, OMX_PTR params);
 
     virtual OMX_ERRORTYPE internalSetParameter(
-            OMX_INDEXTYPE index, const OMX_PTR params);
+        OMX_INDEXTYPE index, const OMX_PTR params);
 
     virtual OMX_ERRORTYPE getConfig(OMX_INDEXTYPE index, OMX_PTR params);
 
@@ -58,7 +57,7 @@ private:
 
     } mMode;
 
-    tagvideoDecControls *mHandle;
+    tagMP4Handle *mHandle;
 
     size_t mInputBufferCount;
 
@@ -68,6 +67,7 @@ private:
     bool mSignalledError;
     bool mInitialized;
     bool mFramesConfigured;
+    bool mStopDecode;
 
     int32_t mNumSamplesOutput;
 
@@ -77,8 +77,8 @@ private:
     uint32_t mCodecExtraBufferSize;
     bool mCodecExtraBufferMalloced;
 
-    static int32_t extMemoryAllocWrapper(void *decCtrl, void *userData, unsigned int width,unsigned int height); 
-    int extMemoryAlloc(void *decCtrl, unsigned int width,unsigned int height) ;
+    static int32_t extMemoryAllocWrapper(void *userData, unsigned int width,unsigned int height, unsigned int is_dp);
+    int extMemoryAlloc(unsigned int width,unsigned int height, unsigned int is_dp);
 
     enum {
         NONE,
