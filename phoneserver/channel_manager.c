@@ -863,7 +863,7 @@ void chnmng_start_thread(struct channel_manager_t *const me)
                 (void *)&(me->itsReceive_thread[i]));
         if (tid < 0) {
             PHS_LOGE("ERROR chnmng_mux pthread_create !\n ");
-            break;;
+            break;
         }
         thread_getschedparam((int)&me->itsReceive_thread[i].thread, &policy, &sched);
         PHS_LOGD("chnmng_mux thread: policy=%d!\n", policy);
@@ -880,7 +880,7 @@ void chnmng_start_thread(struct channel_manager_t *const me)
                 (void *)&(me->itsSend_thread[i]));
         if (tid < 0) {
             PHS_LOGE("ERROR chnmng_pty pthread_create !\n ");
-            break;;
+            break;
         }
         thread_getschedparam((int)&me->itsSend_thread[i].thread, &policy, &sched);
         PHS_LOGD("chnmng_pty thread: policy=%d!\n", policy);
@@ -952,12 +952,14 @@ static void *detect_at_no_response(void *par)
         }
         ALOGD("%s: accept soc_client=%d", __func__, soc_client);
     }
+    close(soc_client);
 }
 
 int main(int argc, char *argv[])
 {
     char prop[5];
     pthread_t tid;
+    int ret;
 
     PHS_LOGD("chnmng start phone server!\n");
     PHS_LOGD("Phoneserver version: %s \n",version_string);
@@ -985,7 +987,9 @@ int main(int argc, char *argv[])
 
     sem_init(&sms_lock, 0, 1);
 
-    pthread_create(&tid, NULL, (void*)detect_at_no_response, NULL);
+    ret = pthread_create(&tid, NULL, (void*)detect_at_no_response, NULL);
+    if(ret < 0)
+        PHS_LOGE("create detect_at_no_response thread failed");
 
     ps_service_init();
     channel_manager_init();

@@ -712,8 +712,16 @@ int cvt_cgdcont_set_req(AT_CMD_REQ_T * req)
     memset(ipladdr, 0, 30);
     memset(hcomp, 0, 30);
     memset(dcomp, 0, 30);
-    at_tok_start(&input, '=');
-    at_tok_nextint(&input, &tmp_cid);
+
+    err = at_tok_start(&input, '=');
+    if (err < 0) {
+        return AT_RESULT_NG;
+    }
+
+    err = at_tok_nextint(&input, &tmp_cid);
+    if (err < 0) {
+        return AT_RESULT_NG;
+    }
 
     err = at_tok_nextstr(&input, &out);	//ip
     if (err < 0)
