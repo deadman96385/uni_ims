@@ -4583,6 +4583,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_DELETE_SMS_ON_SIM
                 || request == RIL_REQUEST_GET_IMSI
                 || request == RIL_REQUEST_QUERY_FACILITY_LOCK
+                || request == RIL_REQUEST_SET_FACILITY_LOCK
                 || request == RIL_REQUEST_ENTER_SIM_PIN2
                 || request == RIL_REQUEST_ENTER_SIM_PUK
                 || request == RIL_REQUEST_ENTER_SIM_PUK2
