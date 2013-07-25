@@ -315,6 +315,13 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, (0),"BSM_cfg1 stream buffer offset & destuff disable");//point to the start of NALU.
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, 0x80000000|(bs_buffer_length+128)&0xfffffffc,"BSM_cfg0 stream buffer size");// BSM load data. Add 16 DW for BSM fifo loading.
 
+     ret = Mp4Dec_VerifyBitstrm(vo,dec_input_ptr->pStream, dec_input_ptr->dataLen);
+   if(ret != MMDEC_OK)
+    {
+        mp4Handle->g_mpeg4_dec_err_flag |= 1<<6;       
+        goto DECODER_DONE;
+    }    	
+   
     if(STREAM_ID_H263 == vop_mode_ptr->video_std)
     {
         ret = Mp4Dec_DecH263Header(vo);
@@ -443,6 +450,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
 
 DECODER_DONE:
     VSP_RELEASE_Dev((VSPObject *)vo);
+    SCI_TRACE_LOW("%s : error flag is 0x%x.", __FUNCTION__,mp4Handle->g_mpeg4_dec_err_flag );
 
     return ret;
 }
