@@ -47,6 +47,7 @@ uint32 Mp4Dec_ByteAlign_Startcode(Mp4DecObject *vo);
 uint32 Mp4Dec_ByteAlign_Mp4(Mp4DecObject *vo);
 uint32 Mp4Dec_ShowBitsByteAlign(Mp4DecObject *vo, int32 nbits);
 uint32 Mp4Dec_ShowBitsByteAlign_H263(Mp4DecObject *vo, int32 nbits);
+MMDecRet Mp4Dec_VerifyBitstrm(Mp4DecObject *vo,uint8 *pStream, int32 strmLen);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
