@@ -234,7 +234,7 @@ void h264enc_sei_version_write(H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr)
         0xdc, 0x45, 0xe9, 0xbd, 0xe6, 0xd9, 0x48, 0xb7,
         0x96, 0x2c, 0xd8, 0x20, 0xd9, 0x23, 0xee, 0xef
     };
-    char version[12];
+    char version[] = "h264 encoder, Copyright (C) Spreadtrum, Inc.";
     int32 length;
 
     uint32 nal_header;

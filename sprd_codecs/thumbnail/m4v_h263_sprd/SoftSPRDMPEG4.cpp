@@ -216,7 +216,9 @@ status_t SoftSPRDMPEG4::initDecoder() {
     mCodecInterBuffer = (uint8 *)malloc(mCodecInterBufferSize);
 
     MMCodecBuffer codec_buf;
-
+    
+    codec_buf.common_buffer_ptr = NULL;
+    codec_buf.size = 0;
     codec_buf.int_buffer_ptr = (uint8 *)( mCodecInterBuffer);
     codec_buf.int_size = mCodecInterBufferSize;
 
