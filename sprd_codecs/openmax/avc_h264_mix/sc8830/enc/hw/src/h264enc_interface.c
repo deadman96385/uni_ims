@@ -127,6 +127,12 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecB
     img_ptr->pYUVRefFrame->imgYAddr = (uint32)H264Enc_ExtraMem_V2P(vo, img_ptr->pYUVRefFrame->imgY, EXTRA_MEM) >> 3;	// DWORD
     img_ptr->pYUVRefFrame->imgUVAddr = (uint32)H264Enc_ExtraMem_V2P(vo, img_ptr->pYUVRefFrame->imgUV, EXTRA_MEM) >> 3;	// DWORD
 
+    vo->g_anti_shake.enable_anti_shake = pVideoFormat->b_anti_shake;
+    vo->g_anti_shake.shift_x = 0;
+    vo->g_anti_shake.shift_y = 0;
+    vo->g_anti_shake.input_width = 0;
+    vo->g_anti_shake.input_height= 0;
+
     h264enc_sps_init (img_ptr);
     h264enc_pps_init (vo, img_ptr);
 
@@ -210,7 +216,13 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     H264EncObject *vo = (H264EncObject *) avcHandle->videoEncoderData;
     ENC_IMAGE_PARAMS_T *img_ptr = vo->g_enc_image_ptr;
     MMEncConfig * enc_config = vo->g_h264_enc_config;
+    ENC_ANTI_SHAKE_T *anti_shark_ptr = &(vo->g_anti_shake);
     uint32 rate_control_en = enc_config->RateCtrlEnable;
+
+    anti_shark_ptr->input_width = pInput->org_img_width;
+    anti_shark_ptr->input_height = pInput->org_img_height;
+    anti_shark_ptr->shift_x = pInput->crop_x;
+    anti_shark_ptr->shift_y = pInput->crop_y;
 
     img_ptr->stm_offset = 0;
     img_ptr->pYUVSrcFrame->i_frame = vo->g_nFrame_enc;

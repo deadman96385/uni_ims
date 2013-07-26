@@ -194,11 +194,11 @@ MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBu
     vo->g_enc_p_frame_count = 0;
     vo->g_nFrame_enc = 0;
 
-    vo->g_anti_shake.enable_anti_shake = 0;
+    vo->g_anti_shake.enable_anti_shake = pVideoFormat->b_anti_shake;
     vo->g_anti_shake.shift_x = 0;
     vo->g_anti_shake.shift_y = 0;
-    vo->g_anti_shake.input_width = frame_width;
-    vo->g_anti_shake.input_height= frame_height;
+    vo->g_anti_shake.input_width = 0;
+    vo->g_anti_shake.input_height= 0;
 
     Mp4Enc_InitVolVopPara(vol_mode_ptr, vop_mode_ptr, pVideoFormat->time_scale);
     Mp4Enc_InitSession(vo);
@@ -233,11 +233,17 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
     VOL_MODE_T *vol_mode_ptr = vo->g_enc_vol_mode_ptr;
     ENC_VOP_MODE_T *vop_mode_ptr = vo->g_enc_vop_mode_ptr;
     BOOLEAN *pIs_prev_frame_success = &(vo->g_enc_is_prev_frame_encoded_success);
+    ENC_ANTI_SHAKE_T *anti_shark_ptr = &(vo->g_anti_shake);
     uint32 frame_width = vop_mode_ptr->FrameWidth;
     uint32 frame_height = vop_mode_ptr->FrameHeight;
     uint32 frame_size = frame_width * frame_height;
     BOOLEAN frame_skip = FALSE;
     uint8 video_type =vol_mode_ptr->short_video_header ?STREAM_ID_H263: STREAM_ID_MPEG4 ;
+
+    anti_shark_ptr->input_width = pInput->org_img_width;
+    anti_shark_ptr->input_height = pInput->org_img_height;
+    anti_shark_ptr->shift_x = pInput->crop_x;
+    anti_shark_ptr->shift_y = pInput->crop_y;
 
     if(ARM_VSP_RST((VSPObject *)vo)<0)
     {
@@ -250,7 +256,7 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
 
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL: software access.");
 
-    vop_mode_ptr->mbline_num_slice	= 5;//pVop_mode->FrameHeight/MB_SIZE;
+    vop_mode_ptr->mbline_num_slice	= (vop_mode_ptr->FrameHeight+MB_SIZE-1)>>4;//5;//pVop_mode->FrameHeight/MB_SIZE;
     vop_mode_ptr->intra_mb_dis		= 30;
 
     if(!vop_mode_ptr->bInitRCSuceess)

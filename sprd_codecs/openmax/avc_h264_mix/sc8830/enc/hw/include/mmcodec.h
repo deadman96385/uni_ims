@@ -141,6 +141,7 @@ typedef struct
     int32	frame_height;				//frame Height
     int32	time_scale;
     int32	uv_interleaved;				//tmp add
+    int32    b_anti_shake;
 } MMEncVideoInfo;
 
 // Encoder config structure
@@ -175,6 +176,10 @@ typedef struct
     int32	time_stamp;					//time stamp
     int32   bs_remain_len;				//remained bitstream length
     int32 	channel_quality;			//0: good, 1: ok, 2: poor
+    int32    org_img_width;
+    int32    org_img_height;
+    int32    crop_x;
+    int32    crop_y;
 } MMEncIn;
 
 // Encoder output structure

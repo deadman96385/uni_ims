@@ -384,6 +384,15 @@ typedef struct  {
     uint32 next_BU_QP;
 } RC_BU_PARAS;
 
+typedef struct
+{
+    uint32 enable_anti_shake;
+    uint32 input_width;
+    uint32 input_height;
+    uint32 shift_x;
+    uint32 shift_y; 
+}ENC_ANTI_SHAKE_T;
+
 typedef struct tagH264EncObject
 {
     uint32 s_vsp_Vaddr_base ;
@@ -404,6 +413,7 @@ typedef struct tagH264EncObject
 
     CODEC_BUF_T mem[MAX_MEM_TYPE];
 
+    ENC_ANTI_SHAKE_T g_anti_shake;
 } H264EncObject;
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

@@ -30,6 +30,7 @@ extern   "C"
 PUBLIC void H264Enc_InitVSP(H264EncObject *vo)
 {
     ENC_IMAGE_PARAMS_T *img_ptr = vo->g_enc_image_ptr;
+    ENC_ANTI_SHAKE_T *anti_shark_ptr = &(vo->g_anti_shake);
     uint32 cmd;
 
     if(ARM_VSP_RST((VSPObject *)vo)<0)
@@ -44,7 +45,7 @@ PUBLIC void H264Enc_InitVSP(H264EncObject *vo)
 
     cmd = img_ptr->frame_width_in_mbs << 0;	// MB_X_MAX[7:0]
     cmd |= img_ptr->frame_height_in_mbs << 8;	// MB_Y_MAX[15:8]
-    cmd |= (img_ptr->width>> 3) << 16;				// CUR_IMG_WIDTH[24:16], unit 8-pixels
+    cmd |= (anti_shark_ptr->enable_anti_shake ? (anti_shark_ptr->input_width>>3) : (img_ptr->width>>3)) << 16;	  // CUR_IMG_WIDTH[24:16], unit 8-pixels
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + 0x24, cmd, "ORSC: IMG_SIZE: Set MB_X_MAX & MB_Y_MAX & CUR_IMG_WIDTH");
 
     cmd = ((img_ptr->pYUVSrcFrame->i_type==SLICE_TYPE_I) ? 0 :
@@ -65,7 +66,10 @@ PUBLIC void H264Enc_InitVSP(H264EncObject *vo)
 
     cmd = (img_ptr->sh.i_last_mb / img_ptr->frame_width_in_mbs) << 0;	// last_mb_y[6:0]
     cmd |= (img_ptr->sh.i_first_mb / img_ptr->frame_width_in_mbs) << 8;	// First_mb_y[14:8]
-    cmd |= (img_ptr->crop_x>>1) << 16;	// CUR_IMG_ST_X[25:16]
+    if (anti_shark_ptr->enable_anti_shake)
+    {
+        cmd |= (anti_shark_ptr->shift_x >>1) << 16;
+    }
     cmd |= 0 << 29;	// Dct_h264_scale_en[29]
     cmd |= 0 << 30;	// MCA_rounding_type[30], For MCA only
     cmd |= 0 << 31;	// Ppa_info_vdb_eb[31], 1: PPA need write MB info to DDR
@@ -93,7 +97,13 @@ PUBLIC void H264Enc_InitVSP(H264EncObject *vo)
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + 0x50, img_ptr->sh.i_poc_lsb, "ORSC: VSP_CFG5, Cur_poc[31:0]");
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + 0x68, (0 & 0x3f), "ORSC: ADDR_IDX_CFG0");
     VSP_WRITE_REG(PPA_SLICE_INFO_BASE_ADDR + 0x0, img_ptr->pYUVRefFrame->i_poc, "ORSC: List0_POC[0]");
-
+    if(anti_shark_ptr->enable_anti_shake)
+    {
+        img_ptr->pYUVSrcFrame->imgY += (anti_shark_ptr->shift_y*anti_shark_ptr->input_width );
+        img_ptr->pYUVSrcFrame->imgYAddr = (uint32)img_ptr->pYUVSrcFrame->imgY >> 3;
+        img_ptr->pYUVSrcFrame->imgUV += (anti_shark_ptr->shift_y*anti_shark_ptr->input_width )/2;
+        img_ptr->pYUVSrcFrame->imgUVAddr = (uint32)img_ptr->pYUVSrcFrame->imgUV >> 3;
+    }
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x20, img_ptr->pYUVSrcFrame->imgYAddr, "ORSC: Frm_addr8: Start address of current frame Y");
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x24, img_ptr->pYUVSrcFrame->imgUVAddr, "ORSC: Frm_addr9: Start address of current frame UV");
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x0, img_ptr->pYUVRecFrame->imgYAddr, "ORSC: Frm_addr0: Start address of reconstruct frame Y");
