@@ -441,7 +441,14 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     }
 
     Mp4Dec_InitVop(vo, dec_input_ptr);
-    Mp4Dec_decode_vop(vo);//wait hw return
+	
+    if(Mp4Dec_decode_vop(vo))
+    {
+        mp4Handle->g_mpeg4_dec_err_flag |= 1<<7;      
+	ret = MMDEC_STREAM_ERROR;
+        goto DECODER_DONE;
+    }	
+    
     Mp4Dec_output_one_frame (vo, dec_output_ptr);
     Mp4Dec_exit_picture(vo);
 

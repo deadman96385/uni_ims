@@ -320,7 +320,7 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
             VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_START_OFF,0xa|1,"VSP_START");//start vsp   vld/vld_table//load_vld_table_en
 
             tmp = VSP_POLL_COMPLETE((VSPObject *)vo);
-            if(tmp&0x30)
+            if(tmp&0xc0000030)
             {
                 vop_mode_ptr->error_flag=1;
                 pic_end=1;//weihu
@@ -332,6 +332,9 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
             VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL");
         }
     }
+
+	if(vop_mode_ptr->error_flag)
+		return MMDEC_ERROR;
 
     return MMDEC_OK;
 }
