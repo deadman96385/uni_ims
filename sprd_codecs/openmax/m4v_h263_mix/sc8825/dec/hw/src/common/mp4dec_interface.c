@@ -313,6 +313,12 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
 
 	ALOGI("MP4DecDecode: E");
 
+        if (dec_input_ptr->dataLen == 0)
+        {
+        	ret = MMDEC_OK;
+		goto MPEG4_DEC_CQM_ERROR;
+        }
+
     if(!Mp4Dec_GetCurRecFrameBfr(vd, vop_mode_ptr))
     {
         memset(dec_output_ptr,0,sizeof(MMDecOutput));

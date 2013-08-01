@@ -352,9 +352,14 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
 	DEC_VOP_MODE_T *vop_mode_ptr = vd->vop_mode_ptr;
 
 	mp4Handle->g_mpeg4_dec_err_flag = 0;
-
         
 	SCI_TRACE_LOW("MP4DecDecode: E");
+
+        if (dec_input_ptr->dataLen == 0)
+        {
+        	ret = MMDEC_OK;
+		goto MPEG4_DEC_CQM_ERROR;
+        }
 
     if(!Mp4Dec_GetCurRecFrameBfr(vd, vop_mode_ptr))
     {
