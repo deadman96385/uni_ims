@@ -356,6 +356,7 @@ typedef struct tagMp4DecObject
     uint32 g_nFrame_dec;
 
     DEC_FRM_BFR g_rec_buf;
+    DEC_FRM_BFR g_tmp_buf;	
 
     uint32 is_need_init_vsp_quant_tab;
 
