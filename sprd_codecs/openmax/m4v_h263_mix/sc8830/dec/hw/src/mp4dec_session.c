@@ -156,6 +156,19 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     vop_mode_ptr->time = vop_mode_ptr->time_base = vop_mode_ptr->last_time_base = 0;
     vop_mode_ptr->last_non_b_time = 0;
 
+    vo->g_tmp_buf.imgY = Mp4Dec_MemAlloc(vo, (uint32)(total_mb_num*256), 256, EXTRA_MEM);
+    vo->g_tmp_buf.imgYAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.imgY, EXTRA_MEM);
+    vo->g_tmp_buf.imgU = Mp4Dec_MemAlloc(vo, (uint32)((total_mb_num*128)), 256, EXTRA_MEM);
+    vo->g_tmp_buf.imgUAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.imgU, EXTRA_MEM);
+
+    memset(vo->g_tmp_buf.imgY, 16, sizeof(uint8)*(total_mb_num*256));
+    memset(vo->g_tmp_buf.imgU, 128, sizeof(uint8)*(total_mb_num*128));
+
+    vo->g_tmp_buf.rec_info = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)(total_mb_num*80), 256, EXTRA_MEM);
+    vo->g_tmp_buf.rec_infoAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.rec_info, EXTRA_MEM);	
+		
+	
+
     return MMDEC_OK;
 }
 
