@@ -84,6 +84,7 @@ PUBLIC void h264Dec_remove_frame_from_dpb (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr
 		{
 			(*VSP_unbindCb)(g_user_data,tmp_fs_ptr->frame->pBufferHeader);
 			tmp_fs_ptr->frame->pBufferHeader = NULL;
+			tmp_fs_ptr->is_reference = 0;
 		}
 	}
 #endif

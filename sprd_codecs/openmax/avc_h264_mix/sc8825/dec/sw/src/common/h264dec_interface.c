@@ -125,6 +125,7 @@ void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
 		{
 			(*VSP_unbindCb)(g_user_data, dpb_ptr->fs[i]->frame->pBufferHeader);
 			dpb_ptr->fs[i]->frame->pBufferHeader = NULL;
+                        dpb_ptr->fs[i]->is_reference = 0;
 		//	dpb_ptr->fs[i]->frame->need_unbind = 0;
 
 //			SCI_TRACE_LOW("H264Dec_ReleaseRefBuffers, unbind\n");			
