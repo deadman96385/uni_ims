@@ -109,11 +109,7 @@ PUBLIC int32 get_unit (uint8 *pInStream, int32 frm_bs_len, int32 *slice_unit_len
 				{
 					code = (code<<8) | data;	//big endian
 				}
-				if (0 == byte_rest)
-				{
-					byte_rest = 4;
-					*stream_ptr++ = code;
-				}
+				
 
 				if (data == 0x1)
 				{
@@ -128,6 +124,12 @@ PUBLIC int32 get_unit (uint8 *pInStream, int32 frm_bs_len, int32 *slice_unit_len
 				}else
 				{
 					zero_num = 0;
+				}
+
+				if (0 == byte_rest)
+				{
+					byte_rest = 4;
+					*stream_ptr++ = code;
 				}
 			}
 		}
