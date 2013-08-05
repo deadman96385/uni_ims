@@ -571,6 +571,12 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
 			*word_align_pIn = g_back_last_word;
 		}
+
+             //Added for Bug#162875
+		if (SOP == curr_slice_ptr->next_header)
+		{
+		    last_slice = 1;
+		}
 	}
 
 	//need IVOP but not found IDR,then return seek ivop
