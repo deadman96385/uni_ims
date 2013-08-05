@@ -49,7 +49,7 @@ itrans_lumaDC:	@FUNCTION
 			ldr		r14, =g_image_ptr
 			ldr		img_ptr, [r14, #0]
 			add		r2, img_ptr, qp, lsl #6
-			ldr		quantizer,[r2, #0x384]
+			ldr		quantizer,[r2, #0x388]
 			vmov.32		d4[0], quantizer
 
 			vld4.s16	{d0, d1, d2, d3}, [DCCoeff]	@//load all 16 DC
