@@ -56,8 +56,11 @@ PUBLIC void VSP_CLOSE_Dev(VSPObject *vo)
 
     if(vo->s_vsp_fd > 0)
     {
-		ioctl(vo->s_vsp_fd, VSP_RELEASE_MMCLK, &ret);
-        munmap(vo->s_vsp_fd,SPRD_VSP_MAP_SIZE);
+        ret = munmap(vo->s_vsp_Vaddr_base + VSP_REG_BASE_ADDR,SPRD_VSP_MAP_SIZE);
+        if (ret)
+        {
+            SCI_TRACE_LOW("%s, %d, %d", __FUNCTION__, __LINE__, errno);
+        }
         close(vo->s_vsp_fd);
     }
 }
