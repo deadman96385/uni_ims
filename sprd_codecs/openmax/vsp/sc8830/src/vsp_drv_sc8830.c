@@ -65,6 +65,18 @@ PUBLIC void VSP_CLOSE_Dev(VSPObject *vo)
     }
 }
 
+PUBLIC void VSP_GET_DEV_FREQ(VSPObject *vo, int32*  vsp_clk_ptr)
+{
+	if(vo->s_vsp_fd > 0)
+		 ioctl(vo->s_vsp_fd,VSP_GET_FREQ,vsp_clk_ptr);
+}
+
+PUBLIC void VSP_CONFIG_DEV_FREQ(VSPObject *vo,int32*  vsp_clk_ptr)
+{
+	if(vo->s_vsp_fd > 0)
+		 ioctl(vo->s_vsp_fd,VSP_CONFIG_FREQ,vsp_clk_ptr);
+}
+
 PUBLIC int32 VSP_POLL_COMPLETE(VSPObject *vo)
 {
     int ret ;
@@ -123,6 +135,14 @@ PUBLIC int32 ARM_VSP_RST (VSPObject *vo)
         return MMDEC_HW_ERROR;
     }
 
+   {
+	// 0:{256000000,"clk_256m"},
+	// 1:{192000000,"clk_192p6m"},
+	// 2:{128000000,"clk_128m"},
+	// 3:{76800000,"clk_76m8"}
+	int vsp_clk = 0; 				
+	VSP_CONFIG_DEV_FREQ(vo,&vsp_clk);
+   }
     VSP_WRITE_REG(AHB_CTRL_BASE_ADDR+ARM_ACCESS_CTRL_OFF, 0,"RAM_ACC_by arm");
     VSP_READ_REG_POLL(AHB_CTRL_BASE_ADDR+ARM_ACCESS_STATUS_OFF, 0x00000003, 0x00000000, TIME_OUT_CLK, "ARM_ACCESS_STATUS_OFF");
 
