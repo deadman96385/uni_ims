@@ -102,6 +102,7 @@ PUBLIC int32 H264Dec_remove_unused_frame_from_dpb (DEC_DECODED_PICTURE_BUFFER_T 
 
     for (i = 0; i < dpb_ptr->used_size; i++)
     {
+    SCI_TRACE_LOW("%s, %d, is_reference %d  disp_status %d", __FUNCTION__, __LINE__,dpb_ptr->fs[i]->is_reference ,  dpb_ptr->fs[i]->disp_status);
         if ((!dpb_ptr->fs[i]->is_reference) && (dpb_ptr->fs[i]->disp_status))
         {
             h264Dec_remove_frame_from_dpb(dpb_ptr, i);
@@ -115,6 +116,7 @@ PUBLIC int32 H264Dec_remove_unused_frame_from_dpb (DEC_DECODED_PICTURE_BUFFER_T 
 
 LOCAL DEC_FRAME_STORE_T *H264Dec_get_one_free_pic_buffer (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
+SCI_TRACE_LOW("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
     while(dpb_ptr->used_size == (MAX_REF_FRAME_NUMBER+1))
     {
         if (!H264Dec_remove_unused_frame_from_dpb(dpb_ptr))
@@ -418,17 +420,22 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
     DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = curr_slice_ptr->p_Dpb;
     DEC_STORABLE_PICTURE_T *dec_picture_ptr = NULL;
     DEC_FRAME_STORE_T *fs = NULL;
+    int32 i;	
 
-    if (vo->g_dec_picture_ptr)//weihu
-    {
-        SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
-
-        // this may only happen on slice loss
-        H264Dec_exit_picture (vo);
-
-        vo->g_dec_picture_ptr = NULL;//weihu for output
-        vo->g_nFrame_dec_h264++;
-    }
+	if ((img_ptr->frame_num != img_ptr->pre_frame_num) && (img_ptr->frame_num != H264Dec_Divide((img_ptr->pre_frame_num+1), img_ptr->max_frame_num)))
+	{
+		if (vo->g_active_sps_ptr->gaps_in_frame_num_value_allowed_flag == 0)
+		{
+			/*advanced error concealment would be called here to combat unitentional loss of pictures*/
+			if (img_ptr->type != I_SLICE)
+			{
+				SCI_TRACE_LOW("an unintentional loss of picture occures!\n");
+			//	img_ptr->error_flag |= ER_BSM_ID;
+			}
+		//	return;
+		}
+	//	H264Dec_fill_frame_num_gap(img_ptr, dpb_ptr);
+	}
 
     fs = H264Dec_get_one_free_pic_buffer(vo, dpb_ptr);
     fs->disp_status = 0;
@@ -437,6 +444,36 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
     {
         return;
     }
+	
+#if 1   //current decoded picture has been in delayed_pic[]
+	if(fs->is_reference == DELAYED_PIC_REF)
+        {
+                int32 out_idx;
+    		
+        	fs->is_reference = 0;
+
+                if(fs->frame->pBufferHeader!=NULL)
+                {
+                    (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,fs->frame->pBufferHeader);
+                    fs->frame->pBufferHeader = NULL;
+                }
+
+		for (i = 0; i < dpb_ptr->delayed_pic_num; i++)
+		{
+			if (fs->frame == dpb_ptr->delayed_pic[i])
+			{
+				out_idx = i;
+				break;
+			}
+		}
+
+		for(i = out_idx; dpb_ptr->delayed_pic[i]; i++)
+                {
+			dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
+		}
+		dpb_ptr->delayed_pic_num--;        
+        }
+#endif
 
     vo->g_dec_picture_ptr = fs->frame;
 

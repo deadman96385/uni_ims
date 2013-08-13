@@ -89,7 +89,7 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
             uint32 malloc_buffer_num;
             uint32 malloc_buffer_size;
 
-            malloc_buffer_num = 17;
+            malloc_buffer_num = MAX_REF_FRAME_NUMBER+1;
             malloc_buffer_size =  ((vo->g_sps_ptr->pic_height_in_map_units_minus1+1) * (vo->g_sps_ptr->pic_width_in_mbs_minus1+1))  * 80;
 
             ALOGE("%s, %d", __FUNCTION__, __LINE__);
@@ -648,6 +648,8 @@ PUBLIC void H264Dec_ProcessSPS (H264DecObject *vo)
         vo->g_image_ptr->profile_idc = vo->g_sps_ptr->profile_idc;
 #else
     vo->g_image_ptr->profile_idc = vo->g_sps_ptr->profile_idc;
+    vo->g_image_ptr->low_delay = 1;
+    vo->g_image_ptr->has =  !vo->g_image_ptr->low_delay;		
 #endif
     return;
 }

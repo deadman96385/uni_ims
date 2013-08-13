@@ -26,18 +26,71 @@ extern   "C"
 PUBLIC void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
 {
     H264DecObject *vo = (H264DecObject *)avcHandle->videoDecoderData;
+    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr =  vo->g_dpb_layer[0];	
     int32 i;
 
-    H264Dec_flush_dpb(vo, vo->g_dpb_layer[0]);
-
-    SCI_TRACE_LOW("%s, %d, display_array_len: %d", __FUNCTION__, __LINE__, vo->display_array_len);
-    for(i =0; i<vo->display_array_len; i++)
     {
-        //OR_VSP_UNBIND(vo->display_array_BH[i]);
-        (*(avcHandle->VSP_unbindCb))(avcHandle->userdata,vo->display_array_BH[i]);
-    }
 
-    vo->display_array_len = 0;
+SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+		if (dpb_ptr->delayed_pic_ptr)
+		{
+			if (dpb_ptr->delayed_pic_ptr->pBufferHeader)
+			{
+			        (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,dpb_ptr->delayed_pic_ptr->pBufferHeader);
+				dpb_ptr->delayed_pic_ptr->pBufferHeader = NULL;
+			}
+			dpb_ptr->delayed_pic_ptr = NULL;
+		}
+
+		for (i = 0; dpb_ptr->delayed_pic[i]; i++)
+		{
+			int32 j;
+			
+			for (j = 0; j < /*dpb_ptr->used_size*/ MAX_REF_FRAME_NUMBER+1; j++)
+			{
+				if (dpb_ptr->delayed_pic[j] == dpb_ptr->fs[j]->frame)
+				{
+					if(dpb_ptr->fs[j]->is_reference == DELAYED_PIC_REF)
+					{
+						dpb_ptr->fs[j]->is_reference = 0;
+
+#ifdef _VSP_LINUX_
+						if(dpb_ptr->fs[j]->frame->pBufferHeader!=NULL)
+						{
+//							SCI_TRACE_LOW("unbind in H264Dec_ReleaseRefBuffers\t");
+							(*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,dpb_ptr->fs[j]->frame->pBufferHeader);
+							dpb_ptr->fs[j]->frame->pBufferHeader = NULL;
+						}
+#endif
+					}
+				}
+			}
+
+			dpb_ptr->delayed_pic[i] = NULL;
+                           dpb_ptr->delayed_pic_num --;
+		}
+  		 H264Dec_flush_dpb(vo, dpb_ptr);
+	}
+
+        if( 0 != dpb_ptr->delayed_pic_num )
+        {
+            SCI_TRACE_LOW("H264Dec_ReleaseRefBuffers delayed_pic_num is %d\n", dpb_ptr->delayed_pic_num);
+        }
+
+	for (i = 0; i <  MAX_REF_FRAME_NUMBER+1; i++)
+	{
+		if (dpb_ptr->fs &&dpb_ptr->fs[i] && dpb_ptr->fs[i]->frame && dpb_ptr->fs[i]->frame->pBufferHeader)
+		{
+			(*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,dpb_ptr->fs[i]->frame->pBufferHeader);
+			dpb_ptr->fs[i]->frame->pBufferHeader = NULL;
+		//	dpb_ptr->fs[i]->frame->need_unbind = 0;
+
+//			SCI_TRACE_LOW("H264Dec_ReleaseRefBuffers, unbind\n");			
+		}
+	}	
+	
+
+
 }
 
 PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, uint8 **pOutput, int32 *picId)

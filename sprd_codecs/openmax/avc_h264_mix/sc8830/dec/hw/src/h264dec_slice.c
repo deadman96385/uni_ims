@@ -371,6 +371,134 @@ void H264Dec_Cfg_ScalingMatix (H264DecObject *vo)
     }
 }
 
+LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_ptr, MMDecOutput * dec_out)
+{
+    DEC_VUI_T *vui_seq_parameters_ptr = vo->g_sps_ptr->vui_seq_parameters;
+    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr=  vo->g_dpb_layer[0];	
+    DEC_STORABLE_PICTURE_T *prev = dpb_ptr->delayed_pic_ptr;
+    DEC_STORABLE_PICTURE_T *cur = vo->g_dec_picture_ptr;
+    DEC_STORABLE_PICTURE_T *out = cur;
+    int i, pics, cross_idr, out_of_order, out_idx;
+
+    if(vui_seq_parameters_ptr->bitstream_restriction_flag && (img_ptr->has_b_frames < vui_seq_parameters_ptr->num_reorder_frames))
+    {
+        img_ptr->has_b_frames = vui_seq_parameters_ptr->num_reorder_frames;
+//		s->low_delay = 0;
+    }
+
+	//SCI_TRACE_LOW("dec poc: %d\t", cur->poc);
+
+    dpb_ptr->delayed_pic[dpb_ptr->delayed_pic_num++] = cur;
+
+    for (i = 0; i < dpb_ptr->used_size; i++)
+    {
+        if (cur == dpb_ptr->fs[i]->frame)
+        {
+            if(dpb_ptr->fs[i]->is_reference == 0)
+            {
+                dpb_ptr->fs[i]->is_reference = DELAYED_PIC_REF;
+
+                if(dpb_ptr->fs[i]->frame->pBufferHeader!=NULL)
+                {
+	            (*(vo->avcHandle->VSP_bindCb))(vo->avcHandle->userdata,dpb_ptr->fs[i]->frame->pBufferHeader);			
+                }
+            }
+        }
+    }
+        
+    cross_idr = 0;
+    for(i = 0; i < dpb_ptr->delayed_pic_num; i++)
+    {
+        if(dpb_ptr->delayed_pic[i]->idr_flag || (dpb_ptr->delayed_pic[i]->poc == 0))
+        {
+            cross_idr = 1;
+        }
+    }
+
+    //find the smallest POC frame in dpb buffer
+    out = dpb_ptr->delayed_pic[0];
+    out_idx = 0;
+    for(i = 1; (i < MAX_DELAYED_PIC_NUM) && dpb_ptr->delayed_pic[i] && !dpb_ptr->delayed_pic[i]->idr_flag; i++)
+    {
+        if(dpb_ptr->delayed_pic[i]->poc < out->poc)
+        {
+            out = dpb_ptr->delayed_pic[i];
+            out_idx = i;
+        }
+    }
+
+    pics = dpb_ptr->delayed_pic_num;
+    out_of_order = !cross_idr && prev && (out->poc < prev->poc);
+    if(vui_seq_parameters_ptr->bitstream_restriction_flag && img_ptr->has_b_frames >= vui_seq_parameters_ptr->num_reorder_frames)
+    {
+    }else if(prev && pics <= img_ptr->has_b_frames)
+    {
+        out = prev;
+    }else if((out_of_order && (pics-1) == img_ptr->has_b_frames && pics < 15/*why 15?, xwluo@20120316 */)  ||
+        ((vo->g_sps_ptr->profile_idc != 0x42/*!bp*/)&&(img_ptr->low_delay) && ((!cross_idr && prev && out->poc > (prev->poc + 2)) || cur->slice_type == B_SLICE)))
+    {
+        img_ptr->low_delay = 0;
+        img_ptr->has_b_frames++;
+        out = prev;
+    } else if(out_of_order)
+    {
+        out = prev;
+    }
+
+    if (out != cur)
+    {
+        dpb_ptr->delayed_pic_ptr = out;
+        dec_out->frameEffective = (prev == out) ? 0 : 1;
+        
+        //flush one frame from dpb and re-organize the delayed_pic buffer
+        if(/*out_of_order ||*/ pics > img_ptr->has_b_frames || dec_out->frameEffective)
+        {
+            for(i = out_idx; dpb_ptr->delayed_pic[i]; i++)
+            {
+                dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
+            }
+            dpb_ptr->delayed_pic_num--;
+        }
+            
+    }
+
+    dec_out->reqNewBuf = 1;				
+    if (dec_out->frameEffective)
+    {
+        dec_out->frame_width = vo->width;
+        dec_out->frame_height = vo->height;
+
+        dec_out->pOutFrameY = out->imgY;
+        dec_out->pOutFrameU = out->imgU;
+        dec_out->pOutFrameV = out->imgV;
+        dec_out->pBufferHeader = out->pBufferHeader;
+	dec_out->mPicId = out->mPicId;	
+
+        for (i = 0; i < /*dpb_ptr->used_size*/(MAX_REF_FRAME_NUMBER+1); i++)
+        {
+            if (out == dpb_ptr->fs[i]->frame)
+            {
+                if(dpb_ptr->fs[i]->is_reference == DELAYED_PIC_REF)
+                {
+                    dpb_ptr->fs[i]->is_reference = 0;
+
+                    if(dpb_ptr->fs[i]->frame->pBufferHeader!=NULL)
+                    {
+			(*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,dpb_ptr->fs[i]->frame->pBufferHeader);				
+                        dpb_ptr->fs[i]->frame->pBufferHeader = NULL;
+                    }
+                }
+            }
+        }
+    }   
+
+    SCI_TRACE_LOW("out poc: %d, effective: %d\t", out->poc, dec_out->frameEffective);
+
+    return;
+}
+
+
+
 //extern BiContextType context[308];
 PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *dec_output_ptr)
 {
@@ -530,6 +658,13 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_CLR_OFF, 0xfFF,"clear BSM_frame done int");
 
 #define USE_INTERRUPT
+#define NALU_LEN_VSP (0xFFFFF) // 20 bit. for 1M
+#define NALU_LEN_MAX (0x600000) // 786 KB.
+
+    if( vo->g_nalu_ptr->len >NALU_LEN_VSP && !active_pps_ptr->entropy_coding_mode_flag)
+    {
+	VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG1_OFF, NALU_LEN_VSP,"VSP_CFG1");
+    }
 
 #ifdef USE_INTERRUPT
     VSP_WRITE_REG(VSP_REG_BASE_ADDR+ARM_INT_MASK_OFF,V_BIT_2,"ARM_INT_MASK, only enable VSP ACC init");//enable int //
@@ -537,6 +672,12 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_MASK_OFF,V_BIT_2 | V_BIT_4 | V_BIT_5,"VSP_INT_MASK, enable mbw_slice_done, vld_err, time_out");//enable int //frame done/error/timeout
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 1,"RAM_ACC_SEL");//change ram access to vsp hw
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_START_OFF,0xa|vo->is_need_init_vsp_hufftab,"VSP_START");//start vsp   vld/vld_table//load_vld_table_en
+
+    if( vo->g_nalu_ptr->len >NALU_LEN_VSP && !active_pps_ptr->entropy_coding_mode_flag)
+    {
+	VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF,NALU_LEN_MAX ,NALU_LEN_MAX, TIME_OUT_CLK, "Poll NALU_LEN_MAX");
+	VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF,V_BIT_2, "clear bitcnt" );
+    }	
 
 #ifdef USE_INTERRUPT
     cmd = VSP_POLL_COMPLETE((VSPObject *)vo);
@@ -573,37 +714,15 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
 
     //if(end of picture)
     cmd = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_DBG_STS0_OFF, "check mb_x mb_y number");//weihu tmp
+    SCI_TRACE_LOW("%s, %d, tmp: %0x", __FUNCTION__, __LINE__, cmd);
     if((((cmd>>8)&0xff)==(uint)(img_ptr->frame_width_in_mbs-1))&&((cmd&0xff)==(uint)(img_ptr->frame_height_in_mbs-1)))//weihu tmp
     {
         ret =MMDEC_OK;
-
-        H264Dec_exit_picture (vo);
+        H264Dec_exit_picture (vo);		
+		SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+	H264Dec_output_one_frame(vo,img_ptr,dec_output_ptr);	
 
         vo->frame_dec_finish = TRUE;
-
-        if(vo->display_array_len>0)
-        {
-            vo->g_dispFrmNum++;
-            dec_output_ptr->frameEffective = TRUE;
-            dec_output_ptr->pOutFrameY = vo->display_array_Y[0];
-            dec_output_ptr->pOutFrameU = vo->display_array_UV[0];
-            dec_output_ptr->pBufferHeader = vo->display_array_BH[0];
-            dec_output_ptr->mPicId = vo->display_array_mPicId[0];
-            //OR_VSP_UNBIND(vo->display_array_BH[0]);
-            (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,vo->display_array_BH[0]);
-            vo->display_array_len--;
-            for(i =0; i<vo->display_array_len; i++)
-            {
-                vo->display_array_BH[i]=vo->display_array_BH[i+1];
-                vo->display_array_Y[i] = vo->display_array_Y[i+1];
-                vo->display_array_UV[i] = vo->display_array_UV[i+1];
-                vo->display_array_mPicId[i] = vo->display_array_mPicId[i+1];
-            }
-        }
-
-        dec_output_ptr->frame_width = vo->width;
-        dec_output_ptr->frame_height = vo->height;
-
         vo->g_dec_picture_ptr = NULL;//weihu for output
         vo->g_nFrame_dec_h264++;
 
@@ -679,8 +798,8 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
         ret = H264Dec_decode_one_slice_data (vo, dec_output_ptr);
     }
 
-    H264Dec_flush_left_byte (vo);
-
+    //H264Dec_flush_left_byte (vo);
+SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
     //need IVOP but not found IDR,then return seek ivop
     if(dec_input_ptr->expected_IVOP && vo->g_searching_IDR_pic)
     {
