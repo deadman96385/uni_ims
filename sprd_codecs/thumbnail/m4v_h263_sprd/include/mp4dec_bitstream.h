@@ -33,7 +33,6 @@ extern   "C"
 **                            Mcaro Definitions                               *
 **---------------------------------------------------------------------------*/
 uint32 Mp4Dec_ByteConsumed(DEC_VOP_MODE_T *vop_mode_ptr);
-void Mp4Dec_VerifyBitstrm(uint8 *pStream, int32 strmLen);
 uint32 Mp4Dec_Show32Bits(DEC_BS_T *bs_ptr);
 uint32 Mp4Dec_ShowBits(DEC_BS_T *bs_ptr, uint32 nbits);
 void Mp4Dec_FlushBits(DEC_BS_T *bs_ptr, uint32 nbits);
@@ -44,6 +43,8 @@ uint32 Mp4Dec_ByteAlign_Startcode(DEC_BS_T *bs_ptr);
 uint32 Mp4Dec_ShowBitsByteAlign_H263(DEC_BS_T *bs_ptr, int32 nbits);
 
 void Mp4Dec_InitBitstream(DEC_BS_T *bitstream_ptr, void *pOneFrameBitstream, int32 length);
+MMDecRet Mp4Dec_VerifyBitstrm(Mp4DecObject *vd,uint8 *pStream, int32 strmLen);
+
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

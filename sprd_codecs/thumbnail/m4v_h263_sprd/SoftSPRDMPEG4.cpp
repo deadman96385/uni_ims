@@ -659,6 +659,10 @@ bool SoftSPRDMPEG4::portSettingsChanged() {
     ALOGI("%s, %d, disp_width = %d, disp_height = %d, buf_width = %d, buf_height = %d", __FUNCTION__, __LINE__,
           disp_width, disp_height, buf_width, buf_height);
 
+    if(disp_width <= 0 || disp_height <= 0 || buf_width <= 0 || buf_height <= 0) {
+        return false;
+    }
+
     CHECK_LE(disp_width, buf_width);
     CHECK_LE(disp_height, buf_height);
 

@@ -367,6 +367,59 @@ PUBLIC uint32 Mp4Dec_ShowBitsByteAlign_H263(DEC_BS_T *bitstream_ptr, int32 nbits
 
     return (tmpVar & g_msk[nbits]);
 }
+
+PUBLIC MMDecRet Mp4Dec_VerifyBitstrm(Mp4DecObject *vd,uint8 *pStream, int32 strmLen)
+{
+	uint8 *pStreamEnd = pStream + (strmLen-4);
+    	uint8 *tempPos = pStream;
+	MMDecRet ret = MMDEC_OK;
+    	DEC_VOP_MODE_T *vop_mode_ptr = vd->vop_mode_ptr;
+
+
+    	if(MPEG4 != vop_mode_ptr->video_std)
+        {
+    	    	    uint32 first_32bits = (pStream[0]<<24) | (pStream[1]<<16) | (pStream[2]<<8) | (pStream[3]);
+    	            if((first_32bits>>11) == 0x10)
+    	            {
+    	        	if((first_32bits>>10) == 0x20)
+    	            	    vop_mode_ptr->video_std = ITU_H263;
+    	                else
+    	            	    vop_mode_ptr->video_std = FLV_V1;
+    	            }
+    	 }
+
+
+ 	if (vop_mode_ptr->video_std != FLV_V1) //for MPEG4 and ITU_H263 bitstrm
+	{
+		while (tempPos < pStreamEnd)
+		{
+			if (tempPos[0] == 0x00 && tempPos[1] == 0x00)
+			{
+				if (tempPos[2] == 0x01 && tempPos[3] == 0xB6) /* MPEG4 VOP start code */
+				{
+					vop_mode_ptr->video_std = MPEG4;
+					return ret;
+				}
+				else if ((tempPos[2] & 0xFC) == 0x80 && (tempPos[3] & 0x03)==0x02) /* H.263 PSC*/
+				{
+					SCI_TRACE_LOW("Mp4Dec_VerifyBitstrm: it is ITU-H.263 format:\n");
+					vop_mode_ptr->video_std = ITU_H263;
+					vop_mode_ptr->bDataPartitioning = FALSE; //MUST!, xweiluo@2012.03.01
+					vop_mode_ptr->bReversibleVlc = FALSE;
+					return ret;
+				}
+			}
+			tempPos++;
+		}
+
+		if (tempPos == pStreamEnd)
+		{
+			ret = MMDEC_STREAM_ERROR;
+		}
+	}	
+
+	return ret;
+}
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

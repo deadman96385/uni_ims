@@ -210,7 +210,18 @@ FLV_RE_DEC:
 
     Mp4Dec_InitBitstream(vop_mode_ptr->bitstrm_ptr, dec_input_ptr->pStream, dec_input_ptr->dataLen);
 
-    if(MPEG4 == vop_mode_ptr->video_std)
+    ret = Mp4Dec_VerifyBitstrm(vd,dec_input_ptr->pStream, dec_input_ptr->dataLen);	
+
+   if(ret != MMDEC_OK)
+    {
+        mp4Handle->g_mpeg4_dec_err_flag |= 1<<0;       
+        return ret;
+    }    	
+   
+    if(ITU_H263 == vop_mode_ptr->video_std)
+    {
+        ret = Mp4Dec_DecH263Header(vd);
+    }else if(MPEG4== vop_mode_ptr->video_std)
     {
         vop_mode_ptr->find_vop_header  = 0;
         ret = Mp4Dec_DecMp4Header(vop_mode_ptr, dec_input_ptr->dataLen);
@@ -219,28 +230,11 @@ FLV_RE_DEC:
             dec_output_ptr->VopPredType = NVOP;
             return MMDEC_OK;
         }
-    } else
+    }else
     {
-        if(ITU_H263 == vop_mode_ptr->video_std)
-        {
-            uint32 first_32bits = Mp4Dec_Show32Bits(vop_mode_ptr->bitstrm_ptr);
-            if((first_32bits>>11) == 0x10)
-            {
-                if((first_32bits>>10) == 0x20)
-                    vop_mode_ptr->video_std = ITU_H263;
-                else
-                    vop_mode_ptr->video_std = FLV_V1;
-            }
-        }
-
-        if(ITU_H263 == vop_mode_ptr->video_std)
-        {
-            ret = Mp4Dec_DecH263Header(vd);
-        } else
-        {
-            ret = Mp4Dec_FlvH263PicHeader(vd);
-        }
+        ret = Mp4Dec_FlvH263PicHeader(vd);
     }
+
 
     SCI_TRACE_LOW("%s, %d, ret: %d, pic_type: %d", __FUNCTION__, __LINE__, ret, vop_mode_ptr->VopPredType);
     if(ret != MMDEC_OK)
