@@ -4948,7 +4948,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
                 p_response = NULL;
                 /* AT^SYSCONFIG=<mode>,<acqorder>,<roam>,<srvdomain>
-                 * mode: 2:Auto 13:GSM ONLY 15:TDSCDMA ONLY
+                 * mode: 2:Auto 13:GSM ONLY 14:WCDMA_ONLY 15:TDSCDMA ONLY
                  * acqorder: 3 -- no change
                  * roam: 2 -- no change
                  * srvdomain: 4 -- no change
@@ -4965,8 +4965,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 case 1://NETWORK_MODE_GSM_ONLY
                     type = 13;
                     break;
-                case 2://NETWORK_MODE_WCDMA_ONLY
-                    type = 15;
+                case 2://NETWORK_MODE_WCDMA_ONLY or TDSCDMA ONLY
+                    if(!strcmp(s_modem, "t")) {
+                        type = 15;
+                    } else {
+                        type = 14;
+                    }
                     break;
                 }
                 if (0 == type) {
@@ -5045,8 +5049,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                         case 13:
                             type = 1;//NETWORK_MODE_GSM_ONLY
                             break;
+                        case 14:
                         case 15:
-                            type = 2;//NETWORK_MODE_WCDMA_ONLY
+                            type = 2;//NETWORK_MODE_WCDMA_ONLY or TDSCDMA ONLY
                             break;
                         }
                         RIL_onRequestComplete(t, RIL_E_SUCCESS, &type,
