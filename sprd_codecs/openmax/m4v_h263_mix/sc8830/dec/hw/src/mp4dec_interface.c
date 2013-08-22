@@ -283,6 +283,12 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     uint32 bs_buffer_length, bs_start_addr;
     DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
 
+    if (dec_input_ptr->dataLen == 0)
+    {
+        dec_output_ptr->frameEffective = FALSE;
+        return MMDEC_OK;
+    }
+
     vop_mode_ptr->error_flag = FALSE;
     mp4Handle->g_mpeg4_dec_err_flag = 0;
 
@@ -332,7 +338,8 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         if(!vop_mode_ptr->find_vop_header)
         {
             dec_output_ptr->VopPredType = NVOP;
-            return MMDEC_OK;
+            ret = MMDEC_OK;
+            goto DECODER_DONE;
         }
     }else
     {

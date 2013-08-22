@@ -94,7 +94,7 @@ extern "C"
 #define VSP_RESET       			_IO(SPRD_VSP_IOCTL_MAGIC, 8)
 #define VSP_START       			_IO(SPRD_VSP_IOCTL_MAGIC, 9)
 
-#define TIME_OUT_CLK			0x7fffff
+#define TIME_OUT_CLK			0xffff
 
 /* -----------------------------------------------------------------------
 ** Standard Types
@@ -677,7 +677,7 @@ int32 ARM_VSP_RST (VSPObject *vo);
 	tmp=(*((volatile uint32*)(reg_addr+((VSPObject *)vo)->s_vsp_Vaddr_base)))&msk_data;\
 	vsp_time_out_cnt++;  \
 }\
-    if (vsp_time_out_cnt > time) \
+    if (vsp_time_out_cnt >= time) \
     {\
         SCI_TRACE_LOW ("vsp_time_out_cnt %d!\n",vsp_time_out_cnt);  \
         return 1;   \

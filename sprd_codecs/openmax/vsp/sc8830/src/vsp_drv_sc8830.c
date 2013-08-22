@@ -94,17 +94,17 @@ PUBLIC int VSP_ACQUIRE_Dev(VSPObject *vo)
 
     if(vo->s_vsp_fd <  0)
     {
-        SCI_TRACE_LOW("VSP_ACQUIRE_Dev failed :fd <  0");
+        SCI_TRACE_LOW("%s: failed :fd <  0", __FUNCTION__);
     }
 
     ret =  ioctl(vo->s_vsp_fd,VSP_ACQUAIRE,NULL);
     if(ret)
     {
-        SCI_TRACE_LOW("avcdec VSP hardware timeout try again %d\n",ret);
+        SCI_TRACE_LOW("%s: VSP hardware timeout try again %d\n",__FUNCTION__, ret);
         ret =  ioctl(vo->s_vsp_fd,VSP_ACQUAIRE,NULL);
         if(ret)
         {
-            SCI_TRACE_LOW("avcdec VSP hardware timeout give up %d\n",ret);
+            SCI_TRACE_LOW("%s: VSP hardware timeout give up %d\n",__FUNCTION__, ret);
             return 1;
         }
     }
