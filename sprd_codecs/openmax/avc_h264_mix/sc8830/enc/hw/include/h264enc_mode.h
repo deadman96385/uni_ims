@@ -362,6 +362,14 @@ typedef struct  {
     int32 rem_bits;
     int32 prev_pic_bits;
     int32 total_qp;
+	int32 intra_period;
+    int32 I_P_ratio;
+	int32 gop_num_per_sec;
+	int32 rem_frame_num;
+	int32 last_I_frame_bits;
+	int32 last_I_QP;
+	int32 last_P_frame_bits;
+	int32 last_P_QP;
 } RC_GOP_PARAS;
 
 

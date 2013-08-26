@@ -37,7 +37,7 @@ extern   "C"
 #endif
 
 #define NO_BU_CHANGE	// slice level update, not BU update
-#define I_P_RATIO 4 // the bit allocation for I and P
+#define I_P_RATIO 3 // the bit allocation for I and P
 
 int32 rc_init_GOP (H264EncObject *vo,  RC_GOP_PARAS *rc_gop_paras);
 int32 rc_init_pict (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras, RC_PIC_PARAS *rc_pic_paras);

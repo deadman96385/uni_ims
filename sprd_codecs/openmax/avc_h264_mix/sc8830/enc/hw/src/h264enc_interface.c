@@ -110,6 +110,8 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecB
     // init RC parameters
     vo->rc_gop_paras.rem_bits = 0;
     vo->rc_gop_paras.curr_buf_full = 0;
+	vo->rc_gop_paras.intra_period = INTRA_PERIOD;
+	vo->rc_gop_paras.I_P_ratio = I_P_RATIO;
 
     /* rate control */
     img_ptr->pOneFrameBitstream = pBitstreamBfr->common_buffer_ptr;
@@ -159,6 +161,15 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
 
     enc_config->QP_IVOP		= pConf->QP_IVOP;
     enc_config->QP_PVOP		= pConf->QP_PVOP;
+
+	if ((1920 == vo->g_enc_image_ptr->width) && (1088 == vo->g_enc_image_ptr->height))
+	{
+		vo->rc_gop_paras.intra_period = INTRA_PERIOD;
+	}
+	else
+	{
+		vo->rc_gop_paras.intra_period = pConf->FrameRate;
+	}
 
     return MMENC_OK;
 }
@@ -226,7 +237,22 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
 
     img_ptr->stm_offset = 0;
     img_ptr->pYUVSrcFrame->i_frame = vo->g_nFrame_enc;
-    img_ptr->pYUVSrcFrame->i_type = i_slice_type =( pInput->vopType == 0)? SLICE_TYPE_I : SLICE_TYPE_P/* = (int32)h264enc_slicetype_decide(img_ptr)*/;
+	
+	if ((1920 == vo->g_enc_image_ptr->width) && (1088 == vo->g_enc_image_ptr->height))
+	{
+		if (0 == (vo->g_nFrame_enc % vo->rc_gop_paras.intra_period))
+		{
+			img_ptr->pYUVSrcFrame->i_type = i_slice_type = SLICE_TYPE_I;
+		}
+		else
+		{
+			img_ptr->pYUVSrcFrame->i_type = i_slice_type = SLICE_TYPE_P;
+		}	
+	}
+	else
+	{
+		img_ptr->pYUVSrcFrame->i_type = i_slice_type =( pInput->vopType == 0)? SLICE_TYPE_I : SLICE_TYPE_P/* = (int32)h264enc_slicetype_decide(img_ptr)*/;	
+	}
 
     img_ptr->pYUVSrcFrame->imgY =  pInput->p_src_y_phy;
     img_ptr->pYUVSrcFrame->imgUV =  pInput->p_src_u_phy;
@@ -285,11 +311,11 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     vo->prev_qp = i_global_qp;	// MUST HAVE prev_qp updated!!
 
     img_ptr->pYUVRecFrame->i_poc =
-        img_ptr->pYUVSrcFrame->i_poc = 2 * img_ptr->frame_num;
+	img_ptr->pYUVSrcFrame->i_poc = 2 * img_ptr->frame_num;
     img_ptr->pYUVRecFrame->i_type = img_ptr->pYUVSrcFrame->i_type;
     img_ptr->pYUVRecFrame->i_frame = img_ptr->pYUVSrcFrame->i_frame;
     img_ptr->pYUVSrcFrame->b_kept_as_ref =
-        img_ptr->pYUVRecFrame->b_kept_as_ref = (i_nal_ref_idc != NAL_PRIORITY_DISPOSABLE);
+	img_ptr->pYUVRecFrame->b_kept_as_ref = (i_nal_ref_idc != NAL_PRIORITY_DISPOSABLE);
 
     //init
     h264enc_reference_build_list (img_ptr, img_ptr->pYUVRecFrame->i_poc, i_slice_type);
