@@ -71,7 +71,7 @@ LOCAL int32 H264Dec_Divide (uint32 dividend, uint32 divisor) //quotient = divide
     return dividend; //remainder
 }
 
-PUBLIC void h264Dec_remove_frame_from_dpb (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, int32 pos)
+PUBLIC void h264Dec_remove_frame_from_dpb (H264DecObject *vo,DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, int32 pos)
 {
     int32 i;
     DEC_FRAME_STORE_T *tmp_fs_ptr;
@@ -91,21 +91,27 @@ PUBLIC void h264Dec_remove_frame_from_dpb (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr
     dpb_ptr->fs[dpb_ptr->used_size-1] = tmp_fs_ptr;
 
     dpb_ptr->used_size--;
+	
+     if(tmp_fs_ptr->frame->pBufferHeader!=NULL)
+     {
+            (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,tmp_fs_ptr->frame->pBufferHeader);
+	     tmp_fs_ptr->frame->pBufferHeader = NULL;
+     }
 
     return;
 }
 
-PUBLIC int32 H264Dec_remove_unused_frame_from_dpb (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
+PUBLIC int32 H264Dec_remove_unused_frame_from_dpb (H264DecObject *vo,DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
     int32 i;
     int32 has_free_bfr = FALSE;
 
     for (i = 0; i < dpb_ptr->used_size; i++)
     {
-    SCI_TRACE_LOW("%s, %d, is_reference %d  disp_status %d", __FUNCTION__, __LINE__,dpb_ptr->fs[i]->is_reference ,  dpb_ptr->fs[i]->disp_status);
-        if ((!dpb_ptr->fs[i]->is_reference) && (dpb_ptr->fs[i]->disp_status))
+    SCI_TRACE_LOW_DPB("%s, %d, is_reference %d  pBufferHeader %x", __FUNCTION__, __LINE__,dpb_ptr->fs[i]->is_reference ,  dpb_ptr->fs[i]->frame->pBufferHeader);
+	 if ((!dpb_ptr->fs[i]->is_reference))		
         {
-            h264Dec_remove_frame_from_dpb(dpb_ptr, i);
+            h264Dec_remove_frame_from_dpb(vo, dpb_ptr, i);
             has_free_bfr = TRUE;
             break;
         }
@@ -114,20 +120,67 @@ PUBLIC int32 H264Dec_remove_unused_frame_from_dpb (DEC_DECODED_PICTURE_BUFFER_T 
     return has_free_bfr;
 }
 
-LOCAL DEC_FRAME_STORE_T *H264Dec_get_one_free_pic_buffer (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
+
+PUBLIC int32 H264Dec_remove_delayed_frame_from_dpb (H264DecObject *vo,DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
-SCI_TRACE_LOW("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
-    while(dpb_ptr->used_size == (MAX_REF_FRAME_NUMBER+1))
+	int32 i,j;
+	int32 out_idx;
+	int32 has_free_bfr = FALSE;
+	DEC_FRAME_STORE_T *fs = NULL;
+
+    for (i = 0; i < dpb_ptr->used_size; i++)
     {
-        if (!H264Dec_remove_unused_frame_from_dpb(dpb_ptr))
+
+	 SCI_TRACE_LOW_DPB("%s, %d, is_reference %d  pBufferHeader %x", __FUNCTION__, __LINE__,dpb_ptr->fs[i]->is_reference ,  dpb_ptr->fs[i]->frame->pBufferHeader);
+	 if ((DELAYED_PIC_REF == dpb_ptr->fs[i]->is_reference))		
         {
-            //wait for display free buffer
-            vo->error_flag = TRUE;
-            return NULL;
+           
+	     fs = dpb_ptr->fs[i];		
+
+	     for (j = 0; j < dpb_ptr->delayed_pic_num; j++)
+	     {
+		    if (fs->frame == dpb_ptr->delayed_pic[j])
+		    {
+			out_idx = j;
+			break;
+		    }
+	     }
+
+	     for(j = out_idx; dpb_ptr->delayed_pic[j]; j++)
+	     {
+			dpb_ptr->delayed_pic[j] = dpb_ptr->delayed_pic[j+1];
+	     }
+	     dpb_ptr->delayed_pic_num--;   		
+
+	      h264Dec_remove_frame_from_dpb(vo, dpb_ptr, i);	 
+
+	     has_free_bfr = TRUE;	 
+            break;
         }
     }
 
-    return dpb_ptr->fs[MAX_REF_FRAME_NUMBER];
+	return has_free_bfr;		
+}
+
+
+
+LOCAL DEC_FRAME_STORE_T *H264Dec_get_one_free_pic_buffer (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
+{
+SCI_TRACE_LOW_DPB("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
+    if(dpb_ptr->used_size == (MAX_REF_FRAME_NUMBER+1))
+    {
+        if (!H264Dec_remove_unused_frame_from_dpb(vo, dpb_ptr))
+        {
+        	 if(!H264Dec_remove_delayed_frame_from_dpb(vo, dpb_ptr))
+        	 {
+		   vo->error_flag = TRUE;	
+		    return NULL;
+        	 }
+        }		  
+    }
+	
+
+	return dpb_ptr->fs[MAX_REF_FRAME_NUMBER];      
 }
 
 /*!
@@ -438,13 +491,17 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
 	}
 
     fs = H264Dec_get_one_free_pic_buffer(vo, dpb_ptr);
-    fs->disp_status = 0;
+
 
     if (vo->error_flag)
     {
         return;
     }
-	
+
+    if (!fs || fs->frame == PNULL)
+     {
+	return;
+     }
 #if 1   //current decoded picture has been in delayed_pic[]
 	if(fs->is_reference == DELAYED_PIC_REF)
         {

@@ -386,7 +386,7 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
 //		s->low_delay = 0;
     }
 
-	//SCI_TRACE_LOW("dec poc: %d\t", cur->poc);
+	SCI_TRACE_LOW_DPB("dec poc: %d,  img_ptr->has_b_frames: %d\t", cur->poc,  img_ptr->has_b_frames);
 
     dpb_ptr->delayed_pic[dpb_ptr->delayed_pic_num++] = cur;
 
@@ -492,7 +492,27 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
         }
     }   
 
-    SCI_TRACE_LOW("out poc: %d, effective: %d\t", out->poc, dec_out->frameEffective);
+    SCI_TRACE_LOW_DPB("out poc: %d, effective: %d\t", out->poc, dec_out->frameEffective);
+
+{
+    int32 list_size0 = vo->g_list_size[0];
+    int32 list_size1 = vo->g_list_size[1];
+    SCI_TRACE_LOW_DPB("list_size: (%d, %d), total: %d", list_size0, list_size1, list_size0 + list_size1);
+
+    for (i = 0; i < /*dpb_ptr->used_size*/(MAX_REF_FRAME_NUMBER+1); i++)
+    {
+        if(dpb_ptr->fs[i]->is_reference)
+        {
+            SCI_TRACE_LOW_DPB("dpb poc: %d,   %0x,is ref %d,", dpb_ptr->fs[i]->poc, dpb_ptr->fs[i]->frame->pBufferHeader,dpb_ptr->fs[i]->is_reference );
+        }
+    }
+
+    for (i = 0; i <  dpb_ptr->delayed_pic_num; i++)
+    {
+        SCI_TRACE_LOW_DPB("delay poc: %d, %0x", dpb_ptr->delayed_pic[i]->poc, dpb_ptr->delayed_pic[i]->pBufferHeader);
+    }
+
+}
 
     return;
 }
@@ -675,7 +695,7 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
 
     if( vo->g_nalu_ptr->len >NALU_LEN_VSP && !active_pps_ptr->entropy_coding_mode_flag)
     {
-	VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF,NALU_LEN_MAX ,NALU_LEN_MAX, TIME_OUT_CLK, "Poll NALU_LEN_MAX");
+	VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF,NALU_LEN_MAX ,NALU_LEN_MAX, TIME_OUT_CLK_FRAME, "Poll NALU_LEN_MAX");
 	VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF,V_BIT_2, "clear bitcnt" );
     }	
 

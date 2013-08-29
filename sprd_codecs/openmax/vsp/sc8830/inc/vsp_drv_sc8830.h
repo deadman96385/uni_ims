@@ -95,6 +95,7 @@ extern "C"
 #define VSP_START       			_IO(SPRD_VSP_IOCTL_MAGIC, 9)
 
 #define TIME_OUT_CLK			0xffff
+#define TIME_OUT_CLK_FRAME		0x7fffff
 
 /* -----------------------------------------------------------------------
 ** Standard Types

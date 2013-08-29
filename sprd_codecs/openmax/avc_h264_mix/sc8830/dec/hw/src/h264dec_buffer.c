@@ -127,10 +127,10 @@ LOCAL void H264Dec_unmark_for_reference (H264DecObject *vo, DEC_FRAME_STORE_T *f
 {
     DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr =  vo->g_dpb_layer[0];	
     fs_ptr->is_reference = 0;
-    if (fs_ptr->frame == dpb_ptr->delayed_pic_ptr)
-	{
+//    if (fs_ptr->frame == dpb_ptr->delayed_pic_ptr)
+//	{
 //		fs_ptr->is_reference = DELAYED_PIC_REF;
-	}else
+//	}else
 	{
 		int32 i;
 		for (i = 0; dpb_ptr->delayed_pic[i]; i++)
@@ -173,7 +173,7 @@ LOCAL void H264Dec_get_smallest_poc (H264DecObject *vo, int32 *poc, int32 * pos,
     *poc = SINT_MAX;
     for (i=0; i<dpb_ptr->used_size; i++)
     {
-        if ((*poc > dpb_ptr->fs[i]->poc)&&(!dpb_ptr->fs[i]->disp_status))
+	 if (*poc > dpb_ptr->fs[i]->poc)		
         {
             *poc = dpb_ptr->fs[i]->poc;
             *pos=i;
@@ -203,11 +203,11 @@ LOCAL void H264Dec_output_one_frame_from_dpb (H264DecObject *vo, DEC_DECODED_PIC
     vo->display_array_mPicId[vo->display_array_len++] = frame->mPicId;
 #endif
 //	PRINTF ("output frame with frame_num #%d, poc %d (dpb_ptr.size=%d, dpb.used_size=%d), total frame num %d\n", dpb_ptr->fs[pos]->frame_num, dpb_ptr->fs[pos]->frame->poc, dpb_ptr->size, dpb_ptr->used_size, g_nFrame_dec_h264);
-    fs[pos]->disp_status = 1;
+//    fs[pos]->disp_status = 1;
 
     if (!fs[pos]->is_reference)
     {
-        h264Dec_remove_frame_from_dpb(dpb_ptr, pos);
+        h264Dec_remove_frame_from_dpb(vo,dpb_ptr, pos);
     }
 }
 
@@ -222,7 +222,7 @@ PUBLIC void H264Dec_flush_dpb (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *
     {
         H264Dec_unmark_for_reference (vo, dpb_ptr->fs[i]);
 
-        if (!dpb_ptr->fs[i]->disp_status && (dpb_ptr->fs[i]->is_reference != DELAYED_PIC_REF))
+	if ((dpb_ptr->fs[i]->is_reference != DELAYED_PIC_REF))		
         {
             tmp_fs_ptr = dpb_ptr->fs[i];
             dpb_ptr->fs[i] = dpb_ptr->fs[disp_num];
@@ -693,6 +693,7 @@ PUBLIC void H264Dec_store_picture_in_dpb (H264DecObject *vo, DEC_STORABLE_PICTUR
 {
     DEC_IMAGE_PARAMS_T *img_ptr = vo->g_image_ptr;
     int8 put_to_dpb = 1;
+	int try_cnt = 0;
 
     img_ptr->last_has_mmco_5 = 0;
 
@@ -711,24 +712,18 @@ PUBLIC void H264Dec_store_picture_in_dpb (H264DecObject *vo, DEC_STORABLE_PICTUR
     {
         H264Dec_sliding_window_memory_management (vo, dpb_ptr, picture_ptr);
     }
-SCI_TRACE_LOW("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
-//jin.zhou
-    // first try to remove unused frames
-     if (dpb_ptr->used_size == dpb_ptr->size)
+SCI_TRACE_LOW_DPB("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
+
+    
+     if (dpb_ptr->used_size >= dpb_ptr->size)
     {
-        H264Dec_remove_unused_frame_from_dpb(dpb_ptr);
+    	// first try to remove unused frames
+        if(!H264Dec_remove_unused_frame_from_dpb(vo, dpb_ptr))
+			H264Dec_remove_delayed_frame_from_dpb(vo, dpb_ptr);
     }
-SCI_TRACE_LOW("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
-    while (dpb_ptr->used_size == dpb_ptr->size)
-    {
-        // flush a frame
-        H264Dec_output_one_frame_from_dpb(vo, dpb_ptr);
-        if (vo->error_flag)//for error
-        {
-            //	break;
-        }
-    }
-SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+SCI_TRACE_LOW_DPB("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
+
+
     H264Dec_insert_picture_in_dpb (vo, dpb_ptr, dpb_ptr->fs[MAX_REF_FRAME_NUMBER], picture_ptr, put_to_dpb);
 
 

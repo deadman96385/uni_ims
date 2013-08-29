@@ -29,8 +29,9 @@ extern   "C"
 PUBLIC int32 H264Dec_is_new_picture (H264DecObject *vo);
 PUBLIC void H264Dec_init_picture (H264DecObject *vo);
 PUBLIC void H264Dec_exit_picture (H264DecObject *vo);
-PUBLIC int32 H264Dec_remove_unused_frame_from_dpb(DEC_DECODED_PICTURE_BUFFER_T * dpb_ptr);
-PUBLIC void h264Dec_remove_frame_from_dpb (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, int32 pos);
+PUBLIC int32 H264Dec_remove_unused_frame_from_dpb(H264DecObject *vo,DEC_DECODED_PICTURE_BUFFER_T * dpb_ptr);
+PUBLIC int32 H264Dec_remove_delayed_frame_from_dpb (H264DecObject *vo,DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr);
+PUBLIC void h264Dec_remove_frame_from_dpb (H264DecObject *vo,DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, int32 pos);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
