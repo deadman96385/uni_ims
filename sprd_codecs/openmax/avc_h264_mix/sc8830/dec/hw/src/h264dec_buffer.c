@@ -95,7 +95,7 @@ PUBLIC void	H264Dec_init_dpb (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *d
         dpb_ptr->fs_ilref[0]->inter_view_flag[0] = dpb_ptr->fs_ilref[0]->inter_view_flag[1] = 0;
         dpb_ptr->fs_ilref[0]->anchor_pic_flag[0] = dpb_ptr->fs_ilref[0]->anchor_pic_flag[1] = 0;
         // given that this is in a different buffer, do we even need proc_flag anymore?
-    }else
+    } else
     {
         dpb_ptr->fs_ilref[0] = NULL;
     }
@@ -113,45 +113,45 @@ PUBLIC void	H264Dec_init_dpb (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *d
 #endif
     dpb_ptr->size = MAX_REF_FRAME_NUMBER;
 
-	for(i = 0; i < MAX_DELAYED_PIC_NUM; i++)
-	{
-		dpb_ptr->delayed_pic[i] = NULL;
-	}
-	dpb_ptr->delayed_pic_ptr= NULL;
-	dpb_ptr->delayed_pic_num = 0;
+    for(i = 0; i < MAX_DELAYED_PIC_NUM; i++)
+    {
+        dpb_ptr->delayed_pic[i] = NULL;
+    }
+    dpb_ptr->delayed_pic_ptr= NULL;
+    dpb_ptr->delayed_pic_num = 0;
 
     return;
 }
 
 LOCAL void H264Dec_unmark_for_reference (H264DecObject *vo, DEC_FRAME_STORE_T *fs_ptr)
 {
-    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr =  vo->g_dpb_layer[0];	
+    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr =  vo->g_dpb_layer[0];
     fs_ptr->is_reference = 0;
 //    if (fs_ptr->frame == dpb_ptr->delayed_pic_ptr)
 //	{
 //		fs_ptr->is_reference = DELAYED_PIC_REF;
 //	}else
-	{
-		int32 i;
-		for (i = 0; dpb_ptr->delayed_pic[i]; i++)
-		{
-			if (fs_ptr->frame == dpb_ptr->delayed_pic[i])
-			{
-				fs_ptr->is_reference = DELAYED_PIC_REF;
-			}
-		}
-	}
+    {
+        int32 i;
+        for (i = 0; dpb_ptr->delayed_pic[i]; i++)
+        {
+            if (fs_ptr->frame == dpb_ptr->delayed_pic[i])
+            {
+                fs_ptr->is_reference = DELAYED_PIC_REF;
+            }
+        }
+    }
 #ifdef _VSP_LINUX_
-	if(fs_ptr->frame->pBufferHeader!=NULL)
-	{	
-		if(!fs_ptr->is_reference)
-		{
-			(*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,fs_ptr->frame->pBufferHeader);
-			fs_ptr->frame->pBufferHeader = NULL;
-		}
-	}
+    if(fs_ptr->frame->pBufferHeader!=NULL)
+    {
+        if(!fs_ptr->is_reference)
+        {
+            (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,fs_ptr->frame->pBufferHeader);
+            fs_ptr->frame->pBufferHeader = NULL;
+        }
+    }
 #endif
-	
+
     fs_ptr->is_long_term = 0;
     fs_ptr->is_short_term = 0;
 
@@ -173,7 +173,7 @@ LOCAL void H264Dec_get_smallest_poc (H264DecObject *vo, int32 *poc, int32 * pos,
     *poc = SINT_MAX;
     for (i=0; i<dpb_ptr->used_size; i++)
     {
-	 if (*poc > dpb_ptr->fs[i]->poc)		
+        if (*poc > dpb_ptr->fs[i]->poc)
         {
             *poc = dpb_ptr->fs[i]->poc;
             *pos=i;
@@ -196,7 +196,7 @@ LOCAL void H264Dec_output_one_frame_from_dpb (H264DecObject *vo, DEC_DECODED_PIC
     }
 
     frame = fs[pos]->frame;
-#if 0	
+#if 0
     vo->display_array_BH[vo->display_array_len]=frame->pBufferHeader;
     vo->display_array_Y[vo->display_array_len] = frame->imgY;
     vo->display_array_UV[vo->display_array_len] = frame->imgU;
@@ -222,7 +222,7 @@ PUBLIC void H264Dec_flush_dpb (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *
     {
         H264Dec_unmark_for_reference (vo, dpb_ptr->fs[i]);
 
-	if ((dpb_ptr->fs[i]->is_reference != DELAYED_PIC_REF))		
+        if ((dpb_ptr->fs[i]->is_reference != DELAYED_PIC_REF))
         {
             tmp_fs_ptr = dpb_ptr->fs[i];
             dpb_ptr->fs[i] = dpb_ptr->fs[disp_num];
@@ -535,10 +535,10 @@ LOCAL void H264Dec_adaptive_memory_management (H264DecObject *vo, DEC_DECODED_PI
             }
             break;
         default:
-            {
-                PRINTF ("invalid memory_management_control_operation in buffer");
-                vo->error_flag=TRUE;
-            }
+        {
+            PRINTF ("invalid memory_management_control_operation in buffer");
+            vo->error_flag=TRUE;
+        }
         }
         i++;
     }
@@ -597,12 +597,12 @@ LOCAL void H264Dec_insert_picture_in_dpb (H264DecObject *vo, DEC_DECODED_PICTURE
     if (picture_ptr->used_for_reference)
     {
         curr_fs_ptr->is_reference = 1;
-		
-	    if(curr_fs_ptr->frame->pBufferHeader!=NULL)
-	    {
-	        (*(vo->avcHandle->VSP_bindCb))(vo->avcHandle->userdata,curr_fs_ptr->frame->pBufferHeader);
-	    }
-	
+
+        if(curr_fs_ptr->frame->pBufferHeader!=NULL)
+        {
+            (*(vo->avcHandle->VSP_bindCb))(vo->avcHandle->userdata,curr_fs_ptr->frame->pBufferHeader);
+        }
+
         if (picture_ptr->is_long_term)
         {
             curr_fs_ptr->is_long_term = 1;
@@ -693,7 +693,7 @@ PUBLIC void H264Dec_store_picture_in_dpb (H264DecObject *vo, DEC_STORABLE_PICTUR
 {
     DEC_IMAGE_PARAMS_T *img_ptr = vo->g_image_ptr;
     int8 put_to_dpb = 1;
-	int try_cnt = 0;
+    int try_cnt = 0;
 
     img_ptr->last_has_mmco_5 = 0;
 
@@ -712,16 +712,16 @@ PUBLIC void H264Dec_store_picture_in_dpb (H264DecObject *vo, DEC_STORABLE_PICTUR
     {
         H264Dec_sliding_window_memory_management (vo, dpb_ptr, picture_ptr);
     }
-SCI_TRACE_LOW_DPB("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
+    SCI_TRACE_LOW_DPB("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
 
-    
-     if (dpb_ptr->used_size >= dpb_ptr->size)
+
+    if (dpb_ptr->used_size >= dpb_ptr->size)
     {
-    	// first try to remove unused frames
+        // first try to remove unused frames
         if(!H264Dec_remove_unused_frame_from_dpb(vo, dpb_ptr))
-			H264Dec_remove_delayed_frame_from_dpb(vo, dpb_ptr);
+            H264Dec_remove_delayed_frame_from_dpb(vo, dpb_ptr);
     }
-SCI_TRACE_LOW_DPB("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
+    SCI_TRACE_LOW_DPB("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
 
 
     H264Dec_insert_picture_in_dpb (vo, dpb_ptr, dpb_ptr->fs[MAX_REF_FRAME_NUMBER], picture_ptr, put_to_dpb);
@@ -812,7 +812,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_long_term_pic (H264DecObject *vo, int3
             vo->error_flag = TRUE;
             return NULL;
         }
-        
+
         if (p_Dpb->fs_ltref[i]->is_reference)
         {
             if (p_Dpb->fs_ltref[i]->frame == NULL)
@@ -830,11 +830,11 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_long_term_pic (H264DecObject *vo, int3
     return vo->g_no_reference_picture_ptr;//NULL;//weihu
 }
 
-LOCAL void H264Dec_reorder_long_term (H264DecObject *vo, 
-                                        DEC_STORABLE_PICTURE_T **ref_picture_listX_ptr, 
-                                        int32 num_ref_idx_lX_active_minus1,
-                                        int32 long_term_pic_num, 
-                                        int32 *ref_idx_lx)
+LOCAL void H264Dec_reorder_long_term (H264DecObject *vo,
+                                      DEC_STORABLE_PICTURE_T **ref_picture_listX_ptr,
+                                      int32 num_ref_idx_lX_active_minus1,
+                                      int32 long_term_pic_num,
+                                      int32 *ref_idx_lx)
 {
     int32 c_idx, n_idx;
     DEC_STORABLE_PICTURE_T *pic_lx_ptr;
@@ -894,13 +894,13 @@ LOCAL DEC_STORABLE_PICTURE_T *get_inter_view_pic(H264DecObject *vo, int targetVi
     return NULL;
 }
 
-LOCAL void reorder_interview(H264DecObject *vo, 
-                                DEC_STORABLE_PICTURE_T **RefPicListX, 
-                                int32 num_ref_idx_lX_active_minus1,
-                                int32 *refIdxLX, 
-                                int8 targetViewID, 
-                                int32 currPOC, 
-                                int listidx)
+LOCAL void reorder_interview(H264DecObject *vo,
+                             DEC_STORABLE_PICTURE_T **RefPicListX,
+                             int32 num_ref_idx_lX_active_minus1,
+                             int32 *refIdxLX,
+                             int8 targetViewID,
+                             int32 currPOC,
+                             int listidx)
 {
     int cIdx, nIdx;
     DEC_STORABLE_PICTURE_T *picLX;
@@ -925,17 +925,17 @@ LOCAL void reorder_interview(H264DecObject *vo,
 }
 
 LOCAL void H264Dec_reorder_ref_pic_list_mvc (H264DecObject *vo,
-                            DEC_STORABLE_PICTURE_T **picture_list_ptr,
-                            int32 num_ref_idx_lX_active_minus1,
-                            int32 *remapping_of_pic_nums_idc,
-                            int32 *abs_diff_pic_num_minus1,
-                            int32 *long_term_pic_idx,
-                            int8 listNO,
-                            int32 **anchor_ref,
-                            int32 **non_anchor_ref,
-                            int8 view_id,
-                            int8 anchor_pic_flag,
-                            int32 currPOC)
+        DEC_STORABLE_PICTURE_T **picture_list_ptr,
+        int32 num_ref_idx_lX_active_minus1,
+        int32 *remapping_of_pic_nums_idc,
+        int32 *abs_diff_pic_num_minus1,
+        int32 *long_term_pic_idx,
+        int8 listNO,
+        int32 **anchor_ref,
+        int32 **non_anchor_ref,
+        int8 view_id,
+        int8 anchor_pic_flag,
+        int32 currPOC)
 {
     int32 i;
     int32 max_pic_num, curr_pic_num, pic_num_lx_no_wrap, pic_num_lx_pred, pic_num_lx;
@@ -1002,7 +1002,7 @@ LOCAL void H264Dec_reorder_ref_pic_list_mvc (H264DecObject *vo,
             }
 
             H264Dec_reorder_short_term (vo, picture_list_ptr, num_ref_idx_lX_active_minus1, pic_num_lx, &ref_idx_lx);
-        }else if (remapping_of_pic_nums_idc[i] == 2) //(modification_of_pic_nums_idc[i] == 2)
+        } else if (remapping_of_pic_nums_idc[i] == 2) //(modification_of_pic_nums_idc[i] == 2)
         {
             H264Dec_reorder_long_term(vo, picture_list_ptr, num_ref_idx_lX_active_minus1, long_term_pic_idx[i], &ref_idx_lx);
         } else
@@ -1037,11 +1037,11 @@ LOCAL void H264Dec_reorder_ref_pic_list_mvc (H264DecObject *vo,
 #endif
 
 LOCAL void H264Dec_reorder_ref_pic_list (H264DecObject *vo,
-                        DEC_STORABLE_PICTURE_T **picture_list_ptr,
-                        int32 num_ref_idx_lX_active_minus1,
-                        int32 *remapping_of_pic_nums_idc,
-                        int32 *abs_diff_pic_num_minus1,
-                        int32 *long_term_pic_idx)
+        DEC_STORABLE_PICTURE_T **picture_list_ptr,
+        int32 num_ref_idx_lX_active_minus1,
+        int32 *remapping_of_pic_nums_idc,
+        int32 *abs_diff_pic_num_minus1,
+        int32 *long_term_pic_idx)
 {
     int32 i;
     int32 max_pic_num, curr_pic_num, pic_num_lx_no_wrap, pic_num_lx_pred, pic_num_lx;
@@ -1478,8 +1478,8 @@ static int is_view_id_in_ref_view_list(int view_id, int *ref_view_id, int num_re
 
     return (num_ref_views && (i<num_ref_views));
 }
-void append_interview_list(H264DecObject *vo, 
-                            DEC_DECODED_PICTURE_BUFFER_T *p_Dpb,
+void append_interview_list(H264DecObject *vo,
+                           DEC_DECODED_PICTURE_BUFFER_T *p_Dpb,
                            int8 list_idx,
                            DEC_STORABLE_PICTURE_T **list,
                            int32 *listXsize,
@@ -1504,7 +1504,7 @@ void append_interview_list(H264DecObject *vo,
     {
         num_ref_views = list_idx ? active_subset_sps->num_anchor_refs_l1[iVOIdx] : active_subset_sps->num_anchor_refs_l0[iVOIdx];
         ref_view_id   = list_idx ? active_subset_sps->anchor_ref_l1[iVOIdx] : active_subset_sps->anchor_ref_l0[iVOIdx];
-    }else
+    } else
     {
         num_ref_views = list_idx ? active_subset_sps->num_non_anchor_refs_l1[iVOIdx] : active_subset_sps->num_non_anchor_refs_l0[iVOIdx];
         ref_view_id = list_idx ? active_subset_sps->non_anchor_ref_l1[iVOIdx] : active_subset_sps->non_anchor_ref_l0[iVOIdx];
@@ -1577,7 +1577,7 @@ PUBLIC void H264Dec_init_list (H264DecObject *vo, int32 curr_slice_type)
     DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = curr_slice_ptr->p_Dpb;
     DEC_STORABLE_PICTURE_T **list = vo->g_list0;
     int32 max_frame_num = (1<<(vo->g_active_sps_ptr->log2_max_frame_num_minus4+4));
-    
+
 #if _MVC_
     curr_slice_ptr->listinterviewidx0 = 0;
     curr_slice_ptr->listinterviewidx1 = 0;
@@ -1777,10 +1777,10 @@ PUBLIC void H264Dec_init_list (H264DecObject *vo, int32 curr_slice_type)
                                   curr_view_id,
                                   curr_slice_ptr->anchor_pic_flag);
 
-            append_interview_list(vo, vo->g_dpb_layer[1], 0, (DEC_STORABLE_PICTURE_T **)(curr_slice_ptr->fs_listinterview0), 
-                                &(curr_slice_ptr->listinterviewidx0), img_ptr->framepoc, curr_view_id, curr_slice_ptr->anchor_pic_flag);
-            append_interview_list(vo, vo->g_dpb_layer[1], 1, (DEC_STORABLE_PICTURE_T **)(curr_slice_ptr->fs_listinterview1), 
-                                &(curr_slice_ptr->listinterviewidx1), img_ptr->framepoc, curr_view_id, curr_slice_ptr->anchor_pic_flag);
+            append_interview_list(vo, vo->g_dpb_layer[1], 0, (DEC_STORABLE_PICTURE_T **)(curr_slice_ptr->fs_listinterview0),
+                                  &(curr_slice_ptr->listinterviewidx0), img_ptr->framepoc, curr_view_id, curr_slice_ptr->anchor_pic_flag);
+            append_interview_list(vo, vo->g_dpb_layer[1], 1, (DEC_STORABLE_PICTURE_T **)(curr_slice_ptr->fs_listinterview1),
+                                  &(curr_slice_ptr->listinterviewidx1), img_ptr->framepoc, curr_view_id, curr_slice_ptr->anchor_pic_flag);
             for (i=0; i<(unsigned int)(curr_slice_ptr->listinterviewidx0); i++)
             {
                 vo->g_list0[list0idx++] = curr_slice_ptr->fs_listinterview0[i]->frame;

@@ -521,6 +521,9 @@ LOCAL void H264Dec_interpret_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
     if (sps_ptr->vui_parameters_present_flag)
     {
         H264Dec_ReadVUI (vo, sps_ptr->vui_seq_parameters);
+    }else
+    {
+        sps_ptr->vui_seq_parameters->num_reorder_frames = 0;
     }
 
     if(vo->error_flag)
@@ -651,7 +654,7 @@ PUBLIC void H264Dec_ProcessSPS (H264DecObject *vo)
 #endif
 
     vo->g_image_ptr->low_delay = 1;
-    vo->g_image_ptr->has_b_frames =  !vo->g_image_ptr->low_delay;		
+    vo->g_image_ptr->has_b_frames =  !vo->g_image_ptr->low_delay;
     return;
 }
 

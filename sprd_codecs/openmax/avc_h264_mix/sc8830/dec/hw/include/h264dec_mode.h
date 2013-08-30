@@ -476,7 +476,7 @@ typedef struct decoded_picture_buffer
 
     DEC_STORABLE_PICTURE_T	*delayed_pic[MAX_DELAYED_PIC_NUM];
     DEC_STORABLE_PICTURE_T *delayed_pic_ptr;
-    int32				delayed_pic_num; 
+    int32				delayed_pic_num;
 } DEC_DECODED_PICTURE_BUFFER_T;
 
 typedef struct
@@ -628,7 +628,7 @@ typedef struct img_parameter_tag
     // /////////////////////////
     int32	pre_frame_num;	//!< store the frame_num in the last decoded slice, for detecting gap in frame_num
     uint32 has_b_frames;
-    int32 low_delay;    
+    int32 low_delay;
 
     int32	is_new_pic;
     uint32   DPB_addr_index;//weihu//当前图像在帧缓存中的地址索引

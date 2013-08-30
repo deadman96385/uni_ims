@@ -55,6 +55,8 @@ typedef struct
     uint32 parHeight;
     uint32 croppingFlag;
     CropParams cropParams;
+    uint32 numRefFrames;
+    uint32 has_b_frames;
 } H264SwDecInfo;
 
 /* Application controls, this structed shall be allocated */

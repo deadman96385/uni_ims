@@ -127,12 +127,12 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
                     //assert(g_curr_slice_ptr->view_id == g_curr_slice_ptr->NaluHeaderMVCExt.view_id); //for OR debug
                     curr_slice_ptr->inter_view_flag = curr_slice_ptr->NaluHeaderMVCExt.inter_view_flag;
                     curr_slice_ptr->anchor_pic_flag = curr_slice_ptr->NaluHeaderMVCExt.anchor_pic_flag;
-                }else
+                } else
                 {
                     //g_curr_slice_ptr->inter_view_flag = 1;
                     //g_curr_slice_ptr->anchor_pic_flag = g_image_ptr->idr_flag;
                 }
-            }else
+            } else
             {
                 //assert(g_active_subset_sps->num_views_minus1 >=0);////for OR debug
                 // prefix NALU available
@@ -141,7 +141,7 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
                     curr_slice_ptr->view_id = curr_slice_ptr->NaluHeaderMVCExt.view_id;
                     curr_slice_ptr->inter_view_flag = curr_slice_ptr->NaluHeaderMVCExt.inter_view_flag;
                     curr_slice_ptr->anchor_pic_flag = curr_slice_ptr->NaluHeaderMVCExt.anchor_pic_flag;
-                }else
+                } else
                 {   //no prefix NALU;
                     curr_slice_ptr->view_id = vo->g_active_subset_sps->view_id[0];
                     curr_slice_ptr->inter_view_flag = 1;
@@ -311,7 +311,7 @@ LOCAL void H264Dec_ref_pic_list_mvc_reordering(H264DecObject *vo)
                     {
                         curr_slice_ptr->abs_diff_pic_num_minus1_l0[i] = UE_V();
                     }
-                }else
+                } else
                 {
                     if (val == 2)
                     {
@@ -769,7 +769,7 @@ PUBLIC void H264Dec_RestSliceHeader (H264DecObject *vo)
     {
         img_ptr->num_ref_idx_l1_active = 0;
     }
-    
+
 #if _MVC_
     if(curr_slice_ptr->svc_extension_flag == 0 || curr_slice_ptr->svc_extension_flag == 1)
         H264Dec_ref_pic_list_mvc_reordering(vo);
