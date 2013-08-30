@@ -23,6 +23,20 @@ extern   "C"
 {
 #endif
 
+PUBLIC void Mp4Enc_ReviseLumaData(uint8 *p_src_y, int32 img_width, int32 img_height)
+{
+    int32 i;
+    int32 img_size = img_width  * img_height;
+
+    for (i = 0; i < img_size; i++)
+    {
+        if (*p_src_y == 0)
+        {
+            *p_src_y ++ = 8;
+        }
+    }
+}
+
 PUBLIC int32 Mp4Enc_EncNVOP(Mp4EncObject *vo, int32 time_stamp)
 {
     int32 Qp;

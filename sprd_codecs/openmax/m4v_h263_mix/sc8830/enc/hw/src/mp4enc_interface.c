@@ -245,6 +245,11 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
     anti_shark_ptr->shift_x = pInput->crop_x;
     anti_shark_ptr->shift_y = pInput->crop_y;
 
+    if (video_type == STREAM_ID_H263)
+    {
+        Mp4Enc_ReviseLumaData(pInput->p_src_y, pInput->org_img_width, pInput->org_img_height);
+    }
+
     if(ARM_VSP_RST((VSPObject *)vo)<0)
     {
         return MMDEC_HW_ERROR;

@@ -27,6 +27,7 @@ extern   "C"
 {
 #endif
 
+void Mp4Enc_ReviseLumaData(uint8 *p_src_y, int32 img_width, int32 img_height);
 void Mp4Enc_UpdateRefFrame(ENC_VOP_MODE_T *vop_mode_ptr);
 int32 Mp4Enc_EncNVOP(Mp4EncObject *vo, int32 time_stamp);
 int32 Mp4Enc_EncIVOP(Mp4EncObject *vo, int32 time_stamp);
