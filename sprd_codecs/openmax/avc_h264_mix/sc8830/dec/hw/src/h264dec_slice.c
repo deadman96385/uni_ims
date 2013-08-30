@@ -778,6 +778,13 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
         DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = curr_slice_ptr->p_Dpb;
         DEC_STORABLE_PICTURE_T *pframe;
 
+        if ((dec_input_ptr->expected_IVOP) && (img_ptr->type != I_SLICE))
+        {
+            SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+
+        	return MMDEC_FRAME_SEEK_IVOP;
+        }
+
         if (img_ptr->is_new_pic)
         {
             if (vo->is_need_init_vsp_hufftab && img_ptr->is_new_pic)//分不分cabac和cavlc
