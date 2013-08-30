@@ -234,6 +234,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
     // Bitstream.
     bs_start_addr=((uint32)dec_input_ptr->pStream_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
     bs_buffer_length=dec_input_ptr->dataLen;
+    vo->pStream = dec_input_ptr->pStream;
     vo->g_stream_offset=0;
 
     VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle

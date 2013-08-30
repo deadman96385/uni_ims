@@ -44,6 +44,20 @@ PUBLIC uint32 uvlc_startcode_follows (H264DecObject *vo)
     byte_offset = nDecTotalBits/8;
     bit_offset = nDecTotalBits&0x7;
 
+
+   {
+		// Simon. Remove trailing zeros.		
+		int i;
+		uint8 * pStream = vo->pStream + vo->g_slice_datalen + vo->g_stream_offset -1;
+		for(i = 0; i < vo->g_nalu_ptr->len; i++)
+		{
+			if( 0 != *pStream--)
+				break;
+			else
+				vo->g_nalu_ptr->len --;		
+		}
+    }
+	  
     if (byte_offset < vo->g_nalu_ptr->len -1)
     {
         return FALSE;

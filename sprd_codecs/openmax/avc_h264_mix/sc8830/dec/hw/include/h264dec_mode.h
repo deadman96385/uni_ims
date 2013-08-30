@@ -743,6 +743,7 @@ typedef struct H264DecObject_tag
 
     int ref_list_buf[33];
     int slice_info[50];
+    uint8 * pStream;	
 } H264DecObject;
 
 /**---------------------------------------------------------------------------*
