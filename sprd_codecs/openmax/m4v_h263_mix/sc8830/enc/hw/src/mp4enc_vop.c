@@ -32,7 +32,7 @@ PUBLIC void Mp4Enc_ReviseLumaData(uint8 *p_src_y, int32 img_width, int32 img_hei
     {
         if (*p_src_y == 0)
         {
-            *p_src_y ++ = 8;
+            *p_src_y ++ = 1;
         }
     }
 }
@@ -175,7 +175,7 @@ PUBLIC int32 Mp4Enc_EncPVOP(Mp4EncObject *vo, int32 time_stamp)
     int32 left_mbline_slice = vop_mode_ptr->mbline_num_slice;
     int32 left_intramb_dis = vop_mode_ptr->intra_mb_dis;
     int mea_start = 0;
-    
+
     vop_mode_ptr->StepSize = Qp = vop_mode_ptr->StepP;
     vop_mode_ptr->MBNumOneVP = 0;
     vop_mode_ptr->mb_x = 0;

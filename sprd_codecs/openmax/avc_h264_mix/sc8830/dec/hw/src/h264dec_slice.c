@@ -453,11 +453,23 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
         //flush one frame from dpb and re-organize the delayed_pic buffer
         if(/*out_of_order ||*/ pics > img_ptr->has_b_frames || dec_out->frameEffective)
         {
-            for(i = out_idx; dpb_ptr->delayed_pic[i]; i++)
+            int j;
+			
+            out_idx = dpb_ptr->delayed_pic_num;
+            for(j = 0; j < dpb_ptr->delayed_pic_num ; j++)
             {
-                dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
+                if(dpb_ptr->delayed_pic[j] == out)
+                {
+                    out_idx = j;
+                    SCI_TRACE_LOW_DPB("delayed_pic_num : %d, out_idx: %d,\t",  dpb_ptr->delayed_pic_num, out_idx);
+                    for(i = out_idx; dpb_ptr->delayed_pic[i]; i++)
+                    {
+                        dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
+                    }
+                    dpb_ptr->delayed_pic_num--;
+                    break;
+                }
             }
-            dpb_ptr->delayed_pic_num--;
         }
 
     }
@@ -701,7 +713,6 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
 
 #ifdef USE_INTERRUPT
     cmd = VSP_POLL_COMPLETE((VSPObject *)vo);
-    SCI_TRACE_LOW("%s, %d, tmp: %0x", __FUNCTION__, __LINE__, cmd);
 #else
     tmp = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_INT_RAW_OFF, "check interrupt type");
     while ((tmp&0x34)==0) //weihu tmp
@@ -734,18 +745,18 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
 
     //if(end of picture)
     cmd = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_DBG_STS0_OFF, "check mb_x mb_y number");//weihu tmp
-    SCI_TRACE_LOW("%s, %d, tmp: %0x", __FUNCTION__, __LINE__, cmd);
+    SCI_TRACE_LOW("%s, %d, (mb_x<<8)|(mb_y): %0x", __FUNCTION__, __LINE__, cmd);
+    img_ptr->curr_mb_nr = (cmd&0xff) * img_ptr->frame_width_in_mbs + ((cmd>>8)&0xff);
     if((((cmd>>8)&0xff)==(uint)(img_ptr->frame_width_in_mbs-1))&&((cmd&0xff)==(uint)(img_ptr->frame_height_in_mbs-1)))//weihu tmp
     {
         ret =MMDEC_OK;
         H264Dec_exit_picture (vo);
-        SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+        SCI_TRACE_LOW("%s, %d, finished decoding one frame", __FUNCTION__, __LINE__);
         H264Dec_output_one_frame(vo,img_ptr,dec_output_ptr);
 
         vo->frame_dec_finish = TRUE;
         vo->g_dec_picture_ptr = NULL;//weihu for output
         vo->g_nFrame_dec_h264++;
-
     }
 
     return ret;
@@ -782,7 +793,7 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
         {
             SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
 
-        	return MMDEC_FRAME_SEEK_IVOP;
+            return MMDEC_FRAME_SEEK_IVOP;
         }
 
         if (img_ptr->is_new_pic)
@@ -826,7 +837,7 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
     }
 
     //H264Dec_flush_left_byte (vo);
-    SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+    SCI_TRACE_LOW("%s, %d, finished decoding one NALU", __FUNCTION__, __LINE__);
     //need IVOP but not found IDR,then return seek ivop
     if(dec_input_ptr->expected_IVOP && vo->g_searching_IDR_pic)
     {
