@@ -217,7 +217,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 {
     MMDecRet ret;
     int32 i;
-    uint32 bs_buffer_length, bs_start_addr;
+    uint32 bs_buffer_length, bs_start_addr, destuffing_num;
     H264DecObject *vo = (H264DecObject *) avcHandle->videoDecoderData;
 
     vo->frame_dec_finish=0;
@@ -264,6 +264,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         // Get length of NALU and net bitstream length.
         vo->g_slice_datalen=VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_NAL_LEN,"get NAL_LEN");
         vo->g_nalu_ptr->len=VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_NAL_DATA_LEN,"get NAL_DATA_LEN");
+	 destuffing_num=VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+DSTUF_NUM_OFF,"get DSTUF_NUM");	
 
         SCI_TRACE_LOW("%s, %d, g_slice_datalen: %d, g_nalu_ptr->len: %d", __FUNCTION__, __LINE__, vo->g_slice_datalen, vo->g_nalu_ptr->len);
 
@@ -281,10 +282,15 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
         SCI_TRACE_LOW("%s, %d, g_slice_datalen: %d, g_stream_offset: %d, bs_buffer_length: %d, frame_dec_finish: %d,ret:  %d ", __FUNCTION__, __LINE__, vo->g_slice_datalen, vo->g_stream_offset, bs_buffer_length, vo->frame_dec_finish, ret);
 
+	 dec_input_ptr->dataLen = vo->g_stream_offset + 	vo->g_nalu_ptr->len + destuffing_num;
+
         vo->g_stream_offset += vo->g_slice_datalen;//dec_input_ptr->dataLen;
 
         if( (MMDEC_ERROR ==ret) ||vo->frame_dec_finish)//dec_output.frameEffective
         {
+ 		if(MMDEC_ERROR ==ret)
+			dec_input_ptr->dataLen = bs_buffer_length;
+			
             break;	//break loop.
         }
     }
