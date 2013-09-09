@@ -175,6 +175,7 @@ struct commthread_data_t {
 
 threadpool_t *threadpool_d;
 static pthread_t s_tid_sms;
+static pthread_t s_tid_local;
 
 static int s_fdWakeupRead;
 static int s_fdWakeupWrite;
@@ -196,6 +197,8 @@ static pthread_cond_t s_startupCond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t s_dispatchMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t s_dispatchCond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t s_listMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t s_localDispatchMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t s_localDispatchCond = PTHREAD_COND_INITIALIZER;
 
 static RequestInfo *s_pendingRequests = NULL;
 
@@ -231,6 +234,7 @@ struct listnode
 
 struct listnode sms_cmd_list;
 struct listnode other_cmd_list;
+struct listnode local_cmd_list;
 
 void list_init(struct listnode *list);
 void list_add_tail(struct listnode *list, struct listnode *item);
@@ -3235,19 +3239,19 @@ static void processCommandsCallback(int fd, short flags, void *param) {
     assert(fd == s_fdCommand);
 
     for (;;) {
-	  void *p_record;
+         void *p_record;
          size_t recordlen;
 
         /* loop until EAGAIN/EINTR, end of stream, or other error */
         ret = record_stream_get_next(p_rs, &p_record, &recordlen);
 
         if (ret == 0 && p_record == NULL) {
-	     record_stream_free(p_rs);
-	     RILLOGE("PCC end of stream");
-             exit(0);
+            record_stream_free(p_rs);
+            RILLOGE("PCC end of stream");
+            exit(0);
             /* end-of-stream
              * restart rild
-	     * */
+             * */
             break;
         } else if (ret < 0) {
             break;
@@ -3308,8 +3312,8 @@ static void processCommandsCallback(int fd, short flags, void *param) {
             ) {
                 RILLOGE("unsupported request code %d token %d", request, token);
                 free(cmd_item);
-		free(user_data->buffer);
-		free(user_data);
+                free(user_data->buffer);
+                free(user_data);
                 return;
             }
 
@@ -3346,10 +3350,12 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                         || pCI->requestNumber == RIL_REQUEST_QUERY_COLR
 #endif
                         || pCI->requestNumber == RIL_REQUEST_SETUP_DATA_CALL
-                        || pCI->requestNumber == RIL_REQUEST_DEACTIVATE_DATA_CALL)
+                        || pCI->requestNumber == RIL_REQUEST_DEACTIVATE_DATA_CALL) {
                     list_add_tail(&sms_cmd_list, cmd_item);
-                else if(pCI->requestNumber == RIL_REQUEST_SCREEN_STATE
-                    || pCI->requestNumber == RIL_REQUEST_DTMF
+                    pthread_mutex_lock(&s_dispatchMutex);
+                    pthread_cond_signal(&s_dispatchCond);
+                    pthread_mutex_unlock(&s_dispatchMutex);
+                } else if(pCI->requestNumber == RIL_REQUEST_DTMF
                     || pCI->requestNumber == RIL_REQUEST_DTMF_START
                     || pCI->requestNumber == RIL_REQUEST_DTMF_STOP) {
                     pthread_mutex_lock(&s_listMutex);
@@ -3358,8 +3364,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                         status = p.readInt32(&request);
                         status = p.readInt32 (&token);
                         pCI = &(s_commands[request]);
-                        if(pCI->requestNumber != RIL_REQUEST_SCREEN_STATE
-                            && pCI->requestNumber != RIL_REQUEST_DTMF
+                        if(pCI->requestNumber != RIL_REQUEST_DTMF
                             && pCI->requestNumber != RIL_REQUEST_DTMF_START
                             && pCI->requestNumber != RIL_REQUEST_DTMF_STOP) {
                             cmd_item->next = cmd;
@@ -3372,8 +3377,17 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     pthread_mutex_unlock(&s_listMutex);
                     if(cmd == (&sms_cmd_list))
                         list_add_tail(&sms_cmd_list, cmd_item);
-                } else
+                    pthread_mutex_lock(&s_dispatchMutex);
+                    pthread_cond_signal(&s_dispatchCond);
+                    pthread_mutex_unlock(&s_dispatchMutex);
+                } else if(pCI->requestNumber == RIL_REQUEST_SCREEN_STATE) {
+                    list_add_tail(&local_cmd_list, cmd_item);
+                    pthread_mutex_lock(&s_localDispatchMutex);
+                    pthread_cond_signal(&s_localDispatchCond);
+                    pthread_mutex_unlock(&s_localDispatchMutex);
+                } else {
                     list_add_tail(&other_cmd_list, cmd_item);
+                }
             } else {
                 if(pCI->requestNumber == RIL_REQUEST_SIM_IO
                         || pCI->requestNumber == RIL_REQUEST_QUERY_FACILITY_LOCK
@@ -3389,10 +3403,12 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                         || pCI->requestNumber == RIL_REQUEST_QUERY_COLP
                         || pCI->requestNumber == RIL_REQUEST_QUERY_COLR
 #endif
-                        || pCI->requestNumber == RIL_REQUEST_QUERY_CLIP)
+                        || pCI->requestNumber == RIL_REQUEST_QUERY_CLIP) {
                     list_add_tail(&sms_cmd_list, cmd_item);
-                else if(pCI->requestNumber == RIL_REQUEST_SCREEN_STATE
-                    || pCI->requestNumber == RIL_REQUEST_DTMF
+                    pthread_mutex_lock(&s_dispatchMutex);
+                    pthread_cond_signal(&s_dispatchCond);
+                    pthread_mutex_unlock(&s_dispatchMutex);
+                } else if(pCI->requestNumber == RIL_REQUEST_DTMF
                     || pCI->requestNumber == RIL_REQUEST_DTMF_START
                     || pCI->requestNumber == RIL_REQUEST_DTMF_STOP) {
                     pthread_mutex_lock(&s_listMutex);
@@ -3401,8 +3417,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                         status = p.readInt32(&request);
                         status = p.readInt32 (&token);
                         pCI = &(s_commands[request]);
-                        if(pCI->requestNumber != RIL_REQUEST_SCREEN_STATE
-                            && pCI->requestNumber != RIL_REQUEST_DTMF
+                        if(pCI->requestNumber != RIL_REQUEST_DTMF
                             && pCI->requestNumber != RIL_REQUEST_DTMF_START
                             && pCI->requestNumber != RIL_REQUEST_DTMF_STOP) {
                             cmd_item->next = cmd;
@@ -3415,14 +3430,19 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     pthread_mutex_unlock(&s_listMutex);
                     if(cmd == (&sms_cmd_list))
                         list_add_tail(&sms_cmd_list, cmd_item);
-		} else
+                    pthread_mutex_lock(&s_dispatchMutex);
+                    pthread_cond_signal(&s_dispatchCond);
+                    pthread_mutex_unlock(&s_dispatchMutex);
+                } else if(pCI->requestNumber == RIL_REQUEST_SCREEN_STATE) {
+                    list_add_tail(&local_cmd_list, cmd_item);
+                    pthread_mutex_lock(&s_localDispatchMutex);
+                    pthread_cond_signal(&s_localDispatchCond);
+                    pthread_mutex_unlock(&s_localDispatchMutex);
+                } else {
                     list_add_tail(&other_cmd_list, cmd_item);
+                }
             }
         }
-
-        pthread_mutex_lock(&s_dispatchMutex);
-        pthread_cond_signal(&s_dispatchCond);
-        pthread_mutex_unlock(&s_dispatchMutex);
 
         for (cmd_item = (&other_cmd_list)->next; cmd_item != (&other_cmd_list);
                 cmd_item = (&other_cmd_list)->next) {
@@ -3435,7 +3455,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                 }
             } while(!ret);
             list_remove(cmd_item);
-	    free(cmd_item);
+            free(cmd_item);
         }
     }
 }
@@ -3456,6 +3476,31 @@ smsDispatch(void *param) {
             processCommandBuffer(cmd_item->user_data->buffer,
                 cmd_item->user_data->buflen);
             RILLOGI("-->SmsDispatch [%d] free one command\n",tid);
+            list_remove(cmd_item);  /* remove list node first, then free it */
+            free(cmd_item->user_data->buffer);
+            free(cmd_item->user_data);
+            free(cmd_item);
+        }
+    }
+    return NULL;
+}
+
+static void *
+localDispatch(void *param) {
+    struct listnode * cmd_item;
+    pid_t tid;
+    tid = gettid();
+
+    while(1) {
+        pthread_mutex_lock(&s_localDispatchMutex);
+        pthread_cond_wait(&s_localDispatchCond, &s_localDispatchMutex);
+        pthread_mutex_unlock(&s_localDispatchMutex);
+
+        for (cmd_item = (&local_cmd_list)->next; cmd_item != (&local_cmd_list);
+                cmd_item = (&local_cmd_list)->next) {
+            processCommandBuffer(cmd_item->user_data->buffer,
+                cmd_item->user_data->buflen);
+            RILLOGI("-->localDispatch [%d] free one command\n",tid);
             list_remove(cmd_item);  /* remove list node first, then free it */
             free(cmd_item->user_data->buffer);
             free(cmd_item->user_data);
@@ -3939,6 +3984,7 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
     // old standalone impl wants it here.
 
     list_init(&sms_cmd_list);
+    list_init(&local_cmd_list);
     list_init(&other_cmd_list);
 
     threadpool_d = thread_pool_init(THR_MAX, 10000);
@@ -3950,7 +3996,13 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     ret = pthread_create(&s_tid_sms, &attr, smsDispatch, NULL);
     if (ret < 0) {
-        RILLOGE("Failed to create dispatch thread errno:%d", errno);
+        RILLOGE("Failed to create sms dispatch thread errno:%d", errno);
+        return;
+    }
+
+    ret = pthread_create(&s_tid_local, &attr, localDispatch, NULL);
+    if (ret < 0) {
+        RILLOGE("Failed to create local dispatch thread errno:%d", errno);
         return;
     }
 
