@@ -164,7 +164,15 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
 
 	if ((1920 == vo->g_enc_image_ptr->width) && (1088 == vo->g_enc_image_ptr->height))
 	{
-		vo->rc_gop_paras.intra_period = INTRA_PERIOD;
+		// for cr#211038, avoid div 0
+		if (0 == (pConf->FrameRate%INTRA_PERIOD))
+		{
+			vo->rc_gop_paras.intra_period = INTRA_PERIOD;
+		}
+		else
+		{
+			vo->rc_gop_paras.intra_period = pConf->FrameRate;
+		}
 	}
 	else
 	{
