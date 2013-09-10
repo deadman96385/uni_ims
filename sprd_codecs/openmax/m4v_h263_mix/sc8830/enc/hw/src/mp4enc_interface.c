@@ -209,6 +209,8 @@ MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBu
 
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
+    vo->ddr_bandwidth_req_cnt = 0;
+    vo->vsp_freq_div = 0;
     if(VSP_OPEN_Dev((VSPObject *)vo)<0)
     {
         return MMDEC_HW_ERROR;

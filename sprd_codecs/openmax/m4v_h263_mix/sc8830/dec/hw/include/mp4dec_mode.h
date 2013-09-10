@@ -336,6 +336,8 @@ typedef struct tagMp4DecObject
 {
     uint32 s_vsp_Vaddr_base ;
     int32 s_vsp_fd ;
+    uint32 ddr_bandwidth_req_cnt;
+    uint32 vsp_freq_div;
 
     MP4Handle  *mp4Handle;
 
@@ -356,7 +358,7 @@ typedef struct tagMp4DecObject
     uint32 g_nFrame_dec;
 
     DEC_FRM_BFR g_rec_buf;
-    DEC_FRM_BFR g_tmp_buf;	
+    DEC_FRM_BFR g_tmp_buf;
 
     uint32 is_need_init_vsp_quant_tab;
 

@@ -362,14 +362,14 @@ typedef struct  {
     int32 rem_bits;
     int32 prev_pic_bits;
     int32 total_qp;
-	int32 intra_period;
+    int32 intra_period;
     int32 I_P_ratio;
-	int32 gop_num_per_sec;
-	int32 rem_frame_num;
-	int32 last_I_frame_bits;
-	int32 last_I_QP;
-	int32 last_P_frame_bits;
-	int32 last_P_QP;
+    int32 gop_num_per_sec;
+    int32 rem_frame_num;
+    int32 last_I_frame_bits;
+    int32 last_I_QP;
+    int32 last_P_frame_bits;
+    int32 last_P_QP;
 } RC_GOP_PARAS;
 
 
@@ -398,13 +398,15 @@ typedef struct
     uint32 input_width;
     uint32 input_height;
     uint32 shift_x;
-    uint32 shift_y; 
-}ENC_ANTI_SHAKE_T;
+    uint32 shift_y;
+} ENC_ANTI_SHAKE_T;
 
 typedef struct tagH264EncObject
 {
     uint32 s_vsp_Vaddr_base ;
     int32 s_vsp_fd ;
+    uint32 ddr_bandwidth_req_cnt;
+    uint32 vsp_freq_div;
 
     AVCHandle  *avcHandle;
 

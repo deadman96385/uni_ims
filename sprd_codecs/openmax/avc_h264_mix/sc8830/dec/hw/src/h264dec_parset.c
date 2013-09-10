@@ -45,19 +45,19 @@ PUBLIC uint32 uvlc_startcode_follows (H264DecObject *vo)
     bit_offset = nDecTotalBits&0x7;
 
 
-   {
-		// Simon. Remove trailing zeros.		
-		int i;
-		uint8 * pStream = vo->pStream + vo->g_slice_datalen + vo->g_stream_offset -1;
-		for(i = 0; i < vo->g_nalu_ptr->len; i++)
-		{
-			if( 0 != *pStream--)
-				break;
-			else
-				vo->g_nalu_ptr->len --;		
-		}
+    {
+        // Simon. Remove trailing zeros.
+        int i;
+        uint8 * pStream = vo->pStream + vo->g_slice_datalen + vo->g_stream_offset -1;
+        for(i = 0; i < vo->g_nalu_ptr->len; i++)
+        {
+            if( 0 != *pStream--)
+                break;
+            else
+                vo->g_nalu_ptr->len --;
+        }
     }
-	  
+
     if (byte_offset < vo->g_nalu_ptr->len -1)
     {
         return FALSE;
@@ -121,6 +121,7 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
         vo->width = img_ptr->frame_width_in_mbs * MB_SIZE;
         vo->height = img_ptr->frame_height_in_mbs * MB_SIZE;
 
+        VSP_config_freq(vo,vo->width*vo->height );
         //H264Dec_SeqLevelConfig (img_ptr);// empty function
 
         //reset memory alloc
@@ -535,7 +536,7 @@ LOCAL void H264Dec_interpret_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
     if (sps_ptr->vui_parameters_present_flag)
     {
         H264Dec_ReadVUI (vo, sps_ptr->vui_seq_parameters);
-    }else
+    } else
     {
         sps_ptr->vui_seq_parameters->num_reorder_frames = 0;
     }

@@ -196,6 +196,9 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
 
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
+    vo->ddr_bandwidth_req_cnt = 0;
+    vo->vsp_freq_div = 0;
+
     if (VSP_OPEN_Dev((VSPObject *)vo) < 0)
     {
         return ret;

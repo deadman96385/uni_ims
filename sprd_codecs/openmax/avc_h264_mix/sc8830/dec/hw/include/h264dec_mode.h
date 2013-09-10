@@ -667,6 +667,8 @@ typedef struct H264DecObject_tag
 {
     uint32 s_vsp_Vaddr_base ;
     int32 s_vsp_fd ;
+    uint32 ddr_bandwidth_req_cnt;
+    uint32 vsp_freq_div;
 
     AVCHandle  *avcHandle;
 
@@ -743,7 +745,7 @@ typedef struct H264DecObject_tag
 
     int ref_list_buf[33];
     int slice_info[50];
-    uint8 * pStream;	
+    uint8 * pStream;
 } H264DecObject;
 
 /**---------------------------------------------------------------------------*

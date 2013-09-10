@@ -105,10 +105,10 @@ int MP4DecGetLastDspFrm(MP4Handle *mp4Handle,void **pOutput)
     *pOutput = NULL;
     if(!vop_mode_ptr)
         return FALSE;
-    
+
     if(!vop_mode_ptr->pBckRefFrame)
         return FALSE;
-    
+
     frm_bfr = vop_mode_ptr->pBckRefFrame->pDecFrame;
     vop_mode_ptr->pBckRefFrame->pDecFrame = NULL;
     if(NULL != frm_bfr)
@@ -188,6 +188,8 @@ MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer * buffer_ptr)
 
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
+    vo->ddr_bandwidth_req_cnt = 0;
+    vo->vsp_freq_div = 0;
     if(VSP_OPEN_Dev((VSPObject *)vo)<0)
     {
         return MMDEC_HW_ERROR;
@@ -321,17 +323,17 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, (0),"BSM_cfg1 stream buffer offset & destuff disable");//point to the start of NALU.
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, 0x80000000|(bs_buffer_length+128)&0xfffffffc,"BSM_cfg0 stream buffer size");// BSM load data. Add 16 DW for BSM fifo loading.
 
-     ret = Mp4Dec_VerifyBitstrm(vo,dec_input_ptr->pStream, dec_input_ptr->dataLen);
-   if(ret != MMDEC_OK)
+    ret = Mp4Dec_VerifyBitstrm(vo,dec_input_ptr->pStream, dec_input_ptr->dataLen);
+    if(ret != MMDEC_OK)
     {
-        mp4Handle->g_mpeg4_dec_err_flag |= 1<<6;       
+        mp4Handle->g_mpeg4_dec_err_flag |= 1<<6;
         goto DECODER_DONE;
-    }    	
-   
+    }
+
     if(STREAM_ID_H263 == vop_mode_ptr->video_std)
     {
         ret = Mp4Dec_DecH263Header(vo);
-    }else if(STREAM_ID_MPEG4== vop_mode_ptr->video_std)
+    } else if(STREAM_ID_MPEG4== vop_mode_ptr->video_std)
     {
         vop_mode_ptr->find_vop_header  = 0;
         ret = Mp4Dec_DecMp4Header(vo, dec_input_ptr->dataLen);
@@ -341,7 +343,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
             ret = MMDEC_OK;
             goto DECODER_DONE;
         }
-    }else
+    } else
     {
         ret = Mp4Dec_FlvH263PicHeader(vo);
     }
@@ -357,7 +359,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
             dec_output_ptr->VopPredType = NVOP;
             ret = MMDEC_OK;
         }
-        
+
         goto DECODER_DONE;
     }
 
@@ -383,7 +385,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         if( MMDEC_OK != Mp4Dec_InitSessionDecode(vo) )
         {
             ret = MMDEC_MEMORY_ERROR;
-        }else
+        } else
         {
             vop_mode_ptr->bInitSuceess = TRUE;
             ret = MMDEC_MEMORY_ALLOCED;
@@ -448,14 +450,14 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     }
 
     Mp4Dec_InitVop(vo, dec_input_ptr);
-	
+
     if(Mp4Dec_decode_vop(vo))
     {
-        mp4Handle->g_mpeg4_dec_err_flag |= 1<<7;      
-	ret = MMDEC_STREAM_ERROR;
+        mp4Handle->g_mpeg4_dec_err_flag |= 1<<7;
+        ret = MMDEC_STREAM_ERROR;
         goto DECODER_DONE;
-    }	
-    
+    }
+
     Mp4Dec_output_one_frame (vo, dec_output_ptr);
     Mp4Dec_exit_picture(vo);
 

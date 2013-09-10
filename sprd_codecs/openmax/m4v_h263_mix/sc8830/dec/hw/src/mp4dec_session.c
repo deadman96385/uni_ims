@@ -37,7 +37,7 @@ PUBLIC void Mp4Dec_InitGlobal (Mp4DecObject *vo)
 PUBLIC void Mp4Dec_InitDecoderPara(Mp4DecObject *vo)
 {
     DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
-    
+
     vop_mode_ptr->uv_interleaved = /*video_format_ptr->uv_interleaved = */1;
     vop_mode_ptr->intra_acdc_pred_disable = TRUE;
     vop_mode_ptr->QuantizerType = Q_H263;
@@ -134,6 +134,8 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     vop_mode_ptr->FrameWidth  = (int16)(mb_num_x * MB_SIZE);
     vop_mode_ptr->FrameHeight = (int16)(mb_num_y * MB_SIZE);
 
+    VSP_config_freq(vo, 	vop_mode_ptr->FrameWidth * vop_mode_ptr->FrameHeight);
+
     vo->mp4Handle->VSP_extMemCb(vo->mp4Handle->userdata,  vop_mode_ptr->FrameWidth, vop_mode_ptr->FrameHeight);
 
     vop_mode_ptr->MB_in_VOP_length = Mp4Dec_Compute_log2(vop_mode_ptr->MBNum);
@@ -165,9 +167,9 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     memset(vo->g_tmp_buf.imgU, 128, sizeof(uint8)*(total_mb_num*128));
 
     vo->g_tmp_buf.rec_info = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)(total_mb_num*80), 256, EXTRA_MEM);
-    vo->g_tmp_buf.rec_infoAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.rec_info, EXTRA_MEM);	
-		
-	
+    vo->g_tmp_buf.rec_infoAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.rec_info, EXTRA_MEM);
+
+
 
     return MMDEC_OK;
 }
