@@ -36,7 +36,7 @@ extern   "C"
 #define SCI_MEMCPY	memcpy
 #define EXIT
 #define RC_BU
-#define INTRA_PERIOD	2
+#define INTRA_PERIOD	6
 #define CROP_1080P		1
 
 //for macroblock
