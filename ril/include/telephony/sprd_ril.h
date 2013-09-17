@@ -999,6 +999,23 @@ typedef struct {
     RIL_LTE_SignalStrength_v8   LTE_SignalStrength;
 } RIL_SignalStrength_v8;
 
+#ifndef RIL_SIGNALSTRENGTH_INVALID
+#define RIL_SIGNALSTRENGTH_INVALID 0x7FFFFFFF
+#endif
+#define RIL_SIGNALSTRENGTH_INIT(ril_signalstrength) do {												\
+	ril_signalstrength.GW_SignalStrength.signalStrength		= 99;										\
+	ril_signalstrength.GW_SignalStrength.bitErrorRate		= -1;										\
+	ril_signalstrength.CDMA_SignalStrength.dbm				= -1;										\
+	ril_signalstrength.CDMA_SignalStrength.ecio				= -1;										\
+	ril_signalstrength.EVDO_SignalStrength.dbm				= -1;										\
+	ril_signalstrength.EVDO_SignalStrength.ecio				= -1;										\
+	ril_signalstrength.EVDO_SignalStrength.signalNoiseRatio = -1;										\
+	ril_signalstrength.LTE_SignalStrength.signalStrength    = 99;										\
+	ril_signalstrength.LTE_SignalStrength.rsrp				= RIL_SIGNALSTRENGTH_INVALID;				\
+	ril_signalstrength.LTE_SignalStrength.rsrq				= RIL_SIGNALSTRENGTH_INVALID;				\
+	ril_signalstrength.LTE_SignalStrength.rssnr				= RIL_SIGNALSTRENGTH_INVALID;				\
+	ril_signalstrength.LTE_SignalStrength.cqi				= RIL_SIGNALSTRENGTH_INVALID;				\
+}while(0);
 /** RIL_CellIdentityGsm */
 typedef struct {
     int mcc;    /* 3-digit Mobile Country Code, 0..999, INT_MAX if unknown */

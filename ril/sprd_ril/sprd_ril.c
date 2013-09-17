@@ -2179,7 +2179,8 @@ static void requestSignalStrength(int channelID, void *data, size_t datalen, RIL
     RIL_SignalStrength_v6 response_v6;
     char *line;
 
-    memset(&response_v6, -1, sizeof(response_v6));
+    //memset(&response_v6, -1, sizeof(response_v6));
+	RIL_SIGNALSTRENGTH_INIT(response_v6);
     err = at_send_command_singleline(ATch_type[channelID], "AT+CSQ", "+CSQ:", &p_response);
 
     if (err < 0 || p_response->success == 0) {
@@ -2217,7 +2218,9 @@ static void requestSsSignalStrength(int channelID, void *data, size_t datalen, R
     char *line;
     int csq, rat;
 
-    memset(&response_v6, -1, sizeof(response_v6));
+    //memset(&response_v6, -1, sizeof(response_v6));
+	RIL_SIGNALSTRENGTH_INIT(response_v6);
+
     err = at_send_command_singleline(ATch_type[channelID], "AT+SPSCSQ", "+SPSCSQ:", &p_response);
 
     if (err < 0 || p_response->success == 0) {
@@ -3217,7 +3220,9 @@ static void onQuerySignalStrength(void *param)
 
     RILLOGE("query signal strength when screen on");
     channelID = getChannel();
-    memset(&response_v6, -1, sizeof(response_v6));
+    //memset(&response_v6, -1, sizeof(response_v6));
+	RIL_SIGNALSTRENGTH_INIT(response_v6);
+
     err = at_send_command_singleline(ATch_type[channelID], "AT+CSQ", "+CSQ:", &p_response);
 
     if (err < 0 || p_response->success == 0) {
@@ -7112,7 +7117,8 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RIL_SignalStrength_v6 response_v6;
         char *tmp;
 
-        memset(&response_v6, -1, sizeof(RIL_SignalStrength_v6));
+        //memset(&response_v6, -1, sizeof(RIL_SignalStrength_v6));
+		RIL_SIGNALSTRENGTH_INIT(response_v6);
         line = strdup(s);
         tmp = line;
 
@@ -8000,7 +8006,8 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         char *tmp;
         int csq, rat;
 
-        memset(&response_v6, -1, sizeof(RIL_SignalStrength_v6));
+        //memset(&response_v6, -1, sizeof(RIL_SignalStrength_v6));
+		RIL_SIGNALSTRENGTH_INIT(response_v6);
         line = strdup(s);
         tmp = line;
 
