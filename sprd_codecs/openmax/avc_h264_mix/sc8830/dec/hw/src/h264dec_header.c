@@ -89,7 +89,7 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
             curr_slice_ptr->NaluHeaderMVCExt.iPrefixNALU = (nal_ptr->nal_unit_type == NALU_TYPE_PREFIX);
         }
     }
-    
+
     if(nal_ptr->nal_unit_type == NALU_TYPE_SLC_EXT)
     {
         if(curr_slice_ptr->svc_extension_flag)
@@ -101,7 +101,7 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
             nal_ptr->nal_unit_type = NALU_TYPE_SLICE;
         }
     }
-    
+
     if (vo->error_flag)
     {
         return -1;

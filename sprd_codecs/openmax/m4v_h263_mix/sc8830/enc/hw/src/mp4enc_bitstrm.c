@@ -51,7 +51,7 @@ uint32 Mp4Enc_ByteAlign(Mp4EncObject*vo, BOOLEAN is_short_header)
     uint32 bitsLeft;
     uint32 total_bits;
     uint32 NumBits = 0;
-    
+
     total_bits = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF,"read total bits");
     bitsLeft = 32 - (total_bits % 32);
     stuffing_bits = bitsLeft & 0x7;

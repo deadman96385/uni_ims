@@ -167,7 +167,7 @@ PUBLIC int32 H264Dec_remove_delayed_frame_from_dpb (H264DecObject *vo,DEC_DECODE
 LOCAL DEC_FRAME_STORE_T *H264Dec_get_one_free_pic_buffer (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
     SCI_TRACE_LOW_DPB("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
-    
+
     if(dpb_ptr->used_size == (MAX_REF_FRAME_NUMBER+1))
     {
         if (!H264Dec_remove_unused_frame_from_dpb(vo, dpb_ptr))

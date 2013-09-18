@@ -48,7 +48,7 @@ PUBLIC int32 H264Dec_Process_slice (H264DecObject *vo)
             return -1;
         }
     }
-    
+
     if(curr_slice_ptr->start_mb_nr>=img_ptr->frame_size_in_mbs)//for error
     {
         vo->error_flag  |= ER_SREAM_ID;
@@ -465,7 +465,7 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
         if(/*out_of_order ||*/ pics > img_ptr->has_b_frames || dec_out->frameEffective)
         {
             int j;
-			
+
             out_idx = dpb_ptr->delayed_pic_num;
             for(j = 0; j < dpb_ptr->delayed_pic_num ; j++)
             {
@@ -736,14 +736,14 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
     if(cmd & (V_BIT_4 | V_BIT_5))
     {
         vo->error_flag |= ER_SREAM_ID;
-        
-         if (cmd & V_BIT_4)
+
+        if (cmd & V_BIT_4)
         {
             SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
-        }else if (cmd & V_BIT_5)
+        } else if (cmd & V_BIT_5)
         {
-            SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);                    
-        }       
+            SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+        }
     } else if(cmd & V_BIT_2)
     {
         vo->error_flag = 0;

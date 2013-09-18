@@ -66,7 +66,7 @@ PUBLIC MMDecRet H264Dec_init_global_para (H264DecObject*vo)
     {
         vo->g_dpb_layer[i] = (DEC_DECODED_PICTURE_BUFFER_T *)H264Dec_MemAlloc (vo, sizeof(DEC_DECODED_PICTURE_BUFFER_T), 4, INTER_MEM);
         CHECK_MALLOC(vo->g_dpb_layer[i], "vo->g_dpb_layer[i]");
-        
+
         vo->g_dpb_layer[i]->init_done=0;
         vo->g_dpb_layer[i]->used_size=0;
     }
@@ -79,22 +79,22 @@ PUBLIC MMDecRet H264Dec_init_global_para (H264DecObject*vo)
 
     vo->g_old_slice_ptr = (DEC_OLD_SLICE_PARAMS_T *)H264Dec_MemAlloc (vo, sizeof(DEC_OLD_SLICE_PARAMS_T), 4, INTER_MEM);
     CHECK_MALLOC(vo->g_old_slice_ptr, "vo->g_old_slice_ptr");
-    
+
     vo->g_nalu_ptr = (DEC_NALU_T *)H264Dec_MemAlloc (vo, sizeof(DEC_NALU_T), 4, INTER_MEM);
     CHECK_MALLOC(vo->g_nalu_ptr, "vo->g_nalu_ptr");
-    
+
     vo->g_image_ptr = (DEC_IMAGE_PARAMS_T *)H264Dec_MemAlloc(vo, sizeof(DEC_IMAGE_PARAMS_T), 4, INTER_MEM);
     CHECK_MALLOC(vo->g_image_ptr, "vo->g_image_ptr");
-    
+
     vo->g_curr_slice_ptr = (DEC_SLICE_T *)H264Dec_MemAlloc(vo, sizeof(DEC_SLICE_T), 4, INTER_MEM);
     CHECK_MALLOC(vo->g_curr_slice_ptr, "vo->g_curr_slice_ptr");
-    
+
     vo->g_curr_slice_ptr->mot_ctx = (MotionInfoContexts *)H264Dec_MemAlloc(vo, sizeof(MotionInfoContexts), 4, INTER_MEM);
     CHECK_MALLOC(vo->g_curr_slice_ptr->mot_ctx, "vo->g_curr_slice_ptr->mot_ctx");
-    
+
     vo->g_curr_slice_ptr->tex_ctx = (TextureInfoContexts *)H264Dec_MemAlloc(vo, sizeof(TextureInfoContexts), 4, INTER_MEM);
     CHECK_MALLOC(vo->g_curr_slice_ptr->tex_ctx, "vo->g_curr_slice_ptr->tex_ctx");
-    
+
 #if _MVC_
     vo->g_curr_slice_ptr->p_Dpb = (DEC_DECODED_PICTURE_BUFFER_T *)H264Dec_MemAlloc(vo, sizeof(DEC_DECODED_PICTURE_BUFFER_T), 4, INTER_MEM);
     CHECK_MALLOC(vo->g_curr_slice_ptr->p_Dpb, "vo->g_curr_slice_ptr->p_Dpb");

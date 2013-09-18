@@ -92,7 +92,7 @@ PUBLIC int32 Mp4Enc_EncVOP(Mp4EncObject *vo, int32 time_stamp)
     {
         Mp4Enc_EncVOPHeader(vo, time_stamp);
     }
-    
+
     VSP_WRITE_REG(VSP_REG_BASE_ADDR + ARM_INT_MASK_OFF, V_BIT_2,"ARM_INT_MASK, only enable VSP ACC init");//enable int //
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_INT_MASK_OFF, (V_BIT_1 | V_BIT_5),"VSP_INT_MASK, enable vlc_slice_done, time_out");//enable int //frame done/timeout
 
@@ -117,7 +117,7 @@ PUBLIC int32 Mp4Enc_EncVOP(Mp4EncObject *vo, int32 time_stamp)
             {
                 Mp4Enc_ReSyncHeader(vo, vop_mode_ptr->StepSize, time_stamp);
             }
-            
+
             left_mbline_slice = vop_mode_ptr->mbline_num_slice;
             vop_mode_ptr->sliceNumber++;
             VSP_WRITE_REG(VSP_REG_BASE_ADDR+ARM_INT_MASK_OFF,V_BIT_2,"ARM_INT_MASK, only enable VSP ACC init");//enable int //

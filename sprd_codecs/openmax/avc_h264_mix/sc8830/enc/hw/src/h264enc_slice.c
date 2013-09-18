@@ -225,28 +225,28 @@ PUBLIC int32 h264enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr
         if (tmp & V_BIT_4)
         {
             SCI_TRACE_LOW("%s, %d, VLC_ERR", __FUNCTION__, __LINE__);
-        }else if (tmp & V_BIT_5)
+        } else if (tmp & V_BIT_5)
         {
-            SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);                    
-        }       
+            SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+        }
     } else if(tmp & V_BIT_1)	// VLC_FRM_DONE
     {
         img_ptr->error_flag=0;
     }
-    
+
     VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, V_BIT_1, "BSM_OPERATE: BSM_CLR");
     VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "Polling BSM_DBG0: BSM inactive"); //check bsm is idle
     VSP_READ_REG_POLL(GLB_REG_BASE_ADDR + BSM_DBG1_OFF, V_BIT_1, 0x0, TIME_OUT_CLK, "Polling AXIM_STS: not Axim_wch_busy"); //check all data has written to DDR
     VSP_READ_REG_POLL(GLB_REG_BASE_ADDR + VSP_INT_RAW_OFF, V_BIT_2, V_BIT_2, TIME_OUT_CLK,  "Polling MBW_FMR_DONE"); //check MBW is done
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_INT_CLR_OFF, V_BIT_2,"VSP_INT_CLR: clear MBW_FMR_DONE");
-    
+
     i_frame_size = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF,"TOTAL_BITS");
 
     if( (img_ptr->sh.i_last_mb + 1) < img_ptr->frame_size_in_mbs)
     {
         img_ptr->sh.i_first_mb = img_ptr->sh.i_last_mb + 1;
-    }else
+    } else
     {
         img_ptr->sh.i_first_mb = 0;
     }

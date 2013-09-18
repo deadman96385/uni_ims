@@ -58,15 +58,15 @@ PUBLIC MMEncRet H264Enc_InitVSP(H264EncObject *vo)
 
     cmd = ((g_skipBlock_QP_table[img_ptr->sh.i_qp] >> 3) & 0xff) << 0;	// Skip_threshold[7:0]
     cmd |= (MEA_SEARCH_ROUND_16) << 8;	// Ime_16X16_max[11:8], less than 8
-    
+
     if ((1920 == img_ptr->width) && (1088 == img_ptr->height))
     {
-    	cmd |= (0x1 << 12);	// Ime_8X8_max[15:12], less than 3
-    	cmd |= (0x1E7 << 16);	// Ipred_mode_cfg[24:16], IEA prediction mode setting, all 9 modes are on	
-    }else
+        cmd |= (0x1 << 12);	// Ime_8X8_max[15:12], less than 3
+        cmd |= (0x1E7 << 16);	// Ipred_mode_cfg[24:16], IEA prediction mode setting, all 9 modes are on
+    } else
     {
-	cmd |= (MEA_SEARCH_ROUND_8 << 12);	// Ime_8X8_max[15:12], less than 3
-    	cmd |= (0x1FF << 16);	// Ipred_mode_cfg[24:16], IEA prediction mode setting, all 9 modes are on	
+        cmd |= (MEA_SEARCH_ROUND_8 << 12);	// Ime_8X8_max[15:12], less than 3
+        cmd |= (0x1FF << 16);	// Ipred_mode_cfg[24:16], IEA prediction mode setting, all 9 modes are on
     }
     cmd |= ((img_ptr->sh.i_qp & 0x3f) << 25); // MB_Qp[30:25]
     cmd |= (1 << 31); // Bsm_bytealign_mode[31], let PPA do stop bit and byte align

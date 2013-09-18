@@ -58,7 +58,7 @@ PUBLIC void Mp4Enc_InitVolVopPara(VOL_MODE_T *vol_mode_ptr, ENC_VOP_MODE_T *vop_
     if(vol_mode_ptr->short_video_header)
     {
         vop_mode_ptr->SearchRangeForward	= MAX_MV_Y_H263;
-    }else
+    } else
     {
         vop_mode_ptr->SearchRangeForward	= MAX_MV_X;//MAX_MV_Y;
     }
@@ -133,7 +133,7 @@ MP4_LOCAL void Mp4Enc_SetMVInfo(ENC_VOP_MODE_T *vop_mode_ptr)
     if(vop_mode_ptr->SearchRangeForward <= 512)
     {
         mvInfoForward->FCode = ((vop_mode_ptr->SearchRangeForward-1)>>4) + 1;
-    }else
+    } else
     {
         mvInfoForward->FCode = 7;
     }
@@ -223,18 +223,18 @@ PUBLIC MMEncRet Mp4Enc_InitSession(Mp4EncObject *vo)
     vop_mode_ptr->intra_acdc_pred_disable = vol_mode_ptr->intra_acdc_pred_disable;
     vop_mode_ptr->short_video_header = vol_mode_ptr->short_video_header;
     vop_mode_ptr->QuantPrecision = vol_mode_ptr->QuantPrecision;
-    vop_mode_ptr->MB_in_VOP_length = Mp4Enc_Compute_log2(vop_mode_ptr->MBNum);   
+    vop_mode_ptr->MB_in_VOP_length = Mp4Enc_Compute_log2(vop_mode_ptr->MBNum);
 
     if(vop_mode_ptr->short_video_header)
     {
         Mp4Enc_InitH263(vo, vol_mode_ptr, vop_mode_ptr);
-    }else
+    } else
     {
         vop_mode_ptr->time_inc_resolution_in_vol_length = Mp4Enc_Compute_log2(vol_mode_ptr->ClockRate);
     }
-    
+
     Mp4Enc_InitVOEncoder(vol_mode_ptr, vop_mode_ptr);
-    
+
     /*backward reference frame and forward reference frame*/
     vop_mode_ptr->pYUVSrcFrame = (Mp4EncStorablePic *)Mp4Enc_MemAlloc(vo, sizeof(Mp4EncStorablePic), 4, INTER_MEM);
     CHECK_MALLOC(vop_mode_ptr->pYUVSrcFrame, "vop_mode_ptr->pYUVSrcFrame");
@@ -290,7 +290,7 @@ PUBLIC MMEncRet Mp4Enc_InitSession(Mp4EncObject *vo)
     vop_mode_ptr->pYUVRefFrame->imgUAddr = (uint32)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRefFrame->imgU, EXTRA_MEM) >> 3;
     vop_mode_ptr->pYUVRefFrame->imgVAddr = (uint32)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRefFrame->imgV, EXTRA_MEM) >> 3;
 
-    return MMENC_OK;   
+    return MMENC_OK;
 }
 
 PUBLIC void Mp4Enc_InitVSP(Mp4EncObject *vo)
@@ -395,7 +395,7 @@ PUBLIC void Mp4Enc_InitBSM(Mp4EncObject *vo)
     cmd |= (0 << 30);	// BUFF1_STATUS[30]
     cmd |= ((vop_mode_ptr->OneframeStreamLen&(~0x3)) & (V_BIT_30 -1)); // BUFFER_SIZE[29:0], unit byte//cmd = g_bsm_reg_ptr->BSM_CFG0 << 0;
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_CFG0_OFF, cmd, "BSM_CFG0");
-    
+
     cmd = (0 << 31);	// DESTUFFING_EN
     cmd |= ((0 & 0x3FFFFFFF) << 0);	// OFFSET_ADDR[29:0], unit word //cmd = g_bsm_reg_ptr->BSM_CFG1 << 0;
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_CFG1_OFF, cmd, "BSM_CFG1");

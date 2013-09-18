@@ -122,7 +122,7 @@ void Vp8Dec_InitVSP(VPXDecObject *vo)
                 baseline_filter_level[z] = pc->filter_level + xd->segment_feature_data[MB_LVL_ALT_LF][z];
                 baseline_filter_level[z] = (baseline_filter_level[z] >= 0) ? ((baseline_filter_level[z] <= MAX_LOOP_FILTER) ? baseline_filter_level[z] : MAX_LOOP_FILTER) : 0;  // Clamp to valid range
             }
-        }else
+        } else
         {
             QIndex[z] = pc->base_qindex;
             baseline_filter_level[z] = pc->filter_level;
@@ -153,7 +153,7 @@ void Vp8Dec_InitVSP(VPXDecObject *vo)
     cmd |= ((pc->Y2dequant[ QIndex[0] ][0][0] & 0x1ff) << 9);	// QP_Y2_DC_0[17:9]
     cmd |= ((pc->UVdequant[ QIndex[0] ][0][0] & 0x1ff) << 18);	// QP_UV_DC_0[26:18]
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_ADDRIDX0_OFF, cmd, "ADDR_IDX_CFG0, QP_DC_0");
-    
+
     cmd = (pc->Y1dequant[ QIndex[0] ][0][1] & 0x1ff) << 0;		// QP_Y1_AC_0[8:0]
     cmd |= ((pc->Y2dequant[ QIndex[0] ][0][1] & 0x1ff) << 9);	// QP_Y2_AC_0[17:9]
     cmd |= ((pc->UVdequant[ QIndex[0] ][0][1] & 0x1ff) << 18);	// QP_UV_AC_0[26:18]
@@ -163,7 +163,7 @@ void Vp8Dec_InitVSP(VPXDecObject *vo)
     cmd |= ((pc->Y2dequant[ QIndex[1] ][0][0] & 0x1ff) << 9);	// QP_Y2_DC_1[17:9]
     cmd |= ((pc->UVdequant[ QIndex[1] ][0][0] & 0x1ff) << 18);	// QP_UV_DC_1[26:18]
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_ADDRIDX2_OFF, cmd, "ADDR_IDX_CFG2, QP_DC_1");
-    
+
     cmd = (pc->Y1dequant[ QIndex[1] ][0][1] & 0x1ff) << 0;		// QP_Y1_AC_1[8:0]
     cmd |= ((pc->Y2dequant[ QIndex[1] ][0][1] & 0x1ff) << 9);	// QP_Y2_AC_1[17:9]
     cmd |= ((pc->UVdequant[ QIndex[1] ][0][1] & 0x1ff) << 18);	// QP_UV_AC_1[26:18]
@@ -173,7 +173,7 @@ void Vp8Dec_InitVSP(VPXDecObject *vo)
     cmd |= ((pc->Y2dequant[ QIndex[2] ][0][0] & 0x1ff) << 9);	// QP_Y2_DC_2[17:9]
     cmd |= ((pc->UVdequant[ QIndex[2] ][0][0] & 0x1ff) << 18);	// QP_UV_DC_2[26:18]
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_ADDRIDX4_OFF, cmd, "ADDR_IDX_CFG4, QP_DC_2");
-    
+
     cmd = (pc->Y1dequant[ QIndex[2] ][0][1] & 0x1ff) << 0;		// QP_Y1_AC_2[8:0]
     cmd |= ((pc->Y2dequant[ QIndex[2] ][0][1] & 0x1ff) << 9);	// QP_Y2_AC_2[17:9]
     cmd |= ((pc->UVdequant[ QIndex[2] ][0][1] & 0x1ff) << 18);	// QP_UV_AC_2[26:18]
@@ -183,7 +183,7 @@ void Vp8Dec_InitVSP(VPXDecObject *vo)
     cmd |= ((pc->Y2dequant[ QIndex[3] ][0][0] & 0x1ff) << 9);	// QP_Y2_DC_3[17:9]
     cmd |= ((pc->UVdequant[ QIndex[3] ][0][0] & 0x1ff) << 18);	// QP_UV_DC_3[26:18]
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_CFG9_OFF, cmd, "VSP_CFG9, QP_DC_3");
-        
+
     cmd = (pc->Y1dequant[ QIndex[3] ][0][1] & 0x1ff) << 0;		// QP_Y1_AC_3[8:0]
     cmd |= ((pc->Y2dequant[ QIndex[3] ][0][1] & 0x1ff) << 9);	// QP_Y2_AC_3[17:9]
     cmd |= ((pc->UVdequant[ QIndex[3] ][0][1] & 0x1ff) << 18);	// QP_UV_AC_3[26:18]
@@ -212,10 +212,10 @@ uint32 BitstreamReadBits (VPXDecObject *vo, uint32 nbits)
 
     VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY");
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, ((nbits)&0x3f)<<24, "BSM_OPERATE: Set OPT_BITS");
-    
+
     cmd = (uint32)VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + BSM_RDATA_OFF, "BSM_RDATA");
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (((nbits)&0x3f)<<24)|0x1, "BSM_OPERATE: BSM_FLUSH n bits");
-    
+
     return cmd;
 }
 
@@ -265,13 +265,13 @@ void Write_tbuf_Probs(VPXDecObject *vo)
 
     cmd = (pc->kf_ymode_prob[3]<<24) | (pc->kf_ymode_prob[2]<<16) | (pc->kf_ymode_prob[1]<<8) | (pc->kf_ymode_prob[0]);
     VSP_WRITE_REG(VLC_TABLE0_BASE_ADDR + 4*word_addr++, cmd, "Write VLC table0");
-    
+
     cmd = (pc->fc.ymode_prob[3]<<24) | (pc->fc.ymode_prob[2]<<16) | (pc->fc.ymode_prob[1]<<8) | (pc->fc.ymode_prob[0]);
     VSP_WRITE_REG(VLC_TABLE0_BASE_ADDR + 4*word_addr++, cmd, "Write VLC table0");
-    
+
     cmd = (pc->kf_uv_mode_prob[2]<<16) | (pc->kf_uv_mode_prob[1]<<8) | (pc->kf_uv_mode_prob[0]);
     VSP_WRITE_REG(VLC_TABLE0_BASE_ADDR + 4*word_addr++, cmd, "Write VLC table0");
-    
+
     cmd = (pc->fc.uv_mode_prob[2]<<16) | (pc->fc.uv_mode_prob[1]<<8) | (pc->fc.uv_mode_prob[0]);
     VSP_WRITE_REG(VLC_TABLE0_BASE_ADDR + 4*word_addr++, cmd, "Write VLC table0");
 
@@ -281,15 +281,15 @@ void Write_tbuf_Probs(VPXDecObject *vo)
         {
             cmd = (pc->kf_bmode_prob[i][j][3]<<24) | (pc->kf_bmode_prob[i][j][2]<<16) | (pc->kf_bmode_prob[i][j][1]<<8) | (pc->kf_bmode_prob[i][j][0]);
             VSP_WRITE_REG(VLC_TABLE0_BASE_ADDR + 4*word_addr++, cmd, "Write VLC table0");
-            
+
             cmd = (pc->kf_bmode_prob[i][j][7]<<24) | (pc->kf_bmode_prob[i][j][6]<<16) | (pc->kf_bmode_prob[i][j][5]<<8) | (pc->kf_bmode_prob[i][j][4]);
             VSP_WRITE_REG(VLC_TABLE0_BASE_ADDR + 4*word_addr++, cmd, "Write VLC table0");
-            
+
             cmd = (pc->kf_bmode_prob[i][j][8]);
             VSP_WRITE_REG(VLC_TABLE0_BASE_ADDR + 4*word_addr++, cmd, "Write VLC table0");
         }
     }
-    
+
     cmd = (pc->fc.bmode_prob[3]<<24) | (pc->fc.bmode_prob[2]<<16) | (pc->fc.bmode_prob[1]<<8) | (pc->fc.bmode_prob[0]);
     VSP_WRITE_REG(VLC_TABLE0_BASE_ADDR + 4*word_addr++, cmd, "Write VLC table0");
 
@@ -314,7 +314,7 @@ void Write_tbuf_Probs(VPXDecObject *vo)
             }
         }
     }
-    
+
     VSP_WRITE_REG(VLC_TABLE0_BASE_ADDR + 4*word_addr++, (0x0000009F), "Write VLC table0");	// Pcat1
     VSP_WRITE_REG(VLC_TABLE0_BASE_ADDR + 4*word_addr++, (0x000091A5), "Write VLC table0");	// Pcat2
     VSP_WRITE_REG(VLC_TABLE0_BASE_ADDR + 4*word_addr++, (0x008C94AD), "Write VLC table0");	// Pcat3

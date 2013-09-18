@@ -71,7 +71,7 @@ void h264enc_sps_init (ENC_IMAGE_PARAMS_T *img_ptr)
         sps->frame_crop_right_offset = 0;
         sps->frame_crop_top_offset = 0;
         sps->frame_crop_bottom_offset = (img_ptr->height - img_ptr->orig_height)/2;
-    }else
+    } else
     {
         sps->b_crop = 0;
 
@@ -82,7 +82,7 @@ void h264enc_sps_init (ENC_IMAGE_PARAMS_T *img_ptr)
     }
 
     SCI_TRACE_LOW("%s, %d, orig_height: %d, height: %d, b_crop: %d, frame_crop_left_offset: %d, frame_crop_right_offset: %d, frame_crop_top_offset: %d, frame_crop_bottom_offset: %d",
-            __FUNCTION__, __LINE__, img_ptr->orig_height, img_ptr->height, sps->b_crop, sps->frame_crop_left_offset, sps->frame_crop_right_offset, sps->frame_crop_top_offset, sps->frame_crop_bottom_offset);
+                  __FUNCTION__, __LINE__, img_ptr->orig_height, img_ptr->height, sps->b_crop, sps->frame_crop_left_offset, sps->frame_crop_right_offset, sps->frame_crop_top_offset, sps->frame_crop_bottom_offset);
     sps->i_num_ref_frames = 1;
 }
 
@@ -162,7 +162,7 @@ void h264enc_sps_write (H264EncObject *vo, ENC_SPS_T *sps)
     H264Enc_OutputBits (vo, sps->b_crop, 1);
     if(sps->b_crop)
     {
-        WRITE_UE_V (sps->frame_crop_left_offset);	
+        WRITE_UE_V (sps->frame_crop_left_offset);
         WRITE_UE_V (sps->frame_crop_right_offset);
         WRITE_UE_V (sps->frame_crop_top_offset);
         WRITE_UE_V (sps->frame_crop_bottom_offset);

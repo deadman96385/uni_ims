@@ -142,7 +142,7 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
 
     vop_mode_ptr->FrameWidth  = (int16)(mb_num_x * MB_SIZE);
     vop_mode_ptr->FrameHeight = (int16)(mb_num_y * MB_SIZE);
-	
+
     if (vo->mp4Handle->VSP_extMemCb(vo->mp4Handle->userdata,  vop_mode_ptr->FrameWidth, vop_mode_ptr->FrameHeight) < 0)
     {
         SCI_TRACE_LOW("%s, %d, extra memory is not enough", __FUNCTION__, __LINE__);
@@ -189,7 +189,7 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     vo->g_tmp_buf.imgY = Mp4Dec_MemAlloc(vo, (uint32)(total_mb_num*256), 256, EXTRA_MEM);
     CHECK_MALLOC(vo->g_tmp_buf.imgY, "vo->g_tmp_buf.imgY");
     vo->g_tmp_buf.imgYAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.imgY, EXTRA_MEM);
-    
+
     vo->g_tmp_buf.imgU = Mp4Dec_MemAlloc(vo, (uint32)((total_mb_num*128)), 256, EXTRA_MEM);
     CHECK_MALLOC(vo->g_tmp_buf.imgU, "vo->g_tmp_buf.imgU");
     vo->g_tmp_buf.imgUAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.imgU, EXTRA_MEM);
@@ -199,8 +199,8 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
 
     vo->g_tmp_buf.rec_info = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)(total_mb_num*80), 256, EXTRA_MEM);
     CHECK_MALLOC(vo->g_tmp_buf.rec_info, "vo->g_tmp_buf.rec_info");
-    vo->g_tmp_buf.rec_infoAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.rec_info, EXTRA_MEM);	
-		
+    vo->g_tmp_buf.rec_infoAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.rec_info, EXTRA_MEM);
+
     return MMDEC_OK;
 }
 

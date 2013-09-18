@@ -36,7 +36,7 @@ MP4_LOCAL uint32 Mp4Enc_InitVOPHeader(Mp4EncObject*vo, int32 time_stamp)
     int32 modula_time_base;
     int32 vop_time_increment;
     int32 nbits_modula_time_base;
-    VOL_MODE_T *vol_mode_ptr = vo->g_enc_vol_mode_ptr; 
+    VOL_MODE_T *vol_mode_ptr = vo->g_enc_vol_mode_ptr;
     ENC_VOP_MODE_T *vop_mode_ptr = vo->g_enc_vop_mode_ptr;
 
     NumBits += Mp4Enc_OutputBits(vo, START_CODE_PREFIX, NUMBITS_START_CODE_PREFIX);
@@ -103,7 +103,7 @@ int32 Mp4Enc_EncH263PicHeader(Mp4EncObject*vo)
 uint32 Mp4Enc_EncSequenceHeader(Mp4EncObject*vo)
 {
     uint32 NumBits = 0;
-    VOL_MODE_T *vol_mode_ptr = vo->g_enc_vol_mode_ptr; 
+    VOL_MODE_T *vol_mode_ptr = vo->g_enc_vol_mode_ptr;
     ENC_VOP_MODE_T *vop_mode_ptr = vo->g_enc_vop_mode_ptr;
     BOOLEAN is_short_header = vop_mode_ptr->short_video_header;
 
@@ -149,7 +149,7 @@ uint32 Mp4Enc_EncVOHeader(Mp4EncObject*vo)
  *****************************************************************************/
 uint32 Mp4Enc_EncVOLHeader(Mp4EncObject*vo)
 {
-    VOL_MODE_T *vol_mode_ptr = vo->g_enc_vol_mode_ptr; 
+    VOL_MODE_T *vol_mode_ptr = vo->g_enc_vol_mode_ptr;
     ENC_VOP_MODE_T *vop_mode_ptr = vo->g_enc_vop_mode_ptr;
     uint32 NumBits = 0;
     ALPHA_USAGE_E alpha_usage;

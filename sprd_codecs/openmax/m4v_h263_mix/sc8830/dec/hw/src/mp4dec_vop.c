@@ -67,7 +67,7 @@ PUBLIC void Mp4Dec_VSP_Cfg(Mp4DecObject *vo)
     } else
     {
         VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_CFG5_OFF,((1<<29)/vop_mode_ptr->time_pp),"VSP_CFG5");
-    }    
+    }
 }
 
 PUBLIC void Mp4Dec_exit_picture(Mp4DecObject *vo)
@@ -210,7 +210,7 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
     {
         if (vop_mode_ptr->pBckRefFrame->pDecFrame == NULL)
         {
-	    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x80,vo->g_tmp_buf.imgYAddr >>3,"ref L0 Y addr");
+            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x80,vo->g_tmp_buf.imgYAddr >>3,"ref L0 Y addr");
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x100,vo->g_tmp_buf.imgUAddr >>3,"ref L0 UV addr");
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x180,vo->g_tmp_buf.rec_infoAddr>>3,"ref L0 info addr");
             //return MMDEC_ERROR;
@@ -225,13 +225,13 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
         {
             if (vop_mode_ptr->pFrdRefFrame->pDecFrame == NULL)
             {
-    	        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x80,vo->g_tmp_buf.imgYAddr >>3,"ref L0 Y addr");
+                VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x80,vo->g_tmp_buf.imgYAddr >>3,"ref L0 Y addr");
                 VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x100,vo->g_tmp_buf.imgUAddr >>3,"ref L0 UV addr");
                 VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x180,vo->g_tmp_buf.rec_infoAddr>>3,"ref L0 info addr");
 
-    	        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0xc0,vo->g_tmp_buf.imgYAddr >>3,"ref L0 Y addr");
+                VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0xc0,vo->g_tmp_buf.imgYAddr >>3,"ref L0 Y addr");
                 VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x140,vo->g_tmp_buf.imgUAddr >>3,"ref L0 UV addr");
-                VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x1c0,vo->g_tmp_buf.rec_infoAddr>>3,"ref L0 info addr");			
+                VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x1c0,vo->g_tmp_buf.rec_infoAddr>>3,"ref L0 info addr");
                 //return MMDEC_ERROR;
             } else
             {
@@ -371,10 +371,10 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
                 if (tmp & V_BIT_4)
                 {
                     SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
-                }else if (tmp & V_BIT_5)
+                } else if (tmp & V_BIT_5)
                 {
-                    SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);                    
-                }                
+                    SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+                }
             } else if(tmp & V_BIT_2)
             {
                 vop_mode_ptr->error_flag = 0;
@@ -385,7 +385,7 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
 
     if(vop_mode_ptr->error_flag)
     {
-		return MMDEC_ERROR;
+        return MMDEC_ERROR;
     }
 
     return MMDEC_OK;

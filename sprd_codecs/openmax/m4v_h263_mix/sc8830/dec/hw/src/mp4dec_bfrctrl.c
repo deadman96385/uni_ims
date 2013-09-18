@@ -75,7 +75,7 @@ BOOLEAN Mp4Dec_GetOneFreeDecBfr(Mp4DecObject *vo, int32 *bfrId)
     if(id == DEC_YUV_BUFFER_NUM)
     {
         return FALSE;
-    }else
+    } else
     {
         return TRUE;
     }

@@ -105,10 +105,10 @@ int MP4DecGetLastDspFrm(MP4Handle *mp4Handle,void **pOutput)
     *pOutput = NULL;
     if(!vop_mode_ptr)
         return FALSE;
-    
+
     if(!vop_mode_ptr->pBckRefFrame)
         return FALSE;
-    
+
     frm_bfr = vop_mode_ptr->pBckRefFrame->pDecFrame;
     vop_mode_ptr->pBckRefFrame->pDecFrame = NULL;
     if(NULL != frm_bfr)
@@ -282,7 +282,7 @@ PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_fo
             }
         }
     }
-    
+
     return ret;
 }
 
@@ -297,9 +297,9 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     if ((dec_input_ptr->pStream == NULL) && (!vo->memory_error))
     {
         vo->memory_error = 1;
-        return MMDEC_MEMORY_ERROR;        
+        return MMDEC_MEMORY_ERROR;
     }
-        
+
     if (vo->memory_error)
     {
         return MMDEC_ERROR;
@@ -346,7 +346,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     ret = Mp4Dec_VerifyBitstrm(vo,dec_input_ptr->pStream, dec_input_ptr->dataLen);
     if(ret != MMDEC_OK)
     {
-        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_6;       
+        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_6;
         goto DECODER_DONE;
     }
 
@@ -459,7 +459,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         if(ByteConsumed > dec_input_ptr->dataLen)
         {
             dec_input_ptr->dataLen = 0;
-        }else
+        } else
         {
             dec_input_ptr->dataLen = dec_input_ptr->dataLen - ByteConsumed;
         }
@@ -473,11 +473,11 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     }
 
     Mp4Dec_InitVop(vo, dec_input_ptr);
-	
+
     if(Mp4Dec_decode_vop(vo) != MMDEC_OK)
     {
-        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_7;      
-	ret = MMDEC_STREAM_ERROR;
+        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_7;
+        ret = MMDEC_STREAM_ERROR;
         goto DECODER_DONE;
     }
 

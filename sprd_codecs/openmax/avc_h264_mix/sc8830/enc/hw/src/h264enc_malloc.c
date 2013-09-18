@@ -38,7 +38,7 @@ PUBLIC MMEncRet H264Enc_InitMem (H264EncObject *vo, MMCodecBuffer *pInterMemBfr,
         vo->mem[type].v_base = pMem->common_buffer_ptr;
         vo->mem[type].p_base = pMem->common_buffer_ptr_phy;
         vo->mem[type].total_size = pMem->size;
-        
+
         CHECK_MALLOC(vo->mem[type].v_base, "vo->mem[type].v_base");
         SCI_MEMSET(vo->mem[type].v_base, 0, vo->mem[type].total_size);
 

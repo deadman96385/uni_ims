@@ -191,7 +191,7 @@ PUBLIC MMDecRet Mp4Dec_VerifyBitstrm(Mp4DecObject *vo,uint8 *pStream, int32 strm
             if((first_32bits>>10) == 0x20)
             {
                 vop_mode_ptr->video_std = STREAM_ID_H263;
-            }else
+            } else
             {
                 vop_mode_ptr->video_std = STREAM_ID_FLVH263;
             }
@@ -208,23 +208,23 @@ PUBLIC MMDecRet Mp4Dec_VerifyBitstrm(Mp4DecObject *vo,uint8 *pStream, int32 strm
                 {
                     vop_mode_ptr->video_std = STREAM_ID_MPEG4;
                     return ret;
-                }else if ((tempPos[2] & 0xFC) == 0x80 && (tempPos[3] & 0x03)==0x02) /* H.263 PSC*/
+                } else if ((tempPos[2] & 0xFC) == 0x80 && (tempPos[3] & 0x03)==0x02) /* H.263 PSC*/
                 {
-		    SCI_TRACE_LOW("Mp4Dec_VerifyBitstrm: it is ITU-H.263 format:\n");
-		    vop_mode_ptr->video_std = STREAM_ID_H263;
-		    vop_mode_ptr->bDataPartitioning = FALSE; //MUST!, xweiluo@2012.03.01
-		    vop_mode_ptr->bReversibleVlc = FALSE;
-		    return ret;
-		}
-	    }
-	    tempPos++;
-	}
+                    SCI_TRACE_LOW("Mp4Dec_VerifyBitstrm: it is ITU-H.263 format:\n");
+                    vop_mode_ptr->video_std = STREAM_ID_H263;
+                    vop_mode_ptr->bDataPartitioning = FALSE; //MUST!, xweiluo@2012.03.01
+                    vop_mode_ptr->bReversibleVlc = FALSE;
+                    return ret;
+                }
+            }
+            tempPos++;
+        }
 
-	if (tempPos == pStreamEnd)
-	{
-		ret = MMDEC_STREAM_ERROR;
-	}
-    }	
+        if (tempPos == pStreamEnd)
+        {
+            ret = MMDEC_STREAM_ERROR;
+        }
+    }
 
     return ret;
 }

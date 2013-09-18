@@ -666,7 +666,7 @@ int32 VSP_ACQUIRE_Dev(VSPObject *vo);
 int32 VSP_RELEASE_Dev(VSPObject *vo);
 int32 ARM_VSP_RST(VSPObject *vo);
 
-#define VSP_WRITE_REG(reg_addr, value, pstring) (*(volatile uint32 *)((reg_addr) +((VSPObject *)vo)->s_vsp_Vaddr_base)  = (value))   
+#define VSP_WRITE_REG(reg_addr, value, pstring) (*(volatile uint32 *)((reg_addr) +((VSPObject *)vo)->s_vsp_Vaddr_base)  = (value))
 #define VSP_READ_REG(reg_addr, pstring)	((*(volatile uint32 *)((reg_addr)+((VSPObject *)vo)->s_vsp_Vaddr_base)))
 #define VSP_READ_REG_POLL(reg_addr, msk_data, msked_data, time, pstring) \
 {\

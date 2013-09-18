@@ -461,13 +461,13 @@ int vp8_decode_frame(VPXDecObject *vo)
         if (tmp & V_BIT_0)
         {
             SCI_TRACE_LOW("%s, %d, BSM_BUF_OVF", __FUNCTION__, __LINE__);
-        }else if (tmp & V_BIT_4)
+        } else if (tmp & V_BIT_4)
         {
             SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
-        }else if (tmp & V_BIT_5)
+        } else if (tmp & V_BIT_5)
         {
-            SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);                    
-        }              
+            SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+        }
     } else if(tmp & V_BIT_2)	// MBW_FMR_DONE
     {
         pc->error_flag=0;

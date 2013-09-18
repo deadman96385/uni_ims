@@ -95,7 +95,7 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
     if (vo->g_active_sps_ptr != sps_ptr)
     {
         vo->g_active_sps_ptr = sps_ptr;
-        
+
         img_ptr->max_frame_num = (1<<(sps_ptr->log2_max_frame_num_minus4+4));
         img_ptr->frame_width_in_mbs = (sps_ptr->pic_width_in_mbs_minus1+1);
         img_ptr->pic_height_in_map_units = (sps_ptr->pic_height_in_map_units_minus1+1);
@@ -107,14 +107,14 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
         if (vo->avcHandle->VSP_extMemCb)
         {
             uint32 malloc_buffer_num = MAX_REF_FRAME_NUMBER+1;
-                        
+
             int ret = (*(vo->avcHandle->VSP_extMemCb))(vo->avcHandle->userdata,vo->width,vo->height,malloc_buffer_num);
 
             if (ret < 0)
             {
                 SCI_TRACE_LOW("%s, %d, extra memory is not enough", __FUNCTION__, __LINE__);
-				vo->error_flag  |= ER_MEMORY_ID;
-				return;
+                vo->error_flag  |= ER_MEMORY_ID;
+                return;
             }
         }
 
@@ -213,7 +213,7 @@ LOCAL void H264Dec_active_pps (H264DecObject *vo, DEC_PPS_T *pps_ptr)
             vo->g_dec_picture_ptr = NULL;//weihu for output
             vo->g_nFrame_dec_h264++;
         }
-#endif        
+#endif
         vo->g_active_pps_ptr = pps_ptr;
     }
 }
@@ -234,7 +234,7 @@ PUBLIC void H264Dec_use_parameter_set (H264DecObject *vo, int32 pps_id)
             vo->error_flag |= ER_SREAM_ID;
             return;
         }
-    }else
+    } else
     {
         // Set SPS to the subset SPS parameters
         vo->g_active_subset_sps = vo->g_SubsetSeqParSet + pps_ptr->seq_parameter_set_id;
@@ -253,7 +253,7 @@ PUBLIC void H264Dec_use_parameter_set (H264DecObject *vo, int32 pps_id)
     {
         return;
     }
-    
+
     H264Dec_active_pps (vo, pps_ptr);
 
     if (!(sps_ptr->valid && pps_ptr->valid))
@@ -684,7 +684,7 @@ PUBLIC void H264Dec_ProcessSPS (H264DecObject *vo)
     if(vo->g_sps_ptr->seq_parameter_set_id < MAX_SPS)
     {
         H264Dec_make_sps_availabe (vo, vo->g_sps_ptr->seq_parameter_set_id, vo->g_sps_ptr);
-    }else
+    } else
     {
         vo->error_flag  |= ER_SREAM_ID;
         return;
@@ -815,7 +815,7 @@ LOCAL void H264Dec_interpret_pps (H264DecObject *vo, DEC_PPS_T *pps_ptr)
         if(pps_ptr->pic_scaling_matrix_present_flag)
         {
             int n_ScalingList = 6 + 2 * pps_ptr->transform_8x8_mode_flag;
-            
+
             for(i = 0; i < n_ScalingList; i++)
             {
                 pps_ptr->pic_scaling_list_present_flag[i]= READ_FLC(1);
@@ -866,7 +866,7 @@ PUBLIC void H264Dec_ProcessPPS (H264DecObject *vo)
     {
         vo->error_flag |= ER_SREAM_ID;
         return;
-    }else
+    } else
     {
         H264Dec_make_pps_available (vo, vo->g_pps_ptr->pic_parameter_set_id, pps_ptr);
     }
@@ -891,7 +891,7 @@ static void free_pointer(void *pointer)
 void init_subset_sps_list(subset_seq_parameter_set_rbsp_t *subset_sps_list, int iSize)
 {
     int i;
-    
+
     SCI_MEMSET(subset_sps_list, 0, iSize*sizeof(subset_sps_list[0]));
     for(i=0; i<iSize; i++)
     {
@@ -912,7 +912,7 @@ MMDecRet seq_parameter_set_mvc_extension(H264DecObject *vo, subset_seq_parameter
     {
         subset_sps->view_id = (int*)H264Dec_MemAlloc(vo, num_views*sizeof(int), 4, INTER_MEM);
         CHECK_MALLOC(subset_sps->view_id, "subset_sps->view_id");
-        
+
         subset_sps->num_anchor_refs_l0 = (int*)H264Dec_MemAlloc(vo, num_views*sizeof(int), 4, INTER_MEM);
         CHECK_MALLOC(subset_sps->num_anchor_refs_l0, "subset_sps->num_anchor_refs_l0");
 
@@ -960,14 +960,14 @@ MMDecRet seq_parameter_set_mvc_extension(H264DecObject *vo, subset_seq_parameter
             vo->error_flag |= ER_SREAM_ID;
             return MMDEC_ERROR;
         }
-        
+
         if(subset_sps->num_anchor_refs_l0[i]>0)
         {
             //if ((subset_sps->anchor_ref_l0[i] = (int*) calloc(subset_sps->num_anchor_refs_l0[i], sizeof(int))) == NULL)
             //  no_mem_exit("init_subset_seq_parameter_set: subset_sps->anchor_ref_l0[i]");
             subset_sps->anchor_ref_l0[i] = (int*)H264Dec_MemAlloc(vo, subset_sps->num_anchor_refs_l0[i]*sizeof(int), 4, INTER_MEM);
             CHECK_MALLOC(subset_sps->anchor_ref_l0[i] , "subset_sps->anchor_ref_l0[i] ");
-            
+
             for(j=0; j<subset_sps->num_anchor_refs_l0[i]; j++)
             {
                 subset_sps->anchor_ref_l0[i][j] = UE_V();
@@ -980,7 +980,7 @@ MMDecRet seq_parameter_set_mvc_extension(H264DecObject *vo, subset_seq_parameter
             vo->error_flag |= ER_SREAM_ID;
             return MMDEC_ERROR;
         }
-        
+
         if(subset_sps->num_anchor_refs_l1[i]>0)
         {
             //if ((subset_sps->anchor_ref_l1[i] = (int*) calloc(subset_sps->num_anchor_refs_l1[i], sizeof(int))) == NULL)
@@ -994,7 +994,7 @@ MMDecRet seq_parameter_set_mvc_extension(H264DecObject *vo, subset_seq_parameter
             }
         }
     }
-    
+
     for(i = 1; i < num_views; i++)
     {
         subset_sps->num_non_anchor_refs_l0[i] = UE_V();
@@ -1009,7 +1009,7 @@ MMDecRet seq_parameter_set_mvc_extension(H264DecObject *vo, subset_seq_parameter
             //  no_mem_exit("init_subset_seq_parameter_set: subset_sps->non_anchor_ref_l0[i]");
             subset_sps->non_anchor_ref_l0[i] = (int*)H264Dec_MemAlloc(vo, subset_sps->num_non_anchor_refs_l0[i]*sizeof(int), 4, INTER_MEM);
             CHECK_MALLOC(subset_sps->non_anchor_ref_l0[i], "subset_sps->non_anchor_ref_l0[i] ");
-                        
+
             for(j=0; j<subset_sps->num_non_anchor_refs_l0[i]; j++)
             {
                 subset_sps->non_anchor_ref_l0[i][j] = UE_V();
@@ -1053,7 +1053,7 @@ MMDecRet seq_parameter_set_mvc_extension(H264DecObject *vo, subset_seq_parameter
 
         subset_sps->applicable_op_num_views_minus1 = (int**)H264Dec_MemAlloc(vo, i*sizeof(int*), 4, INTER_MEM);
         CHECK_MALLOC(subset_sps->applicable_op_num_views_minus1, "subset_sps->applicable_op_num_views_minus1");
-    }else
+    } else
     {
         vo->error_flag |= ER_SREAM_ID;
         return MMDEC_ERROR;
@@ -1177,12 +1177,12 @@ MMDecRet mvc_vui_parameters_extension(H264DecObject *vo, MVCVUI_t *pMVCVUI)
                 pMVCVUI->view_id[i] = (int *)H264Dec_MemAlloc(vo, sizeof(pMVCVUI->view_id[0][0]) * (pMVCVUI->num_target_output_views_minus1[i]+1), 4, INTER_MEM);
                 CHECK_MALLOC(pMVCVUI->view_id[i], "pMVCVUI->view_id[i]");
             }
-            
+
             for(j=0; j<=pMVCVUI->num_target_output_views_minus1[i]; j++)
             {
                 pMVCVUI->view_id[i][j] = UE_V();
             }
-            
+
             pMVCVUI->timing_info_present_flag[i] = (char) READ_FLC(1);
             if(pMVCVUI->timing_info_present_flag[i])
             {
@@ -1190,7 +1190,7 @@ MMDecRet mvc_vui_parameters_extension(H264DecObject *vo, MVCVUI_t *pMVCVUI)
                 pMVCVUI->time_scale[i]            = READ_FLC(32);
                 pMVCVUI->fixed_frame_rate_flag[i] = (char) READ_FLC(1);
             }
-            
+
             pMVCVUI->nal_hrd_parameters_present_flag[i] = (char) READ_FLC(1);
             if(pMVCVUI->nal_hrd_parameters_present_flag[i])
             {

@@ -170,12 +170,12 @@ MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBu
 
     CHECK_MALLOC(pInterMemBfr, "pInterMemBfr");
     CHECK_MALLOC(pInterMemBfr->common_buffer_ptr, "internal memory");
-	CHECK_MALLOC(pExtraMemBfr, "pExtraMemBfr");
+    CHECK_MALLOC(pExtraMemBfr, "pExtraMemBfr");
     CHECK_MALLOC(pExtraMemBfr->common_buffer_ptr, "extranal memory");
     CHECK_MALLOC(pBitstreamBfr, "pBitstreamBfr");
     CHECK_MALLOC(pBitstreamBfr->common_buffer_ptr, "bit stream memory");
 
-    
+
     vo = (Mp4EncObject *) (pInterMemBfr->common_buffer_ptr);
     memset(vo, 0, sizeof(Mp4EncObject));
     mp4Handle->videoEncoderData = (void *) vo;
@@ -190,20 +190,20 @@ MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBu
     {
         return ret;
     }
-    
+
     vo->g_enc_vol_mode_ptr = vol_mode_ptr = (VOL_MODE_T *)Mp4Enc_MemAlloc(vo, sizeof(VOL_MODE_T), 4, INTER_MEM);
     CHECK_MALLOC(vo->g_enc_vol_mode_ptr, "vo->g_enc_vol_mode_ptr");
-    
+
     vo->g_enc_vop_mode_ptr = vop_mode_ptr = (ENC_VOP_MODE_T *)Mp4Enc_MemAlloc(vo, sizeof(ENC_VOP_MODE_T), 4, INTER_MEM);
     CHECK_MALLOC(vo->g_enc_vop_mode_ptr, "vo->g_enc_vop_mode_ptr");
 
     vo->g_vlc_hw_ptr = (uint32 *) Mp4Enc_MemAlloc(vo, 320*2*sizeof(uint32), 8, EXTRA_MEM);
     CHECK_MALLOC(vo->g_vlc_hw_ptr, "vo->g_vlc_hw_ptr");
     memcpy(vo->g_vlc_hw_ptr, g_vlc_hw_tbl, (320*2*sizeof(uint32)));
-    
+
     vo->g_rc_ptr = (rc_single_t *)Mp4Enc_MemAlloc(vo, sizeof(rc_single_t), 4, INTER_MEM);
     CHECK_MALLOC(vo->g_rc_ptr, "vo->g_rc_ptr");
-    
+
     vo->g_rc_data_ptr = (xvid_plg_data_t *)Mp4Enc_MemAlloc(vo, sizeof(xvid_plg_data_t), 4, INTER_MEM);
     CHECK_MALLOC(vo->g_rc_data_ptr, "vo->g_rc_data_ptr");
 
@@ -347,7 +347,7 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
             vop_mode_ptr->StepSize = vop_mode_ptr->StepP;
             ret = Mp4Enc_EncVOP(vo, pInput->time_stamp);
 
-             vo->g_enc_p_frame_count--;
+            vo->g_enc_p_frame_count--;
         } else
         {
 #if 0

@@ -561,11 +561,11 @@ LOCAL void H264Dec_adaptive_memory_management (H264DecObject *vo, DEC_DECODED_PI
             }
             break;
         default:
-            {
-                vo->error_flag |= ER_REF_FRM_ID;
-                SCI_TRACE_LOW ("invalid memory_management_control_operation in buffer");
-                return;
-            }
+        {
+            vo->error_flag |= ER_REF_FRM_ID;
+            SCI_TRACE_LOW ("invalid memory_management_control_operation in buffer");
+            return;
+        }
         }
         i++;
     }
@@ -771,7 +771,7 @@ PUBLIC void H264Dec_store_picture_in_dpb (H264DecObject *vo, DEC_STORABLE_PICTUR
 LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_short_term_pic (H264DecObject *vo, int32 pic_num, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
     int32 i;
-    
+
     for (i = 0; i < (dpb_ptr->ref_frames_in_buffer); i++)
     {
         if (dpb_ptr->fs_ref[i] == NULL)
@@ -779,7 +779,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_short_term_pic (H264DecObject *vo, int
             vo->error_flag |= ER_REF_FRM_ID;
             return NULL;//weihu//return g_no_reference_picture_ptr
         }
-        
+
         if (dpb_ptr->fs_ref[i]->is_reference)
         {
             if (dpb_ptr->fs_ref[i]->frame == NULL)
@@ -787,7 +787,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_short_term_pic (H264DecObject *vo, int
                 vo->error_flag |= ER_REF_FRM_ID;
                 return NULL;//weihu
             }
-            
+
             if ((!dpb_ptr->fs_ref[i]->frame->is_long_term) && (dpb_ptr->fs_ref[i]->frame->pic_num == pic_num))
             {
                 return dpb_ptr->fs_ref[i]->frame;
@@ -849,7 +849,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_long_term_pic (H264DecObject *vo, int3
                 vo->error_flag |= ER_REF_FRM_ID;
                 return NULL;
             }
-            
+
             if ((p_Dpb->fs_ltref[i]->frame->is_long_term) && (p_Dpb->fs_ltref[i]->frame->long_term_pic_num == long_term_pic_num))
             {
                 return p_Dpb->fs_ltref[i]->frame;
@@ -1175,22 +1175,22 @@ LOCAL void H264Dec_map_list1(H264DecObject *vo)
         vo->error_flag |= ER_REF_FRM_ID;
         return;
     }
-        
+
     for(i = 0; i < vo->g_list_size[0]; i++)
     {
         vo->g_list0_map_addr[i] = vo->g_list0[i]->DPB_addr_index;
     }
-        
+
     for (i = vo->g_list_size[0]; i < (2*MAX_REF_FRAME_NUMBER); i++)
     {
         vo->g_list0_map_addr[i] = 0x3f;
     }
-        
+
     for(i = 0; i < vo->g_list_size[1]; i++)
     {
         vo->g_list1_map_addr[i] = vo->g_list1[i]->DPB_addr_index;
     }
-        
+
     for (i = vo->g_list_size[1]; i < MAX_REF_FRAME_NUMBER; i++)
     {
         vo->g_list1_map_addr[i] = 0x3f;
@@ -1597,7 +1597,7 @@ PUBLIC MMDecRet H264Dec_init_list (H264DecObject *vo, int32 curr_slice_type)
     DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = curr_slice_ptr->p_Dpb;
     DEC_STORABLE_PICTURE_T **list = vo->g_list0;
     int32 max_frame_num = (1<<(vo->g_active_sps_ptr->log2_max_frame_num_minus4+4));
-    
+
 #if _MVC_
     curr_slice_ptr->listinterviewidx0 = 0;
     curr_slice_ptr->listinterviewidx1 = 0;
@@ -1798,10 +1798,10 @@ PUBLIC MMDecRet H264Dec_init_list (H264DecObject *vo, int32 curr_slice_type)
                                   curr_view_id,
                                   curr_slice_ptr->anchor_pic_flag);
 
-            append_interview_list(vo, vo->g_dpb_layer[1], 0, (DEC_STORABLE_PICTURE_T **)(curr_slice_ptr->fs_listinterview0), 
-                                &(curr_slice_ptr->listinterviewidx0), img_ptr->framepoc, curr_view_id, curr_slice_ptr->anchor_pic_flag);
-            append_interview_list(vo, vo->g_dpb_layer[1], 1, (DEC_STORABLE_PICTURE_T **)(curr_slice_ptr->fs_listinterview1), 
-                                &(curr_slice_ptr->listinterviewidx1), img_ptr->framepoc, curr_view_id, curr_slice_ptr->anchor_pic_flag);
+            append_interview_list(vo, vo->g_dpb_layer[1], 0, (DEC_STORABLE_PICTURE_T **)(curr_slice_ptr->fs_listinterview0),
+                                  &(curr_slice_ptr->listinterviewidx0), img_ptr->framepoc, curr_view_id, curr_slice_ptr->anchor_pic_flag);
+            append_interview_list(vo, vo->g_dpb_layer[1], 1, (DEC_STORABLE_PICTURE_T **)(curr_slice_ptr->fs_listinterview1),
+                                  &(curr_slice_ptr->listinterviewidx1), img_ptr->framepoc, curr_view_id, curr_slice_ptr->anchor_pic_flag);
             for (i=0; i<(unsigned int)(curr_slice_ptr->listinterviewidx0); i++)
             {
                 vo->g_list0[list0idx++] = curr_slice_ptr->fs_listinterview0[i]->frame;

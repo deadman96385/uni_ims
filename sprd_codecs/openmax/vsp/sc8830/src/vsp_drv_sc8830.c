@@ -30,7 +30,7 @@ LOCAL int32 VSP_set_ddr_freq(const char* freq_in_khz)
 {
     const char* const set_freq = "/sys/devices/platform/scxx30-dmcfreq.0/devfreq/scxx30-dmcfreq.0/ondemand/set_freq";
     FILE* fp = fopen(set_freq, "wb");
-    
+
     if (fp != NULL) {
         fprintf(fp, "%s", freq_in_khz);
         SCI_TRACE_LOW("set ddr freq to %skhz", freq_in_khz);
@@ -119,20 +119,20 @@ PUBLIC int32 VSP_OPEN_Dev (VSPObject *vo)
 PUBLIC int32 VSP_CLOSE_Dev(VSPObject *vo)
 {
     if(vo->s_vsp_fd > 0)
-    {        
+    {
         if (munmap(vo->s_vsp_Vaddr_base + VSP_REG_BASE_ADDR, SPRD_VSP_MAP_SIZE))
         {
             SCI_TRACE_LOW("%s, %d, %d", __FUNCTION__, __LINE__, errno);
             return -1;
         }
-        
+
         close(vo->s_vsp_fd);
         if (VSP_clean_freq(vo) < 0)
         {
             return -1;
         }
         return 0;
-    }else
+    } else
     {
         SCI_TRACE_LOW ("%s, error", __FUNCTION__);
         return -1;
@@ -143,9 +143,9 @@ PUBLIC int32 VSP_GET_DEV_FREQ(VSPObject *vo, int32*  vsp_clk_ptr)
 {
     if(vo->s_vsp_fd > 0)
     {
-	ioctl(vo->s_vsp_fd, VSP_GET_FREQ, vsp_clk_ptr);
+        ioctl(vo->s_vsp_fd, VSP_GET_FREQ, vsp_clk_ptr);
         return 0;
-    }else
+    } else
     {
         SCI_TRACE_LOW ("%s, error", __FUNCTION__);
         return -1;
@@ -156,9 +156,9 @@ PUBLIC int32 VSP_CONFIG_DEV_FREQ(VSPObject *vo,int32*  vsp_clk_ptr)
 {
     if(vo->s_vsp_fd > 0)
     {
-	ioctl(vo->s_vsp_fd, VSP_CONFIG_FREQ, vsp_clk_ptr);
+        ioctl(vo->s_vsp_fd, VSP_CONFIG_FREQ, vsp_clk_ptr);
         return 0;
-    }else
+    } else
     {
         SCI_TRACE_LOW ("%s, error", __FUNCTION__);
         return -1;
@@ -176,7 +176,7 @@ PUBLIC int32 VSP_POLL_COMPLETE(VSPObject *vo)
         SCI_TRACE_LOW("%s, %d, int_ret: %0x", __FUNCTION__, __LINE__, ret);
 
         return ret;
-    }else
+    } else
     {
         SCI_TRACE_LOW ("%s, error", __FUNCTION__);
         return -1;
@@ -223,7 +223,7 @@ PUBLIC int32 VSP_RELEASE_Dev(VSPObject *vo)
         SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
 
         return 0;
-    }else
+    } else
     {
         SCI_TRACE_LOW("%s: failed :fd <  0", __FUNCTION__);
         return -1;

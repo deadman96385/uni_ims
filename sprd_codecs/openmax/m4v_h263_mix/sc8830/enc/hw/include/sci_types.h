@@ -23,8 +23,8 @@
  **                         Compiler Flag                                     *
  **---------------------------------------------------------------------------*/
 #ifdef __cplusplus
-    extern   "C"
-    {
+extern   "C"
+{
 #endif
 
 /* ------------------------------------------------------------------------
@@ -43,7 +43,7 @@
 #define FALSE  0   /* Boolean false value. */
 
 #ifndef NULL
-  #define NULL  0
+#define NULL  0
 #endif
 
 /* -----------------------------------------------------------------------
@@ -65,9 +65,9 @@ typedef signed int			int32;
 #define CONST
 #else
 #ifdef SIM_IN_WIN
-	#define LOCAL		static
+#define LOCAL		static
 #else
-	#define	LOCAL		//static //remove static because openrisc error
+#define	LOCAL		//static //remove static because openrisc error
 #endif
 #define	CONST		const
 #endif  //WIN_UNIT_TEST
@@ -78,7 +78,7 @@ typedef signed int			int32;
 #define PNULL		0
 
 //Added by Xueliang.Wang on 28/03/2002
-#define PUBLIC 
+#define PUBLIC
 //#define	PRIVATE		static
 #define	SCI_CALLBACK
 
@@ -89,11 +89,11 @@ typedef uint32          BLOCK_ID;
 #define IRQ_FUNC        __irq
 
 #ifdef WIN32
-    #define PACK
+#define PACK
 #else
-    #define PACK __packed    /* Byte alignment for communication structures.*/
+#define PACK __packed    /* Byte alignment for communication structures.*/
 #endif
-          
+
 /* some usefule marcos */
 #define Bit(_i)              ((u32) 1<<(_i))
 
@@ -101,7 +101,7 @@ typedef uint32          BLOCK_ID;
 
 #define  MIN( _x, _y ) ( ((_x) < (_y)) ? (_x) : (_y) )
 #define  WORD_LO(_xxx)  ((uint8) ((int16)(_xxx)))
-#define  WORD_HI(_xxx)  ((uint8) ((int16)(_xxx) >> 8)) 
+#define  WORD_HI(_xxx)  ((uint8) ((int16)(_xxx) >> 8))
 
 #define RND8( _x )       ((((_x) + 7) / 8 ) * 8 ) /*rounds a number up to the nearest multiple of 8 */
 
@@ -128,7 +128,7 @@ typedef uint32          BLOCK_ID;
  **                         Compiler Flag                                     *
  **---------------------------------------------------------------------------*/
 #ifdef __cplusplus
-    }
+}
 #endif
 
 #endif  /* SCI_TYPES_H */

@@ -33,12 +33,12 @@ LOCAL MMDecRet Init_Mem (H264DecObject *vo, MMCodecBuffer *pMem, int32 type)
     vo->mem[type].v_base = pMem->common_buffer_ptr + dw_aligned;
     vo->mem[type].p_base = (uint32)(pMem->common_buffer_ptr_phy) + dw_aligned;
     vo->mem[type].total_size = pMem->size - dw_aligned;
-    
+
     CHECK_MALLOC(vo->mem[type].total_size, "vo->mem[type].total_size");
     SCI_MEMSET(vo->mem[type].v_base, 0, vo->mem[type].total_size);
 
     H264DEC_MALLOC_PRINT("%s: dw_aligned, %d, v_base: %0x, p_base: %0x, mem_size:%d\n",
-                        __FUNCTION__, dw_aligned, vo->mem[type].v_base, vo->mem[type].p_base, vo->mem[type].total_size);
+                         __FUNCTION__, dw_aligned, vo->mem[type].v_base, vo->mem[type].p_base, vo->mem[type].total_size);
 
     return MMDEC_OK;
 }

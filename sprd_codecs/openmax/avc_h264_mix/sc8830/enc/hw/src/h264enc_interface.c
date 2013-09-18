@@ -40,13 +40,13 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecB
 
     SCI_TRACE_LOW("libomx_avcenc_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
-	CHECK_MALLOC(pInterMemBfr, "pInterMemBfr");
-	CHECK_MALLOC(pExtaMemBfr, "pExtaMemBfr");
-	CHECK_MALLOC(pBitstreamBfr, "pBitstreamBfr");
-	
+    CHECK_MALLOC(pInterMemBfr, "pInterMemBfr");
+    CHECK_MALLOC(pExtaMemBfr, "pExtaMemBfr");
+    CHECK_MALLOC(pBitstreamBfr, "pBitstreamBfr");
+
     CHECK_MALLOC(pInterMemBfr->common_buffer_ptr, "internal memory");
-	CHECK_MALLOC(pExtaMemBfr->common_buffer_ptr, "external memory");
-	CHECK_MALLOC(pBitstreamBfr->common_buffer_ptr, "bitstream memory");
+    CHECK_MALLOC(pExtaMemBfr->common_buffer_ptr, "external memory");
+    CHECK_MALLOC(pBitstreamBfr->common_buffer_ptr, "bitstream memory");
 
     vo = (H264EncObject *) (pInterMemBfr->common_buffer_ptr);
     memset(vo, 0, sizeof(H264EncObject));
@@ -142,7 +142,7 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecB
 
     img_ptr->pYUVRecFrame->imgUV = (uint8 *)H264Enc_MemAlloc(vo, frame_buf_size/2, 8, EXTRA_MEM);
     CHECK_MALLOC(img_ptr->pYUVRecFrame->imgUV, "img_ptr->pYUVRecFrame->imgUV");
-    
+
     img_ptr->pYUVRecFrame->imgYAddr = (uint32)H264Enc_ExtraMem_V2P(vo, img_ptr->pYUVRecFrame->imgY, EXTRA_MEM) >> 3;	// DWORD
     img_ptr->pYUVRecFrame->imgUVAddr = (uint32)H264Enc_ExtraMem_V2P(vo, img_ptr->pYUVRecFrame->imgUV, EXTRA_MEM) >> 3;	// DWORD
 
@@ -196,11 +196,11 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
         if (0 == (pConf->FrameRate%INTRA_PERIOD))
         {
             vo->rc_gop_paras.intra_period = INTRA_PERIOD;
-        }else
+        } else
         {
             vo->rc_gop_paras.intra_period = pConf->FrameRate;
         }
-    }else
+    } else
     {
         vo->rc_gop_paras.intra_period = pConf->FrameRate;
     }
@@ -282,13 +282,13 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
         if (0 == (vo->g_nFrame_enc % vo->rc_gop_paras.intra_period))
         {
             img_ptr->pYUVSrcFrame->i_type = i_slice_type = SLICE_TYPE_I;
-        }else
+        } else
         {
             img_ptr->pYUVSrcFrame->i_type = i_slice_type = SLICE_TYPE_P;
-        }	
-    }else
+        }
+    } else
     {
-	img_ptr->pYUVSrcFrame->i_type = i_slice_type = ((pInput->vopType == 0) ? SLICE_TYPE_I : SLICE_TYPE_P);	
+        img_ptr->pYUVSrcFrame->i_type = i_slice_type = ((pInput->vopType == 0) ? SLICE_TYPE_I : SLICE_TYPE_P);
     }
 
     img_ptr->pYUVSrcFrame->imgY =  pInput->p_src_y_phy;
@@ -346,11 +346,11 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     vo->prev_qp = i_global_qp;	// MUST HAVE prev_qp updated!!
 
     img_ptr->pYUVRecFrame->i_poc =
-    img_ptr->pYUVSrcFrame->i_poc = 2 * img_ptr->frame_num;
+        img_ptr->pYUVSrcFrame->i_poc = 2 * img_ptr->frame_num;
     img_ptr->pYUVRecFrame->i_type = img_ptr->pYUVSrcFrame->i_type;
     img_ptr->pYUVRecFrame->i_frame = img_ptr->pYUVSrcFrame->i_frame;
     img_ptr->pYUVSrcFrame->b_kept_as_ref =
-    img_ptr->pYUVRecFrame->b_kept_as_ref = (i_nal_ref_idc != NAL_PRIORITY_DISPOSABLE);
+        img_ptr->pYUVRecFrame->b_kept_as_ref = (i_nal_ref_idc != NAL_PRIORITY_DISPOSABLE);
 
     //init
     h264enc_reference_build_list (img_ptr, img_ptr->pYUVRecFrame->i_poc, i_slice_type);

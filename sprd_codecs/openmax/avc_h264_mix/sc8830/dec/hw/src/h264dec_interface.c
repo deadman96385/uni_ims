@@ -243,7 +243,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
     if ((dec_input_ptr->pStream == NULL) && (!vo->memory_error))
     {
         vo->memory_error = 1;
-        return MMDEC_MEMORY_ERROR;        
+        return MMDEC_MEMORY_ERROR;
     }
 
     if (vo->memory_error)
