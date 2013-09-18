@@ -32,7 +32,7 @@ void H264Enc_rbsp_trailing (H264EncObject *vo);
 void H264Enc_write_nal_start_code (H264EncObject *vo);
 uint32 H264Enc_OutputBits(H264EncObject *vo, uint32 val, uint32 nbits);
 
-#define WRITE_SE_V( val) \
+#define WRITE_SE_V(val) \
 {\
     uint32 val_se = (val) <= 0 ? -(val)*2 : (val)*2-1;    \
     write_ue_v(vo, val_se); \

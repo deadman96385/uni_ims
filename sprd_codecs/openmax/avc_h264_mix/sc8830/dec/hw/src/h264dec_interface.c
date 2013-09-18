@@ -133,8 +133,12 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 {
     H264DecObject *vo = (H264DecObject *)avcHandle->videoDecoderData;
     DEC_SPS_T *sps_ptr = &(vo->g_sps_array_ptr[0]);
-    int32 aligned_width =  (sps_ptr->pic_width_in_mbs_minus1 + 1) * 16;
-    int32 aligned_height = (sps_ptr->pic_height_in_map_units_minus1 + 1) * 16;
+    int32 aligned_width, aligned_height;
+
+    if((sps_ptr == NULL) || (sps_ptr->vui_seq_parameters == NULL))
+    {
+        return (MMDEC_ERROR);
+    }
 
 //    SCI_TRACE_LOW("%s, %d, aligned_width: %d, aligned_height: %d", __FUNCTION__, __LINE__, aligned_width, aligned_height);
 
@@ -142,6 +146,9 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
     {
         return(MMDEC_PARAM_ERROR);
     }
+
+    aligned_width =  (sps_ptr->pic_width_in_mbs_minus1 + 1) * 16;
+    aligned_height = (sps_ptr->pic_height_in_map_units_minus1 + 1) * 16;
 
     pDecInfo->picWidth        = aligned_width;
     pDecInfo->picHeight       = aligned_height;
@@ -175,13 +182,17 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 
 MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideoFormat * pVideoFormat)
 {
-    H264DecObject*vo = NULL;
-    MMDecRet ret = MMDEC_ERROR;
+    H264DecObject*vo;
+    MMDecRet ret;
 
-    SCI_TRACE_LOW("libomx_avcdec_hw_sprd.so is built on %s %s, Copyright (C) Spreatrum, Inc.", __DATE__, __TIME__);
+    SCI_TRACE_LOW("libomx_avcdec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
     SCI_ASSERT(NULL != buffer_ptr);
     SCI_ASSERT(NULL != pVideoFormat);
+
+    CHECK_MALLOC(pVideoFormat, "pVideoFormat");
+    CHECK_MALLOC(buffer_ptr, "buffer_ptr");
+    CHECK_MALLOC(buffer_ptr->common_buffer_ptr, "internal memory");
 
     vo = (H264DecObject *) (buffer_ptr->common_buffer_ptr);
     memset(vo, 0, sizeof(H264DecObject));
@@ -192,7 +203,11 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
     buffer_ptr->common_buffer_ptr_phy+= sizeof(H264DecObject);
     buffer_ptr->size -= sizeof(H264DecObject);
 
-    H264Dec_InitInterMem (vo, buffer_ptr);
+    ret = H264Dec_InitInterMem (vo, buffer_ptr);
+    if (ret != MMENC_OK)
+    {
+        return ret;
+    }
 
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
@@ -205,7 +220,11 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
     }
 
     // Physical memory as internal memory.
-    H264Dec_init_global_para (vo);
+    ret = H264Dec_init_global_para (vo);
+    if (ret != MMENC_OK)
+    {
+        return ret;
+    }
 
     if (vo->error_flag)
     {
@@ -214,14 +233,23 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
     return MMDEC_OK;
 }
 
-//int32 b_video_buffer_malloced = 0;
-
 PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, MMDecOutput *dec_output_ptr)
 {
     MMDecRet ret;
     int32 i;
     uint32 bs_buffer_length, bs_start_addr, destuffing_num;
     H264DecObject *vo = (H264DecObject *) avcHandle->videoDecoderData;
+
+    if ((dec_input_ptr->pStream == NULL) && (!vo->memory_error))
+    {
+        vo->memory_error = 1;
+        return MMDEC_MEMORY_ERROR;        
+    }
+
+    if (vo->memory_error)
+    {
+        return MMDEC_ERROR;
+    }
 
     vo->frame_dec_finish=0;
 
@@ -285,20 +313,31 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
         SCI_TRACE_LOW("%s, %d, g_slice_datalen: %d, g_stream_offset: %d, bs_buffer_length: %d, frame_dec_finish: %d,ret:  %d ", __FUNCTION__, __LINE__, vo->g_slice_datalen, vo->g_stream_offset, bs_buffer_length, vo->frame_dec_finish, ret);
 
-        dec_input_ptr->dataLen = vo->g_stream_offset + 	vo->g_nalu_ptr->len + destuffing_num;
+        dec_input_ptr->dataLen = vo->g_stream_offset + vo->g_nalu_ptr->len + destuffing_num;
 
         vo->g_stream_offset += vo->g_slice_datalen;//dec_input_ptr->dataLen;
 
         if( (MMDEC_ERROR ==ret) ||vo->frame_dec_finish)//dec_output.frameEffective
         {
             if(MMDEC_ERROR ==ret)
+            {
                 dec_input_ptr->dataLen = bs_buffer_length;
+
+                if (vo->error_flag & ER_MEMORY_ID)
+                {
+                    vo->memory_error = 1;
+                    ret = MMDEC_MEMORY_ERROR;
+                }
+            }
 
             break;	//break loop.
         }
     }
 
-    VSP_RELEASE_Dev((VSPObject *)vo);
+    if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
+    {
+        return MMENC_HW_ERROR;
+    }
 
     return ret;
 }
@@ -312,7 +351,10 @@ MMDecRet H264DecRelease(AVCHandle *avcHandle)
 {
     H264DecObject *vo = (H264DecObject *) avcHandle->videoDecoderData;
 
-    VSP_CLOSE_Dev((VSPObject *)vo);
+    if (VSP_CLOSE_Dev((VSPObject *)vo) < 0)
+    {
+        return MMENC_HW_ERROR;
+    }
 
     return MMDEC_OK;
 }

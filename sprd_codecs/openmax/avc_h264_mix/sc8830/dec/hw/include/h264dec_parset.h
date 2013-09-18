@@ -26,20 +26,19 @@ extern   "C"
 {
 #endif
 
-PUBLIC void H264Dec_use_parameter_set (H264DecObject *vo, int32 pps_id);
-PUBLIC void H264Dec_InterpretSEIMessage (void);
-PUBLIC void H264Dec_ProcessSPS (H264DecObject *vo);
-PUBLIC void H264Dec_ProcessPPS (H264DecObject *vo);
+void H264Dec_use_parameter_set (H264DecObject *vo, int32 pps_id);
+void H264Dec_InterpretSEIMessage (void);
+void H264Dec_ProcessSPS (H264DecObject *vo);
+void H264Dec_ProcessPPS (H264DecObject *vo);
+
 #if _MVC_
-extern void ProcessSubsetSPS (H264DecObject *vo);
-extern void init_subset_sps_list(subset_seq_parameter_set_rbsp_t *subset_sps_list, int iSize);
-extern void mvc_vui_parameters_extension(H264DecObject *vo, MVCVUI_t *pMVCVUI);
-extern void seq_parameter_set_mvc_extension(H264DecObject *vo, subset_seq_parameter_set_rbsp_t *subset_sps);
-extern void reset_subset_sps(subset_seq_parameter_set_rbsp_t *subset_sps);
-extern void get_max_dec_frame_buf_size(H264DecObject *vo, DEC_SPS_T *sps);
+void ProcessSubsetSPS (H264DecObject *vo);
+void init_subset_sps_list(subset_seq_parameter_set_rbsp_t *subset_sps_list, int iSize);
+MMDecRet mvc_vui_parameters_extension(H264DecObject *vo, MVCVUI_t *pMVCVUI);
+MMDecRet seq_parameter_set_mvc_extension(H264DecObject *vo, subset_seq_parameter_set_rbsp_t *subset_sps);
+void reset_subset_sps(subset_seq_parameter_set_rbsp_t *subset_sps);
+void get_max_dec_frame_buf_size(H264DecObject *vo, DEC_SPS_T *sps);
 #endif
-
-
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

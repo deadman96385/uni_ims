@@ -42,43 +42,69 @@ LOCAL void H264Dec_init_old_slice (DEC_OLD_SLICE_PARAMS_T *old_slice_ptr)
     return;
 }
 
-PUBLIC void H264Dec_init_global_para (H264DecObject*vo)
+PUBLIC MMDecRet H264Dec_init_global_para (H264DecObject*vo)
 {
     int32 i,j;
 
-    SCI_ASSERT(NULL != (vo->g_sps_array_ptr = (DEC_SPS_T *)H264Dec_InterMemAlloc (vo, sizeof(DEC_SPS_T) * MAX_SPS, 4)));
-    SCI_ASSERT(NULL != (vo->g_pps_array_ptr = (DEC_PPS_T *)H264Dec_InterMemAlloc (vo, sizeof(DEC_PPS_T) * MAX_PPS, 4)));
+    vo->g_sps_array_ptr = (DEC_SPS_T *)H264Dec_MemAlloc (vo, sizeof(DEC_SPS_T) * MAX_SPS, 4, INTER_MEM);
+    CHECK_MALLOC(vo->g_sps_array_ptr, "vo->g_sps_array_ptr");
 
-    SCI_ASSERT(NULL != (vo->g_sps_ptr = (DEC_SPS_T *)H264Dec_InterMemAlloc (vo, sizeof(DEC_SPS_T), 4)));
-    SCI_ASSERT(NULL != (vo->g_sps_ptr->vui_seq_parameters = (DEC_VUI_T *)H264Dec_InterMemAlloc (vo, sizeof(DEC_VUI_T), 4)));//weihu
-    SCI_ASSERT(NULL != (vo->g_pps_ptr = (DEC_PPS_T *)H264Dec_InterMemAlloc (vo, sizeof(DEC_PPS_T), 4)));
+    vo->g_pps_array_ptr = (DEC_PPS_T *)H264Dec_MemAlloc (vo, sizeof(DEC_PPS_T) * MAX_PPS, 4, INTER_MEM);
+    CHECK_MALLOC(vo->g_pps_array_ptr, "vo->g_pps_array_ptr");
+
+    vo->g_sps_ptr = (DEC_SPS_T *)H264Dec_MemAlloc (vo, sizeof(DEC_SPS_T), 4, INTER_MEM);
+    CHECK_MALLOC(vo->g_sps_ptr, "vo->g_sps_ptr");
+
+    vo->g_sps_ptr->vui_seq_parameters = (DEC_VUI_T *)H264Dec_MemAlloc (vo, sizeof(DEC_VUI_T), 4, INTER_MEM);
+    CHECK_MALLOC(vo->g_sps_ptr->vui_seq_parameters, "vo->g_sps_ptr->vui_seq_parameters");
+
+    vo->g_pps_ptr = (DEC_PPS_T *)H264Dec_MemAlloc (vo, sizeof(DEC_PPS_T), 4, INTER_MEM);
+    CHECK_MALLOC(vo->g_pps_ptr, "vo->g_pps_ptr");
+
 #if _MVC_
     for (i = 0; i < 2; i++)
     {
-        SCI_ASSERT(NULL != (vo->g_dpb_layer[i] = (DEC_DECODED_PICTURE_BUFFER_T *)H264Dec_InterMemAlloc (vo, sizeof(DEC_DECODED_PICTURE_BUFFER_T), 4)));
+        vo->g_dpb_layer[i] = (DEC_DECODED_PICTURE_BUFFER_T *)H264Dec_MemAlloc (vo, sizeof(DEC_DECODED_PICTURE_BUFFER_T), 4, INTER_MEM);
+        CHECK_MALLOC(vo->g_dpb_layer[i], "vo->g_dpb_layer[i]");
+        
         vo->g_dpb_layer[i]->init_done=0;
         vo->g_dpb_layer[i]->used_size=0;
     }
 #else
-    SCI_ASSERT(NULL != (g_dpb_ptr = (DEC_DECODED_PICTURE_BUFFER_T *)H264Dec_InterMemAlloc (vo, sizeof(DEC_DECODED_PICTURE_BUFFER_T), 4)));
+    g_dpb_ptr = (DEC_DECODED_PICTURE_BUFFER_T *)H264Dec_MemAlloc (vo, sizeof(DEC_DECODED_PICTURE_BUFFER_T), 4, INTER_MEM);
+    CHECK_MALLOC(g_dpb_ptr, "g_dpb_ptr");
 #endif
     vo->g_active_sps_ptr = NULL;
     vo->g_active_pps_ptr = NULL;
 
-    SCI_ASSERT(NULL != (vo->g_old_slice_ptr = (DEC_OLD_SLICE_PARAMS_T *)H264Dec_InterMemAlloc (vo, sizeof(DEC_OLD_SLICE_PARAMS_T), 4)));
-    SCI_ASSERT(NULL != (vo->g_nalu_ptr = (DEC_NALU_T *)H264Dec_InterMemAlloc (vo, sizeof(DEC_NALU_T), 4)));
-    SCI_ASSERT(NULL != (vo->g_image_ptr = (DEC_IMAGE_PARAMS_T *)H264Dec_InterMemAlloc(vo, sizeof(DEC_IMAGE_PARAMS_T), 4)));
-    SCI_ASSERT(NULL != (vo->g_curr_slice_ptr = (DEC_SLICE_T *)H264Dec_InterMemAlloc(vo, sizeof(DEC_SLICE_T), 4)));
-    SCI_ASSERT(NULL != (vo->g_curr_slice_ptr->mot_ctx = (MotionInfoContexts *)H264Dec_InterMemAlloc(vo, sizeof(MotionInfoContexts), 4)));
-    SCI_ASSERT(NULL != (vo->g_curr_slice_ptr->tex_ctx = (TextureInfoContexts *)H264Dec_InterMemAlloc(vo, sizeof(TextureInfoContexts), 4)));
+    vo->g_old_slice_ptr = (DEC_OLD_SLICE_PARAMS_T *)H264Dec_MemAlloc (vo, sizeof(DEC_OLD_SLICE_PARAMS_T), 4, INTER_MEM);
+    CHECK_MALLOC(vo->g_old_slice_ptr, "vo->g_old_slice_ptr");
+    
+    vo->g_nalu_ptr = (DEC_NALU_T *)H264Dec_MemAlloc (vo, sizeof(DEC_NALU_T), 4, INTER_MEM);
+    CHECK_MALLOC(vo->g_nalu_ptr, "vo->g_nalu_ptr");
+    
+    vo->g_image_ptr = (DEC_IMAGE_PARAMS_T *)H264Dec_MemAlloc(vo, sizeof(DEC_IMAGE_PARAMS_T), 4, INTER_MEM);
+    CHECK_MALLOC(vo->g_image_ptr, "vo->g_image_ptr");
+    
+    vo->g_curr_slice_ptr = (DEC_SLICE_T *)H264Dec_MemAlloc(vo, sizeof(DEC_SLICE_T), 4, INTER_MEM);
+    CHECK_MALLOC(vo->g_curr_slice_ptr, "vo->g_curr_slice_ptr");
+    
+    vo->g_curr_slice_ptr->mot_ctx = (MotionInfoContexts *)H264Dec_MemAlloc(vo, sizeof(MotionInfoContexts), 4, INTER_MEM);
+    CHECK_MALLOC(vo->g_curr_slice_ptr->mot_ctx, "vo->g_curr_slice_ptr->mot_ctx");
+    
+    vo->g_curr_slice_ptr->tex_ctx = (TextureInfoContexts *)H264Dec_MemAlloc(vo, sizeof(TextureInfoContexts), 4, INTER_MEM);
+    CHECK_MALLOC(vo->g_curr_slice_ptr->tex_ctx, "vo->g_curr_slice_ptr->tex_ctx");
+    
 #if _MVC_
-    SCI_ASSERT(NULL != (vo->g_curr_slice_ptr->p_Dpb = (DEC_DECODED_PICTURE_BUFFER_T *)H264Dec_InterMemAlloc(vo, sizeof(DEC_DECODED_PICTURE_BUFFER_T), 4)));
+    vo->g_curr_slice_ptr->p_Dpb = (DEC_DECODED_PICTURE_BUFFER_T *)H264Dec_MemAlloc(vo, sizeof(DEC_DECODED_PICTURE_BUFFER_T), 4, INTER_MEM);
+    CHECK_MALLOC(vo->g_curr_slice_ptr->p_Dpb, "vo->g_curr_slice_ptr->p_Dpb");
 #endif
 
-    SCI_ASSERT(NULL != (vo->g_no_reference_picture_ptr = (DEC_STORABLE_PICTURE_T *)H264Dec_InterMemAlloc(vo, sizeof(DEC_STORABLE_PICTURE_T), 4)));
-    SCI_ASSERT(NULL != (vo->g_cavlc_tbl_ptr = (uint32 *)H264Dec_InterMemAlloc(vo, sizeof(uint32)*69, 8)));
+    vo->g_no_reference_picture_ptr = (DEC_STORABLE_PICTURE_T *)H264Dec_MemAlloc(vo, sizeof(DEC_STORABLE_PICTURE_T), 4, INTER_MEM);
+    CHECK_MALLOC(vo->g_no_reference_picture_ptr, "vo->g_no_reference_picture_ptr");
 
     //init global vars
+    vo->memory_error = 0;
     vo->g_dec_ref_pic_marking_buffer_size = 0;
     vo->g_ready_to_decode_slice = FALSE;
     vo->g_searching_IDR_pic = 1;
@@ -87,9 +113,6 @@ PUBLIC void H264Dec_init_global_para (H264DecObject*vo)
 #if _MVC_
     vo->last_profile_idc=0;
 #endif
-
-    //copy cavlc tbl to phy addr of g_cavlc_tbl_ptr.
-    memcpy(vo->g_cavlc_tbl_ptr, g_huff_tab_token, sizeof(uint32)*69);
 
     for (i = 0; i < MAX_REF_FRAME_NUMBER; i++)
     {
@@ -161,7 +184,7 @@ PUBLIC void H264Dec_init_global_para (H264DecObject*vo)
 
     vo->g_image_ptr->curr_slice_ptr = vo->g_curr_slice_ptr;
     vo->g_image_ptr->curr_mb_nr = 0;
-    vo->error_flag = FALSE;
+    vo->error_flag = 0;
     vo->g_image_ptr->no_output_of_prior_pics_flag=0;//weihu
     vo->g_image_ptr->profile_idc=0;
     vo->is_need_init_vsp_hufftab = TRUE;
@@ -185,7 +208,7 @@ PUBLIC void H264Dec_init_global_para (H264DecObject*vo)
     vo->DecodeAllLayers = 0;
 #endif
 
-    return;
+    return MMDEC_OK;
 }
 
 /**---------------------------------------------------------------------------*

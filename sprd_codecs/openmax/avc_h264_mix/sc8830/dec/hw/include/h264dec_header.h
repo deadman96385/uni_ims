@@ -27,10 +27,9 @@ extern   "C"
 {
 #endif
 
-//PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(uint8 *bitstrm_ptr, uint32 bitstrm_len);
-PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo);//uint8 *bitstrm_ptr, uint32 bitstrm_len);//weihu
-PUBLIC void H264Dec_FirstPartOfSliceHeader (H264DecObject *vo);
-PUBLIC void H264Dec_RestSliceHeader (H264DecObject *vo);
+int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo);
+void H264Dec_FirstPartOfSliceHeader (H264DecObject *vo);
+void H264Dec_RestSliceHeader (H264DecObject *vo);
 
 #if _MVC_
 extern int GetViewIdx(H264DecObject *vo, int iVOIdx);

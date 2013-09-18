@@ -1,15 +1,15 @@
 /******************************************************************************
  ** File Name:    mp4dec_malloc.c                                             *
  ** Author:       Xiaowei Luo                                                 *
- ** DATE:         01/23/2007                                                  *
- ** Copyright:    2006 Spreatrum, Incoporated. All Rights Reserved.           *
+ ** DATE:         06/09/2013                                                  *
+ ** Copyright:    2013 Spreatrum, Incoporated. All Rights Reserved.           *
  ** Description:                                                              *
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
  **---------------------------------------------------------------------------*
  ** DATE          NAME            DESCRIPTION                                 *
- ** 01/23/2007    Xiaowei Luo     Create.                                     *
+ ** 06/09/2013    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
@@ -25,7 +25,7 @@ extern   "C"
 
 #define MP4ENC_MALLOC_PRINT   //ALOGD
 
-PUBLIC void Mp4Enc_InitMem (Mp4EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr)
+PUBLIC MMEncRet Mp4Enc_InitMem (Mp4EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr)
 {
     MMCodecBuffer *pMem = pInterMemBfr;
     int32 type;
@@ -38,12 +38,16 @@ PUBLIC void Mp4Enc_InitMem (Mp4EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCod
         vo->mem[type].v_base = pMem->common_buffer_ptr;
         vo->mem[type].p_base = pMem->common_buffer_ptr_phy;
         vo->mem[type].total_size = pMem->size;
+
+        CHECK_MALLOC(vo->mem[type].v_base, "vo->mem[type].v_base");
         SCI_MEMSET(vo->mem[type].v_base, 0, vo->mem[type].total_size);
 
         MP4ENC_MALLOC_PRINT("%s: mem_size:%d\n", __FUNCTION__, vo->mem[type].total_size);
 
         pMem = pExtraMemBfr;
     }
+
+    return MMENC_OK;
 }
 
 /*****************************************************************************

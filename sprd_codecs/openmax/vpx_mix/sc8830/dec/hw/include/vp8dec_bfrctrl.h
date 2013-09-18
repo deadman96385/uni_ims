@@ -20,7 +20,7 @@
 void vp8_copy_yv12_buffer(VPXDecObject *vo,VP8_COMMON *cm, YV12_BUFFER_CONFIG *src_frame, YV12_BUFFER_CONFIG *dst_frame);
 void vp8_create_common(VP8_COMMON *oci);
 void vp8_setup_version(VP8_COMMON *oci);
-int vp8_init_frame_buffers(VPXDecObject *vo, VP8_COMMON *oci);
+MMDecRet vp8_init_frame_buffers(VPXDecObject *vo, VP8_COMMON *oci);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

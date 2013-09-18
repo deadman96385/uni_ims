@@ -32,9 +32,6 @@ extern   "C"
 #define	vpx_calloc calloc
 #define vpx_free	free
 
-#define ALLOC_FAILURE -2
-
-
 #include <stdlib.h>
 #include <string.h>
 #define PRINTF

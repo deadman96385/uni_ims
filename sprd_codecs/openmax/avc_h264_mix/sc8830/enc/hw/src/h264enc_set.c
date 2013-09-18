@@ -32,8 +32,8 @@ void h264enc_sps_init (ENC_IMAGE_PARAMS_T *img_ptr)
     sps->i_id = img_ptr->i_sps_id;
     sps->i_profile_idc = PROFILE_BASELINE;
     sps->i_level_idc = img_ptr->i_level_idc;
-    sps->b_constraint_set0 = sps->i_profile_idc == PROFILE_BASELINE;
-    sps->b_constraint_set1 = sps->i_profile_idc <= PROFILE_MAIN;
+    sps->b_constraint_set0 = (sps->i_profile_idc == PROFILE_BASELINE);
+    sps->b_constraint_set1 = (sps->i_profile_idc <= PROFILE_MAIN);
     sps->b_constraint_set2 = 0;
 
     sps->i_log2_max_frame_num = 4; //at least 4
@@ -41,7 +41,6 @@ void h264enc_sps_init (ENC_IMAGE_PARAMS_T *img_ptr)
     {
         sps->i_log2_max_frame_num++;
     }
-//	sps->i_log2_max_frame_num++;	//jset in case
 
     sps->i_poc_type = 0;
     if (sps->i_poc_type == 0)
@@ -49,17 +48,10 @@ void h264enc_sps_init (ENC_IMAGE_PARAMS_T *img_ptr)
         sps->i_log2_max_poc_lsb = sps->i_log2_max_frame_num + 1; //max poc = 2 * frame_num
     } else if (sps->i_poc_type == 1)
     {
-        //int32 i;
-
         sps->b_delta_pic_order_always_zero = 1;
         sps->i_offset_for_non_ref_pic = 0;
         sps->i_offset_for_top_to_bottom_field = 0;
         sps->i_num_ref_frames_in_poc_cycle = 0;
-
-        //for (i = 0; i < sps->i_num_ref_frames_in_poc_cycle; i++)
-        {
-            //sps->i_offset_for_ref_frame[i] = 0;
-        }
     }
 
     sps->b_vui = 0;
@@ -108,14 +100,12 @@ const uint8 x264_cqm_flat16[64] =
 
 void h264enc_pps_init (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr)
 {
-// 	int32 i/*, j*/;
     ENC_PPS_T *pps;
 
     pps = img_ptr->pps = &img_ptr->pps_array[0];
 
     pps->i_id = img_ptr->sps->i_id;
     pps->i_sps_id = img_ptr->sps->i_id;
-// 	pps->b_cabac = param->b_cabac;
 
     pps->b_pic_order = 0;
     pps->i_num_slice_groups = 1;
@@ -123,23 +113,13 @@ void h264enc_pps_init (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr)
     pps->i_num_ref_idx_l0_active = 1;
     pps->i_num_ref_idx_l1_active = 1;
 
-// 	pps->b_weighted_pred = 0;
-// 	pps->b_weighted_bipred = 0;
-
-    pps->i_pic_init_qp = /*param->rc.i_rc_method == X264_RC_ABR ?*/ 26 /*: param->rc.i_qp_constant*/;
+    pps->i_pic_init_qp =  26;
     pps->i_pic_init_qs = 26;
 
     pps->i_chroma_qp_index_offset = img_ptr->i_chroma_qp_offset;
     pps->b_deblocking_filter_control = 1;
     pps->b_constrained_intra_pred = 0;
     pps->b_redundant_pic_cnt = 0;
-
-// 	pps->b_transform_8x8_mode = 0;
-//	pps->i_cqm_preset = param->i_cqm_preset;
-//	for(i = 0; i < 6; i++)
-//	{
-// 		pps->scaling_list[i] = x264_cqm_flat16;
-//	}
 }
 
 void h264enc_sps_write (H264EncObject *vo, ENC_SPS_T *sps)
@@ -244,11 +224,6 @@ void h264enc_sei_version_write(H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr)
     /* nal header */
     nal_header = ( 0x00 << 7 ) | ( NAL_PRIORITY_DISPOSABLE << 5 ) | NAL_SEI;
     H264Enc_OutputBits (vo, nal_header, 8);
-
-//	char *opt = x264_param2string(h->param, 0);
-//
-//	sprintf(version, "h264 encoder - Copyright 2010 - spreadtrum");
-//	free(opts);
 
     length = strlen(version)+1+16;
 

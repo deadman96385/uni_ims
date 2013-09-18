@@ -78,9 +78,7 @@ typedef struct
 typedef struct
 {
     uint8	*common_buffer_ptr;     // Pointer to buffer used when decoding
-
-    void *common_buffer_ptr_phy;
-
+    uint32 common_buffer_ptr_phy;
     uint32	size;            		// Number of bytes decoding buffer
 
     int32 	frameBfr_num;			//YUV frame buffer number

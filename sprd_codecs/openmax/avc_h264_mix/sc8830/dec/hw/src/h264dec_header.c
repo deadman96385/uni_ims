@@ -38,7 +38,8 @@ void nal_unit_header_mvc_extension(H264DecObject *vo, NALUnitHeaderMVCExt_t *Nal
     tmp= READ_FLC(10);
     if((tmp<0)||(tmp>127))//for error //0~1023//weihu
     {
-        vo->error_flag = TRUE;//weihu
+        vo->error_flag |= ER_SREAM_ID;
+        return;
     }
     NaluHeaderMVCExt->view_id          =tmp;
     NaluHeaderMVCExt->temporal_id      = READ_FLC(3);
@@ -47,8 +48,9 @@ void nal_unit_header_mvc_extension(H264DecObject *vo, NALUnitHeaderMVCExt_t *Nal
     NaluHeaderMVCExt->reserved_one_bit = READ_FLC(1);
     if(NaluHeaderMVCExt->reserved_one_bit != 1)
     {
-        vo->error_flag = TRUE;//weihu
-        PRINTF("Nalu Header MVC Extension: reserved_one_bit is not 1!\n");
+        vo->error_flag |= ER_SREAM_ID;
+        SCI_TRACE_LOW ("Nalu Header MVC Extension: reserved_one_bit is not 1!\n");
+        return;
     }
 }
 #endif
@@ -69,7 +71,7 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
 
     tmpVar = READ_FLC(8);
 
-    SCI_TRACE_LOW("%s, %d, %d.", __FUNCTION__, __LINE__, tmpVar);
+    SCI_TRACE_LOW("%s, %d, the first byte: %d.", __FUNCTION__, __LINE__, tmpVar);
 
     nal_ptr->nal_unit_type = tmpVar & 0x1f;
     nal_ptr->nal_reference_idc = ((tmpVar>>5)&0x3);
@@ -87,16 +89,19 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
             curr_slice_ptr->NaluHeaderMVCExt.iPrefixNALU = (nal_ptr->nal_unit_type == NALU_TYPE_PREFIX);
         }
     }
+    
     if(nal_ptr->nal_unit_type == NALU_TYPE_SLC_EXT)
     {
         if(curr_slice_ptr->svc_extension_flag)
         {
             //to be implemented for Annex G;
-            vo->error_flag=TRUE;
-        }
-        else
+            vo->error_flag |= ER_SREAM_ID;
+        } else
+        {
             nal_ptr->nal_unit_type = NALU_TYPE_SLICE;
+        }
     }
+    
     if (vo->error_flag)
     {
         return -1;
@@ -161,13 +166,6 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
         }
 
         break;
-        /*case NALU_TYPE_SLICE:
-        	if (!g_searching_IDR_pic)
-        	{
-        		g_ready_to_decode_slice = TRUE;
-        		ret = H264Dec_Process_slice (nal_ptr);
-        	}
-        	break;*/
     case NALU_TYPE_PPS:
         H264Dec_ProcessPPS (vo);
         break;
@@ -274,7 +272,7 @@ PUBLIC void H264Dec_FirstPartOfSliceHeader (H264DecObject *vo)
 
     if((tmp>9)||(curr_slice_ptr->pic_parameter_set_id>255))//for error
     {
-        vo->error_flag = TRUE;
+        vo->error_flag |= ER_SREAM_ID;
         return;
     }
 }
@@ -457,8 +455,8 @@ LOCAL void H264Dec_ref_pic_list_reordering (H264DecObject *vo)
 
                 if ((val > 3) || (val < 0) ||(i>img_ptr->num_ref_idx_l0_active)&&(val != 3))//for error
                 {
-                    PRINTF ("Invalid remapping_of_pic_nums_idc command");
-                    vo->error_flag = TRUE;
+                    SCI_TRACE_LOW ("Invalid remapping_of_pic_nums_idc command");
+                    vo->error_flag |= ER_SREAM_ID;
                     return;
                 }
             } while(val != 3);
@@ -511,8 +509,8 @@ LOCAL void H264Dec_ref_pic_list_reordering (H264DecObject *vo)
 
                 if ((val > 3) || (val < 0)||(i>img_ptr->num_ref_idx_l1_active)&&(val != 3))//for error
                 {
-                    PRINTF ("Invalid remapping_of_pic_nums_idc command");
-                    vo->error_flag = TRUE;
+                    SCI_TRACE_LOW ("Invalid remapping_of_pic_nums_idc command");
+                    vo->error_flag |= ER_SREAM_ID;
                     return;
                 }
             } while(val != 3);
@@ -655,16 +653,15 @@ PUBLIC void H264Dec_RestSliceHeader (H264DecObject *vo)
 
     if (active_sps_ptr->frame_mbs_only_flag)
     {
-
     } else
     {
         int32 field_pic_flag = READ_FLC(1);
 
         if (field_pic_flag)
         {
-            vo->error_flag = TRUE;
-            PRINTF("field is not supported!\n");
-            //	exit(-1);
+            vo->error_flag |= ER_SREAM_ID;
+            SCI_TRACE_LOW("field is not supported!\n");
+            return;
         }
     }
 
@@ -750,18 +747,18 @@ PUBLIC void H264Dec_RestSliceHeader (H264DecObject *vo)
                 img_ptr->num_ref_idx_l1_active = (1+UE_V());///1 + ue_v ("SH: num_ref_idx_l1_active_minus1", currStream);
                 if (img_ptr->num_ref_idx_l1_active > MAX_REF_FRAME_NUMBER)
                 {
-                    vo->error_flag = TRUE;
-                    PRINTF ("too many l0_active not supported!\n");
+                    vo->error_flag |= ER_SREAM_ID;
+                    SCI_TRACE_LOW ("too many l0_active not supported!\n");
+                    return;
                 }
             }
-
         }
-
 
         if (img_ptr->num_ref_idx_l0_active > MAX_REF_FRAME_NUMBER)
         {
-            vo->error_flag = TRUE;
-            PRINTF ("too many l0_active not supported!\n");
+            vo->error_flag |= ER_REF_FRM_ID;
+            SCI_TRACE_LOW ("too many l0_active not supported!\n");
+            return;
         }
     }
 

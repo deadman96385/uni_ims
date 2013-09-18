@@ -26,29 +26,38 @@ extern   "C"
 {
 #endif
 
-LOCAL void VSP_set_ddr_freq(const char* freq_in_khz)
+LOCAL int32 VSP_set_ddr_freq(const char* freq_in_khz)
 {
     const char* const set_freq = "/sys/devices/platform/scxx30-dmcfreq.0/devfreq/scxx30-dmcfreq.0/ondemand/set_freq";
     FILE* fp = fopen(set_freq, "wb");
+    
     if (fp != NULL) {
         fprintf(fp, "%s", freq_in_khz);
         SCI_TRACE_LOW("set ddr freq to %skhz", freq_in_khz);
         fclose(fp);
+        return 0;
     } else {
         SCI_TRACE_LOW("Failed to open %s", set_freq);
+        return -1;
     }
 }
 
-LOCAL void VSP_clean_freq(VSPObject *vo)
+LOCAL int32 VSP_clean_freq(VSPObject *vo)
 {
-    while(vo->ddr_bandwidth_req_cnt >0)
+    while(vo->ddr_bandwidth_req_cnt > 0)
     {
-        VSP_set_ddr_freq("0");
+        if (VSP_set_ddr_freq("0") < 0)
+        {
+            SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+            return -1;
+        }
         vo->ddr_bandwidth_req_cnt --;
     }
+
+    return 0;
 }
 
-PUBLIC void VSP_config_freq(VSPObject *vo, uint32 frame_size)
+PUBLIC int32 VSP_CFG_FREQ(VSPObject *vo, uint32 frame_size)
 {
     char* ddr_freq;
 
@@ -70,12 +79,19 @@ PUBLIC void VSP_config_freq(VSPObject *vo, uint32 frame_size)
         vo->vsp_freq_div = 3;
     }
 
-    VSP_clean_freq(vo);
-    VSP_set_ddr_freq(ddr_freq);
+    if (VSP_clean_freq(vo) < 0)
+    {
+        return -1;
+    }
+
+    if (VSP_set_ddr_freq(ddr_freq) < 0)
+    {
+        return -1;
+    }
     vo->ddr_bandwidth_req_cnt ++;
 
+    return 0;
 }
-
 
 PUBLIC int32 VSP_OPEN_Dev (VSPObject *vo)
 {
@@ -88,7 +104,6 @@ PUBLIC int32 VSP_OPEN_Dev (VSPObject *vo)
         {
             SCI_TRACE_LOW("open SPRD_VSP_DRIVER ERR");
             return -1;
-
         } else
         {
             vo->s_vsp_Vaddr_base = (uint32)mmap(NULL,SPRD_VSP_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED, vo->s_vsp_fd,0);
@@ -101,90 +116,125 @@ PUBLIC int32 VSP_OPEN_Dev (VSPObject *vo)
     return 0;
 }
 
-PUBLIC void VSP_CLOSE_Dev(VSPObject *vo)
+PUBLIC int32 VSP_CLOSE_Dev(VSPObject *vo)
 {
-    int ret = 0;
-
     if(vo->s_vsp_fd > 0)
-    {
-        ret = munmap(vo->s_vsp_Vaddr_base + VSP_REG_BASE_ADDR,SPRD_VSP_MAP_SIZE);
-        if (ret)
+    {        
+        if (munmap(vo->s_vsp_Vaddr_base + VSP_REG_BASE_ADDR, SPRD_VSP_MAP_SIZE))
         {
             SCI_TRACE_LOW("%s, %d, %d", __FUNCTION__, __LINE__, errno);
+            return -1;
         }
+        
         close(vo->s_vsp_fd);
-        VSP_clean_freq(vo);
+        if (VSP_clean_freq(vo) < 0)
+        {
+            return -1;
+        }
+        return 0;
+    }else
+    {
+        SCI_TRACE_LOW ("%s, error", __FUNCTION__);
+        return -1;
     }
 }
 
-PUBLIC void VSP_GET_DEV_FREQ(VSPObject *vo, int32*  vsp_clk_ptr)
+PUBLIC int32 VSP_GET_DEV_FREQ(VSPObject *vo, int32*  vsp_clk_ptr)
 {
     if(vo->s_vsp_fd > 0)
-        ioctl(vo->s_vsp_fd,VSP_GET_FREQ,vsp_clk_ptr);
+    {
+	ioctl(vo->s_vsp_fd, VSP_GET_FREQ, vsp_clk_ptr);
+        return 0;
+    }else
+    {
+        SCI_TRACE_LOW ("%s, error", __FUNCTION__);
+        return -1;
+    }
 }
 
-PUBLIC void VSP_CONFIG_DEV_FREQ(VSPObject *vo,int32*  vsp_clk_ptr)
+PUBLIC int32 VSP_CONFIG_DEV_FREQ(VSPObject *vo,int32*  vsp_clk_ptr)
 {
     if(vo->s_vsp_fd > 0)
-        ioctl(vo->s_vsp_fd,VSP_CONFIG_FREQ,vsp_clk_ptr);
+    {
+	ioctl(vo->s_vsp_fd, VSP_CONFIG_FREQ, vsp_clk_ptr);
+        return 0;
+    }else
+    {
+        SCI_TRACE_LOW ("%s, error", __FUNCTION__);
+        return -1;
+    }
 }
 
 PUBLIC int32 VSP_POLL_COMPLETE(VSPObject *vo)
 {
-    int ret ;
+    if(vo->s_vsp_fd > 0)
+    {
+        int ret ;
 
-    ioctl(vo->s_vsp_fd,VSP_COMPLETE,&ret);
+        ioctl(vo->s_vsp_fd, VSP_COMPLETE, &ret);
 
-    SCI_TRACE_LOW("%s, %d, tmp1: %0x", __FUNCTION__, __LINE__, ret);
+        SCI_TRACE_LOW("%s, %d, int_ret: %0x", __FUNCTION__, __LINE__, ret);
 
-    return ret;
+        return ret;
+    }else
+    {
+        SCI_TRACE_LOW ("%s, error", __FUNCTION__);
+        return -1;
+    }
 }
 
-PUBLIC int VSP_ACQUIRE_Dev(VSPObject *vo)
+PUBLIC int32 VSP_ACQUIRE_Dev(VSPObject *vo)
 {
-    int ret ;
+    int32 ret ;
 
     if(vo->s_vsp_fd <  0)
     {
         SCI_TRACE_LOW("%s: failed :fd <  0", __FUNCTION__);
+        return -1;
     }
 
-    ret =  ioctl(vo->s_vsp_fd,VSP_ACQUAIRE,NULL);
+    ret = ioctl(vo->s_vsp_fd, VSP_ACQUAIRE, NULL);
     if(ret)
     {
         SCI_TRACE_LOW("%s: VSP hardware timeout try again %d\n",__FUNCTION__, ret);
-        ret =  ioctl(vo->s_vsp_fd,VSP_ACQUAIRE,NULL);
+        ret =  ioctl(vo->s_vsp_fd, VSP_ACQUAIRE, NULL);
         if(ret)
         {
             SCI_TRACE_LOW("%s: VSP hardware timeout give up %d\n",__FUNCTION__, ret);
-            return 1;
+            return -1;
         }
     }
 
-    ioctl(vo->s_vsp_fd,VSP_ENABLE,NULL);
-    ioctl(vo->s_vsp_fd,VSP_RESET,NULL);
+    ioctl(vo->s_vsp_fd, VSP_ENABLE, NULL);
+    ioctl(vo->s_vsp_fd, VSP_RESET, NULL);
 
     SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
 
     return 0;
 }
 
-PUBLIC void VSP_RELEASE_Dev(VSPObject *vo)
+PUBLIC int32 VSP_RELEASE_Dev(VSPObject *vo)
 {
     if(vo->s_vsp_fd > 0)
     {
-        ioctl(vo->s_vsp_fd,VSP_DISABLE,NULL);
-        ioctl(vo->s_vsp_fd,VSP_RELEASE,NULL);
+        ioctl(vo->s_vsp_fd, VSP_DISABLE, NULL);
+        ioctl(vo->s_vsp_fd, VSP_RELEASE, NULL);
 
         SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+
+        return 0;
+    }else
+    {
+        SCI_TRACE_LOW("%s: failed :fd <  0", __FUNCTION__);
+        return -1;
     }
 }
 
 PUBLIC int32 ARM_VSP_RST (VSPObject *vo)
 {
-    if(VSP_ACQUIRE_Dev(vo)<0)
+    if(VSP_ACQUIRE_Dev(vo) < 0)
     {
-        return MMDEC_HW_ERROR;
+        return -1;
     }
 
     {
@@ -193,15 +243,18 @@ PUBLIC int32 ARM_VSP_RST (VSPObject *vo)
         // 2:{128000000,"clk_128m"},
         // 3:{76800000,"clk_76m8"}
 
-        VSP_CONFIG_DEV_FREQ(vo,&(vo->vsp_freq_div));
+        if (VSP_CONFIG_DEV_FREQ(vo,&(vo->vsp_freq_div)))
+        {
+            return -1;
+        }
     }
-    VSP_WRITE_REG(AHB_CTRL_BASE_ADDR+ARM_ACCESS_CTRL_OFF, 0,"RAM_ACC_by arm");
-    VSP_READ_REG_POLL(AHB_CTRL_BASE_ADDR+ARM_ACCESS_STATUS_OFF, 0x00000003, 0x00000000, TIME_OUT_CLK, "ARM_ACCESS_STATUS_OFF");
+    VSP_WRITE_REG(AHB_CTRL_BASE_ADDR + ARM_ACCESS_CTRL_OFF, 0,"RAM_ACC_by arm");
+    VSP_READ_REG_POLL(AHB_CTRL_BASE_ADDR + ARM_ACCESS_STATUS_OFF, (V_BIT_1 | V_BIT_0), 0x00000000, TIME_OUT_CLK, "ARM_ACCESS_STATUS_OFF");
 
-    VSP_WRITE_REG(AHB_CTRL_BASE_ADDR+ARM_INT_MASK_OFF, 0,"arm int mask set");	// Disable Openrisc interrrupt . TBD.
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+AXIM_ENDIAN_OFF, 0x30828,"axim endian set"); // VSP and OR endian.
+    VSP_WRITE_REG(AHB_CTRL_BASE_ADDR + ARM_INT_MASK_OFF, 0,"arm int mask set");	// Disable Openrisc interrrupt . TBD.
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + AXIM_ENDIAN_OFF, 0x30828,"axim endian set"); // VSP and OR endian.
 
-    return MMDEC_OK;
+    return 0;
 }
 
 /**---------------------------------------------------------------------------*

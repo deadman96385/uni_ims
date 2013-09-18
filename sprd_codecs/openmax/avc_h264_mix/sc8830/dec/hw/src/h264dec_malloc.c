@@ -23,67 +23,84 @@ extern   "C"
 {
 #endif
 
-/*****************************************************************************
- **	Name : 			H264Dec_InterMemAlloc
- ** Description:	Alloc the common memory for h264 decoder.
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void *H264Dec_InterMemAlloc(H264DecObject *vo, uint32 need_size, int32 aligned_byte_num)
+#define H264DEC_MALLOC_PRINT   //ALOGD
+
+LOCAL MMDecRet Init_Mem (H264DecObject *vo, MMCodecBuffer *pMem, int32 type)
 {
+    int32 dw_aligned = (((uint32)(pMem->common_buffer_ptr) + 7) & (~7)) - ((uint32)(pMem->common_buffer_ptr));
+
+    vo->mem[type].used_size = 0;
+    vo->mem[type].v_base = pMem->common_buffer_ptr + dw_aligned;
+    vo->mem[type].p_base = (uint32)(pMem->common_buffer_ptr_phy) + dw_aligned;
+    vo->mem[type].total_size = pMem->size - dw_aligned;
+    
+    CHECK_MALLOC(vo->mem[type].total_size, "vo->mem[type].total_size");
+    SCI_MEMSET(vo->mem[type].v_base, 0, vo->mem[type].total_size);
+
+    H264DEC_MALLOC_PRINT("%s: dw_aligned, %d, v_base: %0x, p_base: %0x, mem_size:%d\n",
+                        __FUNCTION__, dw_aligned, vo->mem[type].v_base, vo->mem[type].p_base, vo->mem[type].total_size);
+
+    return MMDEC_OK;
+}
+
+PUBLIC MMDecRet H264Dec_InitInterMem (H264DecObject *vo, MMCodecBuffer *pInterMemBfr)
+{
+    return Init_Mem(vo, pInterMemBfr, INTER_MEM);
+}
+
+/*****************************************************************************/
+//  Description:   Init mpeg4 decoder	memory
+//	Global resource dependence:
+//  Author:
+//	Note:
+/*****************************************************************************/
+PUBLIC MMDecRet H264DecMemInit(AVCHandle *avcHandle, MMCodecBuffer *pBuffer)
+{
+    H264DecObject *vo = (H264DecObject *) avcHandle->videoDecoderData;
+
+    return Init_Mem(vo, pBuffer, EXTRA_MEM);
+}
+
+/*****************************************************************************
+ ** Note:	Alloc the needed memory
+ *****************************************************************************/
+PUBLIC void *H264Dec_MemAlloc (H264DecObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type)
+{
+    CODEC_BUF_T *pMem = &(vo->mem[type]);
     uint32 CurrAddr, AlignedAddr;
 
-
-    aligned_byte_num = 8;
-
-    CurrAddr = (uint32)(vo->s_inter_mem.v_base) + vo->s_inter_mem.used_size;
+    CurrAddr = (uint32)(pMem->v_base) + pMem->used_size;
     AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
     need_size += (AlignedAddr - CurrAddr);
 
-//    SCI_TRACE_LOW("%s: left mem size : %d, need mem size : %d", __FUNCTION__,(vo->s_inter_mem.total_size-vo->s_inter_mem.used_size), need_size);
+    H264DEC_MALLOC_PRINT("%s: mem_size:%d, AlignedAddr: %0x, type: %d\n", __FUNCTION__, need_size, AlignedAddr, type);
 
-    if((0 == need_size)||(need_size> (vo->s_inter_mem.total_size-vo->s_inter_mem.used_size)))
+    if((0 == need_size)||(need_size >  (pMem->total_size -pMem->used_size)))
     {
-        SCI_TRACE_LOW("%s  failed, total_size:%d, used_size: %d, need_size:%d\n",
-                      __FUNCTION__, vo->s_inter_mem.total_size, vo->s_inter_mem.used_size,need_size);
-        return NULL; //lint !e527
+        ALOGE("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, pMem->total_size, pMem->used_size,need_size, type);
+        return NULL;
     }
 
-    vo->s_inter_mem.used_size+= need_size;
+    pMem->used_size += need_size;
 
     return (void *)AlignedAddr;
 }
 
 /*****************************************************************************
- **	Name : 			H264Dec_FreeInterMem
- ** Description:	Free the common memory for h264 decoder.
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void H264Dec_FreeInterMem(H264DecObject *vo)
-{
-    vo->s_inter_mem.used_size = 0;
-}
-
-PUBLIC void H264Dec_InitInterMem(H264DecObject *vo, MMCodecBuffer *dec_buffer_ptr)
-{
-    vo->s_inter_mem.used_size = 0;
-    vo->s_inter_mem.v_base = dec_buffer_ptr->common_buffer_ptr;
-    vo->s_inter_mem.p_base = dec_buffer_ptr->common_buffer_ptr_phy;
-    vo->s_inter_mem.total_size = dec_buffer_ptr->size;
-    SCI_MEMSET(vo->s_inter_mem.v_base, 0, vo->s_inter_mem.total_size);
-
-    SCI_TRACE_LOW("%s: inter_mem_size:%d\n", __FUNCTION__, vo->s_inter_mem.total_size);
-
-    return;
-}
-
-/*****************************************************************************
  ** Note:	 mapping from virtual to physical address
  *****************************************************************************/
-PUBLIC uint8 *H264Dec_InterMem_V2P(H264DecObject *vo, uint8 *vAddr)
+PUBLIC uint32 H264Dec_MemV2P(H264DecObject *vo, uint8 *vAddr, int32 type)
 {
-    return ((vAddr-vo->s_inter_mem.v_base)+ vo->s_inter_mem.p_base);
+    if (type >= MAX_MEM_TYPE)
+    {
+        ALOGE ("%s, memory type is error!", __FUNCTION__);
+        return NULL;
+    } else
+    {
+        CODEC_BUF_T *pMem = &(vo->mem[type]);
+
+        return ((uint32)(vAddr-pMem->v_base)+pMem->p_base);
+    }
 }
 
 /**---------------------------------------------------------------------------*

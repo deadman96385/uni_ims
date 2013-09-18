@@ -42,7 +42,6 @@ MMDecRet Mp4Dec_DecGobHeader(Mp4DecObject *vo)
     SLICEINFO *slice_info = &(vo->SliceInfo);
     int32 gob_number = slice_info->GobNum;
     int32 temp;
-    uint32 cmd;
 
     if(gob_number > 0)
     {
@@ -84,41 +83,7 @@ MMDecRet Mp4Dec_DecGobHeader(Mp4DecObject *vo)
             vop_mode_ptr->sliceNumber++;
             slice_info->SliceNum++;
 
-            cmd = ((0x0)<<31)|
-                ((slice_info->VopQuant&0x3f)<<25)|
-                ((slice_info->SliceNum&0x1ff)<<16)|
-                ((slice_info->Max_MBX*slice_info->Max_MBy)<<3)|
-                slice_info->VOPCodingType&0x7;
-            VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG0_OFF, cmd,"VSP_CFG0");
-
-            cmd = (slice_info->NumMbsInGob&0x1ff)<<20|(slice_info->NumMbLineInGob&0x7)<<29;
-            VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG1_OFF, cmd, "VSP_CFG1");
-
-            cmd = (BVOP == vop_mode_ptr->VopPredType?0:1)<<31|
-                (1-slice_info->VopRoundingType)<<30|
-                ((slice_info->Max_MBX*slice_info->FirstMBy+slice_info->FirstMBx)&0x1fff)<<16|
-                (slice_info->FirstMBy&0x7f)<<8|
-                (slice_info->FirstMBx&0x7f);
-            VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG2_OFF, cmd, "VSP_CFG2");
-
-            cmd = slice_info->ShortHeader|
-                slice_info->DataPartition<<1|
-                ((slice_info->IsRvlc&(slice_info->VOPCodingType!=BVOP))<<2)|
-                slice_info->IntraDCThr<<3|slice_info->VOPFcodeFwd<<6|
-                slice_info->VOPFcodeBck<<9|0<<12|
-                slice_info->QuantType<<13;
-            VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG3_OFF, cmd, "VSP_CFG3");
-
-            cmd = (vop_mode_ptr->time_pp&0xffff<<16|vop_mode_ptr->time_bp&0xffff);
-            VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG4_OFF, cmd, "VSP_CFG4");
-
-            if(vop_mode_ptr->time_pp==0)
-            {
-                VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,0,"VSP_CFG5");
-            } else
-            {
-                VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,((1<<29)/vop_mode_ptr->time_pp),"VSP_CFG5");
-            }
+            Mp4Dec_VSP_Cfg(vo);
         }
     }
 
@@ -1459,8 +1424,6 @@ PUBLIC MMDecRet Mp4Dec_FlvH263PicHeader(Mp4DecObject *vo)
     return MMDEC_OK;
 }
 
-
-
 PUBLIC BOOLEAN Mp4Dec_CheckResyncMarker(Mp4DecObject *vo, uint32 uAddbit)
 {
     uint32 uCode;
@@ -1487,11 +1450,6 @@ PUBLIC BOOLEAN Mp4Dec_CheckResyncMarker(Mp4DecObject *vo, uint32 uAddbit)
         //flush stuffing bits for resync start code
         if(is_rsc)
         {
-
-            //OR1200_READ_REG_POLL(GLB_REG_BASE_ADDR+VSP_INT_SYS_OFF, 0x00000004,0x00000004,"BSM_frame done int");//check HW int
-            //OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_CLR_OFF, 0x4,"clear BSM_frame done int");
-            //OR1200_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL");
-            //OR1200_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, 0x08000000,0x00000000,"BSM_clr enable");//check bsm is idle
             Mp4Dec_ByteAlign_Mp4(vo);
         }
 
@@ -1550,20 +1508,20 @@ PUBLIC BOOLEAN Mp4Dec_DetectResyncMarker(Mp4DecObject *vo, uint32 uAddbit)
 PUBLIC MMDecRet Mp4Dec_GetVideoPacketHeader(Mp4DecObject *vo, uint32 uAddBits)
 {
     DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
-    int32	tmp_var;
-    int32	hec;
-    int		mb_num;
-    BOOLEAN	is_fake_rsc_mbnum;
+    int32 tmp_var;
+    int32 hec;
+    int32 mb_num;
+    BOOLEAN is_fake_rsc_mbnum;
+    uint32 cmd;
     SLICEINFO *slice_info = &(vo->SliceInfo);
 
-
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, 0x08000000,0x00000000, TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
+    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
 
     Mp4Dec_ReadBits(17 + uAddBits);//,"resync_marker"
 
     /*parsing packet header*/
-    mb_num	= Mp4Dec_ReadBits(vop_mode_ptr->MB_in_VOP_length);//,"macro_block_num"
-    is_fake_rsc_mbnum	= ((mb_num == 0) || (mb_num >= vop_mode_ptr->MBNum))  ? 1 : 0;
+    mb_num = Mp4Dec_ReadBits(vop_mode_ptr->MB_in_VOP_length);//,"macro_block_num"
+    is_fake_rsc_mbnum = (((mb_num == 0) || (mb_num >= vop_mode_ptr->MBNum))  ? 1 : 0);
 
     if (is_fake_rsc_mbnum)
     {
@@ -1574,7 +1532,6 @@ PUBLIC MMDecRet Mp4Dec_GetVideoPacketHeader(Mp4DecObject *vo, uint32 uAddBits)
     slice_info->VopQuant=vop_mode_ptr->StepSize;
 
     hec = Mp4Dec_ReadBits(1);//,"header_extension_code"
-
     if(hec)
     {
         int32 bits;
@@ -1601,8 +1558,6 @@ PUBLIC MMDecRet Mp4Dec_GetVideoPacketHeader(Mp4DecObject *vo, uint32 uAddBits)
         //bit[2:0],"intra_dc_vlc_thr"
         Mp4Dec_ReadBits(6);
 
-
-
         if(IVOP != vop_mode_ptr->VopPredType)
         {
             MV_INFO_T *pMvInfo = &(vop_mode_ptr->mvInfoForward);
@@ -1610,18 +1565,17 @@ PUBLIC MMDecRet Mp4Dec_GetVideoPacketHeader(Mp4DecObject *vo, uint32 uAddBits)
             pMvInfo->ScaleFactor = 1 << (pMvInfo->FCode - 1);
             pMvInfo->Range = 16 << (pMvInfo->FCode);
             slice_info->VOPFcodeFwd=pMvInfo->FCode;
-        }
 
-        if(BVOP == vop_mode_ptr->VopPredType)
-        {
-            MV_INFO_T *pMvInfo = &(vop_mode_ptr->mvInfoBckward);
-            pMvInfo->FCode = (uint8)Mp4Dec_ReadBits(3);//"vop_fcode_backward"
-            pMvInfo->ScaleFactor = 1 << (pMvInfo->FCode - 1);
-            pMvInfo->Range = 16 << (pMvInfo->FCode);
-            slice_info->VOPFcodeBck=pMvInfo->FCode;
+            if(BVOP == vop_mode_ptr->VopPredType)
+            {
+                MV_INFO_T *pMvInfo = &(vop_mode_ptr->mvInfoBckward);
+                pMvInfo->FCode = (uint8)Mp4Dec_ReadBits(3);//"vop_fcode_backward"
+                pMvInfo->ScaleFactor = 1 << (pMvInfo->FCode - 1);
+                pMvInfo->Range = 16 << (pMvInfo->FCode);
+                slice_info->VOPFcodeBck=pMvInfo->FCode;
+            }
         }
     }
-
 
     slice_info->FirstMBx=((vop_mode_ptr->mb_x==(slice_info->Max_MBX-1))?0:(vop_mode_ptr->mb_x+1));
     slice_info->FirstMBy=((vop_mode_ptr->mb_x==(slice_info->Max_MBX-1))?(vop_mode_ptr->mb_y+1):vop_mode_ptr->mb_y);
@@ -1629,23 +1583,7 @@ PUBLIC MMDecRet Mp4Dec_GetVideoPacketHeader(Mp4DecObject *vo, uint32 uAddBits)
     vop_mode_ptr->sliceNumber++;
     slice_info->SliceNum++;
 
-
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG0_OFF, ((0x0)<<31)|((slice_info->VopQuant&0x3f)<<25)|((slice_info->SliceNum&0x1ff)<<16)|((slice_info->Max_MBX*slice_info->Max_MBy)<<3)|slice_info->VOPCodingType&0x7,"VSP_CFG0");
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG1_OFF, (slice_info->NumMbsInGob&0x1ff)<<20|(slice_info->NumMbLineInGob&0x7)<<29 ,"VSP_CFG1");
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG2_OFF,(BVOP == vop_mode_ptr->VopPredType?0:1)<<31|(1-slice_info->VopRoundingType)<<30|((slice_info->Max_MBX*slice_info->FirstMBy+slice_info->FirstMBx)&0x1fff)<<16|(slice_info->FirstMBy&0x7f)<<8|(slice_info->FirstMBx&0x7f),"VSP_CFG2");
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG3_OFF,(slice_info->ShortHeader|slice_info->DataPartition<<1|((slice_info->IsRvlc&(slice_info->VOPCodingType!=BVOP))<<2)|
-                  slice_info->IntraDCThr<<3|slice_info->VOPFcodeFwd<<6|slice_info->VOPFcodeBck<<9|0<<12|slice_info->QuantType<<13),"VSP_CFG3");
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG4_OFF,((vop_mode_ptr->time_pp&0xffff)<<16|(vop_mode_ptr->time_bp&0xffff)),"VSP_CFG4");
-    //OR1200_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG3_OFF,vop_mode_ptr->time_pp&0xffff,"VSP_CFG3");
-
-    if(vop_mode_ptr->time_pp ==0)
-    {
-        VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,0,"VSP_CFG5");
-    } else
-    {
-        VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_CFG5_OFF,((1<<29)/vop_mode_ptr->time_pp),"VSP_CFG5");
-
-    }
+    Mp4Dec_VSP_Cfg(vo);
 
     return MMDEC_OK;
 }

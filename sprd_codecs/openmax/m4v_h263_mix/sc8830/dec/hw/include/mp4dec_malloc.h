@@ -28,7 +28,14 @@ extern   "C"
 {
 #endif
 
-void Mp4Dec_InitInterMem (Mp4DecObject *vo, MMCodecBuffer *pInterMemBfr);
+#define CHECK_MALLOC(addr, str)    \
+        if (NULL == addr)   \
+        {   \
+            SCI_TRACE_LOW ("%s, %s is NULL", __FUNCTION__, str);   \
+            return MMENC_MEMORY_ERROR;  \
+        }
+
+MMDecRet Mp4Dec_InitInterMem (Mp4DecObject *vo, MMCodecBuffer *pInterMemBfr);
 void *Mp4Dec_MemAlloc (Mp4DecObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type);
 uint32 Mp4Dec_MemV2P(Mp4DecObject *vo, uint8 *vAddr, int32 type);
 

@@ -64,8 +64,6 @@ typedef struct tagMP4Handle
     FunctionType_BufCB VSP_bindCb;
     FunctionType_BufCB VSP_unbindCb;
     FunctionType_MemAllocCB VSP_extMemCb;
-//	void *g_user_data;
-
 
     int g_mpeg4_dec_err_flag;
 } MP4Handle;

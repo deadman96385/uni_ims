@@ -55,7 +55,7 @@ PUBLIC uint32 ue_v (H264DecObject *vo)
     tmp = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RD_OFF,"BSM_rd_UE check error");
     if(tmp&4)
     {
-        vo->error_flag = TRUE;
+        vo->error_flag |= ER_SREAM_ID;
         return 0;
     }
     ret = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RDATA_OFF,"BSM_rd_UE dara");
@@ -73,7 +73,7 @@ PUBLIC int32 se_v (H264DecObject *vo)
     tmp = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RD_OFF,"BSM_rd_SE check error");
     if(tmp&4)
     {
-        vo->error_flag = TRUE;
+        vo->error_flag |= ER_SREAM_ID;
         return 0;
     }
     ret = (int32)VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RDATA_OFF,"BSM_rd_SE dara");
@@ -99,7 +99,7 @@ PUBLIC int32 long_ue_v (H264DecObject *vo)
 
             if (leading_zero > 32)//weihu ?//>=16
             {
-                vo->error_flag = TRUE;
+                vo->error_flag |= ER_SREAM_ID;
                 return 0;
             }
         } while(!tmp);
@@ -135,7 +135,7 @@ PUBLIC int32 long_se_v (H264DecObject *vo)
 
             if (leading_zero > 32)//weihu ?//>=16
             {
-                vo->error_flag = TRUE;
+                vo->error_flag |= ER_SREAM_ID;
                 return 0;
             }
         } while(!tmp);

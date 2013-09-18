@@ -64,8 +64,7 @@ void VP8DecSetCurRecPic(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,
 //  Author:
 //	Note:
 /*****************************************************************************/
-MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer * pBuffer);
-
+MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr);
 
 /*****************************************************************************/
 //  Description: Decode one vop
@@ -85,7 +84,7 @@ MMDecRet VP8DecRelease(VPXHandle *vpxHandle);
 
 
 typedef void (*FT_VPXDecSetCurRecPic)(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader);
-typedef MMDecRet (*FT_VPXDecInit)(VPXHandle *vpxHandle, MMCodecBuffer * pBuffer);
+typedef MMDecRet (*FT_VPXDecInit)(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr);
 typedef MMDecRet (*FT_VPXDecDecode)(VPXHandle *vpxHandle, MMDecInput *pInput,MMDecOutput *pOutput);
 typedef MMDecRet (*FT_VPXDecRelease)(VPXHandle *vpxHandle);
 

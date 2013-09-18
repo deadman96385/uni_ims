@@ -655,12 +655,19 @@ typedef struct nalu_tag
     int8	resv; //for world aligned
 } DEC_NALU_T;
 
+typedef enum
+{
+    INTER_MEM = 0, /*physical continuous and no-cachable, constant length */
+    EXTRA_MEM,   /*physical continuous and no-cachable, variable length, need allocated according to image resolution */
+    MAX_MEM_TYPE
+} CODEC_BUF_TYPE;
+
 typedef struct codec_buf_tag
 {
     uint32 used_size;
     uint32 total_size;
     uint8* v_base;  //virtual address
-    uint8* p_base;  //physical address
+    uint32 p_base;  //physical address
 } CODEC_BUF_T;
 
 typedef struct H264DecObject_tag
@@ -674,7 +681,7 @@ typedef struct H264DecObject_tag
 
     DEC_STORABLE_PICTURE_T g_rec_buf;
 
-    CODEC_BUF_T s_inter_mem;
+    CODEC_BUF_T mem[MAX_MEM_TYPE];
 
     uint16	width;
     uint16	height;
@@ -746,6 +753,7 @@ typedef struct H264DecObject_tag
     int ref_list_buf[33];
     int slice_info[50];
     uint8 * pStream;
+    int memory_error;
 } H264DecObject;
 
 /**---------------------------------------------------------------------------*

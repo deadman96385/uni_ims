@@ -40,21 +40,21 @@ PUBLIC int32 write_ue_v(H264EncObject *vo, uint32 val)
 {
     if (val == 0)
     {
-        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + 0x20, V_BIT_0, 0x00000001, TIME_OUT_CLK, "ORSC: Polling BSM_RDY");
-        VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + 0x08, (1&0x3f) << 24, "ORSC: BSM_OPERATE: Set OPT_BITS");
-        VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + 0x0C, 1, "ORSC: BSM_WDATA");
+        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY");
+        VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (1&0x3f) << 24, "BSM_OPERATE: Set OPT_BITS");
+        VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_WDATA_OFF, 1, "BSM_WDATA");
     } else
     {
         int32 i_size = 0;
         uint32 tmp = ++val;
 
-        if (tmp >= 0x00010000)
+        if (tmp >= V_BIT_16)
         {
             i_size += 16;
             tmp >>= 16;
         }
 
-        if (tmp >= 0x100)
+        if (tmp >= V_BIT_8)
         {
             i_size += 8;
             tmp >>= 8;
@@ -62,9 +62,9 @@ PUBLIC int32 write_ue_v(H264EncObject *vo, uint32 val)
 
         i_size += i_size0_255[tmp];
 
-        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + 0x20, V_BIT_0, 0x00000001, TIME_OUT_CLK, "ORSC: Polling BSM_RDY");
-        VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + 0x08, ((2*i_size-1)&0x3f) << 24, "ORSC: BSM_OPERATE: Set OPT_BITS");
-        VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + 0x0C, val, "ORSC: BSM_WDATA");
+        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY");
+        VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, ((2*i_size-1)&0x3f) << 24, "BSM_OPERATE: Set OPT_BITS");
+        VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_WDATA_OFF, val, "BSM_WDATA");
     }
 
     return 0;
@@ -78,9 +78,9 @@ PUBLIC int32 write_ue_v(H264EncObject *vo, uint32 val)
  *****************************************************************************/
 uint32 H264Enc_OutputBits(H264EncObject *vo, uint32 val, uint32 nbits)
 {
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + 0x20, V_BIT_0, 0x00000001, TIME_OUT_CLK, "ORSC: Polling BSM_RDY");
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + 0x08, (nbits&0x3f) << 24, "ORSC: BSM_OPERATE: Set OPT_BITS");
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + 0x0C, val, "ORSC: BSM_WDATA");
+    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY");
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (nbits&0x3f) << 24, "BSM_OPERATE: Set OPT_BITS");
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_WDATA_OFF, val, "BSM_WDATA");
 
     return nbits;
 }
@@ -98,7 +98,7 @@ uint32 H264Enc_ByteAlign(H264EncObject *vo, int32 is_align1)
     uint32 total_bits;
     uint32 NumBits = 0;
 
-    total_bits = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+0x14,"ORSC: TOTAL_BITS");
+    total_bits = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF,"TOTAL_BITS");
     bitsLeft = 32 - (total_bits % 32);
     stuffing_bits = bitsLeft & 0x7;
 

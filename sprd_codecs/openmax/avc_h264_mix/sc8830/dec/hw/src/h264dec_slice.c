@@ -43,10 +43,15 @@ PUBLIC int32 H264Dec_Process_slice (H264DecObject *vo)
 
         //use PPS and SPS
         H264Dec_use_parameter_set (vo, curr_slice_ptr->pic_parameter_set_id);
+        if (vo->error_flag)
+        {
+            return -1;
+        }
     }
+    
     if(curr_slice_ptr->start_mb_nr>=img_ptr->frame_size_in_mbs)//for error
     {
-        vo->error_flag = TRUE;
+        vo->error_flag  |= ER_SREAM_ID;
         return -1;
     }
 
@@ -58,7 +63,7 @@ PUBLIC int32 H264Dec_Process_slice (H264DecObject *vo)
     }
 #endif
 
-    if (vo->error_flag == TRUE)
+    if (vo->error_flag)
     {
         return -1;
     }
@@ -82,7 +87,11 @@ PUBLIC int32 H264Dec_Process_slice (H264DecObject *vo)
         curr_header = SOS;
     }
 
-    H264Dec_init_list (vo, img_ptr->type);
+    if (H264Dec_init_list (vo, img_ptr->type))
+    {
+        vo->error_flag  |= ER_SREAM_ID;
+        return -1;
+    }
 #if _MVC_
     if(curr_slice_ptr->svc_extension_flag == 0 || curr_slice_ptr->svc_extension_flag == 1)
         H264Dec_reorder_list_mvc (vo);
@@ -90,8 +99,10 @@ PUBLIC int32 H264Dec_Process_slice (H264DecObject *vo)
 #endif
         H264Dec_reorder_list (vo);
 
-    if (vo->error_flag == TRUE)
+    if (vo->error_flag)
+    {
         return -1;
+    }
 
     //configure ref_list_buf[24]
     {
@@ -722,16 +733,23 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
     //VSP_WRITE_REG(VSP_REG_BASE_ADDR+0x18,0x4,"VSP_INT_CLR");//enable int //frame done/error/timeout
 #endif
 
-    if(cmd&0x30)
+    if(cmd & (V_BIT_4 | V_BIT_5))
     {
-        vo->error_flag=1;
-    } else if((cmd&0x00000004)==0x00000004)
+        vo->error_flag |= ER_SREAM_ID;
+        
+         if (cmd & V_BIT_4)
+        {
+            SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
+        }else if (cmd & V_BIT_5)
+        {
+            SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);                    
+        }       
+    } else if(cmd & V_BIT_2)
     {
-        vo->error_flag=0;
+        vo->error_flag = 0;
     }
-    SCI_TRACE_LOW("%s, %d, error_flag: %d", __FUNCTION__, __LINE__, vo->error_flag);
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, 0x08000000,0x00000000,TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL");
+    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0, "RAM_ACC_SEL");
     vo->is_need_init_vsp_hufftab = FALSE;
 
     H264Dec_exit_slice(vo);//g_image_ptr);
@@ -770,16 +788,16 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
     DEC_SLICE_T *curr_slice_ptr = vo->g_curr_slice_ptr;
 
     curr_slice_ptr->next_header = -1;
-    vo->error_flag = FALSE;
+    vo->error_flag = 0;
 
     if((dec_input_ptr->expected_IVOP) && (img_ptr->curr_mb_nr == 0))
     {
         vo->g_searching_IDR_pic = TRUE;
     }
 
-    ret = H264Dec_Read_SPS_PPS_SliceHeader (vo);//g_nalu_ptr->buf, g_nalu_ptr->len);//weihu
+    ret = H264Dec_Read_SPS_PPS_SliceHeader (vo);
 
-    if (vo->error_flag == TRUE)
+    if (vo->error_flag)
     {
         return MMDEC_ERROR;
     }
@@ -802,7 +820,7 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
             {
                 uint32 vld_table_addr;
 
-                vld_table_addr = (uint32)H264Dec_InterMem_V2P(vo, vo->g_cavlc_tbl_ptr);
+                vld_table_addr = (uint32)H264Dec_MemV2P(vo, vo->g_cavlc_tbl_ptr, EXTRA_MEM);
                 //load_vld_table_en=1;
 
                 VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0xc, vld_table_addr/8,"ddr vlc table start addr");

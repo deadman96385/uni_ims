@@ -1,15 +1,15 @@
 /******************************************************************************
  ** File Name:      mp4enc_global.h                                           *
  ** Author:         Xiaowei Luo                                               *
- ** DATE:           01/23/2007                                                *
- ** Copyright:      2006 Spreatrum, Incoporated. All Rights Reserved.         *
+ ** DATE:           06/09/2013                                                *
+ ** Copyright:      2013 Spreatrum, Incoporated. All Rights Reserved.         *
  ** Description:    This file defines the basic interfaces of mp4 codec       *
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
  **---------------------------------------------------------------------------*
  ** DATE          NAME            DESCRIPTION                                 *
- ** 01/23/2007    Xiaowei Luo     Create.                                     *
+ ** 06/09/2013    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4ENC_GLOBAL_H_
 #define _MP4ENC_GLOBAL_H_

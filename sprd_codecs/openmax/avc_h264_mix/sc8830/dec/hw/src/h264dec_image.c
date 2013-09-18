@@ -167,18 +167,18 @@ PUBLIC int32 H264Dec_remove_delayed_frame_from_dpb (H264DecObject *vo,DEC_DECODE
 LOCAL DEC_FRAME_STORE_T *H264Dec_get_one_free_pic_buffer (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
     SCI_TRACE_LOW_DPB("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
+    
     if(dpb_ptr->used_size == (MAX_REF_FRAME_NUMBER+1))
     {
         if (!H264Dec_remove_unused_frame_from_dpb(vo, dpb_ptr))
         {
             if(!H264Dec_remove_delayed_frame_from_dpb(vo, dpb_ptr))
             {
-                vo->error_flag = TRUE;
+                vo->error_flag |= ER_REF_FRM_ID;
                 return NULL;
             }
         }
     }
-
 
     return dpb_ptr->fs[MAX_REF_FRAME_NUMBER];
 }
@@ -271,8 +271,8 @@ LOCAL void H264Dec_POC(H264DecObject *vo)
             img_ptr->delta_pic_order_cnt[0] = 0;	//ignore first delta
             if (img_ptr->frame_num)
             {
-                PRINTF("frame_num != 0 in idr pix");
-                vo->error_flag = TRUE;
+                SCI_TRACE_LOW("frame_num != 0 in idr pix");
+                vo->error_flag |= ER_REF_FRM_ID;
             }
         } else
         {
@@ -362,8 +362,8 @@ LOCAL void H264Dec_POC(H264DecObject *vo)
             img_ptr->ThisPOC = img_ptr->framepoc = img_ptr->toppoc = img_ptr->bottompoc = 0;
             if (img_ptr->frame_num)
             {
-                PRINTF("frame_num != 0 in idr pix");
-                vo->error_flag = TRUE;
+                SCI_TRACE_LOW("frame_num != 0 in idr pix");
+                vo->error_flag |= ER_REF_FRM_ID;
             }
         } else
         {
@@ -545,7 +545,7 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
     img_ptr->chroma_qp_offset = vo->g_active_pps_ptr->chroma_qp_index_offset;
     img_ptr->slice_nr = 0;
     img_ptr->curr_mb_nr = 0;
-    vo->error_flag = FALSE;//for error concealment
+    vo->error_flag = 0;//for error concealment
 
     dec_picture_ptr = vo->g_dec_picture_ptr;
     dec_picture_ptr->dec_ref_pic_marking_buffer = img_ptr->dec_ref_pic_marking_buffer;

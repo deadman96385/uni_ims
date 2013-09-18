@@ -1,15 +1,15 @@
 /******************************************************************************
  ** File Name:      mp4enc_mode.h                                             *
  ** Author:         Xiaowei Luo                                               *
- ** DATE:           01/23/2007                                                *
- ** Copyright:      2006 Spreatrum, Incoporated. All Rights Reserved.         *
+ ** DATE:           06/09/2013                                                *
+ ** Copyright:      2013 Spreatrum, Incoporated. All Rights Reserved.         *
  ** Description:    This file defines the mode define of mp4 codec		      *
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
  **---------------------------------------------------------------------------*
  ** DATE          NAME            DESCRIPTION                                 *
- ** 01/23/2007    Xiaowei Luo     Create.                                     *
+ ** 06/09/2013    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4ENC_MODE_H_
 #define _MP4ENC_MODE_H_
@@ -236,7 +236,7 @@ typedef struct codec_buf_tag
     uint32 used_size;
     uint32 total_size;
     uint8* v_base;  //virtual address
-    uint8* p_base;  //physical address
+    uint32 p_base;  //physical address
 } CODEC_BUF_T;
 
 typedef struct tagMp4EncObject

@@ -26,11 +26,8 @@ extern   "C"
 {
 #endif
 
-//#define H264_DECODER_INTERNAL_BUFFER_SIZE (2*1024*1024)
-//#define H264_DECODER_STREAM_BUFFER_SIZE (1024*1024)
-
 typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader);
-typedef int (*FunctionType_MallocCB)(void* aUserData, uint32 * buffer_array, uint32 buffer_num, uint32 buffer_size);
+typedef int (*FunctionType_MallocCB)(void* aUserData, unsigned int width,unsigned int height, unsigned int aNumBuffers);
 
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
@@ -115,7 +112,7 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * pBuffer,MMDecVideoFor
 //  Author:
 //	Note:
 /*****************************************************************************/
-PUBLIC MMDecRet H264DecMemInit(AVCHandle *avcHandle, MMCodecBuffer *pBuffer);
+MMDecRet H264DecMemInit(AVCHandle *avcHandle, MMCodecBuffer *pBuffer);
 
 /*****************************************************************************/
 //  Description: Decode one vop

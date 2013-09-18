@@ -405,12 +405,19 @@ typedef struct
     volatile uint32 FH_CFG11;					// [31:0]	dct_part_offset of the first dct partition
 } VSP_FH_REG_T;
 
+typedef enum
+{
+    INTER_MEM = 0, /*physical continuous and no-cachable, constant length */
+    EXTRA_MEM,   /*physical continuous and no-cachable, variable length, need allocated according to image resolution */
+    MAX_MEM_TYPE
+} CODEC_BUF_TYPE;
+
 typedef struct codec_buf_tag
 {
     uint32 used_size;
     uint32 total_size;
     uint8* v_base;  //virtual address
-    uint8* p_base;  //physical address
+    uint32 p_base;  //physical address
 } CODEC_BUF_T;
 
 typedef struct tagVPXDecObject
@@ -436,10 +443,9 @@ typedef struct tagVPXDecObject
 
     vp8_reader *mbc;
 
-    CODEC_BUF_T s_inter_mem;
+    CODEC_BUF_T mem[MAX_MEM_TYPE];
 
     VSP_FH_REG_T   * g_fh_reg_ptr;
-
 } VPXDecObject;
 
 #endif //VP8DEC_MODE_H

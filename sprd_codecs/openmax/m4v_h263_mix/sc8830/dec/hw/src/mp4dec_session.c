@@ -34,7 +34,7 @@ PUBLIC void Mp4Dec_InitGlobal (Mp4DecObject *vo)
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
-PUBLIC void Mp4Dec_InitDecoderPara(Mp4DecObject *vo)
+PUBLIC MMDecRet Mp4Dec_InitDecoderPara(Mp4DecObject *vo)
 {
     DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
 
@@ -67,9 +67,16 @@ PUBLIC void Mp4Dec_InitDecoderPara(Mp4DecObject *vo)
     vop_mode_ptr->IntraDcSwitchThr = 0;
 
     vop_mode_ptr->pCurDispFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vo, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
+    CHECK_MALLOC(vop_mode_ptr->pCurDispFrame, "vop_mode_ptr->pCurDispFrame");
+
     vop_mode_ptr->pCurRecFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vo, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
+    CHECK_MALLOC(vop_mode_ptr->pCurRecFrame, "vop_mode_ptr->pCurRecFrame");
+
     vop_mode_ptr->pBckRefFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vo, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
+    CHECK_MALLOC( vop_mode_ptr->pBckRefFrame, " vop_mode_ptr->pBckRefFrame");
+
     vop_mode_ptr->pFrdRefFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vo, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
+    CHECK_MALLOC(vop_mode_ptr->pFrdRefFrame, "vop_mode_ptr->pFrdRefFrame");
 
     vop_mode_ptr->pCurDispFrame->bfrId = 0xFF;
     vop_mode_ptr->pCurRecFrame->bfrId = 0xFF;
@@ -79,6 +86,8 @@ PUBLIC void Mp4Dec_InitDecoderPara(Mp4DecObject *vo)
     vo->g_dec_pre_vop_format = IVOP;
 
     memset(vo->g_FrmYUVBfr,0,sizeof(vo->g_FrmYUVBfr));
+
+    return MMDEC_OK;
 }
 
 LOCAL uint8 Mp4Dec_Compute_log2(int32 uNum)
@@ -133,10 +142,19 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
 
     vop_mode_ptr->FrameWidth  = (int16)(mb_num_x * MB_SIZE);
     vop_mode_ptr->FrameHeight = (int16)(mb_num_y * MB_SIZE);
+	
+    if (vo->mp4Handle->VSP_extMemCb(vo->mp4Handle->userdata,  vop_mode_ptr->FrameWidth, vop_mode_ptr->FrameHeight) < 0)
+    {
+        SCI_TRACE_LOW("%s, %d, extra memory is not enough", __FUNCTION__, __LINE__);
+        vo->memory_error = 1;
+        return MMDEC_MEMORY_ERROR;
+    }
 
-    VSP_config_freq(vo, 	vop_mode_ptr->FrameWidth * vop_mode_ptr->FrameHeight);
-
-    vo->mp4Handle->VSP_extMemCb(vo->mp4Handle->userdata,  vop_mode_ptr->FrameWidth, vop_mode_ptr->FrameHeight);
+    if (VSP_CFG_FREQ(vo, vop_mode_ptr->FrameWidth * vop_mode_ptr->FrameHeight) < 0)
+    {
+        SCI_TRACE_LOW("%s, %d, VSP_CFG_FREQ ERR", __FUNCTION__, __LINE__);
+        return MMDEC_HW_ERROR;
+    }
 
     vop_mode_ptr->MB_in_VOP_length = Mp4Dec_Compute_log2(vop_mode_ptr->MBNum);
 
@@ -150,8 +168,18 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
         return MMDEC_MEMORY_ERROR;
     }
 
+    vo->g_rvlc_tbl_ptr = (uint32*)Mp4Dec_MemAlloc(vo, sizeof(uint32)*146, 8, EXTRA_MEM);
+    CHECK_MALLOC(vo->g_rvlc_tbl_ptr, "vo->g_rvlc_tbl_ptr");
+
+    vo->g_huff_tbl_ptr = (uint32*)Mp4Dec_MemAlloc(vo, sizeof(uint32)*152, 8, EXTRA_MEM);
+    CHECK_MALLOC(vo->g_huff_tbl_ptr, "vo->g_huff_tbl_ptr");
+
+    memcpy(vo->g_rvlc_tbl_ptr, g_rvlc_huff_tab,(sizeof(uint32)*146));
+    memcpy(vo->g_huff_tbl_ptr, g_mp4_dec_huff_tbl,(sizeof(uint32)*152));
+
     // Malloc data_partition_buffer. 32 bytes for each MB.
     vop_mode_ptr->data_partition_buffer_ptr = Mp4Dec_MemAlloc(vo, (uint32)((mb_num_x * mb_num_y)*32), 256, EXTRA_MEM);
+    CHECK_MALLOC(vo->g_huff_tbl_ptr, "vo->g_huff_tbl_ptr");
     vop_mode_ptr->data_partition_buffer_Addr = (uint32)Mp4Dec_MemV2P(vo, vop_mode_ptr->data_partition_buffer_ptr, EXTRA_MEM);
 
     /*for B frame support*/
@@ -159,18 +187,20 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     vop_mode_ptr->last_non_b_time = 0;
 
     vo->g_tmp_buf.imgY = Mp4Dec_MemAlloc(vo, (uint32)(total_mb_num*256), 256, EXTRA_MEM);
+    CHECK_MALLOC(vo->g_tmp_buf.imgY, "vo->g_tmp_buf.imgY");
     vo->g_tmp_buf.imgYAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.imgY, EXTRA_MEM);
+    
     vo->g_tmp_buf.imgU = Mp4Dec_MemAlloc(vo, (uint32)((total_mb_num*128)), 256, EXTRA_MEM);
+    CHECK_MALLOC(vo->g_tmp_buf.imgU, "vo->g_tmp_buf.imgU");
     vo->g_tmp_buf.imgUAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.imgU, EXTRA_MEM);
 
     memset(vo->g_tmp_buf.imgY, 16, sizeof(uint8)*(total_mb_num*256));
     memset(vo->g_tmp_buf.imgU, 128, sizeof(uint8)*(total_mb_num*128));
 
     vo->g_tmp_buf.rec_info = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)(total_mb_num*80), 256, EXTRA_MEM);
-    vo->g_tmp_buf.rec_infoAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.rec_info, EXTRA_MEM);
-
-
-
+    CHECK_MALLOC(vo->g_tmp_buf.rec_info, "vo->g_tmp_buf.rec_info");
+    vo->g_tmp_buf.rec_infoAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.rec_info, EXTRA_MEM);	
+		
     return MMDEC_OK;
 }
 

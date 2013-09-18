@@ -1,8 +1,8 @@
 /******************************************************************************
  ** File Name:      mp4dec_malloc.h                                           *
  ** Author:         Xiaowei Luo                                               *
- ** DATE:           01/23/2007                                                *
- ** Copyright:      2006 Spreatrum, Incoporated. All Rights Reserved.         *
+ ** DATE:           06/09/2013                                                *
+ ** Copyright:      2013 Spreatrum, Incoporated. All Rights Reserved.         *
  ** Description:    This file defines the malloc function interfaces of       *
  **					mp4 decoder												  *
  *****************************************************************************/
@@ -10,7 +10,7 @@
  **                   Edit    History                                         *
  **---------------------------------------------------------------------------*
  ** DATE          NAME            DESCRIPTION                                 *
- ** 01/23/2007    Xiaowei Luo     Create.                                     *
+ ** 06/09/2013    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4ENC_MALLOC_H_
 #define _MP4ENC_MALLOC_H_
@@ -27,7 +27,14 @@ extern   "C"
 {
 #endif
 
-void Mp4Enc_InitMem (Mp4EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr);
+#define CHECK_MALLOC(addr, str)    \
+        if (NULL == addr)   \
+        {   \
+            SCI_TRACE_LOW ("%s, %s is NULL", __FUNCTION__, str);   \
+            return MMENC_MEMORY_ERROR;  \
+        }
+
+MMEncRet Mp4Enc_InitMem (Mp4EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr);
 void *Mp4Enc_MemAlloc (Mp4EncObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type);
 uint8 *Mp4Enc_ExtraMem_V2P(Mp4EncObject *vo, uint8 *vAddr, int32 type);
 

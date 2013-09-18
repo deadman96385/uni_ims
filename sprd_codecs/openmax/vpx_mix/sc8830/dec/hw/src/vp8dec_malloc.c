@@ -23,66 +23,73 @@ extern   "C"
 {
 #endif
 
-/*****************************************************************************
- **	Name : 			Vp8Dec_InterMemAlloc
- ** Description:	Alloc the common memory for h264 decoder.
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void *Vp8Dec_InterMemAlloc(VPXDecObject *vo, uint32 need_size, int32 aligned_byte_num)
+#define VP8DEC_MALLOC_PRINT   //ALOGD
+
+PUBLIC MMEncRet Vp8Dec_InitMem (VPXDecObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr)
 {
+    MMCodecBuffer *pMem = pInterMemBfr;
+    int32 type;
+
+    for (type = 0; type < MAX_MEM_TYPE; type++)
+    {
+        int32 dw_aligned = (((uint32)(pMem->common_buffer_ptr) + 7) & (~7)) - ((uint32)(pMem->common_buffer_ptr));
+
+        vo->mem[type].used_size = 0;
+        vo->mem[type].v_base = pMem->common_buffer_ptr;
+        vo->mem[type].p_base = pMem->common_buffer_ptr_phy;
+        vo->mem[type].total_size = pMem->size;
+
+        CHECK_MALLOC(vo->mem[type].v_base, "vo->mem[type].v_base");
+        SCI_MEMSET(vo->mem[type].v_base, 0, vo->mem[type].total_size);
+
+        VP8DEC_MALLOC_PRINT("%s: mem_size:%d\n", __FUNCTION__, vo->mem[type].total_size);
+
+        pMem = pExtraMemBfr;
+    }
+
+    return MMENC_OK;
+}
+
+/*****************************************************************************
+ ** Note:	Alloc the needed memory
+ *****************************************************************************/
+PUBLIC void *Vp8Dec_MemAlloc (VPXDecObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type)
+{
+    CODEC_BUF_T *pMem = &(vo->mem[type]);
     uint32 CurrAddr, AlignedAddr;
 
-    aligned_byte_num = 8;
-
-    CurrAddr = (uint32)(vo->s_inter_mem.v_base) + vo->s_inter_mem.used_size;
+    CurrAddr = (uint32)(pMem->v_base) + pMem->used_size;
     AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
     need_size += (AlignedAddr - CurrAddr);
 
-//    SCI_TRACE_LOW("%s: left mem size : %d, need mem size : %d", __FUNCTION__,(vo->s_inter_mem.total_size-vo->s_inter_mem.used_size), need_size);
+    VP8DEC_MALLOC_PRINT("%s: mem_size:%d\n", __FUNCTION__, need_size);
 
-    if((0 == need_size)||(need_size> (vo->s_inter_mem.total_size-vo->s_inter_mem.used_size)))
+    if((0 == need_size)||(need_size >  (pMem->total_size -pMem->used_size)))
     {
-        SCI_TRACE_LOW("%s  failed, total_size:%d, used_size: %d, need_size:%d\n",
-                      __FUNCTION__, vo->s_inter_mem.total_size, vo->s_inter_mem.used_size,need_size);
-        return NULL; //lint !e527
+        ALOGE("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, pMem->total_size, pMem->used_size,need_size, type);
+        return NULL;
     }
 
-    vo->s_inter_mem.used_size+= need_size;
+    pMem->used_size += need_size;
 
     return (void *)AlignedAddr;
 }
 
 /*****************************************************************************
- **	Name : 			Vp8Dec_FreeInterMem
- ** Description:	Free the common memory for h264 decoder.
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC void Vp8Dec_FreeInterMem(VPXDecObject *vo)
-{
-    vo->s_inter_mem.used_size = 0;
-}
-
-PUBLIC void Vp8Dec_InitInterMem(VPXDecObject *vo, MMCodecBuffer *dec_buffer_ptr)
-{
-    vo->s_inter_mem.used_size = 0;
-    vo->s_inter_mem.v_base = dec_buffer_ptr->common_buffer_ptr;
-    vo->s_inter_mem.p_base = dec_buffer_ptr->common_buffer_ptr_phy;
-    vo->s_inter_mem.total_size = dec_buffer_ptr->size;
-    SCI_MEMSET(vo->s_inter_mem.v_base, 0, vo->s_inter_mem.total_size);
-
-    SCI_TRACE_LOW("%s: inter_mem_size:%d\n", __FUNCTION__, vo->s_inter_mem.total_size);
-
-    return;
-}
-
-/*****************************************************************************
  ** Note:	 mapping from virtual to physical address
  *****************************************************************************/
-PUBLIC uint8 *Vp8Dec_InterMem_V2P(VPXDecObject *vo, uint8 *vAddr)
+PUBLIC uint8 *Vp8Dec_ExtraMem_V2P(VPXDecObject *vo, uint8 *vAddr, int32 type)
 {
-    return ((vAddr-vo->s_inter_mem.v_base)+ vo->s_inter_mem.p_base);
+    if (type >= MAX_MEM_TYPE)
+    {
+        ALOGE ("%s, memory type is error!", __FUNCTION__);
+        return NULL;
+    } else
+    {
+        CODEC_BUF_T *pMem = &(vo->mem[type]);
+
+        return ((vAddr-pMem->v_base)+pMem->p_base);
+    }
 }
 
 /**---------------------------------------------------------------------------*

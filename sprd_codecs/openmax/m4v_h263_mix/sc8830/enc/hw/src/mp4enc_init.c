@@ -1,15 +1,15 @@
 /******************************************************************************
  ** File Name:    mp4enc_init.c  		                                      *
  ** Author:       Xiaowei Luo                                                 *
- ** DATE:         12/14/2006                                                  *
- ** Copyright:    2006 Spreatrum, Incoporated. All Rights Reserved.           *
+ ** DATE:         06/09/2013                                                  *
+ ** Copyright:    2013 Spreatrum, Incoporated. All Rights Reserved.           *
  ** Description:                                                              *
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
  **---------------------------------------------------------------------------*
  ** DATE          NAME            DESCRIPTION                                 *
- ** 12/14/2006    Xiaowei Luo     Create.                                     *
+ ** 06/09/2013    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
@@ -23,8 +23,6 @@
 extern   "C"
 {
 #endif
-
-MP4_LOCAL void Mp4Enc_SetMVInfo(ENC_VOP_MODE_T *vop_mode_ptr);
 
 PUBLIC void Mp4Enc_InitVolVopPara(VOL_MODE_T *vol_mode_ptr, ENC_VOP_MODE_T *vop_mode_ptr, uint32 frame_rate)
 {
@@ -46,7 +44,7 @@ PUBLIC void Mp4Enc_InitVolVopPara(VOL_MODE_T *vol_mode_ptr, ENC_VOP_MODE_T *vop_
     vol_mode_ptr->TemporalRate			= 1;
     vol_mode_ptr->bOriginalForME			= FALSE;
     vol_mode_ptr->bAdvPredDisable			= TRUE;
-    vol_mode_ptr->ClockRate				= frame_rate;
+    vol_mode_ptr->ClockRate				= (frame_rate ? frame_rate : 15);   //avoid to be divided by zero.
     vol_mode_ptr->fAUsage				= RECTANGLE;
     vol_mode_ptr->FrameHz				= 15; //30; //modidied by lxw,@0807
     vol_mode_ptr->MVRadiusPerFrameAwayFromRef = 8;
@@ -204,7 +202,7 @@ MP4_LOCAL uint8 Mp4Enc_Compute_log2(int32 uNum)
     return logLen;
 }
 
-PUBLIC void Mp4Enc_InitSession(Mp4EncObject *vo)
+PUBLIC MMEncRet Mp4Enc_InitSession(Mp4EncObject *vo)
 {
     ENC_VOP_MODE_T *vop_mode_ptr = vo->g_enc_vop_mode_ptr;
     VOL_MODE_T *vol_mode_ptr = vo->g_enc_vol_mode_ptr;
@@ -239,29 +237,48 @@ PUBLIC void Mp4Enc_InitSession(Mp4EncObject *vo)
     
     /*backward reference frame and forward reference frame*/
     vop_mode_ptr->pYUVSrcFrame = (Mp4EncStorablePic *)Mp4Enc_MemAlloc(vo, sizeof(Mp4EncStorablePic), 4, INTER_MEM);
+    CHECK_MALLOC(vop_mode_ptr->pYUVSrcFrame, "vop_mode_ptr->pYUVSrcFrame");
+
     vop_mode_ptr->pYUVRecFrame = (Mp4EncStorablePic *)Mp4Enc_MemAlloc(vo, sizeof(Mp4EncStorablePic), 4, INTER_MEM);
+    CHECK_MALLOC(vop_mode_ptr->pYUVRecFrame, "vop_mode_ptr->pYUVRecFrame");
+
     vop_mode_ptr->pYUVRefFrame = (Mp4EncStorablePic *)Mp4Enc_MemAlloc(vo, sizeof(Mp4EncStorablePic), 4, INTER_MEM);
+    CHECK_MALLOC(vop_mode_ptr->pYUVRefFrame, "vop_mode_ptr->pYUVRefFrame");
 
     size = (vop_mode_ptr->FrameWidth) * (vop_mode_ptr->FrameHeight);
-    vop_mode_ptr->pYUVRecFrame->imgY = (uint8 *)Mp4Enc_MemAlloc(vo, size, 256, EXTRA_MEM);
+    vop_mode_ptr->pYUVRecFrame->imgY = (uint8 *)Mp4Enc_MemAlloc(vo, size, 8, EXTRA_MEM);
+    CHECK_MALLOC(vop_mode_ptr->pYUVRecFrame->imgY, "vop_mode_ptr->pYUVRecFrame->imgY");
+
     if (!vop_mode_ptr->uv_interleaved)
     {
-        vop_mode_ptr->pYUVRecFrame->imgU = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>2), 256, EXTRA_MEM);
-        vop_mode_ptr->pYUVRecFrame->imgV = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>2), 256, EXTRA_MEM);
+        vop_mode_ptr->pYUVRecFrame->imgU = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>2), 8, EXTRA_MEM);
+        CHECK_MALLOC(vop_mode_ptr->pYUVRecFrame->imgU, "vop_mode_ptr->pYUVRecFrame->imgU");
+
+        vop_mode_ptr->pYUVRecFrame->imgV = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>2), 8, EXTRA_MEM);
+        CHECK_MALLOC(vop_mode_ptr->pYUVRecFrame->imgV, "vop_mode_ptr->pYUVRecFrame->imgV");
     } else
     {
-        vop_mode_ptr->pYUVRecFrame->imgU = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>1), 256, EXTRA_MEM);
+        vop_mode_ptr->pYUVRecFrame->imgU = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>1), 8, EXTRA_MEM);
+        CHECK_MALLOC(vop_mode_ptr->pYUVRecFrame->imgU, "vop_mode_ptr->pYUVRecFrame->imgU");
+
         vop_mode_ptr->pYUVRecFrame->imgV = NULL;
     }
 
-    vop_mode_ptr->pYUVRefFrame->imgY = (uint8 *)Mp4Enc_MemAlloc(vo, size, 256, EXTRA_MEM);
+    vop_mode_ptr->pYUVRefFrame->imgY = (uint8 *)Mp4Enc_MemAlloc(vo, size, 8, EXTRA_MEM);
+    CHECK_MALLOC(vop_mode_ptr->pYUVRefFrame->imgY, "vop_mode_ptr->pYUVRefFrame->imgY");
+
     if (!vop_mode_ptr->uv_interleaved)
     {
-        vop_mode_ptr->pYUVRefFrame->imgU = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>2), 256, EXTRA_MEM);
-        vop_mode_ptr->pYUVRefFrame->imgV = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>2), 256, EXTRA_MEM);
+        vop_mode_ptr->pYUVRefFrame->imgU = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>2), 8, EXTRA_MEM);
+        CHECK_MALLOC(vop_mode_ptr->pYUVRefFrame->imgU, "vop_mode_ptr->pYUVRefFrame->imgU");
+
+        vop_mode_ptr->pYUVRefFrame->imgV = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>2), 8, EXTRA_MEM);
+        CHECK_MALLOC(vop_mode_ptr->pYUVRefFrame->imgV, "vop_mode_ptr->pYUVRefFrame->imgV");
     } else
     {
-        vop_mode_ptr->pYUVRefFrame->imgU = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>1), 256, EXTRA_MEM);
+        vop_mode_ptr->pYUVRefFrame->imgU = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>1), 8, EXTRA_MEM);
+        CHECK_MALLOC(vop_mode_ptr->pYUVRefFrame->imgU, "vop_mode_ptr->pYUVRefFrame->imgU");
+
         vop_mode_ptr->pYUVRefFrame->imgV = NULL;
     }
 
@@ -272,6 +289,8 @@ PUBLIC void Mp4Enc_InitSession(Mp4EncObject *vo)
     vop_mode_ptr->pYUVRefFrame->imgYAddr = (uint32)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRefFrame->imgY, EXTRA_MEM) >> 3;
     vop_mode_ptr->pYUVRefFrame->imgUAddr = (uint32)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRefFrame->imgU, EXTRA_MEM) >> 3;
     vop_mode_ptr->pYUVRefFrame->imgVAddr = (uint32)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRefFrame->imgV, EXTRA_MEM) >> 3;
+
+    return MMENC_OK;   
 }
 
 PUBLIC void Mp4Enc_InitVSP(Mp4EncObject *vo)
@@ -279,7 +298,7 @@ PUBLIC void Mp4Enc_InitVSP(Mp4EncObject *vo)
     uint32 cmd;
     uint32 slice_num, slice_num_of_frame;
     uint16 slice_first_mb_x, slice_first_mb_y,  slice_last_mb_y;
-    int is_last_slice = 0;
+    int is_last_slice;
     ENC_VOP_MODE_T *vop_mode_ptr = vo->g_enc_vop_mode_ptr;
     VOL_MODE_T *vol_mode_ptr = vo->g_enc_vol_mode_ptr;
     ENC_ANTI_SHAKE_T *anti_shark_ptr = &(vo->g_anti_shake);
@@ -292,55 +311,55 @@ PUBLIC void Mp4Enc_InitVSP(Mp4EncObject *vo)
     slice_first_mb_y = vop_mode_ptr->mb_y - (vop_mode_ptr->mb_y%vop_mode_ptr->mbline_num_slice);
 
     slice_last_mb_y = slice_first_mb_y + vop_mode_ptr->mbline_num_slice - 1;
-    slice_last_mb_y = (slice_last_mb_y>(vop_mode_ptr->MBNumY-1)) ? (vop_mode_ptr->MBNumY-1) : slice_last_mb_y;
+    slice_last_mb_y = (slice_last_mb_y>(vop_mode_ptr->MBNumY - 1)) ? (vop_mode_ptr->MBNumY - 1) : slice_last_mb_y;
 
-    is_last_slice = ((vop_mode_ptr->MBNumY-vop_mode_ptr->mb_y) <= vop_mode_ptr->mbline_num_slice) ? 1:0;
+    is_last_slice = ((vop_mode_ptr->MBNumY-vop_mode_ptr->mb_y) <= vop_mode_ptr->mbline_num_slice) ? 1 : 0;
 
-    cmd = (vol_mode_ptr->short_video_header)?STREAM_ID_H263:STREAM_ID_MPEG4 << 0;	// VSP_standard[3:0], 0x1:STREAM_ID_MPEG4
-    cmd |= 1 << 4;		// Work_mode[4], 1:encode, 0:decode
-    cmd |= 0 << 5;		// Manual_mode[5], 1:enable manual mode
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF, cmd, "ORSC: VSP_MODE: Set standard, work mode and manual mode");
+    cmd = (((vol_mode_ptr->short_video_header) ? STREAM_ID_H263 : STREAM_ID_MPEG4) << 0);	// VSP_standard[3:0], 0x1:STREAM_ID_MPEG4
+    cmd |= (1 << 4);		// Work_mode[4], 1:encode, 0:decode
+    cmd |= (0 << 5);		// Manual_mode[5], 1:enable manual mode
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF, cmd, "VSP_MODE: Set standard, work mode and manual mode");
 
-    cmd = 0 << 0;	// SETTING_RAM_ACC_SEL[0], 1:access by HW ACC, 0:access by SW
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, cmd, "ORSC: RAM_ACC_SEL: SETTING_RAM_ACC_SEL=0(SW)");
+    cmd = (0 << 0);	// SETTING_RAM_ACC_SEL[0], 1:access by HW ACC, 0:access by SW
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, cmd, "RAM_ACC_SEL: SETTING_RAM_ACC_SEL=0(SW)");
 
-    cmd = vop_mode_ptr->MBNumX << 0;	// MB_X_MAX[7:0]
-    cmd |= vop_mode_ptr->MBNumY << 8;	// MB_Y_MAX[15:8]
-    cmd |= (anti_shark_ptr->enable_anti_shake ? (anti_shark_ptr->input_width>>3) : (2*vop_mode_ptr->MBNumX)) <<16; // CUR_IMG_WIDTH[24:16]Unit 8 BYTE
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR + IMG_SIZE_OFF, cmd, "ORSC: IMG_SIZE: Set MB_X_MAX & MB_Y_MAX");
+    cmd = (vop_mode_ptr->MBNumX << 0);	// MB_X_MAX[7:0]
+    cmd |= (vop_mode_ptr->MBNumY << 8);	// MB_Y_MAX[15:8]
+    cmd |= ((anti_shark_ptr->enable_anti_shake ? (anti_shark_ptr->input_width>>3) : (2*vop_mode_ptr->MBNumX)) <<16); // CUR_IMG_WIDTH[24:16]Unit 8 BYTE
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + IMG_SIZE_OFF, cmd, "IMG_SIZE: Set MB_X_MAX & MB_Y_MAX");
 
-    cmd = ((frame_type==IVOP) ? 0:1);// FRM_TYPE[2:0], 0:I, 1:P
-    cmd |= (vop_mode_ptr->MBNum & 0x1fff) << 3;	// Max_mb_num[15:3]
-    cmd |= ((slice_num /*+ slice_num_of_frame*g_nFrame_enc*/)&0x1ff) << 16;// Slice_num[24:16]
-    cmd |= ((frame_type==IVOP) ? vop_mode_ptr->StepI : vop_mode_ptr->StepP)<<25;// SliceQP[30:25]
-    cmd |= (0) << 31;	// Deblocking_eb[31]//???????????
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_CFG0_OFF, cmd, "ORSC: VSP_CFG0");
+    cmd = ((frame_type == IVOP) ? 0 : 1);// FRM_TYPE[2:0], 0:I, 1:P
+    cmd |= ((vop_mode_ptr->MBNum & 0x1fff) << 3);	// Max_mb_num[15:3]
+    cmd |= ((slice_num & 0x1ff) << 16);// Slice_num[24:16]
+    cmd |= (vop_mode_ptr->StepSize << 25);// SliceQP[30:25]
+    cmd |= (0 << 31);	// Deblocking_eb[31]//???????????
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_CFG0_OFF, cmd, "VSP_CFG0");
 
-    cmd = (0 & 0xff) << 0;	// Skip_threshold[7:0]
-    cmd |= 9 << 8;	// Ime_16X16_max[11:8], less than 9
-    cmd |= 1 << 12;	// Ime_8X8_max[15:12], less than 1
-    cmd |= 511 << 16;	// Ipred_mode_cfg[24:16], IEA prediction mode setting
-    cmd |= ((frame_type==IVOP) ? vop_mode_ptr->StepI:vop_mode_ptr->StepP)<<25; // MB_Qp[30:25]
-    cmd |= (vol_mode_ptr->short_video_header?(is_last_slice?1:0):1)<<31;//1:hardware auto bytealign at the end of each slice, Only for Encode mode
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_CFG1_OFF, cmd, "ORSC: VSP_CFG1");
+    cmd = ((0 & 0xff) << 0);	// Skip_threshold[7:0]
+    cmd |= (9 << 8);	// Ime_16X16_max[11:8], less than 9
+    cmd |= (1 << 12);	// Ime_8X8_max[15:12], less than 1
+    cmd |= (511 << 16);	// Ipred_mode_cfg[24:16], IEA prediction mode setting
+    cmd |= (vop_mode_ptr->StepSize << 25); // MB_Qp[30:25]
+    cmd |= ((vol_mode_ptr->short_video_header ? (is_last_slice ? 1 : 0) : 1)<<31);//1:hardware auto bytealign at the end of each slice, Only for Encode mode
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_CFG1_OFF, cmd, "VSP_CFG1");
 
-    cmd = slice_last_mb_y << 0;	// last_mb_y[6:0]
-    cmd |= (slice_num*vop_mode_ptr->mbline_num_slice) << 8;	// First_mb_y[14:8]
-    cmd |= (anti_shark_ptr->shift_x/2) << 16; //CUR_IMG_ST_X[25:16]Horizontal start position of cur image; unit:2 pixel
-    cmd |= 0 << 29;	// Dct_h264_scale_en[29]
-    cmd |= 1 << 30;	// MCA_rounding_type[30], For MCA only
-    cmd |= 0 << 31;	// Ppa_info_vdb_eb[31], 1: PPA need write MB info to DDR
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_CFG2_OFF, cmd, "ORSC: VSP_CFG2");
+    cmd = (slice_last_mb_y << 0);	// last_mb_y[6:0]
+    cmd |= ((slice_num*vop_mode_ptr->mbline_num_slice) << 8);	// First_mb_y[14:8]
+    cmd |= ((anti_shark_ptr->shift_x/2) << 16); //CUR_IMG_ST_X[25:16]Horizontal start position of cur image; unit:2 pixel
+    cmd |= (0 << 29);	// Dct_h264_scale_en[29]
+    cmd |= (1 << 30);	// MCA_rounding_type[30], For MCA only
+    cmd |= (0 << 31);	// Ppa_info_vdb_eb[31], 1: PPA need write MB info to DDR
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_CFG2_OFF, cmd, "VSP_CFG2");
 
-    cmd = (vop_mode_ptr->short_video_header & 0x1) << 0;	// is_short_header[0]
-    cmd |= (vol_mode_ptr->bDataPartitioning & 0x1) << 1;		// bDataPartitioning[1]
-    cmd |= (vol_mode_ptr->bReversibleVlc & 0x1) << 2;// bReversibleVlc[2]
-    cmd |= (vop_mode_ptr->IntraDcSwitchThr & 0x7) << 3;	// IntraDcSwitchThr[5:3]
-    cmd |= (vop_mode_ptr->mvInfoForward.FCode & 0x7) << 6;	// Vop_fcode_forward[8:6]
-    cmd |= 0 << 9;	// Vop_fcode_backward[11:9]
-    cmd |= 0 << 12;	// For MCA[12]
-    cmd |= 0 << 18; // Reserved [31:18]
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_CFG3_OFF, cmd, "ORSC: VSP_CFG3");
+    cmd = ((vop_mode_ptr->short_video_header & 0x1) << 0);	// is_short_header[0]
+    cmd |= ((vol_mode_ptr->bDataPartitioning & 0x1) << 1);		// bDataPartitioning[1]
+    cmd |= ((vol_mode_ptr->bReversibleVlc & 0x1) << 2);// bReversibleVlc[2]
+    cmd |= ((vop_mode_ptr->IntraDcSwitchThr & 0x7) << 3);	// IntraDcSwitchThr[5:3]
+    cmd |= ((vop_mode_ptr->mvInfoForward.FCode & 0x7) << 6);	// Vop_fcode_forward[8:6]
+    cmd |= (0 << 9);	// Vop_fcode_backward[11:9]
+    cmd |= (0 << 12);	// For MCA[12]
+    cmd |= (0 << 18); // Reserved [31:18]
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_CFG3_OFF, cmd, "VSP_CFG3");
 
     if (anti_shark_ptr->enable_anti_shake)
     {
@@ -349,16 +368,16 @@ PUBLIC void Mp4Enc_InitVSP(Mp4EncObject *vo)
         vop_mode_ptr->pYUVSrcFrame->imgU += (anti_shark_ptr->shift_y*anti_shark_ptr->input_width/2 + anti_shark_ptr->shift_x);
         vop_mode_ptr->pYUVSrcFrame->imgUAddr = (uint32)vop_mode_ptr->pYUVSrcFrame->imgU >> 3;
     }
-    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x20, vop_mode_ptr->pYUVSrcFrame->imgYAddr, "ORSC: Frm_addr8: Start address of current frame Y");
-    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x24, vop_mode_ptr->pYUVSrcFrame->imgUAddr, "ORSC: Frm_addr9: Start address of current frame UV");
-    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x0, vop_mode_ptr->pYUVRecFrame->imgYAddr, "ORSC: Frm_addr0: Start address of reconstruct frame Y");
-    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x4, vop_mode_ptr->pYUVRecFrame->imgUAddr, "ORSC: Frm_addr1: Start address of reconstruct frame UV");
-    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x80, vop_mode_ptr->pYUVRefFrame->imgYAddr, "ORSC: Frm_addr32: Start address of Reference list0 frame Y");
-    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x100, vop_mode_ptr->pYUVRefFrame->imgUAddr, "ORSC: Frm_addr64: Start address of Reference list0 frame UV");
+    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x20, vop_mode_ptr->pYUVSrcFrame->imgYAddr, "Frm_addr8: Start address of current frame Y");
+    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x24, vop_mode_ptr->pYUVSrcFrame->imgUAddr, "Frm_addr9: Start address of current frame UV");
+    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x0, vop_mode_ptr->pYUVRecFrame->imgYAddr, "Frm_addr0: Start address of reconstruct frame Y");
+    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x4, vop_mode_ptr->pYUVRecFrame->imgUAddr, "Frm_addr1: Start address of reconstruct frame UV");
+    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x80, vop_mode_ptr->pYUVRefFrame->imgYAddr, "Frm_addr32: Start address of Reference list0 frame Y");
+    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x100, vop_mode_ptr->pYUVRefFrame->imgUAddr, "Frm_addr64: Start address of Reference list0 frame UV");
 
-    cmd	= (uint32)Mp4Enc_ExtraMem_V2P(vo, vo->g_vlc_hw_ptr, INTER_MEM)>>3;		// Frm_addr3[31:0], VLC Table set by Fixed Table Address
-    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0xC, cmd, "ORSC: Frm_addr3: Start address of VLC table");
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR + 0x34, 128, "ORSC: VSP_SIZE_SET: VLC_table_size");
+    cmd	= (uint32)Mp4Enc_ExtraMem_V2P(vo, vo->g_vlc_hw_ptr, EXTRA_MEM)>>3;		// Frm_addr3[31:0], VLC Table set by Fixed Table Address
+    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0xC, cmd, "Frm_addr3: Start address of VLC table");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_SIZE_SET_OFF, 128, "VSP_SIZE_SET: VLC_table_size");
 }
 
 PUBLIC void Mp4Enc_InitBSM(Mp4EncObject *vo)
@@ -367,19 +386,19 @@ PUBLIC void Mp4Enc_InitBSM(Mp4EncObject *vo)
     ENC_VOP_MODE_T  *vop_mode_ptr = vo->g_enc_vop_mode_ptr;
 
     cmd	= ((uint32)vop_mode_ptr->OneFrameBitstream_addr_phy) >> 3;	// Bsm_buf0_frm_addr[31:0]
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR + 0x60, cmd, "ORSC: BSM0_FRM_ADDR");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + BSM0_FRM_ADDR_OFF, cmd, "BSM0_FRM_ADDR");
 
     cmd = 0x04;	// Move data remain in fifo to external memeory
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + 0x08, cmd, "ORSC: BSM_OPERATE: COUNT_CLR");
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, cmd, "BSM_OPERATE: COUNT_CLR");
 
     cmd = (1 << 31);	// BUFF0_STATUS[31], 1: active
     cmd |= (0 << 30);	// BUFF1_STATUS[30]
-    cmd |= (((vop_mode_ptr->OneframeStreamLen&0xfffffffc) & 0x3FFFFFFF) << 0); // BUFFER_SIZE[29:0], unit byte//cmd = g_bsm_reg_ptr->BSM_CFG0 << 0;
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + 0x00, cmd, "ORSC: BSM_CFG0");
+    cmd |= ((vop_mode_ptr->OneframeStreamLen&(~0x3)) & (V_BIT_30 -1)); // BUFFER_SIZE[29:0], unit byte//cmd = g_bsm_reg_ptr->BSM_CFG0 << 0;
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_CFG0_OFF, cmd, "BSM_CFG0");
     
     cmd = (0 << 31);	// DESTUFFING_EN
     cmd |= ((0 & 0x3FFFFFFF) << 0);	// OFFSET_ADDR[29:0], unit word //cmd = g_bsm_reg_ptr->BSM_CFG1 << 0;
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + 0x04, cmd, "ORSC: BSM_CFG1");
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_CFG1_OFF, cmd, "BSM_CFG1");
 }
 
 /**---------------------------------------------------------------------------*

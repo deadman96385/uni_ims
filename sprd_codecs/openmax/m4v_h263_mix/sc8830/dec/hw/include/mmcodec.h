@@ -102,8 +102,8 @@ typedef struct
     int32	frame_width;
     int32	frame_height;
     int32	i_extra;
-    void 	*p_extra;
-    void *p_extra_phy;
+    uint8 	*p_extra;
+    uint32 p_extra_phy;
     int32	uv_interleaved;				//tmp add
 } MMDecVideoFormat;
 
@@ -136,7 +136,7 @@ typedef struct
 typedef struct
 {
     uint8		*pStream;          	// Pointer to stream to be decoded. Virtual address.
-    uint8		*pStream_phy;          	// Pointer to stream to be decoded. Physical address.
+    uint32 pStream_phy;          	// Pointer to stream to be decoded. Physical address.
     uint32		dataLen;           	// Number of bytes to be decoded
     int32		beLastFrm;			// whether the frame is the last frame.  1: yes,   0: no
 

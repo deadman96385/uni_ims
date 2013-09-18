@@ -149,52 +149,54 @@ void vp8_copy_yv12_buffer(VPXDecObject *vo, VP8_COMMON *cm, YV12_BUFFER_CONFIG *
     dst_frame->pBufferHeader = src_frame->pBufferHeader;
 }
 
-int vp8_init_frame_buffers(VPXDecObject *vo, VP8_COMMON *oci)
+MMDecRet vp8_init_frame_buffers(VPXDecObject *vo, VP8_COMMON *oci)
 {
-    int width = oci->Width;
-    int height = oci->Height;
+    int32 width = oci->Width;
+    int32 height = oci->Height;
 
     // our internal buffers are always multiples of 16
     if ((width & 0xf) != 0)
-        width += 16 - (width & 0xf);
-
-    if ((height & 0xf) != 0)
-        height += 16 - (height & 0xf);
-
-    // FRAME_ADDR_4 for HW, 8160*9*64 + 512 bits
-    if ( oci->FRAME_ADDR_4 == 0)
     {
-        oci->FRAME_ADDR_4 = Vp8Dec_InterMemAlloc(vo, 8160*9*8+64, 8);
+        width += (16 - (width & 0xf));
     }
 
-    if ( oci->FRAME_ADDR_4 == 0)
-        return ALLOC_FAILURE;
+    if ((height & 0xf) != 0)
+    {
+        height += (16 - (height & 0xf));
+    }
+
+    // FRAME_ADDR_4 for HW, 8160*9*64 + 512 bits
+    if (oci->FRAME_ADDR_4 == 0)
+    {
+        oci->FRAME_ADDR_4 = Vp8Dec_MemAlloc(vo, 8160*9*8+64, 8, EXTRA_MEM);
+        CHECK_MALLOC(oci->FRAME_ADDR_4, "oci->FRAME_ADDR_4");
+    }
 
     if (vp8_yv12_init_frame_buffer(&oci->new_frame, width, height, 0) < 0)
     {
-        return ALLOC_FAILURE;
+        return MMENC_MEMORY_ERROR;
     }
 
     if (vp8_yv12_init_frame_buffer(&oci->last_frame, width, height, 1) < 0)
     {
-        return ALLOC_FAILURE;
+        return MMENC_MEMORY_ERROR;
     }
 
     if (vp8_yv12_init_frame_buffer(&oci->golden_frame, width, height, 2) < 0)
     {
-        return ALLOC_FAILURE;
+        return MMENC_MEMORY_ERROR;
     }
 
     if (vp8_yv12_init_frame_buffer(&oci->alt_ref_frame, width, height, 3) < 0)
     {
-        return ALLOC_FAILURE;
+        return MMENC_MEMORY_ERROR;
     }
 
     oci->mb_rows = height >> 4;
     oci->mb_cols = width >> 4;
     oci->MBs = oci->mb_rows * oci->mb_cols;
 
-    return 0;
+    return MMDEC_OK;
 }
 
 /**---------------------------------------------------------------------------*

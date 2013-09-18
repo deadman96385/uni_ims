@@ -27,18 +27,17 @@ PUBLIC uint32 show_bits(Mp4DecObject *vo, uint32 nbits)
 {
     uint32 val;
 
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy");
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, (nbits<<24),"BSM_rd n bits");
-    val =VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_RDATA_OFF,"BSM_rd dara");
+    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM_rdy");
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (nbits<<24), "BSM_rd n bits");
+    val =VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + BSM_RDATA_OFF, "BSM_rd dara");
 
     return val;
 }
 
 PUBLIC void flush_bits(Mp4DecObject *vo, uint32 nbits)
 {
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001, TIME_OUT_CLK, "BSM_rdy");
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, (nbits<<24|0x01),"Flush n bits");
-
+    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM_rdy");
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (nbits<<24|0x01),"Flush n bits");
 }
 
 /*****************************************************************************
@@ -51,11 +50,10 @@ PUBLIC uint32 read_bits(Mp4DecObject *vo, uint32 nbits)
 {
     uint32 val;
 
-
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001, TIME_OUT_CLK, "BSM_rdy");
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, (nbits<<24),"BSM_rd n bits");
-    val =VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_RDATA_OFF,"BSM_rd dara");
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, (nbits<<24|0x01),"Flush n bits");
+    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM_rdy");
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (nbits<<24),"BSM_rd n bits");
+    val =VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + BSM_RDATA_OFF,"BSM_rd dara");
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (nbits<<24|0x01),"Flush n bits");
 
     return val;
 }
@@ -180,55 +178,55 @@ PUBLIC uint32 Mp4Dec_ShowBitsByteAlign_H263(Mp4DecObject *vo, int32 nbits)
 
 PUBLIC MMDecRet Mp4Dec_VerifyBitstrm(Mp4DecObject *vo,uint8 *pStream, int32 strmLen)
 {
-	uint8 *pStreamEnd = pStream + (strmLen-4);
-    	uint8 *tempPos = pStream;
-	MMDecRet ret = MMDEC_OK;
-    	DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
+    uint8 *pStreamEnd = pStream + (strmLen-4);
+    uint8 *tempPos = pStream;
+    MMDecRet ret = MMDEC_OK;
+    DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
 
-
-    	if(STREAM_ID_MPEG4 != vop_mode_ptr->video_std)
+    if(STREAM_ID_MPEG4 != vop_mode_ptr->video_std)
+    {
+        uint32 first_32bits = (pStream[0]<<24) | (pStream[1]<<16) | (pStream[2]<<8) | (pStream[3]);
+        if((first_32bits>>11) == 0x10)
         {
-    	    	    uint32 first_32bits = (pStream[0]<<24) | (pStream[1]<<16) | (pStream[2]<<8) | (pStream[3]);
-    	            if((first_32bits>>11) == 0x10)
-    	            {
-    	        	if((first_32bits>>10) == 0x20)
-    	            	    vop_mode_ptr->video_std = STREAM_ID_H263;
-    	                else
-    	            	    vop_mode_ptr->video_std = STREAM_ID_FLVH263;
-    	            }
-    	 }
+            if((first_32bits>>10) == 0x20)
+            {
+                vop_mode_ptr->video_std = STREAM_ID_H263;
+            }else
+            {
+                vop_mode_ptr->video_std = STREAM_ID_FLVH263;
+            }
+        }
+    }
 
+    if (vop_mode_ptr->video_std != STREAM_ID_FLVH263) //for MPEG4 and ITU_H263 bitstrm
+    {
+        while (tempPos < pStreamEnd)
+        {
+            if (tempPos[0] == 0x00 && tempPos[1] == 0x00)
+            {
+                if (tempPos[2] == 0x01 && tempPos[3] == 0xB6) /* MPEG4 VOP start code */
+                {
+                    vop_mode_ptr->video_std = STREAM_ID_MPEG4;
+                    return ret;
+                }else if ((tempPos[2] & 0xFC) == 0x80 && (tempPos[3] & 0x03)==0x02) /* H.263 PSC*/
+                {
+		    SCI_TRACE_LOW("Mp4Dec_VerifyBitstrm: it is ITU-H.263 format:\n");
+		    vop_mode_ptr->video_std = STREAM_ID_H263;
+		    vop_mode_ptr->bDataPartitioning = FALSE; //MUST!, xweiluo@2012.03.01
+		    vop_mode_ptr->bReversibleVlc = FALSE;
+		    return ret;
+		}
+	    }
+	    tempPos++;
+	}
 
- 	if (vop_mode_ptr->video_std != STREAM_ID_FLVH263) //for MPEG4 and ITU_H263 bitstrm
+	if (tempPos == pStreamEnd)
 	{
-		while (tempPos < pStreamEnd)
-		{
-			if (tempPos[0] == 0x00 && tempPos[1] == 0x00)
-			{
-				if (tempPos[2] == 0x01 && tempPos[3] == 0xB6) /* MPEG4 VOP start code */
-				{
-					vop_mode_ptr->video_std = STREAM_ID_MPEG4;
-					return ret;
-				}
-				else if ((tempPos[2] & 0xFC) == 0x80 && (tempPos[3] & 0x03)==0x02) /* H.263 PSC*/
-				{
-					SCI_TRACE_LOW("Mp4Dec_VerifyBitstrm: it is ITU-H.263 format:\n");
-					vop_mode_ptr->video_std = STREAM_ID_H263;
-					vop_mode_ptr->bDataPartitioning = FALSE; //MUST!, xweiluo@2012.03.01
-					vop_mode_ptr->bReversibleVlc = FALSE;
-					return ret;
-				}
-			}
-			tempPos++;
-		}
+		ret = MMDEC_STREAM_ERROR;
+	}
+    }	
 
-		if (tempPos == pStreamEnd)
-		{
-			ret = MMDEC_STREAM_ERROR;
-		}
-	}	
-
-	return ret;
+    return ret;
 }
 
 /**---------------------------------------------------------------------------*

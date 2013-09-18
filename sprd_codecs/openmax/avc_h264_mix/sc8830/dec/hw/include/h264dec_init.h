@@ -26,7 +26,7 @@ extern   "C"
 {
 #endif
 
-void H264Dec_init_global_para (H264DecObject*vo);
+MMDecRet H264Dec_init_global_para (H264DecObject*vo);
 void H264Dec_VSPInit (void);
 
 /**---------------------------------------------------------------------------*

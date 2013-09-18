@@ -28,7 +28,7 @@ extern   "C"
 {
 #endif
 
-
+void Mp4Dec_VSP_Cfg(Mp4DecObject *vo);
 MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput * dec_input_ptr);
 MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo);
 void Mp4Dec_output_one_frame (Mp4DecObject *vo, MMDecOutput *dec_output_ptr);

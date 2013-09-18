@@ -1,15 +1,15 @@
 /******************************************************************************
  ** File Name:    mp4enc_bitstrm.c                                            *
  ** Author:       Xiaowei Luo                                                 *
- ** DATE:         12/14/2006                                                  *
- ** Copyright:    2006 Spreatrum, Incoporated. All Rights Reserved.           *
+ ** DATE:         09/14/2013                                                  *
+ ** Copyright:    2013 Spreatrum, Incoporated. All Rights Reserved.           *
  ** Description:                                                              *
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
  **---------------------------------------------------------------------------*
  ** DATE          NAME            DESCRIPTION                                 *
- ** 12/14/2006    Xiaowei Luo     Create.                                     *
+ ** 09/14/2013    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
@@ -32,9 +32,9 @@ extern   "C"
  *****************************************************************************/
 uint32 Mp4Enc_OutputBits(Mp4EncObject*vo, uint32 val, uint32 nbits)
 {
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + 0x20, V_BIT_0, 0x00000001, TIME_OUT_CLK, "ORSC: Polling BSM_RDY");
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + 0x08, (nbits&0x3f) << 24, "ORSC: BSM_OPERATE: Set OPT_BITS");
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + 0x0C, val, "ORSC: BSM_WDATA");
+    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY");
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (nbits&0x3f) << 24, "BSM_OPERATE: Set OPT_BITS");
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_WDATA_OFF, val, "BSM_WDATA");
 
     return nbits;
 }
@@ -52,10 +52,8 @@ uint32 Mp4Enc_ByteAlign(Mp4EncObject*vo, BOOLEAN is_short_header)
     uint32 total_bits;
     uint32 NumBits = 0;
     
-    total_bits = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+0x14,"ORSC_SHARE: read total bits");
-
+    total_bits = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF,"read total bits");
     bitsLeft = 32 - (total_bits % 32);
-
     stuffing_bits = bitsLeft & 0x7;
 
     if(stuffing_bits != 0)

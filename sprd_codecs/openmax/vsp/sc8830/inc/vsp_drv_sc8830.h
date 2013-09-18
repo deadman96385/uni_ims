@@ -123,8 +123,6 @@ extern "C"
 #define	VLC_TABLE1_SIZE 1728
 #define	BSM_CTRL_REG_SIZE 0x1000
 
-
-
 #define	VSP_REG_BASE_ADDR 0x60900000//AHB
 
 #define	AHB_CTRL_BASE_ADDR VSP_REG_BASE_ADDR+0x0
@@ -200,6 +198,7 @@ typedef struct vsp_ahbm_reg_tag
 #define VSP_CFG5_OFF 0x50
 #define VSP_CFG6_OFF 0x54
 #define VSP_CFG7_OFF 0x58
+#define VSP_CFG8_OFF 0x5c
 #define BSM0_FRM_ADDR_OFF 0x60
 //#define BSM1_FRM_ADDR_OFF 0x64
 #define VSP_ADDRIDX0_OFF 0x68
@@ -209,8 +208,8 @@ typedef struct vsp_ahbm_reg_tag
 #define VSP_ADDRIDX4_OFF 0x78
 #define VSP_ADDRIDX5_OFF 0x7c
 #define MCU_START_OFF 0x80//ro
-#define CLR_START_OFF 0x84//wo
-#define MCU_SLEEP_OFF 0x88//wo
+#define VSP_CFG9_OFF 0x84//wo
+#define VSP_CFG10_OFF 0x88//wo
 #define VSP_DBG_STS0_OFF 0x100//mbx mby
 
 typedef struct vsp_global_reg_tag
@@ -557,9 +556,7 @@ typedef struct vsp_global_reg_tag
     volatile uint32 VSP_DBG_STS13;		//RSV
 } VSP_GLB_REG_T;
 
-
 //bsm reg
-
 #define BSM_CFG0_OFF 0x0
 #define BSM_CFG1_OFF 0x4
 #define BSM_OP_OFF 0x8
@@ -654,23 +651,23 @@ typedef struct tagVSPObject
 {
     uint32 s_vsp_Vaddr_base ;
     int32 s_vsp_fd ;
-    uint32 ddr_bandwidth_req_cnt;
+    int32 ddr_bandwidth_req_cnt;
     uint32 vsp_freq_div;
 } VSPObject;
 
 /* -----------------------------------------------------------------------
 ** Global
 ** ----------------------------------------------------------------------- */
-void VSP_config_freq(VSPObject *vo, uint32 frame_size);
-int32 VSP_OPEN_Dev (VSPObject *vo);
-void VSP_CLOSE_Dev( VSPObject *vo);
+int32 VSP_CFG_FREQ(VSPObject *vo, uint32 frame_size);
+int32 VSP_OPEN_Dev(VSPObject *vo);
+int32 VSP_CLOSE_Dev(VSPObject *vo);
 int32 VSP_POLL_COMPLETE(VSPObject *vo);
 int32 VSP_ACQUIRE_Dev(VSPObject *vo);
-void VSP_RELEASE_Dev(VSPObject *vo);
-int32 ARM_VSP_RST (VSPObject *vo);
+int32 VSP_RELEASE_Dev(VSPObject *vo);
+int32 ARM_VSP_RST(VSPObject *vo);
 
-#define VSP_WRITE_REG(reg_addr, value, pstring) (*(volatile uint32 *)(reg_addr +((VSPObject *)vo)->s_vsp_Vaddr_base)  = (value))
-#define VSP_READ_REG(reg_addr, pstring)	((*(volatile uint32 *)(reg_addr+((VSPObject *)vo)->s_vsp_Vaddr_base)))
+#define VSP_WRITE_REG(reg_addr, value, pstring) (*(volatile uint32 *)((reg_addr) +((VSPObject *)vo)->s_vsp_Vaddr_base)  = (value))   
+#define VSP_READ_REG(reg_addr, pstring)	((*(volatile uint32 *)((reg_addr)+((VSPObject *)vo)->s_vsp_Vaddr_base)))
 #define VSP_READ_REG_POLL(reg_addr, msk_data, msked_data, time, pstring) \
 {\
 	uint32 tmp, vsp_time_out_cnt;\

@@ -204,39 +204,52 @@ PUBLIC int32 h264enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr
     uint32 tmp;
 
     img_ptr->slice_end = 0;
-    slice_bits = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+0x14,"ORSC: TOTAL_BITS");
+    slice_bits = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF, "TOTAL_BITS");
 
     //slice header
     h264enc_slice_header_write(vo, img_ptr);
 
     img_ptr->qp = img_ptr->sh.i_qp;
 
-    VSP_WRITE_REG(VSP_REG_BASE_ADDR+ARM_INT_MASK_OFF,V_BIT_2,"ARM_INT_MASK, only enable VSP ACC init");//enable int //
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_MASK_OFF,V_BIT_1 | V_BIT_5,"VSP_INT_MASK, enable vlc_slice_done, time_out");//enable int //frame done/timeout
+    VSP_WRITE_REG(VSP_REG_BASE_ADDR + ARM_INT_MASK_OFF, V_BIT_2, "ARM_INT_MASK, only enable VSP ACC init");//enable int //
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_INT_MASK_OFF, (V_BIT_1 | V_BIT_5), "VSP_INT_MASK, enable vlc_slice_done, time_out");//enable int //frame done/timeout
 
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR + 0x28, 0x1, "ORSC: RAM_ACC_SEL: SETTING_RAM_ACC_SEL=1(HW)");
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR + 0x30, 0x5|((img_ptr->sh.i_first_mb==0)<<3), "ORSC: VSP_START: ENCODE_START=1");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, V_BIT_0, "RAM_ACC_SEL: SETTING_RAM_ACC_SEL=1(HW)");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_START_OFF, 0x5|((img_ptr->sh.i_first_mb==0)<<3), "VSP_START: ENCODE_START=1");
 
     tmp = VSP_POLL_COMPLETE((VSPObject *)vo);
-    if(tmp&0x30)	// (VLC_ERR|TIME_OUT)
+    if(tmp & (V_BIT_4 | V_BIT_5))	// (VLC_ERR|TIME_OUT)
     {
         img_ptr->error_flag=1;
-    } else if((tmp&V_BIT_1)==V_BIT_1)	// VLC_FRM_DONE
+
+        if (tmp & V_BIT_4)
+        {
+            SCI_TRACE_LOW("%s, %d, VLC_ERR", __FUNCTION__, __LINE__);
+        }else if (tmp & V_BIT_5)
+        {
+            SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);                    
+        }       
+    } else if(tmp & V_BIT_1)	// VLC_FRM_DONE
     {
         img_ptr->error_flag=0;
     }
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+0x18, V_BIT_27, 0x00000000, TIME_OUT_CLK, "ORSC: Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+0x08, 0x2, "ORSC: BSM_OPERATE: BSM_CLR");
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+0x18, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "ORSC: Polling BSM_DBG0: BSM inactive"); //check bsm is idle
-    VSP_READ_REG_POLL(GLB_REG_BASE_ADDR+0x1C, V_BIT_1, 0x0, TIME_OUT_CLK, "ORSC: Polling AXIM_STS: not Axim_wch_busy"); //check all data has written to DDR
-    VSP_READ_REG_POLL(GLB_REG_BASE_ADDR+0x0C, V_BIT_2, V_BIT_2, TIME_OUT_CLK,  "ORSC: Polling MBW_FMR_DONE"); //check MBW is done
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+0x08, V_BIT_2,"ORSC: VSP_INT_CLR: clear MBW_FMR_DONE");
-    i_frame_size = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+0x14,"ORSC: TOTAL_BITS");
+    
+    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, V_BIT_1, "BSM_OPERATE: BSM_CLR");
+    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "Polling BSM_DBG0: BSM inactive"); //check bsm is idle
+    VSP_READ_REG_POLL(GLB_REG_BASE_ADDR + BSM_DBG1_OFF, V_BIT_1, 0x0, TIME_OUT_CLK, "Polling AXIM_STS: not Axim_wch_busy"); //check all data has written to DDR
+    VSP_READ_REG_POLL(GLB_REG_BASE_ADDR + VSP_INT_RAW_OFF, V_BIT_2, V_BIT_2, TIME_OUT_CLK,  "Polling MBW_FMR_DONE"); //check MBW is done
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_INT_CLR_OFF, V_BIT_2,"VSP_INT_CLR: clear MBW_FMR_DONE");
+    
+    i_frame_size = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF,"TOTAL_BITS");
 
     if( (img_ptr->sh.i_last_mb + 1) < img_ptr->frame_size_in_mbs)
+    {
         img_ptr->sh.i_first_mb = img_ptr->sh.i_last_mb + 1;
-    else
+    }else
+    {
         img_ptr->sh.i_first_mb = 0;
+    }
 
 #ifdef RC_BU
     if(vo->g_h264_enc_config->RateCtrlEnable)

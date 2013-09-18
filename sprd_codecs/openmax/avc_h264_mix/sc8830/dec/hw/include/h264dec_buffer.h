@@ -26,13 +26,13 @@ extern   "C"
 {
 #endif
 
-PUBLIC void H264Dec_init_img_buffer (H264DecObject *vo);
-PUBLIC void	H264Dec_init_dpb (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, int type);
-PUBLIC void H264Dec_store_picture_in_dpb (H264DecObject *vo, DEC_STORABLE_PICTURE_T *picture_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr);
-PUBLIC void H264Dec_reorder_list (H264DecObject *vo);
-PUBLIC void H264Dec_reorder_list_mvc (H264DecObject *vo);
-PUBLIC void H264Dec_init_list (H264DecObject *vo, int32 curr_slice_type);
-PUBLIC void H264Dec_flush_dpb (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr);
+MMDecRet H264Dec_init_img_buffer (H264DecObject *vo);
+MMDecRet H264Dec_init_dpb (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, int type);
+void H264Dec_store_picture_in_dpb (H264DecObject *vo, DEC_STORABLE_PICTURE_T *picture_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr);
+void H264Dec_reorder_list (H264DecObject *vo);
+void H264Dec_reorder_list_mvc (H264DecObject *vo);
+MMDecRet H264Dec_init_list (H264DecObject *vo, int32 curr_slice_type);
+void H264Dec_flush_dpb (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

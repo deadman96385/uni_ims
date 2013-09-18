@@ -1,15 +1,15 @@
 /******************************************************************************
  ** File Name:      mp4_basic.h                                               *
  ** Author:         Xiaowei Luo                                               *
- ** DATE:           12/14/2006                                                *
- ** Copyright:      2006 Spreatrum, Incoporated. All Rights Reserved.         *
+ ** DATE:           06/09/2013                                                *
+ ** Copyright:      2013 Spreatrum, Incoporated. All Rights Reserved.         *
  ** Description:    This file defines the basic interfaces of mp4 codec       *
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
  **---------------------------------------------------------------------------*
  ** DATE          NAME            DESCRIPTION                                 *
- ** 12/14/2006    Xiaowei Luo     Create.                                     *
+ ** 06/09/2013    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4_BASIC_H_
 #define _MP4_BASIC_H_

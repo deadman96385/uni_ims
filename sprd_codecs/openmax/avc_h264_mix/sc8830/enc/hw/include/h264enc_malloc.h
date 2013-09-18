@@ -17,7 +17,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-
+#include "mmcodec.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
@@ -26,7 +26,14 @@ extern   "C"
 {
 #endif
 
-void H264Enc_InitMem (H264EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr);
+#define CHECK_MALLOC(addr, str)    \
+        if (NULL == addr)   \
+        {   \
+            SCI_TRACE_LOW ("%s, %s is NULL", __FUNCTION__, str);   \
+            return MMENC_MEMORY_ERROR;  \
+        }
+
+MMEncRet H264Enc_InitMem (H264EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr);
 void *H264Enc_MemAlloc (H264EncObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type);
 uint8 *H264Enc_ExtraMem_V2P(H264EncObject *vo, uint8 *vAddr, int32 type);
 

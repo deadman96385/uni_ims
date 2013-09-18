@@ -25,7 +25,7 @@ extern   "C"
 
 #define H264ENC_MALLOC_PRINT   //ALOGD
 
-PUBLIC void H264Enc_InitMem (H264EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr)
+PUBLIC MMEncRet H264Enc_InitMem (H264EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr)
 {
     MMCodecBuffer *pMem = pInterMemBfr;
     int32 type;
@@ -38,12 +38,16 @@ PUBLIC void H264Enc_InitMem (H264EncObject *vo, MMCodecBuffer *pInterMemBfr, MMC
         vo->mem[type].v_base = pMem->common_buffer_ptr;
         vo->mem[type].p_base = pMem->common_buffer_ptr_phy;
         vo->mem[type].total_size = pMem->size;
+        
+        CHECK_MALLOC(vo->mem[type].v_base, "vo->mem[type].v_base");
         SCI_MEMSET(vo->mem[type].v_base, 0, vo->mem[type].total_size);
 
         H264ENC_MALLOC_PRINT("%s: mem_size:%d\n", __FUNCTION__, vo->mem[type].total_size);
 
         pMem = pExtraMemBfr;
     }
+
+    return MMENC_OK;
 }
 
 /*****************************************************************************

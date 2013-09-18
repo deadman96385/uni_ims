@@ -35,24 +35,35 @@ void VP8DecSetCurRecPic(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,
     rec_frame->pBufferHeader = pBufferHeader;
 }
 
-MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer * buffer_ptr)
+MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr)
 {
     VPXDecObject*vo;
+    MMDecRet ret;
 
-    SCI_TRACE_LOW("libomx_vpxdec_hw_sprd.so is built on %s %s, Copyright (C) Spreatrum, Inc.", __DATE__, __TIME__);
+    SCI_TRACE_LOW("libomx_vpxdec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
-    vo = (VPXDecObject *) (buffer_ptr->common_buffer_ptr);
+    CHECK_MALLOC(pInterMemBfr, "pInterMemBfr");
+    CHECK_MALLOC(pInterMemBfr->common_buffer_ptr, "internal memory");
+    CHECK_MALLOC(pExtaMemBfr, "pExtaMemBfr");
+    CHECK_MALLOC(pExtaMemBfr->common_buffer_ptr, "extranal memory");
+
+    vo = (VPXDecObject *) (pInterMemBfr->common_buffer_ptr);
     memset(vo, 0, sizeof(VPXDecObject));
     vpxHandle->videoDecoderData = (void *) vo;
     vo->vpxHandle = vpxHandle;
 
-    buffer_ptr->common_buffer_ptr += sizeof(VPXDecObject);
-    buffer_ptr->common_buffer_ptr_phy = (void *)((uint32)(buffer_ptr->common_buffer_ptr_phy) + sizeof(VPXDecObject));
-    buffer_ptr->size -= sizeof(VPXDecObject);
+    pInterMemBfr->common_buffer_ptr += sizeof(VPXDecObject);
+    pInterMemBfr->common_buffer_ptr_phy = ((uint32)(pInterMemBfr->common_buffer_ptr_phy) + sizeof(VPXDecObject));
+    pInterMemBfr->size -= sizeof(VPXDecObject);
 
-    Vp8Dec_InitInterMem (vo, buffer_ptr);
+    ret = Vp8Dec_InitMem (vo, pInterMemBfr, pExtaMemBfr);
+    if (ret != MMENC_OK)
+    {
+        return ret;
+    }
 
-    vo->g_fh_reg_ptr = (VSP_FH_REG_T *)Vp8Dec_InterMemAlloc(vo, sizeof(VSP_FH_REG_T), 4);
+    vo->g_fh_reg_ptr = (VSP_FH_REG_T *)Vp8Dec_MemAlloc(vo, sizeof(VSP_FH_REG_T), 4, INTER_MEM);
+    CHECK_MALLOC(vo->g_fh_reg_ptr, "vo->g_fh_reg_ptr");
 
     Vp8Dec_create_decompressor(vo);
 
@@ -80,20 +91,19 @@ PUBLIC MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *dec_input_ptr, MM
         return MMDEC_HW_ERROR;
     }
 
-//    SCI_TRACE_LOW("%s, %d",__FUNCTION__, __LINE__);
-    SCI_TRACE_LOW("pBufferHeader %x,pOutFrameY %x,frame_width %d,frame_height %d", dec_output_ptr->pBufferHeader, dec_output_ptr->pOutFrameY, dec_output_ptr->frame_width,dec_output_ptr->frame_height );
+//    SCI_TRACE_LOW("pBufferHeader %x,pOutFrameY %x,frame_width %d,frame_height %d", dec_output_ptr->pBufferHeader, dec_output_ptr->pOutFrameY, dec_output_ptr->frame_width,dec_output_ptr->frame_height );
 
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL: software access.");
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_MODE_OFF,V_BIT_6 | STREAM_ID_VP8,"VSP_MODE");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL: software access.");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF, (V_BIT_6 | STREAM_ID_VP8),"VSP_MODE");
 
     // Bitstream.
     bs_start_addr=((uint32)dec_input_ptr->pStream_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
     bs_buffer_length=dec_input_ptr->dataLen;
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, 0x08000000,0x00000000,TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, 0x6,"BSM_OP clr BSM");//clr BSM
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, /*(g_stream_offset)*/0,"BSM_cfg1 stream buffer offset & destuff disable");//point to the start of NALU.
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, 0x80000000|(bs_buffer_length+128)&0xfffffffc,"BSM_cfg0 stream buffer size");// BSM load data. Add 16 DW for BSM fifo loading.
+    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (V_BIT_2 | V_BIT_1), "BSM_OP clr BSM");//clr BSM
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_CFG1_OFF, 0, "BSM_cfg1 stream buffer offset & destuff disable");//point to the start of NALU.
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_CFG0_OFF, (V_BIT_31|((bs_buffer_length+128)&0xfffffffc)), "BSM_cfg0 stream buffer size");// BSM load data. Add 16 DW for BSM fifo loading.
 
     ret = vp8dx_receive_compressed_data(vo,  bs_buffer_length,(uint8 *)dec_input_ptr->pStream , 0);
     SCI_TRACE_LOW("%s, %d, ret is %d",__FUNCTION__, __LINE__, ret);
@@ -102,7 +112,6 @@ PUBLIC MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *dec_input_ptr, MM
     dec_output_ptr->frame_width =  (((cm->Width+ 15)>>4)<<4);
     dec_output_ptr->frame_height = (((cm->Height+ 15)>>4)<<4);
 
-//    SCI_TRACE_LOW("%s, %d, frameEffective is %d,frame_width %d,frame_height %d",__FUNCTION__, __LINE__, dec_output_ptr->frameEffective, dec_output_ptr->frame_width,dec_output_ptr->frame_height);
     if(dec_output_ptr->frameEffective)
     {
         dec_output_ptr->pBufferHeader = (void *)(cm->frame_to_show->pBufferHeader);
@@ -110,9 +119,10 @@ PUBLIC MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *dec_input_ptr, MM
         dec_output_ptr->pOutFrameU = (uint8 *)(cm->frame_to_show->u_buffer_virtual);
     }
 
-//    SCI_TRACE_LOW("pBufferHeader %x,pOutFrameY %x", dec_output_ptr->pBufferHeader, dec_output_ptr->pOutFrameY );
-
-    VSP_RELEASE_Dev((VSPObject *)vo);
+    if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
+    {
+        return MMENC_HW_ERROR;
+    }
 
     // Return output.
     return ret;
@@ -122,7 +132,11 @@ MMDecRet VP8DecRelease(VPXHandle *vpxHandle)
 {
     VPXDecObject *vo = (VPXDecObject *) vpxHandle->videoDecoderData;
 
-    VSP_CLOSE_Dev((VSPObject *)vo);
+    if (VSP_CLOSE_Dev((VSPObject *)vo) < 0)
+    {
+        return MMENC_HW_ERROR;
+    }
+
     return MMDEC_OK;
 }
 

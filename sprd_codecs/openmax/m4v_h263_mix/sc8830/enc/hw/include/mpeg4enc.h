@@ -48,7 +48,7 @@ typedef struct tagMP4Handle
 //  Author:
 //	Note:
 /*****************************************************************************/
-MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat);
+MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat);
 /*****************************************************************************/
 //  Description:   Generate mpeg4 header
 //	Global resource dependence:

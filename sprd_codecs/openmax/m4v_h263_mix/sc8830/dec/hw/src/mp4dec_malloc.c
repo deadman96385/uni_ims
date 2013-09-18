@@ -25,7 +25,7 @@ extern   "C"
 
 #define MP4DEC_MALLOC_PRINT   //ALOGD
 
-LOCAL void Init_Mem (Mp4DecObject *vo, MMCodecBuffer *pMem, int32 type)
+LOCAL MMDecRet Init_Mem (Mp4DecObject *vo, MMCodecBuffer *pMem, int32 type)
 {
     int32 dw_aligned = (((uint32)(pMem->common_buffer_ptr) + 7) & (~7)) - ((uint32)(pMem->common_buffer_ptr));
 
@@ -33,15 +33,19 @@ LOCAL void Init_Mem (Mp4DecObject *vo, MMCodecBuffer *pMem, int32 type)
     vo->mem[type].v_base = pMem->common_buffer_ptr + dw_aligned;
     vo->mem[type].p_base = (uint32)(pMem->common_buffer_ptr_phy) + dw_aligned;
     vo->mem[type].total_size = pMem->size - dw_aligned;
+
+    CHECK_MALLOC(vo->mem[type].total_size, "vo->mem[type].total_size");
     SCI_MEMSET(vo->mem[type].v_base, 0, vo->mem[type].total_size);
 
     MP4DEC_MALLOC_PRINT("%s: dw_aligned, %d, v_base: %0x, p_base: %0x, mem_size:%d\n",
                         __FUNCTION__, dw_aligned, vo->mem[type].v_base, vo->mem[type].p_base, vo->mem[type].total_size);
+
+    return MMDEC_OK;
 }
 
-PUBLIC void Mp4Dec_InitInterMem (Mp4DecObject *vo, MMCodecBuffer *pInterMemBfr)
+PUBLIC MMDecRet Mp4Dec_InitInterMem (Mp4DecObject *vo, MMCodecBuffer *pInterMemBfr)
 {
-    Init_Mem(vo, pInterMemBfr, INTER_MEM);
+    return Init_Mem(vo, pInterMemBfr, INTER_MEM);
 }
 
 /*****************************************************************************/
@@ -54,9 +58,7 @@ PUBLIC MMDecRet MP4DecMemInit(MP4Handle *mp4Handle, MMCodecBuffer *pBuffer)
 {
     Mp4DecObject *vo = (Mp4DecObject *) mp4Handle->videoDecoderData;
 
-    Init_Mem(vo, pBuffer, EXTRA_MEM);
-
-    return MMDEC_OK;
+    return Init_Mem(vo, pBuffer, EXTRA_MEM);
 }
 
 /*****************************************************************************

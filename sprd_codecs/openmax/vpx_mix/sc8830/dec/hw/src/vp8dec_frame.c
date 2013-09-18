@@ -174,7 +174,6 @@ int vp8_decode_frame(VPXDecObject *vo)
     VP8_COMMON *const pc = & vo->common;
     MACROBLOCKD *const xd  = & vo->mb;
     int first_partition_length_in_bytes;
-
     int i, j, k, l;
     const int *const mb_feature_data_bits = vp8_mb_feature_data_bits;
 
@@ -185,8 +184,7 @@ int vp8_decode_frame(VPXDecObject *vo)
     pc->frame_type = (FRAME_TYPE)(data[0] & 1);
     pc->version = (data[0] >> 1) & 7;
     pc->show_frame = (data[0] >> 4) & 1;
-    first_partition_length_in_bytes =
-        (data[0] | (data[1] << 8) | (data[2] << 16)) >> 5;
+    first_partition_length_in_bytes = (data[0] | (data[1] << 8) | (data[2] << 16)) >> 5;
     data += 3;
     BitstreamReadBits(vo, 8*3);
 
@@ -235,7 +233,10 @@ int vp8_decode_frame(VPXDecObject *vo)
                 return MMDEC_STREAM_ERROR;
             }
 
-            vp8_init_frame_buffers(vo, pc);
+            if (vp8_init_frame_buffers(vo, pc) != MMDEC_OK)
+            {
+                return MMDEC_MEMORY_ERROR;
+            }
 
             return MMDEC_MEMORY_ALLOCED;
         }
@@ -351,7 +352,9 @@ int vp8_decode_frame(VPXDecObject *vo)
                     xd->mode_lf_deltas[i] = (signed char)vp8_read_literal(vo, bc, 6);
 
                     if (vp8_read_bit(bc))        // Apply sign
+                    {
                         xd->mode_lf_deltas[i] = (signed char)(xd->mode_lf_deltas[i] * -1);
+                    }
                 }
             }
         }
@@ -445,22 +448,31 @@ int vp8_decode_frame(VPXDecObject *vo)
     Vp8Dec_InitVSP(vo);
     Write_tbuf_Probs(vo);
 
-    VSP_WRITE_REG(VSP_REG_BASE_ADDR+ARM_INT_MASK_OFF,V_BIT_2,"ARM_INT_MASK, only enable VSP ACC init");//enable int //
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_MASK_OFF,V_BIT_2 | V_BIT_4 | V_BIT_5,"VSP_INT_MASK, enable mbw_slice_done, vld_err, time_out");//enable int //frame done/error/timeout
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+0x28, 0x1, "ORSC: RAM_ACC_SEL: SETTING_RAM_ACC_SEL=1(HW)");
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+0x30, 0xa, "ORSC: VSP_START: DECODE_START=1");
+    VSP_WRITE_REG(VSP_REG_BASE_ADDR + ARM_INT_MASK_OFF, V_BIT_2, "ARM_INT_MASK, only enable VSP ACC init");//enable int //
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_INT_MASK_OFF, (V_BIT_2 | V_BIT_4 | V_BIT_5), "VSP_INT_MASK, enable mbw_slice_done, vld_err, time_out");//enable int //frame done/error/timeout
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, V_BIT_0, "RAM_ACC_SEL: SETTING_RAM_ACC_SEL=1(HW)");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_START_OFF, 0xa, "VSP_START: DECODE_START=1");
 
     tmp = VSP_POLL_COMPLETE((VSPObject *)vo);
-    if(tmp&0x31)	// (VLC_ERR|TIME_OUT)
+    if(tmp & (V_BIT_0 | V_BIT_4 | V_BIT_5))	// (VLC_ERR|TIME_OUT)
     {
-        pc->error_flag=1;
-        VSP_WRITE_REG(GLB_REG_BASE_ADDR+0x08, 0x2c,"ORSC: VSP_INT_CLR: clear BSM_frame error int"); // (MBW_FMR_DONE|PPA_FRM_DONE|TIME_OUT)
-    } else if((tmp&0x00000004)==0x00000004)	// MBW_FMR_DONE
+        pc->error_flag = 1;
+
+        if (tmp & V_BIT_0)
+        {
+            SCI_TRACE_LOW("%s, %d, BSM_BUF_OVF", __FUNCTION__, __LINE__);
+        }else if (tmp & V_BIT_4)
+        {
+            SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
+        }else if (tmp & V_BIT_5)
+        {
+            SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);                    
+        }              
+    } else if(tmp & V_BIT_2)	// MBW_FMR_DONE
     {
         pc->error_flag=0;
-        VSP_WRITE_REG(GLB_REG_BASE_ADDR+0x08, V_BIT_2, "ORSC: VSP_INT_CLR: clear MBW_FMR_DONE");
     }
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+0x18, V_BIT_27, 0x00000000, TIME_OUT_CLK, "ORSC: Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
+    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
 
     if (pc->refresh_entropy_probs == 0)
     {
