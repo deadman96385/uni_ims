@@ -3,7 +3,8 @@
 
     <string name="app_name">安全特性选择</string>
     <string name="action_settings">设置</string>
-    <string name="hello_world">本终端支持对应用程序访问系统接口或者开启数据连接等可能会 影响用户信息安全的相关行为进行提示的机制，请您确认是否需要开启此项功能。 如果开启可能会影响部分应用的用户体验，请知悉</string>
+    <string name="hello_world">本终端支持对应用程序访问系统接口或者开启数据连接等可能会 影响用户信息安全的相关行为进行提示的机制，请您确认是否需要开启此项功能。 如果开启可能会影响部分应用的用户体验，选择是否开启</string>
+    <string name="timer">时间剩余:</string>
     <string name="No">不开启</string>
     <string name="Yes">开启</string>
 </resources>

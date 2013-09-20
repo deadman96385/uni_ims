@@ -3,7 +3,8 @@
 
     <string name="app_name">安全特性選擇</string>
     <string name="action_settings">設置</string>
-    <string name="hello_world">本終端支持對應用程序訪問系統接口或者開啓數據連接等可能會 影響用戶信息安全的相關行爲進行提示的機制，請您確認是否需要開啓此項功能。 如果開啓可能會影響部分應用的用戶體驗，請知悉</string>
+    <string name="hello_world">本終端支持對應用程序訪問系統接口或者開啓數據連接等可能會 影響用戶信息安全的相關行爲進行提示的機制，請您確認是否需要開啓此項功能。 如果開啓可能會影響部分應用的用戶體驗，請選擇是否開啟</string>
+    <string name="timer">時間賸餘:</string>
     <string name="No">不開啓</string>
     <string name="Yes">開啓</string>
 </resources>
