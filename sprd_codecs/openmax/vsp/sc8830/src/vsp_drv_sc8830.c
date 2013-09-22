@@ -38,7 +38,11 @@ LOCAL int32 VSP_set_ddr_freq(const char* freq_in_khz)
         return 0;
     } else {
         SCI_TRACE_LOW("Failed to open %s", set_freq);
+#if 0        
         return -1;
+#else
+        return 0;
+#endif
     }
 }
 
