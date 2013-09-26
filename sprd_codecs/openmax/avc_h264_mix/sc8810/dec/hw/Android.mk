@@ -33,8 +33,11 @@ LOCAL_SRC_FILES := \
 	\
 	../../../../vsp/sc8810/src/vsp_drv_sc8810.c
 
-LOCAL_MODULE := libomx_avcdec_hw_sprd
-LOCAL_MODULE_TAGS := optional
+LOCAL_C_INCLUDES := \
+	$(LOCAL_PATH)/include \
+	$(LOCAL_PATH)/src/common \
+	$(LOCAL_PATH)/src/hw	\
+	$(TOP)/vendor/sprd/proprietories-source/sprd_codecs/openmax/vsp/sc8810/inc \
 
 LOCAL_CFLAGS :=  -fno-strict-aliasing -D_VSP_LINUX_  -D_VSP_  -DCHIP_ENDIAN_LITTLE  -DCHIP_8810  -DH264_DEC 
 #LOCAL_CFLAGS += -DYUV_THREE_PLANE
@@ -43,10 +46,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_SHARED_LIBRARIES := \
 	libutils
 
-LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/include \
-	$(LOCAL_PATH)/src/common \
-	$(LOCAL_PATH)/src/hw	\
-	$(TOP)/vendor/sprd/proprietories-source/sprd_codecs/openmax/vsp/sc8810/inc \
+LOCAL_MODULE := libomx_avcdec_hw_sprd
+LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)

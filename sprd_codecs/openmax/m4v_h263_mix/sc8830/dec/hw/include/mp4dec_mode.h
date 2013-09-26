@@ -273,7 +273,6 @@ typedef struct dec_vop_mode_tag
 
     uint8 * data_partition_buffer_ptr;
     uint32 data_partition_buffer_Addr;
-
 } DEC_VOP_MODE_T;
 
 typedef struct h263_plus_header_info_tag
@@ -316,13 +315,6 @@ typedef struct h263_plus_header_info_tag
     int32 bquant;
     int32 true_b_trb;
 } H263_PLUS_HEAD_INFO_T;
-
-typedef enum
-{
-    INTER_MEM = 0, /*physical continuous and no-cachable, constant length */
-    EXTRA_MEM,   /*physical continuous and no-cachable, variable length, need allocated according to image resolution */
-    MAX_MEM_TYPE
-} CODEC_BUF_TYPE;
 
 typedef struct codec_buf_tag
 {

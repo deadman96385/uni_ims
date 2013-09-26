@@ -8,8 +8,8 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 12/14/2006    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4DEC_BLOCK_H_
@@ -17,21 +17,21 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "mp4_basic.h"
+#include "mp4dec_basic.h"
 #include "mp4dec_mode.h"
 #include "mp4dec_global.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 
 void Mp4Dec_MpegIqBlock(DEC_VOP_MODE_T *vop_mode_ptr, int16 *piDCTCoeff, int32 iQP, int32 start);
 
-void Mp4Dec_GetIntraBlkTCoef_H263_sw (DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode_ptr, int16 *coef_block, int32 iBlkIdx);
-void Mp4Dec_GetIntraBlkTCoef_Mp4_sw (DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode_ptr, int16 *coef_block, int32 iBlkIdx);
+void Mp4Dec_GetIntraBlkTCoef_H263 (DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode_ptr, int16 *coef_block, int32 iBlkIdx);
+void Mp4Dec_GetIntraBlkTCoef_Mpeg (DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode_ptr, int16 *coef_block, int32 iBlkIdx);
 
 void Mp4Dec_GetIntraBlkTCoef_H263_hw(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode_ptr, int32 iBlkIdx);
 void Mp4Dec_GetIntraBlkTCoef_Mp4_hw(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode_ptr, int32 iBlkIdx);
@@ -40,9 +40,9 @@ void Mp4Dec_GetIntraBlkTCoef_Mp4_hw(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T 
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif  //_MP4DEC_BLOCK_H_
 

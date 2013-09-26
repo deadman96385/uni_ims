@@ -71,10 +71,10 @@ PUBLIC void Mp4Dec_InitDecoderPara(MP4DecObject *vd)
 	vop_mode_ptr->is_previous_cmd_done = TRUE;
 	vop_mode_ptr->is_work_mode_set = FALSE;
 
-    vop_mode_ptr->pCurDispFrame = (Mp4DecStorablePic *)Mp4Dec_InterMemAlloc(vd, sizeof(Mp4DecStorablePic), 4);
-	vop_mode_ptr->pCurRecFrame = (Mp4DecStorablePic *)Mp4Dec_InterMemAlloc(vd, sizeof(Mp4DecStorablePic), 4);
-	vop_mode_ptr->pBckRefFrame = (Mp4DecStorablePic *)Mp4Dec_InterMemAlloc(vd, sizeof(Mp4DecStorablePic), 4);
-	vop_mode_ptr->pFrdRefFrame = (Mp4DecStorablePic *)Mp4Dec_InterMemAlloc(vd, sizeof(Mp4DecStorablePic), 4);
+    vop_mode_ptr->pCurDispFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vd, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
+	vop_mode_ptr->pCurRecFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vd, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
+	vop_mode_ptr->pBckRefFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vd, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
+	vop_mode_ptr->pFrdRefFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vd, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
 
 	vop_mode_ptr->pCurDispFrame->bfrId = 0xFF;
 	vop_mode_ptr->pCurRecFrame->bfrId = 0xFF;
@@ -170,16 +170,16 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(MP4Handle *mp4Handle, MP4DecObject *vd,
 	vop_mode_ptr->iStartInFrameY = vop_mode_ptr->FrameExtendWidth * YEXTENTION_SIZE + YEXTENTION_SIZE;
 	vop_mode_ptr->iStartInFrameUV = (vop_mode_ptr->FrameExtendWidth >>1) * UVEXTENTION_SIZE + UVEXTENTION_SIZE;
 
-    mp4Handle->VSP_extMemCb(mp4Handle->userdata, vop_mode_ptr->FrameWidth, vop_mode_ptr->FrameHeight);
+    mp4Handle->VSP_extMemCb(mp4Handle->userdata, vop_mode_ptr->FrameWidth, vop_mode_ptr->FrameHeight, vop_mode_ptr->bDataPartitioning);
 
     /*MB mode for a frame*/
-    vop_mode_ptr->pMbMode = (DEC_MB_MODE_T *)Mp4Dec_ExtraMemAlloc(vd, sizeof(DEC_MB_MODE_T) * total_mb_num, 4, SW_CACHABLE);
+    vop_mode_ptr->pMbMode = (DEC_MB_MODE_T *)Mp4Dec_MemAlloc(vd, sizeof(DEC_MB_MODE_T) * total_mb_num, 4, SW_CACHABLE);
     if(NULL == vop_mode_ptr->pMbMode)
     {
         return MMDEC_MEMORY_ERROR;
     }
 	
-    vop_mode_ptr->pMbMode_prev = (DEC_MB_MODE_T *)Mp4Dec_ExtraMemAlloc(vd, sizeof(DEC_MB_MODE_T) * total_mb_num, 4, SW_CACHABLE);
+    vop_mode_ptr->pMbMode_prev = (DEC_MB_MODE_T *)Mp4Dec_MemAlloc(vd, sizeof(DEC_MB_MODE_T) * total_mb_num, 4, SW_CACHABLE);
     if(NULL == vop_mode_ptr->pMbMode)
     {
         return MMDEC_MEMORY_ERROR;
@@ -187,7 +187,7 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(MP4Handle *mp4Handle, MP4DecObject *vd,
 
 	if (vop_mode_ptr->VSP_used || vop_mode_ptr->VT_used)	
 	{
-	vop_mode_ptr->mbdec_stat_ptr = (uint8 *)Mp4Dec_ExtraMemAlloc (vd, total_mb_num * sizeof(uint8), 4, SW_CACHABLE);
+	vop_mode_ptr->mbdec_stat_ptr = (uint8 *)Mp4Dec_MemAlloc (vd, total_mb_num * sizeof(uint8), 4, SW_CACHABLE);
 		if(NULL == vop_mode_ptr->mbdec_stat_ptr)
 		{
 		    return MMDEC_MEMORY_ERROR;
@@ -199,7 +199,7 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(MP4Handle *mp4Handle, MP4DecObject *vd,
 	{
 		uint32 i;
 
-		vop_mode_ptr->g_dec_dc_store = (int32 **)Mp4Dec_ExtraMemAlloc(vd, sizeof (int32 *) * total_mb_num, 4, SW_CACHABLE);
+		vop_mode_ptr->g_dec_dc_store = (int32 **)Mp4Dec_MemAlloc(vd, sizeof (int32 *) * total_mb_num, 4, SW_CACHABLE);
 		if( NULL == vop_mode_ptr->g_dec_dc_store )
 		{
 			return MMDEC_MEMORY_ERROR;
@@ -207,7 +207,7 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(MP4Handle *mp4Handle, MP4DecObject *vd,
 
 		for (i = 0; i < total_mb_num; i++)
 		{
-			vop_mode_ptr->g_dec_dc_store[i] = (int32 *) Mp4Dec_ExtraMemAlloc(vd, sizeof (int32) * 6, 4, SW_CACHABLE);
+			vop_mode_ptr->g_dec_dc_store[i] = (int32 *) Mp4Dec_MemAlloc(vd, sizeof (int32) * 6, 4, SW_CACHABLE);
 			if(NULL == vop_mode_ptr->g_dec_dc_store[i])
 			{
 		                return MMDEC_MEMORY_ERROR;
@@ -220,16 +220,16 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(MP4Handle *mp4Handle, MP4DecObject *vd,
 	{
 
 	    //should be 64 word aligned
-	    vop_mode_ptr->pTopCoeff = (int16 *)Mp4Dec_ExtraMemAlloc(vd,  sizeof(int16) * (uint8)(vop_mode_ptr->MBNumX) * 4 * 8, 256, HW_NO_CACHABLE);
+	    vop_mode_ptr->pTopCoeff = (int16 *)Mp4Dec_MemAlloc(vd,  sizeof(int16) * (uint8)(vop_mode_ptr->MBNumX) * 4 * 8, 256, HW_NO_CACHABLE);
 	    if(NULL == vop_mode_ptr->pTopCoeff)
 	    {
 	        return MMDEC_MEMORY_ERROR;
 	    }
 
-		vop_mode_ptr->frame_bistrm_ptr = (uint8 *)Mp4Dec_ExtraMemAlloc(vd,  sizeof(uint8) * MP4DEC_FRM_STRM_BUF_SIZE, 4, HW_CACHABLE);
+		vop_mode_ptr->frame_bistrm_ptr = (uint8 *)Mp4Dec_MemAlloc(vd,  sizeof(uint8) * MP4DEC_FRM_STRM_BUF_SIZE, 256, HW_CACHABLE);
 		
 	//for sw vld
-	    vop_mode_ptr->pTopLeftDCLine = (int16 *)Mp4Dec_ExtraMemAlloc(vd, sizeof(int16)* mb_num_x * 4, 4, SW_CACHABLE);
+	    vop_mode_ptr->pTopLeftDCLine = (int16 *)Mp4Dec_MemAlloc(vd, sizeof(int16)* mb_num_x * 4, 4, SW_CACHABLE);
 	    if(NULL == vop_mode_ptr->pTopLeftDCLine)
 	    {
 	        return MMDEC_MEMORY_ERROR;
@@ -251,12 +251,12 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(MP4Handle *mp4Handle, MP4DecObject *vd,
         #endif
 	}
 
-	vop_mode_ptr->pLeftCoeff = (int16 *)Mp4Dec_ExtraMemAlloc(vd, sizeof(int16) * 4 * 8, 4, SW_CACHABLE);
+	vop_mode_ptr->pLeftCoeff = (int16 *)Mp4Dec_MemAlloc(vd, sizeof(int16) * 4 * 8, 4, SW_CACHABLE);
 	SCI_ASSERT(NULL != vop_mode_ptr->pLeftCoeff );
 	
 	for (i = 0; i < BLOCK_CNT; i++)
 	{
-		vop_mode_ptr->coef_block[i] = (int16 *)Mp4Dec_ExtraMemAlloc(vd, sizeof(int16) * BLOCK_SQUARE_SIZE, 4, SW_CACHABLE);
+		vop_mode_ptr->coef_block[i] = (int16 *)Mp4Dec_MemAlloc(vd, sizeof(int16) * BLOCK_SQUARE_SIZE, 4, SW_CACHABLE);
 		SCI_ASSERT(NULL != vop_mode_ptr->coef_block[i]);
 
 		if (i < 4)
@@ -397,13 +397,13 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(MP4Handle *mp4Handle, MP4DecObject *vd,
 
 		for(i = 0; i< 2; i++)
 		{
-			vop_mode_ptr->cmd_data_buf[i]= (uint32 *) Mp4Dec_ExtraMemAlloc(vd, 3*(vop_mode_ptr->MBNum)*256, 256, HW_CACHABLE);
+			vop_mode_ptr->cmd_data_buf[i]= (uint32 *) Mp4Dec_MemAlloc(vd, 3*(vop_mode_ptr->MBNum)*256, 256, HW_CACHABLE);
 
 			if(NULL == vop_mode_ptr->cmd_data_buf[i])
 			{
 			    return MMDEC_MEMORY_ERROR;
 			}
-			vop_mode_ptr->cmd_info_buf[i] = (uint32 *) Mp4Dec_ExtraMemAlloc(vd, (vop_mode_ptr->MBNum)*256, 256, HW_CACHABLE);
+			vop_mode_ptr->cmd_info_buf[i] = (uint32 *) Mp4Dec_MemAlloc(vd, (vop_mode_ptr->MBNum)*256, 256, HW_CACHABLE);
 			if(NULL == vop_mode_ptr->cmd_info_buf[i])
 			{
 			    return MMDEC_MEMORY_ERROR;

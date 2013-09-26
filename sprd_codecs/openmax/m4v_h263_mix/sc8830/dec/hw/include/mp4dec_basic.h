@@ -64,6 +64,9 @@ typedef enum {
 }
 QUANTIZER_E;
 
+//for vop prediction type
+typedef enum {IVOP, PVOP, BVOP, SVOP, NVOP} VOP_PRED_TYPE_E;
+
 //binaryshape
 typedef enum {RECTANGLE, ONE_BIT, EIGHT_BIT} ALPHA_USAGE_E;
 typedef enum {ALL, PARTIAL, NONE} TRANSPARENT_STATUS_E;

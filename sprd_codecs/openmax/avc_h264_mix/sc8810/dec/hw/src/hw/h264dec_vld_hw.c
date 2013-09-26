@@ -107,14 +107,30 @@ int readCoeff4x4_CAVLC_hw (DEC_MB_CACHE_T *mb_cache_ptr, int32 n, int32 max_coef
 			{
 				level_code = prefix + READ_FLC(stream, 4);	//part
 			}
-		}else if (prefix == 15)
-		{
-			level_code = (prefix<<suffix_length) + READ_FLC(stream, 12);	//part
-			if (suffix_length == 0)	level_code += 15;	//FIXME doesn't make (much) sense
-		}else
-		{
-			return -1;
 		}
+#if 0         
+            else if (prefix == 15)
+            {
+                level_code = (prefix<<suffix_length) + READ_FLC(stream, 12);	//part
+                if (suffix_length == 0)	level_code += 15;	//FIXME doesn't make (much) sense
+            } else
+            {
+                return -1;
+            }
+#else
+            else
+            {
+                level_code = 30 + READ_FLC(stream, prefix - 3);	//part
+                if (prefix >= 16)
+                {
+                    if (prefix > 25+3)
+                    {
+                        return -1;
+                    }
+                    level_code += (1<<(prefix-3)) - 4096;
+                }
+            }
+#endif
 
 		if (trailing_ones < 3)	level_code += 2;
 

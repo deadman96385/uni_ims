@@ -23,77 +23,104 @@
     {
 #endif
 
-#define MP4_MALLOC_PRINT   //LOGD
+#define MP4DEC_MALLOC_PRINT  ALOGD
 
-/*****************************************************************************
- ** Note:	Alloc the internal memory
- *****************************************************************************/
-PUBLIC void *Mp4Dec_InterMemAlloc(MP4DecObject *vd, uint32 need_size, int32 aligned_byte_num)
+LOCAL void Init_Mem (MP4DecObject *vd, MMCodecBuffer *pMem, int32 type)
 {
-	uint32 CurrAddr, AlignedAddr;
-		
-	CurrAddr = (uint32)(vd->s_inter_mem.v_base) + vd->s_inter_mem.used_size;
-	AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
-	need_size += (AlignedAddr - CurrAddr);
+    int32 dw_aligned;
 
-	if((0 == need_size)||(need_size> (vd->s_inter_mem.total_size-vd->s_inter_mem.used_size)))
-	{
-            SCI_TRACE_LOW("%s  failed, total_size:%d, used_size: %d, need_size:%d\n", __FUNCTION__,vd-> s_inter_mem.total_size, vd->s_inter_mem.used_size,need_size);	
-            return NULL; //lint !e527
-	}
-	
-	vd->s_inter_mem.used_size+= need_size;
+    if (type == HW_CACHABLE)
+    {
+        dw_aligned = (((uint32)(pMem->common_buffer_ptr) + 7) & (~7)) - ((uint32)(pMem->common_buffer_ptr));
+    }else
+    {
+        dw_aligned = (((uint32)(pMem->common_buffer_ptr) + 255) & (~255)) - ((uint32)(pMem->common_buffer_ptr));
+    }
 
-	return (void *)AlignedAddr;
+    vd->mem[type].used_size = 0;
+    vd->mem[type].v_base = pMem->common_buffer_ptr + dw_aligned;
+    vd->mem[type].p_base = (uint32)(pMem->common_buffer_ptr_phy) + dw_aligned;
+    vd->mem[type].total_size = pMem->size - dw_aligned;
+    SCI_MEMSET(vd->mem[type].v_base, 0, vd->mem[type].total_size);
+
+    MP4DEC_MALLOC_PRINT("%s: type:%d, dw_aligned, %d, v_base: %0x, p_base: %0x, mem_size:%d\n",
+                        __FUNCTION__, type, dw_aligned, vd->mem[type].v_base, vd->mem[type].p_base, vd->mem[type].total_size);
+}
+
+PUBLIC void Mp4Dec_InitInterMem (MP4DecObject *vo, MMCodecBuffer *pInterMemBfr)
+{
+    Init_Mem(vo, pInterMemBfr, INTER_MEM);
+}
+
+/*****************************************************************************/
+//  Description:   Init mpeg4 decoder	memory
+//	Global resource dependence:
+//  Author:
+//	Note:
+/*****************************************************************************/
+PUBLIC MMDecRet MP4DecMemInit(MP4Handle *mp4Handle, MMCodecBuffer *pBuffer)
+{
+    MP4DecObject *vd = (MP4DecObject *) mp4Handle->videoDecoderData;
+    int32 type;
+
+    for (type = HW_NO_CACHABLE; type < MAX_MEM_TYPE; type++)
+    {   
+        Init_Mem(vd, &(pBuffer[type]), type);
+    }
+    
+    return MMDEC_OK;
 }
 
 /*****************************************************************************
- ** Note:	Alloc the external memory
+ ** Note:	Alloc the needed memory
  *****************************************************************************/
-PUBLIC void *Mp4Dec_ExtraMemAlloc(MP4DecObject *vd, uint32 need_size, int32 aligned_byte_num, int32 type)
+PUBLIC void *Mp4Dec_MemAlloc (MP4DecObject *vd, uint32 need_size, int32 aligned_byte_num, int32 type)
 {
-	uint32 CurrAddr, AlignedAddr;
-		
-	CurrAddr = (uint32)vd->s_extra_mem[type].v_base + vd->s_extra_mem[type].used_size;
-	AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
-	need_size += (AlignedAddr - CurrAddr);
+    CODEC_BUF_T *pMem = &(vd->mem[type]);
+    uint32 CurrAddr, AlignedAddr;
 
-	MP4_MALLOC_PRINT("%s: mem_size:%d\n", __FUNCTION__, need_size);
+    CurrAddr = (uint32)(pMem->v_base) + pMem->used_size;
+    AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
+    need_size += (AlignedAddr - CurrAddr);
 
-	if((0 == need_size)||(need_size >  (vd->s_extra_mem[type].total_size-vd->s_extra_mem[type].used_size)))
-	{
-            SCI_TRACE_LOW("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, vd->s_extra_mem[type].total_size, vd->s_extra_mem[type].used_size,need_size, type);	
-            return NULL;
-	}
-	
-	vd->s_extra_mem[type].used_size += need_size;
-	
-	return (void *)AlignedAddr;
+    MP4DEC_MALLOC_PRINT("%s: mem_size:%d, AlignedAddr: %0x, type: %d\n", __FUNCTION__, need_size, AlignedAddr, type);
+
+    if((0 == need_size)||(need_size >  (pMem->total_size -pMem->used_size)))
+    {
+        ALOGE("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, pMem->total_size, pMem->used_size,need_size, type);
+        return NULL;
+    }
+
+    pMem->used_size += need_size;
+
+    return (void *)AlignedAddr;
 }
 
 /*****************************************************************************
  ** Note:	 mapping from virtual to physical address
  *****************************************************************************/
-PUBLIC uint8 *Mp4Dec_ExtraMem_V2P(MP4DecObject *vd, uint8 *vAddr, int32 type)
+PUBLIC uint32 Mp4Dec_MemV2P(MP4DecObject *vd, uint8 *vAddr, int32 type)
 {
     if (type >= MAX_MEM_TYPE)
     {
-        SCI_TRACE_LOW("%s, memory type is error!", __FUNCTION__);
+        ALOGE ("%s, memory type is error!", __FUNCTION__);
         return NULL;
-    }else
+    } else
     {
-	return ((vAddr-vd->s_extra_mem[type].v_base)+vd->s_extra_mem[type].p_base);
+        CODEC_BUF_T *pMem = &(vd->mem[type]);
+
+        return ((uint32)(vAddr-pMem->v_base)+pMem->p_base);
     }
 }
 
 /*****************************************************************************
  **	Note:   for cache flushing operation
  *****************************************************************************/
-PUBLIC MMDecRet Mp4Dec_ExtraMem_GetInfo(MP4DecObject *vd, MMCodecBuffer *pBuffer, int32 type)
+PUBLIC MMDecRet Mp4Dec_Mem_GetInfo(MP4DecObject *vd, MMCodecBuffer *pBuffer, int32 type)
 {
-    pBuffer->common_buffer_ptr = vd->s_extra_mem[type].v_base;
-    pBuffer->common_buffer_ptr_phy = vd->s_extra_mem[type].p_base;
-    pBuffer->size = vd->s_extra_mem[type].total_size;
+    pBuffer->common_buffer_ptr = vd->mem[type].v_base;
+    pBuffer->common_buffer_ptr_phy = vd->mem[type].p_base;
+    pBuffer->size = vd->mem[type].total_size;
 
     return MMDEC_OK;
 }
@@ -102,67 +129,16 @@ PUBLIC MMDecRet Mp4Dec_ExtraMem_GetInfo(MP4DecObject *vd, MMCodecBuffer *pBuffer
  ** Note:	Free the common memory
  *****************************************************************************/
 PUBLIC void Mp4Dec_FreeMem(MP4DecObject *vd) 
-{ 
-	vd->s_inter_mem.used_size = 0;
-	Mp4Dec_FreeExtraMem(vd);
-}
-
-/*****************************************************************************
- ** Note:	Free the common memory
- *****************************************************************************/
-PUBLIC void Mp4Dec_FreeExtraMem(MP4DecObject *vd) 
 {
     int32 type;
 
     for (type = 0; type < MAX_MEM_TYPE; type++)
     {
-	vd->s_extra_mem[type].used_size = 0;
+	vd->mem[type].used_size = 0;
     }
         
-    MP4_MALLOC_PRINT("%s\n", __FUNCTION__);
+    MP4DEC_MALLOC_PRINT("%s\n", __FUNCTION__);
 }
-
-/*****************************************************************************
- ** Note:	initialize internal memory
- *****************************************************************************/
-PUBLIC void Mp4Dec_InitInterMem(MP4DecObject *vd, MMCodecBuffer *dec_buffer_ptr)
-{
-    vd->s_inter_mem.used_size = 0;
-    vd->s_inter_mem.v_base = dec_buffer_ptr->int_buffer_ptr;
-    vd->s_inter_mem.total_size = dec_buffer_ptr->int_size;
-    SCI_MEMSET(vd->s_inter_mem.v_base, 0, vd->s_inter_mem.total_size);
-
-    MP4_MALLOC_PRINT("%s: inter_mem_size:%d\n", __FUNCTION__, vd->s_inter_mem.total_size);
-	
-    return;	
-}
-
-/*****************************************************************************
- ** Note:	initialize extra memory, physical continuous and no-cachable 
-*****************************************************************************/
-PUBLIC MMDecRet MP4DecMemInit(MP4Handle *mp4Handle, MMCodecBuffer *pBuffer)
-{
-    MP4DecObject *vd = (MP4DecObject *) (mp4Handle->videoDecoderData);
-	int32 type;
-
-    for (type = 0; type < MAX_MEM_TYPE; type++)
-    {
-	vd->s_extra_mem[type].used_size = 0;
-	vd->s_extra_mem[type].v_base = pBuffer[type].common_buffer_ptr;
-	vd->s_extra_mem[type].p_base = pBuffer[type].common_buffer_ptr_phy;
-
-	vd->s_extra_mem[type].total_size = pBuffer[type].size;
-
-#if 0   //NOT NEED
-	SCI_MEMSET(vd->s_extra_mem[type].v_base, 0, vd->s_extra_mem[type].total_size);
-#endif
-
-	MP4_MALLOC_PRINT("%s: extra_mem_size:%d\n", __FUNCTION__, vd->s_extra_mem[type].total_size);
-    }
-
-    return MMDEC_OK;
-}
-
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

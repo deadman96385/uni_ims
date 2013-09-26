@@ -51,23 +51,6 @@ PUBLIC void MP4DecSetCurRecPic(MP4Handle *mp4Handle, uint8	*pFrameY,uint8 *pFram
 	SCI_TRACE_LOW("VSP DPB::Mpeg4Decoder_OMX::Mp4DecodeVideo set cur pic  %x,%x,%x\n", pFrameY,pBufferHeader,pFrameY_phy);
 }
 
-//void MP4DecRegBufferCB(VideoDecControls *decCtrl, FunctionType_BufCB bindCb,FunctionType_BufCB unbindCb,void *userdata)
-//{
-//    	VIDEO_DATA_T *vd = (VIDEO_DATA_T *) decCtrl->videoDecoderData;
-//
-//	vd->VSP_bindCb = bindCb;
-//	vd->VSP_unbindCb = unbindCb;
-//	vd->g_user_data = userdata;
-//}
-
-//void Mp4DecRegMemAllocCB (VideoDecControls *decCtrl, void *userdata, FunctionType_MemAllocCB extMemCb)
-//{
-//    VIDEO_DATA_T *vd = (VIDEO_DATA_T *) decCtrl->videoDecoderData;
-    
-//    vd->g_user_data = userdata;
-//    vd->VSP_extMemCb = extMemCb;
-//}
-
 void MP4DecReleaseRefBuffers(MP4Handle *mp4Handle)
 {
     	MP4DecObject *vd = (MP4DecObject *) mp4Handle->videoDecoderData;
@@ -216,19 +199,19 @@ PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer *pBuffer)
 		return MMDEC_ERROR;
 	}
 	
-	vd = (MP4DecObject *) pBuffer_tmp->int_buffer_ptr;
+	vd = (MP4DecObject *) pBuffer_tmp->common_buffer_ptr;
         memset(vd, 0, sizeof(MP4DecObject)); 
 	mp4Handle->videoDecoderData = (void *) vd;
 	
-	pBuffer_tmp->int_buffer_ptr += sizeof(MP4DecObject);
-	pBuffer_tmp->int_size -= sizeof(MP4DecObject);
+	pBuffer_tmp->common_buffer_ptr += sizeof(MP4DecObject);
+	pBuffer_tmp->size -= sizeof(MP4DecObject);
 
 	Mp4Dec_InitInterMem(vd, pBuffer_tmp);
 	
 	Mp4Dec_InitGlobal();
         vd->mp4Handle = mp4Handle;
 
-	vd->vop_mode_ptr = (DEC_VOP_MODE_T *)Mp4Dec_InterMemAlloc(vd, sizeof(DEC_VOP_MODE_T), 4);
+	vd->vop_mode_ptr = (DEC_VOP_MODE_T *)Mp4Dec_MemAlloc(vd, sizeof(DEC_VOP_MODE_T), 4, INTER_MEM);
 		vop_mode_ptr = vd->vop_mode_ptr;
 	SCI_ASSERT(NULL != vop_mode_ptr);	
 	Mp4Dec_SetVopmode(vop_mode_ptr);
@@ -244,26 +227,26 @@ PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer *pBuffer)
 	vop_mode_ptr->VT_used = 0;
 
 	//for H263 plus header
-	vd->h263_plus_head_info_ptr = (H263_PLUS_HEAD_INFO_T *)Mp4Dec_InterMemAlloc(vd, sizeof(H263_PLUS_HEAD_INFO_T), 4);
+	vd->h263_plus_head_info_ptr = (H263_PLUS_HEAD_INFO_T *)Mp4Dec_MemAlloc(vd, sizeof(H263_PLUS_HEAD_INFO_T), 4, INTER_MEM);
 	SCI_ASSERT(NULL != vd->h263_plus_head_info_ptr);
 	Mp4Dec_SetH263PlusHeadInfo(vd->h263_plus_head_info_ptr);
 
-	vop_mode_ptr->bitstrm_ptr = (DEC_BS_T *)Mp4Dec_InterMemAlloc(vd,sizeof(DEC_BS_T), 4);	
+	vop_mode_ptr->bitstrm_ptr = (DEC_BS_T *)Mp4Dec_MemAlloc(vd,sizeof(DEC_BS_T), 4, INTER_MEM);	
 	SCI_ASSERT(NULL != vop_mode_ptr->bitstrm_ptr);
 	
-	vop_mode_ptr->pMbMode_B = (DEC_MB_MODE_T *)Mp4Dec_InterMemAlloc(vd,sizeof(DEC_MB_MODE_T), 4);
+	vop_mode_ptr->pMbMode_B = (DEC_MB_MODE_T *)Mp4Dec_MemAlloc(vd,sizeof(DEC_MB_MODE_T), 4, INTER_MEM);
 	SCI_ASSERT(NULL != vop_mode_ptr->pMbMode_B);
 
-	 vop_mode_ptr->mb_cache_ptr = (DEC_MB_BFR_T *)Mp4Dec_InterMemAlloc(vd,sizeof(DEC_MB_BFR_T), 4);
+	 vop_mode_ptr->mb_cache_ptr = (DEC_MB_BFR_T *)Mp4Dec_MemAlloc(vd,sizeof(DEC_MB_BFR_T), 4, INTER_MEM);
 	SCI_ASSERT(NULL != vop_mode_ptr->mb_cache_ptr);
 
- 	vop_mode_ptr->IntraQuantizerMatrix = (uint8 *)Mp4Dec_InterMemAlloc(vd,sizeof(uint8)*BLOCK_SQUARE_SIZE, 4);
+ 	vop_mode_ptr->IntraQuantizerMatrix = (uint8 *)Mp4Dec_MemAlloc(vd,sizeof(uint8)*BLOCK_SQUARE_SIZE, 4, INTER_MEM);
 	SCI_ASSERT(NULL != vop_mode_ptr->IntraQuantizerMatrix);
 
-	 vop_mode_ptr->InterQuantizerMatrix = (uint8 *)Mp4Dec_InterMemAlloc(vd,sizeof(uint8)*BLOCK_SQUARE_SIZE, 4);
+	 vop_mode_ptr->InterQuantizerMatrix = (uint8 *)Mp4Dec_MemAlloc(vd,sizeof(uint8)*BLOCK_SQUARE_SIZE, 4, INTER_MEM);
 	SCI_ASSERT(NULL != vop_mode_ptr->InterQuantizerMatrix);
 
-	vop_mode_ptr->dbk_para = (DBK_PARA_T *)Mp4Dec_InterMemAlloc(vd,sizeof(DBK_PARA_T), 4);
+	vop_mode_ptr->dbk_para = (DBK_PARA_T *)Mp4Dec_MemAlloc(vd,sizeof(DBK_PARA_T), 4, INTER_MEM);
 		
 	Mp4Dec_InitDecoderPara(vd);
 
@@ -352,15 +335,15 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
 	DEC_VOP_MODE_T *vop_mode_ptr = vd->vop_mode_ptr;
 
 	mp4Handle->g_mpeg4_dec_err_flag = 0;
-        
-	SCI_TRACE_LOW("MP4DecDecode: E");
 
+	SCI_TRACE_LOW("MP4DecDecode: E");
+	
         if (dec_input_ptr->dataLen == 0)
         {
         	ret = MMDEC_OK;
 		goto MPEG4_DEC_CQM_ERROR;
         }
-
+		
     if(!Mp4Dec_GetCurRecFrameBfr(vd, vop_mode_ptr))
     {
         memset(dec_output_ptr,0,sizeof(MMDecOutput));
@@ -710,67 +693,6 @@ MPEG4_DEC_CQM_ERROR:
         SCI_TRACE_LOW("---MP4DecDecode, 2,%d",vop_mode_ptr->is_previous_cmd_done);
 	return ret;	
 #endif	
-}
-
-/*****************************************************************************/
-//  Description: for display, return one frame for display
-//	Global resource dependence: 
-//  Author:        
-//	Note:  the transposed type is passed from MMI "req_transposed"
-//         req_transposed£º 1£ºtranposed  0: normal    
-/*****************************************************************************/
-PUBLIC void mpeg4dec_GetOneDspFrm(MP4Handle *mp4Handle, MMDecOutput *pOutput, int req_transposed, int is_last_frame)
-{
-	MP4DecObject *vd = mp4Handle->videoDecoderData;
-	DEC_VOP_MODE_T *vop_mode_ptr = vd->vop_mode_ptr;
-	Mp4DecStorablePic *pic;
-
-	if(is_last_frame)
-	{
-		//notes: if the last frame is bvop, then the last display frame should be it's latest reference frame(pBckRefFrame).
-		//else, the last display frame should be last decoded I or P vop. In MP4DecDecode function, Mp4Dec_exit_picture has 
-		//exchanged pCurRecFrame to pBckRefFrame. so here use pBckRefFrame is correct.
-		pic = vop_mode_ptr->pBckRefFrame;
-	}else
-	{
-		pic = vop_mode_ptr->pFrdRefFrame;
-	}
-
-	if(PNULL != pic)
-	{
-		pic->pDecFrame->bDisp = TRUE; 
-		pOutput->frame_width = vop_mode_ptr->FrameWidth;
-		pOutput->frame_height = vop_mode_ptr->FrameHeight;
-		pOutput->frameEffective = 1;
-		pOutput->is_transposed = 0;
-		pOutput->pOutFrameY = pic->pDecFrame->imgY;
-		pOutput->pOutFrameU = pic->pDecFrame->imgU;
-		pOutput->pOutFrameV = pic->pDecFrame->imgV;
-	}else
-	{
-		pOutput->frameEffective = 0;
-	}
-
-	return;
-}
-
-/*****************************************************************************/
-//  Description: check whether VSP can used for video decoding or not
-//	Global resource dependence: 
-//  Author:        
-//	Note: return VSP status:
-//        1: dcam is idle and can be used for vsp   0: dcam is used by isp           
-/*****************************************************************************/
-BOOLEAN MPEG4DEC_VSP_Available(void)
-{
-	int dcam_cfg;
-
-	dcam_cfg = VSP_READ_REG(VSP_DCAM_BASE+DCAM_CFG_OFF, "DCAM_CFG: read dcam configure register");
-
-	if (((dcam_cfg >> 3) & 1) == 0) //bit3: VSP_EB, xiaowei.luo@20090907
-		return TRUE;
-	else
-		return FALSE;
 }
 
 MMDecRet MP4DecRelease(MP4Handle *mp4Handle)

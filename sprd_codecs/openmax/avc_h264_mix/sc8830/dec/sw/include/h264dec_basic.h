@@ -7,8 +7,8 @@
 *****************************************************************************/
 /******************************************************************************
 **                   Edit    History                                         *
-**---------------------------------------------------------------------------* 
-** DATE          NAME            DESCRIPTION                                 * 
+**---------------------------------------------------------------------------*
+** DATE          NAME            DESCRIPTION                                 *
 ** 11/20/2007    Xiaowei Luo     Create.                                     *
 *****************************************************************************/
 #ifndef _H264DEC_BASIC_H_
@@ -22,7 +22,7 @@
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-extern   "C" 
+extern   "C"
 {
 #endif
 
@@ -32,31 +32,19 @@ extern   "C"
 
 #define DEC_REF_PIC_MARKING_COMMAND_NUM	50
 
-#if 1//hw	
 #define MAX_REF_FRAME_NUMBER	16
 #define	MAX_REF_FRAME_BUF_NUM	16  //5
 
 #define MAX_PPS	256
 #define MAX_SPS	32
-#else
-#define MAX_REF_FRAME_NUMBER	5
-#define	MAX_REF_FRAME_BUF_NUM	5  //5
 
-#define MAX_PPS	10
-#define MAX_SPS	5
-#endif
-
-#ifdef _VSP_LINUX_
 #define SIZE_SLICE_GROUP_ID		960 //512x480
-#else
-#define SIZE_SLICE_GROUP_ID		396	//for CIF size// should be sufficient for HUGE pictures, need one int per MB in a picture
-#endif
 
 #define INVALID_REF_ID	(-135792468)
 
 #define LIST_NOT_USED -1 //FIXME rename?
 #define PART_NOT_AVAIL	-2
-#define MB_SIZE						16 
+#define MB_SIZE						16
 #define MB_CHROMA_SIZE				8
 #define MB_LUMA_CACHE_WIDTH			16
 #define MB_LUMA_CACHE_HEIGHT		16
@@ -185,43 +173,23 @@ extern   "C"
 #define VERT_PRED_8     2
 #define PLANE_8         3
 
-
 /*mv predict type*/
 #define MVPRED_MEDIAN   0
 #define MVPRED_L        1
 #define MVPRED_U        2
 #define MVPRED_UR       3
 
-/*block type for CAVLC*/
-//#define LUMA_16DC       0
-//#define LUMA_16AC       1
-//#define LUMA_8x8        2
-//#define LUMA_8x4        3
-//#define LUMA_4x8        4
-//#define LUMA_4x4        5
-//#define CHROMA_DC       6
-//#define CHROMA_AC       7
-
-#define IS_DIRECT(MB)   ((MB)->mb_type==0     && (img_ptr->type==B_SLICE ))
+//#define IS_DIRECT(MB)   ((MB)->mb_type==0     && (img_ptr->type==B_SLICE ))
 #define IS_P8x8(MB)     ((MB)->mb_type==P8x8)
 #define IS_INTERMV(MB)  ((MB)->mb_type!=I4MB_264  && (MB)->mb_type!=I16MB  && (MB)->mb_type!=0 && (MB)->mb_type!=IPCM)
 
-//--- block types for CABAC ----
-//#define MB_TYPE_LUMA_16DC       0
-//#define MB_TYPE_LUMA_16AC       1
-//#define MB_TYPE_LUMA_8x8        2
-//#define MB_TYPE_LUMA_8x4        3
-//#define MB_TYPE_LUMA_4x8        4
-//#define MB_TYPE_LUMA_4x4        5
-//#define MB_TYPE_CHROMA_DC       6
-//#define MB_TYPE_CHROMA_AC       7
-//#define NUM_BLOCK_TYPES 8
+//--- block category for CABAC ----
+#define LUMA_DC			0
+#define LUMA_AC_I16		1
+#define LUMA_AC			2
+#define CHROMA_DC		3
+#define CHROMA_AC		4
 
-//sw
-typedef void (*MC4xN_LUMA)(uint8 * pFref, uint8 * pPred, int32 width, int32 N);
-typedef void (*MC8xN_LUMA)(uint8 * pFref, uint8 * pPred, int32 width, int32 N);
-typedef void (*MC16xN_LUMA)(uint8 * pFref, uint8 * pPred, int32 width, int32 N);
-typedef void (*MC_LUMA)(uint8 * pFref, uint8 * pPred, int32 xpos, int32 ypos, int32 size);
 
 //error id, added by xiaowei, 20110310
 #define ER_REORD_REF_PIC_ID   	2
@@ -238,13 +206,16 @@ typedef void (*MC_LUMA)(uint8 * pFref, uint8 * pPred, int32 xpos, int32 ypos, in
 #define ER_EXTRA_MEMO_ID      	4096    //1<<12
 #define ER_INTER_MEMO_ID       	8192    //1<<13
 
+#define ER_BS_UE	(1<<0)
+#define ER_BS_SE	(1<<1)
+#define ER_BS_FLC	(1<<2)
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif  //_H264DEC_BASIC_H_

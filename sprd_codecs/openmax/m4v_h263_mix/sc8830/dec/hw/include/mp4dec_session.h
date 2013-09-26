@@ -26,9 +26,8 @@ extern   "C"
 {
 #endif
 
-void Mp4Dec_InitGlobal (Mp4DecObject *vo);
-MMDecRet Mp4Dec_InitDecoderPara(Mp4DecObject *vo);
-MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo);
+MMDecRet Mp4Dec_InitGlobal (Mp4DecObject *vo);
+MMDecRet Mp4Dec_InitSessionDecode (Mp4DecObject *vo);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

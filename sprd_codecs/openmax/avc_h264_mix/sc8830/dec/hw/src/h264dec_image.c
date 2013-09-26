@@ -130,7 +130,6 @@ PUBLIC int32 H264Dec_remove_delayed_frame_from_dpb (H264DecObject *vo,DEC_DECODE
 
     for (i = 0; i < dpb_ptr->used_size; i++)
     {
-
         SCI_TRACE_LOW_DPB("%s, %d, is_reference %d  pBufferHeader %x", __FUNCTION__, __LINE__,dpb_ptr->fs[i]->is_reference ,  dpb_ptr->fs[i]->frame->pBufferHeader);
         if ((DELAYED_PIC_REF == dpb_ptr->fs[i]->is_reference))
         {
@@ -161,8 +160,6 @@ PUBLIC int32 H264Dec_remove_delayed_frame_from_dpb (H264DecObject *vo,DEC_DECODE
 
     return has_free_bfr;
 }
-
-
 
 LOCAL DEC_FRAME_STORE_T *H264Dec_get_one_free_pic_buffer (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
@@ -488,10 +485,11 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
             //	return;
         }
         //	H264Dec_fill_frame_num_gap(img_ptr, dpb_ptr);
+
+        H264Dec_clear_delayed_buffer(vo);
     }
 
     fs = H264Dec_get_one_free_pic_buffer(vo, dpb_ptr);
-
 
     if (vo->error_flag)
     {

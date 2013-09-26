@@ -18,8 +18,6 @@
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
 #include "mmcodec.h"
-//#include "vsp_mp4_dec.h"
-
 /**---------------------------------------------------------------------------*
  **                             Compiler Flag                                 *
  **---------------------------------------------------------------------------*/
@@ -28,16 +26,17 @@ extern   "C"
 {
 #endif
 
-//#define MP4DEC_INTERNAL_BUFFER_SIZE (MP4DEC_OR_RUN_SIZE+MP4DEC_OR_INTER_MALLOC_SIZE)
-//#define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)  //for bitstream size of one encoded frame.
-
 typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader,int flag);
-typedef int (*FunctionType_MemAllocCB)(/*void *decCtrl,*/ void *userData, unsigned int width,unsigned int height);
-typedef int (*FunctionType_MallocCB)(uint32 * buffer_array, uint32 buffer_num, uint32 buffer_size);
+typedef int (*FunctionType_MemAllocCB)(void *userData, unsigned int width,unsigned int height, unsigned int is_dp);
 
-typedef enum {IVOP, PVOP, BVOP, SVOP, NVOP} VOP_PRED_TYPE_E;
-
-
+typedef enum
+{
+    INTER_MEM = 0,  /*internal memory, only for software writing and reading and initialized when initialize decoder*/
+    HW_NO_CACHABLE, /*physical continuous and no-cachable, only for VSP writing and reading */
+    HW_CACHABLE,    /*physical continuous and cachable, for software writing and VSP reading */
+    SW_CACHABLE,    /*only for software writing and reading*/
+    MAX_MEM_TYPE
+} CODEC_BUF_TYPE;
 
 /* Application controls, this structed shall be allocated */
 /*    and initialized in the application.                 */
@@ -68,8 +67,6 @@ typedef struct tagMP4Handle
     int g_mpeg4_dec_err_flag;
 } MP4Handle;
 
-#define MP4_INVALID_VOL_PARAM -1
-
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
@@ -77,7 +74,6 @@ void MP4DecSetPostFilter(MP4Handle *mp4Handle, int en);
 void MP4DecReleaseRefBuffers(MP4Handle *mp4Handle);
 int MP4DecGetLastDspFrm(MP4Handle *mp4Handle,void **pOutput);
 void MP4DecSetCurRecPic(MP4Handle *mp4Handle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader);
-
 void Mp4GetVideoDimensions(MP4Handle *mp4Handle, int32 *display_width, int32 *display_height);
 void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *height);
 
@@ -108,39 +104,12 @@ MMDecRet MP4DecMemInit(MP4Handle *mp4Handle, MMCodecBuffer *pBuffer);
 MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *pInput,MMDecOutput *pOutput);
 
 /*****************************************************************************/
-//  Description: frame buffer no longer used for display
-//	Global resource dependence:
-//  Author:
-//	Note:
-/*****************************************************************************/
-//MMDecRet MPEG4_DecReleaseDispBfr(uint8 *pBfrAddr);
-
-/*****************************************************************************/
 //  Description: Close mpeg4 decoder
 //	Global resource dependence:
 //  Author:
 //	Note:
 /*****************************************************************************/
 MMDecRet MP4DecRelease(MP4Handle *mp4Handle);
-
-/*****************************************************************************/
-//  Description: check whether VSP can used for video decoding or not
-//	Global resource dependence:
-//  Author:
-//	Note: return VSP status:
-//        1: dcam is idle and can be used for vsp   0: dcam is used by isp
-/*****************************************************************************/
-//BOOLEAN MPEG4DEC_VSP_Available (void);
-
-/*****************************************************************************/
-//  Description: for display, return one frame for display
-//	Global resource dependence:
-//  Author:
-//	Note:  the transposed type is passed from MMI "req_transposed"
-//         req_transposed£º 1£ºtranposed  0: normal
-/*****************************************************************************/
-//void mpeg4dec_GetOneDspFrm (MMDecOutput * pOutput, int req_transposed, int is_last_frame);
-
 
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **

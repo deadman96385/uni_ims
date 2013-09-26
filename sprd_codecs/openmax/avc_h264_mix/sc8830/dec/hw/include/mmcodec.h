@@ -97,9 +97,8 @@ typedef struct
     int32	frame_height;
     int32	i_extra;
     void 	*p_extra;
-#ifdef _VSP_LINUX_
-//	void *p_extra_phy;
-#endif
+    uint32 p_extra_phy;
+    int32	uv_interleaved;
 } MMDecVideoFormat;
 
 // Decoder buffer for decoding structure
@@ -156,11 +155,9 @@ typedef struct
     int32	frameEffective;
 
     int32	err_MB_num;		//error MB number
-//#ifdef _VSP_LINUX_
     void *pBufferHeader;
     int reqNewBuf;
     int32 mPicId;
-//#endif
 } MMDecOutput;
 
 // Encoder video format structure

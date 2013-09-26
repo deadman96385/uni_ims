@@ -7,8 +7,8 @@
 *****************************************************************************/
 /******************************************************************************
 **                   Edit    History                                         *
-**---------------------------------------------------------------------------* 
-** DATE          NAME            DESCRIPTION                                 * 
+**---------------------------------------------------------------------------*
+** DATE          NAME            DESCRIPTION                                 *
 ** 11/20/2007    Xiaowei Luo     Create.                                     *
 *****************************************************************************/
 #ifndef _H264DEC_SLICE_H_
@@ -22,34 +22,29 @@
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-extern   "C" 
+extern   "C"
 {
 #endif
 
-PUBLIC int32 get_unit (uint8 *pInStream, int32 frm_bs_len, int32 *slice_unit_len, int32 *start_code_len);
-PUBLIC int32 get_unit_avc1 (uint8 *pInStream, int32 slice_unit_len);
-PUBLIC int32 H264Dec_process_slice (DEC_IMAGE_PARAMS_T *img_ptr, DEC_NALU_T *nalu_ptr);
-PUBLIC MMDecRet H264Dec_decode_one_slice_data (MMDecOutput *dec_output_ptr, DEC_IMAGE_PARAMS_T *img_ptr);
-PUBLIC void set_ref_pic_num(DEC_IMAGE_PARAMS_T *img_ptr);
-PUBLIC void H264Dec_exit_slice (DEC_IMAGE_PARAMS_T *img_ptr);
+int32 get_unit (H264DecContext *img_ptr, uint8 *pInStream, int32 frm_bs_len, int32 *slice_unit_len);
+int32 H264Dec_process_slice (H264DecContext *img_ptr, DEC_NALU_T *nalu_ptr);
+MMDecRet H264Dec_decode_one_slice_data (MMDecOutput *dec_output_ptr, H264DecContext *img_ptr);
+void set_ref_pic_num(H264DecContext *img_ptr);
+void H264Dec_exit_slice (H264DecContext *img_ptr);
 
-PUBLIC void H264Dec_decode_one_slice_I_hw (DEC_IMAGE_PARAMS_T *img_ptr);
-PUBLIC void H264Dec_decode_one_slice_P_hw (DEC_IMAGE_PARAMS_T *img_ptr);
-PUBLIC void H264Dec_decode_one_slice_B_hw (DEC_IMAGE_PARAMS_T *img_ptr);
+void H264Dec_decode_one_slice_I (H264DecContext *img_ptr);
+void H264Dec_decode_one_slice_P (H264DecContext *img_ptr);
+void H264Dec_decode_one_slice_B (H264DecContext *img_ptr);
 
-PUBLIC void H264Dec_decode_one_slice_I_sw (DEC_IMAGE_PARAMS_T *img_ptr);
-PUBLIC void H264Dec_decode_one_slice_P_sw (DEC_IMAGE_PARAMS_T *img_ptr);
-PUBLIC void H264Dec_decode_one_slice_B_sw (DEC_IMAGE_PARAMS_T *img_ptr);
-
-PUBLIC void H264Dec_extent_frame (DEC_IMAGE_PARAMS_T *img_ptr, DEC_STORABLE_PICTURE_T * dec_picture);
-PUBLIC void H264Dec_write_disp_frame (DEC_IMAGE_PARAMS_T *img_ptr, DEC_STORABLE_PICTURE_T * dec_picture);
+void H264Dec_extent_frame (H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T * dec_picture);
+void H264Dec_write_disp_frame (H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T * dec_picture);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif  //_H264DEC_SLICE_H_

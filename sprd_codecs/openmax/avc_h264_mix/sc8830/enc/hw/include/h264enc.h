@@ -26,8 +26,6 @@
 extern   "C"
 {
 #endif
-//#define H264ENC_INTERNAL_BUFFER_SIZE (H264ENC_OR_RUN_SIZE+H264ENC_OR_INTER_MALLOC_SIZE)
-//#define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)  //for bitstream size of one encoded frame.
 
 /**
 This structure has to be allocated and maintained by the user of the library.

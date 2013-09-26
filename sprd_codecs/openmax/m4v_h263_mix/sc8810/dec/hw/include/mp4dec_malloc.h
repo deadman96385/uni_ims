@@ -28,24 +28,11 @@
     {
 #endif
 		
-//PUBLIC void *Mp4Dec_ExtraMemAlloc(MP4DecObject *vd, uint32 mem_size);
-void Mp4Dec_InitInterMem(MP4DecObject *vd, MMCodecBuffer *pBuffer);
-void Mp4Dec_FreeExtraMem(MP4DecObject *vd); 
+void Mp4Dec_InitInterMem (MP4DecObject *vd, MMCodecBuffer *pInterMemBfr);
+void *Mp4Dec_MemAlloc (MP4DecObject *vd, uint32 need_size, int32 aligned_byte_num, int32 type);
+uint32 Mp4Dec_MemV2P(MP4DecObject *vd, uint8 *vAddr, int32 type);
+MMDecRet Mp4Dec_Mem_GetInfo(MP4DecObject *vd, MMCodecBuffer *pBuffer, int32 type);
 void Mp4Dec_FreeMem(MP4DecObject *vd); 
-
-void *Mp4Dec_InterMemAlloc(MP4DecObject *vd, uint32 need_size, int32 aligned_byte_num);
-void *Mp4Dec_ExtraMemAlloc(MP4DecObject *vd, uint32 need_size, int32 aligned_byte_num, int32 type);
-
-uint8 *Mp4Dec_ExtraMem_V2P(MP4DecObject *vd, uint8 *vAddr, int32 type);
-MMDecRet Mp4Dec_ExtraMem_GetInfo(MP4DecObject *vd, MMCodecBuffer *pBuffer, int32 type);
-
-PUBLIC void *Mp4Dec_ExtraMemAlloc_64WordAlign(MP4DecObject *vd, uint32 mem_size);
-#ifdef _VSP_LINUX_
-PUBLIC uint8 *Mp4Dec_ExtraMem_V2Phy(MP4DecObject *vd, uint8 *vAddr);
-PUBLIC void *Mp4Dec_ExtraMemCacheAlloc(MP4DecObject *vd, uint32 mem_size);
-PUBLIC void *Mp4Dec_ExtraMemCacheAlloc_64WordAlign(MP4DecObject *vd, uint32 mem_size);
-#endif
-
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

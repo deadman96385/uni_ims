@@ -172,8 +172,6 @@ MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer * buffer_ptr)
 {
     Mp4DecObject*vo;
     MMDecRet ret;
-    DEC_VOP_MODE_T *vop_mode_ptr = NULL;
-    H263_PLUS_HEAD_INFO_T *h263_plus_head_info_ptr = NULL;
 
     SCI_TRACE_LOW("libomx_m4vh263dec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
@@ -204,30 +202,7 @@ MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer * buffer_ptr)
         return ret;
     }
 
-    vo->g_dec_vop_mode_ptr = vop_mode_ptr = (DEC_VOP_MODE_T *)Mp4Dec_MemAlloc(vo, sizeof(DEC_VOP_MODE_T), 8, INTER_MEM);
-    CHECK_MALLOC(vo->g_dec_vop_mode_ptr, "vo->g_dec_vop_mode_ptr");
-
-    vo->memory_error = 0;
-    vo->g_nFrame_dec = 0;
-    vo->g_dec_is_first_frame = TRUE;
-    vo->g_dec_is_stop_decode_vol = FALSE;
-    vo->g_dec_is_changed_format = FALSE;
-    vo->g_dec_pre_vop_format = IVOP;
-    vo->is_need_init_vsp_quant_tab= FALSE;
-    vop_mode_ptr->error_flag = FALSE;
-
-    //for H263 plus header
-    vo->g_h263_plus_head_info_ptr = h263_plus_head_info_ptr = (H263_PLUS_HEAD_INFO_T *)Mp4Dec_MemAlloc(vo, sizeof(H263_PLUS_HEAD_INFO_T), 8, INTER_MEM);
-    CHECK_MALLOC(vo->g_h263_plus_head_info_ptr, "vo->g_h263_plus_head_info_ptr");
-
-    ret = Mp4Dec_InitDecoderPara(vo);
-    ALOGE("%s, %d, ret: %d", __FUNCTION__, __LINE__, ret);
-    if (ret != MMENC_OK)
-    {
-        return ret;
-    }
-
-    return MMDEC_OK;
+    return Mp4Dec_InitGlobal(vo);
 }
 
 PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_format_ptr)
@@ -497,6 +472,8 @@ DECODER_DONE:
 MMDecRet MP4DecRelease(MP4Handle *mp4Handle)
 {
     Mp4DecObject *vo = (Mp4DecObject *) mp4Handle->videoDecoderData;
+
+    MP4DecReleaseRefBuffers(mp4Handle);
 
     if (VSP_CLOSE_Dev((VSPObject *)vo) < 0)
     {

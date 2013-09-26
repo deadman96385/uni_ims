@@ -23,7 +23,7 @@
     {
 #endif
 
-#define H264_MALLOC_PRINT   //LOGD
+#define H264_MALLOC_PRINT   ALOGD
 
 typedef struct codec_buf_tag
 {
@@ -124,7 +124,7 @@ PUBLIC void H264Dec_FreeExtraMem(void)
 {
     int32 type;
 
-    for (type = 0; type < MAX_MEM_TYPE; type++)
+    for (type = HW_NO_CACHABLE; type < MAX_MEM_TYPE; type++)
     {
 	s_extra_mem[type].used_size = 0;
     }
@@ -138,8 +138,8 @@ PUBLIC void H264Dec_FreeExtraMem(void)
 PUBLIC void H264Dec_InitInterMem(MMCodecBuffer *dec_buffer_ptr)
 {
     s_inter_mem.used_size = 0;
-    s_inter_mem.v_base = dec_buffer_ptr->int_buffer_ptr;
-    s_inter_mem.total_size = dec_buffer_ptr->int_size;
+    s_inter_mem.v_base = dec_buffer_ptr->common_buffer_ptr;
+    s_inter_mem.total_size = dec_buffer_ptr->size;
     SCI_MEMSET(s_inter_mem.v_base, 0, s_inter_mem.total_size);
 
     H264_MALLOC_PRINT("%s: inter_mem_size:%d\n", __FUNCTION__, s_inter_mem.total_size);
@@ -154,7 +154,7 @@ PUBLIC MMDecRet H264DecMemInit(AVCHandle *avcHandle, MMCodecBuffer pBuffer[])
 {
     int32 type;
 
-    for (type = 0; type < MAX_MEM_TYPE; type++)
+    for (type = HW_NO_CACHABLE; type < MAX_MEM_TYPE; type++)
     {
 	s_extra_mem[type].used_size = 0;
 	s_extra_mem[type].v_base = pBuffer[type].common_buffer_ptr;

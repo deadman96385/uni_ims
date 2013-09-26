@@ -486,6 +486,9 @@ global variables
 */
 typedef struct tagDecObject
 {
+    MP4Handle *mp4Handle;
+    CODEC_BUF_T mem[MAX_MEM_TYPE];
+
 	int32 g_firstBsm_init;/*BSM init*/
 	DEC_VOP_MODE_T *vop_mode_ptr;
 	DEC_FRM_BFR g_FrmYUVBfr[DEC_YUV_BUFFER_NUM];
@@ -504,37 +507,7 @@ typedef struct tagDecObject
 	DecPVOP_func g_Mp4Dec_PVOP;
 	DecBVOP_func g_Mp4Dec_BVOP;
 
-	//for mp4 decoder memory. 4Mbyte,extra
-	uint32 s_used_extra_mem;
-	uint32 s_extra_mem_size;  //16M
-
-	//for mp4 decoder memory. 4Mbyte,inter
-	uint32 s_used_inter_mem;
-	uint32 s_inter_mem_size;
-
-	uint8 *s_extra_mem_bfr_ptr;
-	uint8 *s_inter_mem_bfr_ptr;
-
-#ifdef _VSP_LINUX_
 	DEC_FRM_BFR g_rec_buf;
-//	FunctionType_BufCB VSP_bindCb;
-//	FunctionType_BufCB VSP_unbindCb;
-//        FunctionType_MemAllocCB VSP_extMemCb;
-//	void *g_user_data;
-
-	uint8 *s_extra_mem_bfr_phy_ptr;
-	uint8 *s_extra_mem_cache_bfr_ptr;
-	uint8 *s_extra_mem_cache_bfr_phy_ptr;
-	uint32 s_used_extra_mem_cache;
-	uint32 s_extra_mem_cache_size;	//16Mbyte
-
-    	CODEC_BUF_T s_inter_mem;
-    	CODEC_BUF_T s_extra_mem[MAX_MEM_TYPE];	
-#endif
-
-    /* Application control data */
-    MP4Handle *mp4Handle;
-
 }MP4DecObject; //VIDEO_DATA_T;
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

@@ -81,7 +81,7 @@ DEC_STORABLE_PICTURE_T g_rec_buf;
 FunctionType_BufCB VSP_bindCb;
 FunctionType_BufCB VSP_unbindCb;
 void *g_user_data;
-FunctionType_SPS VSP_spsCb;
+FunctionType_MallocCB VSP_extMemCb;
 FunctionType_FlushCacheCB VSP_flushCacheCb ;
 #endif
 

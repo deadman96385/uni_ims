@@ -52,7 +52,7 @@ PUBLIC void Mp4Dec_init_frame_VSP(MP4DecObject *vd, DEC_VOP_MODE_T *vop_mode_ptr
 #if _CMODEL_
 		dec_input_ptr->pStream
 #else
-		((void *)Mp4Dec_ExtraMem_V2P(vd, vop_mode_ptr->frame_bistrm_ptr, HW_CACHABLE))
+		((void *)Mp4Dec_MemV2P(vd, vop_mode_ptr->frame_bistrm_ptr, HW_CACHABLE))
 #endif		
 		,dec_input_ptr->dataLen);
 
@@ -144,8 +144,8 @@ PUBLIC MMDecRet Mp4Dec_VspFrameInit(MP4DecObject *vd, DEC_VOP_MODE_T *vop_mode_p
 	VSP_WRITE_REG(VSP_AHBM_REG_BASE+CMD_INFO_BUF_ADDR_OFFSET, ((uint32)CMD_CONTROL_INFO_ADDR)>>8, "config CMD control info buffer address");
 	VSP_WRITE_REG(VSP_AHBM_REG_BASE+CMD_DATA_BUF_ADDR_OFFSET, ((uint32)CMD_CONTROL_DATA_ADDR)>>8, "config CMD control data buffer address");
 #else
-	VSP_WRITE_REG(VSP_AHBM_REG_BASE+CMD_INFO_BUF_ADDR_OFFSET, ((uint32)Mp4Dec_ExtraMem_V2P(vd, g_cmd_info_base, HW_CACHABLE))>>8, "config CMD control info buffer address");
-	VSP_WRITE_REG(VSP_AHBM_REG_BASE+CMD_DATA_BUF_ADDR_OFFSET, ((uint32)Mp4Dec_ExtraMem_V2P(vd, g_cmd_data_base, HW_CACHABLE))>>8, "config CMD control data buffer address");
+	VSP_WRITE_REG(VSP_AHBM_REG_BASE+CMD_INFO_BUF_ADDR_OFFSET, ((uint32)Mp4Dec_MemV2P(vd, g_cmd_info_base, HW_CACHABLE))>>8, "config CMD control info buffer address");
+	VSP_WRITE_REG(VSP_AHBM_REG_BASE+CMD_DATA_BUF_ADDR_OFFSET, ((uint32)Mp4Dec_MemV2P(vd, g_cmd_data_base, HW_CACHABLE))>>8, "config CMD control data buffer address");
 #endif
 
 	open_vsp_iram();
@@ -168,7 +168,7 @@ PUBLIC MMDecRet Mp4Dec_VspFrameInit(MP4DecObject *vd, DEC_VOP_MODE_T *vop_mode_p
 #if _CMODEL_
 	VSP_WRITE_REG(pTableAddr+ 12, ((uint32)DC_AC_PREDICTION_ADDR)>>8, "config top coeff address");
 #else
-	VSP_WRITE_REG(pTableAddr+ 12, ((uint32)Mp4Dec_ExtraMem_V2P(vd, vop_mode_ptr->pTopCoeff, HW_NO_CACHABLE))>>8, "config top coeff address");	
+	VSP_WRITE_REG(pTableAddr+ 12, ((uint32)Mp4Dec_MemV2P(vd, vop_mode_ptr->pTopCoeff, HW_NO_CACHABLE))>>8, "config top coeff address");	
 #endif 
 	
 	if(IVOP != vop_mode_ptr->VopPredType)

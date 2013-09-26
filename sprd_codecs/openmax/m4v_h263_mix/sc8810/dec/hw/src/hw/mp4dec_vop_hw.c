@@ -39,16 +39,16 @@ PUBLIC MMDecRet Mp4Dec_frm_level_sync_hw_sw_pipeline (MP4DecObject *vd, MMDecInp
 
 	memcpy(vop_mode_ptr->frame_bistrm_ptr,dec_input_ptr->pStream,dec_input_ptr->dataLen);
 			
-	ret = Mp4Dec_VspFrameInit(vd, vop_mode_ptr,((uint32)(Mp4Dec_ExtraMem_V2P(vd, vop_mode_ptr->frame_bistrm_ptr, HW_CACHABLE))));
+	ret = Mp4Dec_VspFrameInit(vd, vop_mode_ptr,((uint32)(Mp4Dec_MemV2P(vd, vop_mode_ptr->frame_bistrm_ptr, HW_CACHABLE))));
 
 //flush cache
 //#if 0
-	if(mp4Handle->VSP_fluchCacheCb)
+	if(mp4Handle->VSP_flushCacheCb)
 	{
     	    MMCodecBuffer IonBuffer;
-	    Mp4Dec_ExtraMem_GetInfo(vd, &IonBuffer, HW_CACHABLE);
+	    Mp4Dec_Mem_GetInfo(vd, &IonBuffer, HW_CACHABLE);
             
-		 int ret = (*mp4Handle->VSP_fluchCacheCb)(mp4Handle->userdata,(int *)(IonBuffer.common_buffer_ptr),(int *)(IonBuffer.common_buffer_ptr_phy),IonBuffer.size);
+		 int ret = (*mp4Handle->VSP_flushCacheCb)(mp4Handle->userdata,(int *)(IonBuffer.common_buffer_ptr),(int *)(IonBuffer.common_buffer_ptr_phy),IonBuffer.size);
 	}
 //#endif 
 	cmd = VSP_READ_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, "DCAM_CFG: readout DCAM CFG");
@@ -80,16 +80,16 @@ PUBLIC MMDecRet Mp4Dec_frm_level_sync_hw_sw_normal (MP4DecObject *vd, MMDecInput
 	
 	memcpy (vop_mode_ptr->frame_bistrm_ptr, dec_input_ptr->pStream, dec_input_ptr->dataLen);
 
-	ret = Mp4Dec_VspFrameInit(vd, vop_mode_ptr, ((uint32)(Mp4Dec_ExtraMem_V2P(vd, vop_mode_ptr->frame_bistrm_ptr, HW_CACHABLE))));
+	ret = Mp4Dec_VspFrameInit(vd, vop_mode_ptr, ((uint32)(Mp4Dec_MemV2P(vd, vop_mode_ptr->frame_bistrm_ptr, HW_CACHABLE))));
 
     //flush cache
 //#if 0
-	if(mp4Handle->VSP_fluchCacheCb)
+	if(mp4Handle->VSP_flushCacheCb)
 	{
     	    MMCodecBuffer IonBuffer;
-	    Mp4Dec_ExtraMem_GetInfo(vd, &IonBuffer, HW_CACHABLE);
+	    Mp4Dec_Mem_GetInfo(vd, &IonBuffer, HW_CACHABLE);
             
-    	    int ret = (*mp4Handle->VSP_fluchCacheCb)(mp4Handle->userdata,(int *)(IonBuffer.common_buffer_ptr),(int *)(IonBuffer.common_buffer_ptr_phy),IonBuffer.size);          
+    	    int ret = (*mp4Handle->VSP_flushCacheCb)(mp4Handle->userdata,(int *)(IonBuffer.common_buffer_ptr),(int *)(IonBuffer.common_buffer_ptr_phy),IonBuffer.size);          
 	}
 //#endif
 	cmd = VSP_READ_REG(VSP_DCAM_REG_BASE+DCAM_CFG_OFF, "DCAM_CFG: readout DCAM CFG");

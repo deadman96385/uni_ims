@@ -7,8 +7,8 @@
 *****************************************************************************/
 /******************************************************************************
 **                   Edit    History                                         *
-**---------------------------------------------------------------------------* 
-** DATE          NAME            DESCRIPTION                                 * 
+**---------------------------------------------------------------------------*
+** DATE          NAME            DESCRIPTION                                 *
 ** 11/20/2007    Xiaowei Luo     Create.                                     *
 *****************************************************************************/
 #ifndef _H264DEC_DEBLOCK_H_
@@ -22,20 +22,20 @@
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-extern   "C" 
+extern   "C"
 {
 #endif
 
-PUBLIC void H264Dec_BS_and_Para (DEC_IMAGE_PARAMS_T *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-PUBLIC void H264Dec_register_deblock_func(DEC_IMAGE_PARAMS_T *img_ptr);
-PUBLIC void H264Dec_deblock_one_frame (DEC_IMAGE_PARAMS_T *img_ptr);
+void H264Dec_BS_and_Para (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+void H264Dec_register_deblock_func(H264DecContext *img_ptr);
+void H264Dec_deblock_one_frame (H264DecContext *img_ptr);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif  //_H264DEC_DEBLOCK_H_

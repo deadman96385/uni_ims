@@ -568,6 +568,8 @@ typedef struct img_parameter_tag
 	uint32 return_pos;
 	uint32 return_pos1;	
    	uint32 return_pos2;
+
+        int32 uv_interleaved;
 	
 //sw	
 	//mv range

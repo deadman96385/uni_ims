@@ -57,15 +57,7 @@ PUBLIC void H264Dec_SetCurRecPic(AVCHandle *avcHandle, uint8	*pFrameY,uint8 *pFr
         SCI_TRACE_LOW("%s, %d, picId: %d", __FUNCTION__, __LINE__, picId);
 
 }
-//FunctionType_BufCB VSP_bindCb = NULL;
-//FunctionType_BufCB VSP_unbindCb = NULL;
-//void *g_user_data = NULL;
-//void H264Dec_RegBufferCB(FunctionType_BufCB bindCb,FunctionType_BufCB unbindCb,void *userdata)
-//{
-//	VSP_bindCb = bindCb;
-//	VSP_unbindCb = unbindCb;
-//	g_user_data = userdata;
-//}
+
 extern void H264Dec_flush_dpb (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr);
 
 void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
@@ -93,7 +85,7 @@ void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
 			
 			for (j = 0; j < /*dpb_ptr->used_size*/16; j++)
 			{
-				if (dpb_ptr->delayed_pic[j] == dpb_ptr->fs[j]->frame)
+				if (dpb_ptr->delayed_pic[i] == dpb_ptr->fs[j]->frame)
 				{
 					if(dpb_ptr->fs[j]->is_reference == DELAYED_PIC_REF)
 					{
@@ -190,11 +182,6 @@ MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, uint8 **pOutput, int32 *pic
 	}
 }
 
-//FunctionType_SPS VSP_spsCb = NULL;
-//void H264Dec_RegSPSCB(FunctionType_SPS spsCb)
-//{
-//	VSP_spsCb = spsCb;
-//}
 #endif
 
 MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int *nal_type, int *nal_ref_idc)
@@ -311,6 +298,7 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
     /* profile */
     pDecInfo->profile = sps_ptr->profile_idc;//h264bsdProfile(pStorage);
     pDecInfo->numRefFrames = sps_ptr->num_ref_frames;
+    pDecInfo->has_b_frames = sps_ptr->vui_seq_parameters->num_reorder_frames;
 
 //    SCI_TRACE_LOW("H264DecGetInfo# OK");
 
@@ -334,76 +322,15 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
 	g_is_avc1_es = FALSE;
 	g_ready_to_decode_slice = FALSE;
 
-VSP_spsCb = avcHandle->VSP_spsCb;
+VSP_extMemCb = avcHandle->VSP_extMemCb;
 VSP_bindCb = avcHandle->VSP_bindCb;
 VSP_unbindCb = avcHandle->VSP_unbindCb;
 g_user_data = avcHandle->userdata;
 VSP_flushCacheCb = avcHandle->VSP_flushCacheCb;
 
+
 	H264Dec_init_global_para ();
 	H264Dec_init_vld_table ();
-
-	if (pVideoFormat->i_extra > 0)
-	{
-		uint8 *bfr_ptr = (uint8*)pVideoFormat->p_extra;
-		uint8 configurationVersion = 1;
-		uint8 AVCProfileIndication;
-		uint8 profile_compatibility;
-		uint8 AVCLevelIndication;
-//		uint8 reserved = 0x3f;
-		//uint8 lengthSizeMinusOne;
-//		uint8 resrved2 = 0x3;
-		uint8 numOfSequenceParameterSets;
-		uint8 numoPictureParameterSets;
-		uint32 i;
-		uint8 data;
-		
-		if (bfr_ptr[0] == 0)
-		{
-			MMDecInput input = {0};
-			MMDecOutput output = {0};
-			input.pStream = pVideoFormat->p_extra;
-			input.dataLen = pVideoFormat->i_extra;
-			
-			return H264DecDecode(avcHandle, &input, &output);
-		}
-		configurationVersion = *bfr_ptr++;
-		AVCProfileIndication = *bfr_ptr++;
-		profile_compatibility = *bfr_ptr++;
-		AVCLevelIndication = *bfr_ptr++;
-		data = *bfr_ptr++;
-		g_lengthSizeMinusOne = (data & 0x3)+1;
-		data = *bfr_ptr++;
-		numOfSequenceParameterSets = data & 0x1f;
-		
-		for (i = 0; i < numOfSequenceParameterSets; i++)
-		{
-			uint16 sequenceParameterSetLength;
-			uint8 tmp = *bfr_ptr++;
-			data = *bfr_ptr++;
-			
-			sequenceParameterSetLength = (tmp<<8)|data;
-			 ret = H264Dec_Read_SPS_PPS_SliceHeader(bfr_ptr, sequenceParameterSetLength,NULL);
-			 
-			 bfr_ptr += sequenceParameterSetLength;
-		}
-		
-		numoPictureParameterSets = *bfr_ptr++;
-		for (i = 0; i < numoPictureParameterSets; i++)
-		{
-			uint16 pictureParameterSetLength;
-			
-			uint8 tmp = *bfr_ptr++;
-			data = *bfr_ptr++;
-			
-			pictureParameterSetLength = (tmp<<8)|data;
-			H264Dec_Read_SPS_PPS_SliceHeader(bfr_ptr, pictureParameterSetLength, NULL);
-			
-			bfr_ptr += pictureParameterSetLength;
-		}
-
-		g_is_avc1_es = TRUE;
-	}
 
 #if _H264_PROTECT_ & _LEVEL_LOW_
 	if (g_image_ptr->error_flag)
@@ -412,6 +339,8 @@ VSP_flushCacheCb = avcHandle->VSP_flushCacheCb;
 		return MMDEC_ERROR;
 	}
 #endif
+
+        g_image_ptr->uv_interleaved = pVideoFormat->uv_interleaved;
 
 	return MMDEC_OK;
 }
@@ -517,6 +446,13 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 				return MMDEC_ERROR;
 			}
 		#endif
+
+			if ((dec_input_ptr->expected_IVOP) && (img_ptr->type != I_SLICE))
+			{
+				SCI_TRACE_LOW("%s, %d, need I slice, return", __FUNCTION__, __LINE__);
+
+				return MMDEC_FRAME_SEEK_IVOP;
+			}
 		
 			if (img_ptr->VSP_used)
 			{
@@ -600,13 +536,10 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 	}
 }
 
-PUBLIC MMDecRet H264_DecReleaseDispBfr(AVCHandle *avcHandle, uint8 *pBfrAddr)
-{
-	return MMDEC_OK;
-}
-
 MMDecRet H264DecRelease(AVCHandle *avcHandle)
 {
+        H264Dec_ReleaseRefBuffers(avcHandle);
+
 	H264Dec_FreeMem();
 
 	VSP_CLOSE_Dev();

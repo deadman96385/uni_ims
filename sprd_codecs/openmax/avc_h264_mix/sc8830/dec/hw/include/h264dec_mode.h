@@ -655,13 +655,6 @@ typedef struct nalu_tag
     int8	resv; //for world aligned
 } DEC_NALU_T;
 
-typedef enum
-{
-    INTER_MEM = 0, /*physical continuous and no-cachable, constant length */
-    EXTRA_MEM,   /*physical continuous and no-cachable, variable length, need allocated according to image resolution */
-    MAX_MEM_TYPE
-} CODEC_BUF_TYPE;
-
 typedef struct codec_buf_tag
 {
     uint32 used_size;

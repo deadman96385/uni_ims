@@ -23,6 +23,52 @@ extern   "C"
 {
 #endif
 
+PUBLIC void H264Dec_clear_delayed_buffer(H264DecObject *vo)
+{
+    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr =  vo->g_dpb_layer[0];
+    int32 i;
+
+    if (dpb_ptr->delayed_pic_ptr)
+    {
+        if (dpb_ptr->delayed_pic_ptr->pBufferHeader)
+        {
+            (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,dpb_ptr->delayed_pic_ptr->pBufferHeader);
+            dpb_ptr->delayed_pic_ptr->pBufferHeader = NULL;
+        }
+        dpb_ptr->delayed_pic_ptr = NULL;
+    }
+
+    for (i = 0; dpb_ptr->delayed_pic[i]; i++)
+    {
+        int32 j;
+
+        for (j = 0; j <  (MAX_REF_FRAME_NUMBER+1); j++)
+        {
+            if (dpb_ptr->delayed_pic[i] == dpb_ptr->fs[j]->frame)
+            {
+                if(dpb_ptr->fs[j]->is_reference == DELAYED_PIC_REF)
+                {
+                    dpb_ptr->fs[j]->is_reference = 0;
+
+                    if(dpb_ptr->fs[j]->frame->pBufferHeader!=NULL)
+                    {
+                        (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,dpb_ptr->fs[j]->frame->pBufferHeader);
+                        dpb_ptr->fs[j]->frame->pBufferHeader = NULL;
+                    }
+                }
+            }
+        }
+
+        dpb_ptr->delayed_pic[i] = NULL;
+        dpb_ptr->delayed_pic_num --;
+    }
+
+    if( 0 != dpb_ptr->delayed_pic_num )
+    {
+        SCI_TRACE_LOW("%s: delayed_pic_num is %d\n", __FUNCTION__, dpb_ptr->delayed_pic_num);
+    }
+}
+
 PUBLIC MMDecRet H264Dec_init_img_buffer (H264DecObject *vo)
 {
     DEC_IMAGE_PARAMS_T *img_ptr = vo->g_image_ptr;
@@ -37,12 +83,12 @@ PUBLIC MMDecRet H264Dec_init_img_buffer (H264DecObject *vo)
 
     for(i =0; i < buffer_num; i++)
     {
-        direct_mb_info_v = H264Dec_MemAlloc (vo, buffer_size, 8, EXTRA_MEM);
+        direct_mb_info_v = H264Dec_MemAlloc (vo, buffer_size, 8, HW_NO_CACHABLE);
         CHECK_MALLOC(direct_mb_info_v, "direct_mb_info_v");
-        vo->direct_mb_info_addr[i] = (uint32)H264Dec_MemV2P(vo, direct_mb_info_v, EXTRA_MEM);
+        vo->direct_mb_info_addr[i] = (uint32)H264Dec_MemV2P(vo, direct_mb_info_v, HW_NO_CACHABLE);
     }
 
-    vo->g_cavlc_tbl_ptr = (uint32 *)H264Dec_MemAlloc(vo, sizeof(uint32)*69, 8, EXTRA_MEM);
+    vo->g_cavlc_tbl_ptr = (uint32 *)H264Dec_MemAlloc(vo, sizeof(uint32)*69, 8, HW_NO_CACHABLE);
     CHECK_MALLOC(vo->g_cavlc_tbl_ptr, "vo->g_cavlc_tbl_ptr");
 
     //copy cavlc tbl to phy addr of g_cavlc_tbl_ptr.
@@ -158,22 +204,18 @@ PUBLIC MMDecRet H264Dec_init_dpb (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_
 LOCAL void H264Dec_unmark_for_reference (H264DecObject *vo, DEC_FRAME_STORE_T *fs_ptr)
 {
     DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr =  vo->g_dpb_layer[0];
+    int32 i;
+
     fs_ptr->is_reference = 0;
-//    if (fs_ptr->frame == dpb_ptr->delayed_pic_ptr)
-//	{
-//		fs_ptr->is_reference = DELAYED_PIC_REF;
-//	}else
+
+    for (i = 0; dpb_ptr->delayed_pic[i]; i++)
     {
-        int32 i;
-        for (i = 0; dpb_ptr->delayed_pic[i]; i++)
+        if (fs_ptr->frame == dpb_ptr->delayed_pic[i])
         {
-            if (fs_ptr->frame == dpb_ptr->delayed_pic[i])
-            {
-                fs_ptr->is_reference = DELAYED_PIC_REF;
-            }
+            fs_ptr->is_reference = DELAYED_PIC_REF;
         }
     }
-#ifdef _VSP_LINUX_
+
     if(fs_ptr->frame->pBufferHeader!=NULL)
     {
         if(!fs_ptr->is_reference)
@@ -182,7 +224,6 @@ LOCAL void H264Dec_unmark_for_reference (H264DecObject *vo, DEC_FRAME_STORE_T *f
             fs_ptr->frame->pBufferHeader = NULL;
         }
     }
-#endif
 
     fs_ptr->is_long_term = 0;
     fs_ptr->is_short_term = 0;
@@ -196,9 +237,9 @@ LOCAL void H264Dec_get_smallest_poc (H264DecObject *vo, int32 *poc, int32 * pos,
 
     if (dpb_ptr->used_size<1)
     {
+        SCI_TRACE_LOW ("Cannot determine smallest POC, DPB empty.");
         vo->error_flag |= ER_REF_FRM_ID;
         return;
-        //error("Cannot determine smallest POC, DPB empty.",150);
     }
 
     *pos=-1;
@@ -286,6 +327,7 @@ LOCAL void H264Dec_idr_memory_management (H264DecObject *vo, DEC_DECODED_PICTURE
 #if _MVC_
     dpb_ptr->last_output_view_id = -1;
 #endif
+
     return;
 }
 

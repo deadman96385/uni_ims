@@ -482,7 +482,6 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
                 }
             }
         }
-
     }
 
     dec_out->reqNewBuf = 1;
@@ -820,7 +819,7 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
             {
                 uint32 vld_table_addr;
 
-                vld_table_addr = (uint32)H264Dec_MemV2P(vo, vo->g_cavlc_tbl_ptr, EXTRA_MEM);
+                vld_table_addr = (uint32)H264Dec_MemV2P(vo, vo->g_cavlc_tbl_ptr, HW_NO_CACHABLE);
                 //load_vld_table_en=1;
 
                 VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0xc, vld_table_addr/8,"ddr vlc table start addr");

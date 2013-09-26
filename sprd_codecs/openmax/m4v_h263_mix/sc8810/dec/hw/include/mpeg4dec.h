@@ -26,18 +26,14 @@
     {
 #endif
 
-#ifdef _VSP_LINUX_
 typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader,int flag);
-typedef int (*FunctionType_MemAllocCB)(/*void *decCtrl,*/ void *userData, unsigned int width,unsigned int height);
+typedef int (*FunctionType_MemAllocCB)(void *userData, unsigned int width,unsigned int height, unsigned int is_dp);
 typedef int (*FunctionType_FlushCacheCB)(void* aUserData, int* vaddr,int* paddr,int size);
-
-//void Mp4DecRegMemAllocCB (VideoDecControls *decCtrl, void *userdata, FunctionType_MemAllocCB extMemCb);
-//void MP4DecRegBufferCB(VideoDecControls *decCtrl, FunctionType_BufCB bindCb,FunctionType_BufCB unbindCb,void *userdata);
-#endif
 
 typedef enum
 {
-    HW_NO_CACHABLE = 0, /*physical continuous and no-cachable, only for VSP writing and reading */
+    INTER_MEM = 0,  /*internal memory, only for software writing and reading and initialized when initialize decoder*/
+    HW_NO_CACHABLE, /*physical continuous and no-cachable, only for VSP writing and reading */
     HW_CACHABLE,    /*physical continuous and cachable, for software writing and VSP reading */
     SW_CACHABLE,    /*only for software writing and reading*/
     MAX_MEM_TYPE
@@ -68,9 +64,7 @@ typedef struct tagMP4Handle
 	FunctionType_BufCB VSP_bindCb;
 	FunctionType_BufCB VSP_unbindCb;
         FunctionType_MemAllocCB VSP_extMemCb;
-	FunctionType_FlushCacheCB VSP_fluchCacheCb;
-//	void *g_user_data;
-
+	FunctionType_FlushCacheCB VSP_flushCacheCb;
 
 	int g_mpeg4_dec_err_flag;
 } MP4Handle;
@@ -78,17 +72,12 @@ typedef struct tagMP4Handle
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
-#ifdef _VSP_LINUX_
 void MP4DecSetPostFilter(MP4Handle *mp4Handle, int en);
-typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader,int flag);
-typedef int (*FunctionType_FlushCache)(void* aUserData, int* vaddr,int* paddr,int size);
-void MP4DecRegBufferCB(FunctionType_BufCB bindCb,FunctionType_BufCB unbindCb,void *userdata);
-void MP4Dec_RegFlushCacheCB( FunctionType_FlushCache fluchCacheCb);
 void MP4DecReleaseRefBuffers(MP4Handle *mp4Handle);
 int MP4DecGetLastDspFrm(MP4Handle *mp4Handle,void **pOutput);
 void MP4DecSetCurRecPic(MP4Handle *mp4Handle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader);
-MMDecRet MP4DecMemCacheInit(MP4Handle *mp4Handle, MMCodecBuffer *pBuffer);
-#endif
+void Mp4GetVideoDimensions(MP4Handle *mp4Handle, int32 *display_width, int32 *display_height);
+void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *height);
 
 /*****************************************************************************/
 //  Description: Init mpeg4 decoder	
@@ -130,24 +119,6 @@ MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *pInput,MMDecOutput *pOut
 //	Note:           
 /*****************************************************************************/
 MMDecRet MP4DecRelease(MP4Handle *mp4Handle);
-
-/*****************************************************************************/
-//  Description: check whether VSP can used for video decoding or not
-//	Global resource dependence: 
-//  Author:        
-//	Note: return VSP status:
-//        1: dcam is idle and can be used for vsp   0: dcam is used by isp           
-/*****************************************************************************/
-BOOLEAN MPEG4DEC_VSP_Available (void);
-
-/*****************************************************************************/
-//  Description: for display, return one frame for display
-//	Global resource dependence: 
-//  Author:        
-//	Note:  the transposed type is passed from MMI "req_transposed"
-//         req_transposed£º 1£ºtranposed  0: normal    
-/*****************************************************************************/
-void mpeg4dec_GetOneDspFrm (MP4Handle *mp4Handle, MMDecOutput * pOutput, int req_transposed, int is_last_frame);
 
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **

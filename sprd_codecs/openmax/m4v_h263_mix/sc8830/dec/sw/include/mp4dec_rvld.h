@@ -8,8 +8,8 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 12/14/2006    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4DEC_RVLD_H_
@@ -17,7 +17,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "mp4_basic.h"
+#include "mp4dec_basic.h"
 #include "mp4dec_mode.h"
 #include "mp4dec_global.h"
 #include "mp4dec_bitstream.h"
@@ -25,8 +25,8 @@
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 
 /*****************************************************************************
@@ -35,20 +35,20 @@
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
-PUBLIC void Mp4Dec_GetIntraRvlcTcoef(DEC_VOP_MODE_T *vop_mode_ptr, DEC_BS_T *bitstrm_ptr, TCOEF_T *run_level_ptr);
+void Mp4Dec_GetIntraRvlcTcoef(DEC_VOP_MODE_T *vop_mode_ptr, DEC_BS_T *bitstrm_ptr, TCOEF_T *run_level_ptr);
 /*****************************************************************************
  **	Name : 			Mp4Dec_GetInterRvlcTcoef
  ** Description:	Get the inter rvlc tcoef.
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
-PUBLIC void Mp4Dec_GetInterRvlcTcoef(DEC_VOP_MODE_T *vop_mode_ptr, DEC_BS_T *bitstrm_ptr, TCOEF_T *run_level_ptr);
+void Mp4Dec_GetInterRvlcTcoef(DEC_VOP_MODE_T *vop_mode_ptr, DEC_BS_T *bitstrm_ptr, TCOEF_T *run_level_ptr);
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif //_MP4DEC_RVLD_H_

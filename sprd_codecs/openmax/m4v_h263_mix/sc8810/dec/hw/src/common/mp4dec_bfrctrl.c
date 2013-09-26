@@ -80,15 +80,15 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(MP4DecObject *vd, DEC_VOP_MODE_T *vop_mode_ptr
 		
 		if (need_malloc_decY)
 		{			
-	        	pDecFrame->imgY = (uint8 *)Mp4Dec_ExtraMemAlloc(vd, (uint32)size_y * sizeof(uint8), 256, HW_NO_CACHABLE);  //y
+	        	pDecFrame->imgY = (uint8 *)Mp4Dec_MemAlloc(vd, (uint32)size_y * sizeof(uint8), 256, HW_NO_CACHABLE);  //y
 			if (vop_mode_ptr->uv_interleaved) //two plane
 			{
-				pDecFrame->imgU = (uint8 *)Mp4Dec_ExtraMemAlloc(vd, 2*(uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //uv
+				pDecFrame->imgU = (uint8 *)Mp4Dec_MemAlloc(vd, 2*(uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //uv
 				pDecFrame->imgV = PNULL;
 			}else //three plane
 			{
-		        	pDecFrame->imgU = (uint8 *)Mp4Dec_ExtraMemAlloc(vd, (uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //u
-		        	pDecFrame->imgV = (uint8 *)Mp4Dec_ExtraMemAlloc(vd, (uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //v
+		        	pDecFrame->imgU = (uint8 *)Mp4Dec_MemAlloc(vd, (uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //u
+		        	pDecFrame->imgV = (uint8 *)Mp4Dec_MemAlloc(vd, (uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //v
 		        	if( NULL == pDecFrame->imgV )
 		        	{
 		            		return MMDEC_MEMORY_ERROR;
@@ -100,9 +100,9 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(MP4DecObject *vd, DEC_VOP_MODE_T *vop_mode_ptr
 		        }
 			
 		#ifdef _VSP_LINUX_
-			pDecFrame->imgYAddr = (uint32)Mp4Dec_ExtraMem_V2P(vd, pDecFrame->imgY, HW_NO_CACHABLE);  //y
-			pDecFrame->imgUAddr = (uint32)Mp4Dec_ExtraMem_V2P(vd, pDecFrame->imgU, HW_NO_CACHABLE);  //u
-			pDecFrame->imgVAddr = (uint32)Mp4Dec_ExtraMem_V2P(vd, pDecFrame->imgV, HW_NO_CACHABLE);  //v
+			pDecFrame->imgYAddr = (uint32)Mp4Dec_MemV2P(vd, pDecFrame->imgY, HW_NO_CACHABLE);  //y
+			pDecFrame->imgUAddr = (uint32)Mp4Dec_MemV2P(vd, pDecFrame->imgU, HW_NO_CACHABLE);  //u
+			pDecFrame->imgVAddr = (uint32)Mp4Dec_MemV2P(vd, pDecFrame->imgV, HW_NO_CACHABLE);  //v
 		#else
 			pDecFrame->imgYAddr = (uint32)pDecFrame->imgY >> 8;  //y
 			pDecFrame->imgUAddr = (uint32)pDecFrame->imgU >> 8;  //u
@@ -112,9 +112,9 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(MP4DecObject *vd, DEC_VOP_MODE_T *vop_mode_ptr
 
 		if (need_malloc_decYUV)
 		{
-			pDecFrame->imgYUV[0] = (uint8 *)Mp4Dec_ExtraMemAlloc(vd, (uint32)ext_size_y * sizeof(uint8), 256, SW_CACHABLE);  //y
-			pDecFrame->imgYUV[1] = (uint8 *)Mp4Dec_ExtraMemAlloc(vd, (uint32)ext_size_c * sizeof(uint8), 256, SW_CACHABLE);  //u
-       	 		pDecFrame->imgYUV[2] = (uint8 *)Mp4Dec_ExtraMemAlloc(vd, (uint32)(ext_size_c + 8) * sizeof(uint8), 256, SW_CACHABLE);  //v // 8 extra byte for mc loading of V.  
+			pDecFrame->imgYUV[0] = (uint8 *)Mp4Dec_MemAlloc(vd, (uint32)ext_size_y * sizeof(uint8), 256, SW_CACHABLE);  //y
+			pDecFrame->imgYUV[1] = (uint8 *)Mp4Dec_MemAlloc(vd, (uint32)ext_size_c * sizeof(uint8), 256, SW_CACHABLE);  //u
+       	 		pDecFrame->imgYUV[2] = (uint8 *)Mp4Dec_MemAlloc(vd, (uint32)(ext_size_c + 8) * sizeof(uint8), 256, SW_CACHABLE);  //v // 8 extra byte for mc loading of V.  
 
 			if( NULL == pDecFrame->imgYUV[0] ||(NULL == pDecFrame->imgYUV[1]) || (NULL == pDecFrame->imgYUV[2]))
        			{
@@ -137,15 +137,15 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(MP4DecObject *vd, DEC_VOP_MODE_T *vop_mode_ptr
 			
 			if (need_malloc_dispY)
 			{
-				pDecFrame->imgY = (uint8 *)Mp4Dec_ExtraMemAlloc(vd, (uint32)size_y * sizeof(uint8), 256, HW_NO_CACHABLE);  //y
+				pDecFrame->imgY = (uint8 *)Mp4Dec_MemAlloc(vd, (uint32)size_y * sizeof(uint8), 256, HW_NO_CACHABLE);  //y
 				if (vop_mode_ptr->uv_interleaved) //two plane
 				{
-					pDecFrame->imgU = (uint8 *)Mp4Dec_ExtraMemAlloc(vd, 2*(uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //uv
+					pDecFrame->imgU = (uint8 *)Mp4Dec_MemAlloc(vd, 2*(uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //uv
 					pDecFrame->imgV = PNULL;
 				}else //three plane
 				{
-	        		pDecFrame->imgU = (uint8 *)Mp4Dec_ExtraMemAlloc(vd, (uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //u
-	            	pDecFrame->imgV = (uint8 *)Mp4Dec_ExtraMemAlloc(vd, (uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //v
+	        		pDecFrame->imgU = (uint8 *)Mp4Dec_MemAlloc(vd, (uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //u
+	            	pDecFrame->imgV = (uint8 *)Mp4Dec_MemAlloc(vd, (uint32)size_c * sizeof(uint8), 256, HW_NO_CACHABLE);  //v
 
 	        		if( NULL == pDecFrame->imgV )
 	        		{
@@ -164,9 +164,9 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(MP4DecObject *vd, DEC_VOP_MODE_T *vop_mode_ptr
 
 			if(need_malloc_dispYUV)
 			{
-				pDecFrame->imgYUV[0] = (uint8 *)Mp4Dec_ExtraMemAlloc(vd, (uint32)ext_size_y * sizeof(uint8), 256, SW_CACHABLE);  //y
-				pDecFrame->imgYUV[1] = (uint8 *)Mp4Dec_ExtraMemAlloc(vd, (uint32)ext_size_c * sizeof(uint8), 256, SW_CACHABLE);  //u
-	       	 		pDecFrame->imgYUV[2] = (uint8 *)Mp4Dec_ExtraMemAlloc(vd, (uint32)ext_size_c * sizeof(uint8), 256, SW_CACHABLE);  //v
+				pDecFrame->imgYUV[0] = (uint8 *)Mp4Dec_MemAlloc(vd, (uint32)ext_size_y * sizeof(uint8), 256, SW_CACHABLE);  //y
+				pDecFrame->imgYUV[1] = (uint8 *)Mp4Dec_MemAlloc(vd, (uint32)ext_size_c * sizeof(uint8), 256, SW_CACHABLE);  //u
+	       	 		pDecFrame->imgYUV[2] = (uint8 *)Mp4Dec_MemAlloc(vd, (uint32)ext_size_c * sizeof(uint8), 256, SW_CACHABLE);  //v
 
 				SCI_TRACE_LOW("Mp4Dec_InitYUVBfr : imgYUV is %x, %x, %x", pDecFrame->imgYUV[0],pDecFrame->imgYUV[1],pDecFrame->imgYUV[2]);	
 

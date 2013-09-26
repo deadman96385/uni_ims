@@ -124,14 +124,17 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
     vop_mode_ptr->err_MB_num	= vop_mode_ptr->MBNum;
 
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + IMG_SIZE_OFF, ((vop_mode_ptr->MBNumY&0xff)<<8) |((vop_mode_ptr->MBNumX&0xff)),"IMG_SIZE");
-    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x10,vop_mode_ptr->data_partition_buffer_Addr>>3,"data partition buffer." );
-
+    if (vop_mode_ptr->bDataPartitioning)
+    {
+        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x10,vop_mode_ptr->data_partition_buffer_Addr>>3,"data partition buffer." );
+    }
+    
     if(vop_mode_ptr->bReversibleVlc&&vop_mode_ptr->VopPredType!=BVOP)
     {
-        vld_table_addr= Mp4Dec_MemV2P(vo, (uint8 *)(vo->g_rvlc_tbl_ptr), EXTRA_MEM);
+        vld_table_addr= Mp4Dec_MemV2P(vo, (uint8 *)(vo->g_rvlc_tbl_ptr), HW_NO_CACHABLE);
     } else
     {
-        vld_table_addr= Mp4Dec_MemV2P(vo, (uint8 *)(vo->g_huff_tbl_ptr), EXTRA_MEM);
+        vld_table_addr= Mp4Dec_MemV2P(vo, (uint8 *)(vo->g_huff_tbl_ptr), HW_NO_CACHABLE);
     }
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0xc, (vld_table_addr)/8,"ddr vlc table start addr");//qiangshen@2013_01_11
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_SIZE_SET_OFF, 0x100,"ddr VLC table size");
@@ -363,7 +366,7 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
             VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_START_OFF, 0xa|1, "VSP_START");//start vsp   vld/vld_table//load_vld_table_en
 
             tmp = VSP_POLL_COMPLETE((VSPObject *)vo);
-            if(tmp & (V_BIT_4 | V_BIT_5))
+            if(tmp & (V_BIT_4 | V_BIT_5 | V_BIT_30 | V_BIT_31))
             {
                 vop_mode_ptr->error_flag = 1;
                 pic_end=1;//weihu
@@ -371,7 +374,7 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
                 if (tmp & V_BIT_4)
                 {
                     SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
-                } else if (tmp & V_BIT_5)
+                } else if (tmp & (V_BIT_5  | V_BIT_30 | V_BIT_31))
                 {
                     SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
                 }

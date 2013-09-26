@@ -7,8 +7,8 @@
 *****************************************************************************/
 /******************************************************************************
 **                   Edit    History                                         *
-**---------------------------------------------------------------------------* 
-** DATE          NAME            DESCRIPTION                                 * 
+**---------------------------------------------------------------------------*
+** DATE          NAME            DESCRIPTION                                 *
 ** 11/20/2007    Xiaowei Luo     Create.                                     *
 *****************************************************************************/
 #ifndef _H264DEC_PARSET_H_
@@ -22,21 +22,21 @@
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-extern   "C" 
+extern   "C"
 {
 #endif
 
-PUBLIC void H264Dec_use_parameter_set (DEC_IMAGE_PARAMS_T *img_ptr, int32 pps_id);
-PUBLIC void H264Dec_interpret_sei_message (void);
-PUBLIC MMDecRet H264Dec_process_sps (DEC_IMAGE_PARAMS_T *img_ptr);
-PUBLIC MMDecRet H264Dec_process_pps (DEC_IMAGE_PARAMS_T *img_ptr);
+void H264Dec_use_parameter_set (H264DecContext *img_ptr, int32 pps_id);
+void H264Dec_interpret_sei_message (void);
+MMDecRet H264Dec_process_sps (H264DecContext *img_ptr);
+MMDecRet H264Dec_process_pps (H264DecContext *img_ptr);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif  //_H264DEC_PARSET_H_

@@ -8,8 +8,8 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 01/23/2007    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4DEC_MALLOC_H_
@@ -17,34 +17,34 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "mp4_basic.h"
+#include "mp4dec_basic.h"
 #include "mp4dec_mode.h"
 #include "mmcodec.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
-		
-PUBLIC void *Mp4Dec_ExtraMemAlloc(MP4DecObject *vd, uint32 mem_size);
-PUBLIC void *Mp4Dec_ExtraMemAlloc_64WordAlign(MP4DecObject *vd, uint32 mem_size);
-PUBLIC void *Mp4Dec_InterMemAlloc(MP4DecObject *vd, uint32 mem_size);
-PUBLIC void Mp4Dec_FreeMem(MP4DecObject *vd); 
-PUBLIC void Mp4Dec_InitInterMem(MP4DecObject *vd, MMCodecBuffer *pBuffer);
-#ifdef _VSP_LINUX_
-PUBLIC uint8 *Mp4Dec_ExtraMem_V2Phy(MP4DecObject *vd, uint8 *vAddr);
-PUBLIC void *Mp4Dec_ExtraMemCacheAlloc(MP4DecObject *vd, uint32 mem_size);
-PUBLIC void *Mp4Dec_ExtraMemCacheAlloc_64WordAlign(MP4DecObject *vd, uint32 mem_size);
-#endif
+
+#define CHECK_MALLOC(addr, str)    \
+        if (NULL == addr)   \
+        {   \
+            SCI_TRACE_LOW ("%s, %s is NULL", __FUNCTION__, str);   \
+            return MMENC_MEMORY_ERROR;  \
+        }
+
+void Mp4Dec_InitInterMem (Mp4DecObject *vo, MMCodecBuffer *pInterMemBfr);
+void *Mp4Dec_MemAlloc (Mp4DecObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type);
+uint32 Mp4Dec_MemV2P(Mp4DecObject *vo, uint8 *vAddr, int32 type);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif // _MP4DEC_MALLOC_H_

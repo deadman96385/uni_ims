@@ -89,9 +89,9 @@ LOCAL void H264Dec_active_sps (DEC_SPS_T *sps_ptr, DEC_IMAGE_PARAMS_T *img_ptr)
 		
 #ifdef _VSP_LINUX_
 	    	g_MbToSliceGroupMap = NULL;
-		if(VSP_spsCb)
+		if(VSP_extMemCb)
 		{
-			int ret = (*VSP_spsCb)(g_user_data,img_ptr->width,img_ptr->height,sps_ptr->num_ref_frames);
+			int ret = (*VSP_extMemCb)(g_user_data,img_ptr->width,img_ptr->height,sps_ptr->num_ref_frames);
 			if(!ret)
 			{
 			#if _H264_PROTECT_ & _LEVEL_LOW_
@@ -301,7 +301,10 @@ LOCAL void H264Dec_ReadVUI (DEC_VUI_T *vui_seq_parameters_ptr, DEC_BS_T *stream)
       		vui_seq_parameters_ptr->log2_max_mv_length_vertical             =  READ_UE_V (stream);
       		vui_seq_parameters_ptr->num_reorder_frames                      =  READ_UE_V (stream);
       		vui_seq_parameters_ptr->max_dec_frame_buffering                 =  READ_UE_V (stream);
-    	}
+    	}else
+        {
+            vui_seq_parameters_ptr->num_reorder_frames = 0;
+        }
 
   	return;	
 }
@@ -506,15 +509,21 @@ LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, DEC_IMAGE_PARAMS_T *im
 
 	if (sps_ptr->frame_cropping_flag == 1)
 	{
-		uint32 frame_crop_left_offset;
-		uint32 frame_crop_right_offset;
-		uint32 frame_crop_top_offset;
-		uint32 frame_crop_bottom_offset;
+	//	uint32 frame_crop_left_offset;
+	//	uint32 frame_crop_right_offset;
+	//	uint32 frame_crop_top_offset;
+	//	uint32 frame_crop_bottom_offset;
 
-		frame_crop_left_offset = READ_UE_V(stream);
-		frame_crop_right_offset = READ_UE_V(stream);
-		frame_crop_top_offset = READ_UE_V(stream);
-		frame_crop_bottom_offset = READ_UE_V(stream);	
+		sps_ptr->frame_crop_left_offset = READ_UE_V(stream);
+		sps_ptr->frame_crop_right_offset = READ_UE_V(stream);
+		sps_ptr->frame_crop_top_offset = READ_UE_V(stream);
+		sps_ptr->frame_crop_bottom_offset = READ_UE_V(stream);	
+	}else
+	{
+		sps_ptr->frame_crop_left_offset = 0;
+		sps_ptr->frame_crop_right_offset = 0;
+		sps_ptr->frame_crop_top_offset = 0;
+		sps_ptr->frame_crop_bottom_offset = 0;	
 	}
 
 	sps_ptr->vui_parameters_present_flag = READ_BITS1(stream);
@@ -522,6 +531,9 @@ LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, DEC_IMAGE_PARAMS_T *im
 	if (sps_ptr->vui_parameters_present_flag)
 	{
 		H264Dec_ReadVUI (sps_ptr->vui_seq_parameters, stream);
+	}else
+    {
+		sps_ptr->vui_seq_parameters->num_reorder_frames = 0;
 	}
 
 	sps_ptr->valid = TRUE;

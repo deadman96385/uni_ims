@@ -57,8 +57,9 @@ PUBLIC MMDecRet Mp4Dec_InitInterMem (Mp4DecObject *vo, MMCodecBuffer *pInterMemB
 PUBLIC MMDecRet MP4DecMemInit(MP4Handle *mp4Handle, MMCodecBuffer *pBuffer)
 {
     Mp4DecObject *vo = (Mp4DecObject *) mp4Handle->videoDecoderData;
+    int32 type = HW_NO_CACHABLE;
 
-    return Init_Mem(vo, pBuffer, EXTRA_MEM);
+    return Init_Mem(vo, &(pBuffer[type]), type);
 }
 
 /*****************************************************************************

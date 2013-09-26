@@ -84,9 +84,7 @@ typedef struct
 	int32	frame_height;
 	int32	i_extra;
 	void 	*p_extra;
-#ifdef _VSP_LINUX_					
-//	void *p_extra_phy;
-#endif			
+	void *p_extra_phy;
 	int32	uv_interleaved;				//tmp add
 }MMDecVideoFormat;
 
@@ -94,9 +92,7 @@ typedef struct
 typedef struct 
 {
     uint8	*common_buffer_ptr;     // Pointer to buffer used when decoding
-#ifdef _VSP_LINUX_					
     void *common_buffer_ptr_phy;
-#endif	         
     uint32	size;            		// Number of bytes decoding buffer
 
 	int32 	frameBfr_num;			//YUV frame buffer number
@@ -121,6 +117,7 @@ typedef struct
 typedef struct
 {
     uint8		*pStream;          	// Pointer to stream to be decoded
+	uint8		*pStream_phy;          	// Pointer to stream to be decoded. Physical address. 
     uint32		dataLen;           	// Number of bytes to be decoded
 	int32		beLastFrm;			// whether the frame is the last frame.  1: yes,   0: no
 

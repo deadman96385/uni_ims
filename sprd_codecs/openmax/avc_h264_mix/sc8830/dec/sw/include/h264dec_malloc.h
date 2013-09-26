@@ -8,8 +8,8 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 01/23/2007    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _H264DEC_MALLOC_H_
@@ -24,28 +24,21 @@
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
-		
-PUBLIC void *H264Dec_ExtraMemAlloc(uint32 mem_size);
-PUBLIC void *H264Dec_ExtraMemAlloc_64WordAlign(uint32 mem_size);
-PUBLIC void *H264Dec_InterMemAlloc(uint32 mem_size);
-PUBLIC void *H264Dec_InterMemAlloc_4WordAlign(uint32 mem_size);
-PUBLIC void H264Dec_FreeExtraMem(void); 
-PUBLIC void H264Dec_FreeMem(void); 
-PUBLIC void H264Dec_InitInterMem(MMCodecBuffer *pBuffer);
-#ifdef _VSP_LINUX_
-PUBLIC uint8 *H264Dec_ExtraMem_V2Phy(uint8 *vAddr);
-PUBLIC void *H264Dec_ExtraMemCacheAlloc(uint32 mem_size);
-PUBLIC void *H264Dec_ExtraMemCacheAlloc_4WordAlign(uint32 mem_size);
-#endif
+
+void H264Dec_InitInterMem (H264DecContext *img_ptr, MMCodecBuffer *pInterMemBfr);
+void *H264Dec_MemAlloc (H264DecContext *img_ptr, uint32 need_size, int32 aligned_byte_num, int32 type);
+uint32 H264Dec_MemV2P(H264DecContext *img_ptr, uint8 *vAddr, int32 type);
+void H264Dec_FreeExtraMem(H264DecContext *img_ptr);
+
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif // _H264DEC_MALLOC_H_

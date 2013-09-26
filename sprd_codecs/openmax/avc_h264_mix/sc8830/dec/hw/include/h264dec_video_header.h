@@ -3,7 +3,7 @@
  ** Author:         Xiaowei Luo                                               *
  ** DATE:           02/07/2010                                                *
  ** Copyright:      2010 Spreatrum, Incoporated. All Rights Reserved.         *
- ** Description:    common header file for sc8801h video(jpeg).               *
+ ** Description:    common header file for H.264 decoder.               *
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
@@ -43,7 +43,6 @@
 #include <stdlib.h>
 #endif //SIM_IN_ADS
 
-//#define H264_MCA //weihu
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

@@ -8,8 +8,8 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 12/14/2006    Xiaowei Luo     Create.                                     *
  *****************************************************************************/
 #ifndef _MP4DEC_SESSION_H_
@@ -22,30 +22,29 @@
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 
 #if defined(SIM_IN_WIN)
 /*****************************************************************************
  **	Name : 			read_tsc
- ** Description:	read time of system clock. 
+ ** Description:	read time of system clock.
  ** Author:			Xiaowei Luo
  **	Note:
  *****************************************************************************/
 __inline __int64 read_tsc(void);
 #endif //SIM_IN_WIN
 
-PUBLIC void Mp4Dec_InitGlobal (void);
-PUBLIC void Mp4Dec_InitDecoderPara(MP4DecObject *vd);
-PUBLIC MMDecRet Mp4Dec_InitSessionDecode(MP4Handle *mp4Handle, MP4DecObject *vd, DEC_VOP_MODE_T *vop_mode_ptr);
+MMDecRet Mp4Dec_InitGlobal (Mp4DecObject *vo);
+MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
 /**---------------------------------------------------------------------------*/
-// End 
+// End
 #endif //_MP4DEC_SESSION_H_

@@ -170,7 +170,7 @@ extern DEC_STORABLE_PICTURE_T g_rec_buf;
 extern FunctionType_BufCB VSP_bindCb;
 extern FunctionType_BufCB VSP_unbindCb;
 extern void *g_user_data;
-extern FunctionType_SPS VSP_spsCb;
+extern FunctionType_MallocCB VSP_extMemCb;
 extern FunctionType_FlushCacheCB VSP_flushCacheCb ;
 #endif
 
