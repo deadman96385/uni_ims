@@ -315,7 +315,7 @@ const struct cmd_table multi_at_cmd_cvt_table[] = {
         cvt_cgdcont_set_req, 5},
     {AT_CMD_CGDATA_SET, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGDATA="),
         cvt_cgdata_set_req, 50},
-    {AT_CMD_CGACT_READ, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGACT?"),
+    {AT_CMD_CGACT_READ, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CGACT?"),
         cvt_cgact_query_cmd_req, 5},
     {AT_CMD_CGACT_SET, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGACT=1"),
         cvt_cgact_act_req, 600},
