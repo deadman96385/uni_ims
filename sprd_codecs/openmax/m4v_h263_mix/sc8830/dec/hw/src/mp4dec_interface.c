@@ -216,7 +216,7 @@ PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_fo
     /*judge h.263 or mpeg4*/
     if(video_format_ptr->video_std != STREAM_ID_MPEG4)
     {
-        SCI_TRACE_LOW ("\nH263(ITU or Sorenson format) is detected!\n");
+        SCI_TRACE_LOW ("H263(ITU or Sorenson format) is detected!");
     } else
     {
         if(video_format_ptr->i_extra > 0)
@@ -358,6 +358,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         goto DECODER_DONE;
     }
 
+#if 0	//removed for bug211978, seek with fake IVOP
     if(dec_input_ptr->expected_IVOP && (vop_mode_ptr->VopPredType != IVOP))
     {
         if (vo->g_nFrame_dec)
@@ -369,6 +370,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
 
         goto DECODER_DONE;
     }
+#endif
 
     dec_output_ptr->frameEffective = FALSE;//weihu
     dec_output_ptr->pOutFrameY = PNULL;
