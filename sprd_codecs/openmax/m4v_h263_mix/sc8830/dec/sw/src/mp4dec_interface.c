@@ -234,6 +234,7 @@ FLV_RE_DEC:
         return ret;
     }
 
+#if 0	//removed for bug211978, seek with fake IVOP
     if(dec_input_ptr->expected_IVOP && (vop_mode_ptr->VopPredType != IVOP))
     {
         if (vop_mode_ptr->g_nFrame_dec)
@@ -243,7 +244,9 @@ FLV_RE_DEC:
         mp4Handle->g_mpeg4_dec_err_flag |= 1<<2;
         return MMDEC_FRAME_SEEK_IVOP;
     }
+#endif
 
+    vop_mode_ptr->is_expect_IVOP  = dec_input_ptr->expected_IVOP;
     dec_output_ptr->frameEffective = FALSE;
     dec_output_ptr->pOutFrameY = PNULL;
     dec_output_ptr->pOutFrameU = PNULL;
@@ -316,10 +319,15 @@ FLV_RE_DEC:
 
         ret = vo->g_Mp4Dec_PVOP(vop_mode_ptr);
 
-        if (vop_mode_ptr->g_nFrame_dec == 0 && vop_mode_ptr->has_interMBs)
+//        if (vop_mode_ptr->g_nFrame_dec == 0 && vop_mode_ptr->has_interMBs)
+//        {
+//            return MMDEC_FRAME_SEEK_IVOP;
+//        }
+
+        if (ret != MMDEC_OK && vop_mode_ptr->is_expect_IVOP  == TRUE)
         {
-            return MMDEC_FRAME_SEEK_IVOP;
-        }
+	    	return MMDEC_FRAME_SEEK_IVOP;
+        }		
     } else if(SVOP == vop_mode_ptr->VopPredType)
     {
         SCI_TRACE_LOW ("\t S VOP, Don't SUPPORTED!\n");

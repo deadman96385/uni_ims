@@ -383,12 +383,16 @@ typedef struct dec_vop_mode_tag
 
     uint32 g_nFrame_dec;
     uint32 g_dispFrmNum;
-    uint32 has_interMBs;
+//    uint32 has_interMBs;
 
     int32 **g_dec_dc_store;
 
     MP4_MC_16x16 g_mp4dec_mc_16x16[4];
     MP4_MC_8x8 g_mp4dec_mc_8x8[4];
+
+    BOOLEAN is_expect_IVOP;	
+	int8  srv0;
+	int16 srv1;
 } DEC_VOP_MODE_T;
 
 typedef struct h263_plus_header_info_tag

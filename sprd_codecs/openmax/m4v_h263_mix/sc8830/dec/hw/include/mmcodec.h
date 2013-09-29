@@ -104,7 +104,7 @@ typedef struct
     int32	i_extra;
     uint8 	*p_extra;
     uint32 p_extra_phy;
-    int32	uv_interleaved;				//tmp add
+    int32	uv_interleaved;				
 } MMDecVideoFormat;
 
 // Decoder buffer for decoding structure
