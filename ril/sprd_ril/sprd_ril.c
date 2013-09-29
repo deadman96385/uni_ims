@@ -719,8 +719,10 @@ error:
             if (err < 0) goto error1;
             err = at_tok_nextint(&line,&errNum);
             if (err < 0) goto error1;
-            if (errNum == 70 || errNum == 3)
+            if (errNum == 70 || errNum == 3) {
                 RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
+                return;
+            }
         }
     }
 error1:
@@ -809,8 +811,12 @@ error:
         if (err >= 0) {
             err = at_tok_nextint(&line, &errNum);
             if(err >= 0) {
-                if(errNum == 11 || errNum == 12)
+                if(errNum == 11 || errNum == 12) {
                     setRadioState(channelID, RADIO_STATE_SIM_LOCKED_OR_ABSENT);
+                } else if (errNum == 70 || errNum == 3) {
+                    RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
+                    return;
+                }
             }
         }
     }
@@ -862,6 +868,8 @@ static void requestChangeFacilityLock(int channelID,  char **data, size_t datale
 error:
     if (err < 0 || errNum == 0xff) {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    } else if (errNum == 70 || errNum == 3) {
+        RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
     } else {
         RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
     }
