@@ -38,7 +38,7 @@ LOCAL int32 VSP_set_ddr_freq(const char* freq_in_khz)
         return 0;
     } else {
         SCI_TRACE_LOW("Failed to open %s", set_freq);
-#if 0        
+#if 0
         return -1;
 #else
         return 0;
@@ -253,10 +253,37 @@ PUBLIC int32 ARM_VSP_RST (VSPObject *vo)
         }
     }
     VSP_WRITE_REG(AHB_CTRL_BASE_ADDR + ARM_ACCESS_CTRL_OFF, 0,"RAM_ACC_by arm");
-    VSP_READ_REG_POLL(AHB_CTRL_BASE_ADDR + ARM_ACCESS_STATUS_OFF, (V_BIT_1 | V_BIT_0), 0x00000000, TIME_OUT_CLK, "ARM_ACCESS_STATUS_OFF");
+    if (VSP_READ_REG_POLL(AHB_CTRL_BASE_ADDR + ARM_ACCESS_STATUS_OFF, (V_BIT_1 | V_BIT_0), 0x00000000, TIME_OUT_CLK, "ARM_ACCESS_STATUS_OFF"))
+    {
+        return -1;
+    }
 
     VSP_WRITE_REG(AHB_CTRL_BASE_ADDR + ARM_INT_MASK_OFF, 0,"arm int mask set");	// Disable Openrisc interrrupt . TBD.
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + AXIM_ENDIAN_OFF, 0x30828,"axim endian set"); // VSP and OR endian.
+
+    return 0;
+}
+
+PUBLIC  int32 vsp_read_reg_poll(VSPObject *vo, uint32 reg_addr, uint32 msk_data,uint32 exp_value, uint32 time, char *pstring)
+{
+    uint32 tmp, vsp_time_out_cnt = 0;
+
+    tmp=(*((volatile uint32*)(reg_addr+((VSPObject *)vo)->s_vsp_Vaddr_base)))&msk_data;
+    while((tmp != exp_value) && (vsp_time_out_cnt < time))
+    {
+        tmp=(*((volatile uint32*)(reg_addr+((VSPObject *)vo)->s_vsp_Vaddr_base)))&msk_data;
+        vsp_time_out_cnt++;
+    }
+
+    if (vsp_time_out_cnt >= time)
+    {
+        uint32 mm_eb_reg;
+
+        ioctl(vo->s_vsp_fd, VSP_HW_INFO, &mm_eb_reg);
+        vo->error_flag |= ER_HW_ID;
+        SCI_TRACE_LOW ("vsp_time_out_cnt %d, MM_CLK_REG (0x402e0000): 0x%0x",vsp_time_out_cnt, mm_eb_reg);
+        return 1;
+    }
 
     return 0;
 }

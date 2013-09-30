@@ -160,7 +160,7 @@ typedef struct dec_vop_mode_tag
     int8 QuantizerType;
     int8 bQuarter_pel;
     BOOLEAN bCoded;
-    BOOLEAN error_flag;
+    BOOLEAN srv;
 
     uint8 MB_in_VOP_length;
     uint8 time_inc_resolution_in_vol_length;
@@ -330,6 +330,7 @@ typedef struct tagMp4DecObject
     int32 s_vsp_fd ;
     uint32 ddr_bandwidth_req_cnt;
     uint32 vsp_freq_div;
+    int32	error_flag;
 
     MP4Handle  *mp4Handle;
 

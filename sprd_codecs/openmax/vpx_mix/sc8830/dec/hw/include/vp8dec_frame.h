@@ -14,6 +14,7 @@
 #ifndef _VP8DEC_FRAME_H_
 #define _VP8DEC_FRAME_H_
 
+MMDecRet vp8dx_receive_compressed_data(VPXDecObject *vo, unsigned long size, const unsigned char *source, int64 time_stamp);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

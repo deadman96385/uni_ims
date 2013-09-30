@@ -27,7 +27,10 @@ PUBLIC uint32 show_bits(Mp4DecObject *vo, uint32 nbits)
 {
     uint32 val;
 
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM_rdy");
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM_rdy"))
+    {
+        return 0;
+    }
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (nbits<<24), "BSM_rd n bits");
     val =VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + BSM_RDATA_OFF, "BSM_rd dara");
 
@@ -36,7 +39,10 @@ PUBLIC uint32 show_bits(Mp4DecObject *vo, uint32 nbits)
 
 PUBLIC void flush_bits(Mp4DecObject *vo, uint32 nbits)
 {
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM_rdy");
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM_rdy"))
+    {
+        return;
+    }
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (nbits<<24|0x01),"Flush n bits");
 }
 
@@ -50,7 +56,10 @@ PUBLIC uint32 read_bits(Mp4DecObject *vo, uint32 nbits)
 {
     uint32 val;
 
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM_rdy");
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM_rdy"))
+    {
+        return 0;
+    }
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (nbits<<24),"BSM_rd n bits");
     val =VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + BSM_RDATA_OFF,"BSM_rd dara");
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (nbits<<24|0x01),"Flush n bits");

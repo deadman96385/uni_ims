@@ -228,9 +228,8 @@ void init_contexts (H264DecObject *vo)
     VSP_WRITE_REG(CABAC_CONTEXT_BASE_ADDR+270*4, 0,"cabac context 276");
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_MODE_OFF, STREAM_ID_H264|0x40,"VSP_MODE");
     vo->is_need_init_vsp_hufftab = FALSE;
-
-
 }
+
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

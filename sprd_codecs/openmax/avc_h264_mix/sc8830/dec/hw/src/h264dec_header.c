@@ -775,6 +775,7 @@ PUBLIC void H264Dec_RestSliceHeader (H264DecObject *vo)
 #else
     H264Dec_ref_pic_list_reordering(vo, img_ptr);
 #endif
+
     if(vo->error_flag)
     {
         return;
@@ -787,8 +788,7 @@ PUBLIC void H264Dec_RestSliceHeader (H264DecObject *vo)
             (active_pps_ptr->weighted_bipred_idc==1 && (img_ptr->type==B_SLICE)))
     {
         pred_weight_table(vo);
-    }
-    else
+    } else
     {
         img_ptr->luma_log2_weight_denom=0;
         img_ptr->chroma_log2_weight_denom=0;
@@ -801,9 +801,8 @@ PUBLIC void H264Dec_RestSliceHeader (H264DecObject *vo)
 
     if (active_pps_ptr->entropy_coding_mode_flag && img_ptr->type!=I_SLICE)
     {
-        img_ptr->model_number = UE_V();//ue_v("SH: cabac_init_idc", currStream);
-    }
-    else
+        img_ptr->model_number = UE_V();
+    }  else
     {
         img_ptr->model_number = 0;
     }
@@ -818,8 +817,8 @@ PUBLIC void H264Dec_RestSliceHeader (H264DecObject *vo)
 
         if (curr_slice_ptr->LFDisableIdc != 1)
         {
-            curr_slice_ptr->LFAlphaC0Offset = 2*SE_V();
-            curr_slice_ptr->LFBetaOffset = 2* SE_V();
+            curr_slice_ptr->LFAlphaC0Offset = 2 * SE_V();
+            curr_slice_ptr->LFBetaOffset = 2 * SE_V();
         } else
         {
             curr_slice_ptr->LFAlphaC0Offset = curr_slice_ptr->LFBetaOffset = 0;
@@ -914,6 +913,7 @@ int GetViewIdx(H264DecObject *vo, int iVOIdx)
 
     return iViewIdx;
 }
+
 int get_maxViewIdx (H264DecObject *vo, int view_id, int anchor_pic_flag, int listidx)
 {
     subset_seq_parameter_set_rbsp_t *active_subset_sps = vo->g_active_subset_sps;

@@ -165,7 +165,7 @@ LOCAL void init_frame(VPXDecObject *vo)
     xd->frame_type = pc->frame_type;
 }
 
-int vp8_decode_frame(VPXDecObject *vo)
+MMDecRet vp8_decode_frame(VPXDecObject *vo)
 {
     const unsigned char *data		= (const unsigned char *)vo->Source;
     const unsigned char *data_end	= (const unsigned char *)(data + vo->source_sz);
@@ -177,7 +177,7 @@ int vp8_decode_frame(VPXDecObject *vo)
     int i, j, k, l;
     const int *const mb_feature_data_bits = vp8_mb_feature_data_bits;
 
-    pc->error_flag = 0;
+    vo->error_flag = 0;
     memset(vo->g_fh_reg_ptr, 0, sizeof(VSP_FH_REG_T));
 
     // 3 byte header
@@ -190,7 +190,7 @@ int vp8_decode_frame(VPXDecObject *vo)
 
     if (data + first_partition_length_in_bytes > data_end)
     {
-        pc->error_flag = 1;
+        vo->error_flag |= ER_SREAM_ID;
         return MMDEC_STREAM_ERROR;
     }
 
@@ -204,7 +204,7 @@ int vp8_decode_frame(VPXDecObject *vo)
         // vet via sync code
         if (data[0] != 0x9d || data[1] != 0x01 || data[2] != 0x2a)
         {
-            pc->error_flag = 1;
+            vo->error_flag |= ER_SREAM_ID;
             //printf ("Invalid frame sync code");
             return MMDEC_STREAM_ERROR;
         }
@@ -222,14 +222,14 @@ int vp8_decode_frame(VPXDecObject *vo)
             if (pc->Width <= 0)
             {
                 pc->Width = Width;
-                pc->error_flag = 1;
+                vo->error_flag |= ER_SREAM_ID;
                 return MMDEC_STREAM_ERROR;
             }
 
             if (pc->Height <= 0)
             {
                 pc->Height = Height;
-                pc->error_flag = 1;
+                vo->error_flag |= ER_SREAM_ID;
                 return MMDEC_STREAM_ERROR;
             }
 
@@ -245,7 +245,7 @@ int vp8_decode_frame(VPXDecObject *vo)
     pc->new_frame.u_buffer_virtual =  pc->new_frame.y_buffer_virtual + (pc->MBs <<8);
     if (pc->Width == 0 || pc->Height == 0)
     {
-        pc->error_flag = 1;
+        vo->error_flag |= ER_SREAM_ID;
         return MMDEC_STREAM_ERROR;
     }
 
@@ -456,7 +456,7 @@ int vp8_decode_frame(VPXDecObject *vo)
     tmp = VSP_POLL_COMPLETE((VSPObject *)vo);
     if(tmp & (V_BIT_0 | V_BIT_4 | V_BIT_5))	// (VLC_ERR|TIME_OUT)
     {
-        pc->error_flag = 1;
+        vo->error_flag |= ER_HW_ID;
 
         if (tmp & V_BIT_0)
         {
@@ -470,9 +470,9 @@ int vp8_decode_frame(VPXDecObject *vo)
         }
     } else if(tmp & V_BIT_2)	// MBW_FMR_DONE
     {
-        pc->error_flag=0;
+        vo->error_flag = 0;
     }
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0, "RAM_ACC_SEL");
 
     if (pc->refresh_entropy_probs == 0)
     {
@@ -482,10 +482,9 @@ int vp8_decode_frame(VPXDecObject *vo)
     return MMDEC_OK;
 }
 
-int vp8dx_receive_compressed_data(VPXDecObject *vo, unsigned long size, const unsigned char *source, int64 time_stamp)
+MMDecRet vp8dx_receive_compressed_data(VPXDecObject *vo, unsigned long size, const unsigned char *source, int64 time_stamp)
 {
     VP8_COMMON *cm = &vo->common;
-    int retcode = 0;
 
     vo->Source = source;
     vo->source_sz = size;
@@ -503,14 +502,14 @@ int vp8dx_receive_compressed_data(VPXDecObject *vo, unsigned long size, const un
         }
 
         if(buffer_index == 4)
-            return -1;
+        {
+            return MMDEC_OUTPUT_BUFFER_OVERFLOW;
+        }
     }
 
-    retcode = vp8_decode_frame(vo);
-
-    if (retcode < 0)
+    if (vp8_decode_frame(vo) != MMDEC_OK)
     {
-        return retcode;
+        return MMDEC_ERROR;
     }
 
     // If any buffer copy / swapping is signaled it should be done here.
@@ -547,7 +546,7 @@ int vp8dx_receive_compressed_data(VPXDecObject *vo, unsigned long size, const un
         cm->frame_to_show = &cm->new_frame;
     }
 
-    return retcode;
+    return MMDEC_OK;
 }
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

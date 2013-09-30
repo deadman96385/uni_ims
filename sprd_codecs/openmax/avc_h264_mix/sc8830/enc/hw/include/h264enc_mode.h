@@ -272,7 +272,6 @@ typedef struct enc_img_parameter_tag
     uint16	mb_x;
     uint16	mb_y;
 
-    uint32	error_flag;
 //	uint16	i_mb_count;
 
     uint16      orig_width;
@@ -407,6 +406,7 @@ typedef struct tagH264EncObject
     int32 s_vsp_fd ;
     uint32 ddr_bandwidth_req_cnt;
     uint32 vsp_freq_div;
+    int32	error_flag;
 
     AVCHandle  *avcHandle;
 

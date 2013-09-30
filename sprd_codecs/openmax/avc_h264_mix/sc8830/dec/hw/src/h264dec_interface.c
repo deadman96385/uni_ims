@@ -222,42 +222,64 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
     vo->pStream = dec_input_ptr->pStream;
     vo->g_stream_offset=0;
 
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
+    {
+        goto DEC_EXIT;
+    }
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, V_BIT_2|V_BIT_1,"BSM_OP clr BSM");//clr BSM
 
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, ((V_BIT_31|V_BIT_30)|vo->g_stream_offset),"BSM_cfg1 check startcode");//byte align
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, (V_BIT_31|bs_buffer_length),"BSM_cfg0 stream buffer size");//BSM load data
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG1_OFF, V_BIT_2,V_BIT_2,TIME_OUT_CLK, "startcode found");//check bsm is idle
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG1_OFF, V_BIT_2,V_BIT_2,TIME_OUT_CLK, "startcode found"))//check bsm is idle
+    {
+        goto DEC_EXIT;
+    }
 
     //Get start code length of first NALU.
     vo->g_slice_datalen=VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_NAL_LEN,"get NAL_LEN");
     vo->g_stream_offset+=vo->g_slice_datalen;
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
+    {
+        goto DEC_EXIT;
+    }
+
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, 0,"BSM_cfg1 check startcode disable");
     while(vo->g_stream_offset<bs_buffer_length)
     {
         // Find the next start code and get length of NALU.
-        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
+        if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
+        {
+            break;
+        }
         VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, V_BIT_2|V_BIT_1,"BSM_OP clr BSM");//clr BSM
 
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, ((V_BIT_31|V_BIT_30)|vo->g_stream_offset),"BSM_cfg1 check startcode");//byte align
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, (V_BIT_31|bs_buffer_length),"BSM_cfg0 stream buffer size");//BSM load data
-        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG1_OFF, V_BIT_2,V_BIT_2,TIME_OUT_CLK, "startcode found");//check bsm is idle
+        if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG1_OFF, V_BIT_2,V_BIT_2,TIME_OUT_CLK, "startcode found"))//check bsm is idle
+        {
+            break;
+        }
 
         // Get length of NALU and net bitstream length.
-        vo->g_slice_datalen=VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_NAL_LEN,"get NAL_LEN");
-        vo->g_nalu_ptr->len=VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_NAL_DATA_LEN,"get NAL_DATA_LEN");
-        destuffing_num=VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+DSTUF_NUM_OFF,"get DSTUF_NUM");
+        vo->g_slice_datalen = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + BSM_NAL_LEN, "get NAL_LEN");
+        vo->g_nalu_ptr->len = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + BSM_NAL_DATA_LEN, "get NAL_DATA_LEN");
+        destuffing_num = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + DSTUF_NUM_OFF, "get DSTUF_NUM");
 
         SCI_TRACE_LOW("%s, %d, g_slice_datalen: %d, g_nalu_ptr->len: %d", __FUNCTION__, __LINE__, vo->g_slice_datalen, vo->g_nalu_ptr->len);
 
-        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
+        if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
+        {
+            break;
+        }
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, 0,"BSM_cfg1 check startcode disable");
 
         // Configure BSM for decoding.
-        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
+        if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
+        {
+            break;
+        }
         VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, V_BIT_2|V_BIT_1,"BSM_OP clr BSM");//clr BSM
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, (V_BIT_31|vo->g_stream_offset),"BSM_cfg1 stream buffer offset");//point to the start of NALU.
@@ -271,9 +293,9 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
         vo->g_stream_offset += vo->g_slice_datalen;//dec_input_ptr->dataLen;
 
-        if( (MMDEC_ERROR ==ret) ||vo->frame_dec_finish)//dec_output.frameEffective
+        if( (MMDEC_ERROR == ret) || vo->frame_dec_finish)//dec_output.frameEffective
         {
-            if(MMDEC_ERROR ==ret)
+            if (MMDEC_ERROR == ret)
             {
                 dec_input_ptr->dataLen = bs_buffer_length;
 
@@ -288,6 +310,9 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         }
     }
 
+DEC_EXIT:
+
+    SCI_TRACE_LOW("%s, %d, exit decoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
         return MMENC_HW_ERROR;

@@ -63,7 +63,7 @@ MMDecRet Mp4Dec_DecGobHeader(Mp4DecObject *vo)
             vop_mode_ptr->mb_y		= slice_info->GobNum * slice_info->NumMbLineInGob;
             if (vop_mode_ptr->mb_y >= slice_info->Max_MBy)
             {
-                vop_mode_ptr->error_flag = TRUE;
+                vo->error_flag |= ER_SREAM_ID;
                 return MMDEC_STREAM_ERROR;
             }
 
@@ -481,7 +481,7 @@ MMDecRet Mp4Dec_DecVopHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_mode_ptr)
     if(DEC_VOP_START_CODE != tmp_var)
     {
         PRINTF_HEAD_INFO("Bitstream does not start with DEC_VOP_START_CODE\n");
-        vop_mode_ptr->error_flag = TRUE;
+        vo->error_flag |= ER_SREAM_ID;
         return MMDEC_STREAM_ERROR;
     }
 
@@ -553,14 +553,14 @@ MMDecRet Mp4Dec_DecVopHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_mode_ptr)
     if(vop_mode_ptr->bInterlace)
     {
         PRINTF_HEAD_INFO("interlace does not be supported\n");
-        vop_mode_ptr->error_flag = TRUE;
+        vo->error_flag |= ER_SREAM_ID;
         return MMDEC_STREAM_ERROR;
     }
 
     if ( vop_mode_ptr->sprite_enable == 2 && vop_mode_ptr->VopPredType == SVOP)
     {
         PRINTF_HEAD_INFO("GMC NOT SUPPORTED!\n");
-        vop_mode_ptr->error_flag = TRUE;
+        vo->error_flag |= ER_SREAM_ID;
         return MMDEC_STREAM_ERROR;
     }
 
@@ -680,7 +680,7 @@ MMDecRet Mp4Dec_DecGOV(Mp4DecObject *vo)
     if(tmp_var != GROUP_START_CODE)
     {
         PRINTF_HEAD_INFO("\nBitstream does not start with GROUP_START_CODE\n");
-        vop_mode_ptr->error_flag = TRUE;
+        vo->error_flag |= ER_SREAM_ID;
         return MMDEC_STREAM_ERROR;
     }
 
@@ -703,7 +703,7 @@ MMDecRet Mp4Dec_DecGOV(Mp4DecObject *vo)
     if((closed_gov == 0)&&(broken_link == 1))
     {
         PRINTF_HEAD_INFO("closed_gov = 0\nbroken_link = 1\n");
-        vop_mode_ptr->error_flag = TRUE;
+        vo->error_flag |= ER_SREAM_ID;
         return MMDEC_STREAM_ERROR;
     }
 
@@ -918,7 +918,7 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
         {
 #if 0 //Removed for support Intel H.263.
 //			PRINTF_HEAD_INFO("error: Optional custom picture clock frequency is not supported in this version\n");
-            vop_mode_ptr->error_flag = TRUE;
+            vo->error_flag |= ER_SREAM_ID;
 #endif
         }
 
@@ -952,7 +952,7 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
         if(h263_plus->slice_structured_mode)
         {
 //			PRINTF_HEAD_INFO("error: Slice structured mode is not supported in this version\n");
-            vop_mode_ptr->error_flag = TRUE;
+            vo->error_flag |= ER_SREAM_ID;
             return MMDEC_NOT_SUPPORTED;
         }
 
@@ -965,7 +965,7 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
         if(h263_plus->independently_segmented_decoding_mode)
         {
 //			PRINTF_HEAD_INFO("error: Independently segmented decoding mode is not supported in this version\n");
-            vop_mode_ptr->error_flag = TRUE;
+            vo->error_flag |= ER_SREAM_ID;
             return MMDEC_NOT_SUPPORTED;
         }
 
@@ -981,7 +981,7 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
         if (tmp != 8)
         {   /* OPPTYPE : bit15=1, bit16,bit17,bit18=0 */
             PRINTF_HEAD_INFO("error: The last 4 bits of OPPTYPE is expected to be 1000\n");
-            vop_mode_ptr->error_flag = TRUE;
+            vo->error_flag |= ER_SREAM_ID;
             return MMDEC_NOT_SUPPORTED;
         }
     }
@@ -991,7 +991,7 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
         if (h263_plus->UFEP == 0)
         {
             //			PRINTF_HEAD_INFO("error: do not supported in this version\n");
-            //			vop_mode_ptr->error_flag = TRUE;
+            //			vo->error_flag |= ER_SREAM_ID;
             //return MMDEC_NOT_SUPPORTED;
         }
 
@@ -1003,7 +1003,7 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
         if(vop_mode_ptr->VopPredType > PVOP)
         {
             PRINTF_HEAD_INFO("error: do not supported in this version\n");
-            vop_mode_ptr->error_flag = TRUE;
+            vo->error_flag |= ER_SREAM_ID;
             return MMDEC_NOT_SUPPORTED;
         }
 
@@ -1014,7 +1014,7 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
         if(h263_plus->reference_picture_resampling_mode)
         {
             PRINTF_HEAD_INFO("error: Reference picture resampling mode is not supported in this version\n");
-            vop_mode_ptr->error_flag = TRUE;
+            vo->error_flag |= ER_SREAM_ID;
             return MMDEC_NOT_SUPPORTED;
         }
 
@@ -1023,7 +1023,7 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
         if (h263_plus->reduced_resolution_update_mode)
         {
             PRINTF_HEAD_INFO("error: Reduced resolution update mode is not supported in this version\n");
-            vop_mode_ptr->error_flag = TRUE;
+            vo->error_flag |= ER_SREAM_ID;
             return MMDEC_NOT_SUPPORTED;
         }
 
@@ -1035,14 +1035,14 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
         if (tmp != 1)
         {   /* MPPTYPE : bit7,bit8=0  bit9=1 */
             PRINTF_HEAD_INFO("error: do not supported in this version\n");
-            vop_mode_ptr->error_flag = TRUE;
+            vo->error_flag |= ER_SREAM_ID;
             return MMDEC_NOT_SUPPORTED;
         }
     } else
     {
         /* UFEP is neither 001 nor 000 */
         PRINTF_HEAD_INFO("error: UFEP should be either 001 or 000.\n");
-        vop_mode_ptr->error_flag = TRUE;
+        vo->error_flag |= ER_SREAM_ID;
         return MMDEC_NOT_SUPPORTED;
     }
 
@@ -1051,7 +1051,7 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
     if (tmp)
     {
         PRINTF_HEAD_INFO("error: CPM not supported in this version\n");
-        vop_mode_ptr->error_flag = TRUE;
+        vo->error_flag |= ER_SREAM_ID;
     }
 
     if (h263_plus->UFEP && (h263_plus->source_format == SF_CUSTOM))
@@ -1065,7 +1065,7 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
         {
 #if 0 //Removed for supporting Intel H.263 format
             PRINTF_HEAD_INFO("error: do not supported in this version\n");
-            vop_mode_ptr->error_flag = TRUE;
+            vo->error_flag |= ER_SREAM_ID;
 #endif
         }
 
@@ -1077,7 +1077,7 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
         if(!tmp)
         {
             PRINTF_HEAD_INFO("error: The 14th bit of Custom Picture Format(CPFMT) should be 1\n");
-            vop_mode_ptr->error_flag = TRUE;
+            vo->error_flag |= ER_SREAM_ID;
         }
 
         tmp = Mp4Dec_ReadBits (9);
@@ -1087,7 +1087,7 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
         if ((vop_mode_ptr->OrgFrameWidth%16) || (vop_mode_ptr->OrgFrameHeight%16))
         {
             PRINTF_HEAD_INFO ("error: only factor of 16 custom source format supported\n");
-            vop_mode_ptr->error_flag = TRUE;
+            vo->error_flag |= ER_SREAM_ID;
         }
 
         if (CP_PAR_code == EXTENDED_PAR)
@@ -1153,7 +1153,7 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
     if (h263_plus->UFEP && h263_plus->slice_structured_mode)
     {
         PRINTF_HEAD_INFO("error: do not supported in this version\n");
-        vop_mode_ptr->error_flag = TRUE;
+        vo->error_flag |= ER_SREAM_ID;
         return MMDEC_NOT_SUPPORTED;
     }
 
@@ -1161,7 +1161,7 @@ static MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_m
     {
         /* reading RPRP info is not implemented */
         PRINTF_HEAD_INFO("error: RPRP reading is not implemented in this version\n");
-        vop_mode_ptr->error_flag = TRUE;
+        vo->error_flag |= ER_SREAM_ID;
         return MMDEC_NOT_SUPPORTED;
     }
 
@@ -1515,7 +1515,10 @@ PUBLIC MMDecRet Mp4Dec_GetVideoPacketHeader(Mp4DecObject *vo, uint32 uAddBits)
     uint32 cmd;
     SLICEINFO *slice_info = &(vo->SliceInfo);
 
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
+    {
+        return MMDEC_HW_ERROR;
+    }
 
     Mp4Dec_ReadBits(17 + uAddBits);//,"resync_marker"
 
@@ -1525,7 +1528,7 @@ PUBLIC MMDecRet Mp4Dec_GetVideoPacketHeader(Mp4DecObject *vo, uint32 uAddBits)
 
     if (is_fake_rsc_mbnum)
     {
-        vop_mode_ptr->error_flag = 1;
+        vo->error_flag |= ER_SREAM_ID;
         return MMDEC_STREAM_ERROR;
     }
     vop_mode_ptr->StepSize		= (int8)Mp4Dec_ReadBits(vop_mode_ptr->QuantPrecision);//,"quant_scale"

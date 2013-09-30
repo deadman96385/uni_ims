@@ -669,6 +669,7 @@ typedef struct H264DecObject_tag
     int32 s_vsp_fd ;
     uint32 ddr_bandwidth_req_cnt;
     uint32 vsp_freq_div;
+    int32	error_flag;
 
     AVCHandle  *avcHandle;
 
@@ -678,8 +679,6 @@ typedef struct H264DecObject_tag
 
     uint16	width;
     uint16	height;
-
-    int32	error_flag;
 
     DEC_SPS_T	*g_sps_ptr;
     DEC_PPS_T	*g_pps_ptr;

@@ -27,7 +27,10 @@ PUBLIC uint32 show_bits (H264DecObject *vo, int32 nbits)
 {
     uint32 temp;
 
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy");
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy"))
+    {
+        return 0;
+    }
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, (nbits<<24),"BSM_rd n bits");
     temp = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_RDATA_OFF,"BSM_rd dara");
 
@@ -38,7 +41,10 @@ PUBLIC uint32 read_bits (H264DecObject *vo, int32 nbits)
 {
     uint32 temp;
 
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy");
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy"))
+    {
+        return 0;
+    }
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, (nbits<<24),"BSM_rd n bits");
     temp = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_RDATA_OFF,"BSM_rd dara");
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, (nbits<<24)|0x1,"BSM_flush n bits");
@@ -50,7 +56,11 @@ PUBLIC uint32 ue_v (H264DecObject *vo)
 {
     uint32 ret;
     uint32 tmp;
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy");
+
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy"))
+    {
+        return 0;
+    }
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RD_OFF, 1,"BSM_rd_UE cmd");
     tmp = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RD_OFF,"BSM_rd_UE check error");
     if(tmp&4)
@@ -68,10 +78,13 @@ PUBLIC int32 se_v (H264DecObject *vo)
     int32 ret;
     int32 tmp;
 
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy");
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy"))
+    {
+        return 0;
+    }
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RD_OFF, 2,"BSM_rd_SE cmd");
     tmp = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RD_OFF,"BSM_rd_SE check error");
-    if(tmp&4)
+    if(tmp & V_BIT_2)
     {
         vo->error_flag |= ER_SREAM_ID;
         return 0;
@@ -162,9 +175,15 @@ PUBLIC void H264Dec_flush_left_byte (H264DecObject *vo)
     int32 left_bytes;
     uint32 nDecTotalBits;// = stream->bitcnt;
 
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy");
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy"))
+    {
+        return;
+    }
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, 8,"BSM byte align");
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy");
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy"))
+    {
+        return;
+    }
     nDecTotalBits =VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF,"BSM flushed bits cnt");
     //bytealign
     dec_len = nDecTotalBits>>3;

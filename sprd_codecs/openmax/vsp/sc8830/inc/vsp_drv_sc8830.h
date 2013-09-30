@@ -92,7 +92,7 @@ extern "C"
 #define VSP_RELEASE     			_IO(SPRD_VSP_IOCTL_MAGIC, 6)
 #define VSP_COMPLETE       			_IO(SPRD_VSP_IOCTL_MAGIC, 7)
 #define VSP_RESET       			_IO(SPRD_VSP_IOCTL_MAGIC, 8)
-#define VSP_START       			_IO(SPRD_VSP_IOCTL_MAGIC, 9)
+#define VSP_HW_INFO                         _IO(SPRD_VSP_IOCTL_MAGIC, 9)
 
 #define TIME_OUT_CLK			0xffff
 #define TIME_OUT_CLK_FRAME		0x7fffff
@@ -642,7 +642,6 @@ typedef struct  bsmr_control_register_tag
 
 } VSP_BSM_REG_T;
 
-
 /* -----------------------------------------------------------------------
 ** Structs
 ** ----------------------------------------------------------------------- */
@@ -653,7 +652,14 @@ typedef struct tagVSPObject
     int32 s_vsp_fd ;
     int32 ddr_bandwidth_req_cnt;
     uint32 vsp_freq_div;
+    int32	error_flag;
 } VSPObject;
+
+//error id, added by xiaowei, 20130910
+#define ER_SREAM_ID   		(1<<0)
+#define ER_MEMORY_ID  		(1<<1)
+#define ER_REF_FRM_ID   	(1<<2)
+#define ER_HW_ID                        (1<<3)
 
 /* -----------------------------------------------------------------------
 ** Global
@@ -665,25 +671,12 @@ int32 VSP_POLL_COMPLETE(VSPObject *vo);
 int32 VSP_ACQUIRE_Dev(VSPObject *vo);
 int32 VSP_RELEASE_Dev(VSPObject *vo);
 int32 ARM_VSP_RST(VSPObject *vo);
+int32 vsp_read_reg_poll(VSPObject *vo, uint32 reg_addr, uint32 msk_data,uint32 exp_value, uint32 time, char *pstring);
 
 #define VSP_WRITE_REG(reg_addr, value, pstring) (*(volatile uint32 *)((reg_addr) +((VSPObject *)vo)->s_vsp_Vaddr_base)  = (value))
 #define VSP_READ_REG(reg_addr, pstring)	((*(volatile uint32 *)((reg_addr)+((VSPObject *)vo)->s_vsp_Vaddr_base)))
-#define VSP_READ_REG_POLL(reg_addr, msk_data, msked_data, time, pstring) \
-{\
-	uint32 tmp, vsp_time_out_cnt;\
-	tmp=(*((volatile uint32*)(reg_addr+((VSPObject *)vo)->s_vsp_Vaddr_base)))&msk_data;\
-	vsp_time_out_cnt = 0;    \
-    while(tmp != msked_data && vsp_time_out_cnt < time)\
-{\
-	tmp=(*((volatile uint32*)(reg_addr+((VSPObject *)vo)->s_vsp_Vaddr_base)))&msk_data;\
-	vsp_time_out_cnt++;  \
-}\
-    if (vsp_time_out_cnt >= time) \
-    {\
-        SCI_TRACE_LOW ("vsp_time_out_cnt %d!\n",vsp_time_out_cnt);  \
-        return 1;   \
-    }   \
-}
+#define VSP_READ_REG_POLL(reg_addr, msk_data, exp_value, time, pstring) \
+    vsp_read_reg_poll(((VSPObject *)vo), reg_addr, msk_data, exp_value, time, pstring)
 
 /**---------------------------------------------------------------------------
 **                         Compiler Flag                                      *

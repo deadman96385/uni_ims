@@ -168,6 +168,7 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecB
     vo->s_vsp_Vaddr_base = 0;
     vo->ddr_bandwidth_req_cnt = 0;
     vo->vsp_freq_div = 0;
+    vo->error_flag = 0;
     if (VSP_OPEN_Dev((VSPObject *)vo) < 0)
     {
         return MMENC_ERROR;
@@ -204,6 +205,8 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
     {
         vo->rc_gop_paras.intra_period = pConf->FrameRate;
     }
+
+    SCI_TRACE_LOW("%s, %d, intra_period: %d", __FUNCTION__, __LINE__, vo->rc_gop_paras.intra_period);
 
     return MMENC_OK;
 }
@@ -380,6 +383,10 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
 
     //write frame
     img_ptr->slice_sz[img_ptr->slice_nr] = h264enc_slice_write(vo, img_ptr);
+    if (vo->error_flag)
+    {
+        goto ENC_EXIT;
+    }
     *((volatile uint32*)(&img_ptr->pOneFrameBitstream[img_ptr->stm_offset])) = 0x01000000;
     img_ptr->slice_sz[img_ptr->slice_nr] += (VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + DSTUF_NUM_OFF, "DSTUF_NUM") << 3);
 
@@ -421,6 +428,10 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
         }
     }
 
+ENC_EXIT:
+
+    SCI_TRACE_LOW("%s, %d, exit encoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
         return MMENC_HW_ERROR;
@@ -445,7 +456,6 @@ MMEncRet H264EncGenHeader(AVCHandle *avcHandle, MMEncOut *pOutput, int is_sps)
         return MMDEC_HW_ERROR;
     }
 
-    SCI_TRACE_LOW("%s, %d.", __FUNCTION__, __LINE__);
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF, (STREAM_ID_H264 | V_BIT_4), "VSP_MODE: Set standard and work mode");
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, 0, "RAM_ACC_SEL: SETTING_RAM_ACC_SEL=0(SW)");
 
@@ -460,10 +470,19 @@ MMEncRet H264EncGenHeader(AVCHandle *avcHandle, MMEncOut *pOutput, int is_sps)
     {
         h264enc_pps_write(vo, img_ptr->pps);
     }
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable")) //check bsm is idle
+    {
+        goto HEADER_EXIT;
+    }
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, V_BIT_1, "BSM_OPERATE: BSM_CLR");
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "Polling BSM_DBG0: BSM inactive"); //check bsm is idle
-    VSP_READ_REG_POLL(GLB_REG_BASE_ADDR + BSM_DBG1_OFF, V_BIT_1, 0x0, TIME_OUT_CLK, "Polling AXIM_STS: not Axim_wch_busy"); //check all data has written to DDR
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "Polling BSM_DBG0: BSM inactive")) //check bsm is idle
+    {
+        goto HEADER_EXIT;
+    }
+    if (VSP_READ_REG_POLL(GLB_REG_BASE_ADDR + BSM_DBG1_OFF, V_BIT_1, 0x0, TIME_OUT_CLK, "Polling AXIM_STS: not Axim_wch_busy")) //check all data has written to DDR
+    {
+        goto HEADER_EXIT;
+    }
 
     *((volatile uint32*)(&img_ptr->pOneFrameBitstream[img_ptr->stm_offset])) = 0x01000000;
     img_ptr->stm_offset = ( VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF,"TOTAL_BITS") >> 3);
@@ -472,6 +491,10 @@ MMEncRet H264EncGenHeader(AVCHandle *avcHandle, MMEncOut *pOutput, int is_sps)
 
     pOutput->strmSize = img_ptr->stm_offset;
     pOutput->pOutBuf = img_ptr->pOneFrameBitstream;
+
+HEADER_EXIT:
+
+    SCI_TRACE_LOW("%s, %d, exit generating header, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
 
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {

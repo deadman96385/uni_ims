@@ -38,7 +38,10 @@ PUBLIC uint32 uvlc_startcode_follows (H264DecObject *vo)
     int32 bit_offset;
     uint32 nDecTotalBits;
 
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy");
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, V_BIT_0, V_BIT_0,TIME_OUT_CLK, "BSM_rdy"))
+    {
+        return TRUE;
+    }
     nDecTotalBits = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF,"BSM flushed bits cnt");
 
     byte_offset = nDecTotalBits/8;
@@ -230,7 +233,8 @@ PUBLIC void H264Dec_use_parameter_set (H264DecObject *vo, int32 pps_id)
     {
         if (sps_ptr->valid != TRUE)
         {
-            SCI_TRACE_LOW ("PicParset %d references an invalid (uninitialized) Sequence Parameter Set with ID %d, expect the unexpected...\n", PicParsetId, (int) pps_ptr->seq_parameter_set_id);
+            SCI_TRACE_LOW ("PicParset %d references an invalid (uninitialized) Sequence Parameter Set with ID %d, expect the unexpected...",
+                           PicParsetId, (int) pps_ptr->seq_parameter_set_id);
             vo->error_flag |= ER_SREAM_ID;
             return;
         }
@@ -241,7 +245,8 @@ PUBLIC void H264Dec_use_parameter_set (H264DecObject *vo, int32 pps_id)
         sps_ptr = &(vo->g_active_subset_sps->sps);
         if (vo->g_SubsetSeqParSet[pps_ptr->seq_parameter_set_id].Valid != TRUE)
         {
-            SCI_TRACE_LOW ("PicParset %d references an invalid (uninitialized) Subset Sequence Parameter Set with ID %d, expect the unexpected...\n",  PicParsetId, (int) pps_ptr->seq_parameter_set_id);
+            SCI_TRACE_LOW ("PicParset %d references an invalid (uninitialized) Subset Sequence Parameter Set with ID %d, expect the unexpected...",
+                           PicParsetId, (int) pps_ptr->seq_parameter_set_id);
             vo->error_flag |= ER_SREAM_ID;
             return;
         }
@@ -379,11 +384,13 @@ LOCAL void H264Dec_ReadVUI (H264DecObject *vo, DEC_VUI_T *vui_seq_parameters_ptr
 }
 
 const int8 ZZ_SCAN[16]  =
-{   0,  1,  4,  8,  5,  2,  3,  6,  9, 12, 13, 10,  7, 11, 14, 15
+{
+    0,  1,  4,  8,  5,  2,  3,  6,  9, 12, 13, 10,  7, 11, 14, 15
 };
 
 const int8 ZZ_SCAN8[64] =
-{   0,  1,  8, 16,  9,  2,  3, 10, 17, 24, 32, 25, 18, 11,  4,  5,
+{
+    0,  1,  8, 16,  9,  2,  3, 10, 17, 24, 32, 25, 18, 11,  4,  5,
     12, 19, 26, 33, 40, 48, 41, 34, 27, 20, 13,  6,  7, 14, 21, 28,
     35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51,
     58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63

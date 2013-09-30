@@ -116,7 +116,6 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
     vop_mode_ptr->sliceNumber	= 0;
     vop_mode_ptr->stop_decoding = FALSE;
     vop_mode_ptr->mbnumDec		= 0;
-    vop_mode_ptr->error_flag	= FALSE;
     vop_mode_ptr->frame_len		= dec_input_ptr->dataLen;
     vop_mode_ptr->err_num		= dec_input_ptr->err_pkt_num;
     vop_mode_ptr->err_left		= dec_input_ptr->err_pkt_num;
@@ -128,7 +127,7 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
     {
         VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x10,vop_mode_ptr->data_partition_buffer_Addr>>3,"data partition buffer." );
     }
-    
+
     if(vop_mode_ptr->bReversibleVlc&&vop_mode_ptr->VopPredType!=BVOP)
     {
         vld_table_addr= Mp4Dec_MemV2P(vo, (uint8 *)(vo->g_rvlc_tbl_ptr), HW_NO_CACHABLE);
@@ -216,7 +215,6 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x80,vo->g_tmp_buf.imgYAddr >>3,"ref L0 Y addr");
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x100,vo->g_tmp_buf.imgUAddr >>3,"ref L0 UV addr");
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x180,vo->g_tmp_buf.rec_infoAddr>>3,"ref L0 info addr");
-            //return MMDEC_ERROR;
         } else
         {
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x80,vop_mode_ptr->pBckRefFrame->pDecFrame->imgYAddr >>3,"ref L0 Y addr");
@@ -235,7 +233,6 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
                 VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0xc0,vo->g_tmp_buf.imgYAddr >>3,"ref L0 Y addr");
                 VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x140,vo->g_tmp_buf.imgUAddr >>3,"ref L0 UV addr");
                 VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x1c0,vo->g_tmp_buf.rec_infoAddr>>3,"ref L0 info addr");
-                //return MMDEC_ERROR;
             } else
             {
                 VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x80,vop_mode_ptr->pFrdRefFrame->pDecFrame->imgYAddr >>3,"ref L0 Y addr");
@@ -368,8 +365,8 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
             tmp = VSP_POLL_COMPLETE((VSPObject *)vo);
             if(tmp & (V_BIT_4 | V_BIT_5 | V_BIT_30 | V_BIT_31))
             {
-                vop_mode_ptr->error_flag = 1;
-                pic_end=1;//weihu
+                vo->error_flag |= ER_HW_ID;
+                pic_end = 1;
 
                 if (tmp & V_BIT_4)
                 {
@@ -380,13 +377,13 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
                 }
             } else if(tmp & V_BIT_2)
             {
-                vop_mode_ptr->error_flag = 0;
+                vo->error_flag = 0;
             }
             VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL");
         }
     }
 
-    if(vop_mode_ptr->error_flag)
+    if(vo->error_flag)
     {
         return MMDEC_ERROR;
     }

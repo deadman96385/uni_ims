@@ -53,9 +53,15 @@ MMEncRet MP4EncGenHeader(MP4Handle *mp4Handle, MMEncOut *pOutput)
         NumBits += Mp4Enc_EncVOHeader(vo);
         NumBits += Mp4Enc_EncVOLHeader(vo);
 
-        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
+        if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable")) //check bsm is idle
+        {
+            goto HEADER_EXIT;
+        }
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, V_BIT_1, "BSM_OPERATE: BSM_CLR");
-        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "Polling BSM_DBG0: BSM inactive"); //check bsm is idle
+        if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "Polling BSM_DBG0: BSM inactive")) //check bsm is idle
+        {
+            goto HEADER_EXIT;
+        }
 
         pOutput->strmSize = (VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF, "read total bits") + 7) >> 3;
     } else
@@ -64,6 +70,10 @@ MMEncRet MP4EncGenHeader(MP4Handle *mp4Handle, MMEncOut *pOutput)
     }
 
     pOutput->pOutBuf = vop_mode_ptr->pOneFrameBitstream;
+
+HEADER_EXIT:
+
+    SCI_TRACE_LOW("%s, %d, exit generating header, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
 
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
@@ -362,9 +372,15 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
 
         vo->g_enc_is_prev_frame_encoded_success = ret;
 
-        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable"); //check bsm is idle
+        if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable")) //check bsm is idle
+        {
+            goto ENC_EXIT;
+        }
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, V_BIT_1, "BSM_OPERATE: BSM_CLR");
-        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "Polling BSM_DBG0: BSM inactive"); //check bsm is idle
+        if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_31, V_BIT_31, TIME_OUT_CLK, "Polling BSM_DBG0: BSM inactive")) //check bsm is idle
+        {
+            goto ENC_EXIT;
+        }
 
         pOutput->strmSize = (VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF, "read total bits") + 7)>>3;
         pOutput->pOutBuf = vop_mode_ptr->pOneFrameBitstream;
@@ -385,6 +401,10 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
     {
         pOutput->strmSize = 0;
     }
+
+ENC_EXIT:
+
+    SCI_TRACE_LOW("%s, %d, exit encoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
 
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {

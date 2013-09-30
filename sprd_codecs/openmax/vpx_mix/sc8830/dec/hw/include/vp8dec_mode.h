@@ -236,7 +236,6 @@ typedef struct VP8Common
 
 //    int near_boffset[3];
     int version;
-    int error_flag;
 
     TOKEN_PARTITION multi_token_partition;
 
@@ -426,6 +425,7 @@ typedef struct tagVPXDecObject
     int32 s_vsp_fd ;
     uint32 ddr_bandwidth_req_cnt;
     uint32 vsp_freq_div;
+    int32	error_flag;
 
     VPXHandle  *vpxHandle;
 

@@ -496,7 +496,7 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
         dec_out->pBufferHeader = out->pBufferHeader;
         dec_out->mPicId = out->mPicId;
 
-        for (i = 0; i < /*dpb_ptr->used_size*/(MAX_REF_FRAME_NUMBER+1); i++)
+        for (i = 0; i < (MAX_REF_FRAME_NUMBER+1); i++)
         {
             if (out == dpb_ptr->fs[i]->frame)
             {
@@ -516,12 +516,13 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
 
     SCI_TRACE_LOW_DPB("out poc: %d, effective: %d\t", out->poc, dec_out->frameEffective);
 
+#if 0   //only for debug
     {
         int32 list_size0 = vo->g_list_size[0];
         int32 list_size1 = vo->g_list_size[1];
         SCI_TRACE_LOW_DPB("list_size: (%d, %d), total: %d", list_size0, list_size1, list_size0 + list_size1);
 
-        for (i = 0; i < /*dpb_ptr->used_size*/(MAX_REF_FRAME_NUMBER+1); i++)
+        for (i = 0; i < (MAX_REF_FRAME_NUMBER+1); i++)
         {
             if(dpb_ptr->fs[i]->is_reference)
             {
@@ -533,8 +534,8 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
         {
             SCI_TRACE_LOW_DPB("delay poc: %d, %0x", dpb_ptr->delayed_pic[i]->poc, dpb_ptr->delayed_pic[i]->pBufferHeader);
         }
-
     }
+#endif
 
     return;
 }
@@ -717,7 +718,10 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
 
     if( vo->g_nalu_ptr->len >NALU_LEN_VSP && !active_pps_ptr->entropy_coding_mode_flag)
     {
-        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF,NALU_LEN_MAX ,NALU_LEN_MAX, TIME_OUT_CLK_FRAME, "Poll NALU_LEN_MAX");
+        if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+TOTAL_BITS_OFF,NALU_LEN_MAX ,NALU_LEN_MAX, TIME_OUT_CLK_FRAME, "Poll NALU_LEN_MAX"))
+        {
+            return MMDEC_HW_ERROR;
+        }
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF,V_BIT_2, "clear bitcnt" );
     }
 
@@ -747,11 +751,11 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
     {
         vo->error_flag = 0;
     }
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
+
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0, "RAM_ACC_SEL");
     vo->is_need_init_vsp_hufftab = FALSE;
 
-    H264Dec_exit_slice(vo);//g_image_ptr);
+    H264Dec_exit_slice(vo);
 
     img_ptr->slice_nr++;
 
@@ -761,10 +765,10 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
     }
 
     //if(end of picture)
-    cmd = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_DBG_STS0_OFF, "check mb_x mb_y number");//weihu tmp
+    cmd = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_DBG_STS0_OFF, "check mb_x mb_y number");
     SCI_TRACE_LOW("%s, %d, (mb_x<<8)|(mb_y): %0x", __FUNCTION__, __LINE__, cmd);
     img_ptr->curr_mb_nr = (cmd&0xff) * img_ptr->frame_width_in_mbs + ((cmd>>8)&0xff);
-    if((((cmd>>8)&0xff)==(uint)(img_ptr->frame_width_in_mbs-1))&&((cmd&0xff)==(uint)(img_ptr->frame_height_in_mbs-1)))//weihu tmp
+    if((((cmd>>8)&0xff) == (uint32)(img_ptr->frame_width_in_mbs-1)) && ((cmd&0xff) == (uint32)(img_ptr->frame_height_in_mbs-1)))
     {
         ret =MMDEC_OK;
         H264Dec_exit_picture (vo);
@@ -809,7 +813,6 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
         if ((dec_input_ptr->expected_IVOP) && (img_ptr->type != I_SLICE))
         {
             SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
-
             return MMDEC_FRAME_SEEK_IVOP;
         }
 
@@ -817,37 +820,34 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
         {
             if (vo->is_need_init_vsp_hufftab && img_ptr->is_new_pic)//分不分cabac和cavlc
             {
-                uint32 vld_table_addr;
+                uint32 vld_table_addr = (uint32)H264Dec_MemV2P(vo, vo->g_cavlc_tbl_ptr, HW_NO_CACHABLE);
 
-                vld_table_addr = (uint32)H264Dec_MemV2P(vo, vo->g_cavlc_tbl_ptr, HW_NO_CACHABLE);
-                //load_vld_table_en=1;
-
-                VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0xc, vld_table_addr/8,"ddr vlc table start addr");
-                VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_SIZE_SET_OFF, 0x45,"ddr VLC table size");
+                VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0xc, vld_table_addr/8, "ddr vlc table start addr");
+                VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_SIZE_SET_OFF, 0x45, "ddr VLC table size");
                 //vd->is_need_init_vsp_hufftab = FALSE;
             }
         }
 
         //配置frame start address ram
-        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR, (vo->g_dec_picture_ptr->imgYAddr)>>3,"current Y addr");//g_dpb_layer[g_curr_slice_ptr->view_id]->fs[img_ptr->DPB_addr_index-17*g_curr_slice_ptr->view_id]->frame->imgYAddr
-        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+4, (vo->g_dec_picture_ptr->imgUAddr)>>3,"current UV addr");//0x480000+//g_dpb_layer[g_curr_slice_ptr->view_id]->fs[img_ptr->DPB_addr_index-17*g_curr_slice_ptr->view_id]->frame->imgUAddr
-        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+8, (vo->g_dec_picture_ptr->direct_mb_info_Addr)>>3,"current info addr");//0x6a0000+//g_dpb_layer[g_curr_slice_ptr->view_id]->fs[img_ptr->DPB_addr_index-17*g_curr_slice_ptr->view_id]->frame->direct_mb_info
+        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR, (vo->g_dec_picture_ptr->imgYAddr)>>3,"current Y addr");
+        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+4, (vo->g_dec_picture_ptr->imgUAddr)>>3,"current UV addr");
+        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+8, (vo->g_dec_picture_ptr->direct_mb_info_Addr)>>3,"current info addr");
 
-        for(i = 0; i < img_ptr->num_ref_idx_l0_active; i++) //16
+        for(i = 0; i < img_ptr->num_ref_idx_l0_active; i++)
         {
             pframe = vo->g_list0[i];
-            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x80+i*4,(pframe->imgYAddr)>>3,"ref L0 Y addr");//g_dpb_layer[0]->fs[g_list0_map_addr[i]]->frame->imgYAddr
-            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x100+i*4,(pframe->imgUAddr)>>3,"ref L0 UV addr");//0x480000+
-            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x180+i*4,(pframe->direct_mb_info_Addr)>>3,"ref L0 info addr");//0x6a0000+
+            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x80+i*4, (pframe->imgYAddr)>>3, "ref L0 Y addr");//g_dpb_layer[0]->fs[g_list0_map_addr[i]]->frame->imgYAddr
+            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x100+i*4, (pframe->imgUAddr)>>3, "ref L0 UV addr");//0x480000+
+            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x180+i*4, (pframe->direct_mb_info_Addr)>>3, "ref L0 info addr");//0x6a0000+
         }
 
         for(i = 0; i < img_ptr->num_ref_idx_l1_active; i++) //16
         {
             //pframe = dpb_ptr->fs[g_list1_map_addr[i]]->frame;
             pframe = vo->g_list1[i];
-            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0xc0+i*4,(pframe->imgYAddr)>>3,"ref L1 Y addr");
-            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x140+i*4,(pframe->imgUAddr)>>3,"ref L1 UV addr");//0x480000+
-            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x1c0+i*4,(pframe->direct_mb_info_Addr)>>3,"ref L1 info addr");//0x6a0000+
+            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0xc0+i*4, (pframe->imgYAddr)>>3, "ref L1 Y addr");
+            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x140+i*4, (pframe->imgUAddr)>>3, "ref L1 UV addr");//0x480000+
+            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x1c0+i*4, (pframe->direct_mb_info_Addr)>>3, "ref L1 info addr");//0x6a0000+
         }
 
         ret = H264Dec_decode_one_slice_data (vo, dec_output_ptr);
@@ -864,10 +864,9 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
     if (vo->error_flag)
     {
         return MMDEC_ERROR;
-    } else
-    {
-        return MMDEC_OK;
     }
+
+    return MMDEC_OK;
 }
 
 /**---------------------------------------------------------------------------*

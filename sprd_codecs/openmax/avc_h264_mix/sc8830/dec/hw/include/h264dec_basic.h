@@ -95,11 +95,6 @@ typedef enum {
 }
 ProfileIDC;
 
-//error id, added by xiaowei, 20130910
-#define ER_SREAM_ID   		(1<<0)
-#define ER_MEMORY_ID  		(1<<1)
-#define ER_REF_FRM_ID   	(1<<2)
-#define ER_HW_ID                        (1<<3)
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

@@ -568,11 +568,11 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
             init_mvc_picture(vo);//g_curr_slice_ptr);
     }
 #endif
+
     {
         int32 i;
         int32 size_y = vo->width * vo->height;
         dec_picture_ptr->pBufferHeader= vo->g_rec_buf.pBufferHeader;
-
 
         dec_picture_ptr->imgY = vo->g_rec_buf.imgY;
         dec_picture_ptr->imgU = dec_picture_ptr->imgY + size_y;
@@ -581,9 +581,6 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
         dec_picture_ptr->imgUAddr = dec_picture_ptr->imgYAddr + size_y;
         dec_picture_ptr->mPicId = vo->g_rec_buf.mPicId;
         SCI_TRACE_LOW("%s, %d, dec_picture_ptr->mPicId: %d, imgY: %0x", __FUNCTION__, __LINE__, dec_picture_ptr->mPicId, vo->g_rec_buf.imgY);
-
-//	dec_picture_ptr->direct_mb_info_Addr = dec_picture_ptr->imgUAddr + (size_y >>1);
-
     }
 
     return;

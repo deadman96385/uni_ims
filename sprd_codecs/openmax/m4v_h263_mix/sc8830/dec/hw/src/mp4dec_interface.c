@@ -232,12 +232,14 @@ PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_fo
             {
                 return MMDEC_HW_ERROR;
             }
-            SCI_TRACE_LOW("%s, %d.", __FUNCTION__, __LINE__);
 
             VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL: software access.");
             VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_MODE_OFF, STREAM_ID_MPEG4,"VSP_MODE");
 
-            VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
+            if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
+            {
+                return MMDEC_HW_ERROR;
+            }
             VSP_WRITE_REG(GLB_REG_BASE_ADDR + BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
             VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (V_BIT_2 | V_BIT_1), "BSM_OP clr BSM");//clr BSM
 
@@ -286,7 +288,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         return MMDEC_OK;
     }
 
-    vop_mode_ptr->error_flag = FALSE;
+    vo->error_flag = 0;
     mp4Handle->g_mpeg4_dec_err_flag = 0;
 
     if(!Mp4Dec_GetCurRecFrameBfr(vo))
@@ -300,18 +302,23 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     if(ARM_VSP_RST(vo) < 0)
     {
         ret = MMDEC_HW_ERROR;
-
-        goto DECODER_DONE;
+        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_1;
+        goto DEC_EXIT;
     }
 
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL: software access.");
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_MODE_OFF, vop_mode_ptr->video_std,"VSP_MODE");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0, "RAM_ACC_SEL: software access.");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_MODE_OFF, vop_mode_ptr->video_std, "VSP_MODE");
 
     // Bitstream.
     bs_start_addr=((uint32)dec_input_ptr->pStream_phy);	// bistream start address
     bs_buffer_length= dec_input_ptr->dataLen;//bitstream length .
 
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
+    {
+        ret = MMDEC_HW_ERROR;
+        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_2;
+        goto DEC_EXIT;
+    }
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, 0x6,"BSM_OP clr BSM");//clr BSM
 
@@ -321,8 +328,9 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     ret = Mp4Dec_VerifyBitstrm(vo,dec_input_ptr->pStream, dec_input_ptr->dataLen);
     if(ret != MMDEC_OK)
     {
-        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_6;
-        goto DECODER_DONE;
+        ret = MMDEC_STREAM_ERROR;
+        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_3;
+        goto DEC_EXIT;
     }
 
     if(STREAM_ID_H263 == vop_mode_ptr->video_std)
@@ -336,7 +344,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         {
             dec_output_ptr->VopPredType = NVOP;
             ret = MMDEC_OK;
-            goto DECODER_DONE;
+            goto DEC_EXIT;
         }
     } else
     {
@@ -346,7 +354,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     if(ret != MMDEC_OK)
     {
         //modified by xwluo, 20100511
-        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_1;
+        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_4;
 
         if (vop_mode_ptr->VopPredType == BVOP)
         {
@@ -355,7 +363,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
             ret = MMDEC_OK;
         }
 
-        goto DECODER_DONE;
+        goto DEC_EXIT;
     }
 
 #if 0	//removed for bug211978, seek with fake IVOP
@@ -365,14 +373,14 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         {
             vo->g_nFrame_dec++;
         }
-        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_2;
+        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_5;
         ret = MMDEC_FRAME_SEEK_IVOP;
 
-        goto DECODER_DONE;
+        goto DEC_EXIT;
     }
 #endif
 
-    dec_output_ptr->frameEffective = FALSE;//weihu
+    dec_output_ptr->frameEffective = FALSE;
     dec_output_ptr->pOutFrameY = PNULL;
     dec_output_ptr->pOutFrameU = PNULL;
     dec_output_ptr->pOutFrameV = PNULL;
@@ -381,6 +389,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     {
         if( MMDEC_OK != Mp4Dec_InitSessionDecode(vo) )
         {
+            mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_6;
             ret = MMDEC_MEMORY_ERROR;
         } else
         {
@@ -388,7 +397,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
             ret = MMDEC_MEMORY_ALLOCED;
         }
 
-        goto DECODER_DONE;
+        goto DEC_EXIT;
     }
 
     if(vop_mode_ptr->VopPredType != NVOP)
@@ -399,15 +408,14 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
             dec_output_ptr->VopPredType = NVOP;
             ret= MMDEC_OK;
 
-            goto DECODER_DONE;
+            goto DEC_EXIT;
         }
 
         if(!Mp4Dec_GetCurRecFrameBfr(vo))
         {
-            mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_4;
+            mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_7;
             ret = MMDEC_OUTPUT_BUFFER_OVERFLOW;
-
-            goto DECODER_DONE;
+            goto DEC_EXIT;
         }
 
         if (vop_mode_ptr->post_filter_en)
@@ -416,10 +424,9 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
             {
                 if(!Mp4Dec_GetCurDispFrameBfr(vo))
                 {
-                    mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_5;
+                    mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_8;
                     ret = MMDEC_OUTPUT_BUFFER_OVERFLOW;
-
-                    goto DECODER_DONE;
+                    goto DEC_EXIT;
                 }
             }
         } else //for fpga verification
@@ -429,7 +436,12 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     } else //NVOP
     {
         uint32 BitConsumed,ByteConsumed;
-        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001, TIME_OUT_CLK, "BSM_rdy");
+        if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "BSM_rdy"))
+        {
+            mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_9;
+            ret = MMDEC_HW_ERROR;
+            goto DEC_EXIT;
+        }
         BitConsumed = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF, "Read out BitConsumed. ") ;
         ByteConsumed = (BitConsumed + 7) >>3;
 
@@ -443,19 +455,24 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
 
         dec_output_ptr->VopPredType = NVOP;
 
-        SCI_TRACE_LOW ("frame not coded!\n");
+        SCI_TRACE_LOW ("frame not coded!");
         ret = MMDEC_OK;
 
-        goto DECODER_DONE;
+        goto DEC_EXIT;
     }
 
-    Mp4Dec_InitVop(vo, dec_input_ptr);
+    if (Mp4Dec_InitVop(vo, dec_input_ptr) != MMDEC_OK)
+    {
+        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_10;
+        ret = MMDEC_ERROR;
+        goto DEC_EXIT;
+    }
 
     if(Mp4Dec_decode_vop(vo) != MMDEC_OK)
     {
-        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_7;
+        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_11;
         ret = MMDEC_STREAM_ERROR;
-        goto DECODER_DONE;
+        goto DEC_EXIT;
     }
 
     Mp4Dec_output_one_frame (vo, dec_output_ptr);
@@ -464,9 +481,13 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     vop_mode_ptr->pre_vop_type = vop_mode_ptr->VopPredType;
     vo->g_nFrame_dec++;
 
-DECODER_DONE:
-    VSP_RELEASE_Dev((VSPObject *)vo);
-    SCI_TRACE_LOW("%s : error flag is 0x%x.", __FUNCTION__,mp4Handle->g_mpeg4_dec_err_flag );
+DEC_EXIT:
+
+    SCI_TRACE_LOW("%s, exit decoder,  error flag: 0x%x.", __FUNCTION__, mp4Handle->g_mpeg4_dec_err_flag);
+    if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
+    {
+        return MMENC_HW_ERROR;
+    }
 
     return ret;
 }

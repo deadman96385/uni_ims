@@ -88,26 +88,33 @@ PUBLIC MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *dec_input_ptr, MM
 
     if(ARM_VSP_RST((VSPObject *)vo)<0)
     {
-        return MMDEC_HW_ERROR;
+        ret = MMDEC_HW_ERROR;
+        goto DEC_EXIT;
     }
-
-//    SCI_TRACE_LOW("pBufferHeader %x,pOutFrameY %x,frame_width %d,frame_height %d", dec_output_ptr->pBufferHeader, dec_output_ptr->pOutFrameY, dec_output_ptr->frame_width,dec_output_ptr->frame_height );
 
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL: software access.");
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF, (V_BIT_6 | STREAM_ID_VP8),"VSP_MODE");
 
+    dec_output_ptr->frameEffective = FALSE;
+
     // Bitstream.
     bs_start_addr=((uint32)dec_input_ptr->pStream_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
     bs_buffer_length=dec_input_ptr->dataLen;
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "BSM_clr enable");//check bsm is idle
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
+    {
+        ret = MMDEC_HW_ERROR;
+        goto DEC_EXIT;
+    }
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (V_BIT_2 | V_BIT_1), "BSM_OP clr BSM");//clr BSM
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_CFG1_OFF, 0, "BSM_cfg1 stream buffer offset & destuff disable");//point to the start of NALU.
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_CFG0_OFF, (V_BIT_31|((bs_buffer_length+128)&0xfffffffc)), "BSM_cfg0 stream buffer size");// BSM load data. Add 16 DW for BSM fifo loading.
 
-    ret = vp8dx_receive_compressed_data(vo,  bs_buffer_length,(uint8 *)dec_input_ptr->pStream , 0);
-    SCI_TRACE_LOW("%s, %d, ret is %d",__FUNCTION__, __LINE__, ret);
-
+    ret = vp8dx_receive_compressed_data(vo,  bs_buffer_length, (uint8 *)dec_input_ptr->pStream , 0);
+    if (ret != MMDEC_OK)
+    {
+        goto DEC_EXIT;
+    }
     dec_output_ptr->frameEffective = (cm->show_frame && (ret ==MMDEC_OK ) );
     dec_output_ptr->frame_width =  (((cm->Width+ 15)>>4)<<4);
     dec_output_ptr->frame_height = (((cm->Height+ 15)>>4)<<4);
@@ -119,12 +126,15 @@ PUBLIC MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *dec_input_ptr, MM
         dec_output_ptr->pOutFrameU = (uint8 *)(cm->frame_to_show->u_buffer_virtual);
     }
 
+DEC_EXIT:
+
+    SCI_TRACE_LOW("%s,  exit decoder, error flag: 0x%x", __FUNCTION__, vo->error_flag);
+
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
         return MMENC_HW_ERROR;
     }
 
-    // Return output.
     return ret;
 }
 

@@ -32,7 +32,10 @@ extern   "C"
  *****************************************************************************/
 uint32 Mp4Enc_OutputBits(Mp4EncObject*vo, uint32 val, uint32 nbits)
 {
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY");
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY") < 0)
+    {
+        return 0;
+    }
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (nbits&0x3f) << 24, "BSM_OPERATE: Set OPT_BITS");
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_WDATA_OFF, val, "BSM_WDATA");
 

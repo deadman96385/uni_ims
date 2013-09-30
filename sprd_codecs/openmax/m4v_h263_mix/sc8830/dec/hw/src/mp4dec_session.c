@@ -99,7 +99,7 @@ PUBLIC MMDecRet Mp4Dec_InitGlobal (Mp4DecObject *vo)
     vo->g_dec_is_changed_format = FALSE;
     vo->g_dec_pre_vop_format = IVOP;
     vo->is_need_init_vsp_quant_tab= FALSE;
-    vop_mode_ptr->error_flag = FALSE;
+    vo->error_flag = 0;
 
     //for H263 plus header
     vo->g_h263_plus_head_info_ptr = (H263_PLUS_HEAD_INFO_T *)Mp4Dec_MemAlloc(vo, sizeof(H263_PLUS_HEAD_INFO_T), 8, INTER_MEM);
@@ -202,7 +202,7 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
         CHECK_MALLOC(vop_mode_ptr->data_partition_buffer_ptr, "vop_mode_ptr->data_partition_buffer_ptr");
         vop_mode_ptr->data_partition_buffer_Addr = (uint32)Mp4Dec_MemV2P(vo, vop_mode_ptr->data_partition_buffer_ptr, HW_NO_CACHABLE);
     }
-    
+
     /*for B frame support*/
     vop_mode_ptr->time = vop_mode_ptr->time_base = vop_mode_ptr->last_time_base = 0;
     vop_mode_ptr->last_non_b_time = 0;

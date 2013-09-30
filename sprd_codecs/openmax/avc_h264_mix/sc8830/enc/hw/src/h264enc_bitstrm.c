@@ -40,7 +40,10 @@ PUBLIC int32 write_ue_v(H264EncObject *vo, uint32 val)
 {
     if (val == 0)
     {
-        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY");
+        if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY"))
+        {
+            return -1;
+        }
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (1&0x3f) << 24, "BSM_OPERATE: Set OPT_BITS");
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_WDATA_OFF, 1, "BSM_WDATA");
     } else
@@ -62,7 +65,10 @@ PUBLIC int32 write_ue_v(H264EncObject *vo, uint32 val)
 
         i_size += i_size0_255[tmp];
 
-        VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY");
+        if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY"))
+        {
+            return -1;
+        }
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, ((2*i_size-1)&0x3f) << 24, "BSM_OPERATE: Set OPT_BITS");
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_WDATA_OFF, val, "BSM_WDATA");
     }
@@ -78,7 +84,10 @@ PUBLIC int32 write_ue_v(H264EncObject *vo, uint32 val)
  *****************************************************************************/
 uint32 H264Enc_OutputBits(H264EncObject *vo, uint32 val, uint32 nbits)
 {
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY");
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY"))
+    {
+        return 0;
+    }
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, (nbits&0x3f) << 24, "BSM_OPERATE: Set OPT_BITS");
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_WDATA_OFF, val, "BSM_WDATA");
 

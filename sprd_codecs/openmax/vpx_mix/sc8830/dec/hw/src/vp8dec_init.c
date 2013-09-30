@@ -210,7 +210,10 @@ uint32 BitstreamReadBits (VPXDecObject *vo, uint32 nbits)
 {
     uint32 cmd;
 
-    VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY");
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_RDY_OFF, V_BIT_0, V_BIT_0, TIME_OUT_CLK, "Polling BSM_RDY"))
+    {
+        return 0;
+    }
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_OP_OFF, ((nbits)&0x3f)<<24, "BSM_OPERATE: Set OPT_BITS");
 
     cmd = (uint32)VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + BSM_RDATA_OFF, "BSM_RDATA");
