@@ -32,11 +32,13 @@
             android:text="@string/timer" />
     </LinearLayout>
 
-    <LinearLayout
+        <LinearLayout
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="15dp" >
+        android:padding="15dp"
+	android:visibility="gone"
+	 >
 
         <Button
             android:id="@+id/button2"

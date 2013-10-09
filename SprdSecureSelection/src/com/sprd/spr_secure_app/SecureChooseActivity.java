@@ -28,7 +28,8 @@ public class SecureChooseActivity extends Activity {
 				break;
 			case 1:
 				// set default value
-				SystemProperties.set(SECURE_PROPERTY, "0");
+				String val = SystemProperties.get(SECURE_PROPERTY, "0");
+				Log.v(tag, "current "+SECURE_PROPERTY +" value is " + val);
 				// over the activity
 				Log.d(tag, "close the activity!");
 				finish();
@@ -59,7 +60,7 @@ public class SecureChooseActivity extends Activity {
 			@Override
 			public void run() {
 				// TODO Auto-generated method stub
-				int timeCount = 12;
+				int timeCount = 10;
 				int count = 0;
 				while (count <timeCount) {
 					count++;
