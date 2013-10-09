@@ -16,7 +16,7 @@ public class SecureChooseActivity extends Activity {
 	Button BtnNOK;
 	private TextView timer;
 	private String SECURE_PROPERTY = "persist.sys.secure.selected";
-	private String tag;
+	private String tag = this.getClass().getName();
 	private Handler handler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
