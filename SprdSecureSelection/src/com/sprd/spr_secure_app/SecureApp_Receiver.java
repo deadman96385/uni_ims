@@ -1,4 +1,4 @@
-package com.example.spr_secure_app;
+package com.sprd.spr_secure_app;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -18,7 +18,7 @@ public class SecureApp_Receiver extends BroadcastReceiver{
 		Log.d(TAG, "onReceive actino = " + intent.getAction());
 		String action = intent.getAction();
 		if(action.equals("ACTION_SPR_SECURE_CHOOSE")){
-			Intent intent1 = new Intent("com.example.spr_secure_app.SecureChooseActivity");
+			Intent intent1 = new Intent("com.sprd.spr_secure_app.SecureChooseActivity");
 			context.sendBroadcast(intent1);
 		}
 	}

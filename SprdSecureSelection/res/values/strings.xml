@@ -3,7 +3,8 @@
 
     <string name="app_name">SecuritySelect</string>
     <string name="action_settings">Settings</string>
-    <string name="hello_world">The terminal supports system interface for application access or open a data connection, which may affect the security of user information related to the mechanism of the conduct prompt, please confirm if you need to turn on this feature. If you open some applications may affect user experience, please know</string>
+    <string name="hello_world">This terminal supports system interface for application access or open a data connection, which may affect the security of user information related to the mechanism of the conduct prompt,If you open some applications may affect user experience, if needed please set it on or off on security ability application.</string>
+    <string name="timer">Time Left:</string>
     <string name="No">No</string>
     <string name="Yes">Yes</string>
 </resources>
