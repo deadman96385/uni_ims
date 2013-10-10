@@ -107,6 +107,9 @@ MMEncRet MP4EncSetConf(MP4Handle *mp4Handle, MMEncConfig *pConf)
     vop_mode_ptr->targetBitRate		= pConf->targetBitRate;
     vop_mode_ptr->RateCtrlEnable		= pConf->RateCtrlEnable;
 
+    SCI_TRACE_LOW("%s, %d, vop_mode_ptr->FrameRate: %d, vop_mode_ptr->targetBitRate: %d, vop_mode_ptr->RateCtrlEnable: %d", 
+        __FUNCTION__, __LINE__, vop_mode_ptr->FrameRate, vop_mode_ptr->targetBitRate, vop_mode_ptr->RateCtrlEnable);
+
     vop_mode_ptr->StepI				= pConf->QP_IVOP;
     vop_mode_ptr->StepP				= pConf->QP_PVOP;
 
