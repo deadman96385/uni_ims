@@ -721,6 +721,7 @@ error:
             if (err < 0) goto error1;
             if (errNum == 70 || errNum == 3) {
                 RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
+                at_response_free(p_response);
                 return;
             }
         }
@@ -815,6 +816,7 @@ error:
                     setRadioState(channelID, RADIO_STATE_SIM_LOCKED_OR_ABSENT);
                 } else if (errNum == 70 || errNum == 3) {
                     RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
+                    at_response_free(p_response);
                     return;
                 }
             }
