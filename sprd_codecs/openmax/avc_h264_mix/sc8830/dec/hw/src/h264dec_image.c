@@ -503,7 +503,7 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
 #if 1   //current decoded picture has been in delayed_pic[]
     if(fs->is_reference == DELAYED_PIC_REF)
     {
-        int32 out_idx;
+        int32 out_idx = 0;
 
         fs->is_reference = 0;
 

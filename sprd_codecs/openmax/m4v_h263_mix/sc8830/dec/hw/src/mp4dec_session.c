@@ -87,9 +87,7 @@ MMDecRet Mp4Dec_InitDecoderPara(Mp4DecObject *vo)
 
 PUBLIC MMDecRet Mp4Dec_InitGlobal (Mp4DecObject *vo)
 {
-    DEC_VOP_MODE_T *vop_mode_ptr = NULL;
-
-    vo->g_dec_vop_mode_ptr = vop_mode_ptr = (DEC_VOP_MODE_T *)Mp4Dec_MemAlloc(vo, sizeof(DEC_VOP_MODE_T), 8, INTER_MEM);
+    vo->g_dec_vop_mode_ptr =  (DEC_VOP_MODE_T *)Mp4Dec_MemAlloc(vo, sizeof(DEC_VOP_MODE_T), 8, INTER_MEM);
     CHECK_MALLOC(vo->g_dec_vop_mode_ptr, "vo->g_dec_vop_mode_ptr");
 
     vo->memory_error = 0;

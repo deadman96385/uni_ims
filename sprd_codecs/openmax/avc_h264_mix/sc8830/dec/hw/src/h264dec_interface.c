@@ -31,18 +31,18 @@ PUBLIC void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
 
     SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
 
-    if (dpb_ptr)
+    if (dpb_ptr != NULL)
     {
         H264Dec_clear_delayed_buffer(vo);
         H264Dec_flush_dpb(vo, dpb_ptr);
-    }
 
-    for (i = 0; i <  (MAX_REF_FRAME_NUMBER+1); i++)
-    {
-        if (dpb_ptr->fs &&dpb_ptr->fs[i] && dpb_ptr->fs[i]->frame && dpb_ptr->fs[i]->frame->pBufferHeader)
+        for (i = 0; i <  (MAX_REF_FRAME_NUMBER+1); i++)
         {
-            (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,dpb_ptr->fs[i]->frame->pBufferHeader);
-            dpb_ptr->fs[i]->frame->pBufferHeader = NULL;
+            if (dpb_ptr->fs &&dpb_ptr->fs[i] && dpb_ptr->fs[i]->frame && dpb_ptr->fs[i]->frame->pBufferHeader)
+            {
+                (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,dpb_ptr->fs[i]->frame->pBufferHeader);
+                dpb_ptr->fs[i]->frame->pBufferHeader = NULL;
+            }
         }
     }
 }
@@ -137,12 +137,9 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideoFormat * pVideoFormat)
 {
     H264DecObject*vo;
-    MMDecRet ret;
+    MMDecRet ret = MMDEC_OK;
 
     SCI_TRACE_LOW("libomx_avcdec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
-
-    SCI_ASSERT(NULL != buffer_ptr);
-    SCI_ASSERT(NULL != pVideoFormat);
 
     CHECK_MALLOC(pVideoFormat, "pVideoFormat");
     CHECK_MALLOC(buffer_ptr, "buffer_ptr");
@@ -158,7 +155,7 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
     buffer_ptr->size -= sizeof(H264DecObject);
 
     ret = H264Dec_InitInterMem (vo, buffer_ptr);
-    if (ret != MMENC_OK)
+    if (ret != MMDEC_OK)
     {
         return ret;
     }
@@ -173,23 +170,22 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
         return ret;
     }
 
-    // Physical memory as internal memory.
     ret = H264Dec_init_global_para (vo);
-    if (ret != MMENC_OK)
+    if (ret != MMDEC_OK)
     {
         return ret;
     }
 
     if (vo->error_flag)
     {
-        return MMDEC_ERROR;
+        ret = MMDEC_ERROR;
     }
-    return MMDEC_OK;
+    return ret;
 }
 
 PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, MMDecOutput *dec_output_ptr)
 {
-    MMDecRet ret;
+    MMDecRet ret = MMDEC_OK;
     int32 i;
     uint32 bs_buffer_length, bs_start_addr, destuffing_num;
     H264DecObject *vo = (H264DecObject *) avcHandle->videoDecoderData;
@@ -217,10 +213,10 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
     vo->is_need_init_vsp_hufftab = TRUE;
 
     // Bitstream.
-    bs_start_addr=((uint32)dec_input_ptr->pStream_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
-    bs_buffer_length=dec_input_ptr->dataLen;
+    bs_start_addr = ((uint32)dec_input_ptr->pStream_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
+    bs_buffer_length = dec_input_ptr->dataLen;
     vo->pStream = dec_input_ptr->pStream;
-    vo->g_stream_offset=0;
+    vo->g_stream_offset = 0;
 
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
     {
@@ -315,7 +311,12 @@ DEC_EXIT:
     SCI_TRACE_LOW("%s, %d, exit decoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
-        return MMENC_HW_ERROR;
+        return MMDEC_HW_ERROR;
+    }
+
+    if (vo->error_flag & ER_HW_ID)
+    {
+        ret = MMDEC_HW_ERROR;
     }
 
     return ret;
