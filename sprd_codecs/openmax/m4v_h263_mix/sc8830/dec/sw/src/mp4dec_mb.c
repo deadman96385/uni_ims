@@ -296,8 +296,6 @@ PUBLIC void Mp4Dec_DecInterMBTexture_DP(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MOD
 
         if (mb_mode_ptr->CBP)	//has resi coeff
         {
-            Mp4Dec_DecInterMBTexture(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);
-
             pDstFrameY = mb_cache_ptr->pMBBfrY;
             pDstFrameU = mb_cache_ptr->pMBBfrU;
             pDstFrameV = mb_cache_ptr->pMBBfrV;
@@ -355,6 +353,11 @@ PUBLIC void Mp4Dec_DecInterMBTexture_DP(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MOD
         }
 
         Mp4Dec_motionCompensationUV(vop_mode_ptr,  mvc_x, mvc_y, pDstFrameU, pDstFrameV,dst_width/2, 1);
+
+        if (mb_mode_ptr->CBP)	//has resi coeff
+        {
+            Mp4Dec_DecInterMBTexture(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);
+        }
     }
 }
 
