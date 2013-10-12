@@ -48,7 +48,6 @@ void mc_xhalfyfull_8x8_rnd1 (uint8 *pframe_ref, uint8 *pRecMB, int32 width, int3
 void mc_xyhalf_8x8_rnd1 (uint8 *pframe_ref, uint8 *pRecMB, int32 width, int32 dstWidth);
 
 void Mp4Dec_MCOneMbBVOP(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode_ptr);
-void Mp4Dec_StartMcaOneDir(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_BFR_T *mb_cache_ptr, MOTION_VECTOR_T *pMv);
 void Mp4Dec_MCA_BVOP(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode_ptr, MOTION_VECTOR_T *pFwdPredMv,
                      MOTION_VECTOR_T *pBckPredMv, MOTION_VECTOR_T *pCoMv);
 //void Mp4Dec_MCA_BVOP(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode_ptr, MOTION_VECTOR_T *pFwdPredMv,

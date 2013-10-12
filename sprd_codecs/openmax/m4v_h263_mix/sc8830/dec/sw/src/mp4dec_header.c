@@ -70,6 +70,30 @@ PUBLIC MMDecRet Mp4Dec_DecGobHeader(DEC_VOP_MODE_T *vop_mode_ptr)
             vop_mode_ptr->StepSize = IClip(1, 31, vop_mode_ptr->StepSize);//, "quant_scale"
 
             mb_num = vop_mode_ptr->mb_y * vop_mode_ptr->MBNumX;
+
+            //for vt
+            {
+                //set skipped MB "NOT DECODED" status, for EC later
+                if ((mb_num -1) < vop_mode_ptr->mbnumDec)
+                {
+                    int32 mb_pos;
+                    for (mb_pos = mb_num; mb_pos < vop_mode_ptr->mbnumDec; mb_pos++)
+                    {
+                        vop_mode_ptr->mbdec_stat_ptr[mb_pos] = NOT_DECODED;
+                    }
+                    vop_mode_ptr->error_flag = TRUE;
+                    vop_mode_ptr->err_MB_num += (vop_mode_ptr->mbnumDec - mb_num);
+                    vop_mode_ptr->return_pos |= (1<<17);
+                    return MMDEC_STREAM_ERROR;
+                } else if ((mb_num -1) > vop_mode_ptr->mbnumDec)
+                {
+                    int32 mb_pos;
+                    for (mb_pos = vop_mode_ptr->mbnumDec; mb_pos < mb_num; mb_pos++)
+                    {
+                        vop_mode_ptr->mbdec_stat_ptr[mb_pos] = NOT_DECODED;
+                    }
+                }
+            }
             vop_mode_ptr->mbnumDec = mb_num;
             vop_mode_ptr->mb_y	   = mb_num / vop_mode_ptr->MBNumX;
             vop_mode_ptr->mb_x	   = mb_num - vop_mode_ptr->mb_y * vop_mode_ptr->MBNumX;
@@ -1575,6 +1599,35 @@ PUBLIC MMDecRet Mp4Dec_GetVideoPacketHeader(DEC_VOP_MODE_T *vop_mode_ptr, uint32
             pMvInfo->FCode = (uint8)Mp4Dec_ReadBits(bitstrm_ptr, 3);//"vop_fcode_backward"
             pMvInfo->ScaleFactor = 1 << (pMvInfo->FCode - 1);
             pMvInfo->Range = 16 << (pMvInfo->FCode);
+        }
+    }
+
+    //for vt
+    {
+        if (vop_mode_ptr->err_left > 0)
+        {
+            Mp4Dec_UpdateErrInfo (vop_mode_ptr);
+        }
+
+        //set skipped MB "NOT DECODED" status, for EC later
+        if (mb_num < vop_mode_ptr->mbnumDec)
+        {
+            int32 mb_pos;
+            for (mb_pos = mb_num; mb_pos < vop_mode_ptr->mbnumDec; mb_pos++)
+            {
+                vop_mode_ptr->mbdec_stat_ptr[mb_pos] = NOT_DECODED;
+            }
+            vop_mode_ptr->error_flag = TRUE;
+            vop_mode_ptr->err_MB_num += (vop_mode_ptr->mbnumDec - mb_num);
+            vop_mode_ptr->return_pos2 |= (1<<3);
+            return MMDEC_STREAM_ERROR;
+        } else
+        {
+            int32 mb_pos;
+            for (mb_pos = vop_mode_ptr->mbnumDec; mb_pos < mb_num; mb_pos++)
+            {
+                vop_mode_ptr->mbdec_stat_ptr[mb_pos] = NOT_DECODED;
+            }
         }
     }
 

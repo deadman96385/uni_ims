@@ -58,13 +58,13 @@ MMDecRet Mp4Dec_InitDecoderPara(Mp4DecObject *vo)
 
     vop_mode_ptr->pCurDispFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vo, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
     CHECK_MALLOC(vop_mode_ptr->pCurDispFrame, "vop_mode_ptr->pCurDispFrame");
-    
+
     vop_mode_ptr->pCurRecFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vo, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
     CHECK_MALLOC(vop_mode_ptr->pCurRecFrame, "vop_mode_ptr->pCurRecFrame");
-    
+
     vop_mode_ptr->pBckRefFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vo, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
     CHECK_MALLOC(vop_mode_ptr->pBckRefFrame, "vop_mode_ptr->pBckRefFrame");
-    
+
     vop_mode_ptr->pFrdRefFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vo, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
     CHECK_MALLOC(vop_mode_ptr->pFrdRefFrame, "vop_mode_ptr->pFrdRefFrame");
 
@@ -183,7 +183,7 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     vop_mode_ptr->FrameHeight = (int16)(mb_num_y <<4);
 
     vop_mode_ptr->FrameExtendWidth  = vop_mode_ptr->FrameWidth  + 2 * YEXTENTION_SIZE;
-    vop_mode_ptr->FrameExtendHeigth = vop_mode_ptr->FrameHeight + 2 * YEXTENTION_SIZE;
+    vop_mode_ptr->FrameExtendHeight = vop_mode_ptr->FrameHeight + 2 * YEXTENTION_SIZE;
 
     vop_mode_ptr->iStartInFrameY = vop_mode_ptr->FrameExtendWidth * YEXTENTION_SIZE + YEXTENTION_SIZE;
     vop_mode_ptr->iStartInFrameUV = (vop_mode_ptr->FrameExtendWidth >>1) * UVEXTENTION_SIZE + UVEXTENTION_SIZE;
@@ -193,13 +193,16 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
         SCI_TRACE_LOW("%s, %d, extra memory is not enough", __FUNCTION__, __LINE__);
         return MMDEC_MEMORY_ERROR;
     }
-    
+
     /*MB mode for a frame*/
     vop_mode_ptr->pMbMode = (DEC_MB_MODE_T *)Mp4Dec_MemAlloc(vo, sizeof(DEC_MB_MODE_T) * total_mb_num, 4, SW_CACHABLE);
     CHECK_MALLOC(vop_mode_ptr->pMbMode, "vop_mode_ptr->pMbMode");
 
     vop_mode_ptr->pMbMode_prev = (DEC_MB_MODE_T *)Mp4Dec_MemAlloc(vo, sizeof(DEC_MB_MODE_T) * total_mb_num, 4, SW_CACHABLE);
     CHECK_MALLOC(vop_mode_ptr->pMbMode_prev, "vop_mode_ptr->pMbMode_prev");
+
+    vop_mode_ptr->mbdec_stat_ptr = (uint8 *)Mp4Dec_MemAlloc (vo, total_mb_num * sizeof(uint8), 4, SW_CACHABLE);
+    CHECK_MALLOC(vop_mode_ptr->mbdec_stat_ptr, "vop_mode_ptr->mbdec_stat_ptr");
 
 #ifdef _MP4CODEC_DATA_PARTITION_
     if (vop_mode_ptr->bDataPartitioning)

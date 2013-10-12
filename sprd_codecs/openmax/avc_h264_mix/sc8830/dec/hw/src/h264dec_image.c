@@ -474,6 +474,8 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
 
     if ((img_ptr->frame_num != img_ptr->pre_frame_num) && (img_ptr->frame_num != H264Dec_Divide((img_ptr->pre_frame_num+1), img_ptr->max_frame_num)))
     {
+        SCI_TRACE_LOW("%s, %d, (img_ptr->frame_num != img_ptr->pre_frame_num)", __FUNCTION__, __LINE__);
+
         if (vo->g_active_sps_ptr->gaps_in_frame_num_value_allowed_flag == 0)
         {
             /*advanced error concealment would be called here to combat unitentional loss of pictures*/

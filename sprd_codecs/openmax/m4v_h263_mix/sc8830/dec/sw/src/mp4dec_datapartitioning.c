@@ -492,6 +492,34 @@ void Mp4Dec_DecSecondPartitionIntraErrRes(DEC_VOP_MODE_T *vop_mode_ptr, int32 st
 
         Mp4Dec_DecIntraMBTexture(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);
 
+        if(!vop_mode_ptr->error_flag)
+        {
+            vop_mode_ptr->err_MB_num--;
+            vop_mode_ptr->mbdec_stat_ptr[mb_num] = DECODED_NOT_IN_ERR_PKT;
+
+#if 1
+            if (vop_mode_ptr->err_left != 0)
+            {
+                int32 mb_end_pos;
+                int32 err_start_pos;
+
+                /*determine whether the mb is located in error domain*/
+                mb_end_pos = (vop_mode_ptr->bitstrm_ptr->bitcnt + 7) / 8;
+
+                err_start_pos = vop_mode_ptr->err_pos_ptr[0].start_pos;
+
+                if (mb_end_pos >= err_start_pos)
+                {
+                    vop_mode_ptr->mbdec_stat_ptr[mb_num] = DECODED_IN_ERR_PKT;
+                }
+            }
+#endif
+        } else
+        {
+            vop_mode_ptr->mbdec_stat_ptr[mb_num] = NOT_DECODED;
+            PRINTF ("decode intra mb coeff error!\n");
+        }
+
         mb_num++;
     }
 }
@@ -592,6 +620,33 @@ void Mp4Dec_DecSecondPartitionInterErrRes(DEC_VOP_MODE_T *vop_mode_ptr, int32 st
         } else
         {
             Mp4Dec_DecInterMBTexture_DP(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);
+        }
+
+        if(!vop_mode_ptr->error_flag)
+        {
+            int32 mb_end_pos;
+            int32 err_start_pos;
+
+            vop_mode_ptr->err_MB_num--;
+            vop_mode_ptr->mbdec_stat_ptr[mb_num] = DECODED_NOT_IN_ERR_PKT;
+#if 1
+            if (vop_mode_ptr->err_left != 0)
+            {
+                /*determine whether the mb is located in error domain*/
+                mb_end_pos = (vop_mode_ptr->bitstrm_ptr->bitcnt + 7) / 8;
+
+                err_start_pos = vop_mode_ptr->err_pos_ptr[0].start_pos;
+
+                if (mb_end_pos >= err_start_pos)
+                {
+                    vop_mode_ptr->mbdec_stat_ptr[mb_num] = DECODED_IN_ERR_PKT;
+                }
+            }
+#endif
+        } else
+        {
+            vop_mode_ptr->mbdec_stat_ptr[mb_num] = NOT_DECODED;
+            PRINTF ("\ndecode inter mb of pVop error!");
         }
 
         mb_num++;
@@ -813,7 +868,7 @@ static MMDecRet Mp4Dec_ResyncDataPartitioning (DEC_VOP_MODE_T *vop_mode_ptr, int
             return ret;
         }
 
-        //	vop_mode_ptr->VopPredType = IVOP;  //here, set it's original value
+        ret = Mp4Dec_EC_FillMBGap (vop_mode_ptr);
         if (ret != MMDEC_OK)
         {
             return ret;

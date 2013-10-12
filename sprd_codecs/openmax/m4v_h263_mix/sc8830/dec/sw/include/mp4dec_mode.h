@@ -202,7 +202,7 @@ typedef struct dec_vop_mode_tag
     int16 FrameHeight;
     int16 FrameExtendWidth;     //can not add or remove element before "FrameExtendWidth", assembly will access it by address
 
-    int16 FrameExtendHeigth;
+    int16 FrameExtendHeight;
     int16 iStartInFrameY;
 
     int16 iStartInFrameUV;
@@ -390,9 +390,9 @@ typedef struct dec_vop_mode_tag
     MP4_MC_16x16 g_mp4dec_mc_16x16[4];
     MP4_MC_8x8 g_mp4dec_mc_8x8[4];
 
-    BOOLEAN is_expect_IVOP;	
-	int8  srv0;
-	int16 srv1;
+    BOOLEAN is_expect_IVOP;
+    int8  srv0;
+    int16 srv1;
 } DEC_VOP_MODE_T;
 
 typedef struct h263_plus_header_info_tag

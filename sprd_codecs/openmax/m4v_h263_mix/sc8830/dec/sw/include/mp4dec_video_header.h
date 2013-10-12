@@ -61,6 +61,7 @@
 #include "mp4dec_vld.h"
 #include "mp4dec_rvld.h"
 #include "mp4dec_block.h"
+#include "mp4dec_error_handle.h"
 #include "mpeg4dec.h"
 
 #ifndef _VSP_LINUX_

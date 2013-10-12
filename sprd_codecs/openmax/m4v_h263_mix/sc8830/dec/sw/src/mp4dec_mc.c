@@ -447,7 +447,6 @@ PUBLIC void Mp4Dec_MCA_BVOP(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode
         dst_width	= vop_mode_ptr->FrameExtendWidth;
     }
 
-
     switch(mbmode)
     {
     case MODE_DIRECT:
@@ -567,11 +566,7 @@ PUBLIC void Mp4Dec_MCA_BVOP(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode
     default:
         break;
     }
-
 }
-
-
-
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

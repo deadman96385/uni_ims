@@ -22,7 +22,8 @@ LOCAL_SRC_FILES := \
 	src/mp4dec_table.c \
 	src/mp4dec_vld.c \
 	src/mp4dec_vld_neon.s \
-	src/mp4dec_vop.c
+	src/mp4dec_vop.c \
+	src/mp4dec_error_handle.c 
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \

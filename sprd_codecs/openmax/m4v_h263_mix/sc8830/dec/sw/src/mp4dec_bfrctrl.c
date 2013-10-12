@@ -41,7 +41,7 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(Mp4DecObject *vo)
     size_y = vop_mode_ptr->FrameWidth * vop_mode_ptr->FrameHeight;
     size_c = size_y >> 2;
 
-    ext_size_y = vop_mode_ptr->FrameExtendWidth * vop_mode_ptr->FrameExtendHeigth;
+    ext_size_y = vop_mode_ptr->FrameExtendWidth * vop_mode_ptr->FrameExtendHeight;
     ext_size_c = ext_size_y >> 2;
 
     memset(vo->g_FrmYUVBfr,0,sizeof(vo->g_FrmYUVBfr));
@@ -60,13 +60,13 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(Mp4DecObject *vo)
             {
                 pDecFrame->imgU = (uint8 *)Mp4Dec_MemAlloc(vo, 2*(uint32)size_c * sizeof(uint8), 256, SW_CACHABLE);  //uv
                 CHECK_MALLOC(pDecFrame->imgU, "pDecFrame->imgU");
-                
+
                 pDecFrame->imgV = PNULL;
             } else //three plane
             {
                 pDecFrame->imgU = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)size_c * sizeof(uint8), 256, SW_CACHABLE);  //u
                 CHECK_MALLOC(pDecFrame->imgU, "pDecFrame->imgU");
-                
+
                 pDecFrame->imgV = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)size_c * sizeof(uint8), 256, SW_CACHABLE);  //v
                 CHECK_MALLOC(pDecFrame->imgV, "pDecFrame->imgV");
             }
@@ -76,12 +76,17 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(Mp4DecObject *vo)
         {
             pDecFrame->imgYUV[0] = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)ext_size_y * sizeof(uint8), 256, SW_CACHABLE);  //y
             CHECK_MALLOC(pDecFrame->imgYUV[0], "pDecFrame->imgYUV[0]");
-            
+
             pDecFrame->imgYUV[1] = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)ext_size_c * sizeof(uint8), 256, SW_CACHABLE);  //u
             CHECK_MALLOC(pDecFrame->imgYUV[1], "pDecFrame->imgYUV[1]");
-            
+
             pDecFrame->imgYUV[2] = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)(ext_size_c + 8) * sizeof(uint8), 256, SW_CACHABLE);  //v, 8 extra byte for mc loading of V.
             CHECK_MALLOC(pDecFrame->imgYUV[2] , "pDecFrame->imgYUV[2]");
+
+            //modify for bug#212454
+            memset(pDecFrame->imgYUV[0], 128, (uint32)ext_size_y * sizeof(uint8));
+            memset(pDecFrame->imgYUV[1], 128, (uint32)ext_size_c * sizeof(uint8));
+            memset(pDecFrame->imgYUV[2], 128, (uint32)(ext_size_c + 8) * sizeof(uint8));
         }
 
         pDecFrame++;

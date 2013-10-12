@@ -39,7 +39,7 @@ PUBLIC void MP4DecSetReferenceYUV(MP4Handle *mp4Handle, uint8 *pFrameY)
 {
     Mp4DecObject *vo = (Mp4DecObject *) mp4Handle->videoDecoderData;
     DEC_VOP_MODE_T *vop_mode_ptr = vo->vop_mode_ptr;
-    uint32 frame_size = vop_mode_ptr->FrameExtendWidth*vop_mode_ptr->FrameExtendHeigth;
+    uint32 frame_size = vop_mode_ptr->FrameExtendWidth*vop_mode_ptr->FrameExtendHeight;
     DEC_FRM_BFR *pDecFrame;
 
     pDecFrame = vop_mode_ptr->pBckRefFrame->pDecFrame = &vo->g_FrmYUVBfr[1];
@@ -326,8 +326,8 @@ FLV_RE_DEC:
 
         if (ret != MMDEC_OK && vop_mode_ptr->is_expect_IVOP  == TRUE)
         {
-	    	return MMDEC_FRAME_SEEK_IVOP;
-        }		
+            return MMDEC_FRAME_SEEK_IVOP;
+        }
     } else if(SVOP == vop_mode_ptr->VopPredType)
     {
         SCI_TRACE_LOW ("\t S VOP, Don't SUPPORTED!\n");
@@ -349,7 +349,29 @@ FLV_RE_DEC:
         FPRINTF (g_fp_trace_fw, "\nnframe: %d, frame type: BVOP\n", vop_mode_ptr->g_nFrame_dec);
 #endif //_TRACE_	
         vop_mode_ptr->RoundingControl = 0; //Notes: roundingctrol is 0 in B-VOP.
+        vop_mode_ptr->err_MB_num = 0;
         ret = vo->g_Mp4Dec_BVOP(vop_mode_ptr);
+    }
+
+    if(vop_mode_ptr->err_MB_num)
+    {
+        SCI_TRACE_LOW ("MP4DecDecode: Detect error bitstream, try to conceal!\n");
+        if(IVOP == vop_mode_ptr->VopPredType)
+        {
+            Mp4Dec_EC_IVOP(vop_mode_ptr);
+        } else if(PVOP == vop_mode_ptr->VopPredType)
+        {
+            Mp4Dec_EC_PVOP(vop_mode_ptr);
+        }
+
+        //modify for bug#222962
+        if (vop_mode_ptr->FrameWidth != 176 || vop_mode_ptr->FrameHeight != 144)
+        {
+            vop_mode_ptr->FrameWidth = 176;
+            vop_mode_ptr->FrameHeight = 144;
+        }
+
+        ret = MMDEC_OK;
     }
 
     Mp4Dec_output_one_frame (vo, dec_output_ptr);
@@ -384,7 +406,7 @@ MMDecRet MP4DecRelease(MP4Handle *mp4Handle)
     Mp4DecObject *vo = mp4Handle->videoDecoderData;
 
     MP4DecReleaseRefBuffers(mp4Handle);
-    
+
     return MMDEC_OK;
 }
 

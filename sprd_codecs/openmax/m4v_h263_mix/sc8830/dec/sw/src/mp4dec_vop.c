@@ -93,22 +93,21 @@ PUBLIC MMDecRet Mp4Dec_InitVop(DEC_VOP_MODE_T *vop_mode_ptr, MMDecInput *dec_inp
     vop_mode_ptr->return_pos1 = 0;
     vop_mode_ptr->return_pos2 = 0;
     vop_mode_ptr->frame_len		= dec_input_ptr->dataLen;
-//    vop_mode_ptr->has_interMBs  = FALSE;
+    vop_mode_ptr->err_num		= dec_input_ptr->err_pkt_num;
+    vop_mode_ptr->err_left		= dec_input_ptr->err_pkt_num;
+    vop_mode_ptr->err_pos_ptr	= dec_input_ptr->err_pkt_pos;
+    vop_mode_ptr->err_MB_num	= vop_mode_ptr->MBNum;
 
     if(IVOP != vop_mode_ptr->VopPredType && vop_mode_ptr->is_expect_IVOP  == FALSE)
     {
-        DEC_FRM_BFR *pDecFrame = vop_mode_ptr->pBckRefFrame->pDecFrame;
-
-        if (pDecFrame == NULL)
+        if(vop_mode_ptr->pBckRefFrame->pDecFrame == NULL)
         {
             ret =  MMDEC_ERROR;
         }
 
         if(BVOP == vop_mode_ptr->VopPredType)
         {
-            pDecFrame = vop_mode_ptr->pFrdRefFrame->pDecFrame;
-
-            if (pDecFrame == NULL)
+            if(vop_mode_ptr->pFrdRefFrame->pDecFrame == NULL)
             {
                 ret =  MMDEC_ERROR;
             }
@@ -189,6 +188,7 @@ PUBLIC void Mp4Dec_output_one_frame (Mp4DecObject *vo, MMDecOutput *dec_output_p
         dec_output_ptr->frame_width = vop_mode_ptr->FrameWidth;
         dec_output_ptr->frame_height = vop_mode_ptr->FrameHeight;
         dec_output_ptr->frameEffective = 1;
+        dec_output_ptr->err_MB_num = vop_mode_ptr->err_MB_num;
     } else
     {
         dec_output_ptr->frame_width = vop_mode_ptr->FrameWidth;
@@ -202,7 +202,7 @@ PUBLIC void write_display_frame(DEC_VOP_MODE_T *vop_mode_ptr,DEC_FRM_BFR *pDecFr
     int16 FrameWidth= vop_mode_ptr->FrameWidth;
     int16 FrameHeight= vop_mode_ptr->FrameHeight;
     int16 FrameExtendWidth= vop_mode_ptr->FrameExtendWidth;
-    int16 FrameExtendHeigth= vop_mode_ptr->FrameExtendHeigth;
+    int16 FrameExtendHeight= vop_mode_ptr->FrameExtendHeight;
     int16 iStartInFrameUV= vop_mode_ptr->iStartInFrameUV;
 
     uint8 *pSrc_y, *pSrc_u, *pSrc_v;
@@ -503,13 +503,14 @@ PUBLIC void Mp4Dec_ExtendFrame(DEC_VOP_MODE_T *vop_mode_ptr, uint8**Frame )
 PUBLIC MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr)
 {
     int32 pos_y, pos_x;
+    int32 rsc_found;
     DEC_MB_MODE_T *mb_mode_ptr = vop_mode_ptr->pMbMode;
     DEC_MB_BFR_T* mb_cache_ptr = vop_mode_ptr->mb_cache_ptr;
     BOOLEAN is_itu_h263 = (ITU_H263 == vop_mode_ptr->video_std)?1:0;
     int32 total_mb_num_x = vop_mode_ptr->MBNumX;
     int32 total_mb_num_y = vop_mode_ptr->MBNumY;
     MMDecRet ret = MMDEC_OK;
-    uint8 *ppxlcRecGobY, *ppxlcRecGobU, *ppxlcRecGobV;//leon
+    uint8 *ppxlcRecGobY, *ppxlcRecGobU, *ppxlcRecGobV;
 
     ppxlcRecGobY = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[0] + vop_mode_ptr->iStartInFrameY;
     ppxlcRecGobU = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[1] + vop_mode_ptr->iStartInFrameUV;
@@ -517,9 +518,6 @@ PUBLIC MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr)
 
     for(pos_y = 0; pos_y < total_mb_num_y; pos_y++)
     {
-        mb_cache_ptr->mb_addr[0] = ppxlcRecGobY;
-        mb_cache_ptr->mb_addr[1] = ppxlcRecGobU;
-        mb_cache_ptr->mb_addr[2] = ppxlcRecGobV;
         vop_mode_ptr->mb_y = (int8)pos_y;
 
         if(is_itu_h263)
@@ -532,7 +530,47 @@ PUBLIC MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr)
         {
             vop_mode_ptr->mb_x = (int8)pos_x;
 
-            if(!vop_mode_ptr->bResyncMarkerDisable)
+            vop_mode_ptr->mbnumDec = pos_y * total_mb_num_x + pos_x;
+            mb_mode_ptr = vop_mode_ptr->pMbMode + vop_mode_ptr->mbnumDec;
+
+            /*if error founded, search next resync header*/
+            if (vop_mode_ptr->error_flag)
+            {
+                vop_mode_ptr->error_flag = FALSE;
+
+                rsc_found = Mp4Dec_SearchResynCode (vop_mode_ptr);
+                if (!rsc_found)
+                {
+                    return MMDEC_STREAM_ERROR;
+                } else
+                {
+                    if (vop_mode_ptr->pBckRefFrame->pDecFrame == NULL)
+                    {
+                        return MMDEC_ERROR;
+                    }
+
+                    if(is_itu_h263)
+                    {
+                        /*decode GOB header*/
+                        ret = Mp4Dec_DecGobHeader(vop_mode_ptr);
+                    } else
+                    {
+                        ret = Mp4Dec_GetVideoPacketHeader(vop_mode_ptr, 0);
+                    }
+
+                    if (vop_mode_ptr->error_flag)
+                    {
+                        PRINTF ("decode resync header error!\n");
+                        continue;
+                    }
+
+                    pos_x = vop_mode_ptr->mb_x;
+                    pos_y = vop_mode_ptr->mb_y;
+                    vop_mode_ptr->mbnumDec = pos_y * total_mb_num_x + pos_x;
+                    mb_mode_ptr = vop_mode_ptr->pMbMode + vop_mode_ptr->mbnumDec;
+                    mb_mode_ptr->bFirstMB_in_VP = TRUE;
+                }
+            } else if(!vop_mode_ptr->bResyncMarkerDisable)
             {
                 mb_mode_ptr->bFirstMB_in_VP = FALSE;
 
@@ -541,8 +579,15 @@ PUBLIC MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr)
                     ret = Mp4Dec_GetVideoPacketHeader(vop_mode_ptr,  0);
                     pos_x = vop_mode_ptr->mb_x;
                     pos_y = vop_mode_ptr->mb_y;
+                    vop_mode_ptr->mbnumDec = pos_y * total_mb_num_x + pos_x;
                     mb_mode_ptr = vop_mode_ptr->pMbMode + vop_mode_ptr->mbnumDec;
                     mb_mode_ptr->bFirstMB_in_VP = TRUE;
+                }
+
+                if (vop_mode_ptr->error_flag)
+                {
+                    PRINTF ("decode resync header error!\n");
+                    continue;
                 }
             }
 
@@ -551,27 +596,58 @@ PUBLIC MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr)
                 mb_mode_ptr->bFirstMB_in_VP = TRUE;
             }
 
-            mb_mode_ptr->videopacket_num = (uint8)(vop_mode_ptr->sliceNumber);
-            Mp4Dec_DecIntraMBHeader(vop_mode_ptr, mb_mode_ptr);
+            mb_cache_ptr->mb_addr[0] = ppxlcRecGobY + pos_y*(vop_mode_ptr->FrameExtendWidth <<4) + pos_x*MB_SIZE;
+            mb_cache_ptr->mb_addr[1] = ppxlcRecGobU + pos_y*(vop_mode_ptr->FrameExtendWidth <<2) + pos_x*BLOCK_SIZE;
+            mb_cache_ptr->mb_addr[2] = ppxlcRecGobV + pos_y*(vop_mode_ptr->FrameExtendWidth <<2) + pos_x*BLOCK_SIZE;
 
-            Mp4Dec_DecIntraMBTexture(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);
+            mb_mode_ptr->videopacket_num = (uint8)(vop_mode_ptr->sliceNumber);
+            vop_mode_ptr->mbdec_stat_ptr[vop_mode_ptr->mbnumDec] = NOT_DECODED;
+
+            Mp4Dec_DecIntraMBHeader(vop_mode_ptr, mb_mode_ptr);
+            if(vop_mode_ptr->error_flag)
+            {
+                PRINTF("decode intra mb header error!\n");
+                continue;
+            }
 
             ((int*)mb_mode_ptr->mv)[0] = 0;   //set to zero for B frame'mv prediction
             ((int*)mb_mode_ptr->mv)[1] = 0;
             ((int*)mb_mode_ptr->mv)[2] = 0;
             ((int*)mb_mode_ptr->mv)[3] = 0;
-            mb_mode_ptr++;
 
-            //updated for next mb
-            mb_cache_ptr->mb_addr[0] += MB_SIZE;
-            mb_cache_ptr->mb_addr[1] += BLOCK_SIZE;
-            mb_cache_ptr->mb_addr[2] += BLOCK_SIZE;
-            vop_mode_ptr->mbnumDec++;
+            Mp4Dec_DecIntraMBTexture(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);
+
+            if(!vop_mode_ptr->error_flag)
+            {
+                int32 mb_end_pos;
+                int32 err_start_pos;
+
+                vop_mode_ptr->err_MB_num--;
+                vop_mode_ptr->mbdec_stat_ptr[vop_mode_ptr->mbnumDec] = DECODED_NOT_IN_ERR_PKT;
+
+                if (vop_mode_ptr->err_left != 0)
+                {
+                    /*determine whether the mb is located in error domain*/
+                    mb_end_pos = (vop_mode_ptr->bitstrm_ptr->bitcnt + 7) / 8;
+                    err_start_pos = vop_mode_ptr->err_pos_ptr[0].start_pos;
+                    if (mb_end_pos >= err_start_pos)
+                    {
+                        vop_mode_ptr->mbdec_stat_ptr[vop_mode_ptr->mbnumDec] = DECODED_IN_ERR_PKT;
+                    }
+                }
+            } else
+            {
+                //Simon.Wang @20120822. The previous MB in the same Gob may be error.
+                int k;
+                for(k=vop_mode_ptr->mbnumDec-1; k>=pos_y * total_mb_num_x; k--)
+                {
+                    vop_mode_ptr->mbdec_stat_ptr[k] = DECODED_IN_ERR_PKT;
+                }
+                vop_mode_ptr->mbdec_stat_ptr[vop_mode_ptr->mbnumDec] = NOT_DECODED;
+                PRINTF ("decode intra mb coeff error!\n");
+                continue;
+            }
         }
-
-        ppxlcRecGobY += vop_mode_ptr->FrameExtendWidth * MB_SIZE;
-        ppxlcRecGobU += vop_mode_ptr->FrameExtendWidth * MB_SIZE / 4;
-        ppxlcRecGobV += vop_mode_ptr->FrameExtendWidth * MB_SIZE / 4;
 
         vop_mode_ptr->GobNum++;
     }
@@ -588,7 +664,8 @@ PUBLIC MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr)
 PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
 {
     int32 pos_y, pos_x;
-    DEC_MB_MODE_T * mb_mode_ptr = vop_mode_ptr->pMbMode;
+    int32 rsc_found;
+    DEC_MB_MODE_T * mb_mode_ptr;
     DEC_MB_BFR_T  * mb_cache_ptr = vop_mode_ptr->mb_cache_ptr;
     BOOLEAN is_itu_h263 = (vop_mode_ptr->video_std == ITU_H263)?1:0;
     int32 total_mb_num_x = vop_mode_ptr->MBNumX;
@@ -602,6 +679,7 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
 #endif
 
     Mp4Dec_ExchangeMBMode (vop_mode_ptr);
+    mb_mode_ptr = vop_mode_ptr->pMbMode;
 
     //ref frame
     if(vop_mode_ptr->is_expect_IVOP == FALSE)
@@ -617,9 +695,6 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
 
     for(pos_y = 0; pos_y < total_mb_num_y; pos_y++)
     {
-        mb_cache_ptr->mb_addr[0] = ppxlcRecGobY;
-        mb_cache_ptr->mb_addr[1] = ppxlcRecGobU;
-        mb_cache_ptr->mb_addr[2] = ppxlcRecGobV;
         vop_mode_ptr->mb_y = (int8)pos_y;
 
         if(is_itu_h263)
@@ -639,7 +714,42 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
 #endif //_DEBUG_
             vop_mode_ptr->mb_x = (int8)pos_x;
 
-            if(!vop_mode_ptr->bResyncMarkerDisable)
+            vop_mode_ptr->mbnumDec = pos_y * total_mb_num_x + pos_x;
+            mb_mode_ptr = vop_mode_ptr->pMbMode + vop_mode_ptr->mbnumDec;
+
+            /*if error founded, search next resync header*/
+            if (vop_mode_ptr->error_flag)
+            {
+                vop_mode_ptr->error_flag = FALSE;
+
+                rsc_found = Mp4Dec_SearchResynCode (vop_mode_ptr);
+                if (!rsc_found)
+                {
+                    return MMDEC_STREAM_ERROR;
+                } else
+                {
+                    if(is_itu_h263)
+                    {
+                        /*decode GOB header*/
+                        ret = Mp4Dec_DecGobHeader(vop_mode_ptr);
+                    } else
+                    {
+                        ret = Mp4Dec_GetVideoPacketHeader(vop_mode_ptr, vop_mode_ptr->mvInfoForward.FCode - 1);
+                    }
+
+                    if (vop_mode_ptr->error_flag)
+                    {
+                        PRINTF ("decode resync header error!\n");
+                        continue;
+                    }
+
+                    pos_x = vop_mode_ptr->mb_x;
+                    pos_y = vop_mode_ptr->mb_y;
+                    vop_mode_ptr->mbnumDec = pos_y * total_mb_num_x + pos_x;
+                    mb_mode_ptr = vop_mode_ptr->pMbMode + vop_mode_ptr->mbnumDec;
+                    mb_mode_ptr->bFirstMB_in_VP = TRUE;
+                }
+            } else if(!vop_mode_ptr->bResyncMarkerDisable)
             {
                 mb_mode_ptr->bFirstMB_in_VP = FALSE;
 
@@ -649,7 +759,15 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
 
                     pos_x = vop_mode_ptr->mb_x;
                     pos_y = vop_mode_ptr->mb_y;
+                    vop_mode_ptr->mbnumDec = pos_y * total_mb_num_x + pos_x;
+                    mb_mode_ptr = vop_mode_ptr->pMbMode + vop_mode_ptr->mbnumDec;
                     mb_mode_ptr->bFirstMB_in_VP = TRUE;
+                }
+
+                if (vop_mode_ptr->error_flag)
+                {
+                    PRINTF ("decode resync header error!\n");
+                    continue;
                 }
             }
 
@@ -658,7 +776,13 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
                 mb_mode_ptr->bFirstMB_in_VP = TRUE;
             }
 
+            mb_cache_ptr->mb_addr[0] = ppxlcRecGobY + pos_y*(vop_mode_ptr->FrameExtendWidth <<4) + pos_x*MB_SIZE;
+            mb_cache_ptr->mb_addr[1] = ppxlcRecGobU + pos_y*(vop_mode_ptr->FrameExtendWidth <<2) + pos_x*BLOCK_SIZE;
+            mb_cache_ptr->mb_addr[2] = ppxlcRecGobV + pos_y*(vop_mode_ptr->FrameExtendWidth <<2) + pos_x*BLOCK_SIZE;
+
             mb_mode_ptr->videopacket_num = (uint8)(vop_mode_ptr->sliceNumber);
+            vop_mode_ptr->mbdec_stat_ptr[vop_mode_ptr->mbnumDec] = NOT_DECODED;
+
             Mp4Dec_DecInterMBHeader(vop_mode_ptr, mb_mode_ptr);
             if (vop_mode_ptr->is_expect_IVOP == TRUE &&  mb_mode_ptr->bIntra == FALSE)
             {
@@ -680,17 +804,37 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
                 Mp4Dec_DecInterMBTexture(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);
             }
 
-            //updated for next mb
-            mb_cache_ptr->mb_addr[0] += MB_SIZE;
-            mb_cache_ptr->mb_addr[1] += BLOCK_SIZE;
-            mb_cache_ptr->mb_addr[2] += BLOCK_SIZE;
-            vop_mode_ptr->mbnumDec++;
-            mb_mode_ptr++;
-        }
+            if(!vop_mode_ptr->error_flag)
+            {
+                int32 mb_end_pos;
+                int32 err_start_pos;
 
-        ppxlcRecGobY += (vop_mode_ptr->FrameExtendWidth <<4);//* MB_SIZE;
-        ppxlcRecGobU += (vop_mode_ptr->FrameExtendWidth <<2);//* MB_SIZE / 4;
-        ppxlcRecGobV += (vop_mode_ptr->FrameExtendWidth <<2);//MB_SIZE / 4;
+                vop_mode_ptr->err_MB_num--;
+                vop_mode_ptr->mbdec_stat_ptr[vop_mode_ptr->mbnumDec] = DECODED_NOT_IN_ERR_PKT;
+
+                if (vop_mode_ptr->err_left != 0)
+                {
+                    /*determine whether the mb is located in error domain*/
+                    mb_end_pos = (vop_mode_ptr->bitstrm_ptr->bitcnt + 7) / 8;
+                    err_start_pos = vop_mode_ptr->err_pos_ptr[0].start_pos;
+                    if (mb_end_pos >= err_start_pos)
+                    {
+                        vop_mode_ptr->mbdec_stat_ptr[vop_mode_ptr->mbnumDec] = DECODED_IN_ERR_PKT;
+                    }
+                }
+            } else
+            {
+                //Simon.Wang @20120822. The previous MB in the same Gob may be error.
+                int k;
+                for(k=vop_mode_ptr->mbnumDec-1; k>=pos_y * total_mb_num_x; k--)
+                {
+                    vop_mode_ptr->mbdec_stat_ptr[k] = DECODED_IN_ERR_PKT;
+                }
+                vop_mode_ptr->mbdec_stat_ptr[vop_mode_ptr->mbnumDec] = NOT_DECODED;
+                PRINTF ("\ndecode inter mb of pVop error!");
+                continue;
+            }
+        }
 
         vop_mode_ptr->GobNum++;
     }
@@ -717,6 +861,103 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
 PUBLIC MMDecRet Mp4Dec_DecBVOP(DEC_VOP_MODE_T *vop_mode_ptr)
 {
     MMDecRet ret = MMDEC_OK;
+    int32 pos_y, pos_x;
+    DEC_MB_MODE_T *mb_mode_bvop_ptr = vop_mode_ptr->pMbMode_B;
+    DEC_MB_MODE_T *pCoMb_mode = vop_mode_ptr->pMbMode;
+    DEC_MB_BFR_T *mb_cache_ptr = vop_mode_ptr->mb_cache_ptr;
+    MOTION_VECTOR_T FwdPredMv, BckPredMv, zeroMv = {0, 0};
+    int32 total_mb_num_x = vop_mode_ptr->MBNumX;
+    int32 total_mb_num_y = vop_mode_ptr->MBNumY;
+    uint8 *ppxlcRecGobY, *ppxlcRecGobU, *ppxlcRecGobV;//leon
+
+    //backward ref frame
+    vop_mode_ptr->YUVRefFrame0[0] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[0];
+    vop_mode_ptr->YUVRefFrame0[1] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[1];
+    vop_mode_ptr->YUVRefFrame0[2] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[2];
+
+    //forward ref frame
+    vop_mode_ptr->YUVRefFrame2[0] = vop_mode_ptr->pFrdRefFrame->pDecFrame->imgYUV[0];
+    vop_mode_ptr->YUVRefFrame2[1] = vop_mode_ptr->pFrdRefFrame->pDecFrame->imgYUV[1];
+    vop_mode_ptr->YUVRefFrame2[2] = vop_mode_ptr->pFrdRefFrame->pDecFrame->imgYUV[2];
+
+    //rec frame
+    vop_mode_ptr->YUVRefFrame1[0] = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[0];
+    vop_mode_ptr->YUVRefFrame1[1] = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[1];
+    vop_mode_ptr->YUVRefFrame1[2] = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[2];
+
+    ppxlcRecGobY = vop_mode_ptr->YUVRefFrame1[0] + vop_mode_ptr->iStartInFrameY;
+    ppxlcRecGobU = vop_mode_ptr->YUVRefFrame1[1] + vop_mode_ptr->iStartInFrameUV;
+    ppxlcRecGobV = vop_mode_ptr->YUVRefFrame1[2] + vop_mode_ptr->iStartInFrameUV;
+
+    FwdPredMv = zeroMv;
+    BckPredMv = zeroMv;
+
+    for(pos_y = 0; pos_y < total_mb_num_y; pos_y++)
+    {
+        vop_mode_ptr->mb_y = (int8)pos_y;
+
+        //reset prediction mv
+        FwdPredMv = zeroMv;
+        BckPredMv = zeroMv;
+
+        /*decode one MB line*/
+        for(pos_x = 0; pos_x < total_mb_num_x; pos_x++)
+        {
+            vop_mode_ptr->mb_x = (int8)pos_x;
+
+            if(!vop_mode_ptr->bResyncMarkerDisable)
+            {
+                if(Mp4Dec_CheckResyncMarker(vop_mode_ptr, vop_mode_ptr->mvInfoForward.FCode - 1))
+                {
+                    ret = Mp4Dec_GetVideoPacketHeader(vop_mode_ptr, vop_mode_ptr->mvInfoForward.FCode - 1);
+
+                    //reset prediction mv
+                    FwdPredMv = zeroMv;
+                    BckPredMv = zeroMv;
+                }
+            }
+
+            mb_mode_bvop_ptr->videopacket_num = (uint8)(vop_mode_ptr->sliceNumber);
+
+            mb_cache_ptr->mb_addr[0] = ppxlcRecGobY + pos_y*(vop_mode_ptr->FrameExtendWidth <<4) + pos_x * MB_SIZE;
+            mb_cache_ptr->mb_addr[1] = ppxlcRecGobU + pos_y*(vop_mode_ptr->FrameExtendWidth <<2) + pos_x * BLOCK_SIZE;
+            mb_cache_ptr->mb_addr[2] = ppxlcRecGobV + pos_y*(vop_mode_ptr->FrameExtendWidth <<2) + pos_x * BLOCK_SIZE;
+
+            if(MODE_NOT_CODED == pCoMb_mode->dctMd)
+            {
+                mb_mode_bvop_ptr->bSkip = TRUE;
+                Mp4Dec_DecMV(vop_mode_ptr, mb_mode_bvop_ptr,mb_cache_ptr);
+
+            } else
+            {
+                Mp4Dec_DecMBHeaderBVOP(vop_mode_ptr,  mb_mode_bvop_ptr);
+
+                Mp4Dec_MCA_BVOP(vop_mode_ptr, mb_mode_bvop_ptr, &FwdPredMv, &BckPredMv, pCoMb_mode->mv);
+
+                if(vop_mode_ptr->error_flag)
+                {
+                    PRINTF("decode mv of B-VOP error!\n");
+                    vop_mode_ptr->return_pos2 |= (1<<0);
+                    return MMDEC_STREAM_ERROR;
+                }
+
+                if(mb_mode_bvop_ptr->CBP)
+                {
+                    Mp4Dec_DecInterMBTexture(vop_mode_ptr, mb_mode_bvop_ptr,mb_cache_ptr);
+                }
+                if(vop_mode_ptr->error_flag)
+                {
+                    PRINTF ("decode inter mb of B-Vop error!\n");
+                    vop_mode_ptr->return_pos |= (1<<0);
+                    return MMDEC_STREAM_ERROR;
+                }
+            }
+
+            pCoMb_mode++;
+            vop_mode_ptr->mbnumDec++;
+        }
+    }
+
     return ret;
 }
 /**---------------------------------------------------------------------------*
