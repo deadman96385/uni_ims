@@ -366,6 +366,7 @@ void Vp8Dec_create_decompressor(VPXDecObject *vo)
     vo->common.uvac_delta_q = 0;
     vo->common.Width = 0;
     vo->common.Height = 0;
+    vo->common.bInitSuceess = 0;
 
     vp8_create_common(&vo->common);
 

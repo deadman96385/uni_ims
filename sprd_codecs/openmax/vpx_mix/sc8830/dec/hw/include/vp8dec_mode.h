@@ -249,6 +249,8 @@ typedef struct VP8Common
     VP8_COMMON_RTCD rtcd;
 #endif
 //    struct postproc_state  postproc_state;
+
+    int bInitSuceess;
 } VP8_COMMON;
 
 /* Size of the bool decoder backing storage

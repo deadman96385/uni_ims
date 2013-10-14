@@ -217,8 +217,13 @@ MMDecRet vp8_decode_frame(VPXDecObject *vo)
         BitstreamReadBits(vo, 8*3);
         BitstreamReadBits(vo, 8*2);
         BitstreamReadBits(vo, 8*2);
-        if ( (Width != pc->Width) || (Height != pc->Height) )	// Resolution Changed
+        if ( (Width != pc->Width) || (Height != pc->Height) || (!pc->bInitSuceess))	// Resolution Changed
         {
+            if ((Width != pc->Width) || (Height != pc->Height))
+            {
+                pc->bInitSuceess = 0;
+            }
+            
             if (pc->Width <= 0)
             {
                 pc->Width = Width;
@@ -238,7 +243,11 @@ MMDecRet vp8_decode_frame(VPXDecObject *vo)
                 return MMDEC_MEMORY_ERROR;
             }
 
-            return MMDEC_MEMORY_ALLOCED;
+            if (!pc->bInitSuceess)
+            {
+                pc->bInitSuceess = 1;
+                return MMDEC_MEMORY_ALLOCED;
+            }            
         }
     }
     pc->new_frame.u_buffer = pc->new_frame.y_buffer + (pc->MBs <<8) ;
@@ -485,6 +494,7 @@ MMDecRet vp8_decode_frame(VPXDecObject *vo)
 MMDecRet vp8dx_receive_compressed_data(VPXDecObject *vo, unsigned long size, const unsigned char *source, int64 time_stamp)
 {
     VP8_COMMON *cm = &vo->common;
+    MMDecRet ret;
 
     vo->Source = source;
     vo->source_sz = size;
@@ -507,9 +517,10 @@ MMDecRet vp8dx_receive_compressed_data(VPXDecObject *vo, unsigned long size, con
         }
     }
 
-    if (vp8_decode_frame(vo) != MMDEC_OK)
+    ret = vp8_decode_frame(vo);
+    if (ret != MMDEC_OK)
     {
-        return MMDEC_ERROR;
+        return ret;
     }
 
     // If any buffer copy / swapping is signaled it should be done here.

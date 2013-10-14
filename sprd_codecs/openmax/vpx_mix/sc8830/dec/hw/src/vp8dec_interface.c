@@ -150,6 +150,23 @@ MMDecRet VP8DecRelease(VPXHandle *vpxHandle)
     return MMDEC_OK;
 }
 
+void VP8DecReleaseRefBuffers(VPXHandle *vpxHandle)
+{
+    VPXDecObject *vo = (VPXDecObject *) vpxHandle->videoDecoderData;
+    VP8_COMMON *cm = &vo->common;
+    int buffer_index;
+
+    for(buffer_index = 0; buffer_index <4; buffer_index ++)
+    {
+        if(cm->buffer_pool[buffer_index]  != NULL)
+        {
+            (*(vo->vpxHandle->VSP_unbindCb))(vo->vpxHandle->userdata,(void *)(cm->buffer_pool[buffer_index]), 0);
+            cm->buffer_pool[buffer_index] = NULL;
+            cm->ref_count[buffer_index] = 0;
+        }
+    }
+}
+
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
