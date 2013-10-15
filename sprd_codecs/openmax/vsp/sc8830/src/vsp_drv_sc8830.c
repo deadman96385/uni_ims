@@ -104,7 +104,7 @@ PUBLIC int32 VSP_OPEN_Dev (VSPObject *vo)
     if (-1 == vo->s_vsp_fd)
     {
         SCI_TRACE_LOW("open SPRD_VSP_DRIVER ");
-        if((vo->s_vsp_fd = open(SPRD_VSP_DRIVER,O_RDWR))<0)
+        if((vo->s_vsp_fd = open(SPRD_VSP_DRIVER,O_RDWR)) < 0)
         {
             SCI_TRACE_LOW("open SPRD_VSP_DRIVER ERR");
             return -1;
@@ -160,13 +160,19 @@ PUBLIC int32 VSP_CONFIG_DEV_FREQ(VSPObject *vo,int32*  vsp_clk_ptr)
 {
     if(vo->s_vsp_fd > 0)
     {
-        ioctl(vo->s_vsp_fd, VSP_CONFIG_FREQ, vsp_clk_ptr);
-        return 0;
+        int ret = ioctl(vo->s_vsp_fd, VSP_CONFIG_FREQ, vsp_clk_ptr);
+        if (ret < 0)
+        {
+            SCI_TRACE_LOW ("%s, VSP_CONFIG_FREQ failed", __FUNCTION__);
+            return -1;
+        }
     } else
     {
         SCI_TRACE_LOW ("%s, error", __FUNCTION__);
         return -1;
     }
+    
+    return 0;
 }
 
 PUBLIC int32 VSP_POLL_COMPLETE(VSPObject *vo)
@@ -200,17 +206,28 @@ PUBLIC int32 VSP_ACQUIRE_Dev(VSPObject *vo)
     ret = ioctl(vo->s_vsp_fd, VSP_ACQUAIRE, NULL);
     if(ret)
     {
-        SCI_TRACE_LOW("%s: VSP hardware timeout try again %d\n",__FUNCTION__, ret);
+        SCI_TRACE_LOW("%s: VSP_ACQUAIRE failed,  try again %d\n",__FUNCTION__, ret);
         ret =  ioctl(vo->s_vsp_fd, VSP_ACQUAIRE, NULL);
-        if(ret)
+        if(ret < 0)
         {
-            SCI_TRACE_LOW("%s: VSP hardware timeout give up %d\n",__FUNCTION__, ret);
+            SCI_TRACE_LOW("%s: VSP_ACQUAIRE failed, give up %d\n",__FUNCTION__, ret);
             return -1;
         }
     }
 
-    ioctl(vo->s_vsp_fd, VSP_ENABLE, NULL);
-    ioctl(vo->s_vsp_fd, VSP_RESET, NULL);
+    ret = ioctl(vo->s_vsp_fd, VSP_ENABLE, NULL);
+    if (ret < 0)
+    {
+            SCI_TRACE_LOW("%s: VSP_ENABLE failed %d\n",__FUNCTION__, ret);
+            return -1;        
+    }
+    
+    ret = ioctl(vo->s_vsp_fd, VSP_RESET, NULL);
+    if (ret < 0)
+    {
+            SCI_TRACE_LOW("%s: VSP_RESET failed %d\n",__FUNCTION__, ret);
+            return -1;        
+    }
 
     SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
 
@@ -221,17 +238,30 @@ PUBLIC int32 VSP_RELEASE_Dev(VSPObject *vo)
 {
     if(vo->s_vsp_fd > 0)
     {
-        ioctl(vo->s_vsp_fd, VSP_DISABLE, NULL);
-        ioctl(vo->s_vsp_fd, VSP_RELEASE, NULL);
+        int ret;
+        
+        ret = ioctl(vo->s_vsp_fd, VSP_DISABLE, NULL);
+        if(ret < 0)
+        {
+            SCI_TRACE_LOW("%s: VSP_DISABLE failed, %d\n",__FUNCTION__, ret);
+            return -1;
+        }
 
-        SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
-
-        return 0;
+        ret = ioctl(vo->s_vsp_fd, VSP_RELEASE, NULL);
+        if(ret < 0)
+        {
+            SCI_TRACE_LOW("%s: VSP_RELEASE failed, %d\n",__FUNCTION__, ret);
+            return -1;
+        }
     } else
     {
         SCI_TRACE_LOW("%s: failed :fd <  0", __FUNCTION__);
         return -1;
     }
+
+    SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+
+    return 0;
 }
 
 PUBLIC int32 ARM_VSP_RST (VSPObject *vo)
