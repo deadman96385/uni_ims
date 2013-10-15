@@ -479,15 +479,20 @@ MMEncRet H264EncGenHeader(AVCHandle *avcHandle, MMEncOut *pOutput, int is_sps)
     {
         goto HEADER_EXIT;
     }
-    if (VSP_READ_REG_POLL(GLB_REG_BASE_ADDR + BSM_DBG1_OFF, V_BIT_1, 0x0, TIME_OUT_CLK, "Polling AXIM_STS: not Axim_wch_busy")) //check all data has written to DDR
+    if (VSP_READ_REG_POLL(GLB_REG_BASE_ADDR + AXIM_STS_OFF, V_BIT_1, 0x0, TIME_OUT_CLK, "Polling AXIM_STS: not Axim_wch_busy")) //check all data has written to DDR
     {
         goto HEADER_EXIT;
     }
 
-    *((volatile uint32*)(&img_ptr->pOneFrameBitstream[img_ptr->stm_offset])) = 0x01000000;
+//    *((volatile uint32*)(&img_ptr->pOneFrameBitstream[img_ptr->stm_offset])) = 0x01000000;
     img_ptr->stm_offset = ( VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF,"TOTAL_BITS") >> 3);
     img_ptr->stm_offset += VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + DSTUF_NUM_OFF,"DSTUF_NUM");
     img_ptr->stm_offset = (img_ptr->stm_offset+7)&(~0x7); // DWORD aligned
+
+    img_ptr->pOneFrameBitstream[0] = 0x0;
+    img_ptr->pOneFrameBitstream[1] = 0x0;
+    img_ptr->pOneFrameBitstream[2] = 0x0;
+    img_ptr->pOneFrameBitstream[3] = 0x1;
 
     pOutput->strmSize = img_ptr->stm_offset;
     pOutput->pOutBuf = img_ptr->pOneFrameBitstream;
