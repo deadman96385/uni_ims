@@ -61,14 +61,23 @@ PUBLIC uint32 ue_v (H264DecObject *vo)
     {
         return 0;
     }
-    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RD_OFF, 1,"BSM_rd_UE cmd");
-    tmp = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RD_OFF,"BSM_rd_UE check error");
-    if(tmp&4)
+    tmp = SHOW_FLC (16);
+    if (tmp == 0)
     {
-        vo->error_flag |= ER_SREAM_ID;
-        return 0;
+        SCI_TRACE_LOW("%s, %d, change to long_ue_v", __FUNCTION__, __LINE__);
+        ret = long_ue_v(vo);
+    } else
+    {
+        VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RD_OFF, 1,"BSM_rd_UE cmd");
+        tmp = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RD_OFF,"BSM_rd_UE check error");
+        if(tmp&4)
+        {
+            vo->error_flag |= ER_SREAM_ID;
+            SCI_TRACE_LOW("%s, %d, vo->error_flag: %d", __FUNCTION__, __LINE__, vo->error_flag);
+            return 0;
+        }
+        ret = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RDATA_OFF,"BSM_rd_UE dara");
     }
-    ret = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RDATA_OFF,"BSM_rd_UE dara");
 
     return ret;
 }

@@ -71,7 +71,7 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
 
     tmpVar = READ_FLC(8);
 
-    SCI_TRACE_LOW("%s, %d, the first byte: %d.", __FUNCTION__, __LINE__, tmpVar);
+    SCI_TRACE_LOW("%s, %d, the first byte: 0x%0x.", __FUNCTION__, __LINE__, tmpVar);
 
     nal_ptr->nal_unit_type = tmpVar & 0x1f;
     nal_ptr->nal_reference_idc = ((tmpVar>>5)&0x3);
