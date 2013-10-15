@@ -202,6 +202,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
     }
 
     vo->frame_dec_finish=0;
+    vo->error_flag = 0;
 
     if(ARM_VSP_RST((VSPObject *)vo)<0)
     {

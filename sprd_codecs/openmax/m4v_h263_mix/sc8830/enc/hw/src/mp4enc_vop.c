@@ -133,20 +133,35 @@ PUBLIC int32 Mp4Enc_EncVOP(Mp4EncObject *vo, int32 time_stamp)
         if(mea_start)
         {
             int32 int_ret = VSP_POLL_COMPLETE((VSPObject *)vo);
-            if(int_ret & (V_BIT_4 | V_BIT_5))	// (VLC_ERR|TIME_OUT)
+            if(int_ret & (V_BIT_4 | V_BIT_5 | V_BIT_30 | V_BIT_31))	// (VLC_ERR|TIME_OUT)
             {
-                vop_mode_ptr->error_flag = 1;
+                vo->error_flag |= ER_HW_ID;
+                if (int_ret & V_BIT_4)
+                {
+                    SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
+                } else if (int_ret & (V_BIT_5  | V_BIT_30 | V_BIT_31))
+                {
+                    SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+                }
+                goto VOP_EXIT;
             } else if(int_ret & V_BIT_1)	// VLC_FRM_DONE
             {
-                vop_mode_ptr->error_flag = 0;
+                vo->error_flag = 0;
             }
             mea_start = 0;
         }
     }
 
+VOP_EXIT:
+    
 #if 0   //VSP has made byte align
     Mp4Enc_ByteAlign(is_short_header);
 #endif
+
+    if(vo->error_flag)
+    {
+        return 0;
+    }
 
     return 1;
 }

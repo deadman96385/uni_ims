@@ -548,7 +548,6 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
     img_ptr->chroma_qp_offset = vo->g_active_pps_ptr->chroma_qp_index_offset;
     img_ptr->slice_nr = 0;
     img_ptr->curr_mb_nr = 0;
-    vo->error_flag = 0;//for error concealment
 
     dec_picture_ptr = vo->g_dec_picture_ptr;
     dec_picture_ptr->dec_ref_pic_marking_buffer = img_ptr->dec_ref_pic_marking_buffer;

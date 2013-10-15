@@ -277,6 +277,8 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
     BOOLEAN frame_skip = FALSE; //now, not support skip frame, noted by xiaowei@2013.08.16
     uint8 video_type = (vol_mode_ptr->short_video_header ? STREAM_ID_H263 : STREAM_ID_MPEG4);
 
+    vo->error_flag = 0;
+    
     anti_shark_ptr->input_width = pInput->org_img_width;
     anti_shark_ptr->input_height = pInput->org_img_height;
     anti_shark_ptr->shift_x = pInput->crop_x;
@@ -375,6 +377,11 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
 
         vo->g_enc_is_prev_frame_encoded_success = ret;
 
+        if (vo->error_flag)
+        {
+            goto ENC_EXIT;
+        }
+
         if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable")) //check bsm is idle
         {
             goto ENC_EXIT;
@@ -410,6 +417,11 @@ ENC_EXIT:
     SCI_TRACE_LOW("%s, %d, exit encoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
 
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
+    {
+        return MMENC_HW_ERROR;
+    }
+
+    if (vo->error_flag & ER_HW_ID)
     {
         return MMENC_HW_ERROR;
     }

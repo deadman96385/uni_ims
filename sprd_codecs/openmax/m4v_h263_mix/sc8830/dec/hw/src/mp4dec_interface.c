@@ -486,7 +486,12 @@ DEC_EXIT:
     SCI_TRACE_LOW("%s, exit decoder,  error flag: 0x%x.", __FUNCTION__, mp4Handle->g_mpeg4_dec_err_flag);
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
-        return MMENC_HW_ERROR;
+        return MMDEC_HW_ERROR;
+    }
+
+    if (vo->error_flag & ER_HW_ID)
+    {
+        ret = MMDEC_HW_ERROR;
     }
 
     return ret;

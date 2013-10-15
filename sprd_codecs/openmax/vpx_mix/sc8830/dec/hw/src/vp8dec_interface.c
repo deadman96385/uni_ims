@@ -132,7 +132,12 @@ DEC_EXIT:
 
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
-        return MMENC_HW_ERROR;
+        return MMDEC_HW_ERROR;
+    }
+
+    if (vo->error_flag & ER_HW_ID)
+    {
+        ret = MMDEC_HW_ERROR;
     }
 
     return ret;

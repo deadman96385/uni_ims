@@ -243,7 +243,6 @@ MMEncRet H264EncGetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
 MMEncRet H264EncRelease(AVCHandle *avcHandle)
 {
     H264EncObject *vo = (H264EncObject *) avcHandle->videoEncoderData;
-    int32 ret;
 
     if ( VSP_CLOSE_Dev((VSPObject *)vo) < 0)
     {
@@ -270,8 +269,10 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     MMEncConfig * enc_config = vo->g_h264_enc_config;
     ENC_ANTI_SHAKE_T *anti_shark_ptr = &(vo->g_anti_shake);
     uint32 rate_control_en = enc_config->RateCtrlEnable;
-    MMEncRet ret;
+    MMEncRet ret = MMENC_OK;
 
+    vo->error_flag = 0;
+    
     anti_shark_ptr->input_width = pInput->org_img_width;
     anti_shark_ptr->input_height = pInput->org_img_height;
     anti_shark_ptr->shift_x = pInput->crop_x;
@@ -437,7 +438,12 @@ ENC_EXIT:
         return MMENC_HW_ERROR;
     }
 
-    return MMENC_OK;
+    if (vo->error_flag & ER_HW_ID)
+    {
+        ret = MMENC_HW_ERROR;
+    }
+
+    return ret;
 }
 
 /*****************************************************************************/

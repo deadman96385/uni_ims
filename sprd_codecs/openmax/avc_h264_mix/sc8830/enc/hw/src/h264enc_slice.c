@@ -218,14 +218,14 @@ PUBLIC int32 h264enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_START_OFF, 0x5|((img_ptr->sh.i_first_mb==0)<<3), "VSP_START: ENCODE_START=1");
 
     tmp = VSP_POLL_COMPLETE((VSPObject *)vo);
-    if(tmp & (V_BIT_4 | V_BIT_5))	// (VLC_ERR|TIME_OUT)
+    if(tmp & (V_BIT_4 | V_BIT_5 |V_BIT_30 | V_BIT_31))	// (VLC_ERR|TIME_OUT)
     {
         vo->error_flag |= ER_HW_ID;
 
         if (tmp & V_BIT_4)
         {
             SCI_TRACE_LOW("%s, %d, VLC_ERR", __FUNCTION__, __LINE__);
-        } else if (tmp & V_BIT_5)
+        } else if (tmp & (V_BIT_5 | V_BIT_30 | V_BIT_31))
         {
             SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
         }

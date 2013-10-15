@@ -116,7 +116,7 @@ void Mp4Enc_InitH263(Mp4EncObject *vo, VOL_MODE_T  *vol_mode_ptr, ENC_VOP_MODE_T
 #endif  //#if 0
     default:
         PRINTF ("Illegal format!\n");
-        vop_mode_ptr->error_flag = TRUE;
+        vo->error_flag |= ER_SREAM_ID;
     }
 }
 

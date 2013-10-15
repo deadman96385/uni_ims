@@ -736,14 +736,14 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
     //VSP_WRITE_REG(VSP_REG_BASE_ADDR+0x18,0x4,"VSP_INT_CLR");//enable int //frame done/error/timeout
 #endif
 
-    if(cmd & (V_BIT_4 | V_BIT_5))
+    if(cmd & (V_BIT_4 | V_BIT_5 | V_BIT_30 | V_BIT_31))
     {
         vo->error_flag |= ER_SREAM_ID;
 
         if (cmd & V_BIT_4)
         {
             SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
-        } else if (cmd & V_BIT_5)
+        } else if (cmd & (V_BIT_5 | V_BIT_30 | V_BIT_31))
         {
             SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
         }

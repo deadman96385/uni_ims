@@ -139,7 +139,7 @@ typedef struct enc_vop_mode_tag
     int8 Need_MinQp_flag;
 
     int8 bCoded;
-    int8 error_flag;
+    int8 srv;
     uint8 MB_in_VOP_length;
 
     uint32 time_inc_resolution_in_vol_length;
