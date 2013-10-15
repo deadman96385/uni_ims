@@ -133,27 +133,30 @@ PUBLIC int32 H264Dec_remove_delayed_frame_from_dpb (H264DecObject *vo,DEC_DECODE
         SCI_TRACE_LOW_DPB("%s, %d, is_reference %d  pBufferHeader %x", __FUNCTION__, __LINE__,dpb_ptr->fs[i]->is_reference ,  dpb_ptr->fs[i]->frame->pBufferHeader);
         if ((DELAYED_PIC_REF == dpb_ptr->fs[i]->is_reference))
         {
-
             fs = dpb_ptr->fs[i];
 
+            out_idx = dpb_ptr->delayed_pic_num;
             for (j = 0; j < dpb_ptr->delayed_pic_num; j++)
             {
                 if (fs->frame == dpb_ptr->delayed_pic[j])
                 {
                     out_idx = j;
+                    has_free_bfr = TRUE;
                     break;
                 }
             }
 
-            for(j = out_idx; dpb_ptr->delayed_pic[j]; j++)
+            if (has_free_bfr == TRUE)
             {
-                dpb_ptr->delayed_pic[j] = dpb_ptr->delayed_pic[j+1];
+                for(j = out_idx; dpb_ptr->delayed_pic[j]; j++)
+                {
+                    dpb_ptr->delayed_pic[j] = dpb_ptr->delayed_pic[j+1];
+                }
+                dpb_ptr->delayed_pic_num--;
+
+                h264Dec_remove_frame_from_dpb(vo, dpb_ptr, i);
             }
-            dpb_ptr->delayed_pic_num--;
 
-            h264Dec_remove_frame_from_dpb(vo, dpb_ptr, i);
-
-            has_free_bfr = TRUE;
             break;
         }
     }
