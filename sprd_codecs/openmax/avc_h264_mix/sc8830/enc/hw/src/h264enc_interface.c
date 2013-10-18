@@ -272,7 +272,7 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     MMEncRet ret = MMENC_OK;
 
     vo->error_flag = 0;
-    
+
     anti_shark_ptr->input_width = pInput->org_img_width;
     anti_shark_ptr->input_height = pInput->org_img_height;
     anti_shark_ptr->shift_x = pInput->crop_x;
@@ -417,7 +417,7 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     //increase frame count
     if(img_ptr->sh.i_first_mb == 0)
     {
-        vo->g_nFrame_enc++;
+//        vo->g_nFrame_enc++;
         if(img_ptr->pYUVRecFrame->b_kept_as_ref)
         {
             img_ptr->frame_num++;
@@ -432,6 +432,11 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
 ENC_EXIT:
 
     SCI_TRACE_LOW("%s, %d, exit encoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+
+    if(img_ptr->sh.i_first_mb == 0)
+    {
+        vo->g_nFrame_enc++;
+    }
 
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
