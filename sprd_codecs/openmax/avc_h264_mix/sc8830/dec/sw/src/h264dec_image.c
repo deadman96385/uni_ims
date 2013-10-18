@@ -518,6 +518,14 @@ PUBLIC void H264Dec_init_picture (H264DecContext *img_ptr)
 
     fs->disp_status = 0;
     img_ptr->g_dec_picture_ptr = fs->frame;
+    if (fs->frame->imgYUV[0] == 0)
+    {
+        int32 ext_frm_size = img_ptr->ext_width * img_ptr->ext_height;
+
+        fs->frame->imgYUV[0] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size, 256, SW_CACHABLE);
+        fs->frame->imgYUV[1] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size>>2, 256, SW_CACHABLE);
+        fs->frame->imgYUV[2] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size>>2, 256, SW_CACHABLE);
+    }
 
     img_ptr->pre_frame_num = img_ptr->frame_num;
     img_ptr->num_dec_mb = 0;

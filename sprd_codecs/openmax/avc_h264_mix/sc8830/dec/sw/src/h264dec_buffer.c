@@ -51,8 +51,8 @@ PUBLIC void H264Dec_clear_delayed_buffer(H264DecContext *img_ptr)
                     dpb_ptr->fs[j]->is_reference = 0;
                     if((dpb_ptr->fs[j]->frame->pBufferHeader!=NULL) && ((*(img_ptr->avcHandle->VSP_unbindCb)) != NULL))
                     {
-                            (*(img_ptr->avcHandle->VSP_unbindCb))(img_ptr->avcHandle->userdata,dpb_ptr->fs[j]->frame->pBufferHeader);
-                            dpb_ptr->fs[j]->frame->pBufferHeader = NULL;
+                        (*(img_ptr->avcHandle->VSP_unbindCb))(img_ptr->avcHandle->userdata,dpb_ptr->fs[j]->frame->pBufferHeader);
+                        dpb_ptr->fs[j]->frame->pBufferHeader = NULL;
                     }
                 }
             }
@@ -112,9 +112,17 @@ PUBLIC void H264Dec_init_dpb (H264DecContext *img_ptr, DEC_SPS_T *sps_ptr)
             dpb_ptr->fs[i]->frame->ref_pic_id_ptr[0] = (int32 *)H264Dec_MemAlloc(img_ptr, frm_size_in_blk * sizeof(int32), 4, SW_CACHABLE);
             dpb_ptr->fs[i]->frame->ref_pic_id_ptr[1] = (int32 *)H264Dec_MemAlloc(img_ptr, frm_size_in_blk * sizeof(int32), 4, SW_CACHABLE);
 
-            dpb_ptr->fs[i]->frame->imgYUV[0] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size, 4, SW_CACHABLE);
-            dpb_ptr->fs[i]->frame->imgYUV[1] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size>>2, 4, SW_CACHABLE);
-            dpb_ptr->fs[i]->frame->imgYUV[2] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size>>2, 4, SW_CACHABLE);
+            if (img_ptr->uv_interleaved)
+            {
+                dpb_ptr->fs[i]->frame->imgYUV[0] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size, 256, SW_CACHABLE);
+                dpb_ptr->fs[i]->frame->imgYUV[1] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size>>2, 256, SW_CACHABLE);
+                dpb_ptr->fs[i]->frame->imgYUV[2] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size>>2, 256, SW_CACHABLE);
+            } else //only for thumbnail
+            {
+                dpb_ptr->fs[i]->frame->imgYUV[0] = PNULL;
+                dpb_ptr->fs[i]->frame->imgYUV[1] = PNULL;
+                dpb_ptr->fs[i]->frame->imgYUV[2] = PNULL;
+            }
 
 #ifdef _SIMUATION_  //ony for simulation
             dpb_ptr->fs[i]->frame->imgY = (uint8 *)H264Dec_MemAlloc(img_ptr, frm_size, 256, SW_CACHABLE);
