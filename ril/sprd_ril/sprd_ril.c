@@ -3233,11 +3233,13 @@ static void  requestScreeState(int channelID, int status, RIL_Token t)
         at_send_command(ATch_type[channelID], "AT+CCED=2,8", NULL);
         at_send_command(ATch_type[channelID], "AT+CREG=1", NULL);
         at_send_command(ATch_type[channelID], "AT+CGREG=1", NULL);
+        at_send_command(ATch_type[channelID], "AT*FDY=1,5", NULL);
     } else {
         /* Resume */
         at_send_command(ATch_type[channelID], "AT+CCED=1,8", NULL);
         at_send_command(ATch_type[channelID], "AT+CREG=2", NULL);
         at_send_command(ATch_type[channelID], "AT+CGREG=2", NULL);
+        at_send_command(ATch_type[channelID], "AT*FDY=1,8", NULL);
         if (sState == RADIO_STATE_SIM_READY) {
             RIL_requestTimedCallback (onQuerySignalStrength, NULL, NULL);
         }
