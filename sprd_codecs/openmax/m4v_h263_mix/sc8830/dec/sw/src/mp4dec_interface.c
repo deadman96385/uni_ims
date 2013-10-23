@@ -353,7 +353,7 @@ FLV_RE_DEC:
         ret = vo->g_Mp4Dec_BVOP(vop_mode_ptr);
     }
 
-    if(vop_mode_ptr->err_MB_num)
+    if(vop_mode_ptr->err_MB_num && vop_mode_ptr->uv_interleaved)
     {
         SCI_TRACE_LOW ("MP4DecDecode: Detect error bitstream, try to conceal!\n");
         if(IVOP == vop_mode_ptr->VopPredType)
