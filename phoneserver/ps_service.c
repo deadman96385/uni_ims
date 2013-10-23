@@ -420,66 +420,119 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
     if (err < 0 || status != 0) {
         return AT_RESULT_NG;
     }
-    err = at_tok_nextint(&at_in_str, &tmp_cid);
-    if (err < 0) {
+
+    if (at_tok_hasmore(&at_in_str)) {
+        err = at_tok_nextint(&at_in_str, &tmp_cid);
+        if (err < 0) {
         return AT_RESULT_NG;
-    }
-
-    mutex_lock(&ps_service_mutex);
-    mux = adapter_get_cmux(req->cmd_type, TRUE);
-    //if ((tmp_cid <= 3) && (ppp_info[tmp_cid - 1].state == PPP_STATE_ACTIVE)) { 	/*deactivate PDP connection */
-    if (tmp_cid <= 3) {	/*deactivate PDP connection */
-        ppp_info[tmp_cid-1].state = PPP_STATE_DESTING;
-        PHS_LOGD("PPP_STATE_DEACTING\n");
-        ppp_info[tmp_cid-1].state = PPP_STATE_DEACTING;
-        ppp_info[tmp_cid - 1].cmux = mux;
-        snprintf(at_cmd_str,sizeof(at_cmd_str), "AT+CGACT=0,%d\r",tmp_cid);
-        adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp2, (int)req->recv_pty);
-        adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
-                req->timeout);
-        ppp_info[tmp_cid - 1].state = PPP_STATE_IDLE;
-
-        usleep(200*1000);
-        if(!strcmp(modem, "t")) {
-            property_get(ETH_TD, prop, "veth");
-        } else if(!strcmp(modem, "w")) {
-            property_get(ETH_W, prop, "veth");
-        } else {
-            PHS_LOGE("Unknown modem type, exit");
-            exit(-1);
         }
-        /* set property */
-        snprintf(linker, sizeof(linker), "%s%d %s down", prop, tmp_cid-1, "0.0.0.0");
-        property_set(SYS_IFCONFIG_DOWN, linker);
-        /* start data_off */
-        property_set("ctl.start", "data_off");
 
-        /* wait up to 10s for data_off execute complete */
-        do {
-            property_get(SYS_IFCONFIG_DOWN, linker, "");
-            if(!strcmp(linker, "done"))
-                break;
-            count++;
-            PHS_LOGD("wait data_off exec %d times...", count);
-            usleep(10*1000);
-         }while(count < RETRY_MAX_COUNT);
+        mutex_lock(&ps_service_mutex);
+        mux = adapter_get_cmux(req->cmd_type, TRUE);
+        //if ((tmp_cid <= 3) && (ppp_info[tmp_cid - 1].state == PPP_STATE_ACTIVE)) { 	/*deactivate PDP connection */
+        if (tmp_cid <= 3) {	/*deactivate PDP connection */
+            ppp_info[tmp_cid-1].state = PPP_STATE_DESTING;
+            PHS_LOGD("PPP_STATE_DEACTING\n");
+            ppp_info[tmp_cid-1].state = PPP_STATE_DEACTING;
+            ppp_info[tmp_cid - 1].cmux = mux;
+            snprintf(at_cmd_str,sizeof(at_cmd_str), "AT+CGACT=0,%d\r",tmp_cid);
+            adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp2, (int)req->recv_pty);
+            adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str), req->timeout);
+            ppp_info[tmp_cid - 1].state = PPP_STATE_IDLE;
 
-        PHS_LOGD("data_off execute done");
+            usleep(200*1000);
+            if(!strcmp(modem, "t")) {
+                property_get(ETH_TD, prop, "veth");
+            } else if(!strcmp(modem, "w")) {
+                property_get(ETH_W, prop, "veth");
+            } else {
+                PHS_LOGE("Unknown modem type, exit");
+                exit(-1);
+            }
+            /* set property */
+            snprintf(linker, sizeof(linker), "%s%d %s down", prop, tmp_cid-1, "0.0.0.0");
+            property_set(SYS_IFCONFIG_DOWN, linker);
+            /* start data_off */
+            property_set("ctl.start", "data_off");
 
-        sprintf(cmd, "setprop net.%s%d.ip %s", prop, tmp_cid-1,"0.0.0.0");
-        system(cmd);
-        sprintf(cmd, "setprop net.%s%d.dns1 \"\"", prop, tmp_cid-1);
-        system(cmd);
-        sprintf(cmd, "setprop net.%s%d.dns2 \"\"", prop, tmp_cid-1);
-        system(cmd);
+            /* wait up to 10s for data_off execute complete */
+            do {
+                property_get(SYS_IFCONFIG_DOWN, linker, "");
+                if(!strcmp(linker, "done"))
+                    break;
+                count++;
+                PHS_LOGD("wait data_off exec %d times...", count);
+                usleep(10*1000);
+            }while(count < RETRY_MAX_COUNT);
+
+            PHS_LOGD("data_off execute done");
+
+            sprintf(cmd, "setprop net.%s%d.ip %s", prop, tmp_cid-1,"0.0.0.0");
+            system(cmd);
+            sprintf(cmd, "setprop net.%s%d.dns1 \"\"", prop, tmp_cid-1);
+            system(cmd);
+            sprintf(cmd, "setprop net.%s%d.dns2 \"\"", prop, tmp_cid-1);
+            system(cmd);
+        } else {
+            snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+CGACT=0,%d\r", tmp_cid);
+            adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp,
+                (int)req->recv_pty);
+            adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
+                req->timeout);
+        }
+        mutex_unlock(&ps_service_mutex);
     } else {
-        snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+CGACT=0,%d\r", tmp_cid);
+        int i;
+        mutex_lock(&ps_service_mutex);
+        mux = adapter_get_cmux(req->cmd_type, TRUE);
+        snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+CGACT=0\r");
         adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp,
                 (int)req->recv_pty);
         adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
                 req->timeout);
+
+        for (i=0; i< MAX_PPP_NUM; i++) { 	/*deactivate PDP connection */
+            PHS_LOGD("context id %d state : %d", i, ppp_info[i].state);
+            if (ppp_info[i].state ==  PPP_STATE_ACTIVE) {	/*deactivate PDP connection */
+                ppp_info[i].cmux = mux;
+                ppp_info[i].state = PPP_STATE_IDLE;
+
+                if(!strcmp(modem, "t")) {
+                    property_get(ETH_TD, prop, "veth");
+                } else if(!strcmp(modem, "w")) {
+                    property_get(ETH_W, prop, "veth");
+                } else {
+                    PHS_LOGE("Unknown modem type, exit");
+                    exit(-1);
+                }
+                /* set property */
+                snprintf(linker, sizeof(linker), "%s%d %s down", prop, i, "0.0.0.0");
+                property_set(SYS_IFCONFIG_DOWN, linker);
+                /* start data_off */
+                property_set("ctl.start", "data_off");
+
+                /* wait up to 10s for data_off execute complete */
+                do {
+                    property_get(SYS_IFCONFIG_DOWN, linker, "");
+                    if(!strcmp(linker, "done"))
+                        break;
+                    count++;
+                    PHS_LOGD("wait data_off exec %d times...", count);
+                    usleep(10*1000);
+                }while(count < RETRY_MAX_COUNT);
+
+                PHS_LOGD("data_off execute done");
+
+                sprintf(cmd, "setprop net.%s%d.ip %s", prop, i,"0.0.0.0");
+                system(cmd);
+                sprintf(cmd, "setprop net.%s%d.dns1 \"\"", prop, i);
+                system(cmd);
+                sprintf(cmd, "setprop net.%s%d.dns2 \"\"", prop, i);
+                system(cmd);
+            }
+        }
+        mutex_unlock(&ps_service_mutex);
     }
-    mutex_unlock(&ps_service_mutex);
     return AT_RESULT_PROGRESS;
 }
 
