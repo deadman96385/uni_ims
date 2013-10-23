@@ -257,15 +257,21 @@ get_unit_loop1_brk1:
 		subs		byte_rest, byte_rest, #1
 		movge	cw_data, cw_data, lsl #8
 		orrge	cw_data, cw_data, data
-		moveq	byte_rest, #4
-		streq	cw_data, [bfr], #4
+		#moveq	byte_rest, #4
+		#streq	cw_data, [bfr], #4
 
 		subs		data, data, #1
 		movgt	zero_num, #0
 		addlt	zero_num, zero_num, #1
-		bne		get_unit_loop1_brk2
-		add		startCode_len, zero_num, #1
-		b 		get_unit_loop1_end
+		#bne		get_unit_loop1_brk2
+		addeq		startCode_len, zero_num, #1
+		beq 		get_unit_loop1_end
+		
+		cmp  	byte_rest, #0
+		moveq	byte_rest, #4
+		streq	cw_data, [bfr], #4
+		b     	get_unit_loop1_brk2
+		
 get_unit_loop1_brk2:
 		subs		dec_len, dec_len, #1
 		bgt		get_unit_loop1

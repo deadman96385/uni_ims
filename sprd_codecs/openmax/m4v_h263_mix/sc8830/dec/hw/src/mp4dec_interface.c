@@ -468,15 +468,19 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         goto DEC_EXIT;
     }
 
-    if(Mp4Dec_decode_vop(vo) != MMDEC_OK)
+	//add this judgement for cr228574
+    if (vop_mode_ptr->VopPredType != BVOP)
     {
-        mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_11;
-        ret = MMDEC_STREAM_ERROR;
-        goto DEC_EXIT;
-    }
+        if(Mp4Dec_decode_vop(vo) != MMDEC_OK)
+        {
+            mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_11;
+            ret = MMDEC_STREAM_ERROR;
+            goto DEC_EXIT;
+        }
 
-    Mp4Dec_output_one_frame (vo, dec_output_ptr);
-    Mp4Dec_exit_picture(vo);
+        Mp4Dec_output_one_frame (vo, dec_output_ptr);
+        Mp4Dec_exit_picture(vo);
+    }
 
     vop_mode_ptr->pre_vop_type = vop_mode_ptr->VopPredType;
     vo->g_nFrame_dec++;
