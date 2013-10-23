@@ -17,6 +17,7 @@ public class SecureChooseActivity extends Activity {
 	private TextView timer;
 	private String SECURE_PROPERTY = "persist.sys.secure.selected";
 	private String tag = this.getClass().getName();
+	public static int waitTime=10;
 	private Handler handler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
@@ -43,27 +44,38 @@ public class SecureChooseActivity extends Activity {
 
 	private void updateTimer(Object msg) {
 		// TODO Auto-generated method stub
-		timer.setText(getResources().getString(R.string.timer) + msg.toString() + "s");
+		timer.setText(getResources().getString(R.string.timer) + msg.toString() + getResources().getString(R.string.second));
 	}
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+		Log.v(tag, "start activity SecurityChooseActivity");
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		Button BtnOK = (Button) findViewById(R.id.button1);
 		Button BtnNOK = (Button) findViewById(R.id.button2);
 		timer = (TextView) this.findViewById(R.id.textView2);
-		timer.setText(getResources().getString(R.string.timer)+"12s");
+		timer.setText(getResources().getString(R.string.timer)+waitTime+getResources().getString(R.string.second));
 		BtnOK.setOnClickListener(new BtnOKListener());
 		BtnNOK.setOnClickListener(new BtnNOKListener());
+		Button btnCancel = (Button) findViewById(R.id.cancel);
+		btnCancel.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View arg0) {
+				// TODO cancel the activity
+				Message msg = new Message();
+				msg.obj = 0;
+				msg.what = 1;
+				handler.sendMessage(msg);
+			}
+		});
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
 				// TODO Auto-generated method stub
-				int timeCount = 10;
-				int count = 0;
-				while (count <timeCount) {
-					count++;
+				int timeCount = waitTime;
+				while (waitTime <=timeCount) {
+					waitTime--;
 					try {
 						Thread.sleep(1000);
 					} catch (InterruptedException e) {
@@ -71,9 +83,13 @@ public class SecureChooseActivity extends Activity {
 						e.printStackTrace();
 					}
 					Message msg = new Message();
-					msg.obj = timeCount - count;
+					msg.obj = waitTime;
 					msg.what = 0;
 					handler.sendMessage(msg);
+					if(waitTime == 0)
+					{
+						break;
+					}
 				}
 				Message msg = new Message();
 				msg.obj = 0;
