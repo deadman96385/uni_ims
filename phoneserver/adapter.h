@@ -14,7 +14,7 @@
 #define AT_RESULT_NG -1
 #define AT_RESULT_TIMEOUT -2
 #define AT_RESULT_PROGRESS 1
-#define MAX_AT_CMD_LEN 1024
+#define MAX_AT_CMD_LEN 4*1024
 
 #define DEFAULT_TIMEOUT 60
 #define CMGS_TIMEOUT   90 // 60
