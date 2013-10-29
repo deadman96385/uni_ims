@@ -356,6 +356,22 @@ FLV_RE_DEC:
     if(vop_mode_ptr->err_MB_num && vop_mode_ptr->uv_interleaved)
     {
         SCI_TRACE_LOW ("MP4DecDecode: Detect error bitstream, try to conceal!\n");
+
+        //modify for bug#222962
+        if (vop_mode_ptr->FrameWidth != 176 || vop_mode_ptr->FrameHeight != 144)
+        {
+            vop_mode_ptr->FrameWidth = 176;
+            vop_mode_ptr->FrameHeight = 144;
+        }
+
+
+        //modify for bug#232314
+        if (vop_mode_ptr->OrgFrameWidth!= 176 || vop_mode_ptr->OrgFrameHeight!= 144)
+        {
+            vop_mode_ptr->OrgFrameWidth = 176;
+            vop_mode_ptr->OrgFrameHeight = 144;
+        }
+		
         if(IVOP == vop_mode_ptr->VopPredType)
         {
             Mp4Dec_EC_IVOP(vop_mode_ptr);
@@ -364,12 +380,6 @@ FLV_RE_DEC:
             Mp4Dec_EC_PVOP(vop_mode_ptr);
         }
 
-        //modify for bug#222962
-        if (vop_mode_ptr->FrameWidth != 176 || vop_mode_ptr->FrameHeight != 144)
-        {
-            vop_mode_ptr->FrameWidth = 176;
-            vop_mode_ptr->FrameHeight = 144;
-        }
 
         ret = MMDEC_OK;
     }
