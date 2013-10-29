@@ -2294,6 +2294,9 @@ static int mapCgregResponse(int in_response)
         case 6:
             out_response = 11;   /* HSPA */
             break;
+        case 15:
+            out_response = 15;   /* HSPA+ */
+            break;
         default:
             out_response = 0;    /* UNKNOWN */
             break;
