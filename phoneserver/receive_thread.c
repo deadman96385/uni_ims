@@ -152,7 +152,7 @@ void *receive_data(struct receive_thread_t *me)
 	me->s_ATBufferCur = buffer;
 	struct cmux_t *mux = me->mux;
 	*buffer = '\0';
-	char tmp_buff[SERIAL_BUFFSIZE / 8];
+	char tmp_buff[SERIAL_BUFFSIZE / 2];
 	memset(buffer, 0, SERIAL_BUFFSIZE);
 	me->buffer = me->mux->buffer;
 	pid_t tid = gettid();
