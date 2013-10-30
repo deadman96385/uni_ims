@@ -45,6 +45,7 @@ MMDecRet Mp4Dec_InitDecoderPara(Mp4DecObject *vo)
     vop_mode_ptr->return_pos1 = 0;
     vop_mode_ptr->return_pos2 = 0;
     vop_mode_ptr->g_nFrame_dec = 0;
+    vop_mode_ptr->is_work_mode_set = 0;
 
     vop_mode_ptr->intra_acdc_pred_disable = TRUE;
     vop_mode_ptr->QuantizerType = Q_H263;
@@ -102,6 +103,9 @@ PUBLIC MMDecRet Mp4Dec_InitGlobal (Mp4DecObject *vo)
 
     vop_mode_ptr->InterQuantizerMatrix = (uint8 *)Mp4Dec_MemAlloc(vo, sizeof(uint8)*BLOCK_SQUARE_SIZE, 4, INTER_MEM);
     CHECK_MALLOC(vop_mode_ptr->InterQuantizerMatrix, "vop_mode_ptr->InterQuantizerMatrix");
+
+    vop_mode_ptr->dbk_para = (DBK_PARA_T *)Mp4Dec_MemAlloc(vo, sizeof(DBK_PARA_T), 4, INTER_MEM);
+    CHECK_MALLOC(vop_mode_ptr->dbk_para, "vop_mode_ptr->dbk_para");
 
     return Mp4Dec_InitDecoderPara(vo);
 }
@@ -250,12 +254,17 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
 
     Mp4Dec_InitHuffmanTable(vop_mode_ptr);
 
+    vop_mode_ptr->post_filter_en = FALSE;
+    if(vop_mode_ptr->VT_used)
+    {
+        vop_mode_ptr->post_filter_en = TRUE;
+    }
+
     if( MMDEC_OK != Mp4Dec_MallocFrmBfr(vo) )
     {
         return MMDEC_MEMORY_ERROR;
     }
 
-    vop_mode_ptr->post_filter_en = FALSE;
     vop_mode_ptr->pStandardZigzag = g_standard_zigzag_trans;
     if(vop_mode_ptr->bDataPartitioning)
     {

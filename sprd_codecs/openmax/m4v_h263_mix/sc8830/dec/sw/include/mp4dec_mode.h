@@ -179,6 +179,20 @@ typedef struct Mp4Dec_storable_pic
 
 } Mp4DecStorablePic;
 
+typedef struct
+{
+    int16 src_line_width;
+    int16 dst_line_width;
+
+    uint8 bs;
+    uint8 alpha;
+    uint8 beta;
+    uint8 clip;
+
+    int16 plane_idx;
+    int16 direction;
+} DBK_PARA_T;
+
 #define MP4DEC_FRM_STRM_BUF_SIZE (1000*1024)
 
 typedef void (*MP4_MC_16x16)(uint8 *pframe_ref, uint8 *pRecMB, int32 width, int32 dstWidth);
@@ -376,8 +390,6 @@ typedef struct dec_vop_mode_tag
 
     int32 iCoefStart;
 
-    int32 is_work_mode_set;
-
     uint16 is_first_frame;
     uint16 is_previous_B_VOP;
 
@@ -391,8 +403,10 @@ typedef struct dec_vop_mode_tag
     MP4_MC_8x8 g_mp4dec_mc_8x8[4];
 
     BOOLEAN is_expect_IVOP;
-    int8  srv0;
-    int16 srv1;
+    int8  is_work_mode_set;
+    int16 VT_used;
+
+    DBK_PARA_T * dbk_para;
 } DEC_VOP_MODE_T;
 
 typedef struct h263_plus_header_info_tag
@@ -458,6 +472,7 @@ typedef struct tagMp4DecObject
     DEC_VOP_MODE_T *vop_mode_ptr;
     DEC_FRM_BFR g_FrmYUVBfr[DEC_YUV_BUFFER_NUM];
     DEC_FRM_BFR g_DispFrmYUVBfr[DISP_YUV_BUFFER_NUM];
+    uint8 * g_dbk_tmp_frm_ptr;
 
     BOOLEAN g_dec_is_first_frame;
     BOOLEAN g_dec_is_stop_decode_vol;

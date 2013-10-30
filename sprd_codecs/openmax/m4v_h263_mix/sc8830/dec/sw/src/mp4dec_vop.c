@@ -140,6 +140,23 @@ PUBLIC MMDecRet Mp4Dec_InitVop(DEC_VOP_MODE_T *vop_mode_ptr, MMDecInput *dec_inp
     return ret;
 }
 
+PUBLIC void MP4Dec_JudgeDecMode (DEC_VOP_MODE_T * vop_mode_ptr)
+{
+    int32 aligned_frm_width = (((vop_mode_ptr->OrgFrameWidth + 15)>>4)<<4);
+    int32 aligned_frm_height = (((vop_mode_ptr->OrgFrameHeight + 15)>>4)<<4);
+
+    if ((aligned_frm_width <= 176 && aligned_frm_height <= 144) ||
+            (aligned_frm_width <= 144 && aligned_frm_height <= 176))
+    {
+        vop_mode_ptr->VT_used = 1;
+    } else
+    {
+        vop_mode_ptr->VT_used = 0;
+    }
+
+    SCI_TRACE_LOW("%s, VT_used: %d", __FUNCTION__, vop_mode_ptr->VT_used);
+}
+
 void Mp4Dec_ExchangeMBMode (DEC_VOP_MODE_T * vop_mode_ptr)
 {
     DEC_MB_MODE_T *mb_mode_tmp_ptr;

@@ -159,7 +159,7 @@ PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_fo
     /*judge h.263 or mpeg4*/
     if(video_format_ptr->video_std != MPEG4)
     {
-        SCI_TRACE_LOW ("\nH263(ITU or Sorenson format) is detected!\n");
+        SCI_TRACE_LOW ("H263(ITU or Sorenson format) is detected");
     } else
     {
         if(video_format_ptr->i_extra > 0)
@@ -232,6 +232,10 @@ FLV_RE_DEC:
         //modified by xwluo, 20100511
         mp4Handle->g_mpeg4_dec_err_flag |= 1<<1;
         return ret;
+    } else if (!vop_mode_ptr->is_work_mode_set)
+    {
+        MP4Dec_JudgeDecMode(vop_mode_ptr);
+        vop_mode_ptr->is_work_mode_set = 1;
     }
 
 #if 0	//removed for bug211978, seek with fake IVOP
@@ -353,33 +357,41 @@ FLV_RE_DEC:
         ret = vo->g_Mp4Dec_BVOP(vop_mode_ptr);
     }
 
-    if(vop_mode_ptr->err_MB_num && vop_mode_ptr->uv_interleaved)
+    if (vop_mode_ptr->VT_used)
     {
-        SCI_TRACE_LOW ("MP4DecDecode: Detect error bitstream, try to conceal!\n");
-
-        //modify for bug#222962
-        if (vop_mode_ptr->FrameWidth != 176 || vop_mode_ptr->FrameHeight != 144)
+        if(vop_mode_ptr->err_MB_num)
         {
-            vop_mode_ptr->FrameWidth = 176;
-            vop_mode_ptr->FrameHeight = 144;
+            SCI_TRACE_LOW ("MP4DecDecode: Detect error bitstream, try to conceal!\n");
+
+            //modify for bug#222962
+            if (vop_mode_ptr->FrameWidth != 176 || vop_mode_ptr->FrameHeight != 144)
+            {
+                vop_mode_ptr->FrameWidth = 176;
+                vop_mode_ptr->FrameHeight = 144;
+            }
+
+
+            //modify for bug#232314
+            if (vop_mode_ptr->OrgFrameWidth!= 176 || vop_mode_ptr->OrgFrameHeight!= 144)
+            {
+                vop_mode_ptr->OrgFrameWidth = 176;
+                vop_mode_ptr->OrgFrameHeight = 144;
+            }
+
+            if(IVOP == vop_mode_ptr->VopPredType)
+            {
+                Mp4Dec_EC_IVOP(vop_mode_ptr);
+            } else if(PVOP == vop_mode_ptr->VopPredType)
+            {
+                Mp4Dec_EC_PVOP(vop_mode_ptr);
+            }
         }
 
-
-        //modify for bug#232314
-        if (vop_mode_ptr->OrgFrameWidth!= 176 || vop_mode_ptr->OrgFrameHeight!= 144)
+        if(vop_mode_ptr->post_filter_en)
         {
-            vop_mode_ptr->OrgFrameWidth = 176;
-            vop_mode_ptr->OrgFrameHeight = 144;
+            SCI_TRACE_LOW("%s, deblock", __FUNCTION__);
+            Mp4Dec_Deblock_vop(vo);
         }
-		
-        if(IVOP == vop_mode_ptr->VopPredType)
-        {
-            Mp4Dec_EC_IVOP(vop_mode_ptr);
-        } else if(PVOP == vop_mode_ptr->VopPredType)
-        {
-            Mp4Dec_EC_PVOP(vop_mode_ptr);
-        }
-
 
         ret = MMDEC_OK;
     }

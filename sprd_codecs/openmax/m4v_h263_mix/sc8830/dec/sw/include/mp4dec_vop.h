@@ -41,6 +41,7 @@ MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr);
 MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr);
 MMDecRet Mp4Dec_DecBVOP(DEC_VOP_MODE_T *vop_mode_ptr);
 
+void Mp4Dec_Deblock_vop(Mp4DecObject *vo);
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
