@@ -2411,7 +2411,7 @@ static void requestRegistrationState(int channelID, int request, void *data,
             if (err < 0) goto error;
             err = at_tok_nexthexint(&line, &response[2]);
             if (err < 0) goto error;
-            err = at_tok_nexthexint(&line, &response[3]);
+            err = at_tok_nextint(&line, &response[3]);
             if (err < 0) goto error;
             break;
         default:
