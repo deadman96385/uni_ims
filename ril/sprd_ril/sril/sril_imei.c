@@ -194,15 +194,15 @@ void compareModemLockInfo(char* data, int dataNum) {
     char nvcplockcode[100] = {0x0,};
 
 /*+ sh0515.lee - Band Selection for CSC update +*/
-    char sType[5] = {0x0,};
+    char sType[PROPERTY_VALUE_MAX] = {0x0,};
     int iType = 0;
-    char sBand[5] = {0x0,};
+    char sBand[PROPERTY_VALUE_MAX] = {0x0,};
     int iBand = 0;
 /*- sh0515.lee - Band Selection for CSC update -*/
 
 //++ JSHAN Attach for CSC update
     int attach_mode = 0;
-    char tmpStrGPRSattch[5];
+    char tmpStrGPRSattch[PROPERTY_VALUE_MAX];
 //-- JSHAN Attach for CSC update
     //wannatea
     int amrwb = 0;
@@ -269,7 +269,7 @@ void compareModemLockInfo(char* data, int dataNum) {
 
             // read GPRS auto attach mode info and compare with item value
             //++ JSHAN Attach for CSC update
-            property_get(NETWORK_GPRS_ATTACH_MODE, &tmpStrGPRSattch, "1"); // 1 for gprs auto attach by default
+            property_get(NETWORK_GPRS_ATTACH_MODE, tmpStrGPRSattch, "1"); // 1 for gprs auto attach by default
             attach_mode = ConvertStrToNum(tmpStrGPRSattch);
 
             if ( (item[6] == 0x01) && (attach_mode == 1) ) {
@@ -688,7 +688,7 @@ void sril_SetUpdateItemMessage(int request, void *data, size_t datalen, RIL_Toke
 
 //++ JSHAN Attach for CSC update
     int attach_mode = 0;
-    char tmpStrGPRSattch[5];
+    char tmpStrGPRSattch[PROPERTY_VALUE_MAX];
 //-- JSHAN Attach for CSC update
 
     //wannatea
@@ -799,11 +799,11 @@ void sril_SetUpdateItemMessage(int request, void *data, size_t datalen, RIL_Toke
                 if (item[6] == 0x01) {
                     attach_mode = 1;
                     sprintf(&tmpStrGPRSattch[0], "%d", attach_mode);
-                    property_set(NETWORK_GPRS_ATTACH_MODE, &tmpStrGPRSattch);
+                    property_set(NETWORK_GPRS_ATTACH_MODE, tmpStrGPRSattch);
                 } else if (item[6] == 0x00) {
                     attach_mode = 2;
                     sprintf(&tmpStrGPRSattch[0], "%d", attach_mode);
-                    property_set(NETWORK_GPRS_ATTACH_MODE, &tmpStrGPRSattch);
+                    property_set(NETWORK_GPRS_ATTACH_MODE, tmpStrGPRSattch);
                 }
             //-- JSHAN Attach for CSC update
             } else if(item[0] == 0x8B) {        // IPC_IMEI_ITEM_GSM_AMR_CALL_CONFIG;

@@ -42,7 +42,7 @@ LOCAL_CFLAGS :=  -fno-strict-aliasing -D_VSP_LINUX_  -D_VSP_  -D_MP4CODEC_DATA_P
 #LOCAL_CFLAGS += -DYUV_THREE_PLANE
 
 LOCAL_SHARED_LIBRARIES := \
-	libutils
+	libutils liblog
 
 LOCAL_ARM_MODE := arm
 

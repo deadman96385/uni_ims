@@ -40,7 +40,7 @@ LOCAL_CFLAGS :=  -fno-strict-aliasing -DMPEG4_DEC -D_VSP_LINUX_  -D_VSP_  -D_MP4
 LOCAL_ARM_MODE := arm
 
 LOCAL_SHARED_LIBRARIES := \
-	libutils
+	libutils liblog
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \

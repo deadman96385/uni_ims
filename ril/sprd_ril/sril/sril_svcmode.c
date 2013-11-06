@@ -449,7 +449,7 @@ unsigned int sril_ProcessSvcMenu(t_SvcMenuStruct * pMenu, OemSvcModeRsp ** pMenu
 /* CWYoon 110527::Factory test, Auto answering ++ */
 int sril_GetAutoAnswerValue(int request, void *data, size_t datalen, RIL_Token t) {
     char *    AUTO_ANS = "ril.AUTO_ANS";
-    char value[3];
+    char value[PROPERTY_VALUE_MAX];
 
     ALOGD("%s\n", __FUNCTION__);
 
@@ -513,7 +513,7 @@ void sril_ToggleAutoAnswer(int request, void *data, size_t datalen, RIL_Token t)
     OemSvcModeRsp * pSvcRsp = NULL;
     OemSvcModeRsp * pTmpRsp = NULL;
     char *    AUTO_ANS = "ril.AUTO_ANS";
-    char value[3];
+    char value[PROPERTY_VALUE_MAX];
 
     ALOGD("%s\n", __FUNCTION__);
 

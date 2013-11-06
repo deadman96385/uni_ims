@@ -21,7 +21,7 @@ LOCAL_CFLAGS :=  -fno-strict-aliasing -DH264_ENC -D_VSP_LINUX_  -D_VSP_  -DCHIP_
 LOCAL_ARM_MODE := arm
 
 LOCAL_SHARED_LIBRARIES := \
-	libutils
+	libutils liblog
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \

@@ -28,7 +28,7 @@
 #define PROP_TTYDEV  "persist.ttydev"
 #define PHONE_APP_PROP  "sys.phone.app"
 
-static char ttydev[12];
+static char ttydev[256];
 static int ttydev_fd;
 
 static int s_multiSimMode = 0;
@@ -226,7 +226,7 @@ int main(int argc, char **argv)
     int str;
     char mux_2sim_mode[]="echo 1 > /proc/mux_mode";
     char mux_3sim_mode[]="echo 2 > /proc/mux_mode";
-    char phoneCount[5];
+    char phoneCount[PROPERTY_VALUE_MAX];
     char path[32];
 
     if(0 == property_get(PROP_PHONE_COUNT, phoneCount, "1")) {

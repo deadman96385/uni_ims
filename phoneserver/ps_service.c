@@ -216,7 +216,7 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
     int ip_hex,dns1_hex, dns2_hex;
     char ip[IP_ADD_SIZE],dns1[IP_ADD_SIZE], dns2[IP_ADD_SIZE];
     char cmd[MAX_CMD * 2];
-    char prop[10];
+    char prop[PROPERTY_VALUE_MAX];
     char linker[128] = {0};
     int count = 0;
 
@@ -403,8 +403,8 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
     char cmd[MAX_CMD], at_cmd_str[MAX_AT_CMD_LEN], 
             cgev_str[MAX_AT_CMD_LEN];
     char *at_in_str;
-    char prop[10];
-    char linker[64] = {0};
+    char prop[PROPERTY_VALUE_MAX];
+    char linker[128] = {0};
     int count = 0;
 
     if (req == NULL) {

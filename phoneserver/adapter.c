@@ -1158,7 +1158,7 @@ int cvt_ecind_cmd_ind(AT_CMD_IND_T * ind)
     int err;
     int skip, sim_status;
     pid_t pid1, pid2;
-    char prop[5];
+    char prop[PROPERTY_VALUE_MAX];
 
     if(multiSimMode == 1) {
         ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));

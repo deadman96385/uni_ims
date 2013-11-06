@@ -3865,7 +3865,7 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
     char s_name_ril_debug[20] = {0};
     pthread_attr_t attr;
     int opt;
-    char phoneCount[5];
+    char phoneCount[PROPERTY_VALUE_MAX];
     int count;
 
     optind = 0;  // reset getopt

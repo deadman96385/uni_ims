@@ -699,7 +699,7 @@ char *chnmng_find_buffer(struct channel_manager_t *const me)
 /*## operation initialize all cmux objects*/
 static void chnmng_cmux_Init(struct channel_manager_t *const me)
 {
-    char prop[20] = {0};
+    char prop[PROPERTY_VALUE_MAX] = {0};
     thread_sched_param sched;
     int tid = 0;
     int policy = 0;
@@ -957,7 +957,7 @@ static void *detect_at_no_response(void *par)
 
 int main(int argc, char *argv[])
 {
-    char prop[5];
+    char prop[PROPERTY_VALUE_MAX];
     pthread_t tid;
     int ret;
 

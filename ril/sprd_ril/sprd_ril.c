@@ -940,8 +940,8 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
     int autoAttach = -1;
     int err, i;
     ATResponse *p_response = NULL;
-    char sim_prop[5];
-    char data_prop[5];
+    char sim_prop[PROPERTY_VALUE_MAX];
+    char data_prop[PROPERTY_VALUE_MAX];
     extern int s_sim_num;
 
     assert (datalen >= sizeof(int *));
@@ -1207,9 +1207,9 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
         char *type;
         char *apn;
         char *address;
-        char cmd[30] = {0};
-        char eth[20] = {0};
-        char prop[20] = {0};
+        char cmd[PROPERTY_VALUE_MAX] = {0};
+        char eth[PROPERTY_VALUE_MAX] = {0};
+        char prop[PROPERTY_VALUE_MAX] = {0};
         const int   dnslist_sz = 50;
         char*       dnslist = alloca(dnslist_sz);
         const char* separator = "";
@@ -1454,7 +1454,7 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     char response[20];
     ATResponse *p_response = NULL;
     int index = -1;
-    char qos_state[10];
+    char qos_state[PROPERTY_VALUE_MAX];
     char *line = NULL;
     const  char *pdp_type;
     int failCause;
@@ -1836,7 +1836,7 @@ static void resetModem(void * param)
         RILLOGD("resetModem channel is busy");
         RIL_requestTimedCallback (resetModem, NULL, &TIMEVAL_SIMPOLL);
     } else {
-	char modemrst_property[8];
+	char modemrst_property[PROPERTY_VALUE_MAX];
 
         memset(modemrst_property, 0, sizeof(modemrst_property));
         property_get(RIL_MODEM_RESET_PROPERTY, modemrst_property, "");
@@ -2648,7 +2648,7 @@ static void requestSetSpeedMode(int channelID, void *data, size_t datalen, RIL_T
 {
     char cmd[20] = {0};
     int enable = ((int *)data)[0];
-    char prop[5] = {0};
+    char prop[PROPERTY_VALUE_MAX] = {0};
     int fd = -1;
     int n = -1;
     int lockFd = -1;
@@ -2657,7 +2657,7 @@ static void requestSetSpeedMode(int channelID, void *data, size_t datalen, RIL_T
 
     RILLOGD("requestSetSpeedMode  enable = %d", enable);
     for(i=0; i<3; i++) {
-        lockFd = open("/data/local/tmp/rilLock", O_RDWR | O_CREAT | O_EXCL);
+        lockFd = open("/data/local/tmp/rilLock", O_RDWR | O_CREAT | O_EXCL, S_IRUSR|S_IWUSR);
         RILLOGD("requestSetSpeedMode  lockFd = %d", lockFd);
         if (lockFd >= 0) {
             fd = open("/sys/module/ipc_sdio/parameters/sdio_tx_wait_time", O_RDWR);
@@ -4993,7 +4993,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     break;
                 }
                 if(s_multiSimMode) {
-                    char prop[10];
+                    char prop[PROPERTY_VALUE_MAX];
                     extern int s_sim_num;
 
                     if(s_sim_num == 0) {
@@ -6421,8 +6421,8 @@ getSIMStatus(int channelID)
 
     if (0 == strcmp (cpinResult, "SIM PIN")) {
         /* add for modem reboot */
-        char sim_prop[20];
-        char prop[10];
+        char sim_prop[PROPERTY_VALUE_MAX];
+        char prop[PROPERTY_VALUE_MAX];
         char *cmd;
         int res;
         ATResponse   *p_response1 = NULL;
@@ -6877,8 +6877,8 @@ static void initializeCallback(void *param)
 
     /*power on sim card */
     if(s_multiSimMode) {
-        char sim_prop[30];
-        char prop[10];
+        char sim_prop[PROPERTY_VALUE_MAX];
+        char prop[PROPERTY_VALUE_MAX];
         extern int s_sim_num;
 
         if(s_sim_num == 0) {
@@ -6916,8 +6916,8 @@ static void initializeCallback(void *param)
             }
         }
     } else {
-        char sim_prop[30];
-        char prop[10];
+        char sim_prop[PROPERTY_VALUE_MAX];
+        char prop[PROPERTY_VALUE_MAX];
 
         if(!strcmp(s_modem, "t")) {
             strcpy(sim_prop, RIL_TD_SIM_POWER_PROPERTY);
@@ -8140,8 +8140,8 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
     int fd = -1;
     int opt;
     pthread_attr_t attr;
-    char phoneCount[5];
-    char prop[5];
+    char phoneCount[PROPERTY_VALUE_MAX];
+    char prop[PROPERTY_VALUE_MAX];
 
     s_rilenv = env;
 

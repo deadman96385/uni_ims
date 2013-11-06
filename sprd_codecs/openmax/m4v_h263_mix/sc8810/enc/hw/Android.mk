@@ -30,7 +30,7 @@ LOCAL_CFLAGS := -fno-strict-aliasing -D_VSP_LINUX_  -D_VSP_  -DCHIP_ENDIAN_LITTL
 LOCAL_ARM_MODE := arm
 
 LOCAL_SHARED_LIBRARIES := \
-	libutils
+	libutils liblog
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \

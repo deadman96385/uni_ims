@@ -26,7 +26,7 @@ LOCAL_CFLAGS :=  -fno-strict-aliasing -DH264_DEC -D_VSP_LINUX_  -D_VSP_  -DCHIP_
 LOCAL_ARM_MODE := arm
 
 LOCAL_SHARED_LIBRARIES := \
-	libutils
+	libutils liblog
 
 LOCAL_MODULE := libomx_avcdec_hw_sprd
 LOCAL_MODULE_TAGS := optional

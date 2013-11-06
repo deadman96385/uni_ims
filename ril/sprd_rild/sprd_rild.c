@@ -116,7 +116,7 @@ int main(int argc, char **argv)
     char cmdline[1024];
     int i, rc, fd;
     int califlag = 0;
-    char prop[5];
+    char prop[PROPERTY_VALUE_MAX];
 
     for (i = 1; i < argc ;) {
         if (0 == strcmp(argv[i], "-l") && (argc - i > 1)) {

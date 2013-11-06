@@ -32,11 +32,12 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/src 
 
 LOCAL_CFLAGS :=  -fno-strict-aliasing -D_VSP_LINUX_   -D_MP4CODEC_DATA_PARTITION_ -DCHIP_ENDIAN_LITTLE
+LOCAL_LDFLAGS := -Wl,--no-warn-shared-textrel
 
 LOCAL_ARM_MODE := arm
 
 LOCAL_SHARED_LIBRARIES := \
-	libutils
+	libutils liblog
 
 
 LOCAL_MODULE := libomx_m4vh263dec_sw_sprd

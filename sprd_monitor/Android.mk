@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 
 common_flags := -DANDROID_CHANGES -DEBUG
-common_libs := libcutils libc
+common_libs := libcutils liblog
 
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := sprd_monitor.c

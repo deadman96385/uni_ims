@@ -39,11 +39,12 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \
 	$(LOCAL_PATH)/src \
 
-LOCAL_CFLAGS :=  -fno-strict-aliasing -D_VSP_LINUX_   -DCHIP_ENDIAN_LITTLE -DITRANS_ASSEMBLY 
+LOCAL_CFLAGS :=  -fno-strict-aliasing -D_VSP_LINUX_ -DCHIP_ENDIAN_LITTLE -DITRANS_ASSEMBLY
+LOCAL_LDFLAGS := -Wl,--no-warn-shared-textrel
 LOCAL_ARM_MODE := arm
 
 LOCAL_SHARED_LIBRARIES := \
-        libutils
+        libutils liblog
 
 LOCAL_MODULE := libomx_avcdec_sw_sprd
 LOCAL_MODULE_TAGS := optional
