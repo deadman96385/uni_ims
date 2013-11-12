@@ -137,7 +137,7 @@ int at_send_command_singleline_timeout (struct ATChannels *ATch,
                                 const char *command,
                                 const char *responsePrefix,
                                 ATResponse **pp_outResponse,
-				int timeout);
+                                int timeout);
 
 int at_send_command_numeric (struct ATChannels *ATch, const char *command,
                                  ATResponse **pp_outResponse);

@@ -18,6 +18,7 @@
 #define ANDROID_RIL_H 1
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <telephony/ril_cdma_sms.h>
 #ifndef FEATURE_UNIT_TEST
 #include <sys/time.h>
@@ -27,7 +28,7 @@
 extern "C" {
 #endif
 
-#define RIL_VERSION 7     /* Current version */
+#define RIL_VERSION 9     /* Current version */
 #define RIL_VERSION_MIN 6 /* Minimum RIL_VERSION supported */
 
 #define CDMA_ALPHA_INFO_BUFFER_LENGTH 64
@@ -79,19 +80,19 @@ typedef enum {
     RIL_E_SS_MODIFIED_TO_SS = 25,               /* SS request modified to different SS request */
     RIL_E_SUBSCRIPTION_NOT_SUPPORTED = 26       /* Subscription not supported by RIL */
 #if defined (GLOBALCONFIG_RIL_DSAC)
-    ,RIL_E_DSAC_SMS_FAIL = 27  
+    ,RIL_E_DSAC_SMS_FAIL = 27
 #endif
 #if defined (GLOBALCONFIG_RIL_DISPLAY_SS_CW_ERR)
     ,RIL_E_NOT_SUBCRIBED_USER = 28
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-	,RIL_E_OPER_NOT_ALLOWED = 1000
-	,RIL_E_MEMORY_ERROR = 1001
-	,RIL_E_INVALID_INDEX =1002
-	,RIL_E_TEXT_STR_TOO_LONG = 1003
-	,RIL_E_DIAL_STR_TOO_LONG = 1004
-	,RIL_E_INVALID_CHARACTERS_IN_TEXT_STR = 1005
-	,RIL_E_INVALID_CHARACTERS_IN_DIAL_STR = 1006
+    ,RIL_E_OPER_NOT_ALLOWED = 1000
+    ,RIL_E_MEMORY_ERROR = 1001
+    ,RIL_E_INVALID_INDEX =1002
+    ,RIL_E_TEXT_STR_TOO_LONG = 1003
+    ,RIL_E_DIAL_STR_TOO_LONG = 1004
+    ,RIL_E_INVALID_CHARACTERS_IN_TEXT_STR = 1005
+    ,RIL_E_INVALID_CHARACTERS_IN_DIAL_STR = 1006
 #endif
 #if defined (RIL_SPRD_EXTENSION)
     ,RIL_E_SMS_SAVE_FAIL_FULL = 2000
@@ -167,11 +168,6 @@ typedef enum {
    CDMA_SUBSCRIPTION_SOURCE_RUIM_SIM = 0,
    CDMA_SUBSCRIPTION_SOURCE_NV = 1
 } RIL_CdmaSubscriptionSource;
-
-typedef enum {
-    RADIO_TECH_3GPP = 1, /* 3GPP Technologies - GSM, WCDMA */
-    RADIO_TECH_3GPP2 = 2 /* 3GPP2 Technologies - CDMA */
-} RIL_RadioTechnologyFamily;
 
 /* User-to-User signaling Info activation types derived from 3GPP 23.087 v8.0 */
 typedef enum {
@@ -254,16 +250,6 @@ typedef struct {
 #endif
 } RIL_Call;
 
-typedef struct {
-    int             cid;        /* Context ID */
-    int             active;     /* 0=inactive, 1=active/physical link down, 2=active/physical link up */
-    char *          type;       /* One of the PDP_type values in TS 27.007 section 10.1.1.
-                                   For example, "IP", "IPV6", "IPV4V6", or "PPP". */
-    char *          apn;
-    char *          address;    /* A space-delimited list of addresses, e.g., "192.0.1.3" or
-                                   "192.0.1.11 2001:db8::1". */
-} RIL_Data_Call_Response;
-
 /* Deprecated, use RIL_Data_Call_Response_v6 */
 typedef struct {
     int             cid;        /* Context ID, uniquely identifies this call */
@@ -286,7 +272,7 @@ typedef struct {
                                            The unit is miliseconds.
                                            The value < 0 means no value is suggested.
                                            The value 0 means retry should be done ASAP.
-                                           The value of MAX_INT(0x7fffffff) means no retry. */
+                                           The value of INT_MAX(0x7fffffff) means no retry. */
     int             cid;        /* Context ID, uniquely identifies this call */
     int             active;     /* 0=inactive, 1=active/physical link down, 2=active/physical link up */
     char *          type;       /* One of the PDP_type values in TS 27.007 section 10.1.1.
@@ -309,6 +295,10 @@ typedef struct {
                                    to point connections. */
 } RIL_Data_Call_Response_v6;
 
+typedef enum {
+    RADIO_TECH_3GPP = 1, /* 3GPP Technologies - GSM, WCDMA */
+    RADIO_TECH_3GPP2 = 2 /* 3GPP2 Technologies - CDMA */
+} RIL_RadioTechnologyFamily;
 
 typedef struct {
     RIL_RadioTechnologyFamily tech;
@@ -396,21 +386,6 @@ typedef struct {
     char *pin2;     /* May be NULL*/
     char *aidPtr;   /* AID value, See ETSI 102.221 8.1 and 101.220 4, NULL if no value. */
 } RIL_SIM_IO_v6;
-
-//FINISHED SISO UPDATION 2nd April
-typedef struct {
-    int command;    /* one of the commands listed for TS 27.007 +CRSM*/
-    int fileid;     /* EF id */
-    char *path;     /* "pathid" from TS 27.007 +CRSM command.
-                       Path is in hex asciii format eg "7f205f70"
-                       Path must always be provided.
-                     */
-    int p1;
-    int p2;
-    int p3;
-    char *data;     /* May be NULL*/
-    char *pin2;     /* May be NULL*/
-} RIL_SIM_IO;
 
 typedef struct {
     int sw1;
@@ -575,6 +550,7 @@ typedef enum {
     PDP_FAIL_SERVICE_OPTION_NOT_SUBSCRIBED = 0x21, /* no retry */
     PDP_FAIL_SERVICE_OPTION_OUT_OF_ORDER = 0x22,
     PDP_FAIL_NSAPI_IN_USE = 0x23,                  /* no retry */
+    PDP_FAIL_REGULAR_DEACTIVATION = 0x24,          /* restart radio */
     PDP_FAIL_ONLY_IPV4_ALLOWED = 0x32,             /* no retry */
     PDP_FAIL_ONLY_IPV6_ALLOWED = 0x33,             /* no retry */
     PDP_FAIL_ONLY_SINGLE_BEARER_ALLOWED = 0x34,
@@ -585,7 +561,7 @@ typedef enum {
     PDP_FAIL_DATA_REGISTRATION_FAIL = -2,
 
    /* reasons for data call drop - network/modem disconnect */
-    PDP_FAIL_SIGNAL_LOST = -3,            /* no retry */
+    PDP_FAIL_SIGNAL_LOST = -3,
     PDP_FAIL_PREF_RADIO_TECH_CHANGED = -4,/* preferred technology has changed, should retry
                                              with parameters appropriate for new technology */
     PDP_FAIL_RADIO_POWER_OFF = -5,        /* data call was disconnected because radio was resetting,
@@ -791,16 +767,7 @@ typedef struct
 #endif
 } RIL_AppStatus;
 
-typedef struct
-{
-  RIL_CardState card_state;
-  RIL_PinState  universal_pin_state;             /* applicable to USIM and CSIM: RIL_PINSTATE_xxx */
-  int           gsm_umts_subscription_app_index; /* value < RIL_CARD_MAX_APPS */
-  int           cdma_subscription_app_index;     /* value < RIL_CARD_MAX_APPS */
-  int           num_applications;                /* value <= RIL_CARD_MAX_APPS */
-  RIL_AppStatus applications[RIL_CARD_MAX_APPS];
-} RIL_CardStatus;
-
+/* Deprecated, use RIL_CardStatus_v6 */
 typedef struct
 {
   RIL_CardState card_state;
@@ -936,6 +903,10 @@ typedef struct {
     int bitErrorRate;    /* bit error rate (0-7, 99) as defined in TS 27.007 8.5 */
 } RIL_GW_SignalStrength;
 
+typedef struct {
+    int signalStrength;  /* Valid values are (0-31, 99) as defined in TS 27.007 8.5 */
+    int bitErrorRate;    /* bit error rate (0-7, 99) as defined in TS 27.007 8.5 */
+} RIL_SignalStrengthWcdma;
 
 typedef struct {
     int dbm;  /* Valid values are positive integers.  This value is the actual RSSI value
@@ -981,6 +952,32 @@ typedef struct {
                           * Reference: 3GPP TS 36.101 9.2, 9.3, A.4 */
 } RIL_LTE_SignalStrength;
 
+typedef struct {
+    int signalStrength;  /* Valid values are (0-31, 99) as defined in TS 27.007 8.5 */
+    int rsrp;            /* The current Reference Signal Receive Power in dBm multipled by -1.
+                          * Range: 44 to 140 dBm
+                          * INT_MAX: 0x7FFFFFFF denotes invalid value.
+                          * Reference: 3GPP TS 36.133 9.1.4 */
+    int rsrq;            /* The current Reference Signal Receive Quality in dB multiplied by -1.
+                          * Range: 20 to 3 dB.
+                          * INT_MAX: 0x7FFFFFFF denotes invalid value.
+                          * Reference: 3GPP TS 36.133 9.1.7 */
+    int rssnr;           /* The current reference signal signal-to-noise ratio in 0.1 dB units.
+                          * Range: -200 to +300 (-200 = -20.0 dB, +300 = 30dB).
+                          * INT_MAX : 0x7FFFFFFF denotes invalid value.
+                          * Reference: 3GPP TS 36.101 8.1.1 */
+    int cqi;             /* The current Channel Quality Indicator.
+                          * Range: 0 to 15.
+                          * INT_MAX : 0x7FFFFFFF denotes invalid value.
+                          * Reference: 3GPP TS 36.101 9.2, 9.3, A.4 */
+    int timingAdvance;   /* timing advance in micro seconds for a one way trip from cell to device.
+                          * Approximate distance can be calculated using 300m/us * timingAdvance.
+                          * Range: 0 to 0x7FFFFFFE
+                          * INT_MAX : 0x7FFFFFFF denotes invalid value.
+                          * Reference: 3GPP 36.321 section 6.1.3.5
+                          * also: http://www.cellular-planningoptimization.com/2010/02/timing-advance-with-calculation.html */
+} RIL_LTE_SignalStrength_v8;
+
 /* Deprecated, use RIL_SignalStrength_v6 */
 typedef struct {
     RIL_GW_SignalStrength   GW_SignalStrength;
@@ -994,6 +991,110 @@ typedef struct {
     RIL_EVDO_SignalStrength EVDO_SignalStrength;
     RIL_LTE_SignalStrength  LTE_SignalStrength;
 } RIL_SignalStrength_v6;
+
+typedef struct {
+    RIL_GW_SignalStrength       GW_SignalStrength;
+    RIL_CDMA_SignalStrength     CDMA_SignalStrength;
+    RIL_EVDO_SignalStrength     EVDO_SignalStrength;
+    RIL_LTE_SignalStrength_v8   LTE_SignalStrength;
+} RIL_SignalStrength_v8;
+
+/** RIL_CellIdentityGsm */
+typedef struct {
+    int mcc;    /* 3-digit Mobile Country Code, 0..999, INT_MAX if unknown */
+    int mnc;    /* 2 or 3-digit Mobile Network Code, 0..999, INT_MAX if unknown */
+    int lac;    /* 16-bit Location Area Code, 0..65535, INT_MAX if unknown  */
+    int cid;    /* 16-bit GSM Cell Identity described in TS 27.007, 0..65535, INT_MAX if unknown  */
+} RIL_CellIdentityGsm;
+
+/** RIL_CellIdentityWcdma */
+typedef struct {
+    int mcc;    /* 3-digit Mobile Country Code, 0..999, INT_MAX if unknown  */
+    int mnc;    /* 2 or 3-digit Mobile Network Code, 0..999, INT_MAX if unknown  */
+    int lac;    /* 16-bit Location Area Code, 0..65535, INT_MAX if unknown  */
+    int cid;    /* 28-bit UMTS Cell Identity described in TS 25.331, 0..268435455, INT_MAX if unknown  */
+    int psc;    /* 9-bit UMTS Primary Scrambling Code described in TS 25.331, 0..511, INT_MAX if unknown */
+} RIL_CellIdentityWcdma;
+
+/** RIL_CellIdentityCdma */
+typedef struct {
+    int networkId;      /* Network Id 0..65535, INT_MAX if unknown */
+    int systemId;       /* CDMA System Id 0..32767, INT_MAX if unknown  */
+    int basestationId;  /* Base Station Id 0..65535, INT_MAX if unknown  */
+    int longitude;      /* Longitude is a decimal number as specified in 3GPP2 C.S0005-A v6.0.
+                         * It is represented in units of 0.25 seconds and ranges from -2592000
+                         * to 2592000, both values inclusive (corresponding to a range of -180
+                         * to +180 degrees). INT_MAX if unknown */
+
+    int latitude;       /* Latitude is a decimal number as specified in 3GPP2 C.S0005-A v6.0.
+                         * It is represented in units of 0.25 seconds and ranges from -1296000
+                         * to 1296000, both values inclusive (corresponding to a range of -90
+                         * to +90 degrees). INT_MAX if unknown */
+} RIL_CellIdentityCdma;
+
+/** RIL_CellIdentityLte */
+typedef struct {
+    int mcc;    /* 3-digit Mobile Country Code, 0..999, INT_MAX if unknown  */
+    int mnc;    /* 2 or 3-digit Mobile Network Code, 0..999, INT_MAX if unknown  */
+    int ci;     /* 28-bit Cell Identity described in TS ???, INT_MAX if unknown */
+    int pci;    /* physical cell id 0..503, INT_MAX if unknown  */
+    int tac;    /* 16-bit tracking area code, INT_MAX if unknown  */
+} RIL_CellIdentityLte;
+
+/** RIL_CellInfoGsm */
+typedef struct {
+  RIL_CellIdentityGsm   cellIdentityGsm;
+  RIL_GW_SignalStrength signalStrengthGsm;
+} RIL_CellInfoGsm;
+
+/** RIL_CellInfoWcdma */
+typedef struct {
+  RIL_CellIdentityWcdma cellIdentityWcdma;
+  RIL_SignalStrengthWcdma signalStrengthWcdma;
+} RIL_CellInfoWcdma;
+
+/** RIL_CellInfoCdma */
+typedef struct {
+  RIL_CellIdentityCdma      cellIdentityCdma;
+  RIL_CDMA_SignalStrength   signalStrengthCdma;
+  RIL_EVDO_SignalStrength   signalStrengthEvdo;
+} RIL_CellInfoCdma;
+
+/** RIL_CellInfoLte */
+typedef struct {
+  RIL_CellIdentityLte        cellIdentityLte;
+  RIL_LTE_SignalStrength_v8  signalStrengthLte;
+} RIL_CellInfoLte;
+
+// Must be the same as CellInfo.TYPE_XXX
+typedef enum {
+  RIL_CELL_INFO_TYPE_GSM    = 1,
+  RIL_CELL_INFO_TYPE_CDMA   = 2,
+  RIL_CELL_INFO_TYPE_LTE    = 3,
+  RIL_CELL_INFO_TYPE_WCDMA  = 4,
+} RIL_CellInfoType;
+
+// Must be the same as CellInfo.TIMESTAMP_TYPE_XXX
+typedef enum {
+    RIL_TIMESTAMP_TYPE_UNKNOWN = 0,
+    RIL_TIMESTAMP_TYPE_ANTENNA = 1,
+    RIL_TIMESTAMP_TYPE_MODEM = 2,
+    RIL_TIMESTAMP_TYPE_OEM_RIL = 3,
+    RIL_TIMESTAMP_TYPE_JAVA_RIL = 4,
+} RIL_TimeStampType;
+
+typedef struct {
+  RIL_CellInfoType  cellInfoType;   /* cell type for selecting from union CellInfo */
+  int               registered;     /* !0 if this cell is registered 0 if not registered */
+  RIL_TimeStampType timeStampType;  /* type of time stamp represented by timeStamp */
+  uint64_t          timeStamp;      /* Time in nanos as returned by ril_nano_time */
+  union {
+    RIL_CellInfoGsm     gsm;
+    RIL_CellInfoCdma    cdma;
+    RIL_CellInfoLte     lte;
+    RIL_CellInfoWcdma   wcdma;
+  } CellInfo;
+} RIL_CellInfo;
 
 /* Names of the CDMA info records (C.S0005 section 3.7.5) */
 typedef enum {
@@ -1192,32 +1293,32 @@ typedef struct {
 
 // Preferred Network List function
 typedef struct {
-	int index;
-	char *oper;
-	char *plmn;
-      int gsmAct;
-      int gsmCompactAct;
-      int utranAct;
-	int mode;
+    int index;
+    char *oper;
+    char *plmn;
+    int gsmAct;
+    int gsmCompactAct;
+    int utranAct;
+    int mode;
 } RIL_PreferredNetworkInfo;
 
 /** Used by RIL_REQUEST_VIDEOPHONE_INIT */
 typedef struct {
     int crc;
     int dcpi;
-	int dsci;
-	int dvtchl;
-	int dvtable;
-	int dvttype;
-	int dvtdci;
-	int creg;
+    int dsci;
+    int dvtchl;
+    int dvtable;
+    int dvttype;
+    int dvtdci;
+    int creg;
 } RIL_VideoPhone_Init;
 
 
 /** Used by RIL_REQUEST_VIDEOPHONE_DIAL */
 typedef struct {
     char * address;
-	char * sub_address;
+    char * sub_address;
     int clir;
             /* (same as 'n' paremeter in TS 27.007 7.7 "+CLIR"
              * clir == 0 on "use subscription default value"
@@ -1283,6 +1384,7 @@ typedef struct {
  */
 
 #define RIL_REQUEST_ENTER_SIM_PIN 2
+
 
 /**
  * RIL_REQUEST_ENTER_SIM_PUK
@@ -1805,6 +1907,15 @@ typedef struct {
  *      40 == No PDP context activated
  * ((const char **)response)[5] The maximum number of simultaneous Data Calls that can be
  *                              established using RIL_REQUEST_SETUP_DATA_CALL.
+ *
+ * The values at offsets 6..10 are optional LTE location information in decimal.
+ * If a value is unknown that value may be NULL. If all values are NULL,
+ * none need to be present.
+ *  ((const char **)response)[6] is TAC, a 16-bit Tracking Area Code.
+ *  ((const char **)response)[7] is CID, a 0-503 Physical Cell Identifier.
+ *  ((const char **)response)[8] is ECI, a 28-bit E-UTRAN Cell Identifier.
+ *  ((const char **)response)[9] is CSGID, a 27-bit Closed Subscriber Group Identity.
+ *  ((const char **)response)[10] is TADV, a 6-bit timing advance value.
  *
  * LAC and CID are in hexadecimal format.
  * valid LAC are 0x0000 - 0xffff
@@ -3779,6 +3890,99 @@ typedef struct {
  */
 #define RIL_REQUEST_VOICE_RADIO_TECH 108
 
+/**
+ * RIL_REQUEST_GET_CELL_INFO_LIST
+ *
+ * Request all of the current cell information known to the radio. The radio
+ * must a list of all current cells, including the neighboring cells. If for a particular
+ * cell information isn't known then the appropriate unknown value will be returned.
+ * This does not cause or change the rate of RIL_UNSOL_CELL_INFO_LIST.
+ *
+ * "data" is NULL
+ *
+ * "response" is an array of  RIL_CellInfo.
+ */
+#define RIL_REQUEST_GET_CELL_INFO_LIST 109
+
+/**
+ * RIL_REQUEST_SET_UNSOL_CELL_INFO_LIST_RATE
+ *
+ * Sets the minimum time between when RIL_UNSOL_CELL_INFO_LIST should be invoked.
+ * A value of 0, means invoke RIL_UNSOL_CELL_INFO_LIST when any of the reported
+ * information changes. Setting the value to INT_MAX(0x7fffffff) means never issue
+ * a RIL_UNSOL_CELL_INFO_LIST.
+ *
+ * "data" is int *
+ * ((int *)data)[0] is minimum time in milliseconds
+ *
+ * "response" is NULL
+ *
+ * Valid errors:
+ *  SUCCESS
+ *  RADIO_NOT_AVAILABLE
+ *  GENERIC_FAILURE
+ */
+#define RIL_REQUEST_SET_UNSOL_CELL_INFO_LIST_RATE 110
+
+/**
+ * RIL_REQUEST_SET_INITIAL_ATTACH_APN
+ *
+ * Set an apn to initial attach network
+ * "response" is NULL
+ *
+ * Valid errors:
+ *  SUCCESS
+ *  RADIO_NOT_AVAILABLE (radio resetting)
+ *  GENERIC_FAILURE
+ *  SUBSCRIPTION_NOT_AVAILABLE
+ */
+#define RIL_REQUEST_SET_INITIAL_ATTACH_APN 111
+
+/**
+ * RIL_REQUEST_IMS_REGISTRATION_STATE
+ *
+ * Request current IMS registration state
+ *
+ * "data" is NULL
+ *
+ * "response" is int *
+ * ((int *)response)[0] is registration state:
+ *              0 - Not registered
+ *              1 - Registered
+ * ((int *)response)[1] is bitmap of the supported services:
+ *          & 0x1 - SMS supported
+ *
+ * If IMS is registered and supports SMS, then ((int *) response)[2]
+ * must follow with IMS SMS format:
+ *
+ * ((int *) response)[2] is of type const RIL_IMS_SMS_Format
+ */
+#define RIL_REQUEST_IMS_REGISTRATION_STATE 112
+
+/**
+ * RIL_REQUEST_IMS_SEND_SMS
+ *
+ * Send a SMS message over IMS
+ *
+ * "data" is const RIL_IMS_SMS_Message *
+ *
+ * "response" is a const RIL_SMS_Response *
+ *
+ * Based on the return error, caller decides to resend if sending sms
+ * fails. SMS_SEND_FAIL_RETRY means retry, and other errors means no retry.
+ * In case of retry, data is encoded based on Voice Technology available.
+ *
+ * Valid errors:
+ *  SUCCESS
+ *  RADIO_NOT_AVAILABLE
+ *  SMS_SEND_FAIL_RETRY
+ *  FDN_CHECK_FAILURE
+ *  GENERIC_FAILURE
+ *
+ */
+#define RIL_REQUEST_IMS_SEND_SMS 113
+
+
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 /**
  * RIL_REQUEST_IMS_REGISTRATION_STATE
@@ -3788,18 +3992,16 @@ typedef struct {
  * "data" is NULL
  *
  * "response" is int *
- * ((int *)response)[0] is == 0 for IMS not registered
- * ((int *)response)[0] is == 1 for IMS registered
+ * ((int *)response)[0] is registration state:
+ *              0 - Not registered
+ *              1 - Registered
+ * ((int *)response)[1] is bitmap of the supported services:
+ *          & 0x1 - SMS supported
  *
- * If ((int*)response)[0] is = 1, then ((int *) response)[1]
- * must follow with IMS SMS encoding:
+ * If IMS is registered and supports SMS, then ((int *) response)[2]
+ * must follow with IMS SMS format:
  *
- * ((int *) response)[1] is of type const RIL_RadioTechnologyFamily
- *
- * Valid errors:
- *  SUCCESS
- *  RADIO_NOT_AVAILABLE
- *  GENERIC_FAILURE
+ * ((int *) response)[2] is of type const RIL_IMS_SMS_Format
  */
 #define RIL_REQUEST_IMS_REGISTRATION_STATE 109
 
@@ -3813,11 +4015,8 @@ typedef struct {
  * "response" is a const RIL_SMS_Response *
  *
  * Based on the return error, caller decides to resend if sending sms
- * fails.
- * SUCCESS is error class 0 (no error)
- * SMS_SEND_FAIL_RETRY will cause re-send with data encoded
- *   based on Voice Technology available.
- * and GENERIC_FAILURE means no retry.
+ * fails. SMS_SEND_FAIL_RETRY means retry, and other errors means no retry.
+ * In case of retry, data is encoded based on Voice Technology available.
  *
  * Valid errors:
  *  SUCCESS
@@ -4102,10 +4301,10 @@ typedef struct {
 #define RIL_REQUEST_RESUME_QOS 123
 #endif
 
-#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-#define RIL_REQUEST_LAST RIL_REQUEST_RESUME_QOS
-#else
-#define RIL_REQUEST_LAST RIL_REQUEST_VOICE_RADIO_TECH
+#if defined (RIL_SPRD_EXTENSION)
+#define RIL_REQUEST_LAST RIL_REQUEST_IMS_SEND_SMS
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+#define RIL_REQUEST_LAST RIL_REQUEST_LAST RIL_REQUEST_RESUME_QOS
 #endif
 /***********************************************************************/
 
@@ -4243,6 +4442,7 @@ typedef struct {
  * Obsolete. Send via RIL_UNSOL_ON_USSD
  */
 #define RIL_UNSOL_ON_USSD_REQUEST 1007
+
 
 /**
  * RIL_UNSOL_NITZ_TIME_RECEIVED
@@ -4585,6 +4785,38 @@ typedef struct {
  */
 #define RIL_UNSOL_VOICE_RADIO_TECH_CHANGED 1035
 
+/**
+ * RIL_UNSOL_CELL_INFO_LIST
+ *
+ * Same information as returned by RIL_REQUEST_GET_CELL_INFO_LIST, but returned
+ * at the rate no greater than specified by RIL_REQUEST_SET_UNSOL_CELL_INFO_RATE.
+ *
+ * "data" is NULL
+ *
+ * "response" is an array of RIL_CellInfo.
+ */
+#define RIL_UNSOL_CELL_INFO_LIST 1036
+
+/*
+ * RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED
+ *
+ * Called when IMS registration state has changed
+ *
+ * "data" is int *
+ * ((int *)response)[0] is registration state:
+ *              0 - Not registered
+ *              1 - Registered
+ * ((int *)response)[1] is bitmap of the services supported:
+ *          & 0x1 - SMS supported
+ *
+ * If IMS is registered and supports SMS, then ((int *) response)[2]
+ * must follow with IMS SMS format:
+ *
+ * ((int *) response)[2] is of type const RIL_IMS_SMS_Format
+ */
+#define RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED 1037
+
+
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 /**
  * RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED
@@ -4675,11 +4907,12 @@ typedef struct {
 #define RIL_UNSOL_QOS_STATE_CHANGED_IND 1042
 #endif
 
-#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+#if defined (RIL_SPRD_EXTENSION)
+#define RIL_UNSOL_LAST RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 #define RIL_UNSOL_LAST RIL_UNSOL_QOS_STATE_CHANGED_IND
-#else
-#define RIL_UNSOL_LAST RIL_UNSOL_VOICE_RADIO_TECH_CHANGED
 #endif
+
 
 #if defined (RIL_SPRD_EXTENSION)
 #define RIL_SPRD_REQUEST_BASE 5000
@@ -4878,7 +5111,7 @@ typedef struct {
 
 #define RIL_OEM_UNSOL_RESPONSE_BASE 11000
 #define RIL_UNSOL_RESPONSE_NEW_CB_MSG  (RIL_OEM_UNSOL_RESPONSE_BASE + 0) //add by jiyoon
-#define RIL_UNSOL_RELEASE_COMPLETE_MESSAGE	(RIL_OEM_UNSOL_RESPONSE_BASE + 1)
+#define RIL_UNSOL_RELEASE_COMPLETE_MESSAGE (RIL_OEM_UNSOL_RESPONSE_BASE + 1)
 #define RIL_UNSOL_STK_SEND_SMS_RESULT (RIL_OEM_UNSOL_RESPONSE_BASE + 2)
 #define RIL_UNSOL_STK_CALL_CONTROL_RESULT (RIL_OEM_UNSOL_RESPONSE_BASE + 3)
 #define RIL_UNSOL_DUN_CALL_STATUS (RIL_OEM_UNSOL_RESPONSE_BASE + 4)
@@ -4886,8 +5119,8 @@ typedef struct {
 #define RIL_UNSOL_RESPONSE_LINE_SMS_READ  (RIL_OEM_UNSOL_RESPONSE_BASE + 6)
 #define RIL_UNSOL_O2_HOME_ZONE_INFO (RIL_OEM_UNSOL_RESPONSE_BASE + 7)
 #define RIL_UNSOL_DEVICE_READY_NOTI (RIL_OEM_UNSOL_RESPONSE_BASE + 8)
-#define RIL_UNSOL_GPS_NOTI	(RIL_OEM_UNSOL_RESPONSE_BASE + 9)
-#define RIL_UNSOL_AM	(RIL_OEM_UNSOL_RESPONSE_BASE + 10)
+#define RIL_UNSOL_GPS_NOTI (RIL_OEM_UNSOL_RESPONSE_BASE + 9)
+#define RIL_UNSOL_AM (RIL_OEM_UNSOL_RESPONSE_BASE + 10)
 #define RIL_UNSOL_DUN_PIN_CONTROL_SIGNAL (RIL_OEM_UNSOL_RESPONSE_BASE + 11)
 #define RIL_UNSOL_DATA_SUSPEND_RESUME (RIL_OEM_UNSOL_RESPONSE_BASE + 12)
 #define RIL_UNSOL_SAP (RIL_OEM_UNSOL_RESPONSE_BASE + 13)
@@ -4902,9 +5135,9 @@ typedef struct {
 
 
 typedef enum {
-	 NO_REASON = 0,					/* CP Crashed */
-	 MODEM_POWER_OFF = 1,			/* MODEM power off request */
-	 MODEM_RESET = 2 		/* MODEM reset request */
+    NO_REASON = 0,    /* CP Crashed */
+    MODEM_POWER_OFF = 1,    /* MODEM power off request */
+    MODEM_RESET = 2    /* MODEM reset request */
  } RIL_Modem_off_Reason;
 
 //add by jiyoon
@@ -4912,27 +5145,24 @@ typedef enum {
 #define GSM_SMS_TPDU_STR_MAX_SIZE 490
 
 typedef struct {
-	int	bCBEnabled;/*< CB service state. If cb_enabled is true then cell broadcast service will be enabled */
-	                              /* and underlying modem will enable CB Channel to receiving CB messages. Otherwise CB */    
-	                              /* service will be disabled; underlying modem will deactivate the CB channel. */
-	                              /* (enabled/disabled)   : Storage : MODEM Flash */ 
-								  
-	int	selectedId;/* < CBMI Identifier selected (all or some)  Storage : MODEM Flash */
+    int bCBEnabled;/*< CB service state. If cb_enabled is true then cell broadcast service will be enabled */
+                                  /* and underlying modem will enable CB Channel to receiving CB messages. Otherwise CB */    
+                                  /* service will be disabled; underlying modem will deactivate the CB channel. */
+                                  /* (enabled/disabled)   : Storage : MODEM Flash */ 
+    int selectedId;/* < CBMI Identifier selected (all or some)  Storage : MODEM Flash */
 
-	int	msgIdMaxCount; /*< CB Channel List Max Count , this number is different for 2G & 3G & is SIM specific Storage : MODEM Flash  */
+    int msgIdMaxCount; /*< CB Channel List Max Count , this number is different for 2G & 3G & is SIM specific Storage : MODEM Flash  */
 
-	int	msgIdCount; /**< CB message ID count , My Channels list is updated in  Storage : MODEM Flash */
+    int msgIdCount; /**< CB message ID count , My Channels list is updated in  Storage : MODEM Flash */
 
-	char * msgIDs; /* < CB message ID information, */
-				   /* My Channels List is updated here. Storage : SIM Memory  */
+    char * msgIDs; /* < CB message ID information, */
+    /* My Channels List is updated here. Storage : SIM Memory  */
 } RIL_CB_ConfigArgs ;
 
 typedef struct {
-	
-	int cbType; // 0x01 :GSM , 0x02:UMTS
-	int message_length;
-	char message[GSM_SMS_TPDU_STR_MAX_SIZE]; //reference : 3GPP TS 23.041 9.4.1, 9.4.2
-	
+    int cbType; // 0x01 :GSM , 0x02:UMTS
+    int message_length;
+    char message[GSM_SMS_TPDU_STR_MAX_SIZE]; //reference : 3GPP TS 23.041 9.4.1, 9.4.2
 }RIL_CBMsg_Notification;
 
 #define LINE_SMS_ADDRESS_SIZE 20
@@ -4940,30 +5170,30 @@ typedef struct {
 
 typedef struct {
 
-	int addrLen; // length of originator address
-	char * address; //originator address (size is 20 bytes)
-	int dataLen; //data length
-	char * data;// content of SMS(8 bit ascii encoding) (size is 256 bytes)	
+    int addrLen; // length of originator address
+    char * address; //originator address (size is 20 bytes)
+    int dataLen; //data length
+    char * data;// content of SMS(8 bit ascii encoding) (size is 256 bytes)
 }RIL_LineSmsReadMsg;
 
 // TO-DO : Is this Samsung Patch? So for what?
 typedef struct {
     int command;    /*add, update, delete*/
     int fileid;     /* EF id */
-	int index;		/* record index */
-	char *alphaTag;     /* name     */
-	int alphaTagDCS;
-	int alphaTagLength;
-	char *number;     /* number     */	
-	char *email;
-	int emailLength;
-	char *anr;
-	char *anrA;
-	char *anrB;
-	char *anrC;
-	char *sne;
-	int sneLength;
-	int sneDCS;
+    int index;    /* record index */
+    char *alphaTag;     /* name     */
+    int alphaTagDCS;
+    int alphaTagLength;
+    char *number;     /* number     */
+    char *email;
+    int emailLength;
+    char *anr;
+    char *anrA;
+    char *anrB;
+    char *anrC;
+    char *sne;
+    int sneLength;
+    int sneDCS;
     char *pin2;     /* May be NULL*/
 } RIL_SIM_ACCESS_PB;
 
@@ -4971,42 +5201,42 @@ typedef struct {
 typedef struct {
     int command;    /* add,get,update*/
     int fileid;     /* EF id */
-	int index;   
+    int index;   
     char *pin2;     /* May be NULL*/
 } RIL_SIM_PB;
 
 // TO-DO : Is this Samsung Patch? So for what?
 /*index for text RIL_SIM_PB_Response*/
 typedef enum {
-	INDEX_NAME = 0,
-	INDEX_SNE,
-	INDEX_EMAIL,
-	NUM_OF_ALPHA,
+    INDEX_NAME = 0,
+    INDEX_SNE,
+    INDEX_EMAIL,
+    NUM_OF_ALPHA,
 } INDEX_TEXT_RIL_SIM_PB_Response;
 
 // TO-DO : Is this Samsung Patch? So for what?
 /*index for num RIL_SIM_PB_Response*/
 typedef enum {
-	INDEX_NUMBER = 0,
-	INDEX_ANR,
-	INDEX_ANRA,
-	INDEX_ANRB,
-	INDEX_ANRC,
-	NUM_OF_NUMBER,
+    INDEX_NUMBER = 0,
+    INDEX_ANR,
+    INDEX_ANRA,
+    INDEX_ANRB,
+    INDEX_ANRC,
+    NUM_OF_NUMBER,
 } INDEX_NUM_RIL_SIM_PB_Response;
 
 // TO-DO : Is this Samsung Patch? So for what?
 typedef struct {
-	int lengthAlphas[NUM_OF_ALPHA];
-	int dataTypeAlphas[NUM_OF_ALPHA];
-	char* alphaTags[NUM_OF_ALPHA];
+    int lengthAlphas[NUM_OF_ALPHA];
+    int dataTypeAlphas[NUM_OF_ALPHA];
+    char* alphaTags[NUM_OF_ALPHA];
 
-	int lengthNumbers[NUM_OF_NUMBER];
-	int dataTypeNumbers[NUM_OF_NUMBER];
-	char* numbers[NUM_OF_NUMBER];
+    int lengthNumbers[NUM_OF_NUMBER];
+    int dataTypeNumbers[NUM_OF_NUMBER];
+    char* numbers[NUM_OF_NUMBER];
 
-	int recordIndex;
-	int nextIndex;
+    int recordIndex;
+    int nextIndex;
 } RIL_SIM_PB_Response;
 
 // TO-DO : Is this Samsung Patch? for what?
@@ -5044,16 +5274,16 @@ typedef struct {
 
 // TO-DO : Is this Samsung patch?
 typedef struct {
-	int num_lock_type;
-	int lock_type;
+    int num_lock_type;
+    int lock_type;
 } RIL_SIM_Lockinfo;
 
 // TO-DO : Is this Samsung patch?
 typedef struct {
-	int num_lock_type;
-	int lock_type;
-	int lock_key;
-	int num_of_retry;
+    int num_lock_type;
+    int lock_type;
+    int lock_key;
+    int num_of_retry;
 } RIL_SIM_Lockinfo_Response;
 
 // [ SecFeature.TMUS_MOVIAL_WFC
@@ -5082,7 +5312,7 @@ typedef struct {
 } RIL_UICC_GBA_Authenticate_NAF;
 
 typedef struct {
-	char *ks_ext_naf;   				/* ASCII hex string */
+    char *ks_ext_naf;   /* ASCII hex string */
 } RIL_UICC_GBA_Authenticate_NAF_Response;
 // SISO AKASH FOR Authentication APIS
 // ] SecFeature.TMUS_MOVIAL_WFC
@@ -5111,7 +5341,7 @@ typedef struct {
 
 // TO-DO : Is this Samsung patch?
 typedef struct {
-    int     	type;
+    int         type;
     char        *id;
     char        *alert_type;
     char        *alert_format;
@@ -5206,6 +5436,14 @@ typedef struct {
     RIL_Cancel onCancel;
     RIL_GetVersion getVersion;
 } RIL_RadioFunctions;
+
+typedef struct {
+    char *apn;
+    char *protocol;
+    int authtype;
+    char *username;
+    char *password;
+} RIL_InitialAttachApn;
 
 #ifdef RIL_SHLIB
 struct RIL_Env {

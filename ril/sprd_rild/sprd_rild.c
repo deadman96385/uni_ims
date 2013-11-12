@@ -71,6 +71,7 @@ static struct RIL_Env s_rilEnv = {
 };
 
 extern void RIL_startEventLoop();
+
 static int make_argv(char * args, char ** argv)
 {
     // Note: reserve argv[0]

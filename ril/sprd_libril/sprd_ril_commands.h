@@ -63,7 +63,7 @@
     {RIL_REQUEST_SET_NETWORK_SELECTION_AUTOMATIC, dispatchVoid, responseVoid},
 #ifdef RIL_SPRD_EXTENSION
     {RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL, dispatchNetworkList, responseVoid},
-#else
+#elif defined GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION
     {RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL, dispatchString, responseVoid},
 #endif
     {RIL_REQUEST_QUERY_AVAILABLE_NETWORKS , dispatchVoid, responseStrings},
@@ -126,7 +126,12 @@
     {RIL_REQUEST_ISIM_AUTHENTICATION, dispatchString, responseString},
     {RIL_REQUEST_ACKNOWLEDGE_INCOMING_GSM_SMS_WITH_PDU, dispatchStrings, responseVoid},
     {RIL_REQUEST_STK_SEND_ENVELOPE_WITH_STATUS, dispatchString, responseSIM_IO},
-    {RIL_REQUEST_VOICE_RADIO_TECH, dispatchVoiceRadioTech, responseInts}
+    {RIL_REQUEST_VOICE_RADIO_TECH, dispatchVoiceRadioTech, responseInts},
+    {RIL_REQUEST_GET_CELL_INFO_LIST, dispatchVoid, responseCellInfoList},
+    {RIL_REQUEST_SET_UNSOL_CELL_INFO_LIST_RATE, dispatchInts, responseVoid},
+    {RIL_REQUEST_SET_INITIAL_ATTACH_APN, dispatchSetInitialAttachApn, responseVoid},
+    {RIL_REQUEST_IMS_REGISTRATION_STATE, dispatchVoid, responseInts},
+    {RIL_REQUEST_IMS_SEND_SMS, dispatchImsSms, responseSMS}
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     ,{RIL_REQUEST_IMS_REGISTRATION_STATE, dispatchVoid, responseInts}
     ,{RIL_REQUEST_IMS_SEND_SMS, dispatchImsSendSms, responseImsSendSms}

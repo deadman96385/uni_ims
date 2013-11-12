@@ -456,7 +456,7 @@ static void *readerLoop(void *arg)
             rfds = ATch_fd;
             ret = select(open_ATch + 1, &rfds, NULL, NULL, 0);
         } while(ret == -1 && errno == EINTR);
-	if (ret > 0) {
+        if (ret > 0) {
             for (i = 0; i < channel_nums; i++) {
                 if (ATChannel[i].s_fd != -1 &&
                     FD_ISSET(ATChannel[i].s_fd, &rfds)) {
@@ -608,13 +608,13 @@ void init_channels(void)
     int channel_nums;
 
     if(s_multiSimMode)
-            channel_nums = MULTI_MAX_CHANNELS;
+        channel_nums = MULTI_MAX_CHANNELS;
     else
-            channel_nums = MAX_CHANNELS;
+        channel_nums = MAX_CHANNELS;
 
     FD_ZERO(&ATch_fd);
     for (i = 0; i < channel_nums; i++) {
-	ATChannel[i].s_fd = -1;
+    ATChannel[i].s_fd = -1;
     }
     open_ATch = -1;
 }

@@ -11,10 +11,12 @@ LOCAL_SRC_FILES:= \
     sprd_thread_pool.cpp
 
 LOCAL_SHARED_LIBRARIES := \
+    liblog \
     libutils \
     libbinder \
     libcutils \
-    libhardware_legacy
+    libhardware_legacy \
+    librilutils
 
 LOCAL_CFLAGS := -DRIL_SHLIB
 
@@ -43,7 +45,8 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_STATIC_LIBRARIES := \
     libutils_static \
-    libcutils
+    libcutils \
+    librilutils_static
 
 LOCAL_CFLAGS := -DRIL_SHLIB
 

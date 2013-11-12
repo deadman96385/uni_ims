@@ -10,12 +10,18 @@ LOCAL_SRC_FILES:= \
 
 
 LOCAL_SHARED_LIBRARIES := \
+	liblog \
 	libcutils \
 	libril_sp
+
 
 ifeq ($(TARGET_ARCH),arm)
 LOCAL_SHARED_LIBRARIES += libdl
 endif # arm
+
+# temporary hack for broken vendor rils
+LOCAL_WHOLE_STATIC_LIBRARIES := \
+	librilutils_static
 
 LOCAL_CFLAGS := -DRIL_SHLIB
 
@@ -32,6 +38,7 @@ LOCAL_SRC_FILES:= \
 	radiooptions.c
 
 LOCAL_SHARED_LIBRARIES := \
+	liblog \
 	libcutils \
 
 LOCAL_CFLAGS := \
