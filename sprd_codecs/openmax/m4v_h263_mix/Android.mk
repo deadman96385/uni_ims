@@ -15,6 +15,10 @@ else
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),sc8830)
 include $(LOCAL_PATH)/sc8830/Android.mk
+else
+
+ifeq ($(strip $(TARGET_BOARD_PLATFORM)),scx15)
+include $(LOCAL_PATH)/sc8830/Android.mk
 endif
 
 endif
@@ -23,3 +27,4 @@ endif
 
 endif
 
+endif
