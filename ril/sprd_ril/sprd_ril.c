@@ -4648,6 +4648,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SET_SPEED_MODE
                 || request == RIL_REQUEST_DELETE_SMS_ON_SIM
                 || request == RIL_REQUEST_GET_IMSI
+                || request == RIL_REQUEST_SET_SIM_SLOT_CFG //SPRD:added for choosing WCDMA SIM
                 || request == RIL_REQUEST_QUERY_FACILITY_LOCK
                 || request == RIL_REQUEST_SET_FACILITY_LOCK
                 || request == RIL_REQUEST_ENTER_SIM_PIN2
@@ -5798,6 +5799,28 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
        case RIL_REQUEST_SET_SPEED_MODE:
             requestSetSpeedMode(channelID, data, datalen, t);
             break;
+        case RIL_REQUEST_SET_SIM_SLOT_CFG: //SPRD:added for choosing WCDMA SIM
+        {
+            p_response = NULL;
+            char cmd[40] = {0};
+            int sim_num = ((int *)data)[0];
+            int sim_slot_cfg;
+            if( sim_num == 1) {
+                sim_slot_cfg=66051; //0x00010203
+            } else {
+                sim_slot_cfg=16777731; //0x01000203
+            }
+            snprintf(cmd, sizeof(cmd), "AT+SPCONFIGSIMSLOT= %d",sim_slot_cfg);
+            err = at_send_command(ATch_type[channelID], cmd,
+                    &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
         case  RIL_REQUEST_QUERY_COLP:
             {
                 p_response = NULL;

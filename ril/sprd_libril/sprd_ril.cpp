@@ -5293,6 +5293,7 @@ requestToString(int request) {
         case RIL_UNSOL_UART: return "UNSOL_UART";
         case RIL_UNSOL_SIM_PB_READY: return "UNSOL_SIM_PB_READY";	
 #endif
+        case RIL_REQUEST_SET_SIM_SLOT_CFG: return "SET_SIM_SLOT_CFG"; //SPRD:added for choosing WCDMA SIM
         default: return "<unknown request>";
     }
 }

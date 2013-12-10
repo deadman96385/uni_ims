@@ -214,5 +214,7 @@
     ,{RIL_REQUEST_SIM_TRANSMIT_CHANNEL, dispatchVoid, responseVoid}
     ,{RIL_REQUEST_SIM_AUTH, dispatchVoid, responseVoid}
 #endif
+    ,{RIL_REQUEST_SET_SIM_SLOT_CFG, dispatchInts, responseVoid}//SPRD:added for choosing WCDMA SIM
+
 
 
