@@ -57,6 +57,8 @@ LOCAL_SRC_FILES := \
 
 
 LOCAL_CFLAGS := -fno-strict-aliasing -D_AACARM_  -D_ARMNINEPLATFORM_  -DAAC_DEC_LITTLE_ENDIAN
+LOCAL_LDFLAGS += -Wl,--no-warn-shared-textrel
+
 LOCAL_STATIC_LIBRARIES := 
 LOCAL_SHARED_LIBRARIES :=
 
@@ -67,6 +69,7 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_ARM_MODE := arm
 
-LOCAL_MODULE := libaacdec_sprd
+LOCAL_MODULE := libomx_aacdec_sprd
+LOCAL_MODULE_TAGS := optional
 
-include $(BUILD_STATIC_LIBRARY)
+include $(BUILD_SHARED_LIBRARY)

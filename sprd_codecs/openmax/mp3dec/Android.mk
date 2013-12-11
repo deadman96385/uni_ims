@@ -17,6 +17,8 @@ LOCAL_SRC_FILES := \
 
 
 LOCAL_CFLAGS := -fno-strict-aliasing -DOPT_DCT_FIXED31 -DFPM_64BIT -D__ASO__
+LOCAL_LDFLAGS += -Wl,--no-warn-shared-textrel
+
 LOCAL_STATIC_LIBRARIES := 
 LOCAL_SHARED_LIBRARIES :=
 
@@ -28,6 +30,7 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_ARM_MODE := arm
 
-LOCAL_MODULE := libmp3dec_sprd
+LOCAL_MODULE := libomx_mp3dec_sprd
+LOCAL_MODULE_TAGS := optional
 
-include $(BUILD_STATIC_LIBRARY)
+include $(BUILD_SHARED_LIBRARY)
