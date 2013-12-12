@@ -72,6 +72,9 @@ typedef enum {
 #define MO_CALL 0
 #define MT_CALL 1
 
+#define SIM_DROP   1
+#define SIM_REMOVE 2
+
 #define TD_SIM_NUM  "ro.modem.t.count"
 #define W_SIM_NUM  "ro.modem.w.count"
 
@@ -1869,33 +1872,47 @@ static void resetModem(void * param)
     return;
 }
 
-/*
 static void onSimAbsent(void *param)
 {
     int channelID;
+    char *sim_state = (char *)param;
 
+    if(!sim_state) {
+        RILLOGE("sim_state is NULL");
+        return;
+    }
+
+    RILLOGE("onSimAbsent  sState = %d,sim_state = %d", sState,*sim_state);
     channelID = getChannel();
-    setRadioState(channelID, RADIO_STATE_SIM_LOCKED_OR_ABSENT);
+    if (sState == RADIO_STATE_SIM_NOT_READY || sState == RADIO_STATE_SIM_READY) {
+        setRadioState(channelID, RADIO_STATE_SIM_LOCKED_OR_ABSENT);
+    }
     putChannel(channelID);
 
     RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,
                                     NULL, 0);
-    RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_DROP, NULL, 0);
+    if (*sim_state == SIM_DROP)
+        RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_DROP, NULL, 0);
 }
 
 static void onSimPresent(void *param)
 {
     int channelID;
 
-    if (sState == RADIO_STATE_SIM_LOCKED_OR_ABSENT) {
-        channelID = getChannel();
-        setRadioState(channelID, RADIO_STATE_SIM_NOT_READY);
-        putChannel(channelID);
+    RILLOGD("onSimPresent sState = %d",sState);
+
+    channelID = getChannel();
+    if(isRadioOn(channelID) > 0) {
+        setRadioState (channelID, RADIO_STATE_SIM_NOT_READY);
     }
-    RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,
-                                    NULL, 0);
+    putChannel(channelID);
+
+    if (sState == RADIO_STATE_SIM_LOCKED_OR_ABSENT ||
+        sState == RADIO_STATE_OFF) {
+        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,
+                                        NULL, 0);
+    }
 }
-*/
 
 static void sendCallStateChanged(void *param)
 {
@@ -7286,20 +7303,24 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 if (err < 0) goto out;
                 if(value == 1) {
                     if (at_tok_hasmore(&tmp)) {
+                        static char sim_state;
                         err = at_tok_nextint(&tmp, &cause);
                         if (err < 0) goto out;
                         if(cause == 2) {
-                            RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED, NULL, 0);
-                            RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_DROP, NULL, 0);
+                            sim_state = SIM_DROP;
+                            RIL_requestTimedCallback (onSimAbsent, (char *)&sim_state, NULL);
                         }
+                        if(cause == 34) { //sim removed
+                            sim_state = SIM_REMOVE;
+                            RIL_requestTimedCallback (onSimAbsent, (char *)&sim_state, NULL);
+                        }
+                        if(cause == 1)  //no sim card
+                            RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
                     }
                 } else if (value == 100) {
                     RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED, NULL, 0);
                 } else if (value == 0 || value == 2) {
-                    if(sState == RADIO_STATE_OFF) {
-                        RILLOGD("RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED  RADIO_STATE_OFF");
-                        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
-                    }
+                    RIL_requestTimedCallback (onSimPresent, NULL, NULL);
                 }
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
                 else if(value == 5) {
