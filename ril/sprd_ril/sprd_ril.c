@@ -57,7 +57,16 @@ typedef enum {
     SIM_NETWORK_PERSONALIZATION = 5,
     SIM_BLOCK = 6,
     SIM_PIN2 = 7,
-    SIM_PUK2 = 8
+    SIM_PUK2 = 8,
+    //Added for bug#213435 sim lock begin
+    SIM_SIM_PERSONALIZATION = 9,
+    SIM_NETWORK_SUBSET_PERSONALIZATION = 10,
+    SIM_CORPORATE_PERSONALIZATION = 11,
+    SIM_SERVICE_PROVIDER_PERSONALIZATION = 12,
+    //Added for bug#213435 sim lock end
+    //Added for bug#242159 begin
+    SIM_LOCK_FOREVER = 13
+    //Added for bug#242159 end
 } SIM_Status;
 
 #define NEW_AT
@@ -6647,7 +6656,13 @@ out:
         goto done;
     } else if (0 == strcmp (cpinResult, "PH-NET PIN")) {
         return SIM_NETWORK_PERSONALIZATION;
-    } else if (0 != strcmp (cpinResult, "READY"))  {
+    }
+    //Added for bug#242159 begin
+    else if (0 == strcmp (cpinResult, "PH-INTEGRITY FAIL"))  {
+        return SIM_LOCK_FOREVER;
+    }
+    //Added for bug#242159 end
+    else if (0 != strcmp (cpinResult, "READY"))  {
         /* we're treating unsupported lock types as "sim absent" */
         ret = SIM_ABSENT;
         goto done;
@@ -6700,7 +6715,11 @@ static int getCardStatus(int channelID, RIL_CardStatus_v6 **pp_card_status)
             NULL, NULL, 0, RIL_PINSTATE_UNKNOWN, RIL_PINSTATE_ENABLED_NOT_VERIFIED },
         /* SIM_PUK2 = 8 */
         { RIL_APPTYPE_SIM, RIL_APPSTATE_READY, RIL_PERSOSUBSTATE_UNKNOWN,
-            NULL, NULL, 0, RIL_PINSTATE_UNKNOWN, RIL_PINSTATE_ENABLED_BLOCKED }
+            NULL, NULL, 0, RIL_PINSTATE_UNKNOWN, RIL_PINSTATE_ENABLED_BLOCKED },
+        //Added for bug#242159 begin
+        { RIL_APPTYPE_SIM, RIL_APPSTATE_SUBSCRIPTION_PERSO, RIL_PERSOSUBSTATE_SIM_LOCK_FOREVER,
+          NULL, NULL, 0, RIL_PINSTATE_ENABLED_NOT_VERIFIED, RIL_PINSTATE_UNKNOWN  }
+        //Added for bug#242159 end
     };
     RIL_CardState card_state;
     int num_apps;
@@ -6790,6 +6809,9 @@ static void pollSIMState (void *param)
         case SIM_PIN:
         case SIM_PUK:
         case SIM_NETWORK_PERSONALIZATION:
+        //Added for bug#242159 begin
+        case SIM_LOCK_FOREVER:
+        //Added for bug#242159 end
         default:
             RILLOGD("SIM ABSENT or LOCKED");
             RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED, NULL, 0);

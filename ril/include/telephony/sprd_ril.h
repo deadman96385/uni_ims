@@ -707,7 +707,10 @@ typedef enum {
     RIL_PERSOSUBSTATE_RUIM_HRPD_PUK             = 21,
     RIL_PERSOSUBSTATE_RUIM_CORPORATE_PUK        = 22,
     RIL_PERSOSUBSTATE_RUIM_SERVICE_PROVIDER_PUK = 23,
-    RIL_PERSOSUBSTATE_RUIM_RUIM_PUK             = 24
+    RIL_PERSOSUBSTATE_RUIM_RUIM_PUK             = 24,
+    //Added for bug#242159 begin
+    RIL_PERSOSUBSTATE_SIM_LOCK_FOREVER          = 25
+    //Added for bug#242159 end
 } RIL_PersoSubstate;
 
 typedef struct {
