@@ -168,9 +168,9 @@ typedef struct
     int8	offset_for_top_to_bottom_field;			//se(v)
     int8	num_ref_frames;							//ue(v)
     int8	gaps_in_frame_num_value_allowed_flag;	//u(1)
-    int8	pic_width_in_mbs_minus1;				//ue(v)
+    uint8	pic_width_in_mbs_minus1;				//ue(v)
 
-    int8	pic_height_in_map_units_minus1;			//ue(v)
+    uint8	pic_height_in_map_units_minus1;			//ue(v)
     int8	frame_mbs_only_flag;
     int8	mb_adaptive_frame_field_flag;           // u(1)
     int8	direct_8x8_inference_flag;

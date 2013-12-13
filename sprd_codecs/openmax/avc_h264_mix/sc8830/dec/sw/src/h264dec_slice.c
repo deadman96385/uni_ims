@@ -355,7 +355,7 @@ PUBLIC int32 H264Dec_process_slice (H264DecContext *img_ptr, DEC_NALU_T *nalu_pt
 
     H264Dec_RestSliceHeader (img_ptr, curr_slice_ptr);
 
-    if (H264Dec_FMO_init(img_ptr) == FALSE || img_ptr->error_flag)
+    if ((H264Dec_FMO_init(img_ptr) != MMDEC_OK) || img_ptr->error_flag)
     {
 #if _H264_PROTECT_ & _LEVEL_LOW_
         img_ptr->error_flag |= ER_BSM_ID;
@@ -369,14 +369,12 @@ PUBLIC int32 H264Dec_process_slice (H264DecContext *img_ptr, DEC_NALU_T *nalu_pt
 
     if (new_picture)
     {
-        H264Dec_init_picture (img_ptr);
-#if _H264_PROTECT_ & _LEVEL_LOW_
-        if(img_ptr->error_flag )
+        if ((H264Dec_init_picture (img_ptr) != MMDEC_OK) || img_ptr->error_flag)
         {
             img_ptr->return_pos1 |= (1<<27);
             return -1;
         }
-#endif
+
         curr_header = SOP;
     } else
     {

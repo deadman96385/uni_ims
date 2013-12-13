@@ -446,7 +446,8 @@ LOCAL int dumppoc(H264DecContext *img)
 #endif
     return 0;
 }
-PUBLIC void H264Dec_init_picture (H264DecContext *img_ptr)
+
+PUBLIC MMDecRet H264Dec_init_picture (H264DecContext *img_ptr)
 {
     DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = img_ptr->g_dpb_ptr;
     DEC_STORABLE_PICTURE_T *dec_picture_ptr = NULL;
@@ -477,13 +478,13 @@ PUBLIC void H264Dec_init_picture (H264DecContext *img_ptr)
     if (img_ptr->error_flag)
     {
         img_ptr->return_pos |= (1<<18);
-        return;
+        return MMDEC_ERROR;
     }
 
     if (!fs || fs->frame == PNULL)
     {
         img_ptr->return_pos1 |= (1<<0);
-        return;
+        return MMDEC_ERROR;
     }
 #endif
 
@@ -523,8 +524,13 @@ PUBLIC void H264Dec_init_picture (H264DecContext *img_ptr)
         int32 ext_frm_size = img_ptr->ext_width * img_ptr->ext_height;
 
         fs->frame->imgYUV[0] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size, 256, SW_CACHABLE);
+        CHECK_MALLOC(fs->frame->imgYUV[0], "fs->frame->imgYUV[0]");
+
         fs->frame->imgYUV[1] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size>>2, 256, SW_CACHABLE);
+        CHECK_MALLOC(fs->frame->imgYUV[1], "fs->frame->imgYUV[1]");
+
         fs->frame->imgYUV[2] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size>>2, 256, SW_CACHABLE);
+        CHECK_MALLOC(fs->frame->imgYUV[2], "fs->frame->imgYUV[2]");
     }
 
     img_ptr->pre_frame_num = img_ptr->frame_num;
@@ -579,7 +585,7 @@ PUBLIC void H264Dec_init_picture (H264DecContext *img_ptr)
     {
         img_ptr->error_flag |= ER_BSM_ID;
         img_ptr->return_pos1 |= (1<<31);
-        return;
+        return MMDEC_ERROR;
     }
 #endif
 
@@ -590,7 +596,7 @@ PUBLIC void H264Dec_init_picture (H264DecContext *img_ptr)
     memset_refIdx_negOne(dec_picture_ptr->ref_idx_ptr[0], dec_picture_ptr->ref_idx_ptr[1], img_ptr->frame_size_in_mbs);
 #endif
 
-    return;
+    return MMDEC_OK;
 }
 
 PUBLIC void H264Dec_exit_picture (H264DecContext *img_ptr)

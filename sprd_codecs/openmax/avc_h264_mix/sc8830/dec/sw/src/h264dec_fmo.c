@@ -274,7 +274,7 @@ LOCAL void H264Dec_FmoGenerateType6MbMap (H264DecContext *img_ptr, DEC_PPS_T *pp
     return;
 }
 
-LOCAL BOOLEAN H264Dec_FmoGenerateMbToSliceGroupMap(H264DecContext *img_ptr)
+LOCAL MMDecRet H264Dec_FmoGenerateMbToSliceGroupMap(H264DecContext *img_ptr)
 {
     int32 mb_num;
     DEC_PPS_T *pps_ptr = img_ptr->g_active_pps_ptr;
@@ -284,6 +284,7 @@ LOCAL BOOLEAN H264Dec_FmoGenerateMbToSliceGroupMap(H264DecContext *img_ptr)
     if (img_ptr->g_MbToSliceGroupMap == PNULL)
     {
         img_ptr->g_MbToSliceGroupMap = (int8 *)H264Dec_MemAlloc(img_ptr, (uint32)(mb_num)*sizeof(int8), 4, SW_CACHABLE);
+        CHECK_MALLOC(img_ptr->g_MbToSliceGroupMap, "img_ptr->g_MbToSliceGroupMap");
     }
 #if FMO_TRACE
     FPRINTF(pFmoFile, "Decode Frame Num: %d, Slice group number: %d\n", g_nFrame_dec, pps_ptr->num_slice_groups_minus1+1);
@@ -292,7 +293,7 @@ LOCAL BOOLEAN H264Dec_FmoGenerateMbToSliceGroupMap(H264DecContext *img_ptr)
     if (pps_ptr->num_slice_groups_minus1 == 0) //only one slice group
     {
         memset(img_ptr->g_MbToSliceGroupMap, 0, (uint32)(mb_num)*sizeof(int8));
-        return TRUE;
+        return MMDEC_OK;
     }
 
     switch(pps_ptr->slice_group_map_type)
@@ -338,10 +339,10 @@ LOCAL BOOLEAN H264Dec_FmoGenerateMbToSliceGroupMap(H264DecContext *img_ptr)
     }
 #endif
 
-    return TRUE;
+    return MMDEC_OK;
 }
 
-PUBLIC BOOLEAN H264Dec_FMO_init(H264DecContext *img_ptr)
+PUBLIC MMDecRet H264Dec_FMO_init(H264DecContext *img_ptr)
 {
     return H264Dec_FmoGenerateMbToSliceGroupMap (img_ptr);
 }

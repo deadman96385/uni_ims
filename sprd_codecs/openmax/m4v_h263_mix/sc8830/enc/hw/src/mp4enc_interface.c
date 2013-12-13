@@ -107,8 +107,8 @@ MMEncRet MP4EncSetConf(MP4Handle *mp4Handle, MMEncConfig *pConf)
     vop_mode_ptr->targetBitRate		= pConf->targetBitRate;
     vop_mode_ptr->RateCtrlEnable		= pConf->RateCtrlEnable;
 
-    SCI_TRACE_LOW("%s, %d, vop_mode_ptr->FrameRate: %d, vop_mode_ptr->targetBitRate: %d, vop_mode_ptr->RateCtrlEnable: %d", 
-        __FUNCTION__, __LINE__, vop_mode_ptr->FrameRate, vop_mode_ptr->targetBitRate, vop_mode_ptr->RateCtrlEnable);
+    SCI_TRACE_LOW("%s, %d, vop_mode_ptr->FrameRate: %d, vop_mode_ptr->targetBitRate: %d, vop_mode_ptr->RateCtrlEnable: %d",
+                  __FUNCTION__, __LINE__, vop_mode_ptr->FrameRate, vop_mode_ptr->targetBitRate, vop_mode_ptr->RateCtrlEnable);
 
     vop_mode_ptr->StepI				= pConf->QP_IVOP;
     vop_mode_ptr->StepP				= pConf->QP_PVOP;
@@ -278,7 +278,7 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
     uint8 video_type = (vol_mode_ptr->short_video_header ? STREAM_ID_H263 : STREAM_ID_MPEG4);
 
     vo->error_flag = 0;
-    
+
     anti_shark_ptr->input_width = pInput->org_img_width;
     anti_shark_ptr->input_height = pInput->org_img_height;
     anti_shark_ptr->shift_x = pInput->crop_x;
@@ -313,15 +313,20 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
 
     rc_single_before(vo->g_rc_ptr, vo->g_rc_data_ptr);
 
-    if(vop_mode_ptr->QP_last[0] +vop_mode_ptr->QP_last[1] +vop_mode_ptr->QP_last[2] +vop_mode_ptr->QP_last[3] +
-            vop_mode_ptr->QP_last[4] +vop_mode_ptr->QP_last[5] +vop_mode_ptr->QP_last[6] +vop_mode_ptr->QP_last[7]  < 16)
+    if (vo->g_nFrame_enc > 7)
     {
-        vop_mode_ptr->Need_MinQp_flag =1;
+        if(vop_mode_ptr->QP_last[0] +vop_mode_ptr->QP_last[1] +vop_mode_ptr->QP_last[2] +vop_mode_ptr->QP_last[3] +
+                vop_mode_ptr->QP_last[4] +vop_mode_ptr->QP_last[5] +vop_mode_ptr->QP_last[6] +vop_mode_ptr->QP_last[7]  < 16)
+        {
+            vop_mode_ptr->Need_MinQp_flag =1;
+        } else
+        {
+            vop_mode_ptr->Need_MinQp_flag =0;
+        }
     } else
     {
         vop_mode_ptr->Need_MinQp_flag =0;
     }
-
     if(!frame_skip)
     {
         vop_mode_ptr->VopPredType	= (pInput->vopType == IVOP) ? IVOP : PVOP;

@@ -195,7 +195,11 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
     img_ptr->g_ready_to_decode_slice = FALSE;
     img_ptr->uv_interleaved = pVideoFormat->uv_interleaved;
 
-    H264Dec_init_global_para (img_ptr);
+    if (H264Dec_init_global_para (img_ptr) != MMDEC_OK)
+    {
+        img_ptr->return_pos2 |= (1<<29);
+        return MMDEC_ERROR;
+    }
     H264Dec_init_vld_table ();
 
 #if _H264_PROTECT_ & _LEVEL_LOW_
@@ -253,9 +257,17 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         {
             img_ptr->return_pos |= (1<<20);
 
+            SCI_TRACE_LOW("%s, %d, img_ptr->error_flag: %0x, pos: %0x, pos1: %0x, pos2: %0x",
+                          __FUNCTION__, __LINE__, img_ptr->error_flag, img_ptr->return_pos, img_ptr->return_pos1, img_ptr->return_pos2);
+
             if (img_ptr->not_supported)
             {
                 return MMDEC_NOT_SUPPORTED;
+            }
+
+            if (img_ptr->error_flag & ER_EXTRA_MEMO_ID)
+            {
+                return MMDEC_MEMORY_ERROR;
             }
 
             return MMDEC_ERROR;
@@ -321,9 +333,18 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 #if _H264_PROTECT_ & _LEVEL_LOW_
     if (img_ptr->error_flag)
     {
+        SCI_TRACE_LOW("%s, %d, img_ptr->error_flag: %0x, pos: %0x, pos1: %0x, pos2: %0x",
+                      __FUNCTION__, __LINE__, img_ptr->error_flag, img_ptr->return_pos, img_ptr->return_pos1, img_ptr->return_pos2);
+
         img_ptr->g_old_slice_ptr->frame_num = -1;
         img_ptr->curr_mb_nr = 0;
         img_ptr->return_pos |= (1<<22);
+
+        if (img_ptr->error_flag & ER_EXTRA_MEMO_ID)
+        {
+            SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+            return MMDEC_MEMORY_ERROR;
+        }
         return MMDEC_ERROR;
     } else
 #endif

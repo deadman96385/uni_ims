@@ -162,10 +162,9 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
                 vo->error_flag  |= ER_MEMORY_ID;
                 return;
             }
-        }
-        else if( (vo->last_profile_idc != vo->g_active_sps_ptr->profile_idc)
-                 && ((is_MVC_profile(vo->last_profile_idc)) || (is_MVC_profile(vo->g_active_sps_ptr->profile_idc)))
-                 && (!vo->g_dpb_layer[1]->init_done))
+        } else if( (vo->last_profile_idc != vo->g_active_sps_ptr->profile_idc)
+                   && ((is_MVC_profile(vo->last_profile_idc)) || (is_MVC_profile(vo->g_active_sps_ptr->profile_idc)))
+                   && (!vo->g_dpb_layer[1]->init_done))
         {
             //assert(g_dpb_layer[0]->init_done);//for OR debug
 
@@ -280,6 +279,8 @@ LOCAL int32 H264Dec_ReadHRDParameters(H264DecObject *vo, DEC_HRD_PARAM_T *hrd_pt
     uint32 SchedSelIdx;
 
     hrd_ptr->cpb_cnt_minus1 = UE_V ();
+    IClip(0, (MAXIMUMVALUEOFcpb_cnt -1), hrd_ptr->cpb_cnt_minus1);
+
     hrd_ptr->bit_rate_scale = READ_FLC (4);
     hrd_ptr->cpb_size_scale = READ_FLC (4);
 
@@ -288,6 +289,10 @@ LOCAL int32 H264Dec_ReadHRDParameters(H264DecObject *vo, DEC_HRD_PARAM_T *hrd_pt
         hrd_ptr->bit_rate_value_minus1[ SchedSelIdx ]  = UE_V ();
         hrd_ptr->cpb_size_value_minus1[ SchedSelIdx ] = Long_UE_V  ();
         hrd_ptr->cbr_flag[ SchedSelIdx ]                         = READ_FLC  (1);
+        if (vo->error_flag)
+        {
+            return -1;
+        }
     }
 
     hrd_ptr->initial_cpb_removal_delay_length_minus1  = READ_FLC (5);
@@ -349,13 +354,19 @@ LOCAL void H264Dec_ReadVUI (H264DecObject *vo, DEC_VUI_T *vui_seq_parameters_ptr
     vui_seq_parameters_ptr->nal_hrd_parameters_present_flag   = READ_FLC  (1);
     if (vui_seq_parameters_ptr->nal_hrd_parameters_present_flag)
     {
-        H264Dec_ReadHRDParameters (vo, &(vui_seq_parameters_ptr->nal_hrd_parameters));
+        if (H264Dec_ReadHRDParameters (vo, &(vui_seq_parameters_ptr->nal_hrd_parameters)) < 0)
+        {
+            return 0;
+        }
     }
 
     vui_seq_parameters_ptr->vcl_hrd_parameters_present_flag   = READ_FLC  (1);
     if (vui_seq_parameters_ptr->vcl_hrd_parameters_present_flag)
     {
-        H264Dec_ReadHRDParameters (vo, &(vui_seq_parameters_ptr->vcl_hrd_parameters));
+        if (H264Dec_ReadHRDParameters (vo, &(vui_seq_parameters_ptr->vcl_hrd_parameters)) < 0)
+        {
+            return;
+        }
     }
 
     if (vui_seq_parameters_ptr->nal_hrd_parameters_present_flag || vui_seq_parameters_ptr->vcl_hrd_parameters_present_flag)
@@ -1361,7 +1372,7 @@ void get_max_dec_frame_buf_size(H264DecObject *vo, DEC_SPS_T *sps)
         break;
     default:
         SCI_TRACE_LOW("undefined level");
-        vo->error_flag  |= ER_SREAM_ID;
+        vo->error_flag  |= ER_FORMAT_ID;
         size = 70778880;//weihu
         //EXIT(500);//weihu
         break;

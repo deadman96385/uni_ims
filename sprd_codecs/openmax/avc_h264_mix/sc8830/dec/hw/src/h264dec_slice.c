@@ -735,21 +735,26 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
     }
     //VSP_WRITE_REG(VSP_REG_BASE_ADDR+0x18,0x4,"VSP_INT_CLR");//enable int //frame done/error/timeout
 #endif
-
-    if(cmd & (V_BIT_4 | V_BIT_5 | V_BIT_30 | V_BIT_31))
+    if(cmd & V_BIT_2)
+    {
+        vo->error_flag = 0;
+    } else if(cmd & (V_BIT_4 | V_BIT_5 | V_BIT_30 | V_BIT_31))
     {
         vo->error_flag |= ER_SREAM_ID;
 
         if (cmd & V_BIT_4)
         {
             SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
-        } else if (cmd & (V_BIT_5 | V_BIT_30 | V_BIT_31))
+        } else if (cmd & (V_BIT_5 | V_BIT_31))
         {
             SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+        } else //if (cmd &  V_BIT_30)
+        {
+            SCI_TRACE_LOW("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
         }
-    } else if(cmd & V_BIT_2)
+    } else
     {
-        vo->error_flag = 0;
+        SCI_TRACE_LOW("%s, %d, should not be here!", __FUNCTION__, __LINE__);
     }
 
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0, "RAM_ACC_SEL");
@@ -772,6 +777,11 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
     {
         ret =MMDEC_OK;
         H264Dec_exit_picture (vo);
+        if (vo->error_flag)
+        {
+            return MMDEC_ERROR;
+        }
+
         SCI_TRACE_LOW("%s, %d, finished decoding one frame", __FUNCTION__, __LINE__);
         H264Dec_output_one_frame(vo,img_ptr,dec_output_ptr);
 

@@ -224,6 +224,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         goto DEC_EXIT;
     }
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM1_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf1 addr");
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, V_BIT_2|V_BIT_1,"BSM_OP clr BSM");//clr BSM
 
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, ((V_BIT_31|V_BIT_30)|vo->g_stream_offset),"BSM_cfg1 check startcode");//byte align
@@ -250,6 +251,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
             break;
         }
         VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
+        VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM1_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf1 addr");
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, V_BIT_2|V_BIT_1,"BSM_OP clr BSM");//clr BSM
 
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, ((V_BIT_31|V_BIT_30)|vo->g_stream_offset),"BSM_cfg1 check startcode");//byte align
@@ -278,6 +280,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
             break;
         }
         VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
+        VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM1_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf1 addr");
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, V_BIT_2|V_BIT_1,"BSM_OP clr BSM");//clr BSM
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, (V_BIT_31|vo->g_stream_offset),"BSM_cfg1 stream buffer offset");//point to the start of NALU.
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, V_BIT_31|((bs_buffer_length+128)&0xfffffffc),"BSM_cfg0 stream buffer size");// BSM load data. Add 16 DW for BSM fifo loading.
@@ -300,6 +303,18 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
                 {
                     vo->memory_error = 1;
                     ret = MMDEC_MEMORY_ERROR;
+                } else if (vo->error_flag & ER_FORMAT_ID)
+                {
+                    ret = MMDEC_NOT_SUPPORTED;
+                } else if (vo->error_flag & ER_SREAM_ID)
+                {
+                    ret = MMDEC_STREAM_ERROR;
+                } else if (vo->error_flag & (ER_REF_FRM_ID |ER_HW_ID))
+                {
+                    ret = MMDEC_HW_ERROR;
+                } else
+                {
+                    ret = MMDEC_ERROR;
                 }
             }
 

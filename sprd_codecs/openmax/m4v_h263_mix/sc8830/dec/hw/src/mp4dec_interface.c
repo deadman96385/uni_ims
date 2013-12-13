@@ -474,7 +474,16 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         if(Mp4Dec_decode_vop(vo) != MMDEC_OK)
         {
             mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_11;
-            ret = MMDEC_STREAM_ERROR;
+            if (vo->error_flag & ER_SREAM_ID)
+            {
+                ret = MMDEC_STREAM_ERROR;
+            }else if(vo->error_flag & ER_HW_ID)
+            {
+                ret = MMDEC_HW_ERROR;
+            }else
+            {
+                ret = MMDEC_ERROR;
+            }
             goto DEC_EXIT;
         }
 

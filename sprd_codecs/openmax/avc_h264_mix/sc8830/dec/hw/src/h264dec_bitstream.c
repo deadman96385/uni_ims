@@ -27,6 +27,11 @@ PUBLIC uint32 show_bits (H264DecObject *vo, int32 nbits)
 {
     uint32 temp;
 
+    if (vo->error_flag)
+    {
+        return 0;
+    }
+
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy"))
     {
         return 0;
@@ -40,6 +45,11 @@ PUBLIC uint32 show_bits (H264DecObject *vo, int32 nbits)
 PUBLIC uint32 read_bits (H264DecObject *vo, int32 nbits)
 {
     uint32 temp;
+
+    if (vo->error_flag)
+    {
+        return 0;
+    }
 
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy"))
     {
@@ -56,6 +66,11 @@ PUBLIC uint32 ue_v (H264DecObject *vo)
 {
     uint32 ret;
     uint32 tmp;
+
+    if (vo->error_flag)
+    {
+        return 0;
+    }
 
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy"))
     {
@@ -86,6 +101,11 @@ PUBLIC int32 se_v (H264DecObject *vo)
 {
     int32 ret;
     int32 tmp;
+
+    if (vo->error_flag)
+    {
+        return 0;
+    }
 
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy"))
     {
@@ -183,6 +203,11 @@ PUBLIC void H264Dec_flush_left_byte (H264DecObject *vo)
     int32 dec_len;
     int32 left_bytes;
     uint32 nDecTotalBits;// = stream->bitcnt;
+
+    if (vo->error_flag)
+    {
+        return;
+    }
 
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_RDY_OFF, 0x00000001,0x00000001,TIME_OUT_CLK, "BSM_rdy"))
     {

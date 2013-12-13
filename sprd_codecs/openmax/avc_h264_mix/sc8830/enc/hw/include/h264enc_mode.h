@@ -424,6 +424,8 @@ typedef struct tagH264EncObject
     CODEC_BUF_T mem[MAX_MEM_TYPE];
 
     ENC_ANTI_SHAKE_T g_anti_shake;
+
+    uint32 b_previous_frame_failed;	
 } H264EncObject;
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

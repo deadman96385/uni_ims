@@ -68,25 +68,43 @@ PUBLIC void H264Dec_clear_delayed_buffer(H264DecContext *img_ptr)
     }
 }
 
-PUBLIC void H264Dec_init_img_buffer (H264DecContext *img_ptr)
+PUBLIC MMDecRet H264Dec_init_img_buffer (H264DecContext *img_ptr)
 {
     int32 mb_num_x = img_ptr->frame_width_in_mbs;
     int32 total_mb_num = mb_num_x * img_ptr->frame_height_in_mbs;
+    void* reserved_mem_ptr;
 
     img_ptr->g_halfPixTemp = (int16 *)H264Dec_MemAlloc(img_ptr, 24*16*sizeof(int16), 16, SW_CACHABLE);
-    H264Dec_MemAlloc (img_ptr, 2*mb_num_x*sizeof(DEC_MB_INFO_T), 4, SW_CACHABLE); //for posy = -1 mb.
-    img_ptr->mb_info = (DEC_MB_INFO_T *)H264Dec_MemAlloc (img_ptr, (uint32)total_mb_num*sizeof(DEC_MB_INFO_T), 4, SW_CACHABLE);
-    img_ptr->i4x4pred_mode_ptr = (int8 *)H264Dec_MemAlloc (img_ptr, total_mb_num*sizeof(int8)*16, 4, SW_CACHABLE);
-    img_ptr->direct_ptr = (int8 *)H264Dec_MemAlloc (img_ptr, total_mb_num*sizeof(int8)*16, 4, SW_CACHABLE);
-    img_ptr->nnz_ptr= (int8 *)H264Dec_MemAlloc (img_ptr, total_mb_num*sizeof(int8)*24, 4, SW_CACHABLE);	/// 16 y  + 4 u +4v
-    img_ptr->mvd_ptr[0] = (int16 *)H264Dec_MemAlloc (img_ptr, total_mb_num*sizeof(int16)*16*2, 4, SW_CACHABLE);
-    img_ptr->mvd_ptr[1] = (int16 *)H264Dec_MemAlloc (img_ptr, total_mb_num*sizeof(int16)*16*2, 4, SW_CACHABLE);
-    img_ptr->slice_nr_ptr = (int32 *)H264Dec_MemAlloc (img_ptr, total_mb_num*sizeof(int32), 4, SW_CACHABLE);
+    CHECK_MALLOC(img_ptr->g_halfPixTemp, "img_ptr->g_halfPixTemp");
 
-    return;
+    reserved_mem_ptr = H264Dec_MemAlloc (img_ptr, 2*mb_num_x*sizeof(DEC_MB_INFO_T), 4, SW_CACHABLE); //for posy = -1 mb.
+    CHECK_MALLOC(reserved_mem_ptr, "reserved_mem_ptr");
+
+    img_ptr->mb_info = (DEC_MB_INFO_T *)H264Dec_MemAlloc (img_ptr, (uint32)total_mb_num*sizeof(DEC_MB_INFO_T), 4, SW_CACHABLE);
+    CHECK_MALLOC(img_ptr->mb_info, "img_ptr->mb_info");
+
+    img_ptr->i4x4pred_mode_ptr = (int8 *)H264Dec_MemAlloc (img_ptr, total_mb_num*sizeof(int8)*16, 4, SW_CACHABLE);
+    CHECK_MALLOC(img_ptr->i4x4pred_mode_ptr, "img_ptr->i4x4pred_mode_ptr");
+
+    img_ptr->direct_ptr = (int8 *)H264Dec_MemAlloc (img_ptr, total_mb_num*sizeof(int8)*16, 4, SW_CACHABLE);
+    CHECK_MALLOC(img_ptr->direct_ptr, "img_ptr->direct_ptr");
+
+    img_ptr->nnz_ptr= (int8 *)H264Dec_MemAlloc (img_ptr, total_mb_num*sizeof(int8)*24, 4, SW_CACHABLE);	/// 16 y  + 4 u +4v
+    CHECK_MALLOC(img_ptr->nnz_ptr, "img_ptr->nnz_ptr");
+
+    img_ptr->mvd_ptr[0] = (int16 *)H264Dec_MemAlloc (img_ptr, total_mb_num*sizeof(int16)*16*2, 4, SW_CACHABLE);
+    CHECK_MALLOC(img_ptr->mvd_ptr[0], "img_ptr->mvd_ptr[0]");
+
+    img_ptr->mvd_ptr[1] = (int16 *)H264Dec_MemAlloc (img_ptr, total_mb_num*sizeof(int16)*16*2, 4, SW_CACHABLE);
+    CHECK_MALLOC(img_ptr->mvd_ptr[1] , "img_ptr->mvd_ptr[1] ");
+
+    img_ptr->slice_nr_ptr = (int32 *)H264Dec_MemAlloc (img_ptr, total_mb_num*sizeof(int32), 4, SW_CACHABLE);
+    CHECK_MALLOC(img_ptr->slice_nr_ptr, "img_ptr->slice_nr_ptr");
+
+    return MMDEC_OK;
 }
 
-PUBLIC void H264Dec_init_dpb (H264DecContext *img_ptr, DEC_SPS_T *sps_ptr)
+PUBLIC MMDecRet H264Dec_init_dpb (H264DecContext *img_ptr, DEC_SPS_T *sps_ptr)
 {
     int32 i;
     int32 ext_frm_size = img_ptr->ext_width * img_ptr->ext_height;
@@ -104,19 +122,39 @@ PUBLIC void H264Dec_init_dpb (H264DecContext *img_ptr, DEC_SPS_T *sps_ptr)
         if (dpb_ptr->fs[i] == PNULL)
         {
             dpb_ptr->fs[i] = (DEC_FRAME_STORE_T *)H264Dec_MemAlloc (img_ptr, sizeof(DEC_FRAME_STORE_T), 4, SW_CACHABLE);
+            CHECK_MALLOC(dpb_ptr->fs[i], "dpb_ptr->fs[i]");
+
             dpb_ptr->fs[i]->frame = (DEC_STORABLE_PICTURE_T *)H264Dec_MemAlloc(img_ptr, sizeof(DEC_STORABLE_PICTURE_T), 4, SW_CACHABLE);
+            CHECK_MALLOC(dpb_ptr->fs[i]->frame, "dpb_ptr->fs[i]->frame");
+
             dpb_ptr->fs[i]->frame->mv_ptr[0] = (int16 *)H264Dec_MemAlloc(img_ptr, (frm_size_in_blk << 1) * sizeof(int16), 4, SW_CACHABLE);
+            CHECK_MALLOC(dpb_ptr->fs[i]->frame->mv_ptr[0], "dpb_ptr->fs[i]->frame->mv_ptr[0]");
+
             dpb_ptr->fs[i]->frame->mv_ptr[1] = (int16 *)H264Dec_MemAlloc(img_ptr, (frm_size_in_blk << 1) * sizeof(int16), 4, SW_CACHABLE);
+            CHECK_MALLOC(dpb_ptr->fs[i]->frame->mv_ptr[1], "dpb_ptr->fs[i]->frame->mv_ptr[1]");
+
             dpb_ptr->fs[i]->frame->ref_idx_ptr[0] = (int8 *)H264Dec_MemAlloc(img_ptr, frm_size_in_blk, 16, SW_CACHABLE);
+            CHECK_MALLOC(dpb_ptr->fs[i]->frame->ref_idx_ptr[0], "dpb_ptr->fs[i]->frame->ref_idx_ptr[0]");
+
             dpb_ptr->fs[i]->frame->ref_idx_ptr[1] = (int8 *)H264Dec_MemAlloc(img_ptr, frm_size_in_blk, 16, SW_CACHABLE);
+            CHECK_MALLOC(dpb_ptr->fs[i]->frame->ref_idx_ptr[1], "dpb_ptr->fs[i]->frame->ref_idx_ptr[1]");
+
             dpb_ptr->fs[i]->frame->ref_pic_id_ptr[0] = (int32 *)H264Dec_MemAlloc(img_ptr, frm_size_in_blk * sizeof(int32), 4, SW_CACHABLE);
+            CHECK_MALLOC(dpb_ptr->fs[i]->frame->ref_pic_id_ptr[0], "dpb_ptr->fs[i]->frame->ref_pic_id_ptr[0]");
+
             dpb_ptr->fs[i]->frame->ref_pic_id_ptr[1] = (int32 *)H264Dec_MemAlloc(img_ptr, frm_size_in_blk * sizeof(int32), 4, SW_CACHABLE);
+            CHECK_MALLOC(dpb_ptr->fs[i]->frame->ref_pic_id_ptr[1], "dpb_ptr->fs[i]->frame->ref_pic_id_ptr[1]");
 
             if (img_ptr->uv_interleaved)
             {
                 dpb_ptr->fs[i]->frame->imgYUV[0] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size, 256, SW_CACHABLE);
+                CHECK_MALLOC(dpb_ptr->fs[i]->frame->imgYUV[0], "dpb_ptr->fs[i]->frame->imgYUV[0]");
+
                 dpb_ptr->fs[i]->frame->imgYUV[1] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size>>2, 256, SW_CACHABLE);
+                CHECK_MALLOC(dpb_ptr->fs[i]->frame->imgYUV[1], "dpb_ptr->fs[i]->frame->imgYUV[1]");
+
                 dpb_ptr->fs[i]->frame->imgYUV[2] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size>>2, 256, SW_CACHABLE);
+                CHECK_MALLOC(dpb_ptr->fs[i]->frame->imgYUV[2], "dpb_ptr->fs[i]->frame->imgYUV[2]");
             } else //only for thumbnail
             {
                 dpb_ptr->fs[i]->frame->imgYUV[0] = PNULL;
@@ -126,8 +164,14 @@ PUBLIC void H264Dec_init_dpb (H264DecContext *img_ptr, DEC_SPS_T *sps_ptr)
 
 #ifdef _SIMUATION_  //ony for simulation
             dpb_ptr->fs[i]->frame->imgY = (uint8 *)H264Dec_MemAlloc(img_ptr, frm_size, 256, SW_CACHABLE);
+            CHECK_MALLOC(dpb_ptr->fs[i]->frame->imgY, "dpb_ptr->fs[i]->frame->imgY");
+
             dpb_ptr->fs[i]->frame->imgU = (uint8 *)H264Dec_MemAlloc(img_ptr, frm_size/4, 256, SW_CACHABLE);
+            CHECK_MALLOC(dpb_ptr->fs[i]->frame->imgU, "dpb_ptr->fs[i]->frame->imgU");
+
             dpb_ptr->fs[i]->frame->imgV = (uint8 *)H264Dec_MemAlloc(img_ptr, frm_size/4, 256, SW_CACHABLE);
+            CHECK_MALLOC(dpb_ptr->fs[i]->frame->imgV, "dpb_ptr->fs[i]->frame->imgV");
+
 #else
             dpb_ptr->fs[i]->frame->imgY = PNULL;
             dpb_ptr->fs[i]->frame->imgU = PNULL;
@@ -162,7 +206,7 @@ PUBLIC void H264Dec_init_dpb (H264DecContext *img_ptr, DEC_SPS_T *sps_ptr)
 
     dpb_ptr->size = MAX_REF_FRAME_NUMBER;
 
-    return;
+    return MMDEC_OK;
 }
 
 LOCAL void H264Dec_unmark_for_reference (H264DecContext *img_ptr, DEC_FRAME_STORE_T *fs_ptr)
