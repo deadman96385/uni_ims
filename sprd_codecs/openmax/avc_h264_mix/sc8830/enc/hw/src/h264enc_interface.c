@@ -169,6 +169,7 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecB
     vo->ddr_bandwidth_req_cnt = 0;
     vo->vsp_freq_div = 0;
     vo->error_flag = 0;
+    vo->b_previous_frame_failed = 0;
     if (VSP_OPEN_Dev((VSPObject *)vo) < 0)
     {
         return MMENC_ERROR;
@@ -253,6 +254,34 @@ MMEncRet H264EncRelease(AVCHandle *avcHandle)
 }
 
 /*****************************************************************************/
+//  Description:   Produce fake nalu.
+//	Global resource dependence:
+//  Author:
+//	Note:
+/*****************************************************************************/
+MMEncRet H264Enc_FakeNALU(ENC_IMAGE_PARAMS_T *img_ptr, MMEncOut *pOutput)
+{
+    uint32 nal_header;
+
+    /* nal header, ( 0x00 << 7 ) | ( nal->i_ref_idc << 5 ) | nal->i_type; */
+    nal_header = ( 0x00 << 7 ) | ( NAL_PRIORITY_HIGHEST << 5 ) | NAL_UNKNOWN;
+
+    img_ptr->pOneFrameBitstream[0] = 0x0;
+    img_ptr->pOneFrameBitstream[1] = 0x0;
+    img_ptr->pOneFrameBitstream[2] = 0x0;
+    img_ptr->pOneFrameBitstream[3] = 0x1;
+    img_ptr->pOneFrameBitstream[4] = nal_header;
+    img_ptr->pOneFrameBitstream[5] = 0x80;
+    img_ptr->pOneFrameBitstream[6] = 0x0;
+    img_ptr->pOneFrameBitstream[7] = 0x0;
+
+    pOutput->strmSize = 8;
+    pOutput->pOutBuf = img_ptr->pOneFrameBitstream;
+
+    return MMENC_OK;
+}
+
+/*****************************************************************************/
 //  Description:   Encode one vop
 //	Global resource dependence:
 //  Author:
@@ -293,6 +322,11 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     } else
     {
         img_ptr->pYUVSrcFrame->i_type = i_slice_type = ((pInput->vopType == 0) ? SLICE_TYPE_I : SLICE_TYPE_P);
+    }
+
+    if(vo->b_previous_frame_failed)
+    {
+        img_ptr->pYUVSrcFrame->i_type = i_slice_type = SLICE_TYPE_I;
     }
 
     img_ptr->pYUVSrcFrame->imgY =  pInput->p_src_y_phy;
@@ -365,7 +399,10 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     ret = H264Enc_InitVSP(vo);
     if (ret != MMENC_OK)
     {
-        return ret;
+        H264Enc_FakeNALU(img_ptr, pOutput);
+        ret = MMENC_OK;
+        vo->b_previous_frame_failed =1;
+        goto ENC_EXIT;
     }
 
     /* ---------------------- Write the bitstream -------------------------- */
@@ -386,7 +423,12 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     img_ptr->slice_sz[img_ptr->slice_nr] = h264enc_slice_write(vo, img_ptr);
     if (vo->error_flag)
     {
+        vo->b_previous_frame_failed =1;
         goto ENC_EXIT;
+    }
+    else
+    {
+        vo->b_previous_frame_failed =0;
     }
     *((volatile uint32*)(&img_ptr->pOneFrameBitstream[img_ptr->stm_offset])) = 0x01000000;
     img_ptr->slice_sz[img_ptr->slice_nr] += (VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + DSTUF_NUM_OFF, "DSTUF_NUM") << 3);

@@ -38,33 +38,58 @@ LOCAL void H264Dec_init_old_slice (DEC_OLD_SLICE_PARAMS_T *old_slice_ptr)
     return;
 }
 
-PUBLIC void H264Dec_init_global_para (H264DecContext *img_ptr)
+PUBLIC MMDecRet H264Dec_init_global_para (H264DecContext *img_ptr)
 {
     int32 i;
 
     img_ptr->g_sps_array_ptr = (DEC_SPS_T *)H264Dec_MemAlloc (img_ptr, sizeof(DEC_SPS_T) * MAX_SPS, 4, INTER_MEM);
+    CHECK_MALLOC(img_ptr->g_sps_array_ptr, "img_ptr->g_sps_array_ptr");
+
     img_ptr->g_pps_array_ptr = (DEC_PPS_T *)H264Dec_MemAlloc (img_ptr, sizeof(DEC_PPS_T) * MAX_PPS, 4, INTER_MEM);
+    CHECK_MALLOC(img_ptr->g_pps_array_ptr, "img_ptr->g_pps_array_ptr");
+
     img_ptr->g_sps_ptr = (DEC_SPS_T *)H264Dec_MemAlloc (img_ptr, sizeof(DEC_SPS_T), 4, INTER_MEM);
+    CHECK_MALLOC(img_ptr->g_sps_ptr, "img_ptr->g_sps_ptr");
+
     img_ptr->g_sps_ptr->vui_seq_parameters =  (DEC_VUI_T *)H264Dec_MemAlloc (img_ptr, sizeof(DEC_VUI_T), 4, INTER_MEM);
+    CHECK_MALLOC(img_ptr->g_sps_ptr->vui_seq_parameters, "img_ptr->g_sps_ptr->vui_seq_parameters");
+
     img_ptr->g_pps_ptr = (DEC_PPS_T *)H264Dec_MemAlloc (img_ptr, sizeof(DEC_PPS_T), 4, INTER_MEM);
+    CHECK_MALLOC(img_ptr->g_pps_ptr, "img_ptr->g_pps_ptr");
+
     img_ptr->g_dpb_ptr = (DEC_DECODED_PICTURE_BUFFER_T *)H264Dec_MemAlloc (img_ptr, sizeof(DEC_DECODED_PICTURE_BUFFER_T), 4, INTER_MEM);
+    CHECK_MALLOC(img_ptr->g_dpb_ptr, "img_ptr->g_dpb_ptr");
+
     img_ptr->g_dpb_ptr->used_size = 0;
     img_ptr->g_active_sps_ptr = NULL;
     img_ptr->g_active_pps_ptr = NULL;
 
     img_ptr->g_old_slice_ptr = (DEC_OLD_SLICE_PARAMS_T *)H264Dec_MemAlloc (img_ptr, sizeof(DEC_OLD_SLICE_PARAMS_T), 4, INTER_MEM);
+    CHECK_MALLOC(img_ptr->g_old_slice_ptr, "img_ptr->g_old_slice_ptr");
+
     img_ptr->g_nalu_ptr = (DEC_NALU_T *)H264Dec_MemAlloc (img_ptr, sizeof(DEC_NALU_T), 4, INTER_MEM);
+    CHECK_MALLOC(img_ptr->g_nalu_ptr, "img_ptr->g_nalu_ptr");
 
     img_ptr->bitstrm_ptr = (DEC_BS_T *)H264Dec_MemAlloc(img_ptr, sizeof(DEC_BS_T), 4, INTER_MEM);
+    CHECK_MALLOC(img_ptr->bitstrm_ptr, "img_ptr->bitstrm_ptr");
+
     img_ptr->g_curr_slice_ptr = (DEC_SLICE_T *)H264Dec_MemAlloc(img_ptr, sizeof(DEC_SLICE_T), 4, INTER_MEM);
+    CHECK_MALLOC(img_ptr->g_curr_slice_ptr, "img_ptr->g_curr_slice_ptr");
 
     img_ptr->g_no_reference_picture_ptr = (DEC_STORABLE_PICTURE_T *)H264Dec_MemAlloc(img_ptr, sizeof(DEC_STORABLE_PICTURE_T), 4, INTER_MEM);
+    CHECK_MALLOC(img_ptr->g_no_reference_picture_ptr, "img_ptr->g_no_reference_picture_ptr");
 
     img_ptr->g_mb_cache_ptr = (DEC_MB_CACHE_T *)H264Dec_MemAlloc (img_ptr, sizeof(DEC_MB_CACHE_T), 16, INTER_MEM);
+    CHECK_MALLOC(img_ptr->g_mb_cache_ptr, "img_ptr->g_mb_cache_ptr");
 
     img_ptr->g_dpb_ptr->fs = (DEC_FRAME_STORE_T **)H264Dec_MemAlloc (img_ptr, sizeof(DEC_FRAME_STORE_T*)*(MAX_REF_FRAME_NUMBER+1), 4, INTER_MEM);
+    CHECK_MALLOC(img_ptr->g_dpb_ptr->fs, "img_ptr->g_dpb_ptr->fs");
+
     img_ptr->g_dpb_ptr->fs_ref = (DEC_FRAME_STORE_T **)H264Dec_MemAlloc (img_ptr, sizeof(DEC_FRAME_STORE_T*)*(MAX_REF_FRAME_NUMBER+1), 4, INTER_MEM);
+    CHECK_MALLOC(img_ptr->g_dpb_ptr->fs_ref, "img_ptr->g_dpb_ptr->fs_ref");
+
     img_ptr->g_dpb_ptr->fs_ltref = (DEC_FRAME_STORE_T **)H264Dec_MemAlloc (img_ptr, sizeof(DEC_FRAME_STORE_T*)*(MAX_REF_FRAME_NUMBER+1), 4, INTER_MEM);
+    CHECK_MALLOC(img_ptr->g_dpb_ptr->fs_ltref, "img_ptr->g_dpb_ptr->fs_ltref");
 
     //init global vars
     img_ptr->g_dec_ref_pic_marking_buffer_size = 0;
@@ -114,7 +139,7 @@ PUBLIC void H264Dec_init_global_para (H264DecContext *img_ptr)
     //init old slice
     H264Dec_init_old_slice (img_ptr->g_old_slice_ptr);
 
-    return;
+    return MMDEC_OK;
 }
 
 //sw

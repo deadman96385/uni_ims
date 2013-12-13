@@ -145,8 +145,10 @@ PUBLIC void MP4Dec_JudgeDecMode (DEC_VOP_MODE_T * vop_mode_ptr)
     int32 aligned_frm_width = (((vop_mode_ptr->OrgFrameWidth + 15)>>4)<<4);
     int32 aligned_frm_height = (((vop_mode_ptr->OrgFrameHeight + 15)>>4)<<4);
 
-    if ((aligned_frm_width <= 176 && aligned_frm_height <= 144) ||
-            (aligned_frm_width <= 144 && aligned_frm_height <= 176))
+    if (vop_mode_ptr->uv_interleaved &&
+            ((aligned_frm_width <= 176 && aligned_frm_height <= 144) ||
+             (aligned_frm_width <= 144 && aligned_frm_height <= 176))
+       )
     {
         vop_mode_ptr->VT_used = 1;
     } else

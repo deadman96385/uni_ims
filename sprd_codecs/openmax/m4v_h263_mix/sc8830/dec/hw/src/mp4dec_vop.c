@@ -322,18 +322,18 @@ PUBLIC void Mp4Dec_output_one_frame (Mp4DecObject *vo, MMDecOutput *dec_output_p
 PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
 {
     DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
-    int tmp;
-    int pic_end=0;
-    int VopPredType=vop_mode_ptr->VopPredType;
-    int resyn_bits=VopPredType ? (vop_mode_ptr->mvInfoForward.FCode - 1):0;
+    int32 cmd;
+    int32 pic_end = 0;
+    int32 VopPredType=vop_mode_ptr->VopPredType;
+    int32 resyn_bits=VopPredType ? (vop_mode_ptr->mvInfoForward.FCode - 1) : 0;
 
     VSP_WRITE_REG(VSP_REG_BASE_ADDR + ARM_INT_MASK_OFF, V_BIT_2, "VSP_INT_MASK");//enable int //frame done/error/timeout
 
     while (!pic_end)
     {
-        tmp = VSP_READ_REG(GLB_REG_BASE_ADDR + VSP_DBG_STS0_OFF, "read mbx mby");
-        vop_mode_ptr->mb_y=tmp&0xff;
-        vop_mode_ptr->mb_x=(tmp>>8)&0xff;
+        cmd = VSP_READ_REG(GLB_REG_BASE_ADDR + VSP_DBG_STS0_OFF, "read mbx mby");
+        vop_mode_ptr->mb_y = (cmd & 0xff);
+        vop_mode_ptr->mb_x = ((cmd >> 8) & 0xff);
 
         SCI_TRACE_LOW("%s, %d, vop_mode_ptr->mb_y: %d, vop_mode_ptr->mb_x: %d", __FUNCTION__, __LINE__, vop_mode_ptr->mb_y, vop_mode_ptr->mb_x);
 
@@ -343,7 +343,7 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
             pic_end = 1;
         } else
         {
-            if(vop_mode_ptr->video_std!=STREAM_ID_H263)
+            if(vop_mode_ptr->video_std != STREAM_ID_H263)
             {
                 if(!vop_mode_ptr->bResyncMarkerDisable)
                 {
@@ -362,22 +362,28 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
             VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, V_BIT_0, "RAM_ACC_SEL");//change ram access to vsp hw
             VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_START_OFF, 0xa|1, "VSP_START");//start vsp   vld/vld_table//load_vld_table_en
 
-            tmp = VSP_POLL_COMPLETE((VSPObject *)vo);
-            if(tmp & (V_BIT_4 | V_BIT_5 | V_BIT_30 | V_BIT_31))
+            cmd = VSP_POLL_COMPLETE((VSPObject *)vo);
+            if(cmd & V_BIT_2)
+            {
+                vo->error_flag = 0;
+            } else if(cmd & (V_BIT_4 | V_BIT_5 | V_BIT_30 | V_BIT_31))
             {
                 vo->error_flag |= ER_HW_ID;
                 pic_end = 1;
 
-                if (tmp & V_BIT_4)
+                if (cmd & V_BIT_4)
                 {
                     SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
-                } else if (tmp & (V_BIT_5  | V_BIT_30 | V_BIT_31))
+                } else if (cmd & (V_BIT_5  | V_BIT_31))
                 {
                     SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+                } else //if (cmd &  V_BIT_30)
+                {
+                    SCI_TRACE_LOW("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
                 }
-            } else if(tmp & V_BIT_2)
+            } else
             {
-                vo->error_flag = 0;
+                SCI_TRACE_LOW("%s, %d, should not be here!", __FUNCTION__, __LINE__);
             }
             VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL");
         }

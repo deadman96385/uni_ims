@@ -777,12 +777,16 @@ PUBLIC void H264Dec_store_picture_in_dpb (H264DecObject *vo, DEC_STORABLE_PICTUR
         }
     }
 
+    if (vo->error_flag)
+    {
+        return;
+    }
+
     if ((!picture_ptr->idr_flag) && (picture_ptr->used_for_reference && (!picture_ptr->adaptive_ref_pic_buffering_flag)))
     {
         H264Dec_sliding_window_memory_management (vo, dpb_ptr, picture_ptr);
     }
     SCI_TRACE_LOW_DPB("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
-
 
     if (dpb_ptr->used_size >= dpb_ptr->size)
     {

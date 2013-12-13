@@ -171,17 +171,23 @@ PUBLIC int32 VSP_CONFIG_DEV_FREQ(VSPObject *vo,int32*  vsp_clk_ptr)
         SCI_TRACE_LOW ("%s, error", __FUNCTION__);
         return -1;
     }
-    
+
     return 0;
 }
 
+#define MAX_POLL_CNT    10
 PUBLIC int32 VSP_POLL_COMPLETE(VSPObject *vo)
 {
     if(vo->s_vsp_fd > 0)
     {
-        int ret ;
+        int32 ret;
+        int32 cnt = 0;
 
-        ioctl(vo->s_vsp_fd, VSP_COMPLETE, &ret);
+        do
+        {
+            ioctl(vo->s_vsp_fd, VSP_COMPLETE, &ret);
+            cnt++;
+        } while ((ret & V_BIT_30) &&  (cnt < MAX_POLL_CNT));
 
         SCI_TRACE_LOW("%s, %d, int_ret: %0x", __FUNCTION__, __LINE__, ret);
 
@@ -206,6 +212,7 @@ PUBLIC int32 VSP_ACQUIRE_Dev(VSPObject *vo)
     ret = ioctl(vo->s_vsp_fd, VSP_ACQUAIRE, NULL);
     if(ret)
     {
+#if 0
         SCI_TRACE_LOW("%s: VSP_ACQUAIRE failed,  try again %d\n",__FUNCTION__, ret);
         ret =  ioctl(vo->s_vsp_fd, VSP_ACQUAIRE, NULL);
         if(ret < 0)
@@ -213,20 +220,25 @@ PUBLIC int32 VSP_ACQUIRE_Dev(VSPObject *vo)
             SCI_TRACE_LOW("%s: VSP_ACQUAIRE failed, give up %d\n",__FUNCTION__, ret);
             return -1;
         }
+#else
+        SCI_TRACE_LOW("%s: VSP_ACQUAIRE failed,  %d\n",__FUNCTION__, ret);
+        return -1;
+#endif
+
     }
 
     ret = ioctl(vo->s_vsp_fd, VSP_ENABLE, NULL);
     if (ret < 0)
     {
-            SCI_TRACE_LOW("%s: VSP_ENABLE failed %d\n",__FUNCTION__, ret);
-            return -1;        
+        SCI_TRACE_LOW("%s: VSP_ENABLE failed %d\n",__FUNCTION__, ret);
+        return -1;
     }
-    
+
     ret = ioctl(vo->s_vsp_fd, VSP_RESET, NULL);
     if (ret < 0)
     {
-            SCI_TRACE_LOW("%s: VSP_RESET failed %d\n",__FUNCTION__, ret);
-            return -1;        
+        SCI_TRACE_LOW("%s: VSP_RESET failed %d\n",__FUNCTION__, ret);
+        return -1;
     }
 
     SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
@@ -239,7 +251,25 @@ PUBLIC int32 VSP_RELEASE_Dev(VSPObject *vo)
     if(vo->s_vsp_fd > 0)
     {
         int ret;
-        
+
+        if (vo->error_flag)
+        {
+            VSP_WRITE_REG(GLB_REG_BASE_ADDR + AXIM_PAUSE_OFF, 0x1, "AXIM_PAUSE: stop DATA TRANS to AXIM");
+            usleep(1);
+        }
+
+        if (VSP_READ_REG_POLL(GLB_REG_BASE_ADDR + AXIM_STS_OFF, V_BIT_1, 0x0, TIME_OUT_CLK_FRAME, "Polling AXIM_STS: not Axim_wch_busy")) //check all data has written to DDR
+        {
+            SCI_TRACE_LOW("%s, %d, Axim_wch_busy", __FUNCTION__, __LINE__);
+        }
+
+        ret = ioctl(vo->s_vsp_fd, VSP_RESET, NULL);
+        if (ret < 0)
+        {
+            SCI_TRACE_LOW("%s: VSP_RESET failed %d\n",__FUNCTION__, ret);
+            return -1;
+        }
+
         ret = ioctl(vo->s_vsp_fd, VSP_DISABLE, NULL);
         if(ret < 0)
         {

@@ -26,7 +26,7 @@ extern   "C"
 {
 #endif
 
-BOOLEAN H264Dec_FMO_init(H264DecContext *img_ptr);
+MMDecRet H264Dec_FMO_init(H264DecContext *img_ptr);
 int32 H264Dec_Fmo_get_next_mb_num (int32 curr_mb_nr, H264DecContext *img_ptr);
 
 /**---------------------------------------------------------------------------*

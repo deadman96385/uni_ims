@@ -28,8 +28,8 @@ extern   "C"
 #endif
 
 void H264Dec_clear_delayed_buffer(H264DecContext *img_ptr);
-void H264Dec_init_img_buffer (H264DecContext *img_ptr);
-void H264Dec_init_dpb (H264DecContext *img_ptr, DEC_SPS_T *sps_ptr);
+MMDecRet H264Dec_init_img_buffer (H264DecContext *img_ptr);
+MMDecRet H264Dec_init_dpb (H264DecContext *img_ptr, DEC_SPS_T *sps_ptr);
 void H264Dec_store_picture_in_dpb (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, DEC_STORABLE_PICTURE_T *picture_ptr);
 void H264Dec_reorder_list (H264DecContext *img_ptr, DEC_SLICE_T *curr_slice_ptr);
 void H264Dec_init_list (H264DecContext *img_ptr, int32 curr_slice_type);

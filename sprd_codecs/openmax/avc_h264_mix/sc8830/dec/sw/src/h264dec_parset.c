@@ -80,7 +80,7 @@ LOCAL void H264Dec_active_sps (DEC_SPS_T *sps_ptr, H264DecContext *img_ptr)
             if(ret < 0)
             {
 #if _H264_PROTECT_ & _LEVEL_LOW_
-                img_ptr->error_flag |= ER_BSM_ID;
+                img_ptr->error_flag |= ER_EXTRA_MEMO_ID;
                 img_ptr->return_pos1 |= (1<<13);
 #endif
                 return;
@@ -97,14 +97,25 @@ LOCAL void H264Dec_active_sps (DEC_SPS_T *sps_ptr, H264DecContext *img_ptr)
         //reset memory alloc
         H264Dec_FreeExtraMem(img_ptr);
 
-        H264Dec_init_img_buffer (img_ptr);
+        if (H264Dec_init_img_buffer (img_ptr) != MMDEC_OK)
+        {
+            img_ptr->error_flag |= ER_EXTRA_MEMO_ID;
+            img_ptr->return_pos2 |= (1<<27);
+            return;
+        }
 
         if (!img_ptr->no_output_of_prior_pics_flag)
         {
             H264Dec_flush_dpb(img_ptr, img_ptr->g_dpb_ptr);
         }
 
-        H264Dec_init_dpb (img_ptr, sps_ptr);
+        if (H264Dec_init_dpb (img_ptr, sps_ptr) != MMDEC_OK)
+        {
+            img_ptr->error_flag |= ER_EXTRA_MEMO_ID;
+            img_ptr->return_pos2 |= (1<<28);
+            return;
+        }
+
         img_ptr->g_dpb_ptr->num_ref_frames = img_ptr->g_active_sps_ptr->num_ref_frames;
     }
 
@@ -555,7 +566,8 @@ LOCAL MMDecRet H264Dec_interpret_pps (DEC_PPS_T *pps_ptr, H264DecContext *img_pt
 
         if (pps_ptr->slice_group_map_type == 6)
         {
-            SCI_ASSERT(NULL != (pps_ptr->slice_group_id = (uint8 *)H264Dec_MemAlloc(img_ptr, SIZE_SLICE_GROUP_ID*sizeof(uint8), 4, INTER_MEM)));
+            pps_ptr->slice_group_id = (uint8 *)H264Dec_MemAlloc(img_ptr, SIZE_SLICE_GROUP_ID*sizeof(uint8), 4, INTER_MEM);
+            CHECK_MALLOC(pps_ptr->slice_group_id, "pps_ptr->slice_group_id");
         }
 
         if (pps_ptr->slice_group_map_type == 0)

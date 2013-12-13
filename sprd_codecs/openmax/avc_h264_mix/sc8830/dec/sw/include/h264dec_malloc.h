@@ -28,6 +28,13 @@ extern   "C"
 {
 #endif
 
+#define CHECK_MALLOC(addr, str)    \
+        if (NULL == addr)   \
+        {   \
+            SCI_TRACE_LOW ("%s, %s is NULL", __FUNCTION__, str);   \
+            return MMENC_MEMORY_ERROR;  \
+        }
+
 void H264Dec_InitInterMem (H264DecContext *img_ptr, MMCodecBuffer *pInterMemBfr);
 void *H264Dec_MemAlloc (H264DecContext *img_ptr, uint32 need_size, int32 aligned_byte_num, int32 type);
 uint32 H264Dec_MemV2P(H264DecContext *img_ptr, uint8 *vAddr, int32 type);

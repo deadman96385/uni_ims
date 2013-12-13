@@ -200,7 +200,7 @@ typedef struct vsp_ahbm_reg_tag
 #define VSP_CFG7_OFF 0x58
 #define VSP_CFG8_OFF 0x5c
 #define BSM0_FRM_ADDR_OFF 0x60
-//#define BSM1_FRM_ADDR_OFF 0x64
+#define BSM1_FRM_ADDR_OFF 0x64
 #define VSP_ADDRIDX0_OFF 0x68
 #define VSP_ADDRIDX1_OFF 0x6c
 #define VSP_ADDRIDX2_OFF 0x70
@@ -660,6 +660,7 @@ typedef struct tagVSPObject
 #define ER_MEMORY_ID  		(1<<1)
 #define ER_REF_FRM_ID   	(1<<2)
 #define ER_HW_ID                        (1<<3)
+#define ER_FORMAT_ID                        (1<<4)
 
 /* -----------------------------------------------------------------------
 ** Global
