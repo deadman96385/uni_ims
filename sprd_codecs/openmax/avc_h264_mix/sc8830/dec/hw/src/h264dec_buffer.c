@@ -23,6 +23,22 @@ extern   "C"
 {
 #endif
 
+PUBLIC DEC_FRAME_STORE_T * H264Dec_search_frame_from_DBP(H264DecObject *vo, DEC_STORABLE_PICTURE_T* frame)
+{
+    uint32 i;
+    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr=  vo->g_dpb_layer[0];
+
+    for (i = 0; i < (MAX_REF_FRAME_NUMBER+1); i++)
+    {
+        if (frame == dpb_ptr->fs[i]->frame)
+        {
+            return dpb_ptr->fs[i];
+        }
+    }
+
+    return NULL;
+}
+
 PUBLIC void H264Dec_clear_delayed_buffer(H264DecObject *vo)
 {
     DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr =  vo->g_dpb_layer[0];
@@ -30,32 +46,21 @@ PUBLIC void H264Dec_clear_delayed_buffer(H264DecObject *vo)
 
     if (dpb_ptr->delayed_pic_ptr)
     {
-        if (dpb_ptr->delayed_pic_ptr->pBufferHeader)
-        {
-            (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,dpb_ptr->delayed_pic_ptr->pBufferHeader);
-            dpb_ptr->delayed_pic_ptr->pBufferHeader = NULL;
-        }
+        H264DEC_UNBIND_FRAME(vo, dpb_ptr->delayed_pic_ptr);
         dpb_ptr->delayed_pic_ptr = NULL;
     }
 
     for (i = 0; dpb_ptr->delayed_pic[i]; i++)
     {
         int32 j;
+        DEC_FRAME_STORE_T * fs = NULL;
 
-        for (j = 0; j <  (MAX_REF_FRAME_NUMBER+1); j++)
+        if (fs = H264Dec_search_frame_from_DBP(vo, dpb_ptr->delayed_pic[i]))
         {
-            if (dpb_ptr->delayed_pic[i] == dpb_ptr->fs[j]->frame)
+            if(fs->is_reference == DELAYED_PIC_REF)
             {
-                if(dpb_ptr->fs[j]->is_reference == DELAYED_PIC_REF)
-                {
-                    dpb_ptr->fs[j]->is_reference = 0;
-
-                    if(dpb_ptr->fs[j]->frame->pBufferHeader!=NULL)
-                    {
-                        (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,dpb_ptr->fs[j]->frame->pBufferHeader);
-                        dpb_ptr->fs[j]->frame->pBufferHeader = NULL;
-                    }
-                }
+                fs->is_reference = 0;
+                H264DEC_UNBIND_FRAME(vo, fs->frame);
             }
         }
 
@@ -216,13 +221,9 @@ LOCAL void H264Dec_unmark_for_reference (H264DecObject *vo, DEC_FRAME_STORE_T *f
         }
     }
 
-    if(fs_ptr->frame->pBufferHeader!=NULL)
+    if(!fs_ptr->is_reference)
     {
-        if(!fs_ptr->is_reference)
-        {
-            (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,fs_ptr->frame->pBufferHeader);
-            fs_ptr->frame->pBufferHeader = NULL;
-        }
+        H264DEC_UNBIND_FRAME(vo, fs_ptr->frame);
     }
 
     fs_ptr->is_long_term = 0;
@@ -666,11 +667,7 @@ LOCAL void H264Dec_insert_picture_in_dpb (H264DecObject *vo, DEC_DECODED_PICTURE
     if (picture_ptr->used_for_reference)
     {
         curr_fs_ptr->is_reference = 1;
-
-        if(curr_fs_ptr->frame->pBufferHeader!=NULL)
-        {
-            (*(vo->avcHandle->VSP_bindCb))(vo->avcHandle->userdata,curr_fs_ptr->frame->pBufferHeader);
-        }
+        H264DEC_BIND_FRAME(vo, curr_fs_ptr->frame);
 
         if (picture_ptr->is_long_term)
         {

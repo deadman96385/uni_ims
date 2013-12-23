@@ -186,6 +186,9 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     vop_mode_ptr->FrameWidth  = (int16)(mb_num_x <<4);
     vop_mode_ptr->FrameHeight = (int16)(mb_num_y <<4);
 
+    vop_mode_ptr->PreOrgFrameWidth = vop_mode_ptr->OrgFrameWidth;
+    vop_mode_ptr->PreOrgFrameHeight = vop_mode_ptr->OrgFrameHeight;
+
     vop_mode_ptr->FrameExtendWidth  = vop_mode_ptr->FrameWidth  + 2 * YEXTENTION_SIZE;
     vop_mode_ptr->FrameExtendHeight = vop_mode_ptr->FrameHeight + 2 * YEXTENTION_SIZE;
 

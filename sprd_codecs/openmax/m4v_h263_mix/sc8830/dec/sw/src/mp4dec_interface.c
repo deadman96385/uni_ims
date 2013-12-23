@@ -359,24 +359,22 @@ FLV_RE_DEC:
 
     if (vop_mode_ptr->VT_used)
     {
+        //modify for bug#232314 & 222962 & 250022
+        if (vop_mode_ptr->OrgFrameWidth != vop_mode_ptr->PreOrgFrameWidth ||
+                vop_mode_ptr->OrgFrameHeight != vop_mode_ptr->PreOrgFrameHeight)
+        {
+            SCI_TRACE_LOW("%s, %d, error concealment for VT mode", __FUNCTION__, __LINE__);
+
+            vop_mode_ptr->OrgFrameWidth = vop_mode_ptr->PreOrgFrameWidth;
+            vop_mode_ptr->OrgFrameHeight = vop_mode_ptr->PreOrgFrameHeight;
+
+            vop_mode_ptr->FrameWidth =  ((vop_mode_ptr->OrgFrameWidth  + 15)>>4)<<4;
+            vop_mode_ptr->FrameHeight  = ((vop_mode_ptr->OrgFrameHeight + 15) >>4)<<4;
+        }
+
         if(vop_mode_ptr->err_MB_num)
         {
             SCI_TRACE_LOW ("MP4DecDecode: Detect error bitstream, try to conceal!\n");
-
-            //modify for bug#222962
-            if (vop_mode_ptr->FrameWidth != 176 || vop_mode_ptr->FrameHeight != 144)
-            {
-                vop_mode_ptr->FrameWidth = 176;
-                vop_mode_ptr->FrameHeight = 144;
-            }
-
-
-            //modify for bug#232314
-            if (vop_mode_ptr->OrgFrameWidth!= 176 || vop_mode_ptr->OrgFrameHeight!= 144)
-            {
-                vop_mode_ptr->OrgFrameWidth = 176;
-                vop_mode_ptr->OrgFrameHeight = 144;
-            }
 
             if(IVOP == vop_mode_ptr->VopPredType)
             {
@@ -420,6 +418,7 @@ FLV_RE_DEC:
     {
         mp4Handle->g_mpeg4_dec_err_flag |= 1<<10;
     }
+
     return ret;
 }
 

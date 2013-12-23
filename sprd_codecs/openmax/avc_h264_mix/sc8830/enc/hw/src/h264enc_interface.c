@@ -425,8 +425,7 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     {
         vo->b_previous_frame_failed =1;
         goto ENC_EXIT;
-    }
-    else
+    }else
     {
         vo->b_previous_frame_failed =0;
     }

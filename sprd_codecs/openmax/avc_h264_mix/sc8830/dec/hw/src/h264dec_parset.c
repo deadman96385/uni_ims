@@ -356,7 +356,7 @@ LOCAL void H264Dec_ReadVUI (H264DecObject *vo, DEC_VUI_T *vui_seq_parameters_ptr
     {
         if (H264Dec_ReadHRDParameters (vo, &(vui_seq_parameters_ptr->nal_hrd_parameters)) < 0)
         {
-            return 0;
+            return;
         }
     }
 

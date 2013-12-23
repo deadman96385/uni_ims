@@ -169,7 +169,7 @@ MMDecRet vp8_decode_frame(VPXDecObject *vo)
 {
     const unsigned char *data		= (const unsigned char *)vo->Source;
     const unsigned char *data_end	= (const unsigned char *)(data + vo->source_sz);
-    uint32 tmp;
+    uint32 cmd;
     vp8_reader *const bc = & vo->bc;
     VP8_COMMON *const pc = & vo->common;
     MACROBLOCKD *const xd  = & vo->mb;
@@ -223,7 +223,7 @@ MMDecRet vp8_decode_frame(VPXDecObject *vo)
             {
                 pc->bInitSuceess = 0;
             }
-            
+
             if (pc->Width <= 0)
             {
                 pc->Width = Width;
@@ -247,7 +247,7 @@ MMDecRet vp8_decode_frame(VPXDecObject *vo)
             {
                 pc->bInitSuceess = 1;
                 return MMDEC_MEMORY_ALLOCED;
-            }            
+            }
         }
     }
     pc->new_frame.u_buffer = pc->new_frame.y_buffer + (pc->MBs <<8) ;
@@ -462,24 +462,27 @@ MMDecRet vp8_decode_frame(VPXDecObject *vo)
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, V_BIT_0, "RAM_ACC_SEL: SETTING_RAM_ACC_SEL=1(HW)");
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_START_OFF, 0xa, "VSP_START: DECODE_START=1");
 
-    tmp = VSP_POLL_COMPLETE((VSPObject *)vo);
-    if(tmp & (V_BIT_0 | V_BIT_4 | V_BIT_5))	// (VLC_ERR|TIME_OUT)
+    cmd = VSP_POLL_COMPLETE((VSPObject *)vo);
+    if(cmd & V_BIT_2)	// MBW_FMR_DONE
+    {
+        vo->error_flag = 0;
+    } else if(cmd & (V_BIT_4 | V_BIT_5 | V_BIT_30 | V_BIT_31))	// (VLD_ERR|TIME_OUT)
     {
         vo->error_flag |= ER_HW_ID;
 
-        if (tmp & V_BIT_0)
-        {
-            SCI_TRACE_LOW("%s, %d, BSM_BUF_OVF", __FUNCTION__, __LINE__);
-        } else if (tmp & V_BIT_4)
+        if (cmd & V_BIT_4)
         {
             SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
-        } else if (tmp & V_BIT_5)
+        } else if (cmd & V_BIT_5)
         {
             SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+        } else //if (cmd & V_BIT_30)
+        {
+            SCI_TRACE_LOW("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
         }
-    } else if(tmp & V_BIT_2)	// MBW_FMR_DONE
+    } else
     {
-        vo->error_flag = 0;
+        SCI_TRACE_LOW("%s, %d, should not be here!", __FUNCTION__, __LINE__);
     }
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0, "RAM_ACC_SEL");
 

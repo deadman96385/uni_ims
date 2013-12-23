@@ -407,6 +407,9 @@ typedef struct dec_vop_mode_tag
     int16 VT_used;
 
     DBK_PARA_T * dbk_para;
+
+    int16 PreOrgFrameWidth;
+    int16 PreOrgFrameHeight;
 } DEC_VOP_MODE_T;
 
 typedef struct h263_plus_header_info_tag

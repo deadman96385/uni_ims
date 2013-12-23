@@ -92,11 +92,7 @@ PUBLIC void h264Dec_remove_frame_from_dpb (H264DecObject *vo,DEC_DECODED_PICTURE
 
     dpb_ptr->used_size--;
 
-    if(tmp_fs_ptr->frame->pBufferHeader!=NULL)
-    {
-        (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,tmp_fs_ptr->frame->pBufferHeader);
-        tmp_fs_ptr->frame->pBufferHeader = NULL;
-    }
+    H264DEC_UNBIND_FRAME(vo, tmp_fs_ptr->frame);
 
     return;
 }
@@ -511,12 +507,7 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
         int32 out_idx = 0;
 
         fs->is_reference = 0;
-
-        if(fs->frame->pBufferHeader!=NULL)
-        {
-            (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,fs->frame->pBufferHeader);
-            fs->frame->pBufferHeader = NULL;
-        }
+        H264DEC_UNBIND_FRAME(vo, fs->frame);
 
         for (i = 0; i < dpb_ptr->delayed_pic_num; i++)
         {

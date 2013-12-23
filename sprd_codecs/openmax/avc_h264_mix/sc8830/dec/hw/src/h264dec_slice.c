@@ -389,6 +389,7 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
     DEC_STORABLE_PICTURE_T *prev = dpb_ptr->delayed_pic_ptr;
     DEC_STORABLE_PICTURE_T *cur = vo->g_dec_picture_ptr;
     DEC_STORABLE_PICTURE_T *out = cur;
+    DEC_FRAME_STORE_T* fs = NULL;
     int i, pics, cross_idr, out_of_order, out_idx;
 
     if(vui_seq_parameters_ptr->bitstream_restriction_flag && (img_ptr->has_b_frames < vui_seq_parameters_ptr->num_reorder_frames))
@@ -401,19 +402,12 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
 
     dpb_ptr->delayed_pic[dpb_ptr->delayed_pic_num++] = cur;
 
-    for (i = 0; i < dpb_ptr->used_size; i++)
+    if (fs = H264Dec_search_frame_from_DBP(vo, cur))
     {
-        if (cur == dpb_ptr->fs[i]->frame)
+        if(fs->is_reference == 0)
         {
-            if(dpb_ptr->fs[i]->is_reference == 0)
-            {
-                dpb_ptr->fs[i]->is_reference = DELAYED_PIC_REF;
-
-                if(dpb_ptr->fs[i]->frame->pBufferHeader!=NULL)
-                {
-                    (*(vo->avcHandle->VSP_bindCb))(vo->avcHandle->userdata,dpb_ptr->fs[i]->frame->pBufferHeader);
-                }
-            }
+            fs->is_reference = DELAYED_PIC_REF;
+            H264DEC_BIND_FRAME(vo, fs->frame);
         }
     }
 
@@ -448,9 +442,39 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
     } else if((out_of_order && (pics-1) == img_ptr->has_b_frames && pics < 15/*why 15?, xwluo@20120316 */)  ||
               ((vo->g_sps_ptr->profile_idc != 0x42/*!bp*/)&&(img_ptr->low_delay) && ((!cross_idr && prev && out->poc > (prev->poc + 2)) || cur->slice_type == B_SLICE)))
     {
-        img_ptr->low_delay = 0;
-        img_ptr->has_b_frames++;
-        out = prev;
+        SCI_TRACE_LOW_DPB("%s,  %d",  __FUNCTION__, __LINE__);
+
+        //modified for Bug#242687
+        if (vui_seq_parameters_ptr->bitstream_restriction_flag == 0 || vui_seq_parameters_ptr->num_reorder_frames == 0)
+        {
+            if (fs = H264Dec_search_frame_from_DBP(vo, cur))
+            {
+                if (fs->is_reference != 1)
+                {
+                    if(cur->slice_type == B_SLICE)
+                    {
+                        out =cur;
+                        dec_out->frameEffective = 1;
+                        dpb_ptr->delayed_pic[--dpb_ptr->delayed_pic_num] = NULL;
+                    } else if (cur->slice_type == P_SLICE)
+                    {
+                        fs->is_reference = 0;
+                        H264DEC_UNBIND_FRAME(vo, fs->frame);
+                        dpb_ptr->delayed_pic[--dpb_ptr->delayed_pic_num] = NULL;
+                    }
+                } else  if(cur->slice_type == B_SLICE)
+                {
+                    vo->error_flag |= ER_SREAM_ID;
+                    return;
+                }
+            }
+
+        } else
+        {
+            img_ptr->low_delay = 0;
+            img_ptr->has_b_frames++;
+            out = prev;
+        }
     } else if(out_of_order)
     {
         out = prev;
@@ -496,21 +520,11 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
         dec_out->pBufferHeader = out->pBufferHeader;
         dec_out->mPicId = out->mPicId;
 
-        for (i = 0; i < (MAX_REF_FRAME_NUMBER+1); i++)
+        fs = H264Dec_search_frame_from_DBP(vo, out);
+        if (fs->is_reference == DELAYED_PIC_REF)
         {
-            if (out == dpb_ptr->fs[i]->frame)
-            {
-                if(dpb_ptr->fs[i]->is_reference == DELAYED_PIC_REF)
-                {
-                    dpb_ptr->fs[i]->is_reference = 0;
-
-                    if(dpb_ptr->fs[i]->frame->pBufferHeader!=NULL)
-                    {
-                        (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,dpb_ptr->fs[i]->frame->pBufferHeader);
-                        dpb_ptr->fs[i]->frame->pBufferHeader = NULL;
-                    }
-                }
-            }
+            fs->is_reference = 0;
+            H264DEC_UNBIND_FRAME(vo, fs->frame);
         }
     }
 
