@@ -47,10 +47,43 @@ PUBLIC void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
     }
 }
 
-PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, uint8 **pOutput, int32 *picId)
+PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picId)
 {
-    *pOutput = NULL;
-    return MMDEC_ERROR;
+    H264DecObject *vo = (H264DecObject *)avcHandle->videoDecoderData;
+    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr =  vo->g_dpb_layer[0];
+    int32 i;
+
+
+    //for multi-slice case, we push the current decoding picture into dpb->delayed_pic queue whether it has been finished or not.
+    if (vo->g_dec_picture_ptr!= NULL)
+    {
+        dpb_ptr->delayed_pic[dpb_ptr->delayed_pic_num++] = vo->g_dec_picture_ptr;
+        vo->g_dec_picture_ptr = NULL;
+    }
+
+    //pop one picture from delayed picture queue.
+    if (dpb_ptr && dpb_ptr->delayed_pic_num)
+    {
+        *pOutput = dpb_ptr->delayed_pic[0]->pBufferHeader;
+
+        if(dpb_ptr->delayed_pic[0]->pBufferHeader !=NULL)
+        {
+            (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,dpb_ptr->delayed_pic[0]->pBufferHeader);
+            dpb_ptr->delayed_pic[0]->pBufferHeader = NULL;
+        }
+
+        for(i =0; i < dpb_ptr->delayed_pic_num; i++)
+        {
+            dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
+        }
+        dpb_ptr->delayed_pic_num--;
+
+        return MMDEC_OK;
+    } else
+    {
+        *pOutput = NULL;
+        return MMDEC_ERROR;
+    }
 }
 
 void H264Dec_SetCurRecPic(AVCHandle *avcHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader, int32 picId)
