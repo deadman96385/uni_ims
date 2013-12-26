@@ -1051,7 +1051,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
                 goto error;
             }
         }
-        setRadioState(channelID, RADIO_STATE_ON);
+        setRadioState(channelID, RADIO_STATE_SIM_NOT_READY);
     }
 
     at_response_free(p_response);
@@ -3297,7 +3297,7 @@ static void  requestScreeState(int channelID, int status, RIL_Token t)
         at_send_command(ATch_type[channelID], "AT+CREG=2", NULL);
         at_send_command(ATch_type[channelID], "AT+CGREG=2", NULL);
         at_send_command(ATch_type[channelID], "AT*FDY=1,8", NULL);
-        if (sState == RADIO_STATE_ON) {
+        if (sState == RADIO_STATE_SIM_READY) {
             RIL_requestTimedCallback (onQuerySignalStrength, NULL, NULL);
         }
         RIL_onUnsolicitedResponse (
@@ -6495,7 +6495,9 @@ setRadioState(int channelID, RIL_RadioState newState)
          * Currently, this doesn't happen, but if that changes then these
          * will need to be dispatched on the request thread
          */
-        if (sState == RADIO_STATE_ON) {
+        if (sState == RADIO_STATE_SIM_READY) {
+            onSIMReady(channelID);
+        } else if (sState == RADIO_STATE_SIM_NOT_READY) {
             onRadioPowerOn(channelID);
         }
     }
@@ -6797,7 +6799,7 @@ static void pollSIMState (void *param)
         channelID = getChannel();
 
 
-    if (sState != RADIO_STATE_ON) {
+    if (sState != RADIO_STATE_SIM_NOT_READY) {
         /* no longer valid to poll */
         if(param == NULL)
             putChannel(channelID);
@@ -6814,7 +6816,7 @@ static void pollSIMState (void *param)
         //Added for bug#242159 end
         default:
             RILLOGD("SIM ABSENT or LOCKED");
-            RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED, NULL, 0);
+           setRadioState(channelID, RADIO_STATE_SIM_LOCKED_OR_ABSENT);
             if(param == NULL)
                 putChannel(channelID);
             return;
@@ -6828,10 +6830,9 @@ static void pollSIMState (void *param)
         case SIM_READY:
         case SIM_PIN2:
         case SIM_PUK2:
-            RLOGI("SIM_READY");
-            onSIMReady(channelID);
-            RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED, NULL, 0);
-            if(param == NULL)
+             RLOGI("SIM_READY");
+             setRadioState(channelID, RADIO_STATE_SIM_READY);
+             if(param == NULL)
                 putChannel(channelID);
             return;
     }
@@ -7082,7 +7083,7 @@ static void initializeCallback(void *param)
 
     /* assume radio is off on error */
     if(isRadioOn(channelID) > 0) {
-        setRadioState (channelID, RADIO_STATE_ON);
+        setRadioState (channelID, RADIO_STATE_SIM_NOT_READY);
     }
     putChannel(channelID);
 
