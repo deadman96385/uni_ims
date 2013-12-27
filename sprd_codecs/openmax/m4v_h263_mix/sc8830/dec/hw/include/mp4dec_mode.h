@@ -331,6 +331,7 @@ typedef struct tagMp4DecObject
     uint32 ddr_bandwidth_req_cnt;
     uint32 vsp_freq_div;
     int32	error_flag;
+    int32   vsp_capability;
 
     MP4Handle  *mp4Handle;
 

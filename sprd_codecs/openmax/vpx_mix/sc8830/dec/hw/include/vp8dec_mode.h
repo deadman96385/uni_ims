@@ -428,6 +428,7 @@ typedef struct tagVPXDecObject
     uint32 ddr_bandwidth_req_cnt;
     uint32 vsp_freq_div;
     int32	error_flag;
+    int32   vsp_capability;
 
     VPXHandle  *vpxHandle;
 

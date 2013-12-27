@@ -167,6 +167,15 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 
 }
 
+MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, int32 *codec_capability)
+{
+    H264DecObject *vo = (H264DecObject *)avcHandle->videoDecoderData;
+
+    *codec_capability = vo->vsp_capability;
+
+    return MMDEC_OK;
+}
+
 MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideoFormat * pVideoFormat)
 {
     H264DecObject*vo;
@@ -197,7 +206,7 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
     vo->s_vsp_Vaddr_base = 0;
     vo->ddr_bandwidth_req_cnt = 0;
     vo->vsp_freq_div = 0;
-
+    vo->vsp_capability = -1;
     if (VSP_OPEN_Dev((VSPObject *)vo) < 0)
     {
         return ret;

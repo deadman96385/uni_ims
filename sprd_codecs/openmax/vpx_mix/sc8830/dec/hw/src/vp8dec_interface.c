@@ -23,6 +23,26 @@ extern   "C"
 {
 #endif
 
+void VP8GetBufferDimensions(VPXHandle *vpxHandle, int32 *width, int32 *height)
+{
+    VPXDecObject *vo = (VPXDecObject *)(vpxHandle->videoDecoderData) ;
+    VP8_COMMON *cm = &vo->common;
+
+    *width =(((cm->Width + 15)>>4)<<4);
+    *height = (((cm->Height + 15)>>4)<<4);
+
+    SCI_TRACE_LOW("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
+}
+
+MMDecRet VP8GetCodecCapability(VPXHandle *vpxHandle, int32 *codec_capability)
+{
+    VPXDecObject *vo = (VPXDecObject *) vpxHandle->videoDecoderData;
+
+    *codec_capability = vo->vsp_capability;
+
+    return MMDEC_OK;
+}
+
 void VP8DecSetCurRecPic(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader)
 {
     VPXDecObject *vo = (VPXDecObject *)(vpxHandle->videoDecoderData) ;
@@ -71,6 +91,7 @@ MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBu
     vo->s_vsp_Vaddr_base = 0;
     vo->ddr_bandwidth_req_cnt= 0;
     vo->vsp_freq_div= 0;
+    vo->vsp_capability = -1;
     if(VSP_OPEN_Dev((VSPObject *)vo)<0)
     {
         return MMDEC_HW_ERROR;

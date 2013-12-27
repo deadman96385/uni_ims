@@ -168,7 +168,16 @@ PUBLIC void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *he
     SCI_TRACE_LOW("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
 }
 
-MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer * buffer_ptr)
+PUBLIC MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *codec_capability)
+{
+    Mp4DecObject *vo = (Mp4DecObject *) mp4Handle->videoDecoderData;
+
+    *codec_capability = vo->vsp_capability;
+
+    return MMDEC_OK;
+}
+
+PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer * buffer_ptr)
 {
     Mp4DecObject*vo;
     MMDecRet ret;
@@ -191,6 +200,7 @@ MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer * buffer_ptr)
     vo->s_vsp_Vaddr_base = 0;
     vo->ddr_bandwidth_req_cnt = 0;
     vo->vsp_freq_div = 0;
+    vo->vsp_capability = -1;
     if(VSP_OPEN_Dev((VSPObject *)vo)<0)
     {
         return MMDEC_HW_ERROR;
@@ -468,7 +478,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         goto DEC_EXIT;
     }
 
-	//add this judgement for cr228574
+    //add this judgement for cr228574
     if (vop_mode_ptr->VopPredType != BVOP)
     {
         if(Mp4Dec_decode_vop(vo) != MMDEC_OK)
@@ -477,10 +487,10 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
             if (vo->error_flag & ER_SREAM_ID)
             {
                 ret = MMDEC_STREAM_ERROR;
-            }else if(vo->error_flag & ER_HW_ID)
+            } else if(vo->error_flag & ER_HW_ID)
             {
                 ret = MMDEC_HW_ERROR;
-            }else
+            } else
             {
                 ret = MMDEC_ERROR;
             }

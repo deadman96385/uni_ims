@@ -407,6 +407,7 @@ typedef struct tagH264EncObject
     uint32 ddr_bandwidth_req_cnt;
     uint32 vsp_freq_div;
     int32	error_flag;
+    int32   vsp_capability;
 
     AVCHandle  *avcHandle;
 
@@ -425,7 +426,7 @@ typedef struct tagH264EncObject
 
     ENC_ANTI_SHAKE_T g_anti_shake;
 
-    uint32 b_previous_frame_failed;	
+    uint32 b_previous_frame_failed;
 } H264EncObject;
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

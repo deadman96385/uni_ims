@@ -113,9 +113,11 @@ PUBLIC int32 VSP_OPEN_Dev (VSPObject *vo)
             vo->s_vsp_Vaddr_base = (uint32)mmap(NULL,SPRD_VSP_MAP_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED, vo->s_vsp_fd,0);
             vo->s_vsp_Vaddr_base -= VSP_REG_BASE_ADDR;
         }
+
+        ioctl(vo->s_vsp_fd, VSP_CAPABILITY, &(vo->vsp_capability));
     }
 
-    SCI_TRACE_LOW("%s, %d, vsp addr %x\n",__FUNCTION__, __LINE__, vo->s_vsp_Vaddr_base);
+    SCI_TRACE_LOW("%s, %d, vsp addr %x, vsp_capability: %d\n",__FUNCTION__, __LINE__, vo->s_vsp_Vaddr_base, vo->vsp_capability);
 
     return 0;
 }

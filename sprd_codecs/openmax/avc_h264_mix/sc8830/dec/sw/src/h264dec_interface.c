@@ -170,6 +170,15 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 
 }
 
+MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, int32 *codec_capability)
+{
+    H264DecContext *img_ptr = (H264DecContext *)(avcHandle->videoDecoderData);
+
+    *codec_capability = 1; //can support 1080p
+
+    return MMDEC_OK;
+}
+
 MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideoFormat * pVideoFormat)
 {
     H264DecContext *img_ptr = NULL;

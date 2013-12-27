@@ -76,6 +76,7 @@ int MP4DecGetLastDspFrm(MP4Handle *mp4Handle,void **pOutput);
 void MP4DecSetCurRecPic(MP4Handle *mp4Handle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader);
 void Mp4GetVideoDimensions(MP4Handle *mp4Handle, int32 *display_width, int32 *display_height);
 void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *height);
+MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *codec_capability);
 
 /*****************************************************************************/
 //  Description: Init mpeg4 decoder

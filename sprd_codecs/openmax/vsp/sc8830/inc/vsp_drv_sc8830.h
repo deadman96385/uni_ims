@@ -93,6 +93,7 @@ extern "C"
 #define VSP_COMPLETE       			_IO(SPRD_VSP_IOCTL_MAGIC, 7)
 #define VSP_RESET       			_IO(SPRD_VSP_IOCTL_MAGIC, 8)
 #define VSP_HW_INFO                         _IO(SPRD_VSP_IOCTL_MAGIC, 9)
+#define VSP_CAPABILITY                  _IO(SPRD_VSP_IOCTL_MAGIC, 10)
 
 #define TIME_OUT_CLK			0xffff
 #define TIME_OUT_CLK_FRAME		0x7fffff
@@ -653,6 +654,7 @@ typedef struct tagVSPObject
     int32 ddr_bandwidth_req_cnt;
     uint32 vsp_freq_div;
     int32	error_flag;
+    int32   vsp_capability;
 } VSPObject;
 
 //error id, added by xiaowei, 20130910
