@@ -5824,9 +5824,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             int sim_num = ((int *)data)[0];
             int sim_slot_cfg;
             if( sim_num == 1) {
-                sim_slot_cfg=66051; //0x00010203
-            } else {
                 sim_slot_cfg=16777731; //0x01000203
+            } else {
+                sim_slot_cfg=66051; //0x00010203
             }
             snprintf(cmd, sizeof(cmd), "AT+SPCONFIGSIMSLOT= %d",sim_slot_cfg);
             err = at_send_command(ATch_type[channelID], cmd,
