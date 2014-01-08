@@ -1831,19 +1831,11 @@ static void requestNetworkRegistration(int channelID,  void *data, size_t datale
 {
     char cmd[128] = {0};
     int err;
-#ifdef RIL_SPRD_EXTENSION
-    RIL_NetworkList *network = (RIL_NetworkList *)data;
-#else
     char *network = (char *)data;
-#endif
     ATResponse *p_response = NULL;
 
     if (network) {
-#ifdef RIL_SPRD_EXTENSION
-        snprintf(cmd, sizeof(cmd), "AT+COPS=1,2,\"%s\",%d", network->operatorNumeric, network->act);
-#else
         snprintf(cmd, sizeof(cmd), "AT+COPS=1,2,\"%s\"", network);
-#endif
         err = at_send_command(ATch_type[channelID], cmd, &p_response);
         if (err != 0 || p_response->success == 0)
             goto error;
