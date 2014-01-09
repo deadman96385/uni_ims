@@ -43,7 +43,6 @@ extern   "C"
     }\
 }
 
-
 void H264Dec_clear_delayed_buffer(H264DecObject *vo);
 MMDecRet H264Dec_init_img_buffer (H264DecObject *vo);
 MMDecRet H264Dec_init_dpb (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, int type);

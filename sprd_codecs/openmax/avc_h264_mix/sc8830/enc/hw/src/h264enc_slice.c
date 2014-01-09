@@ -232,11 +232,11 @@ PUBLIC int32 h264enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr
         } else if (tmp & (V_BIT_5 | V_BIT_31))
         {
             SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
-        }else //if (cmd &  V_BIT_30)
+        } else //if (cmd &  V_BIT_30)
         {
             SCI_TRACE_LOW("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
         }
-    }else
+    } else
     {
         SCI_TRACE_LOW("%s, %d, should not be here!", __FUNCTION__, __LINE__);
     }

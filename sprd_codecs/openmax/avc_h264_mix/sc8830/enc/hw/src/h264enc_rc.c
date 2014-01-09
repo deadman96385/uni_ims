@@ -38,8 +38,8 @@ int32 g_RC_Qstep[52] =
     2048, 2304, 2560, 2816, 3328, 3584, 4096, 4608, 5120, 5632, /*10-19*/
     6656, 7168, 8192, 9216,10240,11264,13312,14336,16384,18432, /*20-29*/
     20480,22528,26624,28672,32768,36864,40960,45056,53248,57344, /*30-39*/
-    65536,73728,81920,90112,106496,   0,    0,    0,    0,    0, /*40-49*/
-    0,    0,                                                     /*50-51*/
+    65536,73728,81920,90112,106496,90112,90112,90112,90112,90112, /*40-49*/
+    90112,90112,                                                     /*50-51*/
 };
 
 int32 rc_init_GOP (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras)
@@ -50,19 +50,70 @@ int32 rc_init_GOP (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras)
     int32  GOP_init_QP;								//return value, the initial QP of the GOP
 
     if(rate_control_en) {
-        // update rc_gop_paras->rem_bits
-        if(0 == (vo->g_nFrame_enc % frame_rate))
+        if (0 == vo->g_nFrame_enc)
         {
 #ifdef INT_RC
             uint32 target_bitrate = (uint32)(target_rate-(target_rate>>8)-(target_rate>>10));
 #else
             float  target_bitrate = (float)(target_rate*0.995);
 #endif
-            rc_gop_paras->rem_bits += target_bitrate;
+            uint32 nTBNum = 1;
+            rc_gop_paras->sv = 0;
 
-            rc_gop_paras->gop_num_per_sec = (frame_rate + rc_gop_paras->intra_period - 1) / rc_gop_paras->intra_period;
+            while (target_bitrate > (1 << nTBNum))
+            {
+                nTBNum++;
+            }
+
+            if (0 == (frame_rate % rc_gop_paras->intra_period))
+            {
+                rc_gop_paras->frames = frame_rate;
+
+                if (32 < (nTBNum+5))
+                {
+                    rc_gop_paras->sv = (nTBNum+5) - 32;
+                }
+
+                rc_gop_paras->bit_rate = (target_bitrate >> rc_gop_paras->sv);
+            } else
+            {
+                uint32 nFRNum = 1, nRCFNum = 1;
+
+                if (rc_gop_paras->intra_period < frame_rate)
+                {
+                    rc_gop_paras->frames = (frame_rate + rc_gop_paras->intra_period - 1) / rc_gop_paras->intra_period;
+                    rc_gop_paras->frames *= rc_gop_paras->intra_period;
+                } else
+                {
+                    rc_gop_paras->frames = rc_gop_paras->intra_period;
+                }
+
+                while (frame_rate > (1 << nFRNum))
+                {
+                    nFRNum++;
+                }
+
+                while (rc_gop_paras->frames > (1 << nRCFNum))
+                {
+                    nRCFNum++;
+                }
+
+                if (32 < (nTBNum + nRCFNum - nFRNum + 5))
+                {
+                    rc_gop_paras->sv = (nTBNum + nRCFNum - nFRNum + 5) - 32;
+                    target_bitrate = (target_bitrate >> rc_gop_paras->sv);
+                }
+
+                rc_gop_paras->bit_rate = (target_bitrate / frame_rate) * rc_gop_paras->frames;
+
+            }
         }
-        else
+        // update rc_gop_paras->rem_bits
+        if(0 == (vo->g_nFrame_enc % rc_gop_paras->frames))
+        {
+            rc_gop_paras->rem_bits += rc_gop_paras->bit_rate;
+            rc_gop_paras->gop_num_per_sec = rc_gop_paras->frames / rc_gop_paras->intra_period;
+        } else
         {
             rc_gop_paras->gop_num_per_sec--;
         }
@@ -71,11 +122,10 @@ int32 rc_init_GOP (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras)
         if (0 == vo->g_nFrame_enc) // the first GOP
         {
             GOP_init_QP = vo->g_h264_enc_config->QP_IVOP;
-        }
-        else
+        } else
         {
             int32 nGOPMONE = rc_gop_paras->intra_period - 1;
-            int32 nCalculateBitRate;
+            int32 nCalculateBitRate, nTargetBits;
             int32 i;
 
             if (0 != nGOPMONE)
@@ -93,18 +143,28 @@ int32 rc_init_GOP (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras)
                     }
                 }
                 rc_gop_paras->I_P_ratio = (rc_gop_paras->last_I_frame_bits + nCalculateBitRate / 2) / nCalculateBitRate;
+                if (0 == rc_gop_paras->I_P_ratio)
+                {
+                    rc_gop_paras->I_P_ratio = 1;
+                }
+            }
+
+            if (0 != rc_gop_paras->gop_num_per_sec)
+            {
+                nTargetBits = rc_gop_paras->rem_bits / rc_gop_paras->gop_num_per_sec;
+            } else
+            {
+                nTargetBits = rc_gop_paras->rem_bits;
             }
 
             for(i = -6; i <= 6; i++)
             {
                 GOP_init_QP = rc_gop_paras->last_I_QP + i;
-                GOP_init_QP = Clip3(0, 40, GOP_init_QP);
                 if(GOP_init_QP >=0 && GOP_init_QP < 40)
                 {
                     nCalculateBitRate = rc_gop_paras->last_I_frame_bits / g_RC_Qstep[GOP_init_QP] * g_RC_Qstep[rc_gop_paras->last_I_QP];
                     nCalculateBitRate += rc_gop_paras->last_P_frame_bits / g_RC_Qstep[GOP_init_QP] * g_RC_Qstep[rc_gop_paras->last_P_QP] * nGOPMONE;
-                }
-                else
+                } else
                 {
                     nCalculateBitRate = 0x7fffffff;
                 }
@@ -113,8 +173,7 @@ int32 rc_init_GOP (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras)
                 {
                     GOP_init_QP = 40;
                     break;
-                }
-                else if(nCalculateBitRate < (rc_gop_paras->rem_bits / rc_gop_paras->gop_num_per_sec))
+                } else if(nCalculateBitRate < nTargetBits)
                 {
                     break;
                 }
@@ -129,8 +188,7 @@ int32 rc_init_GOP (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras)
         fprintf(rc_fp, "rc_init_GOP\t: frame %d, target_bitrate = %d\n", vo->g_nFrame_enc, target_bitrate);
         fprintf(rc_fp, "rc_init_GOP\t: frame %d, rc_gop_paras->rem_bits = %d\n", vo->g_nFrame_enc, rc_gop_paras->rem_bits);
 #endif
-    }
-    else
+    } else
     {
         GOP_init_QP = vo->g_h264_enc_config->QP_IVOP;
     }
@@ -146,7 +204,6 @@ int32 rc_init_pict(H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras, RC_PIC_PARAS *
     {
         int32 frame_no_in_GOP = (int32)vo->g_nFrame_enc % rc_gop_paras->intra_period;
         int32 curr_qp;
-        uint32 target_rate = vo->g_h264_enc_config->targetBitRate;
 #ifdef INT_RC
         uint32 ratio;
 #else
@@ -159,7 +216,14 @@ int32 rc_init_pict(H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras, RC_PIC_PARAS *
 
         if (0 == frame_no_in_GOP) // I frame, calculate the target bits for Basic unit level rate control
         {
-            rc_pic_paras->target_bits = ((rc_gop_paras->rem_bits/rc_gop_paras->gop_num_per_sec)*rc_gop_paras->I_P_ratio)/(rc_gop_paras->intra_period-1+rc_gop_paras->I_P_ratio);
+            if (0 != rc_gop_paras->gop_num_per_sec)
+            {
+                rc_pic_paras->target_bits = ((rc_gop_paras->rem_bits/rc_gop_paras->gop_num_per_sec)*rc_gop_paras->I_P_ratio)/(rc_gop_paras->intra_period-1+rc_gop_paras->I_P_ratio);
+            } else
+            {
+                rc_pic_paras->target_bits = rc_gop_paras->rem_bits;
+            }
+
             rc_pic_paras->remain_bits = rc_pic_paras->target_bits;
             rc_pic_paras->slice_num = 1;
             rc_pic_paras->total_qp = rc_pic_paras->curr_pic_qp;
@@ -168,8 +232,7 @@ int32 rc_init_pict(H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras, RC_PIC_PARAS *
             fprintf(rc_fp, "rc_init_pict\t: frame %d, rc_pic_paras->target_bits = %d\n", vo->g_nFrame_enc, rc_pic_paras->target_bits);
 #endif
             return rc_pic_paras->curr_pic_qp;
-        }
-        else	// P Frame
+        } else	// P Frame
         {
             rc_pic_paras->remain_bits -= vo->BU_bit_stat;
         }
@@ -186,18 +249,25 @@ int32 rc_init_pict(H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras, RC_PIC_PARAS *
         rc_pic_paras->slice_num = 1;
         //rc_pic_paras->total_qp = 0;
 
-        //calculate the target buffer level for the picture
-        rc_pic_paras->delta_target_buf = rc_gop_paras->curr_buf_full/(rc_gop_paras->rem_frame_num-frame_no_in_GOP);
+        if (0 != (rc_gop_paras->rem_frame_num - frame_no_in_GOP))
+        {
+            //calculate the target buffer level for the picture
+            rc_pic_paras->delta_target_buf = rc_gop_paras->curr_buf_full/(rc_gop_paras->rem_frame_num-frame_no_in_GOP);
 
-        //calculate the target bits for the picture
+            //calculate the target bits for the picture
 #ifdef INT_RC
-        rc_pic_paras->target_bits = (int32)( rc_gop_paras->rem_bits/(rc_gop_paras->rem_frame_num-frame_no_in_GOP) );
-        rc_pic_paras->target_bits = rc_pic_paras->target_bits - rc_pic_paras->delta_target_buf;
+            rc_pic_paras->target_bits = (int32)( rc_gop_paras->rem_bits/(rc_gop_paras->rem_frame_num-frame_no_in_GOP) );
+            rc_pic_paras->target_bits = rc_pic_paras->target_bits - rc_pic_paras->delta_target_buf;
 #else
-        rc_pic_paras->target_bits = (int) floor( rc_gop_paras->rem_bits / (rc_gop_paras->intra_period-frame_no_in_GOP) + 0.5);
-        temp  = MAX(0, (int) floor(target_bitrate/(rc_gop_paras->intra_period-1+rc_gop_paras->I_P_ratio) - 0.5*rc_pic_paras->delta_target_buf + 0.5));
-        rc_pic_paras->target_bits = (int) floor(0.5 * rc_pic_paras->target_bits + 0.5 * temp + 0.5);
+            rc_pic_paras->target_bits = (int) floor( rc_gop_paras->rem_bits / (rc_gop_paras->intra_period-frame_no_in_GOP) + 0.5);
+            temp  = MAX(0, (int) floor(target_bitrate/(rc_gop_paras->intra_period-1+rc_gop_paras->I_P_ratio) - 0.5*rc_pic_paras->delta_target_buf + 0.5));
+            rc_pic_paras->target_bits = (int) floor(0.5 * rc_pic_paras->target_bits + 0.5 * temp + 0.5);
 #endif
+        } else
+        {
+            rc_pic_paras->delta_target_buf = rc_gop_paras->curr_buf_full;
+            rc_pic_paras->target_bits = (int)(rc_gop_paras->rem_bits);
+        }
 
 #ifdef RC_DEBUG
         fprintf(rc_fp, "rc_init_pict\t: frame %d, rc_pic_paras->remain_bits = %d\n", vo->g_nFrame_enc, rc_pic_paras->remain_bits);
@@ -209,12 +279,11 @@ int32 rc_init_pict(H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras, RC_PIC_PARAS *
 
 #ifdef INT_RC
         // for cr#211038, avoid div 0
-        if (vo->g_nFrame_enc == 1 && rc_pic_paras->target_bits != 0)
+        if (vo->g_nFrame_enc == 1 && rc_pic_paras->target_bits > 0)
         {
             ratio = ((uint32)(rc_gop_paras->prev_pic_bits<<10)/rc_pic_paras->target_bits);
             ratio = ratio/rc_gop_paras->I_P_ratio;
-        }
-        else if (rc_pic_paras->target_bits != 0) // for cr#211038, avoid div 0
+        } else if (rc_pic_paras->target_bits > 0) // for cr#211038, avoid div 0
         {
             if(frame_no_in_GOP == 1)
                 ratio = ((uint32)(rc_gop_paras->last_P_frame_bits<<10)/rc_pic_paras->target_bits);
@@ -228,24 +297,19 @@ int32 rc_init_pict(H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras, RC_PIC_PARAS *
         if (rc_pic_paras->target_bits <= 0)//overdue)
         {
             curr_qp = Clip3(0, 40, prev_frame_qp+2); //rc_pic_paras->curr_pic_qp + 2;
-        }
-        else if (ratio >= 1126)
+        } else if (ratio >= 1126)
         {
             curr_qp = Clip3(0, 40, prev_frame_qp+2);//rc_pic_paras->curr_pic_qp+2;
-        }
-        else if (ratio < 1126 && ratio >= 1065)
+        } else if (ratio < 1126 && ratio >= 1065)
         {
             curr_qp = Clip3(0, 40, prev_frame_qp+1);//rc_pic_paras->curr_pic_qp+1;
-        }
-        else if (ratio < 1065 && ratio >= 819)
+        } else if (ratio < 1065 && ratio >= 819)
         {
             curr_qp = Clip3(0, 40, prev_frame_qp);//rc_pic_paras->curr_pic_qp;
-        }
-        else if (ratio < 819 && ratio >= 683)
+        } else if (ratio < 819 && ratio >= 683)
         {
             curr_qp = Clip3(0, 40, prev_frame_qp-1);//rc_pic_paras->curr_pic_qp-1;
-        }
-        else
+        } else
         {
             curr_qp = Clip3(0, 40, prev_frame_qp-2);//rc_pic_paras->curr_pic_qp-2;
         }
@@ -253,8 +317,7 @@ int32 rc_init_pict(H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras, RC_PIC_PARAS *
         rc_pic_paras->total_qp = curr_qp;
 
         return curr_qp;
-    }
-    else
+    } else
     {
         return rc_pic_paras->curr_pic_qp;
     }
@@ -285,24 +348,19 @@ int32 rc_init_slice (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr, RC_PIC_PARA
         if(overdue)
         {
             curr_qp = Clip3(0, 40, rc_pic_paras->curr_pic_qp+2);
-        }
-        else if (ratio >= 1126)
+        } else if (ratio >= 1126)
         {
             curr_qp = Clip3(0, 40, rc_pic_paras->curr_pic_qp+2);
-        }
-        else if (ratio < 1126 && ratio >= 1065)
+        } else if (ratio < 1126 && ratio >= 1065)
         {
             curr_qp = Clip3(0, 40, rc_pic_paras->curr_pic_qp+1);
-        }
-        else if (ratio < 1065 && ratio >= 819)
+        } else if (ratio < 1065 && ratio >= 819)
         {
             curr_qp = Clip3(0, 40, rc_pic_paras->curr_pic_qp);
-        }
-        else if (ratio < 819 && ratio >= 683)
+        } else if (ratio < 819 && ratio >= 683)
         {
             curr_qp = Clip3(0, 40, rc_pic_paras->curr_pic_qp-1);
-        }
-        else
+        } else
         {
             curr_qp = Clip3(0, 40, rc_pic_paras->curr_pic_qp-2);
         }
@@ -333,35 +391,32 @@ void rc_update_pict(H264EncObject *vo, int32 bits, RC_GOP_PARAS *rc_gop_paras)//
         int32 frame_no_in_GOP = (int32)vo->g_nFrame_enc % rc_gop_paras->intra_period;
         int	 delta_bits;
 
+        int BitsS = (bits >> rc_gop_paras->sv);
         //update buffer fullness
-#ifdef INT_RC
-        delta_bits = bits - (int)(target_bitrate/frame_rate);
-#else
-        if(frame_no_in_GOP==0)
-            delta_bits = bits - (int)floor((target_bitrate*rc_gop_paras->I_P_ratio)/(rc_gop_paras->intra_period-1+rc_gop_paras->I_P_ratio) + 0.5F);
-        else
-            delta_bits = bits - (int)floor(target_bitrate/(rc_gop_paras->intra_period-1+rc_gop_paras->I_P_ratio) + 0.5F);
-#endif
+        if (rc_gop_paras->frames)
+        {
+            delta_bits = BitsS - (int)(rc_gop_paras->bit_rate/rc_gop_paras->frames);
+        } else
+        {
+            delta_bits = BitsS - (int)(rc_gop_paras->bit_rate);
+        }
 
-
-        rc_gop_paras->rem_bits -= bits;
+        rc_gop_paras->rem_bits -= BitsS;
 
         if (frame_no_in_GOP != 0)
         {
             if(frame_no_in_GOP == 1)
             {
-                rc_gop_paras->last_P_frame_bits = bits;
+                rc_gop_paras->last_P_frame_bits = BitsS;
                 rc_gop_paras->last_P_QP = vo->g_enc_image_ptr->qp;
-            }
-            else
+            } else
             {
-                rc_gop_paras->last_P_frame_bits += bits;
+                rc_gop_paras->last_P_frame_bits += BitsS;
                 rc_gop_paras->last_P_QP += vo->g_enc_image_ptr->qp;
             }
-        }
-        else
+        } else
         {
-            rc_gop_paras->last_I_frame_bits = bits;
+            rc_gop_paras->last_I_frame_bits = BitsS;
             rc_gop_paras->last_I_QP = vo->g_enc_image_ptr->qp;
         }
 
@@ -371,7 +426,7 @@ void rc_update_pict(H264EncObject *vo, int32 bits, RC_GOP_PARAS *rc_gop_paras)//
         fprintf(rc_fp, "rc_update_pict\t: frame %d, rc_gop_paras->curr_buf_full = %d\n", vo->g_nFrame_enc, rc_gop_paras->curr_buf_full);
 #endif
 
-        rc_gop_paras->prev_pic_bits = bits;
+        rc_gop_paras->prev_pic_bits = BitsS;
     }
 
     return;

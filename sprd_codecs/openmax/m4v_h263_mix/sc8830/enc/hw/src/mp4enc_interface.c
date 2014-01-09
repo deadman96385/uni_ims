@@ -327,6 +327,7 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
     {
         vop_mode_ptr->Need_MinQp_flag =0;
     }
+
     if(!frame_skip)
     {
         vop_mode_ptr->VopPredType	= (pInput->vopType == IVOP) ? IVOP : PVOP;

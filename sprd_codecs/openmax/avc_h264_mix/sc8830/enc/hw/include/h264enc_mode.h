@@ -369,6 +369,9 @@ typedef struct  {
     int32 last_I_QP;
     int32 last_P_frame_bits;
     int32 last_P_QP;
+    int32 frames;
+    int32 bit_rate;
+    int32 sv;
 } RC_GOP_PARAS;
 
 

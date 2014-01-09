@@ -462,7 +462,7 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
                         H264DEC_UNBIND_FRAME(vo, fs->frame);
                         dpb_ptr->delayed_pic[--dpb_ptr->delayed_pic_num] = NULL;
                     }
-                } else  if(cur->slice_type == B_SLICE)
+                } else if(cur->slice_type == B_SLICE)
                 {
                     vo->error_flag |= ER_SREAM_ID;
                     return;
