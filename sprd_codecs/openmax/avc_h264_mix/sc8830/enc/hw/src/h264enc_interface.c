@@ -256,6 +256,8 @@ MMEncRet H264Enc_FakeNALU(ENC_IMAGE_PARAMS_T *img_ptr, MMEncOut *pOutput)
 {
     uint32 nal_header;
 
+    SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+
     /* nal header, ( 0x00 << 7 ) | ( nal->i_ref_idc << 5 ) | nal->i_type; */
     nal_header = ( 0x00 << 7 ) | ( NAL_PRIORITY_HIGHEST << 5 ) | NAL_UNKNOWN;
 
@@ -394,6 +396,7 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     {
         H264Enc_FakeNALU(img_ptr, pOutput);
         ret = MMENC_OK;
+        vo->error_flag = 0;
         vo->b_previous_frame_failed =1;
 
         goto ENC_EXIT;
@@ -417,7 +420,11 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     img_ptr->slice_sz[img_ptr->slice_nr] = h264enc_slice_write(vo, img_ptr);
     if (vo->error_flag)
     {
+        H264Enc_FakeNALU(img_ptr, pOutput);
+        ret = MMENC_OK;
+        vo->error_flag = 0;
         vo->b_previous_frame_failed =1;
+
         goto ENC_EXIT;
     } else
     {
