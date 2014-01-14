@@ -5206,9 +5206,17 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
 
         case RIL_REQUEST_SET_NETWORK_SELECTION_AUTOMATIC:
-            at_send_command(ATch_type[channelID], "AT+COPS=0", NULL);
-            at_send_command(ATch_type[channelID], "AT+CGAUTO=1", NULL);
-            RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            p_response = NULL;
+            err = at_send_command(ATch_type[channelID], "AT+COPS=0", &p_response);
+            if (err >= 0 && p_response->success) {
+                err = at_send_command(ATch_type[channelID], "AT+CGAUTO=1", &p_response);
+            }
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
             break;
         case RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL:
             requestNetworkRegistration(channelID, data, datalen, t);
