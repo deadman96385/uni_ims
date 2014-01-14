@@ -1964,7 +1964,11 @@ dispatchNetworkList (Parcel &p, RequestInfo *pRI) {
     printRequest(pRI->token, pRI->pCI->requestNumber);
 
     if (status != NO_ERROR) {
-        goto invalid;
+        /* Mod for bug267572 Start */
+        //goto invalid;
+        RILLOGD("set default AcT = -1");
+        list.act = -1;
+        /* Mod for bug267572 End   */
     }
 
        s_callbacks.onRequest(pRI->pCI->requestNumber, &list, sizeof(list), pRI);

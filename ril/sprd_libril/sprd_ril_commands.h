@@ -61,7 +61,11 @@
     {RIL_REQUEST_CHANGE_BARRING_PASSWORD, dispatchStrings, responseVoid},
     {RIL_REQUEST_QUERY_NETWORK_SELECTION_MODE, dispatchVoid, responseInts},
     {RIL_REQUEST_SET_NETWORK_SELECTION_AUTOMATIC, dispatchVoid, responseVoid},
+#ifdef RIL_SPRD_EXTENSION
+    {RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL, dispatchNetworkList, responseVoid},
+#elif defined GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION
     {RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL, dispatchString, responseVoid},
+#endif
     {RIL_REQUEST_QUERY_AVAILABLE_NETWORKS , dispatchVoid, responseStrings},
     {RIL_REQUEST_DTMF_START, dispatchString, responseVoid},
     {RIL_REQUEST_DTMF_STOP, dispatchVoid, responseVoid},
