@@ -847,6 +847,10 @@ error:
                     RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
                     at_response_free(p_response);
                     return;
+                } else if (errNum == 16) {
+                    RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+                    at_response_free(p_response);
+                    return;
                 }
             }
         }
