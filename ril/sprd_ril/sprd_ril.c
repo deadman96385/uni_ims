@@ -4638,24 +4638,16 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
     RILLOGD("onRequest: %s sState=%d", requestToString(request), sState);
 
-#if defined (RIL_SPRD_EXTENSION)
-    channelID = getChannel();
-#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-    if(request != RIL_REQUEST_OEM_HOOK_RAW)
-        channelID = getChannel();
-#endif
 
-    /* Ignore all requests except RIL_REQUEST_GET_SIM_STATUS
+    /* Ignore all requests except !(requests)
      * when RADIO_STATE_UNAVAILABLE.
      */
     if (sState == RADIO_STATE_UNAVAILABLE
-            && !(request == RIL_REQUEST_GET_SIM_STATUS
-                || request == RIL_REQUEST_GET_IMEI
+            && !(request == RIL_REQUEST_GET_IMEI
                 || request == RIL_REQUEST_GET_IMEISV
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
-        putChannel(channelID);
         return;
     }
 
@@ -4695,9 +4687,15 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
-        putChannel(channelID);
         return;
     }
+
+#if defined (RIL_SPRD_EXTENSION)
+    channelID = getChannel();
+#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+    if(request != RIL_REQUEST_OEM_HOOK_RAW)
+        channelID = getChannel();
+#endif
 
     switch (request) {
         case RIL_REQUEST_BASEBAND_VERSION:
