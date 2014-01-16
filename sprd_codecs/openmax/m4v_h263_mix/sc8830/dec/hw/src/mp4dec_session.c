@@ -150,6 +150,7 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     uint32 mb_num_x;
     uint32 mb_num_y;
     uint32 total_mb_num;
+    uint32 extra_mem_size;
 
     /*MB number in hor and in ver and total MB number*/
     mb_num_x = vop_mode_ptr->MBNumX = (vop_mode_ptr->OrgFrameWidth  + 15) / MB_SIZE;
@@ -159,7 +160,14 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     vop_mode_ptr->FrameWidth  = (int16)(mb_num_x * MB_SIZE);
     vop_mode_ptr->FrameHeight = (int16)(mb_num_y * MB_SIZE);
 
-    if (vo->mp4Handle->VSP_extMemCb(vo->mp4Handle->userdata,  vop_mode_ptr->FrameWidth, vop_mode_ptr->FrameHeight, vop_mode_ptr->bDataPartitioning) < 0)
+
+    extra_mem_size = total_mb_num * (4 * 80 + 384); //384 for tmp YUV.
+    extra_mem_size += (146 + 152)*sizeof(uint32);
+    if (vop_mode_ptr->bDataPartitioning) {
+        extra_mem_size += total_mb_num * 32;
+    }
+    extra_mem_size += 1024;
+    if (vo->mp4Handle->VSP_extMemCb(vo->mp4Handle->userdata,  extra_mem_size) < 0)
     {
         SCI_TRACE_LOW("%s, %d, extra memory is not enough", __FUNCTION__, __LINE__);
         vo->memory_error = 1;

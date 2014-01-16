@@ -27,7 +27,7 @@ extern   "C"
 #endif
 
 typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader);
-typedef int (*FunctionType_MallocCB)(void* aUserData, unsigned int width,unsigned int height, unsigned int aNumBuffers);
+typedef int (*FunctionType_MallocCB)(void* aUserData, unsigned int size_extra);
 
 typedef enum
 {
@@ -92,7 +92,7 @@ MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, uint8 **pOutput, int32 *pic
 void H264Dec_SetCurRecPic(AVCHandle *avcHandle, uint8	*pFrameY, uint8 *pFrameY_phy,void *pBufferHeader, int32 picId);
 MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int *nal_type, int *nal_ref_idc);
 MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo);
-MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, int32 *codec_capability);
+MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, int32 *max_width, int32 *max_height);
 
 /*****************************************************************************/
 //  Description: Init h264 decoder
