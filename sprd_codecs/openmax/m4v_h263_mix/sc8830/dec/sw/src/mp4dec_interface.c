@@ -125,12 +125,13 @@ PUBLIC void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *he
     SCI_TRACE_LOW("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
 }
 
-PUBLIC MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *codec_capability)
+PUBLIC MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *max_width, int32 *max_height)
 {
     Mp4DecObject *vo = (Mp4DecObject *) mp4Handle->videoDecoderData;
 
-    *codec_capability = 1/*vo->vsp_capability*/;
-
+    //*codec_capability = 1/*vo->vsp_capability*/;
+    *max_width = 1920;
+    *max_height = 1088;
     return MMDEC_OK;
 }
 

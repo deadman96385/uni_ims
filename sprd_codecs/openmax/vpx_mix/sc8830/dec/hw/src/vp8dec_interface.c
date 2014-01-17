@@ -34,13 +34,25 @@ void VP8GetBufferDimensions(VPXHandle *vpxHandle, int32 *width, int32 *height)
     SCI_TRACE_LOW("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
 }
 
-MMDecRet VP8GetCodecCapability(VPXHandle *vpxHandle, int32 *codec_capability)
+MMDecRet VP8GetCodecCapability(VPXHandle *vpxHandle, int32 *max_width, int32 *max_height)
 {
-    VPXDecObject *vo = (VPXDecObject *) vpxHandle->videoDecoderData;
+	VPXDecObject *vo = (VPXDecObject *) vpxHandle->videoDecoderData;
 
-    *codec_capability = vo->vsp_capability;
-
-    return MMDEC_OK;
+	int32 codec_capability = vo->vsp_capability;
+	if (codec_capability == 0)   //limited under 720p
+	{
+	    *max_width = 1280;
+	    *max_height = 720;
+	} else if (codec_capability == 1)   //limited under 1080p
+	{
+	    *max_width = 1920;
+	    *max_height = 1088;
+	} else
+	{
+	    *max_width = 352;
+	    *max_height = 288;
+	}
+	return MMDEC_OK;
 }
 
 void VP8DecSetCurRecPic(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader)

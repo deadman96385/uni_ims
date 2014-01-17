@@ -177,6 +177,7 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     DEC_MB_BFR_T *mb_cache_ptr = vop_mode_ptr->mb_cache_ptr;
     uint32 mb_num_x, mb_num_y, total_mb_num;
     uint32 i;
+    uint32 extra_mem_size, ext_size_y, ext_size_c;
 
     /*MB number in hor and in ver and total MB number*/
     mb_num_x = vop_mode_ptr->MBNumX = (vop_mode_ptr->OrgFrameWidth + 15) >>4;
@@ -195,7 +196,31 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     vop_mode_ptr->iStartInFrameY = vop_mode_ptr->FrameExtendWidth * YEXTENTION_SIZE + YEXTENTION_SIZE;
     vop_mode_ptr->iStartInFrameUV = (vop_mode_ptr->FrameExtendWidth >>1) * UVEXTENTION_SIZE + UVEXTENTION_SIZE;
 
-    if (vo->mp4Handle->VSP_extMemCb(vo->mp4Handle->userdata, vop_mode_ptr->FrameWidth, vop_mode_ptr->FrameHeight, vop_mode_ptr->bDataPartitioning) < 0)
+
+    ext_size_y = (mb_num_x * 16 + 16*2) * (mb_num_y * 16 + 16*2);
+    ext_size_c = ext_size_y >> 2;
+
+    extra_mem_size = total_mb_num * 6 * 2* sizeof(int32); 	//mb_info
+    extra_mem_size += 4 * 8 * sizeof(int16);				//pLeftCoeff
+    extra_mem_size += 6 * 64 * sizeof(int16);				//coef_block
+    extra_mem_size += 4*8*mb_num_x*sizeof(int16);	//pTopCoeff
+    extra_mem_size += (total_mb_num * sizeof(uint8));   //mbdec_stat_ptr
+    extra_mem_size += ((( 64*4*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrY
+    extra_mem_size += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrU
+    extra_mem_size += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrV
+
+    for (i = 0; i < 3; i++) {
+        extra_mem_size += ((( ext_size_y + 255) >>8)<<8);	//imgYUV[0]
+        extra_mem_size += ((( ext_size_c + 255) >>8)<<8);	//imgYUV[1]
+        extra_mem_size += ((( ext_size_c + 255 + 8) >>8)<<8);	//imgYUV[2], 8 extra byte for mc loading of V.
+    }
+    extra_mem_size += ((( ext_size_y + 255) >>8)<<8);   //g_dbk_tmp_frm_ptr
+
+    if (vop_mode_ptr->bDataPartitioning) {
+        extra_mem_size += ((1+6)*sizeof (int32 *) * total_mb_num); //g_dec_dc_store + g_dec_dc_store[i]
+    }
+    extra_mem_size += (10*1024);
+    if (vo->mp4Handle->VSP_extMemCb(vo->mp4Handle->userdata, extra_mem_size) < 0)
     {
         SCI_TRACE_LOW("%s, %d, extra memory is not enough", __FUNCTION__, __LINE__);
         return MMDEC_MEMORY_ERROR;

@@ -110,8 +110,18 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
         if (vo->avcHandle->VSP_extMemCb)
         {
             uint32 malloc_buffer_num = MAX_REF_FRAME_NUMBER+1;
+            int32 Frm_width_align = ((vo->width + 15) & (~15));
+            int32 Frm_height_align = ((vo->height + 15) & (~15));
+            int32 mb_num_x = Frm_width_align/16;
+            int32 mb_num_y = Frm_height_align/16;
+            int32 mb_num_total = mb_num_x * mb_num_y;
+            uint32 size_extra;
+            int ret ;
 
-            int ret = (*(vo->avcHandle->VSP_extMemCb))(vo->avcHandle->userdata,vo->width,vo->height,malloc_buffer_num);
+            size_extra = mb_num_total * 80 * malloc_buffer_num + 1024; //384 for tmp YUV.
+            size_extra += sizeof(uint32)*69;
+
+            ret = (*(vo->avcHandle->VSP_extMemCb))(vo->avcHandle->userdata,size_extra);
 
             if (ret < 0)
             {
