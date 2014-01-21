@@ -87,6 +87,18 @@ static int8 is_MVC_profile(uint8 profile_idc)
     return ((profile_idc == MVC_HIGH) || (profile_idc == STEREO_HIGH));
 }
 #endif
+
+uint32 H264Dec_CalculateMemSize (DEC_IMAGE_PARAMS_T *img_ptr)
+{
+    uint32 malloc_buffer_num = MAX_REF_FRAME_NUMBER+1;
+    uint32 size_extra;
+
+    size_extra = img_ptr->frame_size_in_mbs * 80 * malloc_buffer_num + 1024; //384 for tmp YUV.
+    size_extra += sizeof(uint32)*69;
+
+    return size_extra;
+}
+
 /*
 if sps_id is changed, size of frame may be changed, so the buffer for dpb and img
 need to be re-allocate, and the parameter of img need to be re-computed
@@ -109,20 +121,11 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
 
         if (vo->avcHandle->VSP_extMemCb)
         {
-            uint32 malloc_buffer_num = MAX_REF_FRAME_NUMBER+1;
-            int32 Frm_width_align = ((vo->width + 15) & (~15));
-            int32 Frm_height_align = ((vo->height + 15) & (~15));
-            int32 mb_num_x = Frm_width_align/16;
-            int32 mb_num_y = Frm_height_align/16;
-            int32 mb_num_total = mb_num_x * mb_num_y;
             uint32 size_extra;
             int ret ;
 
-            size_extra = mb_num_total * 80 * malloc_buffer_num + 1024; //384 for tmp YUV.
-            size_extra += sizeof(uint32)*69;
-
+            size_extra = H264Dec_CalculateMemSize(img_ptr);
             ret = (*(vo->avcHandle->VSP_extMemCb))(vo->avcHandle->userdata,size_extra);
-
             if (ret < 0)
             {
                 SCI_TRACE_LOW("%s, %d, extra memory is not enough", __FUNCTION__, __LINE__);

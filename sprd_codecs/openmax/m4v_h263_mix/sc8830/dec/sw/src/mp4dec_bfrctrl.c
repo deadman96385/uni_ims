@@ -92,7 +92,7 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(Mp4DecObject *vo)
         pDecFrame++;
     }
 
-    if(vop_mode_ptr->VT_used && vop_mode_ptr->post_filter_en)
+    if(vop_mode_ptr->post_filter_en)
     {
         vo->g_dbk_tmp_frm_ptr = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)ext_size_y * sizeof(uint8), 256, SW_CACHABLE);
 

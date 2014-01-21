@@ -56,6 +56,7 @@ MMDecRet Mp4Dec_InitDecoderPara(Mp4DecObject *vo)
     vop_mode_ptr->bQuarter_pel = FALSE;
     vop_mode_ptr->bInterlace = FALSE;
     vop_mode_ptr->bInitSuceess = FALSE;
+    vop_mode_ptr->post_filter_en = FALSE;
 
     vop_mode_ptr->pCurDispFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vo, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
     CHECK_MALLOC(vop_mode_ptr->pCurDispFrame, "vop_mode_ptr->pCurDispFrame");
@@ -165,37 +166,13 @@ LOCAL MMDecRet Mp4Dec_MallocFrmBfr(Mp4DecObject *vo)
     return MMDEC_OK;
 }
 
-/*****************************************************************************
- **	Name : 			Mp4Dec_InitSessionDecode
- ** Description:	Initialize the decode parameter.
- ** Author:			Xiaowei Luo
- **	Note:
- *****************************************************************************/
-PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
+uint32 Mp4Dec_CalculateMemSize (DEC_VOP_MODE_T *vop_mode_ptr)
 {
-    DEC_VOP_MODE_T *vop_mode_ptr = vo->vop_mode_ptr;
-    DEC_MB_BFR_T *mb_cache_ptr = vop_mode_ptr->mb_cache_ptr;
-    uint32 mb_num_x, mb_num_y, total_mb_num;
-    uint32 i;
+    uint32 mb_num_x = vop_mode_ptr->MBNumX;
+    uint32 mb_num_y = vop_mode_ptr->MBNumY;
+    uint32 total_mb_num = vop_mode_ptr->MBNum;
     uint32 extra_mem_size, ext_size_y, ext_size_c;
-
-    /*MB number in hor and in ver and total MB number*/
-    mb_num_x = vop_mode_ptr->MBNumX = (vop_mode_ptr->OrgFrameWidth + 15) >>4;
-    mb_num_y = vop_mode_ptr->MBNumY = (vop_mode_ptr->OrgFrameHeight + 15) >>4;
-    total_mb_num = vop_mode_ptr->MBNum  = (int16)(mb_num_x * mb_num_y);
-
-    vop_mode_ptr->FrameWidth  = (int16)(mb_num_x <<4);
-    vop_mode_ptr->FrameHeight = (int16)(mb_num_y <<4);
-
-    vop_mode_ptr->PreOrgFrameWidth = vop_mode_ptr->OrgFrameWidth;
-    vop_mode_ptr->PreOrgFrameHeight = vop_mode_ptr->OrgFrameHeight;
-
-    vop_mode_ptr->FrameExtendWidth  = vop_mode_ptr->FrameWidth  + 2 * YEXTENTION_SIZE;
-    vop_mode_ptr->FrameExtendHeight = vop_mode_ptr->FrameHeight + 2 * YEXTENTION_SIZE;
-
-    vop_mode_ptr->iStartInFrameY = vop_mode_ptr->FrameExtendWidth * YEXTENTION_SIZE + YEXTENTION_SIZE;
-    vop_mode_ptr->iStartInFrameUV = (vop_mode_ptr->FrameExtendWidth >>1) * UVEXTENTION_SIZE + UVEXTENTION_SIZE;
-
+    uint32 i;
 
     ext_size_y = (mb_num_x * 16 + 16*2) * (mb_num_y * 16 + 16*2);
     ext_size_c = ext_size_y >> 2;
@@ -209,18 +186,61 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     extra_mem_size += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrU
     extra_mem_size += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrV
 
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < 3; i++)
+    {
         extra_mem_size += ((( ext_size_y + 255) >>8)<<8);	//imgYUV[0]
         extra_mem_size += ((( ext_size_c + 255) >>8)<<8);	//imgYUV[1]
         extra_mem_size += ((( ext_size_c + 255 + 8) >>8)<<8);	//imgYUV[2], 8 extra byte for mc loading of V.
     }
-    extra_mem_size += ((( ext_size_y + 255) >>8)<<8);   //g_dbk_tmp_frm_ptr
 
-    if (vop_mode_ptr->bDataPartitioning) {
+    if(vop_mode_ptr->post_filter_en)
+    {
+        SCI_TRACE_LOW("%s, %d, go here only when video playback and video resolution is NOT larger than QCIF", __FUNCTION__, __LINE__);
+        extra_mem_size += ((( ext_size_y + 255) >>8)<<8);   //g_dbk_tmp_frm_ptr
+    }
+
+    if (vop_mode_ptr->bDataPartitioning)
+    {
         extra_mem_size += ((1+6)*sizeof (int32 *) * total_mb_num); //g_dec_dc_store + g_dec_dc_store[i]
     }
     extra_mem_size += (10*1024);
-    if (vo->mp4Handle->VSP_extMemCb(vo->mp4Handle->userdata, extra_mem_size) < 0)
+
+    return extra_mem_size;
+}
+
+/*****************************************************************************
+ **	Name : 			Mp4Dec_InitSessionDecode
+ ** Description:	Initialize the decode parameter.
+ ** Author:			Xiaowei Luo
+ **	Note:
+ *****************************************************************************/
+PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
+{
+    DEC_VOP_MODE_T *vop_mode_ptr = vo->vop_mode_ptr;
+    DEC_MB_BFR_T *mb_cache_ptr = vop_mode_ptr->mb_cache_ptr;
+    uint32 mb_num_x, mb_num_y, total_mb_num;
+    uint32 i;
+    uint32 extra_mem_size;
+
+    /*MB number in hor and in ver and total MB number*/
+    mb_num_x = vop_mode_ptr->MBNumX = (vop_mode_ptr->OrgFrameWidth + 15) >>4;
+    mb_num_y = vop_mode_ptr->MBNumY = (vop_mode_ptr->OrgFrameHeight + 15) >>4;
+    total_mb_num = vop_mode_ptr->MBNum  = mb_num_x * mb_num_y;
+
+    vop_mode_ptr->FrameWidth  = (int16)(mb_num_x <<4);
+    vop_mode_ptr->FrameHeight = (int16)(mb_num_y <<4);
+
+    vop_mode_ptr->PreOrgFrameWidth = vop_mode_ptr->OrgFrameWidth;
+    vop_mode_ptr->PreOrgFrameHeight = vop_mode_ptr->OrgFrameHeight;
+
+    vop_mode_ptr->FrameExtendWidth  = vop_mode_ptr->FrameWidth  + 2 * YEXTENTION_SIZE;
+    vop_mode_ptr->FrameExtendHeight = vop_mode_ptr->FrameHeight + 2 * YEXTENTION_SIZE;
+
+    vop_mode_ptr->iStartInFrameY = vop_mode_ptr->FrameExtendWidth * YEXTENTION_SIZE + YEXTENTION_SIZE;
+    vop_mode_ptr->iStartInFrameUV = (vop_mode_ptr->FrameExtendWidth >>1) * UVEXTENTION_SIZE + UVEXTENTION_SIZE;
+
+    extra_mem_size = Mp4Dec_CalculateMemSize (vop_mode_ptr);
+    if ((*(vo->mp4Handle->VSP_extMemCb))(vo->mp4Handle->userdata, extra_mem_size) < 0)
     {
         SCI_TRACE_LOW("%s, %d, extra memory is not enough", __FUNCTION__, __LINE__);
         return MMDEC_MEMORY_ERROR;
@@ -281,12 +301,6 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     vop_mode_ptr->MB_in_VOP_length = Mp4Dec_Compute_log2(vop_mode_ptr->MBNum);
 
     Mp4Dec_InitHuffmanTable(vop_mode_ptr);
-
-    vop_mode_ptr->post_filter_en = FALSE;
-    if(vop_mode_ptr->VT_used)
-    {
-        vop_mode_ptr->post_filter_en = TRUE;
-    }
 
     if( MMDEC_OK != Mp4Dec_MallocFrmBfr(vo) )
     {

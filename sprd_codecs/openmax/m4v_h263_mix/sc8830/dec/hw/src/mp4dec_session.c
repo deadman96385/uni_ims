@@ -124,8 +124,6 @@ LOCAL uint8 Mp4Dec_Compute_log2(int32 uNum)
 
 LOCAL MMDecRet Mp4Dec_MallocFrmBfr(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_mode_ptr)
 {
-//	uint32 size;
-
     if( MMDEC_OK != Mp4Dec_InitYUVBfr(vo) )
     {
         return MMDEC_MEMORY_ERROR;
@@ -136,6 +134,21 @@ LOCAL MMDecRet Mp4Dec_MallocFrmBfr(Mp4DecObject *vo, DEC_VOP_MODE_T *vop_mode_pt
     vop_mode_ptr->pCurRecFrame->pDecFrame = &(vo->g_FrmYUVBfr[0]);
 
     return MMDEC_OK;
+}
+
+uint32 Mp4Dec_CalculateMemSize (DEC_VOP_MODE_T *vop_mode_ptr)
+{
+    uint32 extra_mem_size;
+    uint32 total_mb_num =vop_mode_ptr->MBNum;
+
+    extra_mem_size = total_mb_num * (4 * 80 + 384); //384 for tmp YUV.
+    extra_mem_size += (146 + 152)*sizeof(uint32);
+    if (vop_mode_ptr->bDataPartitioning) {
+        extra_mem_size += total_mb_num * 32;
+    }
+    extra_mem_size += 1024;
+
+    return extra_mem_size;
 }
 
 /*****************************************************************************
@@ -155,19 +168,13 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     /*MB number in hor and in ver and total MB number*/
     mb_num_x = vop_mode_ptr->MBNumX = (vop_mode_ptr->OrgFrameWidth  + 15) / MB_SIZE;
     mb_num_y = vop_mode_ptr->MBNumY = (vop_mode_ptr->OrgFrameHeight + 15) / MB_SIZE;
-    total_mb_num = vop_mode_ptr->MBNum  = (int16)(mb_num_x * mb_num_y);
+    total_mb_num = vop_mode_ptr->MBNum  = mb_num_x * mb_num_y;
 
     vop_mode_ptr->FrameWidth  = (int16)(mb_num_x * MB_SIZE);
     vop_mode_ptr->FrameHeight = (int16)(mb_num_y * MB_SIZE);
 
-
-    extra_mem_size = total_mb_num * (4 * 80 + 384); //384 for tmp YUV.
-    extra_mem_size += (146 + 152)*sizeof(uint32);
-    if (vop_mode_ptr->bDataPartitioning) {
-        extra_mem_size += total_mb_num * 32;
-    }
-    extra_mem_size += 1024;
-    if (vo->mp4Handle->VSP_extMemCb(vo->mp4Handle->userdata,  extra_mem_size) < 0)
+    extra_mem_size = Mp4Dec_CalculateMemSize (vop_mode_ptr);
+    if ((*(vo->mp4Handle->VSP_extMemCb))(vo->mp4Handle->userdata, extra_mem_size) < 0)
     {
         SCI_TRACE_LOW("%s, %d, extra memory is not enough", __FUNCTION__, __LINE__);
         vo->memory_error = 1;

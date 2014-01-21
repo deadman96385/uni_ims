@@ -27,6 +27,29 @@ extern   "C"
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
 
+uint32 H264Dec_CalculateMemSize (H264DecContext *img_ptr)
+{
+    int32 Frm_width_align = ((img_ptr->width + 15) & (~15));
+    int32 Frm_height_align = ((img_ptr->height + 15) & (~15));
+    int32 mb_num_x = Frm_width_align/16;
+    int32 mb_num_y = Frm_height_align/16;
+    int32 mb_num_total = mb_num_x * mb_num_y;
+    uint32 size_extra;
+
+    size_extra = (2+mb_num_y)*mb_num_x*8 /*MB_INFO*/
+                 + (mb_num_total*16) /*i4x4pred_mode_ptr*/
+                 + (mb_num_total*16) /*direct_ptr*/
+                 + (mb_num_total*24) /*nnz_ptr*/
+                 + (mb_num_total*2*16*2*2) /*mvd*/
+                 + 3*4*17 /*fs, fs_ref, fs_ltref*/
+                 + 17*(7*4+(23+150*2*17)*4+mb_num_total*16*(2*2*2 + 1 + 1 + 4 + 4)) /*dpb_ptr*/
+                 + 2/*17*/*((mb_num_x*16+48)*(mb_num_y*16+48)*3/2);
+    + mb_num_total /*g_MbToSliceGroupMap*/
+    +10*1024; //rsv
+
+    return size_extra;
+}
+
 /*
 if sps_id is changed, size of frame may be changed, so the buffer for dpb and img
 need to be re-allocate, and the parameter of img need to be re-computed
@@ -76,24 +99,10 @@ LOCAL void H264Dec_active_sps (DEC_SPS_T *sps_ptr, H264DecContext *img_ptr)
 
         if(img_ptr->avcHandle->VSP_extMemCb)
         {
-            int32 Frm_width_align = ((img_ptr->width + 15) & (~15));
-            int32 Frm_height_align = ((img_ptr->height + 15) & (~15));
-            int32 mb_num_x = Frm_width_align/16;
-            int32 mb_num_y = Frm_height_align/16;
-            int32 mb_num_total = mb_num_x * mb_num_y;
             uint32 size_extra;
-            int ret ;
+            int ret;
 
-            size_extra = (2*+mb_num_y)*mb_num_x*8 /*MB_INFO*/
-                         + (mb_num_total*16) /*i4x4pred_mode_ptr*/
-                         + (mb_num_total*16) /*direct_ptr*/
-                         + (mb_num_total*24) /*nnz_ptr*/
-                         + (mb_num_total*2*16*2*2) /*mvd*/
-                         + 3*4*17 /*fs, fs_ref, fs_ltref*/
-                         + 17*(7*4+(23+150*2*17)*4+mb_num_total*16*(2*2*2 + 1 + 1 + 4 + 4)+((mb_num_x*16+48)*(mb_num_y*16+48)*3/2)) /*dpb_ptr*/
-                         + mb_num_total /*g_MbToSliceGroupMap*/
-                         +10*1024; //rsv
-
+            size_extra = H264Dec_CalculateMemSize(img_ptr);
             ret = (*(img_ptr->avcHandle->VSP_extMemCb))(img_ptr->avcHandle->userdata, size_extra);
             if(ret < 0)
             {

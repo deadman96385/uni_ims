@@ -156,6 +156,11 @@ PUBLIC void MP4Dec_JudgeDecMode (DEC_VOP_MODE_T * vop_mode_ptr)
         vop_mode_ptr->VT_used = 0;
     }
 
+    if(vop_mode_ptr->VT_used)
+    {
+        vop_mode_ptr->post_filter_en = TRUE;
+    }
+
     SCI_TRACE_LOW("%s, VT_used: %d", __FUNCTION__, vop_mode_ptr->VT_used);
 }
 
