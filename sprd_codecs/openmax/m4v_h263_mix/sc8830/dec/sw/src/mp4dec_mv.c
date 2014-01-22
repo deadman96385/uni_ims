@@ -410,24 +410,60 @@ PUBLIC void Mp4Dec_DecMV(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode_pt
 
         if (mb_mode_ptr->bSkip)
         {
-            int32 offset;
-            uint8* pRefFrm;
             int32 width = vop_mode_ptr->FrameExtendWidth;
 
-            //y
-            offset = mb_cache_ptr->mb_addr[0] - vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[0];
-            pRefFrm = vop_mode_ptr->YUVRefFrame0[0] + offset;
-            mc_xyfull_16x16(pRefFrm, mb_cache_ptr->mb_addr[0], width, width);
+            if ((vop_mode_ptr->YUVRefFrame0[0] == NULL) ||
+                    (vop_mode_ptr->YUVRefFrame0[1] == NULL) ||
+                    (vop_mode_ptr->YUVRefFrame0[2] == NULL))
+            {
+                uint32 *p, i;
 
-            //u and v
-            offset = mb_cache_ptr->mb_addr[1] - vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[1];
-            width >>= 1;
+                width >>= 2; 	//word unit
 
-            pRefFrm = vop_mode_ptr->YUVRefFrame0[1] + offset;
-            mc_xyfull_8x8(pRefFrm, mb_cache_ptr->mb_addr[1], width, width);
+                //y
+                p = (uint32 *)(mb_cache_ptr->mb_addr[0]);
+                for (i = 0; i < MB_SIZE; i++)
+                {
+                    p[0] = p[1] = p[2] = p[3] = 0x10101010;
+                    p += width;
+                }
 
-            pRefFrm = vop_mode_ptr->YUVRefFrame0[2] + offset;
-            mc_xyfull_8x8(pRefFrm, mb_cache_ptr->mb_addr[2], width, width);
+                //u
+                width >>= 1;
+                p = (uint32 *)(mb_cache_ptr->mb_addr[1]);
+                for (i = 0; i < MB_CHROMA_SIZE; i++)
+                {
+                    p[0] = p[1] = 0x80808080;
+                    p += width;
+                }
+
+                //v
+                p = (uint32 *)(mb_cache_ptr->mb_addr[2]);
+                for (i = 0; i < MB_CHROMA_SIZE; i++)
+                {
+                    p[0] = p[1] = 0x80808080;
+                    p += width;
+                }
+            } else
+            {
+                int32 offset;
+                uint8* pRefFrm;
+
+                //y
+                offset = mb_cache_ptr->mb_addr[0] - vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[0];
+                pRefFrm = vop_mode_ptr->YUVRefFrame0[0] + offset;
+                mc_xyfull_16x16(pRefFrm, mb_cache_ptr->mb_addr[0], width, width);
+
+                //u and v
+                offset = mb_cache_ptr->mb_addr[1] - vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[1];
+                width >>= 1;
+
+                pRefFrm = vop_mode_ptr->YUVRefFrame0[1] + offset;
+                mc_xyfull_8x8(pRefFrm, mb_cache_ptr->mb_addr[1], width, width);
+
+                pRefFrm = vop_mode_ptr->YUVRefFrame0[2] + offset;
+                mc_xyfull_8x8(pRefFrm, mb_cache_ptr->mb_addr[2], width, width);
+            }
 
             mb_mode_ptr->dctMd = MODE_NOT_CODED;
         }

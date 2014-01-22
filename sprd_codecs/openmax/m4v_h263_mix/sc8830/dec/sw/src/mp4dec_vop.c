@@ -808,10 +808,11 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
             vop_mode_ptr->mbdec_stat_ptr[vop_mode_ptr->mbnumDec] = NOT_DECODED;
 
             Mp4Dec_DecInterMBHeader(vop_mode_ptr, mb_mode_ptr);
-            if (vop_mode_ptr->is_expect_IVOP == TRUE &&  mb_mode_ptr->bIntra == FALSE)
-            {
-                return MMDEC_STREAM_ERROR;
-            }
+//            if (vop_mode_ptr->is_expect_IVOP == TRUE &&  mb_mode_ptr->bIntra == FALSE)
+//            {
+//		ALOGI("%s, %d", __FUNCTION__, __LINE__);
+//                return MMDEC_STREAM_ERROR;
+//            }
 
             Mp4Dec_DecMV(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);
 
@@ -823,6 +824,7 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
                 //vop_mode_ptr->has_interMBs = TRUE;
                 if (vop_mode_ptr->pBckRefFrame->pDecFrame == NULL)
                 {
+                    ALOGI("%s, %d", __FUNCTION__, __LINE__);
                     return MMDEC_STREAM_ERROR;
                 }
                 Mp4Dec_DecInterMBTexture(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);

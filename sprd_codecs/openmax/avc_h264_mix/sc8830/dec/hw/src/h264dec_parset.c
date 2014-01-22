@@ -47,7 +47,6 @@ PUBLIC uint32 uvlc_startcode_follows (H264DecObject *vo)
     byte_offset = nDecTotalBits/8;
     bit_offset = nDecTotalBits&0x7;
 
-
     {
         // Simon. Remove trailing zeros.
         int i;
@@ -559,7 +558,7 @@ LOCAL void H264Dec_interpret_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
 
     if (!sps_ptr->frame_mbs_only_flag)
     {
-        vo->error_flag |= ER_SREAM_ID;
+        vo->error_flag |= ER_FORMAT_ID;
         sps_ptr->mb_adaptive_frame_field_flag = READ_FLC(1);
         if (sps_ptr->mb_adaptive_frame_field_flag)
         {

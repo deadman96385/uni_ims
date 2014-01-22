@@ -200,7 +200,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     MMDecRet ret = MMDEC_ERROR;
     DEC_VOP_MODE_T *vop_mode_ptr = vo->vop_mode_ptr;
 
-    SCI_TRACE_LOW("MP4DecDecode: E");
+    SCI_TRACE_LOW("MP4DecDecode: E, dec_input_ptr->expected_IVOP: %d", dec_input_ptr->expected_IVOP);
 
     mp4Handle->g_mpeg4_dec_err_flag = 0;
 
