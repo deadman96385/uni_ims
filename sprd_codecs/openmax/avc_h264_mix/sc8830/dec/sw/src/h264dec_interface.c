@@ -60,7 +60,7 @@ void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
         img_ptr->g_old_slice_ptr->frame_num = -1;
 }
 
-MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, uint8 **pOutput, int32 *picId)
+MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picId)
 {
     int32 i;
     H264DecContext *img_ptr = (H264DecContext *)(avcHandle->videoDecoderData);
@@ -74,9 +74,9 @@ MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, uint8 **pOutput, int32 *pic
     }
 
     //pop one picture from delayed picture queue.
-    if (dpb_ptr->delayed_pic_num)
+    if (dpb_ptr && dpb_ptr->delayed_pic_num)
     {
-        *pOutput = dpb_ptr->delayed_pic[0]->imgY;
+        *pOutput = dpb_ptr->delayed_pic[0]->pBufferHeader;
         *picId = dpb_ptr->delayed_pic[0]->mPicId;
 
         for(i =0; i < dpb_ptr->delayed_pic_num; i++)

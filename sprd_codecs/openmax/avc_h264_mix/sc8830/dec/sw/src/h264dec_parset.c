@@ -35,17 +35,23 @@ uint32 H264Dec_CalculateMemSize (H264DecContext *img_ptr)
     int32 mb_num_y = Frm_height_align/16;
     int32 mb_num_total = mb_num_x * mb_num_y;
     uint32 size_extra;
+    uint32 frame_num = 2;
+
+    if (img_ptr->uv_interleaved)
+    {
+        frame_num = MAX_REF_FRAME_NUMBER+1;
+    }
 
     size_extra = (2+mb_num_y)*mb_num_x*8 /*MB_INFO*/
                  + (mb_num_total*16) /*i4x4pred_mode_ptr*/
                  + (mb_num_total*16) /*direct_ptr*/
                  + (mb_num_total*24) /*nnz_ptr*/
                  + (mb_num_total*2*16*2*2) /*mvd*/
-                 + 3*4*17 /*fs, fs_ref, fs_ltref*/
-                 + 17*(7*4+(23+150*2*17)*4+mb_num_total*16*(2*2*2 + 1 + 1 + 4 + 4)) /*dpb_ptr*/
-                 + 2/*17*/*((mb_num_x*16+48)*(mb_num_y*16+48)*3/2);
-    + mb_num_total /*g_MbToSliceGroupMap*/
-    +10*1024; //rsv
+                 + 3*4*(MAX_REF_FRAME_NUMBER+1) /*fs, fs_ref, fs_ltref*/
+                 + (MAX_REF_FRAME_NUMBER+1)*(7*4+(23+150*2*17)*4+mb_num_total*16*(2*2*2 + 1 + 1 + 4 + 4)) /*dpb_ptr*/
+                 + frame_num *((mb_num_x*16+48)*(mb_num_y*16+48)*3/2)
+                 + mb_num_total /*g_MbToSliceGroupMap*/
+                 + 30*1024; //rsv
 
     return size_extra;
 }
