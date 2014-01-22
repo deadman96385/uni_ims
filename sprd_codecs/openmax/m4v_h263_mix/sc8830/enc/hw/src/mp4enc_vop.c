@@ -37,7 +37,7 @@ PUBLIC void Mp4Enc_ReviseLumaData(uint8 *p_src_y, int32 img_width, int32 img_hei
     }
 }
 
-#if 0   //not verified, removed by xiaowei@2013.09.16
+#if 1   //not verified, removed by xiaowei@2013.09.16
 PUBLIC int32 Mp4Enc_EncNVOP(Mp4EncObject *vo, int32 time_stamp)
 {
     int32 Qp;

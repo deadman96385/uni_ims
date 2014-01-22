@@ -330,7 +330,15 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
 
     if(!frame_skip)
     {
-        vop_mode_ptr->VopPredType	= (pInput->vopType == IVOP) ? IVOP : PVOP;
+        if (!vo->g_enc_is_prev_frame_encoded_success)
+        {
+            vop_mode_ptr->VopPredType = IVOP;
+        }
+        else
+        {
+            vop_mode_ptr->VopPredType = (pInput->vopType == IVOP) ? IVOP : PVOP;
+        }
+
         pInput->vopType = vop_mode_ptr->VopPredType;
 
         SCI_TRACE_LOW("g_nFrame_enc %d frame_type %d ", vo->g_nFrame_enc, vop_mode_ptr->VopPredType );
@@ -381,11 +389,18 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
 #endif
         }
 
-        vo->g_enc_is_prev_frame_encoded_success = ret;
-
         if (vo->error_flag)
         {
+            Mp4Enc_EncNVOP(vo, pInput->time_stamp);
+            ret = MMENC_OK;
+            vo->error_flag = 0;
+            vo->g_nFrame_enc++;
+            vo->g_enc_is_prev_frame_encoded_success =0;
+
             goto ENC_EXIT;
+        } else
+        {
+            vo->g_enc_is_prev_frame_encoded_success =1;
         }
 
         if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable")) //check bsm is idle
