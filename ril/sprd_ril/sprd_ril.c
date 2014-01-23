@@ -5504,85 +5504,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
         case RIL_REQUEST_QUERY_CALL_WAITING:
             {
-#if defined (RIL_SPRD_EXTENSION)
-                p_response = NULL;
-                int c = ((int *)data)[0];
-                int errNum = 0xff;
-                char cmd[30] = {0};
-                char *line;
-                ATLine *p_cur;
-
-                if (c == 0) {
-                    snprintf(cmd, sizeof(cmd), "AT+CCWA=1,2");
-                }else {
-                    snprintf(cmd, sizeof(cmd), "AT+CCWA=1,2,%d", c);
-                }
-                err = at_send_command_multiline(ATch_type[channelID], cmd, "+CCWA: ",
-                        &p_response);
-                if (err >= 0 && p_response->success) {
-                    int waitingCount = 0;
-                    int validCount = 0;
-                    int i;
-                    RIL_CallWaitingInfo **waitingList, *waitingPool;
-
-                    for (p_cur = p_response->p_intermediates
-                            ; p_cur != NULL
-                            ; p_cur = p_cur->p_next, waitingCount++
-                        );
-
-                    waitingList = (RIL_CallWaitingInfo **)
-                        alloca(waitingCount * sizeof(RIL_CallWaitingInfo *));
-
-                    waitingPool = (RIL_CallWaitingInfo *)
-                        alloca(waitingCount * sizeof(RIL_CallWaitingInfo));
-
-                    memset(waitingPool, 0, waitingCount * sizeof(RIL_CallWaitingInfo));
-
-                    /* init the pointer array */
-                    for(i = 0; i < waitingCount ; i++)
-                        waitingList[i] = &(waitingPool[i]);
-
-                    for (p_cur = p_response->p_intermediates
-                            ; p_cur != NULL
-                            ; p_cur = p_cur->p_next
-                        ) {
-                        line = p_cur->line;
-                        err = at_tok_start(&line);
-                        if (err >= 0) {
-                            err = at_tok_nextint(&line, &(waitingList[validCount]->status));
-                            if (err >= 0)
-                                err = at_tok_nextint(&line, &(waitingList[validCount]->serviceClass));
-                        }
-
-                        if (err == 0)
-                            validCount++;
-                    }
-                    if (err >= 0) {
-                        RIL_onRequestComplete(t, RIL_E_SUCCESS,
-                                validCount ? waitingPool : NULL,
-                                validCount * sizeof (RIL_CallWaitingInfo));
-                    } else {
-                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                    }
-                } else {
-                    if (err >= 0) {
-                        if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
-                            line = p_response->finalResponse;
-                            err = at_tok_start(&line);
-                            if (err >= 0) {
-                                err = at_tok_nextint(&line,&errNum);
-                            }
-                        }
-                    }
-                    if (err >= 0 && (errNum == 70 || errNum == 3)) {
-                        RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
-                    } else {
-                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                    }
-                }
-                at_response_free(p_response);
-                break;
-#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
                 p_response = NULL;
                 int c = ((int *)data)[0];
                 int errNum = 0xff;
@@ -5617,8 +5538,10 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                             }
                         }
                     }
+#ifdef GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION
                     if(response[1] == 0)
                         response[1] = 7;
+#endif
                     RIL_onRequestComplete(t, RIL_E_SUCCESS,
                                response, sizeof (response));
                 } else {
@@ -5638,7 +5561,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 }
                 at_response_free(p_response);
                 break;
-#endif
             }
         case RIL_REQUEST_SET_CALL_WAITING:
             {
