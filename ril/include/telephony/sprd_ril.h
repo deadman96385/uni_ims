@@ -4324,7 +4324,7 @@ typedef struct {
 #if defined (RIL_SPRD_EXTENSION)
 #define RIL_REQUEST_LAST RIL_REQUEST_IMS_SEND_SMS
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-#define RIL_REQUEST_LAST RIL_REQUEST_LAST RIL_REQUEST_RESUME_QOS
+#define RIL_REQUEST_LAST RIL_REQUEST_RESUME_QOS
 #endif
 /***********************************************************************/
 

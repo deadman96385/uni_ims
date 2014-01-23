@@ -4759,6 +4759,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 #if defined (RIL_SPRD_EXTENSION)
                 || request == RIL_REQUEST_SIM_POWER
                 || request == RIL_REQUEST_GET_REMAIN_TIMES
+                || request == RIL_REQUEST_SET_SIM_SLOT_CFG //SPRD:added for choosing WCDMA SIM
 #endif
                 || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
                 || request == RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE
@@ -4776,7 +4777,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SET_SPEED_MODE
                 || request == RIL_REQUEST_DELETE_SMS_ON_SIM
                 || request == RIL_REQUEST_GET_IMSI
-                || request == RIL_REQUEST_SET_SIM_SLOT_CFG //SPRD:added for choosing WCDMA SIM
                 || request == RIL_REQUEST_QUERY_FACILITY_LOCK
                 || request == RIL_REQUEST_SET_FACILITY_LOCK
                 || request == RIL_REQUEST_ENTER_SIM_PIN2
