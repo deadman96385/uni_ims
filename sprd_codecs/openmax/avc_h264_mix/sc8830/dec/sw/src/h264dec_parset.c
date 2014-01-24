@@ -42,16 +42,18 @@ uint32 H264Dec_CalculateMemSize (H264DecContext *img_ptr)
         frame_num = MAX_REF_FRAME_NUMBER+1;
     }
 
-    size_extra = (2+mb_num_y)*mb_num_x*8 /*MB_INFO*/
+    size_extra = 24*16*2 /*g_halfPixTemp*/
+                 + (2+mb_num_y)*mb_num_x*8 /*MB_INFO*/
                  + (mb_num_total*16) /*i4x4pred_mode_ptr*/
                  + (mb_num_total*16) /*direct_ptr*/
                  + (mb_num_total*24) /*nnz_ptr*/
                  + (mb_num_total*2*16*2*2) /*mvd*/
+                 + (mb_num_total*4) /*slice_nr_ptr*/
                  + 3*4*(MAX_REF_FRAME_NUMBER+1) /*fs, fs_ref, fs_ltref*/
-                 + (MAX_REF_FRAME_NUMBER+1)*(7*4+(23+150*2*17)*4+mb_num_total*16*(2*2*2 + 1 + 1 + 4 + 4)) /*dpb_ptr*/
+                 + (MAX_REF_FRAME_NUMBER+1)*(7*4+(27+150*2*17)*4+mb_num_total*16*(2*2*2 + 1 + 1 + 4 + 4)) /*dpb_ptr*/
                  + frame_num *((mb_num_x*16+48)*(mb_num_y*16+48)*3/2)
                  + mb_num_total /*g_MbToSliceGroupMap*/
-                 + 30*1024; //rsv
+                 + 10*1024; //rsv
 
     return size_extra;
 }

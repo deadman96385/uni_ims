@@ -73,7 +73,8 @@ PUBLIC void *H264Dec_MemAlloc (H264DecContext *img_ptr, uint32 need_size, int32 
     AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
     need_size += (AlignedAddr - CurrAddr);
 
-    H264DEC_MALLOC_PRINT("%s: mem_size:%d, AlignedAddr: %0x, type: %d\n", __FUNCTION__, need_size, AlignedAddr, type);
+    H264DEC_MALLOC_PRINT("%s: mem_size:%d, AlignedAddr: %0x, type: %d, more: %d, pMem->used_size: %d\n",
+                         __FUNCTION__, need_size, AlignedAddr, type, (AlignedAddr - CurrAddr), pMem->used_size);
 
     if((0 == need_size)||(need_size >  (pMem->total_size -pMem->used_size)))
     {
