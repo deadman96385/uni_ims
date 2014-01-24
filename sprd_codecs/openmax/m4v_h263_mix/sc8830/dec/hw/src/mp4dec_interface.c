@@ -176,7 +176,7 @@ PUBLIC MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *max_width, in
 	if (codec_capability == 0)   //limited under 720p
 	{
 	    *max_width = 1280;
-	    *max_height = 720;
+	    *max_height = 1023; //720;
 	} else if (codec_capability == 1)   //limited under 1080p
 	{
 	    *max_width = 1920;
