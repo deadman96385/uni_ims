@@ -3368,6 +3368,50 @@ static void  requestScreeState(int channelID, int status, RIL_Token t)
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
 }
 
+typedef enum {
+    UNLOCK_PIN   = 0,
+    UNLOCK_PIN2  = 1,
+    UNLOCK_PUK   = 2,
+    UNLOCK_PUK2  = 3
+} SimUnlockType;
+
+int getSimlockRemainTimes(int channelID, SimUnlockType type)
+{
+    ATResponse   *p_response = NULL;
+    int err;
+    char cmd[20] = {0};
+    char *line;
+    int remaintime = 3;
+    int result;
+
+    RILLOGD("getSimlockRemainTimes: type = %d",type);
+
+    if(UNLOCK_PUK == type || UNLOCK_PUK2 == type)
+    {
+        remaintime = 10;
+    }
+
+    snprintf(cmd, sizeof(cmd), "AT+XX=%d", type);
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+XX:",
+            &p_response);
+    if (err < 0 || p_response->success == 0) {
+        RILLOGD("getSimlockRemainTimes: +XX response error !");
+    } else {
+        line = p_response->p_intermediates->line;
+        err = at_tok_start(&line);
+        if (err == 0) {
+            err = at_tok_nextint(&line, &result);
+            if (err == 0) {
+                remaintime = result;
+                RILLOGD("getSimlockRemainTimes:remaintime=%d", remaintime);
+            }
+        }
+    }
+    at_response_free(p_response);
+
+    return remaintime;
+}
+
 static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RIL_Token  t)
 {
     ATResponse   *p_response = NULL;
@@ -3378,9 +3422,12 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
     char *cpinResult;
     int ret;
     char sim_prop[20];
+    int remaintime = 3;
+    SimUnlockType rsqtype = UNLOCK_PIN;
 
     if ( datalen == 2*sizeof(char*) ) {
         ret = asprintf(&cmd, "AT+CPIN=%s", strings[0]);
+        rsqtype = UNLOCK_PIN;
     } else if ( datalen == 3*sizeof(char*) ) {
         err = at_send_command_singleline(ATch_type[channelID], "AT+CPIN?", "+CPIN:", &p_response);
         if (err < 0 || p_response->success == 0)
@@ -3396,6 +3443,7 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
         } else {
             ret = asprintf(&cmd, "AT+CPIN=%s,%s", strings[0], strings[1]);
         }
+        rsqtype = UNLOCK_PUK;
         at_response_free(p_response);
     } else
         goto error;
@@ -3461,7 +3509,8 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
             }
         }
 out:
-        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+        remaintime = getSimlockRemainTimes(channelID, rsqtype);
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, &remaintime, sizeof(remaintime));
         if(getSIMStatus(channelID) == SIM_READY) {
             setRadioState(channelID, RADIO_STATE_SIM_READY);
         }
@@ -3469,7 +3518,8 @@ out:
         return;
     }
 error:
-    RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+    remaintime = getSimlockRemainTimes(channelID, rsqtype);
+    RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, &remaintime, sizeof(remaintime));
     at_response_free(p_response);
 }
 
