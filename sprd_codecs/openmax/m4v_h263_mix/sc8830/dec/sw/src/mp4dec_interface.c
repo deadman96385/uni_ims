@@ -307,7 +307,7 @@ FLV_RE_DEC:
         return MMDEC_OK;
     }
 
-    ret = Mp4Dec_InitVop(vop_mode_ptr, dec_input_ptr);
+    ret = Mp4Dec_InitVop(vo, dec_input_ptr);
 
     if(ret != MMDEC_OK)
     {

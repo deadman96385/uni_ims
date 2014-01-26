@@ -487,6 +487,7 @@ typedef struct tagMp4DecObject
     DecBVOP_func g_Mp4Dec_BVOP;
 
     DEC_FRM_BFR g_rec_buf;
+    DEC_FRM_BFR g_tmp_buf;
 } Mp4DecObject;
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

@@ -152,8 +152,6 @@ LOCAL void Mp4Dec_InitHuffmanTable(DEC_VOP_MODE_T *vop_mode_ptr)
 
 LOCAL MMDecRet Mp4Dec_MallocFrmBfr(Mp4DecObject *vo)
 {
-//	uint32 size;
-
     if( MMDEC_OK != Mp4Dec_InitYUVBfr(vo) )
     {
         return MMDEC_MEMORY_ERROR;
@@ -172,6 +170,7 @@ uint32 Mp4Dec_CalculateMemSize (DEC_VOP_MODE_T *vop_mode_ptr)
     uint32 mb_num_y = vop_mode_ptr->MBNumY;
     uint32 total_mb_num = vop_mode_ptr->MBNum;
     uint32 extra_mem_size, ext_size_y, ext_size_c;
+    uint32 ext_frame_num = vop_mode_ptr->uv_interleaved ? (DEC_YUV_BUFFER_NUM+1) : DEC_YUV_BUFFER_NUM;
     uint32 i;
 
     ext_size_y = (mb_num_x * 16 + 16*2) * (mb_num_y * 16 + 16*2);
@@ -186,7 +185,7 @@ uint32 Mp4Dec_CalculateMemSize (DEC_VOP_MODE_T *vop_mode_ptr)
     extra_mem_size += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrU
     extra_mem_size += ((( 64*1*sizeof(int8) + 255) >>8)<<8);	//mb_cache_ptr->pMBBfrV
 
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < ext_frame_num; i++)
     {
         extra_mem_size += ((( ext_size_y + 255) >>8)<<8);	//imgYUV[0]
         extra_mem_size += ((( ext_size_c + 255) >>8)<<8);	//imgYUV[1]

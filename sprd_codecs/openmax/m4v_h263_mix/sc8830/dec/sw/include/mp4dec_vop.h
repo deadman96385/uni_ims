@@ -29,7 +29,7 @@ extern   "C"
 #endif
 
 void Mp4Dec_exit_picture(Mp4DecObject *vo);
-MMDecRet Mp4Dec_InitVop(DEC_VOP_MODE_T *vop_mode_ptr, MMDecInput * dec_input_ptr);
+MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput * dec_input_ptr);
 
 void write_display_frame(DEC_VOP_MODE_T *vop_mode_ptr,DEC_FRM_BFR *pDecFrame);
 void write_display_frame_uvinterleaved(DEC_VOP_MODE_T *vop_mode_ptr,DEC_FRM_BFR *pDecFrame);

@@ -24,6 +24,23 @@ extern   "C"
 {
 #endif
 
+#define MALLOC_EXT_FRAME_BUFFER	\
+{\
+	pDecFrame->imgYUV[0] = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)ext_size_y * sizeof(uint8), 256, SW_CACHABLE);	/*y*/	\
+	CHECK_MALLOC(pDecFrame->imgYUV[0], "pDecFrame->imgYUV[0]");	\
+\
+	pDecFrame->imgYUV[1] = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)ext_size_c * sizeof(uint8), 256, SW_CACHABLE);	/*u*/	\
+	CHECK_MALLOC(pDecFrame->imgYUV[1], "pDecFrame->imgYUV[1]");	\
+\
+	pDecFrame->imgYUV[2] = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)(ext_size_c + 8) * sizeof(uint8), 256, SW_CACHABLE);/*v, 8 extra byte for mc loading of V.*/	\
+	CHECK_MALLOC(pDecFrame->imgYUV[2] , "pDecFrame->imgYUV[2]");	\
+\
+	/*modify for bug#212454*/	\
+	memset(pDecFrame->imgYUV[0], 16, (uint32)ext_size_y * sizeof(uint8));	\
+	memset(pDecFrame->imgYUV[1], 128, (uint32)ext_size_c * sizeof(uint8));	\
+	memset(pDecFrame->imgYUV[2], 128, (uint32)(ext_size_c + 8) * sizeof(uint8));	\
+}
+
 PUBLIC MMDecRet Mp4Dec_InitYUVBfr(Mp4DecObject *vo)
 {
     DEC_VOP_MODE_T *vop_mode_ptr = vo->vop_mode_ptr;
@@ -74,28 +91,22 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(Mp4DecObject *vo)
 
         if (need_malloc_decYUV)
         {
-            pDecFrame->imgYUV[0] = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)ext_size_y * sizeof(uint8), 256, SW_CACHABLE);  //y
-            CHECK_MALLOC(pDecFrame->imgYUV[0], "pDecFrame->imgYUV[0]");
-
-            pDecFrame->imgYUV[1] = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)ext_size_c * sizeof(uint8), 256, SW_CACHABLE);  //u
-            CHECK_MALLOC(pDecFrame->imgYUV[1], "pDecFrame->imgYUV[1]");
-
-            pDecFrame->imgYUV[2] = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)(ext_size_c + 8) * sizeof(uint8), 256, SW_CACHABLE);  //v, 8 extra byte for mc loading of V.
-            CHECK_MALLOC(pDecFrame->imgYUV[2] , "pDecFrame->imgYUV[2]");
-
-            //modify for bug#212454
-            memset(pDecFrame->imgYUV[0], 128, (uint32)ext_size_y * sizeof(uint8));
-            memset(pDecFrame->imgYUV[1], 128, (uint32)ext_size_c * sizeof(uint8));
-            memset(pDecFrame->imgYUV[2], 128, (uint32)(ext_size_c + 8) * sizeof(uint8));
+            MALLOC_EXT_FRAME_BUFFER;
         }
 
         pDecFrame++;
     }
 
+    //for error protection when reference buffer is not available.
+    if (vop_mode_ptr->uv_interleaved)
+    {
+        pDecFrame = &(vo->g_tmp_buf);
+        MALLOC_EXT_FRAME_BUFFER;
+    }
+
     if(vop_mode_ptr->post_filter_en)
     {
         vo->g_dbk_tmp_frm_ptr = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)ext_size_y * sizeof(uint8), 256, SW_CACHABLE);
-
         CHECK_MALLOC(vo->g_dbk_tmp_frm_ptr , "vo->g_dbk_tmp_frm_ptr");
     }
 

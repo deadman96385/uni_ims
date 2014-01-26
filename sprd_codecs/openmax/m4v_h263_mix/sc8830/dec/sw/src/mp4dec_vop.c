@@ -81,8 +81,9 @@ PUBLIC void Mp4Dec_exit_picture(Mp4DecObject *vo)
     }
 }
 
-PUBLIC MMDecRet Mp4Dec_InitVop(DEC_VOP_MODE_T *vop_mode_ptr, MMDecInput *dec_input_ptr)
+PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
 {
+    DEC_VOP_MODE_T *vop_mode_ptr = vo->vop_mode_ptr;
     MMDecRet ret = MMDEC_OK;
 
     vop_mode_ptr->sliceNumber	= 0;
@@ -98,18 +99,18 @@ PUBLIC MMDecRet Mp4Dec_InitVop(DEC_VOP_MODE_T *vop_mode_ptr, MMDecInput *dec_inp
     vop_mode_ptr->err_pos_ptr	= dec_input_ptr->err_pkt_pos;
     vop_mode_ptr->err_MB_num	= vop_mode_ptr->MBNum;
 
-    if(IVOP != vop_mode_ptr->VopPredType && vop_mode_ptr->is_expect_IVOP  == FALSE)
+    if (IVOP != vop_mode_ptr->VopPredType)
     {
         if(vop_mode_ptr->pBckRefFrame->pDecFrame == NULL)
         {
-            ret =  MMDEC_ERROR;
+            vop_mode_ptr->pBckRefFrame->pDecFrame = &(vo->g_tmp_buf);
         }
 
         if(BVOP == vop_mode_ptr->VopPredType)
         {
             if(vop_mode_ptr->pFrdRefFrame->pDecFrame == NULL)
             {
-                ret =  MMDEC_ERROR;
+                vop_mode_ptr->pFrdRefFrame->pDecFrame = &(vo->g_tmp_buf);
             }
         }
     }
