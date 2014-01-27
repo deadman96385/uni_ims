@@ -42,7 +42,7 @@ MMDecRet VP8GetCodecCapability(VPXHandle *vpxHandle, int32 *max_width, int32 *ma
 	if (codec_capability == 0)   //limited under 720p
 	{
 	    *max_width = 1280;
-	    *max_height = 720;
+	    *max_height = 1023; //720;
 	} else if (codec_capability == 1)   //limited under 1080p
 	{
 	    *max_width = 1920;
