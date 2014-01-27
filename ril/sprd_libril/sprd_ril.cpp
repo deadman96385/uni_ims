@@ -3731,7 +3731,6 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                         || pCI->requestNumber == RIL_REQUEST_QUERY_COLP
                         || pCI->requestNumber == RIL_REQUEST_QUERY_COLR
 #endif
-                        || pCI->requestNumber == RIL_REQUEST_RADIO_POWER
                         || pCI->requestNumber == RIL_REQUEST_SETUP_DATA_CALL
                         || pCI->requestNumber == RIL_REQUEST_DEACTIVATE_DATA_CALL) {
                     list_add_tail(&sms_cmd_list, cmd_item);
