@@ -707,12 +707,9 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
     mb_mode_ptr = vop_mode_ptr->pMbMode;
 
     //ref frame
-    if(vop_mode_ptr->is_expect_IVOP == FALSE)
-    {
-        vop_mode_ptr->YUVRefFrame0[0] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[0];
-        vop_mode_ptr->YUVRefFrame0[1] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[1];
-        vop_mode_ptr->YUVRefFrame0[2] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[2];
-    }
+    vop_mode_ptr->YUVRefFrame0[0] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[0];
+    vop_mode_ptr->YUVRefFrame0[1] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[1];
+    vop_mode_ptr->YUVRefFrame0[2] = vop_mode_ptr->pBckRefFrame->pDecFrame->imgYUV[2];
 
     ppxlcRecGobY = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[0] + vop_mode_ptr->iStartInFrameY;
     ppxlcRecGobU = vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV[1] + vop_mode_ptr->iStartInFrameUV;
@@ -809,11 +806,6 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
             vop_mode_ptr->mbdec_stat_ptr[vop_mode_ptr->mbnumDec] = NOT_DECODED;
 
             Mp4Dec_DecInterMBHeader(vop_mode_ptr, mb_mode_ptr);
-//            if (vop_mode_ptr->is_expect_IVOP == TRUE &&  mb_mode_ptr->bIntra == FALSE)
-//            {
-//		ALOGI("%s, %d", __FUNCTION__, __LINE__);
-//                return MMDEC_STREAM_ERROR;
-//            }
 
             Mp4Dec_DecMV(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);
 
@@ -822,12 +814,6 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
                 Mp4Dec_DecIntraMBTexture(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);
             } else if (mb_mode_ptr->CBP)
             {
-                //vop_mode_ptr->has_interMBs = TRUE;
-                if (vop_mode_ptr->pBckRefFrame->pDecFrame == NULL)
-                {
-                    ALOGI("%s, %d", __FUNCTION__, __LINE__);
-                    return MMDEC_STREAM_ERROR;
-                }
                 Mp4Dec_DecInterMBTexture(vop_mode_ptr, mb_mode_ptr, mb_cache_ptr);
             }
 
