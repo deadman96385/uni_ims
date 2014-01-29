@@ -171,8 +171,8 @@ typedef struct VP8Common
     YV12_BUFFER_CONFIG *frame_to_show;
     //YV12_BUFFER_CONFIG buffer_pool[4];	// For buffer management, 2012-11-06 Derek
     int buffer_count;	// For buffer management, 2012-11-06 Derek
-    int ref_count[4];	// For buffer management, 2012-11-06 Derek
-    void * buffer_pool[4];
+    int ref_count[YUV_BUFFER_NUM];	// For buffer management, 2012-11-06 Derek
+    void * buffer_pool[YUV_BUFFER_NUM];
 //    YV12_BUFFER_CONFIG post_proc_buffer;
 //    YV12_BUFFER_CONFIG temp_scale_frame;
 

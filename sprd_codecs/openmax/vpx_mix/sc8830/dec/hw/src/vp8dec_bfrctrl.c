@@ -94,7 +94,7 @@ void vp8_copy_yv12_buffer(VPXDecObject *vo, VP8_COMMON *cm, YV12_BUFFER_CONFIG *
     // Bind
     if(src_frame->pBufferHeader != NULL)
     {
-        for(buffer_index = 0; buffer_index <4; buffer_index ++)
+        for(buffer_index = 0; buffer_index < YUV_BUFFER_NUM; buffer_index ++)
         {
             if(cm->buffer_pool[buffer_index] ==  src_frame->pBufferHeader)
             {
@@ -102,21 +102,21 @@ void vp8_copy_yv12_buffer(VPXDecObject *vo, VP8_COMMON *cm, YV12_BUFFER_CONFIG *
             }
         }
 
-        if(buffer_index <4)
+        if(buffer_index < YUV_BUFFER_NUM)
         {
-            if(cm->ref_count[buffer_index] ==0)
+            if(cm->ref_count[buffer_index] == 0)
             {
                 (*(vo->vpxHandle->VSP_bindCb))(vo->vpxHandle->userdata,(void *)(src_frame->pBufferHeader), 0);
             }
 
-            cm->ref_count[buffer_index] ++;
+            cm->ref_count[buffer_index]++;
         }
     }
 
     //UnBind
     if(dst_frame->pBufferHeader != NULL)
     {
-        for(buffer_index = 0; buffer_index <4; buffer_index ++)
+        for(buffer_index = 0; buffer_index < YUV_BUFFER_NUM; buffer_index ++)
         {
             if(cm->buffer_pool[buffer_index] ==  dst_frame->pBufferHeader)
             {
@@ -125,11 +125,11 @@ void vp8_copy_yv12_buffer(VPXDecObject *vo, VP8_COMMON *cm, YV12_BUFFER_CONFIG *
         }
 
 
-        if(buffer_index <4)
+        if(buffer_index < YUV_BUFFER_NUM)
         {
-            cm->ref_count[buffer_index] --;
+            cm->ref_count[buffer_index]--;
 
-            if(cm->ref_count[buffer_index] ==0)
+            if(cm->ref_count[buffer_index] == 0)
             {
                 (*(vo->vpxHandle->VSP_unbindCb))(vo->vpxHandle->userdata,(void *)(dst_frame->pBufferHeader), 0);
                 cm->buffer_pool[buffer_index] = NULL;

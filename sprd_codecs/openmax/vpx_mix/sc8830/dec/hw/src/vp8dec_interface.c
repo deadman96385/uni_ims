@@ -36,26 +36,26 @@ void VP8GetBufferDimensions(VPXHandle *vpxHandle, int32 *width, int32 *height)
 
 MMDecRet VP8GetCodecCapability(VPXHandle *vpxHandle, int32 *max_width, int32 *max_height)
 {
-	VPXDecObject *vo = (VPXDecObject *) vpxHandle->videoDecoderData;
+    VPXDecObject *vo = (VPXDecObject *) vpxHandle->videoDecoderData;
 
-	int32 codec_capability = vo->vsp_capability;
-	if (codec_capability == 0)   //limited under 720p
-	{
-	    *max_width = 1280;
-	    *max_height = 1023; //720;
-	} else if (codec_capability == 1)   //limited under 1080p
-	{
-	    *max_width = 1920;
-	    *max_height = 1088;
-	} else
-	{
-	    *max_width = 352;
-	    *max_height = 288;
-	}
-	return MMDEC_OK;
+    int32 codec_capability = vo->vsp_capability;
+    if (codec_capability == 0)   //limited under 720p
+    {
+        *max_width = 1280;
+        *max_height = 1023; //720;
+    } else if (codec_capability == 1)   //limited under 1080p
+    {
+        *max_width = 1920;
+        *max_height = 1088;
+    } else
+    {
+        *max_width = 352;
+        *max_height = 288;
+    }
+    return MMDEC_OK;
 }
 
-void VP8DecSetCurRecPic(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader)
+void VP8DecSetCurRecPic(VPXHandle *vpxHandle, uint8 *pFrameY,uint8 *pFrameY_phy,void *pBufferHeader)
 {
     VPXDecObject *vo = (VPXDecObject *)(vpxHandle->videoDecoderData) ;
     VP8_COMMON *cm = &vo->common;
@@ -65,6 +65,25 @@ void VP8DecSetCurRecPic(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,
     rec_frame->y_buffer = rec_frame->buffer_alloc ;
     rec_frame->y_buffer_virtual = (uint32)pFrameY;
     rec_frame->pBufferHeader = pBufferHeader;
+}
+
+int VP8DecGetLastDspFrm(VPXHandle *vpxHandle,void **pOutput)
+{
+    VPXDecObject *vo = (VPXDecObject *) vpxHandle->videoDecoderData;
+    VP8_COMMON *cm = &vo->common;
+    int buffer_index;
+
+    *pOutput = NULL;
+
+    ALOGI("%s, cm->frame_to_show.pBufferHeader: 0x%0x, cm->last_frame.pBufferHeader: 0x%0x",
+          __FUNCTION__, cm->frame_to_show->pBufferHeader, cm->last_frame.pBufferHeader);
+    if (cm->frame_to_show != &cm->last_frame)
+    {
+        cm->frame_to_show = &cm->last_frame;
+        *pOutput = cm->last_frame.pBufferHeader;
+    }
+
+    return ((NULL != *pOutput) ? 1 : 0);
 }
 
 MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr)
@@ -180,6 +199,10 @@ MMDecRet VP8DecRelease(VPXHandle *vpxHandle)
 {
     VPXDecObject *vo = (VPXDecObject *) vpxHandle->videoDecoderData;
 
+    SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+
+    VP8DecReleaseRefBuffers(vpxHandle);
+
     if (VSP_CLOSE_Dev((VSPObject *)vo) < 0)
     {
         return MMENC_HW_ERROR;
@@ -194,9 +217,11 @@ void VP8DecReleaseRefBuffers(VPXHandle *vpxHandle)
     VP8_COMMON *cm = &vo->common;
     int buffer_index;
 
-    for(buffer_index = 0; buffer_index <4; buffer_index ++)
+    SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+
+    for(buffer_index = 0; buffer_index < YUV_BUFFER_NUM; buffer_index ++)
     {
-        if(cm->buffer_pool[buffer_index]  != NULL)
+        if(cm->buffer_pool[buffer_index] != NULL)
         {
             (*(vo->vpxHandle->VSP_unbindCb))(vo->vpxHandle->userdata,(void *)(cm->buffer_pool[buffer_index]), 0);
             cm->buffer_pool[buffer_index] = NULL;

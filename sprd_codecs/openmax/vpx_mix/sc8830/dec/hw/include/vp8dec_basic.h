@@ -197,6 +197,8 @@ typedef enum
 #define SEGMENT_DELTADATA   0
 #define SEGMENT_ABSDATA     1
 
+#define YUV_BUFFER_NUM	4
+
 typedef enum
 {
     KEY_FRAME = 0,

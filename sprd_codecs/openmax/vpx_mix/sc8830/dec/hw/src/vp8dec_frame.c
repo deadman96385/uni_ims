@@ -505,7 +505,7 @@ MMDecRet vp8dx_receive_compressed_data(VPXDecObject *vo, unsigned long size, con
     // Find a  place in buffer pool to save pBufferHeader of new picture.
     {
         int buffer_index;
-        for(buffer_index = 0; buffer_index <4; buffer_index ++)
+        for(buffer_index = 0; buffer_index < YUV_BUFFER_NUM; buffer_index++)
         {
             if(cm->ref_count[buffer_index] == 0)
             {
@@ -514,7 +514,7 @@ MMDecRet vp8dx_receive_compressed_data(VPXDecObject *vo, unsigned long size, con
             }
         }
 
-        if(buffer_index == 4)
+        if(buffer_index == YUV_BUFFER_NUM)
         {
             return MMDEC_OUTPUT_BUFFER_OVERFLOW;
         }
