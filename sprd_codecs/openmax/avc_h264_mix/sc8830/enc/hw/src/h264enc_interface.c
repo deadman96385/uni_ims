@@ -64,6 +64,17 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecB
     }
 
     vo->g_nFrame_enc = 0;
+    vo->s_vsp_fd = -1;
+    vo->s_vsp_Vaddr_base = 0;
+    vo->ddr_bandwidth_req_cnt = 0;
+    vo->vsp_freq_div = 0;
+    vo->error_flag = 0;
+    vo->b_previous_frame_failed = 0;
+    vo->vsp_capability = -1;
+    if (VSP_OPEN_Dev((VSPObject *)vo) < 0)
+    {
+        return MMENC_ERROR;
+    }
 
     img_ptr = vo->g_enc_image_ptr = (ENC_IMAGE_PARAMS_T *)H264Enc_MemAlloc (vo, sizeof(ENC_IMAGE_PARAMS_T), 8, INTER_MEM);
     CHECK_MALLOC(vo->g_enc_image_ptr, "vo->g_enc_image_ptr");
@@ -83,11 +94,20 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecB
 
 // 	img_ptr->i_frame = 0;
     img_ptr->frame_num = 0;
-
     img_ptr->i_idr_pic_id = 0;
-
     img_ptr->i_sps_id = 0;
-    img_ptr->i_level_idc = 51;	//as close to "unresticted as we can get
+
+    if (vo->vsp_capability == 0)   //limited under 720p
+    {
+        img_ptr->i_level_idc = 31;
+    } else if (vo->vsp_capability == 1)   //limited under 1080p
+    {
+        img_ptr->i_level_idc = 41;
+    } else
+    {
+        img_ptr->i_level_idc = 51;	//as close to "unresticted as we can get
+    }
+
 //	img_ptr->i_max_ref0 = img_ptr->i_frame_reference_num;
 //	img_ptr->i_max_dpb = 2;	//h->sps->vui.i_max_dec_frame_buffering + 1;
 // 	h->fdec->i_poc = 0; //tmp add, 20100512
@@ -163,17 +183,6 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecB
 
     h264enc_sps_init (img_ptr);
     h264enc_pps_init (vo, img_ptr);
-
-    vo->s_vsp_fd = -1;
-    vo->s_vsp_Vaddr_base = 0;
-    vo->ddr_bandwidth_req_cnt = 0;
-    vo->vsp_freq_div = 0;
-    vo->error_flag = 0;
-    vo->b_previous_frame_failed = 0;
-    if (VSP_OPEN_Dev((VSPObject *)vo) < 0)
-    {
-        return MMENC_ERROR;
-    }
 
     return MMENC_OK;
 }
