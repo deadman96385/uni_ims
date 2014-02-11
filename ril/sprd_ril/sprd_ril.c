@@ -7114,7 +7114,7 @@ static void initializeCallback(void *param)
     at_send_command(ATch_type[channelID], "AT+SPDVTTEST=2,650", NULL);
 
     /* set some auto report AT commend on or off */
-    at_send_command(ATch_type[channelID], "AT+SPAURC=10011011111000000000100001000011111111", NULL);
+    at_send_command(ATch_type[channelID], "AT+SPAURC=\"10011011111000000000100001000011111111\"", NULL);
 
     /*power on sim card */
     if(s_multiSimMode) {
