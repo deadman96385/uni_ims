@@ -7725,7 +7725,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
              * the string can theoretically expand by 3/2 in length
              * when converted to UTF-8, so we allocate a new buffer, twice
              * the size of the one holding the hex string.*/
-            at_tok_nextstr(&tmp, &(response[2]));
+            err = at_tok_nextstr(&tmp, &(response[2]));
+            if (err < 0) {
+                RILLOGD("%s fail", s);
+                goto out;
+            }
             RIL_onUnsolicitedResponse(
                     RIL_UNSOL_ON_USSD,
                     &response,3*sizeof(char*));

@@ -1984,9 +1984,9 @@ dispatchNetworkList (Parcel &p, RequestInfo *pRI) {
 #endif
 
     return;
-invalid:
-    invalidCommandBlock(pRI);
-    return;
+//invalid:
+//    invalidCommandBlock(pRI);
+//    return;
 }
 
 static void dispatchVideoPhoneInit(Parcel& p, RequestInfo *pRI){
