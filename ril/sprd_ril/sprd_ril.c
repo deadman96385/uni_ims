@@ -3339,6 +3339,24 @@ error:
     at_response_free(p_response);
 }
 
+int isExistActivePdp()
+{
+    int cid;
+
+    for(cid = 0; cid < MAX_PDP; cid ++){
+        pthread_mutex_lock(&pdp[cid].mutex);
+        if(pdp[cid].state == PDP_BUSY){
+            pthread_mutex_unlock(&pdp[cid].mutex);
+            RILLOGD("pdp[0].state = %d, pdp[1].state = %d,pdp[2].state = %d", pdp[0].state, pdp[1].state, pdp[2].state);
+            RILLOGD("pdp[%d] is busy now", cid);
+            return 1;
+        }
+        pthread_mutex_unlock(&pdp[cid].mutex);
+    }
+
+    return 0;
+}
+
 static void  requestScreeState(int channelID, int status, RIL_Token t)
 {
     int err;
@@ -3350,13 +3368,18 @@ static void  requestScreeState(int channelID, int status, RIL_Token t)
         at_send_command(ATch_type[channelID], "AT+CCED=2,8", NULL);
         at_send_command(ATch_type[channelID], "AT+CREG=1", NULL);
         at_send_command(ATch_type[channelID], "AT+CGREG=1", NULL);
-        at_send_command(ATch_type[channelID], "AT*FDY=1,5", NULL);
+        if(isExistActivePdp()){
+            at_send_command(ATch_type[channelID], "AT*FDY=1,5", NULL);
+        }
     } else {
         /* Resume */
         at_send_command(ATch_type[channelID], "AT+CCED=1,8", NULL);
         at_send_command(ATch_type[channelID], "AT+CREG=2", NULL);
         at_send_command(ATch_type[channelID], "AT+CGREG=2", NULL);
-        at_send_command(ATch_type[channelID], "AT*FDY=1,8", NULL);
+        if(isExistActivePdp()){
+            at_send_command(ATch_type[channelID], "AT*FDY=1,8", NULL);
+        }
+
         if (sState == RADIO_STATE_SIM_READY) {
             RIL_requestTimedCallback (onQuerySignalStrength, NULL, NULL);
         }
