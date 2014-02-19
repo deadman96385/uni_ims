@@ -1481,6 +1481,7 @@ static void convertFailCause(int cause)
             break;
         case MN_GPRS_ERR_ACTIVATION_REJ:
         case MN_GPRS_ERR_MODIFY_REJ:
+        case MN_GPRS_ERR_SM_ERR_UNSPECIFIED:
             s_lastPdpFailCause = PDP_FAIL_ACTIVATION_REJECT_UNSPECIFIED;
             break;
         case MN_GPRS_ERR_MISSING_OR_UNKOWN_APN:
@@ -1492,7 +1493,6 @@ static void convertFailCause(int cause)
             s_lastPdpFailCause = PDP_FAIL_NSAPI_IN_USE;
             break;
         case MN_GPRS_ERR_OPERATOR_DETERMINE_BAR:
-        case MN_GPRS_ERR_SM_ERR_UNSPECIFIED:
             s_lastPdpFailCause = PDP_FAIL_OPERATOR_BARRED;
             break;
         case MN_GPRS_ERR_INCORRECT_MSG:
