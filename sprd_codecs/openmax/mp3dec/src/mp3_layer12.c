@@ -337,9 +337,9 @@ int32 MP3_DEC_LayerII(MP3_STREAM_T *stream, MP3_FRAME_T *frame)
     allocation_ptr = (uint32*) (frame->allocation);
     memset(allocation_ptr, 0, 32*2*sizeof(uint32));    
     scfsi_ptr = (uint32*) (frame->scfsi);
-    memset(scfsi_ptr, 0, 32*2*3*sizeof(uint32));    
+    memset(scfsi_ptr, 0, 32*2*sizeof(uint32));    
     scalefactor_ptr = (uint32*) (frame->scalefactor);
-    memset(scalefactor_ptr, 0, 32*2*sizeof(uint32));    
+    memset(scalefactor_ptr, 0, 32*2*3*sizeof(uint32));    
 
   nch = header->num_ch;//MP3_NCHANNELS(header);
 
