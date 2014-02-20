@@ -22,9 +22,9 @@ void AAC_HybridInit(AAC_HYB_INFO_T *hyb_ptr)
     hyb_ptr->resolution20[2] = 2;	
     hyb_ptr->frame_len       = 32;
 
-    for (i = 0; i < 5; i++)
+    for (i = 0; i < 3; i++)
     {
-        AAC_DEC_MEMSET(hyb_ptr->buffer[i], 0, 12 * sizeof(aac_complex));
+        AAC_DEC_MEMSET(hyb_ptr->buffer[i], 0, 44 * sizeof(aac_complex));
     }
     //return hyb_ptr;
 }
