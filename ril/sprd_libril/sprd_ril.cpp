@@ -1610,6 +1610,11 @@ static void dispatchCdmaSubscriptionSource(Parcel& p, RequestInfo *pRI) {
     // from Radio State
     cdmaSubscriptionSource = decodeCdmaSubscriptionSource(state);
 
+    /* Add for bug279146 Start */
+    /* Don't support for cdma,so force to -1*/
+    cdmaSubscriptionSource = -1;
+    /* Add for bug279146 End   */
+
     if (cdmaSubscriptionSource < 0)
         RIL_onRequestComplete(pRI, RIL_E_GENERIC_FAILURE, NULL, 0);
     else
