@@ -19,7 +19,7 @@
 #define SERIAL_BUFFSIZE   					(8*1024)	// channel buffer size
 #define MAX_AT_RESPONSE 				(8 * 1024)
 
-#define MUX_NUM  						31	//CSMUX_NUM+GSMUX_NUM+PSMUX_NUM+STK+PBK+SS+SIM+STM+NW+4PPP+1VT+IND
+#define MUX_NUM  						16	//CSMUX_NUM+GSMUX_NUM+PSMUX_NUM+STK+PBK+SS+SIM+STM+NW+4PPP+1VT+IND
 
 #define CSMUX_NUM  						1
 #define PSMUX_NUM  						1
