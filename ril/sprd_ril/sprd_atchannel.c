@@ -897,6 +897,19 @@ int at_send_command (struct ATChannels *ATch, const char *command,
 }
 
 
+int at_send_command_snvm (struct ATChannels *ATch, const char *command,
+                                const char *pdu,
+                                const char *responsePrefix,
+                                 ATResponse **pp_outResponse)
+{
+    int err;
+
+    err = at_send_command_full (ATch, command, NO_RESULT, responsePrefix,
+                                    pdu, 0, pp_outResponse);
+
+    return err;
+}
+
 int at_send_command_singleline (struct ATChannels *ATch, const char *command,
                                 const char *responsePrefix,
                                  ATResponse **pp_outResponse)

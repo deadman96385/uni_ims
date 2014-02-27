@@ -4210,13 +4210,34 @@ static void requestSendAT(int channelID, void *data, size_t datalen, RIL_Token t
     ATResponse *p_response = NULL;
     char buf[1024] = {0};
     ATLine *p_cur = NULL;
+    char *cmd;
+    char *pdu;
 
     if(at_cmd == NULL) {
         RILLOGE("Invalid AT command");
         return;
     }
 
-    err = at_send_command_multiline(ATch_type[channelID], at_cmd, "", &p_response);
+    // AT+SNVM=1,2118,01
+    if (!strncasecmp(at_cmd, "AT+SNVM=1", strlen("AT+SNVM=1"))) {
+        cmd = at_cmd;
+        skipNextComma(&at_cmd);
+        pdu = strchr(at_cmd, ',');
+        if (pdu == NULL) {
+            RILLOGE("SNVM: cmd is %s pdu is NULL !", cmd);
+            strlcat(buf, "\r\n", sizeof(buf));
+            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, buf, strlen(buf)+1);
+            return;
+        }
+
+        *pdu = '\0';
+        pdu ++;
+        RILLOGD("SNVM: cmd %s, pdu %s", cmd, pdu);
+        err = at_send_command_snvm(ATch_type[channelID], cmd, pdu, "", &p_response);
+    } else {
+        err = at_send_command_multiline(ATch_type[channelID], at_cmd, "", &p_response);
+    }
+
     if (err < 0 || p_response->success == 0) {
         strlcat(buf, p_response->finalResponse, sizeof(buf));
         strlcat(buf, "\r\n", sizeof(buf));

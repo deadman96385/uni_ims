@@ -158,6 +158,11 @@ int at_send_command_sms (struct ATChannels *ATch,
                             const char *responsePrefix,
                             ATResponse **pp_outResponse);
 
+int at_send_command_snvm (struct ATChannels *ATch, const char *command,
+                                const char *pdu,
+                                const char *responsePrefix,
+                                 ATResponse **pp_outResponse);
+
 void at_response_free(ATResponse *p_response);
 
 typedef enum {
