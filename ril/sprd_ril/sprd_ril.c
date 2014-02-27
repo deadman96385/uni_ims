@@ -7726,6 +7726,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         free(response);
     } else if (strStartsWith(s, "+SPERROR:")) {/*for SS */
         int type;
+        int err_code;
         char *tmp;
 
         RILLOGD("SPERROR for SS");
@@ -7743,6 +7744,17 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         if (type == 5) {/* 5: for SS */
             ussdError = 1;
         }
+        /* SPRD : seriouse error for ps affair @{ */
+        else if (type == 10) { // it means ps business in this sim/usim is rejected by network
+            RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_PS_REJECT, NULL, 0);
+        } else if (type == 1) {
+            err = at_tok_nextint(&tmp, &err_code);
+            if (err < 0) goto out;
+            if ((err_code == 3) || (err_code == 6) || (err_code == 7) || (err_code == 8)) { // it means ps business in this sim/usim is rejected by network
+                RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_PS_REJECT, NULL, 0);
+            }
+        }
+        /* @} */
 
     } else if (strStartsWith(s, "+CUSD:")) {
         char *response[3] = { NULL, NULL, NULL};

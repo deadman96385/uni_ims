@@ -5279,6 +5279,7 @@ requestToString(int request) {
         case RIL_UNSOL_ON_STIN: return "UNSOL_ON_STIN";
         case RIL_UNSOL_SIM_SMS_READY: return "UNSOL_SIM_SMS_READY";
         case RIL_UNSOL_SIM_DROP: return "UNSOL_SIM_DROP";
+        case RIL_UNSOL_SIM_PS_REJECT: return "UNSOL_SIM_PS_REJECT";
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_UNSOL_RESPONSE_NEW_CB_MSG: return "UNSOL_RESPONSE_NEW_CB_MSG";

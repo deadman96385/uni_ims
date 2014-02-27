@@ -4984,7 +4984,18 @@ typedef struct {
 #define RIL_UNSOL_ON_STIN (RIL_SPRD_UNSOL_RESPONSE_BASE + 11)
 #define RIL_UNSOL_SIM_SMS_READY (RIL_SPRD_UNSOL_RESPONSE_BASE + 12)
 #define RIL_UNSOL_SIM_DROP (RIL_SPRD_UNSOL_RESPONSE_BASE + 13)
-#define RIL_SPRD_UNSOL_RESPONSE_LAST RIL_UNSOL_SIM_DROP
+/**
+ * RIL_UNSOL_SIM_PS_REJECT
+ *
+ * +SPERROR: err_code
+ * When err_code is #3, #6, #7, #8, it indicate ps business in this sim/usim card is rejected by network
+ *
+ * "data" is an int
+ * ((int)data)[0] - error number
+ *
+ */
+#define RIL_UNSOL_SIM_PS_REJECT (RIL_SPRD_UNSOL_RESPONSE_BASE + 14)
+#define RIL_SPRD_UNSOL_RESPONSE_LAST RIL_UNSOL_SIM_PS_REJECT
 #endif
 
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
