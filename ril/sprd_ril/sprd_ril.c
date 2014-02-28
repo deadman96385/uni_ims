@@ -3715,15 +3715,19 @@ static int setSmsBroadcastConfigValue(int value ,char * out_value)
 static void setSmsBroadcastConfigData(int data, int idx, int isFirst, char *toStr, int* strLength, char *retStr ){
     int len = 0;
     char get_char[10] ={0};
-    char comma = 0x2c;
-    char quotes = 0x22;
+    char comma = 0x2c; //,
+    char quotes = 0x22; //"
+    char line = 0x2d; //-
 
     memset(get_char,0,10);
     if(setSmsBroadcastConfigValue( data, get_char)>0){
         RILLOGI("Reference-ril. setSmsBroadcastConfigData  ");
         RILLOGI("Reference-ril. setSmsBroadcastConfigData (1) ");
-        if(idx==0 && isFirst){
+        if(idx==0 && 1 == isFirst){
             retStr[len] = quotes;
+            len += 1;
+        }else if (2 == isFirst){
+            retStr[0] = line;
             len += 1;
         }else{
             retStr[0] = comma;
@@ -3791,7 +3795,7 @@ static void requestSetSmsBroadcastConfig(int channelID,  void *data, size_t data
         RILLOGI("Reference-ril. requestSetSmsBroadcastConfig lang %s, %d",lang, langLen);
 
         memset(tmp, 0,20);
-        setSmsBroadcastConfigData(gsmBci.toCodeScheme,i,0,lang,&len,tmp);
+        setSmsBroadcastConfigData(gsmBci.toCodeScheme,i,2,lang,&len,tmp);
         memcpy(lang+langLen,tmp,strlen(tmp));
         langLen += len;
         RILLOGI("Reference-ril. requestSetSmsBroadcastConfig lang %s, %d",lang,langLen);
