@@ -110,7 +110,7 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
         {
             if(vop_mode_ptr->pFrdRefFrame->pDecFrame == NULL)
             {
-                vop_mode_ptr->pFrdRefFrame->pDecFrame = &(vo->g_tmp_buf);
+                return MMDEC_STREAM_ERROR;
             }
         }
     }
