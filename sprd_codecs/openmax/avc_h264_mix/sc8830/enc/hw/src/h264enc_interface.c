@@ -66,7 +66,6 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecB
     vo->g_nFrame_enc = 0;
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
-    vo->ddr_bandwidth_req_cnt = 0;
     vo->vsp_freq_div = 0;
     vo->error_flag = 0;
     vo->b_previous_frame_failed = 0;

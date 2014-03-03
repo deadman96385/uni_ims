@@ -170,24 +170,24 @@ PUBLIC void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *he
 
 PUBLIC MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *max_width, int32 *max_height)
 {
-	Mp4DecObject *vo = (Mp4DecObject *) mp4Handle->videoDecoderData;
+    Mp4DecObject *vo = (Mp4DecObject *) mp4Handle->videoDecoderData;
 
-	int32 codec_capability = vo->vsp_capability;
-	if (codec_capability == 0)   //limited under 720p
-	{
-	    *max_width = 1280;
-	    *max_height = 1023; //720;
-	} else if (codec_capability == 1)   //limited under 1080p
-	{
-	    *max_width = 1920;
-	    *max_height = 1088;
-	} else
-	{
-	    *max_width = 352;
-	    *max_height = 288;
-	}
+    int32 codec_capability = vo->vsp_capability;
+    if (codec_capability == 0)   //limited under 720p
+    {
+        *max_width = 1280;
+        *max_height = 1023; //720;
+    } else if (codec_capability == 1)   //limited under 1080p
+    {
+        *max_width = 1920;
+        *max_height = 1088;
+    } else
+    {
+        *max_width = 352;
+        *max_height = 288;
+    }
 
-	return MMDEC_OK;
+    return MMDEC_OK;
 }
 
 PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer * buffer_ptr)
@@ -211,7 +211,6 @@ PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer * buffer_ptr)
 
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
-    vo->ddr_bandwidth_req_cnt = 0;
     vo->vsp_freq_div = 0;
     vo->vsp_capability = -1;
     if(VSP_OPEN_Dev((VSPObject *)vo)<0)

@@ -120,7 +120,6 @@ MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBu
 
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
-    vo->ddr_bandwidth_req_cnt= 0;
     vo->vsp_freq_div= 0;
     vo->vsp_capability = -1;
     if(VSP_OPEN_Dev((VSPObject *)vo)<0)

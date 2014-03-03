@@ -26,73 +26,21 @@ extern   "C"
 {
 #endif
 
-LOCAL int32 VSP_set_ddr_freq(const char* freq_in_khz)
-{
-    const char* const set_freq = "/sys/devices/platform/scxx30-dmcfreq.0/devfreq/scxx30-dmcfreq.0/ondemand/set_freq";
-    FILE* fp = fopen(set_freq, "wb");
-
-    if (fp != NULL) {
-        fprintf(fp, "%s", freq_in_khz);
-        SCI_TRACE_LOW("set ddr freq to %skhz", freq_in_khz);
-        fclose(fp);
-        return 0;
-    } else {
-        SCI_TRACE_LOW("Failed to open %s", set_freq);
-#if 0
-        return -1;
-#else
-        return 0;
-#endif
-    }
-}
-
-LOCAL int32 VSP_clean_freq(VSPObject *vo)
-{
-    while(vo->ddr_bandwidth_req_cnt > 0)
-    {
-        if (VSP_set_ddr_freq("0") < 0)
-        {
-            SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
-            return -1;
-        }
-        vo->ddr_bandwidth_req_cnt --;
-    }
-
-    return 0;
-}
-
 PUBLIC int32 VSP_CFG_FREQ(VSPObject *vo, uint32 frame_size)
 {
-    char* ddr_freq;
-
     if(frame_size > 1280 *720)
     {
-        ddr_freq = "500000";
         vo->vsp_freq_div = 0;
     } else if(frame_size > 720*576)
     {
-        ddr_freq = "400000";
         vo->vsp_freq_div = 1;
     } else if(frame_size > 320*240)
     {
-        ddr_freq = "300000";
         vo->vsp_freq_div = 2;
     } else
     {
-        ddr_freq = "200000";
         vo->vsp_freq_div = 3;
     }
-
-    if (VSP_clean_freq(vo) < 0)
-    {
-        return -1;
-    }
-
-    if (VSP_set_ddr_freq(ddr_freq) < 0)
-    {
-        return -1;
-    }
-    vo->ddr_bandwidth_req_cnt ++;
 
     return 0;
 }
@@ -133,10 +81,6 @@ PUBLIC int32 VSP_CLOSE_Dev(VSPObject *vo)
         }
 
         close(vo->s_vsp_fd);
-        if (VSP_clean_freq(vo) < 0)
-        {
-            return -1;
-        }
         return 0;
     } else
     {

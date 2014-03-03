@@ -169,23 +169,23 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 
 MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, int32 *max_width, int32 *max_height)
 {
-	H264DecObject *vo = (H264DecObject *)avcHandle->videoDecoderData;
+    H264DecObject *vo = (H264DecObject *)avcHandle->videoDecoderData;
 
-	int32 codec_capability = vo->vsp_capability;
-	if (codec_capability == 0)   //limited under 720p
-	{
-	    *max_width = 1280;
-	    *max_height = 1023; //720;
-	} else if (codec_capability == 1)   //limited under 1080p
-	{
-	    *max_width = 1920;
-	    *max_height = 1088;
-	} else
-	{
-	    *max_width = 352;
-	    *max_height = 288;
-	}
-	return MMDEC_OK;
+    int32 codec_capability = vo->vsp_capability;
+    if (codec_capability == 0)   //limited under 720p
+    {
+        *max_width = 1280;
+        *max_height = 1023; //720;
+    } else if (codec_capability == 1)   //limited under 1080p
+    {
+        *max_width = 1920;
+        *max_height = 1088;
+    } else
+    {
+        *max_width = 352;
+        *max_height = 288;
+    }
+    return MMDEC_OK;
 }
 
 MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideoFormat * pVideoFormat)
@@ -216,7 +216,6 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
 
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
-    vo->ddr_bandwidth_req_cnt = 0;
     vo->vsp_freq_div = 0;
     vo->vsp_capability = -1;
     if (VSP_OPEN_Dev((VSPObject *)vo) < 0)
