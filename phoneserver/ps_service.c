@@ -34,8 +34,11 @@
 #define SYS_IFCONFIG_DOWN "sys.ifconfig.down"
 #define SYS_NO_ARP "sys.data.noarp"
 #define RETRY_MAX_COUNT 1000
+#define DEFAULT_PUBLIC_DNS2 "204.117.214.10"
 
 struct ppp_info_struct ppp_info[MAX_PPP_NUM];
+static char sSavedDns[IP_ADD_SIZE] = {0};
+
 mutex ps_service_mutex;
 extern const char *modem;
 
@@ -206,6 +209,17 @@ void ip_hex_to_str(unsigned int in, char *out, int out_size)
     }
 }
 
+void cvt_reset_dns2(char *out)
+{
+    if (strlen(sSavedDns) > 0) {
+        PHS_LOGD("Use saved DNS2 instead.");
+        memcpy(out, sSavedDns, sizeof(sSavedDns));
+    } else {
+        PHS_LOGD("Use default DNS2 instead.");
+        sprintf(out,"%s", DEFAULT_PUBLIC_DNS2);
+    }
+}
+
 int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
 {
     int ret;
@@ -312,10 +326,22 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
                 else
                     sprintf(cmd, "setprop net.%s%d.dns1 \"\"", prop, cid-1);
                 system(cmd);
-                if(dns2_hex != 0x0)
+                if(dns2_hex != 0x0) {
+                    if(!strcmp(dns1, dns2)) {
+                        PHS_LOGD("Two DNS are the same,so need to reset dns2!!");
+                        cvt_reset_dns2(dns2);
+                    } else {
+                        PHS_LOGD("Backup DNS2");
+                        memset(sSavedDns, 0, sizeof(sSavedDns));
+                        memcpy(sSavedDns, dns2, sizeof(dns2));
+                    }
                     sprintf(cmd, "setprop net.%s%d.dns2 %s", prop, cid-1, dns2);
-                else
-                    sprintf(cmd, "setprop net.%s%d.dns2 \"\"", prop, cid-1);
+                } else {
+                    PHS_LOGD("DNS2 is empty!!");
+                    memset(dns2, 0, IP_ADD_SIZE);
+                    cvt_reset_dns2(dns2);
+                    sprintf(cmd, "setprop net.%s%d.dns2 %s", prop, cid-1, dns2);
+                }
                 system(cmd);
 
                 ppp_info[cid-1].state = PPP_STATE_ACTIVE;
