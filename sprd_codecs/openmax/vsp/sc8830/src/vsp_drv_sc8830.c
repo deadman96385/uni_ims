@@ -194,10 +194,10 @@ PUBLIC int32 VSP_ACQUIRE_Dev(VSPObject *vo)
 
 PUBLIC int32 VSP_RELEASE_Dev(VSPObject *vo)
 {
+    int ret = 0;
+
     if(vo->s_vsp_fd > 0)
     {
-        int ret;
-
         if (vo->error_flag)
         {
             VSP_WRITE_REG(GLB_REG_BASE_ADDR + AXIM_PAUSE_OFF, 0x1, "AXIM_PAUSE: stop DATA TRANS to AXIM");
@@ -213,31 +213,41 @@ PUBLIC int32 VSP_RELEASE_Dev(VSPObject *vo)
         if (ret < 0)
         {
             SCI_TRACE_LOW("%s: VSP_RESET failed %d\n",__FUNCTION__, ret);
-            return -1;
+            ret = -1;
+            goto RELEASE_END;
         }
 
         ret = ioctl(vo->s_vsp_fd, VSP_DISABLE, NULL);
         if(ret < 0)
         {
             SCI_TRACE_LOW("%s: VSP_DISABLE failed, %d\n",__FUNCTION__, ret);
-            return -1;
+            ret = -1;
+            goto RELEASE_END;
         }
 
         ret = ioctl(vo->s_vsp_fd, VSP_RELEASE, NULL);
         if(ret < 0)
         {
             SCI_TRACE_LOW("%s: VSP_RELEASE failed, %d\n",__FUNCTION__, ret);
-            return -1;
+            ret = -1;
+            goto RELEASE_END;
         }
     } else
     {
         SCI_TRACE_LOW("%s: failed :fd <  0", __FUNCTION__);
-        return -1;
+        ret = -1;
     }
 
-    SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+RELEASE_END:
 
-    return 0;
+    if (vo->error_flag || (ret < 0))
+    {
+        usleep(20*1000);
+    }
+
+    SCI_TRACE_LOW("%s, %d, ret: %d", __FUNCTION__, __LINE__, ret);
+
+    return ret;
 }
 
 PUBLIC int32 ARM_VSP_RST (VSPObject *vo)
