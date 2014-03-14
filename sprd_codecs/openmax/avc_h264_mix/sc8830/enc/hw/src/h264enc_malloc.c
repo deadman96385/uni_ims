@@ -25,26 +25,24 @@ extern   "C"
 
 #define H264ENC_MALLOC_PRINT   //ALOGD
 
-PUBLIC MMEncRet H264Enc_InitMem (H264EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr)
+PUBLIC MMEncRet H264Enc_InitMem (H264EncObject *vo, MMCodecBuffer *pMemBfr, int32 type)
 {
-    MMCodecBuffer *pMem = pInterMemBfr;
-    int32 type;
-
-    for (type = 0; type < MAX_MEM_TYPE; type++)
+    if (type >= MAX_MEM_TYPE)
     {
-        int32 dw_aligned = (((uint32)(pMem->common_buffer_ptr) + 7) & (~7)) - ((uint32)(pMem->common_buffer_ptr));
+        return MMENC_ERROR;
+    } else
+    {
+        int32 dw_aligned = (((uint32)(pMemBfr->common_buffer_ptr) + 7) & (~7)) - ((uint32)(pMemBfr->common_buffer_ptr));
 
         vo->mem[type].used_size = 0;
-        vo->mem[type].v_base = pMem->common_buffer_ptr;
-        vo->mem[type].p_base = pMem->common_buffer_ptr_phy;
-        vo->mem[type].total_size = pMem->size;
+        vo->mem[type].v_base = pMemBfr->common_buffer_ptr;
+        vo->mem[type].p_base = pMemBfr->common_buffer_ptr_phy;
+        vo->mem[type].total_size = pMemBfr->size;
 
         CHECK_MALLOC(vo->mem[type].v_base, "vo->mem[type].v_base");
         SCI_MEMSET(vo->mem[type].v_base, 0, vo->mem[type].total_size);
 
         H264ENC_MALLOC_PRINT("%s: mem_size:%d\n", __FUNCTION__, vo->mem[type].total_size);
-
-        pMem = pExtraMemBfr;
     }
 
     return MMENC_OK;

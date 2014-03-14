@@ -33,7 +33,7 @@ extern   "C"
             return MMENC_MEMORY_ERROR;  \
         }
 
-MMEncRet H264Enc_InitMem (H264EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr);
+MMEncRet H264Enc_InitMem (H264EncObject *vo, MMCodecBuffer *pMemBfr, int32 type);
 void *H264Enc_MemAlloc (H264EncObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type);
 uint8 *H264Enc_ExtraMem_V2P(H264EncObject *vo, uint8 *vAddr, int32 type);
 

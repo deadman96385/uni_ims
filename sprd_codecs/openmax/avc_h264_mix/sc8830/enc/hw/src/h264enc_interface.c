@@ -24,14 +24,40 @@ extern   "C"
 {
 #endif
 
+MMEncRet H264EncGetCodecCapability(AVCHandle *avcHandle, MMEncCapability *Capability)
+{
+    H264EncObject *vo = (H264EncObject *)avcHandle->videoEncoderData;
+
+    int32 codec_capability = vo->vsp_capability;
+    if (codec_capability == 0)   //limited under 720p
+    {
+        Capability->max_width = 1280;
+        Capability->max_height = 1023; //720;
+        Capability->profile = AVC_BASELINE;
+        Capability->level = AVC_LEVEL3_1;
+    } else if (codec_capability == 1)   //limited under 1080p
+    {
+        Capability->max_width = 1920;
+        Capability->max_height = 1088;
+        Capability->profile = AVC_BASELINE;
+        Capability->level = AVC_LEVEL5_1;
+    } else
+    {
+        Capability->max_width = 352;
+        Capability->max_height = 288;
+        Capability->profile = AVC_BASELINE;
+        Capability->level = AVC_LEVEL2;
+    }
+    return MMENC_OK;
+}
+
 /*****************************************************************************/
-//  Description:   Init h264 encoder
+//  Description:   Pre-Init h264 encoder
 //	Global resource dependence:
 //  Author:
 //	Note:
 /*****************************************************************************/
-MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr,
-                     MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat)
+MMEncRet H264EncPreInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr)
 {
     H264EncObject*vo;
     ENC_IMAGE_PARAMS_T *img_ptr;
@@ -41,12 +67,7 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecB
     SCI_TRACE_LOW("libomx_avcenc_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
     CHECK_MALLOC(pInterMemBfr, "pInterMemBfr");
-    CHECK_MALLOC(pExtaMemBfr, "pExtaMemBfr");
-    CHECK_MALLOC(pBitstreamBfr, "pBitstreamBfr");
-
     CHECK_MALLOC(pInterMemBfr->common_buffer_ptr, "internal memory");
-    CHECK_MALLOC(pExtaMemBfr->common_buffer_ptr, "external memory");
-    CHECK_MALLOC(pBitstreamBfr->common_buffer_ptr, "bitstream memory");
 
     vo = (H264EncObject *) (pInterMemBfr->common_buffer_ptr);
     memset(vo, 0, sizeof(H264EncObject));
@@ -57,7 +78,7 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecB
     pInterMemBfr->common_buffer_ptr_phy = (void *)((uint32)(pInterMemBfr->common_buffer_ptr_phy) + sizeof(H264EncObject));
     pInterMemBfr->size -= sizeof(H264EncObject);
 
-    ret = H264Enc_InitMem(vo, pInterMemBfr, pExtaMemBfr);
+    ret = H264Enc_InitMem(vo, pInterMemBfr, INTER_MEM);
     if (ret != MMENC_OK)
     {
         return ret;
@@ -73,6 +94,35 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr, MMCodecB
     if (VSP_OPEN_Dev((VSPObject *)vo) < 0)
     {
         return MMENC_ERROR;
+    }
+
+    return MMENC_OK;
+}
+
+/*****************************************************************************/
+//  Description:   Init h264 encoder
+//	Global resource dependence:
+//  Author:
+//	Note:
+/*****************************************************************************/
+MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
+                     MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat)
+{
+    H264EncObject *vo = (H264EncObject *) avcHandle->videoEncoderData;
+    ENC_IMAGE_PARAMS_T *img_ptr;
+    uint32 frame_buf_size;
+    MMEncRet ret;
+
+    CHECK_MALLOC(pExtaMemBfr, "pExtaMemBfr");
+    CHECK_MALLOC(pBitstreamBfr, "pBitstreamBfr");
+
+    CHECK_MALLOC(pExtaMemBfr->common_buffer_ptr, "external memory");
+    CHECK_MALLOC(pBitstreamBfr->common_buffer_ptr, "bitstream memory");
+
+    ret = H264Enc_InitMem(vo, pExtaMemBfr, EXTRA_MEM);
+    if (ret != MMENC_OK)
+    {
+        return ret;
     }
 
     img_ptr = vo->g_enc_image_ptr = (ENC_IMAGE_PARAMS_T *)H264Enc_MemAlloc (vo, sizeof(ENC_IMAGE_PARAMS_T), 8, INTER_MEM);
