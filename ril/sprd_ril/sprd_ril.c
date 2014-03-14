@@ -8378,8 +8378,7 @@ mainLoop(void *param)
         fd = -1;
         s_closed = 0;
         init_channels();
-        sem_wait(&w_sem);
-again:
+ again:
         sim_num = sim_save;
         for(i = 0; i < channel_nums; i++)
         {
@@ -8508,6 +8507,7 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
         ret = pthread_create(&s_tid_mainloop, &attr, mainLoop, NULL);
         RILLOGD("RIL enter single sim card mode!");
     }
+     sem_wait(&w_sem);
     return &s_callbacks;
 }
 #else /* RIL_SHLIB */
