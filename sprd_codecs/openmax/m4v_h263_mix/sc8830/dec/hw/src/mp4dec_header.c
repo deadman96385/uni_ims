@@ -60,11 +60,16 @@ MMDecRet Mp4Dec_DecGobHeader(Mp4DecObject *vo)
             //tmp_var bit[6:2] is gob_number and bit[1:0] is "gob_frame_id"
             tmp_var = Mp4Dec_ReadBits(7);
             slice_info->GobNum = (int8)(tmp_var>>2);
-            vop_mode_ptr->mb_y		= slice_info->GobNum * slice_info->NumMbLineInGob;
-            if (vop_mode_ptr->mb_y >= slice_info->Max_MBy)
+
+            //for bug#287002
+            if (slice_info->NumMbLineInGob != 0)
             {
-                vo->error_flag |= ER_SREAM_ID;
-                return MMDEC_STREAM_ERROR;
+                vop_mode_ptr->mb_y = slice_info->GobNum * slice_info->NumMbLineInGob;
+                if (vop_mode_ptr->mb_y >= slice_info->Max_MBy)
+                {
+                    vo->error_flag |= ER_SREAM_ID;
+                    return MMDEC_STREAM_ERROR;
+                }
             }
 
             vop_mode_ptr->StepSize = (int8)Mp4Dec_ReadBits((uint32)((uint8)vop_mode_ptr->QuantPrecision));//, "quant_scale"
@@ -78,7 +83,16 @@ MMDecRet Mp4Dec_DecGobHeader(Mp4DecObject *vo)
             vop_mode_ptr->mb_x	   = mb_num - vop_mode_ptr->mb_y * vop_mode_ptr->MBNumX;
 
             slice_info->FirstMBx=vop_mode_ptr->mb_x;
-            slice_info->FirstMBy=vop_mode_ptr->mb_y;
+
+            //for bug#287002
+            if (slice_info->NumMbLineInGob == 0)
+            {
+                slice_info->FirstMBy=vop_mode_ptr->mb_y + 1;
+            }
+            else
+            {
+                slice_info->FirstMBy=vop_mode_ptr->mb_y;
+            }
 
             vop_mode_ptr->sliceNumber++;
             slice_info->SliceNum++;

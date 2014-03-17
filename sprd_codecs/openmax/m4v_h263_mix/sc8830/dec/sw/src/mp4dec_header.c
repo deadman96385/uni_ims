@@ -58,12 +58,17 @@ PUBLIC MMDecRet Mp4Dec_DecGobHeader(DEC_VOP_MODE_T *vop_mode_ptr)
             //tmp_var bit[6:2] is gob_number and bit[1:0] is "gob_frame_id"
             tmp_var = Mp4Dec_ReadBits(bitstrm_ptr, 7);
             vop_mode_ptr->GobNum = (int8)(tmp_var>>2);
-            vop_mode_ptr->mb_y		= vop_mode_ptr->GobNum * vop_mode_ptr->num_mbline_gob;
-            if (vop_mode_ptr->mb_y >= vop_mode_ptr->MBNumY)
+
+            //for bug#287002
+            if (vop_mode_ptr->num_mbline_gob != 0)
             {
-                vop_mode_ptr->error_flag = TRUE;
-                vop_mode_ptr->return_pos |= (1<<16);
-                return MMDEC_STREAM_ERROR;
+                vop_mode_ptr->mb_y		= vop_mode_ptr->GobNum * vop_mode_ptr->num_mbline_gob;
+                if (vop_mode_ptr->mb_y >= vop_mode_ptr->MBNumY)
+                {
+                    vop_mode_ptr->error_flag = TRUE;
+                    vop_mode_ptr->return_pos |= (1<<16);
+                    return MMDEC_STREAM_ERROR;
+                }
             }
 
             vop_mode_ptr->StepSize = (int8)Mp4Dec_ReadBits(bitstrm_ptr, (uint32)(vop_mode_ptr->QuantPrecision));
