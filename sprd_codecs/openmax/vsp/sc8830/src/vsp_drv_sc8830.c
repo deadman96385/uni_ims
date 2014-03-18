@@ -170,7 +170,13 @@ PUBLIC int32 VSP_ACQUIRE_Dev(VSPObject *vo)
         SCI_TRACE_LOW("%s: VSP_ACQUAIRE failed,  %d\n",__FUNCTION__, ret);
         return -1;
 #endif
+    }
 
+    //shark:  [0]:"clk_256m", [1]:"clk_192m",   [2]:"clk_128m", [3]:"clk_76m8"
+    //dolphin [0]:"clk_192m", [1]:"clk_153m6", [2]:"clk_128m", [3]:"clk_76m8"
+    if (VSP_CONFIG_DEV_FREQ(vo,&(vo->vsp_freq_div)))
+    {
+        return -1;
     }
 
     ret = ioctl(vo->s_vsp_fd, VSP_ENABLE, NULL);
@@ -257,17 +263,6 @@ PUBLIC int32 ARM_VSP_RST (VSPObject *vo)
         return -1;
     }
 
-    {
-        // 0:{256000000,"clk_256m"},
-        // 1:{192000000,"clk_192p6m"},
-        // 2:{128000000,"clk_128m"},
-        // 3:{76800000,"clk_76m8"}
-
-        if (VSP_CONFIG_DEV_FREQ(vo,&(vo->vsp_freq_div)))
-        {
-            return -1;
-        }
-    }
     VSP_WRITE_REG(AHB_CTRL_BASE_ADDR + ARM_ACCESS_CTRL_OFF, 0,"RAM_ACC_by arm");
     if (VSP_READ_REG_POLL(AHB_CTRL_BASE_ADDR + ARM_ACCESS_STATUS_OFF, (V_BIT_1 | V_BIT_0), 0x00000000, TIME_OUT_CLK, "ARM_ACCESS_STATUS_OFF"))
     {
