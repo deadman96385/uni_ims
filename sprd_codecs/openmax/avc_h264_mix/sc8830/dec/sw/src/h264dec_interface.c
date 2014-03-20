@@ -232,6 +232,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
     uint8 *pInStream = dec_input_ptr->pStream;
     int32 last_slice = 0;
     int32 slice_len_sum = 0, rbsp_len = 0;
+   int32 stream_lenght = dec_input_ptr->dataLen;
 
     SCI_ASSERT(NULL != dec_input_ptr);
     SCI_ASSERT(NULL != dec_output_ptr);
@@ -332,6 +333,8 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
             img_ptr->type = -1;
         }
     }
+
+    dec_input_ptr->dataLen = stream_lenght -dec_input_ptr->dataLen;
 
     //need IVOP but not found IDR,then return seek ivop
     if(dec_input_ptr->expected_IVOP && img_ptr->g_searching_IDR_pic)
