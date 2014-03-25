@@ -288,6 +288,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         if (img_ptr->type == B_SLICE && img_ptr->g_dec_picture_ptr && !(img_ptr->g_dec_picture_ptr->used_for_reference))
         {
             SCI_TRACE_LOW("%s, %d, B_Slice return", __FUNCTION__, __LINE__);
+	    dec_input_ptr->dataLen =stream_lenght ;
             return MMDEC_OK;
         }
 
