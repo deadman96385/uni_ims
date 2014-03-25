@@ -41,6 +41,12 @@ MMEncRet H264EncGetCodecCapability(AVCHandle *avcHandle, MMEncCapability *Capabi
         Capability->max_height = 1088;
         Capability->profile = AVC_BASELINE;
         Capability->level = AVC_LEVEL5_1;
+    } else if (codec_capability == 2)   //limited under 1080p
+    {
+        Capability->max_width = 1920;
+        Capability->max_height = 1088;
+        Capability->profile = AVC_BASELINE;
+        Capability->level = AVC_LEVEL5_1;
     } else
     {
         Capability->max_width = 352;
@@ -133,7 +139,14 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
 
     vo->g_vlc_hw_ptr = (uint8 *)H264Enc_MemAlloc(vo, (406*2*sizeof(uint32)), 8, EXTRA_MEM);
     CHECK_MALLOC(vo->g_vlc_hw_ptr, "vo->g_vlc_hw_ptr");
-    memcpy(vo->g_vlc_hw_ptr, g_vlc_hw_tbl, (406*2*sizeof(uint32)));
+    if (vo->vsp_capability == 2)
+    {
+        memcpy(vo->g_vlc_hw_ptr, &g_vlc_hw_tbl[406*2], (406*2*sizeof(uint32)));
+    }
+    else
+    {
+        memcpy(vo->g_vlc_hw_ptr, g_vlc_hw_tbl, (406*2*sizeof(uint32)));
+    }
 
     img_ptr->orig_width = pVideoFormat->frame_width;
     img_ptr->orig_height = pVideoFormat->frame_height;

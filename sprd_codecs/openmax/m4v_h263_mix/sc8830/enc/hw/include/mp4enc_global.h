@@ -31,7 +31,7 @@ extern   "C"
 #endif
 
 extern const uint32 g_msk[33];
-extern uint32 g_vlc_hw_tbl [320*2];
+extern uint32 g_vlc_hw_tbl [320*2*2];
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

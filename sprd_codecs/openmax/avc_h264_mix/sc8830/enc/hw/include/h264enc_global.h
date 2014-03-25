@@ -16,7 +16,7 @@
 
 #include "sci_types.h"
 
-extern uint32 g_vlc_hw_tbl [406*2];
+extern uint32 g_vlc_hw_tbl [406*2*2];
 extern uint32 g_skipBlock_QP_table[52];
 
 /**---------------------------------------------------------------------------*
