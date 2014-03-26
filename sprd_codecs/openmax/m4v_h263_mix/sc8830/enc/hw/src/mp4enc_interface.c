@@ -212,7 +212,6 @@ MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBu
 
     vo->g_vlc_hw_ptr = (uint32 *) Mp4Enc_MemAlloc(vo, 320*2*sizeof(uint32), 8, EXTRA_MEM);
     CHECK_MALLOC(vo->g_vlc_hw_ptr, "vo->g_vlc_hw_ptr");
-    memcpy(vo->g_vlc_hw_ptr, g_vlc_hw_tbl, (320*2*sizeof(uint32)));
 
     vo->g_rc_ptr = (rc_single_t *)Mp4Enc_MemAlloc(vo, sizeof(rc_single_t), 4, INTER_MEM);
     CHECK_MALLOC(vo->g_rc_ptr, "vo->g_rc_ptr");
@@ -254,6 +253,15 @@ MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBu
     if(VSP_OPEN_Dev((VSPObject *)vo) < 0)
     {
         return MMDEC_HW_ERROR;
+    }
+
+    if (vo->vsp_capability == 2)
+    {
+        memcpy(vo->g_vlc_hw_ptr,& g_vlc_hw_tbl[320*2], (320*2*sizeof(uint32)));
+    }
+    else
+    {
+        memcpy(vo->g_vlc_hw_ptr, g_vlc_hw_tbl, (320*2*sizeof(uint32)));
     }
 
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF, (V_BIT_4 | STREAM_ID_MPEG4), "VSP_MODE: Set standard and work mode");
