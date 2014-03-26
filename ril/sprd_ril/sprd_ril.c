@@ -1609,6 +1609,12 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
             } else
                 s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
 
+            //when cgdata timeout then send deactive to modem
+            if (strStartsWith(p_response->finalResponse,"ERROR")){
+                snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index + 1);
+                at_send_command(ATch_type[channelID], cmd, NULL);
+            }
+
             goto error;
         }
 
