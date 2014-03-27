@@ -5187,6 +5187,8 @@ requestToString(int request) {
         case RIL_REQUEST_DIAL_EMERGENCY_CALL: return "DIAL_EMERGENCY_CALL";
         case RIL_REQUEST_SEND_AT: return "SEND_AT";
         case RIL_REQUEST_SET_SPEED_MODE: return "SET_SPEED_MODE";
+        case RIL_REQUEST_SET_SIM_SLOT_CFG: return "SET_SIM_SLOT_CFG"; //SPRD:added for choosing WCDMA SIM
+        case RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES: return "SIMLOCK_REMAIN_TIMES";
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_SET_CELL_BROADCAST_CONFIG: return "SET_CELL_BROADCAST_CONFIG";
@@ -5305,7 +5307,7 @@ requestToString(int request) {
         case RIL_UNSOL_UART: return "UNSOL_UART";
         case RIL_UNSOL_SIM_PB_READY: return "UNSOL_SIM_PB_READY";	
 #endif
-        case RIL_REQUEST_SET_SIM_SLOT_CFG: return "SET_SIM_SLOT_CFG"; //SPRD:added for choosing WCDMA SIM
+
         default: return "<unknown request>";
     }
 }
