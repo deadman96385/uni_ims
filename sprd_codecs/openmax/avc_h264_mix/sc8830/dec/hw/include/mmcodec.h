@@ -52,6 +52,7 @@ typedef unsigned int	uint32;
 #define NULL  0
 #endif
 
+#define MIN_LEN_FOR_HW 8
 
 #define PUBLIC
 #define	LOCAL		static
