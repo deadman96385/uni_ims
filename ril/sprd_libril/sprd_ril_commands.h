@@ -180,6 +180,8 @@
     ,{RIL_REQUEST_DIAL_EMERGENCY_CALL, dispatchDial, responseVoid}
     ,{RIL_REQUEST_SEND_AT, dispatchString, responseString}
     ,{RIL_REQUEST_SET_SPEED_MODE, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_SET_SIM_SLOT_CFG, dispatchInts, responseVoid}//SPRD:added for choosing WCDMA SIM
+    ,{RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES, dispatchInts, responseInts}
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     ,{RIL_REQUEST_SET_CELL_BROADCAST_CONFIG, dispatchSetCBConf, responseVoid}
@@ -214,7 +216,6 @@
     ,{RIL_REQUEST_SIM_TRANSMIT_CHANNEL, dispatchVoid, responseVoid}
     ,{RIL_REQUEST_SIM_AUTH, dispatchVoid, responseVoid}
 #endif
-    ,{RIL_REQUEST_SET_SIM_SLOT_CFG, dispatchInts, responseVoid}//SPRD:added for choosing WCDMA SIM
 
 
 

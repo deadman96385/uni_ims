@@ -4888,6 +4888,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_ENTER_SIM_PUK2
                 || request == RIL_REQUEST_CHANGE_SIM_PIN
                 || request == RIL_REQUEST_CHANGE_SIM_PIN2
+                || request == RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
@@ -6455,6 +6456,48 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_SEND_AT:
             requestSendAT(channelID,data, datalen, t);
             break;
+
+        //Added for bug#213435 sim lock begin
+        case RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES: {
+            char cmd[20] = {0};
+            int fac = ((int*)data)[0];
+            int ck_type = ((int*)data)[1];
+            char *line;
+            int result[2] = {0,0};
+
+            p_response = NULL;
+            ALOGD("[MBBMS]send RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES, fac:%d,ck_type:%d",fac,ck_type);
+            sprintf(cmd, "AT+SPSMPN=%d,%d", fac,ck_type);
+            err = at_send_command_singleline(ATch_type[channelID], cmd, "+SPSMPN:", &p_response);
+
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                line = p_response->p_intermediates->line;
+                ALOGD("[MBBMS]RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES: err=%d line=%s", err, line);
+
+                err = at_tok_start(&line);
+
+                if (err == 0) {
+                    err = at_tok_nextint(&line, &result[0]);
+                    if (err == 0) {
+                        at_tok_nextint(&line, &result[1]);
+                        err = at_tok_nextint(&line, &result[1]);
+                    }
+                }
+
+                if (err == 0) {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, &result, sizeof(result));
+                }
+                else {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                }
+            }
+            at_response_free(p_response);
+            break;
+        }
+        //Added for bug#213435 sim lock end
+
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_GET_CELL_BROADCAST_CONFIG:
             requestGetCellBroadcastConfig(channelID,data, datalen, t);
@@ -6801,6 +6844,17 @@ out:
     } else if (0 == strcmp (cpinResult, "PH-NET PIN")) {
         return SIM_NETWORK_PERSONALIZATION;
     }
+    //Added for bug#213435 sim lock begin
+    else if (0 == strcmp (cpinResult, "PH-SIM PIN")) {
+        return SIM_SIM_PERSONALIZATION;
+    } else if (0 == strcmp (cpinResult, "PH-NETSUB PIN"))  {
+        return SIM_NETWORK_SUBSET_PERSONALIZATION;
+    } else if (0 == strcmp (cpinResult, "PH-CORP PIN"))  {
+        return SIM_CORPORATE_PERSONALIZATION;
+    } else if (0 == strcmp (cpinResult, "PH-SP PIN"))  {
+        return SIM_SERVICE_PROVIDER_PERSONALIZATION;
+    }
+    //Added for bug#213435 sim lock end
     //Added for bug#242159 begin
     else if (0 == strcmp (cpinResult, "PH-INTEGRITY FAIL"))  {
         return SIM_LOCK_FOREVER;
@@ -6860,6 +6914,20 @@ static int getCardStatus(int channelID, RIL_CardStatus_v6 **pp_card_status)
         /* SIM_PUK2 = 8 */
         { RIL_APPTYPE_SIM, RIL_APPSTATE_READY, RIL_PERSOSUBSTATE_UNKNOWN,
             NULL, NULL, 0, RIL_PINSTATE_UNKNOWN, RIL_PINSTATE_ENABLED_BLOCKED },
+        //Added for bug#213435 sim lock begin
+        /* SIM_SIM_PERSONALIZATION = 9 */
+        { RIL_APPTYPE_SIM, RIL_APPSTATE_SUBSCRIPTION_PERSO, RIL_PERSOSUBSTATE_SIM_SIM,
+          NULL, NULL, 0, RIL_PINSTATE_ENABLED_NOT_VERIFIED, RIL_PINSTATE_UNKNOWN },
+        /* SIM_NETWORK_SUBSET_PERSONALIZATION = 10 */
+        { RIL_APPTYPE_SIM, RIL_APPSTATE_SUBSCRIPTION_PERSO, RIL_PERSOSUBSTATE_SIM_NETWORK_SUBSET,
+          NULL, NULL, 0, RIL_PINSTATE_ENABLED_NOT_VERIFIED, RIL_PINSTATE_UNKNOWN  },
+        /* SIM_CORPORATE_PERSONALIZATION = 11 */
+        { RIL_APPTYPE_SIM, RIL_APPSTATE_SUBSCRIPTION_PERSO, RIL_PERSOSUBSTATE_SIM_CORPORATE,
+          NULL, NULL, 0, RIL_PINSTATE_ENABLED_NOT_VERIFIED, RIL_PINSTATE_UNKNOWN  },
+        /* SIM_SERVICE_PROVIDER_PERSONALIZATION = 12 */
+        { RIL_APPTYPE_SIM, RIL_APPSTATE_SUBSCRIPTION_PERSO, RIL_PERSOSUBSTATE_SIM_SERVICE_PROVIDER,
+          NULL, NULL, 0, RIL_PINSTATE_ENABLED_NOT_VERIFIED, RIL_PINSTATE_UNKNOWN  },
+        //Added for bug#213435 sim lock end
         //Added for bug#242159 begin
         { RIL_APPTYPE_SIM, RIL_APPSTATE_SUBSCRIPTION_PERSO, RIL_PERSOSUBSTATE_SIM_LOCK_FOREVER,
           NULL, NULL, 0, RIL_PINSTATE_ENABLED_NOT_VERIFIED, RIL_PINSTATE_UNKNOWN  }
@@ -6953,6 +7021,12 @@ static void pollSIMState (void *param)
         case SIM_PIN:
         case SIM_PUK:
         case SIM_NETWORK_PERSONALIZATION:
+        //Added for bug#213435 sim lock begin
+        case SIM_SIM_PERSONALIZATION:
+        case SIM_NETWORK_SUBSET_PERSONALIZATION:
+        case SIM_CORPORATE_PERSONALIZATION:
+        case SIM_SERVICE_PROVIDER_PERSONALIZATION:
+        //Added for bug#213435 sim lock end
         //Added for bug#242159 begin
         case SIM_LOCK_FOREVER:
         //Added for bug#242159 end
