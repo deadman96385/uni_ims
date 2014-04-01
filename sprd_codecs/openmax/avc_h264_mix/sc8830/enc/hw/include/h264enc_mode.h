@@ -429,6 +429,7 @@ typedef struct tagH264EncObject
     ENC_ANTI_SHAKE_T g_anti_shake;
 
     uint32 b_previous_frame_failed;
+    int32 yuv_format;
 } H264EncObject;
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

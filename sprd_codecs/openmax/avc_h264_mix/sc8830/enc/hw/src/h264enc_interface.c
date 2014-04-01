@@ -90,6 +90,7 @@ MMEncRet H264EncPreInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr)
         return ret;
     }
 
+    vo->yuv_format = MMENC_YUV420SP_NV21;
     vo->g_nFrame_enc = 0;
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
@@ -242,6 +243,8 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
     vo->g_anti_shake.shift_y = 0;
     vo->g_anti_shake.input_width = 0;
     vo->g_anti_shake.input_height= 0;
+
+    vo->yuv_format = pVideoFormat->yuv_format;
 
     h264enc_sps_init (img_ptr);
     h264enc_pps_init (vo, img_ptr);
