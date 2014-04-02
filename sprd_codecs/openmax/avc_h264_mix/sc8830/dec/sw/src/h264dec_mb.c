@@ -493,9 +493,16 @@ PUBLIC void H264Dec_start_macroblock (H264DecContext *img_ptr, DEC_MB_INFO_T *mb
     return;
 }
 
-void H264Dec_interpret_mb_mode_I (DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+void H264Dec_interpret_mb_mode_I (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
 {
     int32 mb_mode = mb_info_ptr->mb_type;
+    int32 idx = (mb_mode-1)>>2;
+
+    if (idx < 0 || idx > TBL_SIZE_ICBP-1)
+    {
+        idx = Clip3(0, TBL_SIZE_ICBP-1, idx);
+        img_ptr->error_flag |= ER_BSM_ID;
+    }
 
     if (mb_mode == 0)
     {
@@ -506,7 +513,7 @@ void H264Dec_interpret_mb_mode_I (DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb
     } else
     {
         mb_info_ptr->mb_type = I16MB;
-        mb_info_ptr->cbp = g_ICBP_TBL[(mb_mode-1)>>2];
+        mb_info_ptr->cbp = g_ICBP_TBL[idx];
         mb_cache_ptr->i16mode = ((mb_mode-1)&0x3);
     }
 
@@ -1811,7 +1818,7 @@ PUBLIC void H264Dec_read_one_macroblock_ISlice (H264DecContext *img_ptr, DEC_MB_
     mb_info_ptr->is_intra = TRUE;
 
     mb_info_ptr->mb_type = img_ptr->read_mb_type ((void *)img_ptr, mb_info_ptr, mb_cache_ptr);
-    H264Dec_interpret_mb_mode_I (mb_info_ptr, mb_cache_ptr);
+    H264Dec_interpret_mb_mode_I (img_ptr, mb_info_ptr, mb_cache_ptr);
     H264Dec_read_intraMB_context(img_ptr, mb_info_ptr, mb_cache_ptr);
 
     return;

@@ -27,7 +27,7 @@ extern   "C"
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
 
-DECLARE_ASM_CONST (4, int8, g_ICBP_TBL[6]) = {0, 16, 32, 15, 31, 47};
+DECLARE_ASM_CONST (4, int8, g_ICBP_TBL[TBL_SIZE_ICBP]) = {0, 16, 32, 15, 31, 47};
 
 DECLARE_ASM_CONST (4, uint8, g_QP_SCALER_CR_TBL[52]) =
 {
