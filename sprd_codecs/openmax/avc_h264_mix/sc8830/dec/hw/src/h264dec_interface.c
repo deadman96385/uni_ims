@@ -277,6 +277,12 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
     vo->pStream = dec_input_ptr->pStream;
     vo->g_stream_offset = 0;
 
+    //for bug281448, add start code at the tail of stream.
+    vo->pStream[bs_buffer_length] = 0x00;
+    vo->pStream[bs_buffer_length+1] = 0x00;
+    vo->pStream[bs_buffer_length+2] = 0x00;
+    vo->pStream[bs_buffer_length+3] = 0x01;
+
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
     {
         goto DEC_EXIT;
