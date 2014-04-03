@@ -226,6 +226,12 @@ FLV_RE_DEC:
     {
         vop_mode_ptr->find_vop_header  = 0;
         ret = Mp4Dec_DecMp4Header(vop_mode_ptr, dec_input_ptr->dataLen);
+        if (ret != MMDEC_OK)
+        {
+            SCI_TRACE_LOW("%s, %d, Mp4Dec_DecMp4Header failed ret: %d", __FUNCTION__, __LINE__, ret);
+            return ret;
+        }
+
         if(!vop_mode_ptr->find_vop_header)
         {
             dec_output_ptr->VopPredType = NVOP;

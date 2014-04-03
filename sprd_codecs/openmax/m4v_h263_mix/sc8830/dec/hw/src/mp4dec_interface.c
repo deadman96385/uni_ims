@@ -369,6 +369,12 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     {
         vop_mode_ptr->find_vop_header  = 0;
         ret = Mp4Dec_DecMp4Header(vo, dec_input_ptr->dataLen);
+        if(ret != MMDEC_OK)
+        {
+            ALOGE("%s, %d: Mp4Dec_DecMp4Header error ret = %d", __FUNCTION__, __LINE__, ret);
+            goto DEC_EXIT;
+        }
+
         if(!vop_mode_ptr->find_vop_header)
         {
             dec_output_ptr->VopPredType = NVOP;
