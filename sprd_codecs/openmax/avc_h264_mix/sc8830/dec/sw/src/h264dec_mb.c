@@ -496,13 +496,6 @@ PUBLIC void H264Dec_start_macroblock (H264DecContext *img_ptr, DEC_MB_INFO_T *mb
 void H264Dec_interpret_mb_mode_I (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
 {
     int32 mb_mode = mb_info_ptr->mb_type;
-    int32 idx = (mb_mode-1)>>2;
-
-    if (idx < 0 || idx > TBL_SIZE_ICBP-1)
-    {
-        idx = Clip3(0, TBL_SIZE_ICBP-1, idx);
-        img_ptr->error_flag |= ER_BSM_ID;
-    }
 
     if (mb_mode == 0)
     {
@@ -512,6 +505,14 @@ void H264Dec_interpret_mb_mode_I (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_inf
         mb_info_ptr->mb_type = IPCM;
     } else
     {
+        int32 idx = (mb_mode-1)>>2;
+
+        if (idx < 0 || idx > TBL_SIZE_ICBP-1)
+        {
+            idx = Clip3(0, TBL_SIZE_ICBP-1, idx);
+            img_ptr->error_flag |= ER_BSM_ID;
+        }
+
         mb_info_ptr->mb_type = I16MB;
         mb_info_ptr->cbp = g_ICBP_TBL[idx];
         mb_cache_ptr->i16mode = ((mb_mode-1)&0x3);
