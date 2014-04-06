@@ -14,7 +14,7 @@
 #define LOG_TAG "phoneserver"
 #include <utils/Log.h>
 
-//#define PHS_DEBUG
+#define PHS_DEBUG
 
 #ifdef PHS_DEBUG
 #define PHS_LOGD(x...) ALOGD( x )

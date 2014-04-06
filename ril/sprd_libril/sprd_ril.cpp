@@ -213,6 +213,7 @@ static size_t s_lastNITZTimeDataSize;
 
 #define TD_SIM_NUM  "ro.modem.t.count"
 #define W_SIM_NUM  "ro.modem.w.count"
+#define L_SIM_NUM  "ro.modem.l.count"
 
 static int s_multiSimMode;
 const char * s_modem = NULL;
@@ -4285,6 +4286,12 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
             s_multiSimMode = 1;
         else
             s_multiSimMode = 0;
+    } else if(!strcmp(s_modem, "l")) {
+        property_get(L_SIM_NUM, phoneCount, "");
+        if(strcmp(phoneCount, "1"))
+            s_multiSimMode = 1;
+        else
+            s_multiSimMode = 0;
     } else {
         RILLOGE("Invalid modem type");
         exit(-1);
@@ -5282,6 +5289,7 @@ requestToString(int request) {
         case RIL_UNSOL_SIM_SMS_READY: return "UNSOL_SIM_SMS_READY";
         case RIL_UNSOL_SIM_DROP: return "UNSOL_SIM_DROP";
         case RIL_UNSOL_SIM_PS_REJECT: return "UNSOL_SIM_PS_REJECT";
+        case RIL_UNSOL_LTE_READY: return "UNSOL_LTE_READY";
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_UNSOL_RESPONSE_NEW_CB_MSG: return "UNSOL_RESPONSE_NEW_CB_MSG";
@@ -5307,6 +5315,7 @@ requestToString(int request) {
         case RIL_UNSOL_UART: return "UNSOL_UART";
         case RIL_UNSOL_SIM_PB_READY: return "UNSOL_SIM_PB_READY";	
 #endif
+
 
         default: return "<unknown request>";
     }

@@ -12,23 +12,38 @@
 //#include "config.h"
 
 #define IP_ADD_SIZE 16
-#define MAX_PPP_NUM 3
+#define MAX_PPP_NUM 6
 #define MAX_CMD 50
+
+typedef enum {
+    UNKNOWN = 0,
+    IPV4    = 1,
+    IPV6    = 2,
+    IPV4V6  = 3
+}IP_TYPE;
+
 struct ppp_info_struct {
-	char dns1addr[IP_ADD_SIZE];	/* Primary MS DNS entries */
-	char dns2addr[IP_ADD_SIZE];	/*secondary MS DNS entries */
-	char userdns1addr[IP_ADD_SIZE];	/* Primary MS DNS entries */
-	char userdns2addr[IP_ADD_SIZE];	/*secondary MS DNS entries */
-	char ipladdr[IP_ADD_SIZE];	/* IP address local */
-	char ipraddr[IP_ADD_SIZE];	/* IP address remote */
-	int state;
-	cmux_t *cmux;
-	pty_t *pty;
-	mutex mutex_timeout;
-	cond cond_timeout;
-	int cid;
-	int manual_dns;
-	int error_num;
+    char dns1addr[IP_ADD_SIZE]; /* IPV4 Primary MS DNS entries */
+    char dns2addr[IP_ADD_SIZE]; /* IPV4 secondary MS DNS entries */
+    char userdns1addr[IP_ADD_SIZE]; /* IPV4 Primary MS DNS entries */
+    char userdns2addr[IP_ADD_SIZE]; /* IPV4 secondary MS DNS entries */
+    char ipladdr[IP_ADD_SIZE]; /* IPV4 address local */
+    char ipraddr[IP_ADD_SIZE]; /* IPV4 address remote */
+    char ipv6dns1addr[IP_ADD_SIZE*4]; /* IPV6 Primary MS DNS entries */
+    char ipv6dns2addr[IP_ADD_SIZE*4]; /* IPV6 secondary MS DNS entries */
+    char ipv6userdns1addr[IP_ADD_SIZE*4]; /* IPV6 Primary MS DNS entries */
+    char ipv6userdns2addr[IP_ADD_SIZE*4]; /* IPV6 secondary MS DNS entries */
+    char ipv6laddr[IP_ADD_SIZE*4]; /* IPV6 address local */
+    char ipv6raddr[IP_ADD_SIZE*4]; /* IPV6 address remote */
+    IP_TYPE ip_state;
+    int state;
+    cmux_t *cmux;
+    pty_t *pty;
+    mutex mutex_timeout;
+    cond cond_timeout;
+    int cid;
+    int manual_dns;
+    int error_num;
 };
 #define PPP_STATE_IDLE  1
 #define PPP_STATE_ACTING 2
@@ -62,4 +77,10 @@ int cvt_cgact_deact_rsp2(AT_CMD_RSP_T * rsp, int user_data);
 int cvt_cgact_deact_rsp1(AT_CMD_RSP_T * rsp, int user_data);
 int cvt_cgdcont_set_rsp(AT_CMD_RSP_T * rsp, int user_data);
 int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data);
+int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp, int user_data);
+
+ /* SPRD : for svlte & csfb @{ */
+int isSvLte(void);
+int isLte(void);
+int getMaxPDPNum(void);
 #endif /*  */

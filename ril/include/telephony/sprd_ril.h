@@ -1019,6 +1019,14 @@ typedef struct {
 	ril_signalstrength.LTE_SignalStrength.rssnr				= RIL_SIGNALSTRENGTH_INVALID;				\
 	ril_signalstrength.LTE_SignalStrength.cqi				= RIL_SIGNALSTRENGTH_INVALID;				\
 }while(0);
+
+#define RIL_SIGNALSTRENGTH_INIT_LTE(ril_signalstrength) do {                           \
+    ril_signalstrength.LTE_SignalStrength.signalStrength = 99;                         \
+    ril_signalstrength.LTE_SignalStrength.rsrp           = RIL_SIGNALSTRENGTH_INVALID; \
+    ril_signalstrength.LTE_SignalStrength.rsrq           = RIL_SIGNALSTRENGTH_INVALID; \
+    ril_signalstrength.LTE_SignalStrength.rssnr          = RIL_SIGNALSTRENGTH_INVALID; \
+    ril_signalstrength.LTE_SignalStrength.cqi            = RIL_SIGNALSTRENGTH_INVALID; \
+}while(0);
 /** RIL_CellIdentityGsm */
 typedef struct {
     int mcc;    /* 3-digit Mobile Country Code, 0..999, INT_MAX if unknown */
@@ -4324,7 +4332,7 @@ typedef struct {
 #if defined (RIL_SPRD_EXTENSION)
 #define RIL_REQUEST_LAST RIL_REQUEST_IMS_SEND_SMS
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-#define RIL_REQUEST_LAST RIL_REQUEST_LAST RIL_REQUEST_RESUME_QOS
+#define RIL_REQUEST_LAST RIL_REQUEST_RESUME_QOS
 #endif
 /***********************************************************************/
 
@@ -4969,6 +4977,8 @@ typedef struct {
 #define RIL_REQUEST_SET_SIM_SLOT_CFG  (RIL_SPRD_REQUEST_BASE + 31)  //SPRD:added for choose WCDMA SIM
 #define RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES (RIL_SPRD_REQUEST_BASE + 32)
 #define RIL_SPRD_REQUEST_LAST RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES
+#define RIL_REQUEST_SET_RILPROXY_LTE_ENABLE  (RIL_SPRD_REQUEST_BASE + 100)
+#define RIL_SPRD_REQUEST_LAST RIL_REQUEST_SET_RILPROXY_LTE_ENABLE
 
 #define RIL_SPRD_UNSOL_RESPONSE_BASE 6000
 #define RIL_UNSOL_VIDEOPHONE_DATA (RIL_SPRD_UNSOL_RESPONSE_BASE + 0)
@@ -4996,7 +5006,8 @@ typedef struct {
  *
  */
 #define RIL_UNSOL_SIM_PS_REJECT (RIL_SPRD_UNSOL_RESPONSE_BASE + 14)
-#define RIL_SPRD_UNSOL_RESPONSE_LAST RIL_UNSOL_SIM_PS_REJECT
+#define RIL_UNSOL_LTE_READY (RIL_SPRD_UNSOL_RESPONSE_BASE + 15)
+#define RIL_SPRD_UNSOL_RESPONSE_LAST RIL_UNSOL_LTE_READY
 #endif
 
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)

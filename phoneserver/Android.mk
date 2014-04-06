@@ -15,7 +15,7 @@ common_flags := -DANDROID_CHANGES -DEBUG
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(common_src)
 LOCAL_C_INCLUDES := $(LOCAL_PATH)
-LOCAL_SHARED_LIBRARIES := libcutils
+LOCAL_SHARED_LIBRARIES := libcutils libhardware_legacy
 LOCAL_CFLAGS := $(common_flags)
 LOCAL_MODULE_TAGS := optional
 

@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
-
 #include "config.h"
 
 /*## operation deliver_cmd_req(char*,pty_type) */
@@ -105,7 +104,7 @@ static char *readline(struct send_thread_t *me)
 			    		read(me->pty->pty_fd, p_read,
 				 	MAX_AT_RESPONSE - (p_read - me->pty->buffer));
 			}
-		} while (count < 0);
+		} while (count < 0 && errno == EINTR);
 
 		if (count > 0) {
 			AT_DUMP("CHNMNG:pty readline << ", p_read, count);
@@ -128,8 +127,7 @@ static char *readline(struct send_thread_t *me)
 			if (count == 0) {
 				PHS_LOGD("atchannel: EOF reached");
 			} else {
-				PHS_LOGE("atchannel: read error %s",
-				       strerror(errno));
+				PHS_LOGE("atchannel: read error %s", strerror(errno));
 			}
 			return NULL;
 		}
@@ -164,16 +162,18 @@ void *send_data(struct send_thread_t *me)
 		//PDEBUG("Waiting for command\n");
 		memset(buffer, 0, SERIAL_BUFFSIZE);
 		atstr = readline(me);	//read a completed at response
-		tmp_buff[0] = '\0';
-		snprintf(tmp_buff, sizeof(tmp_buff), "%s%c", atstr, me->end_char);
-		memset(atstr, 0, strlen(atstr));
-		received = strlen(tmp_buff);
-		PHS_LOGD
-		    ("Send thread's TID [%d] PS_PTY : %s Received %d bytes command[%s]\n",
-		     tid, me->pty->name, received, tmp_buff);
+		if (atstr != NULL) { 
+			tmp_buff[0] = '\0';
+			snprintf(tmp_buff, sizeof(tmp_buff), "%s%c", atstr, me->end_char);
+			memset(atstr, 0, strlen(atstr));
+			received = strlen(tmp_buff);
+			PHS_LOGD
+			    ("Send thread's TID [%d] PS_PTY : %s Received %d bytes command[%s]\n",
+		    	 tid, me->pty->name, received, tmp_buff);
 
-		//mutex_lock(&me->pty->receive_lock);  //get channel lock
-		me->ops->send_thread_deliver_cmd_req(me, tmp_buff, received);
+			//mutex_lock(&me->pty->receive_lock);  //get channel lock
+			me->ops->send_thread_deliver_cmd_req(me, tmp_buff, received);
+		}
 	}
 	return NULL;
 }

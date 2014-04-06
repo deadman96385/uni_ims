@@ -73,6 +73,8 @@ const struct cmd_table single_at_cmd_cvt_table[] = {
         cvt_generic_cmd_req, 5},
     {AT_CMD_CGQREQ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGQREQ"),
         cvt_generic_cmd_req, 5},
+    {AT_CMD_CGQREQ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQOS"),
+        cvt_generic_cmd_req, 5},
     {AT_CMD_CGEQMIN, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQMIN"),
         cvt_generic_cmd_req, 5},
     {AT_CMD_CGEQREQ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQREQ"),
@@ -154,12 +156,20 @@ const struct cmd_table single_at_cmd_cvt_table[] = {
         cvt_cgreg_cmd_req, 5},
     {AT_CMD_CGREG_SET, AT_CMD_TYPE_NW, AT_CMD_STR("AT+CGREG="),
         cvt_cgreg_cmd_req, 5},
+    {AT_CMD_CEREG_READ, AT_CMD_TYPE_NW, AT_CMD_STR("AT+CEREG?"),
+        cvt_cereg_cmd_req, 5},
+    {AT_CMD_CEREG_TEST, AT_CMD_TYPE_NW, AT_CMD_STR("AT+CEREG=?"),
+        cvt_cereg_cmd_req, 5},
+    {AT_CMD_CEREG_SET, AT_CMD_TYPE_NW, AT_CMD_STR("AT+CEREG="),
+        cvt_cereg_cmd_req, 5},
     {AT_CMD_CSQ_TEST, AT_CMD_TYPE_NW, AT_CMD_STR("AT+CSQ=?"),
         cvt_csq_test_req, 5},
     {AT_CMD_CSQ_ACTION, AT_CMD_TYPE_NW, AT_CMD_STR("AT+CSQ"),
         cvt_csq_action_req, 5},
     {AT_CMD_CSQ_ACTION, AT_CMD_TYPE_NW, AT_CMD_STR("AT+SPSCSQ"),
         cvt_spscsq_action_req, 5},
+    {AT_CMD_CSQ_ACTION, AT_CMD_TYPE_NW, AT_CMD_STR("AT+CESQ"),
+        cvt_generic_cmd_req, 5},
     {AT_CMD_CPOL, AT_CMD_TYPE_NW, AT_CMD_STR("AT+CPOL"),
         cvt_generic_cmd_req, 5},
     {AT_CMD_COPS, AT_CMD_TYPE_NW, AT_CMD_STR("AT+COPS=0"),
@@ -302,6 +312,8 @@ const struct cmd_table multi_at_cmd_cvt_table[] = {
         cvt_generic_cmd_req, 5},
     {AT_CMD_CGQREQ, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGQREQ"),
         cvt_generic_cmd_req, 5},
+    {AT_CMD_CGQREQ, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGEQOS"),
+        cvt_generic_cmd_req, 5},
     {AT_CMD_CGEQMIN, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGEQMIN"),
         cvt_generic_cmd_req, 5},
     {AT_CMD_CGEQREQ, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGEQREQ"),
@@ -312,7 +324,7 @@ const struct cmd_table multi_at_cmd_cvt_table[] = {
         cvt_cgdcont_set_req, 5},
     {AT_CMD_CGDATA_SET, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGDATA="),
         cvt_cgdata_set_req, 50},
-    {AT_CMD_CGACT_READ, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CGACT?"),
+    {AT_CMD_CGACT_READ, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGACT?"),
         cvt_cgact_query_cmd_req, 5},
     {AT_CMD_CGACT_SET, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGACT=1"),
         cvt_cgact_act_req, 600},
@@ -396,12 +408,20 @@ const struct cmd_table multi_at_cmd_cvt_table[] = {
         cvt_cgreg_cmd_req, 5},
     {AT_CMD_CGREG_SET, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CGREG="),
         cvt_cgreg_cmd_req, 5},
+    {AT_CMD_CEREG_READ, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CEREG?"),
+        cvt_cereg_cmd_req, 5},
+    {AT_CMD_CEREG_TEST, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CEREG=?"),
+        cvt_cgreg_cmd_req, 5},
+    {AT_CMD_CEREG_SET, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CEREG="),
+        cvt_cereg_cmd_req, 5},
     {AT_CMD_CSQ_TEST, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CSQ=?"),
         cvt_csq_test_req, 5},
     {AT_CMD_CSQ_ACTION, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CSQ"),
         cvt_csq_action_req, 5},
     {AT_CMD_CSQ_ACTION, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+SPSCSQ"),
         cvt_spscsq_action_req, 5},
+    {AT_CMD_CSQ_ACTION, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CESQ"),
+        cvt_generic_cmd_req, 5},
     {AT_CMD_CPOL, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CPOL"),
         cvt_generic_cmd_req, 5},
     {AT_CMD_COPS, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+COPS=0"),
@@ -524,6 +544,7 @@ const struct ind_table at_ind_cvt_table[] = {
     {AT_CMD_COLP_IND, AT_CMD_STR("+COLP:"), cvt_generic_cmd_ind},
     {AT_CMD_CREG_IND, AT_CMD_STR("+CREG:"), cvt_generic_cmd_ind},
     {AT_CMD_CGREG_IND, AT_CMD_STR("+CGREG:"), cvt_generic_cmd_ind},
+    {AT_CMD_CEREG_IND, AT_CMD_STR("+CEREG:"), cvt_generic_cmd_ind},
     {AT_CMD_CUSD_IND, AT_CMD_STR("+CUSD:"), cvt_generic_cmd_ind},
     {AT_CMD_CSQ_IND, AT_CMD_STR("+CSQ:"), cvt_csq_cmd_ind},
     {AT_CMD_CSQ_IND, AT_CMD_STR("+SPSCSQ:"), cvt_spscsq_cmd_ind},
@@ -575,6 +596,11 @@ int findInBuf(char *buf, int len, char *needle)
 {
     int i;
     int needleMatchedPos = 0;
+
+    if (buf == NULL) {
+        return 0;
+    }
+
     if (needle[0] == '\0') {
         return 1;
     }
@@ -968,7 +994,8 @@ int cvt_generic_cmd_req(AT_CMD_REQ_T * req)
             || strStartsWith(req->cmd_str, "AT+CFUN=0")
             || strStartsWith(req->cmd_str, "at+sfun=5")
             || strStartsWith(req->cmd_str, "AT+SFUN=5")) {
-        for(i = 0; i < MAX_PPP_NUM; i++)
+       int maxPDPNum = getMaxPDPNum();
+        for(i = 0; i < maxPDPNum; i++)
             ppp_info[i].state = PPP_STATE_IDLE;
     }
 
@@ -2049,6 +2076,55 @@ int cvt_cgreg_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
             ind_eng_pty->ops->pty_write(ind_eng_pty, rsp->rsp_str, rsp->len);
     }
     if (findInBuf(rsp->rsp_str, rsp->len, "+CGREG")) {
+        adapter_pty_write((pty_t *) user_data, rsp->rsp_str, rsp->len);
+    } else if (adapter_cmd_is_end(rsp->rsp_str, rsp->len) == TRUE) {
+        adapter_cmux_deregister_callback(rsp->recv_cmux);
+        adapter_pty_write((pty_t *) user_data, rsp->rsp_str, rsp->len);
+        adapter_pty_end_cmd((pty_t *) user_data);
+        adapter_free_cmux(rsp->recv_cmux);
+    } else {
+        return AT_RESULT_NG;
+    }
+    return AT_RESULT_OK;
+}
+
+int cvt_cereg_cmd_req(AT_CMD_REQ_T * req)
+{
+    cmux_t *mux;
+
+    if (req == NULL) {
+        return AT_RESULT_NG;
+    }
+    mux = adapter_get_cmux(req->cmd_type, TRUE);
+    adapter_cmux_register_callback(mux, cvt_cereg_cmd_rsp,
+            (int)req->recv_pty);
+    adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
+    return AT_RESULT_PROGRESS;
+}
+
+int cvt_cereg_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
+{
+    int ret;
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
+
+    if (rsp == NULL) {
+        return AT_RESULT_NG;
+    }
+    if (findInBuf(rsp->rsp_str, rsp->len, "NO CARRIER")) {
+        if(multiSimMode == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(rsp->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(rsp->recv_cmux->type));
+        } else {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
+        if(ind_pty && ind_pty->ops)
+            ind_pty->ops->pty_write(ind_pty, rsp->rsp_str, rsp->len);
+        if(ind_eng_pty && ind_eng_pty->ops)
+            ind_eng_pty->ops->pty_write(ind_eng_pty, rsp->rsp_str, rsp->len);
+    }
+    if (findInBuf(rsp->rsp_str, rsp->len, "+CEREG")) {
         adapter_pty_write((pty_t *) user_data, rsp->rsp_str, rsp->len);
     } else if (adapter_cmd_is_end(rsp->rsp_str, rsp->len) == TRUE) {
         adapter_cmux_deregister_callback(rsp->recv_cmux);

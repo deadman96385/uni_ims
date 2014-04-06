@@ -43,7 +43,11 @@
 
 #define SINGLE_PTY_CHN_NUM  				6	//send thread number
 #define SINGLE_INDPTY_NUM				1
-#define SINGLE_PHS_MUX_NUM  			11	//Receive thread number
+#define SINGLE_PHS_MUX_NUM  				11	//Receive thread number
+
+#define LTE_PTY_CHN_NUM					4       //send thread number for LTE
+#define LTE_INDPTY_NUM					1
+#define LTE_MUX_CHN_NUM					11      //Receive thread number for LTE
 
 #define MULTI_PTY_CHN_NUM  				15	//send thread number
 #define MULTI_INDPTY_NUM				4

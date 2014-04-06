@@ -32,12 +32,17 @@
 #include "version.h"
 #include <private/android_filesystem_config.h>
 #include "cutils/properties.h"
+#include <hardware_legacy/power.h>
 
 #define TD_SIM_NUM  "ro.modem.t.count"
 #define W_SIM_NUM  "ro.modem.w.count"
+#define L_SIM_NUM  "ro.modem.l.count"
 
 #define MUX_TD_DEV  "ro.modem.t.tty"
 #define MUX_W_DEV  "ro.modem.w.tty"
+#define MUX_L_DEV  "ro.modem.l.tty"
+
+#define ANDROID_WAKE_LOCK_NAME "phoneserver-init"
 
 const char *modem = NULL;
 int multiSimMode;
@@ -105,6 +110,29 @@ struct chns_config_t multi_chns_data = {.pty = {
 	{.dev_str = "",.index = 11,.type = ATM2_SIM4,.prority = 20},
 },
 };
+
+
+struct chns_config_t single_chns_data_l = {.pty = {
+	{.dev_str = "/dev/CHNPTY0",.index = 0,.type = IND,.prority = 1}, 	/*## attribute ind_pty */
+	{.dev_str = "/dev/CHNPTY1",.index = 1,.type = AT, .prority = 1},	/*## attribute at_pty */
+	{.dev_str = "/dev/CHNPTY2",.index = 2,.type = AT, .prority = 1},	/*## attribute at_pty */
+	{.dev_str = "/dev/CHNPTY3",.index = 3,.type = AT, .prority = 1},	/*## attribute at_pty */
+},.mux = {
+	{.dev_str = "",.index = 0,.type = INDM,.prority = 20},	/*## attribute misc_mux */
+	{.dev_str = "",.index = 1,.type = SIMM,.prority = 20},	/*## attribute sim_mux */
+	{.dev_str = "",.index = 2,.type = SSM,.prority = 20},	/*## attribute ss_mux */
+	{.dev_str = "",.index = 3,.type = PBKM,.prority = 20},	/*## attribute pbk_mux */
+	{.dev_str = "",.index = 4,.type = STMM,.prority = 20},	/*## attribute stm_mux */
+	{.dev_str = "",.index = 5,.type = GSM,.prority = 20},	/*## attribute gsm_mux */
+	{.dev_str = "",.index = 6,.type = CSM,.prority = 20},	/*## attribute cs_mux */
+	{.dev_str = "",.index = 7,.type = PSM,.prority = 20},	/*## attribute ps_mux */
+	{.dev_str = "",.index = 8,.type = NWM,.prority = 20},	/*## attribute nw_mux */
+	{.dev_str = "",.index = 9,.type = STKM,.prority = 20},	/*## attribute stk_mux */
+	{.dev_str = "",.index = 10,.type = SMSM,.prority = 20},	/*## attribute smsm_mux */
+},
+};
+
+
 /*
  * get_pty - get a pty master/slave pair and chown the slave side
  * to the uid given.  Assumes slave_name points to >= 16 bytes of space.
@@ -242,11 +270,26 @@ static cmux_t *find_type_cmux(struct channel_manager_t *const me, mux_type type)
     int i;
 
     sem_lock(&me->get_mux_lock);
-    for (i = 0; i < MUX_NUM; i++) {
-        if (me->itsCmux[i].type == (int)type && me->itsCmux[i].in_use == 0) {
-            mux = &me->itsCmux[i];
-            mux->in_use = 1;
-            break;
+    if(!strcmp(modem, "l")) {
+        for (i = 0; i < LTE_MUX_CHN_NUM; i++) {
+            PHS_LOGD("LTE find_type_cmux  i = %d, me->itsCmux[i].type = %d, me->itsCmux[i].in_use = %d\n" ,i, me->itsCmux[i].type, me->itsCmux[i].in_use);
+            if (me->itsCmux[i].type == (int)type && me->itsCmux[i].in_use == 0) {
+                PHS_LOGD("LTE find_type_cmux type = %d\n",type);
+                mux = &me->itsCmux[i];
+                mux->in_use = 1;
+                break;
+            }
+        }
+
+    } else {
+        for (i = 0; i < MUX_NUM; i++) {
+            PHS_LOGD("find_type_cmux  i = %d, me->itsCmux[i].type = %d, me->itsCmux[i].in_use = %d\n" ,i, me->itsCmux[i].type, me->itsCmux[i].in_use);
+            if (me->itsCmux[i].type == (int)type && me->itsCmux[i].in_use == 0) {
+                PHS_LOGD(" find_type_cmux type = %d\n",type);
+                mux = &me->itsCmux[i];
+                mux->in_use = 1;
+                break;
+            }
         }
     }
     sem_unlock(&me->get_mux_lock);
@@ -709,7 +752,9 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
     int fd;
     int phs_mux_num;
     int size;
+    int chn_num = MUX_NUM;
     struct chns_config_t chns_data;
+    struct termios ser_settings;
 
     memset(me->itsCmux, 0, sizeof(struct cmux_t) * MUX_NUM);
 
@@ -717,6 +762,9 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
         property_get(MUX_TD_DEV, prop, "/dev/ts0710mux");
     } else if(!strcmp(modem, "w")) {
         property_get(MUX_W_DEV, prop, "/dev/ts0710mux");
+    } else if(!strcmp(modem, "l")) {
+        property_get(MUX_L_DEV, prop, "/dev/sdiomux");
+        chn_num = LTE_MUX_CHN_NUM ;
     } else {
         PHS_LOGE("Wrong modem parameter");
 	exit(-1);
@@ -724,7 +772,7 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
 
     PHS_LOGD("cmux_Init: mux device is %s", prop);
 
-    for (i = 0; i < MUX_NUM; i++) {
+    for (i = 0; i < chn_num; i++) {
         snprintf(muxname, sizeof(muxname), "%s%d", prop, i);
         PHS_LOGD("CHNMNG: open mux:%s !\n ",muxname);
         me->itsCmux[i].type = RESERVE;
@@ -735,7 +783,7 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
             if(i > 14) {
                 continue;
             } else {
-                PHS_LOGD("Phoneserver exit: open %s failed!\n ", muxname);
+                PHS_LOGD("Phoneserver exit: open %s failed!, errno = %d (%s)\n ", muxname, errno, strerror(errno));
                 exit(-1);
 	    }
         }
@@ -747,6 +795,12 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
     } else {
         phs_mux_num = SINGLE_PHS_MUX_NUM;
         chns_data = single_chns_data;
+    }
+
+    if(!strcmp(modem, "l")) {
+        property_get(MUX_L_DEV, prop, "/dev/sdiomux");
+        phs_mux_num = LTE_MUX_CHN_NUM ;
+        chns_data = single_chns_data_l;
     }
 
     for (i = 0; i < phs_mux_num; i++) {
@@ -762,6 +816,11 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
             PHS_LOGD("Phoneserver exit: open mux:%s failed!\n", me->itsCmux[i].name);
             exit(1);
         }
+        if(isatty(me->itsCmux[i].muxfd)) {
+             tcgetattr(me->itsCmux[i].muxfd, &ser_settings);
+             cfmakeraw(&ser_settings);
+             tcsetattr(me->itsCmux[i].muxfd, TCSANOW, &ser_settings);
+        }
         PHS_LOGD("CHNMNG: open mux:%s fd=%d  !\n ",	me->itsCmux[i].name, me->itsCmux[i].muxfd);
         sem_init(&me->itsReceive_thread[i].resp_cmd_lock, 0, 1);
         sem_init(&me->itsCmux[i].cmux_lock, 0, 0);
@@ -772,6 +831,20 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
 
         PHS_LOGD("CHNMNG: after open mux:%s fd=%d  !\n ",
                 me->itsCmux[i].name, me->itsCmux[i].muxfd);
+    }
+
+    /*for test: delete after modification of kernel layer*/
+    /* veth_spi0<->sdiomux13 */
+    /* veth_spi1<->sdiomux14 */
+    /* veth_spi2<->sdiomux15 */
+    /* veth_spi3<->sdiomux16 */
+    /* veth_spi4<->sdiomux17 */
+    for (i=13; i<18; i++) {
+        snprintf(muxname, sizeof(muxname), "/dev/sdiomux%d",i);
+        fd = open(muxname, O_RDWR);
+        PHS_LOGD(" open %s fd = %d\n ",muxname,fd);
+        if (fd < 0)
+            PHS_LOGD(" after open %s errno = %d (%s) \n",muxname, errno, strerror(errno));
     }
 }
 
@@ -796,6 +869,8 @@ static void chnmng_pty_Init(struct channel_manager_t *const me)
         strcpy(pre_ptyname, "/dev/CHNPTYT");
     } else if(!strcmp(modem, "w")) {
          strcpy(pre_ptyname, "/dev/CHNPTYW");
+    } else if(!strcmp(modem, "l")) {
+         strcpy(pre_ptyname, "/dev/CHNPTYL");
     } else {
         PHS_LOGE("Wrong modem parameter");
 	exit(-1);
@@ -808,6 +883,11 @@ static void chnmng_pty_Init(struct channel_manager_t *const me)
         pty_chn_num = SINGLE_PTY_CHN_NUM;
         chns_data = single_chns_data;
     }
+
+    if(!strcmp(modem, "l")) {
+        pty_chn_num = LTE_PTY_CHN_NUM ;
+        chns_data = single_chns_data_l;
+    } 
 
     /*set attris to default value */
     for (i = 0; i < pty_chn_num; i++) {
@@ -857,6 +937,12 @@ void chnmng_start_thread(struct channel_manager_t *const me)
         chns_data = single_chns_data;
     }
 
+    if(!strcmp(modem, "l")) {
+        phs_mux_num = LTE_MUX_CHN_NUM;
+        pty_chn_num = LTE_PTY_CHN_NUM;
+        chns_data = single_chns_data_l;
+    } 
+
     for (i = 0; i < phs_mux_num; i++) {  //receive thread
         tid =thread_creat(&me->itsReceive_thread[i].thread, NULL,
                 (void *)me->itsReceive_thread[i].ops->receive_data,
@@ -892,6 +978,14 @@ void chnmng_start_thread(struct channel_manager_t *const me)
     }
 }
 
+static void getPartialWakeLock() {
+    acquire_wake_lock(PARTIAL_WAKE_LOCK, ANDROID_WAKE_LOCK_NAME);
+}
+
+static void releaseWakeLock() {
+     release_wake_lock(ANDROID_WAKE_LOCK_NAME);
+}
+
 /*## operation initialize all channel manager's objects  according to phone server configuration  file*/
 static void channel_manager_init(void)
 {
@@ -902,6 +996,7 @@ static void channel_manager_init(void)
     sem_init(&chnmng.array_lock, 0, 1);
     chnmng.block_count = 0;
 
+    getPartialWakeLock();
     chnmng_buffer_Init(chnmng.me);
     chnmng_cmux_Init(chnmng.me);
     chnmng_pty_Init(chnmng.me);
@@ -909,6 +1004,7 @@ static void channel_manager_init(void)
     setuid(AID_SYSTEM); /* switch user to system  */
 
     chnmng_start_thread(chnmng.me);
+    releaseWakeLock();
 }
 
 extern void ps_service_init(void);
@@ -919,6 +1015,7 @@ static void usage(const char *argv)
     PHS_LOGE("Usage: %s -m <modem>", argv);
     PHS_LOGE("modem: t (td modem)");
     PHS_LOGE("modem: w (wcdma modem)");
+    PHS_LOGE("modem: l (lte modem)");
     exit(-1);
 }
 
@@ -932,6 +1029,8 @@ static void *detect_at_no_response(void *par)
         strcpy(socket_name, "phstd");
     } else if(!strcmp(modem, "w")) {
          strcpy(socket_name, "phsw");
+    } else if(!strcmp(modem, "l")) {
+         strcpy(socket_name, "phsl");
     } else {
         PHS_LOGE("Wrong modem parameter");
 	exit(-1);
@@ -974,6 +1073,8 @@ int main(int argc, char *argv[])
         property_get(TD_SIM_NUM, prop, "");
     } else if(!strcmp(modem, "w")) {
         property_get(W_SIM_NUM, prop, "");
+    } else if(!strcmp(modem, "l")) {
+        property_get(L_SIM_NUM, prop, "");
     } else {
 	usage(argv[0]);
     }
