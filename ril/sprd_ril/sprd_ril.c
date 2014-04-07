@@ -116,9 +116,9 @@ typedef enum {
 #define RIL_SIM0_STATE  "gsm.sim.state0"
 #define RIL_SIM_ABSENT_PROPERTY "persist.sys.sim.absence"
 #define RIL_SIM1_ABSENT_PROPERTY "ril.sim1.absent"  /* this property will be set by phoneserver */
-#define PERSIST_MODEM_L_RSIM_PROPERTY    "persist.radio.modem.l.rsim"
+#define PERSIST_MODEM_L_RSIM_PROPERTY    "persist.modem.l.rsim"
 #define MODEM_SSDA_USIM_PROPERTY         "ril.ssda.usim"
-#define PERSIST_MOMEM_L_ENABLE_PROPERTY  "persist.radio.modem.l.enable"
+#define PERSIST_MOMEM_L_ENABLE_PROPERTY  "persist.modem.l.enable"
 #define LTE_MODEM_START_PROP         "ril.service.l.enable"
 
 
