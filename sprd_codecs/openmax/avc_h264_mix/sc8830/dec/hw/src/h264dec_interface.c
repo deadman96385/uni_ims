@@ -244,7 +244,7 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
 PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, MMDecOutput *dec_output_ptr)
 {
     MMDecRet ret = MMDEC_OK;
-    int32 i;
+    int32 i, start_code_len = 0;
     uint32 bs_buffer_length, bs_start_addr, destuffing_num;
     H264DecObject *vo = (H264DecObject *) avcHandle->videoDecoderData;
 
@@ -299,8 +299,8 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
     }
 
     //Get start code length of first NALU.
-    vo->g_slice_datalen=VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_NAL_LEN,"get NAL_LEN");
-    vo->g_stream_offset+=vo->g_slice_datalen;
+    start_code_len=VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_NAL_LEN,"get NAL_LEN");
+    vo->g_stream_offset+=start_code_len;
 
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
     {
@@ -320,7 +320,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, V_BIT_2|V_BIT_1,"BSM_OP clr BSM");//clr BSM
 
         VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, ((V_BIT_31|V_BIT_30)|vo->g_stream_offset),"BSM_cfg1 check startcode");//byte align
-        VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, (V_BIT_31|((bs_buffer_length < MIN_LEN_FOR_HW) ? MIN_LEN_FOR_HW : bs_buffer_length)),"BSM_cfg0 stream buffer size");//BSM load data
+        VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, (V_BIT_31|(((bs_buffer_length - vo->g_stream_offset) < MIN_LEN_FOR_HW) ? (MIN_LEN_FOR_HW + vo->g_stream_offset) : bs_buffer_length)),"BSM_cfg0 stream buffer size");//BSM load data
         if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG1_OFF, V_BIT_2,V_BIT_2,TIME_OUT_CLK_FRAME, "startcode found"))//check bsm is idle
         {
             break;
@@ -332,9 +332,9 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         destuffing_num = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + DSTUF_NUM_OFF, "get DSTUF_NUM");
 
         //Added for bug293635
-        if (bs_buffer_length < MIN_LEN_FOR_HW)
+        if ((bs_buffer_length - vo->g_stream_offset) < MIN_LEN_FOR_HW)
         {
-            vo->g_nalu_ptr->len -= (MIN_LEN_FOR_HW - bs_buffer_length);
+            vo->g_nalu_ptr->len -= (MIN_LEN_FOR_HW - (bs_buffer_length - vo->g_stream_offset));
         }
 
         SCI_TRACE_LOW("%s, %d, g_slice_datalen: %d, g_nalu_ptr->len: %d, destuffing_num: %d", __FUNCTION__, __LINE__, vo->g_slice_datalen, vo->g_nalu_ptr->len, destuffing_num);
@@ -349,7 +349,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         if (vo->g_slice_datalen < MIN_LEN_FOR_HW)
         {
             VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, ((V_BIT_31|V_BIT_30)|vo->g_stream_offset),"BSM_cfg1 check startcode");//byte align
-            VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, (V_BIT_31|((vo->g_slice_datalen < MIN_LEN_FOR_HW) ? MIN_LEN_FOR_HW : bs_buffer_length)),"BSM_cfg0 stream buffer size");//BSM load data
+            VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, (V_BIT_31|MIN_LEN_FOR_HW),"BSM_cfg0 stream buffer size");//BSM load data
             if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG1_OFF, V_BIT_2,V_BIT_2,TIME_OUT_CLK_FRAME, "startcode found"))//check bsm is idle
             {
                 break;
