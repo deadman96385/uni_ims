@@ -3482,7 +3482,34 @@ static void requestRegistrationState(int channelID, int request, void *data,
             /* special case for CGREG, there is a fourth parameter
              * that is the network type (unknown/gprs/edge/umts)
              */
-        case 4: /* +CGREG: <n>, <stat>, <lac>, <cid>, <networkType> */
+        case 4:
+            if (!strcmp(s_modem, "l")) { /* +CEREG: <n>, <stat>, <lac>, <rac>, <cid> */
+                RILLOGD("fhy requestRegistrationState  111");
+                err = at_tok_nextint(&line, &skip);
+                if (err < 0) goto error;
+                err = at_tok_nextint(&line, &response[0]);
+                if (err < 0) goto error;
+                err = at_tok_nexthexint(&line, &response[1]);
+                if (err < 0) goto error;
+                err = at_tok_nexthexint(&line, &response[2]);
+                if (err < 0) goto error;
+                err = at_tok_nexthexint(&line, &response[3]);
+                if (err < 0) goto error;
+            } else { /* +CGREG: <n>, <stat>, <lac>, <cid>, <networkType> */
+                RILLOGD("fhy requestRegistrationState  222");
+                err = at_tok_nextint(&line, &skip);
+                if (err < 0) goto error;
+                err = at_tok_nextint(&line, &response[0]);
+                if (err < 0) goto error;
+                err = at_tok_nexthexint(&line, &response[1]);
+                if (err < 0) goto error;
+                err = at_tok_nexthexint(&line, &response[2]);
+                if (err < 0) goto error;
+                err = at_tok_nextint(&line, &response[3]);
+                if (err < 0) goto error;
+            }
+            break;
+        case 5: /* +CEREG: <n>, <stat>, <lac>, <rac>, <cid>, <networkType> */
             err = at_tok_nextint(&line, &skip);
             if (err < 0) goto error;
             err = at_tok_nextint(&line, &response[0]);
@@ -3492,6 +3519,8 @@ static void requestRegistrationState(int channelID, int request, void *data,
             err = at_tok_nexthexint(&line, &response[2]);
             if (err < 0) goto error;
             err = at_tok_nexthexint(&line, &response[3]);
+            if (err < 0) goto error;
+            err = at_tok_nextint(&line, &response[4]);
             if (err < 0) goto error;
             break;
         default:
