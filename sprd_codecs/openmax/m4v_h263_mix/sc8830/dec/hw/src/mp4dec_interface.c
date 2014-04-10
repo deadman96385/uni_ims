@@ -154,7 +154,7 @@ PUBLIC void Mp4GetVideoDimensions(MP4Handle *mp4Handle, int32 *display_width, in
     *display_width = vop_mode_ptr->OrgFrameWidth;
     *display_height =  vop_mode_ptr->OrgFrameHeight;
 
-    SCI_TRACE_LOW("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *display_width, *display_height);
+    //SCI_TRACE_LOW("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *display_width, *display_height);
 }
 
 PUBLIC void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *height)
@@ -165,7 +165,7 @@ PUBLIC void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *he
     *width =( (vop_mode_ptr->OrgFrameWidth + 15) >>4) <<4;
     *height = ( (vop_mode_ptr->OrgFrameHeight + 15) >>4) <<4;
 
-    SCI_TRACE_LOW("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
+    //SCI_TRACE_LOW("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
 }
 
 PUBLIC MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *max_width, int32 *max_height)

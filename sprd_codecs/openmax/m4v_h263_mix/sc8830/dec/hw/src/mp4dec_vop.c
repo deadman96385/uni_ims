@@ -335,7 +335,7 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
         vop_mode_ptr->mb_y = (cmd & 0xff);
         vop_mode_ptr->mb_x = ((cmd >> 8) & 0xff);
 
-        SCI_TRACE_LOW("%s, %d, vop_mode_ptr->mb_y: %d, vop_mode_ptr->mb_x: %d", __FUNCTION__, __LINE__, vop_mode_ptr->mb_y, vop_mode_ptr->mb_x);
+        //SCI_TRACE_LOW("%s, %d, vop_mode_ptr->mb_y: %d, vop_mode_ptr->mb_x: %d", __FUNCTION__, __LINE__, vop_mode_ptr->mb_y, vop_mode_ptr->mb_x);
 
         if(vop_mode_ptr->mb_y == (vop_mode_ptr->MBNumY-1) && vop_mode_ptr->mb_x==(vop_mode_ptr->MBNumX-1))
         {

@@ -134,8 +134,10 @@ PUBLIC int32 VSP_POLL_COMPLETE(VSPObject *vo)
             ioctl(vo->s_vsp_fd, VSP_COMPLETE, &ret);
             cnt++;
         } while ((ret & V_BIT_30) &&  (cnt < MAX_POLL_CNT));
-
-        SCI_TRACE_LOW("%s, %d, int_ret: %0x", __FUNCTION__, __LINE__, ret);
+	if(!(V_BIT_1 == ret || V_BIT_2 == ret ))
+	{
+        	SCI_TRACE_LOW("%s, %d, int_ret: %0x", __FUNCTION__, __LINE__, ret);
+	}
 
         return ret;
     } else
