@@ -3345,6 +3345,7 @@ error:
  *   public static final int RADIO_TECHNOLOGY_HSDPA = 9;
  *   public static final int RADIO_TECHNOLOGY_HSUPA = 10;
  *   public static final int RADIO_TECHNOLOGY_HSPA = 11;
+ *   public static final int RIL_RADIO_TECHNOLOGY_LTE = 14;
 */
 static int mapCgregResponse(int in_response)
 {
@@ -3371,6 +3372,9 @@ static int mapCgregResponse(int in_response)
             break;
         case 15:
             out_response = 15;   /* HSPA+ */
+            break;
+        case 7:
+            out_response = 14;   /* LTE */
             break;
         default:
             out_response = 0;    /* UNKNOWN */
@@ -3518,9 +3522,9 @@ static void requestRegistrationState(int channelID, int request, void *data,
             if (err < 0) goto error;
             err = at_tok_nexthexint(&line, &response[2]);
             if (err < 0) goto error;
-            err = at_tok_nexthexint(&line, &response[3]);
+            err = at_tok_nexthexint(&line, &skip);
             if (err < 0) goto error;
-            err = at_tok_nextint(&line, &response[4]);
+            err = at_tok_nextint(&line, &response[3]);
             if (err < 0) goto error;
             break;
         default:
