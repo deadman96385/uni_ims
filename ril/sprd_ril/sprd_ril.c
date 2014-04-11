@@ -712,6 +712,8 @@ static void deactivateDataConnection(int channelID, void *data, size_t datalen, 
     int cid;
     char cmd[30];
     bool IsLte = isLte();
+    int failCause = 0;
+    char *line;
 
     cid_ptr = ((const char **)data)[0];
     cid = atoi(cid_ptr);
@@ -739,9 +741,23 @@ static void deactivateDataConnection(int channelID, void *data, size_t datalen, 
         RILLOGD(" cmd = %s", cmd);
 
         err = at_send_command(ATch_type[channelID], cmd, &p_response);
-        if (err < 0 || p_response->success == 0)
-            goto error;
-
+        if (err < 0 || p_response->success == 0) {
+            if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
+                line = p_response->finalResponse;
+                err = at_tok_start(&line);
+                if (err >= 0) {
+                    err = at_tok_nextint(&line,&failCause);
+                    if (err >= 0 && failCause == 151) {
+                        RILLOGD("get 151 error,do detach");
+                        at_send_command(ATch_type[channelID], "AT+SGFD", NULL);
+                    } else {
+                        goto error;
+                    }
+                }
+            } else {
+                goto error;
+            }
+        }
         for (i=0; i<2; i++) {
             putPDP(pdpTable[cid-1][i]);
         }
