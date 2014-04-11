@@ -1384,7 +1384,7 @@ void get_max_dec_frame_buf_size(H264DecObject *vo, DEC_SPS_T *sps)
         break;
     default:
         SCI_TRACE_LOW("undefined level");
-        vo->error_flag  |= ER_FORMAT_ID;
+//        vo->error_flag  |= ER_FORMAT_ID;
         size = 70778880;//weihu
         //EXIT(500);//weihu
         break;
