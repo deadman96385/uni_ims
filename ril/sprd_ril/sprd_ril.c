@@ -4548,6 +4548,7 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
     char sim_prop[20];
     int remaintime = 3;
     SimUnlockType rsqtype = UNLOCK_PIN;
+    SIM_Status simstatus = SIM_ABSENT;
 
     if ( datalen == 2*sizeof(char*) ) {
         ret = asprintf(&cmd, "AT+CPIN=%s", strings[0]);
@@ -4637,8 +4638,17 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
 out:
         remaintime = getSimlockRemainTimes(channelID, rsqtype);
         RIL_onRequestComplete(t, RIL_E_SUCCESS, &remaintime, sizeof(remaintime));
-        if(getSIMStatus(channelID) == SIM_READY) {
+        simstatus = getSIMStatus(channelID);
+        RILLOGD("simstatus = %d", simstatus);
+        if(simstatus == SIM_READY) {
+        //if(getSIMStatus(channelID) == SIM_READY) {
             setRadioState(channelID, RADIO_STATE_SIM_READY);
+        }else if((SIM_NETWORK_PERSONALIZATION == simstatus)
+                  || (SIM_SIM_PERSONALIZATION == simstatus)
+                  || (SIM_NETWORK_SUBSET_PERSONALIZATION == simstatus)
+                  || (SIM_CORPORATE_PERSONALIZATION == simstatus)
+                  || (SIM_SERVICE_PROVIDER_PERSONALIZATION == simstatus)){
+            RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
         }
         at_response_free(p_response);
         return;
@@ -4656,6 +4666,7 @@ static void  requestVerifySimPuk2(int channelID, void*  data, size_t  datalen, R
     char *cmd = NULL;
     const char **strings = (const char**)data;
     int ret;
+    SIM_Status simstatus = SIM_ABSENT;
 
     if (datalen == 3*sizeof(char*) ) {
         ret = asprintf(&cmd, "ATD**052*%s*%s*%s#",strings[0],strings[1],strings[1]);
@@ -4676,8 +4687,17 @@ static void  requestVerifySimPuk2(int channelID, void*  data, size_t  datalen, R
 
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     at_response_free(p_response);
-    if(getSIMStatus(channelID) == SIM_READY) {
+    simstatus = getSIMStatus(channelID);
+    RILLOGD("simstatus = %d", simstatus);
+    if(simstatus == SIM_READY) {
+    //if(getSIMStatus(channelID) == SIM_READY) {
         setRadioState(channelID, RADIO_STATE_SIM_READY);
+    }else if((SIM_NETWORK_PERSONALIZATION == simstatus)
+              || (SIM_SIM_PERSONALIZATION == simstatus)
+              || (SIM_NETWORK_SUBSET_PERSONALIZATION == simstatus)
+              || (SIM_CORPORATE_PERSONALIZATION == simstatus)
+              || (SIM_SERVICE_PROVIDER_PERSONALIZATION == simstatus)){
+        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
     }
     return;
 error:
