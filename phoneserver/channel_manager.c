@@ -778,13 +778,17 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
         me->itsCmux[i].type = RESERVE;
         me->itsCmux[i].ops = cmux_get_operations();
         me->itsCmux[i].ops->cmux_free(&me->itsCmux[i]);
+retry:
         fd = open(muxname, O_RDWR);
         if(fd < 0) {
             if(i > 14) {
                 continue;
             } else {
                 PHS_LOGD("Phoneserver exit: open %s failed!, errno = %d (%s)\n ", muxname, errno, strerror(errno));
-                exit(-1);
+                if (errno == EAGAIN)
+                   goto retry;
+                else 
+                  exit(-1);
 	    }
         }
     }
