@@ -2289,6 +2289,9 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
                         goto error;
                     }
                     pthread_mutex_unlock(&s_lte_attach_mutex);
+                } else {
+                    RILLOGD("STATE_IN_SERVICE  release mutex");
+                    pthread_mutex_unlock(&s_lte_attach_mutex);
                 }
             }
 
