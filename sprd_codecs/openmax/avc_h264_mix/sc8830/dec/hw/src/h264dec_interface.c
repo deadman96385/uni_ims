@@ -278,10 +278,10 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
     vo->g_stream_offset = 0;
 
     //for bug281448, add start code at the tail of stream.
-    vo->pStream[bs_buffer_length] = 0x00;
-    vo->pStream[bs_buffer_length+1] = 0x00;
-    vo->pStream[bs_buffer_length+2] = 0x00;
-    vo->pStream[bs_buffer_length+3] = 0x01;
+    vo->pStream[bs_buffer_length] = 0xf4;
+    vo->pStream[bs_buffer_length+1] = 0xf3;
+    vo->pStream[bs_buffer_length+2] = 0xf2;
+    vo->pStream[bs_buffer_length+3] = 0xf1;
 
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
     {
@@ -334,10 +334,14 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         //Added for bug293635
         if ((bs_buffer_length - vo->g_stream_offset) < MIN_LEN_FOR_HW)
         {
-            vo->g_nalu_ptr->len -= (MIN_LEN_FOR_HW - (bs_buffer_length - vo->g_stream_offset));
+            int32 added_bytes = (MIN_LEN_FOR_HW - (bs_buffer_length - vo->g_stream_offset));
+            vo->g_slice_datalen -= added_bytes;
+            vo->g_nalu_ptr->len -= added_bytes;
+            SCI_TRACE_LOW("%s, %d, added_bytes: %d", __FUNCTION__, __LINE__, added_bytes);
         }
 
-        SCI_TRACE_LOW("%s, %d, g_slice_datalen: %d, g_nalu_ptr->len: %d, destuffing_num: %d", __FUNCTION__, __LINE__, vo->g_slice_datalen, vo->g_nalu_ptr->len, destuffing_num);
+        SCI_TRACE_LOW("%s, %d, g_stream_offset: %d, g_slice_datalen: %d, g_nalu_ptr->len: %d, destuffing_num: %d", __FUNCTION__, __LINE__,
+                      vo->g_stream_offset, vo->g_slice_datalen, vo->g_nalu_ptr->len, destuffing_num);
 
         if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
         {
@@ -369,12 +373,9 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
         ret = H264DecDecode_NALU(vo, dec_input_ptr, dec_output_ptr);
 
-        SCI_TRACE_LOW("%s, %d, g_slice_datalen: %d, g_stream_offset: %d, bs_buffer_length: %d, frame_dec_finish: %d,ret:  %d ",
-                      __FUNCTION__, __LINE__, vo->g_slice_datalen, vo->g_stream_offset, bs_buffer_length, vo->frame_dec_finish, ret);
+        SCI_TRACE_LOW("%s, %d, g_nalu_ptr->len: %d, frame_dec_finish: %d,ret:  %d ", __FUNCTION__, __LINE__, vo->g_nalu_ptr->len, vo->frame_dec_finish, ret);
 
         dec_input_ptr->dataLen = vo->g_stream_offset + vo->g_nalu_ptr->len + destuffing_num;
-
-        vo->g_stream_offset += vo->g_slice_datalen;//dec_input_ptr->dataLen;
 
         if( (MMDEC_ERROR == ret) || vo->frame_dec_finish)//dec_output.frameEffective
         {
@@ -403,6 +404,9 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
             break;	//break loop.
         }
+
+        //for next slice
+        vo->g_stream_offset += vo->g_slice_datalen;
     }
 
 DEC_EXIT:
