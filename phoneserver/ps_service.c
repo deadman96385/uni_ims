@@ -32,6 +32,9 @@
 #define ETH_L  "ro.modem.l.eth"
 
 #define SYS_IFCONFIG_UP "sys.ifconfig.up"
+#define SYS_IP_SET "sys.data.setip"
+#define SYS_IP_CLEAR "sys.data.clearip"
+#define SYS_MTU_SET "sys.data.setmtu"
 #define SYS_IFCONFIG_DOWN "sys.ifconfig.down"
 #define SYS_NO_ARP "sys.data.noarp"
 #define RETRY_MAX_COUNT 1000
@@ -233,12 +236,22 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
             PHS_LOGD("PS ip_state = %d\n",ppp_info[cid-1].ip_state);
 
             if (ppp_info[cid-1].ip_state == IPV4V6) {
-                snprintf(linker, sizeof(linker), "%s%d add %s/64", prop, cid-1, ppp_info[cid-1].ipv6laddr);
-                property_set(SYS_IFCONFIG_UP, linker);
-                PHS_LOGD("IPV6 ifconfig linker = %s\n", linker);
+                snprintf(linker, sizeof(linker), "addr add %s/64 dev %s%d", ppp_info[cid-1].ipv6laddr, prop, cid-1);
+                property_set(SYS_IP_SET, linker);
+                PHS_LOGD("IPV6 setip linker = %s\n", linker);
+
+                snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
+                property_set(SYS_MTU_SET, linker);
+                PHS_LOGD("IPV6 setmtu linker = %s\n", linker);
+
                 //snprintf(linker, sizeof(linker), "link set %s%d arp off", prop, cid-1);
                 //property_set(SYS_NO_ARP, linker);
                 //PHS_LOGD("IPV6 arp linker = %s\n", linker);
+
+                // up the net interface
+                snprintf(linker, sizeof(linker), "link set %s%d up", prop, cid-1);
+                property_set(SYS_IFCONFIG_UP, linker);
+                PHS_LOGD("IPV6 setip linker = %s\n", linker);
 
                 /* start data_on */
                 property_set("ctl.start", "data_on");
@@ -258,9 +271,16 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
 
                 usleep(100*1000);
 
-                snprintf(linker, sizeof(linker), "%s%d %s mtu 1400 netmask 255.255.255.255 up", prop, cid-1, ppp_info[cid-1].ipladdr);
+                // set ip addr mtu to check
+                snprintf(linker, sizeof(linker), "addr add %s dev %s%d", ppp_info[cid-1].ipladdr, prop, cid-1);
                 property_set(SYS_IFCONFIG_UP, linker);
-                PHS_LOGD("IPV4 ifconfig linker = %s\n", linker);
+                PHS_LOGD("IPV4 setip linker = %s\n", linker);
+
+                snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
+                property_set(SYS_MTU_SET, linker);
+                PHS_LOGD("IPV6 setmtu linker = %s\n", linker);
+
+                // no arp
                 snprintf(linker, sizeof(linker), "link set %s%d arp off", prop, cid-1);
                 property_set(SYS_NO_ARP, linker);
                 PHS_LOGD("IPV4 arp linker = %s\n", linker);
@@ -280,16 +300,38 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
             } else {
                 if (ppp_info[cid-1].ip_state == IPV4) {
                     /* set property */
-                    snprintf(linker, sizeof(linker), "%s%d %s mtu 1400 netmask 255.255.255.255 up", prop, cid-1, ppp_info[cid-1].ipladdr);
+                    snprintf(linker, sizeof(linker), "addr add %s dev %s%d", ppp_info[cid-1].ipladdr, prop, cid-1);
+                    property_set(SYS_IP_SET, linker);
+                    PHS_LOGD("IPV4 setip linker = %s\n", linker);
+
+                    snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
+                    property_set(SYS_MTU_SET, linker);
+                    PHS_LOGD("IPV6 setmtu linker = %s\n", linker);
+
+                    // up the net interface
+                    snprintf(linker, sizeof(linker), "link set %s%d up", prop, cid-1);
                     property_set(SYS_IFCONFIG_UP, linker);
                     PHS_LOGD("IPV4 ifconfig linker = %s\n", linker);
+
+                    // no arp
                     snprintf(linker, sizeof(linker), "link set %s%d arp off", prop, cid-1);
                     property_set(SYS_NO_ARP, linker);
                     PHS_LOGD("IPV4 arp linker = %s\n", linker);
                 } else if (ppp_info[cid-1].ip_state == IPV6) {
-                    snprintf(linker, sizeof(linker), "%s%d %s/64 up", prop, cid-1, ppp_info[cid-1].ipv6laddr);
+                    snprintf(linker, sizeof(linker), "addr add %s/64 dev %s%d", ppp_info[cid-1].ipv6laddr, prop, cid-1);
+                    property_set(SYS_IP_SET, linker);
+                    PHS_LOGD("IPV6 setip linker = %s\n", linker);
+
+                    snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
+                    property_set(SYS_MTU_SET, linker);
+                    PHS_LOGD("IPV6 setmtu linker = %s\n", linker);
+
+                    //up the net interface
+                    snprintf(linker, sizeof(linker), "link set %s%d up", prop, cid-1);
                     property_set(SYS_IFCONFIG_UP, linker);
                     PHS_LOGD("IPV6 ifconfig linker = %s\n", linker);
+
+                    //no arp
                     snprintf(linker, sizeof(linker), "link set %s%d arp off", prop, cid-1);
                     property_set(SYS_NO_ARP, linker);
                     PHS_LOGD("IPV6 arp linker = %s\n", linker);
@@ -443,8 +485,10 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
                     exit(-1);
                 }
                 /* set property */
-                snprintf(linker, sizeof(linker), "%s%d %s mtu 1400 netmask 255.255.255.255 up", prop, cid-1, ip);
+                snprintf(linker, sizeof(linker), "addr add %s dev %s%d", ip, prop, cid-1);
                 property_set(SYS_IFCONFIG_UP, linker);
+                snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
+                property_set(SYS_MTU_SET, linker);
                 snprintf(linker, sizeof(linker), "link set %s%d arp off", prop, cid-1);
                 property_set(SYS_NO_ARP, linker);
                 /* start data_on */
@@ -619,8 +663,11 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                     PHS_LOGE("Unknown modem type, exit");
                     exit(-1);
                 }
+                /* clear IP addr */
+                snprintf(linker, sizeof(linker), "addr flush dev %s%d", prop, tmp_cid-1);
+                property_set(SYS_IP_CLEAR, linker);
                 /* set property */
-                snprintf(linker, sizeof(linker), "%s%d %s down", prop, tmp_cid-1, "0.0.0.0");
+                snprintf(linker, sizeof(linker), "link set %s%d down", prop, tmp_cid-1);
                 property_set(SYS_IFCONFIG_DOWN, linker);
                 /* start data_off */
                 property_set("ctl.start", "data_off");
@@ -675,8 +722,12 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                         PHS_LOGE("Unknown modem type, exit");
                         exit(-1);
                     }
+
+                    /* clear IP addr */
+                    snprintf(linker, sizeof(linker), "addr flush dev %s%d", prop, tmp_cid-1);
+                    property_set(SYS_IP_CLEAR, linker);
                     /* set property */
-                    snprintf(linker, sizeof(linker), "%s%d %s down", prop, i, "0.0.0.0");
+                    snprintf(linker, sizeof(linker), "link set %s%d down", prop, i);
                     property_set(SYS_IFCONFIG_DOWN, linker);
                     /* start data_off */
                     property_set("ctl.start", "data_off");
@@ -752,7 +803,11 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                     exit(-1);
                 }
 
-                snprintf(linker, sizeof(linker), "%s%d down", prop, tmp_cid-1);
+                /* clear IP addr */
+                snprintf(linker, sizeof(linker), "addr flush dev %s%d", prop, tmp_cid-1);
+                property_set(SYS_IP_CLEAR, linker);
+                /* set property */
+                snprintf(linker, sizeof(linker), "link set %s%d down", prop, tmp_cid-1);
                 property_set(SYS_IFCONFIG_DOWN, linker);
                 /* start data_off */
                 property_set("ctl.start", "data_off");
@@ -778,7 +833,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                 system(cmd);
 
                 if (tmp_cid2 != -1) {
-                    snprintf(linker, sizeof(linker), "%s%d down", prop, tmp_cid2-1);
+                    snprintf(linker, sizeof(linker), "link set %s%d down", prop, tmp_cid2-1);
                     property_set(SYS_IFCONFIG_DOWN, linker);
                     /* start data_off */
                     property_set("ctl.start", "data_off");
