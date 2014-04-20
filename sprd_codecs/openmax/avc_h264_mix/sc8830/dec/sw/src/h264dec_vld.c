@@ -479,6 +479,7 @@ int readCoeff4x4_CAVLC (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr, i
     }
 
     coeff_num = zeros_left + total_coeff - 1;
+    coeff_num = Clip3(0, 15, coeff_num);  //Added for bug310935
     j = scantable[coeff_num];
     if (n > 24)
     {
@@ -500,6 +501,7 @@ int readCoeff4x4_CAVLC (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr, i
             }
             zeros_left -= run_before;
             coeff_num -= 1+run_before;
+            coeff_num = Clip3(0, 15, coeff_num);  //Added for bug310935
             j = scantable[coeff_num];
 
             block[j] = level[i];
@@ -525,6 +527,7 @@ int readCoeff4x4_CAVLC (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr, i
             }
             zeros_left -= run_before;
             coeff_num -= 1+run_before;
+            coeff_num = Clip3(0, 15, coeff_num);  //Added for bug310935
             j = scantable[coeff_num];
 
             block[j] = (level[i] * qmul[j] + 32)>>6;
@@ -552,7 +555,7 @@ void decode_LUMA_DC (H264DecContext *img_ptr, DEC_MB_INFO_T * currMB, DEC_MB_CAC
 #endif
 
     total_coeff = readCoeff4x4_CAVLC(img_ptr, mb_cache_ptr,DC, LUMA_DC_BLOCK_INDEX, inverse_zigZag, NULL, 16);
-    if (total_coeff)
+    if (total_coeff > 0 && total_coeff < 17)
     {
         itrans_lumaDC (img_ptr, DC, mb_cache_ptr->coff_Y, qp);
     }
@@ -652,7 +655,7 @@ void decode_CHROMA_DC (H264DecContext *img_ptr, DEC_MB_INFO_T * currMB, DEC_MB_C
         ((int32 *)DC) [0] = ((int32 *)DC) [1] = 0;
 
         total_coeff = readCoeff4x4_CAVLC(img_ptr, mb_cache_ptr,DC, CHROMA_DC_BLOCK_INDEX, inverse_zigZag, NULL, 4);
-        if (total_coeff)
+        if (total_coeff > 0 && total_coeff < 5)
         {
             mb_cache_ptr->cbp_uv |= 0xf << (4*uv);
         } else
@@ -705,7 +708,7 @@ void decode_CHROMA_AC (H264DecContext *img_ptr, DEC_MB_INFO_T * currMB, DEC_MB_C
         {
             blkIndex = uv * 4 + blk4x4 + 16;
             numCoeff = readCoeff4x4_CAVLC(img_ptr, mb_cache_ptr, coeff, blkIndex, inverse_zigZag, quant_mat, 15);
-            if (numCoeff)
+            if (numCoeff > 0 && numCoeff < 17)
             {
                 mb_cache_ptr->cbp_uv |= 0x1 << (uv*4 + blk4x4);
             } else

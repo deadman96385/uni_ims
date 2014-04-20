@@ -1819,6 +1819,8 @@ PUBLIC void H264Dec_read_one_macroblock_ISlice (H264DecContext *img_ptr, DEC_MB_
     mb_info_ptr->is_intra = TRUE;
 
     mb_info_ptr->mb_type = img_ptr->read_mb_type ((void *)img_ptr, mb_info_ptr, mb_cache_ptr);
+    mb_info_ptr->mb_type = Clip3(0, 51, mb_info_ptr->mb_type);
+
     H264Dec_interpret_mb_mode_I (img_ptr, mb_info_ptr, mb_cache_ptr);
     H264Dec_read_intraMB_context(img_ptr, mb_info_ptr, mb_cache_ptr);
 
