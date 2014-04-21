@@ -2694,7 +2694,8 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
     static char *actStr[] = {
         "GSM",
         "GSMCompact",
-        "UTRAN"
+        "UTRAN",
+        "E-UTRAN"
     };
     int err, stat, act;
     char *line;
@@ -2733,15 +2734,21 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
     RILLOGD("Searched available network list numbers = %d", count - 2);
     if(count <= 2)
         goto error;
-    count = count - 2;
-    responses = alloca(count * 5 * sizeof(char *));
+    count -= 2;
 
     line = p_response->p_intermediates->line;
+//  (,,,,),,(0-4),(0-2)
+    if (strstr(line, ",,,,")) {
+        RILLOGD("no network");
+        goto error;
+    }
+
+//  (1,"CHINA MOBILE","CMCC","46000",0),(2,"CHINA MOBILE","CMCC","46000",2),(3,"CHN-UNICOM","CUCC","46001",0),,(0-4),(0-2)
+    responses = alloca(count * 5 * sizeof(char *));
     cur = responses;
 
     while ( (line = strchr(line, '(')) && (i++ < count) ) {
         line++;
-
         err = at_tok_nextint(&line, &stat);
         if (err < 0) continue;
 
@@ -2760,7 +2767,7 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
         err = at_tok_nextint(&line, &act);
         if (err < 0) continue;
 
-        cur[4] = actStr[act];
+        cur[4] = actStr[act==7 ? 3 : act];
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         err = at_tok_nextstr(&line, &(cur[4]));
         if (err < 0) continue;
@@ -2771,8 +2778,8 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
     RIL_onRequestComplete(t, RIL_E_SUCCESS, responses, count * 5 * sizeof(char *));
     at_response_free(p_response);
     return;
-error:
 
+error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
 }

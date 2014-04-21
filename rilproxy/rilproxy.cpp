@@ -39,7 +39,6 @@ static pthread_mutex_t sLteCFdMutex   = PTHREAD_MUTEX_INITIALIZER;
 static RILP_RequestType     sReqTypeArr[MAX_REQUEST_TYPE_ARRAY_LEN];      
 static RILP_RspTDG_LTE      sRilP_RspTDGLTE[MAX_RESPONSE_FROM_TDG_LTE];
 /* Add for dual signal bar */
-//static int sClientFd[MAX_LTE_CLIENT];
 static RIL_SignalStrength_v6 sSignalStrength;
 
 static void  solicited_response (void *rspbuf, int nlen, int isfromTdg);
@@ -56,7 +55,6 @@ static int   is_tdg_unsolicited(int rspid);
 static int   is_lte_unsolicited(int rspid);
 static RILP_RequestType  get_send_at_request_type(char* req);
 /* Add for dual signal bar */
-//static int   rilproxy_info_clients(const char* buf, const int len);
 static void backupSignalStrength(Parcel &p, int isfromTdg);
 static void mergeSignalStrength(Parcel &p, int isfromTdg);
 static void signalToString(const char *funcname, RIL_SignalStrength_v6 signal);
@@ -91,32 +89,27 @@ static void init_request_type(void) {
 		sReqTypeArr[i] = ReqToTDG;
 	}
 	
-	/* 
-	 * "index +1 " is the same as requesid defined in android original ril 
-	 *  but for spreadtrum extension ril, should subcrat 'base' 
-	 */
-	// data connection AT to target modem (TD/G or LTE modem)
-	sReqTypeArr[RIL_REQUEST_SETUP_DATA_CALL - 1]           = ReqToAuto;
-	sReqTypeArr[RIL_REQUEST_DEACTIVATE_DATA_CALL -1]       = ReqToAuto;
-	sReqTypeArr[RIL_REQUEST_DATA_REGISTRATION_STATE - 1]   = ReqToAuto;
-	sReqTypeArr[RIL_REQUEST_LAST_DATA_CALL_FAIL_CAUSE - 1] = ReqToAuto;	
-	sReqTypeArr[RIL_REQUEST_DATA_CALL_LIST - 1]            = ReqToAuto;
-	// sReqTypeArr[RIL_REQUEST_SET_INITIAL_ATTACH_APN - 1]    = ReqToAuto; // remove for 4.1_3.4.
-	sReqTypeArr[RIL_REQUEST_GPRS_ATTACH - RIL_SPRD_REQUEST_BASE - 1 + RIL_REQUEST_LAST] = ReqToAuto;
-	sReqTypeArr[RIL_REQUEST_GPRS_DETACH - RIL_SPRD_REQUEST_BASE - 1 + RIL_REQUEST_LAST] = ReqToAuto;
+    /* 
+     * "index +1 " is the same as requesid defined in android original ril
+     *  but for spreadtrum extension ril, should subcrat 'base'
+     */
+    // data connection AT to target modem (TD/G or LTE modem)
+    sReqTypeArr[RIL_REQUEST_SETUP_DATA_CALL - 1]           = ReqToAuto;
+    sReqTypeArr[RIL_REQUEST_DEACTIVATE_DATA_CALL -1]       = ReqToAuto;
+    sReqTypeArr[RIL_REQUEST_DATA_REGISTRATION_STATE - 1]   = ReqToAuto;
+    sReqTypeArr[RIL_REQUEST_LAST_DATA_CALL_FAIL_CAUSE - 1] = ReqToAuto;
+    sReqTypeArr[RIL_REQUEST_DATA_CALL_LIST - 1]            = ReqToAuto;
+    sReqTypeArr[RIL_REQUEST_SET_INITIAL_ATTACH_APN - 1]    = ReqToAuto;
+    sReqTypeArr[RIL_REQUEST_GPRS_ATTACH - RIL_SPRD_REQUEST_BASE - 1 + RIL_REQUEST_LAST] = ReqToAuto;
+    sReqTypeArr[RIL_REQUEST_GPRS_DETACH - RIL_SPRD_REQUEST_BASE - 1 + RIL_REQUEST_LAST] = ReqToAuto;
 	
 /*
 	sReqTypeArr[RIL_REQUEST_GET_CELL_INFO_LIST - 1]        = ReqToAuto;
 	sReqTypeArr[RIL_REQUEST_SET_UNSOL_CELL_INFO_LIST_RATE - 1] = ReqToAuto;
-	sReqTypeArr[RIL_REQUEST_GET_NEIGHBORING_CELL_IDS - 1]  = ReqToAuto;	
+	sReqTypeArr[RIL_REQUEST_GET_NEIGHBORING_CELL_IDS - 1]  = ReqToAuto;
 	sReqTypeArr[RIL_REQUEST_SET_LOCATION_UPDATES - 1]      = ReqToAuto;
-	
-	sReqTypeArr[RIL_REQUEST_QUERY_NETWORK_SELECTION_MODE -1]    =  ReqToTDG_LTE;
-    sReqTypeArr[RIL_REQUEST_SET_NETWORK_SELECTION_AUTOMATIC -1] =  ReqToTDG_LTE;
-    sReqTypeArr[RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL -1]    =  ReqToTDG_LTE;
-    sReqTypeArr[RIL_REQUEST_QUERY_AVAILABLE_NETWORKS -1]        =  ReqToTDG_LTE;
-*/  
-
+*/
+  
     // request only send to LTE modem
     // sReqTypeArr[] =  ReqToLTE; 
   
@@ -126,7 +119,13 @@ static void init_request_type(void) {
     sReqTypeArr[RIL_REQUEST_SIGNAL_STRENGTH -1]  =  ReqToTDG_LTE;
     sReqTypeArr[RIL_REQUEST_SIM_POWER - RIL_SPRD_REQUEST_BASE - 1 + RIL_REQUEST_LAST] =  ReqToTDG_LTE;
 
+    sReqTypeArr[RIL_REQUEST_QUERY_NETWORK_SELECTION_MODE -1]    =  ReqToTDG_LTE;
+    sReqTypeArr[RIL_REQUEST_SET_NETWORK_SELECTION_AUTOMATIC -1] =  ReqToTDG_LTE;
+    // sReqTypeArr[RIL_REQUEST_OPERATOR -1]                        =  ReqToTDG_LTE;
+    sReqTypeArr[RIL_REQUEST_QUERY_AVAILABLE_NETWORKS -1]        =  ReqToTDG_LTE;
+
     memset(sRilP_RspTDGLTE, 0 , sizeof(sRilP_RspTDGLTE));
+
 }
 
 static RILP_RequestType get_reqtype_by_id (int reqId) {
@@ -151,8 +150,9 @@ static RILP_RequestType get_reqtype_by_id (int reqId) {
 			pthread_mutex_unlock(&sLteCFdMutex);
 			return ReqToTDG;
 		}
-	} else 
+	} else {
 		return ReqToTDG;
+	}
 }
 
 
@@ -172,6 +172,7 @@ static void add_reqid_token_to_table(int reqId, int token) {
 		}
 	}
 	
+
 	if (i == MAX_RESPONSE_FROM_TDG_LTE) {
 		ALOGE("Too many request need send to both rild.");
 	}
@@ -276,11 +277,39 @@ static RILP_RequestType  get_send_at_request_type(char* req) {
 	    pthread_mutex_lock(&sLteCFdMutex);
 	    if (sLteClientFd  != -1) { // when lte rild connect, ril request should been dispatched.
 			pthread_mutex_unlock(&sLteCFdMutex);
-            ALOGD("Send_AT command: %s.", req);
+			ALOGD("Send_AT command: %s.", req);
 			if (strncasecmp(req, SEND_AT_TO_LTE_LTEBGTIMER, strlen(SEND_AT_TO_LTE_LTEBGTIMER)) == 0 ||
 			    strncasecmp(req, SEND_AT_TO_LTE_LTESETRSRP, strlen(SEND_AT_TO_LTE_LTESETRSRP)) == 0 ||
 			    strncasecmp(req, SEND_AT_TO_LTE_LTENCELLINFO, strlen(SEND_AT_TO_LTE_LTENCELLINFO)) == 0 ||
 			    strncasecmp(req, SEND_AT_TO_LTE_CPOF, strlen(SEND_AT_TO_LTE_CPOF)) == 0) {
+				return ReqToLTE;
+			} else if (strncasecmp(req, SEND_AT_TO_AT_RESET, strlen(SEND_AT_TO_AT_RESET)) == 0 || 
+			           strncasecmp(req, SEND_AT_TO_AT_SPATASSERT, strlen(SEND_AT_TO_AT_SPATASSERT)) == 0) {
+				return ReqToTDG_LTE;
+			}
+		} else {
+			pthread_mutex_unlock(&sLteCFdMutex);
+			return ReqToTDG;
+		}
+	}
+
+	return ReqToTDG;
+}
+
+static RILP_RequestType  get_manual_select_network_request_type(void* req) {
+
+    if (req == NULL) {
+		ALOGE("NETWORK_SELECTION_MANUAL command should not be NULL!");
+		return ReqToTDG;
+	}
+
+	if (is_svlte()) {
+	    pthread_mutex_lock(&sLteCFdMutex);
+	    if (sLteClientFd  != -1) { // when lte rild connect, ril request should been dispatched.
+			pthread_mutex_unlock(&sLteCFdMutex);
+                        RIL_NetworkList* nl = (RIL_NetworkList *) req;
+                        ALOGD("manual selection network act: %d.", nl->act);
+			if (nl->act == 7) {
 				return ReqToLTE;
 			}
 		} else {
@@ -401,6 +430,7 @@ static void backupSignalStrength(Parcel &p, int isfromTdg) {
     int skip;
 
     ALOGD("%s: enter isfromTdg = %d", __FUNCTION__, isfromTdg);
+    p.readInt32(&skip);
     if (isfromTdg) {
         /* save current TD data */
         p.readInt32(&sSignalStrength.GW_SignalStrength.signalStrength);
@@ -426,6 +456,7 @@ static void backupSignalStrength(Parcel &p, int isfromTdg) {
 
 static void mergeSignalStrength(Parcel &p, int isfromTdg) {
     int skip;
+    p.readInt32(&skip);
 
     ALOGD("%s: enter isfromTdg = %d", __FUNCTION__, isfromTdg);
     if (isfromTdg) {
@@ -483,6 +514,81 @@ static void signalToString(const char *funcname, RIL_SignalStrength_v6 signal) {
                 signal.LTE_SignalStrength.cqi);
 }
 
+static Parcel sNetworklistParcel;
+
+static void make_network_list_response(Parcel &p, int nlen) {
+
+    int    numStrings1, numStrings2;
+    int    pos;
+    int    skip;
+    int    err, lasterr;
+
+    p.readInt32(&err);
+    sNetworklistParcel.setDataPosition(8);
+    sNetworklistParcel.readInt32(&lasterr);
+
+    if (lasterr) {  // last response is error.
+        ALOGD("Error occurs in last response.");
+    } else {
+        if (err) {
+            ALOGD("Error occurs in the response, use last response.");
+            p.setDataPosition(0);
+            p.appendFrom(&sNetworklistParcel, 0, sNetworklistParcel.dataSize());
+            return;
+        } else {
+            sNetworklistParcel.readInt32(&numStrings2);
+            ALOGD("Last respnose's length is %d", numStrings2);
+
+            if (numStrings2 % 5 == 0) {
+                pos = p.dataPosition();
+                p.readInt32(&numStrings1);
+                p.setDataPosition(pos);
+                p.writeInt32(numStrings1 + numStrings2);
+
+                p.setDataPosition(nlen);
+                p.appendFrom(&sNetworklistParcel, 16, sNetworklistParcel.dataSize() - 16);
+                ALOGD("After merged response, it's length: %d" , p.dataSize());
+            }
+        }
+    }
+}
+
+static void backup_last_response(int reqid, Parcel &p, int isfromTdg) {
+
+    ALOGD("backup_last_response, reqid = %d, nlen = %d", reqid, p.dataSize());
+    switch (reqid) {
+    case RIL_REQUEST_SIGNAL_STRENGTH :
+        backupSignalStrength(p, isfromTdg);
+        break;
+
+    case RIL_REQUEST_QUERY_AVAILABLE_NETWORKS :
+        sNetworklistParcel.setDataPosition(0);
+        sNetworklistParcel.appendFrom(&p, 0, p.dataSize());
+        break;
+
+    default:
+	// ALOGD("invalid response block");
+        break;
+    }
+}
+
+static void make_final_response(int reqid, Parcel &p, int nlen, int isfromTdg) {
+
+    switch (reqid) {
+    case RIL_REQUEST_SIGNAL_STRENGTH:
+         mergeSignalStrength(p, isfromTdg);
+         break;
+
+    case RIL_REQUEST_QUERY_AVAILABLE_NETWORKS:
+   	 make_network_list_response(p, nlen);
+         break;
+
+    default:
+	// ALOGD("invalid response block");
+        break;
+    }
+}
+
 static void solicited_response (void *rspbuf, int nlen, int isfromTdg) {
 	int token = -1;
 	RILP_RequestType reqType;
@@ -505,28 +611,28 @@ static void solicited_response (void *rspbuf, int nlen, int isfromTdg) {
 	if (reqType == ReqToTDG_LTE) {
 		set_rsptype_by_token(token, isfromTdg ? RSP_FROM_TDG_RILD : RSP_FROM_LTE_RILD);
 	}
-	
+
 	/* 
 	 * when request is sent to TD/G and LTE, it responese only send
 	 * to TD/G till two responses are also received. 
-     */
+         */
 	if (reqType != ReqToTDG_LTE) {
 		write_data (sRILPServerFd, rspbuf, nlen);
 	} else {
 		if (get_rsptype_by_token(token) == (int)ReqToTDG_LTE){
 			if (get_rsp_sent_state_by_token(token) == RSP_UNSENT) {
-				/* Add for dual signal bar */
-				if(reqid == RIL_REQUEST_SIGNAL_STRENGTH) {
-					p.readInt32(&skip);
-					mergeSignalStrength(p, isfromTdg);
+				if (reqid == RIL_REQUEST_SIGNAL_STRENGTH ||
+				    reqid == RIL_REQUEST_QUERY_AVAILABLE_NETWORKS) {
+				        make_final_response(reqid, p, nlen, isfromTdg);
 					write_data (sRILPServerFd, p.data(), p.dataSize());
-				} else {
+				} else{
 					write_data (sRILPServerFd, rspbuf, nlen);
 				}
 				ALOGD("Solicited response has sent !");
 			}
 			clean_rsptye_token(token);
 		} else {
+#if 0
 			int error;
 			status = p.readInt32(&error);
 			if (status != NO_ERROR) {
@@ -540,11 +646,11 @@ static void solicited_response (void *rspbuf, int nlen, int isfromTdg) {
 				ALOGD("There is an error in response for reqid: %d", reqid);
 			} else {
 				ALOGD("Waiting for another rild response reqid: %d", reqid);
-				/* Add for dual signal bar */
-				if(reqid == RIL_REQUEST_SIGNAL_STRENGTH) {
-					backupSignalStrength(p, isfromTdg);
-				}
+			  backup_last_response(reqid, p, isfromTdg);
 			}
+#endif
+			ALOGD("Waiting for another rild response reqid: %d", reqid);
+			backup_last_response(reqid, p, isfromTdg);
 		}
 	}
 }
@@ -651,20 +757,23 @@ static void process_request(void *reqbuf, int nlen) {
 			send_lte_enable_response(token, 0);
 			return;
 		}
-		ALOGD("PS serice enable on %s modem", lteEnable ? "LTE" : "TD/G");
+		ALOGD("PS enable on %s modem", lteEnable ? "LTE" : "TD/G");
 		sPSEnable = (lteEnable ? PS_LTE_ENABLE : PS_TD_ENABLE);
 		send_lte_enable_response(token, 1);
 		return;
 	} else if (reqId == RIL_REQUEST_SEND_AT) {
 		// skip reqId, token, len.
 		reqType = get_send_at_request_type((char*)reqbuf + 12);
+	} else if (reqId == RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL) {
+		// skip reqId, token, len.
+		reqType = get_manual_select_network_request_type((char*)reqbuf + 12);
 	} else {
 		ALOGD("process_request request id %d, token %d", reqId, token);
 		reqType = get_reqtype_by_id(reqId);
-		ALOGD("process_request request type %d", reqType);
 	}
 
-    if (reqType == ReqToTDG_LTE) {
+	ALOGD("process_request request type %d", reqType);
+        if (reqType == ReqToTDG_LTE) {
 		add_reqid_token_to_table(reqId, token);	
 	} else if (reqType == ReqToAuto) {
 		if (sPSEnable == PS_TD_ENABLE) {
@@ -748,89 +857,6 @@ extern "C" void  rilproxy_init(void) {
 	sReqRecordStream = record_stream_new(fd, MAX_REQUEST_BUFFER_LEN);
 }
 
-#if 0
-/*
- * because the TD Rild start first. then start LTE rild.
- * The two thread should be used.
- * 
- */
-extern "C" void*  rilproxy_client(void* dummy) {
-
-	int ret,maxfd, fd = -1;
-	fd_set rfds;
-	RecordStream *p_lters, *p_tdrs, *p_rs;
-	void *p_record;
-	size_t recordlen;
-	int rspFromTd = 1;
-
-	if ((fd = rilproxy_connect(LTE_RILD_SOCKET_NAME)) < 0) {
-		ALOGE("Failed to connect LTE Rild.");
-		return NULL;
-	} else {
-		pthread_mutex_lock(&sLteCFdMutex);
-		sLteClientFd = fd;
-		pthread_mutex_unlock(&sLteCFdMutex);
-		p_lters = record_stream_new(fd, MAX_RESPONE_BUFFER_LEN);
-	}
-
-	if ((fd = rilproxy_connect(TDG_RILD_SOCKET_NAME)) < 0) {
-		close(sLteClientFd);
-		record_stream_free(p_lters);
-		ALOGE("Failed to connect TD/G Rild.");
-		return NULL;
-	} else {
-		sTdGClientFd = fd;
-		p_tdrs = record_stream_new(fd, MAX_RESPONE_BUFFER_LEN);
-	}
-
-	maxfd = sLteClientFd > sTdGClientFd ? sLteClientFd : sTdGClientFd;
-	for (;;) {
-
-		FD_ZERO(&rfds);
-		FD_SET(sLteClientFd, &rfds);
-		FD_SET(sTdGClientFd, &rfds);
-
-		do {
-			ret = select(maxfd + 1, &rfds, NULL, NULL, 0);
-		} while(ret == -1 && errno == EAGAIN);
-		
-		if (ret > 0) {
-			if (FD_ISSET(sLteClientFd, &rfds)) {
-				p_rs = p_lters;
-			    rspFromTd = 0;
-			    ALOGD("Response form LTE Rild."); 
-			} else if (FD_ISSET(sTdGClientFd, &rfds)) {
-				p_rs = p_tdrs;
-				rspFromTd = 1;
-				ALOGD("Response form TD/G Rild.");
-			} else {
-				ALOGD("Invalid file description, continue.");
-				continue;
-			}
-
-			for (;;) {
-				ret = record_stream_get_next(p_rs, &p_record, &recordlen);
-				if (ret == 0 && p_record == NULL){
-					ALOGE("Read socket failure, then should reconnect socket!");
-					close(sLteClientFd);
-					close(sTdGClientFd);
-					exit(0);
-					goto error;
-				} else if (ret < 0){
-					ALOGD("Response buffer process done.");
-					break;  
-				}  
-
-				process_response(p_record, recordlen, rspFromTd);
-			}
-		}
-	}
-error :
-	record_stream_free(p_lters);
-	record_stream_free(p_tdrs);
-	return NULL;
-}
-#else
 
 extern "C" void*  rilproxy_client(void* sockname) {
 
@@ -891,7 +917,6 @@ error :
 	return NULL;
 }
 
-#endif 
 extern "C" void  rilproxy_server() {
 	int ret;	
 	void *p_record;
@@ -919,64 +944,5 @@ extern "C" void  rilproxy_server() {
 	sRILPServerFd = -1;
 }
 
-#if 0
-/***************************/
-/* Add for dual signal bar */
-/***************************/
-int rilproxy_info_clients(const char* buf, const int len)
-{
-    int i, ret;
-
-    for(i = 0; i < MAX_LTE_CLIENT; i++) {
-        ALOGD("sClientFd[%d]=%d\n", i, sClientFd[i]);
-        if(sClientFd[i] >= 0) {
-            ret = write(sClientFd[i], buf, len);
-            ALOGD("write %d bytes to sClientFd[%d]:%d", len, i, sClientFd[i]);
-            if(ret < 0) {
-                ALOGE("write fail!! reset sClientFd[%d] = -1", i);
-                close(sClientFd[i]);
-                sClientFd[i] = -1;
-            }
-        }
-    }
-    return 0;
-}
-
-extern "C" void *rilproxy_lte_server() {
-    int sfd, n, i;
-
-    memset(sClientFd, -1 , sizeof(sClientFd));
-    sfd = socket_local_server(RILPROXY_LTE_SERVER_NAME,
-                              ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
-    if (sfd < 0) {
-        ALOGE("%s: Cannot create rilproxy_lte_server", __FUNCTION__);
-        exit(-1);
-    }
-    for(;;){
-        ALOGD("%s: Waiting for new connect ...", __FUNCTION__);
-        if ((n = accept(sfd, NULL, NULL)) == -1)
-        {
-            ALOGE("rilproxy_lte_server accept error\n");
-            continue;
-        }
-        ALOGD("%s: accept client n=%d",__FUNCTION__, n);
-        for(i = 0;i < MAX_LTE_CLIENT;i ++) {
-            if(sClientFd[i] == -1){
-                sClientFd[i] = n;
-                ALOGD("%s: fill %d to client[%d]\n",__FUNCTION__, n, i);
-                break;
-            }
-            /* if sClientFd arrray is full, just fill the new socket to the */
-            /* last element */
-            if(i == MAX_LTE_CLIENT - 1) {
-                ALOGD("%s: client array is full, just fill %d to client[%d]",
-                        __FUNCTION__, n, i);
-                sClientFd[i] = n;
-            }
-        }
-    }
-    return NULL;
-}
-#endif
 
 }

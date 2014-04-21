@@ -461,6 +461,7 @@ typedef struct {
                         * act=0 GSM
                         * act=1 GSM Compact
                         * act=2 UTRAN
+                        * act=7 E-UTRAN
                         */
 } RIL_NetworkList;
 #endif

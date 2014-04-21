@@ -13,7 +13,6 @@
 #include <linux/prctl.h>
 #include "rilproxy.h"
 #include <private/android_filesystem_config.h>
-
 /*
  * switchUser - Switches UID to radio, preserving CAP_NET_ADMIN capabilities.
  * Our group, cache, was set by init.
@@ -38,12 +37,7 @@ int main(int argc, char *argv[])
 
     switchUser();  
     rilproxy_init();
-#if 0
-    if (pthread_create(&tid, NULL, rilproxy_client, NULL) < 0) {
-         ALOGE("Create rilproxy client failure, exit");
-         exit(0);
-    }
-#else
+
     if (is_svlte()) {
         if (pthread_create(&lte_tid, NULL, rilproxy_client, LTE_RILD_SOCKET_NAME) < 0) {
             ALOGE("Failded to Create rilproxy client LTE thread, exit");
@@ -54,17 +48,9 @@ int main(int argc, char *argv[])
          ALOGE("Failded to Create rilproxy client TD/G thread, exit");
          exit(0);
     }
-#endif
-#if 0
-    /***************************/
-    /* Add for dual signal bar */
-    /***************************/
-    if (pthread_create(&lte_server_tid, NULL, (void*)rilproxy_lte_server, NULL) < 0) {
-         ALOGE("Failded to Create rilproxy lte server thread, exit");
-         exit(0);
-    }
-#endif
+
     rilproxy_server();
+
     return 0;
 }
 
