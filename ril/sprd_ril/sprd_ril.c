@@ -8606,6 +8606,44 @@ error:
     at_response_free(p_response);
 }
 
+static int  sGsCid;
+static int  sEthOnOff;
+#define   SYS_GSPS_ETH_UP_PROP      "sys.gsps.eth.up"
+#define   SYS_GSPS_ETH_DOWN_PROP    "sys.gsps.eth.down"
+
+static void startGSps(void *param)
+{
+    int channelID;
+    int err;
+    char cmd[128];
+    char *line;
+    int  failCause;
+    ATResponse *p_response = NULL;
+
+    RILLOGD("startGSps CID  %d, sEth state: %d", sGsCid, sEthOnOff);
+    channelID = getChannel();
+    if (sEthOnOff) {
+        property_set(SYS_GSPS_ETH_UP_PROP, "1");
+        snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\", %d", sGsCid);
+    } else {
+        property_set(SYS_GSPS_ETH_DOWN_PROP, "1");
+        snprintf(cmd, sizeof(cmd), "AT+CGACT=0, %d", sGsCid);
+    }
+
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+    at_response_free(p_response);
+    putChannel(channelID);
+    return;
+
+error:
+    if(p_response)
+        at_response_free(p_response);
+    putChannel(channelID);
+}
+
 /**
  * Called by atchannel when an unsolicited line appears
  * This is called on atchannel's reader thread. AT commands may
@@ -9466,6 +9504,22 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
         RILLOGD("onUnsolicited(), "AT_PREFIX"VTMDSTRT:, response[0]: %d", response);
         RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_MEDIA_START, &response, sizeof(response));
+    } else if (strStartsWith(s, "+SPGS:")) {
+        char *tmp;
+
+        RILLOGI("Enter SPGS %s", s);
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+
+        err = at_tok_nextint(&tmp, &sGsCid);
+        if (err < 0) goto out;
+
+        err = at_tok_nextint(&tmp, &sEthOnOff);
+        if (err < 0) goto out;
+
+        RILLOGI("SPGS Cid : %d, OnOff : %d \n", sGsCid, sEthOnOff);
+        RIL_requestTimedCallback(startGSps, NULL, NULL);
     }
 #endif
     else if (strStartsWith(s, "^SMOF:")) {

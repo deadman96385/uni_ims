@@ -42,6 +42,13 @@
 #define SSDA_MODE         "persist.radio.ssda.mode"
 #define SSDA_TESTMODE "persist.radio.ssda.testmode"
 
+#define   SYS_GSPS_ETH_UP_PROP        "sys.gsps.eth.up"
+#define   SYS_GSPS_ETH_DOWN_PROP      "sys.gsps.eth.down"
+#define   SYS_GSPS_ETH_IFNAME_PROP    "sys.gsps.eth.ifname"
+#define   SYS_GSPS_ETH_LOCALIP_PROP   "sys.gsps.eth.localip"
+#define   SYS_GSPS_ETH_PEERIP_PROP    "sys.gsps.eth.peerip"
+#define   DHCP_DNSMASQ_LEASES_FILE    "/data/misc/dhcp/dnsmasq.leases"
+
 struct ppp_info_struct ppp_info[MAX_PPP_NUM];
 static char sSavedDns[IP_ADD_SIZE] = {0};
 
@@ -49,6 +56,27 @@ mutex ps_service_mutex;
 extern const char *modem;
 
 extern int findInBuf(char *buf, int len, char *needle);
+
+static int parse_peer_ip(char* ipaddr){
+
+    FILE* fp;
+    char line[1024];
+    char* ptr;
+
+    if ((fp = fopen(DHCP_DNSMASQ_LEASES_FILE, "r")) == NULL) {
+        PHS_LOGE("Fail to open %s, error : %s.", DHCP_DNSMASQ_LEASES_FILE, strerror(errno));
+        return -1;
+    }
+
+    while(fgets(line, sizeof(line), fp) != NULL) {
+        PHS_LOGE("Read line : %s.", line);
+        if ((ptr = strstr(line, "192.168.42.")) != NULL) {
+            strcpy(ipaddr, ptr);
+            return 0;
+        }
+    }
+    return -1;
+}
 
 void ps_service_init(void)
 {
@@ -337,6 +365,18 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                     PHS_LOGD("IPV6 arp linker = %s\n", linker);
                 }
 
+                property_get(SYS_GSPS_ETH_UP_PROP, prop, "0");
+                if (atoi(prop)) {
+                    char peerip[64]="";
+                    char ifname[64]="";
+                    if (parse_peer_ip(peerip) == 0){
+                        sprintf(ifname, "%s%d",  prop, cid-1);
+                        property_set(SYS_GSPS_ETH_IFNAME_PROP, ifname);
+                        property_set(SYS_GSPS_ETH_LOCALIP_PROP, ppp_info[cid-1].ipladdr);
+                        property_set(SYS_GSPS_ETH_PEERIP_PROP,  peerip);
+                    }
+                }
+
                 /* start data_on */
                 property_set("ctl.start", "data_on");
                 /* wait up to 10s for data_on execute complete */
@@ -353,6 +393,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                     snprintf(ipv6_dhcpcd_cmd, sizeof(ipv6_dhcpcd_cmd), "dhcpcd_ipv6:%s%d", prop, cid-1);
                     property_set("ctl.start", ipv6_dhcpcd_cmd);
                 }
+
                 PHS_LOGD("data_on execute done");
             }
 
