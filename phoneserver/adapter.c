@@ -584,7 +584,8 @@ const struct ind_table at_ind_cvt_table[] = {
         cvt_generic_cmd_ind},
     {AT_CMD_EEMGINFOPS_IND, AT_CMD_STR("+EEMGINFOPS"), cvt_generic_cmd_ind},
     {AT_CMD_ECIND_IND, AT_CMD_STR("+CGEV:"), cvt_null_cmd_ind},
-    {AT_CMD_EEMGINFONC_IND, AT_CMD_STR("+EEMGINFONC"), cvt_generic_cmd_ind}
+    {AT_CMD_EEMGINFONC_IND, AT_CMD_STR("+EEMGINFONC"), cvt_generic_cmd_ind},
+    {AT_CMD_CESQ_IND, AT_CMD_STR("+CESQ:"), cvt_cesq_cmd_ind}
 };
 
 int cvt_cmgs_edit_callback(pty_t * pty, char *cmd, int len, int user_data);
@@ -1423,6 +1424,79 @@ int cvt_csq_cmd_ind(AT_CMD_IND_T * ind)
 
     if(ber > 99) ber = 99;
     snprintf(ind_str, sizeof(ind_str), "\r\n+CSQ: %d,%d\r\n", rssi,ber);
+    if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
+        ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
+    } else {
+        PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
+    }
+    if(ind_eng_pty != NULL)
+        if (ind_eng_pty->ops && ind->len < MAX_AT_CMD_LEN)
+            ind_eng_pty->ops->pty_write(ind_eng_pty, ind_str, strlen(ind_str));
+    return AT_RESULT_OK;
+}
+
+int cvt_cesq_cmd_ind(AT_CMD_IND_T * ind)
+{
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
+    int err;
+    int rxlev = 0, ber = 0, rscp = 0, ecno = 0, rsrq = 0, rsrp = 0;
+    char *at_in_str;
+    char ind_str[MAX_AT_CMD_LEN];
+
+
+    PHS_LOGD("cvt_cesq_cmd_ind enter\n");
+    if(multiSimMode == 1) {
+        ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
+        ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
+    } else {
+        ind_pty = adapter_get_default_ind_pty();
+        ind_eng_pty = adapter_single_get_eng_ind_pty();
+    }
+    at_in_str = ind->ind_str;
+    err = at_tok_start(&at_in_str, ':');
+    if (err < 0) {
+        return AT_RESULT_NG;
+    }
+
+    err = at_tok_nextint(&at_in_str, &rxlev);
+    if (err < 0) {
+        return AT_RESULT_NG;
+    }
+
+    err = at_tok_nextint(&at_in_str, &ber);
+    if (err < 0) {
+        return AT_RESULT_NG;
+    }
+
+    err = at_tok_nextint(&at_in_str, &rscp);
+    if (err < 0) {
+        return AT_RESULT_NG;
+    }
+
+    err = at_tok_nextint(&at_in_str, &ecno);
+    if (err < 0) {
+        return AT_RESULT_NG;
+    }
+
+    err = at_tok_nextint(&at_in_str, &rsrq);
+    if (err < 0) {
+        return AT_RESULT_NG;
+    }
+
+    err = at_tok_nextint(&at_in_str, &rsrp);
+    if (err < 0) {
+        return AT_RESULT_NG;
+    }
+
+    if (rsrp == 255) {
+        rsrp = -255;
+    } else {
+        rsrp -= 140;
+    }
+
+    snprintf(ind_str, sizeof(ind_str), "\r\n+CESQ: %d,%d,%d,%d,%d,%d\r\n",
+             rxlev, ber, rscp, ecno, rsrq, rsrp);
     if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
         ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
     } else {
