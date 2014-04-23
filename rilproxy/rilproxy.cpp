@@ -19,7 +19,8 @@
 namespace android {
   
 #define MAX_RESPONE_BUFFER_LEN      (4*1024)    // sms broadcast may be 4K
-#define MAX_REQUEST_BUFFER_LEN      1024
+#define MAX_REQUEST_BUFFER_LEN      (8*1024)    // match with constant in RIL.java
+
 #define MAX_RESPONSE_FROM_TDG_LTE   16
 #define MAX_REQUEST_TYPE_ARRAY_LEN  (RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE)
 /* Add for dual signal bar */
