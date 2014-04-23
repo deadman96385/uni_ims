@@ -89,6 +89,7 @@ typedef enum at_cmd_enum_t {
 	AT_CMD_EEMGINBFTM_IND, AT_CMD_EEMGINFOBASIC_IND,
 	AT_CMD_EEMGINFOSVC_IND, AT_CMD_EEMGINFOPS_IND,
 	AT_CMD_EEMGINFONC_IND,
+	AT_CMD_CESQ_IND,
 
 	AT_CMD_INVALID
 } AT_CMD_ID_T;
@@ -193,6 +194,7 @@ int cvt_sind_cmd_ind(AT_CMD_IND_T * ind);
 int cvt_ecsq_cmd_ind(AT_CMD_IND_T * ind);
 int cvt_csq_cmd_ind(AT_CMD_IND_T * ind);
 int cvt_spscsq_cmd_ind(AT_CMD_IND_T * ind);
+int cvt_cesq_cmd_ind(AT_CMD_IND_T * ind);
 
 /*add by wz 09 -03 -11 */
 int cvt_ccwa_cmd_req(AT_CMD_REQ_T * req);
