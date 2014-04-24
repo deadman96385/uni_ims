@@ -8608,8 +8608,8 @@ error:
 
 static int  sGsCid;
 static int  sEthOnOff;
-#define   SYS_GSPS_ETH_UP_PROP      "sys.gsps.eth.up"
-#define   SYS_GSPS_ETH_DOWN_PROP    "sys.gsps.eth.down"
+#define   SYS_GSPS_ETH_UP_PROP      "ril.gsps.eth.up"
+#define   SYS_GSPS_ETH_DOWN_PROP    "ril.gsps.eth.down"
 
 static void startGSps(void *param)
 {

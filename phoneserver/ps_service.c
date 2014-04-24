@@ -42,8 +42,8 @@
 #define SSDA_MODE         "persist.radio.ssda.mode"
 #define SSDA_TESTMODE "persist.radio.ssda.testmode"
 
-#define   SYS_GSPS_ETH_UP_PROP        "sys.gsps.eth.up"
-#define   SYS_GSPS_ETH_DOWN_PROP      "sys.gsps.eth.down"
+#define   SYS_GSPS_ETH_UP_PROP        "ril.gsps.eth.up"
+#define   SYS_GSPS_ETH_DOWN_PROP      "ril.gsps.eth.down"
 #define   SYS_GSPS_ETH_IFNAME_PROP    "sys.gsps.eth.ifname"
 #define   SYS_GSPS_ETH_LOCALIP_PROP   "sys.gsps.eth.localip"
 #define   SYS_GSPS_ETH_PEERIP_PROP    "sys.gsps.eth.peerip"
@@ -61,7 +61,7 @@ static int parse_peer_ip(char* ipaddr){
 
     FILE* fp;
     char line[1024];
-    char* ptr;
+    char* ptr, *p;
 
     if ((fp = fopen(DHCP_DNSMASQ_LEASES_FILE, "r")) == NULL) {
         PHS_LOGE("Fail to open %s, error : %s.", DHCP_DNSMASQ_LEASES_FILE, strerror(errno));
@@ -69,9 +69,11 @@ static int parse_peer_ip(char* ipaddr){
     }
 
     while(fgets(line, sizeof(line), fp) != NULL) {
-        PHS_LOGE("Read line : %s.", line);
         if ((ptr = strstr(line, "192.168.42.")) != NULL) {
+            p = strchr(ptr, ' ');
+            *p = '\0';
             strcpy(ipaddr, ptr);
+            PHS_LOGD("IP address : %s", ipaddr);
             return 0;
         }
     }
@@ -365,13 +367,14 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                     PHS_LOGD("IPV6 arp linker = %s\n", linker);
                 }
 
-                property_get(SYS_GSPS_ETH_UP_PROP, prop, "0");
-                if (atoi(prop)) {
+                char gspsprop[PROPERTY_VALUE_MAX];
+                property_get(SYS_GSPS_ETH_UP_PROP, gspsprop, "0");
+                if (atoi(gspsprop)) {
                     char peerip[64]="";
-                    char ifname[64]="";
+                    char devname[64]={0};
                     if (parse_peer_ip(peerip) == 0){
-                        sprintf(ifname, "%s%d",  prop, cid-1);
-                        property_set(SYS_GSPS_ETH_IFNAME_PROP, ifname);
+                        snprintf(devname, sizeof(devname), "%s%d",  prop, cid-1);
+                        property_set(SYS_GSPS_ETH_IFNAME_PROP, devname);
                         property_set(SYS_GSPS_ETH_LOCALIP_PROP, ppp_info[cid-1].ipladdr);
                         property_set(SYS_GSPS_ETH_PEERIP_PROP,  peerip);
                     }
