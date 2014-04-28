@@ -1418,21 +1418,6 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
             }
         }
         setRadioState(channelID, RADIO_STATE_SIM_NOT_READY);
-
-        /* SPRD : for svlte & csfb @{ */
-        if (isSvLte() && !strcmp(s_modem, "t")) {
-            // in svlte, if usim, set the property, and then it will trigger modemd to start lte modem services
-            RIL_AppType app_type = getSimType(channelID);
-            RILLOGD("RIL App type = %d", app_type);
-            if (app_type == RIL_APPTYPE_USIM){
-                property_set(LTE_MODEM_START_PROP, "1");
-            } else if (app_type == RIL_APPTYPE_SIM) {
-                property_set(LTE_MODEM_START_PROP, "0");
-            } else {
-                property_set(LTE_MODEM_START_PROP, "-1");
-            }
-        }
-        /* @} */
     }
 
     at_response_free(p_response);
@@ -8254,43 +8239,6 @@ error:
     return -1;
 }
 
-
-static void* svlte_vsim_init(void *dummy) {
-    ATResponse *p_response = NULL;
-    int err;
-    int channelID;
-    char prop[PROPERTY_VALUE_MAX];
-
-    channelID = getChannel();
-
-    err = at_send_command(ATch_type[channelID], "AT+VIRTUALSIMINIT", &p_response);
-    if (err < 0 || p_response->success == 0) {
-        putChannel(channelID);
-        at_response_free(p_response);
-        RILLOGE("LTE virtualsiminit failed, stop rild process !");
-        exit(1);
-    } else {
-        RILLOGE("LTE virtualsiminit success!");
-        at_response_free(p_response);
-    }
-
-    property_get(RIL_L_SIM_POWER_PROPERTY, prop, "0");
-    if(!strcmp(prop, "0")) {
-        property_set(RIL_L_SIM_POWER_PROPERTY, "1");
-        at_send_command(ATch_type[channelID], "AT+SFUN=2", NULL);
-    }
-
-    /* assume radio is off on error */
-    if(isRadioOn(channelID) > 0) {
-        setRadioState (channelID, RADIO_STATE_SIM_NOT_READY);
-    }
-    putChannel(channelID);
-
-    list_init(&dtmf_char_list);
-    sem_post(&w_sem);
-    return NULL;
-}
-
 /**
  * Initialize everything that can be configured while we're still in
  * AT+CFUN=0
@@ -8423,15 +8371,16 @@ static void initializeCallback(void *param)
         // Response for AT+VIRTUALSIMINIT may be spent adbout 30s.
         // in order to fast init, create on thread to open card for SVLTE.
         if (isSvLte()) {
-            pthread_t tid;
-            putChannel(channelID);
-            if (pthread_create(&tid, NULL, svlte_vsim_init, NULL) < 0) {
-                RILLOGE("create LTE virtualsiminit thread failed!");
-                exit(1);
+retry_vinit:
+            err = at_send_command(ATch_type[channelID], "AT+VIRTUALSIMINIT", &p_response);
+            if (err < 0 || p_response->success == 0) {
+               at_response_free(p_response);
+               RILLOGE("LTE virtualsiminit failed, retry!");
+               goto retry_vinit;
+            } else {
+               RILLOGD("LTE virtualsiminit success!");
+               at_response_free(p_response);
             }
-
-            RILLOGD("create LTE virtualsiminit thread successful!");
-            return;
         }
     }
 
@@ -8909,14 +8858,17 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                                         RILLOGD("set %s %d", MODEM_SSDA_USIM_PROPERTY, sim_type);
                                         if (sim_type == 0) {
                                             property_set(MODEM_SSDA_USIM_PROPERTY, "0");
+                                            property_set(LTE_MODEM_START_PROP, "0");
                                         } else if (sim_type == 1) {
                                             property_set(MODEM_SSDA_USIM_PROPERTY, "1");
+                                            property_set(LTE_MODEM_START_PROP, "1");
                                         }
                                     }
                                 }
                             }
                         }
                     }
+
                     // in svlte, when l rild started, if usim exit, set radio power on.
                     if (!strcmp(s_modem,"l") && isSvLte()) {
                         RIL_requestTimedCallback(setLteRadioPowerOn, NULL, NULL);

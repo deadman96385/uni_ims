@@ -23,13 +23,12 @@ namespace android {
 
 #define MAX_RESPONSE_FROM_TDG_LTE   16
 #define MAX_REQUEST_TYPE_ARRAY_LEN  (RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE)
-/* Add for dual signal bar */
-//#define MAX_LTE_CLIENT              10
 
 static int sRILPServerFd = -1;
 static int sTdGClientFd  = -1;
 static int sLteClientFd  = -1;
 static int sPSEnable  = PS_TD_ENABLE;
+static int sLteReady  = 0;
 
 static RecordStream *sReqRecordStream = NULL;
 static pthread_mutex_t sWriteMutex    = PTHREAD_MUTEX_INITIALIZER;
@@ -135,7 +134,7 @@ static RILP_RequestType get_reqtype_by_id (int reqId) {
 	
 	if (is_svlte()) {
 	    pthread_mutex_lock(&sLteCFdMutex);
-	    if (sLteClientFd  != -1) { // when lte rild connect, ril request should been dispatched.
+	    if (sLteClientFd  != -1 && sLteReady) { // when lte rild connect, ril request should been dispatched.
 			pthread_mutex_unlock(&sLteCFdMutex);
 			
 			if (reqId <= RIL_REQUEST_LAST)
@@ -306,10 +305,11 @@ static RILP_RequestType  get_manual_select_network_request_type(void* req) {
 
 	if (is_svlte()) {
 	    pthread_mutex_lock(&sLteCFdMutex);
-	    if (sLteClientFd  != -1) { // when lte rild connect, ril request should been dispatched.
+	    if (sLteClientFd  != -1 && sLteReady) { // when lte rild connect, ril request should been dispatched.
 			pthread_mutex_unlock(&sLteCFdMutex);
-                        RIL_NetworkList* nl = (RIL_NetworkList *) req;
-                        ALOGD("manual selection network act: %d.", nl->act);
+
+			RIL_NetworkList* nl = (RIL_NetworkList *) req;
+			ALOGD("manual selection network act: %d.", nl->act);
 			if (nl->act == 7) {
 				return ReqToLTE;
 			}
@@ -696,6 +696,7 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
             ALOGD("Clear saved sSignalStrength data");
             RIL_SIGNALSTRENGTH_INIT_LTE(sSignalStrength);
         }
+        sLteReady = 1;
         break;
       default:
         return;
@@ -793,7 +794,7 @@ static void process_request(void *reqbuf, int nlen) {
 	} 
 	
 	if (reqType & ReqToLTE) {
-		if (sLteClientFd != -1) {
+		if (sLteClientFd != -1 && sLteReady) {
 			write_data(sLteClientFd, reqbuf, nlen);
 		} else {
 			ALOGE("LTE client socket has been destroy!");
