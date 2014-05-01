@@ -125,7 +125,7 @@ static char *readline(struct send_thread_t *me)
 
 			/* read error encountered or EOF reached */
 			if (count == 0) {
-				PHS_LOGD("atchannel: EOF reached");
+				PHS_LOGE("atchannel: EOF reached");
 			} else {
 				PHS_LOGE("atchannel: read error %s", strerror(errno));
 			}

@@ -42,6 +42,9 @@
 #define MUX_W_DEV  "ro.modem.w.tty"
 #define MUX_L_DEV  "ro.modem.l.tty"
 
+#undef  PHS_LOGD
+#define PHS_LOGD(x...)  ALOGD( x )
+
 #define ANDROID_WAKE_LOCK_NAME "phoneserver-init"
 
 const char *modem = NULL;
@@ -151,44 +154,44 @@ int uid;
     /*
      * Try the unix98 way first.
      */
-    PHS_LOGD("CHNMNG:to open /dev/ptmx !\n");
+    PHS_LOGD("CHNMNG:to open /dev/ptmx");
     mfd = open("/dev/ptmx", O_RDWR | O_NONBLOCK);
     if (mfd >= 0) {
         int ptn, rett = 0;
 
         //grantpt(mfd);
         //unlockpt(mfd);
-        PHS_LOGD("CHNMNG:/dev/ptmx opened!\n");
+        PHS_LOGD("CHNMNG:/dev/ptmx opened");
         rett = ioctl(mfd, TIOCGPTN, &ptn);
-        PHS_LOGD("CHNMNG:/dev/ptmx opened rett=%x ptn=%d!\n", rett, ptn);
+        PHS_LOGD("CHNMNG:/dev/ptmx opened rett=%x ptn=%d", rett, ptn);
         if (rett >= 0) {
             sprintf(pty_name, "/dev/pts/%d", ptn);
             if (chmod(pty_name, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) < 0) {
                 PHS_LOGE
-                    ("CHNMNG: Couldn't change pty slave %s's mode\n",
+                    ("CHNMNG: Couldn't change pty slave %s's mode",
                      pty_name);
             }
 #ifdef TIOCSPTLCK
             ptn = 0;
             if ((rett = ioctl(mfd, TIOCSPTLCK, &ptn)) < 0) {
                 PHS_LOGE
-                    ("CHNMNG: Couldn't unlock pty slave %s rett=%x\n",
+                    ("CHNMNG: Couldn't unlock pty slave %s rett=%x",
                      pty_name, rett);
             }
 #endif
             if ((sfd = open(pty_name, O_RDWR | O_NOCTTY | O_NONBLOCK)) < 0) {
                 PHS_LOGE
-                    ("CHNMNG: Couldn't open pty slave %s sfd=%x\n",
+                    ("CHNMNG: Couldn't open pty slave %s sfd=%x",
                      pty_name, sfd);
             }
         } else {
-            PHS_LOGE("CHNMNG:fail to get pty number!\n");
+            PHS_LOGE("CHNMNG:fail to get pty number");
         }
     }
 #endif /* TIOCGPTN */
     if (sfd < 0) {
         /* the old way - scan through the pty name space */
-        PHS_LOGD("CHNMNG: begin scan pty name space!\n");
+        PHS_LOGD("CHNMNG: begin scan pty name space");
         for (i = 0; i < 64; ++i) {
             sprintf(pty_name, "/dev/pty%c%x", 'p' + i / 16, i % 16);
             mfd = open(pty_name, O_RDWR | O_NONBLOCK, 0);
@@ -220,7 +223,7 @@ int uid;
         }
     } else
         PHS_LOGE("CHNMNG couldn't get attributes on pty");
-    PHS_LOGD("CHNMNG get pty OK mpty=%d!\n", mfd);
+    PHS_LOGD("CHNMNG get pty OK mpty=%d", mfd);
     return 1;
 }
 
@@ -272,9 +275,9 @@ static cmux_t *find_type_cmux(struct channel_manager_t *const me, mux_type type)
     sem_lock(&me->get_mux_lock);
     if(!strcmp(modem, "l")) {
         for (i = 0; i < LTE_MUX_CHN_NUM; i++) {
-            PHS_LOGD("LTE find_type_cmux  i = %d, me->itsCmux[i].type = %d, me->itsCmux[i].in_use = %d\n" ,i, me->itsCmux[i].type, me->itsCmux[i].in_use);
+            PHS_LOGI("LTE find_type_cmux  i = %d, me->itsCmux[i].type = %d, me->itsCmux[i].in_use = %d\n" ,i, me->itsCmux[i].type, me->itsCmux[i].in_use);
             if (me->itsCmux[i].type == (int)type && me->itsCmux[i].in_use == 0) {
-                PHS_LOGD("LTE find_type_cmux type = %d\n",type);
+                PHS_LOGI("LTE find_type_cmux type = %d\n",type);
                 mux = &me->itsCmux[i];
                 mux->in_use = 1;
                 break;
@@ -283,9 +286,9 @@ static cmux_t *find_type_cmux(struct channel_manager_t *const me, mux_type type)
 
     } else {
         for (i = 0; i < MUX_NUM; i++) {
-            PHS_LOGD("find_type_cmux  i = %d, me->itsCmux[i].type = %d, me->itsCmux[i].in_use = %d\n" ,i, me->itsCmux[i].type, me->itsCmux[i].in_use);
+            PHS_LOGI("find_type_cmux  i = %d, me->itsCmux[i].type = %d, me->itsCmux[i].in_use = %d\n" ,i, me->itsCmux[i].type, me->itsCmux[i].in_use);
             if (me->itsCmux[i].type == (int)type && me->itsCmux[i].in_use == 0) {
-                PHS_LOGD(" find_type_cmux type = %d\n",type);
+                PHS_LOGI(" find_type_cmux type = %d\n",type);
                 mux = &me->itsCmux[i];
                 mux->in_use = 1;
                 break;
@@ -302,51 +305,50 @@ static cmux_t *single_find_cmux(struct channel_manager_t *const me, AT_CMD_TYPE_
 
     switch (type) {
         case AT_CMD_TYPE_GEN:
-            PHS_LOGD("TYPE: GSM\n");
+            PHS_LOGI("TYPE: GSM\n");
             return find_type_cmux(me, GSM);
-            break;
+
         case AT_CMD_TYPE_SS:
-            PHS_LOGD("TYPE: SSM\n");
+            PHS_LOGI("TYPE: SSM\n");
             return find_type_cmux(me, SSM);
-            break;
+
         case AT_CMD_TYPE_SMS:
-            PHS_LOGD("TYPE: SMSM\n");
+            PHS_LOGI("TYPE: SMSM\n");
             return find_type_cmux(me, SMSM);
-            break;
 
         case AT_CMD_TYPE_SMST:
-            PHS_LOGD("TYPE: SMSTM\n");
+            PHS_LOGI("TYPE: SMSTM\n");
             return find_type_cmux(me, STKM);
-            break;
+
         case AT_CMD_TYPE_NW:
-            PHS_LOGD("TYPE:NWM\n");
+            PHS_LOGI("TYPE:NWM\n");
             return find_type_cmux(me, NWM);
-            break;
+
         case AT_CMD_TYPE_PBK:
-            PHS_LOGD("TYPE:PBKM\n");
+            PHS_LOGI("TYPE:PBKM\n");
             return find_type_cmux(me, PBKM);
-            break;
+
         case AT_CMD_TYPE_SIM:
-            PHS_LOGD("TYPE:SIMM\n");
+            PHS_LOGI("TYPE:SIMM\n");
             return find_type_cmux(me, SIMM);
-            break;
+
         case AT_CMD_TYPE_STK:
-            PHS_LOGD("TYPE:STKM\n");
+            PHS_LOGI("TYPE:STKM\n");
             return find_type_cmux(me, STKM);
-            break;
+
         case AT_CMD_TYPE_CS:
-            PHS_LOGD("TYPE:CSM\n");
+            PHS_LOGI("TYPE:CSM\n");
             return find_type_cmux(me, CSM);
-            break;
+
         case AT_CMD_TYPE_PS:
-            PHS_LOGD("TYPE:PSM\n");
+            PHS_LOGI("TYPE:PSM\n");
             return find_type_cmux(me, PSM);
-            break;
+
         case AT_CMD_TYPE_STM:
             return find_type_cmux(me, STMM);
-            break;
+
         default:
-            PHS_LOGD(" CHNMNG single_find_cmux invalid cmd type! \n");
+            PHS_LOGI(" CHNMNG single_find_cmux invalid cmd type \n");
     }
     return mux;
 }
@@ -357,39 +359,39 @@ static cmux_t *multi_find_cmux(struct channel_manager_t *const me, AT_CMD_TYPE_T
 
     switch (type) {
         case AT_CMD_TYPE_SLOW1:
-		PHS_LOGD("TYPE: AT_CMD_TYPE_SLOW1\n");
+		PHS_LOGI("TYPE: AT_CMD_TYPE_SLOW1\n");
 		return find_type_cmux(me, ATM1_SIM1);
-		break;
+
         case AT_CMD_TYPE_NORMAL1:
-		PHS_LOGD("TYPE: AT_CMD_TYPE_NORMAL1\n");
+		PHS_LOGI("TYPE: AT_CMD_TYPE_NORMAL1\n");
 		return find_type_cmux(me, ATM2_SIM1);
-		break;
+
         case AT_CMD_TYPE_SLOW2:
-		PHS_LOGD("TYPE: AT_CMD_TYPE_SLOW2\n");
+		PHS_LOGI("TYPE: AT_CMD_TYPE_SLOW2\n");
 		return find_type_cmux(me, ATM1_SIM2);
-		break;
+
         case AT_CMD_TYPE_NORMAL2:
-		PHS_LOGD("TYPE: AT_CMD_TYPE_NORMAL2\n");
+		PHS_LOGI("TYPE: AT_CMD_TYPE_NORMAL2\n");
 		return find_type_cmux(me, ATM2_SIM2);
-		break;
+
         case AT_CMD_TYPE_SLOW3:
-		PHS_LOGD("TYPE: AT_CMD_TYPE_SLOW3\n");
+		PHS_LOGI("TYPE: AT_CMD_TYPE_SLOW3\n");
 		return find_type_cmux(me, ATM1_SIM3);
-		break;
+
         case AT_CMD_TYPE_NORMAL3:
-		PHS_LOGD("TYPE: AT_CMD_TYPE_NORMAL3\n");
+		PHS_LOGI("TYPE: AT_CMD_TYPE_NORMAL3\n");
 		return find_type_cmux(me, ATM2_SIM3);
-		break;
+
         case AT_CMD_TYPE_SLOW4:
-		PHS_LOGD("TYPE: AT_CMD_TYPE_SLOW4\n");
+		PHS_LOGI("TYPE: AT_CMD_TYPE_SLOW4\n");
 		return find_type_cmux(me, ATM1_SIM4);
-		break;
+
         case AT_CMD_TYPE_NORMAL4:
-		PHS_LOGD("TYPE: AT_CMD_TYPE_NORMAL4\n");
+		PHS_LOGI("TYPE: AT_CMD_TYPE_NORMAL4\n");
 		return find_type_cmux(me, ATM2_SIM4);
-		break;
+
         default:
-            PHS_LOGD(" CHNMNG multi_find_cmux invalid cmd type! \n");
+            PHS_LOGI(" CHNMNG multi_find_cmux invalid cmd type \n");
     }
     return mux;
 }
@@ -424,6 +426,7 @@ static pty_t **single_get_mux_wait_array(struct channel_manager_t *const me,
         case AT_CMD_TYPE_GEN:
             *array_size = GSM_WAIT_NUM;
             return me->gsm_wait_array;
+
         case AT_CMD_TYPE_SS:
             *array_size = GSM_WAIT_NUM;
             return me->ssm_wait_array;
@@ -460,7 +463,7 @@ static pty_t **single_get_mux_wait_array(struct channel_manager_t *const me,
             *array_size = STMM_WAIT_NUM;
             return me->stm_wait_array;
         default:
-            PHS_LOGD(" CHNMNG single_get_mux_wait_array invalid cmd type! \n");
+            PHS_LOGI(" CHNMNG single_get_mux_wait_array invalid cmd type \n");
             return NULL;
     }
 }
@@ -498,7 +501,7 @@ static pty_t **multi_get_mux_wait_array(struct channel_manager_t *const me,
             return me->normal4_wait_array;
 
         default:
-            PHS_LOGE(" CHNMNG multi_get_mux_wait_array invalid cmd type! \n");
+            PHS_LOGE(" CHNMNG multi_get_mux_wait_array invalid cmd type ");
             return NULL;
     }
 }
@@ -529,9 +532,9 @@ static void print_array(pty_t ** pty, int array_size)
     int i;
     for (i = 0; i < array_size; i++) {
         if (pty[i] != NULL)
-            PHS_LOGD("[%d]:%d ", i, pty[i]->tid);
+            PHS_LOGI("[%d]:%d ", i, pty[i]->tid);
     }
-    PHS_LOGD("\n");
+    //PHS_LOGI("\n");
 }
 
 /*## operation getdfcmux(cmd_type) */
@@ -546,23 +549,23 @@ static cmux_t *chnmng_get_cmux(void *const chnmng, const AT_CMD_TYPE_T type,
     int not_found = 0;
     tid = gettid();
     struct channel_manager_t *me = (struct channel_manager_t *)chnmng;
-    PHS_LOGD("Send thread TID [%d] CHNMNG enter channel_manager_get_cmux \n",
+    PHS_LOGI("Send thread TID [%d] CHNMNG enter channel_manager_get_cmux ",
             tid);
     pty = find_pty(me, tid);
     int index = 0;
 
     //find free cmux
-    PHS_LOGD("Before add wait array pty=%p\n", pty);
+    PHS_LOGI("Before add wait array pty=%p", pty);
     if(multiSimMode == 1)
         wait_array = multi_get_mux_wait_array(me, type, &array_size);
     else
         wait_array = single_get_mux_wait_array(me, type, &array_size);
     if (block) {
         sem_lock(&me->array_lock);
-        PHS_LOGD("Before add wait array\n");
+        PHS_LOGI("Before add wait array");
         print_array(wait_array, array_size);
         index = add_wait_array(wait_array, pty, array_size);
-        PHS_LOGD("After add wait array\n");
+        PHS_LOGI("After add wait array");
         print_array(wait_array, array_size);
         sem_unlock(&me->array_lock);
     } else {
@@ -581,8 +584,8 @@ static cmux_t *chnmng_get_cmux(void *const chnmng, const AT_CMD_TYPE_T type,
         }
         if (mux)
             break;
-        PHS_LOGD
-            ("Send thread TID [%d] CHNMNG block at channel_manager_get_cmux \n",
+        PHS_LOGI
+            ("Send thread TID [%d] CHNMNG block at channel_manager_get_cmux ",
              tid);
         sem_lock(&pty->get_mux_lock);
         if (mux == 0) {
@@ -595,8 +598,8 @@ static cmux_t *chnmng_get_cmux(void *const chnmng, const AT_CMD_TYPE_T type,
     if (mux) {
         mux->pty = pty;
         mux->cmd_type = type;
-        PHS_LOGD
-            ("Send thread TID [%d] CHNMNG Leave channel_manager_get_cmux:%s \n",
+        PHS_LOGI
+            ("Send thread TID [%d] CHNMNG Leave channel_manager_get_cmux:%s ",
              tid, mux->name);
     }
     return mux;
@@ -608,7 +611,7 @@ void select_send_thread_run(struct channel_manager_t *const me,
     int array_size;
     pty_t **wait_array = NULL;
 
-    PHS_LOGD("Enter select_send_thread_run\n");
+    PHS_LOGI("Enter select_send_thread_run");
     if(multiSimMode == 1)
         wait_array = multi_get_mux_wait_array(me, type, &array_size);
     else
@@ -616,16 +619,16 @@ void select_send_thread_run(struct channel_manager_t *const me,
 
     pty_t *pty = wait_array[0];
     if (pty != NULL) {
-        PHS_LOGD("select thread tid [%d] run...\n", wait_array[0]->tid);
+        PHS_LOGI("select thread tid [%d] run...", wait_array[0]->tid);
         sem_unlock(&pty->get_mux_lock);
     }
-    PHS_LOGD("Leave select_send_thread_run\n");
+    PHS_LOGI("Leave select_send_thread_run");
 }
 
 /*## operation free_cmux(cmux_struct) */
 static void chnmng_free_cmux(void *const chnmng, struct cmux_t *cmux)
 {
-    PHS_LOGD("CHNMNG enter channel_manager_free_cmux cmux=%s \n", cmux->name);
+    PHS_LOGI("CHNMNG enter channel_manager_free_cmux cmux=%s ", cmux->name);
     int array_size = 0;
     int type = cmux->cmd_type;
     struct channel_manager_t *me = (struct channel_manager_t *)chnmng;
@@ -641,15 +644,15 @@ static void chnmng_free_cmux(void *const chnmng, struct cmux_t *cmux)
     sem_lock(&me->array_lock);
     pty = wait_array[0];
     if (pty != NULL) {
-        PHS_LOGD("CHNMNG enter channel_manager_free_cmux pty=%p \n", pty);
+        PHS_LOGI("CHNMNG enter channel_manager_free_cmux pty=%p ", pty);
         if (pty == cmux->pty) {
-            PHS_LOGD("[%d] Before remove wait array\n", tid);
+            PHS_LOGI("[%d] Before remove wait array", tid);
             print_array(wait_array, array_size);
             remove_wait_array(wait_array, pty, array_size);
-            PHS_LOGD("[%d] After remove wait array\n", tid);
+            PHS_LOGI("[%d] After remove wait array", tid);
             print_array(wait_array, array_size);
         } else {
-            PHS_LOGD("free cmux error\n");
+            PHS_LOGI("free cmux error");
         }
     }
     sem_lock(&me->get_mux_lock);
@@ -657,7 +660,7 @@ static void chnmng_free_cmux(void *const chnmng, struct cmux_t *cmux)
     select_send_thread_run(me, cmux->cmd_type);
     sem_unlock(&me->get_mux_lock);
     sem_unlock(&me->array_lock);
-    PHS_LOGD("CHNMNG Leave channel_manager_free_cmux cmux=%s \n", cmux->name);
+    PHS_LOGI("CHNMNG Leave channel_manager_free_cmux cmux=%s ", cmux->name);
 }
 
 /*## operation free_cmux(cmux_struct) */
@@ -735,7 +738,7 @@ char *chnmng_find_buffer(struct channel_manager_t *const me)
             break;
         }
     }
-    PHS_LOGD("chnmng_find_buffer!\n");
+    PHS_LOGD("chnmng_find_buffer");
     return ret;
 }
 
@@ -756,8 +759,6 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
     struct chns_config_t chns_data;
     struct termios ser_settings;
 
-    memset(me->itsCmux, 0, sizeof(struct cmux_t) * MUX_NUM);
-
     if(!strcmp(modem, "t")) {
         property_get(MUX_TD_DEV, prop, "/dev/ts0710mux");
     } else if(!strcmp(modem, "w")) {
@@ -767,29 +768,25 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
         chn_num = LTE_MUX_CHN_NUM ;
     } else {
         PHS_LOGE("Wrong modem parameter");
-	exit(-1);
+        exit(-1);
     }
 
     PHS_LOGD("cmux_Init: mux device is %s", prop);
+    memset(me->itsCmux, 0, sizeof(struct cmux_t) * chn_num);
 
     for (i = 0; i < chn_num; i++) {
         snprintf(muxname, sizeof(muxname), "%s%d", prop, i);
-        PHS_LOGD("CHNMNG: open mux:%s !\n ",muxname);
         me->itsCmux[i].type = RESERVE;
         me->itsCmux[i].ops = cmux_get_operations();
         me->itsCmux[i].ops->cmux_free(&me->itsCmux[i]);
+        PHS_LOGD("CHNMNG: open mux:%s",muxname);
 retry:
         fd = open(muxname, O_RDWR);
         if(fd < 0) {
-            if(i > 14) {
-                continue;
-            } else {
-                PHS_LOGD("Phoneserver exit: open %s failed!, errno = %d (%s)\n ", muxname, errno, strerror(errno));
-                if (errno == EAGAIN)
-                   goto retry;
-                else 
-                  exit(-1);
-	    }
+			PHS_LOGE("Phoneserver exit: open %s failed, errno = %d (%s)\n ", muxname, errno, strerror(errno));
+			if (errno == EAGAIN)
+			   goto retry;
+			exit(-1);
         }
     }
 
@@ -817,7 +814,7 @@ retry:
         me->itsCmux[i].type = chns_data.mux[i].type;
         me->itsCmux[i].muxfd =open(me->itsCmux[i].name, O_RDWR);
         if(me->itsCmux[i].muxfd < 0) {
-            PHS_LOGD("Phoneserver exit: open mux:%s failed!\n", me->itsCmux[i].name);
+            PHS_LOGE("Phoneserver exit: open mux:%s failed, errno = %d (%s)", me->itsCmux[i].name, errno, strerror(errno));
             exit(1);
         }
         if(isatty(me->itsCmux[i].muxfd)) {
@@ -825,31 +822,15 @@ retry:
              cfmakeraw(&ser_settings);
              tcsetattr(me->itsCmux[i].muxfd, TCSANOW, &ser_settings);
         }
-        PHS_LOGD("CHNMNG: open mux:%s fd=%d  !\n ",	me->itsCmux[i].name, me->itsCmux[i].muxfd);
+        PHS_LOGD("CHNMNG: open mux:%s fd=%d",	me->itsCmux[i].name, me->itsCmux[i].muxfd);
         sem_init(&me->itsReceive_thread[i].resp_cmd_lock, 0, 1);
         sem_init(&me->itsCmux[i].cmux_lock, 0, 0);
         cond_init(&me->itsCmux[i].cond_timeout, NULL);
         mutex_init(&me->itsCmux[i].mutex_timeout, NULL);
         me->itsReceive_thread[i].mux = &me->itsCmux[i];
         me->itsReceive_thread[i].ops = receive_thread_get_operations();
-
-        PHS_LOGD("CHNMNG: after open mux:%s fd=%d  !\n ",
-                me->itsCmux[i].name, me->itsCmux[i].muxfd);
     }
-
-    /*for test: delete after modification of kernel layer*/
-    /* veth_spi0<->sdiomux13 */
-    /* veth_spi1<->sdiomux14 */
-    /* veth_spi2<->sdiomux15 */
-    /* veth_spi3<->sdiomux16 */
-    /* veth_spi4<->sdiomux17 */
-    for (i=13; i<18; i++) {
-        snprintf(muxname, sizeof(muxname), "/dev/sdiomux%d",i);
-        fd = open(muxname, O_RDWR);
-        PHS_LOGD(" open %s fd = %d\n ",muxname,fd);
-        if (fd < 0)
-            PHS_LOGD(" after open %s errno = %d (%s) \n",muxname, errno, strerror(errno));
-    }
+    PHS_LOGD("CHNMNG: cmux_Init done");
 }
 
 /*## operation initialize all pty objects */
@@ -912,7 +893,7 @@ static void chnmng_pty_Init(struct channel_manager_t *const me)
         me->itsPty[i].pty_fd =create_communication_channel(me->itsPty[i].name);
         buff = chnmng_find_buffer(&chnmng);
         if (buff == NULL) {
-            PHS_LOGE("ERROR chnmng_pty_Init no buffer!\n");
+            PHS_LOGE("ERROR chnmng_pty_Init no buffer");
         }
         me->itsPty[i].buffer = buff;
         sem_init(&me->itsSend_thread[i].req_cmd_lock, 0, 1);
@@ -952,13 +933,13 @@ void chnmng_start_thread(struct channel_manager_t *const me)
                 (void *)me->itsReceive_thread[i].ops->receive_data,
                 (void *)&(me->itsReceive_thread[i]));
         if (tid < 0) {
-            PHS_LOGE("ERROR chnmng_mux pthread_create !\n ");
+            PHS_LOGE("ERROR chnmng_mux pthread_create \n ");
             break;
         }
         thread_getschedparam((int)&me->itsReceive_thread[i].thread, &policy, &sched);
-        PHS_LOGD("chnmng_mux thread: policy=%d!\n", policy);
+        PHS_LOGD("chnmng_mux thread: policy=%d", policy);
         if (policy != SCHED_OTHER) {
-            PHS_LOGD("chnmng_mux thread: policy=%d!\n", policy);
+            PHS_LOGD("chnmng_mux thread: policy=%d", policy);
             sched.sched_priority = chns_data.mux[i].prority;
             thread_setschedparam((int) &me->itsReceive_thread[i].thread, policy, &sched );
         }
@@ -969,24 +950,24 @@ void chnmng_start_thread(struct channel_manager_t *const me)
                 (void *)me->itsSend_thread[i].ops->send_data,
                 (void *)&(me->itsSend_thread[i]));
         if (tid < 0) {
-            PHS_LOGE("ERROR chnmng_pty pthread_create !\n ");
+            PHS_LOGE("ERROR chnmng_pty pthread_create");
             break;
         }
         thread_getschedparam((int)&me->itsSend_thread[i].thread, &policy, &sched);
-        PHS_LOGD("chnmng_pty thread: policy=%d!\n", policy);
+        PHS_LOGD("chnmng_pty thread: policy=%d", policy);
         if (policy != SCHED_OTHER) {
-            PHS_LOGD("chnmng_pty thread: policy=%d!\n", policy);
+            PHS_LOGD("chnmng_pty thread: policy=%d!", policy);
             sched.sched_priority = chns_data.pty[i].prority;
             thread_setschedparam((int)&me->itsSend_thread[i].thread, policy, &sched );
         }
     }
 }
 
-static void getPartialWakeLock() {
+static void get_partial_wakeLock() {
     acquire_wake_lock(PARTIAL_WAKE_LOCK, ANDROID_WAKE_LOCK_NAME);
 }
 
-static void releaseWakeLock() {
+static void release_wakeLock() {
      release_wake_lock(ANDROID_WAKE_LOCK_NAME);
 }
 
@@ -1000,7 +981,7 @@ static void channel_manager_init(void)
     sem_init(&chnmng.array_lock, 0, 1);
     chnmng.block_count = 0;
 
-    getPartialWakeLock();
+    get_partial_wakeLock();
     chnmng_buffer_Init(chnmng.me);
     chnmng_cmux_Init(chnmng.me);
     chnmng_pty_Init(chnmng.me);
@@ -1008,7 +989,7 @@ static void channel_manager_init(void)
     setuid(AID_SYSTEM); /* switch user to system  */
 
     chnmng_start_thread(chnmng.me);
-    releaseWakeLock();
+    release_wakeLock();
 }
 
 extern void ps_service_init(void);
@@ -1037,7 +1018,7 @@ static void *detect_at_no_response(void *par)
          strcpy(socket_name, "phsl");
     } else {
         PHS_LOGE("Wrong modem parameter");
-	exit(-1);
+        exit(-1);
     }
     soc_fd = socket_local_server(socket_name,
 			ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
@@ -1046,14 +1027,14 @@ static void *detect_at_no_response(void *par)
         exit(-1);
     }
 
-   for(; ;) {
-        PHS_LOGD("%s: waiting for socket client ...", __func__);
+   for(;;) {
+        PHS_LOGI("%s: waiting for socket client ...", __func__);
         if ( (soc_client = accept(soc_fd, NULL, NULL)) == -1)
         {
             PHS_LOGE("%s: accept error", __func__);
             continue;
         }
-        ALOGD("%s: accept soc_client=%d", __func__, soc_client);
+        PHS_LOGD("%s: accept soc_client=%d", __func__, soc_client);
     }
     close(soc_client);
 }
@@ -1064,8 +1045,8 @@ int main(int argc, char *argv[])
     pthread_t tid;
     int ret;
 
-    PHS_LOGD("chnmng start phone server!\n");
-    PHS_LOGD("Phoneserver version: %s \n",version_string);
+    PHS_LOGD("chnmng start phone server");
+    PHS_LOGD("Phoneserver version: %s ",version_string);
 
     if (0 == strcmp(argv[1], "-m") && (argc > 2)) {
         modem = argv[2];
@@ -1093,7 +1074,7 @@ int main(int argc, char *argv[])
     sem_init(&sms_lock, 0, 1);
 
     ret = pthread_create(&tid, NULL, (void*)detect_at_no_response, NULL);
-    if(ret < 0)
+    if(ret < 0) 
         PHS_LOGE("create detect_at_no_response thread failed");
 
     ps_service_init();

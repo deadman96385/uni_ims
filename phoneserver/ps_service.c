@@ -27,6 +27,9 @@
 #include "at_tok.h"
 #include <cutils/properties.h>
 
+#undef  PHS_LOGD
+#define PHS_LOGD(x...)  ALOGD( x )
+
 #define ETH_TD  "ro.modem.t.eth"
 #define ETH_W  "ro.modem.w.eth"
 #define ETH_L  "ro.modem.l.eth"
@@ -71,6 +74,8 @@ static int parse_peer_ip(char* ipaddr){
     while(fgets(line, sizeof(line), fp) != NULL) {
         if ((ptr = strstr(line, "192.168.42.")) != NULL) {
             p = strchr(ptr, ' ');
+            if (p == NULL) 
+                return -1;
             *p = '\0';
             strcpy(ipaddr, ptr);
             PHS_LOGD("IP address : %s", ipaddr);
@@ -104,12 +109,12 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
     int cid, ppp_index;
     int err, ret;
 
-    PHS_LOGD("enter cvt_cgdata_set_req  \n");
+    PHS_LOGD("enter cvt_cgdata_set_req  ");
     if (req == NULL) {
-        PHS_LOGD("leave cvt_cgdata_set_req AT_RESULT_NG\n");
+        PHS_LOGD("leave cvt_cgdata_set_req AT_RESULT_NG");
         return AT_RESULT_NG;
     }
-    PHS_LOGD("enter cvt_cgdata_set_req cmd:%s cmdlen:%d  \n",req->cmd_str, req->len);
+    PHS_LOGD("enter cvt_cgdata_set_req cmd:%s cmdlen:%d  ",req->cmd_str, req->len);
     memset(buffer,0,sizeof(buffer));
     memset(at_cmd_str,0,MAX_AT_CMD_LEN);
 
@@ -118,25 +123,25 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
 
     err = at_tok_start(&at_in_str, '=');
     if (err < 0) {
-        PHS_LOGD("parse cmd error\n");
+        PHS_LOGD("parse cmd error");
         return AT_RESULT_NG;
     }
 
     /*get L2P */
     err = at_tok_nextstr(&at_in_str, &out);
     if (err < 0) {
-        PHS_LOGD("parse cmd error\n");
+        PHS_LOGD("parse cmd error");
         return AT_RESULT_NG;
     }
 
     /*Get cid */
     err = at_tok_nextint(&at_in_str, &cid);
     if (err < 0) {
-        PHS_LOGD("parse cmd error\n");
+        PHS_LOGD("parse cmd error");
         return AT_RESULT_NG;
     }
     if (cid > 3) {
-        PHS_LOGD("invalid cid\n");
+        PHS_LOGD("invalid cid");
         return AT_RESULT_NG;
     }
     ppp_index = cid - 1;
@@ -144,7 +149,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
     mutex_lock(&ps_service_mutex);
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     ppp_info[ppp_index].state = PPP_STATE_ACTING;
-    PHS_LOGD("PPP_STATE_ACTING\n");
+    PHS_LOGD("PPP_STATE_ACTING");
     ppp_info[ppp_index].pty = req->recv_pty;
     ppp_info[ppp_index].cmux = mux;
     ppp_info[ppp_index].cid = cid;
@@ -154,10 +159,10 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
             ppp_index);
     ret = adapter_cmux_write_for_ps(mux, req->cmd_str, req->len, req->timeout);
 
-    PHS_LOGD("PDP activate result:ret = %d,state=%d\n",ret,ppp_info[ppp_index].state);
+    PHS_LOGD("PDP activate result:ret = %d,state=%d",ret,ppp_info[ppp_index].state);
     if(ret == AT_RESULT_TIMEOUT)
     {
-        PHS_LOGD("PDP activate timeout \n");
+        PHS_LOGD("PDP activate timeout ");
         ppp_info[ppp_index].state = PPP_STATE_IDLE;
         adapter_pty_end_cmd(req->recv_pty );
         adapter_free_cmux_for_ps(mux);
@@ -168,7 +173,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
 
     if(ppp_info[ppp_index].state != PPP_STATE_CONNECT)
     {
-        PHS_LOGD("PDP activate error :%d\n",ppp_info[ppp_index].state);
+        PHS_LOGD("PDP activate error :%d",ppp_info[ppp_index].state);
         adapter_pty_end_cmd(req->recv_pty );
         adapter_free_cmux_for_ps(mux);
         if(ppp_info[ppp_index].error_num >= 0) {
@@ -191,7 +196,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
         ret = adapter_cmux_write_for_ps( mux, at_cmd_str, strlen(at_cmd_str), 10);
         if(ret == AT_RESULT_TIMEOUT)
         {
-            PHS_LOGD("Get IP address timeout \n");
+            PHS_LOGD("Get IP address timeout ");
             ppp_info[ppp_index].state = PPP_STATE_IDLE;
             adapter_pty_end_cmd(req->recv_pty );
             adapter_free_cmux_for_ps(mux);
@@ -201,7 +206,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
         }
         if(ppp_info[ppp_index].state != PPP_STATE_ACTIVE)
         {
-            PHS_LOGD("Getting IP addr and PDP activate error :%d\n",ppp_info[ppp_index].state);
+            PHS_LOGD("Getting IP addr and PDP activate error :%d",ppp_info[ppp_index].state);
             adapter_pty_end_cmd(req->recv_pty );
             adapter_free_cmux_for_ps(mux);
             adapter_pty_write(req->recv_pty,"ERROR\r",strlen("ERROR\r"));
@@ -211,7 +216,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
         }
         if(ppp_info[ppp_index].state == PPP_STATE_ACTIVE)
         {
-            PHS_LOGD("PS connected successful\n");
+            PHS_LOGD("PS connected successful");
             adapter_pty_end_cmd(req->recv_pty );
             adapter_free_cmux_for_ps(mux);
             adapter_pty_write(req->recv_pty,"CONNECT\r",strlen("CONNECT\r"));
@@ -230,15 +235,15 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                 ppp_index);
         ret = adapter_cmux_write_for_ps( mux, at_cmd_str, strlen(at_cmd_str), 10);
         if(ret == AT_RESULT_TIMEOUT) {
-            PHS_LOGD("Get IP address timeout \n");
-            PHS_LOGD("PPP_STATE_DEACTING\n");
+            PHS_LOGD("Get IP address timeout ");
+            PHS_LOGD("PPP_STATE_DEACTING");
             ppp_info[ppp_index].state = PPP_STATE_DEACTING;
             snprintf(at_cmd_str,sizeof(at_cmd_str), "AT+CGACT=0,%d\r",cid);
             adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp1, (int)req->recv_pty);
             ret = adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
                     req->timeout);
             if(ret == AT_RESULT_TIMEOUT) {
-                PHS_LOGD("PDP deactivate timeout \n");
+                PHS_LOGD("PDP deactivate timeout ");
 
                 ppp_info[ppp_index].state = PPP_STATE_IDLE;
                 adapter_pty_end_cmd(req->recv_pty );
@@ -251,7 +256,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
 
         if(ppp_info[ppp_index].state == PPP_STATE_ACTIVE)
         {
-            PHS_LOGD("PS connected successful\n");
+            PHS_LOGD("PS connected successful");
             if(!strcmp(modem, "t")) {
                 property_get(ETH_TD, prop, "veth");
             } else if(!strcmp(modem, "w")) {
@@ -263,25 +268,25 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                 exit(-1);
             }
 
-            PHS_LOGD("PS ip_state = %d\n",ppp_info[cid-1].ip_state);
+            PHS_LOGD("PS ip_state = %d",ppp_info[cid-1].ip_state);
 
             if (ppp_info[cid-1].ip_state == IPV4V6) {
                 snprintf(linker, sizeof(linker), "addr add %s/64 dev %s%d", ppp_info[cid-1].ipv6laddr, prop, cid-1);
                 property_set(SYS_IP_SET, linker);
-                PHS_LOGD("IPV6 setip linker = %s\n", linker);
+                PHS_LOGD("IPV6 setip linker = %s", linker);
 
                 snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
                 property_set(SYS_MTU_SET, linker);
-                PHS_LOGD("IPV6 setmtu linker = %s\n", linker);
+                PHS_LOGD("IPV6 setmtu linker = %s", linker);
 
                 //snprintf(linker, sizeof(linker), "link set %s%d arp off", prop, cid-1);
                 //property_set(SYS_NO_ARP, linker);
-                //PHS_LOGD("IPV6 arp linker = %s\n", linker);
+                //PHS_LOGD("IPV6 arp linker = %s", linker);
 
                 // up the net interface
                 snprintf(linker, sizeof(linker), "link set %s%d up", prop, cid-1);
                 property_set(SYS_IFCONFIG_UP, linker);
-                PHS_LOGD("IPV6 setip linker = %s\n", linker);
+                PHS_LOGD("IPV6 setip linker = %s", linker);
 
                 /* start data_on */
                 property_set("ctl.start", "data_on");
@@ -304,16 +309,16 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                 // set ip addr mtu to check
                 snprintf(linker, sizeof(linker), "addr add %s dev %s%d", ppp_info[cid-1].ipladdr, prop, cid-1);
                 property_set(SYS_IFCONFIG_UP, linker);
-                PHS_LOGD("IPV4 setip linker = %s\n", linker);
+                PHS_LOGD("IPV4 setip linker = %s", linker);
 
                 snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
                 property_set(SYS_MTU_SET, linker);
-                PHS_LOGD("IPV6 setmtu linker = %s\n", linker);
+                PHS_LOGD("IPV6 setmtu linker = %s", linker);
 
                 // no arp
                 snprintf(linker, sizeof(linker), "link set %s%d arp off", prop, cid-1);
                 property_set(SYS_NO_ARP, linker);
-                PHS_LOGD("IPV4 arp linker = %s\n", linker);
+                PHS_LOGD("IPV4 arp linker = %s", linker);
 
                 /* start data_on */
                 property_set("ctl.start", "data_on");
@@ -332,39 +337,39 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                     /* set property */
                     snprintf(linker, sizeof(linker), "addr add %s dev %s%d", ppp_info[cid-1].ipladdr, prop, cid-1);
                     property_set(SYS_IP_SET, linker);
-                    PHS_LOGD("IPV4 setip linker = %s\n", linker);
+                    PHS_LOGD("IPV4 setip linker = %s", linker);
 
                     snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
                     property_set(SYS_MTU_SET, linker);
-                    PHS_LOGD("IPV6 setmtu linker = %s\n", linker);
+                    PHS_LOGD("IPV6 setmtu linker = %s", linker);
 
                     // up the net interface
                     snprintf(linker, sizeof(linker), "link set %s%d up", prop, cid-1);
                     property_set(SYS_IFCONFIG_UP, linker);
-                    PHS_LOGD("IPV4 ifconfig linker = %s\n", linker);
+                    PHS_LOGD("IPV4 ifconfig linker = %s", linker);
 
                     // no arp
                     snprintf(linker, sizeof(linker), "link set %s%d arp off", prop, cid-1);
                     property_set(SYS_NO_ARP, linker);
-                    PHS_LOGD("IPV4 arp linker = %s\n", linker);
+                    PHS_LOGD("IPV4 arp linker = %s", linker);
                 } else if (ppp_info[cid-1].ip_state == IPV6) {
                     snprintf(linker, sizeof(linker), "addr add %s/64 dev %s%d", ppp_info[cid-1].ipv6laddr, prop, cid-1);
                     property_set(SYS_IP_SET, linker);
-                    PHS_LOGD("IPV6 setip linker = %s\n", linker);
+                    PHS_LOGD("IPV6 setip linker = %s", linker);
 
                     snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
                     property_set(SYS_MTU_SET, linker);
-                    PHS_LOGD("IPV6 setmtu linker = %s\n", linker);
+                    PHS_LOGD("IPV6 setmtu linker = %s", linker);
 
                     //up the net interface
                     snprintf(linker, sizeof(linker), "link set %s%d up", prop, cid-1);
                     property_set(SYS_IFCONFIG_UP, linker);
-                    PHS_LOGD("IPV6 ifconfig linker = %s\n", linker);
+                    PHS_LOGD("IPV6 ifconfig linker = %s", linker);
 
                     //no arp
                     snprintf(linker, sizeof(linker), "link set %s%d arp off", prop, cid-1);
                     property_set(SYS_NO_ARP, linker);
-                    PHS_LOGD("IPV6 arp linker = %s\n", linker);
+                    PHS_LOGD("IPV6 arp linker = %s", linker);
                 }
 
                 char gspsprop[PROPERTY_VALUE_MAX];
@@ -408,9 +413,9 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
         }
     }
     adapter_pty_write(req->recv_pty,"ERROR\r",strlen("ERROR\r"));
-    PHS_LOGD("Getting IP addr and PDP activate error :%d\n",ppp_info[ppp_index].state);
+    PHS_LOGD("Getting IP addr and PDP activate error :%d",ppp_info[ppp_index].state);
     ppp_info[ppp_index].state = PPP_STATE_IDLE;
-    PHS_LOGD("PPP_STATE_IDLE\n");
+    PHS_LOGD("PPP_STATE_IDLE");
     adapter_pty_end_cmd(req->recv_pty );
     adapter_free_cmux_for_ps(mux);
     mutex_unlock(&ps_service_mutex);
@@ -462,10 +467,10 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
     char linker[128] = {0};
     int count = 0;
 
-    PHS_LOGD("%s enter\n", __FUNCTION__);
+    PHS_LOGD("%s enter", __FUNCTION__);
 
     if (rsp == NULL) {
-        PHS_LOGD("leave cvt_ipconf_rsp:AT_RESULT_NG\n");
+        PHS_LOGD("leave cvt_ipconf_rsp:AT_RESULT_NG");
         return AT_RESULT_NG;
     }
 
@@ -533,19 +538,19 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
                 /* set property */
                 snprintf(linker, sizeof(linker), "addr add %s dev %s%d", ip, prop, cid-1);
                 property_set(SYS_IP_SET, linker);
-                PHS_LOGD("setip linker = %s\n", linker);
+                PHS_LOGD("setip linker = %s", linker);
 
                 snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
                 property_set(SYS_MTU_SET, linker);
-                PHS_LOGD("setmtu linker = %s\n", linker);
+                PHS_LOGD("setmtu linker = %s", linker);
 
                 snprintf(linker, sizeof(linker), "link set %s%d up", prop, cid-1);
                 property_set(SYS_IFCONFIG_UP, linker);
-                PHS_LOGD("setup linker = %s\n", linker);
+                PHS_LOGD("setup linker = %s", linker);
 
                 snprintf(linker, sizeof(linker), "link set %s%d arp off", prop, cid-1);
                 property_set(SYS_NO_ARP, linker);
-                PHS_LOGD("IPV4 arp linker = %s\n", linker);
+                PHS_LOGD("IPV4 arp linker = %s", linker);
 
                 /* start data_on */
                 property_set("ctl.start", "data_on");
@@ -587,11 +592,11 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
                 system(cmd);
 
                 ppp_info[cid-1].state = PPP_STATE_ACTIVE;
-                PHS_LOGD("PPP_STATE_ACTIVE\n");
-                PHS_LOGD("PS:cid=%d ip:%s,dns1:%s,dns2:%s\n",cid, ip, dns1, dns2);
+                PHS_LOGD("PPP_STATE_ACTIVE");
+                PHS_LOGD("PS:cid=%d ip:%s,dns1:%s,dns2:%s",cid, ip, dns1, dns2);
             }else{
                 ppp_info[cid-1].state = PPP_STATE_EST_UP_ERROR;
-                PHS_LOGD("PPP_STATE_EST_UP_ERROR:cid of pdp is error!\n");
+                PHS_LOGD("PPP_STATE_EST_UP_ERROR:cid of pdp is error!");
             }
         } while (0);
         return AT_RESULT_OK;
@@ -614,20 +619,20 @@ int cvt_cgdata_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
     char *input;
     int err, error_num;
 
-    PHS_LOGD("enter cvt_cgdata_set_rsp\n");
+    PHS_LOGD("enter cvt_cgdata_set_rsp");
     if (rsp == NULL) {
-        PHS_LOGD("leave cvt_cgdata_set_rsp:AT_RESULT_NG1\n");
+        PHS_LOGD("leave cvt_cgdata_set_rsp:AT_RESULT_NG1");
         return AT_RESULT_NG;
     }
     rsp_type = adapter_get_rsp_type(rsp->rsp_str, rsp->len);
-    PHS_LOGD("cvt_cgdata_set_rsp rsp_type=%d \n", rsp_type);
+    PHS_LOGD("cvt_cgdata_set_rsp rsp_type=%d ", rsp_type);
     if (rsp_type == AT_RSP_TYPE_MID) {
-        PHS_LOGD("leave cvt_cgdata_set_rsp:AT_RESULT_NG2\n");
+        PHS_LOGD("leave cvt_cgdata_set_rsp:AT_RESULT_NG2");
         return AT_RESULT_NG;
     }
     ppp_index = user_data;
     if (ppp_index < 0 || ppp_index >= getMaxPDPNum()) {
-        PHS_LOGD("leave cvt_cgdata_set_rsp:AT_RESULT_NG3\n");
+        PHS_LOGD("leave cvt_cgdata_set_rsp:AT_RESULT_NG3");
         return AT_RESULT_NG;
     }
 
@@ -657,7 +662,7 @@ int cvt_cgdata_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
     }
     else
     {
-        PHS_LOGD("leave cvt_cgdata_set_rsp:AT_RESULT_NG2\n");
+        PHS_LOGD("leave cvt_cgdata_set_rsp:AT_RESULT_NG2");
         return AT_RESULT_NG;
     }
     return AT_RESULT_OK;
@@ -702,7 +707,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
             //if ((tmp_cid <= 3) && (ppp_info[tmp_cid - 1].state == PPP_STATE_ACTIVE)) { 	/*deactivate PDP connection */
             if (tmp_cid <= 3) {	/*deactivate PDP connection */
                 ppp_info[tmp_cid-1].state = PPP_STATE_DESTING;
-                PHS_LOGD("PPP_STATE_DEACTING\n");
+                PHS_LOGD("PPP_STATE_DEACTING");
                 ppp_info[tmp_cid-1].state = PPP_STATE_DEACTING;
                 ppp_info[tmp_cid - 1].cmux = mux;
                 snprintf(at_cmd_str,sizeof(at_cmd_str), "AT+CGACT=0,%d\r",tmp_cid);
@@ -820,9 +825,9 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                 return AT_RESULT_NG;
             }
             if (at_tok_hasmore(&at_in_str)) {
-                PHS_LOGD("hasmore\n");
+                PHS_LOGD("hasmore");
                 err = at_tok_nextint(&at_in_str, &tmp_cid2);
-                PHS_LOGD("hasmore  tmp_cid2 = %d\n", tmp_cid2);
+                PHS_LOGD("hasmore  tmp_cid2 = %d", tmp_cid2);
                 if (err < 0) {
                     return AT_RESULT_NG;
                 }
@@ -833,7 +838,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
             //if ((tmp_cid <= 3) && (ppp_info[tmp_cid - 1].state == PPP_STATE_ACTIVE)) { 	/*deactivate PDP connection */
             if (0 < tmp_cid && tmp_cid < 6 && ppp_info[tmp_cid - 1].state == PPP_STATE_ACTIVE) {	/*deactivate PDP connection */
                 ppp_info[tmp_cid-1].state = PPP_STATE_DESTING;
-                PHS_LOGD("PPP_STATE_DEACTING\n");
+                PHS_LOGD("PPP_STATE_DEACTING");
                 ppp_info[tmp_cid-1].state = PPP_STATE_DEACTING;
                 ppp_info[tmp_cid - 1].cmux = mux;
                 if (tmp_cid2 != -1) {
@@ -841,7 +846,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                 } else {
                     snprintf(at_cmd_str,sizeof(at_cmd_str), "AT+CGACT=0,%d\r",tmp_cid);
                 }
-                PHS_LOGD("at_cmd_str= %s\n", at_cmd_str);
+                PHS_LOGD("at_cmd_str= %s", at_cmd_str);
                 adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp2, (int)req->recv_pty);
                 adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
                     req->timeout);
@@ -1141,7 +1146,7 @@ int cvt_cgdcont_read_rsp(AT_CMD_RSP_T * rsp, int user_data)
             }
             strncpy(net, out, sizeof(net));
             net[sizeof(net)-1] = '\0';
-            PHS_LOGD("\n  cvt_cgdcont_read_rsp cid =%d\n", tmp_cid);
+            PHS_LOGD("  cvt_cgdcont_read_rsp cid =%d", tmp_cid);
             if ((tmp_cid <= getMaxPDPNum())
                     && (ppp_info[tmp_cid - 1].state ==
                         PPP_STATE_ACTIVE)) {
@@ -1172,7 +1177,7 @@ int cvt_cgdcont_read_rsp(AT_CMD_RSP_T * rsp, int user_data)
             }
             at_cmd_str[MAX_AT_CMD_LEN -1] = '\0';
             PHS_LOGD
-                ("\n  cvt_cgdcont_read_rsp pty_write cid =%d resp:%s\n",
+                ("  cvt_cgdcont_read_rsp pty_write cid =%d resp:%s",
                  tmp_cid, at_cmd_str);
             adapter_pty_write((pty_t *) user_data, at_cmd_str,
                     strlen(at_cmd_str));
@@ -1299,7 +1304,7 @@ end_req:
     snprintf(at_str, sizeof(at_str), "AT+CGDCONT=%d,\"%s\",\"%s\",\"%s\",%s,%s\r", tmp_cid, ip,
             net, ipladdr, dcomp, hcomp);
     len = strlen(at_str);
-    PHS_LOGD("\nPS:%s\n", at_str);
+    PHS_LOGD("PS:%s", at_str);
 
     req->cmd_str = at_str;
     req->len = len;
@@ -1382,7 +1387,7 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp, int user_data)
     int err;
     char *input;
     int cid;
-    char *local_addr_subnet_mask,*gw_addr, *dns_prim_addr, *dns_sec_addr;
+    char *local_addr_subnet_mask= NULL,*gw_addr= NULL, *dns_prim_addr= NULL, *dns_sec_addr= NULL;
     char ip[IP_ADD_SIZE*4],dns1[IP_ADD_SIZE*4], dns2[IP_ADD_SIZE*4];
     char cmd[MAX_CMD * 2];
     char prop[PROPERTY_VALUE_MAX];
@@ -1395,7 +1400,7 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp, int user_data)
     int maxPDPNum = getMaxPDPNum();
 
     if (rsp == NULL) {
-        PHS_LOGD("leave cvt_cgcontrdp_rsp:AT_RESULT_NG\n");
+        PHS_LOGD("leave cvt_cgcontrdp_rsp:AT_RESULT_NG");
         return AT_RESULT_NG;
     }
 
@@ -1417,7 +1422,7 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp, int user_data)
         exit(-1);
     }
 
-    PHS_LOGD("cvt_cgcontrdp_rsp: input = %s\n", input);
+    PHS_LOGD("cvt_cgcontrdp_rsp: input = %s", input);
     if (findInBuf(input, rsp->len, "+CGCONTRDP")) {
         do {
             err = at_tok_start(&input, ':');
@@ -1441,7 +1446,7 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp, int user_data)
                 if (err < 0) {
                     goto error;
                 }
-                PHS_LOGD("cvt_cgcontrdp_rsp: after fetch local_addr_subnet_mask input = %s\n", input);
+                PHS_LOGD("cvt_cgcontrdp_rsp: after fetch local_addr_subnet_mask input = %s", input);
                 if (at_tok_hasmore(&input)) {
                     err = at_tok_nextstr(&input, &sskip);//gw_addr
                     if (err < 0) {
@@ -1466,10 +1471,10 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp, int user_data)
 
             if ((cid <= maxPDPNum) && (cid >=1)) {
                 ip_type = read_ip_addr(local_addr_subnet_mask, ip);
-                PHS_LOGD("PS: cid = %d,  ip_type = %d, ip = %s, dns1 = %s, dns2 = %s\n", cid, ip_type, ip, dns1, dns2);
+                PHS_LOGD("PS: cid = %d,  ip_type = %d, ip = %s, dns1 = %s, dns2 = %s", cid, ip_type, ip, dns1, dns2);
 
                 if (ip_type == IPV6) { //ipv6
-                    PHS_LOGD("cvt_cgcontrdp_rsp: IPV6\n");
+                    PHS_LOGD("cvt_cgcontrdp_rsp: IPV6");
                     if (!strncasecmp(ip, "0000:0000:0000:0000", strlen("0000:0000:0000:0000"))) { //incomplete address
                        tmp = strchr(ip,':');
                        if (tmp != NULL) {
@@ -1492,7 +1497,7 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp, int user_data)
                     ppp_info[cid-1].ip_state = IPV6;
                     ip_type_num++;
                 } else if (ip_type == IPV4) { //ipv4
-                    PHS_LOGD("cvt_cgcontrdp_rsp: IPV4\n");
+                    PHS_LOGD("cvt_cgcontrdp_rsp: IPV4");
                     memcpy(ppp_info[cid-1].ipladdr, ip, sizeof(ppp_info[cid-1].ipladdr));
                     memcpy(ppp_info[cid-1].dns1addr, dns1, sizeof(ppp_info[cid-1].dns1addr));
                     memcpy(ppp_info[cid-1].dns2addr, dns2, sizeof(ppp_info[cid-1].dns2addr));
@@ -1510,17 +1515,17 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp, int user_data)
                     ip_type_num++;
                 } else {//unknown
                     ppp_info[cid-1].state = PPP_STATE_EST_UP_ERROR;
-                    PHS_LOGD("PPP_STATE_EST_UP_ERROR: unknown ip type!\n");
+                    PHS_LOGD("PPP_STATE_EST_UP_ERROR: unknown ip type!");
                 }
 
                 if (ip_type_num > 1) {
-                    PHS_LOGD("cvt_cgcontrdp_rsp: IPV4V6\n");
+                    PHS_LOGD("cvt_cgcontrdp_rsp: IPV4V6");
                     ppp_info[cid-1].ip_state = IPV4V6;
                     sprintf(cmd, "setprop net.%s%d.ip_type %d", prop, cid-1,IPV4V6);
                     system(cmd);
                 }
                 ppp_info[cid-1].state = PPP_STATE_ACTIVE;
-                PHS_LOGD("PPP_STATE_ACTIVE\n");
+                PHS_LOGD("PPP_STATE_ACTIVE");
             }
         } while (0);
         return AT_RESULT_OK;
