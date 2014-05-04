@@ -17,6 +17,9 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#undef  PHS_LOGD
+#define PHS_LOGD(x...)  ALOGD( x )
+
 #if AT_DEBUG
 void AT_DUMP(const char *prefix, const char *buff, int len)
 {
@@ -98,14 +101,16 @@ static char *readline(struct receive_thread_t *me)
 		}
 
 		do {
+			PHS_LOGD("Before read << ");
 			count =
 			    read(me->mux->muxfd, p_read,
 				 MAX_AT_RESPONSE - (p_read - me->mux->buffer));
+			PHS_LOGD("After read count: %d, p_read: %s<< ", count, p_read);
 		} while (count < 0 && errno == EINTR);
 
 		if (count > 0) {
 			AT_DUMP("CHNMNG:readline << ", p_read, count);
-			//PHS_LOGD("Receive thread's TID [%d] CHNMNG:readline pread= %x,count=%d\n", me->tid, p_read,count);
+			PHS_LOGD("Receive thread's TID [%d] CHNMNG:readline pread= %x,count=%d\n", me->tid, p_read,count);
 			//p_read[count] = '\0';
 			while (count >0) {
                		if (*p_read =='\0') {
