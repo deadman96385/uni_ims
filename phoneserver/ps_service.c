@@ -140,7 +140,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
         PHS_LOGD("parse cmd error");
         return AT_RESULT_NG;
     }
-    if (cid > 3) {
+    if (cid > 6) {
         PHS_LOGD("invalid cid");
         return AT_RESULT_NG;
     }
