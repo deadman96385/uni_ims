@@ -296,21 +296,14 @@ static RILP_RequestType  get_send_at_request_type(char* req) {
 	return ReqToTDG;
 }
 
-static RILP_RequestType  get_manual_select_network_request_type(void* req) {
-
-    if (req == NULL) {
-		ALOGE("NETWORK_SELECTION_MANUAL command should not be NULL!");
-		return ReqToTDG;
-	}
+static RILP_RequestType  get_manual_select_network_request_type(int act) {
 
 	if (is_svlte()) {
 	    pthread_mutex_lock(&sLteCFdMutex);
 	    if (sLteClientFd  != -1 && sLteReady) { // when lte rild connect, ril request should been dispatched.
 			pthread_mutex_unlock(&sLteCFdMutex);
 
-			RIL_NetworkList* nl = (RIL_NetworkList *) req;
-			ALOGD("manual selection network act: %d.", nl->act);
-			if (nl->act == 7) {
+			if (act == 7) {
 				return ReqToLTE;
 			}
 		} else {
@@ -750,11 +743,11 @@ static void process_request(void *reqbuf, int nlen) {
 	}
 
 	if (reqId == RIL_REQUEST_SET_RILPROXY_LTE_ENABLE) {
-		int nlen;
+		int len;
 		int lteEnable;
-		status = p.readInt32(&nlen);
+		status = p.readInt32(&len);
 		status = p.readInt32(&lteEnable);
-		if (status != NO_ERROR || nlen != 1) {
+		if (status != NO_ERROR || len != 1) {
 			ALOGE("Failed to get LTE enable state!");
 			send_lte_enable_response(token, 0);
 			return;
@@ -767,8 +760,11 @@ static void process_request(void *reqbuf, int nlen) {
 		// skip reqId, token, len.
 		reqType = get_send_at_request_type((char*)reqbuf + 12);
 	} else if (reqId == RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL) {
-		// skip reqId, token, len.
-		reqType = get_manual_select_network_request_type((char*)reqbuf + 12);
+                int act;
+                p.readString16();
+                p.readInt32(&act);
+                ALOGD(" manual selcect network act=%d", act);
+		reqType = get_manual_select_network_request_type(act);
 	} else {
 		ALOGD("process_request request id %d, token %d", reqId, token);
 		reqType = get_reqtype_by_id(reqId);
