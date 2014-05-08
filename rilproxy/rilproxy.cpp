@@ -9,6 +9,7 @@
 #include <sys/ioctl.h>
 #include <cutils/properties.h>
 #include <cutils/record_stream.h>
+#include <cutils/jstring.h>
 #include <utils/Log.h>
 #include <cutils/sockets.h>
 #include <binder/Parcel.h>
@@ -266,6 +267,15 @@ static void clean_rsptye_token(int token) {
 	}
 }
 
+static char *strdupReadString(Parcel &p) {
+    size_t stringlen;
+    const char16_t *s16;
+
+    s16 = p.readString16Inplace(&stringlen);
+
+    return strndup16to8(s16, stringlen);
+}
+
 static RILP_RequestType  get_send_at_request_type(char* req) {
 
     if (req == NULL) {
@@ -275,9 +285,8 @@ static RILP_RequestType  get_send_at_request_type(char* req) {
 
 	if (is_svlte()) {
 	    pthread_mutex_lock(&sLteCFdMutex);
-	    if (sLteClientFd  != -1) { // when lte rild connect, ril request should been dispatched.
+	    if (sLteClientFd  != -1 && sLteReady) { // when lte rild connect, ril request should been dispatched.
 			pthread_mutex_unlock(&sLteCFdMutex);
-			ALOGD("Send_AT command: %s.", req);
 			if (strncasecmp(req, SEND_AT_TO_LTE_LTEBGTIMER, strlen(SEND_AT_TO_LTE_LTEBGTIMER)) == 0 ||
 			    strncasecmp(req, SEND_AT_TO_LTE_LTESETRSRP, strlen(SEND_AT_TO_LTE_LTESETRSRP)) == 0 ||
 			    strncasecmp(req, SEND_AT_TO_LTE_LTENCELLINFO, strlen(SEND_AT_TO_LTE_LTENCELLINFO)) == 0 ||
@@ -758,12 +767,15 @@ static void process_request(void *reqbuf, int nlen) {
 		return;
 	} else if (reqId == RIL_REQUEST_SEND_AT) {
 		// skip reqId, token, len.
-		reqType = get_send_at_request_type((char*)reqbuf + 12);
+                char *atcmd = strdupReadString(p);
+		reqType = get_send_at_request_type(atcmd);
+                ALOGD("send at command :%s", atcmd);
+                free(atcmd);
 	} else if (reqId == RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL) {
                 int act;
                 p.readString16();
                 p.readInt32(&act);
-                ALOGD(" manual selcect network act=%d", act);
+                ALOGD("manual selcect network act=%d", act);
 		reqType = get_manual_select_network_request_type(act);
 	} else {
 		ALOGD("process_request request id %d, token %d", reqId, token);
