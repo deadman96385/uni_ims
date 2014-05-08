@@ -698,7 +698,12 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
             ALOGD("Clear saved sSignalStrength data");
             RIL_SIGNALSTRENGTH_INIT_LTE(sSignalStrength);
         }
-        sLteReady = 1;
+        break;
+      case RIL_UNSOL_SVLTE_USIM_READY:
+        if (!isfromTdg) {
+            ALOGD("Received LTE USIM READY");
+            sLteReady = 1;
+        }
         break;
       default:
         return;
