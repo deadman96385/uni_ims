@@ -459,7 +459,6 @@ static void backupSignalStrength(Parcel &p, int isfromTdg) {
 
 static void mergeSignalStrength(Parcel &p, int isfromTdg) {
     int skip;
-    p.readInt32(&skip);
 
     ALOGD("%s: enter isfromTdg = %d", __FUNCTION__, isfromTdg);
     if (isfromTdg) {
@@ -483,8 +482,6 @@ static void mergeSignalStrength(Parcel &p, int isfromTdg) {
         p.writeInt32(sSignalStrength.GW_SignalStrength.signalStrength);
         p.writeInt32(sSignalStrength.GW_SignalStrength.bitErrorRate);
         /* skip */
-        p.readInt32(&skip);
-        p.readInt32(&skip);
         p.readInt32(&skip);
         p.readInt32(&skip);
         p.readInt32(&skip);
@@ -576,18 +573,20 @@ static void backup_last_response(int reqid, Parcel &p, int isfromTdg) {
 }
 
 static void make_final_response(int reqid, Parcel &p, int nlen, int isfromTdg) {
+    int skip;
 
     switch (reqid) {
     case RIL_REQUEST_SIGNAL_STRENGTH:
-         mergeSignalStrength(p, isfromTdg);
-         break;
+        p.readInt32(&skip);
+        mergeSignalStrength(p, isfromTdg);
+        break;
 
     case RIL_REQUEST_QUERY_AVAILABLE_NETWORKS:
-   	 make_network_list_response(p, nlen);
-         break;
+        make_network_list_response(p, nlen);
+        break;
 
     default:
-	// ALOGD("invalid response block");
+        // ALOGD("invalid response block");
         break;
     }
 }
