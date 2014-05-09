@@ -9497,6 +9497,25 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             RILLOGD("[sms]RIL_UNSOL_SIM_SMS_STORAGE_FULL");
             RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_SMS_STORAGE_FULL, NULL, 0);
         }
+    } else if (strStartsWith(s, "+CLCK:")) {
+        RILLOGD("UNSOL CLCK ");
+        char *tmp;
+        int response;
+        char *type;
+
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+
+        err = at_tok_nextstr(&tmp, &type);
+        if (err < 0) goto out;
+        RILLOGD("%s UNSOL CLCK ", type);
+        if (0 == strcmp (type, "FD")) {
+            err = at_tok_nextint(&tmp, &response);
+            if (err < 0) goto out;
+            RILLOGD("onUnsolicited(),CLCK response : %d", response);
+            RIL_onUnsolicitedResponse(RIL_UNSOL_FDN_ENABLE, &response, sizeof(response));
+        }
     }
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     else if (strStartsWith(s, "+SPUSATSMS:")) {
