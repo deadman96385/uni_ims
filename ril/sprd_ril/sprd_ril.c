@@ -8532,7 +8532,7 @@ static void setLteRadioPowerOn(void *param)
     property_get(RIL_RADIO_POWER_ON_PROP, prop, "0");
     if (strcmp(prop, "1")) {
 	RILLOGD("RIL_RADIO_POWER_ON %s", prop);
-        return;
+        //return;
     }
 
     channelID = getChannel();
