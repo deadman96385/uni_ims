@@ -120,7 +120,7 @@ typedef enum {
 #define MODEM_SSDA_USIM_PROPERTY         "ril.ssda.usim"
 #define PERSIST_MOMEM_L_ENABLE_PROPERTY  "persist.modem.l.enable"
 #define LTE_MODEM_START_PROP             "ril.service.l.enable"
-#define RIL_RADIO_POWER_ON_PROP          "ril.radio.power.on" // for SVLTE only
+#define RIL_LTE_USIM_READY_PROP          "ril.lte.usim.ready" // for SVLTE only, used by rilproxy
 
 
 #define RIL_SIM_TYPE  "ril.ICC_TYPE"
@@ -1374,7 +1374,6 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 
          /* SPRD : for svlte & csfb @{ */
         if (isSvLte()) {
-            property_set(RIL_RADIO_POWER_ON_PROP, "1");
           // if svlte, auto-attach is decided by framework
             if(autoAttach == 1) {
                 RIL_AppType apptype = getSimType(channelID);
@@ -8520,48 +8519,6 @@ error:
 }
 #endif
 
-
-
-static void setLteRadioPowerOn(void *param)
-{
-    int channelID;
-    int err, i;
-    ATResponse *p_response = NULL;
-    char prop[PROPERTY_VALUE_MAX]= "";
-
-    property_get(RIL_RADIO_POWER_ON_PROP, prop, "0");
-    if (strcmp(prop, "1")) {
-	RILLOGD("RIL_RADIO_POWER_ON %s", prop);
-        //return;
-    }
-
-    channelID = getChannel();
-    if (sState == RADIO_STATE_OFF) {
-        setCeMode(channelID);
-	// if svlte, auto-attach is decided by framework
-	err = at_send_command(ATch_type[channelID],"AT+SAUTOATT=0", &p_response);
-	if (err < 0 || p_response->success == 0)
-		RILLOGW("LTE auto attach failed!");
-
-	err = at_send_command(ATch_type[channelID], "AT+SFUN=4", &p_response);
-	if (err < 0|| p_response->success == 0) {
-		/* Some stacks return an error when there is no SIM,
-		 * but they really turn the RF portion on
-		 * So, if we get an error, let's check to see if it
-		 * turned on anyway
-	    */
-		if (isRadioOn(channelID) != 1) {
-			goto error;
-		}
-	}
-	setRadioState(channelID, RADIO_STATE_SIM_NOT_READY);
-    }
-
-error:
-    putChannel(channelID);
-    at_response_free(p_response);
-}
-
 static int  sGsCid;
 static int  sEthOnOff;
 #define   SYS_GSPS_ETH_UP_PROP      "ril.gsps.eth.up"
@@ -8879,7 +8836,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                     // in svlte, when l rild started, if usim exit, set radio power on.
                     if (!strcmp(s_modem,"l") && isSvLte()) {
                         RIL_onUnsolicitedResponse (RIL_UNSOL_SVLTE_USIM_READY, NULL, 0);
-                        RIL_requestTimedCallback(setLteRadioPowerOn, NULL, NULL);
+                        property_set(RIL_LTE_USIM_READY_PROP, "1");
                     }
 
                     RIL_requestTimedCallback (onSimPresent, NULL, NULL);

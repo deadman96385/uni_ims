@@ -24,18 +24,22 @@ namespace android {
 
 #define MAX_RESPONSE_FROM_TDG_LTE   16
 #define MAX_REQUEST_TYPE_ARRAY_LEN  (RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE)
+#define RIL_LTE_USIM_READY_PROP          "ril.lte.usim.ready" // for SVLTE only, used by rilproxy
+#define LTE_RADIO_POWER_TOKEN            0x00FFFFFE
 
 static int sRILPServerFd = -1;
 static int sTdGClientFd  = -1;
 static int sLteClientFd  = -1;
 static int sPSEnable  = PS_TD_ENABLE;
 static int sLteReady  = 0;
+static int sTdRadioPowerSent = 0;
 
 static RecordStream *sReqRecordStream = NULL;
 static pthread_mutex_t sWriteMutex    = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t sReqTDGLTEMutex= PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t sResponseMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t sLteCFdMutex   = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t sRadiopowerMutex   = PTHREAD_MUTEX_INITIALIZER;
 
 static RILP_RequestType     sReqTypeArr[MAX_REQUEST_TYPE_ARRAY_LEN];      
 static RILP_RspTDG_LTE      sRilP_RspTDGLTE[MAX_RESPONSE_FROM_TDG_LTE];
@@ -429,6 +433,19 @@ static int  send_lte_enable_response(int token, int result) {
 	return write_data (sRILPServerFd, (void *)rspbuf, error == 0 ? 20 : 12);
 }
 
+static int  send_lte_radio_power(int poweron, int autoatt) {
+
+    Parcel p;
+    p.writeInt32(RIL_REQUEST_RADIO_POWER);
+    p.writeInt32(LTE_RADIO_POWER_TOKEN);
+    p.writeInt32(2);
+    p.writeInt32(poweron);
+    p.writeInt32(autoatt);
+
+    return write_data (sLteClientFd, p.data(), p.dataSize());
+}
+
+
 static void backupSignalStrength(Parcel &p, int isfromTdg) {
     int skip;
 
@@ -609,6 +626,11 @@ static void solicited_response (void *rspbuf, int nlen, int isfromTdg) {
 	}
 
 	reqid = get_reqid_by_token(token);
+        if (reqid == RIL_REQUEST_RADIO_POWER && token == LTE_RADIO_POWER_TOKEN) {
+            ALOGD("RilProxy process the first LTE radio power request.");
+            return;
+        }
+
 	reqType = get_reqtype_by_id (reqid);
 	if (reqType == ReqToTDG_LTE) {
 		set_rsptype_by_token(token, isfromTdg ? RSP_FROM_TDG_RILD : RSP_FROM_LTE_RILD);
@@ -665,6 +687,7 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
 	status_t status;
 	/* Add for dual signal bar */
 	int rssi = 0, ber = 0, blte = 0;
+        char prop[PROPERTY_VALUE_MAX] = "";
 
 	p.setData((uint8_t *) rspbuf, nlen);
 	status = p.readInt32(&skip);
@@ -698,9 +721,22 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
             RIL_SIGNALSTRENGTH_INIT_LTE(sSignalStrength);
         }
         break;
+      /* It doesn't sure which the two RIL_CONNETCED and SVLTE_USIM_READY appear first.*/
+      case RIL_UNSOL_RIL_CONNECTED:
+         property_get(RIL_LTE_USIM_READY_PROP, prop, "0");
+         if (!atoi(prop)) break;
+         ALOGD("SVLTE Ril connected");
       case RIL_UNSOL_SVLTE_USIM_READY:
         if (!isfromTdg) {
-            ALOGD("Received LTE USIM READY");
+            ALOGD("SVLTE USIM READY");
+            pthread_mutex_lock(&sRadiopowerMutex);
+            if (sTdRadioPowerSent) {
+                pthread_mutex_unlock(&sRadiopowerMutex);
+                send_lte_radio_power(1,0);
+            } else {
+                pthread_mutex_unlock(&sRadiopowerMutex);
+            }
+
             sLteReady = 1;
         }
         break;
@@ -793,9 +829,15 @@ static void process_request(void *reqbuf, int nlen) {
 		if (sPSEnable == PS_TD_ENABLE) {
 		    reqType = ReqToTDG;
 		} else {
-			reqType = ReqToLTE;
+		    reqType = ReqToLTE;
 		}
-	}
+	} else if (reqType == ReqToTDG) {
+               if (reqId == RIL_REQUEST_RADIO_POWER) {
+                   pthread_mutex_lock(&sRadiopowerMutex);
+                   sTdRadioPowerSent = 1;
+                   pthread_mutex_unlock(&sRadiopowerMutex);
+               }
+        }
 	
 	if (reqType & ReqToTDG) {
 		if (sTdGClientFd != -1) {
@@ -809,7 +851,7 @@ static void process_request(void *reqbuf, int nlen) {
 		if (sLteClientFd != -1 && sLteReady) {
 			write_data(sLteClientFd, reqbuf, nlen);
 		} else {
-			ALOGE("LTE client socket has been destroy!");
+			ALOGE("LTE socket hasn't ready!");
 		}
 	}
 }
