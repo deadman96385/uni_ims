@@ -34,7 +34,7 @@ extern   "C"
             return MMENC_MEMORY_ERROR;  \
         }
 
-MMEncRet Mp4Enc_InitMem (Mp4EncObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr);
+MMEncRet Mp4Enc_InitMem (Mp4EncObject *vo, MMCodecBuffer *pMemBfr, int32 type);
 void *Mp4Enc_MemAlloc (Mp4EncObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type);
 uint8 *Mp4Enc_ExtraMem_V2P(Mp4EncObject *vo, uint8 *vAddr, int32 type);
 

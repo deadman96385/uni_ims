@@ -164,30 +164,46 @@ MMEncRet MP4EncRelease(MP4Handle *mp4Handle)
     return MMENC_OK;
 }
 
+MMEncRet MP4EncGetCodecCapability(MP4Handle *mp4Handle, MMEncCapability *Capability)
+{
+    Mp4EncObject *vo = (Mp4EncObject *) mp4Handle->videoEncoderData;
+
+    int32 codec_capability = vo->vsp_capability;
+    if (codec_capability == 0)   //limited under 720p
+    {
+        Capability->max_width = 1280;
+        Capability->max_height = 1023; //720;
+    } else if (codec_capability == 1)   //limited under 1080p
+    {
+        Capability->max_width = 1920;
+        Capability->max_height = 1088;
+    } else if (codec_capability == 2)   //limited under 1080p
+    {
+        Capability->max_width = 1920;
+        Capability->max_height = 1088;
+    } else
+    {
+        Capability->max_width = 352;
+        Capability->max_height = 288;
+    }
+    return MMENC_OK;
+}
+
 /*****************************************************************************/
-//  Description:   Init mpeg4 encoder
+//  Description:   Pre-Init mpeg4 encoder
 //	Global resource dependence:
 //  Author:
 //	Note:
 /*****************************************************************************/
-MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat)
+MMEncRet MP4EncPreInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr)
 {
     Mp4EncObject*vo;
-    uint16 frame_width = pVideoFormat->frame_width;
-    uint16 frame_height = pVideoFormat->frame_height;
-    VOL_MODE_T  *vol_mode_ptr = NULL;
-    ENC_VOP_MODE_T  *vop_mode_ptr = NULL;
     MMEncRet ret;
 
     SCI_TRACE_LOW("libomx_m4vh263enc_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
     CHECK_MALLOC(pInterMemBfr, "pInterMemBfr");
     CHECK_MALLOC(pInterMemBfr->common_buffer_ptr, "internal memory");
-    CHECK_MALLOC(pExtraMemBfr, "pExtraMemBfr");
-    CHECK_MALLOC(pExtraMemBfr->common_buffer_ptr, "extranal memory");
-    CHECK_MALLOC(pBitstreamBfr, "pBitstreamBfr");
-    CHECK_MALLOC(pBitstreamBfr->common_buffer_ptr, "bit stream memory");
-
 
     vo = (Mp4EncObject *) (pInterMemBfr->common_buffer_ptr);
     memset(vo, 0, sizeof(Mp4EncObject));
@@ -198,7 +214,46 @@ MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBu
     pInterMemBfr->common_buffer_ptr_phy = ((uint32)(pInterMemBfr->common_buffer_ptr_phy) + sizeof(Mp4EncObject));
     pInterMemBfr->size -= sizeof(Mp4EncObject);
 
-    ret = Mp4Enc_InitMem(vo, pInterMemBfr, pExtraMemBfr);
+    ret = Mp4Enc_InitMem(vo, pInterMemBfr, INTER_MEM);
+    if (ret != MMENC_OK)
+    {
+        return ret;
+    }
+
+    vo->s_vsp_fd = -1;
+    vo->s_vsp_Vaddr_base = 0;
+    vo->vsp_capability = -1;
+    if(VSP_OPEN_Dev((VSPObject *)vo) < 0)
+    {
+        return MMDEC_HW_ERROR;
+    }
+
+    return MMENC_OK;
+}
+
+/*****************************************************************************/
+//  Description:   Init mpeg4 encoder
+//	Global resource dependence:
+//  Author:
+//	Note:
+/*****************************************************************************/
+MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pExtraMemBfr,
+                    MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat)
+{
+    Mp4EncObject *vo = (Mp4EncObject *) mp4Handle->videoEncoderData;
+    uint16 frame_width = pVideoFormat->frame_width;
+    uint16 frame_height = pVideoFormat->frame_height;
+    VOL_MODE_T  *vol_mode_ptr = NULL;
+    ENC_VOP_MODE_T  *vop_mode_ptr = NULL;
+    MMEncRet ret;
+
+    CHECK_MALLOC(pExtraMemBfr, "pExtraMemBfr");
+    CHECK_MALLOC(pExtraMemBfr->common_buffer_ptr, "extranal memory");
+
+    CHECK_MALLOC(pBitstreamBfr, "pBitstreamBfr");
+    CHECK_MALLOC(pBitstreamBfr->common_buffer_ptr, "bit stream memory");
+
+    ret = Mp4Enc_InitMem(vo, pExtraMemBfr, EXTRA_MEM);
     if (ret != MMENC_OK)
     {
         return ret;
@@ -247,13 +302,6 @@ MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBu
     vop_mode_ptr->pOneFrameBitstream = pBitstreamBfr->common_buffer_ptr;
     vop_mode_ptr->OneFrameBitstream_addr_phy = (uint32)pBitstreamBfr->common_buffer_ptr_phy;
     vop_mode_ptr->OneframeStreamLen = pBitstreamBfr->size;
-
-    vo->s_vsp_fd = -1;
-    vo->s_vsp_Vaddr_base = 0;
-    if(VSP_OPEN_Dev((VSPObject *)vo) < 0)
-    {
-        return MMDEC_HW_ERROR;
-    }
 
     if (vo->vsp_capability == 2)
     {

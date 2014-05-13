@@ -27,8 +27,12 @@ extern   "C"
 {
 #endif
 
-//#define MP4ENC_INTERNAL_BUFFER_SIZE (MP4ENC_OR_RUN_SIZE+MP4ENC_OR_INTER_MALLOC_SIZE)
-//#define ONEFRAME_BITSTREAM_BFR_SIZE	(1500*1024)  //for bitstream size of one encoded frame.
+// Encoder video capability structure
+typedef struct
+{
+    int32 max_width;
+    int32 max_height;
+} MMEncCapability;
 
 typedef struct tagMP4Handle
 {
@@ -43,12 +47,28 @@ typedef struct tagMP4Handle
 **----------------------------------------------------------------------------*/
 
 /*****************************************************************************/
+//  Description:   Get capability of MPEG4 encoder
+//	Global resource dependence:
+//  Author:
+//	Note:
+/*****************************************************************************/
+MMEncRet MP4EncGetCodecCapability(MP4Handle *mp4Handle, MMEncCapability *Capability);
+
+/*****************************************************************************/
+//  Description:   Pre-Init mpeg4 encoder
+//	Global resource dependence:
+//  Author:
+//	Note:
+/*****************************************************************************/
+MMEncRet MP4EncPreInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr);
+
+/*****************************************************************************/
 //  Description:   Init mpeg4 encoder
 //	Global resource dependence:
 //  Author:
 //	Note:
 /*****************************************************************************/
-MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat);
+MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pExtraMemBfr,MMCodecBuffer *pBitstreamBfr, MMEncVideoInfo *pVideoFormat);
 /*****************************************************************************/
 //  Description:   Generate mpeg4 header
 //	Global resource dependence:
