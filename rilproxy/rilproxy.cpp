@@ -737,6 +737,7 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
                 pthread_mutex_unlock(&sRadiopowerMutex);
             }
 
+            property_set(RIL_LTE_USIM_READY_PROP, "0");
             sLteReady = 1;
         }
         break;
