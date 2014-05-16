@@ -249,7 +249,7 @@ PUBLIC MMEncRet Mp4Enc_InitSession(Mp4EncObject *vo)
     vop_mode_ptr->pYUVRecFrame->imgY = (uint8 *)Mp4Enc_MemAlloc(vo, size, 8, EXTRA_MEM);
     CHECK_MALLOC(vop_mode_ptr->pYUVRecFrame->imgY, "vop_mode_ptr->pYUVRecFrame->imgY");
 
-    if (!vop_mode_ptr->uv_interleaved)
+    if ((vo->yuv_format == MMENC_YUV420P_YU12)||(vo->yuv_format == MMENC_YUV420P_YV12)) //three plane
     {
         vop_mode_ptr->pYUVRecFrame->imgU = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>2), 8, EXTRA_MEM);
         CHECK_MALLOC(vop_mode_ptr->pYUVRecFrame->imgU, "vop_mode_ptr->pYUVRecFrame->imgU");
@@ -267,7 +267,7 @@ PUBLIC MMEncRet Mp4Enc_InitSession(Mp4EncObject *vo)
     vop_mode_ptr->pYUVRefFrame->imgY = (uint8 *)Mp4Enc_MemAlloc(vo, size, 8, EXTRA_MEM);
     CHECK_MALLOC(vop_mode_ptr->pYUVRefFrame->imgY, "vop_mode_ptr->pYUVRefFrame->imgY");
 
-    if (!vop_mode_ptr->uv_interleaved)
+    if ((vo->yuv_format == MMENC_YUV420P_YU12)||(vo->yuv_format == MMENC_YUV420P_YV12)) //three plane
     {
         vop_mode_ptr->pYUVRefFrame->imgU = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>2), 8, EXTRA_MEM);
         CHECK_MALLOC(vop_mode_ptr->pYUVRefFrame->imgU, "vop_mode_ptr->pYUVRefFrame->imgU");
@@ -314,6 +314,13 @@ PUBLIC void Mp4Enc_InitVSP(Mp4EncObject *vo)
     slice_last_mb_y = (slice_last_mb_y>(vop_mode_ptr->MBNumY - 1)) ? (vop_mode_ptr->MBNumY - 1) : slice_last_mb_y;
 
     is_last_slice = ((vop_mode_ptr->MBNumY-vop_mode_ptr->mb_y) <= vop_mode_ptr->mbline_num_slice) ? 1 : 0;
+
+    cmd = V_BIT_17|V_BIT_16|V_BIT_11|V_BIT_5|V_BIT_3;
+    if (vo->yuv_format == MMENC_YUV420SP_NV21)  //vu format
+    {
+        cmd |= V_BIT_6;
+    }
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + AXIM_ENDIAN_OFF, cmd,"axim endian set, vu format"); //VSP and OR endian.
 
     cmd = (((vol_mode_ptr->short_video_header) ? STREAM_ID_H263 : STREAM_ID_MPEG4) << 0);	// VSP_standard[3:0], 0x1:STREAM_ID_MPEG4
     cmd |= (1 << 4);		// Work_mode[4], 1:encode, 0:decode

@@ -165,7 +165,7 @@ typedef struct enc_vop_mode_tag
 
     int32 iMaxVal;    //for clip iquant coeff
 
-    int32 uv_interleaved;
+    //int32 uv_interleaved;
     Mp4EncStorablePic *pYUVSrcFrame;  //frame to be encoded
     Mp4EncStorablePic *pYUVRecFrame; //store forward reference frame
     Mp4EncStorablePic *pYUVRefFrame; //store backward reference frame
@@ -267,6 +267,7 @@ typedef struct tagMp4EncObject
     uint32 g_nFrame_enc;
     uint32 g_enc_frame_skip_number;
     uint16 g_enc_p_frame_count;
+    int32 yuv_format;
 
     ENC_ANTI_SHAKE_T g_anti_shake;
 

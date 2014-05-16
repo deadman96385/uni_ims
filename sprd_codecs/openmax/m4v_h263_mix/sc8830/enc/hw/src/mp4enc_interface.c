@@ -275,7 +275,7 @@ MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pExtraMemBfr,
     CHECK_MALLOC(vo->g_rc_data_ptr, "vo->g_rc_data_ptr");
 
     vop_mode_ptr->short_video_header = vol_mode_ptr->short_video_header  = pVideoFormat->is_h263;
-    vop_mode_ptr->uv_interleaved = pVideoFormat->uv_interleaved;
+    //vop_mode_ptr->uv_interleaved = pVideoFormat->uv_interleaved;
 
     vol_mode_ptr->VolWidth = frame_width;
     vol_mode_ptr->VolHeight = frame_height;
@@ -291,6 +291,7 @@ MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pExtraMemBfr,
     vo->g_anti_shake.shift_y = 0;
     vo->g_anti_shake.input_width = 0;
     vo->g_anti_shake.input_height= 0;
+    vo->yuv_format = pVideoFormat->yuv_format;
 
     Mp4Enc_InitVolVopPara(vol_mode_ptr, vop_mode_ptr, pVideoFormat->time_scale);
     ret = Mp4Enc_InitSession(vo);
@@ -405,7 +406,7 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
         vop_mode_ptr->pYUVSrcFrame->imgU = pInput->p_src_u_phy;
         vop_mode_ptr->pYUVSrcFrame->imgUAddr = (((uint32)vop_mode_ptr->pYUVSrcFrame->imgU) >> 3);
 
-        if (!vop_mode_ptr->uv_interleaved)
+        if ((vo->yuv_format == MMENC_YUV420P_YU12)||(vo->yuv_format == MMENC_YUV420P_YV12)) //three plane
         {
             vop_mode_ptr->pYUVSrcFrame->imgV = pInput->p_src_v_phy;
             vop_mode_ptr->pYUVSrcFrame->imgVAddr = (((uint32)vop_mode_ptr->pYUVSrcFrame->imgV) >> 3);
