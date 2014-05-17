@@ -732,9 +732,9 @@ static int deactivateLteDataConnection(int channelID, char *cmd)
     int ret = -1;
 
     if (cmd == NULL) {
-            RILLOGD("deactivateLteDataConnection cmd is NULL!! return -1");
-            return ret;
-        }
+        RILLOGD("deactivateLteDataConnection cmd is NULL!! return -1");
+        return ret;
+    }
 
     RILLOGD("deactivateLteDataConnection cmd = %s", cmd);
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
@@ -2095,6 +2095,148 @@ static void convertFailCause(int cause)
     }
 }
 
+static int getSPACTFBcause(int channelID)
+{
+    int err = 0, cause = -1;
+    ATResponse *p_response = NULL;
+    char *line;
+
+    RILLOGD("getSPACTFBcause enter");
+    err = at_send_command_singleline(ATch_type[channelID], "AT+SPACTFB?", "+SPACTFB:", &p_response);
+    if (err < 0 || p_response->success == 0) {
+        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+        goto error;
+    }
+    line = p_response->p_intermediates->line;
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+    err = at_tok_nextint(&line, &cause);
+    if (err < 0) goto error;
+error:
+    at_response_free(p_response);
+    RILLOGD("getSPACTFBcause leave. cause = %d", cause);
+    return cause;
+}
+
+static bool isMatchedErrorcause(ATResponse *p_response, int match_number)
+{
+    bool  ret = false;
+    int   failCause = -1;
+    int   err = 0;
+    char *line = NULL;
+
+    RILLOGD("isMatchedErrorcause enter, match_number = %d", match_number);
+    if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
+        line = p_response->finalResponse;
+        err = at_tok_start(&line);
+        if (err >= 0) {
+            err = at_tok_nextint(&line,&failCause);
+            if (err >= 0 && failCause == match_number) {
+                RILLOGD("isMatchedErrorcause: matched,return true");
+                ret = true;
+            }
+        }
+    } else {
+        RILLOGD("isMatchedErrorcause: not cme error,return false");
+        ret = false;
+    }
+    RILLOGD("isMatchedErrorcause leave, ret = %d", ret);
+    return ret;
+}
+
+static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos_state)
+{
+    bool ret = false;
+    ATResponse *p_response = NULL;
+    char *line;
+    int err = 0;
+    int failCause = 0;
+    const char *apn = NULL;
+    const char *username = NULL;
+    const char *password = NULL;
+    const char *authtype = NULL;
+    char cmd[128] = {0};
+
+    apn = ((const char **)data)[2];
+    username = ((const char **)data)[3];
+    password = ((const char **)data)[4];
+    authtype = ((const char **)data)[5];
+
+    //IPV4
+    snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"IP\",\"%s\",\"\",0,0", index+1, apn);
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    if (err < 0 || p_response->success == 0){
+        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+        goto error;
+    }
+
+    snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    if (err < 0 || p_response->success == 0){
+        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+        goto error;
+    }
+
+    pthread_mutex_lock(&pdp[index].mutex);
+    pdp[index].cid = index + 1;
+    pthread_mutex_unlock(&pdp[index].mutex);
+
+    //IPV6
+    index = getPDPByIndex(getExtraPDPNum(index));
+    if(index < 0 || pdp[index].cid >= 0)
+        goto error;
+
+    snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
+    at_send_command(ATch_type[channelID], cmd, NULL);
+
+    snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"IPV6\",\"%s\",\"\",0,0", index+1, apn);
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    if (err < 0 || p_response->success == 0){
+        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+        goto error;
+    }
+
+    snprintf(cmd, sizeof(cmd), "AT+CGPCO=0,\"%s\",\"%s\",%d,%d", username, password,index+1,atoi(authtype));
+    at_send_command(ATch_type[channelID], cmd, NULL);
+
+    /* Set required QoS params to default */
+    property_get("persist.sys.qosstate", qos_state, "0");
+    if(!strcmp(qos_state, "0")) {
+        snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
+        at_send_command(ATch_type[channelID], cmd, NULL);
+        if (!strcmp(s_modem, "l")) {
+            snprintf(cmd, sizeof(cmd), "AT+CGEQOS=%d,9,64,64,64,64", index+1);
+            at_send_command(ATch_type[channelID], cmd, NULL);
+        }
+    }
+
+    snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    if (err < 0 || p_response->success == 0) {
+        if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
+            line = p_response->finalResponse;
+            err = at_tok_start(&line);
+            if (err >= 0) {
+                err = at_tok_nextint(&line,&failCause);
+                if (err >= 0) {
+                    convertFailCause(failCause);
+                } else {
+                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+                    goto error;
+                }
+            }
+        } else {
+            s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+        }
+
+        goto error;
+    }
+    ret = true;
+error:
+    at_response_free(p_response);
+    return ret;
+}
+
 static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     const char *apn = NULL;
@@ -2123,9 +2265,6 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     RILLOGD("requestSetupDataCall data[3] '%s'", ((const char **)data)[3]);
     RILLOGD("requestSetupDataCall data[4] '%s'", ((const char **)data)[4]);
     RILLOGD("requestSetupDataCall data[5] '%s'", ((const char **)data)[5]);
-    RILLOGD("requestSetupDataCall data[6] '%s'", ((const char **)data)[4]);
-    RILLOGD("requestSetupDataCall data[7] '%s'", ((const char **)data)[5]);
-
 
     if (ATch_type[channelID]) {
 
@@ -2142,7 +2281,13 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
         ATch_type[channelID]->nolog = 0;
 
         snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
-        at_send_command(ATch_type[channelID], cmd, NULL);
+        if (!IsLte) {
+            at_send_command(ATch_type[channelID], cmd, NULL);
+        } else {
+            if (deactivateLteDataConnection(channelID, cmd) < 0) {
+                goto error;
+            }
+        }
 
         if (!IsLte) {
             snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"%s\",\"%s\",\"\",0,0", index+1, pdp_type, apn);
@@ -2189,9 +2334,11 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
 
         } else {//LTE
             int ip_type = -1;
-            int fbCause;
+            int fbCause = -1;
             char eth[PROPERTY_VALUE_MAX] = {0};
             char prop[PROPERTY_VALUE_MAX] = {0};
+            bool ret = false, cgatt_fallback = false;
+            int lteAttached = 0;
 
             if (!strcmp(pdp_type,"IPV4+IPV6")) {
                 snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"IP\",\"%s\",\"\",0,0", index+1, apn);
@@ -2203,7 +2350,7 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
                 s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                 goto error;
             }
-
+retrycgatt:
             snprintf(cmd, sizeof(cmd), "AT+CGPCO=0,\"%s\",\"%s\",%d,%d", username, password,index+1,atoi(authtype));
             at_send_command(ATch_type[channelID], cmd, NULL);
 
@@ -2224,9 +2371,53 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
                 if (sLteRegState == STATE_OUT_OF_SERVICE) {
                     err = at_send_command(ATch_type[channelID], "AT+CGATT=1", &p_response);
                     if (err < 0 || p_response->success == 0) {
-                        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                        pthread_mutex_unlock(&s_lte_attach_mutex);
-                        goto error;
+                        /******************************************************/
+                        /* Speical case for CGATT reject by network(cause#28) */
+                        /* The following actions are required:                */
+                        /* 1.Using AT+SPACTFB to get esm cause                */
+                        /* 2.According cause values for the following process */
+                        /*  1)28: Do IPV4 cgatt;                              */
+                        /*        Fallback two pdp connections(IPv4 + IPv6)   */
+                        /*  2)33: Switch ps to TD                             */
+                        /*  3)other values: Do nothing                        */
+                        /******************************************************/
+                        if (!strcmp(pdp_type, "IPV4V6") && 
+                            isMatchedErrorcause(p_response, 119)) {
+                            RILLOGD("CGATT get 119 error,do fallback");
+                            fbCause = getSPACTFBcause(channelID);
+                            RILLOGD("doCGATTFallback, fbCause = %d", fbCause);
+                            switch (fbCause){
+                              case 28:
+                                RILLOGD("CGATT fall Back Cause: 28");
+                                // Do IPV4 attach
+                                snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"IP\",\"%s\",\"\",0,0", index+1, apn);
+                                err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                                if (err < 0 || p_response->success == 0){
+                                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+                                    pthread_mutex_unlock(&s_lte_attach_mutex);
+                                    goto error;
+                                }
+                                pthread_mutex_unlock(&s_lte_attach_mutex);
+                                cgatt_fallback = true;
+                                goto retrycgatt;
+                                break;
+                              case 33:
+                                RILLOGD("CGATT fall Back Cause: 33, do ps switch to TD");
+                                lteAttached = 0;
+                                RIL_onUnsolicitedResponse(RIL_UNSOL_LTE_READY, (void *)&lteAttached, 4);
+                                break;
+                              default:
+                                RILLOGD("CGATT fall Back Cause: other. do nothing");
+                                break;
+                            }
+                            pthread_mutex_unlock(&s_lte_attach_mutex);
+                            goto error;
+                        } else {
+                            RILLOGD("CGATT failed,but not 119, do nothing");
+                            s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+                            pthread_mutex_unlock(&s_lte_attach_mutex);
+                            goto error;
+                        }
                     }
 
                     struct timespec tv;
@@ -2248,7 +2439,18 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
                     pthread_mutex_unlock(&s_lte_attach_mutex);
                 }
             }
-
+            if (cgatt_fallback == true) {
+                RILLOGD("Do cgatt fallback process!");
+                ret = doIPV4_IPV6_Fallback(channelID, index, data, qos_state);
+                if (ret == false) {
+                    goto error;
+                } else {
+                    pthread_mutex_lock(&pdp[index].mutex);
+                    pdp[index].cid = index + 1;
+                    pthread_mutex_unlock(&pdp[index].mutex);
+                    goto done;
+                }
+            }
             snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0) {
@@ -2258,73 +2460,10 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
                     if (err >= 0) {
                         err = at_tok_nextint(&line,&failCause);
                         if (err >= 0) {
-                            if (failCause == 128 && !strcmp(pdp_type,"IPV4V6")) {//128: network reject
-                                //IPV4
-                                snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"IP\",\"%s\",\"\",0,0", index+1, apn);
-                                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                                if (err < 0 || p_response->success == 0){
-                                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                                    goto error;
-                                }
-
-                                snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
-                                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                                if (err < 0 || p_response->success == 0){
-                                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                                    goto error;
-                                }
-
-                                pthread_mutex_lock(&pdp[index].mutex);
-                                pdp[index].cid = index + 1;
-                                pthread_mutex_unlock(&pdp[index].mutex);
-
-                                //IPV6
-                                index = getPDPByIndex(getExtraPDPNum(index));
-                                if(index < 0 || pdp[index].cid >= 0)
-                                    goto error;
-
-                                snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
-                                at_send_command(ATch_type[channelID], cmd, NULL);
-
-                                snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"IPV6\",\"%s\",\"\",0,0", index+1, apn);
-                                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                                if (err < 0 || p_response->success == 0){
-                                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                                    goto error;
-                                }
-
-                                snprintf(cmd, sizeof(cmd), "AT+CGPCO=0,\"%s\",\"%s\",%d,%d", username, password,index+1,atoi(authtype));
-                                at_send_command(ATch_type[channelID], cmd, NULL);
-
-                                /* Set required QoS params to default */
-                                property_get("persist.sys.qosstate", qos_state, "0");
-                                if(!strcmp(qos_state, "0")) {
-                                    snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
-                                    at_send_command(ATch_type[channelID], cmd, NULL);
-                                    if (!strcmp(s_modem, "l")) {
-                                        snprintf(cmd, sizeof(cmd), "AT+CGEQOS=%d,9,64,64,64,64", index+1);
-                                        at_send_command(ATch_type[channelID], cmd, NULL);
-                                    }
-                                }
-
-                                snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
-                                err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                                if (err < 0 || p_response->success == 0) {
-                                    if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
-                                        line = p_response->finalResponse;
-                                        err = at_tok_start(&line);
-                                        if (err >= 0) {
-                                            err = at_tok_nextint(&line,&failCause);
-                                            if (err >= 0) {
-                                                convertFailCause(failCause);
-                                            } else {
-                                                s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                                                goto error;
-                                            }
-                                        }
-                                    } else
-                                        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-
+                            //128: network reject
+                            if (failCause == 128 && !strcmp(pdp_type,"IPV4V6")) {
+                                ret = doIPV4_IPV6_Fallback(channelID, index, data, qos_state);
+                                if (ret == false) {
                                     goto error;
                                 }
                             } else {
@@ -2345,21 +2484,9 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
             pdp[index].cid = index + 1;
             pthread_mutex_unlock(&pdp[index].mutex);
             if (!strcmp(pdp_type,"IPV4V6")) {
-                err = at_send_command_singleline(ATch_type[channelID], "AT+SPACTFB?", "+SPACTFB:", &p_response);
-                if (err < 0 || p_response->success == 0) {
-                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                    goto error;
-                }
-
-                line = p_response->p_intermediates->line;
-
-                err = at_tok_start(&line);
-                if (err < 0) goto error;
-
-                err = at_tok_nextint(&line, &fbCause);
-                if (err < 0) goto error;
-
+                fbCause = getSPACTFBcause(channelID);
                 RILLOGD("requestSetupDataCall fall Back Cause = %d", fbCause);
+                if (fbCause < 0) goto error;
 
                 if(!strcmp(s_modem, "t")) {
                     property_get(ETH_TD, eth, "veth");
@@ -2494,15 +2621,16 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     } else {
         goto error;
     }
+
+done:
     if (index < 3) {
         requestOrSendDataCallList(channelID, index+1, &t);
     } else {
         requestOrSendDataCallList(channelID, (index+1) -3, &t);
     }
-
     at_response_free(p_response);
-
     return;
+
 error:
     if (!IsLte) {
         if(index >= 0)
