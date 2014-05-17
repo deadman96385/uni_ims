@@ -40,6 +40,7 @@ typedef enum {
 #define    SEND_AT_TO_LTE_CPOF                 "AT+CPOF"
 #define    SEND_AT_TO_AT_RESET                 "AT+RESET"
 #define    SEND_AT_TO_AT_SPATASSERT            "AT+SPATASSERT"
+#define    SEND_AT_TO_AT_ARMLOG                "AT+ARMLOG"
 
 /* RILProxy  */
 typedef struct {

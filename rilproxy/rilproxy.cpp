@@ -33,6 +33,11 @@ static int sLteClientFd  = -1;
 static int sPSEnable  = PS_TD_ENABLE;
 static int sLteReady  = 0;
 static int sTdRadioPowerSent = 0;
+static int sLteRilConnected  = 0;
+static int sTdgRilConnected  = 0;
+static Parcel  sParcelRilConnected;
+static Parcel  sParcelRadioState;
+static Parcel  sParcelSimState;
 
 static RecordStream *sReqRecordStream = NULL;
 static pthread_mutex_t sWriteMutex    = PTHREAD_MUTEX_INITIALIZER;
@@ -297,6 +302,7 @@ static RILP_RequestType  get_send_at_request_type(char* req) {
 			    strncasecmp(req, SEND_AT_TO_LTE_CPOF, strlen(SEND_AT_TO_LTE_CPOF)) == 0) {
 				return ReqToLTE;
 			} else if (strncasecmp(req, SEND_AT_TO_AT_RESET, strlen(SEND_AT_TO_AT_RESET)) == 0 || 
+			           strncasecmp(req, SEND_AT_TO_AT_ARMLOG, strlen(SEND_AT_TO_AT_ARMLOG)) == 0 ||
 			           strncasecmp(req, SEND_AT_TO_AT_SPATASSERT, strlen(SEND_AT_TO_AT_SPATASSERT)) == 0) {
 				return ReqToTDG_LTE;
 			}
@@ -419,18 +425,18 @@ write_data (int fd , const void *data, size_t dataSize) {
 
 static int  send_lte_enable_response(int token, int result) {
 
-	char rspbuf[20];
-	int  rsptype = RESPONSE_SOLICITED;
-	int  error = ( result ? 0 : RIL_E_GENERIC_FAILURE) ;
-	int  nlen = 1;
+    char rspbuf[20];
+    int  rsptype = RESPONSE_SOLICITED;
+    int  error = ( result ? 0 : RIL_E_GENERIC_FAILURE) ;
+    int  nlen = 1;
 
-	memcpy(rspbuf,   &rsptype, 4);
-	memcpy(&rspbuf[4], &token, 4);
-	memcpy(&rspbuf[8], &error, 4);
-	memcpy(&rspbuf[12], &nlen, 4);
-	memcpy(&rspbuf[16], &result, 4);
+    memcpy(rspbuf,   &rsptype, 4);
+    memcpy(&rspbuf[4], &token, 4);
+    memcpy(&rspbuf[8], &error, 4);
+    memcpy(&rspbuf[12], &nlen, 4);
+    memcpy(&rspbuf[16], &result, 4);
 	
-	return write_data (sRILPServerFd, (void *)rspbuf, error == 0 ? 20 : 12);
+    return write_data (sRILPServerFd, (void *)rspbuf, error == 0 ? 20 : 12);
 }
 
 static int  send_lte_radio_power(int poweron, int autoatt) {
@@ -443,6 +449,13 @@ static int  send_lte_radio_power(int poweron, int autoatt) {
     p.writeInt32(autoatt);
 
     return write_data (sLteClientFd, p.data(), p.dataSize());
+}
+
+static void send_rilproxy_connected_respone(int fd) {
+
+    write_data (fd, sParcelRilConnected.data(), sParcelRilConnected.dataSize());
+    write_data (fd, sParcelRadioState.data(),   sParcelRadioState.dataSize());
+    write_data (fd, sParcelSimState.data(), sParcelSimState.dataSize());
 }
 
 
@@ -696,9 +709,10 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
 		ALOGE("Invalid response block");
 		return;
 	}
-	
-	if ((isfromTdg  && is_tdg_unsolicited(rspId))||
-	     (!isfromTdg && is_lte_unsolicited(rspId))){
+
+	if ((sRILPServerFd != -1) &&
+            ((isfromTdg  && is_tdg_unsolicited(rspId)) ||
+	    (!isfromTdg && is_lte_unsolicited(rspId))) ){
 		/* Add for dual signal bar */
 		if(rspId == RIL_UNSOL_SIGNAL_STRENGTH) {
 			ALOGD("Received RIL_UNSOL_SIGNAL_STRENGTH isfromTdg = %d", isfromTdg);
@@ -716,6 +730,7 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
         ALOGD("Received RIL_UNSOL_LTE_READY isfromTdg = %d", isfromTdg);
         p.readInt32(&skip);
         p.readInt32(&blte);
+
         if (blte != 1 && blte != 5) {
             ALOGD("Clear saved sSignalStrength data");
             RIL_SIGNALSTRENGTH_INIT_LTE(sSignalStrength);
@@ -723,9 +738,19 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
         break;
       /* It doesn't sure which the two RIL_CONNETCED and SVLTE_USIM_READY appear first.*/
       case RIL_UNSOL_RIL_CONNECTED:
+         if (sRILPServerFd == -1)  {
+            if (isfromTdg) {
+                sTdgRilConnected = 1;
+            } else {
+                sLteRilConnected = 1;
+            }
+            sParcelRilConnected.setData((uint8_t *) rspbuf, nlen);
+         }
+
          property_get(RIL_LTE_USIM_READY_PROP, prop, "0");
          if (!atoi(prop)) break;
          ALOGD("SVLTE Ril connected");
+
       case RIL_UNSOL_SVLTE_USIM_READY:
         if (!isfromTdg) {
             ALOGD("SVLTE USIM READY");
@@ -736,13 +761,22 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
             } else {
                 pthread_mutex_unlock(&sRadiopowerMutex);
             }
-
             property_set(RIL_LTE_USIM_READY_PROP, "0");
             sLteReady = 1;
         }
         break;
-      default:
-        return;
+
+      case RIL_UNSOL_RESPONSE_RADIO_STATE_CHANGED:
+        if (sRILPServerFd == -1 && isfromTdg) {
+            sParcelRadioState.setData((uint8_t *) rspbuf, nlen);
+        }
+        break;
+
+      case RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED :
+        if (sRILPServerFd == -1 && isfromTdg) {
+            sParcelSimState.setData((uint8_t *) rspbuf, nlen);
+        }
+        break;
     }
 }
 
@@ -887,31 +921,10 @@ static int rilproxy_connect(const char* sockname)
 }
 
 extern "C" void  rilproxy_init(void) {
-	int sfd, fd;
-	
-	init_request_type();
 
-	/* Add for dual signal bar */
-	RIL_SIGNALSTRENGTH_INIT(sSignalStrength);
-
-	sfd = android_get_control_socket(RILPROXY_SOCKET_NAME);
-    if (sfd < 0) {
-		ALOGE("Failed to get socket ' %s '", RILPROXY_SOCKET_NAME);
-        exit(-1);
-    }
-    
-    if (listen(sfd, 4) < 0) {
-        ALOGE("Failed to listen on control socket '%d': %s", sfd, strerror(errno));
-        exit(-1);
-    }
-    
-    ALOGD("Waiting for connect from RILJ");
-    if ((fd=accept(sfd,NULL,NULL)) == -1) {
-		ALOGE("Socket accept error: %s ", strerror(errno));
-		exit(-1);
-	}
-	sRILPServerFd = fd;
-	sReqRecordStream = record_stream_new(fd, MAX_REQUEST_BUFFER_LEN);
+    init_request_type();
+    /* Add for dual signal bar */
+    RIL_SIGNALSTRENGTH_INIT(sSignalStrength);
 }
 
 
@@ -974,11 +987,44 @@ error :
 	return NULL;
 }
 
+
+static void  server_init(void) {
+    int sfd, fd;
+
+    sfd = android_get_control_socket(RILPROXY_SOCKET_NAME);
+    if (sfd < 0) {
+		ALOGE("Failed to get socket ' %s '", RILPROXY_SOCKET_NAME);
+        exit(-1);
+    }
+
+    if (listen(sfd, 4) < 0) {
+        ALOGE("Failed to listen on control socket '%d': %s", sfd, strerror(errno));
+        exit(-1);
+    }
+
+    ALOGD("Waiting for connect from RILJ");
+    if ((fd=accept(sfd,NULL,NULL)) == -1) {
+	ALOGE("Socket accept error: %s ", strerror(errno));
+	exit(-1);
+    }
+
+    if (sLteRilConnected && sTdgRilConnected) {
+       ALOGD("Both rild has connetcted.");
+       send_rilproxy_connected_respone(fd);
+    }
+
+    sRILPServerFd = fd;
+    sReqRecordStream = record_stream_new(fd, MAX_REQUEST_BUFFER_LEN);
+}
+
+
 extern "C" void  rilproxy_server() {
 	int ret;	
 	void *p_record;
 	size_t recordlen;
 	
+        server_init();
+
 	for(;;){
 		ALOGD("Beginning receive data form RILJ ");
 		/* loop until EAGAIN/EINTR, end of stream, or other error */
