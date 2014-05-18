@@ -993,7 +993,7 @@ static void  server_init(void) {
 
     sfd = android_get_control_socket(RILPROXY_SOCKET_NAME);
     if (sfd < 0) {
-		ALOGE("Failed to get socket ' %s '", RILPROXY_SOCKET_NAME);
+        ALOGE("Failed to get socket ' %s '", RILPROXY_SOCKET_NAME);
         exit(-1);
     }
 
@@ -1004,12 +1004,14 @@ static void  server_init(void) {
 
     ALOGD("Waiting for connect from RILJ");
     if ((fd=accept(sfd,NULL,NULL)) == -1) {
-	ALOGE("Socket accept error: %s ", strerror(errno));
-	exit(-1);
+    ALOGE("Socket accept error: %s ", strerror(errno));
+    exit(-1);
     }
 
-    if (sLteRilConnected && sTdgRilConnected) {
-       ALOGD("Both rild has connetcted.");
+    //if (sLteRilConnected && sTdgRilConnected) {
+    //   ALOGD("Both rild has connetcted.");
+    if (sTdgRilConnected) {
+       ALOGD("TD rild has connetcted.");
        send_rilproxy_connected_respone(fd);
     }
 
