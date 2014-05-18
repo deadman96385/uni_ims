@@ -296,6 +296,7 @@ static pthread_mutex_t s_sms_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t s_lte_attach_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t s_lte_attach_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t s_pdp_mapping_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t s_lte_cgatt_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int s_port = -1;
 static const char * s_device_path = NULL;
@@ -2363,8 +2364,11 @@ retrycgatt:
                     at_send_command(ATch_type[channelID], cmd, NULL);
                 }
             }
-
             if (!strcmp(s_modem, "l")) {
+                /* Add mutex to avoid multiple cgatt process */
+                pthread_mutex_lock(&s_lte_cgatt_mutex);
+                RILLOGD("Add s_lte_cgatt_mutex");
+                /* Check lte service state */
                 RILLOGD("requestSetupDataCall  sLteRegState = %d", sLteRegState);
                 pthread_mutex_lock(&s_lte_attach_mutex);
                 if (sLteRegState == STATE_OUT_OF_SERVICE) {
@@ -2394,9 +2398,13 @@ retrycgatt:
                                 if (err < 0 || p_response->success == 0){
                                     s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                                     pthread_mutex_unlock(&s_lte_attach_mutex);
+                                    pthread_mutex_unlock(&s_lte_cgatt_mutex);
+                                    RILLOGD("retrycgatt,but CGDCONT failed: Release s_lte_cgatt_mutex");
                                     goto error;
                                 }
                                 pthread_mutex_unlock(&s_lte_attach_mutex);
+                                pthread_mutex_unlock(&s_lte_cgatt_mutex);
+                                RILLOGD("retrycgatt: Release s_lte_cgatt_mutex");
                                 cgatt_fallback = true;
                                 goto retrycgatt;
                                 break;
@@ -2410,11 +2418,15 @@ retrycgatt:
                                 break;
                             }
                             pthread_mutex_unlock(&s_lte_attach_mutex);
+                            pthread_mutex_unlock(&s_lte_cgatt_mutex);
+                            RILLOGD("other fallback case: Release s_lte_cgatt_mutex");
                             goto error;
                         } else {
                             RILLOGD("CGATT failed,but not 119, do nothing");
                             s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                             pthread_mutex_unlock(&s_lte_attach_mutex);
+                            RILLOGD("not 119 error: Release s_lte_cgatt_mutex");
+                            pthread_mutex_unlock(&s_lte_cgatt_mutex);
                             goto error;
                         }
                     }
@@ -2430,6 +2442,8 @@ retrycgatt:
                         RILLOGD("requestSetupDataCall  LTE attach timeout, current time : %ld", time(NULL));
                         s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                         pthread_mutex_unlock(&s_lte_attach_mutex);
+                        RILLOGD("ETIMEDOUT: Release s_lte_cgatt_mutex");
+                        pthread_mutex_unlock(&s_lte_cgatt_mutex);
                         goto error;
                     }
                     pthread_mutex_unlock(&s_lte_attach_mutex);
@@ -2437,8 +2451,12 @@ retrycgatt:
                     RILLOGD("STATE_IN_SERVICE  release mutex");
                     pthread_mutex_unlock(&s_lte_attach_mutex);
                 }
+                RILLOGD("Normal end: Release s_lte_cgatt_mutex");
+                pthread_mutex_unlock(&s_lte_cgatt_mutex);
             }
+
             if (cgatt_fallback == true) {
+                cgatt_fallback = false;
                 RILLOGD("Do cgatt fallback process!");
                 ret = doIPV4_IPV6_Fallback(channelID, index, data, qos_state);
                 if (ret == false) {
