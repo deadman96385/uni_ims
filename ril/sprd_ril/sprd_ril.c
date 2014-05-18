@@ -818,9 +818,8 @@ error:
         if (pdp[cid - 1].cid == cid)
             putPDP(cid - 1);
     } else {
-        for (i=0; i<2; i++) {
-            putPDP(pdpTable[cid-1][i]);
-        }
+        putPDP(cid - 1);
+        putPDP(getExtraPDPNum(cid - 1));
     }
 
 error1:
@@ -2637,8 +2636,8 @@ error:
             putPDP(index);
     } else {
         if(pdpIndex >= 0) {
-            putPDP(pdpTable[pdpIndex][0]);
-            putPDP(pdpTable[pdpIndex][1]);
+            putPDP(index);
+            putPDP(getExtraPDPNum(index));
         }
     }
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
