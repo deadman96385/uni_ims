@@ -2631,13 +2631,12 @@ done:
     return;
 
 error:
-    if (!IsLte) {
-        if(index >= 0)
-            putPDP(index);
-    } else {
-        if(pdpIndex >= 0) {
+    if(index >= 0) {
+        if (IsLte) {
             putPDP(index);
             putPDP(getExtraPDPNum(index));
+        } else {
+            putPDP(index);
         }
     }
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
