@@ -33,11 +33,12 @@ static int sLteClientFd  = -1;
 static int sPSEnable  = PS_TD_ENABLE;
 static int sLteReady  = 0;
 static int sTdRadioPowerSent = 0;
-static int sLteRilConnected  = 0;
+static int sSimSmsReady      = 0;
 static int sTdgRilConnected  = 0;
 static Parcel  sParcelRilConnected;
 static Parcel  sParcelRadioState;
 static Parcel  sParcelSimState;
+static Parcel  sParcelSimSmsReady;
 
 static RecordStream *sReqRecordStream = NULL;
 static pthread_mutex_t sWriteMutex    = PTHREAD_MUTEX_INITIALIZER;
@@ -456,6 +457,11 @@ static void send_rilproxy_connected_respone(int fd) {
     write_data (fd, sParcelRilConnected.data(), sParcelRilConnected.dataSize());
     write_data (fd, sParcelRadioState.data(),   sParcelRadioState.dataSize());
     write_data (fd, sParcelSimState.data(), sParcelSimState.dataSize());
+
+    if (sSimSmsReady) {
+        write_data (fd, sParcelSimSmsReady.data(), sParcelSimSmsReady.dataSize());
+    }
+
 }
 
 
@@ -738,12 +744,8 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
         break;
       /* It doesn't sure which the two RIL_CONNETCED and SVLTE_USIM_READY appear first.*/
       case RIL_UNSOL_RIL_CONNECTED:
-         if (sRILPServerFd == -1)  {
-            if (isfromTdg) {
-                sTdgRilConnected = 1;
-            } else {
-                sLteRilConnected = 1;
-            }
+         if (sRILPServerFd == -1 && isfromTdg)  {
+            sTdgRilConnected = 1;
             sParcelRilConnected.setData((uint8_t *) rspbuf, nlen);
          }
 
@@ -775,6 +777,13 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
       case RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED :
         if (sRILPServerFd == -1 && isfromTdg) {
             sParcelSimState.setData((uint8_t *) rspbuf, nlen);
+        }
+        break;
+
+      case RIL_UNSOL_SIM_SMS_READY:
+        if (sRILPServerFd == -1 && isfromTdg) {
+            sSimSmsReady = 1;
+            sParcelSimSmsReady.setData((uint8_t *) rspbuf, nlen);
         }
         break;
     }
@@ -1004,12 +1013,10 @@ static void  server_init(void) {
 
     ALOGD("Waiting for connect from RILJ");
     if ((fd=accept(sfd,NULL,NULL)) == -1) {
-    ALOGE("Socket accept error: %s ", strerror(errno));
-    exit(-1);
+        ALOGE("Socket accept error: %s ", strerror(errno));
+        exit(-1);
     }
 
-    //if (sLteRilConnected && sTdgRilConnected) {
-    //   ALOGD("Both rild has connetcted.");
     if (sTdgRilConnected) {
        ALOGD("TD rild has connetcted.");
        send_rilproxy_connected_respone(fd);
