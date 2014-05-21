@@ -749,6 +749,10 @@ static int deactivateLteDataConnection(int channelID, char *cmd)
                     ret = 1;
                     RILLOGD("get 151 error,do detach");
                     at_send_command(ATch_type[channelID], "AT+SGFD", NULL);
+                    pthread_mutex_lock(&s_lte_attach_mutex);
+                    sLteRegState = STATE_OUT_OF_SERVICE;
+                    pthread_mutex_unlock(&s_lte_attach_mutex);
+                    RILLOGD("set sLteRegState: OUT OF SERVICE.");
                 }
             }
         }
