@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
+#include <netinet/in.h>
 #include "os_api.h"
 #include "ps_service.h"
 #include "pty.h"
@@ -98,6 +99,72 @@ void ps_service_init(void)
     }
 
     mutex_init(&ps_service_mutex,NULL);
+}
+
+int get_ipv6addr(const char *prop, int cid)
+{
+    char iface[128] = {0};
+    char linker[128] = {0};
+    snprintf(iface, sizeof(iface), "%s%d", prop, cid-1);
+    PHS_LOGD("query interface %s",iface);
+
+    int max_retry = 120;//wait 12s
+    int retry = 0;
+    int setup_success = 0;
+    while(!setup_success)
+    {
+        char rawaddrstr[INET6_ADDRSTRLEN], addrstr[INET6_ADDRSTRLEN];
+        unsigned int prefixlen;
+        int lasterror = 0, i, j, ret;
+        char ifname[64];  // Currently, IFNAMSIZ = 16.
+        FILE *f = fopen("/proc/net/if_inet6", "r");
+        if (!f) {
+            return -errno;
+        }
+
+        // Format:
+        // 20010db8000a0001fc446aa4b5b347ed 03 40 00 01    wlan0
+        while (fscanf(f, "%32s %*02x %02x %*02x %*02x %63s\n",
+              rawaddrstr, &prefixlen, ifname) == 3) {
+            // Is this the interface we're looking for?
+            if (strcmp(iface, ifname)) {
+                continue;
+            }
+
+            // Put the colons back into the address.
+            for (i = 0, j = 0; i < 32; i++, j++) {
+                addrstr[j] = rawaddrstr[i];
+                if (i % 4 == 3) {
+                    addrstr[++j] = ':';
+                }
+            }
+            addrstr[j - 1] = '\0';
+
+            PHS_LOGD("getipv6addr found ip %s",addrstr);
+            // Don't add the link-local address
+            if (strncmp(addrstr, "fe80:", 5) == 0) {
+                PHS_LOGD("getipv6addr found fe80");
+                continue;
+            }
+            char cmd[MAX_CMD * 2];
+            sprintf(cmd, "setprop net.%s%d.ipv6_ip %s", prop, cid-1,addrstr);
+            system(cmd);
+            PHS_LOGD("getipv6addr propset %s ",cmd);
+            setup_success = 1;
+            break;
+
+        }
+
+        fclose(f);
+        if(!setup_success)
+        {
+            usleep(100*1000);
+            retry++;
+        }
+        if(retry == max_retry)
+            break;
+    }
+    return setup_success;
 }
 
 int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
@@ -302,6 +369,16 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
 
                 snprintf(ipv6_dhcpcd_cmd, sizeof(ipv6_dhcpcd_cmd), "dhcpcd_ipv6:%s%d", prop, cid-1);
                 property_set("ctl.start", ipv6_dhcpcd_cmd);
+                if(!get_ipv6addr(prop,cid))
+                {
+                    PHS_LOGD("getipv6addr state ipv4v6 get IPv6 address timeout ");
+                    ppp_info[ppp_index].state = PPP_STATE_IDLE;
+                    adapter_pty_end_cmd(req->recv_pty );
+                    adapter_free_cmux_for_ps(mux);
+                    adapter_pty_write(req->recv_pty,"ERROR\r",strlen("ERROR\r"));
+                    mutex_unlock(&ps_service_mutex);
+                    return AT_RESULT_OK;
+                }
                 PHS_LOGD("IPV6 data_on execute done");
 
                 usleep(100*1000);
@@ -400,6 +477,16 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                 if (ppp_info[cid-1].ip_state == IPV6) {
                     snprintf(ipv6_dhcpcd_cmd, sizeof(ipv6_dhcpcd_cmd), "dhcpcd_ipv6:%s%d", prop, cid-1);
                     property_set("ctl.start", ipv6_dhcpcd_cmd);
+                    if(!get_ipv6addr(prop,cid))
+                    {
+                        PHS_LOGD("getipv6addr state v6 get IPv6 address timeout ");
+                        ppp_info[ppp_index].state = PPP_STATE_IDLE;
+                        adapter_pty_end_cmd(req->recv_pty );
+                        adapter_free_cmux_for_ps(mux);
+                        adapter_pty_write(req->recv_pty,"ERROR\r",strlen("ERROR\r"));
+                        mutex_unlock(&ps_service_mutex);
+                        return AT_RESULT_OK;
+                    }
                 }
 
                 PHS_LOGD("data_on execute done");
