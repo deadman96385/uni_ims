@@ -2217,6 +2217,7 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
     snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (err < 0 || p_response->success == 0) {
+#if 0
         if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
             line = p_response->finalResponse;
             err = at_tok_start(&line);
@@ -2234,6 +2235,9 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
         }
 
         goto error;
+#else
+        RILLOGD("Fallback 2 pdp failed,but still as a success");
+#endif
     }
     ret = true;
 error:
@@ -2563,6 +2567,7 @@ retrycgatt:
                     snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
                     err = at_send_command(ATch_type[channelID], cmd, &p_response);
                     if (err < 0 || p_response->success == 0) {
+#if 0
                         if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
                             line = p_response->finalResponse;
                             err = at_tok_start(&line);
@@ -2579,6 +2584,10 @@ retrycgatt:
                             s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
 
                         goto error;
+#else
+                        RILLOGD("Fallback 2 pdp failed,but still as a success");
+                        goto done;
+#endif
                     }
                     pthread_mutex_lock(&pdp[index].mutex);
                     pdp[index].cid = index + 1;
