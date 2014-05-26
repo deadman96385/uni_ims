@@ -79,8 +79,12 @@ int VP8DecGetLastDspFrm(VPXHandle *vpxHandle,void **pOutput)
 
     *pOutput = NULL;
 
-    ALOGI("%s, cm->frame_to_show.pBufferHeader: 0x%0x, cm->last_frame.pBufferHeader: 0x%0x",
-          __FUNCTION__, cm->frame_to_show->pBufferHeader, cm->last_frame.pBufferHeader);
+    if (cm->frame_to_show != NULL)
+    {
+        ALOGI("%s, cm->frame_to_show.pBufferHeader: 0x%0x, cm->last_frame.pBufferHeader: 0x%0x",
+              __FUNCTION__, cm->frame_to_show->pBufferHeader, cm->last_frame.pBufferHeader);
+    }
+
     if (cm->frame_to_show != &cm->last_frame)
     {
         cm->frame_to_show = &cm->last_frame;
