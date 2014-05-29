@@ -60,5 +60,7 @@ typedef struct {
 /* Add for dual signal bar */
  void *rilproxy_lte_server();
 
+ void set_lte_radio_on(int radioon);
+
 #endif
 

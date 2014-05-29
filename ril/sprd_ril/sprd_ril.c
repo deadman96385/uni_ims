@@ -122,7 +122,6 @@ typedef enum {
 #define LTE_MODEM_START_PROP             "ril.service.l.enable"
 #define RIL_LTE_USIM_READY_PROP          "ril.lte.usim.ready" // for SVLTE only, used by rilproxy
 
-
 #define RIL_SIM_TYPE  "ril.ICC_TYPE"
 #define RIL_SIM_TYPE1  "ril.ICC_TYPE_1"
 #define RIL_SET_SPEED_MODE_COUNT  "ril.sim.speed_count"
@@ -337,6 +336,7 @@ static int s_mcc = 0;
 static int s_mnc = 0;
 static int s_lac = 0;
 static int s_cid = 0;
+static int s_init_sim_ready = 0; // for svlte, setprop only once
 
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 #define RIL_DATA_PREFER_PROPERTY  "persist.sys.dataprefer.simid"
@@ -1427,10 +1427,6 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         }
         setRadioState(channelID, RADIO_STATE_OFF);
     } else if (onOff > 0 && sState == RADIO_STATE_OFF) {
-         /* SPRD : for svlte & csfb @{ */
-        setCeMode(channelID);
-        /* @} */
-
          /* SPRD : for svlte & csfb @{ */
         if (isSvLte()) {
           // if svlte, auto-attach is decided by framework
@@ -3725,24 +3721,6 @@ static void requestRegistrationState(int channelID, int request, void *data,
         responseStr[7] = res[4];
         RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, 15*sizeof(char*));
     } else if (request == RIL_REQUEST_DATA_REGISTRATION_STATE) {
-        if(isLte() && !strcmp(s_modem, "l")) {
-            if ((response[0] == 1 || response[0] == 5)) {
-                pthread_mutex_lock(&s_lte_attach_mutex);
-                if (sLteRegState == STATE_OUT_OF_SERVICE) {
-                    pthread_cond_signal(&s_lte_attach_cond);
-                    sLteRegState = STATE_IN_SERVICE;
-                }
-                pthread_mutex_unlock(&s_lte_attach_mutex);
-                RILLOGD("requestRegistrationState  sLteRegState is IN SERVICE");
-            } else {
-                pthread_mutex_lock(&s_lte_attach_mutex);
-                if (sLteRegState == STATE_IN_SERVICE) {
-                    sLteRegState = STATE_OUT_OF_SERVICE;
-                }
-                pthread_mutex_unlock(&s_lte_attach_mutex);
-                RILLOGD("requestRegistrationState  sLteRegState is OUT OF SERVICE.");
-            }
-        }
         sprintf(res[4], "3");
         responseStr[5] = res[4];
         RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, 6*sizeof(char*));
@@ -8427,6 +8405,26 @@ static void initializeCallback(void *param)
     channelID = getChannel();
     setRadioState (channelID, RADIO_STATE_OFF);
 
+#ifdef LTE_POWERON
+     SIM_Status simst = getSIMStatus(channelID);
+     if (simst == SIM_READY) {
+         if (!strcmp(s_modem, "t")) {
+             RIL_AppType apptype = getSimType(channelID);
+             RILLOGD("sim type %d", apptype);
+             if (apptype == RIL_APPTYPE_USIM){
+                 property_set(LTE_MODEM_START_PROP, "1");
+             } else {
+                 property_set(LTE_MODEM_START_PROP, "0");
+             }
+         } else if (!strcmp(s_modem, "l")) {
+             RIL_onUnsolicitedResponse (RIL_UNSOL_SVLTE_USIM_READY, NULL, 0);
+             property_set(RIL_LTE_USIM_READY_PROP, "1");
+         }
+         s_init_sim_ready = 1;
+    }
+
+#endif
+
     /* note: we don't check errors here. Everything important will
        be handled in onATTimeout and onATReaderClosed */
 
@@ -8534,13 +8532,10 @@ static void initializeCallback(void *param)
 
 
     /* set some auto report AT commend on or off */
+
     at_send_command(ATch_type[channelID], "AT+SPAURC=\"10011011111000000000100001000011111111\"", NULL);
 
-    /* SPRD : for svlte & csfb @{ */
-    setTestMode(channelID);
-    /* @} */
-
-
+#ifndef LTE_POWERON
     /*  LTE Special AT commands */
     if(!strcmp(s_modem, "l")) {
         // Response for AT+VIRTUALSIMINIT may be spent adbout 30s.
@@ -8621,6 +8616,8 @@ retry_vinit:
     if(isRadioOn(channelID) > 0) {
         setRadioState (channelID, RADIO_STATE_SIM_NOT_READY);
     }
+
+#endif
     putChannel(channelID);
 
     list_init(&dtmf_char_list);
@@ -8856,7 +8853,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 NULL, 0);
     } else if (strStartsWith(s,"+CEREG:")) {
         char *p,*tmp;
-        int lteAttached;
+        int lteState;
         int commas=0;
 
         line = strdup(s);
@@ -8866,13 +8863,32 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         for (p = tmp; *p != '\0' ;p++) {
             if (*p == ',') commas++;
         }
-        err = at_tok_nextint(&tmp, &lteAttached);
+        err = at_tok_nextint(&tmp, &lteState);
         if (err < 0) goto out;
         // report LTE_READY or not, in case of +CEREG:0 ,+CEREG:2;
         // only report STATE_CHANGED in case of +CEREG:1,xxxx, xxxx,x
-        if (commas == 0 && (lteAttached == 0 || lteAttached == 2)) {
-            RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteAttached, 4);
+        if (commas == 0 && (lteState == 0 || lteState == 2)) {
+            RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteState, 4);
         }
+
+        if ((lteState == 1 || lteState == 5)) {
+            pthread_mutex_lock(&s_lte_attach_mutex);
+            if (sLteRegState == STATE_OUT_OF_SERVICE) {
+                pthread_cond_signal(&s_lte_attach_cond);
+                sLteRegState = STATE_IN_SERVICE;
+            }
+            pthread_mutex_unlock(&s_lte_attach_mutex);
+            RILLOGD("requestRegistrationState  sLteRegState is IN SERVICE");
+        } else {
+            pthread_mutex_lock(&s_lte_attach_mutex);
+            if (sLteRegState == STATE_IN_SERVICE) {
+                sLteRegState = STATE_OUT_OF_SERVICE;
+            }
+            pthread_mutex_unlock(&s_lte_attach_mutex);
+            RILLOGD("requestRegistrationState  sLteRegState is OUT OF SERVICE.");
+        }
+
+ 
         RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED, NULL, 0);
 
     } else if (strStartsWith(s,"^CEND:")) {
@@ -8982,7 +8998,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 } else if (value == 100) {
                     RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED, NULL, 0);
                 } else if (value == 0 || value == 2) {
-                    if (!strcmp(s_modem,"t") && isSvLte()) {
+                    if (!strcmp(s_modem,"t") && isSvLte() && !s_init_sim_ready) {
                         // in svlte, if usim, t/g modem should be set as non-autoattach. It will be used by SsdaGsmDataConnectionTracker.java
                         if (value == 0) {
                             if (at_tok_hasmore(&tmp)) {
@@ -9008,7 +9024,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                     }
 
                     // in svlte, when l rild started, if usim exit, set radio power on.
-                    if (!strcmp(s_modem,"l") && isSvLte()) {
+                    if (!strcmp(s_modem,"l") && isSvLte() && !s_init_sim_ready) {
                         RIL_onUnsolicitedResponse (RIL_UNSOL_SVLTE_USIM_READY, NULL, 0);
                         property_set(RIL_LTE_USIM_READY_PROP, "1");
                     }

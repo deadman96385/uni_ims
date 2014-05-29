@@ -17,6 +17,7 @@
 #include "sprd_ril.h"
 #include <netinet/in.h>
 
+
 namespace android {
   
 #define MAX_RESPONE_BUFFER_LEN      (4*1024)    // sms broadcast may be 4K
@@ -34,6 +35,9 @@ static int sLteClientFd  = -1;
 static int sPSEnable  = PS_TD_ENABLE;
 static int sLteReady  = 0;
 static int sTdRadioPowerSent = 0;
+static int sLteRadioPowerSent = 0;
+static int sLteCeregReady = -1;
+static int sIsFirstRadioPower = 1;
 static int sSimSmsReady      = 0;
 static int sTdgRilConnected  = 0;
 static int sTdScreenStateSent = 0;
@@ -73,6 +77,8 @@ static RILP_RequestType  get_send_at_request_type(char* req);
 static void backupSignalStrength(Parcel &p, int isfromTdg);
 static void mergeSignalStrength(Parcel &p, int isfromTdg);
 static void signalToString(const char *funcname, RIL_SignalStrength_v6 signal);
+
+static int sLteCanRadioOn = 0;
 
 
 static int get_test_mode(void) {
@@ -468,6 +474,20 @@ static int  send_lte_screen_state() {
     return write_data (sLteClientFd, p.data(), p.dataSize());
 }
 
+static int  send_unsolicate_cereg_response(int fd, int result) {
+    char rspbuf[16];
+    int  rsptype = RESPONSE_UNSOLICITED;
+    int  rspid   = RIL_UNSOL_LTE_READY;
+    int  len = 1;
+
+    memcpy(rspbuf,  &rsptype, 4);
+    memcpy(&rspbuf[4], &rspid, 4);
+    memcpy(&rspbuf[8], &len, 4);
+    memcpy(&rspbuf[12], &result, 4);
+
+    return write_data (fd, (void *)rspbuf, sizeof(rspbuf));
+}
+
 static void send_rilproxy_connected_respone(int fd) {
 
     write_data (fd, sParcelRilConnected.data(), sParcelRilConnected.dataSize());
@@ -478,6 +498,9 @@ static void send_rilproxy_connected_respone(int fd) {
         write_data (fd, sParcelSimSmsReady.data(), sParcelSimSmsReady.dataSize());
     }
 
+    if (sLteCeregReady == 0 || sLteCeregReady == 2) {
+       send_unsolicate_cereg_response(fd, sLteCeregReady);
+    }
 }
 
 
@@ -753,44 +776,45 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
         p.readInt32(&skip);
         p.readInt32(&blte);
 
+        if ((sRILPServerFd == -1) && (blte == 0 || blte == 2)){
+            sLteCeregReady = blte;
+        }
+
         if (blte != 1 && blte != 5) {
             ALOGD("Clear saved sSignalStrength data");
             RIL_SIGNALSTRENGTH_INIT_LTE(sSignalStrength);
         }
         break;
-      /* It doesn't sure which the two RIL_CONNETCED and SVLTE_USIM_READY appear first.*/
+/* It doesn't sure which the two RIL_CONNETCED and SVLTE_USIM_READY appear first.*/
       case RIL_UNSOL_RIL_CONNECTED:
-         if (sRILPServerFd == -1 && isfromTdg)  {
-            sTdgRilConnected = 1;
-            sParcelRilConnected.setData((uint8_t *) rspbuf, nlen);
-         }
-         ALOGD("SVLTE sTdScreenStateSent = %d", sTdScreenStateSent);
-         pthread_mutex_lock(&sScreenStateMutex);
-         if (sTdScreenStateSent) {
-             sTdScreenStateSent = 0;
-             pthread_mutex_unlock(&sScreenStateMutex);
-             send_lte_screen_state();
-         } else {
-             pthread_mutex_unlock(&sScreenStateMutex);
-         }
-
-         property_get(RIL_LTE_USIM_READY_PROP, prop, "0");
-         if (!atoi(prop)) break;
-         ALOGD("SVLTE Ril connected");
-
-      case RIL_UNSOL_SVLTE_USIM_READY:
-        if (!isfromTdg) {
-            ALOGD("SVLTE USIM READY");
-            pthread_mutex_lock(&sRadiopowerMutex);
-            if (sTdRadioPowerSent) {
-                pthread_mutex_unlock(&sRadiopowerMutex);
-                send_lte_radio_power(1,0);
-            } else {
-                pthread_mutex_unlock(&sRadiopowerMutex);
+         if (isfromTdg)  {
+            if (sRILPServerFd == -1)  {
+                sTdgRilConnected = 1;
+                sParcelRilConnected.setData((uint8_t *) rspbuf, nlen);
             }
-            property_set(RIL_LTE_USIM_READY_PROP, "0");
-            sLteReady = 1;
-        }
+            break;
+         } else {
+            ALOGD("SVLTE sTdScreenStateSent = %d", sTdScreenStateSent);
+            pthread_mutex_lock(&sScreenStateMutex);
+            if (sTdScreenStateSent) {
+                sTdScreenStateSent = 0;
+                pthread_mutex_unlock(&sScreenStateMutex);
+                send_lte_screen_state();
+            } else {
+                pthread_mutex_unlock(&sScreenStateMutex);
+            }
+
+            property_get(RIL_LTE_USIM_READY_PROP, prop, "0");
+            if (!atoi(prop)) break;
+            ALOGD("SVLTE Ril connected");
+         }
+      case RIL_UNSOL_SVLTE_USIM_READY:
+         ALOGD("SVLTE USIM READY");
+         if (sLteCanRadioOn || sTdRadioPowerSent) {
+             send_lte_radio_power(1,0);
+             sLteRadioPowerSent = 1;
+         }
+         sLteReady = 1;
         break;
 
       case RIL_UNSOL_RESPONSE_RADIO_STATE_CHANGED:
@@ -877,8 +901,8 @@ static void process_request(void *reqbuf, int nlen) {
         // skip reqId, token, len.
         char *atcmd = strdupReadString(p);
         reqType = get_send_at_request_type(atcmd);
-                ALOGD("send at command :%s", atcmd);
-                free(atcmd);
+        ALOGD("send at command :%s", atcmd);
+        free(atcmd);
     } else if (reqId == RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL) {
         int act;
         p.readString16();
@@ -892,7 +916,16 @@ static void process_request(void *reqbuf, int nlen) {
 
     ALOGD("process_request request type %d", reqType);
     if (reqType == ReqToTDG_LTE) {
-        add_reqid_token_to_table(reqId, token);
+        if (reqId == RIL_REQUEST_RADIO_POWER) {
+            if (sIsFirstRadioPower && sLteRadioPowerSent) {
+                reqType = ReqToTDG;
+            } else {
+                add_reqid_token_to_table(reqId, token);
+            } 
+            sIsFirstRadioPower = 0;
+        } else {
+            add_reqid_token_to_table(reqId, token);
+        }
     } else if (reqType == ReqToAuto) {
         if (sPSEnable == PS_TD_ENABLE) {
             reqType = ReqToTDG;
@@ -1059,7 +1092,7 @@ static void  server_init(void) {
 }
 
 
-extern "C" void  rilproxy_server() {
+extern "C" void  rilproxy_server(void) {
 	int ret;	
 	void *p_record;
 	size_t recordlen;
@@ -1088,5 +1121,8 @@ extern "C" void  rilproxy_server() {
 	sRILPServerFd = -1;
 }
 
+extern "C" void set_lte_radio_on(int radioon) {
+    sLteCanRadioOn = radioon;
+}
 
 }
