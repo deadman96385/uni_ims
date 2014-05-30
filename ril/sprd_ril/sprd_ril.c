@@ -2148,6 +2148,44 @@ static bool isMatchedErrorcause(ATResponse *p_response, int match_number)
     return ret;
 }
 
+/*when the error happened, return true; otherwise, return false.*/
+static bool errorHandlingForCGDATA (int channelID, ATResponse* p_response, int err, int index)
+{
+    char* line;
+    int failCause = 0;
+    char cmd[120] = {0};
+
+
+    if (err < 0 || p_response->success == 0) {
+        if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
+            line = p_response->finalResponse;
+            err = at_tok_start(&line);
+
+            if (err >= 0) {
+                err = at_tok_nextint(&line,&failCause);
+                if (err >= 0) {
+                     convertFailCause(failCause);
+                 } else {
+                     s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+
+                     return true;
+                 }
+            }
+        } else
+            s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+
+        //when cgdata timeout then send deactive to modem
+        if (strStartsWith (p_response->finalResponse,"ERROR")) {
+            snprintf (cmd, sizeof(cmd), "AT+CGACT=0,%d", index + 1);
+            at_send_command (ATch_type[channelID], cmd, NULL);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
 static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos_state)
 {
     bool ret = false;
@@ -2176,10 +2214,8 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
 
     snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
-    if (err < 0 || p_response->success == 0){
-        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+    if (errorHandlingForCGDATA(channelID, p_response, err, index))
         goto error;
-    }
 
     pthread_mutex_lock(&pdp[index].mutex);
     pdp[index].cid = index + 1;
@@ -2317,24 +2353,8 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
 
             snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"PPP\",%d", index+1);
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
-            if (err < 0 || p_response->success == 0) {
-                if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
-                    line = p_response->finalResponse;
-                    err = at_tok_start(&line);
-                    if (err >= 0) {
-                        err = at_tok_nextint(&line,&failCause);
-                        if (err >= 0) {
-                            convertFailCause(failCause);
-                        } else {
-                            s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                            goto error;
-                        }
-                    }
-                } else
-                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-
+            if (errorHandlingForCGDATA(channelID, p_response, err, index))
                 goto error;
-            }
 
             pthread_mutex_lock(&pdp[index].mutex);
             pdp[index].cid = index + 1;
@@ -2502,6 +2522,12 @@ retrycgatt:
                 } else
                     s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
 
+                //when cgdata timeout then send deactive to modem
+                if (strStartsWith(p_response->finalResponse,"ERROR")){
+                    snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index + 1);
+                    at_send_command(ATch_type[channelID], cmd, NULL);
+                }
+
                 goto error;
             }
 
@@ -2625,24 +2651,9 @@ retrycgatt:
 
                 snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                if (err < 0 || p_response->success == 0) {
-                    if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
-                        line = p_response->finalResponse;
-                        err = at_tok_start(&line);
-                        if (err >= 0) {
-                            err = at_tok_nextint(&line,&failCause);
-                            if (err >= 0) {
-                                convertFailCause(failCause);
-                            } else {
-                                s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                                goto error;
-                            }
-                        }
-                    } else
-                        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-
+                if (errorHandlingForCGDATA(channelID, p_response, err, index))
                     goto error;
-                }
+
                 pthread_mutex_lock(&pdp[index].mutex);
                 pdp[index].cid = index + 1;
                 pthread_mutex_unlock(&pdp[index].mutex);
