@@ -3791,6 +3791,8 @@ static void processCommandsCallback(int fd, short flags, void *param) {
 #if defined (RIL_SPRD_EXTENSION)
                         || pCI->requestNumber == RIL_REQUEST_QUERY_COLP
                         || pCI->requestNumber == RIL_REQUEST_QUERY_COLR
+                        || pCI->requestNumber == RIL_REQUEST_SEND_SMS
+                        || pCI->requestNumber == RIL_REQUEST_SET_CMMS
 #endif
                         || pCI->requestNumber == RIL_REQUEST_QUERY_CLIP) {
                     list_add_tail(&sms_cmd_list, cmd_item);
