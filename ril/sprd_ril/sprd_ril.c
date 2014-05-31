@@ -1983,6 +1983,23 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
             }
         }
 
+        for(i = 0; i < n; i++) {
+            if(responses[i].active == 1) {
+                if (count != i) {
+                    responses[count].status = responses[i].status;
+                    responses[count].suggestedRetryTime = responses[i].suggestedRetryTime;
+                    responses[count].cid = responses[i].cid;
+                    responses[count].active = responses[i].active;
+                    responses[count].type = responses[i].type;
+                    responses[count].ifname = responses[i].ifname;
+                    responses[count].addresses = responses[i].addresses;
+                    responses[count].gateways = responses[i].gateways;
+                    responses[count].dnses = responses[i].dnses;
+                }
+                count++;
+            }
+        }
+
         if (t != NULL)
             RIL_onRequestComplete(*t, RIL_E_SUCCESS, responses,
                     count * sizeof(RIL_Data_Call_Response_v6));
@@ -2273,6 +2290,7 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
         goto error;
 #else
         RILLOGD("Fallback 2 pdp failed,but still as a success");
+        putPDP(index+1);
 #endif
     }
     ret = true;
@@ -2612,6 +2630,7 @@ retrycgatt:
                         goto error;
 #else
                         RILLOGD("Fallback 2 pdp failed,but still as a success");
+                        putPDP(index+1);
                         goto done;
 #endif
                     }
