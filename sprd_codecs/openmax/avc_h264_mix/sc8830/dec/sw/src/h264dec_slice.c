@@ -389,7 +389,23 @@ PUBLIC int32 H264Dec_process_slice (H264DecContext *img_ptr, DEC_NALU_T *nalu_pt
         ff_init_cabac_decoder(img_ptr);	//arideco_start_decoding (img_ptr);
     }
 
-    img_ptr->curr_mb_nr = curr_slice_ptr->start_mb_nr;
+    if (!new_picture)
+    {
+        DEC_MB_CACHE_T *mb_cache_ptr = img_ptr->g_mb_cache_ptr;
+        DEC_STORABLE_PICTURE_T	*dec_picture = img_ptr->g_dec_picture_ptr;
+        uint32 offset_y, offset_c;
+
+        img_ptr->curr_mb_nr = curr_slice_ptr->start_mb_nr;
+        img_ptr->num_dec_mb = img_ptr->curr_mb_nr;
+        img_ptr->mb_x = img_ptr->curr_mb_nr % img_ptr->frame_width_in_mbs;
+        img_ptr->mb_y = img_ptr->curr_mb_nr / img_ptr->frame_width_in_mbs;
+
+        offset_y = img_ptr->start_in_frameY +  (img_ptr->mb_y*img_ptr->ext_width + img_ptr->mb_x) * MB_SIZE;
+        offset_c = img_ptr->start_in_frameUV + (img_ptr->mb_y*(img_ptr->ext_width>>1) + img_ptr->mb_x) * BLOCK_SIZE;
+        mb_cache_ptr->mb_addr[0] = dec_picture->imgYUV[0] + offset_y;
+        mb_cache_ptr->mb_addr[1] = dec_picture->imgYUV[1] + offset_c;
+        mb_cache_ptr->mb_addr[2] = dec_picture->imgYUV[2] + offset_c;
+    }
 
     return curr_header;
 }
