@@ -26,6 +26,7 @@ namespace android {
 #define MAX_REQUEST_TYPE_ARRAY_LEN  (RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE)
 #define RIL_LTE_USIM_READY_PROP          "ril.lte.usim.ready" // for SVLTE only, used by rilproxy
 #define LTE_RADIO_POWER_TOKEN            0x00FFFFFE
+#define LTE_SCREEN_STATE_TOKEN           0x00FFFFFD
 
 static int sRILPServerFd = -1;
 static int sTdGClientFd  = -1;
@@ -35,6 +36,7 @@ static int sLteReady  = 0;
 static int sTdRadioPowerSent = 0;
 static int sSimSmsReady      = 0;
 static int sTdgRilConnected  = 0;
+static int sTdScreenStateSent = 0;
 static Parcel  sParcelRilConnected;
 static Parcel  sParcelRadioState;
 static Parcel  sParcelSimState;
@@ -46,6 +48,8 @@ static pthread_mutex_t sReqTDGLTEMutex= PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t sResponseMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t sLteCFdMutex   = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t sRadiopowerMutex   = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t sScreenStateMutex   = PTHREAD_MUTEX_INITIALIZER;
+
 
 static RILP_RequestType     sReqTypeArr[MAX_REQUEST_TYPE_ARRAY_LEN];      
 static RILP_RspTDG_LTE      sRilP_RspTDGLTE[MAX_RESPONSE_FROM_TDG_LTE];
@@ -452,6 +456,16 @@ static int  send_lte_radio_power(int poweron, int autoatt) {
     return write_data (sLteClientFd, p.data(), p.dataSize());
 }
 
+static int  send_lte_screen_state() {
+    Parcel p;
+
+    p.writeInt32(RIL_REQUEST_SCREEN_STATE);
+    p.writeInt32(LTE_SCREEN_STATE_TOKEN);
+    p.writeInt32(1);
+    p.writeInt32(0);
+    return write_data (sLteClientFd, p.data(), p.dataSize());
+}
+
 static void send_rilproxy_connected_respone(int fd) {
 
     write_data (fd, sParcelRilConnected.data(), sParcelRilConnected.dataSize());
@@ -748,6 +762,15 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
             sTdgRilConnected = 1;
             sParcelRilConnected.setData((uint8_t *) rspbuf, nlen);
          }
+         ALOGD("SVLTE sTdScreenStateSent = %d", sTdScreenStateSent);
+         pthread_mutex_lock(&sScreenStateMutex);
+         if (sTdScreenStateSent) {
+             sTdScreenStateSent = 0;
+             pthread_mutex_unlock(&sScreenStateMutex);
+             send_lte_screen_state();
+         } else {
+             pthread_mutex_unlock(&sScreenStateMutex);
+         }
 
          property_get(RIL_LTE_USIM_READY_PROP, prop, "0");
          if (!atoi(prop)) break;
@@ -820,84 +843,91 @@ static void process_response(void *rspbuf, int nlen, int isfromTdg){
 }
 
 static void process_request(void *reqbuf, int nlen) {
-	
-	int reqId;
-	int token;
-	RILP_RequestType reqType;
-	Parcel p;
-	status_t status;
-	
-	p.setData((uint8_t *) (reqbuf), nlen);
-	status = p.readInt32(&reqId);
-	status = p.readInt32(&token);
-	if (status != NO_ERROR) {
-		ALOGE("Invalid request block");
-		return;
-	}
+    int reqId;
+    int token;
+    RILP_RequestType reqType;
+    Parcel p;
+    status_t status;
 
-	if (reqId == RIL_REQUEST_SET_RILPROXY_LTE_ENABLE) {
-		int len;
-		int lteEnable;
-		status = p.readInt32(&len);
-		status = p.readInt32(&lteEnable);
-		if (status != NO_ERROR || len != 1) {
-			ALOGE("Failed to get LTE enable state!");
-			send_lte_enable_response(token, 0);
-			return;
-		}
-		ALOGD("PS enable on %s modem", lteEnable ? "LTE" : "TD/G");
-		sPSEnable = (lteEnable ? PS_LTE_ENABLE : PS_TD_ENABLE);
-		send_lte_enable_response(token, 1);
-		return;
-	} else if (reqId == RIL_REQUEST_SEND_AT) {
-		// skip reqId, token, len.
-                char *atcmd = strdupReadString(p);
-		reqType = get_send_at_request_type(atcmd);
+    p.setData((uint8_t *) (reqbuf), nlen);
+    status = p.readInt32(&reqId);
+    status = p.readInt32(&token);
+    if (status != NO_ERROR) {
+        ALOGE("Invalid request block");
+        return;
+    }
+
+    if (reqId == RIL_REQUEST_SET_RILPROXY_LTE_ENABLE) {
+        int len;
+        int lteEnable;
+        status = p.readInt32(&len);
+        status = p.readInt32(&lteEnable);
+        if (status != NO_ERROR || len != 1) {
+            ALOGE("Failed to get LTE enable state!");
+            send_lte_enable_response(token, 0);
+            return;
+        }
+        ALOGD("PS enable on %s modem", lteEnable ? "LTE" : "TD/G");
+        sPSEnable = (lteEnable ? PS_LTE_ENABLE : PS_TD_ENABLE);
+        send_lte_enable_response(token, 1);
+        return;
+    } else if (reqId == RIL_REQUEST_SEND_AT) {
+        // skip reqId, token, len.
+        char *atcmd = strdupReadString(p);
+        reqType = get_send_at_request_type(atcmd);
                 ALOGD("send at command :%s", atcmd);
                 free(atcmd);
-	} else if (reqId == RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL) {
-                int act;
-                p.readString16();
-                p.readInt32(&act);
-                ALOGD("manual selcect network act=%d", act);
-		reqType = get_manual_select_network_request_type(act);
-	} else {
-		ALOGD("process_request request id %d, token %d", reqId, token);
-		reqType = get_reqtype_by_id(reqId);
-	}
+    } else if (reqId == RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL) {
+        int act;
+        p.readString16();
+        p.readInt32(&act);
+        ALOGD("manual selcect network act=%d", act);
+        reqType = get_manual_select_network_request_type(act);
+    } else {
+        ALOGD("process_request request id %d, token %d", reqId, token);
+        reqType = get_reqtype_by_id(reqId);
+    }
 
-	ALOGD("process_request request type %d", reqType);
-        if (reqType == ReqToTDG_LTE) {
-		add_reqid_token_to_table(reqId, token);	
-	} else if (reqType == ReqToAuto) {
-		if (sPSEnable == PS_TD_ENABLE) {
-		    reqType = ReqToTDG;
-		} else {
-		    reqType = ReqToLTE;
-		}
-	} else if (reqType == ReqToTDG) {
-               if (reqId == RIL_REQUEST_RADIO_POWER) {
-                   pthread_mutex_lock(&sRadiopowerMutex);
-                   sTdRadioPowerSent = 1;
-                   pthread_mutex_unlock(&sRadiopowerMutex);
-               }
+    ALOGD("process_request request type %d", reqType);
+    if (reqType == ReqToTDG_LTE) {
+        add_reqid_token_to_table(reqId, token);
+    } else if (reqType == ReqToAuto) {
+        if (sPSEnable == PS_TD_ENABLE) {
+            reqType = ReqToTDG;
+        } else {
+            reqType = ReqToLTE;
         }
-	
-	if (reqType & ReqToTDG) {
-		if (sTdGClientFd != -1) {
-			write_data(sTdGClientFd, reqbuf, nlen);
-		} else {
-			ALOGE("TD client socket has been destroy!");
-		}
-	} 
-	
-	if (reqType & ReqToLTE) {
-		if (sLteClientFd != -1 && sLteReady) {
-			write_data(sLteClientFd, reqbuf, nlen);
-		} else {
-			ALOGE("LTE socket hasn't ready!");
-		}
-	}
+    } else if (reqType == ReqToTDG) {
+        if (reqId == RIL_REQUEST_RADIO_POWER) {
+            pthread_mutex_lock(&sRadiopowerMutex);
+            sTdRadioPowerSent = 1;
+            pthread_mutex_unlock(&sRadiopowerMutex);
+        } else if (reqId == RIL_REQUEST_SCREEN_STATE) {
+            pthread_mutex_lock(&sScreenStateMutex);
+            int len, onoff;
+            p.readInt32(&len);
+            p.readInt32(&onoff);
+            if (onoff == 0) sTdScreenStateSent = 1;
+            ALOGD("sTdScreenStateSent: onoff = %d", onoff);
+            pthread_mutex_unlock(&sScreenStateMutex);
+        }
+    }
+
+    if (reqType & ReqToTDG) {
+        if (sTdGClientFd != -1) {
+            write_data(sTdGClientFd, reqbuf, nlen);
+        } else {
+            ALOGE("TD client socket has been destroy!");
+        }
+    }
+
+    if (reqType & ReqToLTE) {
+        if (sLteClientFd != -1 && sLteReady) {
+            write_data(sLteClientFd, reqbuf, nlen);
+        } else {
+            ALOGE("LTE socket hasn't ready!");
+        }
+    }
 }
 
 
@@ -1018,7 +1048,7 @@ static void  server_init(void) {
     }
 
     if (sTdgRilConnected) {
-       ALOGD("TD rild has connetcted.");
+       ALOGD("TD rild has connected.");
        send_rilproxy_connected_respone(fd);
     }
 
