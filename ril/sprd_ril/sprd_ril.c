@@ -380,6 +380,7 @@ void list_remove(struct listnode *item)
     pthread_mutex_unlock(&s_list_mutex);
 }
 
+#if 0
 static void dumpPdpTable(void)
 {
     int i;
@@ -541,6 +542,7 @@ done1:
     pthread_mutex_unlock(&pdp[cid].mutex);
 }
 */
+#endif
 
 static void putPDP(int cid)
 {
@@ -601,7 +603,7 @@ static int getPDPByIndex(int index)
         if(pdp[index].state == PDP_IDLE) {
             pdp[index].state = PDP_BUSY;
             pthread_mutex_unlock(&pdp[index].mutex);
-            RILLOGD("get pdp[%d]", index);
+            RILLOGD("getPDPByIndex[%d]", index);
             RILLOGD("pdp[0].state = %d, pdp[1].state = %d,pdp[2].state = %d", pdp[0].state, pdp[1].state, pdp[2].state);
             RILLOGD("pdp[3].state = %d, pdp[4].state = %d,pdp[5].state = %d", pdp[3].state, pdp[4].state, pdp[5].state);
             return index;
@@ -2290,7 +2292,7 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
         goto error;
 #else
         RILLOGD("Fallback 2 pdp failed,but still as a success");
-        putPDP(index+1);
+        putPDP(index);
 #endif
     }
     ret = true;
@@ -2630,7 +2632,7 @@ retrycgatt:
                         goto error;
 #else
                         RILLOGD("Fallback 2 pdp failed,but still as a success");
-                        putPDP(index+1);
+                        putPDP(index);
                         goto done;
 #endif
                     }
