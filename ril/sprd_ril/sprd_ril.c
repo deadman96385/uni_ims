@@ -2696,6 +2696,8 @@ done:
 error:
     if(index >= 0) {
         if (IsLte) {
+            int maxPDPNum = getMaxPDPNum() / 2;
+            if (index > maxPDPNum) index -= maxPDPNum;
             putPDP(index);
             putPDP(getExtraPDPNum(index));
         } else {
