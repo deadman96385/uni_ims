@@ -2424,6 +2424,7 @@ retrycgatt:
                 RILLOGD("requestSetupDataCall  sLteRegState = %d", sLteRegState);
                 pthread_mutex_lock(&s_lte_attach_mutex);
                 if (sLteRegState == STATE_OUT_OF_SERVICE) {
+                    pthread_mutex_unlock(&s_lte_attach_mutex);
                     err = at_send_command(ATch_type[channelID], "AT+CGATT=1", &p_response);
                     if (err < 0 || p_response->success == 0) {
                         /******************************************************/
@@ -2449,12 +2450,10 @@ retrycgatt:
                                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                                 if (err < 0 || p_response->success == 0){
                                     s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                                    pthread_mutex_unlock(&s_lte_attach_mutex);
                                     pthread_mutex_unlock(&s_lte_cgatt_mutex);
                                     RILLOGD("retrycgatt,but CGDCONT failed: Release s_lte_cgatt_mutex");
                                     goto error;
                                 }
-                                pthread_mutex_unlock(&s_lte_attach_mutex);
                                 pthread_mutex_unlock(&s_lte_cgatt_mutex);
                                 RILLOGD("retrycgatt: Release s_lte_cgatt_mutex");
                                 cgatt_fallback = true;
@@ -2469,34 +2468,36 @@ retrycgatt:
                                 RILLOGD("CGATT fall Back Cause: other. do nothing");
                                 break;
                             }
-                            pthread_mutex_unlock(&s_lte_attach_mutex);
                             pthread_mutex_unlock(&s_lte_cgatt_mutex);
                             RILLOGD("other fallback case: Release s_lte_cgatt_mutex");
                             goto error;
                         } else {
                             RILLOGD("CGATT failed,but not 119, do nothing");
                             s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                            pthread_mutex_unlock(&s_lte_attach_mutex);
                             RILLOGD("not 119 error: Release s_lte_cgatt_mutex");
                             pthread_mutex_unlock(&s_lte_cgatt_mutex);
                             goto error;
                         }
                     }
 
-                    struct timespec tv;
+                    // If unsolicate CEREG 1, faster than OK for cgatt, sLteRegState has changed to STATE_IN_SERVICE
+                    pthread_mutex_lock(&s_lte_attach_mutex);
+                    if (sLteRegState == STATE_OUT_OF_SERVICE) {
+                        struct timespec tv;
 
-                    tv.tv_sec = time(NULL) + 100;
-                    tv.tv_nsec = 0;
-                    RILLOGD("CEREG wait beginning time : %ld", tv.tv_sec);
+                        tv.tv_sec = time(NULL) + 100;
+                        tv.tv_nsec = 0;
+                        RILLOGD("CEREG wait beginning time : %ld", tv.tv_sec);
 
-                    err = pthread_cond_timedwait(&s_lte_attach_cond, &s_lte_attach_mutex, &tv);
-                    if (err == ETIMEDOUT) {
-                        RILLOGD("requestSetupDataCall  LTE attach timeout, current time : %ld", time(NULL));
-                        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                        pthread_mutex_unlock(&s_lte_attach_mutex);
-                        RILLOGD("ETIMEDOUT: Release s_lte_cgatt_mutex");
-                        pthread_mutex_unlock(&s_lte_cgatt_mutex);
-                        goto error;
+                        err = pthread_cond_timedwait(&s_lte_attach_cond, &s_lte_attach_mutex, &tv);
+                        if (err == ETIMEDOUT) {
+                            RILLOGD("requestSetupDataCall  LTE attach timeout, current time : %ld", time(NULL));
+                            s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+                            pthread_mutex_unlock(&s_lte_attach_mutex);
+                            RILLOGD("ETIMEDOUT: Release s_lte_cgatt_mutex");
+                            pthread_mutex_unlock(&s_lte_cgatt_mutex);
+                            goto error;
+                        }
                     }
                     pthread_mutex_unlock(&s_lte_attach_mutex);
                 } else {
@@ -8887,8 +8888,6 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             pthread_mutex_unlock(&s_lte_attach_mutex);
             RILLOGD("requestRegistrationState  sLteRegState is OUT OF SERVICE.");
         }
-
- 
         RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED, NULL, 0);
 
     } else if (strStartsWith(s,"^CEND:")) {

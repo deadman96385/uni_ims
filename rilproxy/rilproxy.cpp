@@ -140,7 +140,7 @@ static void init_request_type(void) {
     sReqTypeArr[RIL_REQUEST_SIGNAL_STRENGTH -1]  =  ReqToTDG_LTE;
     sReqTypeArr[RIL_REQUEST_SIM_POWER - RIL_SPRD_REQUEST_BASE - 1 + RIL_REQUEST_LAST] =  ReqToTDG_LTE;
 
-    sReqTypeArr[RIL_REQUEST_QUERY_NETWORK_SELECTION_MODE -1]    =  ReqToTDG_LTE;
+    sReqTypeArr[RIL_REQUEST_QUERY_NETWORK_SELECTION_MODE -1]    =  ReqToAuto; //ReqToTDG_LTE;
     sReqTypeArr[RIL_REQUEST_SET_NETWORK_SELECTION_AUTOMATIC -1] =  ReqToTDG_LTE;
     // sReqTypeArr[RIL_REQUEST_OPERATOR -1]                        =  ReqToTDG_LTE;
     sReqTypeArr[RIL_REQUEST_QUERY_AVAILABLE_NETWORKS -1]        =  ReqToTDG_LTE;
@@ -815,6 +815,7 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
              sLteRadioPowerSent = 1;
          }
          sLteReady = 1;
+         property_set(RIL_LTE_USIM_READY_PROP, "0");
         break;
 
       case RIL_UNSOL_RESPONSE_RADIO_STATE_CHANGED:
@@ -916,8 +917,9 @@ static void process_request(void *reqbuf, int nlen) {
 
     ALOGD("process_request request type %d", reqType);
     if (reqType == ReqToTDG_LTE) {
-        if (reqId == RIL_REQUEST_RADIO_POWER) {
-            if (sIsFirstRadioPower && sLteRadioPowerSent) {
+        if (reqId == RIL_REQUEST_RADIO_POWER && sIsFirstRadioPower) {
+            ALOGD("First radio power come.");
+            if (sLteRadioPowerSent) {
                 reqType = ReqToTDG;
             } else {
                 add_reqid_token_to_table(reqId, token);
