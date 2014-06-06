@@ -275,6 +275,8 @@ const struct cmd_table single_at_cmd_cvt_table[] = {
         cvt_generic_cmd_req, 50},
     {AT_CMD_CFUN, AT_CMD_TYPE_GEN, AT_CMD_STR("AT+SFUN=2"),
         cvt_generic_cmd_req, 300},
+    {AT_CMD_CFUN, AT_CMD_TYPE_GEN, AT_CMD_STR("AT+SFUN=4"),
+        cvt_generic_cmd_req, 120},
     {AT_CMD_CTZU, AT_CMD_TYPE_GEN, AT_CMD_STR("AT+CTZU"),
         cvt_generic_cmd_req, 5},
     {AT_CMD_CTZR, AT_CMD_TYPE_GEN, AT_CMD_STR("AT+CTZR"),
