@@ -226,6 +226,9 @@ struct pdp_info pdp[MAX_PDP] = {
     { -1, PDP_IDLE, PTHREAD_MUTEX_INITIALIZER},
 };
 
+//for lte, attach will occupy a cid for default pdp in cp.
+static int attachPdpIndex = -1;
+
 static int pdpTable[3][2] = {{-1,-1},{-1,-1},{-1,-1}};
 
 #define FACILITY_LOCK_REQUEST "2"
@@ -576,7 +579,7 @@ static int getPDP(void)
 {
     int ret = -1;
     int i;
-    int maxPDPNum = getMaxPDPNum();
+    int maxPDPNum = 3;//getMaxPDPNum();
 
     for (i=0; i < maxPDPNum; i++) {
         pthread_mutex_lock(&pdp[i].mutex);
@@ -1416,7 +1419,12 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
                 putPDP(i);
             }
         }
-
+        if (!strcmp(s_modem, "l")) {
+            pthread_mutex_lock(&s_lte_attach_mutex);
+            sLteRegState = STATE_OUT_OF_SERVICE;
+            pthread_mutex_unlock(&s_lte_attach_mutex);
+            RILLOGD("set sLteRegState: OUT OF SERVICE.");
+        }
         setRadioState(channelID, RADIO_STATE_OFF);
     } else if (onOff > 0 && sState == RADIO_STATE_OFF) {
          /* SPRD : for svlte & csfb @{ */
@@ -8330,7 +8338,10 @@ static void attachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
         return;
     }
-
+    if (!strcmp(s_modem, "l")) {
+        attachPdpIndex = getPDP();
+        RILLOGD("attachGPRS, get pdp %d", attachPdpIndex);
+    }
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     at_response_free(p_response);
     return;
@@ -8355,6 +8366,11 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
         at_response_free(p_response);
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
         return;
+    }
+    if (!strcmp(s_modem, "l")) {
+        putPDP(attachPdpIndex);
+        RILLOGD("attachGPRS, put pdp %d", attachPdpIndex);
+        attachPdpIndex = -1;
     }
 
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
