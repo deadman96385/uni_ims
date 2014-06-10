@@ -8418,8 +8418,12 @@ static void initializeCallback(void *param)
                  property_set(LTE_MODEM_START_PROP, "0");
              }
          } else if (!strcmp(s_modem, "l")) {
-             RIL_onUnsolicitedResponse (RIL_UNSOL_SVLTE_USIM_READY, NULL, 0);
-             property_set(RIL_LTE_USIM_READY_PROP, "1");
+             if (isSvLte()) {
+                 RIL_onUnsolicitedResponse (RIL_UNSOL_SVLTE_USIM_READY, NULL, 0);
+                 property_set(RIL_LTE_USIM_READY_PROP, "1");
+             } else if (isCSFB()) {
+                 RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED, NULL, 0);
+             }
          }
          s_init_sim_ready = 1;
     }
@@ -8866,13 +8870,21 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         }
         err = at_tok_nextint(&tmp, &lteState);
         if (err < 0) goto out;
-        // report LTE_READY or not, in case of +CEREG:0 ,+CEREG:2;
-        // only report STATE_CHANGED in case of +CEREG:1,xxxx, xxxx,x
-        if (commas == 0 && (lteState == 0 || lteState == 2)) {
-            RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteState, 4);
+
+        if (isSvLte()) {
+            // report LTE_READY or not, in case of +CEREG:0 ,+CEREG:2;
+            // only report STATE_CHANGED in case of +CEREG:1,xxxx, xxxx,x
+            if (commas == 0 && (lteState == 0 || lteState == 2)) {
+                RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteState, 4);
+            }
+        } else if (isCSFB()) {
+            // report LTE_READY or not, in case of +CEREG:2;
+            if (commas == 0 && lteState == 2) {
+                RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteState, 4);
+            }
         }
 
-        if ((lteState == 1 || lteState == 5)) {
+        if (lteState == 1 || lteState == 5) {
             pthread_mutex_lock(&s_lte_attach_mutex);
             if (sLteRegState == STATE_OUT_OF_SERVICE) {
                 pthread_cond_signal(&s_lte_attach_cond);

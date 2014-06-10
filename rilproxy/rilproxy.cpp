@@ -772,11 +772,12 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
     /* Add for dual signal bar */
     switch(rspId) {
       case RIL_UNSOL_LTE_READY:
-        ALOGD("Received RIL_UNSOL_LTE_READY isfromTdg = %d", isfromTdg);
+        ALOGD("Received RIL_UNSOL_LTE_READY");
         p.readInt32(&skip);
         p.readInt32(&blte);
 
         if ((sRILPServerFd == -1) && (blte == 0 || blte == 2)){
+            ALOGD("Received LTE_READY blte = ", blte);
             sLteCeregReady = blte;
         }
 
