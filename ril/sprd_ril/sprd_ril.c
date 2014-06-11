@@ -1428,6 +1428,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         setRadioState(channelID, RADIO_STATE_OFF);
     } else if (onOff > 0 && sState == RADIO_STATE_OFF) {
          /* SPRD : for svlte & csfb @{ */
+        setCeMode(channelID);
         if (isSvLte()) {
           // if svlte, auto-attach is decided by framework
             if(autoAttach == 1) {
