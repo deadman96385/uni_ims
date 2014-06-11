@@ -329,6 +329,9 @@ static const char *readline(struct ATChannels *ATch)
     ssize_t count;
     char *p_read = NULL;
     char *p_eol = NULL;
+    /* SPRD: Add for 321528 @{ */
+    ssize_t err_count = 0;
+    /* @} */
 
     /* this is a little odd. I use *s_ATBufferCur == 0 to
      * mean "buffer consumed completely". If it points to a character, than
@@ -387,10 +390,22 @@ static const char *readline(struct ATChannels *ATch)
 
             p_eol = findNextEOL(ATch->s_ATBufferCur);
             p_read += count;
+            /* SPRD: Add for 321528 @{ */
+            err_count = 0;
+            /* @} */
         } else if (count <= 0) {
             /* read error encountered or EOF reached */
             if(count == 0) {
-                RILLOGD("atchannel: EOF reached");
+                //RILLOGD("atchannel: EOF reached");
+                /* SPRD: Add for 321528 @{ */
+                err_count ++;
+                if (err_count > 10) {
+                    RILLOGD("atchannel: EOF reached. Sleep 10s");
+                    sleep(10);
+                } else {
+                    RILLOGD("atchannel: EOF reached. err_count = %d", err_count);
+                }
+                /* @} */
             } else {
                 //RILLOGD("atchannel: read error %s", strerror(errno));
             }
