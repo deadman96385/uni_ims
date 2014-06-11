@@ -945,8 +945,9 @@ static void process_request(void *reqbuf, int nlen) {
             int len, onoff;
             p.readInt32(&len);
             p.readInt32(&onoff);
-            if (onoff == 0) sTdScreenStateSent = 1;
             ALOGD("sTdScreenStateSent: onoff = %d", onoff);
+            sTdScreenStateSent = (onoff == 0 ? 1 : 0);
+            ALOGD("sTdScreenStateSent = %d", sTdScreenStateSent);
             pthread_mutex_unlock(&sScreenStateMutex);
         }
     }
