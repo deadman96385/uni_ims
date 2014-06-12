@@ -368,7 +368,6 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
                 vo->error_flag = 0;
             } else if(cmd & (V_BIT_4 | V_BIT_5 | V_BIT_30 | V_BIT_31))
             {
-                vo->error_flag |= ER_HW_ID;
                 pic_end = 1;
 
                 if (cmd & V_BIT_4)
@@ -380,6 +379,7 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
                 } else //if (cmd &  V_BIT_30)
                 {
                     SCI_TRACE_LOW("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
+                    vo->error_flag |= ER_HW_ID;
                 }
             } else
             {
