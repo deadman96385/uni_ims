@@ -745,7 +745,8 @@ static int deactivateLteDataConnection(int channelID, char *cmd)
     RILLOGD("deactivateLteDataConnection cmd = %s", cmd);
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (err < 0 || p_response->success == 0) {
-        if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
+        if (p_response->finalResponse != NULL &&
+            strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
             line = p_response->finalResponse;
             err = at_tok_start(&line);
             if (err >= 0) {
