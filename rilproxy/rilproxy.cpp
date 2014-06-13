@@ -777,7 +777,7 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
         p.readInt32(&blte);
 
         if ((sRILPServerFd == -1) && (blte == 0 || blte == 2)){
-            ALOGD("Received LTE_READY blte = ", blte);
+            ALOGD("Received LTE_READY blte = %d", blte);
             sLteCeregReady = blte;
         }
 
@@ -918,17 +918,7 @@ static void process_request(void *reqbuf, int nlen) {
 
     ALOGD("process_request request type %d", reqType);
     if (reqType == ReqToTDG_LTE) {
-        if (reqId == RIL_REQUEST_RADIO_POWER && sIsFirstRadioPower) {
-            ALOGD("First radio power come.");
-            if (sLteRadioPowerSent) {
-                reqType = ReqToTDG;
-            } else {
-                add_reqid_token_to_table(reqId, token);
-            } 
-            sIsFirstRadioPower = 0;
-        } else {
-            add_reqid_token_to_table(reqId, token);
-        }
+        add_reqid_token_to_table(reqId, token);
     } else if (reqType == ReqToAuto) {
         if (sPSEnable == PS_TD_ENABLE) {
             reqType = ReqToTDG;
