@@ -163,7 +163,7 @@ PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_fo
     DEC_VOP_MODE_T *vop_mode_ptr = vo->vop_mode_ptr;
     MMDecRet ret = MMDEC_OK;
 
-    vop_mode_ptr->uv_interleaved = video_format_ptr->uv_interleaved;
+    vop_mode_ptr->yuv_format = video_format_ptr->yuv_format;
     vop_mode_ptr->video_std = video_format_ptr->video_std;
 
     /*judge h.263 or mpeg4*/

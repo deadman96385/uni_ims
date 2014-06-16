@@ -98,6 +98,14 @@ typedef enum {
     RV9
 } VIDEO_STANDARD_E;
 
+typedef enum
+{
+    YUV420P_YU12 = 0,
+    YUV420P_YV12 = 1,
+    YUV420SP_NV12 = 2,   /*u/v interleaved*/
+    YUV420SP_NV21 = 3,   /*v/u interleaved*/
+} MM_YUV_FORMAT_E;
+
 // decoder video format structure
 typedef struct
 {
@@ -106,7 +114,9 @@ typedef struct
     int32	frame_height;
     int32	i_extra;
     void 	*p_extra;
-    int32	uv_interleaved;				//tmp add
+    void *p_extra_phy;
+    //int32	uv_interleaved;				//tmp add
+    int32   yuv_format;
 } MMDecVideoFormat;
 
 // Decoder buffer for decoding structure

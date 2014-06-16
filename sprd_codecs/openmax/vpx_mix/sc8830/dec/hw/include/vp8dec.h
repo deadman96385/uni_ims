@@ -67,7 +67,7 @@ int VP8DecGetLastDspFrm(VPXHandle *vpxHandle,void **pOutput);
 //  Author:
 //	Note:
 /*****************************************************************************/
-MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr);
+MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr, MMDecVideoFormat *pVideoFormat);
 
 /*****************************************************************************/
 //  Description: Decode one vop

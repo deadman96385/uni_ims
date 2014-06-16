@@ -170,7 +170,7 @@ uint32 Mp4Dec_CalculateMemSize (DEC_VOP_MODE_T *vop_mode_ptr)
     uint32 mb_num_y = vop_mode_ptr->MBNumY;
     uint32 total_mb_num = vop_mode_ptr->MBNum;
     uint32 extra_mem_size, ext_size_y, ext_size_c;
-    uint32 ext_frame_num = vop_mode_ptr->uv_interleaved ? (DEC_YUV_BUFFER_NUM+1) : DEC_YUV_BUFFER_NUM;
+    uint32 ext_frame_num = (vop_mode_ptr->yuv_format == YUV420SP_NV12 || vop_mode_ptr->yuv_format == YUV420SP_NV21) ? (DEC_YUV_BUFFER_NUM+1) : DEC_YUV_BUFFER_NUM;
     uint32 i;
 
     ext_size_y = (mb_num_x * 16 + 16*2) * (mb_num_y * 16 + 16*2);

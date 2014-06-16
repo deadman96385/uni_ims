@@ -37,7 +37,7 @@ uint32 H264Dec_CalculateMemSize (H264DecContext *img_ptr)
     uint32 size_extra;
     uint32 frame_num = 2;
 
-    if (img_ptr->uv_interleaved)
+    if (img_ptr->yuv_format == YUV420SP_NV12 || img_ptr->yuv_format == YUV420SP_NV21)
     {
         frame_num = MAX_REF_FRAME_NUMBER+1;
     }

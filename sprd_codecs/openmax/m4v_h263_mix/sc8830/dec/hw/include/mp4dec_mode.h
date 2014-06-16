@@ -358,6 +358,7 @@ typedef struct tagMp4DecObject
     uint32 * g_rvlc_tbl_ptr;
     uint32 * g_huff_tbl_ptr;
     int32 memory_error;
+    int32 yuv_format;
 } Mp4DecObject;
 
 /**---------------------------------------------------------------------------*

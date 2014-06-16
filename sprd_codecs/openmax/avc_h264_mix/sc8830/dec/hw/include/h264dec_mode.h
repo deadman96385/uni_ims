@@ -746,6 +746,7 @@ typedef struct H264DecObject_tag
     int slice_info[50];
     uint8 * pStream;
     int memory_error;
+    int32 yuv_format;
 } H264DecObject;
 
 /**---------------------------------------------------------------------------*

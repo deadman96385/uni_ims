@@ -448,6 +448,7 @@ typedef struct tagVPXDecObject
     CODEC_BUF_T mem[MAX_MEM_TYPE];
 
     VSP_FH_REG_T   * g_fh_reg_ptr;
+    int32 yuv_format;
 } VPXDecObject;
 
 #endif //VP8DEC_MODE_H

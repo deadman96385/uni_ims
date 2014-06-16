@@ -762,7 +762,8 @@ typedef struct H264DecContext_tag
     BS_and_Para_interMB_func 	BS_and_Para_interMB_ver;
     readMB_typeInfo_CABAC_func readMB_typeInfo_CABAC;
 
-    int32 uv_interleaved;
+    //int32 uv_interleaved;
+    int32   yuv_format;
     CODEC_BUF_T mem[MAX_MEM_TYPE];
     DEC_STORABLE_PICTURE_T g_rec_buf;
     AVCHandle  *avcHandle;

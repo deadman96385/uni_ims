@@ -516,6 +516,10 @@ col				.req			r10
 
 FrameExtendWidth	.req			r11
 
+yuv_format          .req			r0
+
+.equ 	YUV420SP_NV12_S,	0x2
+
 write_display_frame_uvinterleaved:	@FUNCTION
 			.global 		write_display_frame_uvinterleaved
 
@@ -552,8 +556,17 @@ Y_loop_col:
 
 			@//U, V
 			ldrsh			iStartFrameUV, [vop_mode_ptr, #0x14]
+			ldr                       yuv_format, [vop_mode_ptr, #0x90]
+
+			cmp               yuv_format,    #YUV420SP_NV12_S
+			bne               step_nv21
 			ldr			src_u, [pDecFrame, #4]
 			ldr			src_v, [pDecFrame, #8]
+			b                  after_judge_nv
+step_nv21:
+			ldr			src_v, [pDecFrame, #4]
+			ldr			src_u, [pDecFrame, #8]
+after_judge_nv:
 			ldr			dst, [pDecFrame, #0x10]
 			add			src_u, src_u, iStartFrameUV
 			add			src_v, src_v, iStartFrameUV

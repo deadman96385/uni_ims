@@ -287,7 +287,8 @@ typedef struct dec_vop_mode_tag
     int16 *pTopCoeff;
     int16 *pLeftCoeff;
 
-    int32 uv_interleaved;
+    //int32 uv_interleaved;
+    int32   yuv_format;
     Mp4DecStorablePic *pCurDispFrame;
     Mp4DecStorablePic *pCurRecFrame;
     Mp4DecStorablePic *pBckRefFrame;

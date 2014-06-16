@@ -94,7 +94,7 @@ int VP8DecGetLastDspFrm(VPXHandle *vpxHandle,void **pOutput)
     return ((NULL != *pOutput) ? 1 : 0);
 }
 
-MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr)
+MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtaMemBfr, MMDecVideoFormat *pVideoFormat)
 {
     VPXDecObject*vo;
     MMDecRet ret;
@@ -130,6 +130,8 @@ MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBu
     vo->s_vsp_Vaddr_base = 0;
     vo->vsp_freq_div= 0;
     vo->vsp_capability = -1;
+    vo->yuv_format = pVideoFormat->yuv_format;
+
     if(VSP_OPEN_Dev((VSPObject *)vo)<0)
     {
         return MMDEC_HW_ERROR;
@@ -142,7 +144,7 @@ PUBLIC MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *dec_input_ptr, MM
     VPXDecObject *vo = (VPXDecObject *) vpxHandle->videoDecoderData;
 
     MMDecRet ret;
-    uint32 bs_buffer_length, bs_start_addr;
+    uint32 bs_buffer_length, bs_start_addr, cmd;
     VP8_COMMON *cm = &vo->common;
 
     if(ARM_VSP_RST((VSPObject *)vo)<0)
@@ -151,6 +153,12 @@ PUBLIC MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *dec_input_ptr, MM
         goto DEC_EXIT;
     }
 
+    cmd = V_BIT_17|V_BIT_16|V_BIT_11|V_BIT_5|V_BIT_3;
+    if (vo->yuv_format == YUV420SP_NV21)  //vu format
+    {
+        cmd |= V_BIT_6;
+    }
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + AXIM_ENDIAN_OFF, cmd,"axim endian set, vu format"); //VSP and OR endian.
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL: software access.");
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF, (V_BIT_6 | STREAM_ID_VP8),"VSP_MODE");
 

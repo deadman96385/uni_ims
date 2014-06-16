@@ -203,7 +203,7 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
 
     img_ptr->g_is_avc1_es = FALSE;
     img_ptr->g_ready_to_decode_slice = FALSE;
-    img_ptr->uv_interleaved = pVideoFormat->uv_interleaved;
+    img_ptr->yuv_format = pVideoFormat->yuv_format;
 
     if (H264Dec_init_global_para (img_ptr) != MMDEC_OK)
     {
@@ -232,7 +232,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
     uint8 *pInStream = dec_input_ptr->pStream;
     int32 last_slice = 0;
     int32 slice_len_sum = 0, rbsp_len = 0;
-   int32 stream_lenght = dec_input_ptr->dataLen;
+    int32 stream_lenght = dec_input_ptr->dataLen;
 
     SCI_ASSERT(NULL != dec_input_ptr);
     SCI_ASSERT(NULL != dec_output_ptr);
@@ -288,7 +288,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         if (img_ptr->type == B_SLICE && img_ptr->g_dec_picture_ptr && !(img_ptr->g_dec_picture_ptr->used_for_reference))
         {
             SCI_TRACE_LOW("%s, %d, B_Slice return", __FUNCTION__, __LINE__);
-	    dec_input_ptr->dataLen =stream_lenght ;
+            dec_input_ptr->dataLen =stream_lenght ;
             return MMDEC_OK;
         }
 

@@ -145,7 +145,7 @@ PUBLIC MMDecRet H264Dec_init_dpb (H264DecContext *img_ptr, DEC_SPS_T *sps_ptr)
             dpb_ptr->fs[i]->frame->ref_pic_id_ptr[1] = (int32 *)H264Dec_MemAlloc(img_ptr, frm_size_in_blk * sizeof(int32), 4, SW_CACHABLE);
             CHECK_MALLOC(dpb_ptr->fs[i]->frame->ref_pic_id_ptr[1], "dpb_ptr->fs[i]->frame->ref_pic_id_ptr[1]");
 
-            if (img_ptr->uv_interleaved)
+            if (img_ptr->yuv_format == YUV420SP_NV12 || img_ptr->yuv_format == YUV420SP_NV21)
             {
                 dpb_ptr->fs[i]->frame->imgYUV[0] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size, 256, SW_CACHABLE);
                 CHECK_MALLOC(dpb_ptr->fs[i]->frame->imgYUV[0], "dpb_ptr->fs[i]->frame->imgYUV[0]");

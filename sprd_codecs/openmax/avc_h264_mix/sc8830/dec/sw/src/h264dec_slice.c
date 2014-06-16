@@ -853,7 +853,7 @@ PUBLIC void H264Dec_write_disp_frame (H264DecContext *img_ptr, DEC_STORABLE_PICT
     pDst_u = dec_picture->imgU;
     pDst_v = dec_picture->imgV;
 
-    if (!img_ptr->uv_interleaved)
+    if (img_ptr->yuv_format != YUV420SP_NV12 && img_ptr->yuv_format != YUV420SP_NV21)
     {
         for (row = 0; row < height; row++)
         {
@@ -869,6 +869,14 @@ PUBLIC void H264Dec_write_disp_frame (H264DecContext *img_ptr, DEC_STORABLE_PICT
     {
         uint8 *pDst = dec_picture->imgU;
         int32 col;
+
+        if (img_ptr->yuv_format == YUV420SP_NV21) //YYYY vuvu should exchange pSrc_u & pSrc_v
+        {
+            uint8 *pTemp;
+            pTemp   =  pSrc_u;
+            pSrc_u  =  pSrc_v;
+            pSrc_v   =  pTemp;
+        }
 #ifndef _NEON_OPT_
         for (row = 0; row < height; row++)
         {
@@ -898,6 +906,7 @@ PUBLIC void H264Dec_write_disp_frame (H264DecContext *img_ptr, DEC_STORABLE_PICT
                 v_vec128 = vmovl_u8(v_vec64);
 
                 uv_vec128 = vsliq_n_u16(u_vec128, v_vec128, 8);
+
                 vst1q_u16((uint16*)pDst, uv_vec128);
 
                 pSrc_u += 8;
@@ -919,7 +928,7 @@ LOCAL void H264Dec_output_one_frame (H264DecContext *img_ptr, MMDecOutput * dec_
     DEC_STORABLE_PICTURE_T *cur = img_ptr->g_dec_picture_ptr;
     DEC_STORABLE_PICTURE_T *out = cur;
 
-    if (img_ptr->uv_interleaved)
+    if (img_ptr->yuv_format == YUV420SP_NV12 || img_ptr->yuv_format == YUV420SP_NV21)
     {
         int i, pics, cross_idr, out_of_order, out_idx;
 

@@ -27,7 +27,7 @@ PUBLIC void Mp4Dec_exit_picture(Mp4DecObject *vo)
 {
     DEC_VOP_MODE_T *vop_mode_ptr = vo->vop_mode_ptr;
 
-    if (vop_mode_ptr->uv_interleaved)
+    if(vop_mode_ptr->yuv_format == YUV420SP_NV12 || vop_mode_ptr->yuv_format == YUV420SP_NV21)
     {
         Mp4Dec_ExtendFrame(vop_mode_ptr, vop_mode_ptr->pCurRecFrame->pDecFrame->imgYUV);
     }
@@ -146,7 +146,7 @@ PUBLIC void MP4Dec_JudgeDecMode (DEC_VOP_MODE_T * vop_mode_ptr)
     int32 aligned_frm_width = (((vop_mode_ptr->OrgFrameWidth + 15)>>4)<<4);
     int32 aligned_frm_height = (((vop_mode_ptr->OrgFrameHeight + 15)>>4)<<4);
 
-    if (vop_mode_ptr->uv_interleaved &&
+    if ((vop_mode_ptr->yuv_format == YUV420SP_NV12 || vop_mode_ptr->yuv_format == YUV420SP_NV21) &&
             ((aligned_frm_width <= 176 && aligned_frm_height <= 144) ||
              (aligned_frm_width <= 144 && aligned_frm_height <= 176))
        )
@@ -180,7 +180,7 @@ PUBLIC void Mp4Dec_output_one_frame (Mp4DecObject *vo, MMDecOutput *dec_output_p
     Mp4DecStorablePic *pic = PNULL;
     VOP_PRED_TYPE_E VopPredType = vop_mode_ptr->VopPredType;//pre_vop_type;
 
-    if (vop_mode_ptr->uv_interleaved)
+    if (vop_mode_ptr->yuv_format == YUV420SP_NV12 || vop_mode_ptr->yuv_format == YUV420SP_NV21)
     {
         write_display_frame_uvinterleaved(vop_mode_ptr,vop_mode_ptr->pCurRecFrame->pDecFrame);
 
@@ -256,7 +256,7 @@ PUBLIC void write_display_frame(DEC_VOP_MODE_T *vop_mode_ptr,DEC_FRM_BFR *pDecFr
     pDst_u = pDecFrame->imgU;
     pDst_v = pDecFrame->imgV;
 
-    if(!vop_mode_ptr->uv_interleaved)
+    if(vop_mode_ptr->yuv_format != YUV420SP_NV12 && vop_mode_ptr->yuv_format != YUV420SP_NV21)
     {
         for (row = 0; row < FrameHeight; row++)
         {

@@ -73,7 +73,7 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(Mp4DecObject *vo)
         {
             pDecFrame->imgY = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)size_y * sizeof(uint8), 256, SW_CACHABLE);  //y
             CHECK_MALLOC(pDecFrame->imgY, "pDecFrame->imgY");
-            if (vop_mode_ptr->uv_interleaved) //two plane
+            if (vop_mode_ptr->yuv_format == YUV420SP_NV12 || vop_mode_ptr->yuv_format == YUV420SP_NV21) //two plane
             {
                 pDecFrame->imgU = (uint8 *)Mp4Dec_MemAlloc(vo, 2*(uint32)size_c * sizeof(uint8), 256, SW_CACHABLE);  //uv
                 CHECK_MALLOC(pDecFrame->imgU, "pDecFrame->imgU");
@@ -98,7 +98,7 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(Mp4DecObject *vo)
     }
 
     //for error protection when reference buffer is not available.
-    if (vop_mode_ptr->uv_interleaved)
+    if (vop_mode_ptr->yuv_format == YUV420SP_NV12 || vop_mode_ptr->yuv_format == YUV420SP_NV21)
     {
         pDecFrame = &(vo->g_tmp_buf);
         MALLOC_EXT_FRAME_BUFFER;
