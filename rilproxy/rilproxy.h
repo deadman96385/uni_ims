@@ -42,7 +42,9 @@ typedef enum {
 #define    SEND_AT_TO_AT_SPATASSERT            "AT+SPATASSERT"
 #define    SEND_AT_TO_AT_ARMLOG                "AT+ARMLOG"
 #define    SEND_AT_TO_AT_SPDSPOP               "AT+SPDSPOP"
-#define    SEND_AT_TO_LTE_LTESBAND             "AT+SBAND=1,12"
+#define    SEND_AT_TO_LTE_SBAND0               "AT+SBAND=0,12"
+#define    SEND_AT_TO_LTE_SBAND1               "AT+SBAND=1,12"
+#define    SEND_AT_TO_AT_SPCAPLOG              "AT+SPCAPLOG"
 
 /* RILProxy  */
 typedef struct {
