@@ -310,12 +310,14 @@ static RILP_RequestType  get_send_at_request_type(char* req) {
 			if (strncasecmp(req, SEND_AT_TO_LTE_LTEBGTIMER, strlen(SEND_AT_TO_LTE_LTEBGTIMER)) == 0 ||
 			    strncasecmp(req, SEND_AT_TO_LTE_LTESETRSRP, strlen(SEND_AT_TO_LTE_LTESETRSRP)) == 0 ||
 			    strncasecmp(req, SEND_AT_TO_LTE_LTENCELLINFO, strlen(SEND_AT_TO_LTE_LTENCELLINFO)) == 0 ||
-                            strncasecmp(req, SEND_AT_TO_LTE_LTESBAND, strlen(SEND_AT_TO_LTE_LTESBAND)) == 0 ||
+                            strncasecmp(req, SEND_AT_TO_LTE_SBAND0, strlen(SEND_AT_TO_LTE_SBAND0)) == 0 ||
+                            strncasecmp(req, SEND_AT_TO_LTE_SBAND1, strlen(SEND_AT_TO_LTE_SBAND1)) == 0 ||
 			    strncasecmp(req, SEND_AT_TO_LTE_CPOF, strlen(SEND_AT_TO_LTE_CPOF)) == 0) {
 				return ReqToLTE;
 			} else if (strncasecmp(req, SEND_AT_TO_AT_RESET, strlen(SEND_AT_TO_AT_RESET)) == 0 || 
 			           strncasecmp(req, SEND_AT_TO_AT_ARMLOG, strlen(SEND_AT_TO_AT_ARMLOG)) == 0 ||
 			           strncasecmp(req, SEND_AT_TO_AT_SPDSPOP, strlen(SEND_AT_TO_AT_SPDSPOP)) == 0 ||
+			           strncasecmp(req, SEND_AT_TO_AT_SPCAPLOG, strlen(SEND_AT_TO_AT_SPCAPLOG)) == 0 ||
 			           strncasecmp(req, SEND_AT_TO_AT_SPATASSERT, strlen(SEND_AT_TO_AT_SPATASSERT)) == 0) {
 				return ReqToTDG_LTE;
 			}
