@@ -6498,7 +6498,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_SET_PREFERRED_NETWORK_TYPE:
             {
                 char cmd[30] = {0};
-
+                if (!strcmp(s_modem, "l") ||
+                    (!strcmp(s_modem, "t") && isSvLte())) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    break;
+                }
                 p_response = NULL;
                 /* AT^SYSCONFIG=<mode>,<acqorder>,<roam>,<srvdomain>
                  * mode: 2:Auto 13:GSM ONLY 14:WCDMA_ONLY 15:TDSCDMA ONLY
@@ -6584,6 +6588,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_GET_PREFERRED_NETWORK_TYPE:
             {
                 int response = 0;
+                if (!strcmp(s_modem, "l") ||
+                    (!strcmp(s_modem, "t") && isSvLte())) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    break;
+                }
 
                 p_response = NULL;
                 err = at_send_command_singleline(ATch_type[channelID], "AT^SYSCONFIG?",
