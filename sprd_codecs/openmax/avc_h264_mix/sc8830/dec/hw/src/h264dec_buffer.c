@@ -1287,6 +1287,12 @@ PUBLIC void H264Dec_reorder_list_mvc (H264DecObject *vo)
     int i;
     int8 listNO;
 
+    if (NULL == vo->g_active_subset_sps)
+    {
+        vo->error_flag |= ER_SREAM_ID;
+        return;
+    }
+
     if (currSliceType != I_SLICE)
     {
         if (curr_slice_ptr->ref_pic_list_reordering_flag_l0)

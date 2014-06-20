@@ -473,7 +473,7 @@ MMDecRet vp8_decode_frame(VPXDecObject *vo)
         if (cmd & V_BIT_4)
         {
             SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
-        } else if (cmd & V_BIT_5)
+        } else if (cmd & (V_BIT_5 | V_BIT_31))
         {
             SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
         } else //if (cmd & V_BIT_30)

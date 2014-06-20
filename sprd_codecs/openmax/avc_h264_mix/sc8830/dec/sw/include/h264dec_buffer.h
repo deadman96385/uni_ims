@@ -27,6 +27,24 @@ extern   "C"
 {
 #endif
 
+#define H264DEC_UNBIND_FRAME(img_ptr, frame)\
+{\
+				    if(((frame)->pBufferHeader!=NULL)&&((*(img_ptr->avcHandle->VSP_unbindCb)) != NULL))\
+			  {\
+			       (*((img_ptr)->avcHandle->VSP_unbindCb))((img_ptr)->avcHandle->userdata,(frame)->pBufferHeader);\
+(frame)->pBufferHeader = NULL;\
+}\
+}
+
+#define H264DEC_BIND_FRAME(img_ptr, frame)\
+{\
+				    if(((frame)->pBufferHeader!=NULL)&& ((*(img_ptr->avcHandle->VSP_bindCb)) != NULL))\
+				    {\
+				        (*((img_ptr)->avcHandle->VSP_bindCb))((img_ptr)->avcHandle->userdata, (frame)->pBufferHeader);\
+}\
+}
+
+DEC_FRAME_STORE_T * H264Dec_search_frame_from_DBP(H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T* frame);
 void H264Dec_clear_delayed_buffer(H264DecContext *img_ptr);
 MMDecRet H264Dec_init_img_buffer (H264DecContext *img_ptr);
 MMDecRet H264Dec_init_dpb (H264DecContext *img_ptr, DEC_SPS_T *sps_ptr);

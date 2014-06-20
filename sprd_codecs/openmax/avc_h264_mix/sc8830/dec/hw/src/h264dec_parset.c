@@ -733,8 +733,7 @@ PUBLIC void H264Dec_ProcessSPS (H264DecObject *vo)
     vo->g_image_ptr->profile_idc = vo->g_sps_ptr->profile_idc;
 #endif
 
-    vo->g_image_ptr->low_delay = 1;
-    vo->g_image_ptr->has_b_frames =  !vo->g_image_ptr->low_delay;
+
     return;
 }
 

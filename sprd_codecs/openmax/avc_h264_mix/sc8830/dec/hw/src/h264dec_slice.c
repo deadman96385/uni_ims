@@ -80,6 +80,12 @@ PUBLIC int32 H264Dec_Process_slice (H264DecObject *vo)
 
     if (new_picture)
     {
+        if ((img_ptr->curr_mb_nr>0) && (img_ptr->curr_mb_nr != (img_ptr->frame_size_in_mbs-1)))
+        {
+            img_ptr->curr_mb_nr = 0;
+            H264Dec_clear_delayed_buffer(vo);
+        }
+
         H264Dec_init_picture (vo);
         curr_header = SOP;
     } else

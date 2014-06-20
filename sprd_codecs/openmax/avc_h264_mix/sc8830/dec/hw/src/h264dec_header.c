@@ -148,7 +148,14 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
                     curr_slice_ptr->anchor_pic_flag = curr_slice_ptr->NaluHeaderMVCExt.anchor_pic_flag;
                 } else
                 {   //no prefix NALU;
-                    curr_slice_ptr->view_id = vo->g_active_subset_sps->view_id[0];
+                    if (NULL == vo->g_active_subset_sps->view_id)
+                    {
+                        vo->error_flag |= ER_SREAM_ID;
+                        curr_slice_ptr->view_id = 0;
+                    } else
+                    {
+                        curr_slice_ptr->view_id = vo->g_active_subset_sps->view_id[0];
+                    }
                     curr_slice_ptr->inter_view_flag = 1;
                     curr_slice_ptr->anchor_pic_flag = vo->g_image_ptr->idr_flag;
                 }

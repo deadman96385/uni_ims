@@ -8,6 +8,7 @@ LOCAL_SRC_FILES := \
 	src/h264dec_cabac.c \
 	src/h264dec_context_init.c \
 	src/h264dec_ctx_table.c \
+	src/h264dec_deblock.c \
 	src/h264dec_fmo.c \
 	src/h264dec_global.c \
 	src/h264dec_header.c \
@@ -25,6 +26,7 @@ LOCAL_SRC_FILES := \
 	src/h264dec_table.c \
 	src/h264dec_vld.c	\
 	src/h264dec_vld_table.c \
+	src/gcc/h264dec_deblock_neon.s	\
 	src/gcc/h264dec_ext_frame_neon.s	\
 	src/gcc/h264dec_ipred_neon.s \
 	src/gcc/h264dec_isqt_neon.s \

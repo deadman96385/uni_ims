@@ -419,6 +419,11 @@ DEC_EXIT:
         ret = MMDEC_HW_ERROR;
     }
 
+    if (vo->error_flag)
+    {
+        H264Dec_clear_delayed_buffer(vo);
+    }
+
     return ret;
 }
 

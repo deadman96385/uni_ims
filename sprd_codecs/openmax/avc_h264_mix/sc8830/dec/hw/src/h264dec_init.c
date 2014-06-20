@@ -182,6 +182,8 @@ PUBLIC MMDecRet H264Dec_init_global_para (H264DecObject*vo)
         vo->g_pps_array_ptr[i].valid = FALSE;
     }
 
+    vo->g_image_ptr->low_delay = 1;
+    vo->g_image_ptr->has_b_frames =  !vo->g_image_ptr->low_delay;
     vo->g_image_ptr->curr_slice_ptr = vo->g_curr_slice_ptr;
     vo->g_image_ptr->curr_mb_nr = 0;
     vo->error_flag = 0;

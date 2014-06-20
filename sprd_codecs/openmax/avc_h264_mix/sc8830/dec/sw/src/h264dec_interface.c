@@ -48,10 +48,9 @@ void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
 
     for (i = 0; i <  MAX_REF_FRAME_NUMBER+1; i++)
     {
-        if (dpb_ptr->fs &&dpb_ptr->fs[i] && dpb_ptr->fs[i]->frame && dpb_ptr->fs[i]->frame->pBufferHeader && ((*(img_ptr->avcHandle->VSP_unbindCb)) != NULL))
+        if (dpb_ptr->fs &&dpb_ptr->fs[i] && dpb_ptr->fs[i]->frame)
         {
-            (*(img_ptr->avcHandle->VSP_unbindCb))(img_ptr->avcHandle->userdata,dpb_ptr->fs[i]->frame->pBufferHeader);
-            dpb_ptr->fs[i]->frame->pBufferHeader = NULL;
+            H264DEC_UNBIND_FRAME(img_ptr, dpb_ptr->fs[i]->frame);
         }
     }
 
@@ -78,6 +77,8 @@ MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picI
     {
         *pOutput = dpb_ptr->delayed_pic[0]->pBufferHeader;
         *picId = dpb_ptr->delayed_pic[0]->mPicId;
+
+        H264DEC_UNBIND_FRAME(img_ptr, dpb_ptr->delayed_pic[0]);
 
         for(i =0; i < dpb_ptr->delayed_pic_num; i++)
         {
@@ -258,8 +259,8 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
     while (!last_slice)
     {
-        last_slice = get_unit (img_ptr, pInStream, dec_input_ptr->dataLen, &slice_unit_len);
-        dec_input_ptr->dataLen -= slice_unit_len;
+        last_slice = get_unit (img_ptr, pInStream, stream_lenght, &slice_unit_len);
+        stream_lenght -= slice_unit_len;
 
         ret = H264Dec_Read_SPS_PPS_SliceHeader (img_ptr, img_ptr->g_nalu_ptr->buf, img_ptr->g_nalu_ptr->len, dec_output_ptr);
 
@@ -271,26 +272,9 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
             SCI_TRACE_LOW("%s, %d, img_ptr->error_flag: %0x, pos: %0x, pos1: %0x, pos2: %0x",
                           __FUNCTION__, __LINE__, img_ptr->error_flag, img_ptr->return_pos, img_ptr->return_pos1, img_ptr->return_pos2);
 
-            if (img_ptr->not_supported)
-            {
-                return MMDEC_NOT_SUPPORTED;
-            }
-
-            if (img_ptr->error_flag & ER_EXTRA_MEMO_ID)
-            {
-                return MMDEC_MEMORY_ERROR;
-            }
-
-            return MMDEC_ERROR;
+            goto DEC_EXIT;
         }
 #endif
-
-        if (img_ptr->type == B_SLICE && img_ptr->g_dec_picture_ptr && !(img_ptr->g_dec_picture_ptr->used_for_reference))
-        {
-            SCI_TRACE_LOW("%s, %d, B_Slice return", __FUNCTION__, __LINE__);
-            dec_input_ptr->dataLen =stream_lenght ;
-            return MMDEC_OK;
-        }
 
         if (img_ptr->g_ready_to_decode_slice)
         {
@@ -299,15 +283,13 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
             {
                 img_ptr->error_flag |= ER_PICTURE_NULL_ID;
                 img_ptr->return_pos |= (1<<21);
-
-                return MMDEC_ERROR;
+                goto DEC_EXIT;
             }
 #endif
 
             if ((dec_input_ptr->expected_IVOP) && (img_ptr->type != I_SLICE))
             {
                 SCI_TRACE_LOW("%s, %d, need I slice, return", __FUNCTION__, __LINE__);
-
                 return MMDEC_FRAME_SEEK_IVOP;
             }
 
@@ -335,7 +317,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         }
     }
 
-    dec_input_ptr->dataLen = stream_lenght -dec_input_ptr->dataLen;
+DEC_EXIT:
 
     //need IVOP but not found IDR,then return seek ivop
     if(dec_input_ptr->expected_IVOP && img_ptr->g_searching_IDR_pic)
@@ -353,16 +335,24 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         img_ptr->g_old_slice_ptr->frame_num = -1;
         img_ptr->curr_mb_nr = 0;
         img_ptr->return_pos |= (1<<22);
+        H264Dec_clear_delayed_buffer(img_ptr);
+
+        if (img_ptr->not_supported)
+        {
+            return MMDEC_NOT_SUPPORTED;
+        }
 
         if (img_ptr->error_flag & ER_EXTRA_MEMO_ID)
         {
             SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
             return MMDEC_MEMORY_ERROR;
         }
+
         return MMDEC_ERROR;
     } else
 #endif
     {
+        dec_input_ptr->dataLen -= stream_lenght;
         return MMDEC_OK;
     }
 }

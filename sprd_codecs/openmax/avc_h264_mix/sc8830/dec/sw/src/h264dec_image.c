@@ -85,6 +85,8 @@ PUBLIC void h264Dec_remove_frame_from_dpb (H264DecContext *img_ptr, DEC_DECODED_
 
     dpb_ptr->used_size--;
 
+    H264DEC_UNBIND_FRAME(img_ptr, tmp_fs_ptr->frame);
+
     return;
 }
 
@@ -470,6 +472,7 @@ PUBLIC MMDecRet H264Dec_init_picture (H264DecContext *img_ptr)
         }
         //H264Dec_fill_frame_num_gap(img_ptr, dpb_ptr);
         H264Dec_clear_delayed_buffer(img_ptr);
+        H264Dec_flush_dpb(img_ptr, dpb_ptr);
     }
 
     fs = H264Dec_get_one_free_pic_buffer(img_ptr, dpb_ptr);
@@ -493,12 +496,7 @@ PUBLIC MMDecRet H264Dec_init_picture (H264DecContext *img_ptr)
         int32 out_idx;
 
         fs->is_reference = 0;
-
-        if ((fs->frame->pBufferHeader!=NULL) && ((*(img_ptr->avcHandle->VSP_unbindCb)) != NULL))
-        {
-            (*(img_ptr->avcHandle->VSP_unbindCb))(img_ptr->avcHandle->userdata,fs->frame->pBufferHeader);
-            fs->frame->pBufferHeader = NULL;
-        }
+        H264DEC_UNBIND_FRAME(img_ptr, fs->frame);
 
         for (i = 0; i < img_ptr->g_dpb_ptr->delayed_pic_num; i++)
         {
@@ -603,6 +601,8 @@ PUBLIC void H264Dec_exit_picture (H264DecContext *img_ptr)
 {
     DEC_STORABLE_PICTURE_T *dec_picture_ptr = img_ptr->g_dec_picture_ptr;
     DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = img_ptr->g_dpb_ptr;
+
+    H264Dec_deblock_picture(img_ptr, dec_picture_ptr);
 
     if (dec_picture_ptr->used_for_reference)
     {

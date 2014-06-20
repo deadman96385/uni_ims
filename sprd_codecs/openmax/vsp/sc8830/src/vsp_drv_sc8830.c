@@ -134,10 +134,10 @@ PUBLIC int32 VSP_POLL_COMPLETE(VSPObject *vo)
             ioctl(vo->s_vsp_fd, VSP_COMPLETE, &ret);
             cnt++;
         } while ((ret & V_BIT_30) &&  (cnt < MAX_POLL_CNT));
-	if(!(V_BIT_1 == ret || V_BIT_2 == ret ))
-	{
-        	SCI_TRACE_LOW("%s, %d, int_ret: %0x", __FUNCTION__, __LINE__, ret);
-	}
+        if(!(V_BIT_1 == ret || V_BIT_2 == ret ))
+        {
+            SCI_TRACE_LOW("%s, %d, int_ret: %0x", __FUNCTION__, __LINE__, ret);
+        }
 
         return ret;
     } else
@@ -213,6 +213,11 @@ PUBLIC int32 VSP_RELEASE_Dev(VSPObject *vo)
         }
 
         if (VSP_READ_REG_POLL(GLB_REG_BASE_ADDR + AXIM_STS_OFF, V_BIT_1, 0x0, TIME_OUT_CLK_FRAME, "Polling AXIM_STS: not Axim_wch_busy")) //check all data has written to DDR
+        {
+            SCI_TRACE_LOW("%s, %d, Axim_wch_busy", __FUNCTION__, __LINE__);
+        }
+
+        if (VSP_READ_REG_POLL(GLB_REG_BASE_ADDR + AXIM_STS_OFF, V_BIT_2, 0x0, TIME_OUT_CLK_FRAME, "Polling AXIM_STS: not Axim_rch_busy"))
         {
             SCI_TRACE_LOW("%s, %d, Axim_wch_busy", __FUNCTION__, __LINE__);
         }
