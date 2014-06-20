@@ -2223,6 +2223,9 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
     const char *password = NULL;
     const char *authtype = NULL;
     char cmd[128] = {0};
+    int fb_ip_type = -1;
+    char prop[PROPERTY_VALUE_MAX] = {0};
+    char eth[PROPERTY_VALUE_MAX] = {0};
 
     apn = ((const char **)data)[2];
     username = ((const char **)data)[3];
@@ -2278,29 +2281,34 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
     snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (err < 0 || p_response->success == 0) {
-#if 0
-        if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
-            line = p_response->finalResponse;
-            err = at_tok_start(&line);
-            if (err >= 0) {
-                err = at_tok_nextint(&line,&failCause);
-                if (err >= 0) {
-                    convertFailCause(failCause);
-                } else {
-                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                    goto error;
-                }
-            }
-        } else {
-            s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-        }
-
-        goto error;
-#else
         RILLOGD("Fallback 2 pdp failed,but still as a success");
         putPDP(index);
-#endif
+        goto done;
     }
+    /**********************************/
+    /* Check ip type after fall back  */
+    /**********************************/
+    if(!strcmp(s_modem, "t")) {
+        property_get(ETH_TD, eth, "veth");
+    } else if(!strcmp(s_modem, "w")) {
+        property_get(ETH_W, eth, "veth");
+    } else if(!strcmp(s_modem, "l")) {
+        property_get(ETH_L, eth, "veth");
+    } else {
+        RILLOGE("Unknown modem type, exit");
+        exit(-1);
+    }
+    snprintf(cmd, sizeof(cmd), "net.%s%d.ip_type", eth, index);
+    property_get(cmd, prop, "0");
+    fb_ip_type = atoi(prop);
+    RILLOGD("doIPV4_IPV6_Fb: Fallback 2 pdp: fb_ip_type = %d", fb_ip_type);
+    if (fb_ip_type != IPV6) {
+        RILLOGD("Fallback pdp type mismatch, do deactive");
+        snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
+        at_send_command(ATch_type[channelID], cmd, &p_response);
+        putPDP(index);
+    }
+done:
     ret = true;
 error:
     at_response_free(p_response);
@@ -2388,6 +2396,8 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
 
         } else {//LTE
             int ip_type = -1;
+            int fb_ip_type = -1;
+            int want_ip_type = -1;
             int fbCause = -1;
             char eth[PROPERTY_VALUE_MAX] = {0};
             char prop[PROPERTY_VALUE_MAX] = {0};
@@ -2585,8 +2595,10 @@ retrycgatt:
 
                     if (ip_type == IPV4) {
                         pdp_type = "IPV6";
+                        want_ip_type = IPV6;
                     } else if (ip_type == IPV6) {
                         pdp_type = "IP";
+                        want_ip_type = IPV4;
                     }
 
                     index = getPDPByIndex(getExtraPDPNum(index));
@@ -2620,29 +2632,26 @@ retrycgatt:
                     snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
                     err = at_send_command(ATch_type[channelID], cmd, &p_response);
                     if (err < 0 || p_response->success == 0) {
-#if 0
-                        if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
-                            line = p_response->finalResponse;
-                            err = at_tok_start(&line);
-                            if (err >= 0) {
-                                err = at_tok_nextint(&line,&failCause);
-                                if (err >= 0) {
-                                    convertFailCause(failCause);
-                                } else {
-                                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                                    goto error;
-                                }
-                            }
-                        } else
-                            s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-
-                        goto error;
-#else
                         RILLOGD("Fallback 2 pdp failed,but still as a success");
                         putPDP(index);
                         goto done;
-#endif
                     }
+                    /**********************************/
+                    /* Check ip type after fall back  */
+                    /**********************************/
+                    snprintf(cmd, sizeof(cmd), "net.%s%d.ip_type", eth, index);
+                    property_get(cmd, prop, "0");
+                    fb_ip_type = atoi(prop);
+                    RILLOGD("Fallback 2 pdp: want_ip_type = %d, fb_ip_type = %d",
+                            want_ip_type, fb_ip_type);
+                    if (fb_ip_type != want_ip_type) {
+                        RILLOGD("Fallback pdp type mismatch, do deactive");
+                        snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
+                        at_send_command(ATch_type[channelID], cmd, &p_response);
+                        putPDP(index);
+                        goto done;
+                    }
+
                     pthread_mutex_lock(&pdp[index].mutex);
                     pdp[index].cid = index + 1;
                     pthread_mutex_unlock(&pdp[index].mutex);
