@@ -299,35 +299,34 @@ static char *strdupReadString(Parcel &p) {
 static RILP_RequestType  get_send_at_request_type(char* req) {
 
     if (req == NULL) {
-		ALOGE("Send_AT command should not be NULL!");
-		return ReqToTDG;
-	}
+        ALOGE("Send_AT command should not be NULL!");
+        return ReqToTDG;
+    }
 
-	if (is_svlte()) {
-	    pthread_mutex_lock(&sLteCFdMutex);
-	    if (sLteClientFd  != -1 && sLteReady) { // when lte rild connect, ril request should been dispatched.
-			pthread_mutex_unlock(&sLteCFdMutex);
-			if (strncasecmp(req, SEND_AT_TO_LTE_LTEBGTIMER, strlen(SEND_AT_TO_LTE_LTEBGTIMER)) == 0 ||
-			    strncasecmp(req, SEND_AT_TO_LTE_LTESETRSRP, strlen(SEND_AT_TO_LTE_LTESETRSRP)) == 0 ||
-			    strncasecmp(req, SEND_AT_TO_LTE_LTENCELLINFO, strlen(SEND_AT_TO_LTE_LTENCELLINFO)) == 0 ||
-                            strncasecmp(req, SEND_AT_TO_LTE_SBAND0, strlen(SEND_AT_TO_LTE_SBAND0)) == 0 ||
-                            strncasecmp(req, SEND_AT_TO_LTE_SBAND1, strlen(SEND_AT_TO_LTE_SBAND1)) == 0 ||
-			    strncasecmp(req, SEND_AT_TO_LTE_CPOF, strlen(SEND_AT_TO_LTE_CPOF)) == 0) {
-				return ReqToLTE;
-			} else if (strncasecmp(req, SEND_AT_TO_AT_RESET, strlen(SEND_AT_TO_AT_RESET)) == 0 || 
-			           strncasecmp(req, SEND_AT_TO_AT_ARMLOG, strlen(SEND_AT_TO_AT_ARMLOG)) == 0 ||
-			           strncasecmp(req, SEND_AT_TO_AT_SPDSPOP, strlen(SEND_AT_TO_AT_SPDSPOP)) == 0 ||
-			           strncasecmp(req, SEND_AT_TO_AT_SPCAPLOG, strlen(SEND_AT_TO_AT_SPCAPLOG)) == 0 ||
-			           strncasecmp(req, SEND_AT_TO_AT_SPATASSERT, strlen(SEND_AT_TO_AT_SPATASSERT)) == 0) {
-				return ReqToTDG_LTE;
-			}
-		} else {
-			pthread_mutex_unlock(&sLteCFdMutex);
-			return ReqToTDG;
-		}
-	}
+    pthread_mutex_lock(&sLteCFdMutex);
+    if (sLteClientFd  != -1 && sLteReady) { // when lte rild connect, ril request should been dispatched.
+        pthread_mutex_unlock(&sLteCFdMutex);
+        if (strncasecmp(req, SEND_AT_TO_LTE_LTEBGTIMER, strlen(SEND_AT_TO_LTE_LTEBGTIMER)) == 0 ||
+            strncasecmp(req, SEND_AT_TO_LTE_LTESETRSRP, strlen(SEND_AT_TO_LTE_LTESETRSRP)) == 0 ||
+            strncasecmp(req, SEND_AT_TO_LTE_LTENCELLINFO, strlen(SEND_AT_TO_LTE_LTENCELLINFO)) == 0 ||
+            strncasecmp(req, SEND_AT_TO_LTE_SBAND0, strlen(SEND_AT_TO_LTE_SBAND0)) == 0 ||
+            strncasecmp(req, SEND_AT_TO_LTE_SBAND1, strlen(SEND_AT_TO_LTE_SBAND1)) == 0 ||
+            strncasecmp(req, SEND_AT_TO_LTE_CPOF, strlen(SEND_AT_TO_LTE_CPOF)) == 0) {
+            return ReqToLTE;
+        } else if (strncasecmp(req, SEND_AT_TO_AT_RESET, strlen(SEND_AT_TO_AT_RESET)) == 0 ||
+                   strncasecmp(req, SEND_AT_TO_AT_ARMLOG, strlen(SEND_AT_TO_AT_ARMLOG)) == 0 ||
+		   strncasecmp(req, SEND_AT_TO_AT_SPDSPOP, strlen(SEND_AT_TO_AT_SPDSPOP)) == 0 ||
+		   strncasecmp(req, SEND_AT_TO_AT_SPCAPLOG, strlen(SEND_AT_TO_AT_SPCAPLOG)) == 0 ||
+		   strncasecmp(req, SEND_AT_TO_AT_SPATASSERT, strlen(SEND_AT_TO_AT_SPATASSERT)) == 0) {
+	    return ReqToTDG_LTE;
+        }
 
-	return ReqToTDG;
+    } else {
+        pthread_mutex_unlock(&sLteCFdMutex);
+        return ReqToTDG;
+    }
+
+    return ReqToTDG;
 }
 
 static RILP_RequestType  get_manual_select_network_request_type(int act) {
@@ -360,26 +359,26 @@ static RILP_RequestType  get_manual_select_network_request_type(int act) {
 */
 static int   is_tdg_unsolicited(int rspid) {
 
-	if ((sPSEnable == PS_LTE_ENABLE) &&
-	    (rspid == RIL_UNSOL_DATA_CALL_LIST_CHANGED ))
-	    return 0;
+    if ((sPSEnable == PS_LTE_ENABLE) &&
+        (rspid == RIL_UNSOL_DATA_CALL_LIST_CHANGED ))
+        return 0;
     else 
-		return 1;
+        return 1;
 }
 
 static int  is_lte_unsolicited(int rspid) {
 	
-	if (rspid == RIL_UNSOL_SIM_PS_REJECT ||
-	    rspid == RIL_UNSOL_LTE_READY ||
-	    rspid == RIL_UNSOL_SIGNAL_STRENGTH ||
-	    rspid == RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED)
-	    return 1;
-   
+    if (rspid == RIL_UNSOL_SIM_PS_REJECT ||
+        rspid == RIL_UNSOL_LTE_READY ||
+        rspid == RIL_UNSOL_SIGNAL_STRENGTH ||
+        rspid == RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED)
+        return 1;
+
     if ((sPSEnable == PS_LTE_ENABLE) &&
-	    (rspid == RIL_UNSOL_DATA_CALL_LIST_CHANGED))
-	    return 1;
-	else
-		return 0;
+        (rspid == RIL_UNSOL_DATA_CALL_LIST_CHANGED))
+        return 1;
+    else
+        return 0;
 }
 
 static int blocking_write(int fd, const void *buffer, size_t len) {

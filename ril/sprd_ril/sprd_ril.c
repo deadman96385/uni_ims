@@ -8434,6 +8434,7 @@ static void initializeCallback(void *param)
              } else {
                  property_set(LTE_MODEM_START_PROP, "0");
              }
+             RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED, NULL, 0);
          } else if (!strcmp(s_modem, "l")) {
              if (isSvLte()) {
                  RIL_onUnsolicitedResponse (RIL_UNSOL_SVLTE_USIM_READY, NULL, 0);
