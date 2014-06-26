@@ -26,6 +26,7 @@ namespace android {
 #define MAX_RESPONSE_FROM_TDG_LTE   16
 #define MAX_REQUEST_TYPE_ARRAY_LEN  (RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE)
 #define RIL_LTE_USIM_READY_PROP          "ril.lte.usim.ready" // for SVLTE only, used by rilproxy
+#define RIL_LTE_CEREG_PROP               "ril.lte.cereg.state"
 #define LTE_RADIO_POWER_TOKEN            0x00FFFFFE
 #define LTE_SCREEN_STATE_TOKEN           0x00FFFFFD
 
@@ -490,6 +491,7 @@ static int  send_unsolicate_cereg_response(int fd, int result) {
 }
 
 static void send_rilproxy_connected_respone(int fd) {
+    char prop[PROPERTY_VALUE_MAX] = "";
 
     write_data (fd, sParcelRilConnected.data(), sParcelRilConnected.dataSize());
     write_data (fd, sParcelRadioState.data(),   sParcelRadioState.dataSize());
@@ -501,6 +503,13 @@ static void send_rilproxy_connected_respone(int fd) {
 
     if (sLteCeregReady == 0 || sLteCeregReady == 2) {
        send_unsolicate_cereg_response(fd, sLteCeregReady);
+    }
+
+    property_get(RIL_LTE_CEREG_PROP, prop, "-1");
+    ALOGD("rilprxoy connected, cereg property :%s.", prop);
+    if (atoi(prop) != -1) {
+        ALOGD("phone stop unexcepted, when rilprxoy restart send cereg status.");
+        send_unsolicate_cereg_response(fd, atoi(prop));
     }
 }
 
@@ -777,9 +786,14 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
         p.readInt32(&skip);
         p.readInt32(&blte);
 
-        if ((sRILPServerFd == -1) && (blte == 0 || blte == 2)){
+        if (blte == 0 || blte == 2) {
             ALOGD("Received LTE_READY blte = %d", blte);
-            sLteCeregReady = blte;
+            if (sRILPServerFd == -1) {
+                sLteCeregReady = blte;
+            }
+            // store cereg state
+            sprintf(prop, "%d", blte);
+	    property_set(RIL_LTE_CEREG_PROP, prop);
         }
 
         if (blte != 1 && blte != 5) {
@@ -787,8 +801,19 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
             RIL_SIGNALSTRENGTH_INIT_LTE(sSignalStrength);
         }
         break;
-/* It doesn't sure which the two RIL_CONNETCED and SVLTE_USIM_READY appear first.*/
+      /* It doesn't sure which the two RIL_CONNETCED and SVLTE_USIM_READY appear first.*/
       case RIL_UNSOL_RIL_CONNECTED:
+         // report cereg when rilj connected when phone restart after crash
+         property_get(RIL_LTE_CEREG_PROP, prop, "-1");
+         if (strcmp(prop, "-1"))  {
+              if (isfromTdg)  {
+                   ALOGD("phone stop unexcepted, when ril restart send cereg status.");
+                   send_unsolicate_cereg_response(sRILPServerFd, atoi(prop));
+              } else {
+                   sLteReady = 1;
+              }
+         }
+
          if (isfromTdg)  {
             if (sRILPServerFd == -1)  {
                 sTdgRilConnected = 1;
