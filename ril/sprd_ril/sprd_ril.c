@@ -9424,7 +9424,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             }
         }
 
-        RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DATA, response, strlen(response) + 1);
+        RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DATA, response, response ? strlen(response) + 1 : 0);
     } else if (strStartsWith(s, AT_PREFIX"DVTCODECRI:")) {
         int response[4];
         int index = 0;

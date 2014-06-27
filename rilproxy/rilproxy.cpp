@@ -312,7 +312,10 @@ static RILP_RequestType  get_send_at_request_type(char* req) {
             strncasecmp(req, SEND_AT_TO_LTE_LTENCELLINFO, strlen(SEND_AT_TO_LTE_LTENCELLINFO)) == 0 ||
             strncasecmp(req, SEND_AT_TO_LTE_SBAND0, strlen(SEND_AT_TO_LTE_SBAND0)) == 0 ||
             strncasecmp(req, SEND_AT_TO_LTE_SBAND1, strlen(SEND_AT_TO_LTE_SBAND1)) == 0 ||
+            strncasecmp(req, SEND_AT_TO_LTE_SGMR_R, strlen(SEND_AT_TO_LTE_SGMR_R)) == 0 ||
+            strncasecmp(req, SEND_AT_TO_LTE_SGMR_W, strlen(SEND_AT_TO_LTE_SGMR_W)) == 0 ||
             strncasecmp(req, SEND_AT_TO_LTE_CPOF, strlen(SEND_AT_TO_LTE_CPOF)) == 0) {
+
             return ReqToLTE;
         } else if (strncasecmp(req, SEND_AT_TO_AT_RESET, strlen(SEND_AT_TO_AT_RESET)) == 0 ||
                    strncasecmp(req, SEND_AT_TO_AT_ARMLOG, strlen(SEND_AT_TO_AT_ARMLOG)) == 0 ||
