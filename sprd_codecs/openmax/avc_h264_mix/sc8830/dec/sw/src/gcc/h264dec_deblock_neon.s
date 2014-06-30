@@ -208,19 +208,24 @@ ldr    	alpha_tbl, = alpha_table
                                      vmin.s8		d10, d10, d8
                                      vmax.s8		d10, d10, d9		@//i_delta
 
-                                     vmov.u8		d8, #0
-                                     vmov.u8		d9, #255		@//????????????????
-                                     vadd.s8		d12, d3, d10		@//p0 + i_delta
-                                     vsub.s8		d13, d4, d10		@//q0 - i_delta
+                                     vmovl.u8		q6, d3
+                                     vmovl.u8		q4, d4
+                                     vaddw.s8		q6, q6, d10
+                                     vsubw.s8		q4, q4, d10
 
-                                     vmin.u8		d12, d12, d9
-                                     vmax.u8		d12, d12, d8		@//p0'
-                                     vmin.u8		d13, d13, d9
-                                     vmax.u8		d13, d13, d8		@//q0'
+                                     vmov.u16		q5, #0
+                                     vmov.u16		q7, #255
+                                     vmin.s16		q6, q6, q7
+                                     vmax.s16		q6, q6, q5
+                                     vmin.s16		q4, q4, q7
+                                     vmax.s16		q4, q4, q5
+
+                                     vmovn.u16 	d14, q6		@//p0'
+                                     vmovn.u16 	d15, q4		@//q0'
 
                                      vmov		d16, d17
-                                     vbsl		d16, d12, d3
-                                     vbsl		d17, d13, d4
+                                     vbsl  		d16, d14, d3
+                                     vbsl  		d17, d15, d4
                                      vmov		d3, d16
                                      vmov		d4, d17
 
@@ -515,18 +520,23 @@ ldr    	alpha_tbl, = alpha_table
                                                              vmin.s8		d24, d24, d10
                                                              vmax.s8		d24, d24, d11	@//i_delta
 
-                                                             vmov.u8		d8, #0
-                                                             vmov.u8		d9, #255		@//????????????????
-                                                             vadd.s8		d22, d3, d24		@//p0 + i_delta
-                                                             vsub.s8		d23, d4, d24		@//q0 - i_delta
+                                                             vmovl.u8		q11, d3
+                                                             vmovl.u8		q4,  d4
+                                                             vaddw.s8		q11, q11, d24
+                                                             vsubw.s8		q4, q4, d24
 
-                                                             vmin.u8		d22, d22, d9
-                                                             vmax.u8		d22, d22, d8		@//p0'
-                                                             vmin.u8		d23, d23, d9
-                                                             vmax.u8		d23, d23, d8		@//q0'
+                                                             vmov.u16		q5, #0
+                                                             vmov.u16		q6, #255
+                                                             vmin.s16		q11, q11, q6
+                                                             vmax.s16		q11, q11, q5		@//p0'
+                                                             vmin.s16		q4, q4, q6
+                                                             vmax.s16		q4, q4, q5		@//q0'
 
-                                                             vand		d10, d17, d18
-                                                             vbsl		d10, d20, d2
+                                                             vmovn.u16 	d12, q11
+                                                             vmovn.u16  	d13, q4
+
+                                                             vand			d10, d17, d18
+                                                             vbsl  		d10, d20, d2
                                                              vmov		d2, d10			@//p1
 
                                                              vand		d10, d17, d19
@@ -534,10 +544,10 @@ ldr    	alpha_tbl, = alpha_table
                                                              vmov		d5, d10			@//q1
 
                                                              vmov		d10, d17
-                                                             vbsl		d10, d22, d3
+                                                             vbsl  		d10, d12, d3
                                                              vmov		d3, d10			@//p0
 
-                                                             vbsl		d17, d23, d4
+                                                             vbsl  		d17, d13, d4
                                                              vmov		d4, d17			@//q0
 
                                                              Trans_array:
