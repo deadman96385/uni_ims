@@ -27,39 +27,113 @@
 //------------------------------------------------------------------------------
 
 static const char TCARD_VOLUME_NAME[]  = "sdcard";
-static char TCARD_DEV_NAME[]     = " ";//"../devices/platform/sprd-sdhci.0/mmc_host/mmc1/mmc1:1234/block/mmcblk0";//"/devices/platform/sprd-sdhci.0/mmc_host/mmc0";//"/devices/platform/mxsdhci.2/mmc_host/mmc2";
+static char TCARD_DEV_NAME[128];
 static const char SYS_BLOCK_PATH[]     = "/sys/block";
 static const char TCARD_FILE_NAME[]    = "/mnt/sdcard/sciautotest";
 static const char TCARD_TEST_CONTENT[] = "SCI TCard: 2012-11-12";
 //------------------------------------------------------------------------------
-
-#define TCARD_DEV_PATH_OPEN "/sys/devices/platform/sprd-sdhci.0/mmc_host/mmc1";
-#define TCARD_DEV_PATH_1 "../devices/platform/sprd-sdhci.0/mmc_host/mmc1";
-#define TCARD_DEV_PATH_2 "block/mmcblk0";
-#define TCARD_DEV_PATH_3 "block/mmcblk1";
-
 int tcard_get_dev_path(char*path)
 {
 	DIR *dir;
 	struct dirent *de;
 	int found = 0;
-	char dirpath_open[] = TCARD_DEV_PATH_OPEN;
-	char dirpath_1[] = TCARD_DEV_PATH_1;
+	char dirpath_open[128] = "/sys/devices";
+	char tcard_name[16];
+
+	sprintf(path, "../devices");
 
 	dir = opendir(dirpath_open);
-	DBGMSG("dir = %d \n ",dir);
-	if (dir == NULL)
+	if (dir == NULL) {
+		DBGMSG("%s open fail\n", dirpath_open);
 		return -1;
-
+	}
+	/*try to find dir: sprd-sdhci.0, dt branch*/
 	while((de = readdir(dir))) {
-		if (strncmp(de->d_name, "mmc1:", strlen("mmc1:")) != 0) {
-		    continue;
+		if(strncmp(de->d_name, "sprd-sdhci.0", strlen("sprd-sdhci.0"))) {
+			continue;
 		}
-		sprintf(path, "%s/%s", dirpath_1, de->d_name);
-	    found = 1;
+		sprintf(dirpath_open, "%s/%s", dirpath_open, de->d_name);
+		sprintf(path, "%s/%s", path, de->d_name);
+		found = 1;
+		break;
+	}
+	/*try to find dir: sprd-sdhci.0,no dt branch*/
+	if(!found) {
+		sprintf(dirpath_open, "%s/platform", dirpath_open);
+		closedir(dir);
+		dir = opendir(dirpath_open);
+		if(dir == NULL) {
+			DBGMSG("%s open fail\n", dirpath_open);
+			return -1;
+		}
+		while((de = readdir(dir))) {
+			if(strncmp(de->d_name, "sprd-sdhci.0", strlen("sprd-sdhci.0"))) {
+				continue;
+			}
+			sprintf(dirpath_open, "%s/%s", dirpath_open, de->d_name);
+			sprintf(path, "%s/platform/%s", path, de->d_name);
+			found = 1;
+			break;
+		}
 	}
 	closedir(dir);
-
+	if(!found) {
+		DBGMSG("sprd-sdhci.0 is not found \n");
+		return -1;
+	}
+	found = 0;
+	sprintf(dirpath_open, "%s/mmc_host", dirpath_open);
+	dir = opendir(dirpath_open);
+	if(dir == NULL) {
+		DBGMSG("%s open fail\n", dirpath_open);
+		return -1;
+	}
+	/*may be mmc0 or mmc1*/
+	while((de = readdir(dir))) {
+		if(strstr(de->d_name, "mmc") != NULL) {
+			sprintf(dirpath_open, "%s/%s", dirpath_open, de->d_name);
+			sprintf(path, "%s/mmc_host/%s", path, de->d_name);
+			break;
+		}
+	}
+	strncpy(tcard_name, de->d_name, sizeof(tcard_name)-1);
+	if(strlen(de->d_name) < 16) {
+		tcard_name[strlen(de->d_name)] = 0;
+	} else {
+		tcard_name[15] = 0;
+	}
+	closedir(dir);
+	dir = opendir(dirpath_open);/*open dir: sprd-sdhci.0/mmc_host/mmc0 or mmc1*/
+	if(dir == NULL) {
+		DBGMSG("%s open fail\n", dirpath_open);
+		return -1;
+	}
+	/* try to find: sprd-sdhci.0/mmc_host/mmcx/mmcx:xxxx,  if can find this dir ,T card work well */
+	while((de = readdir(dir))) {
+		if(strstr(de->d_name, tcard_name) == NULL) {
+			continue;
+		}
+		sprintf(dirpath_open, "%s/%s", dirpath_open, de->d_name);
+		sprintf(path, "%s/%s", path, de->d_name);
+		found = 1;
+		break;
+	}
+	closedir(dir);
+	sprintf(dirpath_open, "%s/block",dirpath_open);
+	dir = opendir(dirpath_open);
+	if(dir == NULL) {
+		DBGMSG("%s open fail\n", dirpath_open);
+		return -1;
+	}
+	while((de = readdir(dir)))/*may be mmcblk0 or mmcblk1*/
+	{
+		if(strstr(de->d_name, "mmcblk") != NULL)
+		{
+			sprintf(dirpath_open, "%s/%s", dirpath_open, de->d_name);
+			sprintf(path, "%s/block/%s", path, de->d_name);
+			break;
+		}
+	}
 	if (found) {
 		DBGMSG("the tcard dir is %s \n",path);
 		return 0;
@@ -89,13 +163,6 @@ int tcardIsPresent( void )
         return -1;
     }
     int present = -2;
-
-    char dirpath_2[] = TCARD_DEV_PATH_2;
-    char dirpath_3[] = TCARD_DEV_PATH_3;
-    char tcard_dev_path2[128];
-    char tcard_dev_path3[128];
-    sprintf(tcard_dev_path2, "%s/%s", TCARD_DEV_NAME, dirpath_2);
-    sprintf(tcard_dev_path3, "%s/%s", TCARD_DEV_NAME, dirpath_3);
     
     char realName[256];
     char linkName[128];
@@ -110,15 +177,19 @@ int tcardIsPresent( void )
 
         strncpy(pname, de->d_name, 64);
     
-        int len = readlink(linkName, realName, sizeof realName);
+        int len = readlink(linkName, realName, sizeof(realName)-1);
         if( len < 0 ) {
             ERRMSG("readlink error: %s(%d)\n", strerror(errno), errno);
             continue;
-        } 
-        realName[len] = 0;
+        }
+		if(len < 256) {
+			realName[len] = 0;
+		} else {
+			realName[255] = 0;
+		}
         
         DBGMSG("link name = %s, real name = %s, TCARD_DEV_NAME=%s\n", linkName, realName,TCARD_DEV_NAME);
-        if(( strstr(realName, tcard_dev_path2) != NULL ) || ( strstr(realName, tcard_dev_path3) != NULL )) {
+        if(strstr(realName, TCARD_DEV_NAME) != NULL) {
             present = 1;
             DBGMSG("TCard is present.\n");
             break;
