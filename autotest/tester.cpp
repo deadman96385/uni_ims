@@ -1080,10 +1080,13 @@ int testWIFI(const uchar * data, int data_len, uchar * rsp, int rsp_size)
     case 2: // inquire
         if( !(WIFI_STATUS_SCAN_END & wifiStatus) ) {
             if( !(WIFI_STATUS_SCANNING & wifiStatus) ) {
-                wifiAsyncScanAP();
+                ret = wifiAsyncScanAP();
             }
-            ret = 0;
         }
+		
+	/*if wifi don't successfully get the AP , it should be return fail*/
+	if(  !(WIFI_STATUS_SCAN_END & wifiStatus) )
+		ret = -1;
         break;
     case 3: // get inquired
     {
