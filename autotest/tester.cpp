@@ -161,7 +161,7 @@ enum auto_test_calibration_cmd_id {
 
     camera_handle = dlopen(path, RTLD_NOW | RTLD_GLOBAL);
 	if (!camera_handle){
-	char const *err_str = dlerror();
+	//char const *err_str = dlerror(); /*err_str is never used*/
 	
 		return -1;
 	}
@@ -947,7 +947,8 @@ int testLKBV(const uchar * data, int data_len, uchar * rsp, int rsp_size)
 	case 0x06: // mic
 	{
 		uchar state = headsetPlugState();
-		if (state >= 0){
+		/*state is unsigned, always equal-to or greater-than 0*/
+		/*if (state >= 0)*/{
 			rsp[0] = state;
 			ret = 1;
 		}

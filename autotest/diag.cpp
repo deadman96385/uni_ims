@@ -432,6 +432,7 @@ int diagParseData( uchar * data, int data_len, cmd_info_t ** pinfo )
     
     if( 0xFE == ppckt[6] && 0xEF == ppckt[7] ) {
         dbg_out_data = 1;
+		delete []ppckt;
         return -1;
     }
     

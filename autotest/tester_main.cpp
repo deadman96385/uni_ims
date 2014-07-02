@@ -58,6 +58,9 @@ int autotest_main( int argc, char *argv[] )
 						ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
 		if( sck < 0 || write(sck, hs, strlen(hs)) < 0 ) {
 			ERRMSG("error: sck = %d, errno = %d\n", sck, errno);
+			if(sck >= 0) {
+				close(sck);
+			}
 			usleep(1000 * 1000);
 			continue;
 		}

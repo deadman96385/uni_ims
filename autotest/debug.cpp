@@ -86,7 +86,7 @@ void dbgMsg2FileClose( void )
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-static char logcat_file[64];
+static char logcat_file[64+1];
 
 static void * logcatThread( void * param )
 {
@@ -103,6 +103,7 @@ static void * logcatThread( void * param )
 
 void dbgLogcat2File( const char * filename )
 {
+	logcat_file[64] = 0;
 	strncpy(logcat_file, filename, 64);
 
 	pthread_t      tid;
