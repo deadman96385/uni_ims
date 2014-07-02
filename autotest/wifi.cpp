@@ -217,12 +217,12 @@ int wifiSyncScanAP(struct wifi_ap_t * aps, int maxnum)
 
     reply[0] = 0;
     len = sizeof reply;
-	//-- don't care result anli 2013-03-05
-    //if( (wifiCommand("DRIVER SCAN-ACTIVE", reply, len) <= 0) || (NULL == strstr(reply, "OK")) ) {
-    //    ERRMSG("scan passive fail: %s\n", reply);
-    //    return -1;
-    //}
-	wifiCommand("DRIVER SCAN-ACTIVE", reply, len);
+    //-- don't care result anli 2013-03-05i
+    /*modify by sam.sun,20140702, reason: for solve coverity issue, just check the return value*/
+    if( (wifiCommand("DRIVER SCAN-ACTIVE", reply, len) <= 0) || (NULL == strstr(reply, "OK")) ) {
+        ERRMSG("scan passive fail: %s\n", reply);
+         //return -1;
+    }
 #endif
 
 	reply[0] = 0;
@@ -323,11 +323,12 @@ void * wifiEventLoop( void *param )
     
     #define EVT_MAX_LEN 127
     char evt[EVT_MAX_LEN + 1];
+    int len = 0;  
     
     evt[EVT_MAX_LEN] = 0;
     while( sEventLooping ) {
         evt[0] = 0;
-        wifi_wait_for_event(evt,EVT_MAX_LEN);
+        len = wifi_wait_for_event(evt,EVT_MAX_LEN);
         //INFMSG("event: %s\n", evt);
 /*
 		if( NULL != strstr(evt, "BSS-ADDED") ) {
@@ -338,7 +339,7 @@ void * wifiEventLoop( void *param )
             pthread_mutex_unlock(&sMutxEvent);
         }
 */
-        if( NULL != strstr(evt, "SCAN-RESULTS") ) {
+        if( (len > 0) &&(NULL != strstr(evt, "SCAN-RESULTS")) ) {
             //char reply[64];
             //wifiCommand("AP_SCAN 1", reply, 64);
 
