@@ -134,6 +134,7 @@ int tcard_get_dev_path(char*path)
 			break;
 		}
 	}
+	closedir(dir);
 	if (found) {
 		DBGMSG("the tcard dir is %s \n",path);
 		return 0;

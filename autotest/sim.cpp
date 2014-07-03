@@ -63,6 +63,7 @@ int simCheck( int index )
         
         if( write(fd, at, strlen(at)) < 0 ) {
             ERRMSG("write fail: %s\n", strerror(errno));
+			close(fd);
             ret = -1;
             break;
         }
