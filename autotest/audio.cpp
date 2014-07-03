@@ -326,6 +326,7 @@ int audRcrderOpen( int indev, int sampleRate )
         ALOGE("wangzuo:indev == AUD_INDEV_BUILTIN_MIC");
     } else {
         ALOGE("wangzuo receive command error");
+		return -2;
     }
 
 	status = sRcrder->set(input, sampleRate, AUD_RCRD_PCM, AUD_RCRD_CHL,
