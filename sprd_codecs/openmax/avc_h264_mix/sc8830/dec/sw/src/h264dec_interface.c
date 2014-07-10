@@ -181,6 +181,18 @@ MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, int32 *max_width, int32 *m
     return MMDEC_OK;
 }
 
+MMDecRet H264DecSetParameter(AVCHandle *avcHandle, MMDecVideoFormat * pVideoFormat)
+{
+	H264DecContext *img_ptr = NULL;
+	MMDecRet ret = MMDEC_OK;
+
+	SCI_ASSERT(NULL != pVideoFormat);
+	img_ptr = (H264DecContext *) avcHandle->videoDecoderData;
+	img_ptr->yuv_format = pVideoFormat->yuv_format;
+
+	return ret;
+}
+
 MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideoFormat * pVideoFormat)
 {
     H264DecContext *img_ptr = NULL;

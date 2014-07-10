@@ -93,6 +93,7 @@ void H264Dec_SetCurRecPic(AVCHandle *avcHandle, uint8	*pFrameY, uint8 *pFrameY_p
 MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int *nal_type, int *nal_ref_idc);
 MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo);
 MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, int32 *max_width, int32 *max_height);
+MMDecRet H264DecSetParameter(AVCHandle *avcHandle, MMDecVideoFormat * pVideoFormat);
 
 /*****************************************************************************/
 //  Description: Init h264 decoder

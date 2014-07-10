@@ -724,6 +724,7 @@ PUBLIC void H264Dec_ProcessSPS (H264DecObject *vo)
     {
         vo->g_old_pps_id = -1;
     }
+    vo->g_active_sps_ptr  = NULL;
 #if _MVC_
     if(vo->g_image_ptr->profile_idc < (int)vo->g_sps_ptr->profile_idc)
     {
