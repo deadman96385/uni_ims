@@ -562,6 +562,7 @@ PUBLIC MMDecRet H264Dec_process_sps (H264DecContext *img_ptr)
     {
         img_ptr->g_old_pps_id = -1;
     }
+    img_ptr->g_active_sps_ptr = NULL;
 
     img_ptr->profile_idc = sps_ptr->profile_idc;
     img_ptr->low_delay = 1;

@@ -127,7 +127,7 @@ PUBLIC MMDecRet H264Dec_init_dpb (H264DecContext *img_ptr, DEC_SPS_T *sps_ptr)
     for (i = 0; i < MAX_REF_FRAME_NUMBER+1; i++)
     {
         //each storable_picture buffer is bonding to a frame store
-        if (dpb_ptr->fs[i] == PNULL)
+        //if (dpb_ptr->fs[i] == PNULL)
         {
             dpb_ptr->fs[i] = (DEC_FRAME_STORE_T *)H264Dec_MemAlloc (img_ptr, sizeof(DEC_FRAME_STORE_T), 4, SW_CACHABLE);
             CHECK_MALLOC(dpb_ptr->fs[i], "dpb_ptr->fs[i]");

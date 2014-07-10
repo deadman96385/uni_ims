@@ -78,6 +78,7 @@ void MP4DecSetReferenceYUV(MP4Handle *mp4Handle, uint8 *pFrameY);
 void Mp4GetVideoDimensions(MP4Handle *mp4Handle, int32 *display_width, int32 *display_height);
 void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *height);
 MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *max_width, int32 *max_height);
+MMDecRet MP4DecSetParameter(MP4Handle *mp4Handle, MMDecVideoFormat * pVideoFormat);
 
 /*****************************************************************************/
 //  Description: Init mpeg4 decoder

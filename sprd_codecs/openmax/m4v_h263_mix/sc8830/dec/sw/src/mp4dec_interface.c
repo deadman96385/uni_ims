@@ -135,6 +135,17 @@ PUBLIC MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *max_width, in
     return MMDEC_OK;
 }
 
+MMDecRet MP4DecSetParameter(MP4Handle *mp4Handle, MMDecVideoFormat * pVideoFormat)
+{
+    Mp4DecObject *vo = (Mp4DecObject *) mp4Handle->videoDecoderData;
+    DEC_VOP_MODE_T *vop_mode_ptr = vo->vop_mode_ptr;
+    MMDecRet ret = MMDEC_OK;
+
+    vop_mode_ptr->yuv_format = pVideoFormat->yuv_format;
+
+    return ret;
+}
+
 PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer *buffer_ptr)
 {
     Mp4DecObject *vo;
