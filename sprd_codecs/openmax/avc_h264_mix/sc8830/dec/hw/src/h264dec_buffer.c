@@ -819,6 +819,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_short_term_pic (H264DecObject *vo, int
     {
         if (dpb_ptr->fs_ref[i] == NULL)
         {
+            SCI_TRACE_LOW("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
             vo->error_flag |= ER_REF_FRM_ID;
             return NULL;//weihu//return g_no_reference_picture_ptr
         }
@@ -827,6 +828,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_short_term_pic (H264DecObject *vo, int
         {
             if (dpb_ptr->fs_ref[i]->frame == NULL)
             {
+                SCI_TRACE_LOW("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
                 vo->error_flag |= ER_REF_FRM_ID;
                 return NULL;//weihu
             }
@@ -881,6 +883,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_long_term_pic (H264DecObject *vo, int3
     {
         if (p_Dpb->fs_ltref[i] == NULL)
         {
+            SCI_TRACE_LOW("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
             vo->error_flag |= ER_REF_FRM_ID;
             return NULL;
         }
@@ -889,6 +892,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_long_term_pic (H264DecObject *vo, int3
         {
             if (p_Dpb->fs_ltref[i]->frame == NULL)
             {
+                SCI_TRACE_LOW("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
                 vo->error_flag |= ER_REF_FRM_ID;
                 return NULL;
             }
@@ -1130,7 +1134,7 @@ LOCAL void H264Dec_reorder_ref_pic_list (H264DecObject *vo,
     {
         if (remapping_of_pic_nums_idc[i]>3)
         {
-            PRINTF ("Invalid remapping_of_pic_nums_idc command");
+            SCI_TRACE_LOW("Invalid remapping_of_pic_nums_idc command");
             vo->error_flag |= ER_REF_FRM_ID;
             return;
         }
@@ -1216,6 +1220,7 @@ LOCAL void H264Dec_map_list1(H264DecObject *vo)
     if((vo->g_list_size[0] == 0) && (vo->g_list_size[1] == 0))//for error // 不考虑对B/P slice 全Intra MB 情况支持
     {
         vo->error_flag |= ER_REF_FRM_ID;
+        SCI_TRACE_LOW("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
         return;
     }
 

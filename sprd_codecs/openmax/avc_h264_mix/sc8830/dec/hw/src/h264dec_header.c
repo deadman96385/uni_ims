@@ -104,6 +104,7 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
 
     if (vo->error_flag)
     {
+        SCI_TRACE_LOW("%s, %d, error_flag=0x%x", __FUNCTION__, __LINE__, vo->error_flag);
         return -1;
     }
 #endif

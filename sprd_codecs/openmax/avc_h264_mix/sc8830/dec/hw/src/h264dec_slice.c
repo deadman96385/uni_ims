@@ -65,6 +65,7 @@ PUBLIC int32 H264Dec_Process_slice (H264DecObject *vo)
 
     if (vo->error_flag)
     {
+        SCI_TRACE_LOW("%s, %d, error_flag=0x%x", __FUNCTION__, __LINE__, vo->error_flag);
         return -1;
     }
 
@@ -107,6 +108,7 @@ PUBLIC int32 H264Dec_Process_slice (H264DecObject *vo)
 
     if (vo->error_flag)
     {
+        SCI_TRACE_LOW("%s, %d, error_flag=0x%x", __FUNCTION__, __LINE__, vo->error_flag);
         return -1;
     }
 
@@ -832,6 +834,7 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
 
     if (vo->error_flag)
     {
+        SCI_TRACE_LOW("%s, %d, error_flag=0x%x", __FUNCTION__, __LINE__, vo->error_flag);
         return MMDEC_ERROR;
     }
 
@@ -893,6 +896,7 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
 
     if (vo->error_flag)
     {
+        SCI_TRACE_LOW("%s, %d, error_flag=0x%x", __FUNCTION__, __LINE__, vo->error_flag);
         return MMDEC_ERROR;
     }
 
