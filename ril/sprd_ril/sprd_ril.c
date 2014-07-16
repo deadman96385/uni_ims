@@ -6507,8 +6507,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_SET_PREFERRED_NETWORK_TYPE:
             {
                 char cmd[30] = {0};
-                if (!strcmp(s_modem, "l") ||
-                    (!strcmp(s_modem, "t") && isSvLte())) {
+                if (isLte()) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                     break;
                 }
@@ -6597,8 +6596,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_GET_PREFERRED_NETWORK_TYPE:
             {
                 int response = 0;
-                if (!strcmp(s_modem, "l") ||
-                    (!strcmp(s_modem, "t") && isSvLte())) {
+                if (isLte()) {
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                     break;
                 }
