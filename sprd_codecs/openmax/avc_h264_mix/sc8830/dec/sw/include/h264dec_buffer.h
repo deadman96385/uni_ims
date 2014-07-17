@@ -29,11 +29,14 @@ extern   "C"
 
 #define H264DEC_UNBIND_FRAME(img_ptr, frame)\
 {\
-				    if(((frame)->pBufferHeader!=NULL)&&((*(img_ptr->avcHandle->VSP_unbindCb)) != NULL))\
-			  {\
-			       (*((img_ptr)->avcHandle->VSP_unbindCb))((img_ptr)->avcHandle->userdata,(frame)->pBufferHeader);\
-(frame)->pBufferHeader = NULL;\
-}\
+    if(frame)\
+    {\
+        if(((frame)->pBufferHeader!=NULL)&&((*(img_ptr->avcHandle->VSP_unbindCb)) != NULL))\
+        {\
+            (*((img_ptr)->avcHandle->VSP_unbindCb))((img_ptr)->avcHandle->userdata,(frame)->pBufferHeader);\
+            (frame)->pBufferHeader = NULL;\
+        }\
+    }\
 }
 
 #define H264DEC_BIND_FRAME(img_ptr, frame)\
