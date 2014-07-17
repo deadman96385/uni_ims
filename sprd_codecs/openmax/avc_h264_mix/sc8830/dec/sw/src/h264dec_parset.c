@@ -105,6 +105,13 @@ LOCAL void H264Dec_active_sps (DEC_SPS_T *sps_ptr, H264DecContext *img_ptr)
         img_ptr->g_active_sps_ptr = sps_ptr;
         img_ptr->g_MbToSliceGroupMap = NULL;
 
+        //Added for bug333874
+        H264Dec_clear_delayed_buffer(img_ptr);
+        if (!img_ptr->no_output_of_prior_pics_flag)
+        {
+            H264Dec_flush_dpb(img_ptr, img_ptr->g_dpb_ptr);
+        }
+
         if(img_ptr->avcHandle->VSP_extMemCb)
         {
             uint32 size_extra;
@@ -137,11 +144,6 @@ LOCAL void H264Dec_active_sps (DEC_SPS_T *sps_ptr, H264DecContext *img_ptr)
             img_ptr->error_flag |= ER_EXTRA_MEMO_ID;
             img_ptr->return_pos2 |= (1<<27);
             return;
-        }
-
-        if (!img_ptr->no_output_of_prior_pics_flag)
-        {
-            H264Dec_flush_dpb(img_ptr, img_ptr->g_dpb_ptr);
         }
 
         if (H264Dec_init_dpb (img_ptr, sps_ptr) != MMDEC_OK)
