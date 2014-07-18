@@ -9317,8 +9317,8 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         char *tmp;
 
         RILLOGD("SPERROR for SS");
-        if (ussdRun != 1)
-            return;
+        //if (ussdRun != 1)
+        //    return;
 
         line = strdup(s);
         tmp = line;
@@ -9336,6 +9336,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_PS_REJECT, NULL, 0);
         } else if (type == 1) {
             err = at_tok_nextint(&tmp, &err_code);
+            RILLOGD("SPERROR type = 1 and err_code = %d", err_code);
             if (err < 0) goto out;
             if ((err_code == 3) || (err_code == 6) || (err_code == 7) || (err_code == 8)) { // it means ps business in this sim/usim is rejected by network
                 RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_PS_REJECT, NULL, 0);
@@ -9345,6 +9346,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
         /* SPRD : for svlte & csfb @{ */
         err = at_tok_nextint(&tmp, &err_code);
+        RILLOGD("SPERROR err_code = %d", err_code);
         if (err < 0) goto out;
         if ((err_code == 3) || (err_code == 6) || (err_code == 7) || (err_code == 8)) { // it means ps business in this sim/usim is rejected by network
             RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_PS_REJECT, NULL, 0);

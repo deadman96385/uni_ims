@@ -29,6 +29,7 @@ namespace android {
 #define RIL_LTE_CEREG_PROP               "ril.lte.cereg.state"
 #define LTE_RADIO_POWER_TOKEN            0x00FFFFFE
 #define LTE_SCREEN_STATE_TOKEN           0x00FFFFFD
+#define LTE_SIM_POWER_TOKEN              0x00FFFFFC
 
 static int sRILPServerFd = -1;
 static int sTdGClientFd  = -1;
@@ -457,6 +458,17 @@ static int  send_lte_enable_response(int token, int result) {
     return write_data (sRILPServerFd, (void *)rspbuf, error == 0 ? 20 : 12);
 }
 
+static int  send_lte_sim_power(int poweron) {
+
+    Parcel p;
+    p.writeInt32(RIL_REQUEST_SIM_POWER);
+    p.writeInt32(LTE_RADIO_POWER_TOKEN);
+    p.writeInt32(1);
+    p.writeInt32(poweron);
+
+    return write_data (sLteClientFd, p.data(), p.dataSize());
+}
+
 static int  send_lte_radio_power(int poweron, int autoatt) {
 
     Parcel p;
@@ -866,6 +878,10 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
             sParcelSimSmsReady.setData((uint8_t *) rspbuf, nlen);
         }
         break;
+      case RIL_UNSOL_SIM_PS_REJECT:
+          ALOGE("RIL_UNSOL_SIM_PS_REJECT: power off radio and Icc Card");
+          send_lte_radio_power(0,0);
+          send_lte_sim_power(0);
     }
 }
 
