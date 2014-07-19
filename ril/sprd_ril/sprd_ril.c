@@ -1461,8 +1461,31 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
             if (isCSFB() && getSimType(channelID) != RIL_APPTYPE_USIM) {
                 RILLOGE("USIM card is required in CSFB Mode.");
                 goto error;
-            } else
-               err = at_send_command(ATch_type[channelID],  "AT+SFUN=4", &p_response);
+            } else {
+                bool isSimCmcc = false;
+                err = at_send_command_numeric(ATch_type[channelID], "AT+CIMI", &p_response);
+                if (err < 0 || p_response->success == 0) {
+                    RILLOGE("requestRadioPower AT+CIMI return ERROR");
+                    goto error;
+                } else {
+                    char* imsi = p_response->p_intermediates->line;
+                    int imsiLength = strlen(imsi);
+                    RILLOGD("requestRadioPower--IMSI:[%s]", imsi);
+                    if (imsiLength > 5
+                            && (strStartsWith(imsi, "46000")
+                                    || strStartsWith(imsi, "46002")
+                                    || strStartsWith(imsi, "46007"))) {
+                        isSimCmcc = true;
+                    }
+                }
+                if (isSimCmcc) {
+                    err = at_send_command(ATch_type[channelID], "AT+SFUN=4", &p_response);
+                } else {
+                    err = at_send_command(ATch_type[channelID], "AT+SFUN=3", &p_response);
+                    RILLOGE("LTE radio should be powered by CMCC USIM Card!");
+                    goto error;
+                }
+            }
         }
         if (err < 0|| p_response->success == 0) {
             /* Some stacks return an error when there is no SIM,
