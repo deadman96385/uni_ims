@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"セキュリティの選択"</string>
+<string name="action_settings">"設定"</string>
+<string name="hello_world">"アプリケーション用の端末サポートシステムのインターフェースにてデータ接続にアクセス、または開くと、処理迅速メカニズムに関連するユーザー情報のセキュリティに影響することがあります。いくつかのアプリケーションを開くとユーザーの体感度に影響を及ぼすこともあります、必要に応じてセキィリティ性能配置アプリケーション上で、それをオンまたはオフにしてください。"</string>
+<string name="timer">"残り時間:"</string>
+<string name="No">"いいえ"</string>
+<string name="Yes">"はい"</string>
+<string name="second">"s"</string>
+<string name="cancel">"キャンセル"</string>
+</resources>

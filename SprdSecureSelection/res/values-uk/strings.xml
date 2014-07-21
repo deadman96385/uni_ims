@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Вибір захисту"</string>
+<string name="action_settings">Настройки</string>
+<string name="hello_world">"Даний термінал підтримує систему інтерфейсу для доступу до додатку, або відкриває підєднання до даних, що може вплинути на безпеку інформації користувача в механізмі проведення підказок, якщо ви відкриєте деякі додатки, які можуть впливати на досвід користувача. БУдь-ласка, при необхідності увімкніть Ввімкн. або Вимкн. на додаток щодо конфігурації можливостей безпеки."</string>
+<string name="timer">"Час, що залишився:"</string>
+<string name="No">"Ні"</string>
+<string name="Yes">"да"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Скасувати"</string>
+</resources>
