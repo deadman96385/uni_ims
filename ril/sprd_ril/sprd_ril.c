@@ -1430,9 +1430,27 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
     } else if (onOff > 0 && sState == RADIO_STATE_OFF) {
          /* SPRD : for svlte & csfb @{ */
         setCeMode(channelID);
+        bool isSimCUCC = false;
+        err = at_send_command_numeric(ATch_type[channelID], "AT+CIMI", &p_response);
+        if (err < 0 || p_response->success == 0) {
+            RILLOGE("requestRadioPower AT+CIMI return ERROR");
+            goto error;
+        } else {
+            char* imsi = p_response->p_intermediates->line;
+            int imsiLength = strlen(imsi);
+            RILLOGD("requestRadioPower--IMSI:[%s]", imsi);
+            if (imsiLength > 5
+                    && (strStartsWith(imsi, "46001")
+                            || strStartsWith(imsi, "46006")
+                            || strStartsWith(imsi, "46009"))) {
+                isSimCUCC = true;
+            }
+        }
         if (isSvLte()) {
           // if svlte, auto-attach is decided by framework
-            if(autoAttach == 1) {
+            if (strcmp(s_modem, "l") && isSimCUCC) {
+                err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
+            } else if(autoAttach == 1) {
                 RIL_AppType apptype = getSimType(channelID);
                 err = at_send_command(ATch_type[channelID], apptype == RIL_APPTYPE_USIM ? "AT+SAUTOATT=0" : "AT+SAUTOATT=1", &p_response);
             } else {
@@ -1462,27 +1480,16 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
                 RILLOGE("USIM card is required in CSFB Mode.");
                 goto error;
             } else {
-                bool isSimCmcc = false;
-                err = at_send_command_numeric(ATch_type[channelID], "AT+CIMI", &p_response);
-                if (err < 0 || p_response->success == 0) {
-                    RILLOGE("requestRadioPower AT+CIMI return ERROR");
-                    goto error;
-                } else {
-                    char* imsi = p_response->p_intermediates->line;
-                    int imsiLength = strlen(imsi);
-                    RILLOGD("requestRadioPower--IMSI:[%s]", imsi);
-                    if (imsiLength > 5
-                            && (strStartsWith(imsi, "46000")
-                                    || strStartsWith(imsi, "46002")
-                                    || strStartsWith(imsi, "46007"))) {
-                        isSimCmcc = true;
-                    }
-                }
-                if (isSimCmcc) {
+                if (!isSimCUCC) {
                     err = at_send_command(ATch_type[channelID], "AT+SFUN=4", &p_response);
                 } else {
                     err = at_send_command(ATch_type[channelID], "AT+SFUN=3", &p_response);
                     RILLOGE("LTE radio should be powered by CMCC USIM Card!");
+
+                    int lteState = 0;
+                    RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteState, 4);
+                    RILLOGE("Unsolicited LTE ready is false!");
+
                     goto error;
                 }
             }
