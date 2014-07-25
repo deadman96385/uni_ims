@@ -789,9 +789,18 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
 			ALOGD("Received RIL_UNSOL_SIGNAL_STRENGTH isfromTdg = %d", isfromTdg);
 			mergeSignalStrength(p, isfromTdg);
 			write_data (sRILPServerFd, p.data(), p.dataSize());
+		} else if (RIL_UNSOL_SIM_PS_REJECT == rspId && !isfromTdg) {
+			ALOGD("Received RIL_UNSOL_SIM_PS_REJECT isfromTdg: %d", isfromTdg);
+			Parcel ps;
+			ps.writeInt32(1);
+			ps.writeInt32(RIL_UNSOL_LTE_READY);
+			ps.writeInt32(1);
+			ps.writeInt32(0);
+			write_data(sRILPServerFd, ps.data(), ps.dataSize());
 		} else {
-			write_data (sRILPServerFd, rspbuf, nlen);
-		}
+		    write_data (sRILPServerFd, rspbuf, nlen);
+        }
+
 		ALOGD("Unsolicited response has sent !");
 	}
 
