@@ -1434,7 +1434,6 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         err = at_send_command_numeric(ATch_type[channelID], "AT+CIMI", &p_response);
         if (err < 0 || p_response->success == 0) {
             RILLOGE("requestRadioPower AT+CIMI return ERROR");
-            goto error;
         } else {
             char* imsi = p_response->p_intermediates->line;
             int imsiLength = strlen(imsi);
