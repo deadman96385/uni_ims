@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"BiztonságVálasztás"</string>
+<string name="action_settings">"Beállítások"</string>
+<string name="hello_world">"Ez a terminál támogatja az alkalmazás-hozzáférési rendszerfelületet vagy adatkapcsolat megnyitást, ami hatással lehet a kérési mechanizmussal kapcsolatos felhasználói információkra. Egyes alkalmazások megnyitása hatással lehet a felhasználói élményre. Szükség esetén kapcsolja be vagy ki a biztonság-konfigurációs alkalmazásban."</string>
+<string name="timer">"Hátralévő idő:"</string>
+<string name="No">"Nem"</string>
+<string name="Yes">"Igen"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Mégse"</string>
+</resources>

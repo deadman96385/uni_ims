@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"સુરક્ષા પસંદ કરો"</string>
+<string name="action_settings">સેટિંગ્સ</string>
+<string name="hello_world">" ટર્મીનલ એપ્લીકેશન ઍક્સેસ માટે સિસ્ટમ ઇન્ટરફેસને ટેકો આપે છે અથવા ડેટા જોડાણ ખોલે છે, જે તત્પરતા હાથ ધરવાની પદ્ધતિમાં યૂઝરની માહિતી સંબંધિત સુરક્ષાને માઠી અસર પહોંચાડી શકે છે, જો તમે યૂઝરના અનુભવને માઠી અસર પહોંચાડે તેવી કેટલીક એપ્લીકેશનો ખોલો તો જરૂર હોય તો કૃપા કરીને તેને સુરક્ષા ક્ષમતા સંરચના એપ્લીકેશન પર ચાલુ અથવા બંધ કરો."</string>
+<string name="timer">"બાકીનો સમય"</string>
+<string name="No">ના</string>
+<string name="Yes">"હા"</string>
+<string name="second">"s"</string>
+<string name="cancel">રદ્દ કરવું</string>
+</resources>
