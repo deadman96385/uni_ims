@@ -1008,6 +1008,14 @@ static void process_request(void *reqbuf, int nlen) {
             ALOGD("sTdScreenStateSent: onoff = %d", onoff);
             sTdScreenStateSent = (onoff == 0 ? 1 : 0);
             ALOGD("sTdScreenStateSent = %d", sTdScreenStateSent);
+            if(sLteClientFd  != -1){
+                Parcel p;
+                p.writeInt32(RIL_REQUEST_SCREEN_STATE);
+                p.writeInt32(LTE_SCREEN_STATE_TOKEN);
+                p.writeInt32(1);
+                p.writeInt32(onoff);
+                write_data (sLteClientFd, p.data(), p.dataSize());
+            }
             pthread_mutex_unlock(&sScreenStateMutex);
         }
     }
