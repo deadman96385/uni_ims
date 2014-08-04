@@ -48,6 +48,9 @@ static Parcel  sParcelRadioState;
 static Parcel  sParcelSimState;
 static Parcel  sParcelSimSmsReady;
 
+static int state_td = -1;
+static int state_lte = -1;
+
 static RecordStream *sReqRecordStream = NULL;
 static pthread_mutex_t sWriteMutex    = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t sReqTDGLTEMutex= PTHREAD_MUTEX_INITIALIZER;
@@ -781,7 +784,7 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
 
 	if ((sRILPServerFd != -1) &&
             ((isfromTdg  && is_tdg_unsolicited(rspId)) ||
-	    (!isfromTdg && is_lte_unsolicited(rspId))) ){
+	    (!isfromTdg && is_lte_unsolicited(rspId))) && (RIL_UNSOL_RESPONSE_RADIO_STATE_CHANGED != rspId)){
 		/* Add for dual signal bar */
 		if(rspId == RIL_UNSOL_SIGNAL_STRENGTH) {
 			ALOGD("Received RIL_UNSOL_SIGNAL_STRENGTH isfromTdg = %d", isfromTdg);
@@ -798,7 +801,6 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
 		} else {
 		    write_data (sRILPServerFd, rspbuf, nlen);
         }
-
 		ALOGD("Unsolicited response has sent !");
 	}
 
@@ -869,8 +871,22 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
         break;
 
       case RIL_UNSOL_RESPONSE_RADIO_STATE_CHANGED:
-        if (sRILPServerFd == -1 && isfromTdg) {
+        ALOGD("RIL_UNSOL_RESPONSE_RADIO_STATE_CHANGED");
+        if (isfromTdg) {
+            p.readInt32(&state_td);
+        } else {
+            p.readInt32(&state_lte);
+        }
+        ALOGD("sRILPServerFd = %d sPSEnable = %d isfromTdg = %d state_td = %d state_lte = %d",
+                sRILPServerFd, sPSEnable, isfromTdg, state_td, state_lte);
+        if (sRILPServerFd == -1) {
             sParcelRadioState.setData((uint8_t *) rspbuf, nlen);
+        } else {
+            if ((sPSEnable == PS_LTE_ENABLE) && (state_td == state_lte)) {
+                write_data(sRILPServerFd, rspbuf, nlen);
+            } else if (sPSEnable == PS_TD_ENABLE) {
+                write_data(sRILPServerFd, rspbuf, nlen);
+            }
         }
         break;
 
@@ -890,6 +906,7 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
           ALOGE("RIL_UNSOL_SIM_PS_REJECT: power off radio and Icc Card");
           send_lte_radio_power(0,0);
           send_lte_sim_power(0);
+        break;
     }
 }
 
