@@ -47,7 +47,7 @@ typedef enum {
 #define    SEND_AT_TO_LTE_SBAND1               "AT+SBAND=1,12"
 //#define    SEND_AT_TO_LTE_SGMR_R               "AT+SGMR=1,0,3,3"
 //#define    SEND_AT_TO_LTE_SGMR_W               "AT+SGMR=1,1,3,3"
-#define    SEND_AT_TO_LTE_LTECFG               "AT+SPLTECFG?"
+#define    SEND_AT_TO_LTE_LTECFG               "AT+SPLTECFG"
 
 /* RILProxy  */
 typedef struct {
