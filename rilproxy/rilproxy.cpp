@@ -880,11 +880,13 @@ static void unsolicited_response (void *rspbuf, int nlen, int isfromTdg) {
         ALOGD("sRILPServerFd = %d sPSEnable = %d isfromTdg = %d state_td = %d state_lte = %d",
                 sRILPServerFd, sPSEnable, isfromTdg, state_td, state_lte);
         if (sRILPServerFd == -1) {
-            sParcelRadioState.setData((uint8_t *) rspbuf, nlen);
+            if(isfromTdg){
+                sParcelRadioState.setData((uint8_t *) rspbuf, nlen);
+            }
         } else {
             if ((sPSEnable == PS_LTE_ENABLE) && (state_td == state_lte)) {
                 write_data(sRILPServerFd, rspbuf, nlen);
-            } else if (sPSEnable == PS_TD_ENABLE) {
+            } else if (sPSEnable == PS_TD_ENABLE && isfromTdg) {
                 write_data(sRILPServerFd, rspbuf, nlen);
             }
         }
