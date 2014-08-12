@@ -61,6 +61,58 @@ typedef struct
     uint32 has_b_frames;
 } H264SwDecInfo;
 
+/**
+This enumeration is for profiles. The value follows the profile_idc  in sequence
+parameter set rbsp. See Annex A.
+@publishedAll
+*/
+typedef enum
+{
+    AVC_BASELINE = 66,
+    AVC_MAIN = 77,
+    AVC_EXTENDED = 88,
+    AVC_HIGH = 100,
+    AVC_HIGH10 = 110,
+    AVC_HIGH422 = 122,
+    AVC_HIGH444 = 144
+}
+AVCProfile;
+
+/**
+This enumeration is for levels. The value follows the level_idc in sequence
+parameter set rbsp. See Annex A.
+@published All
+*/
+typedef enum
+{
+    AVC_LEVEL_AUTO = 0,
+    AVC_LEVEL1_B = 9,
+    AVC_LEVEL1 = 10,
+    AVC_LEVEL1_1 = 11,
+    AVC_LEVEL1_2 = 12,
+    AVC_LEVEL1_3 = 13,
+    AVC_LEVEL2 = 20,
+    AVC_LEVEL2_1 = 21,
+    AVC_LEVEL2_2 = 22,
+    AVC_LEVEL3 = 30,
+    AVC_LEVEL3_1 = 31,
+    AVC_LEVEL3_2 = 32,
+    AVC_LEVEL4 = 40,
+    AVC_LEVEL4_1 = 41,
+    AVC_LEVEL4_2 = 42,
+    AVC_LEVEL5 = 50,
+    AVC_LEVEL5_1 = 51
+} AVCLevel;
+
+// Decoder video capability structure
+typedef struct
+{
+    AVCProfile profile;
+    AVCLevel   level;
+    int32 max_width;
+    int32 max_height;
+} MMDecCapability;
+
 /* Application controls, this structed shall be allocated */
 /*    and initialized in the application.                 */
 typedef struct tagAVCHandle
@@ -92,7 +144,7 @@ MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picI
 void H264Dec_SetCurRecPic(AVCHandle *avcHandle, uint8	*pFrameY, uint8 *pFrameY_phy,void *pBufferHeader, int32 picId);
 MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int *nal_type, int *nal_ref_idc);
 MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo);
-MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, int32 *max_width, int32 *max_height);
+MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, MMDecCapability *Capability);
 
 /*****************************************************************************/
 //  Description: Init h264 decoder

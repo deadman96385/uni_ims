@@ -171,26 +171,29 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 
 }
 
-MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, int32 *max_width, int32 *max_height)
+MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, MMDecCapability *Capability)
 {
     H264DecContext *img_ptr = (H264DecContext *)(avcHandle->videoDecoderData);
 
     //can support 1080p
-    *max_width = 1920;
-    *max_height = 1088;
+    Capability->max_width = 1920;
+    Capability->max_height = 1088;
+    Capability->profile = AVC_HIGH;
+    Capability->level = AVC_LEVEL4_1;
+
     return MMDEC_OK;
 }
 
 MMDecRet H264DecSetParameter(AVCHandle *avcHandle, MMDecVideoFormat * pVideoFormat)
 {
-	H264DecContext *img_ptr = NULL;
-	MMDecRet ret = MMDEC_OK;
+    H264DecContext *img_ptr = NULL;
+    MMDecRet ret = MMDEC_OK;
 
-	SCI_ASSERT(NULL != pVideoFormat);
-	img_ptr = (H264DecContext *) avcHandle->videoDecoderData;
-	img_ptr->yuv_format = pVideoFormat->yuv_format;
+    SCI_ASSERT(NULL != pVideoFormat);
+    img_ptr = (H264DecContext *) avcHandle->videoDecoderData;
+    img_ptr->yuv_format = pVideoFormat->yuv_format;
 
-	return ret;
+    return ret;
 }
 
 MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideoFormat * pVideoFormat)

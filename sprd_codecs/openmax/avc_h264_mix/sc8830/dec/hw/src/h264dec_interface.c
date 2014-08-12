@@ -167,29 +167,38 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 
 }
 
-MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, int32 *max_width, int32 *max_height)
+MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, MMDecCapability *Capability)
 {
     H264DecObject *vo = (H264DecObject *)avcHandle->videoDecoderData;
 
     int32 codec_capability = vo->vsp_capability;
+
     if (codec_capability == 0)   //limited under 720p
     {
-        *max_width = 1280;
-        *max_height = 1023; //720;
+        Capability->max_width = 1280;
+        Capability->max_height = 1023; //720;
+        Capability->profile = AVC_HIGH;
+        Capability->level = AVC_LEVEL3_1;
     } else if (codec_capability == 1)   //limited under 1080p
     {
-        *max_width = 1920;
-        *max_height = 1088;
-    }
-    else if (codec_capability == 2)   //limited under 1080p
+        Capability->max_width = 1920;
+        Capability->max_height = 1088;
+        Capability->profile = AVC_HIGH;
+        Capability->level = AVC_LEVEL4_1;
+    } else if (codec_capability == 2)   //limited under 1080p
     {
-        *max_width = 1920;
-        *max_height = 1088;
+        Capability->max_width = 1920;
+        Capability->max_height = 1088;
+        Capability->profile = AVC_HIGH;
+        Capability->level = AVC_LEVEL4_1;
     } else
     {
-        *max_width = 352;
-        *max_height = 288;
+        Capability->max_width = 352;
+        Capability->max_height = 288;
+        Capability->profile = AVC_BASELINE;
+        Capability->level = AVC_LEVEL2;
     }
+
     return MMDEC_OK;
 }
 
