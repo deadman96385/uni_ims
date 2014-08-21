@@ -19,7 +19,7 @@ endif
 
 LOCAL_MODULE:= librilproxy
 LOCAL_MODULE_TAGS := optional
-LOCAL_LDLIBS += -lpthread
+#LOCAL_LDLIBS += -lpthread
 include $(BUILD_SHARED_LIBRARY)
 
 
@@ -40,6 +40,6 @@ LOCAL_MODULE_TAGS := optional
 
 LOCAL_MODULE := rilproxyd
 
-LOCAL_LDLIBS += -lpthread
+#LOCAL_LDLIBS += -lpthread
 
 include $(BUILD_EXECUTABLE)

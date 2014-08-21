@@ -66,8 +66,8 @@ LOCAL_C_INCLUDES:= \
 
 LOCAL_SHARED_LIBRARIES:= \
     libbinder \
-    libbt-utils\
-    libbt-hci\
+#    libbt-utils\
+#    libbt-hci\
     libcamera_client \
     libcutils    \
     libdl        \
@@ -78,5 +78,9 @@ LOCAL_SHARED_LIBRARIES:= \
     libui    \
     libutils 
 
-include $(BUILD_EXECUTABLE)
+LOCAL_STATIC_LIBRARIES:= \
+    libbt-utils\
+    libbt-hci
+
+#include $(BUILD_EXECUTABLE)
 
