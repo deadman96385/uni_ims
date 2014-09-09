@@ -4421,7 +4421,7 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
 
 #else
     if(s_sim_num > 0) {
-#if 1
+#if 0
         snprintf(s_name_ril, sizeof(s_name_ril), "%srild%d", s_modem, s_sim_num);
         snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "%srild-debug%d", s_modem, s_sim_num);
 #else
@@ -4429,7 +4429,7 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
         snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "rild-debug%d", s_sim_num);
 #endif
     } else {
-#if 1
+#if 0
         snprintf(s_name_ril, sizeof(s_name_ril), "%srild", s_modem);
         snprintf(s_name_ril_debug, sizeof(s_name_ril_debug), "%srild-debug", s_modem);
 #else
