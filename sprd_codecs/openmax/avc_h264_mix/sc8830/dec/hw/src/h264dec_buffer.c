@@ -88,9 +88,9 @@ PUBLIC MMDecRet H264Dec_init_img_buffer (H264DecObject *vo)
 
     for(i =0; i < buffer_num; i++)
     {
-        direct_mb_info_v = H264Dec_MemAlloc (vo, buffer_size, 8, HW_NO_CACHABLE);
+        direct_mb_info_v = (uint8 *)H264Dec_MemAlloc (vo, buffer_size, 8, HW_NO_CACHABLE);
         CHECK_MALLOC(direct_mb_info_v, "direct_mb_info_v");
-        vo->direct_mb_info_addr[i] = (uint32)H264Dec_MemV2P(vo, direct_mb_info_v, HW_NO_CACHABLE);
+        vo->direct_mb_info_addr[i] = (uint_32or64)H264Dec_MemV2P(vo, direct_mb_info_v, HW_NO_CACHABLE);
     }
 
     vo->g_cavlc_tbl_ptr = (uint32 *)H264Dec_MemAlloc(vo, sizeof(uint32)*69, 8, HW_NO_CACHABLE);
@@ -140,9 +140,9 @@ PUBLIC MMDecRet H264Dec_init_dpb (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_
         dpb_ptr->fs[i]->frame->imgY = PNULL;
         dpb_ptr->fs[i]->frame->imgU = PNULL;
         dpb_ptr->fs[i]->frame->imgV = PNULL;
-        dpb_ptr->fs[i]->frame->imgYAddr = (uint32)dpb_ptr->fs[i]->frame->imgY>>8;  //y;
-        dpb_ptr->fs[i]->frame->imgUAddr = (uint32)dpb_ptr->fs[i]->frame->imgU>>8;  //u;
-        dpb_ptr->fs[i]->frame->imgVAddr = (uint32)dpb_ptr->fs[i]->frame->imgV>>8;  //v;
+        dpb_ptr->fs[i]->frame->imgYAddr = (uint_32or64)dpb_ptr->fs[i]->frame->imgY>>8;  //y;
+        dpb_ptr->fs[i]->frame->imgUAddr = (uint_32or64)dpb_ptr->fs[i]->frame->imgU>>8;  //u;
+        dpb_ptr->fs[i]->frame->imgVAddr = (uint_32or64)dpb_ptr->fs[i]->frame->imgV>>8;  //v;
 #if _MVC_
         dpb_ptr->fs[i]->view_id = -1;//MVC_INIT_VIEW_ID;
         dpb_ptr->fs[i]->inter_view_flag[0] = dpb_ptr->fs[i]->inter_view_flag[1] = 0;
@@ -238,7 +238,7 @@ LOCAL void H264Dec_get_smallest_poc (H264DecObject *vo, int32 *poc, int32 * pos,
 
     if (dpb_ptr->used_size<1)
     {
-        SCI_TRACE_LOW ("Cannot determine smallest POC, DPB empty.");
+        SCI_TRACE_LOW ("Cannot determine smallest POC, DPB empty.\n");
         vo->error_flag |= ER_REF_FRM_ID;
         return;
     }
@@ -1041,7 +1041,7 @@ LOCAL void H264Dec_reorder_ref_pic_list_mvc (H264DecObject *vo,
     {
         if (remapping_of_pic_nums_idc[i]>5)
         {
-            SCI_TRACE_LOW ("Invalid remapping_of_pic_nums_idc command");
+            SCI_TRACE_LOW ("Invalid remapping_of_pic_nums_idc command\n");
             vo->error_flag |= ER_REF_FRM_ID;
             return;
         }

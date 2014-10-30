@@ -81,7 +81,7 @@ MMEncRet H264EncPreInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr)
     vo->avcHandle = avcHandle;
 
     pInterMemBfr->common_buffer_ptr += sizeof(H264EncObject);
-    pInterMemBfr->common_buffer_ptr_phy = (void *)((uint32)(pInterMemBfr->common_buffer_ptr_phy) + sizeof(H264EncObject));
+    pInterMemBfr->common_buffer_ptr_phy = (void *)((uint_32or64)(pInterMemBfr->common_buffer_ptr_phy) + sizeof(H264EncObject));
     pInterMemBfr->size -= sizeof(H264EncObject);
 
     ret = H264Enc_InitMem(vo, pInterMemBfr, INTER_MEM);
@@ -138,7 +138,7 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
     vo->g_h264_enc_config = (MMEncConfig *)H264Enc_MemAlloc (vo, sizeof(MMEncConfig), 8, INTER_MEM);
     CHECK_MALLOC(vo->g_h264_enc_config, "vo->g_h264_enc_config");
 
-    vo->g_vlc_hw_ptr = (uint8 *)H264Enc_MemAlloc(vo, (406*2*sizeof(uint32)), 8, EXTRA_MEM);
+    vo->g_vlc_hw_ptr = (uint32 *)H264Enc_MemAlloc(vo, (406*2*sizeof(uint32)), 8, EXTRA_MEM);
     CHECK_MALLOC(vo->g_vlc_hw_ptr, "vo->g_vlc_hw_ptr");
     if (vo->vsp_capability == 2)
     {
@@ -216,7 +216,7 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
 
     /* rate control */
     img_ptr->pOneFrameBitstream = pBitstreamBfr->common_buffer_ptr;
-    img_ptr->OneFrameBitstream_addr_phy = (uint32 )pBitstreamBfr->common_buffer_ptr_phy;
+    img_ptr->OneFrameBitstream_addr_phy = (uint_32or64)pBitstreamBfr->common_buffer_ptr_phy;
     img_ptr->OneframeStreamLen = pBitstreamBfr->size;
 
     frame_buf_size = img_ptr->width * img_ptr->height;
@@ -226,8 +226,8 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
     img_ptr->pYUVRecFrame->imgUV = (uint8 *)H264Enc_MemAlloc(vo, frame_buf_size/2, 8, EXTRA_MEM);
     CHECK_MALLOC(img_ptr->pYUVRecFrame->imgUV, "img_ptr->pYUVRecFrame->imgUV");
 
-    img_ptr->pYUVRecFrame->imgYAddr = (uint32)H264Enc_ExtraMem_V2P(vo, img_ptr->pYUVRecFrame->imgY, EXTRA_MEM) >> 3;	// DWORD
-    img_ptr->pYUVRecFrame->imgUVAddr = (uint32)H264Enc_ExtraMem_V2P(vo, img_ptr->pYUVRecFrame->imgUV, EXTRA_MEM) >> 3;	// DWORD
+    img_ptr->pYUVRecFrame->imgYAddr = (uint_32or64)H264Enc_ExtraMem_V2P(vo, img_ptr->pYUVRecFrame->imgY, EXTRA_MEM) >> 3;	// DWORD
+    img_ptr->pYUVRecFrame->imgUVAddr = (uint_32or64)H264Enc_ExtraMem_V2P(vo, img_ptr->pYUVRecFrame->imgUV, EXTRA_MEM) >> 3;	// DWORD
 
     img_ptr->pYUVRefFrame->imgY = (uint8 *)H264Enc_MemAlloc(vo, frame_buf_size, 8, EXTRA_MEM);
     CHECK_MALLOC(img_ptr->pYUVRefFrame->imgY, "img_ptr->pYUVRefFrame->imgY");
@@ -235,8 +235,8 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
     img_ptr->pYUVRefFrame->imgUV = (uint8 *)H264Enc_MemAlloc(vo, frame_buf_size/2, 8, EXTRA_MEM);
     CHECK_MALLOC(img_ptr->pYUVRefFrame->imgUV, "img_ptr->pYUVRefFrame->imgUV");
 
-    img_ptr->pYUVRefFrame->imgYAddr = (uint32)H264Enc_ExtraMem_V2P(vo, img_ptr->pYUVRefFrame->imgY, EXTRA_MEM) >> 3;	// DWORD
-    img_ptr->pYUVRefFrame->imgUVAddr = (uint32)H264Enc_ExtraMem_V2P(vo, img_ptr->pYUVRefFrame->imgUV, EXTRA_MEM) >> 3;	// DWORD
+    img_ptr->pYUVRefFrame->imgYAddr = (uint_32or64)H264Enc_ExtraMem_V2P(vo, img_ptr->pYUVRefFrame->imgY, EXTRA_MEM) >> 3;	// DWORD
+    img_ptr->pYUVRefFrame->imgUVAddr = (uint_32or64)H264Enc_ExtraMem_V2P(vo, img_ptr->pYUVRefFrame->imgUV, EXTRA_MEM) >> 3;	// DWORD
 
     vo->g_anti_shake.enable_anti_shake = pVideoFormat->b_anti_shake;
     vo->g_anti_shake.shift_x = 0;
@@ -400,8 +400,8 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
 
     img_ptr->pYUVSrcFrame->imgY =  pInput->p_src_y_phy;
     img_ptr->pYUVSrcFrame->imgUV =  pInput->p_src_u_phy;
-    img_ptr->pYUVSrcFrame->imgYAddr = (uint32)img_ptr->pYUVSrcFrame->imgY >> 3;
-    img_ptr->pYUVSrcFrame->imgUVAddr = (uint32)img_ptr->pYUVSrcFrame->imgUV >> 3;
+    img_ptr->pYUVSrcFrame->imgYAddr = (uint_32or64)img_ptr->pYUVSrcFrame->imgY >> 3;
+    img_ptr->pYUVSrcFrame->imgUVAddr = (uint_32or64)img_ptr->pYUVSrcFrame->imgUV >> 3;
 
     if( i_slice_type == SLICE_TYPE_I )
     {

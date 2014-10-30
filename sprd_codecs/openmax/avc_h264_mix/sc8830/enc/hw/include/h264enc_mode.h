@@ -245,8 +245,8 @@ typedef struct H264Enc_storable_pic
     uint8 * imgUV;
 //	uint8 * imgV;
 
-    uint32 imgYAddr;
-    uint32 imgUVAddr;
+    uint_32or64 imgYAddr;
+    uint_32or64 imgUVAddr;
 //	uint32 imgVAddr;
 
     int32	i_poc;
@@ -405,7 +405,7 @@ typedef struct
 
 typedef struct tagH264EncObject
 {
-    uint32 s_vsp_Vaddr_base ;
+    uint_32or64 s_vsp_Vaddr_base ;
     int32 s_vsp_fd ;
     uint32 vsp_freq_div;
     int32	error_flag;
@@ -416,7 +416,7 @@ typedef struct tagH264EncObject
     uint32 g_nFrame_enc;
     ENC_IMAGE_PARAMS_T *g_enc_image_ptr;
     MMEncConfig * g_h264_enc_config;
-    uint8 * g_vlc_hw_ptr;
+    uint32 * g_vlc_hw_ptr;
 
     RC_BU_PARAS rc_bu_paras;
     RC_GOP_PARAS rc_gop_paras;

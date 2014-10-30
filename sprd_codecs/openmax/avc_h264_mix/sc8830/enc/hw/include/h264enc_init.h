@@ -23,7 +23,10 @@
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
-
+#ifdef   __cplusplus
+extern "C"
+{
+#endif
 MMEncRet H264Enc_InitVSP(H264EncObject *vo);
 void H264Enc_InitBSM(H264EncObject *vo);
 

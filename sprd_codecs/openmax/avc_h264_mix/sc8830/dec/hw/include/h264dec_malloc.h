@@ -31,13 +31,13 @@ extern   "C"
 #define CHECK_MALLOC(addr, str)    \
         if (NULL == addr)   \
         {   \
-            SCI_TRACE_LOW ("%s, %s is NULL", __FUNCTION__, str);   \
+            SCI_TRACE_LOW ("%s, %s is NULL\n", __FUNCTION__, str);   \
             return MMENC_MEMORY_ERROR;  \
         }
 
 MMDecRet H264Dec_InitInterMem (H264DecObject *vo, MMCodecBuffer *pInterMemBfr);
 void *H264Dec_MemAlloc (H264DecObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type);
-uint32 H264Dec_MemV2P(H264DecObject *vo, uint8 *vAddr, int32 type);
+uint_32or64 H264Dec_MemV2P(H264DecObject *vo, uint8 *vAddr, int32 type);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

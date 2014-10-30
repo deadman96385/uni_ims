@@ -71,7 +71,7 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
 
     tmpVar = READ_FLC(8);
 
-    SCI_TRACE_LOW("%s, %d, the first byte: 0x%0x.", __FUNCTION__, __LINE__, tmpVar);
+    SCI_TRACE_LOW("%s, %d, the first byte: 0x%0x.\n", __FUNCTION__, __LINE__, tmpVar);
 
     nal_ptr->nal_unit_type = tmpVar & 0x1f;
     nal_ptr->nal_reference_idc = ((tmpVar>>5)&0x3);
@@ -463,7 +463,7 @@ LOCAL void H264Dec_ref_pic_list_reordering (H264DecObject *vo)
 
                 if ((val > 3) || (val < 0) ||(i>img_ptr->num_ref_idx_l0_active)&&(val != 3))//for error
                 {
-                    SCI_TRACE_LOW ("Invalid remapping_of_pic_nums_idc command");
+                    SCI_TRACE_LOW ("Invalid remapping_of_pic_nums_idc command\n");
                     vo->error_flag |= ER_SREAM_ID;
                     return;
                 }
@@ -517,7 +517,7 @@ LOCAL void H264Dec_ref_pic_list_reordering (H264DecObject *vo)
 
                 if ((val > 3) || (val < 0)||(i>img_ptr->num_ref_idx_l1_active)&&(val != 3))//for error
                 {
-                    SCI_TRACE_LOW ("Invalid remapping_of_pic_nums_idc command");
+                    SCI_TRACE_LOW ("Invalid remapping_of_pic_nums_idc command\n");
                     vo->error_flag |= ER_SREAM_ID;
                     return;
                 }

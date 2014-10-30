@@ -31,7 +31,7 @@ extern   "C"
 #define NUM_CTX_MODELS_I     1
 #define NUM_CTX_MODELS_P     3
 
-WORD_ALIGN const int32 INIT_MB_TYPE_I[1][3][11][2] =
+extern WORD_ALIGN const int32 INIT_MB_TYPE_I[1][3][11][2] =
 {
     //3...10
     //----- model 0 -----
@@ -42,7 +42,7 @@ WORD_ALIGN const int32 INIT_MB_TYPE_I[1][3][11][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_MB_TYPE_P[3][3][11][2] =
+extern WORD_ALIGN const int32 INIT_MB_TYPE_P[3][3][11][2] =
 {
     //
     //11,12,13,N,14,15,16,17,18/33,19/34,20/35
@@ -67,7 +67,7 @@ WORD_ALIGN const int32 INIT_MB_TYPE_P[3][3][11][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_B8_TYPE_I[1][2][9][2] =
+extern WORD_ALIGN const int32 INIT_B8_TYPE_I[1][2][9][2] =
 {
     //----- model 0 -----
     {
@@ -76,7 +76,7 @@ WORD_ALIGN const int32 INIT_B8_TYPE_I[1][2][9][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_B8_TYPE_P[3][2][9][2] =
+extern WORD_ALIGN const int32 INIT_B8_TYPE_P[3][2][9][2] =
 //jzy,sub_mb_type[ ]:
 //21,22,23
 //36,37,38,39
@@ -99,7 +99,7 @@ WORD_ALIGN const int32 INIT_B8_TYPE_P[3][2][9][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_MV_RES_I[1][2][10][2] =
+extern WORD_ALIGN const int32 INIT_MV_RES_I[1][2][10][2] =
 {
     //----- model 0 -----
     {
@@ -108,7 +108,7 @@ WORD_ALIGN const int32 INIT_MV_RES_I[1][2][10][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_MV_RES_P[3][2][10][2] =
+extern WORD_ALIGN const int32 INIT_MV_RES_P[3][2][10][2] =
 {
     //----- model 0 -----
     //40...42,47...49
@@ -132,7 +132,7 @@ WORD_ALIGN const int32 INIT_MV_RES_P[3][2][10][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_REF_NO_I[1][2][6][2] =
+extern WORD_ALIGN const int32 INIT_REF_NO_I[1][2][6][2] =
 {
     //----- model 0 -----
     {
@@ -141,7 +141,7 @@ WORD_ALIGN const int32 INIT_REF_NO_I[1][2][6][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_REF_NO_P[3][2][6][2] =
+extern WORD_ALIGN const int32 INIT_REF_NO_P[3][2][6][2] =
 {
     //54...59
     //----- model 0 -----
@@ -161,7 +161,7 @@ WORD_ALIGN const int32 INIT_REF_NO_P[3][2][6][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_DELTA_QP_I[1][1][4][2]=
+extern WORD_ALIGN const int32 INIT_DELTA_QP_I[1][1][4][2]=
 {
     //60...63
     //----- model 0 -----
@@ -170,7 +170,7 @@ WORD_ALIGN const int32 INIT_DELTA_QP_I[1][1][4][2]=
     }
 };
 
-WORD_ALIGN const int32 INIT_DELTA_QP_P[3][1][4][2]=
+extern WORD_ALIGN const int32 INIT_DELTA_QP_P[3][1][4][2]=
 {
     //----- model 0 -----
     {
@@ -186,7 +186,7 @@ WORD_ALIGN const int32 INIT_DELTA_QP_P[3][1][4][2]=
     }
 };
 
-WORD_ALIGN const int32 INIT_MB_AFF_I[1][1][4][2] =
+extern WORD_ALIGN const int32 INIT_MB_AFF_I[1][1][4][2] =
 {
     //70...72
     //----- model 0 -----
@@ -195,7 +195,7 @@ WORD_ALIGN const int32 INIT_MB_AFF_I[1][1][4][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_MB_AFF_P[3][1][4][2] =
+extern WORD_ALIGN const int32 INIT_MB_AFF_P[3][1][4][2] =
 {
     //----- model 0 -----
     {
@@ -211,7 +211,7 @@ WORD_ALIGN const int32 INIT_MB_AFF_P[3][1][4][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_IPR_I[1][1][2][2] =
+extern WORD_ALIGN const int32 INIT_IPR_I[1][1][2][2] =
 {
     //68 69
     //----- model 0 -----
@@ -220,7 +220,7 @@ WORD_ALIGN const int32 INIT_IPR_I[1][1][2][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_IPR_P[3][1][2][2] =
+extern WORD_ALIGN const int32 INIT_IPR_P[3][1][2][2] =
 {
     //----- model 0 -----
     {
@@ -236,7 +236,7 @@ WORD_ALIGN const int32 INIT_IPR_P[3][1][2][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_CIPR_I[1][1][4][2] =
+extern WORD_ALIGN const int32 INIT_CIPR_I[1][1][4][2] =
 {
     //64..67
     //----- model 0 -----
@@ -245,7 +245,7 @@ WORD_ALIGN const int32 INIT_CIPR_I[1][1][4][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_CIPR_P[3][1][4][2] =
+extern WORD_ALIGN const int32 INIT_CIPR_P[3][1][4][2] =
 {
     //----- model 0 -----
     {
@@ -261,7 +261,7 @@ WORD_ALIGN const int32 INIT_CIPR_P[3][1][4][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_CBP_I[1][3][4][2] =
+extern WORD_ALIGN const int32 INIT_CBP_I[1][3][4][2] =
 {
     //73..84
     //----- model 0 -----
@@ -272,7 +272,7 @@ WORD_ALIGN const int32 INIT_CBP_I[1][3][4][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_CBP_P[3][3][4][2] =
+extern WORD_ALIGN const int32 INIT_CBP_P[3][3][4][2] =
 {
     //----- model 0 -----
     {
@@ -294,12 +294,13 @@ WORD_ALIGN const int32 INIT_CBP_P[3][3][4][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_BCBP_I[1][8][4][2] =//coded_block_flag
+extern WORD_ALIGN const int32 INIT_BCBP_I[1][8][4][2] =//coded_block_flag
 {
     //85..104
     //----- model 0 -----
     {
-        { { -17, 123} , { -12, 115} , { -16, 122} , { -11, 115} },
+        { { -17, 123} , { -12, 115} , { -16, 122} , { -11, 115}
+        },
         { { -12,  63} , {  -2,  68} , { -15,  84} , { -13, 104} },
         {  CTX_UNUSED ,  CTX_UNUSED ,  CTX_UNUSED ,  CTX_UNUSED },
         {  CTX_UNUSED ,  CTX_UNUSED ,  CTX_UNUSED ,  CTX_UNUSED },
@@ -310,7 +311,7 @@ WORD_ALIGN const int32 INIT_BCBP_I[1][8][4][2] =//coded_block_flag
     }
 };
 
-WORD_ALIGN const int32 INIT_BCBP_P[3][8][4][2] =
+extern WORD_ALIGN const int32 INIT_BCBP_P[3][8][4][2] =
 {
     //----- model 0 -----
     {
@@ -347,7 +348,7 @@ WORD_ALIGN const int32 INIT_BCBP_P[3][8][4][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_MAP_I[1][8][15][2] =
+extern WORD_ALIGN const int32 INIT_MAP_I[1][8][15][2] =
 {
     //105..119
     //N,120..133
@@ -373,7 +374,7 @@ WORD_ALIGN const int32 INIT_MAP_I[1][8][15][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_MAP_P[3][8][15][2] =
+extern WORD_ALIGN const int32 INIT_MAP_P[3][8][15][2] =
 {
     //----- model 0 -----
     {
@@ -422,7 +423,7 @@ WORD_ALIGN const int32 INIT_MAP_P[3][8][15][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_LAST_I[1][8][15][2] =
+extern WORD_ALIGN const int32 INIT_LAST_I[1][8][15][2] =
 {
     //166..180
     //N,181..194
@@ -447,7 +448,7 @@ WORD_ALIGN const int32 INIT_LAST_I[1][8][15][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_LAST_P[3][8][15][2] =
+extern WORD_ALIGN const int32 INIT_LAST_P[3][8][15][2] =
 {
     //----- model 0 -----
     {
@@ -496,11 +497,12 @@ WORD_ALIGN const int32 INIT_LAST_P[3][8][15][2] =
         {  CTX_UNUSED , {  19,  16} , {  15,  36} , {  15,  36} , {  21,  28} , {  25,  21} , {  30,  20} , {  31,  12} , {  27,  16} , {  24,  42} , {   0,  93} , {  14,  56} , {  15,  57} , {  26,  38} , { -24, 127} }
     }
 };
-WORD_ALIGN const int32 INIT_ONE_I[1][8][5][2] =//coeff_abs_level_minus1[ ]
+extern WORD_ALIGN const int32 INIT_ONE_I[1][8][5][2] =//coeff_abs_level_minus1[ ]
 {
     //----- model 0 -----
     {
-        { {  -3,  71} , {  -6,  42} , {  -5,  50} , {  -3,  54} , {  -2,  62} },//227-231
+        { {  -3,  71} , {  -6,  42} , {  -5,  50} , {  -3,  54} , {  -2,  62}
+        },//227-231
         { {  -5,  67} , {  -5,  27} , {  -3,  39} , {  -2,  44} , {   0,  46} },//237-241
 #ifndef LUMA_8x8_CABAC
         {  CTX_UNUSED ,  CTX_UNUSED ,  CTX_UNUSED ,  CTX_UNUSED ,  CTX_UNUSED },
@@ -515,7 +517,7 @@ WORD_ALIGN const int32 INIT_ONE_I[1][8][5][2] =//coeff_abs_level_minus1[ ]
     }
 };
 
-WORD_ALIGN const int32 INIT_ONE_P[3][8][5][2] =
+extern WORD_ALIGN const int32 INIT_ONE_P[3][8][5][2] =
 {
     //----- model 0 -----
     {
@@ -564,11 +566,12 @@ WORD_ALIGN const int32 INIT_ONE_P[3][8][5][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_ABS_I[1][8][5][2] =//coeff_abs_level_minus1[ ]
+extern WORD_ALIGN const int32 INIT_ABS_I[1][8][5][2] =//coeff_abs_level_minus1[ ]
 {
     //----- model 0 -----
     {
-        { {   0,  58} , {   1,  63} , {  -2,  72} , {  -1,  74} , {  -9,  91} },//232-236
+        { {   0,  58} , {   1,  63} , {  -2,  72} , {  -1,  74} , {  -9,  91}
+        },//232-236
         { { -16,  64} , {  -8,  68} , { -10,  78} , {  -6,  77} , { -10,  86} },//242-246
 #ifndef LUMA_8x8_CABAC
         {  CTX_UNUSED ,  CTX_UNUSED ,  CTX_UNUSED ,  CTX_UNUSED ,  CTX_UNUSED },
@@ -584,7 +587,7 @@ WORD_ALIGN const int32 INIT_ABS_I[1][8][5][2] =//coeff_abs_level_minus1[ ]
     }
 };
 
-WORD_ALIGN const int32 INIT_ABS_P[3][8][5][2] =
+extern WORD_ALIGN const int32 INIT_ABS_P[3][8][5][2] =
 {
     //----- model 0 -----
     {
@@ -633,7 +636,7 @@ WORD_ALIGN const int32 INIT_ABS_P[3][8][5][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_FLD_MAP_I[1][8][15][2] =
+extern WORD_ALIGN const int32 INIT_FLD_MAP_I[1][8][15][2] =
 {
     //----- model 0 -----
     {
@@ -685,7 +688,7 @@ WORD_ALIGN const int32 INIT_FLD_MAP_P[3][8][15][2] =
     }
 };
 
-WORD_ALIGN const int32 INIT_FLD_LAST_I[1][8][15][2] =
+extern WORD_ALIGN const int32 INIT_FLD_LAST_I[1][8][15][2] =
 {
     //----- model 0 -----
     {
@@ -699,7 +702,7 @@ WORD_ALIGN const int32 INIT_FLD_LAST_I[1][8][15][2] =
         {  CTX_UNUSED , {  31,  -7} , {  35, -15} , {  34,  -3} , {  34,   3} , {  36,  -1} , {  34,   5} , {  32,  11} , {  35,   5} , {  34,  12} , {  39,  11} , {  30,  29} , {  34,  26} , {  29,  39} , {  19,  66} }
     }
 };
-WORD_ALIGN const int32 INIT_FLD_LAST_P[3][8][15][2] =
+extern WORD_ALIGN const int32 INIT_FLD_LAST_P[3][8][15][2] =
 {
     //----- model 0 -----
     {
@@ -736,7 +739,7 @@ WORD_ALIGN const int32 INIT_FLD_LAST_P[3][8][15][2] =
     }
 };
 #ifdef LUMA_8x8_CABAC
-WORD_ALIGN const int32 INIT_TRANSFORM_SIZE_I[1][1][3][2]=
+extern WORD_ALIGN const int32 INIT_TRANSFORM_SIZE_I[1][1][3][2]=
 {
     //----- model 0 -----
     {
@@ -745,7 +748,7 @@ WORD_ALIGN const int32 INIT_TRANSFORM_SIZE_I[1][1][3][2]=
     }
 };
 
-WORD_ALIGN const int32 INIT_TRANSFORM_SIZE_P[3][1][3][2]=
+extern WORD_ALIGN const int32 INIT_TRANSFORM_SIZE_P[3][1][3][2]=
 {
     //----- model 0 -----
     {

@@ -13,6 +13,10 @@
  *****************************************************************************/
 #ifndef _H264DEC_VIDEO_HEADER_H_
 #define _H264DEC_VIDEO_HEADER_H_
+#ifdef   __cplusplus
+extern   "C"
+{
+#endif
 
 #include "sci_types.h"
 #include "video_common.h"

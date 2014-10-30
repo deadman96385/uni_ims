@@ -92,7 +92,7 @@ void H264Dec_SetCurRecPic(AVCHandle *avcHandle, uint8	*pFrameY,uint8 *pFrameY_ph
     DEC_STORABLE_PICTURE_T *rec_buf_ptr = &(vo->g_rec_buf);
 
     rec_buf_ptr->imgY =  pFrameY;
-    rec_buf_ptr->imgYAddr = (uint32)pFrameY_phy;
+    rec_buf_ptr->imgYAddr = (uint_32or64)pFrameY_phy;
     rec_buf_ptr->pBufferHeader = pBufferHeader;
     rec_buf_ptr->mPicId = picId;
 }

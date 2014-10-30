@@ -267,7 +267,7 @@ LOCAL void H264Dec_POC(H264DecObject *vo)
             img_ptr->delta_pic_order_cnt[0] = 0;	//ignore first delta
             if (img_ptr->frame_num)
             {
-                SCI_TRACE_LOW("frame_num != 0 in idr pix");
+                SCI_TRACE_LOW("frame_num != 0 in idr pix\n");
                 vo->error_flag |= ER_REF_FRM_ID;
             }
         } else
@@ -358,7 +358,7 @@ LOCAL void H264Dec_POC(H264DecObject *vo)
             img_ptr->ThisPOC = img_ptr->framepoc = img_ptr->toppoc = img_ptr->bottompoc = 0;
             if (img_ptr->frame_num)
             {
-                SCI_TRACE_LOW("frame_num != 0 in idr pix");
+                SCI_TRACE_LOW("frame_num != 0 in idr pix\n");
                 vo->error_flag |= ER_REF_FRM_ID;
             }
         } else
@@ -473,7 +473,7 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
 
     if ((img_ptr->frame_num != img_ptr->pre_frame_num) && (img_ptr->frame_num != H264Dec_Divide((img_ptr->pre_frame_num+1), img_ptr->max_frame_num)))
     {
-        SCI_TRACE_LOW("%s, %d, (img_ptr->frame_num != img_ptr->pre_frame_num)", __FUNCTION__, __LINE__);
+        SCI_TRACE_LOW("%s, %d, (img_ptr->frame_num != img_ptr->pre_frame_num)\n", __FUNCTION__, __LINE__);
 
         if (vo->g_active_sps_ptr->gaps_in_frame_num_value_allowed_flag == 0)
         {
@@ -575,7 +575,7 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
         dec_picture_ptr->imgYAddr = vo->g_rec_buf.imgYAddr;
         dec_picture_ptr->imgUAddr = dec_picture_ptr->imgYAddr + size_y;
         dec_picture_ptr->mPicId = vo->g_rec_buf.mPicId;
-        SCI_TRACE_LOW("%s, %d, dec_picture_ptr->mPicId: %d, imgY: %0x", __FUNCTION__, __LINE__, dec_picture_ptr->mPicId, vo->g_rec_buf.imgY);
+        SCI_TRACE_LOW("%s, %d, dec_picture_ptr->mPicId: %d, imgY: %0x\n", __FUNCTION__, __LINE__, dec_picture_ptr->mPicId, vo->g_rec_buf.imgY);
     }
 
     return;

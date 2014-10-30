@@ -32,11 +32,11 @@ PUBLIC MMEncRet H264Enc_InitMem (H264EncObject *vo, MMCodecBuffer *pMemBfr, int3
         return MMENC_ERROR;
     } else
     {
-        int32 dw_aligned = (((uint32)(pMemBfr->common_buffer_ptr) + 7) & (~7)) - ((uint32)(pMemBfr->common_buffer_ptr));
+        int32 dw_aligned = (((uint_32or64)(pMemBfr->common_buffer_ptr) + 7) & (~7)) - ((uint_32or64)(pMemBfr->common_buffer_ptr));
 
         vo->mem[type].used_size = 0;
         vo->mem[type].v_base = pMemBfr->common_buffer_ptr;
-        vo->mem[type].p_base = pMemBfr->common_buffer_ptr_phy;
+        vo->mem[type].p_base = (uint8 *)pMemBfr->common_buffer_ptr_phy;
         vo->mem[type].total_size = pMemBfr->size;
 
         CHECK_MALLOC(vo->mem[type].v_base, "vo->mem[type].v_base");
@@ -54,9 +54,9 @@ PUBLIC MMEncRet H264Enc_InitMem (H264EncObject *vo, MMCodecBuffer *pMemBfr, int3
 PUBLIC void *H264Enc_MemAlloc (H264EncObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type)
 {
     CODEC_BUF_T *pMem = &(vo->mem[type]);
-    uint32 CurrAddr, AlignedAddr;
+    uint_32or64 CurrAddr, AlignedAddr;
 
-    CurrAddr = (uint32)(pMem->v_base) + pMem->used_size;
+    CurrAddr = (uint_32or64)(pMem->v_base) + pMem->used_size;
     AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
     need_size += (AlignedAddr - CurrAddr);
 

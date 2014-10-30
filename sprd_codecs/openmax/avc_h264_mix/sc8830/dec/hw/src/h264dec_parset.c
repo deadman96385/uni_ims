@@ -133,7 +133,7 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
             }
         }
 
-        if (VSP_CFG_FREQ(vo,vo->width*vo->height) < 0)
+        if (VSP_CFG_FREQ((VSPObject *)vo,vo->width*vo->height) < 0)
         {
             SCI_TRACE_LOW("%s, %d, VSP_CFG_FREQ ERR", __FUNCTION__, __LINE__);
             vo->error_flag  |= ER_HW_ID;

@@ -59,7 +59,7 @@ typedef unsigned int		uint;
 typedef signed char			int8;
 typedef signed short		int16;
 typedef signed int			int32;
-
+#define uint_32or64  unsigned long
 
 #ifdef WIN_UNIT_TEST
 #define LOCAL

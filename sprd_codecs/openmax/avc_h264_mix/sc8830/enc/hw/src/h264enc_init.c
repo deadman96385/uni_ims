@@ -114,9 +114,9 @@ PUBLIC MMEncRet H264Enc_InitVSP(H264EncObject *vo)
     if(anti_shark_ptr->enable_anti_shake)
     {
         img_ptr->pYUVSrcFrame->imgY += (anti_shark_ptr->shift_y*anti_shark_ptr->input_width );
-        img_ptr->pYUVSrcFrame->imgYAddr = (uint32)img_ptr->pYUVSrcFrame->imgY >> 3;
+        img_ptr->pYUVSrcFrame->imgYAddr = (uint_32or64)img_ptr->pYUVSrcFrame->imgY >> 3;
         img_ptr->pYUVSrcFrame->imgUV += (anti_shark_ptr->shift_y*anti_shark_ptr->input_width )/2;
-        img_ptr->pYUVSrcFrame->imgUVAddr = (uint32)img_ptr->pYUVSrcFrame->imgUV >> 3;
+        img_ptr->pYUVSrcFrame->imgUVAddr = (uint_32or64)img_ptr->pYUVSrcFrame->imgUV >> 3;
     }
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x20, img_ptr->pYUVSrcFrame->imgYAddr, "Frm_addr8: Start address of current frame Y");
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x24, img_ptr->pYUVSrcFrame->imgUVAddr, "Frm_addr9: Start address of current frame UV");
@@ -125,7 +125,7 @@ PUBLIC MMEncRet H264Enc_InitVSP(H264EncObject *vo)
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x80, img_ptr->pYUVRefFrame->imgYAddr, "Frm_addr32: Start address of Reference list0 frame Y");
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x100, img_ptr->pYUVRefFrame->imgUVAddr, "Frm_addr64: Start address of Reference list0 frame UV");
 
-    cmd	= (uint32)H264Enc_ExtraMem_V2P(vo, vo->g_vlc_hw_ptr, EXTRA_MEM)>>3;		// Frm_addr3[31:0], VLC Table set by Fixed Table Address
+    cmd	= (uint_32or64)H264Enc_ExtraMem_V2P(vo, (uint8 *)vo->g_vlc_hw_ptr, EXTRA_MEM)>>3;		// Frm_addr3[31:0], VLC Table set by Fixed Table Address
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0xC, cmd, "Frm_addr3: Start address of VLC table");
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_SIZE_SET_OFF, 300, "VSP_SIZE_SET: VLC_table_size");
 

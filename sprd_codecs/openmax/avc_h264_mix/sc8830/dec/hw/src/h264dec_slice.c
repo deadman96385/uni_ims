@@ -830,7 +830,7 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
         vo->g_searching_IDR_pic = TRUE;
     }
 
-    ret = H264Dec_Read_SPS_PPS_SliceHeader (vo);
+    ret = (MMDecRet)H264Dec_Read_SPS_PPS_SliceHeader (vo);
 
     if (vo->error_flag)
     {
@@ -853,7 +853,7 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
         {
             if (vo->is_need_init_vsp_hufftab && img_ptr->is_new_pic)//分不分cabac和cavlc
             {
-                uint32 vld_table_addr = (uint32)H264Dec_MemV2P(vo, vo->g_cavlc_tbl_ptr, HW_NO_CACHABLE);
+                uint_32or64 vld_table_addr = (uint_32or64)H264Dec_MemV2P(vo, (uint8 *)vo->g_cavlc_tbl_ptr, HW_NO_CACHABLE);
 
                 VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0xc, vld_table_addr/8, "ddr vlc table start addr");
                 VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_SIZE_SET_OFF, 0x45, "ddr VLC table size");
@@ -887,7 +887,7 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
     }
 
     //H264Dec_flush_left_byte (vo);
-    SCI_TRACE_LOW("%s, %d, finished decoding one NALU", __FUNCTION__, __LINE__);
+    SCI_TRACE_LOW("%s, %d, finished decoding one NALU\n", __FUNCTION__, __LINE__);
     //need IVOP but not found IDR,then return seek ivop
     if(dec_input_ptr->expected_IVOP && vo->g_searching_IDR_pic)
     {
