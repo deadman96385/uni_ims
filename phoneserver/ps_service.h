@@ -12,7 +12,7 @@
 //#include "config.h"
 
 #define IP_ADD_SIZE 16
-#define MAX_PPP_NUM 6
+#define MAX_PPP_NUM 12
 #define MAX_CMD 50
 
 typedef enum {

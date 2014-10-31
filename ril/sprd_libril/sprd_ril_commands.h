@@ -182,6 +182,15 @@
     ,{RIL_REQUEST_SET_SPEED_MODE, dispatchInts, responseVoid}
     ,{RIL_REQUEST_SET_SIM_SLOT_CFG, dispatchInts, responseVoid}//SPRD:added for choosing WCDMA SIM
     ,{RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES, dispatchInts, responseInts}
+    ,{RIL_REQUEST_CALL_CSFALLBACK_ACCEPT, dispatchVoid, responseVoid} //SPRD:add for LTE-CSFB to handle CS fall back of MT call
+    ,{RIL_REQUEST_CALL_CSFALLBACK_REJECT, dispatchVoid, responseVoid} //SPRD:add for LTE-CSFB to handle CS fall back of MT call
+    ,{RIL_REQUEST_SET_PRIORITY_NETWORK_MODE, dispatchInts, responseVoid} //SPRD:add for priority network mode
+    ,{RIL_REQUEST_GET_PRIORITY_NETWORK_MODE, dispatchVoid, responseInts} //SPRD:add for priority network mode
+    //SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 START
+    ,{RIL_REQUEST_GET_BAND_INFO, dispatchVoid, responseString}
+    ,{RIL_REQUEST_SWITCH_BAND_INFO_REPORT, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_SWITCH_3_WIRE, dispatchInts, responseVoid}
+    //SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     ,{RIL_REQUEST_SET_CELL_BROADCAST_CONFIG, dispatchSetCBConf, responseVoid}

@@ -84,6 +84,11 @@
     ,{RIL_UNSOL_LTE_READY, responseInts, WAKE_PARTIAL}
     ,{RIL_UNSOL_SVLTE_USIM_READY, responseVoid, WAKE_PARTIAL}
     ,{RIL_UNSOL_FDN_ENABLE, responseInts, WAKE_PARTIAL}
+    ,{RIL_UNSOL_CALL_CSFALLBACK, responseCallCsFallBack, WAKE_PARTIAL}//SPRD:add for LTE-CSFB to handle CS fall back of MT call
+    //SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 START
+    ,{RIL_UNSOL_BAND_INFO, responseString, WAKE_PARTIAL}
+    //SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
+    ,{RIL_UNSOL_CALL_CSFALLBACK_FINISH, responseCallCsFallBack, WAKE_PARTIAL}//SPRD:add for LTE-CSFB to handle CS fall back of MT call
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     ,{RIL_UNSOL_RESPONSE_NEW_CB_MSG, responseVoid, WAKE_PARTIAL}

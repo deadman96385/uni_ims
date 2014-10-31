@@ -128,6 +128,7 @@ int main(int argc, char **argv)
             i += 2;
         } else if (0 == strcmp(argv[i], "-n") && (argc - i > 1)) {
             rilCurrentSim = argv[i + 1];
+            modem = *argv[i + 1];
             break;
         } else {
             usage(argv[0]);
@@ -142,7 +143,7 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    modem = *rilModem;
+    //modem = *rilModem;
 
     memset(cmdline, 0, 1024);
     fd = open("/proc/cmdline", O_RDONLY);

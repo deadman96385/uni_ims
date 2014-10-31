@@ -23,9 +23,9 @@ ifeq ($(BOARD_SPRD_RIL),true)
 LOCAL_CFLAGS += -DRIL_SPRD_EXTENSION
 endif
 
-ifneq ($(filter scx35_sc9620%, $(TARGET_PRODUCT)),)
-LOCAL_CFLAGS += -DLTE_POWERON
-endif
+
+LOCAL_CFLAGS += -DSIM_AUTO_POWERON
+
 
 ifeq ($(BOARD_SAMSUNG_RIL),true)
 LOCAL_CFLAGS += -DGLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION
@@ -51,7 +51,7 @@ ifeq (foo,foo)
 #build shared library
 LOCAL_SHARED_LIBRARIES += \
         libcutils libutils
-#LOCAL_LDLIBS += -lpthread
+LOCAL_LDLIBS += -lpthread
 LOCAL_CFLAGS += -DRIL_SHLIB
 LOCAL_MODULE:= libreference-ril_sp
 LOCAL_MODULE_TAGS := optional

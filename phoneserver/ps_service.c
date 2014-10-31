@@ -34,6 +34,8 @@
 #define ETH_TD  "ro.modem.t.eth"
 #define ETH_W  "ro.modem.w.eth"
 #define ETH_L  "ro.modem.l.eth"
+#define ETH_TL  "ro.modem.tl.eth"
+#define ETH_LF  "ro.modem.lf.eth"
 
 #define SYS_IFCONFIG_UP "sys.ifconfig.up"
 #define SYS_IP_SET "sys.data.setip"
@@ -41,6 +43,8 @@
 #define SYS_MTU_SET "sys.data.setmtu"
 #define SYS_IFCONFIG_DOWN "sys.ifconfig.down"
 #define SYS_NO_ARP "sys.data.noarp"
+#define SYS_IPV6_DISABLE "sys.data.IPV6.disable"
+#define SYS_NET_ADDR "sys.data.net.addr"
 #define RETRY_MAX_COUNT 1000
 #define DEFAULT_PUBLIC_DNS2 "204.117.214.10"
 #define SSDA_MODE         "persist.radio.ssda.mode"
@@ -207,10 +211,6 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
         PHS_LOGD("parse cmd error");
         return AT_RESULT_NG;
     }
-    if (cid > 6) {
-        PHS_LOGD("invalid cid");
-        return AT_RESULT_NG;
-    }
     ppp_index = cid - 1;
 
     mutex_lock(&ps_service_mutex);
@@ -330,8 +330,12 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                 property_get(ETH_W, prop, "veth");
             } else if(!strcmp(modem, "l")) {
                 property_get(ETH_L, prop, "veth");
+            } else if(!strcmp(modem, "tl")) {
+                property_get(ETH_TL, prop, "veth");
+            } else if(!strcmp(modem, "lf")) {
+                property_get(ETH_LF, prop, "veth");
             } else {
-                PHS_LOGE("Unknown modem type, exit");
+                PHS_LOGE("Unknown modem type, exit--4");
                 exit(-1);
             }
 
@@ -354,6 +358,16 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                 snprintf(linker, sizeof(linker), "link set %s%d up", prop, cid-1);
                 property_set(SYS_IFCONFIG_UP, linker);
                 PHS_LOGD("IPV6 setip linker = %s", linker);
+
+                //able IPV6
+                snprintf(linker, sizeof(linker), "0");
+                property_set(SYS_IPV6_DISABLE, linker);
+                PHS_LOGD("IPV6 able linker = %s", linker);
+                //set net card addr
+                snprintf(linker, sizeof(linker), "%s%d", prop, cid-1);
+                property_set(SYS_NET_ADDR, linker);
+                PHS_LOGD("Netcard addr linker = %s", linker);
+
 
                 /* start data_on */
                 property_set("ctl.start", "data_on");
@@ -429,6 +443,12 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                     snprintf(linker, sizeof(linker), "link set %s%d arp off", prop, cid-1);
                     property_set(SYS_NO_ARP, linker);
                     PHS_LOGD("IPV4 arp linker = %s", linker);
+
+                    //disable IPV6
+                    snprintf(linker, sizeof(linker), "1");
+                    property_set(SYS_IPV6_DISABLE, linker);
+                    PHS_LOGD("IPV6 disable linker = %s", linker);
+
                 } else if (ppp_info[cid-1].ip_state == IPV6) {
                     snprintf(linker, sizeof(linker), "addr add %s/64 dev %s%d", ppp_info[cid-1].ipv6laddr, prop, cid-1);
                     property_set(SYS_IP_SET, linker);
@@ -447,7 +467,17 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                     snprintf(linker, sizeof(linker), "link set %s%d arp off", prop, cid-1);
                     property_set(SYS_NO_ARP, linker);
                     PHS_LOGD("IPV6 arp linker = %s", linker);
+
+                    //able IPV6
+                    snprintf(linker, sizeof(linker), "0");
+                    property_set(SYS_IPV6_DISABLE, linker);
+                    PHS_LOGD("IPV6 disable linker = %s", linker);
                 }
+                // set net card addr
+                snprintf(linker, sizeof(linker), "%s%d", prop, cid-1);
+                property_set(SYS_NET_ADDR, linker);
+                PHS_LOGD("Netcard addr linker = %s", linker);
+
 
                 char gspsprop[PROPERTY_VALUE_MAX];
                 property_get(SYS_GSPS_ETH_UP_PROP, gspsprop, "0");
@@ -599,7 +629,7 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
             } else if(dns2_hex != 0x0) {
                 ip_hex_to_str(dns2_hex,dns2,sizeof(dns2));
             }
-            if ((cid <= getMaxPDPNum()) && (cid >=1)){
+            if ((cid < getMaxPDPNum()) && (cid >=1)){
                 /*Save ppp info */
                 strlcpy(ppp_info[cid-1].ipladdr, ip,sizeof(ppp_info[cid-1].ipladdr));
 
@@ -618,6 +648,12 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
                     property_get(ETH_TD, prop, "veth");
                 } else if(!strcmp(modem, "w")) {
                     property_get(ETH_W, prop, "veth");
+                } else if(!strcmp(modem, "l")) {
+                    //to do
+                } else if(!strcmp(modem, "tl")) {
+                    property_get(ETH_TL, prop, "veth");
+                } else if(!strcmp(modem, "lf")) {
+                    property_get(ETH_LF, prop, "veth");
                 } else {
                     PHS_LOGE("Unknown modem type, exit");
                     exit(-1);
@@ -792,7 +828,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
             mutex_lock(&ps_service_mutex);
             mux = adapter_get_cmux(req->cmd_type, TRUE);
             //if ((tmp_cid <= 3) && (ppp_info[tmp_cid - 1].state == PPP_STATE_ACTIVE)) { 	/*deactivate PDP connection */
-            if (tmp_cid <= 3) {	/*deactivate PDP connection */
+            if (tmp_cid <= 6 && tmp_cid > 0) {	/*deactivate PDP connection */
                 ppp_info[tmp_cid-1].state = PPP_STATE_DESTING;
                 PHS_LOGD("PPP_STATE_DEACTING");
                 ppp_info[tmp_cid-1].state = PPP_STATE_DEACTING;
@@ -807,6 +843,12 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                     property_get(ETH_TD, prop, "veth");
                 } else if(!strcmp(modem, "w")) {
                     property_get(ETH_W, prop, "veth");
+                } else if(!strcmp(modem, "l")) {
+                    //to do
+                } else if(!strcmp(modem, "tl")) {
+                    property_get(ETH_TL, prop, "veth");
+                } else if(!strcmp(modem, "lf")) {
+                    property_get(ETH_LF, prop, "veth");
                 } else {
                     PHS_LOGE("Unknown modem type, exit");
                     exit(-1);
@@ -866,6 +908,12 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                         property_get(ETH_TD, prop, "veth");
                     } else if(!strcmp(modem, "w")) {
                         property_get(ETH_W, prop, "veth");
+                    } else if(!strcmp(modem, "l")) {
+                        //to do
+                    } else if(!strcmp(modem, "tl")) {
+                        property_get(ETH_TL, prop, "veth");
+                    } else if(!strcmp(modem, "lf")) {
+                        property_get(ETH_LF, prop, "veth");
                     } else {
                         PHS_LOGE("Unknown modem type, exit");
                         exit(-1);
@@ -923,7 +971,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
             mutex_lock(&ps_service_mutex);
             mux = adapter_get_cmux(req->cmd_type, TRUE);
             //if ((tmp_cid <= 3) && (ppp_info[tmp_cid - 1].state == PPP_STATE_ACTIVE)) { 	/*deactivate PDP connection */
-            if (0 < tmp_cid && tmp_cid < 6 && ppp_info[tmp_cid - 1].state == PPP_STATE_ACTIVE) {	/*deactivate PDP connection */
+            if (0 < tmp_cid && tmp_cid < 12) {	/*deactivate PDP connection */
                 ppp_info[tmp_cid-1].state = PPP_STATE_DESTING;
                 PHS_LOGD("PPP_STATE_DEACTING");
                 ppp_info[tmp_cid-1].state = PPP_STATE_DEACTING;
@@ -946,8 +994,12 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                     property_get(ETH_W, prop, "veth");
                 } else if(!strcmp(modem, "l")) {
                     property_get(ETH_L, prop, "veth");
+                } else if(!strcmp(modem, "tl")) {
+                    property_get(ETH_TL, prop, "veth");
+                } else if(!strcmp(modem, "lf")) {
+                    property_get(ETH_LF, prop, "veth");
                 } else {
-                    PHS_LOGE("Unknown modem type, exit");
+                    PHS_LOGE("Unknown modem type, exit--1");
                     exit(-1);
                 }
 
@@ -1008,6 +1060,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                     system(cmd);
                 }
             } else {
+                PHS_LOGD("Just send AT+CGACT ");
                 snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+CGACT=0,%d\r", tmp_cid);
                 adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp,
                         (int)req->recv_pty);
@@ -1038,8 +1091,12 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                         property_get(ETH_W, prop, "veth");
                     } else if(!strcmp(modem, "l")) {
                         property_get(ETH_L, prop, "veth");
+                    } else if(!strcmp(modem, "tl")) {
+                        property_get(ETH_TL, prop, "veth");
+                    } else if(!strcmp(modem, "lf")) {
+                        property_get(ETH_LF, prop, "veth");
                     } else {
-                        PHS_LOGE("Unknown modem type, exit");
+                        PHS_LOGE("Unknown modem type, exit--2");
                         exit(-1);
                     }
 
@@ -1504,8 +1561,12 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp, int user_data)
         property_get(ETH_W, prop, "veth");
     } else if(!strcmp(modem, "l")) {
         property_get(ETH_L, prop, "veth");
+    } else if(!strcmp(modem, "tl")) {
+        property_get(ETH_TL, prop, "veth");
+    } else if(!strcmp(modem, "lf")) {
+        property_get(ETH_LF, prop, "veth");
     } else {
-        PHS_LOGE("Unknown modem type, exit");
+        PHS_LOGE("Unknown modem type, exit--3");
         exit(-1);
     }
 
@@ -1556,7 +1617,7 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp, int user_data)
                 }
             }
 
-            if ((cid <= maxPDPNum) && (cid >=1)) {
+            if ((cid < maxPDPNum) && (cid >=1)) {
                 ip_type = read_ip_addr(local_addr_subnet_mask, ip);
                 PHS_LOGD("PS: cid = %d,  ip_type = %d, ip = %s, dns1 = %s, dns2 = %s", cid, ip_type, ip, dns1, dns2);
 
@@ -1666,7 +1727,8 @@ int isLte(void) {
     char prop[PROPERTY_VALUE_MAX]="";
     property_get(SSDA_MODE, prop, "0");
     PHS_LOGD("ssda mode: %s", prop);
-    if ((!strcmp(prop,"svlte")) || (!strcmp(prop,"tdd-csfb")) || (!strcmp(prop,"fdd-csfb"))) {
+    if ((!strcmp(prop,"svlte")) || (!strcmp(prop,"tdd-csfb")) || (!strcmp(prop,"fdd-csfb"))
+        || (!strcmp(prop,"csfb"))) {
         return 1;
     }
     return 0;

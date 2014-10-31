@@ -37,10 +37,14 @@
 #define TD_SIM_NUM  "ro.modem.t.count"
 #define W_SIM_NUM  "ro.modem.w.count"
 #define L_SIM_NUM  "ro.modem.l.count"
+#define TL_SIM_NUM  "ro.modem.tl.count"
+#define LF_SIM_NUM  "ro.modem.lf.count"
 
 #define MUX_TD_DEV  "ro.modem.t.tty"
 #define MUX_W_DEV  "ro.modem.w.tty"
 #define MUX_L_DEV  "ro.modem.l.tty"
+#define MUX_TL_DEV  "ro.modem.tl.tty"
+#define MUX_LF_DEV  "ro.modem.lf.tty"
 
 #undef  PHS_LOGD
 #define PHS_LOGD(x...)  ALOGD( x )
@@ -273,7 +277,7 @@ static cmux_t *find_type_cmux(struct channel_manager_t *const me, mux_type type)
     int i;
 
     sem_lock(&me->get_mux_lock);
-    if(!strcmp(modem, "l")) {
+    if(!strcmp(modem, "l") || !strcmp(modem, "tl") || !strcmp(modem, "lf")) {
         for (i = 0; i < LTE_MUX_CHN_NUM; i++) {
             PHS_LOGI("LTE find_type_cmux  i = %d, me->itsCmux[i].type = %d, me->itsCmux[i].in_use = %d\n" ,i, me->itsCmux[i].type, me->itsCmux[i].in_use);
             if (me->itsCmux[i].type == (int)type && me->itsCmux[i].in_use == 0) {
@@ -763,9 +767,21 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
         property_get(MUX_TD_DEV, prop, "/dev/ts0710mux");
     } else if(!strcmp(modem, "w")) {
         property_get(MUX_W_DEV, prop, "/dev/ts0710mux");
-    } else if(!strcmp(modem, "l")) {
+    } else if(!strcmp(modem, "l") ) {
         property_get(MUX_L_DEV, prop, "/dev/sdiomux");
-        chn_num = LTE_MUX_CHN_NUM ;
+        if(multiSimMode == 0) {
+            chn_num = LTE_MUX_CHN_NUM ;
+        }
+    } else if(!strcmp(modem, "tl")) {
+        property_get(MUX_TL_DEV, prop, "/dev/sdiomux");
+        if(multiSimMode == 0) {
+            chn_num = LTE_MUX_CHN_NUM ;
+        }
+    } else if(!strcmp(modem, "lf")) {
+        property_get(MUX_LF_DEV, prop, "/dev/sdiomux");
+        if(multiSimMode == 0) {
+            chn_num = LTE_MUX_CHN_NUM ;
+        }
     } else {
         PHS_LOGE("Wrong modem parameter");
         exit(-1);
@@ -790,18 +806,26 @@ retry:
         }
     }
 
+    if(!strcmp(modem, "l")) {
+         property_get(MUX_L_DEV, prop, "/dev/sdiomux");
+         phs_mux_num = LTE_MUX_CHN_NUM ;
+         chns_data = single_chns_data_l;
+     }else if(!strcmp(modem, "tl")){
+         property_get(MUX_TL_DEV, prop, "/dev/sdiomux");
+         phs_mux_num = LTE_MUX_CHN_NUM ;
+         chns_data = single_chns_data_l;
+     }else if(!strcmp(modem, "lf")){
+         property_get(MUX_LF_DEV, prop, "/dev/sdiomux");
+         phs_mux_num = LTE_MUX_CHN_NUM ;
+         chns_data = single_chns_data_l;
+     }
+
     if(multiSimMode == 1) {
         phs_mux_num = MULTI_PHS_MUX_NUM;
         chns_data = multi_chns_data;
     } else {
         phs_mux_num = SINGLE_PHS_MUX_NUM;
         chns_data = single_chns_data;
-    }
-
-    if(!strcmp(modem, "l")) {
-        property_get(MUX_L_DEV, prop, "/dev/sdiomux");
-        phs_mux_num = LTE_MUX_CHN_NUM ;
-        chns_data = single_chns_data_l;
     }
 
     for (i = 0; i < phs_mux_num; i++) {
@@ -856,6 +880,10 @@ static void chnmng_pty_Init(struct channel_manager_t *const me)
          strcpy(pre_ptyname, "/dev/CHNPTYW");
     } else if(!strcmp(modem, "l")) {
          strcpy(pre_ptyname, "/dev/CHNPTYL");
+    } else if(!strcmp(modem, "tl")) {
+         strcpy(pre_ptyname, "/dev/CHNPTYTL");
+    } else if(!strcmp(modem, "lf")) {
+         strcpy(pre_ptyname, "/dev/CHNPTYLF");
     } else {
         PHS_LOGE("Wrong modem parameter");
 	exit(-1);
@@ -869,7 +897,8 @@ static void chnmng_pty_Init(struct channel_manager_t *const me)
         chns_data = single_chns_data;
     }
 
-    if(!strcmp(modem, "l")) {
+
+    if((!strcmp(modem, "l") || !strcmp(modem, "tl") || !strcmp(modem, "lf")) && multiSimMode == 0) {
         pty_chn_num = LTE_PTY_CHN_NUM ;
         chns_data = single_chns_data_l;
     } 
@@ -922,7 +951,7 @@ void chnmng_start_thread(struct channel_manager_t *const me)
         chns_data = single_chns_data;
     }
 
-    if(!strcmp(modem, "l")) {
+    if((!strcmp(modem, "l") || !strcmp(modem, "tl") || !strcmp(modem, "lf")) && multiSimMode == 0) {
         phs_mux_num = LTE_MUX_CHN_NUM;
         pty_chn_num = LTE_PTY_CHN_NUM;
         chns_data = single_chns_data_l;
@@ -1001,6 +1030,8 @@ static void usage(const char *argv)
     PHS_LOGE("modem: t (td modem)");
     PHS_LOGE("modem: w (wcdma modem)");
     PHS_LOGE("modem: l (lte modem)");
+    PHS_LOGE("modem: tl (tl modem)");
+    PHS_LOGE("modem: lf (lf modem)");
     exit(-1);
 }
 
@@ -1016,6 +1047,10 @@ static void *detect_at_no_response(void *par)
          strcpy(socket_name, "phsw");
     } else if(!strcmp(modem, "l")) {
          strcpy(socket_name, "phsl");
+    } else if(!strcmp(modem, "tl")) {
+         strcpy(socket_name, "phstl");
+    } else if(!strcmp(modem, "lf")) {
+         strcpy(socket_name, "phslf");
     } else {
         PHS_LOGE("Wrong modem parameter");
         exit(-1);
@@ -1060,6 +1095,10 @@ int main(int argc, char *argv[])
         property_get(W_SIM_NUM, prop, "");
     } else if(!strcmp(modem, "l")) {
         property_get(L_SIM_NUM, prop, "");
+    } else if(!strcmp(modem, "tl")) {
+        property_get(TL_SIM_NUM, prop, "");
+    } else if(!strcmp(modem, "lf")) {
+        property_get(LF_SIM_NUM, prop, "");
     } else {
 	usage(argv[0]);
     }
