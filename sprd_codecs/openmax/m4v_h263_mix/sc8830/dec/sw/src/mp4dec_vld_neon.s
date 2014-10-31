@@ -83,8 +83,8 @@ nonCoeffNum_f1		.req	r7
 .equ 	INTRA_MAX_LEVEL,	0x104
 .equ 	INTRA_MAX_RUN,		0x108
 
-Mp4Dec_VlcDecIntraTCOEF:	@FUNCTION
-		.global	Mp4Dec_VlcDecIntraTCOEF
+Mp4Dec_VlcDecIntraTCOEF_neon:	@FUNCTION
+		.global	Mp4Dec_VlcDecIntraTCOEF_neon
 
 		push	{r4 - r12, r14}
 	
@@ -401,8 +401,8 @@ bCoefQAllZero_f2	.req	r3
 
 .equ	Q_H263,	0
 
-Mp4Dec_VlcDecInterTCOEF_Mpeg:		@FUNCTION
-		.global	Mp4Dec_VlcDecInterTCOEF_Mpeg
+Mp4Dec_VlcDecInterTCOEF_Mpeg_neon:		@FUNCTION
+		.global	Mp4Dec_VlcDecInterTCOEF_Mpeg_neon
 
 		push	{r4 - r12, r14}
 		sub	sp, sp, #8
