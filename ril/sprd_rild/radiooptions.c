@@ -86,8 +86,7 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    fd = socket_local_client(SOCKET_NAME_RIL_DEBUG,
-                             ANDROID_SOCKET_NAMESPACE_RESERVED,
+    fd = socket_local_client(SOCKET_NAME_RIL_DEBUG,ANDROID_SOCKET_NAMESPACE_ABSTRACT,
                              SOCK_STREAM);
     if (fd < 0) {
         perror ("opening radio debug socket");

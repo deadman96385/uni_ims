@@ -17,6 +17,10 @@
 #include <fcntl.h>
 #include "config.h"
 
+
+#undef  PHS_LOGD
+#define PHS_LOGD(x...)  ALOGD( x )
+
 /*## operation deliver_cmd_req(char*,pty_type) */
 static void send_thread_deliver_cmd_req(struct send_thread_t *const me,
 					char *cmd_str, int len)

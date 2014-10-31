@@ -73,8 +73,6 @@ const struct cmd_table single_at_cmd_cvt_table[] = {
         cvt_generic_cmd_req, 5},
     {AT_CMD_CGQREQ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGQREQ"),
         cvt_generic_cmd_req, 5},
-    {AT_CMD_CGQREQ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQOS"),
-        cvt_generic_cmd_req, 5},
     {AT_CMD_CGEQMIN, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQMIN"),
         cvt_generic_cmd_req, 5},
     {AT_CMD_CGEQREQ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGEQREQ"),
@@ -313,8 +311,6 @@ const struct cmd_table multi_at_cmd_cvt_table[] = {
     {AT_CMD_CGQMIN, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGQMIN"),
         cvt_generic_cmd_req, 5},
     {AT_CMD_CGQREQ, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGQREQ"),
-        cvt_generic_cmd_req, 5},
-    {AT_CMD_CGQREQ, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGEQOS"),
         cvt_generic_cmd_req, 5},
     {AT_CMD_CGEQMIN, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGEQMIN"),
         cvt_generic_cmd_req, 5},
@@ -1466,6 +1462,18 @@ int cvt_cesq_cmd_ind(AT_CMD_IND_T * ind)
         return AT_RESULT_NG;
     }
 
+    if (rxlev <= 61) {
+        rxlev = (rxlev+2)/2;
+    } else if(rxlev > 61 && rxlev<= 63){
+        rxlev = 31;
+    } else if(rxlev >= 100 && rxlev < 103){
+        rxlev = 0;
+    } else if(rxlev >= 103 && rxlev < 165) {
+        rxlev = ((rxlev - 103) + 1)/2;    //add 1 for compensation
+    } else if (rxlev >= 165 && rxlev <= 191) {
+        rxlev = 31;
+    }
+
     err = at_tok_nextint(&at_in_str, &ber);
     if (err < 0) {
         return AT_RESULT_NG;
@@ -1474,6 +1482,16 @@ int cvt_cesq_cmd_ind(AT_CMD_IND_T * ind)
     err = at_tok_nextint(&at_in_str, &rscp);
     if (err < 0) {
         return AT_RESULT_NG;
+    }
+
+    if (rscp <= 31) {
+        rscp = rscp;
+    } else if(rscp >= 100 && rscp < 103) {
+        rscp = 0;
+    } else if(rscp >= 103 && rscp < 165) {
+        rscp = ((rscp - 103) + 1)/ 2;    //add 1 for compensation
+    } else if (rscp >= 165 && rscp <= 191) {
+        rscp = 31;
     }
 
     err = at_tok_nextint(&at_in_str, &ecno);
@@ -1739,8 +1757,17 @@ int adapter_cmux_write(cmux_t * mux, char *buf, int len, int to)
             } else if(!strcmp(modem, "w")) {
                 ALOGD("W modem AT no response");
                 strcpy(block_str, "W Modem Blocked");
+            } else if(!strcmp(modem, "l")) {
+                ALOGD("L modem AT no response");
+                strcpy(block_str, "L Modem Blocked");
+            } else if(!strcmp(modem, "tl")) {
+                ALOGD("TL modem AT no response");
+                strcpy(block_str, "TL Modem Blocked");
+            } else if(!strcmp(modem, "lf")) {
+                ALOGD("LF modem AT no response");
+                strcpy(block_str, "LF Modem Blocked");
             } else {
-                PHS_LOGE("Wrong modem parameter");
+                PHS_LOGE("Wrong modem parameter2");
 	        exit(-1);
             }
             if(soc_client > 0) {
@@ -1811,8 +1838,17 @@ int adapter_cmux_write_for_ps(cmux_t * mux, char *buf, int len, int to)
             } else if(!strcmp(modem, "w")) {
                 ALOGD("W modem AT no response");
                 strcpy(block_str, "W Modem Blocked");
+            } else if(!strcmp(modem, "l")) {
+                ALOGD("L modem AT no response");
+                strcpy(block_str, "L Modem Blocked");
+            } else if(!strcmp(modem, "tl")) {
+                ALOGD("TL modem AT no response");
+                strcpy(block_str, "TL Modem Blocked");
+            } else if(!strcmp(modem, "lf")) {
+                ALOGD("LF modem AT no response");
+                strcpy(block_str, "LF Modem Blocked");
             } else {
-                PHS_LOGE("Wrong modem parameter");
+                PHS_LOGE("Wrong modem parameter1");
 	        exit(-1);
             }
             if(soc_client > 0) {

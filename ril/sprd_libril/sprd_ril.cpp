@@ -58,8 +58,9 @@ namespace android {
 
 #if 0
 #define SOCKET_NAME_RIL "rild"
-#define SOCKET_NAME_RIL_DEBUG "rild-debug"
 #endif
+#define SOCKET_NAME_RIL_DEBUG "rild-debug"
+
 
 int modem;
 #define RILLOGI(fmt, args...) ALOGI("[%c] " fmt, modem,  ## args)
@@ -214,6 +215,8 @@ static size_t s_lastNITZTimeDataSize;
 #define TD_SIM_NUM  "ro.modem.t.count"
 #define W_SIM_NUM  "ro.modem.w.count"
 #define L_SIM_NUM  "ro.modem.l.count"
+#define TL_SIM_NUM  "ro.modem.tl.count"
+#define LF_SIM_NUM  "ro.modem.lf.count"
 
 static int s_multiSimMode;
 const char * s_modem = NULL;
@@ -321,6 +324,7 @@ static int responseCCresult(Parcel &p, void *response, size_t responselen);
 #endif
 #if defined (RIL_SPRD_EXTENSION)
 static int responseDSCI(Parcel &p, void *response, size_t responselen);
+static int responseCallCsFallBack(Parcel &p, void *response, size_t responselen);
 #endif
 
 static int decodeVoiceRadioTechnology (RIL_RadioState radioState);
@@ -550,7 +554,6 @@ processCommandBuffer(void *buffer, size_t buflen) {
     assert (ret == 0);
 
 /*    sLastDispatchedToken = token; */
-
     pRI->pCI->dispatchFunction(p, pRI);
 
     return 0;
@@ -3523,6 +3526,29 @@ static int responseDSCI(Parcel &p, void *response, size_t responselen) {
 
     return 0;
 }
+
+/** add for LTE-CSFB to handle CS fall back of MT call  */
+static int responseCallCsFallBack(Parcel &p, void *response, size_t responselen) {
+    if (response == NULL) {
+        RILLOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    if (responselen != sizeof(RIL_CALL_CSFALLBACK)) {
+        RILLOGE("invalid response length was %d expected %d",
+                (int)responselen, (int)sizeof (RIL_CALL_CSFALLBACK));
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    RIL_CALL_CSFALLBACK *p_cur = (RIL_CALL_CSFALLBACK *) response;
+    p.writeInt32(p_cur->id);
+    writeStringToParcel(p, p_cur->number);
+
+    startResponse;
+    appendPrintBuf("responseCallCsFallBack: id=%d, number=%s", p_cur->id, p_cur->number);
+    closeResponse;
+    return 0;
+}
 #endif
 
 /**
@@ -4267,13 +4293,15 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
                 break;
             case 'n':
                 s_sim_num = atoi(optarg);
+                modem = *optarg;
                 break;
             default:
                 RILLOGE("libril parse parameter error");
                 break;
         }
     }
-    modem = *s_modem;
+
+    //modem = *s_modem;
     RILLOGD("it's %s modem rild%d libril", s_modem, s_sim_num);
 
     if(!strcmp(s_modem, "t")) {
@@ -4290,6 +4318,18 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
             s_multiSimMode = 0;
     } else if(!strcmp(s_modem, "l")) {
         property_get(L_SIM_NUM, phoneCount, "");
+        if(strcmp(phoneCount, "1"))
+            s_multiSimMode = 1;
+        else
+            s_multiSimMode = 0;
+    } else if(!strcmp(s_modem, "tl")) {
+        property_get(TL_SIM_NUM, phoneCount, "");
+        if(strcmp(phoneCount, "1"))
+            s_multiSimMode = 1;
+        else
+            s_multiSimMode = 0;
+    } else if(!strcmp(s_modem, "lf")) {
+        property_get(LF_SIM_NUM, phoneCount, "");
         if(strcmp(phoneCount, "1"))
             s_multiSimMode = 1;
         else
@@ -4463,7 +4503,8 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
 #if 0
     // start debug interface socket
 
-    s_fdDebug = android_get_control_socket(SOCKET_NAME_RIL_DEBUG);
+    s_fdDebug = socket_local_server (SOCKET_NAME_RIL_DEBUG,
+                ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
     if (s_fdDebug < 0) {
         RILLOGE("Failed to get socket '" SOCKET_NAME_RIL_DEBUG "' errno:%d", errno);
         exit(-1);
@@ -5198,6 +5239,15 @@ requestToString(int request) {
         case RIL_REQUEST_SET_SPEED_MODE: return "SET_SPEED_MODE";
         case RIL_REQUEST_SET_SIM_SLOT_CFG: return "SET_SIM_SLOT_CFG"; //SPRD:added for choosing WCDMA SIM
         case RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES: return "SIMLOCK_REMAIN_TIMES";
+        case RIL_REQUEST_CALL_CSFALLBACK_ACCEPT: return "RIL_REQUEST_CALL_CSFALLBACK_ACCEPT"; //SPRD:add for LTE-CSFB to handle CS fall back of MT call
+        case RIL_REQUEST_CALL_CSFALLBACK_REJECT: return "RIL_REQUEST_CALL_CSFALLBACK_REJECT"; //SPRD:add for LTE-CSFB to handle CS fall back of MT call
+        case RIL_REQUEST_SET_PRIORITY_NETWORK_MODE: return "RIL_REQUEST_SET_PRIORITY_NETWORK_MODE"; //SPRD:add for priority network mode
+        case RIL_REQUEST_GET_PRIORITY_NETWORK_MODE: return "RIL_REQUEST_GET_PRIORITY_NETWORK_MODE"; //SPRD:add for priority network mode
+        ////SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 START
+        case RIL_REQUEST_GET_BAND_INFO: return "GET_BAND_INFO";
+        case RIL_REQUEST_SWITCH_BAND_INFO_REPORT: return "SWITCH_BAND_INFO_REPORT";
+        case RIL_REQUEST_SWITCH_3_WIRE: return "SWITCH_3_WIRE";
+        ////SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_SET_CELL_BROADCAST_CONFIG: return "SET_CELL_BROADCAST_CONFIG";
@@ -5294,6 +5344,11 @@ requestToString(int request) {
         case RIL_UNSOL_LTE_READY: return "UNSOL_LTE_READY";
         case RIL_UNSOL_SVLTE_USIM_READY: return "UNSOL_SVLTE_USIM_READY";
         case RIL_UNSOL_FDN_ENABLE: return "UNSOL_FDN_ENABLE";
+        case RIL_UNSOL_CALL_CSFALLBACK: return "UNSOL_RIL_CALL_CSFALLBACK";//SPRD:add for LTE-CSFB to handle CS fall back of MT call
+        //SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 START
+        case RIL_UNSOL_BAND_INFO: return "UNSOL_BAND_INFO";
+        //SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
+        case RIL_UNSOL_CALL_CSFALLBACK_FINISH: return "UNSOL_RIL_CALL_CSFALLBACK";//SPRD:add for LTE-CSFB to handle CS fall back of MT call
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_UNSOL_RESPONSE_NEW_CB_MSG: return "UNSOL_RESPONSE_NEW_CB_MSG";

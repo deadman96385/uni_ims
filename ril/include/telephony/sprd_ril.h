@@ -1375,6 +1375,12 @@ typedef struct {
    int location; // if  cause = 57 and location <= 2, it mean current sim hasn't start vt service
 } RIL_VideoPhone_DSCI;
 
+/** Used by RIL_UNSOL_CALL_CSFALLBACK to handle CS fall back of MT call  */
+typedef struct {
+   int id;
+   char *number;
+} RIL_CALL_CSFALLBACK;
+
 typedef struct {
     int response[MAX_3GPP_TYPE][MAX_DATA_LEN];
 } RIL_Usim_PB_Capa;
@@ -4977,8 +4983,18 @@ typedef struct {
 #define RIL_REQUEST_SET_SPEED_MODE (RIL_SPRD_REQUEST_BASE + 30)
 #define RIL_REQUEST_SET_SIM_SLOT_CFG  (RIL_SPRD_REQUEST_BASE + 31)  //SPRD:added for choose WCDMA SIM
 #define RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES (RIL_SPRD_REQUEST_BASE + 32)
+#define RIL_REQUEST_CALL_CSFALLBACK_ACCEPT  (RIL_SPRD_REQUEST_BASE + 33) //SPRD:add for LTE-CSFB to handle CS fall back of MT call
+#define RIL_REQUEST_CALL_CSFALLBACK_REJECT  (RIL_SPRD_REQUEST_BASE + 34) //SPRD:add for LTE-CSFB to handle CS fall back of MT call
+#define RIL_REQUEST_SET_PRIORITY_NETWORK_MODE  (RIL_SPRD_REQUEST_BASE + 35) //SPRD:add for priotiry network mode
+#define RIL_REQUEST_GET_PRIORITY_NETWORK_MODE  (RIL_SPRD_REQUEST_BASE + 36) //SPRD:add for priotiry network mode
+//SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 START
+#define RIL_REQUEST_GET_BAND_INFO (RIL_SPRD_REQUEST_BASE+37)
+#define RIL_REQUEST_SWITCH_BAND_INFO_REPORT (RIL_SPRD_REQUEST_BASE+38)
+#define RIL_REQUEST_SWITCH_3_WIRE (RIL_SPRD_REQUEST_BASE+39)
+//SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
 #define RIL_REQUEST_SET_RILPROXY_LTE_ENABLE  (RIL_SPRD_REQUEST_BASE + 100)
 #define RIL_SPRD_REQUEST_LAST RIL_REQUEST_SET_RILPROXY_LTE_ENABLE
+
 
 #define RIL_SPRD_UNSOL_RESPONSE_BASE 6000
 #define RIL_UNSOL_VIDEOPHONE_DATA (RIL_SPRD_UNSOL_RESPONSE_BASE + 0)
@@ -5010,8 +5026,14 @@ typedef struct {
 
 #define RIL_UNSOL_SVLTE_USIM_READY (RIL_SPRD_UNSOL_RESPONSE_BASE + 16)
 #define RIL_UNSOL_FDN_ENABLE (RIL_SPRD_UNSOL_RESPONSE_BASE + 17)
-#define RIL_SPRD_UNSOL_RESPONSE_LAST RIL_UNSOL_FDN_ENABLE
+#define RIL_UNSOL_CALL_CSFALLBACK (RIL_SPRD_UNSOL_RESPONSE_BASE + 18)//add for LTE-CSFB to handle CS fall back of MT call
+//SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 START
+#define RIL_UNSOL_BAND_INFO (RIL_SPRD_UNSOL_RESPONSE_BASE+19)
+#define RIL_UNSOL_CALL_CSFALLBACK_FINISH (RIL_SPRD_UNSOL_RESPONSE_BASE + 20)//add for LTE-CSFB to handle CS fall back of MT call
+#define RIL_SPRD_UNSOL_RESPONSE_LAST RIL_UNSOL_CALL_CSFALLBACK_FINISH
+//SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
 #endif
+
 
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 #define RIL_OEM_REQUEST_LAST RIL_REQUEST_SIM_AUTH

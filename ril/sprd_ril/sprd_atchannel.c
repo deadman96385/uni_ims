@@ -37,7 +37,7 @@
 
 #ifdef HAVE_ANDROID_OS
 /* for IOCTL's */
-//#include <linux/omap_csmi.h> // In Android L PDK, "omap_csmi.h" doesn't exist, so comment out
+#include <linux/omap_csmi.h>
 #endif /*HAVE_ANDROID_OS*/
 
 #include "misc.h"

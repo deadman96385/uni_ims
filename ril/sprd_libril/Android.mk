@@ -30,7 +30,7 @@ endif
 
 LOCAL_MODULE:= libril_sp
 LOCAL_MODULE_TAGS := optional
-#LOCAL_LDLIBS += -lpthread
+LOCAL_LDLIBS += -lpthread
 include $(BUILD_SHARED_LIBRARY)
 
 

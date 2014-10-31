@@ -87,10 +87,15 @@ typedef enum {
 #define TD_SIM_NUM  "ro.modem.t.count"
 #define W_SIM_NUM  "ro.modem.w.count"
 #define L_SIM_NUM  "ro.modem.l.count"
+#define TL_SIM_NUM  "ro.modem.tl.count"
+#define LF_SIM_NUM  "ro.modem.lf.count"
+#define PHONE_COUNT  "persist.msms.phone_count"
 
 #define ETH_TD  "ro.modem.t.eth"
 #define ETH_W  "ro.modem.w.eth"
 #define ETH_L  "ro.modem.l.eth"
+#define ETH_TL  "ro.modem.tl.eth"
+#define ETH_LF  "ro.modem.lf.eth"
 
 #define RIL_MAIN_SIM_PROPERTY  "persist.msms.phone_default"
 #define RIL_SIM_POWER_OFF_PROPERTY  "sys.power.off"
@@ -101,9 +106,13 @@ typedef enum {
 #define RIL_W_SIM_POWER_PROPERTY1  "ril.w.sim.power1"
 #define RIL_W_SIM_POWER_PROPERTY2  "ril.w.sim.power2"
 #define RIL_L_SIM_POWER_PROPERTY   "ril.l.sim.power"
+#define RIL_TL_SIM_POWER_PROPERTY   "ril.tl.sim.power"
+#define RIL_LF_SIM_POWER_PROPERTY   "ril.lf.sim.power"
 #define RIL_TD_ASSERT  "ril.t.assert"
 #define RIL_W_ASSERT  "ril.w.assert"
 #define RIL_L_ASSERT  "ril.l.assert"
+#define RIL_TL_ASSERT  "ril.tl.assert"
+#define RIL_LF_ASSERT  "ril.lf.assert"
 #define RIL_TD_SIM_PIN_PROPERTY  "ril.t.sim.pin"
 #define RIL_TD_SIM_PIN_PROPERTY1  "ril.t.sim.pin1"
 #define RIL_TD_SIM_PIN_PROPERTY2  "ril.t.sim.pin2"
@@ -111,6 +120,17 @@ typedef enum {
 #define RIL_W_SIM_PIN_PROPERTY1  "ril.w.sim.pin1"
 #define RIL_W_SIM_PIN_PROPERTY2  "ril.w.sim.pin2"
 #define RIL_L_SIM_PIN_PROPERTY  "ril.l.sim.pin"
+
+#define RIL_TL_SIM_PIN_PROPERTY  "ril.tl.sim.pin"
+#define RIL_TL_SIM_PIN_PROPERTY1  "ril.tl.sim.pin1"
+#define RIL_TL_SIM_PIN_PROPERTY2  "ril.tl.sim.pin2"
+#define RIL_LF_SIM_PIN_PROPERTY  "ril.lf.sim.pin"
+#define RIL_LF_SIM_PIN_PROPERTY1  "ril.lf.sim.pin1"
+#define RIL_LF_SIM_PIN_PROPERTY2  "ril.lf.sim.pin2"
+
+#define RIL_L_SIM_PIN_PROPERTY1  "ril.l.sim.pin1"
+#define RIL_L_SIM_PIN_PROPERTY2  "ril.l.sim.pin2"
+
 #define RIL_MODEM_RESET_PROPERTY "persist.sys.sprd.modemreset"
 #define RIL_STK_PROFILE_PREFIX  "ril.stk.proflie_"
 #define RIL_SIM0_STATE  "gsm.sim.state0"
@@ -121,6 +141,9 @@ typedef enum {
 #define PERSIST_MOMEM_L_ENABLE_PROPERTY  "persist.modem.l.enable"
 #define LTE_MODEM_START_PROP             "ril.service.l.enable"
 #define RIL_LTE_USIM_READY_PROP          "ril.lte.usim.ready" // for SVLTE only, used by rilproxy
+#define TL_MODEM_START_PROP         "ril.service.tl.enable"
+#define LF_MODEM_START_PROP         "ril.service.lf.enable"
+
 
 #define RIL_SIM_TYPE  "ril.ICC_TYPE"
 #define RIL_SIM_TYPE1  "ril.ICC_TYPE_1"
@@ -129,9 +152,14 @@ typedef enum {
 #define SSDA_MODE         "persist.radio.ssda.mode"
 #define SSDA_TESTMODE "persist.radio.ssda.testmode"
 
+#define PROP_DEFAULT_BEARER  "gsm.stk.default_bearer"
+#define PROP_OPEN_CHANNEL  "gsm.stk.open_channel"
+
 int modem;
 int s_multiSimMode = 0;
+int g_csfb_processing = 0;
 static const char * s_modem = NULL;
+static int s_testmode = 0;
 
 struct ATChannels *ATch_type[MAX_CHANNELS];
 static int s_channel_open = 0;
@@ -225,6 +253,7 @@ struct pdp_info pdp[MAX_PDP] = {
     { -1, PDP_IDLE, PTHREAD_MUTEX_INITIALIZER},
 };
 
+struct pdp_info default_pdp = { -1, PDP_IDLE, PTHREAD_MUTEX_INITIALIZER};
 //for lte, attach will occupy a cid for default pdp in cp.
 static int attachPdpIndex = -1;
 
@@ -265,7 +294,8 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t);
 static int getMaxPDPNum(void);
 static int getExtraPDPNum(int index);
 static void copyDataReponse(RIL_Data_Call_Response_v6* pSource, RIL_Data_Call_Response_v6* pDest);
-
+static void getSIMStatusAgainForSimBusy();
+static bool hasSimBusy = false;
 
 /*** Static Variables ***/
 static const RIL_RadioFunctions s_callbacks = {
@@ -357,6 +387,7 @@ static bool isLte(void);
 static void setCeMode(int channelID);
 static void setTestMode(int channelID);
 static bool isCSFB(void); 
+static bool bOnlyOneSIMPresent = false;
 /* @} */
 
 void list_init(struct listnode *node)
@@ -580,10 +611,19 @@ static int getPDP(void)
     int ret = -1;
     int i;
     int maxPDPNum = 3;//getMaxPDPNum();
+    int is_open_channel;
+    char prop[PROPERTY_VALUE_MAX] = {0};
+
+    property_get(PROP_OPEN_CHANNEL, prop, "0");
+    is_open_channel = atoi(prop);
 
     for (i=0; i < maxPDPNum; i++) {
         pthread_mutex_lock(&pdp[i].mutex);
         if(pdp[i].state == PDP_IDLE) {
+            if(is_open_channel && (i == 0)){
+                pthread_mutex_unlock(&pdp[0].mutex);
+                continue;
+            }
             pdp[i].state = PDP_BUSY;
             ret = i;
             pthread_mutex_unlock(&pdp[i].mutex);
@@ -753,8 +793,12 @@ static int deactivateLteDataConnection(int channelID, char *cmd)
                 err = at_tok_nextint(&line,&failCause);
                 if (err >= 0 && failCause == 151) {
                     ret = 1;
-                    RILLOGD("get 151 error,do detach");
-                    at_send_command(ATch_type[channelID], "AT+SGFD", NULL);
+                    RILLOGD("get 151 error,do detach! s_testmode = %d",s_testmode);
+                    if (isCSFB() && s_testmode != 10) {
+                        at_send_command(ATch_type[channelID], "AT+CLSSPDT = 1", NULL);
+                    }else {
+                        at_send_command(ATch_type[channelID], "AT+SGFD", NULL);
+                    }
                     pthread_mutex_lock(&s_lte_attach_mutex);
                     sLteRegState = STATE_OUT_OF_SERVICE;
                     pthread_mutex_unlock(&s_lte_attach_mutex);
@@ -781,7 +825,7 @@ static void deactivateDataConnection(int channelID, void *data, size_t datalen, 
     bool IsLte = isLte();
     int failCause = 0;
     char *line;
-
+    extern int s_sim_num;
     cid_ptr = ((const char **)data)[0];
     cid = atoi(cid_ptr);
     if(cid < 1)
@@ -819,7 +863,6 @@ static void deactivateDataConnection(int channelID, void *data, size_t datalen, 
         putPDP(cid - 1);
         putPDP(getExtraPDPNum(cid - 1));
     }
-
     at_response_free(p_response);
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     return;
@@ -1085,7 +1128,7 @@ error:
             if (err < 0) goto error1;
             err = at_tok_nextint(&line,&errNum);
             if (err < 0) goto error1;
-            if (errNum == 70 || errNum == 3 || errNum == 128) {
+            if (errNum == 70 || errNum == 254 || errNum == 128) {
                 RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
                 at_response_free(p_response);
                 return;
@@ -1154,6 +1197,12 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
                             strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY);
                         } else if(!strcmp(s_modem, "w")) {
                             strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY);
+                        } else if(!strcmp(s_modem, "l")) {
+                            strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY);
+                        } else if(!strcmp(s_modem, "tl")) {
+                            strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY);
+                        } else if(!strcmp(s_modem, "lf")) {
+                            strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY);
                         }
                         property_set(sim_prop, pin);
                     }
@@ -1163,6 +1212,12 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
                             strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY1);
                         } else if(!strcmp(s_modem, "w")) {
                             strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY1);
+                        } else if(!strcmp(s_modem, "l")) {
+                            strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY1);
+                        } else if(!strcmp(s_modem, "tl")) {
+                            strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY1);
+                        } else if(!strcmp(s_modem, "lf")) {
+                            strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY1);
                         }
                         property_set(sim_prop, pin);
                     }
@@ -1172,6 +1227,12 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
                             strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY2);
                         } else if(!strcmp(s_modem, "w")) {
                             strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY2);
+                        } else if(!strcmp(s_modem, "l")) {
+                            strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY2);
+                        } else if(!strcmp(s_modem, "tl")) {
+                            strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY2);
+                        } else if(!strcmp(s_modem, "lf")) {
+                            strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY2);
                         }
                         property_set(sim_prop, pin);
                     }
@@ -1358,21 +1419,98 @@ error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
 }
 
+int getTestModeInner(int subscription) {
+    RILLOGD("getTestModeInner subscription = %d", subscription);
+    int testmode = 0;
+    char prop[PROPERTY_VALUE_MAX] = { 0 };
+    static char TESTMODE_FORMAT[128] = { 0 };
+
+    if (subscription == 0) {
+        property_get(SSDA_TESTMODE, prop, "0");
+    } else {
+        char strTestmode[128] = { 0 };
+        memcpy(TESTMODE_FORMAT, SSDA_TESTMODE, sizeof(SSDA_TESTMODE));
+        strcat(TESTMODE_FORMAT, "%d");
+        snprintf(strTestmode, sizeof(strTestmode), TESTMODE_FORMAT, subscription);
+        RILLOGD("getTestModeInner prop key: %s", strTestmode);
+        property_get(strTestmode, prop, "0");
+    }
+    RILLOGD("getTestModeInner: %s", prop);
+
+    testmode = atoi(prop);
+    if ((testmode == 13) || (testmode == 14)) {
+        testmode = 255;
+    }
+    return testmode;
+}
+
+/* SPRD : for svlte & csfb @{ */
+int getTestMode() {
+    RILLOGD("getTestMode");
+    extern int s_sim_num;
+    return getTestModeInner(s_sim_num);
+}
+
+void buildTestModeCmd(char *cmd, size_t size) {
+    RILLOGD("buildTestModeCmd cmdsize = %d", size);
+    int phonecount = 0;
+    int i;
+    char prop[PROPERTY_VALUE_MAX] = { 0 };
+
+    property_get(PHONE_COUNT, prop, "1");
+    phonecount = atoi(prop);
+
+    for (i = 0; i < phonecount; i++) {
+        if (i == 0) {
+            snprintf(cmd, size, "AT+SPTESTMODEM=%d", getTestModeInner(i));
+            RILLOGD("buildTestModeCmd cmd: %s", cmd);
+        } else {
+            //strcat(cmd, ",%d");
+            char * strFormatter = strdup(cmd);
+            strcat(strFormatter, ",%d");
+            snprintf(cmd, size, strFormatter, getTestModeInner(i));
+            RILLOGD("buildTestModeCmd cmd%d: %s", i, cmd);
+        }
+    }
+}
+
+void initSIMPresentState() {
+    RILLOGD("initSIMPresentState");
+    int phonecount = 0;
+    int i;
+    int iAbsentSIMCount = 0;
+    char prop[PROPERTY_VALUE_MAX] = { 0 };
+
+    property_get(PHONE_COUNT, prop, "1");
+    phonecount = atoi(prop);
+
+    for (i = 0; i < phonecount; i++) {
+        if (getTestModeInner(i) == 254) {
+            ++iAbsentSIMCount;
+        }
+    }
+
+    bOnlyOneSIMPresent = iAbsentSIMCount == 1 ? true : false;
+}
+
 static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     int onOff;
     int autoAttach = -1;
+    int dataEnable = -1;
     int err, i;
     ATResponse *p_response = NULL;
     char sim_prop[PROPERTY_VALUE_MAX];
     char data_prop[PROPERTY_VALUE_MAX];
     extern int s_sim_num;
+    char cmd[128] = {0};
 
     assert (datalen >= sizeof(int *));
     onOff = ((int *)data)[0];
 
 #if defined (RIL_SPRD_EXTENSION)
     autoAttach = ((int *)data)[1];
+    dataEnable = ((int *)data)[2];
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     if(s_multiSimMode) {
         property_get(RIL_SIM1_ABSENT_PROPERTY, sim_prop, "0");
@@ -1428,8 +1566,16 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         }
         setRadioState(channelID, RADIO_STATE_OFF);
     } else if (onOff > 0 && sState == RADIO_STATE_OFF) {
+        s_testmode = getTestMode();
+        initSIMPresentState();
+        if (isCSFB()) {
+            buildTestModeCmd(cmd, sizeof(cmd));
+            at_send_command(ATch_type[channelID], cmd, NULL);
+        }
          /* SPRD : for svlte & csfb @{ */
-        setCeMode(channelID);
+        if (isSvLte()) {
+            setCeMode(channelID);
+        }
         bool isSimCUCC = false;
         err = at_send_command_numeric(ATch_type[channelID], "AT+CIMI", &p_response);
         if (err < 0 || p_response->success == 0) {
@@ -1455,8 +1601,17 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
             } else {
                 err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", &p_response);
             }
-        } else if (isCSFB() && !strcmp(s_modem, "l")) {
-            err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", &p_response);
+        } else if (isCSFB() && (!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf"))) {
+            if (s_multiSimMode && !bOnlyOneSIMPresent) {
+                if (s_testmode == 10) {
+                    RILLOGD("s_sim_num=%d,autoAttach=%d,dataEnable=%d",s_sim_num, autoAttach, dataEnable);
+                    snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,%d", s_sim_num, autoAttach && dataEnable);
+                    at_send_command(ATch_type[channelID], cmd, NULL );
+                }
+                //err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", &p_response);
+             }else {
+                 err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
+             }
         }
         /* @} */
         else {
@@ -1477,7 +1632,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         } else {
             if (isCSFB() && getSimType(channelID) != RIL_APPTYPE_USIM) {
                 RILLOGE("USIM card is required in CSFB Mode.");
-                goto error;
+                err = at_send_command(ATch_type[channelID],  "AT+SFUN=4", &p_response);
             } else {
                 if (!isSimCUCC) {
                     err = at_send_command(ATch_type[channelID], "AT+SFUN=4", &p_response);
@@ -1739,7 +1894,9 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                 property_get(ETH_TD, eth, "veth");
             } else if(!strcmp(s_modem, "w")) {
                 property_get(ETH_W, eth, "veth");
-            } else {
+            } else if(!strcmp(s_modem, "l")) {
+                property_get(ETH_L, eth, "veth");
+            }else {
                 RILLOGE("Unknown modem type, exit");
                 exit(-1);
             }
@@ -1880,6 +2037,10 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                 property_get(ETH_W, eth, "veth");
             } else if(!strcmp(s_modem, "l")) {
                 property_get(ETH_L, eth, "veth");
+            } else if(!strcmp(s_modem, "tl")) {
+                property_get(ETH_TL, eth, "veth");
+            } else if(!strcmp(s_modem, "lf")) {
+                property_get(ETH_LF, eth, "veth");
             } else {
                 RILLOGE("Unknown modem type, exit");
                 exit(-1);
@@ -2301,10 +2462,6 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
     if(!strcmp(qos_state, "0")) {
         snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
         at_send_command(ATch_type[channelID], cmd, NULL);
-        if (!strcmp(s_modem, "l")) {
-            snprintf(cmd, sizeof(cmd), "AT+CGEQOS=%d,9,64,64,64,64", index+1);
-            at_send_command(ATch_type[channelID], cmd, NULL);
-        }
     }
 
     snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
@@ -2356,11 +2513,17 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     ATResponse *p_response = NULL;
     int index = -1, pdpIndex = -1;
     char qos_state[PROPERTY_VALUE_MAX];
+    char prop[PROPERTY_VALUE_MAX] = {0};
     char *line = NULL;
     const  char *pdp_type;
     int failCause;
     bool IsLte = isLte();
+    extern int s_sim_num;
+    int is_default_bearer;
 
+    property_get(PROP_DEFAULT_BEARER, prop, "0");
+    is_default_bearer = atoi(prop);
+    RILLOGD("requestSetupDataCall is_default_bearer = %d", is_default_bearer);
     apn = ((const char **)data)[2];
     username = ((const char **)data)[3];
     password = ((const char **)data)[4];
@@ -2374,6 +2537,11 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     RILLOGD("requestSetupDataCall data[5] '%s'", ((const char **)data)[5]);
 
     if (ATch_type[channelID]) {
+        if (isCSFB() && s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
+            RILLOGD("requestSetupDataCall s_sim_num = %d", s_sim_num);
+            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,1", s_sim_num);
+            err = at_send_command(ATch_type[channelID], cmd, NULL );
+       }
 
         if (datalen > 6 * sizeof(char *)) {
             pdp_type = ((const char **)data)[6];
@@ -2381,22 +2549,32 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
             pdp_type = "IP";
         }
         //pdp_type = "IPV4+IPV6";
-        index = getPDP();
-        if(index < 0 || pdp[index].cid >= 0)
-            goto error;
+        if(is_default_bearer){
+
+            index = 0;
+            default_pdp.state = PDP_BUSY;
+        } else {
+            index = getPDP();
+
+            if (index < 0 || pdp[index].cid >= 0)
+                goto error;
+        }
 
         ATch_type[channelID]->nolog = 0;
 
+
         snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
-        if (!IsLte) {
-            at_send_command(ATch_type[channelID], cmd, NULL);
-        } else {
-            if (deactivateLteDataConnection(channelID, cmd) < 0) {
-                goto error;
+        if (!is_default_bearer) {
+            if (!IsLte) {
+                at_send_command(ATch_type[channelID], cmd, NULL );
+            } else {
+                if (deactivateLteDataConnection(channelID, cmd) < 0) {
+                    goto error;
+                }
             }
         }
 
-        if (!IsLte) {
+        if (!IsLte || is_default_bearer) {
             snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"%s\",\"%s\",\"\",0,0", index+1, pdp_type, apn);
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0){
@@ -2413,15 +2591,23 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
                 snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
                 at_send_command(ATch_type[channelID], cmd, NULL);
             }
-
-            snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"PPP\",%d", index+1);
+            if(is_default_bearer){
+                snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
+            } else {
+                snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"PPP\",%d", index + 1);
+            }
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (errorHandlingForCGDATA(channelID, p_response, err, index))
                 goto error;
-
-            pthread_mutex_lock(&pdp[index].mutex);
-            pdp[index].cid = index + 1;
-            pthread_mutex_unlock(&pdp[index].mutex);
+            if (!is_default_bearer) {
+                pthread_mutex_lock(&pdp[index].mutex);
+                pdp[index].cid = index + 1;
+                pthread_mutex_unlock(&pdp[index].mutex);
+            }else {
+                pthread_mutex_lock(&default_pdp.mutex);
+                default_pdp.cid = index + 1;
+                pthread_mutex_unlock(&default_pdp.mutex);
+            }
 
         } else {//LTE
             int ip_type = -1;
@@ -2452,10 +2638,6 @@ retrycgatt:
             if(!strcmp(qos_state, "0")) {
                 snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
                 at_send_command(ATch_type[channelID], cmd, NULL);
-                if (!strcmp(s_modem, "l")) {
-                    snprintf(cmd, sizeof(cmd), "AT+CGEQOS=%d,9,64,64,64,64", index+1);
-                    at_send_command(ATch_type[channelID], cmd, NULL);
-                }
             }
             if (!strcmp(s_modem, "l")) {
                 /* Add mutex to avoid multiple cgatt process */
@@ -2611,6 +2793,10 @@ retrycgatt:
                     property_get(ETH_W, eth, "veth");
                 } else if(!strcmp(s_modem, "l")) {
                     property_get(ETH_L, eth, "veth");
+                } else if(!strcmp(s_modem, "tl")) {
+                    property_get(ETH_TL, eth, "veth");
+                } else if(!strcmp(s_modem, "lf")) {
+                    property_get(ETH_LF, eth, "veth");
                 } else {
                     RILLOGE("Unknown modem type, exit");
                     exit(-1);
@@ -2652,10 +2838,6 @@ retrycgatt:
                     if(!strcmp(qos_state, "0")) {
                         snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
                         at_send_command(ATch_type[channelID], cmd, NULL);
-                        if (!strcmp(s_modem, "l")) {
-                            snprintf(cmd, sizeof(cmd), "AT+CGEQOS=%d,9,64,64,64,64", index+1);
-                            at_send_command(ATch_type[channelID], cmd, NULL);
-                        }
                     }
 
                     snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
@@ -2709,10 +2891,6 @@ retrycgatt:
                 if(!strcmp(qos_state, "0")) {
                     snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
                     at_send_command(ATch_type[channelID], cmd, NULL);
-                    if (!strcmp(s_modem, "l")) {
-                        snprintf(cmd, sizeof(cmd), "AT+CGEQOS=%d,9,64,64,64,64", index+1);
-                        at_send_command(ATch_type[channelID], cmd, NULL);
-                    }
                 }
 
                 snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
@@ -2730,7 +2908,7 @@ retrycgatt:
     }
 
 done:
-    if (index < 3) {
+    if (index < 3 || is_default_bearer) {
         requestOrSendDataCallList(channelID, index+1, &t);
     } else {
         requestOrSendDataCallList(channelID, (index+1) -3, &t);
@@ -2740,7 +2918,7 @@ done:
 
 error:
     if(index >= 0) {
-        if (IsLte) {
+        if (IsLte && !is_default_bearer) {
             int maxPDPNum = getMaxPDPNum() / 2;
             if (index > maxPDPNum) index -= maxPDPNum;
             putPDP(index);
@@ -3296,6 +3474,50 @@ error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
 }
 
+/* SPRD: add for LTE-CSFB to handle CS fall back of MT call @{*/
+static void requestCallCsFallBackAccept(int channelID, void *data, size_t datalen, RIL_Token t)
+{
+    char *cmd;
+    int ret, err;
+    RILLOGD("requestCallCsFallBackAccept.");
+    ret = asprintf(&cmd, "AT+SCSFB=1,1");
+      if(ret < 0) {
+          RILLOGE("Failed to allocate memory");
+          cmd = NULL;
+          goto error;
+      }
+      err = at_send_command(ATch_type[channelID], cmd, NULL);
+      free(cmd);
+      if (err != 0) goto error;
+
+      RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+      return;
+  error:
+      RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+}
+
+static void requestCallCsFallBackReject(int channelID, void *data, size_t datalen, RIL_Token t)
+{
+    char *cmd;
+    int ret, err;
+    RILLOGD("requestCallCsFallBackReject.");
+    ret = asprintf(&cmd, "AT+SCSFB=1,0");
+      if(ret < 0) {
+          RILLOGE("Failed to allocate memory");
+          cmd = NULL;
+          goto error;
+      }
+      err = at_send_command(ATch_type[channelID], cmd, NULL);
+      free(cmd);
+      if (err != 0) goto error;
+
+      RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+      return;
+  error:
+      RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+}
+/* @} */
+
 static void requestWriteSmsToSim(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     RIL_SMS_WriteArgs *p_args;
@@ -3432,6 +3654,7 @@ static void requestSignalStrengthLTE(int channelID, void *data, size_t datalen, 
     int skip;
     RIL_SignalStrength_v6 response_v6;
     char *line;
+    int response[6] = { -1, -1, -1, -1, -1, -1 };
 
     RIL_SIGNALSTRENGTH_INIT(response_v6);
 
@@ -3446,10 +3669,13 @@ static void requestSignalStrengthLTE(int channelID, void *data, size_t datalen, 
     err = at_tok_start(&line);
     if (err < 0) goto error;
 
-    err = at_tok_nextint(&line, &(response_v6.LTE_SignalStrength.signalStrength));
+    err = at_tok_nextint(&line, &response[0]);
     if (err < 0) goto error;
 
-    err = at_tok_nextint(&line, &(response_v6.LTE_SignalStrength.cqi));
+    err = at_tok_nextint(&line, &response[1]);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &response[2]);
     if (err < 0) goto error;
 
     err = at_tok_nextint(&line, &skip);
@@ -3458,11 +3684,18 @@ static void requestSignalStrengthLTE(int channelID, void *data, size_t datalen, 
     err = at_tok_nextint(&line, &skip);
     if (err < 0) goto error;
 
-    err = at_tok_nextint(&line, &(response_v6.LTE_SignalStrength.rsrq));
+    err = at_tok_nextint(&line, &response[5]);
     if (err < 0) goto error;
 
-    err = at_tok_nextint(&line, &(response_v6.LTE_SignalStrength.rsrp));
-    if (err < 0) goto error;
+    if(response[0] != -1 && response[0] != 99){
+        response_v6.GW_SignalStrength.signalStrength = response[0];
+    }
+    if(response[2] != -1 && response[2] != 255){
+        response_v6.GW_SignalStrength.signalStrength = response[2];
+    }
+    if(response[5] != -1 && (response[5] != 255 || response[5] != -255)){
+        response_v6.LTE_SignalStrength.rsrp = response[5];
+    }
 
     RIL_onRequestComplete(t, RIL_E_SUCCESS, &response_v6, sizeof(RIL_SignalStrength_v6));
     at_response_free(p_response);
@@ -3618,7 +3851,7 @@ static void requestRegistrationState(int channelID, int request, void *data,
         cmd = "AT+CREG?";
         prefix = "+CREG:";
     } else if (request == RIL_REQUEST_DATA_REGISTRATION_STATE) {
-        if(!strcmp(s_modem, "l")) {
+        if(!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf")) {
             cmd = "AT+CEREG?";
             prefix = "+CEREG:";
         } else {
@@ -4087,6 +4320,9 @@ static void requestSendSMS(int channelID, void *data, size_t datalen, RIL_Token 
     at_response_free(p_response);
     return;
 error:
+    if (p_response == NULL) {
+        goto error1;
+    }
     line = p_response->finalResponse;
     err = at_tok_start(&line);
     if (err < 0)
@@ -4565,6 +4801,7 @@ static void onQuerySignalStrengthLTE(void *param)
     int skip;
     RIL_SignalStrength_v6 response_v6;
     char *line;
+    int response[6] = { -1, -1, -1, -1, -1, -1 };
 
     RILLOGE("query signal strength LTE when screen on");
     channelID = getChannel();
@@ -4581,10 +4818,13 @@ static void onQuerySignalStrengthLTE(void *param)
     err = at_tok_start(&line);
     if (err < 0) goto error;
 
-    err = at_tok_nextint(&line, &(response_v6.LTE_SignalStrength.signalStrength));
+    err = at_tok_nextint(&line, &response[0]);
     if (err < 0) goto error;
 
-    err = at_tok_nextint(&line, &(response_v6.LTE_SignalStrength.cqi));
+    err = at_tok_nextint(&line, &response[1]);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &response[2]);
     if (err < 0) goto error;
 
     err = at_tok_nextint(&line, &skip);
@@ -4593,11 +4833,18 @@ static void onQuerySignalStrengthLTE(void *param)
     err = at_tok_nextint(&line, &skip);
     if (err < 0) goto error;
 
-    err = at_tok_nextint(&line, &(response_v6.LTE_SignalStrength.rsrq));
+    err = at_tok_nextint(&line, &response[5]);
     if (err < 0) goto error;
 
-    err = at_tok_nextint(&line, &(response_v6.LTE_SignalStrength.rsrp));
-    if (err < 0) goto error;
+    if(response[0] != -1 && response[0] != 99){
+        response_v6.GW_SignalStrength.signalStrength = response[0];
+    }
+    if(response[2] != -1 && response[2] != 255){
+        response_v6.GW_SignalStrength.signalStrength = response[2];
+    }
+    if(response[5] != -1 && (response[5] != 255 || response[5] != -255)){
+        response_v6.LTE_SignalStrength.rsrp = response[5];
+    }
 
     RIL_onUnsolicitedResponse(
               RIL_UNSOL_SIGNAL_STRENGTH,
@@ -4621,30 +4868,28 @@ static void  requestScreeState(int channelID, int status, RIL_Token t)
     if (!status) {
         /* Suspend */
         at_send_command(ATch_type[channelID], "AT+CCED=2,8", NULL);
-        if(!strcmp(s_modem, "l")) {
+        if(!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf")) {
             at_send_command(ATch_type[channelID], "AT+CEREG=1", NULL);
-        } else {
-            at_send_command(ATch_type[channelID], "AT+CREG=1", NULL);
-            at_send_command(ATch_type[channelID], "AT+CGREG=1", NULL);
         }
+        at_send_command(ATch_type[channelID], "AT+CREG=1", NULL);
+        at_send_command(ATch_type[channelID], "AT+CGREG=1", NULL);
         if(isExistActivePdp()){
             at_send_command(ATch_type[channelID], "AT*FDY=1,5", NULL);
         }
     } else {
         /* Resume */
         at_send_command(ATch_type[channelID], "AT+CCED=1,8", NULL);
-        if(!strcmp(s_modem, "l")) {
+        if(!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf")) {
             at_send_command(ATch_type[channelID], "AT+CEREG=2", NULL);
-        } else {
-            at_send_command(ATch_type[channelID], "AT+CREG=2", NULL);
-            at_send_command(ATch_type[channelID], "AT+CGREG=2", NULL);
         }
+        at_send_command(ATch_type[channelID], "AT+CREG=2", NULL);
+        at_send_command(ATch_type[channelID], "AT+CGREG=2", NULL);
         if(isExistActivePdp()){
             at_send_command(ATch_type[channelID], "AT*FDY=1,8", NULL);
         }
 
         if (sState == RADIO_STATE_SIM_READY) {
-            if(!strcmp(s_modem, "l")) {
+            if(!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf")) {
                 RIL_requestTimedCallback (onQuerySignalStrengthLTE, NULL, NULL);
             } else {
                 RIL_requestTimedCallback (onQuerySignalStrength, NULL, NULL);
@@ -4767,6 +5012,12 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
                         strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY);
                     } else if(!strcmp(s_modem, "w")) {
                         strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY);
+                    } else if(!strcmp(s_modem, "l")) {
+                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY);
+                    } else if(!strcmp(s_modem, "tl")) {
+                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY);
+                    } else if(!strcmp(s_modem, "lf")) {
+                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY);
                     }
                     property_set(sim_prop, pin);
                 }
@@ -4776,6 +5027,12 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
                         strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY1);
                     } else if(!strcmp(s_modem, "w")) {
                         strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY1);
+                    } else if(!strcmp(s_modem, "l")) {
+                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY1);
+                    } else if(!strcmp(s_modem, "tl")) {
+                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY1);
+                    } else if(!strcmp(s_modem, "lf")) {
+                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY1);
                     }
                     property_set(sim_prop, pin);
                 }
@@ -4785,6 +5042,12 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
                         strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY2);
                     } else if(!strcmp(s_modem, "w")) {
                         strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY2);
+                    } else if(!strcmp(s_modem, "l")) {
+                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY2);
+                    } else if(!strcmp(s_modem, "tl")) {
+                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY2);
+                    } else if(!strcmp(s_modem, "lf")) {
+                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY2);
                     }
                     property_set(sim_prop, pin);
                 }
@@ -4797,6 +5060,10 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
                     strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY);
                 } else if(!strcmp(s_modem, "l")) {
                     strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY);
+                } else if(!strcmp(s_modem, "tl")) {
+                    strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY);
+                } else if(!strcmp(s_modem, "lf")) {
+                    strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY);
                 }
                 property_set(sim_prop, pin);
             }
@@ -4806,7 +5073,8 @@ out:
         RIL_onRequestComplete(t, RIL_E_SUCCESS, &remaintime, sizeof(remaintime));
         simstatus = getSIMStatus(channelID);
         RILLOGD("simstatus = %d", simstatus);
-        if(simstatus == SIM_READY) {
+        RILLOGD("radioStatus = %d", sState);
+        if(simstatus == SIM_READY && sState == RADIO_STATE_ON) {
         //if(getSIMStatus(channelID) == SIM_READY) {
             setRadioState(channelID, RADIO_STATE_SIM_READY);
         }else if((SIM_NETWORK_PERSONALIZATION == simstatus)
@@ -4912,6 +5180,12 @@ static void  requestEnterSimPin(int channelID, void*  data, size_t  datalen, RIL
                         strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY);
                     } else if(!strcmp(s_modem, "w")) {
                         strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY);
+                    } else if(!strcmp(s_modem, "l")) {
+                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY);
+                    } else if(!strcmp(s_modem, "tl")) {
+                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY);
+                    } else if(!strcmp(s_modem, "lf")) {
+                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY);
                     }
                     property_set(sim_prop, pin);
                 }
@@ -4921,6 +5195,12 @@ static void  requestEnterSimPin(int channelID, void*  data, size_t  datalen, RIL
                         strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY1);
                     } else if(!strcmp(s_modem, "w")) {
                         strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY1);
+                    } else if(!strcmp(s_modem, "l")) {
+                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY1);
+                    } else if(!strcmp(s_modem, "tl")) {
+                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY1);
+                    } else if(!strcmp(s_modem, "lf")) {
+                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY1);
                     }
                     property_set(sim_prop, pin);
                 }
@@ -4930,6 +5210,12 @@ static void  requestEnterSimPin(int channelID, void*  data, size_t  datalen, RIL
                         strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY2);
                     } else if(!strcmp(s_modem, "w")) {
                         strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY2);
+                    } else if(!strcmp(s_modem, "l")) {
+                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY2);
+                    } else if(!strcmp(s_modem, "tl")) {
+                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY2);
+                    } else if(!strcmp(s_modem, "lt")) {
+                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY2);
                     }
                     property_set(sim_prop, pin);
                 }
@@ -5544,6 +5830,9 @@ static void requestSendAT(int channelID, void *data, size_t datalen, RIL_Token t
         strlcat(buf, p_response->finalResponse, sizeof(buf));
         strlcat(buf, "\r\n", sizeof(buf));
         RIL_onRequestComplete(t, RIL_E_SUCCESS, buf, strlen(buf)+1);
+        if(!strncasecmp(at_cmd, "AT+SFUN=5", strlen("AT+SFUN=5"))){
+            setRadioState(channelID, RADIO_STATE_OFF);
+        }
     }
     at_response_free(p_response);
 }
@@ -6132,6 +6421,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
     if (sState == RADIO_STATE_UNAVAILABLE
             && !(request == RIL_REQUEST_GET_IMEI
                 || request == RIL_REQUEST_GET_IMEISV
+                || request == RIL_REQUEST_SIM_POWER
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
@@ -6146,7 +6436,10 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 #if defined (RIL_SPRD_EXTENSION)
                 || request == RIL_REQUEST_SIM_POWER
                 || request == RIL_REQUEST_GET_REMAIN_TIMES
-		|| request == RIL_REQUEST_SET_SIM_SLOT_CFG //SPRD:added for choosing WCDMA SIM
+                || request == RIL_REQUEST_SET_SIM_SLOT_CFG //SPRD:added for choosing WCDMA SIM
+                || request == RIL_REQUEST_CALL_CSFALLBACK_ACCEPT //SPRD:add for LTE-CSFB to handle CS fall back of MT call
+                || request == RIL_REQUEST_CALL_CSFALLBACK_REJECT //SPRD:add for LTE-CSFB to handle CS fall back of MT call
+                || request == RIL_REQUEST_SET_PRIORITY_NETWORK_MODE //SPRD: add for priority network mode
 #endif
                 || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
                 || request == RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE
@@ -6363,7 +6656,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_SIGNAL_STRENGTH:
 #if defined (RIL_SPRD_EXTENSION)
-            if(!strcmp(s_modem, "l")) {
+            if((s_testmode > 0) && (s_testmode < 9)) {
                 requestSignalStrengthLTE(channelID, data, datalen, t);
             } else {
                 requestSignalStrength(channelID, data, datalen, t);
@@ -6577,10 +6870,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
                     if(s_sim_num == 0) {
                         property_get(RIL_MAIN_SIM_PROPERTY, prop, "0");
-                        if(!strcmp(prop, "0"))
-                            at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", NULL);
-                        else
-                            at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", NULL);
+                        if(!isCSFB()){
+                            if(!strcmp(prop, "0"))
+                                at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", NULL);
+                            else
+                                at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", NULL);
+                        }
                         snprintf(cmd, sizeof(cmd), "AT^SYSCONFIG=%d,3,2,4", type);
                         err = at_send_command(ATch_type[channelID], cmd, &p_response);
                         if (err < 0 || p_response->success == 0) {
@@ -6590,10 +6885,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                         }
                     } else if (s_sim_num == 1) {
                         property_get(RIL_MAIN_SIM_PROPERTY, prop, "0");
-                        if(!strcmp(prop, "1"))
-                            at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", NULL);
-                        else
-                            at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", NULL);
+                        if(!isCSFB()){
+                            if(!strcmp(prop, "1"))
+                                at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", NULL);
+                            else
+                                at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", NULL);
+                        }
                         property_get(RIL_SIM0_STATE, prop, "ABSENT");
                         RILLOGD(" RIL_SIM0_STATE = %s", prop);
                         if(!strcmp(prop, "ABSENT")) {
@@ -7791,7 +8088,159 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         }
         //Added for bug#213435 sim lock end
+        /* SPRD: add for LTE-CSFB to handle CS fall back of MT call @{*/
+        case RIL_REQUEST_CALL_CSFALLBACK_ACCEPT:
+            requestCallCsFallBackAccept(channelID, data, datalen, t);
+            break;
+        case RIL_REQUEST_CALL_CSFALLBACK_REJECT:
+            requestCallCsFallBackReject(channelID, data, datalen, t);
+            break;
+        case RIL_REQUEST_SET_PRIORITY_NETWORK_MODE:
+        {
+            if (s_testmode != 4 && s_testmode != 5
+                    && s_testmode != 6 && s_testmode != 7 && s_testmode != 8) {
+                RILLOGE("no need set priority");
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                break;
+            }
+            char cmd[30] = {0};
 
+            p_response = NULL;
+            /* AT^SYSCONFIG=<mode>,<acqorder>,<roam>,<srvdomain>
+             * mode: 17 -- LTE
+             * acqorder: 5:4G priority  6:2/3G priority
+             * roam: 2 -- no change
+             * srvdomain: 4 -- no change
+            */
+
+            // transfer rilconstan to at
+            int order = 0;
+            switch(((int *)data)[0]) {
+            case 0: //4G priority
+                order = 5;
+                break;
+            case 1://2/3G priority
+                order = 6;
+                break;
+            }
+            if (0 == order) {
+                RILLOGE("set priority network failed, order incorrect: %d", ((int *)data)[0]);
+                break;
+            }
+
+            snprintf(cmd, sizeof(cmd), "AT^SYSCONFIG=17,%d,2,4", order);
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            if(p_response)
+                at_response_free(p_response);
+            break;
+        }
+
+        case RIL_REQUEST_GET_PRIORITY_NETWORK_MODE:
+        {
+            p_response = NULL;
+            int response[2] = {0, 0};
+
+            err = at_send_command_singleline(ATch_type[channelID], "AT^SYSCONFIG?",
+                    "^SYSCONFIG:", &p_response);
+            if (err >= 0 && p_response->success) {
+                char *line = p_response->p_intermediates->line;
+                err = at_tok_start(&line);
+                if (err >= 0) {
+                    err = at_tok_nextint(&line, &response[0]);
+                    if(err >= 0)
+                    err = at_tok_nextint(&line, &response[1]);
+                    // transfer at to rilconstant
+                    int order = -1;
+                    switch(response[1]) {
+                        case 5:
+                        order = 0; //4G priority network mode
+                        break;
+                        case 6:
+                        order = 1;//2/3G priority network mode
+                        break;
+                    }
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, &order,
+                            sizeof(order));
+                }
+            } else {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        /* @} */
+        //SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 START
+        case RIL_REQUEST_GET_BAND_INFO: {
+            RILLOGD("enter to handle event: RIL_REQUEST_GET_BAND_INFO");
+            p_response = NULL;
+            char* line = NULL;
+            err = at_send_command_singleline(ATch_type[channelID], "AT+SPCLB?","+SPCLB:", &p_response);
+
+            if (err < 0 || p_response->success == 0) {
+                RILLOGD("response of RIL_REQUEST_GET_BAND_INFO: generic failure!");
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                line = p_response->p_intermediates->line;
+                RILLOGD("response of RIL_REQUEST_GET_BAND_INFO: %s", line);
+                //TODO: check the string of line, which is number.
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, line, strlen(line)+1);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        case RIL_REQUEST_SWITCH_BAND_INFO_REPORT: {
+            RILLOGD("enter to handle event: RIL_REQUEST_SWITCH_BAND_INFO_REPORT");
+            p_response = NULL;
+            int n = ((int*)data)[0];
+            char cmd[20] = {0};
+            RILLOGD("RIL_REQUEST_SWITCH_BAND_INFO_REPORT to data value: %d", n);
+
+            snprintf(cmd, sizeof(cmd), "AT+SPCLB=%d", n);
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+
+            if (err < 0 || p_response->success == 0) {
+                RILLOGD("response of RIL_REQUEST_SWITCH_BAND_INFO_REPORT: generic failure!");
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RILLOGD("response of RIL_REQUEST_SWITCH_BAND_INFO_REPORT: success!");
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+
+            at_response_free(p_response);
+            break;
+        }
+        case RIL_REQUEST_SWITCH_3_WIRE: {
+            RILLOGD("enter to handle event: RIL_REQUEST_SWITCH_3_WIRE");
+            p_response = NULL;
+            int n = ((int*)data)[0];
+            char cmd[20] = {0};
+
+            if (n == 0) {
+                n = 2; //close 3_wire coexistance(AT+SPCLB=2).
+            } else if (n == 1) {
+                n = 3; //open 3_wire coexistance(AT+SPCLB=3).
+            }
+            RILLOGD("RIL_REQUEST_SWITCH_3_WIRE to data value: %d", n);
+            snprintf(cmd, sizeof(cmd), "AT+SPCLB=%d", n);
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+
+            if (err < 0 || p_response->success == 0) {
+                RILLOGD("response of RIL_REQUEST_SWITCH_3_WIRE: generic failure!");
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RILLOGD("response of RIL_REQUEST_SWITCH_3_WIRE: success!");
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+
+            at_response_free(p_response);
+            break;
+        }
+        //SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_GET_CELL_BROADCAST_CONFIG:
             requestGetCellBroadcastConfig(channelID,data, datalen, t);
@@ -8011,7 +8460,14 @@ getSIMStatus(int channelID)
         case CME_SIM_NOT_INSERTED:
             ret = SIM_ABSENT;
             goto done;
-
+        case CME_SIM_BUSY:
+            ret = SIM_NOT_READY;
+            if (!hasSimBusy) {
+                hasSimBusy = true;
+                RIL_requestTimedCallback(getSIMStatusAgainForSimBusy, NULL,
+                    &TIMEVAL_SIMPOLL);
+            }
+            goto done;
         default:
             ret = SIM_NOT_READY;
             goto done;
@@ -8048,6 +8504,10 @@ getSIMStatus(int channelID)
             strcpy(sim_prop, RIL_W_ASSERT);
         } else if(!strcmp(s_modem, "l")) {
             strcpy(sim_prop, RIL_L_ASSERT);
+        } else if(!strcmp(s_modem, "tl")) {
+            strcpy(sim_prop, RIL_TL_ASSERT);
+        } else if(!strcmp(s_modem, "lf")) {
+            strcpy(sim_prop, RIL_LF_ASSERT);
         }
         property_get(sim_prop, prop, "0");
         if(!strcmp(prop, "1")) {
@@ -8058,6 +8518,12 @@ getSIMStatus(int channelID)
                         strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY);
                     } else if(!strcmp(s_modem, "w")) {
                         strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY);
+                    } else if(!strcmp(s_modem, "l")) {
+                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY);
+                    } else if(!strcmp(s_modem, "tl")) {
+                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY);
+                    } else if(!strcmp(s_modem, "lf")) {
+                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY);
                     }
                     property_get(sim_prop, prop, "");
                 } else if (s_sim_num == 1) {
@@ -8065,6 +8531,12 @@ getSIMStatus(int channelID)
                         strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY1);
                     } else if(!strcmp(s_modem, "w")) {
                         strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY1);
+                    } else if(!strcmp(s_modem, "l")) {
+                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY1);
+                    } else if(!strcmp(s_modem, "tl")) {
+                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY1);
+                    } else if(!strcmp(s_modem, "lf")) {
+                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY1);
                     }
                     property_get(sim_prop, prop, "");
                 } else if (s_sim_num == 2) {
@@ -8072,6 +8544,12 @@ getSIMStatus(int channelID)
                         strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY2);
                     } else if(!strcmp(s_modem, "w")) {
                         strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY2);
+                    } else if(!strcmp(s_modem, "l")) {
+                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY2);
+                    } else if(!strcmp(s_modem, "tl")) {
+                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY2);
+                    } else if(!strcmp(s_modem, "lf")) {
+                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY2);
                     }
                     property_get(sim_prop, prop, "");
                 }
@@ -8101,6 +8579,10 @@ getSIMStatus(int channelID)
                     strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY);
                 } else if(!strcmp(s_modem, "l")) {
                     strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY);
+                } else if(!strcmp(s_modem, "tl")) {
+                    strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY);
+                } else if(!strcmp(s_modem, "lf")) {
+                    strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY);
                 }
                 property_get(sim_prop, prop, "");
                 if(strlen(prop) != 4) {
@@ -8385,6 +8867,8 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
     int ret;
     int err, i;
     int maxPDPNum = getMaxPDPNum();
+    extern int s_sim_num;
+    char cmd[30];
 
     for(i = 0; i < maxPDPNum; i++) {
         if (pdp[i].cid > 0) {
@@ -8393,20 +8877,31 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
         }
     }
 
-    err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
-    if (err < 0 || p_response->success == 0) {
-        at_response_free(p_response);
-        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-        return;
-    }
     if (!strcmp(s_modem, "l")) {
         putPDP(attachPdpIndex);
         RILLOGD("attachGPRS, put pdp %d", attachPdpIndex);
         attachPdpIndex = -1;
     }
-
+    if (!isCSFB() || (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10)) {
+        err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
+        if (err < 0 || p_response->success == 0) {
+        goto error;
+        }
+        if (isCSFB()) {
+            RILLOGD("s_sim_num = %d", s_sim_num);
+            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
+            err = at_send_command(ATch_type[channelID], cmd, NULL );
+        }
+    }
+    if (isCSFB() && s_testmode != 10) {
+        at_send_command(ATch_type[channelID], "AT+CLSSPDT = 1", NULL);
+    }
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     at_response_free(p_response);
+    return;
+error:
+    at_response_free(p_response);
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     return;
 }
 
@@ -8459,7 +8954,9 @@ static void initializeCallback(void *param)
     channelID = getChannel();
     setRadioState (channelID, RADIO_STATE_OFF);
 
-#ifdef LTE_POWERON
+
+#ifdef SIM_AUTO_POWERON
+#if 0
      SIM_Status simst = getSIMStatus(channelID);
      if (simst == SIM_READY) {
          if (!strcmp(s_modem, "t")) {
@@ -8482,6 +8979,7 @@ static void initializeCallback(void *param)
          s_init_sim_ready = 1;
     }
 
+#endif
 #endif
 
     /* note: we don't check errors here. Everything important will
@@ -8530,7 +9028,7 @@ static void initializeCallback(void *param)
 
     at_response_free(p_response);
 
-    if(!strcmp(s_modem, "l")) {
+    if(!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf")) {
         /*  LTE registration events */
         at_send_command(ATch_type[channelID], "AT+CEREG=2", NULL);
     } else {
@@ -8594,9 +9092,16 @@ static void initializeCallback(void *param)
 
     at_send_command(ATch_type[channelID], "AT+SPAURC=\"10011011111000000000100001000011111111\"", NULL);
 
-#ifndef LTE_POWERON
+    /* SPRD : for svlte & csfb @{ */
+    if (isSvLte()) {
+        setTestMode(channelID);
+    }
+    /* @} */
+
+
+if (!isLte()) {
     /*  LTE Special AT commands */
-    if(!strcmp(s_modem, "l")) {
+    if(!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf")) {
         // Response for AT+VIRTUALSIMINIT may be spent adbout 30s.
         // in order to fast init, create on thread to open card for SVLTE.
         if (isSvLte()) {
@@ -8661,8 +9166,12 @@ retry_vinit:
             strcpy(sim_prop, RIL_TD_SIM_POWER_PROPERTY);
         } else if(!strcmp(s_modem, "w")) {
             strcpy(sim_prop, RIL_W_SIM_POWER_PROPERTY);
-        }else if(!strcmp(s_modem, "l")) {
+        } else if(!strcmp(s_modem, "l")) {
             strcpy(sim_prop, RIL_L_SIM_POWER_PROPERTY);
+        } else if(!strcmp(s_modem, "tl")) {
+            strcpy(sim_prop, RIL_TL_SIM_POWER_PROPERTY);
+        } else if(!strcmp(s_modem, "lf")) {
+            strcpy(sim_prop, RIL_LF_SIM_POWER_PROPERTY);
         }
         property_get(sim_prop, prop, "0");
         if(!strcmp(prop, "0")) {
@@ -8676,7 +9185,7 @@ retry_vinit:
         setRadioState (channelID, RADIO_STATE_SIM_NOT_READY);
     }
 
-#endif
+}
     putChannel(channelID);
 
     list_init(&dtmf_char_list);
@@ -8811,7 +9320,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         char *tmp;
 
         RILLOGD("[unsl] +CSQ enter");
-        if(!strcmp(s_modem, "l")) {
+        if(!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf")) {
             RILLOGD("for +CSQ, current is lte ril,do nothing");
             return;
         }
@@ -8836,6 +9345,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RIL_SignalStrength_v6 response_v6;
         char *tmp;
         int skip;
+        int response[6] = { -1, -1, -1, -1, -1, -1 };
 
         RILLOGD("[unsl] +CESQ enter");
         if(!strcmp(s_modem, "t")) {
@@ -8849,10 +9359,13 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
         at_tok_start(&tmp);
 
-        err = at_tok_nextint(&tmp, &(response_v6.LTE_SignalStrength.signalStrength));
+        err = at_tok_nextint(&tmp, &response[0]);
         if (err < 0) goto out;
 
-        err = at_tok_nextint(&tmp, &(response_v6.LTE_SignalStrength.cqi));
+        err = at_tok_nextint(&tmp, &response[1]);
+        if (err < 0) goto out;
+
+        err = at_tok_nextint(&tmp, &response[2]);
         if (err < 0) goto out;
 
         err = at_tok_nextint(&tmp, &skip);
@@ -8861,12 +9374,18 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         err = at_tok_nextint(&tmp, &skip);
         if (err < 0) goto out;
 
-        err = at_tok_nextint(&tmp, &(response_v6.LTE_SignalStrength.rsrq));
+        err = at_tok_nextint(&tmp, &response[5]);
         if (err < 0) goto out;
 
-        err = at_tok_nextint(&tmp, &(response_v6.LTE_SignalStrength.rsrp));
-        if (err < 0) goto out;
-
+        if(response[0] != -1 && response[0] != 99){
+            response_v6.GW_SignalStrength.signalStrength = response[0];
+        }
+        if(response[2] != -1 && response[2] != 255){
+            response_v6.GW_SignalStrength.signalStrength = response[2];
+        }
+        if(response[5] != -1 && (response[5] != 255 || response[5] != -255)){
+            response_v6.LTE_SignalStrength.rsrp = response[5];
+        }
         RIL_onUnsolicitedResponse(
                 RIL_UNSOL_SIGNAL_STRENGTH,
                 &response_v6, sizeof(RIL_SignalStrength_v6));
@@ -8934,7 +9453,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         } else if (isCSFB()) {
             // report LTE_READY or not, in case of +CEREG:2;
             if (commas == 0 && lteState == 2) {
-                RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteState, 4);
+                //RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteState, 4);
             }
         }
 
@@ -9599,6 +10118,18 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             goto out;
         }
 
+        //stat:6 is disconnected
+        if(response->stat == 6 && g_csfb_processing){
+            RIL_CALL_CSFALLBACK *csfb_response = NULL;
+            csfb_response = (RIL_CALL_CSFALLBACK *)alloca(sizeof(RIL_CALL_CSFALLBACK));
+            csfb_response->id = response->id;
+            csfb_response->number = response->number;
+            g_csfb_processing = 0;
+            RIL_onUnsolicitedResponse (RIL_UNSOL_CALL_CSFALLBACK_FINISH,
+                    csfb_response,sizeof(RIL_CALL_CSFALLBACK));
+            RILLOGD("RIL_UNSOL_CALL_CSFALLBACK_FINISH, id: %d, number: %s", csfb_response->id, csfb_response->number);
+        }
+
         if(response->type == 0) {
             RIL_onUnsolicitedResponse (
                 RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
@@ -9630,6 +10161,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 RILLOGD("%s fail", s);
                 goto out;
             }
+
             if (at_tok_hasmore(&tmp)) {
                 err = at_tok_nextint(&tmp, &response->cause);
                 if (err < 0) {
@@ -9657,6 +10189,33 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 #endif
         }
     }
+    /* SPRD: add for LTE-CSFB to handle CS fall back of MT call @{*/
+    else if (strStartsWith(s, "+SCSFB")) {
+        RIL_CALL_CSFALLBACK *response = NULL;
+        response = (RIL_CALL_CSFALLBACK *)alloca(sizeof(RIL_CALL_CSFALLBACK));
+         char *tmp;
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+
+        err = at_tok_nextint(&tmp, &response->id);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            response->id = 1;
+        }
+        err = at_tok_nextstr(&tmp, &response->number);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            response->number = " ";
+        }
+        g_csfb_processing = 1;
+
+        RIL_onUnsolicitedResponse (RIL_UNSOL_CALL_CSFALLBACK,
+            response,sizeof(RIL_CALL_CSFALLBACK));
+        RILLOGD("RIL_UNSOL_CALL_CSFALLBACK, id: %d, number: %s", response->id, response->number);
+    }
+    /* @} */
+
 #if defined (RIL_SPRD_EXTENSION)
     else if (strStartsWith(s,AT_PREFIX"DVTRING:")
             || strStartsWith(s,AT_PREFIX"DVTCLOSED")) {
@@ -9698,6 +10257,22 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RILLOGI("SPGS Cid : %d, OnOff : %d \n", sGsCid, sEthOnOff);
         RIL_requestTimedCallback(startGSps, NULL, NULL);
     }
+    //SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 START
+    else if (strStartsWith(s, "+SPCLB:")) {
+        char *tmp;
+        char *response = NULL;
+
+        RILLOGI("Enter SPCLB %s", s);
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+
+        skipWhiteSpace(&tmp);
+        RILLOGI("Retrun SPCLB: %s", tmp);
+        response = tmp;
+        RIL_onUnsolicitedResponse (RIL_UNSOL_BAND_INFO, response, strlen(response) + 1);
+    }
+    //SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
 #endif
     else if (strStartsWith(s, "^SMOF:")) {
         char *tmp;
@@ -10047,6 +10622,10 @@ mainLoop(void *param)
                 sprintf(str,"/dev/CHNPTYW%d",sim_num);
             } else if(!strcmp(s_modem, "l")) {
                 sprintf(str,"/dev/CHNPTYL%d",sim_num);
+            } else if(!strcmp(s_modem, "tl")) {
+                sprintf(str,"/dev/CHNPTYTL%d",sim_num);
+            } else if(!strcmp(s_modem, "lf")) {
+                sprintf(str,"/dev/CHNPTYLF%d",sim_num);
             } else {
                 RILLOGE("Invalid tty device");
                 exit(-1);
@@ -10125,6 +10704,7 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
                 break;
             case 'n':
                 s_sim_num = atoi(optarg);
+                modem = *optarg;
                 break;
             default:
                 usage(argv[0]);
@@ -10132,7 +10712,7 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
         }
     }
 
-    modem = *s_modem;
+    //modem = *s_modem;
     RILLOGD("rild connect %s modem, current is rild%d\n", s_modem, s_sim_num);
 
     if(!strcmp(s_modem, "t")) {
@@ -10153,7 +10733,19 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
             s_multiSimMode = 1;
         else
             s_multiSimMode = 0;
-    } else {
+    } else if(!strcmp(s_modem, "tl")) {
+        property_get(TL_SIM_NUM, phoneCount, "");
+        if(strcmp(phoneCount, "1"))
+            s_multiSimMode = 1;
+        else
+            s_multiSimMode = 0;
+    } else if(!strcmp(s_modem, "lf")) {
+        property_get(LF_SIM_NUM, phoneCount, "");
+        if(strcmp(phoneCount, "1"))
+            s_multiSimMode = 1;
+        else
+            s_multiSimMode = 0;
+    }else {
         usage(argv[0]);
     }
 
@@ -10223,18 +10815,7 @@ int main (int argc, char **argv)
 
 #endif /* RIL_SHLIB */
 
-/* SPRD : for svlte & csfb @{ */
-static int getTestMode(void) {
-    int testmode = 0;
-    char prop[PROPERTY_VALUE_MAX]="";
-    property_get(SSDA_TESTMODE, prop, "0");
-    RILLOGD("ssda testmode: %s", prop);
-    testmode = atoi(prop);
-    if ((testmode == 13) || (testmode == 14)) {
-        testmode = 255;
-    }
-    return testmode;
-}
+
 
 static bool isSvLte(void) {
     char prop[PROPERTY_VALUE_MAX]="";
@@ -10251,10 +10832,13 @@ static bool isSvLte(void) {
 static bool isCSFB(void) {
     char prop[PROPERTY_VALUE_MAX]="";
     property_get(SSDA_MODE, prop, "0");
-
-    if ((!strcmp(prop,"tdd-csfb")) || (!strcmp(prop,"fdd-csfb"))) {
+    RILLOGD("ssda mode: %s", prop);
+    if ((!strcmp(prop,"tdd-csfb")) || (!strcmp(prop,"fdd-csfb"))
+            || (!strcmp(prop,"csfb"))) {
+        RILLOGD("is CSFB ");
         return true;
     }
+    RILLOGD("is not CSFB ");
     return false;
 }
 
@@ -10263,7 +10847,8 @@ static bool isLte(void) {
     char prop[PROPERTY_VALUE_MAX]="";
     property_get(SSDA_MODE, prop, "0");
     RILLOGD("ssda mode: %s", prop);
-    if ((!strcmp(prop,"svlte")) || (!strcmp(prop,"tdd-csfb")) || (!strcmp(prop,"fdd-csfb"))) {
+    if ((!strcmp(prop, "svlte")) || (!strcmp(prop, "tdd-csfb"))
+            || (!strcmp(prop, "fdd-csfb")) || (!strcmp(prop, "csfb"))) {
         return true;
     }
     return false;
@@ -10343,5 +10928,35 @@ static void copyDataReponse(RIL_Data_Call_Response_v6* pSource, RIL_Data_Call_Re
     pDest->gateways = pSource->gateways;
     pDest->dnses = pSource->dnses;
     dumpDataResponse(pDest);
+}
+static void getSIMStatusAgainForSimBusy() {
+    ATResponse *p_response = NULL;
+    int err;
+    int channelID = getChannel();
+    if (sState == RADIO_STATE_UNAVAILABLE) {
+        goto done;
+    }
+    err = at_send_command_singleline(ATch_type[channelID], "AT+CPIN?", "+CPIN:",
+            &p_response);
+
+    if (err != 0) {
+        goto done;
+    }
+    switch (at_get_cme_error(p_response)) {
+    case CME_SIM_BUSY:
+        RIL_requestTimedCallback(getSIMStatusAgainForSimBusy, NULL,
+                &TIMEVAL_SIMPOLL);
+        goto done;
+    default:
+        if (hasSimBusy) {
+            hasSimBusy = false;
+        }
+        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED, NULL,
+                0);
+        goto done;
+    }
+    done: putChannel(channelID);
+    at_response_free(p_response);
+    return;
 }
 
