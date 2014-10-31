@@ -11,7 +11,7 @@ LOCAL_CFLAGS :=
 
 LOCAL_MODULE:= librilutils
 
-LOCAL_LDLIBS += -lpthread
+#LOCAL_LDLIBS += -lpthread
 
 include $(BUILD_SHARED_LIBRARY)
 
@@ -30,6 +30,6 @@ LOCAL_CFLAGS :=
 
 LOCAL_MODULE:= librilutils_static
 
-LOCAL_LDLIBS += -lpthread
+#LOCAL_LDLIBS += -lpthread
 
 include $(BUILD_STATIC_LIBRARY)

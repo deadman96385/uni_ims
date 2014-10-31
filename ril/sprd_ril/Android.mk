@@ -51,7 +51,7 @@ ifeq (foo,foo)
 #build shared library
 LOCAL_SHARED_LIBRARIES += \
         libcutils libutils
-LOCAL_LDLIBS += -lpthread
+#LOCAL_LDLIBS += -lpthread
 LOCAL_CFLAGS += -DRIL_SHLIB
 LOCAL_MODULE:= libreference-ril_sp
 LOCAL_MODULE_TAGS := optional
