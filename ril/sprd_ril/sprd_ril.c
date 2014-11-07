@@ -6465,6 +6465,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_CHANGE_SIM_PIN
                 || request == RIL_REQUEST_CHANGE_SIM_PIN2
                 || request == RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES
+                || request == RIL_REQUEST_OEM_HOOK_RAW
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
@@ -7086,7 +7087,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_OEM_HOOK_RAW:
             /* echo back data */
-            RIL_onRequestComplete(t, RIL_E_SUCCESS, data, datalen);
+            requestSendAT(channelID,data, datalen, t);
+//            RIL_onRequestComplete(t, RIL_E_SUCCESS, data, datalen);
             break;
 
         case RIL_REQUEST_OEM_HOOK_STRINGS:
@@ -8045,7 +8047,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 break;
             }
         case RIL_REQUEST_SEND_AT:
-            requestSendAT(channelID,data, datalen, t);
+//            requestSendAT(channelID,data, datalen, t);
             break;
 
         //Added for bug#213435 sim lock begin
