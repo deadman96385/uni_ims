@@ -21,7 +21,7 @@
 #include "sci_types.h"
 #define LOG_TAG "VSP"
 #include <utils/Log.h>
-
+#include "sci_types.h"
 /**---------------------------------------------------------------------------*
 **                             Compiler Flag                                  *
 **----------------------------------------------------------------------------*/
@@ -29,7 +29,6 @@
 extern   "C"
 {
 #endif
-
 
 /**---------------------------------------------------------------------------*
  **                         Data Structures                                   *
@@ -78,7 +77,7 @@ typedef struct
 typedef struct
 {
     uint8	*common_buffer_ptr;     // Pointer to buffer used when decoding
-    uint32 common_buffer_ptr_phy;
+    uint_32or64 common_buffer_ptr_phy;
     uint32	size;            		// Number of bytes decoding buffer
 
     int32 	frameBfr_num;			//YUV frame buffer number

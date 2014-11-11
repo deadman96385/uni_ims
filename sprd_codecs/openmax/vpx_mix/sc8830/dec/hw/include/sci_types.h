@@ -57,7 +57,7 @@ typedef unsigned int		uint32;
 typedef unsigned long int 	uint64;
 typedef long int 			int64;
 typedef unsigned int		uint;
-
+typedef unsigned long		uint_32or64;
 //vp8
 typedef signed char			vp8_tree_index;
 typedef unsigned char		vp8_prob;

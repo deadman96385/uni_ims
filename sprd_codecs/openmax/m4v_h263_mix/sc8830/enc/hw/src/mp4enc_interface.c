@@ -211,7 +211,7 @@ MMEncRet MP4EncPreInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr)
     vo->mp4Handle = mp4Handle;
 
     pInterMemBfr->common_buffer_ptr += sizeof(Mp4EncObject);
-    pInterMemBfr->common_buffer_ptr_phy = ((uint32)(pInterMemBfr->common_buffer_ptr_phy) + sizeof(Mp4EncObject));
+    pInterMemBfr->common_buffer_ptr_phy = pInterMemBfr->common_buffer_ptr_phy + sizeof(Mp4EncObject);
     pInterMemBfr->size -= sizeof(Mp4EncObject);
 
     ret = Mp4Enc_InitMem(vo, pInterMemBfr, INTER_MEM);
@@ -301,7 +301,7 @@ MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pExtraMemBfr,
     }
 
     vop_mode_ptr->pOneFrameBitstream = pBitstreamBfr->common_buffer_ptr;
-    vop_mode_ptr->OneFrameBitstream_addr_phy = (uint32)pBitstreamBfr->common_buffer_ptr_phy;
+    vop_mode_ptr->OneFrameBitstream_addr_phy = pBitstreamBfr->common_buffer_ptr_phy;
     vop_mode_ptr->OneframeStreamLen = pBitstreamBfr->size;
 
     if (vo->vsp_capability == 2)

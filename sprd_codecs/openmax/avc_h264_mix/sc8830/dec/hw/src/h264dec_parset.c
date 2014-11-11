@@ -105,6 +105,7 @@ need to be re-allocate, and the parameter of img need to be re-computed
 LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
 {
     DEC_IMAGE_PARAMS_T *img_ptr = vo->g_image_ptr;
+    uint32 type;
 
     if (vo->g_active_sps_ptr != sps_ptr)
     {
@@ -197,6 +198,18 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
         //*last_max_dec_frame_buffering = GetMaxDecFrameBuffering(p_Vid);
         vo->last_profile_idc = vo->g_active_sps_ptr->profile_idc;
         vo->g_curr_slice_ptr->p_Dpb->num_ref_frames = vo->g_active_sps_ptr->num_ref_frames;
+
+        for (type = 1; type < 3; type++)
+        {
+            DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = vo->g_dpb_layer[type-1];
+            int32 i;
+
+            for (i = 0; i < MAX_REF_FRAME_NUMBER+1; i++)
+            {
+                dpb_ptr->fs[i]->frame->DPB_addr_index = i + (type==1 ? 0 : MAX_REF_FRAME_NUMBER+1);//weihu
+                dpb_ptr->fs[i]->frame->direct_mb_info_Addr = vo->direct_mb_info_addr[i];
+            }
+        }
 #else
         if (!img_ptr->no_output_of_prior_pics_flag)
         {

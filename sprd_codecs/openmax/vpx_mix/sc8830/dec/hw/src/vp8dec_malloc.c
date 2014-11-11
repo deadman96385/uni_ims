@@ -32,7 +32,7 @@ PUBLIC MMEncRet Vp8Dec_InitMem (VPXDecObject *vo, MMCodecBuffer *pInterMemBfr, M
 
     for (type = 0; type < MAX_MEM_TYPE; type++)
     {
-        int32 dw_aligned = (((uint32)(pMem->common_buffer_ptr) + 7) & (~7)) - ((uint32)(pMem->common_buffer_ptr));
+        int32 dw_aligned = (((uint_32or64)(pMem->common_buffer_ptr) + 7) & (~7)) - ((uint_32or64)(pMem->common_buffer_ptr));
 
         vo->mem[type].used_size = 0;
         vo->mem[type].v_base = pMem->common_buffer_ptr;
@@ -56,9 +56,9 @@ PUBLIC MMEncRet Vp8Dec_InitMem (VPXDecObject *vo, MMCodecBuffer *pInterMemBfr, M
 PUBLIC void *Vp8Dec_MemAlloc (VPXDecObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type)
 {
     CODEC_BUF_T *pMem = &(vo->mem[type]);
-    uint32 CurrAddr, AlignedAddr;
+    uint_32or64 CurrAddr, AlignedAddr;
 
-    CurrAddr = (uint32)(pMem->v_base) + pMem->used_size;
+    CurrAddr = (uint_32or64)(pMem->v_base) + pMem->used_size;
     AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
     need_size += (AlignedAddr - CurrAddr);
 

@@ -19,7 +19,7 @@
 **---------------------------------------------------------------------------*/
 #define LOG_TAG "VSP"
 #include <utils/Log.h>
-
+#include "sci_types.h"
 /**---------------------------------------------------------------------------*
 **                             Compiler Flag                                  *
 **----------------------------------------------------------------------------*/
@@ -27,14 +27,6 @@
 extern   "C"
 {
 #endif
-
-typedef unsigned char	uint8;
-typedef signed char		int8;
-//typedef unsigned char	Bool;
-typedef signed short	int16;
-typedef unsigned short	uint16;
-typedef signed int		int32;
-typedef unsigned int	uint32;
 
 #ifdef TRUE
 #undef TRUE
@@ -110,7 +102,7 @@ typedef struct
     int32	frame_height;
     int32	i_extra;
     uint8 	*p_extra;
-    uint32 p_extra_phy;
+    uint_32or64 p_extra_phy;
     //int32	uv_interleaved;
     int32   yuv_format;
 } MMDecVideoFormat;
@@ -119,7 +111,7 @@ typedef struct
 typedef struct
 {
     uint8	*common_buffer_ptr;     // Pointer to buffer used when decoding
-    void *common_buffer_ptr_phy;
+    uint_32or64 common_buffer_ptr_phy;
     uint32	size;            		// Number of bytes decoding buffer
 
     int32 	frameBfr_num;			//YUV frame buffer number
@@ -144,7 +136,7 @@ typedef struct
 typedef struct
 {
     uint8		*pStream;          	// Pointer to stream to be decoded. Virtual address.
-    uint32 pStream_phy;          	// Pointer to stream to be decoded. Physical address.
+    uint_32or64 pStream_phy;          	// Pointer to stream to be decoded. Physical address.
     uint32		dataLen;           	// Number of bytes to be decoded
     int32		beLastFrm;			// whether the frame is the last frame.  1: yes,   0: no
 

@@ -26,7 +26,7 @@
 MMDecRet Vp8Dec_InitInterMem (VPXDecObject *vo, MMCodecBuffer *pInterMemBfr);
 void *Vp8Dec_MemAlloc (VPXDecObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type);
 uint32 Vp8Dec_MemV2P(VPXDecObject *vo, uint8 *vAddr, int32 type);
-
+uint8 *Vp8Dec_ExtraMem_V2P(VPXDecObject *vo, uint8 *vAddr, int32 type);
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

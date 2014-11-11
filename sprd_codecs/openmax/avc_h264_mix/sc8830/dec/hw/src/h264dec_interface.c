@@ -406,6 +406,8 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
                 {
                     ret = MMDEC_ERROR;
                 }
+
+                vo->g_dec_picture_ptr =NULL; //Added for bug352453
             }
 
             break;	//break loop.

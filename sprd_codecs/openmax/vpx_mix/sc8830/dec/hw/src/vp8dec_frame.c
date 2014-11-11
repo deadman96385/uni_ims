@@ -321,6 +321,9 @@ MMDecRet vp8_decode_frame(VPXDecObject *vo)
                 }
             }
         }
+    } else
+    {
+        xd->update_mb_segmentation_map = 0;
     }
 
     // Read the loop filter level and type

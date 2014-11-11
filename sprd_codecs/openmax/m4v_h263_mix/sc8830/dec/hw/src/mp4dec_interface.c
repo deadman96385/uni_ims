@@ -38,7 +38,7 @@ PUBLIC void MP4DecSetCurRecPic(MP4Handle *mp4Handle, uint8	*pFrameY,uint8 *pFram
     DEC_FRM_BFR *rec_buf_ptr = &(vo->g_rec_buf);
 
     rec_buf_ptr->imgY =  pFrameY;
-    rec_buf_ptr->imgYAddr = (uint32)pFrameY_phy;
+    rec_buf_ptr->imgYAddr = (uint_32or64)pFrameY_phy;
     rec_buf_ptr->pBufferHeader = pBufferHeader;
 }
 
@@ -213,7 +213,7 @@ PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer * buffer_ptr)
     vo->mp4Handle = mp4Handle;
 
     buffer_ptr->common_buffer_ptr += sizeof(Mp4DecObject);
-    buffer_ptr->common_buffer_ptr_phy = (void *)((uint32)(buffer_ptr->common_buffer_ptr_phy) + sizeof(Mp4DecObject));
+    buffer_ptr->common_buffer_ptr_phy = buffer_ptr->common_buffer_ptr_phy + sizeof(Mp4DecObject);
     buffer_ptr->size -= sizeof(Mp4DecObject);
 
     vo->s_vsp_fd = -1;
@@ -254,10 +254,11 @@ PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_fo
         if(video_format_ptr->i_extra > 0)
         {
             MMDecRet is_init_success;
-            uint32 bs_buffer_length, bs_start_addr;
-
+            uint32 bs_buffer_length;
+	     uint_32or64 bs_start_addr;
+		 
             // Bitstream.
-            bs_start_addr=((uint32)video_format_ptr->p_extra_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
+            bs_start_addr=((uint_32or64)video_format_ptr->p_extra_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
             bs_buffer_length= video_format_ptr->i_extra;
 
             if(ARM_VSP_RST(vo)<0)
@@ -300,7 +301,8 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     Mp4DecObject *vo = (Mp4DecObject *) mp4Handle->videoDecoderData;
     MMDecRet ret = MMDEC_ERROR;
     int32 i;
-    uint32 bs_buffer_length, bs_start_addr, cmd;
+    uint32 bs_buffer_length, cmd;
+    uint_32or64 bs_start_addr;
     DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
 
     if ((dec_input_ptr->pStream == NULL) && (!vo->memory_error))
@@ -348,7 +350,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_MODE_OFF, vop_mode_ptr->video_std, "VSP_MODE");
 
     // Bitstream.
-    bs_start_addr=((uint32)dec_input_ptr->pStream_phy);	// bistream start address
+    bs_start_addr = dec_input_ptr->pStream_phy;	// bistream start address
     bs_buffer_length= dec_input_ptr->dataLen;//bitstream length .
 
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle

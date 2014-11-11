@@ -60,7 +60,7 @@ typedef unsigned int	uint32;
 #define PUBLIC
 #define	LOCAL		static
 
-#define  SCI_TRACE_LOW   ALOGE
+#define  SCI_TRACE_LOW   ALOGI
 #define SCI_TRACE_LOW_DPB //SCI_TRACE_LOW
 
 /**---------------------------------------------------------------------------*

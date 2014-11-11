@@ -109,7 +109,7 @@ PUBLIC void Mp4Dec_exit_picture(Mp4DecObject *vo)
 PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
 {
     DEC_VOP_MODE_T *vop_mode_ptr = vo->g_dec_vop_mode_ptr;
-    uint32 vld_table_addr;
+    uint_32or64 vld_table_addr;
     MMDecRet ret = MMDEC_ERROR;
     SLICEINFO *slice_info = &(vo->SliceInfo);
 

@@ -38,9 +38,9 @@ typedef struct Mp4Enc_storable_pic
     uint8 * imgU;
     uint8 * imgV;
 
-    uint32 imgYAddr;
-    uint32 imgUAddr;
-    uint32 imgVAddr;
+    uint_32or64 imgYAddr;
+    uint_32or64 imgUAddr;
+    uint_32or64 imgVAddr;
 } Mp4EncStorablePic;
 
 //for Video Object Layer(VOL) Mode
@@ -177,7 +177,7 @@ typedef struct enc_vop_mode_tag
     uint32  FrameRate;
 
     uint8 *pOneFrameBitstream;
-    uint32 OneFrameBitstream_addr_phy;
+    uint_32or64 OneFrameBitstream_addr_phy;
     uint32 OneframeStreamLen;
 } ENC_VOP_MODE_T;
 
@@ -236,12 +236,12 @@ typedef struct codec_buf_tag
     uint32 used_size;
     uint32 total_size;
     uint8* v_base;  //virtual address
-    uint32 p_base;  //physical address
+    uint_32or64 p_base;  //physical address
 } CODEC_BUF_T;
 
 typedef struct tagMp4EncObject
 {
-    uint32 s_vsp_Vaddr_base ;
+    uint_32or64 s_vsp_Vaddr_base ;
     int32 s_vsp_fd ;
     uint32 vsp_freq_div;
     int32	error_flag;

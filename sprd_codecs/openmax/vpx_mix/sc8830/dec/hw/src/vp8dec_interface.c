@@ -67,7 +67,7 @@ void VP8DecSetCurRecPic(VPXHandle *vpxHandle, uint8 *pFrameY,uint8 *pFrameY_phy,
 
     rec_frame->buffer_alloc =   pFrameY_phy;
     rec_frame->y_buffer = rec_frame->buffer_alloc ;
-    rec_frame->y_buffer_virtual = (uint32)pFrameY;
+    rec_frame->y_buffer_virtual = (uint_32or64)pFrameY;
     rec_frame->pBufferHeader = pBufferHeader;
 }
 
@@ -112,7 +112,7 @@ MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MMCodecBu
     vo->vpxHandle = vpxHandle;
 
     pInterMemBfr->common_buffer_ptr += sizeof(VPXDecObject);
-    pInterMemBfr->common_buffer_ptr_phy = ((uint32)(pInterMemBfr->common_buffer_ptr_phy) + sizeof(VPXDecObject));
+    pInterMemBfr->common_buffer_ptr_phy = pInterMemBfr->common_buffer_ptr_phy + sizeof(VPXDecObject);
     pInterMemBfr->size -= sizeof(VPXDecObject);
 
     ret = Vp8Dec_InitMem (vo, pInterMemBfr, pExtaMemBfr);
@@ -144,7 +144,8 @@ PUBLIC MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *dec_input_ptr, MM
     VPXDecObject *vo = (VPXDecObject *) vpxHandle->videoDecoderData;
 
     MMDecRet ret;
-    uint32 bs_buffer_length, bs_start_addr, cmd;
+    uint32 bs_buffer_length, cmd;
+    uint_32or64 	bs_start_addr;
     VP8_COMMON *cm = &vo->common;
 
     if(ARM_VSP_RST((VSPObject *)vo)<0)
@@ -165,7 +166,7 @@ PUBLIC MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *dec_input_ptr, MM
     dec_output_ptr->frameEffective = FALSE;
 
     // Bitstream.
-    bs_start_addr=((uint32)dec_input_ptr->pStream_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
+    bs_start_addr=((uint_32or64)dec_input_ptr->pStream_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
     bs_buffer_length=dec_input_ptr->dataLen;
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
     {

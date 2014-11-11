@@ -282,13 +282,13 @@ PUBLIC MMEncRet Mp4Enc_InitSession(Mp4EncObject *vo)
         vop_mode_ptr->pYUVRefFrame->imgV = NULL;
     }
 
-    vop_mode_ptr->pYUVRecFrame->imgYAddr = (uint32)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRecFrame->imgY, EXTRA_MEM) >> 3;
-    vop_mode_ptr->pYUVRecFrame->imgUAddr = (uint32)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRecFrame->imgU, EXTRA_MEM) >> 3;
-    vop_mode_ptr->pYUVRecFrame->imgVAddr = (uint32)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRecFrame->imgV, EXTRA_MEM) >> 3;
+    vop_mode_ptr->pYUVRecFrame->imgYAddr = (uint_32or64)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRecFrame->imgY, EXTRA_MEM) >> 3;
+    vop_mode_ptr->pYUVRecFrame->imgUAddr = (uint_32or64)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRecFrame->imgU, EXTRA_MEM) >> 3;
+    vop_mode_ptr->pYUVRecFrame->imgVAddr = (uint_32or64)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRecFrame->imgV, EXTRA_MEM) >> 3;
 
-    vop_mode_ptr->pYUVRefFrame->imgYAddr = (uint32)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRefFrame->imgY, EXTRA_MEM) >> 3;
-    vop_mode_ptr->pYUVRefFrame->imgUAddr = (uint32)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRefFrame->imgU, EXTRA_MEM) >> 3;
-    vop_mode_ptr->pYUVRefFrame->imgVAddr = (uint32)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRefFrame->imgV, EXTRA_MEM) >> 3;
+    vop_mode_ptr->pYUVRefFrame->imgYAddr = (uint_32or64)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRefFrame->imgY, EXTRA_MEM) >> 3;
+    vop_mode_ptr->pYUVRefFrame->imgUAddr = (uint_32or64)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRefFrame->imgU, EXTRA_MEM) >> 3;
+    vop_mode_ptr->pYUVRefFrame->imgVAddr = (uint_32or64)Mp4Enc_ExtraMem_V2P(vo, vop_mode_ptr->pYUVRefFrame->imgV, EXTRA_MEM) >> 3;
 
     return MMENC_OK;
 }
@@ -382,7 +382,7 @@ PUBLIC void Mp4Enc_InitVSP(Mp4EncObject *vo)
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x80, vop_mode_ptr->pYUVRefFrame->imgYAddr, "Frm_addr32: Start address of Reference list0 frame Y");
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x100, vop_mode_ptr->pYUVRefFrame->imgUAddr, "Frm_addr64: Start address of Reference list0 frame UV");
 
-    cmd	= (uint32)Mp4Enc_ExtraMem_V2P(vo, vo->g_vlc_hw_ptr, EXTRA_MEM)>>3;		// Frm_addr3[31:0], VLC Table set by Fixed Table Address
+    cmd	= (uint_32or64)Mp4Enc_ExtraMem_V2P(vo, (uint8 *)vo->g_vlc_hw_ptr, EXTRA_MEM)>>3;		// Frm_addr3[31:0], VLC Table set by Fixed Table Address
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0xC, cmd, "Frm_addr3: Start address of VLC table");
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_SIZE_SET_OFF, 128, "VSP_SIZE_SET: VLC_table_size");
 }
@@ -392,7 +392,7 @@ PUBLIC void Mp4Enc_InitBSM(Mp4EncObject *vo)
     uint32 cmd;
     ENC_VOP_MODE_T  *vop_mode_ptr = vo->g_enc_vop_mode_ptr;
 
-    cmd	= ((uint32)vop_mode_ptr->OneFrameBitstream_addr_phy) >> 3;	// Bsm_buf0_frm_addr[31:0]
+    cmd	= ((uint_32or64)vop_mode_ptr->OneFrameBitstream_addr_phy) >> 3;	// Bsm_buf0_frm_addr[31:0]
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + BSM0_FRM_ADDR_OFF, cmd, "BSM0_FRM_ADDR");
 
     cmd = 0x04;	// Move data remain in fifo to external memeory

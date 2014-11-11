@@ -184,12 +184,6 @@ PUBLIC MMDecRet H264Dec_init_dpb (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_
     }
 #endif
 
-    for (i = 0; i < MAX_REF_FRAME_NUMBER+1; i++)
-    {
-        dpb_ptr->fs[i]->frame->DPB_addr_index = i + (type==1 ? 0 : MAX_REF_FRAME_NUMBER+1);//weihu
-        dpb_ptr->fs[i]->frame->direct_mb_info_Addr = vo->direct_mb_info_addr[i];
-    }
-
 #if _MVC_
     dpb_ptr->last_output_view_id = -1;
     dpb_ptr->init_done = 1;

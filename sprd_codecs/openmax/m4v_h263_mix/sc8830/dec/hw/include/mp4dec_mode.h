@@ -98,9 +98,9 @@ typedef struct dec_buffer_seq_info_tag
     uint8 *imgU;
     uint8 *imgV;
 
-    uint32 imgYAddr;	//frame address which are configured to VSP,  imgYAddr = ((uint32)imgY >> 8), 64 word aligment
-    uint32 imgUAddr;	//imgUVAddr = ((uint32)imgU>>8)
-    uint32 imgVAddr;	//imgUVAddr = ((uint32)imgV>>8)
+    uint_32or64 imgYAddr;	//frame address which are configured to VSP,  imgYAddr = ((uint32)imgY >> 8), 64 word aligment
+    uint_32or64 imgUAddr;	//imgUVAddr = ((uint32)imgU>>8)
+    uint_32or64 imgVAddr;	//imgUVAddr = ((uint32)imgV>>8)
 
     uint8	id;    	// buffer number
     BOOLEAN bRef;   	// FALSE£¬not to be  ref frame
@@ -110,7 +110,7 @@ typedef struct dec_buffer_seq_info_tag
 
     uint8 *rec_imgY;
     uint8 *rec_info;
-    uint32 rec_infoAddr;
+    uint_32or64 rec_infoAddr;
 
     void *pBufferHeader;
 } DEC_FRM_BFR;
@@ -272,7 +272,7 @@ typedef struct dec_vop_mode_tag
     int32 find_vop_header;
 
     uint8 * data_partition_buffer_ptr;
-    uint32 data_partition_buffer_Addr;
+    uint_32or64 data_partition_buffer_Addr;
 } DEC_VOP_MODE_T;
 
 typedef struct h263_plus_header_info_tag
@@ -321,12 +321,12 @@ typedef struct codec_buf_tag
     uint32 used_size;
     uint32 total_size;
     uint8* v_base;  //virtual address
-    uint32 p_base;  //physical address
+    uint_32or64 p_base;  //physical address
 } CODEC_BUF_T;
 
 typedef struct tagMp4DecObject
 {
-    uint32 s_vsp_Vaddr_base ;
+    uint_32or64 s_vsp_Vaddr_base ;
     int32 s_vsp_fd ;
     uint32 vsp_freq_div;
     int32	error_flag;

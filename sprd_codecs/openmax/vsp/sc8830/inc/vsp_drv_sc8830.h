@@ -649,7 +649,7 @@ typedef struct  bsmr_control_register_tag
 
 typedef struct tagVSPObject
 {
-    uint32 s_vsp_Vaddr_base ;
+    uint_32or64 s_vsp_Vaddr_base ;
     int32 s_vsp_fd ;
     uint32 vsp_freq_div;
     int32	error_flag;

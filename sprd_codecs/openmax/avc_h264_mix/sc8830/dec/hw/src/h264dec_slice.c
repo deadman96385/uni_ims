@@ -452,37 +452,9 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
     {
         SCI_TRACE_LOW_DPB("%s,  %d",  __FUNCTION__, __LINE__);
 
-        //modified for Bug#242687
-        if (vui_seq_parameters_ptr->bitstream_restriction_flag == 0 || vui_seq_parameters_ptr->num_reorder_frames == 0)
-        {
-            if (fs = H264Dec_search_frame_from_DBP(vo, cur))
-            {
-                if (fs->is_reference != 1)
-                {
-                    if(cur->slice_type == B_SLICE)
-                    {
-                        out =cur;
-                        dec_out->frameEffective = 1;
-                        dpb_ptr->delayed_pic[--dpb_ptr->delayed_pic_num] = NULL;
-                    } else if (cur->slice_type == P_SLICE)
-                    {
-                        fs->is_reference = 0;
-                        H264DEC_UNBIND_FRAME(vo, fs->frame);
-                        dpb_ptr->delayed_pic[--dpb_ptr->delayed_pic_num] = NULL;
-                    }
-                } else if(cur->slice_type == B_SLICE)
-                {
-                    vo->error_flag |= ER_SREAM_ID;
-                    return;
-                }
-            }
-
-        } else
-        {
-            img_ptr->low_delay = 0;
-            img_ptr->has_b_frames++;
-            out = prev;
-        }
+        img_ptr->low_delay = 0;
+        img_ptr->has_b_frames++;
+        out = prev;
     } else if(out_of_order)
     {
         out = prev;
@@ -561,8 +533,6 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
 
     return;
 }
-
-
 
 //extern BiContextType context[308];
 PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *dec_output_ptr)
@@ -734,7 +704,7 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
 #ifdef USE_INTERRUPT
     VSP_WRITE_REG(VSP_REG_BASE_ADDR+ARM_INT_MASK_OFF,V_BIT_2,"ARM_INT_MASK, only enable VSP ACC init");//enable int //
 #endif
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_MASK_OFF,V_BIT_2 | V_BIT_4 | V_BIT_5,"VSP_INT_MASK, enable mbw_slice_done, vld_err, time_out");//enable int //frame done/error/timeout
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_MASK_OFF,V_BIT_0|V_BIT_2 | V_BIT_5,"VSP_INT_MASK, enable BSM overflow, mbw_slice_done, time_out");//enable int //frame done/error/timeout
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 1,"RAM_ACC_SEL");//change ram access to vsp hw
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_START_OFF,0xa|vo->is_need_init_vsp_hufftab,"VSP_START");//start vsp   vld/vld_table//load_vld_table_en
 
@@ -750,34 +720,61 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *d
 #ifdef USE_INTERRUPT
     cmd = VSP_POLL_COMPLETE((VSPObject *)vo);
 #else
-    tmp = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_INT_RAW_OFF, "check interrupt type");
-    while ((tmp&0x34)==0) //weihu tmp
+    cmd = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_INT_RAW_OFF, "check interrupt type");
+    while ((cmd&0x25)==0) //weihu tmp, BIT_0|BIT_2|BIT5
     {
-        tmp = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_INT_RAW_OFF, "check interrupt type");
+        cmd = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_INT_RAW_OFF, "check interrupt type");
     }
+    SCI_TRACE_LOW("%s, %d, int_status: %0x", __FUNCTION__, __LINE__, cmd);
     //VSP_WRITE_REG(VSP_REG_BASE_ADDR+0x18,0x4,"VSP_INT_CLR");//enable int //frame done/error/timeout
 #endif
-    if(cmd & V_BIT_2)
-    {
-        vo->error_flag = 0;
-    } else if(cmd & (V_BIT_4 | V_BIT_5 | V_BIT_30 | V_BIT_31))
-    {
-        vo->error_flag |= ER_SREAM_ID;
 
-        if (cmd & V_BIT_4)
-        {
-            SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
-        } else if (cmd & (V_BIT_5 | V_BIT_31))
-        {
-            SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
-        } else //if (cmd &  V_BIT_30)
-        {
-            SCI_TRACE_LOW("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
-        }
+    //disable V_BIT_0 (BSM_OVF) to avoid interrupt when searching start code in next slice
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_MASK_OFF, V_BIT_2 | V_BIT_5,"VSP_INT_MASK, enable mbw_slice_done, time_out");//enable int //frame done/error/timeout
+
+    if (cmd & V_BIT_0)
+    {
+        vo->error_flag |= ER_HW_ID;
     } else
     {
-        SCI_TRACE_LOW("%s, %d, should not be here!", __FUNCTION__, __LINE__);
+        if(cmd & V_BIT_2)
+        {
+            vo->error_flag = 0;
+        }
+
+        //check there is other interrupt or not.
+        cmd = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_INT_RAW_OFF, "check interrupt type");
+        SCI_TRACE_LOW("%s, %d, int_status: %0x", __FUNCTION__, __LINE__, cmd);
+
+        if(cmd & (V_BIT_4 | V_BIT_5 | V_BIT_30 | V_BIT_31))
+        {
+            vo->error_flag |= ER_SREAM_ID;
+
+            if (cmd & V_BIT_4)
+            {
+                SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
+            } else if (cmd & (V_BIT_5 | V_BIT_31))
+            {
+                SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+            } else //if (cmd &  V_BIT_30)
+            {
+                SCI_TRACE_LOW("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
+            }
+
+            if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0, TIME_OUT_CLK_FRAME, "Polling BSM_DBG0: DATA_TRAN, 0: bsm can be cleard"))
+            {
+                SCI_TRACE_LOW("%s, %d, DATA_TRAN_busy", __FUNCTION__, __LINE__);
+            }
+
+            cmd = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, "check BSM fifo depth");
+            while ((cmd&(V_BIT_2|V_BIT_3))==0) //FIFO Depth > 4
+            {
+                cmd = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, "check BSM fifo depth");
+            }
+        }
     }
+
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_CLR_OFF, 0x1ff,"VSP_INT_CLR, clear all prossible interrupt");
 
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0, "RAM_ACC_SEL");
     vo->is_need_init_vsp_hufftab = FALSE;
@@ -878,6 +875,21 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
         {
             //pframe = dpb_ptr->fs[g_list1_map_addr[i]]->frame;
             pframe = vo->g_list1[i];
+            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0xc0+i*4, (pframe->imgYAddr)>>3, "ref L1 Y addr");
+            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x140+i*4, (pframe->imgUAddr)>>3, "ref L1 UV addr");//0x480000+
+            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x1c0+i*4, (pframe->direct_mb_info_Addr)>>3, "ref L1 info addr");//0x6a0000+
+        }
+
+        pframe = vo->g_dec_picture_ptr;
+        for (i = img_ptr->num_ref_idx_l0_active; i < 16; i++)
+        {
+            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x80+i*4, (pframe->imgYAddr)>>3, "ref L0 Y addr");//g_dpb_layer[0]->fs[g_list0_map_addr[i]]->frame->imgYAddr
+            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x100+i*4, (pframe->imgUAddr)>>3, "ref L0 UV addr");//0x480000+
+            VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x180+i*4, (pframe->direct_mb_info_Addr)>>3, "ref L0 info addr");//0x6a0000+
+        }
+
+        for (i = img_ptr->num_ref_idx_l1_active; i < 16; i++)
+        {
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0xc0+i*4, (pframe->imgYAddr)>>3, "ref L1 Y addr");
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x140+i*4, (pframe->imgUAddr)>>3, "ref L1 UV addr");//0x480000+
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x1c0+i*4, (pframe->direct_mb_info_Addr)>>3, "ref L1 info addr");//0x6a0000+

@@ -971,8 +971,13 @@ MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo)
         h263_plus->use_4mv = (h263_plus->adv_pred_mode ? 1 : 0);
         h263_plus->pb_frame = 0;
         h263_plus->advanced_intra_coding = Mp4Dec_ReadBits (bitstrm_ptr, 1);
-        PRINTF_HEAD_INFO("\nadvanced_intra_coding: %d", h263_plus->advanced_intra_coding);
-
+        if(h263_plus->advanced_intra_coding)
+        {
+            PRINTF_HEAD_INFO("error: advanced_intra_coding mode is not supported in this version\n");
+            vop_mode_ptr->error_flag = TRUE;
+            return MMDEC_NOT_SUPPORTED;
+        }
+                
         h263_plus->deblocking_filter_mode = Mp4Dec_ReadBits (bitstrm_ptr, 1);
         PRINTF_HEAD_INFO("\ndeblocking_filter_mode: %d", h263_plus->deblocking_filter_mode);
 

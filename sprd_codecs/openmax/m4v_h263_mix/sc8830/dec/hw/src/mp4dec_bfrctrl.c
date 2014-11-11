@@ -45,7 +45,7 @@ PUBLIC MMDecRet Mp4Dec_InitYUVBfr(Mp4DecObject *vo)
         // Malloc frame info buffer. 80 Bytes for each MB.
         pDecFrame->rec_info = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)((size_y >>8)*80), 256, HW_NO_CACHABLE);
         CHECK_MALLOC(pDecFrame->rec_info, "pDecFrame->rec_info");
-        pDecFrame->rec_infoAddr = (uint32)Mp4Dec_MemV2P(vo, pDecFrame->rec_info, HW_NO_CACHABLE);
+        pDecFrame->rec_infoAddr = (uint_32or64)Mp4Dec_MemV2P(vo, pDecFrame->rec_info, HW_NO_CACHABLE);
 
         pDecFrame++;
     }

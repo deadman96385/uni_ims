@@ -213,7 +213,7 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     {
         vop_mode_ptr->data_partition_buffer_ptr = Mp4Dec_MemAlloc(vo, (uint32)((mb_num_x * mb_num_y)*32), 256, HW_NO_CACHABLE);
         CHECK_MALLOC(vop_mode_ptr->data_partition_buffer_ptr, "vop_mode_ptr->data_partition_buffer_ptr");
-        vop_mode_ptr->data_partition_buffer_Addr = (uint32)Mp4Dec_MemV2P(vo, vop_mode_ptr->data_partition_buffer_ptr, HW_NO_CACHABLE);
+        vop_mode_ptr->data_partition_buffer_Addr = (uint_32or64)Mp4Dec_MemV2P(vo, vop_mode_ptr->data_partition_buffer_ptr, HW_NO_CACHABLE);
     }
 
     /*for B frame support*/
@@ -222,18 +222,18 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
 
     vo->g_tmp_buf.imgY = Mp4Dec_MemAlloc(vo, (uint32)(total_mb_num*256), 256, HW_NO_CACHABLE);
     CHECK_MALLOC(vo->g_tmp_buf.imgY, "vo->g_tmp_buf.imgY");
-    vo->g_tmp_buf.imgYAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.imgY, HW_NO_CACHABLE);
+    vo->g_tmp_buf.imgYAddr = (uint_32or64)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.imgY, HW_NO_CACHABLE);
 
     vo->g_tmp_buf.imgU = Mp4Dec_MemAlloc(vo, (uint32)((total_mb_num*128)), 256, HW_NO_CACHABLE);
     CHECK_MALLOC(vo->g_tmp_buf.imgU, "vo->g_tmp_buf.imgU");
-    vo->g_tmp_buf.imgUAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.imgU, HW_NO_CACHABLE);
+    vo->g_tmp_buf.imgUAddr = (uint_32or64)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.imgU, HW_NO_CACHABLE);
 
     memset(vo->g_tmp_buf.imgY, 16, sizeof(uint8)*(total_mb_num*256));
     memset(vo->g_tmp_buf.imgU, 128, sizeof(uint8)*(total_mb_num*128));
 
     vo->g_tmp_buf.rec_info = (uint8 *)Mp4Dec_MemAlloc(vo, (uint32)(total_mb_num*80), 256, HW_NO_CACHABLE);
     CHECK_MALLOC(vo->g_tmp_buf.rec_info, "vo->g_tmp_buf.rec_info");
-    vo->g_tmp_buf.rec_infoAddr = (uint32)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.rec_info, HW_NO_CACHABLE);
+    vo->g_tmp_buf.rec_infoAddr = (uint_32or64)Mp4Dec_MemV2P(vo, vo->g_tmp_buf.rec_info, HW_NO_CACHABLE);
 
     return MMDEC_OK;
 }

@@ -142,8 +142,8 @@ typedef struct
     int frame_size;
 
 
-    unsigned int y_buffer_virtual;
-    unsigned int u_buffer_virtual;
+    uint_32or64 y_buffer_virtual;
+    uint_32or64 u_buffer_virtual;
 //        YUV_TYPE clrtype;
 
     void *pBufferHeader;
@@ -418,12 +418,12 @@ typedef struct codec_buf_tag
     uint32 used_size;
     uint32 total_size;
     uint8* v_base;  //virtual address
-    uint32 p_base;  //physical address
+    uint_32or64 p_base;  //physical address
 } CODEC_BUF_T;
 
 typedef struct tagVPXDecObject
 {
-    uint32 s_vsp_Vaddr_base ;
+    uint_32or64 s_vsp_Vaddr_base ;
     int32 s_vsp_fd ;
     uint32 vsp_freq_div;
     int32	error_flag;

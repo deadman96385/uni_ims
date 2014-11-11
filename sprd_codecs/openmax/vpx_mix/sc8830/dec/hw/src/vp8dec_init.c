@@ -192,17 +192,17 @@ void Vp8Dec_InitVSP(VPXDecObject *vo)
     cmd = 0;	// List0_POC[0][31:0]
     VSP_WRITE_REG(PPA_SLICE_INFO_BASE_ADDR + 0x0, cmd, "List0_POC[0]");
 
-    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x0, ((uint32)pc->new_frame.y_buffer) >> 3, "Frm_addr0: Start address of reconstruct frame Y");
-    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x4, ((uint32)pc->new_frame.u_buffer) >> 3, "Frm_addr1: Start address of reconstruct frame UV");
-    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x10, ((uint32)Vp8Dec_ExtraMem_V2P(vo, pc->FRAME_ADDR_4, EXTRA_MEM)) >> 3, "Frm_addr4: Partition info for MB Header");
+    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x0, ((uint_32or64)pc->new_frame.y_buffer) >> 3, "Frm_addr0: Start address of reconstruct frame Y");
+    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x4, ((uint_32or64)pc->new_frame.u_buffer) >> 3, "Frm_addr1: Start address of reconstruct frame UV");
+    VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x10, ((uint_32or64)Vp8Dec_ExtraMem_V2P(vo, pc->FRAME_ADDR_4, EXTRA_MEM)) >> 3, "Frm_addr4: Partition info for MB Header");
     if(pc->frame_type != KEY_FRAME)
     {
-        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x80, ((uint32)pc->last_frame.y_buffer) >> 3, "Frm_addr32: Start address of Reference list0 frame Y(last)");
-        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x100, ((uint32)pc->last_frame.u_buffer) >> 3, "Frm_addr64: Start address of Reference list0 frame UV(last)");
-        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x84, ((uint32)pc->golden_frame.y_buffer) >> 3, "Frm_addr33: Start address of Reference list0 frame Y(golden)");
-        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x104, ((uint32)pc->golden_frame.u_buffer) >> 3, "Frm_addr65: Start address of Reference list0 frame UV(golden)");
-        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x88, ((uint32)pc->alt_ref_frame.y_buffer) >> 3, "Frm_addr34: Start address of Reference list0 frame Y(alt_ref)");
-        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x108, ((uint32)pc->alt_ref_frame.u_buffer) >> 3, "Frm_addr66: Start address of Reference list0 frame UV(alt_ref)");
+        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x80, ((uint_32or64)pc->last_frame.y_buffer) >> 3, "Frm_addr32: Start address of Reference list0 frame Y(last)");
+        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x100, ((uint_32or64)pc->last_frame.u_buffer) >> 3, "Frm_addr64: Start address of Reference list0 frame UV(last)");
+        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x84, ((uint_32or64)pc->golden_frame.y_buffer) >> 3, "Frm_addr33: Start address of Reference list0 frame Y(golden)");
+        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x104, ((uint_32or64)pc->golden_frame.u_buffer) >> 3, "Frm_addr65: Start address of Reference list0 frame UV(golden)");
+        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x88, ((uint_32or64)pc->alt_ref_frame.y_buffer) >> 3, "Frm_addr34: Start address of Reference list0 frame Y(alt_ref)");
+        VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x108, ((uint_32or64)pc->alt_ref_frame.u_buffer) >> 3, "Frm_addr66: Start address of Reference list0 frame UV(alt_ref)");
     }
 }
 
