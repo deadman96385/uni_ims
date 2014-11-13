@@ -51,7 +51,7 @@ PUBLIC void REVERSE_BITS(DEC_BS_T *stream, uint32 nbits)
     }
 }
 
-#ifdef WIN32
+#if 1//WIN32
 PUBLIC uint32 READ_BITS(DEC_BS_T *stream, uint32 nbits)
 {
     uint32 temp;

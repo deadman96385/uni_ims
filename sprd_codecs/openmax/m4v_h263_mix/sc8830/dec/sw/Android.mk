@@ -10,22 +10,24 @@ LOCAL_SRC_FILES := \
 	src/mp4dec_FixPointDCT.c \
 	src/mp4dec_global.c \
 	src/mp4dec_header.c \
-	src/mp4dec_idct_neon.s \
 	src/mp4dec_interface.c \
 	src/mp4dec_malloc.c \
 	src/mp4dec_mb.c \
 	src/mp4dec_mc.c \
-	src/mp4dec_mc_neon.s \
 	src/mp4dec_mv.c \
 	src/mp4dec_rvld.c	\
 	src/mp4dec_session.c \
 	src/mp4dec_table.c \
 	src/mp4dec_vld.c \
-	src/mp4dec_vld_neon.s \
 	src/mp4dec_vop.c \
 	src/mp4dec_error_handle.c	\
 	src/mp4dec_deblock.c 	\
-	src/mp4dec_dbk_neon.s
+
+
+#	src/mp4dec_dbk_neon.s   \
+#	src/mp4dec_idct_neon.s \
+#	src/mp4dec_mc_neon.s \
+#	src/mp4dec_vld_neon.s \
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \

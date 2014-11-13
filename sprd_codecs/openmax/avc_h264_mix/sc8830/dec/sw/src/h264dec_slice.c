@@ -26,7 +26,7 @@ extern   "C"
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
-#ifdef WIN32
+#if 1//WIN32
 PUBLIC int32 get_unit (H264DecContext *img_ptr, uint8 *pInStream, int32 frm_bs_len, int32 *slice_unit_len)
 {
     int32 len = 0;
@@ -626,7 +626,7 @@ PUBLIC void H264Dec_decode_one_slice_B (H264DecContext *img_ptr)
 }
 
 /*extend 24 pixel*/
-#ifdef WIN32
+#if 1//WIN32
 void H264Dec_extent_frame (H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T * dec_picture)
 {
     int32 i;

@@ -1092,7 +1092,7 @@ typedef struct WP_info_tag
 
 LOCAL void H264Dec_Config_WP_info(H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
 {
-#ifdef WIN32
+#if 1//WIN32
     uint32 row, col;
     int32 blk4x4_id;
     int32 b8;

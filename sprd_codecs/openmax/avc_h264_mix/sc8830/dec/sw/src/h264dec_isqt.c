@@ -21,7 +21,7 @@
 	1. inverse quantization
 	2: put to MB's DC position
 */
-#ifdef WIN32
+#if 1//WIN32
 void itrans_lumaDC (H264DecContext *img_ptr, int16 * DCCoeff, int16 * pCoeffIq, int32 qp)
 {
     int i;
@@ -86,7 +86,7 @@ description: inverse transform the 4x4 block
 			 saturate the addition and put currMB->pred_Y;
 
 */
-#ifdef WIN32
+#if 1//WIN32
 void itrans_4x4 (int16 *coff, uint8 *pred, int32 width_p, uint8 *rec, int32 width_r)
 {
     int32 i;
@@ -162,7 +162,7 @@ void itrans_4x4 (int16 *coff, uint8 *pred, int32 width_p, uint8 *rec, int32 widt
 }
 #endif
 
-#ifdef WIN32
+#if 1//WIN32
 void itrans_8x8 (int16 *coff, uint8 *pred, int32 width_p, uint8 *rec, int32 width_r)
 {
     int i;
