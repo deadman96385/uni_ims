@@ -66,18 +66,18 @@ struct ppp_info_struct {
 void ps_service_init(void);
 int cvt_cgdcont_read_req(AT_CMD_REQ_T * req);
 int cvt_cgdcont_set_req(AT_CMD_REQ_T * req);
-int cvt_cgdata_set_rsp(AT_CMD_RSP_T * rsp, int user_data);
+int cvt_cgdata_set_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data);
 int cvt_cgact_deact_req(AT_CMD_REQ_T * req);
-int cvt_cgact_act_rsp(AT_CMD_RSP_T * rsp, int user_data);
-int cvt_cgdcont_read_rsp(AT_CMD_RSP_T * rsp, int user_data);
-int cvt_cgact_deact_rsp(AT_CMD_RSP_T * rsp, int user_data);
+int cvt_cgact_act_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data);
+int cvt_cgdcont_read_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data);
+int cvt_cgact_deact_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data);
 int cvt_cgdata_set_req(AT_CMD_REQ_T * req);
 int cvt_cgact_act_req(AT_CMD_REQ_T * req);
-int cvt_cgact_deact_rsp2(AT_CMD_RSP_T * rsp, int user_data);
-int cvt_cgact_deact_rsp1(AT_CMD_RSP_T * rsp, int user_data);
-int cvt_cgdcont_set_rsp(AT_CMD_RSP_T * rsp, int user_data);
-int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data);
-int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp, int user_data);
+int cvt_cgact_deact_rsp2(AT_CMD_RSP_T * rsp, unsigned long user_data);
+int cvt_cgact_deact_rsp1(AT_CMD_RSP_T * rsp, unsigned long user_data);
+int cvt_cgdcont_set_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data);
+int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data);
+int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data);
 
  /* SPRD : for svlte & csfb @{ */
 int isSvLte(void);

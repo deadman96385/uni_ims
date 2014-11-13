@@ -31,7 +31,7 @@ struct cmux_ops {
 
 	/*## operation regist_cmd_callback() */
 	int (*cmux_regist_cmd_callback) (struct cmux_t * const me,
-					 void *callback_fn, int userdata);
+				 void *callback_fn, unsigned long userdata);
 
 	/*## operation write() */
 	int (*cmux_write) (struct cmux_t * const me, char *buf, int len);
@@ -41,10 +41,10 @@ struct cmux_t {
 	/***    User explicit entries    ***/
 	void *me;
 	char *buffer;		/*## buffer for read tsmux */
+	unsigned long userdata;	/*## userdata for  */
 	int muxfd;		/*## muxfd of mux dev */
 	int type;		/*## mux channel type */
 	int cmd_type;		/*## cmd  type */
-	int userdata;		/*## userdata for  */
 	int wait_resp;		/*## flag for wait_resp */
 	int in_use;
 	int (*callback) (AT_CMD_RSP_T * resp_req, int usdata);

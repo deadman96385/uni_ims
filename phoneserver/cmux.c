@@ -79,7 +79,7 @@ static int cmux_read(struct cmux_t *const me, char *buf, int len)
 
 /*## operation regist_cmd_callback() */
 static int cmux_regist_cmd_callback(struct cmux_t *const me, void *callback_fn,
-				    int userdata)
+				    unsigned long userdata)
 {
 
 	PHS_LOGD("PS_CMUX cmux_regist_cmd_callback cmux:%s\n",me->name);

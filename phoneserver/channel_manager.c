@@ -510,7 +510,8 @@ static pty_t **multi_get_mux_wait_array(struct channel_manager_t *const me,
     }
 }
 
-static void remove_wait_array(pty_t ** wait_array, pty_t * pty, int array_size)
+static void remove_wait_array(pty_t ** wait_array,
+		pty_t __attribute__((unused)) * pty, int array_size)
 {
     int i;
 
@@ -965,12 +966,12 @@ void chnmng_start_thread(struct channel_manager_t *const me)
             PHS_LOGE("ERROR chnmng_mux pthread_create \n ");
             break;
         }
-        thread_getschedparam((int)&me->itsReceive_thread[i].thread, &policy, &sched);
+        thread_getschedparam(me->itsReceive_thread[i].thread, &policy, &sched);
         PHS_LOGD("chnmng_mux thread: policy=%d", policy);
         if (policy != SCHED_OTHER) {
             PHS_LOGD("chnmng_mux thread: policy=%d", policy);
             sched.sched_priority = chns_data.mux[i].prority;
-            thread_setschedparam((int) &me->itsReceive_thread[i].thread, policy, &sched );
+            thread_setschedparam(me->itsReceive_thread[i].thread, policy, &sched );
         }
     }
 
@@ -982,12 +983,12 @@ void chnmng_start_thread(struct channel_manager_t *const me)
             PHS_LOGE("ERROR chnmng_pty pthread_create");
             break;
         }
-        thread_getschedparam((int)&me->itsSend_thread[i].thread, &policy, &sched);
+        thread_getschedparam(me->itsSend_thread[i].thread, &policy, &sched);
         PHS_LOGD("chnmng_pty thread: policy=%d", policy);
         if (policy != SCHED_OTHER) {
             PHS_LOGD("chnmng_pty thread: policy=%d!", policy);
             sched.sched_priority = chns_data.pty[i].prority;
-            thread_setschedparam((int)&me->itsSend_thread[i].thread, policy, &sched );
+            thread_setschedparam(me->itsSend_thread[i].thread, policy, &sched );
         }
     }
 }
@@ -1036,7 +1037,7 @@ static void usage(const char *argv)
 }
 
 int soc_client = -1;
-static void *detect_at_no_response(void *par)
+static void *detect_at_no_response(void __attribute__((unused)) *par)
 {
     int soc_fd;
     char socket_name[10];
