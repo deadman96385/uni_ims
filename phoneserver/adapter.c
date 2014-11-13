@@ -586,8 +586,8 @@ const struct ind_table at_ind_cvt_table[] = {
     {AT_CMD_CESQ_IND, AT_CMD_STR("+CESQ:"), cvt_cesq_cmd_ind}
 };
 
-int cvt_cmgs_edit_callback(pty_t * pty, char *cmd, int len, int user_data);
-int cvt_cmgw_edit_callback(pty_t * pty, char *cmd, int len, int user_data);
+int cvt_cmgs_edit_callback(pty_t * pty, char *cmd, int len, unsigned long user_data);
+int cvt_cmgw_edit_callback(pty_t * pty, char *cmd, int len, unsigned long user_data);
 
 // Returns 1 if found, 0 otherwise. needle must be null-terminated.
 // strstr might not work because WebBox sends garbage before the first OKread
@@ -919,7 +919,7 @@ int cvt_cops_set_cmd_req0(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_generic_cmd_rsp,
-            (int)req->recv_pty);
+            (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
@@ -933,7 +933,7 @@ int cvt_cops_set_cmd_req1(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_generic_cmd_rsp,
-            (int)req->recv_pty);
+            (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
@@ -947,7 +947,7 @@ int cvt_cops_set_cmd_req2(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_generic_cmd_rsp,
-            (int)req->recv_pty);
+            (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
@@ -961,7 +961,7 @@ int cvt_cops_set_cmd_req4(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_generic_cmd_rsp,
-            (int)req->recv_pty);
+            (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
@@ -987,7 +987,7 @@ int cvt_generic_cmd_req(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_generic_cmd_rsp,
-            (int)req->recv_pty);
+            (unsigned long) req->recv_pty);
 
     if (strStartsWith(req->cmd_str, "at+cfun=0")
             || strStartsWith(req->cmd_str, "AT+CFUN=0")
@@ -1012,7 +1012,7 @@ int cvt_cgact_query_cmd_req(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_generic_cmd_rsp,
-            (int)req->recv_pty);
+            (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
@@ -1031,7 +1031,7 @@ int cvt_esqopt2_cmd_req(AT_CMD_REQ_T * req)
 #endif
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_generic_cmd_rsp,
-            (int)req->recv_pty);
+            (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
@@ -1049,7 +1049,7 @@ int cvt_esqopt01_cmd_req(AT_CMD_REQ_T * req)
 #endif
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_generic_cmd_rsp,
-            (int)req->recv_pty);
+            (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
@@ -1063,12 +1063,12 @@ int cvt_ata_cmd_req(AT_CMD_REQ_T * req)
     }
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_ata_cmd_rsp,
-            (int)req->recv_pty);
+            (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_ata_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_ata_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
 
@@ -1093,7 +1093,7 @@ int cvt_ata_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
     return AT_RESULT_OK;
 }
 
-int cvt_generic_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_generic_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
     if (rsp == NULL) {
@@ -1642,12 +1642,12 @@ int cvt_ecsq_cmd_ind(AT_CMD_IND_T * ind)
     return AT_RESULT_OK;
 }
 
-int cvt_null_cmd_ind(AT_CMD_IND_T * ind)
+int cvt_null_cmd_ind(AT_CMD_IND_T __attribute__((unused)) * ind)
 {
     return AT_RESULT_OK;
 }
 
-int cvt_sind_cmd_ind(AT_CMD_IND_T * ind)
+int cvt_sind_cmd_ind(AT_CMD_IND_T __attribute__((unused)) * ind)
 {
     return AT_RESULT_OK;
 }
@@ -1706,7 +1706,8 @@ void adapter_wakeup_cmux(cmux_t * mux)
     mutex_unlock(&mux->mutex_timeout);
 }
 
-int adapter_cmux_register_callback(cmux_t * mux, void *fn, int user_data)
+int adapter_cmux_register_callback(cmux_t * mux, void *fn,
+		unsigned long user_data)
 {
     if(mux == NULL || mux->ops == NULL || fn == NULL) {
         PHS_LOGE("In adapter_cmux_register_callback mux is NULL\n");
@@ -1716,7 +1717,8 @@ int adapter_cmux_register_callback(cmux_t * mux, void *fn, int user_data)
     return ret;
 }
 
-int adapter_cmux_write(cmux_t * mux, char *buf, int len, int to)
+int adapter_cmux_write(cmux_t * mux, char *buf, int __attribute__((unused))len,
+		int to)
 {
     int ret, res;
     pid_t tid;
@@ -1801,7 +1803,8 @@ int adapter_cmux_write(cmux_t * mux, char *buf, int len, int to)
     return ret;
 }
 
-int adapter_cmux_write_for_ps(cmux_t * mux, char *buf, int len, int to)
+int adapter_cmux_write_for_ps(cmux_t * mux, char *buf,
+		int __attribute__((unused)) len, int to)
 {
     int ret, res;
     pid_t tid;
@@ -1868,7 +1871,7 @@ int adapter_cmux_write_for_ps(cmux_t * mux, char *buf, int len, int to)
     return ret;
 }
 
-int adapter_pty_write(pty_t * pty, char *buf, int len)
+int adapter_pty_write(pty_t * pty, char *buf, int __attribute__((unused)) len)
 {
     int ret = 0;
     char str[MAX_AT_CMD_LEN];
@@ -1881,7 +1884,8 @@ int adapter_pty_write(pty_t * pty, char *buf, int len)
     return ret;
 }
 
-int adapter_pty_enter_editmode(pty_t * pty, void *callback, int userdata)
+int adapter_pty_enter_editmode(pty_t * pty, void *callback,
+		unsigned long userdata)
 {
     if(pty && pty->ops)
         return pty->ops->pty_enter_edit_mode(pty, callback, userdata);
@@ -1891,7 +1895,7 @@ int adapter_pty_enter_editmode(pty_t * pty, void *callback, int userdata)
     }
 }
 
-int adapter_pty_write_error(pty_t * pty, int error_code)
+int adapter_pty_write_error(pty_t * pty, int __attribute__((unused)) error_code)
 {
     char str[20];
 
@@ -1925,12 +1929,12 @@ int adapter_cmux_deregister_callback(cmux_t * mux)
     }
 }
 
-int adapter_cmd_is_end(char *str, int len)
+int adapter_cmd_is_end(char *str, int __attribute__((unused)) len)
 {
     return isFinalResponse(str);
 }
 
-int adapter_get_rsp_type(char *str, int len)
+int adapter_get_rsp_type(char *str, int __attribute__((unused)) len)
 {
 
 #if 0
@@ -1962,12 +1966,12 @@ int cvt_ccwa_cmd_req(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_ccwa_cmd_rsp,
-            (int)req->recv_pty);
+            (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_ccwa_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_ccwa_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
     pty_t *ind_pty = NULL;
@@ -2012,12 +2016,12 @@ int cvt_clip_cmd_req(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_clip_cmd_rsp,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_clip_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_clip_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
     pty_t *ind_pty = NULL;
@@ -2062,12 +2066,12 @@ int cvt_colp_cmd_req(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_colp_cmd_rsp,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_colp_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_colp_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
     pty_t *ind_pty = NULL;
@@ -2111,12 +2115,12 @@ int cvt_creg_cmd_req(AT_CMD_REQ_T * req)
     }
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_creg_cmd_rsp,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_creg_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_creg_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
     pty_t *ind_pty = NULL;
@@ -2160,12 +2164,12 @@ int cvt_cgreg_cmd_req(AT_CMD_REQ_T * req)
     }
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_cgreg_cmd_rsp,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_cgreg_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cgreg_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
     pty_t *ind_pty = NULL;
@@ -2209,12 +2213,12 @@ int cvt_cereg_cmd_req(AT_CMD_REQ_T * req)
     }
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_cereg_cmd_rsp,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_cereg_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cereg_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
     pty_t *ind_pty = NULL;
@@ -2259,12 +2263,12 @@ int cvt_cusd_cmd_req(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_cusd_cmd_rsp,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_cusd_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cusd_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
     pty_t *ind_pty = NULL;
@@ -2307,12 +2311,12 @@ int cvt_csq_action_req(AT_CMD_REQ_T * req)
     }
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_csq_action_rsp,
-            (int)req->recv_pty);
+          (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_csq_action_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_csq_action_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
@@ -2385,12 +2389,12 @@ int cvt_spscsq_action_req(AT_CMD_REQ_T * req)
     }
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_spscsq_action_rsp,
-            (int)req->recv_pty);
+          (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_spscsq_action_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_spscsq_action_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
@@ -2468,12 +2472,12 @@ int cvt_csq_test_req(AT_CMD_REQ_T * req)
     }
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_csq_test_rsp,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_csq_test_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_csq_test_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
     char tmp[200] = { "+CSQ:(0-31,100-191,199),(0-7,99)" };
@@ -2538,12 +2542,13 @@ int cvt_epin_test_req(AT_CMD_REQ_T * req)
     epin_rsp.pty = req->recv_pty;
     epin_rsp.mux = mux;
     epin_rsp.rsp_index = 0;
-    adapter_cmux_register_callback(mux, cvt_epin_test_rsp, (int)&epin_rsp);
+    adapter_cmux_register_callback(mux, cvt_epin_test_rsp,
+		    (unsigned long) &epin_rsp);
     adapter_cmux_write(mux, cmd_str, strlen(cmd_str), req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_epin_test_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_epin_test_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
@@ -2559,7 +2564,7 @@ int cvt_epin_test_rsp(AT_CMD_RSP_T * rsp, int user_data)
     }
     len = rsp->len;
     input = rsp->rsp_str;
-    if (user_data != (int)&epin_rsp) {
+    if (user_data != (unsigned long) &epin_rsp) {
         return AT_RESULT_NG;
     }
     if (rsp->recv_cmux != epin_rsp.mux) {
@@ -2616,12 +2621,12 @@ int cvt_cmgs_cmgw_test_req(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_cmgs_cmgw_test_rsp,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_cmgs_cmgw_test_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cmgs_cmgw_test_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
@@ -2660,7 +2665,7 @@ int cvt_cmgs_cmgw_test_rsp(AT_CMD_RSP_T * rsp, int user_data)
     return AT_RESULT_OK;
 }
 
-int cvt_cmgs_cmgw_set_rsp2(AT_CMD_RSP_T * rsp, int user_data);
+int cvt_cmgs_cmgw_set_rsp2(AT_CMD_RSP_T * rsp, unsigned long user_data);
 int cvt_cmgs_cmgw_recovery(cmux_t *mux,pty_t *pty)
 {
     char escape=0x1B;
@@ -2676,14 +2681,15 @@ int cvt_cmgs_cmgw_recovery(cmux_t *mux,pty_t *pty)
     return AT_RESULT_OK;
 }
 
-int cvt_cmgs_cmgw_edit_callback(pty_t * pty, char *cmd, int len, int user_data)
+int cvt_cmgs_cmgw_edit_callback(pty_t * pty, char *cmd, int len, unsigned long user_data)
 {
     int ret=AT_RESULT_OK;
 
     cmux_t *mux = (cmux_t *) (user_data);
     PHS_LOGD("\n enter cvt_cmgs_cmgw_edit_callback!\n");
     pty->cmgs_cmgw_set_result = 0;
-    adapter_cmux_register_callback(mux, cvt_cmgs_cmgw_set_rsp, (int)pty);
+    adapter_cmux_register_callback(mux, cvt_cmgs_cmgw_set_rsp,
+		(unsigned long) pty);
     ret = adapter_cmux_write_for_ps(mux, cmd, len, CMGS_TIMEOUT);
     PHS_LOGD("\n cvt_cmgs_cmgw_edit_callback:ret=%d", ret);
     if(ret == AT_RESULT_TIMEOUT)
@@ -2714,7 +2720,7 @@ int cvt_cmgs_cmgw_edit_callback(pty_t * pty, char *cmd, int len, int user_data)
     PHS_LOGD("\n Send sms failure");
 
     adapter_cmux_register_callback(mux, cvt_cmgs_cmgw_set_rsp2,
-            (int)&cmgs_cmgw_set_result);
+            &cmgs_cmgw_set_result);
     adapter_cmux_write_for_ps(mux, cmgs_cmgw_cmd,strlen(cmgs_cmgw_cmd), 10);
 
     if(cmgs_cmgw_set_result != 1)
@@ -2725,7 +2731,7 @@ int cvt_cmgs_cmgw_edit_callback(pty_t * pty, char *cmd, int len, int user_data)
         return AT_RESULT_OK;
     }
 
-    adapter_cmux_register_callback(mux, cvt_cmgs_cmgw_set_rsp, (int)pty);
+    adapter_cmux_register_callback(mux, cvt_cmgs_cmgw_set_rsp, pty);
     cmgs_cmgw_set_result = 0;
     ret = adapter_cmux_write_for_ps(mux, cmd, len, CMGS_TIMEOUT);
     PHS_LOGD("\n resend SMS:ret=%d", ret);
@@ -2760,13 +2766,13 @@ int cvt_cmgs_cmgw_set_req(AT_CMD_REQ_T * req)
     sem_lock(&sms_lock);
     req->recv_pty->cmgs_cmgw_set_result = 0;
     adapter_cmux_register_callback(mux, cvt_cmgs_cmgw_set_rsp2,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write_for_ps(mux, req->cmd_str, req->len, req->timeout);
 
     if(req->recv_pty->cmgs_cmgw_set_result == 1)
     {
         adapter_pty_enter_editmode(req->recv_pty, (void *)cvt_cmgs_cmgw_edit_callback,
-                (int)mux);
+               (unsigned long) mux);
         adapter_pty_write(req->recv_pty, "> ", strlen("> "));
         return AT_RESULT_PROGRESS;
     }else if(req->recv_pty->cmgs_cmgw_set_result == 2){
@@ -2783,7 +2789,8 @@ int cvt_cmgs_cmgw_set_req(AT_CMD_REQ_T * req)
     }
 }
 
-int cvt_cmgs_cmgw_set_rsp1(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cmgs_cmgw_set_rsp1(AT_CMD_RSP_T * rsp,
+		unsigned long __attribute__((unused)) user_data)
 {
     int ret;
     pty_t *ind_pty = NULL;
@@ -2814,7 +2821,7 @@ int cvt_cmgs_cmgw_set_rsp1(AT_CMD_RSP_T * rsp, int user_data)
     return AT_RESULT_OK;
 }
 
-int cvt_cmgs_cmgw_set_rsp2(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cmgs_cmgw_set_rsp2(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
@@ -2854,7 +2861,7 @@ int cvt_cmgs_cmgw_set_rsp2(AT_CMD_RSP_T * rsp, int user_data)
     return AT_RESULT_OK;
 }
 
-int cvt_cmgs_cmgw_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cmgs_cmgw_set_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
@@ -2930,7 +2937,7 @@ int cvt_esatprofile_set_req(AT_CMD_REQ_T * req)
         snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+ESATPROFILE=\"%s\"\r", data);
         mux = adapter_get_cmux(req->cmd_type, TRUE);
         adapter_cmux_register_callback(mux, cvt_generic_cmd_rsp,
-                (int)req->recv_pty);
+               (unsigned long) req->recv_pty);
         adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
                 req->timeout);
         PHS_LOGD("leave cvt_esatprofile_set_req:AT_RESULT_PROGRESS\n");
@@ -2975,7 +2982,7 @@ int cvt_esatenvecmd_set_req(AT_CMD_REQ_T * req)
         snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+ESATENVECMD=\"%s\"\r", data);
         mux = adapter_get_cmux(req->cmd_type, TRUE);
         adapter_cmux_register_callback(mux, cvt_generic_cmd_rsp,
-                (int)req->recv_pty);
+               (unsigned long) req->recv_pty);
         adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
                 req->timeout);
         PHS_LOGD("leave cvt_esatenvecmd_set_req:AT_RESULT_PROGRESS\n");
@@ -3020,7 +3027,7 @@ int cvt_esatterminal_set_req(AT_CMD_REQ_T * req)
         snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+ESATTERMINAL=\"%s\"\r", data);
         mux = adapter_get_cmux(req->cmd_type, TRUE);
         adapter_cmux_register_callback(mux, cvt_generic_cmd_rsp,
-                (int)req->recv_pty);
+               (unsigned long) req->recv_pty);
         adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
                 req->timeout);
         PHS_LOGD("leave cvt_esatterminal_set_req:AT_RESULT_PROGRESS\n");
@@ -3053,12 +3060,12 @@ int cvt_echupvt_set_req(AT_CMD_REQ_T * req)
         return AT_RESULT_NG;
     snprintf(tmp, sizeof(tmp),"%s%s", "AT+CHUPVT=", str);
     adapter_cmux_register_callback(mux, cvt_echupvt_set_rsp,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, tmp, strlen(tmp), req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_echupvt_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_echupvt_set_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
@@ -3101,13 +3108,13 @@ int cvt_atd_active_req(AT_CMD_REQ_T * req)
     }
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_atd_active_rsp,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, "ATD*99***04#\r", strlen("ATD*99***04#\r"),
             req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_atd_active_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_atd_active_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
@@ -3156,19 +3163,19 @@ int cvt_ath_cmd_req(AT_CMD_REQ_T * req)
     if (req->recv_pty->type != STMAT) {
         mux = adapter_get_cmux(req->cmd_type, TRUE);
         adapter_cmux_register_callback(mux, cvt_ath_cmd_rsp,
-                (int)req->recv_pty);
+               (unsigned long) req->recv_pty);
         adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     } else {
         mux = adapter_get_cmux(AT_CMD_TYPE_STM, TRUE);
         adapter_cmux_register_callback(mux, cvt_ath_cmd_rsp,
-                (int)req->recv_pty);
+               (unsigned long) req->recv_pty);
         adapter_cmux_write(mux, "AT+CGACT=0,4\r",
                 strlen("AT+CGACT=0,4\r"), req->timeout);
     } 
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_ath_cmd_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_ath_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
@@ -3248,12 +3255,12 @@ int cvt_evts_set_req(AT_CMD_REQ_T * req)
     }
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_evts_set_rsp,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, tmp, strlen(tmp), req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_evts_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_evts_set_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
@@ -3337,12 +3344,12 @@ int cvt_eband_set_req(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_eband_set_rsp,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, tmp, strlen(tmp), req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_eband_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_eband_set_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
@@ -3383,13 +3390,13 @@ int cvt_eband_query_req(AT_CMD_REQ_T * req)
     }
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_eband_query_rsp,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write(mux, "AT^SYSCONFIG?\r", strlen("AT^SYSCONFIG?\r"),
             req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_eband_query_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_eband_query_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
@@ -3438,7 +3445,7 @@ int cvt_eband_query_rsp(AT_CMD_RSP_T * rsp, int user_data)
 
 }
 
-int cvt_snvm_edit_callback(pty_t * pty, char *cmd, int len, int user_data);
+int cvt_snvm_edit_callback(pty_t * pty, char *cmd, int len, unsigned long user_data);
 
 int cvt_snvm_set_req(AT_CMD_REQ_T * req)
 {
@@ -3453,13 +3460,13 @@ int cvt_snvm_set_req(AT_CMD_REQ_T * req)
     sem_lock(&sms_lock);
     req->recv_pty->cmgs_cmgw_set_result = 0;
     adapter_cmux_register_callback(mux, cvt_snvm_set_rsp,
-            (int)req->recv_pty);
+           (unsigned long) req->recv_pty);
     adapter_cmux_write_for_ps(mux, req->cmd_str, req->len, req->timeout);
 
     if(req->recv_pty->cmgs_cmgw_set_result == 1)
     {
         adapter_pty_enter_editmode(req->recv_pty, (void *)cvt_snvm_edit_callback,
-                (int)mux);
+               (unsigned long) mux);
         adapter_pty_write(req->recv_pty, "> ", strlen("> "));
         return AT_RESULT_PROGRESS;
     }else if(req->recv_pty->cmgs_cmgw_set_result == 2){
@@ -3476,7 +3483,7 @@ int cvt_snvm_set_req(AT_CMD_REQ_T * req)
     }
 }
 
-int cvt_snvm_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_snvm_set_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     pty_t *ind_pty = NULL;
     pty_t *ind_eng_pty = NULL;
@@ -3516,14 +3523,14 @@ int cvt_snvm_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
     return AT_RESULT_OK;
 }
 
-int cvt_snvm_edit_callback(pty_t * pty, char *cmd, int len, int user_data)
+int cvt_snvm_edit_callback(pty_t * pty, char *cmd, int len, unsigned long user_data)
 {
     int ret = AT_RESULT_OK;
 
     cmux_t *mux = (cmux_t *) (user_data);
     PHS_LOGD("\n enter cvt_snvm_edit_callback!\n");
     pty->cmgs_cmgw_set_result = 0;
-    adapter_cmux_register_callback(mux, cvt_snvm_set_rsp, (int)pty);
+    adapter_cmux_register_callback(mux, cvt_snvm_set_rsp, (unsigned long)pty);
     ret = adapter_cmux_write_for_ps(mux, cmd, len, CMGS_TIMEOUT);
     PHS_LOGD("\n cvt_snvm_edit_callback:ret=%d", ret);
     if(ret == AT_RESULT_TIMEOUT)

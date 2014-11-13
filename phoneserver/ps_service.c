@@ -306,7 +306,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
             PHS_LOGD("PPP_STATE_DEACTING");
             ppp_info[ppp_index].state = PPP_STATE_DEACTING;
             snprintf(at_cmd_str,sizeof(at_cmd_str), "AT+CGACT=0,%d\r",cid);
-            adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp1, (int)req->recv_pty);
+            adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp1, (unsigned long)req->recv_pty);
             ret = adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
                     req->timeout);
             if(ret == AT_RESULT_TIMEOUT) {
@@ -570,7 +570,8 @@ void cvt_reset_dns2(char *out)
     }
 }
 
-int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp,
+		unsigned long __attribute__((unused)) user_data)
 {
     int ret;
     int err;
@@ -733,7 +734,7 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp, int user_data)
     return AT_RESULT_NG;
 }
 
-int cvt_cgdata_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cgdata_set_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
     int rsp_type;
@@ -834,7 +835,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                 ppp_info[tmp_cid-1].state = PPP_STATE_DEACTING;
                 ppp_info[tmp_cid - 1].cmux = mux;
                 snprintf(at_cmd_str,sizeof(at_cmd_str), "AT+CGACT=0,%d\r",tmp_cid);
-                adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp2, (int)req->recv_pty);
+                adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp2, (unsigned long)req->recv_pty);
                 adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str), req->timeout);
                 ppp_info[tmp_cid - 1].state = PPP_STATE_IDLE;
 
@@ -883,7 +884,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
             } else {
                 snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+CGACT=0,%d\r", tmp_cid);
                 adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp,
-                    (int)req->recv_pty);
+                    (unsigned long)req->recv_pty);
                 adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
                     req->timeout);
             }
@@ -894,7 +895,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
             mux = adapter_get_cmux(req->cmd_type, TRUE);
             snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+CGACT=0\r");
             adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp,
-                    (int)req->recv_pty);
+                    (unsigned long)req->recv_pty);
             adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
                     req->timeout);
 
@@ -982,7 +983,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                     snprintf(at_cmd_str,sizeof(at_cmd_str), "AT+CGACT=0,%d\r",tmp_cid);
                 }
                 PHS_LOGD("at_cmd_str= %s", at_cmd_str);
-                adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp2, (int)req->recv_pty);
+                adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp2, (unsigned long)req->recv_pty);
                 adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
                     req->timeout);
                 ppp_info[tmp_cid - 1].state = PPP_STATE_IDLE;
@@ -1063,7 +1064,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                 PHS_LOGD("Just send AT+CGACT ");
                 snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+CGACT=0,%d\r", tmp_cid);
                 adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp,
-                        (int)req->recv_pty);
+                        (unsigned long)req->recv_pty);
                 adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
                         req->timeout);
             }
@@ -1074,7 +1075,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
             mux = adapter_get_cmux(req->cmd_type, TRUE);
             snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+CGACT=0\r");
             adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp,
-                    (int)req->recv_pty);
+                    (unsigned long)req->recv_pty);
             adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
                     req->timeout);
 
@@ -1133,7 +1134,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_cgact_deact_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cgact_deact_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
 
@@ -1152,7 +1153,8 @@ int cvt_cgact_deact_rsp(AT_CMD_RSP_T * rsp, int user_data)
     return AT_RESULT_NG;
 }
 
-int cvt_cgact_deact_rsp1(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cgact_deact_rsp1(AT_CMD_RSP_T * rsp,
+		unsigned long __attribute__((unused)) user_data)
 {
     int ret;
     if (rsp == NULL) {
@@ -1167,7 +1169,7 @@ int cvt_cgact_deact_rsp1(AT_CMD_RSP_T * rsp, int user_data)
     return AT_RESULT_NG;
 }
 
-int cvt_cgact_deact_rsp2(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cgact_deact_rsp2(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
 
@@ -1186,7 +1188,8 @@ int cvt_cgact_deact_rsp2(AT_CMD_RSP_T * rsp, int user_data)
     return AT_RESULT_NG;
 }
 
-int cvt_cgact_deact_rsp3(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cgact_deact_rsp3(AT_CMD_RSP_T * rsp,
+		unsigned long __attribute__((unused)) user_data)
 {
     int ret;
 
@@ -1213,12 +1216,12 @@ int cvt_cgact_act_req(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_cgact_act_rsp,
-            (int)req->recv_pty);
+            (unsigned long)req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_cgact_act_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cgact_act_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
 
@@ -1246,12 +1249,12 @@ int cvt_cgdcont_read_req(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
     adapter_cmux_register_callback(mux, cvt_cgdcont_read_rsp,
-            (int)req->recv_pty);
+            (unsigned long)req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_cgdcont_read_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cgdcont_read_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret, err;
     int tmp_cid = 0;
@@ -1454,12 +1457,12 @@ end_req:
     req->len = len;
 
     adapter_cmux_register_callback(mux, cvt_cgdcont_set_rsp,
-            (int)req->recv_pty);
+            (unsigned long)req->recv_pty);
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_cgdcont_set_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cgdcont_set_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     if (rsp == NULL) {
         return AT_RESULT_NG;
@@ -1525,7 +1528,8 @@ IP_TYPE read_ip_addr(char *raw, char *rsp)
     return ip_type;
 }
 
-int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp, int user_data)
+int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp,
+		unsigned long __attribute__((unused)) user_data)
 {
     int ret;
     int err;
