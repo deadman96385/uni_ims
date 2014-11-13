@@ -26,16 +26,21 @@ LOCAL_SRC_FILES := \
 	src/h264dec_table.c \
 	src/h264dec_vld.c	\
 	src/h264dec_vld_table.c \
-	src/gcc/h264dec_deblock_neon.s	\
-	src/gcc/h264dec_ext_frame_neon.s	\
-	src/gcc/h264dec_ipred_neon.s \
-	src/gcc/h264dec_isqt_neon.s \
-	src/gcc/h264dec_mc4_neon.s	\
-	src/gcc/h264dec_mc8_neon.s	\
-	src/gcc/h264dec_mc16_neon.s \
-	src/gcc/h264dec_mem_neon.s	\
-	src/gcc/h264dec_bitstream_neon.s \
-	src/gcc/h264dec_wp_neon.s	\
+	src/h264dec_mc4xN.c \
+	src/h264dec_mc8xN.c	\
+	src/h264dec_mc16xN.c \
+
+
+#	src/gcc/h264dec_deblock_neon.s	\
+#	src/gcc/h264dec_ext_frame_neon.s	\
+#	src/gcc/h264dec_ipred_neon.s \
+#	src/gcc/h264dec_isqt_neon.s \
+#	src/gcc/h264dec_mc4_neon.s	\
+#	src/gcc/h264dec_mc8_neon.s	\
+#	src/gcc/h264dec_mc16_neon.s \
+#	src/gcc/h264dec_mem_neon.s	\
+#	src/gcc/h264dec_bitstream_neon.s \
+#	src/gcc/h264dec_wp_neon.s	\
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \

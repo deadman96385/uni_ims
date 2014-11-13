@@ -30,7 +30,7 @@
 #define DECLARE_ASM_CONST(n,t,v)    const t v
 #endif
 
-#ifndef WIN32
+#if 0//WIN32
 #define _NEON_OPT_
 #define _ARM_CLZ_OPT_
 #include <arm_neon.h>

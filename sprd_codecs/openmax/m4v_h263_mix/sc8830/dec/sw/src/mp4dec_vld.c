@@ -356,7 +356,7 @@ PUBLIC int16 Mp4Dec_VlcDecMV(DEC_VOP_MODE_T *vop_mode_ptr, DEC_BS_T *bitstrm_ptr
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
-#if 1//def WIN32
+#if  1// WIN32
 /*****************************************************************************
  **	Name : 			Mp4Dec_VlcDecIntraTCOEF
  ** Description:
@@ -730,7 +730,7 @@ PUBLIC void Mp4Dec_VlcDecInterTCOEF_H263(DEC_VOP_MODE_T *vop_mode_ptr, int16 *iD
  ** Author:			Xiaowei Luo
  **	Note:     vld do deScan.
  *****************************************************************************/
-#if 1//def WIN32
+#if  1// WIN32
 PUBLIC void Mp4Dec_VlcDecInterTCOEF_Mpeg(DEC_VOP_MODE_T *vop_mode_ptr, int16 *iDCTCoef, int32 iQP,DEC_BS_T * pBitstrm)
 {
     uint32 code;

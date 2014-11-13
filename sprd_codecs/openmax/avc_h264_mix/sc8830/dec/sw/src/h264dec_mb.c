@@ -1060,7 +1060,7 @@ PUBLIC int32 H264Dec_exit_macroblock (H264DecContext *img_ptr, DEC_MB_INFO_T *mb
     }
 }
 
-#ifdef WIN32
+#if 1//WIN32
 void put_mb2Frame (uint8 *mb_pred, uint8 *mb_addr[3], int32 pitch)
 {
     int32 uv;
@@ -1558,7 +1558,7 @@ LOCAL void H264Dec_decode_intra_mb(H264DecContext *img_ptr, DEC_MB_INFO_T *mb_in
             } else
             {
                 //copy 8x8
-#ifdef WIN32
+#if 1//WIN32
                 ((uint32 *)rec)[0] = ((uint32 *)pred)[0];
                 ((uint32 *)rec)[1] = ((uint32 *)pred)[1];
                 rec += ext_width;
@@ -1707,7 +1707,7 @@ LOCAL void H264Dec_decode_inter_mb (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_i
             } else
             {
                 //copy 8x8
-#ifdef WIN32
+#if 1//WIN32
                 ((uint32 *)rec)[0] = ((uint32 *)pred)[0];
                 ((uint32 *)rec)[1] = ((uint32 *)pred)[1];
                 rec += ext_width;

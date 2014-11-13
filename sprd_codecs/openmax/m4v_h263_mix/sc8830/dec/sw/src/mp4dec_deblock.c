@@ -321,7 +321,7 @@ PUBLIC void Mp4Dec_Deblock_vop(Mp4DecObject *vo)
             dbk_para->clip = CLIP_TAB[IClip(0,51,qp+12)][dbk_para->bs];
             for(edge_cnt = 0; edge_cnt < edge_num; edge_cnt ++)
             {
-                arm_Mp4Dec_Deblock_Process_Block(dbk_para, above_edge_src_ptr, below_edge_src_ptr, dst_block_ptr);
+                //arm_Mp4Dec_Deblock_Process_Block(dbk_para, above_edge_src_ptr, below_edge_src_ptr, dst_block_ptr);
                 above_edge_src_ptr += BLOCK_SIZE;
                 below_edge_src_ptr += BLOCK_SIZE;
                 dst_block_ptr += dbk_para->dst_line_width * BLOCK_SIZE;
@@ -366,7 +366,7 @@ PUBLIC void Mp4Dec_Deblock_vop(Mp4DecObject *vo)
             dbk_para->clip = CLIP_TAB[IClip(0,51,qp+12)][dbk_para->bs];
             for(edge_cnt = 0; edge_cnt < edge_num; edge_cnt ++)
             {
-                arm_Mp4Dec_Deblock_Process_Block(dbk_para, above_edge_src_ptr, below_edge_src_ptr, dst_block_ptr);
+                //arm_Mp4Dec_Deblock_Process_Block(dbk_para, above_edge_src_ptr, below_edge_src_ptr, dst_block_ptr);
                 above_edge_src_ptr += BLOCK_SIZE;
                 below_edge_src_ptr += BLOCK_SIZE;
                 dst_block_ptr += dbk_para->dst_line_width * BLOCK_SIZE;

@@ -272,7 +272,7 @@ PUBLIC void write_display_frame(DEC_VOP_MODE_T *vop_mode_ptr,DEC_FRM_BFR *pDecFr
     {
         uint8 *pDst = vop_mode_ptr->pCurRecFrame->pDecFrame->imgU;
         int32 col;
-#if 1//ndef _NEON_OPT_ 
+#ifndef _NEON_OPT_
         for (row = 0; row < FrameHeight; row++)
         {
             for (col = 0; col < FrameWidth; col++)
@@ -313,6 +313,58 @@ PUBLIC void write_display_frame(DEC_VOP_MODE_T *vop_mode_ptr,DEC_FRM_BFR *pDecFr
 #endif
     }
 }
+
+#if  1//def WIN32
+PUBLIC void write_display_frame_uvinterleaved(DEC_VOP_MODE_T *vop_mode_ptr,DEC_FRM_BFR *pDecFrame)
+{
+    int16 FrameWidth= vop_mode_ptr->FrameWidth;
+    int16 FrameHeight= vop_mode_ptr->FrameHeight;
+    int16 FrameExtendWidth= vop_mode_ptr->FrameExtendWidth;
+    int16 FrameExtendHeigth= vop_mode_ptr->FrameExtendHeight;
+    int16 iStartInFrameUV= vop_mode_ptr->iStartInFrameUV;
+
+    uint8 *pSrc_y, *pSrc_u, *pSrc_v;
+    uint8 *pDst_y, *pDst_u, *pDst_v;
+    int32 row;
+
+    //    SCI_TRACE_LOW("%s, %d, pDecFrame: %0x",  __FUNCTION__, __LINE__, pDecFrame);
+
+    //y
+    pSrc_y = pDecFrame->imgYUV[0] + vop_mode_ptr->iStartInFrameY;
+    pDst_y = pDecFrame->imgY;
+
+    for (row = 0; row < FrameHeight; row++)
+    {
+        memcpy(pDst_y, pSrc_y, FrameWidth);
+
+        pSrc_y += FrameExtendWidth;
+        pDst_y += FrameWidth;
+    }
+
+    //u and v
+    FrameHeight >>= 1;
+    FrameWidth >>= 1;
+    FrameExtendWidth >>= 1;
+
+    pSrc_u = pDecFrame->imgYUV[1] + iStartInFrameUV;
+    pSrc_v = pDecFrame->imgYUV[2] + iStartInFrameUV;
+    pDst_u = pDecFrame->imgU;
+    for (row = 0; row < FrameHeight; row++)
+    {
+        int j;
+
+        for (j = 0; j < FrameWidth; j++)
+        {
+            pDst_u[2*j + 0] = pSrc_u[j];
+            pDst_u[2*j + 1] = pSrc_v[j];
+        }
+
+        pSrc_u += FrameExtendWidth;
+        pSrc_v += FrameExtendWidth;
+        pDst_u += FrameWidth*2;
+    }
+}
+#endif
 
 PUBLIC void Mp4Dec_ExtendFrame(DEC_VOP_MODE_T *vop_mode_ptr, uint8**Frame )
 {
