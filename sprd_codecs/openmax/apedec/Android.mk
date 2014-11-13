@@ -1,3 +1,4 @@
+ifeq (0,true)
 LOCAL_PATH:= $(call my-dir)
 
 ################################################################################
@@ -29,6 +30,7 @@ LOCAL_MODULE := libomx_apedec_sprd
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
+endif
 
 ################################################################################
 
