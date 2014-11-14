@@ -86,7 +86,6 @@ static void onReaderClosed();
 static int writeCtrlZ (struct ATChannels *ATch, const char *s);
 static int writeline (struct ATChannels *ATch, const char *s);
 
-#ifndef USE_NP
 static void setTimespecRelative(struct timespec *p_ts, long long msec)
 {
     struct timeval tv;
@@ -99,7 +98,6 @@ static void setTimespecRelative(struct timespec *p_ts, long long msec)
     p_ts->tv_sec = tv.tv_sec + (msec / 1000);
     p_ts->tv_nsec = (tv.tv_usec + (msec % 1000) * 1000L ) * 1000L;
 }
-#endif /*USE_NP*/
 
 static void sleepMsec(long long msec)
 {
@@ -788,9 +786,7 @@ static int at_send_command_full_nolock (struct ATChannels *ATch,
                     long long timeoutMsec, ATResponse **pp_outResponse)
 {
     int err = 0;
-#ifndef USE_NP
     struct timespec ts;
-#endif /*USE_NP*/
 
     if(ATch->sp_response != NULL) {
         err = AT_ERROR_COMMAND_PENDING;
@@ -811,20 +807,14 @@ static int at_send_command_full_nolock (struct ATChannels *ATch,
         goto error;
     }
 
-#ifndef USE_NP
     if (timeoutMsec != 0) {
         setTimespecRelative(&ts, timeoutMsec);
     }
-#endif /*USE_NP*/
 
     while (ATch->sp_response->finalResponse == NULL &&
            s_readerClosed == 0) {
         if (timeoutMsec != 0) {
-#ifdef USE_NP
-            err = pthread_cond_timeout_np(&cond[ATch->channelID], &mutex[ATch->channelID], timeoutMsec);
-#else
             err = pthread_cond_timedwait(&cond[ATch->channelID], &mutex[ATch->channelID], &ts);
-#endif /*USE_NP*/
         } else {
             err = pthread_cond_wait(&cond[ATch->channelID], &mutex[ATch->channelID]);
         }

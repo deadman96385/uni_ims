@@ -12,12 +12,8 @@ LOCAL_SRC_FILES:= \
 LOCAL_SHARED_LIBRARIES := \
 	liblog \
 	libcutils \
-	libril_sp
-
-
-ifeq ($(TARGET_ARCH),arm)
-LOCAL_SHARED_LIBRARIES += libdl
-endif # arm
+	libril_sp \
+	libdl
 
 # temporary hack for broken vendor rils
 LOCAL_WHOLE_STATIC_LIBRARIES := \
