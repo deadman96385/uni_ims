@@ -27,15 +27,15 @@ extern   "C"
 
 LOCAL void Init_Mem (Mp4DecObject *vo, MMCodecBuffer *pMem, int32 type)
 {
-    int32 dw_aligned = (((uint32)(pMem->common_buffer_ptr) + 7) & (~7)) - ((uint32)(pMem->common_buffer_ptr));
+    int32 dw_aligned = (((uint_32or64)(pMem->common_buffer_ptr) + 7) & (~7)) - ((uint_32or64)(pMem->common_buffer_ptr));
 
     vo->mem[type].used_size = 0;
     vo->mem[type].v_base = pMem->common_buffer_ptr + dw_aligned;
-    vo->mem[type].p_base = (uint32)(pMem->common_buffer_ptr_phy) + dw_aligned;
+    vo->mem[type].p_base = (uint_32or64)(pMem->common_buffer_ptr_phy) + dw_aligned;
     vo->mem[type].total_size = pMem->size - dw_aligned;
     SCI_MEMSET(vo->mem[type].v_base, 0, vo->mem[type].total_size);
 
-    MP4DEC_MALLOC_PRINT("%s: type:%d, dw_aligned, %d, v_base: %0x, p_base: %0x, mem_size:%d\n",
+    MP4DEC_MALLOC_PRINT("%s: type:%d, dw_aligned, %d, v_base: %lx, p_base: %lx, mem_size:%d\n",
                         __FUNCTION__, type, dw_aligned, vo->mem[type].v_base, vo->mem[type].p_base, vo->mem[type].total_size);
 }
 
@@ -66,9 +66,9 @@ PUBLIC MMDecRet MP4DecMemInit(MP4Handle *mp4Handle, MMCodecBuffer *pBuffer)
 PUBLIC void *Mp4Dec_MemAlloc (Mp4DecObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type)
 {
     CODEC_BUF_T *pMem = &(vo->mem[type]);
-    uint32 CurrAddr, AlignedAddr;
+    uint_32or64 CurrAddr, AlignedAddr;
 
-    CurrAddr = (uint32)(pMem->v_base) + pMem->used_size;
+    CurrAddr = (uint_32or64)(pMem->v_base) + pMem->used_size;
     AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
     need_size += (AlignedAddr - CurrAddr);
 
@@ -88,7 +88,7 @@ PUBLIC void *Mp4Dec_MemAlloc (Mp4DecObject *vo, uint32 need_size, int32 aligned_
 /*****************************************************************************
  ** Note:	 mapping from virtual to physical address
  *****************************************************************************/
-PUBLIC uint32 Mp4Dec_MemV2P(Mp4DecObject *vo, uint8 *vAddr, int32 type)
+PUBLIC uint_32or64 Mp4Dec_MemV2P(Mp4DecObject *vo, uint8 *vAddr, int32 type)
 {
     if (type >= MAX_MEM_TYPE)
     {
@@ -98,7 +98,7 @@ PUBLIC uint32 Mp4Dec_MemV2P(Mp4DecObject *vo, uint8 *vAddr, int32 type)
     {
         CODEC_BUF_T *pMem = &(vo->mem[type]);
 
-        return ((uint32)(vAddr-pMem->v_base)+pMem->p_base);
+        return ((uint_32or64)(vAddr-pMem->v_base)+pMem->p_base);
     }
 }
 /**---------------------------------------------------------------------------*

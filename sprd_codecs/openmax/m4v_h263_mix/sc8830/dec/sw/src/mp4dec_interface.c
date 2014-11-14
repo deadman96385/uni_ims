@@ -29,7 +29,7 @@ PUBLIC void MP4DecSetCurRecPic(MP4Handle *mp4Handle, uint8	*pFrameY,uint8 *pFram
     DEC_FRM_BFR *rec_buf_ptr = &(vo->g_rec_buf);
 
     rec_buf_ptr->imgY =  pFrameY;
-    rec_buf_ptr->imgYAddr = (uint32)pFrameY_phy;
+    rec_buf_ptr->imgYAddr = (uint_32or64)pFrameY_phy;
     rec_buf_ptr->pBufferHeader = pBufferHeader;
 
 //    SCI_TRACE_LOW("%s: %s  %x\n", __FILE__, __FUNCTION__, pFrameY);
@@ -161,7 +161,7 @@ PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer *buffer_ptr)
     vo->mp4Handle = mp4Handle;
 
     buffer_ptr->common_buffer_ptr += sizeof(Mp4DecObject);
-    buffer_ptr->common_buffer_ptr_phy = (void *)((uint32)(buffer_ptr->common_buffer_ptr_phy) + sizeof(Mp4DecObject));
+    buffer_ptr->common_buffer_ptr_phy = (void *)((uint_32or64)(buffer_ptr->common_buffer_ptr_phy) + sizeof(Mp4DecObject));
     buffer_ptr->size -= sizeof(Mp4DecObject);
     Mp4Dec_InitInterMem(vo, buffer_ptr);
 

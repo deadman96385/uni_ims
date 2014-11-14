@@ -478,9 +478,9 @@ typedef struct storable_picture
     uint8	*imgU;
     uint8	*imgV;
 
-    uint32	imgYAddr;	//frame address which are configured to VSP,  imgYAddr = ((uint32)imgY >> 8), 64 word aligment
-    uint32	imgUAddr;	//imgUAddr = ((uint32)imgU>>8)
-    uint32	imgVAddr;	//imgVAddr = ((uint32)imgV>>8)
+    uint_32or64	imgYAddr;	//frame address which are configured to VSP,  imgYAddr = ((uint32)imgY >> 8), 64 word aligment
+    uint_32or64	imgUAddr;	//imgUAddr = ((uint32)imgU>>8)
+    uint_32or64	imgVAddr;	//imgVAddr = ((uint32)imgV>>8)
 
     void *pBufferHeader;
     int32       mPicId;  // Which output picture is for which input buffer?
@@ -531,7 +531,7 @@ typedef struct codec_buf_tag
     uint32 used_size;
     uint32 total_size;
     uint8* v_base;  //virtual address
-    uint32 p_base;  //physical address
+    uint_32or64 p_base;  //physical address
 } CODEC_BUF_T;
 
 typedef int32 (*mv_prediction_subMB)(void *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int32 cache_offset, int32 b8);

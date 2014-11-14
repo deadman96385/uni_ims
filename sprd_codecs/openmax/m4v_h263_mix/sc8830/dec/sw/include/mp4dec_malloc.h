@@ -37,7 +37,7 @@ extern   "C"
 
 void Mp4Dec_InitInterMem (Mp4DecObject *vo, MMCodecBuffer *pInterMemBfr);
 void *Mp4Dec_MemAlloc (Mp4DecObject *vo, uint32 need_size, int32 aligned_byte_num, int32 type);
-uint32 Mp4Dec_MemV2P(Mp4DecObject *vo, uint8 *vAddr, int32 type);
+uint_32or64 Mp4Dec_MemV2P(Mp4DecObject *vo, uint8 *vAddr, int32 type);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

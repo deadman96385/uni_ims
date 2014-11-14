@@ -27,16 +27,16 @@ extern   "C"
 
 LOCAL void Init_Mem (H264DecContext *img_ptr, MMCodecBuffer *pMem, int32 type)
 {
-    int32 dw_aligned = (((uint32)(pMem->common_buffer_ptr) + 7) & (~7)) - ((uint32)(pMem->common_buffer_ptr));
+    int32 dw_aligned = (((uint_32or64)(pMem->common_buffer_ptr) + 7) & (~7)) - ((uint_32or64)(pMem->common_buffer_ptr));
 
     img_ptr->mem[type].used_size = 0;
     img_ptr->mem[type].v_base = pMem->common_buffer_ptr + dw_aligned;
-    img_ptr->mem[type].p_base = (uint32)(pMem->common_buffer_ptr_phy) + dw_aligned;
+    img_ptr->mem[type].p_base = pMem->common_buffer_ptr_phy + dw_aligned;
     img_ptr->mem[type].total_size = pMem->size - dw_aligned;
 
     SCI_MEMSET(img_ptr->mem[type].v_base, 0, img_ptr->mem[type].total_size);
 
-    H264DEC_MALLOC_PRINT("%s: dw_aligned, %d, v_base: %0x, p_base: %0x, mem_size:%d\n",
+    H264DEC_MALLOC_PRINT("%s: dw_aligned, %d, v_base: %lx, p_base: %lx, mem_size:%d\n",
                          __FUNCTION__, dw_aligned, img_ptr->mem[type].v_base, img_ptr->mem[type].p_base, img_ptr->mem[type].total_size);
 }
 
@@ -67,9 +67,9 @@ PUBLIC MMDecRet H264DecMemInit(AVCHandle *avcHandle, MMCodecBuffer *pBuffer)
 PUBLIC void *H264Dec_MemAlloc (H264DecContext *img_ptr, uint32 need_size, int32 aligned_byte_num, int32 type)
 {
     CODEC_BUF_T *pMem = &(img_ptr->mem[type]);
-    uint32 CurrAddr, AlignedAddr;
+    uint_32or64 CurrAddr, AlignedAddr;
 
-    CurrAddr = (uint32)(pMem->v_base) + pMem->used_size;
+    CurrAddr = (uint_32or64)(pMem->v_base) + pMem->used_size;
     AlignedAddr = (CurrAddr + aligned_byte_num-1) & (~(aligned_byte_num -1));
     need_size += (AlignedAddr - CurrAddr);
 
@@ -90,7 +90,7 @@ PUBLIC void *H264Dec_MemAlloc (H264DecContext *img_ptr, uint32 need_size, int32 
 /*****************************************************************************
  ** Note:	 mapping from virtual to physical address
  *****************************************************************************/
-PUBLIC uint32 H264Dec_MemV2P(H264DecContext *img_ptr, uint8 *vAddr, int32 type)
+PUBLIC uint_32or64 H264Dec_MemV2P(H264DecContext *img_ptr, uint8 *vAddr, int32 type)
 {
     if (type >= MAX_MEM_TYPE)
     {
@@ -100,7 +100,7 @@ PUBLIC uint32 H264Dec_MemV2P(H264DecContext *img_ptr, uint8 *vAddr, int32 type)
     {
         CODEC_BUF_T *pMem = &(img_ptr->mem[type]);
 
-        return ((uint32)(vAddr-pMem->v_base)+pMem->p_base);
+        return ((uint_32or64)(vAddr-pMem->v_base)+pMem->p_base);
     }
 }
 

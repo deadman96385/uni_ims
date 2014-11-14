@@ -37,7 +37,7 @@ extern   "C"
 
 void H264Dec_InitInterMem (H264DecContext *img_ptr, MMCodecBuffer *pInterMemBfr);
 void *H264Dec_MemAlloc (H264DecContext *img_ptr, uint32 need_size, int32 aligned_byte_num, int32 type);
-uint32 H264Dec_MemV2P(H264DecContext *img_ptr, uint8 *vAddr, int32 type);
+uint_32or64 H264Dec_MemV2P(H264DecContext *img_ptr, uint8 *vAddr, int32 type);
 void H264Dec_FreeExtraMem(H264DecContext *img_ptr);
 
 /**---------------------------------------------------------------------------*

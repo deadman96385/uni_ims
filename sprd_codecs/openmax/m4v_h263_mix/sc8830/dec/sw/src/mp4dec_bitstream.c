@@ -46,12 +46,12 @@ uint32 Mp4Dec_ByteConsumed(DEC_VOP_MODE_T *vop_mode_ptr)
 
 PUBLIC void Mp4Dec_InitBitstream(DEC_BS_T *bitstream_ptr, void *pOneFrameBitstream, int32 length)
 {
-    int32	offset = 0;
+    uint_32or64	offset = 0;
     uint8	*pTmp;
 
-    offset = ((int32)pOneFrameBitstream)&0x03;
+    offset = ((uint_32or64)pOneFrameBitstream)&0x03;
     length = ((length>>2)<<2)+8;
-    pTmp = (uint8 *)((uint32)pOneFrameBitstream - offset);
+    pTmp = (uint8 *)((uint_32or64)pOneFrameBitstream - offset);
 
     bitstream_ptr->OneframeStreamLen = length;
     bitstream_ptr->stream_len_left = length;

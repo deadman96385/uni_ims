@@ -40,7 +40,7 @@ PUBLIC int32 get_unit (H264DecContext *img_ptr, uint8 *pInStream, int32 frm_bs_l
 // 	uint8 *bfr = g_nalu_ptr->buf = pInStream;
     int32 *stream_ptr;// = (int32 *)bfr;
     int32 code;
-    int32 byte_rest;
+    uint_32or64 byte_rest;
 
     ptr = pInStream;
 
@@ -56,7 +56,7 @@ PUBLIC int32 get_unit (H264DecContext *img_ptr, uint8 *pInStream, int32 frm_bs_l
     declen += len;
 //	g_nalu_ptr->buf += (*start_code_len);
 
-    byte_rest = (uint32)pInStream;
+    byte_rest = (uint_32or64)pInStream;
     byte_rest = ((byte_rest)>>2)<<2;	//word aligned
 
     //destuffing
@@ -134,7 +134,7 @@ next_data:
         declen--;
     } while(declen);
 
-    if (((int32)stream_ptr) == (((((int32)ptr) - startCode_len/*len*/) >> 2) << 2))
+    if (((uint_32or64)stream_ptr) == (((((uint_32or64)ptr) - startCode_len/*len*/) >> 2) << 2))
     {
         img_ptr->g_need_back_last_word = 1;
         img_ptr->g_back_last_word = *stream_ptr;

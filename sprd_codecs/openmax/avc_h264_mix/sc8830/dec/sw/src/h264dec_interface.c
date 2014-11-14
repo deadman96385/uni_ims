@@ -29,7 +29,7 @@ void H264Dec_SetCurRecPic(AVCHandle *avcHandle, uint8	*pFrameY,uint8 *pFrameY_ph
     DEC_STORABLE_PICTURE_T *rec_buf_ptr = &(img_ptr->g_rec_buf);
 
     rec_buf_ptr->imgY =  pFrameY;
-    rec_buf_ptr->imgYAddr = (uint32)pFrameY_phy;
+    rec_buf_ptr->imgYAddr = (uint_32or64)pFrameY_phy;
     rec_buf_ptr->pBufferHeader = pBufferHeader;
     rec_buf_ptr->mPicId = picId;
 }
@@ -315,9 +315,9 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
         if (img_ptr->g_need_back_last_word)
         {
-            uint32 byte_rest;
+            uint_32or64 byte_rest;
             int32 *word_align_pIn;
-            byte_rest = (uint32)pInStream;
+            byte_rest = (uint_32or64)pInStream;
             byte_rest = ((byte_rest)>>2)<<2;
             word_align_pIn = (int32 *)(byte_rest);
 

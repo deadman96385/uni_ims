@@ -156,9 +156,9 @@ typedef struct dec_buffer_seq_info_tag
     uint8 *imgU;
     uint8 *imgV;
 
-    uint32 imgYAddr;	//frame address which are configured to VSP,  imgYAddr = ((uint32)imgY >> 8), 64 word aligment
-    uint32 imgUAddr;	//imgUVAddr = ((uint32)imgU>>8)
-    uint32 imgVAddr;	//imgUVAddr = ((uint32)imgV>>8)
+    uint_32or64 imgYAddr;	//frame address which are configured to VSP,  imgYAddr = ((uint32)imgY >> 8), 64 word aligment
+    uint_32or64 imgUAddr;	//imgUVAddr = ((uint32)imgU>>8)
+    uint_32or64 imgVAddr;	//imgUVAddr = ((uint32)imgV>>8)
 
     uint8	id;    	// buffer number
     BOOLEAN bRef;   	// FALSE£¬not to be  ref frame, TRUE, to  the ref frame

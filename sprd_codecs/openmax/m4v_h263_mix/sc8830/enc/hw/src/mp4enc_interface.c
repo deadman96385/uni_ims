@@ -401,15 +401,15 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
         SCI_TRACE_LOW("g_nFrame_enc %d frame_type %d ", vo->g_nFrame_enc, vop_mode_ptr->VopPredType );
 
         vop_mode_ptr->pYUVSrcFrame->imgY = pInput->p_src_y_phy;
-        vop_mode_ptr->pYUVSrcFrame->imgYAddr = (((uint32)vop_mode_ptr->pYUVSrcFrame->imgY) >> 3);
+        vop_mode_ptr->pYUVSrcFrame->imgYAddr = (((uint_32or64)vop_mode_ptr->pYUVSrcFrame->imgY) >> 3);
 
         vop_mode_ptr->pYUVSrcFrame->imgU = pInput->p_src_u_phy;
-        vop_mode_ptr->pYUVSrcFrame->imgUAddr = (((uint32)vop_mode_ptr->pYUVSrcFrame->imgU) >> 3);
+        vop_mode_ptr->pYUVSrcFrame->imgUAddr = (((uint_32or64)vop_mode_ptr->pYUVSrcFrame->imgU) >> 3);
 
         if ((vo->yuv_format == MMENC_YUV420P_YU12)||(vo->yuv_format == MMENC_YUV420P_YV12)) //three plane
         {
             vop_mode_ptr->pYUVSrcFrame->imgV = pInput->p_src_v_phy;
-            vop_mode_ptr->pYUVSrcFrame->imgVAddr = (((uint32)vop_mode_ptr->pYUVSrcFrame->imgV) >> 3);
+            vop_mode_ptr->pYUVSrcFrame->imgVAddr = (((uint_32or64)vop_mode_ptr->pYUVSrcFrame->imgV) >> 3);
         }
 
         if(IVOP == vop_mode_ptr->VopPredType)

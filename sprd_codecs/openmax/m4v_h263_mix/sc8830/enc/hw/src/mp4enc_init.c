@@ -371,9 +371,9 @@ PUBLIC void Mp4Enc_InitVSP(Mp4EncObject *vo)
     if (anti_shark_ptr->enable_anti_shake)
     {
         vop_mode_ptr->pYUVSrcFrame->imgY += (anti_shark_ptr->shift_y*anti_shark_ptr->input_width + anti_shark_ptr->shift_x);
-        vop_mode_ptr->pYUVSrcFrame->imgYAddr = (uint32)vop_mode_ptr->pYUVSrcFrame->imgY >> 3;
+        vop_mode_ptr->pYUVSrcFrame->imgYAddr = (uint_32or64)vop_mode_ptr->pYUVSrcFrame->imgY >> 3;
         vop_mode_ptr->pYUVSrcFrame->imgU += (anti_shark_ptr->shift_y*anti_shark_ptr->input_width/2 + anti_shark_ptr->shift_x);
-        vop_mode_ptr->pYUVSrcFrame->imgUAddr = (uint32)vop_mode_ptr->pYUVSrcFrame->imgU >> 3;
+        vop_mode_ptr->pYUVSrcFrame->imgUAddr = (uint_32or64)vop_mode_ptr->pYUVSrcFrame->imgU >> 3;
     }
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x20, vop_mode_ptr->pYUVSrcFrame->imgYAddr, "Frm_addr8: Start address of current frame Y");
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0x24, vop_mode_ptr->pYUVSrcFrame->imgUAddr, "Frm_addr9: Start address of current frame UV");
