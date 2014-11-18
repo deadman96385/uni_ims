@@ -12,7 +12,7 @@ LOCAL_SRC_FILES := \
 	src/vp8dec_malloc.c \
 	src/vp8dec_table.c	\
 	src/vp8dec_vld.c \
-	../../../../vsp/sc8830/src/vsp_drv_sc8830.c
+	src/vsp_drv_sc8830.c
 
 
 LOCAL_MODULE := libomx_vpxdec_hw_sprd
@@ -26,7 +26,6 @@ LOCAL_SHARED_LIBRARIES := \
 	libutils liblog
 
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/include \
-	$(TOP)/vendor/sprd/proprietories-source/sprd_codecs/openmax/vsp/sc8830/inc \
+	$(LOCAL_PATH)/include
 
 include $(BUILD_SHARED_LIBRARY)

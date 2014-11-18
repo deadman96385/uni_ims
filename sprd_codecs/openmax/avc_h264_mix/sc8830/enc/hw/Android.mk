@@ -12,7 +12,7 @@ LOCAL_SRC_FILES := \
 	src/h264enc_set.c \
 	src/h264enc_slice.c \
 	src/h264enc_table.c \
-	../../../../vsp/sc8830/src/vsp_drv_sc8830.c
+	src/vsp_drv_sc8830.c
 
 LOCAL_MODULE := libomx_avcenc_hw_sprd
 LOCAL_MODULE_TAGS := optional
@@ -24,7 +24,6 @@ LOCAL_SHARED_LIBRARIES := \
 	libutils liblog
 
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/include \
-	$(TOP)/vendor/sprd/proprietories-source/sprd_codecs/openmax/vsp/sc8830/inc 
+	$(LOCAL_PATH)/include
 
 include $(BUILD_SHARED_LIBRARY)

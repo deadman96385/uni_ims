@@ -16,11 +16,10 @@ LOCAL_SRC_FILES := \
 	src/h264dec_parset.c \
 	src/h264dec_slice.c \
 	src/h264dec_table.c \
-	../../../../vsp/sc8830/src/vsp_drv_sc8830.c
+	src/vsp_drv_sc8830.c
 
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/include \
-	$(TOP)/vendor/sprd/proprietories-source/sprd_codecs/openmax/vsp/sc8830/inc \
+	$(LOCAL_PATH)/include
 
 LOCAL_CFLAGS :=  -fno-strict-aliasing -DH264_DEC -D_VSP_LINUX_  -D_VSP_  -DCHIP_ENDIAN_LITTLE  -DCHIP_8830 
 LOCAL_ARM_MODE := arm

@@ -11,11 +11,10 @@ LOCAL_SRC_FILES := \
 	src/mp4dec_session.c \
 	src/mp4dec_table.c \
 	src/mp4dec_vop.c \
-	../../../../vsp/sc8830/src/vsp_drv_sc8830.c
+	src/vsp_drv_sc8830.c
 
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/include \
-	$(TOP)/vendor/sprd/proprietories-source/sprd_codecs/openmax/vsp/sc8830/inc \
+	$(LOCAL_PATH)/include
 
 LOCAL_CFLAGS :=  -fno-strict-aliasing -DMPEG4_DEC -D_VSP_LINUX_  -D_VSP_  -DCHIP_ENDIAN_LITTLE  -DCHIP_8830 
 
