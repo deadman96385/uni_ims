@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 
-common_src := \
-        channel_manager.c \
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := channel_manager.c \
         at_tok.c \
         cmux.c \
         pty.c \
@@ -10,15 +10,15 @@ common_src := \
         adapter.c\
         ps_service.c
 
-common_flags := -DANDROID_CHANGES -DEBUG
-
-include $(CLEAR_VARS)
-LOCAL_SRC_FILES := $(common_src)
-LOCAL_C_INCLUDES := $(LOCAL_PATH)
 LOCAL_SHARED_LIBRARIES := libcutils libhardware_legacy
-LOCAL_CFLAGS := $(common_flags)
+LOCAL_CFLAGS := -DANDROID_CHANGES -DEBUG
 LOCAL_MODULE_TAGS := optional
+LOCAL_CFLAGS_arm := -marm
 
 LOCAL_MODULE := phoneserver
+LOCAL_MODULE_STEM_32 := phoneserver
+LOCAL_MODULE_STEM_64 := phoneserver64
+LOCAL_MULTILIB := both
+
 include $(BUILD_EXECUTABLE)
 
