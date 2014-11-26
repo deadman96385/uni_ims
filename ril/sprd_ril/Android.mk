@@ -60,5 +60,8 @@ else
 #build executable
 LOCAL_MODULE:= reference-ril_sp
 LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_STEM_32 := reference-ril_sp
+LOCAL_MODULE_STEM_64 := reference-ril_sp64
+LOCAL_MULTILIB := both
 include $(BUILD_EXECUTABLE)
 endif

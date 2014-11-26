@@ -23,7 +23,9 @@ LOCAL_CFLAGS := -DRIL_SHLIB
 
 LOCAL_MODULE:= rild_sp
 LOCAL_MODULE_TAGS := optional
-
+LOCAL_MODULE_STEM_32 := rild_sp
+LOCAL_MODULE_STEM_64 := rild_sp64
+LOCAL_MULTILIB := both
 include $(BUILD_EXECUTABLE)
 
 # For radiooptions binary
@@ -41,5 +43,8 @@ LOCAL_CFLAGS := \
 
 LOCAL_MODULE:= radiooptions_sp
 LOCAL_MODULE_TAGS := debug
+LOCAL_MODULE_STEM_32 := radiooptions_sp
+LOCAL_MODULE_STEM_64 := radiooptions_sp64
+LOCAL_MULTILIB := both
 
 include $(BUILD_EXECUTABLE)
