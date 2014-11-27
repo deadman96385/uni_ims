@@ -18,7 +18,7 @@ struct pty_ops {
 
 	/*## operation enter_edit_mode() */
 	int (*pty_enter_edit_mode) (void *const pty, void *callback,
-				    int userdata);
+				    unsigned long userdata);
 
 	/*## operation get_at_cmd() */
 	int (*pty_read) (void *const pty, char *buf, int len);
@@ -34,9 +34,9 @@ struct pty_t {
 	/***    User explicit entries    ***/
 	void *me;
 	char *buffer;		/*##for reading from channel pty  ## */
-	int (*edit_callback) (struct pty_t * pty, char *str, int len, int userdata);	/*## attribute edit_callback */
+	int (*edit_callback) (struct pty_t * pty, char *str, int len, unsigned long userdata);	/*## attribute edit_callback */
 	int edit_mode;		/*## sms text edit_mode */
-	int user_data;
+	unsigned long user_data;
 	int pty_fd;		/*##  pty_fd for channel pty */
 	pid_t tid;
 	int used;

@@ -41,7 +41,7 @@ int pty_clear_wait_resp_flag(void *const pty)
 }
 
 /*## operation enter_edit_mode() */
-int pty_enter_edit_mode(void *const pty, void *callback, int userdata)
+int pty_enter_edit_mode(void *const pty, void *callback, unsigned long userdata)
 {
 	int ret = 0;
 	struct pty_t *me = (struct pty_t *)pty;
