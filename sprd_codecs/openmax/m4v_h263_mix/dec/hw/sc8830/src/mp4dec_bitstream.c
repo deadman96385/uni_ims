@@ -213,7 +213,7 @@ PUBLIC MMDecRet Mp4Dec_VerifyBitstrm(Mp4DecObject *vo,uint8 *pStream, int32 strm
         {
             if (tempPos[0] == 0x00 && tempPos[1] == 0x00)
             {
-                if (tempPos[2] == 0x01 && tempPos[3] == 0xB6) /* MPEG4 VOP start code */
+                if (tempPos[2] == 0x01 && (tempPos[3] == 0xB6 /*VOP*/|| tempPos[3] == 0xB0 || tempPos[3] == 0xB5))
                 {
                     vop_mode_ptr->video_std = STREAM_ID_MPEG4;
                     return ret;

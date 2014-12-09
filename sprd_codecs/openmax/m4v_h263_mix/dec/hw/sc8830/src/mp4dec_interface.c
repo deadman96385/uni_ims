@@ -412,6 +412,18 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         goto DEC_EXIT;
     }
 
+    if (vop_mode_ptr->bInitSuceess)
+    {
+        int32 FrameWidth =((vop_mode_ptr->OrgFrameWidth + 15) >>4) <<4;
+        int32 FrameHeight = ((vop_mode_ptr->OrgFrameHeight + 15) >>4) <<4;
+
+        if ((FrameWidth != vop_mode_ptr->FrameWidth) ||(FrameHeight!= vop_mode_ptr->FrameHeight))
+        {
+            SCI_TRACE_LOW ("%s, %d, frame dimension has been changed!", __FUNCTION__, __LINE__);
+            vop_mode_ptr->bInitSuceess = 0;
+        }
+    }
+
 #if 0	//removed for bug211978, seek with fake IVOP
     if(dec_input_ptr->expected_IVOP && (vop_mode_ptr->VopPredType != IVOP))
     {
