@@ -48,6 +48,9 @@
 #include <semaphore.h>
 #include <cutils/properties.h>
 
+static void *noopRemoveWarning( void *a ) { return a; }
+#define RIL_UNUSED_PARM(a) noopRemoveWarning((void *)&(a));
+
 typedef enum {
     SIM_ABSENT = 0,
     SIM_NOT_READY = 1,
@@ -151,6 +154,8 @@ typedef enum {
 
 #define SSDA_MODE         "persist.radio.ssda.mode"
 #define SSDA_TESTMODE "persist.radio.ssda.testmode"
+// {for WCDMA}
+#define PRIMARY_CARD_PROPERTY "persist.radio.primarycard"
 
 #define PROP_DEFAULT_BEARER  "gsm.stk.default_bearer"
 #define PROP_OPEN_CHANNEL  "gsm.stk.open_channel"
@@ -1571,6 +1576,12 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         if (isCSFB()) {
             buildTestModeCmd(cmd, sizeof(cmd));
             at_send_command(ATch_type[channelID], cmd, NULL);
+        } else if (!strcmp(s_modem, "w")) {
+            char primary_sim[PROPERTY_VALUE_MAX];
+            memset(cmd, 0, sizeof(cmd));
+            property_get(PRIMARY_CARD_PROPERTY, primary_sim, "0");
+            snprintf(cmd, sizeof(cmd), "AT+SPSDMPSID=%d", atoi(primary_sim));
+            at_send_command(ATch_type[channelID], cmd, NULL );
         }
          /* SPRD : for svlte & csfb @{ */
         if (isSvLte()) {
@@ -1670,9 +1681,27 @@ error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
 }
 
+static void requestShutdown(int channelID, RIL_Token t)
+{
+    int onOff;
+
+    int err;
+    ATResponse *p_response = NULL;
+
+    if (sState != RADIO_STATE_OFF) {
+        err = at_send_command(ATch_type[channelID], "AT+SFUN=5", &p_response);
+        err = at_send_command(ATch_type[channelID], "AT+SFUN=3", &p_response);
+        setRadioState(channelID, RADIO_STATE_UNAVAILABLE);
+    }
+
+    at_response_free(p_response);
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    return;
+}
+
 static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t);
 
-static void onDataCallListChanged(void *param)
+static void onDataCallListChanged(void *param )
 {
     int channelID;
     channelID = getChannel();
@@ -6391,6 +6420,184 @@ static void requestSetCellInfoListRate(void *data, size_t datalen, RIL_Token t)
 }
 #endif
 
+static void requestGetHardwareConfig(void *data, size_t datalen, RIL_Token t)
+{
+   // TODO - hook this up with real query/info from radio.
+
+   RIL_HardwareConfig hwCfg;
+
+   RIL_UNUSED_PARM(data);
+   RIL_UNUSED_PARM(datalen);
+
+   hwCfg.type = -1;
+
+   RIL_onRequestComplete(t, RIL_E_SUCCESS, &hwCfg, sizeof(hwCfg));
+}
+
+static void requestTransmitApduBasic(int channelID, void *data, size_t datalen, RIL_Token t){
+    int err;
+    int len;
+    ATResponse *p_response = NULL;
+    char cmd[128] = {0};
+    char *line;
+    RIL_SIM_APDU *apdu = NULL;
+    RIL_SIM_IO_Response response;
+
+    memset(&response, 0, sizeof(response));
+
+    apdu = (RIL_SIM_APDU *)data;
+
+    len = (apdu->p3)+5;
+
+    RILLOGD("requestTransmitApdu CLA = %02X", apdu->cla);
+    RILLOGD("requestTransmitApdu INSTRUCTION = %02X", apdu->instruction);
+    RILLOGD("requestTransmitApdu P1 = %02X", apdu->p1);
+    RILLOGD("requestTransmitApdu P2 = %02X", apdu->p2);
+    RILLOGD("requestTransmitApdu P3 = %02X", apdu->p3);
+    RILLOGD("requestTransmitApdu DATA = %s", apdu->data);
+    RILLOGD("requestTransmitApdu len = %d", len);
+
+    snprintf(cmd, sizeof(cmd), "AT+CSIM=%d,%02X%02X%02X%02X%02X%s",len,apdu->cla,apdu->instruction,apdu->p1,apdu->p2,apdu->p3,apdu->data);
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+
+    line = p_response->p_intermediates->line;
+
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &(response.sw1));
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &(response.sw2));
+    if (err < 0) goto error;
+
+    if (at_tok_hasmore(&line)) {
+        err = at_tok_nextstr(&line, &(response.simResponse));
+        if (err < 0) goto error;
+    }
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(response));
+    at_response_free(p_response);
+    return;
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+}
+
+static void requestOpenLogicalChannel(int channelID, void *data, size_t datalen, RIL_Token t){
+    int err;
+    ATResponse *p_response = NULL;
+    char cmd[128] = {0};
+    char *line;
+    char *AID = (char *)data;
+    int response[2] = {0, 0};
+
+    if(AID == NULL) {
+        RILLOGE("requestOpenLogicalChannel Invalid AID");
+        return;
+    }
+    snprintf(cmd, sizeof(cmd), "AT+CCHO=%s", AID);
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    if (err < 0 || p_response->success == 0){
+        goto error;
+    }
+
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &response[0]);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &response[1]);
+    if (err < 0){
+        RILLOGD("requestOpenLogicalChannel response is only one: ", response[0]);
+    }
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(int));
+    at_response_free(p_response);
+    return;
+error:
+    at_response_free(p_response);
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+}
+
+static void requestCloseLogicalChannel(int channelID, void *data, size_t datalen, RIL_Token t){
+    int err;
+    ATResponse *p_response = NULL;
+    char cmd[128] = {0};
+    char *line;
+    int session_id = -1;
+
+    session_id = ((int *)data)[0];
+
+    snprintf(cmd, sizeof(cmd), "AT+CCHC=%d", session_id);
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+
+    if (err < 0 || p_response->success == 0){
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    }else{
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    }
+    at_response_free(p_response);
+}
+
+static void requestTransmitApdu(int channelID, void *data, size_t datalen, RIL_Token t){
+    int err;
+    int len;
+    ATResponse *p_response = NULL;
+    char cmd[128] = {0};
+    char *line;
+    RIL_SIM_APDU *apdu = NULL;
+    RIL_SIM_IO_Response response;
+
+    memset(&response, 0, sizeof(response));
+
+    apdu = (RIL_SIM_APDU *)data;
+
+    len = (apdu->p3)+5;
+
+    RILLOGD("requestTransmitApdu SESSIONID = %d", apdu->sessionid);
+    RILLOGD("requestTransmitApdu CLA = %02X", apdu->cla);
+    RILLOGD("requestTransmitApdu INSTRUCTION = %02X", apdu->instruction);
+    RILLOGD("requestTransmitApdu P1 = %02X", apdu->p1);
+    RILLOGD("requestTransmitApdu P2 = %02X", apdu->p2);
+    RILLOGD("requestTransmitApdu P3 = %02X", apdu->p3);
+    RILLOGD("requestTransmitApdu DATA = %s", apdu->data);
+    RILLOGD("requestTransmitApdu len = %d", len);
+
+    snprintf(cmd, sizeof(cmd), "AT+CGLA=%d,%d,%02X%02X%02X%02X%02X%s", apdu->sessionid,len,apdu->cla,apdu->instruction,apdu->p1,apdu->p2,apdu->p3,apdu->data);
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+
+    line = p_response->p_intermediates->line;
+
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &(response.sw1));
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &(response.sw2));
+    if (err < 0) goto error;
+
+    if (at_tok_hasmore(&line)) {
+        err = at_tok_nextstr(&line, &(response.simResponse));
+        if (err < 0) goto error;
+    }
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(response));
+    at_response_free(p_response);
+    return;
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+}
+
 /*** Callback methods from the RIL library to us ***/
 
 /**
@@ -6466,6 +6673,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_CHANGE_SIM_PIN2
                 || request == RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES
                 || request == RIL_REQUEST_OEM_HOOK_RAW
+                || request == RIL_REQUEST_SIM_OPEN_CHANNEL
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
@@ -6653,6 +6861,17 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 }
             }
+            break;
+        case RIL_REQUEST_SIM_TRANSMIT_APDU_BASIC:
+            requestTransmitApduBasic(channelID, data, datalen, t);
+        case RIL_REQUEST_SIM_OPEN_CHANNEL:
+            requestOpenLogicalChannel(channelID, data, datalen, t);
+            break;
+        case RIL_REQUEST_SIM_CLOSE_CHANNEL:
+            requestCloseLogicalChannel(channelID, data, datalen, t);
+            break;
+        case RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL:
+            requestTransmitApdu(channelID, data, datalen, t);
             break;
 
         case RIL_REQUEST_SIGNAL_STRENGTH:

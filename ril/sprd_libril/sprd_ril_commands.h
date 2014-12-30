@@ -131,7 +131,23 @@
     {RIL_REQUEST_SET_UNSOL_CELL_INFO_LIST_RATE, dispatchInts, responseVoid},
     {RIL_REQUEST_SET_INITIAL_ATTACH_APN, dispatchSetInitialAttachApn, responseVoid},
     {RIL_REQUEST_IMS_REGISTRATION_STATE, dispatchVoid, responseInts},
-    {RIL_REQUEST_IMS_SEND_SMS, dispatchImsSms, responseSMS}
+    {RIL_REQUEST_IMS_SEND_SMS, dispatchImsSms, responseSMS},
+    {RIL_REQUEST_SIM_TRANSMIT_APDU_BASIC, dispatchSIM_APDU, responseSIM_IO},
+    {RIL_REQUEST_SIM_OPEN_CHANNEL, dispatchString, responseInts},
+    {RIL_REQUEST_SIM_CLOSE_CHANNEL, dispatchInts, responseVoid},
+    {RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL, dispatchSIM_APDU, responseSIM_IO},
+    {RIL_REQUEST_NV_READ_ITEM, dispatchNVReadItem, responseString},
+    {RIL_REQUEST_NV_WRITE_ITEM, dispatchNVWriteItem, responseVoid},
+    {RIL_REQUEST_NV_WRITE_CDMA_PRL, dispatchRaw, responseVoid},
+    {RIL_REQUEST_NV_RESET_CONFIG, dispatchInts, responseVoid},
+    {RIL_REQUEST_SET_UICC_SUBSCRIPTION, dispatchUiccSubscripton, responseVoid},
+    {RIL_REQUEST_ALLOW_DATA, dispatchInts, responseVoid},
+    {RIL_REQUEST_GET_HARDWARE_CONFIG, dispatchVoid, responseHardwareConfig},
+    {RIL_REQUEST_SIM_AUTHENTICATION, dispatchSimAuthentication, responseSIM_IO},
+    {RIL_REQUEST_GET_DC_RT_INFO, dispatchVoid, responseDcRtInfo},
+    {RIL_REQUEST_SET_DC_RT_INFO_RATE, dispatchInts, responseVoid},
+    {RIL_REQUEST_SET_DATA_PROFILE, dispatchDataProfile, responseVoid},
+    {RIL_REQUEST_SHUTDOWN, dispatchVoid, responseVoid}
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     ,{RIL_REQUEST_IMS_REGISTRATION_STATE, dispatchVoid, responseInts}
     ,{RIL_REQUEST_IMS_SEND_SMS, dispatchImsSendSms, responseImsSendSms}

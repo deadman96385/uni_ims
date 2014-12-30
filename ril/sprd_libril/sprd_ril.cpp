@@ -254,6 +254,7 @@ static void dispatchStrings (Parcel& p, RequestInfo *pRI);
 static void dispatchInts (Parcel& p, RequestInfo *pRI);
 static void dispatchDial (Parcel& p, RequestInfo *pRI);
 static void dispatchSIM_IO (Parcel& p, RequestInfo *pRI);
+static void dispatchSIM_APDU (Parcel& p, RequestInfo *pRI);
 static void dispatchCallForward(Parcel& p, RequestInfo *pRI);
 static void dispatchRaw(Parcel& p, RequestInfo *pRI);
 static void dispatchSmsWrite (Parcel &p, RequestInfo *pRI);
@@ -270,6 +271,11 @@ static void dispatchCdmaSmsAck(Parcel &p, RequestInfo *pRI);
 static void dispatchGsmBrSmsCnf(Parcel &p, RequestInfo *pRI);
 static void dispatchCdmaBrSmsCnf(Parcel &p, RequestInfo *pRI);
 static void dispatchRilCdmaSmsWriteArgs(Parcel &p, RequestInfo *pRI);
+static void dispatchNVReadItem(Parcel &p, RequestInfo *pRI);
+static void dispatchNVWriteItem(Parcel &p, RequestInfo *pRI);
+static void dispatchUiccSubscripton(Parcel &p, RequestInfo *pRI);
+static void dispatchSimAuthentication(Parcel &p, RequestInfo *pRI);
+static void dispatchDataProfile(Parcel &p, RequestInfo *pRI);
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 static void dispatchImsSendSms(Parcel& p, RequestInfo *pRI);
 static void dispatchSetUiccSub(Parcel& p, RequestInfo *pRI);
@@ -311,6 +317,8 @@ static int responseCdmaSignalInfoRecord(Parcel &p,void *response, size_t respons
 static int responseCdmaCallWaiting(Parcel &p,void *response, size_t responselen);
 static int responseSimRefresh(Parcel &p, void *response, size_t responselen);
 static int responseCellInfoList(Parcel &p, void *response, size_t responselen);
+static int responseHardwareConfig(Parcel &p, void *response, size_t responselen);
+static int responseDcRtInfo(Parcel &p, void *response, size_t responselen);
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 static int responseImsSendSms(Parcel &p, void *response, size_t responselen);
 static int responseDataCallProfile(Parcel &p, void *response, size_t responselen);
@@ -343,6 +351,16 @@ extern "C" void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
 extern "C" void
 RIL_onRequestComplete(RIL_Token t, RIL_Errno e, void *response,
                                 size_t responselen);
+#endif
+
+#if defined(ANDROID_MULTI_SIM)
+#define RIL_UNSOL_RESPONSE(a, b, c, d) RIL_onUnsolicitedResponse((a), (b), (c), (d))
+#define CALL_ONREQUEST(a, b, c, d, e) s_callbacks.onRequest((a), (b), (c), (d), (e))
+#define CALL_ONSTATEREQUEST(a) s_callbacks.onStateRequest(a)
+#else
+#define RIL_UNSOL_RESPONSE(a, b, c, d) RIL_onUnsolicitedResponse((a), (b), (c))
+#define CALL_ONREQUEST(a, b, c, d, e) s_callbacks.onRequest((a), (b), (c), (d))
+#define CALL_ONSTATEREQUEST(a) s_callbacks.onStateRequest()
 #endif
 
 static UserCallbackInfo * internalRequestTimedCallback
@@ -925,6 +943,73 @@ dispatchSIM_IO (Parcel &p, RequestInfo *pRI) {
 
 #ifdef MEMSET_FREED
     memset(&simIO, 0, sizeof(simIO));
+#endif
+
+    return;
+invalid:
+    invalidCommandBlock(pRI);
+    return;
+}
+
+/**
+ * Callee expects const RIL_SIM_APDU *
+ * Payload is:
+ *   int32_t sessionid
+ *   int32_t cla
+ *   int32_t instruction
+ *   int32_t p1, p2, p3
+ *   String data
+ */
+static void
+dispatchSIM_APDU (Parcel &p, RequestInfo *pRI) {
+    int32_t t;
+    status_t status;
+    RIL_SIM_APDU apdu;
+
+    memset (&apdu, 0, sizeof(RIL_SIM_APDU));
+
+    // Note we only check status at the end. Any single failure leads to
+    // subsequent reads filing.
+    status = p.readInt32(&t);
+    apdu.sessionid = (int)t;
+
+    status = p.readInt32(&t);
+    apdu.cla = (int)t;
+
+    status = p.readInt32(&t);
+    apdu.instruction = (int)t;
+
+    status = p.readInt32(&t);
+    apdu.p1 = (int)t;
+
+    status = p.readInt32(&t);
+    apdu.p2 = (int)t;
+
+    status = p.readInt32(&t);
+    apdu.p3 = (int)t;
+
+    apdu.data = strdupReadString(p);
+
+    startRequest;
+    appendPrintBuf("%ssessionid=%d,cla=%d,ins=%d,p1=%d,p2=%d,p3=%d,data=%s",
+        printBuf, apdu.sessionid, apdu.cla, apdu.instruction, apdu.p1, apdu.p2,
+        apdu.p3, (char*)apdu.data);
+    closeRequest;
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &apdu, sizeof(RIL_SIM_APDU), pRI, pRI->socket_id);
+
+#ifdef MEMSET_FREED
+    memsetString(apdu.data);
+#endif
+    free(apdu.data);
+
+#ifdef MEMSET_FREED
+    memset(&apdu, 0, sizeof(RIL_SIM_APDU));
 #endif
 
     return;
@@ -2117,6 +2202,246 @@ invalid:
 }
 #endif
 
+static void dispatchNVReadItem(Parcel &p, RequestInfo *pRI) {
+    RIL_NV_ReadItem nvri;
+    int32_t  t;
+    status_t status;
+
+    memset(&nvri, 0, sizeof(nvri));
+
+    status = p.readInt32(&t);
+    nvri.itemID = (RIL_NV_Item) t;
+
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+
+    startRequest;
+    appendPrintBuf("%snvri.itemID=%d, ", printBuf, nvri.itemID);
+    closeRequest;
+
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &nvri, sizeof(nvri), pRI, pRI->socket_id);
+
+#ifdef MEMSET_FREED
+    memset(&nvri, 0, sizeof(nvri));
+#endif
+
+    return;
+
+invalid:
+    invalidCommandBlock(pRI);
+    return;
+}
+
+static void dispatchNVWriteItem(Parcel &p, RequestInfo *pRI) {
+    RIL_NV_WriteItem nvwi;
+    int32_t  t;
+    status_t status;
+
+    memset(&nvwi, 0, sizeof(nvwi));
+
+    status = p.readInt32(&t);
+    nvwi.itemID = (RIL_NV_Item) t;
+
+    nvwi.value = strdupReadString(p);
+
+    if (status != NO_ERROR || nvwi.value == NULL) {
+        goto invalid;
+    }
+
+    startRequest;
+    appendPrintBuf("%snvwi.itemID=%d, value=%s, ", printBuf, nvwi.itemID,
+            nvwi.value);
+    closeRequest;
+
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &nvwi, sizeof(nvwi), pRI, pRI->socket_id);
+
+#ifdef MEMSET_FREED
+    memsetString(nvwi.value);
+#endif
+
+    free(nvwi.value);
+
+#ifdef MEMSET_FREED
+    memset(&nvwi, 0, sizeof(nvwi));
+#endif
+
+    return;
+
+invalid:
+    invalidCommandBlock(pRI);
+    return;
+}
+
+static void dispatchUiccSubscripton(Parcel &p, RequestInfo *pRI) {
+    RIL_SelectUiccSub uicc_sub;
+    status_t status;
+    int32_t  t;
+    memset(&uicc_sub, 0, sizeof(uicc_sub));
+
+    status = p.readInt32(&t);
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+    uicc_sub.slot = (int) t;
+
+    status = p.readInt32(&t);
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+    uicc_sub.app_index = (int) t;
+
+    status = p.readInt32(&t);
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+    uicc_sub.sub_type = (RIL_SubscriptionType) t;
+
+    status = p.readInt32(&t);
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+    uicc_sub.act_status = (RIL_UiccSubActStatus) t;
+
+    startRequest;
+    appendPrintBuf("slot=%d, app_index=%d, act_status = %d", uicc_sub.slot, uicc_sub.app_index,
+            uicc_sub.act_status);
+    RLOGD("dispatchUiccSubscription, slot=%d, app_index=%d, act_status = %d", uicc_sub.slot,
+            uicc_sub.app_index, uicc_sub.act_status);
+    closeRequest;
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &uicc_sub, sizeof(uicc_sub), pRI, pRI->socket_id);
+
+#ifdef MEMSET_FREED
+    memset(&uicc_sub, 0, sizeof(uicc_sub));
+#endif
+    return;
+
+invalid:
+    invalidCommandBlock(pRI);
+    return;
+}
+
+static void dispatchSimAuthentication(Parcel &p, RequestInfo *pRI)
+{
+    RIL_SimAuthentication pf;
+    int32_t  t;
+    status_t status;
+
+    memset(&pf, 0, sizeof(pf));
+
+    status = p.readInt32(&t);
+    pf.authContext = (int) t;
+    pf.authData = strdupReadString(p);
+    pf.aid = strdupReadString(p);
+
+    startRequest;
+    appendPrintBuf("authContext=%d, authData=%s, aid=%s", pf.authContext, pf.authData, pf.aid);
+    closeRequest;
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &pf, sizeof(pf), pRI, pRI->socket_id);
+
+#ifdef MEMSET_FREED
+    memsetString(pf.authData);
+    memsetString(pf.aid);
+#endif
+
+    free(pf.authData);
+    free(pf.aid);
+
+#ifdef MEMSET_FREED
+    memset(&pf, 0, sizeof(pf));
+#endif
+
+    return;
+invalid:
+    invalidCommandBlock(pRI);
+    return;
+}
+
+static void dispatchDataProfile(Parcel &p, RequestInfo *pRI) {
+    int32_t t;
+    status_t status;
+    int32_t num;
+
+    status = p.readInt32(&num);
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+
+    {
+        RIL_DataProfileInfo dataProfiles[num];
+        RIL_DataProfileInfo *dataProfilePtrs[num];
+
+        startRequest;
+        for (int i = 0 ; i < num ; i++ ) {
+            dataProfilePtrs[i] = &dataProfiles[i];
+
+            status = p.readInt32(&t);
+            dataProfiles[i].profileId = (int) t;
+
+            dataProfiles[i].apn = strdupReadString(p);
+            dataProfiles[i].protocol = strdupReadString(p);
+            status = p.readInt32(&t);
+            dataProfiles[i].authType = (int) t;
+
+            dataProfiles[i].user = strdupReadString(p);
+            dataProfiles[i].password = strdupReadString(p);
+
+            status = p.readInt32(&t);
+            dataProfiles[i].type = (int) t;
+
+            status = p.readInt32(&t);
+            dataProfiles[i].maxConnsTime = (int) t;
+            status = p.readInt32(&t);
+            dataProfiles[i].maxConns = (int) t;
+            status = p.readInt32(&t);
+            dataProfiles[i].waitTime = (int) t;
+
+            status = p.readInt32(&t);
+            dataProfiles[i].enabled = (int) t;
+
+            appendPrintBuf("%s [%d: profileId=%d, apn =%s, protocol =%s, authType =%d, \
+                  user =%s, password =%s, type =%d, maxConnsTime =%d, maxConns =%d, \
+                  waitTime =%d, enabled =%d]", printBuf, i, dataProfiles[i].profileId,
+                  dataProfiles[i].apn, dataProfiles[i].protocol, dataProfiles[i].authType,
+                  dataProfiles[i].user, dataProfiles[i].password, dataProfiles[i].type,
+                  dataProfiles[i].maxConnsTime, dataProfiles[i].maxConns,
+                  dataProfiles[i].waitTime, dataProfiles[i].enabled);
+        }
+        closeRequest;
+        printRequest(pRI->token, pRI->pCI->requestNumber);
+
+        if (status != NO_ERROR) {
+            goto invalid;
+        }
+        CALL_ONREQUEST(pRI->pCI->requestNumber,
+                              dataProfilePtrs,
+                              num * sizeof(RIL_DataProfileInfo *),
+                              pRI, pRI->socket_id);
+
+#ifdef MEMSET_FREED
+        memset(dataProfiles, 0, num * sizeof(RIL_DataProfileInfo));
+        memset(dataProfilePtrs, 0, num * sizeof(RIL_DataProfileInfo *));
+#endif
+    }
+
+    return;
+
+invalid:
+    invalidCommandBlock(pRI);
+    return;
+}
+
 static int
 blockingWrite(int fd, const void *buffer, size_t len) {
     size_t writeOffset = 0;
@@ -2209,7 +2534,7 @@ responseInts(Parcel &p, void *response, size_t responselen) {
 
     int *p_int = (int *) response;
 
-    numInts = responselen / sizeof(int *);
+    numInts = responselen / sizeof(int );
     p.writeInt32 (numInts);
 
     /* each int*/
@@ -3122,6 +3447,24 @@ static int responseCellInfoList(Parcel &p, void *response, size_t responselen)
                 p.writeInt32(p_cur->CellInfo.lte.signalStrengthLte.timingAdvance);
                 break;
             }
+            case RIL_CELL_INFO_TYPE_TD_SCDMA: {
+                appendPrintBuf("%s TDSCDMA id: mcc=%d,mnc=%d,lac=%d,cid=%d,cpid=%d,", printBuf,
+                    p_cur->CellInfo.tdscdma.cellIdentityTdscdma.mcc,
+                    p_cur->CellInfo.tdscdma.cellIdentityTdscdma.mnc,
+                    p_cur->CellInfo.tdscdma.cellIdentityTdscdma.lac,
+                    p_cur->CellInfo.tdscdma.cellIdentityTdscdma.cid,
+                    p_cur->CellInfo.tdscdma.cellIdentityTdscdma.cpid);
+                appendPrintBuf("%s tdscdmaSS: rscp=%d],", printBuf,
+                    p_cur->CellInfo.tdscdma.signalStrengthTdscdma.rscp);
+
+                    p.writeInt32(p_cur->CellInfo.tdscdma.cellIdentityTdscdma.mcc);
+                    p.writeInt32(p_cur->CellInfo.tdscdma.cellIdentityTdscdma.mnc);
+                    p.writeInt32(p_cur->CellInfo.tdscdma.cellIdentityTdscdma.lac);
+                    p.writeInt32(p_cur->CellInfo.tdscdma.cellIdentityTdscdma.cid);
+                    p.writeInt32(p_cur->CellInfo.tdscdma.cellIdentityTdscdma.cpid);
+                    p.writeInt32(p_cur->CellInfo.tdscdma.signalStrengthTdscdma.rscp);
+                    break;
+            }
         }
         p_cur += 1;
     }
@@ -3129,6 +3472,57 @@ static int responseCellInfoList(Parcel &p, void *response, size_t responselen)
     closeResponse;
 
     return 0;
+}
+
+static int responseHardwareConfig(Parcel &p, void *response, size_t responselen)
+{
+   if (response == NULL && responselen != 0) {
+       RLOGE("invalid response: NULL");
+       return RIL_ERRNO_INVALID_RESPONSE;
+   }
+
+   if (responselen % sizeof(RIL_HardwareConfig) != 0) {
+       RLOGE("responseHardwareConfig: invalid response length %d expected multiple of %d",
+          (int)responselen, (int)sizeof(RIL_HardwareConfig));
+       return RIL_ERRNO_INVALID_RESPONSE;
+   }
+
+   int num = responselen / sizeof(RIL_HardwareConfig);
+   int i;
+   RIL_HardwareConfig *p_cur = (RIL_HardwareConfig *) response;
+
+   p.writeInt32(num);
+
+   startResponse;
+   for (i = 0; i < num; i++) {
+      switch (p_cur[i].type) {
+         case RIL_HARDWARE_CONFIG_MODEM: {
+            writeStringToParcel(p, p_cur[i].uuid);
+            p.writeInt32((int)p_cur[i].state);
+            p.writeInt32(p_cur[i].cfg.modem.rat);
+            p.writeInt32(p_cur[i].cfg.modem.maxVoice);
+            p.writeInt32(p_cur[i].cfg.modem.maxData);
+            p.writeInt32(p_cur[i].cfg.modem.maxStandby);
+
+            appendPrintBuf("%s modem: uuid=%s,state=%d,rat=%08x,maxV=%d,maxD=%d,maxS=%d", printBuf,
+               p_cur[i].uuid, (int)p_cur[i].state, p_cur[i].cfg.modem.rat,
+               p_cur[i].cfg.modem.maxVoice, p_cur[i].cfg.modem.maxData, p_cur[i].cfg.modem.maxStandby);
+            break;
+         }
+         case RIL_HARDWARE_CONFIG_SIM: {
+            writeStringToParcel(p, p_cur[i].uuid);
+            p.writeInt32((int)p_cur[i].state);
+            writeStringToParcel(p, p_cur[i].cfg.sim.modemUuid);
+
+            appendPrintBuf("%s sim: uuid=%s,state=%d,modem-uuid=%s", printBuf,
+               p_cur[i].uuid, (int)p_cur[i].state, p_cur[i].cfg.sim.modemUuid);
+            break;
+         }
+      }
+   }
+   removeLastChar;
+   closeResponse;
+   return 0;
 }
 
 static void triggerEvLoop() {
@@ -3312,6 +3706,27 @@ static int responseCdmaSms(Parcel &p, void *response, size_t responselen) {
             sAddress.digit_mode=%d, sAddress.number_mode=%d, sAddress.number_type=%d, ",
             printBuf, p_cur->uTeleserviceID,p_cur->bIsServicePresent,p_cur->uServicecategory,
             p_cur->sAddress.digit_mode, p_cur->sAddress.number_mode,p_cur->sAddress.number_type);
+    closeResponse;
+
+    return 0;
+}
+
+static int responseDcRtInfo(Parcel &p, void *response, size_t responselen)
+{
+    int num = responselen / sizeof(RIL_DcRtInfo);
+    if ((responselen % sizeof(RIL_DcRtInfo) != 0) || (num != 1)) {
+        RLOGE("responseDcRtInfo: invalid response length %d expected multiple of %d",
+                (int)responselen, (int)sizeof(RIL_DcRtInfo));
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    startResponse;
+    RIL_DcRtInfo *pDcRtInfo = (RIL_DcRtInfo *)response;
+    p.writeInt64(pDcRtInfo->time);
+    p.writeInt32(pDcRtInfo->powerState);
+    appendPrintBuf("%s[time=%d,powerState=%d]", printBuf,
+        pDcRtInfo->time,
+        pDcRtInfo->powerState);
     closeResponse;
 
     return 0;
