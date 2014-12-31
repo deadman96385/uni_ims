@@ -147,7 +147,8 @@ typedef enum {
     RADIO_TECH_EHRPD = 13,
     RADIO_TECH_LTE = 14,
     RADIO_TECH_HSPAP = 15, // HSPA+
-    RADIO_TECH_GSM = 16 // Only supports voice
+    RADIO_TECH_GSM = 16, // Only supports voice
+    RADIO_TECH_TD_SCDMA = 17
 } RIL_RadioTechnology;
 
 // Do we want to split Data from Voice and the use
@@ -442,7 +443,8 @@ typedef struct {
 typedef struct {
     int sw1;
     int sw2;
-    char *simResponse;  /* In hex string format ([a-fA-F0-9]*). */
+    char *simResponse;  /* In hex string format ([a-fA-F0-9]*), except for SIM_AUTHENTICATION
+                           response for which it is in Base64 format, see 3GPP TS 31.102 7.1.2 */
 } RIL_SIM_IO_Response;
 
 // IMS_AKA_AUTHENTICATION_STEALTHV
@@ -1062,6 +1064,14 @@ typedef struct {
     RIL_LTE_SignalStrength_v8   LTE_SignalStrength;
 } RIL_SignalStrength_v8;
 
+typedef struct {
+    RIL_GW_SignalStrength       GW_SignalStrength;
+    RIL_CDMA_SignalStrength     CDMA_SignalStrength;
+    RIL_EVDO_SignalStrength     EVDO_SignalStrength;
+    RIL_LTE_SignalStrength_v8   LTE_SignalStrength;
+    RIL_TD_SCDMA_SignalStrength TD_SCDMA_SignalStrength;
+} RIL_SignalStrength_v10;
+
 #ifndef RIL_SIGNALSTRENGTH_INVALID
 #define RIL_SIGNALSTRENGTH_INVALID 0x7FFFFFFF
 #endif
@@ -1522,7 +1532,7 @@ typedef enum {
     RIL_DC_POWER_STATE_LOW      = 1,        // Low power state
     RIL_DC_POWER_STATE_MEDIUM   = 2,        // Medium power state
     RIL_DC_POWER_STATE_HIGH     = 3,        // High power state
-    RIL_DC_POWER_STATE_UNKNOWN  = 2147483647 //INT32_MAX // Unknown state
+    RIL_DC_POWER_STATE_UNKNOWN  = 2147483647, //INT32_MAX // Unknown state
 } RIL_DcPowerStates;
 
 /**
@@ -5467,7 +5477,7 @@ typedef struct {
 #endif
 
 #if defined (RIL_SPRD_EXTENSION)
-#define RIL_UNSOL_LAST RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED
+#define RIL_UNSOL_LAST RIL_UNSOL_DC_RT_INFO_CHANGED
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 #define RIL_UNSOL_LAST RIL_UNSOL_QOS_STATE_CHANGED_IND
 #endif
@@ -5964,6 +5974,27 @@ typedef struct {
 
 /***********************************************************************/
 
+#if defined(ANDROID_MULTI_SIM)
+/**
+ * RIL_Request Function pointer
+ *
+ * @param request is one of RIL_REQUEST_*
+ * @param data is pointer to data defined for that RIL_REQUEST_*
+ *        data is owned by caller, and should not be modified or freed by callee
+ * @param t should be used in subsequent call to RIL_onResponse
+ * @param datalen the length of data
+ *
+ */
+typedef void (*RIL_RequestFunc) (int request, void *data,
+                                    size_t datalen, RIL_Token t, RIL_SOCKET_ID socket_id);
+
+/**
+ * This function should return the current radio state synchronously
+ */
+typedef RIL_RadioState (*RIL_RadioStateRequest)(RIL_SOCKET_ID socket_id);
+
+#else
+/* Backward compatible */
 
 /**
  * RIL_Request Function pointer
@@ -5983,6 +6014,7 @@ typedef void (*RIL_RequestFunc) (int request, void *data,
  */
 typedef RIL_RadioState (*RIL_RadioStateRequest)();
 
+#endif
 /**
  * This function returns "1" if the specified RIL_REQUEST code is
  * supported and 0 if it is not
@@ -6063,6 +6095,16 @@ struct RIL_Env {
     void (*OnRequestComplete)(RIL_Token t, RIL_Errno e,
                            void *response, size_t responselen);
 
+#if defined(ANDROID_MULTI_SIM)
+    /**
+     * "unsolResponse" is one of RIL_UNSOL_RESPONSE_*
+     * "data" is pointer to data defined for that RIL_UNSOL_RESPONSE_*
+     *
+     * "data" is owned by caller, and should not be modified or freed by callee
+     */
+    void (*OnUnsolicitedResponse)(int unsolResponse, const void *data,
+                                    size_t datalen, RIL_SOCKET_ID socket_id);
+#else
     /**
      * "unsolResponse" is one of RIL_UNSOL_RESPONSE_*
      * "data" is pointer to data defined for that RIL_UNSOL_RESPONSE_*
@@ -6072,6 +6114,7 @@ struct RIL_Env {
 
     void (*OnUnsolicitedResponse)(int unsolResponse, const void *data,
                                     size_t datalen);
+#endif
 
     /**
      * Call user-specifed "callback" function on on the same thread that
@@ -6129,6 +6172,17 @@ void RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv);
 void RIL_onRequestComplete(RIL_Token t, RIL_Errno e,
                            void *response, size_t responselen);
 
+#if defined(ANDROID_MULTI_SIM)
+/**
+ * @param unsolResponse is one of RIL_UNSOL_RESPONSE_*
+ * @param data is pointer to data defined for that RIL_UNSOL_RESPONSE_*
+ *     "data" is owned by caller, and should not be modified or freed by callee
+ * @param datalen the length of data in byte
+ */
+
+void RIL_onUnsolicitedResponse(int unsolResponse, const void *data,
+                                size_t datalen, RIL_SOCKET_ID socket_id);
+#else
 /**
  * @param unsolResponse is one of RIL_UNSOL_RESPONSE_*
  * @param data is pointer to data defined for that RIL_UNSOL_RESPONSE_*
@@ -6138,6 +6192,7 @@ void RIL_onRequestComplete(RIL_Token t, RIL_Errno e,
 
 void RIL_onUnsolicitedResponse(int unsolResponse, const void *data,
                                 size_t datalen);
+#endif
 
 
 /**

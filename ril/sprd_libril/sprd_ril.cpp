@@ -1018,6 +1018,7 @@ invalid:
     return;
 }
 
+
 /**
  * Callee expects const RIL_CallForwardInfo *
  * Payload is:
@@ -2527,14 +2528,14 @@ responseInts(Parcel &p, void *response, size_t responselen) {
         return RIL_ERRNO_INVALID_RESPONSE;
     }
     if (responselen % sizeof(int) != 0) {
-        RILLOGE("invalid response length %d expected multiple of %d\n",
+        RILLOGE("responseInts: invalid response length %d expected multiple of %d\n",
             (int)responselen, (int)sizeof(int));
         return RIL_ERRNO_INVALID_RESPONSE;
     }
 
     int *p_int = (int *) response;
 
-    numInts = responselen / sizeof(int );
+    numInts = responselen / sizeof(int);
     p.writeInt32 (numInts);
 
     /* each int*/
@@ -2565,7 +2566,7 @@ static int responseStrings(Parcel &p, void *response, size_t responselen) {
         return RIL_ERRNO_INVALID_RESPONSE;
     }
     if (responselen % sizeof(char *) != 0) {
-        RILLOGE("invalid response length %d expected multiple of %d\n",
+        RILLOGE("responseStrings: invalid response length %d expected multiple of %d\n",
             (int)responselen, (int)sizeof(char *));
         return RIL_ERRNO_INVALID_RESPONSE;
     }
@@ -2621,7 +2622,7 @@ static int responseCallList(Parcel &p, void *response, size_t responselen) {
     }
 
     if (responselen % sizeof (RIL_Call *) != 0) {
-        RILLOGE("invalid response length %d expected multiple of %d\n",
+        RILLOGE("responseCallList: invalid response length %d expected multiple of %d\n",
             (int)responselen, (int)sizeof (RIL_Call *));
         return RIL_ERRNO_INVALID_RESPONSE;
     }
@@ -2716,10 +2717,13 @@ static int responseDataCallListV4(Parcel &p, void *response, size_t responselen)
     }
 
     if (responselen % sizeof(RIL_Data_Call_Response_v4) != 0) {
-        RILLOGE("invalid response length %d expected multiple of %d",
+        RILLOGE("responseDataCallListV4: invalid response length %d expected multiple of %d",
                 (int)responselen, (int)sizeof(RIL_Data_Call_Response_v4));
         return RIL_ERRNO_INVALID_RESPONSE;
     }
+
+    // Write version
+    p.writeInt32(4);
 
     int num = responselen / sizeof(RIL_Data_Call_Response_v4);
     p.writeInt32(num);
@@ -2745,12 +2749,62 @@ static int responseDataCallListV4(Parcel &p, void *response, size_t responselen)
     return 0;
 }
 
+static int responseDataCallListV6(Parcel &p, void *response, size_t responselen)
+{
+   if (response == NULL && responselen != 0) {
+        RLOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    if (responselen % sizeof(RIL_Data_Call_Response_v6) != 0) {
+        RLOGE("responseDataCallListV6: invalid response length %d expected multiple of %d",
+                (int)responselen, (int)sizeof(RIL_Data_Call_Response_v6));
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    // Write version
+    p.writeInt32(6);
+
+    int num = responselen / sizeof(RIL_Data_Call_Response_v6);
+    p.writeInt32(num);
+
+    RIL_Data_Call_Response_v6 *p_cur = (RIL_Data_Call_Response_v6 *) response;
+    startResponse;
+    int i;
+    for (i = 0; i < num; i++) {
+        p.writeInt32((int)p_cur[i].status);
+        p.writeInt32(p_cur[i].suggestedRetryTime);
+        p.writeInt32(p_cur[i].cid);
+        p.writeInt32(p_cur[i].active);
+        writeStringToParcel(p, p_cur[i].type);
+        writeStringToParcel(p, p_cur[i].ifname);
+        writeStringToParcel(p, p_cur[i].addresses);
+        writeStringToParcel(p, p_cur[i].dnses);
+        writeStringToParcel(p, p_cur[i].gateways);
+        appendPrintBuf("%s[status=%d,retry=%d,cid=%d,%s,%s,%s,%s,%s,%s],", printBuf,
+            p_cur[i].status,
+            p_cur[i].suggestedRetryTime,
+            p_cur[i].cid,
+            (p_cur[i].active==0)?"down":"up",
+            (char*)p_cur[i].type,
+            (char*)p_cur[i].ifname,
+            (char*)p_cur[i].addresses,
+            (char*)p_cur[i].dnses,
+            (char*)p_cur[i].gateways);
+    }
+    removeLastChar;
+    closeResponse;
+
+    return 0;
+}
+
 static int responseDataCallList(Parcel &p, void *response, size_t responselen)
 {
     // Write version
     p.writeInt32(s_callbacks.version);
 
     if (s_callbacks.version < 5) {
+        RLOGD("responseDataCallList: v4");
         return responseDataCallListV4(p, response, responselen);
     } else {
         if (response == NULL && responselen != 0) {
@@ -2758,16 +2812,23 @@ static int responseDataCallList(Parcel &p, void *response, size_t responselen)
             return RIL_ERRNO_INVALID_RESPONSE;
         }
 
-        if (responselen % sizeof(RIL_Data_Call_Response_v6) != 0) {
-            RILLOGE("invalid response length %d expected multiple of %d",
-                    (int)responselen, (int)sizeof(RIL_Data_Call_Response_v6));
+        // Support v6 or v9 with new rils
+        if (responselen % sizeof(RIL_Data_Call_Response_v6) == 0) {
+            RLOGD("responseDataCallList: v6");
+            return responseDataCallListV6(p, response, responselen);
+        }
+
+        if (responselen % sizeof(RIL_Data_Call_Response_v9) != 0) {
+            RILLOGE("responseDataCallList: invalid response length %d expected multiple of %d",
+                    (int)responselen, (int)sizeof(RIL_Data_Call_Response_v9));
             return RIL_ERRNO_INVALID_RESPONSE;
         }
 
-        int num = responselen / sizeof(RIL_Data_Call_Response_v6);
+
+        int num = responselen / sizeof(RIL_Data_Call_Response_v9);
         p.writeInt32(num);
 
-        RIL_Data_Call_Response_v6 *p_cur = (RIL_Data_Call_Response_v6 *) response;
+        RIL_Data_Call_Response_v9 *p_cur = (RIL_Data_Call_Response_v9 *) response;
         startResponse;
         int i;
         for (i = 0; i < num; i++) {
@@ -2780,7 +2841,8 @@ static int responseDataCallList(Parcel &p, void *response, size_t responselen)
             writeStringToParcel(p, p_cur[i].addresses);
             writeStringToParcel(p, p_cur[i].dnses);
             writeStringToParcel(p, p_cur[i].gateways);
-            appendPrintBuf("%s[status=%d,retry=%d,cid=%d,%s,%s,%s,%s,%s,%s],", printBuf,
+            writeStringToParcel(p, p_cur[i].pcscf);
+            appendPrintBuf("%s[status=%d,retry=%d,cid=%d,%s,%s,%s,%s,%s,%s,%s],", printBuf,
                 p_cur[i].status,
                 p_cur[i].suggestedRetryTime,
                 p_cur[i].cid,
@@ -2789,7 +2851,8 @@ static int responseDataCallList(Parcel &p, void *response, size_t responselen)
                 (char*)p_cur[i].ifname,
                 (char*)p_cur[i].addresses,
                 (char*)p_cur[i].dnses,
-                (char*)p_cur[i].gateways);
+                (char*)p_cur[i].gateways,
+                (char*)p_cur[i].pcscf);
         }
         removeLastChar;
         closeResponse;
@@ -2860,7 +2923,7 @@ static int responseCallForwards(Parcel &p, void *response, size_t responselen) {
     }
 
     if (responselen % sizeof(RIL_CallForwardInfo *) != 0) {
-        RILLOGE("invalid response length %d expected multiple of %d",
+        RILLOGE("responseCallForwards: invalid response length %d expected multiple of %d",
                 (int)responselen, (int)sizeof(RIL_CallForwardInfo *));
         return RIL_ERRNO_INVALID_RESPONSE;
     }
@@ -2929,7 +2992,7 @@ static int responseCellList(Parcel &p, void *response, size_t responselen) {
     }
 
     if (responselen % sizeof (RIL_NeighboringCell *) != 0) {
-        RILLOGE("invalid response length %d expected multiple of %d\n",
+        RILLOGE("responseCellList: invalid response length %d expected multiple of %d\n",
             (int)responselen, (int)sizeof (RIL_NeighboringCell *));
         return RIL_ERRNO_INVALID_RESPONSE;
     }
@@ -2978,7 +3041,7 @@ static int responseCdmaInformationRecords(Parcel &p,
     }
 
     if (responselen != sizeof (RIL_CDMA_InformationRecords)) {
-        RILLOGE("invalid response length %d expected multiple of %d\n",
+        RILLOGE("responseCdmaInformationRecords: invalid response length %d expected multiple of %d\n",
             (int)responselen, (int)sizeof (RIL_CDMA_InformationRecords *));
         return RIL_ERRNO_INVALID_RESPONSE;
     }
@@ -3130,7 +3193,7 @@ static int responseRilSignalStrength(Parcel &p,
     }
 
     if (responselen >= sizeof (RIL_SignalStrength_v5)) {
-        RIL_SignalStrength_v6 *p_cur = ((RIL_SignalStrength_v6 *) response);
+        RIL_SignalStrength_v10 *p_cur = ((RIL_SignalStrength_v10 *) response);
 
         p.writeInt32(p_cur->GW_SignalStrength.signalStrength);
         p.writeInt32(p_cur->GW_SignalStrength.bitErrorRate);
@@ -3171,8 +3234,14 @@ static int responseRilSignalStrength(Parcel &p,
             p.writeInt32(p_cur->LTE_SignalStrength.rsrq);
             p.writeInt32(p_cur->LTE_SignalStrength.rssnr);
             p.writeInt32(p_cur->LTE_SignalStrength.cqi);
+            if (responselen >= sizeof (RIL_SignalStrength_v10)) {
+                p.writeInt32(p_cur->TD_SCDMA_SignalStrength.rscp);
+            } else {
+                p.writeInt32(INT_MAX);
+            }
         } else {
             p.writeInt32(99);
+            p.writeInt32(INT_MAX);
             p.writeInt32(INT_MAX);
             p.writeInt32(INT_MAX);
             p.writeInt32(INT_MAX);
@@ -3185,7 +3254,7 @@ static int responseRilSignalStrength(Parcel &p,
                 EVDO_SS.dbm=%d,EVDO_SS.ecio=%d,\
                 EVDO_SS.signalNoiseRatio=%d,\
                 LTE_SS.signalStrength=%d,LTE_SS.rsrp=%d,LTE_SS.rsrq=%d,\
-                LTE_SS.rssnr=%d,LTE_SS.cqi=%d]",
+                LTE_SS.rssnr=%d,LTE_SS.cqi=%d,TDSCDMA_SS.rscp=%d]",
                 printBuf,
                 p_cur->GW_SignalStrength.signalStrength,
                 p_cur->GW_SignalStrength.bitErrorRate,
@@ -3198,7 +3267,8 @@ static int responseRilSignalStrength(Parcel &p,
                 p_cur->LTE_SignalStrength.rsrp,
                 p_cur->LTE_SignalStrength.rsrq,
                 p_cur->LTE_SignalStrength.rssnr,
-                p_cur->LTE_SignalStrength.cqi);
+                p_cur->LTE_SignalStrength.cqi,
+                p_cur->TD_SCDMA_SignalStrength.rscp);
         closeResponse;
 
     } else {
@@ -3333,7 +3403,7 @@ static int responseCellInfoList(Parcel &p, void *response, size_t responselen)
     }
 
     if (responselen % sizeof(RIL_CellInfo) != 0) {
-        RLOGE("invalid response length %d expected multiple of %d",
+        RLOGE("responseCellInfoList: invalid response length %d expected multiple of %d",
                 (int)responselen, (int)sizeof(RIL_CellInfo));
         return RIL_ERRNO_INVALID_RESPONSE;
     }
@@ -5606,6 +5676,17 @@ requestToString(int request) {
         case RIL_REQUEST_SET_INITIAL_ATTACH_APN: return "RIL_REQUEST_SET_INITIAL_ATTACH_APN";
         case RIL_REQUEST_IMS_REGISTRATION_STATE: return "IMS_REGISTRATION_STATE";
         case RIL_REQUEST_IMS_SEND_SMS: return "IMS_SEND_SMS";
+        case RIL_REQUEST_SIM_TRANSMIT_APDU_BASIC: return "SIM_TRANSMIT_APDU_BASIC";
+        case RIL_REQUEST_SIM_OPEN_CHANNEL: return "SIM_OPEN_CHANNEL";
+        case RIL_REQUEST_SIM_CLOSE_CHANNEL: return "SIM_CLOSE_CHANNEL";
+        case RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL: return "SIM_TRANSMIT_APDU_CHANNEL";
+        case RIL_REQUEST_SET_UICC_SUBSCRIPTION: return "SET_UICC_SUBSCRIPTION";
+        case RIL_REQUEST_ALLOW_DATA: return "ALLOW_DATA";
+        case RIL_REQUEST_GET_HARDWARE_CONFIG: return "GET_HARDWARE_CONFIG";
+        case RIL_REQUEST_SIM_AUTHENTICATION: return "SIM_AUTHENTICATION";
+        case RIL_REQUEST_GET_DC_RT_INFO: return "GET_DC_RT_INFO";
+        case RIL_REQUEST_SET_DC_RT_INFO_RATE: return "SET_DC_RT_INFO_RATE";
+        case RIL_REQUEST_SET_DATA_PROFILE: return "SET_DATA_PROFILE";
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_IMS_REGISTRATION_STATE: return "IMS_REGISTRATION_STATE";
         case RIL_REQUEST_IMS_SEND_SMS: return "IMS_SEND_SMS";
@@ -5731,6 +5812,10 @@ requestToString(int request) {
         case RIL_UNSOL_EXIT_EMERGENCY_CALLBACK_MODE: return "UNSOL_EXIT_EMERGENCY_CALLBACK_MODE";
         case RIL_UNSOL_RIL_CONNECTED: return "UNSOL_RIL_CONNECTED";
         case RIL_UNSOL_VOICE_RADIO_TECH_CHANGED: return "UNSOL_VOICE_RADIO_TECH_CHANGED";
+        case RIL_UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED: return "UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED";
+        case RIL_UNSOL_SRVCC_STATE_NOTIFY: return "UNSOL_SRVCC_STATE_NOTIFY";
+        case RIL_UNSOL_HARDWARE_CONFIG_CHANGED: return "HARDWARE_CONFIG_CHANGED";
+        case RIL_UNSOL_DC_RT_INFO_CHANGED: return "UNSOL_DC_RT_INFO_CHANGED";
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED: return "UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED";
         case RIL_UNSOL_RESPONSE_TETHERED_MODE_STATE_CHANGED: return "UNSOL_RESPONSE_TETHERED_MODE_STATE_CHANGED";
@@ -5790,7 +5875,7 @@ requestToString(int request) {
         case RIL_UNSOL_SIM_PB_READY: return "UNSOL_SIM_PB_READY";	
 #endif
 
-
+        case RIL_REQUEST_SHUTDOWN: return "SHUTDOWN";
         default: return "<unknown request>";
     }
 }

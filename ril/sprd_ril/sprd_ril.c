@@ -152,6 +152,8 @@ typedef enum {
 #define RIL_SIM_TYPE1  "ril.ICC_TYPE_1"
 #define RIL_SET_SPEED_MODE_COUNT  "ril.sim.speed_count"
 
+//3G/4G switch in different slot
+// {for LTE}
 #define SSDA_MODE         "persist.radio.ssda.mode"
 #define SSDA_TESTMODE "persist.radio.ssda.testmode"
 // {for WCDMA}
@@ -298,7 +300,7 @@ static void attachGPRS(int channelID, void *data, size_t datalen, RIL_Token t);
 static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t);
 static int getMaxPDPNum(void);
 static int getExtraPDPNum(int index);
-static void copyDataReponse(RIL_Data_Call_Response_v6* pSource, RIL_Data_Call_Response_v6* pDest);
+static void copyDataReponse(RIL_Data_Call_Response_v9* pSource, RIL_Data_Call_Response_v9* pDest);
 static void getSIMStatusAgainForSimBusy();
 static bool hasSimBusy = false;
 
@@ -1821,8 +1823,8 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
             p_cur = p_cur->p_next)
         n++;
 
-    RIL_Data_Call_Response_v6 *responses =
-        alloca(n * sizeof(RIL_Data_Call_Response_v6));
+    RIL_Data_Call_Response_v9 *responses =
+        alloca(n * sizeof(RIL_Data_Call_Response_v9));
 
     int i;
     for (i = 0; i < n; i++) {
@@ -1835,9 +1837,10 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
         responses[i].addresses = "";
         responses[i].dnses = "";
         responses[i].gateways = "";
+        responses[i].pcscf = "";
     }
 
-    RIL_Data_Call_Response_v6 *response = responses;
+    RIL_Data_Call_Response_v9 *response = responses;
     for (p_cur = p_response->p_intermediates; p_cur != NULL;
          p_cur = p_cur->p_next) {
         char *line = p_cur->line;
@@ -2191,15 +2194,15 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                     RILLOGD("requestOrSendDataCallList is called by SetupDataCall!cid : %d", cid);
                     RILLOGD("requestOrSendDataCallList is called by SetupDataCall!responses[%d].cid : %d", getExtraPDPNum(i), responses[getExtraPDPNum(i)].cid);
                     if ((responses[getExtraPDPNum(i)].cid == getExtraPDPNum(cid)) && responses[getExtraPDPNum(i)].active) {
-                        RIL_Data_Call_Response_v6 *newResponses = alloca(2 * sizeof(RIL_Data_Call_Response_v6));
+                        RIL_Data_Call_Response_v9 *newResponses = alloca(2 * sizeof(RIL_Data_Call_Response_v6));
                         copyDataReponse(&responses[i], &newResponses[0]);
                         copyDataReponse(&responses[getExtraPDPNum(i)], &newResponses[1]);
                         RIL_onRequestComplete(*t, RIL_E_SUCCESS,
                                 newResponses,
-                                2 * sizeof(RIL_Data_Call_Response_v6));
+                                2 * sizeof(RIL_Data_Call_Response_v9));
                     } else {
                         RIL_onRequestComplete(*t, RIL_E_SUCCESS, &responses[i],
-                                sizeof(RIL_Data_Call_Response_v6));
+                                sizeof(RIL_Data_Call_Response_v9));
                     }
                     return;
                 }
@@ -2229,11 +2232,11 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
 
         if (t != NULL)
             RIL_onRequestComplete(*t, RIL_E_SUCCESS, responses,
-                    count * sizeof(RIL_Data_Call_Response_v6));
+                    count * sizeof(RIL_Data_Call_Response_v9));
         else
             RIL_onUnsolicitedResponse(RIL_UNSOL_DATA_CALL_LIST_CHANGED,
                     responses,
-                    count * sizeof(RIL_Data_Call_Response_v6));
+                    count * sizeof(RIL_Data_Call_Response_v9));
     }
 
     return;
@@ -6972,6 +6975,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 }
             }
         case RIL_REQUEST_SEND_SMS:
+        case RIL_REQUEST_SEND_SMS_EXPECT_MORE:
 #if defined (RIL_SPRD_EXTENSION)
             requestSendSMS(channelID, data, datalen, t);
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
@@ -7188,6 +7192,14 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             //requestSetCellInfoListRate(data, datalen, t);
             //TODO
             RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            break;
+
+        case RIL_REQUEST_GET_HARDWARE_CONFIG:
+            requestGetHardwareConfig(data, datalen, t);
+            break;
+
+        case RIL_REQUEST_SHUTDOWN:
+            requestShutdown(channelID, t);
             break;
 
         case RIL_REQUEST_DEVICE_IDENTITY:
@@ -8638,7 +8650,9 @@ setRadioState(int channelID, RIL_RadioState newState)
     if (sState != oldState) {
         RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_RADIO_STATE_CHANGED,
                                     NULL, 0);
-
+        // Sim state can change as result of radio state change
+        RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,
+                                    NULL, 0);
         /* FIXME onSimReady() and onRadioPowerOn() cannot be called
          * from the AT reader thread
          * Currently, this doesn't happen, but if that changes then these
@@ -10788,6 +10802,14 @@ static void onATTimeout()
     putChannel(channelID);
 }
 
+/* Called to pass hardware configuration information to telephony
+ * framework.
+ */
+static void setHardwareConfiguration(int num, RIL_HardwareConfig *cfg)
+{
+   RIL_onUnsolicitedResponse(RIL_UNSOL_HARDWARE_CONFIG_CHANGED, cfg, num*sizeof(*cfg));
+}
+
 static void usage(char *s)
 {
 #ifdef RIL_SHLIB
@@ -11126,7 +11148,7 @@ static int getExtraPDPNum(int index){
     return index+ 3;
 }
 
-static void dumpDataResponse(RIL_Data_Call_Response_v6* pDest) {
+static void dumpDataResponse(RIL_Data_Call_Response_v9* pDest) {
     RILLOGD("status=%d",pDest->status);
     RILLOGD("suggestedRetryTime=%d",pDest->suggestedRetryTime);
     RILLOGD("cid=%d",pDest->cid);
@@ -11138,7 +11160,7 @@ static void dumpDataResponse(RIL_Data_Call_Response_v6* pDest) {
     RILLOGD("gateways = %s",pDest->gateways);
 }
 
-static void copyDataReponse(RIL_Data_Call_Response_v6* pSource, RIL_Data_Call_Response_v6* pDest) {
+static void copyDataReponse(RIL_Data_Call_Response_v9* pSource, RIL_Data_Call_Response_v9* pDest) {
     pDest->cid = pSource->cid;
     pDest->status = pSource->status;
     pDest->suggestedRetryTime = pSource->suggestedRetryTime;
