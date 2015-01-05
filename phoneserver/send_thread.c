@@ -71,10 +71,10 @@ static char *readline(struct send_thread_t *me)
 		// skip over leading newlines
 		while (*me->s_ATBufferCur == '\r' || *me->s_ATBufferCur == '\n')
 			me->s_ATBufferCur++;
-		PHS_LOGD("Send thread's TID [%d] CHNMNG:findNextEOL:\n", me->tid);
+		//PHS_LOGD("Send thread's TID [%d] CHNMNG:findNextEOL:\n", me->tid);
 		p_eol = findNextEOL(me->s_ATBufferCur);
-		PHS_LOGD("Send thread's TID [%d] CHNMNG:end findNextEOL:\n",
-		       me->tid);
+		//PHS_LOGD("Send thread's TID [%d] CHNMNG:end findNextEOL:\n",
+		//       me->tid);
 		if (p_eol == NULL) {
 			/* a partial line. move it up and prepare to read more */
 			size_t len;
@@ -118,12 +118,13 @@ static char *readline(struct send_thread_t *me)
 			while (*me->s_ATBufferCur == '\r'
 			       || *me->s_ATBufferCur == '\n')
 				me->s_ATBufferCur++;
-			PHS_LOGD("Send thread's TID [%d] CHNMNG:findNextEOL:\n",
-			       me->tid);
+			// PHS_LOGD("Send thread's TID [%d] CHNMNG:findNextEOL:\n",
+			//       me->tid);
 			p_eol = findNextEOL(me->s_ATBufferCur);
-			PHS_LOGD
+			/*PHS_LOGD
 			    ("Send thread's TID [%d] CHNMNG:end findNextEOL:\n",
 			     me->tid);
+			     */
 			p_read += count;
 		} else if (count <= 0) {
 

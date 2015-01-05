@@ -385,17 +385,22 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                 property_set("ctl.start", ipv6_dhcpcd_cmd);
                 if(!get_ipv6addr(prop,cid))
                 {
-                    PHS_LOGD("getipv6addr state ipv4v6 get IPv6 address timeout ");
+                    PHS_LOGD("getipv6addr state ipv4v6 get IPv6 address timeout ,just use ipv4");
+                    // Just use IPV4
+                    ppp_info[cid-1].ip_state =IPV4;
+                    /*
                     ppp_info[ppp_index].state = PPP_STATE_IDLE;
                     adapter_pty_end_cmd(req->recv_pty );
                     adapter_free_cmux_for_ps(mux);
                     adapter_pty_write(req->recv_pty,"ERROR\r",strlen("ERROR\r"));
                     mutex_unlock(&ps_service_mutex);
                     return AT_RESULT_OK;
-                }
-                PHS_LOGD("IPV6 data_on execute done");
+                    */
+                }else{
+                    PHS_LOGD("IPV6 data_on execute done");
 
-                usleep(100*1000);
+                    usleep(100*1000);
+                }
 
                 // set ip addr mtu to check
                 snprintf(linker, sizeof(linker), "addr add %s dev %s%d", ppp_info[cid-1].ipladdr, prop, cid-1);
@@ -977,15 +982,22 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                 PHS_LOGD("PPP_STATE_DEACTING");
                 ppp_info[tmp_cid-1].state = PPP_STATE_DEACTING;
                 ppp_info[tmp_cid - 1].cmux = mux;
-                if (tmp_cid2 != -1) {
-                    snprintf(at_cmd_str,sizeof(at_cmd_str), "AT+CGACT=0,%d,%d\r",tmp_cid,tmp_cid2);
-                } else {
-                    snprintf(at_cmd_str,sizeof(at_cmd_str), "AT+CGACT=0,%d\r",tmp_cid);
+                if(tmp_cid2 != 0){
+                   if (tmp_cid2 != -1) {
+                        snprintf(at_cmd_str,sizeof(at_cmd_str), "AT+CGACT=0,%d,%d\r",tmp_cid,tmp_cid2);
+                    } else {
+                        snprintf(at_cmd_str,sizeof(at_cmd_str), "AT+CGACT=0,%d\r",tmp_cid);
+                    }
+                    PHS_LOGD("at_cmd_str= %s", at_cmd_str);
+                    adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp2, (unsigned long)req->recv_pty);
+
+                    adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
+                        req->timeout);
+                }else{
+                    adapter_pty_write(req->recv_pty,"OK\r",strlen("OK\r"));
+                    adapter_pty_end_cmd(req->recv_pty);
+                    adapter_free_cmux(mux);
                 }
-                PHS_LOGD("at_cmd_str= %s", at_cmd_str);
-                adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp2, (unsigned long)req->recv_pty);
-                adapter_cmux_write(mux, at_cmd_str, strlen(at_cmd_str),
-                    req->timeout);
                 ppp_info[tmp_cid - 1].state = PPP_STATE_IDLE;
 
                 usleep(200*1000);
@@ -1033,7 +1045,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                 sprintf(cmd, "setprop net.%s%d.ip_type %d", prop, tmp_cid-1,UNKNOWN);
                 system(cmd);
 
-                if (tmp_cid2 != -1) {
+                if ((tmp_cid2 != -1) && (tmp_cid2 != 0)) {
                     snprintf(linker, sizeof(linker), "link set %s%d down", prop, tmp_cid2-1);
                     property_set(SYS_IFCONFIG_DOWN, linker);
                     /* start data_off */

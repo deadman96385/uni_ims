@@ -101,11 +101,11 @@ static char *readline(struct receive_thread_t *me)
 		}
 
 		do {
-			PHS_LOGD("Before read << ");
+			//PHS_LOGD("Before read << ");
 			count =
 			    read(me->mux->muxfd, p_read,
 				 MAX_AT_RESPONSE - (p_read - me->mux->buffer));
-			PHS_LOGD("After read count: %ld, p_read: %s<< ", count, p_read);
+			//PHS_LOGD("After read count: %d, p_read: %s<< ", count, p_read);
 		} while (count < 0 && errno == EINTR);
 
 		if (count > 0) {

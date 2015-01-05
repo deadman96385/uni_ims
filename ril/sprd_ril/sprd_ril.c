@@ -161,6 +161,7 @@ typedef enum {
 
 #define PROP_DEFAULT_BEARER  "gsm.stk.default_bearer"
 #define PROP_OPEN_CHANNEL  "gsm.stk.open_channel"
+#define PROP_END_CONNECTIVITY  "gsm.stk.end_connectivity"
 
 int modem;
 int s_multiSimMode = 0;
@@ -395,6 +396,109 @@ static void setCeMode(int channelID);
 static void setTestMode(int channelID);
 static bool isCSFB(void); 
 static bool bOnlyOneSIMPresent = false;
+typedef struct {
+    int nCid;
+    char strIPType[64];
+    char strApn[64];
+} PDN;
+
+static PDN pdn[11] = {
+    { -1, "", ""},
+    { -1, "", ""},
+    { -1, "", ""},
+    { -1, "", ""},
+    { -1, "", ""},
+    { -1, "", ""},
+    { -1, "", ""},
+    { -1, "", ""},
+    { -1, "", ""},
+    { -1, "", ""},
+    { -1, "", ""},
+};
+static int activePDN;
+static RIL_InitialAttachApn *initialAttachApn = NULL;
+static int in4G;
+static bool bLteDetached = false;
+
+static void queryAllActivePDN(int channelID) {
+    int err = 0;
+    ATResponse *pdnResponse = NULL;
+    int n,skip,active;
+    ATLine *pCur;
+    activePDN = 0;
+
+
+    err = at_send_command_multiline (ATch_type[channelID], "AT+CGACT?", "+CGACT:", &pdnResponse);
+     if (err != 0 || pdnResponse->success == 0) {
+     }
+
+     PDN *pdns = pdn;
+     for (pCur = pdnResponse->p_intermediates; pCur != NULL;
+             pCur = pCur->p_next) {
+         char *line = pCur->line;
+
+         err = at_tok_start(&line);
+         if (err < 0){
+             pdns->nCid = -1;
+         }
+
+         err = at_tok_nextint(&line, &pdns->nCid);
+         if (err < 0){
+             pdns->nCid= -1;
+         }
+         RILLOGI("queryAllActivePDN CGACT? cid= %d", pdns->nCid);
+         err = at_tok_nextint(&line, &active);
+         if (err < 0 || active == 0){
+             pdns->nCid = -1;
+         }
+         RILLOGI("queryAllActivePDN CGACT? active= %d", active);
+         if(active == 1){
+             activePDN++;
+         }
+         pdns++;
+    }
+    RILLOGI("queryAllActivePDN activePDN= %d", activePDN);
+    err = at_send_command_multiline (ATch_type[channelID], "AT+CGDCONT?", "+CGDCONT:", &pdnResponse);
+    if (err != 0 || pdnResponse->success == 0) {
+        //TODO
+    }
+
+    for (pCur = pdnResponse->p_intermediates; pCur != NULL;
+    pCur =pCur->p_next) {
+        char *line = pCur->line;
+        int cid;
+        char *type;
+        char *apn;
+        err = at_tok_start(&line);
+        if (err < 0) {
+            RILLOGI("queryAllActivePDN CGDCONT? read line failed!");
+        	continue;
+        }
+
+        err = at_tok_nextint(&line, &cid);
+
+        if ((err < 0) || (cid != pdn[cid-1].nCid)) {
+            RILLOGI("queryAllActivePDN CGDCONT? read cid failed!");
+            continue;
+        }
+
+        /* type */
+        err = at_tok_nextstr(&line, &type);
+        if (err < 0) {
+        	pdn[cid-1].nCid = -1;
+        }
+        strcpy(pdn[cid-1].strIPType, type);
+
+        /* apn */
+        err = at_tok_nextstr(&line, &apn);
+        if (err < 0) {
+        	pdn[cid-1].nCid = -1;
+        }
+        strcpy(pdn[cid-1].strApn, apn);
+        RILLOGI("queryAllActivePDN CGDCONT? active pdn: cid = %d, iptype = %s, apn = %s", pdn[cid-1].nCid, pdn[cid-1].strIPType, pdn[cid-1].strApn);
+    }
+}
+
 /* @} */
 
 void list_init(struct listnode *node)
@@ -801,7 +905,7 @@ static int deactivateLteDataConnection(int channelID, char *cmd)
                 if (err >= 0 && failCause == 151) {
                     ret = 1;
                     RILLOGD("get 151 error,do detach! s_testmode = %d",s_testmode);
-                    if (isCSFB() && s_testmode != 10) {
+                    if (s_testmode != 10) {
                         at_send_command(ATch_type[channelID], "AT+CLSSPDT = 1", NULL);
                     }else {
                         at_send_command(ATch_type[channelID], "AT+SGFD", NULL);
@@ -824,7 +928,8 @@ static int deactivateLteDataConnection(int channelID, char *cmd)
 
 static void deactivateDataConnection(int channelID, void *data, size_t datalen, RIL_Token t)
 {
-    int err = 0, i;
+    int err = 0, i = 0;
+    int is_stk_end_connectivity = 0;
     ATResponse *p_response = NULL;
     const char *cid_ptr = NULL;
     int cid;
@@ -832,13 +937,14 @@ static void deactivateDataConnection(int channelID, void *data, size_t datalen, 
     bool IsLte = isLte();
     int failCause = 0;
     char *line;
+    char prop[PROPERTY_VALUE_MAX] = {0};
     extern int s_sim_num;
     cid_ptr = ((const char **)data)[0];
     cid = atoi(cid_ptr);
     if(cid < 1)
         goto error1;
 
-    RILLOGD("Try to deactivated modem ..., cid=%d", cid);
+    RILLOGD("deactivateDataConnection, in4G=%d", in4G);
     if (!IsLte) {
         if (pdp[cid - 1].cid == cid) {
             snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", cid);
@@ -849,11 +955,55 @@ static void deactivateDataConnection(int channelID, void *data, size_t datalen, 
             putPDP(cid - 1);
         }
     } else {
+        RILLOGD("Try to deactivated modem ..., cid=%d", cid);
+        property_get(PROP_END_CONNECTIVITY, prop, "0");
+        is_stk_end_connectivity = atoi(prop);
+        RILLOGD("Try to deactivated is_stk_end_connectivity=%d", is_stk_end_connectivity);
+        if (in4G) {
+            queryAllActivePDN(channelID);
+            if (activePDN == 1) {
+                for (i = 0; i < 11; i++) {
+                    if ((pdn[i].nCid == (i + 1)) && (pdn[i].nCid != cid)) {
+                        RILLOGD("deactivateDataConnection: cid(%d) is not the last one when there is only one(%d)!",cid, pdn[i].nCid);
+                    }
+                }
+                snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d,%d", cid, 0);
+                RILLOGD("deactivateLastDataConnection cmd = %s", cmd);
+                err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                if (err < 0 || p_response->success == 0) {
+                    RILLOGD("last dataconnection data off failed!");
+                }
+                goto done;
+            } else if (activePDN > 1 && (is_stk_end_connectivity == 0)) {
+                if(initialAttachApn != NULL && initialAttachApn->apn != NULL &&
+                    (!strcasecmp(pdn[cid - 1].strApn, initialAttachApn->apn) ||
+                        !strcasecmp(strtok(pdn[cid - 1].strApn, "."), initialAttachApn->apn))) {
+                    snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d,%d", cid, 0);
+                    RILLOGD("deactivateLastDataConnection cmd = %s", cmd);
+                    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                    if (err < 0 || p_response->success == 0) {
+                        RILLOGD("last dataconnection data off failed!");
+                       }
+                    goto done;
+                }
+        }
+    }
+
        if ((pdp[cid-1].cid != -1) ||(pdp[getExtraPDPNum(cid-1)].cid != -1)) {
             if ((pdp[cid-1].cid != -1) &&(pdp[getExtraPDPNum(cid-1)].cid != -1)) {
-                snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", cid);
-                if (deactivateLteDataConnection(channelID, cmd) < 0) {
-                    goto error;
+                if (in4G && (activePDN == 2)){
+                    snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d,%d", cid, 0);
+                    RILLOGD("deactivateLastDataConnection cmd = %s", cmd);
+                    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                    if (err < 0 || p_response->success == 0) {
+                    	RILLOGD("last dataconnection data off failed!");
+                    }
+                }else{
+                       snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", cid);
+                    if (deactivateLteDataConnection(channelID, cmd) < 0) {
+                        goto error;
+                    }
+                    RILLOGD("dual pdp, need do cgact again");
                 }
                 RILLOGD("dual pdp,need do cgact again");
                 snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", getExtraPDPNum(cid));
@@ -867,9 +1017,11 @@ static void deactivateDataConnection(int channelID, void *data, size_t datalen, 
                 }
             }
         }
+done:
         putPDP(cid - 1);
         putPDP(getExtraPDPNum(cid - 1));
     }
+    property_set(PROP_END_CONNECTIVITY, "0");
     at_response_free(p_response);
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     return;
@@ -884,6 +1036,7 @@ error:
     }
 
 error1:
+    property_set(PROP_END_CONNECTIVITY, "0");
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
     return;
@@ -1975,7 +2128,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
             for(i = 0; i < n; i++) {
                 if(responses[i].cid == cid) {
                     RIL_onRequestComplete(*t, RIL_E_SUCCESS, &responses[i],
-                            sizeof(RIL_Data_Call_Response_v6));
+                            sizeof(RIL_Data_Call_Response_v9));
                     return;
                 }
             }
@@ -2005,11 +2158,11 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
 
         if (t != NULL)
             RIL_onRequestComplete(*t, RIL_E_SUCCESS, responses,
-                    count * sizeof(RIL_Data_Call_Response_v6));
+                    count * sizeof(RIL_Data_Call_Response_v9));
         else
             RIL_onUnsolicitedResponse(RIL_UNSOL_DATA_CALL_LIST_CHANGED,
                     responses,
-                    count * sizeof(RIL_Data_Call_Response_v6));
+                    count * sizeof(RIL_Data_Call_Response_v9));
     } else {//LTE
         for (p_cur = p_response->p_intermediates; p_cur != NULL;
              p_cur = p_cur->p_next) {
@@ -2190,21 +2343,41 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
         if((t != NULL) && (cid > 0)) {
             RILLOGD("requestOrSendDataCallList is called by SetupDataCall!");
             for(i = 0; i < 3; i++) {
-                if((responses[i].cid == cid) && responses[i].active) {
-                    RILLOGD("requestOrSendDataCallList is called by SetupDataCall!cid : %d", cid);
-                    RILLOGD("requestOrSendDataCallList is called by SetupDataCall!responses[%d].cid : %d", getExtraPDPNum(i), responses[getExtraPDPNum(i)].cid);
-                    if ((responses[getExtraPDPNum(i)].cid == getExtraPDPNum(cid)) && responses[getExtraPDPNum(i)].active) {
-                        RIL_Data_Call_Response_v9 *newResponses = alloca(2 * sizeof(RIL_Data_Call_Response_v6));
-                        copyDataReponse(&responses[i], &newResponses[0]);
-                        copyDataReponse(&responses[getExtraPDPNum(i)], &newResponses[1]);
-                        RIL_onRequestComplete(*t, RIL_E_SUCCESS,
-                                newResponses,
-                                2 * sizeof(RIL_Data_Call_Response_v9));
-                    } else {
-                        RIL_onRequestComplete(*t, RIL_E_SUCCESS, &responses[i],
-                                sizeof(RIL_Data_Call_Response_v9));
+                if((responses[i].cid == cid)){
+                    if(responses[i].active) {
+                        RILLOGD("requestOrSendDataCallList is called by SetupDataCall!cid : %d", cid);
+                        RILLOGD("requestOrSendDataCallList is called by SetupDataCall!responses[%d].cid : %d", getExtraPDPNum(i), responses[getExtraPDPNum(i)].cid);
+                        if ((responses[getExtraPDPNum(i)].cid == getExtraPDPNum(cid)) && responses[getExtraPDPNum(i)].active) {
+                            RIL_Data_Call_Response_v9 *newResponses = alloca(2 * sizeof(RIL_Data_Call_Response_v9));
+                            copyDataReponse(&responses[i], &newResponses[0]);
+                            copyDataReponse(&responses[getExtraPDPNum(i)], &newResponses[1]);
+                            if (IsLte && bLteDetached) {
+                                RILLOGD("requestOrSendDataCallList: Lte detached in the past.");
+                                putPDP(cid-1);
+                                putPDP(getExtraPDPNum(cid-1));
+                                RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                            } else {
+                                RIL_onRequestComplete(*t, RIL_E_SUCCESS,
+                                    newResponses,
+                                    2 * sizeof(RIL_Data_Call_Response_v9));
+                            }
+                        } else {
+                            if (IsLte && bLteDetached) {
+                                RILLOGD("requestOrSendDataCallList: Lte detached in the past2.");
+                                putPDP(cid-1);
+                                putPDP(getExtraPDPNum(cid-1));
+                                RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                            } else {
+                                RIL_onRequestComplete(*t, RIL_E_SUCCESS, &responses[i],
+                                    sizeof(RIL_Data_Call_Response_v9));
+                            }
+                        }
+
+                        return;
+                    }else{
+                        putPDP(cid-1);
+                        putPDP(getExtraPDPNum(cid-1));
                     }
-                    return;
                 }
             }
             if(i >= 3) {
@@ -2238,6 +2411,9 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                     responses,
                     count * sizeof(RIL_Data_Call_Response_v9));
     }
+
+    
+    bLteDetached = false;
 
     return;
 
@@ -2552,10 +2728,15 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     bool IsLte = isLte();
     extern int s_sim_num;
     int is_default_bearer;
+    int is_open_channel;
+    int nRetryTimes = 0;
 
     property_get(PROP_DEFAULT_BEARER, prop, "0");
     is_default_bearer = atoi(prop);
-    RILLOGD("requestSetupDataCall is_default_bearer = %d", is_default_bearer);
+    property_get(PROP_OPEN_CHANNEL, prop, "0");
+    is_open_channel = atoi(prop);
+    RILLOGD("requestSetupDataCall is_default_bearer = %d, is_open_channel = %d", is_default_bearer, is_open_channel);
+
     apn = ((const char **)data)[2];
     username = ((const char **)data)[3];
     password = ((const char **)data)[4];
@@ -2568,8 +2749,51 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     RILLOGD("requestSetupDataCall data[4] '%s'", ((const char **)data)[4]);
     RILLOGD("requestSetupDataCall data[5] '%s'", ((const char **)data)[5]);
 
+RETRY:
+    bLteDetached = false;
+    if (s_testmode != 10 && !is_default_bearer && !is_open_channel) {
+        queryAllActivePDN(channelID);
+
+        if (activePDN > 0) {
+            int i;
+            for (i = 0; i < 11; i++) {
+                if (pdn[i].nCid == (i + 1)) {
+                    getPDPByIndex(i);
+                    if (i < 3
+                            && (!strcasecmp(pdn[i].strApn, apn)
+                                    || !strcasecmp(strtok(pdn[i].strApn, "."),
+                                            apn))) {
+                        RILLOGD("Using default PDN");
+                        snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d",
+                                pdn[i].nCid);
+                        err = at_send_command(ATch_type[channelID], cmd,
+                                &p_response);
+                        if (errorHandlingForCGDATA(channelID, p_response, err,
+                                i)) {
+                            index = i;
+                            goto error;
+                        }
+                        pthread_mutex_lock(&pdp[i].mutex);
+                        pdp[i].cid = i + 1;
+                        pthread_mutex_unlock(&pdp[i].mutex);
+                        requestOrSendDataCallList(channelID, pdn[i].nCid, &t);
+                        return;
+                    }
+                } else if (i < 3) {
+                    putPDP(i);
+                }
+            }
+        } else {
+            int i;
+            for (i = 0; i < 3; i++) {
+                putPDP(i);
+                putPDP(getExtraPDPNum(i));
+            }
+        }
+    }
+
     if (ATch_type[channelID]) {
-        if (isCSFB() && s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
+        if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
             RILLOGD("requestSetupDataCall s_sim_num = %d", s_sim_num);
             snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,1", s_sim_num);
             err = at_send_command(ATch_type[channelID], cmd, NULL );
@@ -2607,6 +2831,9 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
         }
 
         if (!IsLte || is_default_bearer) {
+            if(is_default_bearer){
+                snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
+            } else {
             snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"%s\",\"%s\",\"\",0,0", index+1, pdp_type, apn);
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0){
@@ -2623,9 +2850,6 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
                 snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
                 at_send_command(ATch_type[channelID], cmd, NULL);
             }
-            if(is_default_bearer){
-                snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
-            } else {
                 snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"PPP\",%d", index + 1);
             }
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
@@ -2785,8 +3009,14 @@ retrycgatt:
                     if (err >= 0) {
                         err = at_tok_nextint(&line,&failCause);
                         if (err >= 0) {
-                            //128: network reject
-                            if (failCause == 128 && !strcmp(pdp_type,"IPV4V6")) {
+                            if (failCause == 288 && nRetryTimes < 5) {
+                                 RILLOGD("Data Active failed with error cause 288 and retrying...");
+                                 putPDP(index);
+                                 line = NULL;
+                                 sleep(1);
+                                 nRetryTimes++;
+                                 goto RETRY;
+                             } else if (failCause == 128 && !strcmp(pdp_type,"IPV4V6")) { //128: network reject
                                 ret = doIPV4_IPV6_Fallback(channelID, index, data, qos_state);
                                 if (ret == false) {
                                     goto error;
@@ -2839,6 +3069,8 @@ retrycgatt:
                 ip_type = atoi(prop);
 
                 if (fbCause == 52 || (fbCause == 0 && ip_type != IPV4V6)) {
+
+                    if( !in4G || fbCause == 52){
 
                     if (ip_type == IPV4) {
                         pdp_type = "IPV6";
@@ -2898,6 +3130,7 @@ retrycgatt:
                     pthread_mutex_lock(&pdp[index].mutex);
                     pdp[index].cid = index + 1;
                     pthread_mutex_unlock(&pdp[index].mutex);
+                  }
                 }
             } else if (!strcmp(pdp_type,"IPV4+IPV6")) {
                 //IPV6
@@ -6677,6 +6910,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES
                 || request == RIL_REQUEST_OEM_HOOK_RAW
                 || request == RIL_REQUEST_SIM_OPEN_CHANNEL
+                || request == RIL_REQUEST_SET_INITIAL_ATTACH_APN
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
@@ -7762,6 +7996,95 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 at_response_free(p_response);
                 break;
             }
+        case RIL_REQUEST_SET_INITIAL_ATTACH_APN:
+        {
+        char cmd[128] = { 0 };
+        char qos_state[PROPERTY_VALUE_MAX] = { 0 };
+        int initial_attach_id = 1;
+        p_response = NULL;
+        int need_ipchange = 0;
+        if (initialAttachApn == NULL) {
+            initialAttachApn = (RIL_InitialAttachApn *) malloc(
+                sizeof(RIL_InitialAttachApn));
+            memset(initialAttachApn, 0, sizeof(RIL_InitialAttachApn));
+        }
+		if (data != NULL) {
+			RIL_InitialAttachApn *pIAApn = (RIL_InitialAttachApn *) data;
+			if (pIAApn->apn != NULL) {
+				if((initialAttachApn->apn != NULL) && (strcmp(initialAttachApn->apn,pIAApn->apn) == 0)){
+					need_ipchange = 1;
+					free(initialAttachApn->apn);
+				}
+				initialAttachApn->apn = (char *) malloc(
+						strlen(pIAApn->apn) + 1);
+				strcpy(initialAttachApn->apn, pIAApn->apn);
+			}
+
+			if (pIAApn->protocol != NULL) {
+                if(need_ipchange  && (initialAttachApn->protocol != NULL) && strcmp(initialAttachApn->protocol,pIAApn->protocol) ){
+                    need_ipchange  = 2;
+                    free(initialAttachApn->protocol);
+                }
+				initialAttachApn->protocol = (char *) malloc(
+						strlen(pIAApn->protocol) + 1);
+
+				strcpy(initialAttachApn->protocol, pIAApn->protocol);
+			}
+
+			initialAttachApn->authtype = pIAApn->authtype;
+
+			if (pIAApn->username != NULL) {
+				initialAttachApn->username = (char *) malloc(
+						strlen(pIAApn->username) + 1);
+				strcpy(initialAttachApn->username, pIAApn->username);
+			}
+
+			if (pIAApn->password != NULL) {
+				initialAttachApn->password = (char *) malloc(
+						strlen(pIAApn->password) + 1);
+				strcpy(initialAttachApn->password, pIAApn->password);
+			}
+		}
+
+
+        RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_APN apn = %s",
+                initialAttachApn->apn);
+        RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_APN protocol = %s",
+                initialAttachApn->protocol);
+        RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_APN authtype = %d",
+                initialAttachApn->authtype);
+        RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_APN username = %s",
+                initialAttachApn->username);
+        RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_APN password = %s",
+                initialAttachApn->password);
+
+        snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"%s\",\"%s\",\"\",0,0",
+                initial_attach_id, initialAttachApn->protocol,
+                initialAttachApn->apn);
+        err = at_send_command(ATch_type[channelID], cmd, &p_response);
+
+        snprintf(cmd, sizeof(cmd), "AT+CGPCO=0,\"%s\",\"%s\",%d,%d",
+                initialAttachApn->username, initialAttachApn->password,
+                initial_attach_id, initialAttachApn->authtype);
+        err = at_send_command(ATch_type[channelID], cmd, NULL);
+
+        /* Set required QoS params to default */
+        property_get("persist.sys.qosstate", qos_state, "0");
+        if (!strcmp(qos_state, "0")) {
+            snprintf(cmd, sizeof(cmd),
+                    "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0",
+                    initial_attach_id);
+            err = at_send_command(ATch_type[channelID], cmd, NULL);
+        }
+        if(need_ipchange == 2){
+            at_send_command(ATch_type[channelID], "AT+SPIPTYPECHANGE=1", NULL);
+        }
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+
+        at_response_free(p_response);
+        break;
+    }
+
 
 #if defined (RIL_SPRD_EXTENSION)
         case RIL_REQUEST_GET_CURRENT_VIDEOCALLS:
@@ -9117,18 +9440,16 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
         RILLOGD("attachGPRS, put pdp %d", attachPdpIndex);
         attachPdpIndex = -1;
     }
-    if (!isCSFB() || (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10)) {
+    if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
         err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
         if (err < 0 || p_response->success == 0) {
         goto error;
         }
-        if (isCSFB()) {
-            RILLOGD("s_sim_num = %d", s_sim_num);
-            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
-            err = at_send_command(ATch_type[channelID], cmd, NULL );
-        }
+        RILLOGD("s_sim_num = %d", s_sim_num);
+        snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
+        err = at_send_command(ATch_type[channelID], cmd, NULL );
     }
-    if (isCSFB() && s_testmode != 10) {
+    if (s_testmode != 10) {
         at_send_command(ATch_type[channelID], "AT+CLSSPDT = 1", NULL);
     }
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
@@ -9325,7 +9646,7 @@ static void initializeCallback(void *param)
 
     /* set some auto report AT commend on or off */
 
-    at_send_command(ATch_type[channelID], "AT+SPAURC=\"10011011111000000000100001000011111111\"", NULL);
+    at_send_command(ATch_type[channelID], "AT+SPAURC=\"100110111110000000001000010000111111110001000000\"", NULL);
 
     /* SPRD : for svlte & csfb @{ */
     if (isSvLte()) {
@@ -9668,7 +9989,8 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         char *p,*tmp;
         int lteState;
         int commas=0;
-
+        int skip ;
+        int net_type = -1;
         line = strdup(s);
         tmp = line;
         at_tok_start(&tmp);
@@ -9689,10 +10011,25 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             // report LTE_READY or not, in case of +CEREG:2;
             if (commas == 0 && lteState == 2) {
                 //RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteState, 4);
+            }else if (commas == 0 && lteState == 0) {
+                in4G = 0;
+                bLteDetached = true;
             }
         }
 
         if (lteState == 1 || lteState == 5) {
+            if(commas >= 3){
+                err = at_tok_nexthexint(&tmp,&skip);
+                if (err < 0) goto out;
+                err = at_tok_nexthexint(&tmp,&skip);
+                if (err < 0) goto out;
+                err = at_tok_nextint(&tmp, &net_type);
+                if (err < 0) goto out;
+            }
+            if(net_type == 7){
+                in4G = 1;
+            }
+            RILLOGD("requestRegistration net_type is %d",net_type);
             pthread_mutex_lock(&s_lte_attach_mutex);
             if (sLteRegState == STATE_OUT_OF_SERVICE) {
                 pthread_cond_signal(&s_lte_attach_cond);
