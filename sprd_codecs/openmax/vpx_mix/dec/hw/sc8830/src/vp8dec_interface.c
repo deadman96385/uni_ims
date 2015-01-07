@@ -244,6 +244,10 @@ void VP8DecReleaseRefBuffers(VPXHandle *vpxHandle)
             cm->ref_count[buffer_index] = 0;
         }
     }
+
+    cm->last_frame.pBufferHeader = NULL;
+    cm->golden_frame.pBufferHeader = NULL;
+    cm->alt_ref_frame.pBufferHeader = NULL;
 }
 
 /**---------------------------------------------------------------------------*
