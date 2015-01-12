@@ -42,6 +42,10 @@ PUBLIC void MP4DecSetCurRecPic(MP4Handle *mp4Handle, uint8	*pFrameY,uint8 *pFram
     rec_buf_ptr->pBufferHeader = pBufferHeader;
 }
 
+PUBLIC void MP4DecSetReferenceYUV(MP4Handle *mp4Handle, uint8 *pFrameY)
+{
+}
+
 void MP4DecReleaseRefBuffers(MP4Handle *mp4Handle)
 {
     Mp4DecObject *vo = (Mp4DecObject *) mp4Handle->videoDecoderData;

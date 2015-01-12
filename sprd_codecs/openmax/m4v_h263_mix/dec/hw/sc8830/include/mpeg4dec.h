@@ -74,6 +74,7 @@ void MP4DecSetPostFilter(MP4Handle *mp4Handle, int en);
 void MP4DecReleaseRefBuffers(MP4Handle *mp4Handle);
 int MP4DecGetLastDspFrm(MP4Handle *mp4Handle,void **pOutput);
 void MP4DecSetCurRecPic(MP4Handle *mp4Handle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader);
+void MP4DecSetReferenceYUV(MP4Handle *mp4Handle, uint8 *pFrameY);
 void Mp4GetVideoDimensions(MP4Handle *mp4Handle, int32 *display_width, int32 *display_height);
 void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *height);
 MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *max_width, int32 *max_height);

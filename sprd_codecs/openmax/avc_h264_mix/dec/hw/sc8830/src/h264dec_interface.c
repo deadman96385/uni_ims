@@ -201,6 +201,11 @@ MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, MMDecCapability *Capabilit
     return MMDEC_OK;
 }
 
+MMDecRet H264DecSetParameter(AVCHandle *avcHandle, MMDecVideoFormat * pVideoFormat)
+{
+    return MMDEC_OK;
+}
+
 MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideoFormat * pVideoFormat)
 {
     H264DecObject*vo;
