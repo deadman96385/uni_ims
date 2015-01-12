@@ -33,25 +33,25 @@ MMEncRet H264EncGetCodecCapability(AVCHandle *avcHandle, MMEncCapability *Capabi
     {
         Capability->max_width = 1280;
         Capability->max_height = 1023; //720;
-        Capability->profile = AVC_BASELINE;
+        Capability->profile = AVC_HIGH;
         Capability->level = AVC_LEVEL3_1;
     } else if (codec_capability == 1)   //limited under 1080p
     {
         Capability->max_width = 1920;
         Capability->max_height = 1088;
-        Capability->profile = AVC_BASELINE;
+        Capability->profile = AVC_HIGH;
         Capability->level = AVC_LEVEL5_1;
     } else if (codec_capability == 2)   //limited under 1080p
     {
         Capability->max_width = 1920;
         Capability->max_height = 1088;
-        Capability->profile = AVC_BASELINE;
+        Capability->profile = AVC_HIGH;
         Capability->level = AVC_LEVEL5_1;
     } else
     {
         Capability->max_width = 352;
         Capability->max_height = 288;
-        Capability->profile = AVC_BASELINE;
+        Capability->profile = AVC_HIGH;
         Capability->level = AVC_LEVEL2;
     }
     return MMENC_OK;
@@ -271,7 +271,7 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
         vo->rc_gop_paras.intra_period = INTRA_PERIOD;
     } else
     {
-        vo->rc_gop_paras.intra_period = pConf->FrameRate;
+        vo->rc_gop_paras.intra_period = pConf->PFrames+1;
     }
 
     SCI_TRACE_LOW("%s, %d, intra_period: %d", __FUNCTION__, __LINE__, vo->rc_gop_paras.intra_period);
@@ -379,19 +379,15 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     img_ptr->stm_offset = 0;
     img_ptr->pYUVSrcFrame->i_frame = vo->g_nFrame_enc;
 
-    if ((1920 == vo->g_enc_image_ptr->width) && (1088 == vo->g_enc_image_ptr->height))
+    if (0 == (vo->g_nFrame_enc % vo->rc_gop_paras.intra_period))
     {
-        if (0 == (vo->g_nFrame_enc % vo->rc_gop_paras.intra_period))
-        {
-            img_ptr->pYUVSrcFrame->i_type = i_slice_type = SLICE_TYPE_I;
-        } else
-        {
-            img_ptr->pYUVSrcFrame->i_type = i_slice_type = SLICE_TYPE_P;
-        }
+        i_slice_type = SLICE_TYPE_I;
     } else
     {
-        img_ptr->pYUVSrcFrame->i_type = i_slice_type = ((pInput->vopType == 0) ? SLICE_TYPE_I : SLICE_TYPE_P);
+        i_slice_type = SLICE_TYPE_P;
     }
+    i_slice_type = (pInput->needIVOP ? SLICE_TYPE_I : i_slice_type);
+    img_ptr->pYUVSrcFrame->i_type = i_slice_type;
 
     if(vo->b_previous_frame_failed)
     {
@@ -449,6 +445,11 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
 
         i_nal_type = NAL_SLICE;
         i_nal_ref_idc = NAL_PRIORITY_HIGH;
+    }
+
+    if (i_global_qp == 0)
+    {
+        i_global_qp = 2;	//avoid level overflow in VLC module.
     }
     vo->prev_qp = i_global_qp;	// MUST HAVE prev_qp updated!!
 
@@ -528,6 +529,7 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
         img_ptr->slice_nr = 0;
         pOutput->strmSize = img_ptr->stm_offset;
         pOutput->pOutBuf = img_ptr->pOneFrameBitstream;
+        pOutput->vopType = (img_ptr->pYUVSrcFrame->i_type == SLICE_TYPE_I) ? 0 : 1;
     }
 
     //increase frame count

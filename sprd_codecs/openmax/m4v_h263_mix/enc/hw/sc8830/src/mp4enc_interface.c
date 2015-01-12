@@ -102,13 +102,14 @@ MMEncRet MP4EncSetConf(MP4Handle *mp4Handle, MMEncConfig *pConf)
 
     vol_mode_ptr->short_video_header	= pConf->h263En;
     vol_mode_ptr->ProfileAndLevel		= pConf->profileAndLevel;
+    vol_mode_ptr->PbetweenI = pConf->PFrames;
 
     vop_mode_ptr->FrameRate			= pConf->FrameRate;
     vop_mode_ptr->targetBitRate		= pConf->targetBitRate;
     vop_mode_ptr->RateCtrlEnable		= pConf->RateCtrlEnable;
 
-    SCI_TRACE_LOW("%s, %d, vop_mode_ptr->FrameRate: %d, vop_mode_ptr->targetBitRate: %d, vop_mode_ptr->RateCtrlEnable: %d",
-                  __FUNCTION__, __LINE__, vop_mode_ptr->FrameRate, vop_mode_ptr->targetBitRate, vop_mode_ptr->RateCtrlEnable);
+    SCI_TRACE_LOW("%s, %d, vol_mode_ptr->PbetweenI: %d, vop_mode_ptr->FrameRate: %d, vop_mode_ptr->targetBitRate: %d, vop_mode_ptr->RateCtrlEnable: %d",
+                  __FUNCTION__, __LINE__, vol_mode_ptr->PbetweenI, vop_mode_ptr->FrameRate, vop_mode_ptr->targetBitRate, vop_mode_ptr->RateCtrlEnable);
 
     vop_mode_ptr->StepI				= pConf->QP_IVOP;
     vop_mode_ptr->StepP				= pConf->QP_PVOP;
@@ -387,17 +388,16 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
 
     if(!frame_skip)
     {
-        if (!vo->g_enc_is_prev_frame_encoded_success)
+        if (!vo->g_enc_is_prev_frame_encoded_success || (vo->g_enc_p_frame_count == 0))
         {
             vop_mode_ptr->VopPredType = IVOP;
         }
         else
         {
-            vop_mode_ptr->VopPredType = (pInput->vopType == IVOP) ? IVOP : PVOP;
+            vop_mode_ptr->VopPredType = PVOP;
         }
 
-        pInput->vopType = vop_mode_ptr->VopPredType;
-
+        vop_mode_ptr->VopPredType = (pInput->needIVOP) ? IVOP : vop_mode_ptr->VopPredType;
         SCI_TRACE_LOW("g_nFrame_enc %d frame_type %d ", vo->g_nFrame_enc, vop_mode_ptr->VopPredType );
 
         vop_mode_ptr->pYUVSrcFrame->imgY = pInput->p_src_y_phy;
@@ -472,6 +472,7 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
 
         pOutput->strmSize = (VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF, "read total bits") + 7)>>3;
         pOutput->pOutBuf = vop_mode_ptr->pOneFrameBitstream;
+        pOutput->vopType = vop_mode_ptr->VopPredType;
 
         vo->g_rc_data_ptr->quant = vop_mode_ptr->StepSize;
         vo->g_rc_data_ptr->length = pOutput->strmSize;

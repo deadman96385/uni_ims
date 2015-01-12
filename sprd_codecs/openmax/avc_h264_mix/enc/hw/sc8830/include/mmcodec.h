@@ -159,6 +159,7 @@ typedef struct
     uint32	RateCtrlEnable;            // 0 : disable  1: enable
     uint32	targetBitRate;             // 400 ~  (bit/s)
     uint32  FrameRate;
+    uint32  PFrames;
 
     uint32	vbv_buf_size;				//vbv buffer size, to determine the max transfer delay
 
@@ -181,7 +182,7 @@ typedef struct
     uint8   *p_src_u_phy;
     uint8   *p_src_v_phy;
 
-    int32	vopType;					//vopµƒ¿‡–Õ  0 - I Frame    1 - P frame
+    BOOLEAN	needIVOP;
     int32	time_stamp;					//time stamp
     int32   bs_remain_len;				//remained bitstream length
     int32 	channel_quality;			//0: good, 1: ok, 2: poor
@@ -196,6 +197,7 @@ typedef struct
 {
     uint8	*pOutBuf;					//Output buffer
     int32	strmSize;					//encoded stream size, if 0, should skip this frame.
+    int32	vopType;					//0: I VOP, 1: P VOP, 2: B VOP
 } MMEncOut;
 
 /**---------------------------------------------------------------------------*
