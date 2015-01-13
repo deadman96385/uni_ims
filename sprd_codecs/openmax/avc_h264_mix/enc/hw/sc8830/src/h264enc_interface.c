@@ -262,6 +262,7 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
     enc_config->FrameRate		= pConf->FrameRate;
     enc_config->targetBitRate		= pConf->targetBitRate;
     enc_config->RateCtrlEnable	= pConf->RateCtrlEnable;
+    enc_config->PrependSPSPPSEnalbe = pConf->PrependSPSPPSEnalbe;
 
     enc_config->QP_IVOP		= pConf->QP_IVOP;
     enc_config->QP_PVOP		= pConf->QP_PVOP;
@@ -415,13 +416,13 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
 #endif
         }
 
-        if( img_ptr->frame_num == 0 )
+        if (enc_config->PrependSPSPPSEnalbe)
         {
-            i_nal_type = NAL_SLICE_IDR;
-        } else
-        {
-            i_nal_type = NAL_SLICE;
+            img_ptr->stm_offset += (16+8);
         }
+
+        img_ptr->frame_num = 0;
+        i_nal_type = NAL_SLICE_IDR;
         i_nal_ref_idc = NAL_PRIORITY_HIGHEST;
     } else if (i_slice_type == SLICE_TYPE_P)
     {
@@ -555,6 +556,12 @@ ENC_EXIT:
     {
         vo->g_nFrame_enc++;
     }
+    if (enc_config->PrependSPSPPSEnalbe && (img_ptr->i_nal_type == NAL_SLICE_IDR))
+    {
+        //copy sps and pps header
+        SCI_MEMCPY(pOutput->pOutBuf, vo->sps_header, 16);
+        SCI_MEMCPY(pOutput->pOutBuf + 16, vo->pps_header, 8);
+    }
 
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
@@ -629,6 +636,25 @@ MMEncRet H264EncGenHeader(AVCHandle *avcHandle, MMEncOut *pOutput, int is_sps)
 HEADER_EXIT:
 
     SCI_TRACE_LOW("%s, %d, exit generating header, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    if (is_sps)
+    {
+        if (pOutput->strmSize != 16)
+        {
+            SCI_TRACE_LOW ("%s, %d, sps header size is not equal to 16 bytes");
+        } else
+        {
+            SCI_MEMCPY(vo->sps_header, img_ptr->pOneFrameBitstream, pOutput->strmSize);
+        }
+    } else
+    {
+        if (pOutput->strmSize != 8)
+        {
+            SCI_TRACE_LOW ("%s, %d, pps header size is not equal to 16 bytes");
+        } else
+        {
+            SCI_MEMCPY(vo->pps_header, img_ptr->pOneFrameBitstream, pOutput->strmSize);
+        }
+    }
 
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
