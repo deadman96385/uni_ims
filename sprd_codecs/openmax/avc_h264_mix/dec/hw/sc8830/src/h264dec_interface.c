@@ -392,9 +392,9 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
         dec_input_ptr->dataLen = vo->g_stream_offset + vo->g_nalu_ptr->len + destuffing_num;
 
-        if( (MMDEC_ERROR == ret) || vo->frame_dec_finish)//dec_output.frameEffective
+        if( (ret != MMDEC_OK) || vo->frame_dec_finish)//dec_output.frameEffective
         {
-            if (MMDEC_ERROR == ret)
+            if (ret == MMDEC_ERROR)
             {
                 dec_input_ptr->dataLen = bs_buffer_length;
 
@@ -415,10 +415,8 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
                 {
                     ret = MMDEC_ERROR;
                 }
-
-                vo->g_dec_picture_ptr =NULL; //Added for bug352453
             }
-
+            vo->g_dec_picture_ptr =NULL; //Added for bug352453
             break;	//break loop.
         }
 
