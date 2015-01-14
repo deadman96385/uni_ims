@@ -303,6 +303,7 @@ static int getMaxPDPNum(void);
 static int getExtraPDPNum(int index);
 static void copyDataReponse(RIL_Data_Call_Response_v9* pSource, RIL_Data_Call_Response_v9* pDest);
 static void getSIMStatusAgainForSimBusy();
+static int DeactiveDataConnectionByCid(int cid);
 static bool hasSimBusy = false;
 
 /*** Static Variables ***/
@@ -10056,7 +10057,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         char *p;
         char *tmp;
         int commas;
-        int skip;
+        int cid;
         int end_status;
         int cc_cause;
 
@@ -10069,7 +10070,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         for (p = tmp; *p != '\0' ;p++) {
             if (*p == ',') commas++;
         }
-        err = at_tok_nextint(&tmp, &skip);
+        err = at_tok_nextint(&tmp, &cid);
         if (err < 0) goto out;
 
         skipNextComma(&tmp);
@@ -10088,6 +10089,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         }
         if(commas == 4) { /*GPRS reply 5 parameters*/
             if(end_status != 29) {
+                if(end_status == 104){
+                    RIL_requestTimedCallback(DeactiveDataConnectionByCid, cid, NULL);
+                }
                 RIL_requestTimedCallback (onDataCallListChanged, NULL, NULL);
                 RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED,
                         NULL, 0);
@@ -11545,3 +11549,32 @@ static void getSIMStatusAgainForSimBusy() {
     return;
 }
 
+static int DeactiveDataConnectionByCid(int cid){
+		ATResponse *p_response = NULL;
+		char cmd[30];
+		int err=0;
+		int ret = 1;
+
+		RILLOGD("DeactiveDataConnectionByCid, deactive cid %d",cid);
+		if (cid <= 0){
+		return 0;
+		}
+		int channel = 0;
+		channel =getChannel();
+
+		if(channel < 0) {
+		return 0;
+		}
+
+		snprintf(cmd,sizeof(cmd),"AT+CGACT=0,%d",cid);
+		RILLOGD("DeactiveDataConnect cmd %s",cmd);
+		err = at_send_command(ATch_type[channel], cmd, &p_response);
+		if (err < 0 || p_response->success == 0){
+		RILLOGD("cmd %s response NOK",cmd);
+		ret = 0;
+		}
+		putChannel(channel);
+		putPDP(cid -1);
+		at_response_free(p_response);
+		return ret;
+}
