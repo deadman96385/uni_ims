@@ -6076,7 +6076,7 @@ static void requestSendAT(int channelID, void *data, size_t datalen, RIL_Token t
         if (pdu == NULL) {
             RILLOGE("SNVM: cmd is %s pdu is NULL !", cmd);
             strlcat(buf, "\r\n", sizeof(buf));
-            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, buf, strlen(buf)+1);
+            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE,&buf, sizeof(char*));
             return;
         }
 
@@ -6091,7 +6091,7 @@ static void requestSendAT(int channelID, void *data, size_t datalen, RIL_Token t
     if (err < 0 || p_response->success == 0) {
         strlcat(buf, p_response->finalResponse, sizeof(buf));
         strlcat(buf, "\r\n", sizeof(buf));
-        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, buf, strlen(buf)+1);
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, &buf, sizeof(char*));
     } else {
         p_cur = p_response->p_intermediates;
         for (i=0; p_cur != NULL; p_cur = p_cur->p_next,i++) {
@@ -6100,7 +6100,7 @@ static void requestSendAT(int channelID, void *data, size_t datalen, RIL_Token t
         }
         strlcat(buf, p_response->finalResponse, sizeof(buf));
         strlcat(buf, "\r\n", sizeof(buf));
-        RIL_onRequestComplete(t, RIL_E_SUCCESS, buf, strlen(buf)+1);
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, &buf, sizeof(char*));
         if(!strncasecmp(at_cmd, "AT+SFUN=5", strlen("AT+SFUN=5"))){
             setRadioState(channelID, RADIO_STATE_OFF);
         }
@@ -7573,8 +7573,10 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 for (i = (datalen / sizeof (char *)), cur = (const char **)data ;
                         i > 0 ; cur++, i --) {
                     RILLOGD("> '%s'", *cur);
+                    break;
                 }
-
+                RILLOGD(">>> %s", *cur);
+                requestSendAT(channelID, (void *)*cur, datalen, t);
                 /* echo back strings */
                 RIL_onRequestComplete(t, RIL_E_SUCCESS, data, datalen);
                 break;
