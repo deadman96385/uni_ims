@@ -118,23 +118,27 @@ MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int
 MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 {
     H264DecObject *vo = (H264DecObject *)avcHandle->videoDecoderData;
-    DEC_SPS_T *sps_ptr = &(vo->g_sps_array_ptr[0]);
+    DEC_SPS_T *sps_ptr = NULL;
     int32 aligned_width, aligned_height;
+
+    if (pDecInfo == NULL)
+    {
+        return (MMDEC_PARAM_ERROR);
+    }
+
+    if (vo->g_sps_array_ptr && vo->g_sps_ptr && (vo->g_sps_ptr->seq_parameter_set_id < MAX_SPS))
+    {
+        sps_ptr = &(vo->g_sps_array_ptr[vo->g_sps_ptr->seq_parameter_set_id]);
+    }
 
     if((sps_ptr == NULL) || (sps_ptr->vui_seq_parameters == NULL))
     {
         return (MMDEC_ERROR);
     }
 
-//    SCI_TRACE_LOW("%s, %d, aligned_width: %d, aligned_height: %d", __FUNCTION__, __LINE__, aligned_width, aligned_height);
-
-    if (pDecInfo == NULL)
-    {
-        return(MMDEC_PARAM_ERROR);
-    }
-
     aligned_width =  (sps_ptr->pic_width_in_mbs_minus1 + 1) * 16;
     aligned_height = (sps_ptr->pic_height_in_map_units_minus1 + 1) * 16;
+//    SCI_TRACE_LOW("%s, %d, aligned_width: %d, aligned_height: %d", __FUNCTION__, __LINE__, aligned_width, aligned_height);
 
     pDecInfo->picWidth        = aligned_width;
     pDecInfo->picHeight       = aligned_height;
