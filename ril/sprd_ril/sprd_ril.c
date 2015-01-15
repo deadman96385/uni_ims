@@ -6062,6 +6062,7 @@ static void requestSendAT(int channelID, void *data, size_t datalen, RIL_Token t
     ATLine *p_cur = NULL;
     char *cmd;
     char *pdu;
+    char *response[1]={NULL};   
 
     if(at_cmd == NULL) {
         RILLOGE("Invalid AT command");
@@ -6076,7 +6077,8 @@ static void requestSendAT(int channelID, void *data, size_t datalen, RIL_Token t
         if (pdu == NULL) {
             RILLOGE("SNVM: cmd is %s pdu is NULL !", cmd);
             strlcat(buf, "\r\n", sizeof(buf));
-            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE,&buf, sizeof(char*));
+            response[0] = buf;
+            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE,response, sizeof(char*));
             return;
         }
 
@@ -6091,7 +6093,8 @@ static void requestSendAT(int channelID, void *data, size_t datalen, RIL_Token t
     if (err < 0 || p_response->success == 0) {
         strlcat(buf, p_response->finalResponse, sizeof(buf));
         strlcat(buf, "\r\n", sizeof(buf));
-        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, &buf, sizeof(char*));
+        response[0] = buf;
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, response, sizeof(char*));
     } else {
         p_cur = p_response->p_intermediates;
         for (i=0; p_cur != NULL; p_cur = p_cur->p_next,i++) {
@@ -6100,7 +6103,8 @@ static void requestSendAT(int channelID, void *data, size_t datalen, RIL_Token t
         }
         strlcat(buf, p_response->finalResponse, sizeof(buf));
         strlcat(buf, "\r\n", sizeof(buf));
-        RIL_onRequestComplete(t, RIL_E_SUCCESS, &buf, sizeof(char*));
+        response[0] = buf;
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, response, sizeof(char*));
         if(!strncasecmp(at_cmd, "AT+SFUN=5", strlen("AT+SFUN=5"))){
             setRadioState(channelID, RADIO_STATE_OFF);
         }
@@ -6914,7 +6918,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_CHANGE_SIM_PIN
                 || request == RIL_REQUEST_CHANGE_SIM_PIN2
                 || request == RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES
-                || request == RIL_REQUEST_OEM_HOOK_RAW
+                || request == RIL_REQUEST_OEM_HOOK_STRINGS
                 || request == RIL_REQUEST_SIM_OPEN_CHANNEL
                 || request == RIL_REQUEST_SET_INITIAL_ATTACH_APN
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
