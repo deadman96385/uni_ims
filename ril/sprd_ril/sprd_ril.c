@@ -434,6 +434,7 @@ static int activePDN;
 static RIL_InitialAttachApn *initialAttachApn = NULL;
 static int in4G;
 static bool bLteDetached = false;
+static int isTest;
 
 static void queryAllActivePDN(int channelID) {
     int err = 0;
@@ -1559,7 +1560,27 @@ error:
     at_response_free(p_response);
 }
 
+static int getSimMode(int channelID){
+    int err;
+    int sim_type = 0;
+    ATResponse *p_response;
+    char *line;
 
+    err = at_send_command_singleline(ATch_type[channelID], "AT^CARDMODE", "^CARDMODE:", &p_response);
+    if (err < 0 || p_response->success == 0) {
+        goto done;
+    }
+    line = p_response->p_intermediates->line;
+    err = at_tok_start(&line);
+    if (err < 0) goto done;
+
+    err = at_tok_nextint(&line, &sim_type);
+    if (err < 0) goto done;
+
+done:
+    at_response_free(p_response);
+    return sim_type;
+}
 
 /** do post-AT+CFUN=1 initialization */
 static void onRadioPowerOn(int channelID)
@@ -1586,6 +1607,11 @@ static void onSIMReady(int channelID)
     at_send_command(ATch_type[channelID],"AT+CNMI=3,2,2,1,1", NULL);
 
     getSmsState(channelID);
+
+    int simMode = getSimMode(channelID);
+    RILLOGD("onSimPresent simMode = %d",simMode);
+    isTest = ((simMode == 3) || (simMode == 4));
+    RILLOGD("onSimPresent isTest = %d",isTest);
 }
 
 static void requestSIMPower(int channelID, void *data, size_t datalen, RIL_Token t)
@@ -3195,67 +3221,85 @@ retrycgatt:
 
                 if (fbCause == 52 || (fbCause == 0 && ip_type != IPV4V6)) {
 
-                    if( !in4G || fbCause == 52){
+                    if ((!in4G && !isTest) || fbCause == 52) {
 
-                    if (ip_type == IPV4) {
-                        pdp_type = "IPV6";
-                        want_ip_type = IPV6;
-                    } else if (ip_type == IPV6) {
-                        pdp_type = "IP";
-                        want_ip_type = IPV4;
-                    }
+                            if (ip_type == IPV4) {
+                                pdp_type = "IPV6";
+                                want_ip_type = IPV6;
+                            } else if (ip_type == IPV6) {
+                                pdp_type = "IP";
+                                want_ip_type = IPV4;
+                            }
 
-                    index = getPDPByIndex(getExtraPDPNum(index));
-                    if(index < 0 || pdp[index].cid >= 0)
-                        goto error;
+                            index = getPDPByIndex(getExtraPDPNum(index));
+                            if (index < 0 || pdp[index].cid >= 0)
+                                goto error;
 
-                    snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
-                    at_send_command(ATch_type[channelID], cmd, NULL);
+                            snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d",
+                                    index + 1);
+                            at_send_command(ATch_type[channelID], cmd, NULL);
 
-                    snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"%s\",\"%s\",\"\",0,0", index+1, pdp_type, apn);
-                    err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                    if (err < 0 || p_response->success == 0){
-                        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                        goto error;
-                    }
+                            snprintf(cmd, sizeof(cmd),
+                                    "AT+CGDCONT=%d,\"%s\",\"%s\",\"\",0,0",
+                                    index + 1, pdp_type, apn);
+                            err = at_send_command(ATch_type[channelID], cmd,
+                                    &p_response);
+                            if (err < 0 || p_response->success == 0) {
+                                s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+                                goto error;
+                            }
 
-                    snprintf(cmd, sizeof(cmd), "AT+CGPCO=0,\"%s\",\"%s\",%d,%d", username, password,index+1,atoi(authtype));
-                    at_send_command(ATch_type[channelID], cmd, NULL);
+                            snprintf(cmd, sizeof(cmd),
+                                    "AT+CGPCO=0,\"%s\",\"%s\",%d,%d", username,
+                                    password, index + 1, atoi(authtype));
+                            at_send_command(ATch_type[channelID], cmd, NULL);
 
-                    /* Set required QoS params to default */
-                    property_get("persist.sys.qosstate", qos_state, "0");
-                    if(!strcmp(qos_state, "0")) {
-                        snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
-                        at_send_command(ATch_type[channelID], cmd, NULL);
-                    }
+                            /* Set required QoS params to default */
+                            property_get("persist.sys.qosstate", qos_state,
+                                    "0");
+                            if (!strcmp(qos_state, "0")) {
+                                snprintf(cmd, sizeof(cmd),
+                                        "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0",
+                                        index + 1);
+                                at_send_command(ATch_type[channelID], cmd,
+                                        NULL);
+                            }
 
-                    snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
-                    err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                    if (err < 0 || p_response->success == 0) {
-                        RILLOGD("Fallback 2 pdp failed,but still as a success");
-                        putPDP(index);
-                        goto done;
-                    }
-                    /**********************************/
-                    /* Check ip type after fall back  */
-                    /**********************************/
-                    snprintf(cmd, sizeof(cmd), "net.%s%d.ip_type", eth, index);
-                    property_get(cmd, prop, "0");
-                    fb_ip_type = atoi(prop);
-                    RILLOGD("Fallback 2 pdp: want_ip_type = %d, fb_ip_type = %d",
-                            want_ip_type, fb_ip_type);
-                    if (fb_ip_type != want_ip_type) {
-                        RILLOGD("Fallback pdp type mismatch, do deactive");
-                        snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
-                        at_send_command(ATch_type[channelID], cmd, &p_response);
-                        putPDP(index);
-                        goto done;
-                    }
+                            snprintf(cmd, sizeof(cmd),
+                                    "AT+CGDATA=\"M-ETHER\",%d", index + 1);
+                            err = at_send_command(ATch_type[channelID], cmd,
+                                    &p_response);
+                            if (err < 0 || p_response->success == 0) {
+                                RILLOGD(
+                                        "Fallback 2 pdp failed,but still as a success");
+                                putPDP(index);
+                                goto done;
+                            }
+                            /**********************************/
+                            /* Check ip type after fall back  */
+                            /**********************************/
+                            snprintf(cmd, sizeof(cmd), "net.%s%d.ip_type", eth,
+                                    index);
+                            property_get(cmd, prop, "0");
+                            fb_ip_type = atoi(prop);
+                            RILLOGD(
+                                    "Fallback 2 pdp: want_ip_type = %d, fb_ip_type = %d",
+                                    want_ip_type, fb_ip_type);
+                            if (fb_ip_type != want_ip_type) {
+                                RILLOGD(
+                                        "Fallback pdp type mismatch, do deactive");
+                                snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d",
+                                        index + 1);
+                                at_send_command(ATch_type[channelID], cmd,
+                                        &p_response);
+                                putPDP(index);
+                                goto done;
+                            }
 
-                    pthread_mutex_lock(&pdp[index].mutex);
-                    pdp[index].cid = index + 1;
-                    pthread_mutex_unlock(&pdp[index].mutex);
-                  }
+                            pthread_mutex_lock(&pdp[index].mutex);
+                            pdp[index].cid = index + 1;
+                            pthread_mutex_unlock(&pdp[index].mutex);
+                        }
                 }
             } else if (!strcmp(pdp_type,"IPV4+IPV6")) {
                 //IPV6
@@ -3675,6 +3719,8 @@ static void onSimAbsent(void *param)
                                     NULL, 0);
     if (*sim_state == SIM_DROP)
         RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_DROP, NULL, 0);
+
+    isTest = 0;
 }
 
 static void onSimPresent(void *param)
@@ -9268,6 +9314,7 @@ setRadioState(int channelID, RIL_RadioState newState)
          * will need to be dispatched on the request thread
          */
         if (sState == RADIO_STATE_SIM_READY) {
+
             onSIMReady(channelID);
         } else if (sState == RADIO_STATE_SIM_NOT_READY) {
             onRadioPowerOn(channelID);
