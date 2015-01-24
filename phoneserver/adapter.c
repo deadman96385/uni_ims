@@ -330,7 +330,7 @@ const struct cmd_table multi_at_cmd_cvt_table[] = {
         cvt_cgact_deact_req, 40},
     {AT_CMD_CFUN, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+SFUN=4"),
         cvt_generic_cmd_req, 50},
-    {AT_CMD_CFUN, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+SFUN=5"),
+    {AT_CMD_CFUN, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+SFUN=5"),
         cvt_generic_cmd_req, 50},
     {AT_CMD_SAUTOATT_SET, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+SAUTOATT="),
         cvt_generic_cmd_req, 50},
