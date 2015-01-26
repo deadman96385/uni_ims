@@ -41,7 +41,7 @@ using namespace at_perm;
 
 #define AUD_RCRD_PCM        AUDIO_FORMAT_PCM_16_BIT
 #define AUD_RCRD_CHL        AUDIO_CHANNEL_IN_MONO
-#define AUD_RCRD_FRAME_BUF  2 * 1024
+#define AUD_RCRD_FRAME_BUF  5 * 1024
 //
 
 //------------------------------------------------------------------------------
