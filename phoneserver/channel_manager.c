@@ -797,14 +797,6 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
         me->itsCmux[i].ops = cmux_get_operations();
         me->itsCmux[i].ops->cmux_free(&me->itsCmux[i]);
         PHS_LOGD("CHNMNG: open mux:%s",muxname);
-retry:
-        fd = open(muxname, O_RDWR);
-        if(fd < 0) {
-			PHS_LOGE("Phoneserver exit: open %s failed, errno = %d (%s)\n ", muxname, errno, strerror(errno));
-			if (errno == EAGAIN)
-			   goto retry;
-			exit(-1);
-        }
     }
 
     if(!strcmp(modem, "l")) {
