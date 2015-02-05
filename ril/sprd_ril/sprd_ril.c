@@ -1799,7 +1799,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         if (err < 0 || p_response->success == 0)
             RILLOGE("GPRS auto attach failed!");
 
-        if (strcmp(s_modem, "l")&& isSvLte()) {
+        if (!(isSvLte()&& !strcmp(s_modem, "l") ) ) {
             err = at_send_command(ATch_type[channelID],  "AT+SFUN=4", &p_response);
         } else {
             if (isCSFB() && getSimType(channelID) != RIL_APPTYPE_USIM) {
