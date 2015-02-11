@@ -10710,11 +10710,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             RIL_CALL_CSFALLBACK *csfb_response = NULL;
             csfb_response = (RIL_CALL_CSFALLBACK *)alloca(sizeof(RIL_CALL_CSFALLBACK));
             csfb_response->id = response->id;
-            csfb_response->number = response->number;
+            csfb_response->number = "";
             g_csfb_processing = 0;
             RIL_onUnsolicitedResponse (RIL_UNSOL_CALL_CSFALLBACK_FINISH,
                     csfb_response,sizeof(RIL_CALL_CSFALLBACK));
-            RILLOGD("RIL_UNSOL_CALL_CSFALLBACK_FINISH, id: %d, number: %s", csfb_response->id, csfb_response->number);
+            RILLOGD("RIL_UNSOL_CALL_CSFALLBACK_FINISH, id: %d", csfb_response->id);
         }
 
         if(response->type == 0) {
