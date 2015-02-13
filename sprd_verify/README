@@ -1,0 +1,14 @@
+INTRO
+This repository contains three part:
+//test binary that verify fdl2_sign using libsprd_verify
+sprd_verify.c
+//libsprd_verify interface for hash verifying
+sec_boot.c
+//algorithm for signature verifying
+rsa: legency rsa function that use montgomery for speed which is not supported by aarch64
+rsa_sprd: porting from trustfirmware
+
+NOTES
+default algorithm is rsa_sprd
+if you use rsa, pls modify Android.mk:
+'USE_LEGENCY_RSA := true'
