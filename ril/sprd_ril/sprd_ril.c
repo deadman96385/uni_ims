@@ -2753,6 +2753,10 @@ RETRY:
                                     || !strcasecmp(strtok(pdn[i].strApn, "."),
                                             apn))) {
                         RILLOGD("Using default PDN");
+                        snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d,%d", pdn[i].nCid, 0);
+                        RILLOGD("clean up seth cmd = %s", cmd);
+                        err = at_send_command(ATch_type[channelID], cmd, &p_response);
+
                         snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d",
                                 pdn[i].nCid);
                         err = at_send_command(ATch_type[channelID], cmd,
