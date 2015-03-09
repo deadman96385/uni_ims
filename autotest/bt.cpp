@@ -51,6 +51,12 @@ static pthread_cond_t  sCondExit    = PTHREAD_COND_INITIALIZER;
 static int             sInqStatus   = BT_STATUS_INQUIRE_UNK;
 static bdremote_t      sRemoteDev[MAX_SUPPORT_RMTDEV_NUM];
 static int             sRemoteDevNum = 0;
+
+static int cb_counter;
+static int lock_count;
+static timer_t timer;
+static alarm_cb saved_callback;
+static void *saved_data;
 //------------------------------------------------------------------------------
 static void * btInquireThread( void *param );
 //------------------------------------------------------------------------------
@@ -59,6 +65,9 @@ static void * btInquireThread( void *param );
 static bluetooth_device_t* sBtDevice = NULL;
 static const bt_interface_t* sBtInterface = NULL;
 static bt_state_t sBtState = BT_STATE_OFF;
+static bool set_wake_alarm(uint64_t delay_millis, bool, alarm_cb cb, void *data);
+static int acquire_wake_lock(const char *);
+static int release_wake_lock(const char *);
 
 //------------------------------------------------------------------------------
 //BT Callbacks;
@@ -66,6 +75,13 @@ static bt_state_t sBtState = BT_STATE_OFF;
 void btDeviceFoundCallback(int num_properties, bt_property_t *properties);
 void btDiscoveryStateChangedCallback(bt_discovery_state_t state);
 void btAdapterStateChangedCallback(bt_state_t state);
+
+static bt_os_callouts_t stub = {
+  sizeof(bt_os_callouts_t),
+  set_wake_alarm,
+  acquire_wake_lock,
+  release_wake_lock,
+};
 
 static bt_callbacks_t btCallbacks = {
     sizeof(bt_callbacks_t),
@@ -87,6 +103,30 @@ static bt_callbacks_t btCallbacks = {
     NULL
 #endif
 };
+
+static bool set_wake_alarm(uint64_t delay_millis, bool, alarm_cb cb, void *data) {
+  saved_callback = cb;
+  saved_data = data;
+
+  struct itimerspec wakeup_time;
+  memset(&wakeup_time, 0, sizeof(wakeup_time));
+  wakeup_time.it_value.tv_sec = (delay_millis / 1000);
+  wakeup_time.it_value.tv_nsec = (delay_millis % 1000) * 1000000LL;
+  timer_settime(timer, 0, &wakeup_time, NULL);
+  return true;
+}
+
+static int acquire_wake_lock(const char *) {
+  if (!lock_count)
+    lock_count = 1;
+  return BT_STATUS_SUCCESS;
+}
+
+static int release_wake_lock(const char *) {
+  if (lock_count)
+    lock_count = 0;
+  return BT_STATUS_SUCCESS;
+}
 static char *btaddr2str(const bt_bdaddr_t *bdaddr, bdstr_t *bdstr)
 {
     char *addr = (char *) bdaddr->address;
@@ -232,7 +272,15 @@ static int btInit(void)
 	int retVal = (bt_status_t)sBtInterface->init(&btCallbacks);
 	DBGMSG("BT init: %d", retVal);
 	if((BT_STATUS_SUCCESS == retVal)||(BT_STATUS_DONE == retVal)){
-		return (0);
+		retVal = (bt_status_t)sBtInterface->set_os_callouts(&stub);
+		if((BT_STATUS_SUCCESS == retVal)||(BT_STATUS_DONE == retVal))
+		{
+			return (0);
+		}
+		else
+		{
+		    return (-1);
+		}
 	}else{
 		return (-1);
 	}
