@@ -5805,6 +5805,9 @@ static void requestSendUSSD(int channelID, void *data, size_t datalen, RIL_Token
     char *cmd;
     int len;
     int ret;
+    char *line = NULL;
+    int errNum = -1;
+    int errCode = -1;
 
     ussdRun = 1;
     ussdHexRequest = (char *)(data);
@@ -5817,7 +5820,20 @@ static void requestSendUSSD(int channelID, void *data, size_t datalen, RIL_Token
     }
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     free(cmd);
-    if (err < 0 || p_response->success == 0) {
+    if (err >= 0){
+        if (strStartsWith(p_response->finalResponse, "+CME ERROR:")) {
+            line = p_response->finalResponse;
+            errCode = at_tok_start(&line);
+            if (errCode >= 0) {
+                errCode = at_tok_nextint(&line, &errNum);
+            }
+        }
+    }
+    if (errNum == 254) {
+        RILLOGE("Failed to send ussd by FDN check");
+        ussdRun = 0;
+        RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
+    } else if (err < 0 || p_response->success == 0) {
         ussdRun = 0;
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     } else {
