@@ -2031,145 +2031,146 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
         return;
     }
 
-    if (!IsLte) {
-        for (p_cur = p_response->p_intermediates; p_cur != NULL;
-             p_cur = p_cur->p_next) {
-            char *line = p_cur->line;
-            int cid;
-            char *type;
-            char *apn;
-            char *address;
-            char cmd[PROPERTY_VALUE_MAX] = {0};
-            char eth[PROPERTY_VALUE_MAX] = {0};
-            char prop[PROPERTY_VALUE_MAX] = {0};
-            const int   dnslist_sz = 50;
-            char*       dnslist = alloca(dnslist_sz);
-            const char* separator = "";
-            int nn;
-
-            err = at_tok_start(&line);
-            if (err < 0)
-                goto error;
-
-            err = at_tok_nextint(&line, &cid);
-            if (err < 0)
-                goto error;
-
-            for (i = 0; i < n; i++) {
-                if (responses[i].cid == cid)
-                    break;
-            }
-
-            if (i >= n) {
-                /* details for a context we didn't hear about in the last request */
-                continue;
-            }
-
-            /* Assume no error */
-            responses[i].status = PDP_FAIL_NONE;
-
-            /* type */
-            err = at_tok_nextstr(&line, &out);
-            if (err < 0)
-                goto error;
-
-            responses[i].type = alloca(strlen(out) + 1);
-            strcpy(responses[i].type, out);
-
-            /* APN ignored for v5 */
-            err = at_tok_nextstr(&line, &out);
-            if (err < 0)
-                goto error;
-
-            if(!strcmp(s_modem, "t")) {
-                property_get(ETH_TD, eth, "veth");
-            } else if(!strcmp(s_modem, "w")) {
-                property_get(ETH_W, eth, "veth");
-            } else if(!strcmp(s_modem, "l")) {
-                property_get(ETH_L, eth, "veth");
-            }else {
-                RILLOGE("Unknown modem type, exit");
-                exit(-1);
-            }
-
-            snprintf(cmd, sizeof(cmd), "%s%d", eth, i);
-            responses[i].ifname = alloca(strlen(cmd) + 1);
-            strcpy(responses[i].ifname, cmd);
-
-            snprintf(cmd, sizeof(cmd), "net.%s%d.ip", eth, i);
-            property_get(cmd, prop, NULL);
-            responses[i].addresses = alloca(strlen(prop) + 1);
-            responses[i].gateways = alloca(strlen(prop) + 1);
-            strcpy(responses[i].addresses, prop);
-            strcpy(responses[i].gateways, prop);
-
-            dnslist[0] = 0;
-            for (nn = 0; nn < 2; nn++) {
-                snprintf(cmd, sizeof(cmd), "net.%s%d.dns%d", eth, i, nn+1);
-                property_get(cmd, prop, NULL);
-
-                /* Append the DNS IP address */
-                strlcat(dnslist, separator, dnslist_sz);
-                strlcat(dnslist, prop, dnslist_sz);
-                separator = " ";
-            }
-            responses[i].dnses = dnslist;
-
-            RILLOGD("status=%d",responses[i].status);
-            RILLOGD("suggestedRetryTime=%d",responses[i].suggestedRetryTime);
-            RILLOGD("cid=%d",responses[i].cid);
-            RILLOGD("active = %d",responses[i].active);
-            RILLOGD("type=%s",responses[i].type);
-            RILLOGD("ifname = %s",responses[i].ifname);
-            RILLOGD("address=%s",responses[i].addresses);
-            RILLOGD("dns=%s",responses[i].dnses);
-            RILLOGD("gateways = %s",responses[i].gateways);
-        }
-
-        at_response_free(p_response);
-
-
-        if(cid > 0) {
-            RILLOGD("requestOrSendDataCallList is called by SetupDataCall!");
-            for(i = 0; i < n; i++) {
-                if(responses[i].cid == cid) {
-                    RIL_onRequestComplete(*t, RIL_E_SUCCESS, &responses[i],
-                            sizeof(RIL_Data_Call_Response_v9));
-                    return;
-                }
-            }
-            if(i >= n) {
-                RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                return;
-            }
-        }
-
-        for(i = 0; i < n; i++) {
-            if(responses[i].active == 1) {
-                if (count != i) {
-                    responses[count].status = responses[i].status;
-                    responses[count].suggestedRetryTime = responses[i].suggestedRetryTime;
-                    responses[count].cid = responses[i].cid;
-                    responses[count].active = responses[i].active;
-                    responses[count].type = responses[i].type;
-                    responses[count].ifname = responses[i].ifname;
-                    responses[count].addresses = responses[i].addresses;
-                    responses[count].gateways = responses[i].gateways;
-                    responses[count].dnses = responses[i].dnses;
-                }
-                count++;
-            }
-        }
-
-
-        if (t != NULL)
-            RIL_onRequestComplete(*t, RIL_E_SUCCESS, responses,
-                    count * sizeof(RIL_Data_Call_Response_v9));
-        else
-            RIL_onUnsolicitedResponse(RIL_UNSOL_DATA_CALL_LIST_CHANGED,
-                    responses,
-                    count * sizeof(RIL_Data_Call_Response_v9));
-    } else {//LTE
+//    if (!IsLte) {
+//        for (p_cur = p_response->p_intermediates; p_cur != NULL;
+//             p_cur = p_cur->p_next) {
+//            char *line = p_cur->line;
+//            int cid;
+//            char *type;
+//            char *apn;
+//            char *address;
+//            char cmd[PROPERTY_VALUE_MAX] = {0};
+//            char eth[PROPERTY_VALUE_MAX] = {0};
+//            char prop[PROPERTY_VALUE_MAX] = {0};
+//            const int   dnslist_sz = 50;
+//            char*       dnslist = alloca(dnslist_sz);
+//            const char* separator = "";
+//            int nn;
+//
+//            err = at_tok_start(&line);
+//            if (err < 0)
+//                goto error;
+//
+//            err = at_tok_nextint(&line, &cid);
+//            if (err < 0)
+//                goto error;
+//
+//            for (i = 0; i < n; i++) {
+//                if (responses[i].cid == cid)
+//                    break;
+//            }
+//
+//            if (i >= n) {
+//                /* details for a context we didn't hear about in the last request */
+//                continue;
+//            }
+//
+//            /* Assume no error */
+//            responses[i].status = PDP_FAIL_NONE;
+//
+//            /* type */
+//            err = at_tok_nextstr(&line, &out);
+//            if (err < 0)
+//                goto error;
+//
+//            responses[i].type = alloca(strlen(out) + 1);
+//            strcpy(responses[i].type, out);
+//
+//            /* APN ignored for v5 */
+//            err = at_tok_nextstr(&line, &out);
+//            if (err < 0)
+//                goto error;
+//
+//            if(!strcmp(s_modem, "t")) {
+//                property_get(ETH_TD, eth, "veth");
+//            } else if(!strcmp(s_modem, "w")) {
+//                property_get(ETH_W, eth, "veth");
+//            } else if(!strcmp(s_modem, "l")) {
+//                property_get(ETH_L, eth, "veth");
+//            }else {
+//                RILLOGE("Unknown modem type, exit");
+//                exit(-1);
+//            }
+//
+//            snprintf(cmd, sizeof(cmd), "%s%d", eth, i);
+//            responses[i].ifname = alloca(strlen(cmd) + 1);
+//            strcpy(responses[i].ifname, cmd);
+//
+//            snprintf(cmd, sizeof(cmd), "net.%s%d.ip", eth, i);
+//            property_get(cmd, prop, NULL);
+//            responses[i].addresses = alloca(strlen(prop) + 1);
+//            responses[i].gateways = alloca(strlen(prop) + 1);
+//            strcpy(responses[i].addresses, prop);
+//            strcpy(responses[i].gateways, prop);
+//
+//            dnslist[0] = 0;
+//            for (nn = 0; nn < 2; nn++) {
+//                snprintf(cmd, sizeof(cmd), "net.%s%d.dns%d", eth, i, nn+1);
+//                property_get(cmd, prop, NULL);
+//
+//                /* Append the DNS IP address */
+//                strlcat(dnslist, separator, dnslist_sz);
+//                strlcat(dnslist, prop, dnslist_sz);
+//                separator = " ";
+//            }
+//            responses[i].dnses = dnslist;
+//
+//            RILLOGD("status=%d",responses[i].status);
+//            RILLOGD("suggestedRetryTime=%d",responses[i].suggestedRetryTime);
+//            RILLOGD("cid=%d",responses[i].cid);
+//            RILLOGD("active = %d",responses[i].active);
+//            RILLOGD("type=%s",responses[i].type);
+//            RILLOGD("ifname = %s",responses[i].ifname);
+//            RILLOGD("address=%s",responses[i].addresses);
+//            RILLOGD("dns=%s",responses[i].dnses);
+//            RILLOGD("gateways = %s",responses[i].gateways);
+//        }
+//
+//        at_response_free(p_response);
+//
+//
+//        if(cid > 0) {
+//            RILLOGD("requestOrSendDataCallList is called by SetupDataCall!");
+//            for(i = 0; i < n; i++) {
+//                if(responses[i].cid == cid) {
+//                    RIL_onRequestComplete(*t, RIL_E_SUCCESS, &responses[i],
+//                            sizeof(RIL_Data_Call_Response_v9));
+//                    return;
+//                }
+//            }
+//            if(i >= n) {
+//                RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
+//                return;
+//            }
+//        }
+//
+//        for(i = 0; i < n; i++) {
+//            if(responses[i].active == 1) {
+//                if (count != i) {
+//                    responses[count].status = responses[i].status;
+//                    responses[count].suggestedRetryTime = responses[i].suggestedRetryTime;
+//                    responses[count].cid = responses[i].cid;
+//                    responses[count].active = responses[i].active;
+//                    responses[count].type = responses[i].type;
+//                    responses[count].ifname = responses[i].ifname;
+//                    responses[count].addresses = responses[i].addresses;
+//                    responses[count].gateways = responses[i].gateways;
+//                    responses[count].dnses = responses[i].dnses;
+//                }
+//                count++;
+//            }
+//        }
+//
+//
+//        if (t != NULL)
+//            RIL_onRequestComplete(*t, RIL_E_SUCCESS, responses,
+//                    count * sizeof(RIL_Data_Call_Response_v9));
+//        else
+//            RIL_onUnsolicitedResponse(RIL_UNSOL_DATA_CALL_LIST_CHANGED,
+//                    responses,
+//                    count * sizeof(RIL_Data_Call_Response_v9));
+//    } else {
+        //LTE
         for (p_cur = p_response->p_intermediates; p_cur != NULL;
              p_cur = p_cur->p_next) {
             char *line = p_cur->line;
@@ -2399,7 +2400,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
             RIL_onUnsolicitedResponse(RIL_UNSOL_DATA_CALL_LIST_CHANGED,
                     responses,
                     n * sizeof(RIL_Data_Call_Response_v9));
-    }
+//    }
 
     
     bLteDetached = false;

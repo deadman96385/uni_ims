@@ -255,7 +255,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
     ppp_info[ppp_index].state = PPP_STATE_ESTING;
     ppp_info[ppp_index].manual_dns = 0;
 
-    if (!isLte()) {
+/*    if (!isLte()) {
         snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+SIPCONFIG=%d\r",cid);
         adapter_cmux_register_callback(mux,
                 (void *)cvt_sipconfig_rsp,
@@ -290,13 +290,16 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
             mutex_unlock(&ps_service_mutex);
             return AT_RESULT_OK;
         }
-    } else {
+    } else {*/
         int i, ip_state, count = 0;
         char prop[PROPERTY_VALUE_MAX];
         char linker[128] = {0};
         char ipv6_dhcpcd_cmd[128] = {0};
-
-        snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+CGCONTRDP=%d\r",cid);
+        if (!isLte()){
+            snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+SIPCONFIG=%d\r",cid);
+        }else{
+            snprintf(at_cmd_str, sizeof(at_cmd_str), "AT+CGCONTRDP=%d\r",cid);
+        }
         adapter_cmux_register_callback(mux,
                 (void *)cvt_cgcontrdp_rsp,
                 ppp_index);
@@ -533,7 +536,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
             mutex_unlock(&ps_service_mutex);
             return AT_RESULT_OK;
         }
-    }
+//    }
     adapter_pty_write(req->recv_pty,"ERROR\r",strlen("ERROR\r"));
     PHS_LOGD("Getting IP addr and PDP activate error :%d",ppp_info[ppp_index].state);
     ppp_info[ppp_index].state = PPP_STATE_IDLE;
@@ -1587,7 +1590,7 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp,
     }
 
     PHS_LOGD("cvt_cgcontrdp_rsp: input = %s", input);
-    if (findInBuf(input, rsp->len, "+CGCONTRDP")) {
+    if (findInBuf(input, rsp->len, "+CGCONTRDP") || findInBuf(input, rsp->len, "+SIPCONFIG")) {
         do {
             err = at_tok_start(&input, ':');
             if (err < 0) {
