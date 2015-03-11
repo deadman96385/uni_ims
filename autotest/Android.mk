@@ -2,7 +2,7 @@
 # 
 #autotest makefile
 #
-
+ifndef PDK_FUSION_PLATFORM_ZIP
 LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
@@ -83,4 +83,4 @@ LOCAL_STATIC_LIBRARIES:= \
     libbt-hci
 
 #include $(BUILD_EXECUTABLE)
-
+endif
