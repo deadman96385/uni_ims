@@ -10248,14 +10248,8 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         }
     } else if (strStartsWith(s, "+CBM:")) {
         char *pdu_bin = NULL;
-
         RILLOGD("Reference-ril. CBM   >>>>>> sss %s ,len  %d", s,strlen(s));
         RILLOGD("Reference-ril. CBM   >>>>>> %s ,len  %d", sms_pdu,strlen(sms_pdu));
-#if defined (RIL_SPRD_EXTENSION)
-        RIL_onUnsolicitedResponse (
-                RIL_UNSOL_RESPONSE_NEW_BROADCAST_SMS,
-                sms_pdu, strlen(sms_pdu));
-#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         pdu_bin = (char *)alloca(strlen(sms_pdu)/2);
         memset(pdu_bin, 0, strlen(sms_pdu)/2);
         if(!convertHexToBin(sms_pdu, strlen(sms_pdu), pdu_bin)) {
@@ -10264,7 +10258,6 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                     pdu_bin, strlen(sms_pdu)/2);
         } else
             RILLOGE("Convert hex to bin failed for SMSCB");
-#endif
     } else if (strStartsWith(s, "+CDS:")) {
         RIL_onUnsolicitedResponse (
                 RIL_UNSOL_RESPONSE_NEW_SMS_STATUS_REPORT,
