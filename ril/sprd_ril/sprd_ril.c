@@ -6057,7 +6057,7 @@ error:
     at_response_free(p_response);
 }
 
-static void requestSendAT(int channelID, void *data, size_t datalen, RIL_Token t)
+static void requestSendAT(int channelID, char *data, size_t datalen, RIL_Token t)
 {
     char *at_cmd = (char *)data;
     int i, err;
@@ -7583,10 +7583,10 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     RILLOGD("> '%s'", *cur);
                     break;
                 }
-                RILLOGD(">>> %s", *cur);
-                requestSendAT(channelID, (void *)*cur, datalen, t);
+                RILLOGD(">>> '%s'", *cur);
+                requestSendAT(channelID, *cur, datalen, t);
                 /* echo back strings */
-                RIL_onRequestComplete(t, RIL_E_SUCCESS, data, datalen);
+//                RIL_onRequestComplete(t, RIL_E_SUCCESS, data, datalen);
                 break;
             }
         case RIL_REQUEST_WRITE_SMS_TO_SIM:
