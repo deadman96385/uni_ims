@@ -168,6 +168,8 @@ int s_multiSimMode = 0;
 int g_csfb_processing = 0;
 static const char * s_modem = NULL;
 static int s_testmode = 0;
+static int allow_data = 0;
+
 
 struct ATChannels *ATch_type[MAX_CHANNELS];
 static int s_channel_open = 0;
@@ -1865,8 +1867,15 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t);
 static void onDataCallListChanged(void *param )
 {
     int channelID;
+    int* cid = (int *)param;
+
+
     channelID = getChannel();
-    requestOrSendDataCallList(channelID, -1, NULL);
+    if(cid == NULL) {
+	    requestOrSendDataCallList(channelID, -1, NULL);
+	} else {
+		requestOrSendDataCallList(channelID, *cid, NULL);
+	}
     putChannel(channelID);
 }
 
@@ -2174,7 +2183,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
         for (p_cur = p_response->p_intermediates; p_cur != NULL;
              p_cur = p_cur->p_next) {
             char *line = p_cur->line;
-            int cid;
+            int ncid;
             char *type;
             char *apn;
             char *address;
@@ -2193,12 +2202,18 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
             if (err < 0)
                 goto error;
 
-            err = at_tok_nextint(&line, &cid);
+            err = at_tok_nextint(&line, &ncid);
             if (err < 0)
                 goto error;
 
+            if((ncid == cid) && (t== NULL)){    //for bug407591
+                RILLOGD(" No need to get ip,fwk will do deact by check ip");
+				responses[cid - 1].status = PDP_FAIL_OPERATOR_BARRED;
+                continue;
+            }
+
             for (i = 0; i < n; i++) {
-                if (responses[i].cid == cid)
+                if (responses[i].cid == ncid)
                     break;
             }
 
@@ -2238,18 +2253,18 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                 exit(-1);
             }
 
-            snprintf(cmd, sizeof(cmd), "%s%d", eth, cid-1);
+            snprintf(cmd, sizeof(cmd), "%s%d", eth, ncid-1);
             responses[i].ifname = alloca(strlen(cmd) + 1);
             strcpy(responses[i].ifname, cmd);
 
-            snprintf(cmd, sizeof(cmd), "net.%s%d.ip_type", eth, cid-1);
+            snprintf(cmd, sizeof(cmd), "net.%s%d.ip_type", eth, ncid-1);
             property_get(cmd, prop, "0");
             ip_type = atoi(prop);
             RILLOGE(" prop = %s, ip_type = %d", prop, ip_type);
             dnslist = alloca(dnslist_sz);
 
             if (ip_type == IPV4) {
-                snprintf(cmd, sizeof(cmd), "net.%s%d.ip", eth, cid-1);
+                snprintf(cmd, sizeof(cmd), "net.%s%d.ip", eth, ncid-1);
                 property_get(cmd, prop, NULL);
                 RILLOGE("IPV4 cmd=%s, prop = %s", cmd,prop);
                 responses[i].addresses = alloca(strlen(prop) + 1);
@@ -2259,7 +2274,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
 
                 dnslist[0] = 0;
                 for (nn = 0; nn < 2; nn++) {
-                    snprintf(cmd, sizeof(cmd), "net.%s%d.dns%d", eth, cid-1, nn+1);
+                    snprintf(cmd, sizeof(cmd), "net.%s%d.dns%d", eth, ncid-1, nn+1);
                     property_get(cmd, prop, NULL);
 
                     /* Append the DNS IP address */
@@ -2269,7 +2284,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                 }
                 responses[i].dnses = dnslist;
             } else if (ip_type == IPV6) {
-                snprintf(cmd, sizeof(cmd), "net.%s%d.ipv6_ip", eth, cid-1);
+                snprintf(cmd, sizeof(cmd), "net.%s%d.ipv6_ip", eth, ncid-1);
                 property_get(cmd, prop, NULL);
                 RILLOGE("IPV6 cmd=%s, prop = %s", cmd,prop);
                 responses[i].addresses = alloca(strlen(prop) + 1);
@@ -2279,7 +2294,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
 
                 dnslist[0] = 0;
                 for (nn = 0; nn < 2; nn++) {
-                    snprintf(cmd, sizeof(cmd), "net.%s%d.ipv6_dns%d", eth, cid-1, nn+1);
+                    snprintf(cmd, sizeof(cmd), "net.%s%d.ipv6_dns%d", eth, ncid-1, nn+1);
                     property_get(cmd, prop, NULL);
 
                     /* Append the DNS IP address */
@@ -2292,13 +2307,13 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                 iplist = alloca(iplist_sz);
                 separator = " ";
                 iplist[0] = 0;
-                snprintf(cmd, sizeof(cmd), "net.%s%d.ip", eth, cid-1);
+                snprintf(cmd, sizeof(cmd), "net.%s%d.ip", eth, ncid-1);
                 property_get(cmd, prop, NULL);
                 strlcat(iplist, prop, iplist_sz);
                 strlcat(iplist, separator, iplist_sz);
                 RILLOGE("IPV4V6 cmd=%s, prop = %s, iplist = %s", cmd,prop,iplist);
 
-                snprintf(cmd, sizeof(cmd), "net.%s%d.ipv6_ip", eth, cid-1);
+                snprintf(cmd, sizeof(cmd), "net.%s%d.ipv6_ip", eth, ncid-1);
                 property_get(cmd, prop, NULL);
                 strlcat(iplist, prop, iplist_sz);
                 responses[i].addresses = iplist;
@@ -2308,7 +2323,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                 separator = "";
                 dnslist[0] = 0;
                 for (nn = 0; nn < 2; nn++) {
-                    snprintf(cmd, sizeof(cmd), "net.%s%d.dns%d", eth, cid-1, nn+1);
+                    snprintf(cmd, sizeof(cmd), "net.%s%d.dns%d", eth, ncid-1, nn+1);
                     property_get(cmd, prop, NULL);
 
                     /* Append the DNS IP address */
@@ -2319,7 +2334,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                 }
 
                 for (nn = 0; nn < 2; nn++) {
-                    snprintf(cmd, sizeof(cmd), "net.%s%d.ipv6_dns%d", eth, cid-1, nn+1);
+                    snprintf(cmd, sizeof(cmd), "net.%s%d.ipv6_dns%d", eth, ncid-1, nn+1);
                     property_get(cmd, prop, NULL);
 
                     /* Append the DNS IP address */
@@ -2333,6 +2348,14 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
             } else {
                 RILLOGE("Unknown IP type!");
             }
+
+            if((cid != -1) && (t == NULL)){
+                 RILLOGE("i = %d",i);
+                 if((!responses[i].active) && strcmp(responses[i].addresses,"")){
+                     responses[i].status = PDP_FAIL_OPERATOR_BARRED;
+                     RILLOGE("responses[i].addresses = %s",responses[i].addresses);
+                 }
+              }
 
             RILLOGD("status=%d",responses[i].status);
             RILLOGD("suggestedRetryTime=%d",responses[i].suggestedRetryTime);
@@ -6999,6 +7022,15 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_HANGUP:
             requestHangup(channelID, data, datalen, t);
             break;
+
+        case RIL_REQUEST_ALLOW_DATA:
+            allow_data = ((int*)data)[0];
+            if(allow_data){
+                attachGPRS(channelID, data, datalen, t);
+            }
+            else{
+                detachGPRS(channelID, data, datalen, t);
+            }
         case RIL_REQUEST_HANGUP_WAITING_OR_BACKGROUND:
             /* 3GPP 22.030 6.5.5
              * "Releases all held calls or sets User Determined User Busy
@@ -9456,17 +9488,21 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
         RILLOGD("attachGPRS, put pdp %d", attachPdpIndex);
         attachPdpIndex = -1;
     }
-    if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
-        err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
-        if (err < 0 || p_response->success == 0) {
-        goto error;
+    if (isLte()) {
+        if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
+            err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
+            if (err < 0 || p_response->success == 0) {
+            	goto error;
+            }
+            RILLOGD("s_sim_num = %d", s_sim_num);
+            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
+            err = at_send_command(ATch_type[channelID], cmd, NULL);
         }
-        RILLOGD("s_sim_num = %d", s_sim_num);
-        snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
-        err = at_send_command(ATch_type[channelID], cmd, NULL );
-    }
-    if (s_testmode != 10) {
-        at_send_command(ATch_type[channelID], "AT+CLSSPDT = 1", NULL);
+        if (s_testmode != 10) {
+            at_send_command(ATch_type[channelID], "AT+CLSSPDT = 1", NULL);
+        }
+    }else{
+        err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
     }
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     at_response_free(p_response);
@@ -10067,7 +10103,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         char *p;
         char *tmp;
         int commas;
-        int cid;
+
+        static int cid =-1;
+
         int end_status;
         int cc_cause;
 
@@ -10100,9 +10138,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         if(commas == 4) { /*GPRS reply 5 parameters*/
             if(end_status != 29) {
                 if(end_status == 104){
-                    RIL_requestTimedCallback(DeactiveDataConnectionByCid, cid, NULL);
+
+                    RIL_requestTimedCallback (onDataCallListChanged, &cid, NULL);
+                }else{
+                    RIL_requestTimedCallback (onDataCallListChanged, NULL, NULL);
                 }
-                RIL_requestTimedCallback (onDataCallListChanged, NULL, NULL);
                 RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED,
                         NULL, 0);
             }
