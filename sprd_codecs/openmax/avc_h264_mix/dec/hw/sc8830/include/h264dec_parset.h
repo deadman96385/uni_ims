@@ -30,6 +30,7 @@ void H264Dec_use_parameter_set (H264DecObject *vo, int32 pps_id);
 void H264Dec_InterpretSEIMessage (void);
 void H264Dec_ProcessSPS (H264DecObject *vo);
 void H264Dec_ProcessPPS (H264DecObject *vo);
+void H264Dec_interpret_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr);
 
 #if _MVC_
 void ProcessSubsetSPS (H264DecObject *vo);
