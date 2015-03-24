@@ -27,6 +27,8 @@ extern   "C"
 {
 #endif
 
+#define MAXIMUMVALUEOFcpb_cnt   32
+
 enum profile_e
 {
     PROFILE_BASELINE = 66,
@@ -130,6 +132,71 @@ enum intra_chroma_pred_e
     I_PRED_CHROMA_P  = 3,
 };
 
+typedef struct hrd_parameters_tag
+{
+    uint32 cpb_cnt_minus1;                                   // ue(v)
+    uint32 bit_rate_value_minus1[MAXIMUMVALUEOFcpb_cnt];  // ue(v)
+    uint32 cpb_size_value_minus1[MAXIMUMVALUEOFcpb_cnt];  // ue(v)
+
+    uint8 bit_rate_scale;                                   // u(4)
+    uint8 cpb_size_scale;                                   // u(4)
+    uint8 initial_cpb_removal_delay_length_minus1;      // u(5)
+    uint8 cpb_removal_delay_length_minus1;                  // u(5)
+
+    uint8 cbr_flag[MAXIMUMVALUEOFcpb_cnt];  // u(1)
+
+    uint8 dpb_output_delay_length_minus1;   // u(5)
+    uint8 time_offset_length;                               // u(5)
+    uint16 rsv;
+} ENC_HRD_PARAM_T;
+
+typedef struct
+{
+    BOOLEAN aspect_ratio_info_present_flag;                   // u(1)
+    BOOLEAN	 overscan_info_present_flag;                       // u(1)
+    BOOLEAN	 overscan_appropriate_flag;                      // u(1)
+    BOOLEAN video_signal_type_present_flag;                   // u(1)
+
+    uint8 aspect_ratio_idc;                               // u(8)
+    uint8 video_format;                                   // u(3)
+    uint8 matrix_coefficients;                          // u(8)
+    BOOLEAN      chroma_location_info_present_flag;                // u(1)
+
+    uint16 sar_width;                                    // u(16)
+    uint16 sar_height;                                   // u(16)
+
+    BOOLEAN      video_full_range_flag;                          // u(1)
+    BOOLEAN      colour_description_present_flag;                // u(1)
+    uint8 colour_primaries;                             // u(8)
+    uint8 transfer_characteristics;                     // u(8)
+
+    uint32  chroma_sample_loc_type_top_field;               // ue(v)
+    uint32  chroma_sample_loc_type_bottom_field;            // ue(v)
+
+    BOOLEAN      timing_info_present_flag;                         // u(1)
+    BOOLEAN      fixed_frame_rate_flag;                          // u(1)
+    BOOLEAN      nal_hrd_parameters_present_flag;                  // u(1)
+    BOOLEAN      vcl_hrd_parameters_present_flag;                  // u(1)
+
+    uint32 num_units_in_tick;                              // u(32)
+    uint32 time_scale;                                     // u(32)
+
+    ENC_HRD_PARAM_T nal_hrd_parameters;                      // hrd_paramters_t
+    ENC_HRD_PARAM_T vcl_hrd_parameters;                      // hrd_paramters_t
+
+    BOOLEAN      low_delay_hrd_flag;                             // u(1)
+    BOOLEAN      pic_struct_present_flag;                        // u(1)
+    BOOLEAN      bitstream_restriction_flag;                       // u(1)
+    BOOLEAN      motion_vectors_over_pic_boundaries_flag;        // u(1)
+
+    uint32 max_bytes_per_pic_denom;                        // ue(v)
+    uint32 max_bits_per_mb_denom;                          // ue(v)
+    uint32 log2_max_mv_length_vertical;                    // ue(v)
+    uint32 log2_max_mv_length_horizontal;                  // ue(v)
+    uint32 num_reorder_frames;                             // ue(v)
+    uint32 max_dec_frame_buffering;                        // ue(v)
+} ENC_VUI_T;
+
 typedef struct
 {
     int32	i_id;
@@ -169,6 +236,9 @@ typedef struct
     uint32  frame_crop_right_offset;               /* ue(v) */
     uint32  frame_crop_top_offset;                 /* ue(v) */
     uint32  frame_crop_bottom_offset;              /* ue(v) */
+
+    int32	vui_parameters_present_flag;
+    ENC_VUI_T vui_seq_parameters;
 } ENC_SPS_T;
 
 typedef struct
@@ -430,7 +500,7 @@ typedef struct tagH264EncObject
 
     uint32 b_previous_frame_failed;
     int32 yuv_format;
-    uint8 sps_header[16];
+    uint8 sps_header[24];
     uint8 pps_header[8];
 } H264EncObject;
 /**---------------------------------------------------------------------------*

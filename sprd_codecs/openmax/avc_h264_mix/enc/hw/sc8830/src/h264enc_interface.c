@@ -635,12 +635,12 @@ MMEncRet H264EncGenHeader(AVCHandle *avcHandle, MMEncOut *pOutput, int is_sps)
 
 HEADER_EXIT:
 
-    SCI_TRACE_LOW("%s, %d, exit generating header, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    SCI_TRACE_LOW("%s, %d, exit generating header, error_flag: %0x, strmSize = %d, is_sps = %d\n", __FUNCTION__, __LINE__, vo->error_flag, pOutput->strmSize, is_sps);
     if (is_sps)
     {
-        if (pOutput->strmSize != 16)
+        if (pOutput->strmSize != 24)
         {
-            SCI_TRACE_LOW ("%s, %d, sps header size is not equal to 16 bytes");
+            SCI_TRACE_LOW ("%s, %d, sps header size is not equal to 16 bytes", __FUNCTION__, __LINE__);
         } else
         {
             SCI_MEMCPY(vo->sps_header, img_ptr->pOneFrameBitstream, pOutput->strmSize);
@@ -649,7 +649,7 @@ HEADER_EXIT:
     {
         if (pOutput->strmSize != 8)
         {
-            SCI_TRACE_LOW ("%s, %d, pps header size is not equal to 16 bytes");
+            SCI_TRACE_LOW ("%s, %d, pps header size is not equal to 16 bytes", __FUNCTION__, __LINE__);
         } else
         {
             SCI_MEMCPY(vo->pps_header, img_ptr->pOneFrameBitstream, pOutput->strmSize);
