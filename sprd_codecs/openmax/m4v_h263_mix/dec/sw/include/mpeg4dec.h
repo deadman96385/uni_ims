@@ -38,6 +38,17 @@ typedef enum
     MAX_MEM_TYPE
 } CODEC_BUF_TYPE;
 
+/*standard*/
+typedef enum {
+    ITU_H263 = 0,
+    MPEG4,
+    JPEG,
+    FLV_V1,
+    H264,
+    RV8,
+    RV9
+} VIDEO_STANDARD_E;
+
 /* Application controls, this structed shall be allocated */
 /*    and initialized in the application.                 */
 typedef struct tagMP4Handle

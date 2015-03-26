@@ -29,6 +29,14 @@ extern   "C"
 {
 #endif
 
+typedef struct bitstream
+{
+    uint32 bitcnt;
+    uint32 bitsLeft; // left bits in the word pointed by rdptr
+    uint32 *rdptr;
+    uint32 bitcnt_before_vld;
+    uint32 error_flag;
+} DEC_BS_T;
 
 /**
  * Value of Picture.reference when Picture is not a reference picture, but

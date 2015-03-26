@@ -50,23 +50,17 @@ extern   "C"
 ** Standard Types
 ** ----------------------------------------------------------------------- */
 typedef unsigned char		BOOLEAN;
-//typedef unsigned char		Bool;
 typedef unsigned char		uint8;
 typedef unsigned short		uint16;
 typedef unsigned int		uint32;
+typedef unsigned long int 	uint64;
+typedef long int 			int64;
+typedef unsigned int		uint;
 typedef unsigned long		uint_32or64;
 
 typedef signed char			int8;
 typedef signed short		int16;
 typedef signed int			int32;
-
-#ifdef WIN_UNIT_TEST
-#define LOCAL
-#define CONST
-#else
-#define	LOCAL		static
-#define	CONST		const
-#endif  //WIN_UNIT_TEST
 
 #define	VOLATILE	volatile
 
@@ -81,8 +75,6 @@ typedef signed int			int32;
 // @Xueliang.Wang moved it from os_api.h(2002-12-30)
 // Thread block ID.
 typedef uint32          BLOCK_ID;
-
-#define IRQ_FUNC        __irq
 
 #ifdef WIN32
 #define PACK
@@ -117,8 +109,6 @@ typedef uint32          BLOCK_ID;
                        ((_c) >= 'a' && (_c) <= 'f') )
 
 #define  ARR_SIZE( _a )  ( sizeof( (_a) ) / sizeof( (_a[0]) ) )
-
-
 
 /**---------------------------------------------------------------------------*
  **                         Compiler Flag                                     *

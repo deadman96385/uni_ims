@@ -17,6 +17,7 @@
 **---------------------------------------------------------------------------*/
 #include "mmcodec.h"
 #include "vsp_drv.h"
+#include "osal_log.h"
 
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
@@ -48,13 +49,14 @@ PUBLIC int32 VSP_CFG_FREQ(VSPObject *vo, uint32 frame_size)
 PUBLIC int32 VSP_OPEN_Dev (VSPObject *vo)
 {
     int32 ret =0;
+    char vsp_version_array[MAX_VERSIONS][10] = {"SHARK", "DOLPHIN", "TSHARK", "SHARKL", "PIKE", "PIKEL"};
 
     if (-1 == vo->s_vsp_fd)
     {
-        SCI_TRACE_LOW("open SPRD_VSP_DRIVER ");
+        SPRD_CODEC_LOGD("open SPRD_VSP_DRIVER ");
         if((vo->s_vsp_fd = open(SPRD_VSP_DRIVER,O_RDWR)) < 0)
         {
-            SCI_TRACE_LOW("open SPRD_VSP_DRIVER ERR");
+            SPRD_CODEC_LOGE("open SPRD_VSP_DRIVER ERR");
             return -1;
         } else
         {
@@ -62,10 +64,10 @@ PUBLIC int32 VSP_OPEN_Dev (VSPObject *vo)
             vo->s_vsp_Vaddr_base -= VSP_REG_BASE_ADDR;
         }
 
-        ioctl(vo->s_vsp_fd, VSP_CAPABILITY, &(vo->vsp_capability));
+        ioctl(vo->s_vsp_fd, VSP_VERSION, &(vo->vsp_version));
     }
 
-    SCI_TRACE_LOW("%s, %d, vsp addr %lx, vsp_capability: %d\n",__FUNCTION__, __LINE__, vo->s_vsp_Vaddr_base, vo->vsp_capability);
+    SPRD_CODEC_LOGD("%s, %d, vsp addr %lx, vsp_version: %s\n",__FUNCTION__, __LINE__, vo->s_vsp_Vaddr_base, vsp_version_array[vo->vsp_version]);
 
     return 0;
 }
@@ -76,7 +78,7 @@ PUBLIC int32 VSP_CLOSE_Dev(VSPObject *vo)
     {
         if (munmap((void *)(vo->s_vsp_Vaddr_base + VSP_REG_BASE_ADDR), SPRD_VSP_MAP_SIZE))
         {
-            SCI_TRACE_LOW("%s, %d, %d", __FUNCTION__, __LINE__, errno);
+            SPRD_CODEC_LOGE("%s, %d, %d", __FUNCTION__, __LINE__, errno);
             return -1;
         }
 
@@ -84,7 +86,7 @@ PUBLIC int32 VSP_CLOSE_Dev(VSPObject *vo)
         return 0;
     } else
     {
-        SCI_TRACE_LOW ("%s, error", __FUNCTION__);
+        SPRD_CODEC_LOGD ("%s, error", __FUNCTION__);
         return -1;
     }
 }
@@ -97,7 +99,7 @@ PUBLIC int32 VSP_GET_DEV_FREQ(VSPObject *vo, uint32*  vsp_clk_ptr)
         return 0;
     } else
     {
-        SCI_TRACE_LOW ("%s, error", __FUNCTION__);
+        SPRD_CODEC_LOGE ("%s, error", __FUNCTION__);
         return -1;
     }
 }
@@ -109,12 +111,12 @@ PUBLIC int32 VSP_CONFIG_DEV_FREQ(VSPObject *vo, uint32*  vsp_clk_ptr)
         int32 ret = ioctl(vo->s_vsp_fd, VSP_CONFIG_FREQ, vsp_clk_ptr);
         if (ret < 0)
         {
-            SCI_TRACE_LOW ("%s, VSP_CONFIG_FREQ failed", __FUNCTION__);
+            SPRD_CODEC_LOGE ("%s, VSP_CONFIG_FREQ failed", __FUNCTION__);
             return -1;
         }
     } else
     {
-        SCI_TRACE_LOW ("%s, error", __FUNCTION__);
+        SPRD_CODEC_LOGE ("%s, error", __FUNCTION__);
         return -1;
     }
 
@@ -136,13 +138,13 @@ PUBLIC int32 VSP_POLL_COMPLETE(VSPObject *vo)
         } while ((ret & V_BIT_30) &&  (cnt < MAX_POLL_CNT));
         if(!(V_BIT_1 == ret || V_BIT_2 == ret ))
         {
-            SCI_TRACE_LOW("%s, %d, int_ret: %0x", __FUNCTION__, __LINE__, ret);
+            SPRD_CODEC_LOGD("%s, %d, int_ret: %0x", __FUNCTION__, __LINE__, ret);
         }
 
         return ret;
     } else
     {
-        SCI_TRACE_LOW ("%s, error", __FUNCTION__);
+        SPRD_CODEC_LOGE ("%s, error", __FUNCTION__);
         return -1;
     }
 }
@@ -153,7 +155,7 @@ PUBLIC int32 VSP_ACQUIRE_Dev(VSPObject *vo)
 
     if(vo->s_vsp_fd <  0)
     {
-        SCI_TRACE_LOW("%s: failed :fd <  0", __FUNCTION__);
+        SPRD_CODEC_LOGE("%s: failed :fd <  0", __FUNCTION__);
         return -1;
     }
 
@@ -161,15 +163,15 @@ PUBLIC int32 VSP_ACQUIRE_Dev(VSPObject *vo)
     if(ret)
     {
 #if 0
-        SCI_TRACE_LOW("%s: VSP_ACQUAIRE failed,  try again %d\n",__FUNCTION__, ret);
+        SPRD_CODEC_LOGW ("%s: VSP_ACQUAIRE failed,  try again %d\n",__FUNCTION__, ret);
         ret =  ioctl(vo->s_vsp_fd, VSP_ACQUAIRE, NULL);
         if(ret < 0)
         {
-            SCI_TRACE_LOW("%s: VSP_ACQUAIRE failed, give up %d\n",__FUNCTION__, ret);
+            SPRD_CODEC_LOGE ("%s: VSP_ACQUAIRE failed, give up %d\n",__FUNCTION__, ret);
             return -1;
         }
 #else
-        SCI_TRACE_LOW("%s: VSP_ACQUAIRE failed,  %d\n",__FUNCTION__, ret);
+        SPRD_CODEC_LOGE("%s: VSP_ACQUAIRE failed,  %d\n",__FUNCTION__, ret);
         return -1;
 #endif
     }
@@ -184,18 +186,18 @@ PUBLIC int32 VSP_ACQUIRE_Dev(VSPObject *vo)
     ret = ioctl(vo->s_vsp_fd, VSP_ENABLE, NULL);
     if (ret < 0)
     {
-        SCI_TRACE_LOW("%s: VSP_ENABLE failed %d\n",__FUNCTION__, ret);
+        SPRD_CODEC_LOGE("%s: VSP_ENABLE failed %d\n",__FUNCTION__, ret);
         return -1;
     }
 
     ret = ioctl(vo->s_vsp_fd, VSP_RESET, NULL);
     if (ret < 0)
     {
-        SCI_TRACE_LOW("%s: VSP_RESET failed %d\n",__FUNCTION__, ret);
+        SPRD_CODEC_LOGE("%s: VSP_RESET failed %d\n",__FUNCTION__, ret);
         return -1;
     }
 
-    SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+    SPRD_CODEC_LOGD("%s, %d", __FUNCTION__, __LINE__);
 
     return 0;
 }
@@ -214,18 +216,18 @@ PUBLIC int32 VSP_RELEASE_Dev(VSPObject *vo)
 
         if (VSP_READ_REG_POLL(GLB_REG_BASE_ADDR + AXIM_STS_OFF, V_BIT_1, 0x0, TIME_OUT_CLK_FRAME, "Polling AXIM_STS: not Axim_wch_busy")) //check all data has written to DDR
         {
-            SCI_TRACE_LOW("%s, %d, Axim_wch_busy", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGI("%s, %d, Axim_wch_busy", __FUNCTION__, __LINE__);
         }
 
         if (VSP_READ_REG_POLL(GLB_REG_BASE_ADDR + AXIM_STS_OFF, V_BIT_2, 0x0, TIME_OUT_CLK_FRAME, "Polling AXIM_STS: not Axim_rch_busy"))
         {
-            SCI_TRACE_LOW("%s, %d, Axim_wch_busy", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE("%s, %d, Axim_wch_busy", __FUNCTION__, __LINE__);
         }
 
         ret = ioctl(vo->s_vsp_fd, VSP_RESET, NULL);
         if (ret < 0)
         {
-            SCI_TRACE_LOW("%s: VSP_RESET failed %d\n",__FUNCTION__, ret);
+            SPRD_CODEC_LOGE("%s: VSP_RESET failed %d\n",__FUNCTION__, ret);
             ret = -1;
             goto RELEASE_END;
         }
@@ -233,7 +235,7 @@ PUBLIC int32 VSP_RELEASE_Dev(VSPObject *vo)
         ret = ioctl(vo->s_vsp_fd, VSP_DISABLE, NULL);
         if(ret < 0)
         {
-            SCI_TRACE_LOW("%s: VSP_DISABLE failed, %d\n",__FUNCTION__, ret);
+            SPRD_CODEC_LOGE("%s: VSP_DISABLE failed, %d\n",__FUNCTION__, ret);
             ret = -1;
             goto RELEASE_END;
         }
@@ -241,13 +243,13 @@ PUBLIC int32 VSP_RELEASE_Dev(VSPObject *vo)
         ret = ioctl(vo->s_vsp_fd, VSP_RELEASE, NULL);
         if(ret < 0)
         {
-            SCI_TRACE_LOW("%s: VSP_RELEASE failed, %d\n",__FUNCTION__, ret);
+            SPRD_CODEC_LOGE("%s: VSP_RELEASE failed, %d\n",__FUNCTION__, ret);
             ret = -1;
             goto RELEASE_END;
         }
     } else
     {
-        SCI_TRACE_LOW("%s: failed :fd <  0", __FUNCTION__);
+        SPRD_CODEC_LOGE("%s: failed :fd <  0", __FUNCTION__);
         ret = -1;
     }
 
@@ -258,7 +260,7 @@ RELEASE_END:
         usleep(20*1000);
     }
 
-    SCI_TRACE_LOW("%s, %d, ret: %d", __FUNCTION__, __LINE__, ret);
+    SPRD_CODEC_LOGD("%s, %d, ret: %d", __FUNCTION__, __LINE__, ret);
 
     return ret;
 }
@@ -299,7 +301,7 @@ PUBLIC  int32 vsp_read_reg_poll(VSPObject *vo, uint32 reg_addr, uint32 msk_data,
 
         ioctl(vo->s_vsp_fd, VSP_HW_INFO, &mm_eb_reg);
         vo->error_flag |= ER_HW_ID;
-        SCI_TRACE_LOW ("vsp_time_out_cnt %d, MM_CLK_REG (0x402e0000): 0x%0x",vsp_time_out_cnt, mm_eb_reg);
+        SPRD_CODEC_LOGE ("vsp_time_out_cnt %d, MM_CLK_REG (0x402e0000): 0x%0x",vsp_time_out_cnt, mm_eb_reg);
         return 1;
     }
 

@@ -977,7 +977,7 @@ MMDecRet Mp4Dec_DecH263PlusHeader(Mp4DecObject *vo)
             vop_mode_ptr->error_flag = TRUE;
             return MMDEC_NOT_SUPPORTED;
         }
-                
+
         h263_plus->deblocking_filter_mode = Mp4Dec_ReadBits (bitstrm_ptr, 1);
         PRINTF_HEAD_INFO("\ndeblocking_filter_mode: %d", h263_plus->deblocking_filter_mode);
 

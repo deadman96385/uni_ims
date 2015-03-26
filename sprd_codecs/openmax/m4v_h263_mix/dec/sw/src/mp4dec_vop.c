@@ -162,7 +162,7 @@ PUBLIC void MP4Dec_JudgeDecMode (DEC_VOP_MODE_T * vop_mode_ptr)
         vop_mode_ptr->post_filter_en = TRUE;
     }
 
-    SCI_TRACE_LOW("%s, VT_used: %d", __FUNCTION__, vop_mode_ptr->VT_used);
+    SPRD_CODEC_LOGD ("%s, VT_used: %d", __FUNCTION__, vop_mode_ptr->VT_used);
 }
 
 void Mp4Dec_ExchangeMBMode (DEC_VOP_MODE_T * vop_mode_ptr)
@@ -912,7 +912,7 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
     {
         cur_time += 1000000;
     }
-    SCI_TRACE_LOW("cur frame % dec time %lld",vop_mode_ptr->g_nFrame_dec,cur_time);
+    SPRD_CODEC_LOGD ("cur frame % dec time %lld",vop_mode_ptr->g_nFrame_dec,cur_time);
 #endif
     return ret;
 }

@@ -466,7 +466,7 @@ PUBLIC MMDecRet H264Dec_init_picture (H264DecContext *img_ptr)
         if (img_ptr->g_active_sps_ptr->gaps_in_frame_num_value_allowed_flag == 0)
         {
             /*advanced error concealment would be called here to combat unitentional loss of pictures*/
-            SCI_TRACE_LOW("an unintentional loss of picture occures!\n");
+            SPRD_CODEC_LOGW("an unintentional loss of picture occures!\n");
             //	img_ptr->error_flag |= ER_BSM_ID;
             //	return;
         }

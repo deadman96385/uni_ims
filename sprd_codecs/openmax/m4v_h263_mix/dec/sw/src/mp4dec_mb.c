@@ -647,7 +647,7 @@ LOCAL int32 Mp4Dec_GetDBQuant(DEC_BS_T *bitstrm_ptr)
     }
 }
 
-CONST char s_mbmode_mcatype_map [5] =
+const char s_mbmode_mcatype_map [5] =
 {
     MCA_BI_DRT_4V, MCA_BI_DRT, MCA_BACKWARD, MCA_FORWARD, MCA_BI_DRT_4V
 };

@@ -212,12 +212,12 @@ int32 get_cabac_cbf_ctx(DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T * mb_cache_pt
     int32		nb;				//top block's nnz
     int32		lblk_avail;		//left block available
     int32		tblk_avail;		//top block available
-    int32		coded_flag_a = 0;
-    int32		coded_flag_b = 0;
 
     int32 	lmb_avail	= mb_cache_ptr->mb_avail_a;//(g_hvld_info_ptr->mb_info >> 16) & 1;
     int32	tmb_avail	= mb_cache_ptr->mb_avail_b;//(g_hvld_info_ptr->mb_info >> 17) & 1;
     int32		default_value = mb_info_ptr->is_intra ? 1 : 0;
+    int32		coded_flag_a = default_value;
+    int32		coded_flag_b = default_value;
 
     int32 	ctx_idx;
 
@@ -228,18 +228,10 @@ int32 get_cabac_cbf_ctx(DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T * mb_cache_pt
         {
             coded_flag_a = (mb_cache_ptr->vld_dc_coded_flag >> 0) & 1;
         }
-        else
-        {
-            coded_flag_a = default_value;
-        }
 
         if (tmb_avail)
         {
             coded_flag_b = (mb_cache_ptr->vld_dc_coded_flag >> 4) & 1;
-        }
-        else
-        {
-            coded_flag_b = default_value;
         }
         break;
 
@@ -542,7 +534,7 @@ int32 readCoeff4x4_CAVLC (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr,
     return total_coeff;
 }
 
-void decode_LUMA_DC (H264DecContext *img_ptr, DEC_MB_INFO_T * currMB, DEC_MB_CACHE_T * mb_cache_ptr, int32 qp)
+void decode_LUMA_DC (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int32 qp)
 {
     int16 DC[16];
     int32 total_coeff;
@@ -563,7 +555,7 @@ void decode_LUMA_DC (H264DecContext *img_ptr, DEC_MB_INFO_T * currMB, DEC_MB_CAC
     return;
 }
 
-void decode_LUMA_AC (H264DecContext *img_ptr, DEC_MB_INFO_T * currMB, DEC_MB_CACHE_T * mb_cache_ptr, int qp )
+void decode_LUMA_AC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CACHE_T *mb_cache_ptr, int qp )
 {
     int32 numCoeff, maxCoeff;
     int32 blk4x4,blk8x8;
@@ -638,7 +630,7 @@ void decode_LUMA_AC (H264DecContext *img_ptr, DEC_MB_INFO_T * currMB, DEC_MB_CAC
     return;
 }
 
-void decode_CHROMA_DC (H264DecContext *img_ptr, DEC_MB_INFO_T * currMB, DEC_MB_CACHE_T * mb_cache_ptr, int qp_uv[2])
+void decode_CHROMA_DC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CACHE_T *mb_cache_ptr, int qp_uv[2])
 {
     int32 uv;
     int16 DC[4];
@@ -744,7 +736,7 @@ void decode_mb_cavlc (void *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T 
 #else
         clear_Nx16words(mb_cache_ptr->coff_Y, 8);
 #endif
-        decode_LUMA_DC ((H264DecContext *)img_ptr, mb_info_ptr,  mb_cache_ptr, qp);	//luma DC
+        decode_LUMA_DC ((H264DecContext *)img_ptr, mb_cache_ptr, qp);	//luma DC
     }
 
     decode_LUMA_AC ((H264DecContext *)img_ptr, mb_info_ptr, mb_cache_ptr, qp);

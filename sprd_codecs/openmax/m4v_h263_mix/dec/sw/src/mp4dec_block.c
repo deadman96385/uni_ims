@@ -521,11 +521,11 @@ PUBLIC void Mp4Dec_GetIntraBlkTCoef_Mpeg (DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_M
 #ifdef _MP4CODEC_DATA_PARTITION_
         if(vop_mode_ptr->bReversibleVlc)
         {
-            nonCoeffNum = Mp4Dec_RvlcIntraTCOEF(vop_mode_ptr, coef_block, iCoefStart, nonCoeffPos);
+            nonCoeffNum = Mp4Dec_RvlcIntraTCOEF(vop_mode_ptr, coef_block, iCoefStart,nonCoeffPos);
         } else
 #endif //DATA_PARTITION	
         {
-            nonCoeffNum = Mp4Dec_VlcDecIntraTCOEF(vop_mode_ptr, coef_block, iCoefStart, nonCoeffPos);
+            nonCoeffNum = Mp4Dec_VlcDecIntraTCOEF(vop_mode_ptr, coef_block, iCoefStart,nonCoeffPos);
         }
     }
 

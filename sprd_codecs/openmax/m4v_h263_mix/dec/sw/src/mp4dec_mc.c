@@ -424,7 +424,7 @@ PUBLIC void Mp4Dec_MCA_BVOP(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode
     uint8 * pDstFrameY, * pDstFrameU,* pDstFrameV;
     MOTION_VECTOR_T FwdMvCliped[4] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}};
     MOTION_VECTOR_T BckMvCliped[4] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}};
-    int32	dst_width;
+    int32 dst_width;
 
     mv = zeroMv;
 //for MV CLIP

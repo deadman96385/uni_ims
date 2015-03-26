@@ -49,7 +49,7 @@ void nal_unit_header_mvc_extension(H264DecObject *vo, NALUnitHeaderMVCExt_t *Nal
     if(NaluHeaderMVCExt->reserved_one_bit != 1)
     {
         vo->error_flag |= ER_SREAM_ID;
-        SCI_TRACE_LOW ("Nalu Header MVC Extension: reserved_one_bit is not 1!\n");
+        SPRD_CODEC_LOGE ("Nalu Header MVC Extension: reserved_one_bit is not 1!\n");
         return;
     }
 }
@@ -70,12 +70,10 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
     DEC_SLICE_T *curr_slice_ptr = vo->g_curr_slice_ptr;
 
     tmpVar = READ_FLC(8);
-
-    SCI_TRACE_LOW("%s, %d, the first byte: 0x%0x.\n", __FUNCTION__, __LINE__, tmpVar);
-
     nal_ptr->nal_unit_type = tmpVar & 0x1f;
     nal_ptr->nal_reference_idc = ((tmpVar>>5)&0x3);
     nal_ptr->frobidden_bit = ((tmpVar>>7)&0x1);
+    SPRD_CODEC_LOGD("%s, %d, the first byte: 0x%0x.\n", __FUNCTION__, __LINE__, tmpVar);
 
 #if _MVC_
     curr_slice_ptr->svc_extension_flag = -1;
@@ -104,7 +102,7 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
 
     if (vo->error_flag)
     {
-        SCI_TRACE_LOW("%s, %d, error_flag=0x%x", __FUNCTION__, __LINE__, vo->error_flag);
+        SPRD_CODEC_LOGE ("%s, %d, error_flag=0x%x", __FUNCTION__, __LINE__, vo->error_flag);
         return -1;
     }
 #endif
@@ -115,69 +113,75 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
     {
     case NALU_TYPE_IDR:
     case NALU_TYPE_SLICE:
-#if _MVC_
-        if(curr_slice_ptr->svc_extension_flag == 0)
-        {   //MVC
-            curr_slice_ptr->view_id = curr_slice_ptr->NaluHeaderMVCExt.view_id;
-            curr_slice_ptr->inter_view_flag = curr_slice_ptr->NaluHeaderMVCExt.inter_view_flag;
-            curr_slice_ptr->anchor_pic_flag = curr_slice_ptr->NaluHeaderMVCExt.anchor_pic_flag;
-        }
-        else if(curr_slice_ptr->svc_extension_flag == -1) //SVC and the normal AVC;
+        if (vo->sawSPS && vo->sawPPS)
         {
-            if(vo->g_active_subset_sps == NULL)
+#if _MVC_
+            if(curr_slice_ptr->svc_extension_flag == 0)
+            {   //MVC
+                curr_slice_ptr->view_id = curr_slice_ptr->NaluHeaderMVCExt.view_id;
+                curr_slice_ptr->inter_view_flag = curr_slice_ptr->NaluHeaderMVCExt.inter_view_flag;
+                curr_slice_ptr->anchor_pic_flag = curr_slice_ptr->NaluHeaderMVCExt.anchor_pic_flag;
+            }
+            else if(curr_slice_ptr->svc_extension_flag == -1) //SVC and the normal AVC;
             {
-                //g_curr_slice_ptr->view_id = GetBaseViewId(g_active_subset_sps);
-                curr_slice_ptr->view_id = 0;//TOFIX
-                if(curr_slice_ptr->NaluHeaderMVCExt.iPrefixNALU >0)
+                if(vo->g_active_subset_sps == NULL)
                 {
-                    //assert(g_curr_slice_ptr->view_id == g_curr_slice_ptr->NaluHeaderMVCExt.view_id); //for OR debug
-                    curr_slice_ptr->inter_view_flag = curr_slice_ptr->NaluHeaderMVCExt.inter_view_flag;
-                    curr_slice_ptr->anchor_pic_flag = curr_slice_ptr->NaluHeaderMVCExt.anchor_pic_flag;
-                } else
-                {
-                    //g_curr_slice_ptr->inter_view_flag = 1;
-                    //g_curr_slice_ptr->anchor_pic_flag = g_image_ptr->idr_flag;
-                }
-            } else
-            {
-                //assert(g_active_subset_sps->num_views_minus1 >=0);////for OR debug
-                // prefix NALU available
-                if(curr_slice_ptr->NaluHeaderMVCExt.iPrefixNALU >0)
-                {
-                    curr_slice_ptr->view_id = curr_slice_ptr->NaluHeaderMVCExt.view_id;
-                    curr_slice_ptr->inter_view_flag = curr_slice_ptr->NaluHeaderMVCExt.inter_view_flag;
-                    curr_slice_ptr->anchor_pic_flag = curr_slice_ptr->NaluHeaderMVCExt.anchor_pic_flag;
-                } else
-                {   //no prefix NALU;
-                    if (NULL == vo->g_active_subset_sps->view_id)
+                    //g_curr_slice_ptr->view_id = GetBaseViewId(g_active_subset_sps);
+                    curr_slice_ptr->view_id = 0;//TOFIX
+                    if(curr_slice_ptr->NaluHeaderMVCExt.iPrefixNALU >0)
                     {
-                        vo->error_flag |= ER_SREAM_ID;
-                        curr_slice_ptr->view_id = 0;
+                        //assert(g_curr_slice_ptr->view_id == g_curr_slice_ptr->NaluHeaderMVCExt.view_id); //for OR debug
+                        curr_slice_ptr->inter_view_flag = curr_slice_ptr->NaluHeaderMVCExt.inter_view_flag;
+                        curr_slice_ptr->anchor_pic_flag = curr_slice_ptr->NaluHeaderMVCExt.anchor_pic_flag;
                     } else
                     {
-                        curr_slice_ptr->view_id = vo->g_active_subset_sps->view_id[0];
+                        //g_curr_slice_ptr->inter_view_flag = 1;
+                        //g_curr_slice_ptr->anchor_pic_flag = g_image_ptr->idr_flag;
                     }
-                    curr_slice_ptr->inter_view_flag = 1;
-                    curr_slice_ptr->anchor_pic_flag = vo->g_image_ptr->idr_flag;
+                } else
+                {
+                    //assert(g_active_subset_sps->num_views_minus1 >=0);////for OR debug
+                    // prefix NALU available
+                    if(curr_slice_ptr->NaluHeaderMVCExt.iPrefixNALU >0)
+                    {
+                        curr_slice_ptr->view_id = curr_slice_ptr->NaluHeaderMVCExt.view_id;
+                        curr_slice_ptr->inter_view_flag = curr_slice_ptr->NaluHeaderMVCExt.inter_view_flag;
+                        curr_slice_ptr->anchor_pic_flag = curr_slice_ptr->NaluHeaderMVCExt.anchor_pic_flag;
+                    } else
+                    {   //no prefix NALU;
+                        if (NULL == vo->g_active_subset_sps->view_id)
+                        {
+                            vo->error_flag |= ER_SREAM_ID;
+                            curr_slice_ptr->view_id = 0;
+                        } else
+                        {
+                            curr_slice_ptr->view_id = vo->g_active_subset_sps->view_id[0];
+                        }
+                        curr_slice_ptr->inter_view_flag = 1;
+                        curr_slice_ptr->anchor_pic_flag = vo->g_image_ptr->idr_flag;
+                    }
                 }
             }
-        }
-        curr_slice_ptr->layer_id = curr_slice_ptr->view_id = GetVOIdx(vo, curr_slice_ptr->view_id );
+            curr_slice_ptr->layer_id = curr_slice_ptr->view_id = GetVOIdx(vo, curr_slice_ptr->view_id );
 #endif
-        vo->g_ready_to_decode_slice = TRUE;
+            vo->g_ready_to_decode_slice = TRUE;
 
-        ret = H264Dec_Process_slice (vo);
-
-        if ((curr_slice_ptr->start_mb_nr == 0) && (!vo->error_flag))
+            ret = H264Dec_Process_slice (vo);
+            if ((curr_slice_ptr->start_mb_nr == 0) && (!vo->error_flag))
+            {
+                vo->g_searching_IDR_pic = FALSE;
+            }
+        } else
         {
-            vo->g_searching_IDR_pic = FALSE;
+            vo->error_flag |= ER_SREAM_ID;
         }
-
         break;
     case NALU_TYPE_PPS:
+        vo->sawPPS = TRUE;
         H264Dec_ProcessPPS (vo);
         break;
     case NALU_TYPE_SPS:
+        vo->sawSPS = TRUE;
         H264Dec_ProcessSPS (vo);
         break;
     case NALU_TYPE_SUB_SPS:
@@ -463,7 +467,7 @@ LOCAL void H264Dec_ref_pic_list_reordering (H264DecObject *vo)
 
                 if ((val > 3) || ((i>img_ptr->num_ref_idx_l0_active)&&(val != 3)))//for error
                 {
-                    SCI_TRACE_LOW ("Invalid remapping_of_pic_nums_idc command\n");
+                    SPRD_CODEC_LOGE ("Invalid remapping_of_pic_nums_idc command\n");
                     vo->error_flag |= ER_SREAM_ID;
                     return;
                 }
@@ -517,7 +521,7 @@ LOCAL void H264Dec_ref_pic_list_reordering (H264DecObject *vo)
 
                 if ((val > 3) ||((i>img_ptr->num_ref_idx_l1_active)&&(val != 3)) )//for error
                 {
-                    SCI_TRACE_LOW ("Invalid remapping_of_pic_nums_idc command\n");
+                    SPRD_CODEC_LOGE ("Invalid remapping_of_pic_nums_idc command\n");
                     vo->error_flag |= ER_SREAM_ID;
                     return;
                 }
@@ -668,7 +672,7 @@ PUBLIC void H264Dec_RestSliceHeader (H264DecObject *vo)
         if (field_pic_flag)
         {
             vo->error_flag |= ER_SREAM_ID;
-            SCI_TRACE_LOW("field is not supported!\n");
+            SPRD_CODEC_LOGE ("field is not supported!\n");
             return;
         }
     }
@@ -756,7 +760,7 @@ PUBLIC void H264Dec_RestSliceHeader (H264DecObject *vo)
                 if (img_ptr->num_ref_idx_l1_active > MAX_REF_FRAME_NUMBER)
                 {
                     vo->error_flag |= ER_SREAM_ID;
-                    SCI_TRACE_LOW ("too many l0_active not supported!\n");
+                    SPRD_CODEC_LOGE ("too many l0_active not supported!\n");
                     return;
                 }
             }
@@ -765,7 +769,7 @@ PUBLIC void H264Dec_RestSliceHeader (H264DecObject *vo)
         if (img_ptr->num_ref_idx_l0_active > MAX_REF_FRAME_NUMBER)
         {
             vo->error_flag |= ER_REF_FRM_ID;
-            SCI_TRACE_LOW ("too many l0_active not supported!\n");
+            SPRD_CODEC_LOGE ("too many l0_active not supported!\n");
             return;
         }
     }
@@ -810,6 +814,12 @@ PUBLIC void H264Dec_RestSliceHeader (H264DecObject *vo)
     if (active_pps_ptr->entropy_coding_mode_flag && img_ptr->type!=I_SLICE)
     {
         img_ptr->model_number = UE_V();
+        if (img_ptr->model_number > 2)
+        {
+            vo->error_flag |= ER_SREAM_ID;
+            SPRD_CODEC_LOGE("error model_number img_type %d, img_ptr->model_number %d\n",img_ptr->type,img_ptr->model_number);
+            return;
+        }
     }  else
     {
         img_ptr->model_number = 0;

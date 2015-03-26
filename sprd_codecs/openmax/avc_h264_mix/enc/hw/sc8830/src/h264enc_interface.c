@@ -28,32 +28,32 @@ MMEncRet H264EncGetCodecCapability(AVCHandle *avcHandle, MMEncCapability *Capabi
 {
     H264EncObject *vo = (H264EncObject *)avcHandle->videoEncoderData;
 
-    int32 codec_capability = vo->vsp_capability;
-    if (codec_capability == 0)   //limited under 720p
+    switch (vo->vsp_version)
     {
+    case SHARK:	//limited under 1080p
+    case TSHARK:
+    case SHARKL:
+    case PIKEL:
+        Capability->max_width = 1920;
+        Capability->max_height = 1088;
+        Capability->profile = AVC_HIGH;
+        Capability->level = AVC_LEVEL4_1;
+        break;
+    case DOLPHIN://limited under 720p
+    case PIKE:
         Capability->max_width = 1280;
         Capability->max_height = 1023; //720;
         Capability->profile = AVC_HIGH;
         Capability->level = AVC_LEVEL3_1;
-    } else if (codec_capability == 1)   //limited under 1080p
-    {
-        Capability->max_width = 1920;
-        Capability->max_height = 1088;
-        Capability->profile = AVC_HIGH;
-        Capability->level = AVC_LEVEL5_1;
-    } else if (codec_capability == 2)   //limited under 1080p
-    {
-        Capability->max_width = 1920;
-        Capability->max_height = 1088;
-        Capability->profile = AVC_HIGH;
-        Capability->level = AVC_LEVEL5_1;
-    } else
-    {
+        break;
+    default:
         Capability->max_width = 352;
         Capability->max_height = 288;
-        Capability->profile = AVC_HIGH;
+        Capability->profile = AVC_BASELINE;
         Capability->level = AVC_LEVEL2;
+        break;
     }
+
     return MMENC_OK;
 }
 
@@ -70,7 +70,7 @@ MMEncRet H264EncPreInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr)
     uint32 frame_buf_size;
     MMEncRet ret;
 
-    SCI_TRACE_LOW("libomx_avcenc_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
+    SPRD_CODEC_LOGI ("libomx_avcenc_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
     CHECK_MALLOC(pInterMemBfr, "pInterMemBfr");
     CHECK_MALLOC(pInterMemBfr->common_buffer_ptr, "internal memory");
@@ -90,14 +90,14 @@ MMEncRet H264EncPreInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr)
         return ret;
     }
 
-    vo->yuv_format = MMENC_YUV420SP_NV21;
+    vo->yuv_format = YUV420SP_NV21;
     vo->g_nFrame_enc = 0;
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
     vo->vsp_freq_div = 0;
     vo->error_flag = 0;
     vo->b_previous_frame_failed = 0;
-    vo->vsp_capability = -1;
+    vo->vsp_version = SHARK;
     if (VSP_OPEN_Dev((VSPObject *)vo) < 0)
     {
         return MMENC_ERROR;
@@ -140,13 +140,35 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
 
     vo->g_vlc_hw_ptr = (uint32 *)H264Enc_MemAlloc(vo, (406*2*sizeof(uint32)), 8, EXTRA_MEM);
     CHECK_MALLOC(vo->g_vlc_hw_ptr, "vo->g_vlc_hw_ptr");
-    if (vo->vsp_capability == 2)
+
+    img_ptr->cabac_enable = pVideoFormat->cabac_en; //g_input->cabac_en;//@leon cabac to modify
+
+    switch (vo->vsp_version)
     {
-        memcpy(vo->g_vlc_hw_ptr, &g_vlc_hw_tbl[406*2], (406*2*sizeof(uint32)));
-    }
-    else
-    {
+    case SHARK:
+    case DOLPHIN:
         memcpy(vo->g_vlc_hw_ptr, g_vlc_hw_tbl, (406*2*sizeof(uint32)));
+        break;
+    case TSHARK:
+    case PIKE:
+    case SHARKL:
+    case PIKEL:
+        memcpy(vo->g_vlc_hw_ptr, &g_vlc_hw_tbl[406*2], (406*2*sizeof(uint32)));
+        break;
+    default:
+        SPRD_CODEC_LOGE ("%s, %d, VSP version is error!", __FUNCTION__, __LINE__);
+        vo->error_flag |= ER_HW_ID;
+        break;
+    }
+
+    if (vo->error_flag & ER_HW_ID)
+    {
+        return MMENC_ERROR;
+    }
+
+    if(1 == img_ptr->cabac_enable)
+    {
+        memcpy(vo->g_vlc_hw_ptr, &g_vlc_hw_tbl[406*4], (406*2*sizeof(uint32)));
     }
 
     img_ptr->orig_width = pVideoFormat->frame_width;
@@ -160,15 +182,21 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
     img_ptr->i_idr_pic_id = 0;
     img_ptr->i_sps_id = 0;
 
-    if (vo->vsp_capability == 0)   //limited under 720p
+    switch (vo->vsp_version)
     {
-        img_ptr->i_level_idc = 31;
-    } else if (vo->vsp_capability == 1)   //limited under 1080p
-    {
-        img_ptr->i_level_idc = 41;
-    } else
-    {
-        img_ptr->i_level_idc = 51;	//as close to "unresticted as we can get
+    case SHARK:	//limited under 1080p
+    case TSHARK:
+    case SHARKL:
+    case PIKEL:
+        img_ptr->i_level_idc = AVC_LEVEL4_1;
+        break;
+    case DOLPHIN://limited under 720p
+    case PIKE:
+        img_ptr->i_level_idc = AVC_LEVEL3_1;
+        break;
+    default:
+        img_ptr->i_level_idc  = AVC_LEVEL2;
+        break;
     }
 
 //	img_ptr->i_max_ref0 = img_ptr->i_frame_reference_num;
@@ -186,10 +214,12 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
     img_ptr->prev_slice_bits = 0;
     img_ptr->crop_x = 0;
     img_ptr->crop_y = 0;
+    img_ptr->model_number = 0;//cabac  ???Josh
     img_ptr->frame_width_in_mbs = (img_ptr->width + 15) >> 4;
     img_ptr->frame_height_in_mbs = (img_ptr->height + 15) >>4;
     img_ptr->frame_size_in_mbs = img_ptr->frame_width_in_mbs * img_ptr->frame_height_in_mbs;
     img_ptr->slice_mb = (img_ptr->frame_height_in_mbs / SLICE_MB)*img_ptr->frame_width_in_mbs;
+    img_ptr->cabac_enable = pVideoFormat->cabac_en; //g_input->cabac_en;//@leon cabac to modify
 
     //init frames
     img_ptr->pYUVSrcFrame = (H264EncStorablePic *)H264Enc_MemAlloc(vo, sizeof(H264EncStorablePic), 8, INTER_MEM);
@@ -246,6 +276,11 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
 
     vo->yuv_format = pVideoFormat->yuv_format;
 
+#ifdef SIM_IN_WIN // cabac encoding
+    img_ptr->context = (BiContextType *)H264Enc_ExtraMemAlloc_64WordAlign (sizeof(BiContextType) * 308);
+#else
+    img_ptr->context = (int32 *)(CABAC_CONTEXT_BASE_ADDR);
+#endif // SIM_IN_WIN
     h264enc_sps_init (img_ptr);
     h264enc_pps_init (img_ptr);
 
@@ -256,6 +291,7 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
 {
     H264EncObject *vo = (H264EncObject *) avcHandle->videoEncoderData;
     MMEncConfig * enc_config = vo->g_h264_enc_config;
+    uint32 target_bitrate_max;
 
     SCI_ASSERT(NULL != pConf);
 
@@ -275,7 +311,14 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
         vo->rc_gop_paras.intra_period = pConf->PFrames+1;
     }
 
-    SCI_TRACE_LOW("%s, %d, intra_period: %d", __FUNCTION__, __LINE__, vo->rc_gop_paras.intra_period);
+    target_bitrate_max = (vo->g_enc_image_ptr->width * vo->g_enc_image_ptr->height * pConf->FrameRate * 6); //8*(3/2)*(1/2)
+    if (enc_config->targetBitRate > target_bitrate_max)
+    {
+        enc_config->targetBitRate = target_bitrate_max;
+    }
+
+    SPRD_CODEC_LOGD ("%s, %d, intra_period: %d, enc_config->targetBitRate: %d, target_bitrate_max: %d",
+                     __FUNCTION__, __LINE__, vo->rc_gop_paras.intra_period, enc_config->targetBitRate, target_bitrate_max);
 
     return MMENC_OK;
 }
@@ -331,7 +374,7 @@ MMEncRet H264Enc_FakeNALU(ENC_IMAGE_PARAMS_T *img_ptr, MMEncOut *pOutput)
 {
     uint32 nal_header;
 
-    SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+    SPRD_CODEC_LOGE ("%s, %d", __FUNCTION__, __LINE__);
 
     /* nal header, ( 0x00 << 7 ) | ( nal->i_ref_idc << 5 ) | nal->i_type; */
     nal_header = ( 0x00 << 7 ) | ( NAL_PRIORITY_HIGHEST << 5 ) | NAL_UNKNOWN;
@@ -550,7 +593,7 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
 
 ENC_EXIT:
 
-    SCI_TRACE_LOW("%s, %d, exit encoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    SPRD_CODEC_LOGD ("%s, %d, exit encoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
 
     if(img_ptr->sh.i_first_mb == 0)
     {
@@ -635,12 +678,12 @@ MMEncRet H264EncGenHeader(AVCHandle *avcHandle, MMEncOut *pOutput, int is_sps)
 
 HEADER_EXIT:
 
-    SCI_TRACE_LOW("%s, %d, exit generating header, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    SPRD_CODEC_LOGD ("%s, %d, exit generating header, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
     if (is_sps)
     {
-        if (pOutput->strmSize != 16)
+        if (pOutput->strmSize != 24)
         {
-            SCI_TRACE_LOW ("%s, %d, sps header size is not equal to 16 bytes");
+            SPRD_CODEC_LOGE ("%s, %d, sps header size is not equal to 16 bytes", __FUNCTION__, __LINE__);
         } else
         {
             SCI_MEMCPY(vo->sps_header, img_ptr->pOneFrameBitstream, pOutput->strmSize);
@@ -649,7 +692,7 @@ HEADER_EXIT:
     {
         if (pOutput->strmSize != 8)
         {
-            SCI_TRACE_LOW ("%s, %d, pps header size is not equal to 16 bytes");
+            SPRD_CODEC_LOGE ("%s, %d, pps header size is not equal to 16 bytes", __FUNCTION__, __LINE__);
         } else
         {
             SCI_MEMCPY(vo->pps_header, img_ptr->pOneFrameBitstream, pOutput->strmSize);

@@ -30,6 +30,7 @@ extern   "C"
 #include "mmcodec.h"
 
 #include "vsp_drv.h"
+#include "osal_log.h"
 
 #include "h264enc_mode.h"
 #include "h264enc_init.h"

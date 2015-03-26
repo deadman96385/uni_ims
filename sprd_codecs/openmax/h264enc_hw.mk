@@ -7,6 +7,8 @@ VSP_PATH := vsp/sc8830/
 endif
 
 LOCAL_SRC_FILES := \
+	$(H264_PATH)/src/h264enc_context_init.c \
+	$(H264_PATH)/src/h264enc_ctx_table.c \
 	$(H264_PATH)/src/h264enc_bitstrm.c \
 	$(H264_PATH)/src/h264enc_frame.c \
 	$(H264_PATH)/src/h264enc_global.c \
@@ -17,7 +19,8 @@ LOCAL_SRC_FILES := \
 	$(H264_PATH)/src/h264enc_set.c \
 	$(H264_PATH)/src/h264enc_slice.c \
 	$(H264_PATH)/src/h264enc_table.c \
-	$(VSP_PATH)/src/vsp_drv.c
+	$(VSP_PATH)/src/vsp_drv.c \
+	$(VSP_PATH)/src/osal_log.c
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/$(H264_PATH)/include \

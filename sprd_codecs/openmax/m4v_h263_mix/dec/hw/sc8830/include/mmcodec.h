@@ -17,10 +17,6 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-
-#include "sci_types.h"
-#define LOG_TAG "VSP"
-#include <utils/Log.h>
 #include "sci_types.h"
 /**---------------------------------------------------------------------------*
 **                             Compiler Flag                                  *
@@ -30,10 +26,30 @@ extern   "C"
 {
 #endif
 
+#ifdef TRUE
+#undef TRUE
+#endif
+
+#ifdef FALSE
+#undef FALSE
+#endif
+
+#define TRUE   1   /* Boolean true value. */
+#define FALSE  0   /* Boolean false value. */
+
+#ifndef NULL
+#define NULL  0
+#endif
+
+
+#define PUBLIC
+#define	LOCAL		static
+
+#define SCI_TRACE_LOW_DPB SPRD_CODEC_LOGV
+
 /**---------------------------------------------------------------------------*
  **                         Data Structures                                   *
  **---------------------------------------------------------------------------*/
-#define  SCI_TRACE_LOW   ALOGE
 
 typedef enum
 {
@@ -48,7 +64,8 @@ typedef enum
     MMDEC_NOT_SUPPORTED = -8,
     MMDEC_FRAME_SEEK_IVOP = -9,
     MMDEC_MEMORY_ALLOCED = -10
-} MMDecRet;
+}
+MMDecRet;
 
 typedef enum
 {
@@ -76,7 +93,7 @@ typedef struct
     int32	frame_width;
     int32	frame_height;
     int32	i_extra;
-    uint8 	*p_extra;
+    void 	*p_extra;
     uint_32or64 p_extra_phy;
     int32   yuv_format;
 } MMDecVideoFormat;
@@ -93,10 +110,6 @@ typedef struct
     uint8   *int_buffer_ptr;		// internal memory address
     int32 	int_size;				//internal memory size
 } MMCodecBuffer;
-
-typedef MMCodecBuffer MMDecBuffer;
-typedef MMCodecBuffer MMEncBuffer;
-
 
 typedef struct
 {
@@ -150,7 +163,10 @@ typedef struct
     int32	frame_width;				//frame width
     int32	frame_height;				//frame Height
     int32	time_scale;
-    int32	uv_interleaved;				//tmp add
+//    int32	uv_interleaved;				//tmp add
+    int32   yuv_format;
+    int32    b_anti_shake;
+    int32 cabac_en;
 } MMEncVideoInfo;
 
 // Encoder config structure
@@ -159,6 +175,7 @@ typedef struct
     uint32	RateCtrlEnable;            // 0 : disable  1: enable
     uint32	targetBitRate;             // 400 ~  (bit/s)
     uint32  FrameRate;
+    uint32  PFrames;
 
     uint32	vbv_buf_size;				//vbv buffer size, to determine the max transfer delay
 
@@ -168,6 +185,8 @@ typedef struct
     uint32	h263En;            			// 1 : H.263, 0 : MP4
 
     uint32	profileAndLevel;
+
+    uint32 PrependSPSPPSEnalbe;	// 0: disable, 1: disable
 } MMEncConfig;
 
 // Encoder input structure
@@ -176,13 +195,19 @@ typedef struct
     uint8   *p_src_y;
     uint8   *p_src_u;
     uint8   *p_src_v;
+
     uint8   *p_src_y_phy;
     uint8   *p_src_u_phy;
     uint8   *p_src_v_phy;
-    int32	vopType;					//vopµƒ¿‡–Õ  0 - I Frame    1 - P frame
+
+    BOOLEAN	needIVOP;
     int32	time_stamp;					//time stamp
     int32   bs_remain_len;				//remained bitstream length
     int32 	channel_quality;			//0: good, 1: ok, 2: poor
+    int32    org_img_width;
+    int32    org_img_height;
+    int32    crop_x;
+    int32    crop_y;
 } MMEncIn;
 
 // Encoder output structure
@@ -190,6 +215,7 @@ typedef struct
 {
     uint8	*pOutBuf;					//Output buffer
     int32	strmSize;					//encoded stream size, if 0, should skip this frame.
+    int32	vopType;					//0: I VOP, 1: P VOP, 2: B VOP
 } MMEncOut;
 
 /**---------------------------------------------------------------------------*

@@ -84,7 +84,7 @@ PUBLIC void *H264Dec_MemAlloc (H264DecObject *vo, uint32 need_size, int32 aligne
 
     if((0 == need_size)||(need_size >  (pMem->total_size -pMem->used_size)))
     {
-        ALOGE("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, pMem->total_size, pMem->used_size,need_size, type);
+        SPRD_CODEC_LOGE ("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, pMem->total_size, pMem->used_size,need_size, type);
         return NULL;
     }
 
@@ -100,7 +100,7 @@ PUBLIC uint_32or64 H264Dec_MemV2P(H264DecObject *vo, uint8 *vAddr, int32 type)
 {
     if (type >= MAX_MEM_TYPE)
     {
-        ALOGE ("%s, memory type is error!", __FUNCTION__);
+        SPRD_CODEC_LOGE ("%s, memory type is error!", __FUNCTION__);
         return (uint_32or64)NULL;
     } else
     {

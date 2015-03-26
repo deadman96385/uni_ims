@@ -54,9 +54,12 @@ void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
         }
     }
 
-    img_ptr->g_searching_IDR_pic = TRUE;
     if(img_ptr->g_old_slice_ptr)
+    {
         img_ptr->g_old_slice_ptr->frame_num = -1;
+    }
+
+    img_ptr->g_searching_IDR_pic = TRUE;
 }
 
 MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picId)
@@ -134,7 +137,7 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 
     aligned_width =  (sps_ptr->pic_width_in_mbs_minus1 + 1) * 16;
     aligned_height = (sps_ptr->pic_height_in_map_units_minus1 + 1) * 16;
-//    SCI_TRACE_LOW("%s, %d, aligned_width: %d, aligned_height: %d", __FUNCTION__, __LINE__, aligned_width, aligned_height);
+//    SPRD_CODEC_LOGD ("%s, %d, aligned_width: %d, aligned_height: %d", __FUNCTION__, __LINE__, aligned_width, aligned_height);
 
     pDecInfo->picWidth        = aligned_width;
     pDecInfo->picHeight       = aligned_height;
@@ -205,7 +208,7 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
     H264DecContext *img_ptr = NULL;
     MMDecRet ret = MMDEC_ERROR;
 
-    SCI_TRACE_LOW("libomx_avcdec_sw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
+    SPRD_CODEC_LOGI ("libomx_avcdec_sw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
     SCI_ASSERT(NULL != buffer_ptr);
     SCI_ASSERT(NULL != pVideoFormat);
@@ -288,8 +291,8 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         {
             img_ptr->return_pos |= (1<<20);
 
-            SCI_TRACE_LOW("%s, %d, img_ptr->error_flag: %0x, pos: %0x, pos1: %0x, pos2: %0x",
-                          __FUNCTION__, __LINE__, img_ptr->error_flag, img_ptr->return_pos, img_ptr->return_pos1, img_ptr->return_pos2);
+            SPRD_CODEC_LOGE ("%s, %d, img_ptr->error_flag: %0x, pos: %0x, pos1: %0x, pos2: %0x",
+                             __FUNCTION__, __LINE__, img_ptr->error_flag, img_ptr->return_pos, img_ptr->return_pos1, img_ptr->return_pos2);
 
             goto DEC_EXIT;
         }
@@ -308,7 +311,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
             if ((dec_input_ptr->expected_IVOP) && (img_ptr->type != I_SLICE))
             {
-                SCI_TRACE_LOW("%s, %d, need I slice, return", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGW ("%s, %d, need I slice, return", __FUNCTION__, __LINE__);
                 return MMDEC_FRAME_SEEK_IVOP;
             }
 
@@ -341,19 +344,20 @@ DEC_EXIT:
     //need IVOP but not found IDR,then return seek ivop
     if(dec_input_ptr->expected_IVOP && img_ptr->g_searching_IDR_pic)
     {
-        SCI_TRACE_LOW("H264DecDecode: need IVOP\n");
+        SPRD_CODEC_LOGW ("H264DecDecode: need IVOP\n");
         return MMDEC_FRAME_SEEK_IVOP;
     }
 
 #if _H264_PROTECT_ & _LEVEL_LOW_
     if (img_ptr->error_flag)
     {
-        SCI_TRACE_LOW("%s, %d, img_ptr->error_flag: %0x, pos: %0x, pos1: %0x, pos2: %0x",
-                      __FUNCTION__, __LINE__, img_ptr->error_flag, img_ptr->return_pos, img_ptr->return_pos1, img_ptr->return_pos2);
+        SPRD_CODEC_LOGE ("%s, %d, img_ptr->error_flag: %0x, pos: %0x, pos1: %0x, pos2: %0x",
+                         __FUNCTION__, __LINE__, img_ptr->error_flag, img_ptr->return_pos, img_ptr->return_pos1, img_ptr->return_pos2);
 
         img_ptr->g_old_slice_ptr->frame_num = -1;
         img_ptr->curr_mb_nr = 0;
         img_ptr->return_pos |= (1<<22);
+        img_ptr->g_dec_picture_ptr =NULL; //Added for bug352453
         H264Dec_clear_delayed_buffer(img_ptr);
 
         if (img_ptr->not_supported)
@@ -363,7 +367,7 @@ DEC_EXIT:
 
         if (img_ptr->error_flag & ER_EXTRA_MEMO_ID)
         {
-            SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d", __FUNCTION__, __LINE__);
             return MMDEC_MEMORY_ERROR;
         }
 

@@ -29,12 +29,57 @@ extern   "C"
 {
 #endif
 
-typedef enum {
-    DIRECT,INTERPOLATE,BACKWARD,FORWARD
-}
-MB_TYPE_E;
-typedef enum {UNKNOWN_DIR,HORIZONTAL,VERTICAL,DIAGONAL} DIRECTION_E;
-typedef enum {NOT_DECODED, DECODED_IN_ERR_PKT, DECODED_NOT_IN_ERR_PKT, DECODED_OK, ERR_CONCEALED} MB_DEC_STATUS_E;
+//for motion vector
+typedef struct motion_vector_tag
+{
+    int16 x;
+    int16 y;
+} MOTION_VECTOR_T;
+
+typedef struct mv_info_tag		/* for motion vector coding*/
+{
+    uint16 Range;			/* search range (32f (-32f, 32f-1))*/
+    uint8  FCode;			/* f-code  (vop_fcode)*/
+    uint8  ScaleFactor;	/* scale factor (f)*/
+} MV_INFO_T;
+
+typedef struct mcbpc_table_code_len_tag
+{
+    uint8 code;	/* right justified *///the value of the variable length code
+    uint8 len;	// the length of the variable length code
+} MCBPC_TABLE_CODE_LEN_T;
+
+typedef struct mv_table_code_len_tag
+{
+    int8 code;	/* right justified *///the value of the variable length code
+    uint8 len;	// the length of the variable length code
+} MV_TABLE_CODE_LEN_T;
+
+//for vlc table structure
+typedef struct vlc_table_code_len_tag
+{
+    int16 code;	/* right justified *///the value of the variable length code
+    uint16 len;	// the length of the variable length code
+} VLC_TABLE_CODE_LEN_T;
+
+#define BITSTREAM_BFR_SIZE		128
+typedef struct bitstream
+{
+#if defined(CHIP_ENDIAN_LITTLE)
+    uint32 bufa;
+    uint32 bufb;
+#endif
+    uint32 bitsLeft; // left bits in the word pointed by rdptr
+    uint32 bitcnt;
+    uint32 *rdptr;
+    uint32 rdbfr[BITSTREAM_BFR_SIZE + 1];	// bitstream data
+
+    /*a nalu information*/
+    uint8 *pOneFrameBitstream;	//point to the nalu(current decoded position)
+    uint32 OneframeStreamLen;				//length of the nalu
+    uint32 stream_len_left;		//left length not decoded of the nalu
+    uint32 bitcnt_before_vld;
+} DEC_BS_T;
 
 typedef struct cbpy_table_code_len_tag
 {

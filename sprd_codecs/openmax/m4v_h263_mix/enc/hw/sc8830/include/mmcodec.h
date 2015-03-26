@@ -17,10 +17,6 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-
-#include "sci_types.h"
-#define LOG_TAG "VSP"
-#include <utils/Log.h>
 #include "sci_types.h"
 /**---------------------------------------------------------------------------*
 **                             Compiler Flag                                  *
@@ -30,10 +26,28 @@ extern   "C"
 {
 #endif
 
+#ifdef TRUE
+#undef TRUE
+#endif
+
+#ifdef FALSE
+#undef FALSE
+#endif
+
+#define TRUE   1   /* Boolean true value. */
+#define FALSE  0   /* Boolean false value. */
+
+#ifndef NULL
+#define NULL  0
+#endif
+
+
+#define PUBLIC
+#define	LOCAL		static
+
 /**---------------------------------------------------------------------------*
  **                         Data Structures                                   *
  **---------------------------------------------------------------------------*/
-#define  SCI_TRACE_LOW   ALOGE
 
 typedef enum
 {
@@ -46,8 +60,10 @@ typedef enum
     MMDEC_OUTPUT_BUFFER_OVERFLOW = -6,
     MMDEC_HW_ERROR = -7,
     MMDEC_NOT_SUPPORTED = -8,
-    MMDEC_FRAME_SEEK_IVOP = -9
-} MMDecRet;
+    MMDEC_FRAME_SEEK_IVOP = -9,
+    MMDEC_MEMORY_ALLOCED = -10
+}
+MMDecRet;
 
 typedef enum
 {
@@ -60,16 +76,24 @@ typedef enum
     MMENC_HW_ERROR = -6
 } MMEncRet;
 
+typedef enum
+{
+    YUV420P_YU12 = 0,
+    YUV420P_YV12 = 1,
+    YUV420SP_NV12 = 2,   /*u/v interleaved*/
+    YUV420SP_NV21 = 3,   /*v/u interleaved*/
+} MM_YUV_FORMAT_E;
+
 // decoder video format structure
 typedef struct
 {
-    int32 	video_std;			//video standard, 0: ITU_H263, 1: MPEG4, 2: JPEG, 3: FLV_H263
+    int32 	video_std;			//video standard, 0: VSP_ITU_H263, 1: VSP_MPEG4, 2: VSP_JPEG, 3: VSP_FLV_V1
     int32	frame_width;
     int32	frame_height;
-    int32   nalu_len;
     int32	i_extra;
     void 	*p_extra;
-    int32	uv_interleaved;				//tmp add
+    uint_32or64 p_extra_phy;
+    int32   yuv_format;
 } MMDecVideoFormat;
 
 // Decoder buffer for decoding structure
@@ -96,9 +120,9 @@ typedef struct
 // Decoder input structure
 typedef struct
 {
-    uint8		*pStream_phy;          	// Pointer to stream to be decoded
+    uint8		*pStream;          	// Pointer to stream to be decoded. Virtual address.
+    uint_32or64 pStream_phy;          	// Pointer to stream to be decoded. Physical address.
     uint32		dataLen;           	// Number of bytes to be decoded
-    uint32      nalu_len;
     int32		beLastFrm;			// whether the frame is the last frame.  1: yes,   0: no
 
     int32		expected_IVOP;		// control flag, seek for IVOP,
@@ -126,18 +150,10 @@ typedef struct
     int32	frameEffective;
 
     int32	err_MB_num;		//error MB number
-
-    uint8	ycode[16];
-    uint8	uvcode[16];
+    void *pBufferHeader;
+    int reqNewBuf;
+    int32 mPicId;
 } MMDecOutput;
-
-typedef enum
-{
-    MMENC_YUV420P_YU12 = 0,
-    MMENC_YUV420P_YV12 = 1,
-    MMENC_YUV420SP_NV12 = 2,        /*u/v interleaved*/
-    MMENC_YUV420SP_NV21 = 3,        /*v/u interleaved*/
-} MMENC_YUV_FORMAT_E;
 
 // Encoder video format structure
 typedef struct
@@ -147,7 +163,7 @@ typedef struct
     int32	frame_height;				//frame Height
     int32	time_scale;
 //    int32	uv_interleaved;				//tmp add
-    int32    yuv_format;
+    int32   yuv_format;
     int32    b_anti_shake;
 } MMEncVideoInfo;
 

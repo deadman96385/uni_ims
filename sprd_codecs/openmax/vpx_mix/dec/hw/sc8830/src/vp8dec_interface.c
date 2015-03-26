@@ -31,31 +31,33 @@ PUBLIC void VP8GetBufferDimensions(VPXHandle *vpxHandle, int32 *width, int32 *he
     *width =(((cm->Width + 15)>>4)<<4);
     *height = (((cm->Height + 15)>>4)<<4);
 
-    SCI_TRACE_LOW("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
+    SPRD_CODEC_LOGD ("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
 }
 
 PUBLIC MMDecRet VP8GetCodecCapability(VPXHandle *vpxHandle, int32 *max_width, int32 *max_height)
 {
     VPXDecObject *vo = (VPXDecObject *) vpxHandle->videoDecoderData;
 
-    int32 codec_capability = vo->vsp_capability;
-    if (codec_capability == 0)   //limited under 720p
+    switch (vo->vsp_version)
     {
+    case SHARK:	//limited under 1080p
+    case TSHARK:
+    case SHARKL:
+    case PIKEL:
+        *max_width = 1920;
+        *max_height = 1088;
+        break;
+    case DOLPHIN://limited under 720p
+    case PIKE:
         *max_width = 1280;
         *max_height = 1023; //720;
-    } else if (codec_capability == 1)   //limited under 1080p
-    {
-        *max_width = 1920;
-        *max_height = 1088;
-    } else if (codec_capability == 2)   //limited under 1080p
-    {
-        *max_width = 1920;
-        *max_height = 1088;
-    } else
-    {
+        break;
+    default:
         *max_width = 352;
         *max_height = 288;
+        break;
     }
+
     return MMDEC_OK;
 }
 
@@ -79,18 +81,6 @@ PUBLIC int32 VP8DecGetLastDspFrm(VPXHandle *vpxHandle,void **pOutput)
 
     *pOutput = NULL;
 
-    if (cm->frame_to_show != NULL)
-    {
-        SCI_TRACE_LOW("%s, cm->frame_to_show.pBufferHeader: 0x%p, cm->last_frame.pBufferHeader: 0x%p",
-                      __FUNCTION__, cm->frame_to_show->pBufferHeader, cm->last_frame.pBufferHeader);
-    }
-
-    if (cm->frame_to_show != &cm->last_frame)
-    {
-        cm->frame_to_show = &cm->last_frame;
-        *pOutput = cm->last_frame.pBufferHeader;
-    }
-
     return ((NULL != *pOutput) ? 1 : 0);
 }
 
@@ -99,7 +89,7 @@ PUBLIC MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MM
     VPXDecObject*vo;
     MMDecRet ret;
 
-    SCI_TRACE_LOW("libomx_vpxdec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
+    SPRD_CODEC_LOGI("libomx_vpxdec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
     CHECK_MALLOC(pInterMemBfr, "pInterMemBfr");
     CHECK_MALLOC(pInterMemBfr->common_buffer_ptr, "internal memory");
@@ -129,7 +119,7 @@ PUBLIC MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MM
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
     vo->vsp_freq_div= 0;
-    vo->vsp_capability = -1;
+    vo->vsp_version = SHARK;
     vo->yuv_format = pVideoFormat->yuv_format;
 
     if(VSP_OPEN_Dev((VSPObject *)vo)<0)
@@ -196,7 +186,7 @@ PUBLIC MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *dec_input_ptr, MM
 
 DEC_EXIT:
 
-    SCI_TRACE_LOW("%s,  exit decoder, error flag: 0x%x", __FUNCTION__, vo->error_flag);
+    SPRD_CODEC_LOGD ("%s,  exit decoder, error flag: 0x%x", __FUNCTION__, vo->error_flag);
 
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
@@ -215,7 +205,7 @@ MMDecRet VP8DecRelease(VPXHandle *vpxHandle)
 {
     VPXDecObject *vo = (VPXDecObject *) vpxHandle->videoDecoderData;
 
-    SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+    SPRD_CODEC_LOGD ("%s, %d", __FUNCTION__, __LINE__);
 
     VP8DecReleaseRefBuffers(vpxHandle);
 
@@ -233,7 +223,7 @@ void VP8DecReleaseRefBuffers(VPXHandle *vpxHandle)
     VP8_COMMON *cm = &vo->common;
     int32 buffer_index;
 
-    SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+    SPRD_CODEC_LOGD ("%s, %d", __FUNCTION__, __LINE__);
 
     for(buffer_index = 0; buffer_index < YUV_BUFFER_NUM; buffer_index ++)
     {

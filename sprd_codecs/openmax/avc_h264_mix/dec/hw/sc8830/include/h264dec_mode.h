@@ -669,7 +669,7 @@ typedef struct H264DecObject_tag
     int32 s_vsp_fd ;
     uint32 vsp_freq_div;
     int32	error_flag;
-    int32   vsp_capability;
+    int32   vsp_version;
 
     AVCHandle  *avcHandle;
 
@@ -693,7 +693,6 @@ typedef struct H264DecObject_tag
     DEC_OLD_SLICE_PARAMS_T	*g_old_slice_ptr;
 
     uint32					*g_cavlc_tbl_ptr;
-    int32 is_need_init_vsp_hufftab;
 
     DEC_DECODED_PICTURE_BUFFER_T	 *g_dpb_layer[2];
 
@@ -720,7 +719,10 @@ typedef struct H264DecObject_tag
     int32	g_dispFrmNum;
     int32	g_stream_offset;
     int32	g_slice_datalen;//weihu
-    int   frame_dec_finish;
+    BOOLEAN   frame_dec_finish;
+    BOOLEAN is_need_init_vsp_hufftab;
+    BOOLEAN sawSPS;
+    BOOLEAN sawPPS;
 
     char weightscale4x4[6][4][4];//6 6*2+2=14*16=224B
     char weightscale8x8[2][8][8];////2 2*2+2=6*64=384B

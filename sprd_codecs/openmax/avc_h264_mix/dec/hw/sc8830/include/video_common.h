@@ -26,11 +26,15 @@ extern   "C"
 {
 #endif
 
+#ifdef _VSP_LINUX_
 #define SCI_MEMSET  memset
-#define SCI_MEMCPY	memcpy //memcpy1	
-#define PRINTF
-#define SCI_ASSERT
-#define LUMA_8x8_CABAC
+#define SCI_MEMCPY	memcpy
+#define SCI_ASSERT(...)
+#define PRINTF(...)
+#endif
+
+#define ABS(x) ((x) > 0 ? (x) : -(x))
+#define Clip3(min,max,val) (((val)<(min))?(min):(((val)>(max))?(max):(val)))
 
 //for macroblock
 #define MB_SIZE					16
@@ -59,4 +63,3 @@ extern   "C"
 /**---------------------------------------------------------------------------*/
 // End
 #endif  //_VIDEO_COMMON_H_
-

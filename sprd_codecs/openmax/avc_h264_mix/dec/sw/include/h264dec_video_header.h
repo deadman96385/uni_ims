@@ -36,15 +36,10 @@
 #include <arm_neon.h>
 #endif
 
-//define the protect level for error bitstream
-#define _LEVEL_LOW_			(1<<0)		//for common case
-#define _LEVEL_MEDIUM_			(1<<1)		//for reserved
-#define _LEVEL_HIGH_			(1<<2)		//for CMMB or streaming case
-#define _H264_PROTECT_	  	( _LEVEL_LOW_ | _LEVEL_MEDIUM_ | _LEVEL_HIGH_)
-
 #include "sci_types.h"
 #include "video_common.h"
 #include "mmcodec.h"
+#include "osal_log.h"
 
 #include "h264dec_basic.h"
 #include "h264dec_mode.h"
@@ -71,15 +66,6 @@
 #include "h264dec_ipred.h"
 #include "h264dec_isqt.h"
 #include "h264dec_mc.h"
-
-#ifdef _VSP_LINUX_
-#define LOG_TAG "VSP"
-#include <utils/Log.h>
-#define  SCI_TRACE_LOW   ALOGI
-#define SCI_MEMSET  memset
-#define SCI_MEMCPY	memcpy
-#define SCI_ASSERT(...)
-#endif
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

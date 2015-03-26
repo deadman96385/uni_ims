@@ -70,7 +70,7 @@ PUBLIC void H264Dec_clear_delayed_buffer(H264DecObject *vo)
 
     if( 0 != dpb_ptr->delayed_pic_num )
     {
-        SCI_TRACE_LOW("%s: delayed_pic_num is %d\n", __FUNCTION__, dpb_ptr->delayed_pic_num);
+        SPRD_CODEC_LOGW ("%s: delayed_pic_num is %d\n", __FUNCTION__, dpb_ptr->delayed_pic_num);
     }
 }
 
@@ -232,7 +232,7 @@ LOCAL void H264Dec_get_smallest_poc (H264DecObject *vo, int32 *poc, int32 * pos,
 
     if (dpb_ptr->used_size<1)
     {
-        SCI_TRACE_LOW ("Cannot determine smallest POC, DPB empty.\n");
+        SPRD_CODEC_LOGE ("Cannot determine smallest POC, DPB empty.\n");
         vo->error_flag |= ER_REF_FRM_ID;
         return;
     }
@@ -563,7 +563,7 @@ LOCAL void H264Dec_adaptive_memory_management (H264DecObject *vo, DEC_DECODED_PI
             if (i != vo->g_dec_ref_pic_marking_buffer_size-1)
             {
                 vo->error_flag |= ER_REF_FRM_ID;
-                SCI_TRACE_LOW("memory_management_control_operation = 0 not last operation buffer");
+                SPRD_CODEC_LOGE("memory_management_control_operation = 0 not last operation buffer");
                 return;
             }
             break;
@@ -594,14 +594,14 @@ LOCAL void H264Dec_adaptive_memory_management (H264DecObject *vo, DEC_DECODED_PI
             if((int32)(dpb_ptr->ltref_frames_in_buffer +dpb_ptr->ref_frames_in_buffer)>(mmax(1, dpb_ptr->num_ref_frames)))
             {
                 vo->error_flag |= ER_REF_FRM_ID;
-                SCI_TRACE_LOW ("max.number of reference frame exceed. invalid stream.");
+                SPRD_CODEC_LOGE ("max.number of reference frame exceed. invalid stream.");
                 return;
             }
             break;
         default:
         {
             vo->error_flag |= ER_REF_FRM_ID;
-            SCI_TRACE_LOW ("invalid memory_management_control_operation in buffer");
+            SPRD_CODEC_LOGE ("invalid memory_management_control_operation in buffer");
             return;
         }
         }
@@ -807,7 +807,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_short_term_pic (H264DecObject *vo, int
     {
         if (dpb_ptr->fs_ref[i] == NULL)
         {
-            SCI_TRACE_LOW("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
             vo->error_flag |= ER_REF_FRM_ID;
             return NULL;//weihu//return g_no_reference_picture_ptr
         }
@@ -816,9 +816,9 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_short_term_pic (H264DecObject *vo, int
         {
             if (dpb_ptr->fs_ref[i]->frame == NULL)
             {
-                SCI_TRACE_LOW("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
                 vo->error_flag |= ER_REF_FRM_ID;
-                return NULL;//weihu
+                return NULL;
             }
 
             if ((!dpb_ptr->fs_ref[i]->frame->is_long_term) && (dpb_ptr->fs_ref[i]->frame->pic_num == pic_num))
@@ -871,7 +871,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_long_term_pic (H264DecObject *vo, int3
     {
         if (p_Dpb->fs_ltref[i] == NULL)
         {
-            SCI_TRACE_LOW("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
             vo->error_flag |= ER_REF_FRM_ID;
             return NULL;
         }
@@ -880,7 +880,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_long_term_pic (H264DecObject *vo, int3
         {
             if (p_Dpb->fs_ltref[i]->frame == NULL)
             {
-                SCI_TRACE_LOW("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE ("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
                 vo->error_flag |= ER_REF_FRM_ID;
                 return NULL;
             }
@@ -1029,7 +1029,7 @@ LOCAL void H264Dec_reorder_ref_pic_list_mvc (H264DecObject *vo,
     {
         if (remapping_of_pic_nums_idc[i]>5)
         {
-            SCI_TRACE_LOW ("Invalid remapping_of_pic_nums_idc command\n");
+            SPRD_CODEC_LOGE ("Invalid remapping_of_pic_nums_idc command\n");
             vo->error_flag |= ER_REF_FRM_ID;
             return;
         }
@@ -1122,7 +1122,7 @@ LOCAL void H264Dec_reorder_ref_pic_list (H264DecObject *vo,
     {
         if (remapping_of_pic_nums_idc[i]>3)
         {
-            SCI_TRACE_LOW("Invalid remapping_of_pic_nums_idc command");
+            SPRD_CODEC_LOGE ("Invalid remapping_of_pic_nums_idc command");
             vo->error_flag |= ER_REF_FRM_ID;
             return;
         }
@@ -1205,12 +1205,14 @@ LOCAL void H264Dec_map_list1(H264DecObject *vo)
 
     vo->g_list_size[0] = list0_size;
 
+#if 0	//removed for bug334390
     if((vo->g_list_size[0] == 0) && (vo->g_list_size[1] == 0))//for error // 不考虑对B/P slice 全Intra MB 情况支持
     {
         vo->error_flag |= ER_REF_FRM_ID;
-        SCI_TRACE_LOW("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
+        SPRD_CODEC_LOGE ("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
         return;
     }
+#endif
 
     for(i = 0; i < vo->g_list_size[0]; i++)
     {

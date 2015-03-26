@@ -17,6 +17,7 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
+#include "sci_types.h"
 /**---------------------------------------------------------------------------*
 **                             Compiler Flag                                  *
 **----------------------------------------------------------------------------*/
@@ -25,17 +26,25 @@ extern   "C"
 {
 #endif
 
-#ifdef SIM_NO_VSP
-typedef unsigned char	uint8;
-typedef signed char		int8;
-//typedef unsigned char	Bool;
-typedef signed short	int16;
-typedef unsigned short	uint16;
-typedef signed int		int32;
-typedef unsigned int	uint32;
-#else
-#include "sci_types.h"
+#ifdef TRUE
+#undef TRUE
 #endif
+
+#ifdef FALSE
+#undef FALSE
+#endif
+
+#define TRUE   1   /* Boolean true value. */
+#define FALSE  0   /* Boolean false value. */
+
+#ifndef NULL
+#define NULL  0
+#endif
+
+
+#define PUBLIC
+#define	LOCAL		static
+
 /**---------------------------------------------------------------------------*
  **                         Data Structures                                   *
  **---------------------------------------------------------------------------*/
@@ -53,7 +62,8 @@ typedef enum
     MMDEC_NOT_SUPPORTED = -8,
     MMDEC_FRAME_SEEK_IVOP = -9,
     MMDEC_MEMORY_ALLOCED = -10
-} MMDecRet;
+}
+MMDecRet;
 
 typedef enum
 {
@@ -82,7 +92,7 @@ typedef struct
     int32	frame_height;
     int32	i_extra;
     void 	*p_extra;
-    uint32 p_extra_phy;
+    uint_32or64 p_extra_phy;
     //int32	uv_interleaved;
     int32   yuv_format;
 } MMDecVideoFormat;
@@ -112,7 +122,7 @@ typedef struct
 typedef struct
 {
     uint8		*pStream;          	// Pointer to stream to be decoded
-    uint_32or64 pStream_phy;          	// Pointer to stream to be decoded, phy
+    uint_32or64		pStream_phy;          	// Pointer to stream to be decoded, phy
     uint32		dataLen;           	// Number of bytes to be decoded
     int32		beLastFrm;			// whether the frame is the last frame.  1: yes,   0: no
 

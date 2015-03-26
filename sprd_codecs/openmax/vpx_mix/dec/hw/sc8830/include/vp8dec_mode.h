@@ -405,7 +405,7 @@ typedef struct tagVPXDecObject
     int32 s_vsp_fd ;
     uint32 vsp_freq_div;
     int32	error_flag;
-    int32   vsp_capability;
+    int32   vsp_version;
 
     VPXHandle  *vpxHandle;
 

@@ -38,15 +38,15 @@ PUBLIC MMEncRet H264Enc_InitVSP(H264EncObject *vo)
         return MMDEC_HW_ERROR;
     }
 
-    SCI_TRACE_LOW("%s, %d.", __FUNCTION__, __LINE__);
+    SPRD_CODEC_LOGD ("%s, %d.", __FUNCTION__, __LINE__);
 //    VSP_WRITE_REG(GLB_REG_BASE_ADDR + AXIM_ENDIAN_OFF, 0x30868,"axim endian set, vu format"); // VSP and OR endian.
     cmd = V_BIT_17|V_BIT_16|V_BIT_11|V_BIT_5|V_BIT_3;
-    if (vo->yuv_format == MMENC_YUV420SP_NV21)  //vu format
+    if (vo->yuv_format == YUV420SP_NV21)  //vu format
     {
         cmd |= V_BIT_6;
     }
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + AXIM_ENDIAN_OFF, cmd,"axim endian set, vu format"); //VSP and OR endian.
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF, (STREAM_ID_H264|V_BIT_4), "VSP_MODE: Set standard and work mode");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF, (STREAM_ID_H264|V_BIT_4|((img_ptr->cabac_enable&0x01)<<9)), "VSP_MODE: Set standard and work mode");
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, 0, "RAM_ACC_SEL: SETTING_RAM_ACC_SEL=0(SW)");
 
     cmd = img_ptr->frame_width_in_mbs << 0;	// MB_X_MAX[7:0]
@@ -95,7 +95,7 @@ PUBLIC MMEncRet H264Enc_InitVSP(H264EncObject *vo)
     cmd |= (0 << 11);	// direct_spatial_mv_pred_flag[11], used in B slice
     cmd |= (img_ptr->sps->b_direct8x8_inference << 12);	// direct_8x8_inference_flag[12]
     cmd |= (0 << 13);	// transform_8x8_mode_flag[13]
-    cmd |= (0 << 14);	// Entropy_coding_mode_flag[14], 0:CAVLC, 1:CABAC
+    cmd	|= img_ptr->pps->b_entropy_coding_mode_flag << 14;	// Entropy_coding_mode_flag[14], 0:CAVLC, 1:CABAC
     cmd |= (0 << 15); // MCA_weighted_en[15]
     cmd |= (0 << 16);	// Weighted_pred_flag[16]
     cmd |= (0 << 17);	// Weighted_bipred_idc[18:17]

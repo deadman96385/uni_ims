@@ -473,17 +473,17 @@ MMDecRet vp8_decode_frame(VPXDecObject *vo)
 
         if (cmd & V_BIT_4)
         {
-            SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
         } else if (cmd & (V_BIT_5 | V_BIT_31))
         {
-            SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
         } else //if (cmd & V_BIT_30)
         {
-            SCI_TRACE_LOW("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
         }
     } else
     {
-        SCI_TRACE_LOW("%s, %d, should not be here!", __FUNCTION__, __LINE__);
+        SPRD_CODEC_LOGE ("%s, %d, should not be here!", __FUNCTION__, __LINE__);
     }
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0, "RAM_ACC_SEL");
 
@@ -552,14 +552,9 @@ MMDecRet vp8dx_receive_compressed_data(VPXDecObject *vo, unsigned long size, con
         vp8_copy_yv12_buffer(vo,cm, &cm->new_frame, &cm->alt_ref_frame);
 
     if (cm->refresh_last_frame == 1)
-    {
         vp8_copy_yv12_buffer(vo,cm, &cm->new_frame, &cm->last_frame);
-        cm->frame_to_show = &cm->last_frame;
-    }
-    else
-    {
-        cm->frame_to_show = &cm->new_frame;
-    }
+
+    cm->frame_to_show = &cm->new_frame;
 
     return MMDEC_OK;
 }

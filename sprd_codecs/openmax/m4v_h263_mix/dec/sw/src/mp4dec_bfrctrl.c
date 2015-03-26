@@ -173,7 +173,7 @@ BOOLEAN Mp4Dec_GetCurRecFrameBfr(Mp4DecObject *vo)
     while(!Mp4Dec_GetOneFreeDecBfr(vo, &bfrId))
     {
         //wait for display free buffer
-        SCI_TRACE_LOW("%s: no buffer is available!\n", __FUNCTION__);
+        SPRD_CODEC_LOGE ("%s: no buffer is available!\n", __FUNCTION__);
         return FALSE;
     }
 

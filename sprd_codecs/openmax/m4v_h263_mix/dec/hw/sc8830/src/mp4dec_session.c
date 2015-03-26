@@ -176,14 +176,14 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     extra_mem_size = Mp4Dec_CalculateMemSize (vop_mode_ptr);
     if ((*(vo->mp4Handle->VSP_extMemCb))(vo->mp4Handle->userdata, extra_mem_size) < 0)
     {
-        SCI_TRACE_LOW("%s, %d, extra memory is not enough", __FUNCTION__, __LINE__);
+        SPRD_CODEC_LOGD ("%s, %d, extra memory is not enough", __FUNCTION__, __LINE__);
         vo->memory_error = 1;
         return MMDEC_MEMORY_ERROR;
     }
 
     if (VSP_CFG_FREQ((VSPObject *)vo, (uint32)(vop_mode_ptr->FrameWidth * vop_mode_ptr->FrameHeight)) < 0)
     {
-        SCI_TRACE_LOW("%s, %d, VSP_CFG_FREQ ERR", __FUNCTION__, __LINE__);
+        SPRD_CODEC_LOGE ("%s, %d, VSP_CFG_FREQ ERR", __FUNCTION__, __LINE__);
         return MMDEC_HW_ERROR;
     }
 

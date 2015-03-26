@@ -16,7 +16,8 @@ LOCAL_SRC_FILES := \
 	$(MP4_PATH)/src/mp4dec_session.c \
 	$(MP4_PATH)/src/mp4dec_table.c \
 	$(MP4_PATH)/src/mp4dec_vop.c \
-	$(VSP_PATH)/src/vsp_drv.c
+	$(VSP_PATH)/src/vsp_drv.c \
+	$(VSP_PATH)/src/osal_log.c
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/$(MP4_PATH)/include \

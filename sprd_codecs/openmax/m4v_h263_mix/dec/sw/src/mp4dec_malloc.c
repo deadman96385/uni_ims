@@ -23,7 +23,7 @@ extern   "C"
 {
 #endif
 
-#define MP4DEC_MALLOC_PRINT   //ALOGD
+#define MP4DEC_MALLOC_PRINT   //SPRD_CODEC_LOGD
 
 LOCAL void Init_Mem (Mp4DecObject *vo, MMCodecBuffer *pMem, int32 type)
 {
@@ -76,7 +76,7 @@ PUBLIC void *Mp4Dec_MemAlloc (Mp4DecObject *vo, uint32 need_size, int32 aligned_
 
     if((0 == need_size)||(need_size >  (pMem->total_size -pMem->used_size)))
     {
-        ALOGE("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, pMem->total_size, pMem->used_size,need_size, type);
+        SPRD_CODEC_LOGE ("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, pMem->total_size, pMem->used_size,need_size, type);
         return NULL;
     }
 
@@ -92,7 +92,7 @@ PUBLIC uint_32or64 Mp4Dec_MemV2P(Mp4DecObject *vo, uint8 *vAddr, int32 type)
 {
     if (type >= MAX_MEM_TYPE)
     {
-        ALOGE ("%s, memory type is error!", __FUNCTION__);
+        SPRD_CODEC_LOGE ("%s, memory type is error!", __FUNCTION__);
         return (uint_32or64)NULL;
     } else
     {

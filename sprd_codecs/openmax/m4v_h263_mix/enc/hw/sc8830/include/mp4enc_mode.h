@@ -27,10 +27,12 @@ extern   "C"
 {
 #endif
 
-typedef enum {
-    BASE_LAYER
-}
-VOL_TYPE_E;	/* will be generlized later*/
+typedef struct mv_info_tag		/* for motion vector coding*/
+{
+    uint16 Range;			/* search range (32f (-32f, 32f-1))*/
+    uint8  FCode;			/* f-code  (vop_fcode)*/
+    uint8  ScaleFactor;	/* scale factor (f)*/
+} MV_INFO_T;
 
 typedef struct Mp4Enc_storable_pic
 {
@@ -245,7 +247,7 @@ typedef struct tagMp4EncObject
     int32 s_vsp_fd ;
     uint32 vsp_freq_div;
     int32	error_flag;
-    int32   vsp_capability;
+    int32   vsp_version;
 
     MP4Handle  *mp4Handle;
 

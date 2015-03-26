@@ -21,7 +21,8 @@ LOCAL_SRC_FILES := \
 	$(H264_PATH)/src/h264dec_parset.c \
 	$(H264_PATH)/src/h264dec_slice.c \
 	$(H264_PATH)/src/h264dec_table.c \
-	$(VSP_PATH)/src/vsp_drv.c 
+	$(VSP_PATH)/src/vsp_drv.c \
+	$(VSP_PATH)/src/osal_log.c 
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/$(H264_PATH)/include \

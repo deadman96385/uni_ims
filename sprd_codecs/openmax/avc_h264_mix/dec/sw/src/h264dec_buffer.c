@@ -72,7 +72,7 @@ PUBLIC void H264Dec_clear_delayed_buffer(H264DecContext *img_ptr)
 
     if( 0 != dpb_ptr->delayed_pic_num )
     {
-        SCI_TRACE_LOW("%s: delayed_pic_num is %d\n", __FUNCTION__, dpb_ptr->delayed_pic_num);
+        SPRD_CODEC_LOGW ("%s: delayed_pic_num is %d\n", __FUNCTION__, dpb_ptr->delayed_pic_num);
     }
 }
 

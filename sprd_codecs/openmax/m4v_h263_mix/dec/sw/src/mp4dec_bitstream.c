@@ -402,7 +402,7 @@ PUBLIC MMDecRet Mp4Dec_VerifyBitstrm(Mp4DecObject *vo,uint8 *pStream, int32 strm
                 }
                 else if ((tempPos[2] & 0xFC) == 0x80 && (tempPos[3] & 0x03)==0x02) /* H.263 PSC*/
                 {
-                    SCI_TRACE_LOW("Mp4Dec_VerifyBitstrm: it is ITU-H.263 format:\n");
+                    SPRD_CODEC_LOGD ("Mp4Dec_VerifyBitstrm: it is ITU-H.263 format:\n");
                     vop_mode_ptr->video_std = ITU_H263;
                     vop_mode_ptr->bDataPartitioning = FALSE; //MUST!, xweiluo@2012.03.01
                     vop_mode_ptr->bReversibleVlc = FALSE;
