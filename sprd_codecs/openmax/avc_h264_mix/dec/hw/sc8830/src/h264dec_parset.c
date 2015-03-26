@@ -456,7 +456,7 @@ LOCAL void Scaling_List(H264DecObject *vo, int8 *scalingList, int8 sizeOfScaling
     }
 }
 
-PUBLIC void H264Dec_interpret_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
+LOCAL void H264Dec_interpret_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
 {
     int32 reserved_zero;
 
