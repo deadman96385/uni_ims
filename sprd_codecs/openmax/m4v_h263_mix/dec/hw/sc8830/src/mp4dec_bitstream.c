@@ -213,13 +213,13 @@ PUBLIC MMDecRet Mp4Dec_VerifyBitstrm(Mp4DecObject *vo,uint8 *pStream, int32 strm
         {
             if (tempPos[0] == 0x00 && tempPos[1] == 0x00)
             {
-                if (tempPos[2] == 0x01 && (tempPos[3] == 0xB6 /*VOP*/|| tempPos[3] == 0xB0 || tempPos[3] == 0xB5))
+                if (tempPos[2] == 0x01 && tempPos[3] == 0xB6) /* MPEG4 VOP start code */
                 {
                     vop_mode_ptr->video_std = STREAM_ID_MPEG4;
                     return ret;
                 } else if ((tempPos[2] & 0xFC) == 0x80 && (tempPos[3] & 0x03)==0x02) /* H.263 PSC*/
                 {
-                    SCI_TRACE_LOW("Mp4Dec_VerifyBitstrm: it is ITU-H.263 format:\n");
+                    SPRD_CODEC_LOGD ("Mp4Dec_VerifyBitstrm: it is ITU-H.263 format:\n");
                     vop_mode_ptr->video_std = STREAM_ID_H263;
                     vop_mode_ptr->bDataPartitioning = FALSE; //MUST!, xweiluo@2012.03.01
                     vop_mode_ptr->bReversibleVlc = FALSE;

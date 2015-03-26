@@ -117,10 +117,6 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
     vop_mode_ptr->stop_decoding = FALSE;
     vop_mode_ptr->mbnumDec		= 0;
     vop_mode_ptr->frame_len		= dec_input_ptr->dataLen;
-    vop_mode_ptr->err_num		= dec_input_ptr->err_pkt_num;
-    vop_mode_ptr->err_left		= dec_input_ptr->err_pkt_num;
-    vop_mode_ptr->err_pos_ptr	= dec_input_ptr->err_pkt_pos;
-    vop_mode_ptr->err_MB_num	= vop_mode_ptr->MBNum;
 
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + IMG_SIZE_OFF, ((vop_mode_ptr->MBNumY&0xff)<<8) |((vop_mode_ptr->MBNumX&0xff)),"IMG_SIZE");
     if (vop_mode_ptr->bDataPartitioning)
@@ -130,9 +126,11 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
 
     if(vop_mode_ptr->bReversibleVlc&&vop_mode_ptr->VopPredType!=BVOP)
     {
+        memcpy(vo->g_rvlc_tbl_ptr, g_rvlc_huff_tab,(sizeof(uint32)*146));
         vld_table_addr= Mp4Dec_MemV2P(vo, (uint8 *)(vo->g_rvlc_tbl_ptr), HW_NO_CACHABLE);
     } else
     {
+        memcpy(vo->g_huff_tbl_ptr, g_mp4_dec_huff_tbl,(sizeof(uint32)*152));
         vld_table_addr= Mp4Dec_MemV2P(vo, (uint8 *)(vo->g_huff_tbl_ptr), HW_NO_CACHABLE);
     }
     VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR + 0xc, (vld_table_addr)/8,"ddr vlc table start addr");//qiangshen@2013_01_11
@@ -284,7 +282,7 @@ PUBLIC void Mp4Dec_output_one_frame (Mp4DecObject *vo, MMDecOutput *dec_output_p
             dec_output_ptr->frame_width = vop_mode_ptr->FrameWidth;
             dec_output_ptr->frame_height = vop_mode_ptr->FrameHeight;
             dec_output_ptr->frameEffective = 1;
-            dec_output_ptr->err_MB_num = vop_mode_ptr->err_MB_num;
+            dec_output_ptr->err_MB_num = 0;
             dec_output_ptr->pBufferHeader = display_frame->pBufferHeader;
         } else
         {
@@ -303,7 +301,7 @@ PUBLIC void Mp4Dec_output_one_frame (Mp4DecObject *vo, MMDecOutput *dec_output_p
             dec_output_ptr->frame_width = vop_mode_ptr->FrameWidth;
             dec_output_ptr->frame_height = vop_mode_ptr->FrameHeight;
             dec_output_ptr->frameEffective = 1;
-            dec_output_ptr->err_MB_num = vop_mode_ptr->err_MB_num;
+            dec_output_ptr->err_MB_num = 0;
         } else
         {
             dec_output_ptr->frame_width = vop_mode_ptr->FrameWidth;
@@ -339,7 +337,7 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
 
         if(vop_mode_ptr->mb_y == (vop_mode_ptr->MBNumY-1) && vop_mode_ptr->mb_x==(vop_mode_ptr->MBNumX-1))
         {
-            SCI_TRACE_LOW("%s, %d, finished decoding one frame", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGD ("%s, %d, finished decoding one frame", __FUNCTION__, __LINE__);
             pic_end = 1;
         } else
         {
@@ -358,7 +356,7 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
                 vo->SliceInfo.GobNum++;
             }
 
-            VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_INT_MASK_OFF, (V_BIT_2 | V_BIT_4 | V_BIT_5), "VSP_INT_MASK, enable mbw_slice_done, vld_err, time_out");//enable int //frame done/error/timeout
+            VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_INT_MASK_OFF, (V_BIT_2 | V_BIT_5), "VSP_INT_MASK, enable mbw_slice_done, time_out");
             VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, V_BIT_0, "RAM_ACC_SEL");//change ram access to vsp hw
             VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_START_OFF, 0xa|1, "VSP_START");//start vsp   vld/vld_table//load_vld_table_en
 
@@ -372,18 +370,18 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
 
                 if (cmd & V_BIT_4)
                 {
-                    SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
+                    SPRD_CODEC_LOGE ("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
                 } else if (cmd & (V_BIT_5  | V_BIT_31))
                 {
-                    SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+                    SPRD_CODEC_LOGE ("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
                 } else //if (cmd &  V_BIT_30)
                 {
-                    SCI_TRACE_LOW("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
-                    vo->error_flag |= ER_HW_ID;
+                    SPRD_CODEC_LOGE ("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
                 }
+                vo->error_flag |= ER_HW_ID;
             } else
             {
-                SCI_TRACE_LOW("%s, %d, should not be here!", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE ("%s, %d, should not be here!", __FUNCTION__, __LINE__);
             }
             VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL");
         }

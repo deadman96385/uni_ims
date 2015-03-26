@@ -249,7 +249,7 @@ PUBLIC MMEncRet Mp4Enc_InitSession(Mp4EncObject *vo)
     vop_mode_ptr->pYUVRecFrame->imgY = (uint8 *)Mp4Enc_MemAlloc(vo, size, 8, EXTRA_MEM);
     CHECK_MALLOC(vop_mode_ptr->pYUVRecFrame->imgY, "vop_mode_ptr->pYUVRecFrame->imgY");
 
-    if ((vo->yuv_format == MMENC_YUV420P_YU12)||(vo->yuv_format == MMENC_YUV420P_YV12)) //three plane
+    if ((vo->yuv_format == YUV420P_YU12)||(vo->yuv_format == YUV420P_YV12)) //three plane
     {
         vop_mode_ptr->pYUVRecFrame->imgU = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>2), 8, EXTRA_MEM);
         CHECK_MALLOC(vop_mode_ptr->pYUVRecFrame->imgU, "vop_mode_ptr->pYUVRecFrame->imgU");
@@ -267,7 +267,7 @@ PUBLIC MMEncRet Mp4Enc_InitSession(Mp4EncObject *vo)
     vop_mode_ptr->pYUVRefFrame->imgY = (uint8 *)Mp4Enc_MemAlloc(vo, size, 8, EXTRA_MEM);
     CHECK_MALLOC(vop_mode_ptr->pYUVRefFrame->imgY, "vop_mode_ptr->pYUVRefFrame->imgY");
 
-    if ((vo->yuv_format == MMENC_YUV420P_YU12)||(vo->yuv_format == MMENC_YUV420P_YV12)) //three plane
+    if ((vo->yuv_format == YUV420P_YU12)||(vo->yuv_format == YUV420P_YV12)) //three plane
     {
         vop_mode_ptr->pYUVRefFrame->imgU = (uint8 *)Mp4Enc_MemAlloc(vo, (size>>2), 8, EXTRA_MEM);
         CHECK_MALLOC(vop_mode_ptr->pYUVRefFrame->imgU, "vop_mode_ptr->pYUVRefFrame->imgU");
@@ -316,7 +316,7 @@ PUBLIC void Mp4Enc_InitVSP(Mp4EncObject *vo)
     is_last_slice = ((vop_mode_ptr->MBNumY-vop_mode_ptr->mb_y) <= vop_mode_ptr->mbline_num_slice) ? 1 : 0;
 
     cmd = V_BIT_17|V_BIT_16|V_BIT_11|V_BIT_5|V_BIT_3;
-    if (vo->yuv_format == MMENC_YUV420SP_NV21)  //vu format
+    if (vo->yuv_format == YUV420SP_NV21)  //vu format
     {
         cmd |= V_BIT_6;
     }

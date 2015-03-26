@@ -26,30 +26,15 @@ extern   "C"
 {
 #endif
 
-
-#include <stdlib.h>
-#include <string.h>
-#define PRINTF
-#define FPRINTF
-#define FFLUSH
-#define SCI_ASSERT
+#ifdef _VSP_LINUX_
 #define SCI_MEMSET  memset
 #define SCI_MEMCPY	memcpy
-#define EXIT
+#define SCI_ASSERT(...)
+#define PRINTF(...)
+#endif
 
-//for motion vector
-typedef struct motion_vector_tag
-{
-    int16 x;
-    int16 y;
-} MOTION_VECTOR_T;
-
-typedef struct mv_info_tag		/* for motion vector coding*/
-{
-    uint16 Range;			/* search range (32f (-32f, 32f-1))*/
-    uint8  FCode;			/* f-code  (vop_fcode)*/
-    uint8  ScaleFactor;	/* scale factor (f)*/
-} MV_INFO_T;
+#define ABS(x) ((x) > 0 ? (x) : -(x))
+#define Clip3(min,max,val) (((val)<(min))?(min):(((val)>(max))?(max):(val)))
 
 //for macroblock
 #define MB_SIZE					16
@@ -60,14 +45,6 @@ typedef struct mv_info_tag		/* for motion vector coding*/
 #define BLOCK_SIZE				8
 #define BLOCK_SQUARE_SIZE		64
 #define BLOCK_CNT				6
-
-#define ABS(x) ((x) > 0 ? (x) : -(x))
-#define Clip3(min,max,val) (((val)<(min))?(min):(((val)>(max))?(max):(val)))
-#define YUV420					0
-#define YUV411					1
-#define YUV444					2
-#define YUV422					3
-#define YUV400					4
 
 #define mmax(aa,bb)		(((aa) > (bb)) ? (aa) : (bb))
 #define mmin(aa,bb)		(((aa) < (bb)) ? (aa) : (bb))

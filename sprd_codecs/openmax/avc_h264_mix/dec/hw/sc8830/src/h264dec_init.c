@@ -190,6 +190,8 @@ PUBLIC MMDecRet H264Dec_init_global_para (H264DecObject*vo)
     vo->g_image_ptr->no_output_of_prior_pics_flag=0;//weihu
     vo->g_image_ptr->profile_idc=0;
     vo->is_need_init_vsp_hufftab = TRUE;
+    vo->sawSPS = FALSE;
+    vo->sawPPS = FALSE;
 
     vo->g_active_pps_ptr = NULL;
     vo->g_active_sps_ptr = NULL;

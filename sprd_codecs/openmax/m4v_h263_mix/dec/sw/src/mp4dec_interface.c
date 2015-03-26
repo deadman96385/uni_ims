@@ -111,7 +111,7 @@ PUBLIC void Mp4GetVideoDimensions(MP4Handle *mp4Handle, int32 *display_width, in
     *display_width = vop_mode_ptr->OrgFrameWidth;
     *display_height = vop_mode_ptr->OrgFrameHeight;
 
-    SCI_TRACE_LOW("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *display_width, *display_height);
+    SPRD_CODEC_LOGD ("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *display_width, *display_height);
 }
 
 PUBLIC void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *height)
@@ -122,7 +122,7 @@ PUBLIC void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *he
     *width = vop_mode_ptr->FrameWidth;
     *height = vop_mode_ptr->FrameHeight;
 
-    SCI_TRACE_LOW("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
+    SPRD_CODEC_LOGD ("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
 }
 
 PUBLIC MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *max_width, int32 *max_height)
@@ -152,7 +152,7 @@ PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer *buffer_ptr)
     MMDecRet is_init_success = MMDEC_OK;
     MMCodecBuffer tmp_buffer;
 
-    SCI_TRACE_LOW("libomx_m4vh263dec_sw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
+    SPRD_CODEC_LOGI ("libomx_m4vh263dec_sw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
     vo = (Mp4DecObject *) (buffer_ptr->common_buffer_ptr);
 
@@ -180,7 +180,7 @@ PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_fo
     /*judge h.263 or mpeg4*/
     if(video_format_ptr->video_std != MPEG4)
     {
-        SCI_TRACE_LOW ("H263(ITU or Sorenson format) is detected");
+        SPRD_CODEC_LOGD ("H263(ITU or Sorenson format) is detected");
     } else
     {
         if(video_format_ptr->i_extra > 0)
@@ -197,8 +197,8 @@ PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_fo
                 vop_mode_ptr->FrameHeight  = ((vop_mode_ptr->OrgFrameHeight + 15) >>4)<<4;
             }
 
-            SCI_TRACE_LOW("%s, %d, ret: %d, org_width: %d, org_height: %d, width: %d, height: %d", __FUNCTION__, __LINE__,
-                          ret, vop_mode_ptr->OrgFrameWidth, vop_mode_ptr->OrgFrameHeight, vop_mode_ptr->FrameWidth, vop_mode_ptr->FrameHeight);
+            SPRD_CODEC_LOGD ("%s, %d, ret: %d, org_width: %d, org_height: %d, width: %d, height: %d", __FUNCTION__, __LINE__,
+                             ret, vop_mode_ptr->OrgFrameWidth, vop_mode_ptr->OrgFrameHeight, vop_mode_ptr->FrameWidth, vop_mode_ptr->FrameHeight);
         }
     }
 
@@ -211,7 +211,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     MMDecRet ret = MMDEC_ERROR;
     DEC_VOP_MODE_T *vop_mode_ptr = vo->vop_mode_ptr;
 
-    SCI_TRACE_LOW("MP4DecDecode: E, dec_input_ptr->expected_IVOP: %d", dec_input_ptr->expected_IVOP);
+    SPRD_CODEC_LOGD ("MP4DecDecode: E, dec_input_ptr->expected_IVOP: %d", dec_input_ptr->expected_IVOP);
 
     mp4Handle->g_mpeg4_dec_err_flag = 0;
 
@@ -239,7 +239,7 @@ FLV_RE_DEC:
         ret = Mp4Dec_DecMp4Header(vop_mode_ptr, dec_input_ptr->dataLen);
         if (ret != MMDEC_OK)
         {
-            SCI_TRACE_LOW("%s, %d, Mp4Dec_DecMp4Header failed ret: %d", __FUNCTION__, __LINE__, ret);
+            SPRD_CODEC_LOGE ("%s, %d, Mp4Dec_DecMp4Header failed ret: %d", __FUNCTION__, __LINE__, ret);
             return ret;
         }
 
@@ -253,7 +253,7 @@ FLV_RE_DEC:
         ret = Mp4Dec_FlvH263PicHeader(vo);
     }
 
-    SCI_TRACE_LOW("%s, %d, ret: %d, pic_type: %d", __FUNCTION__, __LINE__, ret, vop_mode_ptr->VopPredType);
+    SPRD_CODEC_LOGD ("%s, %d, ret: %d, pic_type: %d", __FUNCTION__, __LINE__, ret, vop_mode_ptr->VopPredType);
     if(ret != MMDEC_OK)
     {
         //modified by xwluo, 20100511
@@ -272,7 +272,7 @@ FLV_RE_DEC:
 
         if ((FrameWidth != vop_mode_ptr->FrameWidth) ||(FrameHeight!= vop_mode_ptr->FrameHeight))
         {
-            SCI_TRACE_LOW ("%s, %d, frame dimension has been changed!", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGD ("%s, %d, frame dimension has been changed!", __FUNCTION__, __LINE__);
             vop_mode_ptr->bInitSuceess = 0;
         }
     }
@@ -329,7 +329,7 @@ FLV_RE_DEC:
             dec_input_ptr->dataLen = dec_input_ptr->dataLen - ByteConsumed;
         dec_output_ptr->VopPredType = NVOP;
 
-        SCI_TRACE_LOW ("MP4DecDecode: frame not coded!\n");
+        SPRD_CODEC_LOGD ("MP4DecDecode: frame not coded!\n");
 
         return MMDEC_OK;
     }
@@ -345,7 +345,7 @@ FLV_RE_DEC:
 
     if(IVOP == vop_mode_ptr->VopPredType)
     {
-        SCI_TRACE_LOW ("\t I VOP\t%d frame_num %d\n", dec_input_ptr->dataLen,vop_mode_ptr->g_nFrame_dec);
+        SPRD_CODEC_LOGD ("\t I VOP\t%d frame_num %d\n", dec_input_ptr->dataLen,vop_mode_ptr->g_nFrame_dec);
 #if _TRACE_
         FPRINTF (g_fp_trace_fw, "\nnframe: %d, frame type: IVOP\n", vop_mode_ptr->g_nFrame_dec);
 #endif //_TRACE_	
@@ -353,7 +353,7 @@ FLV_RE_DEC:
         ret = vo->g_Mp4Dec_IVOP(vop_mode_ptr);
     } else if(PVOP == vop_mode_ptr->VopPredType)
     {
-        SCI_TRACE_LOW ("\t P VOP\t%d frame_num %d\n", dec_input_ptr->dataLen,vop_mode_ptr->g_nFrame_dec);
+        SPRD_CODEC_LOGD ("\t P VOP\t%d frame_num %d\n", dec_input_ptr->dataLen,vop_mode_ptr->g_nFrame_dec);
 #if _TRACE_
         FPRINTF (g_fp_trace_fw, "\nnframe: %d, frame type: PVOP\n", vop_mode_ptr->g_nFrame_dec);
 #endif //_TRACE_	
@@ -371,7 +371,7 @@ FLV_RE_DEC:
         }
     } else if(SVOP == vop_mode_ptr->VopPredType)
     {
-        SCI_TRACE_LOW ("\t S VOP, Don't SUPPORTED!\n");
+        SPRD_CODEC_LOGD ("\t S VOP, Don't SUPPORTED!\n");
 
 #if _TRACE_
         FPRINTF (g_fp_trace_fw, "\nnframe: %d, frame type: SVOP\n", vop_mode_ptr->g_nFrame_dec);
@@ -380,12 +380,12 @@ FLV_RE_DEC:
 //		Mp4Dec_DecPVOP(vop_mode_ptr);  //removed by Xiaowei.Luo, because SC6800H don't support GMC
     } else if(NVOP == vop_mode_ptr->VopPredType)
     {
-        SCI_TRACE_LOW ("frame not coded!\n");
+        SPRD_CODEC_LOGD ("frame not coded!\n");
         MPEG4_DecReleaseDispBfr(vo, vop_mode_ptr->pCurDispFrame->pDecFrame->imgY);
         return MMDEC_OK;
     } else
     {
-        SCI_TRACE_LOW ("\t B VOP\t%d\n", dec_input_ptr->dataLen);
+        SPRD_CODEC_LOGD ("\t B VOP\t%d\n", dec_input_ptr->dataLen);
 #if _TRACE_
         FPRINTF (g_fp_trace_fw, "\nnframe: %d, frame type: BVOP\n", vop_mode_ptr->g_nFrame_dec);
 #endif //_TRACE_	
@@ -400,7 +400,7 @@ FLV_RE_DEC:
         if (vop_mode_ptr->OrgFrameWidth != vop_mode_ptr->PreOrgFrameWidth ||
                 vop_mode_ptr->OrgFrameHeight != vop_mode_ptr->PreOrgFrameHeight)
         {
-            SCI_TRACE_LOW("%s, %d, error concealment for VT mode", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGD ("%s, %d, error concealment for VT mode", __FUNCTION__, __LINE__);
 
             vop_mode_ptr->OrgFrameWidth = vop_mode_ptr->PreOrgFrameWidth;
             vop_mode_ptr->OrgFrameHeight = vop_mode_ptr->PreOrgFrameHeight;
@@ -411,7 +411,7 @@ FLV_RE_DEC:
 
         if(vop_mode_ptr->err_MB_num)
         {
-            SCI_TRACE_LOW ("MP4DecDecode: Detect error bitstream, try to conceal!\n");
+            SPRD_CODEC_LOGD ("MP4DecDecode: Detect error bitstream, try to conceal!\n");
 
             if(IVOP == vop_mode_ptr->VopPredType)
             {
@@ -424,7 +424,7 @@ FLV_RE_DEC:
 
         if(vop_mode_ptr->post_filter_en)
         {
-            SCI_TRACE_LOW("%s, deblock", __FUNCTION__);
+            SPRD_CODEC_LOGD ("%s, deblock", __FUNCTION__);
             Mp4Dec_Deblock_vop(vo);
         }
 
@@ -440,7 +440,7 @@ FLV_RE_DEC:
     {
         uint32 ByteConsumed = Mp4Dec_ByteConsumed(vop_mode_ptr);
 
-        SCI_TRACE_LOW ("%s, %d, ByteConsumed: %d, dec_input_ptr->dataLen:%d", __FUNCTION__, __LINE__, ByteConsumed, dec_input_ptr->dataLen);
+        SPRD_CODEC_LOGD ("%s, %d, ByteConsumed: %d, dec_input_ptr->dataLen:%d", __FUNCTION__, __LINE__, ByteConsumed, dec_input_ptr->dataLen);
 
         if(ByteConsumed > dec_input_ptr->dataLen)
             dec_input_ptr->dataLen = 0;
@@ -449,7 +449,7 @@ FLV_RE_DEC:
 
     }
 
-    SCI_TRACE_LOW("MP4DecDecode: X");
+    SPRD_CODEC_LOGD ("MP4DecDecode: X");
 
     if(ret != MMDEC_OK)
     {

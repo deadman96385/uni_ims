@@ -23,6 +23,7 @@ extern   "C"
 #include "mmcodec.h"
 
 #include "vsp_drv.h"
+#include "osal_log.h"
 
 #include "h264dec_basic.h"
 #include "h264dec_mode.h"

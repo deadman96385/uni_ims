@@ -497,8 +497,7 @@ PUBLIC void H264Dec_deblock_picture(H264DecContext *img_ptr, DEC_STORABLE_PICTUR
     uint8 * dest_u = dec_picture_ptr->imgYUV[1] + img_ptr->start_in_frameUV;
     uint8 * dest_v = dec_picture_ptr->imgYUV[2] + img_ptr->start_in_frameUV;
 
-
-    ALOGE("%s, %d", __FUNCTION__, __LINE__);
+    SPRD_CODEC_LOGI ("%s, %d", __FUNCTION__, __LINE__);
 
     for (mb_y = 0; mb_y < img_ptr->frame_height_in_mbs; mb_y++)
     {

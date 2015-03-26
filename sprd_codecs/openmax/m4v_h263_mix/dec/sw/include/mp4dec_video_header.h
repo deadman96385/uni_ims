@@ -44,6 +44,7 @@
 #include "sci_types.h"
 #include "mmcodec.h"
 #include "video_common.h"
+#include "osal_log.h"
 #include "mp4dec_basic.h"
 #include "mp4dec_global.h"
 #include "mp4dec_bfrctrl.h"
@@ -81,14 +82,9 @@ extern long recMb_time;
 #endif
 
 #ifdef _VSP_LINUX_
-#define LOG_TAG "VSP"
-#include <utils/Log.h>
-//#define  SCI_TRACE_LOW   LOGI
-#define  SCI_TRACE_LOW   ALOGI
 #define SCI_MEMSET  memset
 #define SCI_MEMCPY	memcpy
 #define SCI_ASSERT(...)
-
 #endif
 
 /**---------------------------------------------------------------------------*

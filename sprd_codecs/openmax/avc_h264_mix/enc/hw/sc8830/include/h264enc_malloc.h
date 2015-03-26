@@ -29,7 +29,7 @@ extern   "C"
 #define CHECK_MALLOC(addr, str)    \
         if (NULL == addr)   \
         {   \
-            SCI_TRACE_LOW ("%s, %s is NULL\n", __FUNCTION__, str);   \
+            SPRD_CODEC_LOGE ("%s, %s is NULL\n", __FUNCTION__, str);   \
             return MMENC_MEMORY_ERROR;  \
         }
 

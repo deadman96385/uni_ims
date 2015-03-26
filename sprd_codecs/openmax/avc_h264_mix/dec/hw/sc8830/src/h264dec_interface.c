@@ -29,7 +29,7 @@ PUBLIC void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
     DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr =  vo->g_dpb_layer[0];
     int32 i;
 
-    SCI_TRACE_LOW("%s, %d", __FUNCTION__, __LINE__);
+    SPRD_CODEC_LOGI ("%s, %d", __FUNCTION__, __LINE__);
 
     if (dpb_ptr != NULL)
     {
@@ -71,7 +71,7 @@ PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int3
             dpb_ptr->delayed_pic[0]->pBufferHeader = NULL;
         }
 
-        for(i = 0; i < dpb_ptr->delayed_pic_num; i++)
+        for(i =0; i < dpb_ptr->delayed_pic_num; i++)
         {
             dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
         }
@@ -167,39 +167,36 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
     pDecInfo->has_b_frames = sps_ptr->vui_seq_parameters->num_reorder_frames;
 
     return(MMDEC_OK);
-
 }
 
 MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, MMDecCapability *Capability)
 {
     H264DecObject *vo = (H264DecObject *)avcHandle->videoDecoderData;
 
-    int32 codec_capability = vo->vsp_capability;
-
-    if (codec_capability == 0)   //limited under 720p
+    switch (vo->vsp_version)
     {
+    case SHARK:	//limited under 1080p
+    case TSHARK:
+    case SHARKL:
+    case PIKEL:
+        Capability->max_width = 1920;
+        Capability->max_height = 1088;
+        Capability->profile = AVC_HIGH;
+        Capability->level = AVC_LEVEL4_1;
+        break;
+    case DOLPHIN://limited under 720p
+    case PIKE:
         Capability->max_width = 1280;
         Capability->max_height = 1023; //720;
         Capability->profile = AVC_HIGH;
         Capability->level = AVC_LEVEL3_1;
-    } else if (codec_capability == 1)   //limited under 1080p
-    {
-        Capability->max_width = 1920;
-        Capability->max_height = 1088;
-        Capability->profile = AVC_HIGH;
-        Capability->level = AVC_LEVEL4_1;
-    } else if (codec_capability == 2)   //limited under 1080p
-    {
-        Capability->max_width = 1920;
-        Capability->max_height = 1088;
-        Capability->profile = AVC_HIGH;
-        Capability->level = AVC_LEVEL4_1;
-    } else
-    {
+        break;
+    default:
         Capability->max_width = 352;
         Capability->max_height = 288;
         Capability->profile = AVC_BASELINE;
         Capability->level = AVC_LEVEL2;
+        break;
     }
 
     return MMDEC_OK;
@@ -215,7 +212,7 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
     H264DecObject*vo;
     MMDecRet ret = MMDEC_OK;
 
-    SCI_TRACE_LOW("libomx_avcdec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
+    SPRD_CODEC_LOGI ("libomx_avcdec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
     CHECK_MALLOC(pVideoFormat, "pVideoFormat");
     CHECK_MALLOC(buffer_ptr, "buffer_ptr");
@@ -239,12 +236,17 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
     vo->vsp_freq_div = 0;
-    vo->vsp_capability = -1;
+    vo->vsp_version = SHARK;
     vo->yuv_format = pVideoFormat->yuv_format;
 
     if (VSP_OPEN_Dev((VSPObject *)vo) < 0)
     {
         return ret;
+    }
+
+    if(ARM_VSP_RST((VSPObject *)vo)<0)
+    {
+        return MMDEC_HW_ERROR;
     }
 
     ret = H264Dec_init_global_para (vo);
@@ -257,9 +259,16 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
     {
         ret = MMDEC_ERROR;
     }
+
+    if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
+    {
+        return MMDEC_HW_ERROR;
+    }
+
     return ret;
 }
 
+#define MIN_LEN_FOR_HW 8
 PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, MMDecOutput *dec_output_ptr)
 {
     MMDecRet ret = MMDEC_OK;
@@ -367,11 +376,11 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
             int32 added_bytes = (MIN_LEN_FOR_HW - (bs_buffer_length - vo->g_stream_offset));
             vo->g_slice_datalen -= added_bytes;
             vo->g_nalu_ptr->len -= added_bytes;
-            SCI_TRACE_LOW("%s, %d, added_bytes: %d", __FUNCTION__, __LINE__, added_bytes);
+            SPRD_CODEC_LOGD ("%s, %d, added_bytes: %d", __FUNCTION__, __LINE__, added_bytes);
         }
 
-        SCI_TRACE_LOW("%s, %d, g_stream_offset: %d, g_slice_datalen: %d, g_nalu_ptr->len: %d, destuffing_num: %d", __FUNCTION__, __LINE__,
-                      vo->g_stream_offset, vo->g_slice_datalen, vo->g_nalu_ptr->len, destuffing_num);
+        SPRD_CODEC_LOGD ("%s, %d, g_stream_offset: %d, g_slice_datalen: %d, g_nalu_ptr->len: %d, destuffing_num: %d", __FUNCTION__, __LINE__,
+                         vo->g_stream_offset, vo->g_slice_datalen, vo->g_nalu_ptr->len, destuffing_num);
 
         if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
         {
@@ -392,7 +401,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
         ret = H264DecDecode_NALU(vo, dec_input_ptr, dec_output_ptr);
 
-        SCI_TRACE_LOW("%s, %d, g_nalu_ptr->len: %d, frame_dec_finish: %d,ret:  %d ", __FUNCTION__, __LINE__, vo->g_nalu_ptr->len, vo->frame_dec_finish, ret);
+        SPRD_CODEC_LOGD ("%s, %d, g_nalu_ptr->len: %d, frame_dec_finish: %d,ret:  %d ", __FUNCTION__, __LINE__, vo->g_nalu_ptr->len, vo->frame_dec_finish, ret);
 
         dec_input_ptr->dataLen = vo->g_stream_offset + vo->g_nalu_ptr->len + destuffing_num;
 
@@ -430,7 +439,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
 DEC_EXIT:
 
-    SCI_TRACE_LOW("%s, %d, exit decoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    SPRD_CODEC_LOGD ("%s, %d, exit decoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
         return MMDEC_HW_ERROR;
@@ -461,6 +470,164 @@ MMDecRet H264DecRelease(AVCHandle *avcHandle)
     }
 
     return MMDEC_OK;
+}
+
+int32 Is_Interlaced_Sequence(AVCHandle *avcHandle, MMDecInput *dec_input_ptr)
+{
+    uint32 bs_buffer_length, bs_start_addr, destuffing_num, cmd;
+    uint32 nalu_len = 0;
+    uint8* nalu_buf = 0;
+    uint8* pstream = 0;
+    int8 nal_unit_type;
+    int32 ret, start_code_len = 0;;
+
+    H264DecObject *vo = (H264DecObject *) avcHandle->videoDecoderData;
+
+    SPRD_CODEC_LOGD ("%s, %d, called\n", __FUNCTION__, __LINE__);
+
+    if ((dec_input_ptr->pStream == NULL) ||  (dec_input_ptr->pStream_phy == 0))
+    {
+        return MMDEC_MEMORY_ERROR;
+    }
+
+    if(ARM_VSP_RST((VSPObject *)vo)<0)
+    {
+        return MMDEC_HW_ERROR;
+    }
+
+    cmd = V_BIT_17|V_BIT_16|V_BIT_11|V_BIT_5|V_BIT_3;
+    if (vo->yuv_format == YUV420SP_NV21)  //vu format
+    {
+        cmd |= V_BIT_6;
+    }
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + AXIM_ENDIAN_OFF, cmd,"axim endian set, vu format"); //VSP and OR endian.
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0,"RAM_ACC_SEL: software access.");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_MODE_OFF, STREAM_ID_H264,"VSP_MODE");
+    vo->is_need_init_vsp_hufftab = TRUE;
+
+    // Bitstream.
+    bs_start_addr = ((uint32)dec_input_ptr->pStream_phy) ;	// bs_start_addr should be phycial address and 64-biit aligned.
+    bs_buffer_length = dec_input_ptr->dataLen;
+    vo->pStream = dec_input_ptr->pStream;
+    vo->g_stream_offset = 0;
+
+    //for bug281448, add start code at the tail of stream.
+    vo->pStream[bs_buffer_length] = 0xf4;
+    vo->pStream[bs_buffer_length+1] = 0xf3;
+    vo->pStream[bs_buffer_length+2] = 0xf2;
+    vo->pStream[bs_buffer_length+3] = 0xf1;
+
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
+    {
+        goto DEC_EXIT;
+    }
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM1_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf1 addr");
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, V_BIT_2|V_BIT_1,"BSM_OP clr BSM");//clr BSM
+
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, ((V_BIT_31|V_BIT_30)|vo->g_stream_offset),"BSM_cfg1 check startcode");//byte align
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, (V_BIT_31|((bs_buffer_length < MIN_LEN_FOR_HW) ? MIN_LEN_FOR_HW : bs_buffer_length)),"BSM_cfg0 stream buffer size");//BSM load data
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG1_OFF, V_BIT_2,V_BIT_2,TIME_OUT_CLK, "startcode found"))//check bsm is idle
+    {
+        goto DEC_EXIT;
+    }
+
+    //Get start code length of first NALU.
+    start_code_len=VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_NAL_LEN,"get NAL_LEN");
+    vo->g_stream_offset+=start_code_len;
+
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
+    {
+        goto DEC_EXIT;
+    }
+
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, 0,"BSM_cfg1 check startcode disable");
+
+    // Find the next start code and get length of NALU.
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
+    {
+        goto DEC_EXIT;
+    }
+
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM1_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf1 addr");
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, V_BIT_2|V_BIT_1,"BSM_OP clr BSM");//clr BSM
+
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, ((V_BIT_31|V_BIT_30)|vo->g_stream_offset),"BSM_cfg1 check startcode");//byte align
+
+    cmd = V_BIT_31 | (((bs_buffer_length - (uint32)(vo->g_stream_offset)) < MIN_LEN_FOR_HW) ? (MIN_LEN_FOR_HW + (uint32)(vo->g_stream_offset)) : bs_buffer_length);
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, cmd, "BSM_cfg0 stream buffer size");//BSM load data
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG1_OFF, V_BIT_2,V_BIT_2,TIME_OUT_CLK_FRAME, "startcode found"))//check bsm is idle
+    {
+        goto DEC_EXIT;
+    }
+
+    // Get length of NALU and net bitstream length.
+    vo->g_slice_datalen = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + BSM_NAL_LEN, "get NAL_LEN");
+    vo->g_nalu_ptr->len = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + BSM_NAL_DATA_LEN, "get NAL_DATA_LEN");
+    destuffing_num = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + DSTUF_NUM_OFF, "get DSTUF_NUM");
+
+    //Added for bug293635
+    if ((bs_buffer_length - vo->g_stream_offset) < MIN_LEN_FOR_HW)
+    {
+        int32 added_bytes = (MIN_LEN_FOR_HW - (bs_buffer_length - vo->g_stream_offset));
+        vo->g_slice_datalen -= added_bytes;
+        vo->g_nalu_ptr->len -= added_bytes;
+        SPRD_CODEC_LOGD ("%s, %d, added_bytes: %d", __FUNCTION__, __LINE__, added_bytes);
+    }
+
+    SPRD_CODEC_LOGD ("%s, %d, g_stream_offset: %d, g_slice_datalen: %d, g_nalu_ptr->len: %d, destuffing_num: %d", __FUNCTION__, __LINE__,
+                     vo->g_stream_offset, vo->g_slice_datalen, vo->g_nalu_ptr->len, destuffing_num);
+
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
+    {
+        goto DEC_EXIT;
+    }
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, 0,"BSM_cfg1 check startcode disable");
+
+    // Configure BSM for decoding.
+    if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
+    {
+        goto DEC_EXIT;
+    }
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM0_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf0 addr");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR+BSM1_FRM_ADDR_OFF, bs_start_addr/8,"BSM_buf1 addr");
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_OP_OFF, V_BIT_2|V_BIT_1,"BSM_OP clr BSM");//clr BSM
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG1_OFF, (V_BIT_31|vo->g_stream_offset),"BSM_cfg1 stream buffer offset");//point to the start of NALU.
+    VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, V_BIT_31|((bs_buffer_length+128)&0xfffffffc),"BSM_cfg0 stream buffer size");// BSM load data. Add 16 DW for BSM fifo loading.
+
+    nal_unit_type = READ_FLC(8) & 0x1f;
+    SPRD_CODEC_LOGD ("%s, %d, nal_unit_type = %x\n", __FUNCTION__, __LINE__, nal_unit_type);
+
+    if (nal_unit_type == 7)
+    {
+        H264Dec_interpret_sps (vo, vo->g_sps_ptr);
+        if (vo->error_flag)
+        {
+            SPRD_CODEC_LOGE ("%s, %d, interpret_sps error\n", __FUNCTION__, __LINE__);
+            ret = -1;
+            goto DEC_EXIT;
+        }
+    } else
+    {
+        ret = -1;
+        goto DEC_EXIT;
+    }
+
+    SPRD_CODEC_LOGD ("%s, %d, frame_mbs_only_flag = %d\n", __FUNCTION__, __LINE__, vo->g_sps_ptr->frame_mbs_only_flag);
+    if(vo->g_sps_ptr->frame_mbs_only_flag)
+    {
+        ret =  0;
+    }
+    else
+    {
+        ret = 1;
+    }
+
+DEC_EXIT:
+
+    VSP_RELEASE_Dev((VSPObject *)vo);
+    return  ret;
 }
 
 /**---------------------------------------------------------------------------*

@@ -3,6 +3,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 MP4_PATH := m4v_h263_mix/dec/sw/
+VSP_PATH := vsp/sc8830/
 
 LOCAL_SRC_FILES := \
 	$(MP4_PATH)/src/mp4dec_bfrctrl.c \
@@ -23,7 +24,8 @@ LOCAL_SRC_FILES := \
 	$(MP4_PATH)/src/mp4dec_vld.c \
 	$(MP4_PATH)/src/mp4dec_vop.c \
 	$(MP4_PATH)/src/mp4dec_error_handle.c	\
-	$(MP4_PATH)/src/mp4dec_deblock.c
+	$(MP4_PATH)/src/mp4dec_deblock.c \
+	$(VSP_PATH)/src/osal_log.c
 
 
 #	$(MP4_PATH)/src/mp4dec_dbk_neon.s   \
@@ -32,7 +34,8 @@ LOCAL_SRC_FILES := \
 #	$(MP4_PATH)/src/mp4dec_vld_neon.s
 
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/$(MP4_PATH)/include
+	$(LOCAL_PATH)/$(MP4_PATH)/include \
+	$(LOCAL_PATH)/$(VSP_PATH)/inc
 
 LOCAL_CFLAGS :=  -fno-strict-aliasing -D_VSP_LINUX_   -D_MP4CODEC_DATA_PARTITION_ -DCHIP_ENDIAN_LITTLE
 #LOCAL_LDFLAGS := -Wl,--no-warn-shared-textrel

@@ -26,14 +26,16 @@ extern   "C"
 {
 #endif
 
+#define SCI_TRACE_LOW_DPB SPRD_CODEC_LOGV
+
 #define _MVC_		1
+
+#define LUMA_8x8_CABAC
 
 #define DISPLAY_LIST_SIZE	10
 
 #define DEC_REF_PIC_MARKING_COMMAND_NUM	50
-
 #define MAX_REF_FRAME_NUMBER	16
-// #define	MAX_REF_FRAME_BUF_NUM	16  //5
 
 #define MAX_PPS	256
 #define MAX_SPS	32
@@ -47,7 +49,7 @@ extern   "C"
 #define SOP		2	//!< Start Of Picture
 #define	SOS		3	//!< Start Of Slice
 
-#define	SINT_MAX	0x7fffffff
+#define SINT_MAX	0x7fffffff
 #define UINT_MAX	0xffffffff
 
 //nalu type

@@ -2,6 +2,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 H264_PATH := avc_h264_mix/dec/sw/
+VSP_PATH := vsp/sc8830/
 
 LOCAL_SRC_FILES := \
 	$(H264_PATH)/src/h264dec_biaridecod.c \
@@ -30,7 +31,8 @@ LOCAL_SRC_FILES := \
 	$(H264_PATH)/src/h264dec_vld_table.c \
 	$(H264_PATH)/src/h264dec_mc4xN.c \
 	$(H264_PATH)/src/h264dec_mc8xN.c	\
-	$(H264_PATH)/src/h264dec_mc16xN.c
+	$(H264_PATH)/src/h264dec_mc16xN.c \
+	$(VSP_PATH)/src/osal_log.c
 
 
 #	$(H264_PATH)/src/gcc/h264dec_deblock_neon.s	\
@@ -45,7 +47,8 @@ LOCAL_SRC_FILES := \
 #	$(H264_PATH)/src/gcc/h264dec_wp_neon.s
 
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/$(H264_PATH)/include
+	$(LOCAL_PATH)/$(H264_PATH)/include \
+	$(LOCAL_PATH)/$(VSP_PATH)/inc
 	
 LOCAL_CFLAGS :=  -fno-strict-aliasing -D_VSP_LINUX_ -DCHIP_ENDIAN_LITTLE -DITRANS_ASSEMBLY
 #LOCAL_LDFLAGS := -Wl,--no-warn-shared-textrel

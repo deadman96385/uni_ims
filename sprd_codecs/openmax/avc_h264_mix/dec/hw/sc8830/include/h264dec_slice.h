@@ -27,8 +27,8 @@ extern   "C"
 #endif
 
 int32 H264Dec_Process_slice (H264DecObject *vo);
-MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *dec_output_ptr);
 MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr, MMDecOutput *dec_output_ptr);
+
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

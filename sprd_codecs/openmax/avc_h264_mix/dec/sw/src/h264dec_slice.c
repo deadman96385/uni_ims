@@ -318,7 +318,7 @@ LOCAL void init_dequant_tables(H264DecContext *img_ptr) {
             }
         }
         if(pps_ptr->transform_8x8_mode_flag) {
-            for(i=0; i<6; i++) {
+            for(i=0; i<2; i++) {
                 for(x=0; x<64; x++) {
                     img_ptr->dequant8_coeff[i][0][x] = 1<<6;
                 }
@@ -951,7 +951,7 @@ LOCAL void H264Dec_output_one_frame (H264DecContext *img_ptr, MMDecOutput * dec_
 //		s->low_delay = 0;
         }
 
-        SCI_TRACE_LOW("dec poc: %d\t", cur->poc);
+        SPRD_CODEC_LOGI ("dec poc: %d\t", cur->poc);
 
         dpb_ptr->delayed_pic[dpb_ptr->delayed_pic_num++] = cur;
 
@@ -1019,7 +1019,7 @@ LOCAL void H264Dec_output_one_frame (H264DecContext *img_ptr, MMDecOutput * dec_
                     if(dpb_ptr->delayed_pic[j] == out)
                     {
                         out_idx = j;
-                        SCI_TRACE_LOW("delayed_pic_num : %d, out_idx: %d,\t",  dpb_ptr->delayed_pic_num, out_idx);
+                        SPRD_CODEC_LOGD ("delayed_pic_num : %d, out_idx: %d,\t",  dpb_ptr->delayed_pic_num, out_idx);
                         for(i = out_idx; dpb_ptr->delayed_pic[i]; i++)
                         {
                             dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
@@ -1166,14 +1166,14 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (MMDecOutput *dec_output_ptr, H264
         img_ptr->return_pos2 = (1<<7);
 #endif
 
-        SCI_TRACE_LOW ("the other picture type is not supported!\n");
+        SPRD_CODEC_LOGE ("the other picture type is not supported!\n");
     }
 
 #if _H264_PROTECT_ & _LEVEL_HIGH_
     if (img_ptr->error_flag)
     {
-        SCI_TRACE_LOW("H264Dec_decode_one_slice_data: mb_x: %d, mb_y: %d, bit_cnt: %d, pos: %x, pos1: %0x, pos2: %0x, err_flag: %x\n",
-                      img_ptr->mb_x, img_ptr->mb_y, img_ptr->bitstrm_ptr->bitcnt, img_ptr->return_pos, img_ptr->return_pos1, img_ptr->return_pos2, img_ptr->error_flag);
+        SPRD_CODEC_LOGE ("H264Dec_decode_one_slice_data: mb_x: %d, mb_y: %d, bit_cnt: %d, pos: %x, pos1: %0x, pos2: %0x, err_flag: %x\n",
+                         img_ptr->mb_x, img_ptr->mb_y, img_ptr->bitstrm_ptr->bitcnt, img_ptr->return_pos, img_ptr->return_pos1, img_ptr->return_pos2, img_ptr->error_flag);
         img_ptr->return_pos2 = (1<<8);
         img_ptr->g_searching_IDR_pic = 1;
         return MMDEC_ERROR;

@@ -25,6 +25,9 @@ extern   "C"
 #include "video_common.h"
 #include "mmcodec.h"
 
+#include "vsp_drv.h"
+#include "osal_log.h"
+
 #include "vp8dec_basic.h"
 #include "vp8dec_bfrctrl.h"
 #include "vp8dec_dboolhuff.h"
@@ -36,7 +39,6 @@ extern   "C"
 #include "vp8dec_mode.h"
 #include "vp8dec_vld.h"
 #include "vp8dec.h"
-#include "vsp_drv.h"
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

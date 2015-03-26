@@ -59,6 +59,7 @@ int32 rc_init_GOP (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras)
 #endif
             uint32 nTBNum = 1;
             rc_gop_paras->sv = 0;
+            rc_gop_paras->nMaxOneFrameBits = vo->g_enc_image_ptr->orig_height * vo->g_enc_image_ptr->orig_height * 8 * 3 / 2 / 2; // not larger than 50%
 
             while (target_bitrate > (1 << nTBNum))
             {
@@ -156,6 +157,9 @@ int32 rc_init_GOP (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras)
             {
                 nTargetBits = rc_gop_paras->rem_bits;
             }
+
+            if(nTargetBits > rc_gop_paras->nMaxOneFrameBits * rc_gop_paras->intra_period)
+                nTargetBits = rc_gop_paras->nMaxOneFrameBits * rc_gop_paras->intra_period;
 
             for(i = -6; i <= 6; i++)
             {
@@ -275,6 +279,9 @@ int32 rc_init_pict(H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras, RC_PIC_PARAS *
         fprintf(rc_fp, "rc_init_pict\t: frame %d, rc_pic_paras->target_bits = %d\n", vo->g_nFrame_enc, rc_pic_paras->target_bits);
         fprintf(rc_fp, "rc_init_pict\t: frame %d, rc_pic_paras->delta_target_buf = %d\n", vo->g_nFrame_enc, rc_pic_paras->delta_target_buf);
 #endif
+        if(rc_pic_paras->target_bits  > rc_gop_paras->nMaxOneFrameBits) {
+            rc_pic_paras->target_bits = rc_gop_paras->nMaxOneFrameBits;
+        }
         rc_pic_paras->remain_bits = rc_pic_paras->target_bits;
 
 #ifdef INT_RC

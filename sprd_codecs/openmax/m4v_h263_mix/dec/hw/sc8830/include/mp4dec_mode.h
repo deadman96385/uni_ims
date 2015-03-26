@@ -29,6 +29,13 @@ extern   "C"
 {
 #endif
 
+typedef struct mv_info_tag		/* for motion vector coding*/
+{
+    uint16 Range;			/* search range (32f (-32f, 32f-1))*/
+    uint8  FCode;			/* f-code  (vop_fcode)*/
+    uint8  ScaleFactor;	/* scale factor (f)*/
+} MV_INFO_T;
+
 typedef struct cbpy_table_code_len_tag
 {
     uint8 code;	/* right justified *///the value of the variable length code
@@ -89,8 +96,6 @@ typedef struct SLICEINFO_
     int16  FirstMBNum;
     int8 SliceNum;
 } SLICEINFO;
-
-
 
 typedef struct dec_buffer_seq_info_tag
 {
@@ -200,18 +205,11 @@ typedef struct dec_vop_mode_tag
     uint8 IntraQuantizerMatrix[BLOCK_SQUARE_SIZE]; /* Intra Q-Matrix*/
     uint8 InterQuantizerMatrix[BLOCK_SQUARE_SIZE]; /* Inter Q-Matrix*/
 
-
     Mp4DecStorablePic *pCurDispFrame;
     Mp4DecStorablePic *pCurRecFrame;
     Mp4DecStorablePic *pBckRefFrame;
     Mp4DecStorablePic *pFrdRefFrame;
 
-    /*for huffman decoding*/
-
-
-    int32 sw_vld_flag;
-
-    /*******************************************************/
     /*for computing time stamp for every frame*/
     int32 time;				/* for record time */
     int32 time_base;
@@ -234,19 +232,6 @@ typedef struct dec_vop_mode_tag
     int8 h263_long_vectors;
 
     int32 picture_number;
-
-    /*error information*/
-    int			err_num;
-    int			err_left;
-    ERR_POS_T *	err_pos_ptr;
-
-    int32 err_MB_num;		//error MB number
-
-    uint8 *mbdec_stat_ptr;	//indicate mb decoded status,
-    //0: not decoded,
-    //1: decoded, but in error packet,
-    //2: decoded, not in error packet,
-    //3: error concealed
 
     int32 top_grad[16];
     int32 top_dir[16];
@@ -330,7 +315,7 @@ typedef struct tagMp4DecObject
     int32 s_vsp_fd ;
     uint32 vsp_freq_div;
     int32	error_flag;
-    int32   vsp_capability;
+    int32   vsp_version;
 
     MP4Handle  *mp4Handle;
 

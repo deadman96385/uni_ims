@@ -93,10 +93,25 @@ extern "C"
 #define VSP_COMPLETE       			_IO(SPRD_VSP_IOCTL_MAGIC, 7)
 #define VSP_RESET       			_IO(SPRD_VSP_IOCTL_MAGIC, 8)
 #define VSP_HW_INFO                         _IO(SPRD_VSP_IOCTL_MAGIC, 9)
-#define VSP_CAPABILITY                  _IO(SPRD_VSP_IOCTL_MAGIC, 10)
+#define VSP_VERSION                  _IO(SPRD_VSP_IOCTL_MAGIC, 10)
 
 #define TIME_OUT_CLK			0xffff
 #define TIME_OUT_CLK_FRAME		0x7fffff
+
+/* -----------------------------------------------------------------------
+** VSP versions
+** ----------------------------------------------------------------------- */
+typedef enum
+{
+    SHARK = 0,
+    DOLPHIN = 1,
+    TSHARK = 2,
+    SHARKL = 3,
+    PIKE = 4,
+    PIKEL = 5,
+    MAX_VERSIONS,
+}
+VSP_VERSION_E;
 
 /* -----------------------------------------------------------------------
 ** Standard Types
@@ -653,7 +668,7 @@ typedef struct tagVSPObject
     int32 s_vsp_fd ;
     uint32 vsp_freq_div;
     int32	error_flag;
-    int32   vsp_capability;
+    int32   vsp_version;
 } VSPObject;
 
 //error id, added by xiaowei, 20130910

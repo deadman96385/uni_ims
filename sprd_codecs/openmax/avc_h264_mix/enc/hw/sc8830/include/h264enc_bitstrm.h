@@ -31,6 +31,8 @@ int32 write_ue_v(H264EncObject *vo, uint32 val);
 void H264Enc_rbsp_trailing (H264EncObject *vo);
 void H264Enc_write_nal_start_code (H264EncObject *vo);
 uint32 H264Enc_OutputBits(H264EncObject *vo, uint32 val, uint32 nbits);
+//cabac
+void H264Enc_cabac_zero_word_trailing(ENC_IMAGE_PARAMS_T*, void*);
 
 #define WRITE_SE_V(val) \
 {\

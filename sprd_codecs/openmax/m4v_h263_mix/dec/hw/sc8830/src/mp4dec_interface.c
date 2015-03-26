@@ -176,26 +176,24 @@ PUBLIC MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *max_width, in
 {
     Mp4DecObject *vo = (Mp4DecObject *) mp4Handle->videoDecoderData;
 
-    int32 codec_capability = vo->vsp_capability;
-    if (codec_capability == 0)   //limited under 720p
+    switch (vo->vsp_version)
     {
+    case SHARK:	//limited under 1080p
+    case TSHARK:
+    case SHARKL:
+    case PIKEL:
+        *max_width = 1920;
+        *max_height = 1088;
+        break;
+    case DOLPHIN://limited under 720p
+    case PIKE:
         *max_width = 1280;
         *max_height = 1023; //720;
-    }
-    else if (codec_capability == 1)   //limited under 1080p
-    {
-        *max_width = 1920;
-        *max_height = 1088;
-    }
-    else if (codec_capability == 2)   //limited under 1080p
-    {
-        *max_width = 1920;
-        *max_height = 1088;
-    }
-    else
-    {
+        break;
+    default:
         *max_width = 352;
         *max_height = 288;
+        break;
     }
 
     return MMDEC_OK;
@@ -206,7 +204,7 @@ PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer * buffer_ptr)
     Mp4DecObject*vo;
     MMDecRet ret;
 
-    SCI_TRACE_LOW("libomx_m4vh263dec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
+    SPRD_CODEC_LOGI ("libomx_m4vh263dec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
     CHECK_MALLOC(buffer_ptr, "buffer_ptr");
     CHECK_MALLOC(buffer_ptr->common_buffer_ptr, "internal memory");
@@ -223,7 +221,7 @@ PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer * buffer_ptr)
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
     vo->vsp_freq_div = 0;
-    vo->vsp_capability = -1;
+    vo->vsp_version = SHARK;
     vo->yuv_format = YUV420SP_NV21;
 
     if(VSP_OPEN_Dev((VSPObject *)vo)<0)
@@ -252,7 +250,7 @@ PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_fo
     /*judge h.263 or mpeg4*/
     if(video_format_ptr->video_std != STREAM_ID_MPEG4)
     {
-        SCI_TRACE_LOW ("H263(ITU or Sorenson format) is detected!");
+        SPRD_CODEC_LOGD ("H263(ITU or Sorenson format) is detected!");
     } else
     {
         if(video_format_ptr->i_extra > 0)
@@ -386,7 +384,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         ret = Mp4Dec_DecMp4Header(vo, dec_input_ptr->dataLen);
         if(ret != MMDEC_OK)
         {
-            ALOGE("%s, %d: Mp4Dec_DecMp4Header error ret = %d", __FUNCTION__, __LINE__, ret);
+            SPRD_CODEC_LOGE ("%s, %d: Mp4Dec_DecMp4Header error ret = %d", __FUNCTION__, __LINE__, ret);
             goto DEC_EXIT;
         }
 
@@ -423,7 +421,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
 
         if ((FrameWidth != vop_mode_ptr->FrameWidth) ||(FrameHeight!= vop_mode_ptr->FrameHeight))
         {
-            SCI_TRACE_LOW ("%s, %d, frame dimension has been changed!", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGD ("%s, %d, frame dimension has been changed!", __FUNCTION__, __LINE__);
             vop_mode_ptr->bInitSuceess = 0;
         }
     }
@@ -517,7 +515,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
 
         dec_output_ptr->VopPredType = NVOP;
 
-        SCI_TRACE_LOW ("frame not coded!");
+        SPRD_CODEC_LOGD ("frame not coded!");
         ret = MMDEC_OK;
 
         goto DEC_EXIT;
@@ -558,7 +556,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
 
 DEC_EXIT:
 
-    SCI_TRACE_LOW("%s, exit decoder,  error flag: 0x%x.", __FUNCTION__, mp4Handle->g_mpeg4_dec_err_flag);
+    SPRD_CODEC_LOGD ("%s, exit decoder,  error flag: 0x%x.", __FUNCTION__, mp4Handle->g_mpeg4_dec_err_flag);
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
         return MMDEC_HW_ERROR;

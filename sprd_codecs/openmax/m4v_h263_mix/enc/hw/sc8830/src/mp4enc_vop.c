@@ -28,11 +28,11 @@ PUBLIC void Mp4Enc_ReviseLumaData(uint8 *p_src_y, int32 img_width, int32 img_hei
     int32 i;
     int32 img_size = img_width  * img_height;
 
-    for (i = 0; i < img_size; i++)
+    for (i = 0; i < img_size; i++, p_src_y++)
     {
         if (*p_src_y == 0)
         {
-            *p_src_y ++ = 1;
+            *p_src_y = 1;
         }
     }
 }
@@ -142,18 +142,18 @@ PUBLIC int32 Mp4Enc_EncVOP(Mp4EncObject *vo, int32 time_stamp)
                 vo->error_flag |= ER_HW_ID;
                 if (int_ret & V_BIT_4)
                 {
-                    SCI_TRACE_LOW("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
+                    SPRD_CODEC_LOGE ("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
                 } else if (int_ret & (V_BIT_5  | V_BIT_31))
                 {
-                    SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+                    SPRD_CODEC_LOGE ("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
                 } else //if (int_ret &  V_BIT_30)
                 {
-                    SCI_TRACE_LOW("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
+                    SPRD_CODEC_LOGE ("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
                 }
                 goto VOP_EXIT;
             } else
             {
-                SCI_TRACE_LOW("%s, %d, should not be here!", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE ("%s, %d, should not be here!", __FUNCTION__, __LINE__);
             }
             mea_start = 0;
         }

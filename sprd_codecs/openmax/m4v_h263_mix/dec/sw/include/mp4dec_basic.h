@@ -58,20 +58,89 @@ extern   "C"
 #define DEC_YUV_BUFFER_NUM   3
 #define DISP_YUV_BUFFER_NUM   2
 
+#define YEXTENTION_SIZE  16
+#define UVEXTENTION_SIZE 8
+
 //for quantizer mode
 typedef enum {
-    Q_H263,Q_MPEG
+    Q_H263,
+    Q_MPEG
 }
 QUANTIZER_E;
+
+typedef enum {
+    DIRECT,
+    INTERPOLATE,
+    BACKWARD,
+    FORWARD
+} MB_TYPE_E;
+
+typedef enum {
+    UNKNOWN_DIR,
+    HORIZONTAL,
+    VERTICAL,
+    DIAGONAL
+} DIRECTION_E;
+
+typedef enum {
+    NOT_DECODED,
+    DECODED_IN_ERR_PKT,
+    DECODED_NOT_IN_ERR_PKT,
+    DECODED_OK,
+    ERR_CONCEALED
+} MB_DEC_STATUS_E;
+
 //for vop prediction type
-typedef enum {IVOP, PVOP, BVOP, SVOP, NVOP} VOP_PRED_TYPE_E;
+typedef enum {
+    IVOP,
+    PVOP,
+    BVOP,
+    SVOP,
+    NVOP
+} VOP_PRED_TYPE_E;
 
 //binaryshape
-typedef enum {RECTANGLE, ONE_BIT, EIGHT_BIT} ALPHA_USAGE_E;
-typedef enum {ALL, PARTIAL, NONE} TRANSPARENT_STATUS_E;
-typedef enum {ALPHA_CODED, ALPHA_SKIPPED, ALPHA_ALL255} COD_ALPHA_E;
-typedef enum {ALL_TRANSP, ALL_OPAQUE, INTRA_CAE, INTER_CAE_MVDZ, INTER_CAE_MVDNZ, MVDZ_NOUPDT, MVDNZ_NOUPDT, UNKNOWN} SHAPE_MODE_E;
-typedef enum {B_FORWARD, B_BACKWARD} SHAPE_BPRED_DIR_E;
+typedef enum {
+    RECTANGLE,
+    ONE_BIT,
+    EIGHT_BIT
+} ALPHA_USAGE_E;
+
+typedef enum {
+    ALL,
+    PARTIAL,
+    NONE
+} TRANSPARENT_STATUS_E;
+typedef enum {
+    ALPHA_CODED,
+    ALPHA_SKIPPED,
+    ALPHA_ALL255
+} COD_ALPHA_E;
+
+typedef enum {
+    ALL_TRANSP,
+    ALL_OPAQUE,
+    INTRA_CAE,
+    INTER_CAE_MVDZ,
+    INTER_CAE_MVDNZ,
+    MVDZ_NOUPDT,
+    MVDNZ_NOUPDT,
+    UNKNOWN
+} SHAPE_MODE_E;
+
+typedef enum {
+    B_FORWARD,
+    B_BACKWARD
+} SHAPE_BPRED_DIR_E;
+
+typedef enum {
+    INTRA,
+    INTRAQ,
+    INTER,
+    INTERQ,
+    INTER4V,
+    MODE_STUFFING=7
+} MB_MODE_E;
 
 #define VLC_ERROR		(0) //(-1)
 

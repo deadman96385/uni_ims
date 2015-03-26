@@ -17,6 +17,8 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
+#include "mp4dec_basic.h"
+#include "mp4dec_mode.h"
 #include "mmcodec.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
@@ -29,7 +31,7 @@ extern   "C"
 #define CHECK_MALLOC(addr, str)    \
         if (NULL == addr)   \
         {   \
-            SCI_TRACE_LOW ("%s, %s is NULL", __FUNCTION__, str);   \
+            SPRD_CODEC_LOGE ("%s, %s is NULL", __FUNCTION__, str);   \
             return MMENC_MEMORY_ERROR;  \
         }
 

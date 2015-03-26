@@ -23,7 +23,7 @@ extern   "C"
 {
 #endif
 
-#define H264DEC_MALLOC_PRINT   //ALOGD
+#define H264DEC_MALLOC_PRINT   //SPRD_CODEC_LOGD
 
 LOCAL void Init_Mem (H264DecContext *img_ptr, MMCodecBuffer *pMem, int32 type)
 {
@@ -78,7 +78,7 @@ PUBLIC void *H264Dec_MemAlloc (H264DecContext *img_ptr, uint32 need_size, int32 
 
     if((0 == need_size)||(need_size >  (pMem->total_size -pMem->used_size)))
     {
-        ALOGE("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, pMem->total_size, pMem->used_size,need_size, type);
+        SPRD_CODEC_LOGE ("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, pMem->total_size, pMem->used_size,need_size, type);
         return NULL;
     }
 
@@ -94,7 +94,7 @@ PUBLIC uint_32or64 H264Dec_MemV2P(H264DecContext *img_ptr, uint8 *vAddr, int32 t
 {
     if (type >= MAX_MEM_TYPE)
     {
-        ALOGE ("%s, memory type is error!", __FUNCTION__);
+        SPRD_CODEC_LOGE ("%s, memory type is error!", __FUNCTION__);
         return (uint_32or64)NULL;
     } else
     {

@@ -150,6 +150,18 @@ LOCAL void h264enc_slice_header_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *im
         }
     }
 
+    if (img_ptr->pps->b_entropy_coding_mode_flag)
+    {
+        if (sh->i_type != SLICE_TYPE_I)
+        {
+            img_ptr->model_number = 1; // cabac encoding
+            WRITE_UE_V(img_ptr->model_number);
+        } else
+        {
+            img_ptr->model_number = 0; // cabac encoding
+        }
+    }
+
     WRITE_SE_V (sh->i_qp_delta); //slice qp delta
 
     if (sh->pps->b_deblocking_filter_control)
@@ -211,6 +223,14 @@ PUBLIC int32 H264Enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr
 
     img_ptr->qp = img_ptr->sh.i_qp;
 
+    SPRD_CODEC_LOGD ("%s, %d, b_entropy_coding_mode_flag = %d.\n", __FUNCTION__, __LINE__, img_ptr->pps->b_entropy_coding_mode_flag);
+
+    if (img_ptr->pps->b_entropy_coding_mode_flag)
+    {
+        init_contexts(vo);
+        H264Enc_ByteAlign(vo,1);
+    }
+
     VSP_WRITE_REG(VSP_REG_BASE_ADDR + ARM_INT_MASK_OFF, V_BIT_2, "ARM_INT_MASK, only enable VSP ACC init");//enable int //
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_INT_MASK_OFF, (V_BIT_1 | V_BIT_5), "VSP_INT_MASK, enable vlc_slice_done, time_out");//enable int //frame done/timeout
 
@@ -228,17 +248,17 @@ PUBLIC int32 H264Enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr
 
         if (int_ret & V_BIT_4)
         {
-            SCI_TRACE_LOW("%s, %d, VLC_ERR", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, VLC_ERR", __FUNCTION__, __LINE__);
         } else if (int_ret & (V_BIT_5 | V_BIT_31))
         {
-            SCI_TRACE_LOW("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
         } else //if (cmd &  V_BIT_30)
         {
-            SCI_TRACE_LOW("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
         }
     } else
     {
-        SCI_TRACE_LOW("%s, %d, should not be here!", __FUNCTION__, __LINE__);
+        SPRD_CODEC_LOGE ("%s, %d, should not be here!", __FUNCTION__, __LINE__);
     }
 
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable")) //check bsm is idle

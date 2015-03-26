@@ -17,7 +17,8 @@ LOCAL_SRC_FILES := \
 	$(VPX_PATH)/src/vp8dec_malloc.c \
 	$(VPX_PATH)/src/vp8dec_table.c	\
 	$(VPX_PATH)/src/vp8dec_vld.c \
-	$(VSP_PATH)/src/vsp_drv.c
+	$(VSP_PATH)/src/vsp_drv.c \
+	$(VSP_PATH)/src/osal_log.c
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/$(VPX_PATH)/include	\

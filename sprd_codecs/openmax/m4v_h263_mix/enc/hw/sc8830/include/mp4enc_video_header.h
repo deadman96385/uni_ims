@@ -24,8 +24,11 @@ extern   "C"
 #include "sci_types.h"
 #include "mmcodec.h"
 #include "video_common.h"
-#include "mp4enc_basic.h"
 
+#include "vsp_drv.h"
+#include "osal_log.h"
+
+#include "mp4enc_basic.h"
 #include "mp4enc_mode.h"
 #include "mp4enc_bitstrm.h"
 #include "mp4enc_constdef.h"
@@ -36,8 +39,6 @@ extern   "C"
 #include "mp4enc_ratecontrol.h"
 #include "mp4enc_vop.h"
 #include "mpeg4enc.h"
-
-#include "vsp_drv.h"
 
 #ifdef RUN_IN_PLATFORM
 //#include "os_api.h"

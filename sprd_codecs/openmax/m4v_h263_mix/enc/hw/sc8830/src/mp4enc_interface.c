@@ -73,7 +73,7 @@ MMEncRet MP4EncGenHeader(MP4Handle *mp4Handle, MMEncOut *pOutput)
 
 HEADER_EXIT:
 
-    SCI_TRACE_LOW("%s, %d, exit generating header, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    SPRD_CODEC_LOGD ("%s, %d, exit generating header, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
 
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
@@ -108,8 +108,8 @@ MMEncRet MP4EncSetConf(MP4Handle *mp4Handle, MMEncConfig *pConf)
     vop_mode_ptr->targetBitRate		= pConf->targetBitRate;
     vop_mode_ptr->RateCtrlEnable		= pConf->RateCtrlEnable;
 
-    SCI_TRACE_LOW("%s, %d, vol_mode_ptr->PbetweenI: %d, vop_mode_ptr->FrameRate: %d, vop_mode_ptr->targetBitRate: %d, vop_mode_ptr->RateCtrlEnable: %d",
-                  __FUNCTION__, __LINE__, vol_mode_ptr->PbetweenI, vop_mode_ptr->FrameRate, vop_mode_ptr->targetBitRate, vop_mode_ptr->RateCtrlEnable);
+    SPRD_CODEC_LOGD ("%s, %d, vol_mode_ptr->PbetweenI: %d, vop_mode_ptr->FrameRate: %d, vop_mode_ptr->targetBitRate: %d, vop_mode_ptr->RateCtrlEnable: %d",
+                     __FUNCTION__, __LINE__, vol_mode_ptr->PbetweenI, vop_mode_ptr->FrameRate, vop_mode_ptr->targetBitRate, vop_mode_ptr->RateCtrlEnable);
 
     vop_mode_ptr->StepI				= pConf->QP_IVOP;
     vop_mode_ptr->StepP				= pConf->QP_PVOP;
@@ -169,24 +169,26 @@ MMEncRet MP4EncGetCodecCapability(MP4Handle *mp4Handle, MMEncCapability *Capabil
 {
     Mp4EncObject *vo = (Mp4EncObject *) mp4Handle->videoEncoderData;
 
-    int32 codec_capability = vo->vsp_capability;
-    if (codec_capability == 0)   //limited under 720p
+    switch (vo->vsp_version)
     {
+    case SHARK:	//limited under 1080p
+    case TSHARK:
+    case SHARKL:
+    case PIKEL:
+        Capability->max_width = 1920;
+        Capability->max_height = 1088;
+        break;
+    case DOLPHIN://limited under 720p
+    case PIKE:
         Capability->max_width = 1280;
         Capability->max_height = 1023; //720;
-    } else if (codec_capability == 1)   //limited under 1080p
-    {
-        Capability->max_width = 1920;
-        Capability->max_height = 1088;
-    } else if (codec_capability == 2)   //limited under 1080p
-    {
-        Capability->max_width = 1920;
-        Capability->max_height = 1088;
-    } else
-    {
+        break;
+    default:
         Capability->max_width = 352;
         Capability->max_height = 288;
+        break;
     }
+
     return MMENC_OK;
 }
 
@@ -201,7 +203,7 @@ MMEncRet MP4EncPreInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr)
     Mp4EncObject*vo;
     MMEncRet ret;
 
-    SCI_TRACE_LOW("libomx_m4vh263enc_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
+    SPRD_CODEC_LOGI ("libomx_m4vh263enc_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
     CHECK_MALLOC(pInterMemBfr, "pInterMemBfr");
     CHECK_MALLOC(pInterMemBfr->common_buffer_ptr, "internal memory");
@@ -223,7 +225,7 @@ MMEncRet MP4EncPreInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr)
 
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
-    vo->vsp_capability = -1;
+    vo->vsp_version = SHARK;
     if(VSP_OPEN_Dev((VSPObject *)vo) < 0)
     {
         return MMDEC_HW_ERROR;
@@ -305,16 +307,23 @@ MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pExtraMemBfr,
     vop_mode_ptr->OneFrameBitstream_addr_phy = pBitstreamBfr->common_buffer_ptr_phy;
     vop_mode_ptr->OneframeStreamLen = pBitstreamBfr->size;
 
-    if (vo->vsp_capability == 2)
+    switch (vo->vsp_version)
     {
-        memcpy(vo->g_vlc_hw_ptr,& g_vlc_hw_tbl[320*2], (320*2*sizeof(uint32)));
-    }
-    else
-    {
+    case SHARK:
+    case DOLPHIN:
         memcpy(vo->g_vlc_hw_ptr, g_vlc_hw_tbl, (320*2*sizeof(uint32)));
+        break;
+    case TSHARK:
+    case PIKE:
+    case SHARKL:
+    case PIKEL:
+        memcpy(vo->g_vlc_hw_ptr,& g_vlc_hw_tbl[320*2], (320*2*sizeof(uint32)));
+        break;
+    default:
+        SPRD_CODEC_LOGE ("%s, %d, VSP version is error!", __FUNCTION__, __LINE__);
+        vo->error_flag |= ER_HW_ID;
+        break;
     }
-
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF, (V_BIT_4 | STREAM_ID_MPEG4), "VSP_MODE: Set standard and work mode");
 
     return MMENC_OK;
 }
@@ -398,7 +407,7 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
         }
 
         vop_mode_ptr->VopPredType = (pInput->needIVOP) ? IVOP : vop_mode_ptr->VopPredType;
-        SCI_TRACE_LOW("g_nFrame_enc %d frame_type %d ", vo->g_nFrame_enc, vop_mode_ptr->VopPredType );
+        SPRD_CODEC_LOGD ("g_nFrame_enc %d frame_type %d ", vo->g_nFrame_enc, vop_mode_ptr->VopPredType );
 
         vop_mode_ptr->pYUVSrcFrame->imgY = pInput->p_src_y_phy;
         vop_mode_ptr->pYUVSrcFrame->imgYAddr = (((uint_32or64)vop_mode_ptr->pYUVSrcFrame->imgY) >> 3);
@@ -406,7 +415,7 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
         vop_mode_ptr->pYUVSrcFrame->imgU = pInput->p_src_u_phy;
         vop_mode_ptr->pYUVSrcFrame->imgUAddr = (((uint_32or64)vop_mode_ptr->pYUVSrcFrame->imgU) >> 3);
 
-        if ((vo->yuv_format == MMENC_YUV420P_YU12)||(vo->yuv_format == MMENC_YUV420P_YV12)) //three plane
+        if ((vo->yuv_format == YUV420P_YU12)||(vo->yuv_format == YUV420P_YV12)) //three plane
         {
             vop_mode_ptr->pYUVSrcFrame->imgV = pInput->p_src_v_phy;
             vop_mode_ptr->pYUVSrcFrame->imgVAddr = (((uint_32or64)vop_mode_ptr->pYUVSrcFrame->imgV) >> 3);
@@ -438,10 +447,10 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
         {
 #if 0
             vo->g_enc_p_frame_count--;
-            SCI_TRACE_LOW ("No.%d Frame:\t NVOP\n", vo->g_nFrame_enc);
+            SPRD_CODEC_LOGI ("No.%d Frame:\t NVOP\n", vo->g_nFrame_enc);
             ret = Mp4Enc_EncNVOP(vo, pInput->time_stamp);
 #else
-            SCI_TRACE_LOW ("ERROR!, NVOP is not supported");
+            SPRD_CODEC_LOGE ("ERROR!, NVOP is not supported");
             ret = 0;
 #endif
         }
@@ -493,7 +502,7 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
 
 ENC_EXIT:
 
-    SCI_TRACE_LOW("%s, %d, exit encoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    SPRD_CODEC_LOGD ("%s, %d, exit encoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
 
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {

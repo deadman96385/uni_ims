@@ -23,7 +23,7 @@ extern   "C"
 {
 #endif
 
-#define VP8DEC_MALLOC_PRINT   //ALOGD
+#define VP8DEC_MALLOC_PRINT   //SPRD_CODEC_LOGD
 
 PUBLIC MMDecRet Vp8Dec_InitMem (VPXDecObject *vo, MMCodecBuffer *pInterMemBfr, MMCodecBuffer *pExtraMemBfr)
 {
@@ -67,7 +67,7 @@ PUBLIC void *Vp8Dec_MemAlloc (VPXDecObject *vo, uint32 need_size, int32 aligned_
 
     if((0 == need_size)||(need_size >  (pMem->total_size -pMem->used_size)))
     {
-        ALOGE("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, pMem->total_size, pMem->used_size,need_size, type);
+        SPRD_CODEC_LOGE ("%s  failed, total_size:%d, used_size: %d, need_size:%d, type: %d\n", __FUNCTION__, pMem->total_size, pMem->used_size,need_size, type);
         return NULL;
     }
 
@@ -83,7 +83,7 @@ PUBLIC uint_32or64 Vp8Dec_ExtraMem_V2P(VPXDecObject *vo, uint8 *vAddr, int32 typ
 {
     if (type >= MAX_MEM_TYPE)
     {
-        ALOGE ("%s, memory type is error!", __FUNCTION__);
+        SPRD_CODEC_LOGE ("%s, memory type is error!", __FUNCTION__);
         return (uint_32or64)NULL;
     } else
     {

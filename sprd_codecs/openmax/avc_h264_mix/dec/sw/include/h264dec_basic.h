@@ -26,26 +26,40 @@ extern   "C"
 {
 #endif
 
-#define CTS_PROTECT	//added by xweiiluo @20120818
+#ifdef __ICC
+#define DECLARE_ALIGNED(n,t,v)      t v __attribute__ ((aligned (n)))
+#define DECLARE_ASM_CONST(n,t,v)    const t __attribute__ ((aligned (n))) v
+#elif defined(__GNUC__)
+#define DECLARE_ALIGNED(n,t,v)      t v __attribute__ ((aligned (n)))
+#define DECLARE_ASM_CONST(n,t,v)    const t v  __attribute__ ((aligned (n)))
+#elif defined(_MSC_VER)
+#define DECLARE_ALIGNED(n,t,v)      __declspec(align(n)) t v
+#define DECLARE_ASM_CONST(n,t,v)    __declspec(align(n)) static const t v
+#elif defined(HAVE_INLINE_ASM)
+#error The asm code needs alignment, but we do not know how to do it for this compiler.
+#else
+#define DECLARE_ALIGNED(n,t,v)      t v
+#define DECLARE_ASM_CONST(n,t,v)    static const t v
+#endif
 
 #define DISPLAY_LIST_SIZE	10
 
 #define DEC_REF_PIC_MARKING_COMMAND_NUM	50
 
 #define MAX_REF_FRAME_NUMBER	16
-#define	MAX_REF_FRAME_BUF_NUM	16  //5
+#define MAX_REF_FRAME_BUF_NUM	16  //5
 
 #define MAX_PPS	256
 #define MAX_SPS	32
 
 #define SIZE_SLICE_GROUP_ID		960 //512x480
+#define TBL_SIZE_ICBP	6
 
 #define INVALID_REF_ID	(-135792468)
 
 #define LIST_NOT_USED -1 //FIXME rename?
 #define PART_NOT_AVAIL	-2
-#define MB_SIZE						16
-#define MB_CHROMA_SIZE				8
+
 #define MB_LUMA_CACHE_WIDTH			16
 #define MB_LUMA_CACHE_HEIGHT		16
 #define MB_CHROMA_CACHE_WIDTH		8
@@ -100,9 +114,9 @@ extern   "C"
 
 #define EOS		1	//!< End Of Sequence
 #define SOP		2	//!< Start Of Picture
-#define	SOS		3	//!< Start Of Slice
+#define SOS		3	//!< Start Of Slice
 
-#define	SINT_MAX	0x7fffffff
+#define SINT_MAX	0x7fffffff
 #define UINT_MAX	0xffffffff
 
 /*define MB type*/
@@ -121,31 +135,31 @@ extern   "C"
 
 #define PMB8X8_BLOCK8X8	4
 #define PMB8X8_BLOCK8X4	5
-#define	PMB8X8_BLOCK4X8	6
-#define	PMB8X8_BLOCK4X4	7
+#define PMB8X8_BLOCK4X8	6
+#define PMB8X8_BLOCK4X4	7
 
 //nalu type
 #define NALU_TYPE_SLICE		1
 #define NALU_TYPE_DPA		2
-#define	NALU_TYPE_DPB		3
-#define	NALU_TYPE_DPC		4
-#define	NALU_TYPE_IDR		5
-#define	NALU_TYPE_SEI		6
-#define	NALU_TYPE_SPS		7
-#define	NALU_TYPE_PPS		8
-#define	NALU_TYPE_AUD		9
-#define	NALU_TYPE_EOSEQ		10
-#define	NALU_TYPE_EOSTREAM	11
-#define	NALU_TYPE_FILL		12
+#define NALU_TYPE_DPB		3
+#define NALU_TYPE_DPC		4
+#define NALU_TYPE_IDR		5
+#define NALU_TYPE_SEI		6
+#define NALU_TYPE_SPS		7
+#define NALU_TYPE_PPS		8
+#define NALU_TYPE_AUD		9
+#define NALU_TYPE_EOSEQ		10
+#define NALU_TYPE_EOSTREAM	11
+#define NALU_TYPE_FILL		12
 
 //nalu priority
-#define	NALU_PRIORITY_HIGHEST		3
+#define NALU_PRIORITY_HIGHEST		3
 #define NALU_PRIORITY_HIGH			2
-#define	NALU_PRIORITY_LOW			1
+#define NALU_PRIORITY_LOW			1
 #define NALU_PRIORITY_DISPOSABLE	0
 
 //slice type
-#define	P_SLICE		0
+#define P_SLICE		0
 #define B_SLICE		1
 #define I_SLICE		2
 
@@ -190,7 +204,6 @@ extern   "C"
 #define CHROMA_DC		3
 #define CHROMA_AC		4
 
-
 //error id, added by xiaowei, 20110310
 #define ER_REORD_REF_PIC_ID   	2
 #define ER_VLD_ID   				4
@@ -210,7 +223,13 @@ extern   "C"
 #define ER_BS_SE	(1<<1)
 #define ER_BS_FLC	(1<<2)
 
-#define TBL_SIZE_ICBP	6
+#define CTS_PROTECT	//added by xweiiluo @20120818
+
+//define the protect level for error bitstream
+#define _LEVEL_LOW_			(1<<0)		//for common case
+#define _LEVEL_MEDIUM_			(1<<1)		//for reserved
+#define _LEVEL_HIGH_			(1<<2)		//for CMMB or streaming case
+#define _H264_PROTECT_	  	( _LEVEL_LOW_ | _LEVEL_MEDIUM_ | _LEVEL_HIGH_)
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

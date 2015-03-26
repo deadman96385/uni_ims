@@ -25,6 +25,9 @@ extern   "C"
 #include "mmcodec.h"
 #include "video_common.h"
 
+#include "vsp_drv.h"
+#include "osal_log.h"
+
 #include "mp4dec_basic.h"
 #include "mp4dec_bfrctrl.h"
 #include "mp4dec_bitstream.h"
@@ -35,7 +38,6 @@ extern   "C"
 #include "mp4dec_vop.h"
 
 #include "mpeg4dec.h"
-#include "vsp_drv.h"
 
 #ifdef RUN_IN_PLATFORM
 #include "os_api.h"
