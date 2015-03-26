@@ -23,36 +23,6 @@ extern   "C"
 {
 #endif
 
-LOCAL void h264enc_vui_init (ENC_SPS_T *sps, ENC_VUI_T *vui_seq_parameters_ptr)
-{
-    vui_seq_parameters_ptr->aspect_ratio_info_present_flag = 0;
-    vui_seq_parameters_ptr->overscan_info_present_flag     = 0;
-    vui_seq_parameters_ptr->video_signal_type_present_flag = 0;
-    vui_seq_parameters_ptr->chroma_location_info_present_flag = 0;
-    vui_seq_parameters_ptr->timing_info_present_flag          = 0;
-    vui_seq_parameters_ptr->nal_hrd_parameters_present_flag   = 0;
-    vui_seq_parameters_ptr->vcl_hrd_parameters_present_flag   = 0;
-    vui_seq_parameters_ptr->pic_struct_present_flag          =  0;
-
-    vui_seq_parameters_ptr->bitstream_restriction_flag       =  1;
-    if (vui_seq_parameters_ptr->bitstream_restriction_flag)
-    {
-        vui_seq_parameters_ptr->motion_vectors_over_pic_boundaries_flag =  0;
-        vui_seq_parameters_ptr->max_bytes_per_pic_denom                =  0;
-        vui_seq_parameters_ptr->max_bits_per_mb_denom                  =  0;
-        vui_seq_parameters_ptr->log2_max_mv_length_horizontal        =  16;
-        vui_seq_parameters_ptr->log2_max_mv_length_vertical            =  16;
-        vui_seq_parameters_ptr->num_reorder_frames                      =  0;
-        vui_seq_parameters_ptr->max_dec_frame_buffering              =  sps->i_num_ref_frames;
-    }
-    else
-    {
-        vui_seq_parameters_ptr->num_reorder_frames=0;
-    }
-
-    return;
-}
-
 void h264enc_sps_init (ENC_IMAGE_PARAMS_T *img_ptr)
 {
     ENC_SPS_T *sps;
@@ -84,7 +54,7 @@ void h264enc_sps_init (ENC_IMAGE_PARAMS_T *img_ptr)
         sps->i_num_ref_frames_in_poc_cycle = 0;
     }
 
-    sps->b_vui = 1;
+    sps->b_vui = 0;
 
     sps->b_gaps_in_frame_num_value_allowed = 0;
     sps->i_mb_width = img_ptr->frame_width_in_mbs;
@@ -111,15 +81,9 @@ void h264enc_sps_init (ENC_IMAGE_PARAMS_T *img_ptr)
         sps->frame_crop_bottom_offset = 0;
     }
 
-    sps->i_num_ref_frames = 1;
-    sps->vui_parameters_present_flag = 1;
-    if (sps->vui_parameters_present_flag)
-    {
-        h264enc_vui_init (sps, &sps->vui_seq_parameters);
-    }
-
     SCI_TRACE_LOW("%s, %d, orig_height: %d, height: %d, b_crop: %d, frame_crop_left_offset: %d, frame_crop_right_offset: %d, frame_crop_top_offset: %d, frame_crop_bottom_offset: %d",
                   __FUNCTION__, __LINE__, img_ptr->orig_height, img_ptr->height, sps->b_crop, sps->frame_crop_left_offset, sps->frame_crop_right_offset, sps->frame_crop_top_offset, sps->frame_crop_bottom_offset);
+    sps->i_num_ref_frames = 1;
 }
 
 const uint8 x264_cqm_flat16[64] =
@@ -156,75 +120,6 @@ void h264enc_pps_init (ENC_IMAGE_PARAMS_T *img_ptr)
     pps->b_deblocking_filter_control = 1;
     pps->b_constrained_intra_pred = 0;
     pps->b_redundant_pic_cnt = 0;
-}
-
-LOCAL void h264enc_vui_write (H264EncObject *vo, ENC_VUI_T *vui_ptr)
-{
-    H264Enc_OutputBits (vo, vui_ptr->aspect_ratio_info_present_flag, 1);
-    if (vui_ptr->aspect_ratio_info_present_flag)
-    {
-        H264Enc_OutputBits (vo, vui_ptr->aspect_ratio_idc, 8);
-        if (255 == vui_ptr->aspect_ratio_idc)
-        {
-            H264Enc_OutputBits (vo, vui_ptr->sar_width, 16);
-            H264Enc_OutputBits (vo, vui_ptr->sar_height, 16);
-        }
-    }
-
-    H264Enc_OutputBits (vo, vui_ptr->overscan_info_present_flag, 1);
-    if (vui_ptr->overscan_info_present_flag)
-    {
-        H264Enc_OutputBits (vo, vui_ptr->overscan_appropriate_flag, 1);
-    }
-
-    H264Enc_OutputBits (vo, vui_ptr->video_signal_type_present_flag, 1);
-    if (vui_ptr->video_signal_type_present_flag)
-    {
-        H264Enc_OutputBits (vo, vui_ptr->video_format, 3);
-        H264Enc_OutputBits (vo, vui_ptr->video_full_range_flag, 1);
-        H264Enc_OutputBits (vo, vui_ptr->colour_description_present_flag, 1);
-
-        if(vui_ptr->colour_description_present_flag)
-        {
-            H264Enc_OutputBits (vo, vui_ptr->colour_primaries, 8);
-            H264Enc_OutputBits (vo, vui_ptr->transfer_characteristics, 8);
-            H264Enc_OutputBits (vo, vui_ptr->matrix_coefficients, 8);
-        }
-    }
-
-    H264Enc_OutputBits (vo, vui_ptr->chroma_location_info_present_flag, 1);
-    if(vui_ptr->chroma_location_info_present_flag)
-    {
-        WRITE_UE_V (vui_ptr->chroma_sample_loc_type_top_field);
-        WRITE_UE_V (vui_ptr->chroma_sample_loc_type_bottom_field);
-    }
-
-    H264Enc_OutputBits (vo, vui_ptr->timing_info_present_flag, 1);
-    if (vui_ptr->timing_info_present_flag)
-    {
-        H264Enc_OutputBits (vo, vui_ptr->num_units_in_tick, 32);
-        H264Enc_OutputBits (vo, vui_ptr->time_scale, 32);
-        H264Enc_OutputBits (vo, vui_ptr->fixed_frame_rate_flag, 1);
-    }
-
-    H264Enc_OutputBits (vo, vui_ptr->nal_hrd_parameters_present_flag, 1);
-    H264Enc_OutputBits (vo, vui_ptr->vcl_hrd_parameters_present_flag, 1);
-    H264Enc_OutputBits (vo, vui_ptr->pic_struct_present_flag, 1);
-
-    H264Enc_OutputBits (vo, vui_ptr->bitstream_restriction_flag, 1);
-    if (vui_ptr->bitstream_restriction_flag)
-    {
-        H264Enc_OutputBits (vo, vui_ptr->motion_vectors_over_pic_boundaries_flag, 1);
-
-        WRITE_UE_V (vui_ptr->max_bytes_per_pic_denom);
-        WRITE_UE_V (vui_ptr->max_bits_per_mb_denom);
-        WRITE_UE_V (vui_ptr->log2_max_mv_length_horizontal);
-        WRITE_UE_V (vui_ptr->log2_max_mv_length_vertical);
-        WRITE_UE_V (vui_ptr->num_reorder_frames);
-        WRITE_UE_V (vui_ptr->max_dec_frame_buffering);
-    }
-
-    return;
 }
 
 void h264enc_sps_write (H264EncObject *vo, ENC_SPS_T *sps)
@@ -272,12 +167,7 @@ void h264enc_sps_write (H264EncObject *vo, ENC_SPS_T *sps)
         WRITE_UE_V (sps->frame_crop_top_offset);
         WRITE_UE_V (sps->frame_crop_bottom_offset);
     }
-
     H264Enc_OutputBits (vo, sps->b_vui, 1);
-    if (sps->b_vui)
-    {
-        h264enc_vui_write(vo, &sps->vui_seq_parameters);
-    }
 
     H264Enc_rbsp_trailing (vo);
 }
