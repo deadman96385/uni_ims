@@ -51,6 +51,9 @@
 static void *noopRemoveWarning( void *a ) { return a; }
 #define RIL_UNUSED_PARM(a) noopRemoveWarning((void *)&(a));
 
+// Default MTU value
+#define DEFAULT_MTU 1500
+
 typedef enum {
     SIM_ABSENT = 0,
     SIM_NOT_READY = 1,
@@ -303,10 +306,11 @@ static void attachGPRS(int channelID, void *data, size_t datalen, RIL_Token t);
 static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t);
 static int getMaxPDPNum(void);
 static int getExtraPDPNum(int index);
-static void copyDataReponse(RIL_Data_Call_Response_v9* pSource, RIL_Data_Call_Response_v9* pDest);
+static void copyDataReponse(RIL_Data_Call_Response_v11* pSource, RIL_Data_Call_Response_v11* pDest);
 static void getSIMStatusAgainForSimBusy();
 static int DeactiveDataConnectionByCid(int cid);
 unsigned char* convertUsimToSim(unsigned char const* byteUSIM, int len);
+
 static bool hasSimBusy = false;
 
 /*** Static Variables ***/
@@ -1992,8 +1996,8 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
             p_cur = p_cur->p_next)
         n++;
 
-    RIL_Data_Call_Response_v9 *responses =
-        alloca(n * sizeof(RIL_Data_Call_Response_v9));
+    RIL_Data_Call_Response_v11 *responses =
+        alloca(n * sizeof(RIL_Data_Call_Response_v11));
 
     int i;
     for (i = 0; i < n; i++) {
@@ -2007,9 +2011,10 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
         responses[i].dnses = "";
         responses[i].gateways = "";
         responses[i].pcscf = "";
+        responses[i].mtu = 0;
     }
 
-    RIL_Data_Call_Response_v9 *response = responses;
+    RIL_Data_Call_Response_v11 *response = responses;
     for (p_cur = p_response->p_intermediates; p_cur != NULL;
          p_cur = p_cur->p_next) {
         char *line = p_cur->line;
@@ -2349,7 +2354,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
             } else {
                 RILLOGE("Unknown IP type!");
             }
-
+            responses[i].mtu = DEFAULT_MTU;
             if((cid != -1) && (t == NULL)){
                  RILLOGE("i = %d",i);
                  if((!responses[i].active) && strcmp(responses[i].addresses,"")){
@@ -2379,7 +2384,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                         RILLOGD("requestOrSendDataCallList is called by SetupDataCall!cid : %d", cid);
                         RILLOGD("requestOrSendDataCallList is called by SetupDataCall!responses[%d].cid : %d", getExtraPDPNum(i), responses[getExtraPDPNum(i)].cid);
                         if ((responses[getExtraPDPNum(i)].cid == getExtraPDPNum(cid)) && responses[getExtraPDPNum(i)].active) {
-                            RIL_Data_Call_Response_v9 *newResponses = alloca(2 * sizeof(RIL_Data_Call_Response_v9));
+                            RIL_Data_Call_Response_v11 *newResponses = alloca(2 * sizeof(RIL_Data_Call_Response_v11));
                             copyDataReponse(&responses[i], &newResponses[0]);
                             copyDataReponse(&responses[getExtraPDPNum(i)], &newResponses[1]);
                             if (IsLte && bLteDetached) {
@@ -2390,7 +2395,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                             } else {
                                 RIL_onRequestComplete(*t, RIL_E_SUCCESS,
                                     newResponses,
-                                    2 * sizeof(RIL_Data_Call_Response_v9));
+                                    2 * sizeof(RIL_Data_Call_Response_v11));
                             }
                         } else {
                             if (IsLte && bLteDetached) {
@@ -2400,7 +2405,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                                 RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
                             } else {
                                 RIL_onRequestComplete(*t, RIL_E_SUCCESS, &responses[i],
-                                    sizeof(RIL_Data_Call_Response_v9));
+                                    sizeof(RIL_Data_Call_Response_v11));
                             }
                         }
 
@@ -2419,11 +2424,11 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
 
         if (t != NULL)
             RIL_onRequestComplete(*t, RIL_E_SUCCESS, responses,
-                    n * sizeof(RIL_Data_Call_Response_v9));
+                    n * sizeof(RIL_Data_Call_Response_v11));
         else
             RIL_onUnsolicitedResponse(RIL_UNSOL_DATA_CALL_LIST_CHANGED,
                     responses,
-                    n * sizeof(RIL_Data_Call_Response_v9));
+                    n * sizeof(RIL_Data_Call_Response_v11));
 //    }
 
     
@@ -11570,7 +11575,7 @@ static int getExtraPDPNum(int index){
     return index+ 3;
 }
 
-static void dumpDataResponse(RIL_Data_Call_Response_v9* pDest) {
+static void dumpDataResponse(RIL_Data_Call_Response_v11* pDest) {
     RILLOGD("status=%d",pDest->status);
     RILLOGD("suggestedRetryTime=%d",pDest->suggestedRetryTime);
     RILLOGD("cid=%d",pDest->cid);
@@ -11582,7 +11587,7 @@ static void dumpDataResponse(RIL_Data_Call_Response_v9* pDest) {
     RILLOGD("gateways = %s",pDest->gateways);
 }
 
-static void copyDataReponse(RIL_Data_Call_Response_v9* pSource, RIL_Data_Call_Response_v9* pDest) {
+static void copyDataReponse(RIL_Data_Call_Response_v11* pSource, RIL_Data_Call_Response_v11* pDest) {
     pDest->cid = pSource->cid;
     pDest->status = pSource->status;
     pDest->suggestedRetryTime = pSource->suggestedRetryTime;
@@ -11626,33 +11631,33 @@ static void getSIMStatusAgainForSimBusy() {
 }
 
 static int DeactiveDataConnectionByCid(int cid){
-		ATResponse *p_response = NULL;
-		char cmd[30];
-		int err=0;
-		int ret = 1;
+        ATResponse *p_response = NULL;
+        char cmd[30];
+        int err=0;
+        int ret = 1;
 
-		RILLOGD("DeactiveDataConnectionByCid, deactive cid %d",cid);
-		if (cid <= 0){
-		return 0;
-		}
-		int channel = 0;
-		channel =getChannel();
+        RILLOGD("DeactiveDataConnectionByCid, deactive cid %d",cid);
+        if (cid <= 0){
+        return 0;
+        }
+        int channel = 0;
+        channel =getChannel();
 
-		if(channel < 0) {
-		return 0;
-		}
+        if(channel < 0) {
+        return 0;
+        }
 
-		snprintf(cmd,sizeof(cmd),"AT+CGACT=0,%d",cid);
-		RILLOGD("DeactiveDataConnect cmd %s",cmd);
-		err = at_send_command(ATch_type[channel], cmd, &p_response);
-		if (err < 0 || p_response->success == 0){
-		RILLOGD("cmd %s response NOK",cmd);
-		ret = 0;
-		}
-		putChannel(channel);
-		putPDP(cid -1);
-		at_response_free(p_response);
-		return ret;
+        snprintf(cmd,sizeof(cmd),"AT+CGACT=0,%d",cid);
+        RILLOGD("DeactiveDataConnect cmd %s",cmd);
+        err = at_send_command(ATch_type[channel], cmd, &p_response);
+        if (err < 0 || p_response->success == 0){
+        RILLOGD("cmd %s response NOK",cmd);
+        ret = 0;
+        }
+        putChannel(channel);
+        putPDP(cid -1);
+        at_response_free(p_response);
+        return ret;
 }
 
 unsigned char* convertUsimToSim(unsigned char const* byteUSIM, int len) {
