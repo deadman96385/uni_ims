@@ -147,7 +147,9 @@
     {RIL_REQUEST_GET_DC_RT_INFO, dispatchVoid, responseDcRtInfo},
     {RIL_REQUEST_SET_DC_RT_INFO_RATE, dispatchInts, responseVoid},
     {RIL_REQUEST_SET_DATA_PROFILE, dispatchDataProfile, responseVoid},
-    {RIL_REQUEST_SHUTDOWN, dispatchVoid, responseVoid}
+    {RIL_REQUEST_SHUTDOWN, dispatchVoid, responseVoid},
+    {RIL_REQUEST_GET_RADIO_CAPABILITY, dispatchVoid, responseRadioCapability},
+    {RIL_REQUEST_SET_RADIO_CAPABILITY, dispatchRadioCapability, responseRadioCapability}
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     ,{RIL_REQUEST_IMS_REGISTRATION_STATE, dispatchVoid, responseInts}
     ,{RIL_REQUEST_IMS_SEND_SMS, dispatchImsSendSms, responseImsSendSms}
