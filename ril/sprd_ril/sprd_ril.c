@@ -8882,6 +8882,58 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             at_response_free(p_response);
             break;
         }
+        case RIL_REQUEST_SWITCH_BT: {
+            RILLOGD("enter to handle event: RIL_REQUEST_SWITCH_BT");
+            p_response = NULL;
+            int n = ((int*)data)[0];
+            char cmd[20] = {0};
+
+            if (n == 0) {
+                n = 6; //close BT coexistance(AT+SPCLB=6).
+            } else if (n == 1) {
+                n = 7; //open BT coexistance(AT+SPCLB=7).
+            }
+            RILLOGD("RIL_REQUEST_SWITCH_BT to data value: %d", n);
+            snprintf(cmd, sizeof(cmd), "AT+SPCLB=%d", n);
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+
+            if (err < 0 || p_response->success == 0) {
+                RILLOGD("response of RIL_REQUEST_SWITCH_BT: generic failure!");
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RILLOGD("response of RIL_REQUEST_SWITCH_BT: success!");
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+
+            at_response_free(p_response);
+            break;
+        }
+        case RIL_REQUEST_SWITCH_WIFI: {
+            RILLOGD("enter to handle event: RIL_REQUEST_SWITCH_WIFI");
+            p_response = NULL;
+            int n = ((int*)data)[0];
+            char cmd[20] = {0};
+
+            if (n == 0) {
+                n = 4; //close WIFI coexistance(AT+SPCLB=4).
+            } else if (n == 1) {
+                n = 5; //open WIFI coexistance(AT+SPCLB=5).
+            }
+            RILLOGD("RIL_REQUEST_SWITCH_3_WIRE to data value: %d", n);
+            snprintf(cmd, sizeof(cmd), "AT+SPCLB=%d", n);
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+
+            if (err < 0 || p_response->success == 0) {
+                RILLOGD("response of RIL_REQUEST_SWITCH_WIFI: generic failure!");
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RILLOGD("response of RIL_REQUEST_SWITCH_WIFI: success!");
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+
+            at_response_free(p_response);
+            break;
+        }
         //SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_GET_CELL_BROADCAST_CONFIG:

@@ -208,6 +208,8 @@
     ,{RIL_REQUEST_GET_BAND_INFO, dispatchVoid, responseString}
     ,{RIL_REQUEST_SWITCH_BAND_INFO_REPORT, dispatchInts, responseVoid}
     ,{RIL_REQUEST_SWITCH_3_WIRE, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_SWITCH_BT, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_SWITCH_WIFI, dispatchInts, responseVoid}
     //SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)

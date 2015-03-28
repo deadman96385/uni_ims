@@ -149,7 +149,13 @@ static void init_request_type(void) {
     sReqTypeArr[RIL_REQUEST_SET_NETWORK_SELECTION_AUTOMATIC -1] =  ReqToTDG_LTE;
     // sReqTypeArr[RIL_REQUEST_OPERATOR -1]                        =  ReqToTDG_LTE;
     sReqTypeArr[RIL_REQUEST_QUERY_AVAILABLE_NETWORKS -1]        =  ReqToTDG_LTE;
-
+    //SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 START
+    sReqTypeArr[RIL_REQUEST_GET_BAND_INFO - RIL_SPRD_REQUEST_BASE - 1 + RIL_REQUEST_LAST]        =  ReqToLTE;
+    sReqTypeArr[RIL_REQUEST_SWITCH_BAND_INFO_REPORT - RIL_SPRD_REQUEST_BASE - 1 + RIL_REQUEST_LAST] =  ReqToLTE;
+    sReqTypeArr[RIL_REQUEST_SWITCH_3_WIRE - RIL_SPRD_REQUEST_BASE - 1 + RIL_REQUEST_LAST]        =  ReqToLTE;
+    sReqTypeArr[RIL_REQUEST_SWITCH_BT - RIL_SPRD_REQUEST_BASE - 1 + RIL_REQUEST_LAST]        =  ReqToLTE;
+    sReqTypeArr[RIL_REQUEST_SWITCH_WIFI - RIL_SPRD_REQUEST_BASE - 1 + RIL_REQUEST_LAST]        =  ReqToLTE;
+    //SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
     memset(sRilP_RspTDGLTE, 0 , sizeof(sRilP_RspTDGLTE));
 
 }

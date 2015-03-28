@@ -5993,6 +5993,8 @@ requestToString(int request) {
         case RIL_REQUEST_GET_BAND_INFO: return "GET_BAND_INFO";
         case RIL_REQUEST_SWITCH_BAND_INFO_REPORT: return "SWITCH_BAND_INFO_REPORT";
         case RIL_REQUEST_SWITCH_3_WIRE: return "SWITCH_3_WIRE";
+        case RIL_REQUEST_SWITCH_BT: return "SWITCH_BT";
+        case RIL_REQUEST_SWITCH_WIFI: return "SWITCH_WIFI";
         ////SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
