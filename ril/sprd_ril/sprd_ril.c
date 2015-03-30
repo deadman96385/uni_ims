@@ -1719,11 +1719,11 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 #endif
 
     if (onOff == 0) {
-        if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
-            RILLOGD("s_sim_num = %d", s_sim_num);
-            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
-            err = at_send_command(ATch_type[channelID], cmd, NULL );
-        }
+//        if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
+//            RILLOGD("s_sim_num = %d", s_sim_num);
+//            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
+//            err = at_send_command(ATch_type[channelID], cmd, NULL );
+//        }
         /* The system ask to shutdown the radio */
         err = at_send_command(ATch_type[channelID], "AT+SFUN=5", &p_response);
         if (err < 0 || p_response->success == 0)
@@ -1787,11 +1787,11 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
             }
         } else if (isCSFB() && (!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf"))) {
             if (s_multiSimMode && !bOnlyOneSIMPresent) {
-                if (s_testmode == 10) {
-                    RILLOGD("s_sim_num=%d,autoAttach=%d,dataEnable=%d",s_sim_num, autoAttach, dataEnable);
-                    snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,%d", s_sim_num, autoAttach && dataEnable);
-                    at_send_command(ATch_type[channelID], cmd, NULL );
-                }
+//                if (s_testmode == 10) {
+//                    RILLOGD("s_sim_num=%d,autoAttach=%d,dataEnable=%d",s_sim_num, autoAttach, dataEnable);
+//                    snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,%d", s_sim_num, autoAttach && dataEnable);
+//                    at_send_command(ATch_type[channelID], cmd, NULL );
+//                }
                 //err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", &p_response);
              }else {
                  err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
@@ -2821,11 +2821,11 @@ RETRY:
     }
 
     if (ATch_type[channelID]) {
-        if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
-            RILLOGD("requestSetupDataCall s_sim_num = %d", s_sim_num);
-            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,1", s_sim_num);
-            err = at_send_command(ATch_type[channelID], cmd, NULL );
-       }
+//        if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
+//            RILLOGD("requestSetupDataCall s_sim_num = %d", s_sim_num);
+//            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,1", s_sim_num);
+//            err = at_send_command(ATch_type[channelID], cmd, NULL );
+//       }
 
         if (datalen > 6 * sizeof(char *)) {
             pdp_type = ((const char **)data)[6];
@@ -4297,6 +4297,9 @@ static void requestRegistrationState(int channelID, int request, void *data,
         response[3] = mapCgregResponse(response[3]);
         sprintf(res[3], "%d", response[3]);
         responseStr[3] = res[3];
+    }
+    if((response[0] == 1|| response[0] == 5) && response[3] == 14){
+        in4G = 1;
     }
 
     if (request == RIL_REQUEST_VOICE_REGISTRATION_STATE) {
@@ -9579,6 +9582,14 @@ static void attachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
     ATResponse *p_response = NULL;
     int ret;
     int err;
+    extern int s_sim_num;
+    char cmd[128];
+
+     if (isLte() && s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
+         RILLOGD("attachGPRS s_sim_num = %d", s_sim_num);
+         snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,1", s_sim_num);
+         err = at_send_command(ATch_type[channelID], cmd, NULL );
+    }
 
     err = at_send_command(ATch_type[channelID], "AT+CGATT=1", &p_response);
     if (err < 0 || p_response->success == 0) {
