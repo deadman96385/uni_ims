@@ -1275,12 +1275,13 @@ int cvt_cgdcont_read_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
     int tmp_cid = 0;
     int in_len;
     char *input, *out;
-    char at_cmd_str[MAX_AT_CMD_LEN], ip[30], net[30];
+    char at_cmd_str[MAX_AT_CMD_LEN], ip[128], net[128];
 
     if (rsp == NULL) {
         return AT_RESULT_NG;
     }
-
+    memset(at_cmd_str, 0, MAX_AT_CMD_LEN);
+    memset(net, 0, 128);
     in_len = rsp->len;
     input = rsp->rsp_str;
 
@@ -1364,7 +1365,7 @@ int cvt_cgdcont_set_req(AT_CMD_REQ_T * req)
     cmux_t *mux;
     int len, tmp_cid = 0;
     char *input;
-    char at_str[200], ip[30], net[30], ipladdr[30], hcomp[30], dcomp[30];
+    char at_str[200], ip[128], net[128], ipladdr[30], hcomp[30], dcomp[30];
     char *out;
     int err = 0, ret = 0;
     char at_cmd_str[MAX_AT_CMD_LEN];
@@ -1376,8 +1377,8 @@ int cvt_cgdcont_set_req(AT_CMD_REQ_T * req)
     input = req->cmd_str;
 
     memset(at_str, 0, 200);
-    memset(ip, 0, 30);
-    memset(net, 0, 30);
+    memset(ip, 0, 128);
+    memset(net, 0, 128);
     memset(ipladdr, 0, 30);
     memset(hcomp, 0, 30);
     memset(dcomp, 0, 30);

@@ -211,6 +211,8 @@
     ,{RIL_REQUEST_SWITCH_BT, dispatchInts, responseVoid}
     ,{RIL_REQUEST_SWITCH_WIFI, dispatchInts, responseVoid}
     //SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
+    //SPRD: for stop query available networks
+    ,{RIL_REQUEST_STOP_QUERY_AVAILABLE_NETWORKS, dispatchVoid, responseVoid}
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     ,{RIL_REQUEST_SET_CELL_BROADCAST_CONFIG, dispatchSetCBConf, responseVoid}
