@@ -853,7 +853,7 @@ int testAudioOUT(const uchar * data, int data_len, uchar * rsp, int rsp_size)
     case 0x02: {
         ALOGE("wangzuo:testAudioOUT 0x02 data + 3:%c,data_len-3:%d",data + 3,data_len - 3);
         audPlayerClose();
-        if(audPlayerOpen(out, PLAY_SAMPLE_RATE, chl, 0) < 0 || audPlayerPlay(data + 3, data_len - 3) < 0){
+        if(audPlayerOpen(out, PLAY_SAMPLE_RATE, chl, 0) < 0 || audPlayerPlay(data + 3, data_len - 4) < 0){    //remove the end 7e
             ret = -1;
         }
     }
