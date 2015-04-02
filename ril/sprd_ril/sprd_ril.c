@@ -1325,6 +1325,10 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
     int errNum = -1;
     int ret = -1;
     ATLine *p_cur;
+    SIM_Status simstatus = SIM_ABSENT;
+    char *type = data[0];
+    int remainTimes = 10;
+    RILLOGE("type = %s ", type);
 
     if (datalen != 5 * sizeof(char *))
         goto error1;
@@ -1422,8 +1426,19 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
             }
         }
 
-        result = 1;
+        result = getRemainTimes(channelID, type);
         RIL_onRequestComplete(t, RIL_E_SUCCESS, &result, sizeof(result));
+        simstatus = getSIMStatus(channelID);
+        RILLOGD("simstatus = %d", simstatus);
+        if(simstatus == SIM_READY) {
+            setRadioState(channelID, RADIO_STATE_SIM_READY);
+        }else if((SIM_NETWORK_PERSONALIZATION == simstatus)
+            || (SIM_SIM_PERSONALIZATION == simstatus)
+            || (SIM_NETWORK_SUBSET_PERSONALIZATION == simstatus)
+            || (SIM_CORPORATE_PERSONALIZATION == simstatus)
+            || (SIM_SERVICE_PROVIDER_PERSONALIZATION == simstatus)){
+          RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
+        }
         at_response_free(p_response);
         return;
     }
@@ -1465,11 +1480,14 @@ error:
                 if(errNum == 11 || errNum == 12) {
                     setRadioState(channelID, RADIO_STATE_SIM_LOCKED_OR_ABSENT);
                 } else if (errNum == 70 || errNum == 3  || errNum == 128) {
-                    RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
+                    remainTimes = getRemainTimes(channelID, type);
+                    RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE,
+                            &remainTimes, sizeof(remainTimes));
                     at_response_free(p_response);
                     return;
                 } else if (errNum == 16) {
-                    RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+                    remainTimes = getRemainTimes(channelID, type);
+                    RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, &remainTimes, sizeof(remainTimes));
                     at_response_free(p_response);
                     return;
                 }
@@ -1477,7 +1495,9 @@ error:
         }
     }
 error1:
-    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    remainTimes = getRemainTimes(channelID, type);
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, &remainTimes,
+            sizeof(remainTimes));
     at_response_free(p_response);
 }
 
@@ -11871,3 +11891,62 @@ error:
     RILLOGD("convert to sim error, return NULL");
     return NULL;
 }
+
+int getNetLockRemainTimes(int channelID, int type){
+    char cmd[20] = {0};
+    int fac = type;
+    int ck_type = 1;
+    char *line;
+    int result[2] = {0,0};
+    ATResponse   *p_response = NULL;
+    int err;
+    ALOGD("[MBBMS]send RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES, fac:%d,ck_type:%d",fac,ck_type);
+    sprintf(cmd, "AT+SPSMPN=%d,%d", fac,ck_type);
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+SPSMPN:", &p_response);
+    if (err < 0 || p_response->success == 0) {
+        return 10;
+    } else {
+        line = p_response->p_intermediates->line;
+        ALOGD("[MBBMS]RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES: err=%d line=%s", err, line);
+
+        err = at_tok_start(&line);
+
+        if (err == 0) {
+            err = at_tok_nextint(&line, &result[0]);
+            if (err == 0) {
+                at_tok_nextint(&line, &result[1]);
+                err = at_tok_nextint(&line, &result[1]);
+            }
+        }
+
+        if (err == 0) {
+            return result[0] - result[2];
+        }
+        else {
+            return 10;
+        }
+    }
+    at_response_free(p_response);
+}
+
+int getRemainTimes(int channelID, char *type){
+  if(0 == strcmp(type, "PS")){
+     return getNetLockRemainTimes(channelID, 1);
+  }else if(0 == strcmp(type, "PN")){
+      return getNetLockRemainTimes(channelID, 2);
+  }else if(0 == strcmp(type, "PU")){
+      return getNetLockRemainTimes(channelID, 3);
+  }else if(0 == strcmp(type, "PP")){
+      return getNetLockRemainTimes(channelID, 4);
+  }else if(0 == strcmp(type, "PC")){
+      return getNetLockRemainTimes(channelID, 5);
+  }else if(0 == strcmp(type, "SC")){
+      return getSimlockRemainTimes(channelID, 0);
+  }else if(0 == strcmp(type, "FD")){
+      return getSimlockRemainTimes(channelID, 1);
+  }else{
+      RILLOGD("wrong type %s , return -1", type);
+      return -1;
+  }
+}
+
