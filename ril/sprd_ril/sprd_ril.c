@@ -164,7 +164,12 @@ typedef enum {
 
 #define PROP_DEFAULT_BEARER  "gsm.stk.default_bearer"
 #define PROP_OPEN_CHANNEL  "gsm.stk.open_channel"
+
 #define PROP_END_CONNECTIVITY  "gsm.stk.end_connectivity"
+
+// {for sleep log}
+#define BUFFER_SIZE  (12*1024*4)
+#define CONSTANT_DIVIDE  32768.0
 
 int modem;
 int s_multiSimMode = 0;
@@ -312,6 +317,7 @@ static int DeactiveDataConnectionByCid(int cid);
 unsigned char* convertUsimToSim(unsigned char const* byteUSIM, int len);
 static void stopQueryNetwork(int channelID, void *data, size_t datalen, RIL_Token t);
 static bool hasSimBusy = false;
+static void* dump_sleep_log();
 
 /*** Static Variables ***/
 static const RIL_RadioFunctions s_callbacks = {
@@ -6210,6 +6216,13 @@ static void requestSendAT(int channelID, char *data, size_t datalen, RIL_Token t
         pdu ++;
         RILLOGD("SNVM: cmd %s, pdu %s", cmd, pdu);
         err = at_send_command_snvm(ATch_type[channelID], cmd, pdu, "", &p_response);
+    } else if (!strncasecmp(at_cmd, "AT+SPSLEEPLOG", strlen("AT+SPSLEEPLOG"))) {
+        pthread_t tid;
+        do {
+            RILLOGD("Create dump sleep log thread");
+        } while (pthread_create(&tid, NULL, (void*) dump_sleep_log, NULL) < 0);
+        RILLOGD("Create dump sleep log thread success");
+        err = at_send_command(ATch_type[channelID], "AT+SPSLEEPLOG", &p_response);
     } else {
         err = at_send_command_multiline(ATch_type[channelID], at_cmd, "", &p_response);
     }
@@ -11821,6 +11834,7 @@ static int DeactiveDataConnectionByCid(int cid){
         at_response_free(p_response);
         return ret;
 }
+
 static void stopQueryNetwork(int channelID, void *data, size_t datalen, RIL_Token t){
     int err;
     ATResponse *p_response = NULL;
@@ -11950,3 +11964,122 @@ int getRemainTimes(int channelID, char *type){
   }
 }
 
+int open_dev(char *dev)
+{
+    int retry_count = 0;
+    int fd =-1;
+
+    while(fd <= 0 &&(retry_count <10)){
+        fd = open(dev, O_RDONLY);
+        if(fd <= 0){
+            sleep(1);
+            RILLOGD("Unable to open log device '%s' , %d, %d", dev,fd,errno);
+        }else if(fd >0){
+        break;
+        }
+        retry_count ++;
+    }
+
+    return fd;
+}
+
+static void* dump_sleep_log(){
+    int fd_cp =-1;
+    FILE *fd_ap;
+    char cp_buffer[BUFFER_SIZE], buffer[128];
+    char modem_property[128];
+    int ret = 0, totalLen = 0, max = 0;
+    fd_set readset;
+    int result;
+    struct timeval timeout;
+    char* cp_buffer_ptr = cp_buffer;
+    int buf_len =0;
+    unsigned int*  log_ptr = (unsigned int*)cp_buffer;
+    char log_str[100] = {0};
+    char dev_name[30] = {0};
+    RILLOGD("enter dump_sleep_log.");
+    if(!strcmp(s_modem, "t")) {
+        sprintf(dev_name, "/dev/spipe_td5");
+    } else if(!strcmp(s_modem, "w")) {
+        sprintf(dev_name, "/dev/spipe_w5");
+    } else if(!strcmp(s_modem, "l")) {
+        sprintf(dev_name, "/dev/spipe_lte5");
+    } else if(!strcmp(s_modem, "tl")) {
+        sprintf(dev_name, "/dev/spipe_lte5");
+    } else if(!strcmp(s_modem, "lf")) {
+        sprintf(dev_name, "/dev/spipe_lte5");
+    } else {
+        RILLOGE("Unknown modem type, exit");
+        exit(-1);
+    }
+    fd_cp = open_dev(dev_name);
+    if(fd_cp <= 0){
+        RILLOGD("open '%s' failed. exit.",dev_name);
+        return NULL;
+    }
+    FD_SET(fd_cp, &readset);
+
+    sprintf(buffer, "/data/slog/sleep_log.txt");
+    fd_ap = fopen(buffer, "a+");
+    if(fd_ap == NULL) {
+        RILLOGD("open cp log file '%s' failed! exit.", buffer);
+        return NULL;
+    }
+    timeout.tv_sec = 20;
+    timeout.tv_usec = 0;
+    memset(cp_buffer, 0, BUFFER_SIZE);
+
+    while((cp_buffer_ptr - cp_buffer) < BUFFER_SIZE) {
+
+        RILLOGD("wait for data");
+        buf_len = read(fd_cp, cp_buffer_ptr, BUFFER_SIZE);
+        if(buf_len <= 0) {
+            if ( (buf_len == -1 && (errno == EINTR || errno == EAGAIN) ) || buf_len == 0 ) {
+                continue;
+            }
+            RILLOGD("read log failed! exit.");
+            break;
+        }
+        cp_buffer_ptr += buf_len;
+        RILLOGD("read length %d.", buf_len);
+    }
+    unsigned int state_cp =0;
+    float sec_time =0.0;
+    float duration =0.0;
+    unsigned int temp_before = 0,temp =0;
+        buf_len = (int)(cp_buffer_ptr - cp_buffer);
+        RILLOGD("read cp sleeplog total %d.", buf_len/4);
+        int index =0;
+        for(;index < buf_len/4;index++){
+            state_cp =0;
+            sec_time =0.0;
+            duration =0.0;
+            int before = (index == 0 ? (buf_len/4-1):(index-1));
+            RILLOGD("sleep log before: %u",log_ptr[index]);
+            temp_before = log_ptr[before];
+            temp = log_ptr[index];
+            state_cp = temp &0x0001;
+            temp = temp>> 1;
+            temp_before = temp_before>>1;
+            sec_time = (float) temp/1000.0;
+            duration =(float)((temp-temp_before)/1000.0) ;
+            if ((temp==0) ||( temp_before==0)||(temp_before > temp))
+                duration = 0;
+            //str format : "%010u\t%010f\t%u\t%f"
+            sprintf(log_str,"%010u\t%010f\t%u\t%f\n",(unsigned int) (sec_time*CONSTANT_DIVIDE),sec_time,state_cp,duration);
+
+            // write to file
+            RILLOGD("sleep log after: %s",log_str);
+            totalLen = fwrite(log_str, strlen(log_str), 1, fd_ap);
+            if ( totalLen != 1 ) {
+                RILLOGD("write cp log file '%s' failed! exit.", buffer);
+                break;
+            }
+        }
+        RILLOGD("Finish dump the sleep log! exit.");
+    if(fd_ap != NULL)
+        fclose(fd_ap);
+    if (fd_cp > 0)
+        close(fd_cp);
+    return NULL;
+}
