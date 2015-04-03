@@ -222,7 +222,7 @@ const int INIT_BCBP_MAP[]= {0,1,4,5,6};
 #ifdef SIM_IN_WIN
 void biari_init_context(ENC_IMAGE_PARAMS_T *img_ptr, BiContextType *ctx, const int* ini)
 #else
-void biari_init_context(H264EncObject *vo, int *ctx, const int* ini)
+void biari_init_context(H264EncObject *vo, int32 *ctx, const int32* ini)
 #endif // SIM_IN_WIN
 {
     int pstate;
@@ -238,12 +238,12 @@ void biari_init_context(H264EncObject *vo, int *ctx, const int* ini)
     if( pstate <= 63 )
     {
         //*ctx = 2 * ( 63 - pstate ) + 0;
-        VSP_WRITE_REG((uint32)ctx, 2 * ( 63 - pstate ) + 0,"axim endian set, vu format"); //VSP and OR endian.
+        VSP_WRITE_REG(ctx, 2 * ( 63 - pstate ) + 0,"axim endian set, vu format"); //VSP and OR endian.
     }
     else
     {
         //*ctx = 2 * ( pstate - 64 ) + 1;
-        VSP_WRITE_REG((uint32)ctx, 2 * ( pstate - 64 ) + 1,"axim endian set, vu format"); //VSP and OR endian.
+        VSP_WRITE_REG(ctx, 2 * ( pstate - 64 ) + 1,"axim endian set, vu format"); //VSP and OR endian.
     }
     SPRD_CODEC_LOGD ("%s, %d, pstate=%d.\n", __FUNCTION__, __LINE__, pstate);
 }
