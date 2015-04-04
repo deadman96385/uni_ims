@@ -9,7 +9,7 @@
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include <time64.h>
+#include <time.h>
 
 #include <hardware/gps.h>
 

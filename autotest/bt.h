@@ -39,7 +39,7 @@ int btGetLocalVersion( struct hci_ver_t *ver );
 int btGetRssi( int *rssi );
 
 int btInquire(bdremote_t * bdrmt, int maxnum );
-
+typedef char bdstr_t[18];
 
 #define BT_STATUS_INQUIRING   -1
 #define BT_STATUS_INQUIRE_END -2

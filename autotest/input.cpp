@@ -35,11 +35,17 @@
 
 static const char INPUT_EVT_NAME[]  = "/dev/input/event";
 //static const char DEV_NAME_KPD[]     = "sprd-keypad";
-static const char DEV_NAME_KPD[]     = "sci-keypad";
+//static const char DEV_NAME_KPD[]     = "sci-keypad";
+static const char DEV_NAME_KPD_POWER[]     = "sprd-eic-keys";
+static const char DEV_NAME_KPD_VOLUME[]     = "sprd-gpio-keys";
 static const char DEV_NAME_TP[]      = "pixcir_ts";
 
+#define IN_FILES 2
+
 //------------------------------------------------------------------------------
-static int             s_fdKPD   = -1;
+//static int             s_fdKPD   = -1;
+static int             s_fdKPD_power   = -1;
+static int             s_fdKPD_volume   = -1;
 static int             s_fdTP    = -1;
 static volatile int    sRunning  = 0;
 static pthread_mutex_t sMutxExit = PTHREAD_MUTEX_INITIALIZER;
@@ -48,22 +54,31 @@ static pthread_cond_t  sCondExit = PTHREAD_COND_INITIALIZER;
 static struct kpd_info_t sKeyInfo;
 
 static int             openInputDev( const char * name );
-static int             pollInputDev( int fd, int timeout );
+static int             pollInputDev( int fd[], int n, int timeout);
 static void          * inputThread( void *param );
 //------------------------------------------------------------------------------
 
 int inputOpen( void )
 {   
-    AT_ASSERT( -1 == s_fdKPD );
+    AT_ASSERT( -1 == s_fdKPD_power );
+    AT_ASSERT( -1 == s_fdKPD_volume );
     AT_ASSERT( -1 == s_fdTP );
     
     sKeyInfo.key = -1;
     
-	s_fdKPD = openInputDev(DEV_NAME_KPD);
-    if( s_fdKPD < 0 ) {
-        ERRMSG("open keypad '%s' fail!\n", DEV_NAME_KPD);
+    s_fdKPD_power = openInputDev(DEV_NAME_KPD_POWER);
+    if( s_fdKPD_power < 0 ) {
+        ERRMSG("open power keypad '%s' fail!\n", DEV_NAME_KPD_POWER);
         return -1;
     }
+
+    s_fdKPD_volume = openInputDev(DEV_NAME_KPD_VOLUME);
+    if( s_fdKPD_volume < 0 ) {
+        ERRMSG("open volume keypad '%s' fail!\n", DEV_NAME_KPD_VOLUME);
+        close(s_fdKPD_power);
+        return -1;
+    }
+
 /*  // it's ok, not used    
     s_fdTP = openInputDev(DEV_NAME_TP);
     if( s_fdTP < 0 ) {
@@ -95,57 +110,84 @@ int inputKPDGetKeyInfo( struct kpd_info_t * info )
 
 int inputKPDWaitKeyPress( struct kpd_info_t * info, int timeout )
 {
-	AT_ASSERT( NULL != info );
-	
-	info->key = -1;
-	info->row = 0xFFFF;
-	info->col = 0xFFFF;
-	info->gio = 0;
-	
-    if( s_fdKPD < 0 ) {
-        ERRMSG("keypad '%s' unopened!\n", DEV_NAME_KPD);
-        return -1;
-    }
-    
-    if( pollInputDev(s_fdKPD, timeout) < 0 ) {
-        return -2;
-    } 
-    
-    struct input_event iev[64];
-    int32_t readSize = read(s_fdKPD, iev, sizeof(iev));
-    if (readSize < 0) {
-        if (errno != EAGAIN && errno != EINTR) {
-            WRNMSG("could not get event (errno=%d)", errno);
-        }
-        return -3;
-    } else if ((readSize % sizeof(struct input_event)) != 0) {
-        ERRMSG("could not get event (wrong size: %d)", readSize);
-        return -4;
+    struct input_event iev_power[64],iev_volume[64];
+    int fd[IN_FILES];
+    int input,num_volume, num_power;
+    int readSize_power, readSize_volume;
+    int power_flag = 0, volume_flag = 0;
+
+    AT_ASSERT( NULL != info );
+    info->key = -1;
+    info->row = 0xFFFF;
+    info->col = 0xFFFF;
+    info->gio = 0;
+
+    if( s_fdKPD_power < 0 || s_fdKPD_volume < 0 ) {
+	ERRMSG("keypad '%s or %s' unopened!\n", DEV_NAME_KPD_POWER,DEV_NAME_KPD_VOLUME);
+	return -1;
     }
 
-    int num = readSize / sizeof(struct input_event);
-    for( int i = 0; i < num; ++i ) {
-        //DBGMSG("type = %d, code = %d, value = %d\n", iev[i].type, iev[i].code, iev[i].value);
-        if( EV_KEY == iev[i].type ) {		
-			info->key = iev[i].code;
-			drvGetKpdInfo(iev[i].code, &(info->row), &(info->col), &(info->gio));
-
-			DBGMSG("row = %d, col = %d, gio = %d\n", info->row, info->col, info->gio);
+    fd[0]=s_fdKPD_power;
+    fd[1]=s_fdKPD_volume;
+    input = pollInputDev(fd,IN_FILES,timeout);
+    if( input < 0 ) {
+	return -1;
+    }
+    readSize_power = read(s_fdKPD_power, iev_power, sizeof(iev_power));
+    if (readSize_power < 0) {
+	if (errno != EAGAIN && errno != EINTR) {
+	    WRNMSG("could not get event (errno=%d)", errno);
+	}
+    } else if ((readSize_power % sizeof(struct input_event)) != 0) {
+	ERRMSG("could not get event (wrong size: %d)", readSize_power);
+    } else {
+	num_power = readSize_power / sizeof(struct input_event);
+	for( int i = 0; i < num_power; i++ ) {
+	//DBGMSG("type = %d, code = %d, value = %d\n", iev[i].type, iev[i].code, iev[i].value);
+	    if( EV_KEY == iev_power[i].type ) {
+		power_flag = 1;
+		info->key = iev_power[i].code;
+		drvGetKpdInfo(iev_power[i].code, &(info->row), &(info->col), &(info->gio));
+		DBGMSG("row = %d, col = %d, gio = %d\n", info->row, info->col, info->gio);
 	    }
+	}
     }
-    INFMSG("KPD: key = %d\n", info->key);
-    
-    return info->key;
+    readSize_volume = read(s_fdKPD_volume, iev_volume, sizeof(iev_power));
+    if (readSize_volume < 0) {
+	if (errno != EAGAIN && errno != EINTR) {
+	    WRNMSG("could not get event (errno=%d)", errno);
+	}
+    } else if ((readSize_volume % sizeof(struct input_event)) != 0) {
+	ERRMSG("could not get event (wrong size: %d)", readSize_power);
+    } else {
+	num_volume = readSize_volume / sizeof(struct input_event);
+	for( int i = 0; i < num_volume; i++ ) {
+	//DBGMSG("type = %d, code = %d, value = %d\n", iev[i].type, iev[i].code, iev[i].value);
+	    if( EV_KEY == iev_volume[i].type ) {
+		volume_flag = 1;
+		info->key = iev_volume[i].code;
+		drvGetKpdInfo(iev_volume[i].code, &(info->row), &(info->col), &(info->gio));
+		DBGMSG("row = %d, col = %d, gio = %d\n", info->row, info->col, info->gio);
+	    }
+	}
+    }
+
+    if ( power_flag || volume_flag){
+	INFMSG("KPD: key = %d\n", info->key);
+	return info->key;
+    }
+    else return -1;
 }
 
 int inputTPGetPoint( int *x, int *y, int timeout )
 {
+    int fd[1];
     if( s_fdTP < 0 ) {
         ERRMSG("touchpanel '%s' unopened!\n", DEV_NAME_TP);
         return -1;
     }
-    
-    if( pollInputDev(s_fdTP, timeout) < 0 ) {
+    fd[0] = s_fdTP;
+    if( pollInputDev(fd,1,timeout) < 0 ) {
         return -2;
     } 
     
@@ -195,9 +237,14 @@ int inputClose( void )
         pthread_mutex_unlock(&sMutxExit);
     }
     
-    if( s_fdKPD >= 0 ) {
-        close(s_fdKPD);
-        s_fdKPD = -1;
+    if( s_fdKPD_power >= 0 ) {
+        close(s_fdKPD_power);
+        s_fdKPD_power = -1;
+    }
+
+    if( s_fdKPD_volume >= 0 ) {
+        close(s_fdKPD_volume);
+        s_fdKPD_volume = -1;
     }
     
     if( s_fdTP >= 0 ) {
@@ -260,14 +307,20 @@ int openInputDev( const char * name )
     return fd;
 }
 
-int pollInputDev( int fd, int timeout )
+int pollInputDev( int fd[], int n, int timeout)
 {
-    struct pollfd plfd;
-    plfd.fd      = fd;
-    plfd.events  = POLLIN;
-    plfd.revents = 0;
-    
-    int ret = poll(&plfd, 1, timeout);
+    int i;
+    const int num = n;
+    struct pollfd plfd[num];
+
+    for (i = 0; i < num; i++)
+    {
+      plfd[i].fd = fd[i];
+      plfd[i].events = POLLIN;
+      plfd[i].revents = 0;
+    }
+
+    int ret = poll(plfd, num, timeout);
     if( ret <= 0 ) {
         if( 0 == ret ) {
             WRNMSG("poll timeout (%d ms)\n", timeout);
@@ -276,9 +329,9 @@ int pollInputDev( int fd, int timeout )
         }
         return -1;
     }
-    
-    if( plfd.revents & POLLIN ) {
-        return 0;
+
+    for (i = 0; i < num; i++){
+        if(plfd[i].revents & POLLIN)	return 0;;
     }
     
     return -2;

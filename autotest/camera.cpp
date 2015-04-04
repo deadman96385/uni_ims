@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include <asm/page.h>
+//#include <asm/page.h>
 #include <linux/ion.h>
 #include <linux/videodev2.h>
 #include <sys/ioctl.h>
@@ -432,7 +432,7 @@ static int dcam_alloc_mem( void )
 		return -errno;
 	}
 
-	int phy_addr = ipdata.phys;
+	unsigned long phy_addr = ipdata.phys;
 	int phy_size = ipdata.size;
 
 	uchar * viraddr = (uchar *)mmap(0, mem_size, PROT_READ | PROT_WRITE,

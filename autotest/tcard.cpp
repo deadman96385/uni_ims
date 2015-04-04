@@ -47,9 +47,10 @@ int tcard_get_dev_path(char*path)
 		DBGMSG("%s open fail\n", dirpath_open);
 		return -1;
 	}
-	/*try to find dir: sprd-sdhci.0, dt branch*/
+	/*try to find dir: sdio_sd, dt branch*/
+	/* sdio_sd in 5.0/5.1  replaces the sprd-sdhci.0 in sprdroid4.4*/
 	while((de = readdir(dir))) {
-		if(strncmp(de->d_name, "sprd-sdhci.0", strlen("sprd-sdhci.0"))) {
+		if(strncmp(de->d_name, "sdio_sd", strlen("sdio_sd"))) {
 			continue;
 		}
 		sprintf(dirpath_open, "%s/%s", dirpath_open, de->d_name);
@@ -57,7 +58,7 @@ int tcard_get_dev_path(char*path)
 		found = 1;
 		break;
 	}
-	/*try to find dir: sprd-sdhci.0,no dt branch*/
+	/*try to find dir: sdio_sd,no dt branch*/
 	if(!found) {
 		sprintf(dirpath_open, "%s/platform", dirpath_open);
 		closedir(dir);
@@ -67,7 +68,7 @@ int tcard_get_dev_path(char*path)
 			return -1;
 		}
 		while((de = readdir(dir))) {
-			if(strncmp(de->d_name, "sprd-sdhci.0", strlen("sprd-sdhci.0"))) {
+			if(strncmp(de->d_name, "sdio_sd", strlen("sdio_sd"))) {
 				continue;
 			}
 			sprintf(dirpath_open, "%s/%s", dirpath_open, de->d_name);

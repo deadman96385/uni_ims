@@ -27,6 +27,9 @@
 #define MODEM_DEV_BASE_NUM  13
 #define MODEM_DEV_PREFIX_T    "/dev/CHNPTYT"
 #define MODEM_DEV_PREFIX_W    "/dev/CHNPTYW"
+#define MODEM_DEV_PREFIX_TL    "/dev/CHNPTYTL"
+#define MODEM_DEV_PREFIX_LF    "/dev/CHNPTYLF"
+
 #define SIM_CHECK_AT        "AT+EUICC?\r\n";
 
 //------------------------------------------------------------------------------
@@ -53,10 +56,30 @@ int simCheck( int index )
         memset(pty,0,sizeof(pty));
         snprintf(pty, 32, "%s%d", MODEM_DEV_PREFIX_T, MODEM_DEV_BASE_NUM + index);
         fd = open(pty, O_RDWR);
-        if( fd < 0 ) {
-            ERRMSG("open t %s fail: %s\n", pty, strerror(errno));
-            ret = fd;
-        }
+
+	if( fd < 0 ) {
+	    ERRMSG("open t %s fail: %s\n", pty, strerror(errno));
+	    ret = fd;
+
+	    //if "CHNPTYT" not find, try  "CHNPTYTL"
+	    memset(pty,0,sizeof(pty));
+	    snprintf(pty, 32, "%s%d", MODEM_DEV_PREFIX_TL, MODEM_DEV_BASE_NUM + index);
+	    fd = open(pty, O_RDWR);
+	    if( fd < 0 ) {
+		ERRMSG("open tl %s fail: %s\n", pty, strerror(errno));
+		ret = fd;
+
+		//if "CHNPTYTL" not find, try  "CHNPTYLF"
+		memset(pty,0,sizeof(pty));
+		snprintf(pty, 32, "%s%d", MODEM_DEV_PREFIX_LF, MODEM_DEV_BASE_NUM + index);
+		fd = open(pty, O_RDWR);
+		if( fd < 0 ) {
+		    ERRMSG("open lf %s fail: %s\n", pty, strerror(errno));
+		    ret = fd;
+		}
+	    }
+	}
+
     }
 
     while( fd >= 0 ) {

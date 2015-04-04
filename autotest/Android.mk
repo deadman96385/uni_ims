@@ -2,7 +2,7 @@
 # 
 #autotest makefile
 #
-ifndef PDK_FUSION_PLATFORM_ZIP
+
 LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
@@ -42,6 +42,7 @@ LOCAL_SRC_FILES:= \
     ver.cpp         \
     vibrator.cpp    \
     wifi.cpp        \
+    power.cpp       \
     main.cpp   
 
 
@@ -66,8 +67,7 @@ LOCAL_C_INCLUDES:= \
 
 LOCAL_SHARED_LIBRARIES:= \
     libbinder \
-#    libbt-utils\
-#    libbt-hci\
+    liblog \
     libcamera_client \
     libcutils    \
     libdl        \
@@ -82,5 +82,4 @@ LOCAL_STATIC_LIBRARIES:= \
     libbt-utils\
     libbt-hci
 
-#include $(BUILD_EXECUTABLE)
-endif
+include $(BUILD_EXECUTABLE)

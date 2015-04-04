@@ -18,7 +18,7 @@
 #include <hardware/bt_pan.h>
 #include <hardware/bt_rc.h>
 #include <hardware/bt_sock.h>
-#include "btif_util.h"
+//#include "btif_util.h"
 
 
 #include <cutils/properties.h>

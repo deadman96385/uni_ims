@@ -52,7 +52,7 @@ static const light_device_t* s_lightDevs[LIGHT_COUNT];
 //------------------------------------------------------------------------------
 static light_device_t* get_device(const char * name);
 static int             set_light(int idx, int brightness);
-
+extern int set_screen_state(int on);
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
