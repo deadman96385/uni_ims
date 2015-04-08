@@ -358,7 +358,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                 property_set(SYS_IP_SET, linker);
                 PHS_LOGD("IPV6 setip linker = %s", linker);
 
-                snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
+                snprintf(linker, sizeof(linker), "link set %s%d mtu 1500", prop, cid-1);
                 property_set(SYS_MTU_SET, linker);
                 PHS_LOGD("IPV6 setmtu linker = %s", linker);
 
@@ -419,7 +419,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                 property_set(SYS_IFCONFIG_UP, linker);
                 PHS_LOGD("IPV4 setip linker = %s", linker);
 
-                snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
+                snprintf(linker, sizeof(linker), "link set %s%d mtu 1500", prop, cid-1);
                 property_set(SYS_MTU_SET, linker);
                 PHS_LOGD("IPV6 setmtu linker = %s", linker);
 
@@ -447,7 +447,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                     property_set(SYS_IP_SET, linker);
                     PHS_LOGD("IPV4 setip linker = %s", linker);
 
-                    snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
+                    snprintf(linker, sizeof(linker), "link set %s%d mtu 1500", prop, cid-1);
                     property_set(SYS_MTU_SET, linker);
                     PHS_LOGD("IPV6 setmtu linker = %s", linker);
 
@@ -471,7 +471,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                     property_set(SYS_IP_SET, linker);
                     PHS_LOGD("IPV6 setip linker = %s", linker);
 
-                    snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
+                    snprintf(linker, sizeof(linker), "link set %s%d mtu 1500", prop, cid-1);
                     property_set(SYS_MTU_SET, linker);
                     PHS_LOGD("IPV6 setmtu linker = %s", linker);
 
@@ -681,7 +681,7 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp,
                 property_set(SYS_IP_SET, linker);
                 PHS_LOGD("setip linker = %s", linker);
 
-                snprintf(linker, sizeof(linker), "link set %s%d mtu 1400", prop, cid-1);
+                snprintf(linker, sizeof(linker), "link set %s%d mtu 1500", prop, cid-1);
                 property_set(SYS_MTU_SET, linker);
                 PHS_LOGD("setmtu linker = %s", linker);
 
