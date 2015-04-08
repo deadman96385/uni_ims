@@ -88,7 +88,7 @@ const struct cmd_table single_at_cmd_cvt_table[] = {
     {AT_CMD_CGACT_SET, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGACT=1"),
         cvt_cgact_act_req, 600},
     {AT_CMD_CGACT_SET_0, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGACT=0"),
-        cvt_cgact_deact_req, 40},
+        cvt_cgact_deact_req, 50},
 
     {AT_CMD_CLIR, AT_CMD_TYPE_SS, AT_CMD_STR("AT+COLR"),
         cvt_generic_cmd_req, 50},
@@ -101,7 +101,7 @@ const struct cmd_table single_at_cmd_cvt_table[] = {
     {AT_CMD_CGATT, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGATT"),
         cvt_generic_cmd_req, 50},
     {AT_CMD_COPS, AT_CMD_TYPE_NW, AT_CMD_STR("AT+COPS=?"),
-        cvt_generic_cmd_req, 150},
+        cvt_generic_cmd_req, 180},
     {AT_CMD_CCWA_READ, AT_CMD_TYPE_SS, AT_CMD_STR("AT+CCWA?"),
         cvt_ccwa_cmd_req, 30},
     {AT_CMD_CCWA_TEST, AT_CMD_TYPE_SS, AT_CMD_STR("AT+CCWA=?"),
@@ -327,7 +327,7 @@ const struct cmd_table multi_at_cmd_cvt_table[] = {
     {AT_CMD_CGACT_SET, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGACT=1"),
         cvt_cgact_act_req, 600},
     {AT_CMD_CGACT_SET_0, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGACT=0"),
-        cvt_cgact_deact_req, 40},
+        cvt_cgact_deact_req, 50},
     {AT_CMD_CFUN, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+SFUN=4"),
         cvt_generic_cmd_req, 50},
     {AT_CMD_CFUN, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+SFUN=5"),
@@ -346,7 +346,7 @@ const struct cmd_table multi_at_cmd_cvt_table[] = {
     {AT_CMD_CGATT, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CGATT"),
         cvt_generic_cmd_req, 50},
     {AT_CMD_COPS, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+COPS=?"),
-        cvt_generic_cmd_req, 150},
+        cvt_generic_cmd_req, 180},
     {AT_CMD_CCWA_READ, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CCWA?"),
         cvt_ccwa_cmd_req, 30},
     {AT_CMD_CCWA_TEST, AT_CMD_TYPE_SLOW, AT_CMD_STR("AT+CCWA=?"),
@@ -844,7 +844,7 @@ int phoneserver_deliver_at_rsp(const cmux_t * cmux, char *rsp, int len)
     }
     PHS_LOGD("[%d] IND\n", tid);
     return phoneserver_deliver_indicate(cmux, rsp, len);
-    }
+}
 
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 
