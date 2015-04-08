@@ -47,6 +47,8 @@
 #define SYS_NET_ADDR "sys.data.net.addr"
 #define RETRY_MAX_COUNT 1000
 #define DEFAULT_PUBLIC_DNS2 "204.117.214.10"
+//Due to real network limited, 2409:8084:8000:0010:2002:4860:4860:8888 maybe not correct
+#define DEFAULT_PUBLIC_DNS2_IPV6 "2409:8084:8000:0010:2002:4860:4860:8888"
 #define SSDA_MODE         "persist.radio.ssda.mode"
 #define SSDA_TESTMODE "persist.radio.ssda.testmode"
 
@@ -59,6 +61,7 @@
 
 struct ppp_info_struct ppp_info[MAX_PPP_NUM];
 static char sSavedDns[IP_ADD_SIZE] = {0};
+static char sSavedDns_IPV6[IP_ADD_SIZE*4] ={0};
 
 mutex ps_service_mutex;
 extern const char *modem;
@@ -1659,6 +1662,29 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp,
                     system(cmd);
                     sprintf(cmd, "setprop net.%s%d.ipv6_dns1 %s", prop, cid-1, dns1);
                     system(cmd);
+                    if (strlen(dns2) != 0) {
+                         if (!strcmp(dns1, dns2)) {
+                            PHS_LOGD(
+                                    "Two DNS are the same,so need to reset dns2!!");
+                            if (strlen(sSavedDns_IPV6) > 0)
+                            {
+                                PHS_LOGD("Use saved DNS2 instead.");
+                                memcpy(dns2, sSavedDns_IPV6, sizeof(sSavedDns_IPV6));
+                            } else {
+                                PHS_LOGD("Use default DNS2 instead.");
+                                sprintf(dns2, "%s", DEFAULT_PUBLIC_DNS2_IPV6);
+                            }
+                            //cvt_reset_dns2(dns2);
+                            } else {
+                            PHS_LOGD("Backup DNS2");
+                            memset(sSavedDns_IPV6, 0, sizeof(sSavedDns_IPV6));
+                            memcpy(sSavedDns_IPV6, dns2, sizeof(dns2));
+                        }
+                    } else {
+                        PHS_LOGD("DNS2 is empty!!");
+                        memset(dns2, 0, IP_ADD_SIZE*4);
+                        sprintf(dns2, "%s", DEFAULT_PUBLIC_DNS2_IPV6);
+                    }
                     sprintf(cmd, "setprop net.%s%d.ipv6_dns2 %s", prop, cid-1, dns2);
                     system(cmd);
 
@@ -1676,6 +1702,20 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp,
                     system(cmd);
                     sprintf(cmd, "setprop net.%s%d.dns1 %s", prop, cid-1, dns1);
                     system(cmd);
+                    if(strlen(dns2) != 0){
+                        if(!strcmp(dns1, dns2)) {
+                            PHS_LOGD("Two DNS are the same,so need to reset dns2!!");
+                            cvt_reset_dns2(dns2);
+                        } else {
+                            PHS_LOGD("Backup DNS2");
+                            memset(sSavedDns, 0, sizeof(sSavedDns));
+                            memcpy(sSavedDns, dns2, IP_ADD_SIZE);
+                        }
+                    } else {
+                        PHS_LOGD("DNS2 is empty!!");
+                        memset(dns2, 0, IP_ADD_SIZE);
+                        cvt_reset_dns2(dns2);
+                    }
                     sprintf(cmd, "setprop net.%s%d.dns2 %s", prop, cid-1, dns2);
                     system(cmd);
 
