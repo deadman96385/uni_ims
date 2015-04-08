@@ -70,13 +70,15 @@ extern int findInBuf(char *buf, int len, char *needle);
 
 static int parse_peer_ip(char* ipaddr){
 
-    FILE* fp;
-    char line[1024];
-    char* ptr, *p;
+    FILE* fp=NULL;
+    char line[1024] = {0};
+    char* ptr=NULL, *p=NULL;
+    int ret =0;
 
     if ((fp = fopen(DHCP_DNSMASQ_LEASES_FILE, "r")) == NULL) {
         PHS_LOGE("Fail to open %s, error : %s.", DHCP_DNSMASQ_LEASES_FILE, strerror(errno));
-        return -1;
+        ret= -1;
+        goto _close;
     }
 
     while(fgets(line, sizeof(line), fp) != NULL) {
@@ -87,10 +89,14 @@ static int parse_peer_ip(char* ipaddr){
             *p = '\0';
             strcpy(ipaddr, ptr);
             PHS_LOGD("IP address : %s", ipaddr);
-            return 0;
+            goto _close;
         }
     }
-    return -1;
+    ret = -1;
+_close:
+    if(fp != NULL)
+        fclose(fp);
+    return ret;
 }
 
 void ps_service_init(void)

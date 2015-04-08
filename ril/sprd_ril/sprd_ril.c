@@ -3727,9 +3727,9 @@ static void requestGetCurrentCalls(int channelID, void *data, size_t datalen, RI
 
 static void requestDial(int channelID, void *data, size_t datalen, RIL_Token t)
 {
-    RIL_Dial *p_dial;
-    char *cmd;
-    const char *clir;
+    RIL_Dial *p_dial = NULL;
+    char *cmd= NULL;
+    const char *clir= NULL;
     int err;
     int ret;
 
@@ -3747,10 +3747,10 @@ static void requestDial(int channelID, void *data, size_t datalen, RIL_Token t)
     }
 
     switch (p_dial->clir) {
+        case 0: clir = ""; break;   /*subscription default*/
         case 1: clir = "I"; break;  /*invocation*/
         case 2: clir = "i"; break;  /*suppression*/
-        default:
-        case 0: clir = ""; break;   /*subscription default*/
+        default: ;
     }
 
     ret = asprintf(&cmd, "ATD%s%s;", p_dial->address, clir);
@@ -3774,24 +3774,25 @@ error:
 
 static void requestEccDial(int channelID, void *data, size_t datalen, RIL_Token t)
 {
-    RIL_Dial *p_dial;
-    char *cmd;
-    const char *clir;
+    RIL_Dial *p_dial = NULL;
+    char *cmd= NULL;
+    const char *clir= NULL;
     char *category = NULL;
     int ret, err;
 
     p_dial = (RIL_Dial *)data;
 
     switch (p_dial->clir) {
+        case 0: clir = ""; break;   /*subscription default*/
         case 1: clir = "I"; break;  /*invocation*/
         case 2: clir = "i"; break;  /*suppression*/
-        default:
-        case 0: clir = ""; break;   /*subscription default*/
+        default: ;
     }
 
     category = strchr(p_dial->address, '/');
-    if(category)
+    if(category != NULL){
         *category = '@';
+    }
 
     ret = asprintf(&cmd, "ATD%s,#%s;", p_dial->address, clir);
     if(ret < 0) {

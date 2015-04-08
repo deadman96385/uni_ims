@@ -215,7 +215,8 @@ int uid;
         return 0;
     strncpy(slave_name, pty_name, 16);
     *master_fdp = mfd;
-    *slave_fdp = sfd;
+    if(slave_fdp != NULL)
+        *slave_fdp = sfd;
     if (tcgetattr(sfd, &tios) == 0) {
         tios.c_cflag &= ~(CSIZE | CSTOPB | PARENB);
         tios.c_cflag |= CS8 | CREAD | CLOCAL;
@@ -235,9 +236,8 @@ int uid;
 static int create_communication_channel(char *slave_name)
 {
     int pty_master = -1;
-    int pty_slave = -1;
-    char pty_name[16];
-    if (!get_pty(&pty_master, &pty_slave, &pty_name[0], getuid())) {
+    char pty_name[16] ={0};
+    if (!get_pty(&pty_master, NULL, &pty_name[0], getuid())) {
         PHS_LOGE("CHNMNG: Couldn't allocate pseudo-tty");
         return -1;
     }

@@ -1751,6 +1751,7 @@ int adapter_cmux_write(cmux_t * mux, char *buf, int __attribute__((unused))len,
             &timeout);
     if (err == ETIMEDOUT) {
         mux->cp_blked += 1;
+        PHS_LOGE("mux %s command %s time out",mux->name,str);
         if(mux->cp_blked > BLOCKED_MAX_COUNT) {
             mux->cp_blked = 0;
             if(!strcmp(modem, "t")) {
@@ -1833,6 +1834,7 @@ int adapter_cmux_write_for_ps(cmux_t * mux, char *buf,
             &timeout);
     if (err == ETIMEDOUT) {
         mux->cp_blked += 1;
+        PHS_LOGE("mux %s command %s time out",mux->name,str);
         if(mux->cp_blked > BLOCKED_MAX_COUNT) {
             mux->cp_blked = 0;
             if(!strcmp(modem, "t")) {
