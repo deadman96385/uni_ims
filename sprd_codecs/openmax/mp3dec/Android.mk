@@ -1,4 +1,3 @@
-ifeq (0,true)
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
@@ -35,4 +34,3 @@ LOCAL_MODULE := libomx_mp3dec_sprd
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
-endif

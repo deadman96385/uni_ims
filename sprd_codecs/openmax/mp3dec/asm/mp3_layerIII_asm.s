@@ -22,7 +22,7 @@ overlap .req  r0
 sample  .req  r3
 
 MP3_DEC_ImdctWinOverlap:
-        STMFD    sp!,{r1, r2,r4-r11,lr}
+        STMFD    sp!,{r1, r2,r4-r12,lr}
                 
         LDR      r9, c00_1
         MOV      r12, #00
@@ -466,7 +466,7 @@ START_LOOP:
                 
 OUT_LOOP:  
 				ADD			 sp, sp, #0x8
-        LDMFD    sp!,{r4-r11,pc}
+        LDMFD    sp!,{r4-r12,pc}
         @ENDP        
         
 @--------------------------------------------------------------------
@@ -489,7 +489,7 @@ sample   .req r3
 
                 
 MP3_DEC_AliasImdctWinOverlap:
-        STMFD    sp!,{r1, r4-r11,lr}
+        STMFD    sp!,{r1, r4-r12,lr}
         
         ADD      r2, r2, r3, lsl#2   @sample
         STR      r2, [sp, #-4]!
@@ -1122,7 +1122,7 @@ LOOP_END:
         LDR      r2, [sp], #4
         LDR      r1, [sp], #4  
         @ADD      sp, sp, #8
-        LDMFD    sp!,{r4-r11,lr}                        
+        LDMFD    sp!,{r4-r12,lr}                        
         MOV      r3,#1
         B        MP3_DEC_ImdctWinOverlap
               
@@ -1192,9 +1192,9 @@ overlap .req  r0
 sample  .req  r3
 
 MP3_DEC_ImdctWinOverlap1:
-        STMFD    sp!,{r4-r11,lr}        				
+        STMFD    sp!,{r4-r12,lr}        				
         ADD      r1, r1, r2, lsl#2   @@// sample
-        ldr      r4,  [sp, #9*4]     @@// overlap
+        ldr      r4,  [sp, #10*4]     @@// overlap
         sub      sp,   sp,   #8
         str      r4,   [sp,  #0]     @@// overlap
 	    str      r1,   [sp,  #4]     @@// sample
@@ -1604,7 +1604,7 @@ START_LOOP_1:
                 
 OUT_LOOP_1:  
 				ADD			 sp, sp, #0x8
-        LDMFD    sp!,{r4-r11,pc}
+        LDMFD    sp!,{r4-r12,pc}
 window_s_4_13:
         .word      0x0
 window_s_1_16:
@@ -1637,11 +1637,11 @@ window_s_5_12:
 @--------------------------------------------------------------------		
 		
 MP3_DEC_AliasReduce:
-        STMFD    sp!,{r4-r8,lr}
+        STMFD    sp!,{r4-r8,r12,lr}
         ADD      r7,r0,r1,LSL #2    @bound                           
         ADD      r0,r0,#0x48       @xr[18]
         CMP      r0,r7
-        LDMCSFD  sp!,{r4-r8,pc}
+        LDMCSFD  sp!,{r4-r8,r12,pc}
         LDR      r8,=cs_ca
         ADD      lr, r8, #32   @cs_ca[8]
         
@@ -1687,7 +1687,7 @@ L1_10680:
         SUB		 r8, r8, #32  
         CMP      r0,r7
         BCC      L1_10564        
-        LDMFD    sp!,{r4-r8,pc}
+        LDMFD    sp!,{r4-r8,r12,pc}
         @ENDP				
       
 

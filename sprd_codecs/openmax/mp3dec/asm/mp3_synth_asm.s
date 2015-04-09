@@ -34,8 +34,8 @@ lo1 				.req  r9
 lo2 				.req  r10
 
 MP3_DEC_SynthFilter:
-        STMFD    sp!,{r4-r11,lr}
-        LDR      r4,[sp,#36]    @phase                    
+        STMFD    sp!,{r4-r12,lr}
+        LDR      r4,[sp,#40]    @phase                    
         MOV      r9, r3
         MOV      r10, r0
         MOV      r8, r1
@@ -1276,7 +1276,7 @@ L1_632:
         BGT      LOOP_START
       
         @ADD      sp, sp, #4
-        LDMFD    sp!,{r4-r11,pc}
+        LDMFD    sp!,{r4-r12,pc}
 c_1_15:
         .word      0x7b5e57d7
 c_1_1:

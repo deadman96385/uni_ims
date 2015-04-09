@@ -55,7 +55,7 @@ Q_fx          .req   r14
 MP3_DEC_ReQuantizeInternalAsm:@   FUNCTION
                 
                 .global  MP3_DEC_ReQuantizeInternalAsm                
-                stmfd  sp!, {r0-r2, r14}
+                stmfd  sp!, {r0-r2, r12, r14}
                 @@/////////////////////
                 ldr     Q_table_ptr, =MP3_DEC_iq_table       
                 mov     Q_exp, r8, asr #16                       
@@ -169,7 +169,7 @@ MP3_DEC_ReQuantizeInternalAsmQ_exp_exit:
                 @@///////////////////////
 MP3_DEC_ReQuantizeInternalAsmMP3_DEC_ReQuantizeAsm_EXIT:                                
                 @@/////////////////////
-                ldmfd  sp!, {r0-r2, pc}                                
+                ldmfd  sp!, {r0-r2, r12, pc}                                
                 
                 @ENDFUNC
                                 
@@ -402,7 +402,9 @@ HUFF_DEC_EXIT:
                 orr    r3,  r3, r14, lsl r4
                 str    r3,  [tst_data_ptr, #20]
                 @@// IQ
-                BL     MP3_DEC_ReQuantizeInternalAsm   
+                stmfd sp!,{r12}
+				BL MP3_DEC_ReQuantizeInternalAsm
+				ldmia sp!,{r12} 
                                 
                 and    r3,  r5, #0xF
                 add    r3,  tst_data_ptr, r3, lsl #2
@@ -430,7 +432,10 @@ huff_NO_ESC_Another:
                 str    r3,  [tst_data_ptr, #20]
                 
                 @@// IQ
-                BL     MP3_DEC_ReQuantizeInternalAsm                    
+                stmfd sp!,{r12}
+				BL MP3_DEC_ReQuantizeInternalAsm
+				ldmia sp!,{r12} 
+				
                 mov    r3,   r5, lsr #4
                 add    r3,  tst_data_ptr, r3, lsl #2
                 str    r4,  [r3, #24]            
@@ -521,7 +526,10 @@ huff_ESCMODE_15_WORD_READ_SKIP:
                 and     r3, exp_linbits, #0xFF          
                 sub     H_cachesz, H_cachesz, r3
                 
-                BL       MP3_DEC_ReQuantizeInternalAsm
+                stmfd sp!,{r12}
+				BL MP3_DEC_ReQuantizeInternalAsm
+				ldmia sp!,{r12} 
+				
                 sub    H_cachesz, H_cachesz, #1
                 mov    r3, #1
                 tst    H_bitcache, r3,  lsl H_cachesz
@@ -540,7 +548,9 @@ huff_ESCMODE_1_14:
                 orr    r3,  r3, r14, lsl r4
                 str    r3,  [tst_data_ptr, #20]
                 @@// IQ
-                BL     MP3_DEC_ReQuantizeInternalAsm     
+                stmfd sp!,{r12}
+				BL MP3_DEC_ReQuantizeInternalAsm
+				ldmia sp!,{r12}  
                 
                 and    r3,  r5, #0xF
                 add    r3,  tst_data_ptr, r3, lsl #2
@@ -621,7 +631,10 @@ huff_ESCANOTHERPOINT_15_WORD_READ_SKIP:
                 add     r4,  r4, r5, lsr r14                
                 sub     H_cachesz, H_cachesz, r3
                 
-                BL      MP3_DEC_ReQuantizeInternalAsm
+                stmfd sp!,{r12}
+				BL MP3_DEC_ReQuantizeInternalAsm
+				ldmia sp!,{r12} 
+				
                 sub    H_cachesz, H_cachesz, #1
                 mov    r3, #1
                 tst    H_bitcache, r3,  lsl H_cachesz
@@ -638,8 +651,12 @@ huff_ESCANOTHERPOINT_1_14:
                 mov    r14, #1               
                 orr    r3,  r3, r14, lsl r4
                 str    r3,  [tst_data_ptr, #20]
+
                 @@// IQ
-                BL     MP3_DEC_ReQuantizeInternalAsm    
+                stmfd sp!,{r12}
+				BL MP3_DEC_ReQuantizeInternalAsm
+				ldmia sp!,{r12} 
+				
                 mov    r3,  r5, lsr #4
                 add    r3,  tst_data_ptr, r3, lsl #2
                 str    r4,  [r3, #24]
@@ -700,7 +717,10 @@ MP3_DEC_HuffmanParsingAsm_EXIT:
                 ldr     table_ptr,  [tst_data_ptr, #8] 
                                 
                 mov     r4, #1
-                BL MP3_DEC_ReQuantizeInternalAsm             
+                
+                stmfd sp!,{r12}
+				BL MP3_DEC_ReQuantizeInternalAsm
+				ldmia sp!,{r12} 				
                 
                 ldrh    r5,  [table_ptr, #8]
                 ands    r5,  r5, #1
@@ -810,7 +830,11 @@ Count1_HUFF_DEC_LOOP:
                 movne exp_linbits, r14, asl #16   
                 beq   Count1_Boundary_EXIT0
                 mov   r4, #1
-                BL MP3_DEC_ReQuantizeInternalAsm                
+
+                stmfd sp!,{r12}
+				BL MP3_DEC_ReQuantizeInternalAsm
+				ldmia sp!,{r12} 
+				
 Count1_Boundary_EXIT0:
                 @////////////////////////
                 mov   r7,   r7,  lsr #3
@@ -843,7 +867,10 @@ Count1_w_skip:
                 movne exp_linbits, r14, asl #16     
                 beq   Count1_Boundary_EXIT1
                 mov   r4, #1
-                BL MP3_DEC_ReQuantizeInternalAsm              
+				
+                stmfd sp!,{r12}
+				BL MP3_DEC_ReQuantizeInternalAsm
+				ldmia sp!,{r12} 
 Count1_Boundary_EXIT1:
                 @////////////////////////
                 mov   r7,   r7,  lsr #1
@@ -1001,11 +1028,11 @@ result          .req      r0
 MP3_DecMulLongAsm:@   FUNCTION
                 @ // save the value for the following calculation
        .global  MP3_DecMulLongAsm
-       stmfd   sp!, {r14}
+       stmfd   sp!, {r12,r14}
        smull	    lo,hi,x0,y0
        movs    lo,lo,lsr#28
        adc      result, lo, hi, lsl#4
-       ldmfd   sp!, {pc}
+       ldmfd   sp!, {r12,pc}
        @ENDFUNC 
                 
                 
