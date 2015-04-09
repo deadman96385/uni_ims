@@ -5536,7 +5536,7 @@ static void  requestEnterSimPin(int channelID, void*  data, size_t  datalen, RIL
     char *cmd = NULL;
     const char **strings = (const char**)data;
     int ret;
-
+    int remaintime = 3;
     if ( datalen == 3*sizeof(char*) ) {
         ret = asprintf(&cmd, "AT+CPWD=\"SC\",\"%s\",\"%s\"", strings[0], strings[1]);
     } else
@@ -5625,7 +5625,8 @@ static void  requestEnterSimPin(int channelID, void*  data, size_t  datalen, RIL
     at_response_free(p_response);
     return;
 error:
-    RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+    remaintime = getSimlockRemainTimes(channelID, UNLOCK_PIN);
+    RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, &remaintime, sizeof(remaintime));
     at_response_free(p_response);
 }
 
@@ -5636,7 +5637,7 @@ static void  requestEnterSimPin2(int channelID, void*  data, size_t  datalen, RI
     char *cmd = NULL;
     const char **strings = (const char**)data;
     int ret;
-
+    int remaintime = 3;
     if ( datalen == 3*sizeof(char*) ) {
         ret = asprintf(&cmd, "AT+CPWD=\"P2\",\"%s\",\"%s\"", strings[0], strings[1]);
     } else
@@ -5657,7 +5658,8 @@ static void  requestEnterSimPin2(int channelID, void*  data, size_t  datalen, RI
     at_response_free(p_response);
     return;
 error:
-    RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+    remaintime = getSimlockRemainTimes(channelID, UNLOCK_PIN2);
+    RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, &remaintime, sizeof(remaintime));
     at_response_free(p_response);
 }
 
