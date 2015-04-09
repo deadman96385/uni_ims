@@ -175,6 +175,8 @@ MMEncRet MP4EncGetCodecCapability(MP4Handle *mp4Handle, MMEncCapability *Capabil
     case TSHARK:
     case SHARKL:
     case PIKEL:
+    case SHARKL64:
+    case SHARKLT8:
         Capability->max_width = 1920;
         Capability->max_height = 1088;
         break;
@@ -317,6 +319,8 @@ MMEncRet MP4EncInit(MP4Handle *mp4Handle, MMCodecBuffer *pExtraMemBfr,
     case PIKE:
     case SHARKL:
     case PIKEL:
+    case SHARKL64:
+    case SHARKLT8:
         memcpy(vo->g_vlc_hw_ptr,& g_vlc_hw_tbl[320*2], (320*2*sizeof(uint32)));
         break;
     default:

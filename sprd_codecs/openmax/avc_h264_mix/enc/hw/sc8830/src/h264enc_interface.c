@@ -34,6 +34,8 @@ MMEncRet H264EncGetCodecCapability(AVCHandle *avcHandle, MMEncCapability *Capabi
     case TSHARK:
     case SHARKL:
     case PIKEL:
+    case SHARKL64:
+    case SHARKLT8:
         Capability->max_width = 1920;
         Capability->max_height = 1088;
         Capability->profile = AVC_HIGH;
@@ -153,6 +155,8 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
     case PIKE:
     case SHARKL:
     case PIKEL:
+    case SHARKL64:
+    case SHARKLT8:
         memcpy(vo->g_vlc_hw_ptr, &g_vlc_hw_tbl[406*2], (406*2*sizeof(uint32)));
         break;
     default:
@@ -188,6 +192,8 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
     case TSHARK:
     case SHARKL:
     case PIKEL:
+    case SHARKL64:
+    case SHARKLT8:
         img_ptr->i_level_idc = AVC_LEVEL4_1;
         break;
     case DOLPHIN://limited under 720p

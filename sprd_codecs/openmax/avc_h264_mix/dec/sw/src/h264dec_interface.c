@@ -345,6 +345,7 @@ DEC_EXIT:
     if(dec_input_ptr->expected_IVOP && img_ptr->g_searching_IDR_pic)
     {
         SPRD_CODEC_LOGW ("H264DecDecode: need IVOP\n");
+        img_ptr->g_dec_picture_ptr = NULL;
         return MMDEC_FRAME_SEEK_IVOP;
     }
 

@@ -507,7 +507,7 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
         dec_out->mPicId = out->mPicId;
 
         fs = H264Dec_search_frame_from_DBP(vo, out);
-        if (fs->is_reference == DELAYED_PIC_REF)
+        if (fs && (fs->is_reference == DELAYED_PIC_REF))
         {
             fs->is_reference = 0;
             H264DEC_UNBIND_FRAME(vo, fs->frame);
