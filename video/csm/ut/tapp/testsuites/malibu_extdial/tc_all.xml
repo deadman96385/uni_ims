@@ -1,0 +1,22 @@
+<!--
+    This test cases includes all test cases.
+-->
+<tapp>
+    <testcase>
+        <!-- init tests -->
+        <include>tc_init.xml</include>
+        
+        <!-- reuse malibu service test cases -->
+        <include>../malibu/service/tc_reg_all.xml</include>
+        <!--
+        <include>../malibu/service/tc_ps_ims_enable.xml</include>
+        <include>../malibu/service/tc_ps_service_active_with_net.xml</include>
+        -->
+        <include>basic_call/tc_basic_call_all.xml</include>
+        <include>call_features/tc_call_features_all.xml</include>
+        <include>supsrv_calls/tc_supsrv_call_all.xml</include>
+        <include>set_codec/tc_set_codec_all.xml</include>
+        <include>call_waiting/tc_call_waiting_all.xml</include>
+        <include>ims_conf_calls/tc_ims_conf_calls_all.xml</include>
+    </testcase>
+</tapp>

@@ -1,0 +1,92 @@
+<tapp>
+    <testcase name="PS: MT call with history-info and reject">
+        <!--  Issue an incoming call to CSM -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <from type="string">sip:13122099351@foundry.att.com"</from>
+                    <subject type="string">Whatever</subject>
+                    <supsrvHfExist type="int">2</supsrvHfExist>
+                    <historyInfo type="string">%3Csip%3A13122099444%40foundry.att.com%3Eindex%3D1%2C%3Csip%3A13122099555%40foundry.att.com%3Bcause%3D302%3Eindex%3D1.1</historyInfo>
+                </call>
+            </isip>
+        </action>
+        <!--  issue isip trying with id index = 0 -->
+        <action type="validate isip" timeout="2000">
+        <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving Ring -->
+        <action type="validate at" timeout="2000">+CRING: VOICE&#xD;&#xA;+CLIP: "13122099351",129,,,&#xD;</action>
+        <!--  AT infc verify receiving the +CSSU: 0. this is forwarded call -->
+        <action type="validate at" timeout="2000">+CSSU: 0&#xD;</action>
+        <!--  AT infc verify receiving history-info with proprietary at commands -->
+        <action type="validate at" timeout="2000">+CSSH: 1,0,"13122099444",129&#xD;</action>
+        <action type="validate at" timeout="2000">+CSSH: 1.1,302,"13122099555",129&#xD;</action>
+        <!--  ISIP issue ACK to CSM -->
+        <action type="issue isip">  
+             <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="5000">+CLCC: 1,1,4,0,0,"13122099351",129&#xD;&#xA;0&#xD;</action>
+        <!--  AT sent ATH to reject a call.-->
+        <action type="issue at">ATH</action>
+        <!--  ISIP Validate accept event from csm -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_REJECT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                </call>
+            </isip>
+        </action>
+        <!--  ISIP issue to csm that accept done -->
+        <action type="issue isip">  
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving the response  -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+    </testcase>
+</tapp>

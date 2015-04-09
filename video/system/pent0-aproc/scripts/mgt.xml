@@ -1,0 +1,19 @@
+<mgt>
+    <service>
+        <parm name="Domain" value="foundry.att.com"/>
+        <parm name="Pcscf" value="sbc.core.foundry.att.com;transport=TCP"/>
+        <parm name="Impu" value="sip:+14043351655@foundry.att.com"/>
+        <parm name="Impi" value="4043351655@private.att.net"/>
+        <parm name="Password" value="password"/>
+
+        <parm name="Audio_Conf_Server" value="sip:ALU_CONF@foundry.att.com"/>
+        <parm name="Video_Conf_Server" value="sip:ALU_CONF@foundry.att.com"/>
+
+        <parm name="Smsc" value=""/>
+        <parm name="Imei_Uri" value="sip:imei219551288888888@sos.invalid"/>
+        <!-- this is example for instance id of uuid
+        <parm name="instanceid" value="urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6"/>
+        -->
+        <parm name="Instance_Id" value=""/>
+    </service>
+</mgt>

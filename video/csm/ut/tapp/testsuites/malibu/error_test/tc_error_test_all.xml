@@ -1,0 +1,60 @@
+<!--
+    This test cases includes all basic call test cases
+    Precondition: Both CS and PS services are active.
+-->
+<tapp>
+    <testcase>
+<!-- disable ps to test cs call -->
+        <include>../service/tc_ps_lost.xml</include>
+
+<!-- Enable ps to test ps call -->
+        <include>../service/tc_ps_ims_enable.xml</include>
+        <include>../service/tc_ps_service_active_with_net.xml</include>
+
+        <!-- Could not implement this case, beacuse there is timing issue for at the same time case.
+        <include>tc_ps_call_2side_hangUp_atSameTime.xml</include>
+        <include>tc_ps_call_waiting_error_disconnect_and_accept.xml</include>
+        -->
+        <!-- Comment out because we cannot make sure the events order,
+             that causes test case failed sometimes.
+        <include>tc_ps_error_call_swap_when_hold.xml</include>
+        <include>tc_ps_error_call_swap_when_resume.xml</include>
+        -->
+        <!-- The test case id onfailed, comment out. Refer to bug#10218.
+        <include>tc_ps_error_call_waiting_accept_foregnd_disconnect.xml</include>
+        -->
+
+        <!-- Comment out because we cannot make sure the events order,
+             that causes test case failed sometimes.
+        <include>tc_ps_error_isi_accept_incomingCall.xml</include>
+        <include>tc_ps_error_isi_placing_callHold.xml</include>
+        <include>tc_ps_error_isi_reject_incomingCall.xml</include>
+        -->
+        <!-- The test case id onfailed, comment out. Refer to bug#10217.
+        <include>tc_ps_isi_error_reject_call_waiting.xml</include>
+        -->
+        <include>tc_ps_error_mo_sms_404_not_found.xml</include>
+        <include>tc_ps_error_mo_404_not_found.xml</include>
+        <include>tc_ps_outgoing_call_error_from_sapp.xml</include>
+
+        <!-- Erro register case  -->
+        <include>../service/tc_ps_lost.xml</include>
+        <include>../service/tc_ps_ip_changed_no_net.xml</include>
+        <include>../service/tc_ps_ims_enable.xml</include>
+        <include>../service/tc_ps_validate_service_cfg.xml</include>
+        <include>../service/tc_ps_validate_emgcy_service_cfg.xml</include>
+        <include>../service/tc_ps_ip_changed_yes_net.xml</include>
+        <include>tc_ps_service_cancel_reg_retry.xml</include>
+        <include>../service/tc_ps_ip_changed_yes_net.xml</include>
+        <include>tc_ps_service_active_auth_fail.xml</include>
+        <include>../service/tc_ps_ip_changed_yes_net.xml</include>
+        <include>tc_ps_service_active_aka_fail.xml</include>
+        <include>../service/tc_ps_ip_changed_yes_net.xml</include>
+        <include>tc_ps_service_active_net_fail.xml</include>
+
+        <!-- active service -->
+        <include>../service/tc_ps_ip_changed_yes_net.xml</include>
+        <include>../service/tc_ps_service_active.xml</include>
+
+    </testcase>
+</tapp>

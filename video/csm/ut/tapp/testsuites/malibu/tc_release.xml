@@ -1,0 +1,15 @@
+<!--
+    This test cases includes all test cases.
+-->
+<tapp>
+    <testcase>
+        <!-- init tests -->
+        <include>tc_init.xml</include>
+        <!-- registration tests -->
+        <include>service/tc_reg_all.xml</include>
+        <!-- basic call tests -->
+        <include>basic_call/tc_basic_call_all.xml</include>
+        <!-- sms tests -->
+        <include>sms/tc_sms_all.xml</include>
+    </testcase>
+</tapp>

@@ -1,0 +1,21 @@
+<gba>
+    <interface type="this">gba.ipc</interface>
+
+    <protocol>
+        <bsf url="bsf.operator.com"></bsf>
+        <xcap-app>
+<!-- 
+    <SupplementarySrv name="server">http://172.16.0.100:8080</SupplementarySrv>
+    <SupplementarySrv name="user">user1</SupplementarySrv>
+    <SupplementarySrv name="password">12345678</SupplementarySrv>
+    <SupplementarySrv name="uri">user1@iskratel.com</SupplementarySrv>
+        char appName[GBA_STRING_SZ];
+    char appUri[GBA_FQDN_STRING_SZ]; /* e.g. xcap root uri */
+    GBA_ServiceAppAuthType appAuthType;
+    char appAuthName[GBA_STRING_SZ];
+    char appAuthSecret[GBA_STRING_SZ];
+    
+ -->
+        </xcap-app>
+    </protocol>
+</gba>

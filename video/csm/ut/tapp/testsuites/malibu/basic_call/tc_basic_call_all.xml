@@ -1,0 +1,27 @@
+<!--
+    This test cases includes all basic call test cases
+    Precondition: Both CS and PS services are active.
+-->
+<tapp>
+    <testcase>
+<!-- disable ps to test cs call -->
+        <include>../service/tc_ps_lost.xml</include>
+
+<!-- Disable CS call tests.
+        <include>tc_cs_outgoing_call_local_hangs_up.xml</include>
+        <include>tc_cs_outgoing_call_remote_hangs_up.xml</include>
+        <include>tc_cs_accepting_incoming_call.xml</include>
+        <include>tc_cs_reject_incoming_call.xml</include>
+-->
+
+<!-- Enable ps to test ps call -->
+        <include>../service/tc_ps_ims_enable.xml</include>
+        <include>../service/tc_ps_service_active_with_net.xml</include>
+
+        <include>tc_ps_outgoing_call_oriHangUp.xml</include>
+        <include>tc_ps_outgoing_call_rmHangUp.xml</include>
+        <include>tc_ps_accept_incomingCall_rmHangUp.xml</include>
+        <include>tc_ps_reject_incomingCall.xml</include>
+        <include>tc_ps_accept_Call_and_HangUp_before_ACK.xml</include>
+    </testcase>
+</tapp>

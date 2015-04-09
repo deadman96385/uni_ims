@@ -1,0 +1,122 @@
+<tapp>
+    <testcase name="PS: Rejecting call waiting">
+        <action type="issue at">AT+CDEFMP=1,"m=audio"&#xD;</action>
+        <action type="validate at" timeout="2000">0&#13;</action>
+        <action type="issue at">AT+CDEFMP=2,"m=audio\0D\0Am=video"&#xD;</action>
+        <action type="validate at" timeout="2000">0&#13;</action>
+        
+        <!-- Initiate a call -->
+        <action type="issue at">AT+CDU=1,"sip:01022330215@cmcc.com.cn",1,2</action>
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <type type="enum">ISI_SESSION_TYPE_VIDEO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <videoDirection type="enum">ISI_SESSION_DIR_SEND_RECV</videoDirection>
+                    <rsrcStatus type="enum">ISI_RESOURCE_STATUS_NOT_READY</rsrcStatus>
+                    <to type="string">sip:01022330215@cmcc.com.cn</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip trying with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRYING</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="validate at" timeout="2000">+CDU: 1&#13;&#10;</action>
+        <action type="validate at" timeout="2000">0&#13;</action>
+        <!--  issue isip to ACK call with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">50</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,0,0,"",0,2,0,0,0,"sip:01022330215@cmcc.com.cn",0,0&#13;&#10;</action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <type type="enum">ISI_SESSION_TYPE_VIDEO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <videoDirection type="enum">ISI_SESSION_DIR_SEND_RECV</videoDirection>
+                </call>
+            </isip>
+        </action>
+        <!--  issue accept ack with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <type type="enum">ISI_SESSION_TYPE_VIDEO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <videoDirection type="enum">ISI_SESSION_DIR_SEND_RECV</videoDirection>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">50</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,0,0,"",0,3,0,0,0,"sip:01022330215@cmcc.com.cn",0,0&#13;&#10;</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,0,0,"",0,4,0,0,0,"sip:01022330215@cmcc.com.cn",0,0&#13;&#10;</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,1,3,"m=audio\0D\0Am=video\0D\0A0\0D\0Aa=rtpmap:0 H264/90000",0,4,0,0,0,"sip:01022330215@cmcc.com.cn",0,0&#13;&#10;</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,1,1,"m=audio\0D\0Am=video\0D\0A0\0D\0Aa=rtpmap:0 H264/90000",0,6,0,0,0,"sip:01022330215@cmcc.com.cn",0,0&#13;&#10;</action>
+        <!-- Issue an incoming call to CSM -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <id type="int">1</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <from type="string">sip:01022330216@cmcc.com.cn</from>
+                    <subject type="string">Whatever</subject>
+                </call>
+            </isip>
+        </action>
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <id type="int">1</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_REJECT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                </call>
+            </isip>
+        </action>
+        
+    </testcase>
+</tapp>

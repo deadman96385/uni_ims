@@ -1,0 +1,17 @@
+/*
+ * THIS IS AN UNPUBLISHED WORK CONTAINING D2 TECHNOLOGIES, INC. CONFIDENTIAL
+ * AND PROPRIETARY INFORMATION.  IF PUBLICATION OCCURS, THE FOLLOWING NOTICE
+ * APPLIES: "COPYRIGHT 2004 D2 TECHNOLOGIES, INC. ALL RIGHTS RESERVED"
+ *
+ * $D2Tech$ $Rev: 12486 $ $Date: 2010-07-07 17:10:49 -0500 (Wed, 07 Jul 2010) $
+ */
+
+#ifndef _SAPP_CALL_SETTINGS_H_
+#define _SAPP_CALL_SETTINGS_H_
+
+vint SAPP_callSettingsEvent(
+    SAPP_ServiceObj   *service_ptr,
+    tUaAppEvent       *sipEvt_ptr,
+    SAPP_Event        *evt_ptr);
+
+#endif

@@ -1,0 +1,13 @@
+<tapp>
+    <testcase name="ps IMS enable">
+        <!-- Enable IMS service -->
+        <action type="issue csm" timeout="1000">
+            <csm>
+                <type>CSM_EVENT_TYPE_SERVICE</type>
+                <reason>CSM_SERVICE_REASON_IMS_ENABLE</reason>
+                <serviceId>1</serviceId>
+            </csm>
+        </action>
+    </testcase>
+</tapp>
+

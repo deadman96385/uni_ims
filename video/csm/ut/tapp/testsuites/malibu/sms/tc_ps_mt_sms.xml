@@ -1,0 +1,49 @@
+<!--
+    Test Case: PS MT SMS.
+-->
+<tapp>
+    <testcase name="PS MT SMS">
+        <action type="issue isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_MESSAGE</code>
+                <protocol  type="int">1</protocol>
+                <id  type="int">0</id>
+                <message>
+                    <reason type="enum">ISIP_TEXT_REASON_NEW</reason>
+                    <message type="hex">000006819038657158001E240DD0E474D81C0EBB010000111011315214000BE474D81C0EBB5DE3771B</message>
+                    <pduLen type="int">41</pduLen>
+                    <messageId type="string">1</messageId>
+                    <type type="enum">ISI_MSG_TYPE_PDU_3GPP</type>
+                    <from type="string">sip:0983561785@foundry.att.com</from>
+                </message>
+            </isip>
+        </action>
+        <!-- VALDATE ACK -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_MESSAGE</code>
+                <protocol  type="int">1</protocol>
+                <message>
+                    <reason type="enum">ISIP_TEXT_REASON_NEW</reason>
+                    <message type="hex">0200410200</message>
+                    <pduLen type="int">6</pduLen>
+                    <type type="enum">ISI_MSG_TYPE_PDU_3GPP</type>
+                    <to type="string">sip:0983561785@foundry.att.com</to>
+                </message>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_MESSAGE</code>
+                <protocol  type="int">1</protocol>
+                <message>
+                    <reason type="enum">ISIP_TEXT_REASON_COMPLETE</reason>
+                    <type type="enum">ISI_MSG_TYPE_PDU_3GPP</type>
+                </message>
+            </isip>
+        </action>
+        <!-- AT infc verify the unsolicited +CMT. -->
+        <action type="validate at" timeout="2000" onfail="continue">+CMT: ,30&#xD;&#xA;06819038657158240DD0E474D81C0EBB010000111011315214000BE474D81C0EBB5DE3771B&#xD;&#xA;</action>
+    </testcase>
+</tapp>
+

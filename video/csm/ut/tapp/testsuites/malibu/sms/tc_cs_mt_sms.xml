@@ -1,0 +1,12 @@
+<!--
+    Test Case: CS MT SMS.
+-->
+<tapp>
+    <testcase name="CS MT SMS">
+        <!-- GSM send the unsolicited +CMT -->
+        <action type="issue gsm at">+CMT: ,23&#xD;&#xA;0791889653784434240C9188963865715800003110826131642304D472980E&#xD;&#xA;</action>
+        <!-- AT infc verify the unsolicited +CMT. -->
+        <action type="validate at" timeout="2000" onfail="continue">+CMT: ,23&#xD;&#xA;0791889653784434240C9188963865715800003110826131642304D472980E&#xD;&#xA;</action>
+    </testcase>
+</tapp>
+

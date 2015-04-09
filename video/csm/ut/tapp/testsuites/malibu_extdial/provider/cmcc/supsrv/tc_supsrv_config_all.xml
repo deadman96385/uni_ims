@@ -1,0 +1,37 @@
+<tapp>
+    <testcase>
+        <!--
+            OIP test cases
+        -->
+        <include>../../../../malibu/supsrv/tc_supsrv_oip.xml</include>
+        <!--
+            OIR test cases
+        -->
+        <include>../../../../malibu/supsrv/tc_supsrv_oir.xml</include>
+        <!--
+            TIP test cases
+        -->
+        <include>../../../../malibu/supsrv/tc_supsrv_tip.xml</include>
+        <!--
+            TIR test cases
+        -->
+        <include>../../../../malibu/supsrv/tc_supsrv_tir.xml</include>
+        <!--
+            CW test cases for CMCC
+        -->
+        <include>tc_supsrv_config_cw_cmcc.xml</include>
+        <!--
+            CB test cases
+        -->
+        <include>../../../../malibu/supsrv/tc_supsrv_cb.xml</include>
+        <!--
+            CF(CD) test cases
+        -->
+        <include>../../../../malibu/supsrv/tc_supsrv_cf.xml</include>
+        <!--
+            CFT(CF time) test cases
+        -->
+        <include>tc_supsrv_cft.xml</include>
+    </testcase>
+</tapp>
+

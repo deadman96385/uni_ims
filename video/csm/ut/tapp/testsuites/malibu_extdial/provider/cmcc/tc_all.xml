@@ -1,0 +1,13 @@
+<!--
+    This test cases includes all test cases.
+-->
+<tapp>
+    <testcase>
+        <!-- init tests -->
+        <include>tc_init.xml</include>
+        <include>../../../malibu/service/tc_reg_all.xml</include>
+        <!--Disable CMCC test cases since there's error on that, need to review it.
+        <include>video_call/tc_video_call_all.xml</include> -->
+        <include>supsrv/tc_supsrv_all.xml</include>
+    </testcase>
+</tapp>

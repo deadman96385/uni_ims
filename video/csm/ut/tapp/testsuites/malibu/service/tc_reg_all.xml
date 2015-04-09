@@ -1,0 +1,28 @@
+<!--
+    This test cases file includes all registration related test cases
+-->
+<tapp>
+    <testcase>
+        <include>tc_cs_reg_ok.xml</include>
+        <include>tc_ps_set_emgcy_reg_req.xml</include>
+        <include>tc_ps_service_create.xml</include>
+        <include>tc_ps_ip_changed_yes_net.xml</include>
+        <include>tc_ps_service_active.xml</include>
+        <include>tc_set_imei_uri.xml</include>
+
+        <include>tc_ps_lost.xml</include>
+        <include>tc_ps_isim_changed.xml</include>
+        <include>tc_ps_ims_enable.xml</include>
+        <include>tc_ps_validate_service_cfg.xml</include>
+        <include>tc_ps_service_sip_305_handling.xml</include>
+        <include>tc_ps_service_active_with_net.xml</include>
+
+        <include>tc_ps_lost.xml</include>
+        <include>tc_ps_ip_changed_no_net.xml</include>
+        <include>tc_ps_ims_enable.xml</include>
+        <include>tc_ps_validate_service_cfg.xml</include>
+        <include>tc_ps_validate_emgcy_service_cfg.xml</include>
+        <include>tc_ps_ip_changed_yes_net.xml</include>
+        <include>tc_ps_service_active_aka_ok.xml</include>
+    </testcase>
+</tapp>

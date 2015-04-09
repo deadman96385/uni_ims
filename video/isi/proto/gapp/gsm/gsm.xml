@@ -1,0 +1,9 @@
+<gsm>
+<device>/dev/smd0Org</device>
+<serial>
+    <baud>115200</baud>
+</serial>
+<at-cmds>
+    <at timeout="5">AT</at>
+</at-cmds>
+</gsm>

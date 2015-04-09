@@ -1,0 +1,12 @@
+<!--
+    Test Case: PS MO USSD.
+-->
+<tapp>
+    <testcase name="PS INIT USSD">
+        <!-- AT send Invite request. -->
+        <action type="issue at">AT+CUSD=1</action>
+        <!-- AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">OK&#xD;&#xA;</action>       
+    </testcase>
+</tapp>
+

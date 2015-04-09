@@ -1,0 +1,6 @@
+<tapp>
+    <testcase name="set codec parameters">
+        <action type="issue at">AT+CDEFMP=1,"m=audio\0D\0Aa=rtpmap:100 AMR-WB/16000\0D\0Aa=fmtp:100 octet-align=1;mode-change-capability=2;mode-set=8"</action>
+       <action type="validate at" timeout="2000">0&#13;</action>
+    </testcase>
+</tapp>

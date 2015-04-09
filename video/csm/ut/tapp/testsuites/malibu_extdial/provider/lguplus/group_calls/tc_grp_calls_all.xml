@@ -1,0 +1,7 @@
+<tapp>
+    <testcase>
+       <include>tc_ps_group_call_rmHangup.xml</include> 
+       <include>tc_ps_multi_call.xml</include>
+ 
+    </testcase>
+</tapp>

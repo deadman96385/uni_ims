@@ -1,0 +1,232 @@
+<tapp>
+    <testcase name="PS: Accepting call waiting">
+        <!-- Initiate a call -->
+        <action type="issue at">AT+CDU=1,"sip:01022330215@lte-lguplus.co.kr",1,1</action>
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <to type="string">sip:01022330215@lte-lguplus.co.kr</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip trying with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRYING</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="validate at" timeout="2000">+CDU: 1&#13;&#10;</action>
+        <action type="validate at" timeout="2000">0&#13;</action>
+        <!-- issue isip to ACK call with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">50</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,0,0,"",0,2,0,1,0,"sip:01022330215@lte-lguplus.co.kr",0,0&#13;&#10;</action>
+        <!-- issue isip to accept call with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  issue accept ack with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol  type="int">0</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">50</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,0,0,"",0,3,0,1,0,"sip:01022330215@lte-lguplus.co.kr",0,0&#13;&#10;</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,0,0,"",0,4,0,1,0,"sip:01022330215@lte-lguplus.co.kr",0,0&#13;&#10;</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,1,4,"m=audio",0,4,0,1,0,"sip:01022330215@lte-lguplus.co.kr",0,0&#13;&#10;</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,1,1,"",0,6,0,1,0,"sip:01022330215@lte-lguplus.co.kr",0,0&#13;&#10;</action>
+
+        <!-- Issue an incoming call to CSM -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <from type="string">sip:01022330216@lte-lguplus.co.kr</from>
+                    <subject type="string">Whatever</subject>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="5000">+CCWA: "01022330216",129,,,&#xD;</action>
+        <!-- issue isip trying with id index = 0 -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">1</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                </call>
+            </isip>
+        </action>
+        <!-- ISIP issue ACK to CSM -->
+        <action type="issue isip">
+             <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">1</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,0,0,"",0,6,0,1,0,"sip:01022330215@lte-lguplus.co.kr",0,0&#13;&#10;</action>
+        <!-- anser the call -->
+        <action type="issue at">AT+CHLD=2</action>
+        <!--  ISIP Valide CALL HOLD -->
+        <action type="validate isip" timeout="3000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_HOLD</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to accept call hold with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_HOLD</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+        <!-- ISIP Validate accept event from csm -->    
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <id type="int">1</id>
+                <call>
+                        <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                        <status type="enum">ISIP_STATUS_INVALID</status>
+                        <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                        <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                </call>
+            </isip>
+        </action>
+        <!-- ISIP issue to csm that accept done -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">1</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+        <!--  issue accept ack with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">1</id>
+                <protocol  type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving the response that call hold done. -->
+        <action type="validate at" timeout="2000">+CMCCSI: 2,1,1,2,"m=audio",0,5,0,1,0,"sip:01022330216@lte-lguplus.co.kr",0,0&#13;&#10;</action>
+        <action type="validate at" timeout="2000">0&#13;</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,0,0,"",0,13,0,1,0,"sip:01022330215@lte-lguplus.co.kr",0,0&#13;&#10;</action>
+        <action type="pause">10</action>
+        <!-- Remote party Disconnects second call id index=1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">1</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="validate at" timeout="2000">+CMCCSI: 2,1,0,0,"",0,5,0,1,0,"sip:01022330216@lte-lguplus.co.kr",0,0&#13;&#10;</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,0,0,"",0,13,0,1,0,"sip:01022330215@lte-lguplus.co.kr",0,0&#13;&#10;</action>
+<action type="validate at" timeout="2000">+CMCCSI: 2,1,0,0,"",0,6,0,1,0,"sip:01022330216@lte-lguplus.co.kr",0,0&#13;&#10;</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,0,0,"",0,13,0,1,0,"sip:01022330215@lte-lguplus.co.kr",0,0&#13;&#10;</action>
+        
+
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000">+CMCCSI: 2,1,0,0,"",0,8,0,1,0,"sip:01022330216@lte-lguplus.co.kr",0,0&#13;&#10;</action>
+
+        <!-- Remote party Disconnects call index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        
+        <action type="pause">50</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,0,0,"",0,7,0,1,0,"sip:01022330215@lte-lguplus.co.kr",0,0&#13;&#10;</action>
+
+    </testcase>
+</tapp>

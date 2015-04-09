@@ -1,0 +1,380 @@
+<!-- 
+    Test Case: SUPSRV OIR SET and QUERY.
+-->
+<tapp>
+    <testcase name="SUPSRV OIR QUERY - Cannot reach AS">
+        <!--
+            scenario: Cannot reach AS 
+            Note: We assume OIR default is disabled.
+            AT+CLIR?
+            +CME ERROR: 31
+        -->
+        <action type="issue at">AT+CLIR?&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/originating-identity-presentation-restriction</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NET</error>
+                </event>
+            </xcap>
+        </action>
+
+        <!-- AT infc verify receiving the parsed OIR query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">+CME ERROR: 31&#13;</action>
+    </testcase>
+    <testcase name="SUPSRV OIR QUERY - HTTP error">
+        <!--
+            scenario: HTTP error
+            AT+CLIR?
+            +CME ERROR: 100
+        -->
+        <action type="issue at">AT+CLIR?&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/originating-identity-presentation-restriction</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 404 Not Found
+                    ]]>
+                    </header>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed OIR query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">+CME ERROR: 100&#13;</action>
+    </testcase>
+    <testcase name="SUPSRV OIR QUERY - XML parse error">
+        <!--
+            scenario: XML parse error
+            AT+CLIR?
+            +CME ERROR: 100
+        -->
+        <action type="issue at">AT+CLIR?&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/originating-identity-presentation-restriction</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 686
+                    ]]>
+                    </header>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+                        <simservs xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+                           <originating-identity-presentation/>
+                        </simservs>
+                    ]]>
+                    </body>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed OIR query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">+CME ERROR: 100&#13;</action>
+    </testcase>
+    <testcase name="SUPSRV OIR QUERY - Cannot fetch xml doc">
+        <!--
+            scenario: Cannot fetch related doc at AS, consider it not provisioned
+            AT+CLIR?
+            Note: We assume OIR default is disabled.
+            +CME ERROR: 30
+        -->
+        <action type="issue at">AT+CLIR?&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/originating-identity-presentation-restriction</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_HTTP</error>
+                </event>
+            </xcap>
+        </action>
+
+        <!-- AT infc verify receiving the parsed OIR query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">+CME ERROR: 30&#13;</action>
+    </testcase>
+    <testcase name="SUPSRV enable OIR">
+    <!--
+        scenario: Set OIR to active
+        AT+CLIR=1
+        OK
+        AT+CLIR?
+        +CLIR: 1,3
+        OK
+    -->
+        <action type="issue at">AT+CLIR=1&#13;</action>
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_CREATE_REPLACE</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/originating-identity-presentation-restriction</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<simservs xmlns:cp="urn:ietf:params:xml:ns:common-policy"
+xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap"
+xmlns:ocp="urn:oma:xml:xdm:common-policy"><originating-identity-presentation-restriction active="true">
+</originating-identity-presentation-restriction>
+</simservs>]]>
+                    </body>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 0
+                    ]]>
+                    </header>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed OIR query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+        <!-- Query -->
+        <action type="issue at">AT+CLIR?&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/originating-identity-presentation-restriction</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 686
+                    ]]>
+                    </header>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+                        <simservs xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+                           <originating-identity-presentation active="true"/>
+                           <originating-identity-presentation-restriction active="true">
+                               <default-behaviour>presentation-restricted</default-behaviour>
+                           </originating-identity-presentation-restriction>
+                        </simservs>
+                    ]]>
+                    </body>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed OIR query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CLIR: 1,3&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+    <testcase name="SUPSRV disable OIR">
+        <!--
+            scenario: Set OIR to inactive.
+            AT+CLIR=2
+            OK
+            AT+CLIR?
+            +CLIR: 2,4
+        -->
+        <action type="issue at">AT+CLIR=2&#13;</action>
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_CREATE_REPLACE</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/originating-identity-presentation-restriction</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<simservs xmlns:cp="urn:ietf:params:xml:ns:common-policy"
+xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap"
+xmlns:ocp="urn:oma:xml:xdm:common-policy"><originating-identity-presentation-restriction active="false">
+</originating-identity-presentation-restriction>
+</simservs>]]>
+                    </body>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 0
+                    ]]>
+                    </header>
+                </event>
+            </xcap>
+        </action>
+
+        <!-- AT infc verify receiving the parsed OIR query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+        <!-- Query -->
+        <action type="issue at">AT+CLIR?&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/originating-identity-presentation-restriction</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 686
+                    ]]>
+                    </header>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+                        <simservs xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+                           <originating-identity-presentation active="false"/>
+                           <originating-identity-presentation-restriction active="false">
+                               <default-behaviour>presentation-restricted</default-behaviour>
+                           </originating-identity-presentation-restriction>
+                        </simservs>
+                    ]]>
+                    </body>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed OIR query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CLIR: 2,4&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+</tapp>
+

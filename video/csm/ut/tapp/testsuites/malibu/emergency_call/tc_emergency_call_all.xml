@@ -1,0 +1,59 @@
+<!--
+    This test cases includes all emergency call test cases
+    Precondition: 1. Both CS and PS services are active.
+                  2. Emergnency sip service is not active.
+                  3. Failover to CS is not set.
+-->
+<tapp>
+    <testcase>
+<!-- disable ps to test cs emergency call -->
+        <include>../service/tc_ps_lost.xml</include>
+
+        <include>tc_cs_emergency_call_local_hangs_up.xml</include>
+        <include>tc_cs_emergency_call_remote_hangs_up.xml</include>
+
+<!-- Normal ps emergency call -->
+        <include>../service/tc_ps_ims_enable.xml</include>
+        <include>../service/tc_ps_service_active_with_net.xml</include>
+
+        <include>tc_ps_emergency_call_local_hangs_up.xml</include>
+        <include>tc_ps_emergency_call_remote_hangs_up.xml</include>
+        <include>tc_ps_emergency_call_when_one_call_held.xml</include>
+        <!-- Skip this test because now we can not have the scenario after fixing
+             bug 11088.
+        <include>tc_ps_emergency_call_when_no_available_call.xml</include>
+        -->
+
+<!-- Enable emergency ip address -->
+        <include>../service/tc_ps_lost.xml</include>
+        <include>../service/tc_ps_ip_changed_no_net.xml</include>
+        <include>../service/tc_ps_ims_enable.xml</include>
+        <include>../service/tc_ps_validate_service_cfg.xml</include>
+        <include>../service/tc_ps_validate_emgcy_service_cfg.xml</include>
+        <include>../service/tc_ps_set_emgcy_reg_not_req.xml</include>
+        <include>../service/tc_ps_emgcy_ip_changed_yes_net.xml</include>
+        <include>../service/tc_ps_emgcy_reg_not_req_service_active.xml</include>
+        <include>../service/tc_ps_set_emgcy_reg_req.xml</include>
+        <include>../service/tc_ps_emgcy_validate_restart_deactive.xml</include>
+        <include>../service/tc_ps_validate_emgcy_service_cfg.xml</include>
+        <include>../service/tc_ps_emgcy_service_active.xml</include>
+
+        <include>tc_ps_emergency_service_call_local_hangs_up.xml</include>
+        <include>tc_ps_emergency_service_call_remote_hangs_up.xml</include>
+        <include>tc_ps_emergency_service_call_failed.xml</include>
+
+        <include>tc_set_failover_to_cs.xml</include>
+        <include>tc_ps_emergency_service_call_failover_to_cs.xml</include>
+
+        <!-- deactive emergency service and enable IMS service -->
+        <include>../service/tc_ps_emgcy_ip_changed_no_net.xml</include>
+        <include>../service/tc_ps_ip_changed_yes_net.xml</include>
+        <include>../service/tc_ps_service_active.xml</include>
+        <include>../service/tc_ps_lost.xml</include>
+        <include>../service/tc_ps_emgcy_validate_deactive.xml</include>
+        <include>../service/tc_ps_ims_enable.xml</include>
+        <include>../service/tc_ps_service_active_with_net.xml</include>
+
+        <action type="pause">1000</action>
+    </testcase>
+</tapp>

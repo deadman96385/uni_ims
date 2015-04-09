@@ -1,0 +1,16 @@
+/*
+ * THIS IS AN UNPUBLISHED WORK CONTAINING D2 TECHNOLOGIES, INC. CONFIDENTIAL
+ * AND PROPRIETARY INFORMATION.  IF PUBLICATION OCCURS, THE FOLLOWING NOTICE
+ * APPLIES: "COPYRIGHT 2004 D2 TECHNOLOGIES, INC. ALL RIGHTS RESERVED"
+ *
+ * $D2Tech$ $Rev: 12486 $ $Date: 2010-07-08 06:10:49 +0800 (Thu, 08 Jul 2010) $
+ */
+  
+#ifndef _MC_HW_H_
+#define _MC_HW_H_
+
+void MC_vtspHwControl(
+    MC_VtspCodecControl *codec_ptr,
+    OSAL_Boolean         take);
+
+#endif

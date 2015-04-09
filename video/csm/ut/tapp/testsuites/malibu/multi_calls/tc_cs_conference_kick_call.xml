@@ -1,0 +1,172 @@
+<!--
+    Test Case: Remove a participatant from a conference.
+-->
+<tapp>
+    <testcase name="CS: Remove a participatant from a conference">
+        <!-- make a first outgoing call. -->
+        <!-- AT dial to '18055643424' -->
+        <action type="issue at">ATD18055643424;</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">ATD18055643424;&#xD;</action>
+        <!-- GSM send the response, OK, for ATD -->
+        <action type="issue gsm at">0&#xD;</action>
+        <!-- AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <action type="pause">10</action>
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="issue at">AT+CLCC</action>
+        <!-- AT infc verify receiving the response from GSM dev. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,2,0,0,"18055643424",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">AT+CLCC&#xD;</action>
+        <!-- GSM send the response for +CLCC -->
+        <action type="issue gsm at">+CLCC: 1,0,2,0,0,"18055643424",129&#xD;&#xA;0&#xD;</action>
+
+        <action type="pause">10</action>
+        <!-- remote answers this call. -->
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="issue at">AT+CLCC</action>
+        <!-- AT infc verify receiving the response from GSM dev. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,2,0,0,"18055643424",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">AT+CLCC&#xD;</action>
+        <!-- GSM send the response for AT+CLCC -->
+        <action type="issue gsm at">+CLCC: 1,0,0,0,0,"18055643424",129&#xD;&#xA;0&#xD;</action>
+        <action type="pause">10</action>
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="issue at">AT+CLCC</action>
+        <!-- AT infc verify receiving the response from GSM dev. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,0,0,0,"18055643424",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- to hold the call. -->
+        <!-- AT send AT+CHLD=2 to hold the call. -->
+        <action type="issue at">AT+CHLD=2</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="4000">AT+CHLD=2&#xD;</action>
+        <!-- AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- GSM send the response, OK, for AT+CHLD=2 -->
+        <action type="issue gsm at">0&#xD;</action>
+
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">AT+CLCC&#xD;</action>
+        <!-- GSM send the response for AT+CLCC -->
+        <action type="issue gsm at">+CLCC: 1,0,1,0,0,"18055643424",129&#xD;&#xA;0&#xD;</action>
+        <action type="pause">10</action>
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="issue at">AT+CLCC</action>
+        <!-- AT infc verify receiving the response from GSM dev. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,1,0,0,"18055643424",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- ************************* make second call ************************* -->
+        <!-- AT dial to '1312209935' -->
+        <action type="issue at">ATD1312209935;</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">ATD1312209935;&#xD;</action>
+        <!-- GSM send the response, OK, for ATD -->
+        <action type="issue gsm at">0&#xD;</action>
+        <!-- AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <action type="pause">10</action>
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="issue at">AT+CLCC</action>
+        <!-- AT infc verify receiving the response from GSM dev. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,1,0,0,"18055643424",129&#xD;&#xA;+CLCC: 2,0,2,0,0,"1312209935",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">AT+CLCC&#xD;</action>
+        <!-- GSM send the response for +CLCC -->
+        <action type="issue gsm at">+CLCC: 1,0,1,0,0,"18055643424",129&#xD;&#xA;+CLCC: 2,0,2,0,0,"1312209935",129&#xD;&#xA;0&#xD;</action>
+
+        <action type="pause">10</action>
+        <!-- remote(2nd) answers this call. -->
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="issue at">AT+CLCC</action>
+        <!-- AT infc verify receiving the response from GSM dev. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,1,0,0,"18055643424",129&#xD;&#xA;+CLCC: 2,0,2,0,0,"1312209935",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">AT+CLCC&#xD;</action>
+        <!-- GSM send the response for AT+CLCC -->
+        <action type="issue gsm at">+CLCC: 1,0,1,0,0,"18055643424",129&#xD;&#xA;+CLCC: 2,0,0,0,0,"1312209935",129&#xD;&#xA;0&#xD;</action>
+        <action type="pause">10</action>
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="issue at">AT+CLCC</action>
+        <!-- AT infc verify receiving the response from GSM dev. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,1,0,0,"18055643424",129&#xD;&#xA;+CLCC: 2,0,0,0,0,"1312209935",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- ********** create conference call ********** -->
+        <!-- AT send AT+CHLD=3 to swap call. -->
+        <action type="issue at">AT+CHLD=3</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="4000">AT+CHLD=3&#xD;</action>
+        <!-- AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- GSM send the response, OK, for AT+CHLD=3 -->
+        <action type="issue gsm at">0&#xD;</action>
+
+        <action type="pause">10</action>
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="issue at">AT+CLCC</action>
+        <!-- AT infc verify receiving the response from GSM dev. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,0,0,1,"18055643424",129&#xD;&#xA;+CLCC: 2,0,0,0,1,"1312209935",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">AT+CLCC&#xD;</action>
+        <!-- GSM send the response for +CLCC -->
+        <action type="issue gsm at">+CLCC: 1,0,0,0,1,"18055643424",129&#xD;&#xA;+CLCC: 2,0,0,0,1,"1312209935",129&#xD;&#xA;0&#xD;</action>
+        <action type="pause">10</action>
+
+        <!-- ********** kick the 1st call ********** -->
+        <!-- AT send AT+CHLD=11 to swap call. -->
+        <action type="issue at">AT+CHLD=11</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="4000">AT+CHLD=11;&#xD;</action>
+        <!-- GSM send the response, OK, for AT+CHLD=11 -->
+        <action type="issue gsm at">0&#xD;</action>        
+        <!-- AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <action type="pause">10</action>
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="issue at">AT+CLCC</action>
+        <!-- AT infc verify receiving the response from GSM dev. -->
+        <action type="validate at" timeout="2000">+CLCC: 2,0,0,0,1,"1312209935",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">AT+CLCC&#xD;</action>
+        <!-- GSM send the response for +CLCC -->
+        <action type="issue gsm at">+CLCC: 2,0,0,0,1,"1312209935",129&#xD;&#xA;0&#xD;</action>
+        <action type="pause">10</action>
+
+        <!-- ********** terminate the 2nd call ********** -->
+        <!-- AT send ATH to hang up the call. -->
+        <action type="issue at">ATH</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">ATH&#xD;</action>
+        <!-- GSM send the response, OK, for ATH -->
+        <action type="issue gsm at">0&#xD;</action>
+        <!-- AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <action type="pause">50</action>
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="issue at">AT+CLCC</action>
+        <!-- AT infc verify receiving the response from GSM dev. -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="validate gsm at" timeout="2000">AT+CLCC&#xD;</action>
+        <!-- GSM send OK to terminate AT+CLCC. -->
+        <action type="issue gsm at">0&#xD;</action>
+
+        <action type="clean isip" timeout="2000">
+    </testcase>
+</tapp>
+

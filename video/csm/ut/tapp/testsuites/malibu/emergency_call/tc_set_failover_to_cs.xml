@@ -1,0 +1,13 @@
+<tapp>
+    <testcase name="Set failover to CS">
+    <!--issue CSM to Set emergency serivce -->
+       <action type="issue csm" timeout="1000">
+            <csm>
+                <type>CSM_EVENT_TYPE_RADIO</type>
+                <reason>CSM_RADIO_REASON_RADIO_CHANGE_EMERGENCY</reason>
+                <isEmergencyFailoverToCs>1</isEmergencyFailoverToCs>
+                <isEmergencyRegRequired>1</isEmergencyRegRequired>
+            </csm>
+        </action>
+    </testcase>
+</tapp>

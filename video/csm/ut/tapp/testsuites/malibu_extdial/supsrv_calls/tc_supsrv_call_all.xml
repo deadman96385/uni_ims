@@ -1,0 +1,15 @@
+<!--
+    This test cases includes all supsrv call test cases
+-->
+<tapp>
+    <testcase>
+        <include>tc_MO_Call_CFU.xml</include>
+        <include>tc_MT_Call_CF_486.xml</include>
+        <include>tc_MT_Call_CF_302.xml</include>
+        <include>tc_MT_Call_CF_404.xml</include>
+        <include>tc_MT_Call_CF_408.xml</include>
+        <include>tc_MT_Call_CF_503.xml</include>
+        <include>tc_MT_Call_CF_no_cause_code.xml</include>
+        <include>tc_MT_Call_CF_no_history_info.xml</include>
+    </testcase>
+</tapp>

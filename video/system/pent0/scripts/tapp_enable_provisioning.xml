@@ -1,0 +1,19 @@
+<tapp>
+    <testsuite>
+        <name>MalibuGeneric.DefaultProvisioning</name>
+    </testsuite>
+    <report>
+        <filename>./tapp_malibu_default_provisioning_result.txt</filename>
+    </report>
+    <xmlReport>
+        <filename>./tapp_malibu_default_provisioning_result.xml</filename>
+    </xmlReport>
+    <report>
+    </report>
+    <gsm>
+        <device>./smd0</device>
+    </gsm>
+    <csm>
+        <xml>./csm_enable_pv.xml</xml>
+    </csm>
+</tapp>

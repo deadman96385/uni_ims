@@ -1,0 +1,83 @@
+<!--
+    Test Case: PS MO USSD.
+-->
+<tapp>
+    <testcase name="PS MO USSD">
+        <!-- AT send Invite request. -->
+        <action type="issue at">AT+CUSD=1,"*123#",15</action>
+        <!-- AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">OK&#xD;&#xA;</action>
+        <!-- VALDATE new message  -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_USSD</code>
+                <protocol  type="int">1</protocol>
+                <ussd>
+                    <reason type="enum">ISIP_USSD_REASON_SEND</reason>
+                    <message type="hex">2A31323323</message>
+                    <to type="string">sip:*123#@foundry.att.com;user=dialstring</to>
+                </ussd>
+            </isip>
+        </action>
+        <!-- Issue OK  -->
+        <action type="issue isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_USSD</code>
+                <protocol  type="int">1</protocol>
+                <ussd>
+                    <reason type="enum">ISIP_USSD_REASON_SEND_OK</reason>
+                </ussd>
+            </isip>
+        </action>     
+        <!-- Issue INFO request  -->
+        <action type="issue isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_USSD</code>
+                <protocol  type="int">1</protocol>
+                <ussd>
+                    <reason type="enum">ISIP_USSD_REASON_REQUEST</reason>
+                    <message type="hex">E5AF86E7A2BC</message>
+                </ussd>
+            </isip>
+        </action>        
+        <action type="validate at" timeout="2000">+CUSD:1,"5BC678BC",72&#xD;&#xA;OK&#xD;&#xA;</action>
+        <action type="issue at">AT+CUSD=1,"abc",15</action>
+        <!-- AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">OK&#xD;&#xA;</action>
+        <!-- VALDATE new message  -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_USSD</code>
+                <protocol  type="int">1</protocol>
+                <ussd>
+                    <reason type="enum">ISIP_USSD_REASON_REPLY</reason>
+                    <message type="hex">616263</message>
+                    <to type="string">sip:*123#@foundry.att.com;user=dialstring</to>
+                </ussd>
+            </isip>
+        </action>
+        <!-- Issue OK  -->
+        <action type="issue isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_USSD</code>
+                <protocol  type="int">1</protocol>
+                <ussd>
+                    <reason type="enum">ISIP_USSD_REASON_SEND_OK</reason>
+                </ussd>
+            </isip>
+        </action>
+        <!-- Issue bye  -->
+        <action type="issue isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_USSD</code>
+                <protocol  type="int">1</protocol>
+                <ussd>
+                    <reason type="enum">ISIP_USSD_REASON_DISCONNECT</reason>
+                    <message type="hex">E5868DE8A68B</message>
+                </ussd>
+            </isip>
+        </action> 
+        <action type="validate at" timeout="2000">+CUSD:2,"518D898B",72&#xD;&#xA;OK&#xD;&#xA;</action>
+    </testcase>
+</tapp>
+

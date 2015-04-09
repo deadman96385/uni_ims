@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    /*
+     * THIS IS AN UNPUBLISHED WORK CONTAINING D2 TECHNOLOGIES, INC. CONFIDENTIAL
+     * AND PROPRIETARY INFORMATION.  IF PUBLICATION OCCURS, THE FOLLOWING NOTICE
+     * APPLIES: "COPYRIGHT 2011 D2 TECHNOLOGIES, INC. ALL RIGHTS RESERVED"
+     *
+     * $D2Tech$ $Rev: 3435 $ $Date: 2011-06-16 14:17:43 -0700 (Thu, 16 Jun 2011) $
+     *
+     */
+-->
+    <Service>
+        <isim name="domain">foundry.att.com</isim>
+        <isim name="pcscf">sbc.core.foundry.att.com;transport=TCP</isim>
+        <isim name="impu">sip:+14043351655@foundry.att.com</isim>
+        <isim name="impi">4043351655@private.att.net</isim>
+        <isim name="password">d2test</isim>
+        <isim name="smsc"></isim>
+        <AccountType>VoIP</AccountType>
+        <Protocol>Sip</VoiceProtocol>
+    </Service>

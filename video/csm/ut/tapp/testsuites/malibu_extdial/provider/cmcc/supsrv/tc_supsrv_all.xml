@@ -1,0 +1,35 @@
+<!--
+    This test cases includes all basic call test cases
+    Precondition: Both CS and PS services are active.
+-->
+<tapp>
+    <testcase>
+    <!-- cs domain policy -->
+        <include>../../../../malibu/service/tc_ps_lost.xml</include>
+        <include>../../../../malibu/service/tc_ps_ip_changed_no_net.xml</include>
+        
+        <include>tc_cs_supsrv_oip.xml</include>
+        
+    <!-- ps domain policy -->
+        <include>../../../../malibu/service/tc_ps_ims_enable.xml</include>
+        <include>../../../../malibu/service/tc_ps_validate_service_cfg.xml</include>
+        <include>../../../../malibu/service/tc_ps_validate_emgcy_service_cfg.xml</include>
+        <include>../../../../malibu/service/tc_ps_ip_changed_yes_net.xml</include>
+        <include>../../../../malibu/service/tc_ps_service_active_aka_ok.xml</include>
+        
+        <!-- now could setup supsrv IP for use in later cases 
+        <include>tc_ps_ip_changed_supsrv.xml</include>
+        -->
+
+        <include>tc_supsrv_config_all.xml</include>
+
+    <!-- call waiting setting disabled cases -->
+        <include>tc_ps_call_waiting_disabled.xml</include>
+    <!-- normal call waiting -->
+        <include>../../../../malibu_extdial/call_waiting/tc_call_waiting_all.xml</include>
+
+    <!-- other ps mode supsrv features -->
+        <include>tc_ps_reject_blacklist.xml</include>
+
+    </testcase>
+</tapp>

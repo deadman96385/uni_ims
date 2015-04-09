@@ -1,0 +1,112 @@
+<tapp>
+    <testcase name="PS: Can't make 2nd incoming call">
+        <!--  Issue an incoming call to CSM -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <from type="string">sip:13122099351@domain.com"</from>
+                    <subject type="string">Whatever</subject>
+                </call>
+            </isip>
+        </action>
+        <!--  ISIP Validate with id index = 0 -->
+        <action type="validate isip" timeout="2000">    
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving Ring -->
+        <action type="validate at" timeout="2000">+CRING: VOICE&#xD;&#xA;+CLIP: "13122099351",129,,,&#xD;</action>
+
+        <!--  Issue 2nd  incoming call to CSM -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <from type="string">sip:13122099135@domain.com"</from>
+                    <subject type="string">Whatever</subject>
+                </call>
+            </isip>
+        </action>
+        <!--  ISIP Validate with id index = 1 -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">1</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_REJECT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip that call was terminated  with id index=1 -->
+        <action type="issue isip">
+            <isip>
+                  <code type="enum">ISIP_CODE_CALL</code>
+                   <protocol  type="int">0</protocol>
+                   <id type="int">1</id>
+                   <call>
+                       <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                       <status type="enum">ISIP_STATUS_DONE</status>
+                   </call>
+            </isip>
+        </action>
+
+        <!--  AT sent AT+CHLD=0 to release incoming call.-->
+        <action type="issue at">AT+CHLD=0</action>
+        <!--  ISIP Validate accept event from csm -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_REJECT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                </call>
+            </isip>
+        </action>
+        <!--  ISIP issue to csm that accept done -->
+        <action type="issue isip">  
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving the response  -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response -->
+        <action type="validate at" timeout="2000">0&#xD;</action> 
+    </testcase>
+</tapp>

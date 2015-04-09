@@ -1,0 +1,227 @@
+/*
+ * THIS IS AN UNPUBLISHED WORK CONTAINING D2 TECHNOLOGIES, INC. CONFIDENTIAL AND
+ * PROPRIETARY INFORMATION.  IF PUBLICATION OCCURS, THE FOLLOWING NOTICE
+ * APPLIES: "COPYRIGHT 2005-2010 D2 TECHNOLOGIES, INC. ALL RIGHTS RESERVED"
+ *
+ * $D2Tech$ $Rev: 12730 $ $Date: 2010-08-09 20:55:01 -0400 (Mon, 09 Aug 2010) $
+ *
+ */        
+
+#include "_ve_private.h"
+
+/*
+ * ======== _VE_rtpDir() ========
+ *
+ * Set the direction of RTP streams.
+ */
+vint _VE_rtpDir(
+    _VE_RtpObject *rtp_ptr,
+    vint              dir)
+{
+    /*
+     * Now set the direction.
+     */
+    switch (dir) {
+        case VTSP_STREAM_DIR_SENDONLY:
+            rtp_ptr->sendActive = _VE_RTP_READY;
+            rtp_ptr->recvActive = _VE_RTP_NOTREADY;
+            break;
+
+        case VTSP_STREAM_DIR_RECVONLY:
+            rtp_ptr->sendActive = _VE_RTP_NOTREADY;
+            if (_VE_RTP_NOTREADY == rtp_ptr->recvActive) {
+                /*
+                 * Initialize RTP sequence number check. Received stream
+                 * switched from inactive state.
+                 */
+                rtp_ptr->probation = _VE_RTP_MIN_SEQUENTIAL + 1;
+            }
+            rtp_ptr->recvActive = _VE_RTP_READY;
+            break;
+
+        case VTSP_STREAM_DIR_SENDRECV:
+            rtp_ptr->sendActive = _VE_RTP_READY;
+            if (_VE_RTP_NOTREADY == rtp_ptr->recvActive) {
+                /*
+                 * Initialize RTP sequence number check. Received stream
+                 * switched from inactive state.
+                 */
+                rtp_ptr->probation = _VE_RTP_MIN_SEQUENTIAL + 1;
+            }
+            rtp_ptr->recvActive = _VE_RTP_READY;
+            break;
+        default:
+            rtp_ptr->sendActive = _VE_RTP_NOTREADY;
+            rtp_ptr->recvActive = _VE_RTP_NOTREADY;
+            break;
+    }
+    return (0);
+}
+
+/*
+ * ======== _VE_rtpOpen() ========
+ *
+ * This function is used to open an RTP flow.
+ */
+vint _VE_rtpOpen(
+    _VE_RtpObject  *rtp_ptr,
+    VTSP_StreamDir     dir,
+    OSAL_NetAddress    remoteAddr,
+    OSAL_NetAddress    localAddr,
+    uint8              rdnDynType,
+    uint16             srtpSecurityType,
+    char              *srtpSendKey,
+    char              *srtpRecvKey)
+{
+    vint   newBind;
+    uint32 random;
+    char dummy[16] = {0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+    if (0 == rtp_ptr->open) {
+        if (0 == rtp_ptr->tsRandom) {
+            rtp_ptr->rtpTime = 0;
+        }
+        else {
+        OSAL_randomGetOctets((char *)&random, sizeof(random));
+            rtp_ptr->rtpTime = random;            
+        }
+
+        rtp_ptr->sendRtpObj.seqRandom = rtp_ptr->seqRandom;
+        rtp_ptr->recvRtpObj.seqRandom = rtp_ptr->seqRandom;
+        rtp_ptr->sendRtpObj.tsRandom  = rtp_ptr->tsRandom;
+        rtp_ptr->recvRtpObj.tsRandom  = rtp_ptr->tsRandom;
+
+        /*
+         * Initialize the RTP objects.
+         * Redundant cache buffers for RFC2198 have been allocated
+         * during _VE_rtpInit()
+         */
+        RTP_init(&(rtp_ptr->sendRtpObj));
+        RTP_init(&(rtp_ptr->recvRtpObj));
+
+        rtp_ptr->sendPacketCount = 0;
+        rtp_ptr->sendOctetCount  = 0;
+        rtp_ptr->receiveTime     = 0;
+        rtp_ptr->lastReceiveTime = 0;
+        rtp_ptr->lastTimeStamp   = 0;
+        rtp_ptr->payloadOffset   = 0; /* bug 3782 */
+        rtp_ptr->lastLocVCoder   = VTSP_CODER_VIDEO_H263;
+        rtp_ptr->lastLocalCoder  = VTSP_CODER_VIDEO_H263;
+        rtp_ptr->jitter          = 0;
+        rtp_ptr->lastSR          = 0;
+        rtp_ptr->recvLastSR      = 0;
+    }
+    
+#ifdef VTSP_ENABLE_SRTP
+    RTP_srtpinit(&(rtp_ptr->sendRtpObj), srtpSecurityType, srtpSendKey,            
+         RTP_KEY_STRING_MAX_LEN);
+    RTP_srtpinit(&(rtp_ptr->recvRtpObj), srtpSecurityType, srtpRecvKey,            
+         RTP_KEY_STRING_MAX_LEN);
+#endif
+    /*
+     * Check if need rebind socket.
+     */
+    if (localAddr.type != rtp_ptr->localAddr.type ||
+            localAddr.port != rtp_ptr->localAddr.port) {
+        newBind = 1;
+    }
+    else if (OSAL_NET_SOCK_UDP == localAddr.type || 
+            OSAL_NET_SOCK_TCP == localAddr.type) {
+        /* IPv4 Address type */
+        if (localAddr.ipv4 != rtp_ptr->localAddr.ipv4) { 
+            newBind = 1;
+        }
+        else {
+            newBind = 0;
+        }
+    }
+    else {
+        /* IPv6 Address type */
+        if ( 0 != OSAL_memCmp(localAddr.ipv6, rtp_ptr->localAddr.ipv6, 
+                sizeof(localAddr.ipv6))) {
+            newBind = 1;
+        }
+        else {
+            newBind = 0;
+        }
+    }
+
+
+    OSAL_memCpy(&rtp_ptr->remoteAddr, &remoteAddr, sizeof(remoteAddr));
+    OSAL_memCpy(&rtp_ptr->localAddr, &localAddr, sizeof(localAddr));
+
+    /*
+     * If the port was being used and the port changed, then rebind the port by
+     * closing, opening, then binding.
+     */
+    if ((_VE_RTP_BOUND == rtp_ptr->inUse) && (1 == newBind)) {
+        rtp_ptr->sendActive = _VE_RTP_NOTREADY;
+        rtp_ptr->recvActive = _VE_RTP_NOTREADY;
+        rtp_ptr->inUse      = _VE_RTP_NOT_BOUND;
+        /*
+         * If this routine has previously been called. Close all sockets and
+         * reopen them.
+         */
+        if (_VE_netClose(rtp_ptr->socket) != _VE_RTP_OK) {
+            _VE_TRACE(__FILE__, __LINE__);
+            return (_VE_RTP_ERROR);
+        }
+        rtp_ptr->open = 0;
+    }
+
+    /* 
+     * Create socket if socket is not opened.
+     */
+    
+    if (0 == rtp_ptr->open) {
+        if ((rtp_ptr->socket = 
+                    _VE_netSocket(localAddr.type, rtp_ptr->tos)) < 0) {
+            _VE_TRACE(__FILE__, __LINE__);
+            return (_VE_RTP_ERROR);
+        }
+        rtp_ptr->open = 1;
+    }
+
+    /*
+     * Now bind the socket so that RTP data can be exchanged. Note this is only
+     * called if the port is non-zero. If the port is zero, the application
+     * effectively is closing the port.
+     */
+    _VE_rtpDir(rtp_ptr, dir);
+
+    if ((localAddr.port != 0) && (newBind == 1)) {
+        if (_VE_RTP_OK != _VE_netBind(rtp_ptr->socket, localAddr)) {
+            /*
+             * Set RTP socket into not ready state.
+            */
+            rtp_ptr->sendActive = _VE_RTP_NOTREADY;
+            rtp_ptr->recvActive = _VE_RTP_NOTREADY;
+            rtp_ptr->inUse      = _VE_RTP_NOT_BOUND;
+            _VE_TRACE(__FILE__, __LINE__);
+            return (_VE_RTP_ERROR);
+        }
+        rtp_ptr->inUse = _VE_RTP_BOUND;
+    }
+    else {
+        if ((0 == remoteAddr.port) || (0 == remoteAddr.ipv4)) {
+            rtp_ptr->sendActive = _VE_RTP_NOTREADY;
+        }
+        if (0 == localAddr.port) {
+            rtp_ptr->sendActive = _VE_RTP_NOTREADY;
+            rtp_ptr->recvActive = _VE_RTP_NOTREADY;
+            rtp_ptr->inUse      = _VE_RTP_NOT_BOUND;
+        }
+    }
+
+    /*
+     * Open up the NAT quickly so we dont lose any incoming packets.
+     */
+    if (0 != remoteAddr.port) {
+        if (0 != remoteAddr.ipv4) {
+            _VE_netSendto(rtp_ptr->socket, &dummy, sizeof(dummy),
+                    rtp_ptr->remoteAddr);
+        }
+    }
+
+    return (_VE_RTP_OK);
+}

@@ -1,0 +1,58 @@
+<!--
+    Test Case: PS MO SMS - Large.
+-->
+<tapp>
+    <testcase name="PS MO SMS - Large">
+        <!-- AT send AT+CMGS to send SMS. -->
+        <action type="issue at">AT+CMGS=152</action>
+        <!-- AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">> &#xD;</action>
+        <!-- AT send pdu. -->
+        <action type="issue at">0041000a8190386571580000a0050003b8020162b219ad66bbe17230504c36a3d56c375c0e068ac966b49aed86cbc14031d98c56b3dd70391828269bd16ab61b2e0703c564335acd76c3e560a0986c46abd96eb81c0c1493cd6835db0d97838162b219ad66bbe17230504c36a3d56c375c0e068ac966b49aed86cbc14031d98c</action>
+        <action type="issue at">56b3dd70391828269bd16ab61b2e0703c564335acd76c3e560&#x1A;</action>
+        <!-- VALDATE new message  -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_MESSAGE</code>
+                <protocol  type="int">1</protocol>
+                <message>
+                    <reason type="enum">ISIP_TEXT_REASON_NEW</reason>
+                    <message type="hex">000500068190386571589841000a8190386571580000a0050003b8020162b219ad66bbe17230504c36a3d56c375c0e068ac966b49aed86cbc14031d98c56b3dd70391828269bd16ab61b2e0703c564335acd76c3e560a0986c46abd96eb81c0c1493cd6835db0d97838162b219ad66bbe17230504c36a3d56c375c0e068ac966b49aed86cbc14031d98c56b3dd70391828269bd16ab61b2e0703c564335acd76c3e560&#x1A;</message>
+                    <pduLen type="int">163</pduLen>
+                    <messageId type="string">0</messageId>
+                    <type type="enum">ISI_MSG_TYPE_PDU_3GPP</type>
+                    <to type="string">sip:0983561785@foundry.att.com</to>
+                </message>
+            </isip>
+        </action>
+        <!-- Issue message send OK  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_MESSAGE</code>
+                <protocol  type="int">1</protocol>
+                <message>
+                    <reason type="enum">ISIP_TEXT_REASON_COMPLETE</reason>
+                    <messageId type="string">1</messageId>
+                    <mr type="string">1</mr>
+                </message>
+            </isip>
+        </action>
+        <!-- Issue RP-ACK  message  -->
+        <action type="issue isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_MESSAGE</code>
+                <protocol  type="int">1</protocol>
+                <message>
+                    <reason type="enum">ISIP_TEXT_REASON_NEW</reason>
+                    <message type="hex">0302410101&#x1A;</message>
+                    <pduLen type="int">5</pduLen>
+                    <type type="enum">ISI_MSG_TYPE_PDU_3GPP</type>
+                    <from type="string">sip:0983561785@foundry.att.com</from>
+                </message>
+            </isip>
+        </action>
+        <!-- AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CMGS: 2&#xD;&#xA;0&#xD;</action>
+    </testcase>
+</tapp>
+

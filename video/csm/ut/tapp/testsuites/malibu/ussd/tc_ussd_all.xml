@@ -1,0 +1,9 @@
+<!--
+    This test cases include all conference call test cases.
+-->
+<tapp>
+    <testcase>
+        <include>tc_ps_init_ussd.xml</include>
+        <include>tc_ps_mo_ussd.xml</include>
+    </testcase>
+</tapp>

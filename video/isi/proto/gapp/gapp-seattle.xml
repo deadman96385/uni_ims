@@ -1,0 +1,27 @@
+<gapp>
+    <interface>
+        <parm name="this" value="aproc.gapp.ipc"/>
+        <parm name="audio" value="mc.ipc"/>
+        <parm name="stream" value="aproc.gapp.ipc"/>
+        <parm name="isi" value="aproc.isi.ipc.protocol"/>
+    </interface>
+    <audio>
+        <parm name="Ring_Template" value="12"/>
+    </audio>
+    <protocol id="7">
+    <!-- Set id attribute in protocol tag to indicate it's protocol for GSM or LTE
+         3 for GSM
+         7 for LTE
+    -->
+        <gsm>
+            <parm name="File" value="/system/bin/gsm.xml"/>
+            <!-- For pent0 <parm name="file" value="nokia-gsm.xml"/> -->
+        </gsm>
+        <handoff>
+            <parm name="Vdi" value="sip:16784732700@216.234.148.28"/>
+        </handoff>
+    </protocol>
+    <proxy>
+        <parm name="Terminal" value="/dev/smd0"/>
+    </proxy>
+</gapp>

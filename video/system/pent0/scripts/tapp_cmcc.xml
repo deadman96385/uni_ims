@@ -1,0 +1,17 @@
+<tapp>
+    <testsuite>
+        <name>MalibuCMCC.ExtDailATCommands</name>
+    </testsuite>
+    <report>
+        <filename>./tapp_malibu_cmcc_result.txt</filename>
+    </report>
+    <xmlReport>
+        <filename>./tapp_malibu_cmcc_result.xml</filename>
+    </xmlReport>
+    <gsm>
+        <device>./smd0</device>
+    </gsm>
+    <csm>
+        <xml>./csm_cmcc.xml</xml>
+    </csm>
+</tapp>

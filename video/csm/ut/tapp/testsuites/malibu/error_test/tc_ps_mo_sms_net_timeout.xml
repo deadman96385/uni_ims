@@ -1,0 +1,47 @@
+<!--
+    Test Case: PS MO SMS Error due to network timeout.
+-->
+<tapp>
+    <testcase name="PS MO SMS Error due to network timeout">
+        <!-- AT send AT+CMGS to send SMS. -->
+        <action type="issue at">AT+CMGS=17</action>
+        <!-- AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">> &#xD;</action>
+        <!-- AT send pdu. -->
+        <action type="issue at">0001000a819038657158000005d4f29c2e03&#x1A;</action>
+        <!-- VALDATE new message  -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_MESSAGE</code>
+                <protocol  type="int">1</protocol>
+                <message>
+                    <reason type="enum">ISIP_TEXT_REASON_NEW</reason>
+                    <message type="hex">0001000a819038657158000005d4f29c2e03&#x1A;</message>
+                    <pduLen type="int">17</pduLen>
+                    <messageId type="string">0</messageId>
+                    <type type="enum">ISI_MSG_TYPE_PDU_3GPP</type>
+                    <to type="string">sip:0983561785@foundry.att.com</to>
+                </message>
+            </isip>
+        </action>
+        <!-- Issue message send OK  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_MESSAGE</code>
+                <protocol  type="int">1</protocol>
+                <id  type="int">1</id>
+                <message>
+                    <reason type="enum">ISIP_TEXT_REASON_COMPLETE</reason>
+                    <messageId type="string">1</messageId>
+                    <mr type="string">1</mr>
+                </message>
+            </isip>
+        </action>
+        <action type="pause">35000</action>
+        <!-- AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">+CMS ERROR: 332&#;</action>
+        <action type="clean isip" timeout="2000"></action>
+        <action type="pause">1000</action>
+    </testcase>
+</tapp>
+

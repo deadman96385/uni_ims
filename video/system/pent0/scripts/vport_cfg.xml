@@ -1,0 +1,409 @@
+<?xml version="1.0"?>
+<ParameterList>
+    <SIP>
+        <Parameter name="uaname">vPort 1.6</Parameter>
+        <!-- 
+          Number of VoiceProfile.{i}. instances.
+          Must be between [1:MAX_NUM_VOICE_PROFILES] inclusive.
+          vapp_const.h contains MAX_NUM_VOICE_PROFILES.
+        -->
+        <Parameter name="numVoiceProfiles">2</Parameter>
+        <!-- 
+          profilename{i} are the values assigned to
+          VoiceService.{1}.VoiceProfile.{i}.Name
+        -->
+        <Parameter name="profilename0">Profile_1</Parameter>
+        <Parameter name="profilename1">Profile_2</Parameter>
+        <Parameter name="dumbmode">0</Parameter>
+        <!-- enabledalllines applies to all lines in all profiles -->
+        <Parameter name="enabledalllines">1</Parameter>
+        <!-- 
+            lineenable{i} settings are defaults applied 
+            to .VoiceProfile.{i}.Line.{i}.Enable
+        -->
+        <Parameter name="lineenable0">1</Parameter>
+          <Parameter name="srvprovidername"></Parameter>
+        <Parameter name="authname0">bob@open-ims.test</Parameter>
+        <Parameter name="authpass0">bob</Parameter>
+        <Parameter name="dname00">Bob</Parameter>
+        
+        <Parameter name="lineenable2">0</Parameter>
+        <Parameter name="lineenable3">0</Parameter>
+        <Parameter name="srvprovidername"></Parameter>
+        <Parameter name="authname2">19702</Parameter>
+        <Parameter name="authname3">19703</Parameter>
+        <Parameter name="authpass2">19702</Parameter>
+        <Parameter name="authpass3">19703</Parameter>
+        <Parameter name="dname20">19702</Parameter>
+        <Parameter name="dname30">19703</Parameter>
+        
+        <!-- SIP Transaction Timers (RFC3261)
+             These are specified in milliseconds.
+             Specify a value of 0 to use the default in vSIP
+        -->
+        <Parameter name="sipTimerT1">2000</Parameter>
+        <Parameter name="sipTimerT2">16000</Parameter>
+        <Parameter name="sipTimerT4">17000</Parameter>
+        
+        <!-- ATT Requirement: The SIP max retransmissions are resettable -->
+        <Parameter name="sipMaxNonInviteRetrans">4</Parameter>
+        <Parameter name="sipMaxInviteRetrans">3</Parameter>
+        
+        <!-- RTCP Summary Report configuration
+             Refer to entries in 
+             .VoiceService.{i}.VoiceProfile.{i}.SIP.XouiRTCPSum.*
+             .VoiceService.{i}.VoiceProfile.{i}.Line.{i}.SIP.XouiRTCPSum.*
+        -->
+        <Parameter name="rtcpSummaryUserinfo">tadprod</Parameter>
+        <Parameter name="rtcpSummaryCollector">siptwopmoss.att.com</Parameter>
+        <Parameter name="rtcpSummaryCollectorPort">5070</Parameter>
+        <Parameter name="rtcpSummaryInvocation">never</Parameter>
+        
+        <Parameter name="obproxy">172.16.0.237</Parameter>
+        <Parameter name="obproxyport">4060</Parameter>
+        <!-- Expires: value in REGISTER message. -->
+        <Parameter name="regtime">3600</Parameter>
+        <!-- 
+             Min-Expires: value in REGISTER message.  
+             If not present, 60 is used by default
+             If set to 0, Min-Expires: header is excluded
+        -->
+        <Parameter name="regMinExpires">60</Parameter>
+        <Parameter name="regretry">3600</Parameter>
+        <Parameter name="rtpportmin">11000</Parameter>
+        <Parameter name="rtpportmax">11100</Parameter>
+        <Parameter name="digitmapsm">0</Parameter>
+        <Parameter name="digitmaps">[2-9]xxxxxxT|1xxxxxxxxxx|[2-9]xxxxxxxxx|xx+*|xx+#|00x.T|011x.T|911x.T|*x.T|#x.T|[34679]11|*911|#911|x+T</Parameter>
+        <Parameter name="sipdomain0">open-ims.test</Parameter>
+        <Parameter name="sipdomain1">172.16.0.165</Parameter>
+        <Parameter name="sipdomain2">172.16.0.165</Parameter>
+        <Parameter name="sipdomain3">172.16.0.165</Parameter>
+        <Parameter name="sipluport">6060</Parameter>
+        <Parameter name="sipluport0">6060</Parameter>
+        <Parameter name="sipluport1">6060</Parameter>
+        <Parameter name="sipluport2">6060</Parameter>
+        <Parameter name="sipluport3">6060</Parameter>
+        <Parameter name="sipTcpServerPort0">6060</Parameter>
+        <Parameter name="sipTcpClientPort0">0</Parameter>
+        <Parameter name="sipTlsServerPort0">6061</Parameter>
+        <Parameter name="sipTlsClientPort0">0</Parameter>
+        <Parameter name="sipTcpServerPort1">6060</Parameter>
+        <Parameter name="sipTcpClientPort1">0</Parameter>
+        <Parameter name="sipTlsServerPort1">6061</Parameter>
+        <Parameter name="sipTlsClientPort1">0</Parameter>
+        <Parameter name="sipTcpServerPort2">6060</Parameter>
+        <Parameter name="sipTcpClientPort2">0</Parameter>
+        <Parameter name="sipTlsServerPort2">6061</Parameter>
+        <Parameter name="sipTlsClientPort2">0</Parameter>
+        <Parameter name="sipTcpServerPort3">6060</Parameter>
+        <Parameter name="sipTcpClientPort3">0</Parameter>
+        <Parameter name="sipTlsServerPort3">6061</Parameter>
+        <Parameter name="sipTlsClientPort3">0</Parameter>
+        <Parameter name="sipproxy0">open-ims.test</Parameter>
+        <Parameter name="sipproxyport0"></Parameter>
+        <Parameter name="sipproxy1">172.16.0.165</Parameter>
+        <Parameter name="sipproxyport1">5060</Parameter>
+        <Parameter name="sipproxy2">172.16.0.165</Parameter>
+        <Parameter name="sipproxyport2">5060</Parameter>
+        <Parameter name="sipproxy3">172.16.0.165</Parameter>
+        <Parameter name="sipproxyport3">5060</Parameter>
+        <Parameter name="siprealm0">open-ims.test</Parameter>
+        <Parameter name="siprealm1">172.16.0.165</Parameter>
+        <Parameter name="siprealm2">172.16.0.165</Parameter>
+        <Parameter name="siprealm3">172.16.0.165</Parameter>
+        <Parameter name="sipregis0">open-ims.test</Parameter>
+        <Parameter name="sipregisport0"></Parameter>
+        <Parameter name="sipregis1">172.16.0.165</Parameter>
+        <Parameter name="sipregisport1">5060</Parameter>
+        <Parameter name="sipregis2">172.16.0.165</Parameter>
+        <Parameter name="sipregisport2">5060</Parameter>
+        <Parameter name="sipregis3">172.16.0.165</Parameter>
+        <Parameter name="sipregisport3">5060</Parameter>
+        <Parameter name="bkserverm"></Parameter>
+        <Parameter name="sipbkdomain0"></Parameter>
+        <Parameter name="sipbkproxy0"></Parameter>
+        <Parameter name="sipbkproxyport0"></Parameter>
+        <Parameter name="sipbkrealm0"></Parameter>
+        <Parameter name="sipbkregis0"></Parameter>
+        <Parameter name="sipbkregisport0"></Parameter>
+        <Parameter name="bkobproxy"></Parameter>
+        <Parameter name="bkobproxyport"></Parameter>
+        <Parameter name="stunaddr"></Parameter>
+        <Parameter name="stunm">0</Parameter>
+        <Parameter name="stunport">3478</Parameter>
+        <Parameter name="uname00">bob</Parameter>
+        <Parameter name="uname10">19703</Parameter>
+        <Parameter name="uname20">19704</Parameter>
+        <Parameter name="uname30">19705</Parameter>
+        <Parameter name="useob">1</Parameter>
+        <Parameter name="sessiontimer">1800</Parameter>
+        <Parameter name="useregevt">0</Parameter>
+        <Parameter name="p2pm0">0</Parameter>
+        <Parameter name="p2pm1">0</Parameter>
+        <Parameter name="subsm">0</Parameter>
+        <Parameter name="subsuri0"></Parameter>
+        <Parameter name="subsuri1"></Parameter>
+        <Parameter name="subsmsg0">voicemail</Parameter>
+        <Parameter name="subsmsg1">voicemail</Parameter>
+        <Parameter name="subtime">10800</Parameter>
+        <Parameter name="nbtwconfenb0">0</Parameter>
+        <Parameter name="nbtwconfenb1">0</Parameter>
+        <Parameter name="conferenceuri0"></Parameter>
+        <Parameter name="conferenceuri1"></Parameter>
+        <Parameter name="mwienb0">1</Parameter>
+        <Parameter name="mwienb1">1</Parameter>
+        <Parameter name="sipdscpmark">5</Parameter>
+        <Parameter name="rtpdscpmark">6</Parameter>
+        <Parameter name="rport">1</Parameter>
+        <Parameter name="proxytransport0">UDP</Parameter>
+        <Parameter name="regtransport0">UDP</Parameter>
+        <Parameter name="uatransport0">UDP</Parameter>        
+        <Parameter name="proxytransport1">UDP</Parameter>
+        <Parameter name="regtransport1">UDP</Parameter>
+        <Parameter name="uatransport1">UDP</Parameter>
+        <Parameter name="proxytransport2">UDP</Parameter>
+        <Parameter name="regtransport2">UDP</Parameter>
+        <Parameter name="uatransport2">UDP</Parameter>
+        <Parameter name="proxytransport3">UDP</Parameter>
+        <Parameter name="regtransport3">UDP</Parameter>
+        <Parameter name="uatransport3">UDP</Parameter>
+        <!-- IPSEC settings -->
+        <Parameter name="ipsecEnabled">1</Parameter>
+        <Parameter name="ipsecProtPort0">7000</Parameter>
+        <Parameter name="ipsecProtPoolSz0">20</Parameter>
+        <Parameter name="ipsecSpi0">1234</Parameter>
+        <Parameter name="ipsecSpiPoolSz">20</Parameter>
+        <!-- UA-Profile is disabled -->
+        <Parameter name="uaProfileEnable0">0</Parameter>
+        <Parameter name="uaProfileEnable1">0</Parameter>
+        <Parameter name="uaProfileEnable2">0</Parameter>
+        <Parameter name="uaProfileEnable3">0</Parameter>
+        <!-- Set the debug log level 0=off, 1=all errors & printing SIP packets, 2=warnings, 3=info -->
+        <Parameter name="debugLogLevel">0</Parameter>
+    </SIP>
+    <Coder>
+        <Parameter name="prate0">20</Parameter>
+        <Parameter name="prate1">20</Parameter>
+        <Parameter name="pratecn0">40</Parameter>
+        <Parameter name="pratecn1">40</Parameter>
+        <Parameter name="t38m0">1</Parameter>
+        <Parameter name="t38m1">1</Parameter>
+        <!-- 
+            RTP/AVP audio and video payload type values
+             Disabled if set to 129 or greater
+        -->
+        <Parameter name="t711a">8</Parameter>
+        <Parameter name="t722">129</Parameter>
+        <Parameter name="t722p1">129</Parameter>
+        <Parameter name="t711p1u">129</Parameter>
+        <Parameter name="t711p1a">129</Parameter>
+        <Parameter name="tamrnboabr">12200</Parameter>
+        <Parameter name="tamrnbbebr">12200</Parameter>
+        <Parameter name="tamrnboa">129</Parameter>
+        <Parameter name="tamrnbbe">129</Parameter>
+        <Parameter name="t722p1br">24000</Parameter>
+        <Parameter name="t723">4</Parameter>
+        <Parameter name="t723br">6300</Parameter>
+        <Parameter name="t726">2</Parameter>
+        <Parameter name="t729">18</Parameter>
+        <Parameter name="tcn">13</Parameter>
+        <!-- 
+            RTP Payload Type for DTMF Relay 
+                Set Type as:
+                101 - RFC2833
+                128 - SIPInfo
+                255 - InBand 
+        -->
+        <Parameter name="tdtmfr">101</Parameter>
+        <!-- RTP Payload Type for DTMF Relay RFC4733 -->
+        <Parameter name="ttone">129</Parameter>
+        <!-- 
+            Codec priority order preference
+            tpref[iface][index]
+            'index' may be 0-9, inclusive
+            value should be one of the RTP payload type values
+        -->
+        <Parameter name="tpref00">0</Parameter>
+        <Parameter name="tpref01">8</Parameter>
+        <Parameter name="tpref02">2</Parameter>
+        <Parameter name="tpref03">18</Parameter>
+        <Parameter name="tpref04">101</Parameter>
+        <Parameter name="tpref05">-1</Parameter>
+        <Parameter name="tpref06">-1</Parameter>
+        <Parameter name="tpref07">-1</Parameter>
+        <Parameter name="tpref08">-1</Parameter>
+        <Parameter name="tpref09">-1</Parameter>
+        <Parameter name="tpref10">0</Parameter>
+        <Parameter name="tpref11">8</Parameter>
+        <Parameter name="tpref12">2</Parameter>
+        <Parameter name="tpref13">18</Parameter>
+        <Parameter name="tpref14">101</Parameter>
+        <Parameter name="tpref15">-1</Parameter>
+        <Parameter name="tpref16">-1</Parameter>
+        <Parameter name="tpref17">-1</Parameter>
+        <Parameter name="tpref18">-1</Parameter>
+        <Parameter name="tpref19">-1</Parameter>
+        <Parameter name="tpref20">18</Parameter>
+        <Parameter name="tpref30">0</Parameter>
+    </Coder>
+    <CallFeature>
+        <Parameter name="actrans">*73</Parameter>
+        <Parameter name="aifuri00">sip:2005500@172.16.0.55</Parameter>
+        <Parameter name="aifuri01">sip:2170500@172.16.17.5</Parameter>
+        <Parameter name="aifuri10">sip:2170500@172.16.17.5</Parameter>
+        <Parameter name="aifuri11">sip:2005500@172.16.0.55</Parameter>
+        <Parameter name="aim0">0</Parameter>
+        <Parameter name="aim1">0</Parameter>
+        <Parameter name="aituri00">sip:2700800@172.16.60.21</Parameter>
+        <Parameter name="aituri01">sip:2700801@172.16.60.21</Parameter>
+        <Parameter name="anocid">*66</Parameter>
+        <Parameter name="aocid0">0</Parameter>
+        <Parameter name="bifuri00">sip:2005500@172.16.0.55</Parameter>
+        <Parameter name="bifuri01">sip:2170500@172.16.17.5</Parameter>
+        <Parameter name="bifuri10">sip:2170500@172.16.17.5</Parameter>
+        <Parameter name="bifuri11">sip:2005500@172.16.0.55</Parameter>
+        <Parameter name="bim0">0</Parameter>
+        <Parameter name="bim1">0</Parameter>
+        <Parameter name="bituri00">sip:2800100@172.16.80.1</Parameter>
+        <Parameter name="bituri01">sip:2800101@172.16.80.1</Parameter>
+        <Parameter name="bituri10">sip:2700801@172.16.60.21</Parameter>
+        <Parameter name="bituri11">sip:2700800@172.16.60.21</Parameter>
+        <Parameter name="bofuri00">sip:2800100@172.16.80.1</Parameter>
+        <Parameter name="bofuri01">sip:2800101@172.16.80.1</Parameter>
+        <Parameter name="bofuri10">sip:2800101@172.16.80.1</Parameter>
+        <Parameter name="bofuri11">sip:2800100@172.16.80.1</Parameter>
+        <Parameter name="bom0">0</Parameter>
+        <Parameter name="bom1">0</Parameter>
+        <Parameter name="boturi00">sip:2005500@172.16.0.55</Parameter>
+        <Parameter name="boturi01">sip:2200500@172.16.20.5</Parameter>
+        <Parameter name="boturi10">sip:2200500@172.16.20.5</Parameter>
+        <Parameter name="boturi11">sip:2005500@172.16.0.55</Parameter>
+        <Parameter name="resetcode">*#101</Parameter>
+        <!-- Code to turn off 'low battery' notification when it's enabled -->
+        <Parameter name="batterynotifyoffcode">#103</Parameter>
+        <Parameter name="cdndc">*74</Parameter>
+        <Parameter name="cdnds">*70</Parameter>
+        <Parameter name="cfduri0">sip:2170500@172.16.17.5</Parameter>
+        <Parameter name="cfduri1">sip:2170500@172.16.17.5</Parameter>
+        <Parameter name="cfm0">0</Parameter>
+        <Parameter name="cfm1">0</Parameter>
+        <Parameter name="cfring0">2</Parameter>
+        <Parameter name="cfring1">2</Parameter>
+        <Parameter name="cfwdunenb">*57*</Parameter>
+        <Parameter name="cfwdundisb">#57#</Parameter>
+        <Parameter name="cfwdbzenb">*40*</Parameter>
+        <Parameter name="cfwdbzdisb">#40#</Parameter>
+        <Parameter name="cfwdnoReplyenb">*41*</Parameter>
+        <Parameter name="cfwdnoReplydisb">#41#</Parameter>
+        <Parameter name="cnocid">*67</Parameter>
+        <Parameter name="crets">*69</Parameter>
+        <Parameter name="csfuri00">sip:2700800@172.16.60.21</Parameter>
+        <Parameter name="csfuri10">sip:2700801@172.16.60.21</Parameter>
+        <Parameter name="csm0">0</Parameter>
+        <Parameter name="ctrans">*72</Parameter>
+        <Parameter name="dials02">sip:2700801@172.16.60.21</Parameter>
+        <Parameter name="dials04">sip:000100000001420@10.0.0.142</Parameter>
+        <Parameter name="dials05">sip:000100000001421@10.0.0.142</Parameter>
+        <Parameter name="dials12">sip:2700800@172.16.60.21</Parameter>
+        <Parameter name="drfuri00">sip:2005500@172.16.0.55</Parameter>
+        <Parameter name="drfuri01">sip:2170500@172.16.17.5</Parameter>
+        <Parameter name="drfuri10">sip:2170500@172.16.17.5</Parameter>
+        <Parameter name="drfuri11">sip:2170500@172.16.17.5</Parameter>
+        <Parameter name="drm0">0</Parameter>
+        <Parameter name="drm1">0</Parameter>
+        <Parameter name="drring00">4</Parameter>
+        <Parameter name="drring01">5</Parameter>
+        <Parameter name="drring10">4</Parameter>
+        <Parameter name="drring11">5</Parameter>
+        <Parameter name="drturi00">sip:2700800@172.16.60.21</Parameter>
+        <Parameter name="drturi01">sip:2700800@172.16.60.21</Parameter>
+        <Parameter name="drturi10">sip:2700801@172.16.60.21</Parameter>
+        <Parameter name="drturi11">sip:2700801@172.16.60.21</Parameter>
+        <Parameter name="rdials">*68</Parameter>
+        <Parameter name="sfduri00">sip:2170500@172.16.17.5</Parameter>
+        <Parameter name="sfduri01">sip:2005500@172.16.00.55</Parameter>
+        <Parameter name="sfduri10">sip:2170500@172.16.17.5</Parameter>
+        <Parameter name="sfduri11">sip:2170500@172.16.17.5</Parameter>
+        <Parameter name="sffuri00">sip:2700801@172.16.60.21</Parameter>
+        <Parameter name="sffuri01">sip:2200500@172.16.17.5</Parameter>
+        <Parameter name="sffuri10">sip:2700800@172.16.60.21</Parameter>
+        <Parameter name="sffuri11">sip:2700800@172.16.60.21</Parameter>
+        <Parameter name="sfm0">0</Parameter>
+        <Parameter name="sfm1">0</Parameter>
+        <Parameter name="sfturi00">sip:2700800@172.16.60.21</Parameter>
+        <Parameter name="sfturi01">sip:2700800@172.16.60.21</Parameter>
+        <Parameter name="sfturi10">sip:2700801@172.16.60.21</Parameter>
+        <Parameter name="sfturi11">sip:2700801@172.16.60.21</Parameter>
+        <Parameter name="cwenable0">1</Parameter>
+        <Parameter name="cwenable1">1</Parameter>
+        <Parameter name="icdnd0">0</Parameter>
+        <Parameter name="icdnd1">0</Parameter>
+        <Parameter name="faxcngdctenable0">0</Parameter>
+        <Parameter name="faxcngdctenable1">0</Parameter>
+        <Parameter name="g711Afax">1</Parameter>
+        <Parameter name="g711Afaxtype">all</Parameter>
+        
+    </CallFeature>
+    <Hardware>
+        <Parameter name="hookfmax0">1000</Parameter>
+        <Parameter name="hookfmax1">1000</Parameter>
+        <Parameter name="hookfmin0">300</Parameter>
+        <Parameter name="hookfmin1">300</Parameter>
+        <Parameter name="hookrmin0">1500</Parameter>
+        <Parameter name="hookrmin1">1500</Parameter>
+        <Parameter name="ecenable">1</Parameter>
+        <Parameter name="ectail">16</Parameter>
+        <Parameter name="gaintx0">0</Parameter>
+        <Parameter name="gaintx1">0</Parameter>
+        <Parameter name="gainrx0">0</Parameter>
+        <Parameter name="gainrx1">0</Parameter>
+    </Hardware>
+    <Misc>
+        <Parameter name="cidfmt">us</Parameter>
+        <Parameter name="mgmtport">10000</Parameter>
+        <Parameter name="prackm">0</Parameter>
+        <Parameter name="preconditionenabled">1</Parameter>
+        <Parameter name="profile">us</Parameter>
+        <Parameter name="ring00">1</Parameter>
+        <Parameter name="ring10">1</Parameter>
+        <Parameter name="scm0">1</Parameter>
+        <Parameter name="scm1">1</Parameter>
+        <Parameter name="srtpm">1</Parameter>
+        <Parameter name="vmwi">3</Parameter>
+        <Parameter name="warmm0">0</Parameter>
+        <Parameter name="warmm1">0</Parameter>
+        <Parameter name="warmt0">0</Parameter>
+        <Parameter name="warmt1">5</Parameter>
+        <Parameter name="warmuri0">sip:2170500@172.16.17.5</Parameter>
+        <Parameter name="warmuri1">sip:2200500@172.16.20.5</Parameter>
+        <Parameter name="rtptos">184</Parameter>
+        <Parameter name="rtcptos">184</Parameter>
+        <Parameter name="siptos">184</Parameter>
+        <Parameter name="startDigitTimer">10</Parameter>
+        <Parameter name="InterDigitTimerShort">5</Parameter>
+        <Parameter name="InterDigitTimerLong">6</Parameter>
+        <Parameter name="HaningReminderToneTimer">60</Parameter>
+        <Parameter name="BusyToneTimer">40</Parameter>
+        <Parameter name="NoAnswerTimer">60</Parameter>
+        <Parameter name="HeartBeatSwitch">0</Parameter>
+        <Parameter name="HeartBeatCycle">60</Parameter>
+        <Parameter name="HeartBeatCount">3</Parameter>
+        <Parameter name="diagState">None</Parameter>
+        <Parameter name="diagTestSvr">1</Parameter>
+        <!-- ATT Specific Features -->
+        <!-- 'voip  reset' when enabled will monitor lines and execute 
+              resets when failure criteria is met. -->
+        <Parameter name="att-voipreset">1</Parameter>
+        <!-- 'line shutdown' when enabled will monitor lines and power 
+              off a line when the line can't place calls. -->
+        <Parameter name="att-lineshutdown">0</Parameter>
+        <!-- 'timed disconnect. When a remote user hangs up this is the amount
+              of time power is removed from the line before the offhook device 
+              hears dial tone again.
+              0 = do not power off at all, just playsilence 
+              0 < time in milliseconds to remove power from the line. -->
+        <Parameter name="timeddiscn">800</Parameter>
+        <!-- Whether or not to reject incoming calls from URI's with no username -->
+        <Parameter name="rejectWhenNoUsername">1</Parameter>
+    </Misc>
+</ParameterList>

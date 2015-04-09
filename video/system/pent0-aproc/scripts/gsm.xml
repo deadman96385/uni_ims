@@ -1,0 +1,8 @@
+<gsm>
+<device>/var/tmp/osal/smd0</device>
+<serial>
+    <baud>115200</baud>
+</serial>
+<at-cmds>
+</at-cmds>
+</gsm>

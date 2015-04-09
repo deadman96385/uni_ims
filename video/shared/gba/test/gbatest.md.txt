@@ -1,0 +1,33 @@
+# gbatest
+
+Purpose: test GBA module using ericsson lab gba server
+
+--------
+
+## register on ericsson lab
+
+register HSS on 
+<https://hss.labs.ericsson.net/>
+
+Sample test account:
+
+* Username `tomyjwu`
+* IMPI `tomyjwu@labs.ericsson.net`
+* IMPU `sip:tomyjwu@labs.ericsson.net`
+* Secret Key `658e91bd575fc190b983b178ef7eef65`
+
+## run the test
+
+1. Update the iemu.xml with HSS account, impi and secret key
+2. run the gba_test exe
+3. it should output the example naf key derived
+
+TODO: 
+
+1. Use that naf key to run through gaa with our sample server
+1. Design our sample server using java or python
+
+Note: The client connects to the sample server hosted by Ericsson Labs.  
+
+
+

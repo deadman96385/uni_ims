@@ -1,0 +1,26 @@
+<isim>
+    <service>
+        <parm name="Domain" value="huawei.com"/>
+        <parm name="Pcscf" value="58.60.106.231"/>
+        <parm name="Impu" value="sip:+8675501010001@huawei.com"/>
+        <parm name="Impi" value="460010755010001@huawei.com"/>
+        <parm name="Password" value="password"/>
+        <parm name="Smsc" value=""/>
+        <parm name="Imei_Uri" value="sip:imei219551288888888@sos.invalid"/>
+        <!-- this is example for instance id of uuid
+        <parm name="instanceid" value="urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6"/>
+        -->
+        <parm name="Instance_Id" value=""/>
+        <parm name="Sip_Port" value="5060"/>
+        <parm name="Audio_Port" value="59000"/>
+        <parm name="Audio_Port_Pool_Size" value="20"/>
+        <parm name="Video_Port" value="60000"/>
+        <parm name="Video_Port_Pool_Size" value="20"/>
+        <parm name="Sip_Protected_Port" value="7000"/>
+        <parm name="Sip_Protected_Port_Pool_Size" value="20"/>
+        <parm name="Ipsec_Spi" value="1234"/>
+        <parm name="Ipsec_Spi_Pool_Size" value="20"/>
+        <parm name="Aka_Ki" value="1234567890ABCDEF1234567801010001"/>
+        <parm name="Aka_Opc" value="1234567890ABCDEF1234567890ABCDEF"/>
+    </service>
+</isim>

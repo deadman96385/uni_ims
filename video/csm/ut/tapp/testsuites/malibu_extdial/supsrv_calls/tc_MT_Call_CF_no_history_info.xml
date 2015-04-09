@@ -1,0 +1,62 @@
+<tapp>
+    <testcase name="PS: MT Call CF no history info">
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <from type="string">sip:UE-A@ims.com</from>
+                    <supsrvHfExist type="int">2</supsrvHfExist>
+                </call>
+            </isip>
+        </action>
+
+        <action type="validate isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                </call>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRYING</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">100</action>
+        <action type="validate at" timeout="200">+CRING: VOICE&#13;&#10;</action>
+        <action type="validate at" timeout="200">+CLIP: "UE-A",129,,,&#13;</action>       
+        <action type="validate at" timeout="200">+CMCCSS1: 1,1,8&#13;&#10;</action>
+        <action type="validate at" timeout="200">+CMCCSSEND&#13;&#10;</action>
+        <action type="validate at" timeout="200">+CMCCSI: 1,1,1,2,"m=audio",0,5,0,1,0,"sip:UE-A@ims.com",0,0&#13;&#10;</action>
+        <action type="issue isip">
+        <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="validate at" timeout="1000">+CMCCSI: 1,1,0,0,"",0,8,0,1,0,"sip:UE-A@ims.com",0,0&#13;&#10;</action>        
+    </testcase>
+</tapp>

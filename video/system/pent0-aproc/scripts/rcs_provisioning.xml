@@ -1,0 +1,26 @@
+<provisioning>
+    <!-- IMS Settings -->
+    <sip>
+        <parm name="Keep_Alive_Enabled" value="0"/>
+        <parm name="Timer_T1" value="2000"/>
+        <parm name="Timer_T2" value="16000"/>
+        <parm name="Timer_T4" value="17000"/>
+        <parm name="RegRetryBaseTime" value="300"/>
+        <parm name="RegRetryMaxTime" value="3600"/>
+        <parm name="Q-Value" value="0.5"/>
+        <parm name="PhoneContext" value="movistar.es"/>
+        <parm name="Public_User_Identity" value="sip:+34690045326@movistar.es"/>
+    </sip>
+    <service>
+        <parm name="NatUrlFmt" value="0"/>
+        <parm name="IntUrlFmt" value="0"/>
+        <transportProto>
+            <parm name="psSignalling" value="SIPoUDP"/>
+            <parm name="wifiSignalling" value="SIPoTCP"/>
+            <parm name="psMedia" value="MSRPoTLS"/>
+            <parm name="wifiMedia" value="MSRP"/>
+            <parm name="psRTMedia" value="RTP"/>
+            <parm name="wifiRTMedia" value="RTP"/>
+        </transportProto>
+    </service>
+<provisioning>

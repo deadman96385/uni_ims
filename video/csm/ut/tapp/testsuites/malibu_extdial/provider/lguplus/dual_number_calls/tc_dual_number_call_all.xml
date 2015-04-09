@@ -1,0 +1,10 @@
+<tapp>
+    <testcase>
+
+        <include>tc_ps_MT_secondary_number.xml</include>
+        <include>tc_ps_MO_secondary_number.xml</include>
+<!--
+        <include>tc_ps_dual_number_reg.xml</include>
+-->        
+    </testcase>
+</tapp>

@@ -1,0 +1,30 @@
+<sapp>
+    <interface type="this">sapp.ipc</interface>
+    <interface type="audio">mc.ipc</interface>
+    <interface type="stream">mc.ipc</interface>
+    <interface type="isi">isi.ipc.protocol</interface>
+    <audio>
+        <ringtemplate>12</ringtemplate>
+        <rtp port="8800" poolsize="20"></rtp>
+    </audio>
+    <video>
+        <rtp port="8900" poolsize="20"></rtp>
+    </video>
+    <protocol>
+        <sip port="0" keepalivesec="600000" mwirefreshsec="86400" refreshsec="30" prack="0" ipsec="0" session-timer="3600" regevent="1" mwievent="0" precondition="0" name="D2 mCUE 4G IMS Client">
+            <capabilities cap-discovery="1" common-stack="1"></capabilities>
+            <cell-id></cell-id>
+        </sip>
+        <simple keepalivesec="3600" tls="0" deferredDelay="0" filepath="/var/tmp/osal" fileprepend="PATH_" fileflowcontroldepth="8">
+            <resource-list></resource-list>
+            <resource-list></resource-list>
+            <rc-list>
+                <entity></entity>
+                <entity></entity>
+                <entity></entity>
+            </rc-list>
+        </simple>
+        <xcap timeout="5" blacklist="Black.list" whitelist="whitelist"></xcap>
+        <handoff type="vdn">6472885452</handoff>
+    </protocol>    
+</sapp>

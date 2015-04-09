@@ -1,0 +1,25 @@
+<!--
+    Test Case: PS MT SMS.
+-->
+<tapp>
+    <testcase name="MT SMS">
+        <action type="issue isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_MESSAGE</code>
+                <protocol  type="int">1</protocol>
+                <id  type="int">0</id>
+                <message>
+                    <reason type="enum">ISIP_TEXT_REASON_NEW</reason>
+                    <message type="hex">0000021002020702e86888cd0980082300031375b001088035fe062d86066003061405222150300801000e0705d0d1119a1350</message>
+                    <pduLen type="int">51</pduLen>
+                    <messageId type="string">1</messageId>
+                    <type type="enum">ISI_MSG_TYPE_PDU_3GPP2</type>
+                    <from type="string">tel:17</from>
+                </message>
+            </isip>
+        </action>
+        <!-- AT infc verify the unsolicited +CMT. -->
+        <action type="validate at" timeout="2000" onfail="continue">+CMT: "01022334260",,"14/12/12,12:23:12+00",,,,12,,,6&#xD;&#xA;ø¿≈∞¿Ã&#xD;&#xA;</action>
+    </testcase>
+</tapp>
+

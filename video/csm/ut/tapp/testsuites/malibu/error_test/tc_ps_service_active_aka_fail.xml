@@ -1,0 +1,107 @@
+<tapp>
+    <testcase name="PS registration with AKA Auth failed">
+    <!-- Validate this isip caused by service activate  -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_NET</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <name type="string">lte</name>
+                    <address type="addr">172.16.0.200</address>
+                </service>
+            </isip>
+        </action>   
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_SERVER</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <server type="string">sip:foundry.att.com</server>
+                    <serverType type="enum">ISI_SERVER_TYPE_REGISTRAR</serverType>
+                </service>
+            </isip>
+        </action>
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_SERVER</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <server type="string">sbc.core.foundry.att.com;transport=TCP</server>
+                    <serverType type="enum">ISI_SERVER_TYPE_OUTBOUND_PROXY</serverType>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_SERVER</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                    <serverType type="enum">ISI_SERVER_TYPE_OUTBOUND_PROXY</serverType>
+                </service>
+            </isip>
+        </action>
+        <!-- Active Service to register  -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_ACTIVATE</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <name type="string">lte</name>
+                    <address type="addr">172.16.0.200</address>
+                </service>
+            </isip>
+        </action>
+        <!-- AT infc verify receiving register state. -->
+        <action type="validate at" timeout="5000">+CREG: 2,1,"2871","0161835"&#xD;&#xA;</action>
+        <!-- issue AKA require to CSM -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_AUTH_AKA_CHALLENGE</reason>
+                    <status type="enum">ISIP_STATUS_FAILED</status>
+                    <rand type="hex">1A2B3CD0</rand>
+                    <autn type="hex">AB12CD30</autn>
+                </service>
+            </isip>
+        </action>
+        <!-- valisate AKA response  -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_AUTH_AKA_RESPONSE</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <akaAuthResp type="hex"></akaAuthResp>
+                    <ck type="hex"></ck>
+                    <ik type="hex"></ik>
+                </service>
+            </isip>
+        </action>
+        <!-- issue DEACTIVATE -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_DEACTIVATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <reasonDesc type="string">CODE:401</status>
+                </service>
+            </isip>
+        </action>
+        <action type="clean isip" timeout="3000"/>
+        <!-- AT infc verify receiving register state. -->
+        <action type="validate at" timeout="5000">+CREG: 2,1,"2871","0161835"&#xD;&#xA;</action>
+    </testcase>
+</tapp>

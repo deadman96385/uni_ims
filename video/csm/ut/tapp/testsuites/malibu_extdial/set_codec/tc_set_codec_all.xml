@@ -1,0 +1,8 @@
+<!--
+    This test cases includes all supsrv call test cases
+-->
+<tapp>
+    <testcase>
+        <include>tc_set_codec.xml</include>
+    </testcase>
+</tapp>

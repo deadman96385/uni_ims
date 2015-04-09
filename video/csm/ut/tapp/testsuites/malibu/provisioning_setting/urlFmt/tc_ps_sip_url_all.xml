@@ -1,0 +1,11 @@
+<!--
+    This test cases includes all sip URL format test cases
+    Precondition: 1.PS services are active.
+                  2.modify the "NatUrlFmt" and "IntUrlFmt" to sip mode.  
+-->
+<tapp>
+    <testcase>
+        <include>tc_ps_IntUrlFmt_sip.xml</include>
+        <include>tc_ps_NatUrlFmt_sip.xml</include>
+    </testcase>
+</tapp>

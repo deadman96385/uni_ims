@@ -1,0 +1,23 @@
+/*
+ * THIS IS AN UNPUBLISHED WORK CONTAINING D2 TECHNOLOGIES, INC. CONFIDENTIAL
+ * AND PROPRIETARY INFORMATION.  IF PUBLICATION OCCURS, THE FOLLOWING NOTICE
+ * APPLIES: "COPYRIGHT 2004 D2 TECHNOLOGIES, INC. ALL RIGHTS RESERVED"
+ *
+ * $D2Tech$ $Rev: 28625 $ $Date: 2014-09-01 15:12:45 +0800 (Mon, 01 Sep 2014) $
+ *
+ */
+
+#ifndef __XCAP_TASK_H_
+#define __XCAP_TASK_H_
+
+#define _XCAP_TASK_STACK_BYTES       (4096)
+#define _XCAP_TASK_CMD_Q_LEN         (4)
+#define _XCAP_TASK_EVT_Q_LEN         (4)
+
+/*
+ * Function prototypes
+ */
+OSAL_TaskReturn _XCAP_task(
+    OSAL_TaskArg arg_ptr);
+
+#endif

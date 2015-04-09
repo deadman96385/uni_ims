@@ -1,0 +1,18 @@
+[
+{inputSupsrvEvent:{
+    eventDesc:OIPDisable,reason:0,reasonDesc:"",mode:0,status:0,ruleParams:{
+        noReplyTimer:0,mediaType:PCMA,cfwNumber:+8618616563563,addrType:145}}},
+{inputSupsrvEvent:{
+    eventDesc:OIPQuery,reason:0,reasonDesc:"",mode:0,status:0,ruleParams:{
+        noReplyTimer:0,mediaType:PCMA,cfwNumber:+8618616563563,addrType:145}}},
+{outputSupsrvEvent:{
+    eventDesc:OIPQueryResult,reason:15,reasonDesc:"",cmdType:2,mode:0,queryEnb:0,prov:3,errorCode:0,ruleParams:{
+        noReplyTimer:0,mediaType:PCMA,cfwNumber:+8618616563563,addrType:145}}}
+{inputSupsrvEvent:{
+    eventDesc:OIPEnable,reason:0,reasonDesc:"",mode:0,status:1}},
+{inputSupsrvEvent:{
+    eventDesc:OIPQuery,reason:0,reasonDesc:"",mode:0,status:0}},
+{outputSupsrvEvent:{
+    eventDesc:OIPQueryResult,reason:15,reasonDesc:"",cmdType:2,mode:0,queryEnb:0,prov:3,errorCode:0,ruleParams:{
+        noReplyTimer:0,mediaType:PCMA,cfwNumber:+8618616563563,addrType:145}}}
+]

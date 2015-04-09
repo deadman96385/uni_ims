@@ -1,0 +1,16 @@
+<tapp>
+    <!-- This case only issue an new ip, using this case should take care of 
+         the rest of event flow.-->
+    <testcase name="New supsrv IP address - for supsrv PS mode">
+        <!--issue CSM to Set ip -->
+        <action type="issue csm" timeout="1000">
+            <csm>
+                <type>CSM_EVENT_TYPE_RADIO</type>
+                <reason>CSM_RADIO_REASON_IP_CHANGE</reason>
+                <ip>172.16.0.200</ip>
+                <infc>eth0</infc>
+                <nettype>lte_ss</nettype>
+            </csm>
+        </action>
+    </testcase>
+</tapp>

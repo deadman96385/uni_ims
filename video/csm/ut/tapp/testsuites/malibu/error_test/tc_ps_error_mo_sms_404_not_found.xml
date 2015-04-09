@@ -1,0 +1,45 @@
+<!--
+    Test Case: PS MO SMS.
+-->
+<tapp>
+    <testcase name="PS MO SMS ERROR NOT FOUND">
+        <!-- AT send AT+CMGS to send SMS. -->
+        <action type="issue at">AT+CMGS=17</action>
+        <!-- AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">> &#xD;</action>
+        <!-- AT send pdu. -->
+        <action type="issue at">0001000a819038657158000005d4f29c2e03&#x1A;</action>
+        <!-- VALDATE new message  -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_MESSAGE</code>
+                <protocol  type="int">1</protocol>
+                <message>
+                    <reason type="enum">ISIP_TEXT_REASON_NEW</reason>
+                    <message type="hex">000000068190386571581101000A819038657158000005D4F29C2E03</message>
+                    <pduLen type="int">28</pduLen>
+                    <type type="enum">ISI_MSG_TYPE_PDU_3GPP</type>
+                    <to type="string">sip:0983561785@foundry.att.com</to>
+                </message>
+            </isip>
+        </action>
+        <!-- Issue message send ERROR  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_MESSAGE</code>
+                <protocol  type="int">1</protocol>
+                <message>
+                    <reason type="enum">ISIP_TEXT_REASON_ERROR</reason>
+                    <type type="enum">ISI_MSG_TYPE_PDU_3GPP</type>
+                    <reasonDesc type="string">SMS FAILED: CODE:404 REASON:Not Found</reasonDesc>
+                </message>
+            </isip>
+        </action>
+        <!-- AT infc verify receiving the response. -->
+        <!--
+        <action type="validate at" timeout="2000" onFail="stop">+CMS ERROR: 512&#xD;</action>
+        -->
+        <action type="validate at" timeout="2000" onFail="stop">+CMS ERROR: 512, SMS FAILED: CODE:404 REASON:Not Found&#xD;</action>
+    </testcase>
+</tapp>
+

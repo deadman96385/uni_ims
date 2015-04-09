@@ -1,0 +1,17 @@
+<rir>
+    <service>
+        <parm name="Wm_Proxy" value=""/>
+        <parm name="Log_File" value=""/>
+        <parm name="Ping_Server" value=""/>
+        <parm name="Reset_Delay" value="0"/>
+        <parm name="Notify" value="sapp.ip,gapp.ip"/>
+    </service>
+    <profile name="default">
+        <interface>
+            <parm name="Name" value="wlan0"/>
+            <parm name="Type" value="lte"/>
+            <parm name="Enabled" value="1"/>
+            <parm name="Priority" value="2"/>
+        </interface>
+    </profile>
+</rir>

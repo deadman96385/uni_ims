@@ -1,0 +1,38 @@
+<csm>
+    <service>
+        <parm name="Rcs_Provisioning_Enabled" value="1"/>
+        <parm name="NatUrlFmt" value="1"/>
+        <parm name="IntUrlFmt" value="1"/>
+        <parm name="conf-fcty-uri" value=""/>
+        <SupplementarySrv>
+            <parm name="Server" value="http://172.16.0.100:8080"/>
+            <parm name="User" value="user1"/>
+            <parm name="Password" value="12345678"/>
+            <parm name="Uri" value="user1@iskratel.com"/>
+            <parm name="Timeout" value="100"/>
+        </SupplementarySrv>
+        <transportProto>
+            <parm name="psSignalling" value="SIPoTCP"/>
+            <parm name="wifiSignalling" value="SIPoTCP"/>
+            <parm name="psMedia" value="MSRPoTLS"/>
+            <parm name="wifiMedia" value="MSRP"/>
+            <parm name="psRTMedia" value="RTP"/>
+            <parm name="wifiRTMedia" value="RTP"/>
+        </transportProto>
+        <port>
+            <parm name="Sip_Port" value="5060"/>
+            <parm name="Audio_Port" value="59000"/>
+            <parm name="Audio_Port_Pool_Size" value="20"/>
+            <parm name="Video_Port" value="60000"/>
+            <parm name="Video_Port_Pool_Size" value="20"/>
+            <parm name="Sip_Protected_Port" value="7000"/>
+            <parm name="Sip_Protected_Port_Pool_Size" value="20"/>
+            <parm name="Ipsec_Spi" value="1234"/>
+            <parm name="Ipsec_Spi_Pool_Size" value="20"/>
+        </port>
+    </service>
+    <sms>
+        <!-- Set it to TEXT for 3GPP2 SMS. This need to be same as gapp.xml -->
+        <parm name="PduFmt" value="TPDU"/>
+    </sms>
+</csm>

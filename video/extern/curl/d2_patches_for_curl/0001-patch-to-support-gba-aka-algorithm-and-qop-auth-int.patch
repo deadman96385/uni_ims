@@ -1,0 +1,61 @@
+From dfb7647e0fabbf10cff1bc4c88f74e565dad09d9 Mon Sep 17 00:00:00 2001
+From: Tom Wu <tomyjwu@gmail.com>
+Date: Thu, 25 Apr 2013 15:26:48 +0800
+Subject: [PATCH 1/2] patch to support gba aka-algorithm and qop=auth-int
+
+---
+ lib/http_digest.c | 20 +++++++++++++-------
+ 1 file changed, 13 insertions(+), 7 deletions(-)
+
+diff --git a/lib/http_digest.c b/lib/http_digest.c
+index 02347f9..11dce27 100644
+--- a/lib/http_digest.c
++++ b/lib/http_digest.c
+@@ -163,6 +163,8 @@ CURLdigest Curl_input_digest(struct connectdata *conn,
+             d->algo = CURLDIGESTALGO_MD5SESS;
+           else if(strequal(content, "MD5"))
+             d->algo = CURLDIGESTALGO_MD5;
++          else if(strequal(content, "AKAv1-MD5"))
++            d->algo = CURLDIGESTALGO_MD5;
+           else
+             return CURLDIGEST_BADALGO;
+         }
+@@ -226,6 +228,7 @@ CURLcode Curl_output_digest(struct connectdata *conn,
+   unsigned char *md5this;
+   unsigned char *ha1;
+   unsigned char ha2[33];/* 32 digits and 1 zero byte */
++  unsigned char hbody[33];/* 32 digits and 1 zero byte */
+   char cnoncebuf[7];
+   char *cnonce;
+   char *tmp = NULL;
+@@ -349,17 +352,20 @@ CURLcode Curl_output_digest(struct connectdata *conn,
+     (The "Method" value is the HTTP request method as specified in section
+     5.1.1 of RFC 2616)
+   */
+-
+-  md5this = (unsigned char *)aprintf("%s:%s", request, uripath);
+-  if(!md5this) {
+-    free(ha1);
+-    return CURLE_OUT_OF_MEMORY;
+-  }
+-
+   if(d->qop && strequal(d->qop, "auth-int")) {
+     /* We don't support auth-int at the moment. I can't see a easy way to get
+        entity-body here */
+     /* TODO: Append H(entity-body)*/
++    /* use empty "" as body to do H(body) */
++    Curl_md5it(md5buf, "");
++    md5_to_ascii(md5buf, hbody);
++    md5this = (unsigned char *)aprintf("%s:%s:%s", request, uripath, hbody);
++  } else {
++    md5this = (unsigned char *)aprintf("%s:%s", request, uripath);
++  }
++  if(!md5this) {
++    free(ha1);
++    return CURLE_OUT_OF_MEMORY;
+   }
+   CURL_OUTPUT_DIGEST_CONV(data, md5this); /* convert on non-ASCII machines */
+   Curl_md5it(md5buf, md5this);
+-- 
+1.7.12.4 (Apple Git-37)
+

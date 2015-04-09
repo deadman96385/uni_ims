@@ -1,0 +1,39 @@
+<!-- 
+    Test Case: CS DOMAIN SUPSRV OIP SET and QUERY.
+-->
+<tapp>
+    
+    <testcase name="SUPSRV enable CS OIP">
+    <!--
+        scenario: Set OIP to active
+        AT+CLIP=1
+        OK
+        AT+CLIP?
+        +CLIP: 1,1
+        OK
+    -->
+        <action type="issue at">AT+CLIP=1&#13;</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="4000">AT+CLIP=1&#13;&#xD;</action>
+        <!-- GSM send the response, OK, for CLIP -->
+        <action type="issue gsm at">+CLIP: 1,1&#13;&#10;0&#13;&#10;</action>
+        <!-- AT infc verify receiving the parsed OIP query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CLIP: 1,1&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+    <testcase name="SUPSRV disable CS OIP">
+        <!--
+            scenario: Set OIP to inactive.
+            AT+CLIP=0
+            OK
+            AT+CLIP?
+            +CLIP:0, 0
+        -->
+        <action type="issue at">AT+CLIP=0&#13;</action>
+        <action type="validate gsm at" timeout="4000">AT+CLIP=0&#13;&#xD;</action>
+        <!-- GSM send the response, OK, for CLIP -->
+        <action type="issue gsm at">+CLIP: 0,0&#13;&#10;0&#13;&#10;</action>
+        <!-- AT infc verify receiving the parsed OIP query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CLIP: 0,0&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+</tapp>
+

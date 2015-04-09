@@ -1,0 +1,9 @@
+<!--
+    This test cases include all conference call test cases.
+-->
+<tapp>
+    <testcase>
+        <include>tc_mo_sms.xml</include>
+        <include>tc_mt_sms.xml</include>
+    </testcase>
+</tapp>

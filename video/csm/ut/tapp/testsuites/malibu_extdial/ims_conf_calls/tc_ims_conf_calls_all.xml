@@ -1,0 +1,6 @@
+<tapp>
+    <testcase>
+       <include>tc_ims_conf_call_rmHangup.xml</include> 
+
+    </testcase>
+</tapp>

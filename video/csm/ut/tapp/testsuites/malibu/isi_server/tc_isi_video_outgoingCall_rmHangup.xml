@@ -1,0 +1,174 @@
+<tapp>
+    <!-- This case is to test isi rpc server about making video call and remote hangup.-->
+    <testcase name="ISI RPC initial video outgoing call and remot hang up">
+        <!--issue isi to initate call -->
+        <action type="issue isi rpc">
+             <rpc>
+                <func type="enum">ISI_INITIATE_CALL</func>
+                <!-- service id , don't care about the value of 'serviceId' attr-->
+                <param type="int" serviceId="1">0</param>
+                <!-- to URI -->
+                <param type="string">sip:18055643424@foundry.att.com</param>
+                <!-- subject URI -->
+                <param type="string">D2</param>
+                <!-- callType 1 = audio ,2 = video, 8 = emergency -->
+                <param type="int">2</param>
+                <!-- cidType -->
+                <param type="int">0</param>
+                <!-- audioDirection  -->
+                <param type="int">0</param>
+                <!-- videoDirection  -->
+                <param type="int">3</param>
+            </rpc>
+        </action>
+        <!-- isip validate initate call -->
+        <action type="validate isi rpc return" timeout="1000">
+            <rpc>
+                <func type="enum">ISI_INITIATE_CALL</func>
+                <!-- return value -->
+                <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+                <param type="int" dontcare="1">0</param>
+            </rpc>
+        </action>
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_VIDEO</type>
+                    <to type="string">sip:18055643424@foundry.att.com</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                    <videoDirection type="enum">ISI_SESSION_DIR_SEND_RECV</videoDirection>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip trying with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRYING</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- isi rpc validate get  trying event-->
+        <action type="validate isi get event" timeout="1000">
+            <rpc>
+                <func type="enum">ISI_GET_EVENT</func>
+                <!-- return value -->
+                <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+                <!-- serviceId -->
+                <param type="int" dontcare="0">0</param>
+                <!-- id -->
+                <param type="int" dontcare="0">0</param>
+                <!-- idType 1 = call -->
+                <param type="int" dontcare="0">1</param>
+                <!-- event id 41 =trying -->
+                <param type="int" dontcare="0">41</param>
+            </rpc>
+        </action>
+      <!-- issue isip to ACK call with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">50</action>
+        <!-- isi rpc validate get ACK event-->
+        <action type="validate isi get event" timeout="1000">
+            <rpc>
+                <func type="enum">ISI_GET_EVENT</func>
+                <!-- return value -->
+                <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+                <!-- serviceId -->
+                <param type="int" dontcare="0">0</param>
+                <!-- id -->
+                <param type="int" dontcare="0">0</param>
+                <!-- idType 1 = call -->
+                <param type="int" dontcare="0">1</param>
+                <!-- event id 38 = ack -->
+                <param type="int" dontcare="0">38</param>
+            </rpc>
+        </action>
+        <!-- issue isip to accept call with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  issue accept ack with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol  type="int">0</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- Pause a while -->
+        <action type="pause">50</action>
+        <!-- isi rpc validate get ACCEPT event -->
+        <action type="validate isi get event" timeout="1000">
+            <rpc>
+                <func type="enum">ISI_GET_EVENT</func>
+                <!-- return value -->
+                <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+                <!-- serviceId -->
+                <param type="int" dontcare="0">0</param>
+                <!-- id -->
+                <param type="int" dontcare="0">0</param>
+                <!-- idType 1 = call -->
+                <param type="int" dontcare="0">1</param>
+                <!-- event id 37 = accept -->
+                <param type="int" dontcare="0">37</param>
+            </rpc>
+        </action>
+        <!-- Remote party Disconnects  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="validate isi get event" timeout="1000">
+            <rpc>
+                <func type="enum">ISI_GET_EVENT</func>
+                <!-- return value -->
+                <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+                <!-- serviceId -->
+                <param type="int" dontcare="0">0</param>
+                <!-- id -->
+                <param type="int" dontcare="0">0</param>
+                <!-- idType 1 = call -->
+                <param type="int" dontcare="0">1</param>
+                <!-- event id 39 = disconnect -->
+                <param type="int" dontcare="0">39</param>
+            </rpc>
+        </action>
+    </testcase>
+</tapp>

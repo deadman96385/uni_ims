@@ -1,0 +1,10 @@
+<!--
+    This test cases includes all basic call test cases
+    Precondition: Both CS and PS services are active.
+-->
+<tapp>
+    <testcase>
+         <include>tc_ps_MT_with_cnap.xml</include>
+         <include>tc_ps_MO_with_cnap.xml</include>
+    </testcase>
+</tapp>

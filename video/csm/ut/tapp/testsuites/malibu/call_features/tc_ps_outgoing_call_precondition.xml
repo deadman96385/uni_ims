@@ -1,0 +1,163 @@
+<tapp>
+    <testcase name="Make Outgoing PS call with precondition">
+        <!-- Initiate a call to 18055643424 -->
+        <action type="issue at">ATD18055643424;</action>
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <to type="string">sip:18055643424@foundry.att.com</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip trying with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRYING</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- Issue modify with precondition not met -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_MODIFY</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <rsrcStatus type="enum">ISI_RESOURCE_STATUS_NOT_READY</rsrcStatus>
+                </call>
+            </isip>
+        </action>
+        <!-- validate isip modify accept with both local and remote resource not ready -->
+        <action type="validate isip" timeout="2000">    
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_MODIFY</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <rsrcStatus type="enum">ISI_RESOURCE_STATUS_NOT_READY</rsrcStatus>
+                </call>
+            </isip>
+        </action>
+        <!-- validate isip modify with local resource ready -->
+        <action type="validate isip" timeout="2000">    
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_MODIFY</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <rsrcStatus type="enum">ISI_RESOURCE_STATUS_LOCAL_READY</rsrcStatus>
+                </call>
+            </isip>
+        </action>
+        <!-- Issue modify accept with resource ready -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_MODIFY</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <rsrcStatus type="enum">ISI_RESOURCE_STATUS_REMOTE_READY</rsrcStatus>
+                    <rsrcStatus type="enum">ISI_RESOURCE_STATUS_LOCAL_READY</rsrcStatus>
+                    <subject type="string">Whatever</subject>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to ACK call with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">50</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the respons. -->
+        <action type="validate at" timeout="5000">+CLCC: 1,0,3,0,0,"18055643424",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="5000">0&#xD;</action>
+        <!-- issue isip to accept call with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  issue accept ack with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol  type="int">0</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- Pause a while -->
+        <action type="pause">50</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the respons. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,0,0,0,"18055643424",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- Remote party Disconnects  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- AT validate '3' that is remote disconnection, NO CARRIER -->
+        <action type="validate at" timeout="2000">3&#xD;</action>
+
+        <action type="pause">50</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the respons. -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+    </testcase>
+</tapp>

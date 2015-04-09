@@ -1,0 +1,17 @@
+<tapp>
+    <testsuite>
+        <name>MalibuGeneric.ConfigurationOne</name>
+    </testsuite>
+    <report>
+        <filename>./tapp_malibu_config_1_result.txt</filename>
+    </report>
+    <xmlReport>
+        <filename>./tapp_malibu_config_1_result.xml</filename>
+    </xmlReport>
+    <gsm>
+        <device>./smd0</device>
+    </gsm>
+    <csm>
+        <xml>./csm_config_1.xml</xml>
+    </csm>
+</tapp>

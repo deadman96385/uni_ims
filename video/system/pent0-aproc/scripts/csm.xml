@@ -1,0 +1,27 @@
+<csm>
+    <service>
+        <parm name="Rcs_Provisioning_Enabled" value="0"/>
+        <parm name="NatUrlFmt" value="1"/>
+        <parm name="IntUrlFmt" value="1"/>
+        <parm name="conf-fcty-uri" value=""/>
+        <SupplementarySrv>
+            <parm name="Server" value="http://172.16.0.100:8080"/>
+            <parm name="User" value="user1"/>
+            <parm name="Password" value="12345678"/>
+            <parm name="Uri" value="user1@iskratel.com"/>
+            <parm name="Timeout" value="100"/>
+        </SupplementarySrv>
+        <transportProto>
+            <parm name="psSignalling" value="SIPoTCP"/>
+            <parm name="wifiSignalling" value="SIPoTCP"/>
+            <parm name="psMedia" value="MSRPoTLS"/>
+            <parm name="wifiMedia" value="MSRP"/>
+            <parm name="psRTMedia" value="RTP"/>
+            <parm name="wifiRTMedia" value="RTP"/>
+        </transportProto>
+    </service>
+    <sms>
+        <!-- Set it to TEXT for 3GPP2 SMS -->
+        <parm name="PduFmt" value="TPDU"/>
+    </sms>
+</csm>

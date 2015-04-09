@@ -1,0 +1,28 @@
+<tapp>
+    <!-- This case only issue an new ip, using this case should take care of 
+         the rest of event flow.-->
+    <testcase name="New IP address - yes net">
+        <!--issue CSM to Set ip -->
+        <action type="issue csm" timeout="1000">
+            <csm>
+                <type>CSM_EVENT_TYPE_RADIO</type>
+                <reason>CSM_RADIO_REASON_IP_CHANGE</reason>
+                <ip>172.16.0.200</ip>
+                <infc>eth0</infc>
+                <nettype>lte</nettype>
+            </csm>
+        </action>
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_NET</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <name type="string">lte</name>
+                    <address type="addr">172.16.0.200</address>
+                </service>
+            </isip>
+        </action>
+    </testcase>
+</tapp>

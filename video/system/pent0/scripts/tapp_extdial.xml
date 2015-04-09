@@ -1,0 +1,17 @@
+<tapp>
+    <testsuite>
+        <name>MalibuGeneric.ExtDialATCommands</name>
+    </testsuite>
+    <report>
+        <filename>./tapp_malibu_extdial_result.txt</filename>
+    </report>
+    <xmlReport>
+        <filename>./tapp_malibu_extdial_result.xml</filename>
+    </xmlReport>
+    <gsm>
+        <device>./smd0</device>
+    </gsm>
+    <csm>
+        <xml>./csm.xml</xml>
+    </csm>
+</tapp>

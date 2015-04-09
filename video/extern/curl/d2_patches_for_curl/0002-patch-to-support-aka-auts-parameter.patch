@@ -1,0 +1,179 @@
+From 9dbd69d92f3387693240a8e1bbb8eb99ece3e6d8 Mon Sep 17 00:00:00 2001
+From: Tom Wu <tomyjwu@gmail.com>
+Date: Wed, 3 Jul 2013 03:12:31 +0800
+Subject: [PATCH 2/2] patch to support aka auts parameter
+
+---
+ lib/http_digest.c | 22 +++++++++++++++++++++-
+ lib/url.c         | 42 ++++++++++++++++++++++++++++++++++++++----
+ lib/urldata.h     |  5 ++++-
+ 3 files changed, 63 insertions(+), 6 deletions(-)
+
+diff --git a/lib/http_digest.c b/lib/http_digest.c
+index 11dce27..2e17302 100644
+--- a/lib/http_digest.c
++++ b/lib/http_digest.c
+@@ -238,6 +238,7 @@ CURLcode Curl_output_digest(struct connectdata *conn,
+   char *userp;
+   char *passwdp;
+   struct auth *authp;
++  char *autsp;
+ 
+   struct SessionHandle *data = conn->data;
+   struct digestdata *d;
+@@ -263,6 +264,7 @@ CURLcode Curl_output_digest(struct connectdata *conn,
+     userp = conn->proxyuser;
+     passwdp = conn->proxypasswd;
+     authp = &data->state.authproxy;
++    autsp = NULL;
+   }
+   else {
+     d = &data->state.digest;
+@@ -270,6 +272,7 @@ CURLcode Curl_output_digest(struct connectdata *conn,
+     userp = conn->user;
+     passwdp = conn->passwd;
+     authp = &data->state.authhost;
++    autsp = conn->aka_auts;
+   }
+ 
+   if(*allocuserpwd) {
+@@ -282,7 +285,10 @@ CURLcode Curl_output_digest(struct connectdata *conn,
+     userp=(char *)"";
+ 
+   if(!passwdp)
+-    passwdp=(char *)"";
++      passwdp=(char *)"";
++
++  if(!autsp)
++    autsp=(char *)"";
+ 
+   if(!d->nonce) {
+     authp->done = FALSE;
+@@ -465,6 +471,20 @@ CURLcode Curl_output_digest(struct connectdata *conn,
+     *allocuserpwd = tmp;
+   }
+ 
++  /* append auts if aka resync is requested by user app */
++  /* RFC 3310:
++   * If the directive is present, the client doesn't use any password when
++   *   calculating its credentials.  Instead, the client MUST calculate
++   *   its credentials using an empty password (password of "").
++   */
++  if ((NULL != autsp[0]) && (NULL == passwdp[0])) {
++      tmp = aprintf("%s, auts=\"%s\"", *allocuserpwd, autsp);
++      if(!tmp)
++        return CURLE_OUT_OF_MEMORY;
++      free(*allocuserpwd);
++      *allocuserpwd = tmp;
++  }
++
+   /* append CRLF to the userpwd header */
+   tmp = (char*) realloc(*allocuserpwd, strlen(*allocuserpwd) + 3 + 1);
+   if(!tmp)
+diff --git a/lib/url.c b/lib/url.c
+index 83561db..50ece22 100644
+--- a/lib/url.c
++++ b/lib/url.c
+@@ -2105,6 +2105,7 @@ static void conn_free(struct connectdata *conn)
+ 
+   Curl_safefree(conn->user);
+   Curl_safefree(conn->passwd);
++  Curl_safefree(conn->aka_auts);
+   Curl_safefree(conn->proxyuser);
+   Curl_safefree(conn->proxypasswd);
+   Curl_safefree(conn->allocptr.proxyuserpwd);
+@@ -3893,10 +3894,32 @@ static CURLcode CreateConnection(struct SessionHandle *data,
+    */
+   if(data->set.str[STRING_USERPWD] != NULL) {
+     /* the name is given, get user+password */
+-    sscanf(data->set.str[STRING_USERPWD],
+-           "%" MAX_CURL_USER_LENGTH_TXT "[^:]:"
+-           "%" MAX_CURL_PASSWORD_LENGTH_TXT "[^\n]",
+-           user, passwd);
++    /* extended for AKAv1 auts argument: "username,auts-b64:passwd"
++     * auts-b64 would be 20+1 char base64 encoded from 14 bytes auts
++     * and passwd is empty
++     */
++    if (NULL != strchr(data->set.str[STRING_USERPWD], ',')) {
++#define MAX_CURL_AKA_AUTS_LENGTH 32
++#define MAX_CURL_AKA_AUTS_LENGTH_TXT "32"
++        data->set.str[STRING_AKA_AUTS] = malloc(MAX_CURL_AKA_AUTS_LENGTH);
++        sscanf(data->set.str[STRING_USERPWD],
++                "%" MAX_CURL_USER_LENGTH_TXT "[^,],"
++                "%" MAX_CURL_AKA_AUTS_LENGTH_TXT "[^:]:",
++                user, data->set.str[STRING_AKA_AUTS]);
++        passwd[0] = '\0';
++        infof(data, "Parsed AKA AUTS %s in the STRING_USERPWD\n",
++                data->set.str[STRING_AKA_AUTS]);
++    }
++    else {
++      if (NULL != data->set.str[STRING_AKA_AUTS]) {
++          free(data->set.str[STRING_AKA_AUTS]);
++      }
++      data->set.str[STRING_AKA_AUTS] = NULL;
++      sscanf(data->set.str[STRING_USERPWD],
++               "%" MAX_CURL_USER_LENGTH_TXT "[^:]:"
++               "%" MAX_CURL_PASSWORD_LENGTH_TXT "[^\n]",
++               user, passwd);
++    }
+   }
+ 
+   conn->bits.netrc = FALSE;
+@@ -3934,6 +3957,13 @@ static CURLcode CreateConnection(struct SessionHandle *data,
+   if(!conn->user || !conn->passwd)
+     return CURLE_OUT_OF_MEMORY;
+ 
++
++  /* get aka auts or null */
++  if(data->set.str[STRING_AKA_AUTS] != NULL) {
++    conn->aka_auts = strdup(data->set.str[STRING_AKA_AUTS]);
++  }
++
++
+   /*************************************************************
+    * Check the current list of connections to see if we can
+    * re-use an already existing one or if we have to create a
+@@ -4011,6 +4041,10 @@ static CURLcode CreateConnection(struct SessionHandle *data,
+       old_conn->proxypasswd = NULL;
+     }
+ 
++    /* don't reuse auts */
++    conn->aka_auts = NULL;
++    Curl_safefree(old_conn->aka_auts);
++
+     /* host can change, when doing keepalive with a proxy ! */
+     if(conn->bits.proxy) {
+       free(conn->host.rawalloc);
+diff --git a/lib/urldata.h b/lib/urldata.h
+index f037bc4..f1cb931 100644
+--- a/lib/urldata.h
++++ b/lib/urldata.h
+@@ -912,6 +912,8 @@ struct connectdata {
+   char *user;    /* user name string, allocated */
+   char *passwd;  /* password string, allocated */
+ 
++  char *aka_auts; /* aka auts re-sync for this connection */
++
+   char *proxyuser;    /* proxy user name string, allocated */
+   char *proxypasswd;  /* proxy password string, allocated */
+   curl_proxytype proxytype; /* what kind of proxy that is in use */
+@@ -946,6 +948,7 @@ struct connectdata {
+     char *ref; /* free later if not NULL! */
+     char *host; /* free later if not NULL */
+     char *cookiehost; /* free later if not NULL */
++    char *aka_auts; /* free later if not NULL! */
+   } allocptr;
+ 
+   int sec_complete; /* if kerberos is enabled for this connection */
+@@ -1312,7 +1315,7 @@ enum dupstring {
+   STRING_USERAGENT,       /* User-Agent string */
+   STRING_USERPWD,         /* <user:password>, if used */
+   STRING_SSH_HOST_PUBLIC_KEY_MD5, /* md5 of host public key in ascii hex */
+-
++  STRING_AKA_AUTS,
+   /* -- end of strings -- */
+   STRING_LAST /* not used, just an end-of-list marker */
+ };
+-- 
+1.7.12.4 (Apple Git-37)
+

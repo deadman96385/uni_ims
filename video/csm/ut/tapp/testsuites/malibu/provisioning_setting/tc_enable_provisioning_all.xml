@@ -1,0 +1,11 @@
+<!--
+    This test cases includes  provisioning data test cases.
+-->
+<tapp>
+    <testcase>
+        <!-- init tests -->
+        <include>../tc_init.xml</include>
+        <!-- test case for enable provisioning data -->
+        <include>./tc_isi_set_provisioning_and_make_call.xml</include>
+    </testcase>
+</tapp>

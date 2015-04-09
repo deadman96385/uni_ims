@@ -1,0 +1,28 @@
+<tapp>
+    <!-- Precondition: PS is active-->
+    <testcase name="ps emgcy deactive">
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_DEACTIVATE</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_DEACTIVATE</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <!-- AT infc verify receiving emergency register state. -->
+    </testcase>
+</tapp>

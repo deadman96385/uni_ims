@@ -1,0 +1,36 @@
+<tapp>
+    <!-- This case is to validate event when service actived ok.-->
+    <testcase name="ISI protocol ready and services active">
+    <action type="pause">20</action>
+        <action type="validate isi get event" timeout="3000">
+            <rpc>
+                <func type="enum">ISI_GET_EVENT</func>
+                <!-- return value -->
+                <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+                <!-- serviceId -->
+                <param type="int" dontcare="1">0</param>
+                <!-- id -->
+                <param type="int" dontcare="1">0</param>
+                <!-- idType 1 = call -->
+                <param type="int" dontcare="0">3</param>
+                <!-- event id 22 ISI_EVENT_SERVICE_ACTIVE -->
+                <param type="int" dontcare="0">22</param>
+            </rpc>
+        </action>
+        <action type="validate isi get event" timeout="3000">
+            <rpc>
+                <func type="enum">ISI_GET_EVENT</func>
+                <!-- return value -->
+                <param type="enum" dontcare="0">ISI_RETURN_OK</param>
+                <!-- serviceId -->
+                <param type="int" dontcare="1">0</param>
+                <!-- id -->
+                <param type="int" dontcare="1">0</param>
+                <!-- idType 1 = call -->
+                <param type="int" dontcare="0">3</param>
+                <!-- event id 83 ISI_EVENT_IPSEC_SETUP -->
+                <param type="int" dontcare="0">83</param>
+            </rpc>
+        </action>
+    </testcase>
+</tapp>

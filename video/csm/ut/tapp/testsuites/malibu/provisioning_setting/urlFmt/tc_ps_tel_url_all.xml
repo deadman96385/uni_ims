@@ -1,0 +1,11 @@
+<!--
+    This test cases includes tel URL format test cases with SRTP RT media
+    Precondition: 1.PS services are active.
+                  2.modify the "NatUrlFmt" and "IntUrlFmt" to tel mode. 
+-->
+<tapp>
+    <testcase>
+        <include>tc_ps_IntUrlFmt_tel.xml</include>
+        <include>tc_ps_NatUrlFmt_tel.xml</include>
+    </testcase>
+</tapp>

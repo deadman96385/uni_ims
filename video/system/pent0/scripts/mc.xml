@@ -1,0 +1,17 @@
+<mc>
+    <interface>
+        <parm name="this" value="mc.ipc"/>
+        <parm name="audio" value="mc.ipc"/>
+        <parm name="stream" value="mc.ipc"/>
+        <parm name="isi" value="isi.ipc.protocol"/>
+    </interface>
+    <audio>
+        <parm name="Rtp_Port" value="59000"/>
+        <parm name="Rtcp_Interval" value="2"/>
+        <parm name="Tone_Auto_Callprogress" value="on"/>
+        <!--
+            If timer is 0 or not configure, disable rtp/rtcp inactivity timer.
+        -->
+        <parm name="Timer_Rtp_Inactivity" value="10"/>
+    </audio>
+</mc>

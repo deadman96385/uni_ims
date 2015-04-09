@@ -1,0 +1,17 @@
+<gsm>
+<device>/dev/rfcomm0</device>
+<serial>
+    <baud>115200</baud>
+</serial>
+<at-cmds>
+    <at timeout="5">ATE</at>
+    <at timeout="5">ATV1</at>
+    <at timeout="5">ATX4</at>
+    <at timeout="5">AT+CRC=1</at>
+    <at timeout="5">AT+CREG=1</at>
+    <at timeout="5">AT+CLIP=1</at>
+    <at timeout="5">AT+CCWA=1</at>
+    <at timeout="5">AT+CMGF=1</at>
+    <at timeout="5">AT+CNMI=1,2,0,1,0</at>
+</at-cmds>
+</gsm>

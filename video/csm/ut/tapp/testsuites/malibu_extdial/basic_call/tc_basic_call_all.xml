@@ -1,0 +1,31 @@
+<!--
+    This test cases includes all basic call test cases
+    Precondition: Both CS and PS services are active.
+-->
+<tapp>
+    <testcase>
+<!--    dont test cs call at this moment.
+        <include>../service/tc_ps_lost.xml</include>
+        <include>tc_cs_outgoing_call_local_hangs_up.xml</include>
+        <include>tc_cs_outgoing_call_remote_hangs_up.xml</include>
+        <include>tc_cs_accepting_incoming_call.xml</include>
+        <include>tc_cs_reject_incoming_call.xml</include>
+-->
+
+        <!-- it is ok to test by this squence -->
+        <include>tc_ps_accept_Call_and_HangUp_before_ACK.xml</include>
+        <include>tc_ps_reject_incomingCall.xml</include>
+        <include>tc_ps_accept_incomingCall_rmHangUp.xml</include>
+        <include>tc_ps_outgoing_call_rmHangUp.xml</include>
+        <include>tc_ps_outgoing_call_oriHangUp.xml</include>
+        <include>tc_ps_outgoing_call_oriHangUp_cid_invocation.xml</include>
+
+<!--    it's one of failed squence
+        <include>tc_ps_outgoing_call_oriHangUp.xml</include>
+        <include>tc_ps_accept_Call_and_HangUp_before_ACK.xml</include>
+        <include>tc_ps_reject_incomingCall.xml</include>
+        <include>tc_ps_accept_incomingCall_rmHangUp.xml</include>
+        <include>tc_ps_outgoing_call_rmHangUp.xml</include>
+-->    
+    </testcase>
+</tapp>

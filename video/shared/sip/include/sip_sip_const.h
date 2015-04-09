@@ -1,0 +1,435 @@
+/*
+ * THIS IS AN UNPUBLISHED WORK CONTAINING D2 TECHNOLOGIES, INC. CONFIDENTIAL
+ * AND PROPRIETARY INFORMATION.  IF PUBLICATION OCCURS, THE FOLLOWING NOTICE
+ * APPLIES: "COPYRIGHT 2004 D2 TECHNOLOGIES, INC. ALL RIGHTS RESERVED"
+ *
+ * $D2Tech$ $Rev: 29644 $ $Date: 2014-11-03 19:15:40 +0800 (Mon, 03 Nov 2014) $
+ */
+
+#ifndef _SIP_SIP_CONST_H_
+#define _SIP_SIP_CONST_H_
+
+#define SIP_DONE              (2)
+#define SIP_OK                (1)
+#define SIP_FAILED            (0)
+#define SIP_BAD_METHOD        (-1)
+#define SIP_BAD_HF            (-2)
+#define SIP_NO_ROOM           (-3)
+#define SIP_BADPARM           (-4)
+#define SIP_NOT_FOUND         (-5)
+#define SIP_NO_MEM            (-6)
+#define SIP_NOT_SUPPORTED     (-7)
+#define SIP_FREE_MEM          (-8)
+#define SIP_PROTO_ERROR       (-10)
+#define SDP_PROTO_ERROR       (-11)
+#define SIP_RESOURCE_UNAVAIL  (-12)
+#define SIP_BUSY              (-13)
+#define SIP_NO_DATA           (-14)
+#define SIP_AUTH_AKA_V1       (-15)
+#define SIP_AUTH_AKA_V2       (-16)
+#define SIP_VALID_DATA        (0xDeadBeef)
+
+#define SIP_VAL_NONE          (0x0000)    /* "None" special value */
+#define SIP_VAL_DATA          (0x0001)    /* Value is uint32 data */
+#define SIP_VAL_ALLOC_DATA    (0x0002)    /* Value was allocated separately */
+#define SIP_VAL_DLL           (0x0004)    /* It's a double linked list */
+
+/* Bit mask of precondition status */
+#define SIP_PREC_MASK_CURR_STATUS (1 << 0)
+#define SIP_PREC_MASK_DES_STATUS  (1 << 1)
+#define SIP_PREC_MASK_CONF_STATUS (1 << 2)
+
+#ifndef TRUE
+#define TRUE                  (1)
+#endif
+#ifndef FALSE
+#define FALSE                 (0)
+#endif
+
+typedef enum eSipMethod
+{
+    eSIP_FIRST_METHOD,
+    eSIP_INVITE,
+    eSIP_ACK,
+    eSIP_CANCEL,
+    eSIP_OPTIONS,
+    eSIP_REGISTER,
+    eSIP_BYE,
+    eSIP_NOTIFY,
+    eSIP_REFER,
+    eSIP_MESSAGE,
+    eSIP_SUBSCRIBE,
+    eSIP_INFO,
+    eSIP_PRACK,
+    eSIP_UPDATE,
+    eSIP_PUBLISH,
+    eSIP_ERROR,
+    eSIP_LAST_METHOD,
+}tSipMethod;
+
+typedef enum eSipMsgType
+{
+    eSIP_REQUEST,
+    eSIP_RESPONSE,
+}tSipMsgType;
+
+typedef enum eSipHdrFld
+{
+    eSIP_HF_START,
+    eSIP_ACCEPT_HF = eSIP_HF_START,              
+    eSIP_ACCEPT_ENCODING_HF,     
+    eSIP_ACCEPT_LANGUAGE_HF,
+    eSIP_ALERT_INFO_HF,
+    eSIP_ALLOW_HF,
+    eSIP_ALLOW_EVENTS_HF,
+    eSIP_AUTHORIZATION_HF,
+    eSIP_CALL_ID_HF,
+    eSIP_CONTACT_HF, 
+    eSIP_CONTENT_DISP_HF,
+    eSIP_CONTENT_ENCODING_HF,
+    
+    eSIP_CSEQ_HF,
+    eSIP_ETAG_HF,
+    eSIP_EVENT_HF,
+    eSIP_EXPIRES_HF,
+    eSIP_FROM_HF,
+    eSIP_IF_MATCH_HF,
+    eSIP_MAX_FORWARDS_HF,
+    eSIP_MIN_EXPIRES_HF,
+    eSIP_MIN_SE_HF,
+    eSIP_ORGANIZATION_HF,
+
+    eSIP_PROXY_AUTHENTICATE_HF,
+    eSIP_PROXY_AUTHORIZATION_HF,
+    eSIP_RACK_HF,
+    eSIP_RECORD_ROUTE_HF,
+    eSIP_REFER_TO_HF,
+    eSIP_REFERRED_BY_HF, 
+    eSIP_REPLACES_HF,
+    eSIP_REQUIRE_HF,  
+    eSIP_ROUTE_HF,
+    eSIP_RSEQ_HF,
+
+    eSIP_SERVER_HF,
+    eSIP_HF_THIRTY_TWO, /* half way ***************/
+    eSIP_SERVICE_ROUTE_HF = eSIP_HF_THIRTY_TWO,
+    eSIP_SESSION_EXPIRES_HF,
+    eSIP_SUB_STATE_HF,
+    eSIP_SUPPORTED_HF,
+    eSIP_TO_HF,
+    eSIP_P_ACCESS_NW_INFO_HF,
+    eSIP_USER_AGENT_HF,
+    eSIP_VIA_HF,
+    eSIP_WWW_AUTHENTICATE_HF,
+
+    eSIP_CONTENT_TYPE_HF,
+    eSIP_CONTENT_LENGTH_HF,
+    eSIP_RETRY_AFTER_HF,
+    eSIP_LAST_HF,
+
+}tHdrFld;
+
+/* response codes */
+typedef enum eSipMsgCodes
+{
+    /* 1xx provisional response */
+    eSIP_PROV_RSP_FIRST,
+    eSIP_RSP_TRYING,
+    eSIP_RSP_RINGING,
+    eSIP_RSP_CALL_IS_BEING_FORW,
+    eSIP_RSP_QUEUED,
+    eSIP_PROV_RSP_LAST,
+    eSIP_RSP_SESSION_PROGRESS = eSIP_PROV_RSP_LAST,
+    /* 2xx succesfull */
+    eSIP_SUCCESS_RSP_FIRST,
+    eSIP_RSP_OK = eSIP_SUCCESS_RSP_FIRST,
+    eSIP_RSP_ACCEPTED,
+    eSIP_RSP_NO_NOTIFICATION,
+    eSIP_RSP_SUCCESS_2XX,
+    eSIP_SUCCESS_RSP_LAST = eSIP_RSP_SUCCESS_2XX,
+    /* 3xx redirection */
+    eSIP_REDIRECT_RSP_FIRST,
+    eSIP_RSP_MULTI_CHOICES = eSIP_REDIRECT_RSP_FIRST,
+    eSIP_RSP_MOVED_PERM,
+    eSIP_RSP_MOVED_TEMP,
+    eSIP_RSP_USE_PROXY,
+    eSIP_REDIRECT_RSP_LAST,
+    eSIP_RSP_ALTER_SERVICE = eSIP_REDIRECT_RSP_LAST,
+    /* 4xx request failure */
+    eSIP_FAILURE_RSP_FIRST,
+    eSIP_RSP_BAD_REQUEST = eSIP_FAILURE_RSP_FIRST,
+    eSIP_RSP_UNAUTH,
+    eSIP_RSP_PAYMENT_REQUIRED,
+    eSIP_RSP_FORBIDDEN,
+    eSIP_RSP_NOT_FOUND,
+    eSIP_RSP_METHOD_NOT_ALLOWED,
+    eSIP_RSP_NOT_ACCEPT,
+    eSIP_RSP_PROXY_AUTH_REQUIRED,
+    eSIP_RSP_REQUEST_TIMEOUT,
+    eSIP_RSP_GONE,
+    eSIP_RSP_REQ_ENT_TOO_LARGE,
+    eSIP_RSP_REQ_URI_TOO_LONG,
+    eSIP_RSP_UNSUPP_MEDIA_TYPE,
+    eSIP_RSP_UNSUPP_URI_SCHEME,
+    eSIP_RSP_BAD_EXT,
+    eSIP_RSP_EXT_REQUIRED,
+    eSIP_RSP_SESSION_TOO_SMALL,
+    eSIP_RSP_INTERVAL_TOO_BRIEF,
+    eSIP_RSP_SEND_FAILED,
+    eSIP_RSP_NO_PROCESS_URI,
+    eSIP_RSP_TEMP_UNAVAIL,
+    eSIP_RSP_CALL_TRANS_NO_EXIST,
+    eSIP_RSP_LOOP_DETECTED,
+    eSIP_RSP_TOO_MANY_HOPS,
+    eSIP_RSP_ADDR_INCOMPLETE,
+    eSIP_RSP_AMBIGUOUS,
+    eSIP_RSP_BUSY_HERE,
+    eSIP_RSP_REQUEST_TERMINATED,
+    eSIP_RSP_NOT_ACCEPTABLE_HERE,
+    eSIP_RSP_BAD_EVENT,
+    eSIP_RSP_REQUEST_PENDING,
+    eSIP_FAILURE_RSP_LAST,
+    eSIP_RSP_UNDECIPHERABLE = eSIP_FAILURE_RSP_LAST,
+    /* 5xx server failures */
+    eSIP_SERVER_RSP_FIRST,
+    eSIP_RSP_SERVER_INT_ERR = eSIP_SERVER_RSP_FIRST,
+    eSIP_RSP_NOT_IMPLEMENTED,
+    eSIP_RSP_BAD_GATEWAY,
+    eSIP_RSP_SERVICE_UNAVAIL,
+    eSIP_RSP_SERVER_TIMEOUT,
+    eSIP_RSP_VERSION_NO_SUPPORT,
+    eSIP_RSP_MSG_TOO_LARGE,
+    eSIP_RSP_PRECONDITION_FAILUIRE,
+    eSIP_SERVER_RSP_LAST = eSIP_RSP_PRECONDITION_FAILUIRE,
+    /* 6xx Global failures */
+    eSIP_GLOBAL_RSP_FIRST,
+    eSIP_RSP_BUSY_EVERYWHERE = eSIP_GLOBAL_RSP_FIRST,
+    eSIP_RSP_DECLINE,
+    eSIP_RSP_DOES_NOT_EXIST,
+    eSIP_RSP_NOT_ACCEPTABLE,
+    eSIP_GLOBAL_RSP_LAST = eSIP_RSP_NOT_ACCEPTABLE,
+    /* D2 Error Codes */
+    eSIP_RSP_CODE_XACT_TIMEOUT,
+    eSIP_RSP_CODE_INTERNAL_ERROR,
+    eSIP_RSP_CODE_ACK_TIMEOUT,
+    eSIP_RSP_CODE_AUTH_AKA_V1,
+    eSIP_RSP_CODE_AUTH_AKA_V2,
+    eSIP_RSP_CODE_UNKNOWN,
+    eSIP_RSP_LAST_RESPONSE_CODE = eSIP_RSP_CODE_UNKNOWN,
+}tSipMsgCodes;
+
+enum eSipHdrFldArg
+{
+    eSIP_BRANCH_HF_ARG,
+    eSIP_TAG_HF_ARG,
+    eSIP_RECEIVED_HF_ARG,
+    eSIP_RPORT_HF_ARG,
+    eSIP_KEEP_HF_ARG,
+    eSIP_LAST_HF_ARG
+};
+
+enum eSipUriParam
+{
+    eSIP_LR_URI_PARM,
+    eSIP_MADDR_URI_PARM,
+    eSIP_TTL_URI_PARM,
+    eSIP_METHOD_URI_PARM,
+    eSIP_TRANSPORT_URI_PARM,
+    eSIP_USER_URI_PARM,
+    eSIP_PHONE_CXT_URI_PARM,
+    eSIP_SESSION_URI_PARM,
+    eSIP_PSBR_URI_PARM,
+    eSIP_LBFH_URI_PARM,
+    eSIP_CONF_URI_PARM,
+    eSIP_FTAG_URI_PARM,
+    eSIP_GR_URI_PARM,
+    eSIP_LSKPMC_URI_PARM,
+    eSIP_LAST_URI_PARM
+};
+
+enum eSipReplacesHFArg
+{
+    eSIP_CALL_ID_HF_ARG,
+    eSIP_TO_TAG_HF_ARG,
+    eSIP_FROM_TAG_HF_ARG,
+    eSIP_EARLY_FLAG_HF_ARG,
+    eSIP_LAST_REPLACES_HF_ARG
+};
+
+enum eSipContactHFArg
+{
+    eSIP_CONTACT_HF_Q_ARG,
+    eSIP_CONTACT_HF_EXPIRES_ARG,
+    eSIP_CONTACT_HF_USER_ARG,
+    eSIP_CONTACT_HF_IM_SESSION_ARG,
+    eSIP_CONTACT_HF_IM_CONF_ISFOCUS_ARG,
+    eSIP_CONTACT_HF_PUB_GRUU_ARG,
+    eSIP_CONTACT_HF_LAST_ARG,
+};
+
+typedef enum eSipSubStateHFArg
+{
+    eSIP_SUBS_HF_ACTIVE_ARG,
+    eSIP_SUBS_HF_PEND_ARG,
+    eSIP_SUBS_HF_TERM_ARG,
+    eSIP_SUBS_HF_LAST_ARG,
+}tSipSubStateHFArg;
+
+typedef enum eSipSubStateHFParm
+{
+    eSIP_SUBS_HF_EXPIRES_PARM,
+    eSIP_SUBS_HF_REASON_PARM,
+    eSIP_SUBS_HF_LAST_PARM,
+}tSipSubStateHFParm;
+
+typedef enum eSipEventHFParm
+{
+    eSIP_EVENT_HF_PARAM_PARM,
+    eSIP_EVENT_HF_ID_PARM,
+    eSIP_EVENT_HF_LAST_PARM
+}tSipEventHFParm;
+
+typedef enum eSipUriScheme
+{
+     eURI_SCHEME_DUMMY, 
+     eURI_SCHEME_SIP,
+     eURI_SCHEME_SIPS,
+     eURI_SCHEME_TEL,
+     eURI_SCHEME_IM,
+     eURI_SCHEME_URN,
+     eURI_SCHEME_LAST,
+}tSipUriScheme;
+
+typedef enum eSipHdrAuthHFArg
+{
+    eSIP_DOMAIN_HF_ARG,
+    eSIP_USERNAME_HF_ARG,   
+    eSIP_REALM_HF_ARG,     
+    eSIP_NONCE_HF_ARG,
+    eSIP_QOP_HF_ARG,  
+    eSIP_NC_HF_ARG, 
+    eSIP_ALGORITHM_HF_ARG,
+    eSIP_CNONCE_HF_ARG,
+    eSIP_OPAQUE_HF_ARG, 
+    eSIP_STALE_HF_ARG,
+    eSIP_RESPONSE_HF_ARG,
+    eSIP_AUTS_HF_ARG,
+    eSIP_URI_HF_ARG,
+    eSIP_B64_USER_PW_HF_ARG,
+    eSIP_LAST_AUTH_ARG,
+}tSipHdrAuthHFArg;
+
+typedef enum eSipAuthType
+{
+    eSIP_AUTH_TYPE_BASIC,
+    eSIP_AUTH_TYPE_DIGEST,
+}tSipAuthType;
+
+typedef enum eSipAuthAlg
+{
+    eAUTH_ALG_NONE,
+    eAUTH_ALG_MD5,
+    eAUTH_ALG_AKAV1_MD5,
+    eAUTH_ALG_AKAV2_MD5,
+}tSipAuthAlg;
+
+typedef enum eSipContentType
+{
+    eCONTENT_TYPE_NONE,
+    eCONTENT_TYPE_SDP,
+    eCONTENT_TYPE_SIPFRAG,
+    eCONTENT_TYPE_TEXT,
+    eCONTENT_TYPE_MULTIPART,
+    eCONTENT_TYPE_3GPPSMS,
+    eCONTENT_TYPE_RSRC_LISTS,
+    eCONTENT_TYPE_LAST,
+}tSipContentType;
+
+typedef enum eSipAuthQop
+{
+    eSIP_QOP_NONE,
+    eSIP_QOP_AUTH,
+    eSIP_QOP_AUTH_INT,
+}tSipAuthQop;
+
+typedef enum eSipRefresher
+{
+    eSIP_REFRESHER_NONE,
+    eSIP_REFRESHER_UAC,
+    eSIP_REFRESHER_UAS,
+}tSipRefresher;
+
+typedef enum eSipIpcMsgType
+{
+    eSIP_IPC_TIMER_MSG,
+    eSIP_IPC_SERVER_MSG,
+    eSIP_IPC_CLIENT_MSG,
+    eSIP_IPC_ERROR_MSG,
+}tSipIpcMsgType;
+
+
+typedef enum {
+    eSIP_CONTACT_HF_OMA_NONE            = 0,
+    eSIP_CONTACT_HF_OMA_SIP_IM          = 1,
+    eSIP_CONTACT_HF_OMA_SIP_IM_LRG_SMS  = 2,
+    eSIP_CONTACT_HF_OMA_SIP_IM_LRG_MMS  = 4,
+    eSIP_CONTACT_HF_OMA_SIP_IM_LRG_MSG  = 8,
+    eSIP_CONTACT_HF_OMA_SIP_IM_SMS      = 16,
+    eSIP_CONTACT_HF_OMA_SIP_IM_VCARD    = 32,
+    eSIP_CONTACT_HF_OMA_PUSH_CRBT_UA    = 64,
+    eSIP_CONTACT_HF_OMA_PUSH_FS_UA      = 128,
+    eSIP_CONTACT_HF_OMA_PUSH_MMS_UA     = 256,
+    eSIP_CONTACT_HF_OMA_PUSH_NAB_UA     = 512,
+    eSIP_CONTACT_HF_OMA_PUSH_SMS_UA     = 1024,
+    eSIP_CONTACT_HF_OMA_PUSH_VMS_UA     = 2048,
+} tSipContactHFFeat;
+
+typedef enum {
+    eSIP_CAPS_TYPE_FIRST,
+    eSIP_CAPS_TYPE_PLUS_3GPP = eSIP_CAPS_TYPE_FIRST,
+    eSIP_CAPS_TYPE_ICSI, 
+    eSIP_CAPS_TYPE_IARI,
+    eSIP_CAPS_TYPE_OTHERS,
+    eSIP_CAPS_TYPE_RCS_TELEPHONY, /* RCS Telephony */
+    eSIP_CAPS_TYPE_LAST,
+} tSipCapabilitiesType;
+
+typedef enum {
+    eSIP_CAPS_NONE                        = 0x00000000,
+    eSIP_CAPS_FIRST                       = 0x00000001,
+    eSIP_CAPS_DISCOVERY_VIA_PRESENCE      = eSIP_CAPS_FIRST,
+    eSIP_CAPS_IP_VOICE_CALL               = 0x00000002,
+    eSIP_CAPS_IP_VIDEO_CALL               = 0x00000004,
+    eSIP_CAPS_MESSAGING                   = 0x00000008,
+    eSIP_CAPS_SMS                         = 0x00000010,
+    eSIP_CAPS_FILE_TRANSFER               = 0x00000020,
+    eSIP_CAPS_IMAGE_SHARE                 = 0x00000040,
+    eSIP_CAPS_VIDEO_SHARE                 = 0x00000080,
+    eSIP_CAPS_VIDEO_SHARE_WITHOUT_CALL    = 0x00000100,
+    eSIP_CAPS_CHAT                        = 0x00000200,
+    eSIP_CAPS_SOCIAL_PRESENCE             = 0x00000400,
+    eSIP_CAPS_GEOLOCATION_PUSH            = 0x00000800,
+    eSIP_CAPS_GEOLOCATION_PULL            = 0x00001000,
+    eSIP_CAPS_FILE_TRANSFER_HTTP          = 0x00002000,
+    eSIP_CAPS_FILE_TRANSFER_THUMBNAIL     = 0x00004000,
+    eSIP_CAPS_FILE_TRANSFER_STORE_FWD     = 0x00008000,
+    eSIP_CAPS_EMERGENCY_REG               = 0x00010000,
+    eSIP_CAPS_RCS_TELEPHONY_NONE          = 0x00020000,
+    eSIP_CAPS_RCS_TELEPHONY_CS            = 0x00040000,
+    eSIP_CAPS_RCS_TELEPHONY_VOLTE         = 0x00080000,
+    eSIP_CAPS_RCS_TELEPHONY_VOHSPA        = 0x00100000,
+    eSIP_CAPS_SRVCC_ALERTING              = 0x00200000,
+    eSIP_CAPS_SRVCC_MID_CALL              = 0x00400000,
+    eSIP_CAPS_LAST = eSIP_CAPS_SRVCC_MID_CALL,
+} tSipContactHFCaps;
+
+typedef enum {
+    eSIP_CAPS_ARG_SMS,
+    eSIP_CAPS_ARG_VIDEO_SHARE,
+    eSIP_CAPS_ARG_IARI,
+    eSIP_CAPS_ARG_ICSI,
+    eSIP_CAPS_ARG_RCS_TELEPHONY,
+    eSIP_CAPS_ARG_LAST,
+} tSipCapabilitiesArg;
+
+#endif

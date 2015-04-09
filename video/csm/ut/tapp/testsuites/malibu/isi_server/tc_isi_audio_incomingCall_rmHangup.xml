@@ -1,0 +1,194 @@
+<tapp>
+    <testcase name="ISI RPC: Accepting an incoming audio call and remote party hangs up">
+        <!-- Issue an incoming call to CSM -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <from type="string">sip:13122099351@domain.com</from>
+                    <subject type="string">Whatever</subject>
+                </call>
+            </isip>
+        </action>
+        <!-- isi rpc validate get incoming call event-->
+        <action type="validate isi get event" timeout="2000">
+            <rpc>
+                <func type="enum">ISI_GET_EVENT</func>
+                <!-- return value -->
+                <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+                <!-- serviceId -->
+                <param type="int" dontcare="0">0</param>
+                <!-- call id ,do no get call id yet -->
+                <param type="int" dontcare="1">0</param>
+                <!-- idType 1 = call -->
+                <param type="int" dontcare="0">1</param>
+                <!-- event id 40 = incoming -->
+                <param type="int" dontcare="0">40</param>
+            </rpc>
+        </action>
+        <!--issue isi to get call header -->
+        <action type="issue isi rpc">
+             <rpc>
+                <func type="enum">ISI_GET_CALL_HEADER</func>
+                <!-- Call id , the value of 'callId' attr is the order of all parameters -->
+                <param type="int" callId="1">0</param>
+            </rpc>
+        </action>
+        <!-- valdate isi rpc get call header -->
+        <action type="validate isi rpc return" timeout="1000">
+            <rpc>
+                <func type="enum">ISI_GET_CALL_HEADER</func>
+               <!-- return value -->
+               <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+                <!-- subject -->
+                <param type="string" dontcare="0">Whatever</param>
+                <!-- from -->
+                <param type="string" dontcare="0">sip:13122099351@domain.com</param>
+            </rpc>
+        </action>
+
+        <!--issue isi to ack call -->
+        <action type="issue isi rpc">
+             <rpc>
+                <func type="enum">ISI_ACKNOWLEDGE_CALL</func>
+                <!-- call id -->
+                <param type="int" callId="1">0</param>
+            </rpc>
+        </action>
+        <!-- validate isip ack with id index = 0 -->
+        <action type="validate isip" timeout="2000">    
+        <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                </call>
+            </isip>
+        </action>
+        <!-- ISIP issue ACK to CSM -->
+        <action type="issue isip">  
+             <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+        <!-- isi rpc validate ack call -->
+        <action type="validate isi rpc return" timeout="1000">
+            <rpc>
+                <func type="enum">ISI_ACKNOWLEDGE_CALL</func>
+               <!-- return value -->
+               <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+            </rpc>
+        </action>
+        <!--issue isi to accept call -->
+        <action type="issue isi rpc">
+             <rpc>
+                <func type="enum">ISI_ACCEPT_CALL</func>
+                <!-- call id -->
+                <param type="int" callId="1">0</param>
+            </rpc>
+        </action>
+        <!-- ISIP Validate accept event from csm -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                        <status type="enum">ISIP_STATUS_INVALID</status>
+                        <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                        <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                </call>
+            </isip>
+        </action>
+        <!-- ISIP issue to csm that accept done -->
+        <action type="issue isip">  
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+        <!--  issue accept ack with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol  type="int">0</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- isi rpc validate accept call -->
+        <action type="validate isi rpc return" timeout="1000">
+            <rpc>
+                <func type="enum">ISI_ACCEPT_CALL</func>
+               <!-- return value -->
+               <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+            </rpc>
+        </action>
+        <!-- isi rpc validate call active -->
+        <action type="validate isi get event" timeout="2000">
+            <rpc>
+                <func type="enum">ISI_GET_EVENT</func>
+                <!-- return value -->
+                <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+                <!-- serviceId -->
+                <param type="int" dontcare="0">0</param>
+                <!-- call id ,do no get call id yet -->
+                <param type="int" dontcare="1">0</param>
+                <!-- idType 1 = call -->
+                <param type="int" dontcare="0">1</param>
+                <!-- event id 37 = ISI_EVENT_CALL_ACCEPTED  -->
+                <param type="int" dontcare="0">37</param>
+            </rpc>
+        </action>
+        <!-- Remote party Disconnects  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="validate isi get event" timeout="1000">
+            <rpc>
+                <func type="enum">ISI_GET_EVENT</func>
+                <!-- return value -->
+                <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+                <!-- serviceId -->
+                <param type="int" dontcare="0">0</param>
+                <!-- id -->
+                <param type="int" dontcare="0">0</param>
+                <!-- idType 1 = call -->
+                <param type="int" dontcare="0">1</param>
+                <!-- event id 39 = disconnect -->
+                <param type="int" dontcare="0">39</param>
+            </rpc>
+        </action>
+    </testcase>
+</tapp>

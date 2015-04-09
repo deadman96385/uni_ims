@@ -1,0 +1,24 @@
+<!--
+    Test Case: CS MO SMS.
+-->
+<tapp>
+    <testcase name="CS MO SMS">
+        <!-- AT send AT+CMGS to send SMS. -->
+        <action type="issue at">AT+CMGS=17</action>
+        <!-- AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">> &#xD;</action>
+        <!-- AT send pdu. -->
+        <action type="issue at">0001000a819038657158000005d4f29c2e03&#x1A;</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">AT+CMGS=17&#xD;</action>
+        <!-- GSM send the response for AT+CMGS -->
+        <action type="issue gsm at">> &#xD;&#xA;</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">0001000a819038657158000005d4f29c2e03&#x1A;&#xD;</action>
+        <!-- GSM send the response for AT+CMGS -->
+        <action type="issue gsm at">+CMGS: 7&#xD;&#xA;0&#xD;&#xA;</action>
+        <!-- AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">+CMGS: 7&#xD;&#xA;0&#xD;</action>
+    </testcase>
+</tapp>
+

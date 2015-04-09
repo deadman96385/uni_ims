@@ -1,0 +1,7 @@
+<tapp>
+    <!-- This case is to clean up the event if protocoal initial ok.-->
+    <testcase name="ISI event clean">
+        <!-- isi rpc validate get  protocol init ok event-->
+        <action type="clean isi rpc event" timeout="1000"></action>
+    </testcase>
+</tapp>

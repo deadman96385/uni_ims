@@ -1,0 +1,30 @@
+<!--
+    This test cases includes all basic call test cases
+    Precondition: Both CS and PS services are active.
+-->
+<tapp>
+    <testcase>
+<!-- disable ps to test cs call -->
+        <include>../service/tc_ps_lost.xml</include>
+
+<!-- Disable CS call tests
+        <include>tc_cs_accepting_call_waiting.xml</include>
+        <include>tc_cs_accepting_call_waiting_and_disconnecting_foreground_call.xml</include>
+        <include>tc_cs_accepting_call_waiting_when_ori_call_disconnect.xml</include>
+        <include>tc_cs_reject_call_waiting.xml</include>
+-->
+
+<!-- Enable ps to test ps call -->
+        <include>../service/tc_ps_ims_enable.xml</include>
+        <include>../service/tc_ps_service_active_with_net.xml</include>
+
+        <include>tc_ps_call_waiting_accept.xml</include>
+        <!-- cannot make sure the command order for at the same time cases. -->
+        <!--
+        <include>tc_ps_call_waiting_accept_foregnd_disconnect.xml</include>
+        <include>tc_ps_call_waiting_accept_origCall_disconnect.xml</include>
+        -->
+
+        <include>tc_ps_call_waiting_reject.xml</include>
+    </testcase>
+</tapp>

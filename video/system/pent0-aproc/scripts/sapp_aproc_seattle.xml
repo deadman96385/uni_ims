@@ -1,0 +1,105 @@
+<sapp>
+    <interface>
+        <parm name="this" value="asapp.ipc"/>
+        <parm name="audio" value="mc.ipc"/>
+        <parm name="stream" value="mc.ipc"/>
+        <parm name="isi" value="aproc.isi.ipc.protocol"/>
+    </interface>
+    <audio>
+        <parm name="Ring_Template" value="12"/>
+    </audio>
+    <protocol id="6">
+    <!-- Set id attribute in protocol tag to indicate it's protocol for VoLTE or RCS
+         1 for VoLTE
+         6 for RCS
+    -->
+        <sip>
+            <parm name="Keep_Alive_Enabled" value="0"/>
+            <parm name="Timer_T1" value="2000"/>
+            <parm name="Timer_T2" value="16000"/>
+            <parm name="Timer_T4" value="17000"/>
+            <parm name="RegRetryBaseTime" value="300"/>
+            <parm name="RegRetryMaxTime" value="3600"/>
+            <parm name="Q-Value" value="0.5"/>
+            <parm name="Reg_Expire_Sec" value="3600"/>
+            <parm name="Ipsec_Enabled" value="0"/>
+            <parm name="Isim_Enabled" value="0"/>
+            <parm name="Precondition_Enabled" value="0"/>
+            <parm name="Mwi_Expire_Sec" value="0"/>
+            <parm name="Nat_Keep_Alive_Sec" value="0"/>
+            <parm name="Prack_Enabled" value="0"/>
+            <parm name="Cpim_Enabled" value="0"/>
+            <parm name="Session_Timer" value="0"/>
+            <!-- If Force_MT_Session_Timer is set to a value, to force the MT
+                 side to enable session timer no matter MO support it or not.
+                 Verizon need it be "90;refresher=uas".
+            -->
+            <parm name="Force_MT_Session_Timer" value="0"/>
+            <parm name="Reg_Event_Enabled" value="0"/>
+            <parm name="Mwi_Event_Enabled" value="0"/>
+            <parm name="Ua_Name" value="D2 IMS 4G"/>
+            <!-- If Mtu is set to 0, then we will not send request thru tcp
+                 if its length larger than MTU size.
+            -->
+            <parm name="Mtu" value="1300"/>
+            <reg-capabilities>
+                <parm name="Ip_Voice_Call" value="1"/>
+                <parm name="Ip_Video_Call" value="0"/>
+                <parm name="Chat" value="0"/>
+                <parm name="Image_Share" value="0"/>
+                <parm name="Video_Share" value="0"/>
+                <parm name="File_Transfer" value="0"/>
+                <parm name="Sms_Over_Ip" value="1"/>
+                <parm name="Messaging" value="0"/>
+                <parm name="Discover_Via_Presence" value="0"/>
+                <parm name="Video_Share_Without_Call" value="0"/>
+                <parm name="Social_Presence" value="0"/>
+                <parm name="Geolocation_Push" value="0"/>
+                <parm name="Geolocation_Pull" value="0"/>
+                <parm name="File_Transfer_Http" value="0"/>
+                <parm name="File_Transfer_Thumbnail" value="0"/>
+                <parm name="File_Transfer_Store_Forward" value="0"/>
+                <parm name="Rcs_Telephony_Cs" value="1"/>
+                <parm name="Rcs_Telephony_Volte" value="1"/>
+                <parm name="Rcs_Telephony_Vohspa" value="0"/>
+            </reg-capabilities>
+            <exchange-capabilities cap-discovery="1" common-stack="1">
+                <parm name="Ip_Voice_Call" value="0"/>
+                <parm name="Ip_Video_Call" value="1"/>
+                <parm name="Chat" value="1"/>
+                <parm name="Image_Share" value="1"/>
+                <parm name="Video_Share" value="1"/>
+                <parm name="File_Transfer" value="1"/>
+                <parm name="Sms_Over_Ip" value="1"/>
+                <parm name="Messaging" value="1"/>
+                <parm name="Discover_Via_Presence" value="1"/>
+                <parm name="Video_Share_Without_Call" value="1"/>
+                <parm name="Social_Presence" value="1"/>
+                <parm name="Geolocation_Push" value="1"/>
+                <parm name="Geolocation_Pull" value="1"/>
+                <parm name="File_Transfer_Http" value="0"/>
+                <parm name="File_Transfer_Thumbnail" value="0"/>
+                <parm name="File_Transfer_Store_Forward" value="0"/>
+            </exchange-capabilities>
+        </sip>
+        <simple>
+            <parm name="Presence_Expire_Sec" value="3600"/>
+            <parm name="Deferred_Delay" value="0"/>
+            <parm name="File_Path" value="/var/tmp/osal"/>
+            <parm name="File_Prepend" value="PATH_"/>
+            <parm name="File_Flow_Ctrl_Depth" value="8"/>
+            <transportProto>
+                <parm name="psMedia" value="MSRPoTLS"/>
+                <parm name="wifiMedia" value="MSRP"/>
+            </transportProto>
+        </simple>
+        <xcap>
+            <parm name="Black_List" value=""/>
+            <parm name="White_List" value=""/>
+            <parm name="Timeout" value="0"/>
+        </xcap>
+        <handoff>
+            <parm name="Vdn" value="6472885452"/>
+        </handoff>
+    </protocol>
+</sapp>

@@ -1,0 +1,43 @@
+<!--
+    IPSec created and release report to CSM
+-->
+<tapp>
+    <testcase name="IPSec setup">
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_IPSEC</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                    <portuc type="int">7000</portuc>
+                    <portus type="int">7001</portus>
+                    <portpc type="int">8000</portpc>
+                    <portps type="int">8001</portps>
+                    <spiuc type="int">1234</spiuc>
+                    <spius type="int">5678</spius>
+                    <spipc type="int">4321</spipc>
+                    <spips type="int">8765</spips>
+                </service>
+            </isip>
+        </action>
+    </testcase>
+    <testcase name="IPSec release">
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_IPSEC</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <portuc type="int">7000</portuc>
+                    <portus type="int">7001</portus>
+                    <portpc type="int">8000</portpc>
+                    <portps type="int">8001</portps>
+                    <spiuc type="int">1234</spiuc>
+                    <spius type="int">5678</spius>
+                    <spipc type="int">4321</spipc>
+                    <spips type="int">8765</spips>
+                </service>
+            </isip>
+        </action>
+    </testcase>
+</tapp>

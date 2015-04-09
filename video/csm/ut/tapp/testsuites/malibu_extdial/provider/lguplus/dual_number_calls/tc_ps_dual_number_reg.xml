@@ -1,0 +1,684 @@
+<!--
+    This test case is to verify network registration state.
+
+    Note:
+    =================================
+    add '\r' and '\n' in XML. 
+           Dec    Hex
+    '\n': &#10;  &#xA;
+    '\r': &#13;  &#xD;
+-->
+<tapp>
+    <testcase name="PS: Dual number registration">
+        <!-- AT set register state mode. -->
+        <action type="issue at">AT+CREG=2</action>
+        <!-- GSM dev verify receiving register state mode. -->
+        <action type="validate gsm at" timeout="2000">AT+CREG=2&#xD;</action>
+        <!-- GSM response OK for AT+CREG= -->
+        <action type="issue gsm at">0&#xD;</action>
+        <!-- AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- AT query register state. -->
+        <action type="issue at">AT+CREG?</action>
+        <!-- GSM dev verify receiving register query. -->
+        <action type="validate gsm at" timeout="2000">AT+CREG?&#xD;</action>
+        <!-- GSM response register state. -->
+        <action type="issue gsm at">+CREG: 2,0&#xD;</action>
+        <!-- AT infc verify receiving register state. -->
+        <action type="validate at" timeout="2000">+CREG: 2,0&#xD;&#xA;0&#xD;</action>
+
+        <!-- stop 5sec and AT infc will send reg query again. -->
+        <action type="pause">2000</action>
+
+        <!-- AT query register state. -->
+        <action type="issue at">AT+CREG?</action>
+        <!-- GSM dev verify receiving register query. -->
+        <action type="validate gsm at" timeout="5000">AT+CREG?&#xD;</action>
+        <!-- GSM response register state. -->
+        <action type="issue gsm at">+CREG: 2,1,"2871","0161835"&#xD;0&#xD;</action>
+        <!-- AT infc verify receiving register state. -->
+        <action type="validate at" timeout="5000">+CREG: 2,1,"2871","0161835"&#xD;&#xA;0&#xD;</action>
+<action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_CREATE</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <server type="enum">ISI_SERVER_TYPE_INVALID</server>
+                </service>
+            </isip>
+        </action>
+        <!--issue a cerate done evnent to CSM  -->
+        <action type="issue isip">
+        <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_CREATE</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_CREATE</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <server type="enum">ISI_SERVER_TYPE_INVALID</server>
+                </service>
+            </isip>
+        </action>
+        <!--issue a cerate done evnent to CSM  -->
+        <action type="issue isip">
+        <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_CREATE</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <!-- Set Service Field -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_EMERGENCY</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <isEmergency type="int">0</isEmergency>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_EMERGENCY</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                    <isEmergency type="int">0</isEmergency>
+                </service>
+            </isip>
+        </action>
+        <action type="validate isip" timeout="3000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_URI</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <uri type="string">sip:+14043351655@foundry.att.com</uri>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_URI</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <!-- Set identityHide from CSM -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_IDENTITY</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <identityHide type="int">0</identityHide>
+                </service>
+            </isip>
+        </action>
+        <!-- issue set identityHide done to CSM -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_IDENTITY</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <!-- Set server from CSM refer to isim.xml -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_SERVER</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <server type="string">sip:foundry.att.com</server>
+                    <serverType type="enum">ISI_SERVER_TYPE_REGISTRAR</serverType>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_SERVER</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                    <serverType type="enum">ISI_SERVER_TYPE_REGISTRAR</serverType>
+                </service>
+            </isip>
+        </action>
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_SERVER</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <server type="string">sbc.core.foundry.att.com;transport=TCP</server>
+                    <serverType type="enum">ISI_SERVER_TYPE_OUTBOUND_PROXY</serverType>
+                </service>
+            </isip> 
+        </action>   
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_SERVER</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                    <serverType type="enum">ISI_SERVER_TYPE_OUTBOUND_PROXY</serverType>
+                </service>
+            </isip>
+        </action>
+        <!-- Set authentication from CSM refer to isim.xml -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                 <protocol type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_AUTH</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <username type="string">4043351655@private.att.net</username>
+                    <password type="string">password</password>
+                    <realm type="string">foundry.att.com</realm>
+                </service>
+            </isip> 
+        </action>
+        <!-- Set server IMEI  from CSM refer to isim.xml -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_IMEI_URI</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <imeiUri type="string">sip:imei219551288888888@sos.invalid</imeiUri>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_IMEI_URI</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <!-- Set audio and sip port from CSM -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_PORT</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <portType type="enum">ISI_PORT_TYPE_SIP</portType>
+                    <portNum type="int">5060</portNum>
+                    <poolSize type="int">0</poolSize>
+                </service>
+            </isip>
+        </action>
+        <!-- issue setting done -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_PORT</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_PORT</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <portType type="enum">ISI_PORT_TYPE_AUDIO</portType>
+                    <portNum type="int">59000</portNum>
+                    <poolSize type="int">20</poolSize>
+                </service>
+            </isip>
+        </action>
+        <!-- issue setting done -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_PORT</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_PORT</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <portType type="enum">ISI_PORT_TYPE_VIDEO</portType>
+                    <portNum type="int">60000</portNum>
+                    <poolSize type="int">20</poolSize>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_PORT</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+
+        <!-- Set IPSec protected port -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_IPSEC</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <portNum type="int">7000</portNum>
+                    <portPoolSize type="int">20</portPoolSize>
+                    <spi type="int">1234</spi>
+                    <spiPoolSize type="int">20</spiPoolSize>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_IPSEC</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+
+        <!-- Emergency service. Set Service Field -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_EMERGENCY</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <isEmergency type="int">1</isEmergency>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_EMERGENCY</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                    <isEmergency type="int">1</isEmergency>
+                </service>
+            </isip>
+        </action>
+        <action type="validate isip" timeout="3000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_URI</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <uri type="string">sip:+14043351655@foundry.att.com</uri>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_URI</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <!-- Set identityHide from CSM -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_IDENTITY</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <identityHide type="int">0</identityHide>
+                </service>
+            </isip>
+        </action>
+        <!-- issue set identityHide done to CSM -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_IDENTITY</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <!-- Set server from CSM refer to isim.xml -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_SERVER</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <server type="string">sip:foundry.att.com</server>
+                    <serverType type="enum">ISI_SERVER_TYPE_REGISTRAR</serverType>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_SERVER</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                    <serverType type="enum">ISI_SERVER_TYPE_REGISTRAR</serverType>
+                </service>
+            </isip>
+        </action>
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_SERVER</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <server type="string">sbc.core.foundry.att.com;transport=TCP</server>
+                    <serverType type="enum">ISI_SERVER_TYPE_OUTBOUND_PROXY</serverType>
+                </service>
+            </isip> 
+        </action>   
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_SERVER</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                    <serverType type="enum">ISI_SERVER_TYPE_OUTBOUND_PROXY</serverType>
+                </service>
+            </isip>
+        </action>
+        <!-- Set authentication from CSM refer to isim.xml -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_AUTH</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <username type="string">4043351655@private.att.net</username>
+                    <password type="string">password</password>
+                    <realm type="string">foundry.att.com</realm>
+                </service>
+            </isip> 
+        </action>
+        <!-- Set server IMEI  from CSM refer to isim.xml -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_IMEI_URI</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <imeiUri type="string">sip:imei219551288888888@sos.invalid</imeiUri>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_IMEI_URI</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <!-- Set audio and sip port from CSM -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_PORT</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <portType type="enum">ISI_PORT_TYPE_SIP</portType>
+                    <portNum type="int">5060</portNum>
+                    <poolSize type="int">0</poolSize>
+                </service>
+            </isip>
+        </action>
+        <!-- issue setting done -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_PORT</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_PORT</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <portType type="enum">ISI_PORT_TYPE_AUDIO</portType>
+                    <portNum type="int">59000</portNum>
+                    <poolSize type="int">20</poolSize>
+                </service>
+            </isip>
+        </action>
+        <!-- issue setting done -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_PORT</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_PORT</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <portType type="enum">ISI_PORT_TYPE_VIDEO</portType>
+                    <portNum type="int">60000</portNum>
+                    <poolSize type="int">20</poolSize>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_PORT</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <!-- Set IPSec protected port -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_IPSEC</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <portNum type="int">7000</portNum>
+                    <portPoolSize type="int">20</portPoolSize>
+                    <spi type="int">1234</spi>
+                    <spiPoolSize type="int">20</spiPoolSize>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_IPSEC</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <action type="issue csm" timeout="1000">
+            <csm>
+                <type>CSM_EVENT_TYPE_RADIO</type>
+                <reason>CSM_RADIO_REASON_IP_CHANGE</reason>
+                <ip>172.16.0.200</ip>
+                <infc>eth0</infc>
+                <nettype>lte</nettype>
+            </csm>
+        </action>
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_NET</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <name type="string">lte</name>
+                    <address type="addr">172.16.0.200</address>
+                </service>
+            </isip>
+        </action>
+<action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_NET</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <name type="string">lte</name>
+                    <address type="addr">172.16.0.200</address>
+                </service>
+            </isip>
+        </action>
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_SERVER</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <server type="string">sip:foundry.att.com</server>
+                    <serverType type="enum">ISI_SERVER_TYPE_REGISTRAR</serverType>
+                </service>
+            </isip>
+        </action>
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_SERVER</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <server type="string">sbc.core.foundry.att.com;transport=TCP</server>
+                    <serverType type="enum">ISI_SERVER_TYPE_OUTBOUND_PROXY</serverType>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_SERVER</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                    <serverType type="enum">ISI_SERVER_TYPE_OUTBOUND_PROXY</serverType>
+                </service>
+            </isip>
+        </action>
+        <!-- Active Service to register  -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_ACTIVATE</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                </service>
+            </isip>
+        </action>
+        <!-- AT infc verify receiving register state. -->
+        <action type="validate at" timeout="5000">+CREG: 2,1,"2871","0161835"&#xD;&#xA;</action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_ACTIVATE</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                    <reasonDesc type="string">ALIAS:"uri2"</reasonDesc>
+                </service>
+            </isip>
+        </action>
+        <action type="pause">500</action>
+        <!-- AT infc verify receiving register state. -->
+        <action type="validate at" timeout="5000">+CREG: 2,1,"2871","0161835"&#xD;&#xA;</action>    
+        <action type="validate at" timeout="5000">%IMSSN:1,"uri2"&#xD;&#xA;</action>
+    </testcase>
+</tapp>

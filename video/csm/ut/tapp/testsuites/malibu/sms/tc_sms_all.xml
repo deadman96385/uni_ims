@@ -1,0 +1,19 @@
+<!--
+    This test cases include all conference call test cases.
+-->
+<tapp>
+    <testcase>
+<!-- disable ps to test cs call -->
+        <include>../service/tc_ps_lost.xml</include>
+
+        <include>tc_cs_mo_sms.xml</include>
+        <include>tc_cs_mt_sms.xml</include>
+
+<!-- Enable ps to test ps call -->
+        <include>../service/tc_ps_ims_enable.xml</include>
+        <include>../service/tc_ps_service_active_with_net.xml</include>
+
+        <include>tc_ps_mo_sms.xml</include>
+        <include>tc_ps_mt_sms.xml</include>
+    </testcase>
+</tapp>

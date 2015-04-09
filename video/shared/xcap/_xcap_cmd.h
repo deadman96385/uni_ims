@@ -1,0 +1,21 @@
+/*
+ * THIS IS AN UNPUBLISHED WORK CONTAINING D2 TECHNOLOGIES, INC. CONFIDENTIAL
+ * AND PROPRIETARY INFORMATION.  IF PUBLICATION OCCURS, THE FOLLOWING NOTICE
+ * APPLIES: "COPYRIGHT 2004 D2 TECHNOLOGIES, INC. ALL RIGHTS RESERVED"
+ *
+ * $D2Tech$ $Rev: 12486 $ $Date: 2010-07-08 06:10:49 +0800 (Thu, 08 Jul 2010) $
+ *
+ */
+
+#ifndef __XCAP_CMD_H_
+#define __XCAP_CMD_H_
+
+/*
+ * Function prototypes.
+ */
+
+int _XCAP_cmdRun(
+    XCAP_Cmd      *cmd_ptr,
+    _XCAP_XactObj *xact_ptr);
+
+#endif

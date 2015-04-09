@@ -1,0 +1,1273 @@
+<!--
+    Test Case: SUPSRV CF SET and QUERY.
+-->
+<tapp>
+    <testcase name="SUPSRV CF enable unconditional">
+    <!--
+        scenario: Set unconditional to active
+        AT+CCFC=0,1,"12345678",1
+        OK
+        AT+CCFC=0,2
+        +CCFC: 1,1,"12345678",129
+    -->
+        <action type="issue at">AT+CCFC=0,1,"12345678",129,1&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_CREATE_REPLACE</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<simservs xmlns:cp="urn:ietf:params:xml:ns:common-policy"
+xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap"
+xmlns:ocp="urn:oma:xml:xdm:common-policy"><communication-diversion active="true">
+    
+    <cp:ruleset>
+        <cp:rule id="rule1">
+            <cp:conditions>
+                
+                
+            </cp:conditions>
+            <cp:actions>
+                <forward-to>
+                    <target>"12345678"</target>
+                </forward-to>
+            </cp:actions>
+        </cp:rule>
+    </cp:ruleset>
+    </communication-diversion>
+</simservs>]]></body>
+                </command>
+            </xcap>
+        </action>
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 0
+                    ]]>
+                    </header>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+
+
+        <!-- Query -->
+        <action type="issue at">AT+CCFC=0,2&#13;</action>
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 686
+                    ]]>
+                    </header>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+                        <simservs xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+                           <communication-diversion active="true">
+                               <conditions/>
+                               <actions>
+                                   <forward-to>
+                                      <target>"12345678"</target>
+                                   </forward-to>
+                               </actions>
+                           </communication-diversion>
+                        </simservs>
+                    ]]>
+                    </body>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CCFC: 1,1,"12345678",129&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+
+    <testcase name="SUPSRV CF disable unconditional">
+    <!--
+        scenario: Set unconditional to inactive
+        AT+CCFC=0,0
+        OK
+        AT+CCFC=0,2
+        +CCFC: 0,1
+    -->
+        <action type="issue at">AT+CCFC=0,0&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_CREATE_REPLACE</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<simservs xmlns:cp="urn:ietf:params:xml:ns:common-policy"
+xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap"
+xmlns:ocp="urn:oma:xml:xdm:common-policy"><communication-diversion active="false">
+    <cp:ruleset>
+        <cp:rule id="rule1">
+            <cp:conditions>
+                
+            </cp:conditions>
+        </cp:rule>
+    </cp:ruleset>
+    </communication-diversion>
+</simservs>]]></body>
+                </command>
+            </xcap>
+        </action>
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 0
+                    ]]>
+                    </header>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+
+        <!-- Query -->
+        <action type="issue at">AT+CCFC=0,2&#13;</action>
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 686
+                    ]]>
+                    </header>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+                        <simservs xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+                           <communication-diversion active="false"/>
+                           <target>"12345678"</target>
+                        </simservs>
+                    ]]>
+                    </body>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CCFC: 0,1&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+
+    <testcase name="SUPSRV CF enable busy">
+    <!--
+        scenario: Set unconditional to active
+        AT+CCFC=1,1,"12345678",1
+        OK
+        AT+CCFC=1,2
+        +CCFC: 1,1,"12345678",129
+    -->
+        <action type="issue at">AT+CCFC=1,1,"12345678",129,1&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_CREATE_REPLACE</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<simservs xmlns:cp="urn:ietf:params:xml:ns:common-policy"
+xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap"
+xmlns:ocp="urn:oma:xml:xdm:common-policy"><communication-diversion active="true">
+    
+    <cp:ruleset>
+        <cp:rule id="rule2">
+            <cp:conditions>
+                <busy/>
+                
+            </cp:conditions>
+            <cp:actions>
+                <forward-to>
+                    <target>"12345678"</target>
+                </forward-to>
+            </cp:actions>
+        </cp:rule>
+    </cp:ruleset>
+    </communication-diversion>
+</simservs>]]></body>
+                </command>
+            </xcap>
+        </action>
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 0
+                    ]]>
+                    </header>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+
+
+        <!-- Query -->
+        <action type="issue at">AT+CCFC=1,2&#13;</action>
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 686
+                    ]]>
+                    </header>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+                        <simservs xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+                           <communication-diversion active="true">
+                               <conditions>
+                                   <busy/>
+                               </conditions>
+                               <actions>
+                                   <forward-to>
+                                      <target>"12345678"</target>
+                                   </forward-to>
+                               </actions>
+                           </communication-diversion>
+                        </simservs>
+                    ]]>
+                    </body>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CCFC: 1,1,"12345678",129&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+
+    <testcase name="SUPSRV CF disable busy">
+    <!--
+        scenario: Set busy to inactive
+        AT+CCFC=1,0
+        OK
+        AT+CCFC=1,2
+        +CCFC: 0,1
+    -->
+        <action type="issue at">AT+CCFC=1,0&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_CREATE_REPLACE</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<simservs xmlns:cp="urn:ietf:params:xml:ns:common-policy"
+xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap"
+xmlns:ocp="urn:oma:xml:xdm:common-policy"><communication-diversion active="false">
+    <cp:ruleset>
+        <cp:rule id="rule1">
+            <cp:conditions>
+                <busy/>
+            </cp:conditions>
+        </cp:rule>
+    </cp:ruleset>
+    </communication-diversion>
+</simservs>]]></body>
+                </command>
+            </xcap>
+        </action>
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 0
+                    ]]>
+                    </header>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+
+        <!-- Query -->
+        <action type="issue at">AT+CCFC=1,2&#13;</action>
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 686
+                    ]]>
+                    </header>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+                        <simservs xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+                           <communication-diversion active="false"/>
+                           <target>"12345678"</target>
+                        </simservs>
+                    ]]>
+                    </body>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CCFC: 0,1&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+
+
+    <testcase name="SUPSRV CF enable NOREPLY">
+    <!--
+        scenario: Set no reply to active
+        AT+CCFC=2,1,"12345678",129,1
+        OK
+        AT+CCFC=2,2
+        +CCFC: 1,1,"12345678",129,1,,,20
+    -->
+        <action type="issue at">AT+CCFC=2,1,"12345678",129,1&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_CREATE_REPLACE</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<simservs xmlns:cp="urn:ietf:params:xml:ns:common-policy"
+xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap"
+xmlns:ocp="urn:oma:xml:xdm:common-policy"><communication-diversion active="true">
+    <NoReplyTimer>20</NoReplyTimer>
+    <cp:ruleset>
+        <cp:rule id="rule3">
+            <cp:conditions>
+                <no-answer/>
+                
+            </cp:conditions>
+            <cp:actions>
+                <forward-to>
+                    <target>"12345678"</target>
+                </forward-to>
+            </cp:actions>
+        </cp:rule>
+    </cp:ruleset>
+    </communication-diversion>
+</simservs>]]></body>
+                </command>
+            </xcap>
+        </action>
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 0
+                    ]]>
+                    </header>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+
+
+        <!-- Query -->
+        <action type="issue at">AT+CCFC=2,2&#13;</action>
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 686
+                    ]]>
+                    </header>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+                        <simservs xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+                           <communication-diversion active="true">
+                               <NoReplyTimer>20</NoReplyTimer>
+                               <conditions>
+                                   <no-answer/>
+                               </conditions>
+                               <actions>
+                                   <forward-to>
+                                      <target>"12345678"</target>
+                                   </forward-to>
+                               </actions>
+                           </communication-diversion>
+                        </simservs>
+                    ]]>
+                    </body>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CCFC: 1,1,"12345678",129,,,20&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+
+    <testcase name="SUPSRV CF enable NOREPLY with timer, 10sec">
+    <!--
+        scenario: Set no reply to active
+        AT+CCFC=2,1,"12345678",1,,,10
+        OK
+        AT+CCFC=2,2
+        +CCFC: 1,1,"12345678",129,1,,,10
+    -->
+        <action type="issue at">AT+CCFC=2,1,"12345678",129,1,,,10&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_CREATE_REPLACE</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<simservs xmlns:cp="urn:ietf:params:xml:ns:common-policy"
+xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap"
+xmlns:ocp="urn:oma:xml:xdm:common-policy"><communication-diversion active="true">
+    <NoReplyTimer>10</NoReplyTimer>
+    <cp:ruleset>
+        <cp:rule id="rule3">
+            <cp:conditions>
+                <no-answer/>
+                
+            </cp:conditions>
+            <cp:actions>
+                <forward-to>
+                    <target>"12345678"</target>
+                </forward-to>
+            </cp:actions>
+        </cp:rule>
+    </cp:ruleset>
+    </communication-diversion>
+</simservs>]]></body>
+                </command>
+            </xcap>
+        </action>
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 0
+                    ]]>
+                    </header>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+
+
+        <!-- Query -->
+        <action type="issue at">AT+CCFC=2,2&#13;</action>
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 686
+                    ]]>
+                    </header>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+                        <simservs xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+                           <communication-diversion active="true">
+                               <NoReplyTimer>10</NoReplyTimer>
+                               <conditions>
+                                   <no-answer/>
+                               </conditions>
+                               <actions>
+                                   <forward-to>
+                                      <target>"12345678"</target>
+                                   </forward-to>
+                               </actions>
+                           </communication-diversion>
+                        </simservs>
+                    ]]>
+                    </body>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CCFC: 1,1,"12345678",129,,,10&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+
+    <testcase name="SUPSRV CF disable NOREPLY">
+    <!--
+        scenario: Set no reply to inactive
+        AT+CCFC=2,0
+        OK
+        AT+CCFC=2,2
+        +CCFC: 0,1
+    -->
+        <action type="issue at">AT+CCFC=2,0&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_CREATE_REPLACE</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<simservs xmlns:cp="urn:ietf:params:xml:ns:common-policy"
+xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap"
+xmlns:ocp="urn:oma:xml:xdm:common-policy"><communication-diversion active="false">
+    <cp:ruleset>
+        <cp:rule id="rule1">
+            <cp:conditions>
+                <no-answer/>
+            </cp:conditions>
+        </cp:rule>
+    </cp:ruleset>
+    </communication-diversion>
+</simservs>]]></body>
+                </command>
+            </xcap>
+        </action>
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 0
+                    ]]>
+                    </header>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+
+
+        <!-- Query -->
+        <action type="issue at">AT+CCFC=2,2&#13;</action>
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 686
+                    ]]>
+                    </header>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+                        <simservs xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+                           <communication-diversion active="false"/>
+                           <no-answer/>
+                           <target>"12345678"</target>
+                        </simservs>
+                    ]]>
+                    </body>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CCFC: 0,1&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+
+    <testcase name="SUPSRV CF enable not reachable">
+    <!--
+        scenario: Set not reachable to active
+        AT+CCFC=3,1,"12345678",1
+        OK
+        AT+CCFC=3,2
+        +CCFC: 1,1,"12345678",129
+    -->
+        <action type="issue at">AT+CCFC=3,1,"12345678",129,1&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_CREATE_REPLACE</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<simservs xmlns:cp="urn:ietf:params:xml:ns:common-policy"
+xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap"
+xmlns:ocp="urn:oma:xml:xdm:common-policy"><communication-diversion active="true">
+    
+    <cp:ruleset>
+        <cp:rule id="rule4">
+            <cp:conditions>
+                <not-reachable/>
+                
+            </cp:conditions>
+            <cp:actions>
+                <forward-to>
+                    <target>"12345678"</target>
+                </forward-to>
+            </cp:actions>
+        </cp:rule>
+    </cp:ruleset>
+    </communication-diversion>
+</simservs>]]></body>
+                </command>
+            </xcap>
+        </action>
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 0
+                    ]]>
+                    </header>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+
+
+        <!-- Query -->
+        <action type="issue at">AT+CCFC=3,2&#13;</action>
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 686
+                    ]]>
+                    </header>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+                        <simservs xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+                           <communication-diversion active="true">
+                               <conditions>
+                                   <not-reachable/>
+                               </conditions>
+                               <actions>
+                                   <forward-to>
+                                      <target>"12345678"</target>
+                                   </forward-to>
+                               </actions>
+                           </communication-diversion>
+                        </simservs>
+                    ]]>
+                    </body>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CCFC: 1,1,"12345678",129&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+
+    <testcase name="SUPSRV CF disable not reachable">
+    <!--
+        scenario: Set not reachable to inactive
+        AT+CCFC=3,0
+        OK
+        AT+CCFC=3,2
+        +CCFC: 0,1
+    -->
+        <action type="issue at">AT+CCFC=3,0&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_CREATE_REPLACE</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<simservs xmlns:cp="urn:ietf:params:xml:ns:common-policy"
+xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap"
+xmlns:ocp="urn:oma:xml:xdm:common-policy"><communication-diversion active="false">
+    <cp:ruleset>
+        <cp:rule id="rule1">
+            <cp:conditions>
+                <not-reachable/>
+            </cp:conditions>
+        </cp:rule>
+    </cp:ruleset>
+    </communication-diversion>
+</simservs>]]></body>
+                </command>
+            </xcap>
+        </action>
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 0
+                    ]]>
+                    </header>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+
+        <!-- Query -->
+        <action type="issue at">AT+CCFC=3,2&#13;</action>
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 686
+                    ]]>
+                    </header>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+                        <simservs xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+                           <communication-diversion active="false"/>
+                           <target>"12345678"</target>
+                        </simservs>
+                    ]]>
+                    </body>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CCFC: 0,1&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+
+
+    <testcase name="SUPSRV CF enable not login">
+    <!--
+        scenario: Set not registered to active
+        AT+CCFC=4,1,"12345678",1
+        OK
+        AT+CCFC=4,2
+        +CCFC: 1,1,"12345678",129
+    -->
+        <action type="issue at">AT+CCFC=4,1,"12345678",129,1&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_CREATE_REPLACE</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<simservs xmlns:cp="urn:ietf:params:xml:ns:common-policy"
+xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap"
+xmlns:ocp="urn:oma:xml:xdm:common-policy"><communication-diversion active="true">
+    
+    <cp:ruleset>
+        <cp:rule id="rule4">
+            <cp:conditions>
+                <not-registered/>
+                
+            </cp:conditions>
+            <cp:actions>
+                <forward-to>
+                    <target>"12345678"</target>
+                </forward-to>
+            </cp:actions>
+        </cp:rule>
+    </cp:ruleset>
+    </communication-diversion>
+</simservs>]]></body>
+                </command>
+            </xcap>
+        </action>
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 0
+                    ]]>
+                    </header>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+
+
+        <!-- Query -->
+        <action type="issue at">AT+CCFC=4,2&#13;</action>
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 686
+                    ]]>
+                    </header>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+                        <simservs xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+                           <communication-diversion active="true">
+                               <conditions>
+                                   <not-registered/>
+                               </conditions>
+                               <actions>
+                                   <forward-to>
+                                      <target>"12345678"</target>
+                                   </forward-to>
+                               </actions>
+                           </communication-diversion>
+                        </simservs>
+                    ]]>
+                    </body>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CCFC: 1,1,"12345678",129&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+
+    <testcase name="SUPSRV CF disable not login">
+    <!--
+        scenario: Set not login to inactive
+        AT+CCFC=4,0
+        OK
+        AT+CCFC=4,2
+        +CCFC: 0,1
+    -->
+        <action type="issue at">AT+CCFC=4,0&#13;</action>
+
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_CREATE_REPLACE</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<simservs xmlns:cp="urn:ietf:params:xml:ns:common-policy"
+xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap"
+xmlns:ocp="urn:oma:xml:xdm:common-policy"><communication-diversion active="false">
+    <cp:ruleset>
+        <cp:rule id="rule1">
+            <cp:conditions>
+                <not-registered/>
+            </cp:conditions>
+        </cp:rule>
+    </cp:ruleset>
+    </communication-diversion>
+</simservs>]]></body>
+                </command>
+            </xcap>
+        </action>
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 0
+                    ]]>
+                    </header>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+
+        <!-- Query -->
+        <action type="issue at">AT+CCFC=4,2&#13;</action>
+        <!-- validate a xcap message -->
+        <action type="validate xcap" timeout="2000">
+            <xcap>
+                <command>
+                    <operation type="enum">XCAP_OPERATION_FETCH</operation>
+                    <optype type="enum">XCAP_OPERATION_TYPE_DOCUMENT</optype>
+                    <condition type="enum">XCAP_CONDITION_NONE</condition>
+                    <uri type="string">http://user1:12345678@172.16.0.100:8080/xcap/simservs.ngn.etsi.org/users/sip:+14043351655@foundry.att.com/simservs.xml/~~/simservs/communication-diversion</uri>
+                    <username type="string">user1</username>
+                    <password type="string">12345678</password>
+                    <x3gpp type="string"></x3gpp>
+                    <auid type="string">xcap/simservs.ngn.etsi.org</auid>
+                    <etag type="string"></etag>
+                </command>
+            </xcap>
+        </action>
+
+        <!-- simulate xcap response as event -->
+        <action type="issue xcap">
+            <xcap>
+                <event>
+                    <error type="enum">XCAP_EVT_ERR_NONE</error>
+                    <header type="string"><![CDATA[HTTP/1.1 200 OK
+                        Server: XDM-serv/OMA2.0
+                        Date: Mon, 04 March 2013 10:50:39 GMT
+                        Etag: "eti87"
+                        Content-Type:application/simservs+xml; charset="utf-8" 
+                        Content-Length: 686
+                    ]]>
+                    </header>
+                    <body type="string"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+                        <simservs xmlns="http://uri.etsi.org/ngn/params/xml/simservs/xcap" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" >
+                           <communication-diversion active="false"/>
+                           <target>"12345678"</target>
+                        </simservs>
+                    ]]>
+                    </body>
+                </event>
+            </xcap>
+        </action>
+        <!-- AT infc verify receiving the parsed query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CCFC: 0,1&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+
+
+</tapp>
+

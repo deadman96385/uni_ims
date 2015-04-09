@@ -1,0 +1,78 @@
+<tapp>
+    <testcase name="Create Service for testing setting Provisioninf Data">
+        <!--issue CSM to Set ip -->
+        <action type="issue csm" timeout="1000">
+            <csm>
+                <type>CSM_EVENT_TYPE_RADIO</type>
+                <reason>CSM_RADIO_REASON_IP_CHANGE</reason>
+                <ip>172.16.0.200</ip>
+                <nettype>lte</nettype>
+                <infc>eth0</infc>
+            </csm>
+        </action>
+        <!-- Create Service  -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_CREATE</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <server type="enum">ISI_SERVER_TYPE_INVALID</server>
+                </service>
+            </isip>
+        </action>
+        <!--issue a cerate done evnent to CSM  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_CREATE</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+        <action type="issue isi rpc">
+            <rpc>
+                <func type="enum">ISI_SET_PROVISIONING_DATA</func>
+                <!-- serviceId -->
+                <param type="int" dontcare="1">1</param>
+                <!-- filename  -->
+                <param type="xmlDoc">./rcs_provisioning.xml</param>
+            </rpc>
+       </action>
+       <!--validate isi get next service -->
+       <action type="validate isi rpc return" timeout="2000">
+           <rpc>
+               <func type="enum">ISI_SET_PROVISIONING_DATA</func>
+               <!-- return value -->
+               <param type="enum" dontcare="0">ISI_RETURN_OK</param>
+           </rpc>
+       </action>
+        <!-- Create Service  -->
+        <action type="validate isip" timeout="1000">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_CREATE</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <server type="enum">ISI_SERVER_TYPE_INVALID</server>
+                </service>
+            </isip>
+        </action>
+        <!--issue a cerate done evnent to CSM  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <protocol  type="int">1</protocol>
+                <id type="int">1</id>
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_CREATE</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </service>
+            </isip>
+        </action>
+    </testcase>
+</tapp>

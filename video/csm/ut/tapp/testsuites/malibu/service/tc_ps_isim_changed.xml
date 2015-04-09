@@ -1,0 +1,50 @@
+<tapp>
+    <!--
+        Change IMS service account data.
+    -->
+    <testcase name="ISIM changed">
+        <!--issue CSM to change ISIM info -->
+        <action type="issue csm" timeout="1000">
+            <csm>
+                <type>CSM_EVENT_TYPE_SERVICE</type>
+                <reason>CSM_SERVICE_REASON_SET_PCSCF</reason>
+                <serviceId>1</serviceId>
+                <pcscf>sbc.core.foundry.att.com;transport=TCP</pcscf>
+            </csm>
+        </action>
+        <action type="issue csm" timeout="1000">
+            <csm>
+                <type>CSM_EVENT_TYPE_SERVICE</type>
+                <reason>CSM_SERVICE_REASON_SET_IMPU</reason>
+                <serviceId>1</serviceId>
+                <impu>sip:4043351655@foundry.att.com</impu>
+            </csm>
+        </action>
+        <action type="issue csm" timeout="1000">
+            <csm>
+                <type>CSM_EVENT_TYPE_SERVICE</type>
+                <reason>CSM_SERVICE_REASON_SET_IMPI</reason>
+                <serviceId>1</serviceId>
+                <impi>4043351655@private.att.net</impi>
+            </csm>
+        </action>
+        <action type="issue csm" timeout="1000">
+            <csm>
+                <type>CSM_EVENT_TYPE_SERVICE</type>
+                <reason>CSM_SERVICE_REASON_SET_DOMAIN</reason>
+                <serviceId>1</serviceId>
+                <domain>foundry.att.com</domain>
+            </csm>
+        </action>
+        <action type="issue csm" timeout="1000">
+            <csm>
+                <type>CSM_EVENT_TYPE_SERVICE</type>
+                <reason>CSM_SERVICE_REASON_SET_PASSWORD</reason>
+                <serviceId>1</serviceId>
+                <password>12345</password>
+            </csm>
+        </action>
+
+    </testcase>
+</tapp>
+

@@ -1,0 +1,22 @@
+<tapp>
+    <!-- This case is to set feature to VOLTE CALL.-->
+    <testcase name="Set Feature =  VOLTE call">
+        <!--issue isi to get service -->
+        <action type="issue isi rpc">
+            <rpc>
+                <func type="enum">ISI_SET_FEATURE</func>
+                <!-- features 1=VOLTE_CALL  2= VOLTE_SMS 4 = RCS -->
+                <param type="int">5</param>
+            </rpc>
+       </action>
+       <!--validate isi get next service -->
+       <action type="validate isi rpc return" timeout="2000">
+           <rpc>
+               <func type="enum">ISI_SET_FEATURE</func>
+               <!-- return value -->
+               <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+           </rpc>
+       </action>
+    <action type="pause">500</action>
+    </testcase>
+</tapp>

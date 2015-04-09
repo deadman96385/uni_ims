@@ -1,0 +1,10 @@
+<mc>
+    <interface type="this">mc.ipc</interface>
+    <interface type="audio">mc.ipc</interface>
+    <interface type="stream">mc.ipc</interface>
+    <interface type="isi">isi.ipc.protocol</interface>
+    <audio>
+        <rtp port="59000"></rtp>
+        <tone auto-callprogress="on"></tone>
+    </audio>
+</mc>

@@ -1,0 +1,21 @@
+<!--
+    This test cases includes all test cases.
+-->
+<tapp>
+    <testcase>
+        <!-- init tests -->
+        <include>tc_init.xml</include>
+        <include>../../../malibu/service/tc_reg_all.xml</include>
+        <!-- reuse malibu service test cases -->
+        <!-- Note: If you want to test dual number registration, you have to mark the test case tc_reg_all.xml-->
+
+        
+        <include>dual_number_calls/tc_dual_number_call_all.xml</include>
+        <include>call_waiting/tc_call_waiting_all.xml</include>
+        <include>cnap_calls/tc_cnap_call_all.xml</include>
+        <include>sms/tc_sms_all.xml</include>
+        <include>video_request_key/tc_ps_video_request_key.xml</include>
+        <include>group_calls/tc_grp_calls_all.xml</include>
+        <include>supsrv/tc_supsrv_all.xml</include>
+    </testcase>
+</tapp>

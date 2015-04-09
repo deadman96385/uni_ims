@@ -1,0 +1,36 @@
+<!--
+    This test cases includes all test cases.
+-->
+<tapp>
+    <testcase>
+        <!-- init tests -->
+        <include>tc_init.xml</include>
+        <!-- supplementary service configuration tests -->
+        <include>supsrv/tc_supsrv_all.xml</include>
+        <!-- registration tests -->
+        <include>service/tc_reg_all.xml</include>
+        <!-- basic call tests -->
+        <include>basic_call/tc_basic_call_all.xml</include>
+        <!-- url format tests -->
+        <include>provisioning_setting/urlFmt/tc_ps_url_all.xml</include>
+        <!-- sms tests -->
+        <include>sms/tc_sms_all.xml</include>
+        <!-- emergency  call tests -->
+        <include>emergency_call/tc_emergency_call_all.xml</include>
+        <!-- call waiting test-->
+        <include>call_waiting/tc_call_waiting_all.xml</include>
+        <!-- call features test-->
+        <include>call_features/tc_call_features_all.xml</include>
+        <!-- multiple call tests -->
+        <include>multi_calls/tc_multi_calls_all.xml</include>
+        <!-- sms features test-->
+        <include>sms_features/tc_sms_features_all.xml</include>
+        <!-- isi rpc server test-->
+        <!-- ussd tests -->
+        <include>ussd/tc_ussd_all.xml</include>
+        <!--
+            error tests. Note: error test need be last.
+        -->
+        <include>error_test/tc_error_test_all.xml</include>
+    </testcase>
+</tapp>

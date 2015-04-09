@@ -1,0 +1,17 @@
+<tapp>
+    <testsuite>
+        <name>MalibuGeneric.StandardATCommands</name>
+    </testsuite>
+    <report>
+        <filename>./tapp_malibu_generic_result.txt</filename>
+    </report>
+    <xmlReport>
+        <filename>./tapp_malibu_generic_result.xml</filename>
+    </xmlReport>
+    <gsm>
+        <device>./smd0</device>
+    </gsm>
+    <csm>
+        <xml>./csm.xml</xml>
+    </csm>
+</tapp>

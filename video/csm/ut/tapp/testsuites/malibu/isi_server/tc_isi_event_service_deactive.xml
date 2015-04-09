@@ -1,0 +1,21 @@
+<tapp>
+    <!-- This case is to validate event when protocoal initial ok.-->
+    <testcase name="ISI validate services deactive event">
+        <!-- isi rpc validate get protocoal event-->
+        <action type="validate isi get event" timeout="1000">
+            <rpc>
+                <func type="enum">ISI_GET_EVENT</func>
+                <!-- return value -->
+                <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+                <!-- serviceId -->
+                <param type="int" dontcare="1">2</param>
+                <!-- id -->
+                <param type="int" dontcare="1">2</param>
+                <!-- idType 1 = call -->
+                <param type="int" dontcare="0">3</param>
+                <!-- event id 23 ISI_EVENT_SERVICE_INACTIVE -->
+                <param type="int" dontcare="0">23</param>
+            </rpc>
+        </action>
+    </testcase>
+</tapp>

@@ -1,0 +1,20 @@
+/*
+ * THIS IS AN UNPUBLISHED WORK CONTAINING D2 TECHNOLOGIES, INC. CONFIDENTIAL
+ * AND PROPRIETARY INFORMATION.  IF PUBLICATION OCCURS, THE FOLLOWING NOTICE
+ * APPLIES: "COPYRIGHT 2004-2007 D2 TECHNOLOGIES, INC. ALL RIGHTS RESERVED"
+ *
+ * $D2Tech$ $Rev: $ $Date: $
+ *
+ */
+
+#ifndef _VID_H_
+#define _VID_H_
+
+            
+int VID_dspInit(
+    void);
+
+int VID_dspShutdown(
+    void);
+
+#endif

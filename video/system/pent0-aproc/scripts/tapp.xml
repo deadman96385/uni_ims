@@ -1,0 +1,11 @@
+<tapp>
+    <report>
+        <filename>./malibu_test_result.txt</filename>
+    </report>
+    <gsm>
+        <device>./smd0</device>
+    </gsm>
+    <csm>
+        <xml>./csm.xml</xml>
+    </csm>
+</tapp>

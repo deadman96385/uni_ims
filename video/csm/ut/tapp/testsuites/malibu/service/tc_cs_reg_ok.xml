@@ -1,0 +1,43 @@
+<!--
+    This test case is to verify network registration state.
+
+    Note:
+    =================================
+    add '\r' and '\n' in XML. 
+           Dec    Hex
+    '\n': &#10;  &#xA;
+    '\r': &#13;  &#xD;
+-->
+<tapp>
+    <testcase name="GSM network status">
+        <!-- AT set register state mode. -->
+        <action type="issue at">AT+CREG=2</action>
+        <!-- GSM dev verify receiving register state mode. -->
+        <action type="validate gsm at" timeout="2000">AT+CREG=2&#xD;</action>
+        <!-- GSM response OK for AT+CREG= -->
+        <action type="issue gsm at">0&#xD;</action>
+        <!-- AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- AT query register state. -->
+        <action type="issue at">AT+CREG?</action>
+        <!-- GSM dev verify receiving register query. -->
+        <action type="validate gsm at" timeout="2000">AT+CREG?&#xD;</action>
+        <!-- GSM response register state. -->
+        <action type="issue gsm at">+CREG: 2,0&#xD;</action>
+        <!-- AT infc verify receiving register state. -->
+        <action type="validate at" timeout="2000">+CREG: 2,0&#xD;&#xA;0&#xD;</action>
+
+        <!-- stop 5sec and AT infc will send reg query again. -->
+        <action type="pause">2000</action>
+
+        <!-- AT query register state. -->
+        <action type="issue at">AT+CREG?</action>
+        <!-- GSM dev verify receiving register query. -->
+        <action type="validate gsm at" timeout="5000">AT+CREG?&#xD;</action>
+        <!-- GSM response register state. -->
+        <action type="issue gsm at">+CREG: 2,1,"2871","0161835"&#xD;0&#xD;</action>
+        <!-- AT infc verify receiving register state. -->
+        <action type="validate at" timeout="5000">+CREG: 2,1,"2871","0161835"&#xD;&#xA;0&#xD;</action>
+    </testcase>
+</tapp>

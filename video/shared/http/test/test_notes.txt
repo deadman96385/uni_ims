@@ -1,0 +1,68 @@
+# Http lib testing
+Testing D2 http wrapper library around libcurl, libfetch, libdownlooad
+
+## build and setup
+   * config your platform to use the http lib you would like to use/test and build it
+   * requirements: python 2.x runtime
+   * only tested in pent0 environment.
+
+## run
+
+   * run quickserve.py in current directory
+    ./quickserve.py --no-clobber --upload=./ --port=9090 --bind=127.0.0.1 \
+        --authfile=httpauth.txt  --filelist=httplist.txt
+    ./quickserve.py --no-clobber --upload=./ --port=9090 --bind=127.0.0.1 \
+        --authfile=httpnopass.txt  --filelist=httplist.txt
+   * run http_test xxx, where http_test is in build.pent0, and example ip for supsrv
+    cd build.pent0
+    ./shared_http_test --digest --user=admin --pass=passwd --localip=10.0.2.15\
+        http://127.0.0.1:9090/test_notes.txt
+
+    ./shared_http_test --put=tapp.xml --digest --user=admin --localip=10.0.2.15\
+        --pass=passwd http://127.0.0.1:9090/tapp.xml
+        
+    ./shared_http_test --digest --user=admin --pass="" \
+        --auts=12345671234567 \
+        http://127.0.0.1:9090/test_notes.txt
+        
+    gdb --tui --args xxx for debugging
+    sudo tcpdump -i lo -p -s 0 -vv -w ~/test.pcap
+    
+    e.g. 
+    gdb --tui --args ./shared_http_test --digest --user=admin --pass=passwd  http://127.0.0.1:9090/test_notes.txt
+    
+    compare with curl put command by:
+    curl --upload-file csm.xml --user admin:passwd --digest http://127.0.0.1:9090/csm.xml
+
+    for doing xcap/supsrv at command, do the radio policy "rir_main 10.0.2.15 3"
+    and create xcap subdirectory here such as: (path is based on xcap uri rule)
+    xcap/simservs.ngn.etsi.org/users/user1/simservs.xml/~~/simservs/originating-identity-presentation-restriction
+
+it should go through these use cases
+
+   1. put some customer header to identify the 3gpp ids and auth
+   2. do connection and try auth
+   3. based on auth responses, do some auth setup or negotiation
+   4. based on auth challenge to do some auth calculation, either default or external funct.
+   5. report error header if still in error
+   6. complete the request with read buffer or write buffer function (only body is significant)
+
+## platform ac502 notes:
+
+To test on ac502 phone, do the following steps:
+
+connect phone to pc with android ADB tool installed. issue following commands.
+adb root
+adb remount
+adb shell
+
+following commands are to be entered inside the adb shell
+cat /dev/stty_lte31 &
+echo -e 'at+cgdcont=11,"IPV4V6","cmnet"\r' > /dev/stty_lte31
+echo -e 'at+cgdata="M-ETHER",11\r' > /dev/stty_lte31
+echo -e 'at+cgpaddr\r' > /dev/stty_lte31
+
+check the ip address and replace it to the localip parameter in the d2idh test command.
+also replace server ip with your testing server.
+
+echo -e 'at+spd2cmd=11,"--digest,--user=admin,--pass=passwd,--localip=phone.local.ip.addr,http://server.public.ip.addr:9090/testdata.xml"\r' > /dev/stty_lte31

@@ -1,0 +1,25 @@
+<!--
+    Test Case: CS MO SMS Large.
+-->
+<tapp>
+    <testcase name="CS MO SMS Large">
+        <!-- AT send AT+CMGS to send SMS. -->
+        <action type="issue at">AT+CMGS=152</action>
+        <!-- AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">> &#xD;</action>
+        <!-- AT send pdu. -->
+        <action type="issue at">0041000a8190386571580000a0050003b8020162b219ad66bbe17230504c36a3d56c375c0e068ac966b49aed86cbc14031d98c56b3dd70391828269bd16ab61b2e0703c564335acd76c3e560a0986c46abd96eb81c0c1493cd6835db0d97838162b219ad66bbe17230504c36a3d56c375c0e068ac966b49aed86cbc14031d98c</action>
+        <action type="issue at">56b3dd70391828269bd16ab61b2e0703c564335acd76c3e560&#x1A;</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">AT+CMGS=152&#xD;</action>
+        <!-- GSM send the response for AT+CMGS -->
+        <action type="issue gsm at">> &#xD;&#xA;</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">0041000a8190386571580000a0050003b8020162b219ad66bbe17230504c36a3d56c375c0e068ac966b49aed86cbc14031d98c56b3dd70391828269bd16ab61b2e0703c564335acd76c3e560a0986c46abd96eb81c0c1493cd6835db0d97838162b219ad66bbe17230504c36a3d56c375c0e068ac966b49aed86cbc14031d98c56b3dd70391828269bd16ab61b2e0703c564335acd76c3e560&#x1A;&#xD;</action>
+        <!-- GSM send the response for AT+CMGS -->
+        <action type="issue gsm at">+CMGS: 8&#xD;&#xA;0&#xD;&#xA;</action>
+        <!-- AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">+CMGS: 8&#xD;&#xA;0&#xD;</action>
+    </testcase>
+</tapp>
+

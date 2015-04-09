@@ -1,0 +1,41 @@
+<!--
+    Test Case: PS MO SMS.
+-->
+<tapp>
+    <testcase name="MO SMS">
+        <!-- AT send AT+CMGS to send SMS. -->
+        <action type="issue at">AT+CMGS="tel:17"</action>
+        <!-- AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">> &#xD;</action>
+        <!-- AT send pdu. -->
+        <action type="issue at">Hello World&#x1A;</action>
+        <!-- VALDATE new message  -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_MESSAGE</code>
+                <protocol  type="int">1</protocol>
+                <message>
+                    <reason type="enum">ISIP_TEXT_REASON_NEW</reason>
+                    <message type="hex">000002100204030085C008220003200000010C105C8CBB366F415F7F2D99000801000D01400E070525219A8B2A80</message>
+                    <pduLen type="int">46</pduLen>
+                    <type type="enum">ISI_MSG_TYPE_PDU_3GPP2</type>
+                    <to type="string">tel:17</to>
+                    <serviceId type="int">0</serviceId>
+                </message>
+            </isip>
+        </action>
+        <!-- Issue message send OK  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_MESSAGE</code>
+                <protocol  type="int">1</protocol>
+                <message>
+                    <reason type="enum">ISIP_TEXT_REASON_COMPLETE</reason>
+                </message>
+            </isip>
+        </action>
+        <!-- AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000" onFail="stop">0&#xD;&#xA;</action>
+    </testcase>
+</tapp>
+

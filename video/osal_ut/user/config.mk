@@ -1,0 +1,30 @@
+#!/bin/make
+# THIS IS AN UNPUBLISHED WORK CONTAINING D2 TECHNOLOGIES, INC. CONFIDENTIAL
+# AND PROPRIETARY INFORMATION.  IF PUBLICATION OCCURS, THE FOLLOWING NOTICE
+# APPLIES: "COPYRIGHT 2004 D2 TECHNOLOGIES, INC. ALL RIGHTS RESERVED"
+#
+# $D2Tech$ $Rev: 9028 $ $Date: 2009-03-03 15:31:45 +0800 (Tue, 03 Mar 2009) $
+#
+
+#
+# This file is for module level configuration
+# 
+# -------- You may modify this file to include customizations
+#
+
+#export CDEBUG  = -g
+
+export MODULE_SUB_DIRS		:= 	\
+		../user
+
+export MODULE_PREFIX	= OSAL_UT_USER
+export MODULE_OUTPUT	= rlib
+
+export MODULE_OTHER_LIBS	= \
+		$(LIB_DIR)/osal_user.lib
+
+export MODULE_CDEFINES	= $(CDEFINES_ADD_FOR_USERLAND) -DOSAL_DEBUG
+export MODULE_CFLAGS	= $(CFLAGS_ADD_FOR_USERLAND)
+
+# END OF MAKEFILE
+

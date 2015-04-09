@@ -1,0 +1,191 @@
+<tapp>
+    <testcase name="PS: Creating a conference (IP)">
+        <!-- Initiate a call -->
+        <action type="issue at">AT+CDU=1,"tel:+821022330215",1,1</action>
+
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <to type="string">tel:+821022330215</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                </call>
+            </isip>
+        </action>
+
+        <action type="validate at" timeout="2000">+CDU: 1&#13;&#10;</action>
+        <action type="validate at" timeout="2000">0&#13;</action>
+
+        <action type="pause">10</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="5000">+CMCCSI: 1,0,0,0,"",0,2,0,1,0,"tel:+821022330215",0,0&#xD;&#xA;</action>
+        <!-- issue isip trying with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRYING</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to ACK call with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+
+        <action type="pause">10</action>
+
+        <action type="validate at" timeout="5000">+CMCCSI: 1,0,0,0,"",0,3,0,1,0,"tel:+821022330215",0,0&#xD;&#xA;</action>
+
+        <!-- issue isip to accept call with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+
+        <!--  issue accept ack with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol  type="int">0</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                </call>
+            </isip>
+        </action>
+
+        <action type="pause">10</action>
+
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,0,0,"",0,4,0,1,0,"tel:+821022330215",0,0&#xD;&#xA;</action>
+        
+        <!-- AT to places a second call  -->
+        <!-- Initiate a group call by merge current call -->
+        <action type="issue at">AT%CGU=2,"tel:+821022330216"</action>
+
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,1,4,"m=audio",0,4,0,1,0,"tel:+821022330215",0,0&#xD;&#xA;</action>
+
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,1,1,"",0,6,0,1,0,"tel:+821022330215",0,0&#xD;&#xA;</action>
+
+        <action type="validate at" timeout="2000">0&#13;</action>
+
+        <!-- conf call refer -->
+        <!--  ISIP Valide TRANSFER_CONSULT the first call-->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRANSFER_CONF</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <to type="string">sip:ALU_CONF@foundry.att.com</to>
+                    <participants type="string">tel:+821022330216</participants>
+                </call>
+            </isip>
+        </action>
+
+        <!-- issue isip to csm that transfer completed-->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRANSFER_COMPLETED</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <to type="string">tel:+821022330215</to>
+                    <transferTargetCallId type="int">0</transferTargetCallId>
+                </call>
+            </isip>
+        </action>
+
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,0,0,"",0,6,2,1,0,"tel:+821022330215",0,0&#xD;&#xA;</action>
+
+        <!-- *************************Server notify presence info ************************* -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_PRESENCE</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <presence>
+                    <reason type="enum">ISIP_PRES_REASON_PRESENCE</reason>
+                    <from type="string">tel:+821022330214</from>
+                    <show type="string">Available</show>
+                    <status type="string">connected</status>
+                </presence>
+            </isip>
+        </action>
+        <action type="validate at" timeout="2000">+CMCCSS1: 1,0,259&#xD;&#xA;+CMCCSS2: 1,0,+821022330214,0&#xD;&#xA;+CMCCSSEND&#xD;&#xA;</action>
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_PRESENCE</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <presence>
+                    <reason type="enum">ISIP_PRES_REASON_PRESENCE</reason>
+                    <from type="string">tel:+821022330215</from>
+                    <show type="string">Available</show>
+                    <status type="string">connected</status>
+                </presence>
+            </isip>
+        </action>
+        <action type="validate at" timeout="2000">+CMCCSS1: 1,0,259&#xD;&#xA;+CMCCSS2: 1,0,+821022330215,0&#xD;&#xA;+CMCCSSEND&#xD;&#xA;</action>
+
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_PRESENCE</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <presence>
+                    <reason type="enum">ISIP_PRES_REASON_PRESENCE</reason>
+                    <from type="string">tel:+821022330216</from>
+                    <show type="string">Available</show>
+                    <status type="string">connected</status>
+                </presence>
+            </isip>
+        </action>
+        <action type="validate at" timeout="2000">+CMCCSS1: 1,0,259&#xD;&#xA;+CMCCSS2: 1,0,+821022330216,0&#xD;&#xA;+CMCCSSEND&#xD;&#xA;</action>
+
+        <!-- Remote party Disconnects call index = 2 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+
+        <action type="validate at" timeout="2000">+CMCCSI: 1,0,0,0,"",0,7,2,1,0,"tel:+821022330215",0,0&#xD;&#xA;</action>
+    </testcase>
+</tapp>

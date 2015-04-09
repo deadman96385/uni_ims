@@ -1,0 +1,30 @@
+<tapp>
+    <testcase>
+<!-- disable ps to test cs call -->
+        <include>../service/tc_ps_lost.xml</include>
+
+<!-- Disable CS call tests.
+        <include>tc_cs_placing_call_on_hold_resuming.xml</include>
+        <include>tc_cs_dialing_digit_during_call.xml</include>
+        <include>tc_cs_outgoing_call_invocation.xml</include>
+        <include>tc_cs_outgoing_call_suppression.xml</include>
+-->
+
+<!-- Enable ps to test ps call -->
+        <include>../service/tc_ps_ims_enable.xml</include>
+        <include>../service/tc_ps_service_active_with_net.xml</include>
+
+        <include>tc_ps_call_hold_resum.xml</include>
+        <include>tc_ps_loHold_rmHold_loResum_rmResum.xml</include>
+        <include>tc_ps_dial_digit_duringCall.xml</include>
+        <include>tc_ps_dial_digit_inearlymedia.xml</include>
+        <include>tc_ps_outgoing_call_invocation.xml</include>
+        <include>tc_ps_outgoing_call_suppression.xml</include>
+        <!-- precondition test -->
+        <include>tc_ps_incoming_call_precondition.xml</include>
+        <include>tc_ps_outgoing_call_precondition.xml</include>
+        <!-- DTMF detected SIP INFO -->
+        <include>tc_ps_dtmf_detected_sip_info.xml</include>
+    </testcase>
+</tapp>
+

@@ -1,0 +1,41 @@
+<tapp>
+    <testcase name="PS Emergency call failed">
+        <!-- Initiate a call -->
+        <action type="issue at">ATD112;</action>
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <type type="enum">ISI_SESSION_TYPE_EMERGENCY</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <to type="string">sip:112@foundry.att.com</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                    <serviceId type="int">1</serviceId>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip trying with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_FAILED</reason>
+                    <status type="enum">ISIP_STATUS_FAILED</status>
+                    <serviceId type="int">1</serviceId>
+                </call>
+            </isip>
+        </action>
+        <!-- AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <action type="pause">50</action>
+        <action type="validate at" timeout="100" onfail="continue">+CME ERROR: 30&#xD;</action>
+        <action type="validate at" timeout="100">3&#xD;</action>
+
+    </testcase>
+</tapp>

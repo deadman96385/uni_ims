@@ -1,0 +1,7 @@
+<tapp>
+    <testcase>
+        <!-- Reject call upgrade when call held -->
+        <include>tc_ps_reject_upgrade_when_held.xml</include>
+    </testcase>
+</tapp>
+

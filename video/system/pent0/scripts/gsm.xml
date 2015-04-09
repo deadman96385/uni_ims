@@ -1,0 +1,8 @@
+<gsm>
+<device>./smd0Org</device>
+<serial>
+    <baud>115200</baud>
+</serial>
+<at-cmds>
+</at-cmds>
+</gsm>

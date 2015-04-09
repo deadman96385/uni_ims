@@ -1,0 +1,24 @@
+<tapp>
+    <!-- This case is to set provisioning data.-->
+    <testcase name="Set Provisioning">
+        <!--issue isi to get service -->
+        <action type="issue isi rpc">
+            <rpc>
+                <func type="enum">ISI_SET_PROVISIONING_DATA</func>
+                <!-- serviceId -->
+                <param type="int" dontcare="1">2</param>
+                <!-- filename  -->
+                <param type="xmlDoc">./rcs_provisioning_config1.xml</param>
+            </rpc>
+       </action>
+       <!--validate isi get next service -->
+       <action type="validate isi rpc return" timeout="2000">
+           <rpc>
+               <func type="enum">ISI_SET_PROVISIONING_DATA</func>
+               <!-- return value -->
+               <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+           </rpc>
+       </action>
+       <action type="pause">2000</action>
+    </testcase>
+</tapp>

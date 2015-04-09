@@ -1,0 +1,60 @@
+<tapp>
+    <!-- This case only issue get next service of SIP , using this case t0 get and save service Id
+        to TAPP object.-->
+    <testcase name="Get sip service">
+        <!--issue isi to get service -->
+        <action type="issue isi rpc">
+            <rpc>
+                <func type="enum">ISI_GET_NEXT_SERVICE</func>
+                <!-- Service id  -->
+                <param type="int">0</param>
+            </rpc>
+       </action>
+       <action type="pause">100</action>
+       <!--validate isi get next service -->
+       <action type="validate isi rpc return" timeout="2000">
+           <rpc>
+               <func type="enum">ISI_GET_NEXT_SERVICE</func>
+               <!-- return value -->
+               <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+               <param type="int" dontcare="1">0</param>
+           </rpc>
+       </action>
+       <action type="pause">50</action>
+       <!--issue isi to get service -->
+       <action type="issue isi rpc">
+            <rpc>
+               <func type="enum">ISI_GET_NEXT_SERVICE</func>
+               <!-- Service id  -->
+               <param type="int">1</param>
+            </rpc>
+       </action>
+       <!--validate isi get next service -->
+       <action type="validate isi rpc return" timeout="2000">
+           <rpc>
+               <func type="enum">ISI_GET_NEXT_SERVICE</func>
+               <!-- return value -->
+               <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+               <param type="int" dontcare="1">0</param>
+           </rpc>
+       </action>
+       <action type="pause">50</action>
+       <!--issue isi to get service -->
+       <action type="issue isi rpc">
+            <rpc>
+                <func type="enum">ISI_GET_NEXT_SERVICE</func>
+                <!-- Service id  -->
+                <param type="int">2</param>
+            </rpc>
+       </action>
+       <!--validate isi get next service -->
+       <action type="validate isi rpc return" timeout="2000">
+           <rpc>
+               <func type="enum">ISI_GET_NEXT_SERVICE</func>
+               <!-- return value -->
+               <param type="enum" dontcare="0">ISI_RETURN_OK</param> 
+               <param type="int" dontcare="1">0</param>
+           </rpc>
+       </action>
+    </testcase>
+</tapp>

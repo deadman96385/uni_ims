@@ -1,0 +1,152 @@
+<!-- Mandatory tapp tag-->
+<tapp>
+    <!--Mandatory testcase tag.-->
+    <!--
+        It's better to have a name attribute in test case,
+        it will be printed in the test result so it can be traced easily if some cases onfailed
+
+        "repeat" attribute is to repeat the test cases.
+    -->
+    <testcase name="tc example" repeat="10">
+        <!--Include tag to include other testcase file, must in the beginning of a testcase-->
+        <include>tc_init.xml</include>
+        <!--Pause some time in millisecond, using pause a test case need-->
+        <action type="pause">500</action>
+        <!--It's must to validate complete at command with /r or /n-->
+        <!--Using &#xD; for /r and &#xA for /n -->
+        <!-- /r could be omitted when issuing at because gapp/proxy ignores it -->
+        <action type="issue at">AT+CREG?&#xD;</action>
+        <action type="validate gsm at" timeout="1000">AT+CREG?&#xD;</action>
+        <action type="issue gsm at">+CREG? 2, 0&#xD;</action>
+        <!-- Using onfail attribute to control if the test continue or stop on
+             an action failed. Set onfail to "continue" to continue the test if
+             the action failed. Default value of onfail is "stop". -->
+        <action type="validate at" onfail="continue">+CREG? 2, 0&#xD;</action>
+
+        <!-- Issuing an isip message -->
+        <action type="validate isip" timeout="1000">
+            <!--construct ISIP_Message under isip tag-->
+            <isip>
+                <!-- Each field need a type atttribute to specify the data type of this field-->
+                <code type="enum">ISIP_CODE_SERVICE</code>
+                <!--
+                     protocol will always be 1 for sip,
+                     in case there will be other protocol used in tapp, protocol is still required
+                -->
+                <protocol  type="int">1</protocol>
+                <!-- service tag for the service variable in msg -->
+                <!-- Contents of service is inside service tag -->
+                <service>
+                    <reason type="enum">ISIP_SERVICE_REASON_CREATE</reason>
+                    <status type="enum">ISIP_STATUS_TRYING</status>
+                    <server type="enum">ISI_SERVER_TYPE_INVALID</server>
+                </service>
+            </isip>
+        </action>
+
+        <!-- Example initiate a PS call -->
+        <action type="issue at">ATD18055643424;</action>
+        <!--
+            For the test case writer it's difficult to track all the call id especially there a bunch of calls.
+            But the call id is still required when validating or issuing an isip call message for mapping to the
+            correct call.
+            So mock sapp keeps an array of call id, test case writer need to know the order of a call.
+            For exmaple, one call is initiated the order is 0(first call) and then there comes a call waiting call,
+            then the call waiting call's order is 1(second call), so when issuing or validate isip call message
+            regarding to the second call, the order must be presented as 1 in <id> tag.
+            Following from above case, if the first call ended, the second call's order is still 1 and if a new call
+            is initiated, it occupys the first order.
+         -->
+        <action type="validate isip" timeout="3000">
+            <isip>
+                <!-- For outgoing call initiate validaing, no need to put id(represents the order of call)-->
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <to type="string">sip:18055643424@foundry.att.com</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip trying with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <!-- Here the id represents the order of calls, mock sapp will mapping to the correct call id-->
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRYING</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!--  If a test case doesn't validate any isip message, there will be periodical
+              isip event(ISIP_SYSTEM_REASON_START) sends to mock sapp and queued in the
+              sapp queue. It causes ISI blocks on sending message to sapp if the sapp
+              message queue is full.
+              "clean isip" action is to read and clean the isip message. If "clean isip"
+              received unexpected isip message, A.K.A any isip message doesn't filter out,
+              than it causes onfailure on the action.
+              *Note: Use this action if your test case has long period(more than one minute)
+              without validate isip message.-->
+        <action type="clean isip" timeout="10"></action>
+
+        <!-- Example action for ISI RPC -->
+        <!-- Action type "clean isi rpc event" is to clean all existing ISI RPC event.
+             Use this action to clean out all ISI RPC events which introduced by previous
+             tests. -->
+        <action type="clean isi event" timeout="1000"></action>
+        <!-- Action type "validate isi get event" to valid the return value of ISI_getEvent()
+             func tag must be ISI_GET_EVENT. Follow param tags are the expected return value of
+             ISI_getEvent(). The number of param must four for *serviceId_ptr, *id_ptr,
+             *idType_ptr, and *event_ptr. Note, currently *eventDesc_ptr is not validated.
+             Use dontcare attribute to indicate we won't validate this parameter -->
+        <action type="validate isi get event" timeout="1000">
+            <rpc>
+                <func type="enum">ISI_GET_EVENT</func>
+                <!-- serviceId -->
+                <param type="int" dontcare="0">0</param>
+                <!-- call id,do no get call id yet -->
+                <param type="int" dontcare="1">0</param>
+                <!-- idType 1 = call ,do no get call id yet -->
+                <param type="int" dontcare="0">1</param>
+                <!-- event id 40 =incoming -->
+                <param type="int" dontcare="0">40</param>
+            </rpc>
+        </action>
+        <!-- Action type "issue isi rpc" is to issue an ISI RPC call to ISI server.
+             func tag is the enum of ISI_ApiName(see isi_rpc.h) and following param tags must
+             match the number of output parameters. --> 
+        <action type="issue isi rpc">
+             <rpc>
+                <func type="enum">ISI_GET_CALL_HEADER</func>
+                <!-- call id -->
+                <param type="int" callId="1">0</param>
+            </rpc>
+        </action>
+        <!-- Action type "validate isi rpc return" is to validate return value of an ISI server API call.
+             It issue an ISI RPC call to ISI server.
+             func tag is the enum of ISI_ApiName(see isi_rpc.h) and following param tags must
+             match the number of output parameters. --> 
+        <action type="validate isi rpc return" timeout="1000">
+            <rpc>
+                <func type="enum">ISI_GET_CALL_HEADER</func>
+                <!-- Return value -->
+                <param type="enum" dontcare="0">ISI_RETURN_OK</param>
+                <!-- subject -->
+                <param type="string" dontcare="0">Whatever</param>
+                <!-- from -->
+                <param type="string" dontcare="0">sip:13122099351@domain.com</param>
+            </rpc>
+        </action>
+
+    </testcase>
+</tapp>
+

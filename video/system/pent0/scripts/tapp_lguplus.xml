@@ -1,0 +1,17 @@
+<tapp>
+    <testsuite>
+        <name>MalibuLGUPLUS.ExtDailATCommands</name>
+    </testsuite>
+    <report>
+        <filename>./tapp_malibu_lguplus_result.txt</filename>
+    </report>
+    <xmlReport>
+        <filename>./tapp_malibu_lguplus_result.xml</filename>
+    </xmlReport>
+    <gsm>
+        <device>./smd0</device>
+    </gsm>
+    <csm>
+        <xml>./csm_lguplus.xml</xml>
+    </csm>
+</tapp>

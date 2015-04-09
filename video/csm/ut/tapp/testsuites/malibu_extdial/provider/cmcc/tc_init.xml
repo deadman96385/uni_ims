@@ -1,0 +1,22 @@
+<!--
+    TAPP need to run this testcase first before starting other testcases.
+
+    How to add '\r' and '\n' in XML. 
+           Dec    Hex
+    '\n': &#10;  &#xA;
+    '\r': &#13;  &#xD;
+-->
+<tapp>
+    <testcase name="modem init status">
+        <!-- AT infc response for AT+CDEFMP=1,"m=audio" -->
+        <action type="validate gsm at" timeout="2000">AT+CDEFMP=1,"m=audio"&#xD;</action>
+        <action type="issue gsm at">0&#xD;</action>
+        <!-- AT infc response for AT+CDEFMP=AT+CDEFMP=2,"m=audio\0D\0Am=video" -->
+        <action type="validate gsm at" timeout="2000">AT+CDEFMP=2,"m=audio\0D\0Am=video"&#xD;</action>
+        <action type="issue gsm at">0&#xD;</action>
+        <!-- 01. GSM dev verify receiving register query. -->
+        <action type="validate gsm at">AT+CREG?&#13;</action>
+        <!-- 02. GSM response register state. -->
+        <action type="issue gsm at">+CREG: 2,0&#13;</action>
+    </testcase>
+</tapp>

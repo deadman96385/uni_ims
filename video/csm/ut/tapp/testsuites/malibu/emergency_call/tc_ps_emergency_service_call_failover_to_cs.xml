@@ -1,0 +1,96 @@
+<tapp>
+    <!-- Precondition: emergency call failover to CS is set -->
+    <testcase name="PS Emergency call, failover to CS">
+        <!-- Initiate a call -->
+        <action type="issue at">ATD112;</action>
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <type type="enum">ISI_SESSION_TYPE_EMERGENCY</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <to type="string">sip:112@foundry.att.com</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                    <serviceId type="int">1</serviceId>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip trying with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_FAILED</reason>
+                    <to type="string">sip:112@foundry.att.com</to>
+                    <status type="enum">ISIP_STATUS_FAILED</status>
+                    <serviceId type="int">1</serviceId>
+                </call>
+            </isip>
+        </action>
+        <!-- Failover to CS -->
+        <action type="validate gsm at" timeout="4000">ATD112;&#xD;</action>
+        <!-- GSM send the response, OK, for ATD -->
+        <action type="issue gsm at">0&#xD;</action>
+        <!-- AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="issue at">AT+CLCC</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">AT+CLCC&#xD;</action>
+        <!-- GSM send the response for +CLCC -->
+        <action type="issue gsm at">+CLCC: 1,0,2,0,0,"112",129&#xD;&#xA;0&#xD;</action>
+        <!-- AT infc verify receiving the response from GSM dev. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,2,0,0,"112",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="issue at">AT+CLCC</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">AT+CLCC&#xD;</action>
+        <!-- GSM send the response for +CLCC -->
+        <action type="issue gsm at">+CLCC: 1,0,2,0,0,"112",129&#xD;&#xA;0&#xD;</action>
+        <!-- AT infc verify receiving the response from GSM dev. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,2,0,0,"112",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">AT+CLCC&#xD;</action>
+        <!-- GSM send the response, OK, for ATD -->
+        <action type="issue gsm at">+CLCC: 1,0,0,0,0,"112",129&#xD;&#xA;0&#xD;</action>
+        <action type="pause">10</action>
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="issue at">AT+CLCC</action>
+        <!-- AT infc verify receiving the response from GSM dev. -->
+        <action type="validate at" timeout="4000">+CLCC: 1,0,0,0,0,"112",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="4000">0&#xD;</action>
+
+        <!-- ********** hang up ********* -->
+        <!-- AT send ATH to hang up the call. -->
+        <action type="issue at">ATH</action>
+        <!-- GSM dev verify the receiving AT command. -->
+        <action type="validate gsm at" timeout="2000">ATH&#xD;</action>
+        <!-- GSM send the response, OK, for ATH -->
+        <action type="issue gsm at">0&#xD;</action>
+        <!-- AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <action type="pause">50</action>
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="issue at">AT+CLCC</action>
+        <!-- AT infc verify receiving the response from GSM dev. -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- AT send AT+CLCC to request the state of the call. -->
+        <action type="validate gsm at" timeout="2000">AT+CLCC&#xD;</action>
+        <!-- GSM send OK to terminate AT+CLCC. -->
+        <action type="issue gsm at">0&#xD;</action>
+
+        <action type="clean isip" timeout="100">
+    </testcase>
+</tapp>

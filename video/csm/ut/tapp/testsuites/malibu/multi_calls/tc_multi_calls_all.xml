@@ -1,0 +1,42 @@
+<!--
+    This test cases includes all basic call test cases
+    Precondition: Both CS and PS services are active.
+-->
+<tapp>
+    <testcase>
+<!-- disable ps to test cs call -->
+        <include>../service/tc_ps_lost.xml</include>
+<!-- Disable CS call tests
+        <include>tc_cs_call_swapping.xml</include>
+        <include>tc_cs_background_call_drops.xml</include>
+        <include>tc_cs_dropping_foreground_call.xml</include>
+        <include>tc_cs_foreground_call_drops.xml</include>
+        <include>tc_cs_rmReject_2nd_outgoing_call.xml</include>
+
+        <include>tc_cs_conference_create.xml</include>
+        <include>tc_cs_conference_splitting_and_add.xml</include>
+        <include>tc_cs_conference_rmHangup_conference_again.xml</include>
+        <include>tc_cs_conference_with_6parti.xml</include>
+        <include>tc_cs_conference_kick_call.xml</include>
+
+        <include>tc_cs_call_hold_accept_incoming.xml</include>
+-->
+<!-- Enable ps to test ps call -->
+        <include>../service/tc_ps_ims_enable.xml</include>
+        <include>../service/tc_ps_service_active_with_net.xml</include>
+
+        <include>tc_ps_call_swap.xml</include>
+        <include>tc_ps_2call_disconnect_backgnd.xml</include>
+        <include>tc_ps_2call_disconnect_foregnd.xml</include>
+        <include>tc_ps_2call_drop_foregnd.xml</include>
+        <include>tc_ps_rmReject_2nd_outgoing_call.xml</include>
+
+        <include>tc_ps_conference_create.xml</include>
+        <include>tc_ps_2nd_incoming_conference_create.xml</include>
+        <include>tc_ps_conference_rmHangup.xml</include>
+        <include>tc_ps_conference_with_6parti.xml</include>
+        <include>tc_ps_conference_kick_call.xml</include>
+        <include>tc_ps_conference_add_incoming.xml</include>
+        <include>tc_ps_call_hold_accept_incoming.xml</include>
+    </testcase>
+</tapp>

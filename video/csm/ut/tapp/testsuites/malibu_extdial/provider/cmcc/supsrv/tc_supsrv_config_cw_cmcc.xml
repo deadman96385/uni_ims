@@ -1,0 +1,43 @@
+<!-- 
+    Test Case: SUPSRV CW SET and QUERY for CMCC policy.
+-->
+<tapp>
+    <testcase name="SUPSRV enable CMCC CW">
+        <!--
+            scenario: Set CW to active
+            AT+CCWA=,1
+            OK
+            AT+CCWA
+            +CCWA: ,1
+            OK
+        -->
+        <action type="issue at">AT+CCWA=,1&#13;</action>
+
+        <!-- AT infc verify receiving the parsed CW query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+        <!-- Query -->
+        <action type="issue at">AT+CCWA=,2&#13;</action>
+        <!-- AT infc verify receiving the parsed CW query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CCWA: 1,1&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+    <testcase name="SUPSRV disable CMCC CW">
+        <!--
+            scenario: Set CW to inactive.
+            AT+CCWA=,0
+            OK
+            AT+CCWA=,2
+            +CCWA: 0,1
+        -->
+        <action type="issue at">AT+CCWA=,0&#13;</action>
+
+        <!-- AT infc verify receiving the parsed CW query result. -->
+        <action type="pause">10</action>
+        <action type="validate at" timeout="2000" onFail="stop">0&#13;&#10;</action>
+        <!-- Query -->
+        <action type="issue at">AT+CCWA=,2&#13;</action>
+        <!-- AT infc verify receiving the parsed CW query result. -->
+        <action type="validate at" timeout="2000" onFail="stop">+CCWA: 0,1&#13;&#10;0&#13;&#10;</action>
+    </testcase>
+</tapp>
+

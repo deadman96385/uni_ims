@@ -1,0 +1,38 @@
+<!--
+    This test cases includes isi RPC server test cases
+    Precondition: 1. PS services are active.
+                  2. Both audio and video call.
+                  3. If feature is not set to volte mode, the incoming audio call would not be tested.
+-->
+<tapp>
+    <testcase>
+        <include>tc_isi_clean_event.xml</include>
+        <!-- deactive service  -->
+        <include>../service/tc_ps_lost.xml</include>
+        <include>tc_isi_event_service_deactive.xml</include>
+        <!-- active service  -->
+        <include>../service/tc_ps_service_active.xml</include>
+        <include>tc_isi_event_service_active.xml</include>
+        <include>tc_isi_get_next_service.xml</include>
+        <!-- set feature to volte mode  -->
+        <include>tc_isi_set_feature_volte_call.xml</include>
+        <!-- Audio call -->
+        <include>tc_isi_audio_outgoingCall_oriHangup.xml</include>
+        <include>tc_isi_audio_outgoingCall_rmHangup.xml</include>
+        <include>tc_isi_audio_incomingCall_rmHangup.xml</include>
+        <!-- Video call -->
+        <include>tc_isi_video_outgoingCall_oriHangup.xml</include>
+        <include>tc_isi_video_outgoingCall_rmHangup.xml</include>
+        <include>tc_isi_video_incomingCall_rmHangup.xml</include>
+        <!-- set feature to volte mode  -->
+        <include>tc_isi_set_feature_rcs_call.xml</include>
+        <!-- Audio call -->
+        <include>tc_isi_audio_outgoingCall_oriHangup.xml</include>
+        <include>tc_isi_audio_outgoingCall_rmHangup.xml</include>
+        <!-- Video call -->
+        <include>tc_isi_video_outgoingCall_oriHangup.xml</include>
+        <include>tc_isi_video_outgoingCall_rmHangup.xml</include>
+        <include>tc_isi_video_incomingCall_rmHangup.xml</include>
+        <action type="pause">100</action>
+    </testcase>
+</tapp>

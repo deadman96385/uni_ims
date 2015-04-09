@@ -1,0 +1,16 @@
+<!--
+    This test cases is basic test with another prvisioningdata setting.
+-->
+<tapp>
+    <testcase>
+        <!-- init tests -->
+        <include>../tc_init.xml</include>
+        <!-- registration tests -->
+        <include>../service/tc_cs_reg_ok.xml</include>
+        <include>../service/tc_ps_service_create_with_udp.xml</include>
+        <include>../service/tc_ps_ip_changed_yes_net.xml</include>
+        <include>../service/tc_ps_service_active_with_udp.xml</include>
+        <!-- making call with SRTP RTmedia and tel uri format -->
+        <include>../provisioning_setting/urlFmt/tc_ps_tel_url_all.xml</include>
+    </testcase>
+</tapp>

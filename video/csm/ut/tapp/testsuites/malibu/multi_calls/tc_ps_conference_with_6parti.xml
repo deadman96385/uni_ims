@@ -1,0 +1,1230 @@
+<tapp>
+    <testcase name="PS: Creating a conference with 6 participants">
+        <!-- Initiate a call -->
+        <action type="issue at">ATD18055643424;</action>
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <to type="string">sip:18055643424@foundry.att.com</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip trying with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRYING</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <action type="pause">100</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="5000">+CLCC: 1,0,2,0,0,"18055643424",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="5000">0&#xD;</action>
+
+        <!-- issue isip to ACK call with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">100</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="5000">+CLCC: 1,0,3,0,0,"18055643424",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="5000">0&#xD;</action>
+
+        <!-- issue isip to accept call with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  issue accept ack with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol  type="int">0</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">100</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,0,0,0,"18055643424",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- caller hold -->
+        <action type="issue at">AT+CHLD=2</action>
+        <!--  ISIP Valide CALL HOLD -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_HOLD</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to accept call hold with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_HOLD</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving the response that call hold done. -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- AT to places a second call  -->
+        <!-- Initiate a call -->
+        <action type="issue at">ATD13122099351;</action>
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <to type="string">sip:13122099351@foundry.att.com</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip trying with second id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">1</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRYING</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- issue isip to ACK call with id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">1</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to accept call with id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">1</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  issue accept ack with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">1</id>
+                <protocol  type="int">0</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">100</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,1,0,0,"18055643424",129&#xD;&#xA;+CLCC: 2,0,0,0,0,"13122099351",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- call swap -->
+        <action type="issue at">AT+CHLD=3</action>
+        <action type="validate isip" timeout="3000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <to type="string">sip:ALU_CONF@foundry.att.com</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip trying with second id index = 2 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">2</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRYING</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- issue isip to accept call with id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  issue accept ack with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">2</id>
+                <protocol  type="int">0</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  ISIP Valide TRANSFER_CONSULT the fist call-->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRANSFER_CONSULT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <to type="string">sip:18055643424@foundry.att.com</to>
+                    <transferTargetCallId type="int">0</transferTargetCallId>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to csm that transfer completed-->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRANSFER_COMPLETED</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <transferTargetCallId type="int">0</transferTargetCallId>
+                    <to type="string">sip:18055643424@foundry.att.com</to>
+                </call>
+            </isip>
+        </action>
+
+        <!--  ISIP Valide TRANSFER_CONSULT the second call -->
+        <action type="validate isip" timeout="3000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRANSFER_CONSULT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <to type="string">sip:13122099351@foundry.att.com</to>
+                    <transferTargetCallId type="int">1</transferTargetCallId>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to csm that transfer completed-->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRANSFER_COMPLETED</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <to type="string">sip:13122099351@foundry.att.com</to>
+                    <from type="string">sip:ALU_CONF@foundry.att.com</from>
+                    <transferTargetCallId type="int">1</transferTargetCallId>
+                </call>
+            </isip>
+        </action>
+
+        <!--  Now insure that the old call legs are terminated. -->
+        <!--  Failed: Local side should terminate the old calls. -->
+        <!--  Remote terminate index=0  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  Remote terminate index=1  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">1</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- AT validate '3' that is remote disconnection, NO CARRIER -->
+        <action type="validate at" timeout="2000">3&#xD;</action>
+        <action type="validate at" timeout="2000">3&#xD;</action>
+
+        <action type="pause">100</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,0,0,1,"18055643424",129&#xD;&#xA;+CLCC: 2,0,0,0,1,"13122099351",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_PRESENCE</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <presence>
+                    <reason type="enum">ISIP_PRES_REASON_PRESENCE</reason>
+                    <from type="string">sip:18055643424@foundry.att.com</from>
+                    <show type="string">Available</show>
+                    <status type="string">connected</status>
+                </presence>
+            </isip>
+        </action>
+        <action type="pause">100</action>
+
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_PRESENCE</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <presence>
+                    <reason type="enum">ISIP_PRES_REASON_PRESENCE</reason>
+                    <from type="string">sip:13122099351@foundry.att.com</from>
+                    <show type="string">Available</show>
+                    <status type="string">connected</status>
+                </presence>
+            </isip>
+        </action>
+        <action type="pause">100</action>
+
+        <!-- ************************* make 3nd call ************************* -->
+        <!-- To place PS CC on hold -->
+        <action type="issue at">AT+CHLD=2</action>
+        <!--  ISIP Valide CALL HOLD -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_HOLD</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+       <!-- issue isip to accept call hold with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_HOLD</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving the response that call hold done. -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- AT to make 3nd call  -->
+        <!-- Initiate a call -->
+        <action type="issue at">ATD13122097226;</action>
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <to type="string">sip:13122097226@foundry.att.com</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip trying with second id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRYING</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- issue isip to ACK call with id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to accept call with id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  issue accept ack with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol  type="int">0</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">100</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">+CLCC: 3,0,0,0,0,"13122097226",129&#xD;&#xA;+CLCC: 1,0,1,0,1,"18055643424",129&#xD;&#xA;+CLCC: 2,0,1,0,1,"13122099351",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- ************************* Merge 3nd call to PS CC ************************* -->
+        <action type="issue at">AT+CHLD=3</action>
+        <!--  AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        
+        <!-- Resume exsting PS CC-->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_RESUME</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to accept call resum with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_RESUME</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+
+        <!--  ISIP Valide TRANSFER_CONSULT the 3nd call-->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRANSFER_CONSULT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <to type="string">sip:13122097226@foundry.att.com</to>
+                    <transferTargetCallId type="int">0</transferTargetCallId>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to csm that transfer completed-->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRANSFER_COMPLETED</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <transferTargetCallId type="int">0</transferTargetCallId>
+                    <to type="string">sip:13122097226@foundry.att.com</to>
+                </call>
+            </isip>
+        </action>
+
+        <!--  Remote terminate index=0  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- AT validate '3' that is remote disconnection, NO CARRIER -->
+        <action type="validate at" timeout="2000">3&#xD;</action>       
+
+        <action type="pause">100</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,0,0,1,"18055643424",129&#xD;&#xA;+CLCC: 2,0,0,0,1,"13122099351",129&#xD;&#xA;+CLCC: 3,0,0,0,1,"13122097226",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_PRESENCE</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <presence>
+                    <reason type="enum">ISIP_PRES_REASON_PRESENCE</reason>
+                    <from type="string">sip:13122097226@foundry.att.com</from>
+                    <show type="string">Available</show>
+                    <status type="string">connected</status>
+                </presence>
+            </isip>
+        </action>
+        <action type="pause">100</action>
+
+        <!-- ************************* make 4th call ************************* -->
+        <!-- To place PS CC on hold -->
+        <action type="issue at">AT+CHLD=2</action>
+        <!--  ISIP Valide CALL HOLD -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_HOLD</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+       <!-- issue isip to accept call hold with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_HOLD</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving the response that call hold done. -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- AT to make 4nd call  -->
+        <!-- Initiate a call -->
+        <action type="issue at">ATD13122091651;</action>
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <to type="string">sip:13122091651@foundry.att.com</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip trying with second id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRYING</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- issue isip to ACK call with id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to accept call with id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  issue accept ack with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol  type="int">0</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">100</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">+CLCC: 4,0,0,0,0,"13122091651",129&#xD;&#xA;+CLCC: 1,0,1,0,1,"18055643424",129&#xD;&#xA;+CLCC: 2,0,1,0,1,"13122099351",129&#xD;&#xA;+CLCC: 3,0,1,0,1,"13122097226",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- ************************* Merge 4th call to PS CC ************************* -->
+        <action type="issue at">AT+CHLD=3</action>
+        <!--  AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- Resume exsting PS CC-->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_RESUME</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to accept call resum with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_RESUME</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+
+        <!--  ISIP Valide TRANSFER_CONSULT the 3nd call-->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRANSFER_CONSULT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <to type="string">sip:13122091651@foundry.att.com</to>
+                    <transferTargetCallId type="int">0</transferTargetCallId>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to csm that transfer completed-->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRANSFER_COMPLETED</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <transferTargetCallId type="int">0</transferTargetCallId>
+                    <to type="string">sip:13122091651@foundry.att.com</to>
+                </call>
+            </isip>
+        </action>
+
+        <!--  Remote terminate index=0  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- AT validate '3' that is remote disconnection, NO CARRIER -->
+        <action type="validate at" timeout="2000">3&#xD;</action>
+
+       <action type="pause">100</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,0,0,1,"18055643424",129&#xD;&#xA;+CLCC: 2,0,0,0,1,"13122099351",129&#xD;&#xA;+CLCC: 3,0,0,0,1,"13122097226",129&#xD;&#xA;+CLCC: 4,0,0,0,1,"13122091651",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_PRESENCE</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <presence>
+                    <reason type="enum">ISIP_PRES_REASON_PRESENCE</reason>
+                    <from type="string">sip:13122091651@foundry.att.com</from>
+                    <show type="string">Available</show>
+                    <status type="string">connected</status>
+                </presence>
+            </isip>
+        </action>
+        <action type="pause">100</action>
+
+        <!-- ************************* make 5th call ************************* -->
+        <!-- To place PS CC on hold -->
+        <action type="issue at">AT+CHLD=2</action>
+        <!--  ISIP Valide CALL HOLD -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_HOLD</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+       <!-- issue isip to accept call hold with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_HOLD</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving the response that call hold done. -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- AT to make 5nd call  -->
+        <!-- Initiate a call -->
+        <action type="issue at">ATD13122091661;</action>
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <to type="string">sip:13122091661@foundry.att.com</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip trying with second id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRYING</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- issue isip to ACK call with id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to accept call with id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  issue accept ack with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol  type="int">0</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">100</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">+CLCC: 5,0,0,0,0,"13122091661",129&#xD;&#xA;+CLCC: 1,0,1,0,1,"18055643424",129&#xD;&#xA;+CLCC: 2,0,1,0,1,"13122099351",129&#xD;&#xA;+CLCC: 3,0,1,0,1,"13122097226",129&#xD;&#xA;+CLCC: 4,0,1,0,1,"13122091651",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- ************************* Merge 5th call to PS CC ************************* -->
+        <action type="issue at">AT+CHLD=3</action>
+        <!--  AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- Resume exsting PS CC-->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_RESUME</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to accept call resum with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_RESUME</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+
+        <!--  ISIP Valide TRANSFER_CONSULT the 3nd call-->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRANSFER_CONSULT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <to type="string">sip:13122091661@foundry.att.com</to>
+                    <transferTargetCallId type="int">0</transferTargetCallId>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to csm that transfer completed-->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRANSFER_COMPLETED</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <transferTargetCallId type="int">0</transferTargetCallId>
+                    <to type="string">sip:13122091661@foundry.att.com</to>
+                </call>
+            </isip>
+        </action>
+
+        <!--  Remote terminate index=0  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- AT validate '3' that is remote disconnection, NO CARRIER -->
+        <action type="validate at" timeout="2000">3&#xD;</action>
+
+        <action type="pause">100</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,0,0,1,"18055643424",129&#xD;&#xA;+CLCC: 2,0,0,0,1,"13122099351",129&#xD;&#xA;+CLCC: 3,0,0,0,1,"13122097226",129&#xD;&#xA;+CLCC: 4,0,0,0,1,"13122091651",129&#xD;&#xA;+CLCC: 5,0,0,0,1,"13122091661",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_PRESENCE</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <presence>
+                    <reason type="enum">ISIP_PRES_REASON_PRESENCE</reason>
+                    <from type="string">sip:13122091661@foundry.att.com</from>
+                    <show type="string">Available</show>
+                    <status type="string">connected</status>
+                </presence>
+            </isip>
+        </action>
+        <action type="pause">100</action>
+
+        <!-- ************************* make 6th call ************************* -->
+        <!-- To place PS CC on hold -->
+        <action type="issue at">AT+CHLD=2</action>
+        <!--  ISIP Valide CALL HOLD -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_HOLD</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+       <!-- issue isip to accept call hold with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_HOLD</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving the response that call hold done. -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- AT to make 6nd call  -->
+        <!-- Initiate a call -->
+        <action type="issue at">ATD13122096655;</action>
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_INITIATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <type type="enum">ISI_SESSION_TYPE_AUDIO</type>
+                    <audioDirection type="enum">ISI_SESSION_DIR_SEND_RECV</audioDirection>
+                    <to type="string">sip:13122096655@foundry.att.com</to>
+                    <from type="string">4043351655@private.att.net@foundry.att.com</from>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip trying with second id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol type="int">1</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRYING</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+        <!-- issue isip to ACK call with id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to accept call with id index = 1 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!--  issue accept ack with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <id type="int">0</id>
+                <protocol  type="int">0</protocol>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_ACCEPT_ACK</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <action type="pause">100</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">+CLCC: 6,0,0,0,0,"13122096655",129&#xD;&#xA;+CLCC: 1,0,1,0,1,"18055643424",129&#xD;&#xA;+CLCC: 2,0,1,0,1,"13122099351",129&#xD;&#xA;+CLCC: 3,0,1,0,1,"13122097226",129&#xD;&#xA;+CLCC: 4,0,1,0,1,"13122091651",129&#xD;&#xA;+CLCC: 5,0,1,0,1,"13122091661",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- ************************* Merge 6th call to PS CC ************************* -->
+        <action type="issue at">AT+CHLD=3</action>
+        <!--  AT infc verify receiving OK -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- Resume exsting PS CC-->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_RESUME</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to accept call resum with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_RESUME</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+
+        <!--  ISIP Valide TRANSFER_CONSULT the 3nd call-->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRANSFER_CONSULT</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <to type="string">sip:13122096655@foundry.att.com</to>
+                    <transferTargetCallId type="int">0</transferTargetCallId>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to csm that transfer completed-->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TRANSFER_COMPLETED</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                    <transferTargetCallId type="int">0</transferTargetCallId>
+                    <to type="string">sip:13122096655@foundry.att.com</to>
+                </call>
+            </isip>
+        </action>
+
+        <!--  Remote terminate index=0  -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">0</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- AT validate '3' that is remote disconnection, NO CARRIER -->
+        <action type="validate at" timeout="2000">3&#xD;</action>
+
+        <action type="pause">100</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the response. -->
+        <action type="validate at" timeout="2000">+CLCC: 1,0,0,0,1,"18055643424",129&#xD;&#xA;+CLCC: 2,0,0,0,1,"13122099351",129&#xD;&#xA;+CLCC: 3,0,0,0,1,"13122097226",129&#xD;&#xA;+CLCC: 4,0,0,0,1,"13122091651",129&#xD;&#xA;+CLCC: 5,0,0,0,1,"13122091661",129&#xD;&#xA;+CLCC: 6,0,0,0,1,"13122096655",129&#xD;&#xA;</action>
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_PRESENCE</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <presence>
+                    <reason type="enum">ISIP_PRES_REASON_PRESENCE</reason>
+                    <from type="string">sip:13122096655@foundry.att.com</from>
+                    <show type="string">Available</show>
+                    <status type="string">connected</status>
+                </presence>
+            </isip>
+        </action>
+        <action type="pause">100</action>
+
+        <!-- ************************* make 7th call ************************* -->
+        <!-- To place PS CC on hold -->
+        <action type="issue at">AT+CHLD=2</action>
+        <!--  ISIP Valide CALL HOLD -->
+        <action type="validate isip" timeout="2000">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_HOLD</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- issue isip to accept call hold with id index = 0 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_HOLD</reason>
+                    <status type="enum">ISIP_STATUS_DONE</status>
+                </call>
+            </isip>
+        </action>
+        <!--  AT infc verify receiving the response that call hold done. -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+
+        <!-- AT to make 7nd call  -->
+        <!-- Initiate a call -->
+        <action type="issue at">ATD13122091510;</action>
+        <!--  AT infc verify receiving ERROR -->
+        <action type="validate at" timeout="3000"  onfail="continue">+CME ERROR: 3&#xD;</action>
+
+        <!-- ************************* Terminate PS CC ************************* -->
+        <!-- Remote party Disconnects call index = 2 -->
+        <action type="issue isip">
+            <isip>
+                <code type="enum">ISIP_CODE_CALL</code>
+                <protocol  type="int">0</protocol>
+                <id type="int">2</id>
+                <call>
+                    <reason type="enum">ISIP_CALL_REASON_TERMINATE</reason>
+                    <status type="enum">ISIP_STATUS_INVALID</status>
+                </call>
+            </isip>
+        </action>
+        <!-- AT validate '3' that is remote disconnection, NO CARRIER -->
+        <action type="validate at" timeout="2000">3&#xD;</action>
+
+        <action type="pause">500</action>
+        <!--  AT send AT+CLCC to request the state of the calls. -->
+        <action type="issue at">AT+CLCC</action>
+        <!--  AT infc verify receiving the respons. -->
+        <action type="validate at" timeout="2000">0&#xD;</action>
+    </testcase>
+</tapp>

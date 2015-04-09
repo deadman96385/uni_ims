@@ -1,0 +1,38 @@
+<gapp>
+    <interface>
+        <parm name="this" value="gapp.ipc"/>
+        <parm name="audio" value="mc.ipc"/>
+        <parm name="stream" value="gapp.ipc"/>
+        <parm name="isi" value="isi.ipc.protocol"/>
+    </interface>
+    <audio>
+        <parm name="Ring_Template" value="12"/>
+    </audio>
+    <protocol id="3">
+    <!-- Set id attribute in protocol tag to indicate it's protocol for GSM or LTE
+         3 for GSM
+         7 for LTE
+    -->
+        <gsm>
+            <parm name="File" value="./gsm.xml"/>
+            <!-- For pent0 <parm name="file" value="nokia-gsm.xml"/> -->
+
+            <!-- Extended Dial Command. I.e. AT+CDU -->
+            <parm name="Ext_Dial_Cmd_Enabled" value="1"/>
+        </gsm>
+        <handoff>
+            <parm name="Vdi" value="sip:16784732700@216.234.148.28"/>
+        </handoff>
+    </protocol>
+    <proxy>
+        <parm name="Terminal" value="./smd0"/>
+    </proxy>
+    <sms>
+        <parm name="SmsType" value="3GPP"/>
+        <!-- PduFmt need to be same as CSM configuration in csm.xml -->
+        <parm name="PduFmt" value="TPDU"/>
+    </sms>
+    <emergency>
+        <parm name="Number" value="112"/>
+    </emergency>
+</gapp>

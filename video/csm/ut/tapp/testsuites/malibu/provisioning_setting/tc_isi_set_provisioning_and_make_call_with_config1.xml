@@ -1,0 +1,19 @@
+<!--
+    This test cases includes setting Provisioning data
+    Precondition: 1. enabled provisioning data in csm.xml
+-->
+<tapp>
+    <testcase>
+        <!-- active service  -->
+        <include>../isi_server/tc_isi_clean_event.xml</include>
+        <include>tc_ps_service_create_for_set_provision_data_config1.xml</include>
+        <include>tc_ps_service_active_for_provisioning_data_config1.xml</include>
+        <include>../isi_server/tc_isi_event_service_active.xml</include>
+        <include>../isi_server/tc_isi_get_next_service.xml</include>
+        <!-- set feature to volte mode  -->
+        <include>../isi_server/tc_isi_set_feature_rcs_call.xml</include>
+        <!-- Audio call -->
+        <include>../provisioning_setting/rtMedia/tc_isi_psRTMedia_srtp.xml</include>
+        <action type="pause">100</action>
+    </testcase>
+</tapp>

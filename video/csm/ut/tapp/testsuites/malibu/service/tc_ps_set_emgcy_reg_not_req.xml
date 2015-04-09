@@ -1,0 +1,13 @@
+<tapp>
+    <testcase name="Set emergency registrtion not required">
+    <!--issue CSM to Set emergency serivce -->
+       <action type="issue csm" timeout="1000">
+            <csm>
+                <type>CSM_EVENT_TYPE_RADIO</type>
+                <reason>CSM_RADIO_REASON_RADIO_CHANGE_EMERGENCY</reason>
+                <isEmergencyFailoverToCs>0</isEmergencyFailoverToCs>
+                <isEmergencyRegRequired>0</isEmergencyRegRequired>
+            </csm>
+        </action>
+    </testcase>
+</tapp>
