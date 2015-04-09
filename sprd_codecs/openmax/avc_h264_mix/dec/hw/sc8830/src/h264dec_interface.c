@@ -179,6 +179,8 @@ MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, MMDecCapability *Capabilit
     case TSHARK:
     case SHARKL:
     case PIKEL:
+    case SHARKL64:
+    case SHARKLT8:
         Capability->max_width = 1920;
         Capability->max_height = 1088;
         Capability->profile = AVC_HIGH;

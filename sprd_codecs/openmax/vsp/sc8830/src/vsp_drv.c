@@ -49,7 +49,7 @@ PUBLIC int32 VSP_CFG_FREQ(VSPObject *vo, uint32 frame_size)
 PUBLIC int32 VSP_OPEN_Dev (VSPObject *vo)
 {
     int32 ret =0;
-    char vsp_version_array[MAX_VERSIONS][10] = {"SHARK", "DOLPHIN", "TSHARK", "SHARKL", "PIKE", "PIKEL"};
+    char vsp_version_array[MAX_VERSIONS][10] = {"SHARK", "DOLPHIN", "TSHARK", "SHARKL", "PIKE", "PIKEL", "SHARKL64", "SHARKLT8"};
 
     if (-1 == vo->s_vsp_fd)
     {
