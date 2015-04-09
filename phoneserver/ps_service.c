@@ -43,6 +43,7 @@
 #define SYS_MTU_SET "sys.data.setmtu"
 #define SYS_IFCONFIG_DOWN "sys.ifconfig.down"
 #define SYS_NO_ARP "sys.data.noarp"
+#define SYS_NO_ARP_IPV6  "sys.data.noarp.ipv6"
 #define SYS_IPV6_DISABLE "sys.data.IPV6.disable"
 #define SYS_NET_ADDR "sys.data.net.addr"
 #define RETRY_MAX_COUNT 1000
@@ -362,9 +363,9 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                 property_set(SYS_MTU_SET, linker);
                 PHS_LOGD("IPV6 setmtu linker = %s", linker);
 
-                //snprintf(linker, sizeof(linker), "link set %s%d arp off", prop, cid-1);
-                //property_set(SYS_NO_ARP, linker);
-                //PHS_LOGD("IPV6 arp linker = %s", linker);
+                snprintf(linker, sizeof(linker), "-6 link set %s%d arp off", prop, cid-1);
+                property_set(SYS_NO_ARP_IPV6, linker);
+                PHS_LOGD("IPV6 arp linker = %s", linker);
 
                 // up the net interface
                 snprintf(linker, sizeof(linker), "link set %s%d up", prop, cid-1);
@@ -450,6 +451,10 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                     snprintf(linker, sizeof(linker), "link set %s%d mtu 1500", prop, cid-1);
                     property_set(SYS_MTU_SET, linker);
                     PHS_LOGD("IPV6 setmtu linker = %s", linker);
+
+                    snprintf(linker, sizeof(linker), "");
+                    property_set(SYS_NO_ARP_IPV6, linker);
+                    PHS_LOGD("IPV6 arp linker = %s", linker);
 
                     // up the net interface
                     snprintf(linker, sizeof(linker), "link set %s%d up", prop, cid-1);
