@@ -409,6 +409,7 @@ static bool isLte(void);
 static void setCeMode(int channelID);
 static void setTestMode(int channelID);
 static bool isCSFB(void); 
+static bool isCMCC(void);
 static bool bOnlyOneSIMPresent = false;
 typedef struct {
     int nCid;
@@ -9884,6 +9885,12 @@ static void initializeCallback(void *param)
     }
     /* @} */
 
+    if (isCMCC()) {
+        at_send_command(ATch_type[channelID], "at+spcapability=32,1,1", NULL);
+    } else {
+        at_send_command(ATch_type[channelID], "at+spcapability=32,1,0", NULL);
+    }
+
 
 if (!isLte()) {
     /*  LTE Special AT commands */
@@ -11700,6 +11707,16 @@ static bool isLte(void) {
     RILLOGD("ssda mode: %s", prop);
     if ((!strcmp(prop, "svlte")) || (!strcmp(prop, "tdd-csfb"))
             || (!strcmp(prop, "fdd-csfb")) || (!strcmp(prop, "csfb"))) {
+        return true;
+    }
+    return false;
+}
+
+static bool isCMCC(void) {
+    char prop[PROPERTY_VALUE_MAX]="";
+    property_get("ro.operator", prop, NULL);
+    RILLOGD("operator mode: %s", prop);
+    if (!strcmp(prop, "cmcc")) {
         return true;
     }
     return false;
