@@ -5567,7 +5567,7 @@ typedef struct {
  * "data" is NULL
  *
  */
-#define RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED 1036
+#define RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED 1045
 
 
 /**
@@ -5579,7 +5579,7 @@ typedef struct {
  * "data" is an int 0 - tethered mode off, 1 - tethered mode on
  *
  */
-#define RIL_UNSOL_RESPONSE_TETHERED_MODE_STATE_CHANGED 1037
+#define RIL_UNSOL_RESPONSE_TETHERED_MODE_STATE_CHANGED 1046
 
 /**
  * RIL_UNSOL_RESPONSE_DATA_NETWORK_STATE_CHANGED
@@ -5593,7 +5593,7 @@ typedef struct {
  * "data" is NULL
  *
  */
-#define RIL_UNSOL_RESPONSE_DATA_NETWORK_STATE_CHANGED 1038
+#define RIL_UNSOL_RESPONSE_DATA_NETWORK_STATE_CHANGED 1047
 
 /**
  * RIL_UNSOL_ON_SS
@@ -5604,7 +5604,7 @@ typedef struct {
  * "data" is const RIL_StkCcUnsolSsResponse *
  *
  */
-#define RIL_UNSOL_ON_SS 1039
+
 
 /**
  * RIL_UNSOL_STK_CC_ALPHA_NOTIFY
@@ -5614,7 +5614,7 @@ typedef struct {
  * "data" is const char * containing ALPHA string from UICC in UTF-8 format.
  *
  */
-#define RIL_UNSOL_STK_CC_ALPHA_NOTIFY 1040
+
 
 /**
  * RIL_UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED
@@ -5629,7 +5629,7 @@ typedef struct {
  * ((const int *)data)[0] == 1 for Subscription Activated
  *
  */
-#define RIL_UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED 1041
+#define RIL_UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED 1048
 
 /**
  * RIL_UNSOL_QOS_STATE_CHANGED_IND
@@ -5641,7 +5641,7 @@ typedef struct {
  * ((char **)data)[1] - Status from RIL_QosIndStates
  *
  */
-#define RIL_UNSOL_QOS_STATE_CHANGED_IND 1042
+#define RIL_UNSOL_QOS_STATE_CHANGED_IND 1049
 #endif
 
 #if defined (RIL_SPRD_EXTENSION)
@@ -5859,10 +5859,8 @@ typedef struct {
 #define RIL_UNSOL_UTS_GETSMSMSG (RIL_USA_CDMA_UNSOL_BASE + 6)
 #define RIL_UNSOL_UTS_GET_UNREAD_SMS_STATUS (RIL_USA_CDMA_UNSOL_BASE + 7)
 #define RIL_UNSOL_MIP_CONNECT_STATUS	(RIL_USA_CDMA_UNSOL_BASE + 8)
-#define RIL_UNSOL_ON_SS 1039
-#define RIL_UNSOL_STK_CC_ALPHA_NOTIFY 1040
-#define RIL_UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED 1041
-#define RIL_UNSOL_QOS_STATE_CHANGED_IND 1042
+#define RIL_UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED 1048
+#define RIL_UNSOL_QOS_STATE_CHANGED_IND 1049
 #define RIL_USA_CDMA_UNSOL_LAST RIL_UNSOL_MIP_CONNECT_STATUS
 
 //////////////////////////////////////////////////////////////////////////
