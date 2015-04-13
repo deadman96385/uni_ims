@@ -1746,11 +1746,11 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 #endif
 
     if (onOff == 0) {
-        if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
-            RILLOGD("s_sim_num = %d", s_sim_num);
-            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
-            err = at_send_command(ATch_type[channelID], cmd, NULL );
-        }
+//        if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
+//            RILLOGD("s_sim_num = %d", s_sim_num);
+//            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
+//            err = at_send_command(ATch_type[channelID], cmd, NULL );
+//        }
         /* The system ask to shutdown the radio */
         err = at_send_command(ATch_type[channelID], "AT+SFUN=5", &p_response);
         if (err < 0 || p_response->success == 0)
@@ -1815,12 +1815,12 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         } else if (isCSFB() && (!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf"))) {
             if (s_multiSimMode && !bOnlyOneSIMPresent) {
                 if (s_testmode == 10) {
-                    RILLOGD("s_sim_num=%d,autoAttach=%d,dataEnable=%d",s_sim_num, autoAttach, dataEnable);
-                    snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,%d", s_sim_num, autoAttach && dataEnable);
-                    at_send_command(ATch_type[channelID], cmd, NULL );
-                    if(autoAttach && dataEnable){
-                        err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
-                    }
+//                    RILLOGD("s_sim_num=%d,autoAttach=%d,dataEnable=%d",s_sim_num, autoAttach, dataEnable);
+//                    snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,%d", s_sim_num, autoAttach && dataEnable);
+//                    at_send_command(ATch_type[channelID], cmd, NULL );
+//                    if(autoAttach && dataEnable){
+//                        err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
+//                    }
                 }
                 //err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", &p_response);
              }else {
