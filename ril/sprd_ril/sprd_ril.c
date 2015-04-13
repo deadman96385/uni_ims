@@ -1752,6 +1752,42 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 //            err = at_send_command(ATch_type[channelID], cmd, NULL );
 //        }
         /* The system ask to shutdown the radio */
+                   int sim_status = getSIMStatus(channelID);
+                char test_mode[128] = { 0 };
+                char TESTMODE_FORMAT[128] = { 0 };
+                extern int s_sim_num;
+                if (s_sim_num == 1) {
+                    memcpy(TESTMODE_FORMAT, SSDA_TESTMODE, sizeof(SSDA_TESTMODE));
+                    strcat(TESTMODE_FORMAT, "%d");
+                    snprintf(test_mode, sizeof(test_mode), TESTMODE_FORMAT, s_sim_num);
+                }
+                if (sim_status == SIM_ABSENT) {
+                    RILLOGD("no sim card");
+                    if (s_sim_num == 1) {
+                        property_set(test_mode, "254");
+                    } else {
+                       property_set(SSDA_TESTMODE, "254");
+                    }
+                } else {
+                    RILLOGD("has sim card");
+                    if (s_sim_num == 1) {
+                        property_set(test_mode, "10");
+                    } else {
+                        char prop[PROPERTY_VALUE_MAX] = "";
+                        property_get(SSDA_MODE, prop, "0");
+                        RILLOGD("ssda mode: %s", prop);
+                        if (!strcmp(prop, "tdd-csfb")) {
+                            property_set(SSDA_TESTMODE, "7");
+                        } else if (!strcmp(prop, "fdd-csfb")) {
+                            property_set(SSDA_TESTMODE, "6");
+                        } else if (!strcmp(prop, "csfb")) {
+                            property_set(SSDA_TESTMODE, "9");
+                        } else {
+                            property_set(SSDA_TESTMODE, "255");
+                       }
+                    }
+                }
+
         err = at_send_command(ATch_type[channelID], "AT+SFUN=5", &p_response);
         if (err < 0 || p_response->success == 0)
             goto error;
@@ -1771,17 +1807,48 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         }
         setRadioState(channelID, RADIO_STATE_OFF);
     } else if (onOff > 0 && sState == RADIO_STATE_OFF) {
+
+                extern int s_sim_num;
+                if (s_sim_num == 0) {
+                    RILLOGD("sim1.");
+                    if (getTestModeInner(s_sim_num) == 254
+                            && getTestModeInner(1) != 254) {
+                        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,
+                                NULL, 0);
+                        at_response_free(p_response);
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                        return;
+                   }
+                   if(getTestModeInner(s_sim_num) == 254 && getTestModeInner(1) == 254){
+                       char prop[PROPERTY_VALUE_MAX] = "";
+                        property_get(SSDA_MODE, prop, "0");
+                        RILLOGD("ssda mode: %s", prop);
+                        if (!strcmp(prop, "tdd-csfb")) {
+                            property_set(SSDA_TESTMODE, "7");
+                        } else if (!strcmp(prop, "fdd-csfb")) {
+                            property_set(SSDA_TESTMODE, "6");
+                        } else if (!strcmp(prop, "csfb")) {
+                            property_set(SSDA_TESTMODE, "9");
+                        } else {
+                            property_set(SSDA_TESTMODE, "255");
+                       }
+                   }
+               } else {
+                   RILLOGD("sim2.");
+                   if (getTestModeInner(s_sim_num) == 254) {
+                       RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,
+                                NULL, 0);
+                        at_response_free(p_response);
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                        return;
+                   }
+                }
+
         s_testmode = getTestMode();
         initSIMPresentState();
-        if (isCSFB()) {
+        if (isCSFB() || !strcmp(s_modem, "w")) {
             buildTestModeCmd(cmd, sizeof(cmd));
             at_send_command(ATch_type[channelID], cmd, NULL);
-        } else if (!strcmp(s_modem, "w")) {
-            char primary_sim[PROPERTY_VALUE_MAX];
-            memset(cmd, 0, sizeof(cmd));
-            property_get(PRIMARY_CARD_PROPERTY, primary_sim, "0");
-            snprintf(cmd, sizeof(cmd), "AT+SPSDMPSID=%d", atoi(primary_sim));
-            at_send_command(ATch_type[channelID], cmd, NULL );
         }
          /* SPRD : for svlte & csfb @{ */
         if (isSvLte()) {
@@ -1829,7 +1896,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         }
         /* @} */
         else {
-            if(s_multiSimMode) {
+            if(s_multiSimMode && !bOnlyOneSIMPresent) {
                 if(autoAttach == 1)
                     err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
                 else
