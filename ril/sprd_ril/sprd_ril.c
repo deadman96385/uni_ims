@@ -195,7 +195,41 @@ static int ussdError = 0;/* 0: no unsolicited SPERROR. 1: unsolicited SPERROR. *
 static int ussdRun = 0;/* 0: ussd to end. 1: ussd to start. */
 
 static int s_isstkcall = 0;
+/*SPRD: add for VoLTE to handle SRVCC */
+typedef struct {
+    char *cmd;
+    struct SrvccPendingRequest *p_next;
+}SrvccPendingRequest;
 
+#define VOLTE_ENABLE_PROP         "persist.sys.volte.enable"
+
+static VoLTE_SrvccState s_srvccState = SRVCC_PS_TO_CS_SUCCESS;
+static SrvccPendingRequest *s_srvccPendingRequest;
+static bool isSrvccStrated();
+static void addSrvccPendingOperate(char *cmd);
+static void excuteSrvccPendingOperate();
+
+#define SIM_ECC_LIST_PROPERTY "ril.sim.ecclist"
+#define SIM_ECC_LIST_CATEGORY_PROPERTY "ril.sim.ecclist.category"
+
+typedef struct{
+    char * number;
+    int category;
+    struct Ecc_Record *next;
+    struct Ecc_Record *prev;
+}Ecc_Record;
+Ecc_Record * s_sim_ecclist;
+static pthread_mutex_t s_ecclist_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static int getEccRecordCategory(char *number);
+static void dialEmergencyWhileCallFailed(void *param);
+static void addEmergencyNumbertoEccList(Ecc_Record *record);
+static void redialWhileCallFailed(void *param);
+static void requestCallForwardUri(int channelID, RIL_CallForwardInfoUri *data, size_t datalen, RIL_Token t);
+static void requestInitialGroupCall(int channelID, void *data, size_t datalen, RIL_Token t);
+static void requestAddGroupCall(int channelID, void *data, size_t datalen, RIL_Token t);
+static void requestCallForwardU(int channelID, RIL_CallForwardInfo *data, size_t datalen, RIL_Token t);
+static int isVoLteEnable();
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 
 struct listnode
@@ -1062,7 +1096,26 @@ error1:
     at_response_free(p_response);
     return;
 }
-
+static int voLTEStateToRILState(int state, RIL_CallState *p_state)
+{
+    switch(state) {
+        case 1:                                  return -1; /*VoLTE_CallState-> VOLTE_CALL_IDEL*/
+        case 2: *p_state = RIL_CALL_DIALING;     return 0; /*VoLTE_CallState-> VOLTE_CALL_CALLING_MO*/
+        case 3: *p_state = RIL_CALL_DIALING;     return 0; /*VoLTE_CallState-> VOLTE_CALL_CONNECTING_MO*/
+        case 4: *p_state = RIL_CALL_ALERTING;    return 0; /*VoLTE_CallState-> VOLTE_CALL_ALERTING_MO*/
+        case 5: *p_state = RIL_CALL_INCOMING;    return 0; /*VoLTE_CallState-> VOLTE_CALL_ALERTING_MT*/
+        case 6: *p_state = RIL_CALL_ACTIVE;      return 0; /*VoLTE_CallState-> VOLTE_CALL_ACTIVE*/
+        case 7:                                  return -1; /*VoLTE_CallState-> VOLTE_CALL_RELEASED_MO*/
+        case 8:                                  return -1; /*VoLTE_CallState-> VOLTE_CALL_RELEASED_MT*/
+        case 9:                                  return -1; /*VoLTE_CallState-> VOLTE_CALL_USER_BUSY*/
+        case 10:                                 return -1; /*VoLTE_CallState-> VOLTE_CALL_USER_DETERMINED_BUSY*/
+        case 11: *p_state = RIL_CALL_DIALING;    return 0; /*VoLTE_CallState-> VOLTE_CALL_WAITING_MO*/
+        case 12: *p_state = RIL_CALL_WAITING;    return 0; /*VoLTE_CallState-> VOLTE_CALL_WAITING_MT*/
+        case 13: *p_state = RIL_CALL_HOLDING;    return 0; /*VoLTE_CallState-> VOLTE_CALL_HOLD_MO*/
+        case 14: *p_state = RIL_CALL_HOLDING;    return 0; /*VoLTE_CallState-> VOLTE_CALL_HOLD_MT*/
+        default: return -1;
+    }
+}
 static int clccStateToRILState(int state, RIL_CallState *p_state)
 
 {
@@ -1136,6 +1189,122 @@ static int callFromCLCCLine(char *line, RIL_Call *p_call)
 
 error:
     RILLOGE("invalid CLCC line\n");
+    return -1;
+}
+static int callFromCLCCLineVoLTE(char *line, RIL_Call_VoLTE *p_call)
+{
+    //+CLCC:index,isMT,state,mode,isMpty(,number,TOA)?
+
+    /* [+CLCCS: <ccid1>,<dir>,<neg_status_present>,<neg_status>,<SDP_md>,
+     * <cs_mode>,<ccstatus>,<mpty>,[,<numbertype>,<ton>,<number>
+     * [,<priority_present>,<priority>[,<CLI_validity_present>,<CLI_validity>]]]
+     */
+
+    int err;
+    int state;
+
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &(p_call->index));
+    if (err < 0) goto error;
+
+    err = at_tok_nextbool(&line, &(p_call->isMT));
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &(p_call->negStatusPresent));
+    if (err < 0){
+        RILLOGE("invalid CLCCS line:negStatusPresent\n");
+        p_call->negStatusPresent = 0;
+    }
+
+    err = at_tok_nextint(&line, &(p_call->negStatus));
+    if (err < 0){
+        RILLOGE("invalid CLCCS line:negStatus\n");
+        p_call->negStatus = 0;
+    }
+
+    err = at_tok_nextstr(&line, &(p_call->mediaDescription));
+    if (err < 0){
+        RILLOGE("invalid CLCCS line:mediaDescription\n");
+        p_call->mediaDescription = " ";
+    }
+
+    err = at_tok_nextint(&line, &(p_call->csMode));
+    if (err < 0){
+        RILLOGE("invalid CLCCS line:mode\n");
+        p_call->csMode = 0;
+    }
+
+    err = at_tok_nextint(&line, &state);
+    if (err < 0) goto error;
+
+    err = voLTEStateToRILState(state, &(p_call->state));
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &(p_call->mpty));
+    if (err < 0){
+        RILLOGE("invalid CLCCS line:mpty\n");
+        p_call->mpty = 0;
+    }
+
+    err = at_tok_nextint(&line, &(p_call->numberType));
+    if (err < 0){
+        RILLOGE("invalid CLCCS line:numberType\n");
+        p_call->numberType = 2;
+    }
+
+    err = at_tok_nextint(&line, &(p_call->toa));
+    if (err < 0){
+        RILLOGE("invalid CLCCS line:toa\n");
+        p_call->toa = 128;
+    }
+
+    if (at_tok_hasmore(&line)) {
+        err = at_tok_nextstr(&line, &(p_call->number));
+
+        /* tolerate null here */
+        if (err < 0) return 0;
+
+        // Some lame implementations return strings
+        // like "NOT AVAILABLE" in the CLCC line
+        if (p_call->number != NULL
+                && 0 == strspn(p_call->number, "+0123456789*#abc")
+        ) {
+            p_call->number = NULL;
+        }
+
+    }
+    err = at_tok_nextint(&line, &(p_call->prioritypresent));
+    if (err < 0){
+        RILLOGE("invalid CLCCS line:prioritypresent\n");
+        p_call->prioritypresent = 0;
+    }
+
+    err = at_tok_nextint(&line, &(p_call->priority));
+    if (err < 0){
+        RILLOGE("invalid CLCCS line:priority\n");
+        p_call->priority = 0;
+    }
+
+    err = at_tok_nextint(&line, &(p_call->CliValidityPresent));
+    if (err < 0){
+        RILLOGE("invalid CLCCS line:CliValidityPresent\n");
+        p_call->CliValidityPresent = 0;
+    }
+
+    err = at_tok_nextint(&line, &(p_call->numberPresentation));
+    if (err < 0){
+        RILLOGE("invalid CLCCS line:numberPresentation\n");
+        p_call->numberPresentation = 0;
+    }
+
+
+    p_call->uusInfo = NULL;
+    return 0;
+
+    error:
+    RILLOGE("invalid CLCCS line\n");
     return -1;
 }
 
@@ -2011,6 +2180,13 @@ static void onDataCallListChanged(void *param )
 	}
     putChannel(channelID);
 }
+static void onConn(void *param) {
+	int channelID;
+	channelID = getChannel();
+	at_send_command(ATch_type[channelID], "AT+IMSEN=1", NULL);
+	putChannel(channelID);
+}
+
 
 static void onClass2SmsReceived(void *param)
 {
@@ -3838,6 +4014,95 @@ static void requestGetCurrentCalls(int channelID, void *data, size_t datalen, RI
     }
     return;
 }
+static void requestGetCurrentCallsVoLTE(int channelID, void *data, size_t datalen, RIL_Token t, int bVideoCall)
+{
+    int err;
+    ATResponse *p_response;
+    ATLine *p_cur;
+    int countCalls;
+    int countValidCalls;
+    RIL_Call_VoLTE *p_calls;
+    RIL_Call_VoLTE **pp_calls;
+    int i;
+    int needRepoll = 0;
+
+    err = at_send_command_multiline (ATch_type[channelID],"AT+CLCCS", "+CLCCS:", &p_response);
+    if (err != 0 || p_response->success == 0) {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        at_response_free(p_response);
+        return;
+    }
+
+    /* count the calls */
+    for (countCalls = 0, p_cur = p_response->p_intermediates
+            ; p_cur != NULL
+            ; p_cur = p_cur->p_next
+        ) {
+        countCalls++;
+    }
+
+    process_calls(countCalls);
+
+    /* yes, there's an array of pointers and then an array of structures */
+
+    pp_calls = (RIL_Call_VoLTE **)alloca(countCalls * sizeof(RIL_Call_VoLTE *));
+    p_calls = (RIL_Call_VoLTE *)alloca(countCalls * sizeof(RIL_Call_VoLTE));
+    RIL_Call_VoLTE * p_t_calls = (RIL_Call_VoLTE *)alloca(countCalls * sizeof(RIL_Call_VoLTE));
+    memset (p_calls, 0, countCalls * sizeof(RIL_Call_VoLTE));
+
+    /* init the pointer array */
+    for(i = 0; i < countCalls ; i++) {
+        pp_calls[i] = &(p_calls[i]);
+    }
+    int groupCallIndex = 8;
+
+    for (countValidCalls = 0, p_cur = p_response->p_intermediates
+            ; p_cur != NULL
+            ; p_cur = p_cur->p_next
+        ) {
+        err = callFromCLCCLineVoLTE(p_cur->line, p_calls + countValidCalls);
+        p_t_calls = p_calls + countValidCalls;
+        if(p_t_calls->mpty == 2){
+            if(groupCallIndex != 8){
+                p_t_calls->index = groupCallIndex;
+            }
+            groupCallIndex --;
+        }
+
+        if (err != 0) {
+            continue;
+        }
+#if 0
+        if (p_calls[countValidCalls].state != RIL_CALL_ACTIVE
+                && p_calls[countValidCalls].state != RIL_CALL_HOLDING
+           ) {
+            needRepoll = 1;
+        }
+#endif
+        countValidCalls++;
+    }
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, pp_calls,
+            countValidCalls * sizeof (RIL_Call_VoLTE *));
+
+    at_response_free(p_response);
+#ifdef POLL_CALL_STATE
+    if (countValidCalls)
+    /* We don't seem to get a "NO CARRIER" message from
+     * smd, so we're forced to poll until the call ends.
+     */
+#else
+    if (needRepoll)
+#endif
+    {
+        if (bVideoCall == 0) {
+            RIL_requestTimedCallback (sendCallStateChanged, NULL, &TIMEVAL_CALLSTATEPOLL);
+        } else {
+            RIL_requestTimedCallback (sendVideoCallStateChanged, NULL, &TIMEVAL_CALLSTATEPOLL);
+        }
+    }
+    return;
+}
 
 static void requestDial(int channelID, void *data, size_t datalen, RIL_Token t)
 {
@@ -3891,7 +4156,9 @@ static void requestEccDial(int channelID, void *data, size_t datalen, RIL_Token 
     RIL_Dial *p_dial = NULL;
     char *cmd= NULL;
     const char *clir= NULL;
-    char *category = NULL;
+    char *token = NULL;
+    char *categoryFromJava = NULL;
+	int category = -1;
     int ret, err;
 
     p_dial = (RIL_Dial *)data;
@@ -3903,12 +4170,25 @@ static void requestEccDial(int channelID, void *data, size_t datalen, RIL_Token 
         default: ;
     }
 
-    category = strchr(p_dial->address, '/');
-    if(category != NULL){
-        *category = '@';
+    if(isVoLteEnable()){
+        token = strchr(p_dial->address, '/');
+        if(token)
+            *token = '@';
+        category = getEccRecordCategory(p_dial->address);
+
+        if(category != -1){
+            ret = asprintf(&cmd, "ATD%s@%d,#%s;", p_dial->address,category, clir);
+        } else {
+            ret = asprintf(&cmd, "ATD%s,#%s;", p_dial->address, clir);
+        }
+    } else {
+        categoryFromJava = strchr(p_dial->address, '/');
+        if(categoryFromJava != NULL){
+            *categoryFromJava = '@';
+        }
+        ret = asprintf(&cmd, "ATD%s,#%s;", p_dial->address, clir);
     }
 
-    ret = asprintf(&cmd, "ATD%s,#%s;", p_dial->address, clir);
     if(ret < 0) {
         RILLOGE("Failed to allocate memory");
         cmd = NULL;
@@ -4311,7 +4591,10 @@ static void requestRegistrationState(int channelID, int request, void *data,
             cmd = "AT+CGREG?";
             prefix = "+CGREG:";
         }
-    } else {
+    } else if (request == RIL_REQUEST_IMS_REGISTRATION_STATE){
+        cmd = "AT+CIREG?";
+        prefix = "+CIREG:";
+    }  else {
         assert(0);
         goto error;
     }
@@ -4454,6 +4737,8 @@ static void requestRegistrationState(int channelID, int request, void *data,
         sprintf(res[4], "3");
         responseStr[5] = res[4];
         RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, 6*sizeof(char*));
+    } else if(request == RIL_REQUEST_IMS_REGISTRATION_STATE){
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, response, sizeof(response));
     }
     at_response_free(p_response);
     return;
@@ -4814,6 +5099,102 @@ error1:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
     return;
+}
+static void requestSendIMSSMS(int channelID, void *data, size_t datalen,
+        RIL_Token t) {
+    int err;
+    const char *smsc;
+    char *pdu;
+    int tpLayerLength;
+    char *cmd1, *cmd2;
+    RIL_SMS_Response response;
+    ATResponse *p_response = NULL;
+    char * line;
+    int ret;
+    RIL_IMS_SMS_Message *sms = NULL;
+    p_response = NULL;
+    if (data != NULL) {
+        sms = (RIL_IMS_SMS_Message *) data;
+        if(sms->tech == RADIO_TECH_3GPP){
+            memset(&response, 0, sizeof(RIL_SMS_Response));
+
+                smsc = ((char **) (sms->message.gsmMessage))[0];
+                pdu = ((char **) (sms->message.gsmMessage))[1];
+                if (sms->retry > 0) {
+
+                    // per TS 23.040 Section 9.2.3.6:  If TP-MTI SMS-SUBMIT (0x01) type
+                    //   TP-RD (bit 2) is 1 for retry
+                    //   and TP-MR is set to previously failed sms TP-MR
+                    if (((0x01 & pdu[0]) == 0x01)) {
+                        pdu[0] |= 0x04; // TP-RD
+                        pdu[1] = sms->messageRef; // TP-MR
+                    }
+                }
+
+                tpLayerLength = strlen(pdu) / 2;
+                /* "NULL for default SMSC" */
+                if (smsc == NULL) {
+                    smsc = "00";
+                }
+
+                ret = asprintf(&cmd1, "AT+CMGS=%d", tpLayerLength);
+                if (ret < 0) {
+                    RILLOGE("Failed to allocate memory");
+                    cmd1 = NULL;
+                    goto error1;
+                }
+                ret = asprintf(&cmd2, "%s%s", smsc, pdu);
+                if (ret < 0) {
+                    RILLOGE("Failed to allocate memory");
+                    free(cmd1);
+                    cmd2 = NULL;
+                    goto error1;
+                }
+
+                err = at_send_command_sms(ATch_type[channelID], cmd1, cmd2, "+CMGS:",
+                        &p_response);
+                free(cmd1);
+                free(cmd2);
+                if (err != 0 || p_response->success == 0)
+                    goto error;
+
+                /* FIXME fill in messageRef and ackPDU */
+
+                line = p_response->p_intermediates->line;
+                err = at_tok_start(&line);
+                if (err < 0)
+                    goto error1;
+                err = at_tok_nextint(&line, &response.messageRef);
+                if (err < 0)
+                    goto error1;
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, &response,
+                        sizeof(RIL_SMS_Response));
+                at_response_free(p_response);
+                return;
+                error: if (p_response == NULL) {
+                    goto error1;
+                }
+                line = p_response->finalResponse;
+                err = at_tok_start(&line);
+                if (err < 0)
+                    goto error1;
+                err = at_tok_nextint(&line, &response.errorCode);
+                if (err < 0)
+                    goto error1;
+                if ((response.errorCode != 313) && (response.errorCode != 512))
+                    goto error1;
+                if (response.errorCode == 313) {
+                    RIL_onRequestComplete(t, RIL_E_SMS_SEND_FAIL_RETRY, NULL, 0);
+                } else if (response.errorCode == 512 || response.errorCode == 128) {
+                    RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
+                }
+                at_response_free(p_response);
+                return;
+                error1: RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                at_response_free(p_response);
+                return;
+        }
+    }
 }
 
 #define BIT0 (1 << 0)
@@ -5387,6 +5768,10 @@ static void  requestScreeState(int channelID, int status, RIL_Token t)
         }
         at_send_command(ATch_type[channelID], "AT+CREG=2", NULL);
         at_send_command(ATch_type[channelID], "AT+CGREG=2", NULL);
+        if(isVoLteEnable()){
+            at_send_command(ATch_type[channelID], "AT+CIREG=1", NULL);
+            at_send_command(ATch_type[channelID], "AT+CIREG=2", NULL);
+        }
         if(isExistActivePdp()){
             at_send_command(ATch_type[channelID], "AT*FDY=1,8", NULL);
         }
@@ -7150,6 +7535,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_CALL_CSFALLBACK_ACCEPT //SPRD:add for LTE-CSFB to handle CS fall back of MT call
                 || request == RIL_REQUEST_CALL_CSFALLBACK_REJECT //SPRD:add for LTE-CSFB to handle CS fall back of MT call
                 || request == RIL_REQUEST_SET_PRIORITY_NETWORK_MODE //SPRD: add for priority network mode
+                || request == RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY
+                || request == RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY
+                || request == RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN
 #endif
                 || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
                 || request == RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE
@@ -7178,6 +7566,17 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_OEM_HOOK_STRINGS
                 || request == RIL_REQUEST_SIM_OPEN_CHANNEL
                 || request == RIL_REQUEST_SET_INITIAL_ATTACH_APN
+                || request == RIL_REQUEST_GET_CURRENT_CALLS_VOLTE
+                || request == RIL_REQUEST_INIT_ISIM
+                || request == RIL_REQUEST_REGISTER_IMS_IMPU
+                || request == RIL_REQUEST_VOLTE_SET_CONFERENCE_URI
+                || request == RIL_REQUEST_REGISTER_IMS_IMPI
+                || request == RIL_REQUEST_REGISTER_IMS_DOMAIN
+                || request ==  RIL_REQUEST_REGISTER_IMS_IMEI
+                || request ==  RIL_REQUEST_REGISTER_IMS_XCAP
+                || request ==  RIL_REQUEST_REGISTER_IMS_BSF
+                || request == RIL_REQUEST_SET_INITIAL_ATTACH_APN
+                || request == RIL_REQUEST_SET_IMS_SMSC
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
@@ -7213,12 +7612,20 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         case RIL_REQUEST_QUERY_CALL_FORWARD_STATUS:
         {
-            requestCallForward(channelID, data, datalen, t);
+            if(isVoLteEnable()){
+                requestCallForwardU(channelID, data, datalen, t);
+            } else {
+                requestCallForward(channelID, data, datalen, t);
+            }
             break;
         }
 
         case RIL_REQUEST_SET_CALL_FORWARD:
-            requestCallForward(channelID, data, datalen, t);
+            if(isVoLteEnable()){
+                requestCallForwardU(channelID, data, datalen, t);
+            } else {
+                requestCallForward(channelID, data, datalen, t);
+            }
             break;
         case RIL_REQUEST_GET_SIM_STATUS:
             {
@@ -7403,6 +7810,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         case RIL_REQUEST_VOICE_REGISTRATION_STATE:
         case RIL_REQUEST_DATA_REGISTRATION_STATE:
+        case RIL_REQUEST_IMS_REGISTRATION_STATE:
             requestRegistrationState(channelID, request, data, datalen, t);
             break;
         case RIL_REQUEST_OPERATOR:
@@ -7492,6 +7900,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             requestSendSSSMS(channelID, data, datalen, t);
 #endif
             break;
+    case RIL_REQUEST_IMS_SEND_SMS:
+        requestSendIMSSMS(channelID, data, datalen, t);
+        break;
         case RIL_REQUEST_SETUP_DATA_CALL:
             requestSetupDataCall(channelID, data, datalen, t);
             break;
@@ -8261,6 +8672,28 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 at_response_free(p_response);
                 break;
             }
+    case RIL_REQUEST_SET_IMS_SMSC: {
+        char *cmd;
+        int ret;
+        p_response = NULL;
+        RILLOGD("[sms]RIL_REQUEST_SET_IMS_SMSC (%s)", (char*)(data));
+        ret = asprintf(&cmd, "AT+PSISMSC=\"%s\"", (char*) (data));
+        if (ret < 0) {
+            RILLOGE("Failed to allocate memory");
+            cmd = NULL;
+            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            break;
+        }
+        err = at_send_command(ATch_type[channelID], cmd, &p_response);
+        free(cmd);
+        if (err < 0 || p_response->success == 0) {
+            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        } else {
+            RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+        }
+        at_response_free(p_response);
+        break;
+    }
         case RIL_REQUEST_REPORT_SMS_MEMORY_STATUS:
             {
                 char cmd[30] = {0};
@@ -8285,47 +8718,49 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         int need_ipchange = 0;
         if (initialAttachApn == NULL) {
             initialAttachApn = (RIL_InitialAttachApn *) malloc(
-                sizeof(RIL_InitialAttachApn));
+                    sizeof(RIL_InitialAttachApn));
             memset(initialAttachApn, 0, sizeof(RIL_InitialAttachApn));
         }
-		if (data != NULL) {
-			RIL_InitialAttachApn *pIAApn = (RIL_InitialAttachApn *) data;
-			if (pIAApn->apn != NULL) {
-				if((initialAttachApn->apn != NULL) && (strcmp(initialAttachApn->apn,pIAApn->apn) == 0)){
-					need_ipchange = 1;
-					free(initialAttachApn->apn);
-				}
-				initialAttachApn->apn = (char *) malloc(
-						strlen(pIAApn->apn) + 1);
-				strcpy(initialAttachApn->apn, pIAApn->apn);
-			}
+        if (data != NULL) {
+            RIL_InitialAttachApn *pIAApn = (RIL_InitialAttachApn *) data;
+            if (pIAApn->apn != NULL) {
+                if ((initialAttachApn->apn != NULL)
+                        && (strcmp(initialAttachApn->apn, pIAApn->apn) == 0)) {
+                    need_ipchange = 1;
+                    free(initialAttachApn->apn);
+                }
+                initialAttachApn->apn = (char *) malloc(
+                        strlen(pIAApn->apn) + 1);
+                strcpy(initialAttachApn->apn, pIAApn->apn);
+            }
 
-			if (pIAApn->protocol != NULL) {
-                if(need_ipchange  && (initialAttachApn->protocol != NULL) && strcmp(initialAttachApn->protocol,pIAApn->protocol) ){
-                    need_ipchange  = 2;
+            if (pIAApn->protocol != NULL) {
+                if (need_ipchange && (initialAttachApn->protocol != NULL)
+                        && strcmp(initialAttachApn->protocol,
+                                pIAApn->protocol)) {
+                    need_ipchange = 2;
                     free(initialAttachApn->protocol);
                 }
-				initialAttachApn->protocol = (char *) malloc(
-						strlen(pIAApn->protocol) + 1);
+                initialAttachApn->protocol = (char *) malloc(
+                        strlen(pIAApn->protocol) + 1);
 
-				strcpy(initialAttachApn->protocol, pIAApn->protocol);
-			}
+                strcpy(initialAttachApn->protocol, pIAApn->protocol);
+            }
 
-			initialAttachApn->authtype = pIAApn->authtype;
+            initialAttachApn->authtype = pIAApn->authtype;
 
-			if (pIAApn->username != NULL) {
-				initialAttachApn->username = (char *) malloc(
-						strlen(pIAApn->username) + 1);
-				strcpy(initialAttachApn->username, pIAApn->username);
-			}
+            if (pIAApn->username != NULL) {
+                initialAttachApn->username = (char *) malloc(
+                        strlen(pIAApn->username) + 1);
+                strcpy(initialAttachApn->username, pIAApn->username);
+            }
 
-			if (pIAApn->password != NULL) {
-				initialAttachApn->password = (char *) malloc(
-						strlen(pIAApn->password) + 1);
-				strcpy(initialAttachApn->password, pIAApn->password);
-			}
-		}
-
+            if (pIAApn->password != NULL) {
+                initialAttachApn->password = (char *) malloc(
+                        strlen(pIAApn->password) + 1);
+                strcpy(initialAttachApn->password, pIAApn->password);
+            }
+        }
 
         RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_APN apn = %s",
                 initialAttachApn->apn);
@@ -8356,7 +8791,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     initial_attach_id);
             err = at_send_command(ATch_type[channelID], cmd, NULL);
         }
-        if(need_ipchange == 2){
+        if (need_ipchange == 2) {
             at_send_command(ATch_type[channelID], "AT+SPIPTYPECHANGE=1", NULL);
         }
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
@@ -8924,6 +9359,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         }
         //Added for bug#213435 sim lock end
+        case RIL_REQUEST_GET_CURRENT_CALLS_VOLTE:
+            requestGetCurrentCallsVoLTE(channelID, data, datalen, t, 0);
+            break;
         /* SPRD: add for LTE-CSFB to handle CS fall back of MT call @{*/
         case RIL_REQUEST_CALL_CSFALLBACK_ACCEPT:
             requestCallCsFallBackAccept(channelID, data, datalen, t);
@@ -9222,6 +9660,302 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 at_response_free(p_response);
                 break;
             }
+        case RIL_REQUEST_INIT_ISIM: {
+            p_response = NULL;
+            int response = 0;
+            char *line;
+            err = at_send_command_singleline(ATch_type[channelID], "AT+ISIM=1", "+ISIM:", &p_response);
+            if (err < 0 || p_response->success == 0) {
+                goto error;
+            }
+            line = p_response->p_intermediates->line;
+            err = at_tok_start(&line);
+            if (err < 0) {
+                goto error;
+            }
+            err = at_tok_nextint(&line, &response);
+            if (err < 0) {
+                goto error;
+            }
+            RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(int));
+            at_response_free(p_response);
+            return;
+            error:
+            at_response_free(p_response);
+            RILLOGE("INITISIM must never return error when radio is on");
+            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            break;
+        }
+        case RIL_REQUEST_REGISTER_IMS_IMPU: {
+            char cmd[100] = {0};
+            const char *impu = NULL;
+            impu = (char*)(data);
+            RILLOGE("RIL_REQUEST_REGISTER_IMS impu = \"%s\"", impu);
+            snprintf(cmd, sizeof(cmd), "AT+IMPU=\"%s\"", impu);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+        case RIL_REQUEST_VOLTE_SET_CONFERENCE_URI: {
+            char cmd[100] = {0};
+            const char *uri = NULL;
+            uri = (char*)(data);
+            RILLOGE("RIL_REQUEST_VOLTE_SET_CONFERENCE_URI uri = \"%s\"", uri);
+            snprintf(cmd, sizeof(cmd), "AT+CONFURI=0,\"%s\"", uri);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+        case RIL_REQUEST_REGISTER_IMS_IMPI: {
+            char cmd[100] = {0};
+            const char *impi = NULL;
+            impi = (char*)(data);
+            RILLOGE("RIL_REQUEST_REGISTER_IMS impi = \"%s\"", impi);
+            snprintf(cmd, sizeof(cmd), "AT+IMPI=\"%s\"", impi);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+        case RIL_REQUEST_REGISTER_IMS_DOMAIN: {
+            char cmd[100] = {0};
+            const char *domain = NULL;
+            domain = (char*)(data);
+            RILLOGE("RIL_REQUEST_REGISTER_IMS domain = \"%s\"", domain);
+            snprintf(cmd, sizeof(cmd), "AT+DOMAIN=\"%s\"", domain);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+        case RIL_REQUEST_REGISTER_IMS_IMEI: {
+            char cmd[100] = {0};
+            const char *impi = NULL;
+            impi = (char*)(data);
+            RILLOGE("RIL_REQUEST_REGISTER_IMS_IMEI instanceId = \"%s\"", impi);
+            snprintf(cmd, sizeof(cmd), "AT+INSTANCEID=\"%s\"", impi);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+
+        case RIL_REQUEST_DISABLE_IMS: {
+            err = at_send_command(ATch_type[channelID], "AT+IMSEN=0" , NULL);
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+
+        case RIL_REQUEST_REGISTER_IMS_XCAP: {
+            char cmd[100] = {0};
+            const char *xcap = NULL;
+            xcap = (char*)(data);
+            RILLOGE("RIL_REQUEST_REGISTER_IMS_XCAP xcap = \"%s\"", xcap);
+            snprintf(cmd, sizeof(cmd), "AT+XCAPRTURI=\"%s\"", xcap);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+
+        }
+        case RIL_REQUEST_REGISTER_IMS_BSF: {
+            char cmd[100] = {0};
+            const char *bsf = NULL;
+            bsf = (char*)(data);
+            RILLOGE("RIL_REQUEST_REGISTER_IMS_BSF bsf = \"%s\"", bsf);
+            snprintf(cmd, sizeof(cmd), "AT+BSF=\"%s\"", bsf);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+        /* SPRD: add for VoLTE to handle Voice call Availability
+         * AT+CAVIMS=<state>
+         * state: integer type.The UEs IMS voice call availability status
+         * 0, Voice calls with the IMS are not available.
+         * 1, Voice calls with the IMS are available.
+         * {@*/
+        case RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY:
+        {
+            char cmd[20] = {0};
+            p_response = NULL;
+            int state = ((int *)data)[0];
+
+            snprintf(cmd, sizeof(cmd), "AT+CAVIMS=%d", state);
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RILLOGD("SET_IMS_VOICE_CALL_AVAILABILITY:%d",state);
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RILLOGD("SET_IMS_VOICE_CALL_AVAILABILITY failure!");
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            if(p_response)
+            at_response_free(p_response);
+            break;
+        }
+
+        case RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY:
+        {
+            p_response = NULL;
+            int state = 0;
+
+            err = at_send_command_singleline(ATch_type[channelID], "AT+CAVIMS?",
+                    "+CAVIMS:", &p_response);
+            if (err >= 0 && p_response->success) {
+                char *line = p_response->p_intermediates->line;
+                err = at_tok_start(&line);
+                if (err >= 0) {
+                    err = at_tok_nextint(&line, &state);
+                    RILLOGD("GET_IMS_VOICE_CALL_AVAILABILITY:%d",state);
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, &state,
+                            sizeof(state));
+                }
+            } else {
+                RILLOGD("GET_IMS_VOICE_CALL_AVAILABILITY failure!");
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        /* @} */
+        case RIL_REQUEST_VOLTE_CALL_REQUEST_MEDIA_CHANGE: {
+            char cmd[30] = {0};
+            p_response = NULL;
+            int isVideo = ((int *)data)[0];
+            if(isVideo) {
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=1,2,\"m=audio\"");
+            } else {
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=1,2,\"m=video\"");
+            }
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RILLOGD("RIL_REQUEST_VOLTE_CALL_REQUEST_MEDIA_CHANGE:%d",isVideo);
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RILLOGD("RIL_REQUEST_VOLTE_CALL_REQUEST_MEDIA_CHANGE failure!");
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            if(p_response)
+            at_response_free(p_response);
+            break;
+        }
+        case RIL_REQUEST_VOLTE_CALL_RESPONSE_MEDIA_CHANGE: {
+            char cmd[20] = {0};
+            p_response = NULL;
+            int isAccept = ((int *)data)[0];
+            if(isAccept) {
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=1,3");
+            } else {
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=1,4");
+            }
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RILLOGD("RIL_REQUEST_VOLTE_CALL_RESPONSE_MEDIA_CHANGE:%d",isAccept);
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RILLOGD("RIL_REQUEST_VOLTE_CALL_RESPONSE_MEDIA_CHANGE failure!");
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            if(p_response)
+            at_response_free(p_response);
+            break;
+        }
+        case RIL_REQUEST_VOLTE_CALL_FALL_BACK_TO_VOICE: {
+            char cmd[30] = {0};
+            p_response = NULL;
+            snprintf(cmd, sizeof(cmd), "AT+CCMMD=1,1,\"m=audio\"");
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RILLOGD("RIL_REQUEST_VOLTE_CALL_FALL_BACK_TO_VOICE success!");
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RILLOGD("RIL_REQUEST_VOLTE_CALL_FALL_BACK_TO_VOICE failure!");
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            if(p_response)
+            at_response_free(p_response);
+            break;
+        }
+
+        case RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN: {
+            RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN");
+            char cmd[128] = {0};
+            char qos_state[PROPERTY_VALUE_MAX] = {0};
+            int initial_attach_id = 11;
+            RIL_InitialAttachApn *initialAttachIMSApn = NULL;
+            p_response = NULL;
+            if (data != NULL) {
+                initialAttachIMSApn = (RIL_InitialAttachApn *) data;
+
+                RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN apn = %s",initialAttachIMSApn->apn);
+                RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN protocol = %s",initialAttachIMSApn->protocol);
+                RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN authtype = %d",initialAttachIMSApn->authtype);
+                RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN username = %s",initialAttachIMSApn->username);
+                RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN password = %s",initialAttachIMSApn->password);
+
+                snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"%s\",\"%s\",\"\",0,0",
+                        initial_attach_id, initialAttachIMSApn->protocol,initialAttachIMSApn->apn);
+                err = at_send_command(ATch_type[channelID], cmd, &p_response);
+
+                snprintf(cmd, sizeof(cmd), "AT+CGPCO=0,\"%s\",\"%s\",%d,%d",
+                        initialAttachIMSApn->username, initialAttachIMSApn->password,
+                        initial_attach_id, initialAttachIMSApn->authtype);
+                err = at_send_command(ATch_type[channelID], cmd, NULL);
+
+                /* Set required QoS params to default */
+                property_get("persist.sys.qosstate", qos_state, "0");
+                if (!strcmp(qos_state, "0")) {
+                    snprintf(cmd, sizeof(cmd),"AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0",initial_attach_id);
+                    err = at_send_command(ATch_type[channelID], cmd, NULL);
+                }
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                at_response_free(p_response);
+            } else {
+                RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN data is null");
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            }
+            break;
+        }
+        case RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI:
+        requestCallForwardUri(channelID, data, datalen, t);
+        break;
+        case RIL_REQUEST_SET_CALL_FORWARD_URI:
+        requestCallForwardUri(channelID, data, datalen, t);
+        break;
+        case RIL_REQUEST_VOLTE_INITIAL_GROUP_CALL:
+        requestInitialGroupCall(channelID, data, datalen, t);
+        break;
+        case RIL_REQUEST_VOLTE_ADD_TO_GROUP_CALL:
+        requestAddGroupCall(channelID, data, datalen, t);
+        break;
 #endif
         default:
             RIL_onRequestComplete(t, RIL_E_REQUEST_NOT_SUPPORTED, NULL, 0);
@@ -9987,6 +10721,12 @@ static void initializeCallback(void *param)
     at_send_command(ATch_type[channelID], "AT+SPVIDEOTYPE=3", NULL);
     at_send_command(ATch_type[channelID], "AT+SPDVTDCI="VT_DCI, NULL);
     at_send_command(ATch_type[channelID], "AT+SPDVTTEST=2,650", NULL);
+    if(isVoLteEnable()){
+        at_send_command(ATch_type[channelID], "AT+CIREG=2", NULL);
+        at_send_command(ATch_type[channelID], "AT+CEN=1", NULL);
+        at_send_command(ATch_type[channelID], "AT+CIREP=1", NULL);
+        at_send_command(ATch_type[channelID], "AT+CMCCS=2", NULL);
+    }
 
 
     /* set some auto report AT commend on or off */
@@ -10398,7 +11138,51 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         }
         RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED, NULL, 0);
 
-    } else if (strStartsWith(s,"^CEND:")) {
+    } else if (strStartsWith(s, "+CIREGU:")) {
+        int response;
+        int index = 0;
+        char *tmp;
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+        err = at_tok_nextint(&tmp, &response);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+        RILLOGD("onUnsolicited(), " "CIREGU:, response: %d", response);
+        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED,
+                &response, sizeof(response));
+    } else if (strStartsWith(s, "^CONN:")) {
+        int cid;
+        int type;
+        int active;
+        int index = 0;
+        char *tmp;
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+        err = at_tok_nextint(&tmp, &cid);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &type);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &active);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+        RILLOGD("onUnsolicited(), " "CONN:, cid: %d, active: %d", cid, active);
+        if (cid == 11 && active == 1) {
+            RIL_requestTimedCallback(onConn, NULL, NULL);
+        }
+    }
+	else if (strStartsWith(s,"^CEND:")) {
         char *p;
         char *tmp;
         int commas;
@@ -11012,105 +11796,227 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
     }
 #endif
     else if (strStartsWith(s, "^DSCI:")) {
-        RIL_VideoPhone_DSCI *response = NULL;
-        response = (RIL_VideoPhone_DSCI *)alloca(sizeof(RIL_VideoPhone_DSCI));
-        char *tmp;
 
-        line = strdup(s);
-        tmp = line;
-        at_tok_start(&tmp);
+        if (isVoLteEnable()) {
 
-        err = at_tok_nextint(&tmp, &response->id);
-        if (err < 0) {
-            RILLOGD("%s fail", s);
-            goto out;
-        }
-        err = at_tok_nextint(&tmp, &response->idr);
-        if (err < 0) {
-            RILLOGD("%s fail", s);
-            goto out;
-        }
-        err = at_tok_nextint(&tmp, &response->stat);
-        if (err < 0) {
-            RILLOGD("%s fail", s);
-            goto out;
-        }
-        err = at_tok_nextint(&tmp, &response->type);
-        if (err < 0) {
-            RILLOGD("%s fail", s);
-            goto out;
-        }
+            RIL_VideoPhone_DSCI *response = NULL;
+            response = (RIL_VideoPhone_DSCI *) alloca(
+                    sizeof(RIL_VideoPhone_DSCI));
+            char *tmp;
 
-        //stat:6 is disconnected
-        if(response->stat == 6 && g_csfb_processing){
-            RIL_CALL_CSFALLBACK *csfb_response = NULL;
-            csfb_response = (RIL_CALL_CSFALLBACK *)alloca(sizeof(RIL_CALL_CSFALLBACK));
-            csfb_response->id = response->id;
-            csfb_response->number = "";
-            g_csfb_processing = 0;
-            RIL_onUnsolicitedResponse (RIL_UNSOL_CALL_CSFALLBACK_FINISH,
-                    csfb_response,sizeof(RIL_CALL_CSFALLBACK));
-            RILLOGD("RIL_UNSOL_CALL_CSFALLBACK_FINISH, id: %d", csfb_response->id);
-        }
+            line = strdup(s);
+            tmp = line;
+            at_tok_start(&tmp);
 
-        if(response->type == 0) {
-            RIL_onUnsolicitedResponse (
-                RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
-                NULL, 0);
-            goto out;
-        } else if(response->type == 1) {
-#if defined (RIL_SPRD_EXTENSION)
-            RIL_onUnsolicitedResponse (
-                RIL_UNSOL_RESPONSE_VIDEOCALL_STATE_CHANGED,
-                NULL, 0);
+            err = at_tok_nextint(&tmp, &response->id);
+            if (err < 0) {
+                RILLOGD("%s fail", s);
+                goto out;
+            }
+            err = at_tok_nextint(&tmp, &response->idr);
+            if (err < 0) {
+                RILLOGD("%s fail", s);
+                goto out;
+            }
+            err = at_tok_nextint(&tmp, &response->stat);
+            if (err < 0) {
+                RILLOGD("%s fail", s);
+                goto out;
+            }
+            err = at_tok_nextint(&tmp, &response->type);
+            if (err < 0) {
+                RILLOGD("%s fail", s);
+                goto out;
+            }
+
+            //stat:6 is disconnected
+            if (response->stat == 6 && g_csfb_processing) {
+                RIL_CALL_CSFALLBACK *csfb_response = NULL;
+                csfb_response = (RIL_CALL_CSFALLBACK *) alloca(
+                        sizeof(RIL_CALL_CSFALLBACK));
+                csfb_response->id = response->id;
+                csfb_response->number = response->number;
+                g_csfb_processing = 0;
+                RIL_onUnsolicitedResponse(RIL_UNSOL_CALL_CSFALLBACK_FINISH,
+                        csfb_response, sizeof(RIL_CALL_CSFALLBACK));
+                RILLOGD("RIL_UNSOL_CALL_CSFALLBACK_FINISH, id: %d, number: %s",
+                        csfb_response->id, csfb_response->number);
+            }
 
             err = at_tok_nextint(&tmp, &response->mpty);
             if (err < 0) {
-               RILLOGD("%s fail", s);
-               goto out;
+                RILLOGD("%s fail", s);
+                goto out;
             }
             err = at_tok_nextstr(&tmp, &response->number);
             if (err < 0) {
                 RILLOGD("%s fail", s);
                 goto out;
             }
+
             err = at_tok_nextint(&tmp, &response->num_type);
-            if (err < 0) {
-                RILLOGD("%s fail", s);
-                goto out;
-            }
-            err = at_tok_nextint(&tmp, &response->bs_type);
             if (err < 0) {
                 RILLOGD("%s fail", s);
                 goto out;
             }
 
             if (at_tok_hasmore(&tmp)) {
+                err = at_tok_nextint(&tmp, &response->bs_type);
+                if (err < 0) {
+                    RILLOGD("%s get bs_type fail", s);
+                }
                 err = at_tok_nextint(&tmp, &response->cause);
+                if (err < 0) {
+                    RILLOGD("%s get cause fail", s);
+                }
+                /*SPRD: add for VoLTE to handle call retry */
+                if (response->cause == 380 && response->number != NULL) {
+                    RIL_requestTimedCallback(dialEmergencyWhileCallFailed,
+                            (char *) strdup(response->number), NULL);
+                } else if ((response->cause == 400 || response->cause == 381)
+                        && response->number != NULL) {
+                    RIL_requestTimedCallback(redialWhileCallFailed,
+                            (char *) strdup(response->number), NULL);
+                } else {
+                    RIL_onUnsolicitedResponse(
+                            RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED, NULL, 0);
+                }
+#if defined (RIL_SPRD_EXTENSION)
+                if(response->type == 1 || response->type == 3) {
+                    if (at_tok_hasmore(&tmp)) {
+                        err = at_tok_nextint(&tmp, &response->location);
+                        if (err < 0) {
+                            RILLOGD("%s get location fail", s);
+                            response->location = 0;
+                        }
+                        RILLOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d, location: %d",
+                                response->id, response->id, response->stat, response->type, response->mpty, response->number,
+                                response->num_type, response->bs_type, response->cause, response->location);
+                        RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DSCI, response, sizeof(RIL_VideoPhone_DSCI));
+                    } else {
+                        response->location = 0;
+                        RILLOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d",
+                                response->id, response->id, response->stat, response->type, response->mpty, response->number,
+                                response->num_type, response->bs_type, response->cause);
+                        RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DSCI, response, sizeof(RIL_VideoPhone_DSCI));
+                    }
+                }
+#endif
+            } else {
+                RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
+                        NULL, 0);
+            }
+
+        } else {
+            RIL_VideoPhone_DSCI *response = NULL;
+            response = (RIL_VideoPhone_DSCI *) alloca(
+                    sizeof(RIL_VideoPhone_DSCI));
+            char *tmp;
+
+            line = strdup(s);
+            tmp = line;
+            at_tok_start(&tmp);
+
+            err = at_tok_nextint(&tmp, &response->id);
+            if (err < 0) {
+                RILLOGD("%s fail", s);
+                goto out;
+            }
+            err = at_tok_nextint(&tmp, &response->idr);
+            if (err < 0) {
+                RILLOGD("%s fail", s);
+                goto out;
+            }
+            err = at_tok_nextint(&tmp, &response->stat);
+            if (err < 0) {
+                RILLOGD("%s fail", s);
+                goto out;
+            }
+            err = at_tok_nextint(&tmp, &response->type);
+            if (err < 0) {
+                RILLOGD("%s fail", s);
+                goto out;
+            }
+
+            //stat:6 is disconnected
+            if (response->stat == 6 && g_csfb_processing) {
+                RIL_CALL_CSFALLBACK *csfb_response = NULL;
+                csfb_response = (RIL_CALL_CSFALLBACK *) alloca(
+                        sizeof(RIL_CALL_CSFALLBACK));
+                csfb_response->id = response->id;
+                csfb_response->number = "";
+                g_csfb_processing = 0;
+                RIL_onUnsolicitedResponse(RIL_UNSOL_CALL_CSFALLBACK_FINISH,
+                        csfb_response, sizeof(RIL_CALL_CSFALLBACK));
+                RILLOGD("RIL_UNSOL_CALL_CSFALLBACK_FINISH, id: %d",
+                        csfb_response->id);
+            }
+
+            if (response->type == 0) {
+                RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
+                        NULL, 0);
+                goto out;
+            } else if (response->type == 1) {
+#if defined (RIL_SPRD_EXTENSION)
+                RIL_onUnsolicitedResponse (
+                        RIL_UNSOL_RESPONSE_VIDEOCALL_STATE_CHANGED,
+                        NULL, 0);
+
+                err = at_tok_nextint(&tmp, &response->mpty);
                 if (err < 0) {
                     RILLOGD("%s fail", s);
                     goto out;
                 }
+                err = at_tok_nextstr(&tmp, &response->number);
+                if (err < 0) {
+                    RILLOGD("%s fail", s);
+                    goto out;
+                }
+                err = at_tok_nextint(&tmp, &response->num_type);
+                if (err < 0) {
+                    RILLOGD("%s fail", s);
+                    goto out;
+                }
+                err = at_tok_nextint(&tmp, &response->bs_type);
+                if (err < 0) {
+                    RILLOGD("%s fail", s);
+                    goto out;
+                }
+
                 if (at_tok_hasmore(&tmp)) {
-                    err = at_tok_nextint(&tmp, &response->location);
+                    err = at_tok_nextint(&tmp, &response->cause);
                     if (err < 0) {
                         RILLOGD("%s fail", s);
                         goto out;
                     }
-                    RILLOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d, location: %d",
-                            response->id, response->id, response->stat, response->type, response->mpty, response->number,
-                            response->num_type, response->bs_type, response->cause, response->location);
-                    RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DSCI, response, sizeof(RIL_VideoPhone_DSCI));
-                } else {
-                    response->location = 0;
-                    RILLOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d",
-                            response->id, response->id, response->stat, response->type, response->mpty, response->number,
-                            response->num_type, response->bs_type, response->cause);
-                    RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DSCI, response, sizeof(RIL_VideoPhone_DSCI));
+                    if (at_tok_hasmore(&tmp)) {
+                        err = at_tok_nextint(&tmp, &response->location);
+                        if (err < 0) {
+                            RILLOGD("%s fail", s);
+                            goto out;
+                        }
+                        RILLOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d, location: %d",
+                                response->id, response->id, response->stat, response->type, response->mpty, response->number,
+                                response->num_type, response->bs_type, response->cause, response->location);
+                        RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DSCI, response, sizeof(RIL_VideoPhone_DSCI));
+                    } else {
+                        response->location = 0;
+                        RILLOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d",
+                                response->id, response->id, response->stat, response->type, response->mpty, response->number,
+                                response->num_type, response->bs_type, response->cause);
+                        RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DSCI, response, sizeof(RIL_VideoPhone_DSCI));
+                    }
                 }
-            }
 #endif
+            }
         }
+    } else if (strStartsWith(s, "+CMCCSI")) {
+        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED, NULL,
+                0);
+    }
+    else if (strStartsWith(s, "+CMCCSI:")) {
+        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED, NULL,
+                0);
     }
     /* SPRD: add for LTE-CSFB to handle CS fall back of MT call @{*/
     else if (strStartsWith(s, "+SCSFB")) {
@@ -11136,6 +12042,56 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RIL_onUnsolicitedResponse (RIL_UNSOL_CALL_CSFALLBACK,
             response,sizeof(RIL_CALL_CSFALLBACK));
         RILLOGD("RIL_UNSOL_CALL_CSFALLBACK, id: %d, number: %s", response->id, response->number);
+    }
+    /* @} */
+	/*SPRD: add for VoLTE to handle SRVCC */
+    else if (strStartsWith(s, "+CIREPH")) {
+        int status;
+        int index = 0;
+        char *tmp;
+
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+
+        err = at_tok_nextint(&tmp, &status);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+
+        s_srvccState = status;
+        if(!isSrvccStrated()){
+            RIL_requestTimedCallback (excuteSrvccPendingOperate, NULL, NULL);
+        }
+        RILLOGD("onUnsolicited(),SRVCC status: %d", status);
+        RIL_onUnsolicitedResponse(RIL_UNSOL_SRVCC_STATE_NOTIFY, &status,
+                sizeof(status));
+    }
+    /* @} */
+    /*SPRD: add for VoLTE to handle emergency number report */
+    else if (strStartsWith(s, "+CEN2")) {
+        char *tmp;
+        char *number;
+        int category;
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+
+        err = at_tok_nextint(&tmp, &category);
+        if (err < 0) {
+            RILLOGD("%s get cat fail", s);
+        }
+        err = at_tok_nextstr(&tmp, &number);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+        RILLOGD("onUnsolicited(),ecc category:%d  number:%s",category,number);
+        Ecc_Record *record = (Ecc_Record *)calloc(1, sizeof(Ecc_Record));
+        record->number = (char *)strdup(number);
+        record->category = category;
+        RIL_requestTimedCallback (addEmergencyNumbertoEccList, (Ecc_Record *)record, NULL);
     }
     /* @} */
 
@@ -12226,3 +13182,646 @@ static void* dump_sleep_log(){
         close(fd_cp);
     return NULL;
 }
+static bool isSrvccStrated(){
+    return (s_srvccState == SRVCC_PS_TO_CS_START
+            || s_srvccState == VSRVCC_PS_TO_CS_START
+            || s_srvccState == SRVCC_CS_TO_PS_START);
+}
+
+static void addSrvccPendingOperate(char *cmd){
+    char *command = strdup(cmd);
+    RILLOGD("addSrvccPendingOperate cmd = %s", command);
+
+    SrvccPendingRequest *newRequest = (SrvccPendingRequest *)calloc(1, sizeof(SrvccPendingRequest));
+    newRequest->cmd = command;
+    newRequest->p_next = NULL;
+    if(s_srvccPendingRequest == NULL){
+        s_srvccPendingRequest = newRequest;
+    } else {
+        SrvccPendingRequest *lastestRequest = s_srvccPendingRequest;
+        while(lastestRequest->p_next != NULL){
+            lastestRequest = lastestRequest->p_next;
+        }
+        lastestRequest->p_next = newRequest;
+    }
+}
+
+static void excuteSrvccPendingOperate(void *param){
+    if(s_srvccPendingRequest != NULL){
+        SrvccPendingRequest *request;
+        ATResponse *p_response = NULL;
+        int err;
+        int channelID;
+        do{
+            request = s_srvccPendingRequest;
+            channelID = getChannel();
+            RILLOGD("excuteSrvccPendingOperate cmd = %s", request->cmd);
+            err = at_send_command(ATch_type[channelID], request->cmd, &p_response);
+            if (err < 0 || p_response->success == 0){
+                RILLOGD("excuteSrvccPendingOperate fail!---cmd = %s", request->cmd);
+            }
+            at_response_free(p_response);
+            putChannel(channelID);
+            s_srvccPendingRequest = request->p_next;
+
+            free(request->cmd);
+            free(request);
+        }while(request->p_next != NULL);
+    }
+
+}
+/* @} */
+
+/*SPRD: add for VoLTE to handle emergency call*/
+static void addEccRecord(Ecc_Record *record){
+    if(record == NULL){
+        return;
+    }
+    RILLOGD("addEccRecord->number:%s category:%d",record->number,record->category);
+    pthread_mutex_lock(&s_ecclist_mutex);
+    if(s_sim_ecclist == NULL){
+        s_sim_ecclist = record;
+    } else {
+        s_sim_ecclist->next = record;
+        record->prev = s_sim_ecclist;
+        record->next = NULL;
+        s_sim_ecclist = record;
+    }
+    pthread_mutex_unlock(&s_ecclist_mutex);
+}
+
+static void updateEccRecord(Ecc_Record *record){
+    if(s_sim_ecclist == NULL || record == NULL){
+        return;
+    }
+    RILLOGD("updateEccRecord->number:%s category:%d",record->number,record->category);
+    pthread_mutex_lock(&s_ecclist_mutex);
+    Ecc_Record *tem_record = s_sim_ecclist;
+    while(record->number != NULL
+            && tem_record->number != NULL
+            && tem_record->prev != NULL){
+        if(strcmp(record->number,tem_record->number) == 0){
+            tem_record->category = record->category;
+            break;
+        }
+        tem_record = tem_record->prev;
+    }
+    pthread_mutex_unlock(&s_ecclist_mutex);
+}
+
+static int getEccRecordCategory(char *number){
+    if(number == NULL || s_sim_ecclist == NULL){
+        return -1;
+    }
+    int category = -1;
+    Ecc_Record *tem_record = s_sim_ecclist;
+    while(tem_record->number != NULL
+            && tem_record->prev != NULL){
+        if(strcmp(number,tem_record->number) == 0){
+            category = tem_record->category;
+            break;
+        }
+        tem_record = tem_record->prev;
+    }
+    RILLOGD("getEccRecordCategory->number:%s category:%d",number,category);
+    return category;
+}
+
+static void addEmergencyNumbertoEccList(Ecc_Record *record){
+    extern int s_sim_num;
+    char *ecc_list = (char *)calloc(1, PROPERTY_VALUE_MAX);
+    char *prop_name = (char *)calloc(1, PROPERTY_VALUE_MAX);
+    char *tmp_list = (char *)calloc(1, PROPERTY_VALUE_MAX);
+    char *tmp;
+    int number_exist = 0;
+    strcpy(prop_name, SIM_ECC_LIST_PROPERTY);
+    if(s_multiSimMode){
+        sprintf(prop_name,"%s%d",prop_name,s_sim_num);
+    }
+    property_get(prop_name, ecc_list, NULL);
+
+    if(ecc_list == NULL){
+        number_exist = 1;
+    } else {
+        tmp_list = strcpy(tmp_list,ecc_list);
+
+        tmp = strtok(tmp_list,",");
+        if(tmp != NULL && strcmp(tmp,record->number) == 0){
+            number_exist = 1;
+        }
+        while(tmp != NULL && !number_exist) {
+            if(strcmp(tmp,record->number) == 0){
+                number_exist = 1;
+            }
+            tmp = strtok( NULL, "," );
+        }
+    }
+
+    if(!number_exist){
+        sprintf(ecc_list,"%s%s,",ecc_list,record->number);
+        property_set(prop_name, ecc_list);
+        addEccRecord(record);
+    } else {
+        updateEccRecord(record);
+        free(record->number);
+        free(record);
+    }
+    RILLOGD("addEmergencyNumbertoEccList->ecc list =%s number_exist:%d",ecc_list,number_exist);
+
+    free(ecc_list);
+    free(prop_name);
+    free(tmp_list);
+}
+
+static void dialEmergencyWhileCallFailed(void *param){
+    RILLOGD("dialEmergencyWhileCallFailed->address =%s", param);
+
+    if(param != NULL){
+        char *number = (char *)param;
+        RIL_Dial *p_dial = (RIL_Dial *)calloc(1, sizeof(RIL_Dial));
+        Ecc_Record *record = (Ecc_Record *)calloc(1, sizeof(Ecc_Record));
+        record->number = (char *)strdup(number);
+        addEmergencyNumbertoEccList(record);
+
+        p_dial->address = number;
+        p_dial->clir = 0;
+        p_dial->uusInfo = NULL;
+        int channelID = getChannel();
+        requestEccDial(channelID, p_dial, sizeof(*p_dial), NULL);
+        putChannel(channelID);
+
+        free(p_dial->address);
+        free(p_dial);
+    }
+}
+
+static void redialWhileCallFailed(void *param){
+    RILLOGD("redialWhileCallFailed->address =%s", param);
+
+    if(param != NULL){
+        char *number = (char *)param;
+        RIL_Dial *p_dial = (RIL_Dial *)calloc(1, sizeof(RIL_Dial));
+
+        p_dial->address = number;
+        p_dial->clir = 0;
+        p_dial->uusInfo = NULL;
+        int channelID = getChannel();
+        requestDial(channelID, p_dial, sizeof(*p_dial), NULL);
+        putChannel(channelID);
+
+        free(p_dial->address);
+        free(p_dial);
+    }
+}
+
+static int forwardFromCCFCLineUri(char *line, RIL_CallForwardInfoUri *p_forward)
+{
+    int err;
+    int state;
+    int mode;
+    int i;
+
+    //+CCFCU: <status>,<class1>[,<numbertype>,<ton>,<number>[,<subaddr>,<satype>[,<time>]]]
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &(p_forward->status));
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &(p_forward->serviceClass));
+    if (err < 0) goto error;
+
+    if (at_tok_hasmore(&line)) {
+        err = at_tok_nextint(&line, &p_forward->numberType);
+        if (err < 0) goto error;
+
+        err = at_tok_nextint(&line, &p_forward->ton);
+        if (err < 0) goto error;
+
+        err = at_tok_nextstr(&line, &(p_forward->number));
+
+        /* tolerate null here */
+        if (err < 0) return 0;
+
+        if (at_tok_hasmore(&line)) {
+            for(i=0; i<2; i++ ) {
+                skipNextComma(&line);
+            }
+
+            if (at_tok_hasmore(&line)) {
+                err = at_tok_nextint(&line, &p_forward->timeSeconds);
+                if (err < 0){
+                    RILLOGE("invalid CCFCU timeSeconds\n");
+                }
+                p_forward->timeSeconds = 0;
+            }
+            if (at_tok_hasmore(&line)) {
+                err = at_tok_nextstr(&line, &p_forward->ruleset);
+                if (err < 0){
+                    RILLOGE("invalid CCFCU ruleset\n");
+                    p_forward->ruleset = NULL;
+                }
+            }
+        }
+    }
+
+    return 0;
+
+    error:
+    RILLOGE("invalid CCFCU line\n");
+    return -1;
+}
+
+static void requestCallForwardUri(int channelID, RIL_CallForwardInfoUri *data, size_t datalen, RIL_Token t)
+{
+    ATResponse *p_response = NULL;
+    ATLine *p_cur;
+    int err;
+    int errNum = 0xff;
+    char *cmd, *line;
+    int ret = -1;
+
+    if (datalen != sizeof(*data))
+        goto error1;
+    if (data->serviceClass == 0) {
+        if (data->status == 2) {
+            ret = asprintf(&cmd, "AT+CCFCU=%d,%d",
+                data->reason,
+                data->status);
+        } else {
+            if (data->timeSeconds != 0 && data->status == 3) {
+                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",,\"\",\"\",,%d",
+                        data->reason,
+                        data->status,
+                        data->numberType,
+                        data->ton,
+                        data->number ? data->number : "",
+                        data->timeSeconds);
+
+            } else {
+                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\"",
+                        data->reason,
+                        data->status,
+                        data->numberType,
+                        data->ton,
+                        data->number ? data->number : "");
+            }
+        }
+    } else {
+        if (data->status == 2) {
+            ret = asprintf(&cmd, "AT+CCFCU=%d,%d",
+                    data->reason,
+                    data->status);
+        } else {
+            if (data->timeSeconds != 0 && data->status == 3) {
+                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",%d,\"%s\",\"\",,%d",
+                        data->reason,
+                        data->status,
+                        data->numberType,
+                        data->ton,
+                        data->number ? data->number : "",
+                        data->serviceClass,
+                        data->ruleset ? data->ruleset : "",
+                        data->timeSeconds);
+            } else {
+                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",%d,\"%s\"",
+                        data->reason,
+                        data->status,
+                        data->numberType,
+                        data->ton,
+                        data->number ? data->number : "",
+                        data->serviceClass,
+                        data->ruleset ? data->ruleset : "");
+            }
+        }
+    }
+    if(ret < 0) {
+        RILLOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error1;
+    }
+    err = at_send_command_multiline (ATch_type[channelID],  cmd, "+CCFCU:", &p_response);
+    free(cmd);
+    if (err < 0 || p_response->success == 0)
+        goto error;
+
+    if (data->status == 2 ) {
+        RIL_CallForwardInfoUri **forwardList, *forwardPool;
+        int forwardCount = 0;
+        int validCount = 0;
+        int i;
+
+        for (p_cur = p_response->p_intermediates
+                ; p_cur != NULL
+                ; p_cur = p_cur->p_next, forwardCount++
+            );
+
+        forwardList = (RIL_CallForwardInfoUri **)
+            alloca(forwardCount * sizeof(RIL_CallForwardInfoUri *));
+
+        forwardPool = (RIL_CallForwardInfoUri *)
+            alloca(forwardCount * sizeof(RIL_CallForwardInfoUri));
+
+        memset(forwardPool, 0, forwardCount * sizeof(RIL_CallForwardInfoUri));
+
+        /* init the pointer array */
+        for(i = 0; i < forwardCount ; i++)
+            forwardList[i] = &(forwardPool[i]);
+
+        for (p_cur = p_response->p_intermediates
+                ; p_cur != NULL
+                ; p_cur = p_cur->p_next
+            ) {
+            err = forwardFromCCFCLineUri(p_cur->line, forwardList[validCount]);
+            forwardList[validCount]->reason = data->reason;
+            if (err == 0)
+                validCount++;
+        }
+
+        RIL_onRequestComplete(t, RIL_E_SUCCESS,
+                validCount ? forwardList : NULL,
+                validCount * sizeof (RIL_CallForwardInfoUri *));
+    } else
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+
+    at_response_free(p_response);
+    return;
+
+error:
+    if (data->status == 2 ) {
+        if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
+            line = p_response->finalResponse;
+            err = at_tok_start(&line);
+            if (err < 0) goto error1;
+            err = at_tok_nextint(&line,&errNum);
+            if (err < 0) goto error1;
+            if (errNum == 70 || errNum == 254 || errNum == 128) {
+                RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
+                at_response_free(p_response);
+                return;
+            }
+        }
+    }
+error1:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+}
+
+static int forwardFromCCFCULine(char *line, RIL_CallForwardInfo *p_forward)
+{
+    int err;
+    int state;
+    int mode;
+    int i;
+
+    //+CCFCU: <status>,<class1>[,<numbertype>,<ton>,<number>[,<subaddr>,<satype>[,<time>]]]
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &(p_forward->status));
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &(p_forward->serviceClass));
+    if (err < 0) goto error;
+
+    if (at_tok_hasmore(&line)) {
+        int numberType = 0;
+        err = at_tok_nextint(&line, &numberType);
+        if (err < 0) goto error;
+
+        err = at_tok_nextint(&line, &p_forward->toa);
+        if (err < 0) goto error;
+
+        err = at_tok_nextstr(&line, &(p_forward->number));
+
+        /* tolerate null here */
+        if (err < 0) return 0;
+
+        if (at_tok_hasmore(&line)) {
+            for(i=0; i<2; i++ ) {
+                skipNextComma(&line);
+            }
+
+            if (at_tok_hasmore(&line)) {
+                err = at_tok_nextint(&line, &p_forward->timeSeconds);
+                if (err < 0){
+                    RILLOGE("invalid CCFCU timeSeconds\n");
+                }
+                p_forward->timeSeconds = 0;
+            }
+        }
+    }
+
+    return 0;
+
+    error:
+    RILLOGE("invalid CCFCU line\n");
+    return -1;
+}
+
+static void requestCallForwardU(int channelID, RIL_CallForwardInfo *data, size_t datalen, RIL_Token t)
+{
+    ATResponse *p_response = NULL;
+    ATLine *p_cur;
+    int err;
+    int errNum = 0xff;
+    char *cmd, *line;
+    int ret = -1;
+
+    if (datalen != sizeof(*data))
+        goto error1;
+    if (data->serviceClass == 0) {
+        if (data->status == 2) {
+            ret = asprintf(&cmd, "AT+CCFCU=%d,%d",
+                data->reason,
+                data->status);
+        } else {
+            if (data->timeSeconds != 0 && data->status == 3) {
+                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",,\"\",\"\",,%d",
+                        data->reason,
+                        data->status,
+                        2,
+                        data->toa,
+                        data->number ? data->number : "",
+                        data->timeSeconds);
+
+            } else {
+                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\"",
+                        data->reason,
+                        data->status,
+                        2,
+                        data->toa,
+                        data->number ? data->number : "");
+            }
+        }
+    } else {
+        if (data->status == 2) {
+            ret = asprintf(&cmd, "AT+CCFCU=%d,%d",
+                    data->reason,
+                    data->status);
+        } else {
+            if (data->timeSeconds != 0 && data->status == 3) {
+                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",%d,\"%s\",\"\",,%d",
+                        data->reason,
+                        data->status,
+                        2,
+                        data->toa,
+                        data->number ? data->number : "",
+                        data->serviceClass,
+                        "",
+                        data->timeSeconds);
+            } else {
+                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",%d,\"%s\"",
+                        data->reason,
+                        data->status,
+                        2,
+                        data->toa,
+                        data->number ? data->number : "",
+                        data->serviceClass,
+                        "");
+            }
+        }
+    }
+    if(ret < 0) {
+        RILLOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error1;
+    }
+    err = at_send_command_multiline (ATch_type[channelID],  cmd, "+CCFCU:", &p_response);
+    free(cmd);
+    if (err < 0 || p_response->success == 0)
+        goto error;
+
+    if (data->status == 2 ) {
+        RIL_CallForwardInfo **forwardList, *forwardPool;
+        int forwardCount = 0;
+        int validCount = 0;
+        int i;
+
+        for (p_cur = p_response->p_intermediates
+                ; p_cur != NULL
+                ; p_cur = p_cur->p_next, forwardCount++
+            );
+
+        forwardList = (RIL_CallForwardInfo **)
+            alloca(forwardCount * sizeof(RIL_CallForwardInfo *));
+
+        forwardPool = (RIL_CallForwardInfo *)
+            alloca(forwardCount * sizeof(RIL_CallForwardInfo));
+
+        memset(forwardPool, 0, forwardCount * sizeof(RIL_CallForwardInfo));
+
+        /* init the pointer array */
+        for(i = 0; i < forwardCount ; i++)
+            forwardList[i] = &(forwardPool[i]);
+
+        for (p_cur = p_response->p_intermediates
+                ; p_cur != NULL
+                ; p_cur = p_cur->p_next
+            ) {
+            err = forwardFromCCFCULine(p_cur->line, forwardList[validCount]);
+            forwardList[validCount]->reason = data->reason;
+            if (err == 0)
+                validCount++;
+        }
+
+        RIL_onRequestComplete(t, RIL_E_SUCCESS,
+                validCount ? forwardList : NULL,
+                validCount * sizeof (RIL_CallForwardInfo *));
+    } else
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+
+    at_response_free(p_response);
+    return;
+
+error:
+    if (data->status == 2 ) {
+        if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
+            line = p_response->finalResponse;
+            err = at_tok_start(&line);
+            if (err < 0) goto error1;
+            err = at_tok_nextint(&line,&errNum);
+            if (err < 0) goto error1;
+            if (errNum == 70 || errNum == 254 || errNum == 128) {
+                RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
+                at_response_free(p_response);
+                return;
+            }
+        }
+    }
+error1:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+}
+
+static void requestInitialGroupCall(int channelID, void *data, size_t datalen, RIL_Token t)
+{
+    int err = 0, i;
+    ATResponse *p_response = NULL;
+    const char *numbers_ptr = NULL;
+    int cid;
+    const char *numbers = NULL;
+    numbers = (char*)strdup((char *)data);
+    char cmd[PROPERTY_VALUE_MAX] = {0};
+    RILLOGE("requestInitialGroupCall numbers = \"%s\"", numbers);
+    snprintf(cmd, sizeof(cmd), "AT+CGU=1,\"%s\"", numbers);
+    err = at_send_command(ATch_type[channelID], cmd , NULL);
+    if (err < 0) {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    } else {
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    }
+
+
+    at_response_free(p_response);
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    return;
+
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+    return;
+}
+
+static void requestAddGroupCall(int channelID, void *data, size_t datalen, RIL_Token t)
+{
+    int err = 0, i;
+    ATResponse *p_response = NULL;
+    const char *numbers_ptr = NULL;
+    int cid;
+    const char *numbers = NULL;
+    numbers = (char*)strdup((char *)data);
+    char cmd[PROPERTY_VALUE_MAX] = {0};
+    RILLOGE("requestAddGroupCall numbers = \"%s\"", numbers);
+    snprintf(cmd, sizeof(cmd), "AT+CGU=4,\"%s\"", numbers);
+    err = at_send_command(ATch_type[channelID], cmd , NULL);
+    if (err < 0) {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    } else {
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    }
+
+
+    at_response_free(p_response);
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    return;
+
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+    return;
+}
+
+static int isVoLteEnable(){
+    char volte_prop[PROPERTY_VALUE_MAX];
+    property_get(VOLTE_ENABLE_PROP, volte_prop, "0");
+    int value = strcmp(volte_prop, "1");
+    int stringValue = strcmp(volte_prop, "true");
+    RILLOGE("isVoLteEnable =%s", volte_prop);
+    if (value == 0 || stringValue == 0){
+        return 1;
+    } else {
+        return 0;
+    }
+}
+

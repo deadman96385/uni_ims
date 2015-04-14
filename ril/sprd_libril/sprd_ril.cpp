@@ -291,6 +291,8 @@ static void dispatchNetworkList (Parcel &p, RequestInfo *pRI);
 static void dispatchVideoPhoneInit(Parcel& p, RequestInfo *pRI);
 static void dispatchVideoPhoneDial(Parcel& p, RequestInfo *pRI);
 static void dispatchVideoPhoneCodec(Parcel& p, RequestInfo *pRI);
+static void dispatchCallForwardUri(Parcel& p, RequestInfo *pRI);
+
 #endif
 
 
@@ -336,6 +338,8 @@ static int responseCCresult(Parcel &p, void *response, size_t responselen);
 #if defined (RIL_SPRD_EXTENSION)
 static int responseDSCI(Parcel &p, void *response, size_t responselen);
 static int responseCallCsFallBack(Parcel &p, void *response, size_t responselen);
+static int responseCallListVoLTE(Parcel &p, void *response, size_t responselen);
+static int responseCallForwardsUri(Parcel &p, void *response, size_t responselen);
 #endif
 
 static int decodeVoiceRadioTechnology (RIL_RadioState radioState);
@@ -2287,7 +2291,75 @@ invalid:
     invalidCommandBlock(pRI);
     return;
 }
+static void
+dispatchCallForwardUri(Parcel &p, RequestInfo *pRI) {
+    RIL_CallForwardInfoUri cff;
+    int32_t t;
+    status_t status;
+
+    memset (&cff, 0, sizeof(cff));
+
+    // note we only check status at the end
+
+    status = p.readInt32(&t);
+    cff.status = (int)t;
+
+    status = p.readInt32(&t);
+    cff.reason = (int)t;
+
+    status = p.readInt32(&t);
+    cff.numberType = (int)t;
+
+    status = p.readInt32(&t);
+    cff.ton = (int)t;
+
+    cff.number = strdupReadString(p);
+
+    status = p.readInt32(&t);
+    cff.serviceClass = (int)t;
+
+    cff.ruleset = strdupReadString(p);
+
+    status = p.readInt32(&t);
+    cff.timeSeconds = (int)t;
+
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+
+    // special case: number 0-length fields is null
+
+    if (cff.number != NULL && strlen (cff.number) == 0) {
+        cff.number = NULL;
+    }
+
+    startRequest;
+    appendPrintBuf("%sstat=%d,reason=%d,numType=%d,toa=%d,%s,serv=%d,rule=%s,tout=%d", printBuf,
+            cff.status, cff.reason, cff.numberType, cff.ton,(char*)cff.number,
+            cff.serviceClass, cff.ruleset, cff.timeSeconds);
+    closeRequest;
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    s_callbacks.onRequest(pRI->pCI->requestNumber, &cff, sizeof(cff), pRI);
+
+#ifdef MEMSET_FREED
+    memsetString(cff.number);
 #endif
+
+    free (cff.number);
+
+#ifdef MEMSET_FREED
+    memset(&cff, 0, sizeof(cff));
+#endif
+
+    return;
+    invalid:
+    invalidCommandBlock(pRI);
+    return;
+}
+#endif
+
+
 
 static void dispatchNVReadItem(Parcel &p, RequestInfo *pRI) {
     RIL_NV_ReadItem nvri;
@@ -4282,6 +4354,141 @@ static int responseCallCsFallBack(Parcel &p, void *response, size_t responselen)
     closeResponse;
     return 0;
 }
+static int responseCallListVoLTE(Parcel &p, void *response, size_t responselen) {
+    int num;
+
+    if (response == NULL && responselen != 0) {
+        RILLOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    if (responselen % sizeof (RIL_Call_VoLTE *) != 0) {
+        RILLOGE("invalid response length %d expected multiple of %d\n",
+            (int)responselen, (int)sizeof (RIL_Call_VoLTE *));
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    startResponse;
+    /* number of call info's */
+    num = responselen / sizeof(RIL_Call_VoLTE *);
+    p.writeInt32(num);
+
+    for (int i = 0 ; i < num ; i++) {
+        RIL_Call_VoLTE *p_cur = ((RIL_Call_VoLTE **) response)[i];
+        /* each call info */
+        p.writeInt32(p_cur->index);
+        p.writeInt32(p_cur->isMT);
+        p.writeInt32(p_cur->negStatusPresent);
+        p.writeInt32(p_cur->negStatus);
+        writeStringToParcel(p, p_cur->mediaDescription);
+        p.writeInt32(p_cur->csMode);
+        p.writeInt32(p_cur->state);
+        p.writeInt32(p_cur->mpty);
+        p.writeInt32(p_cur->numberType);
+        p.writeInt32(p_cur->toa);
+        writeStringToParcel(p, p_cur->number);
+        p.writeInt32(p_cur->prioritypresent);
+        p.writeInt32(p_cur->priority);
+        p.writeInt32(p_cur->CliValidityPresent);
+        p.writeInt32(p_cur->numberPresentation);
+        p.writeInt32(p_cur->als);
+        p.writeInt32(p_cur->isVoicePrivacy);
+        writeStringToParcel(p, p_cur->name);
+        p.writeInt32(p_cur->namePresentation);
+
+
+        // Remove when partners upgrade to version 3
+        if ((s_callbacks.version < 3) || (p_cur->uusInfo == NULL || p_cur->uusInfo->uusData == NULL)) {
+            p.writeInt32(0); /* UUS Information is absent */
+        } else {
+            RIL_UUS_Info *uusInfo = p_cur->uusInfo;
+            p.writeInt32(1); /* UUS Information is present */
+            p.writeInt32(uusInfo->uusType);
+            p.writeInt32(uusInfo->uusDcs);
+            p.writeInt32(uusInfo->uusLength);
+            p.write(uusInfo->uusData, uusInfo->uusLength);
+        }
+        appendPrintBuf("%s[id=%d,%s,[neg_Present=%d,",
+            printBuf,
+            p_cur->index,
+            (p_cur->isMT)?"mt":"mo",
+            p_cur->negStatusPresent);
+        appendPrintBuf("%snegStatus=%d,mediaDes=%s],[csMode=%d,",
+            printBuf,
+            p_cur->negStatus,
+            p_cur->mediaDescription,
+            (p_cur->csMode));
+        appendPrintBuf("%s,%s,conf=%d,numberType=%d,",
+            printBuf,
+            callStateToString(p_cur->state),
+            (p_cur->mpty),
+            p_cur->numberType);
+
+        appendPrintBuf("%s,toa=%d,%s],[pri_p=%d,priority=%d,CliValidity=%d,",
+            printBuf,
+            p_cur->toa,
+            p_cur->number,
+            p_cur->prioritypresent,
+            p_cur->priority,
+            p_cur->CliValidityPresent);
+        appendPrintBuf("%s,cli=%d],als='%d',%s,%s,%s]",
+            printBuf,
+            p_cur->numberPresentation,
+            p_cur->als,
+            (p_cur->isVoicePrivacy)?"voc":"nonvoc",
+            p_cur->name,
+            p_cur->namePresentation);
+    }
+    removeLastChar;
+    closeResponse;
+
+    return 0;
+}
+
+static int responseCallForwardsUri(Parcel &p, void *response, size_t responselen) {
+    int num;
+
+    if (response == NULL && responselen != 0) {
+        RILLOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    if (responselen % sizeof(RIL_CallForwardInfoUri *) != 0) {
+        RILLOGE("invalid response length %d expected multiple of %d",
+                (int)responselen, (int)sizeof(RIL_CallForwardInfoUri *));
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    /* number of call info's */
+    num = responselen / sizeof(RIL_CallForwardInfoUri *);
+    p.writeInt32(num);
+
+    startResponse;
+    for (int i = 0 ; i < num ; i++) {
+        RIL_CallForwardInfoUri *p_cur = ((RIL_CallForwardInfoUri **) response)[i];
+
+        p.writeInt32(p_cur->status);
+        p.writeInt32(p_cur->reason);
+        p.writeInt32(p_cur->numberType);
+        p.writeInt32(p_cur->ton);
+        writeStringToParcel(p, p_cur->number);
+        p.writeInt32(p_cur->serviceClass);
+        writeStringToParcel(p, p_cur->ruleset);
+        p.writeInt32(p_cur->timeSeconds);
+        appendPrintBuf("%s[%s,reason=%d,numType=%d,ton=%d,%s,cls=%d,rule=%s,tout=%d],", printBuf,
+                (p_cur->status==1)?"enable":"disable",
+                        p_cur->reason, p_cur->numberType, p_cur->ton,
+                        (char*)p_cur->number,
+                        p_cur->serviceClass,
+                        p_cur->ruleset,
+                        p_cur->timeSeconds);
+    }
+    removeLastChar;
+    closeResponse;
+
+    return 0;
+}
+
 #endif
 
 /**
@@ -4495,6 +4702,8 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                         || pCI->requestNumber == RIL_REQUEST_SET_CMMS
                         || pCI->requestNumber == RIL_REQUEST_QUERY_COLP
                         || pCI->requestNumber == RIL_REQUEST_QUERY_COLR
+                        || pCI->requestNumber == RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI
+                        || pCI->requestNumber == RIL_REQUEST_SET_CALL_FORWARD_URI
 #endif
                         || pCI->requestNumber == RIL_REQUEST_SETUP_DATA_CALL
                         || pCI->requestNumber == RIL_REQUEST_DEACTIVATE_DATA_CALL) {
@@ -4551,6 +4760,8 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                         || pCI->requestNumber == RIL_REQUEST_QUERY_COLR
                         || pCI->requestNumber == RIL_REQUEST_SEND_SMS
                         || pCI->requestNumber == RIL_REQUEST_SET_CMMS
+                        || pCI->requestNumber == RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI
+                        || pCI->requestNumber == RIL_REQUEST_SET_CALL_FORWARD_URI
 #endif
                         || pCI->requestNumber == RIL_REQUEST_QUERY_CLIP) {
                     list_add_tail(&sms_cmd_list, cmd_item);
@@ -5998,6 +6209,25 @@ requestToString(int request) {
         /*SPRD: for stop query available networks@{*/
         case RIL_REQUEST_STOP_QUERY_AVAILABLE_NETWORKS: return "RIL_REQUEST_STOP_QUERY_AVAILABLE_NETWORKS";
         /*@}*/
+		case RIL_REQUEST_GET_CURRENT_CALLS_VOLTE: return "GET_CURRENT_CALLS_VOLTE";
+        case RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY: return "RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY";
+        case RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY: return "RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY";
+        case RIL_REQUEST_INIT_ISIM: return "RIL_REQUEST_INIT_ISIM";
+        case RIL_REQUEST_REGISTER_IMS_IMPU: return "RIL_REQUEST_REGISTER_IMS_IMPU";
+        case RIL_REQUEST_REGISTER_IMS_IMPI: return "RIL_REQUEST_REGISTER_IMS_IMPI";
+        case RIL_REQUEST_REGISTER_IMS_DOMAIN: return "RIL_REQUEST_REGISTER_IMS_DOMAIN";
+        case RIL_REQUEST_REGISTER_IMS_IMEI: return "RIL_REQUEST_REGISTER_IMS_IMEI";
+        case RIL_REQUEST_REGISTER_IMS_XCAP: return "RIL_REQUEST_REGISTER_IMS_XCAP";
+        case RIL_REQUEST_REGISTER_IMS_BSF: return "RIL_REQUEST_REGISTER_IMS_BSF";
+        case RIL_REQUEST_VOLTE_CALL_REQUEST_MEDIA_CHANGE: return "RIL_REQUEST_VOLTE_CALL_REQUEST_MEDIA_CHANGE";
+        case RIL_REQUEST_VOLTE_CALL_RESPONSE_MEDIA_CHANGE: return "RIL_REQUEST_VOLTE_CALL_RESPONSE_MEDIA_CHANGE";
+        case RIL_REQUEST_VOLTE_CALL_FALL_BACK_TO_VOICE: return "RIL_REQUEST_VOLTE_CALL_FALL_BACK_TO_VOICE";
+        case RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN: return "RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN";
+        case RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI: return "QUERY_CALL_FORWARD_STATUS_URI";
+        case RIL_REQUEST_SET_CALL_FORWARD_URI: return "SET_CALL_FORWARD_URI";
+        case RIL_REQUEST_VOLTE_INITIAL_GROUP_CALL: return "VOLTE_INITIAL_GROUP_CALL";
+        case RIL_REQUEST_VOLTE_ADD_TO_GROUP_CALL: return "VOLTE_ADD_TO_GROUP_CALL";
+        case RIL_REQUEST_VOLTE_SET_CONFERENCE_URI: return "RIL_REQUEST_VOLTE_SET_CONFERENCE_URI";
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_SET_CELL_BROADCAST_CONFIG: return "SET_CELL_BROADCAST_CONFIG";

@@ -114,6 +114,39 @@ typedef enum {
     RIL_CALL_WAITING = 5     /* MT call only */
 } RIL_CallState;
 
+/*SPRD: add for VoLTE to handle +CLCCS */
+typedef enum {
+    VOLTE_CALL_IDEL = 1,
+    VOLTE_CALL_CALLING_MO = 2,
+    VOLTE_CALL_CONNECTING_MO = 3,
+    VOLTE_CALL_ALERTING_MO = 4,
+    VOLTE_CALL_ALERTING_MT = 5,
+    VOLTE_CALL_ACTIVE = 6,
+    VOLTE_CALL_RELEASED_MO = 7,
+    VOLTE_CALL_RELEASED_MT = 8,
+    VOLTE_CALL_USER_BUSY = 9,
+    VOLTE_CALL_USER_DETERMINED_BUSY = 10,
+    VOLTE_CALL_WAITING_MO = 11,
+    VOLTE_CALL_WAITING_MT = 12,
+    VOLTE_CALL_HOLD_MO = 13,
+    VOLTE_CALL_HOLD_MT = 14
+} VoLTE_CallState;
+
+/*SPRD: add for VoLTE to handle SRVCC */
+typedef enum {
+    SRVCC_PS_TO_CS_START = 0,
+    SRVCC_PS_TO_CS_SUCCESS = 1,
+    SRVCC_PS_TO_CS_CANCELED = 2,
+    SRVCC_PS_TO_CS_FAILED = 3,
+    VSRVCC_PS_TO_CS_START = 4,
+    VSRVCC_PS_TO_CS_SUCCESS = 5,
+    SRVCC_CS_TO_PS_START = 6,
+    SRVCC_CS_TO_PS_CANCELED = 7,
+    SRVCC_CS_TO_PS_FAILED = 8,
+    SRVCC_CS_TO_PS_SUCCESS = 9,
+} VoLTE_SrvccState;
+
+
 typedef enum {
     RADIO_STATE_OFF = 0,                   /* Radio explictly powered off (eg CFUN=0) */
     RADIO_STATE_UNAVAILABLE = 1,           /* Radio unavailable (eg, resetting or not booted) */
@@ -312,6 +345,62 @@ typedef struct {
     int             redirectingNumPresentation; /* 0=Allowed, 1=Restricted, 2=Not Specified/Unknown 3=Payphone */
 #endif
 } RIL_Call;
+/*
+ *SPRD: add for VoLTE to handle +CLCCS
+ */
+typedef struct {
+    /* parameter from +CLCCS:
+     * [+CLCCS: <ccid1>,<dir>,<neg_status_present>,<neg_status>,<SDP_md>,
+     * <cs_mode>,<ccstatus>,<mpty>,[,<numbertype>,<ton>,<number>
+     * [,<priority_present>,<priority>[,<CLI_validity_present>,<CLI_validity>]]]
+     */
+    int             index;              /* CLCCS parameter:<ccid1> */
+    char            isMT;               /* CLCCS parameter:<dir> nonzero if call is mobile terminated*/
+    int             negStatusPresent;    /*CLCCS parameter:<neg_status_present>*/
+    int             negStatus;          /*CLCCS parameter:<neg_status>*/
+    char *          mediaDescription;    /*CLCCS parameter:<SDP_md>*/
+    int             csMode;            /*CLCCS parameter: <cs_mode> */
+    RIL_CallState   state;               /*CLCCS parameter:<ccstatus>*/
+    int             mpty;             /*CLCCS parameter:<mpty> nonzero if is mpty call */
+    int             numberType;         /*CLCCS parameter:<numbertype>*/
+    int             toa;                /*CLCCS parameter:<ton> type of address, eg 145 = intl */
+    char *          number;             /*CLCCS parameter:<number> Remote party number */
+    int             prioritypresent;    /*CLCCS parameter:<priority_present> nonzero if priority has valid info*/
+    int             priority;           /*CLCCS parameter:<priority> eMLPP level*/
+    int             CliValidityPresent; /*CLCCS parameter:<CLI_validity_present> nonzero if CLI_validity has valid info*/
+    int             numberPresentation; /*CLCCS parameter:<CLI_validity> 0=Allowed, 1=Restricted, 2=Not Specified/Unknown 3=Payphone*/
+
+    char            als;        /* ALS line indicator if available
+                                   (0 = line 1) */
+    char            isVoicePrivacy;     /* nonzero if CDMA voice privacy mode is active */
+    char *          name;       /* Remote party name */
+    int             namePresentation; /* 0=Allowed, 1=Restricted, 2=Not Specified/Unknown 3=Payphone */
+    char            isLoopBack;
+    RIL_UUS_Info *  uusInfo;    /* NULL or Pointer to User-User Signaling Information */
+#if defined (GLOBALCONFIG_RIL_VT_SUPPORT)
+    char            isVideo;    /* nonzero if this is is a Video call */
+#endif
+#if defined (GLOBALCONFIG_RIL_CALL_CNAP_KSC5601)
+    int             dcs;        /* coding scheme */
+#endif /* GLOBALCONFIG_RIL_CALL_CNAP_KSC5601 */
+#if defined (GLOBALCONFIG_RIL_CALL_DUAL_PHONENUMBER)
+    //number plus
+    int             dualNumToa;        /* type of address, eg 145 = intl */
+    char *          dualNum;     /*CDNIP */
+    int             dualNumPresentation; /* 0=Allowed, 1=Restricted, 2=Not Specified/Unknown 3=Payphone */
+#endif /* GLOBALCONFIG_RIL_CALL_DUAL_PHONENUMBER */
+#if defined (GLOBALCONFIG_RIL_CALL_VISUAL_EXPRESSION)
+    int             urldcs;
+    char *          sktVEUrl;       /* Remote party name */
+    int             sktVEUrlPresentation; /* 0=Allowed, 1=Restricted, 2=Not Specified/Unknown 3=Payphone */
+#endif /* GLOBALCONFIG_RIL_CALL_VISUAL_EXPRESSION */
+#if defined (GLOBALCONFIG_RIL_CALL_NEXTI)
+    int             redirectingNumToa;  /* type of address, eg 145 = intl */
+    char *          redirectingNum;     /* redirectedNum */
+    int             redirectingNumPresentation; /* 0=Allowed, 1=Restricted, 2=Not Specified/Unknown 3=Payphone */
+#endif
+} RIL_Call_VoLTE;
+
 
 /* Deprecated, use RIL_Data_Call_Response_v6 */
 typedef struct {
@@ -587,6 +676,32 @@ typedef struct {
     char *          number;      /* "number" from TS 27.007 7.11. May be NULL */
     int             timeSeconds; /* for CF no reply only */
 }RIL_CallForwardInfo;
+typedef struct {
+    int             status;     /*
+                                 * For RIL_REQUEST_QUERY_CALL_FORWARD_STATUS
+                                 * status 1 = active, 0 = not active
+                                 *
+                                 * For RIL_REQUEST_SET_CALL_FORWARD:
+                                 * status(mode) is:
+                                 * 0 = disable
+                                 * 1 = enable
+                                 * 2 = query
+                                 * 3 = registration
+                                 * 4 = erasure
+                                 */
+
+    int             reason;      /* from TS 27.007 7.11 "reason" */
+    int             numberType;  /* Indicating type of information in parameter */
+    int             ton;         /* "type" from TS 27.007 7.11 */
+    char *          number;      /* "number" from TS 27.007 7.11. May be NULL */
+    int             serviceClass;/* From 27.007 +CCFC/+CLCK "class"
+                                    See table for Android mapping from
+                                    MMI service code
+                                    0 means user doesn't input class */
+    char *          ruleset;     /* element of communication diversion XML document, refer 3GPP TS 24.604 [132]*/
+    char            timeSeconds; /* for CF no reply only */
+}RIL_CallForwardInfoUri;
+
 
 #if defined (RIL_SPRD_EXTENSION)
 /* See also com.android.internal.telephony.gsm.CallWaitingInfo */
@@ -5721,6 +5836,27 @@ typedef struct {
 /*SPRD: for stop query available networks@{*/
 #define RIL_REQUEST_STOP_QUERY_AVAILABLE_NETWORKS (RIL_SPRD_REQUEST_BASE+42)
 /*@}*/
+#define RIL_REQUEST_GET_CURRENT_CALLS_VOLTE (RIL_SPRD_REQUEST_BASE + 43)
+#define RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY (RIL_SPRD_REQUEST_BASE + 44)
+#define RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY (RIL_SPRD_REQUEST_BASE + 45)
+#define RIL_REQUEST_INIT_ISIM  (RIL_SPRD_REQUEST_BASE + 46)
+#define RIL_REQUEST_REGISTER_IMS_IMPU  (RIL_SPRD_REQUEST_BASE + 47)
+#define RIL_REQUEST_REGISTER_IMS_IMPI  (RIL_SPRD_REQUEST_BASE + 48)
+#define RIL_REQUEST_REGISTER_IMS_DOMAIN  (RIL_SPRD_REQUEST_BASE + 49)
+#define RIL_REQUEST_DISABLE_IMS  (RIL_SPRD_REQUEST_BASE + 50)
+#define RIL_REQUEST_REGISTER_IMS_IMEI  (RIL_SPRD_REQUEST_BASE + 51)
+#define RIL_REQUEST_VOLTE_CALL_REQUEST_MEDIA_CHANGE (RIL_SPRD_REQUEST_BASE + 52)
+#define RIL_REQUEST_VOLTE_CALL_RESPONSE_MEDIA_CHANGE (RIL_SPRD_REQUEST_BASE + 53)
+#define RIL_REQUEST_REGISTER_IMS_XCAP (RIL_SPRD_REQUEST_BASE + 54)
+#define RIL_REQUEST_REGISTER_IMS_BSF (RIL_SPRD_REQUEST_BASE + 55)
+#define RIL_REQUEST_SET_IMS_SMSC (RIL_SPRD_REQUEST_BASE + 56)
+#define RIL_REQUEST_VOLTE_CALL_FALL_BACK_TO_VOICE (RIL_SPRD_REQUEST_BASE + 57)
+#define RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN (RIL_SPRD_REQUEST_BASE+58)
+#define RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI (RIL_SPRD_REQUEST_BASE+59)
+#define RIL_REQUEST_SET_CALL_FORWARD_URI (RIL_SPRD_REQUEST_BASE+60)
+#define RIL_REQUEST_VOLTE_INITIAL_GROUP_CALL (RIL_SPRD_REQUEST_BASE+61)
+#define RIL_REQUEST_VOLTE_ADD_TO_GROUP_CALL (RIL_SPRD_REQUEST_BASE+62)
+#define RIL_REQUEST_VOLTE_SET_CONFERENCE_URI (RIL_SPRD_REQUEST_BASE +63)
 #define RIL_REQUEST_SET_RILPROXY_LTE_ENABLE  (RIL_SPRD_REQUEST_BASE + 100)
 #define RIL_SPRD_REQUEST_LAST RIL_REQUEST_SET_RILPROXY_LTE_ENABLE
 
