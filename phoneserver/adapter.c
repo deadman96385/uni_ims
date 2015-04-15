@@ -228,12 +228,6 @@ const struct cmd_table single_at_cmd_cvt_table[] = {
     {AT_CMD_CMMS, AT_CMD_TYPE_SMS, AT_CMD_STR("AT+CMMS"),
         cvt_generic_cmd_req, 5},
 
-
-    {AT_CMD_ATD_SET, AT_CMD_TYPE_STM, AT_CMD_STR("ATD*99"),
-        cvt_atd_active_req, 150},
-    {AT_CMD_ATDT_SET, AT_CMD_TYPE_STM, AT_CMD_STR("ATDT*99"),
-        cvt_atd_active_req, 150},
-
     {AT_CMD_CHLD, AT_CMD_TYPE_CS, AT_CMD_STR("AT+CHLD"),
         cvt_generic_cmd_req, 50},
     {AT_CMD_VTS, AT_CMD_TYPE_CS, AT_CMD_STR("AT+VTS"),
@@ -465,10 +459,6 @@ const struct cmd_table multi_at_cmd_cvt_table[] = {
     {AT_CMD_CMMS, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CMMS"),
         cvt_generic_cmd_req, 5},
 
-    {AT_CMD_ATD_SET, AT_CMD_TYPE_NORMAL, AT_CMD_STR("ATD*99"),
-        cvt_atd_active_req, 150},
-    {AT_CMD_ATDT_SET, AT_CMD_TYPE_NORMAL, AT_CMD_STR("ATDT*99"),
-        cvt_atd_active_req, 150},
     {AT_CMD_CHLD, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CHLD"),
         cvt_generic_cmd_req, 50},
     {AT_CMD_VTS, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+VTS"),
