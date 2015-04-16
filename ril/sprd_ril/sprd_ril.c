@@ -12032,8 +12032,14 @@ unsigned char* convertUsimToSim(unsigned char const* byteUSIM, int len) {
         byteSIM[RESPONSE_DATA_RECORD_LENGTH] =
                 ((byteUSIM[RESPONSE_DATA_FILE_RECORD_LEN_1] & 0xff) << 8)
                         + (byteUSIM[RESPONSE_DATA_FILE_RECORD_LEN_2] & 0xff);
+    }else if((byteUSIM[desIndex + RESPONSE_DATA_FILE_DES_FLAG] & 0x07)
+            == EF_TYPE_CYCLIC){
+        RILLOGE("EF_TYPE_CYCLIC");
+        byteSIM[RESPONSE_DATA_STRUCTURE] = 3;
+        byteSIM[RESPONSE_DATA_RECORD_LENGTH] = 
+                ((byteUSIM[RESPONSE_DATA_FILE_RECORD_LEN_1] & 0xff) << 8)
+                        + (byteUSIM[RESPONSE_DATA_FILE_RECORD_LEN_2] & 0xff);
     }
-
     memset(byteUSIM, 0, len);
     convertBinToHex(byteSIM, RESPONSE_EF_SIZE, byteUSIM);
     RILLOGD("convert to sim done, return:%s", byteUSIM);
