@@ -33,6 +33,7 @@
 #define BUFFER_FLAG_SYNC_FRAME      (1)
 #define BUFFER_FLAG_CODEC_CONFIG    (2)
 
+#define FRAME_SPS_PPS_SIZE          (24)
 /*
  * VC - VCI interfac methods.
  */
