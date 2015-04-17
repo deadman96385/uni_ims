@@ -164,7 +164,7 @@ vint _VC_videoStreamSendEncodedData(
                 /* Calculate the Video RTP time stamp. */
                 previousTsMs = rtp_ptr->tsMs;
                 DBG("previousTsMs:%llu", previousTsMs);
-                if (previousTsMs <= 0) {
+                if (FRAME_SPS_PPS_SIZE == length) {
                     /*
                      * For the first frame, Use the randomly initialized rtpTime.
                      * Also record the OSAL Time so that we can calculate the time elapsed
