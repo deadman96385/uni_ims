@@ -11828,9 +11828,9 @@ static bool isLte(void) {
 
 static bool isCMCC(void) {
     char prop[PROPERTY_VALUE_MAX]="";
-    property_get("ro.operator", prop, NULL);
-    RILLOGD("operator mode: %s", prop);
-    if (!strcmp(prop, "cmcc")) {
+    property_get("ro.product.name", prop, NULL);
+    RILLOGD("product name is: %s", prop);
+    if ((!strcmp(prop, "sp9838aea_5mod")) || (!strcmp(prop, "sp9830aea_5m_h100_dt_cmcc"))) {
         return true;
     }
     return false;
