@@ -3679,7 +3679,7 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
     char **responses, **cur;
     ATResponse *p_response = NULL;
     int tok = 0, count = 0, i = 0;
-
+    char *tmp, *startTmp;
     err = at_send_command_singleline(ATch_type[channelID], "AT+COPS=?", "+COPS:",
             &p_response);
     if (err != 0 || p_response->success == 0)
@@ -3721,8 +3721,10 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
     }
 
 //  (1,"CHINA MOBILE","CMCC","46000",0),(2,"CHINA MOBILE","CMCC","46000",2),(3,"CHN-UNICOM","CUCC","46001",0),,(0-4),(0-2)
-    responses = alloca(count * 5 * sizeof(char *));
+    responses = alloca(count * 4 * sizeof(char *));
     cur = responses;
+    tmp = (char *) malloc(count * sizeof(char) *30);
+    startTmp=tmp;
 
     while ( (line = strchr(line, '(')) && (i++ < count) ) {
         line++;
@@ -3743,7 +3745,6 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
         /**  SPRD : Add SPNWNAME feature @{ **/
         if(cur[2] != NULL && strlen(cur[2]) > 0) {
             cur[0] = NULL;
-            cur[1] = NULL;
         }
         if(strlen(s_nw_plmn) > 0 && cur[2] != NULL){
             bool exit_full_name = strlen(s_nw_full_name) > 0;
@@ -3755,26 +3756,39 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
             }
         }
         /* @} */
-
 #if defined (RIL_SPRD_EXTENSION)
         err = at_tok_nextint(&line, &act);
         if (err < 0) continue;
-
-        cur[4] = actStr[act==7 ? 3 : act];
+        if(cur[1] == NULL){
+            if(cur[0] != NULL){
+                cur[1] = cur[0];
+            }else{
+                cur[1] = tmp;
+            }
+        }
+        strcpy(tmp, cur[1]);
+        strcat(tmp, " ");
+        RILLOGD("requestNetworkList  tmp cur[1] = %s", tmp);
+        strcat(tmp, actStr[act==7 ? 3 : act]);//set act in cur[3], cur[3] = available.UTRAN
+        RILLOGD("requestNetworkList cur[1] act = %s", tmp);
+        cur[1] = tmp;
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
-        err = at_tok_nextstr(&line, &(cur[4]));
-        if (err < 0) continue;
+//        err = at_tok_nextstr(&line, &(cur[4]));
+//        if (err < 0) continue;
 #endif
 
-        cur += 5;
+        cur += 4;
+        tmp += 30;
     }
-    RIL_onRequestComplete(t, RIL_E_SUCCESS, responses, count * 5 * sizeof(char *));
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, responses, count * 4 * sizeof(char *));
     at_response_free(p_response);
+    free(startTmp);
     return;
 
 error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
+    free(startTmp);
 }
 
 static void requestQueryNetworkSelectionMode(int channelID,
@@ -4912,7 +4926,6 @@ static void requestOperator(int channelID, void *data, size_t datalen, RIL_Token
     /**  SPRD : Add SPNWNAME feature @{ **/
     if(response[2] != NULL && strlen(response[2]) > 0) {
         response[0] = NULL;
-        response[1] = NULL;
     }
     if(strlen(s_nw_plmn) > 0 && response[2] != NULL){
         bool exit_full_name = strlen(s_nw_full_name) > 0;
