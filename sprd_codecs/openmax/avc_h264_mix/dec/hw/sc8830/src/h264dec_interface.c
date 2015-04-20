@@ -63,15 +63,21 @@ PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int3
     //pop one picture from delayed picture queue.
     if (dpb_ptr && dpb_ptr->delayed_pic_num)
     {
-        *pOutput = dpb_ptr->delayed_pic[0]->pBufferHeader;
+        DEC_FRAME_STORE_T *fs  = H264Dec_search_frame_from_DBP(vo, dpb_ptr->delayed_pic[0]);
 
-        if(dpb_ptr->delayed_pic[0]->pBufferHeader !=NULL)
+        if (!fs || (fs->is_reference != DELAYED_PIC_REF))
         {
-            (*(vo->avcHandle->VSP_unbindCb))(vo->avcHandle->userdata,dpb_ptr->delayed_pic[0]->pBufferHeader);
-            dpb_ptr->delayed_pic[0]->pBufferHeader = NULL;
+            SPRD_CODEC_LOGE ("%s, %d, 'fs->is_reference != DELAYED_PIC_REF!'", __FUNCTION__, __LINE__);
+            *pOutput = NULL;
+            return MMDEC_ERROR;
         }
 
-        for(i =0; i < dpb_ptr->delayed_pic_num; i++)
+        *pOutput = dpb_ptr->delayed_pic[0]->pBufferHeader;
+
+        fs->is_reference = 0;
+        H264DEC_UNBIND_FRAME(vo, fs->frame);
+
+        for(i = 0; i < dpb_ptr->delayed_pic_num; i++)
         {
             dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
         }
