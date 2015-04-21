@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"సెక్యూరిటీసెలెక్ట్"</string>
+<string name="action_settings">"సెట్టింగులు"</string>
+<string name="hello_world">"ఈ టెర్మినల్ ఆప్లికేషన్ ఆక్సెస్ కొరకు సిస్టం ఇంటర్ఫేసుకు మద్దతు ఇస్తుంది లేదా డాటా కనెక్షనును తెరుస్తుంది,ఇది ప్రవర్తన ప్రాంప్టుకు సంబంధించిన యూజరు సమాచారం యొక్క సేక్యూరిటీను ప్రభావితం చేయవచ్చు, కొన్ని అప్ప్లికేషనులను తెరిచినప్పుడు అవి యూజరు యొక్క అనుభవాన్ని ప్రభావితం చేయవచ్చు,అవసరమయితే సెక్యూరిటీ కాన్ఫిగరేషన్ అప్లికేషన్ పైన దానిని ఆన్ లేదా ఆఫ్ చేయండి."</string>
+<string name="timer">"మిగిలి ఉన్న టైం:"</string>
+<string name="No">"వద్దు"</string>
+<string name="Yes">అవును</string>
+<string name="second">"s"</string>
+<string name="cancel">"రద్దు"</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"ಭದ್ರತಾಆಯ್ಕೆ"</string>
+<string name="action_settings">"ಸೆಟ್ಟಿಂಗ್ ಗಳು"</string>
+<string name="hello_world">"ಈ ಟರ್ಮಿನಲ್ ಅನ್ವಯ ಪ್ರವೇಶಾವಕಾಶಕ್ಕೆ ಅಥವಾ ದತ್ತ ಸಂಪರ್ಕವನ್ನು ತೆರೆಯಲು ಅವಶ್ಯವಾದ ಸಿಸ್ಟಮ್ ಇಂಟರ್ಫೇಸ್ ಅನ್ನು ಬೆಂಬಲಿಸುತ್ತದೆ; ಇದರಿಂದ ಕಂಡಕ್ಟ್ ಪ್ರಾಂಪ್ಟ್ ನ ಯಾಂತ್ರಿಕ ವಿಷಯಕ್ಕೆ ಸಂಬಂಧಿಸಿದ ಬಳಕೆದಾರ ಮಾಹಿತಿಯ ಭದ್ರತೆಯ ಮೇಲೆ ಪರಿಣಾಮ ಉಂಟಾಗಬಹುದು; ನೀವು ಕೆಲವು ಅನ್ವಯಗಳನ್ನು ತೆರೆದರೆ ಬಳಕೆದಾರರ ಅನುಭವದ ಮೇಲೆ ಪರಿಣಾಮ ಬೀರಬಹುದು, ಬೇಕಾಗಿದ್ದಲ್ಲಿ ಇದನ್ನು ದಯವಿಟ್ಟು ಭದ್ರತಾ ಸಾಮರ್ಥ್ಯ ರಚನಾ ಅನ್ವಯದ ಮೇಲೆ ಅಥವಾ ಹೊರಗೆ ಸ್ಥಾಪಿಸಿ."</string>
+<string name="timer">"ಉಳಿದಿರುವ ಸಮಯ:"</string>
+<string name="No">"ಇಲ್ಲ"</string>
+<string name="Yes">"ಹೌದು"</string>
+<string name="second">"s"</string>
+<string name="cancel">"ರದ್ದು"</string>
+</resources>

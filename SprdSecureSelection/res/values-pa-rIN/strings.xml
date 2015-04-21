@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"ਸੁਰੱਖਿਆ ਚੋਣ"</string>
+<string name="action_settings">ਸੈਟਿੰਗਸ</string>
+<string name="hello_world">"ਇਹ ਟਰਮਿਨਲ ਅਨੁਪ੍ਰਯੋਗ ਪਹੁੰਚ ਜਾਂ ਇੱਕ ਡਾਟਾ ਕਨੈਕਸ਼ਨ ਖੋਲ੍ਹਣ ਲਈ ਸਿਸਟਮ ਇੰਟਰਫੇਸ ਦਾ ਸਮਰਥਨ ਕਰਦਾ ਹੈ, ਜੋ ਤੁਰੰਤ ਆਚਰਨ ਦੀ ਵਿਧੀ ਨਾਲ ਸੰਬੰਧਿਤ ਪ੍ਰਯੋਗਕਰਤਾ ਜਾਣਕਾਰੀ ਦੀ ਸੁਰੱਖਿਆ ਨੂੰ ਪ੍ਰਭਾਵਿਤ ਕਰ ਸਕਦਾ ਹੈ, ਜੇਕਰ ਤੁਸੀਂ ਕੁਝ ਅਨੁਪ੍ਰਯੋਗ ਖੋਲ੍ਹਦੇ ਹੋ ਤਾਂ ਉਹ ਪ੍ਰਯੋਗਕਰਤਾ ਅਨੁਭਵ ਨੂੰ ਪ੍ਰਭਾਵਿਤ ਕਰ ਸਕਦੇ ਹਨ, ਜੇਕਰ ਲੋੜ ਹੋਵੇ ਤਾਂ ਕਿਰਪਾ ਕਰਕੇ ਇਸਨੂੰ ਸੁਰੱਖਿਆ ਯੋਗਤਾ ਕੌਂਫਿਗੁਰੇਸ਼ਨ ਅਨੁਪ੍ਰਯੋਗ \'ਤੇ ਬੰਦ ਜਾਂ ਚਾਲੂ ਸੈਟ ਕਰੋ। "</string>
+<string name="timer">"ਬਾਕੀ ਸਮਾਂ:"</string>
+<string name="No">ਨਹੀਂ</string>
+<string name="Yes">ਹਾਂ</string>
+<string name="second">"s"</string>
+<string name="cancel">ਰੱਦ ਕਰੋ</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">ការជ្រើសរើសសុវត្ថិភាព</string>
+<string name="action_settings">"ការកំណត់នានា"</string>
+<string name="hello_world">ធឺមីណលនេះគាំទ្រផ្ទៃអន្តរមុខរបស់ប្រព័ន្ធសម្រាប់ចូលប្រើកម្មវិធីឬបើកភ្ជាប់បណ្តាញអ៊ីនធឺនែត ដែលអាចប៉ះពាល់ដល់សុវត្ថិភាពពត៍មានរបស់អ្នកប្រើប្រាស់ដែលទាក់ទងនឹងបំណងដំណើការរបស់ម៉ាស៊ីន។ប្រសិនបើលោកអ្នកបើកកម្មវិធីខ្លះនោះនឹងមានផលប៉ះពាល់ដល់ការ   ប្រើប្រាស់របស់អ្នកប្រើប្រាស់។ប្រសិនបើត្រូវការសូមបើកវាឬមួយបិទការកំណត់ការការពារសុវត្ថិភាពកម្មវិធីចោល។</string>
+<string name="timer">ពេលនៅសល់៖</string>
+<string name="No">"ទេ"</string>
+<string name="Yes">"បាទ"</string>
+<string name="second">"កញ្ញា"</string>
+<string name="cancel">លុបចោល</string>
+</resources>

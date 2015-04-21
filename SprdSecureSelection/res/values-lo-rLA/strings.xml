@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"ເລືອກ​ລັກ​ສະ​ນະ​ຄວາມ​ປອດ​ໄພ"</string>
+<string name="action_settings">"ຕັ້ງຄ່າ"</string>
+<string name="hello_world">"ເຄື່ອງນີ້ຮອງຮັບຮ້ອງການເຊື່ອມຕໍ່ລະບົບສຳລັບການເຂົ້າເຖິງໂປແກຣມ ຫຼືເປີດການເຊື່ອມຕໍ່ຂໍ້ມູນ, ເຊິ່ງອາດຈະສົ່ງຜົນກະທົບເຖິງການຮັກສາຄວາມປອດໄພຂອງຂໍ້ມູນຂອງຜູ້ໃຊ້ ທີ່ກ່ຽວຂ້ອງກັບກົນໄກການໃຫ້ດຳເນີນການ, ຖ້າທ່ານເປີດໃຊ້ງ່ານບາງໂປແກຣມອາດສົ່ງຜົນກະທົບຕໍ່ປະສົບການຜູ້ໃຊ້ງານ, ຖ້າຈຳເປັນ ກະລຸນາຕັ້ງຄ່າຄວາມອາດສາມາດໃນການຮັກສາຄວາມປອດໄພຂອງໂປແກຣມ."</string>
+<string name="timer">"ເວລາທີ່ຍັງເຫຼືອ:"</string>
+<string name="No">ບໍ່</string>
+<string name="Yes">ຕົກລົງ</string>
+<string name="second">"s"</string>
+<string name="cancel">ຍົກເລີກ</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"सुरक्षा निवड" </string>
+<string name="action_settings">"सेटिंग्ज"</string>
+<string name="hello_world">"हे टर्मिनल अॅप्लिकेशन प्रवेशपद्धतीचे अंतःपृष्ठ अथवा उघडे माहितीचा स्त्रोत, जे वापराच्या प्रवृत्तीच्या तंत्रामुळे वापरकर्त्याच्या माहितीच्या सुरक्षेवर परिणाम करेल. जे वापरकर्त्याच्या  अनुभवावर परिणाम करतील असे काही अॅप्लिकेशन्स आपण उघडले तर, गरज पडल्यास सुरक्षेच्या क्षमतेनुसार अॅप्लिकेशनचा विन्यास उघडा किंवा बंद करा"</string>
+<string name="timer">"उरलेला वेळ:"</string>
+<string name="No">"नाही"</string>
+<string name="Yes">"होय"</string>
+<string name="second">"s"</string>
+<string name="cancel">"रद्द करा"</string>
+</resources>

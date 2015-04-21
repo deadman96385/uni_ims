@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Pili ug Seguridad"</string>
+<string name="action_settings">"Mga Setting"</string>
+<string name="hello_world">"Kani nga terminal nagsuporta sa interface sa sistema para sa pagakses sa aplikasyon og pagabli sa koneksyon sa datus, nga pwede maka-apekto sa seguridad sa impormasyon sa tig-gamit nga may kalabutan sa mekanismo sa paspas nga pamatasan, Kung imo ablihan ang ubang aplikasyon kini mahimong maka-apekto sa kinasinatian sa tig-gamit, kung mahimo palihug itakda sa on o off ang abilidad sa seguridad sa pagbago sa aplikasyon."</string>
+<string name="timer">"Oras nga Nabilin:"</string>
+<string name="No">"Dili"</string>
+<string name="Yes">O</string>
+<string name="second">"S"</string>
+<string name="cancel">Balihon</string>
+</resources>

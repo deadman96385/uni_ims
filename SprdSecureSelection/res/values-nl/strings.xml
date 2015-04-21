@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"BeveiligingSelecteren"</string>
+<string name="action_settings">"Instellingen"</string>
+<string name="hello_world">Deze terminal ondersteunt systeeminterface voor toegang tot applicaties of een dataverbinding, wat de veiligheid van de gebruikersinformatie met betrekking tot het mechanisme van prompt uitvoeren kan beïnvloeden, als u sommige toepassingen opent kan dat de gebruikerservaring beïnvloeden, indien nodig, schakel het in of uit in de beveiligingsmogelijkheid van de configuratieapplicatie."</string>
+<string name="timer">"Tijd over:"</string>
+<string name="No">"Nee"</string>
+<string name="Yes">"Ja"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Annuleren"</string>
+</resources>

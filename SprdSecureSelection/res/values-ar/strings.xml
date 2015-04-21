@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"اختيار الأمان"</string>
+<string name="action_settings">"إعدادات"</string>
+<string name="hello_world">"تدعم هذه المحطة واجهة النظام للوصول إلى التطبيقات أو فتح اتصال البيانات، والتي قد تؤثر على أمن معلومات المستخدم المتعلقة بآلية سلوك التوجيه. إذا قمت بفتح بعض التطبيقات فإنه قد يؤثر على خبرة المستخدم، وإذا لزم الأمر فيرجى وضعها على فتح أو إيقاف في ضبط التطبيق بالقدرة على الأمان."</string>
+<string name="timer">"الزمن المتبقي"</string>
+<string name="No">"No"</string>
+<string name="Yes">"Yes"</string>
+<string name="second">"ثانية"</string>
+<string name="cancel">"الغاء"</string>
+</resources>

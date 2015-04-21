@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">Seleziona protezione</string>
+<string name="action_settings">"Impostazioni"</string>
+<string name="hello_world">"Questo terminale sostiene l\'interfaccia del sistema per accesso applicazione o aprire un collegamento dei dati, il quale influenzerebbe la sicurezza dell\'informazione dell\'utente relativa al meccanismo di suggerimento della condotta, se Lei aprisse alcune applicazioni, influenzerebbe l\'esperienza dell\'utente, se è necessario, deve accendere o spegnerlo all\'applicazione della configurazione dell\'abilità di sicurezza."</string>
+<string name="timer">"Tempo rimasto"</string>
+<string name="No">"No"</string>
+<string name="Yes">"Sì"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Annulla"</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">Bezpieczeństwo Wybierz</string>
+<string name="action_settings">"Ustawienia"</string>
+<string name="hello_world">"Terminal obsługuje interfejs systemu dla uzyskania dostępu do aplikacji lub otwarcia połączenia danych, co może mieć wpływ na bezpieczeństwo informacji użytkownika związane z mechanizmem monitu postępowania. Otworzenie niektórych aplikacji może mieć wpływ na doświadczenie użytkownika. W razie potrzeby należy włączyć lub wyłączyć możliwość zabezpieczenia konfiguracji aplikacji."</string>
+<string name="timer">"Pozostały czas:"</string>
+<string name="No">"Nie"</string>
+<string name="Yes">"Tak"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Anuluj"</string>
+</resources>

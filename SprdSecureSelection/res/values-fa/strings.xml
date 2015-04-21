@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"انتخاب امنیت"</string>
+<string name="action_settings">"تنظیمات HTML"</string>
+<string name="hello_world">"این ترمینال از رابط سیستم برای دسترسی به نرم افزار یا باز کردن ارتباط داده ای پشتیبانی می کند که ممکن است بر امنیت اطلاعات کاربر که به ساز و کار دستور اجرا مربوط می شود تأثیر بگذارد، در صورت بازکردن بعضی برنامه ها، ممکن است بر تجربه کاربر تأثیر گذاشته شود. در صورتی که به آن نیاز دارید، در قسمت برنامه تنظیم امنیت آن را روشن کنید."</string>
+<string name="timer">"زمان باقیمانده:"</string>
+<string name="No">"خیر"</string>
+<string name="Yes">"بله"</string>
+<string name="second">"ثانیه"</string>
+<string name="cancel">"تأیید"</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"TurvallisuusValinta"</string>
+<string name="action_settings">"Asetukset"</string>
+<string name="hello_world">"Tämä terminaali tukee järjestelmän liittymää sovellutukseen pääsemiseksi tai tietoyhteyden avaamiseksi, joka voi vaikuttaa käyttäjän tietojen turvallisuuteen, jotka liittyvät käsiteltyjen kehotusten mekanismiin,I Jos avaat joitakin sovellutuksia, ne voivat vaikuttaa käyttäjän kokemukseen, jos tarpeen aseta se päälle tai pois turvallisuuden konfiguraatiokyvyn sovellutukseen."</string>
+<string name="timer">"Aikaa jälkellä:"</string>
+<string name="No">"Ei"</string>
+<string name="Yes">"Kyllä"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Peruuta"</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Selectare caracteristici securitate"</string>
+<string name="action_settings">"Setări"</string>
+<string name="hello_world">"Acest terminal suportă interfaţa sistemului pentru accesul la aplicaţii sau pentru a deschide o conexiune de date, ceea ce ar putea afecta securitatea informaţiilor utilizatorului din cauza mecanismului mesajului de comportament. Deschiderea unor aplicaţii poate afecta experienţa utilizatorului. Dacă este necesar, vă rugăm să selectaţi opţiunea off (oprit) sau on (pornit) în aplicaţia de configurare a caracteristicilor de securitate."</string>
+<string name="timer">"Timp rămas:"</string>
+<string name="No">"Nu"</string>
+<string name="Yes">"Da"</string>
+<string name="second">"s"</string>
+<string name="cancel">„Anulare”</string>
+</resources>

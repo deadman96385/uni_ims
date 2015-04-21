@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"സെക്യൂരിറ്റി തെരഞ്ഞെടുക്കുക"</string>
+<string name="action_settings">"ക്രമീകരങ്ങള്‍"</string>
+<string name="hello_world">"ഈ ടെര്‍മിനല്‍ അപ്ലിക്കേഷന്‍ ആക്സസോ ഒരു ഡാറ്റാ ബന്ധം തുറക്കുന്നതിനോ പിന്‍തുണയ്ക്കുന്നു, അത്  നടത്തിപ്പു പ്രോംപ്റ്റിന്റെ രീതി സംബന്ധിച്ച ഉപയോക്താവിന്റെ സെക്യൂരിറ്റിയെ ബാധിക്കും, ചില അപ്ലിക്കേഷനുകള്‍ തുറന്നാല്‍ ഉപയോക്താവിന്റെ അനുഭവത്തെ ബാധിക്കും, ആവശ്യമെങ്കില്‍ സെക്യൂരിറ്റി പാടവ കോണ്‍ഫിഗറേഷന്‍ അപ്ലിക്കേഷന്‍ ഓണ്‍ അഥവാ ഓഫ് ആയി സ്ഥാപിക്കുക."</string>
+<string name="timer">"ശേഷിക്കുന്ന സമയം:"</string>
+<string name="No">"അല്ല"</string>
+<string name="Yes">"അതെ"</string>
+<string name="second">"s"</string>
+<string name="cancel">"റദ്ദാക്കുക"</string>
+</resources>

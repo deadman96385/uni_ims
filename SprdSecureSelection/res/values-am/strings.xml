@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">የደህንነት መምረጫ</string>
+<string name="action_settings">ቅንጅቶች</string>
+<string name="hello_world">"ይህ የተርሚናል  ምናልባት  በፈጣን መንገድ ለማስከሄድ የሚመለከት የሚገናኝ  የተጠቃሚው መረጃ ደህንነት ሊጎዳ የሚችል  ስርዓት መተግበርያው የዳታ ግንኙነት ለመክፈት ወይም ለማግኘት  ያግዛል፣ከከፈቱት የተወሰኑ መተግበርያዎች የተጠቃሚው ልምድ ሊጎዱ ይችላሉ፣ከፈለጉ እባክዎ የደህንነት ችሎታ ማረጋገጫ መተግበርያ  በማጥፋት ወይም በማብራት ያዘጋጁ፡፡"</string>
+<string name="timer">"የቀረ ጊዜ:"</string>
+<string name="No">አይ</string>
+<string name="Yes">"ጩኸት"</string>
+<string name="second">"S"</string>
+<string name="cancel">ሰርዝ</string>
+</resources>

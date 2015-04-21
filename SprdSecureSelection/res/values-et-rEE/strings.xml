@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Turvalisuse valik"</string>
+<string name="action_settings">"Seaded"</string>
+<string name="hello_world">"See terminal toetab rakendusse pääsemiseks süsteemifaasi või andmeühenduse loomist, mis võib mõjutada mehhanismiga seotud kasutaja informatsiooni turvalisust, avamisel võivad mõned rakendused mõjutada kasutamise kogemust, vajadusel palun määra see sisse või välja turvavõimaluste konfiguratsioonirakenduses."</string>
+<string name="timer">"Aega jäänud:"</string>
+<string name="No">"Ei"</string>
+<string name="Yes">"Jah"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Tühista"</string>
+</resources>

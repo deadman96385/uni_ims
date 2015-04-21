@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"সুরক্ষা নির্বাচন"</string>
+<string name="action_settings">সেটিং</string>
+<string name="hello_world">"টার্মিনালটি অ্যাপ্লিকেশানের নাগাল পাওয়ার জন্য সিস্টেম ইন্টারফেসকে সহায়তা করে, যেটি ব্যবহারকারীর কনডাক্ট প্রম্পটের কৌশল সম্পর্কিত তথ্যের নিরাপত্তাকে প্রভাবিত করতে পারে। আপনি যদি কোন অ্যাপ্লিকেশান খোলেন তার ফলে ব্যবহারকারীর অভিজ্ঞতাকে প্রভাবিত করতে পারে, প্রয়োজন হল অনুগ্রহ করে এটিকে সুরক্ষা সক্ষমতাভিত্তিক কাঠামোমূলক অ্যাপ্লিকেশানে চালু অথবা বন্ধ রাখুন।"</string>
+<string name="timer">"অবশিষ্ট সময়"</string>
+<string name="No">নয়</string>
+<string name="Yes">হ্যাঁ</string>
+<string name="second">"সেপ্টে"</string>
+<string name="cancel">বাতিল</string>
+</resources>

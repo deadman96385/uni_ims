@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"SecuritySelect"</string>
+<string name="action_settings">הגדרות</string>
+<string name="hello_world">"המסוף תומך בממשק תוכנה לגישה יישומים או פתיחת חיבור נתונים, אשר עשויים להשפיע על האבטחה של פרטי המשתמש הקשורים במנגנון של נוהל הבקשה. אם תפתחו חלק מהיישומים הדבר עשוי להשפיע על חווית המשתמש, במידת הצורך בבקשה הפעילו או נטרלו את הגדרות האבטחה של היישום."</string>
+<string name="timer">"זמן שנותר:"</string>
+<string name="No">לא</string>
+<string name="Yes">כן</string>
+<string name="second">"שנ\'"</string>
+<string name="cancel">בטל</string>
+</resources>

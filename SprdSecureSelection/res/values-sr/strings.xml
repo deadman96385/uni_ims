@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Одабир сигурности"</string>
+<string name="action_settings">"Подешавања"</string>
+<string name="hello_world">"Овај терминал подржава интерфејс система за приступ пријави или отварању податковне везе, што може утицати на сигурност корисника информација везаних уз механизам брзине понашања, ако отворите неке апликације оне могу утицати на искуство корисника, ако је потребно поставите га или искључите на апликацији за конфигурацију способности осигурања. </string>
+<string name="timer">"Преостало време:"</string>
+<string name="No">"Не"</string>
+<string name="Yes">"Да"</string>
+<string name="second">"с"</string>
+<string name="cancel">"Откажи"</string>
+</resources>

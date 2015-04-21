@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"সুৰক্ষা বাছনি"</string>
+<string name="action_settings">"ছেটিংছ"</string>
+<string name="hello_world">"এই টাৰ্মিনেলে এপ্লিকেচন প্ৰৱেশাধিকাৰ বা ডাটা সংযোগ এটা খোলাৰ বাবে চিষ্টেম ইণ্টাৰফেচ সমৰ্থন কৰে, যি কণ্ডাক্ট প্ৰম্‍প্টৰ কাৰ্যকাৰিতাৰ সৈতে সম্পৰ্কিত ব্যৱহাৰকৰ্তা তথ্যৰ সুৰক্ষা প্ৰভাৱিত কৰিব পাৰে। যদি আপুনি কিছুমান এপ্লিকেচন খোলে যি ব্যৱহাৰকৰ্তা অভিজ্ঞতা প্ৰভাৱিত কৰিব পাৰে, প্ৰয়োজন হ’লে সুৰক্ষা সামৰ্থ্য কনফিগাৰেচন এপ্লিকেচনত ইয়াক অন বা অফ ছেট কৰিব।"</string>
+<string name="timer">"বাকী থকা সময়:"</string>
+<string name="No">"নহয়"</string>
+<string name="Yes">"হয়"</string>
+<string name="second">"এস্‍"</string>
+<string name="cancel">"নাকচ"</string>
+</resources>

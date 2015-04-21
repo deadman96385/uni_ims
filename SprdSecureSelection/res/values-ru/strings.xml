@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"выбор безопасности"</string>
+<string name="action_settings">"Настройки"</string>
+<string name="hello_world">"Этот терминал поддерживает системный интерфейс для доступа к приложениям или открытого соединения данных, которые могут повлиять на безопасность пользовательской информации, относящейся к механизму поведения. Открытие некоторых приложений может повлиять на пролцесс использования. В случае необходимости, включите или выключите функцию безопасности терминала."</string>
+<string name="timer">"Времени осталось:"</string>
+<string name="No">"Нет"</string>
+<string name="Yes">"Да"</string>
+<string name="second">"s"</string>
+<string name="cancel">"ОК"</string>
+</resources>

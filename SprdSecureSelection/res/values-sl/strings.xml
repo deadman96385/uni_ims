@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"IzbiraVarnosti"</string>
+<string name="action_settings">"Nastavitve"</string>
+<string name="hello_world">"Ta terminal podpira sistemski vmesnik za dostop do aplikacij ali odpiranje podatkovne povezave, ki lahko vpliva na varnost uporabniških podatkov glede mehanizma izvajanja. Z odpiranjem nekaterih aplikacij lahko vplivate na uporabniško izkušnjo, po potrebi vklopite ali izklopite varnost v nastavitvah aplikacije."</string>
+<string name="timer">"Preostali čas:"</string>
+<string name="No">"Ne"</string>
+<string name="Yes">"Da"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Prekliči"</string>
+</resources>

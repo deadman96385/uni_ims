@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Vælg sikkerhed"</string>
+<string name="action_settings">"Indstillinger"</string>
+<string name="hello_world">"Denne terminal understøtter en systemgrænseflade for applikationsadgang eller åbning af en dataforbindelse, hvilket kan påvirke sikkerheden for brugeroplysninger, der vedrører anvendelsen af systemet. Hvis der åbnes applikationer, kan brugerens oplevelse påvirkes. Aktiver eller deaktiver om nødvendigt funktionaliteten i applikationens opsætning af sikkerhed."</string>
+<string name="timer">"Resttid:"</string>
+<string name="No">"Nej"</string>
+<string name="Yes">"Ja"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Annuller"</string>
+</resources>

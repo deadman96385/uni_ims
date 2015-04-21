@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"सुरक्षा चयन"</string>
+<string name="action_settings">"सेटिंग"</string>
+<string name="hello_world">"यह टर्मिनल अनुप्रयोग पहुंच या एक डाटा कनेक्शन खोलने के लिए सिस्टम इंटरफेस का समर्थन करता है, जो तुरंत आचरण की विधि से संबंधित प्रयोगकर्ता जानकारी की सुरक्षा को प्रभावित कर सकता है, यदि आप कुछ अनुप्रयोग खोलते हैं तो वे प्रयोगकर्ता अनुभव को प्रभावित कर सकते हैं, यदि जरूरत हो तो कृपया इसे सुरक्षा योग्यता कांफिगरेशन अनुप्रयोग पर बंद या चालू करें।"</string>
+<string name="timer">"बाकी समय:"</string>
+<string name="No">"नहीं"</string>
+<string name="Yes">"हां"</string>
+<string name="second">"सेकंड"</string>
+<string name="cancel">"रद्द करें"</string>
+</resources>

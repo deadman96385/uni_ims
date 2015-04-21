@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"เลือกระบบป้องกัน"</string>
+<string name="action_settings">"การตั้งค่า"</string>
+<string name="hello_world">"เครื่องนี้สนับสนุนการเชื่อมต่อการเข้าถึงแอพลิเคชันหรือเปิดใช้งานเพื่อเชื่อมต่อข้อมูลซึ่งอาจส่งผลกระทบต่อความปลอดภัยกับข้อมูลของผู้ใช้ที่เกี่ยวข้องกับการดำเนินการใช้งานถ้าคุณเปิดใช้งานบางอย่างอาจส่งผลกระทบต่อประวัติการใช้งานถ้าจำเป็นโปรดตั้งหรือปิด ระบบรักษาความปลอดภัยการตั้งค่าการใช้งานโปรแกรม ".</string>
+<string name="timer">"เหลือเวลา:"</string>
+<string name="No">"ไม่"</string>
+<string name="Yes">"ใช่"</string>
+<string name="second">"s"</string>
+<string name="cancel">"ยกเลิก"</string>
+</resources>

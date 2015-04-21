@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Tombol Pengaman"</string>
+<string name="action_settings">"Setelan"</string>
+<string name="hello_world">"Sistem pendukung terminal ini berhadapan dengan akses aplikasi atau koneksi data terbuka, yang dapat mempengaruhi keamanan informasi pengguna berhubungan pada mekanisme dalam melakukan konfirmasi, jika kamu buka beberapa aplikasi mungkin mempengaruhi pengalaman pengguna, jika diperlukan silahkan atur itu nyala atau mati pada konfigurasi aplikasi kemampuan keamanan."  </string>
+<string name="timer">"Waktu tersisa"</string>
+<string name="No">"Tidak"</string>
+<string name="Yes">"Ya"</string>
+<string name="second">"d"</string>
+<string name="cancel">"Batal"</string>
+</resources>

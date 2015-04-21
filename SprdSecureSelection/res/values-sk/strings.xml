@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"VoľbaZabezpečenia"</string>
+<string name="action_settings">"Nastavenia"</string>
+<string name="hello_world">"Tento terminál podporuje systémové rozhranie pre prístup k aplikáciám alebo otvorenie dátového pripojenia, čo môže mať vplyv na zabezpečenie používateľských informácií týkajúcich sa mechanizmu fungovania upozornení. Ak otvoríte nejaké aplikácie, môže to mať vplyv na užívateľské prostredie, ak je to potrebné, nastavte aplikáciu konfigurácie zabezpečenia na zapnutú alebo vypnutú."</string>
+<string name="timer">"Zostávajúci čas:"</string>
+<string name="No">"Nie"</string>
+<string name="Yes">"Áno"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Zrušiť"</string>
+</resources>

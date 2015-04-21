@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"ΕπιλογήΑσφάλειας"</string>
+<string name="action_settings">"Ρυθμίσεις"</string>
+<string name="hello_world">"Αυτό το τερματικό υποστηρίζει το σύστημα διεπαφών για να αποκτάτε πρόσβαση σε εφαρμογές ή για να ανοίγετε μια σύνδεση δεδομένων, το οποίο μπορεί να επηρεάσει την ασφάλεια πληροφοριών χρήστη σχετικά με τον μηχανισμό  συμπεριφοράς εντολών, Εάν ανοίξετε μερικές εφαρμογές μπορεί να επηρεαστεί η εμπειρία του χρήστη, εάν χρειάζεται παρακαλούμε ενεργοποιήστε ή απενεργοποιήστε την εφαρμογή διαμόρφωσης της ικανότητας ασφάλειας"  </string>
+<string name="timer">"Χρόνος που απομένει:"</string>
+<string name="No">"Όχι"</string>
+<string name="Yes">"Ναι"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Άκυρο"</string>
+</resources>

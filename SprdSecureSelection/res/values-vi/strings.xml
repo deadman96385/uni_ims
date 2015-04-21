@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Chọn bảo mật"</string>
+<string name="action_settings">"Cài đặt"</string>
+<string name="hello_world">“Thiết bị đầu cuối này hỗ trợ giao diện hệ thống để truy cập ứng dụng hoặc mở một kết nối dữ liệu có thể ảnh hưởng đến bảo mật thông tin người dùng liên quan đến cơ chế nhắc ứng xử, nếu bạn mở một số ứng dụng có thể ảnh hưởng đến trải nghiệm người dùng, nếu cần thiết vui lòng đặt thiết bị ở trạng thái mở hoặc tắt ứng dụng cấu hình khả năng bảo mật”</string>
+<string name="timer"> “Thời gian còn lại:”</string>
+<string name="No">"KHÔNG"</string>
+<string name="Yes">"Có"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Hủy"</string>
+</resources>

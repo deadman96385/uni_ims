@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Sécurité Sélectionnée"</string>
+<string name="action_settings">"Paramètres"</string>
+<string name="hello_world">"Ce terminal prend en charge l\'interface du système d\'accès aux applications ou ouvre une connexion de données, ce qui peut affecter la sécurité de l\'information de l\'utilisateur concernant le mécanisme de l\'invite de conduite, si vous ouvrez certaines applications peuvent affecter l\'expérience de l’utilisateur, si nécessaire s\'il vous plaît le mettre sous ou hors tension sur l’application de configuration de la capacité de sécurité. "</string>
+<string name="timer">"Temps restant :"</string>
+<string name="No">"Non"</string>
+<string name="Yes">"Oui"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Annuler"</string>
+</resources>

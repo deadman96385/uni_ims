@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"பாதுகாப்புத் தேர்வு"</string>
+<string name="action_settings">அமைப்புக்கள்</string>
+<string name="hello_world">"இந்த டெர்மினல் பயன்பாட்டு அணுகலுக்கான சிஸ்டம் இன்டர்ஃபேஸை ஆதரிக்கின்றது அல்லது ஒரு தரவு இணைப்பை திறக்கவும், அது கான்டாக்ட் ப்ராம்ப்டின் மெக்கானிஸத்துடன் தொடர்புடைய பயனர் தகவலின் பாதுகாப்பை பாதிக்கக்கூடும்.நீங்கள் சில பயன்பாடுகளைத் திறந்தால், அது பயனர் அனுபவத்தை பாதிக்கக்கூடும், தேவைப்பட்டால் பாதுகாப்பு திறன் கட்டமைப்பு பயன்பாட்டில் நீங்கள் அதை ஆன் அல்லது ஆஃப் என அமைக்கலாம்."</string>
+<string name="timer">"எஞ்சியிருக்கும் நேரம்:"</string>
+<string name="No">இல்லை</string>
+<string name="Yes">ஆம்</string>
+<string name="second">"s"</string>
+<string name="cancel">OK</string>
+</resources>

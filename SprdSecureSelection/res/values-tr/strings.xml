@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="action_settings">"Ayarlar"</string>
+<string name="hello_world">"Bu uçbirim, uygulama erişimi sistem arayüzünü ya da davranış istemi mekanizmasıyla ilgili kullanıcı bilgisi güvenliğini etkileyebilecek açık bir veri bağlantısını destekler. Açarsanız, bazı uygulamalar kullanıcı deneyimini etkileyebilir. Gerektiğinde, güvenlik ehliyeti yapılandırması uygulamasında açık veya kapalı olarak ayarlayın."        </string>
+<string name="timer">"Kalan Süre:"</string>
+<string name="No">"Hayır"</string>
+<string name="Yes">"Evet"</string>
+<string name="second">"s"</string>
+<string name="cancel">"İptal"</string>
+</resources>

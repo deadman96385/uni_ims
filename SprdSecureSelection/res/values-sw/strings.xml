@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"ChaguaUsalama"</string>
+<string name="action_settings">"Mipangilio"</string>
+<string name="hello_world">"Sehemu hii inahimii kusano ya mfumo kwa ufikiaji wa programu tumizi au ufunguaji muunganisho wa data,inayoweza kuathiri usalama wa taarifa ya mtumizi inayohusiana na ufundi wa upesi wa amri, ukifungua programu zingine tumizi kunaweza kuathiri uzoefu wa mtumizi, ikihitajika iwashe au izime kwenye programu tumizi ya usanidi wa uwezo wa usalama. </string>
+<string name="timer">"Muda Uliosalia:"</string>
+<string name="No">"Hapana"</string>
+<string name="Yes">"Ndio"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Ghairi"</string>
+</resources>

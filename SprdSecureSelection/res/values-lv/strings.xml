@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Drošības Izvēle"</string>
+<string name="action_settings">"Iestatījumi"</string>
+<string name="hello_world">"Šis terminālis atbalsta sistēmas interfeisu aplikāciju piekļuvei vai datu savienojumu atvēršanai,  kas var ietekmēt lietotāja informācijas drošību, kas ir saistīta ar uzvedņa mehānismu,Ja jūs atvērsiet dažas aplikācijas, tas var ietekmēt lietojamību, ja nepieciešams, lūdzu, iestatiet vai atstatiet to drošības spēju konfigurācijas aplikācijā."</string>
+<string name="timer">"Atlikušais Laiks:"</string>
+<string name="No">"Nē"</string>
+<string name="Yes">"Jā"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Atcelt"</string>
+</resources>

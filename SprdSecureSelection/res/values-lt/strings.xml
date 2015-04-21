@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Apsaugos rinkimasis"</string>
+<string name="action_settings">"Nustatymai"</string>
+<string name="hello_world">"Šis terminalas palaiko sistemos sąsają programos prieigai ar duomenų ryšio atidarymui, kas gali paveikti vartotojo apsaugotą informaciją, susijusią su greito valdymo mechanizmu,Jei atidarysite kai kurias programas, galite paveikti vartotoją, jei nustatykite įjungta ar išjungta programos apsaugos konfigūravimo funkciją."</string>
+<string name="timer">"Likęs laikas:"</string>
+<string name="No">"Ne"</string>
+<string name="Yes">"Taip"</string>
+<string name="second">"sek."</string>
+<string name="cancel">"Atšaukti"</string>
+</resources>

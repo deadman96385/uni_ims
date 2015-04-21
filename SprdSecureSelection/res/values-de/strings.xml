@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Sicherheitsauswahl"</string>
+<string name="action_settings">"Einstellung."</string>
+<string name="hello_world">" Dieses Systemendgerät unterstützt die Systemschnittstelle zum Zugang zur Anwendung oder zum Öffnen einer Datenverbindung, dies kann die Sicherheit der Benutzerinformation beeinträchtigen die mit der Eingabeaufforderung verbunden ist, beim Öffnen einiger Benutzeranwendungen kann die Benutzererfahrung beeinträchtigt werden. Falls notwendig setzen Sie es  bei der Einstellung der Anwendung der Sicherheitsfähigkeiten auf Ein oder Aus."</string>
+<string name="timer">" Zeit übrig:"</string>
+<string name="No">"Nein"</string>
+<string name="Yes">"Ja"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Abbrechen"</string>
+</resources>

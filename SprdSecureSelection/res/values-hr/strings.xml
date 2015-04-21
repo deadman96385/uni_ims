@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Odabir sigurnosti"</string>
+<string name="action_settings">"Postavke"</string>
+<string name="hello_world">"Ovaj terminal podržava interfejs sustava za pristup prijavi ili otvorite podatkovnu vezu, što može uticati na sigurnost korisničkih informacija vezanih uz mehanizam prenosa podataka, ako otvorite neke aplikacije on može uticati na korisničko iskustvo, ako je potrebno  isključite ga ili uključite na podešavanjima aplikacije za sigurnosnu sposobnost. "</string>
+<string name="timer">"Preostalo vrijeme:"</string>
+<string name="No">"Ne"</string>
+<string name="Yes">"Da"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Odustani"</string>
+</resources>

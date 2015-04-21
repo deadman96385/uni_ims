@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"SegurançaSeleccionar"</string>
+<string name="action_settings">"Configurações"</string>
+<string name="hello_world">"Este terminal suporta o interface de sistema para o acesso de aplicação ou abrir uma conexão de dados, que pode afectar a segurança de informação de usuário relativa ao mecanismo de rápida indicação, se precisa, favor ligue ou desligue na aplicação de configuração de capacidade de segurança."   </string>
+<string name="timer">"Tempo Deixado:"</string>
+<string name="No">"Não"</string>
+<string name="Yes">"Sim"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Cancelar"</string>
+</resources>

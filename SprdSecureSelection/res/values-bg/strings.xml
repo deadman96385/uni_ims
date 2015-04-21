@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">Опции на защита</string>
+<string name="action_settings">"Настройки"</string>
+<string name="hello_world">Този механизъм поддържа системния интерфейс за достъп до приложенията или връзка с данни, което може да засегне сигурността на потребителската информация; при отваряне на някои приложения потребителските впечатления може да бъдат засегнати, ако е необходимо конфигурирайте включване и изключване от панела за управление на приложенията.</string>
+<string name="timer">Оставащо време:</string>
+<string name="No">"Не"</string>
+<string name="Yes">"Да"</string>
+<string name="second">"с"</string>
+<string name="cancel">"Отказ"</string>
+</resources>

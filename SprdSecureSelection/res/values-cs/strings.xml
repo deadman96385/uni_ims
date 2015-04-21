@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"ZvolitZabezpečení"</string>
+<string name="action_settings">"Nastavení"</string>
+<string name="hello_world">"Tato svorka podporuje rozhraní systému pro přístup k aplikaci anebo otevírá dátové připojení, které může ovlyvnit bezpečnost uživatelských informací týkajících se mechanismu výzvy vedení,Když otevřete některé aplikace, může to ovlyvnit zážitek uživatele, když je to potřebné, prosím, nastavte to na zapnuté anebo vypnuté na aplikaci konfigurace schopnosti bezpečnosti."</string>
+<string name="timer">"Zbývající čas:"</string>
+<string name="No">"Ne"</string>
+<string name="Yes">Ano</string>
+<string name="second">"s"</string>
+<string name="cancel">"Zrušit"</string>
+</resources>

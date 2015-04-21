@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Pumili ng seguridad"</string>
+<string name="action_settings">"Mga Setting"</string>
+<string name="hello_world">"Ang terminal na ito ay sumusuporta sa sistema ng interface para sa pagakses ng aplikasyon o pagbukas ng datus na koneksyon, na maaaring maka-apekto sa seguridad ng impormasyon ng gumagamit na may kaugnayan sa mekanismo ng mabilis na asal. Kung ikaw ay magbubukas ng bagong aplikasyon na maaaring maka-apekto sa karanasan ng gumagamit, kung kinakailangan mangyaring itakda ito sa on o off sa kakayahan ng seguridad sa pagbago ng aplikasyon."</string>
+<string name="timer">"Oras na nalalabi:"</string>
+<string name="No">"Hindi"</string>
+<string name="Yes">"Oo"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Kanselahin"</string>
+</resources>

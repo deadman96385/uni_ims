@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">“بىخەتەلىك تاللىشى”</string>
+<string name="action_settings">ئورۇنلاشتۇرۇش</string>
+<string name="hello_world">"بۇ تېرمىنال قوللىنىشچان دېتالنىڭ سىستېما ئۇلىنىش ئېغىزى ئارقىلق سانىلىق مەلۇمات ئۇلىنىشىنى زىيارەت قلىش ياكى ئىچىشقا ئوخشاش ئابونىتنىڭ ئۇچۇر بىخەتىرلىكىگە دەخلى قىلىش مۇمكىنچىلىكى بولغان ھەركەتلىرىنى ئەسكەرتىش مېخانىزىمىنى ھازىرلىغان، ئەگەر سىز فۇنكىسىيەنى ئىچىپ قويسىڭىز بەزى قوللىنىشچان دېتالنىڭ ئىشلەتكۈچى تەسىراتىغا دەخلى قىلىشى مۇمكىن. ئەگەر كېرەك بولسا بىخەتەرلىك ئىقدىدارى سەپلىمىسى قوللىنىشچان دېتالىدىن بۇ فۇنكىسىيەنى ئىچىڭ ياكى تاقىۋىتىڭ."</string>
+<string name="timer">"قالغان ۋاقىت:"</string>
+<string name="No">ياق</string>
+<string name="Yes">ھەئە</string>
+<string name="second">S</string>
+<string name="cancel">"بىكار قىلىش"</string>
+</resources>

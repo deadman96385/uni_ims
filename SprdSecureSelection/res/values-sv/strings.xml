@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Välj säkerhet"</string>
+<string name="action_settings">"Inställningar"</string>
+<string name="hello_world">"Den här terminalen stöder systemets gränssnitt för tillgång till program eller för att öppna en dataanslutning, vilket kan påverka användarinformationens säkerhet relaterat till mekanismen av prompt beteende. Om du öppnar några program kan detta påverka användarupplevelsen. Vid behov, sätt på eller stäng av säkerhetskapaciteten vid konfigurering av program."</string>
+<string name="timer">"Återstående tid:"</string>
+<string name="No">"Nej"</string>
+<string name="Yes">"Ja"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Avbryt"</string>
+</resources>

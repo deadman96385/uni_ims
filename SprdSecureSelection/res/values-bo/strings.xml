@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">བདེ་འཇགས་ཁྱད་གཤིས་འདམ་ག</string>
+<string name="action_settings">སྒྲིག་འགོད།</string>
+<string name="hello_world">མཇུག་སྣེ་འདིས་རྒྱུད་ཁོངས་མཐུད་སྣེའམ་དན་གྲངས་སྦྲེལ་མཐུད་ལ་རྒྱབ་སྐྱོར་བྱེད་སྐྱོར་བྱེད་ཅིང་དེས་བཀོལ་བདག་ཆ་འཕྲིན་ལ་འབྲེལ་བའི་སྒྲིག་གཞིའི་སྤྱོད་ལམ་དྲན་སྐུལ་བདེ་འཇགས་ལ་ཤུགས་རྐྱེན་གཏོང་སྲིད། གལ་ཏེ་ཁྱེད་ཀྱིས་སྒོ་ཕྱེས་པ་ན་བཀོལ་བདག་མྱོང་ཚོར་ལ་ཤུགས་རྐྱེན་གཏོང་སྲིད། གལ་ཏེ་དགོས་མཁོ་ཡོད་ན་བདེ་འཇགས་ནུས་པའི་སྒྲིག་འགོད་ཉེར་སྤྱོད་འབྱེད་སྟེམ་བྱེད་རོགས།</string>
+<string name="timer">དུས་ཚོད་ལྷག་མ།</string>
+<string name="No">མིན།</string>
+<string name="Yes">རེད།</string>
+<string name="second">"s"</string>
+<string name="cancel">སྐྱུར་བ།</string>
+</resources>

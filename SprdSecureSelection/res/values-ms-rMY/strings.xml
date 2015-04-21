@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Pilih Keselamatan "</string>
+<string name="action_settings">"Tetapan"</string>
+<string name="hello_world">"Terminal ini menyokong sistem antara muka untuk mengakses aplikasi atau membuka sambungan data, yang boleh menjejaskan keselamatan maklumat pengguna yang berkaitan dengan mekanisma pelaksanaan segera, Jika anda membuka beberapa aplikasi ia boleh menjejaskan pengalaman pengguna, jika perlu sila tetapkannya kepada hidup atau mati pada konfigurasi keupayaan keselamatan aplikasi."</string>
+<string name="timer">"Baki Masa:"</string>
+<string name="No">"Tidak"</string>
+<string name="Yes">"Ya"</string>
+<string name="second">"s"</string>
+<string name="cancel">"BATAL"</string>
+</resources>

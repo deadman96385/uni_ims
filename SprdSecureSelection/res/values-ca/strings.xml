@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"SeleccióSeguretat"</string>
+<string name="action_settings">"Configuració"</string>
+<string name="hello_world">"Aquest terminal té un sistema de interfície capaç d\'accedir a aplicacions i d\'activar connexions de dades, fet que pot afectar a la seguretat de la informació de l\'usuari relacionada amb el mecanisme de funcionament ràpid. Si obriu algunes aplicacions pot afectar al funcionament. Si fos necessari activeu-ho o desactiveu-ho a la configuració de l\'aplicació de seguretat."</string>
+<string name="timer">"Temps restant:"</string>
+<string name="No">"No"</string>
+<string name="Yes">"Sí"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Cancel·la"</string>
+</resources>

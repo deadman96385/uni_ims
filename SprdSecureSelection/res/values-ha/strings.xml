@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Zabi tsaro"</string>
+<string name="action_settings">Saituna</string>
+<string name="hello_world">"Wannan mahadin yana aiki da  tsarin da ya dace don amfani da masarrafi ko bude bayanai, wanda zai iya shafar tsaron bayanan mai amfani da na\'urar da ya danganci aikin manunin, in ka bude wasu masarrafan za su iya shafan gogayyar mai amfani da na\'urar, in da bukata a saita shi a kunne ko a kashe don iya saita matakan tsaron masarrafin."</string>
+<string name="timer">"Lokacin da ya rage:"</string>
+<string name="No">A\'a</string>
+<string name="Yes">"E"</string>
+<string name="second">"s"</string>
+<string name="cancel">Soke</string>
+</resources>
