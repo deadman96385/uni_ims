@@ -1963,26 +1963,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
                     } else {
                        property_set(SSDA_TESTMODE, "254");
                     }
-                } else {
-                    RILLOGD("has sim card");
-                    if (s_sim_num == 1) {
-                        property_set(test_mode, "10");
-                    } else {
-                        char prop[PROPERTY_VALUE_MAX] = "";
-                        property_get(SSDA_MODE, prop, "0");
-                        RILLOGD("ssda mode: %s", prop);
-                        if (!strcmp(prop, "tdd-csfb")) {
-                            property_set(SSDA_TESTMODE, "7");
-                        } else if (!strcmp(prop, "fdd-csfb")) {
-                            property_set(SSDA_TESTMODE, "6");
-                        } else if (!strcmp(prop, "csfb")) {
-                            property_set(SSDA_TESTMODE, "9");
-                        } else {
-                            property_set(SSDA_TESTMODE, "255");
-                       }
-                    }
                 }
-
         err = at_send_command(ATch_type[channelID], "AT+SFUN=5", &p_response);
         if (err < 0 || p_response->success == 0)
             goto error;
