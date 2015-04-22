@@ -13027,7 +13027,7 @@ int getNetLockRemainTimes(int channelID, int type){
         }
 
         if (err == 0) {
-            return result[0] - result[2];
+            return result[0] - result[1];
         }
         else {
             return 10;
