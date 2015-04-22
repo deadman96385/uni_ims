@@ -171,6 +171,9 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
     pDecInfo->profile = sps_ptr->profile_idc;//h264bsdProfile(pStorage);
     pDecInfo->numRefFrames = sps_ptr->num_ref_frames;
     pDecInfo->has_b_frames = sps_ptr->vui_seq_parameters->num_reorder_frames;
+    if (vo->g_sps_ptr->profile_idc != 0x42) {
+        pDecInfo->has_b_frames = (!pDecInfo->has_b_frames) ? 1 : pDecInfo->has_b_frames;
+    }
 
     return(MMDEC_OK);
 }
