@@ -231,13 +231,23 @@ PUBLIC int32 H264Enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr
         H264Enc_ByteAlign(vo,1);
     }
 
+#ifdef USE_INTERRUPT
     VSP_WRITE_REG(VSP_REG_BASE_ADDR + ARM_INT_MASK_OFF, V_BIT_2, "ARM_INT_MASK, only enable VSP ACC init");//enable int //
+#endif
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_INT_MASK_OFF, (V_BIT_1 | V_BIT_5), "VSP_INT_MASK, enable vlc_slice_done, time_out");//enable int //frame done/timeout
 
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, V_BIT_0, "RAM_ACC_SEL: SETTING_RAM_ACC_SEL=1(HW)");
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_START_OFF, 0x5|((img_ptr->sh.i_first_mb==0)<<3), "VSP_START: ENCODE_START=1");
 
+#ifdef USE_INTERRUPT
     int_ret = VSP_POLL_COMPLETE((VSPObject *)vo);
+#else
+    int_ret = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_INT_RAW_OFF, "check interrupt type");
+    while ((int_ret&0x22)==0) //weihu tmp, BIT_1|BIT5
+    {
+        int_ret = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_INT_RAW_OFF, "check interrupt type");
+    }
+#endif
 
     if(int_ret & V_BIT_1)	// VLC_FRM_DONE
     {
