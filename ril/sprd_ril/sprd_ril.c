@@ -159,6 +159,7 @@ typedef enum {
 // {for LTE}
 #define SSDA_MODE         "persist.radio.ssda.mode"
 #define SSDA_TESTMODE "persist.radio.ssda.testmode"
+#define RIL_HAS_SIM  "ril.has_sim"
 // {for WCDMA}
 #define PRIMARY_CARD_PROPERTY "persist.radio.primarycard"
 
@@ -211,7 +212,6 @@ static void excuteSrvccPendingOperate();
 
 #define SIM_ECC_LIST_PROPERTY "ril.sim.ecclist"
 #define SIM_ECC_LIST_CATEGORY_PROPERTY "ril.sim.ecclist.category"
-
 typedef struct{
     char * number;
     int category;
@@ -1839,6 +1839,52 @@ int getTestModeInner(int subscription) {
     return testmode;
 }
 
+int hasSimInner(int subscription) {
+    RILLOGD("getHasSimInner subscription = %d", subscription);
+    int hasSim = 0;
+    char prop[PROPERTY_VALUE_MAX] = { 0 };
+    static char HAS_SIM_FORMAT[128] = { 0 };
+
+    if (subscription == 0) {
+        property_get(RIL_HAS_SIM, prop, "0");
+    } else {
+        char strHasSim[128] = { 0 };
+        memcpy(HAS_SIM_FORMAT, RIL_HAS_SIM, sizeof(RIL_HAS_SIM));
+        strcat(HAS_SIM_FORMAT, "%d");
+        snprintf(strHasSim, sizeof(strHasSim), HAS_SIM_FORMAT, subscription);
+        RILLOGD("getHasInner prop key: %s", strHasSim);
+        property_get(strHasSim, prop, "0");
+    }
+    RILLOGD("getHasInner: %s", prop);
+
+    hasSim = atoi(prop);
+    return hasSim;
+}
+
+void setHasSim(bool hasSim) {
+    RILLOGD("setHasSim hasSim = %d", hasSim);
+    extern int s_sim_num;
+    if (s_sim_num == 0) {
+        if (hasSim) {
+            property_set(RIL_HAS_SIM, "1");
+        } else {
+            property_set(RIL_HAS_SIM, "0");
+        }
+    } else {
+        char has_sim[128] = { 0 };
+        static char HAS_SIM_FORMAT[128] = { 0 };
+        memcpy(HAS_SIM_FORMAT, RIL_HAS_SIM, sizeof(RIL_HAS_SIM));
+        strcat(HAS_SIM_FORMAT, "%d");
+        snprintf(has_sim, sizeof(has_sim), HAS_SIM_FORMAT, s_sim_num);
+        if (hasSim) {
+            property_set(has_sim, "1");
+        } else {
+            property_set(has_sim, "0");
+        }
+    }
+}
+
+
 /* SPRD : for svlte & csfb @{ */
 int getTestMode() {
     RILLOGD("getTestMode");
@@ -1947,23 +1993,8 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 //            err = at_send_command(ATch_type[channelID], cmd, NULL );
 //        }
         /* The system ask to shutdown the radio */
-                   int sim_status = getSIMStatus(channelID);
-                char test_mode[128] = { 0 };
-                char TESTMODE_FORMAT[128] = { 0 };
-                extern int s_sim_num;
-                if (s_sim_num == 1) {
-                    memcpy(TESTMODE_FORMAT, SSDA_TESTMODE, sizeof(SSDA_TESTMODE));
-                    strcat(TESTMODE_FORMAT, "%d");
-                    snprintf(test_mode, sizeof(test_mode), TESTMODE_FORMAT, s_sim_num);
-                }
-                if (sim_status == SIM_ABSENT) {
-                    RILLOGD("no sim card");
-                    if (s_sim_num == 1) {
-                        property_set(test_mode, "254");
-                    } else {
-                       property_set(SSDA_TESTMODE, "254");
-                    }
-                }
+        int sim_status = getSIMStatus(channelID);
+        setHasSim(sim_status == SIM_ABSENT ? false: true );
         err = at_send_command(ATch_type[channelID], "AT+SFUN=5", &p_response);
         if (err < 0 || p_response->success == 0)
             goto error;
@@ -1983,35 +2014,20 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         }
         setRadioState(channelID, RADIO_STATE_OFF);
     } else if (onOff > 0 && sState == RADIO_STATE_OFF) {
-
                 extern int s_sim_num;
                 if (s_sim_num == 0) {
                     RILLOGD("sim1.");
-                    if (getTestModeInner(s_sim_num) == 254
-                            && getTestModeInner(1) != 254) {
+                    if (hasSimInner(s_sim_num) == 0
+                            && hasSimInner(1) == 1) {
                         RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,
                                 NULL, 0);
                         at_response_free(p_response);
                         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                         return;
                    }
-                   if(getTestModeInner(s_sim_num) == 254 && getTestModeInner(1) == 254){
-                       char prop[PROPERTY_VALUE_MAX] = "";
-                        property_get(SSDA_MODE, prop, "0");
-                        RILLOGD("ssda mode: %s", prop);
-                        if (!strcmp(prop, "tdd-csfb")) {
-                            property_set(SSDA_TESTMODE, "7");
-                        } else if (!strcmp(prop, "fdd-csfb")) {
-                            property_set(SSDA_TESTMODE, "6");
-                        } else if (!strcmp(prop, "csfb")) {
-                            property_set(SSDA_TESTMODE, "9");
-                        } else {
-                            property_set(SSDA_TESTMODE, "255");
-                       }
-                   }
                } else {
                    RILLOGD("sim2.");
-                   if (getTestModeInner(s_sim_num) == 254) {
+                   if (hasSimInner(s_sim_num) == 0) {
                        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,
                                 NULL, 0);
                         at_response_free(p_response);
@@ -2019,7 +2035,6 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
                         return;
                    }
                 }
-
         s_testmode = getTestMode();
         initSIMPresentState();
         if (isCSFB() || !strcmp(s_modem, "w")) {
@@ -3629,7 +3644,6 @@ static void requestBasebandVersion(int channelID, void *data, size_t datalen, RI
         RILLOGE("requestBasebandVersion: Parameter parse error!");
         goto error;
     }
-
     RIL_onRequestComplete(t, RIL_E_SUCCESS, response, strlen(response));
     at_response_free(p_response);
     return;
@@ -13826,4 +13840,3 @@ static int isVoLteEnable(){
         return 0;
     }
 }
-
