@@ -2027,7 +2027,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
             at_send_command(ATch_type[channelID], cmd, NULL);
         }
          /* SPRD : for svlte & csfb @{ */
-        if (isSvLte()) {
+        if (isLte()) {
             setCeMode(channelID);
         }
         bool isSimCUCC = false;
@@ -12800,6 +12800,12 @@ static int getCeMode(void) {
         case 6:
         case 7:
         case 8:
+        case 9:
+        case 10:
+        case 11:
+        case 12:
+        case 13:
+        case 14:
             cemode = 1;
             break;
         default:
@@ -13066,7 +13072,7 @@ int open_dev(char *dev)
         fd = open(dev, O_RDONLY);
         if(fd <= 0){
             sleep(1);
-            RILLOGD("Unable to open log device '%s' , %d, %d", dev,fd,errno);
+            RILLOGD("Unable to open log device '%s' , %d, %d", dev,fd,strerror(errno));
         }else if(fd >0){
         break;
         }
@@ -13115,8 +13121,8 @@ static void* dump_sleep_log(){
     sprintf(buffer, "/data/slog/sleep_log.txt");
     fd_ap = fopen(buffer, "a+");
     if(fd_ap == NULL) {
-        RILLOGD("open cp log file '%s' failed! exit.", buffer);
-        return NULL;
+        RILLOGD("open cp log file '%s' failed! ERROR: %s .", buffer,strerror(errno));
+        //return NULL;
     }
     timeout.tv_sec = 20;
     timeout.tv_usec = 0;
@@ -13163,10 +13169,12 @@ static void* dump_sleep_log(){
 
             // write to file
             RILLOGD("sleep log after: %s",log_str);
+            if(fd_ap != NULL){
             totalLen = fwrite(log_str, strlen(log_str), 1, fd_ap);
-            if ( totalLen != 1 ) {
-                RILLOGD("write cp log file '%s' failed! exit.", buffer);
-                break;
+                if ( totalLen != 1 ) {
+                    RILLOGD("write cp log file '%s' failed! exit.", buffer);
+                    break;
+                }
             }
         }
         RILLOGD("Finish dump the sleep log! exit.");
