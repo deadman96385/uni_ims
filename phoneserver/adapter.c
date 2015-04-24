@@ -167,7 +167,7 @@ const struct cmd_table single_at_cmd_cvt_table[] = {
     {AT_CMD_CSQ_ACTION, AT_CMD_TYPE_NW, AT_CMD_STR("AT+SPSCSQ"),
         cvt_spscsq_action_req, 5},
     {AT_CMD_CSQ_ACTION, AT_CMD_TYPE_NW, AT_CMD_STR("AT+CESQ"),
-        cvt_generic_cmd_req, 5},
+        cvt_cesq_cmd_req, 5},
     {AT_CMD_CPOL, AT_CMD_TYPE_NW, AT_CMD_STR("AT+CPOL"),
         cvt_generic_cmd_req, 5},
     {AT_CMD_COPS, AT_CMD_TYPE_NW, AT_CMD_STR("AT+COPS=0"),
@@ -413,7 +413,7 @@ const struct cmd_table multi_at_cmd_cvt_table[] = {
     {AT_CMD_CSQ_ACTION, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+SPSCSQ"),
         cvt_spscsq_action_req, 5},
     {AT_CMD_CSQ_ACTION, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CESQ"),
-        cvt_generic_cmd_req, 5},
+        cvt_cesq_cmd_req, 5},
     {AT_CMD_CPOL, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CPOL"),
         cvt_generic_cmd_req, 5},
     {AT_CMD_COPS, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+COPS=0"),
@@ -1088,12 +1088,6 @@ int cvt_generic_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
     int ret;
     if (rsp == NULL) {
         return AT_RESULT_NG;
-    }
-    ret =
-        phoneserver_deliver_indicate(rsp->recv_cmux, rsp->rsp_str,
-                rsp->len);
-    if (ret == AT_RESULT_OK) {
-        return AT_RESULT_OK;
     }
     if (adapter_cmd_is_end(rsp->rsp_str, rsp->len) == TRUE) {
         adapter_cmux_deregister_callback(rsp->recv_cmux);
@@ -3511,6 +3505,112 @@ int cvt_snvm_set_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
         adapter_wakeup_cmux(rsp->recv_cmux);
     } else {
         return AT_RESULT_NG;
+    }
+    return AT_RESULT_OK;
+}
+
+int cvt_cesq_cmd_req(AT_CMD_REQ_T * req)
+{
+    cmux_t *mux;
+    int i;
+
+    if (req == NULL) {
+        return AT_RESULT_NG;
+    }
+
+    mux = adapter_get_cmux(req->cmd_type, TRUE);
+    adapter_cmux_register_callback(mux, cvt_cesq_cmd_rsp,
+            (unsigned long)req->recv_pty);
+    adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
+    return AT_RESULT_PROGRESS;
+}
+
+int cvt_cesq_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
+{
+    int ret;
+    char *at_str;
+    int err,len;
+    int rxlev = 0, ber = 0, rscp = 0, ecno = 0, rsrq = 0, rsrp = 0;
+    char resp_str[MAX_AT_CMD_LEN];
+
+    if (rsp == NULL) {
+        return AT_RESULT_NG;
+    }
+    PHS_LOGD("cvt_cesq_cmd_rsp enter\n");
+    at_str = rsp->rsp_str;
+    len = rsp->len;
+    if(findInBuf(at_str, len, "+CESQ")){
+        err = at_tok_start(&at_str, ':');
+        if (err < 0) {
+            return AT_RESULT_NG;
+        }
+
+        err = at_tok_nextint(&at_str, &rxlev);
+        if (err < 0) {
+            return AT_RESULT_NG;
+        }
+
+        if (rxlev <= 61) {
+            rxlev = (rxlev+2)/2;
+        } else if(rxlev > 61 && rxlev<= 63){
+            rxlev = 31;
+        } else if(rxlev >= 100 && rxlev < 103){
+            rxlev = 0;
+        } else if(rxlev >= 103 && rxlev < 165) {
+            rxlev = ((rxlev - 103) + 1)/2;    //add 1 for compensation
+        } else if (rxlev >= 165 && rxlev <= 191) {
+            rxlev = 31;
+        }
+
+        err = at_tok_nextint(&at_str, &ber);
+        if (err < 0) {
+            return AT_RESULT_NG;
+        }
+
+        err = at_tok_nextint(&at_str, &rscp);
+        if (err < 0) {
+            return AT_RESULT_NG;
+        }
+
+        if (rscp <= 31) {
+            rscp = rscp;
+        } else if(rscp >= 100 && rscp < 103) {
+            rscp = 0;
+        } else if(rscp >= 103 && rscp < 165) {
+            rscp = ((rscp - 103) + 1)/ 2;    //add 1 for compensation
+        } else if (rscp >= 165 && rscp <= 191) {
+            rscp = 31;
+        }
+
+        err = at_tok_nextint(&at_str, &ecno);
+        if (err < 0) {
+            return AT_RESULT_NG;
+        }
+
+        err = at_tok_nextint(&at_str, &rsrq);
+        if (err < 0) {
+            return AT_RESULT_NG;
+        }
+
+        err = at_tok_nextint(&at_str, &rsrp);
+        if (err < 0) {
+            return AT_RESULT_NG;
+        }
+
+        if (rsrp == 255) {
+            rsrp = -255;
+        } else {
+            rsrp -= 140;
+        }
+        snprintf(resp_str, sizeof(resp_str), "\r\n+CESQ: %d,%d,%d,%d,%d,%d\r\n",
+                 rxlev, ber, rscp, ecno, rsrq, rsrp);
+        adapter_pty_write((pty_t *) user_data, resp_str, strlen(resp_str));
+    }
+    if (adapter_cmd_is_end(rsp->rsp_str, rsp->len) == TRUE) {
+        adapter_cmux_deregister_callback(rsp->recv_cmux);
+        adapter_pty_write((pty_t *) user_data, rsp->rsp_str, rsp->len);
+        adapter_pty_end_cmd((pty_t *) user_data);
+        adapter_free_cmux(rsp->recv_cmux);
     }
     return AT_RESULT_OK;
 }

@@ -251,5 +251,6 @@ int cvt_ecind0_cmd_ind(AT_CMD_IND_T * ind);
 int cvt_eceer_cmd_ind(AT_CMD_IND_T * ind);
 int cvt_snvm_set_req(AT_CMD_REQ_T * req);
 int cvt_snvm_set_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data);
-
+int cvt_cesq_cmd_req(AT_CMD_REQ_T * req);
+int cvt_cesq_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data);
 #endif /*  */
