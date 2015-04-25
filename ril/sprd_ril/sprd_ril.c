@@ -10747,11 +10747,11 @@ static void initializeCallback(void *param)
     }
     /* @} */
 
-    if (isCMCC()) {
-        at_send_command(ATch_type[channelID], "at+spcapability=32,1,1", NULL);
-    } else {
+    /* SPRD : for non-CMCC version @{ */
+    if (!isCMCC()) {
         at_send_command(ATch_type[channelID], "at+spcapability=32,1,0", NULL);
     }
+    /* @} */
 
 
 if (!isLte()) {
