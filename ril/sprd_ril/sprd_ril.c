@@ -2079,6 +2079,9 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 //                    if(autoAttach && dataEnable){
 //                        err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
 //                    }
+                      RILLOGD("s_sim_num=%d,autoAttach=%d,dataEnable=%d",s_sim_num, autoAttach, dataEnable);
+                      snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
+                      at_send_command(ATch_type[channelID], cmd, NULL );
                 }
                 //err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", &p_response);
              }else {
