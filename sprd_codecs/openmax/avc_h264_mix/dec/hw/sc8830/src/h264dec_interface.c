@@ -65,15 +65,16 @@ PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int3
     {
         DEC_FRAME_STORE_T *fs  = H264Dec_search_frame_from_DBP(vo, dpb_ptr->delayed_pic[0]);
 
-        if (!fs || (fs->is_reference != DELAYED_PIC_REF))
+        if (!fs)
         {
-            SPRD_CODEC_LOGE ("%s, %d, 'fs->is_reference != DELAYED_PIC_REF!'", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, fs is NULL!'", __FUNCTION__, __LINE__);
             *pOutput = NULL;
             return MMDEC_ERROR;
         }
 
         *pOutput = dpb_ptr->delayed_pic[0]->pBufferHeader;
 
+        SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x ", __FUNCTION__, __LINE__, fs->is_reference);
         fs->is_reference = 0;
         H264DEC_UNBIND_FRAME(vo, fs->frame);
 
