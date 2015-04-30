@@ -1266,14 +1266,6 @@ static int callFromCLCCLineVoLTE(char *line, RIL_Call_VoLTE *p_call)
         /* tolerate null here */
         if (err < 0) return 0;
 
-        // Some lame implementations return strings
-        // like "NOT AVAILABLE" in the CLCC line
-        if (p_call->number != NULL
-                && 0 == strspn(p_call->number, "+0123456789*#abc")
-        ) {
-            p_call->number = NULL;
-        }
-
     }
     err = at_tok_nextint(&line, &(p_call->prioritypresent));
     if (err < 0){
