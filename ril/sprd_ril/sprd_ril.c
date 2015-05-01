@@ -5558,25 +5558,25 @@ static void  requestSIM_IO(int channelID, void *data, size_t datalen, RIL_Token 
             RILLOGE("sr.simResponse NOT NULL, convert to sim");
             unsigned char* byteUSIM = NULL;
             int usimLen = strlen(sr.simResponse) / 2; // simResponse could not be odd, ex "EF3EF0"
-            byteUSIM = (char *) malloc(usimLen);
+            byteUSIM = (unsigned char *) alloca(usimLen);
             memset(byteUSIM, 0, usimLen);
             convertHexToBin(sr.simResponse, strlen(sr.simResponse), byteUSIM);
             if (byteUSIM[RESPONSE_DATA_FCP_FLAG] != TYPE_FCP) {
                 RILLOGE("wrong fcp flag, unable to convert to sim ");
-                if (byteUSIM != NULL) {
+                /*if (byteUSIM != NULL) {
                     free(byteUSIM);
                     byteUSIM = NULL;
-                }
+                }*/
                 goto error;
             }
             if (NULL != convertUsimToSim(byteUSIM, usimLen)) {
                 memset(sr.simResponse, 0, usimLen * 2);
                 strncpy(sr.simResponse, byteUSIM, RESPONSE_EF_SIZE * 2);
             }
-            if (byteUSIM != NULL) {
+            /*if (byteUSIM != NULL) {
                 free(byteUSIM);
                 byteUSIM = NULL;
-            }
+            }*/
         }
        if (sr.simResponse == NULL) {
             RILLOGE("unable convert to sim, return error");
