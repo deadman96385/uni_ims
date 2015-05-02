@@ -5788,6 +5788,9 @@ typedef struct {
 #define USIM_DATA_OFFSET_3  3
 #define USIM_FILE_DES_TAG 0x82
 #define USIM_FILE_SIZE_TAG 0x80
+/* SPRD: add by bug432482 @{ */
+#define TYPE_CHAR_SIZE sizeof(char)
+/* @} */
 #if defined (RIL_SPRD_EXTENSION)
 #define RIL_SPRD_REQUEST_BASE 5000
 #define RIL_REQUEST_VIDEOPHONE_DIAL (RIL_SPRD_REQUEST_BASE + 1)

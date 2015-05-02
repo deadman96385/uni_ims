@@ -348,7 +348,7 @@ static int getExtraPDPNum(int index);
 static void copyDataReponse(RIL_Data_Call_Response_v11* pSource, RIL_Data_Call_Response_v11* pDest);
 static void getSIMStatusAgainForSimBusy();
 static int DeactiveDataConnectionByCid(int cid);
-unsigned char* convertUsimToSim(unsigned char const* byteUSIM, int len);
+unsigned char* convertUsimToSim(unsigned char const* byteUSIM, int len, unsigned char * hexUSIM);
 static void stopQueryNetwork(int channelID, void *data, size_t datalen, RIL_Token t);
 static bool hasSimBusy = false;
 static void* dump_sleep_log();
@@ -5550,25 +5550,28 @@ static void  requestSIM_IO(int channelID, void *data, size_t datalen, RIL_Token 
             RILLOGE("sr.simResponse NOT NULL, convert to sim");
             unsigned char* byteUSIM = NULL;
             int usimLen = strlen(sr.simResponse) / 2; // simResponse could not be odd, ex "EF3EF0"
-            byteUSIM = (unsigned char *) alloca(usimLen);
-            memset(byteUSIM, 0, usimLen);
+            byteUSIM = (unsigned char *) malloc(usimLen + sizeof(char));
+            memset(byteUSIM, 0, usimLen + sizeof(char));
             convertHexToBin(sr.simResponse, strlen(sr.simResponse), byteUSIM);
             if (byteUSIM[RESPONSE_DATA_FCP_FLAG] != TYPE_FCP) {
                 RILLOGE("wrong fcp flag, unable to convert to sim ");
-                /*if (byteUSIM != NULL) {
+                if (byteUSIM != NULL) {
                     free(byteUSIM);
                     byteUSIM = NULL;
-                }*/
+                }
                 goto error;
             }
-            if (NULL != convertUsimToSim(byteUSIM, usimLen)) {
+
+            unsigned char hexUSIM[RESPONSE_EF_SIZE * 2 + TYPE_CHAR_SIZE] = { 0 };
+            memset(hexUSIM, 0, RESPONSE_EF_SIZE * 2 + TYPE_CHAR_SIZE);
+            if (NULL != convertUsimToSim(byteUSIM, usimLen, hexUSIM)) {
                 memset(sr.simResponse, 0, usimLen * 2);
-                strncpy(sr.simResponse, byteUSIM, RESPONSE_EF_SIZE * 2);
+                strncpy(sr.simResponse, hexUSIM, RESPONSE_EF_SIZE * 2);
             }
-            /*if (byteUSIM != NULL) {
+            if (byteUSIM != NULL) {
                 free(byteUSIM);
                 byteUSIM = NULL;
-            }*/
+            }
         }
        if (sr.simResponse == NULL) {
             RILLOGE("unable convert to sim, return error");
@@ -12949,7 +12952,7 @@ error:
     at_response_free(p_response);
 }
 
-unsigned char* convertUsimToSim(unsigned char const* byteUSIM, int len) {
+unsigned char* convertUsimToSim(unsigned char const* byteUSIM, int len, unsigned char * hexUSIM) {
     int desIndex = 0;
     int sizeIndex = 0;
     int i = 0;
@@ -13002,10 +13005,9 @@ unsigned char* convertUsimToSim(unsigned char const* byteUSIM, int len) {
                 ((byteUSIM[RESPONSE_DATA_FILE_RECORD_LEN_1] & 0xff) << 8)
                         + (byteUSIM[RESPONSE_DATA_FILE_RECORD_LEN_2] & 0xff);
     }
-    memset(byteUSIM, 0, len);
-    convertBinToHex(byteSIM, RESPONSE_EF_SIZE, byteUSIM);
-    RILLOGD("convert to sim done, return:%s", byteUSIM);
-    return byteUSIM;
+    convertBinToHex(byteSIM, RESPONSE_EF_SIZE, hexUSIM);
+    RILLOGD("convert to sim done, return:%s",  hexUSIM);
+    return hexUSIM;
 error:
     RILLOGD("convert to sim error, return NULL");
     return NULL;
