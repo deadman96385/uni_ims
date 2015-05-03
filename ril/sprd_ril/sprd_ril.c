@@ -10265,7 +10265,12 @@ out:
     }
     //Added for bug#213435 sim lock end
     //Added for bug#242159 begin
-    else if (0 == strcmp (cpinResult, "PH-INTEGRITY FAIL"))  {
+    else if ((0 == strcmp (cpinResult, "PH-INTEGRITY FAIL"))
+            || (0 == strcmp (cpinResult, "PH-NET PUK"))
+            || (0 == strcmp (cpinResult, "PH-SIM PUK"))
+            || (0 == strcmp (cpinResult, "PH-NETSUB PUK"))
+            || (0 == strcmp (cpinResult, "PH-CORP PUK"))
+            || (0 == strcmp (cpinResult, "PH-SP PUK")))  {
         ret = SIM_LOCK_FOREVER;
         goto done;
     }
