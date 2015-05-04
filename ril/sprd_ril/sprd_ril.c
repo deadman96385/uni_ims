@@ -3758,7 +3758,7 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
         strcpy(tmp, cur[1]);
         strcat(tmp, " ");
         RILLOGD("requestNetworkList  tmp cur[1] = %s", tmp);
-        strcat(tmp, actStr[act==7 ? 3 : act]);//set act in cur[3], cur[3] = available.UTRAN
+        strcat(tmp, actStr[act==7 ? 3 : act]);//set act in cur[1], cur[1] = CMCC UTRAN
         RILLOGD("requestNetworkList cur[1] act = %s", tmp);
         cur[1] = tmp;
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
