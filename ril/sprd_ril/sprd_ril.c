@@ -1825,8 +1825,10 @@ int getTestModeInner(int subscription) {
     RILLOGD("getTestModeInner: %s", prop);
 
     testmode = atoi(prop);
-    if ((testmode == 13) || (testmode == 14)) {
-        testmode = 255;
+    if (!strcmp(s_modem, "tl") || !strcmp(s_modem, "lf")){
+        if ((testmode == 13) || (testmode == 14)) {
+              testmode = 255;
+        }
     }
     return testmode;
 }
