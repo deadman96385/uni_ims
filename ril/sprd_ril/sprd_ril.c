@@ -7350,7 +7350,7 @@ static void requestTransmitApduBasic(int channelID, void *data, size_t datalen, 
     RILLOGD("requestTransmitApdu DATA = %s", apdu->data);
     RILLOGD("requestTransmitApdu len = %d", len);
 
-    snprintf(cmd, sizeof(cmd), "AT+CSIM=%d,%02X%02X%02X%02X%02X%s",len,apdu->cla,apdu->instruction,apdu->p1,apdu->p2,apdu->p3,apdu->data);
+    snprintf(cmd, sizeof(cmd), "AT+CSIM=%d,\"%02X%02X%02X%02X%02X%s\"",len,apdu->cla,apdu->instruction,apdu->p1,apdu->p2,apdu->p3,apdu->data);
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (err < 0 || p_response->success == 0) {
         goto error;
@@ -7392,7 +7392,7 @@ static void requestOpenLogicalChannel(int channelID, void *data, size_t datalen,
         RILLOGE("requestOpenLogicalChannel Invalid AID");
         return;
     }
-    snprintf(cmd, sizeof(cmd), "AT+CCHO=%s", AID);
+    snprintf(cmd, sizeof(cmd), "AT+CCHO=\"%s\"", AID);
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (err < 0 || p_response->success == 0){
         goto error;
@@ -7461,7 +7461,7 @@ static void requestTransmitApdu(int channelID, void *data, size_t datalen, RIL_T
     RILLOGD("requestTransmitApdu DATA = %s", apdu->data);
     RILLOGD("requestTransmitApdu len = %d", len);
 
-    snprintf(cmd, sizeof(cmd), "AT+CGLA=%d,%d,%02X%02X%02X%02X%02X%s", apdu->sessionid,len,apdu->cla,apdu->instruction,apdu->p1,apdu->p2,apdu->p3,apdu->data);
+    snprintf(cmd, sizeof(cmd), "AT+CGLA=%d,%d,\"%02X%02X%02X%02X%02X%s\"", apdu->sessionid,len,apdu->cla,apdu->instruction,apdu->p1,apdu->p2,apdu->p3,apdu->data);
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (err < 0 || p_response->success == 0) {
         goto error;
