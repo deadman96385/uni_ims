@@ -288,7 +288,7 @@ PUBLIC int32 H264Enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr
     {
         return 0;
     }
-    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_INT_CLR_OFF, V_BIT_2,"VSP_INT_CLR: clear MBW_FMR_DONE");
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_INT_CLR_OFF, 0x1ff, "VSP_INT_CLR: clear");
 
     i_frame_size = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF,"TOTAL_BITS");
 
