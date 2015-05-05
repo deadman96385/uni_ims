@@ -497,9 +497,9 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
         i_nal_ref_idc = NAL_PRIORITY_HIGH;
     }
 
-    if (i_global_qp == 0)
+    if (i_global_qp < 6)
     {
-        i_global_qp = 2;	//avoid level overflow in VLC module.
+        i_global_qp = 6;	//avoid level overflow in VLC module.
     }
     vo->prev_qp = i_global_qp;	// MUST HAVE prev_qp updated!!
 
