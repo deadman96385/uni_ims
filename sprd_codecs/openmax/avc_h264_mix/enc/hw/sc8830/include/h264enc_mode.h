@@ -540,8 +540,11 @@ typedef struct tagH264EncObject
 
     uint32 b_previous_frame_failed;
     int32 yuv_format;
-    uint8 sps_header[24];
-    uint8 pps_header[8];
+    uint8* sps_header;
+    uint8* pps_header;
+
+    uint32 sps_header_len;
+    uint32 pps_header_len;
 } H264EncObject;
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
