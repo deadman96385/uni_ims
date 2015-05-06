@@ -857,6 +857,7 @@ static void process_calls(int _calls)
     static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
     char buf[3];
     int incall_recording_status;
+    int len =0;
 
     if (calls && _calls == 0) {
         pthread_mutex_lock(&lock);
@@ -869,12 +870,15 @@ static void process_calls(int _calls)
         incall_recording_status = open("/proc/vaudio/close", O_RDWR);
         if (incall_recording_status >= 0) {
             memset(buf, 0, sizeof buf);
-            read(incall_recording_status, buf, 3);
-            RILLOGW("################## < vaudio > %sincall recording ##################[%s]",
+            len = read(incall_recording_status, buf, 3);
+            if(len > 0){
+                RILLOGW("################## < vaudio > %sincall recording ##################[%s]",
                     buf[0] == '1' ? "": "no ", buf);
-            if (buf[0] == '1') {
-                /* incall recording */
-                write(incall_recording_status, buf, 1);
+                if (buf[0] == '1') {
+                    /* incall recording */
+                    len = write(incall_recording_status, buf, 1);
+                    RILLOGD("write /proc/vaudio/close len = %d", len);
+                }
             }
             close(incall_recording_status);
         }
@@ -3668,7 +3672,7 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
     char **responses, **cur;
     ATResponse *p_response = NULL;
     int tok = 0, count = 0, i = 0;
-    char *tmp, *startTmp;
+    char *tmp, *startTmp = NULL;
     err = at_send_command_singleline(ATch_type[channelID], "AT+COPS=?", "+COPS:",
             &p_response);
     if (err != 0 || p_response->success == 0)
@@ -3777,7 +3781,8 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
 error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
-    free(startTmp);
+    if (startTmp != NULL)
+        free(startTmp);
 }
 
 static void requestQueryNetworkSelectionMode(int channelID,
@@ -7673,6 +7678,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             else{
                 detachGPRS(channelID, data, datalen, t);
             }
+            break;
         case RIL_REQUEST_HANGUP_WAITING_OR_BACKGROUND:
             /* 3GPP 22.030 6.5.5
              * "Releases all held calls or sets User Determined User Busy
@@ -13028,11 +13034,12 @@ int getNetLockRemainTimes(int channelID, int type){
     int result[2] = {0,0};
     ATResponse   *p_response = NULL;
     int err;
+    int ret =-1;
     ALOGD("[MBBMS]send RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES, fac:%d,ck_type:%d",fac,ck_type);
     sprintf(cmd, "AT+SPSMPN=%d,%d", fac,ck_type);
     err = at_send_command_singleline(ATch_type[channelID], cmd, "+SPSMPN:", &p_response);
     if (err < 0 || p_response->success == 0) {
-        return 10;
+        ret = 10;
     } else {
         line = p_response->p_intermediates->line;
         ALOGD("[MBBMS]RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES: err=%d line=%s", err, line);
@@ -13048,13 +13055,14 @@ int getNetLockRemainTimes(int channelID, int type){
         }
 
         if (err == 0) {
-            return result[0] - result[1];
+            ret= result[0] - result[1];
         }
         else {
-            return 10;
+            ret= 10;
         }
     }
     at_response_free(p_response);
+    return ret;
 }
 
 int getRemainTimes(int channelID, char *type){
@@ -13078,23 +13086,21 @@ int getRemainTimes(int channelID, char *type){
   }
 }
 
-int open_dev(char *dev)
+void open_dev(char *dev,int* fd)
 {
     int retry_count = 0;
-    int fd =-1;
 
-    while(fd <= 0 &&(retry_count <10)){
-        fd = open(dev, O_RDONLY);
-        if(fd <= 0){
+    while( (*fd) < 0 &&(retry_count <10)){
+        (*fd) = open(dev, O_RDONLY);
+        if( (*fd) < 0){
             sleep(1);
-            RILLOGD("Unable to open log device '%s' , %d, %d", dev,fd,strerror(errno));
-        }else if(fd >0){
-        break;
+            RILLOGD("Unable to open log device '%s' , %d, %d", dev,(*fd),strerror(errno));
+        }else if( (*fd) >= 0){
+            break;
         }
         retry_count ++;
     }
 
-    return fd;
 }
 
 static void* dump_sleep_log(){
@@ -13126,8 +13132,8 @@ static void* dump_sleep_log(){
         RILLOGE("Unknown modem type, exit");
         exit(-1);
     }
-    fd_cp = open_dev(dev_name);
-    if(fd_cp <= 0){
+    open_dev(dev_name,&fd_cp);
+    if(fd_cp < 0){
         RILLOGD("open '%s' failed. exit.",dev_name);
         return NULL;
     }
@@ -13243,7 +13249,7 @@ static void excuteSrvccPendingOperate(void *param){
 
             free(request->cmd);
             free(request);
-        }while(request->p_next != NULL);
+        }while(s_srvccPendingRequest != NULL);
     }
 
 }
@@ -13782,9 +13788,11 @@ static void requestInitialGroupCall(int channelID, void *data, size_t datalen, R
     char cmd[PROPERTY_VALUE_MAX] = {0};
     RILLOGE("requestInitialGroupCall numbers = \"%s\"", numbers);
     snprintf(cmd, sizeof(cmd), "AT+CGU=1,\"%s\"", numbers);
+    if(numbers != NULL)
+            free(numbers);
     err = at_send_command(ATch_type[channelID], cmd , NULL);
     if (err < 0) {
-        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        goto error;
     } else {
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
@@ -13811,9 +13819,11 @@ static void requestAddGroupCall(int channelID, void *data, size_t datalen, RIL_T
     char cmd[PROPERTY_VALUE_MAX] = {0};
     RILLOGE("requestAddGroupCall numbers = \"%s\"", numbers);
     snprintf(cmd, sizeof(cmd), "AT+CGU=4,\"%s\"", numbers);
+    if(numbers != NULL)
+        free(numbers);
     err = at_send_command(ATch_type[channelID], cmd , NULL);
     if (err < 0) {
-        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        goto error;
     } else {
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }

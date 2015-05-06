@@ -599,6 +599,7 @@ static cmux_t *chnmng_get_cmux(void *const chnmng, const AT_CMD_TYPE_T type,
             else
                 mux = single_find_cmux(me, type);
         }
+        sem_unlock(&pty->get_mux_lock);
     }
     if (mux) {
         mux->pty = pty;
@@ -798,20 +799,6 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
         me->itsCmux[i].ops->cmux_free(&me->itsCmux[i]);
         PHS_LOGD("CHNMNG: open mux:%s",muxname);
     }
-
-    if(!strcmp(modem, "l")) {
-         property_get(MUX_L_DEV, prop, "/dev/sdiomux");
-         phs_mux_num = LTE_MUX_CHN_NUM ;
-         chns_data = single_chns_data_l;
-     }else if(!strcmp(modem, "tl")){
-         property_get(MUX_TL_DEV, prop, "/dev/sdiomux");
-         phs_mux_num = LTE_MUX_CHN_NUM ;
-         chns_data = single_chns_data_l;
-     }else if(!strcmp(modem, "lf")){
-         property_get(MUX_LF_DEV, prop, "/dev/sdiomux");
-         phs_mux_num = LTE_MUX_CHN_NUM ;
-         chns_data = single_chns_data_l;
-     }
 
     if(multiSimMode == 1) {
         phs_mux_num = MULTI_PHS_MUX_NUM;
