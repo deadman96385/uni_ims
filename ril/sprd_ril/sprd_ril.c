@@ -786,7 +786,7 @@ static int getPDP(void)
     for (i=0; i < maxPDPNum; i++) {
         pthread_mutex_lock(&pdp[i].mutex);
         if(pdp[i].state == PDP_IDLE) {
-            if(is_open_channel && (i == 0)){
+            if(isLte() && is_open_channel && (i == 0)){
                 pthread_mutex_unlock(&pdp[0].mutex);
                 continue;
             }
