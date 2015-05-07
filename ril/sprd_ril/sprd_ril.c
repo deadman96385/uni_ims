@@ -1917,19 +1917,19 @@ void initSIMPresentState() {
     RILLOGD("initSIMPresentState");
     int phonecount = 0;
     int i;
-    int iAbsentSIMCount = 0;
+    int iPresentSIMCount = 0;
     char prop[PROPERTY_VALUE_MAX] = { 0 };
 
     property_get(PHONE_COUNT, prop, "1");
     phonecount = atoi(prop);
 
     for (i = 0; i < phonecount; i++) {
-        if (getTestModeInner(i) == 254) {
-            ++iAbsentSIMCount;
+        if (hasSimInner(i) == 1) {
+            ++iPresentSIMCount;
         }
     }
 
-    bOnlyOneSIMPresent = iAbsentSIMCount == 1 ? true : false;
+    bOnlyOneSIMPresent = iPresentSIMCount == 1 ? true : false;
 }
 
 static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Token t)
@@ -2086,10 +2086,12 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         /* @} */
         else {
             if(s_multiSimMode && !bOnlyOneSIMPresent) {
-                if(autoAttach == 1)
+                if(autoAttach == 1) {
                     err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
-                else
+                } else {
                     err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", &p_response);
+                }
+
             } else {
                 err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
             }
@@ -8044,10 +8046,15 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     } else if (s_sim_num == 1) {
                         property_get(RIL_MAIN_SIM_PROPERTY, prop, "0");
                         if(!isCSFB()){
-                            if(!strcmp(prop, "1"))
+                            if(!strcmp(prop, "1")){
                                 at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", NULL);
-                            else
-                                at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", NULL);
+                            } else {
+                                if(hasSimInner(0) == 0){
+                                    at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", NULL);
+                                } else {
+                                    at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", NULL);
+                                }
+                            }
                         }
                         property_get(RIL_SIM0_STATE, prop, "ABSENT");
                         RILLOGD(" RIL_SIM0_STATE = %s", prop);
