@@ -3167,12 +3167,13 @@ RETRY:
             int i;
             for (i = 0; i < 11; i++) {
                 if (pdn[i].nCid == (i + 1)) {
-                    getPDPByIndex(i);
+                    int isActivated = getPDPByIndex(i);
+                    RILLOGD("isActivated = %d", isActivated);
                     strncpy(strApnName, pdn[i].strApn, checkCmpAnchor(pdn[i].strApn));
                     strApnName[strlen(strApnName)] = '\0';
                     if (i < 3
                             && (!strcasecmp(pdn[i].strApn, apn)
-                                    || !strcasecmp(strApnName, apn))) {
+                                    || !strcasecmp(strApnName, apn)) && (isActivated != -1)) {
                         RILLOGD("Using default PDN");
                         snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d,%d", pdn[i].nCid, 0);
                         RILLOGD("clean up seth cmd = %s", cmd);
