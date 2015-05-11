@@ -363,37 +363,33 @@ static cmux_t *multi_find_cmux(struct channel_manager_t *const me, AT_CMD_TYPE_T
 
     switch (type) {
         case AT_CMD_TYPE_SLOW1:
-		PHS_LOGI("TYPE: AT_CMD_TYPE_SLOW1\n");
-		return find_type_cmux(me, ATM1_SIM1);
-
         case AT_CMD_TYPE_NORMAL1:
-		PHS_LOGI("TYPE: AT_CMD_TYPE_NORMAL1\n");
-		return find_type_cmux(me, ATM2_SIM1);
-
+        PHS_LOGI("TYPE: AT_CMD_TYPE_SLOW1 or NORMAL1\n");
+        mux = find_type_cmux(me, ATM1_SIM1);
+        if (mux == NULL)
+            mux = find_type_cmux(me, ATM2_SIM1);
+        break;
         case AT_CMD_TYPE_SLOW2:
-		PHS_LOGI("TYPE: AT_CMD_TYPE_SLOW2\n");
-		return find_type_cmux(me, ATM1_SIM2);
-
         case AT_CMD_TYPE_NORMAL2:
-		PHS_LOGI("TYPE: AT_CMD_TYPE_NORMAL2\n");
-		return find_type_cmux(me, ATM2_SIM2);
-
+        PHS_LOGI("TYPE: AT_CMD_TYPE_SLOW2 or NORMAL2\n");
+        mux = find_type_cmux(me, ATM1_SIM2);
+        if (mux == NULL)
+            mux = find_type_cmux(me, ATM2_SIM2);
+        break;
         case AT_CMD_TYPE_SLOW3:
-		PHS_LOGI("TYPE: AT_CMD_TYPE_SLOW3\n");
-		return find_type_cmux(me, ATM1_SIM3);
-
         case AT_CMD_TYPE_NORMAL3:
-		PHS_LOGI("TYPE: AT_CMD_TYPE_NORMAL3\n");
-		return find_type_cmux(me, ATM2_SIM3);
-
+        PHS_LOGI("TYPE: AT_CMD_TYPE_SLOW3 or NORMAL3\n");
+        mux = find_type_cmux(me, ATM1_SIM3);
+        if (mux == NULL)
+            mux = find_type_cmux(me, ATM2_SIM3);
+        break;
         case AT_CMD_TYPE_SLOW4:
-		PHS_LOGI("TYPE: AT_CMD_TYPE_SLOW4\n");
-		return find_type_cmux(me, ATM1_SIM4);
-
         case AT_CMD_TYPE_NORMAL4:
-		PHS_LOGI("TYPE: AT_CMD_TYPE_NORMAL4\n");
-		return find_type_cmux(me, ATM2_SIM4);
-
+        PHS_LOGI("TYPE: AT_CMD_TYPE_SLOW4 or NORMAL4\n");
+        mux = find_type_cmux(me, ATM1_SIM4);
+        if (mux == NULL)
+            mux = find_type_cmux(me, ATM2_SIM4);
+        break;
         default:
             PHS_LOGI(" CHNMNG multi_find_cmux invalid cmd type \n");
     }
