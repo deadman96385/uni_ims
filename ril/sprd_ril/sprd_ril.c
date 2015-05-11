@@ -3028,6 +3028,60 @@ error:
     return ret;
 }
 
+// To get the compared APN's point
+/*
+ * These are two kinds of APNs. The first one is short name(ex.cmnet.chinamobile) and
+ * the second one is long name (ex. CMNET.chinamobile.mnc000.mcc460.gprs) assigned by
+ * network.
+ */
+static int checkCmpAnchor(char* apn){
+    if (apn == NULL || strlen(apn) == 0) {
+        return 0;
+    }
+
+    const int len = strlen(apn);
+    int i;
+    int nDotCount = 0;
+    char strApn[128] = { 0 };
+    char tmp[128] = { 0 };
+    static char *str[] = {
+        ".GPRS",
+        ".MCC",
+        ".MNC",
+    };
+
+    // if the length of apn is less than "mncxxx.mccxxx.gprs", we would not continue to check.
+    if (len <= 19) {
+        return len;
+    }
+
+    strcpy(strApn, apn);
+    RILLOGD("getOrgApnlen: apn = %s", apn);
+    RILLOGD("getOrgApnlen: strApn = %s", strApn);
+    RILLOGD("getOrgApnlen: len = %d", len);
+
+    strncpy(tmp, apn+(len-5), 5);
+    RILLOGD("getOrgApnlen: tmp = %s", tmp);
+    if(strcasecmp(str[0], tmp)){
+        return len;
+    }
+    memset(tmp,0,sizeof(tmp));
+
+    strncpy(tmp, apn+(len-12), 4);
+    RILLOGD("getOrgApnlen: tmp = %s", tmp);
+    if (strcasecmp(str[1], tmp)) {
+        return len;
+    }
+    memset(tmp,0,sizeof(tmp));
+
+    strncpy(tmp, apn+(len-19), 4);
+    RILLOGD("getOrgApnlen: tmp = %s", tmp);
+    if (strcasecmp(str[2], tmp)) {
+        return len;
+    }
+
+    return len-19;
+}
 static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     const char *apn = NULL;
@@ -3049,6 +3103,7 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     int is_default_bearer;
     int is_open_channel;
     int nRetryTimes = 0;
+    char strApnName[128] = {0};
 
     property_get(PROP_DEFAULT_BEARER, prop, "0");
     is_default_bearer = atoi(prop);
@@ -3070,18 +3125,18 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
 
 RETRY:
     bLteDetached = false;
-    if (s_testmode != 10 && !is_default_bearer && !is_open_channel) {
+    if (IsLte && s_testmode != 10 && !is_default_bearer && !is_open_channel) {
         queryAllActivePDN(channelID);
-
         if (activePDN > 0) {
             int i;
             for (i = 0; i < 11; i++) {
                 if (pdn[i].nCid == (i + 1)) {
                     getPDPByIndex(i);
+                    strncpy(strApnName, pdn[i].strApn, checkCmpAnchor(pdn[i].strApn));
+                    strApnName[strlen(strApnName)] = '\0';
                     if (i < 3
                             && (!strcasecmp(pdn[i].strApn, apn)
-                                    || !strcasecmp(strtok(pdn[i].strApn, "."),
-                                            apn))) {
+                                    || !strcasecmp(strApnName, apn))) {
                         RILLOGD("Using default PDN");
                         snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d,%d", pdn[i].nCid, 0);
                         RILLOGD("clean up seth cmd = %s", cmd);
