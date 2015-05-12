@@ -209,6 +209,8 @@ PUBLIC void H264Enc_slice_init (ENC_IMAGE_PARAMS_T *img_ptr, int32 nal_type, int
     }
 }
 
+#define USE_INTERRUPT
+
 PUBLIC int32 H264Enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr)
 {
     int32 i_frame_size;
