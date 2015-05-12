@@ -5581,10 +5581,10 @@ static void  requestSIM_IO(int channelID, void *data, size_t datalen, RIL_Token 
                 free(byteUSIM);
                 byteUSIM = NULL;
             }
-        }
-       if (sr.simResponse == NULL) {
-            RILLOGE("unable convert to sim, return error");
-            goto error;
+            if (sr.simResponse == NULL) {
+                 RILLOGE("unable convert to sim, return error");
+                 goto error;
+             }
         }
     }
     RIL_onRequestComplete(t, RIL_E_SUCCESS, &sr, sizeof(sr));
