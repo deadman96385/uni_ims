@@ -340,6 +340,7 @@ static int responseDSCI(Parcel &p, void *response, size_t responselen);
 static int responseCallCsFallBack(Parcel &p, void *response, size_t responselen);
 static int responseCallListVoLTE(Parcel &p, void *response, size_t responselen);
 static int responseCallForwardsUri(Parcel &p, void *response, size_t responselen);
+static void stripNumberFromSipAddress(const char *sipAddress, char *number, int len);
 #endif
 
 static int decodeVoiceRadioTechnology (RIL_RadioState radioState);
@@ -4386,7 +4387,14 @@ static int responseCallListVoLTE(Parcel &p, void *response, size_t responselen) 
         p.writeInt32(p_cur->mpty);
         p.writeInt32(p_cur->numberType);
         p.writeInt32(p_cur->toa);
-        writeStringToParcel(p, p_cur->number);
+        if(p_cur->number != NULL){
+            char* number_tmp = strdup(p_cur->number);
+            stripNumberFromSipAddress(p_cur->number, number_tmp, strlen(number_tmp) * sizeof(char));
+            writeStringToParcel(p, number_tmp);
+            free(number_tmp);
+        } else {
+            writeStringToParcel(p, p_cur->number);
+        }
         p.writeInt32(p_cur->prioritypresent);
         p.writeInt32(p_cur->priority);
         p.writeInt32(p_cur->CliValidityPresent);
@@ -4489,6 +4497,40 @@ static int responseCallForwardsUri(Parcel &p, void *response, size_t responselen
     return 0;
 }
 
+static void stripNumberFromSipAddress(const char *sipAddress, char *number, int len) {
+    if (sipAddress == NULL || strlen(sipAddress) == 0 || number == NULL || len <= 0) {
+        return;
+    }
+
+    memset(number, 0, len * sizeof(char));
+
+    char delim[] = ":@";
+    char *strDupSipAddr = strdup(sipAddress);
+    char *s = strDupSipAddr;
+    char *token = strsep(&s, delim);
+    if (token != NULL) {
+        if (strlen(token) == strlen(sipAddress)) {
+            strncpy(number, sipAddress, len);
+            goto EXIT;
+        }
+        token = strsep(&s, delim);
+        if (token == NULL) {
+            strncpy(number, sipAddress, len);
+            goto EXIT;
+        } else {
+            strncpy(number, token, len);
+            goto EXIT;
+        }
+    }
+    strncpy(number, sipAddress, len);
+
+    EXIT:
+    if (s != NULL) {
+        free(strDupSipAddr);
+        strDupSipAddr = NULL;
+    }
+    return;
+}
 #endif
 
 /**
