@@ -1496,7 +1496,7 @@ int cvt_cesq_cmd_ind(AT_CMD_IND_T * ind)
     if (rsrp == 255) {
         rsrp = -255;
     } else {
-        rsrp -= 140;
+        rsrp -= 141;//modified by bug#434807
     }
 
     snprintf(ind_str, sizeof(ind_str), "\r\n+CESQ: %d,%d,%d,%d,%d,%d\r\n",
