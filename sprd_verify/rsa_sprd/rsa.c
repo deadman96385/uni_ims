@@ -170,20 +170,20 @@ void	Mov_bigint(SBigInt *sOut, SBigInt *sIn)
 	return;
 }
 
-void	Mov_long(SBigInt *sOut, unsigned long A)
+void	Mov_long(SBigInt *sOut, uint64_t A)
 {
 	int	i;
 
 	if(A>0xffffffff)
     {
         sOut->m_iLength32=2;
-        sOut->m_ulValue[1]=(unsigned long)(A>>32);
-        sOut->m_ulValue[0]=(unsigned long)A;
+        sOut->m_ulValue[1]=(uint64_t)(A>>32);
+        sOut->m_ulValue[0]=(uint64_t)A;
     }
     else
     {
         sOut->m_iLength32=1;
-        sOut->m_ulValue[0]=(unsigned long)A;
+        sOut->m_ulValue[0]=(uint64_t)A;
     }
 
 	for(i=sOut->m_iLength32;i<BIGINT_MAXLEN;i++)
@@ -199,7 +199,7 @@ void	Mov_long(SBigInt *sOut, unsigned long A)
 void	Add_bigint(SBigInt *sOut, SBigInt *sIn, SBigInt *sIn2)
 {
     unsigned			carry=0;
-    unsigned long	sum=0;
+    uint64_t	sum=0;
 	int					i;
 
     if(sIn->m_iLength32<sIn2->m_iLength32)
@@ -211,7 +211,7 @@ void	Add_bigint(SBigInt *sOut, SBigInt *sIn, SBigInt *sIn2)
     {
 		sum=sIn->m_ulValue[i];
 		sum=sum+sIn2->m_ulValue[i]+carry;
-        sOut->m_ulValue[i]=(unsigned long)sum;
+        sOut->m_ulValue[i]=(uint64_t)sum;
         carry=(unsigned)(sum>>32);
     }
 
@@ -225,16 +225,16 @@ void	Add_bigint(SBigInt *sOut, SBigInt *sIn, SBigInt *sIn2)
 }
 
 //	sOut可同SIn
-void	Add_long(SBigInt *sOut, SBigInt *sIn, unsigned long ulIn)
+void	Add_long(SBigInt *sOut, SBigInt *sIn, uint64_t ulIn)
 {
-    unsigned long	sum;
+    uint64_t	sum;
 	int					i;
 
 	Mov_bigint(sOut,sIn);
 
     sum=sIn->m_ulValue[0];
 	sum+=ulIn;
-    sOut->m_ulValue[0]=(unsigned long)sum;
+    sOut->m_ulValue[0]=(uint64_t)sum;
     if(sum>0xffffffff)
     {
         i=1;
@@ -260,7 +260,7 @@ void	Add_long(SBigInt *sOut, SBigInt *sIn, unsigned long ulIn)
 void	Sub_bigint(SBigInt *sOut, SBigInt *sIn, SBigInt *sIn2)
 {
     unsigned			carry=0;
-    unsigned long	num;
+    uint64_t	num;
 	int					i;
 
     if(Cmp(sIn,sIn2)<=0)
@@ -282,7 +282,7 @@ void	Sub_bigint(SBigInt *sOut, SBigInt *sIn, SBigInt *sIn2)
         else
         {
             num=0x100000000+sIn->m_ulValue[i];
-            sOut->m_ulValue[i]=(unsigned long)(num-carry-sIn2->m_ulValue[i]);
+            sOut->m_ulValue[i]=(uint64_t)(num-carry-sIn2->m_ulValue[i]);
             carry=1;
         }
     }
@@ -296,9 +296,9 @@ void	Sub_bigint(SBigInt *sOut, SBigInt *sIn, SBigInt *sIn2)
 }
 
 //	sOut可同SIn
-void	Sub_long(SBigInt *sOut, SBigInt *sIn, unsigned long ulIn)
+void	Sub_long(SBigInt *sOut, SBigInt *sIn, uint64_t ulIn)
 {
-	unsigned long num;
+	uint64_t num;
 	int i;
 
 	sOut->m_iLength32=sIn->m_iLength32;
@@ -320,7 +320,7 @@ void	Sub_long(SBigInt *sOut, SBigInt *sIn, unsigned long ulIn)
 	}
 
 	num=0x100000000+sIn->m_ulValue[0];
-    sOut->m_ulValue[0]=(unsigned long)(num-ulIn);
+    sOut->m_ulValue[0]=(uint64_t)(num-ulIn);
     i=1;
     while(sIn->m_ulValue[i]==0)
 	{
@@ -338,10 +338,10 @@ void	Sub_long(SBigInt *sOut, SBigInt *sIn, unsigned long ulIn)
 }
 
 //	sOut可同SIn
-void Mul_long(SBigInt *sOut, SBigInt *sIn, unsigned long ulIn)
+void Mul_long(SBigInt *sOut, SBigInt *sIn, uint64_t ulIn)
 {
-    unsigned long	mul;
-    unsigned long		carry;
+    uint64_t	mul;
+    uint64_t		carry;
 	int					i;
 
 	carry=0;
@@ -351,8 +351,8 @@ void Mul_long(SBigInt *sOut, SBigInt *sIn, unsigned long ulIn)
     {
         mul=sIn->m_ulValue[i];
 		mul=mul*ulIn+carry;
-        sOut->m_ulValue[i]=(unsigned long)mul;
-        carry=(unsigned long)(mul>>32);
+        sOut->m_ulValue[i]=(uint64_t)mul;
+        carry=(uint64_t)(mul>>32);
     }
 
     if(carry)
@@ -375,7 +375,7 @@ void Mul_long(SBigInt *sOut, SBigInt *sIn, unsigned long ulIn)
 //	sOut不可同SIn !!!!!!!!
 void Mul_bigint(SBigInt *sOut, SBigInt *sIn, SBigInt *sIn2)
 {
-	unsigned long	sum,mul=0,carry=0;
+	uint64_t	sum,mul=0,carry=0;
 	int					i,j,k;
 
     if(sIn2->m_iLength32==1)
@@ -402,12 +402,12 @@ void Mul_bigint(SBigInt *sOut, SBigInt *sIn, SBigInt *sIn2)
 			}
         }
 		carry+=sum>>32;
-		sOut->m_ulValue[i]=(unsigned long)sum;
+		sOut->m_ulValue[i]=(uint64_t)sum;
 	}
 	if(carry)
 	{
 		sOut->m_iLength32++;
-		sOut->m_ulValue[sOut->m_iLength32-1]=(unsigned long)carry;
+		sOut->m_ulValue[sOut->m_iLength32-1]=(uint64_t)carry;
 	}
 
 	for(i=sOut->m_iLength32;i<BIGINT_MAXLEN;i++)
@@ -418,10 +418,10 @@ void Mul_bigint(SBigInt *sOut, SBigInt *sIn, SBigInt *sIn2)
 
 
 //	sOut可同SIn
-void	Div_long(SBigInt *sOut, SBigInt *sIn, unsigned long ulIn)
+void	Div_long(SBigInt *sOut, SBigInt *sIn, uint64_t ulIn)
 {
-    unsigned long	div,mul;
-    unsigned long		carry=0;
+    uint64_t	div,mul;
+    uint64_t		carry=0;
 	int					i;
 
     sOut->m_iLength32=sIn->m_iLength32;
@@ -436,9 +436,9 @@ void	Div_long(SBigInt *sOut, SBigInt *sIn, unsigned long ulIn)
     {
         div=carry;
         div=(div<<32)+sIn->m_ulValue[i];
-        sOut->m_ulValue[i]=(unsigned long)(div/ulIn);
+        sOut->m_ulValue[i]=(uint64_t)(div/ulIn);
         mul=(div/ulIn)*ulIn;
-        carry=(unsigned long)(div-mul);
+        carry=(uint64_t)(div-mul);
     }
     if(sOut->m_ulValue[sOut->m_iLength32-1]==0)
 		sOut->m_iLength32--;
@@ -458,7 +458,7 @@ void	Div_long(SBigInt *sOut, SBigInt *sIn, unsigned long ulIn)
 void	Div_bigint(SBigInt *sOut, SBigInt *sIn, SBigInt *sIn2)
 {
     unsigned			i,len;
-    unsigned long	num,div;
+    uint64_t	num,div;
 	SBigInt				sTemp1,sTemp2,sTemp3;
 
 	if(sIn2->m_iLength32==1)
@@ -512,8 +512,8 @@ void	Div_bigint(SBigInt *sOut, SBigInt *sIn, SBigInt *sIn2)
 void Mod_bigint(SBigInt *sOut, SBigInt *sIn, SBigInt *sIn2)
 {
     SBigInt				sTemp1,sTemp2;
-	unsigned long	div,num;
-    unsigned long		carry=0;
+	uint64_t	div,num;
+    uint64_t		carry=0;
 	unsigned			i,len;
 
     Mov_bigint(sOut,sIn);
@@ -550,10 +550,10 @@ void Mod_bigint(SBigInt *sOut, SBigInt *sIn, SBigInt *sIn2)
 }
 
 //	sOut可同SIn
-unsigned long	Mod_long(SBigInt *sIn, unsigned long ulIn)
+uint64_t	Mod_long(SBigInt *sIn, uint64_t ulIn)
 {
-    unsigned long	div;
-    unsigned long		carry=0;
+    uint64_t	div;
+    uint64_t		carry=0;
 	int					i;
 
     if(sIn->m_iLength32==1)
@@ -562,7 +562,7 @@ unsigned long	Mod_long(SBigInt *sIn, unsigned long ulIn)
     for(i=sIn->m_iLength32-1;i>=0;i--)
     {
         div=sIn->m_ulValue[i]+carry*0x100000000;
-        carry=(unsigned long)(div%ulIn);
+        carry=(uint64_t)(div%ulIn);
     }
 
     return carry;
@@ -681,7 +681,7 @@ void	RsaTrans(SBigInt *sOut, SBigInt *sIn, SBigInt *sE, SBigInt *sN)
 {
 	int				i,j,k;
 	int				n;
-	unsigned long	num;
+	uint64_t	num;
 
 	SBigInt			sTemp1,sTemp2;
 
@@ -950,7 +950,7 @@ int myrand()
 return g_seed = (g_seed * 1103515245 + 12345) & RAND_MAX;
 }
 
-unsigned long  Rand()
+uint64_t  Rand()
 {
     int ulNum;
     ulNum=myrand()*0x10000+myrand();
