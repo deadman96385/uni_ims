@@ -144,7 +144,7 @@ int32 rc_init_GOP (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras)
                     }
                 }
                 rc_gop_paras->I_P_ratio = (rc_gop_paras->last_I_frame_bits + nCalculateBitRate / 2) / nCalculateBitRate;
-                if (0 == rc_gop_paras->I_P_ratio)
+                if (0 >= rc_gop_paras->I_P_ratio)
                 {
                     rc_gop_paras->I_P_ratio = 1;
                 }
