@@ -316,6 +316,9 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
     {
         vo->rc_gop_paras.intra_period = pConf->PFrames+1;
     }
+	if (vo->rc_gop_paras.intra_period > 900){
+		vo->rc_gop_paras.intra_period = 900;
+	}
 
     target_bitrate_max = (vo->g_enc_image_ptr->width * vo->g_enc_image_ptr->height * pConf->FrameRate * 6); //8*(3/2)*(1/2)
     if (enc_config->targetBitRate > target_bitrate_max)
@@ -323,8 +326,8 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
         enc_config->targetBitRate = target_bitrate_max;
     }
 
-    SPRD_CODEC_LOGD ("%s, %d, intra_period: %d, enc_config->targetBitRate: %d, target_bitrate_max: %d",
-                     __FUNCTION__, __LINE__, vo->rc_gop_paras.intra_period, enc_config->targetBitRate, target_bitrate_max);
+    SPRD_CODEC_LOGD ("%s, %d, FrameRate: %d, intra_period: %d, enc_config->targetBitRate: %d, target_bitrate_max: %d",
+                     __FUNCTION__, __LINE__, enc_config->FrameRate, vo->rc_gop_paras.intra_period, enc_config->targetBitRate, target_bitrate_max);
 
     return MMENC_OK;
 }
@@ -504,6 +507,7 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
 
 
     vo->prev_qp = i_global_qp;	// MUST HAVE prev_qp updated!!
+	SPRD_CODEC_LOGD ("%s, %d, qp: %d", __FUNCTION__, __LINE__, i_global_qp);
 
     img_ptr->pYUVRecFrame->i_poc =
         img_ptr->pYUVSrcFrame->i_poc = 2 * img_ptr->frame_num;
