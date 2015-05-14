@@ -23,6 +23,17 @@ extern   "C"
 {
 #endif
 
+PUBLIC void VP8GetVideoDimensions(VPXHandle *vpxHandle, int32 *display_width, int32 *display_height)
+{
+    VPXDecObject *vo = (VPXDecObject *)(vpxHandle->videoDecoderData) ;
+    VP8_COMMON *cm = &vo->common;
+
+    *display_width = cm->Width;
+    *display_height =  cm->Height;
+
+    SPRD_CODEC_LOGD ("%s, %d, display_width: %d, display_height: %d", __FUNCTION__, __LINE__, *display_width, *display_height);
+}
+
 PUBLIC void VP8GetBufferDimensions(VPXHandle *vpxHandle, int32 *width, int32 *height)
 {
     VPXDecObject *vo = (VPXDecObject *)(vpxHandle->videoDecoderData) ;
@@ -31,7 +42,7 @@ PUBLIC void VP8GetBufferDimensions(VPXHandle *vpxHandle, int32 *width, int32 *he
     *width =(((cm->Width + 15)>>4)<<4);
     *height = (((cm->Height + 15)>>4)<<4);
 
-    SPRD_CODEC_LOGD ("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
+    SPRD_CODEC_LOGD ("%s, %d, buffer_width: %d, buffer_height: %d", __FUNCTION__, __LINE__, *width, *height);
 }
 
 PUBLIC MMDecRet VP8GetCodecCapability(VPXHandle *vpxHandle, int32 *max_width, int32 *max_height)

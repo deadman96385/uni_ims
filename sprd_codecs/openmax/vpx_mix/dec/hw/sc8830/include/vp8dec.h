@@ -56,6 +56,7 @@ typedef struct tagVPXHandle
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
 
+void VP8GetVideoDimensions(VPXHandle *vpxHandle, int32 *display_width, int32 *display_height);
 void VP8GetBufferDimensions(VPXHandle *vpxHandle, int32 *width, int32 *height);
 MMDecRet VP8GetCodecCapability(VPXHandle *vpxHandle, int32 *max_width, int32 *max_height);
 void VP8DecSetCurRecPic(VPXHandle *vpxHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader);
