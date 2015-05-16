@@ -7864,7 +7864,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_SIGNAL_STRENGTH:
 #if defined (RIL_SPRD_EXTENSION)
-            if((s_testmode > 0) && (s_testmode < 9)) {
+            if(!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf")) {//bug 437252
                 requestSignalStrengthLTE(channelID, data, datalen, t);
             } else {
                 requestSignalStrength(channelID, data, datalen, t);
