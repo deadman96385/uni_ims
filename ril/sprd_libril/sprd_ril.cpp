@@ -178,6 +178,7 @@ struct commthread_data_t {
 threadpool_t *threadpool_d;
 static pthread_t s_tid_sms;
 static pthread_t s_tid_local;
+static pthread_t s_tid_call;
 
 static int s_fdWakeupRead;
 static int s_fdWakeupWrite;
@@ -201,6 +202,8 @@ static pthread_cond_t s_dispatchCond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t s_listMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t s_localDispatchMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t s_localDispatchCond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t s_callDispatchMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t s_callDispatchCond = PTHREAD_COND_INITIALIZER;
 
 static RequestInfo *s_pendingRequests = NULL;
 
@@ -240,6 +243,7 @@ struct listnode
 struct listnode sms_cmd_list;
 struct listnode other_cmd_list;
 struct listnode local_cmd_list;
+struct listnode call_cmd_list;
 
 void list_init(struct listnode *list);
 void list_add_tail(struct listnode *list, struct listnode *item);
@@ -4783,6 +4787,13 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     pthread_mutex_lock(&s_localDispatchMutex);
                     pthread_cond_signal(&s_localDispatchCond);
                     pthread_mutex_unlock(&s_localDispatchMutex);
+                } else if(pCI->requestNumber == RIL_REQUEST_DIAL
+                        || pCI->requestNumber == RIL_REQUEST_SWITCH_WAITING_OR_HOLDING_AND_ACTIVE) {
+                    RILLOGD("Add call_cmd_list");
+                    list_add_tail(&call_cmd_list, cmd_item);
+                    pthread_mutex_lock(&s_callDispatchMutex);
+                    pthread_cond_signal(&s_callDispatchCond);
+                    pthread_mutex_unlock(&s_callDispatchMutex);
                 } else {
                     list_add_tail(&other_cmd_list, cmd_item);
                 }
@@ -4840,6 +4851,12 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     pthread_mutex_lock(&s_localDispatchMutex);
                     pthread_cond_signal(&s_localDispatchCond);
                     pthread_mutex_unlock(&s_localDispatchMutex);
+                } else if(pCI->requestNumber == RIL_REQUEST_DIAL
+                        || pCI->requestNumber == RIL_REQUEST_SWITCH_WAITING_OR_HOLDING_AND_ACTIVE) {
+                    list_add_tail(&call_cmd_list, cmd_item);
+                    pthread_mutex_lock(&s_callDispatchMutex);
+                    pthread_cond_signal(&s_callDispatchCond);
+                    pthread_mutex_unlock(&s_callDispatchMutex);
                 } else {
                     list_add_tail(&other_cmd_list, cmd_item);
                 }
@@ -4903,6 +4920,31 @@ localDispatch(void *param) {
             processCommandBuffer(cmd_item->user_data->buffer,
                 cmd_item->user_data->buflen);
             RILLOGI("-->localDispatch [%d] free one command\n",tid);
+            list_remove(cmd_item);  /* remove list node first, then free it */
+            free(cmd_item->user_data->buffer);
+            free(cmd_item->user_data);
+            free(cmd_item);
+        }
+    }
+    return NULL;
+}
+
+static void *
+callDispatch(void *param) {
+    struct listnode * cmd_item;
+    pid_t tid;
+    tid = gettid();
+
+    while(1) {
+        pthread_mutex_lock(&s_callDispatchMutex);
+        pthread_cond_wait(&s_callDispatchCond, &s_callDispatchMutex);
+        pthread_mutex_unlock(&s_callDispatchMutex);
+
+        for (cmd_item = (&call_cmd_list)->next; cmd_item != (&call_cmd_list);
+                cmd_item = (&call_cmd_list)->next) {
+            processCommandBuffer(cmd_item->user_data->buffer,
+                cmd_item->user_data->buflen);
+            RILLOGI("-->callDispatch [%d] free one command\n",tid);
             list_remove(cmd_item);  /* remove list node first, then free it */
             free(cmd_item->user_data->buffer);
             free(cmd_item->user_data);
@@ -5408,6 +5450,7 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
     list_init(&sms_cmd_list);
     list_init(&local_cmd_list);
     list_init(&other_cmd_list);
+    list_init(&call_cmd_list);
 
     threadpool_d = thread_pool_init(THR_MAX, 10000);
     if(threadpool_d->thr_max==THR_MAX){
@@ -5427,7 +5470,12 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
         RILLOGE("Failed to create local dispatch thread errno:%d", errno);
         return;
     }
-
+    ret = pthread_create(&s_tid_call, &attr, callDispatch, NULL);
+    if (ret < 0) {
+        RILLOGE("Failed to create local dispatch thread errno:%d", errno);
+        return;
+    }
+    RILLOGD("create call dispatch thread");
     if (s_started == 0) {
         RIL_startEventLoop();
     }
