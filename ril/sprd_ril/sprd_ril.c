@@ -1985,11 +1985,11 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 #endif
 
     if (onOff == 0) {
-//        if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
-//            RILLOGD("s_sim_num = %d", s_sim_num);
-//            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
-//            err = at_send_command(ATch_type[channelID], cmd, NULL );
-//        }
+        if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
+            RILLOGD("s_sim_num = %d", s_sim_num);
+            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
+            err = at_send_command(ATch_type[channelID], cmd, NULL );
+        }
         /* The system ask to shutdown the radio */
         int sim_status = getSIMStatus(channelID);
         setHasSim(sim_status == SIM_ABSENT ? false: true );
@@ -2071,9 +2071,9 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         } else if (isCSFB() && (!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf"))) {
             if (s_multiSimMode && !bOnlyOneSIMPresent) {
                 if (s_testmode == 10) {
-//                    RILLOGD("s_sim_num=%d,autoAttach=%d,dataEnable=%d",s_sim_num, autoAttach, dataEnable);
-//                    snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,%d", s_sim_num, autoAttach && dataEnable);
-//                    at_send_command(ATch_type[channelID], cmd, NULL );
+                    RILLOGD("s_sim_num=%d,allow_data=%d",s_sim_num, allow_data);
+                    snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,%d", s_sim_num, allow_data);
+                    at_send_command(ATch_type[channelID], cmd, NULL );
 //                    if(autoAttach && dataEnable){
 //                        err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
 //                    }
@@ -7644,6 +7644,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request ==  RIL_REQUEST_REGISTER_IMS_BSF
                 || request == RIL_REQUEST_SET_INITIAL_ATTACH_APN
                 || request == RIL_REQUEST_SET_IMS_SMSC
+                || request == RIL_REQUEST_ALLOW_DATA
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
@@ -7729,11 +7730,15 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_ALLOW_DATA:
             allow_data = ((int*)data)[0];
-            if(allow_data){
-                attachGPRS(channelID, data, datalen, t);
-            }
-            else{
-                detachGPRS(channelID, data, datalen, t);
+            if(sState != RADIO_STATE_UNAVAILABLE && sState != RADIO_STATE_OFF){
+                if(allow_data){
+                    attachGPRS(channelID, data, datalen, t);
+                }else{
+                    detachGPRS(channelID, data, datalen, t);
+                }
+            }else{
+                RILLOGD("allow data when radio is off");
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
             }
             break;
         case RIL_REQUEST_HANGUP_WAITING_OR_BACKGROUND:
