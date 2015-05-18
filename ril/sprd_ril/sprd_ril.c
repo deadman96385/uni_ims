@@ -470,6 +470,10 @@ static int in4G;
 static bool bLteDetached = false;
 static int isTest;
 
+void *setRadioOnWhileSimBusy(void *param);
+static pthread_mutex_t s_hasSimBusyMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t s_hasSimBusyCond = PTHREAD_COND_INITIALIZER;
+
 static void queryAllActivePDN(int channelID) {
     int err = 0;
     ATResponse *pdnResponse = NULL;
@@ -1932,6 +1936,31 @@ void initSIMPresentState() {
     bOnlyOneSIMPresent = iPresentSIMCount == 1 ? true : false;
 }
 
+void *setRadioOnWhileSimBusy(void *param) {
+    int channelID;
+    int err;
+    ATResponse *p_response = NULL;
+
+    RILLOGD("SIM is busy now, please wait!");
+    pthread_mutex_lock(&s_hasSimBusyMutex);
+    pthread_cond_wait(&s_hasSimBusyCond,&s_hasSimBusyMutex);
+    pthread_mutex_unlock(&s_hasSimBusyMutex);
+
+    RILLOGD("CPIN is READY now, please set radio power on again!");
+    channelID = getChannel();
+    err = at_send_command(ATch_type[channelID],  "AT+SFUN=4", &p_response);
+    if (err < 0|| p_response->success == 0) {
+        if (isRadioOn(channelID) != 1) {
+            goto error;
+        }
+    }
+    setRadioState(channelID, RADIO_STATE_SIM_NOT_READY);
+error:
+    putChannel(channelID);
+    at_response_free(p_response);
+    return NULL;
+}
+
 static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     int onOff;
@@ -2033,6 +2062,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
                         return;
                    }
                 }
+
         s_testmode = getTestMode();
         initSIMPresentState();
         if (isCSFB() || !strcmp(s_modem, "w")) {
@@ -2126,6 +2156,12 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
              * So, if we get an error, let's check to see if it
              * turned on anyway
             */
+
+            if (hasSimBusy) {
+                RILLOGD("SIM is busy now. We create a thread to wait for CPIN READY, and then set radio on again.");
+                pthread_t tid;
+                pthread_create(&tid, NULL, (void*)setRadioOnWhileSimBusy, NULL);
+            }
 
             if (isRadioOn(channelID) != 1) {
                 goto error;
@@ -12976,7 +13012,11 @@ static void getSIMStatusAgainForSimBusy() {
         goto done;
     default:
         if (hasSimBusy) {
+            pthread_mutex_lock(&s_hasSimBusyMutex);
             hasSimBusy = false;
+            pthread_cond_signal(&s_hasSimBusyCond);
+            pthread_mutex_unlock(&s_hasSimBusyMutex);
+
         }
         RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED, NULL,
                 0);
