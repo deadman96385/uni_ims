@@ -29,7 +29,7 @@ void _VC_rtpSendTx(
 {
     vint sendErr;
     uint32 opts;
-    
+
     /*
      * Create the RTP payload.  Place it in netBuffer[]
      */
@@ -57,7 +57,7 @@ void _VC_rtpSendTx(
             rtp_ptr->payloadOffset,
             rtp_ptr->lastCoder);
 
-    DBG("RTP Send Seqn: %d", rtp_ptr->sendRtpObj.pkt.rtpMinHdr.seqn);
+    // DBG("RTP Send Seqn: %d", rtp_ptr->sendRtpObj.pkt.rtpMinHdr.seqn);
 
     /*
      * Copy the packet length to netBufferLen
@@ -132,7 +132,7 @@ void _VC_rtpSend(
     rtp_ptr->lastCoder = hdr_ptr->dynamicCoder;
     rtp_ptr->lastLocalCoder = hdr_ptr->localCoder;
 
-    DBG("");
+    // DBG("");
 
     if ((hdr_ptr->extension & VTSP_MASK_EXT_SEND) &&
         (rtp_ptr->payloadOffset != 0)) {

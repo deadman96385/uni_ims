@@ -11,6 +11,34 @@
 #include "_jbv.h"
 
 /*
+ * ======== _JBV_ntohs() ========
+ *
+ * change net's byte sequence to host's.
+ *
+ */
+inline unsigned short _JBV_ntohs(unsigned short data)
+{
+	unsigned int x;
+
+	x = 1;
+
+	/* if the host is little endian, byte reversal; otherwise no reversal */
+	if (*((unsigned char *)&x))
+	{
+		/* little endian */
+		return (((data & 0xFF00) >> 8) + ((data & 0x00FF) << 8));
+	}
+	else
+	{
+	        /* big endian */
+		return data;
+	}
+
+}
+
+
+
+/*
  * ======== _JBV_processH263() ========
  *
  * Process an incoming H263 packet.
@@ -320,7 +348,7 @@ vint _JBV_processH264(
                 ts, obj_ptr->lastDrawnTs);
         return (-1);
     }
- 
+
     cseqn = JBV_SEQN_FROM_RTP_SEQN(pkt_ptr->seqn);
     unit1_ptr = &obj_ptr->unit[cseqn];
 
@@ -595,11 +623,13 @@ vint _JBV_reassembleH264(
                  * Discard size because its part of encapsulation and
                  * H.264 does not care about it.
                  */
-                sz = JBV_htons((unsigned short)*(unsigned short *)buf_ptr);
+                sz = _JBV_ntohs((unsigned short)*(unsigned short *)buf_ptr);
+
                 buf_ptr += 2;
                 pktsz -= 2;
 
                 if ((sz <= 0) || sz > pktsz) {
+                    JBV_dbgLog("sz %d expire the range [0, %d]\n", sz, pktsz);
                     break;
                 }
 
