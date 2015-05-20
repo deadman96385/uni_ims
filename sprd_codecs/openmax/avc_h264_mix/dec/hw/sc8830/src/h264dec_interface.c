@@ -67,8 +67,9 @@ PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int3
 
         if (!fs)
         {
-            SPRD_CODEC_LOGE ("%s, %d, fs is NULL!'", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, fs is NULL!, delayed_pic_num: %d, delayed_pic_ptr: %p'", __FUNCTION__, __LINE__, dpb_ptr->delayed_pic_num, dpb_ptr->delayed_pic_ptr);
             *pOutput = NULL;
+            dpb_ptr->delayed_pic_ptr = NULL;
             return MMDEC_ERROR;
         }
 
@@ -88,6 +89,11 @@ PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int3
     } else
     {
         *pOutput = NULL;
+        dpb_ptr->delayed_pic_ptr = NULL;
+        if (dpb_ptr->delayed_pic_num != 0)
+        {
+            SPRD_CODEC_LOGE ("%s, %d, dpb_ptr->delayed_pic_num != 0!'", __FUNCTION__, __LINE__);
+        }
         return MMDEC_ERROR;
     }
 }
