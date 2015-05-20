@@ -6072,7 +6072,8 @@ out:
                   || (SIM_SIM_PERSONALIZATION == simstatus)
                   || (SIM_NETWORK_SUBSET_PERSONALIZATION == simstatus)
                   || (SIM_CORPORATE_PERSONALIZATION == simstatus)
-                  || (SIM_SERVICE_PROVIDER_PERSONALIZATION == simstatus)){
+                  || (SIM_SERVICE_PROVIDER_PERSONALIZATION == simstatus)
+                  || (SIM_LOCK_FOREVER == simstatus)){
             RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
         }
         at_response_free(p_response);
@@ -6121,7 +6122,8 @@ static void  requestVerifySimPuk2(int channelID, void*  data, size_t  datalen, R
               || (SIM_SIM_PERSONALIZATION == simstatus)
               || (SIM_NETWORK_SUBSET_PERSONALIZATION == simstatus)
               || (SIM_CORPORATE_PERSONALIZATION == simstatus)
-              || (SIM_SERVICE_PROVIDER_PERSONALIZATION == simstatus)){
+              || (SIM_SERVICE_PROVIDER_PERSONALIZATION == simstatus)
+              || (SIM_LOCK_FOREVER == simstatus)){
         RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
     }
     return;
