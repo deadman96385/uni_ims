@@ -11232,7 +11232,7 @@ static void initializeCallback(void *param)
 
     /* set some auto report AT commend on or off */
 
-    at_send_command(ATch_type[channelID], "AT+SPAURC=\"100110111110000000001000010000111111110001000000\"", NULL);
+    at_send_command(ATch_type[channelID], "AT+SPAURC=\"100110111110000000001000010000111111110001000100\"", NULL);
 
     /* SPRD : for svlte & csfb @{ */
     if (isSvLte()) {
@@ -12653,6 +12653,20 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RIL_onUnsolicitedResponse (RIL_UNSOL_BAND_INFO, response, strlen(response) + 1);
     }
     //SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
+    /* SPRD: add AGPS feature for bug 436461 @{ */
+    else if(strStartsWith(s, "+SPPCI:")) {
+        char *tmp;
+        int cell_id;
+
+        RILLOGD("RIL_UNSOL_PHY_CELL_ID");
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+        err = at_tok_nexthexint(&tmp, &cell_id);
+        if (err < 0) goto out;
+        RIL_onUnsolicitedResponse (RIL_UNSOL_PHY_CELL_ID, (void *)&cell_id, 4);
+    }
+    /* @} */
 #endif
     else if (strStartsWith(s, "^SMOF:")) {
         char *tmp;

@@ -6423,6 +6423,9 @@ requestToString(int request) {
         case RIL_UNSOL_BAND_INFO: return "UNSOL_BAND_INFO";
         //SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
         case RIL_UNSOL_CALL_CSFALLBACK_FINISH: return "UNSOL_RIL_CALL_CSFALLBACK";//SPRD:add for LTE-CSFB to handle CS fall back of MT call
+        /* SPRD: add AGPS feature for bug 436461 @{ */
+		case RIL_UNSOL_PHY_CELL_ID: return "UNSOL_PHY_CELL_ID";
+		/* @} */
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_UNSOL_RESPONSE_NEW_CB_MSG: return "UNSOL_RESPONSE_NEW_CB_MSG";

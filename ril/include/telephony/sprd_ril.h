@@ -5898,8 +5898,11 @@ typedef struct {
 //SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 START
 #define RIL_UNSOL_BAND_INFO (RIL_SPRD_UNSOL_RESPONSE_BASE+19)
 #define RIL_UNSOL_CALL_CSFALLBACK_FINISH (RIL_SPRD_UNSOL_RESPONSE_BASE + 20)//add for LTE-CSFB to handle CS fall back of MT call
-#define RIL_SPRD_UNSOL_RESPONSE_LAST RIL_UNSOL_CALL_CSFALLBACK_FINISH
 //SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
+/* SPRD: add AGPS feature for bug 436461 @{ */
+#define RIL_UNSOL_PHY_CELL_ID (RIL_SPRD_UNSOL_RESPONSE_BASE + 21)
+#define RIL_SPRD_UNSOL_RESPONSE_LAST RIL_UNSOL_PHY_CELL_ID
+/* @} */
 #endif
 
 

@@ -384,7 +384,8 @@ static int  is_lte_unsolicited(int rspid) {
     if (rspid == RIL_UNSOL_SIM_PS_REJECT ||
         rspid == RIL_UNSOL_LTE_READY ||
         rspid == RIL_UNSOL_SIGNAL_STRENGTH ||
-        rspid == RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED)
+        rspid == RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED ||
+        rspid == RIL_UNSOL_PHY_CELL_ID)
         return 1;
 
     if ((sPSEnable == PS_LTE_ENABLE) &&
