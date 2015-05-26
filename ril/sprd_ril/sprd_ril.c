@@ -71,7 +71,12 @@ typedef enum {
     SIM_SERVICE_PROVIDER_PERSONALIZATION = 12,
     //Added for bug#213435 sim lock end
     //Added for bug#242159 begin
-    SIM_LOCK_FOREVER = 13
+    SIM_LOCK_FOREVER = 13,
+    SIM_NETWORK_PUK = 14,
+    SIM_NETWORK_SUBSET_PUK = 15,
+    SIM_CORPORATE_PUK = 16,
+    SIM_SERVICE_PROVIDER_PUK = 17,
+    SIM_SIM_PUK = 18
     //Added for bug#242159 end
 } SIM_Status;
 
@@ -1603,8 +1608,11 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
             }
         }
 
-        result = getRemainTimes(channelID, type);
-        RIL_onRequestComplete(t, RIL_E_SUCCESS, &result, sizeof(result));
+        if( 0 != strcmp(type, "PSP") && 0 != strcmp(type, "PUP") && 0 != strcmp(type, "PCP")
+                                     && 0 != strcmp(type, "PPP") && 0 != strcmp(type, "PNP") ) {
+            result = getRemainTimes(channelID, type);
+            RIL_onRequestComplete(t, RIL_E_SUCCESS, &result, sizeof(result));
+        }
         simstatus = getSIMStatus(channelID);
         RILLOGD("simstatus = %d", simstatus);
         if(simstatus == SIM_READY) {
@@ -1614,7 +1622,32 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
             || (SIM_NETWORK_SUBSET_PERSONALIZATION == simstatus)
             || (SIM_CORPORATE_PERSONALIZATION == simstatus)
             || (SIM_SERVICE_PROVIDER_PERSONALIZATION == simstatus)){
-          RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
+            if( 0 == strcmp(type, "PSP") || 0 == strcmp(type, "PUP") || 0 == strcmp(type, "PCP")
+                                         || 0 == strcmp(type, "PPP") || 0 == strcmp(type, "PNP")) {
+                char *type_new[3] = {0};
+                switch(simstatus) {
+                    case SIM_NETWORK_PERSONALIZATION:
+                        strcpy(type_new,"PN");
+                        break;
+                    case SIM_NETWORK_SUBSET_PERSONALIZATION:
+                        strcpy(type_new,"PU");
+                        break;
+                    case SIM_CORPORATE_PERSONALIZATION:
+                        strcpy(type_new,"PC");
+                        break;
+                    case SIM_SERVICE_PROVIDER_PERSONALIZATION:
+                        strcpy(type_new,"PP");
+                        break;
+                    case SIM_SIM_PERSONALIZATION:
+                        strcpy(type_new,"PS");
+                        break;
+                }
+                result = getRemainTimes(channelID, type_new);
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, &result, sizeof(result));
+            } else {
+                RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
+            }
+          //RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
         }
         at_response_free(p_response);
         return;
@@ -6074,7 +6107,12 @@ out:
                   || (SIM_NETWORK_SUBSET_PERSONALIZATION == simstatus)
                   || (SIM_CORPORATE_PERSONALIZATION == simstatus)
                   || (SIM_SERVICE_PROVIDER_PERSONALIZATION == simstatus)
-                  || (SIM_LOCK_FOREVER == simstatus)){
+                  || (SIM_LOCK_FOREVER == simstatus)
+                  || (SIM_NETWORK_PUK == simstatus)
+                  || (SIM_NETWORK_SUBSET_PUK == simstatus)
+                  || (SIM_CORPORATE_PUK == simstatus)
+                  || (SIM_SERVICE_PROVIDER_PUK == simstatus)
+                  || (SIM_SIM_PUK == simstatus)){
             RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
         }
         at_response_free(p_response);
@@ -10376,15 +10414,20 @@ out:
         return SIM_CORPORATE_PERSONALIZATION;
     } else if (0 == strcmp (cpinResult, "PH-SP PIN"))  {
         return SIM_SERVICE_PROVIDER_PERSONALIZATION;
+    } else if (0 == strcmp (cpinResult, "PH-NET PUK")) {
+        return SIM_NETWORK_PUK;
+    } else if (0 == strcmp (cpinResult, "PH-NETSUB PUK")) {
+        return SIM_NETWORK_SUBSET_PUK;
+    } else if (0 == strcmp (cpinResult, "PH-CORP PUK")) {
+        return SIM_CORPORATE_PUK;
+    } else if (0 == strcmp (cpinResult, "PH-SP PUK")) {
+        return SIM_SERVICE_PROVIDER_PUK;
+    } else if (0 == strcmp (cpinResult, "PH-SIM PUK")) {
+        return SIM_SIM_PUK;
     }
     //Added for bug#213435 sim lock end
     //Added for bug#242159 begin
-    else if ((0 == strcmp (cpinResult, "PH-INTEGRITY FAIL"))
-            || (0 == strcmp (cpinResult, "PH-NET PUK"))
-            || (0 == strcmp (cpinResult, "PH-SIM PUK"))
-            || (0 == strcmp (cpinResult, "PH-NETSUB PUK"))
-            || (0 == strcmp (cpinResult, "PH-CORP PUK"))
-            || (0 == strcmp (cpinResult, "PH-SP PUK")))  {
+    else if (0 == strcmp (cpinResult, "PH-INTEGRITY FAIL"))  {
         ret = SIM_LOCK_FOREVER;
         goto done;
     }
@@ -10465,6 +10508,21 @@ static int getCardStatus(int channelID, RIL_CardStatus_v6 **pp_card_status)
         //Added for bug#213435 sim lock end
         //Added for bug#242159 begin
         { RIL_APPTYPE_SIM, RIL_APPSTATE_SUBSCRIPTION_PERSO, RIL_PERSOSUBSTATE_SIM_LOCK_FOREVER,
+          NULL, NULL, 0, RIL_PINSTATE_ENABLED_NOT_VERIFIED, RIL_PINSTATE_UNKNOWN  },
+          /* PERSOSUBSTATE_SIM_NETWORK_PUK = 14 */
+        { RIL_APPTYPE_SIM, RIL_APPSTATE_SUBSCRIPTION_PERSO, RIL_PERSOSUBSTATE_SIM_NETWORK_PUK ,
+          NULL, NULL, 0, RIL_PINSTATE_ENABLED_NOT_VERIFIED, RIL_PINSTATE_UNKNOWN  },
+          /* PERSOSUBSTATE_SIM_NETWORK_SUBSET_PUK = 15 */
+        { RIL_APPTYPE_SIM, RIL_APPSTATE_SUBSCRIPTION_PERSO, RIL_PERSOSUBSTATE_SIM_NETWORK_SUBSET_PUK,
+          NULL, NULL, 0, RIL_PINSTATE_ENABLED_NOT_VERIFIED, RIL_PINSTATE_UNKNOWN  },
+         /* PERSOSUBSTATE_SIM_CORPORATE_PUK = 16 */
+        { RIL_APPTYPE_SIM, RIL_APPSTATE_SUBSCRIPTION_PERSO, RIL_PERSOSUBSTATE_SIM_CORPORATE_PUK ,
+          NULL, NULL, 0, RIL_PINSTATE_ENABLED_NOT_VERIFIED, RIL_PINSTATE_UNKNOWN  },
+          /* PERSOSUBSTATE_SIM_SERVICE_PROVIDER_PUK = 17 */
+        { RIL_APPTYPE_SIM, RIL_APPSTATE_SUBSCRIPTION_PERSO, RIL_PERSOSUBSTATE_SIM_SERVICE_PROVIDER_PUK ,
+          NULL, NULL, 0, RIL_PINSTATE_ENABLED_NOT_VERIFIED, RIL_PINSTATE_UNKNOWN  },
+          /* PERSOSUBSTATE_SIM_SIM_PUK = 18 */
+        { RIL_APPTYPE_SIM, RIL_APPSTATE_SUBSCRIPTION_PERSO, RIL_PERSOSUBSTATE_SIM_SIM_PUK ,
           NULL, NULL, 0, RIL_PINSTATE_ENABLED_NOT_VERIFIED, RIL_PINSTATE_UNKNOWN  }
         //Added for bug#242159 end
     };
