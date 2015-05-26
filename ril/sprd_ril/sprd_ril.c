@@ -208,6 +208,7 @@ typedef struct {
 }SrvccPendingRequest;
 
 #define VOLTE_ENABLE_PROP         "persist.sys.volte.enable"
+#define VOLTE_PCSCF_ADDRESS        "persist.sys.volte.pcscf"
 
 static VoLTE_SrvccState s_srvccState = SRVCC_PS_TO_CS_SUCCESS;
 static SrvccPendingRequest *s_srvccPendingRequest;
@@ -11202,6 +11203,19 @@ static void initializeCallback(void *param)
         at_send_command(ATch_type[channelID], "AT+CEN=1", NULL);
         at_send_command(ATch_type[channelID], "AT+CIREP=1", NULL);
         at_send_command(ATch_type[channelID], "AT+CMCCS=2", NULL);
+        char address[PROPERTY_VALUE_MAX];
+        property_get(VOLTE_PCSCF_ADDRESS, address, NULL);
+        if(address != NULL && strlen(address)>1){
+            RILLOGI("setPcscfAddress =%s", address);
+            char pcscf_cmd[PROPERTY_VALUE_MAX];
+            char* p_address = address;
+            if(strchr(p_address,'[') != NULL){
+                snprintf(pcscf_cmd, sizeof(pcscf_cmd), "AT+PCSCF=2,\"%s\"", address);
+            } else {
+                snprintf(pcscf_cmd, sizeof(pcscf_cmd), "AT+PCSCF=1,\"%s\"", address);
+            }
+            err = at_send_command(ATch_type[channelID], pcscf_cmd, NULL);
+        }
     }
 
 
