@@ -10979,6 +10979,8 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
 
     for(i = 0; i < maxPDPNum; i++) {
         if (pdp[i].cid > 0) {
+            snprintf(cmd,sizeof(cmd),"AT+CGACT=0,%d",pdp[i].cid);
+            at_send_command(ATch_type[channelID], cmd, &p_response);
             RILLOGD("pdp[%d].state = %d", i, pdp[i].state);
             putPDP(i);
         }
