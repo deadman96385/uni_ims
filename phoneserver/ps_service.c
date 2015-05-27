@@ -190,9 +190,9 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
     int cid, ppp_index;
     int err, ret;
 
-    PHS_LOGD("enter cvt_cgdata_set_req  ");
+    //PHS_LOGD("enter cvt_cgdata_set_req  ");
     if (req == NULL) {
-        PHS_LOGD("leave cvt_cgdata_set_req AT_RESULT_NG");
+        PHS_LOGE("leave cvt_cgdata_set_req AT_RESULT_NG");
         return AT_RESULT_NG;
     }
     PHS_LOGD("enter cvt_cgdata_set_req cmd:%s cmdlen:%d  ",req->cmd_str, req->len);
@@ -316,7 +316,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
         ret = adapter_cmux_write_for_ps( mux, at_cmd_str, strlen(at_cmd_str), 10);
         if(ret == AT_RESULT_TIMEOUT) {
             PHS_LOGD("Get IP address timeout ");
-            PHS_LOGD("PPP_STATE_DEACTING");
+            //PHS_LOGD("PPP_STATE_DEACTING");
             ppp_info[ppp_index].state = PPP_STATE_DEACTING;
             snprintf(at_cmd_str,sizeof(at_cmd_str), "AT+CGACT=0,%d\r",cid);
             adapter_cmux_register_callback(mux, cvt_cgact_deact_rsp1, (unsigned long)req->recv_pty);
@@ -554,7 +554,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
     adapter_pty_write(req->recv_pty,"ERROR\r",strlen("ERROR\r"));
     PHS_LOGD("Getting IP addr and PDP activate error :%d",ppp_info[ppp_index].state);
     ppp_info[ppp_index].state = PPP_STATE_IDLE;
-    PHS_LOGD("PPP_STATE_IDLE");
+    //PHS_LOGD("PPP_STATE_IDLE");
     adapter_pty_end_cmd(req->recv_pty );
     adapter_free_cmux_for_ps(mux);
     mutex_unlock(&ps_service_mutex);
@@ -765,7 +765,7 @@ int cvt_cgdata_set_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
     char *input;
     int err, error_num;
 
-    PHS_LOGD("enter cvt_cgdata_set_rsp");
+    //PHS_LOGD("enter cvt_cgdata_set_rsp");
     if (rsp == NULL) {
         PHS_LOGD("leave cvt_cgdata_set_rsp:AT_RESULT_NG1");
         return AT_RESULT_NG;

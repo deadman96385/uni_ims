@@ -110,7 +110,7 @@ static char *readline(struct receive_thread_t *me)
 
 		if (count > 0) {
 			AT_DUMP("CHNMNG:readline << ", p_read, count);
-			PHS_LOGD("Receive thread's TID [%d] CHNMNG:readline pread= %p,count=%ld\n", me->tid, p_read,count);
+			//PHS_LOGD("Rev TID [%d] :read pread= %p,count=%ld\n", me->tid, p_read,count);
 			//p_read[count] = '\0';
 			while (count >0) {
                		if (*p_read =='\0') {
@@ -162,12 +162,10 @@ void *receive_data(struct receive_thread_t *me)
 	pid_t tid = gettid();
 	me->tid = tid;
 	PHS_LOGD
-	    ("Receive thread's TID [%d] CHMNG: enter receive data thread :mux=%s\n",
+	    ("Rev TID [%d] : enter receive thread :mux=%s\n",
 	     tid, me->mux->name);
 	while (1) {
-		PHS_LOGD
-		    ("Receive thread's TID [%d] MUX :%s Waiting for resp  \n",
-		     tid, me->mux->name);
+		//PHS_LOGD("Rev TID [%d] MUX :%s Waiting for resp  \n", tid, me->mux->name);
 		atstr = readline(me);	//read a completed at response
                 if (atstr != NULL) {
    			tmp_buff[0] = '\0';
@@ -175,7 +173,7 @@ void *receive_data(struct receive_thread_t *me)
 			memset(atstr, 0, strlen(atstr));
 			received = strlen(tmp_buff);
 			PHS_LOGD
-			    ("Receive thread's TID [%d] CHMNG:  receive data thread :mux=%s:input:%s\n",
+			    ("Rev TID [%d] :  rev data :mux=%s:input:%s\n",
 			     tid, me->mux->name, tmp_buff);
 			phoneserver_deliver_at_rsp(me->mux, tmp_buff, received);
 		}

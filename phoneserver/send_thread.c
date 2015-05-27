@@ -18,8 +18,8 @@
 #include "config.h"
 
 
-#undef  PHS_LOGD
-#define PHS_LOGD(x...)  ALOGD( x )
+//#undef  PHS_LOGD
+//#define PHS_LOGD(x...)  ALOGD( x )
 
 /*## operation deliver_cmd_req(char*,pty_type) */
 static void send_thread_deliver_cmd_req(struct send_thread_t *const me,
@@ -159,7 +159,7 @@ void *send_data(struct send_thread_t *me)
 	pid_t tid = gettid();
 	me->pty->tid = tid;
 	me->tid = tid;
-	PHS_LOGD("Send thread's TID [%d] enter send data thread :pty=%s\n", tid,
+	PHS_LOGD("Send TID [%d] enter send thread :pty=%s\n", tid,
 	       me->pty->name);
 	memset(buffer, 0, SERIAL_BUFFSIZE);
 	while (1) {
@@ -173,7 +173,7 @@ void *send_data(struct send_thread_t *me)
 			memset(atstr, 0, strlen(atstr));
 			received = strlen(tmp_buff);
 			PHS_LOGD
-			    ("Send thread's TID [%d] PS_PTY : %s Received %d bytes command[%s]\n",
+			    ("Send TID [%d] PS_PTY : %s Received %d bytes command[%s]\n",
 		    	 tid, me->pty->name, received, tmp_buff);
 
 			//mutex_lock(&me->pty->receive_lock);  //get channel lock

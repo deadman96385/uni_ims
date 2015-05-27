@@ -944,7 +944,7 @@ void chnmng_start_thread(struct channel_manager_t *const me)
         thread_getschedparam(me->itsReceive_thread[i].thread, &policy, &sched);
         PHS_LOGD("chnmng_mux thread: policy=%d", policy);
         if (policy != SCHED_OTHER) {
-            PHS_LOGD("chnmng_mux thread: policy=%d", policy);
+            //PHS_LOGD("chnmng_mux thread: policy=%d", policy);
             sched.sched_priority = chns_data.mux[i].prority;
             thread_setschedparam(me->itsReceive_thread[i].thread, policy, &sched );
         }
@@ -961,7 +961,7 @@ void chnmng_start_thread(struct channel_manager_t *const me)
         thread_getschedparam(me->itsSend_thread[i].thread, &policy, &sched);
         PHS_LOGD("chnmng_pty thread: policy=%d", policy);
         if (policy != SCHED_OTHER) {
-            PHS_LOGD("chnmng_pty thread: policy=%d!", policy);
+            //PHS_LOGD("chnmng_pty thread: policy=%d!", policy);
             sched.sched_priority = chns_data.pty[i].prority;
             thread_setschedparam(me->itsSend_thread[i].thread, policy, &sched );
         }
@@ -1056,7 +1056,7 @@ int main(int argc, char *argv[])
     pthread_t tid;
     int ret;
 
-    PHS_LOGD("chnmng start phone server");
+    //PHS_LOGD("chnmng start phone server");
     PHS_LOGD("Phoneserver version: %s ",version_string);
 
     if (0 == strcmp(argv[1], "-m") && (argc > 2)) {
