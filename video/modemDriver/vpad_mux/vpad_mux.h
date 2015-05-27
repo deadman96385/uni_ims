@@ -9,7 +9,6 @@
 #ifndef _VPAD_MUX_H_
 #define _VPAD_MUX_H_
 
-#define VPAD_MUX_DEBUG
 #ifndef VPAD_MUX_DEBUG
 #define VPAD_muxDbgPrintf(fmt, args...)
 #else

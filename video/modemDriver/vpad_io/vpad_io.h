@@ -12,7 +12,6 @@
 #include <vpr_comm.h>
 #define VPAD_IO_MESSAGE_SIZE_MAX             (sizeof(VPR_Comm))
 
-#define VPAD_IO_DEBUG
 #ifndef VPAD_IO_DEBUG
 #define VPAD_ioDbgPrintf(fmt, args...)
 #else

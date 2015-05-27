@@ -109,7 +109,7 @@ static void _VPAD_muxStatsReport()
     OSAL_TimeVal myTimeVal;
 
     OSAL_timeGetTimeOfDay(&myTimeVal);
-    OSAL_logMsg("[D2Log] _VPAD_muxStatsReport, timeSec: %d, timeUsec:%d, lastTpSec: %d\n",
+    VPAD_muxDbgPrintf("[D2Log] _VPAD_muxStatsReport, timeSec: %d, timeUsec:%d, lastTpSec: %d\n",
 	myTimeVal.sec, myTimeVal.usec, _VPAD_muxPtr->lastStatTimeStamp.sec);
     if (myTimeVal.sec <
             (_VPAD_muxPtr->lastStatTimeStamp.sec+VPAD_MUX_STAT_TIMER)) {
@@ -139,7 +139,9 @@ static void _VPAD_muxStatsReport()
     _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.isipQ);
     _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.csmEvtQ);
 
+#ifdef VPAD_MUX_DEBUG
     _VPAD_muxVideoCountersReport();
+#endif
 
 }
 #endif // VPAD_MUX_STATS
@@ -670,7 +672,7 @@ static OSAL_TaskReturn _VPAD_muxReadDeviceTask(
 
 _VPAD_READ_TASK_LOOP:
     OSAL_memSet(vpr_ptr, 0, sizeof(vpr_ptr));
-    OSAL_logMsg("[D2Log] _VPAD_muxReadDeviceTask, ioReadDevice\n");
+    VPAD_muxDbgPrintf("[D2Log] _VPAD_muxReadDeviceTask, ioReadDevice\n");
     if (OSAL_SUCCESS != VPAD_ioReadDevice(vpr_ptr, size)) {
         if (_VPAD_muxPtr->isVpmdReady) {
             /* lost vpmd connection */
@@ -682,7 +684,7 @@ _VPAD_READ_TASK_LOOP:
         OSAL_taskDelay(VPAD_MUX_ERROR_RECOVERY_DELAY);
         goto _VPAD_READ_TASK_LOOP;
     }
-    OSAL_logMsg("[D2Log] _VPAD_muxReadDeviceTask, ioReadDevice, SUCCESS, type = %d\n",
+    VPAD_muxDbgPrintf("[D2Log] _VPAD_muxReadDeviceTask, ioReadDevice, SUCCESS, type = %d\n",
          vpr_ptr->targetModule);
 
     /* Swap endian if needed. */
