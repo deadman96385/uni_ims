@@ -10953,12 +10953,13 @@ static void attachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
          snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,1", s_sim_num);
          err = at_send_command(ATch_type[channelID], cmd, NULL );
     }
-
-    err = at_send_command(ATch_type[channelID], "AT+CGATT=1", &p_response);
-    if (err < 0 || p_response->success == 0) {
-        at_response_free(p_response);
-        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-        return;
+    if(!strcmp(s_modem, "w") || s_testmode == 10){
+        err = at_send_command(ATch_type[channelID], "AT+CGATT=1", &p_response);
+        if (err < 0 || p_response->success == 0) {
+            at_response_free(p_response);
+            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            return;
+        }
     }
     if (!strcmp(s_modem, "l")&& isSvLte()) {
         attachPdpIndex = getPDP();
