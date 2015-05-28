@@ -471,6 +471,7 @@ typedef struct  {
     int32 prev_pic_bits;
     int32 total_qp;
     uint32 intra_period;
+    uint32 ori_intra_period;
     int32 I_P_ratio;
     int32 gop_num_per_sec;
     int32 rem_frame_num;

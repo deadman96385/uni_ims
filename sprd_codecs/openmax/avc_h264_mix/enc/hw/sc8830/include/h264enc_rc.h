@@ -28,6 +28,7 @@ extern   "C"
 {
 #endif
 
+#define RCMODE_FRAMERATE_
 #define TARGET_BITRATE 1000000
 
 //#define SLICE_SIZE TARGET_BITRATE/INTRA_PERIOD/3
@@ -40,9 +41,15 @@ extern   "C"
 #define I_P_RATIO 3 // the bit allocation for I and P
 
 int32 rc_init_GOP (H264EncObject *vo,  RC_GOP_PARAS *rc_gop_paras);
-int32 rc_init_pict (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras, RC_PIC_PARAS *rc_pic_paras);
 int32 rc_init_slice (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr, RC_PIC_PARAS *rc_pic_paras);
+
+#ifndef RCMODE_FRAMERATE_
+int32 rc_init_pict (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras, RC_PIC_PARAS *rc_pic_paras);
 void rc_update_pict (H264EncObject *vo, int32 bits, RC_GOP_PARAS *rc_gop_paras);
+#else
+int32 rc_init_pict (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras, RC_PIC_PARAS *rc_pic_paras, int frame_type);
+void rc_update_pict (H264EncObject *vo, int32 bits, RC_GOP_PARAS *rc_gop_paras, int frame_type);
+#endif
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
