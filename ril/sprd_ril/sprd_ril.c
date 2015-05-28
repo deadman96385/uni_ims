@@ -10977,13 +10977,16 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
     int maxPDPNum = getMaxPDPNum();
     extern int s_sim_num;
     char cmd[30];
+    bool islte = isLte();
 
-    for(i = 0; i < maxPDPNum; i++) {
-        if (pdp[i].cid > 0) {
-            snprintf(cmd,sizeof(cmd),"AT+CGACT=0,%d",pdp[i].cid);
-            at_send_command(ATch_type[channelID], cmd, &p_response);
-            RILLOGD("pdp[%d].state = %d", i, pdp[i].state);
-            putPDP(i);
+    if(islte){
+        for(i = 0; i < maxPDPNum; i++) {
+            if (pdp[i].cid > 0) {
+                snprintf(cmd,sizeof(cmd),"AT+CGACT=0,%d",pdp[i].cid);
+                at_send_command(ATch_type[channelID], cmd, &p_response);
+                RILLOGD("pdp[%d].state = %d", i, pdp[i].state);
+                putPDP(i);
+            }
         }
     }
 
@@ -10992,7 +10995,7 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
         RILLOGD("attachGPRS, put pdp %d", attachPdpIndex);
         attachPdpIndex = -1;
     }
-    if (isLte()) {
+    if (islte) {
         if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
             err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
             if (err < 0 || p_response->success == 0) {
