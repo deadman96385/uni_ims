@@ -11720,7 +11720,8 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             RILLOGD("The last call fail cause: %d", call_fail_cause);
         }
         if(commas == 4) { /*GPRS reply 5 parameters*/
-            if(end_status != 29) {
+            /*as end_status 21 means: pdp reject by network so we not do onDataCallListChanged*/
+            if(end_status != 29 && end_status != 21) {
                 if(end_status == 104){
 
                     RIL_requestTimedCallback (onDataCallListChanged, &cid, NULL);
