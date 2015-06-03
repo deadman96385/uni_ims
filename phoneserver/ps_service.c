@@ -46,6 +46,7 @@
 #define SYS_NO_ARP_IPV6  "sys.data.noarp.ipv6"
 #define SYS_IPV6_DISABLE "sys.data.IPV6.disable"
 #define SYS_NET_ADDR "sys.data.net.addr"
+#define SYS_IPV6_ON  "sys.data.ipv6.on"
 #define RETRY_MAX_COUNT 1000
 #define DEFAULT_PUBLIC_DNS2 "204.117.214.10"
 //Due to real network limited, 2409:8084:8000:0010:2002:4860:4860:8888 maybe not correct
@@ -303,6 +304,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
     } else {*/
         int i, ip_state, count = 0;
         char prop[PROPERTY_VALUE_MAX];
+        char ipv6_on[PROPERTY_VALUE_MAX];
         char linker[128] = {0};
         char ipv6_dhcpcd_cmd[128] = {0};
         if (!isLte()){
@@ -467,7 +469,12 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
                     PHS_LOGD("IPV4 arp linker = %s", linker);
 
                     //disable IPV6
-                    snprintf(linker, sizeof(linker), "1");
+                    property_get(SYS_IPV6_ON,ipv6_on,"0");
+                    if(!strcmp(ipv6_on, "1")){// add for cts bug442490
+                        snprintf(linker, sizeof(linker), "0");
+                    }else{
+                        snprintf(linker, sizeof(linker), "1");
+                    }
                     property_set(SYS_IPV6_DISABLE, linker);
                     PHS_LOGD("IPV6 disable linker = %s", linker);
 
