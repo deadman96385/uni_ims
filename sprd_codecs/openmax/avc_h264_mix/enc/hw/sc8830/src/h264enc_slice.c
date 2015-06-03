@@ -216,6 +216,7 @@ PUBLIC int32 H264Enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr
     int32 i_frame_size;
     uint32 slice_bits;
     uint32 int_ret;
+    int32 reg_value = 0;
 
     img_ptr->slice_end = 0;
     slice_bits = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF, "TOTAL_BITS");
@@ -251,12 +252,14 @@ PUBLIC int32 H264Enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr
     }
 #endif
 
-    if(int_ret & V_BIT_1)	// VLC_FRM_DONE
+    reg_value = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_INT_RAW_OFF, "check interrupt type");
+    if((int_ret & V_BIT_1)||(reg_value & V_BIT_1))// VLC_FRM_DONE
     {
         vo->error_flag = 0;
     } else if(int_ret & (V_BIT_4 | V_BIT_5 |V_BIT_30 | V_BIT_31))	// (VLC_ERR|TIME_OUT)
     {
-        vo->error_flag |= ER_HW_ID;
+         SPRD_CODEC_LOGE ("%s, %d, VSP_INT_RAW 0x%x \n", __FUNCTION__, __LINE__,reg_value);
+         vo->error_flag |= ER_HW_ID;
 
         if (int_ret & V_BIT_4)
         {
