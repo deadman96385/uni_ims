@@ -29,18 +29,26 @@ extern   "C"
 
 PUBLIC int32 VSP_CFG_FREQ(VSPObject *vo, uint32 frame_size)
 {
-    if(frame_size > 1280 *720)
+    if(frame_size <= 320*240)
     {
         vo->vsp_freq_div = 0;
-    } else if(frame_size > 720*576)
+    }
+    else if(frame_size <= 720*576)
     {
         vo->vsp_freq_div = 1;
-    } else if(frame_size > 320*240)
+    }
+    else if(frame_size <= 1280 *720)
     {
         vo->vsp_freq_div = 2;
-    } else
+    }
+    else if (vo->vsp_version != PIKE)
     {
         vo->vsp_freq_div = 3;
+    }
+    else
+    {
+        vo->vsp_freq_div = 2;
+        return  -1;
     }
 
     return 0;
