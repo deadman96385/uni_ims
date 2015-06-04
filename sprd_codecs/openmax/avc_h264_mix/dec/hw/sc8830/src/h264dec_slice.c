@@ -748,6 +748,7 @@ LOCAL MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *de
     cmd = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_INT_RAW_OFF, "check interrupt type");
     while ((cmd&0x25)==0) //weihu tmp, BIT_0|BIT_2|BIT5
     {
+        usleep(200);
         cmd = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_INT_RAW_OFF, "check interrupt type");
     }
     //SPRD_CODEC_LOGD("%s, %d, int_status: %0x", __FUNCTION__, __LINE__, cmd);
