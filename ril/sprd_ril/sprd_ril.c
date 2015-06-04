@@ -1484,7 +1484,7 @@ error:
             if (err < 0) goto error1;
             err = at_tok_nextint(&line,&errNum);
             if (err < 0) goto error1;
-            if (errNum == 70 || errNum == 254 || errNum == 128) {
+            if (errNum == 70 || errNum == 254 || errNum == 128 || errNum == 254) {
                 RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
                 at_response_free(p_response);
                 return;
@@ -1690,7 +1690,7 @@ error:
             if(err >= 0) {
                 if(errNum == 11 || errNum == 12) {
                     setRadioState(channelID, RADIO_STATE_SIM_LOCKED_OR_ABSENT);
-                } else if (errNum == 70 || errNum == 3  || errNum == 128) {
+                } else if (errNum == 70 || errNum == 3 || errNum == 128 || errNum == 254) {
                     remainTimes = getRemainTimes(channelID, type);
                     RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE,
                             &remainTimes, sizeof(remainTimes));
@@ -1755,7 +1755,7 @@ static void requestChangeFacilityLock(int channelID,  char **data, size_t datale
 error:
     if (err < 0 || errNum == 0xff) {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-    } else if (errNum == 70 || errNum == 3 || errNum == 128) {
+    } else if (errNum == 70 || errNum == 3 || errNum == 128 || errNum == 254) {
         RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
     } else {
         RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
@@ -5289,7 +5289,7 @@ error:
         goto error1;
     if (response.errorCode == 313) {
         RIL_onRequestComplete(t, RIL_E_SMS_SEND_FAIL_RETRY, NULL, 0);
-    } else if (response.errorCode == 512  || response.errorCode == 128) {
+    } else if (response.errorCode == 512  || response.errorCode == 128 || response.errorCode == 254) {
         RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
     }
     at_response_free(p_response);
@@ -5384,7 +5384,7 @@ static void requestSendIMSSMS(int channelID, void *data, size_t datalen,
                     goto error1;
                 if (response.errorCode == 313) {
                     RIL_onRequestComplete(t, RIL_E_SMS_SEND_FAIL_RETRY, NULL, 0);
-                } else if (response.errorCode == 512 || response.errorCode == 128) {
+                } else if (response.errorCode == 512 || response.errorCode == 128 || response.errorCode == 254) {
                     RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
                 }
                 at_response_free(p_response);
@@ -8660,7 +8660,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                             }
                         }
                     }
-                    if (err >= 0 && (errNum == 70 || errNum == 3 || errNum == 128)) {
+                    if (err >= 0 && (errNum == 70 || errNum == 3 || errNum == 128 || errNum == 254)) {
                         RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
                     } else {
                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -8856,7 +8856,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                         err = at_tok_start(&line);
                         if (err >= 0) {
                             err = at_tok_nextint(&line,&errNum);
-                            if (err >= 0 && (errNum == 70 || errNum == 3 || errNum == 128))
+                            if (err >= 0 && (errNum == 70 || errNum == 3 || errNum == 128 || errNum == 254))
                                 RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
                             else
                                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -14089,7 +14089,7 @@ error:
             if (err < 0) goto error1;
             err = at_tok_nextint(&line,&errNum);
             if (err < 0) goto error1;
-            if (errNum == 70 || errNum == 254 || errNum == 128) {
+            if (errNum == 70 || errNum == 254 || errNum == 128 || errNum == 254) {
                 RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
                 at_response_free(p_response);
                 return;
@@ -14276,7 +14276,7 @@ error:
             if (err < 0) goto error1;
             err = at_tok_nextint(&line,&errNum);
             if (err < 0) goto error1;
-            if (errNum == 70 || errNum == 254 || errNum == 128) {
+            if (errNum == 70 || errNum == 254 || errNum == 128 || errNum == 254) {
                 RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
                 at_response_free(p_response);
                 return;
