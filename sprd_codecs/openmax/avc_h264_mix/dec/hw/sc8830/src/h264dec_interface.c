@@ -433,7 +433,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
                 {
                     vo->memory_error = 1;
                     ret = MMDEC_MEMORY_ERROR;
-                } else if (vo->error_flag & ER_FORMAT_ID)
+                } else if ((vo->error_flag & ER_FORMAT_ID) || (vo->error_flag & ER_SPSPPS_ID) )
                 {
                     ret = MMDEC_NOT_SUPPORTED;
                 } else if (vo->error_flag & ER_SREAM_ID)

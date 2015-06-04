@@ -471,7 +471,9 @@ PUBLIC void H264Dec_interpret_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
        )//0x42: baseline profile, 0x4d: main profile
     {
         vo->error_flag |= ER_SREAM_ID;
-        return;
+        vo->error_flag |= ER_SPSPPS_ID;
+        SPRD_CODEC_LOGE ("sps_ptr->profile_idc INVALID \n");
+        return ;
     }
     sps_ptr->constrained_set0_flag = READ_FLC(1);
     sps_ptr->constrained_set1_flag = READ_FLC(1);

@@ -679,6 +679,7 @@ typedef struct tagVSPObject
 #define ER_REF_FRM_ID   	(1<<2)
 #define ER_HW_ID                        (1<<3)
 #define ER_FORMAT_ID                        (1<<4)
+#define ER_SPSPPS_ID                        (1<<5)
 
 /* -----------------------------------------------------------------------
 ** Global
