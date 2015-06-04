@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources>
+	<color name="cm_startLightGray">#808080</color>
+	<color name="cm_endLightGray">#9F9F9F</color>
+		<color name="four">#FF99CC</color>
+	<color name="five">#CCFF99</color>
+	<color name="six">#99CC99</color>
+</resources>

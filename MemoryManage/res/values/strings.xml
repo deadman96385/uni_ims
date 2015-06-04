@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">内存管理</string>
+    <string name="action_settings">Settings</string>
+    <string name="hello_world">Hello world!</string>
+
+    
+    <string name="app_title">app name:</string>
+    <string name="app_type">app type：</string>
+    <string name="app_memory">app memory：</string>
+    <string name="app_kill">close</string>
+    <string name="free_memory">free memory：</string>
+    <string name="sysprocess">系统进程</string>
+    <string name="appprocess">应用进程</string>
+    <string name="diag_ok">确认</string>
+    <string name="diag_cancel">取消</string>
+    <string name="diag_close">关闭</string>
+    <string name="dia_title">确定要彻底关闭程序%1$s吗？</string>
+    
+</resources>

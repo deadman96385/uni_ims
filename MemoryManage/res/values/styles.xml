@@ -1,0 +1,50 @@
+<resources>
+
+    <!--
+        Base application theme, dependent on API level. This theme is replaced
+        by AppBaseTheme from res/values-vXX/styles.xml on newer devices.
+    -->
+    <style name="AppBaseTheme" parent="android:Theme.Light">
+        <!--
+            Theme customizations available in newer API levels can go in
+            res/values-vXX/styles.xml, while customizations related to
+            backward-compatibility can go here.
+        -->
+    </style>
+
+    <!-- Application theme. -->
+    <style name="AppTheme" parent="AppBaseTheme">
+        <!-- All customizations that are NOT specific to a particular API-level can go here. -->
+    </style>
+
+    <style name="Theme.RealWorld" parent="AppTheme">
+        <item name="android:textViewStyle">@style/CustomNormalTextView</item>
+        <item name="android:editTextStyle">@style/CustomNormalEditText</item>
+        <item name="android:buttonStyle">@style/CustomNormalButton</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:checkboxStyle">@style/CustomNormalCheckBox</item>
+        <item name="android:drawingCacheQuality">auto</item>
+        <item name="android:listSelector">@drawable/bg_list_item</item>
+        <item name="android:listDivider">@drawable/listitem_divide</item>
+        <item name="android:colorBackground">#ff0000</item>
+        <item name="android:colorForeground">#00ff00</item>
+    </style>
+    
+    <style name="CustomNormalTextView" parent="@android:style/Widget.TextView">
+        <item name="android:textColor">@color/black</item>
+    </style>
+    
+    <style name="CustomNormalEditText" parent="@android:style/Widget.EditText">
+        <item name="android:background">@drawable/my_edittext_bg</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+    
+    <style name="CustomNormalButton" parent="@android:style/Widget.Button">
+        
+    </style>
+    
+    <style name="CustomNormalCheckBox" parent="@android:style/Widget.CompoundButton.CheckBox">
+        
+    </style>
+</resources>

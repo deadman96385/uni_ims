@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+	package="com.sprd.security.tools.battery" android:sharedUserId="com.sprd.security" android:versionName="1.0" android:versionCode="1">
+
+	<supports-screens android:largeScreens="true" android:anyDensity="true" />
+
+	<application android:icon="@drawable/icon"
+		android:label="@string/txt_quick_battery" android:process="com.sprd.security">
+
+		<receiver android:name=".BatteryWidgetProvider">
+			<intent-filter>
+				<action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+			</intent-filter>
+			<meta-data android:name="android.appwidget.provider"
+				android:resource="@xml/battery_widget_info" />
+		</receiver>
+
+		<service android:name=".BatteryService">
+			<intent-filter>
+				<action android:name="com.sprd.security.tools.battery.BatteryService" />
+			</intent-filter>
+		</service>
+
+		<activity android:name=".SettingsActivityList"
+			android:label="@string/txt_assigned_activity" >
+		    
+		    
+		    <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            
+		</activity>
+
+		<activity android:name=".QuickBatteryActivity" android:theme="@android:style/Theme.NoTitleBar"
+			android:label="@string/txt_quick_battery">
+			<intent-filter>
+				<action android:name="android.intent.action.VIEW" />
+				<category android:name="android.intent.category.DEFAULT" />
+				<data android:mimeType="com.sprd.security.tools.battery/widget" />
+			</intent-filter>
+		</activity>
+
+	</application>
+
+	<uses-sdk android:minSdkVersion="8"/>
+
+</manifest> 

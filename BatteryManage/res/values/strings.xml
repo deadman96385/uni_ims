@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="txt_quick_battery">省电管理</string>
+    <string name="txt_configuration">配置</string>
+    <string name="txt_recommended">应用专题</string>
+    <string name="txt_other">其他应用</string>
+    <string name="txt_assigned_activity">省电管理</string>
+    <string name="txt_assigned_activity_descr">设置和查看应用电池相关</string>
+    <string name="txt_select_widget_design">小部件的风格</string>
+    <string name="btn_done">完成</string>
+    <string name="preview">预览</string>
+    <string name="setting_text">Settings text</string>
+    <string name="number_99">99</string>
+    
+</resources>
