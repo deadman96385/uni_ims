@@ -794,6 +794,9 @@ static int getPDP(void)
     is_open_channel = atoi(prop);
 
     for (i=0; i < maxPDPNum; i++) {
+        if(activePDN > 0 && pdn[i].nCid == (i + 1)){
+            continue;
+        }
         pthread_mutex_lock(&pdp[i].mutex);
         if(pdp[i].state == PDP_IDLE) {
             if(isLte() && is_open_channel && (i == 0)){
@@ -3203,14 +3206,14 @@ RETRY:
             int i;
             for (i = 0; i < 11; i++) {
                 if (pdn[i].nCid == (i + 1)) {
-                    int isActivated = getPDPByIndex(i);
-                    RILLOGD("isActivated = %d", isActivated);
                     strncpy(strApnName, pdn[i].strApn, checkCmpAnchor(pdn[i].strApn));
                     strApnName[strlen(strApnName)] = '\0';
+                    RILLOGD("pdp[%d].state = %d", i, pdp[i].state);
                     if (i < 3
                             && (!strcasecmp(pdn[i].strApn, apn)
-                                    || !strcasecmp(strApnName, apn)) && (isActivated != -1)) {
+                                    || !strcasecmp(strApnName, apn)) && (pdp[i].state == PDP_IDLE)) {
                         RILLOGD("Using default PDN");
+                        getPDPByIndex(i);
                         snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d,%d", pdn[i].nCid, 0);
                         RILLOGD("clean up seth cmd = %s", cmd);
                         err = at_send_command(ATch_type[channelID], cmd, &p_response);
