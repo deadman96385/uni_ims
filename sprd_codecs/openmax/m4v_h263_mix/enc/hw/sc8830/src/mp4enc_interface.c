@@ -228,6 +228,7 @@ MMEncRet MP4EncPreInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr)
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
     vo->vsp_version = SHARK;
+    vo->vsp_freq_div = SPRD_MAX_VSP_FREQ_LEVEL;
     if(VSP_OPEN_Dev((VSPObject *)vo) < 0)
     {
         return MMDEC_HW_ERROR;

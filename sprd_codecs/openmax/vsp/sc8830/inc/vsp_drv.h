@@ -83,6 +83,9 @@ extern "C"
 #define SPRD_VSP_DRIVER "/dev/sprd_vsp"
 #define SPRD_VSP_MAP_SIZE 0xA000            // 40kbyte
 
+#define SPRD_MAX_VSP_FREQ_LEVEL 3
+#define SPRD_MAX_VSP_FREQ_LEVEL_FOR_PIKE 2
+
 #define SPRD_VSP_IOCTL_MAGIC 	'm'
 #define VSP_CONFIG_FREQ 		_IOW(SPRD_VSP_IOCTL_MAGIC, 1, unsigned int)
 #define VSP_GET_FREQ    			_IOR(SPRD_VSP_IOCTL_MAGIC, 2, unsigned int)

@@ -96,7 +96,7 @@ MMEncRet H264EncPreInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr)
     vo->g_nFrame_enc = 0;
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
-    vo->vsp_freq_div = 0;
+    vo->vsp_freq_div = SPRD_MAX_VSP_FREQ_LEVEL; // 3 is related to the max vsp frequency
     vo->error_flag = 0;
     vo->b_previous_frame_failed = 0;
     vo->vsp_version = SHARK;

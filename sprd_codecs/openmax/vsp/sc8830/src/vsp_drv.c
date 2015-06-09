@@ -75,6 +75,11 @@ PUBLIC int32 VSP_OPEN_Dev (VSPObject *vo)
         ioctl(vo->s_vsp_fd, VSP_VERSION, &(vo->vsp_version));
     }
 
+    if (vo->vsp_version == PIKE)
+    {
+        vo->vsp_freq_div = SPRD_MAX_VSP_FREQ_LEVEL_FOR_PIKE;
+    }
+
     SPRD_CODEC_LOGD("%s, %d, vsp addr %lx, vsp_version: %s\n",__FUNCTION__, __LINE__, vo->s_vsp_Vaddr_base, vsp_version_array[vo->vsp_version]);
 
     return 0;

@@ -253,7 +253,7 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
 
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
-    vo->vsp_freq_div = 0;
+    vo->vsp_freq_div = SPRD_MAX_VSP_FREQ_LEVEL;
     vo->vsp_version = SHARK;
     vo->yuv_format = pVideoFormat->yuv_format;
 
