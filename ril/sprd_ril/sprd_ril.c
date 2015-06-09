@@ -4868,6 +4868,8 @@ static void requestRegistrationState(int channelID, int request, void *data,
     }
     if((response[0] == 1|| response[0] == 5) && response[3] == 14){
         in4G = 1;
+    }else if(request == RIL_REQUEST_DATA_REGISTRATION_STATE){
+        in4G = 0;
     }
 
     if (request == RIL_REQUEST_VOICE_REGISTRATION_STATE) {
