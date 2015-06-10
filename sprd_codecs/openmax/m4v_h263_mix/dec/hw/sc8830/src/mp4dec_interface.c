@@ -257,7 +257,6 @@ PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_fo
     {
         if(video_format_ptr->i_extra > 0)
         {
-            MMDecRet is_init_success;
             uint32 bs_buffer_length;
             uint_32or64 bs_start_addr;
 
@@ -283,8 +282,8 @@ PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_fo
             VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_CFG1_OFF, (0), "BSM_cfg1 stream buffer offset & destuff disable");//point to the start of NALU.
             VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR + BSM_CFG0_OFF, (V_BIT_31|((bs_buffer_length+128)&0xfffffffc)),"BSM_cfg0 stream buffer size");// BSM load data. Add 16 DW for BSM fifo loading.
 
-            is_init_success = Mp4Dec_DecMp4Header(vo, video_format_ptr->i_extra);
-            if(MMDEC_OK == is_init_success)
+            ret = Mp4Dec_DecMp4Header(vo, video_format_ptr->i_extra);
+            if(MMDEC_OK == ret)
             {
                 video_format_ptr->frame_width = vop_mode_ptr->OrgFrameWidth;
                 video_format_ptr->frame_height= vop_mode_ptr->OrgFrameHeight;
