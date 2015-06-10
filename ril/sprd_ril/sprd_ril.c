@@ -10782,23 +10782,32 @@ out:
     }
     //Added for bug#213435 sim lock begin
     else if (0 == strcmp (cpinResult, "PH-SIM PIN")) {
-        return SIM_SIM_PERSONALIZATION;
+        ret = SIM_SIM_PERSONALIZATION;
+        goto done;
     } else if (0 == strcmp (cpinResult, "PH-NETSUB PIN"))  {
-        return SIM_NETWORK_SUBSET_PERSONALIZATION;
+        ret = SIM_NETWORK_SUBSET_PERSONALIZATION;
+        goto done;
     } else if (0 == strcmp (cpinResult, "PH-CORP PIN"))  {
-        return SIM_CORPORATE_PERSONALIZATION;
+        ret = SIM_CORPORATE_PERSONALIZATION;
+        goto done;
     } else if (0 == strcmp (cpinResult, "PH-SP PIN"))  {
-        return SIM_SERVICE_PROVIDER_PERSONALIZATION;
+        ret = SIM_SERVICE_PROVIDER_PERSONALIZATION;
+        goto done;
     } else if (0 == strcmp (cpinResult, "PH-NET PUK")) {
-        return SIM_NETWORK_PUK;
+        ret = SIM_NETWORK_PUK;
+        goto done;
     } else if (0 == strcmp (cpinResult, "PH-NETSUB PUK")) {
-        return SIM_NETWORK_SUBSET_PUK;
+        ret =  SIM_NETWORK_SUBSET_PUK;
+        goto done;
     } else if (0 == strcmp (cpinResult, "PH-CORP PUK")) {
-        return SIM_CORPORATE_PUK;
+        ret =  SIM_CORPORATE_PUK;
+        goto done;
     } else if (0 == strcmp (cpinResult, "PH-SP PUK")) {
-        return SIM_SERVICE_PROVIDER_PUK;
+        ret =  SIM_SERVICE_PROVIDER_PUK;
+        goto done;
     } else if (0 == strcmp (cpinResult, "PH-SIM PUK")) {
-        return SIM_SIM_PUK;
+        ret =  SIM_SIM_PUK;
+        goto done;
     }
     //Added for bug#213435 sim lock end
     //Added for bug#242159 begin
@@ -10821,6 +10830,11 @@ out:
 
 done:
     at_response_free(p_response);
+    if(ret == SIM_ABSENT){
+        setHasSim(false);
+    }else{
+        setHasSim(true);
+    }
     return ret;
 }
 
