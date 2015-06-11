@@ -201,6 +201,7 @@ static int ussdError = 0;/* 0: no unsolicited SPERROR. 1: unsolicited SPERROR. *
 static int ussdRun = 0;/* 0: ussd to end. 1: ussd to start. */
 
 static int s_isstkcall = 0;
+static int add_ip_cid = -1;   //for volte addtional business
 /*SPRD: add for VoLTE to handle SRVCC */
 typedef struct {
     char *cmd;
@@ -763,6 +764,9 @@ static void putPDP(int cid)
     if(pdp[cid].state != PDP_BUSY)
     {
         goto done1;
+    }
+    if(add_ip_cid == (cid +1)){
+        add_ip_cid = -1;
     }
     pdp[cid].state = PDP_IDLE;
 done1:
@@ -2353,6 +2357,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
     char *out;
     int count = 0;
     bool IsLte = isLte();
+    char eth[PROPERTY_VALUE_MAX] = {0};
 
     RILLOGD("requestOrSendDataCallList, cid: %d", cid);
 
@@ -2569,7 +2574,6 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
             char *apn;
             char *address;
             char cmd[30] = {0};
-            char eth[PROPERTY_VALUE_MAX] = {0};
             char prop[PROPERTY_VALUE_MAX] = {0};
             const int   iplist_sz = 180;
             char*       iplist = NULL;
@@ -2781,7 +2785,29 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                             } else {
                                 RIL_onRequestComplete(*t, RIL_E_SUCCESS, &responses[i],
                                     sizeof(RIL_Data_Call_Response_v11));
+
                             }
+                        }
+                        if (add_ip_cid ==0 &&  !(IsLte && bLteDetached) && isVoLteEnable() ) {
+                            char cmd[180] = {0};
+                            char prop0[PROPERTY_VALUE_MAX] = {0};
+                            char prop1[PROPERTY_VALUE_MAX] = {0};
+                            if (!strcmp(responses[i].type,"IPV4V6") ) {
+                                snprintf(cmd, sizeof(cmd), "net.%s%d.ip", eth, responses[i].cid-1);
+                                property_get(cmd, prop0, NULL);
+                                snprintf(cmd, sizeof(cmd), "net.%s%d.ipv6_ip", eth, responses[i].cid-1);
+                                property_get(cmd, prop1, NULL);
+                                snprintf(cmd, sizeof(cmd),"AT+XCAPIP=%d,\"%s,[%s]\"",
+                                        responses[i].cid,prop0,prop1);
+                            } else if (!strcmp( responses[i].type,"IP")) {
+                                snprintf(cmd, sizeof(cmd),"AT+XCAPIP=%d,\"%s,[FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF]\"",
+                                        responses[i].cid,responses[i].addresses);
+                            } else {
+                                snprintf(cmd, sizeof(cmd),"AT+XCAPIP=%d,\"0.0.0.0,[%s]\"",
+                                        responses[i].cid,responses[i].addresses);
+                            }
+                                err = at_send_command(ATch_type[channelID],cmd,NULL);
+                                add_ip_cid = responses[i].cid;
                         }
 
                         return;
@@ -3197,6 +3223,10 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     RILLOGD("requestSetupDataCall data[3] '%s'", ((const char **)data)[3]);
     RILLOGD("requestSetupDataCall data[4] '%s'", ((const char **)data)[4]);
     RILLOGD("requestSetupDataCall data[5] '%s'", ((const char **)data)[5]);
+
+    if((strstr(apn,"wap") == NULL) && ( add_ip_cid == -1) ){
+        add_ip_cid = 0;
+    }
 
 RETRY:
     bLteDetached = false;
@@ -3663,6 +3693,9 @@ error:
         } else {
             putPDP(index);
         }
+    }
+    if(add_ip_cid == 0){
+        add_ip_cid = -1;
     }
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     if(p_response)
