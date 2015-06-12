@@ -93,12 +93,12 @@ void h264enc_sps_init (ENC_IMAGE_PARAMS_T *img_ptr)
     sps->b_mb_adaptive_frame_field = 0;
     sps->b_direct8x8_inference = 0;
 
-    if ((img_ptr->orig_height & 0xf) != 0) //only consider 1920x1080 and 960x540
+    if ((img_ptr->orig_height & 0xf) || (img_ptr->orig_width & 0xf))
     {
         sps->b_crop = 1;
 
         sps->frame_crop_left_offset = 0;
-        sps->frame_crop_right_offset = 0;
+        sps->frame_crop_right_offset = (img_ptr->width - img_ptr->orig_width)/2;
         sps->frame_crop_top_offset = 0;
         sps->frame_crop_bottom_offset = (img_ptr->height - img_ptr->orig_height)/2;
     } else
