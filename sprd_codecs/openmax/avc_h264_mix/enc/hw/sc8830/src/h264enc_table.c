@@ -1266,6 +1266,26 @@ uint32 g_skipBlock_QP_table[52] =
     1536,1536,                                         /*50-51*/
 };
 
+LEVEL_LIMITS_T g_level_infos[] = {
+    {1485, 	99, 		64, 		AVC_LEVEL1,		"level1.0"},
+    {3000, 	396, 	192, 	AVC_LEVEL1_1,	"level1.1"	},
+    {6000, 	396, 	384, 	AVC_LEVEL1_2,	"level1.2"},
+    {11880, 	396, 	768, 	AVC_LEVEL1_3,	"level1.3"},
+    {11880, 	396, 	2000, 	AVC_LEVEL2,		"level2.0"	},
+    {19800, 	792, 	4000, 	AVC_LEVEL2_1,	"level2.1"},
+    {20250, 	1620, 	4000, 	AVC_LEVEL2_2,	"level2.2"},
+    {40500, 	1620, 	10000, 	AVC_LEVEL3,		"level3.0"	},
+    {108000, 	3600, 	14000, 	AVC_LEVEL3_1,	"level3.1"},
+    {216000, 	5120, 	20000, 	AVC_LEVEL3_2,	"level3.2"},
+    {245760, 	8192, 	20000, 	AVC_LEVEL4,		"level4.0"},
+    {245760, 	8192, 	50000, 	AVC_LEVEL4_1,	"level4.1"},
+    {491520, 	8192, 	50000, 	AVC_LEVEL4_2,	"level4.2"},
+    {589824, 	22080, 	135000, 	AVC_LEVEL5,		"level5.0"},
+    {983040, 	36864, 	240000, 	AVC_LEVEL5_1,	"level5.1"},
+};
+
+uint32 g_level_num = sizeof(g_level_infos)/sizeof(LEVEL_LIMITS_T);
+
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

@@ -450,6 +450,14 @@ typedef struct enc_img_parameter_tag
 #endif // SIM_IN_WIN
 } ENC_IMAGE_PARAMS_T;
 
+typedef struct level_limits_t {
+    uint32 MaxMBPS;
+    uint32 MaxFS;
+    uint32 MaxBR;
+    AVCLevel level;
+    char level_str[16];
+} LEVEL_LIMITS_T;
+
 typedef enum
 {
     INTER_MEM = 0, /*physical continuous and no-cachable, constant length */

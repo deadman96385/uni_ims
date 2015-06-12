@@ -22,6 +22,8 @@ extern   "C"
 #endif
 extern uint32 g_vlc_hw_tbl [406*2*3];
 extern uint32 g_skipBlock_QP_table[52];
+extern LEVEL_LIMITS_T g_level_infos[];
+extern uint32 g_level_num;
 
 //cabac
 extern const int32 INIT_MB_TYPE_I[1][3][11][2];
