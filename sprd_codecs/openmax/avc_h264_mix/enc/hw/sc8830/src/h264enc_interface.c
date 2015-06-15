@@ -300,8 +300,7 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
     MMEncConfig * enc_config = vo->g_h264_enc_config;
     uint32 target_bitrate_max;
     uint32 total_mb_number, mb_rate;
-    uint32 i, level_idx;
-
+    int32 i, level_idx;
 
     SCI_ASSERT(NULL != pConf);
 
@@ -344,10 +343,14 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
         enc_config->targetBitRate = target_bitrate_max;
         enc_config->QP_IVOP = 1;
         enc_config->QP_PVOP = 1;
+    }else if(enc_config->targetBitRate > (target_bitrate_max*3/8))
+    {
+        enc_config->QP_IVOP = 15;
+        enc_config->QP_PVOP = 15;
     }
 
     SPRD_CODEC_LOGD ("%s, %d, FrameRate: %d, intra_period: %d, targetBitRate: %d, target_bitrate_max: %d, level: %s, QP_I: %d, QP_P: %d",
-                     __FUNCTION__, __LINE__, enc_config->FrameRate, vo->rc_gop_paras.intra_period, enc_config->targetBitRate, target_bitrate_max,
+                     __FUNCTION__, __LINE__, enc_config->FrameRate, vo->rc_gop_paras.intra_period, pConf->targetBitRate, target_bitrate_max,
                      g_level_infos[level_idx].level_str, enc_config->QP_IVOP, enc_config->QP_PVOP);
 
     return MMENC_OK;
