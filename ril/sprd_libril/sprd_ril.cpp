@@ -345,6 +345,7 @@ static int responseCallCsFallBack(Parcel &p, void *response, size_t responselen)
 static int responseCallListVoLTE(Parcel &p, void *response, size_t responselen);
 static int responseCallForwardsUri(Parcel &p, void *response, size_t responselen);
 static void stripNumberFromSipAddress(const char *sipAddress, char *number, int len);
+static int responseBroadcastSmsLte(Parcel &p, void *response, size_t responselen);
 #endif
 
 static int decodeVoiceRadioTechnology (RIL_RadioState radioState);
@@ -4501,6 +4502,35 @@ static int responseCallForwardsUri(Parcel &p, void *response, size_t responselen
     return 0;
 }
 
+static int responseBroadcastSmsLte(Parcel &p, void *response, size_t responselen) {
+    if (response == NULL) {
+        RILLOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    if (responselen != sizeof(RIL_BROADCAST_SMS_LTE)) {
+        RILLOGE("invalid response length was %d expected %d",
+                (int)responselen, (int)sizeof (RIL_BROADCAST_SMS_LTE));
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    RIL_BROADCAST_SMS_LTE *p_cur = (RIL_BROADCAST_SMS_LTE *) response;
+    p.writeInt32(p_cur->segment_id);
+    p.writeInt32(p_cur->total_segments);
+    p.writeInt32(p_cur->serial_number);
+    p.writeInt32(p_cur->message_identifier);
+    p.writeInt32(p_cur->dcs);
+    p.writeInt32(p_cur->length);
+    writeStringToParcel(p, p_cur->data);
+
+    startResponse;
+    appendPrintBuf("responseBroadcastSmsLte: segment_id=%d, total_segments=%d, serial_number=%d, "
+            "message_identifier=%d, dcs=%d, length=%d, data=%s", p_cur->segment_id,
+            p_cur->total_segments, p_cur->serial_number, p_cur->message_identifier, p_cur->dcs, p_cur->length, p_cur->data);
+    closeResponse;
+    return 0;
+}
+
 static void stripNumberFromSipAddress(const char *sipAddress, char *number, int len) {
     if (sipAddress == NULL || strlen(sipAddress) == 0 || number == NULL || len <= 0) {
         return;
@@ -6320,6 +6350,7 @@ requestToString(int request) {
         case RIL_REQUEST_VOLTE_INITIAL_GROUP_CALL: return "VOLTE_INITIAL_GROUP_CALL";
         case RIL_REQUEST_VOLTE_ADD_TO_GROUP_CALL: return "VOLTE_ADD_TO_GROUP_CALL";
         case RIL_REQUEST_VOLTE_SET_CONFERENCE_URI: return "RIL_REQUEST_VOLTE_SET_CONFERENCE_URI";
+        case RIL_REQUEST_ENABLE_BROADCAST_SMS: return "ENABLE_BROADCAST_SMS";
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_SET_CELL_BROADCAST_CONFIG: return "SET_CELL_BROADCAST_CONFIG";
@@ -6428,6 +6459,7 @@ requestToString(int request) {
         /* SPRD: add AGPS feature for bug 436461 @{ */
 		case RIL_UNSOL_PHY_CELL_ID: return "UNSOL_PHY_CELL_ID";
 		/* @} */
+		case RIL_UNSOL_RESPONSE_NEW_BROADCAST_SMS_LTE: return "UNSOL_RESPONSE_NEW_BROADCAST_SMS_LTE";
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_UNSOL_RESPONSE_NEW_CB_MSG: return "UNSOL_RESPONSE_NEW_CB_MSG";

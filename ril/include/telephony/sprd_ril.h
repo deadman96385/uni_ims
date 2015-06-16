@@ -5860,6 +5860,7 @@ typedef struct {
 #define RIL_REQUEST_VOLTE_INITIAL_GROUP_CALL (RIL_SPRD_REQUEST_BASE+61)
 #define RIL_REQUEST_VOLTE_ADD_TO_GROUP_CALL (RIL_SPRD_REQUEST_BASE+62)
 #define RIL_REQUEST_VOLTE_SET_CONFERENCE_URI (RIL_SPRD_REQUEST_BASE +63)
+#define RIL_REQUEST_ENABLE_BROADCAST_SMS (RIL_SPRD_REQUEST_BASE+64)
 #define RIL_REQUEST_SET_RILPROXY_LTE_ENABLE  (RIL_SPRD_REQUEST_BASE + 100)
 #define RIL_SPRD_REQUEST_LAST RIL_REQUEST_SET_RILPROXY_LTE_ENABLE
 
@@ -5901,7 +5902,10 @@ typedef struct {
 //SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
 /* SPRD: add AGPS feature for bug 436461 @{ */
 #define RIL_UNSOL_PHY_CELL_ID (RIL_SPRD_UNSOL_RESPONSE_BASE + 21)
-#define RIL_SPRD_UNSOL_RESPONSE_LAST RIL_UNSOL_PHY_CELL_ID
+/* @} */
+/* SPRD: add CB for Lte @{ */
+#define RIL_UNSOL_RESPONSE_NEW_BROADCAST_SMS_LTE (RIL_SPRD_UNSOL_RESPONSE_BASE + 22)
+#define RIL_SPRD_UNSOL_RESPONSE_LAST RIL_UNSOL_RESPONSE_NEW_BROADCAST_SMS_LTE
 /* @} */
 #endif
 
@@ -6413,6 +6417,16 @@ typedef struct {
     char *aid;                  /* AID value, See ETSI 102.221 8.1 and 101.220 4,
                                    NULL if no value. */
 } RIL_SimAuthentication;
+
+typedef struct {
+    int segment_id;
+    int total_segments;
+    int serial_number;
+    int message_identifier;
+    int dcs;
+    int length;
+    char *data;
+} RIL_BROADCAST_SMS_LTE;
 
 #ifdef RIL_SHLIB
 struct RIL_Env {

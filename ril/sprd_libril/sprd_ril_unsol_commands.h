@@ -93,6 +93,7 @@
     /* SPRD: add AGPS feature for bug 436461 @{ */
     ,{RIL_UNSOL_PHY_CELL_ID, responseInts, WAKE_PARTIAL}
     /* @} */
+    ,{RIL_UNSOL_RESPONSE_NEW_BROADCAST_SMS_LTE, responseBroadcastSmsLte, WAKE_PARTIAL}
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     ,{RIL_UNSOL_RESPONSE_NEW_CB_MSG, responseVoid, WAKE_PARTIAL}

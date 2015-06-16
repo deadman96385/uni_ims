@@ -8945,6 +8945,33 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_GSM_GET_BROADCAST_SMS_CONFIG:
             requestGetSmsBroadcastConfig(channelID,data, datalen, t);
             break;
+
+        case RIL_REQUEST_ENABLE_BROADCAST_SMS: {
+            char *cmd;
+            int pri = ((int*) data)[0];
+            int sec = ((int*) data)[1];
+            int test = ((int*) data)[2];
+            int cmas = ((int*) data)[3];
+            int ret;
+            RILLOGI("Reference-ril. requestEnableBroadcastSms %d ,%d ,%d ,%d", pri, sec, test, cmas);
+            p_response = NULL;
+            ret = asprintf(&cmd, "AT+SPPWS=%d,%d,%d,%d", pri, sec, test, cmas);
+            if (ret < 0) {
+                RILLOGE("Failed to allocate memory");
+                cmd = NULL;
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                break;
+            }
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            free(cmd);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
         case RIL_REQUEST_STK_GET_PROFILE:
             {
                 char * line;
@@ -11926,7 +11953,41 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                     pdu_bin, strlen(sms_pdu)/2);
         } else
             RILLOGE("Convert hex to bin failed for SMSCB");
-    } else if (strStartsWith(s, "+CDS:")) {
+    } else if (strStartsWith(s, "+SPWRN")) {
+        RIL_BROADCAST_SMS_LTE *response = NULL;
+        response = (RIL_BROADCAST_SMS_LTE *)alloca(sizeof(RIL_BROADCAST_SMS_LTE));
+        char *tmp;
+
+        RILLOGD("+SPWRN: enter %s", s);
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+
+        err = at_tok_nextint(&tmp, &response->segment_id);
+        if (err < 0) goto out;
+
+        err = at_tok_nextint(&tmp, &response->total_segments);
+        if (err < 0) goto out;
+
+        err = at_tok_nextint(&tmp, &response->serial_number);
+        if (err < 0) goto out;
+
+        err = at_tok_nextint(&tmp, &response->message_identifier);
+        if (err < 0) goto out;
+
+        err = at_tok_nextint(&tmp, &response->dcs);
+        if (err < 0) goto out;
+
+        err = at_tok_nextint(&tmp, &response->length);
+        if (err < 0) goto out;
+
+        err = at_tok_nextstr(&tmp, &response->data);
+        if (err < 0) goto out;
+
+        RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_NEW_BROADCAST_SMS_LTE,
+            response,sizeof(RIL_BROADCAST_SMS_LTE));
+    }
+    else if (strStartsWith(s, "+CDS:")) {
         RIL_onUnsolicitedResponse (
                 RIL_UNSOL_RESPONSE_NEW_SMS_STATUS_REPORT,
                 sms_pdu, strlen(sms_pdu));
