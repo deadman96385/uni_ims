@@ -717,7 +717,7 @@ LOCAL MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *de
 
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_INT_CLR_OFF, 0xfFF,"clear BSM_frame done int");
 
-//#define USE_INTERRUPT
+#define USE_INTERRUPT
 #define NALU_LEN_VSP (0xFFFFF) // 20 bit. for 1M
 #define NALU_LEN_MAX (0x600000) // 786 KB.
 
