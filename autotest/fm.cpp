@@ -91,6 +91,8 @@ int fmPlay( uint freq )
     }
 
 	status_t   status;
+    String8 fm_mute("FM_Volume=0");
+    String8 fm_volume("FM_Volume=11");
 #if 0
 	AudioTrack atrk;
 
@@ -122,6 +124,8 @@ int fmPlay( uint freq )
         return ret;
     }
     //usleep(20 * 1000);
+    AudioSystem::setParameters(audio_io_handle_t(0),fm_mute);
+    AudioSystem::setForceUse(AUDIO_POLICY_FORCE_FOR_FM,AUDIO_POLICY_FORCE_NONE);
 
 	status = AudioSystem::setDeviceConnectionState(AUDIO_DEVICE_OUT_FM_HEADSET,
             AUDIO_POLICY_DEVICE_STATE_AVAILABLE, "");
@@ -130,6 +134,7 @@ int fmPlay( uint freq )
         ERRMSG("out to fm headset error!\n");
         return -3;
     }
+    AudioSystem::setParameters(audio_io_handle_t(0),fm_volume);
 
     return 0;
 }
