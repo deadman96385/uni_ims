@@ -1948,11 +1948,19 @@ void buildTestModeCmd(char *cmd, size_t size) {
         if (i == 0) {
             snprintf(cmd, size, "AT+SPTESTMODEM=%d", getTestModeInner(i));
             RILLOGD("buildTestModeCmd cmd: %s", cmd);
+            if (phonecount == 1) {
+                char * strFormatter = strdup(cmd);
+                strcat(strFormatter, ",%d");
+                snprintf(cmd, size, strFormatter, 254);
+                free (strFormatter);
+                RILLOGD("buildTestModeCmd cmd(SingleSim): %s", cmd);
+            }
         } else {
             //strcat(cmd, ",%d");
             char * strFormatter = strdup(cmd);
             strcat(strFormatter, ",%d");
             snprintf(cmd, size, strFormatter, getTestModeInner(i));
+            free (strFormatter);
             RILLOGD("buildTestModeCmd cmd%d: %s", i, cmd);
         }
     }
