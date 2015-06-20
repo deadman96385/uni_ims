@@ -297,61 +297,76 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
 MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
 {
     H264EncObject *vo = (H264EncObject *) avcHandle->videoEncoderData;
-    MMEncConfig * enc_config = vo->g_h264_enc_config;
+    MMEncConfig *enc_config = vo->g_h264_enc_config;
     uint32 target_bitrate_max;
-    uint32 total_mb_number, mb_rate;
-    int32 i, level_idx;
+    uint32 mb_rate, total_mbs = (vo->g_enc_image_ptr->width * vo->g_enc_image_ptr->height)>>8;
+    uint32 i, level_idx;
+    uint32 max_framerate;
 
     SCI_ASSERT(NULL != pConf);
 
-    enc_config->FrameRate		= pConf->FrameRate;
-    enc_config->targetBitRate		= pConf->targetBitRate;
-    enc_config->RateCtrlEnable	= pConf->RateCtrlEnable;
-    enc_config->PrependSPSPPSEnalbe = pConf->PrependSPSPPSEnalbe;
+    SPRD_CODEC_LOGD ("%s, configure, FrameRate: %d, targetBitRate: %d, intra_period: %d, QP_I: %d, QP_P: %d",
+                     __FUNCTION__, pConf->FrameRate, pConf->targetBitRate, pConf->PFrames+1, pConf->QP_IVOP, pConf->QP_PVOP);
 
-    enc_config->QP_IVOP		= pConf->QP_IVOP;
-    enc_config->QP_PVOP		= pConf->QP_PVOP;
+    for (level_idx = 0; level_idx < g_level_num; level_idx++) {
+        if (g_level_infos[level_idx].level == AVC_LEVEL4_1) {
+            //now, max level4.1
+            break;
+        }
+    }
+    max_framerate = g_level_infos[level_idx].MaxMBPS/total_mbs;
 
-    if ((1920 == vo->g_enc_image_ptr->width) && (1088 == vo->g_enc_image_ptr->height))
-    {
+    mb_rate = total_mbs * max_framerate;//enc_config->FrameRate;
+    level_idx = 0;
+    for (i = (g_level_num-1); i >= 0; i--) {
+        if ((g_level_infos[i].MaxMBPS <= mb_rate) && (g_level_infos[i].MaxFS <= total_mbs)) {
+            level_idx = i;
+            if ((g_level_infos[i].MaxMBPS < mb_rate) || (g_level_infos[i].MaxFS < total_mbs)) {
+                level_idx++;
+            }
+            break;
+        }
+    }
+
+    //revised by actual level
+    max_framerate = g_level_infos[level_idx].MaxMBPS/total_mbs;
+    if (pConf->FrameRate > max_framerate) {
+        pConf->FrameRate = max_framerate;
+    }
+
+    target_bitrate_max = g_level_infos[level_idx].MaxBR * 1200;
+    if (pConf->targetBitRate > target_bitrate_max) {
+        pConf->targetBitRate = target_bitrate_max;
+        pConf->QP_IVOP = 1;
+        pConf->QP_PVOP = 1;
+    } else if(pConf->targetBitRate > (target_bitrate_max*3/8)) {
+        pConf->QP_IVOP = 15;
+        pConf->QP_PVOP = 15;
+    } else {
+        //nothing
+    }
+
+    enc_config->FrameRate				= pConf->FrameRate;
+    enc_config->targetBitRate			= pConf->targetBitRate;
+    enc_config->RateCtrlEnable			= pConf->RateCtrlEnable;
+    enc_config->PrependSPSPPSEnalbe 	= pConf->PrependSPSPPSEnalbe;
+    enc_config->QP_IVOP				= pConf->QP_IVOP;
+    enc_config->QP_PVOP				= pConf->QP_PVOP;
+
+    if ((SHARK == vo->vsp_version) && ((1920 == vo->g_enc_image_ptr->width) && (1088 == vo->g_enc_image_ptr->height))) {
         vo->rc_gop_paras.intra_period = INTRA_PERIOD;
-    } else
-    {
-        if(pConf->PFrames+1 < 900)
-        {
+    } else {
+        if(pConf->PFrames+1 < 900) {
             vo->rc_gop_paras.intra_period = pConf->PFrames+1;
-        } else
-        {
+        } else {
             vo->rc_gop_paras.intra_period = 900;
         }
         vo->rc_gop_paras.ori_intra_period = pConf->PFrames+1;
     }
 
-    total_mb_number = (vo->g_enc_image_ptr->width * vo->g_enc_image_ptr->height)/256;
-    mb_rate = total_mb_number * enc_config->FrameRate;
-    level_idx = 0;
-    for (i = (g_level_num-1); i >= 0; i--) {
-        if ((g_level_infos[i].MaxMBPS <= mb_rate) && (g_level_infos[i].MaxFS <= total_mb_number)) {
-            level_idx = i;
-            break;
-        }
-    }
-
-    target_bitrate_max = g_level_infos[level_idx].MaxBR * 1200;
-    if (enc_config->targetBitRate > target_bitrate_max)
-    {
-        enc_config->targetBitRate = target_bitrate_max;
-        enc_config->QP_IVOP = 1;
-        enc_config->QP_PVOP = 1;
-    }else if(enc_config->targetBitRate > (target_bitrate_max*3/8))
-    {
-        enc_config->QP_IVOP = 15;
-        enc_config->QP_PVOP = 15;
-    }
-
-    SPRD_CODEC_LOGD ("%s, %d, FrameRate: %d, intra_period: %d, targetBitRate: %d, target_bitrate_max: %d, level: %s, QP_I: %d, QP_P: %d",
-                     __FUNCTION__, __LINE__, enc_config->FrameRate, vo->rc_gop_paras.intra_period, pConf->targetBitRate, target_bitrate_max,
-                     g_level_infos[level_idx].level_str, enc_config->QP_IVOP, enc_config->QP_PVOP);
+    SPRD_CODEC_LOGD ("%s, actual, FrameRate: %d, targetBitRate: %d, intra_period: %d, QP_I: %d, QP_P: %d, level: %s",
+                     __FUNCTION__, enc_config->FrameRate, enc_config->targetBitRate, vo->rc_gop_paras.intra_period,
+                     enc_config->QP_IVOP, enc_config->QP_PVOP, g_level_infos[level_idx].level_str);
 
     return MMENC_OK;
 }
@@ -485,9 +500,9 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
             rc_init_GOP(vo, &(vo->rc_gop_paras)); // 20
             i_global_qp = vo->rc_pic_paras.curr_pic_qp = rc_init_pict(vo,&(vo->rc_gop_paras), &(vo->rc_pic_paras), i_slice_type);
 #else
-            if(0 == (vo->g_nFrame_enc % vo->rc_gop_paras.intra_period)
-        {
-            i_global_qp = vo->rc_pic_paras.curr_pic_qp = rc_init_GOP(vo, &(vo->rc_gop_paras)); // 20
+            if(0 == (vo->g_nFrame_enc % vo->rc_gop_paras.intra_period))
+            {
+                i_global_qp = vo->rc_pic_paras.curr_pic_qp = rc_init_GOP(vo, &(vo->rc_gop_paras)); // 20
             }
             rc_init_pict(vo,&(vo->rc_gop_paras), &(vo->rc_pic_paras));
 #endif
@@ -516,9 +531,9 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
 #ifdef RCMODE_FRAMERATE_
             enc_config->QP_PVOP = rc_init_pict(vo,&(vo->rc_gop_paras), &(vo->rc_pic_paras), i_slice_type);
 #else
-            if(0 == (vo->g_nFrame_enc % vo->rc_gop_paras.intra_period)
-        {
-            vo->rc_pic_paras.curr_pic_qp = rc_init_GOP(vo, &(vo->rc_gop_paras)); // 20
+            if(0 == (vo->g_nFrame_enc % vo->rc_gop_paras.intra_period))
+            {
+                vo->rc_pic_paras.curr_pic_qp = rc_init_GOP(vo, &(vo->rc_gop_paras)); // 20
             }
             enc_config->QP_PVOP = rc_init_pict(vo,&(vo->rc_gop_paras), &(vo->rc_pic_paras));
 #endif

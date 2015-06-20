@@ -1268,6 +1268,7 @@ uint32 g_skipBlock_QP_table[52] =
 
 LEVEL_LIMITS_T g_level_infos[] = {
     {1485, 	99, 		64, 		AVC_LEVEL1,		"level1.0"},
+    {1485, 	99, 		128, 	AVC_LEVEL1_B,	"level1.b"},
     {3000, 	396, 	192, 	AVC_LEVEL1_1,	"level1.1"	},
     {6000, 	396, 	384, 	AVC_LEVEL1_2,	"level1.2"},
     {11880, 	396, 	768, 	AVC_LEVEL1_3,	"level1.3"},
