@@ -155,9 +155,9 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
     {
         pDecInfo->croppingFlag = 0;
         pDecInfo->cropParams.cropLeftOffset = 0;
-        pDecInfo->cropParams.cropOutWidth  = 0;
+        pDecInfo->cropParams.cropOutWidth  = pDecInfo->picWidth;
         pDecInfo->cropParams.cropTopOffset = 0;
-        pDecInfo->cropParams.cropOutHeight= 0;
+        pDecInfo->cropParams.cropOutHeight= pDecInfo->picHeight;
     }
 
     //added for bug#154484 and bug#154498

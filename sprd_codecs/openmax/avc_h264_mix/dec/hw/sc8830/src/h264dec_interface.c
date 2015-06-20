@@ -169,9 +169,9 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
     {
         pDecInfo->croppingFlag = 0;
         pDecInfo->cropParams.cropLeftOffset = 0;
-        pDecInfo->cropParams.cropOutWidth  = 0;
+        pDecInfo->cropParams.cropOutWidth  = pDecInfo->picWidth;
         pDecInfo->cropParams.cropTopOffset = 0;
-        pDecInfo->cropParams.cropOutHeight= 0;
+        pDecInfo->cropParams.cropOutHeight= pDecInfo->picHeight;
     }
 
     /* profile */
@@ -423,7 +423,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
         dec_input_ptr->dataLen = vo->g_stream_offset + vo->g_nalu_ptr->len + destuffing_num;
 
-        if( (ret != MMDEC_OK) || vo->frame_dec_finish)//dec_output.frameEffective
+        if( (ret != MMDEC_OK) || vo->frame_dec_finish || (vo->g_nalu_ptr->nal_unit_type == NALU_TYPE_SPS) || (vo->g_nalu_ptr->nal_unit_type == NALU_TYPE_PPS))
         {
             if (ret == MMDEC_ERROR)
             {
