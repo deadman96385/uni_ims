@@ -197,7 +197,8 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
             }
         }
 
-        vo->is_need_init_vsp_quant_tab = FALSE;
+        //disable this code for bug449345
+        //vo->is_need_init_vsp_quant_tab = FALSE;
     }
 
     /*init  current frame, forward reference frame, backward reference frame*/
