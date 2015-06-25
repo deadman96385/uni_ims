@@ -4819,6 +4819,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     pthread_mutex_unlock(&s_localDispatchMutex);
                 } else if(pCI->requestNumber == RIL_REQUEST_DIAL
                         || pCI->requestNumber == RIL_REQUEST_DIAL_EMERGENCY_CALL
+                        || pCI->requestNumber == RIL_REQUEST_VIDEOPHONE_DIAL
                         || pCI->requestNumber == RIL_REQUEST_SWITCH_WAITING_OR_HOLDING_AND_ACTIVE) {
                     RILLOGD("Add '%s' to call_cmd_list\n", requestToString(pCI->requestNumber));
                     list_add_tail(&call_cmd_list, cmd_item);
@@ -4884,6 +4885,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     pthread_mutex_unlock(&s_localDispatchMutex);
                 } else if(pCI->requestNumber == RIL_REQUEST_DIAL
                         || pCI->requestNumber == RIL_REQUEST_DIAL_EMERGENCY_CALL
+                        || pCI->requestNumber == RIL_REQUEST_VIDEOPHONE_DIAL
                         || pCI->requestNumber == RIL_REQUEST_SWITCH_WAITING_OR_HOLDING_AND_ACTIVE) {
                     list_add_tail(&call_cmd_list, cmd_item);
                     pthread_mutex_lock(&s_callDispatchMutex);
