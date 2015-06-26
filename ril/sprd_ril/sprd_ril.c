@@ -3565,9 +3565,7 @@ retrycgatt:
                 property_get(cmd, prop, "0");
                 ip_type = atoi(prop);
 
-                if (fbCause == 52 || (fbCause == 0 && ip_type != IPV4V6)) {
-
-                    if ((!in4G && !isTest) || fbCause == 52) {
+                if (fbCause == 52) {
 
                             if (ip_type == IPV4) {
                                 pdp_type = "IPV6";
@@ -3645,7 +3643,6 @@ retrycgatt:
                             pthread_mutex_lock(&pdp[index].mutex);
                             pdp[index].cid = index + 1;
                             pthread_mutex_unlock(&pdp[index].mutex);
-                        }
                 }
             } else if (!strcmp(pdp_type,"IPV4+IPV6")) {
                 //IPV6
