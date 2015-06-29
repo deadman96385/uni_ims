@@ -96,11 +96,10 @@ static bt_callbacks_t btCallbacks = {
     NULL, /* acl_state_changed_cb */
     NULL, /* thread_evt_cb */
     NULL, /*dut_mode_recv_cb */
-//    NULL, /*authorize_request_cb */
-#if BLE_INCLUDED == TRUE
-    NULL, /* le_test_mode_cb */
-#else
-    NULL
+    NULL, /*authorize_request_cb */
+    NULL, /* energy_info_cb */
+#if defined (SPRD_WCNBT_MARLIN) || defined (SPRD_WCNBT_SR2351)
+    NULL,
 #endif
 };
 
@@ -289,17 +288,18 @@ static int btInit(void)
 
 int btOpen( void )
 {
-	if ( btHalLoad() < 0 ) {
-		return 0;
+	int ret = 0;
+	if ((ret = btHalLoad()) < 0 ) {
+		return ret;
 	}
-	if ( btInit() < 0 ) {
-		return 0;
+	if ((ret = btInit()) < 0 ) {
+		return ret;
 	}
 
 	//sBtInterface->disable();
 	//utilDisableService("dbus");
 
-	int ret = sBtInterface->enable();
+	ret = sBtInterface->enable();
 
 	if( btCheckRtnVal((bt_status_t)ret) ) {
 		ERRMSG("BT enable Fail(%d)!\n", ret);
