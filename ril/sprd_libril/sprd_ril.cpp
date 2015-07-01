@@ -4787,31 +4787,6 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     pthread_mutex_lock(&s_dispatchMutex);
                     pthread_cond_signal(&s_dispatchCond);
                     pthread_mutex_unlock(&s_dispatchMutex);
-                } else if(pCI->requestNumber == RIL_REQUEST_DTMF
-                    || pCI->requestNumber == RIL_REQUEST_DTMF_START
-                    || pCI->requestNumber == RIL_REQUEST_DTMF_STOP) {
-                    pthread_mutex_lock(&s_listMutex);
-                    for(cmd = (&sms_cmd_list)->next; cmd != (&sms_cmd_list); cmd = cmd->next) {
-                        p.setData((uint8_t *) (cmd->user_data->buffer), cmd->user_data->buflen);
-                        status = p.readInt32(&request);
-                        status = p.readInt32 (&token);
-                        pCI = &(s_commands[request]);
-                        if(pCI->requestNumber != RIL_REQUEST_DTMF
-                            && pCI->requestNumber != RIL_REQUEST_DTMF_START
-                            && pCI->requestNumber != RIL_REQUEST_DTMF_STOP) {
-                            cmd_item->next = cmd;
-                            cmd_item->prev = cmd->prev;
-                            cmd->prev->next = cmd_item;
-                            cmd->prev= cmd_item;
-                            break;
-                        }
-                    }
-                    pthread_mutex_unlock(&s_listMutex);
-                    if(cmd == (&sms_cmd_list))
-                        list_add_tail(&sms_cmd_list, cmd_item);
-                    pthread_mutex_lock(&s_dispatchMutex);
-                    pthread_cond_signal(&s_dispatchCond);
-                    pthread_mutex_unlock(&s_dispatchMutex);
                 } else if(pCI->requestNumber == RIL_REQUEST_SCREEN_STATE) {
                     list_add_tail(&local_cmd_list, cmd_item);
                     pthread_mutex_lock(&s_localDispatchMutex);
@@ -4819,6 +4794,19 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     pthread_mutex_unlock(&s_localDispatchMutex);
                 } else if(pCI->requestNumber == RIL_REQUEST_DIAL
                         || pCI->requestNumber == RIL_REQUEST_DIAL_EMERGENCY_CALL
+                        || pCI->requestNumber == RIL_REQUEST_DTMF
+                        || pCI->requestNumber == RIL_REQUEST_DTMF_START
+                        || pCI->requestNumber == RIL_REQUEST_DTMF_STOP
+                        || pCI->requestNumber == RIL_REQUEST_HANGUP
+                        || pCI->requestNumber == RIL_REQUEST_HANGUP_WAITING_OR_BACKGROUND
+                        || pCI->requestNumber == RIL_REQUEST_HANGUP_FOREGROUND_RESUME_BACKGROUND
+                        || pCI->requestNumber == RIL_REQUEST_ANSWER
+                        || pCI->requestNumber == RIL_REQUEST_GET_CURRENT_CALLS
+                        || pCI->requestNumber == RIL_REQUEST_CONFERENCE
+                        || pCI->requestNumber == RIL_REQUEST_UDUB
+                        || pCI->requestNumber == RIL_REQUEST_SEPARATE_CONNECTION
+                        || pCI->requestNumber == RIL_REQUEST_VIDEOPHONE_HANGUP
+                        || pCI->requestNumber == RIL_REQUEST_VIDEOPHONE_ANSWER
                         || pCI->requestNumber == RIL_REQUEST_VIDEOPHONE_DIAL
                         || pCI->requestNumber == RIL_REQUEST_SWITCH_WAITING_OR_HOLDING_AND_ACTIVE) {
                     RILLOGD("Add '%s' to call_cmd_list\n", requestToString(pCI->requestNumber));
@@ -4853,31 +4841,6 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     pthread_mutex_lock(&s_dispatchMutex);
                     pthread_cond_signal(&s_dispatchCond);
                     pthread_mutex_unlock(&s_dispatchMutex);
-                } else if(pCI->requestNumber == RIL_REQUEST_DTMF
-                    || pCI->requestNumber == RIL_REQUEST_DTMF_START
-                    || pCI->requestNumber == RIL_REQUEST_DTMF_STOP) {
-                    pthread_mutex_lock(&s_listMutex);
-                    for(cmd = (&sms_cmd_list)->next; cmd != (&sms_cmd_list); cmd = cmd->next) {
-                        p.setData((uint8_t *) (cmd->user_data->buffer), cmd->user_data->buflen);
-                        status = p.readInt32(&request);
-                        status = p.readInt32 (&token);
-                        pCI = &(s_commands[request]);
-                        if(pCI->requestNumber != RIL_REQUEST_DTMF
-                            && pCI->requestNumber != RIL_REQUEST_DTMF_START
-                            && pCI->requestNumber != RIL_REQUEST_DTMF_STOP) {
-                            cmd_item->next = cmd;
-                            cmd_item->prev = cmd->prev;
-                            cmd->prev->next = cmd_item;
-                            cmd->prev= cmd_item;
-                            break;
-                        }
-                    }
-                    pthread_mutex_unlock(&s_listMutex);
-                    if(cmd == (&sms_cmd_list))
-                        list_add_tail(&sms_cmd_list, cmd_item);
-                    pthread_mutex_lock(&s_dispatchMutex);
-                    pthread_cond_signal(&s_dispatchCond);
-                    pthread_mutex_unlock(&s_dispatchMutex);
                 } else if(pCI->requestNumber == RIL_REQUEST_SCREEN_STATE) {
                     list_add_tail(&local_cmd_list, cmd_item);
                     pthread_mutex_lock(&s_localDispatchMutex);
@@ -4885,6 +4848,19 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     pthread_mutex_unlock(&s_localDispatchMutex);
                 } else if(pCI->requestNumber == RIL_REQUEST_DIAL
                         || pCI->requestNumber == RIL_REQUEST_DIAL_EMERGENCY_CALL
+                        || pCI->requestNumber == RIL_REQUEST_DTMF
+                        || pCI->requestNumber == RIL_REQUEST_DTMF_START
+                        || pCI->requestNumber == RIL_REQUEST_DTMF_STOP
+                        || pCI->requestNumber == RIL_REQUEST_HANGUP
+                        || pCI->requestNumber == RIL_REQUEST_HANGUP_WAITING_OR_BACKGROUND
+                        || pCI->requestNumber == RIL_REQUEST_HANGUP_FOREGROUND_RESUME_BACKGROUND
+                        || pCI->requestNumber == RIL_REQUEST_ANSWER
+                        || pCI->requestNumber == RIL_REQUEST_GET_CURRENT_CALLS
+                        || pCI->requestNumber == RIL_REQUEST_CONFERENCE
+                        || pCI->requestNumber == RIL_REQUEST_UDUB
+                        || pCI->requestNumber == RIL_REQUEST_SEPARATE_CONNECTION
+                        || pCI->requestNumber == RIL_REQUEST_VIDEOPHONE_HANGUP
+                        || pCI->requestNumber == RIL_REQUEST_VIDEOPHONE_ANSWER
                         || pCI->requestNumber == RIL_REQUEST_VIDEOPHONE_DIAL
                         || pCI->requestNumber == RIL_REQUEST_SWITCH_WAITING_OR_HOLDING_AND_ACTIVE) {
                     list_add_tail(&call_cmd_list, cmd_item);
