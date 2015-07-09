@@ -27,7 +27,6 @@ extern   "C"
 {
 #endif
 
-#define RC_BU
 #define INTRA_PERIOD	6
 #define CROP_1080P		1
 #define LUMA_8x8_CABAC
@@ -473,45 +472,70 @@ typedef struct codec_buf_tag
     uint_32or64 p_base;  //physical address
 } CODEC_BUF_T;
 
-typedef struct  {
-    long curr_buf_full;
-    int32 rem_bits;
-    int32 prev_pic_bits;
-    int32 total_qp;
-    uint32 intra_period;
-    uint32 ori_intra_period;
-    int32 I_P_ratio;
-    int32 gop_num_per_sec;
-    int32 rem_frame_num;
-    int32 last_I_frame_bits;
-    int32 last_I_QP;
-    int32 last_P_frame_bits;
-    int32 last_P_QP;
-    int32 frames;
-    int32 bit_rate;
-    int32 sv;
-    int32 nMaxOneFrameBits;
-} RC_GOP_PARAS;
+//---------------------------------------
+//struct define
+//--------------------------------------
+typedef struct {
+    int32 curr_buf_full;	//buffer status
+    int32 nRem_bits;		//remain bits of current GOPs
+    int32 nRem_GOPNum;	//GOP number of current GOPs
+    int32 nRemNumFrames;	//un_encoded P frame number of current GOPs
+    int32 avg_GOP_bits;		//bits of each GOP for CBR mode
 
+    //CBR
+    int32 CBR_P_bits;	//average P frame target bits
 
-typedef struct  {
-    long delta_target_buf;
-    int32 target_bits;
-    int32 remain_bits;
-    int32 pred_remain_bits;
-    int32 curr_pic_qp;
-    uint32 total_qp;
-    uint32 slice_num;
-} RC_PIC_PARAS;
+    //previous frame information
+    int32 last_PframeNum;	//previous encoded P frames number
+    int32 last_PframeBits;	//sum of previous encoded P frame bits
+    int32 last_PQP;			//sum of previous encoded P frame QP
+    int32 last_IframeNum;	//previous encoded I frame number
+    int32 last_IframeBits;		//sum of previous encoded I frame bits
+    int32 last_IQP;			//sum of previous encoded I frame QP
 
+    //last frame informatino for getQP and current frame information for update
+    int32 last_frame_type;	//frame type of last frame
+    int32 last_frameBits;		//number bits of last frame
+    int32 last_QP;			//QP of last frame
+} RC_GOP_PARAS; //GOP RC parameters
 
-typedef struct  {
-    int32 target_bits;
-    int32 prev_target_bits;
-    uint32 BU_skip_MB;
-    uint32 curr_BU_QP;
-    uint32 next_BU_QP;
-} RC_BU_PARAS;
+typedef struct {
+    int32 target_bits;		//target bits in a frame
+    int32 encoded_bits;	//bits of encoded slice
+    int32 encoded_MBnum;	//number of encoded MBs
+    uint32 sum_slice_qp;		//sum of QP of whole slices in a frame
+    uint32 slice_num;			//number of encoded slice in a frame
+    int32 nLast_slice_QP;
+} RC_PIC_PARAS; //multiple slice RC parameters
+
+typedef struct {
+    //external RC parameters------------------
+    int32 nRate_control_en;	//Rate control mode
+    int32 nTarget_bitrate;
+    int32 nIntra_Period;
+    int32 nFrame_Rate;
+    int32 nIP_Ratio;
+    int32 nIQP;
+    int32 nPQP;
+    int32 nWidth;
+    int32 nHeight;
+    int32 nMaxQP;
+    int32 nMinQP;
+    int32 nframe_size_in_mbs;
+    int32 nSlice_enable;	//0: disable, 1: enable
+    int32 nCodec_type;	//which video codec is used
+
+    //internal RC parameters-----------------------
+    int32 nFrameCounter;		//frame counter
+    int32 nSV;				//avoid 32-bits over flow
+    int32 nBitrate;			//RC target bit rate based on target frames
+    int32 nFrames;			//RC target frames
+    int32 nMaxOneFrameBits;	//Max bits in one frame
+    int32 nNumGOP;			//GOP number of RC calculated unit
+
+    RC_GOP_PARAS	rc_gop_paras;
+    RC_PIC_PARAS	rc_pic_paras;
+} RC_INOUT_PARAS;
 
 typedef struct
 {
@@ -537,11 +561,7 @@ typedef struct tagH264EncObject
     MMEncConfig * g_h264_enc_config;
     uint32 *g_vlc_hw_ptr;
 
-    RC_BU_PARAS rc_bu_paras;
-    RC_GOP_PARAS rc_gop_paras;
-    RC_PIC_PARAS rc_pic_paras;
-    uint32 BU_bit_stat;
-    uint32 prev_qp;
+    RC_INOUT_PARAS rc_inout_paras;
 
     CODEC_BUF_T mem[MAX_MEM_TYPE];
 

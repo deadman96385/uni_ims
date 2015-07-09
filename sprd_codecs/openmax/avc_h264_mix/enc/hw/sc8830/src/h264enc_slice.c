@@ -305,11 +305,6 @@ PUBLIC int32 H264Enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr
         img_ptr->sh.i_first_mb = 0;
     }
 
-#ifdef RC_BU
-    if(vo->g_h264_enc_config->RateCtrlEnable)
-        vo->BU_bit_stat = (i_frame_size - slice_bits);
-#endif
-
     return (i_frame_size-slice_bits);
 }
 /**---------------------------------------------------------------------------*

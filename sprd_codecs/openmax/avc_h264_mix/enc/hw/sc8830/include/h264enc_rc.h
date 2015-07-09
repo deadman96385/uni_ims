@@ -27,29 +27,57 @@
 extern   "C"
 {
 #endif
-
-#define RCMODE_FRAMERATE_
-#define TARGET_BITRATE 1000000
-
-//#define SLICE_SIZE TARGET_BITRATE/INTRA_PERIOD/3
-//#define SLICE_SIZE 5000
 #ifndef SLICE_SIZE
 #define SLICE_MB 1
 #endif
 
-#define NO_BU_CHANGE	// slice level update, not BU update
-#define I_P_RATIO 3 // the bit allocation for I and P
+//Frame type----------------------------
+#define RC_B_SLICE		0
+#define RC_P_SLICE		1
+#define RC_I_SLICE		2
 
-int32 rc_init_GOP (H264EncObject *vo,  RC_GOP_PARAS *rc_gop_paras);
-int32 rc_init_slice (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr, RC_PIC_PARAS *rc_pic_paras);
+//Rate control mode----------------------
+typedef enum {
+    RC_DISABLE = 0,
+    RC_GOP_VBR,
+    RC_GOP_CBR,
+    RC_MODE_NUM,
+}
+RATE_CONTROL_MODE;
 
-#ifndef RCMODE_FRAMERATE_
-int32 rc_init_pict (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras, RC_PIC_PARAS *rc_pic_paras);
-void rc_update_pict (H264EncObject *vo, int32 bits, RC_GOP_PARAS *rc_gop_paras);
-#else
-int32 rc_init_pict (H264EncObject *vo, RC_GOP_PARAS *rc_gop_paras, RC_PIC_PARAS *rc_pic_paras, int frame_type);
-void rc_update_pict (H264EncObject *vo, int32 bits, RC_GOP_PARAS *rc_gop_paras, int frame_type);
-#endif
+//Codec type---------------------------
+typedef enum {
+    RC_MPEG4 = 0,
+    RC_H264,
+    RC_HEVC,
+    RC_VP8,
+    RC_VP9,
+    RC_CODEC_NUM,
+} RC_ENCODER_TYPES;
+
+//Error message--------------------------------------
+typedef enum {
+    RC_NO_ERROR = 0,
+    RC_PARA_ZERO = -1,
+    RC_NON_SUPPORT_CODEC = -2,
+    RC_NON_SUPPORT_RC_MODE = -3,
+} RC_ERROR_MSG;
+
+//MAX and MIN value define --------------------
+#define RC_MIN_INTRA_PERIOD	1
+#define RC_MAX_INTRA_PERIOD	300
+#define RC_MIN_IPRATIO			1
+#define RC_MAX_IPRATIO			30
+#define RC_MIN_CR				2
+#define RC_MIN_BITRATE			56000
+
+//---------------------------------------
+//global function
+//--------------------------------------
+int32 init_GOPRC(RC_INOUT_PARAS *rc_inout_paras);
+int32 reset_GOPRC(RC_INOUT_PARAS *rc_inout_paras);
+int32 getQP_GOPRC(RC_INOUT_PARAS *rc_inout_paras, int32 nSliceType, int32 nSlice_mb_index, int32 last_slice_bits);
+void updatePicPara_GOPRC(RC_INOUT_PARAS *rc_inout_paras, int32 bits);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

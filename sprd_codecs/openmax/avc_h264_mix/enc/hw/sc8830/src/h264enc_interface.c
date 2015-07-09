@@ -244,14 +244,6 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
     img_ptr->pYUVRecFrame->addr_idx = 1;
     img_ptr->pYUVRefFrame->addr_idx = 2;
 
-    // init RC parameters
-    vo->rc_gop_paras.rem_bits = 0;
-    vo->rc_gop_paras.curr_buf_full = 0;
-    vo->rc_gop_paras.intra_period = INTRA_PERIOD;
-    vo->rc_gop_paras.ori_intra_period = INTRA_PERIOD;
-    vo->rc_gop_paras.I_P_ratio = I_P_RATIO;
-
-    /* rate control */
     img_ptr->pOneFrameBitstream = pBitstreamBfr->common_buffer_ptr;
     img_ptr->OneFrameBitstream_addr_phy = (uint_32or64)pBitstreamBfr->common_buffer_ptr_phy;
     img_ptr->OneframeStreamLen = pBitstreamBfr->size;
@@ -302,6 +294,7 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
     uint32 mb_rate, total_mbs = (vo->g_enc_image_ptr->width * vo->g_enc_image_ptr->height)>>8;
     uint32 i, level_idx;
     uint32 max_framerate;
+    LEVEL_LIMITS_T *level_infos = &g_level_infos;
 
     SCI_ASSERT(NULL != pConf);
 
@@ -309,37 +302,47 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
                      __FUNCTION__, pConf->FrameRate, pConf->targetBitRate, pConf->PFrames+1, pConf->QP_IVOP, pConf->QP_PVOP);
 
     for (level_idx = 0; level_idx < g_level_num; level_idx++) {
-        if (g_level_infos[level_idx].level == AVC_LEVEL4_1) {
+        if (level_infos[level_idx].level == AVC_LEVEL4_1) {
             //now, max level4.1
             break;
         }
     }
-    max_framerate = g_level_infos[level_idx].MaxMBPS/total_mbs;
+    max_framerate = level_infos[level_idx].MaxMBPS/total_mbs;
 
     mb_rate = total_mbs * max_framerate;//enc_config->FrameRate;
     level_idx = 0;
     for (i = (g_level_num-1); i >= 0; i--) {
-        if ((g_level_infos[i].MaxMBPS <= mb_rate) && (g_level_infos[i].MaxFS <= total_mbs)) {
+        if ((level_infos[i].MaxMBPS <= mb_rate) && (level_infos[i].MaxFS <= total_mbs)) {
             level_idx = i;
-            if ((g_level_infos[i].MaxMBPS < mb_rate) || (g_level_infos[i].MaxFS < total_mbs)) {
+            if ((level_infos[i].MaxMBPS < mb_rate) || (level_infos[i].MaxFS < total_mbs)) {
                 level_idx++;
             }
             break;
         }
     }
 
+    SPRD_CODEC_LOGD("%s, level_idx: %s", __FUNCTION__, level_infos[level_idx].level_str);
+    max_framerate = level_infos[level_idx].MaxMBPS/total_mbs;
+    while (max_framerate < 60 && (level_infos[level_idx].level <= AVC_LEVEL4_1)) {
+        level_idx++;
+        max_framerate = level_infos[level_idx].MaxMBPS/total_mbs;
+    }
+    SPRD_CODEC_LOGD("%s, level_idx: %s", __FUNCTION__, level_infos[level_idx].level_str);
+
     //revised by actual level
-    max_framerate = g_level_infos[level_idx].MaxMBPS/total_mbs;
+    max_framerate = level_infos[level_idx].MaxMBPS/total_mbs;
     if (pConf->FrameRate > max_framerate) {
         pConf->FrameRate = max_framerate;
     }
 
-    target_bitrate_max = g_level_infos[level_idx].MaxBR * 1200;
+    target_bitrate_max = level_infos[level_idx].MaxBR * 1200;
+	SPRD_CODEC_LOGD("%s, target_bitrate_max: %d, pConf->targetBitRate: %d", __FUNCTION__, target_bitrate_max, pConf->targetBitRate);
+
     if (pConf->targetBitRate > target_bitrate_max) {
         pConf->targetBitRate = target_bitrate_max;
         pConf->QP_IVOP = 1;
         pConf->QP_PVOP = 1;
-    } else if(pConf->targetBitRate > (target_bitrate_max*3/8)) {
+    } else if(pConf->targetBitRate > (target_bitrate_max*3/16)) {
         pConf->QP_IVOP = 15;
         pConf->QP_PVOP = 15;
     } else {
@@ -353,20 +356,36 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
     enc_config->QP_IVOP				= pConf->QP_IVOP;
     enc_config->QP_PVOP				= pConf->QP_PVOP;
 
-    if ((SHARK == vo->vsp_version) && ((1920 == vo->g_enc_image_ptr->width) && (1088 == vo->g_enc_image_ptr->height))) {
-        vo->rc_gop_paras.intra_period = INTRA_PERIOD;
-    } else {
-        if(pConf->PFrames+1 < 900) {
-            vo->rc_gop_paras.intra_period = pConf->PFrames+1;
+    if (enc_config->RateCtrlEnable) {
+        vo->rc_inout_paras.nRate_control_en = enc_config->RateCtrlEnable;
+        vo->rc_inout_paras.nTarget_bitrate = enc_config->targetBitRate;
+        vo->rc_inout_paras.nFrame_Rate = enc_config->FrameRate;
+        vo->rc_inout_paras.nIP_Ratio = 3;
+        vo->rc_inout_paras.nIQP = enc_config->QP_IVOP;
+        vo->rc_inout_paras.nPQP = enc_config->QP_PVOP;
+        vo->rc_inout_paras.nWidth = vo->g_enc_image_ptr->width;
+        vo->rc_inout_paras.nHeight = vo->g_enc_image_ptr->height;
+        vo->rc_inout_paras.nMaxQP = 40;
+        vo->rc_inout_paras.nMinQP = 0;
+        vo->rc_inout_paras.nframe_size_in_mbs = vo->g_enc_image_ptr->frame_size_in_mbs;
+        vo->rc_inout_paras.nSlice_enable = 0;
+        vo->rc_inout_paras.nCodec_type = RC_H264;
+
+        if ((SHARK == vo->vsp_version) && ((1920 == vo->g_enc_image_ptr->width) && (1088 == vo->g_enc_image_ptr->height))) {
+            vo->rc_inout_paras.nIntra_Period = INTRA_PERIOD;
         } else {
-            vo->rc_gop_paras.intra_period = 900;
+            if(pConf->PFrames+1 < 900) {
+                vo->rc_inout_paras.nIntra_Period = pConf->PFrames+1;
+            } else {
+                vo->rc_inout_paras.nIntra_Period = 900;
+            }
         }
-        vo->rc_gop_paras.ori_intra_period = pConf->PFrames+1;
+        init_GOPRC(&(vo->rc_inout_paras));
     }
 
     SPRD_CODEC_LOGD ("%s, actual, FrameRate: %d, targetBitRate: %d, intra_period: %d, QP_I: %d, QP_P: %d, level: %s",
-                     __FUNCTION__, enc_config->FrameRate, enc_config->targetBitRate, vo->rc_gop_paras.intra_period,
-                     enc_config->QP_IVOP, enc_config->QP_PVOP, g_level_infos[level_idx].level_str);
+                     __FUNCTION__, enc_config->FrameRate, enc_config->targetBitRate, vo->rc_inout_paras.nIntra_Period,
+                     enc_config->QP_IVOP, enc_config->QP_PVOP, level_infos[level_idx].level_str);
 
     return MMENC_OK;
 }
@@ -471,7 +490,7 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     img_ptr->stm_offset = 0;
     img_ptr->pYUVSrcFrame->i_frame = vo->g_nFrame_enc;
 
-    if (0 == (vo->g_nFrame_enc % vo->rc_gop_paras.ori_intra_period))
+    if (0 == (vo->g_nFrame_enc % vo->rc_inout_paras.nIntra_Period))
     {
         i_slice_type = SLICE_TYPE_I;
     } else
@@ -494,26 +513,7 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     if( i_slice_type == SLICE_TYPE_I )
     {
         //rate_control
-        if(img_ptr->sh.i_first_mb==0)
-        {
-#ifdef RCMODE_FRAMERATE_
-            rc_init_GOP(vo, &(vo->rc_gop_paras)); // 20
-            i_global_qp = vo->rc_pic_paras.curr_pic_qp = rc_init_pict(vo,&(vo->rc_gop_paras), &(vo->rc_pic_paras), i_slice_type);
-#else
-            if(0 == (vo->g_nFrame_enc % vo->rc_gop_paras.intra_period))
-            {
-                i_global_qp = vo->rc_pic_paras.curr_pic_qp = rc_init_GOP(vo, &(vo->rc_gop_paras)); // 20
-            }
-            rc_init_pict(vo,&(vo->rc_gop_paras), &(vo->rc_pic_paras));
-#endif
-        } else
-        {
-#ifdef NO_BU_CHANGE
-            i_global_qp = vo->rc_pic_paras.curr_pic_qp = rc_init_slice(vo, img_ptr, &(vo->rc_pic_paras));
-#else
-            i_global_qp = vo->rc_pic_paras.curr_pic_qp;
-#endif
-        }
+        i_global_qp = getQP_GOPRC(&(vo->rc_inout_paras), RC_I_SLICE, img_ptr->sh.i_first_mb, img_ptr->prev_slice_bits);
 
         if (enc_config->PrependSPSPPSEnalbe)
         {
@@ -526,29 +526,10 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     } else if (i_slice_type == SLICE_TYPE_P)
     {
         //rate_control
-        if(img_ptr->sh.i_first_mb==0)
-        {
-#ifdef RCMODE_FRAMERATE_
-            enc_config->QP_PVOP = rc_init_pict(vo,&(vo->rc_gop_paras), &(vo->rc_pic_paras), i_slice_type);
-#else
-            if(0 == (vo->g_nFrame_enc % vo->rc_gop_paras.intra_period))
-            {
-                vo->rc_pic_paras.curr_pic_qp = rc_init_GOP(vo, &(vo->rc_gop_paras)); // 20
-            }
-            enc_config->QP_PVOP = rc_init_pict(vo,&(vo->rc_gop_paras), &(vo->rc_pic_paras));
-#endif
-            vo->rc_pic_paras.curr_pic_qp = enc_config->QP_PVOP;
-            i_global_qp = enc_config->QP_PVOP;
+        i_global_qp = getQP_GOPRC(&(vo->rc_inout_paras), RC_P_SLICE, img_ptr->sh.i_first_mb, img_ptr->prev_slice_bits);
+
+        if(img_ptr->sh.i_first_mb==0) {
             H264Enc_reference_update(img_ptr);
-        } else
-        {
-#ifdef NO_BU_CHANGE
-            enc_config->QP_PVOP = vo->rc_pic_paras.curr_pic_qp = rc_init_slice(vo, img_ptr, &(vo->rc_pic_paras));
-            i_global_qp = enc_config->QP_PVOP;
-#else
-            enc_config->QP_PVOP = vo->rc_pic_paras.curr_pic_qp;
-            i_global_qp = enc_config->QP_PVOP;
-#endif
         }
 
         i_nal_type = NAL_SLICE;
@@ -560,8 +541,6 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
         i_global_qp = 7;	//avoid level overflow in VLC module.
     }
 
-
-    vo->prev_qp = i_global_qp;	// MUST HAVE prev_qp updated!!
     SPRD_CODEC_LOGD ("%s, %d, qp: %d", __FUNCTION__, __LINE__, i_global_qp);
 
     img_ptr->pYUVRecFrame->i_poc =
@@ -635,11 +614,8 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     //rate_control
     if(img_ptr->sh.i_first_mb==0)
     {
-#ifdef RCMODE_FRAMERATE_
-        rc_update_pict(vo, img_ptr->pic_sz, &(vo->rc_gop_paras), i_slice_type);
-#else
-        rc_update_pict(vo, img_ptr->pic_sz, &(vo->rc_gop_paras));
-#endif
+        updatePicPara_GOPRC(&(vo->rc_inout_paras), img_ptr->pic_sz);
+
         img_ptr->pic_sz = 0;
         img_ptr->slice_nr = 0;
         pOutput->strmSize = img_ptr->stm_offset;
