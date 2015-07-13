@@ -536,9 +536,9 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
         i_nal_ref_idc = NAL_PRIORITY_HIGH;
     }
 
-    if (i_global_qp < 7)
+    if (i_global_qp < 16)
     {
-        i_global_qp = 7;	//avoid level overflow in VLC module.
+        i_global_qp = 16;	//avoid level overflow in VLC module.
     }
 
     SPRD_CODEC_LOGD ("%s, %d, qp: %d", __FUNCTION__, __LINE__, i_global_qp);
