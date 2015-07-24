@@ -11,6 +11,14 @@ ifeq ($(AUTOTST_DEVLP_DBG),true)
 LOCAL_CPPFLAGS += -DAUTOTST_DEVLP_DBG
 endif
 
+ifeq ($(BOARD_SPRD_WCNBT_MARLIN),true)
+LOCAL_CFLAGS  += -DSPRD_WCNBT_MARLIN
+endif
+
+ifeq ($(BOARD_SPRD_WCNBT_SR2351),true)
+LOCAL_CFLAGS += -DSPRD_WCNBT_SR2351
+endif
+
 LOCAL_MODULE_TAGS:= optional
 
 LOCAL_MODULE:= autotest
@@ -21,7 +29,7 @@ LOCAL_SRC_FILES:= \
     atv.cpp      \
     audio.cpp    \
     battery.cpp  \
-    bt.cpp       \
+    bt_fm_mixed.cpp       \
     camera.cpp   \
     channel.cpp  \
     cmmb.cpp     \
@@ -45,6 +53,7 @@ LOCAL_SRC_FILES:= \
     vibrator.cpp    \
     wifi.cpp        \
     power.cpp       \
+    otg.cpp	    \
     main.cpp   
 
 
@@ -83,5 +92,6 @@ LOCAL_SHARED_LIBRARIES:= \
 LOCAL_STATIC_LIBRARIES:= \
     libbt-utils\
     libbt-hci
+
 
 include $(BUILD_EXECUTABLE)
