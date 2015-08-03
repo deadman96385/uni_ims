@@ -16,6 +16,7 @@
 #include <assert.h>
 #include <errno.h>
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -62,19 +63,19 @@ void dbgLogcat2File( const char * filename );
 //-----------------------------------------------------------------------------
 
 #define AT_DBG(fmt, arg...)  { \
-    LOGD(  "%s(): "fmt, __FUNCTION__, ##arg); \
-    PRTF(  "%s(): "fmt, __FUNCTION__, ##arg); \
-    DM2F("D %s(): "fmt, __FUNCTION__, ##arg); }
+    LOGD(  "%s(): " fmt, __FUNCTION__, ##arg); \
+    PRTF(  "%s(): " fmt, __FUNCTION__, ##arg); \
+    DM2F("D %s(): " fmt, __FUNCTION__, ##arg); }
 
 #define AT_WRN(fmt, arg...)  { \
-    LOGE(  "%s(): "fmt, __FUNCTION__, ##arg); \
-    PRTF(  "%s(): "fmt, __FUNCTION__, ##arg); \
-    DM2F("W %s(): "fmt, __FUNCTION__, ##arg); }
+    LOGE(  "%s(): " fmt, __FUNCTION__, ##arg); \
+    PRTF(  "%s(): " fmt, __FUNCTION__, ##arg); \
+    DM2F("W %s(): " fmt, __FUNCTION__, ##arg); }
 
 #define AT_ERR(fmt, arg...)  { \
-    LOGE(  "%s(): "fmt, __FUNCTION__, ##arg); \
-    PRTF(  "%s(): "fmt, __FUNCTION__, ##arg); \
-    DM2F("E %s(): "fmt, __FUNCTION__, ##arg); }
+    LOGE(  "%s(): " fmt, __FUNCTION__, ##arg); \
+    PRTF(  "%s(): " fmt, __FUNCTION__, ##arg); \
+    DM2F("E %s(): " fmt, __FUNCTION__, ##arg); }
 
 #define AT_INF(fmt, arg...)  { \
     LOGI(  fmt, ##arg);  \
