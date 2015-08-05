@@ -90,9 +90,9 @@ int atvOpen( void )
 	permInstallService(NULL);
 
 	AudioSystem::setDeviceConnectionState(AUDIO_DEVICE_OUT_FM_SPEAKER,
-            AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE, "");
+            AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE, "", "");
     AudioSystem::setDeviceConnectionState(AUDIO_DEVICE_OUT_FM_HEADSET,
-            AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE, "");
+            AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE, "", "");
 
 	FUN_EXIT;
 	return 0;
@@ -128,7 +128,7 @@ int atvPlay( void )
 
 	int ret = camStart();
 	AudioSystem::setDeviceConnectionState(AUDIO_DEVICE_OUT_FM_HEADSET,
-            AUDIO_POLICY_DEVICE_STATE_AVAILABLE, "");
+            AUDIO_POLICY_DEVICE_STATE_AVAILABLE, "", "");
 
 	FUN_EXIT;
 	return ret;
@@ -146,7 +146,7 @@ int atvStop( void )
 	}
 
 	AudioSystem::setDeviceConnectionState(AUDIO_DEVICE_OUT_FM_HEADSET,
-            AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE, "");
+            AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE, "", "");
 
 	FUN_EXIT;
 	return 0;

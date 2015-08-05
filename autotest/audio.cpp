@@ -273,12 +273,12 @@ status_t setDeviceStateIsConnection( audio_devices_t device )
 	for( uint i = 0; i < sizeof(arrOut) / sizeof(arrOut[0]); ++i ) {
 		if( arrOut[i] != device ) {
 			AudioSystem::setDeviceConnectionState( arrOut[i],
-				AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE, "" );
+				AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE, "", "");
 		}
 	}
 
 	return AudioSystem::setDeviceConnectionState( device,
-            AUDIO_POLICY_DEVICE_STATE_AVAILABLE, "" );
+            AUDIO_POLICY_DEVICE_STATE_AVAILABLE, "", "");
 }
 
 //------------------------------------------------------------------------------
@@ -301,12 +301,13 @@ int audRcrderOpen( int indev, int sampleRate )
     if( sRcrdBufLen < AUD_RCRD_FRAME_BUF ) {
         sRcrdBufLen = AUD_RCRD_FRAME_BUF;
     }
-    
+#if 0
     sRcrder = new AudioRecord();
     if( sRcrder == NULL ) {
         ERRMSG("new fail!\n");
         return -2;
     }
+#endif
 
     status_t status;
     audio_source_t input;
@@ -314,12 +315,12 @@ int audRcrderOpen( int indev, int sampleRate )
     if (indev == AUD_INDEV_BACK_MIC){
         input = AUDIO_SOURCE_CAMCORDER;
         status = AudioSystem::setDeviceConnectionState(AUDIO_DEVICE_IN_BACK_MIC,
-            AUDIO_POLICY_DEVICE_STATE_AVAILABLE, "");
+            AUDIO_POLICY_DEVICE_STATE_AVAILABLE, "", "");
             ALOGE("wangzuo:indev == AUD_INDEV_BACK_MIC");
     } else if (indev == AUD_INDEV_HEADSET_MIC){
         input = AUDIO_SOURCE_MIC;
         status = AudioSystem::setDeviceConnectionState(AUDIO_DEVICE_IN_WIRED_HEADSET,
-            AUDIO_POLICY_DEVICE_STATE_AVAILABLE, "");
+            AUDIO_POLICY_DEVICE_STATE_AVAILABLE, "", "");
         ALOGE("wangzuo:indev == AUD_INDEV_HEADSET_MIC");
     } else if (indev == AUD_INDEV_BUILTIN_MIC ){
         input = AUDIO_SOURCE_MIC;

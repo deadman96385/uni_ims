@@ -66,9 +66,9 @@ int fmOpen( void )
     permInstallService(NULL);
 
 	AudioSystem::setDeviceConnectionState(AUDIO_DEVICE_OUT_FM_SPEAKER,
-            AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE, "");
+            AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE, "", "");
     AudioSystem::setDeviceConnectionState(AUDIO_DEVICE_OUT_FM_HEADSET,
-            AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE, "");
+            AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE, "", "");
     
     return 0;
 }
@@ -128,7 +128,7 @@ int fmPlay( uint freq )
     AudioSystem::setForceUse(AUDIO_POLICY_FORCE_FOR_FM,AUDIO_POLICY_FORCE_NONE);
 
 	status = AudioSystem::setDeviceConnectionState(AUDIO_DEVICE_OUT_FM_HEADSET,
-            AUDIO_POLICY_DEVICE_STATE_AVAILABLE, "");
+            AUDIO_POLICY_DEVICE_STATE_AVAILABLE, "", "");
 
 	if( NO_ERROR != status ) {
         ERRMSG("out to fm headset error!\n");
@@ -145,7 +145,7 @@ int fmStop( void )
 	if( NULL != s_hwDev ) {
 
 		AudioSystem::setDeviceConnectionState(AUDIO_DEVICE_OUT_FM_HEADSET,
-            AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE, "");
+            AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE, "", "");
 
 		s_hwDev->setControl(s_hwDev, V4L2_CID_PRIVATE_TAVARUA_STATE, 0);
 	}
