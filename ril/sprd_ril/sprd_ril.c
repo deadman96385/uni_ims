@@ -7741,28 +7741,24 @@ static void requestOpenLogicalChannel(int channelID, void *data, size_t datalen,
     char cmd[128] = {0};
     char *line;
     char *AID = (char *)data;
-    int response[2] = {0, 0};
+    int response;
 
     if(AID == NULL) {
         RILLOGE("requestOpenLogicalChannel Invalid AID");
         return;
     }
     snprintf(cmd, sizeof(cmd), "AT+CCHO=\"%s\"", AID);
-    err = at_send_command(ATch_type[channelID], cmd, &p_response);
-    if (err < 0 || p_response->success == 0){
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CCHO:",&p_response);
+    if (err < 0 || p_response->success == 0)
         goto error;
-    }
+
+    line = p_response->p_intermediates->line;
 
     err = at_tok_start(&line);
     if (err < 0) goto error;
 
-    err = at_tok_nextint(&line, &response[0]);
+    err = at_tok_nextint(&line, &response);
     if (err < 0) goto error;
-
-    err = at_tok_nextint(&line, &response[1]);
-    if (err < 0){
-        RILLOGD("requestOpenLogicalChannel response is only one: ", response[0]);
-    }
 
     RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(int));
     at_response_free(p_response);
@@ -7798,6 +7794,8 @@ static void requestTransmitApdu(int channelID, void *data, size_t datalen, RIL_T
     ATResponse *p_response = NULL;
     char cmd[128] = {0};
     char *line;
+    char *resp, *p_sw1, *p_sw2;
+    char *endptr = NULL;
     RIL_SIM_APDU *apdu = NULL;
     RIL_SIM_IO_Response response;
 
@@ -7805,7 +7803,9 @@ static void requestTransmitApdu(int channelID, void *data, size_t datalen, RIL_T
 
     apdu = (RIL_SIM_APDU *)data;
 
-    len = (apdu->p3)+5;
+    char cmd_tmp[128] = {0};
+    snprintf(cmd_tmp, sizeof(cmd_tmp), "%02X%02X%02X%02X%02X%s", apdu->cla,apdu->instruction,apdu->p1,apdu->p2,apdu->p3,apdu->data);
+    len = strlen(cmd_tmp);
 
     RILLOGD("requestTransmitApdu SESSIONID = %d", apdu->sessionid);
     RILLOGD("requestTransmitApdu CLA = %02X", apdu->cla);
@@ -7817,7 +7817,7 @@ static void requestTransmitApdu(int channelID, void *data, size_t datalen, RIL_T
     RILLOGD("requestTransmitApdu len = %d", len);
 
     snprintf(cmd, sizeof(cmd), "AT+CGLA=%d,%d,\"%02X%02X%02X%02X%02X%s\"", apdu->sessionid,len,apdu->cla,apdu->instruction,apdu->p1,apdu->p2,apdu->p3,apdu->data);
-    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CGLA: ", &p_response);
     if (err < 0 || p_response->success == 0) {
         goto error;
     }
@@ -7827,15 +7827,27 @@ static void requestTransmitApdu(int channelID, void *data, size_t datalen, RIL_T
     err = at_tok_start(&line);
     if (err < 0) goto error;
 
-    err = at_tok_nextint(&line, &(response.sw1));
+    err = at_tok_nextint(&line, &len);
+    if (err < 0 || len < 4) goto error;
+
+    err = at_tok_nextstr(&line, &resp);
     if (err < 0) goto error;
 
-    err = at_tok_nextint(&line, &(response.sw2));
-    if (err < 0) goto error;
+    p_sw1 = (char*)alloca(sizeof(char) * 3);
+    memcpy(p_sw1, resp + len - 4, 2);
+    memcpy(p_sw1 + 2, "\0", 1);
 
-    if (at_tok_hasmore(&line)) {
-        err = at_tok_nextstr(&line, &(response.simResponse));
-        if (err < 0) goto error;
+    p_sw2 = resp + len - 2;
+
+    response.sw1 = strtol(p_sw1, &endptr, 16);
+    response.sw2 = strtol(p_sw2, &endptr, 16);
+
+    if (len == 4) {
+        response.simResponse = NULL;
+    } else if (len > 4) {
+        response.simResponse = (char*)alloca( sizeof(char) * (len - 4 + 1) );
+        memcpy(response.simResponse, resp, len - 4);
+        memcpy(response.simResponse + len - 4, "\0", 1);
     }
 
     RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(response));
@@ -7878,6 +7890,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SIM_POWER
                 || request == RIL_REQUEST_OEM_HOOK_RAW
                 || request == RIL_REQUEST_OEM_HOOK_STRINGS
+                || request == RIL_REQUEST_SIM_CLOSE_CHANNEL
+                || request == RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
@@ -7900,6 +7914,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY
                 || request == RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY
                 || request == RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN
+                || request == RIL_REQUEST_SIM_CLOSE_CHANNEL
+                || request == RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL
 #endif
                 || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
                 || request == RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE
