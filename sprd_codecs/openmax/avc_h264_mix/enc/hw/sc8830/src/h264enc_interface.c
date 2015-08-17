@@ -336,7 +336,7 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
     }
 
     target_bitrate_max = level_infos[level_idx].MaxBR * 1200;
-	SPRD_CODEC_LOGD("%s, target_bitrate_max: %d, pConf->targetBitRate: %d", __FUNCTION__, target_bitrate_max, pConf->targetBitRate);
+    SPRD_CODEC_LOGD("%s, target_bitrate_max: %d, pConf->targetBitRate: %d", __FUNCTION__, target_bitrate_max, pConf->targetBitRate);
 
     if (pConf->targetBitRate > target_bitrate_max) {
         pConf->targetBitRate = target_bitrate_max;
@@ -486,6 +486,13 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     anti_shark_ptr->input_height = pInput->org_img_height;
     anti_shark_ptr->shift_x = pInput->crop_x;
     anti_shark_ptr->shift_y = pInput->crop_y;
+
+    if (pInput->ischangebitrate) {
+        SPRD_CODEC_LOGD ("%s, changing bit rate, old: %d, new: %d", __FUNCTION__, vo->rc_inout_paras.nTarget_bitrate, pInput->bitrate);
+
+        vo->rc_inout_paras.nTarget_bitrate = pInput->bitrate;
+        reset_GOPRC(&(vo->rc_inout_paras));
+    }
 
     img_ptr->stm_offset = 0;
     img_ptr->pYUVSrcFrame->i_frame = vo->g_nFrame_enc;

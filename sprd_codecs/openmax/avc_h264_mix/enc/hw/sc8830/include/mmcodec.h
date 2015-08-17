@@ -210,6 +210,9 @@ typedef struct
     int32    org_img_height;
     int32    crop_x;
     int32    crop_y;
+
+    int32 bitrate;
+    BOOLEAN ischangebitrate;
 } MMEncIn;
 
 // Encoder output structure
