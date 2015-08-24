@@ -38,6 +38,11 @@
 
 #include <telephony/sprd_ril.h>
 #include "hardware/qemu_pipe.h"
+#include "sprd_ril_cb.h"
+
+#if defined (RIL_SUPPORT_CALL_BLACKLIST)
+#include "ril_call_blacklist.h"
+#endif
 
 #define LOG_TAG "RIL"
 #include <utils/Log.h>
@@ -372,11 +377,7 @@ static const RIL_RadioFunctions s_callbacks = {
 };
 
 #ifdef RIL_SHLIB
-static const struct RIL_Env *s_rilenv;
-
-#define RIL_onRequestComplete(t, e, response, responselen) s_rilenv->OnRequestComplete(t,e, response, responselen)
-#define RIL_onUnsolicitedResponse(a,b,c) s_rilenv->OnUnsolicitedResponse(a,b,c)
-#define RIL_requestTimedCallback(a,b,c) s_rilenv->RequestTimedCallback(a,b,c)
+const struct RIL_Env *s_rilenv;
 #endif
 
 static RIL_RadioState sState = RADIO_STATE_UNAVAILABLE;
@@ -2269,13 +2270,13 @@ static void onDataCallListChanged(void *param )
 	}
     putChannel(channelID);
 }
+
 static void onConn(void *param) {
 	int channelID;
 	channelID = getChannel();
 	at_send_command(ATch_type[channelID], "AT+IMSEN=1", NULL);
 	putChannel(channelID);
 }
-
 
 static void onClass2SmsReceived(void *param)
 {
@@ -8748,23 +8749,53 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_OEM_HOOK_STRINGS:
             {
-               int i;
-               const char ** cur;
+#if defined (RIL_SUPPORT_CALL_BLACKLIST)
+                OemRequest * req = (OemRequest *) data;
+                switch (atoi(req->funcId)) {
+                    case OEM_FUNCTION_ID_CALL_BLACKLIST :
+                        requestCallBlackList(data, datalen, t);
+                        break;
+                    default :
+                        {
+                            int i;
+                            const char ** cur;
 
-               RILLOGD("got OEM_HOOK_STRINGS: 0x%8p %lu", data, (long)datalen);
+                            RILLOGD("got OEM_HOOK_STRINGS: 0x%8p %lu", data, (long)datalen);
 
 
-               for (i = (datalen / sizeof (char *)), cur = (const char **)data ;
-                       i > 0 ; cur++, i --) {
-                   RILLOGD("> '%s'", *cur);
-                   break;
+                            for (i = (datalen / sizeof (char *)), cur = (const char **)data ;
+                                    i > 0 ; cur++, i --) {
+                                 RILLOGD("> '%s'", *cur);
+                                 break;
+                            }
+                            RILLOGD(">>> '%s'", *cur);
+                            requestSendAT(channelID, *cur, datalen, t);
+                            /* echo back strings */
+                        //  RIL_onRequestComplete(t, RIL_E_SUCCESS, data, datalen);
+                            break;
+                        }
+                }
+                break;
+#else
+                int i;
+                const char ** cur;
+
+                RILLOGD("got OEM_HOOK_STRINGS: 0x%8p %lu", data, (long)datalen);
+
+
+                for (i = (datalen / sizeof (char *)), cur = (const char **)data ;
+                        i > 0 ; cur++, i --) {
+                     RILLOGD("> '%s'", *cur);
+                     break;
                 }
                 RILLOGD(">>> '%s'", *cur);
                 requestSendAT(channelID, *cur, datalen, t);
                 /* echo back strings */
-//                RIL_onRequestComplete(t, RIL_E_SUCCESS, data, datalen);
+            //  RIL_onRequestComplete(t, RIL_E_SUCCESS, data, datalen);
                 break;
-           }
+#endif
+            }
+
         case RIL_REQUEST_WRITE_SMS_TO_SIM:
             requestWriteSmsToSim(channelID, data, datalen, t);
             break;
@@ -12509,7 +12540,16 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 RILLOGD("%s fail", s);
                 goto out;
             }
-
+#if defined (RIL_SUPPORT_CALL_BLACKLIST)
+            /* SPRD : add for blacklist call */
+            if (response->stat == 4 && response->number != NULL) {
+                int ret = 0;
+                ret = queryBlackList(response->type, response->number);
+                if (ret == 1) {
+                    goto out;
+                }
+            }
+#endif
             if (at_tok_hasmore(&tmp)) {
                 err = at_tok_nextint(&tmp, &response->bs_type);
                 if (err < 0) {
@@ -12587,6 +12627,16 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 RILLOGD("%s fail", s);
                 goto out;
             }
+            err = at_tok_nextint(&tmp, &response->mpty);
+            if (err < 0) {
+                RILLOGD("%s fail", s);
+                goto out;
+            }
+            err = at_tok_nextstr(&tmp, &response->number);
+            if (err < 0) {
+                RILLOGD("%s fail", s);
+                goto out;
+            }
 
             //stat:6 is disconnected
             if (response->stat == 6 && g_csfb_processing) {
@@ -12601,7 +12651,16 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 RILLOGD("RIL_UNSOL_CALL_CSFALLBACK_FINISH, id: %d",
                         csfb_response->id);
             }
-
+#if defined (RIL_SUPPORT_CALL_BLACKLIST)
+            /* SPRD : add for blacklist call */
+            if (response->stat == 4 && response->number != NULL) {
+                int ret = 0;
+                ret = queryBlackList(response->type, response->number);
+                if (ret == 1) {
+                    goto out;
+                }
+            }
+#endif
             if (response->type == 0) {
                 RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
                         NULL, 0);
@@ -12612,16 +12671,6 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                         RIL_UNSOL_RESPONSE_VIDEOCALL_STATE_CHANGED,
                         NULL, 0);
 
-                err = at_tok_nextint(&tmp, &response->mpty);
-                if (err < 0) {
-                    RILLOGD("%s fail", s);
-                    goto out;
-                }
-                err = at_tok_nextstr(&tmp, &response->number);
-                if (err < 0) {
-                    RILLOGD("%s fail", s);
-                    goto out;
-                }
                 err = at_tok_nextint(&tmp, &response->num_type);
                 if (err < 0) {
                     RILLOGD("%s fail", s);
@@ -12687,8 +12736,22 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             RILLOGD("%s fail", s);
             response->number = " ";
         }
+#if defined (RIL_SUPPORT_CALL_BLACKLIST)
+        /* SPRD : add for blacklist call */
+        if (response->number != NULL) {
+            int ret = 0;
+            /* SCSFB unsol response don't have the param of type, type == 0 represent voice call */
+            int type = 0;
+            ret = queryBlackList(type, response->number);
+            if (ret == 1) {
+                goto out;
+            }
+        }
+#endif
         g_csfb_processing = 1;
-
+#if defined (RIL_SUPPORT_CALL_BLACKLIST)
+        RIL_requestTimedCallback(onCallCsFallBackAccept, NULL, NULL);
+#endif
         RIL_onUnsolicitedResponse (RIL_UNSOL_CALL_CSFALLBACK,
             response,sizeof(RIL_CALL_CSFALLBACK));
         RILLOGD("RIL_UNSOL_CALL_CSFALLBACK, id: %d, number: %s", response->id, response->number);

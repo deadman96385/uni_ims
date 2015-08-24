@@ -26,6 +26,10 @@
 #include <sys/time.h>
 #endif /* !FEATURE_UNIT_TEST */
 
+#if defined (RIL_SUPPORT_CALL_BLACKLIST)
+#include <telephony/sprd_ril_oem.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

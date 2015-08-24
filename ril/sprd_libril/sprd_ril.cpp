@@ -348,6 +348,7 @@ static int responseCallListVoLTE(Parcel &p, void *response, size_t responselen);
 static int responseCallForwardsUri(Parcel &p, void *response, size_t responselen);
 static void stripNumberFromSipAddress(const char *sipAddress, char *number, int len);
 static int responseBroadcastSmsLte(Parcel &p, void *response, size_t responselen);
+static int responseBroadcastSms(Parcel &p, void *response, size_t responselen);
 #endif
 
 static int decodeVoiceRadioTechnology (RIL_RadioState radioState);
@@ -3090,7 +3091,45 @@ static int responseRaw(Parcel &p, void *response, size_t responselen) {
         RILLOGE("invalid response: NULL with responselen != 0");
         return RIL_ERRNO_INVALID_RESPONSE;
     }
+#if defined (RIL_SUPPORT_CALL_BLACKLIST)
+    RIL_OEM_NOTIFY *p_cur = (RIL_OEM_NOTIFY *) response;
+    switch (p_cur->oemFuncId) {
+        case OEM_FUNCTION_ID_CALL_BLACKLIST:
+            {
+                RILLOGD("Black call, subFuncID : %d", p_cur->oemSubFuncId);
 
+                switch (p_cur->oemSubFuncId) {
+                    case OEM_SUBFUNC_ID_BLACKCALL:
+                    {
+                        char *resp;
+                        int resplen;
+
+                        asprintf(&resp, "%d%d%s", p_cur->oemFuncId, p_cur->oemSubFuncId, p_cur->data);
+                        resplen = strlen(resp) + 1;
+                        p.writeInt32(resplen);
+                        p.write(resp, resplen);
+                        RILLOGD("resp = %s", resp);
+                        free(resp);
+                        break;
+                    }
+                    default:
+                        RILLOGD("Not supported black call subFuncId: %d", p_cur->oemSubFuncId);
+                        p.writeInt32(-1);
+                        break;
+                }
+                break;
+            }
+        default:
+            // The java code reads -1 size as null byte array
+            if (response == NULL) {
+                p.writeInt32(-1);
+            } else {
+                p.writeInt32(responselen);
+                p.write(response, responselen);
+            }
+            break;
+    }
+#else
     // The java code reads -1 size as null byte array
     if (response == NULL) {
         p.writeInt32(-1);
@@ -3098,10 +3137,10 @@ static int responseRaw(Parcel &p, void *response, size_t responselen) {
         p.writeInt32(responselen);
         p.write(response, responselen);
     }
+#endif
 
     return 0;
 }
-
 
 static int responseSIM_IO(Parcel &p, void *response, size_t responselen) {
     if (response == NULL) {
@@ -4565,6 +4604,23 @@ static void stripNumberFromSipAddress(const char *sipAddress, char *number, int 
         strDupSipAddr = NULL;
     }
     return;
+}
+
+static int responseBroadcastSms(Parcel &p, void *response, size_t responselen) {
+    if (response == NULL && responselen != 0) {
+        RILLOGE("invalid response: NULL with responselen != 0");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    // The java code reads -1 size as null byte array
+    if (response == NULL) {
+        p.writeInt32(-1);
+    } else {
+        p.writeInt32(responselen);
+        p.write(response, responselen);
+    }
+
+    return 0;
 }
 #endif
 
