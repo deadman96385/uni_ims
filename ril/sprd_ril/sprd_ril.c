@@ -47,6 +47,7 @@
 #include <ctype.h>
 #include <semaphore.h>
 #include <cutils/properties.h>
+#include "sprd_ril_cb.h"
 
 static void *noopRemoveWarning( void *a ) { return a; }
 #define RIL_UNUSED_PARM(a) noopRemoveWarning((void *)&(a));
@@ -326,10 +327,10 @@ enum sms_init_status {
 };
 
 static void onRequest (int request, void *data, size_t datalen, RIL_Token t);
-static RIL_RadioState currentState();
-static int onSupports (int requestCode);
-static void onCancel (RIL_Token t);
-static const char *getVersion();
+//static RIL_RadioState currentState();
+//static int onSupports (int requestCode);
+//static void onCancel (RIL_Token t);
+//static const char *getVersion();
 static int isRadioOn(int channelID);
 static SIM_Status getSIMStatus(int channelID);
 static int getCardStatus(int channelID, RIL_CardStatus_v6 **pp_card_status);
@@ -10501,7 +10502,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
  * Synchronous call from the RIL to us to return current radio state.
  * RADIO_STATE_UNAVAILABLE should be the initial state.
  */
-static RIL_RadioState
+RIL_RadioState
 currentState()
 {
     return sState;
@@ -10513,7 +10514,7 @@ currentState()
  * Return 1 for "supported" and 0 for "unsupported"
  */
 
-static int
+int
 onSupports (int requestCode)
 {
     /* @@@ todo */
@@ -10521,13 +10522,13 @@ onSupports (int requestCode)
     return 1;
 }
 
-static void onCancel (RIL_Token t)
+void onCancel (RIL_Token t)
 {
     /* @@@ todo */
 
 }
 
-static const char * getVersion(void)
+const char * getVersion(void)
 {
     pthread_mutex_lock(&s_sms_ready_mutex);
     s_socket_connected = 1;

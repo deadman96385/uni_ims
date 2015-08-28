@@ -48,6 +48,19 @@ extern "C" {
 typedef void * RIL_Token;
 
 typedef enum {
+    RIL_SOCKET_1,
+    RIL_SOCKET_2,
+    RIL_SOCKET_3,
+    RIL_SOCKET_4,
+    RIL_SOCKET_NUM
+} RIL_SOCKET_ID;
+
+typedef enum {
+    RIL_TELEPHONY_SOCKET,
+    RIL_ATCI_SOCKET
+} RIL_SOCKET_TYPE;
+
+typedef enum {
     RIL_E_SUCCESS = 0,
     RIL_E_RADIO_NOT_AVAILABLE = 1,     /* If radio did not start or is resetting */
     RIL_E_GENERIC_FAILURE = 2,
@@ -6503,8 +6516,11 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
  *
  * @param callbacks user-specifed callback function
  */
+
 void RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv);
 
+void RIL_register_ATCIServer (RIL_RadioFunctions *(*Init)(const struct RIL_Env *, int, char **),
+        RIL_SOCKET_TYPE socketType, int argc, char **argv);
 
 /**
  *
@@ -6565,7 +6581,6 @@ void RIL_requestTimedCallback (RIL_TimedCallback callback,
  */
 
 void RIL_removeTimedCallback(void *callbackInfo);
-
 
 #endif /* RIL_SHLIB */
 

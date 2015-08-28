@@ -7,8 +7,10 @@ LOCAL_C_INCLUDES :=$(LOCAL_PATH)/../include
 
 LOCAL_SRC_FILES:= \
     sprd_ril.cpp \
-    ril_event.cpp\
-    sprd_thread_pool.cpp
+    ril_event.cpp \
+    sprd_thread_pool.cpp \
+    RilSocket.cpp \
+    RilATCISocket.cpp \
 
 LOCAL_SHARED_LIBRARIES := \
     liblog \
@@ -30,6 +32,8 @@ endif
 
 LOCAL_MODULE:= libril_sp
 LOCAL_MODULE_TAGS := optional
+LOCAL_COPY_HEADERS_TO := libril_sp
+LOCAL_COPY_HEADERS := ril_ex.h
 #LOCAL_LDLIBS += -lpthread
 include $(BUILD_SHARED_LIBRARY)
 

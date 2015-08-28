@@ -9,7 +9,8 @@ LOCAL_SRC_FILES := \
     sprd_ril.c \
     sprd_atchannel.c \
     misc.c \
-    at_tok.c
+    at_tok.c \
+    sprd_atci.c
 
 LOCAL_SHARED_LIBRARIES := \
     liblog libcutils libutils libril_sp librilutils
