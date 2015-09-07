@@ -38,6 +38,7 @@
 #define LIB_PATH_PROPERTY   "rild.libpath"
 #define LIB_ARGS_PROPERTY   "rild.libargs"
 #define MAX_LIB_ARGS        16
+#define MAX_CAP_NUM         (CAP_TO_INDEX(CAP_LAST_CAP) + 1)
 #define RIL_AT_TEST_PROPERTY  "persist.sys.sprd.attest"
 
 static int modem;
@@ -62,10 +63,10 @@ extern void RIL_onRequestComplete(RIL_Token t, RIL_Errno e,
                            void *response, size_t responselen);
 
 #if defined(ANDROID_MULTI_SIM)
-extern void RIL_onUnsolicitedResponse(int unsolResponse, const void *data,
+extern void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
                                 size_t datalen, RIL_SOCKET_ID socket_id);
 #else
-extern void RIL_onUnsolicitedResponse(int unsolResponse, const void *data,
+extern void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
                                 size_t datalen);
 #endif
 
@@ -103,6 +104,8 @@ static int make_argv(char * args, char ** argv)
  * Our group, cache, was set by init.
  */
 void switchUser() {
+    char debuggable[PROP_VALUE_MAX];
+
     prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
     setuid(AID_RADIO);
 
@@ -111,7 +114,7 @@ void switchUser() {
     header.version = _LINUX_CAPABILITY_VERSION_3;
     header.pid = 0;
 
-    struct __user_cap_data_struct data[2];
+    struct __user_cap_data_struct data[MAX_CAP_NUM];
     memset(&data, 0, sizeof(data));
 
     data[CAP_TO_INDEX(CAP_NET_ADMIN)].effective |= CAP_TO_MASK(CAP_NET_ADMIN);
@@ -120,9 +123,21 @@ void switchUser() {
     data[CAP_TO_INDEX(CAP_NET_RAW)].effective |= CAP_TO_MASK(CAP_NET_RAW);
     data[CAP_TO_INDEX(CAP_NET_RAW)].permitted |= CAP_TO_MASK(CAP_NET_RAW);
 
+    data[CAP_TO_INDEX(CAP_BLOCK_SUSPEND)].effective |= CAP_TO_MASK(CAP_BLOCK_SUSPEND);
+    data[CAP_TO_INDEX(CAP_BLOCK_SUSPEND)].permitted |= CAP_TO_MASK(CAP_BLOCK_SUSPEND);
+
     if (capset(&header, &data[0]) == -1) {
         RLOGE("capset failed: %s", strerror(errno));
         exit(EXIT_FAILURE);
+    }
+
+    /*
+     * Debuggable build only:
+     * Set DUMPABLE that was cleared by setuid() to have tombstone on RIL crash
+     */
+    property_get("ro.debuggable", debuggable, "0");
+    if (strcmp(debuggable, "1") == 0) {
+        prctl(PR_SET_DUMPABLE, 1, 0, 0, 0);
     }
 }
 

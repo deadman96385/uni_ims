@@ -73,6 +73,8 @@ int modem;
 
 #define ANDROID_WAKE_LOCK_NAME "radio-interface"
 
+#define ANDROID_WAKE_LOCK_SECS 0
+#define ANDROID_WAKE_LOCK_USECS 200000
 
 #define PROPERTY_RIL_IMPL "gsm.version.ril-impl"
 
@@ -97,6 +99,9 @@ int modem;
 
 // request, response, and unsolicited msg print macro
 #define PRINTBUF_SIZE 8096
+
+// Enable verbose logging
+#define VDBG 0
 
 // Enable RILC log
 #define RILC_LOG 1
@@ -192,7 +197,8 @@ static struct ril_event s_wake_timeout_event;
 static struct ril_event s_debug_event;
 
 
-static const struct timeval TIMEVAL_WAKE_TIMEOUT = {1,0};
+static const struct timeval TIMEVAL_WAKE_TIMEOUT = {ANDROID_WAKE_LOCK_SECS,ANDROID_WAKE_LOCK_USECS};
+
 
 static pthread_mutex_t s_pendingRequestsMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t s_writeMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -303,6 +309,7 @@ static void dispatchCallForwardUri(Parcel& p, RequestInfo *pRI);
 
 
 static int responseInts(Parcel &p, void *response, size_t responselen);
+static int responseFailCause(Parcel &p, void *response, size_t responselen);
 static int responseStrings(Parcel &p, void *response, size_t responselen);
 static int responseString(Parcel &p, void *response, size_t responselen);
 static int responseVoid(Parcel &p, void *response, size_t responselen);
@@ -330,6 +337,10 @@ static int responseHardwareConfig(Parcel &p, void *response, size_t responselen)
 static int responseDcRtInfo(Parcel &p, void *response, size_t responselen);
 static int responseRadioCapability(Parcel &p, void *response, size_t responselen);
 static int responseSSData(Parcel &p, void *response, size_t responselen);
+static int responseLceStatus(Parcel &p, void *response, size_t responselen);
+static int responseLceData(Parcel &p, void *response, size_t responselen);
+static int responseActivityData(Parcel &p, void *response, size_t responselen);
+
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 static int responseImsSendSms(Parcel &p, void *response, size_t responselen);
 static int responseDataCallProfile(Parcel &p, void *response, size_t responselen);
@@ -986,7 +997,9 @@ dispatchSIM_IO (Parcel &p, RequestInfo *pRI) {
     int32_t t;
     int size;
     status_t status;
-
+#if VDBG
+    RLOGD("dispatchSIM_IO");
+#endif
     memset (&simIO, 0, sizeof(simIO));
 
     // note we only check status at the end
@@ -1307,7 +1320,7 @@ static void
 dispatchCdmaSms(Parcel &p, RequestInfo *pRI) {
     RIL_CDMA_SMS_Message rcsm;
 
-    ALOGD("dispatchCdmaSms");
+    RLOGD("dispatchCdmaSms");
     if (NO_ERROR != constructCdmaSms(p, pRI, rcsm)) {
         goto invalid;
     }
@@ -1330,7 +1343,7 @@ dispatchImsCdmaSms(Parcel &p, RequestInfo *pRI, uint8_t retry, int32_t messageRe
     RIL_IMS_SMS_Message rism;
     RIL_CDMA_SMS_Message rcsm;
 
-    ALOGD("dispatchImsCdmaSms: retry=%d, messageRef=%d", retry, messageRef);
+    RLOGD("dispatchImsCdmaSms: retry=%d, messageRef=%d", retry, messageRef);
 
     if (NO_ERROR != constructCdmaSms(p, pRI, rcsm)) {
         goto invalid;
@@ -1364,7 +1377,7 @@ dispatchImsGsmSms(Parcel &p, RequestInfo *pRI, uint8_t retry, int32_t messageRef
     status_t status;
     size_t datalen;
     char **pStrings;
-    ALOGD("dispatchImsGsmSms: retry=%d, messageRef=%d", retry, messageRef);
+    RLOGD("dispatchImsGsmSms: retry=%d, messageRef=%d", retry, messageRef);
 
     status = p.readInt32 (&countStrings);
 
@@ -1436,7 +1449,7 @@ dispatchImsSms(Parcel &p, RequestInfo *pRI) {
     uint8_t retry;
     int32_t messageRef;
 
-    ALOGD("dispatchImsSms");
+    RLOGD("dispatchImsSms");
     if (status != NO_ERROR) {
         goto invalid;
     }
@@ -2631,7 +2644,9 @@ blockingWrite(int fd, const void *buffer, size_t len) {
             return -1;
         }
     }
-
+#if VDBG
+    RLOGE("RIL Response bytes written:%d", writeOffset);
+#endif
     return 0;
 }
 
@@ -2712,6 +2727,40 @@ responseInts(Parcel &p, void *response, size_t responselen) {
     }
     removeLastChar;
     closeResponse;
+
+    return 0;
+}
+
+// Response is an int or RIL_LastCallFailCauseInfo.
+// Currently, only Shamu plans to use RIL_LastCallFailCauseInfo.
+// TODO(yjl): Let all implementations use RIL_LastCallFailCauseInfo.
+static int responseFailCause(Parcel &p, void *response, size_t responselen) {
+    if (response == NULL && responselen != 0) {
+        RLOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    if (responselen == sizeof(int)) {
+      startResponse;
+      int *p_int = (int *) response;
+      appendPrintBuf("%s%d,", printBuf, p_int[0]);
+      p.writeInt32(p_int[0]);
+      removeLastChar;
+      closeResponse;
+    } else if (responselen == sizeof(RIL_LastCallFailCauseInfo)) {
+      startResponse;
+      RIL_LastCallFailCauseInfo *p_fail_cause_info = (RIL_LastCallFailCauseInfo *) response;
+      appendPrintBuf("%s[cause_code=%d,vendor_cause=%s]", printBuf, p_fail_cause_info->cause_code,
+                     p_fail_cause_info->vendor_cause);
+      p.writeInt32(p_fail_cause_info->cause_code);
+      writeStringToParcel(p, p_fail_cause_info->vendor_cause);
+      removeLastChar;
+      closeResponse;
+    } else {
+      RLOGE("responseFailCause: invalid response length %d expected an int or "
+            "RIL_LastCallFailCauseInfo", (int)responselen);
+      return RIL_ERRNO_INVALID_RESPONSE;
+    }
 
     return 0;
 }
@@ -4166,6 +4215,88 @@ static int responseDcRtInfo(Parcel &p, void *response, size_t responselen)
     closeResponse;
 
     return 0;
+}
+
+static int responseLceStatus(Parcel &p, void *response, size_t responselen) {
+  if (response == NULL || responselen != sizeof(RIL_LceStatusInfo)) {
+    if (response == NULL) {
+      RLOGE("invalid response: NULL");
+    }
+    else {
+      RLOGE("responseLceStatus: invalid response length %d expecting len: d%",
+            sizeof(RIL_LceStatusInfo), responselen);
+    }
+    return RIL_ERRNO_INVALID_RESPONSE;
+  }
+
+  RIL_LceStatusInfo *p_cur = (RIL_LceStatusInfo *)response;
+  p.write((void *)p_cur, 1);  // p_cur->lce_status takes one byte.
+  p.writeInt32(p_cur->actual_interval_ms);
+
+  startResponse;
+  appendPrintBuf("LCE Status: %d, actual_interval_ms: %d",
+                 p_cur->lce_status, p_cur->actual_interval_ms);
+  closeResponse;
+
+  return 0;
+}
+
+static int responseLceData(Parcel &p, void *response, size_t responselen) {
+  if (response == NULL || responselen != sizeof(RIL_LceDataInfo)) {
+    if (response == NULL) {
+      RLOGE("invalid response: NULL");
+    }
+    else {
+      RLOGE("responseLceData: invalid response length %d expecting len: d%",
+            sizeof(RIL_LceDataInfo), responselen);
+    }
+    return RIL_ERRNO_INVALID_RESPONSE;
+  }
+
+  RIL_LceDataInfo *p_cur = (RIL_LceDataInfo *)response;
+  p.writeInt32(p_cur->last_hop_capacity_kbps);
+
+  /* p_cur->confidence_level and p_cur->lce_suspended take 1 byte each.*/
+  p.write((void *)&(p_cur->confidence_level), 1);
+  p.write((void *)&(p_cur->lce_suspended), 1);
+
+  startResponse;
+  appendPrintBuf("LCE info received: capacity %d confidence level %d and suspended %d",
+                  p_cur->last_hop_capacity_kbps, p_cur->confidence_level,
+                  p_cur->lce_suspended);
+  closeResponse;
+
+  return 0;
+}
+
+static int responseActivityData(Parcel &p, void *response, size_t responselen) {
+  if (response == NULL || responselen != sizeof(RIL_ActivityStatsInfo)) {
+    if (response == NULL) {
+      RLOGE("invalid response: NULL");
+    }
+    else {
+      RLOGE("responseActivityData: invalid response length %d expecting len: d%",
+            sizeof(RIL_ActivityStatsInfo), responselen);
+    }
+    return RIL_ERRNO_INVALID_RESPONSE;
+  }
+
+  RIL_ActivityStatsInfo *p_cur = (RIL_ActivityStatsInfo *)response;
+  p.writeInt32(p_cur->sleep_mode_time_ms);
+  p.writeInt32(p_cur->idle_mode_time_ms);
+  for(int i = 0; i < RIL_NUM_TX_POWER_LEVELS; i++) {
+    p.writeInt32(p_cur->tx_mode_time_ms[i]);
+  }
+  p.writeInt32(p_cur->rx_mode_time_ms);
+
+  startResponse;
+  appendPrintBuf("Modem activity info received: sleep_mode_time_ms %d idle_mode_time_ms %d tx_mode_time_ms %d %d %d %d %d and rx_mode_time_ms %d",
+                  p_cur->sleep_mode_time_ms, p_cur->idle_mode_time_ms, p_cur->tx_mode_time_ms[0],
+                  p_cur->tx_mode_time_ms[1], p_cur->tx_mode_time_ms[2], p_cur->tx_mode_time_ms[3],
+                  p_cur->tx_mode_time_ms[4], p_cur->rx_mode_time_ms);
+   closeResponse;
+
+  return 0;
 }
 
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
@@ -5810,11 +5941,7 @@ static void
 wakeTimeoutCallback (void *param) {
     // We're using "param != NULL" as a cancellation mechanism
     if (param == NULL) {
-        //RILLOGD("wakeTimeout: releasing wake lock");
-
         releaseWakeLock();
-    } else {
-        //RILLOGD("wakeTimeout: releasing wake lock CANCELLED");
     }
 }
 
