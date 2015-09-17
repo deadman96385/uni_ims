@@ -3140,34 +3140,23 @@ static int responseRaw(Parcel &p, void *response, size_t responselen) {
         RILLOGE("invalid response: NULL with responselen != 0");
         return RIL_ERRNO_INVALID_RESPONSE;
     }
-#if defined (RIL_SUPPORT_CALL_BLACKLIST)
-    RIL_OEM_NOTIFY *p_cur = (RIL_OEM_NOTIFY *) response;
+
+    RIL_OEM_NOTIFY *p_cur = (RIL_OEM_NOTIFY *)response;
     switch (p_cur->oemFuncId) {
-        case OEM_FUNCTION_ID_CALL_BLACKLIST:
+#if defined (RIL_SUPPORT_CALL_BLACKLIST)
+        case OEM_UNSOL_FUNCTION_ID_BLACKCALL:
             {
-                RILLOGD("Black call, subFuncID : %d", p_cur->oemSubFuncId);
+                char *resp;
+                int resplen;
 
-                switch (p_cur->oemSubFuncId) {
-                    case OEM_SUBFUNC_ID_BLACKCALL:
-                    {
-                        char *resp;
-                        int resplen;
-
-                        asprintf(&resp, "%d%d%s", p_cur->oemFuncId, p_cur->oemSubFuncId, p_cur->data);
-                        resplen = strlen(resp) + 1;
-                        p.writeInt32(resplen);
-                        p.write(resp, resplen);
-                        RILLOGD("resp = %s", resp);
-                        free(resp);
-                        break;
-                    }
-                    default:
-                        RILLOGD("Not supported black call subFuncId: %d", p_cur->oemSubFuncId);
-                        p.writeInt32(-1);
-                        break;
-                }
+                asprintf(&resp, "%d%s", p_cur->oemFuncId, p_cur->data);
+                resplen = strlen(resp) + 1;
+                p.writeInt32(resplen);
+                p.write(resp, resplen);
+                free(resp);
                 break;
             }
+#endif
         default:
             // The java code reads -1 size as null byte array
             if (response == NULL) {
@@ -3178,15 +3167,6 @@ static int responseRaw(Parcel &p, void *response, size_t responselen) {
             }
             break;
     }
-#else
-    // The java code reads -1 size as null byte array
-    if (response == NULL) {
-        p.writeInt32(-1);
-    } else {
-        p.writeInt32(responselen);
-        p.write(response, responselen);
-    }
-#endif
 
     return 0;
 }

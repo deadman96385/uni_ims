@@ -8008,6 +8008,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             && !(request == RIL_REQUEST_GET_IMEI
                 || request == RIL_REQUEST_GET_IMEISV
                 || request == RIL_REQUEST_SIM_POWER
+                || request == RIL_REQUEST_OEM_HOOK_RAW
+                || request == RIL_REQUEST_OEM_HOOK_STRINGS
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
@@ -8054,6 +8056,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_CHANGE_SIM_PIN
                 || request == RIL_REQUEST_CHANGE_SIM_PIN2
                 || request == RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES
+                || request == RIL_REQUEST_OEM_HOOK_RAW
                 || request == RIL_REQUEST_OEM_HOOK_STRINGS
                 || request == RIL_REQUEST_SIM_OPEN_CHANNEL
                 || request == RIL_REQUEST_SET_INITIAL_ATTACH_APN
@@ -8742,41 +8745,41 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
 
         case RIL_REQUEST_OEM_HOOK_RAW:
-            /* echo back data */
-            requestSendAT(channelID,data, datalen, t);
-//            RIL_onRequestComplete(t, RIL_E_SUCCESS, data, datalen);
-            break;
-
-        case RIL_REQUEST_OEM_HOOK_STRINGS:
             {
+                OemRequest *req = (OemRequest *)data;
+                switch (req->funcId) {
+                    if (sState == RADIO_STATE_UNAVAILABLE
 #if defined (RIL_SUPPORT_CALL_BLACKLIST)
-                OemRequest * req = (OemRequest *) data;
-                switch (atoi(req->funcId)) {
-                    case OEM_FUNCTION_ID_CALL_BLACKLIST :
+                            && !(req->funcId == OEM_REQ_FUNCTION_ID_CALL_BLACKLIST)
+#endif
+                       ) {
+                        RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
+                        break;
+                    }
+
+                    if (sState == RADIO_STATE_OFF
+#if defined (RIL_SUPPORT_CALL_BLACKLIST)
+                            && !(request == OEM_REQ_FUNCTION_ID_CALL_BLACKLIST)
+#endif
+                       ) {
+                        RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
+                        break;
+                    }
+
+#if defined (RIL_SUPPORT_CALL_BLACKLIST)
+                    case OEM_REQ_FUNCTION_ID_CALL_BLACKLIST :
                         requestCallBlackList(data, datalen, t);
                         break;
+#endif
                     default :
-                        {
-                            int i;
-                            const char ** cur;
-
-                            RILLOGD("got OEM_HOOK_STRINGS: 0x%8p %lu", data, (long)datalen);
-
-
-                            for (i = (datalen / sizeof (char *)), cur = (const char **)data ;
-                                    i > 0 ; cur++, i --) {
-                                 RILLOGD("> '%s'", *cur);
-                                 break;
-                            }
-                            RILLOGD(">>> '%s'", *cur);
-                            requestSendAT(channelID, *cur, datalen, t);
-                            /* echo back strings */
-                        //  RIL_onRequestComplete(t, RIL_E_SUCCESS, data, datalen);
-                            break;
-                        }
+                        /* echo back data */
+                        requestSendAT(channelID,data, datalen, t);
+                        break;
                 }
                 break;
-#else
+            }
+        case RIL_REQUEST_OEM_HOOK_STRINGS:
+            {
                 int i;
                 const char ** cur;
 
@@ -8793,7 +8796,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 /* echo back strings */
             //  RIL_onRequestComplete(t, RIL_E_SUCCESS, data, datalen);
                 break;
-#endif
             }
 
         case RIL_REQUEST_WRITE_SMS_TO_SIM:

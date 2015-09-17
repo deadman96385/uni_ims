@@ -165,44 +165,48 @@ void onCallCsFallBackAccept(void *param) {
  */
 static void creatBlackList(void *data, size_t datalen)
 {
-    int i;
+    int numberLen = 0;
     char *tmp = NULL;
-    char ** number = (char **) data;
+    char *type = NULL;
+    char *number = NULL;
+    char *blackList = ((OemRequest *)data)->payload;
 
-    if(number == NULL) {
+    if(blackList == NULL) {
         RILLOGE("Invalid blacklist\n");
         return;
     }
 
     black_list_init(&voice_black_list);
-
     if (voice_black_list == NULL)
         return;
 
     blacklistnode *p1 = NULL;
     blacklistnode *p2 = voice_black_list;
 
-    for (i = 3; i < datalen / sizeof(char *); i+= 2) {
-        int numberLen = 0;
-        numberLen = strlen(number[i+1]) + 1;
-        p1 = (blacklistnode *) malloc(sizeof(blacklistnode));
-        p1->phonenumber = (char *) malloc (numberLen*sizeof(char));
+    while (blackList != NULL) {
+        type = strsep(&blackList, ",");
+        if (blackList != NULL) {
+            number = strsep(&blackList, ",");
+            numberLen = strlen(number) + 1;
+            p1 = (blacklistnode *) malloc(sizeof(blacklistnode));
+            p1->phonenumber = (char *) malloc (numberLen*sizeof(char));
 
-        if (!strcmp(number[i], "0")) { //type == 0, represent voice black number
-            tmp = revstr(number[i+1]);
-            strcpy(p1->phonenumber, tmp);
-            p1->next = NULL;
-            p2->next = p1;
-            p2 = p1;
+            if (!strcmp(type, "0")) { //type == 0, represent voice black number
+                tmp = revstr(number);
+                strcpy(p1->phonenumber, tmp);
+                p1->next = NULL;
+                p2->next = p1;
+                p2 = p1;
+            }
         }
     }
 }
 
 void requestCallBlackList(void *data, size_t datalen, RIL_Token t) {
-    OemRequest * blackListReq = (OemRequest *) data;
-    RILLOGD("OEM subFuncID : %s", blackListReq->subFuncId);
-    switch (atoi(blackListReq->subFuncId)) {
-        case OEM_SUBFUNC_ID_MINMATCH :
+    OemRequest *blackListReq = (OemRequest *)data;
+    RILLOGD("OEM subFuncID : %d", blackListReq->subFuncId);
+    switch (blackListReq->subFuncId) {
+        case OEM_REQ_SUBFUNC_ID_MINMATCH :
             {
                 pthread_mutex_lock(&s_blackListMutex);
                 minMatch = atoi(blackListReq->payload);
@@ -216,17 +220,17 @@ void requestCallBlackList(void *data, size_t datalen, RIL_Token t) {
                 pthread_mutex_unlock(&s_blackListMutex);
                 break;
             }
-        case OEM_SUBFUNC_ID_BLACKLIST :
+        case OEM_REQ_SUBFUNC_ID_BLACKLIST :
             {
                  pthread_mutex_lock(&s_blackListMutex);
                  free_list_memory(voice_black_list);
                  voice_black_list = NULL;
-                 int length = datalen / sizeof(char *);
-                 if ( length == 3 ) {
+                 int length = blackListReq->len;
+                 if ( length == 0 ) {
                      RILLOGD("Blacklist is empty\n");
                      s_blacklist = 0;
                      RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-                 } else if ( length > 3 && ( minMatch == 7 || minMatch == 11)) {
+                 } else if ( length > 0 && ( minMatch == 7 || minMatch == 11)) {
                      s_blacklist = 1;
                      creatBlackList(data, datalen);
                      RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
@@ -265,19 +269,18 @@ int queryBlackList (int type, char *phonenumber)
         char *black_call = NULL;
         asprintf(&black_call, "%d%s", type, phonenumber);
 
-        black_response->oemFuncId = OEM_FUNCTION_ID_CALL_BLACKLIST;
-        black_response->oemSubFuncId = OEM_SUBFUNC_ID_BLACKCALL;
+        black_response->oemFuncId = OEM_UNSOL_FUNCTION_ID_BLACKCALL;
         black_response->data = black_call;
 
         RIL_onUnsolicitedResponse (RIL_UNSOL_OEM_HOOK_RAW,
                                     black_response, sizeof(RIL_OEM_NOTIFY));
-        RILLOGD("RIL_UNSOL_OEM_HOOK_RAW, oemFuncId: %d, oemSubFuncId: %d, data: %s",
-                black_response->oemFuncId, black_response->oemSubFuncId, black_response->data);
+        RILLOGD("RIL_UNSOL_OEM_HOOK_RAW, oemFuncId: %d, data: %s",
+                black_response->oemFuncId, black_response->data);
         free(black_call);
     }
-    EXIT:
-        pthread_mutex_unlock(&s_blackListMutex);
-        return ret;
+EXIT:
+    pthread_mutex_unlock(&s_blackListMutex);
+    return ret;
 }
 
 #endif
