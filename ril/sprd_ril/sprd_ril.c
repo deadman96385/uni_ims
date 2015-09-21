@@ -5106,20 +5106,6 @@ static void requestOperator(int channelID, void *data, size_t datalen, RIL_Token
         goto error;
     }
 
-    /**  SPRD : Add SPNWNAME feature @{ **/
-    if(response[2] != NULL && strlen(response[2]) > 0) {
-        response[0] = NULL;
-    }
-    if(strlen(s_nw_plmn) > 0 && response[2] != NULL){
-        bool exit_full_name = strlen(s_nw_full_name) > 0;
-        bool exit_short_name = strlen(s_nw_short_name) > 0;
-        bool same_plmn = strcmp(s_nw_plmn, response[2]) == 0;
-        if(same_plmn) {
-            if(exit_full_name) response[0] = s_nw_full_name;
-            if(exit_short_name) response[1] = s_nw_short_name;
-        }
-    }
-    /* @} */
     RIL_onRequestComplete(t, RIL_E_SUCCESS, response, sizeof(response));
     at_response_free(p_response);
 
