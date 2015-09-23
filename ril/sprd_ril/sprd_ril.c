@@ -12604,7 +12604,12 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         at_tok_start(&tmp);
         err = at_tok_nexthexint(&tmp, &cell_id);
         if (err < 0) goto out;
-        RIL_onUnsolicitedResponse (RIL_UNSOL_PHY_CELL_ID, (void *)&cell_id, 4);
+        char pci[30] = { 0 };
+        memset(pci, 0, sizeof(pci));
+        sprintf(pci, "%d%d", OEM_UNSOL_FUNCTION_ID_SPPCI, cell_id);
+        RILLOGD("pci %s", pci);
+        RIL_onUnsolicitedResponse (RIL_UNSOL_OEM_HOOK_RAW,
+                                    pci, strlen(pci)+1);
     }
     /* @} */
 #endif
