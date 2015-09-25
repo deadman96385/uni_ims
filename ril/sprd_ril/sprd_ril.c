@@ -167,6 +167,7 @@ typedef struct {
 #define VOLTE_ENABLE_PROP         "persist.sys.volte.enable"
 #define VOLTE_PCSCF_ADDRESS        "persist.sys.volte.pcscf"
 
+static bool plmnFiltration(char *plmn);//Bug#476317 Eliminate unwanted PLMNs
 static VoLTE_SrvccState s_srvccState = SRVCC_PS_TO_CS_SUCCESS;
 static SrvccPendingRequest *s_srvccPendingRequest;
 static bool isSrvccStrated();
@@ -3844,6 +3845,9 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
     tmp = (char *) malloc(count * sizeof(char) *30);
     startTmp=tmp;
 
+    /** Bug#476317 Eliminate unwanted PLMNs @{ **/
+    int count_unwanted_plmn = 0;
+    /** @} **/
     while ( (line = strchr(line, '(')) && (i++ < count) ) {
         line++;
         err = at_tok_nextint(&line, &stat);
@@ -3859,9 +3863,16 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
 
         err = at_tok_nextstr(&line, &(cur[2]));
         if (err < 0) continue;
+        /** Bug#476317 Do not report unwanted PLMNs @{ **/
+        if(plmnFiltration(cur[2])){
+            count_unwanted_plmn++;
+            continue;
+        }
+        /** @} **/
 
         /**  SPRD : Add SPNWNAME feature @{ **/
         if(cur[2] != NULL && strlen(cur[2]) > 0) {
+            if(cur[1] == NULL && cur[0] != NULL) cur[1] = cur[0];
             cur[0] = NULL;
         }
         if(strlen(s_nw_plmn) > 0 && cur[2] != NULL){
@@ -3877,19 +3888,9 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
 #if defined (RIL_SPRD_EXTENSION)
         err = at_tok_nextint(&line, &act);
         if (err < 0) continue;
-        if(cur[1] == NULL){
-            if(cur[0] != NULL){
-                cur[1] = cur[0];
-            }else{
-                cur[1] = tmp;
-            }
-        }
-        strcpy(tmp, cur[1]);
-        strcat(tmp, " ");
-        RILLOGD("requestNetworkList  tmp cur[1] = %s", tmp);
-        strcat(tmp, actStr[act==7 ? 3 : act]);//set act in cur[1], cur[1] = CMCC UTRAN
-        RILLOGD("requestNetworkList cur[1] act = %s", tmp);
-        cur[1] = tmp;
+        sprintf(tmp,"%s%s%d",cur[2]," ", act);
+        RILLOGD("requestNetworkList cur[2] act = %s", tmp);
+        cur[2] = tmp;
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 //        err = at_tok_nextstr(&line, &(cur[4]));
 //        if (err < 0) continue;
@@ -3898,7 +3899,7 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
         cur += 4;
         tmp += 30;
     }
-    RIL_onRequestComplete(t, RIL_E_SUCCESS, responses, count * 4 * sizeof(char *));
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, responses, (count - count_unwanted_plmn) * 4 * sizeof(char *));
     at_response_free(p_response);
     free(startTmp);
     return;
@@ -3908,6 +3909,23 @@ error:
     at_response_free(p_response);
     if (startTmp != NULL)
         free(startTmp);
+}
+
+/**
+ * Bug#476317 Eliminate unwanted PLMNs
+ * Return true if it is an unwanted PLMN
+ */
+static bool plmnFiltration(char *plmn){
+    int i;
+    //Array of unwanted plmns; "46003","46005","46011","45502" are CTCC
+    char *unwanted_plmns[] = {"46003","46005","46011","45502"};
+    int length = sizeof(unwanted_plmns)/sizeof(char*);
+    for(i=0; i<length; i++){
+        if(strcmp(unwanted_plmns[i],plmn) == 0){
+            return true;
+        }
+    }
+    return false;
 }
 
 static void requestQueryNetworkSelectionMode(int channelID,
@@ -3961,6 +3979,11 @@ static void requestNetworkRegistration(int channelID,  void *data, size_t datale
     if (network) {
 #ifdef RIL_SPRD_EXTENSION
         /* Mod for bug267572 Start */
+        char *p=strstr(network->operatorNumeric," ");
+        if(p!=NULL) {
+            network->act = atoi(p+1);
+            *p=0;
+        }
         if (network->act >= 0) {
             snprintf(cmd, sizeof(cmd), "AT+COPS=1,2,\"%s\",%d", network->operatorNumeric, network->act);
         } else {
