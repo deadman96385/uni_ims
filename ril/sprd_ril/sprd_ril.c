@@ -9139,8 +9139,16 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     at_response_free(p_response);
                 } else {
                     RILLOGD(" confirm STK call ");
-                    s_isstkcall = 1;
-                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                    /* SPRD: STK SETUP CALL feature support @{*/
+                    //s_isstkcall = 1;
+                    err = at_send_command(ATch_type[channelID], "AT+SPUSATCALLSETUP=1", &p_response);
+                    if (err < 0 || p_response->success == 0) {
+                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    } else {
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                    }
+                    at_response_free(p_response);
+                    /* @} */
                 }
                 break;
             }
@@ -12114,11 +12122,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             RILLOGD("%s fail", s);
             goto out;
         }
-#if defined (RIL_SPRD_EXTENSION)
-        RIL_onUnsolicitedResponse (RIL_UNSOL_STK_CALL_SETUP, response, strlen(response) + 1);
-#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+        /* SPRD: STK SETUP CALL feature support @{*/
         RIL_onUnsolicitedResponse (RIL_UNSOL_STK_PROACTIVE_COMMAND, response, strlen(response) + 1);
-#endif
+        /* @} */
     } else if (strStartsWith(s, "+SPUSATREFRESH:")) {
         char *tmp;
         int result = 0;
