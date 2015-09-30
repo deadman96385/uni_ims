@@ -2254,6 +2254,21 @@ static void requestShutdown(int channelID, RIL_Token t)
     return;
 }
 
+static void requestGetRadioCapability(RIL_Token t)
+{
+    RIL_RadioCapability *response;
+    response = (RIL_RadioCapability*)alloca(sizeof(RIL_RadioCapability));
+    memset(response, 0, sizeof(RIL_RadioCapability));
+    response->version = RIL_RADIO_CAPABILITY_VERSION;
+    response->phase = RC_PHASE_FINISH;
+    response->session = 0;
+    response->rat = 0xFFFF;
+    response->status = 1;
+    strcpy(response->logicalModemUuid,"com.sprd.modem");
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, response, sizeof(RIL_RadioCapability));
+    return;
+}
+
 static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t);
 
 static void onDataCallListChanged(void *param )
@@ -8000,7 +8015,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
     RILLOGD("onRequest: %s sState=%d", requestToString(request), sState);
 
-
     /* Ignore all requests except !(requests)
      * when RADIO_STATE_UNAVAILABLE.
      */
@@ -8021,6 +8035,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
      */
     if (sState == RADIO_STATE_OFF
             && !(request == RIL_REQUEST_RADIO_POWER
+                || request == RIL_REQUEST_GET_RADIO_CAPABILITY
 #if defined (RIL_SPRD_EXTENSION)
                 || request == RIL_REQUEST_SIM_POWER
                 || request == RIL_REQUEST_GET_REMAIN_TIMES
@@ -8629,7 +8644,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_SHUTDOWN:
             requestShutdown(channelID, t);
             break;
-
+        case RIL_REQUEST_GET_RADIO_CAPABILITY:
+            requestGetRadioCapability(t);
+            break;
         case RIL_REQUEST_DEVICE_IDENTITY:
             RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
             break;
