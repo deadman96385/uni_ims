@@ -316,6 +316,7 @@ unsigned char* convertUsimToSim(unsigned char const* byteUSIM, int len, unsigned
 static bool hasSimBusy = false;
 static void* dump_sleep_log();
 void setModemtype();
+static void getIMEIPassword(int channeID,char pwd[]);//SPRD add for simlock
 
 /*** Static Variables ***/
 static const RIL_RadioFunctions s_callbacks = {
@@ -1718,6 +1719,114 @@ error1:
             sizeof(remainTimes));
     at_response_free(p_response);
 }
+
+//SPRD add for simlock begin
+static void requestFacilityLockByUser(int channelID,  char **data, size_t datalen, RIL_Token t)
+{
+    ATResponse *p_response = NULL;
+    char imeiPwd[9];
+    int err;
+    int result;
+    int status;
+    char *cmd, *line;
+    int errNum = -1;
+    int ret = -1;
+
+    if (datalen != 2 * sizeof(char *))
+        goto error1;
+
+    getIMEIPassword(channelID,imeiPwd);
+
+    ret = asprintf(&cmd, "AT+CLCK=\"%s\",%c,\"%s\"",
+            data[0], *data[1], imeiPwd);
+
+    if(ret < 0) {
+        RILLOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error1;
+    }
+    RILLOGD("requestFacilityLockByUser: %s", cmd);
+
+
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    free(cmd);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    at_response_free(p_response);
+    return;
+
+error:
+    if(strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
+        line = p_response->finalResponse;
+        err = at_tok_start(&line);
+        if (err >= 0) {
+            err = at_tok_nextint(&line, &errNum);
+            if(err >= 0) {
+                if(errNum == 11 || errNum == 12) {
+                    setRadioState(channelID, RADIO_STATE_SIM_LOCKED_OR_ABSENT);
+                } else if (errNum == 70 || errNum == 128) {
+                    RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
+                    at_response_free(p_response);
+                    return;
+                } else if (errNum == 16) {
+                    RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+                    at_response_free(p_response);
+                    return;
+                }
+            }
+        }
+    }
+error1:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+}
+//SPRD add for simlock end
+
+//SPRD add for simlock begin
+static void getIMEIPassword(int channelID,char imeiPwd[])
+{
+    ATResponse *p_response = NULL;
+    extern int s_sim_num;
+    char password[15];
+    int i = 0;
+    int j = 0;
+    int err;
+    char *line;
+    if (s_sim_num != 0) return;
+
+    err = at_send_command_numeric(ATch_type[channelID], "AT+CGSN", &p_response);
+    if (err < 0 || p_response->success == 0)
+        goto error;
+
+    line = p_response->p_intermediates->line;
+
+    if (strlen(line) != 15) goto error;
+    while (*line != '\0')
+    {
+        if (i > 15) break;
+        password[i] = *line;
+        line++;
+        i++;
+    }
+    for(i = 0;i < 15;j++)
+    {
+        if (j > 6) break;
+        imeiPwd[j] =(password[i] -48 + password[i+1] - 48) %10 + '0';
+        i = i + 2;
+    }
+    imeiPwd[7] = password[0];
+    imeiPwd[8] = '\0';
+    at_response_free(p_response);
+    return;
+error:
+    RILLOGD(" get IMEI failed or IMEI is not rigth");
+    at_response_free(p_response);
+    return;
+}
+//SPRD add for simlock end
 
 static void requestChangeFacilityLock(int channelID,  char **data, size_t datalen, RIL_Token t)
 {
@@ -7935,6 +8044,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_GET_IMSI
                 || request == RIL_REQUEST_QUERY_FACILITY_LOCK
                 || request == RIL_REQUEST_SET_FACILITY_LOCK
+                || request == RIL_REQUEST_SET_FACILITY_LOCK_FOR_USER//SPRD: add for one key simlock
                 || request == RIL_REQUEST_ENTER_SIM_PIN2
                 || request == RIL_REQUEST_ENTER_SIM_PUK
                 || request == RIL_REQUEST_ENTER_SIM_PUK2
@@ -7986,6 +8096,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
         case RIL_REQUEST_SET_FACILITY_LOCK:
             requestFacilityLock(channelID, data, datalen, t);
+            break;
+        case RIL_REQUEST_SET_FACILITY_LOCK_FOR_USER:
+            requestFacilityLockByUser(channelID, data, datalen, t);
             break;
         case RIL_REQUEST_CHANGE_BARRING_PASSWORD:
             requestChangeFacilityLock(channelID, data, datalen, t);
