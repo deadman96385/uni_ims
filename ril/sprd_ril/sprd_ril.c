@@ -128,6 +128,8 @@ char RIL_SP_SIM_PIN_PROPERTYS[20]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.s
 
 #define PROP_END_CONNECTIVITY  "gsm.stk.end_connectivity"
 
+#define PRO_SIMLOCK_UNLOCK_BYNV  "ro.simlock.unlock.bynv"
+
 // {for sleep log}
 #define BUFFER_SIZE  (12*1024*4)
 #define CONSTANT_DIVIDE  32768.0
@@ -1624,13 +1626,19 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
         }
         simstatus = getSIMStatus(channelID);
         RILLOGD("simstatus = %d", simstatus);
+
+        char prop[PROPERTY_VALUE_MAX] = {0};
+        property_get(PRO_SIMLOCK_UNLOCK_BYNV, prop, "0");
+
         if(simstatus == SIM_READY) {
             setRadioState(channelID, RADIO_STATE_SIM_READY);
         }else if((SIM_NETWORK_PERSONALIZATION == simstatus)
             || (SIM_SIM_PERSONALIZATION == simstatus)
             || (SIM_NETWORK_SUBSET_PERSONALIZATION == simstatus)
             || (SIM_CORPORATE_PERSONALIZATION == simstatus)
-            || (SIM_SERVICE_PROVIDER_PERSONALIZATION == simstatus)){
+            || (SIM_SERVICE_PROVIDER_PERSONALIZATION == simstatus)
+            //simlock unlock by nv allow unlock with no sim card
+            || !strcmp(prop, "1")){
             if( 0 == strcmp(type, "PSP") || 0 == strcmp(type, "PUP") || 0 == strcmp(type, "PCP")
                                          || 0 == strcmp(type, "PPP") || 0 == strcmp(type, "PNP")) {
                 char *type_new[3] = {0};
