@@ -12635,6 +12635,23 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                                     pci, strlen(pci)+1);
     }
     /* @} */
+    else if (strStartsWith(s, "+SPEXPIRESIM:")) {
+        int simID;
+        char *tmp;
+        line = strdup(s);
+        tmp = line;
+        err = at_tok_start(&tmp);
+        if (err < 0) goto out;
+
+        err = at_tok_nextint(&tmp, &simID);
+        if (err < 0) goto out;
+        RILLOGD("SPEXPIRESIM = %d", simID);
+        char response[5] = {0};
+        memset(response, 0, sizeof(response));
+        sprintf(response, "%d%d", OEM_UNSOL_FUNCTION_ID_EXPIREDSIM, simID);
+        RILLOGD("response %s", response);
+        RIL_onUnsolicitedResponse (RIL_UNSOL_OEM_HOOK_RAW, response, strlen(response));
+    }
 #endif
     else if (strStartsWith(s, "^SMOF:")) {
         char *tmp;
