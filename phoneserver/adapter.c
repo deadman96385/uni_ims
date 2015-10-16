@@ -1496,7 +1496,7 @@ int cvt_cesq_cmd_ind(AT_CMD_IND_T * ind)
     if (rsrp == 255) {
         rsrp = -255;
     } else {
-        rsrp -= 141;//modified by bug#434807
+        rsrp = 141 - rsrp;//modified by bug#486220
     }
 
     snprintf(ind_str, sizeof(ind_str), "\r\n+CESQ: %d,%d,%d,%d,%d,%d\r\n",
@@ -3600,7 +3600,7 @@ int cvt_cesq_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
         if (rsrp == 255) {
             rsrp = -255;
         } else {
-            rsrp -= 141;//modified by bug#439424
+            rsrp = 141 - rsrp;//modified by bug#486220
         }
         snprintf(resp_str, sizeof(resp_str), "\r\n+CESQ: %d,%d,%d,%d,%d,%d\r\n",
                  rxlev, ber, rscp, ecno, rsrq, rsrp);
