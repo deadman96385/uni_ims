@@ -31,12 +31,6 @@
 #undef  PHS_LOGD
 #define PHS_LOGD(x...)  ALOGD( x )
 
-#define ETH_TD  "ro.modem.t.eth"
-#define ETH_W  "ro.modem.w.eth"
-#define ETH_L  "ro.modem.l.eth"
-#define ETH_TL  "ro.modem.tl.eth"
-#define ETH_LF  "ro.modem.lf.eth"
-
 #define SYS_IFCONFIG_UP "sys.ifconfig.up"
 #define SYS_IP_SET "sys.data.setip"
 #define SYS_IP_CLEAR "sys.data.clearip"
@@ -64,6 +58,7 @@
 struct ppp_info_struct ppp_info[MAX_PPP_NUM];
 static char sSavedDns[IP_ADD_SIZE] = {0};
 static char sSavedDns_IPV6[IP_ADD_SIZE*4] ={0};
+char ETH_SP[20]; // "ro.modem.*.eth"
 
 mutex ps_service_mutex;
 extern const char *modem;
@@ -182,6 +177,88 @@ int get_ipv6addr(const char *prop, int cid)
     return setup_success;
 }
 
+int down_netcard(int cid, char* netinterface) {
+    int index = cid - 1;
+    char linker[128] = { 0 };
+    int count = 0;
+
+    if (cid < 1 || cid >= MAX_PPP_NUM || netinterface == NULL)
+        return 0;
+    PHS_LOGD("down cid %d, network interface %s ", cid, netinterface);
+    snprintf(linker, sizeof(linker), "addr flush dev %s%d", netinterface, index);
+    property_set(SYS_IP_CLEAR, linker);
+    /* set property */
+    snprintf(linker, sizeof(linker), "link set %s%d down", netinterface, index);
+    property_set(SYS_IFCONFIG_DOWN, linker);
+    /* start data_off */
+    property_set("ctl.start", "data_off");
+
+    /* wait up to 10s for data_off execute complete */
+    do {
+        property_get(SYS_IFCONFIG_DOWN, linker, "");
+        if (!strcmp(linker, "done"))
+            break;
+        count++;
+        PHS_LOGD("wait data_off exec %d times...", count);
+        usleep(10 * 1000);
+    } while (count < RETRY_MAX_COUNT);
+    PHS_LOGD("data_off execute done");
+    return 1;
+}
+
+int dispose_data_fallback(int masterCid, int secondaryCid) {
+    int master_index = masterCid - 1;
+    int secondary_index = secondaryCid - 1;
+    char linker[128] = { 0 };
+    char cmd[MAX_CMD * 2];
+    char prop[PROPERTY_VALUE_MAX];
+    int count = 0;
+
+    if (masterCid < 1|| masterCid >= MAX_PPP_NUM || secondaryCid <1 || secondaryCid >= MAX_PPP_NUM) {
+    // 1~11 is valid cid
+    return 0;
+    }
+    snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", modem);
+    property_get(ETH_SP, prop, "veth");
+    PHS_LOGD( "master ip type %d ,secondary ip type %d", ppp_info[master_index].ip_state, ppp_info[secondary_index].ip_state);
+    if (ppp_info[master_index].ip_state == ppp_info[secondary_index].ip_state) { // fallback get same type ip with master
+        return 0;
+    }
+    if (ppp_info[master_index].ip_state == IPV4) {
+        down_netcard(masterCid, prop); // down ipv4, because need set ipv6 firstly
+        //copy secondary ppp to master ppp
+        memcpy(ppp_info[master_index].ipv6laddr, ppp_info[secondary_index].ipv6laddr,
+                sizeof(ppp_info[master_index].ipv6laddr));
+        memcpy(ppp_info[master_index].ipv6dns1addr, ppp_info[secondary_index].ipv6dns1addr,
+                sizeof(ppp_info[master_index].ipv6dns1addr));
+        memcpy(ppp_info[master_index].ipv6dns2addr, ppp_info[secondary_index].ipv6dns2addr,
+                sizeof(ppp_info[master_index].ipv6dns2addr));
+        sprintf(cmd, "setprop net.%s%d.ipv6_ip %s", prop, master_index, ppp_info[master_index].ipv6laddr);
+        system(cmd);
+        sprintf(cmd, "setprop net.%s%d.ipv6_dns1 %s", prop, master_index, ppp_info[master_index].ipv6dns1addr);
+        system(cmd);
+        sprintf(cmd, "setprop net.%s%d.ipv6_dns2 %s", prop, master_index, ppp_info[master_index].ipv6dns2addr);
+        system(cmd);
+    } else if (ppp_info[master_index].ip_state == IPV6) { //copy secondary ppp to master ppp
+        memcpy(ppp_info[master_index].ipladdr, ppp_info[secondary_index].ipladdr,
+                sizeof(ppp_info[master_index].ipladdr));
+        memcpy(ppp_info[master_index].dns1addr, ppp_info[secondary_index].dns1addr,
+                sizeof(ppp_info[master_index].dns1addr));
+        memcpy(ppp_info[master_index].dns2addr, ppp_info[secondary_index].dns2addr,
+                sizeof(ppp_info[master_index].dns2addr));
+        sprintf(cmd, "setprop net.%s%d.ip %s", prop, master_index, ppp_info[master_index].ipladdr);
+        system(cmd);
+        sprintf(cmd, "setprop net.%s%d.dns1 %s", prop, master_index, ppp_info[master_index].dns1addr);
+        system(cmd);
+        sprintf(cmd, "setprop net.%s%d.dns2 %s", prop, master_index, ppp_info[secondary_index].dns2addr);
+        system(cmd);
+    }
+    sprintf(cmd, "setprop net.%s%d.ip_type %d", prop, master_index, IPV4V6);
+    system(cmd);
+    ppp_info[master_index].ip_state = IPV4V6;
+    return 1;
+}
+
 int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
 {
     cmux_t *mux;
@@ -190,6 +267,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
     char at_cmd_str[MAX_AT_CMD_LEN];
     int cid, ppp_index;
     int err, ret;
+    int master_cid = 0;
 
     //PHS_LOGD("enter cvt_cgdata_set_req  ");
     if (req == NULL) {
@@ -221,6 +299,17 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
     if (err < 0) {
         PHS_LOGD("parse cmd error");
         return AT_RESULT_NG;
+    }
+    if (at_tok_hasmore(&at_in_str)) {
+        err = at_tok_nextint(&at_in_str, &master_cid);
+        if (err < 0) {
+            PHS_LOGD("parse master cid error");
+            master_cid = 0;
+        } else {
+            master_cid ^= cid;
+            cid ^= master_cid;
+            master_cid ^= cid;
+        }
     }
     ppp_index = cid - 1;
 
@@ -339,19 +428,10 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
         if(ppp_info[ppp_index].state == PPP_STATE_ACTIVE)
         {
             PHS_LOGD("PS connected successful");
-            if(!strcmp(modem, "t")) {
-                property_get(ETH_TD, prop, "veth");
-            } else if(!strcmp(modem, "w")) {
-                property_get(ETH_W, prop, "veth");
-            } else if(!strcmp(modem, "l")) {
-                property_get(ETH_L, prop, "veth");
-            } else if(!strcmp(modem, "tl")) {
-                property_get(ETH_TL, prop, "veth");
-            } else if(!strcmp(modem, "lf")) {
-                property_get(ETH_LF, prop, "veth");
-            } else {
-                PHS_LOGE("Unknown modem type, exit--4");
-                exit(-1);
+            snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", modem);
+            property_get(ETH_SP, prop, "veth");
+            if (dispose_data_fallback(master_cid, cid)) { // if fallback, need map ipv4 and ipv6 to one net device
+                cid = master_cid;
             }
 
             PHS_LOGD("PS ip_state = %d",ppp_info[cid-1].ip_state);
@@ -424,7 +504,7 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
 
                 snprintf(linker, sizeof(linker), "link set %s%d mtu 1500", prop, cid-1);
                 property_set(SYS_MTU_SET, linker);
-                PHS_LOGD("IPV6 setmtu linker = %s", linker);
+                PHS_LOGD("IPV4 setmtu linker = %s", linker);
 
                 // no arp
                 snprintf(linker, sizeof(linker), "link set %s%d arp off", prop, cid-1);
@@ -452,11 +532,11 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
 
                     snprintf(linker, sizeof(linker), "link set %s%d mtu 1500", prop, cid-1);
                     property_set(SYS_MTU_SET, linker);
-                    PHS_LOGD("IPV6 setmtu linker = %s", linker);
+                    PHS_LOGD("IPV4 setmtu linker = %s", linker);
 
-                    snprintf(linker, sizeof(linker), "");
+                    snprintf(linker, sizeof(linker), " ");
                     property_set(SYS_NO_ARP_IPV6, linker);
-                    PHS_LOGD("IPV6 arp linker = %s", linker);
+                    PHS_LOGD("IPV4 arp linker = %s", linker);
 
                     // up the net interface
                     snprintf(linker, sizeof(linker), "link set %s%d up", prop, cid-1);
@@ -674,20 +754,8 @@ int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp,
                     strlcpy(ppp_info[cid-1].dns2addr,ppp_info[cid-1].userdns2addr,sizeof(ppp_info[cid-1].dns2addr));
                 }
 
-                if(!strcmp(modem, "t")) {
-                    property_get(ETH_TD, prop, "veth");
-                } else if(!strcmp(modem, "w")) {
-                    property_get(ETH_W, prop, "veth");
-                } else if(!strcmp(modem, "l")) {
-                    //to do
-                } else if(!strcmp(modem, "tl")) {
-                    property_get(ETH_TL, prop, "veth");
-                } else if(!strcmp(modem, "lf")) {
-                    property_get(ETH_LF, prop, "veth");
-                } else {
-                    PHS_LOGE("Unknown modem type, exit");
-                    exit(-1);
-                }
+                snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", modem);
+                property_get(ETH_SP, prop, "veth");
                 /* set property */
                 snprintf(linker, sizeof(linker), "addr add %s dev %s%d", ip, prop, cid-1);
                 property_set(SYS_IP_SET, linker);
@@ -869,40 +937,9 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                 ppp_info[tmp_cid - 1].state = PPP_STATE_IDLE;
 
                 usleep(200*1000);
-                if(!strcmp(modem, "t")) {
-                    property_get(ETH_TD, prop, "veth");
-                } else if(!strcmp(modem, "w")) {
-                    property_get(ETH_W, prop, "veth");
-                } else if(!strcmp(modem, "l")) {
-                    //to do
-                } else if(!strcmp(modem, "tl")) {
-                    property_get(ETH_TL, prop, "veth");
-                } else if(!strcmp(modem, "lf")) {
-                    property_get(ETH_LF, prop, "veth");
-                } else {
-                    PHS_LOGE("Unknown modem type, exit");
-                    exit(-1);
-                }
-                /* clear IP addr */
-                snprintf(linker, sizeof(linker), "addr flush dev %s%d", prop, tmp_cid-1);
-                property_set(SYS_IP_CLEAR, linker);
-                /* set property */
-                snprintf(linker, sizeof(linker), "link set %s%d down", prop, tmp_cid-1);
-                property_set(SYS_IFCONFIG_DOWN, linker);
-                /* start data_off */
-                property_set("ctl.start", "data_off");
-
-                /* wait up to 10s for data_off execute complete */
-                do {
-                    property_get(SYS_IFCONFIG_DOWN, linker, "");
-                    if(!strcmp(linker, "done"))
-                        break;
-                    count++;
-                    PHS_LOGD("wait data_off exec %d times...", count);
-                    usleep(10*1000);
-                }while(count < RETRY_MAX_COUNT);
-
-                PHS_LOGD("data_off execute done");
+                snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", modem);
+                property_get(ETH_SP, prop, "veth");
+                down_netcard(tmp_cid,prop);
 
                 sprintf(cmd, "setprop net.%s%d.ip %s", prop, tmp_cid-1,"0.0.0.0");
                 system(cmd);
@@ -934,41 +971,9 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                     ppp_info[i].cmux = mux;
                     ppp_info[i].state = PPP_STATE_IDLE;
 
-                    if(!strcmp(modem, "t")) {
-                        property_get(ETH_TD, prop, "veth");
-                    } else if(!strcmp(modem, "w")) {
-                        property_get(ETH_W, prop, "veth");
-                    } else if(!strcmp(modem, "l")) {
-                        //to do
-                    } else if(!strcmp(modem, "tl")) {
-                        property_get(ETH_TL, prop, "veth");
-                    } else if(!strcmp(modem, "lf")) {
-                        property_get(ETH_LF, prop, "veth");
-                    } else {
-                        PHS_LOGE("Unknown modem type, exit");
-                        exit(-1);
-                    }
-
-                    /* clear IP addr */
-                    snprintf(linker, sizeof(linker), "addr flush dev %s%d", prop, tmp_cid-1);
-                    property_set(SYS_IP_CLEAR, linker);
-                    /* set property */
-                    snprintf(linker, sizeof(linker), "link set %s%d down", prop, i);
-                    property_set(SYS_IFCONFIG_DOWN, linker);
-                    /* start data_off */
-                    property_set("ctl.start", "data_off");
-
-                    /* wait up to 10s for data_off execute complete */
-                    do {
-                        property_get(SYS_IFCONFIG_DOWN, linker, "");
-                        if(!strcmp(linker, "done"))
-                            break;
-                        count++;
-                        PHS_LOGD("wait data_off exec %d times...", count);
-                        usleep(10*1000);
-                    }while(count < RETRY_MAX_COUNT);
-
-                    PHS_LOGD("data_off execute done");
+                    snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", modem);
+                    property_get(ETH_SP, prop, "veth");
+                    down_netcard(i+1,prop);
 
                     sprintf(cmd, "setprop net.%s%d.ip %s", prop, i,"0.0.0.0");
                     system(cmd);
@@ -1025,39 +1030,9 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                 ppp_info[tmp_cid - 1].state = PPP_STATE_IDLE;
 
                 usleep(200*1000);
-                if(!strcmp(modem, "t")) {
-                    property_get(ETH_TD, prop, "veth");
-                } else if(!strcmp(modem, "w")) {
-                    property_get(ETH_W, prop, "veth");
-                } else if(!strcmp(modem, "l")) {
-                    property_get(ETH_L, prop, "veth");
-                } else if(!strcmp(modem, "tl")) {
-                    property_get(ETH_TL, prop, "veth");
-                } else if(!strcmp(modem, "lf")) {
-                    property_get(ETH_LF, prop, "veth");
-                } else {
-                    PHS_LOGE("Unknown modem type, exit--1");
-                    exit(-1);
-                }
-
-                /* clear IP addr */
-                snprintf(linker, sizeof(linker), "addr flush dev %s%d", prop, tmp_cid-1);
-                property_set(SYS_IP_CLEAR, linker);
-                /* set property */
-                snprintf(linker, sizeof(linker), "link set %s%d down", prop, tmp_cid-1);
-                property_set(SYS_IFCONFIG_DOWN, linker);
-                /* start data_off */
-                property_set("ctl.start", "data_off");
-
-                /* wait up to 10s for data_off execute complete */
-                do {
-                    property_get(SYS_IFCONFIG_DOWN, linker, "");
-                    if(!strcmp(linker, "done"))
-                        break;
-                    count++;
-                    PHS_LOGD("wait data_off exec %d times...", count);
-                    usleep(10*1000);
-                }while(count < RETRY_MAX_COUNT);
+                snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", modem);
+                property_get(ETH_SP, prop, "veth");
+                down_netcard(tmp_cid,prop);
 
                 if (ppp_info[tmp_cid-1].ip_state == IPV6 ||
                     ppp_info[tmp_cid-1].ip_state == IPV4V6) {
@@ -1070,21 +1045,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                 system(cmd);
 
                 if ((tmp_cid2 != -1) && (tmp_cid2 != 0)) {
-                    snprintf(linker, sizeof(linker), "link set %s%d down", prop, tmp_cid2-1);
-                    property_set(SYS_IFCONFIG_DOWN, linker);
-                    /* start data_off */
-                    property_set("ctl.start", "data_off");
-
-                    /* wait up to 10s for data_off execute complete */
-                    do {
-                        property_get(SYS_IFCONFIG_DOWN, linker, "");
-                        if(!strcmp(linker, "done"))
-                            break;
-                        count++;
-                        PHS_LOGD("wait data_off exec %d times...", count);
-                        usleep(10*1000);
-                    }while(count < RETRY_MAX_COUNT);
-
+                    down_netcard(tmp_cid2,prop);
                     if (ppp_info[tmp_cid-1].ip_state == IPV6 ||
                         ppp_info[tmp_cid-1].ip_state == IPV4V6) {
                         snprintf(ipv6_dhcpcd_cmd, sizeof(ipv6_dhcpcd_cmd), "dhcpcd_ipv6:%s%d", prop, tmp_cid2-1);
@@ -1122,36 +1083,9 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
                     ppp_info[i].state = PPP_STATE_IDLE;
 
                     usleep(200*1000);
-                    if(!strcmp(modem, "t")) {
-                        property_get(ETH_TD, prop, "veth");
-                    } else if(!strcmp(modem, "w")) {
-                        property_get(ETH_W, prop, "veth");
-                    } else if(!strcmp(modem, "l")) {
-                        property_get(ETH_L, prop, "veth");
-                    } else if(!strcmp(modem, "tl")) {
-                        property_get(ETH_TL, prop, "veth");
-                    } else if(!strcmp(modem, "lf")) {
-                        property_get(ETH_LF, prop, "veth");
-                    } else {
-                        PHS_LOGE("Unknown modem type, exit--2");
-                        exit(-1);
-                    }
-
-                    snprintf(linker, sizeof(linker), "%s%d down", prop, i);
-                    property_set(SYS_IFCONFIG_DOWN, linker);
-                    /* start data_off */
-                    property_set("ctl.start", "data_off");
-
-
-                    /* wait up to 10s for data_off execute complete */
-                    do {
-                        property_get(SYS_IFCONFIG_DOWN, linker, "");
-                        if(!strcmp(linker, "done"))
-                            break;
-                        count++;
-                        PHS_LOGD("wait data_off exec %d times...", count);
-                        usleep(10*1000);
-                    }while(count < RETRY_MAX_COUNT);
+                    snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", modem);
+                    property_get(ETH_SP, prop, "veth");
+                    down_netcard(tmp_cid,prop);
 
                     if (ppp_info[i].ip_state == IPV6 ||
                         ppp_info[i].ip_state == IPV4V6) {
@@ -1595,22 +1529,8 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp,
     input = rsp->rsp_str;
     input[rsp->len-1] ='\0';
 
-
-    if(!strcmp(modem, "t")) {
-        property_get(ETH_TD, prop, "veth");
-    } else if(!strcmp(modem, "w")) {
-        property_get(ETH_W, prop, "veth");
-    } else if(!strcmp(modem, "l")) {
-        property_get(ETH_L, prop, "veth");
-    } else if(!strcmp(modem, "tl")) {
-        property_get(ETH_TL, prop, "veth");
-    } else if(!strcmp(modem, "lf")) {
-        property_get(ETH_LF, prop, "veth");
-    } else {
-        PHS_LOGE("Unknown modem type, exit--3");
-        exit(-1);
-    }
-
+    snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", modem);
+    property_get(ETH_SP, prop, "veth");
     PHS_LOGD("cvt_cgcontrdp_rsp: input = %s", input);
     if (findInBuf(input, rsp->len, "+CGCONTRDP") || findInBuf(input, rsp->len, "+SIPCONFIG")) {
         do {
@@ -1672,7 +1592,6 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp,
                     }
                     memcpy(ppp_info[cid-1].ipv6laddr, ip, sizeof(ppp_info[cid-1].ipv6laddr));
                     memcpy(ppp_info[cid-1].ipv6dns1addr, dns1, sizeof(ppp_info[cid-1].ipv6dns1addr));
-                    memcpy(ppp_info[cid-1].ipv6dns2addr, dns2, sizeof(ppp_info[cid-1].ipv6dns2addr));
 
                     sprintf(cmd, "setprop net.%s%d.ip_type %d", prop, cid-1,IPV6);
                     system(cmd);
@@ -1703,6 +1622,7 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp,
                         memset(dns2, 0, IP_ADD_SIZE*4);
                         sprintf(dns2, "%s", DEFAULT_PUBLIC_DNS2_IPV6);
                     }
+                    memcpy(ppp_info[cid-1].ipv6dns2addr, dns2, sizeof(ppp_info[cid-1].ipv6dns2addr));
                     sprintf(cmd, "setprop net.%s%d.ipv6_dns2 %s", prop, cid-1, dns2);
                     system(cmd);
 
@@ -1712,7 +1632,6 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp,
                     PHS_LOGD("cvt_cgcontrdp_rsp: IPV4");
                     memcpy(ppp_info[cid-1].ipladdr, ip, sizeof(ppp_info[cid-1].ipladdr));
                     memcpy(ppp_info[cid-1].dns1addr, dns1, sizeof(ppp_info[cid-1].dns1addr));
-                    memcpy(ppp_info[cid-1].dns2addr, dns2, sizeof(ppp_info[cid-1].dns2addr));
 
                     sprintf(cmd, "setprop net.%s%d.ip_type %d", prop, cid-1,IPV4);
                     system(cmd);
@@ -1734,6 +1653,7 @@ int cvt_cgcontrdp_rsp(AT_CMD_RSP_T * rsp,
                         memset(dns2, 0, IP_ADD_SIZE);
                         cvt_reset_dns2(dns2);
                     }
+                    memcpy(ppp_info[cid-1].dns2addr, dns2, sizeof(ppp_info[cid-1].dns2addr));
                     sprintf(cmd, "setprop net.%s%d.dns2 %s", prop, cid-1, dns2);
                     system(cmd);
 

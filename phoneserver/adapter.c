@@ -571,7 +571,6 @@ const struct ind_table at_ind_cvt_table[] = {
     {AT_CMD_EEMGINFOSVC_IND, AT_CMD_STR("+EEMGINFOSVC"),
         cvt_generic_cmd_ind},
     {AT_CMD_EEMGINFOPS_IND, AT_CMD_STR("+EEMGINFOPS"), cvt_generic_cmd_ind},
-    {AT_CMD_ECIND_IND, AT_CMD_STR("+CGEV:"), cvt_null_cmd_ind},
     {AT_CMD_EEMGINFONC_IND, AT_CMD_STR("+EEMGINFONC"), cvt_generic_cmd_ind},
     {AT_CMD_CESQ_IND, AT_CMD_STR("+CESQ:"), cvt_cesq_cmd_ind}
 };
