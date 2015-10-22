@@ -38,7 +38,6 @@
 
 #include <telephony/sprd_ril.h>
 #include "hardware/qemu_pipe.h"
-#include "sprd_ril_cb.h"
 
 #if defined (RIL_SUPPORT_CALL_BLACKLIST)
 #include "ril_call_blacklist.h"
@@ -85,13 +84,6 @@ typedef enum {
     SIM_SIM_PUK = 18
     //Added for bug#242159 end
 } SIM_Status;
-
-#define NEW_AT
-#ifdef NEW_AT
-#define AT_PREFIX "+SP"
-#else
-#define AT_PREFIX "^"
-#endif
 
 #define VT_DCI "\"000001B000000001B5090000010000000120008440FA282C2090A21F\""
 
@@ -187,7 +179,7 @@ int modem;
 int s_multiSimMode = 0;
 int g_csfb_processing = 0;
 static const char * s_modem = NULL;
-static int s_testmode = 0;
+int s_testmode = 0;
 static int allow_data = 0;
 
 
@@ -206,7 +198,7 @@ static int call_fail_cause = CALL_FAIL_ERROR_UNSPECIFIED;
 static int ussdError = 0;/* 0: no unsolicited SPERROR. 1: unsolicited SPERROR. */
 static int ussdRun = 0;/* 0: ussd to end. 1: ussd to start. */
 
-static int s_isstkcall = 0;
+int s_isstkcall = 0;
 static int add_ip_cid = -1;   //for volte addtional business
 /*SPRD: add for VoLTE to handle SRVCC */
 typedef struct {
@@ -354,9 +346,7 @@ static void getSmsState(int channelID) ;
 static void convertBinToHex(char *bin_ptr, int length, char *hex_ptr);
 static int convertHexToBin(const char *hex_ptr, int length, char *bin_ptr);
 int parsePdu(char *pdu);
-static RIL_AppType getSimType(int channelID);
 static void pollSIMState (void *param);
-static void setRadioState(int channelID, RIL_RadioState newState);
 static void attachGPRS(int channelID, void *data, size_t datalen, RIL_Token t);
 static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t);
 static int getMaxPDPNum(void);
@@ -364,7 +354,6 @@ static void copyDataReponse(RIL_Data_Call_Response_v11* pSource, RIL_Data_Call_R
 static void getSIMStatusAgainForSimBusy();
 static int DeactiveDataConnectionByCid(int cid);
 unsigned char* convertUsimToSim(unsigned char const* byteUSIM, int len, unsigned char * hexUSIM);
-static void stopQueryNetwork(int channelID, void *data, size_t datalen, RIL_Token t);
 static bool hasSimBusy = false;
 static void* dump_sleep_log();
 
@@ -382,7 +371,7 @@ static const RIL_RadioFunctions s_callbacks = {
 const struct RIL_Env *s_rilenv;
 #endif
 
-static RIL_RadioState sState = RADIO_STATE_UNAVAILABLE;
+RIL_RadioState sState = RADIO_STATE_UNAVAILABLE;
 
 static pthread_mutex_t s_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t s_state_cond = PTHREAD_COND_INITIALIZER;
@@ -417,7 +406,7 @@ static int sFD;     /* file desc of AT channel */
 //static char *sATBufferCur = NULL;
 
 static const struct timeval TIMEVAL_SIMPOLL = {1,0};
-static const struct timeval TIMEVAL_CALLSTATEPOLL = {0,500000};
+const struct timeval TIMEVAL_CALLSTATEPOLL = {0,500000};
 static const struct timeval TIMEVAL_0 = {0,0};
 
 static int s_ims_registered  = 0;        // 0==unregistered
@@ -455,7 +444,6 @@ static rilnet_tz_entry_t rilnet_tz_entry[] = {
 static bool isSvLte(void);
 static bool isLte(void);
 static void setCeMode(int channelID);
-static void setTestMode(int channelID);
 static bool isCSFB(void); 
 static bool isCMCC(void);
 static bool bOnlyOneSIMPresent = false;
@@ -959,7 +947,7 @@ static int getPDP(int *index)
 #define WRITE_PPP_OPTION(option) write(fd, option, strlen(option))
 #endif  
 
-static void process_calls(int _calls)
+void process_calls(int _calls)
 {
     static int calls = 0;
     static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -1246,7 +1234,7 @@ static int clccStateToRILState(int state, RIL_CallState *p_state)
  * Note: directly modified line and has *p_call point directly into
  * modified line
  */
-static int callFromCLCCLine(char *line, RIL_Call *p_call)
+int callFromCLCCLine(char *line, RIL_Call *p_call)
 {
         //+CLCC: 1,0,2,0,0,\"+18005551212\",145
         //     index,isMT,state,mode,isMpty(,number,TOA)?
@@ -1303,7 +1291,7 @@ error:
     RILLOGE("invalid CLCC line\n");
     return -1;
 }
-static int callFromCLCCLineVoLTE(char *line, RIL_Call_VoLTE *p_call)
+int callFromCLCCLineVoLTE(char *line, RIL_Call_VoLTE *p_call)
 {
     //+CLCC:index,isMT,state,mode,isMpty(,number,TOA)?
 
@@ -4175,14 +4163,14 @@ static void onSimPresent(void *param)
     }
 }
 
-static void sendCallStateChanged(void *param)
+void sendCallStateChanged(void *param)
 {
     RIL_onUnsolicitedResponse (
         RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
         NULL, 0);
 }
 
-static void sendVideoCallStateChanged(void *param)
+void sendVideoCallStateChanged(void *param)
 {
 #if defined (RIL_SPRD_EXTENSION)
     RIL_onUnsolicitedResponse (
@@ -4465,7 +4453,7 @@ error:
 }
 
 /* SPRD: add for LTE-CSFB to handle CS fall back of MT call @{*/
-static void requestCallCsFallBackAccept(int channelID, void *data, size_t datalen, RIL_Token t)
+void requestCallCsFallBackAccept(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     char *cmd;
     int ret, err;
@@ -4486,7 +4474,7 @@ static void requestCallCsFallBackAccept(int channelID, void *data, size_t datale
       RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
 }
 
-static void requestCallCsFallBackReject(int channelID, void *data, size_t datalen, RIL_Token t)
+void requestCallCsFallBackReject(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     char *cmd;
     int ret, err;
@@ -5264,7 +5252,6 @@ static void requestSetCmms(int channelID, void *data, size_t datalen, RIL_Token 
     at_send_command( ATch_type[channelID], cmd, NULL);
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
 }
-
 
 static void requestSetSpeedMode(int channelID, void *data, size_t datalen, RIL_Token t)
 {
@@ -6945,7 +6932,7 @@ static int getSmsChannel()
     return ret;
 }
 
-static RIL_AppType getSimType(int channelID)
+RIL_AppType getSimType(int channelID)
 {
            int err;
            ATResponse *p_response = NULL;
@@ -7018,7 +7005,7 @@ error:
     at_response_free(p_response);
 }
 
-static void requestSendAT(int channelID, char *data, size_t datalen, RIL_Token t)
+void requestSendAT(int channelID, char *data, size_t datalen, RIL_Token t)
 {
     char *at_cmd = (char *)data;
     int i, err;
@@ -8818,39 +8805,10 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
 
         case RIL_REQUEST_OEM_HOOK_RAW:
-            {
-                OemRequest *req = (OemRequest *)data;
-                switch (req->funcId) {
-                    if (sState == RADIO_STATE_UNAVAILABLE
-#if defined (RIL_SUPPORT_CALL_BLACKLIST)
-                            && !(req->funcId == OEM_REQ_FUNCTION_ID_CALL_BLACKLIST)
+#if defined (RIL_SPRD_EXTENSION)
+            requestOemHookRaw(channelID, data, datalen, t);
 #endif
-                       ) {
-                        RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
-                        break;
-                    }
-
-                    if (sState == RADIO_STATE_OFF
-#if defined (RIL_SUPPORT_CALL_BLACKLIST)
-                            && !(request == OEM_REQ_FUNCTION_ID_CALL_BLACKLIST)
-#endif
-                       ) {
-                        RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
-                        break;
-                    }
-
-#if defined (RIL_SUPPORT_CALL_BLACKLIST)
-                    case OEM_REQ_FUNCTION_ID_CALL_BLACKLIST :
-                        requestCallBlackList(data, datalen, t);
-                        break;
-#endif
-                    default :
-                        /* echo back data */
-                        requestSendAT(channelID,data, datalen, t);
-                        break;
-                }
-                break;
-            }
+            break;
         case RIL_REQUEST_OEM_HOOK_STRINGS:
             {
                 int i;
@@ -10642,8 +10600,7 @@ const char * getVersion(void)
     return "android reference-ril 1.0";
 }
 
-static void
-setRadioState(int channelID, RIL_RadioState newState)
+void setRadioState(int channelID, RIL_RadioState newState)
 {
     RIL_RadioState oldState;
 
@@ -13653,7 +13610,7 @@ static void setCeMode(int channelID) {
     }
 }
 
-static void setTestMode(int channelID) {
+void setTestMode(int channelID) {
     if (isLte()) {
         char cmd[20] = {0};
         sprintf(cmd, "AT+SPTESTMODEM=%d", getTestMode());
@@ -13758,7 +13715,7 @@ static int DeactiveDataConnectionByCid(int cid){
         return ret;
 }
 
-static void stopQueryNetwork(int channelID, void *data, size_t datalen, RIL_Token t){
+void stopQueryNetwork(int channelID, void *data, size_t datalen, RIL_Token t){
     int err;
     ATResponse *p_response = NULL;
     err = at_send_command(ATch_type[channelID], "AT+SAC", &p_response);
@@ -14588,16 +14545,15 @@ error1:
 static void requestInitialGroupCall(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     int err = 0, i;
-    ATResponse *p_response = NULL;
-    const char *numbers_ptr = NULL;
     int cid;
-    const char *numbers = NULL;
+    char *numbers = NULL;
     numbers = (char*)strdup((char *)data);
     char cmd[PROPERTY_VALUE_MAX] = {0};
     RILLOGE("requestInitialGroupCall numbers = \"%s\"", numbers);
     snprintf(cmd, sizeof(cmd), "AT+CGU=1,\"%s\"", numbers);
-    if(numbers != NULL)
-            free(numbers);
+    if(numbers != NULL) {
+        free(numbers);
+    }
     err = at_send_command(ATch_type[channelID], cmd , NULL);
     if (err < 0) {
         goto error;
@@ -14605,29 +14561,26 @@ static void requestInitialGroupCall(int channelID, void *data, size_t datalen, R
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
 
-    at_response_free(p_response);
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     return;
 
 error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-    at_response_free(p_response);
     return;
 }
 
 static void requestAddGroupCall(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     int err = 0, i;
-    ATResponse *p_response = NULL;
-    const char *numbers_ptr = NULL;
     int cid;
-    const char *numbers = NULL;
+    char *numbers = NULL;
     numbers = (char*)strdup((char *)data);
     char cmd[PROPERTY_VALUE_MAX] = {0};
     RILLOGE("requestAddGroupCall numbers = \"%s\"", numbers);
     snprintf(cmd, sizeof(cmd), "AT+CGU=4,\"%s\"", numbers);
-    if(numbers != NULL)
+    if(numbers != NULL) {
         free(numbers);
+    }
     err = at_send_command(ATch_type[channelID], cmd , NULL);
     if (err < 0) {
         goto error;
@@ -14635,14 +14588,11 @@ static void requestAddGroupCall(int channelID, void *data, size_t datalen, RIL_T
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
 
-
-    at_response_free(p_response);
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     return;
 
 error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-    at_response_free(p_response);
     return;
 }
 

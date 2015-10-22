@@ -77,7 +77,8 @@
     {RIL_REQUEST_LAST_DATA_CALL_FAIL_CAUSE, dispatchVoid, responseInts},
     {RIL_REQUEST_DATA_CALL_LIST, dispatchVoid, responseDataCallList},
     {RIL_REQUEST_RESET_RADIO, dispatchVoid, responseVoid},
-    {RIL_REQUEST_OEM_HOOK_RAW, dispatchRaw, responseRaw},
+    /*{RIL_REQUEST_OEM_HOOK_RAW, dispatchRaw, responseRaw},*/
+    {RIL_REQUEST_OEM_HOOK_RAW, dispatchRawSprd, responseRawSprd},
     {RIL_REQUEST_OEM_HOOK_STRINGS, dispatchStrings, responseStrings},
     {RIL_REQUEST_SCREEN_STATE, dispatchInts, responseVoid},
     {RIL_REQUEST_SET_SUPP_SVC_NOTIFICATION, dispatchInts, responseVoid},
@@ -218,7 +219,7 @@
     //SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
     //SPRD: for stop query available networks
     ,{RIL_REQUEST_STOP_QUERY_AVAILABLE_NETWORKS, dispatchVoid, responseVoid}
-	,{RIL_REQUEST_GET_CURRENT_CALLS_VOLTE, dispatchVoid, responseCallListVoLTE}//SPRD: add for VoLTE to handle +CLCCS
+    ,{RIL_REQUEST_GET_CURRENT_CALLS_VOLTE, dispatchVoid, responseCallListVoLTE}//SPRD: add for VoLTE to handle +CLCCS
     ,{RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY, dispatchInts, responseVoid}
     ,{RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY, dispatchVoid, responseInts}
     ,{RIL_REQUEST_INIT_ISIM, dispatchVoid, responseInts}

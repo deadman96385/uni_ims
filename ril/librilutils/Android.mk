@@ -5,31 +5,31 @@ include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES:= \
     librilutils.c \
-    record_stream.c
+    record_stream.c \
+    proto/ril_oem.proto
+
+LOCAL_C_INCLUDES += \
+    external/protobuf/src \
+
+LOCAL_PROTOC_OPTIMIZE_TYPE := lite
 
 LOCAL_CFLAGS :=
 
-LOCAL_MODULE:= librilutils
+LOCAL_MODULE:= librilutils_sp
 
 #LOCAL_LDLIBS += -lpthread
 
 include $(BUILD_SHARED_LIBRARY)
 
 
-# Create static library for those that want it
-# =========================================
+# Create java protobuf code
+
 include $(CLEAR_VARS)
 
-LOCAL_SRC_FILES:= \
-    librilutils.c \
-    record_stream.c
-
-LOCAL_STATIC_LIBRARIES :=
-
-LOCAL_CFLAGS :=
-
-LOCAL_MODULE:= librilutils_static
-
+src_proto := $(LOCAL_PATH)
+LOCAL_MODULE := ril-oem-java-static
+LOCAL_SRC_FILES := proto/ril_oem.proto
+LOCAL_PROTOC_OPTIMIZE_TYPE := micro
 #LOCAL_LDLIBS += -lpthread
 
-include $(BUILD_STATIC_LIBRARY)
+include $(BUILD_STATIC_JAVA_LIBRARY)

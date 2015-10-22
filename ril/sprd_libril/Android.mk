@@ -6,11 +6,13 @@ include $(CLEAR_VARS)
 LOCAL_C_INCLUDES :=$(LOCAL_PATH)/../include
 
 LOCAL_SRC_FILES:= \
+    $(call all-proto-files-under, proto) \
     sprd_ril.cpp \
     ril_event.cpp \
     sprd_thread_pool.cpp \
     RilSocket.cpp \
     RilATCISocket.cpp \
+    ril_oem.cpp
 
 LOCAL_SHARED_LIBRARIES := \
     liblog \
@@ -18,7 +20,18 @@ LOCAL_SHARED_LIBRARIES := \
     libbinder \
     libcutils \
     libhardware_legacy \
-    librilutils
+    librilutils_sp
+
+LOCAL_SHARED_LIBRARIES += \
+    libprotobuf-cpp-lite \
+
+#LOCAL_C_INCLUDES += \
+    external/protobuf/src \
+
+LOCAL_PROTOC_OPTIMIZE_TYPE := lite
+
+LOCAL_C_INCLUDES += $(TARGET_OUT_HEADER)/librilutils
+LOCAL_C_INCLUDES += external/protobuf/src
 
 LOCAL_CFLAGS := -DRIL_SHLIB
 
@@ -34,8 +47,6 @@ endif
 
 LOCAL_MODULE:= libril_sp
 LOCAL_MODULE_TAGS := optional
-LOCAL_COPY_HEADERS_TO := libril_sp
-LOCAL_COPY_HEADERS := ril_ex.h
 #LOCAL_LDLIBS += -lpthread
 include $(BUILD_SHARED_LIBRARY)
 
@@ -52,7 +63,7 @@ LOCAL_SRC_FILES:= \
 LOCAL_STATIC_LIBRARIES := \
     libutils_static \
     libcutils \
-    librilutils_static
+    librilutils_static \
 
 LOCAL_CFLAGS := -DRIL_SHLIB
 

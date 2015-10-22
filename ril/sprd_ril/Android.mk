@@ -11,7 +11,8 @@ LOCAL_SRC_FILES := \
     misc.c \
     at_tok.c \
     sprd_atci.c \
-    ril_call_blacklist.c
+    ril_call_blacklist.c \
+    ril_oem.c
 
 LOCAL_SHARED_LIBRARIES := \
     liblog libcutils libutils libril_sp librilutils

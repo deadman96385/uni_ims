@@ -31,7 +31,6 @@
 #include <telephony/sprd_ril.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <libril_sp/ril_ex.h>
 
 #include <private/android_filesystem_config.h>
 

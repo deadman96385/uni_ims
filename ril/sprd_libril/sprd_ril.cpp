@@ -50,8 +50,7 @@
 #include <netinet/in.h>
 #include <cutils/properties.h>
 #include <RilATCISocket.h>
-
-//#include <ril_event.h>
+#include <vendor/sprd/proprietories-source/ril/librilutils/proto/ril_oem.pb.h>
 
 namespace android {
 
@@ -65,11 +64,6 @@ namespace android {
 
 
 int modem;
-#define RILLOGI(fmt, args...) ALOGI("[%c] " fmt, modem,  ## args)
-#define RILLOGD(fmt, args...) ALOGD("[%c] " fmt, modem,  ## args)
-#define RILLOGV(fmt, args...) ALOGV("[%c] " fmt, modem,  ## args)
-#define RILLOGW(fmt, args...) ALOGW("[%c] " fmt, modem,  ## args)
-#define RILLOGE(fmt, args...) ALOGE("[%c] " fmt, modem,  ## args)
 
 #define ANDROID_WAKE_LOCK_NAME "radio-interface"
 
@@ -94,64 +88,18 @@ int modem;
 #define RESPONSE_SOLICITED 0
 #define RESPONSE_UNSOLICITED 1
 
-/* Negative values for private RIL errno's */
-#define RIL_ERRNO_INVALID_RESPONSE -1
-
-// request, response, and unsolicited msg print macro
-#define PRINTBUF_SIZE 8096
-
 // Enable verbose logging
 #define VDBG 0
 
-// Enable RILC log
-#define RILC_LOG 1
 #define THR_MAX            3
-#if RILC_LOG
-    #define startRequest           sprintf(printBuf, "(")
-    #define closeRequest           sprintf(printBuf, "%s)", printBuf)
-    #define printRequest(token, req)           \
-            RILLOGD("[%04d]> %s %s", token, requestToString(req), printBuf)
-
-    #define startResponse           sprintf(printBuf, "%s {", printBuf)
-    #define closeResponse           sprintf(printBuf, "%s}", printBuf)
-    #define printResponse           RILLOGD("%s", printBuf)
-
-    #define clearPrintBuf           printBuf[0] = 0
-    #define removeLastChar          printBuf[strlen(printBuf)-1] = 0
-    #define appendPrintBuf(x...)    sprintf(printBuf, x)
-#else
-    #define startRequest
-    #define closeRequest
-    #define printRequest(token, req)
-    #define startResponse
-    #define closeResponse
-    #define printResponse
-    #define clearPrintBuf
-    #define removeLastChar
-    #define appendPrintBuf(x...)
-#endif
 
 enum WakeType {DONT_WAKE, WAKE_PARTIAL};
-
-typedef struct {
-    int requestNumber;
-    void (*dispatchFunction) (Parcel &p, struct RequestInfo *pRI);
-    int(*responseFunction) (Parcel &p, void *response, size_t responselen);
-} CommandInfo;
 
 typedef struct {
     int requestNumber;
     int (*responseFunction) (Parcel &p, void *response, size_t responselen);
     WakeType wakeType;
 } UnsolResponseInfo;
-
-typedef struct RequestInfo {
-    int32_t token;      //this is not RIL_Token
-    CommandInfo *pCI;
-    struct RequestInfo *p_next;
-    char cancelled;
-    char local;         // responses to local commands do not go back to command process
-} RequestInfo;
 
 typedef struct UserCallbackInfo {
     RIL_TimedCallback p_callback;
@@ -233,9 +181,8 @@ static int s_multiSimMode;
 const char * s_modem = NULL;
 static int s_sim_num;
 
-
 #if RILC_LOG
-    static char printBuf[PRINTBUF_SIZE];
+char printBuf[PRINTBUF_SIZE];
 #endif
 
 struct listnode
@@ -304,7 +251,6 @@ static void dispatchVideoPhoneInit(Parcel& p, RequestInfo *pRI);
 static void dispatchVideoPhoneDial(Parcel& p, RequestInfo *pRI);
 static void dispatchVideoPhoneCodec(Parcel& p, RequestInfo *pRI);
 static void dispatchCallForwardUri(Parcel& p, RequestInfo *pRI);
-
 #endif
 
 
@@ -357,7 +303,7 @@ static int responseDSCI(Parcel &p, void *response, size_t responselen);
 static int responseCallCsFallBack(Parcel &p, void *response, size_t responselen);
 static int responseCallListVoLTE(Parcel &p, void *response, size_t responselen);
 static int responseCallForwardsUri(Parcel &p, void *response, size_t responselen);
-static void stripNumberFromSipAddress(const char *sipAddress, char *number, int len);
+extern "C" void stripNumberFromSipAddress(const char *sipAddress, char *number, int len);
 static int responseBroadcastSmsLte(Parcel &p, void *response, size_t responselen);
 static int responseBroadcastSms(Parcel &p, void *response, size_t responselen);
 #endif
@@ -397,6 +343,8 @@ static UserCallbackInfo * internalRequestTimedCallback
 
 static void internalRemoveTimedCallback(void *callbackInfo);
 
+extern "C" void dispatchRawSprd(Parcel &p, RequestInfo *pRI);
+extern "C" int responseRawSprd(Parcel &p, void *response, size_t responselen);
 /** Index == requestNumber */
 static CommandInfo s_commands[] = {
 #include "sprd_ril_commands.h"
@@ -625,7 +573,7 @@ processCommandBuffer(void *buffer, size_t buflen) {
     return 0;
 }
 
-static void
+extern "C" void
 invalidCommandBlock (RequestInfo *pRI) {
     RILLOGE("invalid command block for token %d request %s",
                 pRI->token, requestToString(pRI->pCI->requestNumber));
@@ -3141,31 +3089,12 @@ static int responseRaw(Parcel &p, void *response, size_t responselen) {
         return RIL_ERRNO_INVALID_RESPONSE;
     }
 
-    RIL_OEM_NOTIFY *p_cur = (RIL_OEM_NOTIFY *)response;
-    switch (p_cur->oemFuncId) {
-#if defined (RIL_SUPPORT_CALL_BLACKLIST)
-        case OEM_UNSOL_FUNCTION_ID_BLACKCALL:
-            {
-                char *resp;
-                int resplen;
-
-                asprintf(&resp, "%d%s", p_cur->oemFuncId, p_cur->data);
-                resplen = strlen(resp) + 1;
-                p.writeInt32(resplen);
-                p.write(resp, resplen);
-                free(resp);
-                break;
-            }
-#endif
-        default:
-            // The java code reads -1 size as null byte array
-            if (response == NULL) {
-                p.writeInt32(-1);
-            } else {
-                p.writeInt32(responselen);
-                p.write(response, responselen);
-            }
-            break;
+    // The java code reads -1 size as null byte array
+    if (response == NULL) {
+        p.writeInt32(-1);
+    } else {
+        p.writeInt32(responselen);
+        p.write(response, responselen);
     }
 
     return 0;
@@ -4682,7 +4611,7 @@ static int responseBroadcastSmsLte(Parcel &p, void *response, size_t responselen
     return 0;
 }
 
-static void stripNumberFromSipAddress(const char *sipAddress, char *number, int len) {
+extern "C" void stripNumberFromSipAddress(const char *sipAddress, char *number, int len) {
     if (sipAddress == NULL || strlen(sipAddress) == 0 || number == NULL || len <= 0) {
         return;
     }
@@ -6322,7 +6251,7 @@ radioStateToString(RIL_RadioState s) {
     }
 }
 
-const char *
+extern "C" const char *
 callStateToString(RIL_CallState s) {
     switch(s) {
         case RIL_CALL_ACTIVE : return "ACTIVE";
@@ -6335,7 +6264,7 @@ callStateToString(RIL_CallState s) {
     }
 }
 
-const char *
+extern "C" const char *
 requestToString(int request) {
 /*
  cat libs/telephony/ril_commands.h \

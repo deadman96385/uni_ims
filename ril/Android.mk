@@ -14,5 +14,5 @@
 # limitations under the License.
 #
 
-common_ril_dirs := sprd_libril sprd_ril sprd_rild libatci
+common_ril_dirs := sprd_libril sprd_ril sprd_rild libatci librilutils
 include $(call all-named-subdir-makefiles,$(common_ril_dirs))
