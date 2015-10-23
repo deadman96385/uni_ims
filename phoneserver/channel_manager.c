@@ -47,6 +47,13 @@ char MUX_SP_DEV[20];
 int multiSimMode;
 struct channel_manager_t chnmng;
 
+#define N 10
+pthread_t s_tid_signal_process;
+pthread_attr_t attr;
+pthread_cond_t s_signal_trigger_cond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t s_signal_trigger_mutex = PTHREAD_MUTEX_INITIALIZER;
+extern int screen_state;
+
 struct chns_config_t single_chns_data = {.pty = {
 	{.dev_str = "/dev/CHNPTY0",.index = 0,.type = IND,.prority = 1}, 	/*## attribute ind_pty */
 	{.dev_str = "/dev/CHNPTY1",.index = 1,.type = AT,.prority = 1},
@@ -885,6 +892,122 @@ static void chnmng_pty_Init(struct channel_manager_t *const me)
         me->itsSend_thread[i].ops = send_thread_get_operations();
     }
 }
+static int least_squares(int y[]){
+    int i=0;
+    int x[N]={0};
+    int sum_x=0, sum_y=0, sum_xy=0, square=0;
+    float a=0.0, b=0.0, value=0.0;
+
+    for(i=0; i<N; ++i){
+        x[i]=i;
+        sum_x += x[i];
+        sum_y += y[i];
+        sum_xy += x[i]*y[i];
+        square += x[i]*x[i];
+    }
+    a=((float)(sum_xy *N -sum_x*sum_y)) /(square*N -sum_x*sum_x);
+    b=((float)sum_y)/N -a*sum_x/N;
+    value=a*x[N-1]+b;
+    return (int)(value)+((int)(10*value)%10<5?0:1);
+}
+
+static void *signal_process(){
+    pty_t *ind_pty = NULL;
+    pty_t *ind_eng_pty = NULL;
+    char ind_str[MAX_AT_CMD_LEN];
+    int sim_index = 0;
+    int i =0;
+    int point[N], sample_rsrp_sim0[N], sample_rsrp_sim1[N],
+            sample_rscp_sim0[N], sample_rscp_sim1[N],
+            sample_rssi_sim0[N],sample_rssi_sim1[N];
+    int* rsrp_array = NULL, *rscp_array = NULL;
+    int rsrp_value, rscp_value;
+
+    extern int rxlev[4], ber[4], rscp[4], ecno[4], rsrq[4], rsrp[4];
+    extern int rssi[4], berr[4];
+
+    while(1){
+        sim_index = 0;
+        for(;sim_index < 2;sim_index++){
+            if(multiSimMode == 1) {
+                if(sim_index == 0){
+                    ind_pty = adapter_get_ind_pty((mux_type)(INDM_SIM1));
+                    ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(INDM_SIM1));
+                }else if(sim_index == 1){
+                    ind_pty = adapter_get_ind_pty((mux_type)(INDM_SIM2));
+                    ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(INDM_SIM2));
+                }
+            } else {
+                ind_pty = adapter_get_default_ind_pty();
+                ind_eng_pty = adapter_single_get_eng_ind_pty();
+            }
+
+            // compute the rsrp rscp or rssi
+            if(!strcmp(modem, "l") || !strcmp(modem, "tl") || !strcmp(modem, "lf")){
+                if(sim_index == 0){         // dispatch sim 1
+                    rsrp_array = sample_rsrp_sim0;
+                    rscp_array = sample_rscp_sim0;
+                }else if(sim_index == 1){  // dispatch sim 2
+                    rsrp_array = sample_rsrp_sim1;
+                    rscp_array = sample_rscp_sim1;
+                }
+            }else if(!strcmp(modem, "t") || !strcmp(modem, "w")){
+                if(sim_index == 0){
+                    rsrp_array = sample_rssi_sim0;
+                    rscp_array = NULL;
+                }else if(sim_index == 1){
+                    rsrp_array = sample_rssi_sim1;
+                    rscp_array = NULL;
+                }
+            }
+            for(i = 0; i < N-1; ++i){
+                if((rsrp_array[i] == rsrp_array[i+1]) && rsrp_array[i] == 0){
+                    rsrp_array[i] = rsrp[sim_index];  //the first unsolicitied
+                }else
+                    rsrp_array[i] = rsrp_array[i+1];
+
+                if(rscp_array != NULL){  //w/td mode no rscp
+                    if((rscp_array[i] == rscp_array[i+1]) && rscp_array[i] == 0){
+                        rscp_array[i] = rscp[sim_index];  //the first unsolicitied
+                    }else
+                        rscp_array[i]=rscp_array[i+1];
+                }
+            }
+            rsrp_array[N-1]=rsrp[sim_index];
+            rsrp_value = least_squares(rsrp_array);
+            if(rscp_array != NULL){  ////w/td mode no rscp
+                rscp_array[N-1]=rscp[sim_index];
+                rscp_value = least_squares(rscp_array);
+            }
+
+            if(rscp_array != NULL)  // l/tl/lf
+                snprintf(ind_str, sizeof(ind_str), "\r\n+CESQ: %d,%d,%d,%d,%d,%d\r\n",
+                        rxlev[sim_index], ber[sim_index], rscp_value, ecno[sim_index], rsrq[sim_index], rsrp_value);
+            else    // w/t
+                snprintf(ind_str, sizeof(ind_str), "\r\n+CSQ: %d,%d\r\n", rsrp_value, ber[sim_index]);
+
+
+            if (ind_pty && ind_pty->ops) {
+                PHS_LOGD("rsrp %d, ind_str= %s", rsrp_array[sim_index],ind_str);
+                ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
+            } else {
+                PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
+            }
+
+            if(ind_eng_pty != NULL){
+                if (ind_eng_pty->ops)
+                    ind_eng_pty->ops->pty_write(ind_eng_pty, ind_str, strlen(ind_str));
+            }
+        }
+        if(screen_state == 0){
+            pthread_mutex_lock(&s_signal_trigger_mutex);
+            pthread_cond_wait(&s_signal_trigger_cond,&s_signal_trigger_mutex);
+            pthread_mutex_unlock(&s_signal_trigger_mutex);
+        }else
+            sleep(2);
+    }
+    return NULL;
+}
 
 void chnmng_start_thread(struct channel_manager_t *const me)
 {
@@ -893,6 +1016,7 @@ void chnmng_start_thread(struct channel_manager_t *const me)
     int i = 0;
     int tid = 0;
     int policy = 0;
+    int ret = 0;
     thread_sched_param sched;
     struct chns_config_t chns_data;
 
@@ -944,6 +1068,12 @@ void chnmng_start_thread(struct channel_manager_t *const me)
             sched.sched_priority = chns_data.pty[i].prority;
             thread_setschedparam(me->itsSend_thread[i].thread, policy, &sched );
         }
+    }
+
+    pthread_attr_init (&attr);
+    ret = pthread_create(&s_tid_signal_process, &attr, signal_process, NULL);
+    if(ret < 0){
+        PHS_LOGE("ERROR signal_process pthread_create");
     }
 }
 
