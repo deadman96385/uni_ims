@@ -680,7 +680,7 @@ void cvt_reset_dns2(char *out)
 }
 
 int cvt_sipconfig_rsp(AT_CMD_RSP_T * rsp,
-		unsigned long __attribute__((unused)) user_data)
+        unsigned long __attribute__((unused)) user_data)
 {
     int ret;
     int err;
@@ -1078,7 +1078,7 @@ int cvt_cgact_deact_req(AT_CMD_REQ_T * req)
 
             for (i=0; i< maxPDPNum; i++) { 	/*deactivate PDP connection */
                 PHS_LOGD("context id %d state : %d", i, ppp_info[i].state);
-                if (ppp_info[i].state ==  PPP_STATE_ACTIVE) {	/*deactivate PDP connection */
+                if (ppp_info[i].state ==  PPP_STATE_ACTIVE) {   /*deactivate PDP connection */
                     ppp_info[i].cmux = mux;
                     ppp_info[i].state = PPP_STATE_IDLE;
 

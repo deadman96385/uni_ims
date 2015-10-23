@@ -93,66 +93,25 @@ typedef enum {
 #define SIM_DROP   1
 #define SIM_REMOVE 2
 
-#define TD_SIM_NUM  "ro.modem.t.count"
-#define W_SIM_NUM  "ro.modem.w.count"
-#define L_SIM_NUM  "ro.modem.l.count"
-#define TL_SIM_NUM  "ro.modem.tl.count"
-#define LF_SIM_NUM  "ro.modem.lf.count"
 #define PHONE_COUNT  "persist.msms.phone_count"
 
-#define ETH_TD  "ro.modem.t.eth"
-#define ETH_W  "ro.modem.w.eth"
-#define ETH_L  "ro.modem.l.eth"
-#define ETH_TL  "ro.modem.tl.eth"
-#define ETH_LF  "ro.modem.lf.eth"
-
 #define RIL_MAIN_SIM_PROPERTY  "persist.msms.phone_default"
-#define RIL_SIM_POWER_OFF_PROPERTY  "sys.power.off"
-#define RIL_TD_SIM_POWER_PROPERTY  "ril.t.sim.power"
-#define RIL_TD_SIM_POWER_PROPERTY1  "ril.t.sim.power1"
-#define RIL_TD_SIM_POWER_PROPERTY2  "ril.t.sim.power2"
-#define RIL_W_SIM_POWER_PROPERTY  "ril.w.sim.power"
-#define RIL_W_SIM_POWER_PROPERTY1  "ril.w.sim.power1"
-#define RIL_W_SIM_POWER_PROPERTY2  "ril.w.sim.power2"
-#define RIL_L_SIM_POWER_PROPERTY   "ril.l.sim.power"
-#define RIL_TL_SIM_POWER_PROPERTY   "ril.tl.sim.power"
-#define RIL_LF_SIM_POWER_PROPERTY   "ril.lf.sim.power"
-#define RIL_TD_ASSERT  "ril.t.assert"
-#define RIL_W_ASSERT  "ril.w.assert"
-#define RIL_L_ASSERT  "ril.l.assert"
-#define RIL_TL_ASSERT  "ril.tl.assert"
-#define RIL_LF_ASSERT  "ril.lf.assert"
-#define RIL_TD_SIM_PIN_PROPERTY  "ril.t.sim.pin"
-#define RIL_TD_SIM_PIN_PROPERTY1  "ril.t.sim.pin1"
-#define RIL_TD_SIM_PIN_PROPERTY2  "ril.t.sim.pin2"
-#define RIL_W_SIM_PIN_PROPERTY  "ril.w.sim.pin"
-#define RIL_W_SIM_PIN_PROPERTY1  "ril.w.sim.pin1"
-#define RIL_W_SIM_PIN_PROPERTY2  "ril.w.sim.pin2"
-#define RIL_L_SIM_PIN_PROPERTY  "ril.l.sim.pin"
 
-#define RIL_TL_SIM_PIN_PROPERTY  "ril.tl.sim.pin"
-#define RIL_TL_SIM_PIN_PROPERTY1  "ril.tl.sim.pin1"
-#define RIL_TL_SIM_PIN_PROPERTY2  "ril.tl.sim.pin2"
-#define RIL_LF_SIM_PIN_PROPERTY  "ril.lf.sim.pin"
-#define RIL_LF_SIM_PIN_PROPERTY1  "ril.lf.sim.pin1"
-#define RIL_LF_SIM_PIN_PROPERTY2  "ril.lf.sim.pin2"
-
-#define RIL_L_SIM_PIN_PROPERTY1  "ril.l.sim.pin1"
-#define RIL_L_SIM_PIN_PROPERTY2  "ril.l.sim.pin2"
+char SP_SIM_NUM[20]; // ro.modem.*.count
+char ETH_SP[20]; //ro.modem.*.eth
+char RIL_SP_SIM_POWER_PROPERTY[20]; //ril.*.sim.power
+char RIL_SP_SIM_POWER_PROPERTYS[20]; // ril.*.sim.powe*--ril.*.sim.power1 or ril.*.sim.power2 ...
+char RIL_SP_ASSERT[20]; // ril.*.assert
+char RIL_SP_SIM_PIN_PROPERTY[20]; // ril.*.sim.pin
+char RIL_SP_SIM_PIN_PROPERTYS[20]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.sim.pin2 ...
 
 #define RIL_MODEM_RESET_PROPERTY "persist.sys.sprd.modemreset"
 #define RIL_STK_PROFILE_PREFIX  "ril.stk.proflie_"
 #define RIL_SIM0_STATE  "gsm.sim.state0"
-#define RIL_SIM_ABSENT_PROPERTY "persist.sys.sim.absence"
 #define RIL_SIM1_ABSENT_PROPERTY "ril.sim1.absent"  /* this property will be set by phoneserver */
-#define PERSIST_MODEM_L_RSIM_PROPERTY    "persist.modem.l.rsim"
 #define MODEM_SSDA_USIM_PROPERTY         "ril.ssda.usim"
-#define PERSIST_MOMEM_L_ENABLE_PROPERTY  "persist.modem.l.enable"
 #define LTE_MODEM_START_PROP             "ril.service.l.enable"
 #define RIL_LTE_USIM_READY_PROP          "ril.lte.usim.ready" // for SVLTE only, used by rilproxy
-#define TL_MODEM_START_PROP         "ril.service.tl.enable"
-#define LF_MODEM_START_PROP         "ril.service.lf.enable"
-
 
 #define RIL_SIM_TYPE  "ril.ICC_TYPE"
 #define RIL_SIM_TYPE1  "ril.ICC_TYPE_1"
@@ -163,8 +122,6 @@ typedef enum {
 #define SSDA_MODE         "persist.radio.ssda.mode"
 #define SSDA_TESTMODE "persist.radio.ssda.testmode"
 #define RIL_HAS_SIM  "ril.has_sim"
-// {for WCDMA}
-#define PRIMARY_CARD_PROPERTY "persist.radio.primarycard"
 
 #define PROP_DEFAULT_BEARER  "gsm.stk.default_bearer"
 #define PROP_OPEN_CHANNEL  "gsm.stk.open_channel"
@@ -174,6 +131,7 @@ typedef enum {
 // {for sleep log}
 #define BUFFER_SIZE  (12*1024*4)
 #define CONSTANT_DIVIDE  32768.0
+#define MODEM_TYPE "ril.radio.modemtype"
 
 int modem;
 int s_multiSimMode = 0;
@@ -216,7 +174,6 @@ static void addSrvccPendingOperate(char *cmd);
 static void excuteSrvccPendingOperate();
 
 #define SIM_ECC_LIST_PROPERTY "ril.sim.ecclist"
-#define SIM_ECC_LIST_CATEGORY_PROPERTY "ril.sim.ecclist.category"
 typedef struct{
     char * number;
     int category;
@@ -356,6 +313,7 @@ static int DeactiveDataConnectionByCid(int cid);
 unsigned char* convertUsimToSim(unsigned char const* byteUSIM, int len, unsigned char * hexUSIM);
 static bool hasSimBusy = false;
 static void* dump_sleep_log();
+void setModemtype();
 
 /*** Static Variables ***/
 static const RIL_RadioFunctions s_callbacks = {
@@ -1636,60 +1594,21 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
             RILLOGD("requestFacilityLock :s_modem= %s,prop=%s",s_modem,pin);
             RILLOGD("requestFacilityLock :s_multiSimMode= %d,s_sim_num=%d",s_multiSimMode,s_sim_num);
 
-            if(s_multiSimMode) {
-                if(s_sim_num == 0) {
-                    if(pin != NULL) {
-                        if(!strcmp(s_modem, "t")) {
-                            strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY);
-                        } else if(!strcmp(s_modem, "w")) {
-                            strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY);
-                        } else if(!strcmp(s_modem, "l")) {
-                            strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY);
-                        } else if(!strcmp(s_modem, "tl")) {
-                            strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY);
-                        } else if(!strcmp(s_modem, "lf")) {
-                            strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY);
-                        }
-                        property_set(sim_prop, pin);
-                    }
-                } else if (s_sim_num == 1) {
-                    if(pin != NULL) {
-                        if(!strcmp(s_modem, "t")) {
-                            strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY1);
-                        } else if(!strcmp(s_modem, "w")) {
-                            strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY1);
-                        } else if(!strcmp(s_modem, "l")) {
-                            strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY1);
-                        } else if(!strcmp(s_modem, "tl")) {
-                            strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY1);
-                        } else if(!strcmp(s_modem, "lf")) {
-                            strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY1);
-                        }
-                        property_set(sim_prop, pin);
-                    }
-                } else if (s_sim_num == 2) {
-                    if(pin != NULL) {
-                        if(!strcmp(s_modem, "t")) {
-                            strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY2);
-                        } else if(!strcmp(s_modem, "w")) {
-                            strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY2);
-                        } else if(!strcmp(s_modem, "l")) {
-                            strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY2);
-                        } else if(!strcmp(s_modem, "tl")) {
-                            strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY2);
-                        } else if(!strcmp(s_modem, "lf")) {
-                            strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY2);
-                        }
-                        property_set(sim_prop, pin);
-                    }
+            if (s_sim_num == 0) {
+                if (pin != NULL) {
+                    snprintf(RIL_SP_SIM_PIN_PROPERTY,
+                            sizeof(RIL_SP_SIM_PIN_PROPERTY), "ril.%s.sim.pin", s_modem);
+                    strcpy(sim_prop, RIL_SP_SIM_PIN_PROPERTY);
+                    property_set(sim_prop, pin);
                 }
             } else {
-                if(pin != NULL) {
-                    if(!strcmp(s_modem, "t")) {
-                        strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY);
-                    } else if(!strcmp(s_modem, "w")) {
-                        strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY);
-                    }
+                if (pin != NULL) {
+                    snprintf(RIL_SP_SIM_PIN_PROPERTYS, sizeof(RIL_SP_SIM_PIN_PROPERTYS),
+                            "ril.%s.sim.pin", s_modem);
+                    strcat(RIL_SP_SIM_PIN_PROPERTYS, "%d");
+                    snprintf(RIL_SP_SIM_PIN_PROPERTYS, sizeof(RIL_SP_SIM_PIN_PROPERTYS),
+                            RIL_SP_SIM_PIN_PROPERTYS, s_sim_num);
+                    strcpy(sim_prop, RIL_SP_SIM_PIN_PROPERTYS);
                     property_set(sim_prop, pin);
                 }
             }
@@ -2726,20 +2645,8 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
             if (err < 0)
                 goto error;
 
-            if(!strcmp(s_modem, "t")) {
-                property_get(ETH_TD, eth, "veth");
-            } else if(!strcmp(s_modem, "w")) {
-                property_get(ETH_W, eth, "veth");
-            } else if(!strcmp(s_modem, "l")) {
-                property_get(ETH_L, eth, "veth");
-            } else if(!strcmp(s_modem, "tl")) {
-                property_get(ETH_TL, eth, "veth");
-            } else if(!strcmp(s_modem, "lf")) {
-                property_get(ETH_LF, eth, "veth");
-            } else {
-                RILLOGE("Unknown modem type, exit");
-                exit(-1);
-            }
+            snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", s_modem);
+            property_get(ETH_SP, eth, "veth");
 
             snprintf(cmd, sizeof(cmd), "%s%d", eth, ncid-1);
             responses[i].ifname = alloca(strlen(cmd) + 1);
@@ -3204,16 +3111,8 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
     /**********************************/
     /* Check ip type after fall back  */
     /**********************************/
-    if(!strcmp(s_modem, "t")) {
-        property_get(ETH_TD, eth, "veth");
-    } else if(!strcmp(s_modem, "w")) {
-        property_get(ETH_W, eth, "veth");
-    } else if(!strcmp(s_modem, "l")) {
-        property_get(ETH_L, eth, "veth");
-    } else {
-        RILLOGE("Unknown modem type, exit");
-        exit(-1);
-    }
+    snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", s_modem);
+    property_get(ETH_SP, eth, "veth");
     snprintf(cmd, sizeof(cmd), "net.%s%d.ip_type", eth, index);
     property_get(cmd, prop, "0");
     fb_ip_type = atoi(prop);
@@ -3627,20 +3526,8 @@ retrycgatt:
                 RILLOGD("requestSetupDataCall fall Back Cause = %d", fbCause);
                 if (fbCause < 0) goto error;
 
-                if(!strcmp(s_modem, "t")) {
-                    property_get(ETH_TD, eth, "veth");
-                } else if(!strcmp(s_modem, "w")) {
-                    property_get(ETH_W, eth, "veth");
-                } else if(!strcmp(s_modem, "l")) {
-                    property_get(ETH_L, eth, "veth");
-                } else if(!strcmp(s_modem, "tl")) {
-                    property_get(ETH_TL, eth, "veth");
-                } else if(!strcmp(s_modem, "lf")) {
-                    property_get(ETH_LF, eth, "veth");
-                } else {
-                    RILLOGE("Unknown modem type, exit");
-                    exit(-1);
-                }
+                snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", s_modem);
+                property_get(ETH_SP, eth, "veth");
 
                 snprintf(cmd, sizeof(cmd), "net.%s%d.ip_type", eth, index);
                 property_get(cmd, prop, "0");
@@ -3879,6 +3766,7 @@ static void requestBasebandVersion(int channelID, void *data, size_t datalen, RI
         RILLOGE("requestBasebandVersion: Parameter parse error!");
         goto error;
     }
+    setModemtype();
     RIL_onRequestComplete(t, RIL_E_SUCCESS, response, strlen(response));
     at_response_free(p_response);
     return;
@@ -6203,66 +6091,21 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
         } else
             goto out;
 
-        if(s_multiSimMode) {
-            if(s_sim_num == 0) {
-                if(pin != NULL) {
-                    if(!strcmp(s_modem, "t")) {
-                        strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY);
-                    } else if(!strcmp(s_modem, "w")) {
-                        strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY);
-                    } else if(!strcmp(s_modem, "l")) {
-                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY);
-                    } else if(!strcmp(s_modem, "tl")) {
-                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY);
-                    } else if(!strcmp(s_modem, "lf")) {
-                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY);
-                    }
-                    property_set(sim_prop, pin);
-                }
-            } else if (s_sim_num == 1) {
-                if(pin != NULL) {
-                    if(!strcmp(s_modem, "t")) {
-                        strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY1);
-                    } else if(!strcmp(s_modem, "w")) {
-                        strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY1);
-                    } else if(!strcmp(s_modem, "l")) {
-                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY1);
-                    } else if(!strcmp(s_modem, "tl")) {
-                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY1);
-                    } else if(!strcmp(s_modem, "lf")) {
-                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY1);
-                    }
-                    property_set(sim_prop, pin);
-                }
-            } else if (s_sim_num == 2) {
-                if(pin != NULL) {
-                    if(!strcmp(s_modem, "t")) {
-                        strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY2);
-                    } else if(!strcmp(s_modem, "w")) {
-                        strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY2);
-                    } else if(!strcmp(s_modem, "l")) {
-                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY2);
-                    } else if(!strcmp(s_modem, "tl")) {
-                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY2);
-                    } else if(!strcmp(s_modem, "lf")) {
-                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY2);
-                    }
-                    property_set(sim_prop, pin);
-                }
+        if (s_sim_num == 0) {
+            if (pin != NULL) {
+                snprintf(RIL_SP_SIM_PIN_PROPERTY,
+                        sizeof(RIL_SP_SIM_PIN_PROPERTY), "ril.%s.sim.pin", s_modem);
+                strcpy(sim_prop, RIL_SP_SIM_PIN_PROPERTY);
+                property_set(sim_prop, pin);
             }
         } else {
-            if(pin != NULL) {
-                if(!strcmp(s_modem, "t")) {
-                    strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY);
-                } else if(!strcmp(s_modem, "w")) {
-                    strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY);
-                } else if(!strcmp(s_modem, "l")) {
-                    strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY);
-                } else if(!strcmp(s_modem, "tl")) {
-                    strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY);
-                } else if(!strcmp(s_modem, "lf")) {
-                    strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY);
-                }
+            if (pin != NULL) {
+                snprintf(RIL_SP_SIM_PIN_PROPERTYS, sizeof(RIL_SP_SIM_PIN_PROPERTYS),
+                        "ril.%s.sim.pin", s_modem);
+                strcat(RIL_SP_SIM_PIN_PROPERTYS, "%d");
+                snprintf(RIL_SP_SIM_PIN_PROPERTYS, sizeof(RIL_SP_SIM_PIN_PROPERTYS),
+                        RIL_SP_SIM_PIN_PROPERTYS, s_sim_num);
+                strcpy(sim_prop, RIL_SP_SIM_PIN_PROPERTYS);
                 property_set(sim_prop, pin);
             }
         }
@@ -6378,60 +6221,21 @@ static void  requestEnterSimPin(int channelID, void*  data, size_t  datalen, RIL
         RILLOGD("requestEnterSimPin :s_modem= %s,prop=%s",s_modem,pin);
         RILLOGD("requestEnterSimPin :s_multiSimMode= %d,s_sim_num=%d",s_multiSimMode,s_sim_num);
 
-        if(s_multiSimMode) {
-            if(s_sim_num == 0) {
-                if(pin != NULL) {
-                    if(!strcmp(s_modem, "t")) {
-                        strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY);
-                    } else if(!strcmp(s_modem, "w")) {
-                        strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY);
-                    } else if(!strcmp(s_modem, "l")) {
-                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY);
-                    } else if(!strcmp(s_modem, "tl")) {
-                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY);
-                    } else if(!strcmp(s_modem, "lf")) {
-                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY);
-                    }
-                    property_set(sim_prop, pin);
-                }
-            } else if (s_sim_num == 1) {
-                if(pin != NULL) {
-                    if(!strcmp(s_modem, "t")) {
-                        strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY1);
-                    } else if(!strcmp(s_modem, "w")) {
-                        strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY1);
-                    } else if(!strcmp(s_modem, "l")) {
-                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY1);
-                    } else if(!strcmp(s_modem, "tl")) {
-                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY1);
-                    } else if(!strcmp(s_modem, "lf")) {
-                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY1);
-                    }
-                    property_set(sim_prop, pin);
-                }
-            } else if (s_sim_num == 2) {
-                if(pin != NULL) {
-                    if(!strcmp(s_modem, "t")) {
-                        strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY2);
-                    } else if(!strcmp(s_modem, "w")) {
-                        strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY2);
-                    } else if(!strcmp(s_modem, "l")) {
-                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY2);
-                    } else if(!strcmp(s_modem, "tl")) {
-                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY2);
-                    } else if(!strcmp(s_modem, "lt")) {
-                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY2);
-                    }
-                    property_set(sim_prop, pin);
-                }
+        if (s_sim_num == 0) {
+            if (pin != NULL) {
+                snprintf(RIL_SP_SIM_PIN_PROPERTY,
+                        sizeof(RIL_SP_SIM_PIN_PROPERTY), "ril.%s.sim.pin", s_modem);
+                strcpy(sim_prop, RIL_SP_SIM_PIN_PROPERTY);
+                property_set(sim_prop, pin);
             }
         } else {
-            if(pin != NULL) {
-                if(!strcmp(s_modem, "t")) {
-                    strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY);
-                } else if(!strcmp(s_modem, "w")) {
-                    strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY);
-                }
+            if (pin != NULL) {
+                snprintf(RIL_SP_SIM_PIN_PROPERTYS, sizeof(RIL_SP_SIM_PIN_PROPERTYS),
+                        "ril.%s.sim.pin", s_modem);
+                strcat(RIL_SP_SIM_PIN_PROPERTYS, "%d");
+                snprintf(RIL_SP_SIM_PIN_PROPERTYS, sizeof(RIL_SP_SIM_PIN_PROPERTYS),
+                        RIL_SP_SIM_PIN_PROPERTYS, s_sim_num);
+                strcpy(sim_prop, RIL_SP_SIM_PIN_PROPERTYS);
                 property_set(sim_prop, pin);
             }
         }
@@ -10714,112 +10518,35 @@ getSIMStatus(int channelID)
         int res;
         ATResponse   *p_response1 = NULL;
 
-        if(!strcmp(s_modem, "t")) {
-            strcpy(sim_prop, RIL_TD_ASSERT);
-        } else if(!strcmp(s_modem, "w")) {
-            strcpy(sim_prop, RIL_W_ASSERT);
-        } else if(!strcmp(s_modem, "l")) {
-            strcpy(sim_prop, RIL_L_ASSERT);
-        } else if(!strcmp(s_modem, "tl")) {
-            strcpy(sim_prop, RIL_TL_ASSERT);
-        } else if(!strcmp(s_modem, "lf")) {
-            strcpy(sim_prop, RIL_LF_ASSERT);
-        }
+        snprintf(RIL_SP_ASSERT, sizeof(RIL_SP_ASSERT), "ril.%s.assert", s_modem);
+        strcpy(sim_prop, RIL_SP_ASSERT);
         property_get(sim_prop, prop, "0");
-        if(!strcmp(prop, "1")) {
+        if (!strcmp(prop, "1")) {
             extern int s_sim_num;
-            if(s_multiSimMode) {
-                if(s_sim_num == 0) {
-                    if(!strcmp(s_modem, "t")) {
-                        strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY);
-                    } else if(!strcmp(s_modem, "w")) {
-                        strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY);
-                    } else if(!strcmp(s_modem, "l")) {
-                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY);
-                    } else if(!strcmp(s_modem, "tl")) {
-                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY);
-                    } else if(!strcmp(s_modem, "lf")) {
-                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY);
-                    }
-                    property_get(sim_prop, prop, "");
-                } else if (s_sim_num == 1) {
-                    if(!strcmp(s_modem, "t")) {
-                        strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY1);
-                    } else if(!strcmp(s_modem, "w")) {
-                        strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY1);
-                    } else if(!strcmp(s_modem, "l")) {
-                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY1);
-                    } else if(!strcmp(s_modem, "tl")) {
-                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY1);
-                    } else if(!strcmp(s_modem, "lf")) {
-                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY1);
-                    }
-                    property_get(sim_prop, prop, "");
-                } else if (s_sim_num == 2) {
-                    if(!strcmp(s_modem, "t")) {
-                        strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY2);
-                    } else if(!strcmp(s_modem, "w")) {
-                        strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY2);
-                    } else if(!strcmp(s_modem, "l")) {
-                        strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY2);
-                    } else if(!strcmp(s_modem, "tl")) {
-                        strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY2);
-                    } else if(!strcmp(s_modem, "lf")) {
-                        strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY2);
-                    }
-                    property_get(sim_prop, prop, "");
-                }
-                if(strlen(prop) != 4) {
-                    goto out;
-                } else {
-                    res = asprintf(&cmd, "AT+CPIN=%s", prop);
-                    if(res < 0) {
-                        RILLOGE("Failed to allocate memory");
-                        cmd = NULL;
-                        goto out;
-                    }
-                    err = at_send_command(ATch_type[channelID], cmd, &p_response1);
-                    free(cmd);
-                    if(err < 0 || p_response1->success == 0) {
-                        at_response_free(p_response1);
-                        goto out;
-                    }
-                    at_response_free(p_response1);
-                    ret = SIM_NOT_READY;
-                    goto done;
-                }
+            if (s_sim_num == 0) {
+                strcpy(sim_prop, RIL_SP_SIM_PIN_PROPERTY);
             } else {
-                if(!strcmp(s_modem, "t")) {
-                    strcpy(sim_prop, RIL_TD_SIM_PIN_PROPERTY);
-                } else if(!strcmp(s_modem, "w")) {
-                    strcpy(sim_prop, RIL_W_SIM_PIN_PROPERTY);
-                } else if(!strcmp(s_modem, "l")) {
-                    strcpy(sim_prop, RIL_L_SIM_PIN_PROPERTY);
-                } else if(!strcmp(s_modem, "tl")) {
-                    strcpy(sim_prop, RIL_TL_SIM_PIN_PROPERTY);
-                } else if(!strcmp(s_modem, "lf")) {
-                    strcpy(sim_prop, RIL_LF_SIM_PIN_PROPERTY);
-                }
-                property_get(sim_prop, prop, "");
-                if(strlen(prop) != 4) {
+                strcpy(sim_prop, RIL_SP_SIM_PIN_PROPERTYS);
+            }
+            property_get(sim_prop, prop, "");
+            if (strlen(prop) != 4) {
+                goto out;
+            } else {
+                res = asprintf(&cmd, "AT+CPIN=%s", prop);
+                if (res < 0) {
+                    RILLOGE("Failed to allocate memory");
+                    cmd = NULL;
                     goto out;
-                } else {
-                    res = asprintf(&cmd, "AT+CPIN=%s", prop);
-                    if(res < 0) {
-                        RILLOGE("Failed to allocate memory");
-                        cmd = NULL;
-                        goto out;
-                    }
-                    err = at_send_command(ATch_type[channelID], cmd, &p_response1);
-                    free(cmd);
-                    if(err < 0 || p_response1->success == 0) {
-                        at_response_free(p_response1);
-                        goto out;
-                    }
-                    at_response_free(p_response1);
-                    ret = SIM_NOT_READY;
-                    goto done;
                 }
+                err = at_send_command(ATch_type[channelID], cmd, &p_response1);
+                free(cmd);
+                if (err < 0 || p_response1->success == 0) {
+                    at_response_free(p_response1);
+                    goto out;
+                }
+                at_response_free(p_response1);
+                ret = SIM_NOT_READY;
+                goto done;
             }
         }
 out:
@@ -11443,66 +11170,28 @@ retry_vinit:
     }
 
     /*power on sim card */
-    if(s_multiSimMode) {
         char sim_prop[PROPERTY_VALUE_MAX];
         char prop[PROPERTY_VALUE_MAX];
         extern int s_sim_num;
 
-        if(s_sim_num == 0) {
-            if(!strcmp(s_modem, "t")) {
-                strcpy(sim_prop, RIL_TD_SIM_POWER_PROPERTY);
-            } else if(!strcmp(s_modem, "w")) {
-                strcpy(sim_prop, RIL_W_SIM_POWER_PROPERTY);
-            }
-            property_get(sim_prop, prop, "0");
-            if(!strcmp(prop, "0")) {
-                property_set(sim_prop, "1");
-                at_send_command(ATch_type[channelID], "AT+SFUN=2", NULL);
-            }
-        } else if (s_sim_num == 1) {
-            if(!strcmp(s_modem, "t")) {
-                strcpy(sim_prop, RIL_TD_SIM_POWER_PROPERTY1);
-            } else if(!strcmp(s_modem, "w")) {
-                strcpy(sim_prop, RIL_W_SIM_POWER_PROPERTY1);
-            }
-            property_get(sim_prop, prop, "0");
-            if(!strcmp(prop, "0")) {
-                property_set(sim_prop, "1");
-                at_send_command(ATch_type[channelID], "AT+SFUN=2", NULL);
-            }
-        } else if (s_sim_num == 2) {
-            if(!strcmp(s_modem, "t")) {
-                strcpy(sim_prop, RIL_TD_SIM_POWER_PROPERTY2);
-            } else if(!strcmp(s_modem, "w")) {
-                strcpy(sim_prop, RIL_W_SIM_POWER_PROPERTY2);
-            }
-            property_get(sim_prop, prop, "0");
-            if(!strcmp(prop, "0")) {
-                property_set(sim_prop, "1");
-                at_send_command(ATch_type[channelID], "AT+SFUN=2", NULL);
-            }
-        }
-    } else {
-        char sim_prop[PROPERTY_VALUE_MAX];
-        char prop[PROPERTY_VALUE_MAX];
-
-        if(!strcmp(s_modem, "t")) {
-            strcpy(sim_prop, RIL_TD_SIM_POWER_PROPERTY);
-        } else if(!strcmp(s_modem, "w")) {
-            strcpy(sim_prop, RIL_W_SIM_POWER_PROPERTY);
-        } else if(!strcmp(s_modem, "l")) {
-            strcpy(sim_prop, RIL_L_SIM_POWER_PROPERTY);
-        } else if(!strcmp(s_modem, "tl")) {
-            strcpy(sim_prop, RIL_TL_SIM_POWER_PROPERTY);
-        } else if(!strcmp(s_modem, "lf")) {
-            strcpy(sim_prop, RIL_LF_SIM_POWER_PROPERTY);
+        if (s_sim_num == 0) {
+            snprintf(RIL_SP_SIM_POWER_PROPERTY,
+                    sizeof(RIL_SP_SIM_POWER_PROPERTY), "ril.%s.sim.power", s_modem);
+            strcpy(sim_prop, RIL_SP_SIM_POWER_PROPERTY);
+        } else {
+            snprintf(RIL_SP_SIM_POWER_PROPERTYS, sizeof(RIL_SP_SIM_POWER_PROPERTYS),
+                    "ril.%s.sim.power", s_modem);
+            strcat(RIL_SP_SIM_POWER_PROPERTYS, "%d");
+            snprintf(RIL_SP_SIM_POWER_PROPERTYS, sizeof(RIL_SP_SIM_POWER_PROPERTYS),
+                    RIL_SP_SIM_POWER_PROPERTYS, s_sim_num);
+            strcpy(sim_prop, RIL_SP_SIM_POWER_PROPERTYS);
         }
         property_get(sim_prop, prop, "0");
-        if(!strcmp(prop, "0")) {
+        if (!strcmp(prop, "0")) {
             property_set(sim_prop, "1");
             at_send_command(ATch_type[channelID], "AT+SFUN=2", NULL);
         }
-    }
+
 
     /* assume radio is off on error */
     if(isRadioOn(channelID) > 0) {
@@ -13419,43 +13108,25 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
                 break;
         }
     }
+    if (s_modem == NULL) {
+        s_modem = (char *) malloc(PROPERTY_VALUE_MAX);
+        property_get("ro.radio.modemtype", (char*)s_modem, "");
+        if (strcmp(s_modem, "") == 0) {
+            ALOGD("get s_modem failed.");
+            free((char*)s_modem);
+            usage(argv[0]);
+        }
+    }
 
     //modem = *s_modem;
     RILLOGD("rild connect %s modem, current is rild%d\n", s_modem, s_sim_num);
 
-    if(!strcmp(s_modem, "t")) {
-        property_get(TD_SIM_NUM, phoneCount, "");
-        if(strcmp(phoneCount, "1"))
-            s_multiSimMode = 1;
-        else
-            s_multiSimMode = 0;
-    } else if(!strcmp(s_modem, "w")) {
-        property_get(W_SIM_NUM, phoneCount, "");
-        if(strcmp(phoneCount, "1"))
-            s_multiSimMode = 1;
-        else
-            s_multiSimMode = 0;
-    } else if(!strcmp(s_modem, "l")) {
-        property_get(L_SIM_NUM, phoneCount, "");
-        if(strcmp(phoneCount, "1"))
-            s_multiSimMode = 1;
-        else
-            s_multiSimMode = 0;
-    } else if(!strcmp(s_modem, "tl")) {
-        property_get(TL_SIM_NUM, phoneCount, "");
-        if(strcmp(phoneCount, "1"))
-            s_multiSimMode = 1;
-        else
-            s_multiSimMode = 0;
-    } else if(!strcmp(s_modem, "lf")) {
-        property_get(LF_SIM_NUM, phoneCount, "");
-        if(strcmp(phoneCount, "1"))
-            s_multiSimMode = 1;
-        else
-            s_multiSimMode = 0;
-    }else {
-        usage(argv[0]);
-    }
+    snprintf(SP_SIM_NUM, sizeof(SP_SIM_NUM), "ro.modem.%s.count", s_modem);
+    property_get(SP_SIM_NUM, phoneCount, "");
+    if(strcmp(phoneCount, "1"))
+        s_multiSimMode = 1;
+    else
+        s_multiSimMode = 0;
 
     pthread_attr_init (&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
@@ -14606,5 +14277,21 @@ static int isVoLteEnable(){
         return 1;
     } else {
         return 0;
+    }
+}
+void setModemtype() {
+    RILLOGD("Modem Type is %s", s_modem);
+    if (strcmp(s_modem, "t") == 0) {
+        RILLOGD("MODEM_TYPE_TDSCDMA");
+        property_set(MODEM_TYPE, MODEM_TYPE_TDSCDMA);
+        return;
+    } else if (strcmp(s_modem, "w") == 0) {
+        RILLOGD("MODEM_TYPE_WCDMA");
+        property_set(MODEM_TYPE, MODEM_TYPE_WCDMA);
+        return;
+    } else if (strcmp(s_modem, "l") == 0 || strcmp(s_modem, "tl") == 0 || strcmp(s_modem, "lf") == 0) {
+        RILLOGD("MODEM_TYPE_LTE");
+        property_set(MODEM_TYPE, MODEM_TYPE_LTE);
+        return;
     }
 }

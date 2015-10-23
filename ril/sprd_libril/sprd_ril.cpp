@@ -171,11 +171,7 @@ static UserCallbackInfo *s_last_wake_timeout_info = NULL;
 static void *s_lastNITZTimeData = NULL;
 static size_t s_lastNITZTimeDataSize;
 
-#define TD_SIM_NUM  "ro.modem.t.count"
-#define W_SIM_NUM  "ro.modem.w.count"
-#define L_SIM_NUM  "ro.modem.l.count"
-#define TL_SIM_NUM  "ro.modem.tl.count"
-#define LF_SIM_NUM  "ro.modem.lf.count"
+char SP_SIM_NUM[20]; // ro.modem.*.count
 
 static int s_multiSimMode;
 const char * s_modem = NULL;
@@ -5480,44 +5476,25 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
                 break;
         }
     }
+    if (s_modem == NULL) {
+        s_modem = (char *) malloc(PROPERTY_VALUE_MAX);
+        property_get("ro.radio.modemtype", (char*) s_modem, "");
+        if (strcmp(s_modem, "") == 0) {
+            RILLOGE("get modem type failed, exit!");
+            free((char*) s_modem);
+            exit(-1);
+        }
+    }
 
     //modem = *s_modem;
     RILLOGD("it's %s modem rild%d libril", s_modem, s_sim_num);
 
-    if(!strcmp(s_modem, "t")) {
-        property_get(TD_SIM_NUM, phoneCount, "");
-        if(strcmp(phoneCount, "1"))
-            s_multiSimMode = 1;
-        else
-            s_multiSimMode = 0;
-    } else if(!strcmp(s_modem, "w")) {
-        property_get(W_SIM_NUM, phoneCount, "");
-        if(strcmp(phoneCount, "1"))
-            s_multiSimMode = 1;
-        else
-            s_multiSimMode = 0;
-    } else if(!strcmp(s_modem, "l")) {
-        property_get(L_SIM_NUM, phoneCount, "");
-        if(strcmp(phoneCount, "1"))
-            s_multiSimMode = 1;
-        else
-            s_multiSimMode = 0;
-    } else if(!strcmp(s_modem, "tl")) {
-        property_get(TL_SIM_NUM, phoneCount, "");
-        if(strcmp(phoneCount, "1"))
-            s_multiSimMode = 1;
-        else
-            s_multiSimMode = 0;
-    } else if(!strcmp(s_modem, "lf")) {
-        property_get(LF_SIM_NUM, phoneCount, "");
-        if(strcmp(phoneCount, "1"))
-            s_multiSimMode = 1;
-        else
-            s_multiSimMode = 0;
-    } else {
-        RILLOGE("Invalid modem type");
-        exit(-1);
-    }
+    snprintf(SP_SIM_NUM, sizeof(SP_SIM_NUM), "ro.modem.%s.count", s_modem);
+    property_get(SP_SIM_NUM, phoneCount, "");
+    if (strcmp(phoneCount, "1"))
+        s_multiSimMode = 1;
+    else
+        s_multiSimMode = 0;
 
     if (callbacks == NULL) {
         RILLOGE("RIL_register: RIL_RadioFunctions * null");

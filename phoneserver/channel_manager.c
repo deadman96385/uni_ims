@@ -34,17 +34,7 @@
 #include "cutils/properties.h"
 #include <hardware_legacy/power.h>
 
-#define TD_SIM_NUM  "ro.modem.t.count"
-#define W_SIM_NUM  "ro.modem.w.count"
-#define L_SIM_NUM  "ro.modem.l.count"
-#define TL_SIM_NUM  "ro.modem.tl.count"
-#define LF_SIM_NUM  "ro.modem.lf.count"
-
-#define MUX_TD_DEV  "ro.modem.t.tty"
-#define MUX_W_DEV  "ro.modem.w.tty"
-#define MUX_L_DEV  "ro.modem.l.tty"
-#define MUX_TL_DEV  "ro.modem.tl.tty"
-#define MUX_LF_DEV  "ro.modem.lf.tty"
+#define MODEM_TYPE "ro.radio.modemtype"
 
 #undef  PHS_LOGD
 #define PHS_LOGD(x...)  ALOGD( x )
@@ -52,6 +42,8 @@
 #define ANDROID_WAKE_LOCK_NAME "phoneserver-init"
 
 const char *modem = NULL;
+char SP_SIM_NUM[20];
+char MUX_SP_DEV[20];
 int multiSimMode;
 struct channel_manager_t chnmng;
 
@@ -761,28 +753,15 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
     struct chns_config_t chns_data;
     struct termios ser_settings;
 
-    if(!strcmp(modem, "t")) {
-        property_get(MUX_TD_DEV, prop, "/dev/ts0710mux");
-    } else if(!strcmp(modem, "w")) {
-        property_get(MUX_W_DEV, prop, "/dev/ts0710mux");
-    } else if(!strcmp(modem, "l") ) {
-        property_get(MUX_L_DEV, prop, "/dev/sdiomux");
+    snprintf(MUX_SP_DEV, sizeof(MUX_SP_DEV), "ro.modem.%s.tty", modem);
+    if (!strcmp(modem, "t") || !strcmp(modem, "w")) {
+        property_get(MUX_SP_DEV, prop, "/dev/ts0710mux");
+    } else if (!strcmp(modem, "l") || !strcmp(modem, "tl")
+            || !strcmp(modem, "lf") ) {
+        property_get(MUX_SP_DEV, prop, "/dev/sdiomux");
         if(multiSimMode == 0) {
             chn_num = LTE_MUX_CHN_NUM ;
         }
-    } else if(!strcmp(modem, "tl")) {
-        property_get(MUX_TL_DEV, prop, "/dev/sdiomux");
-        if(multiSimMode == 0) {
-            chn_num = LTE_MUX_CHN_NUM ;
-        }
-    } else if(!strcmp(modem, "lf")) {
-        property_get(MUX_LF_DEV, prop, "/dev/sdiomux");
-        if(multiSimMode == 0) {
-            chn_num = LTE_MUX_CHN_NUM ;
-        }
-    } else {
-        PHS_LOGE("Wrong modem parameter");
-        exit(-1);
     }
 
     PHS_LOGD("cmux_Init: mux device is %s", prop);
@@ -1000,6 +979,7 @@ static void channel_manager_init(void)
 extern void ps_service_init(void);
 extern sem sms_lock;
 
+/*
 static void usage(const char *argv)
 {
     PHS_LOGE("Usage: %s -m <modem>", argv);
@@ -1010,6 +990,7 @@ static void usage(const char *argv)
     PHS_LOGE("modem: lf (lf modem)");
     exit(-1);
 }
+*/
 
 int soc_client = -1;
 static void *detect_at_no_response(void __attribute__((unused)) *par)
@@ -1017,20 +998,8 @@ static void *detect_at_no_response(void __attribute__((unused)) *par)
     int soc_fd;
     char socket_name[10];
 
-    if(!strcmp(modem, "t")) {
-        strcpy(socket_name, "phstd");
-    } else if(!strcmp(modem, "w")) {
-         strcpy(socket_name, "phsw");
-    } else if(!strcmp(modem, "l")) {
-         strcpy(socket_name, "phsl");
-    } else if(!strcmp(modem, "tl")) {
-         strcpy(socket_name, "phstl");
-    } else if(!strcmp(modem, "lf")) {
-         strcpy(socket_name, "phslf");
-    } else {
-        PHS_LOGE("Wrong modem parameter");
-        exit(-1);
-    }
+    snprintf(socket_name, sizeof(socket_name), "phs%s", modem);
+
     soc_fd = socket_local_server(socket_name,
 			ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
     if (soc_fd < 0) {
@@ -1058,26 +1027,23 @@ int main(int argc, char *argv[])
 
     //PHS_LOGD("chnmng start phone server");
     PHS_LOGD("Phoneserver version: %s ",version_string);
+    PHS_LOGD("Phoneserver get modem type %s's value", MODEM_TYPE);
 
-    if (0 == strcmp(argv[1], "-m") && (argc > 2)) {
+    if ((argc > 2) && 0 == strcmp(argv[1], "-m") ) {
         modem = argv[2];
-    } else {
-        usage(argv[0]);
+    }
+    if (modem == NULL) {
+        modem = (char *) malloc(PROPERTY_VALUE_MAX);
+        property_get(MODEM_TYPE, (char*) modem, "");
+        if (strcmp(modem, "") == 0) {
+            PHS_LOGD("get modem type failed, exit!");
+            free((char*) modem);
+            exit(-1);
+        }
     }
 
-    if(!strcmp(modem, "t")) {
-        property_get(TD_SIM_NUM, prop, "");
-    } else if(!strcmp(modem, "w")) {
-        property_get(W_SIM_NUM, prop, "");
-    } else if(!strcmp(modem, "l")) {
-        property_get(L_SIM_NUM, prop, "");
-    } else if(!strcmp(modem, "tl")) {
-        property_get(TL_SIM_NUM, prop, "");
-    } else if(!strcmp(modem, "lf")) {
-        property_get(LF_SIM_NUM, prop, "");
-    } else {
-	usage(argv[0]);
-    }
+    snprintf(SP_SIM_NUM, sizeof(SP_SIM_NUM), "ro.modem.%s.count", modem);
+    property_get(SP_SIM_NUM, prop, "");
 
     PHS_LOGD("Current modem is %s, Current sim is %s", modem, prop);
 
@@ -1097,4 +1063,5 @@ int main(int argc, char *argv[])
 
     while(1)
         pause();
+
 }

@@ -173,6 +173,16 @@ int main(int argc, char **argv)
         }
     }
 
+    if (rilModem == NULL) {
+        rilModem = (char *) malloc(PROPERTY_VALUE_MAX);
+        property_get("ro.radio.modemtype", (char*) rilModem, "");
+        if (strcmp(rilModem, "") == 0) {
+            ALOGD("get rilModem failed.");
+            free((char*) rilModem);
+            usage(argv[0]);
+        }
+    }
+
     rilArgv = argv + 2;
     argc = argc - 2;
 
@@ -236,7 +246,7 @@ OpenLib:
         RLOGW("RIL_ATCI_Init defined as null in %s. AT Channel Not usable\n", rilLibPath);
     }
 
-    RILLOGD("Rild: rilArgv[1]=%s,rilArgv[2]=%s,rilArgv[3]=%s,rilArgv[4]=%s",rilArgv[1],rilArgv[2],rilArgv[3],rilArgv[4]);
+    RILLOGD("Rild: rilArgv[1]=%s,rilArgv[2]=%s,ModemType=%s",rilArgv[1],rilArgv[2],rilModem);
     funcs = rilInit(&s_rilEnv, argc, rilArgv);
     RIL_register(funcs, argc, rilArgv);
 
@@ -247,6 +257,10 @@ OpenLib:
     RLOGD("RIL_register_socket completed");
 
 done:
+
+    if (strcmp(argv[3], "-n") == 0 && rilModem !=NULL) {
+        free((char*) rilModem);
+    }
 
     RLOGD("RIL_Init starting sleep loop");
     while (true) {

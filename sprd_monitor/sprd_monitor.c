@@ -99,14 +99,14 @@ static int start_engservice(void)
 
 static int start_phser()
 {
-    property_set("ctl.start", "phoneserver_w");
+    property_set("ctl.start", "phoneserver");
 
     return 0;
 }
 
 static int kill_phser()
 {
-    property_set("ctl.stop", "phoneserver_w");
+    property_set("ctl.stop", "phoneserver");
 
     return 0;
 }
@@ -115,14 +115,14 @@ static int stop_rild(void)
 {
 	/* stop rild */
     if(s_multiSimMode == 3) {
-        property_set("ctl.stop", "wril-daemon");
-        property_set("ctl.stop", "wril-daemon1");
-        property_set("ctl.stop", "wril-daemon2");
+        property_set("ctl.stop", "spril-daemon");
+        property_set("ctl.stop", "spril-daemon1");
+        property_set("ctl.stop", "spril-daemon2");
     } else if(s_multiSimMode == 2) {
-        property_set("ctl.stop", "wril-daemon");
-        property_set("ctl.stop", "wril-daemon1");
+        property_set("ctl.stop", "spril-daemon");
+        property_set("ctl.stop", "spril-daemon1");
     } else {
-        property_set("ctl.stop", "wril-daemon");
+        property_set("ctl.stop", "spril-daemon");
     }
 
     return 0;
@@ -132,14 +132,14 @@ static int start_rild(void)
 {
     /* start rild */
     if(s_multiSimMode == 3) {
-        property_set("ctl.start", "wril-daemon");
-        property_set("ctl.start", "wril-daemon1");
-        property_set("ctl.start", "wril-daemon2");
+        property_set("ctl.start", "spril-daemon");
+        property_set("ctl.start", "spril-daemon1");
+        property_set("ctl.start", "spril-daemon2");
     } else if(s_multiSimMode == 2) {
-        property_set("ctl.start", "wril-daemon");
-        property_set("ctl.start", "wril-daemon1");
+        property_set("ctl.start", "spril-daemon");
+        property_set("ctl.start", "spril-daemon1");
     } else {
-        property_set("ctl.start", "wril-daemon");
+        property_set("ctl.start", "spril-daemon");
     }
 
     return 0;
@@ -171,7 +171,7 @@ void assert_handler(int sig_num)
     if (pid > 0) {
         snprintf(pid_str, sizeof(pid_str), "%d", pid);
         property_set(PHONE_APP_PROP, pid_str);
-        property_set("ctl.start", "kill_w_phone");
+        property_set("ctl.start", "kill_phone");
     }
 }
 

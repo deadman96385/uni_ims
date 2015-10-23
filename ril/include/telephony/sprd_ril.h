@@ -5925,6 +5925,10 @@ typedef struct {
 #define USIM_DATA_OFFSET_3  3
 #define USIM_FILE_DES_TAG 0x82
 #define USIM_FILE_SIZE_TAG 0x80
+//#define MODEM_TYPE_GSM "0"
+#define MODEM_TYPE_TDSCDMA "1"
+#define MODEM_TYPE_WCDMA "2"
+#define MODEM_TYPE_LTE "3"
 /* SPRD: add by bug432482 @{ */
 #define TYPE_CHAR_SIZE sizeof(char)
 /* @} */
