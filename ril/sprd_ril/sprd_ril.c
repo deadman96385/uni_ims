@@ -1939,6 +1939,8 @@ void buildTestModeCmd(char *cmd, size_t size) {
     int phonecount = 0;
     int i;
     char prop[PROPERTY_VALUE_MAX] = { 0 };
+    char strFormatter[128] = { 0 };
+    memset(strFormatter, 0, sizeof(strFormatter));
 
     property_get(PHONE_COUNT, prop, "1");
     phonecount = atoi(prop);
@@ -1948,18 +1950,16 @@ void buildTestModeCmd(char *cmd, size_t size) {
             snprintf(cmd, size, "AT+SPTESTMODEM=%d", getTestModeInner(i));
             RILLOGD("buildTestModeCmd cmd: %s", cmd);
             if (phonecount == 1) {
-                char * strFormatter = strdup(cmd);
+                strcpy(strFormatter, cmd);
                 strcat(strFormatter, ",%d");
                 snprintf(cmd, size, strFormatter, 254);
-                free (strFormatter);
                 RILLOGD("buildTestModeCmd cmd(SingleSim): %s", cmd);
             }
         } else {
             //strcat(cmd, ",%d");
-            char * strFormatter = strdup(cmd);
+            strcpy(strFormatter, cmd);
             strcat(strFormatter, ",%d");
             snprintf(cmd, size, strFormatter, getTestModeInner(i));
-            free (strFormatter);
             RILLOGD("buildTestModeCmd cmd%d: %s", i, cmd);
         }
     }
