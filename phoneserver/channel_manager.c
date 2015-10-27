@@ -973,7 +973,11 @@ static void *signal_process(){
                         rscp_array[i]=rscp_array[i+1];
                 }
             }
-            rsrp_array[N-1]=rsrp[sim_index];
+            if (!strcmp(modem, "l") || !strcmp(modem, "tl") || !strcmp(modem, "lf")) {
+                rsrp_array[N - 1] = rsrp[sim_index];
+            } else if (!strcmp(modem, "t") || !strcmp(modem, "w")) {
+                rsrp_array[N - 1] = rssi[sim_index];
+            }
             rsrp_value = least_squares(rsrp_array);
             if(rscp_array != NULL){  ////w/td mode no rscp
                 rscp_array[N-1]=rscp[sim_index];
