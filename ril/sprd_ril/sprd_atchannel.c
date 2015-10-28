@@ -397,12 +397,12 @@ static const char *readline(struct ATChannels *ATch)
                 //RILLOGD("atchannel: EOF reached");
                 /* SPRD: Add for 321528 @{ */
                 err_count ++;
-                if (err_count > 10) {
-                    RILLOGD("atchannel: EOF reached. Sleep 10s");
-                    sleep(10);
-                } else {
-                    RILLOGD("atchannel: EOF reached. err_count = %d", err_count);
-                }
+                //if (err_count > 10) {
+                RILLOGD("atchannel: EOF reached. Sleep 10s");
+                sleep(10);
+                //} else {
+                    //RILLOGD("atchannel: EOF reached. err_count = %d", err_count);
+                //}
                 /* @} */
             } else {
                 //RILLOGD("atchannel: read error %s", strerror(errno));

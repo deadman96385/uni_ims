@@ -156,6 +156,7 @@ int main(int argc, char **argv)
     int i, rc, fd;
     int califlag = 0;
     char prop[PROPERTY_VALUE_MAX];
+    RILLOGI("sprd_rild Compile date:%s,%s ",__DATE__,__TIME__);
 
     for (i = 1; i < argc ;) {
         if (0 == strcmp(argv[i], "-l") && (argc - i > 1)) {

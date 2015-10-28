@@ -159,9 +159,9 @@ static int ussdRun = 0;/* 0: ussd to end. 1: ussd to start. */
 int s_isstkcall = 0;
 static int add_ip_cid = -1;   //for volte addtional business
 /*SPRD: add for VoLTE to handle SRVCC */
-typedef struct {
+typedef struct Srvccpendingrequest{
     char *cmd;
-    struct SrvccPendingRequest *p_next;
+    struct Srvccpendingrequest *p_next;
 }SrvccPendingRequest;
 
 #define VOLTE_ENABLE_PROP         "persist.sys.volte.enable"
@@ -176,11 +176,11 @@ static void excuteSrvccPendingOperate();
 
 #define SIM_ECC_LIST_PROPERTY "ril.ecclist"
 
-typedef struct{
+typedef struct Ecc_record{
     char * number;
     int category;
-    struct Ecc_Record *next;
-    struct Ecc_Record *prev;
+    struct Ecc_record *next;
+    struct Ecc_record *prev;
 }Ecc_Record;
 Ecc_Record * s_sim_ecclist = NULL;
 static pthread_mutex_t s_ecclist_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -302,7 +302,7 @@ int getChannel();
 static int getSmsChannel();
 static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_Token t);
 static void getSmsState(int channelID) ;
-static void convertBinToHex(char *bin_ptr, int length, char *hex_ptr);
+static void convertBinToHex(char *bin_ptr, int length, unsigned char *hex_ptr);
 static int convertHexToBin(const char *hex_ptr, int length, char *bin_ptr);
 int parsePdu(char *pdu);
 static void pollSIMState (void *param);
@@ -1647,7 +1647,7 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
                     case SIM_SERVICE_PROVIDER_PERSONALIZATION:
                         strcpy(type_new,"PP");
                         break;
-                    case SIM_SIM_PERSONALIZATION:
+                    default: //SIM_SIM_PERSONALIZATION:
                         strcpy(type_new,"PS");
                         break;
                 }
@@ -2304,7 +2304,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
                     RILLOGE("LTE radio should be powered by CMCC USIM Card!");
 
                     int lteState = 0;
-                    RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteState, 4);
+                    RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteState, sizeof(lteState));
                     RILLOGE("Unsolicited LTE ready is false!");
 
                     goto error;
@@ -2453,8 +2453,8 @@ static void onClass2SmsReceived(void *param)
     if (at_tok_hasmore(&line)) {
         err = at_tok_nextstr(&line, &sms_pdu);
         if (err < 0) goto error;
+        RILLOGD("pdu : %s", sms_pdu);
     }
-    RILLOGD("pdu : %s", sms_pdu);
     pdu_length = strlen(sms_pdu);
     if(!convertHexToBin(sms_pdu, pdu_length, buf))
     {
@@ -3534,7 +3534,7 @@ retrycgatt:
                               case 33:
                                 RILLOGD("CGATT fall Back Cause: 33, do ps switch to TD");
                                 lteAttached = 0;
-                                RIL_onUnsolicitedResponse(RIL_UNSOL_LTE_READY, (void *)&lteAttached, 4);
+                                RIL_onUnsolicitedResponse(RIL_UNSOL_LTE_READY, (void *)&lteAttached, sizeof(lteAttached));
                                 break;
                               default:
                                 RILLOGD("CGATT fall Back Cause: other. do nothing");
@@ -3878,7 +3878,7 @@ static void requestBasebandVersion(int channelID, void *data, size_t datalen, RI
         goto error;
     }
     setModemtype();
-    RIL_onRequestComplete(t, RIL_E_SUCCESS, response, strlen(response));
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, response, strlen(response)+1);
     at_response_free(p_response);
     return;
 
@@ -4689,7 +4689,7 @@ static void requestSignalStrengthLTE(int channelID, void *data, size_t datalen, 
     if(response[2] != -1 && response[2] != 255){
         response_v6.GW_SignalStrength.signalStrength = response[2];
     }
-    if(response[5] != -1 && (response[5] != 255 || response[5] != -255)){
+    if(response[5] != -1 && response[5] != 255 && response[5] != -255){
         response_v6.LTE_SignalStrength.rsrp = response[5];
     }
 
@@ -6040,7 +6040,7 @@ static void onQuerySignalStrengthLTE(void *param)
     if(response[2] != -1 && response[2] != 255){
         response_v6.GW_SignalStrength.signalStrength = response[2];
     }
-    if(response[5] != -1 && (response[5] != 255 || response[5] != -255)){
+    if(response[5] != -1 && response[5] != 255 && response[5] != -255){
         response_v6.LTE_SignalStrength.rsrp = response[5];
     }
 
@@ -6604,7 +6604,7 @@ error:
     at_response_free(p_response);
 }
 
-static void convertBinToHex(char *bin_ptr, int length, char *hex_ptr)
+static void convertBinToHex(char *bin_ptr, int length, unsigned char *hex_ptr)
 {
     int i;
     unsigned char tmp;
@@ -8282,6 +8282,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         case RIL_REQUEST_SIM_TRANSMIT_APDU_BASIC:
             requestTransmitApduBasic(channelID, data, datalen, t);
+            break;
         case RIL_REQUEST_SIM_OPEN_CHANNEL:
             requestOpenLogicalChannel(channelID, data, datalen, t);
             break;
@@ -9106,7 +9107,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 #if defined (RIL_SPRD_EXTENSION)
                         err = at_tok_nextstr(&line, &sc_line);
                         RIL_onRequestComplete(t, RIL_E_SUCCESS, sc_line,
-                                strlen(sc_line));
+                                strlen(sc_line)+1);
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
                         line++;
                         for ( i = 0; i < strlen(line); i++ )
@@ -9148,7 +9149,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
                         }
                         RIL_onRequestComplete(t, RIL_E_SUCCESS, sc_temp,
-                                strlen(sc_temp));
+                                strlen(sc_temp)+1);
 #endif
                     } else {
                         RILLOGD("[sms]at_tok_start fail");
@@ -9675,7 +9676,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     RILLOGD("[MBBMS]RIL_REQUEST_MBBMS_GSM_AUTHEN: err=%d line=%s", err, line);
                     err = at_tok_start(&line);
                     if (err == 0) {
-                        RIL_onRequestComplete(t, RIL_E_SUCCESS, line, strlen(line));
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, line, strlen(line)+1);
                     }
                     else {
                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -9710,7 +9711,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     RILLOGD("[MBBMS]RIL_REQUEST_MBBMS_USIM_AUTHEN: err=%d line=%s", err, line);
                     err = at_tok_start(&line);
                     if (err == 0) {
-                        RIL_onRequestComplete(t, RIL_E_SUCCESS, line, strlen(line));
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, line, strlen(line)+1);
                     }
                     else {
                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -9736,7 +9737,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 card_type = 0;
             snprintf(str, sizeof(str), "%d", card_type);
             RILLOGD("[MBBMS]RIL_REQUEST_MBBMS_SIM_TYPE, card_type =%s", str);
-            RIL_onRequestComplete(t, RIL_E_SUCCESS, str, strlen(str));
+            RIL_onRequestComplete(t, RIL_E_SUCCESS, str, strlen(str)+1);
             break;
         }
         case RIL_REQUEST_GET_REMAIN_TIMES:
@@ -11251,8 +11252,8 @@ static void initializeCallback(void *param)
         at_send_command(ATch_type[channelID], "AT+CIREP=1", NULL);
         at_send_command(ATch_type[channelID], "AT+CMCCS=2", NULL);
         char address[PROPERTY_VALUE_MAX];
-        property_get(VOLTE_PCSCF_ADDRESS, address, NULL);
-        if(address != NULL && strlen(address)>1){
+        property_get(VOLTE_PCSCF_ADDRESS, address, "");
+        if(strcmp(address, "") != 0){
             RILLOGI("setPcscfAddress =%s", address);
             char pcscf_cmd[PROPERTY_VALUE_MAX];
             char* p_address = address;
@@ -11261,7 +11262,7 @@ static void initializeCallback(void *param)
             } else {
                 snprintf(pcscf_cmd, sizeof(pcscf_cmd), "AT+PCSCF=1,\"%s\"", address);
             }
-            err = at_send_command(ATch_type[channelID], pcscf_cmd, NULL);
+            at_send_command(ATch_type[channelID], pcscf_cmd, NULL);
         }
     }
 
@@ -11398,7 +11399,7 @@ static void onNitzReceived(void *param)
 
     RIL_onUnsolicitedResponse (
             RIL_UNSOL_NITZ_TIME_RECEIVED,
-            nitz_str, strlen(nitz_str));
+            nitz_str, strlen(nitz_str)+1);
     free(raw_str);
     return;
 error:
@@ -11532,7 +11533,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         if(response[2] != -1 && response[2] != 255){
             response_v6.GW_SignalStrength.signalStrength = response[2];
         }
-        if(response[5] != -1 && (response[5] != 255 || response[5] != -255)){
+        if(response[5] != -1 && response[5] != 255 && response[5] != -255){
             response_v6.LTE_SignalStrength.rsrp = response[5];
         }
         RIL_onUnsolicitedResponse(
@@ -11561,7 +11562,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 #elif defined (RIL_SPRD_EXTENSION)
             RIL_onUnsolicitedResponse (
                     RIL_UNSOL_NITZ_TIME_RECEIVED,
-                    response, strlen(response));
+                    response, strlen(response)+1);
 #endif
         }
     } else if (strStartsWith(s,"+CRING:")
@@ -11598,12 +11599,12 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             // report LTE_READY or not, in case of +CEREG:0 ,+CEREG:2;
             // only report STATE_CHANGED in case of +CEREG:1,xxxx, xxxx,x
             if (commas == 0 && (lteState == 0 || lteState == 2)) {
-                RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteState, 4);
+                RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteState, sizeof(lteState));
             }
         } else if (isCSFB()) {
             // report LTE_READY or not, in case of +CEREG:2;
             if (commas == 0 && lteState == 2) {
-                //RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteState, 4);
+                //RIL_onUnsolicitedResponse (RIL_UNSOL_LTE_READY, (void *)&lteState, sizeof(lteState));
             }else if (commas == 0 && lteState == 0) {
                 in4G = 0;
                 bLteDetached = true;
@@ -11761,7 +11762,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
     } else if (strStartsWith(s, "+CMT:")) {
         RIL_onUnsolicitedResponse (
                 RIL_UNSOL_RESPONSE_NEW_SMS,
-                sms_pdu, strlen(sms_pdu));
+                sms_pdu, strlen(sms_pdu)+1);
 
     } else if (strStartsWith(s, "+ECIND:")) {
         char *tmp;
@@ -11921,11 +11922,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
     else if (strStartsWith(s, "+CDS:")) {
         RIL_onUnsolicitedResponse (
                 RIL_UNSOL_RESPONSE_NEW_SMS_STATUS_REPORT,
-                sms_pdu, strlen(sms_pdu));
+                sms_pdu, strlen(sms_pdu)+1);
     } else if (strStartsWith(s, "+CMGR:")) {
         if (sms_pdu != NULL) {
             RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_NEW_SMS, sms_pdu,
-                    strlen(sms_pdu));
+                    strlen(sms_pdu)+1);
         } else {
             RILLOGD("[cmgr] sms_pdu is NULL");
         }
@@ -12682,7 +12683,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         Ecc_Record *record = (Ecc_Record *)calloc(1, sizeof(Ecc_Record));
         record->number = (char *)strdup(number);
         record->category = category;
-        RIL_requestTimedCallback (addEmergencyNumbertoEccList, (Ecc_Record *)record, NULL);
+        RIL_requestTimedCallback (addEmergencyNumbertoEccList, (void *)record, NULL);
     }
     /* @} */
 
@@ -13143,6 +13144,7 @@ mainLoop(void *param)
     int sim_save = 0;
     int channel_nums;
     struct channel_description *descriptions;
+    RILLOGI("sprd_reference ril Compile date:%s,%s ",__DATE__,__TIME__);
 
     if(param)
         sim_num= *((int*)param);
@@ -13688,7 +13690,7 @@ void open_dev(char *dev,int* fd)
         (*fd) = open(dev, O_RDONLY);
         if( (*fd) < 0){
             sleep(1);
-            RILLOGD("Unable to open log device '%s' , %d, %d", dev,(*fd),strerror(errno));
+            RILLOGD("Unable to open log device '%s' , %d, %s", dev,(*fd),strerror(errno));
         }else if( (*fd) >= 0){
             break;
         }
@@ -13948,7 +13950,7 @@ static void addEmergencyNumbertoEccList(Ecc_Record *record){
 }
 
 static void dialEmergencyWhileCallFailed(void *param){
-    RILLOGD("dialEmergencyWhileCallFailed->address =%s", param);
+    RILLOGD("dialEmergencyWhileCallFailed->address =%s", (char *)param);
 
     if(param != NULL){
         char *number = (char *)param;
@@ -13970,7 +13972,7 @@ static void dialEmergencyWhileCallFailed(void *param){
 }
 
 static void redialWhileCallFailed(void *param){
-    RILLOGD("redialWhileCallFailed->address =%s", param);
+    RILLOGD("redialWhileCallFailed->address =%s", (char *)param);
 
     if(param != NULL){
         char *number = (char *)param;
@@ -14375,7 +14377,7 @@ static void requestInitialGroupCall(int channelID, void *data, size_t datalen, R
     char *numbers = NULL;
     numbers = (char*)strdup((char *)data);
     char cmd[PROPERTY_VALUE_MAX] = {0};
-    RILLOGE("requestInitialGroupCall numbers = \"%s\"", numbers);
+    //RILLOGE("requestInitialGroupCall numbers = \"%s\"", numbers);
     snprintf(cmd, sizeof(cmd), "AT+CGU=1,\"%s\"", numbers);
     if(numbers != NULL) {
         free(numbers);
@@ -14402,7 +14404,7 @@ static void requestAddGroupCall(int channelID, void *data, size_t datalen, RIL_T
     char *numbers = NULL;
     numbers = (char*)strdup((char *)data);
     char cmd[PROPERTY_VALUE_MAX] = {0};
-    RILLOGE("requestAddGroupCall numbers = \"%s\"", numbers);
+    //RILLOGE("requestAddGroupCall numbers = \"%s\"", numbers);
     snprintf(cmd, sizeof(cmd), "AT+CGU=4,\"%s\"", numbers);
     if(numbers != NULL) {
         free(numbers);

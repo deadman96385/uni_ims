@@ -537,31 +537,9 @@ const struct cmd_table multi_at_cmd_cvt_table[] = {
 };
 
 const struct ind_table at_ind_cvt_table[] = {
-    {AT_CMD_CCWA_IND, AT_CMD_STR("+CCWA:"), cvt_generic_cmd_ind},
-    {AT_CMD_CLIP_IND, AT_CMD_STR("+CLIP:"), cvt_generic_cmd_ind},
-    {AT_CMD_COLP_IND, AT_CMD_STR("+COLP:"), cvt_generic_cmd_ind},
-    {AT_CMD_CREG_IND, AT_CMD_STR("+CREG:"), cvt_generic_cmd_ind},
-    {AT_CMD_CGREG_IND, AT_CMD_STR("+CGREG:"), cvt_generic_cmd_ind},
-    {AT_CMD_CEREG_IND, AT_CMD_STR("+CEREG:"), cvt_generic_cmd_ind},
-    {AT_CMD_CUSD_IND, AT_CMD_STR("+CUSD:"), cvt_generic_cmd_ind},
     {AT_CMD_CSQ_IND, AT_CMD_STR("+CSQ:"), cvt_csq_cmd_ind},
     {AT_CMD_CSQ_IND, AT_CMD_STR("+SPSCSQ:"), cvt_spscsq_cmd_ind},
-    {AT_CMD_CCCM_IND, AT_CMD_STR("+CCCM:"), cvt_generic_cmd_ind},
-    {AT_CMD_CRING_IND, AT_CMD_STR("+CRING:"), cvt_generic_cmd_ind},
-    {AT_CMD_CSSI_IND, AT_CMD_STR("+CSSI:"), cvt_generic_cmd_ind},
-    {AT_CMD_CSSU_IND, AT_CMD_STR("+CSSU:"), cvt_generic_cmd_ind},
-    {AT_CMD_CTZV_IND, AT_CMD_STR("+CTZV:"), cvt_generic_cmd_ind},
-    {AT_CMD_BUSY_IND, AT_CMD_STR("BUSY"), cvt_generic_cmd_ind},
-    {AT_CMD_CONNECT_IND, AT_CMD_STR("CONNECT"), cvt_generic_cmd_ind},
-    {AT_CMD_NO_CARRIER_IND, AT_CMD_STR("NO CARRIER"), cvt_generic_cmd_ind},
-    {AT_CMD_NO_ANSWER_IND, AT_CMD_STR("NO ANSWER"), cvt_generic_cmd_ind},
-    {AT_CMD_NO_DIALTONE_IND, AT_CMD_STR("NO DIALTONE"), cvt_generic_cmd_ind},
-    {AT_CMD_RING_IND, AT_CMD_STR("RING"), cvt_generic_cmd_ind},
-    {AT_CMD_CMTI_IND, AT_CMD_STR("+CMTI:"), cvt_generic_cmd_ind},
-    {AT_CMD_CMT_IND, AT_CMD_STR("+CMT:"), cvt_generic_cmd_ind},
     {AT_CMD_CDSI_IND, AT_CMD_STR("+CDSI:"), cvt_null_cmd_ind},
-    {AT_CMD_CDS_IND, AT_CMD_STR("+CDS:"), cvt_generic_cmd_ind},
-    {AT_CMD_SIND_IND, AT_CMD_STR("+SIND:"), cvt_generic_cmd_ind},
     {AT_CMD_ECSQ_IND, AT_CMD_STR("+ECSQ:"), cvt_ecsq_cmd_ind},
     {AT_CMD_ECEER_IND, AT_CMD_STR("+ECEER:"), cvt_eceer_cmd_ind},
     {AT_CMD_ECIND_IND, AT_CMD_STR("+ECIND: 3"), cvt_ecind_cmd_ind},
@@ -582,11 +560,9 @@ const struct ind_table at_ind_cvt_table[] = {
         cvt_generic_cmd_ind},
     {AT_CMD_EEMGINFOPS_IND, AT_CMD_STR("+EEMGINFOPS"), cvt_generic_cmd_ind},
     {AT_CMD_EEMGINFONC_IND, AT_CMD_STR("+EEMGINFONC"), cvt_generic_cmd_ind},
+    {AT_CMD_ECIND_IND, AT_CMD_STR("+CGEV:"), cvt_null_cmd_ind},
     {AT_CMD_CESQ_IND, AT_CMD_STR("+CESQ:"), cvt_cesq_cmd_ind}
 };
-
-int cvt_cmgs_edit_callback(pty_t * pty, char *cmd, int len, unsigned long user_data);
-int cvt_cmgw_edit_callback(pty_t * pty, char *cmd, int len, unsigned long user_data);
 
 // Returns 1 if found, 0 otherwise. needle must be null-terminated.
 // strstr might not work because WebBox sends garbage before the first OKread

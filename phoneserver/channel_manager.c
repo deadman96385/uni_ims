@@ -157,14 +157,14 @@ int uid;
     /*
      * Try the unix98 way first.
      */
-    PHS_LOGD("CHNMNG:to open /dev/ptmx");
+    //PHS_LOGD("CHNMNG:to open /dev/ptmx");
     mfd = open("/dev/ptmx", O_RDWR | O_NONBLOCK);
     if (mfd >= 0) {
         int ptn, rett = 0;
 
         //grantpt(mfd);
         //unlockpt(mfd);
-        PHS_LOGD("CHNMNG:/dev/ptmx opened");
+        //PHS_LOGD("CHNMNG:/dev/ptmx opened");
         rett = ioctl(mfd, TIOCGPTN, &ptn);
         PHS_LOGD("CHNMNG:/dev/ptmx opened rett=%x ptn=%d", rett, ptn);
         if (rett >= 0) {
@@ -739,7 +739,7 @@ char *chnmng_find_buffer(struct channel_manager_t *const me)
             break;
         }
     }
-    PHS_LOGD("chnmng_find_buffer");
+    //PHS_LOGD("chnmng_find_buffer");
     return ret;
 }
 
@@ -779,7 +779,7 @@ static void chnmng_cmux_Init(struct channel_manager_t *const me)
         me->itsCmux[i].type = RESERVE;
         me->itsCmux[i].ops = cmux_get_operations();
         me->itsCmux[i].ops->cmux_free(&me->itsCmux[i]);
-        PHS_LOGD("CHNMNG: open mux:%s",muxname);
+        //PHS_LOGD("CHNMNG: open mux:%s",muxname);
     }
 
     if(multiSimMode == 1) {
@@ -1049,7 +1049,7 @@ void chnmng_start_thread(struct channel_manager_t *const me)
             break;
         }
         thread_getschedparam(me->itsReceive_thread[i].thread, &policy, &sched);
-        PHS_LOGD("chnmng_mux thread: policy=%d", policy);
+        //PHS_LOGD("chnmng_mux thread: policy=%d", policy);
         if (policy != SCHED_OTHER) {
             //PHS_LOGD("chnmng_mux thread: policy=%d", policy);
             sched.sched_priority = chns_data.mux[i].prority;
@@ -1066,7 +1066,7 @@ void chnmng_start_thread(struct channel_manager_t *const me)
             break;
         }
         thread_getschedparam(me->itsSend_thread[i].thread, &policy, &sched);
-        PHS_LOGD("chnmng_pty thread: policy=%d", policy);
+        //PHS_LOGD("chnmng_pty thread: policy=%d", policy);
         if (policy != SCHED_OTHER) {
             //PHS_LOGD("chnmng_pty thread: policy=%d!", policy);
             sched.sched_priority = chns_data.pty[i].prority;
@@ -1162,6 +1162,7 @@ int main(int argc, char *argv[])
     //PHS_LOGD("chnmng start phone server");
     PHS_LOGD("Phoneserver version: %s ",version_string);
     PHS_LOGD("Phoneserver get modem type %s's value", MODEM_TYPE);
+    PHS_LOGD("Phoneserver Compile date:%s,%s ",__DATE__,__TIME__);
 
     if ((argc > 2) && 0 == strcmp(argv[1], "-m") ) {
         modem = argv[2];

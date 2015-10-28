@@ -161,9 +161,9 @@ void *receive_data(struct receive_thread_t *me)
 	me->buffer = me->mux->buffer;
 	pid_t tid = gettid();
 	me->tid = tid;
-	PHS_LOGD
+	/*PHS_LOGD
 	    ("Rev TID [%d] : enter receive thread :mux=%s\n",
-	     tid, me->mux->name);
+	     tid, me->mux->name);*/
 	while (1) {
 		//PHS_LOGD("Rev TID [%d] MUX :%s Waiting for resp  \n", tid, me->mux->name);
 		atstr = readline(me);	//read a completed at response
@@ -173,7 +173,7 @@ void *receive_data(struct receive_thread_t *me)
 			memset(atstr, 0, strlen(atstr));
 			received = strlen(tmp_buff);
 			PHS_LOGD
-			    ("Rev TID [%d] :  rev data :mux=%s:input:%s\n",
+			    ("Rev TID [%d]: mux=%s:%s\n",
 			     tid, me->mux->name, tmp_buff);
 			phoneserver_deliver_at_rsp(me->mux, tmp_buff, received);
 		}
