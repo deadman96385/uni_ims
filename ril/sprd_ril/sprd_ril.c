@@ -14979,33 +14979,43 @@ static void requestCallForwardUri(int channelID, RIL_CallForwardInfoUri *data, s
         goto error1;
     if (data->serviceClass == 0) {
         if (data->status == 2) {
-            ret = asprintf(&cmd, "AT+CCFCU=%d,%d",
+            ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",%d",
                 data->reason,
-                data->status);
+                data->status,
+                data->numberType,
+                data->ton,
+                data->number ? data->number : "",
+                data->serviceClass);
         } else {
             if (data->timeSeconds != 0 && data->status == 3) {
-                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",,\"\",\"\",,%d",
+                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",%d,\"\",\"\",,%d",
                         data->reason,
                         data->status,
                         data->numberType,
                         data->ton,
                         data->number ? data->number : "",
+                        data->serviceClass,
                         data->timeSeconds);
 
             } else {
-                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\"",
+                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",%d",
                         data->reason,
                         data->status,
                         data->numberType,
                         data->ton,
-                        data->number ? data->number : "");
+                        data->number ? data->number : "",
+                        data->serviceClass);
             }
         }
     } else {
         if (data->status == 2) {
-            ret = asprintf(&cmd, "AT+CCFCU=%d,%d",
+            ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",%d",
                     data->reason,
-                    data->status);
+                    data->status,
+                    data->numberType,
+                    data->ton,
+                    data->number ? data->number : "",
+                    data->serviceClass);
         } else {
             if (data->timeSeconds != 0 && data->status == 3) {
                 ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",%d,\"%s\",\"\",,%d",
@@ -15166,33 +15176,43 @@ static void requestCallForwardU(int channelID, RIL_CallForwardInfo *data, size_t
         goto error1;
     if (data->serviceClass == 0) {
         if (data->status == 2) {
-            ret = asprintf(&cmd, "AT+CCFCU=%d,%d",
+            ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",%d",
                 data->reason,
-                data->status);
+                data->status,
+                2,
+                data->toa,
+                data->number ? data->number : "",
+                data->serviceClass);
         } else {
             if (data->timeSeconds != 0 && data->status == 3) {
-                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",,\"\",\"\",,%d",
+                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",%d,\"\",\"\",,%d",
                         data->reason,
                         data->status,
                         2,
                         data->toa,
                         data->number ? data->number : "",
+                        data->serviceClass,
                         data->timeSeconds);
 
             } else {
-                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\"",
+                ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",%d",
                         data->reason,
                         data->status,
                         2,
                         data->toa,
-                        data->number ? data->number : "");
+                        data->number ? data->number : "",
+                        data->serviceClass);
             }
         }
     } else {
         if (data->status == 2) {
-            ret = asprintf(&cmd, "AT+CCFCU=%d,%d",
+            ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",%d",
                     data->reason,
-                    data->status);
+                    data->status,
+                    2,
+                    data->toa,
+                    data->number ? data->number : "",
+                    data->serviceClass);
         } else {
             if (data->timeSeconds != 0 && data->status == 3) {
                 ret = asprintf(&cmd, "AT+CCFCU=%d,%d,%d,%d,\"%s\",%d,\"%s\",\"\",,%d",
