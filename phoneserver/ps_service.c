@@ -79,7 +79,8 @@ static int parse_peer_ip(char* ipaddr){
     }
 
     while(fgets(line, sizeof(line), fp) != NULL) {
-        if ((ptr = strstr(line, "192.168.42.")) != NULL) {
+        PHS_LOGD("read file: %s ", line);
+        if ((ptr = strstr(line, "192.168.")) != NULL) {
             p = strchr(ptr, ' ');
             if (p == NULL) 
                 return -1;
