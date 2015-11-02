@@ -112,7 +112,7 @@ char RIL_SP_SIM_PIN_PROPERTYS[20]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.s
 #define MODEM_SSDA_USIM_PROPERTY         "ril.ssda.usim"
 #define LTE_MODEM_START_PROP             "ril.service.l.enable"
 #define RIL_LTE_USIM_READY_PROP          "ril.lte.usim.ready" // for SVLTE only, used by rilproxy
-
+#define PROP_RADIO_FD_DISABLE  "persist.radio.fd.disable"
 #define RIL_SIM_TYPE  "ril.ICC_TYPE"
 #define RIL_SIM_TYPE1  "ril.ICC_TYPE_1"
 #define RIL_SET_SPEED_MODE_COUNT  "ril.sim.speed_count"
@@ -348,6 +348,7 @@ static pthread_cond_t s_lte_attach_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t s_lte_attach_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t s_pdp_mapping_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t s_lte_cgatt_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t wait_cpin_unlock_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int s_port = -1;
 static const char * s_device_path = NULL;
@@ -409,6 +410,7 @@ static bool isLte(void);
 static void setCeMode(int channelID);
 static bool isCSFB(void); 
 static bool isCMCC(void);
+static bool isCUCC(void);
 static bool bOnlyOneSIMPresent = false;
 typedef struct {
     int nCid;
@@ -736,7 +738,7 @@ done1:
 
 static void putPDP(int cid)
 {
-    if (cid < 0)
+    if (cid < 0 || cid >= MAX_PDP)
         return;
 
     pthread_mutex_lock(&pdp[cid].mutex);
@@ -781,7 +783,7 @@ static int getPDP(void)
     is_open_channel = atoi(prop);
 
     for (i=0; i < MAX_PDP; i++) {
-        if(activePDN > 0 && pdn[i].nCid == (i + 1)){
+        if(s_testmode != 10 && activePDN > 0 && pdn[i].nCid == (i + 1)){
             continue;
         }
         pthread_mutex_lock(&pdp[i].mutex);
@@ -2204,7 +2206,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
             pthread_mutex_lock(&s_lte_attach_mutex);
             sLteRegState = STATE_OUT_OF_SERVICE;
             pthread_mutex_unlock(&s_lte_attach_mutex);
-            RILLOGD("set sLteRegState: OUT OF SERVICE.");
+            RILLOGD("requestRadioPower set sLteRegState: OUT OF SERVICE.");
         }
         setRadioState(channelID, RADIO_STATE_OFF);
     } else if (onOff > 0 && sState == RADIO_STATE_OFF) {
@@ -2903,6 +2905,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                                 putPDP(fb_cid -1);
                                 putPDP(cid-1);
                                 RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                                s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                             } else {
                                 RIL_onRequestComplete(*t, RIL_E_SUCCESS,
                                     newResponses,
@@ -2914,6 +2917,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                                 putPDP(fb_cid -1);
                                 putPDP(cid-1);
                                 RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                                s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                             } else {
                                 RIL_onRequestComplete(*t, RIL_E_SUCCESS, &responses[i],
                                     sizeof(RIL_Data_Call_Response_v11));
@@ -2949,6 +2953,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                 }
             }
             if(i >= 3) {
+                s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                 RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 return;
             }
@@ -3150,6 +3155,7 @@ static bool errorHandlingForCGDATA (int channelID, ATResponse* p_response, int e
 
         //when cgdata timeout then send deactive to modem
         if (strStartsWith (p_response->finalResponse,"ERROR")) {
+            s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
             snprintf (cmd, sizeof(cmd), "AT+CGACT=0,%d", index + 1);
             at_send_command (ATch_type[channelID], cmd, NULL);
         }
@@ -3197,8 +3203,10 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
     updatePDPCid(index+1,1);
     //IPV6
     index = getPDP();
-    if(index < 0 || getPDPCid(index) >= 0)
+    if(index < 0 || getPDPCid(index) >= 0) {
+        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
         goto error;
+    }
 
     snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
     at_send_command(ATch_type[channelID], cmd, NULL);
@@ -3415,8 +3423,10 @@ RETRY:
         } else {
             index = getPDP();
 
-            if (index < 0 || getPDPCid(index) >= 0)
+            if (index < 0 || getPDPCid(index) >= 0) {
+                s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                 goto error;
+            }
         }
 
         ATch_type[channelID]->nolog = 0;
@@ -3428,6 +3438,7 @@ RETRY:
                 at_send_command(ATch_type[channelID], cmd, NULL );
             } else {
                 if (deactivateLteDataConnection(channelID, cmd) < 0) {
+                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                     goto error;
                 }
             }
@@ -3633,6 +3644,7 @@ retrycgatt:
 
                 //when cgdata timeout then send deactive to modem
                 if (strStartsWith(p_response->finalResponse,"ERROR")){
+                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                     snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index + 1);
                     at_send_command(ATch_type[channelID], cmd, NULL);
                 }
@@ -3643,7 +3655,10 @@ retrycgatt:
             if (!strcmp(pdp_type,"IPV4V6")) {
                 fbCause = getSPACTFBcause(channelID);
                 RILLOGD("requestSetupDataCall fall Back Cause = %d", fbCause);
-                if (fbCause < 0) goto error;
+                if (fbCause < 0) {
+                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+                    goto error;
+                }
 
                 snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", s_modem);
                 property_get(ETH_SP, eth, "veth");
@@ -3662,8 +3677,10 @@ retrycgatt:
                         want_ip_type = IPV4;
                     }
                     index = getPDP();;
-                    if (index < 0 || getPDPCid(index) >= 0)
+                    if (index < 0 || getPDPCid(index) >= 0) {
+                        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                         goto error;
+                    }
 
                     snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index + 1);
                     at_send_command(ATch_type[channelID], cmd, NULL);
@@ -3720,8 +3737,10 @@ retrycgatt:
             } else if (!strcmp(pdp_type,"IPV4+IPV6")) {
                 //IPV6
                 index = getPDP();
-                if(index < 0 || getPDPCid(index) >= 0)
+                if(index < 0 || getPDPCid(index) >= 0) {
+                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                     goto error;
+                }
 
                 snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
                 at_send_command(ATch_type[channelID], cmd, NULL);
@@ -4849,7 +4868,7 @@ static void requestRegistrationState(int channelID, int request, void *data,
     int commas;
     int skip;
     int i;
-
+    bool islte = isLte();
 
     if (request == RIL_REQUEST_VOICE_REGISTRATION_STATE) {
         cmd = "AT+CREG?";
@@ -4996,10 +5015,26 @@ static void requestRegistrationState(int channelID, int request, void *data,
         sprintf(res[3], "%d", response[3]);
         responseStr[3] = res[3];
     }
-    if((response[0] == 1|| response[0] == 5) && response[3] == 14){
-        in4G = 1;
-    }else if(request == RIL_REQUEST_DATA_REGISTRATION_STATE){
-        in4G = 0;
+    if (islte && request == RIL_REQUEST_DATA_REGISTRATION_STATE) {
+        if (response[0] == 1 || response[0] == 5) {
+            pthread_mutex_lock(&s_lte_attach_mutex);
+            if (sLteRegState == STATE_OUT_OF_SERVICE) {
+                sLteRegState = STATE_IN_SERVICE;
+            }
+            pthread_mutex_unlock(&s_lte_attach_mutex);
+            if (response[3] == 14) {
+                in4G = 1;
+            } else {
+                in4G = 0;
+            }
+        } else {
+            pthread_mutex_lock(&s_lte_attach_mutex);
+            if (sLteRegState == STATE_IN_SERVICE) {
+                sLteRegState = STATE_OUT_OF_SERVICE;
+            }
+            pthread_mutex_unlock(&s_lte_attach_mutex);
+            in4G = 0;
+        }
     }
 
     if (request == RIL_REQUEST_VOICE_REGISTRATION_STATE) {
@@ -6065,12 +6100,16 @@ error:
     at_response_free(p_response);
 }
 
-static void  requestScreeState(int channelID, int status, RIL_Token t)
+static void requestScreeState(int channelID, int status, RIL_Token t)
 {
     int err;
     int stat;
+    char prop[PROPERTY_VALUE_MAX] = { 0 };
 
     pthread_mutex_lock(&s_screen_mutex);
+    property_get(PROP_RADIO_FD_DISABLE, prop, "0");
+    RILLOGD(" PROP_RADIO_FD_DISABLE = %s", prop);
+
     if (!status) {
         /* Suspend */
         at_send_command(ATch_type[channelID], "AT+CCED=2,8", NULL);
@@ -6079,8 +6118,11 @@ static void  requestScreeState(int channelID, int status, RIL_Token t)
         }
         at_send_command(ATch_type[channelID], "AT+CREG=1", NULL);
         at_send_command(ATch_type[channelID], "AT+CGREG=1", NULL);
-        if(isExistActivePdp()){
-            at_send_command(ATch_type[channelID], "AT*FDY=1,5", NULL);
+        if (isVoLteEnable()) {
+            at_send_command(ATch_type[channelID], "AT+CIREG=0", NULL);
+        }
+        if(isExistActivePdp() && !strcmp(prop, "0")){
+            at_send_command(ATch_type[channelID], "AT*FDY=1,2", NULL);
         }
     } else {
         /* Resume */
@@ -6091,11 +6133,10 @@ static void  requestScreeState(int channelID, int status, RIL_Token t)
         at_send_command(ATch_type[channelID], "AT+CREG=2", NULL);
         at_send_command(ATch_type[channelID], "AT+CGREG=2", NULL);
         if(isVoLteEnable()){
-            at_send_command(ATch_type[channelID], "AT+CIREG=1", NULL);
             at_send_command(ATch_type[channelID], "AT+CIREG=2", NULL);
         }
-        if(isExistActivePdp()){
-            at_send_command(ATch_type[channelID], "AT*FDY=1,8", NULL);
+        if(isExistActivePdp() && !strcmp(prop, "0")){
+            at_send_command(ATch_type[channelID], "AT*FDY=1,5", NULL);
         }
 
         if (sState == RADIO_STATE_SIM_READY) {
@@ -6294,7 +6335,8 @@ static void  requestVerifySimPuk2(int channelID, void*  data, size_t  datalen, R
     at_response_free(p_response);
     simstatus = getSIMStatus(channelID);
     RILLOGD("simstatus = %d", simstatus);
-    if(simstatus == SIM_READY) {
+    RILLOGD("radioStatus = %d", sState);
+    if(simstatus == SIM_READY  && sState == RADIO_STATE_ON) {
     //if(getSIMStatus(channelID) == SIM_READY) {
         setRadioState(channelID, RADIO_STATE_SIM_READY);
     }else if((SIM_NETWORK_PERSONALIZATION == simstatus)
@@ -8410,9 +8452,19 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
     case RIL_REQUEST_IMS_SEND_SMS:
         requestSendIMSSMS(channelID, data, datalen, t);
         break;
-        case RIL_REQUEST_SETUP_DATA_CALL:
+    case RIL_REQUEST_SETUP_DATA_CALL:
+        if (isLte()) {
+            RILLOGD("RIL_REQUEST_SETUP_DATA_CALL testmode= %d, sLteRegState = %d", s_testmode, sLteRegState);
+            if (s_testmode == 10 || sLteRegState == STATE_IN_SERVICE) {
+                requestSetupDataCall(channelID, data, datalen, t);
+            } else {
+                s_lastPdpFailCause = PDP_FAIL_SERVICE_OPTION_NOT_SUPPORTED;
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            }
+        } else {
             requestSetupDataCall(channelID, data, datalen, t);
-            break;
+        }
+        break;
         case RIL_REQUEST_DEACTIVATE_DATA_CALL:
             deactivateDataConnection(channelID, data, datalen, t);
             break;
@@ -8480,6 +8532,18 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_STOP_QUERY_AVAILABLE_NETWORKS:
             stopQueryNetwork(channelID, data, datalen, t);
             break;
+        case RIL_REQUEST_EXPLICIT_CALL_TRANSFER:
+        {
+            p_response = NULL;
+            err = at_send_command(ATch_type[channelID], "AT+CHLD=4", &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
         case RIL_REQUEST_SET_PREFERRED_NETWORK_TYPE:
             {
                 char cmd[30] = {0};
@@ -10113,25 +10177,20 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             int response = 0;
             char *line;
             err = at_send_command_singleline(ATch_type[channelID], "AT+ISIM=1", "+ISIM:", &p_response);
-            if (err < 0 || p_response->success == 0) {
-                goto error;
+            if (err >= 0 && p_response->success) {
+                line = p_response->p_intermediates->line;
+                err = at_tok_start(&line);
+                if (err >= 0) {
+                    err = at_tok_nextint(&line, &response);
+                    if (err >= 0) {
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(int));
+                        at_response_free(p_response);
+                        break;
+                    }
+                }
             }
-            line = p_response->p_intermediates->line;
-            err = at_tok_start(&line);
-            if (err < 0) {
-                goto error;
-            }
-            err = at_tok_nextint(&line, &response);
-            if (err < 0) {
-                goto error;
-            }
-            RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(int));
-            at_response_free(p_response);
-            return;
-            error:
-            at_response_free(p_response);
-            RILLOGE("INITISIM must never return error when radio is on");
             RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            at_response_free(p_response);
             break;
         }
         case RIL_REQUEST_REGISTER_IMS_IMPU: {
@@ -10683,7 +10742,9 @@ getSIMStatus(int channelID)
                     cmd = NULL;
                     goto out;
                 }
+                pthread_mutex_lock(&wait_cpin_unlock_mutex);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response1);
+                pthread_mutex_unlock(&wait_cpin_unlock_mutex);
                 free(cmd);
                 if (err < 0 || p_response1->success == 0) {
                     at_response_free(p_response1);
@@ -11289,8 +11350,12 @@ static void initializeCallback(void *param)
     /* @} */
 
     /* SPRD : for non-CMCC version @{ */
-    if (!isCMCC()) {
-        at_send_command(ATch_type[channelID], "at+spcapability=32,1,0", NULL);
+    if (isCSFB()) {
+        if (isCUCC()) {
+            at_send_command(ATch_type[channelID], "at+spcapability=32,1,2", NULL);
+        } else if (!isCMCC()){
+            at_send_command(ATch_type[channelID], "at+spcapability=32,1,0", NULL);
+        }
     }
     /* @} */
 
@@ -11591,7 +11656,6 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         char *p,*tmp;
         int lteState;
         int commas=0;
-        int skip ;
         int net_type = -1;
         line = strdup(s);
         tmp = line;
@@ -11621,10 +11685,8 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
         if (lteState == 1 || lteState == 5) {
             if(commas >= 3){
-                err = at_tok_nexthexint(&tmp,&skip);
-                if (err < 0) goto out;
-                err = at_tok_nexthexint(&tmp,&skip);
-                if (err < 0) goto out;
+                skipNextComma(&tmp);
+                skipNextComma(&tmp);
                 err = at_tok_nextint(&tmp, &net_type);
                 if (err < 0) goto out;
             }
@@ -11733,8 +11795,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             /*as end_status 21 means: pdp reject by network so we not do onDataCallListChanged*/
             if(end_status != 29 && end_status != 21) {
                 if(end_status == 104){
-
-                    RIL_requestTimedCallback (onDataCallListChanged, &cid, NULL);
+                    if (cid > 0 && cid <= MAX_PDP && pdp[cid - 1].state == PDP_BUSY) {
+                        RIL_requestTimedCallback(onDataCallListChanged, &cid, NULL);
+                    }
                 }else{
                     RIL_requestTimedCallback (onDataCallListChanged, NULL, NULL);
                 }
@@ -13406,6 +13469,16 @@ static bool isCMCC(void) {
     property_get("ro.operator", prop, NULL);
     RILLOGD("ro.operator is: %s", prop);
     if (!strcmp(prop, "cmcc")) {
+        return true;
+    }
+    return false;
+}
+
+static bool isCUCC(void) {
+    char prop[PROPERTY_VALUE_MAX]="";
+    property_get("ro.operator", prop, NULL);
+    RILLOGD("ro.operator is: %s", prop);
+    if (!strcmp(prop, "cucc")) {
         return true;
     }
     return false;

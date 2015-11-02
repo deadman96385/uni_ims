@@ -4622,7 +4622,7 @@ extern "C" void stripNumberFromSipAddress(const char *sipAddress, char *number, 
 
     memset(number, 0, len * sizeof(char));
 
-    char delim[] = ":@";
+    char delim[] = ":;@";
     char *strDupSipAddr = strdup(sipAddress);
     char *s = strDupSipAddr;
     char *token = strsep(&s, delim);
@@ -6390,6 +6390,7 @@ requestToString(int request) {
         case RIL_REQUEST_GET_DC_RT_INFO: return "GET_DC_RT_INFO";
         case RIL_REQUEST_SET_DC_RT_INFO_RATE: return "SET_DC_RT_INFO_RATE";
         case RIL_REQUEST_SET_DATA_PROFILE: return "SET_DATA_PROFILE";
+        case RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED: return "UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED";
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_IMS_REGISTRATION_STATE: return "IMS_REGISTRATION_STATE";
         case RIL_REQUEST_IMS_SEND_SMS: return "IMS_SEND_SMS";
