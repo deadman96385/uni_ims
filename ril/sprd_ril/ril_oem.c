@@ -14,6 +14,7 @@
 #include "ril_call_blacklist.h"
 
 #define LOG_TAG "RIL"
+#define PROP_BUILD_TYPE "ro.build.type"
 
 // {for get sim lock infors,like dummy,white list}
 #define REQUEST_SIMLOCK_WHITE_LIST_PS 1
@@ -21,6 +22,8 @@
 #define REQUEST_SIMLOCK_WHITE_LIST_PU 3
 #define REQUEST_SIMLOCK_WHITE_LIST_PP 4
 #define REQUEST_SIMLOCK_WHITE_LIST_PC 5
+
+extern int s_isuserdebug;
 
 static void requestSIMPower(int channelID, void *data, size_t datalen, RIL_Token t)
 {
@@ -1150,8 +1153,9 @@ static void requestInitialGroupCall(int channelID, void *data, size_t datalen, R
     OemRequest *req = (OemRequest*)data;
     char *str = (char*)(req->payload);
     numbers = (char*)strdup((char *)str);
-
-    RILLOGE("requestInitialGroupCall numbers = \"%s\"", numbers);
+    if (s_isuserdebug) {
+        RILLOGE("requestInitialGroupCall numbers = \"%s\"", numbers);
+    }
     snprintf(cmd, sizeof(cmd), "AT+CGU=1,\"%s\"", numbers);
     if (numbers != NULL) {
         free(numbers);
@@ -1180,8 +1184,9 @@ static void requestAddGroupCall(int channelID, void *data, size_t datalen, RIL_T
     OemRequest *req = (OemRequest*)data;
     char *str = (char*)(req->payload);
     numbers = (char*)strdup((char *)str);
-
-    RILLOGE("requestAddGroupCall numbers = \"%s\"", numbers);
+    if (s_isuserdebug) {
+        RILLOGE("requestAddGroupCall numbers = \"%s\"", numbers);
+    }
     snprintf(cmd, sizeof(cmd), "AT+CGU=4,\"%s\"", numbers);
     if (numbers != NULL) {
         free(numbers);
@@ -1299,8 +1304,13 @@ static void requestGetCurrentCallsVoLTE(int channelID, void *data, size_t datale
 static void requestVolte(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     int err;
+    char versionStr[PROPERTY_VALUE_MAX];
     ATResponse *p_response = NULL;
     OemRequest *volteReq = (OemRequest *)data;
+    property_get(PROP_BUILD_TYPE, versionStr, "user");
+    if(strstr(versionStr, "userdebug")) {
+        s_isuserdebug = 1;
+    }
     switch (volteReq->subFuncId) {
         if (sState == RADIO_STATE_OFF
                    && !(volteReq->subFuncId == OEM_REQ_SUBFUNCID_VOLTE_SET_CONFERENCE_URI

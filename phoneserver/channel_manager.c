@@ -40,12 +40,14 @@
 #define PHS_LOGD(x...)  ALOGD( x )
 
 #define ANDROID_WAKE_LOCK_NAME "phoneserver-init"
+#define PROP_BUILD_TYPE "ro.build.type"
 
 const char *modem = NULL;
 char SP_SIM_NUM[20];
 char MUX_SP_DEV[20];
 int multiSimMode;
 struct channel_manager_t chnmng;
+extern int s_isuserdebug;
 
 #define N 10
 pthread_t s_tid_signal_process;
@@ -1156,6 +1158,7 @@ static void *detect_at_no_response(void __attribute__((unused)) *par)
 int main(int argc, char *argv[])
 {
     char prop[PROPERTY_VALUE_MAX];
+    char versionStr[PROPERTY_VALUE_MAX];
     pthread_t tid;
     int ret;
 
@@ -1186,6 +1189,11 @@ int main(int argc, char *argv[])
         multiSimMode = 1;
     else
         multiSimMode = 0;
+
+    property_get(PROP_BUILD_TYPE, versionStr, "user");
+    if(strstr(versionStr, "userdebug")) {
+        s_isuserdebug = 1;
+    }
 
     sem_init(&sms_lock, 0, 1);
 

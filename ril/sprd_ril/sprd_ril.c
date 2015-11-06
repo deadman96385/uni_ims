@@ -130,10 +130,14 @@ char RIL_SP_SIM_PIN_PROPERTYS[20]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.s
 
 #define PRO_SIMLOCK_UNLOCK_BYNV  "ro.simlock.unlock.bynv"
 
+#define PROP_BUILD_TYPE "ro.build.type"
+
 // {for sleep log}
 #define BUFFER_SIZE  (12*1024*4)
 #define CONSTANT_DIVIDE  32768.0
 #define MODEM_TYPE "ril.radio.modemtype"
+
+int s_isuserdebug = 0;
 
 int modem;
 int s_multiSimMode = 0;
@@ -2252,7 +2256,9 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         } else {
             char* imsi = p_response->p_intermediates->line;
             int imsiLength = strlen(imsi);
-            RILLOGD("requestRadioPower--IMSI:[%s]", imsi);
+            if (s_isuserdebug) {
+                RILLOGD("requestRadioPower--IMSI:[%s]", imsi);
+            }
             if (imsiLength > 5
                     && (strStartsWith(imsi, "46001")
                             || strStartsWith(imsi, "46006")
@@ -3434,8 +3440,6 @@ RETRY:
                 goto error;
             }
         }
-
-        ATch_type[channelID]->nolog = 0;
 
         primaryindex = index;
         snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
@@ -12453,22 +12457,22 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
             err = at_tok_nextint(&tmp, &response->id);
             if (err < 0) {
-                RILLOGD("%s fail", s);
+                RILLOGD("get id fail");
                 goto out;
             }
             err = at_tok_nextint(&tmp, &response->idr);
             if (err < 0) {
-                RILLOGD("%s fail", s);
+                RILLOGD("get idr fail");
                 goto out;
             }
             err = at_tok_nextint(&tmp, &response->stat);
             if (err < 0) {
-                RILLOGD("%s fail", s);
+                RILLOGD("get stat fail");
                 goto out;
             }
             err = at_tok_nextint(&tmp, &response->type);
             if (err < 0) {
-                RILLOGD("%s fail", s);
+                RILLOGD("get type fail");
                 goto out;
             }
 
@@ -12488,18 +12492,18 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
             err = at_tok_nextint(&tmp, &response->mpty);
             if (err < 0) {
-                RILLOGD("%s fail", s);
+                RILLOGD("get mpty fail");
                 goto out;
             }
             err = at_tok_nextstr(&tmp, &response->number);
             if (err < 0) {
-                RILLOGD("%s fail", s);
+                RILLOGD("get number fail");
                 goto out;
             }
 
             err = at_tok_nextint(&tmp, &response->num_type);
             if (err < 0) {
-                RILLOGD("%s fail", s);
+                RILLOGD("get num_type fail");
                 goto out;
             }
 #if defined (RIL_SUPPORT_CALL_BLACKLIST)
@@ -12515,11 +12519,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             if (at_tok_hasmore(&tmp)) {
                 err = at_tok_nextint(&tmp, &response->bs_type);
                 if (err < 0) {
-                    RILLOGD("%s get bs_type fail", s);
+                    RILLOGD("get bs_type fail");
                 }
                 err = at_tok_nextint(&tmp, &response->cause);
                 if (err < 0) {
-                    RILLOGD("%s get cause fail", s);
+                    RILLOGD("get cause fail");
                 }
                 /*SPRD: add for VoLTE to handle call retry */
                 if (response->cause == 380 && response->number != NULL) {
@@ -12538,18 +12542,22 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                     if (at_tok_hasmore(&tmp)) {
                         err = at_tok_nextint(&tmp, &response->location);
                         if (err < 0) {
-                            RILLOGD("%s get location fail", s);
+                            RILLOGD("get location fail");
                             response->location = 0;
                         }
-                        RILLOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d, location: %d",
-                                response->id, response->id, response->stat, response->type, response->mpty, response->number,
-                                response->num_type, response->bs_type, response->cause, response->location);
+                        if (s_isuserdebug) {
+                            RILLOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d, location: %d",
+                                    response->id, response->id, response->stat, response->type, response->mpty, response->number,
+                                    response->num_type, response->bs_type, response->cause, response->location);
+                        }
                         RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DSCI, response, sizeof(RIL_VideoPhone_DSCI));
                     } else {
                         response->location = 0;
-                        RILLOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d",
-                                response->id, response->id, response->stat, response->type, response->mpty, response->number,
-                                response->num_type, response->bs_type, response->cause);
+                        if (s_isuserdebug) {
+                            RILLOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d",
+                                    response->id, response->id, response->stat, response->type, response->mpty, response->number,
+                                    response->num_type, response->bs_type, response->cause);
+                        }
                         RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DSCI, response, sizeof(RIL_VideoPhone_DSCI));
                     }
                 }
@@ -12571,32 +12579,32 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
             err = at_tok_nextint(&tmp, &response->id);
             if (err < 0) {
-                RILLOGD("%s fail", s);
+                RILLOGD("get id fail");
                 goto out;
             }
             err = at_tok_nextint(&tmp, &response->idr);
             if (err < 0) {
-                RILLOGD("%s fail", s);
+                RILLOGD("get idr fail");
                 goto out;
             }
             err = at_tok_nextint(&tmp, &response->stat);
             if (err < 0) {
-                RILLOGD("%s fail", s);
+                RILLOGD("get stat fail");
                 goto out;
             }
             err = at_tok_nextint(&tmp, &response->type);
             if (err < 0) {
-                RILLOGD("%s fail", s);
+                RILLOGD("get type fail");
                 goto out;
             }
             err = at_tok_nextint(&tmp, &response->mpty);
             if (err < 0) {
-                RILLOGD("%s fail", s);
+                RILLOGD("get mpty fail");
                 goto out;
             }
             err = at_tok_nextstr(&tmp, &response->number);
             if (err < 0) {
-                RILLOGD("%s fail", s);
+                RILLOGD("get number fail");
                 goto out;
             }
 
@@ -12635,36 +12643,40 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
                 err = at_tok_nextint(&tmp, &response->num_type);
                 if (err < 0) {
-                    RILLOGD("%s fail", s);
+                    RILLOGD("get num_type fail");
                     goto out;
                 }
                 err = at_tok_nextint(&tmp, &response->bs_type);
                 if (err < 0) {
-                    RILLOGD("%s fail", s);
+                    RILLOGD("get bs_type fail");
                     goto out;
                 }
 
                 if (at_tok_hasmore(&tmp)) {
                     err = at_tok_nextint(&tmp, &response->cause);
                     if (err < 0) {
-                        RILLOGD("%s fail", s);
+                        RILLOGD("get cause fail");
                         goto out;
                     }
                     if (at_tok_hasmore(&tmp)) {
                         err = at_tok_nextint(&tmp, &response->location);
                         if (err < 0) {
-                            RILLOGD("%s fail", s);
+                            RILLOGD("get location fail");
                             goto out;
                         }
-                        RILLOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d, location: %d",
-                                response->id, response->id, response->stat, response->type, response->mpty, response->number,
-                                response->num_type, response->bs_type, response->cause, response->location);
+                        if (s_isuserdebug) {
+                            RILLOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d, location: %d",
+                                    response->id, response->id, response->stat, response->type, response->mpty, response->number,
+                                    response->num_type, response->bs_type, response->cause, response->location);
+                        }
                         RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DSCI, response, sizeof(RIL_VideoPhone_DSCI));
                     } else {
                         response->location = 0;
-                        RILLOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d",
-                                response->id, response->id, response->stat, response->type, response->mpty, response->number,
-                                response->num_type, response->bs_type, response->cause);
+                        if (s_isuserdebug) {
+                            RILLOGD("onUnsolicited(), ^DSCI:, id: %d, idr: %d, stat: %d, type: %d, mpty: %d, number: %s, num_type: %d, bs_type: %d, cause: %d",
+                                    response->id, response->id, response->stat, response->type, response->mpty, response->number,
+                                    response->num_type, response->bs_type, response->cause);
+                        }
                         RIL_onUnsolicitedResponse(RIL_UNSOL_VIDEOPHONE_DSCI, response, sizeof(RIL_VideoPhone_DSCI));
                     }
                 }
@@ -12690,12 +12702,12 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
         err = at_tok_nextint(&tmp, &response->id);
         if (err < 0) {
-            RILLOGD("%s fail", s);
+            RILLOGD("get id fail");
             response->id = 1;
         }
         err = at_tok_nextstr(&tmp, &response->number);
         if (err < 0) {
-            RILLOGD("%s fail", s);
+            RILLOGD("get number fail");
             response->number = " ";
         }
 #if defined (RIL_SUPPORT_CALL_BLACKLIST)
@@ -12716,7 +12728,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 #endif
         RIL_onUnsolicitedResponse (RIL_UNSOL_CALL_CSFALLBACK,
             response,sizeof(RIL_CALL_CSFALLBACK));
-        RILLOGD("RIL_UNSOL_CALL_CSFALLBACK, id: %d, number: %s", response->id, response->number);
+        if (s_isuserdebug) {
+            RILLOGD("RIL_UNSOL_CALL_CSFALLBACK, id: %d, number: %s", response->id, response->number);
+        }
     }
     /* @} */
 	/*SPRD: add for VoLTE to handle SRVCC */
@@ -13301,7 +13315,9 @@ mainLoop(void *param)
                 RILLOGE ("AT error on at_open\n");
                 return 0;
             }
-            ATch_type[i]->nolog = 0;
+            if (s_isuserdebug) {
+                ATch_type[i]->nolog = 0;
+            }
 
             sim_num++;
         }
@@ -13334,6 +13350,7 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
     pthread_attr_t attr;
     char phoneCount[PROPERTY_VALUE_MAX];
     char prop[PROPERTY_VALUE_MAX];
+    char versionStr[PROPERTY_VALUE_MAX];
 
     s_rilenv = env;
 
@@ -13370,6 +13387,11 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
         s_multiSimMode = 1;
     else
         s_multiSimMode = 0;
+
+    property_get(PROP_BUILD_TYPE, versionStr, "user");
+    if(strstr(versionStr, "userdebug")) {
+        s_isuserdebug = 1;
+    }
 
     pthread_attr_init (&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);

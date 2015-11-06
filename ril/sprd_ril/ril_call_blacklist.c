@@ -14,12 +14,15 @@
 #include "sprd_atchannel.h"
 #include "ril_call_blacklist.h"
 #include "sprd_ril_cb.h"
+#include <cutils/properties.h>
 
 #define LOG_TAG "RIL"
+#define PROP_BUILD_TYPE "ro.build.type"
 
 /*represent if blacklist is empty, 0--empty, 1--hava black number*/
 static int s_blacklist = 0;
 static int minMatch;
+extern int s_isuserdebug;
 
 blacklistnode *voice_black_list = NULL; // for voice call
 
@@ -123,7 +126,9 @@ static int checkIsBlackNumber(char *phonenumber, blacklistnode *blacklist)
         index = phonenumLen - minMatch;
         phonenumLen = minMatch;
     }
-    RILLOGD("phonenumber=%s, phonenumLen=%d, index=%d\n", phonenumber, phonenumLen, index);
+    if (s_isuserdebug) {
+        RILLOGD("phonenumber=%s, phonenumLen=%d, index=%d\n", phonenumber, phonenumLen, index);
+    }
 
     while (item != NULL)
     {
@@ -259,7 +264,12 @@ void requestCallBlackList(void *data, size_t datalen, RIL_Token t) {
 int queryBlackList (int type, char *phonenumber)
 {
     int ret = 0;
+    char versionStr[PROPERTY_VALUE_MAX];
     pthread_mutex_lock(&s_blackListMutex);
+    property_get(PROP_BUILD_TYPE, versionStr, "user");
+    if(strstr(versionStr, "userdebug")) {
+        s_isuserdebug = 1;
+    }
     if (s_blacklist == 0) {
         goto EXIT;
     } else if (s_blacklist == 1 && type == 0 && phonenumber != NULL) {
@@ -279,8 +289,10 @@ int queryBlackList (int type, char *phonenumber)
         char *resp = NULL;
         asprintf(&resp, "%d%s", black_response->oemFuncId, black_response->data);
         RIL_onUnsolicitedResponse (RIL_UNSOL_OEM_HOOK_RAW, resp, strlen(resp));
-        RILLOGD("RIL_UNSOL_OEM_HOOK_RAW, oemFuncId: %d, data: %s",
-                black_response->oemFuncId, black_response->data);
+        if (s_isuserdebug) {
+            RILLOGD("RIL_UNSOL_OEM_HOOK_RAW, oemFuncId: %d, data: %s",
+                    black_response->oemFuncId, black_response->data);
+        }
         free(black_call);
         free(resp);
     }
