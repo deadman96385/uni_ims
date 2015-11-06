@@ -47,7 +47,12 @@ PUBLIC MMEncRet H264Enc_InitVSP(H264EncObject *vo)
         cmd |= V_BIT_6;
     }
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + AXIM_ENDIAN_OFF, cmd,"axim endian set, vu format"); //VSP and OR endian.
-
+    cmd =  0;
+    if((SHARKL == vo->vsp_version) || (SHARKLT8 == vo->vsp_version))
+    {
+	cmd = 0x180;
+    }
+    VSP_WRITE_REG(GLB_REG_BASE_ADDR +AXIM_BURST_GAP_OFF,cmd,"axim burst gap"); //VSP and OR endian.
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF, (STREAM_ID_H264|V_BIT_4|((img_ptr->cabac_enable&0x01)<<9)), "VSP_MODE: Set standard and work mode");
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, 0, "RAM_ACC_SEL: SETTING_RAM_ACC_SEL=0(SW)");
 

@@ -204,6 +204,7 @@ typedef struct vsp_ahbm_reg_tag
 #define VSP_INT_RAW_OFF 0x0c
 #define AXIM_ENDIAN_OFF 0x10
 #define AXIM_PAUSE_OFF 0x18
+#define AXIM_BURST_GAP_OFF 0x14
 #define AXIM_STS_OFF 0x1c
 #define VSP_MODE_OFF 0x20
 #define IMG_SIZE_OFF 0x24
