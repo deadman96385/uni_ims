@@ -440,6 +440,8 @@ static RIL_InitialAttachApn *initialAttachApn = NULL;
 static int in4G;
 static bool bLteDetached = false;
 static int isTest;
+//desire to power on/off radio by FW
+static int desiredRadioState = 0;
 
 void *setRadioOnWhileSimBusy(void *param);
 static pthread_mutex_t s_hasSimBusyMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -2138,7 +2140,6 @@ error:
 
 static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Token t)
 {
-    int onOff;
     int autoAttach = -1;
     int dataEnable = -1;
     int err, i;
@@ -2149,7 +2150,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
     char cmd[128] = {0};
 
     assert (datalen >= sizeof(int *));
-    onOff = ((int *)data)[0];
+    desiredRadioState = ((int *)data)[0];
 
 #if defined (RIL_SPRD_EXTENSION)
     autoAttach = ((int *)data)[1];
@@ -2188,7 +2189,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
     }
 #endif
 
-    if (onOff == 0) {
+    if (desiredRadioState == 0) {
         if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
             RILLOGD("s_sim_num = %d", s_sim_num);
             snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
@@ -2216,7 +2217,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
             RILLOGD("requestRadioPower set sLteRegState: OUT OF SERVICE.");
         }
         setRadioState(channelID, RADIO_STATE_OFF);
-    } else if (onOff > 0 && sState == RADIO_STATE_OFF) {
+    } else if (desiredRadioState > 0 && sState == RADIO_STATE_OFF) {
                 extern int s_sim_num;
                 if (s_sim_num == 0) {
                     RILLOGD("sim1.");
@@ -8212,7 +8213,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_ALLOW_DATA:
             allow_data = ((int*)data)[0];
-            if(sState != RADIO_STATE_UNAVAILABLE && sState != RADIO_STATE_OFF){
+            if(desiredRadioState > 0){
                 if(allow_data){
                     attachGPRS(channelID, data, datalen, t);
                 }else{
@@ -8220,7 +8221,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 }
             }else{
                 RILLOGD("allow data when radio is off");
-                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
             }
             break;
         case RIL_REQUEST_HANGUP_WAITING_OR_BACKGROUND:
