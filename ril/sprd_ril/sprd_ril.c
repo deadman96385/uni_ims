@@ -5000,14 +5000,11 @@ static void requestRegistrationState(int channelID, int request, void *data,
             goto error;
     }
 
-#if defined (RIL_SPRD_EXTENSION)
-    sprintf(res[0], "%d", response[0]);
-#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     if(8 == response[0])
-        sprintf(res[0], "14");
-    else
-        sprintf(res[0], "%d", response[0]);
-#endif
+    {
+        response[0] = 10; // 10 meas "RIL_REG_STATE_NOT_REG_EMERGENCY_CALL_ENABLED"
+    }
+    sprintf(res[0], "%d", response[0]);
     responseStr[0] = res[0];
 
     if (response[1] != -1) {
