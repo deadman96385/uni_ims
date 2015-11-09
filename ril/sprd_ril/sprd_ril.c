@@ -6724,29 +6724,47 @@ static int convertHexToBin(const char *hex_ptr, int length, char *bin_ptr)
     return 0;
 }
 
+void convertStringToHex(char *outString, char *inString, int len)
+{
+    const char *hex = "0123456789ABCDEF";
+    int i = 0;
+    while (i < len) {
+        *outString++ = hex[inString[i] >> 4];
+        *outString++ = hex[inString[i] & 0x0F];
+        ++i;
+    }
+    *outString = '\0';
+}
+
 static void requestSendUSSD(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     ATResponse  *p_response = NULL;
-    char *ussdHexRequest;
+    char *ussdInitialRequest = NULL;
+    char *ussdHexRequest = NULL;
     int err;
     char *cmd;
-    int len;
+    int len = 0;
     int ret;
     char *line = NULL;
     int errNum = -1;
     int errCode = -1;
 
     ussdRun = 1;
-    ussdHexRequest = (char *)(data);
+    ussdInitialRequest = (char *)(data);
+    len = strlen(ussdInitialRequest);
+    ussdHexRequest = (char *)malloc(2*len+1);
+    convertStringToHex(ussdHexRequest, ussdInitialRequest, len);
     ret = asprintf(&cmd, "AT+CUSD=1,\"%s\",15", ussdHexRequest);
     if(ret < 0) {
         RILLOGE("Failed to allocate memory");
         cmd = NULL;
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        free(ussdHexRequest);
         return;
     }
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     free(cmd);
+    free(ussdHexRequest);
     if (err >= 0){
         if (strStartsWith(p_response->finalResponse, "+CME ERROR:")) {
             line = p_response->finalResponse;
