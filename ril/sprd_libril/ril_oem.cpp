@@ -10,7 +10,7 @@
 
 #include <ril_ex.h>
 #include <telephony/sprd_ril.h>
-#include <vendor/sprd/proprietories-source/ril/librilutils/proto/ril_oem.pb.h>
+#include <vendor/sprd/open-source/libs/libril_oem/proto/ril_oem.pb.h>
 
 using namespace android;
 

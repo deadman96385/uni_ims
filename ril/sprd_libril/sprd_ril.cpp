@@ -50,7 +50,6 @@
 #include <netinet/in.h>
 #include <cutils/properties.h>
 #include <RilATCISocket.h>
-#include <vendor/sprd/proprietories-source/ril/librilutils/proto/ril_oem.pb.h>
 
 namespace android {
 

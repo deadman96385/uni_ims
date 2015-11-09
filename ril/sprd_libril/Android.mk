@@ -6,7 +6,6 @@ include $(CLEAR_VARS)
 LOCAL_C_INCLUDES :=$(LOCAL_PATH)/../include
 
 LOCAL_SRC_FILES:= \
-    $(call all-proto-files-under, proto) \
     sprd_ril.cpp \
     ril_event.cpp \
     sprd_thread_pool.cpp \
@@ -20,18 +19,14 @@ LOCAL_SHARED_LIBRARIES := \
     libbinder \
     libcutils \
     libhardware_legacy \
-    librilutils_sp
+    librilutils_sp \
+    libril_oem
 
 LOCAL_SHARED_LIBRARIES += \
     libprotobuf-cpp-lite \
 
-#LOCAL_C_INCLUDES += \
-    external/protobuf/src \
-
 LOCAL_PROTOC_OPTIMIZE_TYPE := lite
 
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADER)/librilutils
-LOCAL_C_INCLUDES += external/protobuf/src
 
 LOCAL_CFLAGS := -DRIL_SHLIB
 
