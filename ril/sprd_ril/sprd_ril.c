@@ -3191,6 +3191,7 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
     int fb_ip_type = -1;
     char prop[PROPERTY_VALUE_MAX] = {0};
     char eth[PROPERTY_VALUE_MAX] = {0};
+    bool IsLte = isLte();
 
     apn = ((const char **)data)[2];
     username = ((const char **)data)[3];
@@ -3204,8 +3205,10 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
         s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
         goto error;
     }
-
-    snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
+    if(IsLte)
+        snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
+    else
+        snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"PPP\",%d", index+1);
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (errorHandlingForCGDATA(channelID, p_response, err, index))
         goto error;
@@ -3215,7 +3218,8 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
     index = getPDP();
     if(index < 0 || getPDPCid(index) >= 0) {
         s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-        goto error;
+        putPDP(index);
+        goto done;
     }
 
     snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
@@ -3225,7 +3229,8 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (err < 0 || p_response->success == 0){
         s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-        goto error;
+        putPDP(index);
+        goto done;
     }
 
     snprintf(cmd, sizeof(cmd), "AT+CGPCO=0,\"%s\",\"%s\",%d,%d", username, password,index+1,atoi(authtype));
@@ -3237,8 +3242,10 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
         snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
         at_send_command(ATch_type[channelID], cmd, NULL);
     }
-
-    snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
+    if(IsLte)
+        snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d,%d", primaryindex+1,index+1);
+    else
+        snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"PPP\",%d,%d",primaryindex+1, index+1);
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (err < 0 || p_response->success == 0) {
         RILLOGD("Fallback 2 pdp failed,but still as a success");
@@ -3250,11 +3257,11 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
     /**********************************/
     snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", s_modem);
     property_get(ETH_SP, eth, "veth");
-    snprintf(cmd, sizeof(cmd), "net.%s%d.ip_type", eth, index);
+    snprintf(cmd, sizeof(cmd), "net.%s%d.ip_type", eth, primaryindex);
     property_get(cmd, prop, "0");
     fb_ip_type = atoi(prop);
     RILLOGD("doIPV4_IPV6_Fb: Fallback 2 pdp: fb_ip_type = %d", fb_ip_type);
-    if (fb_ip_type != IPV6) {
+    if (fb_ip_type != IPV4V6) {
         RILLOGD("Fallback pdp type mismatch, do deactive");
         snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
         at_send_command(ATch_type[channelID], cmd, &p_response);
@@ -3455,33 +3462,11 @@ RETRY:
             }
         }
 
-        if (!IsLte || is_default_bearer) {
-            if(is_default_bearer){
-                snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
-            } else {
-            snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"%s\",\"%s\",\"\",0,0", index+1, pdp_type, apn);
+        if (is_default_bearer) {
+            snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
-            if (err < 0 || p_response->success == 0){
-                s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+            if (errorHandlingForCGDATA(channelID, p_response, err, index)){
                 goto error;
-            }
-
-            snprintf(cmd, sizeof(cmd), "AT+CGPCO=0,\"%s\",\"%s\",%d,%d", username, password,index+1,atoi(authtype));
-            at_send_command(ATch_type[channelID], cmd, NULL);
-
-            /* Set required QoS params to default */
-            property_get("persist.sys.qosstate", qos_state, "0");
-            if(!strcmp(qos_state, "0")) {
-                snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
-                at_send_command(ATch_type[channelID], cmd, NULL);
-            }
-                snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"PPP\",%d", index + 1);
-            }
-            err = at_send_command(ATch_type[channelID], cmd, &p_response);
-            if (errorHandlingForCGDATA(channelID, p_response, err, index))
-                goto error;
-            if (!is_default_bearer) {
-                updatePDPCid(index+1,1);
             }else {
                 pthread_mutex_lock(&default_pdp.mutex);
                 default_pdp.cid = index + 1;
@@ -3617,11 +3602,14 @@ retrycgatt:
                 if (ret == false) {
                     goto error;
                 } else {
-                    updatePDPCid(index+1,1);
                     goto done;
                 }
             }
-            snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
+            if(IsLte) {
+                snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
+            } else {
+                snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"PPP\",%d", index+1);
+            }
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0) {
                 if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
@@ -3641,7 +3629,10 @@ retrycgatt:
                                 ret = doIPV4_IPV6_Fallback(channelID, index, data, qos_state);
                                 if (ret == false) {
                                     goto error;
+                                }else {
+                                    goto done;
                                 }
+
                             } else {
                                 convertFailCause(failCause);
                             }
@@ -3661,25 +3652,21 @@ retrycgatt:
                 }
                 goto error;
             }
-
             updatePDPCid(index+1,1);
-            if (!strcmp(pdp_type,"IPV4V6")) {
+
+            snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", s_modem);
+            property_get(ETH_SP, eth, "veth");
+            snprintf(cmd, sizeof(cmd), "net.%s%d.ip_type", eth, index);
+            property_get(cmd, prop, "0");
+            ip_type = atoi(prop);
+            if (!strcmp(pdp_type,"IPV4V6") && ip_type != IPV4V6 ) {
                 fbCause = getSPACTFBcause(channelID);
                 RILLOGD("requestSetupDataCall fall Back Cause = %d", fbCause);
                 if (fbCause < 0) {
                     s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                     goto error;
                 }
-
-                snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", s_modem);
-                property_get(ETH_SP, eth, "veth");
-
-                snprintf(cmd, sizeof(cmd), "net.%s%d.ip_type", eth, index);
-                property_get(cmd, prop, "0");
-                ip_type = atoi(prop);
-
                 if (fbCause == 52) {
-
                     if (ip_type == IPV4) {
                         pdp_type = "IPV6";
                         want_ip_type = IPV6;
@@ -3687,10 +3674,10 @@ retrycgatt:
                         pdp_type = "IP";
                         want_ip_type = IPV4;
                     }
-                    index = getPDP();;
+                    index = getPDP();
                     if (index < 0 || getPDPCid(index) >= 0) {
-                        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                        goto error;
+                        /*just use actived ip*/
+                        goto done;
                     }
 
                     snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index + 1);
@@ -3702,10 +3689,10 @@ retrycgatt:
                     err = at_send_command(ATch_type[channelID], cmd,
                             &p_response);
                     if (err < 0 || p_response->success == 0) {
-                        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                        goto error;
+                        /*just use actived ip*/
+                        putPDP(index);
+                        goto done;
                     }
-
                     snprintf(cmd, sizeof(cmd), "AT+CGPCO=0,\"%s\",\"%s\",%d,%d",
                             username, password, index + 1, atoi(authtype));
                     at_send_command(ATch_type[channelID], cmd, NULL);
@@ -3719,8 +3706,14 @@ retrycgatt:
                         at_send_command(ATch_type[channelID], cmd, NULL);
                     }
 
-                    snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d, %d",
-                            primaryindex+1, index + 1);
+                    if(IsLte) {
+                        snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d, %d",
+                                primaryindex+1, index + 1);
+                    } else {
+                        snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"PPP\",%d, %d",
+                                primaryindex+1, index + 1);
+                    }
+
                     err = at_send_command(ATch_type[channelID], cmd,
                             &p_response);
                     if (err < 0 || p_response->success == 0) {
@@ -3731,7 +3724,7 @@ retrycgatt:
                     /**********************************/
                     /* Check ip type after fall back  */
                     /**********************************/
-                    snprintf(cmd, sizeof(cmd), "net.%s%d.ip_type", eth, index);
+                    snprintf(cmd, sizeof(cmd), "net.%s%d.ip_type", eth, primaryindex);
                     property_get(cmd, prop, "0");
                     fb_ip_type = atoi(prop);
                     RILLOGD( "Fallback 2 pdp: want_ip_type = %d, fb_ip_type = %d",
@@ -3749,8 +3742,7 @@ retrycgatt:
                 //IPV6
                 index = getPDP();
                 if(index < 0 || getPDPCid(index) >= 0) {
-                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                    goto error;
+                    goto done;
                 }
 
                 snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
@@ -3759,8 +3751,8 @@ retrycgatt:
                 snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"IPV6\",\"%s\",\"\",0,0", index+1, apn);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 if (err < 0 || p_response->success == 0){
-                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                    goto error;
+                    putPDP(index);
+                    goto done;
                 }
 
                 snprintf(cmd, sizeof(cmd), "AT+CGPCO=0,\"%s\",\"%s\",%d,%d", username, password,index+1,atoi(authtype));
@@ -3772,13 +3764,18 @@ retrycgatt:
                     snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
                     at_send_command(ATch_type[channelID], cmd, NULL);
                 }
-
-                snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
+                if(IsLte) {
+                    snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
+                } else {
+                    snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"PPP\",%d", index+1);
+                }
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
-                if (errorHandlingForCGDATA(channelID, p_response, err, index))
-                    goto error;
-
-                setPDPMapping(primaryindex,index);
+                if (errorHandlingForCGDATA(channelID, p_response, err, index)) {
+                    putPDP(index);
+                    goto done;
+                } else {
+                    updatePDPCid(index+1,1);
+                }
             }
         }
     } else {
