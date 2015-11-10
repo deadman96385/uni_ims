@@ -97,13 +97,13 @@ typedef enum {
 
 #define RIL_MAIN_SIM_PROPERTY  "persist.msms.phone_default"
 
-char SP_SIM_NUM[20]; // ro.modem.*.count
-char ETH_SP[20]; //ro.modem.*.eth
-char RIL_SP_SIM_POWER_PROPERTY[20]; //ril.*.sim.power
-char RIL_SP_SIM_POWER_PROPERTYS[20]; // ril.*.sim.powe*--ril.*.sim.power1 or ril.*.sim.power2 ...
-char RIL_SP_ASSERT[20]; // ril.*.assert
-char RIL_SP_SIM_PIN_PROPERTY[20]; // ril.*.sim.pin
-char RIL_SP_SIM_PIN_PROPERTYS[20]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.sim.pin2 ...
+char SP_SIM_NUM[128]; // ro.modem.*.count
+char ETH_SP[128]; //ro.modem.*.eth
+char RIL_SP_SIM_POWER_PROPERTY[128]; //ril.*.sim.power
+char RIL_SP_SIM_POWER_PROPERTYS[128]; // ril.*.sim.powe*--ril.*.sim.power1 or ril.*.sim.power2 ...
+char RIL_SP_ASSERT[128]; // ril.*.assert
+char RIL_SP_SIM_PIN_PROPERTY[128]; // ril.*.sim.pin
+char RIL_SP_SIM_PIN_PROPERTYS[128]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.sim.pin2 ...
 
 #define RIL_MODEM_RESET_PROPERTY "persist.sys.sprd.modemreset"
 #define RIL_STK_PROFILE_PREFIX  "ril.stk.proflie_"
@@ -1619,11 +1619,13 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
                 }
             } else {
                 if (pin != NULL) {
+                    char tmp[128] = { 0 };
                     snprintf(RIL_SP_SIM_PIN_PROPERTYS, sizeof(RIL_SP_SIM_PIN_PROPERTYS),
                             "ril.%s.sim.pin", s_modem);
-                    strcat(RIL_SP_SIM_PIN_PROPERTYS, "%d");
+                    strcpy(tmp, RIL_SP_SIM_PIN_PROPERTYS);
+                    strcat(tmp, "%d");
                     snprintf(RIL_SP_SIM_PIN_PROPERTYS, sizeof(RIL_SP_SIM_PIN_PROPERTYS),
-                            RIL_SP_SIM_PIN_PROPERTYS, s_sim_num);
+                            tmp, s_sim_num);
                     strcpy(sim_prop, RIL_SP_SIM_PIN_PROPERTYS);
                     property_set(sim_prop, pin);
                 }
@@ -6270,11 +6272,13 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
             }
         } else {
             if (pin != NULL) {
+                char tmp[128] = { 0 };
                 snprintf(RIL_SP_SIM_PIN_PROPERTYS, sizeof(RIL_SP_SIM_PIN_PROPERTYS),
                         "ril.%s.sim.pin", s_modem);
-                strcat(RIL_SP_SIM_PIN_PROPERTYS, "%d");
+                strcpy(tmp, RIL_SP_SIM_PIN_PROPERTYS);
+                strcat(tmp, "%d");
                 snprintf(RIL_SP_SIM_PIN_PROPERTYS, sizeof(RIL_SP_SIM_PIN_PROPERTYS),
-                        RIL_SP_SIM_PIN_PROPERTYS, s_sim_num);
+                        tmp, s_sim_num);
                 strcpy(sim_prop, RIL_SP_SIM_PIN_PROPERTYS);
                 property_set(sim_prop, pin);
             }
@@ -6401,11 +6405,13 @@ static void  requestEnterSimPin(int channelID, void*  data, size_t  datalen, RIL
             }
         } else {
             if (pin != NULL) {
+                char tmp[128] = { 0 };
                 snprintf(RIL_SP_SIM_PIN_PROPERTYS, sizeof(RIL_SP_SIM_PIN_PROPERTYS),
                         "ril.%s.sim.pin", s_modem);
-                strcat(RIL_SP_SIM_PIN_PROPERTYS, "%d");
+                strcpy(tmp, RIL_SP_SIM_PIN_PROPERTYS);
+                strcat(tmp, "%d");
                 snprintf(RIL_SP_SIM_PIN_PROPERTYS, sizeof(RIL_SP_SIM_PIN_PROPERTYS),
-                        RIL_SP_SIM_PIN_PROPERTYS, s_sim_num);
+                        tmp, s_sim_num);
                 strcpy(sim_prop, RIL_SP_SIM_PIN_PROPERTYS);
                 property_set(sim_prop, pin);
             }
@@ -11420,11 +11426,13 @@ retry_vinit:
                     sizeof(RIL_SP_SIM_POWER_PROPERTY), "ril.%s.sim.power", s_modem);
             strcpy(sim_prop, RIL_SP_SIM_POWER_PROPERTY);
         } else {
+            char tmp[128] = { 0 };
             snprintf(RIL_SP_SIM_POWER_PROPERTYS, sizeof(RIL_SP_SIM_POWER_PROPERTYS),
                     "ril.%s.sim.power", s_modem);
-            strcat(RIL_SP_SIM_POWER_PROPERTYS, "%d");
+            strcpy(tmp,RIL_SP_SIM_POWER_PROPERTYS);
+            strcat(tmp, "%d");
             snprintf(RIL_SP_SIM_POWER_PROPERTYS, sizeof(RIL_SP_SIM_POWER_PROPERTYS),
-                    RIL_SP_SIM_POWER_PROPERTYS, s_sim_num);
+                    tmp, s_sim_num);
             strcpy(sim_prop, RIL_SP_SIM_POWER_PROPERTYS);
         }
         property_get(sim_prop, prop, "0");
