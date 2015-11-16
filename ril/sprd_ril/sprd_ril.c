@@ -146,7 +146,7 @@ int g_csfb_processing = 0;
 static const char * s_modem = NULL;
 int s_testmode = 0;
 static int allow_data = 0;
-
+int  g_maybe_addcall = 0;
 
 struct ATChannels *ATch_type[MAX_CHANNELS];
 static int s_channel_open = 0;
@@ -1232,6 +1232,9 @@ int callFromCLCCLine(char *line, RIL_Call *p_call)
     if (err < 0) goto error;
 
     err = clccStateToRILState(state, &(p_call->state));
+    if(p_call->state == RIL_CALL_HOLDING){
+       g_maybe_addcall = 1;
+    }
     if (err < 0) goto error;
 
     err = at_tok_nextint(&line, &mode);
@@ -1316,6 +1319,9 @@ int callFromCLCCLineVoLTE(char *line, RIL_Call_VoLTE *p_call)
     if (err < 0) goto error;
 
     err = voLTEStateToRILState(state, &(p_call->state));
+    if(p_call->state == VOLTE_CALL_HOLD_MO || p_call->state == VOLTE_CALL_HOLD_MT){
+       g_maybe_addcall = 1;
+    }
     if (err < 0) goto error;
 
     err = at_tok_nextint(&line, &(p_call->mpty));
@@ -4278,7 +4284,7 @@ static void requestGetCurrentCalls(int channelID, void *data, size_t datalen, RI
     for(i = 0; i < countCalls ; i++) {
         pp_calls[i] = &(p_calls[i]);
     }
-
+    g_maybe_addcall = 0;
     for (countValidCalls = 0, p_cur = p_response->p_intermediates
             ; p_cur != NULL
             ; p_cur = p_cur->p_next
@@ -4360,7 +4366,7 @@ static void requestGetCurrentCallsVoLTE(int channelID, void *data, size_t datale
         pp_calls[i] = &(p_calls[i]);
     }
     int groupCallIndex = 8;
-
+    g_maybe_addcall =0;
     for (countValidCalls = 0, p_cur = p_response->p_intermediates
             ; p_cur != NULL
             ; p_cur = p_cur->p_next
@@ -8916,6 +8922,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             {
                 char cmd[20] = {0};
                 snprintf(cmd, sizeof(cmd), "AT+CMUT=%d", ((int *)data)[0]);
+                if(g_maybe_addcall == 1 && ((int *)data)[0] == 0){
+                  RILLOGD("Don't cancel mute when dial second call ");
+                  g_maybe_addcall = 0;
+                  RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                  break;
+                }
                 at_send_command(ATch_type[channelID], cmd, NULL);
                 RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                 break;
@@ -12487,6 +12499,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 goto out;
             }
             err = at_tok_nextint(&tmp, &response->stat);
+            if(response->stat == RIL_CALL_HOLDING && g_maybe_addcall == 0){
+               g_maybe_addcall = 1;
+            }
             if (err < 0) {
                 RILLOGD("get stat fail");
                 goto out;
@@ -12609,6 +12624,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 goto out;
             }
             err = at_tok_nextint(&tmp, &response->stat);
+            if(response->stat == RIL_CALL_HOLDING && g_maybe_addcall == 0){
+               g_maybe_addcall = 1;
+            }
             if (err < 0) {
                 RILLOGD("get stat fail");
                 goto out;
