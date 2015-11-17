@@ -11130,7 +11130,12 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
     char cmd[30];
     bool islte = isLte();
 
-    if(islte){
+    if (!strcmp(s_modem, "l")&&isSvLte()) {
+        putPDP(attachPdpIndex);
+        RILLOGD("attachGPRS, put pdp %d", attachPdpIndex);
+        attachPdpIndex = -1;
+    }
+    if (islte) {
         for(i = 0; i <  MAX_PDP; i++) {
             if ( getPDPCid(i) > 0 ) {
                 snprintf(cmd,sizeof(cmd),"AT+CGACT=0,%d",getPDPCid(i));
@@ -11139,28 +11144,15 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
                 putPDP(i);
             }
         }
-    }
-
-    if (!strcmp(s_modem, "l")&&isSvLte()) {
-        putPDP(attachPdpIndex);
-        RILLOGD("attachGPRS, put pdp %d", attachPdpIndex);
-        attachPdpIndex = -1;
-    }
-    if (islte) {
         if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
-            err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
-            if (err < 0 || p_response->success == 0) {
-            	goto error;
-            }
             RILLOGD("s_sim_num = %d", s_sim_num);
             snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
             err = at_send_command(ATch_type[channelID], cmd, NULL);
         }
-        if (s_testmode != 10) {
-            at_send_command(ATch_type[channelID], "AT+CLSSPDT = 1", NULL);
-        }
-    }else{
-        err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
+    }
+    err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
     }
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     at_response_free(p_response);
