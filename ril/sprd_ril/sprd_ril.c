@@ -6537,7 +6537,7 @@ static void requestSetSmsBroadcastConfig(int channelID,  void *data, size_t data
     for(i=0;i<count;i++){
         gsmBci =*(RIL_GSM_BroadcastSmsConfigInfo *)(gsmBciPtrs[i]);
         if(i == 0){
-            enable = gsmBci.selected;
+            enable = gsmBci.selected ? 0 : 1;
         }
         memset(tmp, 0,20);
         setSmsBroadcastConfigData(gsmBci.fromServiceId,i,1,channel,&len,tmp);
