@@ -116,6 +116,7 @@ char RIL_SP_SIM_PIN_PROPERTYS[128]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.
 #define RIL_SIM_TYPE  "ril.ICC_TYPE"
 #define RIL_SIM_TYPE1  "ril.ICC_TYPE_1"
 #define RIL_SET_SPEED_MODE_COUNT  "ril.sim.speed_count"
+#define PROP_ATTACH_ENABLE "persist.sys.attach.enable"
 
 //3G/4G switch in different slot
 // {for LTE}
@@ -200,6 +201,7 @@ static void requestInitialGroupCall(int channelID, void *data, size_t datalen, R
 static void requestAddGroupCall(int channelID, void *data, size_t datalen, RIL_Token t);
 static void requestCallForwardU(int channelID, RIL_CallForwardInfo *data, size_t datalen, RIL_Token t);
 static int isVoLteEnable();
+static bool isAttachEnable();
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 
 struct listnode
@@ -8234,14 +8236,14 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_ALLOW_DATA:
             allow_data = ((int*)data)[0];
-            if(desiredRadioState > 0){
+            if(desiredRadioState > 0 && isAttachEnable()){
                 if(allow_data){
                     attachGPRS(channelID, data, datalen, t);
                 }else{
                     detachGPRS(channelID, data, datalen, t);
                 }
             }else{
-                RILLOGD("allow data when radio is off");
+                RILLOGD("allow data when radio is off or engineer mode disable");
                 RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
             }
             break;
@@ -8482,16 +8484,22 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         requestSendIMSSMS(channelID, data, datalen, t);
         break;
     case RIL_REQUEST_SETUP_DATA_CALL:
-        if (isLte()) {
-            RILLOGD("RIL_REQUEST_SETUP_DATA_CALL testmode= %d, sLteRegState = %d", s_testmode, sLteRegState);
-            if (s_testmode == 10 || sLteRegState == STATE_IN_SERVICE) {
-                requestSetupDataCall(channelID, data, datalen, t);
+        if(isAttachEnable()) {
+            if (isLte()) {
+                RILLOGD("RIL_REQUEST_SETUP_DATA_CALL testmode= %d, sLteRegState = %d", s_testmode, sLteRegState);
+                if (s_testmode == 10 || sLteRegState == STATE_IN_SERVICE) {
+                    requestSetupDataCall(channelID, data, datalen, t);
+                } else {
+                    s_lastPdpFailCause = PDP_FAIL_SERVICE_OPTION_NOT_SUPPORTED;
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                }
             } else {
-                s_lastPdpFailCause = PDP_FAIL_SERVICE_OPTION_NOT_SUPPORTED;
-                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                requestSetupDataCall(channelID, data, datalen, t);
             }
         } else {
-            requestSetupDataCall(channelID, data, datalen, t);
+            RILLOGD("RIL_REQUEST_SETUP_DATA_CALL attach not enable by engineer mode");
+            s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
         }
         break;
         case RIL_REQUEST_DEACTIVATE_DATA_CALL:
@@ -14579,4 +14587,14 @@ void setModemtype() {
         property_set(MODEM_TYPE, MODEM_TYPE_LTE);
         return;
     }
+}
+
+static bool isAttachEnable() {
+    char prop[PROPERTY_VALUE_MAX] = { 0 };
+    property_get(PROP_ATTACH_ENABLE, prop, "true");
+    RILLOGD("isAttachEnable: prop = %s", prop);
+    if(!strcmp(prop, "false")) {
+        return false;
+    }
+    return true;
 }
