@@ -413,11 +413,10 @@ typedef struct storable_picture
     uint8	*imgY;		//should be 64 word alignment
     uint8	*imgU;
     uint8	*imgV;
-    int32   *direct_mb_info;
     uint_32or64	imgYAddr;	//frame address which are configured to VSP,  imgYAddr = ((uint32)imgY >> 8), 64 word aligment
     uint_32or64	imgUAddr;	//imgUAddr = ((uint32)imgU>>8)
     uint_32or64	imgVAddr;	//imgVAddr = ((uint32)imgV>>8)
-    uint32  direct_mb_info_Addr;
+    uint_32or64  direct_mb_info_Addr;
 
     int32   DPB_addr_index;//weihu
 

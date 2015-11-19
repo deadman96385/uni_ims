@@ -76,23 +76,6 @@ PUBLIC void H264Dec_clear_delayed_buffer(H264DecObject *vo)
 
 PUBLIC MMDecRet H264Dec_init_img_buffer (H264DecObject *vo)
 {
-    DEC_IMAGE_PARAMS_T *img_ptr = vo->g_image_ptr;
-    int32 mb_num_x = img_ptr->frame_width_in_mbs;
-    int32 total_mb_num = mb_num_x * img_ptr->frame_height_in_mbs;
-    uint8 *direct_mb_info_v;
-    uint32 buffer_num, buffer_size, i;
-
-    // Malloc direct mb info buffers
-    buffer_num = MAX_REF_FRAME_NUMBER+1;
-    buffer_size =  total_mb_num  * 80;
-
-    for(i =0; i < buffer_num; i++)
-    {
-        direct_mb_info_v = (uint8 *)H264Dec_MemAlloc (vo, buffer_size, 8, HW_NO_CACHABLE);
-        CHECK_MALLOC(direct_mb_info_v, "direct_mb_info_v");
-        vo->direct_mb_info_addr[i] = (uint_32or64)H264Dec_MemV2P(vo, direct_mb_info_v, HW_NO_CACHABLE);
-    }
-
     vo->g_cavlc_tbl_ptr = (uint32 *)H264Dec_MemAlloc(vo, sizeof(uint32)*69, 8, HW_NO_CACHABLE);
     CHECK_MALLOC(vo->g_cavlc_tbl_ptr, "vo->g_cavlc_tbl_ptr");
 
@@ -136,7 +119,7 @@ PUBLIC MMDecRet H264Dec_init_dpb (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_
         dpb_ptr->fs[i]->frame = (DEC_STORABLE_PICTURE_T *)H264Dec_MemAlloc(vo, sizeof(DEC_STORABLE_PICTURE_T), 4, INTER_MEM);
         CHECK_MALLOC(dpb_ptr->fs[i]->frame, "dpb_ptr->fs[i]->frame");
 
-        dpb_ptr->fs[i]->frame->direct_mb_info =PNULL;//(int32 *)H264Dec_ExtraMemAlloc_64WordAlign((frm_size_in_blk>>4) * 20*sizeof(int32));//weihu
+        dpb_ptr->fs[i]->frame->direct_mb_info_Addr = 0;
         dpb_ptr->fs[i]->frame->imgY = PNULL;
         dpb_ptr->fs[i]->frame->imgU = PNULL;
         dpb_ptr->fs[i]->frame->imgV = PNULL;

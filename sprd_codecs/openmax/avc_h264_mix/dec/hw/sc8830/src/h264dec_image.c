@@ -572,6 +572,29 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
         dec_picture_ptr->imgYAddr = vo->g_rec_buf.imgYAddr;
         dec_picture_ptr->imgUAddr = dec_picture_ptr->imgYAddr + size_y;
         dec_picture_ptr->mPicId = vo->g_rec_buf.mPicId;
+
+        if (dec_picture_ptr->direct_mb_info_Addr == 0) {
+            uint32 size_mbinfo = 0;
+
+            size_mbinfo = img_ptr->frame_size_in_mbs * 80 + 1024; //384 for tmp YUV.
+
+            if ((*(vo->avcHandle->VSP_mbinfoMemCb)) != NULL)
+            {
+                int mem_ret = (*(vo->avcHandle->VSP_mbinfoMemCb))(vo->avcHandle->userdata,size_mbinfo, &(vo->g_dec_picture_ptr->direct_mb_info_Addr));
+                if (mem_ret < 0)
+                {
+                    SPRD_CODEC_LOGE ("%s, %d, mbinfo memory is not enough", __FUNCTION__, __LINE__);
+                    vo->error_flag  |= ER_MEMORY_ID;
+                    return;
+                }
+            } else
+            {
+                SPRD_CODEC_LOGE ("%s, %d, VSP_mbinfoMemCb is NULL", __FUNCTION__, __LINE__);
+                vo->error_flag  |= ER_MEMORY_ID;
+                return;
+            }
+        }
+
         SPRD_CODEC_LOGV("%s, %d, dec_picture_ptr->mPicId: %d, imgY: 0x%p\n", __FUNCTION__, __LINE__, dec_picture_ptr->mPicId, vo->g_rec_buf.imgY);
     }
 

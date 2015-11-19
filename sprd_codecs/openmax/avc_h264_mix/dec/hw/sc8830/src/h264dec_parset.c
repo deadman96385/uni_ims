@@ -89,10 +89,8 @@ static int8 is_MVC_profile(uint8 profile_idc)
 
 uint32 H264Dec_CalculateMemSize (DEC_IMAGE_PARAMS_T *img_ptr)
 {
-    uint32 malloc_buffer_num = MAX_REF_FRAME_NUMBER+1;
-    uint32 size_extra;
+    uint32 size_extra = 0;
 
-    size_extra = img_ptr->frame_size_in_mbs * 80 * malloc_buffer_num + 1024; //384 for tmp YUV.
     size_extra += sizeof(uint32)*69;
 
     return size_extra;
@@ -207,7 +205,6 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
             for (i = 0; i < MAX_REF_FRAME_NUMBER+1; i++)
             {
                 dpb_ptr->fs[i]->frame->DPB_addr_index = i + (type==1 ? 0 : MAX_REF_FRAME_NUMBER+1);//weihu
-                dpb_ptr->fs[i]->frame->direct_mb_info_Addr = vo->direct_mb_info_addr[i];
             }
         }
 #else
