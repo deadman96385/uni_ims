@@ -2916,8 +2916,8 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                                 RILLOGD("requestOrSendDataCallList: Lte detached in the past.");
                                 putPDP(fb_cid -1);
                                 putPDP(cid-1);
-                                RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
                                 s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+                                RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
                             } else {
                                 RIL_onRequestComplete(*t, RIL_E_SUCCESS,
                                     newResponses,
@@ -2928,8 +2928,8 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                                 RILLOGD("requestOrSendDataCallList: Lte detached in the past2.");
                                 putPDP(fb_cid -1);
                                 putPDP(cid-1);
-                                RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
                                 s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+                                RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
                             } else {
                                 RIL_onRequestComplete(*t, RIL_E_SUCCESS, &responses[i],
                                     sizeof(RIL_Data_Call_Response_v11));
