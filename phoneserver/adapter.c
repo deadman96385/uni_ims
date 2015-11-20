@@ -36,11 +36,8 @@ static int sim1_absent =-1, sim2_exist = -1;
 extern const char *modem;
 extern int soc_client;
 
-extern pthread_cond_t s_signal_trigger_cond;
-extern pthread_mutex_t s_signal_trigger_mutex;
 int rxlev[4], ber[4], rscp[4], ecno[4], rsrq[4], rsrp[4];
-int rssi[4] = {12}, berr[4];
-int screen_state;
+int rssi[4], berr[4];
 
 struct cmd_table {
     AT_CMD_ID_T cmd_id;
@@ -295,8 +292,6 @@ const struct cmd_table single_at_cmd_cvt_table[] = {
         cvt_generic_cmd_req, 5},
     {AT_CMD_CGMR, AT_CMD_TYPE_NW, AT_CMD_STR("AT+CGMR"),
         cvt_generic_cmd_req, 5},
-    {AT_CMD_CCED, AT_CMD_TYPE_GEN,AT_CMD_STR("AT+CCED"),
-        cvt_cced_cmd_req, 5},
 
     {AT_CMD_UNKNOWN, AT_CMD_TYPE_GEN, AT_CMD_STR("AT"), cvt_generic_cmd_req,
         50},
@@ -528,8 +523,6 @@ const struct cmd_table multi_at_cmd_cvt_table[] = {
         cvt_generic_cmd_req, 5},
     {AT_CMD_CGMR, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT+CGMR"),
         cvt_generic_cmd_req, 5},
-    {AT_CMD_CCED, AT_CMD_TYPE_NORMAL,AT_CMD_STR("AT+CCED"),
-        cvt_cced_cmd_req, 5},
 
     {AT_CMD_UNKNOWN, AT_CMD_TYPE_NORMAL, AT_CMD_STR("AT"),
         cvt_generic_cmd_req, 50},
@@ -1043,31 +1036,6 @@ int cvt_ata_cmd_req(AT_CMD_REQ_T * req)
     return AT_RESULT_PROGRESS;
 }
 
-int cvt_cced_cmd_req(AT_CMD_REQ_T * req)
-{
-    cmux_t *mux;
-    int i;
-
-    if (req == NULL) {
-        return AT_RESULT_NG;
-    }
-    mux = adapter_get_cmux(req->cmd_type, TRUE);
-    adapter_cmux_register_callback(mux, cvt_generic_cmd_rsp,
-            (unsigned long) req->recv_pty);
-
-    if (strStartsWith(req->cmd_str, "AT+CCED=2,8")) {
-        screen_state = 0;
-    }else{
-        pthread_mutex_lock(&s_signal_trigger_mutex);//send signal
-        pthread_cond_signal(&s_signal_trigger_cond);
-        pthread_mutex_unlock(&s_signal_trigger_mutex);
-        screen_state = 1;
-    }
-
-    adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
-    return AT_RESULT_PROGRESS;
-}
-
 int cvt_ata_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 {
     int ret;
@@ -1432,12 +1400,6 @@ int cvt_csq_cmd_ind(AT_CMD_IND_T * ind)
 
    if(berr[ind_sim] > 99) berr[ind_sim] = 99;
 
-   PHS_LOGD("enter cvt_csq_cmd_ind screen_state is %d",screen_state);
-   if(screen_state == 0){
-       pthread_mutex_lock(&s_signal_trigger_mutex);//send signal
-       pthread_cond_signal(&s_signal_trigger_cond);
-       pthread_mutex_unlock(&s_signal_trigger_mutex);
-   }
  /*   snprintf(ind_str, sizeof(ind_str), "\r\n+CSQ: %d,%d\r\n", rssi,ber);
     if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
         ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
@@ -1547,13 +1509,6 @@ int cvt_cesq_cmd_ind(AT_CMD_IND_T * ind)
     } else {
         rsrp[ind_sim] = 141 - rsrp[ind_sim];//modified by bug#450497
     }
-    PHS_LOGD("enter cvt_cesq_cmd_ind screen_state is %d",screen_state);
-    if(screen_state == 0){
-        pthread_mutex_lock(&s_signal_trigger_mutex);//send signal
-        pthread_cond_signal(&s_signal_trigger_cond);
-        pthread_mutex_unlock(&s_signal_trigger_mutex);
-    }
-
  /*   snprintf(ind_str, sizeof(ind_str), "\r\n+CESQ: %d,%d,%d,%d,%d,%d\r\n",
              rxlev, ber, rscp, ecno, rsrq, rsrp);
     if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {

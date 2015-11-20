@@ -75,7 +75,6 @@ typedef enum at_cmd_enum_t {
 	AT_CMD_CGMR,
 	AT_CMD_SNVM_SET,
 	AT_CMD_SAUTOATT_SET,
-	AT_CMD_CCED,
 	AT_CMD_UNKNOWN,
 
 	AT_CMD_CCCM_IND, AT_CMD_CRING_IND, AT_CMD_CSSI_IND,
@@ -254,5 +253,4 @@ int cvt_snvm_set_req(AT_CMD_REQ_T * req);
 int cvt_snvm_set_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data);
 int cvt_cesq_cmd_req(AT_CMD_REQ_T * req);
 int cvt_cesq_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data);
-int cvt_cced_cmd_req(AT_CMD_REQ_T * req);
 #endif /*  */

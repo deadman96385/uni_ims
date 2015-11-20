@@ -52,9 +52,6 @@ extern int s_isuserdebug;
 #define N 10
 pthread_t s_tid_signal_process;
 pthread_attr_t attr;
-pthread_cond_t s_signal_trigger_cond = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t s_signal_trigger_mutex = PTHREAD_MUTEX_INITIALIZER;
-extern int screen_state;
 
 struct chns_config_t single_chns_data = {.pty = {
 	{.dev_str = "/dev/CHNPTY0",.index = 0,.type = IND,.prority = 1}, 	/*## attribute ind_pty */
@@ -914,66 +911,78 @@ static int least_squares(int y[]){
 }
 
 static void *signal_process(){
-    pty_t *ind_pty = NULL;
-    pty_t *ind_eng_pty = NULL;
+    pty_t *ind_pty[2] = { 0 };
+    pty_t *ind_eng_pty[2] = { 0 };
     char ind_str[MAX_AT_CMD_LEN];
     int sim_index = 0;
-    int i =0;
-    int point[N], sample_rsrp_sim0[N], sample_rsrp_sim1[N],
-            sample_rscp_sim0[N], sample_rscp_sim1[N],
-            sample_rssi_sim0[N],sample_rssi_sim1[N];
-    int* rsrp_array = NULL, *rscp_array = NULL;
-    int rsrp_value, rscp_value;
+    int i = 0, simNum = 0;
+    int sample_rsrp_sim[2][N] = { { 0 }, { 0 } },
+        sample_rscp_sim[2][N] = { { 0 }, { 0 } },
+        sample_rssi_sim[2][N] = { { 0 }, { 0 } };
+    int* rsrp_array = NULL, *rscp_array = NULL, newSig;
 
-    extern int rxlev[4], ber[4], rscp[4], ecno[4], rsrq[4], rsrp[4];
-    extern int rssi[4], berr[4];
+    int rsrp_value, rscp_value;
+    int nosigUpdate[2], MAXSigCount = 2 * (N - 1);
+    extern int rxlev[], ber[], rscp[], ecno[], rsrq[], rsrp[];
+    extern int rssi[], berr[];
+
+    simNum = multiSimMode ? 2 : 1;
+    if(!strcmp(modem, "t") || !strcmp(modem, "w")){
+        MAXSigCount = N-1;
+    }
+
+    for (sim_index = 0; sim_index < simNum; sim_index++) {
+        if (multiSimMode == 1) {
+            if (sim_index == 0) {
+                ind_pty[sim_index] = adapter_get_ind_pty( (mux_type) (INDM_SIM1));
+                ind_eng_pty[sim_index] = adapter_multi_get_eng_ind_pty((mux_type) (INDM_SIM1));
+            } else if (sim_index == 1) {
+                ind_pty[sim_index] = adapter_get_ind_pty( (mux_type) (INDM_SIM2));
+                ind_eng_pty[sim_index] = adapter_multi_get_eng_ind_pty( (mux_type) (INDM_SIM2));
+            }
+        } else {
+            ind_pty[sim_index] = adapter_get_default_ind_pty();
+            ind_eng_pty[sim_index] = adapter_single_get_eng_ind_pty();
+        }
+    }
 
     while(1){
-        sim_index = 0;
-        for(;sim_index < 2;sim_index++){
-            if(multiSimMode == 1) {
-                if(sim_index == 0){
-                    ind_pty = adapter_get_ind_pty((mux_type)(INDM_SIM1));
-                    ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(INDM_SIM1));
-                }else if(sim_index == 1){
-                    ind_pty = adapter_get_ind_pty((mux_type)(INDM_SIM2));
-                    ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(INDM_SIM2));
-                }
-            } else {
-                ind_pty = adapter_get_default_ind_pty();
-                ind_eng_pty = adapter_single_get_eng_ind_pty();
-            }
-
+        for (sim_index = 0; sim_index < simNum; sim_index++) {
             // compute the rsrp rscp or rssi
-            if(!strcmp(modem, "l") || !strcmp(modem, "tl") || !strcmp(modem, "lf")){
-                if(sim_index == 0){         // dispatch sim 1
-                    rsrp_array = sample_rsrp_sim0;
-                    rscp_array = sample_rscp_sim0;
-                }else if(sim_index == 1){  // dispatch sim 2
-                    rsrp_array = sample_rsrp_sim1;
-                    rscp_array = sample_rscp_sim1;
-                }
-            }else if(!strcmp(modem, "t") || !strcmp(modem, "w")){
-                if(sim_index == 0){
-                    rsrp_array = sample_rssi_sim0;
-                    rscp_array = NULL;
-                }else if(sim_index == 1){
-                    rsrp_array = sample_rssi_sim1;
-                    rscp_array = NULL;
+            if (!strcmp(modem, "t") || !strcmp(modem, "w")) {
+                rsrp_array = sample_rssi_sim[sim_index];
+                rscp_array = NULL;
+                newSig = rssi[sim_index];
+            } else {
+                rsrp_array = sample_rsrp_sim[sim_index];
+                rscp_array = sample_rscp_sim[sim_index];
+                newSig = rsrp[sim_index];
+            }
+            nosigUpdate[sim_index] = 0;
+            for (i = 0; i < N - 1; ++i) {
+                if (rsrp_array[i] == rsrp_array[i + 1]) {
+                    if (rsrp_array[i] == newSig) {
+                        nosigUpdate[sim_index]++;
+                    } else if (rsrp_array[i] == 0) {
+                        rsrp_array[i] = newSig;
+                    }
+                } else
+                    rsrp_array[i] = rsrp_array[i + 1];
+
+                if (rscp_array != NULL) { //w/td mode no rscp
+                    if (rscp_array[i] == rscp_array[i + 1]) {
+                        if (rscp_array[i] == rscp[sim_index]) {
+                            nosigUpdate[sim_index]++;
+                        } else if (rscp_array[i] == 0) {
+                            rscp_array[i] = rscp[sim_index]; //the first unsolicitied
+                        }
+                    } else
+                        rscp_array[i] = rscp_array[i + 1];
                 }
             }
-            for(i = 0; i < N-1; ++i){
-                if((rsrp_array[i] == rsrp_array[i+1]) && rsrp_array[i] == 0){
-                    rsrp_array[i] = rsrp[sim_index];  //the first unsolicitied
-                }else
-                    rsrp_array[i] = rsrp_array[i+1];
-
-                if(rscp_array != NULL){  //w/td mode no rscp
-                    if((rscp_array[i] == rscp_array[i+1]) && rscp_array[i] == 0){
-                        rscp_array[i] = rscp[sim_index];  //the first unsolicitied
-                    }else
-                        rscp_array[i]=rscp_array[i+1];
-                }
+            PHS_LOGD("sim%d signal no update num=%d",sim_index, nosigUpdate[sim_index]);
+            if (nosigUpdate[sim_index] == MAXSigCount) {
+                continue;
             }
             if (!strcmp(modem, "l") || !strcmp(modem, "tl") || !strcmp(modem, "lf")) {
                 rsrp_array[N - 1] = rsrp[sim_index];
@@ -981,8 +990,8 @@ static void *signal_process(){
                 rsrp_array[N - 1] = rssi[sim_index];
             }
             rsrp_value = least_squares(rsrp_array);
-            if(rscp_array != NULL){  ////w/td mode no rscp
-                rscp_array[N-1]=rscp[sim_index];
+            if (rscp_array != NULL) { ////w/td mode no rscp
+                rscp_array[N - 1] = rscp[sim_index];
                 rscp_value = least_squares(rscp_array);
             }
 
@@ -992,25 +1001,19 @@ static void *signal_process(){
             else    // w/t
                 snprintf(ind_str, sizeof(ind_str), "\r\n+CSQ: %d,%d\r\n", rsrp_value, ber[sim_index]);
 
-
-            if (ind_pty && ind_pty->ops) {
-                PHS_LOGD("rsrp %d, ind_str= %s", rsrp_array[sim_index],ind_str);
-                ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
+            if (ind_pty[sim_index] && ind_pty[sim_index]->ops) {
+                PHS_LOGD( "rsrp %d, ind_str= %s", rsrp_array[sim_index], ind_str);
+                ind_pty[sim_index]->ops->pty_write(ind_pty[sim_index], ind_str, strlen(ind_str));
             } else {
                 PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
             }
 
-            if(ind_eng_pty != NULL){
-                if (ind_eng_pty->ops)
-                    ind_eng_pty->ops->pty_write(ind_eng_pty, ind_str, strlen(ind_str));
+            if (ind_eng_pty[sim_index] != NULL) {
+                if (ind_eng_pty[sim_index]->ops)
+                    ind_eng_pty[sim_index]->ops->pty_write(ind_eng_pty[sim_index], ind_str, strlen(ind_str));
             }
         }
-        if(screen_state == 0){
-            pthread_mutex_lock(&s_signal_trigger_mutex);
-            pthread_cond_wait(&s_signal_trigger_cond,&s_signal_trigger_mutex);
-            pthread_mutex_unlock(&s_signal_trigger_mutex);
-        }else
-            sleep(2);
+        sleep(2);
     }
     return NULL;
 }
