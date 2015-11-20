@@ -140,18 +140,17 @@ void* RilATCISocket::processRequestsLoop(void) {
     ATCISocketRequest *req = NULL;
     RLOGI("ATCI_SOCKET:Request loop started");
 
-    while(true) {
-        req = dispatchQueue.dequeue();
+    req = dispatchQueue.dequeue();
 
-        RLOGI("New request from the dispatch Queue");
+    RLOGI("New request from the dispatch Queue");
 
-        if (req != NULL) {
-            processRequest(req);
-            free(req);
-        } else {
-            RLOGE("Fetched null buffer from queue!");
-        }
+    if (req != NULL) {
+        processRequest(req);
+        free(req);
+    } else {
+        RLOGE("Fetched null buffer from queue!");
     }
+
     return NULL;
 }
 
