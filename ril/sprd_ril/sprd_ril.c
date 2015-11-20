@@ -124,10 +124,6 @@ char RIL_SP_SIM_PIN_PROPERTYS[128]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.
 #define SSDA_TESTMODE "persist.radio.ssda.testmode"
 #define RIL_HAS_SIM  "ril.has_sim"
 
-#define PROP_DEFAULT_BEARER  "gsm.stk.default_bearer"
-#define PROP_OPEN_CHANNEL  "gsm.stk.open_channel"
-
-#define PROP_END_CONNECTIVITY  "gsm.stk.end_connectivity"
 
 #define PRO_SIMLOCK_UNLOCK_BYNV  "ro.simlock.unlock.bynv"
 
@@ -784,11 +780,8 @@ static int getPDP(void)
 {
     int ret = -1;
     int i;
-    int is_open_channel;
     char prop[PROPERTY_VALUE_MAX] = {0};
 
-    property_get(PROP_OPEN_CHANNEL, prop, "0");
-    is_open_channel = atoi(prop);
 
     for (i=0; i < MAX_PDP; i++) {
         if(s_testmode != 10 && activePDN > 0 && pdn[i].nCid == (i + 1)){
@@ -796,10 +789,6 @@ static int getPDP(void)
         }
         pthread_mutex_lock(&pdp[i].mutex);
         if(pdp[i].state == PDP_IDLE && pdp[i].cid == -1) {
-            if(isLte() && is_open_channel && (i == 0)){
-                pthread_mutex_unlock(&pdp[0].mutex);
-                continue;
-            }
             pdp[i].state = PDP_BUSY;
             ret = i;
             pthread_mutex_unlock(&pdp[i].mutex);
@@ -1057,7 +1046,6 @@ static int deactivateLteDataConnection(int channelID, char *cmd)
 static void deactivateDataConnection(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     int err = 0, i = 0;
-    int is_stk_end_connectivity = 0;
     ATResponse *p_response = NULL;
     const char *cid_ptr = NULL;
     int cid;
@@ -1082,11 +1070,8 @@ static void deactivateDataConnection(int channelID, void *data, size_t datalen, 
         }
     } else {
         RILLOGD("Try to deactivated modem ..., cid=%d", cid);
-        property_get(PROP_END_CONNECTIVITY, prop, "0");
-        is_stk_end_connectivity = atoi(prop);
         secondary_cid = getFallbackCid(cid-1);
-        RILLOGD( "Try to deactivated is_stk_end_connectivity=%d, secondary_cid= %d",
-                is_stk_end_connectivity, secondary_cid);
+        RILLOGD( "Try to deactivated secondary_cid= %d", secondary_cid);
         if (in4G) {
             queryAllActivePDN(channelID);
             if (activePDN == 1) {
@@ -1102,7 +1087,7 @@ static void deactivateDataConnection(int channelID, void *data, size_t datalen, 
                     RILLOGD("last dataconnection data off failed!");
                 }
                 goto done;
-            } else if (activePDN > 1 && (is_stk_end_connectivity == 0) && pdn[cid - 1].nCid != -1 ) {
+            } else if (activePDN > 1 && pdn[cid - 1].nCid != -1 ) {
                 if(initialAttachApn != NULL && initialAttachApn->apn != NULL &&
                     (!strcasecmp(pdn[cid - 1].strApn, initialAttachApn->apn) ||
                         !strcasecmp(strtok(pdn[cid - 1].strApn, "."), initialAttachApn->apn))) {
@@ -1152,7 +1137,7 @@ done:
     if (isVoLteEnable() && !isExistActivePdp()) { // for ddr, power consumptioon
         at_send_command(ATch_type[channelID], "AT+SPVOOLTE=1", NULL);
     }
-    property_set(PROP_END_CONNECTIVITY, "0");
+
     at_response_free(p_response);
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     return;
@@ -1167,7 +1152,6 @@ error:
     }
 
 error1:
-    property_set(PROP_END_CONNECTIVITY, "0");
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
     return;
@@ -3358,16 +3342,8 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     int failCause;
     bool IsLte = isLte();
     extern int s_sim_num;
-    int is_default_bearer;
-    int is_open_channel;
     int nRetryTimes = 0;
     char strApnName[128] = {0};
-
-    property_get(PROP_DEFAULT_BEARER, prop, "0");
-    is_default_bearer = atoi(prop);
-    property_get(PROP_OPEN_CHANNEL, prop, "0");
-    is_open_channel = atoi(prop);
-    RILLOGD("requestSetupDataCall is_default_bearer = %d, is_open_channel = %d", is_default_bearer, is_open_channel);
 
     apn = ((const char **)data)[2];
     username = ((const char **)data)[3];
@@ -3390,7 +3366,7 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
 
 RETRY:
     bLteDetached = false;
-    if (IsLte && s_testmode != 10 && !is_default_bearer && !is_open_channel) {
+    if (IsLte && s_testmode != 10) {
         queryAllActivePDN(channelID);
         if (activePDN > 0) {
             int i, cid ;
@@ -3446,22 +3422,16 @@ RETRY:
             pdp_type = "IP";
         }
         //pdp_type = "IPV4+IPV6";
-        if(is_default_bearer){
-
-            index = 0;
-            default_pdp.state = PDP_BUSY;
-        } else {
             index = getPDP();
 
             if (index < 0 || getPDPCid(index) >= 0) {
                 s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                 goto error;
             }
-        }
 
-        primaryindex = index;
-        snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
-        if (!is_default_bearer) {
+            primaryindex = index;
+            snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", index+1);
+
             if (!IsLte) {
                 at_send_command(ATch_type[channelID], cmd, NULL );
             } else {
@@ -3470,20 +3440,7 @@ RETRY:
                     goto error;
                 }
             }
-        }
 
-        if (is_default_bearer) {
-            snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
-            err = at_send_command(ATch_type[channelID], cmd, &p_response);
-            if (errorHandlingForCGDATA(channelID, p_response, err, index)){
-                goto error;
-            }else {
-                pthread_mutex_lock(&default_pdp.mutex);
-                default_pdp.cid = index + 1;
-                pthread_mutex_unlock(&default_pdp.mutex);
-            }
-
-        } else {//LTE
             int ip_type = -1;
             int fb_ip_type = -1;
             int want_ip_type = -1;
@@ -3787,13 +3744,12 @@ retrycgatt:
                     updatePDPCid(index+1,1);
                 }
             }
-        }
     } else {
         goto error;
     }
 
 done:
-    if (primaryindex < MAX_PDP || is_default_bearer) {
+    if (primaryindex < MAX_PDP) {
         requestOrSendDataCallList(channelID, primaryindex+1, &t);
     }
     at_response_free(p_response);
@@ -3801,7 +3757,7 @@ done:
 
 error:
     if( primaryindex >= 0 ) {
-        if (IsLte && !is_default_bearer) {
+        if (IsLte) {
             putPDP(getFallbackCid(primaryindex)-1);
             putPDP(primaryindex);
         } else {
