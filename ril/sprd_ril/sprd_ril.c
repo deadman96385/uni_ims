@@ -9049,6 +9049,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 int enable = ((int *)data)[0];
                 int c = ((int *)data)[1];
                 char cmd[40] = {0};
+                char *line = NULL;
+                int errNum = -1;
+                int errCode = -1;
 
                 if (c == 0) {
                     snprintf(cmd, sizeof(cmd), "AT+CCWA=1,%d", enable);
@@ -9056,10 +9059,24 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     snprintf(cmd, sizeof(cmd), "AT+CCWA=1,%d,%d", enable, c);
                 }
 
-                err = at_send_command(ATch_type[channelID], cmd,
-                        &p_response);
+                err = at_send_command(ATch_type[channelID], cmd, &p_response);
                 if (err < 0 || p_response->success == 0) {
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    if (strStartsWith(p_response->finalResponse, "+CME ERROR:")) {
+                        line = p_response->finalResponse;
+                        errCode = at_tok_start(&line);
+                        if (errCode >= 0) {
+                            errCode = at_tok_nextint(&line, &errNum);
+                            if (errCode >= 0 && errNum == 254) {
+                                RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE, NULL, 0);
+                            } else {
+                                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                            }
+                        } else {
+                            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                        }
+                    } else {
+                        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                    }
                 } else {
                     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                 }
