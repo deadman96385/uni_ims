@@ -897,12 +897,12 @@ static int least_squares(int y[]){
     int sum_x=0, sum_y=0, sum_xy=0, square=0;
     float a=0.0, b=0.0, value=0.0;
 
-    for(i=0; i<N; ++i){
-        x[i]=i;
+    for (i = 0; i < N; ++i) {
+        x[i] = i;
         sum_x += x[i];
         sum_y += y[i];
-        sum_xy += x[i]*y[i];
-        square += x[i]*x[i];
+        sum_xy += x[i] * y[i];
+        square += x[i] * x[i];
     }
     a=((float)(sum_xy *N -sum_x*sum_y)) /(square*N -sum_x*sum_x);
     b=((float)sum_y)/N -a*sum_x/N;
@@ -918,11 +918,13 @@ static void *signal_process(){
     int i = 0, simNum = 0;
     int sample_rsrp_sim[2][N] = { { 0 }, { 0 } },
         sample_rscp_sim[2][N] = { { 0 }, { 0 } },
+        sample_rxlev_sim[2][N] = { { 0 }, { 0 } },
         sample_rssi_sim[2][N] = { { 0 }, { 0 } };
-    int* rsrp_array = NULL, *rscp_array = NULL, newSig;
+    int* rsrp_array = NULL, *rscp_array = NULL, *rxlev_array, newSig;
+    int upValue = -1, lowValue = -1;
 
-    int rsrp_value, rscp_value;
-    int nosigUpdate[2], MAXSigCount = 2 * (N - 1);
+    int rsrp_value, rscp_value, rxlev_value;
+    int nosigUpdate[2], MAXSigCount = 3 * (N - 1);
     extern int rxlev[], ber[], rscp[], ecno[], rsrq[], rsrp[];
     extern int rssi[], berr[];
 
@@ -952,18 +954,24 @@ static void *signal_process(){
             if (!strcmp(modem, "t") || !strcmp(modem, "w")) {
                 rsrp_array = sample_rssi_sim[sim_index];
                 rscp_array = NULL;
+                rxlev_array = NULL;
                 newSig = rssi[sim_index];
+                upValue = 31;
+                lowValue = 0;
             } else {
                 rsrp_array = sample_rsrp_sim[sim_index];
                 rscp_array = sample_rscp_sim[sim_index];
+                rxlev_array = sample_rxlev_sim[sim_index];
                 newSig = rsrp[sim_index];
+                upValue = 140;
+                lowValue = 44;
             }
             nosigUpdate[sim_index] = 0;
             for (i = 0; i < N - 1; ++i) {
                 if (rsrp_array[i] == rsrp_array[i + 1]) {
                     if (rsrp_array[i] == newSig) {
                         nosigUpdate[sim_index]++;
-                    } else if (rsrp_array[i] == 0) {
+                    } else if (rsrp_array[i] == 0 || rsrp_array[i] < lowValue || rsrp_array[i] > upValue) {
                         rsrp_array[i] = newSig;
                     }
                 } else
@@ -973,12 +981,24 @@ static void *signal_process(){
                     if (rscp_array[i] == rscp_array[i + 1]) {
                         if (rscp_array[i] == rscp[sim_index]) {
                             nosigUpdate[sim_index]++;
-                        } else if (rscp_array[i] == 0) {
+                        } else if (rscp_array[i] <= 0 || rscp_array[i] > 31) {
                             rscp_array[i] = rscp[sim_index]; //the first unsolicitied
                         }
                     } else
                         rscp_array[i] = rscp_array[i + 1];
                 }
+
+                if (rxlev_array != NULL) { //w/td mode no rxlev
+                    if ((rxlev_array[i] == rxlev_array[i + 1]) ) {
+                        if (rxlev_array[i] == rxlev[sim_index]) {
+                            nosigUpdate[sim_index]++;
+                        } else if (rsrp_array[i] <= 0 || rxlev_array[i] > 31) {
+                            rxlev_array[i] = rxlev[sim_index];
+                        }
+                    } else
+                        rxlev_array[i] = rxlev_array[i + 1];
+                }
+
             }
             PHS_LOGD("sim%d signal no update num=%d",sim_index, nosigUpdate[sim_index]);
             if (nosigUpdate[sim_index] == MAXSigCount) {
@@ -990,19 +1010,36 @@ static void *signal_process(){
                 rsrp_array[N - 1] = rssi[sim_index];
             }
             rsrp_value = least_squares(rsrp_array);
-            if (rscp_array != NULL) { ////w/td mode no rscp
+            if (rsrp_value < lowValue || rsrp_value > upValue) {// if invalid, use current value
+                if (!strcmp(modem, "l") || !strcmp(modem, "tl") || !strcmp(modem, "lf")) {
+                    rsrp_value = rsrp[sim_index];
+                } else if (!strcmp(modem, "t") || !strcmp(modem, "w")) {
+                    rsrp_value = rssi[sim_index];
+                }
+            }
+            if (rscp_array != NULL) { // w/td mode no rscp
                 rscp_array[N - 1] = rscp[sim_index];
                 rscp_value = least_squares(rscp_array);
+                if (rscp_value < 0 || rscp_value > 31) {// if invalid, use current value
+                    rscp_value = rscp[sim_index];
+                }
+            }
+            if (rxlev_array != NULL) { // w/td mode no rxlev
+                rxlev_array[N - 1] = rxlev[sim_index];
+                rxlev_value = least_squares(rxlev_array);
+                if (rxlev_value < 0 || rxlev_value > 31) {// if invalid, use current value
+                    rxlev_value = rxlev[sim_index];
+                }
             }
 
             if(rscp_array != NULL)  // l/tl/lf
                 snprintf(ind_str, sizeof(ind_str), "\r\n+CESQ: %d,%d,%d,%d,%d,%d\r\n",
-                        rxlev[sim_index], ber[sim_index], rscp_value, ecno[sim_index], rsrq[sim_index], rsrp_value);
+                        rxlev_value, ber[sim_index], rscp_value, ecno[sim_index], rsrq[sim_index], rsrp_value);
             else    // w/t
                 snprintf(ind_str, sizeof(ind_str), "\r\n+CSQ: %d,%d\r\n", rsrp_value, ber[sim_index]);
 
             if (ind_pty[sim_index] && ind_pty[sim_index]->ops) {
-                PHS_LOGD( "rsrp %d, ind_str= %s", rsrp_array[sim_index], ind_str);
+                PHS_LOGD( "rsrp[%d]=%d, ind_str= %s", sim_index, rsrp_value, ind_str);
                 ind_pty[sim_index]->ops->pty_write(ind_pty[sim_index], ind_str, strlen(ind_str));
             } else {
                 PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
@@ -1013,7 +1050,7 @@ static void *signal_process(){
                     ind_eng_pty[sim_index]->ops->pty_write(ind_eng_pty[sim_index], ind_str, strlen(ind_str));
             }
         }
-        sleep(2);
+        sleep(1);
     }
     return NULL;
 }
