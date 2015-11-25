@@ -2742,7 +2742,10 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
 
             if((ncid == cid) && (t== NULL)){    //for bug407591
                 RILLOGD(" No need to get ip,fwk will do deact by check ip");
-				responses[cid - 1].status = PDP_FAIL_OPERATOR_BARRED;
+                responses[cid - 1].status = PDP_FAIL_OPERATOR_BARRED;
+                if(getPDPState(cid - 1) == PDP_IDLE){
+                    responses[cid - 1].active = 0;
+                }
                 continue;
             }
 
@@ -11191,7 +11194,11 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
                 snprintf(cmd,sizeof(cmd),"AT+CGACT=0,%d",getPDPCid(i));
                 at_send_command(ATch_type[channelID], cmd, &p_response);
                 RILLOGD("pdp[%d].state = %d", i, getPDPState(i));
-                putPDP(i);
+                if (pdp[i].state == PDP_BUSY) {
+                    int cid = getPDPCid(i);
+                    putPDP(i);
+                    requestOrSendDataCallList(channelID, cid, NULL);
+                }
             }
         }
         if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
