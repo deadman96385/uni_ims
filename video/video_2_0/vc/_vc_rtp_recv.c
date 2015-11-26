@@ -22,7 +22,6 @@ void _VC_rtpInitSeq(
     rtp_ptr->info.maxSequence = sequenceNumber;
     rtp_ptr->info.cycles = 0;
     rtp_ptr->info.received = 0;
-
     return;
 }
 
@@ -73,7 +72,7 @@ static vint _VC_rtpLockedUpdateSeq(
         }
         rtp_ptr->info.maxSequence = sequenceNumber;
     }
-    else if (delta <= (_VC_RTP_SEQ_MOD - _VC_RTP_MAX_MISORDER)) {
+    else if (delta <= (uint16)(_VC_RTP_SEQ_MOD - _VC_RTP_MAX_MISORDER)) {
         if (sequenceNumber == rtp_ptr->badSequence) {
             _VC_rtpInitSeq(rtp_ptr, sequenceNumber);
         }
@@ -88,16 +87,91 @@ static vint _VC_rtpLockedUpdateSeq(
 }
 
 /*
+ * ======== _VC_calcRxBitrate() =======
+ *
+ * This function is used to calculate the rx Bitrate.
+ * */
+vint _VC_calcRxBitrate(_VC_RtpObject *rtp_ptr,
+    OSAL_SelectTimeval *tv,
+    JBV_Pkt *pkt_ptr)
+{
+    _VC_RtpRtcpInfoObject *info;
+    _VC_RtpBitrateStat    *br_stat;
+    uint32 size;
+    uint16 seqn;
+    uint64 time_us;
+    static uint32 cnt = 0;
+
+    if (rtp_ptr == NULL || pkt_ptr == NULL){
+        JBV_errLog(" the input params are invalid, rtp_ptr 0x%x, pkt_ptr %x\n",
+                rtp_ptr, pkt_ptr);
+        return _VC_ERROR;
+    }
+
+    info = &rtp_ptr->info;
+    br_stat = &info->rxBitrateStat;
+    size = pkt_ptr->pSize;
+    seqn = pkt_ptr->seqn;
+
+    time_us = tv->sec * 1000000;
+    time_us += tv->usec;
+
+    br_stat->totalSize += size;
+
+    /*
+     *
+     * if a new period begins, we reset the statistics.
+     *
+     * if the interval is greater than 500 ms and the seqn is sequencial,
+     * we here assume that the peer UE is paused for a while then resumes,
+     * but the session keeps running.
+     *
+     * if the seqn interval between adjust pkts is greater than 500, we consider
+     * that the sender has renew the seqn.
+     *
+     * if the time gap is greater than BITRATE_TIME_US_GAP.
+     * */
+    if (br_stat->periodFlag == 0 ||
+            ((time_us - br_stat->lastTime) > BITRATE_PKT_INTV_THRESHOLD && (seqn - br_stat->lastSeqn) <= 3) ||
+            ((int16)(seqn - br_stat->lastSeqn) > 500 || (int16)(seqn - br_stat->lastSeqn) < -500) ||
+            (time_us - br_stat->lastTime) > BITRATE_TIME_US_GAP) {
+        /* update the statistics, except the bitrate, begin a new period  */
+        if (br_stat->periodFlag != 0) {
+            br_stat->bitrate = 0;
+        }
+        br_stat->lastSize = br_stat->totalSize - size;
+        br_stat->startTime = time_us;
+        br_stat->periodFlag = 1;
+        OSAL_logMsg("%s: restart the bitrate calculattion peroid\n", __FUNCTION__);
+    } else if((int64)(time_us - br_stat->startTime) > BITRATE_STAT_PERIOD){
+        /* calculate the bitrate */
+        br_stat->bitrate = (uint32)((((br_stat->totalSize - br_stat->lastSize) << 3) * 1000000 / (time_us - br_stat->startTime)) >> 10);
+        OSAL_logMsg("%s: cur_br update to %u Kbps, totalSize %llu, lastSize %llu, startTime %llu, time_us %llu, seqn %u\n",
+                __FUNCTION__, br_stat->bitrate, br_stat->totalSize, br_stat->lastSize, br_stat->startTime, time_us, seqn);
+        br_stat->periodFlag = 0;
+        br_stat->lastSize = br_stat->totalSize;
+    }
+
+    br_stat->lastTime = time_us;
+    br_stat->lastSeqn = seqn;
+
+    return _VC_OK;
+}
+
+/*
  * ======== _VC_rtpUpdateSeq() ========
  *
  * This function is used update statistics based in incoming RTP packets.
  */
 vint _VC_rtpUpdateSeq(
-    _VC_RtpObject   *rtp_ptr)
+    _VC_RtpObject *rtp_ptr,
+    OSAL_SelectTimeval *tv,
+    JBV_Pkt *pkt_ptr)
 {
     vint ret;
     OSAL_semAcquire(rtp_ptr->info.mutexLock, OSAL_WAIT_FOREVER);
     ret = _VC_rtpLockedUpdateSeq(rtp_ptr);
+    _VC_calcRxBitrate(rtp_ptr, tv, pkt_ptr);
     OSAL_semGive(rtp_ptr->info.mutexLock);
     return ret;
 }
@@ -158,7 +232,8 @@ vint _VC_rtpRecv(
     timesel.usec = 10000;
     if (OSAL_FAIL == OSAL_select(&readSet, NULL, &timesel, &boolean)) {
         OSAL_taskDelay(10);
-        _VC_TRACE(__FILE__, __LINE__);
+       // _VC_TRACE(__FILE__, __LINE__);
+        OSAL_logMsg("%s:failed to select RTP\n", __FUNCTION__);
         return (_VC_RTP_ERROR);
     }
     else if (OSAL_TRUE == boolean) {
@@ -265,10 +340,11 @@ vint _VC_rtpRecv(
                         dsp_ptr->jbPutPkt.valid = 1;
 
                         OSAL_selectGetTime(&tv);
-                        DBG("RTP Rcv Seqn: %d", dsp_ptr->jbPutPkt.seqn);
+                        //DBG("RTP Rcv Seqn: %d", dsp_ptr->jbPutPkt.seqn);
                         JBV_putPkt(&stream_ptr->dec.jbObj, &dsp_ptr->jbPutPkt, (JBV_Timeval *)&tv);
 
-                        _VC_rtpUpdateSeq(rtp_ptr);
+                        //_VC_calcRxBitrate(rtp_ptr, &tv, &dsp_ptr->jbPutPkt);
+                        _VC_rtpUpdateSeq(rtp_ptr, &tv, &dsp_ptr->jbPutPkt);
                     }
                 }
                 else {

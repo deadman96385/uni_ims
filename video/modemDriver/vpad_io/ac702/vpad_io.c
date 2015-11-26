@@ -178,7 +178,7 @@ OSAL_Status VPAD_ioReadDevice(
         if (OSAL_SUCCESS != OSAL_fileOpen(&_VPAD_ioObj_ptr->ioPty.fid,
                 VPAD_IO_DEVICE, OSAL_FILE_O_RDWR, 0)) {
             _VPAD_ioObj_ptr->ioPty.fid = 0;
-            VPAD_ioDbgPrintf("Open %s device FAIL.\n", VPAD_IO_DEVICE);
+            OSAL_logMsg("%s: Open %s device FAIL.\n", __FUNCTION__ ,VPAD_IO_DEVICE);
             return (OSAL_FAIL);
         }
     }

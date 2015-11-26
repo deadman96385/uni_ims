@@ -9,7 +9,7 @@
 #ifndef __VIER_H_
 #define __VIER_H_
 
-#define VIER_TASK_NAME             "vpr"
+#define VIER_TASK_NAME             "VES_vier"
 #define VIER_TASK_STACK_BYTES      (4096)
 #define VIER_SOCKET_Q_NAME         "vier-socket-q"
 #define VIER_SOCKET_Q_DEPTH        (2)

@@ -15,7 +15,7 @@
 
 VIER_Obj *_VIER_Obj_ptr = NULL;
 
-/* 
+/*
  * ======== _VIER_processVprComm() ========
  *
  * Private function to process VPR_Comm from modem processor.
@@ -36,16 +36,18 @@ OSAL_Status _VIER_processVprComm(
         /*
          * Video vtsp command from modem processor, send to video engine.
          */
-        VIER_dbgPrintf("Got command from VTSP.\n");
+        //VIER_dbgPrintf("Got command from VTSP.\n");
+        OSAL_logMsg("%s: Got command from VTSP\n", __FUNCTION__);
         msg_ptr = (uint8 *)&comm_ptr->u.vtspCmd;
         if (OSAL_SUCCESS != (OSAL_msgQSend(_VIER_Obj_ptr->queue.cmdQVideo,
                 msg_ptr, _VTSP_Q_CMD_MSG_SZ, OSAL_NO_WAIT, NULL))) {
-            VIER_dbgPrintf("Failed to write video engine vtsp command Q.\n");
+            //VIER_dbgPrintf("Failed to write video engine vtsp command Q.\n");
+            OSAL_logMsg("%s: Failed to write video engine vtsp command Q.\n", __FUNCTION__);
             return (OSAL_FAIL);
         }
     }
     else if (VPR_TYPE_RTCP_EVT == comm_ptr->type) {
-        /* 
+        /*
          * Video rtcp event from modem processor, send to video engine.
          */
         VIER_dbgPrintf("Got rtcp event from VTSP.\n");
@@ -66,8 +68,8 @@ OSAL_Status _VIER_processVprComm(
             return (OSAL_FAIL);
         }
 
-        OSAL_logMsg("[D2Log] _VIER_processVprComm, type = %d, netType = %d\n",
-                comm_ptr->type, net_ptr->type);
+        //OSAL_logMsg("[D2Log] _VIER_processVprComm, type = %d, netType = %d\n",
+        //        comm_ptr->type, net_ptr->type);
         switch (net_ptr->type) {
             case VPR_NET_TYPE_RTP_RECV_PKT:
                 /* Write to msg Q */
@@ -102,7 +104,7 @@ OSAL_Status _VIER_processVprComm(
     return (OSAL_SUCCESS);
 }
 
-/* 
+/*
  * ======== _VIER_recvVtspEvt() ========
  * This is used to receive video vtsp event from video engine.
  * If there is any event, send it to VPAD.
@@ -151,7 +153,7 @@ OSAL_Status _VIER_recvRtcpCmd(
     VPR_Comm *comm_ptr)
 {
     vint   size;
-    uint8 *msg_ptr; 
+    uint8 *msg_ptr;
 
     msg_ptr = (uint8 *)&comm_ptr->u.vtspRtcpCmd;
     if (0 < (size = OSAL_msgQRecv(vier_ptr->queue.rtcpCmdQId, msg_ptr,
@@ -179,11 +181,11 @@ OSAL_Status _VIER_recvRtcpCmd(
  *
  * This function is the VIER thread to read and process cmd from VPAD.
  *
- * Returns: 
+ * Returns:
  *  0: Normal exit.
  */
 OSAL_TaskReturn _VIER_daemon(
-    OSAL_TaskArg arg_ptr) 
+    OSAL_TaskArg arg_ptr)
 {
     VIER_Obj     *vier_ptr = (VIER_Obj *)arg_ptr;
     VPR_Comm     *comm_ptr = &vier_ptr->commRecv;
@@ -191,6 +193,7 @@ OSAL_TaskReturn _VIER_daemon(
     vint          timeout = 10;
 #endif
 
+    OSAL_logMsg("%s: vier task is running\n", __FUNCTION__);
 _VIER_DAEMON_WAIT_VPAD:
     /* Wait for VPAD ready */
     while (OSAL_FALSE == VPAD_IS_READY()) {
@@ -224,10 +227,11 @@ _VIER_DAEMON_LOOP:
      */
     if (OSAL_SUCCESS == VPAD_READ_VIDEO_CMDEVT(comm_ptr, sizeof(VPR_Comm),
             OSAL_NO_WAIT)) {
+        OSAL_logMsg("%s: get video CMDEVT, type %d\n", __FUNCTION__, comm_ptr->type);
         _VIER_processVprComm(vier_ptr, comm_ptr);
     }
 
-    /* 
+    /*
      * Receive and process rtcp command msg from video engine.
      * It's non-blocking.
      */
@@ -235,7 +239,7 @@ _VIER_DAEMON_LOOP:
         VIER_dbgPrintf("Failed on receiving rtcp from video engine\n");
     }
 
-    /* 
+    /*
      * Receive and process video vtsp event msg from video engine.
      * It's non-blocking.
      */
@@ -244,6 +248,7 @@ _VIER_DAEMON_LOOP:
     }
 
     goto _VIER_DAEMON_LOOP;
+    OSAL_logMsg("%s: vier task exited\n", __FUNCTION__);
     return 0;
 }
 
@@ -253,7 +258,7 @@ _VIER_DAEMON_LOOP:
  * This function is to construct VPR command object for sending video rtp
  * or rtcp packet.
  *
- * Returns: 
+ * Returns:
  * OSAL_SUCCESS: VPR_Comm object constructed.
  * OSAL_FAIL: Error in VPR_Comm object construction.
  */
@@ -290,9 +295,9 @@ OSAL_Status _VIER_constructVideoPacket(
 /*
  * ======== _VIER_allocSocket() ========
  *
- * Private function to allocate a VIER_Socket 
+ * Private function to allocate a VIER_Socket
  *
- * Returns: 
+ * Returns:
  * -1: No available vier socket.
  * Otherwise: The index of vier socket.
  */
@@ -323,7 +328,7 @@ VIER_Socket* _VIER_allocSocket(
  *
  * Private function to get vier socket index by socket id.
  *
- * Returns: 
+ * Returns:
  * NULL: Cannot find vier socket.
  * Otherwise: The pointer of found vier socket.
  */
@@ -349,7 +354,7 @@ VIER_Socket* _VIER_getSocketById(
 /*
  * ======== _VIER_freeSocket() ========
  *
- * Private function to free a VIER_Socket 
+ * Private function to free a VIER_Socket
  *
  * Returns:
  * OSAL_SUCCESS: Success.
@@ -365,7 +370,7 @@ OSAL_Status _VIER_freeSocket(
     }
     /* Flush msgQ */
     comm_ptr = &_VIER_Obj_ptr->commRtpRecv;
-    while (0 <= OSAL_msgQRecv(sock_ptr->qId, comm_ptr, sizeof(VPR_Comm), 
+    while (0 <= OSAL_msgQRecv(sock_ptr->qId, comm_ptr, sizeof(VPR_Comm),
             OSAL_NO_WAIT, NULL)) {
     }
 
@@ -402,7 +407,7 @@ OSAL_Boolean _VIER_isVprHostedSocket(
     return (OSAL_FALSE);
 }
 
-/* 
+/*
  * ======== _VIER_netSocket() ========
  *
  * Private function to allocate vier socket that will be used internally
@@ -432,7 +437,7 @@ OSAL_Status _VIER_netSocket(
     return (OSAL_SUCCESS);
 }
 
-/* 
+/*
  * ======== _VIER_netCloseSocket() ========
  *
  * Private function to close and free vier socket.
@@ -468,7 +473,7 @@ OSAL_Status _VIER_netCloseSocket(
     return VPAD_WRITE_VIDEO_STREAM(comm_ptr, sizeof(VPR_Comm));
 }
 
-/* 
+/*
  * ======== _VIER_netBindSocket() ========
  *
  * Private function to bind vier socket.
@@ -512,7 +517,7 @@ OSAL_Status _VIER_netBindSocket(
     return VPAD_WRITE_VIDEO_STREAM(comm_ptr, sizeof(VPR_Comm));
 }
 
-/* 
+/*
  * ======== _VIER_netSocketReceiveFrom() ========
  *
  * Private function to receive video packet from vier socket.
@@ -535,7 +540,7 @@ OSAL_Status _VIER_netSocketReceiveFrom(
     uint32       temp32;
     uint32      *packed_ptr;
     uint16       seqn;
-	static uint32 total_num;
+    static uint32 total_num = 0;
 
     //OSAL_logMsg("[D2Log] _VIER_netSocketReceiveFrom\n");
     /* Get vier socket by socket id */
@@ -547,7 +552,7 @@ OSAL_Status _VIER_netSocketReceiveFrom(
     comm_ptr = &_VIER_Obj_ptr->commRtpRecv;
     /* Read from corresponding msg Q*/
     if (sizeof(VPR_Comm) !=
-            OSAL_msgQRecv(sock_ptr->qId, comm_ptr, sizeof(VPR_Comm), 
+            OSAL_msgQRecv(sock_ptr->qId, comm_ptr, sizeof(VPR_Comm),
             OSAL_NO_WAIT, NULL)) {
 	//OSAL_logMsg("[D2Log] _VIER_netSocketReceiveFrom, NULL\n");
         return (OSAL_FAIL);
@@ -567,17 +572,17 @@ OSAL_Status _VIER_netSocketReceiveFrom(
             temp32       = OSAL_netNtohl(*packed_ptr);
             packed_ptr++;
             seqn         = temp32 & 0xFFFF;
-			total_num++;
-            OSAL_logMsg("_VIER_netSocketReceiveFrom seq = %d\n",seqn);
-			OSAL_logMsg("_VIER_netSocketReceiveFrom total_num = %d\n", total_num);
+            if (((total_num ++) & 0x1f) == 0) {
+                    OSAL_logMsg("_VIER_netSocketReceiveFrom seq = %d, total_num = %d\n",seqn, total_num);
+            }
             return (OSAL_SUCCESS);
-        } 
+        }
     }
     OSAL_logMsg("[D2Log] _VIER_netSocketReceiveFrom, FAIL\n");
     return (OSAL_FAIL);
 }
 
-/* 
+/*
  * ======== _VIER_netSocketSendTo() ========
  *
  * Private function to send video packet to vier socket.
@@ -606,6 +611,7 @@ OSAL_Status _VIER_netSocketSendTo(
      * to modem.
      */
     if (OSAL_TRUE == sock_ptr->error) {
+        VIER_dbgPrintf("there is network error from VPR.\n");
         return (OSAL_FAIL);
     }
 
@@ -616,13 +622,14 @@ OSAL_Status _VIER_netSocketSendTo(
             &sock_ptr->localAddress,
             address_ptr,
             comm_ptr, VPR_NET_TYPE_RTP_SEND_PKT)) {
+        VIER_dbgPrintf(" _VIER_constructVideoPacket Failed.\n");
         return (OSAL_FAIL);
     }
     /* Write to modem processor */
     return VPAD_WRITE_VIDEO_STREAM(comm_ptr, sizeof(VPR_Comm));
 }
 
-/* 
+/*
  * ======== _VIER_netSetSocketOptions() ========
  *
  * Private function to set socket options to vier socket.

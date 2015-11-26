@@ -11,7 +11,7 @@
 #define _VTSP_PRIVATE_H_
 
 #include <osal.h>
-#include "../../../ve/vtsp_hw/audiotrack/tic/tic.h"
+#include "../../../include_ac702/tic.h"
 #include "vtsp.h"
 
 /*

@@ -143,7 +143,7 @@ vint _VC_videoStreamSendEncodedData(
                  *
                  * Should never get here
                  */
-                DBG("");
+                //DBG("Send Direction is off\n");
                 continue;
             }
 
@@ -159,21 +159,26 @@ vint _VC_videoStreamSendEncodedData(
 
                 pkt.buf_ptr = rtp_ptr->sendRtpObj.pkt.payload;
 
-                DBG("");
+                //DBG("");
 
                 /* Calculate the Video RTP time stamp. */
                 previousTsMs = rtp_ptr->tsMs;
-                DBG("previousTsMs:%llu", previousTsMs);
-                if (FRAME_SPS_PPS_SIZE == length) {
-                    /*
-                     * For the first frame, Use the randomly initialized rtpTime.
-                     * Also record the OSAL Time so that we can calculate the time elapsed
-                     * when sending RTCP SR. This is approximately the sending time.
-                     * NOTE: For improved accuracy, rtp_ptr->firstRtpTimeMs value should be adjusted by calculating
-                     * CameraFrameTime-to-Send path latency and subtracting it.
-                     */
-                    OSAL_selectGetTime(&timeval);
-                    rtp_ptr->info.firstRtpTimeMs = (timeval.sec * 1000) + (timeval.usec / 1000);
+                //DBG("previousTsMs:%llu", previousTsMs);
+                if(previousTsMs ==0){
+                    if (FRAME_SPS_PPS_SIZE == length) {
+                        /*
+                         * For the first frame, Use the randomly initialized rtpTime.
+                         * Also record the OSAL Time so that we can calculate the time elapsed
+                         * when sending RTCP SR. This is approximately the sending time.
+                         * NOTE: For improved accuracy, rtp_ptr->firstRtpTimeMs value should be adjusted by calculating
+                         * CameraFrameTime-to-Send path latency and subtracting it.
+                         */
+                        OSAL_selectGetTime(&timeval);
+                        rtp_ptr->info.firstRtpTimeMs = (timeval.sec * 1000) + (timeval.usec / 1000);
+                    }
+                    else {
+                        OSAL_logMsg("%s: This is not expected. The first frame should be SPS PPS frame\n", __FUNCTION__);
+                    }
                 }
                 else {
                     /*
@@ -183,9 +188,10 @@ vint _VC_videoStreamSendEncodedData(
                      */
                     rtp_ptr->rtpTime += ((tsMs - previousTsMs) * _VC_VIDEO_CLOCK_RATE_IN_KHZ);
                 }
+                //OSAL_logMsg("%s: tsMs=%llu, previousTsMs=%llu, rtpTime=%lu\n", __FUNCTION__, tsMs, previousTsMs, rtp_ptr->rtpTime);
                 /* Update the local Video RTP Time stamp in Milliseconds. */
                 rtp_ptr->tsMs = tsMs;
-                DBG("currentTsMs:%llu", tsMs);
+                //DBG("currentTsMs:%llu", tsMs);
                 while (_VC_videoGetCodedData(stream_ptr, &pkt, data_ptr, length, tsMs, encType)) {
                     /*
                      * Fill in BlockHeader here
@@ -234,6 +240,9 @@ vint _VC_videoStreamSendFir(
     _VC_RtcpCmdMsg    message;
     _VC_StreamObj     *stream_ptr;
     int16              streamId;
+    _VC_TaskObj * task_rtcp_ptr;
+
+    task_rtcp_ptr = &vc_ptr->taskRtcp;
 
     /*
      * Do for all streams on infc.
@@ -246,6 +255,8 @@ vint _VC_videoStreamSendFir(
             message.streamId     = streamId;
             message.feedbackMask = VTSP_MASK_RTCP_FB_FIR;
             _VC_sendRtcpCommand(vc_ptr->q_ptr, &message);
+            OSAL_logMsg("%s: send SIGALRM to RTCP task\n", __FUNCTION__);
+            OSAL_taskSendSignal(task_rtcp_ptr->taskId, SIGALRM);
         }
     }
     return (_VC_OK);
@@ -269,7 +280,7 @@ void _VC_populateFlags(
      * But should only contain one frame in buffer for 
      * I-Frame / P-Frame / B-Frame.
      */
-    while(offset < pSize) {
+    while(offset + 4 <= pSize) {
         /* For H.264 raw format, every NALU should begin with 00 00 00 01 */
         if ((*(uint8 *) (data + offset + 0) == 0x00) &&
             (*(uint8 *) (data + offset + 1) == 0x00) &&
@@ -278,7 +289,7 @@ void _VC_populateFlags(
 
             /* Set Flags. */
             nalu = (*(uint8 *) (data + offset + 4)) & 0x1F;
-            DBG("nal:%d\n", nalu);
+            //DBG("nal:%d\n", nalu);
 
             if (NALU_SPS == nalu || NALU_PPS == nalu) {
                 /* If we are processing nalu 7 or nalu 8, there may remain some frames in this data,
@@ -287,7 +298,7 @@ void _VC_populateFlags(
 
                 /* SPS/PPS - append flag BUFFER_FLAG_CODEC_CONFIG. */
                 *flags_ptr |= BUFFER_FLAG_CODEC_CONFIG;
-                DBG("");
+                //DBG("");
             }
             else if (NALU_IDR == nalu) {
                 /* If we are processing I-Frame, there should be no any other frames in this data.
@@ -295,7 +306,7 @@ void _VC_populateFlags(
                  */
                 /* I Frame - append flag  BUFFER_FLAG_SYNC_FRAME . */
                 *flags_ptr |= BUFFER_FLAG_SYNC_FRAME;
-                DBG("");
+                //DBG("");
                 break;
             }
             else {
@@ -361,7 +372,7 @@ vint _VC_videoStreamGetDataToDecode(
         if (0 != (_VC_ALG_STREAM_JB & streamMask)) {
             OSAL_selectGetTime(&tv);
             JBV_getPkt(&stream_ptr->dec.jbObj, &dsp_ptr->jbGetPkt, (JBV_Timeval *)&tv);
-            DBG("");
+            //DBG("");
 
             /*
              * After adding JB, move the source pointer from RTP.
@@ -369,7 +380,7 @@ vint _VC_videoStreamGetDataToDecode(
             if ((0 == dsp_ptr->jbGetPkt.valid) || (0 == dsp_ptr->jbGetPkt.pSize)) {
                 continue;
             }
-            DBG("");
+            //DBG("");
             pSize = dsp_ptr->jbGetPkt.pSize;
         }
         else {
@@ -398,13 +409,14 @@ vint _VC_videoStreamGetDataToDecode(
 
             /* Get RCS RTP Extn payload. */
             *rcsRtpExtnPayload_ptr = dsp_ptr->jbGetPkt.rcsRtpExtnPayload;
-            DBG("payload:%d\n", *rcsRtpExtnPayload_ptr);
+            //DBG("payload:%d\n", *rcsRtpExtnPayload_ptr);
 
             _VC_populateFlags(data, pSize, flags_ptr);
             if ((*flags_ptr)  & BUFFER_FLAG_SYNC_FRAME) {
                 rtcpInfo_ptr = &stream_ptr->dec.jbObj.rtcpInfo;
                 /* Atomic write is allowed */
                 rtcpInfo_ptr->keyFrameRead = OSAL_TRUE;
+                rtcpInfo_ptr->keyFrameDropped = OSAL_FALSE;
             }
             /* Assign the data pointer. */
             *data_ptr = data;
@@ -413,7 +425,7 @@ vint _VC_videoStreamGetDataToDecode(
 
             *tsMs_ptr = dsp_ptr->jbGetPkt.tsOrig;
 
-            DBG("");
+            //DBG("");
             ret = (_VC_OK);
         }
     }

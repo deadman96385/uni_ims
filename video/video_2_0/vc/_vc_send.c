@@ -27,7 +27,8 @@ void _VC_sendVtspEvent(
         if (OSAL_SUCCESS != (OSAL_msgQSend(q_ptr->eventQ, (char *)msg_ptr,
                         sizeof(VTSP_EventMsg), OSAL_NO_WAIT, NULL))) { 
             /* Queue Full error; vtsp needs to service queue */
-            _VC_TRACE(__FILE__, __LINE__);
+            //_VC_TRACE(__FILE__, __LINE__);
+            OSAL_logMsg("%s:failed to send msg\n", __FUNCTION__);
         }
 
         /* After sending event, zero event buffer for next call
@@ -51,7 +52,8 @@ void _VC_sendRtcpCommand(
         if (OSAL_SUCCESS != (OSAL_msgQSend(q_ptr->rtcpCmdQ, (char *)msg_ptr,
                         sizeof(_VC_RtcpCmdMsg), OSAL_NO_WAIT, NULL))) {
             /* Queue Full error; vtsp needs to service queue */
-            _VC_TRACE(__FILE__, __LINE__);
+            //_VC_TRACE(__FILE__, __LINE__);
+            OSAL_logMsg("%s: failed to send msg\n", __FUNCTION__);
         }
     }
 }
@@ -78,7 +80,8 @@ void _VC_sendAppEvent(
     if (OSAL_SUCCESS != OSAL_msgQSend(q_ptr->appEventQ, (char *) &appEventMsg,
                     _VC_APP_Q_EVENT_MSG_SZ, OSAL_NO_WAIT, NULL)) {
         /* Queue Full error; application needs to service queue */
-        _VC_TRACE(__FILE__, __LINE__);
+        //_VC_TRACE(__FILE__, __LINE__);
+        OSAL_logMsg("%s:failed to send msg\n", __FUNCTION__);
     }
 }
 

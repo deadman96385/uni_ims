@@ -286,7 +286,7 @@ vint _JBV_processH264(
      */
     unit_ptr->key = 0;
 
-    JBV_dbgLog("nalu:%d, pktSz:%d, seqn:%d\n", nalu, pkt_ptr->pSize, pkt_ptr->seqn);
+    //JBV_dbgLog("nalu:%d, pktSz:%d, seqn:%d\n", nalu, pkt_ptr->pSize, pkt_ptr->seqn);
     switch (nalu) {
         case NALU_NON_IDR:
         case NALU_PARTITION_A:
@@ -312,8 +312,8 @@ vint _JBV_processH264(
 
             return(-1);
     }
-    JBV_dbgLog("nalu:%d, pktSz:%d, seqn:%d\n", nalu, pkt_ptr->pSize,
-                pkt_ptr->seqn);
+    //JBV_dbgLog("nalu:%d, pktSz:%d, seqn:%d\n", nalu, pkt_ptr->pSize,
+    //            pkt_ptr->seqn);
 
     /*
      * Correct time stamp wrap-around.
@@ -344,8 +344,8 @@ vint _JBV_processH264(
     if ((_JBV_TS_INIT != obj_ptr->lastDrawnTs) && (ts < obj_ptr->lastDrawnTs)) {
         /* Packet too Old.  Drop it by not adding it to the buffer. */
         _JBV_dropPacket(obj_ptr, unit_ptr, JBV_DROP_TOO_OLD);
-        JBV_dbgLog("Incoming packetTs:%llu lastDrawnTs:%llu",
-                ts, obj_ptr->lastDrawnTs);
+        JBV_wrnLog("seqn:%d, Incoming packetTs:%llu, lastDrawnTs:%llu, tslast:%llu, firstUnNormTs:%llu\n",
+                pkt_ptr->seqn, ts, obj_ptr->lastDrawnTs, tsLast, obj_ptr->firstUnNormTs);
         return (-1);
     }
 
@@ -356,7 +356,7 @@ vint _JBV_processH264(
     if ((unit1_ptr->valid) && (unit1_ptr->ts != ts)) {
         /* JBV over flow. We are going to overwrite previous undrawn pkt. */
         _JBV_dropPacket(obj_ptr, unit_ptr, JBV_DROP_OVERFLOW);
-        JBV_dbgLog("Overwrite location:%d seqn:%d ts:%llu",
+        JBV_wrnLog("Overwrite location:%d seqn:%d ts:%llu",
                 cseqn, pkt_ptr->seqn, ts);
     }
     /*
@@ -413,14 +413,32 @@ vint _JBV_processH264(
      */
     if (NALU_SPS == nalu) {
         unit_ptr->firstInSeq = 1;
-        if ((0 <= m1Seqn) &&
-                (NALU_SPS != H264_READ_NALU(obj_ptr->unit[m1Seqn].data_ptr[0]))) {
+       /*bug480990 SPS,PPS and I frame(FU-A) with the same TS, but SPS&PPS mark==1 */
+       /* if ((0 <= m1Seqn) &&
+                (NALU_SPS != H264_READ_NALU(obj_ptr->unit[m1Seqn].data_ptr[0]))) {*/
             /*
              * There is already a packet with firstInSeq set
              * and it's not NALU_SPS, then clear it.
              */
-            obj_ptr->unit[m1Seqn].firstInSeq = 0;
-        }
+       /*     obj_ptr->unit[m1Seqn].firstInSeq = 0;
+        }*/
+        /*sps pps with same timestamp, but sps has no mark*/
+        pkt_ptr->mark = 1;
+    }
+    if(NALU_PPS == nalu)
+    {
+       unit_ptr->firstInSeq = 1;
+       pkt_ptr->mark = 1;
+       OSAL_logMsg("make marker pps firstinseq and mark");
+    }
+
+    /*
+     * STAP-A marks first packet of new sequence
+     */
+    if (NALU_STAP_A == nalu) {
+        JBV_dbgLog("recv a NALU_STAP_A pkt, mark is %d, fistInSeq %d -> %d\n",
+                pkt_ptr->mark, unit_ptr->firstInSeq, 1);
+        unit_ptr->firstInSeq = 1;
     }
 
     /* Update Observer with details of the new incoming packet. */
@@ -469,6 +487,10 @@ vint _JBV_processH264(
     unit_ptr->seqn      = pkt_ptr->seqn;
     unit_ptr->offset    = pkt_ptr->pSize;
     unit_ptr->valid     = 1;
+    if((pkt_ptr->mark) && (NALU_PPS != nalu) && (NALU_SPS != nalu)){
+        obj_ptr->totalFramesReceived ++;
+        obj_ptr->statisticFramesReceived ++;
+    }
     OSAL_memCpy(unit_ptr->data_ptr, pkt_ptr->data_ptr, pkt_ptr->pSize);
 
     return (0);
@@ -683,7 +705,7 @@ vint _JBV_reassembleH264(
         }
 
         /* Next packet */
-        JBV_dbgLog("at %d at loc %d\n", obj_ptr->offset, seqn);
+        //JBV_dbgLog("at %d at loc %d\n", obj_ptr->offset, seqn);
         seqn = JBV_NEXT_SEQN(seqn);
     }
 
@@ -718,7 +740,7 @@ vint _JBV_reassembleH264(
         }
     }
 
-    obj_ptr->totalFramesReceived += framesReceived;
+    // obj_ptr->totalFramesReceived += framesReceived;
 
     if (unit_ptr->key) {
         obj_ptr->rtcpInfo.packetLoss.lostSinceIdr = 0;

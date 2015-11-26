@@ -21,6 +21,8 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libvpad \
 	libosal_user_bionic
 
+LOCAL_32_BIT_ONLY := true
+
 LOCAL_MODULE:= modemDriver_vpad_main
 LOCAL_MODULE_TAGS := optional
 
@@ -38,6 +40,8 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libvpad_mux\
 	libvpad_io \
 	libvpad
+
+LOCAL_32_BIT_ONLY := true
 
 LOCAL_MODULE:= libmodemDriver_vpad
 LOCAL_MODULE_TAGS := optional
@@ -58,6 +62,8 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libvpad_io \
 	libvpad_test\
 	libosal_user_bionic
+
+LOCAL_32_BIT_ONLY := true
 
 LOCAL_MODULE:= libvpad_TXRXtest
 LOCAL_MODULE_TAGS := optional

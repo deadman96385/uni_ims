@@ -154,6 +154,7 @@ static void _VC_notifyAppWhenStreamChange(
 {
     /* Notify App about Coder start/stop. */
     if (VTSP_STREAM_DIR_SENDONLY == stream_ptr->streamParam.dir) {
+        OSAL_logMsg("%s: the dir param is VTSP_STREAM_DIR_SENDONLY\n", __FUNCTION__);
         if (!stream_ptr->enc.encRunning) {
             /* Enc is currently NOT running. Notify App to Start Enc. */
             stream_ptr->enc.encRunning = 1;
@@ -175,6 +176,7 @@ static void _VC_notifyAppWhenStreamChange(
         }
     }
     else if (VTSP_STREAM_DIR_RECVONLY == stream_ptr->streamParam.dir) {
+        OSAL_logMsg("%s: the dir param is VTSP_STREAM_DIR_RECVONLY\n", __FUNCTION__);
         if (stream_ptr->enc.encRunning) {
             /* Enc is currently running. Notify App to Stop Enc. */
             stream_ptr->enc.encRunning = 0;
@@ -188,6 +190,7 @@ static void _VC_notifyAppWhenStreamChange(
         if (!stream_ptr->dec.decRunning) {
             /* Dec is currently NOT running. */
             stream_ptr->dec.decRunning = 1;
+            JBV_init(&stream_ptr->dec.jbObj);
             /* start the rtp receive task. */
             _VC_startRtpRecvTask(stream_ptr);
             /* Notify App to Start Dec. */
@@ -199,6 +202,7 @@ static void _VC_notifyAppWhenStreamChange(
         }
     }
     else if (VTSP_STREAM_DIR_SENDRECV == stream_ptr->streamParam.dir) {
+        OSAL_logMsg("%s: the dir param is VTSP_STREAM_DIR_SENDRECV\n", __FUNCTION__);
         if (!stream_ptr->enc.encRunning) {
             /* Enc is currently not running. Notify App to Start Enc. */
             stream_ptr->enc.encRunning = 1;
@@ -211,6 +215,7 @@ static void _VC_notifyAppWhenStreamChange(
         if (!stream_ptr->dec.decRunning) {
             /* Dec is currently NOT running. */
             stream_ptr->dec.decRunning = 1;
+            JBV_init(&stream_ptr->dec.jbObj);
             /* start the rtp receive task. */
             _VC_startRtpRecvTask(stream_ptr);
             /* Notify App to Start Dec. */
@@ -223,6 +228,7 @@ static void _VC_notifyAppWhenStreamChange(
     }
     else if ((VTSP_STREAM_DIR_INACTIVE == stream_ptr->streamParam.dir)
             || (_VTSP_STREAM_DIR_ENDED == stream_ptr->streamParam.dir)) {
+        OSAL_logMsg("%s: the dir param is VTSP_STREAM_DIR_INACTIVE or _VTSP_STREAM_DIR_ENDED\n", __FUNCTION__);
         if (stream_ptr->enc.encRunning) {
             /* Enc is currently running. Notify App to Stop Enc. */
             stream_ptr->enc.encRunning = 0;
@@ -314,7 +320,7 @@ void _VC_runDnCmd(
     infc = cmd_ptr->infc;
     /* Check if the infc is Video. */
     if (infc != VTSP_INFC_VIDEO) {
-        _VC_TRACE(__FILE__, __LINE__);
+        OSAL_logMsg("%s: infc is not VTSP_INFC_VIDEO, return\n", __FUNCTION__);
         return;
     }
 
@@ -407,7 +413,9 @@ void _VC_runDnCmd(
 
             if (_VTSP_STREAM_DIR_ENDED == stream_ptr->streamParam.dir) {
                 /* Stream must be started in order to modify */
-                _VC_TRACE(__FILE__, __LINE__);
+                //_VC_LOG("_VTSP_CMD_STREAM_VIDEO_MODIFY, dir is ENDED!\n");
+                OSAL_logMsg("%s: _VTSP_CMD_STREAM_VIDEO_MODIFY, dir is ENDED!\n", __FUNCTION__);
+                //_VC_TRACE(__FILE__, __LINE__);
                 break;
             }
 
@@ -485,8 +493,11 @@ void _VC_runDnCmd(
                     stream_ptr->streamParam.srtpRecvKey);
 
             if (_VC_RTP_ERROR == errval) {
-                DBG("RTP Error infc:%d", infc);
-                DBG("RTP Error remoteDataPort:%d",
+                //DBG("RTP Error infc:%d", infc);
+                //DBG("RTP Error remoteDataPort:%d",
+                //OSAL_netNtohs(stream_ptr->streamParam.remoteAddr.port));
+                OSAL_logMsg("RTP Error infc:%d", infc);
+                OSAL_logMsg("RTP Error remoteDataPort:%d",
                 OSAL_netNtohs(stream_ptr->streamParam.remoteAddr.port));
             }
             /*

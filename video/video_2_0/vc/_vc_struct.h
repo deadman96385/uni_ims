@@ -16,6 +16,17 @@
 #include "../../ve/vtsp/vtsp_private/_vtsp_private.h"
 #include "_vc_const.h"
 
+/* A structure for recording the statistics of bitrate*/
+typedef struct {
+    uint16      periodFlag;/* the flag for mark a new period */
+    uint16      lastSeqn;  /* the sequence number of last pkt received */
+    uint32      bitrate;   /* the bitrate in the previous statistics period*/
+    uint64      totalSize; /* the total size of the incomming date */
+    uint64      lastSize;  /* the total size of the last period */
+    uint64      startTime; /* the time when a new period begins*/
+    uint64      lastTime;  /* the time when the last pkt received */
+} _VC_RtpBitrateStat;
+
 /* A structure for containing all fields of the RTP object that will be read by RTCP */
 typedef struct {
     OSAL_SemId         mutexLock;
@@ -37,6 +48,10 @@ typedef struct {
      */
     uvint              sendPacketCount;
     uvint              sendOctetCount;
+    /*
+     * The following state info is used to calculate rx bitrate
+     */
+    _VC_RtpBitrateStat             rxBitrateStat;
 } _VC_RtpRtcpInfoObject;
 
 /*
@@ -89,6 +104,8 @@ typedef struct {
     uint8              firSeqNumber;
     /* The time when the most recent FIR that has been acted upon was received. */
     VTSP_NtpTime       lastFir;
+    /* The time when the most recent FIR that has been send out. */
+    uint32 	  lastFirSend;
     /* The time when the most recent PLI that has been acted upon was received. */
     VTSP_NtpTime       lastPli;
 
@@ -112,6 +129,13 @@ typedef struct {
     uint16  expectedPacketTotal;
     /* Accumulator for lost packets in every rtcp reporting interval. */
     uint16  lostPacketTotal;
+    /* adjustment factor */
+    uint32  step;
+    /* adustment direction */
+    vint    direction;
+    /* tmmbr state */
+    vint    state;
+
 } _VC_RtcpFeedback;
 
 
@@ -139,6 +163,7 @@ typedef struct {
     int32          currentCount;
     int32          sendCountFixed;
     vint           sendPacketCount;
+    vint           sendFirCount;
     vint           rtpSendPacketCount;
     vint           rtpSendOctetCount;
     uint32         enableMask;
@@ -171,6 +196,8 @@ typedef struct {
     _VC_RtcpFeedback        feedback;
     /* Local - Video RTP Session bandwidth in kbps - AS bandwidth parameter. */
     uint32          localVideoAsBwKbps;
+    /* The actual rx bitrate */
+    uint32          curRxBitrate;
 } _VC_RtcpObject;
 
 /*

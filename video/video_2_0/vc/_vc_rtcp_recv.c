@@ -32,16 +32,17 @@ vint _VC_rtcpRecv(
     char                buffer[20];
 
     qId = q_ptr->rtcpEvent;
-    _VC_RTCP_LOG("RTCP recv \n");
+    _VC_RTCP_LOG("RTCP recv\n");
     OSAL_TimeVal currentTime;
 
     /*
      * Read and process messages. Then relay event to application.
      */
     while ((retVal = OSAL_msgQRecv(qId, (char *)&message,
-            _VTSP_Q_RTCP_EVENT_SZ, OSAL_NO_WAIT, NULL)) > 0) {
+            _VTSP_Q_RTCP_EVENT_SZ, _VC_RTCP_MIN_INTERVAL_MILLIS, NULL)) > 0) {
 
-        _VC_RTCP_LOG("RTCP recvd something\n");
+        _VC_RTCP_LOG("RTCP recvd something, rtcp_ptr->configure.enableMask=%u\n",
+                rtcp_ptr->configure.enableMask);
         /*
          * If the message is a sender report, save the middle 32 bits in the
          * timestamp and calculate. Save the internal time when the report
@@ -114,6 +115,7 @@ vint _VC_rtcpRecv(
                 }
                 break;
             case VTSP_EVENT_RTCP_FB_TMMBN:
+                OSAL_logMsg("%s: RTCP received TMMBN\n", __FUNCTION__);
                 mantissa = ((message.arg3 >> 9) & 0x1ffff);
                 exponent = ((message.arg3 >> 26) & 0x3f);
                 _VC_RTCP_LOG("RTCP received TMMBN SSRC %x", message.arg2);
@@ -125,6 +127,9 @@ vint _VC_rtcpRecv(
                 if (rtcp_ptr->configure.enableMask & VTSP_MASK_RTCP_FB_TMMBR) {
                     /* Store the received TMMBN value in kbps. */
                     rtcp_ptr->feedback.recvTmmbnInKbps = (bitrateBps >> 10);
+                    rtcp_ptr->feedback.state = _VC_TMMBR_STATE_DONE;
+                    OSAL_logMsg("%s: received TMMBN, recvTmmbnInKbps=%u Kbps\n",
+                            __FUNCTION__, rtcp_ptr->feedback.recvTmmbnInKbps);
                 }
                 break;
             case VTSP_EVENT_RTCP_FB_PLI:
@@ -149,14 +154,20 @@ vint _VC_rtcpRecv(
                 _VC_RTCP_LOG("RTCP received FIR SSRC %x", message.arg2);
                 _VC_RTCP_LOG("RTCP received FIR Sequence number %x", message.arg3);
                 rtcp_ptr = _VC_streamIdToRtcpPtr(net_ptr, message.streamId);
-                restrictionPeriod = rtcp_ptr->roundTripTime + _VC_RTCP_IFRAME_GENERATION_DELAY;
+                restrictionPeriod = 2000;//rtcp_ptr->roundTripTime + _VC_RTCP_IFRAME_GENERATION_DELAY;
                 /* Check the restriction period. If not enough time has elapsed, ignore this FIR */
                 startTime = rtcp_ptr->feedback.lastFir;
-                if ((message.receivedTime - startTime) > restrictionPeriod) {
+                if (_VC_NTP_32_TO_MSEC(message.receivedTime - startTime) > restrictionPeriod) {
                     /* Restriction period has ended. Check if the feature is enabled */
                     if (rtcp_ptr->configure.enableMask & VTSP_MASK_RTCP_FB_FIR) {
+                        _VC_RTCP_LOG("RTCP received FIR, sent FIR event to VCE for key frame");
                         _VC_sendAppEvent(q_ptr, VC_EVENT_SEND_KEY_FRAME, "VC - Restart Enc", stream_ptr->streamParam.encoder);
+                        //update the lastFir once this event is sent to APP
+                        rtcp_ptr->feedback.lastFir = message.receivedTime;
                     }
+                } else {
+                    //_VC_RTCP_LOG("RTCP received FIR, Ignoring due to restriction period");
+                    OSAL_logMsg("%s:RTCP received FIR, Ignoring due to restriction period\n " , __FUNCTION__);
                 }
                 break;
             default:

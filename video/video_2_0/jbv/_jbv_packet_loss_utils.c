@@ -91,7 +91,7 @@ void _JBV_dropOlderPackets(
             /* Drop the packet by invalidating it. */
             unit_ptr->valid = 0;
             _JBV_dropPacket(obj_ptr, unit_ptr, JBV_DROP_TOO_OLD);
-            JBV_dbgLog("JBV dropped %s packet at location %u[%u] ts %llu",
+            JBV_wrnLog("JBV dropped %s packet at location %u[%u] ts %llu",
                     unit_ptr->key ? "key" : "non-key", seqn, unit_ptr->seqn,
                     unit_ptr->ts);
         }

@@ -21,11 +21,12 @@ vint _VC_rtpClose(
      * If the socket is open, close it. Then reopen it for next time use.
      */
         if (_VC_netClose(rtp_ptr->socket) != _VC_RTP_OK) {
-            _VC_TRACE(__FILE__, __LINE__);
+            //_VC_TRACE(__FILE__, __LINE__);
+            OSAL_logMsg("%s: failed to close net\n", __FUNCTION__);
             return (_VC_RTP_ERROR);
         }
 
-        /*
+    /*
      * Mark the stream no longer in use.
      */
     rtp_ptr->inUse      = _VC_RTP_NOT_BOUND;
@@ -38,6 +39,13 @@ vint _VC_rtpClose(
     OSAL_memSet(&rtp_ptr->remoteAddr, 0, sizeof(OSAL_NetAddress));
     OSAL_memSet(&rtp_ptr->localAddr, 0, sizeof(OSAL_NetAddress));
     rtp_ptr->open = 0;
+
+    /*
+     * Clear thte rx bitrate statistics
+     */
+    OSAL_semAcquire(rtp_ptr->info.mutexLock, OSAL_WAIT_FOREVER);
+    OSAL_memSet(&rtp_ptr->info.rxBitrateStat, 0, sizeof(_VC_RtpBitrateStat));
+    OSAL_semGive(rtp_ptr->info.mutexLock);
 
     return (_VC_RTP_OK);
 }

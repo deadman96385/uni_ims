@@ -14,7 +14,7 @@
 /*
  * Max RTP size supported.
  */
-#define H263_ENC_MAX_RTP_SIZE (VIDEO_MAX_RTP_SZ)
+#define H263_ENC_MAX_RTP_SIZE (VIDEO_MAX_RTP_SZ - 104)
 
 
 /*

@@ -14,9 +14,9 @@
 
 #ifdef VIDEO_DEBUG_LOG
 # define DBG(fmt, args...) \
-        OSAL_logMsg("%s:%d (%s) " fmt, __FILE__, __LINE__, __FUNCTION__, ## args)
+        OSAL_logMsg("%s " fmt, __FUNCTION__, ## args)
 #define ERR(fmt, args...) \
-        OSAL_logMsg("%s:%d: (%s) ERROR" fmt, __FILE__, __LINE__, __FUNCTION__, ## args)
+        OSAL_logMsg("%s ERROR" fmt, __FUNCTION__, ## args)
 #else
 # define DBG(fmt, args...)
 # define ERR(fmt, args...)

@@ -14,6 +14,67 @@
 
 #define CLEAR_FLAG(rtcp_ptr, flag) rtcp_ptr->configure.rtcpFeedbackSendMask &= ~flag;
 
+static inline vint _VC_getBitrateLevel(
+    uint64 sample_time)
+{
+    uint64 temp = (BITRATE_STAT_PERIOD * 205) >> 8; /* get 0.8 x BITRATE_STAT_PERIOD */
+    vint level = -1;
+
+    /*
+     * BITRATE_FACTOR_LEVEL3: sample_time >= 0.8 x BITRATE_STAT_PERIOD
+     * BITRATE_FACTOR_LEVEL2: 0.8 x BITRATE_STAT_PERIOD > sample_time >= 0.4 x BITRATE_STAT_PERIOD
+     * BITRATE_FACTOR_LEVEL1: 0.4 x BITRATE_STAT_PERIOD > sample_time >= 0.2 x BITRATE_STAT_PERIOD
+     * BITRATE_FACTOR_LEVEL0: 0.2 x BITRATE_STAT_PERIOD > sample_time
+     */
+    if (sample_time >= temp) {
+        level = BITRATE_FACTOR_LEVEL3;
+    } else if((sample_time >= (temp >> 1)) && (sample_time < temp)) {
+        level = BITRATE_FACTOR_LEVEL2;
+    } else if((sample_time >= (temp >> 2)) && (sample_time < (temp >> 1))) {
+        level = BITRATE_FACTOR_LEVEL1;
+    } else {
+        level = BITRATE_FACTOR_LEVEL0;
+    }
+
+    return level;
+}
+
+static uint32 _VC_estimateBitrate(
+     _VC_RtpBitrateStat *br_stat)
+{
+    uint32 prev_br;
+    uint32 cur_br = 0;
+    uint32 est_br = 0;
+    uint64 sample_time;
+    vint   level;
+
+    prev_br = br_stat->bitrate;
+    sample_time = br_stat->lastTime - br_stat->startTime;
+    level = _VC_getBitrateLevel(sample_time);
+
+    /*
+     * [FORMULA]:
+     * alpha = level/base;
+     * e_br = p_br*(1-alpha) + alpha*c_br;
+     * */
+    if (level > 0 && prev_br > 0) {
+        cur_br = (uint32)((((br_stat->totalSize - br_stat->lastSize) << 3) * 1000000 / sample_time) >> 10);
+        est_br = (prev_br - ((level * prev_br) >> BITRATE_FACTOR_BASE_BIT) +
+            ((level * cur_br) >> BITRATE_FACTOR_BASE_BIT));
+    } else if(level == 0 && prev_br > 0) {
+        est_br = prev_br;
+    } else if(level >= BITRATE_FACTOR_LEVEL1 && prev_br == 0){
+        cur_br = (uint32)((((br_stat->totalSize - br_stat->lastSize) << 3) * 1000000 / sample_time) >> 10);
+        est_br = cur_br;
+    } else {
+        est_br = 0;
+    }
+    OSAL_logMsg("%s: est_br %u, prev_br %u, cur_br %u, sample_time %llu, level %d, size %llu\n",
+            __FUNCTION__, est_br, prev_br, cur_br, sample_time, level,
+            br_stat->totalSize - br_stat->lastSize);
+    return est_br;
+}
+
 /*
  * ======== _VC_rtcpUtilUpdateRtcp() ========
  *
@@ -25,11 +86,11 @@ static void _VC_rtcpUtilProcessRtp(
     _VC_RtcpObject  *rtcp_ptr,
     _VC_RtcpNtpTime *time_ptr)
 {
-    vint extendedMax;
-    vint expected;
-    vint expectedInterval;
-    vint receivedInterval;
-    vint lostInterval;
+    uvint extendedMax;
+    uvint expected;
+    uvint expectedInterval;
+    uvint receivedInterval;
+    uvint lostInterval;
     OSAL_SelectTimeval  currentTime;    /* Current time as OSAL Timeval */
     uint32 currentTimeMs;               /* Current time as milliseconds */
     uint32 timeDiffMs;
@@ -92,15 +153,22 @@ static void _VC_rtcpUtilProcessRtp(
     /*
      * Calculate the fraction.
      */
-    /* Find the number of packets expected between now and the previously sent RTCP report */
-    expectedInterval       = expected - rtcp_ptr->expectedPrior;
-    /* Find the number of packets expected between now and the previously sent RTCP report */
-    rtcp_ptr->expectedPrior = expected;
+    if (expected - rtcp_ptr->expectedPrior > (1 << 15) && expected < rtcp_ptr->expectedPrior) {
+        expectedInterval = expected;
+        rtcp_ptr->expectedPrior = expected;
+        receivedInterval = expectedInterval;
+    } else {
+        /* Find the number of packets expected between now and the previously sent RTCP report */
+        expectedInterval       = expected - rtcp_ptr->expectedPrior;
+        /* Find the number of packets expected between now and the previously sent RTCP report */
+        rtcp_ptr->expectedPrior = expected;
+        /* Find the actual number of packets received between now and the previously sent RTCP report */
+        receivedInterval       = rtpInfo_ptr->received - rtcp_ptr->receivedPrior;
+    }
+
     /* Accumulate expected packet total for TMMBR. */
     rtcp_ptr->feedback.expectedPacketTotal += expectedInterval;
 
-    /* Find the actual number of packets received between now and the previously sent RTCP report */
-    receivedInterval       = rtpInfo_ptr->received - rtcp_ptr->receivedPrior;
     /* Store the count of total received packets for the next time this method is called */
     rtcp_ptr->receivedPrior = rtpInfo_ptr->received;
     /* Find the number of lost packets between now and the previously sent RTCP report */
@@ -108,6 +176,12 @@ static void _VC_rtcpUtilProcessRtp(
 
     /* Accumulate lost packet total for TMMBR. */
     rtcp_ptr->feedback.lostPacketTotal += lostInterval;
+
+    if (rtcp_ptr->feedback.lostPacketTotal > rtcp_ptr->feedback.expectedPacketTotal) {
+        OSAL_logMsg("%s: this should not happen, lostPacketTotal:%d, expectedPacketTotal:%d, expected:%d, received:%d, cycles:%u, maxSeq:%u, baseSeq:%u\n",
+                __FUNCTION__, rtcp_ptr->feedback.lostPacketTotal, rtcp_ptr->feedback.expectedPacketTotal,
+                expected, rtpInfo_ptr->received, rtpInfo_ptr->cycles, rtpInfo_ptr->maxSequence, rtpInfo_ptr->baseSequence);
+    }
 
     if (( 0 == expectedInterval) || (lostInterval <= 0)) {
         rtcp_ptr->fracLost = 0;
@@ -130,6 +204,7 @@ static void _VC_rtcpUtilProcessRtp(
 
     rtcp_ptr->rtpSendPacketCount = rtpInfo_ptr->sendPacketCount;
     rtcp_ptr->rtpSendOctetCount = rtpInfo_ptr->sendOctetCount;
+    rtcp_ptr->curRxBitrate = _VC_estimateBitrate(&rtpInfo_ptr->rxBitrateStat);
 }
 /*
  * ======== _VC_rtcpUtilBuildNackRows() ========
@@ -174,6 +249,144 @@ static vint _VC_rtcpUtilBuildNackRows(
     }
 
     return rowsUsed;
+}
+
+static uint32 _VC_rtcpUtilRunTmmbrFsm2(
+    _VC_RtcpObject      *rtcp_ptr)
+{
+    _VC_RtcpFeedback *feedback_ptr;
+    uint32      lost_permillage = 0;
+    vint        state;
+    vint        dir;
+    uint32      bitrate_kbps;
+    uint32      mask = 0;
+
+    feedback_ptr = &rtcp_ptr->feedback;
+    state = feedback_ptr->state;
+    dir = feedback_ptr->direction;
+    bitrate_kbps = rtcp_ptr->curRxBitrate;
+
+    OSAL_logMsg("%s: TMMBR - state:%u dir:%d bitrate_kbps: %u expected:%u lost:%u\n",
+            __FUNCTION__, state, dir, bitrate_kbps, feedback_ptr->expectedPacketTotal,
+            feedback_ptr->lostPacketTotal);
+
+    /*
+     * if the bitrate is zero, it means we should accmulate more pkts in the first time.
+     * if the expected pkts is less than 500, should accmulate more pkts to reduce the tmmbr frequency.
+     *
+     * */
+    if (bitrate_kbps == 0 ||
+            feedback_ptr->expectedPacketTotal < 500) {
+        return mask;
+    }
+
+    /* if lostPacketTotal is greater than expectedPacketTotal, workround */
+    if (feedback_ptr->expectedPacketTotal < feedback_ptr->lostPacketTotal) {
+        OSAL_logMsg("%s: expectedPacketTotal is less than lostPacketTotal, workround here\n",
+                __FUNCTION__);
+        feedback_ptr->expectedPacketTotal = 0;
+        feedback_ptr->lostPacketTotal = 0;
+        return mask;
+    }
+
+    /*
+     * if the state is pending, resned TMMBR feedback with the previous config.
+     * when the resend count is greater than 2, clean the sendFailCount.
+     * */
+    if (feedback_ptr->state == _VC_TMMBR_STATE_PENDING && feedback_ptr->tmmbrSendFailCount <= 2) {
+        OSAL_logMsg("%s: not received TMMBN, then send the previous bitrate once more, count=%d\n",
+                __FUNCTION__, feedback_ptr->tmmbrSendFailCount);
+        feedback_ptr->tmmbrSendFailCount ++;
+        mask = VTSP_MASK_RTCP_FB_TMMBR;
+        return mask;
+    } else if(feedback_ptr->state == _VC_TMMBR_STATE_PENDING && feedback_ptr->tmmbrSendFailCount > 2){
+        OSAL_logMsg("%s, not received TMMBN, tmmbrSendFailCount > 2", __FUNCTION__);
+        feedback_ptr->tmmbrSendFailCount = 0;
+    }
+
+    /* calculate the lost permillage if we have observed sufficient packets. */
+    lost_permillage = (feedback_ptr->lostPacketTotal * 1000) /
+            feedback_ptr->expectedPacketTotal;
+
+    switch (dir) {
+        case _VC_TMMBR_DIR_LEVEL:
+            if (lost_permillage >= 10) {
+                feedback_ptr->step = lost_permillage >= 30 ?
+                        (bitrate_kbps * 205) >> 10 : /* if lost_permillage > 3%, step = 0.2 * bitrate */
+                        (bitrate_kbps * 102) >> 10;  /* if 3% > lost_permillage > 1%, step = 0.1 * bitrate*/
+                feedback_ptr->direction = _VC_TMMBR_DIR_DOWN;
+                feedback_ptr->state = _VC_TMMBR_STATE_PENDING;
+                feedback_ptr->sendTmmbrInKbps = bitrate_kbps - feedback_ptr->step;
+                mask = VTSP_MASK_RTCP_FB_TMMBR;
+            }
+            break;
+        case _VC_TMMBR_DIR_DOWN:
+            if (lost_permillage >= 10) {
+                feedback_ptr->step = lost_permillage >= 30 ?
+                        (bitrate_kbps * 205) >> 10 : /* if lost_permillage > 3%, step = 0.2 * bitrate */
+                        (bitrate_kbps * 102) >> 10;  /* if 3% > lost_permillage > 1%, step = 0.1 * bitrate*/
+                feedback_ptr->direction = _VC_TMMBR_DIR_DOWN;
+                feedback_ptr->state = _VC_TMMBR_STATE_PENDING;
+                feedback_ptr->sendTmmbrInKbps = bitrate_kbps - feedback_ptr->step;
+                mask = VTSP_MASK_RTCP_FB_TMMBR;
+            } else {
+                if (feedback_ptr->step < _VC_TMMBR_STEP_MIN) {
+                    feedback_ptr->step = 0;
+                    feedback_ptr->direction = _VC_TMMBR_DIR_LEVEL;
+                } else if (lost_permillage < 5){
+                    feedback_ptr->step = feedback_ptr->step >> 1;
+                    feedback_ptr->direction = _VC_TMMBR_DIR_UP;
+                    feedback_ptr->state = _VC_TMMBR_STATE_PENDING;
+                    feedback_ptr->sendTmmbrInKbps = bitrate_kbps + feedback_ptr->step;
+                    mask = VTSP_MASK_RTCP_FB_TMMBR;
+                } else if (lost_permillage >= 5) {
+                    feedback_ptr->step = feedback_ptr->step >> 1;
+                    feedback_ptr->state = _VC_TMMBR_STATE_PENDING;
+                    feedback_ptr->sendTmmbrInKbps = bitrate_kbps - feedback_ptr->step;
+                    mask = VTSP_MASK_RTCP_FB_TMMBR;
+                }
+            }
+            break;
+        case _VC_TMMBR_DIR_UP:
+            if (lost_permillage >= 10) {
+                feedback_ptr->step = lost_permillage >= 30 ?
+                        (bitrate_kbps * 205) >> 10 : /* if lost_permillage > 3%, step = 0.2 * bitrate */
+                        (bitrate_kbps * 102) >> 10;  /* if 3% > lost_permillage > 1%, step = 0.1 * bitrate*/
+                feedback_ptr->direction = _VC_TMMBR_DIR_DOWN;
+                feedback_ptr->state = _VC_TMMBR_STATE_PENDING;
+                feedback_ptr->sendTmmbrInKbps = bitrate_kbps - feedback_ptr->step;
+                mask = VTSP_MASK_RTCP_FB_TMMBR;
+            } else {
+                if (feedback_ptr->step < _VC_TMMBR_STEP_MIN) {
+                    feedback_ptr->step = 0;
+                    feedback_ptr->direction = _VC_TMMBR_DIR_LEVEL;
+                } else if(lost_permillage <= 5){
+                    feedback_ptr->state = _VC_TMMBR_STATE_PENDING;
+                    feedback_ptr->sendTmmbrInKbps = bitrate_kbps + feedback_ptr->step;
+                    mask = VTSP_MASK_RTCP_FB_TMMBR;
+                } else if(lost_permillage > 5) {
+                    feedback_ptr->direction = _VC_TMMBR_DIR_DOWN;
+                    feedback_ptr->step = feedback_ptr->step >> 1;
+                    feedback_ptr->state = _VC_TMMBR_STATE_PENDING;
+                    feedback_ptr->sendTmmbrInKbps = bitrate_kbps - feedback_ptr->step;
+                    mask = VTSP_MASK_RTCP_FB_TMMBR;
+                }
+            }
+            break;
+        default:
+            OSAL_logMsg("invalid tmmbr state, %d\n", feedback_ptr->state);
+            break;
+    }
+
+    OSAL_logMsg("%s: TMMBR - state:%d->%d, dir:%d->%d, sendTmmbrInKbps:%u, step:%u, lost_permillage:%u, mask:0x%x\n",
+            __FUNCTION__, state, feedback_ptr->state, dir, feedback_ptr->direction,
+            feedback_ptr->sendTmmbrInKbps, feedback_ptr->step, lost_permillage, mask);
+
+    /* Reset the variables that keeps track of incoming video payload statistics. */
+    feedback_ptr->expectedPacketTotal = 0;
+    feedback_ptr->lostPacketTotal = 0;
+
+    return mask;
 }
 
 /*
@@ -352,6 +565,11 @@ static uint32 _VC_rtcpUtilitProcessJbvRtcpInfo(
     _VC_RtcpFeedback  *rtcpPrivate_ptr;
     vint               pliLoss;
 
+    //get the current time
+    OSAL_SelectTimeval  currentTime;    /* Current time as OSAL Timeval */
+    OSAL_selectGetTime(&currentTime);
+    uint32 currentTimeMs = (currentTime.sec * 1000) + (currentTime.usec / 1000);
+
     /* The feedback mask may get changed in other threads, so make a copy of the current value */
     feedbackMask = rtcp_ptr->configure.rtcpFeedbackSendMask;
     rtcpPrivate_ptr = &rtcp_ptr->feedback;
@@ -367,11 +585,15 @@ static uint32 _VC_rtcpUtilitProcessJbvRtcpInfo(
         /* Each time a new FIR request is sent, the sequence number must be increased by
          * one. However, if this is a retransmission, then the sequence number
          * must NOT be incremented. */
-        if (jbvRtcpInfo_ptr->keyFrameRead) {
+    //check the time has elapsed since the last fir to avoid frequently sending FIR
+        _VC_RTCP_LOG("keyFrameRead=%d, currentTimeMs=%u, lastFirSend=%u\n"
+            , jbvRtcpInfo_ptr->keyFrameRead, currentTimeMs, rtcp_ptr->feedback.lastFirSend);
+        if (jbvRtcpInfo_ptr->keyFrameRead &&
+            ((currentTimeMs - rtcp_ptr->feedback.lastFirSend) < 2000)) {
             /* A completed sync frame was read by the application. This means the application's
              * request to send an FIR should be cancelled. The sequence number should be updated
              * for the next FIR. */
-            rtcp_ptr->feedback.firSeqNumber++;
+            //rtcp_ptr->feedback.firSeqNumber++;
             rtcp_ptr->feedback.firWaiting = OSAL_FALSE;
             feedbackMask &= ~VTSP_MASK_RTCP_FB_FIR;
             CLEAR_FLAG(rtcp_ptr, VTSP_MASK_RTCP_FB_FIR);
@@ -380,6 +602,9 @@ static uint32 _VC_rtcpUtilitProcessJbvRtcpInfo(
             /* A sync frame was dropped to to an error in it's transmission. This
              * means the FIR is no longer a 'retransmission.' Instead, this is
              * a request for a new sync frame. */
+            _VC_RTCP_LOG("key Frame droped, and after that no more key frame has been recv");
+            rtcp_ptr->feedback.firSeqNumber++;
+        } else {
             rtcp_ptr->feedback.firSeqNumber++;
         }
     }
@@ -404,7 +629,7 @@ static uint32 _VC_rtcpUtilitProcessJbvRtcpInfo(
     }
 
     /* Run the TMMBR state machine which returns bitmask indicating we should send TMMBR or not. */
-    feedbackMask |= _VC_rtcpUtilRunTmmbrFsm(rtcp_ptr);
+    feedbackMask |= _VC_rtcpUtilRunTmmbrFsm2(rtcp_ptr);
 
     return feedbackMask;
 }
@@ -900,6 +1125,13 @@ static vint _VC_rtcpFeedbackFir(
     temp32 |= _VTSP_RTCP_PTYPE_PSFB << 16; /* FIR is Payload Specific FB Message - PSFB */
     temp32 |= 4; /* length = 2 + 2n where n=1 refers to number of FCI entries */
 
+    //save the current time to the lastFirSend as this Fir has been sent out sucessfully
+    OSAL_SelectTimeval  currentTime;  /* Current time as OSAL Timeval */
+    OSAL_selectGetTime(&currentTime);
+    rtcp_ptr->feedback.lastFirSend  = (currentTime.sec * 1000) + (currentTime.usec / 1000);
+    rtcp_ptr->sendFirCount += 1;
+    _VC_RTCP_LOG("RTCP send fir count: %d\n",rtcp_ptr->sendFirCount);
+
     msg_ptr->msg.payload[newoffset++] = OSAL_netHtonl(temp32);
     msg_ptr->msg.payload[newoffset++] = OSAL_netHtonl(rtcp_ptr->ssrc);      /* SSRC of this RTCP packet sender */
     msg_ptr->msg.payload[newoffset++] = 0; /* The SSRC of the Media Source must be zero. */
@@ -1013,6 +1245,7 @@ vint _VC_rtcpSend(
     q_ptr       = vc_ptr->q_ptr;
     net_ptr     = vc_ptr->net_ptr;
     dsp_ptr     = vc_ptr->dsp_ptr;
+
     rtcp_ptr    = _VC_streamIdToRtcpPtr(net_ptr, streamId);
 
 
@@ -1027,16 +1260,15 @@ vint _VC_rtcpSend(
     feedbackMask = _VC_rtcpUtilitProcessJbvRtcpInfo(jbv_ptr, rtcp_ptr, &jbvRtcpInfo);
     packetLoss = jbvRtcpInfo.packetLoss;
 
-    _VC_LOG("RTCP send - lostSeqnLength:%u\n", packetLoss.lostSeqnLength);
-       
+    //_VC_LOG("RTCP send - lostSeqnLength:%u\n", packetLoss.lostSeqnLength);
+
     OSAL_memSet(&message, 0, sizeof(_VTSP_RtcpCmdMsg));
- 
+
     /* Create next message. */
     message.command  = _VTSP_RTCP_CMD_SEND;
     message.infc     = rtcp_ptr->infc;
     message.streamId = rtcp_ptr->streamId;
     msg_ptr = &message;
-
     /* Create a Full Compound RTCP packet. RFC 4584 Section 3.1 and 3.5.3  */
     if ((VTSP_STREAM_DIR_SENDONLY == dir) || (VTSP_STREAM_DIR_SENDRECV == dir)) {
         /* Add SR block if we are actively sending. */
@@ -1069,6 +1301,7 @@ vint _VC_rtcpSend(
             (feedbackMask & VTSP_MASK_RTCP_FB_TMMBR)) {
         /* Add TMMBR RTCP feedback. Determining when to send TMMBR is handled inside this method */
         offset = _VC_rtcpFeedbackTmmbr(rtcp_ptr, msg_ptr, rtcp_ptr->feedback.sendTmmbrInKbps, offset);
+	OSAL_logMsg("%s: TMMBR sendTmmbrInKbps=%u Kbps\n", __FUNCTION__, rtcp_ptr->feedback.sendTmmbrInKbps);
     }
 
     if ((rtcp_ptr->configure.enableMask & VTSP_MASK_RTCP_FB_TMMBN) &&
@@ -1077,6 +1310,7 @@ vint _VC_rtcpSend(
         offset = _VC_rtcpFeedbackTmmbn(rtcp_ptr, msg_ptr, rtcp_ptr->feedback.sendTmmbnInKbps, offset);
         /* TMMBN has been sent, remove this flag */
         CLEAR_FLAG(rtcp_ptr, VTSP_MASK_RTCP_FB_TMMBN);
+        OSAL_logMsg("%s: TMMBN sendTmmbnInKbps=%u Kbps\n", __FUNCTION__, rtcp_ptr->feedback.sendTmmbnInKbps);
     }
 
     if ((rtcp_ptr->configure.enableMask & VTSP_MASK_RTCP_FB_PLI) &&
@@ -1093,6 +1327,7 @@ vint _VC_rtcpSend(
         offset = _VC_rtcpFeedbackFir(rtcp_ptr, rtcp_ptr->feedback.firSeqNumber, msg_ptr, offset);
         /* FIR has been sent, remove this flag */
         CLEAR_FLAG(rtcp_ptr, VTSP_MASK_RTCP_FB_FIR);
+        OSAL_logMsg("%s: FIR firSeqNumber=%u\n", __FUNCTION__, rtcp_ptr->feedback.firSeqNumber);
     }
 
     /* convert the payload size into bytes. */
@@ -1100,7 +1335,8 @@ vint _VC_rtcpSend(
 
     /* Send message. */
     rtcp_ptr->sendPacketCount += 1;
-    _VC_LOG("RTCP send packet count: %d\n",rtcp_ptr->sendPacketCount);
+    _VC_LOG("RTCP send packet count: %d, lostSeqnLength:%u\n",
+		    rtcp_ptr->sendPacketCount, packetLoss.lostSeqnLength);
     if (OSAL_SUCCESS != OSAL_msgQSend(q_ptr->rtcpMsg, (char *) msg_ptr,
                     sizeof(_VTSP_RtcpCmdMsg), OSAL_NO_WAIT, NULL)) {
         _VC_TRACE(__FILE__, __LINE__);

@@ -126,6 +126,7 @@ OSAL_TaskId OSAL_taskCreate(
         return(NULL);
     }
     else {
+        pthread_setname_np(tid_ptr->tId, tid_ptr->name);
         sched_yield();
     }
 
@@ -175,3 +176,44 @@ OSAL_Status  OSAL_taskDelay(
     usleep(msTimeout * 1000);
     return(OSAL_SUCCESS);
 }
+
+/*
+ * ======== OSAL_taskSendSignal() ========
+ *
+ * Send signal to specified task.
+ *
+ * Returns
+ *  OSAL_FAIL or OSAL_SUCCESS
+ */
+OSAL_Status OSAL_taskSendSignal(OSAL_TaskId tId, int signo)
+{
+    _OSAL_TaskParams *tid_ptr = (_OSAL_TaskParams *)tId;
+    int ret;
+
+    if (tid_ptr == 0) {
+       return OSAL_FAIL;
+    }
+    ret = pthread_kill(tid_ptr->tId, signo);
+    if (ret) {
+        OSAL_logMsg("%s: failed to send sig %d to task %s\n", __FUNCTION__, signo, tid_ptr->name);
+        return OSAL_FAIL;
+    }
+    return OSAL_SUCCESS;
+}
+
+/*
+ * ======== OSAL_taskRegisterSignal() ========
+ *
+ * Register the signal handler.
+ *
+ * Returns
+ *  OSAL_FAIL or OSAL_SUCCESS
+ */
+OSAL_Status OSAL_taskRegisterSignal(int signo, void (*handler)(int))
+{
+    sighandler_t ret;
+
+    ret = signal(signo, handler);
+    return ret == SIG_ERR ? OSAL_FAIL : OSAL_SUCCESS;
+}
+

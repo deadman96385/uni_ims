@@ -72,6 +72,9 @@ void _VC_rtpSendTx(
     rtp_ptr->info.sendOctetCount += rtp_ptr->payloadOffset;
     OSAL_semGive(rtp_ptr->info.mutexLock);
 
+    /*OSAL_logMsg("_VC_rtpSendTx, account = %d, rtp_len = %d\n",
+            rtp_ptr->info.sendPacketCount, rtp_ptr->netBufferLen);*/
+
     /*
      * Send it to the network
      */
@@ -81,7 +84,7 @@ void _VC_rtpSendTx(
             rtp_ptr->netBufferLen,
             rtp_ptr->remoteAddr))
             != rtp_ptr->netBufferLen) {
-        DBG("sendto error %d:", sendErr);
+        OSAL_logMsg("sendto error %d:", sendErr);
     }
     else {
         /*
@@ -122,7 +125,7 @@ void _VC_rtpSend(
      * First check to see if the packet is destined for an open stream.
      */
     if (rtp_ptr->sendActive != _VC_RTP_READY) {
-        /* _VC_TRACE(__FILE__, rtp_ptr->rtpTime); */
+        OSAL_logMsg("_VC_rtpSend, stream is not ready");
         return;
     }
 
@@ -141,6 +144,8 @@ void _VC_rtpSend(
          */
         _VC_rtpSendTx(vc_ptr, rtp_ptr, hdr_ptr);
         rtp_ptr->payloadOffset = 0;
+    } else {
+        OSAL_logMsg("_VC_rtpSend SEND bit is not set");
     }
 }
 

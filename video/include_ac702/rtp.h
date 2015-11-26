@@ -43,7 +43,7 @@
 #if defined(PROVIDER_LGUPLUS)
 #define RTP_SAMPLES_MAX    (1300)
 #else
-#define RTP_SAMPLES_MAX    (1408)
+#define RTP_SAMPLES_MAX    (1412)
 #endif
 
 /*

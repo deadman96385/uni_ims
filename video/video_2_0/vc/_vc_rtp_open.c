@@ -5,7 +5,7 @@
  *
  * $D2Tech$ $Rev: 12730 $ $Date: 2010-08-09 20:55:01 -0400 (Mon, 09 Aug 2010) $
  *
- */        
+ */
 
 #include "_vc_private.h"
 
@@ -115,7 +115,7 @@ vint _VC_rtpOpen(
         rtp_ptr->info.sendOctetCount  = 0;
         OSAL_semGive(rtp_ptr->info.mutexLock);
     }
-    
+
 #ifdef VTSP_ENABLE_SRTP
     RTP_srtpinit(&(rtp_ptr->sendRtpObj), srtpSecurityType, srtpSendKey,
          RTP_KEY_STRING_MAX_LEN);
@@ -129,10 +129,10 @@ vint _VC_rtpOpen(
             localAddr.port != rtp_ptr->localAddr.port) {
         newBind = 1;
     }
-    else if (OSAL_NET_SOCK_UDP == localAddr.type || 
+    else if (OSAL_NET_SOCK_UDP == localAddr.type ||
             OSAL_NET_SOCK_TCP == localAddr.type) {
         /* IPv4 Address type */
-        if (localAddr.ipv4 != rtp_ptr->localAddr.ipv4) { 
+        if (localAddr.ipv4 != rtp_ptr->localAddr.ipv4) {
             newBind = 1;
         }
         else {
@@ -141,7 +141,7 @@ vint _VC_rtpOpen(
     }
     else {
         /* IPv6 Address type */
-        if ( 0 != OSAL_memCmp(localAddr.ipv6, rtp_ptr->localAddr.ipv6, 
+        if ( 0 != OSAL_memCmp(localAddr.ipv6, rtp_ptr->localAddr.ipv6,
                 sizeof(localAddr.ipv6))) {
             newBind = 1;
         }
@@ -167,20 +167,22 @@ vint _VC_rtpOpen(
          * reopen them.
          */
         if (_VC_netClose(rtp_ptr->socket) != _VC_RTP_OK) {
-            _VC_TRACE(__FILE__, __LINE__);
+            //_VC_TRACE(__FILE__, __LINE__);
+            OSAL_logMsg("%s: failed to close net\n", __FUNCTION__);
             return (_VC_RTP_ERROR);
         }
         rtp_ptr->open = 0;
     }
 
-    /* 
+    /*
      * Create socket if socket is not opened.
      */
-    
+
     if (0 == rtp_ptr->open) {
-        if ((rtp_ptr->socket = 
+        if ((rtp_ptr->socket =
                     _VC_netSocket(localAddr.type, rtp_ptr->tos)) < 0) {
-            _VC_TRACE(__FILE__, __LINE__);
+           // _VC_TRACE(__FILE__, __LINE__);
+            OSAL_logMsg("%s: failed to create socket\n", __FUNCTION__);
             return (_VC_RTP_ERROR);
         }
         rtp_ptr->open = 1;
@@ -201,13 +203,14 @@ vint _VC_rtpOpen(
             rtp_ptr->sendActive = _VC_RTP_NOTREADY;
             rtp_ptr->recvActive = _VC_RTP_NOTREADY;
             rtp_ptr->inUse      = _VC_RTP_NOT_BOUND;
-            _VC_TRACE(__FILE__, __LINE__);
+            //_VC_TRACE(__FILE__, __LINE__);
+            OSAL_logMsg("%s: failed to bind net\n", __FUNCTION__);
             return (_VC_RTP_ERROR);
         }
         rtp_ptr->inUse = _VC_RTP_BOUND;
     }
     else {
-        if ((0 == remoteAddr.port) || 
+        if ((0 == remoteAddr.port) ||
                 (OSAL_netIsAddrZero(&remoteAddr) == OSAL_TRUE)) {
             rtp_ptr->sendActive = _VC_RTP_NOTREADY;
         }
@@ -221,10 +224,10 @@ vint _VC_rtpOpen(
     /*
      * Open up the NAT quickly so we dont lose any incoming packets.
      */
-    if ((0 != remoteAddr.port) && 
+    if ((0 != remoteAddr.port) &&
             (OSAL_netIsAddrZero(&remoteAddr) != OSAL_TRUE)) {
-        _VC_netSendto(rtp_ptr->socket, &dummy, sizeof(dummy),
-                rtp_ptr->remoteAddr);
+        //_VC_netSendto(rtp_ptr->socket, &dummy, sizeof(dummy),
+        //        rtp_ptr->remoteAddr);
     }
 
     return (_VC_RTP_OK);

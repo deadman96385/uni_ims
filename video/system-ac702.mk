@@ -293,7 +293,7 @@ MY_SYSTEM_CFLAGS += -DISI_DEBUG_LOG
 #
 # Define to enable video debug printing
 #
-MY_SYSTEM_CFLAGS += -DVIDEO_DEBUG_LOG
+#MY_SYSTEM_CFLAGS += -DVIDEO_DEBUG_LOG
 
 #
 # Define to enable RIR debug printing

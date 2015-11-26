@@ -270,6 +270,7 @@ OSAL_Status VIER_netSocketSendTo(
         return _VIER_netSocketSendTo(socket_ptr, buf_ptr, size_ptr,
                 address_ptr);
     }
+    OSAL_logMsg("VIER_netSocketSendTo, OSAL_netSocketSendTo");
     return OSAL_netSocketSendTo(socket_ptr, buf_ptr, size_ptr, address_ptr);
 }
 

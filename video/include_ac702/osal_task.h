@@ -35,6 +35,12 @@ OSAL_Status OSAL_taskDelete(
 
 OSAL_Status  OSAL_taskDelay(
     uint32 msTimeout);
+
+OSAL_Status OSAL_taskSendSignal(
+    OSAL_TaskId tId, int signo);
+
+OSAL_Status OSAL_taskRegisterSignal(
+    int signo, void (*handler)(int));
 #ifdef __cplusplus
 }
 #endif

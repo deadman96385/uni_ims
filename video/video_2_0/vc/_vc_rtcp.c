@@ -174,6 +174,7 @@ vint _VC_rtcpReadCommand(
                break;
            case _VC_RTCP_CMD_SEND_RTCP_FB:
                rtcp_ptr->configure.rtcpFeedbackSendMask |= message.feedbackMask;
+               OSAL_logMsg("%s: _VC_RTCP_CMD_SEND_RTCP_FB\n", __FUNCTION__);
                break;
            case _VC_RTCP_CMD_CONFIGURE:
                _VC_rtcpHandleSetControl(rtcp_ptr, message.config);

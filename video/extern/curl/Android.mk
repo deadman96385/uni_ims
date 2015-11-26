@@ -76,6 +76,8 @@ LOCAL_CFLAGS += $(common_CFLAGS)
 LOCAL_COPY_HEADERS_TO := libcurl/curl
 LOCAL_COPY_HEADERS := $(addprefix include/curl/,$(CURL_HEADERS))
 
+LOCAL_32_BIT_ONLY := true
+
 LOCAL_MODULE:= libcurl
 LOCAL_MODULE_TAGS := optional
 
@@ -96,6 +98,8 @@ include $(BUILD_STATIC_LIBRARY)
 include $(CLEAR_VARS)
 include $(LOCAL_PATH)/src/Makefile.inc
 LOCAL_SRC_FILES := $(addprefix src/,$(CURL_CFILES))
+
+LOCAL_32_BIT_ONLY := true
 
 LOCAL_MODULE := curl
 LOCAL_MODULE_TAGS := optional

@@ -19,7 +19,7 @@
 #endif
 
 #ifndef OSAL_LOG_CONSOLE
-#define LOG_TAG "OSAL"
+#define LOG_TAG "VES"
 #endif
 
 /*

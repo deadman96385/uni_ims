@@ -35,22 +35,22 @@ OSAL_INLINE OSAL_NetSockId _VC_netSocket(
      * network is configured.
      */
     if (OSAL_FAIL == VIDEO_NET_SOCKET(&socketFd, type)) {
-        _VC_TRACE(__FILE__, __LINE__);
+        OSAL_logMsg("%s %d\n", __FILE__, __LINE__);
         return (socketFd);
     }
     if (OSAL_FAIL == VIDEO_NET_SET_SOCKET_OPTIONS(&socketFd,
             OSAL_NET_SOCK_NONBLOCKING, 1)) {
-        _VC_TRACE(__FILE__, __LINE__);
+        OSAL_logMsg("%s %d\n", __FILE__, __LINE__);
         return (_VC_RTP_ERROR);
     }
     if (OSAL_FAIL == VIDEO_NET_SET_SOCKET_OPTIONS(&socketFd,
             OSAL_NET_SOCK_REUSE, 1)) {
-        _VC_TRACE(__FILE__, __LINE__);
+        OSAL_logMsg("%s %d\n", __FILE__, __LINE__);
         return (_VC_RTP_ERROR);
     }
     if (OSAL_FAIL == VIDEO_NET_SET_SOCKET_OPTIONS(&socketFd,
             OSAL_NET_IP_TOS, flags)) {
-        _VC_TRACE(__FILE__, __LINE__);
+        OSAL_logMsg("%s %d\n", __FILE__, __LINE__);
         return (_VC_RTP_ERROR);
     }
 
@@ -141,6 +141,7 @@ uvint _VC_netSendto(
                 &socketFd, buf_ptr, &retval, &sendAddr)) {
             return (retval);
         }
+        OSAL_logMsg("_VC_netSendto failed");
         return (0);
     }
 }

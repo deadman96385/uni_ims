@@ -17,7 +17,7 @@
 #ifdef VIDEO_DEBUG_LOG
 # define _VC_TRACE(x, y) OSAL_logMsg("%s %d\n", x, y)
 # define _VC_LOG(fmt, args...) \
-         OSAL_logMsg("%s:%d (%s) " fmt, __FILE__, __LINE__, __FUNCTION__, ## args)
+         OSAL_logMsg("%s: " fmt, __FUNCTION__, ## args)
 #else
 # define _VC_TRACE(x,y)
 # define _VC_LOG(fmt, args...)
@@ -25,15 +25,37 @@
 
 /* Task related settings. */
 
-#define VC_VTSP_INFC_TASK_NAME     "Vc-Vtsp-Cmd"
-#define VC_RTP_INFC_TASK_NAME      "Vc-Rtp"
-#define VC_RTCP_INFC_TASK_NAME     "Vc-Rtcp"
+#define VC_VTSP_INFC_TASK_NAME     "VES_vtspCmd"
+#define VC_RTP_INFC_TASK_NAME      "VES_rtp"
+#define VC_RTCP_INFC_TASK_NAME     "VES_rtcp"
 
 
 #define BUFFER_FLAG_SYNC_FRAME      (1)
 #define BUFFER_FLAG_CODEC_CONFIG    (2)
 
 #define FRAME_SPS_PPS_SIZE          (32)
+
+/* the time unit of rx bitrate statistics is 1s */
+#define BITRATE_STAT_UNIT           (1000000)
+/* the period of rx bitrate statistics is 10s */
+#define BITRATE_STAT_PERIOD         (10 * BITRATE_STAT_UNIT)
+
+/* the interval threshold of the two adjacent pkts is 600 ms*/
+#define BITRATE_PKT_INTV_THRESHOLD  (600000)
+
+/* bitrate factor level */
+#define BITRATE_FACTOR_LEVEL3       (3)
+#define BITRATE_FACTOR_LEVEL2       (2)
+#define BITRATE_FACTOR_LEVEL1       (1)
+#define BITRATE_FACTOR_LEVEL0       (0)
+
+/* bitrate factor base MUST be a power of 2 */
+#define BITRATE_FACTOR_BASE_BIT     (2)
+#define BITRATE_FACTOR_BASE         (1 << BITRATE_FACTOR_BASE_BIT)
+
+/* bitrate time us gap, 3s*/
+#define BITRATE_TIME_US_GAP         (3000000)
+
 /*
  * VC - VCI interfac methods.
  */

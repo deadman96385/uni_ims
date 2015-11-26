@@ -117,28 +117,28 @@ static void _VPAD_muxStatsReport()
     }
 
     _VPAD_muxPtr->lastStatTimeStamp = myTimeVal;
-    OSAL_logMsg("\nstatistics dump\n");
-    OSAL_logMsg("%36s \t pkt, \t sz, \t, time sec:%d usec:%d\n\n",
+    OSAL_logMsg("\n[statistics dump]\n");
+    OSAL_logMsg("%36s \t pkt, \t sz, \t, time sec:%d usec:%d\n",
             "qname", myTimeVal.sec, myTimeVal.usec);
 
     _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->inFifo.videoCmdEvtQ);
     _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->inFifo.videoStreamQ);
-    _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->inFifo.voiceStreamQ);
-    _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->inFifo.isiRpcQ);
-    _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->inFifo.isiEvtRpcQ);
-    _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->inFifo.sipQ);
-    _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->inFifo.isipQ);
-    _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->inFifo.csmEvtQ);
+   // _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->inFifo.voiceStreamQ);
+   // _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->inFifo.isiRpcQ);
+   // _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->inFifo.isiEvtRpcQ);
+   // _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->inFifo.sipQ);
+   // _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->inFifo.isipQ);
+   // _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->inFifo.csmEvtQ);
 
     _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.videoCmdEvtQ);
     _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.videoStreamQ);
-    _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.voiceStreamQ);
-    _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.isiRpcQ);
-    _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.isiEvtRpcQ);
-    _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.sipQ);
-    _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.isipQ);
-    _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.csmEvtQ);
-
+   // _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.voiceStreamQ);
+   // _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.isiRpcQ);
+   // _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.isiEvtRpcQ);
+   // _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.sipQ);
+   // _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.isipQ);
+   // _VPAD_MUX_DUMP_ONE_STAT(_VPAD_muxPtr->outFifo.csmEvtQ);
+   OSAL_logMsg("\n");
 #ifdef VPAD_MUX_DEBUG
     _VPAD_muxVideoCountersReport();
 #endif
@@ -223,6 +223,7 @@ OSAL_Status _VPAD_muxWriteDataToFifo(
     vint *fid_ptr = &toFifo->fid;
     char *name_ptr = toFifo->name;
 
+
     /* If a fd doesn't exist then create it. */
     if (0 == *fid_ptr) {
         OSAL_logMsg("%s:%d write %s fifo but it is not opened yet.\n",
@@ -245,9 +246,6 @@ OSAL_Status _VPAD_muxWriteDataToFifo(
 
     /* Update statistics if needed */
     _VPAD_MUX_STATS_UPDATE(toFifo, size);
-
-    /* Output statistics report if defined. */
-    _VPAD_MUX_STATS_REPORT();
 
     return (OSAL_SUCCESS);
 }
@@ -348,6 +346,7 @@ static OSAL_TaskReturn _VPAD_muxWriteDeviceTask(
     vint            size;
     OSAL_SelectSet  fdSet;
     OSAL_Boolean    flag;
+    uint32   cnt = 0;
 
     size = sizeof(VPR_Comm);
 
@@ -510,9 +509,10 @@ _VPAD_WRITE_TASK_LOOP:
         }
     }
 
-    /* Output statistics report if defined. */
-    _VPAD_MUX_STATS_REPORT();
-
+    /* Output statistics report if defined, every 16 times print once. */
+    if (((cnt ++) & 0xf) == 0) {
+        _VPAD_MUX_STATS_REPORT();
+    }
     goto _VPAD_WRITE_TASK_LOOP;
 
     return (0);
@@ -667,6 +667,7 @@ static OSAL_TaskReturn _VPAD_muxReadDeviceTask(
 {
     VPR_Comm *vpr_ptr = &(_VPAD_muxPtr->readTaskBuf);
     vint      size;
+    uint32    cnt = 0;
 
     size = sizeof(VPR_Comm);
 
@@ -678,9 +679,9 @@ _VPAD_READ_TASK_LOOP:
             /* lost vpmd connection */
             _VPAD_muxPtr->isVpmdReady = OSAL_FALSE;
             _VPAD_muxFifoDestroy();
-            VPAD_muxDbgPrintf("VPMD connection is lost.\n");
+            OSAL_logMsg("%s: VPMD connection is lost.\n", __FUNCTION__);
         }
-        VPAD_muxDbgPrintf("VPMD read fail, retry later.\n");
+        OSAL_logMsg("%s: VPMD read fail, retry later.\n");
         OSAL_taskDelay(VPAD_MUX_ERROR_RECOVERY_DELAY);
         goto _VPAD_READ_TASK_LOOP;
     }
@@ -694,6 +695,7 @@ _VPAD_READ_TASK_LOOP:
         case VPMD_VIDEO_CMDEVT_TARGET:
             _VPAD_muxWriteDataToFifo(&_VPAD_muxPtr->outFifo.videoCmdEvtQ,
                     vpr_ptr, vpr_ptr->targetSize, OSAL_WAIT_FOREVER);
+            OSAL_logMsg("%s: receive VPMD_VIDEO_CMDEVT_TARGET, type %d\n", __FUNCTION__, vpr_ptr->type);
             break;
         case VPMD_VIDEO_STREAM_TARGET:
             _VPAD_muxWriteDataToFifo(&_VPAD_muxPtr->outFifo.videoStreamQ,
@@ -769,6 +771,11 @@ _VPAD_READ_TASK_LOOP:
             OSAL_logMsg("_VPAD_mux unknown target:%d\n", vpr_ptr->targetModule);
             break;
     }
+    /* Output statistics report if defined, every 16 times print once */
+    if (((cnt ++) & 0xf) == 0) {
+        _VPAD_MUX_STATS_REPORT();
+    }
+
     goto _VPAD_READ_TASK_LOOP;
 
     return (0);

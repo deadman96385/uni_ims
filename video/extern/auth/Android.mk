@@ -14,6 +14,8 @@ LOCAL_CFLAGS := \
 
 LOCAL_C_INCLUDES := $(MY_INCLUDE_DIR)
 
+LOCAL_32_BIT_ONLY := true
+
 LOCAL_MODULE:= libextern_auth
 LOCAL_MODULE_TAGS := optional
 

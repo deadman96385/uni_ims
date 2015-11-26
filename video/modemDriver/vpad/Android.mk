@@ -14,6 +14,8 @@ LOCAL_CFLAGS := \
 
 LOCAL_C_INCLUDES := $(MY_INCLUDE_DIR)
 
+LOCAL_32_BIT_ONLY := true
+
 LOCAL_MODULE:= libvpad
 LOCAL_MODULE_TAGS := optional
 
@@ -35,6 +37,8 @@ LOCAL_CFLAGS := \
 	$(MY_CFLAGS)
 
 LOCAL_C_INCLUDES := $(MY_INCLUDE_DIR)
+
+LOCAL_32_BIT_ONLY := true
 
 LOCAL_MODULE:= libvpad_test
 LOCAL_MODULE_TAGS := optional

@@ -59,6 +59,19 @@
  */
 #define _VC_TMMBR_STATE_BACK_OFF (4)
 
+
+/* adjust direction of tmmbr */
+#define _VC_TMMBR_DIR_LEVEL    (1)
+#define _VC_TMMBR_DIR_UP       (2)
+#define _VC_TMMBR_DIR_DOWN     (3)
+
+/* new tmmbr FSM is designed to repalce the stale one */
+#define _VC_TMMBR_STATE_DONE         (0)
+#define _VC_TMMBR_STATE_PENDING      (1)
+
+/* step threshold */
+#define _VC_TMMBR_STEP_MIN           (30) /* 30 Kbps */
+
 /* Number of incoming packets to be ignored when TMMBR state is inhibited. */
 #define _VC_TMMBR_N_INHIBT ((5) * JBV_OBSERVATION_WINDOW)
 /* Number of incoming packets to be ignored when TMMBR state is waiting for response. */

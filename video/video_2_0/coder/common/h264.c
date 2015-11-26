@@ -49,7 +49,7 @@ static void _H264_encFindFullPacket(
     if (NULL == *start1_ptr) {
         return;
     }
-    
+
     in_ptr = *start1_ptr;
 
     /*
@@ -209,7 +209,7 @@ int H264_encGetData(
     sz = start2_ptr - start1_ptr;
     consumed = obj_ptr->pkt.consumed;
     nal = H264_READ_NALU(start1_ptr[0]);
-    DBG("nal: %d", nal);
+    //DBG("nal: %d", nal);
 
     /*
      * Don't send SEI if encoder generates it
@@ -241,6 +241,12 @@ int H264_encGetData(
         else {
             pkt_ptr->mark = 0;
         }
+
+        //sps & pps nalu type must be NAL, set mark 1.
+        if(NALU_SPS == nal || NALU_PPS == nal) {
+            pkt_ptr->mark = 1;
+        }
+
         obj_ptr->lastType = nal;
         return (1);
     }
