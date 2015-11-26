@@ -172,6 +172,17 @@ int H264_encGetData(
                 (NULL != obj_ptr->pkt.start1_ptr[i]) &&
                 (NULL != obj_ptr->pkt.start2_ptr[i])
                 ) {
+
+            start1_ptr = obj_ptr->pkt.start1_ptr[i];
+            nal =  H264_READ_NALU(start1_ptr[0]);
+            /* if the nal is IDR(I frame) or NON_IDR(P frame), stop fragmenting */
+            if (NALU_IDR == nal || NALU_NON_IDR == nal) {
+                obj_ptr->pkt.start2_ptr[i] = obj_ptr->pkt.end_ptr;
+                obj_ptr->pkt.start1_ptr[i + 1] = NULL;
+                obj_ptr->pkt.start2_ptr[i + 1] = NULL;
+                break;
+            }
+
             i++;
             if (i >= ENC_MAX_PKTS) {
                 DBG("Losing data, increase packet buffer\n");
