@@ -440,6 +440,8 @@ static bool bLteDetached = false;
 static int isTest;
 //desire to power on/off radio by FW
 static int desiredRadioState = 0;
+static RIL_RegState csRegState = RIL_REG_STATE_UNKNOWN;
+static RIL_RegState psRegState = RIL_REG_STATE_UNKNOWN;
 
 void *setRadioOnWhileSimBusy(void *param);
 static pthread_mutex_t s_hasSimBusyMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -4828,6 +4830,49 @@ static int mapCgregResponse(int in_response)
     return out_response;
 }
 
+static int mapRegState(int in_response)
+{
+    int out_response = RIL_REG_STATE_UNKNOWN;
+
+    switch(in_response) {
+        case 0:
+            out_response = RIL_REG_STATE_NOT_REG;
+            break;
+        case 1:
+            out_response = RIL_REG_STATE_HOME;
+            break;
+        case 2:
+            out_response = RIL_REG_STATE_SEARCHING;
+            break;
+        case 3:
+            out_response = RIL_REG_STATE_DENIED;
+            break;
+        case 4:
+            out_response = RIL_REG_STATE_UNKNOWN;
+            break;
+        case 5:
+            out_response = RIL_REG_STATE_ROAMING;
+            break;
+        case 8:
+        case 10:
+            out_response = RIL_REG_STATE_NOT_REG_EMERGENCY_CALL_ENABLED;
+            break;
+        case 12:
+            out_response = RIL_REG_STATE_SEARCHING_EMERGENCY_CALL_ENABLED;
+            break;
+        case 13:
+            out_response = RIL_REG_STATE_DENIED_EMERGENCY_CALL_ENABLED;
+            break;
+        case 14:
+            out_response = RIL_REG_STATE_UNKNOWN_EMERGENCY_CALL_ENABLED;
+            break;
+        default:
+            out_response = RIL_REG_STATE_UNKNOWN;
+            break;
+    }
+    return out_response;
+}
+
 static void requestRegistrationState(int channelID, int request, void *data,
                                         size_t datalen, RIL_Token t)
 {
@@ -4962,6 +5007,13 @@ static void requestRegistrationState(int channelID, int request, void *data,
             break;
         default:
             goto error;
+    }
+
+    int regState = mapRegState(response[0]);
+    if (request == RIL_REQUEST_VOICE_REGISTRATION_STATE) {
+        csRegState = regState;
+    } else if (request == RIL_REQUEST_DATA_REGISTRATION_STATE) {
+        psRegState = regState;
     }
 
     if(8 == response[0])
@@ -11060,6 +11112,11 @@ static void pollSIMState (void *param)
 
 static void attachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
 {
+    if(psRegState == RIL_REG_STATE_NOT_REG_EMERGENCY_CALL_ENABLED) {
+        RILLOGD("attachGPRS when inEmergency");
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        return;
+    }
     ATResponse *p_response = NULL;
     int ret;
     int err;

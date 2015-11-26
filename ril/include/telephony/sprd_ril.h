@@ -278,6 +278,25 @@ typedef enum {
     PREF_NET_TYPE_LTE_WCDMA                = 12  /* LTE/WCDMA */
 } RIL_PreferredNetworkType;
 
+typedef enum {
+    RIL_REG_STATE_NOT_REG                           = 0, /*Not registered, MT is not currently searching*/
+                                                         /*a new operator to register*/
+    RIL_REG_STATE_HOME                              = 1, /*Registered, home network*/
+    RIL_REG_STATE_SEARCHING                         = 2, /*Not registered, but MT is currently searching*/
+                                                          /*a new operator to register*/
+    RIL_REG_STATE_DENIED                            = 3, /*Registration denied*/
+    RIL_REG_STATE_UNKNOWN                           = 4, /*Unknown*/
+    RIL_REG_STATE_ROAMING                           = 5, /*Registered, roaming*/
+    RIL_REG_STATE_NOT_REG_EMERGENCY_CALL_ENABLED    = 10, /*Same as 0, but indicates that emergency calls*/
+                                                          /*are enabled.*/
+    RIL_REG_STATE_SEARCHING_EMERGENCY_CALL_ENABLED  = 12, /*Same as 2, but indicates that emergency calls*/
+                                                          /*are enabled.*/
+    RIL_REG_STATE_DENIED_EMERGENCY_CALL_ENABLED     = 13, /*Same as 3, but indicates that emergency calls*/
+                                                          /*are enabled.*/
+    RIL_REG_STATE_UNKNOWN_EMERGENCY_CALL_ENABLED    = 14 /*Same as 4, but indicates that emergency calls*/
+                                                         /*are enabled.*/
+} RIL_RegState;
+
 /* Source for cdma subscription */
 typedef enum {
    CDMA_SUBSCRIPTION_SOURCE_RUIM_SIM = 0,
