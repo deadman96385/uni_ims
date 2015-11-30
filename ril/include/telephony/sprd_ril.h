@@ -6487,6 +6487,22 @@ typedef struct {
   char      data[OMADM_SEND_DATA_SIZE];
   char      len[2];
 } RIL_OmaDm_SendDataNoti;
+
+#else
+/*SPRD: add for alpha identifier display in stk @{ */
+typedef struct {
+   int   call_type;
+   int   result;
+   int   is_alpha;
+   int   alpha_len;
+   char *alpha_data;
+   int   pre_type;
+   int   ton;
+   int   npi;
+   int   num_len;
+   char *number;
+} RIL_StkCallControlResult;
+/* @} */
 #endif
 
 /***********************************************************************/

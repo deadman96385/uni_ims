@@ -58,7 +58,9 @@
     {RIL_UNSOL_DC_RT_INFO_CHANGED, responseDcRtInfo, WAKE_PARTIAL},
     {RIL_UNSOL_RADIO_CAPABILITY, responseRadioCapability, WAKE_PARTIAL},
     {RIL_UNSOL_ON_SS, responseSSData, WAKE_PARTIAL},
-    {RIL_UNSOL_STK_CC_ALPHA_NOTIFY, responseString, WAKE_PARTIAL},
+    /*SPRD: modify for alpha identifier display in stk @{ */
+    {RIL_UNSOL_STK_CC_ALPHA_NOTIFY, responseCCresult, WAKE_PARTIAL},
+    /* @} */
     {RIL_UNSOL_LCEDATA_RECV, responseLceData, WAKE_PARTIAL}
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     ,{RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED, responseVoid, WAKE_PARTIAL}

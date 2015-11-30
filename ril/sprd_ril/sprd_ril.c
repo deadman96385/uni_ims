@@ -13412,6 +13412,71 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 RIL_UNSOL_SIGNAL_STRENGTH,
                 &response_v6, sizeof(RIL_SignalStrength_v6));
     }
+#else
+    /*SPRD: add for alpha identifier display in stk @{ */
+    else if (strStartsWith(s, "+SPUSATCALLCTRL:")) {
+        char *tmp;
+        RIL_StkCallControlResult *response = NULL;;
+
+        RILLOGD("RIL_UNSOL_STK_CALL_CONTROL_RESULT");
+        response = (RIL_StkCallControlResult *)alloca(sizeof(RIL_StkCallControlResult));
+        if (response == NULL) goto out;
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+        err = at_tok_nextint(&tmp, &response->call_type);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->result);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->is_alpha);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->alpha_len);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+        err = at_tok_nextstr(&tmp, &response->alpha_data);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->pre_type);
+        if (err < 0) {
+           RILLOGD("%s fail", s);
+           goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->ton);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->npi);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->num_len);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+        err = at_tok_nextstr(&tmp, &response->number);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+        RIL_onUnsolicitedResponse(RIL_UNSOL_STK_CC_ALPHA_NOTIFY, response, sizeof(RIL_StkCallControlResult));
+    }
+    /* @} */
 #endif
 out:
     free(line);

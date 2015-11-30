@@ -291,6 +291,10 @@ static int responseSS(Parcel &p, void *response, size_t responselen);
 static int responseLockInfo(Parcel &p, void *response, size_t responselen);
 static int responsemsg(Parcel &p, void *response, size_t responselen);
 static int responseCCresult(Parcel &p, void *response, size_t responselen);
+#else
+/*SPRD: add for alpha identifier display in stk @{ */
+static int responseCCresult(Parcel &p, void *response, size_t responselen);
+/* @} */
 #endif
 #if defined (RIL_SPRD_EXTENSION)
 static int responseDSCI(Parcel &p, void *response, size_t responselen);
@@ -4395,6 +4399,43 @@ static int responseLockInfo(Parcel &p, void *response, size_t responselen)
     /*FIXME*/
     return 0;
 }
+#else
+/*SPRD: add for alpha identifier display in stk @{ */
+static int responseCCresult(Parcel &p, void *response, size_t responselen)
+{
+    if (response == NULL) {
+        RILLOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+    if (responselen != sizeof(RIL_StkCallControlResult)) {
+        RILLOGE("invalid response length was %d expected %d",
+                (int)responselen, (int)sizeof (RIL_StkCallControlResult));
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    RIL_StkCallControlResult *p_cur = (RIL_StkCallControlResult *) response;
+    p.writeInt32(p_cur->call_type);
+    p.writeInt32(p_cur->result);
+    p.writeInt32(p_cur->is_alpha);
+    p.writeInt32(p_cur->alpha_len);
+    writeStringToParcel(p, p_cur->alpha_data);
+    p.writeInt32(p_cur->pre_type);
+    p.writeInt32(p_cur->ton);
+    p.writeInt32(p_cur->npi);
+    p.writeInt32(p_cur->num_len);
+    writeStringToParcel(p, p_cur->number);
+
+    startResponse;
+    appendPrintBuf("%scall_type=%d, result=%d,is_alpha=%d,alpha_len=%d,alpha_data=%s \
+                    pre_type=%d,ton=%d,npi=%d,num_len=%d,number=%s",
+                   printBuf, p_cur->call_type, p_cur->result, p_cur->is_alpha,
+                   p_cur->alpha_len,p_cur->alpha_data,p_cur->pre_type,p_cur->ton,
+                   p_cur->npi,p_cur->num_len,p_cur->number);
+    closeResponse;
+
+    return 0;
+}
+/* @} */
 #endif
 
 #if defined (RIL_SPRD_EXTENSION)
@@ -6605,6 +6646,10 @@ requestToString(int request) {
         case RIL_UNSOL_STK_CC_ALPHA_NOTIFY: return "UNSOL_STK_CC_ALPHA_NOTIFY";
         case RIL_UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED: return "UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED";
         case RIL_UNSOL_QOS_STATE_CHANGED_IND: return "UNSOL_QOS_STATE_CHANGED_IND";
+#else
+        /*SPRD: add for alpha identifier display in stk @{ */
+        case RIL_UNSOL_STK_CC_ALPHA_NOTIFY: return "UNSOL_STK_CC_ALPHA_NOTIFY";
+        /* @} */
 #endif
 #if defined (RIL_SPRD_EXTENSION)
         case RIL_UNSOL_VIDEOPHONE_DATA: return "UNSOL_VIDEOPHONE_DATA";
