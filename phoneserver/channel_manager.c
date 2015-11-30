@@ -998,37 +998,58 @@ static void *signal_process(){
                     } else
                         rxlev_array[i] = rxlev_array[i + 1];
                 }
-
             }
             PHS_LOGD("sim%d signal no update num=%d",sim_index, nosigUpdate[sim_index]);
             if (nosigUpdate[sim_index] == MAXSigCount) {
                 continue;
             }
-            if (!strcmp(modem, "l") || !strcmp(modem, "tl") || !strcmp(modem, "lf")) {
-                rsrp_array[N - 1] = rsrp[sim_index];
-            } else if (!strcmp(modem, "t") || !strcmp(modem, "w")) {
-                rsrp_array[N - 1] = rssi[sim_index];
-            }
-            rsrp_value = least_squares(rsrp_array);
-            if (rsrp_value < lowValue || rsrp_value > upValue) {// if invalid, use current value
-                if (!strcmp(modem, "l") || !strcmp(modem, "tl") || !strcmp(modem, "lf")) {
-                    rsrp_value = rsrp[sim_index];
-                } else if (!strcmp(modem, "t") || !strcmp(modem, "w")) {
-                    rsrp_value = rssi[sim_index];
+
+            rsrp_array[N - 1] = newSig;
+            if (rsrp_array[N - 1] >= rsrp_array[N - 2]) {//signal go up
+                rsrp_value = newSig;
+            } else {// signal come down
+                if (rsrp_array[N - 1] == rsrp_array[N - 2] -1) {
+                    rsrp_value = newSig;
+                } else {
+                    rsrp_value = least_squares(rsrp_array);
+                    if (rsrp_value < lowValue || rsrp_value > upValue || rsrp_value < newSig) { //if invalid, use current value
+                        rsrp_value = newSig;
+                    }
+                    rsrp_array[N - 1] = rsrp_value;
                 }
             }
+
             if (rscp_array != NULL) { // w/td mode no rscp
                 rscp_array[N - 1] = rscp[sim_index];
-                rscp_value = least_squares(rscp_array);
-                if (rscp_value < 0 || rscp_value > 31) {// if invalid, use current value
+                if (rscp_array[N - 1] >= rscp_array[N - 2] ){//signal go up
                     rscp_value = rscp[sim_index];
+                } else {//signal come down
+                    if (rscp_array[N - 1] == rscp_array[N - 2] -1 ) {
+                        rscp_value = rscp[sim_index];
+                    } else {
+                        rscp_value = least_squares(rscp_array);
+                        if (rscp_value < 0 || rscp_value > 31 || rscp_value < rscp[sim_index]) { //if invalid, use current value
+                            rscp_value = rscp[sim_index];
+                        }
+                        rscp_array[N - 1] = rscp_value;
+                    }
                 }
             }
+
             if (rxlev_array != NULL) { // w/td mode no rxlev
                 rxlev_array[N - 1] = rxlev[sim_index];
-                rxlev_value = least_squares(rxlev_array);
-                if (rxlev_value < 0 || rxlev_value > 31) {// if invalid, use current value
+                if (rxlev_array[N - 1] >= rxlev_array[N - 2]) {//signal go up
                     rxlev_value = rxlev[sim_index];
+                } else { //signal come down
+                    if (rxlev_array[N - 1] == rxlev_array[N - 2] -1) {
+                        rxlev_value = rxlev[sim_index];
+                    } else {
+                        rxlev_value = least_squares(rxlev_array);
+                        if (rxlev_value < 0 || rxlev_value > 31 || rxlev_value < rxlev[sim_index]) { //if invalid, use current value
+                            rxlev_value = rxlev[sim_index];
+                        }
+                        rxlev_array[N - 1] = rxlev_value;
+                    }
                 }
             }
 
@@ -1039,7 +1060,8 @@ static void *signal_process(){
                 snprintf(ind_str, sizeof(ind_str), "\r\n+CSQ: %d,%d\r\n", rsrp_value, ber[sim_index]);
 
             if (ind_pty[sim_index] && ind_pty[sim_index]->ops) {
-                PHS_LOGD( "rsrp[%d]=%d, ind_str= %s", sim_index, rsrp_value, ind_str);
+                PHS_LOGD( "rsrp[%d]=%d,rscp[%d]=%d,rxlev[%d]=%d ind_str= %s",
+                        sim_index, rsrp_value, sim_index, rscp_value, sim_index, rxlev_value, ind_str);
                 ind_pty[sim_index]->ops->pty_write(ind_pty[sim_index], ind_str, strlen(ind_str));
             } else {
                 PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
