@@ -548,11 +548,6 @@ static void queryAllActivePDN(int channelID) {
 }
 
 /* @} */
-/* SPRD : for SPNWNAME @{ */
-static char s_nw_plmn[10] = {0};
-static char s_nw_full_name[PROPERTY_VALUE_MAX] = {0};
-static char s_nw_short_name[PROPERTY_VALUE_MAX] = {0};
-/* @} */
 
 void list_init(struct listnode *node)
 {
@@ -3986,21 +3981,6 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
         }
         /** @} **/
 
-        /**  SPRD : Add SPNWNAME feature @{ **/
-        if(cur[2] != NULL && strlen(cur[2]) > 0) {
-            if(cur[1] == NULL && cur[0] != NULL) cur[1] = cur[0];
-            cur[0] = NULL;
-        }
-        if(strlen(s_nw_plmn) > 0 && cur[2] != NULL){
-            bool exit_full_name = strlen(s_nw_full_name) > 0;
-            bool exit_short_name = strlen(s_nw_short_name) > 0;
-            bool same_plmn = strcmp(s_nw_plmn, cur[2]) == 0;
-            if(same_plmn) {
-                if(exit_full_name) cur[0] = s_nw_full_name;
-                if(exit_short_name) cur[1] = s_nw_short_name;
-            }
-        }
-        /* @} */
 #if defined (RIL_SPRD_EXTENSION)
         err = at_tok_nextint(&line, &act);
         if (err < 0) continue;
@@ -12989,47 +12969,6 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             RIL_onUnsolicitedResponse(RIL_UNSOL_FDN_ENABLE, &response, sizeof(response));
         }
     }
-    else if(strStartsWith(s,"+SPNWNAME:")) {
-        RILLOGD("UNSOL SPNWNAME %s", s);
-        char *tmp;
-        char *mcc;
-        char *mnc;
-        char *full_name;
-        char *short_name;
-
-        line = strdup(s);
-        tmp = line;
-        at_tok_start(&tmp);
-
-        err = at_tok_nextstr(&tmp, &mcc);
-        if(err < 0) goto out;
-        RILLOGD("UNSOL SPNWNAME MCC -> %s", mcc);
-
-        err = at_tok_nextstr(&tmp, &mnc);
-        if(err < 0) goto out;
-        RILLOGD("UNSOL SPNWNAME MNC -> %s", mnc);
-
-        err = at_tok_nextstr(&tmp, &full_name);
-        if(err < 0) goto out;
-        RILLOGD("UNSOL SPNWNAME FULL_NAME -> %s", full_name);
-
-        err = at_tok_nextstr(&tmp, &short_name);
-        if(err < 0) goto out;
-        RILLOGD("UNSOL SPNWNAME SHORT_NAME -> %s", short_name);
-
-        memset(s_nw_plmn, 0, sizeof(s_nw_plmn));
-        memset(s_nw_full_name, 0, sizeof(s_nw_full_name));
-        memset(s_nw_short_name,0, sizeof(s_nw_short_name));
-
-        strcpy(s_nw_plmn,mcc);
-        strcat(s_nw_plmn,mnc);
-
-        strcpy(s_nw_full_name, full_name);
-        strcpy(s_nw_short_name, short_name);
-
-        RILLOGD("UNSOL SPNWNAME s_nw_plmn -> %s, s_nw_full_name -> %s, s_nw_short_name -> %s",
-                           s_nw_plmn, s_nw_full_name, s_nw_short_name);
-}
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     else if (strStartsWith(s, "+SPUSATSMS:")) {
         char *response = NULL;
