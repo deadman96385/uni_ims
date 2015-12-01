@@ -284,9 +284,17 @@ PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_fo
 
             ret = Mp4Dec_DecMp4Header(vo, video_format_ptr->i_extra);
             if(MMDEC_OK == ret)
-            {
-                video_format_ptr->frame_width = vop_mode_ptr->OrgFrameWidth;
-                video_format_ptr->frame_height= vop_mode_ptr->OrgFrameHeight;
+            {  //revised for bug456978
+                if (vop_mode_ptr->OrgFrameWidth != 0 && vop_mode_ptr->OrgFrameHeight != 0)
+                {
+                    video_format_ptr->frame_width = vop_mode_ptr->OrgFrameWidth;
+                    video_format_ptr->frame_height= vop_mode_ptr->OrgFrameHeight;
+                }
+                else
+                {
+                    vop_mode_ptr->OrgFrameWidth =  video_format_ptr->frame_width;
+                    vop_mode_ptr->OrgFrameHeight = video_format_ptr->frame_height;
+                }
             }
 
             if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)

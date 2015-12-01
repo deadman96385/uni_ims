@@ -60,6 +60,7 @@ MMDecRet Mp4Dec_InitDecoderPara(Mp4DecObject *vo)
     vop_mode_ptr->bCoded = TRUE;
     vop_mode_ptr->RoundingControl = 0;
     vop_mode_ptr->IntraDcSwitchThr = 0;
+    vop_mode_ptr->NumBitsTimeIncr = 4; //added for bug456978
 
     vop_mode_ptr->pCurDispFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vo, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
     CHECK_MALLOC(vop_mode_ptr->pCurDispFrame, "vop_mode_ptr->pCurDispFrame");

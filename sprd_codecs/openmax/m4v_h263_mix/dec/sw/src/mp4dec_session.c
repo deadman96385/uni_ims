@@ -57,6 +57,8 @@ MMDecRet Mp4Dec_InitDecoderPara(Mp4DecObject *vo)
     vop_mode_ptr->bInterlace = FALSE;
     vop_mode_ptr->bInitSuceess = FALSE;
     vop_mode_ptr->post_filter_en = FALSE;
+    vop_mode_ptr->QuantPrecision = 5;
+    vop_mode_ptr->NumBitsTimeIncr = 4; //added for bug456978
 
     vop_mode_ptr->pCurDispFrame = (Mp4DecStorablePic *)Mp4Dec_MemAlloc(vo, sizeof(Mp4DecStorablePic), 4, INTER_MEM);
     CHECK_MALLOC(vop_mode_ptr->pCurDispFrame, "vop_mode_ptr->pCurDispFrame");
