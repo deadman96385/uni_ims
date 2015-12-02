@@ -48,38 +48,48 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecContext *img_ptr, uint8 *bi
     switch(nal_ptr->nal_unit_type)
     {
     case NALU_TYPE_IDR:
-        img_ptr->g_ready_to_decode_slice = TRUE;
-        ret = H264Dec_process_slice (img_ptr, nal_ptr);
-
-        if ((img_ptr->g_curr_slice_ptr->start_mb_nr == 0) && (!img_ptr->error_flag))
-        {
-            img_ptr->g_searching_IDR_pic = FALSE;
-        }
-        break;
-    case NALU_TYPE_SLICE:
-#if 0
-        if (!g_searching_IDR_pic)
-        {
+        if (img_ptr->sawSPS && img_ptr->sawPPS) {
             img_ptr->g_ready_to_decode_slice = TRUE;
             ret = H264Dec_process_slice (img_ptr, nal_ptr);
-        }
-#else
-        ret = H264Dec_process_slice (img_ptr, nal_ptr);
-        if (!img_ptr->g_searching_IDR_pic || (img_ptr->type == I_SLICE))
-        {
-            img_ptr->g_ready_to_decode_slice = TRUE;
 
             if ((img_ptr->g_curr_slice_ptr->start_mb_nr == 0) && (!img_ptr->error_flag))
             {
                 img_ptr->g_searching_IDR_pic = FALSE;
             }
+        } else {
+            img_ptr->error_flag |= ER_BSM_ID;
         }
+        break;
+    case NALU_TYPE_SLICE:
+        if (img_ptr->sawSPS && img_ptr->sawPPS) {
+#if 0
+            if (!g_searching_IDR_pic)
+            {
+                img_ptr->g_ready_to_decode_slice = TRUE;
+                ret = H264Dec_process_slice (img_ptr, nal_ptr);
+            }
+#else
+            ret = H264Dec_process_slice (img_ptr, nal_ptr);
+            if (!img_ptr->g_searching_IDR_pic || (img_ptr->type == I_SLICE))
+            {
+                img_ptr->g_ready_to_decode_slice = TRUE;
+
+                if ((img_ptr->g_curr_slice_ptr->start_mb_nr == 0) && (!img_ptr->error_flag))
+                {
+                    img_ptr->g_searching_IDR_pic = FALSE;
+                }
+            }
 #endif
+        } else {
+            img_ptr->error_flag |= ER_BSM_ID;
+        }
         break;
     case NALU_TYPE_PPS:
+        img_ptr->sawPPS = TRUE;
         H264Dec_process_pps (img_ptr);
         break;
     case NALU_TYPE_SPS:
+        img_ptr->sawSPS = TRUE;
         H264Dec_process_sps (img_ptr);
         if(dec_output_ptr)
         {

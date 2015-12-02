@@ -111,17 +111,29 @@ void H264Dec_SetCurRecPic(AVCHandle *avcHandle, uint8	*pFrameY,uint8 *pFrameY_ph
 
 MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int *nal_type, int *nal_ref_idc)
 {
-    int forbidden_zero_bit;
+    if (size > 0) {
+        uint32 data;
+        int32 forbidden_zero_bit;
+        uint8 *ptr = bitstream;
+        uint32 len = 0;
 
-    if (size > 0)
-    {
-        forbidden_zero_bit = bitstream[0] >> 7;
+        while ((len < size) && (data = ptr[0]) == 0x00) {
+            len++;
+            ptr++;
+        }
 
-        if (forbidden_zero_bit != 0)
+        if ((len > 2) && (ptr[0] == 0x1)) {
+            ptr++; //start code found, skip the byte '0x1'
+        }
+
+        data = ptr[0];
+        forbidden_zero_bit = data >> 7;
+        if (forbidden_zero_bit != 0) {
             return MMDEC_ERROR;
+        }
 
-        *nal_ref_idc = (bitstream[0] & 0x60) >> 5;
-        *nal_type = bitstream[0] & 0x1F;
+        *nal_ref_idc = (data & 0x60) >> 5;
+        *nal_type = data & 0x1F;
         return MMDEC_OK;
     }
 
@@ -456,6 +468,9 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
     }
 
 DEC_EXIT:
+
+    dec_output_ptr->sawSPS = vo->sawSPS;
+    dec_output_ptr->sawPPS = vo->sawPPS;
 
     SPRD_CODEC_LOGD ("%s, %d, exit decoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)

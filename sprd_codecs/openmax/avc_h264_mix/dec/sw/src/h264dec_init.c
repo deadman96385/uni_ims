@@ -123,6 +123,8 @@ PUBLIC MMDecRet H264Dec_init_global_para (H264DecContext *img_ptr)
     img_ptr->return_pos1 = 0;
     img_ptr->return_pos2 = 0;
     img_ptr->not_supported = FALSE;
+    img_ptr->sawSPS = FALSE;
+    img_ptr->sawPPS = FALSE;
 
     img_ptr->g_no_reference_picture_ptr->used_for_reference = 0;
     img_ptr->g_no_reference_picture_ptr->is_long_term = 0;

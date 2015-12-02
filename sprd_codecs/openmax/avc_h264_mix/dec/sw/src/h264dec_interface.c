@@ -99,15 +99,32 @@ MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picI
 
 MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int *nal_type, int *nal_ref_idc)
 {
-    int forbidden_zero_bit;
+    if (size > 0) {
+        uint32 data;
+        int32 forbidden_zero_bit;
+        uint8 *ptr = bitstream;
+        uint32 len = 0;
 
-    if (size > 0)
-    {
-        forbidden_zero_bit = bitstream[0] >> 7;
-        if (forbidden_zero_bit != 0)
+        //SPRD_CODEC_LOGI("%s, %d, check Nal type: [%0x, %0x, %0x, %0x, %0x, %0x, %0x]",
+        //                 __FUNCTION__, __LINE__, ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5]);
+
+        while ((len < size) && (data = ptr[0]) == 0x00) {
+            len++;
+            ptr++;
+        }
+
+        if ((len > 2) && (ptr[0] == 0x1)) {
+            ptr++; //start code found, skip the byte '0x1'
+        }
+
+        data = ptr[0];
+        forbidden_zero_bit = data >> 7;
+        if (forbidden_zero_bit != 0) {
             return MMDEC_ERROR;
-        *nal_ref_idc = (bitstream[0] & 0x60) >> 5;
-        *nal_type = bitstream[0] & 0x1F;
+        }
+
+        *nal_ref_idc = (data & 0x60) >> 5;
+        *nal_type = data & 0x1F;
         return MMDEC_OK;
     }
 
@@ -340,6 +357,9 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
     }
 
 DEC_EXIT:
+
+    dec_output_ptr->sawSPS = img_ptr->sawSPS;
+    dec_output_ptr->sawPPS = img_ptr->sawPPS;
 
     //need IVOP but not found IDR,then return seek ivop
     if(dec_input_ptr->expected_IVOP && img_ptr->g_searching_IDR_pic)

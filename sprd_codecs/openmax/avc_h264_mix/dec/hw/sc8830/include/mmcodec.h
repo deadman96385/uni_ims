@@ -153,6 +153,9 @@ typedef struct
     void *pBufferHeader;
     int reqNewBuf;
     int32 mPicId;
+
+    BOOLEAN sawSPS;
+    BOOLEAN sawPPS;
 } MMDecOutput;
 
 // Encoder video format structure
