@@ -537,23 +537,6 @@ const struct ind_table at_ind_cvt_table[] = {
     {AT_CMD_ECEER_IND, AT_CMD_STR("+ECEER:"), cvt_eceer_cmd_ind},
     {AT_CMD_ECIND_IND, AT_CMD_STR("+ECIND: 3"), cvt_ecind_cmd_ind},
     {AT_CMD_ECIND_IND, AT_CMD_STR("+ECIND:"), cvt_ecind0_cmd_ind},
-    {AT_CMD_ESATCAPCNF_IND, AT_CMD_STR("+ESATCAPCNF"), cvt_generic_cmd_ind},
-    {AT_CMD_ESATPROCMDIND_IND, AT_CMD_STR("+ESATPROCMDIND"),
-        cvt_generic_cmd_ind},
-    {AT_CMD_ESATENDSESSIONIND_IND, AT_CMD_STR("+ESATENDSESSIONIND"),
-        cvt_generic_cmd_ind},
-    {AT_CMD_ESATSETUPCALLACKIND_IND, AT_CMD_STR("+ESATSETUPCALLACKIND"),
-        cvt_generic_cmd_ind},
-    {AT_CMD_ESIMATDISPLAY_IND, AT_CMD_STR("+ESIMATDISPLAY"),
-        cvt_generic_cmd_ind},
-    {AT_CMD_EEMGINBFTM_IND, AT_CMD_STR("+EEMGINBFTM"), cvt_generic_cmd_ind},
-    {AT_CMD_EEMGINFOBASIC_IND, AT_CMD_STR("+EEMGINFOBASIC"),
-        cvt_generic_cmd_ind},
-    {AT_CMD_EEMGINFOSVC_IND, AT_CMD_STR("+EEMGINFOSVC"),
-        cvt_generic_cmd_ind},
-    {AT_CMD_EEMGINFOPS_IND, AT_CMD_STR("+EEMGINFOPS"), cvt_generic_cmd_ind},
-    {AT_CMD_EEMGINFONC_IND, AT_CMD_STR("+EEMGINFONC"), cvt_generic_cmd_ind},
-    {AT_CMD_ECIND_IND, AT_CMD_STR("+CGEV:"), cvt_null_cmd_ind},
     {AT_CMD_CESQ_IND, AT_CMD_STR("+CESQ:"), cvt_cesq_cmd_ind}
 };
 

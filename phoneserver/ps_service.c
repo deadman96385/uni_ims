@@ -219,7 +219,7 @@ int dispose_data_fallback(int masterCid, int secondaryCid) {
 
     if (masterCid < 1|| masterCid >= MAX_PPP_NUM || secondaryCid <1 || secondaryCid >= MAX_PPP_NUM) {
     // 1~11 is valid cid
-    return 0;
+        return 0;
     }
     snprintf(ETH_SP, sizeof(ETH_SP), "ro.modem.%s.eth", modem);
     property_get(ETH_SP, prop, "veth");
@@ -308,10 +308,6 @@ int cvt_cgdata_set_req(AT_CMD_REQ_T * req)
         if (err < 0) {
             PHS_LOGD("parse master cid error");
             master_cid = 0;
-        } else {
-            master_cid ^= cid;
-            cid ^= master_cid;
-            master_cid ^= cid;
         }
     }
     ppp_index = cid - 1;
