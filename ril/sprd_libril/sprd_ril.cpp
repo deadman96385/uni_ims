@@ -4901,7 +4901,6 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     pthread_cond_signal(&s_dispatchCond);
                     pthread_mutex_unlock(&s_dispatchMutex);
                 } else if(pCI->requestNumber == RIL_REQUEST_DIAL
-                        || pCI->requestNumber == RIL_REQUEST_DIAL_EMERGENCY_CALL
                         || pCI->requestNumber == RIL_REQUEST_DTMF
                         || pCI->requestNumber == RIL_REQUEST_DTMF_START
                         || pCI->requestNumber == RIL_REQUEST_DTMF_STOP
@@ -4965,7 +4964,6 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     pthread_cond_signal(&s_dispatchCond);
                     pthread_mutex_unlock(&s_dispatchMutex);
                 } else if(pCI->requestNumber == RIL_REQUEST_DIAL
-                        || pCI->requestNumber == RIL_REQUEST_DIAL_EMERGENCY_CALL
                         || pCI->requestNumber == RIL_REQUEST_DTMF
                         || pCI->requestNumber == RIL_REQUEST_DTMF_START
                         || pCI->requestNumber == RIL_REQUEST_DTMF_STOP
@@ -6452,7 +6450,6 @@ requestToString(int request) {
         case RIL_REQUEST_GET_REMAIN_TIMES: return "RIL_REQUEST_GET_REMAIN_TIMES";
         case RIL_REQUEST_SET_CMMS: return "SET_CMMS";
         case RIL_REQUEST_SIM_POWER: return "SIM_POWER";
-        case RIL_REQUEST_DIAL_EMERGENCY_CALL: return "DIAL_EMERGENCY_CALL";
         case RIL_REQUEST_SEND_AT: return "SEND_AT";
         case RIL_REQUEST_SET_SPEED_MODE: return "SET_SPEED_MODE";
         case RIL_REQUEST_SET_SIM_SLOT_CFG: return "SET_SIM_SLOT_CFG"; //SPRD:added for choosing WCDMA SIM
@@ -6508,7 +6505,6 @@ requestToString(int request) {
         case RIL_REQUEST_USIM_PB_CAPA: return "USIM_PB_CAPA";
         case RIL_REQUEST_LOCK_INFO: return "LOCK_INFO";
         case RIL_REQUEST_SEND_MOBILE_TRACKER_SMS: return "SEND_MOBILE_TRACKER_SMS";
-        case RIL_REQUEST_DIAL_EMERGENCY_CALL: return "DIAL_EMERGENCY_CALL";
         case RIL_REQUEST_GET_STOREAD_MSG_COUNT: return "GET_STOREAD_MSG_COUNT";	
         case RIL_REQUEST_STK_SIM_INIT_EVENT: return "STK_SIM_INIT_EVENT";
         case RIL_REQUEST_GET_LINE_ID: return "GET_LINE_ID";	

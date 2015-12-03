@@ -201,7 +201,6 @@
     ,{RIL_REQUEST_GET_REMAIN_TIMES, dispatchInts, responseInts}
     ,{RIL_REQUEST_SET_CMMS, dispatchInts, responseVoid}
     ,{RIL_REQUEST_SIM_POWER, dispatchInts, responseVoid}
-    ,{RIL_REQUEST_DIAL_EMERGENCY_CALL, dispatchDial, responseVoid}
     ,{RIL_REQUEST_SEND_AT, dispatchString, responseString}
     ,{RIL_REQUEST_SET_SPEED_MODE, dispatchInts, responseVoid}
     ,{RIL_REQUEST_SET_SIM_SLOT_CFG, dispatchInts, responseVoid}//SPRD:added for choosing WCDMA SIM
@@ -260,7 +259,6 @@
 //    ,{RIL_REQUEST_LOCK_INFO, dispatchInts, responseLockInfo}
     ,{RIL_REQUEST_LOCK_INFO, dispatchInts, responseInts}
     ,{RIL_REQUEST_SEND_MOBILE_TRACKER_SMS, dispatchVoid, responseVoid}
-    ,{RIL_REQUEST_DIAL_EMERGENCY_CALL, dispatchDial, responseVoid}
     ,{RIL_REQUEST_GET_STOREAD_MSG_COUNT, dispatchVoid, responseInts}
     ,{RIL_REQUEST_STK_SIM_INIT_EVENT, dispatchVoid, responseVoid}
     ,{RIL_REQUEST_GET_LINE_ID, dispatchVoid, responseInts}

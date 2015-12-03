@@ -4338,6 +4338,38 @@ static void requestGetCurrentCallsVoLTE(int channelID, void *data, size_t datale
     return;
 }
 
+int isEccNumber(int s_sim_num, char *dial_number) {
+    char eccNumberList[PROPERTY_VALUE_MAX] = { 0 };
+    char tmpList[PROPERTY_VALUE_MAX] = { 0 };
+    char *tmpNumber = NULL;
+    int eccNumber = 0;
+
+    if (s_sim_num == 0) {
+        property_get("ril.ecclist", eccNumberList, "0");
+    } else {
+        char eccListProperty[64] = { 0 };
+        snprintf(eccListProperty, sizeof(eccListProperty), "ril.ecclist%d", s_sim_num);
+        property_get(eccListProperty, eccNumberList, "0");
+    }
+    RILLOGD("dial_number=%s, eccNumberList=%s", dial_number, eccNumberList);
+    if (strcmp(eccNumberList, "0") == 0) {
+        property_get("ro.ril.ecclist", eccNumberList, "0");
+    }
+    RILLOGD("dial_number=%s, eccNumberList=%s", dial_number, eccNumberList);
+    strncpy(tmpList, eccNumberList, strlen(eccNumberList));
+    tmpNumber = strtok(tmpList, ",");
+    if (tmpNumber != NULL && strcmp(tmpNumber, dial_number) == 0) {
+        eccNumber = 1;
+    }
+    while (tmpNumber != NULL && !eccNumber) {
+        if (strcmp(tmpNumber, dial_number) == 0) {
+            eccNumber = 1;
+        }
+        tmpNumber = strtok(NULL, ",");
+    }
+    return eccNumber;
+}
+
 static void requestDial(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     RIL_Dial *p_dial = NULL;
@@ -4392,7 +4424,7 @@ static void requestEccDial(int channelID, void *data, size_t datalen, RIL_Token 
     const char *clir= NULL;
     char *token = NULL;
     char *categoryFromJava = NULL;
-	int category = -1;
+    int category = -1;
     int ret, err;
 
     p_dial = (RIL_Dial *)data;
@@ -4401,23 +4433,14 @@ static void requestEccDial(int channelID, void *data, size_t datalen, RIL_Token 
         case 0: clir = ""; break;   /*subscription default*/
         case 1: clir = "I"; break;  /*invocation*/
         case 2: clir = "i"; break;  /*suppression*/
-        default: ;
+        default: break;
     }
 
-    token = strchr(p_dial->address, '/');
-    if(token) {
-        *token = '\0';
-    }
     category = getEccRecordCategory(p_dial->address);
     if(category != -1){
         ret = asprintf(&cmd, "ATD%s@%d,#%s;", p_dial->address, category, clir);
     } else {
-        if(token) {
-            *token = '@';
-            ret = asprintf(&cmd, "ATD%s,#%s;", p_dial->address, clir);
-        } else {
             ret = asprintf(&cmd, "ATD%s@,#%s;", p_dial->address, clir);
-        }
     }
 
     if(ret < 0) {
@@ -8204,11 +8227,20 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             requestGetCurrentCalls(channelID, data, datalen, t, 0);
             break;
         case RIL_REQUEST_DIAL:
-            requestDial(channelID, data, datalen, t);
+        {
+            RIL_Dial *p_dial = (RIL_Dial *)data;
+            extern int s_sim_num;
+            int ret = 0;
+
+            ret = isEccNumber(s_sim_num, p_dial->address);
+            RILLOGD("p_dial->address=%s, isEccNumber=%d", p_dial->address, ret);
+            if (ret == 1) {
+                requestEccDial(channelID, data, datalen, t);
+            } else {
+                requestDial(channelID, data, datalen, t);
+            }
             break;
-        case RIL_REQUEST_DIAL_EMERGENCY_CALL:
-            requestEccDial(channelID, data, datalen, t);
-            break;
+        }
         case RIL_REQUEST_HANGUP:
             requestHangup(channelID, data, datalen, t);
             break;
