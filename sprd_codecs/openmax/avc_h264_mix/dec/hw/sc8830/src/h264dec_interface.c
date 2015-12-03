@@ -47,7 +47,7 @@ PUBLIC void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
     }
 }
 
-PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picId)
+PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picId, uint64 *pts)
 {
     H264DecObject *vo = (H264DecObject *)avcHandle->videoDecoderData;
     DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr =  vo->g_dpb_layer[0];
@@ -63,7 +63,8 @@ PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int3
     //pop one picture from delayed picture queue.
     if (dpb_ptr && dpb_ptr->delayed_pic_num)
     {
-        DEC_FRAME_STORE_T *fs  = H264Dec_search_frame_from_DBP(vo, dpb_ptr->delayed_pic[0]);
+        DEC_STORABLE_PICTURE_T	*out = dpb_ptr->delayed_pic[0];
+        DEC_FRAME_STORE_T *fs  = H264Dec_search_frame_from_DBP(vo, out);
 
         if (!fs)
         {
@@ -73,17 +74,21 @@ PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int3
             return MMDEC_ERROR;
         }
 
-        *pOutput = dpb_ptr->delayed_pic[0]->pBufferHeader;
-
-        SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x ", __FUNCTION__, __LINE__, fs->is_reference);
-        fs->is_reference = 0;
-        H264DEC_UNBIND_FRAME(vo, fs->frame);
-
         for(i = 0; i < dpb_ptr->delayed_pic_num; i++)
         {
             dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
         }
         dpb_ptr->delayed_pic_num--;
+
+        H264Dec_find_smallest_pts(vo, out);
+
+        *pOutput = out->pBufferHeader;
+        *picId = out->mPicId;
+        *pts = out->nTimeStamp;
+
+        SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x ", __FUNCTION__, __LINE__, fs->is_reference);
+        fs->is_reference = 0;
+        H264DEC_UNBIND_FRAME(vo, fs->frame);
 
         return MMDEC_OK;
     } else

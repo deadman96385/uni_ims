@@ -122,7 +122,7 @@ typedef struct dec_buffer_seq_info_tag
 
 typedef struct Mp4Dec_storable_pic
 {
-    int		time;		//display time of the frame
+    uint64	nTimeStamp;		//time stamp of the frame
     int		bfrId;		//yuv buffer index
 
     DEC_FRM_BFR *pDecFrame;

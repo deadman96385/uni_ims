@@ -140,7 +140,7 @@ typedef struct tagAVCHandle
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
 void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle);
-MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picId);
+MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picId, uint64 *pts);
 void H264Dec_SetCurRecPic(AVCHandle *avcHandle, uint8	*pFrameY, uint8 *pFrameY_phy,void *pBufferHeader, int32 picId);
 MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int *nal_type, int *nal_ref_idc);
 MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo);

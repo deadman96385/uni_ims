@@ -38,6 +38,7 @@ void H264Dec_decode_one_slice_B (H264DecContext *img_ptr);
 
 void H264Dec_extent_frame (H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T * dec_picture);
 void H264Dec_write_disp_frame (H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T * dec_picture);
+void H264Dec_find_smallest_pts(H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T *out);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

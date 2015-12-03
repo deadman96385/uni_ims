@@ -530,6 +530,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         goto DEC_EXIT;
     }
 
+    SPRD_CODEC_LOGD ("frame type:%s", (vop_mode_ptr->VopPredType ==  IVOP) ? "I" : ((vop_mode_ptr->VopPredType ==  PVOP) ? "P" : "B"));
     if (Mp4Dec_InitVop(vo, dec_input_ptr) != MMDEC_OK)
     {
         mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_10;
@@ -538,7 +539,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     }
 
     //add this judgement for cr228574
-    if (vop_mode_ptr->VopPredType != BVOP)
+    if (!((vo->vsp_version == SHARK) && (vop_mode_ptr->VopPredType == BVOP)))
     {
         if(Mp4Dec_decode_vop(vo) != MMDEC_OK)
         {

@@ -28,6 +28,7 @@ extern   "C"
 
 int32 H264Dec_Process_slice (H264DecObject *vo);
 MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr, MMDecOutput *dec_output_ptr);
+void H264Dec_find_smallest_pts(H264DecObject *vo, DEC_STORABLE_PICTURE_T *out);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

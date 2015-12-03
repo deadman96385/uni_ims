@@ -492,6 +492,7 @@ typedef struct storable_picture
 
     void *pBufferHeader;
     int32       mPicId;  // Which output picture is for which input buffer?
+    uint64	nTimeStamp;
 } DEC_STORABLE_PICTURE_T;
 
 typedef struct frame_store_tag

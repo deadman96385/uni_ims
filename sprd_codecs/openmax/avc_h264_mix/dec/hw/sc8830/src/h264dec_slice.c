@@ -396,6 +396,28 @@ void H264Dec_Cfg_ScalingMatix (H264DecObject *vo)
     }
 }
 
+PUBLIC void H264Dec_find_smallest_pts(H264DecObject *vo, DEC_STORABLE_PICTURE_T *out)
+{
+    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = vo->g_dpb_layer[0];
+    uint32 j;
+
+    SPRD_CODEC_LOGD ("%s, [Cur pts: %lld]", __FUNCTION__, out->nTimeStamp);
+
+    for(j = 0; j < dpb_ptr->delayed_pic_num ; j++)
+    {
+        if(dpb_ptr->delayed_pic[j]->nTimeStamp < out->nTimeStamp)
+        {
+            uint64 nTimeStamp;
+
+            SPRD_CODEC_LOGD ("%s, [delay pts: %lld], [Cur pts: %lld]", __FUNCTION__, dpb_ptr->delayed_pic[j]->nTimeStamp, out->nTimeStamp);
+
+            nTimeStamp = dpb_ptr->delayed_pic[j]->nTimeStamp;
+            dpb_ptr->delayed_pic[j]->nTimeStamp = out->nTimeStamp;
+            out->nTimeStamp = nTimeStamp;
+        }
+    }
+}
+
 LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_ptr, MMDecOutput * dec_out)
 {
     DEC_VUI_T *vui_seq_parameters_ptr = vo->g_sps_ptr->vui_seq_parameters;
@@ -495,8 +517,11 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
     }
 
     dec_out->reqNewBuf = 1;
+    dec_out->pts = 0;
     if (dec_out->frameEffective)
     {
+        H264Dec_find_smallest_pts(vo, out);
+
         dec_out->frame_width = vo->width;
         dec_out->frame_height = vo->height;
 
@@ -505,6 +530,7 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
         dec_out->pOutFrameV = out->imgV;
         dec_out->pBufferHeader = out->pBufferHeader;
         dec_out->mPicId = out->mPicId;
+        dec_out->pts = out->nTimeStamp;
 
         fs = H264Dec_search_frame_from_DBP(vo, out);
         if (fs && (fs->is_reference == DELAYED_PIC_REF))
@@ -885,6 +911,8 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
                 VSP_WRITE_REG(GLB_REG_BASE_ADDR+VSP_SIZE_SET_OFF, 0x45, "ddr VLC table size");
                 //vd->is_need_init_vsp_hufftab = FALSE;
             }
+
+            vo->g_dec_picture_ptr->nTimeStamp = dec_input_ptr->nTimeStamp;
         }
 
         //≈‰÷√frame start address ram

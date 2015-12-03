@@ -98,6 +98,7 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
     vop_mode_ptr->err_left		= dec_input_ptr->err_pkt_num;
     vop_mode_ptr->err_pos_ptr	= dec_input_ptr->err_pkt_pos;
     vop_mode_ptr->err_MB_num	= vop_mode_ptr->MBNum;
+    vop_mode_ptr->pCurRecFrame->nTimeStamp = dec_input_ptr->nTimeStamp;
 
     if (IVOP != vop_mode_ptr->VopPredType)
     {
@@ -111,6 +112,17 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
             if(vop_mode_ptr->pFrdRefFrame->pDecFrame == NULL)
             {
                 return MMDEC_STREAM_ERROR;
+            }
+
+            if (vop_mode_ptr->pBckRefFrame->nTimeStamp < vop_mode_ptr->pCurRecFrame->nTimeStamp) {
+                uint64 nTimeStamp;
+
+                SPRD_CODEC_LOGD ("%s, [Bck time_stamp: %lld], [Cur time_stamp: %lld]", __FUNCTION__,
+                                 vop_mode_ptr->pBckRefFrame->nTimeStamp, vop_mode_ptr->pCurRecFrame->nTimeStamp);
+
+                nTimeStamp = vop_mode_ptr->pCurRecFrame->nTimeStamp;
+                vop_mode_ptr->pCurRecFrame->nTimeStamp = vop_mode_ptr->pBckRefFrame->nTimeStamp;
+                vop_mode_ptr->pBckRefFrame->nTimeStamp = nTimeStamp;
             }
         }
     }
@@ -214,11 +226,13 @@ PUBLIC void Mp4Dec_output_one_frame (Mp4DecObject *vo, MMDecOutput *dec_output_p
         dec_output_ptr->frame_height = vop_mode_ptr->FrameHeight;
         dec_output_ptr->frameEffective = 1;
         dec_output_ptr->err_MB_num = vop_mode_ptr->err_MB_num;
+        dec_output_ptr->pts = pic->nTimeStamp;
     } else
     {
         dec_output_ptr->frame_width = vop_mode_ptr->FrameWidth;
         dec_output_ptr->frame_height = vop_mode_ptr->FrameHeight;
         dec_output_ptr->frameEffective = 0;
+        dec_output_ptr->pts = 0;
     }
 }
 

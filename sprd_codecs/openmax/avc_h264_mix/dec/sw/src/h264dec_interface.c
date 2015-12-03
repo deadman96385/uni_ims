@@ -62,7 +62,7 @@ void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
     img_ptr->g_searching_IDR_pic = TRUE;
 }
 
-MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picId)
+MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picId, uint64 *pts)
 {
     int32 i;
     H264DecContext *img_ptr = (H264DecContext *)(avcHandle->videoDecoderData);
@@ -78,10 +78,16 @@ MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picI
     //pop one picture from delayed picture queue.
     if (dpb_ptr && dpb_ptr->delayed_pic_num)
     {
-        *pOutput = dpb_ptr->delayed_pic[0]->pBufferHeader;
-        *picId = dpb_ptr->delayed_pic[0]->mPicId;
+        DEC_STORABLE_PICTURE_T *out = dpb_ptr->delayed_pic[0];
+        DEC_FRAME_STORE_T *fs  = H264Dec_search_frame_from_dpb(img_ptr, out);
 
-        H264DEC_UNBIND_FRAME(img_ptr, dpb_ptr->delayed_pic[0]);
+        if (!fs)
+        {
+            SPRD_CODEC_LOGE ("%s, %d, fs is NULL!, delayed_pic_num: %d, delayed_pic_ptr: %p'", __FUNCTION__, __LINE__, dpb_ptr->delayed_pic_num, dpb_ptr->delayed_pic_ptr);
+            *pOutput = NULL;
+            dpb_ptr->delayed_pic_ptr = NULL;
+            return MMDEC_ERROR;
+        }
 
         for(i =0; i < dpb_ptr->delayed_pic_num; i++)
         {
@@ -89,6 +95,15 @@ MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picI
         }
         dpb_ptr->delayed_pic_num--;
 
+        H264Dec_find_smallest_pts(img_ptr, out);
+
+        *pOutput = out->pBufferHeader;
+        *picId = out->mPicId;
+        *pts = out->nTimeStamp;
+
+        SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x ", __FUNCTION__, __LINE__, fs->is_reference);
+        fs->is_reference = 0;
+        H264DEC_UNBIND_FRAME(img_ptr, out);
         return MMDEC_OK;
     } else
     {
@@ -325,6 +340,7 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
                 goto DEC_EXIT;
             }
 #endif
+            img_ptr->g_dec_picture_ptr->nTimeStamp = dec_input_ptr->nTimeStamp;
 
             if ((dec_input_ptr->expected_IVOP) && (img_ptr->type != I_SLICE))
             {

@@ -932,6 +932,26 @@ PUBLIC void H264Dec_write_disp_frame (H264DecContext *img_ptr, DEC_STORABLE_PICT
     }
 }
 
+PUBLIC void H264Dec_find_smallest_pts(H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T *out)
+{
+    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = img_ptr->g_dpb_ptr;
+    uint32 j;
+
+    for(j = 0; j < dpb_ptr->delayed_pic_num ; j++)
+    {
+        if(dpb_ptr->delayed_pic[j]->nTimeStamp < out->nTimeStamp)
+        {
+            uint64 nTimeStamp;
+
+            SPRD_CODEC_LOGD ("%s, [delay time_stamp: %lld], [Cur time_stamp: %lld]", __FUNCTION__, dpb_ptr->delayed_pic[j]->nTimeStamp, out->nTimeStamp);
+
+            nTimeStamp = dpb_ptr->delayed_pic[j]->nTimeStamp;
+            dpb_ptr->delayed_pic[j]->nTimeStamp = out->nTimeStamp;
+            out->nTimeStamp = nTimeStamp;
+        }
+    }
+}
+
 LOCAL void H264Dec_output_one_frame (H264DecContext *img_ptr, MMDecOutput * dec_out)
 {
     DEC_VUI_T *vui_seq_parameters_ptr = img_ptr->g_sps_ptr->vui_seq_parameters;
@@ -1032,8 +1052,11 @@ LOCAL void H264Dec_output_one_frame (H264DecContext *img_ptr, MMDecOutput * dec_
         }
 
         dec_out->reqNewBuf = 1;
+        dec_out->pts = 0;
         if (dec_out->frameEffective)
         {
+            H264Dec_find_smallest_pts(img_ptr, out);
+
             dec_out->frame_width = img_ptr->width;
             dec_out->frame_height = img_ptr->height;
             dec_out->pOutFrameY = out->imgY;
@@ -1041,6 +1064,7 @@ LOCAL void H264Dec_output_one_frame (H264DecContext *img_ptr, MMDecOutput * dec_
             dec_out->pOutFrameV = out->imgV;
             dec_out->pBufferHeader = out->pBufferHeader;
             dec_out->mPicId = out->mPicId;
+            dec_out->pts = out->nTimeStamp;
 
             fs = H264Dec_search_frame_from_dpb(img_ptr, out);
             if (fs && (fs->is_reference == DELAYED_PIC_REF))

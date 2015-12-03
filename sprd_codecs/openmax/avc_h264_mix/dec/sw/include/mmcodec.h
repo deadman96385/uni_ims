@@ -127,7 +127,7 @@ typedef struct
     int32		beLastFrm;			// whether the frame is the last frame.  1: yes,   0: no
 
     int32		expected_IVOP;		// control flag, seek for IVOP,
-    int32		pts;                // presentation time stamp
+    uint64		nTimeStamp;         // time stamp, it maybe PTS or DTS
 
     int32		beDisplayed;		// whether the frame to be displayed    1: display   0: not //display
 
@@ -147,7 +147,7 @@ typedef struct
 
     int32   is_transposed;	//the picture is transposed or not, in 8800S4, it should always 0.
 
-    int32	pts;            //presentation time stamp
+    uint64	pts;            //presentation time stamp
     int32	frameEffective;
 
     int32	err_MB_num;		//error MB number
