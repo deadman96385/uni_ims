@@ -11520,6 +11520,10 @@ static void initializeCallback(void *param)
     }
     /* @} */
 
+    /* set RAU SUCCESS report to AP @{*/
+    at_send_command(ATch_type[channelID], "AT+SPREPORTRAU=1", NULL);
+    /* @} */
+
     /* SPRD : for non-CMCC version @{ */
     if (isCSFB()) {
         if (isCUCC()) {
@@ -12252,6 +12256,24 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         memcpy(p_index, &location, sizeof(int));
         RIL_requestTimedCallback (onClass2SmsReceived, p_index, NULL);
 #endif
+    } else if (strStartsWith(s,"+SPREPORTRAU:")) {
+        char *response = NULL;
+        char *tmp;
+
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+        err = at_tok_nextstr(&tmp, &response);
+        if (err < 0) {
+            RILLOGD("%s fail", s);
+            goto out;
+        }
+
+        if(!strcmp(response, "RAU SUCCESS")) {
+            RIL_onUnsolicitedResponse(RIL_UNSOL_GPRS_RAU, NULL, 0);
+        } else {
+            RILLOGD("%s does not support", response);
+        }
     } else if (strStartsWith(s, "+SPUSATENDSESSIONIND")) {
         RILLOGD("[stk unsl]RIL_UNSOL_STK_SESSION_END");
         RIL_onUnsolicitedResponse (RIL_UNSOL_STK_SESSION_END, NULL, 0);
