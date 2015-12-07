@@ -313,7 +313,6 @@ static void pollSIMState (void *param);
 static void attachGPRS(int channelID, void *data, size_t datalen, RIL_Token t);
 static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t);
 static int getMaxPDPNum(void);
-static void copyDataReponse(RIL_Data_Call_Response_v11* pSource, RIL_Data_Call_Response_v11* pDest);
 static void getSIMStatusAgainForSimBusy();
 static int DeactiveDataConnectionByCid(int cid);
 unsigned char* convertUsimToSim(unsigned char const* byteUSIM, int len, unsigned char * hexUSIM);
@@ -2896,68 +2895,50 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
         if((t != NULL) && (cid > 0)) {
             RILLOGD("requestOrSendDataCallList is called by SetupDataCall!");
             for(i = 0; i < MAX_PDP; i++) {
-                if((responses[i].cid == cid)){
+                if((responses[i].cid == cid)) {
                     if(responses[i].active) {
                         int fb_cid = getFallbackCid(cid-1); //pdp fallback cid
                         RILLOGD("called by SetupDataCall! fallback cid : %d", fb_cid);
-                        //just for IPV4+IPV6, strcmp(responses[i].type ,"IPV4V6") == 0 will goto else branch
-                        if (fb_cid> 0 && (responses[fb_cid-1].cid == fb_cid) && responses[fb_cid-1].active) {
-                            RIL_Data_Call_Response_v11 *newResponses = alloca(2 * sizeof(RIL_Data_Call_Response_v11));
-                            copyDataReponse(&responses[i], &newResponses[0]);
-                            copyDataReponse(&responses[fb_cid-1], &newResponses[1]);
-                            if (IsLte && bLteDetached) {
-                                RILLOGD("requestOrSendDataCallList: Lte detached in the past.");
-                                putPDP(fb_cid -1);
-                                putPDP(cid-1);
-                                s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                                RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                            } else {
-                                RIL_onRequestComplete(*t, RIL_E_SUCCESS,
-                                    newResponses,
-                                    2 * sizeof(RIL_Data_Call_Response_v11));
-                            }
+                        if (IsLte && bLteDetached) {
+                            RILLOGD("requestOrSendDataCallList: Lte detached in the past2.");
+                            putPDP(fb_cid -1);
+                            putPDP(cid-1);
+                            s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+                            RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
                         } else {
-                            if (IsLte && bLteDetached) {
-                                RILLOGD("requestOrSendDataCallList: Lte detached in the past2.");
-                                putPDP(fb_cid -1);
-                                putPDP(cid-1);
-                                s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                                RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                            } else {
-                                RIL_onRequestComplete(*t, RIL_E_SUCCESS, &responses[i],
-                                    sizeof(RIL_Data_Call_Response_v11));
-                            }
-                        }
-                        if (add_ip_cid ==0 &&  !(IsLte && bLteDetached) && isVoLteEnable() ) {
-                            char cmd[180] = {0};
-                            char prop0[PROPERTY_VALUE_MAX] = {0};
-                            char prop1[PROPERTY_VALUE_MAX] = {0};
-                            if (!strcmp(responses[i].type,"IPV4V6") ) {
-                                snprintf(cmd, sizeof(cmd), "net.%s%d.ip", eth, responses[i].cid-1);
-                                property_get(cmd, prop0, NULL);
-                                snprintf(cmd, sizeof(cmd), "net.%s%d.ipv6_ip", eth, responses[i].cid-1);
-                                property_get(cmd, prop1, NULL);
-                                snprintf(cmd, sizeof(cmd),"AT+XCAPIP=%d,\"%s,[%s]\"",
-                                        responses[i].cid,prop0,prop1);
-                            } else if (!strcmp( responses[i].type,"IP")) {
-                                snprintf(cmd, sizeof(cmd),"AT+XCAPIP=%d,\"%s,[FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF]\"",
-                                        responses[i].cid,responses[i].addresses);
-                            } else {
-                                snprintf(cmd, sizeof(cmd),"AT+XCAPIP=%d,\"0.0.0.0,[%s]\"",
-                                        responses[i].cid,responses[i].addresses);
-                            }
-                                err = at_send_command(ATch_type[channelID],cmd,NULL);
+                            RIL_onRequestComplete(*t, RIL_E_SUCCESS, &responses[i],
+                                sizeof(RIL_Data_Call_Response_v11));
+                            /* send IP for volte addtional business */
+                            if (add_ip_cid ==0 &&  !(IsLte && bLteDetached) && isVoLteEnable() ) {
+                                char cmd[180] = {0};
+                                char prop0[PROPERTY_VALUE_MAX] = {0};
+                                char prop1[PROPERTY_VALUE_MAX] = {0};
+                                if (!strcmp(responses[i].type,"IPV4V6") ) {
+                                    snprintf(cmd, sizeof(cmd), "net.%s%d.ip", eth, responses[i].cid-1);
+                                    property_get(cmd, prop0, NULL);
+                                    snprintf(cmd, sizeof(cmd), "net.%s%d.ipv6_ip", eth, responses[i].cid-1);
+                                    property_get(cmd, prop1, NULL);
+                                    snprintf(cmd, sizeof(cmd),"AT+XCAPIP=%d,\"%s,[%s]\"",
+                                            responses[i].cid,prop0,prop1);
+                                } else if (!strcmp( responses[i].type,"IP")) {
+                                    snprintf(cmd, sizeof(cmd),"AT+XCAPIP=%d,\"%s,[FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF]\"",
+                                            responses[i].cid,responses[i].addresses);
+                                } else {
+                                    snprintf(cmd, sizeof(cmd),"AT+XCAPIP=%d,\"0.0.0.0,[%s]\"",
+                                            responses[i].cid,responses[i].addresses);
+                                }
+                                at_send_command(ATch_type[channelID],cmd,NULL);
                                 add_ip_cid = responses[i].cid;
+                            }
                         }
-
-                        return;
-                    }else{
-                        putPDP(getFallbackCid(cid-1)-1);
-                        putPDP(cid-1);
                     }
+                    return;
+                }else{
+                    putPDP(getFallbackCid(cid-1)-1);
+                    putPDP(cid-1);
                 }
             }
-            if(i >= 3) {
+            if(i >= MAX_PDP) {
                 s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                 RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 return;
@@ -13611,20 +13592,6 @@ static void dumpDataResponse(RIL_Data_Call_Response_v11* pDest) {
     RILLOGD("gateways = %s",pDest->gateways);
 }
 
-static void copyDataReponse(RIL_Data_Call_Response_v11* pSource, RIL_Data_Call_Response_v11* pDest) {
-    pDest->cid = pSource->cid;
-    pDest->status = pSource->status;
-    pDest->suggestedRetryTime = pSource->suggestedRetryTime;
-    pDest->active = pSource->active;
-    pDest->type = pSource->type;
-    pDest->ifname = pSource->ifname;
-    pDest->addresses = pSource->addresses;
-    pDest->gateways = pSource->gateways;
-    pDest->dnses = pSource->dnses;
-    pDest->pcscf = pSource->pcscf;
-    pDest->mtu = pSource->mtu;
-    dumpDataResponse(pDest);
-}
 static void getSIMStatusAgainForSimBusy() {
     ATResponse *p_response = NULL;
     int err;
