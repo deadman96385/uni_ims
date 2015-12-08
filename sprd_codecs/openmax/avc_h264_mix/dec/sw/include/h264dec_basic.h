@@ -42,6 +42,8 @@ extern   "C"
 #define DECLARE_ASM_CONST(n,t,v)    static const t v
 #endif
 
+#define SCI_TRACE_LOW_DPB //SPRD_CODEC_LOGE
+
 #define DISPLAY_LIST_SIZE	10
 
 #define DEC_REF_PIC_MARKING_COMMAND_NUM	50

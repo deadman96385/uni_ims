@@ -33,12 +33,13 @@ PUBLIC MMEncRet H264Enc_InitVSP(H264EncObject *vo)
     ENC_ANTI_SHAKE_T *anti_shark_ptr = &(vo->g_anti_shake);
     uint32 cmd;
 
-    if(ARM_VSP_RST((VSPObject *)vo)<0)
-    {
-        return MMDEC_HW_ERROR;
+    if(0 == img_ptr->sh.i_first_mb) {
+        if(ARM_VSP_RST((VSPObject *)vo)<0)
+        {
+            return MMDEC_HW_ERROR;
+        }
     }
 
-    SPRD_CODEC_LOGD ("%s, %d.", __FUNCTION__, __LINE__);
 //    VSP_WRITE_REG(GLB_REG_BASE_ADDR + AXIM_ENDIAN_OFF, 0x30868,"axim endian set, vu format"); // VSP and OR endian.
     cmd = V_BIT_17|V_BIT_16|V_BIT_11|V_BIT_5|V_BIT_3;
     if (vo->yuv_format == YUV420SP_NV21)  //vu format
@@ -46,6 +47,7 @@ PUBLIC MMEncRet H264Enc_InitVSP(H264EncObject *vo)
         cmd |= V_BIT_6;
     }
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + AXIM_ENDIAN_OFF, cmd,"axim endian set, vu format"); //VSP and OR endian.
+
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + VSP_MODE_OFF, (STREAM_ID_H264|V_BIT_4|((img_ptr->cabac_enable&0x01)<<9)), "VSP_MODE: Set standard and work mode");
     VSP_WRITE_REG(GLB_REG_BASE_ADDR + RAM_ACC_SEL_OFF, 0, "RAM_ACC_SEL: SETTING_RAM_ACC_SEL=0(SW)");
 

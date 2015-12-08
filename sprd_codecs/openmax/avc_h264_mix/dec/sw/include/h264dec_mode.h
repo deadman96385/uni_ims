@@ -511,7 +511,7 @@ typedef struct frame_store_tag
     DEC_STORABLE_PICTURE_T *frame;
 } DEC_FRAME_STORE_T;
 
-#define MAX_DELAYED_PIC_NUM	5
+#define MAX_DELAYED_PIC_NUM	10
 
 //decoded picture buffer
 typedef struct decoded_picture_buffer
@@ -683,7 +683,7 @@ typedef struct H264DecContext_tag
     int32	g_searching_IDR_pic;
     int32	g_is_avc1_es;
     uint8	g_lengthSizeMinusOne;
-    int32       not_supported;
+    int32   not_supported;
     int32 	last_dquant;
 
     int16 	g_wp_weight[2][MAX_REF_FRAME_NUMBER][3];  // weight in [list][index][component] order
@@ -702,10 +702,10 @@ typedef struct H264DecContext_tag
     uint8	ref_count[2];	//!< number of forward/backward reference
     int32	g_list_size[2];
 
-    int8		last_has_mmco_5;
-    int8		is_new_pic;
-    int8 		is_cabac;
-    uint8	cabac_state[460];
+    int8 last_has_mmco_5;
+    int8 is_new_pic;
+    int8 is_cabac;
+    uint8 cabac_state[460];
 
     DEC_DEC_REF_PIC_MARKING_T	*dec_ref_pic_marking_buffer;	//!< stores the memory management control operation
 

@@ -189,6 +189,7 @@ typedef struct
     uint32	profileAndLevel;
 
     uint32 PrependSPSPPSEnalbe;	// 0: disable, 1: disable
+    uint32  EncSceneMode;
 } MMEncConfig;
 
 // Encoder input structure

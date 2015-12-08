@@ -124,8 +124,8 @@ PUBLIC void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *he
     Mp4DecObject *vo = (Mp4DecObject *) mp4Handle->videoDecoderData;
     DEC_VOP_MODE_T *vop_mode_ptr = vo->vop_mode_ptr;
 
-    *width = vop_mode_ptr->FrameWidth;
-    *height = vop_mode_ptr->FrameHeight;
+    *width =( (vop_mode_ptr->OrgFrameWidth + 15) >>4) <<4;
+    *height = ( (vop_mode_ptr->OrgFrameHeight + 15) >>4) <<4;
 
     SPRD_CODEC_LOGD ("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
 }
@@ -224,7 +224,7 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     MMDecRet ret = MMDEC_ERROR;
     DEC_VOP_MODE_T *vop_mode_ptr = vo->vop_mode_ptr;
 
-    SPRD_CODEC_LOGD ("MP4DecDecode: E, dec_input_ptr->expected_IVOP: %d", dec_input_ptr->expected_IVOP);
+    SPRD_CODEC_LOGD ("MP4DecDecode: E, dec_input_ptr->expected_IVOP: %d, vop_mode_ptr->yuv_format: %d", dec_input_ptr->expected_IVOP, vop_mode_ptr->yuv_format);
 
     mp4Handle->g_mpeg4_dec_err_flag = 0;
 

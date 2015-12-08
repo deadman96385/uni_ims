@@ -91,6 +91,15 @@ PUBLIC MMDecRet H264Dec_init_global_para (H264DecContext *img_ptr)
     img_ptr->g_dpb_ptr->fs_ltref = (DEC_FRAME_STORE_T **)H264Dec_MemAlloc (img_ptr, sizeof(DEC_FRAME_STORE_T*)*(MAX_REF_FRAME_NUMBER+1), 4, INTER_MEM);
     CHECK_MALLOC(img_ptr->g_dpb_ptr->fs_ltref, "img_ptr->g_dpb_ptr->fs_ltref");
 
+    for (i = 0; i < MAX_REF_FRAME_NUMBER+1; i++)
+    {
+        img_ptr->g_dpb_ptr->fs[i] = (DEC_FRAME_STORE_T *)H264Dec_MemAlloc (img_ptr, sizeof(DEC_FRAME_STORE_T), 4, INTER_MEM);
+        CHECK_MALLOC(img_ptr->g_dpb_ptr->fs[i], "dpb_ptr->fs[i]");
+
+        img_ptr->g_dpb_ptr->fs[i]->frame = (DEC_STORABLE_PICTURE_T *)H264Dec_MemAlloc(img_ptr, sizeof(DEC_STORABLE_PICTURE_T), 4, INTER_MEM);
+        CHECK_MALLOC(img_ptr->g_dpb_ptr->fs[i]->frame, "dpb_ptr->fs[i]->frame");
+    }
+
     //init global vars
     img_ptr->g_dec_ref_pic_marking_buffer_size = 0;
     img_ptr->g_ready_to_decode_slice = FALSE;

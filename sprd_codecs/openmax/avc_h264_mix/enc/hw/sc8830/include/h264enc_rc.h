@@ -28,7 +28,7 @@ extern   "C"
 {
 #endif
 #ifndef SLICE_SIZE
-#define SLICE_MB 1
+#define SLICE_MB 12
 #endif
 
 //Frame type----------------------------
@@ -42,8 +42,7 @@ typedef enum {
     RC_GOP_VBR,
     RC_GOP_CBR,
     RC_MODE_NUM,
-}
-RATE_CONTROL_MODE;
+} RATE_CONTROL_MODE;
 
 //Codec type---------------------------
 typedef enum {
@@ -54,6 +53,13 @@ typedef enum {
     RC_VP9,
     RC_CODEC_NUM,
 } RC_ENCODER_TYPES;
+
+//Coding mode--------------------------
+typedef enum {
+    RC_DISABLE_CODINGMODE = 0,
+    RC_SLICE_ENABLE,
+    RC_PN_ENABLE,
+} RC_CODING_MODE;
 
 //Error message--------------------------------------
 typedef enum {

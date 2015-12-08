@@ -55,10 +55,8 @@ PUBLIC void H264Dec_clear_delayed_buffer(H264DecContext *img_ptr)
         int32 j;
         DEC_FRAME_STORE_T * fs = NULL;
 
-
         if ((fs = H264Dec_search_frame_from_dpb(img_ptr, dpb_ptr->delayed_pic[i])) != NULL)
         {
-
             if(fs->is_reference == DELAYED_PIC_REF)
             {
                 fs->is_reference = 0;
@@ -67,7 +65,7 @@ PUBLIC void H264Dec_clear_delayed_buffer(H264DecContext *img_ptr)
         }
 
         dpb_ptr->delayed_pic[i] = NULL;
-        dpb_ptr->delayed_pic_num --;
+        dpb_ptr->delayed_pic_num--;
     }
 
     if( 0 != dpb_ptr->delayed_pic_num )
@@ -129,12 +127,6 @@ PUBLIC MMDecRet H264Dec_init_dpb (H264DecContext *img_ptr)
         //each storable_picture buffer is bonding to a frame store
         //if (dpb_ptr->fs[i] == PNULL)
         {
-            dpb_ptr->fs[i] = (DEC_FRAME_STORE_T *)H264Dec_MemAlloc (img_ptr, sizeof(DEC_FRAME_STORE_T), 4, SW_CACHABLE);
-            CHECK_MALLOC(dpb_ptr->fs[i], "dpb_ptr->fs[i]");
-
-            dpb_ptr->fs[i]->frame = (DEC_STORABLE_PICTURE_T *)H264Dec_MemAlloc(img_ptr, sizeof(DEC_STORABLE_PICTURE_T), 4, SW_CACHABLE);
-            CHECK_MALLOC(dpb_ptr->fs[i]->frame, "dpb_ptr->fs[i]->frame");
-
             dpb_ptr->fs[i]->frame->mv_ptr[0] = (int16 *)H264Dec_MemAlloc(img_ptr, (frm_size_in_blk << 1) * sizeof(int16), 4, SW_CACHABLE);
             CHECK_MALLOC(dpb_ptr->fs[i]->frame->mv_ptr[0], "dpb_ptr->fs[i]->frame->mv_ptr[0]");
 
@@ -223,6 +215,7 @@ LOCAL void H264Dec_unmark_for_reference (H264DecContext *img_ptr, DEC_FRAME_STOR
     int32 i;
 
     fs_ptr->is_reference = 0;
+
     for (i = 0; dpb_ptr->delayed_pic[i]; i++)
     {
         if (fs_ptr->frame == dpb_ptr->delayed_pic[i])
@@ -238,23 +231,26 @@ LOCAL void H264Dec_unmark_for_reference (H264DecContext *img_ptr, DEC_FRAME_STOR
 
     fs_ptr->is_long_term = 0;
     fs_ptr->is_short_term = 0;
+
     return;
 }
-LOCAL void H264Dec_get_smallest_poc (H264DecContext *img_ptr, int32 *poc,int32 * pos)
+
+LOCAL void H264Dec_get_smallest_poc (H264DecContext *img_ptr, int32 *poc,int32 * pos, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
     int32 i;
-    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = img_ptr->g_dpb_ptr;
 
     if (dpb_ptr->used_size<1)
     {
-        //error("Cannot determine smallest POC, DPB empty.",150);
+        SPRD_CODEC_LOGE ("Cannot determine smallest POC, DPB empty.\n");
+        img_ptr->error_flag |= ER_REF_FRM_ID;
+        return;
     }
 
     *pos=-1;
     *poc = SINT_MAX;
     for (i=0; i<dpb_ptr->used_size; i++)
     {
-        if ((*poc > dpb_ptr->fs[i]->poc)&&(!dpb_ptr->fs[i]->disp_status))
+        if (*poc > dpb_ptr->fs[i]->poc)
         {
             *poc = dpb_ptr->fs[i]->poc;
             *pos=i;
@@ -269,20 +265,14 @@ LOCAL void H264Dec_output_one_frame_from_dpb (H264DecContext *img_ptr, DEC_DECOD
     DEC_FRAME_STORE_T **fs = dpb_ptr->fs;
     DEC_STORABLE_PICTURE_T *frame;
 
-    H264Dec_get_smallest_poc(img_ptr, &poc, &pos);
-
+    H264Dec_get_smallest_poc(img_ptr, &poc, &pos, dpb_ptr);
     if (pos < 0)
     {
-        img_ptr->error_flag |= ER_BSM_ID;
+        img_ptr->error_flag |= ER_REF_FRM_ID;
         return;
     }
 
     frame = fs[pos]->frame;
-
-//	printf ("output frame with frame_num #%d, poc %d (dpb_ptr.size=%d, dpb.used_size=%d), total frame num %d\n", dpb_ptr->fs[pos]->frame_num, dpb_ptr->fs[pos]->frame->poc, dpb_ptr->size, dpb_ptr->used_size, g_nFrame_dec_h264);
-
-//	write_out_frame(frame);
-    fs[pos]->disp_status = 1;
 
     if (!fs[pos]->is_reference)
     {
@@ -296,14 +286,12 @@ PUBLIC void H264Dec_flush_dpb (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFF
     int32 disp_num = 0;
     DEC_FRAME_STORE_T *tmp_fs_ptr;
 
-//	SCI_TRACE_LOW("H264Dec_flush_dpb 0, used_size: %d\n", dpb_ptr->used_size);
-
     //mark all frame unused
     for (i = 0; i < dpb_ptr->used_size; i++)
     {
         H264Dec_unmark_for_reference (img_ptr, dpb_ptr->fs[i]);
 
-        if (!dpb_ptr->fs[i]->disp_status  && (dpb_ptr->fs[i]->is_reference != DELAYED_PIC_REF))
+        if (dpb_ptr->fs[i]->is_reference != DELAYED_PIC_REF)
         {
             tmp_fs_ptr = dpb_ptr->fs[i];
             dpb_ptr->fs[i] = dpb_ptr->fs[disp_num];
@@ -314,12 +302,10 @@ PUBLIC void H264Dec_flush_dpb (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFF
 
     dpb_ptr->used_size = disp_num;
 
-    while(dpb_ptr->used_size && !img_ptr->error_flag)
+    while(dpb_ptr->used_size)
     {
         H264Dec_output_one_frame_from_dpb(img_ptr, dpb_ptr);
     }
-
-//	SCI_TRACE_LOW("H264Dec_flush_dpb 1, used_size: %d\n", dpb_ptr->used_size);
 
     return;
 }
@@ -351,7 +337,7 @@ LOCAL __inline int32 H264Dec_get_pic_num_x (DEC_STORABLE_PICTURE_T *picture_ptr,
     return (curr_pic_num - (difference_of_pic_nums_minus1 + 1));
 }
 
-LOCAL void H264Dec_mm_unmark_short_term_for_reference (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr,  DEC_STORABLE_PICTURE_T *picture_ptr, int32 difference_of_pic_nums_minus1)
+LOCAL void H264Dec_mm_unmark_short_term_for_reference (H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T *picture_ptr, int32 difference_of_pic_nums_minus1, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
     int32 pic_num_x;
     int32 i;
@@ -374,7 +360,7 @@ LOCAL void H264Dec_mm_unmark_short_term_for_reference (H264DecContext *img_ptr, 
     return;
 }
 
-LOCAL void H264Dec_mm_unmark_long_term_for_reference (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, int32 long_term_pic_num)
+LOCAL void H264Dec_mm_unmark_long_term_for_reference (H264DecContext *img_ptr, int32 long_term_pic_num, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
     int32 i;
 
@@ -393,7 +379,7 @@ LOCAL void H264Dec_mm_unmark_long_term_for_reference (H264DecContext *img_ptr, D
     return;
 }
 
-LOCAL void H264Dec_unmark_long_term_for_reference_by_frame_idx (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, int32 long_term_frame_idx)
+LOCAL void H264Dec_unmark_long_term_for_reference_by_frame_idx (H264DecContext *img_ptr, int32 long_term_frame_idx, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
     int32 i;
 
@@ -408,7 +394,7 @@ LOCAL void H264Dec_unmark_long_term_for_reference_by_frame_idx (H264DecContext *
     return;
 }
 
-LOCAL void H264Dec_mark_pic_long_term (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, int32 long_term_frame_idx, int32 pic_num_x)
+LOCAL void H264Dec_mark_pic_long_term (int32 long_term_frame_idx, int32 pic_num_x, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
     int32 i;
 
@@ -433,14 +419,14 @@ LOCAL void H264Dec_mark_pic_long_term (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, in
     return;
 }
 
-LOCAL void H264Dec_mm_assign_long_term_frame_idx (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, DEC_STORABLE_PICTURE_T *picture_ptr, int32 difference_of_pic_nums_minus1, int32 long_term_frame_idx)
+LOCAL void H264Dec_mm_assign_long_term_frame_idx (H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T *picture_ptr, int32 difference_of_pic_nums_minus1, int32 long_term_frame_idx, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
     int32 pic_num_x;
 
     pic_num_x = H264Dec_get_pic_num_x (picture_ptr, difference_of_pic_nums_minus1);
 
-    H264Dec_unmark_long_term_for_reference_by_frame_idx (img_ptr, dpb_ptr, long_term_frame_idx);
-    H264Dec_mark_pic_long_term (dpb_ptr, long_term_frame_idx, pic_num_x);
+    H264Dec_unmark_long_term_for_reference_by_frame_idx (img_ptr, long_term_frame_idx, dpb_ptr);
+    H264Dec_mark_pic_long_term (long_term_frame_idx, pic_num_x, dpb_ptr);
 }
 
 LOCAL void H264Dec_update_ref_list (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
@@ -520,7 +506,7 @@ LOCAL void H264Dec_update_ltref_list (DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 }
 
 //set new max long_term_frame_idx
-LOCAL void H264Dec_mm_update_max_long_term_frame_idx (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, int32 max_long_term_frame_idx_plus1)
+LOCAL void H264Dec_mm_update_max_long_term_frame_idx (H264DecContext *img_ptr, int32 max_long_term_frame_idx_plus1, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
     int32 i;
 
@@ -555,14 +541,14 @@ LOCAL void H264Dec_mm_unmark_all_short_term_for_reference (H264DecContext *img_p
 
 LOCAL void H264Dec_mm_unmark_all_long_term_for_reference (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
-    H264Dec_mm_update_max_long_term_frame_idx(img_ptr, dpb_ptr, 0);
+    H264Dec_mm_update_max_long_term_frame_idx(img_ptr, 0, dpb_ptr);
 }
 
 //mark the current picture used for long term reference
-LOCAL void H264Dec_mm_mark_current_picture_long_term (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, DEC_STORABLE_PICTURE_T *picture_ptr, int32 long_term_frame_idx)
+LOCAL void H264Dec_mm_mark_current_picture_long_term (H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T *picture_ptr, int32 long_term_frame_idx, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
     //remove long term pictures with same long_term_frame_idx
-    H264Dec_unmark_long_term_for_reference_by_frame_idx (img_ptr, dpb_ptr, long_term_frame_idx);
+    H264Dec_unmark_long_term_for_reference_by_frame_idx (img_ptr, long_term_frame_idx, dpb_ptr);
 
     picture_ptr->is_long_term = 1;
     picture_ptr->long_term_frame_idx = long_term_frame_idx;
@@ -587,24 +573,26 @@ LOCAL void H264Dec_adaptive_memory_management (H264DecContext *img_ptr, DEC_DECO
         case 0:
             if (i != img_ptr->g_dec_ref_pic_marking_buffer_size-1)
             {
-                PRINTF("memory_management_control_operation = 0 not last operation buffer");
+                img_ptr->error_flag |= ER_REF_FRM_ID;
+                SPRD_CODEC_LOGE("memory_management_control_operation = 0 not last operation buffer");
+                return;
             }
             break;
         case 1:
-            H264Dec_mm_unmark_short_term_for_reference (img_ptr, dpb_ptr, picture_ptr, tmp_drpm_ptr->difference_of_pic_nums_minus1);
+            H264Dec_mm_unmark_short_term_for_reference (img_ptr, picture_ptr, tmp_drpm_ptr->difference_of_pic_nums_minus1, dpb_ptr);
             H264Dec_update_ref_list(dpb_ptr);
             break;
         case 2:
-            H264Dec_mm_unmark_long_term_for_reference (img_ptr, dpb_ptr, tmp_drpm_ptr->long_term_pic_num);
+            H264Dec_mm_unmark_long_term_for_reference (img_ptr, tmp_drpm_ptr->long_term_pic_num, dpb_ptr);
             H264Dec_update_ltref_list (dpb_ptr);
             break;
         case 3:
-            H264Dec_mm_assign_long_term_frame_idx (img_ptr, dpb_ptr, picture_ptr, tmp_drpm_ptr->difference_of_pic_nums_minus1, tmp_drpm_ptr->long_term_frame_idx);
+            H264Dec_mm_assign_long_term_frame_idx (img_ptr, picture_ptr, tmp_drpm_ptr->difference_of_pic_nums_minus1, tmp_drpm_ptr->long_term_frame_idx, dpb_ptr);
             H264Dec_update_ref_list (dpb_ptr);
             H264Dec_update_ltref_list(dpb_ptr);
             break;
         case 4:
-            H264Dec_mm_update_max_long_term_frame_idx (img_ptr,dpb_ptr, tmp_drpm_ptr->max_long_term_frame_idx_plus1);
+            H264Dec_mm_update_max_long_term_frame_idx (img_ptr, tmp_drpm_ptr->max_long_term_frame_idx_plus1, dpb_ptr);
             H264Dec_update_ltref_list (dpb_ptr);
             break;
         case 5:
@@ -613,14 +601,20 @@ LOCAL void H264Dec_adaptive_memory_management (H264DecContext *img_ptr, DEC_DECO
             img_ptr->last_has_mmco_5 = 1;
             break;
         case 6:
-            H264Dec_mm_mark_current_picture_long_term (img_ptr, dpb_ptr, picture_ptr, tmp_drpm_ptr->long_term_frame_idx);
+            H264Dec_mm_mark_current_picture_long_term (img_ptr, picture_ptr, tmp_drpm_ptr->long_term_frame_idx, dpb_ptr);
             if((int32)(dpb_ptr->ltref_frames_in_buffer +dpb_ptr->ref_frames_in_buffer)>(mmax(1, dpb_ptr->num_ref_frames)))
             {
-                PRINTF ("max.number of reference frame exceed. invalid stream.");
+                img_ptr->error_flag |= ER_REF_FRM_ID;
+                SPRD_CODEC_LOGE ("max.number of reference frame exceed. invalid stream.");
+                return;
             }
             break;
         default:
-            PRINTF ("invalid memory_management_control_operation in buffer");
+        {
+            img_ptr->error_flag |= ER_REF_FRM_ID;
+            SPRD_CODEC_LOGE ("invalid memory_management_control_operation in buffer");
+            return;
+        }
         }
         i++;
     }
@@ -644,7 +638,7 @@ LOCAL void H264Dec_sliding_window_memory_management (H264DecContext *img_ptr, DE
 {
     int32 i;
 
-    if (dpb_ptr->ref_frames_in_buffer == (dpb_ptr->num_ref_frames - dpb_ptr->ltref_frames_in_buffer))
+    if (dpb_ptr->ref_frames_in_buffer >= (dpb_ptr->num_ref_frames - dpb_ptr->ltref_frames_in_buffer))
     {
         for (i = 0; i < dpb_ptr->used_size; i++)
         {
@@ -662,10 +656,9 @@ LOCAL void H264Dec_sliding_window_memory_management (H264DecContext *img_ptr, DE
 }
 
 //if current frame is used as reference frame, put it to first unused store frame in dpb
-LOCAL void H264Dec_insert_picture_in_dpb (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, DEC_STORABLE_PICTURE_T *picture_ptr)
+LOCAL void H264Dec_insert_picture_in_dpb (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, DEC_FRAME_STORE_T *curr_fs_ptr, DEC_STORABLE_PICTURE_T *picture_ptr)
 {
     int32 used_size = dpb_ptr->used_size;
-    DEC_FRAME_STORE_T *curr_fs_ptr = dpb_ptr->fs[MAX_REF_FRAME_NUMBER];
     DEC_FRAME_STORE_T *tmp_fs_ptr;
 
     if (picture_ptr->used_for_reference)
@@ -692,8 +685,6 @@ LOCAL void H264Dec_insert_picture_in_dpb (H264DecContext *img_ptr, DEC_DECODED_P
     curr_fs_ptr->frame = picture_ptr;
     curr_fs_ptr->frame_num = picture_ptr->frame_num;
     curr_fs_ptr->poc = picture_ptr->poc;
-//	curr_fs_ptr->disp_status = 0;
-
     //put the current frame store to the first unused frame store of dpb
     tmp_fs_ptr = dpb_ptr->fs[used_size];
     dpb_ptr->fs[used_size] = curr_fs_ptr;
@@ -731,9 +722,8 @@ LOCAL void dump_dpb(H264DecContext *img_ptr)
 #endif
 }
 
-PUBLIC void H264Dec_store_picture_in_dpb (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, DEC_STORABLE_PICTURE_T *picture_ptr)
+PUBLIC void H264Dec_store_picture_in_dpb (H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T *picture_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
-
     img_ptr->last_has_mmco_5 = 0;
 
     if (picture_ptr->idr_flag)
@@ -747,25 +737,28 @@ PUBLIC void H264Dec_store_picture_in_dpb (H264DecContext *img_ptr, DEC_DECODED_P
         }
     }
 
+    if (img_ptr->error_flag)
+    {
+        return;
+    }
+
     if ((!picture_ptr->idr_flag) && (picture_ptr->used_for_reference && (!picture_ptr->adaptive_ref_pic_buffering_flag)))
     {
         H264Dec_sliding_window_memory_management (img_ptr, dpb_ptr, picture_ptr);
     }
+    SCI_TRACE_LOW_DPB("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
 
-//jin.zhou
-    // first try to remove unused frames
-    if (dpb_ptr->used_size == dpb_ptr->size)
+    if (dpb_ptr->used_size >= dpb_ptr->size)
     {
-        H264Dec_remove_unused_frame_from_dpb(img_ptr, dpb_ptr);
+        // first try to remove unused frames
+        if(!H264Dec_remove_unused_frame_from_dpb(img_ptr, dpb_ptr))
+        {
+            H264Dec_remove_delayed_frame_from_dpb(img_ptr, dpb_ptr);
+        }
     }
+    SCI_TRACE_LOW_DPB("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
 
-    while ((dpb_ptr->used_size == dpb_ptr->size) && !img_ptr->error_flag)
-    {
-        // flush a frame
-        H264Dec_output_one_frame_from_dpb(img_ptr, dpb_ptr);
-    }
-
-    H264Dec_insert_picture_in_dpb (img_ptr, dpb_ptr, picture_ptr);
+    H264Dec_insert_picture_in_dpb (img_ptr, dpb_ptr, dpb_ptr->fs[MAX_REF_FRAME_NUMBER], picture_ptr);
 
     H264Dec_update_ref_list (dpb_ptr);
     H264Dec_update_ltref_list (dpb_ptr);
@@ -780,16 +773,16 @@ PUBLIC void H264Dec_store_picture_in_dpb (H264DecContext *img_ptr, DEC_DECODED_P
     return;
 }
 
-LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_short_term_pic (H264DecContext *img_ptr, int32 pic_num)
+LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_short_term_pic (H264DecContext *img_ptr, int32 pic_num, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
     int32 i;
-    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = img_ptr->g_dpb_ptr;
 
     for (i = 0; i < (dpb_ptr->ref_frames_in_buffer); i++)
     {
 #if _H264_PROTECT_ & _LEVEL_HIGH_
         if (dpb_ptr->fs_ref[i] == NULL)
         {
+            SPRD_CODEC_LOGE("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
             img_ptr->error_flag |= ER_GET_SHORT_REF_ID;
             img_ptr->return_pos |= (1<<3);
             return NULL;
@@ -800,6 +793,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_short_term_pic (H264DecContext *img_pt
 #if _H264_PROTECT_ & _LEVEL_HIGH_
             if (dpb_ptr->fs_ref[i]->frame == NULL)
             {
+                SPRD_CODEC_LOGE("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
                 img_ptr->error_flag |= ER_GET_SHORT_REF_ID;
                 img_ptr->return_pos |= (1<<4);
                 return NULL;
@@ -820,7 +814,7 @@ LOCAL void H264Dec_reorder_short_term (H264DecContext *img_ptr, DEC_STORABLE_PIC
     int32 c_idx, n_idx;
     DEC_STORABLE_PICTURE_T *pic_lx_ptr;
 
-    pic_lx_ptr = H264Dec_get_short_term_pic (img_ptr, pic_num_lx);
+    pic_lx_ptr = H264Dec_get_short_term_pic (img_ptr, pic_num_lx, img_ptr->g_dpb_ptr);
 
     for (c_idx = (num_ref_idx_lX_active_minus1+1); c_idx > *ref_idx_lx; c_idx--)
     {
@@ -861,11 +855,14 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_long_term_pic (H264DecContext *img_ptr
         }
     }
 
-    return NULL;
+    return img_ptr->g_no_reference_picture_ptr;//NULL;
 }
 
-LOCAL void H264Dec_reorder_long_term (H264DecContext *img_ptr,DEC_STORABLE_PICTURE_T **ref_picture_listX_ptr, int32 num_ref_idx_lX_active_minus1,
-                                      int32 long_term_pic_num, int32 *ref_idx_lx)
+LOCAL void H264Dec_reorder_long_term (H264DecContext *img_ptr,
+                                      DEC_STORABLE_PICTURE_T **ref_picture_listX_ptr,
+                                      int32 num_ref_idx_lX_active_minus1,
+                                      int32 long_term_pic_num,
+                                      int32 *ref_idx_lx)
 {
     int32 c_idx, n_idx;
     DEC_STORABLE_PICTURE_T *pic_lx_ptr;
@@ -883,7 +880,7 @@ LOCAL void H264Dec_reorder_long_term (H264DecContext *img_ptr,DEC_STORABLE_PICTU
 
     for (c_idx = (*ref_idx_lx); c_idx <= (num_ref_idx_lX_active_minus1+1); c_idx++)
     {
-        if (ref_picture_listX_ptr[c_idx])
+        //if (ref_picture_listX_ptr[c_idx])
         {
             if ((!ref_picture_listX_ptr[c_idx]->is_long_term) || (ref_picture_listX_ptr[c_idx]->long_term_pic_num != long_term_pic_num))
             {
@@ -895,8 +892,12 @@ LOCAL void H264Dec_reorder_long_term (H264DecContext *img_ptr,DEC_STORABLE_PICTU
     return;
 }
 
-LOCAL void H264Dec_reorder_ref_pic_list (H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T **picture_list_ptr, int32 num_ref_idx_lX_active_minus1,
-        int32 *remapping_of_pic_nums_idc, int32 *abs_diff_pic_num_minus1, int32 *long_term_pic_idx)
+LOCAL void H264Dec_reorder_ref_pic_list (H264DecContext *img_ptr,
+        DEC_STORABLE_PICTURE_T **picture_list_ptr,
+        int32 num_ref_idx_lX_active_minus1,
+        int32 *remapping_of_pic_nums_idc,
+        int32 *abs_diff_pic_num_minus1,
+        int32 *long_term_pic_idx)
 {
     int32 i;
     int32 max_pic_num, curr_pic_num, pic_num_lx_no_wrap, pic_num_lx_pred, pic_num_lx;
@@ -1397,7 +1398,6 @@ PUBLIC void H264Dec_init_list (H264DecContext *img_ptr, int32 curr_slice_type)
     {
         img_ptr->g_list[1][i] = img_ptr->g_no_reference_picture_ptr;
     }
-
 
     return;
 }

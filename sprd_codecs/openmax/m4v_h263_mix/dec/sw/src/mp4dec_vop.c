@@ -651,7 +651,7 @@ PUBLIC MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr)
 
                     if (vop_mode_ptr->error_flag)
                     {
-                        PRINTF ("decode resync header error!\n");
+                        SPRD_CODEC_LOGD ("decode resync header error!\n");
                         continue;
                     }
 
@@ -677,7 +677,7 @@ PUBLIC MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr)
 
                 if (vop_mode_ptr->error_flag)
                 {
-                    PRINTF ("decode resync header error!\n");
+                    SPRD_CODEC_LOGD ("decode resync header error!\n");
                     continue;
                 }
             }
@@ -697,7 +697,7 @@ PUBLIC MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr)
             Mp4Dec_DecIntraMBHeader(vop_mode_ptr, mb_mode_ptr);
             if(vop_mode_ptr->error_flag)
             {
-                PRINTF("decode intra mb header error!\n");
+                SPRD_CODEC_LOGD("decode intra mb header error!\n");
                 continue;
             }
 
@@ -735,7 +735,7 @@ PUBLIC MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr)
                     vop_mode_ptr->mbdec_stat_ptr[k] = DECODED_IN_ERR_PKT;
                 }
                 vop_mode_ptr->mbdec_stat_ptr[vop_mode_ptr->mbnumDec] = NOT_DECODED;
-                PRINTF ("decode intra mb coeff error!\n");
+                SPRD_CODEC_LOGD ("decode intra mb coeff error!\n");
                 continue;
             }
         }

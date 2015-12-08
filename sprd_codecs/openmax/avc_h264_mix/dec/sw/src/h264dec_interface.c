@@ -44,13 +44,13 @@ void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
     {
         H264Dec_clear_delayed_buffer(img_ptr);
         H264Dec_flush_dpb(img_ptr, dpb_ptr);
-    }
 
-    for (i = 0; i <  MAX_REF_FRAME_NUMBER+1; i++)
-    {
-        if (dpb_ptr->fs &&dpb_ptr->fs[i] && dpb_ptr->fs[i]->frame)
+        for (i = 0; i <  (MAX_REF_FRAME_NUMBER+1); i++)
         {
-            H264DEC_UNBIND_FRAME(img_ptr, dpb_ptr->fs[i]->frame);
+            if (dpb_ptr->fs &&dpb_ptr->fs[i] && dpb_ptr->fs[i]->frame)
+            {
+                H264DEC_UNBIND_FRAME(img_ptr, dpb_ptr->fs[i]->frame);
+            }
         }
     }
 
@@ -76,39 +76,50 @@ MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picI
     }
 
     //pop one picture from delayed picture queue.
-    if (dpb_ptr && dpb_ptr->delayed_pic_num)
-    {
-        DEC_STORABLE_PICTURE_T *out = dpb_ptr->delayed_pic[0];
-        DEC_FRAME_STORE_T *fs  = H264Dec_search_frame_from_dpb(img_ptr, out);
-
-        if (!fs)
-        {
-            SPRD_CODEC_LOGE ("%s, %d, fs is NULL!, delayed_pic_num: %d, delayed_pic_ptr: %p'", __FUNCTION__, __LINE__, dpb_ptr->delayed_pic_num, dpb_ptr->delayed_pic_ptr);
-            *pOutput = NULL;
-            dpb_ptr->delayed_pic_ptr = NULL;
-            return MMDEC_ERROR;
-        }
-
-        for(i =0; i < dpb_ptr->delayed_pic_num; i++)
-        {
-            dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
-        }
-        dpb_ptr->delayed_pic_num--;
-
-        H264Dec_find_smallest_pts(img_ptr, out);
-
-        *pOutput = out->pBufferHeader;
-        *picId = out->mPicId;
-        *pts = out->nTimeStamp;
-
-        SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x ", __FUNCTION__, __LINE__, fs->is_reference);
-        fs->is_reference = 0;
-        H264DEC_UNBIND_FRAME(img_ptr, out);
-        return MMDEC_OK;
-    } else
+    if (NULL == dpb_ptr)
     {
         *pOutput = NULL;
         return MMDEC_ERROR;
+    } else {
+        if (dpb_ptr->delayed_pic_num)
+        {
+            DEC_STORABLE_PICTURE_T *out = dpb_ptr->delayed_pic[0];
+            DEC_FRAME_STORE_T *fs  = H264Dec_search_frame_from_dpb(img_ptr, out);
+
+            if (!fs)
+            {
+                SPRD_CODEC_LOGE ("%s, %d, fs is NULL!, delayed_pic_num: %d, delayed_pic_ptr: %p'", __FUNCTION__, __LINE__, dpb_ptr->delayed_pic_num, dpb_ptr->delayed_pic_ptr);
+                *pOutput = NULL;
+                dpb_ptr->delayed_pic_ptr = NULL;
+                return MMDEC_ERROR;
+            }
+
+            for(i =0; i < dpb_ptr->delayed_pic_num; i++)
+            {
+                dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
+            }
+            dpb_ptr->delayed_pic_num--;
+
+            H264Dec_find_smallest_pts(img_ptr, out);
+
+            *pOutput = out->pBufferHeader;
+            *picId = out->mPicId;
+            *pts = out->nTimeStamp;
+
+            SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x ", __FUNCTION__, __LINE__, fs->is_reference);
+            fs->is_reference = 0;
+            H264DEC_UNBIND_FRAME(img_ptr, out);
+
+            return MMDEC_OK;
+        } else {
+            *pOutput = NULL;
+            dpb_ptr->delayed_pic_ptr = NULL;
+            if (dpb_ptr->delayed_pic_num != 0)
+            {
+                SPRD_CODEC_LOGE ("%s, %d, dpb_ptr->delayed_pic_num != 0!'", __FUNCTION__, __LINE__);
+            }
+            return MMDEC_ERROR;
+        }
     }
 }
 
@@ -317,6 +328,12 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         stream_lenght -= slice_unit_len;
 
         ret = H264Dec_Read_SPS_PPS_SliceHeader (img_ptr, img_ptr->g_nalu_ptr->buf, img_ptr->g_nalu_ptr->len, dec_output_ptr);
+        if( (img_ptr->g_nalu_ptr->nal_unit_type == NALU_TYPE_SPS) || (img_ptr->g_nalu_ptr->nal_unit_type == NALU_TYPE_PPS))
+        {
+            SPRD_CODEC_LOGW ("%s, %d, slice_unit_len: %d", __FUNCTION__, __LINE__, slice_unit_len);
+            img_ptr->g_dec_picture_ptr = NULL; //Added for bug352453
+            goto DEC_EXIT;
+        }
 
 #if _H264_PROTECT_ & _LEVEL_LOW_
         if (img_ptr->error_flag)
@@ -381,6 +398,7 @@ DEC_EXIT:
     if(dec_input_ptr->expected_IVOP && img_ptr->g_searching_IDR_pic)
     {
         SPRD_CODEC_LOGW ("H264DecDecode: need IVOP\n");
+        dec_input_ptr->dataLen -= stream_lenght;
         img_ptr->g_dec_picture_ptr = NULL;
         return MMDEC_FRAME_SEEK_IVOP;
     }

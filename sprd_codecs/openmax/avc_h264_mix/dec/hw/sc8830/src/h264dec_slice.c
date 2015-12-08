@@ -540,7 +540,10 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
         }
     }
 
-    SCI_TRACE_LOW_DPB("out poc: %d, effective: %d\t", out->poc, dec_out->frameEffective);
+    if (out)
+    {
+        SCI_TRACE_LOW_DPB("out poc: %d, effective: %d\t", out->poc, dec_out->frameEffective);
+    }
 
 #if 0   //only for debug
     {

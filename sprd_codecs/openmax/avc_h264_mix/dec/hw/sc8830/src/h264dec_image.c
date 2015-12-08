@@ -463,6 +463,63 @@ LOCAL void init_mvc_picture(H264DecObject *vo)
 }
 #endif
 
+LOCAL void H264Dec_fill_frame_num_gap (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
+{
+    DEC_IMAGE_PARAMS_T *img_ptr = vo->g_image_ptr;
+
+    int32 curr_frame_num;
+    int32 unused_short_term_frm_num;
+    int tmp1 = img_ptr->delta_pic_order_cnt[0];
+    int tmp2 = img_ptr->delta_pic_order_cnt[1];
+
+    PRINTF("a gap in frame number is found, try to fill it.\n");
+
+    unused_short_term_frm_num = H264Dec_Divide ((img_ptr->pre_frame_num+1), img_ptr->max_frame_num);
+    curr_frame_num = img_ptr->frame_num;
+
+    while (curr_frame_num != unused_short_term_frm_num)
+    {
+        DEC_STORABLE_PICTURE_T *picture_ptr;
+        DEC_FRAME_STORE_T *frame_store_ptr = H264Dec_get_one_free_pic_buffer (vo, dpb_ptr);
+        int32 size_y = vo->width * vo->height;
+        DEC_STORABLE_PICTURE_T *prev = vo->g_dpb_layer[0]->delayed_pic_ptr;
+
+        picture_ptr = frame_store_ptr->frame;
+        picture_ptr->pic_num = unused_short_term_frm_num;
+        picture_ptr->frame_num = unused_short_term_frm_num;
+        picture_ptr->non_existing = 1;
+        picture_ptr->used_for_reference = 1;
+        picture_ptr->is_long_term = 0;
+        picture_ptr->idr_flag = 0;
+        picture_ptr->adaptive_ref_pic_buffering_flag = 0;
+
+        picture_ptr->imgY = NULL;
+        picture_ptr->imgU = NULL;
+        picture_ptr->imgV = NULL;
+        picture_ptr->imgYAddr = prev ? prev->imgYAddr : vo->g_rec_buf.imgYAddr;
+        picture_ptr->imgUAddr = picture_ptr->imgYAddr + size_y;
+        picture_ptr->imgVAddr = NULL;
+        picture_ptr->pBufferHeader= NULL;
+
+        img_ptr->frame_num = unused_short_term_frm_num;
+        if (vo->g_active_sps_ptr->pic_order_cnt_type!=0)
+        {
+            H264Dec_POC(img_ptr);
+        }
+        picture_ptr->frame_poc=img_ptr->framepoc;
+        picture_ptr->poc=img_ptr->framepoc;
+
+        H264Dec_store_picture_in_dpb (vo, picture_ptr, dpb_ptr);
+
+        img_ptr->pre_frame_num = unused_short_term_frm_num;
+        unused_short_term_frm_num = H264Dec_Divide (unused_short_term_frm_num+1, img_ptr->max_frame_num);
+    }
+
+    img_ptr->frame_num = curr_frame_num;
+    img_ptr->delta_pic_order_cnt[0] = tmp1;
+    img_ptr->delta_pic_order_cnt[1] = tmp2;
+}
+
 PUBLIC void H264Dec_init_picture (H264DecObject *vo)
 {
     DEC_IMAGE_PARAMS_T *img_ptr = vo->g_image_ptr;
@@ -474,7 +531,8 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
 
     if ((img_ptr->frame_num != img_ptr->pre_frame_num) && (img_ptr->frame_num != H264Dec_Divide((img_ptr->pre_frame_num+1), img_ptr->max_frame_num)))
     {
-        SPRD_CODEC_LOGW("%s, %d, (img_ptr->frame_num != img_ptr->pre_frame_num)\n", __FUNCTION__, __LINE__);
+        SPRD_CODEC_LOGW("%s, %d, img_ptr->pre_frame_num: %d, img_ptr->frame_num: %d\n",
+                        __FUNCTION__, __LINE__, img_ptr->pre_frame_num, img_ptr->frame_num);
 
         if (vo->g_active_sps_ptr->gaps_in_frame_num_value_allowed_flag == 0)
         {
@@ -482,9 +540,7 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
             SPRD_CODEC_LOGW ("an unintentional loss of picture occures!\n");
             //	return;
         }
-        //	H264Dec_fill_frame_num_gap(img_ptr, dpb_ptr);
-
-        H264Dec_clear_delayed_buffer(vo);
+        H264Dec_fill_frame_num_gap(vo, dpb_ptr);
     }
 
     fs = H264Dec_get_one_free_pic_buffer(vo, dpb_ptr);

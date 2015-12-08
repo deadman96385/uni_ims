@@ -198,7 +198,7 @@ PUBLIC void H264Enc_slice_init (ENC_IMAGE_PARAMS_T *img_ptr, int32 nal_type, int
 
     if (img_ptr->sps->i_poc_type == 0)
     {
-        img_ptr->sh.i_poc_lsb = img_ptr->pYUVRecFrame->i_poc & ( ( 1<< img_ptr->sps->i_log2_max_poc_lsb) - 1);
+        img_ptr->sh.i_poc_lsb = img_ptr->pYUVSrcFrame->i_poc & ( ( 1<< img_ptr->sps->i_log2_max_poc_lsb) - 1);
         img_ptr->sh.i_delta_poc_bottom = 0; //won't work for field
     } else if (img_ptr->sps->i_poc_type == 1)
     {
@@ -226,7 +226,7 @@ PUBLIC int32 H264Enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr
 
     img_ptr->qp = img_ptr->sh.i_qp;
 
-    SPRD_CODEC_LOGD ("%s, %d, b_entropy_coding_mode_flag = %d.\n", __FUNCTION__, __LINE__, img_ptr->pps->b_entropy_coding_mode_flag);
+    //SPRD_CODEC_LOGD ("%s, %d, b_entropy_coding_mode_flag = %d.\n", __FUNCTION__, __LINE__, img_ptr->pps->b_entropy_coding_mode_flag);
 
     if (img_ptr->pps->b_entropy_coding_mode_flag)
     {
@@ -258,8 +258,8 @@ PUBLIC int32 H264Enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr
         vo->error_flag = 0;
     } else if(int_ret & (V_BIT_4 | V_BIT_5 |V_BIT_30 | V_BIT_31))	// (VLC_ERR|TIME_OUT)
     {
-         SPRD_CODEC_LOGE ("%s, %d, VSP_INT_RAW 0x%x \n", __FUNCTION__, __LINE__,reg_value);
-         vo->error_flag |= ER_HW_ID;
+        SPRD_CODEC_LOGE ("%s, %d, VSP_INT_RAW 0x%x \n", __FUNCTION__, __LINE__,reg_value);
+        vo->error_flag |= ER_HW_ID;
 
         if (int_ret & V_BIT_4)
         {

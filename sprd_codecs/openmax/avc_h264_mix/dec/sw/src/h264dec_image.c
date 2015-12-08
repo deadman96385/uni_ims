@@ -97,7 +97,8 @@ PUBLIC int32 H264Dec_remove_unused_frame_from_dpb (H264DecContext *img_ptr, DEC_
 
     for (i = 0; i < dpb_ptr->used_size; i++)
     {
-        if ((!dpb_ptr->fs[i]->is_reference) && (dpb_ptr->fs[i]->disp_status))
+        SCI_TRACE_LOW_DPB("%s, %d, is_reference %d  pBufferHeader %x", __FUNCTION__, __LINE__,dpb_ptr->fs[i]->is_reference ,  dpb_ptr->fs[i]->frame->pBufferHeader);
+        if ((!dpb_ptr->fs[i]->is_reference))
         {
             h264Dec_remove_frame_from_dpb(img_ptr, dpb_ptr, i);
             has_free_bfr = TRUE;
@@ -108,18 +109,66 @@ PUBLIC int32 H264Dec_remove_unused_frame_from_dpb (H264DecContext *img_ptr, DEC_
     return has_free_bfr;
 }
 
+PUBLIC int32 H264Dec_remove_delayed_frame_from_dpb (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
+{
+    uint32 i,j;
+    uint32 out_idx;
+    int32 has_free_bfr = FALSE;
+    DEC_FRAME_STORE_T *fs = NULL;
+
+    for (i = 0; i < (uint32)(dpb_ptr->used_size); i++)
+    {
+        SCI_TRACE_LOW_DPB("%s, %d, is_reference %d  pBufferHeader %x", __FUNCTION__, __LINE__,dpb_ptr->fs[i]->is_reference ,  dpb_ptr->fs[i]->frame->pBufferHeader);
+        if ((DELAYED_PIC_REF == dpb_ptr->fs[i]->is_reference))
+        {
+            fs = dpb_ptr->fs[i];
+
+            out_idx = dpb_ptr->delayed_pic_num;
+            for (j = 0; j < dpb_ptr->delayed_pic_num; j++)
+            {
+                if (fs->frame == dpb_ptr->delayed_pic[j])
+                {
+                    out_idx = j;
+                    has_free_bfr = TRUE;
+                    break;
+                }
+            }
+
+            if (has_free_bfr == TRUE)
+            {
+                for(j = out_idx; dpb_ptr->delayed_pic[j]; j++)
+                {
+                    dpb_ptr->delayed_pic[j] = dpb_ptr->delayed_pic[j+1];
+                }
+                dpb_ptr->delayed_pic_num--;
+
+                h264Dec_remove_frame_from_dpb(img_ptr, dpb_ptr, i);
+            }
+
+            break;
+        }
+    }
+
+    return has_free_bfr;
+}
+
 LOCAL DEC_FRAME_STORE_T *H264Dec_get_one_free_pic_buffer (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr)
 {
-    while(dpb_ptr->used_size == (MAX_REF_FRAME_NUMBER+1))
+    SCI_TRACE_LOW_DPB("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
+
+    if (dpb_ptr->used_size == (MAX_REF_FRAME_NUMBER+1))
     {
         if (!H264Dec_remove_unused_frame_from_dpb(img_ptr, dpb_ptr))
         {
-            //wait for display free buffer
+            if(!H264Dec_remove_delayed_frame_from_dpb(img_ptr, dpb_ptr))
+            {
+                //wait for display free buffer
 #if _H264_PROTECT_ & _LEVEL_LOW_
-            img_ptr->error_flag |= ER_REF_FRM_ID;
-            img_ptr->return_pos |= (1<<16);
+                img_ptr->error_flag |= ER_REF_FRM_ID;
+                img_ptr->return_pos |= (1<<16);
 #endif
-            return NULL;
+                return NULL;
+            }
         }
     }
 
@@ -187,12 +236,10 @@ LOCAL void H264Dec_POC(H264DecContext *img_ptr)
             img_ptr->toppoc = img_ptr->PicOrderCntMsb + img_ptr->pic_order_cnt_lsb;
             img_ptr->bottompoc = img_ptr->toppoc + img_ptr->delta_pic_order_cnt_bottom;
             img_ptr->ThisPOC = img_ptr->framepoc = (img_ptr->toppoc < img_ptr->bottompoc)? img_ptr->toppoc : img_ptr->bottompoc; // POC200301
-        }
-        else if (img_ptr->bottom_field_flag==0)
+        } else if (img_ptr->bottom_field_flag==0)
         {   //top field
             img_ptr->ThisPOC= img_ptr->toppoc = img_ptr->PicOrderCntMsb + img_ptr->pic_order_cnt_lsb;
-        }
-        else
+        } else
         {   //bottom field
             img_ptr->ThisPOC= img_ptr->bottompoc = img_ptr->PicOrderCntMsb + img_ptr->pic_order_cnt_lsb;
         }
@@ -216,7 +263,7 @@ LOCAL void H264Dec_POC(H264DecContext *img_ptr)
             img_ptr->delta_pic_order_cnt[0] = 0;	//ignore first delta
             if (img_ptr->frame_num)
             {
-                PRINTF("frame_num != 0 in idr pix");
+                SPRD_CODEC_LOGE("frame_num != 0 in idr pix\n");
                 img_ptr->error_flag |= ER_BSM_ID;
             }
         } else
@@ -256,7 +303,7 @@ LOCAL void H264Dec_POC(H264DecContext *img_ptr)
 
         if (sps_ptr->num_ref_frames_in_pic_order_cnt_cycle)
         {
-            for (i = 0; i < (int32)sps_ptr->num_ref_frames_in_pic_order_cnt_cycle; i++)
+            for (i = 0; i < (int32)(sps_ptr->num_ref_frames_in_pic_order_cnt_cycle); i++)
             {
                 img_ptr->ExpectedDeltaPerPicOrderCntCycle += sps_ptr->offset_for_ref_frame[i];
             }
@@ -307,7 +354,7 @@ LOCAL void H264Dec_POC(H264DecContext *img_ptr)
             img_ptr->ThisPOC = img_ptr->framepoc = img_ptr->toppoc = img_ptr->bottompoc = 0;
             if (img_ptr->frame_num)
             {
-                PRINTF("frame_num != 0 in idr pix");
+                SPRD_CODEC_LOGE("frame_num != 0 in idr pix\n");
                 img_ptr->error_flag |= ER_BSM_ID;
             }
         } else
@@ -366,6 +413,7 @@ LOCAL void H264Dec_fill_frame_num_gap (H264DecContext *img_ptr, DEC_DECODED_PICT
     {
         DEC_STORABLE_PICTURE_T *picture_ptr;
         DEC_FRAME_STORE_T *frame_store_ptr = H264Dec_get_one_free_pic_buffer (img_ptr, dpb_ptr);
+        DEC_STORABLE_PICTURE_T *prev = dpb_ptr->delayed_pic_ptr;
 
 #if _H264_PROTECT_ & _LEVEL_HIGH_
         if (frame_store_ptr == PNULL || frame_store_ptr->frame == PNULL)
@@ -379,8 +427,6 @@ LOCAL void H264Dec_fill_frame_num_gap (H264DecContext *img_ptr, DEC_DECODED_PICT
             return;
         }
 #endif
-
-        frame_store_ptr->disp_status = 1;
 
         picture_ptr = frame_store_ptr->frame;
         picture_ptr->pic_num = unused_short_term_frm_num;
@@ -398,7 +444,12 @@ LOCAL void H264Dec_fill_frame_num_gap (H264DecContext *img_ptr, DEC_DECODED_PICT
         picture_ptr->imgUAddr = NULL;
         picture_ptr->imgVAddr = NULL;
         picture_ptr->pBufferHeader= NULL;
-
+        if (prev)
+        {
+            picture_ptr->imgYUV[0] = prev->imgYUV[0];
+            picture_ptr->imgYUV[1] = prev->imgYUV[1];
+            picture_ptr->imgYUV[2] = prev->imgYUV[2];
+        }
         img_ptr->frame_num = unused_short_term_frm_num;
         if (img_ptr->g_active_sps_ptr->pic_order_cnt_type!=0)
         {
@@ -407,7 +458,7 @@ LOCAL void H264Dec_fill_frame_num_gap (H264DecContext *img_ptr, DEC_DECODED_PICT
         picture_ptr->frame_poc=img_ptr->framepoc;
         picture_ptr->poc=img_ptr->framepoc;
 
-        H264Dec_store_picture_in_dpb (img_ptr, dpb_ptr, picture_ptr);
+        H264Dec_store_picture_in_dpb (img_ptr, picture_ptr, dpb_ptr);
 
         img_ptr->pre_frame_num = unused_short_term_frm_num;
         unused_short_term_frm_num = H264Dec_Divide (unused_short_term_frm_num+1, img_ptr->max_frame_num);
@@ -466,13 +517,11 @@ PUBLIC MMDecRet H264Dec_init_picture (H264DecContext *img_ptr)
         if (img_ptr->g_active_sps_ptr->gaps_in_frame_num_value_allowed_flag == 0)
         {
             /*advanced error concealment would be called here to combat unitentional loss of pictures*/
-            SPRD_CODEC_LOGW("an unintentional loss of picture occures!\n");
-            //	img_ptr->error_flag |= ER_BSM_ID;
+            SPRD_CODEC_LOGW("an unintentional loss of picture occures! pre_frame_num: %d, frame_num: %d\n",
+                            img_ptr->pre_frame_num, img_ptr->frame_num);
             //	return;
         }
-        //H264Dec_fill_frame_num_gap(img_ptr, dpb_ptr);
-        H264Dec_clear_delayed_buffer(img_ptr);
-        H264Dec_flush_dpb(img_ptr, dpb_ptr);
+        H264Dec_fill_frame_num_gap(img_ptr, dpb_ptr);
     }
 
     fs = H264Dec_get_one_free_pic_buffer(img_ptr, dpb_ptr);
@@ -493,14 +542,13 @@ PUBLIC MMDecRet H264Dec_init_picture (H264DecContext *img_ptr)
 
     if(fs->is_reference == DELAYED_PIC_REF)
     {
-        int32 out_idx = 0;
+        uint32 out_idx = 0;
 
         fs->is_reference = 0;
         H264DEC_UNBIND_FRAME(img_ptr, fs->frame);
 
         for (i = 0; i < img_ptr->g_dpb_ptr->delayed_pic_num; i++)
         {
-            //printf("%d,", dpb_ptr->delayed_pic[i]->poc);
             if (fs->frame == img_ptr->g_dpb_ptr->delayed_pic[i])
             {
                 out_idx = i;
@@ -515,7 +563,6 @@ PUBLIC MMDecRet H264Dec_init_picture (H264DecContext *img_ptr)
         dpb_ptr->delayed_pic_num--;
     }
 
-    fs->disp_status = 0;
     img_ptr->g_dec_picture_ptr = fs->frame;
     if (fs->frame->imgYUV[0] == 0)
     {
@@ -602,7 +649,10 @@ PUBLIC void H264Dec_exit_picture (H264DecContext *img_ptr)
     DEC_STORABLE_PICTURE_T *dec_picture_ptr = img_ptr->g_dec_picture_ptr;
     DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = img_ptr->g_dpb_ptr;
 
-    H264Dec_deblock_picture(img_ptr, dec_picture_ptr);
+    if (img_ptr->yuv_format == YUV420SP_NV12 || img_ptr->yuv_format == YUV420SP_NV21)
+    {
+        H264Dec_deblock_picture(img_ptr, dec_picture_ptr);
+    }
 
     if (dec_picture_ptr->used_for_reference)
     {
@@ -611,7 +661,7 @@ PUBLIC void H264Dec_exit_picture (H264DecContext *img_ptr)
     H264Dec_write_disp_frame (img_ptr, dec_picture_ptr);
 
     //reference frame store update
-    H264Dec_store_picture_in_dpb(img_ptr, dpb_ptr, dec_picture_ptr);
+    H264Dec_store_picture_in_dpb(img_ptr, dec_picture_ptr, dpb_ptr);
     if (img_ptr->last_has_mmco_5)
     {
         img_ptr->pre_frame_num = 0;

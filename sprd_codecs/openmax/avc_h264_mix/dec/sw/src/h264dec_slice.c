@@ -971,7 +971,7 @@ LOCAL void H264Dec_output_one_frame (H264DecContext *img_ptr, MMDecOutput * dec_
 //		s->low_delay = 0;
         }
 
-        SPRD_CODEC_LOGI ("dec poc: %d\t", cur->poc);
+        SCI_TRACE_LOW_DPB ("dec poc: %d\t", cur->poc);
 
         dpb_ptr->delayed_pic[dpb_ptr->delayed_pic_num++] = cur;
 
@@ -1015,6 +1015,8 @@ LOCAL void H264Dec_output_one_frame (H264DecContext *img_ptr, MMDecOutput * dec_
         } else if((out_of_order && (pics-1) == img_ptr->has_b_frames && pics < 15/*why 15?, xwluo@20120316 */)  ||
                   ((img_ptr->g_sps_ptr->profile_idc != 0x42/*!bp*/)&&(img_ptr->low_delay) && ((!cross_idr && prev && out->poc > (prev->poc + 2)) || cur->slice_type == B_SLICE)))
         {
+            SCI_TRACE_LOW_DPB("%s,  %d",  __FUNCTION__, __LINE__);
+
             img_ptr->low_delay = 0;
             img_ptr->has_b_frames++;
             out = prev;
@@ -1039,7 +1041,7 @@ LOCAL void H264Dec_output_one_frame (H264DecContext *img_ptr, MMDecOutput * dec_
                     if(dpb_ptr->delayed_pic[j] == out)
                     {
                         out_idx = j;
-                        SPRD_CODEC_LOGD ("delayed_pic_num : %d, out_idx: %d,\t",  dpb_ptr->delayed_pic_num, out_idx);
+                        SCI_TRACE_LOW_DPB ("delayed_pic_num : %d, out_idx: %d,\t",  dpb_ptr->delayed_pic_num, out_idx);
                         for(i = out_idx; dpb_ptr->delayed_pic[i]; i++)
                         {
                             dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
@@ -1072,30 +1074,27 @@ LOCAL void H264Dec_output_one_frame (H264DecContext *img_ptr, MMDecOutput * dec_
                 fs->is_reference = 0;
                 H264DEC_UNBIND_FRAME(img_ptr, fs->frame);
             }
-
-//		SCI_TRACE_LOW("out poc: %d\t", out->poc);
-        } else
-        {
-//		SCI_TRACE_LOW("out poc: %d\n", out->poc);
         }
+
+        SCI_TRACE_LOW_DPB("out poc: %d, effective: %d\t", out->poc, dec_out->frameEffective);
 
 #if 0   //only for debug
         {
             int32 list_size0 = img_ptr->g_list_size[0];
             int32 list_size1 = img_ptr->g_list_size[1];
-            SCI_TRACE_LOW("list_size: (%d, %d), total: %d", list_size0, list_size1, list_size0 + list_size1);
+            SCI_TRACE_LOW_DPB("list_size: (%d, %d), total: %d", list_size0, list_size1, list_size0 + list_size1);
 
             for (i = 0; i < (MAX_REF_FRAME_NUMBER+1); i++)
             {
                 if(dpb_ptr->fs[i]->is_reference)
                 {
-                    SCI_TRACE_LOW("dpb poc: %d,   %0x,is ref %d,", dpb_ptr->fs[i]->poc, dpb_ptr->fs[i]->frame->pBufferHeader,dpb_ptr->fs[i]->is_reference );
+                    SCI_TRACE_LOW_DPB("dpb poc: %d, %0x,is ref %d,", dpb_ptr->fs[i]->poc, dpb_ptr->fs[i]->frame->pBufferHeader,dpb_ptr->fs[i]->is_reference );
                 }
             }
 
             for (i = 0; i <  dpb_ptr->delayed_pic_num; i++)
             {
-                SCI_TRACE_LOW("delay poc: %d, %0x", dpb_ptr->delayed_pic[i]->poc, dpb_ptr->delayed_pic[i]->pBufferHeader);
+                SCI_TRACE_LOW_DPB("delay poc: %d, %0x", dpb_ptr->delayed_pic[i]->poc, dpb_ptr->delayed_pic[i]->pBufferHeader);
             }
         }
 #endif

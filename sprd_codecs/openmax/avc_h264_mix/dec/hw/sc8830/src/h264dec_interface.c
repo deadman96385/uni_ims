@@ -60,46 +60,52 @@ PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int3
         vo->g_dec_picture_ptr = NULL;
     }
 
-    //pop one picture from delayed picture queue.
-    if (dpb_ptr && dpb_ptr->delayed_pic_num)
-    {
-        DEC_STORABLE_PICTURE_T	*out = dpb_ptr->delayed_pic[0];
-        DEC_FRAME_STORE_T *fs  = H264Dec_search_frame_from_DBP(vo, out);
-
-        if (!fs)
-        {
-            SPRD_CODEC_LOGE ("%s, %d, fs is NULL!, delayed_pic_num: %d, delayed_pic_ptr: %p'", __FUNCTION__, __LINE__, dpb_ptr->delayed_pic_num, dpb_ptr->delayed_pic_ptr);
-            *pOutput = NULL;
-            dpb_ptr->delayed_pic_ptr = NULL;
-            return MMDEC_ERROR;
-        }
-
-        for(i = 0; i < dpb_ptr->delayed_pic_num; i++)
-        {
-            dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
-        }
-        dpb_ptr->delayed_pic_num--;
-
-        H264Dec_find_smallest_pts(vo, out);
-
-        *pOutput = out->pBufferHeader;
-        *picId = out->mPicId;
-        *pts = out->nTimeStamp;
-
-        SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x ", __FUNCTION__, __LINE__, fs->is_reference);
-        fs->is_reference = 0;
-        H264DEC_UNBIND_FRAME(vo, fs->frame);
-
-        return MMDEC_OK;
-    } else
+    if (NULL == dpb_ptr)
     {
         *pOutput = NULL;
-        dpb_ptr->delayed_pic_ptr = NULL;
-        if (dpb_ptr->delayed_pic_num != 0)
-        {
-            SPRD_CODEC_LOGE ("%s, %d, dpb_ptr->delayed_pic_num != 0!'", __FUNCTION__, __LINE__);
-        }
         return MMDEC_ERROR;
+    } else {
+        //pop one picture from delayed picture queue.
+        if (dpb_ptr->delayed_pic_num)
+        {
+            DEC_STORABLE_PICTURE_T *out = dpb_ptr->delayed_pic[0];
+            DEC_FRAME_STORE_T *fs = H264Dec_search_frame_from_DBP(vo, out);
+
+            if (!fs)
+            {
+                SPRD_CODEC_LOGE ("%s, %d, fs is NULL!, delayed_pic_num: %d, delayed_pic_ptr: %p'", __FUNCTION__, __LINE__, dpb_ptr->delayed_pic_num, dpb_ptr->delayed_pic_ptr);
+                *pOutput = NULL;
+                dpb_ptr->delayed_pic_ptr = NULL;
+                return MMDEC_ERROR;
+            }
+
+            for(i = 0; i < dpb_ptr->delayed_pic_num; i++)
+            {
+                dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
+            }
+            dpb_ptr->delayed_pic_num--;
+
+            H264Dec_find_smallest_pts(vo, out);
+
+            *pOutput = out->pBufferHeader;
+            *picId = out->mPicId;
+            *pts = out->nTimeStamp;
+
+            SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x ", __FUNCTION__, __LINE__, fs->is_reference);
+            fs->is_reference = 0;
+            H264DEC_UNBIND_FRAME(vo, fs->frame);
+
+            return MMDEC_OK;
+        } else
+        {
+            *pOutput = NULL;
+            dpb_ptr->delayed_pic_ptr = NULL;
+            if (dpb_ptr->delayed_pic_num != 0)
+            {
+                SPRD_CODEC_LOGE ("%s, %d, dpb_ptr->delayed_pic_num != 0!'", __FUNCTION__, __LINE__);
+            }
+            return MMDEC_ERROR;
+        }
     }
 }
 
@@ -244,7 +250,7 @@ MMDecRet H264DecSetParameter(AVCHandle *avcHandle, MMDecVideoFormat * pVideoForm
 
 MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideoFormat * pVideoFormat)
 {
-    H264DecObject*vo;
+    H264DecObject *vo;
     MMDecRet ret = MMDEC_OK;
 
     SPRD_CODEC_LOGI ("libomx_avcdec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
@@ -517,11 +523,11 @@ int32 Is_Interlaced_Sequence(AVCHandle *avcHandle, MMDecInput *dec_input_ptr)
     uint8* nalu_buf = 0;
     uint8* pstream = 0;
     int8 nal_unit_type;
-    int32 ret, start_code_len = 0;;
-
-    H264DecObject *vo = (H264DecObject *) avcHandle->videoDecoderData;
+    int32 ret = -1, start_code_len = 0;
 
     SPRD_CODEC_LOGD ("%s, %d, called\n", __FUNCTION__, __LINE__);
+
+    H264DecObject *vo = (H264DecObject *) avcHandle->videoDecoderData;
 
     if ((dec_input_ptr->pStream == NULL) ||  (dec_input_ptr->pStream_phy == 0))
     {
@@ -571,8 +577,8 @@ int32 Is_Interlaced_Sequence(AVCHandle *avcHandle, MMDecInput *dec_input_ptr)
     }
 
     //Get start code length of first NALU.
-    start_code_len=VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_NAL_LEN,"get NAL_LEN");
-    vo->g_stream_offset+=start_code_len;
+    start_code_len = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_NAL_LEN,"get NAL_LEN");
+    vo->g_stream_offset += start_code_len;
 
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
     {
@@ -664,7 +670,10 @@ int32 Is_Interlaced_Sequence(AVCHandle *avcHandle, MMDecInput *dec_input_ptr)
 
 DEC_EXIT:
 
-    VSP_RELEASE_Dev((VSPObject *)vo);
+    if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
+    {
+        return MMDEC_HW_ERROR;
+    }
     return  ret;
 }
 

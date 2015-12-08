@@ -480,7 +480,10 @@ typedef struct {
     int32 nRem_bits;		//remain bits of current GOPs
     int32 nRem_GOPNum;	//GOP number of current GOPs
     int32 nRemNumFrames;	//un_encoded P frame number of current GOPs
-    int32 avg_GOP_bits;		//bits of each GOP for CBR mode
+    int32 avg_GOP_bits;    //bits of each GOP for CBR mode
+    int32 avg_Frame_bits;   //bits of each frame for CBR mode
+    int32 nEncoded_num;    //number of frame to be encoded
+    int32 nPrevious_encoded_num;    //number of last frame to be encoded
 
     //CBR
     int32 CBR_P_bits;	//average P frame target bits
@@ -522,7 +525,7 @@ typedef struct {
     int32 nMaxQP;
     int32 nMinQP;
     int32 nframe_size_in_mbs;
-    int32 nSlice_enable;	//0: disable, 1: enable
+    int32 nSlice_enable;	//0: disable, 1: multiple-slice enable, 2: Pn frame enable
     int32 nCodec_type;	//which video codec is used
 
     //internal RC parameters-----------------------

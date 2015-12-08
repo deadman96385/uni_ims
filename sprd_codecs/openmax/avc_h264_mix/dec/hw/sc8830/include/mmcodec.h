@@ -174,21 +174,19 @@ typedef struct
 // Encoder config structure
 typedef struct
 {
-    uint32	RateCtrlEnable;            // 0 : disable  1: enable
-    uint32	targetBitRate;             // 400 ~  (bit/s)
+    uint32  RateCtrlEnable;            // 0 : disable  1: enable
+    uint32  targetBitRate;             // 400 ~  (bit/s)
     uint32  FrameRate;
     uint32  PFrames;
 
-    uint32	vbv_buf_size;				//vbv buffer size, to determine the max transfer delay
+    uint32  vbv_buf_size;				//vbv buffer size, to determine the max transfer delay
+    uint32  QP_IVOP;     				// first I frame's QP; 1 ~ 31, default QP value if the Rate Control is disabled
+    uint32  QP_PVOP;     				// first P frame's QP; 1 ~ 31, default QP value if the Rate Control is disabled
+    uint32  h263En;            			// 1 : H.263, 0 : MP4
 
-    uint32	QP_IVOP;     				// first I frame's QP; 1 ~ 31, default QP value if the Rate Control is disabled
-    uint32	QP_PVOP;     				// first P frame's QP; 1 ~ 31, default QP value if the Rate Control is disabled
-
-    uint32	h263En;            			// 1 : H.263, 0 : MP4
-
-    uint32	profileAndLevel;
-
-    uint32 PrependSPSPPSEnalbe;	// 0: disable, 1: disable
+    uint32  profileAndLevel;
+    uint32  PrependSPSPPSEnalbe;	// 0: disable, 1: disable
+    uint32  EncSceneMode;
 } MMEncConfig;
 
 // Encoder input structure
