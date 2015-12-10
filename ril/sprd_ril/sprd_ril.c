@@ -131,6 +131,8 @@ char RIL_SP_SIM_PIN_PROPERTYS[128]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.
 
 #define PROP_BUILD_TYPE "ro.build.type"
 
+#define PERSIET_SYS_DDR_STATUS            "persist.sys.ddr.status"
+#define PROPPERTY_VALUE_ENABLE            "1"
 // {for sleep log}
 #define BUFFER_SIZE  (12*1024*4)
 #define CONSTANT_DIVIDE  32768.0
@@ -1212,10 +1214,14 @@ done:
         putPDP(secondary_cid - 1);
         putPDP(cid - 1);
     }
-    if (isVoLteEnable() && !isExistActivePdp()) { // for ddr, power consumptioon
-        at_send_command(ATch_type[channelID], "AT+SPVOOLTE=1", NULL);
-    }
 
+    if (isVoLteEnable() && !isExistActivePdp()) { // for ddr, power consumptioon
+        property_get(PERSIET_SYS_DDR_STATUS, prop,"0");
+        RILLOGD("volte ddr power prop = %s", prop);
+        if (!strcmp(prop, PROPPERTY_VALUE_ENABLE)) {
+            at_send_command(ATch_type[channelID], "AT+SPVOOLTE=1", NULL);
+        }
+    }
     at_response_free(p_response);
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
 
@@ -3567,7 +3573,11 @@ static void requestSetupDataCall(int channelID, void *data, size_t datalen, RIL_
     RILLOGD("requestSetupDataCall data[5] '%s'", ((const char **)data)[5]);
 
     if(isVoLteEnable() && !isExistActivePdp()){  // for ddr, power consumptioon
-        at_send_command(ATch_type[channelID], "AT+SPVOOLTE=0", NULL);
+        property_get(PERSIET_SYS_DDR_STATUS, prop,"0");
+        RILLOGD("volte ddr power prop = %s", prop);
+        if (!strcmp(prop, PROPPERTY_VALUE_ENABLE)) {
+            at_send_command(ATch_type[channelID], "AT+SPVOOLTE=0", NULL);
+        }
     }
 
 RETRY:
