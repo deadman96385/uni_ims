@@ -926,6 +926,11 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
         for(i = 0; i < img_ptr->num_ref_idx_l0_active; i++)
         {
             pframe = vo->g_list0[i];
+            if (pframe->imgYAddr == 0) {
+                pframe->imgYAddr = (vo->g_dec_picture_ptr->imgYAddr);
+                pframe->imgUAddr = (vo->g_dec_picture_ptr->imgUAddr);
+            }
+
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x80+i*4, (pframe->imgYAddr)>>3, "ref L0 Y addr");//g_dpb_layer[0]->fs[g_list0_map_addr[i]]->frame->imgYAddr
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x100+i*4, (pframe->imgUAddr)>>3, "ref L0 UV addr");//0x480000+
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x180+i*4, (pframe->direct_mb_info_Addr)>>3, "ref L0 info addr");//0x6a0000+
@@ -935,6 +940,10 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
         {
             //pframe = dpb_ptr->fs[g_list1_map_addr[i]]->frame;
             pframe = vo->g_list1[i];
+            if (pframe->imgYAddr == 0) {
+                pframe->imgYAddr = (vo->g_dec_picture_ptr->imgYAddr);
+                pframe->imgUAddr = (vo->g_dec_picture_ptr->imgUAddr);
+            }
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0xc0+i*4, (pframe->imgYAddr)>>3, "ref L1 Y addr");
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x140+i*4, (pframe->imgUAddr)>>3, "ref L1 UV addr");//0x480000+
             VSP_WRITE_REG(FRAME_ADDR_TABLE_BASE_ADDR+0x1c0+i*4, (pframe->direct_mb_info_Addr)>>3, "ref L1 info addr");//0x6a0000+
