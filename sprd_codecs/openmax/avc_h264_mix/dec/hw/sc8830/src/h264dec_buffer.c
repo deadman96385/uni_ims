@@ -119,7 +119,6 @@ PUBLIC MMDecRet H264Dec_init_dpb (H264DecObject *vo, DEC_DECODED_PICTURE_BUFFER_
         dpb_ptr->fs[i]->frame = (DEC_STORABLE_PICTURE_T *)H264Dec_MemAlloc(vo, sizeof(DEC_STORABLE_PICTURE_T), 4, INTER_MEM);
         CHECK_MALLOC(dpb_ptr->fs[i]->frame, "dpb_ptr->fs[i]->frame");
 
-        dpb_ptr->fs[i]->frame->direct_mb_info_Addr = 0;
         dpb_ptr->fs[i]->frame->imgY = PNULL;
         dpb_ptr->fs[i]->frame->imgU = PNULL;
         dpb_ptr->fs[i]->frame->imgV = PNULL;

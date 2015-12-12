@@ -205,6 +205,7 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
             for (i = 0; i < MAX_REF_FRAME_NUMBER+1; i++)
             {
                 dpb_ptr->fs[i]->frame->DPB_addr_index = i + (type==1 ? 0 : MAX_REF_FRAME_NUMBER+1);//weihu
+                dpb_ptr->fs[i]->frame->direct_mb_info_Addr = 0;
             }
         }
 #else
