@@ -103,16 +103,6 @@ PUBLIC int32 get_unit (H264DecContext *img_ptr, uint8 *pInStream, int32 frm_bs_l
             } else
             {
                 //*bfr++ = data;
-                byte_rest--;
-                if (byte_rest >= 0)
-                {
-                    code = (code<<8) | data;	//big endian
-                }
-                if (0 == byte_rest)
-                {
-                    byte_rest = 4;
-                    *stream_ptr++ = code;
-                }
 
                 if (data == 0x1)
                 {
@@ -127,6 +117,17 @@ PUBLIC int32 get_unit (H264DecContext *img_ptr, uint8 *pInStream, int32 frm_bs_l
                 } else
                 {
                     zero_num = 0;
+                }
+
+                byte_rest--;
+                if (byte_rest >= 0)
+                {
+                    code = (code<<8) | data;	//big endian
+                }
+                if (0 == byte_rest)
+                {
+                    byte_rest = 4;
+                    *stream_ptr++ = code;
                 }
             }
         }
