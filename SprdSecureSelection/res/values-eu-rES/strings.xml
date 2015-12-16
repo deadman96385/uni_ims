@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">SegurtasunHautapena</string>
+<string name="action_settings">"Ezarpenak"</string>
+<string name="hello_world">Terminal honek sistemaren aplikazioaren sarbiderako interfazea edo data konexioa ireki, zeinak baliteke erabiltzailearen segurtasun informazioaren mekanismoa konduktaren bistaratzea. Zenbait aplikazio irekitzen badituzu erabiltzailearen esperientzian eragina izan dezake, behar izatekoten aktibatu edo desaktibatu segurtasunaren gaitasunare konfigurazio aplikazioan.</string>
+<string name="timer">Falta den denbora</string>
+<string name="No">Ez</string>
+<string name="Yes">"Bai"</string>
+<string name="second">"s"</string>
+<string name="cancel">Utzi</string>
+</resources>

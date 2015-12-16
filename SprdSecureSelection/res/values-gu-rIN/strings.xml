@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"સુરક્ષા પસંદ કરો"</string>
+<string name="action_settings">"ગોઠવણી"</string>
+<string name="hello_world">"આ ટર્મીનલ સમર્થન સિસ્ટમ ઍપ્લિકેશન એક્સેસ માટે ઇંટરફેસ થયેલ છે અથવા ડેટા કનેક્શન ખોલવ માટે, જે કંડક્ટ પ્રૉમ્પ્ટની કાર્યરચનાથી સંબંધિત વપરાશકર્તાની માહિતીને અસર કરી શકે છે. જો તમે કેટલીક ઍપ્લિકેશંસ ખોલશો તો તે વપરાશકર્તાના અનુભવને અસર કરી શકે છે, જો જરૂરી હોય તો, કૃપા કરી તેને ચાલુ અથવા બંધ સુરક્ષા ક્ષમતા કંફીગરેશન ઍપ્લિકેશન પર સેટ કરો."</string>
+<string name="timer">"બચેલો સમય:"</string>
+<string name="No">"ના"</string>
+<string name="Yes">"હા"</string>
+<string name="second">"એસ"</string>
+<string name="cancel">"રદ્દ"</string>
+</resources>

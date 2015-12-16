@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">Selección de seguridade</string>
+<string name="action_settings">Axustes</string>
+<string name="hello_world">Este terminal soporta a interface do sistema para o acceso a aplicación ou abrindo unha conexión de datos, que podería afectar a seguridade da información do usuario relacionada co mecanismo para levar a cabo as medidas  a realizar. Se abre algunhas aplicacións podería afectar a experiencia do usuario, se o necesita axuste o acendido ou apagado da aplicación da configuración da capacidade de seguridade.</string>
+<string name="timer">Tempo restante:</string>
+<string name="No">Non </string>
+<string name="Yes">Sí</string>
+<string name="second">"s"</string>
+<string name="cancel">cancelar</string>
+</resources>

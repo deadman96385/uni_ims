@@ -7,4 +7,6 @@
 <string name="Yes">"Evet"</string>
 <string name="second">"s"</string>
 <string name="cancel">"İptal"</string>
+    <string name="app_name">"Güvenlik Seçimi"</string>
+
 </resources>

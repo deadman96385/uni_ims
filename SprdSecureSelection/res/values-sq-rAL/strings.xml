@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">Zgjedhje e sigurisë</string>
+<string name="action_settings">Cilësimet</string>
+<string name="hello_world">Ky terminal suporton ndërfaqen e sistemit për akses aplikacioni ose për të hapur një lidhje interneti, e cila mund të ndikojë në sigurinë e informacioneve që lidhen me mekanizmin e kërkesës të drejtimit. Nëse hapni disa aplikacione, mund të ndikohet eksperienca e përdoruesit, nëse është e nevojshme ju lutem vendoseni aktive ose joaktive në aplikacionin e konfigurimit të aftësisë të sigurisë.</string>
+<string name="timer">Koha e mbetur:</string>
+<string name="No">Jo</string>
+<string name="Yes">Po</string>
+<string name="second">"s"</string>
+<string name="cancel">Anulo</string>
+</resources>
