@@ -20,8 +20,7 @@ extern   "C"
 {
 #endif
 
-DECLARE_ASM_CONST (4, int8, chroma_dc_coeff_token_vlc_tbl[256][2]) =
-{
+DECLARE_ASM_CONST (4, int8, chroma_dc_coeff_token_vlc_tbl[256][2]) = {
     {0x13, 7},{0x13, 7},{0x12, 8},{0x11, 8},{0xe, 7},{0xe, 7},{0xd, 7},{0xd, 7},
     {0x10, 6},{0x10, 6},{0x10, 6},{0x10, 6},{0xc, 6},{0xc, 6},{0xc, 6},{0xc, 6},
     {0x8, 6},{0x8, 6},{0x8, 6},{0x8, 6},{0xf, 6},{0xf, 6},{0xf, 6},{0xf, 6},
@@ -56,8 +55,7 @@ DECLARE_ASM_CONST (4, int8, chroma_dc_coeff_token_vlc_tbl[256][2]) =
     {0x5, 1},{0x5, 1},{0x5, 1},{0x5, 1},{0x5, 1},{0x5, 1},{0x5, 1},{0x5, 1},
 };
 
-DECLARE_ASM_CONST (4, int16, coeff_token_vlc_tbl_0[520][2]) =
-{
+DECLARE_ASM_CONST (4, int16, coeff_token_vlc_tbl_0[520][2]) = {
     {0x100, -8},{0x200, -2},{0x204, -1},{0x206, -1},{0x1b, 8},{0x12, 8},{0xd, 8},{0x8, 8},
     {0x17, 7},{0x17, 7},{0xe, 7},{0xe, 7},{0x13, 6},{0x13, 6},{0x13, 6},{0x13, 6},
     {0x9, 6},{0x9, 6},{0x9, 6},{0x9, 6},{0x4, 6},{0x4, 6},{0x4, 6},{0x4, 6},
@@ -125,8 +123,7 @@ DECLARE_ASM_CONST (4, int16, coeff_token_vlc_tbl_0[520][2]) =
     {0x23, 2},{0x1a, 2},{0x15, 2},{0x10, 2},{0x1f, 1},{0x16, 1},{0x11, 1},{0xc, 1},
 };
 
-DECLARE_ASM_CONST (4, int16, coeff_token_vlc_tbl_1[332][2]) =
-{
+DECLARE_ASM_CONST (4, int16, coeff_token_vlc_tbl_1[332][2]) = {
     {0x100, -6},{0x140, -3},{0x148, -1},{0x14a, -1},{0x14, 8},{0x1a, 8},{0x19, 8},{0x10, 8},
     {0x23, 7},{0x23, 7},{0x16, 7},{0x16, 7},{0x15, 7},{0x15, 7},{0xc, 7},{0xc, 7},
     {0x1f, 6},{0x1f, 6},{0x1f, 6},{0x1f, 6},{0x12, 6},{0x12, 6},{0x12, 6},{0x12, 6},
@@ -171,8 +168,7 @@ DECLARE_ASM_CONST (4, int16, coeff_token_vlc_tbl_1[332][2]) =
     {0x27, 1},{0x1e, 1},{0x1d, 1},{0x18, 1},
 };
 
-DECLARE_ASM_CONST (4, int16, coeff_token_vlc_tbl_2[280][2]) =
-{
+DECLARE_ASM_CONST (4, int16, coeff_token_vlc_tbl_2[280][2]) = {
     {0x100, -2},{0x104, -2},{0x108, -2},{0x10c, -2},{0x110, -1},{0x112, -1},{0x114, -1},{0x116, -1},
     {0x33, 8},{0x2e, 8},{0x29, 8},{0x24, 8},{0x2f, 8},{0x2a, 8},{0x25, 8},{0x20, 8},
     {0x1c, 7},{0x1c, 7},{0x18, 7},{0x18, 7},{0x26, 7},{0x26, 7},{0x14, 7},{0x14, 7},
@@ -210,8 +206,7 @@ DECLARE_ASM_CONST (4, int16, coeff_token_vlc_tbl_2[280][2]) =
     {0x30, 1},{0x36, 1},{0x31, 1},{0x2c, 1},{0x37, 1},{0x32, 1},{0x2d, 1},{0x28, 1},
 };
 
-DECLARE_ASM_CONST (4, int16, coeff_token_vlc_tbl_3[256][2]) =
-{
+DECLARE_ASM_CONST (4, int16, coeff_token_vlc_tbl_3[256][2]) = {
     {0x4, 6},{0x4, 6},{0x4, 6},{0x4, 6},{0x5, 6},{0x5, 6},{0x5, 6},{0x5, 6},
     {-1, 0},{-1, 0},{-1, 0},{-1, 0},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},
     {0x8, 6},{0x8, 6},{0x8, 6},{0x8, 6},{0x9, 6},{0x9, 6},{0x9, 6},{0x9, 6},
@@ -246,23 +241,19 @@ DECLARE_ASM_CONST (4, int16, coeff_token_vlc_tbl_3[256][2]) =
     {0x42, 6},{0x42, 6},{0x42, 6},{0x42, 6},{0x43, 6},{0x43, 6},{0x43, 6},{0x43, 6},
 };
 
-DECLARE_ASM_CONST (4, int8, chroma_dc_total_zeros_vlc_tbl_0[8][2]) =
-{
+DECLARE_ASM_CONST (4, int8, chroma_dc_total_zeros_vlc_tbl_0[8][2]) = {
     {0x3, 3},{0x2, 3},{0x1, 2},{0x1, 2},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},
 };
 
-DECLARE_ASM_CONST (4, int8, chroma_dc_total_zeros_vlc_tbl_1[8][2]) =
-{
+DECLARE_ASM_CONST (4, int8, chroma_dc_total_zeros_vlc_tbl_1[8][2]) = {
     {0x2, 2},{0x2, 2},{0x1, 2},{0x1, 2},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},
 };
 
-DECLARE_ASM_CONST (4, int8, chroma_dc_total_zeros_vlc_tbl_2[8][2]) =
-{
+DECLARE_ASM_CONST (4, int8, chroma_dc_total_zeros_vlc_tbl_2[8][2]) = {
     {0x1, 1},{0x1, 1},{0x1, 1},{0x1, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},
 };
 
-DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_0[512][2]) =
-{
+DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_0[512][2]) = {
     {-1, 0},{0xf, 9},{0xe, 9},{0xd, 9},{0xc, 8},{0xc, 8},{0xb, 8},{0xb, 8},
     {0xa, 7},{0xa, 7},{0xa, 7},{0xa, 7},{0x9, 7},{0x9, 7},{0x9, 7},{0x9, 7},
     {0x8, 6},{0x8, 6},{0x8, 6},{0x8, 6},{0x8, 6},{0x8, 6},{0x8, 6},{0x8, 6},
@@ -329,8 +320,7 @@ DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_0[512][2]) =
     {0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},
 };
 
-DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_1[512][2]) =
-{
+DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_1[512][2]) = {
     {0xe, 6},{0xe, 6},{0xe, 6},{0xe, 6},{0xe, 6},{0xe, 6},{0xe, 6},{0xe, 6},
     {0xd, 6},{0xd, 6},{0xd, 6},{0xd, 6},{0xd, 6},{0xd, 6},{0xd, 6},{0xd, 6},
     {0xc, 6},{0xc, 6},{0xc, 6},{0xc, 6},{0xc, 6},{0xc, 6},{0xc, 6},{0xc, 6},
@@ -397,8 +387,7 @@ DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_1[512][2]) =
     {0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},
 };
 
-DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_2[512][2]) =
-{
+DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_2[512][2]) = {
     {0xd, 6},{0xd, 6},{0xd, 6},{0xd, 6},{0xd, 6},{0xd, 6},{0xd, 6},{0xd, 6},
     {0xb, 6},{0xb, 6},{0xb, 6},{0xb, 6},{0xb, 6},{0xb, 6},{0xb, 6},{0xb, 6},
     {0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},
@@ -465,8 +454,7 @@ DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_2[512][2]) =
     {0x1, 3},{0x1, 3},{0x1, 3},{0x1, 3},{0x1, 3},{0x1, 3},{0x1, 3},{0x1, 3},
 };
 
-DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_3[512][2]) =
-{
+DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_3[512][2]) = {
     {0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},
     {0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},{0xc, 5},
     {0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},
@@ -533,8 +521,7 @@ DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_3[512][2]) =
     {0x1, 3},{0x1, 3},{0x1, 3},{0x1, 3},{0x1, 3},{0x1, 3},{0x1, 3},{0x1, 3},
 };
 
-DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_4[512][2]) =
-{
+DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_4[512][2]) = {
     {0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},
     {0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},{0xb, 5},
     {0x9, 5},{0x9, 5},{0x9, 5},{0x9, 5},{0x9, 5},{0x9, 5},{0x9, 5},{0x9, 5},
@@ -601,8 +588,7 @@ DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_4[512][2]) =
     {0x3, 3},{0x3, 3},{0x3, 3},{0x3, 3},{0x3, 3},{0x3, 3},{0x3, 3},{0x3, 3},
 };
 
-DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_5[512][2]) =
-{
+DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_5[512][2]) = {
     {0xa, 6},{0xa, 6},{0xa, 6},{0xa, 6},{0xa, 6},{0xa, 6},{0xa, 6},{0xa, 6},
     {0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},
     {0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},
@@ -669,8 +655,7 @@ DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_5[512][2]) =
     {0x2, 3},{0x2, 3},{0x2, 3},{0x2, 3},{0x2, 3},{0x2, 3},{0x2, 3},{0x2, 3},
 };
 
-DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_6[512][2]) =
-{
+DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_6[512][2]) = {
     {0x9, 6},{0x9, 6},{0x9, 6},{0x9, 6},{0x9, 6},{0x9, 6},{0x9, 6},{0x9, 6},
     {0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},
     {0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},
@@ -737,8 +722,7 @@ DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_6[512][2]) =
     {0x5, 2},{0x5, 2},{0x5, 2},{0x5, 2},{0x5, 2},{0x5, 2},{0x5, 2},{0x5, 2},
 };
 
-DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_7[512][2]) =
-{
+DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_7[512][2]) = {
     {0x8, 6},{0x8, 6},{0x8, 6},{0x8, 6},{0x8, 6},{0x8, 6},{0x8, 6},{0x8, 6},
     {0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},
     {0x2, 5},{0x2, 5},{0x2, 5},{0x2, 5},{0x2, 5},{0x2, 5},{0x2, 5},{0x2, 5},
@@ -805,8 +789,7 @@ DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_7[512][2]) =
     {0x4, 2},{0x4, 2},{0x4, 2},{0x4, 2},{0x4, 2},{0x4, 2},{0x4, 2},{0x4, 2},
 };
 
-DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_8[512][2]) =
-{
+DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_8[512][2]) = {
     {0x1, 6},{0x1, 6},{0x1, 6},{0x1, 6},{0x1, 6},{0x1, 6},{0x1, 6},{0x1, 6},
     {0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},{0x0, 6},
     {0x7, 5},{0x7, 5},{0x7, 5},{0x7, 5},{0x7, 5},{0x7, 5},{0x7, 5},{0x7, 5},
@@ -873,8 +856,7 @@ DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_8[512][2]) =
     {0x3, 2},{0x3, 2},{0x3, 2},{0x3, 2},{0x3, 2},{0x3, 2},{0x3, 2},{0x3, 2},
 };
 
-DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_9[512][2]) =
-{
+DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_9[512][2]) = {
     {0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},
     {0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},{0x1, 5},
     {0x0, 5},{0x0, 5},{0x0, 5},{0x0, 5},{0x0, 5},{0x0, 5},{0x0, 5},{0x0, 5},
@@ -941,8 +923,7 @@ DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_9[512][2]) =
     {0x3, 2},{0x3, 2},{0x3, 2},{0x3, 2},{0x3, 2},{0x3, 2},{0x3, 2},{0x3, 2},
 };
 
-DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_10[512][2]) =
-{
+DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_10[512][2]) = {
     {0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},
     {0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},
     {0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},
@@ -1009,8 +990,7 @@ DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_10[512][2]) =
     {0x4, 1},{0x4, 1},{0x4, 1},{0x4, 1},{0x4, 1},{0x4, 1},{0x4, 1},{0x4, 1},
 };
 
-DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_11[512][2]) =
-{
+DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_11[512][2]) = {
     {0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},
     {0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},
     {0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},{0x0, 4},
@@ -1077,8 +1057,7 @@ DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_11[512][2]) =
     {0x3, 1},{0x3, 1},{0x3, 1},{0x3, 1},{0x3, 1},{0x3, 1},{0x3, 1},{0x3, 1},
 };
 
-DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_12[512][2]) =
-{
+DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_12[512][2]) = {
     {0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},
     {0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},
     {0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},{0x0, 3},
@@ -1145,8 +1124,7 @@ DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_12[512][2]) =
     {0x2, 1},{0x2, 1},{0x2, 1},{0x2, 1},{0x2, 1},{0x2, 1},{0x2, 1},{0x2, 1},
 };
 
-DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_13[512][2]) =
-{
+DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_13[512][2]) = {
     {0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},
     {0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},
     {0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},{0x0, 2},
@@ -1213,8 +1191,7 @@ DECLARE_ASM_CONST (4, int8, total_zeros_vlc_tbl_13[512][2]) =
     {0x2, 1},{0x2, 1},{0x2, 1},{0x2, 1},{0x2, 1},{0x2, 1},{0x2, 1},{0x2, 1},
 };
 
-const int8 total_zeros_vlc_tbl_14[512][2] =
-{
+const int8 total_zeros_vlc_tbl_14[512][2] = {
     {0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},
     {0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},
     {0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},
@@ -1281,38 +1258,31 @@ const int8 total_zeros_vlc_tbl_14[512][2] =
     {0x1, 1},{0x1, 1},{0x1, 1},{0x1, 1},{0x1, 1},{0x1, 1},{0x1, 1},{0x1, 1},
 };
 
-DECLARE_ASM_CONST (4, int8, run_vlc_tbl_0[8][2]) =
-{
+DECLARE_ASM_CONST (4, int8, run_vlc_tbl_0[8][2]) = {
     {0x1, 1},{0x1, 1},{0x1, 1},{0x1, 1},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},
 };
 
-DECLARE_ASM_CONST (4, int8, run_vlc_tbl_1[8][2]) =
-{
+DECLARE_ASM_CONST (4, int8, run_vlc_tbl_1[8][2]) = {
     {0x2, 2},{0x2, 2},{0x1, 2},{0x1, 2},{0x0, 1},{0x0, 1},{0x0, 1},{0x0, 1},
 };
 
-DECLARE_ASM_CONST (4, int8, run_vlc_tbl_2[8][2]) =
-{
+DECLARE_ASM_CONST (4, int8, run_vlc_tbl_2[8][2]) = {
     {0x3, 2},{0x3, 2},{0x2, 2},{0x2, 2},{0x1, 2},{0x1, 2},{0x0, 2},{0x0, 2},
 };
 
-DECLARE_ASM_CONST (4, int8, run_vlc_tbl_3[8][2]) =
-{
+DECLARE_ASM_CONST (4, int8, run_vlc_tbl_3[8][2]) = {
     {0x4, 3},{0x3, 3},{0x2, 2},{0x2, 2},{0x1, 2},{0x1, 2},{0x0, 2},{0x0, 2},
 };
 
-DECLARE_ASM_CONST (4, int8, run_vlc_tbl_4[8][2]) =
-{
+DECLARE_ASM_CONST (4, int8, run_vlc_tbl_4[8][2]) = {
     {0x5, 3},{0x4, 3},{0x3, 3},{0x2, 3},{0x1, 2},{0x1, 2},{0x0, 2},{0x0, 2},
 };
 
-DECLARE_ASM_CONST (4, int8, run_vlc_tbl_5[8][2]) =
-{
+DECLARE_ASM_CONST (4, int8, run_vlc_tbl_5[8][2]) = {
     {0x1, 3},{0x2, 3},{0x4, 3},{0x3, 3},{0x6, 3},{0x5, 3},{0x0, 2},{0x0, 2},
 };
 
-DECLARE_ASM_CONST (4, int8, run7_vlc_tbl[96][2]) =
-{
+DECLARE_ASM_CONST (4, int8, run7_vlc_tbl[96][2]) = {
     {0x40, -5},{0x9, 6},{0x8, 5},{0x8, 5},{0x7, 4},{0x7, 4},{0x7, 4},{0x7, 4},
     {0x6, 3},{0x6, 3},{0x6, 3},{0x6, 3},{0x6, 3},{0x6, 3},{0x6, 3},{0x6, 3},
     {0x5, 3},{0x5, 3},{0x5, 3},{0x5, 3},{0x5, 3},{0x5, 3},{0x5, 3},{0x5, 3},
@@ -1327,31 +1297,26 @@ DECLARE_ASM_CONST (4, int8, run7_vlc_tbl[96][2]) =
     {0xa, 1},{0xa, 1},{0xa, 1},{0xa, 1},{0xa, 1},{0xa, 1},{0xa, 1},{0xa, 1},
 };
 
-DECLARE_ASM_CONST (4, int32, significant_coeff_flag_offset[6]) =
-{
+DECLARE_ASM_CONST (4, int32, significant_coeff_flag_offset[6]) = {
     105+0, 105+15, 105+29, 105+44, 105+47, 402
 };
 
-DECLARE_ASM_CONST (4, int32, last_coeff_flag_offset[6]) =
-{
+DECLARE_ASM_CONST (4, int32, last_coeff_flag_offset[6]) = {
     166+0, 166+15, 166+29, 166+44, 166+47, 417,
 };
 
-DECLARE_ASM_CONST (4, int32,coeff_abs_level_m1_offset[6]) =
-{
+DECLARE_ASM_CONST (4, int32,coeff_abs_level_m1_offset[6]) = {
     227+0, 227+10, 227+20, 227+30, 227+39, 426
 };
 
-DECLARE_ASM_CONST (4, uint8, significant_coeff_flag_offset_8x8[63]) =
-{
+DECLARE_ASM_CONST (4, uint8, significant_coeff_flag_offset_8x8[63]) = {
     0, 1, 2, 3, 4, 5, 5, 4, 4, 3, 3, 4, 4, 4, 5, 5,
     4, 4, 4, 4, 3, 3, 6, 7, 7, 7, 8, 9,10, 9, 8, 7,
     7, 6,11,12,13,11, 6, 7, 8, 9,14,10, 9, 8, 6,11,
     12,13,11, 6, 9,14,10, 9,11,12,13,11,14,10,12
 };
 
-DECLARE_ASM_CONST (4, uint8, last_coeff_flag_offset_8x8[63]) =
-{
+DECLARE_ASM_CONST (4, uint8, last_coeff_flag_offset_8x8[63]) = {
     0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
     3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -1361,19 +1326,16 @@ DECLARE_ASM_CONST (4, uint8, last_coeff_flag_offset_8x8[63]) =
 /* node ctx: 0..3: abslevel1 (with abslevelgt1 == 0).
   * 4..7: abslevelgt1 + 3 (and abslevel1 doesn't matter).
   * map node ctx => cabac ctx for level=1 */
-DECLARE_ASM_CONST (4, uint8, coeff_abs_level1_ctx[8]) =
-{
+DECLARE_ASM_CONST (4, uint8, coeff_abs_level1_ctx[8]) = {
     1, 2, 3, 4, 0, 0, 0, 0
 };
 
 /* map node ctx => cabac ctx for level>1 */
-DECLARE_ASM_CONST (4, uint8, coeff_abs_levelgt1_ctx[8]) =
-{
+DECLARE_ASM_CONST (4, uint8, coeff_abs_levelgt1_ctx[8]) = {
     5, 5, 5, 5, 6, 7, 8, 9
 };
 
-DECLARE_ASM_CONST (4, uint8, coeff_abs_level_transition[2][8]) =
-{
+DECLARE_ASM_CONST (4, uint8, coeff_abs_level_transition[2][8]) = {
     /* update node ctx after decoding a level=1 */
     { 1, 2, 3, 3, 4, 5, 6, 7 },
     /* update node ctx after decoding a level>1 */

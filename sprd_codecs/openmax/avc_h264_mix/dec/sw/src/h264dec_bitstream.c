@@ -23,251 +23,331 @@ extern   "C"
 {
 #endif
 
-uint32 H264Dec_ByteConsumed(H264DecContext *img_ptr)
+const uint32 s_msk[33] =
 {
-    DEC_BS_T *bs_ptr = img_ptr->bitstrm_ptr;
+    0x00000000, 0x00000001, 0x00000003, 0x00000007,
+    0x0000000f, 0x0000001f, 0x0000003f, 0x0000007f,
+    0x000000ff, 0x000001ff, 0x000003ff, 0x000007ff,
+    0x00000fff, 0x00001fff, 0x00003fff, 0x00007fff,
+    0x0000ffff, 0x0001ffff, 0x0003ffff, 0x0007ffff,
+    0x000fffff, 0x001fffff, 0x003fffff, 0x007fffff,
+    0x00ffffff, 0x01ffffff, 0x03ffffff, 0x07ffffff,
+    0x0fffffff, 0x1fffffff, 0x3fffffff, 0x7fffffff,
+    0xffffffff
+};
+
+PUBLIC uint32 H264Dec_ByteConsumed(DEC_BS_T *bs_ptr)
+{
     uint32 nDecTotalBits = bs_ptr->bitcnt;
 
     return (nDecTotalBits+7)/8;
 }
 
-void H264Dec_InitBitstream(DEC_BS_T * stream, void *pOneFrameBitstream, int32 length)
+PUBLIC void H264Dec_InitBitstream(DEC_BS_T *bs_ptr, void *nalu_strm_ptr, int32 nal_strm_len)
 {
-    stream->bitcnt = 0;
-    stream->rdptr = (uint32 *)pOneFrameBitstream;
-    stream->bitsLeft   = 32;
-    stream->bitcnt_before_vld = stream->bitcnt;
+    int32	offset = 0;
+    uint8	*pTmp;
+
+    offset = ((int32)nalu_strm_ptr)&0x03;
+    nal_strm_len = ((nal_strm_len>>2)<<2)+8;
+    pTmp = (uint8 *)((uint32)nalu_strm_ptr - offset);
+
+    bs_ptr->stream_len = nal_strm_len;
+    bs_ptr->stream_len_left = nal_strm_len;
+    bs_ptr->p_stream = pTmp;
+
+    bs_ptr->bitsLeft = 32 - 8*offset;
+    bs_ptr->bitcnt = 8*offset;
+    bs_ptr->rdptr = bs_ptr->rdbfr;
+
+    if(BITSTREAM_BFR_SIZE * sizeof (uint32) >= nal_strm_len) {
+        memset(bs_ptr->rdptr, 0, BITSTREAM_BFR_SIZE * sizeof(uint32));
+        memcpy(bs_ptr->rdptr, bs_ptr->p_stream, nal_strm_len/*+4*/);
+        bs_ptr->stream_len_left = 0;
+    } else {
+        memcpy (bs_ptr->rdptr, bs_ptr->p_stream, BITSTREAM_BFR_SIZE * sizeof (uint32));
+        bs_ptr->p_stream += BITSTREAM_BFR_SIZE * sizeof (uint32);
+        bs_ptr->stream_len_left -= BITSTREAM_BFR_SIZE * sizeof (uint32);
+    }
+
+#if defined(CHIP_ENDIAN_LITTLE)
+    {
+        uint8 * pCharTmp;
+
+        pCharTmp = (uint8 *)bs_ptr->rdptr;
+
+        ((uint8 *)(&bs_ptr->bufa)) [0] = pCharTmp[3];
+        ((uint8 *)(&bs_ptr->bufa)) [1] = pCharTmp[2];
+        ((uint8 *)(&bs_ptr->bufa)) [2] = pCharTmp[1];
+        ((uint8 *)(&bs_ptr->bufa)) [3] = pCharTmp[0];
+
+        ((uint8 *)(&bs_ptr->bufb)) [0] = pCharTmp[7];
+        ((uint8 *)(&bs_ptr->bufb)) [1] = pCharTmp[6];
+        ((uint8 *)(&bs_ptr->bufb)) [2] = pCharTmp[5];
+        ((uint8 *)(&bs_ptr->bufb)) [3] = pCharTmp[4];
+
+        bs_ptr->rdptr += 2;
+    }
+#endif
 }
 
-PUBLIC void REVERSE_BITS(DEC_BS_T *stream, uint32 nbits)
+PUBLIC uint32 show_bits(DEC_BS_T *bs_ptr, uint32 nbits)
 {
-    stream->bitcnt -= nbits;
-    stream->bitsLeft += nbits;
+    uint32 bitsLeft = bs_ptr->bitsLeft;
+    uint32 ret;
 
-    if (stream->bitsLeft > 0x20)
-    {
-        stream->bitsLeft -= 0x20;
-        stream->rdptr--;
+    if (nbits <= bitsLeft) {
+        ret = ( bs_ptr->bufa >> (bitsLeft - nbits) ) & s_msk [nbits];
+    } else {
+        int nBitsInBfrb = nbits - bitsLeft;
+        ret = ((bs_ptr->bufa << nBitsInBfrb) | (bs_ptr->bufb >> (32 - nBitsInBfrb))) & s_msk [nbits];
+    }
+
+    return ret;
+}
+
+void flush_bits(DEC_BS_T *bs_ptr, uint32 nbits)
+{
+    bs_ptr->bitcnt += nbits;
+    if (nbits < bs_ptr->bitsLeft) {
+        bs_ptr->bitsLeft -= nbits;
+    } else {
+        bs_ptr->bitsLeft += 32 - nbits;
+        bs_ptr->bufa = bs_ptr->bufb;
+
+        if (bs_ptr->rdptr >=  bs_ptr->rdbfr + BITSTREAM_BFR_SIZE) {
+            uint32 * ptr;
+
+            ptr = bs_ptr->rdbfr;
+
+            if (BITSTREAM_BFR_SIZE * sizeof (int) > bs_ptr->stream_len_left) {
+                if (bs_ptr->stream_len_left != 0) {
+                    memcpy (ptr, bs_ptr->p_stream, bs_ptr->stream_len_left);
+                    bs_ptr->stream_len_left = 0;
+                }
+            } else {
+                memcpy (ptr, bs_ptr->p_stream, BITSTREAM_BFR_SIZE * sizeof (int));
+                bs_ptr->p_stream += BITSTREAM_BFR_SIZE * sizeof (int);
+                bs_ptr->stream_len_left -= BITSTREAM_BFR_SIZE * sizeof (int);
+            }
+
+            bs_ptr->rdptr = bs_ptr->rdbfr;
+        }
+
+#if defined(CHIP_ENDIAN_LITTLE)
+        {
+            uint8 *pCharTmp;
+
+            pCharTmp = (uint8 *)bs_ptr->rdptr;
+
+            ((uint8 *)&bs_ptr->bufb)[0] = pCharTmp[3];
+            ((uint8 *)&bs_ptr->bufb)[1] = pCharTmp[2];
+            ((uint8 *)&bs_ptr->bufb)[2] = pCharTmp[1];
+            ((uint8 *)&bs_ptr->bufb)[3] = pCharTmp[0];
+            bs_ptr->rdptr++;
+        }
+#endif
     }
 }
 
-#if 1//WIN32
-PUBLIC uint32 READ_BITS(DEC_BS_T *stream, uint32 nbits)
-{
-    uint32 temp;
-
-    temp = BITSTREAMSHOWBITS(stream, nbits);
-    BITSTREAMFLUSHBITS(stream, nbits);
-
-    return temp;
-}
-
-PUBLIC uint32 READ_BITS1(DEC_BS_T *stream)
+/*****************************************************************************
+ **	Name : 			H265Dec_ReadBits
+ ** Description:	Read out nbits data from bitstream.
+ ** Author:			Xiaowei Luo
+ **	Note:
+ *****************************************************************************/
+PUBLIC uint32 read_bits(DEC_BS_T *bs_ptr, uint32 nbits)
 {
     uint32 val;
 
-    val = ((*stream->rdptr >> (stream->bitsLeft - 1)) & 0x1);
-    stream->bitcnt++;
-    stream->bitsLeft--;
-
-    if (!stream->bitsLeft)
-    {
-        stream->bitsLeft = 32;
-        stream->rdptr++;
-    }
+    val = show_bits(bs_ptr, nbits);
+    flush_bits(bs_ptr, nbits);
 
     return val;
 }
 
-PUBLIC uint32 READ_UE_V (DEC_BS_T * stream)
+PUBLIC uint32 ue_v (DEC_BS_T *bs_ptr)
 {
-    int32 info;
     uint32 ret;
     uint32 tmp;
-    uint32 leading_zero = 0;
 
-    //tmp = BitstreamShowBits (stream, 32);
-    tmp = (uint32)(BITSTREAMSHOWBITS (stream, 32));
+    tmp = show_bits (bs_ptr, 16);
+    if (tmp == 0) {
+        ret = long_ue_v(bs_ptr);
+    } else {
+        int32 info;
+        uint32 leading_zero = 0;
 
-    /*find the leading zero number*/
+        tmp = show_bits (bs_ptr, 32);
+
+        /*find the leading zero number*/
 #ifndef _ARM_CLZ_OPT_
-    if (!tmp)
-    {
-        stream->error_flag |= ER_BSM_ID;
-        return 0;
-    }
-    while ( (tmp & (1 << (31 - leading_zero))) == 0 )
-        leading_zero++;
+        while ((tmp & (1 << (31 - leading_zero))) == 0) {
+            leading_zero++;
+        }
 #else
 #if defined(__GNUC__)
-    __asm__("clz %0, %1":"=&r"(leading_zero):"r"(tmp):"cc");
+        __asm__("clz %0, %1":"=&r"(leading_zero):"r"(tmp):"cc");
 #else
-    __asm {
-        clz leading_zero, tmp
-    }
+        __asm {
+            clz leading_zero, tmp
+        }
 #endif
 #endif
 
-    //must! because BITSTRM may be error and can't find the leading zero, xw@20100527
-    if (leading_zero > 16)
-    {
-        stream->error_flag |= ER_BSM_ID;
-        //g_image_ptr->return_pos |= (1<<0);
-        return 0;
+        flush_bits(bs_ptr, leading_zero * 2 + 1);
+
+        info = (tmp >> (32 - 2 * leading_zero -1)) & s_msk [leading_zero];
+        ret = (1 << leading_zero) + info - 1;
     }
-
-    BITSTREAMFLUSHBITS(stream, leading_zero * 2 + 1);
-
-    info = (tmp >> (32 - 2 * leading_zero -1)) & g_msk [leading_zero];
-    ret = (1 << leading_zero) + info - 1;
 
     return ret;
 }
 
-PUBLIC int32 READ_SE_V (DEC_BS_T * stream)
+PUBLIC int32 se_v (DEC_BS_T *bs_ptr)
 {
     int32 ret;
-    int32 info;
     int32 tmp;
-    uint32 leading_zero = 0;
 
-    //tmp = BitstreamShowBits (stream, 32);
-    tmp = BITSTREAMSHOWBITS(stream, 32);
+    tmp = show_bits (bs_ptr, 16);
+    if (tmp == 0) {
+        ret = long_se_v(bs_ptr);
+    } else {
+        int32 info;
+        uint32 leading_zero = 0;
 
-    /*find the leading zero number*/
+        tmp = show_bits(bs_ptr, 32);
+
+        /*find the leading zero number*/
 #ifndef _ARM_CLZ_OPT_
-    if (!tmp)
-    {
-        stream->error_flag |= ER_BSM_ID;
-        return 0;
-    }
-    while ( (tmp & (1 << (31 - leading_zero))) == 0 )
-        leading_zero++;
+        while ( (tmp & (1 << (31 - leading_zero))) == 0 )
+            leading_zero++;
 #else
 #if defined(__GNUC__)
-    __asm__("clz %0, %1":"=&r"(leading_zero):"r"(tmp):"cc");
+        __asm__("clz %0, %1":"=&r"(leading_zero):"r"(tmp):"cc");
 #else
-    __asm {
-        clz leading_zero, tmp
-    }
+        __asm {
+            clz leading_zero, tmp
+        }
 #endif
 #endif
 
-    //must! because BITSTRM may be error and can't find the leading zero, xw@20100527
-    if (leading_zero > 16)
-    {
-        stream->error_flag |= ER_BSM_ID;
-        //g_image_ptr->return_pos |= (1<<1);
-        return 0;
+        flush_bits (bs_ptr, leading_zero * 2 + 1);
+
+        info = (tmp >> (32 - 2 * leading_zero -1)) & s_msk [leading_zero];
+
+        tmp = (1 << leading_zero) + info - 1;
+        ret = (tmp + 1) / 2;
+        if ( (tmp & 1) == 0 ) {
+            ret = -ret;
+        }
     }
-
-    BITSTREAMFLUSHBITS (stream, leading_zero * 2 + 1);
-
-    info = (tmp >> (32 - 2 * leading_zero -1)) & g_msk [leading_zero];
-
-    tmp = (1 << leading_zero) + info - 1;
-    ret = (tmp + 1) / 2;
-
-    if ( (tmp & 1) == 0 )
-        ret = -ret;
 
     return ret;
 }
-#endif
 
-PUBLIC uint32 H264Dec_Long_UEV (DEC_BS_T * stream)
+PUBLIC int32 long_ue_v (DEC_BS_T *bs_ptr)
 {
     uint32 tmp;
     int32 leading_zero = 0;
+    int32 ret;
 
-    tmp = BITSTREAMSHOWBITS (stream, 16);
-
-    if (tmp == 0)
-    {
-        READ_FLC (stream, 16);
+    tmp = show_bits (bs_ptr, 16);
+    if (tmp == 0) {
+        read_bits (bs_ptr, 16);
         leading_zero = 16;
 
         do {
-            tmp = READ_BITS1 (stream);
+            tmp = read_bits (bs_ptr, 1);
             leading_zero++;
         } while(!tmp);
 
         leading_zero--;
-        tmp = READ_FLC (stream, leading_zero);
+        tmp = read_bits (bs_ptr, leading_zero);
 
-        return tmp;
-    } else
-    {
-        return READ_UE_V (stream);
+        ret = (1 << leading_zero) + tmp - 1;
+
+        return ret;
+    } else {
+        return ue_v (bs_ptr);
     }
 }
 
-PUBLIC int32 H264Dec_Long_SEV (DEC_BS_T * stream)
+PUBLIC int32 long_se_v (DEC_BS_T *bs_ptr)
 {
     uint32 tmp;
     int32 leading_zero = 0;
+    int32 ret;
 
-    tmp = BITSTREAMSHOWBITS (stream, 16);
-
-    if (tmp == 0)
-    {
-        READ_FLC (stream, 16);
+    tmp = show_bits (bs_ptr, 16);
+    if (tmp == 0) {
+        read_bits (bs_ptr, 16);
         leading_zero = 16;
 
         do {
-            tmp = READ_BITS1 (stream);
+            tmp = read_bits (bs_ptr, 1);
             leading_zero++;
         } while(!tmp);
 
         leading_zero--;
-        tmp = READ_FLC (stream, leading_zero);
+        tmp = read_bits (bs_ptr, leading_zero);
+        tmp = (1 << leading_zero) + tmp - 1;
+        ret = (tmp + 1) / 2;
 
-        return tmp;
-    } else
-    {
-        return READ_SE_V (stream);
+        if ( (tmp & 1) == 0 ) {
+            ret = -ret;
+        }
+
+        return ret;
+    } else {
+        return se_v (bs_ptr);
     }
 }
 
-#if 0
-LOCAL void H264Dec_byte_align (void)
+PUBLIC void revserse_bits (DEC_BS_T *bs_ptr, uint32 nbits)
 {
-    int32 left_bits;
-    int32 flush_bits;
-    DEC_BS_T * stream = g_image_ptr->bitstrm_ptr;
-    uint32 nDecTotalBits = stream->bitcnt;
+    bs_ptr->bitcnt -= nbits;
+    bs_ptr->bitsLeft += nbits;
 
-    left_bits = 8 - (nDecTotalBits&0x7);
+    if (bs_ptr->bitsLeft > 32) {
+        bs_ptr->bitsLeft -= 32;
+        bs_ptr->bufb = bs_ptr->bufa;
 
-    flush_bits = (left_bits == 8)?8: left_bits;
-
-    READ_FLC(stream, flush_bits);
-
-    return;
-}
-
-PUBLIC void H264Dec_flush_left_byte (void)
-{
-    int32 i;
-    int32 dec_len;
-    int32 left_bytes;
-    DEC_BS_T * stream = g_image_ptr->bitstrm_ptr;
-    uint32 nDecTotalBits = stream->bitcnt;
-
-    H264Dec_byte_align ();
-
-    dec_len = nDecTotalBits>>3;
-
-    left_bytes = g_nalu_ptr->len - dec_len;
-
-    for (i = 0; i < left_bytes; i++)
-    {
-        READ_FLC(stream, 8);
-    }
-
-    return;
-}
+#if defined(CHIP_ENDIAN_LITTLE)
+        {
+            uint8 *pCharTmp = (uint8 *)(bs_ptr->rdptr - 3);
+            ((uint8 *)&bs_ptr->bufa)[0] = pCharTmp[3];
+            ((uint8 *)&bs_ptr->bufa)[1] = pCharTmp[2];
+            ((uint8 *)&bs_ptr->bufa)[2] = pCharTmp[1];
+            ((uint8 *)&bs_ptr->bufa)[3] = pCharTmp[0];
+            bs_ptr->rdptr--;
+        }
 #endif
+    }
+}
+
+/*****************************************************************************
+ **	Name : 			H264Dec_ByteAlign
+ ** Description:	Byte align function when decode mp4 bitstream.
+ ** Author:			Xiaowei Luo
+ **	Note:
+ *****************************************************************************/
+void H264Dec_ByteAlign(DEC_BS_T *bs_ptr)
+{
+    uint32 n_stuffed, v;
+
+    v = read_bits(bs_ptr, 1);
+    SCI_ASSERT(v == 1);
+
+    n_stuffed = bs_ptr->bitsLeft &0x07;
+    if (n_stuffed) {
+        v = read_bits(bs_ptr, n_stuffed);
+        SCI_ASSERT(v == 0);
+    }
+
+    return;
+}
+
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/

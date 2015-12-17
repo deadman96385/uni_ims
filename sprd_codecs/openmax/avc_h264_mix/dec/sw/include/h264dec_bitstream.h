@@ -27,38 +27,28 @@ extern   "C"
 {
 #endif
 
-uint32 H264Dec_ByteConsumed(H264DecContext *img_ptr);
-void H264Dec_InitBitstream (DEC_BS_T * stream, void *pOneFrameBitstream, int32 length);
-
-//big endian
-#define BITSTREAMSHOWBITS(bitstream, nBits) \
-((nBits) <= bitstream->bitsLeft) ? (((bitstream->rdptr[0]) >> (bitstream->bitsLeft - (nBits))) & g_msk [(nBits)]) : \
-	((((bitstream->rdptr[0])  << ((nBits) - bitstream->bitsLeft)) | ((bitstream->rdptr[1]) >> (32 - (nBits) + bitstream->bitsLeft))) & g_msk[(nBits)])
-
-#define BITSTREAMFLUSHBITS(stream, nbits) \
-{ \
-	stream->bitcnt += (nbits); \
-	if (nbits < stream->bitsLeft) \
-	{		\
-		stream->bitsLeft -= (nbits);	\
-	} \
-	else \
-	{\
-		stream->bitsLeft += 32 - (nbits);\
-		stream->rdptr++;\
-	}	\
-}
-
-uint32 READ_BITS1(DEC_BS_T *stream);
-void REVERSE_BITS(DEC_BS_T *stream, uint32 nbits);
-uint32 READ_BITS(DEC_BS_T *stream, uint32 nbits);
-uint32 READ_UE_V(DEC_BS_T *stream);
-int32 READ_SE_V(DEC_BS_T *stream);
-uint32 H264Dec_Long_UEV(DEC_BS_T *stream);
-int32 H264Dec_Long_SEV(DEC_BS_T *stream);
+uint32 H264Dec_ByteConsumed(DEC_BS_T *bs_ptr);
+void H264Dec_InitBitstream (DEC_BS_T *bs_ptr, void *pOneFrameBitstream, int32 length);
 void H264Dec_flush_left_byte(void);
 
-#define READ_FLC(stream, nbits)	READ_BITS(stream, nbits)
+void flush_bits(DEC_BS_T *bs_ptr, uint32 nbits);
+uint32 show_bits(DEC_BS_T *bs_ptr, uint32 nbits);
+uint32 read_bits(DEC_BS_T *bs_ptr, uint32 nbits);
+uint32 ue_v (DEC_BS_T *bs_ptr);
+int32 se_v (DEC_BS_T *bs_ptr);
+int32 long_ue_v (DEC_BS_T *bs_ptr);
+int32 long_se_v (DEC_BS_T *bs_ptr);
+void revserse_bits (DEC_BS_T *bs_ptr, uint32 nbits);
+
+#define SHOW_FLC(nbits)    show_bits(bs_ptr, nbits)
+#define FLUSH_FLC(nbits)    flush_bits(bs_ptr, nbits)
+#define READ_FLC(nbits)	read_bits(bs_ptr, nbits)
+#define READ_FLAG()		(BOOLEAN)read_bits(bs_ptr, 1)
+#define UE_V()    ue_v(bs_ptr)
+#define SE_V()   se_v(bs_ptr)
+#define Long_SE_V()    long_se_v(bs_ptr)
+#define Long_UE_V()    long_ue_v(bs_ptr)
+#define REVERSE_BITS(nbits) revserse_bits (bs_ptr, nbits)
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

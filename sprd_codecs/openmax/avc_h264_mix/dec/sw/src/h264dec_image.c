@@ -36,17 +36,14 @@ PUBLIC int32 H264Dec_is_new_picture (H264DecContext *img_ptr)
     reslt |= ((old_slice_ptr->nal_ref_idc != img_ptr->nal_reference_idc) && ((old_slice_ptr->nal_ref_idc == 0) || (img_ptr->nal_reference_idc == 0))) ? 1 : 0;
     reslt |= (old_slice_ptr->idr_flag != img_ptr->idr_flag) ? 1 : 0;
 
-    if (img_ptr->idr_flag && old_slice_ptr->idr_flag)
-    {
+    if (img_ptr->idr_flag && old_slice_ptr->idr_flag) {
         reslt |= (old_slice_ptr->idr_pic_id != img_ptr->idr_pic_id) ? 1 : 0;
     }
 
-    if (img_ptr->g_active_sps_ptr->pic_order_cnt_type == 0)
-    {
+    if (img_ptr->g_active_sps_ptr->pic_order_cnt_type == 0) {
         reslt |= (old_slice_ptr->pic_order_cnt_lsb != img_ptr->pic_order_cnt_lsb) ? 1 : 0;
         reslt |= (old_slice_ptr->delta_pic_order_cnt_bottom != img_ptr->delta_pic_order_cnt_bottom) ? 1 : 0;
-    } else if (img_ptr->g_active_sps_ptr->pic_order_cnt_type == 1)
-    {
+    } else if (img_ptr->g_active_sps_ptr->pic_order_cnt_type == 1) {
         reslt |= (old_slice_ptr->delta_pic_order_cnt[0] != img_ptr->delta_pic_order_cnt[0]) ? 1 : 0;
         reslt |= (old_slice_ptr->delta_pic_order_cnt[1] != img_ptr->delta_pic_order_cnt[1]) ? 1 : 0;
     }
@@ -56,8 +53,7 @@ PUBLIC int32 H264Dec_is_new_picture (H264DecContext *img_ptr)
 
 LOCAL int32 H264Dec_Divide (uint32 dividend, uint32 divisor) //quotient = divident/divisor
 {
-    while (dividend >= divisor)
-    {
+    while (dividend >= divisor) {
         dividend -= divisor;
     }
 
@@ -72,8 +68,7 @@ PUBLIC void h264Dec_remove_frame_from_dpb (H264DecContext *img_ptr, DEC_DECODED_
     tmp_fs_ptr = dpb_ptr->fs[pos];
 
     //move empty fs to the end of list
-    for (i = pos; i < dpb_ptr->used_size-1; i++)
-    {
+    for (i = pos; i < dpb_ptr->used_size-1; i++) {
         dpb_ptr->fs[i] = dpb_ptr->fs[i+1];
     }
 
@@ -95,11 +90,9 @@ PUBLIC int32 H264Dec_remove_unused_frame_from_dpb (H264DecContext *img_ptr, DEC_
     int32 i;
     int32 has_free_bfr = FALSE;
 
-    for (i = 0; i < dpb_ptr->used_size; i++)
-    {
+    for (i = 0; i < dpb_ptr->used_size; i++) {
         SCI_TRACE_LOW_DPB("%s, %d, is_reference %d  pBufferHeader %x", __FUNCTION__, __LINE__,dpb_ptr->fs[i]->is_reference ,  dpb_ptr->fs[i]->frame->pBufferHeader);
-        if ((!dpb_ptr->fs[i]->is_reference))
-        {
+        if ((!dpb_ptr->fs[i]->is_reference)) {
             h264Dec_remove_frame_from_dpb(img_ptr, dpb_ptr, i);
             has_free_bfr = TRUE;
             break;
@@ -116,28 +109,22 @@ PUBLIC int32 H264Dec_remove_delayed_frame_from_dpb (H264DecContext *img_ptr, DEC
     int32 has_free_bfr = FALSE;
     DEC_FRAME_STORE_T *fs = NULL;
 
-    for (i = 0; i < (uint32)(dpb_ptr->used_size); i++)
-    {
+    for (i = 0; i < (uint32)(dpb_ptr->used_size); i++) {
         SCI_TRACE_LOW_DPB("%s, %d, is_reference %d  pBufferHeader %x", __FUNCTION__, __LINE__,dpb_ptr->fs[i]->is_reference ,  dpb_ptr->fs[i]->frame->pBufferHeader);
-        if ((DELAYED_PIC_REF == dpb_ptr->fs[i]->is_reference))
-        {
+        if ((DELAYED_PIC_REF == dpb_ptr->fs[i]->is_reference)) {
             fs = dpb_ptr->fs[i];
 
             out_idx = dpb_ptr->delayed_pic_num;
-            for (j = 0; j < dpb_ptr->delayed_pic_num; j++)
-            {
-                if (fs->frame == dpb_ptr->delayed_pic[j])
-                {
+            for (j = 0; j < dpb_ptr->delayed_pic_num; j++) {
+                if (fs->frame == dpb_ptr->delayed_pic[j]) {
                     out_idx = j;
                     has_free_bfr = TRUE;
                     break;
                 }
             }
 
-            if (has_free_bfr == TRUE)
-            {
-                for(j = out_idx; dpb_ptr->delayed_pic[j]; j++)
-                {
+            if (has_free_bfr == TRUE) {
+                for(j = out_idx; dpb_ptr->delayed_pic[j]; j++) {
                     dpb_ptr->delayed_pic[j] = dpb_ptr->delayed_pic[j+1];
                 }
                 dpb_ptr->delayed_pic_num--;
@@ -156,12 +143,9 @@ LOCAL DEC_FRAME_STORE_T *H264Dec_get_one_free_pic_buffer (H264DecContext *img_pt
 {
     SCI_TRACE_LOW_DPB("%s, %d, %d used vs total %d", __FUNCTION__, __LINE__,dpb_ptr->used_size ,  dpb_ptr->size);
 
-    if (dpb_ptr->used_size == (MAX_REF_FRAME_NUMBER+1))
-    {
-        if (!H264Dec_remove_unused_frame_from_dpb(img_ptr, dpb_ptr))
-        {
-            if(!H264Dec_remove_delayed_frame_from_dpb(img_ptr, dpb_ptr))
-            {
+    if (dpb_ptr->used_size == (MAX_REF_FRAME_NUMBER+1)) {
+        if (!H264Dec_remove_unused_frame_from_dpb(img_ptr, dpb_ptr)) {
+            if(!H264Dec_remove_delayed_frame_from_dpb(img_ptr, dpb_ptr)) {
                 //wait for display free buffer
 #if _H264_PROTECT_ & _LEVEL_LOW_
                 img_ptr->error_flag |= ER_REF_FRM_ID;
@@ -192,24 +176,18 @@ LOCAL void H264Dec_POC(H264DecContext *img_ptr)
     DEC_SPS_T	*sps_ptr = img_ptr->g_active_sps_ptr;
     uint32 MaxPicOrderCntLsb = (1<<(sps_ptr->log2_max_pic_order_cnt_lsb_minus4+4));
 
-    switch (sps_ptr->pic_order_cnt_type)
-    {
+    switch (sps_ptr->pic_order_cnt_type) {
     case 0:	//poc mode 0
         ///1 st
-        if (img_ptr->idr_flag)
-        {
+        if (img_ptr->idr_flag) {
             img_ptr->PrevPicOrderCntMsb = 0;
             img_ptr->PrevPicOrderCntLsb = 0;
-        } else
-        {
-            if (img_ptr->last_has_mmco_5)
-            {
-                if (0/*img_ptr->last_pic_bottom_field*/)
-                {
+        } else {
+            if (img_ptr->last_has_mmco_5) {
+                if (0/*img_ptr->last_pic_bottom_field*/) {
                     img_ptr->PrevPicOrderCntMsb = 0;
                     img_ptr->PrevPicOrderCntLsb = 0;
-                } else
-                {
+                } else {
                     img_ptr->PrevPicOrderCntMsb = 0;
                     img_ptr->PrevPicOrderCntLsb = img_ptr->toppoc;
                 }
@@ -218,38 +196,32 @@ LOCAL void H264Dec_POC(H264DecContext *img_ptr)
 
         //calculate the MSBs of current picture
         if (img_ptr->pic_order_cnt_lsb < img_ptr->PrevPicOrderCntLsb &&
-                (img_ptr->PrevPicOrderCntLsb - img_ptr->pic_order_cnt_lsb ) >= (MaxPicOrderCntLsb /2))
-        {
+                (img_ptr->PrevPicOrderCntLsb - img_ptr->pic_order_cnt_lsb ) >= (MaxPicOrderCntLsb /2)) {
             img_ptr->PicOrderCntMsb = img_ptr->PrevPicOrderCntMsb + MaxPicOrderCntLsb;
         } else if (img_ptr->pic_order_cnt_lsb > img_ptr->PrevPicOrderCntLsb &&
-                   (img_ptr->pic_order_cnt_lsb - img_ptr->PrevPicOrderCntLsb) > (MaxPicOrderCntLsb /2))
-        {
+                   (img_ptr->pic_order_cnt_lsb - img_ptr->PrevPicOrderCntLsb) > (MaxPicOrderCntLsb /2)) {
             img_ptr->PicOrderCntMsb = img_ptr->PrevPicOrderCntMsb - MaxPicOrderCntLsb;
-        } else
-        {
+        } else {
             img_ptr->PicOrderCntMsb = img_ptr->PrevPicOrderCntMsb;
         }
 
         ///2nd
-        if(img_ptr->field_pic_flag==0)
-        {   //frame pix
+        if(img_ptr->field_pic_flag==0) {   //frame pix
             img_ptr->toppoc = img_ptr->PicOrderCntMsb + img_ptr->pic_order_cnt_lsb;
             img_ptr->bottompoc = img_ptr->toppoc + img_ptr->delta_pic_order_cnt_bottom;
             img_ptr->ThisPOC = img_ptr->framepoc = (img_ptr->toppoc < img_ptr->bottompoc)? img_ptr->toppoc : img_ptr->bottompoc; // POC200301
-        } else if (img_ptr->bottom_field_flag==0)
-        {   //top field
+        } else if (img_ptr->bottom_field_flag==0) {   //top field
             img_ptr->ThisPOC= img_ptr->toppoc = img_ptr->PicOrderCntMsb + img_ptr->pic_order_cnt_lsb;
-        } else
-        {   //bottom field
+        } else {   //bottom field
             img_ptr->ThisPOC= img_ptr->bottompoc = img_ptr->PicOrderCntMsb + img_ptr->pic_order_cnt_lsb;
         }
         img_ptr->framepoc=img_ptr->ThisPOC;
 
-        if ( img_ptr->frame_num!=img_ptr->PreviousFrameNum)
+        if ( img_ptr->frame_num!=img_ptr->PreviousFrameNum) {
             img_ptr->PreviousFrameNum=img_ptr->frame_num;
+        }
 
-        if(img_ptr->nal_reference_idc)
-        {
+        if(img_ptr->nal_reference_idc) {
             img_ptr->PrevPicOrderCntLsb = img_ptr->pic_order_cnt_lsb;
             img_ptr->PrevPicOrderCntMsb = img_ptr->PicOrderCntMsb;
         }
@@ -257,89 +229,71 @@ LOCAL void H264Dec_POC(H264DecContext *img_ptr)
         break;
     case 1:	//poc mode 1
         ///1 st
-        if (img_ptr->idr_flag)
-        {
+        if (img_ptr->idr_flag) {
             img_ptr->FrameNumOffset = 0;	//  first pix of IDRGOP,
             img_ptr->delta_pic_order_cnt[0] = 0;	//ignore first delta
-            if (img_ptr->frame_num)
-            {
+            if (img_ptr->frame_num) {
                 SPRD_CODEC_LOGE("frame_num != 0 in idr pix\n");
                 img_ptr->error_flag |= ER_BSM_ID;
             }
-        } else
-        {
-            if (img_ptr->last_has_mmco_5)
-            {
+        } else {
+            if (img_ptr->last_has_mmco_5) {
                 img_ptr->PreviousFrameNumOffset = 0;
                 img_ptr->PreviousFrameNum = 0;
             }
 
-            if (img_ptr->frame_num < img_ptr->PreviousFrameNum)
-            {
+            if (img_ptr->frame_num < img_ptr->PreviousFrameNum) {
                 //not first pix of IDRGOP
                 img_ptr->FrameNumOffset = img_ptr->PreviousFrameNumOffset+ img_ptr->max_frame_num;
-            } else
-            {
+            } else {
                 img_ptr->FrameNumOffset = img_ptr->PreviousFrameNumOffset;
             }
         }
 
         ///2nd
-        if (sps_ptr->num_ref_frames_in_pic_order_cnt_cycle)
-        {
+        if (sps_ptr->num_ref_frames_in_pic_order_cnt_cycle) {
             img_ptr->AbsFrameNum = img_ptr->FrameNumOffset + img_ptr->frame_num;
-        } else
-        {
+        } else {
             img_ptr->AbsFrameNum = 0;
         }
 
-        if (!(img_ptr->nal_reference_idc) && img_ptr->AbsFrameNum > 0)
-        {
+        if (!(img_ptr->nal_reference_idc) && img_ptr->AbsFrameNum > 0) {
             img_ptr->AbsFrameNum--;
         }
 
         ///3rd
         img_ptr->ExpectedDeltaPerPicOrderCntCycle = 0;
 
-        if (sps_ptr->num_ref_frames_in_pic_order_cnt_cycle)
-        {
-            for (i = 0; i < (int32)(sps_ptr->num_ref_frames_in_pic_order_cnt_cycle); i++)
-            {
+        if (sps_ptr->num_ref_frames_in_pic_order_cnt_cycle) {
+            for (i = 0; i < (int32)(sps_ptr->num_ref_frames_in_pic_order_cnt_cycle); i++) {
                 img_ptr->ExpectedDeltaPerPicOrderCntCycle += sps_ptr->offset_for_ref_frame[i];
             }
         }
 
-        if (img_ptr->AbsFrameNum)
-        {
+        if (img_ptr->AbsFrameNum) {
             img_ptr->PicOrderCntCycleCnt = (img_ptr->AbsFrameNum-1)/sps_ptr->num_ref_frames_in_pic_order_cnt_cycle;
             img_ptr->FrameNumInPicOrderCntCycle = (img_ptr->AbsFrameNum-1)%sps_ptr->num_ref_frames_in_pic_order_cnt_cycle;
             img_ptr->ExpectedPicOrderCnt = img_ptr->PicOrderCntCycleCnt*img_ptr->ExpectedDeltaPerPicOrderCntCycle;
 
-            for (i = 0; i <= img_ptr->FrameNumInPicOrderCntCycle; i++)
-            {
+            for (i = 0; i <= img_ptr->FrameNumInPicOrderCntCycle; i++) {
                 img_ptr->ExpectedPicOrderCnt += sps_ptr->offset_for_ref_frame[i];
             }
-        } else
-        {
+        } else {
             img_ptr->ExpectedPicOrderCnt = 0;
         }
 
-        if (!img_ptr->nal_reference_idc)
-        {
+        if (!img_ptr->nal_reference_idc) {
             img_ptr->ExpectedPicOrderCnt += sps_ptr->offset_for_non_ref_pic;
         }
 
-        if (img_ptr->field_pic_flag == 0)
-        {
+        if (img_ptr->field_pic_flag == 0) {
             //frame pix
             img_ptr->toppoc = img_ptr->ExpectedPicOrderCnt + img_ptr->delta_pic_order_cnt[0];
             img_ptr->bottompoc = img_ptr->toppoc + sps_ptr->offset_for_top_to_bottom_field + img_ptr->delta_pic_order_cnt[1];
             img_ptr->ThisPOC = img_ptr->framepoc = (img_ptr->toppoc < img_ptr->bottompoc) ? img_ptr->toppoc : img_ptr->bottompoc;	//poc 200301
-        } else	if (img_ptr->bottom_field_flag == 0)
-        {
+        } else if (img_ptr->bottom_field_flag == 0) {
             //top field
-        } else
-        {   //bottom field
+        } else {   //bottom field
         }
         img_ptr->framepoc = img_ptr->ThisPOC;
 
@@ -348,47 +302,36 @@ LOCAL void H264Dec_POC(H264DecContext *img_ptr)
 
         break;
     case 2: //poc mode 2
-        if (img_ptr->idr_flag) 	//idr picture
-        {
+        if (img_ptr->idr_flag) {	//idr picture
             img_ptr->FrameNumOffset = 0; //first pix of IDRGOP
             img_ptr->ThisPOC = img_ptr->framepoc = img_ptr->toppoc = img_ptr->bottompoc = 0;
-            if (img_ptr->frame_num)
-            {
+            if (img_ptr->frame_num) {
                 SPRD_CODEC_LOGE("frame_num != 0 in idr pix\n");
                 img_ptr->error_flag |= ER_BSM_ID;
             }
-        } else
-        {
-            if (img_ptr->last_has_mmco_5)
-            {
+        } else {
+            if (img_ptr->last_has_mmco_5) {
                 img_ptr->PreviousFrameNum = 0;
                 img_ptr->PreviousFrameNumOffset = 0;
             }
 
-            if (img_ptr->frame_num < img_ptr->PreviousFrameNum)
-            {
+            if (img_ptr->frame_num < img_ptr->PreviousFrameNum) {
                 img_ptr->FrameNumOffset = img_ptr->PreviousFrameNumOffset + img_ptr->max_frame_num;
-            } else
-            {
+            } else {
                 img_ptr->FrameNumOffset = img_ptr->PreviousFrameNumOffset;
             }
 
             img_ptr->AbsFrameNum = img_ptr->FrameNumOffset + img_ptr->frame_num;
-            if (!img_ptr->nal_reference_idc)
-            {
+            if (!img_ptr->nal_reference_idc) {
                 img_ptr->ThisPOC = (2*img_ptr->AbsFrameNum - 1);
-            } else
-            {
+            } else {
                 img_ptr->ThisPOC = (2*img_ptr->AbsFrameNum);
             }
 
-            if (img_ptr->field_pic_flag == 0)	//frame pix
-            {
+            if (img_ptr->field_pic_flag == 0)	{//frame pix
                 img_ptr->toppoc = img_ptr->bottompoc = img_ptr->framepoc = img_ptr->ThisPOC;
-            } else if (img_ptr->bottom_field_flag == 0)	//top field
-            {
-            } else	//bottom field
-            {
+            } else if (img_ptr->bottom_field_flag == 0) {	//top field
+            } else {	//bottom field
             }
         }
 
@@ -409,20 +352,17 @@ LOCAL void H264Dec_fill_frame_num_gap (H264DecContext *img_ptr, DEC_DECODED_PICT
     unused_short_term_frm_num = H264Dec_Divide ((img_ptr->pre_frame_num+1), img_ptr->max_frame_num);
     curr_frame_num = img_ptr->frame_num;
 
-    while (curr_frame_num != unused_short_term_frm_num)
-    {
+    while (curr_frame_num != unused_short_term_frm_num) {
         DEC_STORABLE_PICTURE_T *picture_ptr;
         DEC_FRAME_STORE_T *frame_store_ptr = H264Dec_get_one_free_pic_buffer (img_ptr, dpb_ptr);
         DEC_STORABLE_PICTURE_T *prev = dpb_ptr->delayed_pic_ptr;
 
 #if _H264_PROTECT_ & _LEVEL_HIGH_
-        if (frame_store_ptr == PNULL || frame_store_ptr->frame == PNULL)
-        {
+        if (frame_store_ptr == PNULL || frame_store_ptr->frame == PNULL) {
             img_ptr->error_flag |= ER_BSM_ID;
         }
 
-        if (img_ptr->error_flag)
-        {
+        if (img_ptr->error_flag) {
             img_ptr->return_pos |= (1<<17);
             return;
         }
@@ -444,15 +384,13 @@ LOCAL void H264Dec_fill_frame_num_gap (H264DecContext *img_ptr, DEC_DECODED_PICT
         picture_ptr->imgUAddr = NULL;
         picture_ptr->imgVAddr = NULL;
         picture_ptr->pBufferHeader= NULL;
-        if (prev)
-        {
+        if (prev) {
             picture_ptr->imgYUV[0] = prev->imgYUV[0];
             picture_ptr->imgYUV[1] = prev->imgYUV[1];
             picture_ptr->imgYUV[2] = prev->imgYUV[2];
         }
         img_ptr->frame_num = unused_short_term_frm_num;
-        if (img_ptr->g_active_sps_ptr->pic_order_cnt_type!=0)
-        {
+        if (img_ptr->g_active_sps_ptr->pic_order_cnt_type!=0) {
             H264Dec_POC(img_ptr);
         }
         picture_ptr->frame_poc=img_ptr->framepoc;
@@ -507,15 +445,13 @@ PUBLIC MMDecRet H264Dec_init_picture (H264DecContext *img_ptr)
     DEC_FRAME_STORE_T *fs = NULL;
     int32 i;
 
-    if (img_ptr->fmo_used)
-    {
+    if (img_ptr->fmo_used) {
         memset(img_ptr->slice_nr_ptr, -1, img_ptr->frame_width_in_mbs * img_ptr->frame_height_in_mbs);
     }
 
-    if ((img_ptr->frame_num != img_ptr->pre_frame_num) && (img_ptr->frame_num != H264Dec_Divide((img_ptr->pre_frame_num+1), img_ptr->max_frame_num)))
-    {
-        if (img_ptr->g_active_sps_ptr->gaps_in_frame_num_value_allowed_flag == 0)
-        {
+    if ((img_ptr->frame_num != img_ptr->pre_frame_num) &&
+            (img_ptr->frame_num != H264Dec_Divide((img_ptr->pre_frame_num+1), img_ptr->max_frame_num))) {
+        if (img_ptr->g_active_sps_ptr->gaps_in_frame_num_value_allowed_flag == 0) {
             /*advanced error concealment would be called here to combat unitentional loss of pictures*/
             SPRD_CODEC_LOGW("an unintentional loss of picture occures! pre_frame_num: %d, frame_num: %d\n",
                             img_ptr->pre_frame_num, img_ptr->frame_num);
@@ -527,45 +463,38 @@ PUBLIC MMDecRet H264Dec_init_picture (H264DecContext *img_ptr)
     fs = H264Dec_get_one_free_pic_buffer(img_ptr, dpb_ptr);
 
 #if _H264_PROTECT_ & _LEVEL_HIGH_
-    if (img_ptr->error_flag)
-    {
+    if (img_ptr->error_flag) {
         img_ptr->return_pos |= (1<<18);
         return MMDEC_ERROR;
     }
 
-    if (!fs || fs->frame == PNULL)
-    {
+    if (!fs || fs->frame == PNULL) {
         img_ptr->return_pos1 |= (1<<0);
         return MMDEC_ERROR;
     }
 #endif
 
-    if(fs->is_reference == DELAYED_PIC_REF)
-    {
+    if(fs->is_reference == DELAYED_PIC_REF) {
         uint32 out_idx = 0;
 
         fs->is_reference = 0;
         H264DEC_UNBIND_FRAME(img_ptr, fs->frame);
 
-        for (i = 0; i < img_ptr->g_dpb_ptr->delayed_pic_num; i++)
-        {
-            if (fs->frame == img_ptr->g_dpb_ptr->delayed_pic[i])
-            {
+        for (i = 0; i < img_ptr->g_dpb_ptr->delayed_pic_num; i++) {
+            if (fs->frame == img_ptr->g_dpb_ptr->delayed_pic[i]) {
                 out_idx = i;
                 break;
             }
         }
 
-        for(i = out_idx; dpb_ptr->delayed_pic[i]; i++)
-        {
+        for(i = out_idx; dpb_ptr->delayed_pic[i]; i++) {
             dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
         }
         dpb_ptr->delayed_pic_num--;
     }
 
     img_ptr->g_dec_picture_ptr = fs->frame;
-    if (fs->frame->imgYUV[0] == 0)
-    {
+    if (fs->frame->imgYUV[0] == 0) {
         int32 ext_frm_size = img_ptr->ext_width * img_ptr->ext_height;
 
         fs->frame->imgYUV[0] = (uint8 *)H264Dec_MemAlloc(img_ptr, ext_frm_size, 256, SW_CACHABLE);
@@ -626,8 +555,7 @@ PUBLIC MMDecRet H264Dec_init_picture (H264DecContext *img_ptr)
     }
 
 #if _H264_PROTECT_ & _LEVEL_HIGH_
-    if (dec_picture_ptr->ref_idx_ptr[0] == NULL || dec_picture_ptr->ref_idx_ptr[1] == NULL)
-    {
+    if (dec_picture_ptr->ref_idx_ptr[0] == NULL || dec_picture_ptr->ref_idx_ptr[1] == NULL) {
         img_ptr->error_flag |= ER_BSM_ID;
         img_ptr->return_pos1 |= (1<<31);
         return MMDEC_ERROR;
@@ -649,21 +577,18 @@ PUBLIC void H264Dec_exit_picture (H264DecContext *img_ptr)
     DEC_STORABLE_PICTURE_T *dec_picture_ptr = img_ptr->g_dec_picture_ptr;
     DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = img_ptr->g_dpb_ptr;
 
-    if (img_ptr->yuv_format == YUV420SP_NV12 || img_ptr->yuv_format == YUV420SP_NV21)
-    {
+    if (img_ptr->yuv_format == YUV420SP_NV12 || img_ptr->yuv_format == YUV420SP_NV21) {
         H264Dec_deblock_picture(img_ptr, dec_picture_ptr);
     }
 
-    if (dec_picture_ptr->used_for_reference)
-    {
+    if (dec_picture_ptr->used_for_reference) {
         H264Dec_extent_frame (img_ptr, dec_picture_ptr);
     }
     H264Dec_write_disp_frame (img_ptr, dec_picture_ptr);
 
     //reference frame store update
     H264Dec_store_picture_in_dpb(img_ptr, dec_picture_ptr, dpb_ptr);
-    if (img_ptr->last_has_mmco_5)
-    {
+    if (img_ptr->last_has_mmco_5) {
         img_ptr->pre_frame_num = 0;
     }
 

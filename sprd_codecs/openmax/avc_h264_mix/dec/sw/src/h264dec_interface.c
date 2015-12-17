@@ -370,17 +370,6 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
         pInStream += slice_unit_len;
 
-        if (img_ptr->g_need_back_last_word)
-        {
-            uint_32or64 byte_rest;
-            int32 *word_align_pIn;
-            byte_rest = (uint_32or64)pInStream;
-            byte_rest = ((byte_rest)>>2)<<2;
-            word_align_pIn = (int32 *)(byte_rest);
-
-            *word_align_pIn = img_ptr->g_back_last_word;
-        }
-
         //Added for Bug#162875
         if (SOP == curr_slice_ptr->next_header)
         {

@@ -29,8 +29,7 @@ extern   "C"
 
 DECLARE_ASM_CONST (4, int8, g_ICBP_TBL[TBL_SIZE_ICBP]) = {0, 16, 32, 15, 31, 47};
 
-DECLARE_ASM_CONST (4, uint8, g_QP_SCALER_CR_TBL[52]) =
-{
+DECLARE_ASM_CONST (4, uint8, g_QP_SCALER_CR_TBL[52]) = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,
     12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,
     28,29,29,30,31,32,32,33,34,34,35,35,36,36,37,37,
@@ -38,8 +37,7 @@ DECLARE_ASM_CONST (4, uint8, g_QP_SCALER_CR_TBL[52]) =
 };
 
 /*cbp table for intra MB*/
-DECLARE_ASM_CONST (4, uint8, g_cbp_intra_tbl [48]) =
-{
+DECLARE_ASM_CONST (4, uint8, g_cbp_intra_tbl [48]) = {
     47, 31, 15,  0, 23, 27, 29, 30,  7, 11, 13, 14,
     39, 43, 45, 46, 16,  3,  5, 10, 12, 19, 21, 26,
     28, 35, 37, 42, 44,  1,  2,  4,  8, 17, 18, 20,
@@ -47,8 +45,7 @@ DECLARE_ASM_CONST (4, uint8, g_cbp_intra_tbl [48]) =
 };
 
 /*cbp table for inter MB*/
-DECLARE_ASM_CONST (4, uint8, g_cbp_inter_tbl [48]) =
-{
+DECLARE_ASM_CONST (4, uint8, g_cbp_inter_tbl [48]) = {
     0, 16,  1,  2,  4,  8, 32,  3,
     5, 10, 12, 15, 47,  7, 11, 13,
     14,  6,  9, 31, 35, 37, 42, 44,
@@ -58,8 +55,7 @@ DECLARE_ASM_CONST (4, uint8, g_cbp_inter_tbl [48]) =
 };
 
 //qp_per<<8 | (qp_rem<<0)
-DECLARE_ASM_CONST (4, uint16, g_qpPerRem_tbl [52]) =
-{
+DECLARE_ASM_CONST (4, uint16, g_qpPerRem_tbl [52]) = {
     ((0<<8)|0), ((0<<8)|1), ((0<<8)|2), ((0<<8)|3), ((0<<8)|4), ((0<<8)|5),
     ((1<<8)|0), ((1<<8)|1), ((1<<8)|2), ((1<<8)|3), ((1<<8)|4), ((1<<8)|5),
     ((2<<8)|0), ((2<<8)|1), ((2<<8)|2), ((2<<8)|3), ((2<<8)|4), ((2<<8)|5),
@@ -72,8 +68,7 @@ DECLARE_ASM_CONST (4, uint16, g_qpPerRem_tbl [52]) =
 };
 
 /*block order map from decoder order to context cache order*/
-DECLARE_ASM_CONST (4, uint8, g_blk_order_map_tbl[16+2 * 4]) =
-{
+DECLARE_ASM_CONST (4, uint8, g_blk_order_map_tbl[16+2 * 4]) = {
     1 *12+4, 1 *12+5, 2 *12+4, 2 *12+5,  //first one block8x8
     1 *12+6, 1 *12+7, 2 *12+6, 2 *12+7,
     3 *12+4, 3 *12+5, 4 *12+4, 4 *12+5,
@@ -83,19 +78,22 @@ DECLARE_ASM_CONST (4, uint8, g_blk_order_map_tbl[16+2 * 4]) =
     6 *12+8, 6 *12+9, 7 *12+8, 7 *12+9,
 };
 
-DECLARE_ASM_CONST (4, uint8, g_b8_offset[4]) = { 0, 2, CTX_CACHE_WIDTH_X2, CTX_CACHE_WIDTH_X2+2};
-DECLARE_ASM_CONST (4, uint8, g_b4_offset[4]) = {0, 1, CTX_CACHE_WIDTH, CTX_CACHE_WIDTH+1};
+DECLARE_ASM_CONST (4, uint8, g_b8_offset[4]) = {
+    0, 2, CTX_CACHE_WIDTH_X2, CTX_CACHE_WIDTH_X2+2
+};
 
-DECLARE_ASM_CONST (4, uint8, g_b8map[16]) =
-{
+DECLARE_ASM_CONST (4, uint8, g_b4_offset[4]) = {
+    0, 1, CTX_CACHE_WIDTH, CTX_CACHE_WIDTH+1
+};
+
+DECLARE_ASM_CONST (4, uint8, g_b8map[16]) = {
     0, 0, 1, 1,
     0, 0, 1, 1,
     2, 2, 3, 3,
     2, 2, 3, 3,
 };
 
-DECLARE_ASM_CONST (4, uint32, g_msk[33]) =
-{
+DECLARE_ASM_CONST (4, uint32, g_msk[33]) = {
     0x00000000, 0x00000001, 0x00000003, 0x00000007,
     0x0000000f, 0x0000001f, 0x0000003f, 0x0000007f,
     0x000000ff, 0x000001ff, 0x000003ff, 0x000007ff,
@@ -119,6 +117,7 @@ DECLARE_ASM_CONST(4, uint8,dequant4_coeff_init[6][3])= {
 DECLARE_ASM_CONST(4, uint8, dequant8_coeff_init_scan[16]) = {
     0,3,4,3, 3,1,5,1, 4,5,2,5, 3,1,5,1
 };
+
 DECLARE_ASM_CONST(4, uint8, dequant8_coeff_init[6][6])= {
     {20,18,32,19,25,24},
     {22,19,35,21,28,26},
@@ -128,18 +127,15 @@ DECLARE_ASM_CONST(4, uint8, dequant8_coeff_init[6][6])= {
     {36,32,58,34,46,43},
 };
 
-DECLARE_ASM_CONST (4, uint8, g_inverse_zigzag_tbl[16]) =
-{
+DECLARE_ASM_CONST (4, uint8, g_inverse_zigzag_tbl[16]) = {
     0, 1, 4, 8, 5, 2, 3, 6, 9, 12, 13, 10, 7, 11, 14, 15,
 };
 
-DECLARE_ASM_CONST (4, uint8, g_inverse_zigzag_cabac_I16_ac_tbl[15]) =
-{
+DECLARE_ASM_CONST (4, uint8, g_inverse_zigzag_cabac_I16_ac_tbl[15]) = {
     1, 4, 8, 5, 2, 3, 6, 9, 12, 13, 10, 7, 11, 14, 15,
 };
 
-DECLARE_ASM_CONST (4, uint8, g_inverse_8x8_zigzag_tbl[64]) =
-{
+DECLARE_ASM_CONST (4, uint8, g_inverse_8x8_zigzag_tbl[64]) = {
 #if 0 //normal
     0, 1, 8, 16, 9, 2, 3, 10,
     17, 24, 32, 25, 18, 11, 4, 5,
@@ -162,8 +158,7 @@ DECLARE_ASM_CONST (4, uint8, g_inverse_8x8_zigzag_tbl[64]) =
 };
 
 // zigzag_scan8x8_cavlc[i] = zigzag_scan8x8[(i/4) + 16*(i%4)]
-DECLARE_ASM_CONST (4, uint8, g_inverse_8x8_zigzag_tbl_cavlc[64]) =
-{
+DECLARE_ASM_CONST (4, uint8, g_inverse_8x8_zigzag_tbl_cavlc[64]) = {
 #if 0 //normal
     0+0*8, 1+1*8, 1+2*8, 2+2*8,
     4+1*8, 0+5*8, 3+3*8, 7+0*8,
@@ -201,8 +196,7 @@ DECLARE_ASM_CONST (4, uint8, g_inverse_8x8_zigzag_tbl_cavlc[64]) =
 #endif
 };
 
-DECLARE_ASM_CONST (4, uint8, g_clip_tbl[1024+256]) =
-{
+DECLARE_ASM_CONST (4, uint8, g_clip_tbl[1024+256]) = {
     0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
     0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
     0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
@@ -285,24 +279,21 @@ DECLARE_ASM_CONST (4, uint8, g_clip_tbl[1024+256]) =
     255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
 };
 
-DECLARE_ASM_CONST (4, uint8, g_blKIndex [16]) =
-{
+DECLARE_ASM_CONST (4, uint8, g_blKIndex [16]) = {
     0, 1, 4, 5,
     2, 3, 6, 7,
     8, 9, 12, 13,
     10, 11, 14, 15,
 };
 
-DECLARE_ASM_CONST (4, int8, g_blkC_avaiable_tbl[16]) =
-{
+DECLARE_ASM_CONST (4, int8, g_blkC_avaiable_tbl[16]) = {
     1, 1, 1, 1,
     1, 0, 1, 0,
     1, 1, 1, 0,
     1, 0, 1, 0,
 };
 
-DECLARE_ASM_CONST (4, uint8, g_mbcache_addr_map_tbl[16+4]) =
-{
+DECLARE_ASM_CONST (4, uint8, g_mbcache_addr_map_tbl[16+4]) = {
     //y
     16*0 + 0, 16*0 + 4 , 16*4 + 0, 16*4 + 4,
     16*0 + 8, 16*0 + 12, 16*4 + 8, 16*4 + 12,
@@ -313,29 +304,25 @@ DECLARE_ASM_CONST (4, uint8, g_mbcache_addr_map_tbl[16+4]) =
     0, 4, 8*4, 8*4 + 4,
 };
 
-DECLARE_ASM_CONST (4, uint8, g_dec_order_to_scan_order_map_tbl[16]) =
-{
+DECLARE_ASM_CONST (4, uint8, g_dec_order_to_scan_order_map_tbl[16]) = {
     0, 1, 4, 5, 2, 3, 6, 7, 8, 9, 12, 13, 10, 11, 14, 15
 };
 
-DECLARE_ASM_CONST (4, uint8, weightscale4x4_intra_default[16]) =
-{
+DECLARE_ASM_CONST (4, uint8, weightscale4x4_intra_default[16]) = {
     6,13,20,28,
     13,20,28,32,
     20,28,32,37,
     28,32,37,42
 };
 
-DECLARE_ASM_CONST (4, uint8, weightscale4x4_inter_default[16]) =
-{
+DECLARE_ASM_CONST (4, uint8, weightscale4x4_inter_default[16]) = {
     10,14,20,24,
     14,20,24,27,
     20,24,27,30,
     24,27,30,34
 };
 
-DECLARE_ASM_CONST (4, uint8, weightscale8x8_intra_default[64]) =
-{
+DECLARE_ASM_CONST (4, uint8, weightscale8x8_intra_default[64]) = {
     6,10,13,16,18,23,25,27,
     10,11,16,18,23,25,27,29,
     13,16,18,23,25,27,29,31,
@@ -346,8 +333,7 @@ DECLARE_ASM_CONST (4, uint8, weightscale8x8_intra_default[64]) =
     27,29,31,33,36,38,40,42
 };
 
-DECLARE_ASM_CONST (4, uint8, weightscale8x8_inter_default[64]) =
-{
+DECLARE_ASM_CONST (4, uint8, weightscale8x8_inter_default[64]) = {
     9,13,15,17,19,21,22,24,
     13,13,17,19,21,22,24,25,
     15,17,19,21,22,24,25,27,

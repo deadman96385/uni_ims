@@ -29,13 +29,24 @@ extern   "C"
 {
 #endif
 
+#define BITSTREAM_BFR_SIZE		128
+
 typedef struct bitstream
 {
+#if defined(CHIP_ENDIAN_LITTLE)
+    uint32 bufa;
+    uint32 bufb;
+#endif
     uint32 bitcnt;
     uint32 bitsLeft; // left bits in the word pointed by rdptr
     uint32 *rdptr;
-    uint32 bitcnt_before_vld;
+    uint32 rdbfr[BITSTREAM_BFR_SIZE + 1];	// bitstream data
     uint32 error_flag;
+
+    /*a nalu information*/
+    int32 stream_len;				//length of the nalu
+    int32 stream_len_left;		//left length not decoded of the nalu
+    uint8 *p_stream;	//point to the nalu(current decoded position)
 } DEC_BS_T;
 
 /**
@@ -595,9 +606,6 @@ typedef struct H264DecContext_tag
     int32 	g_refPosx;
     int32 	g_refPosy;
     int16  	*g_halfPixTemp;// [24*16]; //wxh
-
-    uint32	g_need_back_last_word;
-    int32 	g_back_last_word;
 
     uint16	frame_width_in_mbs;
     uint16	frame_height_in_mbs;
