@@ -143,6 +143,10 @@ static const char * s_modem = NULL;
 int s_testmode = 0;
 static int allow_data = 0;
 int  g_maybe_addcall = 0;
+/** SPRD: Bug 503887 add ISIM for volte . @{*/
+int g_ImsISIM = -1;
+int g_ImsConn = -1;
+/** }@ */
 
 struct ATChannels *ATch_type[MAX_CHANNELS];
 static int s_channel_open = 0;
@@ -4151,9 +4155,15 @@ static void onSimPresent(void *param)
 
 void sendCallStateChanged(void *param)
 {
-    RIL_onUnsolicitedResponse (
-        RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
-        NULL, 0);
+    if(s_ims_registered){
+        RIL_onUnsolicitedResponse (
+            RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
+            NULL, 0);
+    } else {
+        RIL_onUnsolicitedResponse (
+            RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
+            NULL, 0);
+    }
 }
 
 void sendVideoCallStateChanged(void *param)
@@ -5054,6 +5064,8 @@ static void requestRegistrationState(int channelID, int request, void *data,
         responseStr[5] = res[4];
         RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, 6*sizeof(char*));
     } else if(request == RIL_REQUEST_IMS_REGISTRATION_STATE){
+        s_ims_registered = response[0];
+        RILLOGD("s_ims_registered= %d", s_ims_registered);
         RIL_onRequestComplete(t, RIL_E_SUCCESS, response, sizeof(response));
     }
     at_response_free(p_response);
@@ -6206,6 +6218,75 @@ int getSimlockRemainTimes(int channelID, SimUnlockType type)
     return remaintime;
 }
 
+static void requestInitISIM(int channelID, void*  data, size_t  datalen, RIL_Token  t)
+{
+    ATResponse   *p_response = NULL;
+    int           err;
+    char          cmd[100] = {0};
+    char         *line;
+    int           response = 0;
+    const char**  strings = (const char**)data;
+    err = at_send_command_singleline(ATch_type[channelID], "AT+ISIM=1", "+ISIM:", &p_response);
+    if (err >= 0 && p_response->success) {
+        line = p_response->p_intermediates->line;
+        err = at_tok_start(&line);
+        if (err >= 0) {
+            err = at_tok_nextint(&line, &response);
+            if(err >= 0) {
+                RILLOGE("Response of ISIM is %d", response);
+            }
+        }
+    }
+    at_response_free(p_response);
+
+    if(datalen == 7 * sizeof(char *) && strings[0] != NULL && strlen(strings[0]) > 0)
+    {
+        if(response == 0)
+        {
+            memset(cmd, 0, sizeof(cmd));
+            RILLOGE("requestInitISIM impu = \"%s\"", strings[2]);
+            snprintf(cmd, sizeof(cmd), "AT+IMPU=\"%s\"", strings[2]);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+
+            memset(cmd, 0, sizeof(cmd));
+            RILLOGE("requestInitISIM impi = \"%s\"", strings[3]);
+            snprintf(cmd, sizeof(cmd), "AT+IMPI=\"%s\"", strings[3]);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+
+            memset(cmd, 0, sizeof(cmd));
+            RILLOGE("requestInitISIM domain = \"%s\"", strings[4]);
+            snprintf(cmd, sizeof(cmd), "AT+DOMAIN=\"%s\"", strings[4]);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+
+            memset(cmd, 0, sizeof(cmd));
+            RILLOGE("requestInitISIM xcap = \"%s\"", strings[5]);
+            snprintf(cmd, sizeof(cmd), "AT+XCAPRTURI=\"%s\"", strings[5]);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+
+            memset(cmd, 0, sizeof(cmd));
+            RILLOGE("requestInitISIM bsf = \"%s\"", strings[6]);
+            snprintf(cmd, sizeof(cmd), "AT+BSF=\"%s\"", strings[6]);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+        }
+        memset(cmd, 0, sizeof(cmd));
+        RILLOGE("requestInitISIM instanceId = \"%s\"", strings[1]);
+        snprintf(cmd, sizeof(cmd), "AT+INSTANCEID=\"%s\"", strings[1]);
+        err = at_send_command(ATch_type[channelID], cmd , NULL);
+
+        memset(cmd, 0, sizeof(cmd));
+        RILLOGE("requestInitISIM confuri = \"%s\"", strings[0]);
+        snprintf(cmd, sizeof(cmd), "AT+CONFURI=0,\"%s\"", strings[0]);
+        err = at_send_command(ATch_type[channelID], cmd , NULL);
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(int));
+        g_ImsISIM = 1;
+        if(g_ImsConn == 1)
+        {
+            at_send_command(ATch_type[channelID], "AT+IMSEN=1", NULL);
+        }
+    } else {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    }
+}
 static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RIL_Token  t)
 {
     ATResponse   *p_response = NULL;
@@ -8102,7 +8183,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SET_PRIORITY_NETWORK_MODE //SPRD: add for priority network mode
                 || request == RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY
                 || request == RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY
-                || request == RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN
+                || request == RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN
                 || request == RIL_REQUEST_SIM_CLOSE_CHANNEL
                 || request == RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL
 #endif
@@ -8135,15 +8216,15 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_OEM_HOOK_STRINGS
                 || request == RIL_REQUEST_SIM_OPEN_CHANNEL
                 || request == RIL_REQUEST_SET_INITIAL_ATTACH_APN
-                || request == RIL_REQUEST_GET_CURRENT_CALLS_VOLTE
+                || request == RIL_REQUEST_GET_IMS_CURRENT_CALLS
                 || request == RIL_REQUEST_INIT_ISIM
                 || request == RIL_REQUEST_REGISTER_IMS_IMPU
-                || request == RIL_REQUEST_VOLTE_SET_CONFERENCE_URI
+                || request == RIL_REQUEST_IMS_SET_CONFERENCE_URI
                 || request == RIL_REQUEST_REGISTER_IMS_IMPI
                 || request == RIL_REQUEST_REGISTER_IMS_DOMAIN
-                || request ==  RIL_REQUEST_REGISTER_IMS_IMEI
-                || request ==  RIL_REQUEST_REGISTER_IMS_XCAP
-                || request ==  RIL_REQUEST_REGISTER_IMS_BSF
+                || request == RIL_REQUEST_REGISTER_IMS_IMEI
+                || request == RIL_REQUEST_REGISTER_IMS_XCAP
+                || request == RIL_REQUEST_REGISTER_IMS_BSF
                 || request == RIL_REQUEST_SET_INITIAL_ATTACH_APN
                 || request == RIL_REQUEST_SET_IMS_SMSC
                 || request == RIL_REQUEST_ALLOW_DATA
@@ -9443,15 +9524,15 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
         }
 
-        RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_APN apn = %s",
+        RILLOGD("IMS_INITIAL_ATTACH_APN apn = %s",
                 initialAttachApn->apn);
-        RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_APN protocol = %s",
+        RILLOGD("IMS_INITIAL_ATTACH_APN protocol = %s",
                 initialAttachApn->protocol);
-        RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_APN authtype = %d",
+        RILLOGD("IMS_INITIAL_ATTACH_APN authtype = %d",
                 initialAttachApn->authtype);
-        RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_APN username = %s",
+        RILLOGD("IMS_INITIAL_ATTACH_APN username = %s",
                 initialAttachApn->username);
-        RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_APN password = %s",
+        RILLOGD("IMS_INITIAL_ATTACH_APN password = %s",
                 initialAttachApn->password);
 
         snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"%s\",\"%s\",\"\",0,0",
@@ -10040,7 +10121,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         }
         //Added for bug#213435 sim lock end
-        case RIL_REQUEST_GET_CURRENT_CALLS_VOLTE:
+        case RIL_REQUEST_GET_IMS_CURRENT_CALLS:
             requestGetCurrentCallsVoLTE(channelID, data, datalen, t, 0);
             break;
         /* SPRD: add for LTE-CSFB to handle CS fall back of MT call @{*/
@@ -10249,24 +10330,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         }
         //SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
         case RIL_REQUEST_INIT_ISIM: {
-            p_response = NULL;
-            int response = 0;
-            char *line;
-            err = at_send_command_singleline(ATch_type[channelID], "AT+ISIM=1", "+ISIM:", &p_response);
-            if (err >= 0 && p_response->success) {
-                line = p_response->p_intermediates->line;
-                err = at_tok_start(&line);
-                if (err >= 0) {
-                    err = at_tok_nextint(&line, &response);
-                    if (err >= 0) {
-                        RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(int));
-                        at_response_free(p_response);
-                        break;
-                    }
-                }
-            }
-            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-            at_response_free(p_response);
+            requestInitISIM(channelID, data, datalen, t);
             break;
         }
         case RIL_REQUEST_REGISTER_IMS_IMPU: {
@@ -10283,11 +10347,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
             break;
         }
-        case RIL_REQUEST_VOLTE_SET_CONFERENCE_URI: {
+        case RIL_REQUEST_IMS_SET_CONFERENCE_URI: {
             char cmd[100] = {0};
             const char *uri = NULL;
             uri = (char*)(data);
-            RILLOGE("RIL_REQUEST_VOLTE_SET_CONFERENCE_URI uri = \"%s\"", uri);
+            RILLOGE("RIL_REQUEST_IMS_SET_CONFERENCE_URI uri = \"%s\"", uri);
             snprintf(cmd, sizeof(cmd), "AT+CONFURI=0,\"%s\"", uri);
             err = at_send_command(ATch_type[channelID], cmd , NULL);
             if (err < 0) {
@@ -10342,6 +10406,16 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_DISABLE_IMS: {
             err = at_send_command(ATch_type[channelID], "AT+IMSEN=0" , NULL);
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+
+        case RIL_REQUEST_ENABLE_IMS: {
+            err = at_send_command(ATch_type[channelID], "AT+IMSEN=1" , NULL);
             if (err < 0) {
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
             } else {
@@ -10429,7 +10503,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         }
         /* @} */
-        case RIL_REQUEST_VOLTE_CALL_REQUEST_MEDIA_CHANGE: {
+        case RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE: {
             char cmd[30] = {0};
             p_response = NULL;
             int isVideo = ((int *)data)[0];
@@ -10440,17 +10514,17 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0) {
-                RILLOGD("RIL_REQUEST_VOLTE_CALL_REQUEST_MEDIA_CHANGE:%d",isVideo);
+                RILLOGD("RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE:%d",isVideo);
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
             } else {
-                RILLOGD("RIL_REQUEST_VOLTE_CALL_REQUEST_MEDIA_CHANGE failure!");
+                RILLOGD("RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE failure!");
                 RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
             }
             if(p_response)
             at_response_free(p_response);
             break;
         }
-        case RIL_REQUEST_VOLTE_CALL_RESPONSE_MEDIA_CHANGE: {
+        case RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE: {
             char cmd[20] = {0};
             p_response = NULL;
             int isAccept = ((int *)data)[0];
@@ -10461,26 +10535,26 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0) {
-                RILLOGD("RIL_REQUEST_VOLTE_CALL_RESPONSE_MEDIA_CHANGE:%d",isAccept);
+                RILLOGD("RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE:%d",isAccept);
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
             } else {
-                RILLOGD("RIL_REQUEST_VOLTE_CALL_RESPONSE_MEDIA_CHANGE failure!");
+                RILLOGD("RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE failure!");
                 RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
             }
             if(p_response)
             at_response_free(p_response);
             break;
         }
-        case RIL_REQUEST_VOLTE_CALL_FALL_BACK_TO_VOICE: {
+        case RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE: {
             char cmd[30] = {0};
             p_response = NULL;
             snprintf(cmd, sizeof(cmd), "AT+CCMMD=1,1,\"m=audio\"");
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0) {
-                RILLOGD("RIL_REQUEST_VOLTE_CALL_FALL_BACK_TO_VOICE success!");
+                RILLOGD("RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE success!");
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
             } else {
-                RILLOGD("RIL_REQUEST_VOLTE_CALL_FALL_BACK_TO_VOICE failure!");
+                RILLOGD("RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE failure!");
                 RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
             }
             if(p_response)
@@ -10488,8 +10562,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         }
 
-        case RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN: {
-            RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN");
+        case RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN: {
+            RILLOGD("RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN");
             char cmd[128] = {0};
             char qos_state[PROPERTY_VALUE_MAX] = {0};
             int initial_attach_id = 11;
@@ -10498,11 +10572,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             if (data != NULL) {
                 initialAttachIMSApn = (RIL_InitialAttachApn *) data;
 
-                RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN apn = %s",initialAttachIMSApn->apn);
-                RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN protocol = %s",initialAttachIMSApn->protocol);
-                RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN authtype = %d",initialAttachIMSApn->authtype);
-                RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN username = %s",initialAttachIMSApn->username);
-                RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN password = %s",initialAttachIMSApn->password);
+                RILLOGD("INITIAL_ATTACH_IMS_APN apn = %s",initialAttachIMSApn->apn);
+                RILLOGD("INITIAL_ATTACH_IMS_APN protocol = %s",initialAttachIMSApn->protocol);
+                RILLOGD("INITIAL_ATTACH_IMS_APN authtype = %d",initialAttachIMSApn->authtype);
+                RILLOGD("INITIAL_ATTACH_IMS_APN username = %s",initialAttachIMSApn->username);
+                RILLOGD("INITIAL_ATTACH_IMS_APN password = %s",initialAttachIMSApn->password);
 
                 snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"%s\",\"%s\",\"\",0,0",
                         initial_attach_id, initialAttachIMSApn->protocol,initialAttachIMSApn->apn);
@@ -10522,23 +10596,23 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                 at_response_free(p_response);
             } else {
-                RILLOGD("RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN data is null");
+                RILLOGD("INITIAL_ATTACH_IMS_APN data is null");
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
             }
             break;
         }
         case RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI:
-        requestCallForwardUri(channelID, data, datalen, t);
-        break;
+            requestCallForwardUri(channelID, data, datalen, t);
+            break;
         case RIL_REQUEST_SET_CALL_FORWARD_URI:
-        requestCallForwardUri(channelID, data, datalen, t);
-        break;
-        case RIL_REQUEST_VOLTE_INITIAL_GROUP_CALL:
-        requestInitialGroupCall(channelID, data, datalen, t);
-        break;
-        case RIL_REQUEST_VOLTE_ADD_TO_GROUP_CALL:
-        requestAddGroupCall(channelID, data, datalen, t);
-        break;
+            requestCallForwardUri(channelID, data, datalen, t);
+            break;
+        case RIL_REQUEST_IMS_INITIAL_GROUP_CALL:
+            requestInitialGroupCall(channelID, data, datalen, t);
+            break;
+        case RIL_REQUEST_IMS_ADD_TO_GROUP_CALL:
+            requestAddGroupCall(channelID, data, datalen, t);
+            break;
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_GET_CELL_BROADCAST_CONFIG:
             requestGetCellBroadcastConfig(channelID,data, datalen, t);
@@ -10709,6 +10783,12 @@ void setRadioState(int channelID, RIL_RadioState newState)
 
     pthread_mutex_unlock(&s_state_mutex);
 
+    /** SPRD: Bug 503887 add ISIM for volte . @{*/
+    if(newState == RADIO_STATE_OFF || newState == RADIO_STATE_UNAVAILABLE) {
+        g_ImsISIM = -1;
+       g_ImsConn = -1;
+    }
+    /** }@ */
 
     /* do these outside of the mutex */
     if (sState != oldState) {
@@ -11722,9 +11802,15 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             || strStartsWith(s,"NO CARRIER")
             || strStartsWith(s,"+CCWA")
             ) {
-        RIL_onUnsolicitedResponse (
+        if(s_ims_registered){
+            RIL_onUnsolicitedResponse (
+                RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
+                NULL, 0);
+        } else {
+            RIL_onUnsolicitedResponse (
                 RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
                 NULL, 0);
+        }
     } else if (strStartsWith(s,"+CREG:")
             || strStartsWith(s,"+CGREG:")
             ) {
@@ -11835,8 +11921,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             goto out;
         }
         RILLOGD("onUnsolicited(), " "CONN:, cid: %d, active: %d", cid, active);
-        if (cid == 11 && active == 1) {
-            RIL_requestTimedCallback(onConn, NULL, NULL);
+        if (cid == 11) {
+            g_ImsConn = active;
+            if(active == 1 && g_ImsISIM == 1) {
+                RIL_requestTimedCallback(onConn, NULL, NULL);
+            }
         }
     }
 	else if (strStartsWith(s,"^CEND:")) {
@@ -12603,8 +12692,15 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                     RIL_requestTimedCallback(redialWhileCallFailed,
                             (char *) strdup(response->number), NULL);
                 } else {
-                    RIL_onUnsolicitedResponse(
-                            RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED, NULL, 0);
+                    if(s_ims_registered){
+                        RIL_onUnsolicitedResponse (
+                            RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
+                            NULL, 0);
+                    } else {
+                        RIL_onUnsolicitedResponse (
+                            RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
+                            NULL, 0);
+                    }
                 }
 #if defined (RIL_SPRD_EXTENSION)
                 if(response->type == 1 || response->type == 3) {
@@ -12632,8 +12728,15 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 }
 #endif
             } else {
-                RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
-                        NULL, 0);
+                    if(s_ims_registered){
+                        RIL_onUnsolicitedResponse (
+                            RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
+                            NULL, 0);
+                    } else {
+                        RIL_onUnsolicitedResponse (
+                            RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
+                            NULL, 0);
+                    }
             }
 
         } else {
@@ -12704,8 +12807,15 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             }
 #endif
             if (response->type == 0) {
-                RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
-                        NULL, 0);
+                    if(s_ims_registered){
+                        RIL_onUnsolicitedResponse (
+                            RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
+                            NULL, 0);
+                    } else {
+                        RIL_onUnsolicitedResponse (
+                            RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
+                            NULL, 0);
+                    }
                 goto out;
             } else if (response->type == 1) {
 #if defined (RIL_SPRD_EXTENSION)
@@ -12755,13 +12865,84 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 #endif
             }
         }
-    } else if (strStartsWith(s, "+CMCCSI")) {
-        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED, NULL,
-                0);
-    }
-    else if (strStartsWith(s, "+CMCCSI:")) {
-        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED, NULL,
-                0);
+    } else if (strStartsWith(s, "+CMCCSI:")) {
+        RIL_IMSPHONE_CMCCSI *response;
+        response = (RIL_IMSPHONE_CMCCSI *) alloca(sizeof(RIL_IMSPHONE_CMCCSI));
+        char *tmp;
+
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+
+        err = at_tok_nextint(&tmp, &response->id);
+        if (err < 0) {
+            RILLOGD("get id fail");
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->idr);
+        if (err < 0) {
+            RILLOGD("get idr fail");
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->neg_stat_present);
+        if (err < 0) {
+            RILLOGD("get neg_stat_present fail");
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->neg_stat);
+        if (err < 0) {
+            RILLOGD("get neg_stat fail");
+            goto out;
+        }
+        err = at_tok_nextstr(&tmp, &response->SDP_md);
+        if (err < 0) {
+            RILLOGD("get SDP_md fail");
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->cs_mod);
+        if (err < 0) {
+            RILLOGD("get cs_mod fail");
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->ccs_stat);
+        if (err < 0) {
+            RILLOGD("get ccs_stat fail");
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->mpty);
+        if (err < 0) {
+            RILLOGD("get mpty fail");
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->num_type);
+        if (err < 0) {
+            RILLOGD("get num_type fail");
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->ton);
+        if (err < 0) {
+            RILLOGD("get ton fail");
+            goto out;
+        }
+        err = at_tok_nextstr(&tmp, &response->number);
+        if (err < 0) {
+            RILLOGD("get number fail");
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->exit_type);
+        if (err < 0) {
+            RILLOGD("get exit_type fail");
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &response->exit_cause);
+        if (err < 0) {
+            RILLOGD("get exit_cause fail");
+            goto out;
+        }
+        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED, response,sizeof(RIL_IMSPHONE_CMCCSI));
+    } else if (strStartsWith(s, "+CMCCSS")) {
+        /* CMCCSS1, CMCCSS2, ... CMCCSS7, just report ims state change */
+        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED, NULL, 0);
     }
     /* SPRD: add for LTE-CSFB to handle CS fall back of MT call @{*/
     else if (strStartsWith(s, "+SCSFB")) {

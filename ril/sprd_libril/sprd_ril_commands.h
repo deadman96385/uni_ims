@@ -176,6 +176,28 @@
 #if defined (RIL_SPRD_EXTENSION)
     ,{RIL_REQUEST_VIDEOPHONE_DIAL, dispatchVideoPhoneDial, responseVoid}
     ,{RIL_REQUEST_VIDEOPHONE_CODEC, dispatchVideoPhoneCodec, responseVoid}
+    ,{RIL_REQUEST_GET_IMS_CURRENT_CALLS, dispatchVoid, responseCallListIMS}//SPRD: add for VoLTE to handle +CLCCS
+    ,{RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY, dispatchVoid, responseInts}
+    ,{RIL_REQUEST_INIT_ISIM, dispatchStrings, responseInts}
+    ,{RIL_REQUEST_REGISTER_IMS_IMPU, dispatchString, responseVoid}
+    ,{RIL_REQUEST_REGISTER_IMS_IMPI, dispatchString, responseVoid}
+    ,{RIL_REQUEST_REGISTER_IMS_DOMAIN, dispatchString, responseVoid}
+    ,{RIL_REQUEST_ENABLE_IMS, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_DISABLE_IMS, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_REGISTER_IMS_IMEI, dispatchString, responseVoid}
+    ,{RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_REGISTER_IMS_XCAP, dispatchString, responseVoid}
+    ,{RIL_REQUEST_REGISTER_IMS_BSF, dispatchString, responseVoid}
+    ,{RIL_REQUEST_SET_IMS_SMSC, dispatchString, responseVoid}
+    ,{RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN, dispatchSetInitialAttachApn, responseVoid}
+    ,{RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI, dispatchCallForwardUri, responseCallForwardsUri}
+    ,{RIL_REQUEST_SET_CALL_FORWARD_URI, dispatchCallForwardUri, responseVoid}
+    ,{RIL_REQUEST_IMS_INITIAL_GROUP_CALL, dispatchString, responseVoid}
+    ,{RIL_REQUEST_IMS_ADD_TO_GROUP_CALL, dispatchString, responseVoid}
+    ,{RIL_REQUEST_IMS_SET_CONFERENCE_URI, dispatchString, responseVoid}
     ,{RIL_REQUEST_VIDEOPHONE_HANGUP, dispatchInts, responseVoid}
     ,{RIL_REQUEST_VIDEOPHONE_ANSWER, dispatchVoid, responseVoid}
     ,{RIL_REQUEST_VIDEOPHONE_FALLBACK, dispatchVoid, responseVoid}
@@ -218,29 +240,9 @@
     //SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
     //SPRD: for stop query available networks
     ,{RIL_REQUEST_STOP_QUERY_AVAILABLE_NETWORKS, dispatchVoid, responseVoid}
-    ,{RIL_REQUEST_GET_CURRENT_CALLS_VOLTE, dispatchVoid, responseCallListVoLTE}//SPRD: add for VoLTE to handle +CLCCS
-    ,{RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY, dispatchInts, responseVoid}
-    ,{RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY, dispatchVoid, responseInts}
-    ,{RIL_REQUEST_INIT_ISIM, dispatchVoid, responseInts}
-    ,{RIL_REQUEST_REGISTER_IMS_IMPU, dispatchString, responseVoid}
-    ,{RIL_REQUEST_REGISTER_IMS_IMPI, dispatchString, responseVoid}
-    ,{RIL_REQUEST_REGISTER_IMS_DOMAIN, dispatchString, responseVoid}
-    ,{RIL_REQUEST_DISABLE_IMS, dispatchVoid, responseVoid}
-    ,{RIL_REQUEST_REGISTER_IMS_IMEI, dispatchString, responseVoid}
-    ,{RIL_REQUEST_VOLTE_CALL_REQUEST_MEDIA_CHANGE, dispatchInts, responseVoid}
-    ,{RIL_REQUEST_VOLTE_CALL_RESPONSE_MEDIA_CHANGE, dispatchInts, responseVoid}
-    ,{RIL_REQUEST_REGISTER_IMS_XCAP, dispatchString, responseVoid}
-    ,{RIL_REQUEST_REGISTER_IMS_BSF, dispatchString, responseVoid}
-    ,{RIL_REQUEST_SET_IMS_SMSC, dispatchString, responseVoid}
-    ,{RIL_REQUEST_VOLTE_CALL_FALL_BACK_TO_VOICE, dispatchVoid, responseVoid}
-    ,{RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN, dispatchSetInitialAttachApn, responseVoid}
-    ,{RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI, dispatchCallForwardUri, responseCallForwardsUri}
-    ,{RIL_REQUEST_SET_CALL_FORWARD_URI, dispatchCallForwardUri, responseVoid}
-    ,{RIL_REQUEST_VOLTE_INITIAL_GROUP_CALL, dispatchString, responseVoid}
-    ,{RIL_REQUEST_VOLTE_ADD_TO_GROUP_CALL, dispatchString, responseVoid}
-    ,{RIL_REQUEST_VOLTE_SET_CONFERENCE_URI, dispatchString, responseVoid}
-    ,{RIL_REQUEST_ENABLE_BROADCAST_SMS, dispatchInts, responseVoid}
     ,{RIL_REQUEST_SET_FACILITY_LOCK_FOR_USER, dispatchStrings, responseVoid}
+    ,{RIL_REQUEST_ENABLE_BROADCAST_SMS, dispatchInts, responseVoid}
+
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     ,{RIL_REQUEST_SET_CELL_BROADCAST_CONFIG, dispatchSetCBConf, responseVoid}

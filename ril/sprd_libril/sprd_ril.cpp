@@ -294,8 +294,9 @@ static int responseCCresult(Parcel &p, void *response, size_t responselen);
 #endif
 #if defined (RIL_SPRD_EXTENSION)
 static int responseDSCI(Parcel &p, void *response, size_t responselen);
+static int responseCMCCSI(Parcel &p, void *response, size_t responselen);
 static int responseCallCsFallBack(Parcel &p, void *response, size_t responselen);
-static int responseCallListVoLTE(Parcel &p, void *response, size_t responselen);
+static int responseCallListIMS(Parcel &p, void *response, size_t responselen);
 static int responseCallForwardsUri(Parcel &p, void *response, size_t responselen);
 extern "C" void stripNumberFromSipAddress(const char *sipAddress, char *number, int len);
 static int responseBroadcastSmsLte(Parcel &p, void *response, size_t responselen);
@@ -4428,6 +4429,38 @@ static int responseDSCI(Parcel &p, void *response, size_t responselen) {
     return 0;
 }
 
+static int responseCMCCSI(Parcel &p, void *response, size_t responselen) {
+    if (response == NULL) {
+        RILLOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    if (responselen != sizeof(RIL_IMSPHONE_CMCCSI)) {
+        RILLOGE("invalid response length was %d expected %d",
+                (int)responselen, (int)sizeof (RIL_IMSPHONE_CMCCSI));
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    RIL_IMSPHONE_CMCCSI *p_cur = (RIL_IMSPHONE_CMCCSI *) response;
+    p.writeInt32(p_cur->id);
+    p.writeInt32(p_cur->idr);
+    p.writeInt32(p_cur->neg_stat_present);
+    p.writeInt32(p_cur->neg_stat);
+    writeStringToParcel(p, p_cur->SDP_md);
+    p.writeInt32(p_cur->cs_mod);
+    p.writeInt32(p_cur->ccs_stat);
+    p.writeInt32(p_cur->mpty);
+    p.writeInt32(p_cur->num_type);
+    p.writeInt32(p_cur->ton);
+    writeStringToParcel(p, p_cur->number);
+    p.writeInt32(p_cur->exit_type);
+    p.writeInt32(p_cur->exit_cause);
+    startResponse;
+    closeResponse;
+
+    return 0;
+}
+
 /** add for LTE-CSFB to handle CS fall back of MT call  */
 static int responseCallCsFallBack(Parcel &p, void *response, size_t responselen) {
     if (response == NULL) {
@@ -4452,7 +4485,7 @@ static int responseCallCsFallBack(Parcel &p, void *response, size_t responselen)
     closeResponse;
     return 0;
 }
-static int responseCallListVoLTE(Parcel &p, void *response, size_t responselen) {
+static int responseCallListIMS(Parcel &p, void *response, size_t responselen) {
     int num;
 
     if (response == NULL && responselen != 0) {
@@ -4916,11 +4949,11 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                         || pCI->requestNumber == RIL_REQUEST_VIDEOPHONE_HANGUP
                         || pCI->requestNumber == RIL_REQUEST_VIDEOPHONE_ANSWER
                         || pCI->requestNumber == RIL_REQUEST_VIDEOPHONE_DIAL
-                        || pCI->requestNumber == RIL_REQUEST_VOLTE_CALL_RESPONSE_MEDIA_CHANGE
-                        || pCI->requestNumber == RIL_REQUEST_VOLTE_CALL_REQUEST_MEDIA_CHANGE
-                        || pCI->requestNumber == RIL_REQUEST_VOLTE_CALL_FALL_BACK_TO_VOICE
-                        || pCI->requestNumber == RIL_REQUEST_VOLTE_INITIAL_GROUP_CALL
-                        || pCI->requestNumber == RIL_REQUEST_VOLTE_ADD_TO_GROUP_CALL
+                        || pCI->requestNumber == RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE
+                        || pCI->requestNumber == RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE
+                        || pCI->requestNumber == RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE
+                        || pCI->requestNumber == RIL_REQUEST_IMS_INITIAL_GROUP_CALL
+                        || pCI->requestNumber == RIL_REQUEST_IMS_ADD_TO_GROUP_CALL
 #endif
                         || pCI->requestNumber == RIL_REQUEST_SWITCH_WAITING_OR_HOLDING_AND_ACTIVE) {
                     RILLOGD("Add '%s' to call_cmd_list\n", requestToString(pCI->requestNumber));
@@ -4979,11 +5012,11 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                         || pCI->requestNumber == RIL_REQUEST_VIDEOPHONE_HANGUP
                         || pCI->requestNumber == RIL_REQUEST_VIDEOPHONE_ANSWER
                         || pCI->requestNumber == RIL_REQUEST_VIDEOPHONE_DIAL
-                        || pCI->requestNumber == RIL_REQUEST_VOLTE_CALL_RESPONSE_MEDIA_CHANGE
-                        || pCI->requestNumber == RIL_REQUEST_VOLTE_CALL_REQUEST_MEDIA_CHANGE
-                        || pCI->requestNumber == RIL_REQUEST_VOLTE_CALL_FALL_BACK_TO_VOICE
-                        || pCI->requestNumber == RIL_REQUEST_VOLTE_INITIAL_GROUP_CALL
-                        || pCI->requestNumber == RIL_REQUEST_VOLTE_ADD_TO_GROUP_CALL
+                        || pCI->requestNumber == RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE
+                        || pCI->requestNumber == RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE
+                        || pCI->requestNumber == RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE
+                        || pCI->requestNumber == RIL_REQUEST_IMS_INITIAL_GROUP_CALL
+                        || pCI->requestNumber == RIL_REQUEST_IMS_ADD_TO_GROUP_CALL
 #endif
                         || pCI->requestNumber == RIL_REQUEST_SWITCH_WAITING_OR_HOLDING_AND_ACTIVE) {
                     list_add_tail(&call_cmd_list, cmd_item);
@@ -6427,6 +6460,27 @@ requestToString(int request) {
 #if defined (RIL_SPRD_EXTENSION)
         case RIL_REQUEST_QUERY_COLP: return "QUERY_COLP";
         case RIL_REQUEST_QUERY_COLR: return "QUERY_COLR";
+        case RIL_REQUEST_GET_IMS_CURRENT_CALLS: return "RIL_REQUEST_GET_IMS_CURRENT_CALLS_VOLTE";
+        case RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY: return "RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY";
+        case RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY: return "RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY";
+        case RIL_REQUEST_INIT_ISIM: return "RIL_REQUEST_INIT_ISIM";
+        case RIL_REQUEST_REGISTER_IMS_IMPU: return "RIL_REQUEST_REGISTER_IMS_IMPU";
+        case RIL_REQUEST_REGISTER_IMS_IMPI: return "RIL_REQUEST_REGISTER_IMS_IMPI";
+        case RIL_REQUEST_REGISTER_IMS_DOMAIN: return "RIL_REQUEST_REGISTER_IMS_DOMAIN";
+        case RIL_REQUEST_ENABLE_IMS: return "RIL_REQUEST_ENABLE_IMS";
+        case RIL_REQUEST_DISABLE_IMS: return "RIL_REQUEST_DISABLE_IMS";
+        case RIL_REQUEST_REGISTER_IMS_IMEI: return "RIL_REQUEST_REGISTER_IMS_IMEI";
+        case RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE: return "RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE";
+        case RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE: return "RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE";
+        case RIL_REQUEST_REGISTER_IMS_XCAP: return "RIL_REQUEST_REGISTER_IMS_XCAP";
+        case RIL_REQUEST_REGISTER_IMS_BSF: return "RIL_REQUEST_REGISTER_IMS_BSF";
+        case RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE: return "RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE";
+        case RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN: return "RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN";
+        case RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI: return "QUERY_CALL_FORWARD_STATUS_URI";
+        case RIL_REQUEST_SET_CALL_FORWARD_URI: return "RIL_REQUEST_SET_CALL_FORWARD_URI";
+        case RIL_REQUEST_IMS_INITIAL_GROUP_CALL: return "RIL_REQUEST_IMS_INITIAL_GROUP_CALL";
+        case RIL_REQUEST_IMS_ADD_TO_GROUP_CALL: return "RIL_REQUEST_IMS_ADD_TO_GROUP_CALL";
+        case RIL_REQUEST_IMS_SET_CONFERENCE_URI: return "RIL_REQUEST_IMS_SET_CONFERENCE_URI";
         case RIL_REQUEST_VIDEOPHONE_DIAL: return "VIDEOPHONE_DIAL";
         case RIL_REQUEST_VIDEOPHONE_CODEC: return "VIDEOPHONE_CODEC";
         case RIL_REQUEST_VIDEOPHONE_HANGUP: return "VIDEOPHONE_HANGUP";
@@ -6468,26 +6522,7 @@ requestToString(int request) {
         /*SPRD: for stop query available networks@{*/
         case RIL_REQUEST_STOP_QUERY_AVAILABLE_NETWORKS: return "RIL_REQUEST_STOP_QUERY_AVAILABLE_NETWORKS";
         /*@}*/
-		case RIL_REQUEST_GET_CURRENT_CALLS_VOLTE: return "GET_CURRENT_CALLS_VOLTE";
-        case RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY: return "RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY";
-        case RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY: return "RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY";
-        case RIL_REQUEST_INIT_ISIM: return "RIL_REQUEST_INIT_ISIM";
-        case RIL_REQUEST_REGISTER_IMS_IMPU: return "RIL_REQUEST_REGISTER_IMS_IMPU";
-        case RIL_REQUEST_REGISTER_IMS_IMPI: return "RIL_REQUEST_REGISTER_IMS_IMPI";
-        case RIL_REQUEST_REGISTER_IMS_DOMAIN: return "RIL_REQUEST_REGISTER_IMS_DOMAIN";
-        case RIL_REQUEST_REGISTER_IMS_IMEI: return "RIL_REQUEST_REGISTER_IMS_IMEI";
-        case RIL_REQUEST_REGISTER_IMS_XCAP: return "RIL_REQUEST_REGISTER_IMS_XCAP";
-        case RIL_REQUEST_REGISTER_IMS_BSF: return "RIL_REQUEST_REGISTER_IMS_BSF";
-        case RIL_REQUEST_VOLTE_CALL_REQUEST_MEDIA_CHANGE: return "RIL_REQUEST_VOLTE_CALL_REQUEST_MEDIA_CHANGE";
-        case RIL_REQUEST_VOLTE_CALL_RESPONSE_MEDIA_CHANGE: return "RIL_REQUEST_VOLTE_CALL_RESPONSE_MEDIA_CHANGE";
-        case RIL_REQUEST_VOLTE_CALL_FALL_BACK_TO_VOICE: return "RIL_REQUEST_VOLTE_CALL_FALL_BACK_TO_VOICE";
-        case RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN: return "RIL_REQUEST_SET_INITIAL_ATTACH_IMS_APN";
-        case RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI: return "QUERY_CALL_FORWARD_STATUS_URI";
-        case RIL_REQUEST_SET_CALL_FORWARD_URI: return "SET_CALL_FORWARD_URI";
-        case RIL_REQUEST_VOLTE_INITIAL_GROUP_CALL: return "VOLTE_INITIAL_GROUP_CALL";
-        case RIL_REQUEST_VOLTE_ADD_TO_GROUP_CALL: return "VOLTE_ADD_TO_GROUP_CALL";
-        case RIL_REQUEST_VOLTE_SET_CONFERENCE_URI: return "RIL_REQUEST_VOLTE_SET_CONFERENCE_URI";
-        case RIL_REQUEST_ENABLE_BROADCAST_SMS: return "ENABLE_BROADCAST_SMS";
+        case RIL_REQUEST_ENABLE_BROADCAST_SMS: return "RIL_REQUEST_ENABLE_BROADCAST_SMS";
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_SET_CELL_BROADCAST_CONFIG: return "SET_CELL_BROADCAST_CONFIG";
@@ -6593,9 +6628,10 @@ requestToString(int request) {
         //SPRD: For WIFI get BandInfo report from modem,* BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
         case RIL_UNSOL_CALL_CSFALLBACK_FINISH: return "UNSOL_RIL_CALL_CSFALLBACK";//SPRD:add for LTE-CSFB to handle CS fall back of MT call
         /* SPRD: add AGPS feature for bug 436461 @{ */
-		case RIL_UNSOL_PHY_CELL_ID: return "UNSOL_PHY_CELL_ID";
-		/* @} */
-		case RIL_UNSOL_RESPONSE_NEW_BROADCAST_SMS_LTE: return "UNSOL_RESPONSE_NEW_BROADCAST_SMS_LTE";
+        case RIL_UNSOL_PHY_CELL_ID: return "UNSOL_PHY_CELL_ID";
+        /* @} */
+        case RIL_UNSOL_RESPONSE_NEW_BROADCAST_SMS_LTE: return "UNSOL_RESPONSE_NEW_BROADCAST_SMS_LTE";
+        case RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED: return "RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED";
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_UNSOL_RESPONSE_NEW_CB_MSG: return "UNSOL_RESPONSE_NEW_CB_MSG";
