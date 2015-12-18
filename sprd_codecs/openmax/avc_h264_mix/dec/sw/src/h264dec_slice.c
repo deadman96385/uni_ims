@@ -50,11 +50,10 @@ PUBLIC int32 get_unit (H264DecContext *img_ptr, uint8 *pInStream, int32 frm_bs_l
     while ((declen++) < frm_bs_len) {
         data = *ptr++;
         len++;
-        *buf++= data;
+
         if (zero_num < 2) {
             zero_num++;
-            if(data != 0)
-            {
+            if(data != 0) {
                 zero_num = 0;
             }
         } else {
@@ -62,7 +61,6 @@ PUBLIC int32 get_unit (H264DecContext *img_ptr, uint8 *pInStream, int32 frm_bs_l
                 zero_num = 0;
                 stuffing_num++;
 
-                buf--;
                 continue;
             }
 
@@ -77,10 +75,8 @@ PUBLIC int32 get_unit (H264DecContext *img_ptr, uint8 *pInStream, int32 frm_bs_l
                 zero_num = 0;
             }
         }
-    }
 
-    for (i = next_start_code_len; i > cur_start_code_len; i--) {
-        *(--buf) = 0x0;
+        *buf++= data;
     }
 
     img_ptr->g_nalu_ptr->len = len - stuffing_num - next_start_code_len;
