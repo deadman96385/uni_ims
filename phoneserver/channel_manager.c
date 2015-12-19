@@ -992,7 +992,7 @@ static void *signal_process(){
                     if ((rxlev_array[i] == rxlev_array[i + 1]) ) {
                         if (rxlev_array[i] == rxlev[sim_index]) {
                             nosigUpdate[sim_index]++;
-                        } else if (rsrp_array[i] <= 0 || rxlev_array[i] > 31) {
+                        } else if (rxlev_array[i] <= 0 || rxlev_array[i] > 31) {
                             rxlev_array[i] = rxlev[sim_index];
                         }
                     } else
