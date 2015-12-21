@@ -571,7 +571,7 @@ PUBLIC void H264Dec_interpret_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
 
     if (!sps_ptr->frame_mbs_only_flag)
     {
-        //vo->error_flag |= ER_FORMAT_ID;
+        vo->error_flag |= ER_FORMAT_ID;
         sps_ptr->mb_adaptive_frame_field_flag = READ_FLC(1);
         if (sps_ptr->mb_adaptive_frame_field_flag)
         {
