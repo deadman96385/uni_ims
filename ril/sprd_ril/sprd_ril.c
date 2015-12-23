@@ -4304,8 +4304,10 @@ static void requestGetCurrentCallsVoLTE(int channelID, void *data, size_t datale
 
 int isEccNumber(int s_sim_num, char *dial_number) {
     char eccNumberList[PROPERTY_VALUE_MAX] = { 0 };
-    char tmpList[PROPERTY_VALUE_MAX] = { 0 };
+    char *tmpPtr;
     char *tmpNumber = NULL;
+    char ecc3GPP_NoSIM[] = "112,911,000,08,110,118,119,999";
+    char ecc3GPP_SIM[] = "112,911";
     int eccNumber = 0;
 
     if (s_sim_num == 0) {
@@ -4320,16 +4322,27 @@ int isEccNumber(int s_sim_num, char *dial_number) {
         property_get("ro.ril.ecclist", eccNumberList, "0");
     }
     RILLOGD("dial_number=%s, eccNumberList=%s", dial_number, eccNumberList);
-    strncpy(tmpList, eccNumberList, strlen(eccNumberList));
-    tmpNumber = strtok(tmpList, ",");
-    if (tmpNumber != NULL && strcmp(tmpNumber, dial_number) == 0) {
-        eccNumber = 1;
+    tmpNumber = eccNumberList;
+    if (strcmp(eccNumberList, "0") == 0) {
+        if (hasSimInner(s_sim_num) == 1) {
+            tmpNumber = ecc3GPP_SIM;
+        } else {
+            tmpNumber = ecc3GPP_NoSIM;
+        }
     }
-    while (tmpNumber != NULL && !eccNumber) {
+    while (tmpNumber != NULL) {
+        tmpPtr = strchr(tmpNumber, ',');
+        if (tmpPtr != NULL) {
+            *tmpPtr = '\0';
+        }
         if (strcmp(tmpNumber, dial_number) == 0) {
             eccNumber = 1;
+            break;
+        } else if (tmpPtr == NULL) {
+            break;
+        } else {
+            tmpNumber = tmpPtr + 1;
         }
-        tmpNumber = strtok(NULL, ",");
     }
     return eccNumber;
 }
@@ -14185,7 +14198,7 @@ static void addEmergencyNumbertoEccList(Ecc_Record *record){
     char *tmp;
     int number_exist = 0;
     strcpy(prop_name, SIM_ECC_LIST_PROPERTY);
-    if(s_multiSimMode){
+    if(s_sim_num > 0){
         sprintf(prop_name,"%s%d",prop_name,s_sim_num);
     }
     property_get(prop_name, ecc_list, "");
