@@ -2945,11 +2945,13 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                                 add_ip_cid = responses[i].cid;
                             }
                         }
+                    }else{
+                        putPDP(getFallbackCid(cid-1)-1);
+                        putPDP(cid-1);
+                        s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
+                        RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
                     }
                     return;
-                }else{
-                    putPDP(getFallbackCid(cid-1)-1);
-                    putPDP(cid-1);
                 }
             }
             if(i >= MAX_PDP) {
