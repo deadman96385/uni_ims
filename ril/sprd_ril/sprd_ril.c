@@ -1627,53 +1627,10 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
             }
         }
 
-        if( 0 != strcmp(type, "PSP") && 0 != strcmp(type, "PUP") && 0 != strcmp(type, "PCP")
-                                     && 0 != strcmp(type, "PPP") && 0 != strcmp(type, "PNP") ) {
-            result = getRemainTimes(channelID, type);
-            RIL_onRequestComplete(t, RIL_E_SUCCESS, &result, sizeof(result));
-        }
-        simstatus = getSIMStatus(channelID);
-        RILLOGD("simstatus = %d", simstatus);
+        result = 1;
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, &result, sizeof(result));
+        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
 
-        char prop[PROPERTY_VALUE_MAX] = {0};
-        property_get(PRO_SIMLOCK_UNLOCK_BYNV, prop, "0");
-
-        if(simstatus == SIM_READY) {
-            setRadioState(channelID, RADIO_STATE_SIM_READY);
-        }else if((SIM_NETWORK_PERSONALIZATION == simstatus)
-            || (SIM_SIM_PERSONALIZATION == simstatus)
-            || (SIM_NETWORK_SUBSET_PERSONALIZATION == simstatus)
-            || (SIM_CORPORATE_PERSONALIZATION == simstatus)
-            || (SIM_SERVICE_PROVIDER_PERSONALIZATION == simstatus)
-            //simlock unlock by nv allow unlock with no sim card
-            || !strcmp(prop, "1")){
-            if( 0 == strcmp(type, "PSP") || 0 == strcmp(type, "PUP") || 0 == strcmp(type, "PCP")
-                                         || 0 == strcmp(type, "PPP") || 0 == strcmp(type, "PNP")) {
-                char *type_new[3] = {0};
-                switch(simstatus) {
-                    case SIM_NETWORK_PERSONALIZATION:
-                        strcpy(type_new,"PN");
-                        break;
-                    case SIM_NETWORK_SUBSET_PERSONALIZATION:
-                        strcpy(type_new,"PU");
-                        break;
-                    case SIM_CORPORATE_PERSONALIZATION:
-                        strcpy(type_new,"PC");
-                        break;
-                    case SIM_SERVICE_PROVIDER_PERSONALIZATION:
-                        strcpy(type_new,"PP");
-                        break;
-                    default: //SIM_SIM_PERSONALIZATION:
-                        strcpy(type_new,"PS");
-                        break;
-                }
-                result = getRemainTimes(channelID, type_new);
-                RIL_onRequestComplete(t, RIL_E_SUCCESS, &result, sizeof(result));
-            } else {
-                RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
-            }
-          //RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
-        }
         at_response_free(p_response);
         return;
     }
@@ -12041,7 +11998,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                         if(cause == 1)  //no sim card
                             RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
                     }
-                } else if (value == 100) {
+                } else if (value == 100 || value == 4) {
                     RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED, NULL, 0);
                 } else if (value == 0 || value == 2) {
                     if (!strcmp(s_modem,"t") && isSvLte() && !s_init_sim_ready) {
