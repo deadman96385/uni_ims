@@ -1712,8 +1712,15 @@ error:
                     setRadioState(channelID, RADIO_STATE_SIM_LOCKED_OR_ABSENT);
                 } else if (errNum == 70 || errNum == 3 || errNum == 128 || errNum == 254) {
                     remainTimes = getRemainTimes(channelID, type);
-                    RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE,
-                            &remainTimes, sizeof(remainTimes));
+                    if (errNum == 3 && !strcmp(data[0], "SC") && *data[1] == '1')
+                    {
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, &remainTimes, sizeof(remainTimes));
+                    }
+                    else
+                    {
+                        RIL_onRequestComplete(t, RIL_E_FDN_CHECK_FAILURE,
+                                &remainTimes, sizeof(remainTimes));
+                    }
                     at_response_free(p_response);
                     return;
                 } else if (errNum == 16) {
