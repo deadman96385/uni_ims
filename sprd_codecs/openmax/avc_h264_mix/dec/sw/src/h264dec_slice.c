@@ -38,7 +38,8 @@ PUBLIC int32 get_unit (H264DecContext *img_ptr, uint8 *pInStream, int32 frm_bs_l
     uint8 *ptr, *buf;
     int32 i;
 
-    img_ptr->g_nalu_ptr->buf = buf = ptr = pInStream;
+    ptr = pInStream;
+    img_ptr->g_nalu_ptr->buf = buf = (uint8 *)(((((uint32)ptr)+3)>>2)<<2);
     while ((data = *ptr++) == 0x00) {
         cur_start_code_len++;
     }
@@ -958,8 +959,9 @@ PUBLIC MMDecRet H264Dec_decode_one_slice_data (MMDecOutput *dec_output_ptr, H264
 
 #if _H264_PROTECT_ & _LEVEL_HIGH_
     if (img_ptr->error_flag) {
-        SPRD_CODEC_LOGE ("H264Dec_decode_one_slice_data: mb_x: %d, mb_y: %d, bit_cnt: %d, pos: %x, pos1: %0x, pos2: %0x, err_flag: %x\n",
-                         img_ptr->mb_x, img_ptr->mb_y, img_ptr->bitstrm_ptr->bitcnt, img_ptr->return_pos, img_ptr->return_pos1, img_ptr->return_pos2, img_ptr->error_flag);
+        SPRD_CODEC_LOGE ("%s: mb_x: %d, mb_y: %d, bit_cnt: %d, pos: %x, pos1: %0x, pos2: %0x, err_flag: %x\n",
+                         __FUNCTION__, img_ptr->mb_x, img_ptr->mb_y, img_ptr->bitstrm_ptr->bitsCnt - img_ptr->bitstrm_ptr->bitsAligned,
+                         img_ptr->return_pos, img_ptr->return_pos1, img_ptr->return_pos2, img_ptr->error_flag);
         img_ptr->return_pos2 = (1<<8);
         img_ptr->g_searching_IDR_pic = 1;
         return MMDEC_ERROR;

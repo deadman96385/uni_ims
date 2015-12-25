@@ -30,7 +30,7 @@ uint32 ff_init_cabac_decoder(H264DecContext *img_ptr)
     CABACContext *c = &(img_ptr->cabac);
     DEC_BS_T *bs_ptr = img_ptr->bitstrm_ptr;
     uint32 nStuffedBits;
-    uint32 nDecTotalBits = bs_ptr->bitcnt;//VSP_READ_REG(VSP_BSM_REG_BASE+BSM_TOTAL_BITS_OFF, "read BSMR_TOTAL_BITS reg");
+    uint32 nDecTotalBits = bs_ptr->bitsCnt - bs_ptr->bitsAligned;
     uint32 bitsLeft = 32 - (nDecTotalBits % 32);
 
     nStuffedBits = (bitsLeft%8);

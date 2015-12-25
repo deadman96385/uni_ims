@@ -37,8 +37,9 @@ typedef struct bitstream
     uint32 bufa;
     uint32 bufb;
 #endif
-    uint32 bitcnt;
+    uint32 bitsCnt;
     uint32 bitsLeft; // left bits in the word pointed by rdptr
+    uint32 bitsAligned;	//aligned bit for stream buffer ptr.
     uint32 *rdptr;
     uint32 rdbfr[BITSTREAM_BFR_SIZE + 1];	// bitstream data
     uint32 error_flag;

@@ -38,7 +38,7 @@ const uint32 s_msk[33] =
 
 PUBLIC uint32 H264Dec_ByteConsumed(DEC_BS_T *bs_ptr)
 {
-    uint32 nDecTotalBits = bs_ptr->bitcnt;
+    uint32 nDecTotalBits = bs_ptr->bitsCnt - bs_ptr->bitsAligned;
 
     return (nDecTotalBits+7)/8;
 }
@@ -57,7 +57,8 @@ PUBLIC void H264Dec_InitBitstream(DEC_BS_T *bs_ptr, void *nalu_strm_ptr, int32 n
     bs_ptr->p_stream = pTmp;
 
     bs_ptr->bitsLeft = 32 - 8*offset;
-    bs_ptr->bitcnt = 8*offset;
+    bs_ptr->bitsCnt = 8*offset;
+    bs_ptr->bitsAligned = bs_ptr->bitsCnt;
     bs_ptr->rdptr = bs_ptr->rdbfr;
 
     if(BITSTREAM_BFR_SIZE * sizeof (uint32) >= nal_strm_len) {
@@ -108,7 +109,7 @@ PUBLIC uint32 show_bits(DEC_BS_T *bs_ptr, uint32 nbits)
 
 void flush_bits(DEC_BS_T *bs_ptr, uint32 nbits)
 {
-    bs_ptr->bitcnt += nbits;
+    bs_ptr->bitsCnt += nbits;
     if (nbits < bs_ptr->bitsLeft) {
         bs_ptr->bitsLeft -= nbits;
     } else {
@@ -306,7 +307,7 @@ PUBLIC int32 long_se_v (DEC_BS_T *bs_ptr)
 
 PUBLIC void revserse_bits (DEC_BS_T *bs_ptr, uint32 nbits)
 {
-    bs_ptr->bitcnt -= nbits;
+    bs_ptr->bitsCnt -= nbits;
     bs_ptr->bitsLeft += nbits;
 
     if (bs_ptr->bitsLeft > 32) {

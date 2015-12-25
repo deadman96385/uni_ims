@@ -889,7 +889,7 @@ PUBLIC uint32 uvlc_startcode_follows (void *img)
     int32 byte_offset;
     int32 bit_offset;
     DEC_BS_T *bs_ptr = img_ptr->bitstrm_ptr;
-    uint32 nDecTotalBits = bs_ptr->bitcnt;
+    uint32 nDecTotalBits = bs_ptr->bitsCnt - bs_ptr->bitsAligned;
 
     byte_offset = nDecTotalBits>>3;
     bit_offset = nDecTotalBits&0x7;
