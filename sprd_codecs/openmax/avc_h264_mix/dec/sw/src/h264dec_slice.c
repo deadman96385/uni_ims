@@ -445,7 +445,7 @@ PUBLIC void H264Dec_decode_one_slice_B (H264DecContext *img_ptr)
 }
 
 /*extend 24 pixel*/
-#if 1//WIN32
+#ifndef _NEON_OPT_
 void H264Dec_extent_frame (H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T * dec_picture)
 {
     int32 i;

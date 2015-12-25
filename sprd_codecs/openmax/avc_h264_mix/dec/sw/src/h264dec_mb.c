@@ -953,7 +953,7 @@ PUBLIC int32 H264Dec_exit_macroblock (H264DecContext *img_ptr, DEC_MB_INFO_T *mb
     }
 }
 
-#if 1//WIN32
+#ifndef _NEON_OPT_
 void put_mb2Frame (uint8 *mb_pred, uint8 *mb_addr[3], int32 pitch)
 {
     int32 uv;
@@ -1392,7 +1392,7 @@ LOCAL void H264Dec_decode_intra_mb(H264DecContext *img_ptr, DEC_MB_INFO_T *mb_in
                 itrans_8x8 (coff, pred, MB_SIZE, rec, ext_width);
             } else {
                 //copy 8x8
-#if 1//WIN32
+#ifndef _NEON_OPT_
                 ((uint32 *)rec)[0] = ((uint32 *)pred)[0];
                 ((uint32 *)rec)[1] = ((uint32 *)pred)[1];
                 rec += ext_width;
