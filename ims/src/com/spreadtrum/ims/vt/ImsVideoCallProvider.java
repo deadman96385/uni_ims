@@ -19,7 +19,8 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     private static final String TAG = ImsVideoCallProvider.class.getSimpleName();
     private VTManagerProxy mVTManagerProxy;
     private Handler mHandler;
-    private ImsCallProfile mImsCallProfile;
+    private ImsCallProfile mNegotiatedCallProfile = new ImsCallProfile();
+    private VideoProfile mLocalRequestProfile;
     private ImsCallSessionImpl mImsCallSessionImpl;
     private Context mContext;
     private CommandsInterface mCi;
@@ -39,6 +40,11 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         if(mImsCallSessionImpl.mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT){
            onVTConnectionEstablished(mImsCallSessionImpl);
         }
+        mNegotiatedCallProfile.mCallType = mImsCallSessionImpl.mImsCallProfile.mCallType;
+        mNegotiatedCallProfile.mMediaProfile.mAudioQuality =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mAudioQuality;
+        mNegotiatedCallProfile.mMediaProfile.mAudioDirection =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mAudioDirection;
+        mNegotiatedCallProfile.mMediaProfile.mVideoQuality =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoQuality;
+        mNegotiatedCallProfile.mMediaProfile.mVideoDirection =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoDirection;
     }
 
     public void onVTConnectionEstablished(ImsCallSessionImpl mImsCallSessionImpl){
@@ -123,6 +129,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
 
         if(requestImsCallProfile.mCallType != mImsCallSessionImpl.mImsCallProfile.mCallType
                 && requestImsCallProfile.mCallType != mImsCallSessionImpl.getLocalRequestProfile().mCallType){
+            mLocalRequestProfile = toProfile;
             mImsCallSessionImpl.getLocalRequestProfile().mCallType = requestImsCallProfile.mCallType;
             if(requestImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT){
                mCi.requestVolteCallMediaChange(false,null);
@@ -186,23 +193,63 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
 
         @Override
         public void onUpdate(ImsCallSessionImpl session){
+            if(mImsCallSessionImpl != session){
+                log("onUpdate->session is not match.");
+                return;
+            }
+            updateNegotiatedCallProfile(session);
             handleClearLocalCallProfile(session);
             handleVolteCallMediaChange(session);
         }
      };
 
+     public void updateNegotiatedCallProfile(ImsCallSessionImpl session){
+         ImsCallProfile imsCallProfile = session.getCallProfile();
+         VideoProfile responseProfile = new VideoProfile(VideoProfile.STATE_AUDIO_ONLY);
+         if(imsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT){
+             responseProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
+             onVTConnectionEstablished(session);
+         } else {
+             onVTConnectionDisconnected(session);
+         }
+         if (mLocalRequestProfile != null) {
+             int result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_FAIL;
+             if(mImsCallSessionImpl.getLocalRequestProfile().mCallType == imsCallProfile.mCallType){
+                 result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS;
+             }
+             receiveSessionModifyResponse(result, mLocalRequestProfile, responseProfile);
+             mLocalRequestProfile = null;
+         }
+         if(mNegotiatedCallProfile.mCallType != imsCallProfile.mCallType){
+             mNegotiatedCallProfile.mCallType = imsCallProfile.mCallType;
+         }
+         if(mNegotiatedCallProfile.mMediaProfile.mAudioQuality !=
+                 mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mAudioQuality){
+             mNegotiatedCallProfile.mMediaProfile.mAudioQuality =
+                     mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mAudioQuality;
+         }
+         if(mNegotiatedCallProfile.mMediaProfile.mAudioDirection !=
+                 mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mAudioDirection){
+             mNegotiatedCallProfile.mMediaProfile.mAudioDirection =
+                     mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mAudioDirection;
+         }
+         if(mNegotiatedCallProfile.mMediaProfile.mVideoQuality !=
+                 mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoQuality){
+             mNegotiatedCallProfile.mMediaProfile.mVideoQuality =
+                     mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoQuality;
+         }
+         if(mNegotiatedCallProfile.mMediaProfile.mVideoDirection !=
+                 mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoDirection){
+             mNegotiatedCallProfile.mMediaProfile.mVideoDirection =
+                     mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoDirection;
+         }
+     }
+
     public void handleClearLocalCallProfile(ImsCallSessionImpl session){
           if(session.mImsDriverCall != null && (session.mImsDriverCall.isReuestAccept() || session.mImsDriverCall.isReuestReject()) || 
              mImsCallSessionImpl.getLocalRequestProfile().mCallType == mImsCallSessionImpl.mImsCallProfile.mCallType){
              mImsCallSessionImpl.getLocalRequestProfile().mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
-             updateSessionModificationState();
           }
-    }
-
-    private void updateSessionModificationState() {
-        log("updateSessionModificationState receiveSessionModifyResponse");
-        receiveSessionModifyResponse(VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS,
-                null, null);
     }
 
     public void handleVolteCallMediaChange(ImsCallSessionImpl session){
@@ -224,6 +271,12 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
 
     @Override
     public void changeCameraCapabilities(CameraCapabilities CameraCapabilities) {
-            super.changeCameraCapabilities(CameraCapabilities);
+         super.changeCameraCapabilities(CameraCapabilities);
+    }
+
+    @Override
+    public void receiveSessionModifyResponse(
+            int status, VideoProfile requestedProfile, VideoProfile responseProfile) {
+        super.receiveSessionModifyResponse(status,requestedProfile,responseProfile);
     }
 }
