@@ -4923,7 +4923,8 @@ static void requestRegistrationState(int channelID, int request, void *data,
             if (err < 0) goto error;
             break;
 
-        case 2: /* +CREG: <stat>, <lac>, <cid> */
+        case 2: /* +CREG: <stat>, <lac>, <cid> or
+                   +CIREG: <n>,<reg_info>,[<ext_info>] */
             err = at_tok_nextint(&line, &response[0]);
             if (err < 0) goto error;
             err = at_tok_nexthexint(&line, &response[1]);
@@ -5034,7 +5035,7 @@ static void requestRegistrationState(int channelID, int request, void *data,
         responseStr[5] = res[4];
         RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, 6*sizeof(char*));
     } else if(request == RIL_REQUEST_IMS_REGISTRATION_STATE){
-        s_ims_registered = response[0];
+        s_ims_registered = response[1];
         RILLOGD("s_ims_registered= %d", s_ims_registered);
         RIL_onRequestComplete(t, RIL_E_SUCCESS, response, sizeof(response));
     }
@@ -12909,10 +12910,14 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             RILLOGD("get exit_cause fail");
             goto out;
         }
-        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED, response,sizeof(RIL_IMSPHONE_CMCCSI));
+        if (s_ims_registered) {
+            RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED, response,sizeof(RIL_IMSPHONE_CMCCSI));
+        }
     } else if (strStartsWith(s, "+CMCCSS")) {
         /* CMCCSS1, CMCCSS2, ... CMCCSS7, just report ims state change */
-        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED, NULL, 0);
+        if (s_ims_registered) {
+            RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED, NULL, 0);
+        }
     }
     /* SPRD: add for LTE-CSFB to handle CS fall back of MT call @{*/
     else if (strStartsWith(s, "+SCSFB")) {
