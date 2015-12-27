@@ -13,7 +13,10 @@ import android.telecom.VideoProfile;
 import android.view.Surface;
 
 import com.spreadtrum.ims.ImsCallSessionImpl;
+import com.spreadtrum.ims.ImsService;
 import com.spreadtrum.ims.ImsServiceCallTracker;
+import com.spreadtrum.ims.ImsConfigImpl;
+
 
 import com.android.internal.telephony.Call;
 import com.android.internal.telephony.Connection;
@@ -55,6 +58,7 @@ public class VTManagerProxy{
     private static final Object mLock = new Object();
     private static VTManagerProxy mInstance;
 
+    private ImsService mImsService;
     private Context mContext;
     private VideoProfile mLoacalRequestProfile;
     private VideoCallEngine mVideoCallEngine;
@@ -69,14 +73,15 @@ public class VTManagerProxy{
     private AlertDialog mFallBackDialog;
     private ImsCallSessionImpl mImsCallSessionImpl;
 
-    private VTManagerProxy(Context context) {
-        mContext = context;
+    private VTManagerProxy(ImsService imsService) {
+        mImsService = imsService;
+        mContext = (Context)mImsService;
     }
 
-    public static VTManagerProxy init(Context c) {
+    public static VTManagerProxy init(ImsService imsService) {
          synchronized (mLock) {
             if (mInstance == null) {
-                mInstance = new VTManagerProxy(c);
+                mInstance = new VTManagerProxy(imsService);
              }
            return (VTManagerProxy) mInstance;
         }
@@ -152,11 +157,13 @@ public class VTManagerProxy{
             final Object syncObj = new Object();
 
             final RIL ril = (RIL)mActiveImsCallSessionImpl.mCi;
+            final int serviceId = imsCallSessionImpl.getServiceId();
             mMediaPhoneThread = new HandlerThread("VideoCallEngine") {
                 protected void onLooperPrepared() {
                     log("create mVideoCallEngine");
                     synchronized (syncObj) {
-                        mVideoCallEngine = new VideoCallEngine(ril, mContext);
+                        mVideoCallEngine = new VideoCallEngine(ril, mContext,
+                                (ImsConfigImpl)mImsService.getConfigInterface(serviceId));
                         syncObj.notifyAll();
                     }
                     log("create mVideoCallEngine done");
@@ -255,8 +262,8 @@ public class VTManagerProxy{
         if (mVideoCallEngine != null) {
             mVideoCallEngine.setImsRemoteSurface(mDisplaySurface);
         }
-        if (surface != null) {
-            setPreviewSize(176, 144);
+        if (surface != null){
+            setPreviewSize(180,240);
         }
     }
 
@@ -373,8 +380,9 @@ public class VTManagerProxy{
             if (vp != null) {
                 log("setPreviewSize->width=" + width + " height=" + height);
                 VideoProfile.CameraCapabilities cc = new VideoProfile.CameraCapabilities(width,
-                        width, false, 0);
+                        height, false, 0);
                 vp.changeCameraCapabilities(cc);
+                vp.changePeerDimensions(480,640);//TODO: set peer image size
             }
         }
     }

@@ -278,6 +278,15 @@ public class ImsService extends Service {
         }
     };
 
+    public IImsConfig getConfigInterface(int serviceId) {
+        ImsServiceImpl service = mImsServiceImplMap.get(new Integer(serviceId));
+        if (service == null) {
+            Log.e (TAG, "getConfigInterface->Invalid serviceId " + serviceId);
+            return null;
+        }
+        return service.getConfigInterface();
+    }
+
     private void iLog(String log){
         Log.i(TAG, log);
     }

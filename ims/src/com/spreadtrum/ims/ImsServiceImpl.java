@@ -248,8 +248,6 @@ public class ImsServiceImpl {
         } catch (RemoteException e){
             e.printStackTrace();
         }
-        //TODO :for test
-//        mHandler.sendEmptyMessageDelayed(IMS_REG_STATE_REGISTERED, 20000);
         return mServiceId;
     }
 

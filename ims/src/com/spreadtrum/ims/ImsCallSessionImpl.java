@@ -931,4 +931,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.w(TAG, "terminate-> mImsDriverCall is null!");
         }
     }
+    public int getServiceId(){
+        return mImsServiceCallTracker.getServiceId();
+    }
 }

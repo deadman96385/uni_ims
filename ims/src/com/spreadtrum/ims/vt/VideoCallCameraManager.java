@@ -11,6 +11,7 @@ import android.os.Message;
 import android.util.Log;
 import android.view.OrientationEventListener;
 import android.view.Surface;
+import com.spreadtrum.ims.ImsConfigImpl;
 
 public class VideoCallCameraManager {
     private static String TAG = VideoCallCameraManager.class.getSimpleName();
@@ -217,25 +218,75 @@ public class VideoCallCameraManager {
                     params.set("ycbcr", 1);// ensure yuv sequence of camera preview
                     if (mVideoCallEngine != null) {
                         switch (mVideoCallEngine.getCameraResolution()) {
-                            case VideoCallEngine.RESOLUTION_720P:
+                            case ImsConfigImpl.VT_RESOLUTION_720P:
+                                mWidth = 1280;
+                                mHeight = 720;
                                 params.setPreviewSize(1280, 720);
+                                params.setPreviewFrameRate(30);
                                 break;
-                            case VideoCallEngine.RESOLUTION_VGA:
-                                params.setPreviewSize(640, 480);
+                            case ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_15:
+                                mWidth = 480;
+                                mHeight = 640;
+                                params.setPreviewSize(480, 640);
+                                params.setPreviewFrameRate(15);
                                 break;
-                            case VideoCallEngine.RESOLUTION_QVGA:
-                                params.setPreviewSize(320, 240);
+                            case ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_30:
+                                mWidth = 480;
+                                mHeight = 640;
+                                params.setPreviewSize(480, 640);
+                                params.setPreviewFrameRate(30);
                                 break;
-                            case VideoCallEngine.RESOLUTION_CIF:
+                            case ImsConfigImpl.VT_RESOLUTION_QVGA_REVERSED_15:
+                                mWidth = 480;
+                                mHeight = 640;
+                                params.setPreviewSize(240, 320);
+                                params.setPreviewFrameRate(15);
+                                break;
+                            case ImsConfigImpl.VT_RESOLUTION_QVGA_REVERSED_30:
+                                mWidth = 240;
+                                mHeight = 320;
+                                params.setPreviewSize(240, 320);
+                                params.setPreviewFrameRate(30);
+                                break;
+                            case ImsConfigImpl.VT_RESOLUTION_CIF:
+                                mWidth = 352;
+                                mHeight = 288;
                                 params.setPreviewSize(352, 288);
+                                params.setPreviewFrameRate(30);
                                 break;
-                            case VideoCallEngine.RESOLUTION_QCIF:
+                            case ImsConfigImpl.VT_RESOLUTION_QCIF:
+                                mWidth = 176;
+                                mHeight = 144;
                                 params.setPreviewSize(176, 144);
+                                params.setPreviewFrameRate(30);
+                                break;
+                            case ImsConfigImpl.VT_RESOLUTION_VGA_15:
+                                mWidth = 640;
+                                mHeight = 480;
+                                params.setPreviewSize(640, 480);
+                                params.setPreviewFrameRate(15);
+                                break;
+                            case ImsConfigImpl.VT_RESOLUTION_VGA_30:
+                                mWidth = 640;
+                                mHeight = 480;
+                                params.setPreviewSize(640, 480);
+                                params.setPreviewFrameRate(30);
+                                break;
+                            case ImsConfigImpl.VT_RESOLUTION_QVGA_15:
+                                mWidth = 320;
+                                mHeight = 240;
+                                params.setPreviewSize(320, 240);
+                                params.setPreviewFrameRate(15);
+                                break;
+                            case ImsConfigImpl.VT_RESOLUTION_QVGA_30:
+                                mWidth = 320;
+                                mHeight = 240;
+                                params.setPreviewSize(320, 240);
+                                params.setPreviewFrameRate(30);
                                 break;
                             default:
                                 break;
                         }
-                        params.setPreviewFrameRate(30);
                     }
                     mCamera.setParameters(params);
                     if (mVideoCallEngine != null) {

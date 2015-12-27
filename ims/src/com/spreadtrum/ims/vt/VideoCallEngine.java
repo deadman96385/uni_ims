@@ -18,22 +18,18 @@ import android.preference.PreferenceManager;
 
 import com.android.internal.telephony.RilVideoEx;
 import com.android.internal.telephony.RIL;
+import com.spreadtrum.ims.ImsConfigImpl;
+
 import static com.android.internal.telephony.RILConstants.*;
 
 public class VideoCallEngine {
-
-    public static final int RESOLUTION_720P = 0;
-    public static final int RESOLUTION_VGA = 1;
-    public static final int RESOLUTION_QVGA = 2;
-    public static final int RESOLUTION_CIF = 3;
-    public static final int RESOLUTION_QCIF = 4;
-
     private static String TAG = VideoCallEngine.class.getSimpleName();
     private static VideoCallEngine gInstance = null;
     private EventHandler mEventHandler;
     private Context mContext;
     private RIL mCm;
-    private int mCameraResolution = RESOLUTION_VGA;
+    private int mCameraResolution = ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_15;
+    private ImsConfigImpl mImsConfigImpl;
 
     Surface mRemoteSurface;
     Surface mLocalSurface;
@@ -109,9 +105,10 @@ public class VideoCallEngine {
         System.loadLibrary("video_call_engine_jni");
     }
 
-    public VideoCallEngine(RIL ril,Context context) {
+    public VideoCallEngine(RIL ril,Context context, ImsConfigImpl imsConfigImpl) {
         mCm = ril;
         mContext = context;
+        mImsConfigImpl = imsConfigImpl;
         initContext();
         gInstance = this;
         Log.i(TAG, "VideoCallEngine create.");
@@ -135,18 +132,10 @@ public class VideoCallEngine {
             mEventHandler = null;
         }
 
-        //mCm.registerForOemHookRaw(mEventHandler, MEDIA_UNSOL_CODEC, null);
-        //mCm.registerForOemHookRaw(mEventHandler, RIL_UNSOL_VIDEOPHONE_CODEC, null);
         mCm.registerForOemHookRaw(mEventHandler, MEDIA_UNSOL_STR, null);
-        //mCm.registerForOemHookRaw(mEventHandler, RIL_UNSOL_VIDEOPHONE_STRING, null);
         mCm.registerForOemHookRaw(mEventHandler, MEDIA_UNSOL_REMOTE_VIDEO, null);
-        //mCm.registerForOemHookRaw(mEventHandler, RIL_UNSOL_VIDEOPHONE_REMOTE_MEDIA, null);
-
-        //mCm.registerForOemHookRaw(mEventHandler, RIL_UNSOL_VIDEOPHONE_MM_RING, null);
         mCm.registerForOemHookRaw(mEventHandler, MEDIA_UNSOL_MM_RING, null);
-
         mCm.registerForOemHookRaw(mEventHandler, MEDIA_UNSOL_RECORD_VIDEO, null);
-        //mCm.registerForOemHookRaw(mEventHandler, RIL_UNSOL_VIDEOPHONE_RECORD_VIDEO, null);
         mCm.registerForOemHookRaw(mEventHandler, MEDIA_UNSOL_MEDIA_START, null);
         mVideoState = VideoState.AUDIO_ONLY;
         initCameraResolution();
@@ -154,8 +143,7 @@ public class VideoCallEngine {
     }
 
     public void initCameraResolution(){
-        SharedPreferences sharePref = PreferenceManager.getDefaultSharedPreferences(mContext.getApplicationContext());
-        mCameraResolution = sharePref.getInt("vt_resolution", RESOLUTION_VGA);
+        mCameraResolution = mImsConfigImpl.getVideoQualityFromPreference();
         Log.i(TAG, "initCameraResolution():"+mCameraResolution);
     }
 
