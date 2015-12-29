@@ -377,7 +377,7 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
         }
         vo->rc_inout_paras.nTarget_bitrate = enc_config->targetBitRate;
         vo->rc_inout_paras.nFrame_Rate = enc_config->FrameRate;
-        vo->rc_inout_paras.nIP_Ratio = 3;
+        vo->rc_inout_paras.nIP_Ratio = 2;
         vo->rc_inout_paras.nIQP = enc_config->QP_IVOP;
         vo->rc_inout_paras.nPQP = enc_config->QP_PVOP;
         vo->rc_inout_paras.nWidth = vo->g_enc_image_ptr->width;
