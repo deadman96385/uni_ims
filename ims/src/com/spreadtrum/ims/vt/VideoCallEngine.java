@@ -104,7 +104,6 @@ public class VideoCallEngine {
             return "CODEC_IDLE";
         }
     };
-    private CodecState mCodecState = CodecState.CODEC_IDLE;
 
     static {
         System.loadLibrary("video_call_engine_jni");
@@ -155,8 +154,7 @@ public class VideoCallEngine {
     }
 
     public void initCameraResolution(){
-        SharedPreferences sharePref = PreferenceManager.getDefaultSharedPreferences(
-                mContext.getApplicationContext());
+        SharedPreferences sharePref = PreferenceManager.getDefaultSharedPreferences(mContext.getApplicationContext());
         mCameraResolution = sharePref.getInt("vt_resolution", RESOLUTION_VGA);
         Log.i(TAG, "initCameraResolution():"+mCameraResolution);
     }
@@ -373,15 +371,6 @@ public class VideoCallEngine {
                     return;
             }
         }
-    }
-
-    public boolean isVideoCodecStarted(){
-        return getCodecState() == CodecState.CODEC_START;
-    }
-
-    public CodecState getCodecState() {
-        Log.d(TAG, "getCodecState(), " + mCodecState);
-        return mCodecState;
     }
 
     private void log(String msg) {

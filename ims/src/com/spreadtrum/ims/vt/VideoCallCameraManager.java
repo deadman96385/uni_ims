@@ -543,7 +543,7 @@ public class VideoCallCameraManager {
      * When user click menu to control the camera, this method will be called.
      */
     private void operateCamera(final WorkerTaskType type) {
-        if (!mVideoCallEngine.isVideoCodecStarted() || mThreadRunning) {
+        if (mThreadRunning) {
             Log.e(TAG, "operateCamera(), CODEC is closed or work task locked!");
             return;
         }

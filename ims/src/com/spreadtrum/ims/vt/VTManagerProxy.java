@@ -207,7 +207,24 @@ public class VTManagerProxy{
             return;
         }
         mVideoCallCameraManager.handleSetCamera(cameraId);
+        updateSessionModificationState();//bug493552
     }
+
+    /* SPRD:bug493552 @{ */
+    private void updateSessionModificationState() {
+        if (mActiveImsCallSessionImpl == null) {
+            log("updateSessionModificationState mActiveImsCallSessionImpl is null!");
+            return;
+        }
+        ImsVideoCallProvider vtProvider = (ImsVideoCallProvider)mActiveImsCallSessionImpl
+                .getImsVideoCallProvider();
+        if (vtProvider != null) {
+            log("updateSessionModificationState receiveSessionModifyResponse");
+            vtProvider.receiveSessionModifyResponse(VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS,
+                    null, null);
+        }
+    }
+    /* @} */
 
     private void handleSetPreviewSurface(Surface surface) {
         log("handleSetPreviewSurface->Surface=" + surface);
