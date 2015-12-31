@@ -106,6 +106,15 @@ extern "C"
 ** ----------------------------------------------------------------------- */
 typedef enum
 {
+    SCENE_NORMAL     = 0,
+    SCENE_VOLTE         = 1,
+    SCENE_WFD            = 2,
+    MAX_SCENE_MODE,
+}
+VSP_SCENE_MODE_E;
+
+typedef enum
+{
     SHARK = 0,
     DOLPHIN = 1,
     TSHARK = 2,

@@ -292,6 +292,7 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
 {
     H264EncObject *vo = (H264EncObject *) avcHandle->videoEncoderData;
     MMEncConfig *enc_config = vo->g_h264_enc_config;
+    ENC_IMAGE_PARAMS_T *img_ptr = vo->g_enc_image_ptr;
     uint32 target_bitrate_max, target_bitrate_min;
     uint32 mb_rate, total_mbs = (vo->g_enc_image_ptr->width * vo->g_enc_image_ptr->height)>>8;
     int32 i, level_idx;
@@ -362,6 +363,9 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
     enc_config->QP_PVOP				= pConf->QP_PVOP;
     enc_config->EncSceneMode			= pConf->EncSceneMode;
 
+    if (enc_config->EncSceneMode == SCENE_NORMAL){
+        img_ptr->slice_mb = img_ptr->frame_height_in_mbs *img_ptr->frame_width_in_mbs;
+    }
     if (enc_config->RateCtrlEnable) {
         vo->rc_inout_paras.nRate_control_en = enc_config->RateCtrlEnable;
         if ((enc_config->EncSceneMode == 2) /*WFD*/ || (enc_config->EncSceneMode == 1)/*volte*/)
