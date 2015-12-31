@@ -8127,6 +8127,421 @@ error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
 }
+const char * base64char = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+int base64_decode(const char * base64, unsigned char * bindata) {
+    int i, j;
+    unsigned char k;
+    unsigned char temp[4];
+    for (i = 0, j = 0; base64[i] != '\0'; i += 4) {
+        memset(temp, 0xFF, sizeof(temp));
+        for (k = 0; k < 64; k++) {
+            if (base64char[k] == base64[i])
+                temp[0] = k;
+        }
+        for (k = 0; k < 64; k++) {
+            if (base64char[k] == base64[i + 1])
+                temp[1] = k;
+        }
+        for (k = 0; k < 64; k++) {
+            if (base64char[k] == base64[i + 2])
+                temp[2] = k;
+        }
+        for (k = 0; k < 64; k++) {
+            if (base64char[k] == base64[i + 3])
+                temp[3] = k;
+        }
+
+        bindata[j++] = ((unsigned char) (((unsigned char) (temp[0] << 2)) & 0xFC))
+                        | ((unsigned char) ((unsigned char) (temp[1] >> 4)
+                                & 0x03));
+        if (base64[i + 2] == '='){
+            break;
+        }
+        bindata[j++] = ((unsigned char) (((unsigned char) (temp[1] << 4)) & 0xF0))
+                        | ((unsigned char) ((unsigned char) (temp[2] >> 2)
+                                & 0x0F));
+        if (base64[i + 3] == '='){
+            break;
+        }
+        bindata[j++] = ((unsigned char) (((unsigned char) (temp[2] << 6)) & 0xF0))
+                        | ((unsigned char) (temp[3] & 0x3F));
+    }
+    return j;
+}
+char * base64_encode(const unsigned char * bindata, char * base64, int binlength) {
+    int i, j;
+    unsigned char current;
+
+    for (i = 0, j = 0; i < binlength; i += 3) {
+        current = (bindata[i] >> 2);
+        current &= (unsigned char) 0x3F;
+        base64[j++] = base64char[(int) current];
+
+        current = ((unsigned char) (bindata[i] << 4)) & ((unsigned char) 0x30);
+        if (i + 1 >= binlength) {
+            base64[j++] = base64char[(int) current];
+            base64[j++] = '=';
+            base64[j++] = '=';
+            break;
+        }
+        current |= ((unsigned char) (bindata[i + 1] >> 4))
+                & ((unsigned char) 0x0F);
+        base64[j++] = base64char[(int) current];
+
+        current = ((unsigned char) (bindata[i + 1] << 2))
+                & ((unsigned char) 0x3C);
+        if (i + 2 >= binlength) {
+            base64[j++] = base64char[(int) current];
+            base64[j++] = '=';
+            break;
+        }
+        current |= ((unsigned char) (bindata[i + 2] >> 6))
+                & ((unsigned char) 0x03);
+        base64[j++] = base64char[(int) current];
+
+        current = ((unsigned char) bindata[i + 2]) & ((unsigned char) 0x3F);
+        base64[j++] = base64char[(int) current];
+    }
+    base64[j] = '\0';
+    return base64;
+}
+static void requestSimAuthentication(int channelID, char *authData, RIL_Token t) {
+    int err;
+    ATResponse *p_response = NULL;
+    char *cmd;
+    char *line;
+    int ret;
+
+    char *rand = NULL;
+    int status;
+    char *kc, *sres;
+    int rand_len, kc_len, sres_len;
+    unsigned char *binSimResponse = NULL;
+    int binSimResponseLen;
+    RIL_SIM_IO_Response response;
+    memset(&response, 0, sizeof(response));
+    response.sw1 = 0x90;
+    response.sw2 = 0;
+
+    unsigned char *binAuthData = NULL;
+    unsigned char *hexAuthData = NULL;
+    binAuthData  = (unsigned char*) malloc( sizeof(char) * strlen(authData));
+    if(binAuthData == NULL){
+        goto error;
+    }
+    base64_decode(authData, binAuthData);
+    hexAuthData = (unsigned char *) malloc(strlen(authData)*2 + sizeof(char));
+    if(hexAuthData == NULL){
+        goto error;
+    }
+    memset(hexAuthData, 0, strlen(authData)*2 + sizeof(char));
+    convertBinToHex(binAuthData, strlen(authData), hexAuthData);
+
+    rand_len = binAuthData[0];
+    rand = (char*) malloc( sizeof(char) * (rand_len*2 + sizeof(char)) );
+    if(rand == NULL){
+        goto error;
+    }
+    memcpy(rand, hexAuthData+2, rand_len*2);
+    memcpy(rand + rand_len*2, "\0", 1);
+
+    RILLOGD("requestSimAuthentication rand = %s", rand);
+    ret = asprintf(&cmd, "AT^MBAU=\"%s\"", rand);
+    if (ret < 0) {
+        RILLOGE("Failed to allocate memory");
+        cmd = NULL;
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        return;
+    }
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "^MBAU:",
+            &p_response);
+    free(cmd);
+
+    if (err < 0 || p_response->success == 0) {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    } else {
+        line = p_response->p_intermediates->line;
+        RILLOGD("[MBBMS]RIL_REQUEST_MBBMS_USIM_AUTHEN: err=%d line=%s", err, line);
+        err = at_tok_start(&line);
+        if (err < 0)
+            goto error;
+        err = at_tok_nextint(&line, &status);
+        if (err < 0)
+            goto error;
+        RILLOGD("status = %d",status);
+        if(status == SIM_AUTH_RESPONSE_SUCCESS) {
+            err = at_tok_nextstr(&line, &kc);
+            if (err < 0) goto error;
+            kc_len = strlen(kc);
+            err = at_tok_nextstr(&line, &sres);
+            if (err < 0) goto error;
+            sres_len = strlen(sres);
+            binSimResponseLen = (kc_len + sres_len) / 2 + 3 * sizeof(char);//sres_len + sres + kc_len + kc + '\0'
+            binSimResponse = (unsigned char *) malloc(binSimResponseLen + sizeof(char));
+            if(binSimResponse == NULL){
+                goto error;
+            }
+            memset(binSimResponse, 0, binSimResponseLen + sizeof(char));
+            //set sres_len and sres
+            binSimResponse[0] = (sres_len/2) & 0xFF;
+            convertHexToBin(sres, sres_len, binSimResponse + 1);
+            //set kc_len and kc
+            binSimResponse[1 + sres_len/2] = (kc_len/2) & 0xFF;
+            convertHexToBin(kc, kc_len, binSimResponse + 1 + sres_len/2 +1);
+
+            response.simResponse = (char*)malloc(2 * binSimResponseLen + sizeof(char));
+            if(response.simResponse == NULL){
+                goto error;
+            }
+            base64_encode(binSimResponse, response.simResponse, binSimResponse[0] + binSimResponse[1 + sres_len/2] + 2 );
+            RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(response));
+        }else{
+            goto error;
+        }
+    }
+    at_response_free(p_response);
+    if(binAuthData != NULL){
+        free(binAuthData);
+        binAuthData = NULL;
+    }
+    if(hexAuthData != NULL){
+        free(hexAuthData);
+        hexAuthData = NULL;
+    }
+    if(rand != NULL){
+        free(rand);
+        rand = NULL;
+    }
+    if(response.simResponse != NULL) {
+        free(response.simResponse);
+        response.simResponse = NULL;
+    }
+    if(binSimResponse != NULL) {
+        free(binSimResponse);
+        binSimResponse = NULL;
+    }
+    return;
+    error:
+    if(binAuthData != NULL){
+        free(binAuthData);
+        binAuthData = NULL;
+    }
+    if(hexAuthData != NULL){
+        free(hexAuthData);
+        hexAuthData = NULL;
+    }
+    if(rand != NULL){
+        free(rand);
+        rand = NULL;
+    }
+    if(response.simResponse != NULL) {
+        free(response.simResponse);
+        response.simResponse = NULL;
+    }
+    if(binSimResponse != NULL) {
+        free(binSimResponse);
+        binSimResponse = NULL;
+    }
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+
+}
+
+
+static void requestUSimAuthentication(int channelID, char *authData, RIL_Token t) {
+    int err;
+    ATResponse *p_response = NULL;
+    char *cmd;
+    char *line;
+    int ret;
+
+    char *rand = NULL;
+    char *autn = NULL;
+    int status;
+    char *res, *ck, *ik, *auts;
+    int rand_len, autn_len, res_len, ck_len, ik_len, auts_len;
+    unsigned char *binSimResponse = NULL;
+    int binSimResponseLen;
+    RIL_SIM_IO_Response response;
+    memset(&response, 0, sizeof(response));
+    response.sw1 = 0x90;
+    response.sw2 = 0;
+
+    unsigned char *binAuthData = NULL;
+    unsigned char *hexAuthData = NULL;
+    binAuthData  = (char*) malloc( sizeof(char) * strlen(authData));
+    if(binAuthData == NULL){
+        goto error;
+    }
+    base64_decode(authData, binAuthData);
+    hexAuthData = (unsigned char *) malloc(strlen(authData)*2 + sizeof(char));
+    if(hexAuthData == NULL){
+        goto error;
+    }
+    memset(hexAuthData, 0, strlen(authData)*2 + sizeof(char));
+    convertBinToHex(binAuthData, strlen(authData), hexAuthData);
+
+    rand_len = binAuthData[0];
+    autn_len = binAuthData[rand_len + 1];
+    rand = (char*) malloc( sizeof(char) * (rand_len*2 + sizeof(char)) );
+    if(rand == NULL){
+        goto error;
+    }
+    autn = (char*) malloc( sizeof(char) * (autn_len*2 + sizeof(char)) );
+    if(autn == NULL){
+        goto error;
+    }
+    memcpy(rand, hexAuthData+2, rand_len*2);
+    memcpy(rand + rand_len*2, "\0", 1);
+    memcpy(autn, hexAuthData + rand_len*2 +4, autn_len*2);
+    memcpy(autn + autn_len*2, "\0", 1);
+
+    RILLOGD("requestUSimAuthentication rand = %s", rand);
+    RILLOGD("requestUSimAuthentication autn = %s", autn);
+
+    ret = asprintf(&cmd, "AT^MBAU=\"%s\",\"%s\"", rand, autn);
+    if (ret < 0) {
+        RILLOGE("Failed to allocate memory");
+        cmd = NULL;
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        return;
+    }
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "^MBAU:",
+            &p_response);
+    free(cmd);
+
+    if (err < 0 || p_response->success == 0) {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    } else {
+        line = p_response->p_intermediates->line;
+        RILLOGD("requestUSimAuthentication: err=%d line=%s", err, line);
+        err = at_tok_start(&line);
+        if (err < 0)
+            goto error;
+        err = at_tok_nextint(&line, &status);
+        if (err < 0)
+            goto error;
+        RILLOGD("status = %d",status);
+        if(status == SIM_AUTH_RESPONSE_SUCCESS) {
+            err = at_tok_nextstr(&line, &res);
+            if (err < 0) goto error;
+            res_len = strlen(res);
+            err = at_tok_nextstr(&line, &ck);
+            if (err < 0) goto error;
+            ck_len = strlen(ck);
+            err = at_tok_nextstr(&line, &ik);
+            if (err < 0) goto error;
+            ik_len = strlen(ik);
+
+            binSimResponseLen = (res_len + ck_len + ik_len) / 2 + 4 * sizeof(char);//0xdb + res_len + res + ck_len + ck  + ik_len + ik + '\0'
+            binSimResponse = (unsigned char *) malloc(binSimResponseLen + sizeof(char));
+            if(binSimResponse == NULL){
+                goto error;
+            }
+            memset(binSimResponse, 0, binSimResponseLen + sizeof(char));
+            //set flag to first byte
+            binSimResponse[0] = 0xDB;
+            //set res_len and res
+            binSimResponse[1] = (res_len/2) & 0xFF;
+            convertHexToBin(res, res_len, binSimResponse + 2);
+            //set ck_len and ck
+            binSimResponse[2 + res_len/2] = (ck_len/2) & 0xFF;
+            convertHexToBin(ck, ck_len, binSimResponse + 2 + res_len/2 +1);
+            //set ik_len and ik
+            binSimResponse[2 + res_len/2 + 1 + ck_len/2] = (ik_len/2) & 0xFF;
+            convertHexToBin(ik, ik_len, binSimResponse + 2 + res_len/2 + 1 + ck_len/2 + 1);
+
+            response.simResponse = (char*)malloc(2 * binSimResponseLen + sizeof(char));
+            if(response.simResponse  == NULL){
+                goto error;
+            }
+            base64_encode(binSimResponse, response.simResponse, binSimResponse[1] + binSimResponse[2 + res_len/2] + binSimResponse[2 + res_len/2 + 1 + ck_len/2] +4);
+            RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(response));
+        } else if(status == SIM_AUTH_RESPONSE_SYNC_FAILURE) {
+            err = at_tok_nextstr(&line, &auts);
+            if (err < 0)
+                goto error;
+            auts_len = strlen(auts);
+            RILLOGD("requestUSimAuthentication auts = %s", auts);
+            RILLOGD("requestUSimAuthentication auts_len = %d", auts_len);
+
+            binSimResponseLen = auts_len/2 + 2 * sizeof(char);
+            binSimResponse = (unsigned char *) malloc(binSimResponseLen + sizeof(char));
+            if(binSimResponse  == NULL){
+                goto error;
+            }
+            memset(binSimResponse, 0, binSimResponseLen + sizeof(char));
+            //set flag to first byte
+            binSimResponse[0] = 0xDC;
+            //set auts_len and auts
+            binSimResponse[1] = (auts_len / 2) & 0xFF;
+            convertHexToBin(auts, auts_len, binSimResponse + 2);
+
+            response.simResponse = (char*) malloc(2 * binSimResponseLen + sizeof(char));
+            if(response.simResponse  == NULL){
+                goto error;
+            }
+            base64_encode(binSimResponse, response.simResponse, binSimResponse[1] + 2);
+            RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(response));
+        }else{
+            goto error;
+        }
+    }
+    at_response_free(p_response);
+
+    if(binAuthData != NULL){
+        free(binAuthData);
+        binAuthData = NULL;
+    }
+    if(hexAuthData != NULL){
+        free(hexAuthData);
+        hexAuthData = NULL;
+    }
+    if(rand != NULL){
+        free(rand);
+        rand = NULL;
+    }
+    if(autn != NULL){
+        free(autn);
+        autn = NULL;
+    }
+    if(response.simResponse != NULL) {
+        free(response.simResponse);
+        response.simResponse = NULL;
+    }
+    if(binSimResponse != NULL) {
+        free(binSimResponse);
+        binSimResponse = NULL;
+    }
+    return;
+    error:
+    if(binAuthData != NULL){
+        free(binAuthData);
+        binAuthData = NULL;
+    }
+    if(hexAuthData != NULL){
+        free(hexAuthData);
+        hexAuthData = NULL;
+    }
+    if(rand != NULL){
+        free(rand);
+        rand = NULL;
+    }
+    if(autn != NULL){
+        free(autn);
+        autn = NULL;
+    }
+    if(response.simResponse != NULL) {
+        free(response.simResponse);
+        response.simResponse = NULL;
+    }
+    if(binSimResponse != NULL) {
+        free(binSimResponse);
+        binSimResponse = NULL;
+    }
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+}
 
 /*** Callback methods from the RIL library to us ***/
 
@@ -8464,7 +8879,20 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL:
             requestTransmitApdu(channelID, data, datalen, t);
             break;
-
+        case RIL_REQUEST_SIM_AUTHENTICATION:{
+            RIL_SimAuthentication *sim_auth = (RIL_SimAuthentication *) data;
+            RILLOGD("requestSimAuthentication authContext = %d", sim_auth->authContext);
+            RILLOGD("requestSimAuthentication rand_autn = %s", sim_auth->authData);
+            RILLOGD("requestSimAuthentication aid = %s", sim_auth->aid);
+            if(sim_auth->authContext == AUTH_CONTEXT_EAP_AKA){
+                requestUSimAuthentication(channelID, sim_auth->authData, t);
+            }else if(sim_auth->authContext == AUTH_CONTEXT_EAP_SIM){
+                requestSimAuthentication(channelID, sim_auth->authData, t);
+            }else{
+                RILLOGD("invalid authContext");
+            }
+            break;
+        }
         case RIL_REQUEST_SIGNAL_STRENGTH:
 #if defined (RIL_SPRD_EXTENSION)
             if(!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf")) {//bug 437252
