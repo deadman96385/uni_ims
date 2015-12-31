@@ -183,10 +183,10 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         android.util.Log.i(TAG, string);
     }
 
-     class ImsCallSessionImplListner implements ImsCallSessionImpl.Listener{
+    class ImsCallSessionImplListner implements ImsCallSessionImpl.Listener{
         @Override
         public void onDisconnected(ImsCallSessionImpl session){
-            log("handleVolteCallMediaChange->session="+session);
+            log("onDisconnected->session="+session);
             onVTConnectionDisconnected(session);
             mImsCallSessionImpl.removeListener(mImsCallSessionImplListner);
         }
@@ -206,6 +206,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
      public void updateNegotiatedCallProfile(ImsCallSessionImpl session){
          ImsCallProfile imsCallProfile = session.getCallProfile();
          VideoProfile responseProfile = new VideoProfile(VideoProfile.STATE_AUDIO_ONLY);
+         log("updateNegotiatedCallProfilee->mCallType="+imsCallProfile.mCallType);
          if(imsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT){
              responseProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
              onVTConnectionEstablished(session);

@@ -27,6 +27,7 @@ import com.android.ims.ImsServiceClass;
 import com.android.ims.internal.IImsCallSessionListener;
 import com.android.ims.internal.IImsRegistrationListener;
 import com.android.ims.internal.ImsCallSession;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 
 
@@ -54,7 +55,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
 
     private Map<String, ImsCallSessionImpl> mSessionList = new HashMap<String, ImsCallSessionImpl>();
     private ArrayList<ImsCallSessionImpl> mPendingSessionList = new ArrayList<ImsCallSessionImpl>();
-    private ArrayList<SessionListListener> mSessionListListeners = new ArrayList<SessionListListener>();
+    private List<SessionListListener> mSessionListListeners = new CopyOnWriteArrayList<SessionListListener>();
 
     public ImsServiceCallTracker(Context context,CommandsInterface ci, PendingIntent intent, int id, ImsServiceImpl service){
         mContext = context;
@@ -356,6 +357,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
 
     public void notifySessionDisonnected(ImsCallSessionImpl session) {
         for (SessionListListener listener : mSessionListListeners) {
+            Log.d(TAG,"notifySessionDisonnected -> listener="+listener);
             listener.onSessionDisonnected(session);
         }
     }

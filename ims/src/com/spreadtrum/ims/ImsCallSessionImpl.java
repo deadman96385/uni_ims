@@ -1,6 +1,6 @@
 package com.spreadtrum.ims;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.ImsDriverCall;
@@ -26,7 +26,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.util.Log;
-
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final String TAG = ImsCallSessionImpl.class.getSimpleName();
@@ -44,7 +44,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final int ACTION_COMPLETE_RINGBACK_TONE = 11;
     private static final int ACTION_COMPLETE_REMOVE_PARTICIPANT = 12;
 
-    private ArrayList<Listener>  mCallSessionImplListeners = new ArrayList<Listener>();
+    private List<Listener>  mCallSessionImplListeners = new CopyOnWriteArrayList<Listener>();
     private int mState = ImsCallSession.State.IDLE;
     private ImsHandler mHandler;
     public ImsCallProfile mImsCallProfile = new ImsCallProfile();
@@ -275,6 +275,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         synchronized (mCallSessionImplListeners) {
             for(Listener l : mCallSessionImplListeners) {
                 l.onDisconnected(this);
+                Log.i(TAG,"notifySessionDisconnected..l="+l);
             }
         }
     }

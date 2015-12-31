@@ -132,6 +132,7 @@ public class VTManagerProxy{
                     break;
                 case EVENT_ON_VT_DISCONNECT:
                     handleDisconnect((ImsCallSessionImpl) msg.obj);
+                    break;
                 default:
                     log("handleMessage,unkwon message:what =" + msg.what);
                     break;
