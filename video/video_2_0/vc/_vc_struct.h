@@ -52,6 +52,11 @@ typedef struct {
      * The following state info is used to calculate rx bitrate
      */
     _VC_RtpBitrateStat             rxBitrateStat;
+
+    /*
+     * this state is used to record the time(us) of the last incomming Rtp
+     */
+    uint64                         lastRtpRxUs;
 } _VC_RtpRtcpInfoObject;
 
 /*
@@ -198,6 +203,10 @@ typedef struct {
     uint32          localVideoAsBwKbps;
     /* The actual rx bitrate */
     uint32          curRxBitrate;
+    /* The flag to send event to App for lost_permillage */
+    uint32          lostPermillageFlag;
+    /* The lostPermillage of downlink */
+    uint32          lostPermillage;
 } _VC_RtcpObject;
 
 /*

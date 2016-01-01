@@ -308,6 +308,12 @@ static uint32 _VC_rtcpUtilRunTmmbrFsm2(
     lost_permillage = (feedback_ptr->lostPacketTotal * 1000) /
             feedback_ptr->expectedPacketTotal;
 
+    /* if the lostPermillage is greater than 20%, send event to App */
+    if (lost_permillage > 20) {
+        rtcp_ptr->lostPermillage = lost_permillage;
+        rtcp_ptr->lostPermillageFlag = 1;
+    }
+
     switch (dir) {
         case _VC_TMMBR_DIR_LEVEL:
             if (lost_permillage >= 10) {
@@ -1241,6 +1247,7 @@ vint _VC_rtcpSend(
     vint              offset = 0;
     uint32            feedbackMask;
     _VC_RtcpNtpTime   currentTime;
+    char buffer[20] = {0};
 
     q_ptr       = vc_ptr->q_ptr;
     net_ptr     = vc_ptr->net_ptr;
@@ -1258,6 +1265,13 @@ vint _VC_rtcpSend(
 
     /* Update the JBV_RtcpInfo Object with any new information from the jitter buffer. */
     feedbackMask = _VC_rtcpUtilitProcessJbvRtcpInfo(jbv_ptr, rtcp_ptr, &jbvRtcpInfo);
+    /* send event to VCE*/
+    if (rtcp_ptr->lostPermillageFlag) {
+        //OSAL_logMsg("%s, lostPermillage %d\n", __FUNCTION__, rtcp_ptr->lostPermillage);
+        sprintf(buffer, "%d", rtcp_ptr->lostPermillage/10);
+        _VC_sendAppEvent(q_ptr, VC_EVENT_PKT_LOSS_RATE, buffer, -1);
+        rtcp_ptr->lostPermillageFlag = 0;
+    }
     packetLoss = jbvRtcpInfo.packetLoss;
 
     //_VC_LOG("RTCP send - lostSeqnLength:%u\n", packetLoss.lostSeqnLength);

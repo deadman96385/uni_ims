@@ -159,6 +159,26 @@ vint _VC_calcRxBitrate(_VC_RtpObject *rtp_ptr,
 }
 
 /*
+ * ======== _VC_rtpUpdateLastRxTime() ========
+ *
+ * this function is used to update the time of last packet received.
+ */
+void _VC_rtpUpdateLastRxTime(_VC_RtpObject *rtp_ptr, OSAL_SelectTimeval *tv)
+{
+    _VC_RtpRtcpInfoObject * info;
+
+    if (rtp_ptr == NULL || tv == NULL) {
+        JBV_errLog("invalid parameter, rtp_ptr=0x%p, tv=0x%p");
+        return;
+    }
+
+    info = &rtp_ptr->info;
+
+    info->lastRtpRxUs = tv->sec * (uint64)1000000;
+    info->lastRtpRxUs += tv->usec;
+}
+
+/*
  * ======== _VC_rtpUpdateSeq() ========
  *
  * This function is used update statistics based in incoming RTP packets.
@@ -172,8 +192,58 @@ vint _VC_rtpUpdateSeq(
     OSAL_semAcquire(rtp_ptr->info.mutexLock, OSAL_WAIT_FOREVER);
     ret = _VC_rtpLockedUpdateSeq(rtp_ptr);
     _VC_calcRxBitrate(rtp_ptr, tv, pkt_ptr);
+    _VC_rtpUpdateLastRxTime(rtp_ptr, tv);
     OSAL_semGive(rtp_ptr->info.mutexLock);
     return ret;
+}
+
+/*
+ * =========_VC_checkRtpDelayAndNotify()===========
+ *
+ * this function is used to check whether there is no incomming RTPs for a long time (5 seconds).
+ * if so, notify the VES for it.
+ */
+void _VC_checkRtpDelayAndNotify(_VC_RtpObject *rtp_ptr, _VC_Queues *q_ptr)
+{
+    _VC_RtpRtcpInfoObject *info;
+    OSAL_SelectTimeval tv;
+    uint64 current;
+    uint64 interval;
+    char buffer[20] = {0};
+
+    if (rtp_ptr == NULL ||
+            _VC_RTP_NOT_BOUND == rtp_ptr->inUse ||
+            q_ptr == NULL) {
+        JBV_errLog("invalid parameter\n");
+        return;
+    }
+
+    info = &rtp_ptr->info;
+    OSAL_selectGetTime(&tv);
+
+    current = tv.sec * (uint64)1000000;
+    current += tv.usec;
+
+    if (info->lastRtpRxUs == 0) {
+        info->lastRtpRxUs = current;
+        return;
+    }
+
+    if (current >= info->lastRtpRxUs) {
+        interval = current - info->lastRtpRxUs;
+    } else {
+        interval = current + (uint64)0x100000000 * 1000000 - info->lastRtpRxUs;
+    }
+    /*
+     * if dont receive rtp for 5 seconds, notify the VCE
+     */
+    if (interval > 5 * 1000000) {
+        /* notify */
+        sprintf(buffer, "%llu", interval);
+        _VC_sendAppEvent(q_ptr, VC_EVENT_NO_RTP, buffer, -1);
+        info->lastRtpRxUs = current;
+    }
+    return;
 }
 
 /*
@@ -225,6 +295,7 @@ vint _VC_rtpRecv(
                 continue;
             }
             OSAL_selectAddId(&rtp_ptr->socket, &readSet);
+            _VC_checkRtpDelayAndNotify(rtp_ptr, vc_ptr->q_ptr);
         }
     }
 
@@ -265,14 +336,14 @@ vint _VC_rtpRecv(
              */
             /*
              * In order to support both IPv4 and IPv6, we have to specify which
-             * type of socket is used. So that the receive function could 
+             * type of socket is used. So that the receive function could
              * prepare data structure to recevice correct data.
              */
             remoteAddr.type = stream_ptr->streamParam.localAddr.type;
 
             while ((pktLen = _VC_netRecvfrom(rtp_ptr->socket, buf_ptr,
                     RTP_BUFSZ_MAX, &remoteAddr)) > 0) {
-    
+
                 /* Reset the headerExtnOffset to 0 */
                 headerExtnOffset = 0;
 
@@ -289,7 +360,7 @@ vint _VC_rtpRecv(
                  * Demux packets.
                  * Bug 2542
                  */
-                if (RTP_VERSION != ((*buf_ptr >> 6) & 3)) { 
+                if (RTP_VERSION != ((*buf_ptr >> 6) & 3)) {
                     /*
                      * Not an RTP packet.
                     */

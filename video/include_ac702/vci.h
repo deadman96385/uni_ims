@@ -22,7 +22,9 @@ typedef enum {
     VC_EVENT_STOP_DEC               = 5,
     VC_EVENT_SHUTDOWN               = 6,
     VC_EVENT_REMOTE_RECV_BW_KBPS    = 7,
-    VC_EVENT_SEND_KEY_FRAME         = 8
+    VC_EVENT_SEND_KEY_FRAME         = 8,
+    VC_EVENT_NO_RTP                 = 9,
+    VC_EVENT_PKT_LOSS_RATE          = 10,
 } VC_Event;
 
 typedef struct {
