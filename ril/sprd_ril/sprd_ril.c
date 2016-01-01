@@ -381,7 +381,8 @@ typedef enum {
     STATE_IN_SERVICE = 1
 }LTE_PS_REG_STATE;
 
-static LTE_PS_REG_STATE sLteRegState = STATE_OUT_OF_SERVICE;
+static LTE_PS_REG_STATE s_PSRegState = STATE_OUT_OF_SERVICE;
+static s_PSAttachAllowed;
 
 /* trigger change to this with s_state_cond */
 static int s_closed = 0;
@@ -1048,9 +1049,9 @@ static int deactivateLteDataConnection(int channelID, char *cmd)
                         at_send_command(ATch_type[channelID], "AT+SGFD", NULL);
                     }
                     pthread_mutex_lock(&s_lte_attach_mutex);
-                    sLteRegState = STATE_OUT_OF_SERVICE;
+                    s_PSRegState = STATE_OUT_OF_SERVICE;
                     pthread_mutex_unlock(&s_lte_attach_mutex);
-                    RILLOGD("set sLteRegState: OUT OF SERVICE.");
+                    RILLOGD("set s_PSRegState: OUT OF SERVICE.");
                 }
             }
         }
@@ -2188,9 +2189,9 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         }
         if (!strcmp(s_modem, "l") && isSvLte()) {
             pthread_mutex_lock(&s_lte_attach_mutex);
-            sLteRegState = STATE_OUT_OF_SERVICE;
+            s_PSRegState = STATE_OUT_OF_SERVICE;
             pthread_mutex_unlock(&s_lte_attach_mutex);
-            RILLOGD("requestRadioPower set sLteRegState: OUT OF SERVICE.");
+            RILLOGD("requestRadioPower set s_PSRegState: OUT OF SERVICE.");
         }
         setRadioState(channelID, RADIO_STATE_OFF);
     } else if (desiredRadioState > 0 && sState == RADIO_STATE_OFF) {
@@ -3527,9 +3528,9 @@ retrycgatt:
                 pthread_mutex_lock(&s_lte_cgatt_mutex);
                 RILLOGD("Add s_lte_cgatt_mutex");
                 /* Check lte service state */
-                RILLOGD("requestSetupDataCall  sLteRegState = %d", sLteRegState);
+                RILLOGD("requestSetupDataCall  s_PSRegState = %d", s_PSRegState);
                 pthread_mutex_lock(&s_lte_attach_mutex);
-                if (sLteRegState == STATE_OUT_OF_SERVICE) {
+                if (s_PSRegState == STATE_OUT_OF_SERVICE) {
                     pthread_mutex_unlock(&s_lte_attach_mutex);
                     err = at_send_command(ATch_type[channelID], "AT+CGATT=1", &p_response);
                     if (err < 0 || p_response->success == 0) {
@@ -3586,9 +3587,9 @@ retrycgatt:
                         }
                     }
 
-                    // If unsolicate CEREG 1, faster than OK for cgatt, sLteRegState has changed to STATE_IN_SERVICE
+                    // If unsolicate CEREG 1, faster than OK for cgatt, s_PSRegState has changed to STATE_IN_SERVICE
                     pthread_mutex_lock(&s_lte_attach_mutex);
-                    if (sLteRegState == STATE_OUT_OF_SERVICE) {
+                    if (s_PSRegState == STATE_OUT_OF_SERVICE) {
                         struct timespec tv;
 
                         tv.tv_sec = time(NULL) + 100;
@@ -5016,8 +5017,8 @@ static void requestRegistrationState(int channelID, int request, void *data,
     if (islte && request == RIL_REQUEST_DATA_REGISTRATION_STATE) {
         if (response[0] == 1 || response[0] == 5) {
             pthread_mutex_lock(&s_lte_attach_mutex);
-            if (sLteRegState == STATE_OUT_OF_SERVICE) {
-                sLteRegState = STATE_IN_SERVICE;
+            if (s_PSRegState == STATE_OUT_OF_SERVICE) {
+                s_PSRegState = STATE_IN_SERVICE;
             }
             pthread_mutex_unlock(&s_lte_attach_mutex);
             if (response[3] == 14) {
@@ -5027,8 +5028,8 @@ static void requestRegistrationState(int channelID, int request, void *data,
             }
         } else {
             pthread_mutex_lock(&s_lte_attach_mutex);
-            if (sLteRegState == STATE_IN_SERVICE) {
-                sLteRegState = STATE_OUT_OF_SERVICE;
+            if (s_PSRegState == STATE_IN_SERVICE) {
+                s_PSRegState = STATE_OUT_OF_SERVICE;
             }
             pthread_mutex_unlock(&s_lte_attach_mutex);
             in4G = 0;
@@ -5042,7 +5043,11 @@ static void requestRegistrationState(int channelID, int request, void *data,
     } else if (request == RIL_REQUEST_DATA_REGISTRATION_STATE) {
         sprintf(res[4], "3");
         responseStr[5] = res[4];
-        RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, 6*sizeof(char*));
+        if(s_PSAttachAllowed == 1 || s_PSRegState != STATE_IN_SERVICE){
+            RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, 6*sizeof(char*));
+        }else{
+            goto error;
+        }
     } else if(request == RIL_REQUEST_IMS_REGISTRATION_STATE){
         s_ims_registered = response[1];
         RILLOGD("s_ims_registered= %d", s_ims_registered);
@@ -8751,6 +8756,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_ALLOW_DATA:
             allow_data = ((int*)data)[0];
+            if(s_PSAttachAllowed == 0){
+                s_PSAttachAllowed = 1;
+                RIL_onUnsolicitedResponse (
+                        RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED,
+                        NULL, 0);
+            }
             if(desiredRadioState > 0 && isAttachEnable()){
                 if(allow_data){
                     attachGPRS(channelID, data, datalen, t);
@@ -9014,8 +9025,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
     case RIL_REQUEST_SETUP_DATA_CALL:
         if(isAttachEnable()) {
             if (isLte()) {
-                RILLOGD("RIL_REQUEST_SETUP_DATA_CALL testmode= %d, sLteRegState = %d", s_testmode, sLteRegState);
-                if (s_testmode == 10 || sLteRegState == STATE_IN_SERVICE) {
+                RILLOGD("RIL_REQUEST_SETUP_DATA_CALL testmode= %d, s_PSRegState = %d", s_testmode, s_PSRegState);
+                if (s_testmode == 10 || s_PSRegState == STATE_IN_SERVICE) {
                     requestSetupDataCall(channelID, data, datalen, t);
                 } else {
                     s_lastPdpFailCause = PDP_FAIL_SERVICE_OPTION_NOT_SUPPORTED;
@@ -12353,19 +12364,19 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             }
             RILLOGD("requestRegistration net_type is %d",net_type);
             pthread_mutex_lock(&s_lte_attach_mutex);
-            if (sLteRegState == STATE_OUT_OF_SERVICE) {
+            if (s_PSRegState == STATE_OUT_OF_SERVICE) {
                 pthread_cond_signal(&s_lte_attach_cond);
-                sLteRegState = STATE_IN_SERVICE;
+                s_PSRegState = STATE_IN_SERVICE;
             }
             pthread_mutex_unlock(&s_lte_attach_mutex);
-            RILLOGD("requestRegistrationState  sLteRegState is IN SERVICE");
+            RILLOGD("requestRegistrationState  s_PSRegState is IN SERVICE");
         } else {
             pthread_mutex_lock(&s_lte_attach_mutex);
-            if (sLteRegState == STATE_IN_SERVICE) {
-                sLteRegState = STATE_OUT_OF_SERVICE;
+            if (s_PSRegState == STATE_IN_SERVICE) {
+                s_PSRegState = STATE_OUT_OF_SERVICE;
             }
             pthread_mutex_unlock(&s_lte_attach_mutex);
-            RILLOGD("requestRegistrationState  sLteRegState is OUT OF SERVICE.");
+            RILLOGD("requestRegistrationState  s_PSRegState is OUT OF SERVICE.");
         }
         RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED, NULL, 0);
 
