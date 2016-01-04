@@ -29,11 +29,20 @@ LOCAL_SRC_FILES := \
 	$(H264_PATH)/src/h264dec_table.c \
 	$(H264_PATH)/src/h264dec_vld.c	\
 	$(H264_PATH)/src/h264dec_vld_table.c \
-	$(H264_PATH)/src/h264dec_mc4xN.c \
-	$(H264_PATH)/src/h264dec_mc8xN.c	\
-	$(H264_PATH)/src/h264dec_mc16xN.c \
+	$(H264_PATH)/src/gcc/h264dec_deblock_neon.s	\
+	$(H264_PATH)/src/gcc/h264dec_ext_frame_neon.s	\
+	$(H264_PATH)/src/gcc/h264dec_ipred_neon.s \
+	$(H264_PATH)/src/gcc/h264dec_isqt_neon.s \
+	$(H264_PATH)/src/gcc/h264dec_mc4_neon.s	\
+	$(H264_PATH)/src/gcc/h264dec_mc8_neon.s	\
+	$(H264_PATH)/src/gcc/h264dec_mc16_neon.s \
+	$(H264_PATH)/src/gcc/h264dec_mem_neon.s	\
+	$(H264_PATH)/src/gcc/h264dec_wp_neon.s	\
 	$(VSP_PATH)/src/osal_log.c
 
+#	$(H264_PATH)/src/h264dec_mc4xN.c \
+#	$(H264_PATH)/src/h264dec_mc8xN.c	\
+#	$(H264_PATH)/src/h264dec_mc16xN.c \
 
 #	$(H264_PATH)/src/gcc/h264dec_deblock_neon.s	\
 #	$(H264_PATH)/src/gcc/h264dec_ext_frame_neon.s	\
@@ -50,7 +59,7 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/$(H264_PATH)/include \
 	$(LOCAL_PATH)/$(VSP_PATH)/inc
 	
-LOCAL_CFLAGS :=  -fno-strict-aliasing -D_VSP_LINUX_ -DCHIP_ENDIAN_LITTLE -DITRANS_ASSEMBLY
+LOCAL_CFLAGS :=  -fno-strict-aliasing -fPIC -D_VSP_LINUX_ -DCHIP_ENDIAN_LITTLE -DITRANS_ASSEMBLY -D_NEON_OPT_
 LOCAL_LDFLAGS := -Wl,--no-warn-shared-textrel
 #LOCAL_LDFLAGS := --no-warn-shared-textrel
 LOCAL_ARM_MODE := arm
