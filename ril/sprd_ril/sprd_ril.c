@@ -12413,9 +12413,10 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 RILLOGD("%s fail", s);
                 goto out;
             }
-            RIL_onUnsolicitedResponse(
-                    RIL_UNSOL_ON_USSD,
-                    &response,3*sizeof(char*));
+            if (strcmp(response[0], "2") == 0) {
+                response[0] = "0";
+            }
+            RIL_onUnsolicitedResponse(RIL_UNSOL_ON_USSD, &response, 3*sizeof(char*));
         } else {
             if (ussdError == 1) {/* for ussd */
                 RILLOGD("+CUSD ussdError");
@@ -12423,9 +12424,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 ussdError = 0;
             }
 
-            RIL_onUnsolicitedResponse(
-                    RIL_UNSOL_ON_USSD,
-                    &response[0], 1*sizeof(char*));
+            RIL_onUnsolicitedResponse(RIL_UNSOL_ON_USSD, &response[0], 1*sizeof(char*));
         }
     }
 #if defined (RIL_SPRD_EXTENSION)
