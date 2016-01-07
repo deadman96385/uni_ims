@@ -1762,7 +1762,7 @@ typedef struct {
    int idr;
    int neg_stat_present;
    int neg_stat;
-   char* SDP_md;
+   char *SDP_md;
    int cs_mod;
    int ccs_stat;
    int mpty;
