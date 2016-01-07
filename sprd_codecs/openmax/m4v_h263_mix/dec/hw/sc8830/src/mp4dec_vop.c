@@ -302,7 +302,7 @@ PUBLIC void Mp4Dec_output_one_frame (Mp4DecObject *vo, MMDecOutput *dec_output_p
         }
     } else
     {
-        if(pic != PNULL)
+        if(pic != PNULL && pic->pDecFrame != PNULL)
         {
             dec_output_ptr->pOutFrameY = pic->pDecFrame->imgY;
             dec_output_ptr->pOutFrameU = pic->pDecFrame->imgU;
