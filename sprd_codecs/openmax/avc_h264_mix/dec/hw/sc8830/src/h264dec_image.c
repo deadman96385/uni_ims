@@ -504,7 +504,7 @@ LOCAL void H264Dec_fill_frame_num_gap (H264DecObject *vo, DEC_DECODED_PICTURE_BU
         img_ptr->frame_num = unused_short_term_frm_num;
         if (vo->g_active_sps_ptr->pic_order_cnt_type!=0)
         {
-            H264Dec_POC(img_ptr);
+            H264Dec_POC(vo);
         }
         picture_ptr->frame_poc=img_ptr->framepoc;
         picture_ptr->poc=img_ptr->framepoc;
