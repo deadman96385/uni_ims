@@ -193,6 +193,7 @@ Ecc_Record * s_sim_ecclist = NULL;
 static pthread_mutex_t s_ecclist_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int getEccRecordCategory(char *number);
+static void reopenSimCardAndProtocolStack(void *param);
 static void dialEmergencyWhileCallFailed(void *param);
 static void addEmergencyNumbertoEccList(Ecc_Record *record);
 static void redialWhileCallFailed(void *param);
@@ -2160,7 +2161,6 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         int sim_status = getSIMStatus(channelID);
         setHasSim(sim_status == SIM_ABSENT ? false: true );
 
-
         err = at_send_command(ATch_type[channelID], "AT+SFUN=5", &p_response);
         if (err < 0 || p_response->success == 0)
             goto error;
@@ -2316,7 +2316,6 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         }
         setRadioState(channelID, RADIO_STATE_SIM_NOT_READY);
     }
-
     at_response_free(p_response);
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     return;
@@ -12285,8 +12284,13 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             RILLOGD("%s fail", s);
             goto out;
         }
-        response->result = result;
-        RIL_onUnsolicitedResponse(RIL_UNSOL_SIM_REFRESH, response, sizeof(RIL_SimRefreshResponse_v7));
+        if (SIM_RESET == result) {
+            RIL_requestTimedCallback (reopenSimCardAndProtocolStack, NULL, NULL);
+        }
+        else {
+            response->result = result;
+            RIL_onUnsolicitedResponse(RIL_UNSOL_SIM_REFRESH, response, sizeof(RIL_SimRefreshResponse_v7));
+        }
     } else if (strStartsWith(s, "+CSSI:")) {
         RIL_SuppSvcNotification *response = NULL;
         int code = 0;
@@ -14232,6 +14236,18 @@ static void addEmergencyNumbertoEccList(Ecc_Record *record){
         free(record);
     }
     RILLOGD("addEmergencyNumbertoEccList->ecc list =%s number_exist:%d",ecc_list,number_exist);
+}
+
+static void reopenSimCardAndProtocolStack(void *param){
+    int channelID;
+    channelID = getChannel();
+
+    at_send_command(ATch_type[channelID], "AT+SFUN=5", NULL);
+    at_send_command(ATch_type[channelID], "AT+SFUN=3", NULL);
+    at_send_command(ATch_type[channelID], "AT+SFUN=2", NULL);
+    at_send_command(ATch_type[channelID], "AT+SFUN=4", NULL);
+
+    putChannel(channelID);
 }
 
 static void dialEmergencyWhileCallFailed(void *param){
