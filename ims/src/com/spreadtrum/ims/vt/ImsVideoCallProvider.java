@@ -127,6 +127,12 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             requestImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
         }
 
+        if (mImsCallSessionImpl == null || mImsCallSessionImpl.mImsCallProfile == null) {
+            log("onSendSessionModifyRequest mImsCallSessionImpl = "+ mImsCallSessionImpl);
+            log("onSendSessionModifyRequest mImsCallProfile = "+ mImsCallSessionImpl.mImsCallProfile);
+            return ;
+        }
+
         if(requestImsCallProfile.mCallType != mImsCallSessionImpl.mImsCallProfile.mCallType
                 && requestImsCallProfile.mCallType != mImsCallSessionImpl.getLocalRequestProfile().mCallType){
             mLocalRequestProfile = toProfile;
