@@ -35,8 +35,14 @@ PUBLIC int32 get_unit (H264DecContext *img_ptr, uint8 *pInStream, int32 frm_bs_l
     int32 stuffing_num = 0;
     int32 cur_start_code_len = 0;
     int32 next_start_code_len = 0;
+    int32 tailing_zero_bytes = 0;
     uint8 *ptr, *buf;
     int32 i;
+
+    for (i = (frm_bs_len-1); (i > 0) && (pInStream[i] == 0); i--) {
+        tailing_zero_bytes++;
+    }
+    SPRD_CODEC_LOGD ("%s:  tailing_zero_bytes: %x\n", __FUNCTION__, tailing_zero_bytes);
 
     ptr = pInStream;
     img_ptr->g_nalu_ptr->buf = buf = (uint8 *)(((((uint32)ptr)+3)>>2)<<2);
@@ -80,7 +86,7 @@ PUBLIC int32 get_unit (H264DecContext *img_ptr, uint8 *pInStream, int32 frm_bs_l
         *buf++= data;
     }
 
-    img_ptr->g_nalu_ptr->len = len - stuffing_num - next_start_code_len;
+    img_ptr->g_nalu_ptr->len = len - stuffing_num - next_start_code_len - tailing_zero_bytes;
     *slice_unit_len = len + cur_start_code_len - next_start_code_len;
 
     if (declen >= frm_bs_len) {
