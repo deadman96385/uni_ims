@@ -147,6 +147,15 @@ int  g_maybe_addcall = 0;
 int g_ImsISIM = -1;
 int g_ImsConn = -1;
 /** }@ */
+/** SPRD: Bug 523208 set pin/puk remain times to prop. @{*/
+#define PIN_PUK_PROP_SIZE 20
+bool g_NeedQueryPinTimes = true;
+bool g_NeedQueryPukTimes = true;
+static char s_Pin1[2][PIN_PUK_PROP_SIZE] = {"gsm.slot1.num.pin1","gsm.slot2.num.pin1"};
+static char s_SinglePin[PIN_PUK_PROP_SIZE] = {"gsm.sim.num.pin"};
+static char s_Puk1[2][PIN_PUK_PROP_SIZE] = {"gsm.slot1.num.puk1","gsm.slot2.num.puk1"};
+static char s_SinglePuk[PIN_PUK_PROP_SIZE] = {"gsm.sim.num.puk"};
+/** }@ */
 
 struct ATChannels *ATch_type[MAX_CHANNELS];
 static int s_channel_open = 0;
@@ -2016,7 +2025,6 @@ void setHasSim(bool hasSim) {
         }
     }
 }
-
 
 /* SPRD : for svlte & csfb @{ */
 int getTestMode() {
@@ -6181,8 +6189,32 @@ int getSimlockRemainTimes(int channelID, SimUnlockType type)
     }
     at_response_free(p_response);
 
+    /** SPRD: Bug 523208 set pin/puk remain times to prop. @{*/
+    if(UNLOCK_PUK == type || UNLOCK_PIN == type) {
+        setPinPukRemainTimes(type, remaintime);
+    }
+    /** }@ */
     return remaintime;
 }
+
+/** SPRD: Bug 523208 set pin/puk remain times to prop. @{*/
+void setPinPukRemainTimes(SimUnlockType type, int remainTimes) {
+    int phonecount = 0;
+    char prop[PROPERTY_VALUE_MAX] = { 0 };
+    char num[3]; // max is 10, so num 3 is enough
+    property_get(PHONE_COUNT, prop, "1");
+    phonecount = atoi(prop);
+    sprintf(num, "%d", remainTimes);
+
+    if(phonecount == 1) {
+        property_set(type == UNLOCK_PIN ? s_SinglePin : s_SinglePuk, num);
+        return;
+    }
+    extern int s_sim_num;
+    char *pinpuk = (type == UNLOCK_PIN ? s_Pin1[s_sim_num] : s_Puk1[s_sim_num]);
+    property_set(pinpuk, num);
+}
+/** }@ */
 
 static void requestInitISIM(int channelID, void*  data, size_t  datalen, RIL_Token  t)
 {
@@ -10953,6 +10985,18 @@ done:
     }else{
         setHasSim(true);
     }
+
+    /** SPRD: Bug 523208 set pin/puk remain times to prop. @{*/
+    if ( (g_NeedQueryPinTimes && ret == SIM_PIN) || ( g_NeedQueryPukTimes && ret == SIM_PUK)) {
+        if(ret == SIM_PIN)
+            g_NeedQueryPinTimes = false;
+        else g_NeedQueryPukTimes = false;
+        int remaintime = getSimlockRemainTimes(channelID, ret == SIM_PIN ? UNLOCK_PIN : UNLOCK_PUK);
+    } else if(ret == SIM_ABSENT) {
+        g_NeedQueryPinTimes = true;
+        g_NeedQueryPukTimes = true;
+    }
+    /** }@ */
     return ret;
 }
 
