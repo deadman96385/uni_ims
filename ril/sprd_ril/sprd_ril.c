@@ -2261,22 +2261,18 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
              }else {
                  err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
              }
-        }
         /* @} */
-        /* SPRD: not send AT+SAUTOATT on non-LTE @{*/
-        /*else {
+        }else {
             if(s_multiSimMode && !bOnlyOneSIMPresent) {
-                if(autoAttach == 1) {
+                if(allow_data == 1) {
                     err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
                 } else {
                     err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", &p_response);
                 }
-
             } else {
                 err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
             }
-        }*/
-        /* @} */
+        }
         if (err < 0 || p_response->success == 0)
             RILLOGE("GPRS auto attach failed!");
 
