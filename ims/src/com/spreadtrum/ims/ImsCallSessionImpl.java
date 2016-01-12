@@ -361,7 +361,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 case ACTION_COMPLETE_MERGE:
                     if (ar != null && ar.exception != null) {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_MERGE error!");
-
+                        if(ar.userObj != null) {
+                            try{
+                                mIImsCallSessionListener.callSessionMergeFailed((IImsCallSession)ar.userObj,
+                                        new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,
+                                                "Merge Failed"));
+                            } catch(RemoteException e){
+                                e.printStackTrace();
+                            }
+                        }
                     }
                     break;
                 case ACTION_COMPLETE_CONFERENCE:
