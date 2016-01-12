@@ -77,8 +77,8 @@
     {RIL_REQUEST_LAST_DATA_CALL_FAIL_CAUSE, dispatchVoid, responseInts},
     {RIL_REQUEST_DATA_CALL_LIST, dispatchVoid, responseDataCallList},
     {RIL_REQUEST_RESET_RADIO, dispatchVoid, responseVoid},
-    /*{RIL_REQUEST_OEM_HOOK_RAW, dispatchRaw, responseRaw},*/
-    {RIL_REQUEST_OEM_HOOK_RAW, dispatchRawSprd, responseRawSprd},
+    {RIL_REQUEST_OEM_HOOK_RAW, dispatchRaw, responseRaw},
+    /*{RIL_REQUEST_OEM_HOOK_RAW, dispatchRawSprd, responseRawSprd},*/
     {RIL_REQUEST_OEM_HOOK_STRINGS, dispatchStrings, responseStrings},
     {RIL_REQUEST_SCREEN_STATE, dispatchInts, responseVoid},
     {RIL_REQUEST_SET_SUPP_SVC_NOTIFICATION, dispatchInts, responseVoid},
@@ -276,6 +276,3 @@
     ,{RIL_REQUEST_SIM_TRANSMIT_CHANNEL, dispatchVoid, responseVoid}
     ,{RIL_REQUEST_SIM_AUTH, dispatchVoid, responseVoid}
 #endif
-
-
-

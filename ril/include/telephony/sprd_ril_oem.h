@@ -5,12 +5,22 @@
  * RIL_REQUEST_OEM_HOOK_RAW
  * request data struct
  */
+#if defined (RIL_SUPPORTED_OEM_PROTOBUF)
 typedef struct _OemRequest
 {
     int funcId;
     int subFuncId;
     void * payload;
-}OemRequest;
+} OemRequest;
+#else
+typedef struct _OemRequest
+{
+    unsigned char funcId;
+    unsigned char subFuncId;
+    int len;
+    void *payload;
+} OemRequest;
+#endif
 
 /*
  * RIL_UNSOL_OEM_HOOK_RAW
@@ -20,7 +30,6 @@ typedef struct {
     unsigned char oemFuncId;
     char* data;
 } RIL_OEM_NOTIFY;
-
 
 /*
  * RIL_REQUEST_OEM_HOOK_RAW
@@ -167,7 +176,6 @@ typedef struct {
  * RIL_UNSOL_OEM_HOOK_STRINGS
  * function IDs
  */
-
 
 
 #endif

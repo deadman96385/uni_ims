@@ -1,6 +1,6 @@
 //vendor/sprd/proprietories-source/ril/sprd_libril/sprd_ril_oem_commands.h
 
-#if defined (RIL_SPRD_EXTENSION)
+#if defined (RIL_SUPPORTED_OEM_PROTOBUF)
     {OEM_REQ_FUNCID_UNKNOWN, NULL, NULL},                   //none
     {OEM_REQ_FUNCID_CALL_BLACKLIST, dispatchCallBlack, responseVoid},
     {OEM_REQ_FUNCID_SIM_POWER, dispatchInts, responseVoid},

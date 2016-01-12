@@ -1,5 +1,3 @@
-#if defined (RIL_SPRD_EXTENSION)
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -9,11 +7,15 @@
 #include <utils/Log.h>
 #include <cutils/properties.h>
 #include <telephony/sprd_ril.h>
+#include <telephony/sprd_ril_oem.h>
 #include <sprd_atchannel.h>
 #include "sprd_ril_cb.h"
 #include "ril_call_blacklist.h"
 
 #define LOG_TAG "RIL"
+
+#if defined (RIL_SUPPORTED_OEM_PROTOBUF)
+
 #define PROP_BUILD_TYPE "ro.build.type"
 
 // {for get sim lock infors,like dummy,white list}
@@ -2091,3 +2093,500 @@ void requestOemHookRaw(int channelID, void *data, size_t datalen, RIL_Token t)
     }
 }
 #endif
+
+static void requestGetRemainTimes(int channelID, void *data,
+                                      size_t datalen, RIL_Token t) {
+    char  cmd[20] = {0};
+    char *line;
+    int result, err;
+    ATResponse *p_response = NULL;
+
+    int type = ((int *)data)[2];
+
+    p_response = NULL;
+    RILLOGD("[MBBMS]send RIL_REQUEST_GET_REMAIN_TIMES, type:%d",type);
+    if (type >= 0 && type < 4) {
+        snprintf(cmd, sizeof(cmd), "AT+XX=%d", type);
+        err = at_send_command_singleline(ATch_type[channelID], cmd, "+XX:",
+                &p_response);
+        if (err < 0 || p_response->success == 0) {
+            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        } else {
+            line = p_response->p_intermediates->line;
+
+            RILLOGD("[MBBMS]RIL_REQUEST_GET_REMAIN_TIMES: err=%d line=%s", err, line);
+
+            err = at_tok_start(&line);
+            if (err == 0) {
+                err = at_tok_nextint(&line, &result);
+                if (err == 0) {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, &result, sizeof(result));
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                }
+            }
+        }
+        at_response_free(p_response);
+    } else {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    }
+}
+
+static void requestVideoPhone(int channelID, void *data, size_t datalen, RIL_Token t) {
+    int err;
+    ATResponse *p_response = NULL;
+
+    OemRequest *videoPhoneReq = (OemRequest *)data;
+    int len = videoPhoneReq->len;
+    RILLOGD("Video Phone subFuncId: %d", videoPhoneReq->subFuncId);
+    switch(videoPhoneReq->subFuncId) {
+//        case OEM_REQ_SUBFUNCID_VIDEOPHONE_DIAL :
+//            requestVideoPhoneDial(channelID, data, datalen, t);
+//            break;
+//        case OEM_REQ_SUBFUNCID_VIDEOPHONE_CODEC:
+//            {
+//                char cmd[30] = {0};
+//                p_response = NULL;
+//                int type = ((int*)data)[2];
+//                snprintf(cmd, sizeof(cmd), "AT"AT_PREFIX"DVTCODEC=%d", type);
+//                err = at_send_command(ATch_type[channelID], cmd, &p_response);
+//                if (err < 0 || p_response->success == 0) {
+//                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+//                } else {
+//                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+//                }
+//                at_response_free(p_response);
+//                break;
+//            }
+        case OEM_REQ_SUBFUNCID_VIDEOPHONE_HANGUP:
+            {
+                p_response = NULL;
+#ifdef NEW_AT
+                int reason = ((int*)data)[2];
+                if (reason < 0){
+                    err = at_send_command(ATch_type[channelID], "ATH", &p_response);
+                } else {
+                    char cmd[20] = {0};
+                    snprintf(cmd, sizeof(cmd), "ATH%d", reason);
+                    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+                }
+#else
+                err = at_send_command(ATch_type[channelID], "AT^DVTEND", &p_response);
+#endif
+
+                if (err < 0 || p_response->success == 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                }
+                at_response_free(p_response);
+                break;
+            }
+        case OEM_REQ_SUBFUNCID_VIDEOPHONE_ANSWER:
+            {
+                p_response = NULL;
+//              wait4android_audio_ready("ATA_VIDEO");
+#ifdef NEW_AT
+                err = at_send_command(ATch_type[channelID], "ATA", &p_response);
+#else
+                err = at_send_command(ATch_type[channelID], "AT^DVTANS", &p_response);
+#endif
+
+                if (err < 0 || p_response->success == 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                }
+                at_response_free(p_response);
+                break;
+            }
+        case OEM_REQ_SUBFUNCID_VIDEOPHONE_FALLBACK: {
+            p_response = NULL;
+            err = at_send_command(ATch_type[channelID], "AT"AT_PREFIX"DVTHUP", &p_response);
+
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        case OEM_REQ_SUBFUNCID_VIDEOPHONE_STRING: {
+            char *cmd;
+            int ret;
+            p_response = NULL;
+            char *payload = (char*)data;
+            char *str = &payload[8];
+            ret = asprintf(&cmd, "AT"AT_PREFIX"DVTSTRS=\"%s\"", str);
+            if(ret < 0) {
+                RILLOGE("Failed to allocate memory");
+                cmd = NULL;
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                break;
+            }
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            free(cmd);
+            break;
+        }
+        case OEM_REQ_SUBFUNCID_VIDEOPHONE_LOCAL_MEDIA: {
+            char cmd[50] = {0};
+            int datatype = ((int*)data)[2];
+            int sw = ((int*)data)[3];
+            if (datalen > 16){
+                int indication = ((int*)data)[4];
+                snprintf(cmd, sizeof(cmd), "AT"AT_PREFIX"DVTSEND=%d,%d,%d", datatype, sw, indication);
+            } else {
+                snprintf(cmd, sizeof(cmd), "AT"AT_PREFIX"DVTSEND=%d,%d", datatype, sw);
+            }
+            p_response = NULL;
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        case OEM_REQ_SUBFUNCID_VIDEOPHONE_RECORD_VIDEO: {
+            char cmd[30];
+            p_response = NULL;
+            int payload = ((int*)data)[2];
+            snprintf(cmd, sizeof(cmd), "AT"AT_PREFIX"DVTRECA=%d", payload);
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        case OEM_REQ_SUBFUNCID_VIDEOPHONE_RECORD_AUDIO: {
+            char cmd[40];
+            p_response = NULL;
+            int on, mode;
+            on = ((int*)data)[2];
+            if (datalen > 12) {
+                mode = ((int*)data)[3];
+                snprintf(cmd, sizeof(cmd), "AT^DAUREC=%d,%d", on, mode);
+            } else {
+                snprintf(cmd, sizeof(cmd), "AT^DAUREC=%d", on);
+            }
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        case OEM_REQ_SUBFUNCID_VIDEOPHONE_TEST: {
+            char cmd[40];
+            p_response = NULL;
+            int flag = ((int*)data)[2];
+            int value = ((int*)data)[3];
+
+            snprintf(cmd, sizeof(cmd), "AT"AT_PREFIX"DVTTEST=%d,%d", flag, value);
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+//        case OEM_REQ_SUBFUNCID_VIDEOPHONE_GET_CURRENT_VIDEOCALLS:
+//            requestGetCurrentCalls(channelID, data, datalen, t, 1);
+//            break;
+        case OEM_REQ_SUBFUNCID_VIDEOPHONE_CONTROL_IFRAME: {
+            char cmd[50] = {0};
+            p_response = NULL;
+            int flag = ((int*)data)[2];
+            int value = ((int*)data)[3];
+
+            snprintf(cmd, sizeof(cmd), "AT"AT_PREFIX"DVTLFRAME=%d,%d", flag, value);
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        case OEM_REQ_SUBFUNCID_VIDEOPHONE_SET_VOICERECORDTYPE: {
+            char cmd[30] = {0};
+            p_response = NULL;
+            snprintf(cmd, sizeof(cmd), "AT+SPRUDLV=%d", ((int*)data)[2]);
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        default :
+            RIL_onRequestComplete(t, RIL_E_REQUEST_NOT_SUPPORTED, NULL, 0);
+            break;
+    }
+}
+
+static void requestQueryCOLRCOLP(int channelID, void *data, size_t datalen, RIL_Token t) {
+    int err;
+    ATResponse *p_response = NULL;
+
+    OemRequest *queryReq = (OemRequest *)data;
+    switch(queryReq->subFuncId) {
+        case  OEM_REQ_SUBFUNCID_QUERY_COLP: {
+            p_response = NULL;
+            int response[2] = {0, 0};
+
+            err = at_send_command_singleline(ATch_type[channelID], "AT+COLP?",
+                    "+COLP: ", &p_response);
+            if (err >= 0 && p_response->success) {
+                char *line = p_response->p_intermediates->line;
+                err = at_tok_start(&line);
+                if (err >= 0) {
+                    err = at_tok_nextint(&line, &response[0]);
+                    if (err >= 0)
+                        err = at_tok_nextint(&line, &response[1]);
+                }
+                if (err >= 0) {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, &response[1],
+                            sizeof(response[1]));
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                }
+            } else {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        case  OEM_REQ_SUBFUNCID_QUERY_COLR: {
+            p_response = NULL;
+            int response[2] = {0, 0};
+
+            err = at_send_command_singleline(ATch_type[channelID], "AT+COLR?",
+                    "+COLR: ", &p_response);
+            if (err >= 0 && p_response->success) {
+                char *line = p_response->p_intermediates->line;
+                err = at_tok_start(&line);
+                if (err >= 0) {
+                    err = at_tok_nextint(&line, &response[0]);
+                    if (err >= 0)
+                        err = at_tok_nextint(&line, &response[1]);
+                }
+                if (err >= 0) {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, &response[1],
+                            sizeof(response[1]));
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                }
+            } else {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        default :
+            RIL_onRequestComplete(t, RIL_E_REQUEST_NOT_SUPPORTED, NULL, 0);
+            break;
+    }
+}
+
+static void requestGetSimLockStatus(int channelID, void *data, size_t datalen, RIL_Token t) {
+    ATResponse *p_response = NULL;
+    int err,skip,status;
+    char *cmd, *line;
+    int ret = -1;
+
+    int fac = ((int *)(data))[2];
+    int ck_type = ((int *)(data))[3];
+
+    RILLOGD("data[0] = %d, data[1] = %d", fac, ck_type);
+
+    ret = asprintf(&cmd, "AT+SPSMPN=%d,%d", fac, ck_type);
+    if(ret < 0) {
+        RILLOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error;
+    }
+    RILLOGD("requestGetSimLockStatus: %s", cmd);
+
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+SPSMPN:", &p_response);
+    free(cmd);
+
+    if (err < 0 || p_response->success == 0)
+        goto error;
+
+    line = p_response->p_intermediates->line;
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &skip);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &status);
+    if (err < 0) goto error;
+
+    RILLOGD("requestGetSimLockStatus fac = %d status = %d ", fac, status);
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, &status, sizeof(status));
+    at_response_free(p_response);
+    return;
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+    return;
+}
+
+void requestSimLock(int channelID, void *data, size_t datalen, RIL_Token t) {
+    int err;
+    ATResponse *p_response = NULL;
+
+    OemRequest *simlockReq = (OemRequest *)data;
+    switch (simlockReq->subFuncId) {
+        case OEM_REQ_SUBFUNCID_GET_SIMLOCK_REMAIN_TIMES: {
+            char cmd[20] = {0};
+            int fac = ((int*)data)[2];
+            int ck_type = ((int*)data)[3];
+            char *line;
+            int result[2] = {0,0};
+
+            p_response = NULL;
+            ALOGD("[MBBMS]send RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES, fac:%d,ck_type:%d",fac,ck_type);
+            sprintf(cmd, "AT+SPSMPN=%d,%d", fac, ck_type);
+            err = at_send_command_singleline(ATch_type[channelID], cmd, "+SPSMPN:", &p_response);
+
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                line = p_response->p_intermediates->line;
+                ALOGD("[MBBMS]RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES: err=%d line=%s", err, line);
+
+                err = at_tok_start(&line);
+
+                if (err == 0) {
+                    err = at_tok_nextint(&line, &result[0]);
+                    if (err == 0) {
+                        at_tok_nextint(&line, &result[1]);
+                        err = at_tok_nextint(&line, &result[1]);
+                    }
+                }
+
+                if (err == 0) {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, &result, sizeof(result));
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                }
+            }
+            at_response_free(p_response);
+            break;
+        }
+        case OEM_REQ_SUBFUNCID_GET_SIMLOCK_STATUS:
+            requestGetSimLockStatus(channelID, data, datalen, t);
+            break;
+        default:
+            RIL_onRequestComplete(t, RIL_E_REQUEST_NOT_SUPPORTED, NULL, 0);
+            break;
+    }
+}
+
+void requestOemHookRaw(int channelID, void *data, size_t datalen, RIL_Token t) {
+    ATResponse *p_response = NULL;
+    int err;
+    OemRequest *req = (OemRequest *)data;
+    RILLOGD("OEM_HOOK_RAW funcId: %d", req->funcId);
+    switch (req->funcId) {
+        if (sState == RADIO_STATE_UNAVAILABLE) {
+            RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
+            break;
+        }
+
+        if (sState == RADIO_STATE_OFF
+                && !(req->funcId == OEM_REQ_FUNCTION_ID_GET_REMAIN_TIMES
+                   || req->funcId == OEM_REQ_FUNCTION_ID_SIMLOCK)) {
+            RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
+            break;
+        }
+
+        case OEM_REQ_FUNCTION_ID_GET_REMAIN_TIMES :
+            requestGetRemainTimes(channelID, data, datalen, t);
+            break;
+        case OEM_REQ_FUNCTION_ID_VIDEOPHONE :
+            requestVideoPhone(channelID, data, datalen, t);
+            break;
+        case OEM_REQ_FUNCTION_ID_QUERY_COLP_COLR:
+            requestQueryCOLRCOLP(channelID, data, datalen, t);
+            break;
+        case OEM_REQ_FUNCTION_ID_MMI_ENTER_SIM: {
+            char *cmd;
+            int ret;
+            char *payload = (char *)data;
+            char *str = &payload[8];
+            p_response = NULL;
+            RILLOGD("[SIM]send RIL_REQUEST_MMI_ENTER_SIM");
+            ret = asprintf(&cmd, "ATD%s", str);
+            if(ret < 0) {
+                RILLOGE("Failed to allocate memory");
+                cmd = NULL;
+                RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+                break;
+            }
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            free(cmd);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        case OEM_REQ_FUNCTION_ID_SIMLOCK:
+            requestSimLock(channelID, data, datalen, t);
+            break;
+        case OEM_REQ_FUNCTION_ID_ENABLE_BROADCAST_SMS: {
+            char *cmd;
+            int pri = ((int *)data)[2];
+            int sec = ((int *)data)[3];
+            int test = ((int *)data)[4];
+            int cmas = ((int *)data)[5];
+            int ret;
+            RILLOGI("Reference-ril. requestEnableBroadcastSms %d ,%d ,%d ,%d", pri, sec, test, cmas);
+            p_response = NULL;
+            ret = asprintf(&cmd, "AT+SPPWS=%d,%d,%d,%d", pri, sec, test, cmas);
+            if (ret < 0) {
+                RILLOGE("Failed to allocate memory");
+                cmd = NULL;
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                break;
+            }
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            free(cmd);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        default:
+            RIL_onRequestComplete(t, RIL_E_REQUEST_NOT_SUPPORTED, NULL, 0);
+            break;
+    }
+}

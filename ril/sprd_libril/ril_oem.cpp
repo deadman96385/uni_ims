@@ -1,4 +1,4 @@
-#if defined (RIL_SPRD_EXTENSION)
+#if defined (RIL_SUPPORTED_OEM_PROTOBUF)
 #define LOG_TAG "RILC"
 
 #include <cutils/jstring.h>

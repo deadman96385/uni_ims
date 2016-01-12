@@ -338,8 +338,11 @@ static UserCallbackInfo * internalRequestTimedCallback
 
 static void internalRemoveTimedCallback(void *callbackInfo);
 
+#if defined (RIL_SUPPORTED_OEM_PROTOBUF)
 extern "C" void dispatchRawSprd(Parcel &p, RequestInfo *pRI);
 extern "C" int responseRawSprd(Parcel &p, void *response, size_t responselen);
+#endif
+
 /** Index == requestNumber */
 static CommandInfo s_commands[] = {
 #include "sprd_ril_commands.h"

@@ -212,6 +212,7 @@ static void creatBlackList(void *data, size_t datalen)
     }
 }
 
+#if defined (RIL_SUPPORTED_OEM_PROTOBUF)
 void requestCallBlackList(void *data, size_t datalen, RIL_Token t) {
     OemRequest *blackListReq = (OemRequest *)data;
     RILLOGD("Blacklist subFuncID : %d", blackListReq->subFuncId);
@@ -256,6 +257,7 @@ void requestCallBlackList(void *data, size_t datalen, RIL_Token t) {
             break;
     }
 }
+#endif
 
 /*
  * SPRD: check if the phonenumber is in blacklist,
