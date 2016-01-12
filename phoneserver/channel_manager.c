@@ -34,8 +34,8 @@
 #include "cutils/properties.h"
 #include <hardware_legacy/power.h>
 
-#define MODEM_TYPE "ro.radio.modemtype"
-
+#define MODEM_TYPE                   "ro.radio.modemtype"
+#define PROP_SIGNAL_HANDLED          "ro.ril.signalhandled"
 #undef  PHS_LOGD
 #define PHS_LOGD(x...)  ALOGD( x )
 
@@ -46,6 +46,7 @@ const char *modem = NULL;
 char SP_SIM_NUM[20];
 char MUX_SP_DEV[20];
 int multiSimMode;
+int g_signalHanded;
 struct channel_manager_t chnmng;
 extern int s_isuserdebug;
 
@@ -1138,6 +1139,9 @@ void chnmng_start_thread(struct channel_manager_t *const me)
         }
     }
 
+    if (g_signalHanded <= 0) {
+        return;
+    }
     pthread_attr_init (&attr);
     ret = pthread_create(&s_tid_signal_process, &attr, signal_process, NULL);
     if(ret < 0){
@@ -1256,9 +1260,11 @@ int main(int argc, char *argv[])
     if(strstr(versionStr, "userdebug")) {
         s_isuserdebug = 1;
     }
+    property_get(PROP_SIGNAL_HANDLED, prop, "1");
+    g_signalHanded = atoi(prop);
+    PHS_LOGD("Signal handed state %d", g_signalHanded);
 
     sem_init(&sms_lock, 0, 1);
-
     ret = pthread_create(&tid, NULL, (void*)detect_at_no_response, NULL);
     if(ret < 0) 
         PHS_LOGE("create detect_at_no_response thread failed");

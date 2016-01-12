@@ -1327,10 +1327,13 @@ int cvt_csq_cmd_ind(AT_CMD_IND_T * ind)
     char *at_in_str;
     char ind_str[MAX_AT_CMD_LEN];
     int ind_sim =0;
+    extern int g_signalHanded;
 
     if(multiSimMode == 1) {
-  /*    ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
-        ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));  */
+        if(g_signalHanded <= 0) {
+            ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
+        }
         switch(ind->recv_cmux->type){
             case INDM_SIM1:
                 ind_sim =0;
@@ -1349,8 +1352,10 @@ int cvt_csq_cmd_ind(AT_CMD_IND_T * ind)
                 break;
         }
     } else {
-  /*    ind_pty = adapter_get_default_ind_pty();
-        ind_eng_pty = adapter_single_get_eng_ind_pty();  */
+        if(g_signalHanded <= 0) {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
     }
     at_in_str = ind->ind_str;
     err = at_tok_start(&at_in_str, ':');
@@ -1382,16 +1387,17 @@ int cvt_csq_cmd_ind(AT_CMD_IND_T * ind)
     }
 
    if(berr[ind_sim] > 99) berr[ind_sim] = 99;
-
- /*   snprintf(ind_str, sizeof(ind_str), "\r\n+CSQ: %d,%d\r\n", rssi,ber);
-    if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
-        ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
-    } else {
-        PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
+   if(g_signalHanded <= 0) {
+        snprintf(ind_str, sizeof(ind_str), "\r\n+CSQ: %d,%d\r\n", rssi[ind_sim],berr[ind_sim]);
+        if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
+            ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
+        } else {
+            PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
+        }
+        if(ind_eng_pty != NULL)
+            if (ind_eng_pty->ops && ind->len < MAX_AT_CMD_LEN)
+                ind_eng_pty->ops->pty_write(ind_eng_pty, ind_str, strlen(ind_str));
     }
-    if(ind_eng_pty != NULL)
-        if (ind_eng_pty->ops && ind->len < MAX_AT_CMD_LEN)
-            ind_eng_pty->ops->pty_write(ind_eng_pty, ind_str, strlen(ind_str));  */
     return AT_RESULT_OK;
 }
 
@@ -1403,11 +1409,14 @@ int cvt_cesq_cmd_ind(AT_CMD_IND_T * ind)
     char *at_in_str;
     char ind_str[MAX_AT_CMD_LEN];
     int ind_sim =0;
+    extern int g_signalHanded;
 
     PHS_LOGD("cvt_cesq_cmd_ind enter\n");
     if(multiSimMode == 1) {
-  /*      ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
-        ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type)); */
+        if(g_signalHanded <= 0) {
+            ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
+        }
         switch(ind->recv_cmux->type){
             case INDM_SIM1:
                 ind_sim =0;
@@ -1426,8 +1435,10 @@ int cvt_cesq_cmd_ind(AT_CMD_IND_T * ind)
                 break;
         }
     } else {
-  /*      ind_pty = adapter_get_default_ind_pty();
-        ind_eng_pty = adapter_single_get_eng_ind_pty(); */
+        if(g_signalHanded <= 0) {
+            ind_pty = adapter_get_default_ind_pty();
+            ind_eng_pty = adapter_single_get_eng_ind_pty();
+        }
     }
     at_in_str = ind->ind_str;
     err = at_tok_start(&at_in_str, ':');
@@ -1492,16 +1503,19 @@ int cvt_cesq_cmd_ind(AT_CMD_IND_T * ind)
     } else {
         rsrp[ind_sim] = 141 - rsrp[ind_sim];//modified by bug#450497
     }
- /*   snprintf(ind_str, sizeof(ind_str), "\r\n+CESQ: %d,%d,%d,%d,%d,%d\r\n",
-             rxlev, ber, rscp, ecno, rsrq, rsrp);
-    if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
-        ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
-    } else {
-        PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
+    if(g_signalHanded <= 0) {
+        snprintf(ind_str, sizeof(ind_str), "\r\n+CESQ: %d,%d,%d,%d,%d,%d\r\n",
+             rxlev[ind_sim], ber[ind_sim], rscp[ind_sim], ecno[ind_sim],
+             rsrq[ind_sim], rsrp[ind_sim]);
+        if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
+            ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
+        } else {
+            PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
+        }
+        if(ind_eng_pty != NULL)
+            if (ind_eng_pty->ops && ind->len < MAX_AT_CMD_LEN)
+                ind_eng_pty->ops->pty_write(ind_eng_pty, ind_str, strlen(ind_str));
     }
-    if(ind_eng_pty != NULL)
-        if (ind_eng_pty->ops && ind->len < MAX_AT_CMD_LEN)
-            ind_eng_pty->ops->pty_write(ind_eng_pty, ind_str, strlen(ind_str)); */
     return AT_RESULT_OK;
 }
 
