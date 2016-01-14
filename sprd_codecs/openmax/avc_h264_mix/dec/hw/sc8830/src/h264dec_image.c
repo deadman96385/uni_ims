@@ -482,7 +482,7 @@ LOCAL void H264Dec_fill_frame_num_gap (H264DecObject *vo, DEC_DECODED_PICTURE_BU
         DEC_STORABLE_PICTURE_T *picture_ptr;
         DEC_FRAME_STORE_T *frame_store_ptr = H264Dec_get_one_free_pic_buffer (vo, dpb_ptr);
         int32 size_y = vo->width * vo->height;
-        DEC_STORABLE_PICTURE_T *prev = vo->g_dpb_layer[0]->delayed_pic_ptr;
+        DEC_STORABLE_PICTURE_T *prev = dpb_ptr->delayed_pic_num ? vo->g_dpb_layer[0]->delayed_pic[dpb_ptr->delayed_pic_num-1] : PNULL;
 
         picture_ptr = frame_store_ptr->frame;
         picture_ptr->pic_num = unused_short_term_frm_num;
