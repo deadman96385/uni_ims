@@ -47,8 +47,6 @@ import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.DctConstants;
 import com.android.internal.util.ArrayUtils;
 import com.spreadtrum.ims.data.ApnUtils;
-import com.android.internal.telephony.RilOemMsg;
-import com.android.internal.telephony.RilOemMsg.*;
 
 public class ImsServiceImpl {
     private static final String TAG = ImsServiceImpl.class.getSimpleName();
@@ -354,17 +352,9 @@ public class ImsServiceImpl {
             if (DBG) Log.i(TAG,"initialAttachIMSApnSetting: X There in no available ims apn");
         }else {
             if (DBG) Log.i(TAG,"initialAttachIMSApnSetting: X selected ims Apn=" + initialAttachIMSApnSetting);
-            String[] strs = new String[4];
-            strs[0] = initialAttachIMSApnSetting.apn;
-            strs[1] = initialAttachIMSApnSetting.protocol;
-            strs[2] = initialAttachIMSApnSetting.user;
-            strs[3] = initialAttachIMSApnSetting.password;
-            int[] ints = new int[1];
-            ints[0] = initialAttachIMSApnSetting.authType;
-            byte[] data = IccUtils.getOemRequestRawBytes(ints, strs,
-                                    RilOemMsg.OEM_REQ_FUNCID_IMS,
-                                    RilOemMsg.OEM_REQ_SUBFUNCID_11);
-            mCi.invokeOemRilRequestRaw(data, null);
+            mCi.setInitialAttachIMSApn(initialAttachIMSApnSetting.apn, initialAttachIMSApnSetting.protocol,
+                initialAttachIMSApnSetting.authType, initialAttachIMSApnSetting.user,
+                initialAttachIMSApnSetting.password, null);
         }
     }
     /**
