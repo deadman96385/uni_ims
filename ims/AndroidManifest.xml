@@ -1,22 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.spreadtrum.ims"
-    android:sharedUserId="android.uid.phone"
-    android:versionCode="1"
-    android:versionName="1.0" >
+    android:sharedUserId="android.uid.phone" >
 
-    <uses-sdk android:minSdkVersion="16" />
-
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.BROADCAST_STICKY" />
 
     <application
         android:name="ImsApp"
         android:allowBackup="false"
-        android:persistent="true"
         android:process="com.android.phone" >
         <receiver android:name=".ImsBroadcastReceiver" >
             <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.SIM_STATE_CHANGED" />
             </intent-filter>
         </receiver>
