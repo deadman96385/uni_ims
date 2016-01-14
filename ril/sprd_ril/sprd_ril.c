@@ -134,6 +134,8 @@ char RIL_SP_SIM_PIN_PROPERTYS[128]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.
 #define CONSTANT_DIVIDE  32768.0
 #define MODEM_TYPE "ril.radio.modemtype"
 
+#define OEM_FUNCTION_ID_TRAFFICCLASS 1
+
 int s_isuserdebug = 0;
 
 int modem;
@@ -147,6 +149,7 @@ int  g_maybe_addcall = 0;
 int g_ImsISIM = -1;
 int g_ImsConn = -1;
 /** }@ */
+
 /** SPRD: Bug 523208 set pin/puk remain times to prop. @{*/
 #define PIN_PUK_PROP_SIZE 20
 bool g_NeedQueryPinTimes = true;
@@ -457,8 +460,11 @@ static int isTest;
 static bool radioOnERROR = false;
 //desire to power on/off radio by FW
 static int desiredRadioState = 0;
+
 static RIL_RegState csRegState = RIL_REG_STATE_UNKNOWN;
 static RIL_RegState psRegState = RIL_REG_STATE_UNKNOWN;
+
+int trafficclass = 2; /* SPRD add */
 
 void *setRadioOnWhileSimBusy(void *param);
 static pthread_mutex_t s_hasSimBusyMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -3172,6 +3178,7 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
     if(index < 0 || getPDPCid(index) >= 0) {
         s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
         putPDP(index);
+
     }else {
         activeSpecifiedCidProcess(channelID, data, primaryindex+1, index+1, "IPV6");
     }
@@ -3285,7 +3292,7 @@ static int activeSpecifiedCidProcess(int channelID, void *data, int primaryCid, 
     /* Set required QoS params to default */
     property_get("persist.sys.qosstate", qos_state, "0");
     if(!strcmp(qos_state, "0")) {
-        snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", acitveCid);
+        snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,%d,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", acitveCid, trafficclass);
         at_send_command(ATch_type[channelID], cmd, NULL);
     }
     if(IsLte) {
@@ -3512,7 +3519,7 @@ retrycgatt:
             /* Set required QoS params to default */
             property_get("persist.sys.qosstate", qos_state, "0");
             if(!strcmp(qos_state, "0")) {
-                snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1);
+                snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1, trafficclass);
                 at_send_command(ATch_type[channelID], cmd, NULL);
             }
             if (!strcmp(s_modem, "l") && isSvLte()) {
@@ -3693,6 +3700,7 @@ done:
         requestOrSendDataCallList(channelID, primaryindex+1, &t);
     }
     at_response_free(p_response);
+    trafficclass = 2;
     return;
 
 error:
@@ -3710,6 +3718,7 @@ error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     if(p_response)
         at_response_free(p_response);
+    trafficclass = 2;
 }
 
 /**
@@ -9380,21 +9389,51 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         case RIL_REQUEST_OEM_HOOK_STRINGS:
             {
-                int i;
-                const char ** cur;
+                char ** funcID = (char **) data;
+                char *ptr;
+                ptr = strtok(*funcID, ",");
+                int FUNCID = atoi(ptr);
+                switch (FUNCID) {
+                    case OEM_FUNCTION_ID_TRAFFICCLASS :
+                    {
+                        char buf[128] = {0};
+                        char *response[1] = {NULL};
+                        ptr = strtok(NULL, ",");
+                        trafficclass = atoi(ptr);
+                        if (trafficclass < 0) {
+                            RILLOGE("Invalid trafficclass");
+                            trafficclass = 2;
+                            strlcat(buf, "ERROR", sizeof(buf));
+                            response[0] = buf;
+                            RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE,response, sizeof(char*));
+                        } else {
+                            RILLOGD("trafficclass = %d", trafficclass);
+                            strlcat(buf, "OK", sizeof(buf));
+                            response[0] = buf;
+                            RIL_onRequestComplete(t, RIL_E_SUCCESS, response, sizeof(char*));
+                        }
+                        break;
+                    }
+                    default :
+                    {
+                        int i;
+                        const char ** cur;
 
-                RILLOGD("got OEM_HOOK_STRINGS: 0x%8p %lu", data, (long)datalen);
+                        RILLOGD("got OEM_HOOK_STRINGS: 0x%8p %lu", data, (long)datalen);
 
 
-                for (i = (datalen / sizeof (char *)), cur = (const char **)data ;
-                        i > 0 ; cur++, i --) {
-                     RILLOGD("> '%s'", *cur);
-                     break;
+                        for (i = (datalen / sizeof (char *)), cur = (const char **)data ;
+                                i > 0 ; cur++, i --) {
+                             RILLOGD("> '%s'", *cur);
+                             break;
+                        }
+                        RILLOGD(">>> '%s'", *cur);
+                        requestSendAT(channelID, *cur, datalen, t);
+                        /* echo back strings */
+                    //  RIL_onRequestComplete(t, RIL_E_SUCCESS, data, datalen);
+                        break;
+                    }
                 }
-                RILLOGD(">>> '%s'", *cur);
-                requestSendAT(channelID, *cur, datalen, t);
-                /* echo back strings */
-            //  RIL_onRequestComplete(t, RIL_E_SUCCESS, data, datalen);
                 break;
             }
 
@@ -9979,8 +10018,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         property_get("persist.sys.qosstate", qos_state, "0");
         if (!strcmp(qos_state, "0")) {
             snprintf(cmd, sizeof(cmd),
-                    "AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0",
-                    initial_attach_id);
+                    "AT+CGEQREQ=%d,%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0",
+                    initial_attach_id, trafficclass);
             err = at_send_command(ATch_type[channelID], cmd, NULL);
         }
         if (need_ipchange == 2) {
@@ -9989,6 +10028,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
 
         at_response_free(p_response);
+        trafficclass = 2;
         break;
     }
 
@@ -11020,7 +11060,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 /* Set required QoS params to default */
                 property_get("persist.sys.qosstate", qos_state, "0");
                 if (!strcmp(qos_state, "0")) {
-                    snprintf(cmd, sizeof(cmd),"AT+CGEQREQ=%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0",initial_attach_id);
+                    snprintf(cmd, sizeof(cmd),"AT+CGEQREQ=%d,%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0",initial_attach_id, trafficclass);
                     err = at_send_command(ATch_type[channelID], cmd, NULL);
                 }
                 RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
