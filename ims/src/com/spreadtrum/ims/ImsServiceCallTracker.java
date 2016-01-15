@@ -361,4 +361,17 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             listener.onSessionDisonnected(session);
         }
     }
+
+    public void hangupAllMultipartyCall(){
+        Log.d(TAG,"hangupAllMultipartyCall.");
+        synchronized(mSessionList) {
+            for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it =
+                    mSessionList.entrySet().iterator(); it.hasNext();) {
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+                if (e.getValue().isMultiparty()) {
+                    e.getValue().hangup();
+                }
+            }
+        }
+    }
 }

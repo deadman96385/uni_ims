@@ -71,7 +71,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mContext = context;
         mCi = ci;
         mImsServiceCallTracker = callTracker;
-        mHandler = new ImsHandler(context.getMainLooper());
+        mHandler = new ImsHandler(context.getMainLooper(),this);
         mImsVideoCallProvider = new ImsVideoCallProvider(this,ci,mContext) ;
     }
 
@@ -83,7 +83,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mContext = context;
         mCi = ci;
         mImsServiceCallTracker = callTracker;
-        mHandler = new ImsHandler(context.getMainLooper());
+        mHandler = new ImsHandler(context.getMainLooper(),this);
         mImsVideoCallProvider = new ImsVideoCallProvider(this,ci,mContext) ;
     }
 
@@ -94,7 +94,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mContext = context;
         mCi = ci;
         mImsServiceCallTracker = callTracker;
-        mHandler = new ImsHandler(context.getMainLooper());
+        mHandler = new ImsHandler(context.getMainLooper(),this);
         mImsVideoCallProvider = new ImsVideoCallProvider(this,ci,mContext) ;
     }
 
@@ -283,8 +283,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     private class ImsHandler extends Handler {
-        ImsHandler(Looper looper) {
+        private ImsCallSessionImpl mImsCallSessionImpl;
+        ImsHandler(Looper looper,ImsCallSessionImpl imsCallSessionImpl) {
             super(looper);
+            mImsCallSessionImpl = imsCallSessionImpl;
         }
         @Override
         public void handleMessage(Message msg) {
@@ -375,11 +377,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     }
                     break;
                 case ACTION_COMPLETE_CONFERENCE:
+                    if(ar != null){
+                        Log.i(TAG,"ACTION_COMPLETE_CONFERENCE->ar:"+ar+" ar.exception:"+ar.exception
+                                +"  ar.userObj:"+ar.userObj);
+                    }
                     if (ar != null && ar.exception != null) {
-                        Log.w(TAG,"handleMessage->ACTION_COMPLETE_CONFERENCE error!");
                         if(ar.userObj != null) {
                             try{
-                                mIImsCallSessionListener.callSessionStartFailed((IImsCallSession)ar.userObj,
+                                mIImsCallSessionListener.callSessionStartFailed((IImsCallSession)mImsCallSessionImpl,
                                         new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,
                                                 "Dial Conference Failed"));
                             } catch(RemoteException e){
@@ -394,7 +399,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                             if (ar != null && ar.exception != null) {
                                 Log.w(TAG,"handleMessage->ACTION_COMPLETE_ADD_PARTICIPANT error!");
                                 mIImsCallSessionListener.callSessionInviteParticipantsRequestFailed(
-                                        (IImsCallSession)ar.userObj,new ImsReasonInfo(
+                                        (IImsCallSession)mImsCallSessionImpl,new ImsReasonInfo(
                                                 ImsReasonInfo.CODE_UNSPECIFIED, 0,
                                                 "Dial Conference Failed"));
                             } else {
@@ -621,7 +626,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         Log.d(TAG, "startConference-> participantList:"+participantList.toString());
         mCi.requestInitialGroupCall(participantList.toString(),
-                mHandler.obtainMessage(ACTION_COMPLETE_CONFERENCE,this));
+                mHandler.obtainMessage(ACTION_COMPLETE_CONFERENCE));
     }
 
     /**
@@ -685,6 +690,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 Log.i(TAG, "terminate-> isMultiparty state:"+mImsDriverCall.state);
                 if(mImsDriverCall.state == ImsDriverCall.State.HOLDING){
                     mCi.hangupWaitingOrBackground(mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
+                } else if(mImsDriverCall.state == ImsDriverCall.State.DIALING
+                        || mImsDriverCall.state == ImsDriverCall.State.ALERTING){
+                    mImsServiceCallTracker.hangupAllMultipartyCall();
+                    return;
                 } else {
                     mCi.hangupForegroundResumeBackground(mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
                 }
@@ -790,7 +799,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         Log.d(TAG, "inviteParticipants-> participantList:"+participantList.toString());
         mCi.requestAddGroupCall(participantList.toString(),
-                mHandler.obtainMessage(ACTION_COMPLETE_ADD_PARTICIPANT,this));
+                mHandler.obtainMessage(ACTION_COMPLETE_ADD_PARTICIPANT));
     }
 
     /**
@@ -887,5 +896,19 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return false;
         }
         return mImsDriverCall.isMpty;
+    }
+
+    public void hangup(){
+        if(isImsSessionInvalid()){
+            Log.w(TAG, "hangup-> ImsSessionInvalid!");
+            return;
+        }
+        if(mImsDriverCall != null){
+            Log.i(TAG, "hangup-> isMultiparty state:"+mImsDriverCall.state);
+            mCi.hangupConnection(mImsDriverCall.index,
+                    mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
+        } else {
+            Log.w(TAG, "terminate-> mImsDriverCall is null!");
+        }
     }
 }
