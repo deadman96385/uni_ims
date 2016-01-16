@@ -122,6 +122,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         boolean knownState = mImsDriverCall != null && dc != null &&
                 mImsDriverCall.state == dc.state;
+
+        updateImsCallProfileFromDC(dc);//SPRD:add for bug523375 updata dc when fallback to voice
         switch(dc.state){
             case DIALING:
                 try{
@@ -194,7 +196,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             hasUpdate = true;
         }
         hasUpdate = mImsDriverCall.update(dc);
-        updateImsCallProfileFromDC(dc);
+
         try{
             if(hasUpdate && knownState
                     && mIImsCallSessionListener != null){
@@ -635,6 +637,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.w(TAG, "accept-> ImsSessionInvalid!");
             return;
         }
+
+        /*SPRD:bug523375 add voice accept video call @{*/
+        if(callType == ImsCallProfile.CALL_TYPE_VOICE){
+            Log.i(TAG, "voice accept video call!");
+            mCi.requestVolteCallFallBackToVoice(null);
+        }/*@}*/
+
         mImsCallProfile.mMediaProfile = profile;
 
         if(profile.mVideoQuality != ImsStreamMediaProfile.VIDEO_QUALITY_NONE ){
