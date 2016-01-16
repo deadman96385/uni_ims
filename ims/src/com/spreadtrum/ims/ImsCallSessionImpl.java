@@ -63,6 +63,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mDesiredMute = false;
     private String mCallee;
     private ImsVideoCallProvider mImsVideoCallProvider;
+    // SPRD: add for bug524928
+    private boolean isMegerAction;
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             CommandsInterface ci, ImsServiceCallTracker callTracker){
@@ -196,7 +198,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             hasUpdate = true;
         }
         hasUpdate = mImsDriverCall.update(dc);
-
+        /* SPRD: add for bug524928 @{ */
+        if(mImsDriverCall.isMpty && isMegerAction){
+            try{
+                mIImsCallSessionListener.callSessionMergeComplete((IImsCallSession) this);
+                isMegerAction = false;
+            } catch(RemoteException e){
+                e.printStackTrace();
+            }
+        }
+        /* @} */
         try{
             if(hasUpdate && knownState
                     && mIImsCallSessionListener != null){
@@ -753,6 +764,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
      */
     @Override
     public void merge(){
+        // SPRD: add for bug524928
+        isMegerAction = true;
         mCi.conference(mHandler.obtainMessage(ACTION_COMPLETE_MERGE,this));
     }
 
