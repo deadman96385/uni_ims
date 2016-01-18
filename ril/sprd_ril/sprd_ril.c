@@ -10964,6 +10964,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     RILLOGD("GET_IMS_VOICE_CALL_AVAILABILITY:%d",state);
                     RIL_onRequestComplete(t, RIL_E_SUCCESS, &state,
                             sizeof(state));
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 }
             } else {
                 RILLOGD("GET_IMS_VOICE_CALL_AVAILABILITY failure!");
@@ -15291,7 +15293,6 @@ static void requestInitialGroupCall(int channelID, void *data, size_t datalen, R
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
 
-    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     return;
 
 error:
@@ -15318,7 +15319,6 @@ static void requestAddGroupCall(int channelID, void *data, size_t datalen, RIL_T
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
 
-    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     return;
 
 error:
