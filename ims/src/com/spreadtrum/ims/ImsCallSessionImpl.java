@@ -266,18 +266,22 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     public void notifySessionDisconnected() {
         mState = ImsCallSession.State.TERMINATED;
-        try{
-            if (mIImsCallSessionListener != null){
+        try {
+            if (mIImsCallSessionListener != null) {
+                if (mImsDriverCall.state == ImsDriverCall.State.INCOMING) {
+                    mDisconnCause = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
+                }
+                Log.w(TAG, "notifySessionDisconnected  mDisconnCause=" + mDisconnCause);
                 mIImsCallSessionListener.callSessionTerminated((IImsCallSession) this,
                         new ImsReasonInfo(mDisconnCause, 0));
             }
-        } catch(RemoteException e){
+        } catch (RemoteException e) {
             e.printStackTrace();
         }
         synchronized (mCallSessionImplListeners) {
-            for(Listener l : mCallSessionImplListeners) {
+            for (Listener l : mCallSessionImplListeners) {
                 l.onDisconnected(this);
-                Log.i(TAG,"notifySessionDisconnected..l="+l);
+                Log.i(TAG, "notifySessionDisconnected..l=" + l);
             }
         }
     }
