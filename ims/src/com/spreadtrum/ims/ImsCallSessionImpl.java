@@ -440,7 +440,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mImsCallProfile = null;
         mLocalCallProfile = null;
         mRemoteCallProfile = null;
-        mIImsCallSessionListener = null;
         mImsDriverCall = null;
         mCallee = null;
         mImsVideoCallProvider = null;
