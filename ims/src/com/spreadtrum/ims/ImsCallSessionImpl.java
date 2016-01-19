@@ -278,14 +278,18 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public void notifySessionDisconnected() {
         mState = ImsCallSession.State.TERMINATED;
         try {
-            if (mIImsCallSessionListener != null) {
+            if ((mIImsCallSessionListener != null) && (mImsDriverCall != null)) {
                 if (mImsDriverCall.state == ImsDriverCall.State.INCOMING) {
                     mDisconnCause = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
                 }
                 Log.w(TAG, "notifySessionDisconnected  mDisconnCause=" + mDisconnCause);
                 mIImsCallSessionListener.callSessionTerminated((IImsCallSession) this,
                         new ImsReasonInfo(mDisconnCause, 0));
-            }
+            }else if(mImsDriverCall == null){/* SPRD: add for bug525777 @{ */
+                Log.w(TAG, "notifySessionDisconnected(Fdn)  mDisconnCause=" + mDisconnCause);
+                mIImsCallSessionListener.callSessionStartFailed((IImsCallSession) this,
+                        new ImsReasonInfo(mDisconnCause, 0));
+            }/* @} */
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -311,15 +315,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 case ACTION_COMPLETE_DIAL:
                     if (ar != null && ar.exception != null) {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_DIAL error!");
-                        if(ar.userObj != null) {
-                            try{
-                                mIImsCallSessionListener.callSessionStartFailed((IImsCallSession)ar.userObj,
-                                        new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,"Dial Failed"));
-                            } catch(RemoteException e){
-                                e.printStackTrace();
-                            }
+                        try{
+                            mIImsCallSessionListener.callSessionStartFailed(mImsCallSessionImpl,
+                                    new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,"Dial Failed"));
+                        } catch(RemoteException e){
+                            e.printStackTrace();
                         }
                     }
+                    //SPRD: add for bug525777
+                    mImsServiceCallTracker.pollCallsAfterOperationComplete();
                     break;
                 case ACTION_COMPLETE_HOLD:
                     if (ar != null && ar.exception != null) {

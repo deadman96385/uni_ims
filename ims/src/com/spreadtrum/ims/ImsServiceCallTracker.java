@@ -56,9 +56,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     protected Message mLastRelevantPoll;
 
     private Map<String, ImsCallSessionImpl> mSessionList = new HashMap<String, ImsCallSessionImpl>();
-    private ArrayList<ImsCallSessionImpl> mPendingSessionList = new ArrayList<ImsCallSessionImpl>();
+    private List<ImsCallSessionImpl> mPendingSessionList = new CopyOnWriteArrayList<ImsCallSessionImpl>();
     private List<SessionListListener> mSessionListListeners = new CopyOnWriteArrayList<SessionListListener>();
-
     public ImsServiceCallTracker(Context context,CommandsInterface ci, PendingIntent intent, int id, ImsServiceImpl service){
         mContext = context;
         mCi = ci;
@@ -189,7 +188,14 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
 
         return mHandler.obtainMessage(what);
     }
-
+    /* SPRD: add for bug525777 @{ */
+    public void
+    pollCallsAfterOperationComplete() {
+        mNeedsPoll = true;
+        mPendingOperations ++;
+        operationComplete();
+    }
+    /* @} */
     private void
     operationComplete() {
         mPendingOperations--;
@@ -237,19 +243,25 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             pollCallsAfterDelay();
             return;
         }
+
         for (int i = 0; imsDcList!= null && i < imsDcList.size(); i++) {
             ImsCallSessionImpl callSession = null;
             ImsDriverCall imsDc = imsDcList.get(i);
-            if (mPendingSessionList != null) {
-                synchronized(mPendingSessionList) {
-                    for (Iterator<ImsCallSessionImpl> it = mPendingSessionList.iterator();it.hasNext();) {
-                        ImsCallSessionImpl session = it.next();
-                        if (imsDc.state == ImsDriverCall.State.DIALING) {
-                            Log.d(TAG, "PendingSession found, index:"+imsDc.index+" session:" + session);
-                            addSessionToList(imsDc.index, session);
-                            it.remove();
-                        }
+            synchronized(mPendingSessionList) {
+                //SPRD: add for bug525777
+                int index = -1;
+                for(int j=0;j<mPendingSessionList.size();j++){
+                    ImsCallSessionImpl session = mPendingSessionList.get(j);
+                    if (imsDc.state == ImsDriverCall.State.DIALING) {
+                        Log.d(TAG, "PendingSession found, index:"+j+" session:" + session);
+                        addSessionToList(imsDc.index, session);
+                        index = j;
+                        break;
                     }
+                }
+                if(index != -1){
+                    Log.d(TAG, "PendingSession remove, index:"+index);
+                    mPendingSessionList.remove(index);
                 }
             }
             synchronized(mSessionList) {
@@ -318,13 +330,19 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             ImsDriverCall imsDc = imsDcList.get(i);
             if (mPendingSessionList != null) {
                 synchronized(mPendingSessionList) {
-                    for (Iterator<ImsCallSessionImpl> it = mPendingSessionList.iterator();it.hasNext();) {
-                        ImsCallSessionImpl session = it.next();
+                    int index = -1;
+                    for(int j=0;j<mPendingSessionList.size();j++){
+                        ImsCallSessionImpl session = mPendingSessionList.get(j);
                         if (imsDc.state == ImsDriverCall.State.DIALING) {
-                            Log.d(TAG, "PendingSession found, index:"+imsDc.index+" session:" + session);
+                            Log.d(TAG, "PendingSession found, index:"+j+" session:" + session);
                             addSessionToList(imsDc.index, session);
-                            it.remove();
+                            index = j;
+                            break;
                         }
+                    }
+                    if(index != -1){
+                        Log.d(TAG, "PendingSession remove, index:"+index);
+                        mPendingSessionList.remove(index);
                     }
                 }
             }
@@ -351,6 +369,18 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     }
 
     public void removeInvalidSessionFromList(Map <String, ImsDriverCall> validDriverCall) {
+        /* SPRD: add for bug525777 @{ */
+        synchronized(mPendingSessionList) {
+            if(mPendingSessionList.size() >0){
+                for(int i=0;i<mPendingSessionList.size();i++){
+                    ImsCallSessionImpl session = mPendingSessionList.get(i);
+                    Log.d(TAG, "remove Invalid Pending Session, index:"+i+" session:" + session);
+                    session.notifySessionDisconnected();
+                    notifySessionDisonnected(session);
+                }
+                mPendingSessionList.clear();
+            }
+        }/* @} */
         synchronized(mSessionList) {
             for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it =
                     mSessionList.entrySet().iterator(); it.hasNext();) {
@@ -367,14 +397,19 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     }
 
     public void removeDisconncetedSessionFromList(ImsCallSessionImpl session) {
+        //SPRD: modify for bug525777
         synchronized(mPendingSessionList) {
-            for (Iterator<ImsCallSessionImpl> it = mPendingSessionList.iterator();it.hasNext();) {
-                ImsCallSessionImpl s = it.next();
-                if (s == session) {
-                    Log.d(TAG, "DisconncetedSession: " + session);
-                    it.remove();
+            int index = -1;
+            for(int i=0;i<mPendingSessionList.size();i++){
+                ImsCallSessionImpl s = mPendingSessionList.get(i);
+                if(s == session){
+                    Log.d(TAG, "remove disconnected Pending Session, index:"+i+" session:" + session);
                     notifySessionDisonnected(s);
+                    index = i;
                 }
+            }
+            if(index != -1){
+                mPendingSessionList.remove(index);
             }
         }
         synchronized(mSessionList) {
