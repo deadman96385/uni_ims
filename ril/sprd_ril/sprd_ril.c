@@ -13121,7 +13121,6 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
     }
 #endif
     else if (strStartsWith(s, "^DSCI:")) {
-
         if (isVoLteEnable()) {
 
             RIL_VideoPhone_DSCI *response = NULL;
@@ -14088,6 +14087,7 @@ mainLoop(void *param)
                 RILLOGE("Invalid tty device");
                 exit(-1);
             }
+
             strcpy(descriptions[i].ttyName , str);
 
             /* open TTY device, and attach it to channel */
