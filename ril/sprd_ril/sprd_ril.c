@@ -9400,9 +9400,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         case RIL_REQUEST_OEM_HOOK_STRINGS:
             {
-                char ** funcID = (char **) data;
+                int len = strlen(((char **)data)[0]) + 1;
+                char *funcID = (char *)malloc(sizeof(char) * len);
+                memcpy(funcID, ((char **)data)[0], len);
                 char *ptr;
-                ptr = strtok(*funcID, ",");
+                ptr = strtok(funcID, ",");
                 int FUNCID = atoi(ptr);
                 switch (FUNCID) {
                     case OEM_FUNCTION_ID_TRAFFICCLASS :
@@ -9445,6 +9447,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                         break;
                     }
                 }
+                free(funcID);
                 break;
             }
 
