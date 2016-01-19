@@ -9812,8 +9812,20 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     if (err >= 0) {
 #if defined (RIL_SPRD_EXTENSION)
                         err = at_tok_nextstr(&line, &sc_line);
-                        RIL_onRequestComplete(t, RIL_E_SUCCESS, sc_line,
-                                strlen(sc_line)+1);
+                        char digit[64], num[64], pline[64];
+                        char *endptr = NULL;
+                        int i, value;
+                        memset(digit, 0, sizeof(digit));
+                        memset(num, 0, sizeof(num));
+                        memset(pline, 0, sizeof(pline));
+                        for (i = 0; i < strlen(sc_line) / 2; i++) {
+                            memcpy(pline, sc_line + i * 2, 2);
+                            value = strtol(pline, &endptr, 16);
+                            snprintf(digit, sizeof(digit), "%c", value);
+                            strcat(num, digit);
+                        }
+                        RIL_onRequestComplete(t, RIL_E_SUCCESS, num,
+                                strlen(num) + 1);
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
                         line++;
                         for ( i = 0; i < strlen(line); i++ )
@@ -9872,29 +9884,25 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             {
                 char *cmd;
                 int ret;
-#if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
                 char str_temp[50] = {0};
                 char *cp;
                 unsigned int i;
-#endif
+
                 p_response = NULL;
                 RILLOGD("[sms]RIL_REQUEST_SET_SMSC_ADDRESS (%s)", (char*)(data));
-#if defined (RIL_SPRD_EXTENSION)
-                ret = asprintf(&cmd, "AT+CSCA=\"%s\"", (char*)(data));
-#elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
+
                 cp = str_temp;
                 for(i = 0 ; i< strlen((char*)data); i++)
                 {
                     if( *((char*)data + i) != '\"' && *((char*)data+i) != ',' && *((char*)data+i) != '\0'){
                         cp += sprintf(cp,"%X",*((char*)data+i));
-                    }
-                    else if( *((char*)data+i) == ','){
+                    } else if( *((char*)data+i) == ','){
                         break;
                     }
                 }
 
                 ret = asprintf(&cmd, "AT+CSCA=\"%s\"", str_temp);
-#endif
+
                 if(ret < 0) {
                     RILLOGE("Failed to allocate memory");
                     cmd = NULL;
