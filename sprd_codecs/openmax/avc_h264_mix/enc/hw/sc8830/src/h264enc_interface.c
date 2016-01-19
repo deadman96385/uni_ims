@@ -576,6 +576,13 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
         /* ------------------------ Create slice header  ----------------------- */
         H264Enc_slice_init(img_ptr, i_nal_type, i_slice_type, i_global_qp );
 
+        if(0 == img_ptr->sh.i_first_mb) {
+            if(ARM_VSP_RST((VSPObject *)vo)<0)
+            {
+                return MMDEC_HW_ERROR;
+            }
+        }
+
         ret = H264Enc_InitVSP(vo);
         if (ret != MMENC_OK)
         {
