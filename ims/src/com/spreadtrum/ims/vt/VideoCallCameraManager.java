@@ -344,6 +344,9 @@ public class VideoCallCameraManager {
                         Log.i(TAG, "mVideoCallEngine.mLocalSurface is null " + (mVideoCallEngine.mLocalSurface == null)
                                 + mVideoCallEngine.mLocalSurface);
                         //SPRD:add stopPreview for bug523233
+                        if (null != mVideoCallEngine) {
+                            mVideoCallEngine.setImsCamera(null);
+                        }
                         mCamera.stopPreview();
                         mCamera.setPreviewSurface(mVideoCallEngine.mLocalSurface);
                         mCamera.startPreview();
@@ -392,6 +395,9 @@ public class VideoCallCameraManager {
                         Log.i(TAG, "mVideoCallEngine.mLocalSurface is null " + (mVideoCallEngine.mLocalSurface == null)
                                 + mVideoCallEngine.mLocalSurface);
                         //SPRD:add stopPreview for bug523233
+                        if (null != mVideoCallEngine) {
+                            mVideoCallEngine.setImsCamera(null);
+                        }
                         mCamera.stopPreview();
                         mCamera.setPreviewSurface(mVideoCallEngine.mLocalSurface);
                         mCamera.startPreview();
