@@ -146,7 +146,6 @@ int s_testmode = 0;
 static int allow_data = 0;
 int  g_maybe_addcall = 0;
 /** SPRD: Bug 503887 add ISIM for volte . @{*/
-int g_ImsISIM = -1;
 int g_ImsConn = -1;
 /** }@ */
 
@@ -6285,12 +6284,7 @@ static void requestInitISIM(int channelID, void*  data, size_t  datalen, RIL_Tok
         RILLOGE("requestInitISIM confuri = \"%s\"", strings[0]);
         snprintf(cmd, sizeof(cmd), "AT+CONFURI=0,\"%s\"", strings[0]);
         err = at_send_command(ATch_type[channelID], cmd , NULL);
-        RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(int));
-        g_ImsISIM = 1;
-        if(g_ImsConn == 1)
-        {
-            at_send_command(ATch_type[channelID], "AT+IMSEN=1", NULL);
-        }
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, &g_ImsConn, sizeof(int));
     } else {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     }
@@ -11271,7 +11265,6 @@ void setRadioState(int channelID, RIL_RadioState newState)
 
     /** SPRD: Bug 503887 add ISIM for volte . @{*/
     if(newState == RADIO_STATE_OFF || newState == RADIO_STATE_UNAVAILABLE) {
-        g_ImsISIM = -1;
        g_ImsConn = -1;
     }
     /** }@ */
@@ -12425,9 +12418,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RILLOGD("onUnsolicited(), " "CONN:, cid: %d, active: %d", cid, active);
         if (cid == 11) {
             g_ImsConn = active;
-            if(active == 1 && g_ImsISIM == 1) {
-                RIL_requestTimedCallback(onConn, NULL, NULL);
-            }
+            RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONS_IMS_CONN_ENABLE, (void *)&g_ImsConn, sizeof(int));
         }
     }
 	else if (strStartsWith(s,"^CEND:")) {

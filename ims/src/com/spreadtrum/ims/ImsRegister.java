@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
+import android.database.ContentObserver;
 import android.os.Message;
 import android.os.Handler;
 import com.android.internal.telephony.Phone;
@@ -25,6 +26,7 @@ import com.android.internal.telephony.IccCardConstants;
 import android.telephony.SubscriptionManager;
 import android.provider.Settings;
 import android.telephony.VoLteServiceState;
+import com.android.ims.ImsManager;
 
 public class ImsRegister {
     private static final String TAG = "ImsRegister";
@@ -35,13 +37,16 @@ public class ImsRegister {
     private GSMPhone mPhone;
 
     private boolean mInitISIM;
+    private boolean mConnIMSEN;
     private TelephonyManager mTelephonyManager;
     private int mPhoneId;
     private BaseHandler mHandler;
+    private ContentObserver mEnhancedLTEObserver;
     private boolean mCurrentImsRegistered;
 
     protected static final int EVENT_RADIO_STATE_CHANGED               = 105;
     protected static final int EVENT_INIT_ISIM_DONE                    = 106;
+    protected static final int EVENT_CONN_IMS_ENABLE                   = 107;
 
     public ImsRegister(GSMPhone phone , Context context, CommandsInterface ci) {
         mPhone = phone;
@@ -50,11 +55,28 @@ public class ImsRegister {
         mTelephonyManager = TelephonyManager.from(mContext);
         mPhoneId = mPhone.getPhoneId();
         mHandler = new BaseHandler(mContext.getMainLooper());
+        mEnhancedLTEObserver = new ContentObserver(mHandler) {
+            @Override
+            public void onChange(boolean selfChange) {
+                boolean isEnhanced4gLteMode = ImsManager.isEnhanced4gLteModeSettingEnabledByUser(mContext);
+                if(mPhoneId != mTelephonyManager.getPrimaryCard()) return;
+                if (DBG) Log.i(TAG,"phone" + mPhoneId + " Enhanced4gLteMode changed " + isEnhanced4gLteMode);
+                if(!isEnhanced4gLteMode) {
+                    mCi.disableIms(null);
+                } else if(mInitISIM && mConnIMSEN) {
+                    mCi.enableIms(null);
+                }
+            }
+        };
 
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
         mContext.registerReceiver(mReceiver, intentFilter);
         mCi.registerForRadioStateChanged(mHandler, EVENT_RADIO_STATE_CHANGED, null);
+        mCi.registerForConnImsen(mHandler, EVENT_CONN_IMS_ENABLE, null);
+        mContext.getContentResolver().registerContentObserver(
+                Settings.Global.getUriFor(android.provider.Settings.Global.ENHANCED_4G_MODE_ENABLED),
+                true, mEnhancedLTEObserver);
     }
 
     private class BaseHandler extends Handler {
@@ -72,6 +94,7 @@ public class ImsRegister {
                         initISIM();
                     } else {
                         mInitISIM = false;
+                        mConnIMSEN = false;
                         mCurrentImsRegistered = false;
                         boolean needNotifyRegisterState = false;
                         if(mPhone.getPhoneId() == mTelephonyManager.getPrimaryCard()){
@@ -103,6 +126,22 @@ public class ImsRegister {
                         break;
                     }
                     mInitISIM = true;
+                    if(initResult[0] == 1) mConnIMSEN = true;
+                    if(mConnIMSEN && ImsManager.isEnhanced4gLteModeSettingEnabledByUser(mContext)) {
+                        mCi.enableIms(null);
+                    }
+                    break;
+                case EVENT_CONN_IMS_ENABLE:
+                    ar = (AsyncResult) msg.obj;
+                    if(ar.exception != null) break;
+                    int[] conn = (int[]) ar.result;
+                    Log.i(TAG, "EVENT_CONN_IMSEN : conn = "+conn[0]);
+                    if (conn[0] == 1) {
+                        mConnIMSEN = true;
+                        if (mInitISIM && ImsManager.isEnhanced4gLteModeSettingEnabledByUser(mContext)) {
+                            mCi.enableIms(null);
+                        }
+                    }
                     break;
                 default:
                     break;

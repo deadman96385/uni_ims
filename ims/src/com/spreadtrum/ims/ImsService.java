@@ -203,7 +203,7 @@ public class ImsService extends Service {
             if (service == null) {
                 Log.e (TAG, "Invalid phoneId " + phoneId);
             }
-            service.turnOnIms();
+            //service.turnOnIms();
         }
 
         /**
@@ -216,7 +216,7 @@ public class ImsService extends Service {
             if (service == null) {
                 Log.e (TAG, "Invalid phoneId " + phoneId);
             }
-            service.turnOffIms();
+            //service.turnOffIms();
         }
 
         /**
