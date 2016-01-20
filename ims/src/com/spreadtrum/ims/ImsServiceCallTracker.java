@@ -41,6 +41,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final int EVENT_OPERATION_COMPLETE            = 3;
     private static final int EVENT_POLL_CALLS_RESULT             = 4;
     private static final int EVENT_IMS_CALL_STATE_CHANGED        = 5;
+    private static final int EVENT_POLL_CURRENT_CALLS            = 6;
+    private static final int EVENT_POLL_CURRENT_CALLS_RESULT     = 7;
 
     private PendingIntent mIncomingCallIntent;
     private CommandsInterface mCi;
@@ -65,6 +67,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         mImsServiceImpl = service;
         mHandler = new ImsHandler(mContext.getMainLooper());
         mCi.registerForImsCallStateChanged(mHandler, EVENT_IMS_CALL_STATE_CHANGED, null);
+        mCi.registerForCallStateChanged(mHandler, EVENT_CALL_STATE_CHANGE, null);
     }
 
     /**
@@ -79,6 +82,10 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             AsyncResult ar = (AsyncResult) msg.obj;
             Log.i(TAG, "handleMessage: "+msg.what);
             switch (msg.what) {
+                case EVENT_CALL_STATE_CHANGE:
+                    removeMessages(EVENT_POLL_CURRENT_CALLS);
+                    sendEmptyMessageDelayed(EVENT_POLL_CURRENT_CALLS,500);
+                    break;
                 case EVENT_GET_CURRENT_CALLS:
                 case EVENT_IMS_CALL_STATE_CHANGED:
                     pollCallsWhenSafe();
@@ -94,6 +101,16 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                         handlePollCalls((AsyncResult)msg.obj);
                     }
                     break;
+                case EVENT_POLL_CURRENT_CALLS:
+                    pollCurrentCallsWhenSafe();
+                    break;
+                case EVENT_POLL_CURRENT_CALLS_RESULT:
+                    if (msg == mLastRelevantPoll) {
+                        Log.i(TAG, "handle EVENT_POLL_CURRENT_CALLS_RESULT: set needsPoll=F");
+                        mNeedsPoll = false;
+                        mLastRelevantPoll = null;
+                        updateCurrentCalls((AsyncResult)msg.obj);
+                    }
                 default:
                     break;
             }
@@ -146,6 +163,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     }
 
     protected void pollCallsWhenSafe() {
+        mHandler.removeMessages(EVENT_POLL_CURRENT_CALLS);
         mNeedsPoll = true;
 
         if (checkNoOperationsPending()) {
@@ -180,6 +198,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                 mPendingOperations + ", needsPoll=" + mNeedsPoll);
 
         if (mPendingOperations == 0 && mNeedsPoll) {
+            mHandler.removeMessages(EVENT_POLL_CURRENT_CALLS);
             mLastRelevantPoll = mHandler.obtainMessage(EVENT_POLL_CALLS_RESULT);
             mCi.getImsCurrentCalls  (mLastRelevantPoll);
         } else if (mPendingOperations < 0) {
@@ -192,7 +211,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     protected void pollCallsAfterDelay() {
         Message msg = mHandler.obtainMessage();
 
-        msg.what = EVENT_CALL_STATE_CHANGE;
+        msg.what = EVENT_IMS_CALL_STATE_CHANGED;
         mHandler.sendMessageDelayed(msg, POLL_DELAY_MSEC);
     }
 
@@ -261,6 +280,60 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                 if (shouldNotify) {
                     sendNewSessionIntent(callSession, imsDc.index, true, imsDc.state, imsDc.number);
                 }
+            }
+
+            if (imsDc.state != ImsDriverCall.State.DISCONNECTED ) {
+                validDriverCall.put(Integer.toString(imsDc.index), imsDc);
+            }
+        }
+        removeInvalidSessionFromList(validDriverCall);
+    }
+
+    protected void pollCurrentCallsWhenSafe() {
+        mNeedsPoll = true;
+
+        if (checkNoOperationsPending()) {
+            mLastRelevantPoll = mHandler.obtainMessage(EVENT_POLL_CURRENT_CALLS_RESULT);
+            mCi.getImsCurrentCalls  (mLastRelevantPoll);
+        }
+    }
+
+    public void updateCurrentCalls(AsyncResult ar){
+        ArrayList<ImsDriverCall> imsDcList;
+        Map <String, ImsDriverCall> validDriverCall = new HashMap<String, ImsDriverCall>();
+        if (ar.exception == null) {
+            imsDcList = (ArrayList<ImsDriverCall>)ar.result;
+        } else if (isCommandExceptionRadioNotAvailable(ar.exception)) {
+            // just a dummy empty ArrayList to cause the loop
+            // to hang up all the calls
+            imsDcList = new ArrayList<ImsDriverCall>();
+        } else {
+            // Radio probably wasn't ready--try again in a bit
+            // But don't keep polling if the channel is closed
+            Log.w(TAG, "updateCurrentCalls error: " + ar.exception);
+            return;
+        }
+        for (int i = 0; imsDcList!= null && i < imsDcList.size(); i++) {
+            ImsCallSessionImpl callSession = null;
+            ImsDriverCall imsDc = imsDcList.get(i);
+            if (mPendingSessionList != null) {
+                synchronized(mPendingSessionList) {
+                    for (Iterator<ImsCallSessionImpl> it = mPendingSessionList.iterator();it.hasNext();) {
+                        ImsCallSessionImpl session = it.next();
+                        if (imsDc.state == ImsDriverCall.State.DIALING) {
+                            Log.d(TAG, "PendingSession found, index:"+imsDc.index+" session:" + session);
+                            addSessionToList(imsDc.index, session);
+                            it.remove();
+                        }
+                    }
+                }
+            }
+            synchronized(mSessionList) {
+                callSession = mSessionList.get(Integer.toString(imsDc.index));
+            }
+            if (callSession != null){
+                // This is a existing call
+                callSession.updateFromDc(imsDc);
             }
 
             if (imsDc.state != ImsDriverCall.State.DISCONNECTED ) {
