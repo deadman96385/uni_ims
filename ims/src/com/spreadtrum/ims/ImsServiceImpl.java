@@ -316,7 +316,7 @@ public class ImsServiceImpl {
     private void onRecordsLoaded() {
         if (DBG) Log.i(TAG,"onRecordsLoaded: createAllApnList");
         createAllApnList();
-        if(ImsManager.isVolteProvisionedOnDevice(mPhone.getContext())){
+        if(ImsManager.isVolteEnabledByPlatform(mPhone.getContext())){
             setInitialAttachIMSApn();
         }
     }
