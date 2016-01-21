@@ -35,12 +35,12 @@
 #define        MP3_DEC_PRE_FLAG	                    0x04
 #define        MP3_MIXED_BLOCK_FLAG               0x08
 #define  MP3_ERROR_NONE	        0x0000	/* no error */
-#define  MP3_ERROR_BUFLEN	        0x0001	/* input buffer too small (or EOF) */
+#define  MP3_ERROR_BUFLEN	        0x0100	/* input buffer too small (or EOF) */
 
 
 
 
-#define  MP3_ERROR_BUFPTR	        0x0002	/* invalid (null) buffer pointer */
+#define  MP3_ERROR_BUFPTR	        0x0100	/* invalid (null) buffer pointer */
   //MP3_ERROR_NOMEM	       = 0x0031,	/* not enough memory */
 #define  MP3_ERROR_LOSTSYNC	0x0101	/* lost synchronization */
 #define  MP3_ERROR_BADLAYER	0x0102	/* reserved header layer value */

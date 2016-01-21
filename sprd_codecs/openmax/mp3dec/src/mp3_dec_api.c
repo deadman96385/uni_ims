@@ -127,6 +127,7 @@ void MP3_ARM_DEC_DecodeFrame(
 	g_decoder->frame.xr[0]= (mp3_fixed_t *)output_frame_ptr->pcm_data_l_ptr;
 	g_decoder->frame.xr[1]= (mp3_fixed_t *)output_frame_ptr->pcm_data_r_ptr;
 
+	g_decoder->stream.error = MP3_ARM_DEC_ERROR_NONE;
 		
 	if (MP3_DEC_FrameDecode(frame_dec_buf_ptr->frame_buf_ptr, &g_decoder->frame, &g_decoder->stream) == 0)
 	{		
@@ -135,7 +136,7 @@ void MP3_ARM_DEC_DecodeFrame(
 	}
 	else 
 	{
-		*decode_result = MP3_ARM_DEC_ERROR_DECODING;
+		*decode_result = g_decoder->stream.error;
 		goto fail;
 	}
 	
