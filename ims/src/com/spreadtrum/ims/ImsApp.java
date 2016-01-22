@@ -4,6 +4,7 @@ import android.app.Application;
 import android.util.Log;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.os.UserHandle;
 
 
 public class ImsApp extends Application {
@@ -15,6 +16,9 @@ public class ImsApp extends Application {
         Log.i(TAG, "ImsApp Boot Successfully!");
         if(!ImsConfigImpl.isVolteEnabledBySystemProperties()){
             Log.w(TAG, "Could Not Start Ims Service because volte disabled by system properties!");
+            return;
+        }
+        if(UserHandle.myUserId() != UserHandle.USER_OWNER){
             return;
         }
         ComponentName comp = new ComponentName(this.getPackageName(),
