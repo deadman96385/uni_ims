@@ -393,6 +393,7 @@ static int sFD;     /* file desc of AT channel */
 static const struct timeval TIMEVAL_SIMPOLL = {1,0};
 const struct timeval TIMEVAL_CALLSTATEPOLL = {0,500000};
 static const struct timeval TIMEVAL_0 = {0,0};
+const struct timeval TIMEVAL_CSCALLSTATEPOLL = {0,50000};
 
 static int s_ims_registered  = 0;        // 0==unregistered
 static int s_ims_services    = 1;        // & 0x1 == sms over ims supported
@@ -4130,6 +4131,12 @@ void sendCallStateChanged(void *param)
             RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
             NULL, 0);
     }
+}
+
+void sendCSCallStateChanged(void *param)
+{
+    RILLOGI("sendCSCallStateChanged");
+    RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,NULL, 0);
 }
 
 void sendVideoCallStateChanged(void *param)
@@ -13536,6 +13543,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RILLOGD("onUnsolicited(),SRVCC status: %d", status);
         RIL_onUnsolicitedResponse(RIL_UNSOL_SRVCC_STATE_NOTIFY, &status,
                 sizeof(status));
+        RIL_requestTimedCallback (sendCSCallStateChanged, NULL, &TIMEVAL_CSCALLSTATEPOLL);
     }
     /* @} */
     /*SPRD: add for VoLTE to handle emergency number report */
