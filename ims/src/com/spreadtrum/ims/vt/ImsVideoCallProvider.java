@@ -14,6 +14,7 @@ import com.android.internal.telephony.CommandsInterface;
 import android.app.AlertDialog;
 import android.telecom.VideoProfile.CameraCapabilities;
 import android.telecom.Connection.VideoProvider;
+import android.os.PowerManager;
 
 public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallProvider {
     private static final String TAG = ImsVideoCallProvider.class.getSimpleName();
@@ -27,6 +28,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     private AlertDialog mVolteMediaUpdateDialog;
     private AlertDialog mVolteMediaDegradeDialog;
     private ImsCallSessionImplListner mImsCallSessionImplListner;
+    private PowerManager.WakeLock mPartialWakeLock;
 
     public ImsVideoCallProvider(ImsCallSessionImpl imsCallSessionImpl,CommandsInterface ci,Context context) {
         super();
@@ -37,6 +39,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         mCi = ci;
         mImsCallSessionImplListner = new ImsCallSessionImplListner();
         mImsCallSessionImpl.addListener(mImsCallSessionImplListner);
+        createWakeLock(mContext.getApplicationContext());
         if(mImsCallSessionImpl.mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT){
            onVTConnectionEstablished(mImsCallSessionImpl);
         }
@@ -49,10 +52,12 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
 
     public void onVTConnectionEstablished(ImsCallSessionImpl mImsCallSessionImpl){
         mHandler.obtainMessage(mVTManagerProxy.EVENT_ON_VT_ESTABLISH, mImsCallSessionImpl).sendToTarget();
+        acquireWakeLock();
     }
 
     public void onVTConnectionDisconnected(ImsCallSessionImpl mImsCallSessionImpl){
         mHandler.obtainMessage(mVTManagerProxy.EVENT_ON_VT_DISCONNECT, mImsCallSessionImpl).sendToTarget();
+        releaseWakeLock();
     }
     /**
      * Sets the camera to be used for video recording in a video call.
@@ -187,6 +192,27 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
 
     private void log(String string) {
         android.util.Log.i(TAG, string);
+    }
+
+    private void createWakeLock(Context context) {
+        PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+        mPartialWakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, TAG);
+
+    }
+
+    private void acquireWakeLock() {
+        log("acquireWakeLock");
+        mPartialWakeLock.acquire();
+    }
+
+    private void releaseWakeLock() {
+        log("releaseWakeLock : "+mPartialWakeLock.isHeld());
+        synchronized (mPartialWakeLock) {
+            if (mPartialWakeLock.isHeld()) {
+                log("releaseWakeLock");
+                mPartialWakeLock.release();
+            }
+        }
     }
 
     class ImsCallSessionImplListner implements ImsCallSessionImpl.Listener{
