@@ -129,6 +129,7 @@ struct commthread_data_t {
     RecordStream *p_rs;
     char *buffer;
     size_t buflen;
+    RIL_SOCKET_TYPE socket_type;
 };
 
 threadpool_t *threadpool_d;
@@ -143,9 +144,7 @@ static struct ril_event s_listen_event;
 static struct ril_event s_wake_timeout_event;
 static struct ril_event s_debug_event;
 
-
 static const struct timeval TIMEVAL_WAKE_TIMEOUT = {ANDROID_WAKE_LOCK_SECS,ANDROID_WAKE_LOCK_USECS};
-
 
 static pthread_mutex_t s_pendingRequestsMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t s_writeMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -178,6 +177,17 @@ static int s_sim_num;
 #if RILC_LOG
 char printBuf[PRINTBUF_SIZE];
 #endif
+
+static SocketListenParam s_rilSocketParam;
+/* OEM @{ */
+#define SOCKET_NAME_OEM "oem_socket1"
+#define SOCKET2_NAME_OEM "oem_socket2"
+
+static struct ril_event s_oemListenEvent;
+static struct ril_event s_oemCommandsEvent;
+static SocketListenParam s_oemSocketParam;
+static pthread_mutex_t s_oemWriteMutex;
+/* }@ */
 
 struct listnode
 {
@@ -498,7 +508,7 @@ issueLocalRequest(int request, void *data, int len) {
 
 
 static int
-processCommandBuffer(void *buffer, size_t buflen) {
+processCommandBuffer(void *buffer, size_t buflen, RIL_SOCKET_TYPE socket_type) {
     Parcel p;
     status_t status;
     int32_t request;
@@ -521,7 +531,12 @@ processCommandBuffer(void *buffer, size_t buflen) {
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 #if defined (RIL_SPRD_EXTENSION)
         || (request > RIL_REQUEST_LAST && request < RIL_SPRD_REQUEST_BASE)
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+        || (request > RIL_SPRD_REQUEST_LAST && request < RIL_RADIOINTERACTOR_REQUEST_BASE)
+        || (request > RIL_RADIOINTERACTOR_REQUEST_LAST && request < RIL_OEM_REQUEST_BASE)
+#else
         || (request > RIL_SPRD_REQUEST_LAST && request < RIL_OEM_REQUEST_BASE)
+#endif
 #else
         || (request > RIL_REQUEST_LAST && request < RIL_OEM_REQUEST_BASE)
 #endif
@@ -529,7 +544,12 @@ processCommandBuffer(void *buffer, size_t buflen) {
 #else
 #if defined (RIL_SPRD_EXTENSION)
         || (request > RIL_REQUEST_LAST && request < RIL_SPRD_REQUEST_BASE)
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+        || (request > RIL_SPRD_REQUEST_LAST && request < RIL_RADIOINTERACTOR_REQUEST_BASE)
+        || (request > RIL_RADIOINTERACTOR_REQUEST_LAST)
+#else
         || (request > RIL_SPRD_REQUEST_LAST)
+#endif
 #else
         || request >= (int32_t)NUM_ELEMS(s_commands)
 #endif
@@ -541,15 +561,29 @@ processCommandBuffer(void *buffer, size_t buflen) {
     }
 
 #if defined (RIL_SPRD_EXTENSION)
-    if(request > RIL_SPRD_REQUEST_BASE && request <= RIL_SPRD_REQUEST_LAST)
+    if(request > RIL_SPRD_REQUEST_BASE && request <= RIL_SPRD_REQUEST_LAST) {
         request = request - RIL_SPRD_REQUEST_BASE + RIL_REQUEST_LAST;
+    }
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+    else if (request > RIL_RADIOINTERACTOR_REQUEST_BASE &&
+            request <= RIL_RADIOINTERACTOR_REQUEST_LAST) {
+        request = request - RIL_RADIOINTERACTOR_REQUEST_BASE +
+                RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE;
+    }
+#endif
 #endif
 
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     if(request > RIL_OEM_REQUEST_BASE && request <= RIL_OEM_REQUEST_LAST)
 #if defined (RIL_SPRD_EXTENSION)
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+        request = request - RIL_OEM_REQUEST_BASE + RIL_REQUEST_LAST
+                + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE
+                + RIL_RADIOINTERACTOR_REQUEST_LAST - RIL_RADIOINTERACTOR_REQUEST_BASE;
+#else
         request = request - RIL_OEM_REQUEST_BASE + RIL_REQUEST_LAST
                              + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE;
+#endif
 #else
         request = request - RIL_OEM_REQUEST_BASE + RIL_REQUEST_LAST;
 #endif
@@ -564,6 +598,7 @@ processCommandBuffer(void *buffer, size_t buflen) {
     assert (ret == 0);
 
     pRI->p_next = s_pendingRequests;
+    pRI->socket_type = socket_type;
     s_pendingRequests = pRI;
 
     ret = pthread_mutex_unlock(&s_pendingRequestsMutex);
@@ -2611,12 +2646,17 @@ blockingWrite(int fd, const void *buffer, size_t len) {
 }
 
 static int
-sendResponseRaw (const void *data, size_t dataSize) {
-    int fd = s_fdCommand;
+sendResponseRaw (const void *data, size_t dataSize, RIL_SOCKET_TYPE socket_type) {
+    int fd = s_rilSocketParam.fdCommand;
     int ret;
     uint32_t header;
+    pthread_mutex_t *writeMutex = &s_writeMutex;
 
-    if (s_fdCommand < 0) {
+    if (socket_type == RIL_OEM_SOCKET) {
+        fd = s_oemSocketParam.fdCommand;
+        writeMutex = &s_oemWriteMutex;
+    }
+    if (fd < 0) {
         return -1;
     }
 
@@ -2627,7 +2667,7 @@ sendResponseRaw (const void *data, size_t dataSize) {
         return -1;
     }
 
-    pthread_mutex_lock(&s_writeMutex);
+    pthread_mutex_lock(writeMutex);
 
     header = htonl(dataSize);
 
@@ -2647,15 +2687,15 @@ sendResponseRaw (const void *data, size_t dataSize) {
         return ret;
     }
 
-    pthread_mutex_unlock(&s_writeMutex);
+    pthread_mutex_unlock(writeMutex);
 
     return 0;
 }
 
 static int
-sendResponse (Parcel &p) {
+sendResponse (Parcel &p, RIL_SOCKET_TYPE socket_type) {
     printResponse;
-    return sendResponseRaw(p.data(), p.dataSize());
+    return sendResponseRaw(p.data(), p.dataSize(), socket_type);
 }
 
 /** response is an int* pointing to an array of ints*/
@@ -4801,11 +4841,10 @@ void CommandThread(void *arg) {
     pid_t tid;
     tid = gettid();
     commthread_data_t *user_data = (commthread_data_t *)arg;
-    processCommandBuffer(user_data->buffer, user_data->buflen);
+    processCommandBuffer(user_data->buffer, user_data->buflen, user_data->socket_type);
     RILLOGI("-->CommandThread [%d] free one command\n",tid);
     free(user_data->buffer);
     free(user_data);
-
 }
 
 void list_init(struct listnode *node)
@@ -4846,7 +4885,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
     struct listnode * cmd_item = NULL;
     struct listnode * cmd = NULL;
     int ret = 0;
-    RecordStream *p_rs= (RecordStream *)param;
+    RecordStream *p_rs;
     Parcel p;
     status_t status;
     int32_t request;
@@ -4854,7 +4893,10 @@ static void processCommandsCallback(int fd, short flags, void *param) {
     CommandInfo *pCI;
     char prop[10];
 
-    RILLOGI("enter processCommandsCallback\n");
+    SocketListenParam *p_info = (SocketListenParam *)param;
+    p_rs = p_info->p_rs;
+
+    RILLOGI("enter processCommandsCallback, socket type = %d\n", p_info->type);
 
     assert(fd == s_fdCommand);
 
@@ -4895,6 +4937,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                 exit(-1);
             }
             user_data->buflen = recordlen;
+            user_data->socket_type = p_info->type;
 
             memcpy(user_data->buffer,p_record,recordlen);
 
@@ -4915,7 +4958,12 @@ static void processCommandsCallback(int fd, short flags, void *param) {
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 #if defined (RIL_SPRD_EXTENSION)
                 || (request > RIL_REQUEST_LAST && request < RIL_SPRD_REQUEST_BASE)
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+                || (request > RIL_SPRD_REQUEST_LAST && request < RIL_RADIOINTERACTOR_REQUEST_BASE)
+                || (request > RIL_RADIOINTERACTOR_REQUEST_LAST && request < RIL_OEM_REQUEST_BASE)
+#else
                 || (request > RIL_SPRD_REQUEST_LAST && request < RIL_OEM_REQUEST_BASE)
+#endif
 #else
                 || (request > RIL_REQUEST_LAST && request < RIL_OEM_REQUEST_BASE)
 #endif
@@ -4923,7 +4971,12 @@ static void processCommandsCallback(int fd, short flags, void *param) {
 #else
 #if defined (RIL_SPRD_EXTENSION)
                 || (request > RIL_REQUEST_LAST && request < RIL_SPRD_REQUEST_BASE)
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+                || (request > RIL_SPRD_REQUEST_LAST && request < RIL_RADIOINTERACTOR_REQUEST_BASE)
+                || (request > RIL_RADIOINTERACTOR_REQUEST_LAST)
+#else
                 || (request > RIL_SPRD_REQUEST_LAST)
+#endif
 #else
                 || request >= (int32_t)NUM_ELEMS(s_commands)
 #endif
@@ -4937,14 +4990,28 @@ static void processCommandsCallback(int fd, short flags, void *param) {
             }
 
 #if defined (RIL_SPRD_EXTENSION)
-            if(request > RIL_SPRD_REQUEST_BASE && request <= RIL_SPRD_REQUEST_LAST)
+            if(request > RIL_SPRD_REQUEST_BASE && request <= RIL_SPRD_REQUEST_LAST) {
                 request = request - RIL_SPRD_REQUEST_BASE + RIL_REQUEST_LAST;
+            }
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+            else if (request > RIL_RADIOINTERACTOR_REQUEST_BASE &&
+                    request <= RIL_RADIOINTERACTOR_REQUEST_LAST) {
+                request = request - RIL_RADIOINTERACTOR_REQUEST_BASE +
+                        RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE;
+            }
+#endif
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
             if(request > RIL_OEM_REQUEST_BASE && request <= RIL_OEM_REQUEST_LAST)
 #if defined (RIL_SPRD_EXTENSION)
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+                request = request - RIL_OEM_REQUEST_BASE + RIL_REQUEST_LAST
+                        + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE
+                        + RIL_RADIOINTERACTOR_REQUEST_LAST - RIL_RADIOINTERACTOR_REQUEST_BASE;
+#else
                 request = request - RIL_OEM_REQUEST_BASE + RIL_REQUEST_LAST
                                      + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE;
+#endif
 #else
                 request = request - RIL_OEM_REQUEST_BASE + RIL_REQUEST_LAST;
 #endif
@@ -5113,7 +5180,7 @@ slowDispatch(void *param) {
         for (cmd_item = (&slow_cmd_list)->next; cmd_item != (&slow_cmd_list);
                 cmd_item = (&slow_cmd_list)->next) {
             processCommandBuffer(cmd_item->user_data->buffer,
-                cmd_item->user_data->buflen);
+                cmd_item->user_data->buflen, cmd_item->user_data->socket_type);
             RILLOGI("-->slowDispatch [%d] free one command\n",tid);
             list_remove(cmd_item);  /* remove list node first, then free it */
             free(cmd_item->user_data->buffer);
@@ -5145,7 +5212,7 @@ static void * normalDispatch(void *param) {
                 RILLOGI("-->Normal Dispatch sim list\n",tid);
             }
             processCommandBuffer(cmd_item->user_data->buffer,
-                cmd_item->user_data->buflen);
+                cmd_item->user_data->buflen, cmd_item->user_data->socket_type);
             RILLOGI("-->Normal Dispatch [%d] free one command\n",tid);
             list_remove(cmd_item);  /* remove list node first, then free it */
             free(cmd_item->user_data->buffer);
@@ -5172,7 +5239,7 @@ static void onNewCommandConnect() {
 
     // Send last NITZ time data, in case it was missed
     if (s_lastNITZTimeData != NULL) {
-        sendResponseRaw(s_lastNITZTimeData, s_lastNITZTimeDataSize);
+        sendResponseRaw(s_lastNITZTimeData, s_lastNITZTimeDataSize, RIL_TELEPHONY_SOCKET);
 
         free(s_lastNITZTimeData);
         s_lastNITZTimeData = NULL;
@@ -5197,6 +5264,8 @@ static void listenCallback (int fd, short flags, void *param) {
     int err;
     int is_phone_socket;
     RecordStream *p_rs;
+
+    SocketListenParam *p_info = (SocketListenParam *)param;
 
     struct sockaddr_un peeraddr;
     socklen_t socklen = sizeof (peeraddr);
@@ -5267,10 +5336,12 @@ static void listenCallback (int fd, short flags, void *param) {
 
     RILLOGI("libril: new connection");
 
+    p_info->fdCommand = s_fdCommand;
     p_rs = record_stream_new(s_fdCommand, MAX_COMMAND_BYTES);
+    p_info->p_rs = p_rs;
 
     ril_event_set (&s_commands_event, s_fdCommand, 1,
-            processCommandsCallback, p_rs);
+            processCommandsCallback, p_info);
 
     rilEventAddWakeup (&s_commands_event);
 
@@ -5550,6 +5621,76 @@ extern "C" void RIL_setcallbacks (const RIL_RadioFunctions *callbacks) {
     memcpy(&s_callbacks, callbacks, sizeof (RIL_RadioFunctions));
 }
 
+static void listenCallbackOEM(int fd, short flags, void *param) {
+    int ret;
+    int fdCommand;
+    RecordStream *p_rs;
+
+    SocketListenParam *p_info = (SocketListenParam *)param;
+
+    assert(fd == p_info->fdListen);
+
+    struct sockaddr_un peeraddr;
+    socklen_t socklen = sizeof(peeraddr);
+
+    fdCommand = accept(fd, (sockaddr *)&peeraddr, &socklen);
+
+    if (fdCommand < 0) {
+        RILLOGE("[ATCI] Error on accept() errno:%d", errno);
+        return;
+    }
+
+    ret = fcntl(fdCommand, F_SETFL, O_NONBLOCK);
+
+    if (ret < 0) {
+        RILLOGE("[ATCI] Error setting O_NONBLOCK errno:%d", errno);
+    }
+
+    RILLOGD("libril: new connection to oem_socket");
+
+    p_info->fdCommand = fdCommand;
+    p_rs = record_stream_new(p_info->fdCommand, MAX_COMMAND_BYTES);
+    p_info->p_rs = p_rs;
+
+    ril_event_set(p_info->commands_event, p_info->fdCommand, true,
+            p_info->processCommandsCallback, p_info);
+    rilEventAddWakeup(p_info->commands_event);
+}
+
+static void startListenOEM(RIL_SOCKET_ID socket_id, SocketListenParam *socket_listen_p) {
+    int fdListen = -1;
+    int ret;
+    char socket_name[20];
+
+    memset(socket_name, 0, sizeof(char) * 20);
+
+    snprintf(socket_name, sizeof(socket_name), "oem_socket%d", (socket_id + 1));
+
+    RILLOGD("Start to listen %s", socket_name);
+
+    fdListen = socket_local_server(socket_name,
+            ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+    if (fdListen < 0) {
+        RILLOGE("Failed to get socket %s", socket_name);
+        exit(-1);
+    }
+
+    ret = listen(fdListen, 4);
+
+    if (ret < 0) {
+        RILLOGE("Failed to listen on control socket '%d': %s",
+             fdListen, strerror(errno));
+        exit(-1);
+    }
+    socket_listen_p->fdListen = fdListen;
+
+    /* note: non-persistent so we can accept only one connection at a time */
+    ril_event_set(socket_listen_p->listen_event, fdListen, false,
+                listenCallbackOEM, socket_listen_p);
+
+    rilEventAddWakeup(socket_listen_p->listen_event);
+}
+
 extern "C" void
 RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
     int ret;
@@ -5631,7 +5772,7 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
 
     // Little self-check
 
-    for (int i = 0; i <= RIL_REQUEST_LAST; i++) {         
+    for (int i = 0; i <= RIL_REQUEST_LAST; i++) {
         assert(i == s_commands[i].requestNumber);
     }
 
@@ -5641,11 +5782,23 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
         assert(i - RIL_REQUEST_LAST ==
                         s_commands[i].requestNumber - RIL_SPRD_REQUEST_BASE);
     }
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+    count = RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE;
+    for (int i = count + 1; i <= count + RIL_RADIOINTERACTOR_REQUEST_LAST -
+                RIL_RADIOINTERACTOR_REQUEST_BASE; i++) {
+        assert(i - count == s_commands[i].requestNumber - RIL_RADIOINTERACTOR_REQUEST_BASE);
+    }
+#endif
 #endif
 
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 #if defined (RIL_SPRD_EXTENSION)
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+    count = RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE +
+            RIL_RADIOINTERACTOR_REQUEST_LAST - RIL_RADIOINTERACTOR_REQUEST_BASE;
+#else
     count = RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE;
+#endif
 #else
     count = RIL_REQUEST_LAST;
 #endif
@@ -5665,12 +5818,28 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
         assert(i - count - 1 == s_unsolResponses[i].requestNumber
                         - RIL_SPRD_UNSOL_RESPONSE_BASE);
     }
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+    count = RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE +
+            RIL_SPRD_UNSOL_RESPONSE_LAST - RIL_SPRD_UNSOL_RESPONSE_BASE;
+    for (int i = count + 1; i <= count + RIL_RADIOINTERACTOR_UNSOL_RESPONSE_LAST
+              - RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE + 1; i++) {
+        assert(i - count - 1 == s_unsolResponses[i].requestNumber
+                        - RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE);
+    }
+#endif
 #endif
 
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 #if defined (RIL_SPRD_EXTENSION)
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
     count = RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE
-                      + RIL_SPRD_UNSOL_RESPONSE_LAST - RIL_SPRD_UNSOL_RESPONSE_BASE + 1;
+            + RIL_SPRD_UNSOL_RESPONSE_LAST - RIL_SPRD_UNSOL_RESPONSE_BASE
+            + RIL_RADIOINTERACTOR_UNSOL_RESPONSE_LAST
+            - RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE + 1;
+#else
+    count = RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE
+            + RIL_SPRD_UNSOL_RESPONSE_LAST - RIL_SPRD_UNSOL_RESPONSE_BASE + 1;
+#endif
 #else
     count = RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE;
 #endif
@@ -5758,10 +5927,21 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
     }
 #endif
 
+    s_rilSocketParam = {
+            (RIL_SOCKET_ID)(s_sim_num),  /* socket_id */
+            s_fdListen,                  /* fdListen */
+            -1,                          /* fdCommand */
+            PHONE_PROCESS,               /* processName */
+            &s_commands_event,           /* commands_event */
+            &s_listen_event,             /* listen_event */
+            processCommandsCallback,     /* processCommandsCallback */
+            NULL,                        /* p_rs */
+            RIL_TELEPHONY_SOCKET         /* RIL_SOCKET_TYPE */
+            };
 
     /* note: non-persistent so we can accept only one connection at a time */
     ril_event_set (&s_listen_event, s_fdListen, false,
-                listenCallback, NULL);
+                listenCallback, &s_rilSocketParam);
 
     rilEventAddWakeup (&s_listen_event);
 
@@ -5808,6 +5988,18 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
      rilEventAddWakeup(&s_debug_event);
 #endif
 
+     s_oemSocketParam = {
+                     (RIL_SOCKET_ID)s_sim_num,    /* socket_id */
+                     -1,                          /* fdListen */
+                     -1,                          /* fdCommand */
+                     NULL,                        /* processName */
+                     &s_oemCommandsEvent,         /* commands_event */
+                     &s_oemListenEvent,           /* listen_event */
+                     processCommandsCallback,     /* processCommandsCallback */
+                     NULL,                        /* p_rs */
+                     RIL_OEM_SOCKET               /* RIL_SOCKET_TYPE */
+                     };
+     startListenOEM((RIL_SOCKET_ID)(s_sim_num), &s_oemSocketParam);
 }
 
 extern "C" void
@@ -5859,13 +6051,23 @@ RIL_onRequestComplete(RIL_Token t, RIL_Errno e, void *response, size_t responsel
     RequestInfo *pRI;
     int ret;
     size_t errorOffset;
+    int fd = s_rilSocketParam.fdCommand;
+    RIL_SOCKET_TYPE socket_type = RIL_TELEPHONY_SOCKET;
 
     pRI = (RequestInfo *)t;
-
     if (!checkAndDequeueRequestInfo(pRI)) {
         RILLOGE ("RIL_onRequestComplete: invalid RIL_Token");
         return;
     }
+
+    socket_type = pRI->socket_type;
+    if (socket_type == RIL_TELEPHONY_SOCKET) {
+        fd = s_rilSocketParam.fdCommand;
+    } else if (socket_type == RIL_OEM_SOCKET) {
+        fd = s_oemSocketParam.fdCommand;
+    }
+
+
 
     if (pRI->local > 0) {
         // Locally issued command...void only!
@@ -5902,10 +6104,10 @@ RIL_onRequestComplete(RIL_Token t, RIL_Errno e, void *response, size_t responsel
             appendPrintBuf("%s fails by %s", printBuf, failCauseToString(e));
         }
 
-        if (s_fdCommand < 0) {
+        if (fd < 0) {
             RILLOGD ("RIL onRequestComplete: Command channel closed");
         }
-        sendResponse(p);
+        sendResponse(p, socket_type);
     }
 
 done:
@@ -6059,6 +6261,7 @@ void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
     int64_t timeReceived = 0;
     bool shouldScheduleTimeout = false;
     RIL_RadioState newState;
+    RIL_SOCKET_TYPE socket_type = RIL_TELEPHONY_SOCKET;
 
     if (s_registerCalled == 0) {
         // Ignore RIL_onUnsolicitedResponse before RIL_register
@@ -6071,8 +6274,15 @@ void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
 #if defined (RIL_SPRD_EXTENSION)
         || (unsolResponse > RIL_UNSOL_LAST
                  && unsolResponse < RIL_SPRD_UNSOL_RESPONSE_BASE)
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+        || (unsolResponse > RIL_SPRD_UNSOL_RESPONSE_LAST
+                && unsolResponse < RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE)
+        || (unsolResponse > RIL_RADIOINTERACTOR_UNSOL_RESPONSE_LAST
+                && unsolResponse < RIL_OEM_UNSOL_RESPONSE_BASE)
+#else
         || (unsolResponse > RIL_SPRD_UNSOL_RESPONSE_LAST
                  && unsolResponse < RIL_OEM_UNSOL_RESPONSE_BASE)
+#endif
 #else
         || (unsolResponse > RIL_UNSOL_LAST
                  && unsolResponse < RIL_OEM_UNSOL_RESPONSE_BASE)
@@ -6082,7 +6292,13 @@ void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
 #if defined (RIL_SPRD_EXTENSION)
         || (unsolResponse > RIL_UNSOL_LAST
                  && unsolResponse < RIL_SPRD_UNSOL_RESPONSE_BASE)
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+        || (unsolResponse > RIL_SPRD_UNSOL_RESPONSE_LAST
+                && unsolResponse < RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE)
+        || (unsolResponse > RIL_RADIOINTERACTOR_UNSOL_RESPONSE_LAST)
+#else
         || (unsolResponse > RIL_SPRD_UNSOL_RESPONSE_LAST)
+#endif
 #endif
 #endif
     ) {
@@ -6097,14 +6313,31 @@ void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
                   && unsolResponse <= RIL_SPRD_UNSOL_RESPONSE_LAST)
         unsolResponseIndex = unsolResponse - RIL_SPRD_UNSOL_RESPONSE_BASE
                                                 + RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE + 1;
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+    else if (unsolResponse >= RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE
+                      && unsolResponse <= RIL_RADIOINTERACTOR_UNSOL_RESPONSE_LAST) {
+        unsolResponseIndex = unsolResponse - RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE
+                + RIL_SPRD_UNSOL_RESPONSE_LAST - RIL_SPRD_UNSOL_RESPONSE_BASE
+                + RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE + 2;
+        socket_type = RIL_OEM_SOCKET;
+    }
 #endif
+#endif
+
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     else if(unsolResponse >= RIL_OEM_UNSOL_RESPONSE_BASE
                   && unsolResponse <= RIL_OEM_UNSOL_LAST)
 #if defined (RIL_SPRD_EXTENSION)
-    unsolResponseIndex = unsolResponse - RIL_OEM_UNSOL_RESPONSE_BASE
-                                                + RIL_SPRD_UNSOL_RESPONSE_LAST - RIL_SPRD_UNSOL_RESPONSE_BASE
-                                                + RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE + 2;
+#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+        unsolResponseIndex = unsolResponse - RIL_OEM_UNSOL_RESPONSE_BASE
+                + RIL_SPRD_UNSOL_RESPONSE_LAST - RIL_SPRD_UNSOL_RESPONSE_BASE
+                + RIL_RADIOINTERACTOR_UNSOL_RESPONSE_LAST - RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE
+                + RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE + 3;
+#else
+        unsolResponseIndex = unsolResponse - RIL_OEM_UNSOL_RESPONSE_BASE
+                + RIL_SPRD_UNSOL_RESPONSE_LAST - RIL_SPRD_UNSOL_RESPONSE_BASE
+                + RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE + 2;
+#endif
 #else
     unsolResponseIndex = unsolResponse - RIL_OEM_UNSOL_RESPONSE_BASE
                                                 + RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE + 1;
@@ -6159,7 +6392,6 @@ void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
                 radioStateToString(s_callbacks.onStateRequest()));
         break;
 
-
         case RIL_UNSOL_NITZ_TIME_RECEIVED:
             // Store the time that this was received so the
             // handler of this message can account for
@@ -6170,7 +6402,7 @@ void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
         break;
     }
 
-    ret = sendResponse(p);
+    ret = sendResponse(p, socket_type);
     if (ret != 0 && unsolResponse == RIL_UNSOL_NITZ_TIME_RECEIVED) {
 
         // Unfortunately, NITZ time is not poll/update like everything

@@ -36,6 +36,7 @@ typedef struct RequestInfo {
     struct RequestInfo *p_next;
     char cancelled;
     char local;         // responses to local commands do not go back to command process
+    RIL_SOCKET_TYPE socket_type;
 } RequestInfo;
 
 extern int modem;
