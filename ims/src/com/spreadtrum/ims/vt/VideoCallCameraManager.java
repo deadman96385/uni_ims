@@ -41,6 +41,7 @@ public class VideoCallCameraManager {
     private Parameters mParameters;
     private Camera mCamera;
     private Object mCameraLock = new Object();
+    private Object mThreadLock = new Object();
     private VideoCallEngine mVideoCallEngine;
     private VTManagerProxy mVTManagerProxy;
     private Thread mOperateCameraThread;
@@ -54,6 +55,7 @@ public class VideoCallCameraManager {
     private int mHeight = 144;
     private int mDeviceRotation = 0;
     private boolean mIsFirstInit = true;
+    private boolean mIsSurfacePreviewFailed = false;
 
     private Handler mHandler = new Handler() {
         @Override
@@ -183,15 +185,19 @@ public class VideoCallCameraManager {
         mOperateCameraThread = new Thread(new Runnable() {
             public void run() {
                 if (null != mVideoCallEngine) {
-                    mThreadRunning = true;
+                    synchronized(mThreadLock){
+                        mThreadRunning = true;
+                    }
                 }
                 Log.i(TAG, "mOperateCameraThread start. ");
                 openCamera();
                 if (null != mVideoCallEngine) {
                     Log.d(TAG, "mVideoCallEngine is not null.");
-                    mThreadRunning = false;
-                    if (mVideoCallEngine.mLocalSurface != null) {
-                        startCameraPreView();
+                    synchronized(mThreadLock){
+                        if(mIsSurfacePreviewFailed){
+                            startCameraPreViewBackground();
+                        }
+                        mThreadRunning = false;
                     }
                 }
                 Log.d(TAG, "mOperateCameraThread end. ");
@@ -370,11 +376,15 @@ public class VideoCallCameraManager {
             Log.w(TAG, "startCameraPreView->mVideoCallEngine:" + mVideoCallEngine + " mLocalSurface:"
                     + mVideoCallEngine.mLocalSurface
                     + " mCamera:" + mCamera);
+            mIsSurfacePreviewFailed = true;
             return;
         }
-        if (null != mVideoCallEngine && mThreadRunning) {
-            Log.w(TAG, "startCameraPreView->mThreadRunning:" + mThreadRunning);
-            return;
+        synchronized(mThreadLock){
+            if(null != mVideoCallEngine && mThreadRunning){
+                Log.w(TAG, "startCameraPreView->mThreadRunning:"+mThreadRunning);
+                mIsSurfacePreviewFailed = true;
+                return;
+            }
         }
         try {
             synchronized (mCameraLock) {
@@ -408,6 +418,7 @@ public class VideoCallCameraManager {
                         mVideoCallEngine.setImsCamera(mCamera);
                     }
                 }
+                mIsSurfacePreviewFailed = false;
             }
         } catch (Exception e) {
             Log.e(TAG, "startCameraPreView Fail: " + e);
@@ -425,6 +436,8 @@ public class VideoCallCameraManager {
             else {
                 Log.w(TAG, "startCameraPreViewBackground->mVideoCallEngine:" + mVideoCallEngine + " mCamera:" + mCamera);
             }
+            mIsSurfacePreviewFailed = true;
+            mThreadRunning = false;
             return;
         }
         try {
@@ -458,6 +471,7 @@ public class VideoCallCameraManager {
                         mVideoCallEngine.setImsCamera(mCamera);
                     }
                 }
+                mIsSurfacePreviewFailed = false;
             }
         } catch (Exception e) {
             Log.e(TAG, "startCameraPreView Fail: " + e);
@@ -606,6 +620,7 @@ public class VideoCallCameraManager {
     private void operateCamera(final WorkerTaskType type) {
         if (mThreadRunning) {
             Log.e(TAG, "operateCamera(), CODEC is closed or work task locked!");
+            mIsSurfacePreviewFailed = true;
             return;
         }
         mOperateCameraThread = new Thread(new Runnable() {
