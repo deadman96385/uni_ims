@@ -39,6 +39,8 @@ public class VTManagerProxy{
     public static final int EVENT_ON_SET_DISPLAY_SURFACE = 202;
     public static final int EVENT_ON_SET_PAUSE_IMAGE = 203;
     public static final int EVENT_ON_SET_DEVICE_ORIENTATION = 204;
+    public static final int EVENT_ON_UPDATE_DEVICE_QUALITY = 205;
+
 
     /** video call cp event code. */
     private static final int EVENT_VIDEO_CALL_CODEC = 300;
@@ -72,6 +74,7 @@ public class VTManagerProxy{
     private Uri mPauseImage;
     private AlertDialog mFallBackDialog;
     private ImsCallSessionImpl mImsCallSessionImpl;
+    private int mPeerVideoQuality = -1;
 
     private VTManagerProxy(ImsService imsService) {
         mImsService = imsService;
@@ -138,6 +141,9 @@ public class VTManagerProxy{
                 case EVENT_ON_VT_DISCONNECT:
                     handleDisconnect((ImsCallSessionImpl) msg.obj);
                     break;
+                case EVENT_ON_UPDATE_DEVICE_QUALITY:
+                    handleUpdateVideoQuality((Integer) msg.obj);
+                    break;
                 default:
                     log("handleMessage,unkwon message:what =" + msg.what);
                     break;
@@ -179,6 +185,9 @@ public class VTManagerProxy{
                 }
             }
             mVideoCallCameraManager = new VideoCallCameraManager(mVideoCallEngine, mContext, this);
+            if(mPeerVideoQuality != -1){
+                mVideoCallCameraManager.updateVideoQuality(mPeerVideoQuality);
+            }
             log("after wait mVideoCallEngine, mVideoCallEngine is null?:" + (mVideoCallEngine == null));
             log("wait mVideoCallEngine done.");
         }
@@ -203,6 +212,7 @@ public class VTManagerProxy{
             mVideoCallCameraManager = null;
             mVideoCallEngine = null;
             mActiveImsCallSessionImpl = null;
+            mPeerVideoQuality = -1;
             log("onVTConnectionDisconnected::mMediaPhoneThread.quit(): " + mMediaPhoneThread.quit());
         }
     }
@@ -275,6 +285,14 @@ public class VTManagerProxy{
         }
         if (rotation != null) {
             mVideoCallCameraManager.onSetDeviceRotation(rotation.intValue());
+        }
+    }
+
+    private void handleUpdateVideoQuality(Integer quality) {
+        log("handleUpdateVideoQuality->quality=" + quality);
+        mPeerVideoQuality = quality;
+        if(mVideoCallCameraManager != null){
+            mVideoCallCameraManager.updateVideoQuality(quality);
         }
     }
 

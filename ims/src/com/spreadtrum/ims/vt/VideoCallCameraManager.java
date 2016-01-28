@@ -56,6 +56,8 @@ public class VideoCallCameraManager {
     private int mDeviceRotation = 0;
     private boolean mIsFirstInit = true;
     private boolean mIsSurfacePreviewFailed = false;
+    private int mVideoQuality;
+    private boolean mIsVideoQualityReceived = false;
 
     private Handler mHandler = new Handler() {
         @Override
@@ -81,6 +83,7 @@ public class VideoCallCameraManager {
         mVTManagerProxy = vtManagerProxy;
         mOrientationListener = new MyOrientationEventListener(context);
         mOrientationListener.enable();
+        mVideoQuality = mVideoCallEngine.getCameraResolution();
     }
 
     /**
@@ -175,6 +178,10 @@ public class VideoCallCameraManager {
      * drawing preview frames to the screen.
      */
     public void initCameraAndStartPreview() {
+        if(!mIsVideoQualityReceived){
+            Log.w(TAG,"initCameraAndStartPreview()->mIsVideoQualityReceived:"+mIsVideoQualityReceived);
+            return;
+        }
         if (mOperateCameraThread != null) {
             try {
                 mOperateCameraThread.join();
@@ -223,7 +230,7 @@ public class VideoCallCameraManager {
                     params.set("sensor-orient", 1);
                     params.set("ycbcr", 1);// ensure yuv sequence of camera preview
                     if (mVideoCallEngine != null) {
-                        switch (mVideoCallEngine.getCameraResolution()) {
+                        switch (mVideoQuality) {
                             case ImsConfigImpl.VT_RESOLUTION_720P:
                                 mWidth = 1280;
                                 mHeight = 720;
@@ -357,6 +364,10 @@ public class VideoCallCameraManager {
 
     /* SPRD: add the judge camera for bug 408181 @{ */
     public void handleSetCameraPreSurface(Surface surface) {
+        if(!mIsVideoQualityReceived){
+            Log.w(TAG,"handleSetCameraPreSurface()->mIsVideoQualityReceived:"+mIsVideoQualityReceived);
+            return;
+        }
         if (surface != null) {
             if (mCamera == null) {
                 openVideoCamera();
@@ -415,7 +426,7 @@ public class VideoCallCameraManager {
                     if (mVideoCallEngine != null) {
                         Log.i(TAG, "setImsCamera mCamera. ="+mCamera);
                         mCamera.unlock();
-                        mVideoCallEngine.setImsCamera(mCamera);
+                        mVideoCallEngine.setImsCamera(mCamera,mVideoQuality);
                     }
                 }
                 mIsSurfacePreviewFailed = false;
@@ -468,7 +479,7 @@ public class VideoCallCameraManager {
                     }
                     if (mVideoCallEngine != null) {
                         mCamera.unlock();
-                        mVideoCallEngine.setImsCamera(mCamera);
+                        mVideoCallEngine.setImsCamera(mCamera,mVideoQuality);
                     }
                 }
                 mIsSurfacePreviewFailed = false;
@@ -572,6 +583,11 @@ public class VideoCallCameraManager {
     public void handleSetCamera(String cameraId) {
         Log.i(TAG, "handleSetCamera()->isFirstInit:" + mIsFirstInit + " cameraId=" + cameraId
                 + " mCameraId=" + mCameraId);
+        if(!mIsVideoQualityReceived){
+            mCameraId = cameraId;
+            Log.w(TAG,"handleSetCamera()->mIsVideoQualityReceived:"+mIsVideoQualityReceived);
+            return;
+        }
         if (cameraId == null) {
             closeVideoCamera();
             setCameraID(null);
@@ -766,5 +782,24 @@ public class VideoCallCameraManager {
         Camera.Parameters params = mCamera.getParameters();
         params.set("sensor-rot", getSensorRotation(mCameraId));
         mCamera.setParameters(params);
+    }
+
+    public void updateVideoQuality(int videoQuality){
+        if(videoQuality < 0 || videoQuality > 10){
+            videoQuality = mVideoCallEngine.getCameraResolution();
+        }
+        boolean qualityChange = (mVideoQuality != videoQuality || !mIsVideoQualityReceived);
+        mVideoQuality = videoQuality;
+        mIsVideoQualityReceived = true;
+        Log.i(TAG,"updateVideoQuality->qualityChange:"+qualityChange
+                + " isCameraPreviewing():"+isCameraPreviewing()
+                + " mCameraId:"+mCameraId);
+        if(qualityChange && mVideoCallEngine.mLocalSurface != null){
+            if(mCamera == null){
+                openVideoCamera();
+            } else {
+                switchVideoCamera();
+            }
+        }
     }
 }

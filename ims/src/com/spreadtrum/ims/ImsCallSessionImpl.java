@@ -27,6 +27,7 @@ import android.os.Message;
 import android.os.RemoteException;
 import android.util.Log;
 import java.util.concurrent.CopyOnWriteArrayList;
+import android.telecom.VideoProfile;
 
 public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final String TAG = ImsCallSessionImpl.class.getSimpleName();
@@ -87,6 +88,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mImsServiceCallTracker = callTracker;
         mHandler = new ImsHandler(context.getMainLooper(),this);
         mImsVideoCallProvider = new ImsVideoCallProvider(this,ci,mContext) ;
+        updateVideoProfile(mImsDriverCall);
     }
 
     public ImsCallSessionImpl(ImsDriverCall dc, Context context,
@@ -98,6 +100,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mImsServiceCallTracker = callTracker;
         mHandler = new ImsHandler(context.getMainLooper(),this);
         mImsVideoCallProvider = new ImsVideoCallProvider(this,ci,mContext) ;
+        updateVideoProfile(mImsDriverCall);
     }
 
     private void updateImsCallProfileFromDC(ImsDriverCall dc){
@@ -222,6 +225,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         } catch(RemoteException e){
             e.printStackTrace();
         }
+        updateVideoProfile(mImsDriverCall);
         Log.d(TAG, "updateFromDc->hasUpdate:"+hasUpdate+" dc:" + dc);
     }
 
@@ -936,5 +940,30 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
     public int getServiceId(){
         return mImsServiceCallTracker.getServiceId();
+    }
+
+    public void updateVideoProfile(ImsDriverCall vdc){
+        Log.i(TAG,"updateVideoProfile...vdc="+vdc);
+        if((vdc!= null) && (vdc.mediaDescription != null) && (vdc.mediaDescription.contains("profile"))
+                && (mImsCallProfile !=null) && (mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT)){
+            int index = vdc.mediaDescription.indexOf("profile=");
+            String qualityString = null;
+            int quality = -1;
+            if(index >=0){
+                qualityString = vdc.mediaDescription.substring(index+8);
+                if(qualityString != null){
+                    try {
+                        quality = Integer.parseInt(qualityString);
+                    } catch(NumberFormatException e){
+                        e.printStackTrace();
+                    }
+                }
+            }
+            if(getImsVideoCallProvider() != null){
+                VideoProfile  profile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL,quality);
+                getImsVideoCallProvider().updateVideoQuality(profile);
+            }
+            Log.w(TAG,"vdc.mediaDescription: " + vdc.mediaDescription + " quality:"+quality);
+        }
     }
 }

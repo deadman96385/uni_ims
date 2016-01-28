@@ -16,6 +16,7 @@ import com.android.ims.internal.IImsConfig;
 import com.android.ims.ImsConfig;
 import com.android.internal.telephony.CommandsInterface;
 import android.telephony.TelephonyManager;
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 
 public class ImsConfigImpl extends IImsConfig.Stub {
 
@@ -26,6 +27,7 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     private static final int ACTION_SET_VT_RESOLUTION = 102;
     private static final int ACTION_GET_IMS_CALL_AVAILABILITY = 103;
     private static final int ACTION_SET_IMS_CALL_AVAILABILITY = 104;
+    private static final int EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE = 105;
 
     public static final int VT_RESOLUTION_720P = 0;                //1280*720 Frame rate:30
     public static final int VT_RESOLUTION_VGA_REVERSED_15 = 1;     //480*640 Frame rate:15
@@ -43,6 +45,8 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     private ImsHandler mHandler;
     private Context mContext;
     private SharedPreferences mSharedPreferences;
+    private static final String VIDEO_CALL_RESOLUTION = "vt_resolution";
+    private int mCameraResolution = VT_RESOLUTION_VGA_REVERSED_30;
 
     /**
      * Creates the Ims Config interface object for a sub.
@@ -53,6 +57,8 @@ public class ImsConfigImpl extends IImsConfig.Stub {
         mHandler = new ImsHandler(context.getMainLooper());
         mContext = context;
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        mSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferenceListener);
+        mCameraResolution = mSharedPreferences.getInt(VIDEO_CALL_RESOLUTION, VT_RESOLUTION_VGA_REVERSED_30);
     }
 
     /**
@@ -144,6 +150,11 @@ public class ImsConfigImpl extends IImsConfig.Stub {
                     } catch(RemoteException e){
                         e.printStackTrace();
                     }
+                    break;
+                case EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE:
+                    String[] cmd=new String[1];
+                    cmd[0] = "AT+CDEFMP=1,\""+mCameraResolution+"\"";
+                    mCi.invokeOemRilRequestStrings(cmd, null);
                     break;
                 default:
                     Log.e(TAG, "handleMessage: unhandled message");
@@ -300,4 +311,16 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     public static boolean isVolteEnabledBySystemProperties(){
         return SystemProperties.getBoolean("persist.sys.volte.enable", false);
     }
+
+    private OnSharedPreferenceChangeListener mSharedPreferenceListener = new OnSharedPreferenceChangeListener() {
+        public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+            Log.d(TAG,"onSharedPreferenceChanged()->key:"+key);
+            if(VIDEO_CALL_RESOLUTION.equals(key)){
+                mCameraResolution = sharedPreferences.getInt(VIDEO_CALL_RESOLUTION, VT_RESOLUTION_VGA_REVERSED_30);
+                mHandler.removeMessages(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE);
+                mHandler.sendEmptyMessageDelayed(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE, 1000);
+                Log.d(TAG,"onSharedPreferenceChanged()->mCameraResolution:"+mCameraResolution);
+            }
+        }
+    };
 }

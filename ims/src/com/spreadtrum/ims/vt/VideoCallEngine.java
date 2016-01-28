@@ -188,10 +188,13 @@ public class VideoCallEngine {
         log("setRemoteSurface() mVideoState:" + mVideoState);
     }
 
-    public void setImsCamera(Camera cam){
-        this.setCamera(cam, getCameraResolution());
+    public void setImsCamera(Camera cam,int quality){
+        this.setCamera(cam, quality);
     }
 
+    public void setImsCamera(Camera cam){
+        this.setCamera(cam, mCameraResolution);
+    }
     public static final int MEDIA_CALLEVENT_CAMERACLOSE = 100;
     public static final int MEDIA_CALLEVENT_CAMERAOPEN = 101;
     public static final int MEDIA_CALLEVENT_STRING = 102;

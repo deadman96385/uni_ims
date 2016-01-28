@@ -185,6 +185,13 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             log("onSendSessionModifyResponse->responseProfile:" + responseProfile);
     }
 
+    public void updateVideoQuality(VideoProfile responseProfile) {
+            log("onSendSessionModifyResponse->responseProfile:" + responseProfile);
+            if(responseProfile != null){
+                log("onSendSessionModifyRequest.updateVideoQuality-> quality:"+ responseProfile.getQuality());
+                mHandler.obtainMessage(mVTManagerProxy.EVENT_ON_UPDATE_DEVICE_QUALITY, new Integer(responseProfile.getQuality())).sendToTarget();
+            }
+    }
     /**
      * Issues a request to the video provider to retrieve the camera capabilities. Camera
      * capabilities are reported back to the caller via the In-Call UI.
