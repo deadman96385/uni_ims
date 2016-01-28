@@ -15,6 +15,11 @@ import android.app.AlertDialog;
 import android.telecom.VideoProfile.CameraCapabilities;
 import android.telecom.Connection.VideoProvider;
 import android.os.PowerManager;
+import android.os.Message;
+import android.widget.Toast;
+import com.spreadtrum.ims.R;
+import com.android.internal.telephony.ImsDriverCall;
+import com.android.ims.internal.ImsCallSession;
 
 public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallProvider {
     private static final String TAG = ImsVideoCallProvider.class.getSimpleName();
@@ -29,6 +34,25 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     private AlertDialog mVolteMediaDegradeDialog;
     private ImsCallSessionImplListner mImsCallSessionImplListner;
     private PowerManager.WakeLock mPartialWakeLock;
+    /** volte media event code. */
+    private static final int EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 500;
+    private Handler mVTHandler = new Handler(){
+        @Override
+        public void handleMessage(Message msg) {
+            log("handleMessage msg = " + msg.what);
+            switch (msg.what) {
+                case EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT:
+                    if(mVolteMediaUpdateDialog != null && mVolteMediaUpdateDialog.isShowing()){
+                        mVolteMediaUpdateDialog.dismiss();
+                        CommandsInterface mCi = (CommandsInterface)msg.obj;
+                        mCi.responseVolteCallMediaChange(false,null);
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
 
     public ImsVideoCallProvider(ImsCallSessionImpl imsCallSessionImpl,CommandsInterface ci,Context context) {
         super();
@@ -251,6 +275,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                  result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS;
              }
              receiveSessionModifyResponse(result, mLocalRequestProfile, responseProfile);
+             showRequestStateToast();
              mLocalRequestProfile = null;
          }
          if(mNegotiatedCallProfile.mCallType != imsCallProfile.mCallType){
@@ -293,6 +318,11 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 }
                 mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi);
                 mVolteMediaUpdateDialog.show();
+                Message msg = new Message();
+                msg.what = EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT;
+                msg.obj = mCi;
+                mVTHandler.removeMessages(EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT);
+                mVTHandler.sendMessageDelayed(msg, 10000);
             }else if(session.mImsDriverCall != null && session.mImsDriverCall.isRequestDowngradeToVoice()){
                 if(mVolteMediaDegradeDialog != null){
                    mVolteMediaDegradeDialog.dismiss();
@@ -311,5 +341,15 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     public void receiveSessionModifyResponse(
             int status, VideoProfile requestedProfile, VideoProfile responseProfile) {
         super.receiveSessionModifyResponse(status,requestedProfile,responseProfile);
+    }
+
+    public void showRequestStateToast(){
+        if (mImsCallSessionImpl.mImsDriverCall != null && mImsCallSessionImpl.mImsDriverCall.isReuestAccept()) {
+            Toast.makeText(mContext.getApplicationContext(),
+                    mContext.getString(R.string.remote_accept_request), Toast.LENGTH_SHORT).show();
+        } else if(mImsCallSessionImpl.mImsDriverCall != null && mImsCallSessionImpl.mImsDriverCall.isReuestReject()){
+            Toast.makeText(mContext.getApplicationContext(),
+                    mContext.getString(R.string.remote_reject_request), Toast.LENGTH_SHORT).show();
+        }
     }
 }

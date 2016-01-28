@@ -26,4 +26,6 @@
     <string name="videophone_failcause_157">"The mobile phone hasn't start the VT service"</string>
     <string name="videophone_failcause_minus_1">3G service not available</string>
     <string name="videophone_failcause_default">User is unavailable</string>
+    <string name="remote_reject_request">Remote reject request </string>
+    <string name="remote_accept_request">Remount accept request</string>
 </resources>

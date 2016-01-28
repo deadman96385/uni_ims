@@ -1,0 +1,4 @@
+<resources>
+    <string name="remote_reject_request">"对端拒绝请求"</string>
+    <string name="remote_accept_request">"对端接受请求" </string>
+</resources>
