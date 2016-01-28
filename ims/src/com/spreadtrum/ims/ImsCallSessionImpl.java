@@ -725,15 +725,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mDisconnCause = reason;
         if(mImsDriverCall != null){
             if(isMultiparty()){
-                Log.i(TAG, "terminate-> isMultiparty state:"+mImsDriverCall.state);
-                if(mImsDriverCall.state == ImsDriverCall.State.HOLDING){
-                    mCi.hangupWaitingOrBackground(mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
-                } else if(mImsDriverCall.state == ImsDriverCall.State.DIALING
-                        || mImsDriverCall.state == ImsDriverCall.State.ALERTING){
-                    mImsServiceCallTracker.hangupAllMultipartyCall();
-                    return;
+                Log.i(TAG, "terminate-> isMultiparty state:"+mImsDriverCall.state
+                        + " isForegroundCall():"+isForegroundCall()
+                        + " isBackgroundCall():"+isBackgroundCall());
+                if(isForegroundCall()){
+                    mImsServiceCallTracker.hangupAllMultipartyCall(true);
+                } else if(isBackgroundCall()){
+                    mImsServiceCallTracker.hangupAllMultipartyCall(false);
                 } else {
-                    mCi.hangupForegroundResumeBackground(mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
+                    mCi.hangupConnection(mImsDriverCall.index,
+                            mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
                 }
             } else {
                 mCi.hangupConnection(mImsDriverCall.index,
@@ -978,5 +979,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             }
             Log.w(TAG,"vdc.mediaDescription: " + vdc.mediaDescription + " quality:"+quality);
         }
+    }
+
+    public boolean isForegroundCall(){
+        return (mImsDriverCall != null &&
+                (mImsDriverCall.state == ImsDriverCall.State.ACTIVE
+                || mImsDriverCall.state == ImsDriverCall.State.DIALING
+                || mImsDriverCall.state == ImsDriverCall.State.ALERTING));
+    }
+
+    public boolean isBackgroundCall(){
+        return (mImsDriverCall != null && mImsDriverCall.state == ImsDriverCall.State.HOLDING);
     }
 }

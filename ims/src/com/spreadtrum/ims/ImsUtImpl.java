@@ -125,7 +125,9 @@ public class ImsUtImpl extends IImsUt.Stub {
                                         callForwardInfo.mToA = cfInfo.toa;
                                         callForwardInfo.mNumber = cfInfo.number;
                                         callForwardInfo.mTimeSeconds = cfInfo.timeSeconds;
+                                        callForwardInfo.mServiceClass = cfInfo.serviceClass;
                                         callForwardInfoList[i] = callForwardInfo;
+                                        Log.i(TAG,"ACTION_QUERY_CF->callForwardInfo:" + callForwardInfo.toString());
                                     }
 
                                     mImsUtListener.utConfigurationCallForwardQueried(

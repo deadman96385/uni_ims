@@ -470,13 +470,15 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         }
     }
 
-    public void hangupAllMultipartyCall(){
-        Log.d(TAG,"hangupAllMultipartyCall.");
+    public void hangupAllMultipartyCall(boolean isForeground){
+        Log.d(TAG,"hangupAllMultipartyCall->isForeground:"+isForeground);
         synchronized(mSessionList) {
             for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it =
                     mSessionList.entrySet().iterator(); it.hasNext();) {
                 Map.Entry<String, ImsCallSessionImpl> e = it.next();
-                if (e.getValue().isMultiparty()) {
+                if (e.getValue().isMultiparty()
+                        && ((e.getValue().isForegroundCall() && isForeground)
+                        || (e.getValue().isBackgroundCall() && !isForeground))) {
                     e.getValue().hangup();
                 }
             }
