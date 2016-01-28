@@ -106,7 +106,9 @@ MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picI
             *picId = out->mPicId;
             *pts = out->nTimeStamp;
 
-            SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x ", __FUNCTION__, __LINE__, fs->is_reference);
+            if (img_ptr->trace_enabled) {
+                SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x ", __FUNCTION__, __LINE__, fs->is_reference);
+            }
             fs->is_reference = 0;
             H264DEC_UNBIND_FRAME(img_ptr, out);
 
@@ -250,6 +252,7 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
 {
     H264DecContext *img_ptr = NULL;
     MMDecRet ret = MMDEC_ERROR;
+    char value_dump[PROPERTY_VALUE_MAX];
 
     SPRD_CODEC_LOGI ("libomx_avcdec_sw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
@@ -266,6 +269,9 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
     buffer_ptr->size -= sizeof(H264DecContext);
 
     H264Dec_InitInterMem (img_ptr, buffer_ptr);
+
+    property_get("h264dec.sw.trace", value_dump, "false");
+    img_ptr->trace_enabled = !strcmp(value_dump, "true");
 
     img_ptr->g_is_avc1_es = FALSE;
     img_ptr->g_ready_to_decode_slice = FALSE;

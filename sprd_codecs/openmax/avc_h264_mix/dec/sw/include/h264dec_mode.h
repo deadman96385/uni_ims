@@ -786,6 +786,7 @@ typedef struct H264DecContext_tag
     CODEC_BUF_T mem[MAX_MEM_TYPE];
     DEC_STORABLE_PICTURE_T g_rec_buf;
     AVCHandle  *avcHandle;
+    int32 trace_enabled;
 } H264DecContext;
 
 //sw

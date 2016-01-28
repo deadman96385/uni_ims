@@ -116,7 +116,9 @@ PUBLIC void Mp4GetVideoDimensions(MP4Handle *mp4Handle, int32 *display_width, in
     *display_width = vop_mode_ptr->OrgFrameWidth;
     *display_height = vop_mode_ptr->OrgFrameHeight;
 
-    SPRD_CODEC_LOGD ("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *display_width, *display_height);
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *display_width, *display_height);
+    }
 }
 
 PUBLIC void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *height)
@@ -127,7 +129,9 @@ PUBLIC void Mp4GetBufferDimensions(MP4Handle *mp4Handle, int32 *width, int32 *he
     *width =( (vop_mode_ptr->OrgFrameWidth + 15) >>4) <<4;
     *height = ( (vop_mode_ptr->OrgFrameHeight + 15) >>4) <<4;
 
-    SPRD_CODEC_LOGD ("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("%s, %d, width: %d, height: %d", __FUNCTION__, __LINE__, *width, *height);
+    }
 }
 
 PUBLIC MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *max_width, int32 *max_height)
@@ -155,7 +159,7 @@ PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer *buffer_ptr)
 {
     Mp4DecObject *vo;
     MMDecRet is_init_success = MMDEC_OK;
-    MMCodecBuffer tmp_buffer;
+    char value_dump[PROPERTY_VALUE_MAX];
 
     SPRD_CODEC_LOGI ("libomx_m4vh263dec_sw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
@@ -169,6 +173,9 @@ PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer *buffer_ptr)
     buffer_ptr->common_buffer_ptr_phy = (void *)((uint_32or64)(buffer_ptr->common_buffer_ptr_phy) + sizeof(Mp4DecObject));
     buffer_ptr->size -= sizeof(Mp4DecObject);
     Mp4Dec_InitInterMem(vo, buffer_ptr);
+
+    property_get("m4vdec.sw.trace", value_dump, "false");
+    vo->trace_enabled = !strcmp(value_dump, "true");
 
     return Mp4Dec_InitGlobal(vo);
 }
@@ -224,8 +231,9 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
     MMDecRet ret = MMDEC_ERROR;
     DEC_VOP_MODE_T *vop_mode_ptr = vo->vop_mode_ptr;
 
-    SPRD_CODEC_LOGD ("MP4DecDecode: E, dec_input_ptr->expected_IVOP: %d, vop_mode_ptr->yuv_format: %d", dec_input_ptr->expected_IVOP, vop_mode_ptr->yuv_format);
-
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("MP4DecDecode: E, dec_input_ptr->expected_IVOP: %d, vop_mode_ptr->yuv_format: %d", dec_input_ptr->expected_IVOP, vop_mode_ptr->yuv_format);
+    }
     mp4Handle->g_mpeg4_dec_err_flag = 0;
 
 FLV_RE_DEC:
@@ -266,7 +274,9 @@ FLV_RE_DEC:
         ret = Mp4Dec_FlvH263PicHeader(vo);
     }
 
-    SPRD_CODEC_LOGD ("%s, %d, ret: %d, pic_type: %d", __FUNCTION__, __LINE__, ret, vop_mode_ptr->VopPredType);
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("%s, %d, ret: %d, pic_type: %d", __FUNCTION__, __LINE__, ret, vop_mode_ptr->VopPredType);
+    }
     if(ret != MMDEC_OK)
     {
         //modified by xwluo, 20100511
@@ -358,7 +368,9 @@ FLV_RE_DEC:
 
     if(IVOP == vop_mode_ptr->VopPredType)
     {
-        SPRD_CODEC_LOGD ("\t I VOP\t%d frame_num %d\n", dec_input_ptr->dataLen,vop_mode_ptr->g_nFrame_dec);
+        if (vo->trace_enabled) {
+            SPRD_CODEC_LOGD ("\t I VOP\t%d frame_num %d\n", dec_input_ptr->dataLen,vop_mode_ptr->g_nFrame_dec);
+        }
 #if _TRACE_
         FPRINTF (g_fp_trace_fw, "\nnframe: %d, frame type: IVOP\n", vop_mode_ptr->g_nFrame_dec);
 #endif //_TRACE_	
@@ -366,7 +378,9 @@ FLV_RE_DEC:
         ret = vo->g_Mp4Dec_IVOP(vop_mode_ptr);
     } else if(PVOP == vop_mode_ptr->VopPredType)
     {
-        SPRD_CODEC_LOGD ("\t P VOP\t%d frame_num %d\n", dec_input_ptr->dataLen,vop_mode_ptr->g_nFrame_dec);
+        if (vo->trace_enabled) {
+            SPRD_CODEC_LOGD ("\t P VOP\t%d frame_num %d\n", dec_input_ptr->dataLen,vop_mode_ptr->g_nFrame_dec);
+        }
 #if _TRACE_
         FPRINTF (g_fp_trace_fw, "\nnframe: %d, frame type: PVOP\n", vop_mode_ptr->g_nFrame_dec);
 #endif //_TRACE_	
@@ -398,7 +412,9 @@ FLV_RE_DEC:
         return MMDEC_OK;
     } else
     {
-        SPRD_CODEC_LOGD ("\t B VOP\t%d\n", dec_input_ptr->dataLen);
+        if (vo->trace_enabled) {
+            SPRD_CODEC_LOGD ("\t B VOP\t%d\n", dec_input_ptr->dataLen);
+        }
 #if _TRACE_
         FPRINTF (g_fp_trace_fw, "\nnframe: %d, frame type: BVOP\n", vop_mode_ptr->g_nFrame_dec);
 #endif //_TRACE_	
@@ -437,7 +453,6 @@ FLV_RE_DEC:
 
         if(vop_mode_ptr->post_filter_en)
         {
-            SPRD_CODEC_LOGD ("%s, deblock", __FUNCTION__);
             Mp4Dec_Deblock_vop(vo);
         }
 
@@ -453,8 +468,9 @@ FLV_RE_DEC:
     {
         uint32 ByteConsumed = Mp4Dec_ByteConsumed(vop_mode_ptr);
 
-        SPRD_CODEC_LOGD ("%s, %d, ByteConsumed: %d, dec_input_ptr->dataLen:%d", __FUNCTION__, __LINE__, ByteConsumed, dec_input_ptr->dataLen);
-
+        if (vo->trace_enabled) {
+            SPRD_CODEC_LOGD ("%s, %d, ByteConsumed: %d, dec_input_ptr->dataLen:%d", __FUNCTION__, __LINE__, ByteConsumed, dec_input_ptr->dataLen);
+        }
         if(ByteConsumed > dec_input_ptr->dataLen)
             dec_input_ptr->dataLen = 0;
         else
@@ -462,7 +478,9 @@ FLV_RE_DEC:
 
     }
 
-    SPRD_CODEC_LOGD ("MP4DecDecode: X");
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("MP4DecDecode: X");
+    }
 
     if(ret != MMDEC_OK)
     {

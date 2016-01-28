@@ -61,7 +61,9 @@ PUBLIC int32 VSP_OPEN_Dev (VSPObject *vo)
 
     if (-1 == vo->s_vsp_fd)
     {
-        SPRD_CODEC_LOGD("open SPRD_VSP_DRIVER ");
+        if (vo->trace_enabled) {
+            SPRD_CODEC_LOGD("open SPRD_VSP_DRIVER ");
+        }
         if((vo->s_vsp_fd = open(SPRD_VSP_DRIVER,O_RDWR)) < 0)
         {
             SPRD_CODEC_LOGE("open SPRD_VSP_DRIVER ERR");
@@ -79,9 +81,9 @@ PUBLIC int32 VSP_OPEN_Dev (VSPObject *vo)
     {
         vo->vsp_freq_div = SPRD_MAX_VSP_FREQ_LEVEL_FOR_PIKE;
     }
-
-    SPRD_CODEC_LOGD("%s, %d, vsp addr %lx, vsp_version: %s\n",__FUNCTION__, __LINE__, vo->s_vsp_Vaddr_base, vsp_version_array[vo->vsp_version]);
-
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD("%s, %d, vsp addr %lx, vsp_version: %s\n",__FUNCTION__, __LINE__, vo->s_vsp_Vaddr_base, vsp_version_array[vo->vsp_version]);
+    }
     return 0;
 }
 
@@ -99,7 +101,7 @@ PUBLIC int32 VSP_CLOSE_Dev(VSPObject *vo)
         return 0;
     } else
     {
-        SPRD_CODEC_LOGD ("%s, error", __FUNCTION__);
+        SPRD_CODEC_LOGE ("%s, error", __FUNCTION__);
         return -1;
     }
 }
@@ -151,7 +153,7 @@ PUBLIC int32 VSP_POLL_COMPLETE(VSPObject *vo)
         } while ((ret & V_BIT_30) &&  (cnt < MAX_POLL_CNT));
         if(!(V_BIT_1 == ret || V_BIT_2 == ret ))
         {
-            SPRD_CODEC_LOGD("%s, %d, int_ret: %0x", __FUNCTION__, __LINE__, ret);
+            SPRD_CODEC_LOGE("%s, %d, int_ret: %0x", __FUNCTION__, __LINE__, ret);
         }
 
         return ret;
@@ -210,8 +212,9 @@ PUBLIC int32 VSP_ACQUIRE_Dev(VSPObject *vo)
         return -1;
     }
 
-    SPRD_CODEC_LOGD("%s, %d", __FUNCTION__, __LINE__);
-
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD("%s, %d", __FUNCTION__, __LINE__);
+    }
     return 0;
 }
 
@@ -273,8 +276,9 @@ RELEASE_END:
         usleep(20*1000);
     }
 
-    SPRD_CODEC_LOGD("%s, %d, ret: %d", __FUNCTION__, __LINE__, ret);
-
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD("%s, %d, ret: %d", __FUNCTION__, __LINE__, ret);
+    }
     return ret;
 }
 

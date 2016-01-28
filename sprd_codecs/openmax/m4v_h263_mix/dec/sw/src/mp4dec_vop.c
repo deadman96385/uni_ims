@@ -117,8 +117,10 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
             if (vop_mode_ptr->pBckRefFrame->nTimeStamp < vop_mode_ptr->pCurRecFrame->nTimeStamp) {
                 uint64 nTimeStamp;
 
-                SPRD_CODEC_LOGD ("%s, [Bck time_stamp: %lld], [Cur time_stamp: %lld]", __FUNCTION__,
-                                 vop_mode_ptr->pBckRefFrame->nTimeStamp, vop_mode_ptr->pCurRecFrame->nTimeStamp);
+                if (vo->trace_enabled) {
+                    SPRD_CODEC_LOGD ("%s, [Bck time_stamp: %lld], [Cur time_stamp: %lld]", __FUNCTION__,
+                                     vop_mode_ptr->pBckRefFrame->nTimeStamp, vop_mode_ptr->pCurRecFrame->nTimeStamp);
+                }
 
                 nTimeStamp = vop_mode_ptr->pCurRecFrame->nTimeStamp;
                 vop_mode_ptr->pCurRecFrame->nTimeStamp = vop_mode_ptr->pBckRefFrame->nTimeStamp;
@@ -215,7 +217,7 @@ PUBLIC void Mp4Dec_output_one_frame (Mp4DecObject *vo, MMDecOutput *dec_output_p
         pic = vop_mode_ptr->pCurRecFrame;
     }
 
-	if(pic != PNULL && pic->pDecFrame != PNULL)
+    if(pic != PNULL && pic->pDecFrame != PNULL)
     {
         dec_output_ptr->pOutFrameY = pic->pDecFrame->imgY;
         dec_output_ptr->pOutFrameU = pic->pDecFrame->imgU;
@@ -677,7 +679,7 @@ PUBLIC MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr)
 
                 if (vop_mode_ptr->error_flag)
                 {
-                    SPRD_CODEC_LOGD ("decode resync header error!\n");
+                    SPRD_CODEC_LOGE ("decode resync header error!\n");
                     continue;
                 }
             }
@@ -697,7 +699,7 @@ PUBLIC MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr)
             Mp4Dec_DecIntraMBHeader(vop_mode_ptr, mb_mode_ptr);
             if(vop_mode_ptr->error_flag)
             {
-                SPRD_CODEC_LOGD("decode intra mb header error!\n");
+                SPRD_CODEC_LOGE ("decode intra mb header error!\n");
                 continue;
             }
 
@@ -735,7 +737,7 @@ PUBLIC MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr)
                     vop_mode_ptr->mbdec_stat_ptr[k] = DECODED_IN_ERR_PKT;
                 }
                 vop_mode_ptr->mbdec_stat_ptr[vop_mode_ptr->mbnumDec] = NOT_DECODED;
-                SPRD_CODEC_LOGD ("decode intra mb coeff error!\n");
+                SPRD_CODEC_LOGE ("decode intra mb coeff error!\n");
                 continue;
             }
         }

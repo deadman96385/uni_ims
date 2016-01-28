@@ -247,8 +247,9 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
             if (vop_mode_ptr->pBckRefFrame->nTimeStamp < vop_mode_ptr->pCurRecFrame->nTimeStamp) {
                 uint64 nTimeStamp;
 
-                SPRD_CODEC_LOGD ("%s, [Bck nTimeStamp: %lld], [Cur nTimeStamp: %lld]", __FUNCTION__, vop_mode_ptr->pBckRefFrame->nTimeStamp, vop_mode_ptr->pCurRecFrame->nTimeStamp);
-
+                if (vo->trace_enabled) {
+                    SPRD_CODEC_LOGD ("%s, [Bck nTimeStamp: %lld], [Cur nTimeStamp: %lld]", __FUNCTION__, vop_mode_ptr->pBckRefFrame->nTimeStamp, vop_mode_ptr->pCurRecFrame->nTimeStamp);
+                }
                 nTimeStamp = vop_mode_ptr->pCurRecFrame->nTimeStamp;
                 vop_mode_ptr->pCurRecFrame->nTimeStamp = vop_mode_ptr->pBckRefFrame->nTimeStamp;
                 vop_mode_ptr->pBckRefFrame->nTimeStamp = nTimeStamp;
@@ -350,7 +351,9 @@ PUBLIC MMDecRet Mp4Dec_decode_vop(Mp4DecObject *vo)
 
         if(vop_mode_ptr->mb_y == (vop_mode_ptr->MBNumY-1) && vop_mode_ptr->mb_x==(vop_mode_ptr->MBNumX-1))
         {
-            SPRD_CODEC_LOGD ("%s, %d, finished decoding one frame", __FUNCTION__, __LINE__);
+            if (vo->trace_enabled) {
+                SPRD_CODEC_LOGD ("%s, %d, finished decoding one frame", __FUNCTION__, __LINE__);
+            }
             pic_end = 1;
         } else
         {

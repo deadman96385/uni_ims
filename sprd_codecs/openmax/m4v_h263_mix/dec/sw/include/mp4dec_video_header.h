@@ -65,6 +65,8 @@
 #include "mp4dec_error_handle.h"
 #include "mpeg4dec.h"
 
+#include <cutils/properties.h>
+
 #ifndef _VSP_LINUX_
 //#include "os_api.h"
 #endif

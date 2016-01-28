@@ -91,7 +91,9 @@ PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int3
             *picId = out->mPicId;
             *pts = out->nTimeStamp;
 
-            SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x ", __FUNCTION__, __LINE__, fs->is_reference);
+            if (vo->trace_enabled) {
+                SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x ", __FUNCTION__, __LINE__, fs->is_reference);
+            }
             fs->is_reference = 0;
             H264DEC_UNBIND_FRAME(vo, fs->frame);
 
@@ -252,6 +254,7 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
 {
     H264DecObject *vo;
     MMDecRet ret = MMDEC_OK;
+    char value_dump[PROPERTY_VALUE_MAX];
 
     SPRD_CODEC_LOGI ("libomx_avcdec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
@@ -273,6 +276,9 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
     {
         return ret;
     }
+
+    property_get("h264dec.hw.trace", value_dump, "false");
+    vo->trace_enabled = !strcmp(value_dump, "true");
 
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
@@ -417,11 +423,15 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
             int32 added_bytes = (MIN_LEN_FOR_HW - (bs_buffer_length - vo->g_stream_offset));
             vo->g_slice_datalen -= added_bytes;
             vo->g_nalu_ptr->len -= added_bytes;
-            SPRD_CODEC_LOGD ("%s, %d, added_bytes: %d", __FUNCTION__, __LINE__, added_bytes);
+            if (vo->trace_enabled) {
+                SPRD_CODEC_LOGD ("%s, %d, added_bytes: %d", __FUNCTION__, __LINE__, added_bytes);
+            }
         }
 
-        SPRD_CODEC_LOGD ("%s, %d, g_stream_offset: %d, g_slice_datalen: %d, g_nalu_ptr->len: %d, destuffing_num: %d", __FUNCTION__, __LINE__,
-                         vo->g_stream_offset, vo->g_slice_datalen, vo->g_nalu_ptr->len, destuffing_num);
+        if (vo->trace_enabled) {
+            SPRD_CODEC_LOGD ("%s, %d, g_stream_offset: %d, g_slice_datalen: %d, g_nalu_ptr->len: %d, destuffing_num: %d", __FUNCTION__, __LINE__,
+                             vo->g_stream_offset, vo->g_slice_datalen, vo->g_nalu_ptr->len, destuffing_num);
+        }
 
         if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
         {
@@ -442,7 +452,9 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
         ret = H264DecDecode_NALU(vo, dec_input_ptr, dec_output_ptr);
 
-        SPRD_CODEC_LOGD ("%s, %d, g_nalu_ptr->len: %d, frame_dec_finish: %d,ret:  %d ", __FUNCTION__, __LINE__, vo->g_nalu_ptr->len, vo->frame_dec_finish, ret);
+        if (vo->trace_enabled) {
+            SPRD_CODEC_LOGD ("%s, %d, g_nalu_ptr->len: %d, frame_dec_finish: %d,ret:  %d ", __FUNCTION__, __LINE__, vo->g_nalu_ptr->len, vo->frame_dec_finish, ret);
+        }
 
         dec_input_ptr->dataLen = vo->g_stream_offset + vo->g_nalu_ptr->len + destuffing_num;
 
@@ -483,7 +495,9 @@ DEC_EXIT:
     dec_output_ptr->sawSPS = vo->sawSPS;
     dec_output_ptr->sawPPS = vo->sawPPS;
 
-    SPRD_CODEC_LOGD ("%s, %d, exit decoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("%s, %d, exit decoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    }
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
         return MMDEC_HW_ERROR;
@@ -525,10 +539,11 @@ int32 Is_Interlaced_Sequence(AVCHandle *avcHandle, MMDecInput *dec_input_ptr)
     int8 nal_unit_type;
     int32 ret = -1, start_code_len = 0;
 
-    SPRD_CODEC_LOGD ("%s, %d, called\n", __FUNCTION__, __LINE__);
-
     H264DecObject *vo = (H264DecObject *) avcHandle->videoDecoderData;
 
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("%s, %d, called\n", __FUNCTION__, __LINE__);
+    }
     if ((dec_input_ptr->pStream == NULL) ||  (dec_input_ptr->pStream_phy == 0))
     {
         return MMDEC_MEMORY_ERROR;
@@ -617,12 +632,15 @@ int32 Is_Interlaced_Sequence(AVCHandle *avcHandle, MMDecInput *dec_input_ptr)
         int32 added_bytes = (MIN_LEN_FOR_HW - (bs_buffer_length - vo->g_stream_offset));
         vo->g_slice_datalen -= added_bytes;
         vo->g_nalu_ptr->len -= added_bytes;
-        SPRD_CODEC_LOGD ("%s, %d, added_bytes: %d", __FUNCTION__, __LINE__, added_bytes);
+        if (vo->trace_enabled) {
+            SPRD_CODEC_LOGD ("%s, %d, added_bytes: %d", __FUNCTION__, __LINE__, added_bytes);
+        }
     }
 
-    SPRD_CODEC_LOGD ("%s, %d, g_stream_offset: %d, g_slice_datalen: %d, g_nalu_ptr->len: %d, destuffing_num: %d", __FUNCTION__, __LINE__,
-                     vo->g_stream_offset, vo->g_slice_datalen, vo->g_nalu_ptr->len, destuffing_num);
-
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("%s, %d, g_stream_offset: %d, g_slice_datalen: %d, g_nalu_ptr->len: %d, destuffing_num: %d", __FUNCTION__, __LINE__,
+                         vo->g_stream_offset, vo->g_slice_datalen, vo->g_nalu_ptr->len, destuffing_num);
+    }
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, V_BIT_27,0x0,TIME_OUT_CLK, "BSM_clr enable"))//check bsm is idle
     {
         goto DEC_EXIT;
@@ -641,7 +659,9 @@ int32 Is_Interlaced_Sequence(AVCHandle *avcHandle, MMDecInput *dec_input_ptr)
     VSP_WRITE_REG(BSM_CTRL_REG_BASE_ADDR+BSM_CFG0_OFF, V_BIT_31|((bs_buffer_length+128)&0xfffffffc),"BSM_cfg0 stream buffer size");// BSM load data. Add 16 DW for BSM fifo loading.
 
     nal_unit_type = READ_FLC(8) & 0x1f;
-    SPRD_CODEC_LOGD ("%s, %d, nal_unit_type = %x\n", __FUNCTION__, __LINE__, nal_unit_type);
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("%s, %d, nal_unit_type = %x\n", __FUNCTION__, __LINE__, nal_unit_type);
+    }
 
     if (nal_unit_type == 7)
     {
@@ -658,7 +678,9 @@ int32 Is_Interlaced_Sequence(AVCHandle *avcHandle, MMDecInput *dec_input_ptr)
         goto DEC_EXIT;
     }
 
-    SPRD_CODEC_LOGD ("%s, %d, frame_mbs_only_flag = %d\n", __FUNCTION__, __LINE__, vo->g_sps_ptr->frame_mbs_only_flag);
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("%s, %d, frame_mbs_only_flag = %d\n", __FUNCTION__, __LINE__, vo->g_sps_ptr->frame_mbs_only_flag);
+    }
     if(vo->g_sps_ptr->frame_mbs_only_flag)
     {
         ret =  0;

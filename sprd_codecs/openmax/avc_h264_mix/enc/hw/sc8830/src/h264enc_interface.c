@@ -71,6 +71,7 @@ MMEncRet H264EncPreInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr)
     ENC_IMAGE_PARAMS_T *img_ptr;
     uint32 frame_buf_size;
     MMEncRet ret;
+    char value_dump[PROPERTY_VALUE_MAX];
 
     SPRD_CODEC_LOGI ("libomx_avcenc_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
@@ -91,6 +92,9 @@ MMEncRet H264EncPreInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr)
     {
         return ret;
     }
+
+    property_get("h264enc.hw.trace", value_dump, "false");
+    vo->trace_enabled = !strcmp(value_dump, "true");
 
     vo->yuv_format = YUV420SP_NV21;
     vo->g_nFrame_enc = 0;
@@ -363,7 +367,7 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
     enc_config->QP_PVOP				= pConf->QP_PVOP;
     enc_config->EncSceneMode			= pConf->EncSceneMode;
 
-    if (enc_config->EncSceneMode == SCENE_NORMAL){
+    if (enc_config->EncSceneMode == SCENE_NORMAL) {
         img_ptr->slice_mb = img_ptr->frame_height_in_mbs *img_ptr->frame_width_in_mbs;
     }
     if (enc_config->RateCtrlEnable) {
@@ -571,7 +575,9 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
             i_global_qp = 16;	//avoid level overflow in VLC module.
         }
 
-        //SPRD_CODEC_LOGD ("%s, %d, qp: %d", __FUNCTION__, __LINE__, i_global_qp);
+        if (vo->trace_enabled) {
+            SPRD_CODEC_LOGD ("%s, %d, qp: %d", __FUNCTION__, __LINE__, i_global_qp);
+        }
 
         /* ------------------------ Create slice header  ----------------------- */
         H264Enc_slice_init(img_ptr, i_nal_type, i_slice_type, i_global_qp );
@@ -661,7 +667,9 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
 
 ENC_EXIT:
 
-    SPRD_CODEC_LOGD ("%s, %d, exit encoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("%s, %d, exit encoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    }
 
     if(img_ptr->sh.i_first_mb == 0)
     {
@@ -746,7 +754,9 @@ MMEncRet H264EncGenHeader(AVCHandle *avcHandle, MMEncOut *pOutput, int is_sps)
 
 HEADER_EXIT:
 
-    SPRD_CODEC_LOGD ("%s, %d, exit generating header, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("%s, %d, exit generating header, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    }
     if (is_sps)
     {
         vo->sps_header_len = pOutput->strmSize;

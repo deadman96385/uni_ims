@@ -65,7 +65,7 @@ LOCAL_LDFLAGS := -Wl,--no-warn-shared-textrel
 LOCAL_ARM_MODE := arm
 
 LOCAL_SHARED_LIBRARIES := \
-        libutils liblog
+        libutils liblog libcutils
 
 LOCAL_MODULE := libomx_avcdec_sw_sprd
 LOCAL_MODULE_TAGS := optional

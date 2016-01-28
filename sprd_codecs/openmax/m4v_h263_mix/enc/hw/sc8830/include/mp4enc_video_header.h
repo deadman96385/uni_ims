@@ -40,6 +40,8 @@ extern   "C"
 #include "mp4enc_vop.h"
 #include "mpeg4enc.h"
 
+#include <cutils/properties.h>
+
 #ifdef RUN_IN_PLATFORM
 //#include "os_api.h"
 #endif //RUN_IN_PLATFORM

@@ -205,6 +205,7 @@ PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer * buffer_ptr)
 {
     Mp4DecObject*vo;
     MMDecRet ret;
+    char value_dump[PROPERTY_VALUE_MAX];
 
     SPRD_CODEC_LOGI ("libomx_m4vh263dec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
@@ -219,6 +220,9 @@ PUBLIC MMDecRet MP4DecInit(MP4Handle *mp4Handle, MMCodecBuffer * buffer_ptr)
     buffer_ptr->common_buffer_ptr += sizeof(Mp4DecObject);
     buffer_ptr->common_buffer_ptr_phy = buffer_ptr->common_buffer_ptr_phy + sizeof(Mp4DecObject);
     buffer_ptr->size -= sizeof(Mp4DecObject);
+
+    property_get("m4vdec.hw.trace", value_dump, "false");
+    vo->trace_enabled = !strcmp(value_dump, "true");
 
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
@@ -284,7 +288,7 @@ PUBLIC MMDecRet MP4DecVolHeader(MP4Handle *mp4Handle, MMDecVideoFormat *video_fo
 
             ret = Mp4Dec_DecMp4Header(vo, video_format_ptr->i_extra);
             if(MMDEC_OK == ret)
-            {  //revised for bug456978
+            {   //revised for bug456978
                 if (vop_mode_ptr->OrgFrameWidth != 0 && vop_mode_ptr->OrgFrameHeight != 0)
                 {
                     video_format_ptr->frame_width = vop_mode_ptr->OrgFrameWidth;
@@ -530,7 +534,6 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
         goto DEC_EXIT;
     }
 
-    SPRD_CODEC_LOGD ("frame type:%s", (vop_mode_ptr->VopPredType ==  IVOP) ? "I" : ((vop_mode_ptr->VopPredType ==  PVOP) ? "P" : "B"));
     if (Mp4Dec_InitVop(vo, dec_input_ptr) != MMDEC_OK)
     {
         mp4Handle->g_mpeg4_dec_err_flag |= V_BIT_10;
@@ -566,7 +569,10 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
 
 DEC_EXIT:
 
-    SPRD_CODEC_LOGD ("%s, exit decoder,  error flag: 0x%x.", __FUNCTION__, mp4Handle->g_mpeg4_dec_err_flag);
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("%s, exit decoder, error flag: 0x%x, frame type:%s", __FUNCTION__, mp4Handle->g_mpeg4_dec_err_flag,
+                         (vop_mode_ptr->VopPredType ==  IVOP) ? "I" : ((vop_mode_ptr->VopPredType ==  PVOP) ? "P" : "B(N)"));
+    }
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
         return MMDEC_HW_ERROR;

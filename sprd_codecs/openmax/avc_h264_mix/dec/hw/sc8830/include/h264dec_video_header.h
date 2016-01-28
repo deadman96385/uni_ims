@@ -40,6 +40,8 @@ extern   "C"
 #include "h264dec_image.h"
 #include "h264dec.h"
 
+#include <cutils/properties.h>
+
 #ifdef RUN_IN_PLATFORM
 #include "os_api.h"
 #endif //RUN_IN_PLATFORM

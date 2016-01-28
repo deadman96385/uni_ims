@@ -745,7 +745,9 @@ PUBLIC void H264Dec_find_smallest_pts(H264DecContext *img_ptr, DEC_STORABLE_PICT
         if(dpb_ptr->delayed_pic[j]->nTimeStamp < out->nTimeStamp) {
             uint64 nTimeStamp;
 
-            SPRD_CODEC_LOGD ("%s, [delay time_stamp: %lld], [Cur time_stamp: %lld]", __FUNCTION__, dpb_ptr->delayed_pic[j]->nTimeStamp, out->nTimeStamp);
+            if(img_ptr->trace_enabled) {
+                SPRD_CODEC_LOGD ("%s, [delay time_stamp: %lld], [Cur time_stamp: %lld]", __FUNCTION__, dpb_ptr->delayed_pic[j]->nTimeStamp, out->nTimeStamp);
+            }
 
             nTimeStamp = dpb_ptr->delayed_pic[j]->nTimeStamp;
             dpb_ptr->delayed_pic[j]->nTimeStamp = out->nTimeStamp;

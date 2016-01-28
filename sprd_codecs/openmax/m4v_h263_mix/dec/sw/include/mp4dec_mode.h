@@ -533,6 +533,8 @@ typedef struct tagMp4DecObject
 
     DEC_FRM_BFR g_rec_buf;
     DEC_FRM_BFR g_tmp_buf;
+
+    int32 trace_enabled;
 } Mp4DecObject;
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

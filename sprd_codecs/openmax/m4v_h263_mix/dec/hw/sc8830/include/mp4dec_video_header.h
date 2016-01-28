@@ -36,8 +36,9 @@ extern   "C"
 #include "mp4dec_malloc.h"
 #include "mp4dec_session.h"
 #include "mp4dec_vop.h"
-
 #include "mpeg4dec.h"
+
+#include <cutils/properties.h>
 
 #ifdef RUN_IN_PLATFORM
 #include "os_api.h"

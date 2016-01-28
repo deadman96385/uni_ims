@@ -43,7 +43,7 @@ LOCAL_CFLAGS :=  -fno-strict-aliasing -D_VSP_LINUX_   -D_MP4CODEC_DATA_PARTITION
 LOCAL_ARM_MODE := arm
 
 LOCAL_SHARED_LIBRARIES := \
-	libutils liblog
+	libutils liblog libcutils
 
 LOCAL_MODULE := libomx_m4vh263dec_sw_sprd
 LOCAL_MODULE_TAGS := optional

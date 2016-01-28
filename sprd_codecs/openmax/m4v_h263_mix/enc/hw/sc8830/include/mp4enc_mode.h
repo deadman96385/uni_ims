@@ -248,6 +248,7 @@ typedef struct tagMp4EncObject
     uint32 vsp_freq_div;
     int32	error_flag;
     int32   vsp_version;
+    int32 trace_enabled;
 
     MP4Handle  *mp4Handle;
 

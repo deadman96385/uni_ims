@@ -73,7 +73,9 @@ MMEncRet MP4EncGenHeader(MP4Handle *mp4Handle, MMEncOut *pOutput)
 
 HEADER_EXIT:
 
-    SPRD_CODEC_LOGD ("%s, %d, exit generating header, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("%s, %d, exit generating header, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    }
 
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
@@ -204,6 +206,7 @@ MMEncRet MP4EncPreInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr)
 {
     Mp4EncObject*vo;
     MMEncRet ret;
+    char value_dump[PROPERTY_VALUE_MAX];
 
     SPRD_CODEC_LOGI ("libomx_m4vh263enc_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
 
@@ -224,6 +227,9 @@ MMEncRet MP4EncPreInit(MP4Handle *mp4Handle, MMCodecBuffer *pInterMemBfr)
     {
         return ret;
     }
+
+    property_get("m4venc.hw.trace", value_dump, "false");
+    vo->trace_enabled = !strcmp(value_dump, "true");
 
     vo->s_vsp_fd = -1;
     vo->s_vsp_Vaddr_base = 0;
@@ -412,8 +418,9 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
         }
 
         vop_mode_ptr->VopPredType = (pInput->needIVOP) ? IVOP : vop_mode_ptr->VopPredType;
-        SPRD_CODEC_LOGD ("g_nFrame_enc %d frame_type %d ", vo->g_nFrame_enc, vop_mode_ptr->VopPredType );
-
+        if (vo->trace_enabled) {
+            SPRD_CODEC_LOGD ("g_nFrame_enc %d frame_type %d ", vo->g_nFrame_enc, vop_mode_ptr->VopPredType );
+        }
         vop_mode_ptr->pYUVSrcFrame->imgY = pInput->p_src_y_phy;
         vop_mode_ptr->pYUVSrcFrame->imgYAddr = (((uint_32or64)vop_mode_ptr->pYUVSrcFrame->imgY) >> 3);
 
@@ -507,8 +514,9 @@ MMEncRet MP4EncStrmEncode(MP4Handle *mp4Handle, MMEncIn *pInput, MMEncOut *pOutp
 
 ENC_EXIT:
 
-    SPRD_CODEC_LOGD ("%s, %d, exit encoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
-
+    if (vo->trace_enabled) {
+        SPRD_CODEC_LOGD ("%s, %d, exit encoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
+    }
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
         return MMENC_HW_ERROR;

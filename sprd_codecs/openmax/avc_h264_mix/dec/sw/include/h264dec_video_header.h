@@ -60,12 +60,12 @@
 #include "h264dec_mv.h"
 #include "h264dec_fmo.h"
 #include "h264dec_vld.h"
-#include "h264dec.h"
-
-//sw
 #include "h264dec_ipred.h"
 #include "h264dec_isqt.h"
 #include "h264dec_mc.h"
+#include "h264dec.h"
+
+#include <cutils/properties.h>
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
