@@ -155,7 +155,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     if (mIImsCallSessionListener != null) {
                         if(mImsDriverCall.state == ImsDriverCall.State.HOLDING){
                             mIImsCallSessionListener.callSessionResumed((IImsCallSession)this, mImsCallProfile);
-                        } else {
+                        } else if ((mImsDriverCall.state == ImsDriverCall.State.DIALING)
+                                || (mImsDriverCall.state == ImsDriverCall.State.ALERTING)
+                                || (mImsDriverCall.state == ImsDriverCall.State.INCOMING)
+                                || (mImsDriverCall.state == ImsDriverCall.State.WAITING)) {
                             mIImsCallSessionListener.callSessionStarted((IImsCallSession) this,mImsCallProfile);
                         }
                     }
