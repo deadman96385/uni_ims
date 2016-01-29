@@ -275,9 +275,7 @@ PUBLIC void Mp4Dec_Deblock_vop(Mp4DecObject *vo)
     uint8 * above_edge_src_ptr, * below_edge_src_ptr;
     uint8 * dst_block_ptr;
 
-    if (vo->trace_enabled) {
-        SPRD_CODEC_LOGD("%s, vo->g_dbk_tmp_frm_ptr: 0x%p", __FUNCTION__, vo->g_dbk_tmp_frm_ptr);
-    }
+    SPRD_CODEC_LOGD("%s, vo->g_dbk_tmp_frm_ptr: 0x%p\n", __FUNCTION__, vo->g_dbk_tmp_frm_ptr);
 
     dbk_para->alpha = ALPHA_TABLE[IClip(0, 51, qp + 12)];
     dbk_para->beta  = BETA_TABLE[IClip(0, 51, qp + 12)];

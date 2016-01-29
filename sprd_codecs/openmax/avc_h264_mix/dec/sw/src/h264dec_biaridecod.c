@@ -25,10 +25,10 @@ extern   "C"
 #define CABAC_BITS 16
 #define CABAC_MASK ((1<<CABAC_BITS)-1)
 
-uint32 ff_init_cabac_decoder(H264DecContext *img_ptr)
+uint32 ff_init_cabac_decoder(H264DecContext *vo)
 {
-    CABACContext *c = &(img_ptr->cabac);
-    DEC_BS_T *bs_ptr = img_ptr->bitstrm_ptr;
+    CABACContext *c = &(vo->cabac);
+    DEC_BS_T *bs_ptr = vo->bitstrm_ptr;
     uint32 nStuffedBits;
     uint32 nDecTotalBits = bs_ptr->bitsCnt - bs_ptr->bitsAligned;
     uint32 bitsLeft = 32 - (nDecTotalBits % 32);
@@ -40,7 +40,7 @@ uint32 ff_init_cabac_decoder(H264DecContext *img_ptr)
 
     c->low =  ((READ_FLC(24))<<2) + 2;
     c->range= 0x1FE;
-    c->bitstrm_ptr = img_ptr->bitstrm_ptr;
+    c->bitstrm_ptr = vo->bitstrm_ptr;
 
     return (nStuffedBits+24);
 }
@@ -122,8 +122,8 @@ int32 get_cabac_bypass_sign(CABACContext *c, int val)
 
 uint32 get_cabac_terminate (void *img)
 {
-    H264DecContext *img_ptr = (H264DecContext *)img;
-    CABACContext *c = &img_ptr->cabac;
+    H264DecContext *vo = (H264DecContext *)img;
+    CABACContext *c = &vo->cabac;
     c->range -= 2;
 
     if (c->low < c->range<<(CABAC_BITS+1)) {

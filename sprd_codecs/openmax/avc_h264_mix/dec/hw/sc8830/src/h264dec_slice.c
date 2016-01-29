@@ -71,7 +71,7 @@ PUBLIC int32 H264Dec_Process_slice (H264DecObject *vo)
 
     if (vo->error_flag)
     {
-        SPRD_CODEC_LOGE ("%s, %d, error_flag=0x%x", __FUNCTION__, __LINE__, vo->error_flag);
+        SPRD_CODEC_LOGE ("%s, %d, error_flag=0x%x\n", __FUNCTION__, __LINE__, vo->error_flag);
         return -1;
     }
 
@@ -114,7 +114,7 @@ PUBLIC int32 H264Dec_Process_slice (H264DecObject *vo)
 
     if (vo->error_flag)
     {
-        SPRD_CODEC_LOGE ("%s, %d, error_flag=0x%x", __FUNCTION__, __LINE__, vo->error_flag);
+        SPRD_CODEC_LOGE ("%s, %d, error_flag=0x%x\n", __FUNCTION__, __LINE__, vo->error_flag);
         return -1;
     }
 
@@ -401,9 +401,7 @@ PUBLIC void H264Dec_find_smallest_pts(H264DecObject *vo, DEC_STORABLE_PICTURE_T 
     DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = vo->g_dpb_layer[0];
     uint32 j;
 
-    if (vo->trace_enabled) {
-        SPRD_CODEC_LOGD ("%s, [Cur pts: %lld]", __FUNCTION__, out->nTimeStamp);
-    }
+    SPRD_CODEC_LOGD ("%s, [Cur pts: %lld]\n", __FUNCTION__, out->nTimeStamp);
 
     for(j = 0; j < dpb_ptr->delayed_pic_num ; j++)
     {
@@ -411,9 +409,7 @@ PUBLIC void H264Dec_find_smallest_pts(H264DecObject *vo, DEC_STORABLE_PICTURE_T 
         {
             uint64 nTimeStamp;
 
-            if (vo->trace_enabled) {
-                SPRD_CODEC_LOGD ("%s, [delay pts: %lld], [Cur pts: %lld]", __FUNCTION__, dpb_ptr->delayed_pic[j]->nTimeStamp, out->nTimeStamp);
-            }
+            SPRD_CODEC_LOGD ("%s, [delay pts: %lld], [Cur pts: %lld]\n", __FUNCTION__, dpb_ptr->delayed_pic[j]->nTimeStamp, out->nTimeStamp);
             nTimeStamp = dpb_ptr->delayed_pic[j]->nTimeStamp;
             dpb_ptr->delayed_pic[j]->nTimeStamp = out->nTimeStamp;
             out->nTimeStamp = nTimeStamp;
@@ -802,27 +798,25 @@ LOCAL MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *de
 
         //check there is other interrupt or not.
         cmd = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_INT_RAW_OFF, "check interrupt type");
-        if (vo->trace_enabled) {
-            SPRD_CODEC_LOGD ("%s, %d, int_status: %0x", __FUNCTION__, __LINE__, cmd);
-        }
+        SPRD_CODEC_LOGD ("%s, %d, int_status: %0x\n", __FUNCTION__, __LINE__, cmd);
         if(cmd & (V_BIT_4 | V_BIT_5 | V_BIT_30 | V_BIT_31))
         {
             vo->error_flag |= ER_SREAM_ID;
 
             if (cmd & V_BIT_4)
             {
-                SPRD_CODEC_LOGE ("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE ("%s, %d, VLD_ERR\n", __FUNCTION__, __LINE__);
             } else if (cmd & (V_BIT_5 | V_BIT_31))
             {
-                SPRD_CODEC_LOGE ("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE ("%s, %d, TIME_OUT\n", __FUNCTION__, __LINE__);
             } else //if (cmd &  V_BIT_30)
             {
-                SPRD_CODEC_LOGE ("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE ("%s, %d, Broken by signal\n", __FUNCTION__, __LINE__);
             }
 
             if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0, TIME_OUT_CLK_FRAME, "Polling BSM_DBG0: DATA_TRAN, 0: bsm can be cleard"))
             {
-                SPRD_CODEC_LOGE ("%s, %d, DATA_TRAN_busy", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE ("%s, %d, DATA_TRAN_busy\n", __FUNCTION__, __LINE__);
             }
 
             cmd = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+BSM_DBG0_OFF, "check BSM fifo depth");
@@ -849,9 +843,7 @@ LOCAL MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *de
 
     //if(end of picture)
     cmd = VSP_READ_REG(GLB_REG_BASE_ADDR+VSP_DBG_STS0_OFF, "check mb_x mb_y number");
-    if (vo->trace_enabled) {
-        SPRD_CODEC_LOGD ("%s, %d, (mb_x<<8)|(mb_y): %0x", __FUNCTION__, __LINE__, cmd);
-    }
+    SPRD_CODEC_LOGD ("%s, %d, (mb_x<<8)|(mb_y): %0x\n", __FUNCTION__, __LINE__, cmd);
     img_ptr->curr_mb_nr = (cmd&0xff) * img_ptr->frame_width_in_mbs + ((cmd>>8)&0xff);
     if((((cmd>>8)&0xff) == (uint32)(img_ptr->frame_width_in_mbs-1)) && ((cmd&0xff) == (uint32)(img_ptr->frame_height_in_mbs-1)))
     {
@@ -862,9 +854,7 @@ LOCAL MMDecRet H264Dec_decode_one_slice_data (H264DecObject *vo, MMDecOutput *de
             return MMDEC_ERROR;
         }
 
-        if (vo->trace_enabled) {
-            SPRD_CODEC_LOGD ("%s, %d, finished decoding one frame", __FUNCTION__, __LINE__);
-        }
+        SPRD_CODEC_LOGD ("%s, %d, finished decoding one frame\n", __FUNCTION__, __LINE__);
         H264Dec_output_one_frame(vo,img_ptr,dec_output_ptr);
 
         vo->frame_dec_finish = TRUE;
@@ -895,7 +885,7 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
 
     if (vo->error_flag)
     {
-        SPRD_CODEC_LOGE ("%s, %d, error_flag=0x%x", __FUNCTION__, __LINE__, vo->error_flag);
+        SPRD_CODEC_LOGE ("%s, %d, error_flag=0x%x\n", __FUNCTION__, __LINE__, vo->error_flag);
         return MMDEC_ERROR;
     }
 
@@ -976,9 +966,7 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
     }
 
     //H264Dec_flush_left_byte (vo);
-    if (vo->trace_enabled) {
-        SPRD_CODEC_LOGD ("%s, %d, finished decoding one NALU\n", __FUNCTION__, __LINE__);
-    }
+    SPRD_CODEC_LOGD ("%s, %d, finished decoding one NALU\n", __FUNCTION__, __LINE__);
 //need IVOP but not found IDR,then return seek ivop
     if(dec_input_ptr->expected_IVOP && vo->g_searching_IDR_pic)
     {
@@ -987,7 +975,7 @@ PUBLIC MMDecRet H264DecDecode_NALU(H264DecObject *vo, MMDecInput *dec_input_ptr,
 
     if (vo->error_flag)
     {
-        SPRD_CODEC_LOGE ("%s, %d, error_flag=0x%x", __FUNCTION__, __LINE__, vo->error_flag);
+        SPRD_CODEC_LOGE ("%s, %d, error_flag=0x%x\n", __FUNCTION__, __LINE__, vo->error_flag);
         return MMDEC_ERROR;
     }
 

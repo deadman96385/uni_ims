@@ -14,7 +14,7 @@
 #include "h264dec_mode.h"
 
 void H264Dec_init_vld_table (void);
-void decode_mb_cabac (void *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-void decode_mb_cavlc (void *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+void decode_mb_cabac (void *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+void decode_mb_cavlc (void *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
 
 #endif

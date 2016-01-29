@@ -26,7 +26,7 @@ extern   "C"
 {
 #endif
 
-#define SCI_TRACE_LOW_DPB SPRD_CODEC_LOGV
+#define SCI_TRACE_LOW_DPB SPRD_CODEC_LOGD
 
 #define _MVC_		1
 

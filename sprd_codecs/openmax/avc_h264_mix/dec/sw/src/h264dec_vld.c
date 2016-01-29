@@ -299,9 +299,9 @@ int32 get_cabac_cbf_ctx(DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T * mb_cache_pt
   * @param max_coeff number of coefficients in the block
   * @return < 0 if an error occurred
   */
-int32 readCoeff4x4_CAVLC (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int16 *block, int32 n, const uint8 *scantable, const uint32 *qmul, int32 max_coeff)
+int32 readCoeff4x4_CAVLC (H264DecContext *vo, DEC_MB_CACHE_T *mb_cache_ptr, int16 *block, int32 n, const uint8 *scantable, const uint32 *qmul, int32 max_coeff)
 {
-    DEC_BS_T *bs_ptr = img_ptr->bitstrm_ptr;
+    DEC_BS_T *bs_ptr = vo->bitstrm_ptr;
     static const int32 coeff_token_table_index[17] = {0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3};
     int level[16];
     int zeros_left, coeff_num, coeff_token, total_coeff, i, j, trailing_ones, run_before;
@@ -486,7 +486,7 @@ int32 readCoeff4x4_CAVLC (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr,
     return total_coeff;
 }
 
-void decode_LUMA_DC (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int32 qp)
+void decode_LUMA_DC (H264DecContext *vo, DEC_MB_CACHE_T *mb_cache_ptr, int32 qp)
 {
     int16 DC[16];
     int32 total_coeff;
@@ -498,15 +498,15 @@ void decode_LUMA_DC (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int3
     memset_8words_zero(DC);
 #endif
 
-    total_coeff = readCoeff4x4_CAVLC(img_ptr, mb_cache_ptr,DC, LUMA_DC_BLOCK_INDEX, inverse_zigZag, NULL, 16);
+    total_coeff = readCoeff4x4_CAVLC(vo, mb_cache_ptr,DC, LUMA_DC_BLOCK_INDEX, inverse_zigZag, NULL, 16);
     if (total_coeff > 0 && total_coeff < 17) {
-        itrans_lumaDC (img_ptr, DC, mb_cache_ptr->coff_Y, qp);
+        itrans_lumaDC (vo, DC, mb_cache_ptr->coff_Y, qp);
     }
 
     return;
 }
 
-void decode_LUMA_AC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CACHE_T *mb_cache_ptr, int qp )
+void decode_LUMA_AC (H264DecContext *vo, DEC_MB_INFO_T *currMB, DEC_MB_CACHE_T *mb_cache_ptr, int qp )
 {
     int32 numCoeff, maxCoeff;
     int32 blk4x4,blk8x8;
@@ -517,7 +517,7 @@ void decode_LUMA_AC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CACH
 
     if(currMB->transform_size_8x8_flag) {
         inverse_zigZag = g_inverse_8x8_zigzag_tbl_cavlc;
-        quant_mat= (currMB->is_intra) ? img_ptr->dequant8_buffer[0][qp] : img_ptr->dequant8_buffer[1][qp];
+        quant_mat= (currMB->is_intra) ? vo->dequant8_buffer[0][qp] : vo->dequant8_buffer[1][qp];
 
         for(blk8x8 = 0; blk8x8 < 4; blk8x8++) {
             if(cbp & (1 << blk8x8)) {
@@ -530,7 +530,7 @@ void decode_LUMA_AC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CACH
 #endif
 
                 for(blk4x4 = 0; blk4x4 < 4; blk4x4++) {
-                    numCoeff = readCoeff4x4_CAVLC(img_ptr, mb_cache_ptr, coeff, ((blk8x8<<2) + blk4x4), inverse_zigZag+16*blk4x4, quant_mat, 16);
+                    numCoeff = readCoeff4x4_CAVLC(vo, mb_cache_ptr, coeff, ((blk8x8<<2) + blk4x4), inverse_zigZag+16*blk4x4, quant_mat, 16);
                 }
                 nnz = &(mb_cache_ptr->nnz_cache[g_blk_order_map_tbl[(blk8x8<<2)+0]]);
                 nnz[0] += (nnz[1] + nnz[12] + nnz[13]);
@@ -539,7 +539,7 @@ void decode_LUMA_AC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CACH
         }
     } else {
         inverse_zigZag = g_inverse_zigzag_tbl;
-        quant_mat = (currMB->is_intra) ? img_ptr->dequant4_buffer[0][qp] : img_ptr->dequant4_buffer[3][qp];
+        quant_mat = (currMB->is_intra) ? vo->dequant4_buffer[0][qp] : vo->dequant4_buffer[3][qp];
 
         if (currMB->mb_type == I16MB) {
             maxCoeff = 15;
@@ -557,7 +557,7 @@ void decode_LUMA_AC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CACH
                     memset_8words_zero(coeff);
 #endif
                 }
-                numCoeff = readCoeff4x4_CAVLC(img_ptr, mb_cache_ptr, coeff, blk4x4, inverse_zigZag, quant_mat, maxCoeff);
+                numCoeff = readCoeff4x4_CAVLC(vo, mb_cache_ptr, coeff, blk4x4, inverse_zigZag, quant_mat, maxCoeff);
 
                 coeff += 16;
             } else {
@@ -570,7 +570,7 @@ void decode_LUMA_AC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CACH
     return;
 }
 
-void decode_CHROMA_DC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CACHE_T *mb_cache_ptr, int qp_uv[2])
+void decode_CHROMA_DC (H264DecContext *vo, DEC_MB_INFO_T *currMB, DEC_MB_CACHE_T *mb_cache_ptr, int qp_uv[2])
 {
     int32 uv;
     int16 DC[4];
@@ -585,7 +585,7 @@ void decode_CHROMA_DC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CA
     for (uv = 0; uv < 2; uv++) {
         ((int32 *)DC) [0] = ((int32 *)DC) [1] = 0;
 
-        total_coeff = readCoeff4x4_CAVLC(img_ptr, mb_cache_ptr,DC, CHROMA_DC_BLOCK_INDEX, inverse_zigZag, NULL, 4);
+        total_coeff = readCoeff4x4_CAVLC(vo, mb_cache_ptr,DC, CHROMA_DC_BLOCK_INDEX, inverse_zigZag, NULL, 4);
         if (total_coeff > 0 && total_coeff < 5) {
             mb_cache_ptr->cbp_uv |= 0xf << (4*uv);
         } else {
@@ -602,7 +602,7 @@ void decode_CHROMA_DC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CA
         n2 = m0 - m1;
         n3 = m2 - m3;
 
-        quantizer = (currMB->is_intra)? img_ptr->dequant4_buffer[uv+1][qp_uv[uv]][0]: img_ptr->dequant4_buffer[uv+4][qp_uv[uv]][0];
+        quantizer = (currMB->is_intra)? vo->dequant4_buffer[uv+1][qp_uv[uv]][0]: vo->dequant4_buffer[uv+4][qp_uv[uv]][0];
         m0 = (n0 + n1) * quantizer;
         m1 = (n2 + n3) * quantizer;
         m2 = (n0 - n1) * quantizer;
@@ -618,7 +618,7 @@ void decode_CHROMA_DC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CA
     return;
 }
 
-LOCAL void decode_CHROMA_AC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CACHE_T *mb_cache_ptr, int32 qp_uv[2])
+LOCAL void decode_CHROMA_AC (H264DecContext *vo, DEC_MB_INFO_T *currMB, DEC_MB_CACHE_T *mb_cache_ptr, int32 qp_uv[2])
 {
     int32 uv;
     int32 numCoeff;
@@ -629,12 +629,12 @@ LOCAL void decode_CHROMA_AC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC
     const uint8 *inverse_zigZag = g_inverse_zigzag_tbl + 1;
 
     for (uv = 0; uv < 2; uv++) {
-        quant_mat = (currMB->is_intra)? img_ptr->dequant4_buffer[uv+1][qp_uv[uv]]: img_ptr->dequant4_buffer[uv+4][qp_uv[uv]];
+        quant_mat = (currMB->is_intra)? vo->dequant4_buffer[uv+1][qp_uv[uv]]: vo->dequant4_buffer[uv+4][qp_uv[uv]];
         coeff = mb_cache_ptr->coff_UV[uv];
 
         for (blk4x4 = 0; blk4x4 < 4; blk4x4++) {
             blkIndex = uv * 4 + blk4x4 + 16;
-            numCoeff = readCoeff4x4_CAVLC(img_ptr, mb_cache_ptr, coeff, blkIndex, inverse_zigZag, quant_mat, 15);
+            numCoeff = readCoeff4x4_CAVLC(vo, mb_cache_ptr, coeff, blkIndex, inverse_zigZag, quant_mat, 15);
             if (numCoeff > 0 && numCoeff < 17) {
                 mb_cache_ptr->cbp_uv |= 0x1 << (uv*4 + blk4x4);
             } else {
@@ -649,7 +649,7 @@ LOCAL void decode_CHROMA_AC (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC
     return;
 }
 
-void decode_mb_cavlc (void *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+void decode_mb_cavlc (void *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
 {
     int32 qp_uv, qp_c[2];
     int32 qp = mb_info_ptr->qp;
@@ -665,16 +665,16 @@ void decode_mb_cavlc (void *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T 
 #else
         clear_Nx16words(mb_cache_ptr->coff_Y, 8);
 #endif
-        decode_LUMA_DC ((H264DecContext *)img_ptr, mb_cache_ptr, qp);	//luma DC
+        decode_LUMA_DC ((H264DecContext *)vo, mb_cache_ptr, qp);	//luma DC
     }
 
-    decode_LUMA_AC ((H264DecContext *)img_ptr, mb_info_ptr, mb_cache_ptr, qp);
+    decode_LUMA_AC ((H264DecContext *)vo, mb_info_ptr, mb_cache_ptr, qp);
 
-    qp_uv = qp + ((H264DecContext *)img_ptr)->chroma_qp_offset;
+    qp_uv = qp + ((H264DecContext *)vo)->chroma_qp_offset;
     qp_uv = IClip(0, 51, qp_uv);
     qp_c[0] = g_QP_SCALER_CR_TBL[qp_uv];
 
-    qp_uv = qp + ((H264DecContext *)img_ptr)->second_chroma_qp_index_offset;
+    qp_uv = qp + ((H264DecContext *)vo)->second_chroma_qp_index_offset;
     qp_uv = IClip(0, 51, qp_uv);
     qp_c[1] = g_QP_SCALER_CR_TBL[qp_uv];
 
@@ -684,11 +684,11 @@ void decode_mb_cavlc (void *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T 
 #else
         clear_Nx16words(mb_cache_ptr->coff_UV, 4);
 #endif
-        decode_CHROMA_DC((H264DecContext *)img_ptr, mb_info_ptr, mb_cache_ptr, qp_c);
+        decode_CHROMA_DC((H264DecContext *)vo, mb_info_ptr, mb_cache_ptr, qp_c);
     }
 
     if (mb_info_ptr->cbp > 31) {
-        decode_CHROMA_AC ((H264DecContext *)img_ptr, mb_info_ptr, mb_cache_ptr, qp_c);
+        decode_CHROMA_AC ((H264DecContext *)vo, mb_info_ptr, mb_cache_ptr, qp_c);
     }
 }
 
@@ -710,7 +710,7 @@ void decode_mb_cavlc (void *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T 
 
 static int32 readCoeff4x4_CABAC(void *img, DEC_MB_INFO_T * currMB, DEC_MB_CACHE_T *mb_cache_ptr, int16 *block, int32 cat, int32 n, const uint8 *scantable, const uint32 *qmul, int32 max_coeff)
 {
-    H264DecContext *img_ptr = (H264DecContext *)img;
+    H264DecContext *vo = (H264DecContext *)img;
     int32 index[64];
     int32 last;
     int32 coeff_count = 0;
@@ -723,9 +723,9 @@ static int32 readCoeff4x4_CABAC(void *img, DEC_MB_INFO_T * currMB, DEC_MB_CACHE_
 
 #define CC &cc
     CABACContext cc;
-    cc.range     = img_ptr->cabac.range;
-    cc.low       = img_ptr->cabac.low;
-    cc.bitstrm_ptr = img_ptr->cabac.bitstrm_ptr;
+    cc.range     = vo->cabac.range;
+    cc.low       = vo->cabac.low;
+    cc.bitstrm_ptr = vo->cabac.bitstrm_ptr;
 
     /* cat: 0-> DC 16x16  n = 0
      *      1-> AC 16x16  n = luma4x4idx
@@ -737,19 +737,19 @@ static int32 readCoeff4x4_CABAC(void *img, DEC_MB_INFO_T * currMB, DEC_MB_CACHE_
 
     /* read coded block flag */
     if( cat != 5 ) {
-        if( get_cabac( CC, &img_ptr->cabac_state[85 + get_cabac_cbf_ctx( currMB, mb_cache_ptr, cat, n ) ] ) == 0 ) {
+        if( get_cabac( CC, &vo->cabac_state[85 + get_cabac_cbf_ctx( currMB, mb_cache_ptr, cat, n ) ] ) == 0 ) {
             if( cat == 1 || cat == 2 || cat == 4) {
                 pNnzRef [g_blk_order_map_tbl[n]] = 0;
             }
-            img_ptr->cabac.range     = cc.range;
-            img_ptr->cabac.low       = cc.low;
+            vo->cabac.range     = cc.range;
+            vo->cabac.low       = cc.low;
             return 0;
         }
     }
 
-    significant_coeff_ctx_base = img_ptr->cabac_state + significant_coeff_flag_offset[cat];
-    last_coeff_ctx_base = img_ptr->cabac_state + last_coeff_flag_offset[cat];
-    abs_level_m1_ctx_base = img_ptr->cabac_state + coeff_abs_level_m1_offset[cat];
+    significant_coeff_ctx_base = vo->cabac_state + significant_coeff_flag_offset[cat];
+    last_coeff_ctx_base = vo->cabac_state + last_coeff_flag_offset[cat];
+    abs_level_m1_ctx_base = vo->cabac_state + coeff_abs_level_m1_offset[cat];
 
     if( cat == 5 ) {
         const uint8 *sig_off = significant_coeff_flag_offset_8x8;
@@ -825,13 +825,13 @@ static int32 readCoeff4x4_CABAC(void *img, DEC_MB_INFO_T * currMB, DEC_MB_CACHE_
         }
     }
 
-    img_ptr->cabac.range = cc.range;
-    img_ptr->cabac.low = cc.low;
+    vo->cabac.range = cc.range;
+    vo->cabac.low = cc.low;
 
     return coeff_count;
 }
 
-void decode_LUMA_DC_cabac (H264DecContext *img_ptr, DEC_MB_INFO_T * currMB, DEC_MB_CACHE_T * mb_cache_ptr, int qp)
+void decode_LUMA_DC_cabac (H264DecContext *vo, DEC_MB_INFO_T * currMB, DEC_MB_CACHE_T * mb_cache_ptr, int qp)
 {
     int16 DC[16];
     int32 total_coeff;
@@ -843,15 +843,15 @@ void decode_LUMA_DC_cabac (H264DecContext *img_ptr, DEC_MB_INFO_T * currMB, DEC_
     memset_8words_zero(DC);
 #endif
 
-    total_coeff = readCoeff4x4_CABAC (img_ptr, currMB, mb_cache_ptr, DC, LUMA_DC, 0, inverse_zigZag, NULL, 16);
+    total_coeff = readCoeff4x4_CABAC (vo, currMB, mb_cache_ptr, DC, LUMA_DC, 0, inverse_zigZag, NULL, 16);
     if (total_coeff) {
-        itrans_lumaDC (img_ptr, DC, mb_cache_ptr->coff_Y, qp);
+        itrans_lumaDC (vo, DC, mb_cache_ptr->coff_Y, qp);
     }
 
     return;
 }
 
-void decode_LUMA_AC_cabac (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CACHE_T * mb_cache_ptr, int32 qp)
+void decode_LUMA_AC_cabac (H264DecContext *vo, DEC_MB_INFO_T *currMB, DEC_MB_CACHE_T * mb_cache_ptr, int32 qp)
 {
     int32 maxCoeff;
     int32 blk4x4, blk8x8;
@@ -864,7 +864,7 @@ void decode_LUMA_AC_cabac (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_M
     if (currMB->transform_size_8x8_flag) {
         inverse_zigZag = g_inverse_8x8_zigzag_tbl;
         maxCoeff = 64;
-        quant_mat= (currMB->is_intra) ? img_ptr->dequant8_buffer[0][qp] : img_ptr->dequant8_buffer[1][qp];
+        quant_mat= (currMB->is_intra) ? vo->dequant8_buffer[0][qp] : vo->dequant8_buffer[1][qp];
 
         for (blk8x8= 0; blk8x8 < 4; blk8x8++) {
             if (cbp & (1 << blk8x8)) {
@@ -873,13 +873,13 @@ void decode_LUMA_AC_cabac (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_M
 #else
                 clear_Nx16words(coeff, 2);
 #endif
-                readCoeff4x4_CABAC (img_ptr, currMB, mb_cache_ptr, coeff, 5, (blk8x8<<2), inverse_zigZag, quant_mat, maxCoeff);
+                readCoeff4x4_CABAC (vo, currMB, mb_cache_ptr, coeff, 5, (blk8x8<<2), inverse_zigZag, quant_mat, maxCoeff);
             }
 
             coeff += 16*4;
         }
     } else {
-        quant_mat = (currMB->is_intra) ? img_ptr->dequant4_buffer[0][qp] : img_ptr->dequant4_buffer[3][qp];
+        quant_mat = (currMB->is_intra) ? vo->dequant4_buffer[0][qp] : vo->dequant4_buffer[3][qp];
 
         if (currMB->mb_type == I16MB) {
             inverse_zigZag = g_inverse_zigzag_tbl + 1; //g_inverse_zigzag_cabac_I16_ac_tbl;
@@ -902,7 +902,7 @@ void decode_LUMA_AC_cabac (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_M
 #endif
                     }
 
-                    readCoeff4x4_CABAC (img_ptr, currMB, mb_cache_ptr, coeff, blk_type, ((blk8x8<<2) + blk4x4), inverse_zigZag, quant_mat, maxCoeff);
+                    readCoeff4x4_CABAC (vo, currMB, mb_cache_ptr, coeff, blk_type, ((blk8x8<<2) + blk4x4), inverse_zigZag, quant_mat, maxCoeff);
                     coeff += 16;
                 }
             } else {
@@ -914,7 +914,7 @@ void decode_LUMA_AC_cabac (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_M
     return;
 }
 
-void decode_CHROMA_DC_cabac_sw (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CACHE_T *mb_cache_ptr, int32 qp_uv[2])
+void decode_CHROMA_DC_cabac_sw (H264DecContext *vo, DEC_MB_INFO_T *currMB, DEC_MB_CACHE_T *mb_cache_ptr, int32 qp_uv[2])
 {
     int32 uv;
     int16 DC[4];
@@ -929,7 +929,7 @@ void decode_CHROMA_DC_cabac_sw (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, 
     for (uv = 0; uv < 2; uv++) {
         ((int32 *)DC) [0] = ((int32 *)DC) [1] = 0;
 
-        total_coeff = readCoeff4x4_CABAC (img_ptr, currMB, mb_cache_ptr, DC, CHROMA_DC, uv, inverse_zigZag, NULL, 4);
+        total_coeff = readCoeff4x4_CABAC (vo, currMB, mb_cache_ptr, DC, CHROMA_DC, uv, inverse_zigZag, NULL, 4);
         if (total_coeff) {
             mb_cache_ptr->cbp_uv |= 0xf << (4*uv);
         } else {
@@ -946,7 +946,7 @@ void decode_CHROMA_DC_cabac_sw (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, 
         n2 = m0 - m1;
         n3 = m2 - m3;
 
-        quantizer = (currMB->is_intra)? img_ptr->dequant4_buffer[uv+1][qp_uv[uv]][0]: img_ptr->dequant4_buffer[uv+4][qp_uv[uv]][0];
+        quantizer = (currMB->is_intra)? vo->dequant4_buffer[uv+1][qp_uv[uv]][0]: vo->dequant4_buffer[uv+4][qp_uv[uv]][0];
         m0 = (n0 + n1) * quantizer;
         m1 = (n2 + n3) * quantizer;
         m2 = (n0 - n1) * quantizer;
@@ -962,7 +962,7 @@ void decode_CHROMA_DC_cabac_sw (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, 
     return;
 }
 
-void decode_CHROMA_AC_cabac_sw (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, DEC_MB_CACHE_T * mb_cache_ptr, int32 qp_uv[2])
+void decode_CHROMA_AC_cabac_sw (H264DecContext *vo, DEC_MB_INFO_T *currMB, DEC_MB_CACHE_T * mb_cache_ptr, int32 qp_uv[2])
 {
     int32 uv;
     int32 numCoeff;
@@ -973,13 +973,13 @@ void decode_CHROMA_AC_cabac_sw (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, 
     const uint8 *inverse_zigZag = g_inverse_zigzag_tbl + 1;//g_inverse_zigzag_cabac_I16_ac_tbl;
 
     for (uv = 0; uv < 2; uv++) {
-        quant_mat = (currMB->is_intra)? img_ptr->dequant4_buffer[uv+1][qp_uv[uv]]: img_ptr->dequant4_buffer[uv+4][qp_uv[uv]];
+        quant_mat = (currMB->is_intra)? vo->dequant4_buffer[uv+1][qp_uv[uv]]: vo->dequant4_buffer[uv+4][qp_uv[uv]];
         coeff = mb_cache_ptr->coff_UV[uv];
 
         for (blk4x4 = 0; blk4x4 < 4; blk4x4++) {
             blkIndex = uv * 4 + blk4x4 + 16;
 
-            numCoeff = readCoeff4x4_CABAC (img_ptr, currMB, mb_cache_ptr, coeff, CHROMA_AC, blkIndex, inverse_zigZag, quant_mat, 15);
+            numCoeff = readCoeff4x4_CABAC (vo, currMB, mb_cache_ptr, coeff, CHROMA_AC, blkIndex, inverse_zigZag, quant_mat, 15);
             if (numCoeff) {
                 mb_cache_ptr->cbp_uv |= 0x1 << (uv*4 + blk4x4);
             } else {
@@ -995,7 +995,7 @@ void decode_CHROMA_AC_cabac_sw (H264DecContext *img_ptr, DEC_MB_INFO_T *currMB, 
 
 void decode_mb_cabac (void *img, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
 {
-    H264DecContext *img_ptr = (H264DecContext *)img;
+    H264DecContext *vo = (H264DecContext *)img;
     int32 qp_uv, qp_c[2];
     int32 qp;
 #ifdef _NEON_OPT_
@@ -1013,16 +1013,16 @@ void decode_mb_cabac (void *img, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_
 #else
         clear_Nx16words(mb_cache_ptr->coff_Y, 8);
 #endif
-        decode_LUMA_DC_cabac(img_ptr,mb_info_ptr, mb_cache_ptr, qp);
+        decode_LUMA_DC_cabac(vo,mb_info_ptr, mb_cache_ptr, qp);
     }
 
-    decode_LUMA_AC_cabac(img_ptr, mb_info_ptr, mb_cache_ptr, qp);
+    decode_LUMA_AC_cabac(vo, mb_info_ptr, mb_cache_ptr, qp);
 
-    qp_uv = qp + img_ptr->chroma_qp_offset;
+    qp_uv = qp + vo->chroma_qp_offset;
     qp_uv = IClip(0, 51, qp_uv);
     qp_c[0] = g_QP_SCALER_CR_TBL[qp_uv];
 
-    qp_uv = qp + img_ptr->second_chroma_qp_index_offset;
+    qp_uv = qp + vo->second_chroma_qp_index_offset;
     qp_uv = IClip(0, 51, qp_uv);
     qp_c[1] = g_QP_SCALER_CR_TBL[qp_uv];
 
@@ -1032,11 +1032,11 @@ void decode_mb_cabac (void *img, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_
 #else
         clear_Nx16words(mb_cache_ptr->coff_UV, 4);
 #endif
-        decode_CHROMA_DC_cabac_sw(img_ptr,mb_info_ptr, mb_cache_ptr, qp_c);
+        decode_CHROMA_DC_cabac_sw(vo,mb_info_ptr, mb_cache_ptr, qp_c);
     }
 
     if (mb_info_ptr->cbp > 31) {
-        decode_CHROMA_AC_cabac_sw(img_ptr,mb_info_ptr, mb_cache_ptr, qp_c);
+        decode_CHROMA_AC_cabac_sw(vo,mb_info_ptr, mb_cache_ptr, qp_c);
     }
 
     mb_info_ptr->dc_coded_flag = (mb_cache_ptr->vld_dc_coded_flag >> 8) & 0x7;

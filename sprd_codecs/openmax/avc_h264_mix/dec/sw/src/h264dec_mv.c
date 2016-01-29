@@ -42,9 +42,9 @@ extern   "C"
 PUBLIC int32 H264Dec_get_te (void *img, DEC_MB_CACHE_T *mb_cache_ptr, int32 blk_id, int32 list)
 {
     int32 ref_frm_id;
-    H264DecContext *img_ptr = (H264DecContext *)img;
-    DEC_BS_T *bs_ptr = img_ptr->bitstrm_ptr;
-    int32 num_ref_idx_active = img_ptr->ref_count[list];
+    H264DecContext *vo = (H264DecContext *)img;
+    DEC_BS_T *bs_ptr = vo->bitstrm_ptr;
+    int32 num_ref_idx_active = vo->ref_count[list];
 
     if (num_ref_idx_active == 2) {
         ref_frm_id = READ_FLAG();
@@ -58,9 +58,9 @@ PUBLIC int32 H264Dec_get_te (void *img, DEC_MB_CACHE_T *mb_cache_ptr, int32 blk_
 
 PUBLIC int32 decode_cavlc_mb_mvd(void *img, DEC_MB_CACHE_T *mb_cache_ptr, int32 sub_blk_id, int32 list)
 {
-    H264DecContext *img_ptr = (H264DecContext *)img;
+    H264DecContext *vo = (H264DecContext *)img;
     int32 mvd_x, mvd_y, mvd_xy;
-    DEC_BS_T *bs_ptr = img_ptr->bitstrm_ptr;
+    DEC_BS_T *bs_ptr = vo->bitstrm_ptr;
 
     mvd_x = SE_V();
     mvd_y = SE_V();
@@ -76,7 +76,7 @@ PUBLIC int32 decode_cavlc_mb_mvd(void *img, DEC_MB_CACHE_T *mb_cache_ptr, int32 
 
 #define IS_DIR(pdir)	(((pdir) == 2) || (s_list == (pdir)))
 
-LOCAL void H264Dec_read_motionAndRefId_PMB16x16 (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+LOCAL void H264Dec_read_motionAndRefId_PMB16x16 (H264DecContext *vo, DEC_MB_CACHE_T *mb_cache_ptr)
 {
     DEC_STORABLE_PICTURE_T	**listX;
     int32 ref_frm_id_s32;
@@ -90,17 +90,17 @@ LOCAL void H264Dec_read_motionAndRefId_PMB16x16 (H264DecContext *img_ptr, DEC_MB
     int32x4_t v32x4;
 #endif
 
-    for (s_list = 0; s_list < img_ptr->list_count; s_list++) {
+    for (s_list = 0; s_list < vo->list_count; s_list++) {
         if(IS_DIR(pdir)) {
-            listX = img_ptr->g_list[s_list];
+            listX = vo->g_list[s_list];
 
             if (mb_cache_ptr->read_ref_id_flag[s_list]) {
-                int32 ref_frm_id = img_ptr->readRefFrame ((void *)img_ptr, mb_cache_ptr, 0, s_list);
+                int32 ref_frm_id = vo->readRefFrame ((void *)vo, mb_cache_ptr, 0, s_list);
 
 #if _H264_PROTECT_ & _LEVEL_HIGH_
                 if (ref_frm_id >= (MAX_REF_FRAME_NUMBER+1)) {
-                    img_ptr->error_flag |= ER_REF_FRM_ID;
-                    img_ptr->return_pos |= (1<<27);
+                    vo->error_flag |= ER_REF_FRM_ID;
+                    vo->return_pos |= (1<<27);
                     return;
                 }
 #endif
@@ -119,9 +119,9 @@ LOCAL void H264Dec_read_motionAndRefId_PMB16x16 (H264DecContext *img_ptr, DEC_MB
         }
     }
 
-    for (s_list = 0; s_list < img_ptr->list_count; s_list++) {
+    for (s_list = 0; s_list < vo->list_count; s_list++) {
         if(IS_DIR(pdir)) {
-            s_mvd_xy = img_ptr->decode_mvd_xy((void *)img_ptr, mb_cache_ptr, CTX_CACHE_WIDTH_PLUS4, s_list);
+            s_mvd_xy = vo->decode_mvd_xy((void *)vo, mb_cache_ptr, CTX_CACHE_WIDTH_PLUS4, s_list);
 
             if (s_mvd_xy) {
                 s_mvd_ptr = (int32 *)(mb_cache_ptr->mvd_cache[s_list]);
@@ -145,7 +145,7 @@ LOCAL void H264Dec_read_motionAndRefId_PMB16x16 (H264DecContext *img_ptr, DEC_MB
     return;
 }
 
-LOCAL void H264Dec_read_motionAndRefId_PMB16x8 (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+LOCAL void H264Dec_read_motionAndRefId_PMB16x8 (H264DecContext *vo, DEC_MB_CACHE_T *mb_cache_ptr)
 {
     DEC_STORABLE_PICTURE_T	**listX;
     int32 ref_frm_id_s32;
@@ -160,20 +160,20 @@ LOCAL void H264Dec_read_motionAndRefId_PMB16x8 (H264DecContext *img_ptr, DEC_MB_
     int32 *s_mvd_ptr;
     int32 s_mvd_xy;
 
-    for (s_list = 0; s_list < img_ptr->list_count; s_list++) {
+    for (s_list = 0; s_list < vo->list_count; s_list++) {
         for (b16x8= 0; b16x8 < 2; b16x8++) {
             pdir = mb_cache_ptr->b8pdir[2*b16x8];
 
             if(IS_DIR(pdir)) {
-                listX = img_ptr->g_list[s_list];
+                listX = vo->g_list[s_list];
 
                 if (mb_cache_ptr->read_ref_id_flag[s_list]) {
-                    int32 ref_frm_id = img_ptr->readRefFrame ((void *)img_ptr, mb_cache_ptr, 2*b16x8, s_list);
+                    int32 ref_frm_id = vo->readRefFrame ((void *)vo, mb_cache_ptr, 2*b16x8, s_list);
 
 #if _H264_PROTECT_ & _LEVEL_HIGH_
                     if (ref_frm_id >= (MAX_REF_FRAME_NUMBER+1)) {
-                        img_ptr->error_flag |= ER_REF_FRM_ID;
-                        img_ptr->return_pos |= (1<<28);
+                        vo->error_flag |= ER_REF_FRM_ID;
+                        vo->return_pos |= (1<<28);
 
                         return;
                     }
@@ -195,12 +195,12 @@ LOCAL void H264Dec_read_motionAndRefId_PMB16x8 (H264DecContext *img_ptr, DEC_MB_
         }
     }
 
-    for (s_list = 0; s_list < img_ptr->list_count; s_list++) {
+    for (s_list = 0; s_list < vo->list_count; s_list++) {
         for (b16x8 = 0; b16x8 < 2; b16x8++) {
             pdir = mb_cache_ptr->b8pdir[2*b16x8];
 
             if(IS_DIR(pdir)) {
-                s_mvd_xy = img_ptr->decode_mvd_xy((void *)img_ptr, mb_cache_ptr, CTX_CACHE_WIDTH_PLUS4+b16x8*CTX_CACHE_WIDTH_X2, s_list);
+                s_mvd_xy = vo->decode_mvd_xy((void *)vo, mb_cache_ptr, CTX_CACHE_WIDTH_PLUS4+b16x8*CTX_CACHE_WIDTH_X2, s_list);
 
                 if (s_mvd_xy) {
                     s_mvd_ptr = (int32 *)(mb_cache_ptr->mvd_cache[s_list]) + CTX_CACHE_WIDTH_PLUS4+ CTX_CACHE_WIDTH_X2 *b16x8;
@@ -221,7 +221,7 @@ LOCAL void H264Dec_read_motionAndRefId_PMB16x8 (H264DecContext *img_ptr, DEC_MB_
     return;
 }
 
-LOCAL void H264Dec_read_motionAndRefId_PMB8x16 (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+LOCAL void H264Dec_read_motionAndRefId_PMB8x16 (H264DecContext *vo, DEC_MB_CACHE_T *mb_cache_ptr)
 {
     DEC_STORABLE_PICTURE_T	**listX;
     int32 ref_frm_id_s32;
@@ -236,20 +236,20 @@ LOCAL void H264Dec_read_motionAndRefId_PMB8x16 (H264DecContext *img_ptr, DEC_MB_
     int32 *s_mvd_ptr;
     int32 s_mvd_xy;
 
-    for (s_list = 0; s_list < img_ptr->list_count; s_list++) {
+    for (s_list = 0; s_list < vo->list_count; s_list++) {
         for (b8x16 = 0; b8x16 < 2; b8x16++) {
             pdir = mb_cache_ptr->b8pdir[b8x16];
 
             if(IS_DIR(pdir)) {
-                listX = img_ptr->g_list[s_list];
+                listX = vo->g_list[s_list];
 
                 if (mb_cache_ptr->read_ref_id_flag[s_list]) {
-                    int32 ref_frm_id = img_ptr->readRefFrame ((void *)img_ptr, mb_cache_ptr, b8x16, s_list);
+                    int32 ref_frm_id = vo->readRefFrame ((void *)vo, mb_cache_ptr, b8x16, s_list);
 
 #if _H264_PROTECT_ & _LEVEL_HIGH_
                     if (ref_frm_id >= (MAX_REF_FRAME_NUMBER+1)) {
-                        img_ptr->error_flag |= ER_REF_FRM_ID;
-                        img_ptr->return_pos |= (1<<(29+b8x16));
+                        vo->error_flag |= ER_REF_FRM_ID;
+                        vo->return_pos |= (1<<(29+b8x16));
 
                         return;
                     }
@@ -275,12 +275,12 @@ LOCAL void H264Dec_read_motionAndRefId_PMB8x16 (H264DecContext *img_ptr, DEC_MB_
         }
     }
 
-    for (s_list = 0; s_list < img_ptr->list_count; s_list++) {
+    for (s_list = 0; s_list < vo->list_count; s_list++) {
         for (b8x16 = 0; b8x16 < 2; b8x16++) {
             pdir = mb_cache_ptr->b8pdir[b8x16];
 
             if(IS_DIR(pdir)) {
-                s_mvd_xy = img_ptr->decode_mvd_xy((void *)img_ptr, mb_cache_ptr, CTX_CACHE_WIDTH_PLUS4+b8x16*2, s_list);
+                s_mvd_xy = vo->decode_mvd_xy((void *)vo, mb_cache_ptr, CTX_CACHE_WIDTH_PLUS4+b8x16*2, s_list);
 
                 if (s_mvd_xy) {
                     s_mvd_ptr = (int32 *)(mb_cache_ptr->mvd_cache[s_list]) + CTX_CACHE_WIDTH_PLUS4+ 2 *b8x16;
@@ -307,7 +307,7 @@ LOCAL void H264Dec_read_motionAndRefId_PMB8x16 (H264DecContext *img_ptr, DEC_MB_
     return;
 }
 
-LOCAL void H264Dec_read_motionAndRefId_P8x8 (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+LOCAL void H264Dec_read_motionAndRefId_P8x8 (H264DecContext *vo, DEC_MB_CACHE_T *mb_cache_ptr)
 {
     DEC_STORABLE_PICTURE_T	**listX;
     int32 ref_frm_id_s32;
@@ -325,21 +325,21 @@ LOCAL void H264Dec_read_motionAndRefId_P8x8 (H264DecContext *img_ptr, DEC_MB_CAC
     int32 s_mvd_xy;
     uint32 s_row;
 
-    for (s_list = 0; s_list < img_ptr->list_count; s_list++) {
+    for (s_list = 0; s_list < vo->list_count; s_list++) {
         for (b8 = 0; b8 < 4; b8++) {
             if (mb_cache_ptr->b8mode[b8] == 0)	continue;	//direct 8x8
 
             pdir = mb_cache_ptr->b8pdir[b8];
             if(IS_DIR(pdir)) {
-                listX = img_ptr->g_list[s_list];
+                listX = vo->g_list[s_list];
 
                 if (mb_cache_ptr->read_ref_id_flag[s_list]) {
-                    int32 ref_frm_id =  img_ptr->readRefFrame ((void *)img_ptr, mb_cache_ptr, b8, s_list);
+                    int32 ref_frm_id =  vo->readRefFrame ((void *)vo, mb_cache_ptr, b8, s_list);
 
 #if _H264_PROTECT_ & _LEVEL_HIGH_
                     if (ref_frm_id >= (MAX_REF_FRAME_NUMBER+1)) {
-                        img_ptr->error_flag |= ER_REF_FRM_ID;
-                        img_ptr->return_pos1 |= (1<<(2+b8));
+                        vo->error_flag |= ER_REF_FRM_ID;
+                        vo->return_pos1 |= (1<<(2+b8));
 
                         return;
                     }
@@ -361,7 +361,7 @@ LOCAL void H264Dec_read_motionAndRefId_P8x8 (H264DecContext *img_ptr, DEC_MB_CAC
         }
     }
 
-    for (s_list = 0; s_list < img_ptr->list_count; s_list++) {
+    for (s_list = 0; s_list < vo->list_count; s_list++) {
         for (b8 = 0; b8 < 4; b8++) {
             if (mb_cache_ptr->b8mode[b8] == 0) {
                 continue;
@@ -377,7 +377,7 @@ LOCAL void H264Dec_read_motionAndRefId_P8x8 (H264DecContext *img_ptr, DEC_MB_CAC
 
                 switch(mb_cache_ptr->b8mode[b8]) {
                 case PMB8X8_BLOCK8X8:
-                    s_mvd_xy = img_ptr->decode_mvd_xy((void *)img_ptr, mb_cache_ptr, sub_blk_id, s_list);
+                    s_mvd_xy = vo->decode_mvd_xy((void *)vo, mb_cache_ptr, sub_blk_id, s_list);
 #ifndef _NEON_OPT_
                     s_mvd_ptr[0] = s_mvd_ptr[1] = s_mvd_xy;
                     s_mvd_ptr += CTX_CACHE_WIDTH;
@@ -390,7 +390,7 @@ LOCAL void H264Dec_read_motionAndRefId_P8x8 (H264DecContext *img_ptr, DEC_MB_CAC
 
                     break;
                 case PMB8X8_BLOCK8X4:
-                    s_mvd_xy = img_ptr->decode_mvd_xy((void *)img_ptr, mb_cache_ptr, sub_blk_id+0*CTX_CACHE_WIDTH, s_list);
+                    s_mvd_xy = vo->decode_mvd_xy((void *)vo, mb_cache_ptr, sub_blk_id+0*CTX_CACHE_WIDTH, s_list);
 #ifndef _NEON_OPT_
                     s_mvd_ptr[0] = s_mvd_ptr[1] = s_mvd_xy;
                     s_mvd_ptr += CTX_CACHE_WIDTH;
@@ -399,7 +399,7 @@ LOCAL void H264Dec_read_motionAndRefId_P8x8 (H264DecContext *img_ptr, DEC_MB_CAC
                     vst1_s32 (s_mvd_ptr+0, v32x2 );
 #endif
 
-                    s_mvd_xy = img_ptr->decode_mvd_xy((void *)img_ptr, mb_cache_ptr, sub_blk_id+1*CTX_CACHE_WIDTH, s_list);
+                    s_mvd_xy = vo->decode_mvd_xy((void *)vo, mb_cache_ptr, sub_blk_id+1*CTX_CACHE_WIDTH, s_list);
 #ifndef _NEON_OPT_
                     s_mvd_ptr[0] = s_mvd_ptr[1] = s_mvd_xy;
 #else
@@ -409,7 +409,7 @@ LOCAL void H264Dec_read_motionAndRefId_P8x8 (H264DecContext *img_ptr, DEC_MB_CAC
 
                     break;
                 case PMB8X8_BLOCK4X8:
-                    s_mvd_xy = img_ptr->decode_mvd_xy((void *)img_ptr, mb_cache_ptr, sub_blk_id+0, s_list);
+                    s_mvd_xy = vo->decode_mvd_xy((void *)vo, mb_cache_ptr, sub_blk_id+0, s_list);
 #if 1//ndef _NEON_OPT_		
                     s_mvd_ptr[0] = s_mvd_ptr[CTX_CACHE_WIDTH] = s_mvd_xy;
                     s_mvd_ptr ++;
@@ -417,7 +417,7 @@ LOCAL void H264Dec_read_motionAndRefId_P8x8 (H264DecContext *img_ptr, DEC_MB_CAC
                     v32x2 = vset_lane_s32(s_mvd_xy, v32x2, 0);
 #endif
 
-                    s_mvd_xy = img_ptr->decode_mvd_xy((void *)img_ptr, mb_cache_ptr, sub_blk_id+1, s_list);
+                    s_mvd_xy = vo->decode_mvd_xy((void *)vo, mb_cache_ptr, sub_blk_id+1, s_list);
 #if 1//ndef _NEON_OPT_				
                     s_mvd_ptr[0] = s_mvd_ptr[CTX_CACHE_WIDTH] = s_mvd_xy;
 #else
@@ -430,22 +430,22 @@ LOCAL void H264Dec_read_motionAndRefId_P8x8 (H264DecContext *img_ptr, DEC_MB_CAC
                 case PMB8X8_BLOCK4X4:
 
                     ///0
-                    s_mvd_xy = img_ptr->decode_mvd_xy((void *)img_ptr, mb_cache_ptr, sub_blk_id, s_list);
+                    s_mvd_xy = vo->decode_mvd_xy((void *)vo, mb_cache_ptr, sub_blk_id, s_list);
                     s_mvd_ptr[0] = s_mvd_xy;
 
                     ///1
-                    s_mvd_xy = img_ptr->decode_mvd_xy((void *)img_ptr, mb_cache_ptr, sub_blk_id+1, s_list);
+                    s_mvd_xy = vo->decode_mvd_xy((void *)vo, mb_cache_ptr, sub_blk_id+1, s_list);
                     s_mvd_ptr[1] = s_mvd_xy;
 
                     sub_blk_id += CTX_CACHE_WIDTH;
                     s_mvd_ptr += CTX_CACHE_WIDTH;
 
                     ///2
-                    s_mvd_xy = img_ptr->decode_mvd_xy((void *)img_ptr, mb_cache_ptr, sub_blk_id, s_list);
+                    s_mvd_xy = vo->decode_mvd_xy((void *)vo, mb_cache_ptr, sub_blk_id, s_list);
                     s_mvd_ptr[0] = s_mvd_xy;
 
                     ///3
-                    s_mvd_xy = img_ptr->decode_mvd_xy((void *)img_ptr, mb_cache_ptr, sub_blk_id+1, s_list);
+                    s_mvd_xy = vo->decode_mvd_xy((void *)vo, mb_cache_ptr, sub_blk_id+1, s_list);
                     s_mvd_ptr[1] = s_mvd_xy;
 
                     break;
@@ -459,20 +459,20 @@ LOCAL void H264Dec_read_motionAndRefId_P8x8 (H264DecContext *img_ptr, DEC_MB_CAC
     return;
 }
 
-PUBLIC void H264Dec_read_motionAndRefId (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+PUBLIC void H264Dec_read_motionAndRefId (H264DecContext *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
 {
     switch (mb_info_ptr->mb_type) {
     case PMB16x16:
-        H264Dec_read_motionAndRefId_PMB16x16 (img_ptr, mb_cache_ptr);
+        H264Dec_read_motionAndRefId_PMB16x16 (vo, mb_cache_ptr);
         break;
     case PMB16x8:
-        H264Dec_read_motionAndRefId_PMB16x8 (img_ptr, mb_cache_ptr);
+        H264Dec_read_motionAndRefId_PMB16x8 (vo, mb_cache_ptr);
         break;
     case PMB8x16:
-        H264Dec_read_motionAndRefId_PMB8x16 (img_ptr, mb_cache_ptr);
+        H264Dec_read_motionAndRefId_PMB8x16 (vo, mb_cache_ptr);
         break;
     case P8x8:
-        H264Dec_read_motionAndRefId_P8x8 (img_ptr, mb_cache_ptr);
+        H264Dec_read_motionAndRefId_P8x8 (vo, mb_cache_ptr);
         break;
     default:
         break;
@@ -620,9 +620,9 @@ int32 H264Dec_pred8x16_motion (DEC_MB_CACHE_T *mb_cache_ptr, int32 blkIdx, int32
 }
 
 //not reference
-void H264Dec_FillNoRefList_8x8(H264DecContext *img_ptr, uint32 b8, int32 b8pdir)
+void H264Dec_FillNoRefList_8x8(H264DecContext *vo, uint32 b8, int32 b8pdir)
 {
-    if (img_ptr->type != B_SLICE) return;
+    if (vo->type != B_SLICE) return;
 
     if (b8pdir != 2) {
         uint32 cache_offset = CTX_CACHE_WIDTH_PLUS4 + CTX_CACHE_WIDTH_X2*(b8>>1)+2*(b8&1);
@@ -630,7 +630,7 @@ void H264Dec_FillNoRefList_8x8(H264DecContext *img_ptr, uint32 b8, int32 b8pdir)
         int32 s_list = 1 - b8pdir;
         int8 *s_ref_idx_ptr;
 
-        s_ref_idx_ptr = img_ptr->g_mb_cache_ptr->ref_idx_cache[s_list]+cache_offset;
+        s_ref_idx_ptr = vo->g_mb_cache_ptr->ref_idx_cache[s_list]+cache_offset;
 
         ((int16 *)s_ref_idx_ptr)[0] = LIST_NOT_USED;
         s_ref_idx_ptr += CTX_CACHE_WIDTH;
@@ -639,7 +639,7 @@ void H264Dec_FillNoRefList_8x8(H264DecContext *img_ptr, uint32 b8, int32 b8pdir)
     return;
 }
 
-PUBLIC void H264Dec_mv_prediction_P8x8 (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+PUBLIC void H264Dec_mv_prediction_P8x8 (H264DecContext *vo, DEC_MB_CACHE_T *mb_cache_ptr)
 {
     uint32 i;
     int8  *ref_idx_ptr[2];
@@ -660,10 +660,10 @@ PUBLIC void H264Dec_mv_prediction_P8x8 (H264DecContext *img_ptr, DEC_MB_CACHE_T 
     //8x8 0
     cache_offset = CTX_CACHE_WIDTH_PLUS4;
     b8mode = mb_cache_ptr->b8mode[0];
-    b8pdir = (*img_ptr->b8_mv_pred_func[b8mode])((void *)img_ptr, mb_cache_ptr, cache_offset, 0);
+    b8pdir = (*vo->b8_mv_pred_func[b8mode])((void *)vo, mb_cache_ptr, cache_offset, 0);
 
-    if ((img_ptr->type == B_SLICE) && (b8pdir != 2)) {
-        H264Dec_FillNoRefList_8x8(img_ptr, 0, b8pdir);
+    if ((vo->type == B_SLICE) && (b8pdir != 2)) {
+        H264Dec_FillNoRefList_8x8(vo, 0, b8pdir);
     }
 
     //8x8 1
@@ -671,19 +671,19 @@ PUBLIC void H264Dec_mv_prediction_P8x8 (H264DecContext *img_ptr, DEC_MB_CACHE_T 
     ref_idx_ptr[0][2] = ref_idx_b8_1[0];
     ref_idx_ptr[1][2] = ref_idx_b8_1[1];
     b8mode = mb_cache_ptr->b8mode[1];
-    b8pdir = (*img_ptr->b8_mv_pred_func[b8mode])((void *)img_ptr, mb_cache_ptr, cache_offset, 1);
+    b8pdir = (*vo->b8_mv_pred_func[b8mode])((void *)vo, mb_cache_ptr, cache_offset, 1);
 
-    if ((img_ptr->type == B_SLICE) && (b8pdir != 2)) {
-        H264Dec_FillNoRefList_8x8(img_ptr, 1, b8pdir);
+    if ((vo->type == B_SLICE) && (b8pdir != 2)) {
+        H264Dec_FillNoRefList_8x8(vo, 1, b8pdir);
     }
 
     //8x8 2
     cache_offset = CTX_CACHE_WIDTH_PLUS4 + CTX_CACHE_WIDTH_X2;
     b8mode = mb_cache_ptr->b8mode[2];
-    b8pdir = (*img_ptr->b8_mv_pred_func[b8mode])((void *)img_ptr, mb_cache_ptr, cache_offset, 2);
+    b8pdir = (*vo->b8_mv_pred_func[b8mode])((void *)vo, mb_cache_ptr, cache_offset, 2);
 
-    if ((img_ptr->type == B_SLICE) && (b8pdir != 2)) {
-        H264Dec_FillNoRefList_8x8(img_ptr, 2, b8pdir);
+    if ((vo->type == B_SLICE) && (b8pdir != 2)) {
+        H264Dec_FillNoRefList_8x8(vo, 2, b8pdir);
     }
 
     //8x8 3
@@ -693,10 +693,10 @@ PUBLIC void H264Dec_mv_prediction_P8x8 (H264DecContext *img_ptr, DEC_MB_CACHE_T 
     ref_idx_ptr[0][0] = ref_idx_b8_3[0];
     ref_idx_ptr[1][0] = ref_idx_b8_3[1];
     b8mode = mb_cache_ptr->b8mode[3];
-    b8pdir = (*img_ptr->b8_mv_pred_func[b8mode])((void *)img_ptr, mb_cache_ptr, cache_offset, 3);
+    b8pdir = (*vo->b8_mv_pred_func[b8mode])((void *)vo, mb_cache_ptr, cache_offset, 3);
 
-    if ((img_ptr->type == B_SLICE) && (b8pdir != 2)) {
-        H264Dec_FillNoRefList_8x8(img_ptr, 3, b8pdir);
+    if ((vo->type == B_SLICE) && (b8pdir != 2)) {
+        H264Dec_FillNoRefList_8x8(vo, 3, b8pdir);
     }
 
     return;
@@ -738,7 +738,7 @@ PUBLIC void H264Dec_mv_prediction_P8x8 (H264DecContext *img_ptr, DEC_MB_CACHE_T 
 
 PUBLIC void H264Dec_direct_mv_spatial(void *img, DEC_MB_CACHE_T *mb_cache_ptr)
 {
-    H264DecContext *img_ptr = (H264DecContext *)img;
+    H264DecContext *vo = (H264DecContext *)img;
     int fw_rFrameL, fw_rFrameU, fw_rFrameUL, fw_rFrameUR;
     int bw_rFrameL, bw_rFrameU, bw_rFrameUL, bw_rFrameUR;
     int32 fw_rFrame,bw_rFrame;
@@ -752,7 +752,7 @@ PUBLIC void H264Dec_direct_mv_spatial(void *img, DEC_MB_CACHE_T *mb_cache_ptr)
     int32 *s_ref_mv_ptr_array[2];
     int32 *s_ref_mv_ptr;
 
-    DEC_STORABLE_PICTURE_T	*fs = img_ptr->g_list[1][0];
+    DEC_STORABLE_PICTURE_T	*fs = vo->g_list[1][0];
     int8  *ref_idx_cache_direct0 = mb_cache_ptr->ref_idx_cache_direct[0];
     int8  *ref_idx_cache_direct1 = mb_cache_ptr->ref_idx_cache_direct[1];
     int32 *ref_pic_id_cache_direct0 = mb_cache_ptr->ref_pic_id_cache_direct[0];
@@ -761,12 +761,12 @@ PUBLIC void H264Dec_direct_mv_spatial(void *img, DEC_MB_CACHE_T *mb_cache_ptr)
     int16 *ref_mv_cache_direct1 = mb_cache_ptr->mv_cache_direct[1];
 
     if (!fs || !fs->mv_ptr[0] || !fs->mv_ptr[1]) {
-        img_ptr->error_flag |= ER_REF_FRM_ID;
+        vo->error_flag |= ER_REF_FRM_ID;
         return;
     }
 
     for (blk4x4Idx = 0; blk4x4Idx < 16; blk4x4Idx++) {
-        offset = img_ptr->corner_map[blk4x4Idx];
+        offset = vo->corner_map[blk4x4Idx];
         JUDGE_MOVING_BLOCK
     }
 
@@ -819,9 +819,9 @@ PUBLIC void H264Dec_direct_mv_spatial(void *img, DEC_MB_CACHE_T *mb_cache_ptr)
 
 PUBLIC void H264Dec_direct_mv_temporal(void *img, DEC_MB_CACHE_T *mb_cache_ptr)
 {
-    H264DecContext *img_ptr = (H264DecContext *)img;
-    DEC_STORABLE_PICTURE_T	*fs = img_ptr->g_list[1][0];
-    int32 iref_max = mmin(img_ptr->ref_count[0], img_ptr->g_list_size[0]);
+    H264DecContext *vo = (H264DecContext *)img;
+    DEC_STORABLE_PICTURE_T	*fs = vo->g_list[1][0];
+    int32 iref_max = mmin(vo->ref_count[0], vo->g_list_size[0]);
     int32 /*i,*/ offset, blk4x4Idx;
     int32 blk4x4_id;
     int8  *ref_idx_cache_direct0 = mb_cache_ptr->ref_idx_cache_direct[0];
@@ -832,7 +832,7 @@ PUBLIC void H264Dec_direct_mv_temporal(void *img, DEC_MB_CACHE_T *mb_cache_ptr)
     int16 *ref_mv_cache_direct1 = mb_cache_ptr->mv_cache_direct[1];
 
     for (blk4x4Idx = 0; blk4x4Idx < 16; blk4x4Idx++) {
-        offset = img_ptr->corner_map[blk4x4Idx];
+        offset = vo->corner_map[blk4x4Idx];
 
         *ref_idx_cache_direct0++ = fs->ref_idx_ptr[0][offset];
         *ref_idx_cache_direct1++ = fs->ref_idx_ptr[1][offset];
@@ -869,14 +869,14 @@ PUBLIC void H264Dec_direct_mv_temporal(void *img, DEC_MB_CACHE_T *mb_cache_ptr)
             } else {
                 int mapped_idx=0;
                 int32 ref_pic_id = ((refList == 0) ? ref_pic_id_cache_direct0[0] : ref_pic_id_cache_direct1[0]);
-                int iref_max = mmin(img_ptr->ref_count[0], img_ptr->g_list_size[0]);
+                int iref_max = mmin(vo->ref_count[0], vo->g_list_size[0]);
                 int iref;
 
                 for (iref = 0; iref < iref_max; iref++) {
                     // If the current MB is a frame MB and the colocated is from a field picture,
                     // then the co_located_ref_id may have been generated from the wrong value of
                     // frame_poc if it references it's complementary field, so test both POC values
-                    if((img_ptr->g_list[0][iref]->poc * 2) == ref_pic_id) {
+                    if((vo->g_list[0][iref]->poc * 2) == ref_pic_id) {
                         mapped_idx=iref;
                         break;
                     } else {//! invalid index. Default to zero even though this case should not happen
@@ -889,7 +889,7 @@ PUBLIC void H264Dec_direct_mv_temporal(void *img, DEC_MB_CACHE_T *mb_cache_ptr)
                     //	exit(-1);
                 }
 
-                if (img_ptr->dist_scale_factor[mapped_idx] == 9999 || img_ptr->g_list[0][mapped_idx]->is_long_term) {
+                if (vo->dist_scale_factor[mapped_idx] == 9999 || vo->g_list[0][mapped_idx]->is_long_term) {
                     if (refList == 0) {
                         mb_cache_ptr->fw_mv_xy = ((int32 *)ref_mv_cache_direct0)[0];
                     } else {
@@ -903,8 +903,8 @@ PUBLIC void H264Dec_direct_mv_temporal(void *img, DEC_MB_CACHE_T *mb_cache_ptr)
 
                     int16 *ref_mv_ptr = ((refList == 0) ? ref_mv_cache_direct0 : ref_mv_cache_direct1);
 
-                    tmp1 = (img_ptr->dist_scale_factor[mapped_idx] * ref_mv_ptr[0] + 128) >> 8;
-                    tmp2 = (img_ptr->dist_scale_factor[mapped_idx] * ref_mv_ptr[1] + 128) >> 8;
+                    tmp1 = (vo->dist_scale_factor[mapped_idx] * ref_mv_ptr[0] + 128) >> 8;
+                    tmp2 = (vo->dist_scale_factor[mapped_idx] * ref_mv_ptr[1] + 128) >> 8;
                     mb_cache_ptr->fw_mv_xy = ((tmp2<<16) | (tmp1 & 0xffff));
                     tmp1 -= ref_mv_ptr[0];
                     tmp2 -= ref_mv_ptr[1];
@@ -943,7 +943,7 @@ typedef struct WP_info_tag
     int16 *g_wp_weight_ptr;
 } DEC_WP_MEM_INFO_T;
 
-LOCAL void H264Dec_Config_WP_info(H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+LOCAL void H264Dec_Config_WP_info(H264DecContext *vo, DEC_MB_CACHE_T *mb_cache_ptr)
 {
 #if 1//WIN32
     uint32 row, col;
@@ -971,7 +971,7 @@ LOCAL void H264Dec_Config_WP_info(H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_ca
         ref_idx_ptr0 = mb_cache_ptr->ref_idx_cache[0] + CTX_CACHE_WIDTH_PLUS4;
         ref_idx_ptr1 = mb_cache_ptr->ref_idx_cache[1] + CTX_CACHE_WIDTH_PLUS4;
         pitch = (comp == 0) ? MB_SIZE : MB_CHROMA_SIZE;
-        shift = (comp == 0) ? img_ptr->luma_log2_weight_denom : img_ptr->chroma_log2_weight_denom;
+        shift = (comp == 0) ? vo->luma_log2_weight_denom : vo->chroma_log2_weight_denom;
         blk_size = (comp == 0) ? 4 : 2;
 
         for (row = 0; row < 4; row++) {
@@ -992,10 +992,10 @@ LOCAL void H264Dec_Config_WP_info(H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_ca
                 }
 
                 if (2 == pdir) {//bi-dir
-                    offset[0] = img_ptr->g_wp_offset[0][mc_ref_idx[0]][comp];
-                    offset[1] = img_ptr->g_wp_offset[1][mc_ref_idx[1]][comp];
-                    weight[0] = img_ptr->g_wbp_weight[0][mc_ref_idx[0]][mc_ref_idx[1]][comp];
-                    weight[1] = img_ptr->g_wbp_weight[1][mc_ref_idx[0]][mc_ref_idx[1]][comp];
+                    offset[0] = vo->g_wp_offset[0][mc_ref_idx[0]][comp];
+                    offset[1] = vo->g_wp_offset[1][mc_ref_idx[1]][comp];
+                    weight[0] = vo->g_wbp_weight[0][mc_ref_idx[0]][mc_ref_idx[1]][comp];
+                    weight[1] = vo->g_wbp_weight[1][mc_ref_idx[0]][mc_ref_idx[1]][comp];
 
                     for (i = 0; i < blk_size; i++) {
                         for (j = 0; j < blk_size; j++) {
@@ -1009,8 +1009,8 @@ LOCAL void H264Dec_Config_WP_info(H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_ca
                         src_ptr[1] += pitch;
                     }
                 } else {//list 0 or list 1
-                    offset[pdir] = img_ptr->g_wp_offset[pdir][mc_ref_idx[pdir]][comp];
-                    weight[pdir] = img_ptr->g_wp_weight[pdir][mc_ref_idx[pdir]][comp];
+                    offset[pdir] = vo->g_wp_offset[pdir][mc_ref_idx[pdir]][comp];
+                    weight[pdir] = vo->g_wp_weight[pdir][mc_ref_idx[pdir]][comp];
 
                     for (i = 0; i < blk_size; i++) {
                         for (j = 0; j < blk_size; j++) {
@@ -1071,7 +1071,7 @@ LOCAL void H264Dec_Config_WP_info(H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_ca
 }
 
 //for one 8x8 block in one MB
-void H264Dec_Config_8x8MC_info(H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int32 b8, int32 b8pdir)
+void H264Dec_Config_8x8MC_info(H264DecContext *vo, DEC_MB_CACHE_T *mb_cache_ptr, int32 b8, int32 b8pdir)
 {
     uint32 b8_cache_offset;
     int32 mv_x, mv_y;
@@ -1097,16 +1097,16 @@ void H264Dec_Config_8x8MC_info(H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache
         mv_x = ((mv_xy << 16) >> 16);
         mv_y = (mv_xy >> 16);
 
-        list = img_ptr->g_list[s_list];
+        list = vo->g_list[s_list];
         pRefFrame = list[s_ref_idx_ptr[0]]->imgYUV;
 #if defined(CTS_PROTECT)
         if ((pRefFrame == NULL) || (pRefFrame[0] == NULL) ||(pRefFrame[1] == NULL) ) {
-            img_ptr->error_flag |= ER_REF_FRM_ID;
-            img_ptr->return_pos2 |= (1<<15);
+            vo->error_flag |= ER_REF_FRM_ID;
+            vo->return_pos2 |= (1<<15);
             return;
         }
 #endif
-        H264Dec_mc_8x8 (img_ptr, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b8);
+        H264Dec_mc_8x8 (vo, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b8);
 
         s_dir++;
     } while(s_dir < b8pdir);
@@ -1115,7 +1115,7 @@ void H264Dec_Config_8x8MC_info(H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache
 }
 
 //for four 4x4 subblock in one 8x8 block
-void H264Dec_Config_4x4MC_info(H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int32 b8, int32 b8pdir)
+void H264Dec_Config_4x4MC_info(H264DecContext *vo, DEC_MB_CACHE_T *mb_cache_ptr, int32 b8, int32 b8pdir)
 {
     uint32 b4;
     uint32 b8_cache_offset;
@@ -1145,17 +1145,17 @@ void H264Dec_Config_4x4MC_info(H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache
             mv_x = ((mv_xy << 16) >> 16);
             mv_y = (mv_xy >> 16);
 
-            list = img_ptr->g_list[s_list];
+            list = vo->g_list[s_list];
             pRefFrame = list[s_ref_idx_ptr[0]]->imgYUV;
 #if defined(CTS_PROTECT)
             if ((pRefFrame == NULL) || (pRefFrame[0] == NULL) ||(pRefFrame[1] == NULL) ) {
-                img_ptr->error_flag |= ER_REF_FRM_ID;
-                img_ptr->return_pos2 |= (1<<16);
+                vo->error_flag |= ER_REF_FRM_ID;
+                vo->return_pos2 |= (1<<16);
                 return;
             }
 #endif
 
-            H264Dec_mc_4x4 (img_ptr, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b8, b4);
+            H264Dec_mc_4x4 (vo, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b8, b4);
 
             s_dir++;
         } while(s_dir < b8pdir);
@@ -1166,7 +1166,7 @@ void H264Dec_Config_4x4MC_info(H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache
 
 PUBLIC int8 H264Dec_mv_prediction_skipped_bslice_spatial (void *img, DEC_MB_CACHE_T *mb_cache_ptr)
 {
-    H264DecContext *img_ptr = (H264DecContext *)img;
+    H264DecContext *vo = (H264DecContext *)img;
     int32 mv_xy;
     int32 use_8x8mc;
     int32 use_4x4mc[4] = {0,0,0,0};
@@ -1198,7 +1198,7 @@ PUBLIC int8 H264Dec_mv_prediction_skipped_bslice_spatial (void *img, DEC_MB_CACH
         //set mv cache
         if (mv_xy)	{//curr mv context has been set to value 0 in fill_mb func.
             uint32 col;
-            int32 condition = (fw_rFrame || (img_ptr->g_list[1][0]->is_long_term)) ? 0 : 1;
+            int32 condition = (fw_rFrame || (vo->g_list[1][0]->is_long_term)) ? 0 : 1;
             int8 *moving_block = mb_cache_ptr->moving_block;
 
             s_ref_mv_ptr = (int32 *)(mb_cache_ptr->mv_cache[0]) + CTX_CACHE_WIDTH_PLUS4;
@@ -1228,7 +1228,7 @@ PUBLIC int8 H264Dec_mv_prediction_skipped_bslice_spatial (void *img, DEC_MB_CACH
         //set mv cache
         if (mv_xy) {//curr mv context has been set to value 0 in fill_mb func.
             uint32 col;
-            int32 condition = (bw_rFrame || (img_ptr->g_list[1][0]->is_long_term)) ? 0 : 1;
+            int32 condition = (bw_rFrame || (vo->g_list[1][0]->is_long_term)) ? 0 : 1;
             int8 *moving_block = mb_cache_ptr->moving_block;
 
             s_ref_mv_ptr = (int32 *)(mb_cache_ptr->mv_cache[1])+ CTX_CACHE_WIDTH_PLUS4;
@@ -1292,27 +1292,27 @@ PUBLIC int8 H264Dec_mv_prediction_skipped_bslice_spatial (void *img, DEC_MB_CACH
             s_ref_mv_ptr = (int32*)(mb_cache_ptr->mv_cache[s_list]) + cache_offset;
             mv_xy = s_ref_mv_ptr[0];
 
-            list = img_ptr->g_list[s_list];
+            list = vo->g_list[s_list];
             pRefFrame = list[s_ref_idx_ptr[0]]->imgYUV;
 #if defined(CTS_PROTECT)
             if ((pRefFrame == NULL) || (pRefFrame[0] == NULL) ||(pRefFrame[1] == NULL) ) {
-                img_ptr->error_flag |= ER_REF_FRM_ID;
-                img_ptr->return_pos2 |= (1<<17);
+                vo->error_flag |= ER_REF_FRM_ID;
+                vo->return_pos2 |= (1<<17);
                 return 0;
             }
 #endif
             mv_x = ((mv_xy << 16) >> 16);
             mv_y = (mv_xy >> 16);
-            H264Dec_mc_16x16 (img_ptr, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y);
+            H264Dec_mc_16x16 (vo, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y);
 
             s_dir++;
         } while(s_dir < b8pdir);
     } else {
         for (b8 = 0; b8 < 4; b8++) {
             if (use_4x4mc[b8]) {
-                H264Dec_Config_4x4MC_info(img_ptr, mb_cache_ptr, b8, b8pdir);
+                H264Dec_Config_4x4MC_info(vo, mb_cache_ptr, b8, b8pdir);
             } else {
-                H264Dec_Config_8x8MC_info(img_ptr, mb_cache_ptr, b8, b8pdir);
+                H264Dec_Config_8x8MC_info(vo, mb_cache_ptr, b8, b8pdir);
             }
         }
     }
@@ -1322,7 +1322,7 @@ PUBLIC int8 H264Dec_mv_prediction_skipped_bslice_spatial (void *img, DEC_MB_CACH
 
 PUBLIC int8 H264Dec_mv_prediction_skipped_bslice_temporal (void *img, DEC_MB_CACHE_T *mb_cache_ptr)
 {
-    H264DecContext *img_ptr = (H264DecContext *)img;
+    H264DecContext *vo = (H264DecContext *)img;
     int32 use_8x8mc;
     int32 use_4x4mc[4] = {0, 0, 0, 0};
     int32 b4, offset_b4;
@@ -1376,7 +1376,7 @@ PUBLIC int8 H264Dec_mv_prediction_skipped_bslice_temporal (void *img, DEC_MB_CAC
     for (b8 = 0 ; b8 < 4; b8++) {
         offset = ((b8>>1)<<3)+((b8&1)<<1);
 
-        if (img_ptr->g_active_sps_ptr->direct_8x8_inference_flag == 0) {
+        if (vo->g_active_sps_ptr->direct_8x8_inference_flag == 0) {
             for (b4=1 ; b4 < 4; b4++) {
                 offset_b4 = ((b4>>1)<<2)+(b4&1);
 
@@ -1418,25 +1418,25 @@ PUBLIC int8 H264Dec_mv_prediction_skipped_bslice_temporal (void *img, DEC_MB_CAC
             mv_x = ((mv_xy << 16) >> 16);
             mv_y = (mv_xy >> 16);
 
-            list = img_ptr->g_list[s_list];
+            list = vo->g_list[s_list];
             pRefFrame = list[s_ref_idx_ptr[0]]->imgYUV;
 #if defined(CTS_PROTECT)
             if ((pRefFrame == NULL) || (pRefFrame[0] == NULL) ||(pRefFrame[1] == NULL) ) {
-                img_ptr->error_flag |= ER_REF_FRM_ID;
-                img_ptr->return_pos2 |= (1<<18);
+                vo->error_flag |= ER_REF_FRM_ID;
+                vo->return_pos2 |= (1<<18);
                 return 0;
             }
 #endif
-            H264Dec_mc_16x16 (img_ptr, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y);
+            H264Dec_mc_16x16 (vo, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y);
 
             s_dir++;
         } while(s_dir < b8pdir);
     } else {
         for (b8 = 0; b8 < 4; b8++) {
             if (use_4x4mc[b8]) {
-                H264Dec_Config_4x4MC_info(img_ptr, mb_cache_ptr, b8, b8pdir);
+                H264Dec_Config_4x4MC_info(vo, mb_cache_ptr, b8, b8pdir);
             } else {
-                H264Dec_Config_8x8MC_info(img_ptr, mb_cache_ptr, b8, b8pdir);
+                H264Dec_Config_8x8MC_info(vo, mb_cache_ptr, b8, b8pdir);
             }
         }
     }
@@ -1445,14 +1445,14 @@ PUBLIC int8 H264Dec_mv_prediction_skipped_bslice_temporal (void *img, DEC_MB_CAC
 }
 
 //pred_mv = mv_y<<16 | mv_x
-LOCAL void H264Dec_mv_prediction_skipped_pslice (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+LOCAL void H264Dec_mv_prediction_skipped_pslice (H264DecContext *vo, DEC_MB_CACHE_T *mb_cache_ptr)
 {
     int32 pred_mv;
     int32 mv_xy;
     int32 mv_x, mv_y;
     int32 top_ref_idx, left_ref_idx;
     uint8 ** pRefFrame;
-    DEC_STORABLE_PICTURE_T ** list = img_ptr->g_list[0];
+    DEC_STORABLE_PICTURE_T ** list = vo->g_list[0];
     int32 pdir = mb_cache_ptr->b8pdir[0];
     int8 *s_ref_idx_ptr;
     int32 *s_ref_mv_ptr;
@@ -1506,18 +1506,18 @@ LOCAL void H264Dec_mv_prediction_skipped_pslice (H264DecContext *img_ptr, DEC_MB
     pRefFrame = list[0]->imgYUV;
 #if defined(CTS_PROTECT)
     if ((pRefFrame == NULL) || (pRefFrame[0] == NULL) ||(pRefFrame[1] == NULL) ) {
-        img_ptr->error_flag |= ER_REF_FRM_ID;
-        img_ptr->return_pos2 |= (1<<19);
+        vo->error_flag |= ER_REF_FRM_ID;
+        vo->return_pos2 |= (1<<19);
         return;
     }
 #endif
 
-    H264Dec_mc_16x16 (img_ptr, mb_cache_ptr->pred_cache[0].pred_Y, pRefFrame, mv_x, mv_y);
+    H264Dec_mc_16x16 (vo, mb_cache_ptr->pred_cache[0].pred_Y, pRefFrame, mv_x, mv_y);
 
     return;
 }
 
-LOCAL void H264Dec_mv_prediction_PMB16x16 (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+LOCAL void H264Dec_mv_prediction_PMB16x16 (H264DecContext *vo, DEC_MB_CACHE_T *mb_cache_ptr)
 {
     int32 pred_mv_x, pred_mv_y, pred_mv_xy;
     int32 mvd_x, mvd_y;
@@ -1580,17 +1580,17 @@ LOCAL void H264Dec_mv_prediction_PMB16x16 (H264DecContext *img_ptr, DEC_MB_CACHE
 #endif
 
         /*motion compensation*/
-        list = img_ptr->g_list[s_list];
+        list = vo->g_list[s_list];
         pRefFrame = list[s_ref_idx_ptr[0]]->imgYUV;
 #if defined(CTS_PROTECT)
         if ((pRefFrame == NULL) || (pRefFrame[0] == NULL) ||(pRefFrame[1] == NULL) ) {
-            img_ptr->error_flag |= ER_REF_FRM_ID;
-            img_ptr->return_pos2 |= (1<<20);
+            vo->error_flag |= ER_REF_FRM_ID;
+            vo->return_pos2 |= (1<<20);
             return;
         }
 #endif
 
-        H264Dec_mc_16x16 (img_ptr, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y);
+        H264Dec_mc_16x16 (vo, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y);
 
         s_dir++;
     } while (s_dir < pdir);
@@ -1598,7 +1598,7 @@ LOCAL void H264Dec_mv_prediction_PMB16x16 (H264DecContext *img_ptr, DEC_MB_CACHE
     return;
 }
 
-LOCAL void H264Dec_mv_prediction_PMB16x8 (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+LOCAL void H264Dec_mv_prediction_PMB16x8 (H264DecContext *vo, DEC_MB_CACHE_T *mb_cache_ptr)
 {
     int32 pred_mv_x, pred_mv_y, pred_mv_xy;
     int32 mvd_x, mvd_y;
@@ -1661,17 +1661,17 @@ LOCAL void H264Dec_mv_prediction_PMB16x8 (H264DecContext *img_ptr, DEC_MB_CACHE_
             vst1q_s32 (s_ref_mv_ptr+CTX_CACHE_WIDTH_X1, v32x4);
 #endif
 
-            list = img_ptr->g_list[s_list];
+            list = vo->g_list[s_list];
             pRefFrame = list[s_ref_idx_ptr[0]]->imgYUV;
 #if defined(CTS_PROTECT)
             if ((pRefFrame == NULL) || (pRefFrame[0] == NULL) ||(pRefFrame[1] == NULL) ) {
-                img_ptr->error_flag |= ER_REF_FRM_ID;
-                img_ptr->return_pos2 |= (1<<21);
+                vo->error_flag |= ER_REF_FRM_ID;
+                vo->return_pos2 |= (1<<21);
                 return;
             }
 #endif
 
-            H264Dec_mc_16x8 (img_ptr, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b16x8);
+            H264Dec_mc_16x8 (vo, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b16x8);
 
             s_dir++;
         } while(s_dir < pdir);
@@ -1680,7 +1680,7 @@ LOCAL void H264Dec_mv_prediction_PMB16x8 (H264DecContext *img_ptr, DEC_MB_CACHE_
     return;
 }
 
-LOCAL void H264Dec_mv_prediction_PMB8x16 (H264DecContext *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+LOCAL void H264Dec_mv_prediction_PMB8x16 (H264DecContext *vo, DEC_MB_CACHE_T *mb_cache_ptr)
 {
     int32 pred_mv_x, pred_mv_y, pred_mv_xy;
     int32 mvd_x, mvd_y;
@@ -1744,17 +1744,17 @@ LOCAL void H264Dec_mv_prediction_PMB8x16 (H264DecContext *img_ptr, DEC_MB_CACHE_
             vst1_s32 (s_ref_mv_ptr+CTX_CACHE_WIDTH_X3, v32x2);
 #endif
 
-            list = img_ptr->g_list[s_list];
+            list = vo->g_list[s_list];
             pRefFrame = list[s_ref_idx_ptr[0]]->imgYUV;
 #if defined(CTS_PROTECT)
             if ((pRefFrame == NULL) || (pRefFrame[0] == NULL) ||(pRefFrame[1] == NULL) ) {
-                img_ptr->error_flag |= ER_REF_FRM_ID;
-                img_ptr->return_pos2 |= (1<<22);
+                vo->error_flag |= ER_REF_FRM_ID;
+                vo->return_pos2 |= (1<<22);
                 return;
             }
 #endif
 
-            H264Dec_mc_8x16 (img_ptr, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b8x16);
+            H264Dec_mc_8x16 (vo, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b8x16);
 
             s_dir++;
         } while(s_dir < pdir);
@@ -1765,7 +1765,7 @@ LOCAL void H264Dec_mv_prediction_PMB8x16 (H264DecContext *img_ptr, DEC_MB_CACHE_
 
 PUBLIC int32 H264Dec_mv_prediction_P8x8_8x8 (void *img, DEC_MB_CACHE_T *mb_cache_ptr, int32 cache_offset, int32 b8)
 {
-    H264DecContext *img_ptr = (H264DecContext *)img;
+    H264DecContext *vo = (H264DecContext *)img;
     int32 pred_mv_x, pred_mv_y, pred_mv_xy;
     int32 mvd_x, mvd_y;
     int32 mv_x, mv_y;
@@ -1818,17 +1818,17 @@ PUBLIC int32 H264Dec_mv_prediction_P8x8_8x8 (void *img, DEC_MB_CACHE_T *mb_cache
         vst1_s32 (s_ref_mv_ptr+CTX_CACHE_WIDTH_X1, v32x2);
 #endif
 
-        list = img_ptr->g_list[s_list];
+        list = vo->g_list[s_list];
         pRefFrame = list[s_ref_idx_ptr[0]]->imgYUV;
 #if defined(CTS_PROTECT)
         if ((pRefFrame == NULL) || (pRefFrame[0] == NULL) ||(pRefFrame[1] == NULL) ) {
-            img_ptr->error_flag |= ER_REF_FRM_ID;
-            img_ptr->return_pos2 |= (1<<23);
+            vo->error_flag |= ER_REF_FRM_ID;
+            vo->return_pos2 |= (1<<23);
             return 0;
         }
 #endif
 
-        H264Dec_mc_8x8 (img_ptr, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b8);
+        H264Dec_mc_8x8 (vo, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b8);
 
         s_dir++;
     } while(s_dir < pdir);
@@ -1838,7 +1838,7 @@ PUBLIC int32 H264Dec_mv_prediction_P8x8_8x8 (void *img, DEC_MB_CACHE_T *mb_cache
 
 PUBLIC int32 H264Dec_mv_prediction_P8x8_8x4 (void *img, DEC_MB_CACHE_T *mb_cache_ptr, int32 cache_offset, int32 b8)
 {
-    H264DecContext *img_ptr = (H264DecContext *)img;
+    H264DecContext *vo = (H264DecContext *)img;
     int32 pred_mv_x, pred_mv_y, pred_mv_xy;
     int32 mvd_x, mvd_y;
     int32 mv_x, mv_y;
@@ -1892,17 +1892,17 @@ PUBLIC int32 H264Dec_mv_prediction_P8x8_8x4 (void *img, DEC_MB_CACHE_T *mb_cache
             vst1_s32 (s_ref_mv_ptr+0, v32x2);
 #endif
 
-            list = img_ptr->g_list[s_list];
+            list = vo->g_list[s_list];
             pRefFrame = list[s_ref_idx_ptr[0]]->imgYUV;
 #if defined(CTS_PROTECT)
             if ((pRefFrame == NULL) || (pRefFrame[0] == NULL) ||(pRefFrame[1] == NULL) ) {
-                img_ptr->error_flag |= ER_REF_FRM_ID;
-                img_ptr->return_pos2 |= (1<<24);
+                vo->error_flag |= ER_REF_FRM_ID;
+                vo->return_pos2 |= (1<<24);
                 return 0;
             }
 #endif
 
-            H264Dec_mc_8x4 (img_ptr, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b8, b8x4);
+            H264Dec_mc_8x4 (vo, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b8, b8x4);
 
             s_dir++;
         } while(s_dir < pdir);
@@ -1913,7 +1913,7 @@ PUBLIC int32 H264Dec_mv_prediction_P8x8_8x4 (void *img, DEC_MB_CACHE_T *mb_cache
 
 PUBLIC int32 H264Dec_mv_prediction_P8x8_4x8 (void *img, DEC_MB_CACHE_T *mb_cache_ptr, int32 cache_offset, int32 b8)
 {
-    H264DecContext *img_ptr = (H264DecContext *)img;
+    H264DecContext *vo = (H264DecContext *)img;
     int32 pred_mv_x, pred_mv_y, pred_mv_xy;
     int32 mvd_x, mvd_y;
     int32 mv_x, mv_y;
@@ -1959,16 +1959,16 @@ PUBLIC int32 H264Dec_mv_prediction_P8x8_4x8 (void *img, DEC_MB_CACHE_T *mb_cache
 
             s_ref_mv_ptr[0] = s_ref_mv_ptr[CTX_CACHE_WIDTH] = mv_xy;
 
-            list = img_ptr->g_list[s_list];
+            list = vo->g_list[s_list];
             pRefFrame = list[s_ref_idx_ptr[0]]->imgYUV;
 #if defined(CTS_PROTECT)
             if ((pRefFrame == NULL) || (pRefFrame[0] == NULL) ||(pRefFrame[1] == NULL) ) {
-                img_ptr->error_flag |= ER_REF_FRM_ID;
-                img_ptr->return_pos2 |= (1<<25);
+                vo->error_flag |= ER_REF_FRM_ID;
+                vo->return_pos2 |= (1<<25);
                 return 0;
             }
 #endif
-            H264Dec_mc_4x8 (img_ptr, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b8, b4x8);
+            H264Dec_mc_4x8 (vo, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b8, b4x8);
 
             s_dir++;
         } while(s_dir < pdir);
@@ -1979,7 +1979,7 @@ PUBLIC int32 H264Dec_mv_prediction_P8x8_4x8 (void *img, DEC_MB_CACHE_T *mb_cache
 
 PUBLIC int32 H264Dec_mv_prediction_P8x8_4x4 (void *img, DEC_MB_CACHE_T *mb_cache_ptr, int32 cache_offset, int32 b8)
 {
-    H264DecContext *img_ptr = (H264DecContext *)img;
+    H264DecContext *vo = (H264DecContext *)img;
     int32 pred_mv_x, pred_mv_y, pred_mv_xy;
     int32 mvd_x, mvd_y;
     int32 mv_x, mv_y;
@@ -2024,16 +2024,16 @@ PUBLIC int32 H264Dec_mv_prediction_P8x8_4x4 (void *img, DEC_MB_CACHE_T *mb_cache
 #endif
             s_ref_mv_ptr[0] = mv_xy;
 
-            list = img_ptr->g_list[s_list];
+            list = vo->g_list[s_list];
             pRefFrame = list[s_ref_idx_ptr[0]]->imgYUV;
 #if defined(CTS_PROTECT)
             if ((pRefFrame == NULL) || (pRefFrame[0] == NULL) ||(pRefFrame[1] == NULL) ) {
-                img_ptr->error_flag |= ER_REF_FRM_ID;
-                img_ptr->return_pos2 |= (1<<26);
+                vo->error_flag |= ER_REF_FRM_ID;
+                vo->return_pos2 |= (1<<26);
                 return 0;
             }
 #endif
-            H264Dec_mc_4x4 (img_ptr, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b8, b4);
+            H264Dec_mc_4x4 (vo, mb_cache_ptr->pred_cache[s_list].pred_Y, pRefFrame, mv_x, mv_y, b8, b4);
 
             s_dir++;
         } while(s_dir < pdir);
@@ -2044,7 +2044,7 @@ PUBLIC int32 H264Dec_mv_prediction_P8x8_4x4 (void *img, DEC_MB_CACHE_T *mb_cache
 
 PUBLIC int32 H264Dec_MC8x8_direct_spatial(void *img, DEC_MB_CACHE_T *mb_cache_ptr, int32 cache_offset, int32 b8)
 {
-    H264DecContext *img_ptr = (H264DecContext *)img;
+    H264DecContext *vo = (H264DecContext *)img;
     int32 fw_rFrame,bw_rFrame;
     int32 mv_xy;
     uint32 row;
@@ -2073,7 +2073,7 @@ PUBLIC int32 H264Dec_MC8x8_direct_spatial(void *img, DEC_MB_CACHE_T *mb_cache_pt
         if (mv_xy) {	//curr mv context has been set to value 0 in fill_mb func.
 
             uint32 col;
-            int32 condition = (fw_rFrame || (img_ptr->g_list[1][0]->is_long_term)) ? 0 : 1;
+            int32 condition = (fw_rFrame || (vo->g_list[1][0]->is_long_term)) ? 0 : 1;
             int8 *moving_block = mb_cache_ptr->moving_block + (( (b8>>1)*2)*4 + (b8&0x1)*2);
 
             s_ref_mv_ptr = (int32 *)(mb_cache_ptr->mv_cache[0]) + cache_offset;
@@ -2107,7 +2107,7 @@ PUBLIC int32 H264Dec_MC8x8_direct_spatial(void *img, DEC_MB_CACHE_T *mb_cache_pt
         //set mv cache
         if (mv_xy) {	//curr mv context has been set to value 0 in fill_mb func.
             uint32 col;
-            int32 condition = (bw_rFrame || (img_ptr->g_list[1][0]->is_long_term)) ? 0 : 1;
+            int32 condition = (bw_rFrame || (vo->g_list[1][0]->is_long_term)) ? 0 : 1;
             int8 *moving_block = mb_cache_ptr->moving_block + (( (b8>>1)*2)*4 + (b8&0x1)*2);
 
             s_ref_mv_ptr = (int32 *)(mb_cache_ptr->mv_cache[1]) + cache_offset;
@@ -2154,9 +2154,9 @@ PUBLIC int32 H264Dec_MC8x8_direct_spatial(void *img, DEC_MB_CACHE_T *mb_cache_pt
     mb_cache_ptr->b8pdir[b8] = b8pdir;
 
     if (!use_4x4mc) {
-        H264Dec_Config_8x8MC_info (img_ptr, mb_cache_ptr, b8, b8pdir);
+        H264Dec_Config_8x8MC_info (vo, mb_cache_ptr, b8, b8pdir);
     } else {
-        H264Dec_Config_4x4MC_info(img_ptr, mb_cache_ptr, b8, b8pdir);
+        H264Dec_Config_4x4MC_info(vo, mb_cache_ptr, b8, b8pdir);
     }
 
     return b8pdir;
@@ -2164,7 +2164,7 @@ PUBLIC int32 H264Dec_MC8x8_direct_spatial(void *img, DEC_MB_CACHE_T *mb_cache_pt
 
 PUBLIC int32 H264Dec_MC8x8_direct_temporal(void *img, DEC_MB_CACHE_T *mb_cache_ptr, int32 cache_offset, int32 b8)
 {
-    H264DecContext *img_ptr = (H264DecContext *)img;
+    H264DecContext *vo = (H264DecContext *)img;
     uint32 use_4x4mc = 0;
     uint32 b8pdir = 0;
     int32 j,offset_b4;
@@ -2216,9 +2216,9 @@ PUBLIC int32 H264Dec_MC8x8_direct_temporal(void *img, DEC_MB_CACHE_T *mb_cache_p
     mb_cache_ptr->b8pdir[b8] = b8pdir;
 
     if (!use_4x4mc) {
-        H264Dec_Config_8x8MC_info(img_ptr, mb_cache_ptr, b8, b8pdir);
+        H264Dec_Config_8x8MC_info(vo, mb_cache_ptr, b8, b8pdir);
     } else {
-        H264Dec_Config_4x4MC_info(img_ptr, mb_cache_ptr, b8, b8pdir);
+        H264Dec_Config_4x4MC_info(vo, mb_cache_ptr, b8, b8pdir);
     }
 
     return b8pdir;
@@ -2371,50 +2371,50 @@ LOCAL void H264_MC_Copy (DEC_MB_CACHE_T *mb_cache_ptr, int32 b8)
     }
 }
 
-PUBLIC void H264Dec_mv_prediction (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
+PUBLIC void H264Dec_mv_prediction (H264DecContext *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr)
 {
     if (mb_cache_ptr->is_skipped || mb_info_ptr->mb_type == 0) {
         int8 b8pdir;
-        if ( img_ptr->type == B_SLICE) {
-            b8pdir = img_ptr->pred_skip_bslice ((void *)img_ptr, mb_cache_ptr);
+        if ( vo->type == B_SLICE) {
+            b8pdir = vo->pred_skip_bslice ((void *)vo, mb_cache_ptr);
 
             if (b8pdir != 2) {
-                H264Dec_FillNoRefList_8x8(img_ptr, 0, b8pdir);
-                H264Dec_FillNoRefList_8x8(img_ptr, 1, b8pdir);
-                H264Dec_FillNoRefList_8x8(img_ptr, 2, b8pdir);
-                H264Dec_FillNoRefList_8x8(img_ptr, 3, b8pdir);
+                H264Dec_FillNoRefList_8x8(vo, 0, b8pdir);
+                H264Dec_FillNoRefList_8x8(vo, 1, b8pdir);
+                H264Dec_FillNoRefList_8x8(vo, 2, b8pdir);
+                H264Dec_FillNoRefList_8x8(vo, 3, b8pdir);
             }
         } else {//pslice
-            H264Dec_mv_prediction_skipped_pslice (img_ptr, mb_cache_ptr);
+            H264Dec_mv_prediction_skipped_pslice (vo, mb_cache_ptr);
             b8pdir = 0;
         }
     } else {
         switch(mb_info_ptr->mb_type) {
         case PMB16x16:
-            H264Dec_mv_prediction_PMB16x16 (img_ptr, mb_cache_ptr);
+            H264Dec_mv_prediction_PMB16x16 (vo, mb_cache_ptr);
             break;
         case PMB16x8:
-            H264Dec_mv_prediction_PMB16x8 (img_ptr, mb_cache_ptr);
+            H264Dec_mv_prediction_PMB16x8 (vo, mb_cache_ptr);
             break;
         case PMB8x16:
-            H264Dec_mv_prediction_PMB8x16 (img_ptr, mb_cache_ptr);
+            H264Dec_mv_prediction_PMB8x16 (vo, mb_cache_ptr);
             break;
         case P8x8:
-            H264Dec_mv_prediction_P8x8 (img_ptr, mb_cache_ptr);
+            H264Dec_mv_prediction_P8x8 (vo, mb_cache_ptr);
             break;
         default:
             break;
         }
     }
 #if defined(CTS_PROTECT)
-    if(img_ptr->error_flag) {
+    if(vo->error_flag) {
         return;
     }
 #endif
 
-    if (img_ptr->apply_weights) {
-        H264Dec_Config_WP_info(img_ptr, mb_cache_ptr);
-    } else if (img_ptr->type == B_SLICE) {//B_SLICE
+    if (vo->apply_weights) {
+        H264Dec_Config_WP_info(vo, mb_cache_ptr);
+    } else if (vo->type == B_SLICE) {//B_SLICE
         int b8;
         int pdir;
 

@@ -26,9 +26,7 @@ extern   "C"
 {
 #endif
 
-MMDecRet H264Dec_init_global_para (H264DecContext *img_ptr);
-
-//sw
+MMDecRet H264Dec_init_global_para (H264DecContext *vo);
 void H264Dec_setClipTab (void);
 void H264Dec_init_mc_function (void);
 void H264Dec_init_intra4x4Pred_function (void);

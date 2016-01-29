@@ -196,7 +196,7 @@ uint32 Mp4Dec_CalculateMemSize (DEC_VOP_MODE_T *vop_mode_ptr)
 
     if(vop_mode_ptr->post_filter_en)
     {
-        SPRD_CODEC_LOGD ("%s, %d, go here only when video playback and video resolution is NOT larger than QCIF", __FUNCTION__, __LINE__);
+        SPRD_CODEC_LOGI ("%s, %d, go here only when video playback and video resolution is NOT larger than QCIF\n", __FUNCTION__, __LINE__);
         extra_mem_size += ((( ext_size_y + 255) >>8)<<8);   //g_dbk_tmp_frm_ptr
     }
 
@@ -243,7 +243,7 @@ PUBLIC MMDecRet Mp4Dec_InitSessionDecode(Mp4DecObject *vo)
     extra_mem_size = Mp4Dec_CalculateMemSize (vop_mode_ptr);
     if ((*(vo->mp4Handle->VSP_extMemCb))(vo->mp4Handle->userdata, extra_mem_size) < 0)
     {
-        SPRD_CODEC_LOGE ("%s, %d, extra memory is not enough", __FUNCTION__, __LINE__);
+        SPRD_CODEC_LOGE ("%s, %d, extra memory is not enough\n", __FUNCTION__, __LINE__);
         return MMDEC_MEMORY_ERROR;
     }
 

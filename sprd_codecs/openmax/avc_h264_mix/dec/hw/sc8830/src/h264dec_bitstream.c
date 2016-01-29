@@ -79,7 +79,7 @@ PUBLIC uint32 ue_v (H264DecObject *vo)
     tmp = SHOW_FLC (16);
     if (tmp == 0)
     {
-        SPRD_CODEC_LOGI("%s, %d, change to long_ue_v", __FUNCTION__, __LINE__);
+        SPRD_CODEC_LOGI("%s, %d, change to long_ue_v\n", __FUNCTION__, __LINE__);
         ret = long_ue_v(vo);
     } else
     {
@@ -88,7 +88,7 @@ PUBLIC uint32 ue_v (H264DecObject *vo)
         if(tmp&4)
         {
             vo->error_flag |= ER_SREAM_ID;
-            SPRD_CODEC_LOGE("%s, %d, vo->error_flag: %d", __FUNCTION__, __LINE__, vo->error_flag);
+            SPRD_CODEC_LOGE("%s, %d, vo->error_flag: %d\n", __FUNCTION__, __LINE__, vo->error_flag);
             return 0;
         }
         ret = VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR+USEV_RDATA_OFF,"BSM_rd_UE dara");

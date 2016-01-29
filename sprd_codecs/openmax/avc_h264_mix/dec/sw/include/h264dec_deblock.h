@@ -38,10 +38,10 @@ typedef struct
 
 } DEBLK_PARAS_T;
 
-void H264Dec_BS_and_Para (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-void H264Dec_register_deblock_func(H264DecContext *img_ptr);
-void H264Dec_deblock_one_frame (H264DecContext *img_ptr);
-void H264Dec_deblock_picture(H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T *dec_picture_ptr);
+void H264Dec_BS_and_Para (H264DecContext *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+void H264Dec_register_deblock_func(H264DecContext *vo);
+void H264Dec_deblock_one_frame (H264DecContext *vo);
+void H264Dec_deblock_picture(H264DecContext *vo, DEC_STORABLE_PICTURE_T *dec_picture_ptr);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

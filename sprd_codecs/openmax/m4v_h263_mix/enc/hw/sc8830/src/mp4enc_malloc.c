@@ -81,7 +81,7 @@ PUBLIC uint_32or64 Mp4Enc_ExtraMem_V2P(Mp4EncObject *vo, uint8 *vAddr, int32 typ
 {
     if (type >= MAX_MEM_TYPE)
     {
-        SPRD_CODEC_LOGE ("%s, memory type is error!", __FUNCTION__);
+        SPRD_CODEC_LOGE ("%s, memory type is error!\n", __FUNCTION__);
         return (uint_32or64)NULL;
     } else
     {

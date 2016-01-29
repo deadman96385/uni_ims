@@ -29,11 +29,11 @@ extern   "C"
 int32 H264Dec_get_te (void *img, DEC_MB_CACHE_T *mb_cache_ptr, int32 blk_id, int32 list);
 int32 decode_cavlc_mb_mvd(void *img, DEC_MB_CACHE_T *mb_cache_ptr, int32 sub_blk_id, int32 list);
 
-void H264Dec_read_motionAndRefId (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-void H264Dec_read_motionAndRefId_cabac (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-void H264Dec_direct_mv_spatial (void *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-void H264Dec_direct_mv_temporal (void *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-void H264Dec_mv_prediction (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+void H264Dec_read_motionAndRefId (H264DecContext *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+void H264Dec_read_motionAndRefId_cabac (H264DecContext *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+void H264Dec_direct_mv_spatial (void *vo, DEC_MB_CACHE_T *mb_cache_ptr);
+void H264Dec_direct_mv_temporal (void *vo, DEC_MB_CACHE_T *mb_cache_ptr);
+void H264Dec_mv_prediction (H264DecContext *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
 
 int32 H264Dec_mv_prediction_P8x8_8x8 (void *img, DEC_MB_CACHE_T *mb_cache_ptr, int32 cache_offset, int32 b8);
 int32 H264Dec_mv_prediction_P8x8_8x4 (void *img, DEC_MB_CACHE_T *mb_cache_ptr, int32 cache_offset, int32 b8);

@@ -26,16 +26,16 @@ extern   "C"
 {
 #endif
 
-void cabac_new_slice(H264DecContext *img_ptr);
-int8 decode_cabac_mb_transform_size (H264DecContext *img_ptr, DEC_MB_INFO_T *curr_mb_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-int32 decode_cabac_mb_intra4x4_pred_mode (H264DecContext *img_ptr);
-int32 decode_cabac_mb_chroma_pre_mode (H264DecContext *img_ptr, DEC_MB_INFO_T *curr_mb_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-int32 decode_cabac_mb_cbp (H264DecContext *img_ptr, DEC_MB_INFO_T *curr_mb_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-int32 decode_cabac_mb_dqp (H264DecContext *img_ptr);
-uint32 decode_cabac_mb_sub_type (void *img_ptr);
-int32 decode_cabac_mb_ref (void *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int32 blk_id, int32 list);
-int32 decode_cabac_mb_mvd (void *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int32 sub_blk_id, int32 list);
-int32 decode_cabac_intra_mb_type(H264DecContext *img_ptr, DEC_MB_INFO_T *curr_mb_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int32 ctx_base, int32 intra_slice);
+void cabac_new_slice(H264DecContext *vo);
+int8 decode_cabac_mb_transform_size (H264DecContext *vo, DEC_MB_INFO_T *curr_mb_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+int32 decode_cabac_mb_intra4x4_pred_mode (H264DecContext *vo);
+int32 decode_cabac_mb_chroma_pre_mode (H264DecContext *vo, DEC_MB_INFO_T *curr_mb_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+int32 decode_cabac_mb_cbp (H264DecContext *vo, DEC_MB_INFO_T *curr_mb_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+int32 decode_cabac_mb_dqp (H264DecContext *vo);
+uint32 decode_cabac_mb_sub_type (void *vo);
+int32 decode_cabac_mb_ref (void *vo, DEC_MB_CACHE_T *mb_cache_ptr, int32 blk_id, int32 list);
+int32 decode_cabac_mb_mvd (void *vo, DEC_MB_CACHE_T *mb_cache_ptr, int32 sub_blk_id, int32 list);
+int32 decode_cabac_intra_mb_type(H264DecContext *vo, DEC_MB_INFO_T *curr_mb_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int32 ctx_base, int32 intra_slice);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

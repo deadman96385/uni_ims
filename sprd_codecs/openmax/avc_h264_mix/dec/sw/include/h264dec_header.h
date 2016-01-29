@@ -27,9 +27,9 @@ extern   "C"
 {
 #endif
 
-int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecContext *img_ptr, uint8 *bitstrm_ptr, uint32 bitstrm_len, MMDecOutput *dec_output_ptr);
-MMDecRet H264Dec_FirstPartOfSliceHeader (DEC_SLICE_T *curr_slice_ptr, H264DecContext *img_ptr);
-MMDecRet H264Dec_RestSliceHeader (H264DecContext *img_ptr, DEC_SLICE_T *curr_slice_ptr);
+int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecContext *vo, uint8 *bitstrm_ptr, uint32 bitstrm_len, MMDecOutput *dec_output_ptr);
+MMDecRet H264Dec_FirstPartOfSliceHeader (DEC_SLICE_T *curr_slice_ptr, H264DecContext *vo);
+MMDecRet H264Dec_RestSliceHeader (H264DecContext *vo, DEC_SLICE_T *curr_slice_ptr);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

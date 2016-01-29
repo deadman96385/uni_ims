@@ -473,17 +473,17 @@ MMDecRet vp8_decode_frame(VPXDecObject *vo)
 
         if (cmd & V_BIT_4)
         {
-            SPRD_CODEC_LOGE ("%s, %d, VLD_ERR", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, VLD_ERR\n", __FUNCTION__, __LINE__);
         } else if (cmd & (V_BIT_5 | V_BIT_31))
         {
-            SPRD_CODEC_LOGE ("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, TIME_OUT\n", __FUNCTION__, __LINE__);
         } else //if (cmd & V_BIT_30)
         {
-            SPRD_CODEC_LOGE ("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, Broken by signal\n", __FUNCTION__, __LINE__);
         }
     } else
     {
-        SPRD_CODEC_LOGE ("%s, %d, should not be here!", __FUNCTION__, __LINE__);
+        SPRD_CODEC_LOGE ("%s, %d, should not be here!\n", __FUNCTION__, __LINE__);
     }
     VSP_WRITE_REG(GLB_REG_BASE_ADDR+RAM_ACC_SEL_OFF, 0, "RAM_ACC_SEL");
 

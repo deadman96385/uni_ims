@@ -81,7 +81,7 @@ PUBLIC uint_32or64 H264Enc_ExtraMem_V2P(H264EncObject *vo, uint8 *vAddr, int32 t
 {
     if (type >= MAX_MEM_TYPE)
     {
-        SPRD_CODEC_LOGE ("%s, memory type is error!", __FUNCTION__);
+        SPRD_CODEC_LOGE ("%s, memory type is error!\n", __FUNCTION__);
         return (uint_32or64)NULL;
     } else
     {

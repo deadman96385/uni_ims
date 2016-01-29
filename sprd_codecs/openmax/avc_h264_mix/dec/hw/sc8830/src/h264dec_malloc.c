@@ -100,7 +100,7 @@ PUBLIC uint_32or64 H264Dec_MemV2P(H264DecObject *vo, uint8 *vAddr, int32 type)
 {
     if (type >= MAX_MEM_TYPE)
     {
-        SPRD_CODEC_LOGE ("%s, memory type is error!", __FUNCTION__);
+        SPRD_CODEC_LOGE ("%s, memory type is error!\n", __FUNCTION__);
         return (uint_32or64)NULL;
     } else
     {

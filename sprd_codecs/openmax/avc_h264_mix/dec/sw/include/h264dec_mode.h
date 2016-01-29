@@ -555,19 +555,19 @@ typedef struct codec_buf_tag
     uint_32or64 p_base;  //physical address
 } CODEC_BUF_T;
 
-typedef int32 (*mv_prediction_subMB)(void *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int32 cache_offset, int32 b8);
-typedef uint32 (*nal_startcode_follows_func)(void *img_ptr);
-typedef int32 (*readRefFrame_func) (void *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int32 blk_id, int32 list);
-typedef int32 (*decode_mvd_xy_func)(void *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr, int32 sub_blk_id, int32 list);
-typedef void (*direct_mv_func) (void *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-typedef int8 (*pred_skip_bslice_func) (void *img_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-typedef void (*decode_mb_coeff_func) (void *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+typedef int32 (*mv_prediction_subMB)(void *vo, DEC_MB_CACHE_T *mb_cache_ptr, int32 cache_offset, int32 b8);
+typedef uint32 (*nal_startcode_follows_func)(void *vo);
+typedef int32 (*readRefFrame_func) (void *vo, DEC_MB_CACHE_T *mb_cache_ptr, int32 blk_id, int32 list);
+typedef int32 (*decode_mvd_xy_func)(void *vo, DEC_MB_CACHE_T *mb_cache_ptr, int32 sub_blk_id, int32 list);
+typedef void (*direct_mv_func) (void *vo, DEC_MB_CACHE_T *mb_cache_ptr);
+typedef int8 (*pred_skip_bslice_func) (void *vo, DEC_MB_CACHE_T *mb_cache_ptr);
+typedef void (*decode_mb_coeff_func) (void *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
 
-typedef int32 (*read_mb_type_func) (void *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-typedef uint32 (*readB8_typeInfo_func) (void *img_ptr);
+typedef int32 (*read_mb_type_func) (void *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+typedef uint32 (*readB8_typeInfo_func) (void *vo);
 
-typedef void (*BS_and_Para_interMB_func)(void *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-typedef int32 (*readMB_typeInfo_CABAC_func) (void *img_ptr, DEC_MB_INFO_T *curr_mb_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+typedef void (*BS_and_Para_interMB_func)(void *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+typedef int32 (*readMB_typeInfo_CABAC_func) (void *vo, DEC_MB_INFO_T *curr_mb_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
 
 typedef void (*Intra4x4Pred)(void * img, DEC_MB_INFO_T * currMB, DEC_MB_CACHE_T * mb_cache_ptr, uint8 * pPred, int blkIdxInMB, uint8 * pRec, int32 pitch);
 typedef void (*Intra8x8Pred)(DEC_MB_CACHE_T * mb_cache_ptr, uint8 * pPred, int blkIdxInMB);
@@ -789,11 +789,9 @@ typedef struct H264DecContext_tag
     int32 trace_enabled;
 } H264DecContext;
 
-//sw
-typedef void (*MC4xN_LUMA)(H264DecContext *img_ptr, uint8 * pFref, uint8 * pPred, int32 N);
-typedef void (*MC8xN_LUMA)(H264DecContext *img_ptr, uint8 * pFref, uint8 * pPred, int32 N);
-typedef void (*MC16xN_LUMA)(H264DecContext *img_ptr, uint8 * pFref, uint8 * pPred, int32 N);
-//typedef void (*MC_LUMA)(uint8 * pFref, uint8 * pPred, int32 xpos, int32 ypos, int32 size);
+typedef void (*MC4xN_LUMA)(H264DecContext *vo, uint8 * pFref, uint8 * pPred, int32 N);
+typedef void (*MC8xN_LUMA)(H264DecContext *vo, uint8 * pFref, uint8 * pPred, int32 N);
+typedef void (*MC16xN_LUMA)(H264DecContext *vo, uint8 * pFref, uint8 * pPred, int32 N);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

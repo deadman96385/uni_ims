@@ -117,10 +117,8 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
             if (vop_mode_ptr->pBckRefFrame->nTimeStamp < vop_mode_ptr->pCurRecFrame->nTimeStamp) {
                 uint64 nTimeStamp;
 
-                if (vo->trace_enabled) {
-                    SPRD_CODEC_LOGD ("%s, [Bck time_stamp: %lld], [Cur time_stamp: %lld]", __FUNCTION__,
-                                     vop_mode_ptr->pBckRefFrame->nTimeStamp, vop_mode_ptr->pCurRecFrame->nTimeStamp);
-                }
+                SPRD_CODEC_LOGD ("%s, [Bck time_stamp: %lld], [Cur time_stamp: %lld]\n", __FUNCTION__,
+                                 vop_mode_ptr->pBckRefFrame->nTimeStamp, vop_mode_ptr->pCurRecFrame->nTimeStamp);
 
                 nTimeStamp = vop_mode_ptr->pCurRecFrame->nTimeStamp;
                 vop_mode_ptr->pCurRecFrame->nTimeStamp = vop_mode_ptr->pBckRefFrame->nTimeStamp;
@@ -176,7 +174,7 @@ PUBLIC void MP4Dec_JudgeDecMode (DEC_VOP_MODE_T * vop_mode_ptr)
         vop_mode_ptr->post_filter_en = TRUE;
     }
 
-    SPRD_CODEC_LOGD ("%s, VT_used: %d", __FUNCTION__, vop_mode_ptr->VT_used);
+    SPRD_CODEC_LOGI ("%s, VT_used: %d\n", __FUNCTION__, vop_mode_ptr->VT_used);
 }
 
 void Mp4Dec_ExchangeMBMode (DEC_VOP_MODE_T * vop_mode_ptr)
@@ -653,7 +651,7 @@ PUBLIC MMDecRet Mp4Dec_DecIVOP(DEC_VOP_MODE_T *vop_mode_ptr)
 
                     if (vop_mode_ptr->error_flag)
                     {
-                        SPRD_CODEC_LOGD ("decode resync header error!\n");
+                        SPRD_CODEC_LOGE ("decode resync header error!\n");
                         continue;
                     }
 
@@ -928,7 +926,7 @@ PUBLIC MMDecRet Mp4Dec_DecPVOP(DEC_VOP_MODE_T *vop_mode_ptr)
     {
         cur_time += 1000000;
     }
-    SPRD_CODEC_LOGD ("cur frame % dec time %lld",vop_mode_ptr->g_nFrame_dec,cur_time);
+    SPRD_CODEC_LOGD ("cur frame % dec time %lld\n",vop_mode_ptr->g_nFrame_dec,cur_time);
 #endif
     return ret;
 }

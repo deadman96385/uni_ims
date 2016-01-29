@@ -25,24 +25,24 @@ extern   "C"
 
 #define H264DEC_MALLOC_PRINT   //SPRD_CODEC_LOGD
 
-LOCAL void Init_Mem (H264DecContext *img_ptr, MMCodecBuffer *pMem, int32 type)
+LOCAL void Init_Mem (H264DecContext *vo, MMCodecBuffer *pMem, int32 type)
 {
     int32 dw_aligned = (((uint_32or64)(pMem->common_buffer_ptr) + 7) & (~7)) - ((uint_32or64)(pMem->common_buffer_ptr));
 
-    img_ptr->mem[type].used_size = 0;
-    img_ptr->mem[type].v_base = (uint_32or64)(pMem->common_buffer_ptr) + dw_aligned;
-    img_ptr->mem[type].p_base = (uint_32or64)(pMem->common_buffer_ptr_phy) + dw_aligned;
-    img_ptr->mem[type].total_size = pMem->size - dw_aligned;
+    vo->mem[type].used_size = 0;
+    vo->mem[type].v_base = (uint_32or64)(pMem->common_buffer_ptr) + dw_aligned;
+    vo->mem[type].p_base = (uint_32or64)(pMem->common_buffer_ptr_phy) + dw_aligned;
+    vo->mem[type].total_size = pMem->size - dw_aligned;
 
-    SCI_MEMSET((void *)(img_ptr->mem[type].v_base), 0, img_ptr->mem[type].total_size);
+    SCI_MEMSET((void *)(vo->mem[type].v_base), 0, vo->mem[type].total_size);
 
     H264DEC_MALLOC_PRINT("%s: type:%d, dw_aligned, %d, v_base: %lx, p_base: %lx, mem_size:%d\n",
-                         __FUNCTION__, type, dw_aligned, img_ptr->mem[type].v_base, img_ptr->mem[type].p_base, img_ptr->mem[type].total_size);
+                         __FUNCTION__, type, dw_aligned, vo->mem[type].v_base, vo->mem[type].p_base, vo->mem[type].total_size);
 }
 
-PUBLIC void H264Dec_InitInterMem (H264DecContext *img_ptr, MMCodecBuffer *pInterMemBfr)
+PUBLIC void H264Dec_InitInterMem (H264DecContext *vo, MMCodecBuffer *pInterMemBfr)
 {
-    Init_Mem(img_ptr, pInterMemBfr, INTER_MEM);
+    Init_Mem(vo, pInterMemBfr, INTER_MEM);
 }
 
 /*****************************************************************************/
@@ -53,10 +53,10 @@ PUBLIC void H264Dec_InitInterMem (H264DecContext *img_ptr, MMCodecBuffer *pInter
 /*****************************************************************************/
 PUBLIC MMDecRet H264DecMemInit(AVCHandle *avcHandle, MMCodecBuffer *pBuffer)
 {
-    H264DecContext *img_ptr = (H264DecContext *) avcHandle->videoDecoderData;
+    H264DecContext *vo = (H264DecContext *) avcHandle->videoDecoderData;
     int32 type = SW_CACHABLE;
 
-    Init_Mem(img_ptr, &(pBuffer[type]), type);
+    Init_Mem(vo, &(pBuffer[type]), type);
 
     return MMDEC_OK;
 }
@@ -64,9 +64,9 @@ PUBLIC MMDecRet H264DecMemInit(AVCHandle *avcHandle, MMCodecBuffer *pBuffer)
 /*****************************************************************************
  ** Note:	Alloc the needed memory
  *****************************************************************************/
-PUBLIC void *H264Dec_MemAlloc (H264DecContext *img_ptr, uint32 need_size, int32 aligned_byte_num, int32 type)
+PUBLIC void *H264Dec_MemAlloc (H264DecContext *vo, uint32 need_size, int32 aligned_byte_num, int32 type)
 {
-    CODEC_BUF_T *pMem = &(img_ptr->mem[type]);
+    CODEC_BUF_T *pMem = &(vo->mem[type]);
     uint_32or64 CurrAddr, AlignedAddr;
 
     CurrAddr = (uint_32or64)(pMem->v_base) + pMem->used_size;
@@ -90,15 +90,15 @@ PUBLIC void *H264Dec_MemAlloc (H264DecContext *img_ptr, uint32 need_size, int32 
 /*****************************************************************************
  ** Note:	 mapping from virtual to physical address
  *****************************************************************************/
-PUBLIC uint_32or64 H264Dec_MemV2P(H264DecContext *img_ptr, uint8 *vAddr, int32 type)
+PUBLIC uint_32or64 H264Dec_MemV2P(H264DecContext *vo, uint8 *vAddr, int32 type)
 {
     if (type >= MAX_MEM_TYPE)
     {
-        SPRD_CODEC_LOGE ("%s, memory type is error!", __FUNCTION__);
+        SPRD_CODEC_LOGE ("%s, memory type is error!\n", __FUNCTION__);
         return (uint_32or64)NULL;
     } else
     {
-        CODEC_BUF_T *pMem = &(img_ptr->mem[type]);
+        CODEC_BUF_T *pMem = &(vo->mem[type]);
 
         return ((uint_32or64)(vAddr)-pMem->v_base+pMem->p_base);
     }
@@ -107,13 +107,13 @@ PUBLIC uint_32or64 H264Dec_MemV2P(H264DecContext *img_ptr, uint8 *vAddr, int32 t
 /*****************************************************************************
  ** Note:	Free the common memory for h264 decoder.
  *****************************************************************************/
-PUBLIC void H264Dec_FreeExtraMem(H264DecContext *img_ptr)
+PUBLIC void H264Dec_FreeExtraMem(H264DecContext *vo)
 {
     int32 type;
 
     for (type = HW_NO_CACHABLE; type < MAX_MEM_TYPE; type++)
     {
-        img_ptr->mem[type].used_size = 0;
+        vo->mem[type].used_size = 0;
     }
 
 //    H264_MALLOC_PRINT("%s\n", __FUNCTION__);

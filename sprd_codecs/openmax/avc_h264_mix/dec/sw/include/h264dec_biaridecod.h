@@ -26,9 +26,9 @@ extern   "C"
 {
 #endif
 
-uint32 ff_init_cabac_decoder(H264DecContext *img_ptr);
-uint32 get_cabac (CABACContext *c, uint8 * const state);
-uint32 get_cabac_terminate (void *img_ptr);
+uint32 ff_init_cabac_decoder(H264DecContext *vo);
+uint32 get_cabac (CABACContext *c, uint8 *const state);
+uint32 get_cabac_terminate (void *vo);
 int32 get_cabac_bypass_sign(CABACContext *c, int val);
 int32 get_cabac_bypass(CABACContext *c);
 

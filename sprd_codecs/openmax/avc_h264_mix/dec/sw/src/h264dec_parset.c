@@ -27,17 +27,17 @@ extern   "C"
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
 
-uint32 H264Dec_CalculateMemSize (H264DecContext *img_ptr)
+uint32 H264Dec_CalculateMemSize (H264DecContext *vo)
 {
-    int32 Frm_width_align = ((img_ptr->width + 15) & (~15));
-    int32 Frm_height_align = ((img_ptr->height + 15) & (~15));
+    int32 Frm_width_align = ((vo->width + 15) & (~15));
+    int32 Frm_height_align = ((vo->height + 15) & (~15));
     int32 mb_num_x = Frm_width_align/16;
     int32 mb_num_y = Frm_height_align/16;
     int32 mb_num_total = mb_num_x * mb_num_y;
     uint32 size_extra;
     uint32 frame_num = 2;
 
-    if (img_ptr->yuv_format == YUV420SP_NV12 || img_ptr->yuv_format == YUV420SP_NV21) {
+    if (vo->yuv_format == YUV420SP_NV12 || vo->yuv_format == YUV420SP_NV21) {
         frame_num = MAX_REF_FRAME_NUMBER+1;
     }
 
@@ -61,139 +61,139 @@ uint32 H264Dec_CalculateMemSize (H264DecContext *img_ptr)
 if sps_id is changed, size of frame may be changed, so the buffer for dpb and img
 need to be re-allocate, and the parameter of img need to be re-computed
 */
-LOCAL void H264Dec_active_sps (DEC_SPS_T *sps_ptr, H264DecContext *img_ptr)
+LOCAL void H264Dec_active_sps (DEC_SPS_T *sps_ptr, H264DecContext *vo)
 {
-    img_ptr->max_frame_num = (1<<(sps_ptr->log2_max_frame_num_minus4+4));
-    img_ptr->frame_width_in_mbs = (sps_ptr->pic_width_in_mbs_minus1+1);
-    img_ptr->pic_height_in_map_units = (sps_ptr->pic_height_in_map_units_minus1+1);
-    img_ptr->frame_height_in_mbs = (2-(uint8)sps_ptr->frame_mbs_only_flag)*img_ptr->pic_height_in_map_units;
-    img_ptr->frame_size_in_mbs = img_ptr->frame_width_in_mbs*img_ptr->frame_height_in_mbs;
-    img_ptr->width = img_ptr->frame_width_in_mbs * MB_SIZE;
-    img_ptr->height = img_ptr->frame_height_in_mbs * MB_SIZE;
-    img_ptr->b4_pitch = (img_ptr->frame_width_in_mbs << 2);
+    vo->max_frame_num = (1<<(sps_ptr->log2_max_frame_num_minus4+4));
+    vo->frame_width_in_mbs = (sps_ptr->pic_width_in_mbs_minus1+1);
+    vo->pic_height_in_map_units = (sps_ptr->pic_height_in_map_units_minus1+1);
+    vo->frame_height_in_mbs = (2-(uint8)sps_ptr->frame_mbs_only_flag)*vo->pic_height_in_map_units;
+    vo->frame_size_in_mbs = vo->frame_width_in_mbs*vo->frame_height_in_mbs;
+    vo->width = vo->frame_width_in_mbs * MB_SIZE;
+    vo->height = vo->frame_height_in_mbs * MB_SIZE;
+    vo->b4_pitch = (vo->frame_width_in_mbs << 2);
 
     {
-        DEC_MB_CACHE_T *mb_cache_ptr = img_ptr->g_mb_cache_ptr;
+        DEC_MB_CACHE_T *mb_cache_ptr = vo->g_mb_cache_ptr;
         int32 blk8x8Idx, blk4x4Idx = 0;
         int32 offset;
 
-        img_ptr->ext_width  = img_ptr->width + Y_EXTEND_SIZE * 2;
-        img_ptr->ext_height = img_ptr->height + Y_EXTEND_SIZE * 2;
-        img_ptr->start_in_frameY = img_ptr->ext_width * Y_EXTEND_SIZE + Y_EXTEND_SIZE;
-        img_ptr->start_in_frameUV = (img_ptr->ext_width>>1) * UV_EXTEND_SIZE + UV_EXTEND_SIZE;
+        vo->ext_width  = vo->width + Y_EXTEND_SIZE * 2;
+        vo->ext_height = vo->height + Y_EXTEND_SIZE * 2;
+        vo->start_in_frameY = vo->ext_width * Y_EXTEND_SIZE + Y_EXTEND_SIZE;
+        vo->start_in_frameUV = (vo->ext_width>>1) * UV_EXTEND_SIZE + UV_EXTEND_SIZE;
 
         //y
         for (blk8x8Idx = 0; blk8x8Idx < 4; blk8x8Idx++) {
-            offset = (((blk8x8Idx >> 1) *img_ptr->ext_width+ (blk8x8Idx & 1) )<<3);
+            offset = (((blk8x8Idx >> 1) *vo->ext_width+ (blk8x8Idx & 1) )<<3);
             mb_cache_ptr->blk4x4_offset[blk4x4Idx++] = offset;
             mb_cache_ptr->blk4x4_offset[blk4x4Idx++] = offset + 4;
-            mb_cache_ptr->blk4x4_offset[blk4x4Idx++] = offset + 4 * img_ptr->ext_width;
-            mb_cache_ptr->blk4x4_offset[blk4x4Idx++] = offset + 4 + 4 * img_ptr->ext_width;
+            mb_cache_ptr->blk4x4_offset[blk4x4Idx++] = offset + 4 * vo->ext_width;
+            mb_cache_ptr->blk4x4_offset[blk4x4Idx++] = offset + 4 + 4 * vo->ext_width;
         }
 
         //uv
         mb_cache_ptr->blk4x4_offset[blk4x4Idx++] = 0;
         mb_cache_ptr->blk4x4_offset[blk4x4Idx++] = 4;
-        mb_cache_ptr->blk4x4_offset[blk4x4Idx++] = 4 * img_ptr->ext_width/2;
-        mb_cache_ptr->blk4x4_offset[blk4x4Idx++] = 4 + 4 * img_ptr->ext_width/2;
+        mb_cache_ptr->blk4x4_offset[blk4x4Idx++] = 4 * vo->ext_width/2;
+        mb_cache_ptr->blk4x4_offset[blk4x4Idx++] = 4 + 4 * vo->ext_width/2;
     }
 
-    if (img_ptr->g_active_sps_ptr != sps_ptr) {
-        img_ptr->g_active_sps_ptr = sps_ptr;
-        img_ptr->g_MbToSliceGroupMap = NULL;
+    if (vo->g_active_sps_ptr != sps_ptr) {
+        vo->g_active_sps_ptr = sps_ptr;
+        vo->g_MbToSliceGroupMap = NULL;
 
-        if(img_ptr->avcHandle->VSP_extMemCb) {
+        if(vo->avcHandle->VSP_extMemCb) {
             uint32 size_extra;
             int ret;
 
-            size_extra = H264Dec_CalculateMemSize(img_ptr);
-            ret = (*(img_ptr->avcHandle->VSP_extMemCb))(img_ptr->avcHandle->userdata, size_extra);
+            size_extra = H264Dec_CalculateMemSize(vo);
+            ret = (*(vo->avcHandle->VSP_extMemCb))(vo->avcHandle->userdata, size_extra);
             if(ret < 0) {
 #if _H264_PROTECT_ & _LEVEL_LOW_
-                img_ptr->error_flag |= ER_EXTRA_MEMO_ID;
-                img_ptr->return_pos1 |= (1<<13);
+                vo->error_flag |= ER_EXTRA_MEMO_ID;
+                vo->return_pos1 |= (1<<13);
 #endif
                 return;
             }
         } else {
 #if _H264_PROTECT_ & _LEVEL_LOW_
-            img_ptr->error_flag |= ER_BSM_ID;
-            img_ptr->return_pos1 |= (1<<14);
+            vo->error_flag |= ER_BSM_ID;
+            vo->return_pos1 |= (1<<14);
 #endif
             return;
         }
 
         //Added for bug333874
-        H264Dec_clear_delayed_buffer(img_ptr);
-        if (!img_ptr->no_output_of_prior_pics_flag) {
-            H264Dec_flush_dpb(img_ptr, img_ptr->g_dpb_ptr);
+        H264Dec_clear_delayed_buffer(vo);
+        if (!vo->no_output_of_prior_pics_flag) {
+            H264Dec_flush_dpb(vo, vo->g_dpb_ptr);
         }
 
         //reset memory alloc
-        H264Dec_FreeExtraMem(img_ptr);
+        H264Dec_FreeExtraMem(vo);
 
-        if (H264Dec_init_img_buffer (img_ptr) != MMDEC_OK) {
-            img_ptr->error_flag |= ER_EXTRA_MEMO_ID;
-            img_ptr->return_pos2 |= (1<<27);
+        if (H264Dec_init_img_buffer (vo) != MMDEC_OK) {
+            vo->error_flag |= ER_EXTRA_MEMO_ID;
+            vo->return_pos2 |= (1<<27);
             return;
         }
 
-        if (H264Dec_init_dpb (img_ptr) != MMDEC_OK) {
-            img_ptr->error_flag |= ER_EXTRA_MEMO_ID;
-            img_ptr->return_pos2 |= (1<<28);
+        if (H264Dec_init_dpb (vo) != MMDEC_OK) {
+            vo->error_flag |= ER_EXTRA_MEMO_ID;
+            vo->return_pos2 |= (1<<28);
             return;
         }
 
-        img_ptr->g_dpb_ptr->num_ref_frames = img_ptr->g_active_sps_ptr->num_ref_frames;
+        vo->g_dpb_ptr->num_ref_frames = vo->g_active_sps_ptr->num_ref_frames;
     }
 
     return;
 }
 
-LOCAL void H264Dec_active_pps (H264DecContext *img_ptr, DEC_PPS_T *pps_ptr)
+LOCAL void H264Dec_active_pps (H264DecContext *vo, DEC_PPS_T *pps_ptr)
 {
-    if (img_ptr->g_active_pps_ptr != pps_ptr) {
-        img_ptr->g_active_pps_ptr = pps_ptr;
+    if (vo->g_active_pps_ptr != pps_ptr) {
+        vo->g_active_pps_ptr = pps_ptr;
     }
 }
 
-PUBLIC void H264Dec_use_parameter_set (H264DecContext *img_ptr, int32 pps_id)
+PUBLIC void H264Dec_use_parameter_set (H264DecContext *vo, int32 pps_id)
 {
-    DEC_PPS_T *pps_ptr = &(img_ptr->g_pps_array_ptr[pps_id]);
-    DEC_SPS_T *sps_ptr = &(img_ptr->g_sps_array_ptr[pps_ptr->seq_parameter_set_id]);
+    DEC_PPS_T *pps_ptr = &(vo->g_pps_array_ptr[pps_id]);
+    DEC_SPS_T *sps_ptr = &(vo->g_sps_array_ptr[pps_ptr->seq_parameter_set_id]);
 
     if (sps_ptr->valid && pps_ptr->valid) {
-        H264Dec_active_sps (sps_ptr, img_ptr);
+        H264Dec_active_sps (sps_ptr, vo);
 
 #if _H264_PROTECT_ & _LEVEL_LOW_
-        if(img_ptr->error_flag) {
-            img_ptr->return_pos1 |= (1<<15);
+        if(vo->error_flag) {
+            vo->return_pos1 |= (1<<15);
             return;
         }
 #endif
-        H264Dec_active_pps (img_ptr, pps_ptr);
+        H264Dec_active_pps (vo, pps_ptr);
     } else {
 #if _H264_PROTECT_ & _LEVEL_LOW_
-        img_ptr->error_flag |= ER_BSM_ID;
-        img_ptr->return_pos1 |= (1<<16);
+        vo->error_flag |= ER_BSM_ID;
+        vo->return_pos1 |= (1<<16);
 #endif
-        img_ptr->g_ready_to_decode_slice = FALSE;
+        vo->g_ready_to_decode_slice = FALSE;
     }
 
-    if (!img_ptr->is_cabac) {//UVLC
-        img_ptr->nal_startcode_follows = uvlc_startcode_follows;
-        img_ptr->readRefFrame = H264Dec_get_te;
-        img_ptr->decode_mvd_xy = decode_cavlc_mb_mvd;
-        img_ptr->read_mb_type = decode_cavlc_mb_type;
-        img_ptr->read_b8mode = readB8_typeInfo_cavlc;
-        img_ptr->sw_vld_mb= decode_mb_cavlc;
+    if (!vo->is_cabac) {//UVLC
+        vo->nal_startcode_follows = uvlc_startcode_follows;
+        vo->readRefFrame = H264Dec_get_te;
+        vo->decode_mvd_xy = decode_cavlc_mb_mvd;
+        vo->read_mb_type = decode_cavlc_mb_type;
+        vo->read_b8mode = readB8_typeInfo_cavlc;
+        vo->sw_vld_mb= decode_mb_cavlc;
     } else {
-        img_ptr->nal_startcode_follows = get_cabac_terminate;
-        img_ptr->readRefFrame = decode_cabac_mb_ref;
-        img_ptr->decode_mvd_xy = decode_cabac_mb_mvd;
-        img_ptr->read_mb_type = decode_cabac_mb_type;
-        img_ptr->read_b8mode = decode_cabac_mb_sub_type;
-        img_ptr->sw_vld_mb= decode_mb_cabac;
+        vo->nal_startcode_follows = get_cabac_terminate;
+        vo->readRefFrame = decode_cabac_mb_ref;
+        vo->decode_mvd_xy = decode_cabac_mb_mvd;
+        vo->read_mb_type = decode_cabac_mb_type;
+        vo->read_b8mode = decode_cabac_mb_sub_type;
+        vo->sw_vld_mb= decode_mb_cabac;
     }
 
     return;
@@ -340,10 +340,10 @@ LOCAL void decode_scaling_matrices(DEC_BS_T *bs_ptr, DEC_SPS_T *sps, DEC_PPS_T *
     }
 }
 
-LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, H264DecContext *img_ptr)
+LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, H264DecContext *vo)
 {
     int32 reserved_zero;
-    DEC_BS_T *bs_ptr = img_ptr->bitstrm_ptr;
+    DEC_BS_T *bs_ptr = vo->bitstrm_ptr;
 
     sps_ptr->profile_idc = READ_FLC(8);
 
@@ -360,7 +360,7 @@ LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, H264DecContext *img_pt
     if (sps_ptr->profile_idc == 0x64) {//hp
         sps_ptr->chroma_format_idc = UE_V();
         if ((sps_ptr->chroma_format_idc != 1)) {
-            img_ptr->error_flag |= ER_BSM_ID;
+            vo->error_flag |= ER_BSM_ID;
         }
 
         sps_ptr->bit_depth_luma_minus8 = UE_V();
@@ -379,8 +379,8 @@ LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, H264DecContext *img_pt
     if (sps_ptr->seq_parameter_set_id < 0 || sps_ptr->log2_max_frame_num_minus4 < 0 ||
             sps_ptr->log2_max_frame_num_minus4 > 12 || sps_ptr->pic_order_cnt_type < 0 ||
             sps_ptr->pic_order_cnt_type > 2) {
-        img_ptr->error_flag |= ER_BSM_ID;
-        img_ptr->return_pos1 |= (1<<18);
+        vo->error_flag |= ER_BSM_ID;
+        vo->return_pos1 |= (1<<18);
         return MMDEC_STREAM_ERROR;
     }
 #endif
@@ -397,8 +397,8 @@ LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, H264DecContext *img_pt
 
 #if _H264_PROTECT_ & _LEVEL_LOW_
         if (sps_ptr->num_ref_frames_in_pic_order_cnt_cycle > 255) {
-            img_ptr->error_flag |= ER_BSM_ID;
-            img_ptr->return_pos1 |= (1<<19);
+            vo->error_flag |= ER_BSM_ID;
+            vo->return_pos1 |= (1<<19);
             return MMDEC_STREAM_ERROR;
         }
 #endif
@@ -410,8 +410,8 @@ LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, H264DecContext *img_pt
     sps_ptr->num_ref_frames = UE_V();
 #if _H264_PROTECT_ & _LEVEL_LOW_
     if (sps_ptr->num_ref_frames > MAX_REF_FRAME_NUMBER) {
-        img_ptr->error_flag |= ER_REF_FRM_ID;
-        img_ptr->return_pos1 |= (1<<20);
+        vo->error_flag |= ER_REF_FRM_ID;
+        vo->return_pos1 |= (1<<20);
         PRINTF ("sps_ptr->num_ref_frames > MAX_REF_FRAME_NUMBER");
     }
 #endif
@@ -421,15 +421,15 @@ LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, H264DecContext *img_pt
     sps_ptr->pic_height_in_map_units_minus1 = UE_V();
 
     if ((sps_ptr->profile_idc != 0x42) && (sps_ptr->profile_idc != 0x4d) && (sps_ptr->profile_idc != 0x64)) {//0x42: bp, 0x4d: mp, 0x64: hp
-        img_ptr->not_supported = TRUE;
-        img_ptr->error_flag |= ER_BSM_ID;
-        img_ptr->return_pos1 |= (1<<17);
+        vo->not_supported = TRUE;
+        vo->error_flag |= ER_BSM_ID;
+        vo->return_pos1 |= (1<<17);
         return MMDEC_STREAM_ERROR;
     } else {
-        img_ptr->b8_mv_pred_func[4] = H264Dec_mv_prediction_P8x8_8x8;
-        img_ptr->b8_mv_pred_func[5] = H264Dec_mv_prediction_P8x8_8x4;
-        img_ptr->b8_mv_pred_func[6] = H264Dec_mv_prediction_P8x8_4x8;
-        img_ptr->b8_mv_pred_func[7] = H264Dec_mv_prediction_P8x8_4x4;
+        vo->b8_mv_pred_func[4] = H264Dec_mv_prediction_P8x8_8x8;
+        vo->b8_mv_pred_func[5] = H264Dec_mv_prediction_P8x8_8x4;
+        vo->b8_mv_pred_func[6] = H264Dec_mv_prediction_P8x8_4x8;
+        vo->b8_mv_pred_func[7] = H264Dec_mv_prediction_P8x8_4x4;
 
         H264Dec_setClipTab ();
         H264Dec_init_mc_function ();
@@ -443,8 +443,8 @@ LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, H264DecContext *img_pt
 
 #if _H264_PROTECT_ & _LEVEL_LOW_
     if (!sps_ptr->frame_mbs_only_flag) {
-        img_ptr->error_flag |= ER_BSM_ID;
-        img_ptr->return_pos1 |= (1<<22);
+        vo->error_flag |= ER_BSM_ID;
+        vo->return_pos1 |= (1<<22);
         sps_ptr->mb_adaptive_frame_field_flag = READ_FLAG();
         if (sps_ptr->mb_adaptive_frame_field_flag) {
             PRINTF("MBAFF is not supported!\n");
@@ -478,10 +478,10 @@ LOCAL MMDecRet H264Dec_interpret_sps (DEC_SPS_T *sps_ptr, H264DecContext *img_pt
     return MMDEC_OK;
 }
 
-LOCAL void H264Dec_make_sps_availabe (H264DecContext *img_ptr, int32 sps_id, DEC_SPS_T *sps_ptr)
+LOCAL void H264Dec_make_sps_availabe (H264DecContext *vo, int32 sps_id, DEC_SPS_T *sps_ptr)
 {
     int32 *src_ptr = (int32 *)sps_ptr;
-    int32 *dst_ptr = (int32 *)(&img_ptr->g_sps_array_ptr[sps_id]);
+    int32 *dst_ptr = (int32 *)(&vo->g_sps_array_ptr[sps_id]);
     uint32 sps_size = sizeof(DEC_SPS_T)/4;
 #if 0
     int32 i;
@@ -495,63 +495,63 @@ LOCAL void H264Dec_make_sps_availabe (H264DecContext *img_ptr, int32 sps_id, DEC
     return;
 }
 
-PUBLIC MMDecRet H264Dec_process_sps (H264DecContext *img_ptr)
+PUBLIC MMDecRet H264Dec_process_sps (H264DecContext *vo)
 {
-    DEC_SPS_T *sps_ptr = img_ptr->g_sps_ptr;
+    DEC_SPS_T *sps_ptr = vo->g_sps_ptr;
     MMDecRet ret;
 
     memset(sps_ptr, 0, sizeof(DEC_SPS_T)-(6*16+2*64+4));
     memset(sps_ptr->ScalingList4x4,16,6*16);
     memset(sps_ptr->ScalingList8x8,16,2*64);
 
-    ret = H264Dec_interpret_sps (sps_ptr, img_ptr);
+    ret = H264Dec_interpret_sps (sps_ptr, vo);
     if (ret != MMDEC_OK) {
         return ret;
     }
 
-    H264Dec_make_sps_availabe (img_ptr, sps_ptr->seq_parameter_set_id, sps_ptr);
+    H264Dec_make_sps_availabe (vo, sps_ptr->seq_parameter_set_id, sps_ptr);
 
-    if (img_ptr->g_active_sps_ptr && (sps_ptr->seq_parameter_set_id == img_ptr->g_active_sps_ptr->seq_parameter_set_id)) {
-        img_ptr->g_old_pps_id = -1;
+    if (vo->g_active_sps_ptr && (sps_ptr->seq_parameter_set_id == vo->g_active_sps_ptr->seq_parameter_set_id)) {
+        vo->g_old_pps_id = -1;
     }
-    img_ptr->g_active_sps_ptr = NULL;
+    vo->g_active_sps_ptr = NULL;
 
-    img_ptr->profile_idc = sps_ptr->profile_idc;
-    img_ptr->low_delay = 1;
-    img_ptr->has_b_frames = !img_ptr->low_delay;
+    vo->profile_idc = sps_ptr->profile_idc;
+    vo->low_delay = 1;
+    vo->has_b_frames = !vo->low_delay;
 
     return MMDEC_OK;
 }
 
-LOCAL MMDecRet H264Dec_interpret_pps (DEC_PPS_T *pps_ptr, H264DecContext *img_ptr)
+LOCAL MMDecRet H264Dec_interpret_pps (DEC_PPS_T *pps_ptr, H264DecContext *vo)
 {
     int32 i;
     int32 NumberBitsPerSliceGroupId;
-    DEC_BS_T *bs_ptr = img_ptr->bitstrm_ptr;
+    DEC_BS_T *bs_ptr = vo->bitstrm_ptr;
 
     pps_ptr->pic_parameter_set_id = UE_V();
     pps_ptr->seq_parameter_set_id = UE_V();
-    pps_ptr->entropy_coding_mode_flag = img_ptr->is_cabac = READ_FLAG();
+    pps_ptr->entropy_coding_mode_flag = vo->is_cabac = READ_FLAG();
     pps_ptr->pic_order_present_flag = READ_FLAG();
     pps_ptr->num_slice_groups_minus1 = UE_V();
 
 #if _H264_PROTECT_ & _LEVEL_LOW_
     if (pps_ptr->num_slice_groups_minus1 >MAX_NUM_SLICE_GROUPS_MINUS1) {
-        img_ptr->error_flag |= ER_BSM_ID;
-        img_ptr->return_pos1 |= (1<<23);
+        vo->error_flag |= ER_BSM_ID;
+        vo->return_pos1 |= (1<<23);
         return MMDEC_STREAM_ERROR;
     }
 #endif
 
     //fmo parsing
     if (pps_ptr->num_slice_groups_minus1 > 0) {
-        img_ptr->fmo_used = TRUE;
+        vo->fmo_used = TRUE;
 
         PRINTF ("FMO used!\n");
         pps_ptr->slice_group_map_type	= (int8)UE_V();
 
         if (pps_ptr->slice_group_map_type == 6) {
-            pps_ptr->slice_group_id = (uint8 *)H264Dec_MemAlloc(img_ptr, SIZE_SLICE_GROUP_ID*sizeof(uint8), 4, INTER_MEM);
+            pps_ptr->slice_group_id = (uint8 *)H264Dec_MemAlloc(vo, SIZE_SLICE_GROUP_ID*sizeof(uint8), 4, INTER_MEM);
             CHECK_MALLOC(pps_ptr->slice_group_id, "pps_ptr->slice_group_id");
         }
 
@@ -584,7 +584,7 @@ LOCAL MMDecRet H264Dec_interpret_pps (DEC_PPS_T *pps_ptr, H264DecContext *img_pt
             }
         }
     } else {
-        img_ptr->fmo_used = FALSE; //FALSE;
+        vo->fmo_used = FALSE; //FALSE;
     }
 
     //ONLY FOR FMO COMFORMANCE TEST
@@ -592,8 +592,8 @@ LOCAL MMDecRet H264Dec_interpret_pps (DEC_PPS_T *pps_ptr, H264DecContext *img_pt
 
 #if _H264_PROTECT_ & _LEVEL_LOW_
     if ((pps_ptr->num_ref_idx_l0_active_minus1+1) > MAX_REF_FRAME_NUMBER) {
-        img_ptr->error_flag |= ER_REF_FRM_ID;
-        img_ptr->return_pos1 |= (1<<24);     //lint !e648
+        vo->error_flag |= ER_REF_FRM_ID;
+        vo->return_pos1 |= (1<<24);     //lint !e648
         PRINTF ("too many l0_active not supported!\n");
         return MMDEC_STREAM_ERROR;
     }
@@ -610,11 +610,11 @@ LOCAL MMDecRet H264Dec_interpret_pps (DEC_PPS_T *pps_ptr, H264DecContext *img_pt
     pps_ptr->constrained_intra_pred_flag = READ_FLAG();
     pps_ptr->redundant_pic_cnt_present_flag = READ_FLAG();
 
-    if (!uvlc_startcode_follows((void *)img_ptr)) {
+    if (!uvlc_startcode_follows((void *)vo)) {
         pps_ptr->transform_8x8_mode_flag = READ_FLAG();
         pps_ptr->pic_scaling_matrix_present_flag = READ_FLAG();
         if(pps_ptr->pic_scaling_matrix_present_flag) {
-            decode_scaling_matrices(bs_ptr, &img_ptr->g_sps_array_ptr[pps_ptr->seq_parameter_set_id], pps_ptr, 0, pps_ptr->ScalingList4x4, pps_ptr->ScalingList8x8);
+            decode_scaling_matrices(bs_ptr, &vo->g_sps_array_ptr[pps_ptr->seq_parameter_set_id], pps_ptr, 0, pps_ptr->ScalingList4x4, pps_ptr->ScalingList8x8);
         }
 
         pps_ptr->second_chroma_qp_index_offset = SE_V();
@@ -627,10 +627,10 @@ LOCAL MMDecRet H264Dec_interpret_pps (DEC_PPS_T *pps_ptr, H264DecContext *img_pt
     return MMDEC_OK;
 }
 
-LOCAL void H264Dec_make_pps_available (H264DecContext *img_ptr, int32 pps_id, DEC_PPS_T *pps_ptr)
+LOCAL void H264Dec_make_pps_available (H264DecContext *vo, int32 pps_id, DEC_PPS_T *pps_ptr)
 {
     int32 *src_ptr = (int32 *)pps_ptr;
-    int32 *dst_ptr = (int32 *)(&img_ptr->g_pps_array_ptr[pps_id]);
+    int32 *dst_ptr = (int32 *)(&vo->g_pps_array_ptr[pps_id]);
     uint32 pps_size = sizeof(DEC_PPS_T)/4;
 #if 0
     uint32 i;
@@ -645,23 +645,23 @@ LOCAL void H264Dec_make_pps_available (H264DecContext *img_ptr, int32 pps_id, DE
     return;
 }
 
-PUBLIC MMDecRet H264Dec_process_pps (H264DecContext *img_ptr)
+PUBLIC MMDecRet H264Dec_process_pps (H264DecContext *vo)
 {
-    DEC_PPS_T *pps_ptr = img_ptr->g_pps_ptr;
+    DEC_PPS_T *pps_ptr = vo->g_pps_ptr;
     MMDecRet ret;
 
-    memset(img_ptr->g_pps_ptr, 0, sizeof(DEC_PPS_T)-4);
-    memset(img_ptr->g_pps_ptr->ScalingList4x4,16,6*16);
-    memset(img_ptr->g_pps_ptr->ScalingList8x8,16,2*64);
+    memset(vo->g_pps_ptr, 0, sizeof(DEC_PPS_T)-4);
+    memset(vo->g_pps_ptr->ScalingList4x4,16,6*16);
+    memset(vo->g_pps_ptr->ScalingList8x8,16,2*64);
 
-    ret = H264Dec_interpret_pps (pps_ptr, img_ptr);
+    ret = H264Dec_interpret_pps (pps_ptr, vo);
     if (ret != MMDEC_OK) {
         return ret;
     }
-    H264Dec_make_pps_available (img_ptr, pps_ptr->pic_parameter_set_id, pps_ptr);
+    H264Dec_make_pps_available (vo, pps_ptr->pic_parameter_set_id, pps_ptr);
 
-    if (img_ptr->g_active_pps_ptr && (pps_ptr->pic_parameter_set_id == img_ptr->g_active_pps_ptr->pic_parameter_set_id)) {
-        img_ptr->g_old_pps_id = -1;
+    if (vo->g_active_pps_ptr && (pps_ptr->pic_parameter_set_id == vo->g_active_pps_ptr->pic_parameter_set_id)) {
+        vo->g_old_pps_id = -1;
     }
 
     return MMDEC_OK;

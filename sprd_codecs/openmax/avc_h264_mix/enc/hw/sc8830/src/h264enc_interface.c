@@ -73,7 +73,7 @@ MMEncRet H264EncPreInit(AVCHandle *avcHandle, MMCodecBuffer *pInterMemBfr)
     MMEncRet ret;
     char value_dump[PROPERTY_VALUE_MAX];
 
-    SPRD_CODEC_LOGI ("libomx_avcenc_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
+    SPRD_CODEC_LOGI ("libomx_avcenc_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.\n", __DATE__, __TIME__);
 
     CHECK_MALLOC(pInterMemBfr, "pInterMemBfr");
     CHECK_MALLOC(pInterMemBfr->common_buffer_ptr, "internal memory");
@@ -165,7 +165,7 @@ MMEncRet H264EncInit(AVCHandle *avcHandle, MMCodecBuffer *pExtaMemBfr,
         memcpy(vo->g_vlc_hw_ptr, &g_vlc_hw_tbl[406*2], (406*2*sizeof(uint32)));
         break;
     default:
-        SPRD_CODEC_LOGE ("%s, %d, VSP version is error!", __FUNCTION__, __LINE__);
+        SPRD_CODEC_LOGE ("%s, %d, VSP version is error!\n", __FUNCTION__, __LINE__);
         vo->error_flag |= ER_HW_ID;
         break;
     }
@@ -305,7 +305,7 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
 
     SCI_ASSERT(NULL != pConf);
 
-    SPRD_CODEC_LOGD ("%s, configure, FrameRate: %d, targetBitRate: %d, intra_period: %d, QP_I: %d, QP_P: %d",
+    SPRD_CODEC_LOGD ("%s, configure, FrameRate: %d, targetBitRate: %d, intra_period: %d, QP_I: %d, QP_P: %d\n",
                      __FUNCTION__, pConf->FrameRate, pConf->targetBitRate, pConf->PFrames+1, pConf->QP_IVOP, pConf->QP_PVOP);
 
     for (level_idx = 0; level_idx < (int32)g_level_num; level_idx++) {
@@ -328,13 +328,13 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
         }
     }
 
-    SPRD_CODEC_LOGD("%s, level_idx: %s", __FUNCTION__, level_infos[level_idx].level_str);
+    SPRD_CODEC_LOGD("%s, level_idx: %s\n", __FUNCTION__, level_infos[level_idx].level_str);
     max_framerate = level_infos[level_idx].MaxMBPS/total_mbs;
     while (max_framerate < 60 && (level_infos[level_idx].level <= AVC_LEVEL4_1)) {
         level_idx++;
         max_framerate = level_infos[level_idx].MaxMBPS/total_mbs;
     }
-    SPRD_CODEC_LOGD("%s, level_idx: %s", __FUNCTION__, level_infos[level_idx].level_str);
+    SPRD_CODEC_LOGD("%s, level_idx: %s\n", __FUNCTION__, level_infos[level_idx].level_str);
 
     //revised by actual level
     max_framerate = level_infos[level_idx].MaxMBPS/total_mbs;
@@ -344,7 +344,7 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
 
     target_bitrate_max = level_infos[level_idx].MaxBR * 1200;
     target_bitrate_min = ((total_mbs << 8)*8*pConf->FrameRate)/200; // 200 is max compress ratio
-    SPRD_CODEC_LOGD("%s, target_bitrate_min: %d, target_bitrate_max: %d, pConf->targetBitRate: %d", __FUNCTION__, target_bitrate_min, target_bitrate_max, pConf->targetBitRate);
+    SPRD_CODEC_LOGD("%s, target_bitrate_min: %d, target_bitrate_max: %d, pConf->targetBitRate: %d\n", __FUNCTION__, target_bitrate_min, target_bitrate_max, pConf->targetBitRate);
 
     if (pConf->targetBitRate < target_bitrate_min) {
         pConf->targetBitRate = target_bitrate_min;
@@ -404,7 +404,7 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
         init_GOPRC(&(vo->rc_inout_paras));
     }
 
-    SPRD_CODEC_LOGD ("%s, actual, FrameRate: %d, targetBitRate: %d, intra_period: %d, QP_I: %d, QP_P: %d, level: %s, RC_mode: %d",
+    SPRD_CODEC_LOGD ("%s, actual, FrameRate: %d, targetBitRate: %d, intra_period: %d, QP_I: %d, QP_P: %d, level: %s, RC_mode: %d\n",
                      __FUNCTION__, enc_config->FrameRate, enc_config->targetBitRate, vo->rc_inout_paras.nIntra_Period,
                      enc_config->QP_IVOP, enc_config->QP_PVOP, level_infos[level_idx].level_str, vo->rc_inout_paras.nRate_control_en);
 
@@ -462,7 +462,7 @@ MMEncRet H264Enc_FakeNALU(ENC_IMAGE_PARAMS_T *img_ptr, MMEncOut *pOutput)
 {
     uint32 nal_header;
 
-    SPRD_CODEC_LOGE ("%s, %d", __FUNCTION__, __LINE__);
+    SPRD_CODEC_LOGE ("%s, %d\n", __FUNCTION__, __LINE__);
 
     /* nal header, ( 0x00 << 7 ) | ( nal->i_ref_idc << 5 ) | nal->i_type; */
     nal_header = ( 0x00 << 7 ) | ( NAL_PRIORITY_HIGHEST << 5 ) | NAL_UNKNOWN;
@@ -509,7 +509,7 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     anti_shark_ptr->shift_y = pInput->crop_y;
 
     if (pInput->ischangebitrate) {
-        SPRD_CODEC_LOGD ("%s, changing bit rate, old: %d, new: %d", __FUNCTION__, vo->rc_inout_paras.nTarget_bitrate, pInput->bitrate);
+        SPRD_CODEC_LOGD ("%s, changing bit rate, old: %d, new: %d\n", __FUNCTION__, vo->rc_inout_paras.nTarget_bitrate, pInput->bitrate);
 
         vo->rc_inout_paras.nTarget_bitrate = pInput->bitrate;
         reset_GOPRC(&(vo->rc_inout_paras));
@@ -575,9 +575,7 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
             i_global_qp = 16;	//avoid level overflow in VLC module.
         }
 
-        if (vo->trace_enabled) {
-            SPRD_CODEC_LOGD ("%s, %d, qp: %d", __FUNCTION__, __LINE__, i_global_qp);
-        }
+        SPRD_CODEC_LOGD ("%s, %d, qp: %d\n", __FUNCTION__, __LINE__, i_global_qp);
 
         /* ------------------------ Create slice header  ----------------------- */
         H264Enc_slice_init(img_ptr, i_nal_type, i_slice_type, i_global_qp );
@@ -667,9 +665,7 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
 
 ENC_EXIT:
 
-    if (vo->trace_enabled) {
-        SPRD_CODEC_LOGD ("%s, %d, exit encoder, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
-    }
+    SPRD_CODEC_LOGD ("%s, %d, exit encoder, error_flag: %0x\n", __FUNCTION__, __LINE__, vo->error_flag);
 
     if(img_ptr->sh.i_first_mb == 0)
     {
@@ -754,9 +750,7 @@ MMEncRet H264EncGenHeader(AVCHandle *avcHandle, MMEncOut *pOutput, int is_sps)
 
 HEADER_EXIT:
 
-    if (vo->trace_enabled) {
-        SPRD_CODEC_LOGD ("%s, %d, exit generating header, error_flag: %0x", __FUNCTION__, __LINE__, vo->error_flag);
-    }
+    SPRD_CODEC_LOGD ("%s, %d, exit generating header, error_flag: %0x\n", __FUNCTION__, __LINE__, vo->error_flag);
     if (is_sps)
     {
         vo->sps_header_len = pOutput->strmSize;

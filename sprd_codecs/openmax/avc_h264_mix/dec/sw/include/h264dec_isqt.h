@@ -27,7 +27,7 @@ extern   "C"
 #endif
 
 
-void itrans_lumaDC (H264DecContext *img_ptr, int16 * DCCoeff, int16 * pCoeffIq, int32 qp);
+void itrans_lumaDC (H264DecContext *vo, int16 *DCCoeff, int16 *pCoeffIq, int32 qp);
 void itrans_4x4 (int16 *coff, uint8 *pred, int32 width_p, uint8 *rec, int32 width_r);
 void itrans_8x8 (int16 *coff, uint8 *pred, int32 width_p, uint8 *rec, int32 width_r);
 /**---------------------------------------------------------------------------*

@@ -32,10 +32,10 @@ extern   "C"
 **----------------------------------------------------------------------------*/
 #if 1 //WIN32
 //N: 8 or 16
-void MC_luma8xN_dx0dy0 (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPred, int32 N)
+void MC_luma8xN_dx0dy0 (H264DecContext *vo, uint8 * pRefFrame, uint8 * pPred, int32 N)
 {
     int32 i;
-    int32 width = img_ptr->ext_width;
+    int32 width = vo->ext_width;
 #ifdef _NEON_OPT_
     uint8x8_t vec64;
 #endif
@@ -63,11 +63,11 @@ void MC_luma8xN_dx0dy0 (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPre
 
 #if 1 //WIN32
 //N: 8 or 16, M: 1 or 3
-void MC_luma8xN_dxMdy0 (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPred, int32 N)
+void MC_luma8xN_dxMdy0 (H264DecContext *vo, uint8 * pRefFrame, uint8 * pPred, int32 N)
 {
     int32 i;
-    int32 width = img_ptr->ext_width;
-    int32 col = ((img_ptr->g_refPosx & 0x3) == 0x1) ? 2 : 3;
+    int32 width = vo->ext_width;
+    int32 col = ((vo->g_refPosx & 0x3) == 0x1) ? 2 : 3;
 #ifdef _NEON_OPT_
     uint8x8_t v64[6], v64_next;
     uint16x8_t v05, v14, v23;
@@ -134,10 +134,10 @@ void MC_luma8xN_dxMdy0 (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPre
 
 #if 1 //WIN32
 //N: 8 or 16
-void MC_luma8xN_yfull (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPred, int32 N)
+void MC_luma8xN_yfull (H264DecContext *vo, uint8 * pRefFrame, uint8 * pPred, int32 N)
 {
     int32 i;
-    int32 width = img_ptr->ext_width;
+    int32 width = vo->ext_width;
 #ifdef _NEON_OPT_
     uint8x8_t v64[6], v64_next;
     uint16x8_t v05, v14, v23;
@@ -192,12 +192,12 @@ void MC_luma8xN_yfull (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPred
 
 #if 1 //WIN32
 //N: 8 or 16, M: 1 or 3
-void MC_luma8xN_dx0dyM (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPred, int32 N)
+void MC_luma8xN_dx0dyM (H264DecContext *vo, uint8 * pRefFrame, uint8 * pPred, int32 N)
 {
     int32 i;
     uint8 * pRefTemp;//, * pPredTemp;
-    int32 width = img_ptr->ext_width;
-    int32 row = ((img_ptr->g_refPosy & 0x3) == 0x1) ? 0x2 : 0x3;
+    int32 width = vo->ext_width;
+    int32 row = ((vo->g_refPosy & 0x3) == 0x1) ? 0x2 : 0x3;
 #ifdef _NEON_OPT_
     uint8x8_t v64[6];
     uint16x8_t v05, v14, v23;
@@ -279,13 +279,13 @@ void MC_luma8xN_dx0dyM (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPre
 #endif
 
 #if 1 //WIN32
-void MC_luma8xN_xyqpix (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPred, int32 N)
+void MC_luma8xN_xyqpix (H264DecContext *vo, uint8 * pRefFrame, uint8 * pPred, int32 N)
 {
     int32 i;
     int32 dx, dy;
     uint8 * pRefHorFilter;
     uint8 * pRefVerFilter;
-    int32 width = img_ptr->ext_width;
+    int32 width = vo->ext_width;
     uint8 * pPredTemp = pPred;
 #ifndef _NEON_OPT_
     int32 j, halfPix;
@@ -298,7 +298,7 @@ void MC_luma8xN_xyqpix (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPre
     uint16x8_t halfpix;
 #endif
 
-    dx = img_ptr->g_refPosx & 0x3;
+    dx = vo->g_refPosx & 0x3;
     pRefVerFilter = pRefFrame + (dx >> 1) - width * 2;
 
     //first, vertical interpolation
@@ -360,7 +360,7 @@ void MC_luma8xN_xyqpix (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPre
     if (!dx)	return; //xfull
 
     /*luma 8x8 horizontal interpolation and bilinear interpolation*/
-    dy = img_ptr->g_refPosy & 0x3;
+    dy = vo->g_refPosy & 0x3;
     pRefHorFilter = pRefFrame + width * (dy >> 1) - 2;
 
     /*get horizontal interpolate half pixel, and compute quarter pixel*/
@@ -595,19 +595,19 @@ void bilinear_filter8xN_short (int16 * phalfPix, uint8 * pPred, int32 width, int
 #endif
 
 #if 1 //WIN32
-void MC_luma8xN_xhalf (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPred, int32 N)
+void MC_luma8xN_xhalf (H264DecContext *vo, uint8 * pRefFrame, uint8 * pPred, int32 N)
 {
     int32 dy;
 //	uint8 * pRefBlk;
-    int32 width = img_ptr->ext_width;
-    int16 *pHalfPix = img_ptr->g_halfPixTemp;
+    int32 width = vo->ext_width;
+    int16 *pHalfPix = vo->g_halfPixTemp;
 
 //	pRefBlk = pRefFrame  - 2 * width;
     luma13x5pN_interpolation_hor (pRefFrame, pHalfPix, width, N);
 
     luma8x5pN_interpolation_ver (pHalfPix, pPred, N);
 
-    dy = img_ptr->g_refPosy & 0x3;
+    dy = vo->g_refPosy & 0x3;
     if (dy != 2)
     {
         bilinear_filter8xN_short (pHalfPix + (2 + (dy>>1))*8, pPred, 8, N);
@@ -797,25 +797,25 @@ void luma13xN_interpolation_hor (int16 * pHalfPix, uint8 * pPred, int32 N)
 }
 
 //only for dx = 1 or 3, because dx = 2 has been implemented with MC_luma8xN_xhalf() func.
-void MC_luma8xN_yhalf (H264DecContext *img_ptr, uint8 * pRefFrame, uint8 * pPred, int32 N)
+void MC_luma8xN_yhalf (H264DecContext *vo, uint8 * pRefFrame, uint8 * pPred, int32 N)
 {
     int32 dx;
-    int32 width = img_ptr->ext_width;
-    int16 *pHalfPix = img_ptr->g_halfPixTemp;
+    int32 width = vo->ext_width;
+    int16 *pHalfPix = vo->g_halfPixTemp;
 
     luma13xN_interpolation_ver (pRefFrame, pHalfPix, width, N);
 
     luma13xN_interpolation_hor (pHalfPix, pPred, N);
 
     /*bilinear filter*/
-    dx = img_ptr->g_refPosx & 0x3;
+    dx = vo->g_refPosx & 0x3;
     bilinear_filter8xN_short (pHalfPix + 2 + (dx>>1), pPred, 16, N);
 }
 #endif
 
 #if 1 //WIN32
 //N: 4 or 2
-void PC_MC_chroma4xN (H264DecContext *img_ptr, uint8 ** pRefFrame, uint8 ** pPredUV, int32 N)
+void PC_MC_chroma4xN (H264DecContext *vo, uint8 ** pRefFrame, uint8 ** pPredUV, int32 N)
 {
     int32 i;
     int32 uv;
@@ -825,7 +825,7 @@ void PC_MC_chroma4xN (H264DecContext *img_ptr, uint8 ** pRefFrame, uint8 ** pPre
     uint8 * pPred;
     uint8 downRight, upRight, downLeft, upLeft;
     uint8 * pRefUp, * pRefDown;
-    int32 width_c = img_ptr->ext_width>>1;
+    int32 width_c = vo->ext_width>>1;
 #ifdef _NEON_OPT_
     uint8x16_t v8x16_t, v8x16_b;
     uint8x8_t v8x8_t[2], v8x8_b[2];
@@ -835,8 +835,8 @@ void PC_MC_chroma4xN (H264DecContext *img_ptr, uint8 ** pRefFrame, uint8 ** pPre
     uint32 p;
 #endif
 
-    dx1 = img_ptr->g_refPosx & 0x7;
-    dy1 = img_ptr->g_refPosy & 0x7;
+    dx1 = vo->g_refPosx & 0x7;
+    dy1 = vo->g_refPosy & 0x7;
     dx2 = 8 - dx1;
     dy2 = 8 - dy1;
 
@@ -852,7 +852,7 @@ void PC_MC_chroma4xN (H264DecContext *img_ptr, uint8 ** pRefFrame, uint8 ** pPre
     coef8x8_ul = vdup_n_u8(upLeft);
 #endif
 
-    offset = (img_ptr->g_refPosy >> 3) * width_c + (img_ptr->g_refPosx >> 3);
+    offset = (vo->g_refPosy >> 3) * width_c + (vo->g_refPosx >> 3);
 
     for (uv = 0; uv < 2; uv++)
     {

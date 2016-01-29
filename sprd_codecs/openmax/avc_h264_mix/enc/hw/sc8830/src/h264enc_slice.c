@@ -258,22 +258,22 @@ PUBLIC int32 H264Enc_slice_write (H264EncObject *vo, ENC_IMAGE_PARAMS_T *img_ptr
         vo->error_flag = 0;
     } else if(int_ret & (V_BIT_4 | V_BIT_5 |V_BIT_30 | V_BIT_31))	// (VLC_ERR|TIME_OUT)
     {
-        SPRD_CODEC_LOGE ("%s, %d, VSP_INT_RAW 0x%x \n", __FUNCTION__, __LINE__,reg_value);
+        SPRD_CODEC_LOGE ("%s, %d, VSP_INT_RAW 0x%x\n", __FUNCTION__, __LINE__,reg_value);
         vo->error_flag |= ER_HW_ID;
 
         if (int_ret & V_BIT_4)
         {
-            SPRD_CODEC_LOGE ("%s, %d, VLC_ERR", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, VLC_ERR\n", __FUNCTION__, __LINE__);
         } else if (int_ret & (V_BIT_5 | V_BIT_31))
         {
-            SPRD_CODEC_LOGE ("%s, %d, TIME_OUT", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, TIME_OUT\n", __FUNCTION__, __LINE__);
         } else //if (cmd &  V_BIT_30)
         {
-            SPRD_CODEC_LOGE ("%s, %d, Broken by signal", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, Broken by signal\n", __FUNCTION__, __LINE__);
         }
     } else
     {
-        SPRD_CODEC_LOGE ("%s, %d, should not be here!", __FUNCTION__, __LINE__);
+        SPRD_CODEC_LOGE ("%s, %d, should not be here!\n", __FUNCTION__, __LINE__);
     }
 
     if (VSP_READ_REG_POLL(BSM_CTRL_REG_BASE_ADDR + BSM_DBG0_OFF, V_BIT_27, 0x00000000, TIME_OUT_CLK, "Polling BSM_DBG0: !DATA_TRAN, BSM_clr enable")) //check bsm is idle

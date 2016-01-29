@@ -137,9 +137,9 @@ static void filter_mb_edgev(DEC_SLICE_T *curr_slice_ptr, uint8 *pix, int stride,
     }
 }
 
-static void filter_mb_edgecv( H264DecContext *img_ptr, uint8 *pix, int stride, int bS[4], int qp ) {
+static void filter_mb_edgecv( H264DecContext *vo, uint8 *pix, int stride, int bS[4], int qp ) {
     int i, d;
-    DEC_SLICE_T *curr_slice_ptr = img_ptr->curr_slice_ptr;
+    DEC_SLICE_T *curr_slice_ptr = vo->curr_slice_ptr;
     const int index_a = Clip3(0, 51, qp + curr_slice_ptr->LFAlphaC0Offset);
     const int alpha = alpha_table[index_a];
     const int beta  = beta_table[Clip3(0, 51, qp + curr_slice_ptr->LFBetaOffset)];
@@ -184,9 +184,9 @@ static void filter_mb_edgecv( H264DecContext *img_ptr, uint8 *pix, int stride, i
     }
 }
 
-static void filter_mb_edgeh( H264DecContext *img_ptr, uint8 *pix, int stride, int bS[4], int qp ) {
+static void filter_mb_edgeh( H264DecContext *vo, uint8 *pix, int stride, int bS[4], int qp ) {
     int i, d;
-    DEC_SLICE_T *curr_slice_ptr = img_ptr->curr_slice_ptr;
+    DEC_SLICE_T *curr_slice_ptr = vo->curr_slice_ptr;
     const int index_a = Clip3(0, 51, qp + curr_slice_ptr->LFAlphaC0Offset);
     const int alpha = alpha_table[index_a];
     const int beta  = beta_table[Clip3(0, 51, qp + curr_slice_ptr->LFBetaOffset)];
@@ -270,9 +270,9 @@ static void filter_mb_edgeh( H264DecContext *img_ptr, uint8 *pix, int stride, in
     }
 }
 
-static void filter_mb_edgech( H264DecContext *img_ptr, uint8 *pix, int stride, int bS[4], int qp ) {
+static void filter_mb_edgech( H264DecContext *vo, uint8 *pix, int stride, int bS[4], int qp ) {
     int i, d;
-    DEC_SLICE_T *curr_slice_ptr = img_ptr->curr_slice_ptr;
+    DEC_SLICE_T *curr_slice_ptr = vo->curr_slice_ptr;
     const int index_a = Clip3(0, 51, qp + curr_slice_ptr->LFAlphaC0Offset);
     const int alpha = alpha_table[index_a];
     const int beta  = beta_table[Clip3(0, 51, qp + curr_slice_ptr->LFBetaOffset)];
@@ -320,21 +320,21 @@ static void filter_mb_edgech( H264DecContext *img_ptr, uint8 *pix, int stride, i
 }
 #endif
 
-static void H264Dec_filter_mb( H264DecContext *img_ptr, int mb_x, int mb_y, uint8 *img_y, uint8 *img_cb, uint8 *img_cr)
+static void H264Dec_filter_mb( H264DecContext *vo, int mb_x, int mb_y, uint8 *img_y, uint8 *img_cb, uint8 *img_cr)
 {
-    DEC_SLICE_T *curr_slice_ptr = img_ptr->curr_slice_ptr;
-    DEC_MB_INFO_T *mb_info_ptr = img_ptr->mb_info;
-    const int32 mb_xy= mb_x + mb_y*img_ptr->frame_width_in_mbs;
+    DEC_SLICE_T *curr_slice_ptr = vo->curr_slice_ptr;
+    DEC_MB_INFO_T *mb_info_ptr = vo->mb_info;
+    const int32 mb_xy= mb_x + mb_y*vo->frame_width_in_mbs;
 
-    int32 b4_offset = (mb_y<<2)* img_ptr->b4_pitch+ (mb_x<<2);
-    int32 b4_offset_nnz = (mb_y*6)* img_ptr->b4_pitch + (mb_x<<2);
-    int8 * nnz_ptr = img_ptr->nnz_ptr + b4_offset_nnz;
+    int32 b4_offset = (mb_y<<2)* vo->b4_pitch+ (mb_x<<2);
+    int32 b4_offset_nnz = (mb_y*6)* vo->b4_pitch + (mb_x<<2);
+    int8 * nnz_ptr = vo->nnz_ptr + b4_offset_nnz;
 
-    DEC_STORABLE_PICTURE_T *pic = img_ptr->g_dec_picture_ptr;
+    DEC_STORABLE_PICTURE_T *pic = vo->g_dec_picture_ptr;
     int8 *ref_idx_ptr = pic->ref_idx_ptr[0] + b4_offset;
     int32 *mv_ptr = (int32*)(pic->mv_ptr[0]) + b4_offset;
 
-    int32 linesize = img_ptr->ext_width;
+    int32 linesize = vo->ext_width;
     int32 uvlinesize = linesize >> 1;
     int32 dir, mbn_xy, i;
     int32 b_idx, bn_idx;
@@ -343,10 +343,10 @@ static void H264Dec_filter_mb( H264DecContext *img_ptr, int mb_x, int mb_y, uint
     int16 mv_x, mv_y, mvn_x, mvn_y;
 
     DEBLK_PARAS_T dbk_para;
-    dbk_para.linesize = img_ptr->ext_width;
+    dbk_para.linesize = vo->ext_width;
 
     /* FIXME Implement deblocking filter for field MB */
-    if( img_ptr->g_sps_ptr->mb_adaptive_frame_field_flag) {
+    if( vo->g_sps_ptr->mb_adaptive_frame_field_flag) {
         return;
     }
 
@@ -370,7 +370,7 @@ static void H264Dec_filter_mb( H264DecContext *img_ptr, int mb_x, int mb_y, uint
         /* Calculate bS */
         for( edge = start; edge < 4; edge++ ) {
             /* mbn_xy: neighbour macroblock (how that works for field ?) */
-            mbn_xy = edge > 0 ? mb_xy : ( dir == 0 ? mb_xy -1 : mb_xy - img_ptr->frame_width_in_mbs);
+            mbn_xy = edge > 0 ? mb_xy : ( dir == 0 ? mb_xy -1 : mb_xy - vo->frame_width_in_mbs);
 
             if( IS_INTRA( (mb_info_ptr + mb_xy)->mb_type ) ||
                     IS_INTRA( (mb_info_ptr + mbn_xy)->mb_type ) )
@@ -384,19 +384,19 @@ static void H264Dec_filter_mb( H264DecContext *img_ptr, int mb_x, int mb_y, uint
                     int32 x = dir == 0 ? edge : i;
                     int32 y = dir == 0 ? i : edge;
 
-                    b_idx = y*img_ptr->b4_pitch + x;
+                    b_idx = y*vo->b4_pitch + x;
                     bn_idx = dir == 0 ? (b_idx - 1) : ((0 == edge) ?
-                                                       (b_idx - 3*img_ptr->b4_pitch) : (b_idx - img_ptr->b4_pitch));   //for nnz_ptr
+                                                       (b_idx - 3*vo->b4_pitch) : (b_idx - vo->b4_pitch));   //for nnz_ptr
 
                     if( nnz_ptr[b_idx] != 0 ||nnz_ptr[bn_idx] != 0 )
                     {
                         bS[i] = 2;
                     }
-                    else if( img_ptr->type == P_SLICE)
+                    else if( vo->type == P_SLICE)
                     {
                         if (1 == dir && 0 == edge)
                         {
-                            bn_idx = (b_idx - img_ptr->b4_pitch); //for ref_idx_ptr &  mv
+                            bn_idx = (b_idx - vo->b4_pitch); //for ref_idx_ptr &  mv
                         }
 
 #if defined(H264_BIG_ENDIAN)
@@ -433,10 +433,10 @@ static void H264Dec_filter_mb( H264DecContext *img_ptr, int mb_x, int mb_y, uint
             qp_n = (mb_info_ptr + mbn_xy)->qp;
             dbk_para.qp_y = (qp_cur + qp_n + 1 ) >> 1;
 
-            qp_u = g_QP_SCALER_CR_TBL[qp_cur + img_ptr->chroma_qp_offset];
-            qp_v = g_QP_SCALER_CR_TBL[qp_cur + img_ptr->second_chroma_qp_index_offset];
-            qp_u_n = g_QP_SCALER_CR_TBL[qp_n + img_ptr->chroma_qp_offset];
-            qp_v_n = g_QP_SCALER_CR_TBL[qp_n + img_ptr->second_chroma_qp_index_offset];
+            qp_u = g_QP_SCALER_CR_TBL[qp_cur + vo->chroma_qp_offset];
+            qp_v = g_QP_SCALER_CR_TBL[qp_cur + vo->second_chroma_qp_index_offset];
+            qp_u_n = g_QP_SCALER_CR_TBL[qp_n + vo->chroma_qp_offset];
+            qp_v_n = g_QP_SCALER_CR_TBL[qp_n + vo->second_chroma_qp_index_offset];
             dbk_para.qp_u = ( qp_u + qp_u_n + 1 ) >> 1;
             dbk_para.qp_v = ( qp_v + qp_v_n + 1 ) >> 1;
 
@@ -445,16 +445,16 @@ static void H264Dec_filter_mb( H264DecContext *img_ptr, int mb_x, int mb_y, uint
             {
                 filter_mb_edgev( curr_slice_ptr, &img_y[4*edge], linesize, bS, dbk_para.qp_y );
                 if( (edge&1) == 0 ) {
-                    filter_mb_edgecv( img_ptr, &img_cb[2*edge], uvlinesize, bS, dbk_para.qp_u );
-                    filter_mb_edgecv( img_ptr, &img_cr[2*edge], uvlinesize, bS, dbk_para.qp_v );
+                    filter_mb_edgecv( vo, &img_cb[2*edge], uvlinesize, bS, dbk_para.qp_u );
+                    filter_mb_edgecv( vo, &img_cr[2*edge], uvlinesize, bS, dbk_para.qp_v );
                 }
             }
             else
             {
-                filter_mb_edgeh( img_ptr, &img_y[4*edge*linesize], linesize, bS, dbk_para.qp_y );
+                filter_mb_edgeh( vo, &img_y[4*edge*linesize], linesize, bS, dbk_para.qp_y );
                 if( (edge&1) == 0 ) {
-                    filter_mb_edgech( img_ptr, &img_cb[2*edge*uvlinesize], uvlinesize, bS, dbk_para.qp_u );
-                    filter_mb_edgech( img_ptr, &img_cr[2*edge*uvlinesize], uvlinesize, bS, dbk_para.qp_v );
+                    filter_mb_edgech( vo, &img_cb[2*edge*uvlinesize], uvlinesize, bS, dbk_para.qp_u );
+                    filter_mb_edgech( vo, &img_cr[2*edge*uvlinesize], uvlinesize, bS, dbk_para.qp_v );
                 }
             }
 #else
@@ -488,23 +488,23 @@ static void H264Dec_filter_mb( H264DecContext *img_ptr, int mb_x, int mb_y, uint
     }
 }
 
-PUBLIC void H264Dec_deblock_picture(H264DecContext *img_ptr, DEC_STORABLE_PICTURE_T *dec_picture_ptr)
+PUBLIC void H264Dec_deblock_picture(H264DecContext *vo, DEC_STORABLE_PICTURE_T *dec_picture_ptr)
 {
     int32 mb_x, mb_y;
     int32 i, j;
 
-    uint8 * dest_y = dec_picture_ptr->imgYUV[0] + img_ptr->start_in_frameY;
-    uint8 * dest_u = dec_picture_ptr->imgYUV[1] + img_ptr->start_in_frameUV;
-    uint8 * dest_v = dec_picture_ptr->imgYUV[2] + img_ptr->start_in_frameUV;
+    uint8 * dest_y = dec_picture_ptr->imgYUV[0] + vo->start_in_frameY;
+    uint8 * dest_u = dec_picture_ptr->imgYUV[1] + vo->start_in_frameUV;
+    uint8 * dest_v = dec_picture_ptr->imgYUV[2] + vo->start_in_frameUV;
 
-    SPRD_CODEC_LOGI ("%s, %d", __FUNCTION__, __LINE__);
+    SPRD_CODEC_LOGD ("%s, %d\n", __FUNCTION__, __LINE__);
 
-    for (mb_y = 0; mb_y < img_ptr->frame_height_in_mbs; mb_y++)
+    for (mb_y = 0; mb_y < vo->frame_height_in_mbs; mb_y++)
     {
-        for (mb_x = 0; mb_x < img_ptr->frame_width_in_mbs; mb_x++)
+        for (mb_x = 0; mb_x < vo->frame_width_in_mbs; mb_x++)
         {
 
-            H264Dec_filter_mb(img_ptr, mb_x, mb_y, dest_y, dest_u, dest_v);
+            H264Dec_filter_mb(vo, mb_x, mb_y, dest_y, dest_u, dest_v);
 
 #if 0
             if (mb_x == 29 && mb_y == 21 && img_ptr->g_nFrame_dec_h264 == 12)
@@ -549,9 +549,9 @@ PUBLIC void H264Dec_deblock_picture(H264DecContext *img_ptr, DEC_STORABLE_PICTUR
             dest_v += BLOCK_SIZE;
         }
 
-        dest_y += ((img_ptr->ext_width<<4)- img_ptr->width);
-        dest_u += ((img_ptr->ext_width<<2)- (img_ptr->width>>1));
-        dest_v += ((img_ptr->ext_width<<2)- (img_ptr->width>>1));
+        dest_y += ((vo->ext_width<<4)- vo->width);
+        dest_u += ((vo->ext_width<<2)- (vo->width>>1));
+        dest_v += ((vo->ext_width<<2)- (vo->width>>1));
     }
 
 #if 0

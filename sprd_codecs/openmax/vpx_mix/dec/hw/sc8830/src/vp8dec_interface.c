@@ -31,9 +31,7 @@ PUBLIC void VP8GetVideoDimensions(VPXHandle *vpxHandle, int32 *display_width, in
     *display_width = cm->Width;
     *display_height =  cm->Height;
 
-    if (vo->trace_enabled) {
-        SPRD_CODEC_LOGD ("%s, %d, display_width: %d, display_height: %d", __FUNCTION__, __LINE__, *display_width, *display_height);
-    }
+    SPRD_CODEC_LOGD ("%s, %d, display_width: %d, display_height: %d\n", __FUNCTION__, __LINE__, *display_width, *display_height);
 }
 
 PUBLIC void VP8GetBufferDimensions(VPXHandle *vpxHandle, int32 *width, int32 *height)
@@ -44,9 +42,7 @@ PUBLIC void VP8GetBufferDimensions(VPXHandle *vpxHandle, int32 *width, int32 *he
     *width =(((cm->Width + 15)>>4)<<4);
     *height = (((cm->Height + 15)>>4)<<4);
 
-    if (vo->trace_enabled) {
-        SPRD_CODEC_LOGD ("%s, %d, buffer_width: %d, buffer_height: %d", __FUNCTION__, __LINE__, *width, *height);
-    }
+    SPRD_CODEC_LOGD ("%s, %d, buffer_width: %d, buffer_height: %d\n", __FUNCTION__, __LINE__, *width, *height);
 }
 
 PUBLIC MMDecRet VP8GetCodecCapability(VPXHandle *vpxHandle, int32 *max_width, int32 *max_height)
@@ -107,7 +103,7 @@ PUBLIC MMDecRet VP8DecInit(VPXHandle *vpxHandle, MMCodecBuffer *pInterMemBfr, MM
     MMDecRet ret;
     char value_dump[PROPERTY_VALUE_MAX];
 
-    SPRD_CODEC_LOGI("libomx_vpxdec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.", __DATE__, __TIME__);
+    SPRD_CODEC_LOGI("libomx_vpxdec_hw_sprd.so is built on %s %s, Copyright (C) Spreadtrum, Inc.\n", __DATE__, __TIME__);
 
     CHECK_MALLOC(pInterMemBfr, "pInterMemBfr");
     CHECK_MALLOC(pInterMemBfr->common_buffer_ptr, "internal memory");
@@ -207,9 +203,7 @@ PUBLIC MMDecRet VP8DecDecode(VPXHandle *vpxHandle, MMDecInput *dec_input_ptr, MM
 
 DEC_EXIT:
 
-    if (vo->trace_enabled) {
-        SPRD_CODEC_LOGD ("%s,  exit decoder, error flag: 0x%x", __FUNCTION__, vo->error_flag);
-    }
+    SPRD_CODEC_LOGD ("%s,  exit decoder, error flag: 0x%x\n", __FUNCTION__, vo->error_flag);
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
         return MMDEC_HW_ERROR;
@@ -227,9 +221,7 @@ MMDecRet VP8DecRelease(VPXHandle *vpxHandle)
 {
     VPXDecObject *vo = (VPXDecObject *) vpxHandle->videoDecoderData;
 
-    if (vo->trace_enabled) {
-        SPRD_CODEC_LOGD ("%s, %d", __FUNCTION__, __LINE__);
-    }
+    SPRD_CODEC_LOGD ("%s, %d\n", __FUNCTION__, __LINE__);
     VP8DecReleaseRefBuffers(vpxHandle);
 
     if (VSP_CLOSE_Dev((VSPObject *)vo) < 0)
@@ -246,9 +238,7 @@ void VP8DecReleaseRefBuffers(VPXHandle *vpxHandle)
     VP8_COMMON *cm = &vo->common;
     int32 buffer_index;
 
-    if (vo->trace_enabled) {
-        SPRD_CODEC_LOGD ("%s, %d", __FUNCTION__, __LINE__);
-    }
+    SPRD_CODEC_LOGD ("%s, %d\n", __FUNCTION__, __LINE__);
     for(buffer_index = 0; buffer_index < YUV_BUFFER_NUM; buffer_index ++)
     {
         if(cm->buffer_pool[buffer_index] != NULL)

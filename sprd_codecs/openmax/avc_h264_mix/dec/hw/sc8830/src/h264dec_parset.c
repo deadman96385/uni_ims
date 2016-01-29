@@ -126,7 +126,7 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
             ret = (*(vo->avcHandle->VSP_extMemCb))(vo->avcHandle->userdata,size_extra);
             if (ret < 0)
             {
-                SPRD_CODEC_LOGE ("%s, %d, extra memory is not enough", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE ("%s, %d, extra memory is not enough\n", __FUNCTION__, __LINE__);
                 vo->error_flag  |= ER_MEMORY_ID;
                 return;
             }
@@ -134,7 +134,7 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
 
         if (VSP_CFG_FREQ((VSPObject *)vo,vo->width*vo->height) < 0)
         {
-            SPRD_CODEC_LOGE ("%s, %d, VSP_CFG_FREQ ERR", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, VSP_CFG_FREQ ERR\n", __FUNCTION__, __LINE__);
             vo->error_flag  |= ER_HW_ID;
             return;
         }
@@ -144,7 +144,7 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
 
         if (H264Dec_init_img_buffer (vo) != MMDEC_OK)
         {
-            SPRD_CODEC_LOGE ("%s, %d, H264Dec_init_img_buffer", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, H264Dec_init_img_buffer\n", __FUNCTION__, __LINE__);
             vo->error_flag  |= ER_MEMORY_ID;
             return;
         }
@@ -162,14 +162,14 @@ LOCAL void H264Dec_active_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
             }
             if (H264Dec_init_dpb(vo, vo->g_dpb_layer[0], 1) != MMDEC_OK)
             {
-                SPRD_CODEC_LOGE ("%s, %d, H264Dec_init_dpb", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE ("%s, %d, H264Dec_init_dpb\n", __FUNCTION__, __LINE__);
                 vo->error_flag  |= ER_MEMORY_ID;
                 return;
             }
 
             if (H264Dec_init_dpb(vo, vo->g_dpb_layer[1], 2) != MMDEC_OK)
             {
-                SPRD_CODEC_LOGE ("%s, %d, H264Dec_init_dpb", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE ("%s, %d, H264Dec_init_dpb\n", __FUNCTION__, __LINE__);
                 vo->error_flag  |= ER_MEMORY_ID;
                 return;
             }
@@ -255,7 +255,7 @@ PUBLIC void H264Dec_use_parameter_set (H264DecObject *vo, int32 pps_id)
     {
         if (sps_ptr->valid != TRUE)
         {
-            SPRD_CODEC_LOGE ("PicParset %d references an invalid (uninitialized) Sequence Parameter Set with ID %d, expect the unexpected...",
+            SPRD_CODEC_LOGE ("PicParset %d references an invalid (uninitialized) Sequence Parameter Set with ID %d, expect the unexpected...\n",
                              PicParsetId, (int) pps_ptr->seq_parameter_set_id);
             vo->error_flag |= ER_SREAM_ID;
             return;
@@ -267,7 +267,7 @@ PUBLIC void H264Dec_use_parameter_set (H264DecObject *vo, int32 pps_id)
         sps_ptr = &(vo->g_active_subset_sps->sps);
         if (vo->g_SubsetSeqParSet[pps_ptr->seq_parameter_set_id].Valid != TRUE)
         {
-            SPRD_CODEC_LOGE ("PicParset %d references an invalid (uninitialized) Subset Sequence Parameter Set with ID %d, expect the unexpected...",
+            SPRD_CODEC_LOGE ("PicParset %d references an invalid (uninitialized) Subset Sequence Parameter Set with ID %d, expect the unexpected...\n",
                              PicParsetId, (int) pps_ptr->seq_parameter_set_id);
             vo->error_flag |= ER_SREAM_ID;
             return;
@@ -470,7 +470,7 @@ PUBLIC void H264Dec_interpret_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
     {
         vo->error_flag |= ER_SREAM_ID;
         vo->error_flag |= ER_SPSPPS_ID;
-        SPRD_CODEC_LOGE ("sps_ptr->profile_idc INVALID \n");
+        SPRD_CODEC_LOGE ("sps_ptr->profile_idc INVALID\n");
         return ;
     }
     sps_ptr->constrained_set0_flag = READ_FLC(1);
@@ -559,7 +559,7 @@ PUBLIC void H264Dec_interpret_sps (H264DecObject *vo, DEC_SPS_T *sps_ptr)
 
     if (sps_ptr->num_ref_frames > MAX_REF_FRAME_NUMBER)
     {
-        SPRD_CODEC_LOGE ("sps_ptr->num_ref_frames > MAX_REF_FRAME_NUMBER");
+        SPRD_CODEC_LOGE ("sps_ptr->num_ref_frames > MAX_REF_FRAME_NUMBER\n");
         vo->error_flag |= ER_REF_FRM_ID;
         return;
     }
@@ -671,7 +671,7 @@ LOCAL MMDecRet InterpretSubsetSPS (H264DecObject *vo, int32 *curr_seq_set_id)
 
         if (seq_parameter_set_mvc_extension(vo, subset_sps) != MMDEC_OK)
         {
-            SPRD_CODEC_LOGE ("seq_parameter_set_mvc_extension");
+            SPRD_CODEC_LOGE ("seq_parameter_set_mvc_extension\n");
             vo->error_flag |= ER_MEMORY_ID;
             return MMDEC_ERROR;// error exit
         }
@@ -681,7 +681,7 @@ LOCAL MMDecRet InterpretSubsetSPS (H264DecObject *vo, int32 *curr_seq_set_id)
         {
             if (mvc_vui_parameters_extension(vo, &(subset_sps->MVCVUIParams)) != MMDEC_OK)
             {
-                SPRD_CODEC_LOGE ("mvc_vui_parameters_extension");
+                SPRD_CODEC_LOGE ("mvc_vui_parameters_extension\n");
                 vo->error_flag |= ER_MEMORY_ID;
                 return MMDEC_ERROR;// error exit
             }
@@ -1398,7 +1398,7 @@ void get_max_dec_frame_buf_size(H264DecObject *vo, DEC_SPS_T *sps)
         size = 70778880;
         break;
     default:
-        SPRD_CODEC_LOGW ("undefined level");
+        SPRD_CODEC_LOGW ("undefined level\n");
 //        vo->error_flag  |= ER_FORMAT_ID;
         size = 70778880;//weihu
         //EXIT(500);//weihu

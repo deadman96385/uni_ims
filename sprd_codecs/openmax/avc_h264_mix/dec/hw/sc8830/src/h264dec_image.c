@@ -639,13 +639,13 @@ PUBLIC void H264Dec_init_picture (H264DecObject *vo)
                 int mem_ret = (*(vo->avcHandle->VSP_mbinfoMemCb))(vo->avcHandle->userdata,size_mbinfo, &(vo->g_dec_picture_ptr->direct_mb_info_Addr));
                 if (mem_ret < 0)
                 {
-                    SPRD_CODEC_LOGE ("%s, %d, mbinfo memory is not enough", __FUNCTION__, __LINE__);
+                    SPRD_CODEC_LOGE ("%s, %d, mbinfo memory is not enough\n", __FUNCTION__, __LINE__);
                     vo->error_flag  |= ER_MEMORY_ID;
                     return;
                 }
             } else
             {
-                SPRD_CODEC_LOGE ("%s, %d, VSP_mbinfoMemCb is NULL", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE ("%s, %d, VSP_mbinfoMemCb is NULL\n", __FUNCTION__, __LINE__);
                 vo->error_flag  |= ER_MEMORY_ID;
                 return;
             }

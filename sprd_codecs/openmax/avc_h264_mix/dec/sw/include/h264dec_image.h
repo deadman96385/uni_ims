@@ -26,12 +26,12 @@ extern   "C"
 {
 #endif
 
-int32 H264Dec_is_new_picture (H264DecContext *img_ptr);
-MMDecRet H264Dec_init_picture (H264DecContext *img_ptr);
-void H264Dec_exit_picture (H264DecContext *img_ptr);
-int32 H264Dec_remove_unused_frame_from_dpb (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T * dpb_ptr);
-int32 H264Dec_remove_delayed_frame_from_dpb (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr);
-void h264Dec_remove_frame_from_dpb (H264DecContext *img_ptr, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, int32 pos);
+int32 H264Dec_is_new_picture (H264DecContext *vo);
+MMDecRet H264Dec_init_picture (H264DecContext *vo);
+void H264Dec_exit_picture (H264DecContext *vo);
+int32 H264Dec_remove_unused_frame_from_dpb (H264DecContext *vo, DEC_DECODED_PICTURE_BUFFER_T * dpb_ptr);
+int32 H264Dec_remove_delayed_frame_from_dpb (H264DecContext *vo, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr);
+void h264Dec_remove_frame_from_dpb (H264DecContext *vo, DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr, int32 pos);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

@@ -118,7 +118,7 @@ void h264enc_sps_init (ENC_IMAGE_PARAMS_T *img_ptr)
         h264enc_vui_init (sps, &sps->vui_seq_parameters);
     }
 
-    SPRD_CODEC_LOGD ("%s, %d, orig_height: %d, height: %d, b_crop: %d, frame_crop_left_offset: %d, frame_crop_right_offset: %d, frame_crop_top_offset: %d, frame_crop_bottom_offset: %d",
+    SPRD_CODEC_LOGI ("%s, %d, orig_height: %d, height: %d, b_crop: %d, frame_crop_left_offset: %d, frame_crop_right_offset: %d, frame_crop_top_offset: %d, frame_crop_bottom_offset: %d\n",
                      __FUNCTION__, __LINE__, img_ptr->orig_height, img_ptr->height, sps->b_crop, sps->frame_crop_left_offset, sps->frame_crop_right_offset, sps->frame_crop_top_offset, sps->frame_crop_bottom_offset);
 }
 

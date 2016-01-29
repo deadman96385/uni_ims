@@ -73,9 +73,7 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
     nal_ptr->nal_unit_type = tmpVar & 0x1f;
     nal_ptr->nal_reference_idc = ((tmpVar>>5)&0x3);
     nal_ptr->frobidden_bit = ((tmpVar>>7)&0x1);
-    if (vo->trace_enabled) {
-        SPRD_CODEC_LOGD("%s, %d, the first byte: 0x%0x.\n", __FUNCTION__, __LINE__, tmpVar);
-    }
+    SPRD_CODEC_LOGD("%s, %d, the first byte: 0x%0x.\n", __FUNCTION__, __LINE__, tmpVar);
 
 #if _MVC_
     curr_slice_ptr->svc_extension_flag = -1;
@@ -104,7 +102,7 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecObject *vo)//uint8 *bitstrm
 
     if (vo->error_flag)
     {
-        SPRD_CODEC_LOGE ("%s, %d, error_flag=0x%x", __FUNCTION__, __LINE__, vo->error_flag);
+        SPRD_CODEC_LOGE ("%s, %d, error_flag=0x%x\n", __FUNCTION__, __LINE__, vo->error_flag);
         return -1;
     }
 #endif

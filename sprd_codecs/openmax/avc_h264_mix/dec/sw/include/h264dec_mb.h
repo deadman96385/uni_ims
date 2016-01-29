@@ -26,17 +26,17 @@ extern   "C"
 {
 #endif
 
-void H264Dec_start_macroblock (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-void H264Dec_read_one_macroblock_ISlice (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-void H264Dec_read_one_macroblock_PSlice (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-void H264Dec_read_one_macroblock_BSlice (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-int32 H264Dec_exit_macroblock (H264DecContext *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-uint32 uvlc_startcode_follows (void *img_ptr);
+void H264Dec_start_macroblock (H264DecContext *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+void H264Dec_read_one_macroblock_ISlice (H264DecContext *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+void H264Dec_read_one_macroblock_PSlice (H264DecContext *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+void H264Dec_read_one_macroblock_BSlice (H264DecContext *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+int32 H264Dec_exit_macroblock (H264DecContext *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+uint32 uvlc_startcode_follows (void *vo);
 
-int32 decode_cavlc_mb_type (void *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
-int32 decode_cabac_mb_type (void *img_ptr, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+int32 decode_cavlc_mb_type (void *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
+int32 decode_cabac_mb_type (void *vo, DEC_MB_INFO_T *mb_info_ptr, DEC_MB_CACHE_T *mb_cache_ptr);
 
-uint32 readB8_typeInfo_cavlc (void *img_ptr);
+uint32 readB8_typeInfo_cavlc (void *vo);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

@@ -26,10 +26,10 @@ extern   "C"
 {
 #endif
 
-void H264Dec_use_parameter_set (H264DecContext *img_ptr, int32 pps_id);
+void H264Dec_use_parameter_set (H264DecContext *vo, int32 pps_id);
 void H264Dec_interpret_sei_message (void);
-MMDecRet H264Dec_process_sps (H264DecContext *img_ptr);
-MMDecRet H264Dec_process_pps (H264DecContext *img_ptr);
+MMDecRet H264Dec_process_sps (H264DecContext *vo);
+MMDecRet H264Dec_process_pps (H264DecContext *vo);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

@@ -25,8 +25,8 @@ extern   "C"
 
 void H264Dec_SetCurRecPic(AVCHandle *avcHandle, uint8	*pFrameY,uint8 *pFrameY_phy,void *pBufferHeader, int32 picId)
 {
-    H264DecContext *img_ptr = (H264DecContext *)(avcHandle->videoDecoderData);
-    DEC_STORABLE_PICTURE_T *rec_buf_ptr = &(img_ptr->g_rec_buf);
+    H264DecContext *vo = (H264DecContext *)(avcHandle->videoDecoderData);
+    DEC_STORABLE_PICTURE_T *rec_buf_ptr = &(vo->g_rec_buf);
 
     rec_buf_ptr->imgY =  pFrameY;
     rec_buf_ptr->imgYAddr = (uint_32or64)pFrameY_phy;
@@ -36,43 +36,43 @@ void H264Dec_SetCurRecPic(AVCHandle *avcHandle, uint8	*pFrameY,uint8 *pFrameY_ph
 
 void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
 {
-    H264DecContext *img_ptr = (H264DecContext *)(avcHandle->videoDecoderData);
-    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = img_ptr->g_dpb_ptr;
+    H264DecContext *vo = (H264DecContext *)(avcHandle->videoDecoderData);
+    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = vo->g_dpb_ptr;
     int32 i;
 
     if(dpb_ptr)
     {
-        H264Dec_clear_delayed_buffer(img_ptr);
-        H264Dec_flush_dpb(img_ptr, dpb_ptr);
+        H264Dec_clear_delayed_buffer(vo);
+        H264Dec_flush_dpb(vo, dpb_ptr);
 
         for (i = 0; i <  (MAX_REF_FRAME_NUMBER+1); i++)
         {
             if (dpb_ptr->fs &&dpb_ptr->fs[i] && dpb_ptr->fs[i]->frame)
             {
-                H264DEC_UNBIND_FRAME(img_ptr, dpb_ptr->fs[i]->frame);
+                H264DEC_UNBIND_FRAME(vo, dpb_ptr->fs[i]->frame);
             }
         }
     }
 
-    if(img_ptr->g_old_slice_ptr)
+    if(vo->g_old_slice_ptr)
     {
-        img_ptr->g_old_slice_ptr->frame_num = -1;
+        vo->g_old_slice_ptr->frame_num = -1;
     }
 
-    img_ptr->g_searching_IDR_pic = TRUE;
+    vo->g_searching_IDR_pic = TRUE;
 }
 
 MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picId, uint64 *pts)
 {
     int32 i;
-    H264DecContext *img_ptr = (H264DecContext *)(avcHandle->videoDecoderData);
-    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = img_ptr->g_dpb_ptr;
+    H264DecContext *vo = (H264DecContext *)(avcHandle->videoDecoderData);
+    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = vo->g_dpb_ptr;
 
     //for multi-slice case, we push the current decoding picture into dpb->delayed_pic queue whether it has been finished or not.
-    if (img_ptr->g_dec_picture_ptr != NULL)
+    if (vo->g_dec_picture_ptr != NULL)
     {
-        dpb_ptr->delayed_pic[dpb_ptr->delayed_pic_num++] = img_ptr->g_dec_picture_ptr;
-        img_ptr->g_dec_picture_ptr = NULL;
+        dpb_ptr->delayed_pic[dpb_ptr->delayed_pic_num++] = vo->g_dec_picture_ptr;
+        vo->g_dec_picture_ptr = NULL;
     }
 
     //pop one picture from delayed picture queue.
@@ -84,11 +84,11 @@ MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picI
         if (dpb_ptr->delayed_pic_num)
         {
             DEC_STORABLE_PICTURE_T *out = dpb_ptr->delayed_pic[0];
-            DEC_FRAME_STORE_T *fs  = H264Dec_search_frame_from_dpb(img_ptr, out);
+            DEC_FRAME_STORE_T *fs  = H264Dec_search_frame_from_dpb(vo, out);
 
             if (!fs)
             {
-                SPRD_CODEC_LOGE ("%s, %d, fs is NULL!, delayed_pic_num: %d, delayed_pic_ptr: %p'", __FUNCTION__, __LINE__, dpb_ptr->delayed_pic_num, dpb_ptr->delayed_pic_ptr);
+                SPRD_CODEC_LOGE ("%s, %d, fs is NULL!, delayed_pic_num: %d, delayed_pic_ptr: %p\n'", __FUNCTION__, __LINE__, dpb_ptr->delayed_pic_num, dpb_ptr->delayed_pic_ptr);
                 *pOutput = NULL;
                 dpb_ptr->delayed_pic_ptr = NULL;
                 return MMDEC_ERROR;
@@ -100,17 +100,15 @@ MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picI
             }
             dpb_ptr->delayed_pic_num--;
 
-            H264Dec_find_smallest_pts(img_ptr, out);
+            H264Dec_find_smallest_pts(vo, out);
 
             *pOutput = out->pBufferHeader;
             *picId = out->mPicId;
             *pts = out->nTimeStamp;
 
-            if (img_ptr->trace_enabled) {
-                SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x ", __FUNCTION__, __LINE__, fs->is_reference);
-            }
+            SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x\n", __FUNCTION__, __LINE__, fs->is_reference);
             fs->is_reference = 0;
-            H264DEC_UNBIND_FRAME(img_ptr, out);
+            H264DEC_UNBIND_FRAME(vo, out);
 
             return MMDEC_OK;
         } else {
@@ -118,7 +116,7 @@ MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picI
             dpb_ptr->delayed_pic_ptr = NULL;
             if (dpb_ptr->delayed_pic_num != 0)
             {
-                SPRD_CODEC_LOGE ("%s, %d, dpb_ptr->delayed_pic_num != 0!'", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE ("%s, %d, dpb_ptr->delayed_pic_num != 0!\n'", __FUNCTION__, __LINE__);
             }
             return MMDEC_ERROR;
         }
@@ -161,7 +159,7 @@ MMDecRet H264DecGetNALType(AVCHandle *avcHandle, uint8 *bitstream, int size, int
 
 MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 {
-    H264DecContext *img_ptr = (H264DecContext *)(avcHandle->videoDecoderData);
+    H264DecContext *vo = (H264DecContext *)(avcHandle->videoDecoderData);
     DEC_SPS_T *sps_ptr = NULL;
     int32 aligned_width, aligned_height;
 
@@ -170,9 +168,9 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
         return (MMDEC_PARAM_ERROR);
     }
 
-    if (img_ptr->g_sps_array_ptr && img_ptr->g_sps_ptr && (img_ptr->g_sps_ptr->seq_parameter_set_id < MAX_SPS))
+    if (vo->g_sps_array_ptr && vo->g_sps_ptr && (vo->g_sps_ptr->seq_parameter_set_id < MAX_SPS))
     {
-        sps_ptr = &(img_ptr->g_sps_array_ptr[img_ptr->g_sps_ptr->seq_parameter_set_id]);
+        sps_ptr = &(vo->g_sps_array_ptr[vo->g_sps_ptr->seq_parameter_set_id]);
     }
 
     if((sps_ptr == NULL) || (sps_ptr->vui_seq_parameters == NULL))
@@ -225,7 +223,7 @@ MMDecRet H264DecGetInfo(AVCHandle *avcHandle, H264SwDecInfo *pDecInfo)
 
 MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, MMDecCapability *Capability)
 {
-    H264DecContext *img_ptr = (H264DecContext *)(avcHandle->videoDecoderData);
+    H264DecContext *vo = (H264DecContext *)(avcHandle->videoDecoderData);
 
     //can support 1080p
     Capability->max_width = 1920;
@@ -238,19 +236,19 @@ MMDecRet H264GetCodecCapability(AVCHandle *avcHandle, MMDecCapability *Capabilit
 
 MMDecRet H264DecSetParameter(AVCHandle *avcHandle, MMDecVideoFormat * pVideoFormat)
 {
-    H264DecContext *img_ptr = NULL;
+    H264DecContext *vo = NULL;
     MMDecRet ret = MMDEC_OK;
 
     SCI_ASSERT(NULL != pVideoFormat);
-    img_ptr = (H264DecContext *) avcHandle->videoDecoderData;
-    img_ptr->yuv_format = pVideoFormat->yuv_format;
+    vo = (H264DecContext *) avcHandle->videoDecoderData;
+    vo->yuv_format = pVideoFormat->yuv_format;
 
     return ret;
 }
 
 MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideoFormat * pVideoFormat)
 {
-    H264DecContext *img_ptr = NULL;
+    H264DecContext *vo = NULL;
     MMDecRet ret = MMDEC_ERROR;
     char value_dump[PROPERTY_VALUE_MAX];
 
@@ -259,35 +257,35 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
     SCI_ASSERT(NULL != buffer_ptr);
     SCI_ASSERT(NULL != pVideoFormat);
 
-    img_ptr = (H264DecContext *) (buffer_ptr->common_buffer_ptr);
+    vo = (H264DecContext *) (buffer_ptr->common_buffer_ptr);
 
-    memset(img_ptr, 0, sizeof(H264DecContext));
-    avcHandle->videoDecoderData = (void *) img_ptr;
-    img_ptr->avcHandle = avcHandle;
+    memset(vo, 0, sizeof(H264DecContext));
+    avcHandle->videoDecoderData = (void *) vo;
+    vo->avcHandle = avcHandle;
 
     buffer_ptr->common_buffer_ptr += sizeof(H264DecContext);
     buffer_ptr->size -= sizeof(H264DecContext);
 
-    H264Dec_InitInterMem (img_ptr, buffer_ptr);
+    H264Dec_InitInterMem (vo, buffer_ptr);
 
     property_get("h264dec.sw.trace", value_dump, "false");
-    img_ptr->trace_enabled = !strcmp(value_dump, "true");
+    vo->trace_enabled = !strcmp(value_dump, "true");
 
-    img_ptr->g_is_avc1_es = FALSE;
-    img_ptr->g_ready_to_decode_slice = FALSE;
-    img_ptr->yuv_format = pVideoFormat->yuv_format;
+    vo->g_is_avc1_es = FALSE;
+    vo->g_ready_to_decode_slice = FALSE;
+    vo->yuv_format = pVideoFormat->yuv_format;
 
-    if (H264Dec_init_global_para (img_ptr) != MMDEC_OK)
+    if (H264Dec_init_global_para (vo) != MMDEC_OK)
     {
-        img_ptr->return_pos2 |= (1<<29);
+        vo->return_pos2 |= (1<<29);
         return MMDEC_ERROR;
     }
     H264Dec_init_vld_table ();
 
 #if _H264_PROTECT_ & _LEVEL_LOW_
-    if (img_ptr->error_flag)
+    if (vo->error_flag)
     {
-        img_ptr->return_pos |= (1<<19);
+        vo->return_pos |= (1<<19);
         return MMDEC_ERROR;
     }
 #endif
@@ -298,8 +296,8 @@ MMDecRet H264DecInit(AVCHandle *avcHandle, MMCodecBuffer * buffer_ptr,MMDecVideo
 PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, MMDecOutput *dec_output_ptr)
 {
     MMDecRet ret = MMDEC_ERROR;
-    H264DecContext *img_ptr = (H264DecContext *)(avcHandle->videoDecoderData);
-    DEC_SLICE_T *curr_slice_ptr = img_ptr->curr_slice_ptr;
+    H264DecContext *vo = (H264DecContext *)(avcHandle->videoDecoderData);
+    DEC_SLICE_T *curr_slice_ptr = vo->curr_slice_ptr;
     int32 slice_unit_len = 0;
     uint8 *pInStream = dec_input_ptr->pStream;
     int32 last_slice = 0;
@@ -315,14 +313,14 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
     }
 
     curr_slice_ptr->next_header = -1;
-    img_ptr->error_flag = FALSE;
-    img_ptr->return_pos = 0;
-    img_ptr->return_pos1 = 0;
-    img_ptr->return_pos2 = 0;
+    vo->error_flag = FALSE;
+    vo->return_pos = 0;
+    vo->return_pos1 = 0;
+    vo->return_pos2 = 0;
 
-    if((dec_input_ptr->expected_IVOP) && (img_ptr->curr_mb_nr == 0))
+    if((dec_input_ptr->expected_IVOP) && (vo->curr_mb_nr == 0))
     {
-        img_ptr->g_searching_IDR_pic = TRUE;
+        vo->g_searching_IDR_pic = TRUE;
     }
 
     dec_output_ptr->frameEffective = 0;
@@ -330,48 +328,48 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
 
     while (!last_slice)
     {
-        last_slice = get_unit (img_ptr, pInStream, stream_lenght, &slice_unit_len);
+        last_slice = get_unit (vo, pInStream, stream_lenght, &slice_unit_len);
         stream_lenght -= slice_unit_len;
 
-        ret = H264Dec_Read_SPS_PPS_SliceHeader (img_ptr, img_ptr->g_nalu_ptr->buf, img_ptr->g_nalu_ptr->len, dec_output_ptr);
-        if( (img_ptr->g_nalu_ptr->nal_unit_type == NALU_TYPE_SPS) || (img_ptr->g_nalu_ptr->nal_unit_type == NALU_TYPE_PPS))
+        ret = H264Dec_Read_SPS_PPS_SliceHeader (vo, vo->g_nalu_ptr->buf, vo->g_nalu_ptr->len, dec_output_ptr);
+        if( (vo->g_nalu_ptr->nal_unit_type == NALU_TYPE_SPS) || (vo->g_nalu_ptr->nal_unit_type == NALU_TYPE_PPS))
         {
-            SPRD_CODEC_LOGW ("%s, %d, slice_unit_len: %d", __FUNCTION__, __LINE__, slice_unit_len);
-            img_ptr->g_dec_picture_ptr = NULL; //Added for bug352453
+            SPRD_CODEC_LOGW ("%s, %d, slice_unit_len: %d\n", __FUNCTION__, __LINE__, slice_unit_len);
+            vo->g_dec_picture_ptr = NULL; //Added for bug352453
             goto DEC_EXIT;
         }
 
 #if _H264_PROTECT_ & _LEVEL_LOW_
-        if (img_ptr->error_flag)
+        if (vo->error_flag)
         {
-            img_ptr->return_pos |= (1<<20);
+            vo->return_pos |= (1<<20);
 
-            SPRD_CODEC_LOGE ("%s, %d, img_ptr->error_flag: %0x, pos: %0x, pos1: %0x, pos2: %0x",
-                             __FUNCTION__, __LINE__, img_ptr->error_flag, img_ptr->return_pos, img_ptr->return_pos1, img_ptr->return_pos2);
+            SPRD_CODEC_LOGE ("%s, %d, vo->error_flag: %0x, pos: %0x, pos1: %0x, pos2: %0x\n",
+                             __FUNCTION__, __LINE__, vo->error_flag, vo->return_pos, vo->return_pos1, vo->return_pos2);
 
             goto DEC_EXIT;
         }
 #endif
 
-        if (img_ptr->g_ready_to_decode_slice)
+        if (vo->g_ready_to_decode_slice)
         {
 #if _H264_PROTECT_ & _LEVEL_LOW_
-            if (img_ptr->g_dec_picture_ptr == NULL)	//added by xw, 20100526, for mb2frm bug.
+            if (vo->g_dec_picture_ptr == NULL)	//added by xw, 20100526, for mb2frm bug.
             {
-                img_ptr->error_flag |= ER_PICTURE_NULL_ID;
-                img_ptr->return_pos |= (1<<21);
+                vo->error_flag |= ER_PICTURE_NULL_ID;
+                vo->return_pos |= (1<<21);
                 goto DEC_EXIT;
             }
 #endif
-            img_ptr->g_dec_picture_ptr->nTimeStamp = dec_input_ptr->nTimeStamp;
+            vo->g_dec_picture_ptr->nTimeStamp = dec_input_ptr->nTimeStamp;
 
-            if ((dec_input_ptr->expected_IVOP) && (img_ptr->type != I_SLICE))
+            if ((dec_input_ptr->expected_IVOP) && (vo->type != I_SLICE))
             {
-                SPRD_CODEC_LOGW ("%s, %d, need I slice, return", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGW ("%s, %d, need I slice, return\n", __FUNCTION__, __LINE__);
                 return MMDEC_FRAME_SEEK_IVOP;
             }
 
-            ret = H264Dec_decode_one_slice_data (dec_output_ptr, img_ptr);
+            ret = H264Dec_decode_one_slice_data (dec_output_ptr, vo);
         }
 
         pInStream += slice_unit_len;
@@ -380,44 +378,44 @@ PUBLIC MMDecRet H264DecDecode(AVCHandle *avcHandle, MMDecInput *dec_input_ptr, M
         if (SOP == curr_slice_ptr->next_header)
         {
             last_slice = 1;
-            img_ptr->type = -1;
+            vo->type = -1;
         }
     }
 
 DEC_EXIT:
 
-    dec_output_ptr->sawSPS = img_ptr->sawSPS;
-    dec_output_ptr->sawPPS = img_ptr->sawPPS;
+    dec_output_ptr->sawSPS = vo->sawSPS;
+    dec_output_ptr->sawPPS = vo->sawPPS;
 
     //need IVOP but not found IDR,then return seek ivop
-    if(dec_input_ptr->expected_IVOP && img_ptr->g_searching_IDR_pic)
+    if(dec_input_ptr->expected_IVOP && vo->g_searching_IDR_pic)
     {
         SPRD_CODEC_LOGW ("H264DecDecode: need IVOP\n");
         dec_input_ptr->dataLen -= stream_lenght;
-        img_ptr->g_dec_picture_ptr = NULL;
+        vo->g_dec_picture_ptr = NULL;
         return MMDEC_FRAME_SEEK_IVOP;
     }
 
 #if _H264_PROTECT_ & _LEVEL_LOW_
-    if (img_ptr->error_flag)
+    if (vo->error_flag)
     {
-        SPRD_CODEC_LOGE ("%s, %d, img_ptr->error_flag: %0x, pos: %0x, pos1: %0x, pos2: %0x",
-                         __FUNCTION__, __LINE__, img_ptr->error_flag, img_ptr->return_pos, img_ptr->return_pos1, img_ptr->return_pos2);
+        SPRD_CODEC_LOGE ("%s, %d, vo->error_flag: %0x, pos: %0x, pos1: %0x, pos2: %0x\n",
+                         __FUNCTION__, __LINE__, vo->error_flag, vo->return_pos, vo->return_pos1, vo->return_pos2);
 
-        img_ptr->g_old_slice_ptr->frame_num = -1;
-        img_ptr->curr_mb_nr = 0;
-        img_ptr->return_pos |= (1<<22);
-        img_ptr->g_dec_picture_ptr =NULL; //Added for bug352453
-        H264Dec_clear_delayed_buffer(img_ptr);
+        vo->g_old_slice_ptr->frame_num = -1;
+        vo->curr_mb_nr = 0;
+        vo->return_pos |= (1<<22);
+        vo->g_dec_picture_ptr =NULL; //Added for bug352453
+        H264Dec_clear_delayed_buffer(vo);
 
-        if (img_ptr->not_supported)
+        if (vo->not_supported)
         {
             return MMDEC_NOT_SUPPORTED;
         }
 
-        if (img_ptr->error_flag & ER_EXTRA_MEMO_ID)
+        if (vo->error_flag & ER_EXTRA_MEMO_ID)
         {
-            SPRD_CODEC_LOGE ("%s, %d", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d\n", __FUNCTION__, __LINE__);
             return MMDEC_MEMORY_ERROR;
         }
 
@@ -432,7 +430,7 @@ DEC_EXIT:
 
 MMDecRet H264DecRelease(AVCHandle *avcHandle)
 {
-    H264DecContext *img_ptr = (H264DecContext *)(avcHandle->videoDecoderData);
+    H264DecContext *vo = (H264DecContext *)(avcHandle->videoDecoderData);
 
     H264Dec_ReleaseRefBuffers(avcHandle);
 

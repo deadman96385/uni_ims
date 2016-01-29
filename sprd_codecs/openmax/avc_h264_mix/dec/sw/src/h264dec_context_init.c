@@ -22,7 +22,7 @@ extern   "C"
 {
 #endif
 
-void init_contexts (H264DecContext *img_ptr)
+void init_contexts (H264DecContext *vo)
 {
     int i;
 
@@ -31,15 +31,15 @@ void init_contexts (H264DecContext *img_ptr)
     {
         int pre;
 
-        if( img_ptr->type == I_SLICE )
-            pre = IClip (1, 126 , ((cabac_context_init_I[i][0] * img_ptr->qp) >>4 ) + cabac_context_init_I[i][1]);
+        if( vo->type == I_SLICE )
+            pre = IClip (1, 126 , ((cabac_context_init_I[i][0] * vo->qp) >>4 ) + cabac_context_init_I[i][1]);
         else
-            pre = IClip (1, 126 ,  ((cabac_context_init_PB[img_ptr->model_number][i][0] * img_ptr->qp) >>4 ) + cabac_context_init_PB[img_ptr->model_number][i][1]);
+            pre = IClip (1, 126 ,  ((cabac_context_init_PB[vo->model_number][i][0] * vo->qp) >>4 ) + cabac_context_init_PB[vo->model_number][i][1]);
 
         if( pre <= 63 )
-            img_ptr->cabac_state[i] = 2 * ( 63 - pre ) + 0;
+            vo->cabac_state[i] = 2 * ( 63 - pre ) + 0;
         else
-            img_ptr->cabac_state[i] = 2 * ( pre - 64 ) + 1;
+            vo->cabac_state[i] = 2 * ( pre - 64 ) + 1;
     }
 }
 /**---------------------------------------------------------------------------*

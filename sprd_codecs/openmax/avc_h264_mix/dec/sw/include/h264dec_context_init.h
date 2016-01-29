@@ -26,7 +26,7 @@ extern   "C"
 {
 #endif
 
-void init_contexts (H264DecContext *img_ptr);
+void init_contexts (H264DecContext *vo);
 
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *

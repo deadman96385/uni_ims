@@ -545,7 +545,7 @@ LOCAL void H264Dec_adaptive_memory_management (H264DecObject *vo, DEC_DECODED_PI
             if (i != vo->g_dec_ref_pic_marking_buffer_size-1)
             {
                 vo->error_flag |= ER_REF_FRM_ID;
-                SPRD_CODEC_LOGE("memory_management_control_operation = 0 not last operation buffer");
+                SPRD_CODEC_LOGE("memory_management_control_operation = 0 not last operation buffer\n");
                 return;
             }
             break;
@@ -576,14 +576,14 @@ LOCAL void H264Dec_adaptive_memory_management (H264DecObject *vo, DEC_DECODED_PI
             if((int32)(dpb_ptr->ltref_frames_in_buffer +dpb_ptr->ref_frames_in_buffer)>(mmax(1, dpb_ptr->num_ref_frames)))
             {
                 vo->error_flag |= ER_REF_FRM_ID;
-                SPRD_CODEC_LOGE ("max.number of reference frame exceed. invalid stream.");
+                SPRD_CODEC_LOGE ("max.number of reference frame exceed. invalid stream.\n");
                 return;
             }
             break;
         default:
         {
             vo->error_flag |= ER_REF_FRM_ID;
-            SPRD_CODEC_LOGE ("invalid memory_management_control_operation in buffer");
+            SPRD_CODEC_LOGE ("invalid memory_management_control_operation in buffer\n");
             return;
         }
         }
@@ -789,7 +789,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_short_term_pic (H264DecObject *vo, int
     {
         if (dpb_ptr->fs_ref[i] == NULL)
         {
-            SPRD_CODEC_LOGE("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE("%s, %d, ER_REF_FRM_ID\n", __FUNCTION__, __LINE__);
             vo->error_flag |= ER_REF_FRM_ID;
             return NULL;//weihu//return g_no_reference_picture_ptr
         }
@@ -798,7 +798,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_short_term_pic (H264DecObject *vo, int
         {
             if (dpb_ptr->fs_ref[i]->frame == NULL)
             {
-                SPRD_CODEC_LOGE("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE("%s, %d, ER_REF_FRM_ID\n", __FUNCTION__, __LINE__);
                 vo->error_flag |= ER_REF_FRM_ID;
                 return NULL;
             }
@@ -853,7 +853,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_long_term_pic (H264DecObject *vo, int3
     {
         if (p_Dpb->fs_ltref[i] == NULL)
         {
-            SPRD_CODEC_LOGE ("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
+            SPRD_CODEC_LOGE ("%s, %d, ER_REF_FRM_ID\n", __FUNCTION__, __LINE__);
             vo->error_flag |= ER_REF_FRM_ID;
             return NULL;
         }
@@ -862,7 +862,7 @@ LOCAL DEC_STORABLE_PICTURE_T *H264Dec_get_long_term_pic (H264DecObject *vo, int3
         {
             if (p_Dpb->fs_ltref[i]->frame == NULL)
             {
-                SPRD_CODEC_LOGE ("%s, %d, ER_REF_FRM_ID", __FUNCTION__, __LINE__);
+                SPRD_CODEC_LOGE ("%s, %d, ER_REF_FRM_ID\n", __FUNCTION__, __LINE__);
                 vo->error_flag |= ER_REF_FRM_ID;
                 return NULL;
             }
@@ -1104,7 +1104,7 @@ LOCAL void H264Dec_reorder_ref_pic_list (H264DecObject *vo,
     {
         if (remapping_of_pic_nums_idc[i]>3)
         {
-            SPRD_CODEC_LOGE ("Invalid remapping_of_pic_nums_idc command");
+            SPRD_CODEC_LOGE ("Invalid remapping_of_pic_nums_idc command\n");
             vo->error_flag |= ER_REF_FRM_ID;
             return;
         }

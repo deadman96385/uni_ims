@@ -22,7 +22,7 @@
 	2: put to MB's DC position
 */
 #ifndef _NEON_OPT_
-void itrans_lumaDC (H264DecContext *img_ptr, int16 * DCCoeff, int16 * pCoeffIq, int32 qp)
+void itrans_lumaDC (H264DecContext *vo, int16 * DCCoeff, int16 * pCoeffIq, int32 qp)
 {
     int i;
     int16 blk_tmp [16];
@@ -30,7 +30,7 @@ void itrans_lumaDC (H264DecContext *img_ptr, int16 * DCCoeff, int16 * pCoeffIq, 
     int32 n0, n1, n2, n3;
     int16 * p_blk, *p_blkIn;
     const uint8 *blkIndex = g_blKIndex;
-    int32 quantizer = img_ptr->dequant4_buffer[0][qp][0];
+    int32 quantizer = vo->dequant4_buffer[0][qp][0];
 
     p_blk = blk_tmp;
     p_blkIn = DCCoeff;

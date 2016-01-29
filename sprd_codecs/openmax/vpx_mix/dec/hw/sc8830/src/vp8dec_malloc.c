@@ -83,7 +83,7 @@ PUBLIC uint_32or64 Vp8Dec_ExtraMem_V2P(VPXDecObject *vo, uint8 *vAddr, int32 typ
 {
     if (type >= MAX_MEM_TYPE)
     {
-        SPRD_CODEC_LOGE ("%s, memory type is error!", __FUNCTION__);
+        SPRD_CODEC_LOGE ("%s, memory type is error!\n", __FUNCTION__);
         return (uint_32or64)NULL;
     } else
     {
