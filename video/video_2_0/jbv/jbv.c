@@ -145,7 +145,7 @@ static void _JBV_putPkt(
                 }
                 break;
             case VTSP_CODER_VIDEO_H264:
-                if (0 != _JBV_processH264(obj_ptr, unit_ptr, pkt_ptr)) {
+                if (0 != _JBV_processH264(obj_ptr, unit_ptr, pkt_ptr, &updateFirstTs)) {
                     /* Packet got dropped. Return. */
                     return;
                 }
@@ -213,7 +213,7 @@ static void _JBV_putPkt(
        // if the buffer level bigger than 1s, drop the oldest frame
         if(level > JBV_MAX_JITTER_USEC){
             _JBV_dropPacket(obj_ptr, &obj_ptr->unit[lastSeqnNextFrame], JBV_DROP_TOO_OLD);
-            JBV_dbgLog("Drop the the too old frame. First packet at location:%d, "
+            JBV_wrnLog("Drop the the too old frame. First packet at location:%d, "
                               "last packet at location:%d. Packet ts=%d, current time=%d\n",
                               firstSeqnNextFrame,
                               lastSeqnNextFrame,

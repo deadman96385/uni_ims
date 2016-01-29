@@ -259,7 +259,8 @@ vint _JBV_reassembleH263(
 vint _JBV_processH264(
     JBV_Obj  *obj_ptr,
     JBV_Unit *unit_ptr,
-    JBV_Pkt  *pkt_ptr)
+    JBV_Pkt  *pkt_ptr,
+    vint        *updateFirstTs)
 {
     uint8    *buf_ptr = pkt_ptr->data_ptr;
     uint8     nalu = H264_READ_NALU(buf_ptr[0]);
@@ -324,12 +325,19 @@ vint _JBV_processH264(
     if (tsDiff < -(_JBV_TS_RANGE >> 2)) {
         tsOvfl++;
         ts += _JBV_TS_RANGE;
-        JBV_dbgLog("overflow tsDiff:%llu ts:%llu\n", tsDiff, ts);
+        JBV_wrnLog("overflow tsDiff:%llu ts:%llu\n", tsDiff, ts);
     }
     if (tsDiff > (_JBV_TS_RANGE >> 2)) {
         /* Packet from past time reference. */
         ts -= _JBV_TS_RANGE;
     }
+
+    if(ts < obj_ptr->firstUnNormTs){
+        *updateFirstTs = 1;
+        obj_ptr->firstUnNormTs = pkt_ptr->tsOrig;
+        JBV_wrnLog("We got a packet that should arrive earlier than 1rst arrived one.  RTP_TS = %lu, seq = %u", pkt_ptr->tsOrig, pkt_ptr->seqn);
+    }
+
     /* Keep the 90K ts for restoring to obj later */
     tsLast = ts;
 

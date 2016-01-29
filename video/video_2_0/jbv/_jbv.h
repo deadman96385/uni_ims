@@ -135,7 +135,8 @@ vint _JBV_processH263(
 vint _JBV_processH264(
     JBV_Obj  *obj_ptr,
     JBV_Unit *unit_ptr,
-    JBV_Pkt  *pkt_ptr);
+    JBV_Pkt  *pkt_ptr,
+    vint        *updateFirstTs);
 
 /*
  * ======== _JBV_reassembeH263() ========

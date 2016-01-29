@@ -24,7 +24,7 @@ void _JBV_updateFramePeriod(
     vint      seqn)
 {
     JBV_Unit *unit_ptr;
-    uint64    elapsedTime;
+    int64    elapsedTime;
 
     unit_ptr = &obj_ptr->unit[seqn];
 
@@ -36,8 +36,14 @@ void _JBV_updateFramePeriod(
     if ((unit_ptr->mark) && (unit_ptr->nalu != NALU_PPS) && (unit_ptr->nalu != NALU_SPS)
             && (obj_ptr->lastSeqn < unit_ptr->seqn)) {
         if (obj_ptr->statisticFramesReceived> 1) {
-            elapsedTime = unit_ptr->ts - obj_ptr->statisticFirstTs;
-            if (obj_ptr->statisticFramesReceived < elapsedTime) {
+
+            elapsedTime = (int64)unit_ptr->ts - (int64)obj_ptr->statisticFirstTs;
+
+            /*
+             * elapsedTime may less than 0 because the network jitter, a later packet that arrived earlier.
+             * In this situation, we just skip to update frameFeriod for one time.
+             */
+            if ((elapsedTime > 0) && (obj_ptr->statisticFramesReceived < elapsedTime)) {
                 /* garuantee that obj_ptr->framePeriod is greater than 0 */
                 obj_ptr->framePeriod = elapsedTime / (obj_ptr->statisticFramesReceived -1);
                 JBV_dbgLog("DBG framePeriod=%llu, statisticFramesReceived=%d, elapsedTime=%llu\n",
