@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.ImsDriverCall;
+import com.android.internal.telephony.LastCallFailCause;
 
 import com.android.ims.ImsStreamMediaProfile;
 import com.android.ims.ImsCallProfile;
@@ -14,6 +15,7 @@ import com.android.ims.internal.IImsCallSession;
 import com.android.ims.internal.IImsCallSessionListener;
 import com.android.ims.internal.IImsVideoCallProvider;
 import com.spreadtrum.ims.vt.ImsVideoCallProvider;
+import com.spreadtrum.ims.vt.VTManagerUtils;
 
 import android.app.PendingIntent;
 import android.content.Context;
@@ -44,6 +46,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final int ACTION_COMPLETE_ADD_PARTICIPANT = 10;
     private static final int ACTION_COMPLETE_RINGBACK_TONE = 11;
     private static final int ACTION_COMPLETE_REMOVE_PARTICIPANT = 12;
+    private static final int ACTION_COMPLETE_GET_CALL_FAIL_CAUSE = 13;
 
     private List<Listener>  mCallSessionImplListeners = new CopyOnWriteArrayList<Listener>();
     private int mState = ImsCallSession.State.IDLE;
@@ -296,6 +299,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 Log.w(TAG, "notifySessionDisconnected(Fdn)  mDisconnCause=" + mDisconnCause);
                 mIImsCallSessionListener.callSessionStartFailed((IImsCallSession) this,
                         new ImsReasonInfo(mDisconnCause, 0));
+                mCi.getLastCallFailCause(mHandler.obtainMessage(ACTION_COMPLETE_GET_CALL_FAIL_CAUSE,this));
             }/* @} */
         } catch (RemoteException e) {
             e.printStackTrace();
@@ -447,6 +451,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     if (ar != null && ar.exception != null) {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_REMOVE_PARTICIPANT error!");
 
+                    }
+                    break;
+                case ACTION_COMPLETE_GET_CALL_FAIL_CAUSE:
+                    if(ar != null && ar.exception != null){
+                        Log.w(TAG,"handleMessage->ACTION_COMPLETE_GET_CALL_FAIL_CAUSE error!");
+                    }else{
+                        LastCallFailCause failCause = (LastCallFailCause)ar.result;
+                        mDisconnCause = failCause.causeCode;
+                        VTManagerUtils.showVideoCallFailToast(mContext, mDisconnCause);
                     }
                     break;
                 default:

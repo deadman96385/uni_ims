@@ -19,7 +19,7 @@ import android.widget.TextView;
 import android.widget.ListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import com.android.internal.R;
+import com.spreadtrum.ims.R;
 
 import static com.android.internal.telephony.PhoneConstants.SUBSCRIPTION_KEY;
 import com.android.internal.telephony.gsm.GSMPhone;
@@ -34,16 +34,20 @@ public class VTManagerUtils {
     public static final int VIDEO_CALL_NO_SERVICE = 50;
     public static final int VIDEO_CALL_CAPABILITY_NOT_AUTHORIZED = 57;
     public static final int VIDEO_CALL_NORLMAL_UNSPECIFIELD = 255;
+    public static final int VODEO_CALL_FDN_BLOCKED = 241;
 
     public static void showVideoCallFailToast(Context context,int disconnectCause){
         log("showVideoCallFailToast-> disconnectCause:"+disconnectCause);
         if(disconnectCause == VIDEO_CALL_NORLMAL_CLEAR){
             return;
         } else if(disconnectCause == VIDEO_CALL_NORLMAL_DISCONNECT){
-            Toast.makeText(context,context.getString(R.string.net_connection_disconnect),
+            Toast.makeText(context,context.getString(com.android.internal.R.string.net_connection_disconnect),
                     Toast.LENGTH_LONG).show();
         } else if(disconnectCause == VIDEO_CALL_NORLMAL_UNSPECIFIELD){
-            Toast.makeText(context,context.getString(R.string.videophone_failcause_3),
+            Toast.makeText(context,context.getString(com.android.internal.R.string.videophone_failcause_3),
+                    Toast.LENGTH_LONG).show();
+        } else if(disconnectCause == VODEO_CALL_FDN_BLOCKED){
+            Toast.makeText(context,context.getString(R.string.callFailed_fdn_only),
                     Toast.LENGTH_LONG).show();
         } else {
             Toast.makeText(context,getVideoCallFailReason(context,disconnectCause),
@@ -55,13 +59,13 @@ public class VTManagerUtils {
             int disconnectCause, final GSMPhone phone) {
         LayoutInflater inflater = (LayoutInflater)context.getSystemService(
                 Context.LAYOUT_INFLATER_SERVICE);
-        final CharSequence[] items = context.getResources().getTextArray(R.array.videophone_fallback_menu);
+        final CharSequence[] items = context.getResources().getTextArray(com.android.internal.R.array.videophone_fallback_menu);
 
-        View view = inflater.inflate(R.xml.vt_fallback_dialog_ex,null);
-        TextView causeView = (TextView) view.findViewById(R.id.FallBackCause);
+        View view = inflater.inflate(com.android.internal.R.xml.vt_fallback_dialog_ex,null);
+        TextView causeView = (TextView) view.findViewById(com.android.internal.R.id.FallBackCause);
         causeView.setText(getVideoCallFailReason(context,disconnectCause));
 
-        ListView fallBackList = (ListView) view.findViewById(R.id.FallBackList);
+        ListView fallBackList = (ListView) view.findViewById(com.android.internal.R.id.FallBackList);
         fallBackList.setAdapter(new ArrayAdapter<CharSequence>(context,
                 android.R.layout.simple_list_item_1, items));
         fallBackList.setItemsCanFocus(false);
