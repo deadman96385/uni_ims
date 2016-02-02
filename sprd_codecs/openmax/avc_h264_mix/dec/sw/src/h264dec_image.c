@@ -458,6 +458,7 @@ PUBLIC MMDecRet H264Dec_init_picture (H264DecContext *vo)
             //	return;
         }
         H264Dec_fill_frame_num_gap(vo, dpb_ptr);
+        H264Dec_clear_delayed_buffer(vo);
     }
 
     fs = H264Dec_get_one_free_pic_buffer(vo, dpb_ptr);
