@@ -270,6 +270,9 @@ public class VTManagerProxy{
         log("handleSetDisplaySurface->Surface=" + surface);
         mDisplaySurface = surface;
         if (mVideoCallEngine != null) {
+            if(mVideoCallEngine.mRemoteSurface != null){
+                mVideoCallEngine.setImsRemoteSurface(null);
+             }
             mVideoCallEngine.setImsRemoteSurface(mDisplaySurface);
         }
         if (surface != null){
