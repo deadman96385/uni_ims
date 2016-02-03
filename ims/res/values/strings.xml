@@ -1,12 +1,5 @@
 <resources>
-
     <string name="app_name">SprdIms</string>
-    <string name="remote_request_change">Remote request media change</string>
-    <string name="choose_accept_reject">Please choose accept or reject</string>
-    <string name="remote_request_change_accept">Accept</string>
-    <string name="remote_request_change_reject">Reject</string>
-    <string name="net_connection_disconnect">Net Connection Disconnect</string>
-    <string name="no_vt_service">"Cannot make video calls"</string>
     <string name="videophone_fallback_title">Video call fall back</string>
     <string name="videophone_failcause_1000">"Last video call hasn't normally ended, please retry after a while"</string>
     <string name="videophone_failcause_1">The number you have dialed is not in service</string>
@@ -19,13 +12,19 @@
     <string name="videophone_failcause_63_modify">Video phone could not be established</string>
     <string name="videophone_failcause_79">VT unsupported by the other</string>
     <string name="videophone_failcause_47">Sorry, video call unavailable</string>
+    <string name="videophone_failcause_50">VT is unsupported</string>
     <string name="videophone_failcause_57_remote">The number you dialed does not support VT</string>
     <string name="videophone_failcause_58">VT unsupported by the other</string>
-    <string name="videophone_failcause_88">User chooses voice call</string>
-    <string name="videophone_failcause_50">VT is unsupported</string>
     <string name="videophone_failcause_157">"The mobile phone hasn't start the VT service"</string>
+    <string name="videophone_failcause_88">User chooses voice call</string>
     <string name="videophone_failcause_minus_1">3G service not available</string>
     <string name="videophone_failcause_default">User is unavailable</string>
+    <string name="net_connection_disconnect">Net Connection Disconnect</string>
+    <string name="no_vt_service">"Cannot make video calls"</string>
+    <string name="remote_request_change">Remote request media change</string>
+    <string name="choose_accept_reject">Please choose accept or reject</string>
+    <string name="remote_request_change_accept">Accept</string>
+    <string name="remote_request_change_reject">Reject</string>
     <string name="remote_reject_request">Remote reject request </string>
     <string name="remote_accept_request">Remote accept request</string>
     <string name="callFailed_fdn_only">Outgoing calls are restricted by FDN</string>
