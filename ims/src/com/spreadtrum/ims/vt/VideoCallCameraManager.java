@@ -199,7 +199,7 @@ public class VideoCallCameraManager {
                 Log.i(TAG, "mOperateCameraThread start. ");
                 openCamera();
                 if (null != mVideoCallEngine) {
-                    Log.d(TAG, "mVideoCallEngine is not null.");
+                    Log.d(TAG, "mVideoCallEngine is not null.mIsSurfacePreviewFailed = "+mIsSurfacePreviewFailed);
                     synchronized(mThreadLock){
                         if(mIsSurfacePreviewFailed){
                             startCameraPreViewBackground();
@@ -304,9 +304,9 @@ public class VideoCallCameraManager {
                     mCamera.setParameters(params);
                     if (mVideoCallEngine != null) {
                         mCamera.unlock();
-                        if (mVideoCallEngine.mLocalSurface == null) {
+                        /*if (mVideoCallEngine.mLocalSurface == null) {
                             setPreviewSize(mWidth, mHeight);
-                        }
+                        }*/
                     }
                     mIsFirstInit = false;
                     Log.i(TAG, "openCamera(), mCamera: " + mCamera);
@@ -364,6 +364,7 @@ public class VideoCallCameraManager {
 
     /* SPRD: add the judge camera for bug 408181 @{ */
     public void handleSetCameraPreSurface(Surface surface) {
+        Log.i(TAG, "handleSetCameraPreSurface surface is "+surface+" mCamera = "+mCamera);
         if(!mIsVideoQualityReceived){
             Log.w(TAG,"handleSetCameraPreSurface()->mIsVideoQualityReceived:"+mIsVideoQualityReceived);
             return;
