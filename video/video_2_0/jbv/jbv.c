@@ -117,7 +117,7 @@ static void _JBV_putPkt(
         obj_ptr->firstAtime    = pkt_ptr->atime;
         obj_ptr->firstUnNormTs = pkt_ptr->tsOrig;
         updateFirstTs = 1;
-        obj_ptr->initTime  = tv_ptr->sec * _JBV_SEC_TO_USEC + tv_ptr->usec;
+        obj_ptr->initTime  = ((uint64)tv_ptr->sec) * _JBV_SEC_TO_USEC + (uint64)tv_ptr->usec;
         obj_ptr->tsLast90K = pkt_ptr->tsOrig;
         obj_ptr->ready     = 1;
 
@@ -218,7 +218,7 @@ static void _JBV_putPkt(
                               firstSeqnNextFrame,
                               lastSeqnNextFrame,
                               obj_ptr->unit[firstSeqnNextFrame].ts,
-                              tv_ptr->sec * _JBV_SEC_TO_USEC + tv_ptr->usec);
+                              ((uint64)tv_ptr->sec) * _JBV_SEC_TO_USEC + (uint64)tv_ptr->usec);
         }else{
             break;
         }
@@ -321,7 +321,7 @@ static void _JBV_getPkt(
         /*
          * Find time stamp of current time.
          */
-        curTime = tv_ptr->sec * _JBV_SEC_TO_USEC + tv_ptr->usec;
+        curTime = ((uint64)tv_ptr->sec) * _JBV_SEC_TO_USEC + (uint64)tv_ptr->usec;
         curTime -= obj_ptr->initTime;
 
         /* Draw rule bases on JBV state */

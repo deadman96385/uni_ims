@@ -123,7 +123,7 @@ void _JBV_checkForPacketLoss(
             obj_ptr->lastMaxSeqn = obj_ptr->lastSeqn;
         }
         /* Find time stamp of current time. */
-        curTime = tv_ptr->sec * _JBV_SEC_TO_USEC + tv_ptr->usec;
+        curTime = ((uint64)tv_ptr->sec) * _JBV_SEC_TO_USEC + (uint64)tv_ptr->usec;
         curTime -= obj_ptr->initTime;
 
         /* Calculate the difference between the incoming packet RTP Seqn and last Rcvd MAXIMUM RTP Seqn. */
