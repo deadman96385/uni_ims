@@ -95,8 +95,6 @@ typedef enum {
 
 #define PHONE_COUNT  "persist.msms.phone_count"
 
-#define RIL_MAIN_SIM_PROPERTY  "persist.msms.phone_default"
-
 char SP_SIM_NUM[128]; // ro.modem.*.count
 char ETH_SP[128]; //ro.modem.*.eth
 char RIL_SP_SIM_POWER_PROPERTY[128]; //ril.*.sim.power
@@ -9162,11 +9160,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 if(s_multiSimMode) {
                     char prop[PROPERTY_VALUE_MAX];
                     extern int s_sim_num;
-
                     if(s_sim_num == 0) {
-                        property_get(RIL_MAIN_SIM_PROPERTY, prop, "0");
                         if(!isCSFB()){
-                            if(!strcmp(prop, "0"))
+                            //send AT+SAUTOATT=1 on default data sim
+                            RILLOGD(" allow_data = %d", allow_data);
+                            if(allow_data == 1)
                                 at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", NULL);
                             else
                                 at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", NULL);
@@ -9179,9 +9177,10 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                             RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
                         }
                     } else if (s_sim_num == 1) {
-                        property_get(RIL_MAIN_SIM_PROPERTY, prop, "0");
                         if(!isCSFB()){
-                            if(!strcmp(prop, "1")){
+                            //send AT+SAUTOATT=1 on default data sim
+                            RILLOGD(" allow_data = %d", allow_data);
+                            if(allow_data == 1){
                                 at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", NULL);
                             } else {
                                 if(hasSimInner(0) == 0){
