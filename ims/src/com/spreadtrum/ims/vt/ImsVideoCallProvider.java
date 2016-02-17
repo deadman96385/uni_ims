@@ -166,10 +166,14 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 && requestImsCallProfile.mCallType != mImsCallSessionImpl.getLocalRequestProfile().mCallType){
             mLocalRequestProfile = toProfile;
             mImsCallSessionImpl.getLocalRequestProfile().mCallType = requestImsCallProfile.mCallType;
+            /* SPRD: add for bug533562 @{ */
+            Message message = new Message();
+            message.arg1 = Integer.parseInt(mImsCallSessionImpl.getCallId());
+            /* @} */
             if(requestImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT){
-               mCi.requestVolteCallMediaChange(false,null);
+               mCi.requestVolteCallMediaChange(false,message);
             } else {
-               mCi.requestVolteCallMediaChange(true,null);
+               mCi.requestVolteCallMediaChange(true,message);
             }
             requestImsCallProfile = null;
         }

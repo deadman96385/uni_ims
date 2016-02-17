@@ -11000,11 +11000,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE: {
             char cmd[30] = {0};
             p_response = NULL;
-            int isVideo = ((int *)data)[0];
+            int callId = ((int *)data)[0];
+            int isVideo = ((int *)data)[1];
             if(isVideo) {
-                snprintf(cmd, sizeof(cmd), "AT+CCMMD=1,2,\"m=audio\"");
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,2,\"m=audio\"", callId);
             } else {
-                snprintf(cmd, sizeof(cmd), "AT+CCMMD=1,2,\"m=video\"");
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,2,\"m=video\"", callId);
             }
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0) {
