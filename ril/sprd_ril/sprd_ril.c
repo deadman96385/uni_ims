@@ -3518,7 +3518,7 @@ retrycgatt:
             /* Set required QoS params to default */
             property_get("persist.sys.qosstate", qos_state, "0");
             if(!strcmp(qos_state, "0")) {
-                snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1, trafficclass);
+                snprintf(cmd, sizeof(cmd), "AT+CGEQREQ=%d,%d,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0", index+1, trafficclass);
                 at_send_command(ATch_type[channelID], cmd, NULL);
             }
             if (!strcmp(s_modem, "l") && isSvLte()) {
@@ -10040,7 +10040,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         property_get("persist.sys.qosstate", qos_state, "0");
         if (!strcmp(qos_state, "0")) {
             snprintf(cmd, sizeof(cmd),
-                    "AT+CGEQREQ=%d,%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0",
+                    "AT+CGEQREQ=%d,%d,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0",
                     initial_attach_id, trafficclass);
             err = at_send_command(ATch_type[channelID], cmd, NULL);
         }
@@ -11086,7 +11086,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 /* Set required QoS params to default */
                 property_get("persist.sys.qosstate", qos_state, "0");
                 if (!strcmp(qos_state, "0")) {
-                    snprintf(cmd, sizeof(cmd),"AT+CGEQREQ=%d,%d,2,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0",initial_attach_id, trafficclass);
+                    snprintf(cmd, sizeof(cmd),"AT+CGEQREQ=%d,%d,0,0,0,0,2,0,\"1e4\",\"0e0\",3,0,0",initial_attach_id, trafficclass);
                     err = at_send_command(ATch_type[channelID], cmd, NULL);
                 }
                 RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
@@ -12347,7 +12347,6 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         }
         err = at_tok_nextint(&tmp, &lteState);
         if (err < 0) goto out;
-
         if (isSvLte()) {
             // report LTE_READY or not, in case of +CEREG:0 ,+CEREG:2;
             // only report STATE_CHANGED in case of +CEREG:1,xxxx, xxxx,x
@@ -12916,17 +12915,19 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         err = at_tok_nextint(&tmp, &type);
         if (err < 0) goto out;
 
-        RILLOGD("SPERROR type = %d",type);
-        if (type == 5) {/* 5: for SS */
+        err = at_tok_nextint(&tmp, &err_code);
+        if (err < 0) goto out;
+
+        RILLOGD("SPERROR type = %d, err_code = %d", type, err_code);
+        if (err_code == 336) {
+            RIL_onUnsolicitedResponse (RIL_UNSOL_CLEAR_CODE_FALLBACK, NULL, 0);
+        }else if (type == 5) {/* 5: for SS */
             ussdError = 1;
         }
         /* SPRD : seriouse error for ps affair @{ */
         else if (type == 10) { // it means ps business in this sim/usim is rejected by network
             RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_PS_REJECT, NULL, 0);
         } else if (type == 1) {
-            err = at_tok_nexthexint(&tmp, &err_code);
-            RILLOGD("SPERROR type = 1 and err_code = %d", err_code);
-            if (err < 0) goto out;
             if ((err_code == 3) || (err_code == 6) || (err_code == 7) || (err_code == 8) || (err_code == 14)) { // it means ps business in this sim/usim is rejected by network
                 RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_PS_REJECT, NULL, 0);
             }
