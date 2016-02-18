@@ -680,11 +680,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.w(TAG, "accept-> ImsSessionInvalid!");
             return;
         }
-
+        Message message = new Message();
+        message.arg1 = Integer.parseInt(getCallId());
         /*SPRD:bug523375 add voice accept video call @{*/
         if(callType == ImsCallProfile.CALL_TYPE_VOICE && (mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT)){
             Log.i(TAG, "voice accept video call!");
-            mCi.requestVolteCallFallBackToVoice(null);
+            mCi.requestVolteCallFallBackToVoice(message);
         }/*@}*/
 
         mImsCallProfile.mMediaProfile = profile;

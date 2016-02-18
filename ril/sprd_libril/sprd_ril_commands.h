@@ -191,7 +191,7 @@
     ,{RIL_REQUEST_REGISTER_IMS_XCAP, dispatchString, responseVoid}
     ,{RIL_REQUEST_REGISTER_IMS_BSF, dispatchString, responseVoid}
     ,{RIL_REQUEST_SET_IMS_SMSC, dispatchString, responseVoid}
-    ,{RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE, dispatchInts, responseVoid}
     ,{RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN, dispatchSetInitialAttachApn, responseVoid}
     ,{RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI, dispatchCallForwardUri, responseCallForwardsUri}
     ,{RIL_REQUEST_SET_CALL_FORWARD_URI, dispatchCallForwardUri, responseVoid}

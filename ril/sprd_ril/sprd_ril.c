@@ -11042,8 +11042,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         }
         case RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE: {
             char cmd[30] = {0};
+            int callId = ((int *)data)[0];
             p_response = NULL;
-            snprintf(cmd, sizeof(cmd), "AT+CCMMD=1,1,\"m=audio\"");
+            snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,1,\"m=audio\"",callId);
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0) {
                 RILLOGD("RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE success!");
