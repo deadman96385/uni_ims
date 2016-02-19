@@ -121,7 +121,7 @@ char RIL_SP_SIM_PIN_PROPERTYS[128]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.
 #define SSDA_MODE         "persist.radio.ssda.mode"
 #define SSDA_TESTMODE "persist.radio.ssda.testmode"
 #define RIL_HAS_SIM  "ril.has_sim"
-
+#define PROP_MTBF_ENABLE "persist.sys.mtbf.enable"
 
 #define PRO_SIMLOCK_UNLOCK_BYNV  "ro.simlock.unlock.bynv"
 
@@ -14164,6 +14164,7 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
     char phoneCount[PROPERTY_VALUE_MAX];
     char prop[PROPERTY_VALUE_MAX];
     char versionStr[PROPERTY_VALUE_MAX];
+    char mtbfProp[PROPERTY_VALUE_MAX];
 
     s_rilenv = env;
 
@@ -14202,7 +14203,8 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
         s_multiSimMode = 0;
 
     property_get(PROP_BUILD_TYPE, versionStr, "user");
-    if(strstr(versionStr, "userdebug")) {
+    property_get(PROP_MTBF_ENABLE, mtbfProp, "0");
+    if(strstr(versionStr, "userdebug") || strcmp(mtbfProp, "1") == 0) {
         s_isuserdebug = 1;
     }
 
