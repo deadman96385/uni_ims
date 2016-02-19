@@ -8263,8 +8263,7 @@ static void requestSimAuthentication(int channelID, char *authData, RIL_Token t)
     if (ret < 0) {
         RILLOGE("Failed to allocate memory");
         cmd = NULL;
-        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-        return;
+        goto error;
     }
     err = at_send_command_singleline(ATch_type[channelID], cmd, "^MBAU:",
             &p_response);
@@ -8416,8 +8415,7 @@ static void requestUSimAuthentication(int channelID, char *authData, RIL_Token t
     if (ret < 0) {
         RILLOGE("Failed to allocate memory");
         cmd = NULL;
-        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-        return;
+        goto error;
     }
     err = at_send_command_singleline(ATch_type[channelID], cmd, "^MBAU:",
             &p_response);
@@ -8658,6 +8656,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SET_INITIAL_ATTACH_APN
                 || request == RIL_REQUEST_SET_IMS_SMSC
                 || request == RIL_REQUEST_ALLOW_DATA
+                || request == RIL_REQUEST_SIM_AUTHENTICATION
                 || (request == RIL_REQUEST_DIAL && s_isstkcall))
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
