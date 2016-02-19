@@ -409,6 +409,10 @@ public class VideoCallCameraManager {
                     updateCameraPara();
                     if (mCamera.previewEnabled()) {
                         Log.i(TAG, "surfaceCreated setPreviewSurface. ");
+                        //SPRD:add stopPreview for bug534360
+                        if (null != mVideoCallEngine) {
+                            mVideoCallEngine.setImsCamera(null);
+                        }
                         mCamera.stopPreview();
                         mCamera.setPreviewSurface(mVideoCallEngine.mLocalSurface);
                         mCamera.startPreview();
@@ -463,6 +467,10 @@ public class VideoCallCameraManager {
                     updateCameraPara();
                     if (mCamera.previewEnabled()) {
                         Log.i(TAG, "surfaceCreated setPreviewSurface. ");
+                        //SPRD:add stopPreview for bug534360
+                        if (null != mVideoCallEngine) {
+                            mVideoCallEngine.setImsCamera(null);
+                        }
                         mCamera.stopPreview();
                         mCamera.setPreviewSurface(mVideoCallEngine.mLocalSurface);
                         mCamera.startPreview();
