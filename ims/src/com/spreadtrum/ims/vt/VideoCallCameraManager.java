@@ -17,9 +17,10 @@ public class VideoCallCameraManager {
     private static String TAG = VideoCallCameraManager.class.getSimpleName();
 
     private static final int BRIGHTNESS_CONTRAST_ERROR = -1;
-    private static final int START_CAMERA_TIMES = 5;
+    private static final int START_CAMERA_TIMES = 2;
     private static final int EVENT_DELAYED_CREATE_CAMERA = 999;
     private static final int EVENT_CHANGE_ORIENTATION = 1000;
+    private static final short OPERATION_SUCCESS = 0;
 
     public static final String CAMERA_PARAMETERS_BRIGHTNESS = "brightness";
     public static final String CAMERA_PARAMETERS_CONTRAST = "contrast";
@@ -39,7 +40,6 @@ public class VideoCallCameraManager {
     private String mRearFacingCameraId;
 
     private Parameters mParameters;
-    private Camera mCamera;
     private Object mCameraLock = new Object();
     private Object mThreadLock = new Object();
     private VideoCallEngine mVideoCallEngine;
@@ -51,13 +51,16 @@ public class VideoCallCameraManager {
     private int mCameraTimes = START_CAMERA_TIMES;
     private int mCameraNumbers = 0;
     private boolean mThreadRunning;
-    private int mWidth = 176;
-    private int mHeight = 144;
+    public int mWidth = 176;
+    public int mHeight = 144;
     private int mDeviceRotation = 0;
     private boolean mIsFirstInit = true;
     private boolean mIsSurfacePreviewFailed = false;
     private int mVideoQuality;
     private boolean mIsVideoQualityReceived = false;
+    private boolean mIsOpened;
+    private boolean mIsPreviewing;
+    private boolean mIsRecording;
 
     private Handler mHandler = new Handler() {
         @Override
@@ -84,28 +87,6 @@ public class VideoCallCameraManager {
         mOrientationListener = new MyOrientationEventListener(context);
         mOrientationListener.enable();
         mVideoQuality = mVideoCallEngine.getCameraResolution();
-    }
-
-    /**
-     * Get the Camera object which video call using.
-     */
-    public Camera getCamera() {
-        return mCamera;
-    }
-
-    /**
-     * Get the Camera-related parameters from Camera object.
-     */
-    public int getCameraParameters(boolean isBrightness) {
-        if (null != mCamera) {
-            String key = isBrightness ? CAMERA_PARAMETERS_BRIGHTNESS : CAMERA_PARAMETERS_CONTRAST;
-            mParameters = mCamera.getParameters();
-            int parameters = Integer.parseInt(mParameters.get(key));
-            Log.i(TAG, "getCameraParameters(), key: " + key + "  value:" + parameters);
-            return parameters;
-        }
-        Log.e(TAG, "getCameraParameters()... ERROR");
-        return BRIGHTNESS_CONTRAST_ERROR;
     }
 
     /**
@@ -153,20 +134,6 @@ public class VideoCallCameraManager {
     }
 
     /**
-     * Set the Camera-related parameters.
-     */
-    public void setCameraParameters(boolean isBrightness, int value) {
-        if (null != mCamera) {
-            String key = isBrightness ? CAMERA_PARAMETERS_BRIGHTNESS : CAMERA_PARAMETERS_CONTRAST;
-            mParameters = mCamera.getParameters();
-            mParameters.set(key, value);
-            mCamera.setParameters(mParameters);
-            Log.i(TAG, "setCameraParameters(), key: " + key + "  value:" + value);
-        }
-        Log.e(TAG, "setCameraParameters()... ERROR");
-    }
-
-    /**
      * indicate async task is running, should disable camera-relative operations.
      */
     private boolean isThreadRunning() {
@@ -199,11 +166,7 @@ public class VideoCallCameraManager {
                 Log.i(TAG, "mOperateCameraThread start. ");
                 openCamera();
                 if (null != mVideoCallEngine) {
-                    Log.d(TAG, "mVideoCallEngine is not null.mIsSurfacePreviewFailed = "+mIsSurfacePreviewFailed);
                     synchronized(mThreadLock){
-                        if(mIsSurfacePreviewFailed){
-                            startCameraPreViewBackground();
-                        }
                         mThreadRunning = false;
                     }
                 }
@@ -220,111 +183,102 @@ public class VideoCallCameraManager {
     private void openCamera() {
         try {
             synchronized (mCameraLock) {
-                if (mCamera == null) {
+                Log.i(TAG, "openCamera(), mIsOpened: " + mIsOpened);
+                if (!mIsOpened) {
                     // If the activity is paused and resumed, camera device has been
                     // released and we need to open the camera.
                     String cameraId = getCamerID();
-                    mCamera = Camera.open(Integer.valueOf(cameraId));
-                    Camera.Parameters params = mCamera.getParameters();
-                    params.set("sensor-rot", getSensorRotation(cameraId));
-                    params.set("sensor-orient", 1);
-                    params.set("ycbcr", 1);// ensure yuv sequence of camera preview
-                    if (mVideoCallEngine != null) {
-                        switch (mVideoQuality) {
-                            case ImsConfigImpl.VT_RESOLUTION_720P:
-                                mWidth = 1280;
-                                mHeight = 720;
-                                params.setPreviewSize(1280, 720);
-                                params.setPreviewFrameRate(30);
-                                break;
-                            case ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_15:
-                                mWidth = 480;
-                                mHeight = 640;
-                                params.setPreviewSize(480, 640);
-                                params.setPreviewFrameRate(15);
-                                break;
-                            case ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_30:
-                                mWidth = 480;
-                                mHeight = 640;
-                                params.setPreviewSize(480, 640);
-                                params.setPreviewFrameRate(30);
-                                break;
-                            case ImsConfigImpl.VT_RESOLUTION_QVGA_REVERSED_15:
-                                mWidth = 480;
-                                mHeight = 640;
-                                params.setPreviewSize(240, 320);
-                                params.setPreviewFrameRate(15);
-                                break;
-                            case ImsConfigImpl.VT_RESOLUTION_QVGA_REVERSED_30:
-                                mWidth = 240;
-                                mHeight = 320;
-                                params.setPreviewSize(240, 320);
-                                params.setPreviewFrameRate(30);
-                                break;
-                            case ImsConfigImpl.VT_RESOLUTION_CIF:
-                                mWidth = 352;
-                                mHeight = 288;
-                                params.setPreviewSize(352, 288);
-                                params.setPreviewFrameRate(30);
-                                break;
-                            case ImsConfigImpl.VT_RESOLUTION_QCIF:
-                                mWidth = 176;
-                                mHeight = 144;
-                                params.setPreviewSize(176, 144);
-                                params.setPreviewFrameRate(30);
-                                break;
-                            case ImsConfigImpl.VT_RESOLUTION_VGA_15:
-                                mWidth = 640;
-                                mHeight = 480;
-                                params.setPreviewSize(640, 480);
-                                params.setPreviewFrameRate(15);
-                                break;
-                            case ImsConfigImpl.VT_RESOLUTION_VGA_30:
-                                mWidth = 640;
-                                mHeight = 480;
-                                params.setPreviewSize(640, 480);
-                                params.setPreviewFrameRate(30);
-                                break;
-                            case ImsConfigImpl.VT_RESOLUTION_QVGA_15:
-                                mWidth = 320;
-                                mHeight = 240;
-                                params.setPreviewSize(320, 240);
-                                params.setPreviewFrameRate(15);
-                                break;
-                            case ImsConfigImpl.VT_RESOLUTION_QVGA_30:
-                                mWidth = 320;
-                                mHeight = 240;
-                                params.setPreviewSize(320, 240);
-                                params.setPreviewFrameRate(30);
-                                break;
-                            default:
-                                break;
-                        }
+                    if(cameraId != null){
+                        mVideoCallEngine.setCameraId(Integer.parseInt(cameraId));
+                        mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation);
                     }
-                    mCamera.setParameters(params);
-                    if (mVideoCallEngine != null) {
-                        mCamera.unlock();
-                        /*if (mVideoCallEngine.mLocalSurface == null) {
-                            setPreviewSize(mWidth, mHeight);
-                        }*/
+                    mVideoCallEngine.setCameraPreviewSize(mVideoQuality);
+                    setPreviewSurfaceSize(mVideoQuality);
+                    if(mVideoCallEngine !=null && mVideoCallEngine.mLocalSurface != null){
+                        mVideoCallEngine.setImsLocalSurface(mVideoCallEngine.mLocalSurface);
+                        mVideoCallEngine.startPreview();
                     }
+                    Log.i(TAG, "openCamera(), cameraId: " + cameraId+"   mVideoCallEngine="+mVideoCallEngine);
+                    mIsOpened = true;
                     mIsFirstInit = false;
-                    Log.i(TAG, "openCamera(), mCamera: " + mCamera);
                 }
             }
         } catch (Exception e) {
             Log.w(TAG, "Open Camera Fail: " + e);
             closeCamera();
-            if (mIsFirstInit) {
-                if (mCameraTimes >= 0) {
-                    mHandler.removeMessages(EVENT_DELAYED_CREATE_CAMERA);
-                    mHandler.sendEmptyMessageDelayed(EVENT_DELAYED_CREATE_CAMERA, 700);
-                    mCameraTimes--;
-                    Log.d(TAG, "mCameraTimes: " + mCameraTimes);
-                } else {
-                    Log.d(TAG, "Camera start progrom exit.");
-                    mHandler.removeMessages(EVENT_DELAYED_CREATE_CAMERA);
-                }
+            tryReopenCamera();
+        }
+    }
+
+    private void setPreviewSurfaceSize(int quality){
+        int frameRate = 30;
+        switch (mVideoQuality) {
+            case ImsConfigImpl.VT_RESOLUTION_720P:
+                mWidth = 1280;
+                mHeight = 720;
+                break;
+            case ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_15:
+                mWidth = 480;
+                mHeight = 640;
+                frameRate = 15;
+                break;
+            case ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_30:
+                mWidth = 480;
+                mHeight = 640;
+                break;
+            case ImsConfigImpl.VT_RESOLUTION_QVGA_REVERSED_15:
+                mWidth = 480;
+                mHeight = 640;
+                frameRate = 15;
+                break;
+            case ImsConfigImpl.VT_RESOLUTION_QVGA_REVERSED_30:
+                mWidth = 240;
+                mHeight = 320;
+                break;
+            case ImsConfigImpl.VT_RESOLUTION_CIF:
+                mWidth = 352;
+                mHeight = 288;
+                break;
+            case ImsConfigImpl.VT_RESOLUTION_QCIF:
+                mWidth = 176;
+                mHeight = 144;
+                break;
+            case ImsConfigImpl.VT_RESOLUTION_VGA_15:
+                mWidth = 640;
+                mHeight = 480;
+                frameRate = 15;
+                break;
+            case ImsConfigImpl.VT_RESOLUTION_VGA_30:
+                mWidth = 640;
+                mHeight = 480;
+                break;
+            case ImsConfigImpl.VT_RESOLUTION_QVGA_15:
+                mWidth = 320;
+                mHeight = 240;
+                frameRate = 15;
+                break;
+            case ImsConfigImpl.VT_RESOLUTION_QVGA_30:
+                mWidth = 320;
+                mHeight = 240;
+                break;
+            default:
+                break;
+        }
+        VTManagerProxy.getInstance().mPreviewWidth = mWidth;
+        VTManagerProxy.getInstance().mPreviewHeight = mHeight;
+        setPreviewSize(mWidth,mHeight);
+        Log.i(TAG, "setPreviewSurfaceSize, mWidth: " + mWidth+"   mHeight="+mHeight+"   mVideoQuality="+mVideoQuality);
+    }
+    private void tryReopenCamera(){
+        if (mIsFirstInit) {
+            if (mCameraTimes >= 0) {
+                mHandler.removeMessages(EVENT_DELAYED_CREATE_CAMERA);
+                mHandler.sendEmptyMessageDelayed(EVENT_DELAYED_CREATE_CAMERA, 700);
+                mCameraTimes--;
+                Log.d(TAG, "mCameraTimes: " + mCameraTimes);
+            } else {
+                Log.d(TAG, "Camera start progrom exit.");
+                mHandler.removeMessages(EVENT_DELAYED_CREATE_CAMERA);
             }
         }
     }
@@ -334,231 +288,27 @@ public class VideoCallCameraManager {
      */
     private void closeCamera() {
         Log.i(TAG, "closeCamera");
-        if (null != mVideoCallEngine) {
-            mVideoCallEngine.setImsCamera(null);
-        }
         mHandler.removeMessages(EVENT_DELAYED_CREATE_CAMERA);
-        if (mCamera == null) {
-            Log.e(TAG, "already stopped.");
-            return;
-        }
-
         synchronized (mCameraLock) {
-            Log.i(TAG, "close camera and get lock.");
             try {
-                if (null != mVideoCallEngine) {
-                    mCamera.reconnect();
-                    mVideoCallEngine.setImsCamera(null);
-                }
-                Camera.Parameters params = mCamera.getParameters();
-                params.set("ycbcr", 0);
-                mCamera.setParameters(params);
-                mCamera.release();
-                mCamera = null;
+                mVideoCallEngine.stopPreview();
+                mVideoCallEngine.setCameraId(-1);
+                mIsOpened = false;
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-
     }
 
-    /* SPRD: add the judge camera for bug 408181 @{ */
     public void handleSetCameraPreSurface(Surface surface) {
-        Log.i(TAG, "handleSetCameraPreSurface surface is "+surface+" mCamera = "+mCamera);
+        Log.i(TAG, "handleSetCameraPreSurface surface is "+surface + " mIsOpened:"+mIsOpened);
         if(!mIsVideoQualityReceived){
             Log.w(TAG,"handleSetCameraPreSurface()->mIsVideoQualityReceived:"+mIsVideoQualityReceived);
             return;
         }
-        if (surface != null) {
-            if (mCamera == null) {
-                openVideoCamera();
-            }
-            startCameraPreView();
-        } else {
-            stopCameraPreView();
+        if (!mIsOpened) {
+            openVideoCamera();
         }
-    }
-
-    /* @} */
-    /**
-     * Starts capturing and drawing preview frames to the screen.
-     */
-    public void startCameraPreView() {
-        if (mVideoCallEngine == null || mVideoCallEngine.mLocalSurface == null || mCamera == null) {
-            Log.w(TAG, "startCameraPreView->mVideoCallEngine:" + mVideoCallEngine + " mLocalSurface:"
-                    + mVideoCallEngine.mLocalSurface
-                    + " mCamera:" + mCamera);
-            mIsSurfacePreviewFailed = true;
-            return;
-        }
-        synchronized(mThreadLock){
-            if(null != mVideoCallEngine && mThreadRunning){
-                Log.w(TAG, "startCameraPreView->mThreadRunning:"+mThreadRunning);
-                mIsSurfacePreviewFailed = true;
-                return;
-            }
-        }
-        try {
-            synchronized (mCameraLock) {
-                Log.i(TAG, "get camera lock in surface create");
-                if (mCamera != null) {
-                    if (mCamera.previewEnabled()) {
-                        Log.i(TAG, "surfaceCreated setPreviewSurface. ");
-                        //SPRD:add stopPreview for bug534360
-                        if (null != mVideoCallEngine) {
-                            mVideoCallEngine.setImsCamera(null);
-                            mCamera.reconnect();
-                        }
-                        updateCameraPara();
-                        mCamera.stopPreview();
-                        mCamera.setPreviewSurface(mVideoCallEngine.mLocalSurface);
-                        mCamera.startPreview();
-                    } else {
-                        Log.i(TAG, "surfaceCreated startPreview. ");
-                        Log.i(TAG, "mVideoCallEngine.mLocalSurface is null " + (mVideoCallEngine.mLocalSurface == null)
-                                + mVideoCallEngine.mLocalSurface);
-                        //SPRD:add stopPreview for bug523233
-                        if (null != mVideoCallEngine) {
-                            mVideoCallEngine.setImsCamera(null);
-                            mCamera.reconnect();
-                        }
-                        updateCameraPara();
-                        mCamera.stopPreview();
-                        mCamera.setPreviewSurface(mVideoCallEngine.mLocalSurface);
-                        mCamera.startPreview();
-                    }
-                    if (mVideoCallEngine != null) {
-                        Log.i(TAG, "setImsCamera mCamera. ="+mCamera);
-                        mCamera.unlock();
-                        mVideoCallEngine.setImsCamera(mCamera,mVideoQuality);
-                    }
-                }
-                mIsSurfacePreviewFailed = false;
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "startCameraPreView Fail: " + e);
-            closeCamera();
-        }
-    }
-
-    public void startCameraPreViewBackground() {
-        if (mVideoCallEngine == null || mVideoCallEngine.mLocalSurface == null || mCamera == null) {
-            if (mVideoCallEngine != null) {
-                Log.w(TAG, "startCameraPreViewBackground->mVideoCallEngine:" + mVideoCallEngine + " mLocalSurface:"
-                        + mVideoCallEngine.mLocalSurface
-                        + " mCamera:" + mCamera);
-            }
-            else {
-                Log.w(TAG, "startCameraPreViewBackground->mVideoCallEngine:" + mVideoCallEngine + " mCamera:" + mCamera);
-            }
-            mIsSurfacePreviewFailed = true;
-            mThreadRunning = false;
-            return;
-        }
-        try {
-            synchronized (mCameraLock) {
-                Log.i(TAG, "get camera lock in surface create");
-                if (mCamera != null) {
-                    if (mCamera.previewEnabled()) {
-                        Log.i(TAG, "surfaceCreated setPreviewSurface. ");
-                        //SPRD:add stopPreview for bug534360
-                        if (null != mVideoCallEngine) {
-                            mVideoCallEngine.setImsCamera(null);
-                            mCamera.reconnect();
-                        }
-                        updateCameraPara();
-                        mCamera.stopPreview();
-                        mCamera.setPreviewSurface(mVideoCallEngine.mLocalSurface);
-                        mCamera.startPreview();
-                    } else {
-                        Log.i(TAG, "surfaceCreated startPreview. ");
-                        Log.i(TAG, "mVideoCallEngine.mLocalSurface is null " + (mVideoCallEngine.mLocalSurface == null)
-                                + mVideoCallEngine.mLocalSurface);
-                        //SPRD:add stopPreview for bug523233
-                        if (null != mVideoCallEngine) {
-                            mVideoCallEngine.setImsCamera(null);
-                            mCamera.reconnect();
-                        }
-                        updateCameraPara();
-                        mCamera.stopPreview();
-                        mCamera.setPreviewSurface(mVideoCallEngine.mLocalSurface);
-                        mCamera.startPreview();
-                    }
-                    if (mVideoCallEngine != null) {
-                        mCamera.unlock();
-                        mVideoCallEngine.setImsCamera(mCamera,mVideoQuality);
-                    }
-                }
-                mIsSurfacePreviewFailed = false;
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "startCameraPreView Fail: " + e);
-            closeCamera();
-        }
-    }
-
-    /**
-     * Stops capturing and drawing preview frames to the surface, and resets the camera for a future
-     * call to {@link #startPreview()}.
-     */
-    public void stopCameraPreView() {
-        synchronized (mCameraLock) {
-            if (mVideoCallEngine != null) {
-                mVideoCallEngine.setImsCamera(null);
-            }
-            if (mCamera != null) {
-                try {
-                    Log.i(TAG, "stopCameraPreView.");
-                    if (mVideoCallEngine != null) {
-                        mCamera.reconnect();
-                    }
-                    if (mCamera.previewEnabled()) {
-                        mCamera.stopPreview();
-                    }
-                    mCamera.setPreviewSurface((Surface) null);
-                    mCamera.startPreview();
-                    if (mVideoCallEngine != null) {
-                        mCamera.unlock();
-                        mVideoCallEngine.setImsCamera(null);
-                    }
-                } catch (Exception e) {
-                    Log.e(TAG, "setPreviewSurface failed, " + e);
-                }
-            }
-        }
-    }
-
-    /**
-     * Return current preview state.
-     */
-    public boolean isCameraPreviewing() {
-        if (mCamera != null) {
-            synchronized (mCameraLock) {
-                boolean isPreviewing = false;
-                try {
-                    if (mCamera.previewEnabled()) {
-                        Log.i(TAG, "isCameraPreviewing: true");
-                        isPreviewing = true;
-                    }
-                } catch (Exception e) {
-                    Log.e(TAG, "isCameraPreviewing, camera exception " + e);
-                }
-                return isPreviewing;
-            }
-        } else {
-            return false;
-        }
-    }
-
-    /**
-     * Determine whether the camera type can switch.
-     */
-    private boolean canSwitchCameras() {
-        Log.d(TAG, "canSwitchCameras()...");
-        if (mCameraNumbers < 2) {
-            return false;
-        }
-        return true;
     }
 
     public void setPreviewSize(int width, int height) {
@@ -571,9 +321,6 @@ public class VideoCallCameraManager {
     }
 
     public void switchVideoCamera() {
-        if (null != mVideoCallEngine) {
-            mVideoCallEngine.setImsCamera(null);
-        }
         operateCamera(WorkerTaskType.CAMERA_SWITCH);
     }
 
@@ -590,14 +337,9 @@ public class VideoCallCameraManager {
     public void handleSetCamera(String cameraId) {
         Log.i(TAG, "handleSetCamera()->isFirstInit:" + mIsFirstInit + " cameraId=" + cameraId
                 + " mCameraId=" + mCameraId);
-        if(!mIsVideoQualityReceived){
-            mCameraId = cameraId;
-            Log.w(TAG,"handleSetCamera()->mIsVideoQualityReceived:"+mIsVideoQualityReceived);
-            return;
-        }
         if (cameraId == null) {
             closeVideoCamera();
-            setCameraID(null);
+            setCameraID(String.valueOf(-1));
         } else {
             if (mIsFirstInit) {
                 setCameraID(cameraId);
@@ -605,7 +347,7 @@ public class VideoCallCameraManager {
             } else if (isSameCamera(cameraId)) {
                 onSetSameCameraId();
             } else {
-                if (mCameraId == null) {
+                if (mCameraId.equals(String.valueOf(-1))) {
                     setCameraID(cameraId);
                     openVideoCamera();
                 } else {
@@ -616,20 +358,9 @@ public class VideoCallCameraManager {
         }
     }
 
-    /**
-     * Determine whether the camera is opened.
-     */
-    public boolean isCameraOpened() {
-        return (mCamera != null);
-    }
-
     public void onSetSameCameraId() {
-        if (isCameraPreviewing()) {
-            Log.i(TAG, "onSetSameCameraId() E, Camera is previewing");
-            return;
-        } else if (isCameraOpened()) {
-            startCameraPreView();
-        } else {
+        Log.i(TAG, "onSetSameCameraId->mIsPreviewing:"+mIsPreviewing+" mIsOpened:"+mIsOpened);
+        if (!mIsOpened) {
             openVideoCamera();
         }
     }
@@ -656,33 +387,10 @@ public class VideoCallCameraManager {
                         closeCamera();
                     } else if (WorkerTaskType.CAMERA_OPEN == type) {
                         openCamera();
-                        if (mVideoCallEngine != null) {
-                            startCameraPreViewBackground();
-                        } else {
-                            startCameraPreView();
-                        }
-                    }
-
-                    if (mVideoCallEngine != null) {
-                        mVideoCallEngine.controlLocalVideo(isCameraPreviewing(), false);
-                        // TODO:SPRD
-                        /*
-                         * mVideoCallEngine.enableSubstitutePic(VideoCallUtils.getSubstitutePic(true,
-                         * PhoneGlobals.getInstance().mVideoCallHSP.mUsedPhoneId,
-                         * PhoneGlobals.getInstance().getApplicationContext()) ,
-                         * !isCameraAvailable());
-                         */
                     }
                 } else if (WorkerTaskType.CAMERA_SWITCH == type) {
                     closeCamera();
                     openCamera();
-                    if (null != mVideoCallEngine) {
-                        if (mVideoCallEngine != null) {
-                            startCameraPreViewBackground();
-                        } else {
-                            startCameraPreView();
-                        }
-                    }
                 }
                 mVTManagerProxy.setCameraSwitching(false);
                 Log.i(TAG, "closeOrSwitchCamera() X");
@@ -763,7 +471,9 @@ public class VideoCallCameraManager {
                     displayOrientation = 0;
                 } else if (orientation >= 80 && orientation <= 100) {
                     displayOrientation = 90;
-                } else if (orientation >= 160 && orientation <= 280) {
+                } else if (orientation >= 170 && orientation <= 190) {
+                    displayOrientation = 180;
+                } else if (orientation >= 260 && orientation <= 280) {
                     displayOrientation = 270;
                 }
             }
@@ -772,25 +482,25 @@ public class VideoCallCameraManager {
                 Log.i(TAG, "onOrientationChanged: " + displayOrientation);
                 mDeviceRotation = displayOrientation;
                 mHandler.removeMessages(EVENT_CHANGE_ORIENTATION);
-                mHandler.sendEmptyMessageDelayed(EVENT_CHANGE_ORIENTATION, 500);
+                mHandler.sendEmptyMessageDelayed(EVENT_CHANGE_ORIENTATION, 200);
             }
         }
     }
 
     private void handleOrientationChange() {
-        Log.i(TAG, "handleOrientationChange->mCamera:" + mCamera);
-        // SPRD:add startCameraPreView for bug541058
-        startCameraPreView();
+        Log.i(TAG, "handleOrientationChange->mDeviceRotation: " + mDeviceRotation);
+        if((mDeviceRotation == 90) || (mDeviceRotation == 270)){
+            VTManagerProxy.getInstance().mPreviewWidth = mHeight;
+            VTManagerProxy.getInstance().mPreviewHeight = mWidth;
+        }else if((mDeviceRotation == 0) || (mDeviceRotation == 180)){
+            VTManagerProxy.getInstance().mPreviewWidth = mWidth;
+            VTManagerProxy.getInstance().mPreviewHeight = mHeight;
+        }
+        updateCameraPara();
     }
 
     private void updateCameraPara() {
-        Log.i(TAG, "updateCameraPara->mCamera:" + mCamera);
-        if (mCamera == null) {
-            return;
-        }
-        Camera.Parameters params = mCamera.getParameters();
-        params.set("sensor-rot", getSensorRotation(mCameraId));
-        mCamera.setParameters(params);
+        mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation);
     }
 
     public void updateVideoQuality(int videoQuality){
@@ -799,16 +509,40 @@ public class VideoCallCameraManager {
         }
         boolean qualityChange = (mVideoQuality != videoQuality || !mIsVideoQualityReceived);
         mVideoQuality = videoQuality;
+        setPreviewSurfaceSize(mVideoQuality);
         mIsVideoQualityReceived = true;
         Log.i(TAG,"updateVideoQuality->qualityChange:"+qualityChange
-                + " isCameraPreviewing():"+isCameraPreviewing()
-                + " mCameraId:"+mCameraId);
-        if(qualityChange && mVideoCallEngine.mLocalSurface != null){
-            if(mCamera == null){
+                + " mCameraId:"+mCameraId +" mLocalSurface:"+mVideoCallEngine.mLocalSurface);
+        if(qualityChange && mCameraId != null){
+            if(!mIsOpened){
                 openVideoCamera();
             } else {
-                switchVideoCamera();
+                updateVideoCameraQuality();
             }
         }
+    }
+
+    public void updateVideoCameraQuality(){
+        if (mOperateCameraThread != null) {
+            try {
+                mOperateCameraThread.join();
+            } catch (InterruptedException ex) {
+                Log.d(TAG, "updateVideoCameraQuality.quit() exception " + ex);
+            }
+        }
+        mOperateCameraThread = new Thread(new Runnable() {
+            public void run() {
+                mThreadRunning = true;
+                mVTManagerProxy.setCameraSwitching(true);
+                closeCamera();
+                openCamera();
+                mVTManagerProxy.setCameraSwitching(false);
+                mThreadRunning = false;
+                return;
+            }
+        });
+
+        Log.i(TAG, "updateVideoCameraQuality: " + mOperateCameraThread);
+        mOperateCameraThread.start();
     }
 }

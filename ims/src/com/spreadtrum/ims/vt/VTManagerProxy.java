@@ -76,7 +76,11 @@ public class VTManagerProxy{
     private AlertDialog mFallBackDialog;
     private ImsCallSessionImpl mImsCallSessionImpl;
     private int mPeerVideoQuality = -1;
-
+    private int mPeerWidth = 480;
+    private int mPeerHeight = 640;
+    public int mPreviewWidth = 480;
+    public int mPreviewHeight = 640;
+    private int mRotation = -1;
     private VTManagerProxy(ImsService imsService) {
         mImsService = imsService;
         mContext = (Context)mImsService;
@@ -213,11 +217,15 @@ public class VTManagerProxy{
         }
         if (mVideoCallEngine != null) {
             mVideoCallEngine.releaseVideocallEngine();
-            mVideoCallCameraManager.releaseVideoCamera();
             mVideoCallCameraManager = null;
             mVideoCallEngine = null;
             mActiveImsCallSessionImpl = null;
             mPeerVideoQuality = -1;
+            mPeerWidth = 480;
+            mPeerHeight = 640;
+            mPreviewWidth = 480;
+            mPreviewHeight = 640;
+            mRotation = -1;
             log("onVTConnectionDisconnected::mMediaPhoneThread.quit(): " + mMediaPhoneThread.quit());
         }
     }
@@ -258,12 +266,10 @@ public class VTManagerProxy{
                 mVideoCallEngine.setImsCamera(null);
             }
             mVideoCallEngine.setImsLocalSurface(mPreviewSurface);
+            mVideoCallEngine.startPreview();
         }
         if (mVideoCallCameraManager == null) {
             log("handleSetPreviewSurface-->mVideoCallCameraManager is null");
-            if (mVideoCallEngine != null) {
-                mVideoCallEngine.setImsLocalSurface(mPreviewSurface);
-            }
             return;
         }
         /* SPRD: add handleSetCameraPreSurface for bug 408181 @{ */
@@ -278,18 +284,28 @@ public class VTManagerProxy{
             mVideoCallEngine.setImsRemoteSurface(mDisplaySurface);
         }
         if (surface != null){
-            setPreviewSize(180,240);
+            setPreviewSize(mPreviewWidth,mPreviewHeight);
+            setPeerDimensions(mPeerWidth,mPeerHeight);
         }
     }
 
     private void handleSetDeviceOrientation(Integer rotation) {
-        log("handleSetDeviceOrientation->rotation=" + rotation);
+        log("handleSetDeviceOrientation->rotation=" + rotation+"  mRotation="+mRotation);
         if (mVideoCallCameraManager == null) {
             log("handleSetDeviceOrientation-->mVideoCallCameraManager is null");
             return;
         }
-        if (rotation != null) {
+        if (rotation != null && (mRotation != rotation)) {
+            mRotation = rotation;
             mVideoCallCameraManager.onSetDeviceRotation(rotation.intValue());
+            if((mRotation == 90) || (mRotation == 270)){
+                mPreviewWidth = mVideoCallCameraManager.mHeight;
+                mPreviewHeight = mVideoCallCameraManager.mWidth;
+            }else if((mRotation == 0) || (mRotation == 180)){
+                mPreviewWidth = mVideoCallCameraManager.mWidth;
+                mPreviewHeight = mVideoCallCameraManager.mHeight;
+            }
+            setPreviewSize(mPreviewWidth,mPreviewHeight);
         }
     }
 
@@ -405,11 +421,24 @@ public class VTManagerProxy{
                 VideoProfile.CameraCapabilities cc = new VideoProfile.CameraCapabilities(width,
                         height, false, 0);
                 vp.changeCameraCapabilities(cc);
-                vp.changePeerDimensions(480,640);//TODO: set peer image size
             }
         }
     }
 
+    public void setPeerDimensions(int width, int height){
+        mPeerWidth = width;
+        mPeerHeight = height;
+        if (mActiveImsCallSessionImpl != null) {
+            ImsVideoCallProvider vp = (ImsVideoCallProvider)mActiveImsCallSessionImpl
+                    .getImsVideoCallProvider();
+            if (vp != null) {
+                log("setPeerDimensions->width=" + width + " height=" + height);
+                VideoProfile.CameraCapabilities cc = new VideoProfile.CameraCapabilities(width,
+                        height, false, 0);
+                vp.changePeerDimensions(width,height);
+            }
+        }
+    }
     public void setCameraSwitching(boolean isSwitching) {
         if (mActiveImsCallSessionImpl != null) {
             ImsVideoCallProvider vp = (ImsVideoCallProvider)mActiveImsCallSessionImpl
