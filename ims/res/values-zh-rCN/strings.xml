@@ -35,4 +35,5 @@
     <string name="low_battery_continue_video_call">"继续"</string>
     <string name="low_battery_convert_to_voice_call">"降为语音"</string>
     <!-- @} -->
+    <string name="camera_open_fail">摄像头故障</string> <!-- SPRD: Add for bug571839 -->
 </resources>

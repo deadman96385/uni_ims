@@ -8,6 +8,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.AsyncResult;
 import android.os.SystemProperties;
+import android.os.Parcel;
 import android.util.Log;
 import com.android.ims.ImsManager;
 import android.hardware.Camera;
@@ -23,7 +24,7 @@ import com.spreadtrum.ims.ImsConfigImpl;
 import static com.android.internal.telephony.RILConstants.*;
 
 public class VideoCallEngine {
-    private static String TAG = VideoCallEngine.class.getSimpleName();
+    private static String TAG = "ImsVideoCallEngine";
     private static VideoCallEngine gInstance = null;
     private EventHandler mEventHandler;
     private Context mContext;
@@ -42,6 +43,7 @@ public class VideoCallEngine {
     public static final int VCE_EVENT_STOP_ENC           = 1004;
     public static final int VCE_EVENT_STOP_DEC           = 1005;
     public static final int VCE_EVENT_SHUTDOWN           = 1006;
+    public static final int VCE_EVENT_REMOTE_ROTATE_CHANGE           = 1011;
     /* Do not change these values without updating their counterparts
      * in include/media/mediaphone.h
      */
@@ -259,9 +261,10 @@ public class VideoCallEngine {
         public void handleMessage(Message msg) {
             Log.d(TAG, "handleMessage " + msg);
 
-            AsyncResult ar;
-            ar = (AsyncResult) msg.obj;
-
+            AsyncResult ar = null;;
+            if (msg.what != VCE_EVENT_REMOTE_ROTATE_CHANGE){
+                ar = (AsyncResult) msg.obj;
+             }
             switch(msg.what) {
                 //case RIL_UNSOL_VIDEOPHONE_STRING: {
                 case MEDIA_UNSOL_STR: {
@@ -355,6 +358,19 @@ public class VideoCallEngine {
                 }
                 case VCE_EVENT_SHUTDOWN:{
                     mVideoState = VideoState.AUDIO_ONLY;
+                    return;
+                }
+                case VCE_EVENT_REMOTE_ROTATE_CHANGE:{
+                    Log.d(TAG, "handleMessage VCE_EVENT_REMOTE_ROTATE_CHANGE");
+                    if(msg.obj != null){
+                        Parcel data = (Parcel)msg.obj;
+                        int width = data.readInt();
+                        int height = data.readInt();
+                        if(VTManagerProxy.getInstance() != null){
+                            VTManagerProxy.getInstance().setPeerDimensions(width, height);
+                        }
+                        log("VCE_EVENT_REMOTE_ROTATE_CHANGE, width = " + width + "height = " + height);
+                    }
                     return;
                 }
                 default:
@@ -499,4 +515,17 @@ public class VideoCallEngine {
     public static native void setRecordFileFD(Object fileDescriptor, long offset, long length);
 
     public static native void setRecordMaxFileSize(long max_filesize_bytes);
+
+    public static native int setCameraId(int id);
+
+    public static native void setCameraPreviewSize(int size);
+
+    public static native void setPreviewDisplayOrientation(int rotation);
+
+    public static native void startPreview();
+
+    public static native void stopPreview();
+
+    public static native void setUplinkQos(int qos);
+
 }

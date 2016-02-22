@@ -36,4 +36,5 @@
     <string name="low_battery_continue_video_call">"Yes"</string>
     <string name="low_battery_convert_to_voice_call">"Convert"</string>
     <!-- @} -->
+    <string name="camera_open_fail">Camera open fail</string><!-- SPRD: Add for bug571839 -->
 </resources>
