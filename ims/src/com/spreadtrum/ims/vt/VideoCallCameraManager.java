@@ -402,17 +402,14 @@ public class VideoCallCameraManager {
             synchronized (mCameraLock) {
                 Log.i(TAG, "get camera lock in surface create");
                 if (mCamera != null) {
-                    if (mVideoCallEngine != null) {
-                        mCamera.reconnect();
-                    }
-                    //SPRD:add updateCameraPara() for bug495583
-                    updateCameraPara();
                     if (mCamera.previewEnabled()) {
                         Log.i(TAG, "surfaceCreated setPreviewSurface. ");
                         //SPRD:add stopPreview for bug534360
                         if (null != mVideoCallEngine) {
                             mVideoCallEngine.setImsCamera(null);
+                            mCamera.reconnect();
                         }
+                        updateCameraPara();
                         mCamera.stopPreview();
                         mCamera.setPreviewSurface(mVideoCallEngine.mLocalSurface);
                         mCamera.startPreview();
@@ -423,7 +420,9 @@ public class VideoCallCameraManager {
                         //SPRD:add stopPreview for bug523233
                         if (null != mVideoCallEngine) {
                             mVideoCallEngine.setImsCamera(null);
+                            mCamera.reconnect();
                         }
+                        updateCameraPara();
                         mCamera.stopPreview();
                         mCamera.setPreviewSurface(mVideoCallEngine.mLocalSurface);
                         mCamera.startPreview();
@@ -460,17 +459,14 @@ public class VideoCallCameraManager {
             synchronized (mCameraLock) {
                 Log.i(TAG, "get camera lock in surface create");
                 if (mCamera != null) {
-                    if (mVideoCallEngine != null) {
-                        mCamera.reconnect();
-                    }
-                    //SPRD:add updateCameraPara() for bug495583
-                    updateCameraPara();
                     if (mCamera.previewEnabled()) {
                         Log.i(TAG, "surfaceCreated setPreviewSurface. ");
                         //SPRD:add stopPreview for bug534360
                         if (null != mVideoCallEngine) {
                             mVideoCallEngine.setImsCamera(null);
+                            mCamera.reconnect();
                         }
+                        updateCameraPara();
                         mCamera.stopPreview();
                         mCamera.setPreviewSurface(mVideoCallEngine.mLocalSurface);
                         mCamera.startPreview();
@@ -481,7 +477,9 @@ public class VideoCallCameraManager {
                         //SPRD:add stopPreview for bug523233
                         if (null != mVideoCallEngine) {
                             mVideoCallEngine.setImsCamera(null);
+                            mCamera.reconnect();
                         }
+                        updateCameraPara();
                         mCamera.stopPreview();
                         mCamera.setPreviewSurface(mVideoCallEngine.mLocalSurface);
                         mCamera.startPreview();
