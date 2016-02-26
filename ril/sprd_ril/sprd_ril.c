@@ -2166,16 +2166,16 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 #endif
 
     if (desiredRadioState == 0) {
-        if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
-            RILLOGD("s_sim_num = %d", s_sim_num);
-            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
-            err = at_send_command(ATch_type[channelID], cmd, NULL );
-        }
         /* The system ask to shutdown the radio */
         int sim_status = getSIMStatus(channelID);
         setHasSim(sim_status == SIM_ABSENT ? false: true );
 
         err = at_send_command(ATch_type[channelID], "AT+SFUN=5", &p_response);
+        if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
+            RILLOGD("s_sim_num = %d", s_sim_num);
+            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
+            at_send_command(ATch_type[channelID], cmd, NULL );
+        }
         if (err < 0 || p_response->success == 0)
             goto error;
 
@@ -11779,15 +11779,20 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
                 }
             }
         }
+        err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
+        if (err < 0 || p_response->success == 0) {
+            goto error;
+        }
         if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
             RILLOGD("s_sim_num = %d", s_sim_num);
             snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
             err = at_send_command(ATch_type[channelID], cmd, NULL);
         }
-    }
-    err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
-    if (err < 0 || p_response->success == 0) {
-        goto error;
+    }else{
+        err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
+        if (err < 0 || p_response->success == 0) {
+            goto error;
+        }
     }
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     at_response_free(p_response);
