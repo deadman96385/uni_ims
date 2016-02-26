@@ -258,6 +258,7 @@ static struct ydst ydst_default[YDST_MAX+1] = {
         .max_segment = 5,
         .max_segment_size = 10*1024*1024,
         .cache = &cacheline_socket_open,
+        /* .nowrap = 1, */
     },
     [YDST_TYPE_YLOG_DEBUG] = {
         .file = "ylog_debug",
@@ -282,6 +283,14 @@ static struct ydst ydst_default[YDST_MAX+1] = {
 };
 
 static struct ylog ylog_default[YLOG_MAX+1] = {
+    {
+        .name = "benchmark_socket",
+        .type = FILE_POPEN,
+        .file = "ylog_benchmark_socket_server",
+        .ydst = &ydst_default[YDST_TYPE_SOCKET],
+        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY,
+        .raw_data = 1,
+    },
     {
         .name = "socket",
         .type = FILE_SOCKET_LOCAL,

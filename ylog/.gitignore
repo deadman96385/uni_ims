@@ -117,6 +117,7 @@ resources/statics
 ylog
 ylog_cli
 ylog_benchmark
+ylog_benchmark_socket_server
 Session.vim
 a.out
 logs/

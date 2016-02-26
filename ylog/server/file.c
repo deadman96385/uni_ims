@@ -175,8 +175,8 @@ static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char
     int count = sizeof buf;
     char *p = buf;
     char *pmax = p + sizeof(buf);
-    int ret;
-    FILE *wfp = popen(cmd, "r");
+    int ret, timeout = 0;
+    FILE *wfp = popen2(cmd, "r");
     char timeBuf[32];
     if (wfp) {
         int fd = fileno(wfp);
@@ -198,15 +198,72 @@ static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char
             if (ret <= 0) {
                 ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog cmd %s is failed, %s\n",
                         cmd, ret == 0 ? "timeout":strerror(errno));
+                timeout = 1;
                 break;
             }
             ret = read(fd, p, count);
             if (ret > 0 && w)
                 w(p, ret, y);
         } while (ret > 0);
-        if (w)
-            w("\n", 1, y);
-        pclose(wfp);
+        if (w) {
+            if (timeout)
+                ret = snprintf(buf, count, "xxxxxxxxxxxxxxxxxxxxxx ylog cmd %s is failed, %s\n",
+                        cmd, ret == 0 ? "timeout":strerror(errno));
+            else
+                ret = snprintf(buf, count, "\n");
+            w(buf, ret, y);
+        }
+        /**
+         * For ylog_cli space command
+         * maybe more than 500ms there is no log send back to ylog_cli space command
+         * so poll will timeout
+         * if we use popen / pclose(wfp); the pipe is closed by here,
+         * but ylog_cli is still running, when the cmd_space du -sh return value,
+         * ylog service will send(fd,...) to ylog_cli, ylog_cli poll will get data,
+         * ylog_cli will call write(STDOUT_FILENO, buf, ret);
+         * but the the remote end of the pipe has been closed by pclose(wfp)
+         * then ylog_cli will get signal 13 (SIGPIPE), tombstones will be generated in Android
+         * following are the tombstones log trace
+         * so we have to use popen2 / pclose2(wfp) to let pclose2 kill the ylog_cli first [2016.02.29]
+         *
+         * ylog_tombstones 001 [ cat /data/tombstones/tombstone_00 ] [01-01 11:54:04.363]
+         * *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+         * Native Crash TIME: 12064470
+         * *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+         * Build fingerprint: 'SPRD/sp9832a_2h11_4mvoltesea/sp9832a_2h11_volte:6.0/MRA58K/W16.09.6N18:userdebug/test-keys'
+         * Revision: '0'
+         * ABI: 'arm'
+         * pid: 24598, tid: 24598, name: ylog_cli  >>> /system/bin/ylog_cli <<<
+         * signal 13 (SIGPIPE), code 0 (SI_USER), fault addr --------
+         *     r0 ffffffe0  r1 bebfaa34  r2 00000054  r3 00000000
+         *     r4 bebfaa34  r5 00000054  r6 bebfaa24  r7 00000004
+         *     r8 b6f056d8  r9 b6f08000  sl b6f056c7  fp bebfba34
+         *     ip 00000001  sp bebfaa18  lr b6f03a3f  pc b6de54ac  cpsr 20070010
+         *     d0  0000000000000000  d1  3038343120353470
+         *     d2  3236373637322061  d3  2037373836312063
+         *     d4  3431203436373332  d5  3038343120383038
+         *     d6  3637303135392038  d7  3933323436323120
+         *     d8  0000000000000000  d9  0000000000000000
+         *     d10 0000000000000000  d11 0000000000000000
+         *     d12 0000000000000000  d13 0000000000000000
+         *     d14 0000000000000000  d15 0000000000000000
+         *     d16 0000000000000000  d17 0000000000000000
+         *     d18 0000000000000000  d19 0000000000000000
+         *     d20 0000000000000000  d21 0000000000000000
+         *     d22 0000000000000000  d23 0000000000000000
+         *     d24 0000000000000000  d25 0000000000000000
+         *     d26 0000000000000000  d27 0000000000000000
+         *     d28 0000000000000000  d29 0000000000000000
+         *     d30 0000000000000000  d31 0000000000000000
+         *     scr 00000000
+
+         * backtrace:
+         *     #00 pc 000424ac  /system/lib/libc.so (write+12)
+         *     #01 pc 00000a3b  /system/bin/ylog_cli
+         *     #02 pc 0001735d  /system/lib/libc.so (__libc_init+44)
+         *     #03 pc 00000b40  /system/bin/ylog_cli
+         */
+        pclose2(wfp);
     } else {
         ylog_error("popen2 %s failed: %s\n", cmd, strerror(errno));
     }
@@ -871,6 +928,10 @@ static void ydst_cache_unlock(struct ydst *ydst, struct cacheline *cl) {
         ylog_critical("cacheline %s is not locked\n", cl->name);
 }
 
+static int ydst_nowrap_segment(struct ydst *ydst) {
+    return ydst->nowrap && (ydst->segments >= ydst->max_segment_now);
+}
+
 static int ydst_new_segment_default(struct ylog *y, int ymode) {
     int written_count = 0;
     struct ydst *ydst = y->ydst;
@@ -884,6 +945,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
     int ydst_change_seq_move_root;
     int ydst_change_seq_resize_segment;
     int moved = 0;
+    int nowrap;
 
     if (cl)
         ydst_cache_lock(ydst, cl);
@@ -892,6 +954,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
 
     ydst_change_seq_move_root = root->ydst_change_seq_move_root;
     ydst_change_seq_resize_segment = root->ydst_change_seq_resize_segment;
+    nowrap = ydst_nowrap_segment(ydst);
 
     if (ymode == YDST_SEGMENT_MODE_NEW ||
         ymode == YDST_SEGMENT_MODE_RESET ||
@@ -1028,14 +1091,22 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
                 ydst_file = path;
             }
         }
-        ydst->open(ydst_file, mode, ydst); /* if ydst has cache, restart cache line */
-        ylog_debug("new_segment: fopen %s mode=%s\n", path, mode);
+        if (nowrap == 0) {
+            ydst->open(ydst_file, mode, ydst); /* if ydst has cache, restart cache line */
+            ylog_debug("new_segment: fopen %s mode=%s\n", path, mode);
+        } else {
+            ylog_critical("ylog %s is forced stop, because ydst %s has reached max_segment %d/%ld\n",
+                    y->name, ydst->file, ydst->max_segment_now, ydst->segments);
+            print2journal_file("ylog %s is forced stop, because ydst %s has reached max_segment %d/%ld\n",
+                    y->name, ydst->file, ydst->max_segment_now, ydst->segments);
+            y->thread_stop(y, 0);
+        }
     }
 
     if (cl)
         ydst_cache_unlock(ydst, cl);
 
-    if (ymode == YDST_SEGMENT_MODE_NEW) {
+    if (ymode == YDST_SEGMENT_MODE_NEW && nowrap == 0) {
         ylog_debug("new_segment: new %d\n", segment);
         if (y->raw_data == 0)
             written_count += y->write_header(y);
@@ -1912,6 +1983,7 @@ static void *ylog_thread_handler_default(void *arg) {
     enum ylog_thread_state state_curr;
     struct ylog_poll *yp = &y->yp;
     char *name = y->name;
+    int nowrap;
     ydst_refs_inc(y);
     y->pid = getpid();
     y->tid = gettid();
@@ -1958,13 +2030,16 @@ static void *ylog_thread_handler_default(void *arg) {
 __state_control:
             switch (state_curr) {
             case YLOG_RUN:
-                if (yp_isclosed(YLOG_POLL_INDEX_DATA, yp)) {
+                nowrap = ydst_nowrap_segment(y->ydst);
+                if (yp_isclosed(YLOG_POLL_INDEX_DATA, yp) && nowrap == 0) {
                     if (y->open(file, mode, y)) {
                         ylog_critical("open %s failed\n", file);
                         y->state = YLOG_STOP;
                         pthread_mutex_lock(&mutex);
                         y->status |= YLOG_DISABLED;
                         pthread_mutex_unlock(&mutex);
+                        if (os_hooks.ylog_status_hook)
+                            os_hooks.ylog_status_hook(YLOG_STOP, y);
                         if (y->mode & YLOG_READ_MODE_BLOCK_RESTART_ALWAYS) {
                             y->state = YLOG_RESTART;
                             if (y->restart_period) {
@@ -1980,9 +2055,14 @@ __state_control:
                         pthread_mutex_lock(&mutex);
                         y->status &= ~YLOG_DISABLED;
                         pthread_mutex_unlock(&mutex);
+                        if (os_hooks.ylog_status_hook)
+                            os_hooks.ylog_status_hook(YLOG_RUN, y);
                     }
                 } else {
-                    ylog_critical("%s %s is opened, no need to re-open again\n", name, file);
+                    if (nowrap == 0)
+                        ylog_critical("%s %s is opened, no need to re-open again\n", name, file);
+                    else
+                        ylog_critical("%s %s is forbidden open, ydst has reached max size\n", name, file);
                 }
                 y->state_pipe_count++;
                 continue;
@@ -1997,6 +2077,8 @@ __state_control:
                 continue;
             case YLOG_STOP:
             case YLOG_RESTART:
+                if (os_hooks.ylog_status_hook)
+                    os_hooks.ylog_status_hook(YLOG_STOP, y);
                 yp_invalid(YLOG_POLL_INDEX_DATA, yp, y);
                 pthread_mutex_lock(&mutex);
                 timeout = -1;
@@ -2034,6 +2116,8 @@ __state_control:
                 y->state_pipe_count++;
                 continue;
             case YLOG_EXIT:
+                if (os_hooks.ylog_status_hook)
+                    os_hooks.ylog_status_hook(YLOG_STOP, y);
                 ylog_critical("%s %s exit\n", name, file);
                 y->state_pipe_count++;
                 goto __exit;

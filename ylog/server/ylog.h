@@ -361,6 +361,7 @@ struct ydst {
     int segment; /* current segment numbers (you should assign right value in init process) */
     long segments; /* all segment numbers generated till now */
     int max_segment; /* how many segment can be reached */
+    int nowrap; /* when the log size reaches the max, stop it */
     enum ydst_segment_mode segment_mode;
 
     unsigned long long max_segment_size_now; /* the max size of each segment now in use */
@@ -538,6 +539,7 @@ struct os_hooks {
     ylog_read ylog_read_info_hook;
     int (*process_command_hook)(char *buf, int buf_size, int fd, int index, struct ylog_poll *yp);
     void (*cmd_ylog_hook)(int nargs, char **args);
+    void (*ylog_status_hook)(enum ylog_thread_state state, struct ylog *y);
 };
 
 static inline void yp_clr(int index, struct ylog_poll *yp) {

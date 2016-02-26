@@ -10,7 +10,8 @@ C_FLAGS:=-Wall -Wunused-parameter -Werror -Wstrict-prototypes -Wclobbered \
 ubuntu: $(common) server/os/ubuntu.c
 	gcc $(C_FLAGS) -o ylog -pthread -lrt server/ylog.c -ldl
 	gcc $(C_FLAGS) -o ylog_cli client/ylog_cli.c
-	gcc $(C_FLAGS) -o ylog_benchmark benchmark/ylog_benchmark.c
+	gcc $(C_FLAGS) -o ylog_benchmark benchmark/ylog_benchmark.c -lrt
+	gcc $(C_FLAGS) -o ylog_benchmark_socket_server benchmark/ylog_benchmark_socket_server.c -lrt
 
 android: $(common) server/os/android.c
 	gcc -DANDROID $(C_FLAGS) -o ylog -pthread -lrt server/ylog.c
@@ -18,4 +19,4 @@ android: $(common) server/os/android.c
 	gcc -DANDROID $(C_FLAGS) -o ylog_benchmark benchmark/ylog_benchmark.c
 
 clean:
-	rm -rf ylog ylog_cli ylog_benchmark data/* sdcard/*
+	rm -rf ylog ylog_cli ylog_benchmark ylog_benchmark_socket_server data/* sdcard/*

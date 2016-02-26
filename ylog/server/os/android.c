@@ -469,6 +469,20 @@ static void ylog_update_config2(char *key, char *value) {
     ylog_update_config(YLOG_CONFIG, 2, argv, 1);
 }
 
+static void ylog_status_hook(enum ylog_thread_state state, struct ylog *y) {
+    char *value;
+    char buf[PROPERTY_VALUE_MAX];
+    snprintf(buf, sizeof buf, "ylog.svc.%s", y->name);
+    switch (state) {
+    case YLOG_STOP: value = "stopped"; break;
+    case YLOG_RUN: value = "running"; break;
+    case YLOG_NOP: value = "waiting"; break;
+    default: value = "unknown"; break;
+    }
+    ylog_info("ylog %s setprop %s %s\n", y->name, buf, value);
+    property_set(buf, value);
+}
+
 static int os_inotify_handler_anr(struct ylog_inotify_cell *pcell, int timeout, struct ylog *y) {
     ylog_info("os_inotify_handler_anr is called for '%s %s' %dms %s now\n",
                 pcell->pathname ? pcell->pathname:"", pcell->filename, pcell->timeout, timeout ? "timeout":"normal");
@@ -567,6 +581,7 @@ enum os_ydst_type {
     OS_YDST_TYPE_KERNEL,
     OS_YDST_TYPE_TRACER,
     OS_YDST_TYPE_TCPDUMP,
+    OS_YDST_TYPE_HCIDUMP,
     OS_YDST_TYPE_TRACES,
     OS_YDST_TYPE_SYS_INFO,
     OS_YDST_TYPE_MAX
@@ -575,25 +590,31 @@ enum os_ydst_type {
 static struct cacheline os_cacheline[OS_YDST_TYPE_MAX] = {
     [OS_YDST_TYPE_ANDROID] = {
         .size = 512 * 1024,
-        .num = 10,
+        .num = 4,
         .timeout = 1000, /* ms */
         .debuglevel = CACHELINE_DEBUG_CRITICAL,
     },
     [OS_YDST_TYPE_KERNEL] = {
         .size = 512 * 1024,
-        .num = 4,
+        .num = 2,
         .timeout = 1000, /* ms */
         .debuglevel = CACHELINE_DEBUG_CRITICAL,
     },
     [OS_YDST_TYPE_TRACER] = {
         .size = 512 * 1024,
-        .num = 4,
+        .num = 2,
         .timeout = 1000, /* ms */
         .debuglevel = CACHELINE_DEBUG_CRITICAL,
     },
     [OS_YDST_TYPE_TCPDUMP] = {
         .size = 512 * 1024,
-        .num = 4,
+        .num = 2,
+        .timeout = 1000, /* ms */
+        .debuglevel = CACHELINE_DEBUG_CRITICAL,
+    },
+    [OS_YDST_TYPE_HCIDUMP] = {
+        .size = 512 * 1024,
+        .num = 2,
         .timeout = 1000, /* ms */
         .debuglevel = CACHELINE_DEBUG_CRITICAL,
     },
@@ -650,6 +671,8 @@ static void os_env_prepare(void) {
 static void os_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root,
         struct context **c, struct os_hooks *hook) {
     struct ylog *y;
+    int i;
+    char *value;
     char buf[PROPERTY_VALUE_MAX];
     static char tombstone_files[10][128];
     static struct ylog_inotify_cell_args tombstone = {
@@ -698,6 +721,14 @@ static void os_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root
             .max_segment = 4,
             .max_segment_size = 20*1024*1024,
             .cache = &os_cacheline[OS_YDST_TYPE_TCPDUMP],
+        },
+        [OS_YDST_TYPE_HCIDUMP] = {
+            .file = "hcidump/",
+            .file_name = "hcidump.log",
+            .max_segment = 6,
+            .max_segment_size = 20*1024*1024,
+            .cache = &os_cacheline[OS_YDST_TYPE_HCIDUMP],
+            .nowrap = 1,
         },
         [OS_YDST_TYPE_TRACES] = {
             .file = "traces/",
@@ -804,7 +835,15 @@ static void os_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root
             .fp_array = NULL,
         },
         {
-            .name = "traces.txt",
+            .name = "hcidump",
+            .type = FILE_POPEN,
+            .file = "hcidump",
+            .ydst = &ydst[OS_YDST_TYPE_HCIDUMP+OS_YDST_TYPE_BASE],
+            .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY,
+            .raw_data = 1,
+        },
+        {
+            .name = "traces",
             .type = FILE_INOTIFY,
             .file = "inotify",
             .ydst = &ydst[OS_YDST_TYPE_TRACES+OS_YDST_TYPE_BASE],
@@ -887,9 +926,21 @@ static void os_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root
     hook->ylog_read_info_hook = ylog_read_info_hook;
     hook->process_command_hook = process_command_hook;
     hook->cmd_ylog_hook = cmd_ylog_hook;
+    hook->ylog_status_hook = ylog_status_hook;
 
     poc->keep_historical_folder_numbers = KEEP_HISTORICAL_FOLDER_NUMBERS_DEFUALT;
     parse_config(YLOG_CONFIG);
+
+    for_each_ylog(i, y, ylog) {
+        enum ylog_thread_state state;
+        if (y->name == NULL)
+            continue;
+        if (y->status & YLOG_DISABLED_MASK)
+            state = YLOG_STOP;
+        else
+            state = YLOG_NOP;
+        hook->ylog_status_hook(state, y);
+    }
 
     root->root = os_detect_root_folder(NULL); /**
                                                 * root->quota_new is 0 now if quota = root->max_size;
@@ -898,7 +949,7 @@ static void os_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root
     property_get("ylog.anr.flag", buf, "0");
     pos->anr_fast = strtol(buf, NULL, 0);
 
-    y = ylog_get_by_name("traces.txt");
+    y = ylog_get_by_name("traces");
     if (pos->anr_fast)
         y->yinotify.cells[0].timeout = 50;
     else
