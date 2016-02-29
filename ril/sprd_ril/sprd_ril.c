@@ -8862,7 +8862,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SHUTDOWN
                 || request == RIL_REQUEST_SIM_CLOSE_CHANNEL
                 || request == RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL
-                || (request == RIL_REQUEST_DIAL && s_isstkcall))
+                || (request == RIL_REQUEST_DIAL && s_isstkcall)
+                || request == RIL_EXT_REQUEST_GET_HD_VOICE_STATE)
        ) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
         return;
@@ -8887,6 +8888,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN
                 || request == RIL_REQUEST_SIM_CLOSE_CHANNEL
                 || request == RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL
+                || request == RIL_EXT_REQUEST_GET_HD_VOICE_STATE
 #endif
                 || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
                 || request == RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE
@@ -11392,6 +11394,30 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_IMS_ADD_TO_GROUP_CALL:
             requestAddGroupCall(channelID, data, datalen, t);
             break;
+        case RIL_EXT_REQUEST_GET_HD_VOICE_STATE:
+        {
+            p_response = NULL;
+            int response = 0;
+            err = at_send_command_singleline(ATch_type[channelID], "AT+SPCAPABILITY=10,0",
+                    "+SPCAPABILITY", &p_response);
+            if (err >= 0 && p_response->success) {
+                char *line = p_response->p_intermediates->line;
+                skipNextComma(&line);
+                skipNextComma(&line);
+                err = at_tok_nextint(&line, &response);
+                RILLOGD("RIL_EXT_REQUEST_GET_HD_VOICE_STATE:%d",response);
+                if(err >= 0){
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, &response,
+                            sizeof(response));
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                }
+            } else {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_GET_CELL_BROADCAST_CONFIG:
             requestGetCellBroadcastConfig(channelID,data, datalen, t);
