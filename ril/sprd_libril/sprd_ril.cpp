@@ -6800,6 +6800,7 @@ requestToString(int request) {
         /*@}*/
         case RIL_REQUEST_ENABLE_BROADCAST_SMS: return "RIL_REQUEST_ENABLE_BROADCAST_SMS";
 #if defined (RIL_SUPPORTED_OEMSOCKET)
+        case RIL_EXT_REQUEST_GET_HD_VOICE_STATE: return "RIL_EXT_REQUEST_GET_HD_VOICE_STATE";
         case RIL_EXT_REQUEST_SIM_GET_ATR: return "SIM_GET_ATR";
         case RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2: return "SIM_OPEN_CHANNEL_WITH_P2";
 #endif

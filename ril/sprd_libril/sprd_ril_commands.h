@@ -243,7 +243,7 @@
     ,{RIL_REQUEST_SET_FACILITY_LOCK_FOR_USER, dispatchStrings, responseVoid}
     ,{RIL_REQUEST_ENABLE_BROADCAST_SMS, dispatchInts, responseVoid}
 #if defined (RIL_SUPPORTED_OEMSOCKET)
-    ,{RIL_EXT_REQUEST, dispatchInts, responseInts}
+    ,{RIL_EXT_REQUEST_GET_HD_VOICE_STATE, dispatchVoid, responseInts}
     ,{RIL_EXT_REQUEST_SIM_GET_ATR, dispatchVoid, responseString}
     ,{RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2, dispatchStrings, responseInts}
 #endif

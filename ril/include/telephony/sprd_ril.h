@@ -6054,7 +6054,7 @@ typedef struct {
 /*****************************OEM SOCKET REQUEST******************************/
 #if defined (RIL_SUPPORTED_OEMSOCKET)
 #define RIL_EXT_REQUEST_BASE                        5500
-#define RIL_EXT_REQUEST                             (RIL_EXT_REQUEST_BASE + 1)
+#define RIL_EXT_REQUEST_GET_HD_VOICE_STATE          (RIL_EXT_REQUEST_BASE + 1)
 /**
  * RIL_EXT_REQUEST_SIM_GET_ATR
  *
