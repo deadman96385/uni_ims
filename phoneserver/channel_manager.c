@@ -1000,7 +1000,6 @@ static void *signal_process(){
                         rxlev_array[i] = rxlev_array[i + 1];
                 }
             }
-            PHS_LOGD("sim%d signal no update num=%d",sim_index, nosigUpdate[sim_index]);
             if (nosigUpdate[sim_index] == MAXSigCount) {
                 continue;
             }

@@ -20,6 +20,9 @@
 #undef  PHS_LOGD
 #define PHS_LOGD(x...)  ALOGD( x )
 
+// Enable verbose logging
+#define VDBG 0
+
 int s_isuserdebug = 0;
 
 #if AT_DEBUG
@@ -174,10 +177,10 @@ void *receive_data(struct receive_thread_t *me)
 			snprintf(tmp_buff, sizeof(tmp_buff), "%s%c", atstr, me->end_char);
 			memset(atstr, 0, strlen(atstr));
 			received = strlen(tmp_buff);
-			if (s_isuserdebug) {
+            #if VDBG
 			    PHS_LOGD("Rev TID [%d]: mux=%s:%s\n",
 			             tid, me->mux->name, tmp_buff);
-			}
+            #endif
 			phoneserver_deliver_at_rsp(me->mux, tmp_buff, received);
 		}
 	}
