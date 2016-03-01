@@ -531,9 +531,9 @@ processCommandBuffer(void *buffer, size_t buflen, RIL_SOCKET_TYPE socket_type) {
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 #if defined (RIL_SPRD_EXTENSION)
         || (request > RIL_REQUEST_LAST && request < RIL_SPRD_REQUEST_BASE)
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
-        || (request > RIL_SPRD_REQUEST_LAST && request < RIL_RADIOINTERACTOR_REQUEST_BASE)
-        || (request > RIL_RADIOINTERACTOR_REQUEST_LAST && request < RIL_OEM_REQUEST_BASE)
+#if defined (RIL_SUPPORTED_OEMSOCKET)
+        || (request > RIL_SPRD_REQUEST_LAST && request < RIL_EXT_REQUEST_BASE)
+        || (request > RIL_EXT_REQUEST_LAST && request < RIL_OEM_REQUEST_BASE)
 #else
         || (request > RIL_SPRD_REQUEST_LAST && request < RIL_OEM_REQUEST_BASE)
 #endif
@@ -544,9 +544,9 @@ processCommandBuffer(void *buffer, size_t buflen, RIL_SOCKET_TYPE socket_type) {
 #else
 #if defined (RIL_SPRD_EXTENSION)
         || (request > RIL_REQUEST_LAST && request < RIL_SPRD_REQUEST_BASE)
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
-        || (request > RIL_SPRD_REQUEST_LAST && request < RIL_RADIOINTERACTOR_REQUEST_BASE)
-        || (request > RIL_RADIOINTERACTOR_REQUEST_LAST)
+#if defined (RIL_SUPPORTED_OEMSOCKET)
+        || (request > RIL_SPRD_REQUEST_LAST && request < RIL_EXT_REQUEST_BASE)
+        || (request > RIL_EXT_REQUEST_LAST)
 #else
         || (request > RIL_SPRD_REQUEST_LAST)
 #endif
@@ -564,10 +564,10 @@ processCommandBuffer(void *buffer, size_t buflen, RIL_SOCKET_TYPE socket_type) {
     if(request > RIL_SPRD_REQUEST_BASE && request <= RIL_SPRD_REQUEST_LAST) {
         request = request - RIL_SPRD_REQUEST_BASE + RIL_REQUEST_LAST;
     }
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
-    else if (request > RIL_RADIOINTERACTOR_REQUEST_BASE &&
-            request <= RIL_RADIOINTERACTOR_REQUEST_LAST) {
-        request = request - RIL_RADIOINTERACTOR_REQUEST_BASE +
+#if defined (RIL_SUPPORTED_OEMSOCKET)
+    else if (request > RIL_EXT_REQUEST_BASE &&
+            request <= RIL_EXT_REQUEST_LAST) {
+        request = request - RIL_EXT_REQUEST_BASE +
                 RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE;
     }
 #endif
@@ -576,10 +576,10 @@ processCommandBuffer(void *buffer, size_t buflen, RIL_SOCKET_TYPE socket_type) {
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     if(request > RIL_OEM_REQUEST_BASE && request <= RIL_OEM_REQUEST_LAST)
 #if defined (RIL_SPRD_EXTENSION)
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+#if defined (RIL_SUPPORTED_OEMSOCKET)
         request = request - RIL_OEM_REQUEST_BASE + RIL_REQUEST_LAST
                 + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE
-                + RIL_RADIOINTERACTOR_REQUEST_LAST - RIL_RADIOINTERACTOR_REQUEST_BASE;
+                + RIL_EXT_REQUEST_LAST - RIL_EXT_REQUEST_BASE;
 #else
         request = request - RIL_OEM_REQUEST_BASE + RIL_REQUEST_LAST
                              + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE;
@@ -4958,9 +4958,9 @@ static void processCommandsCallback(int fd, short flags, void *param) {
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 #if defined (RIL_SPRD_EXTENSION)
                 || (request > RIL_REQUEST_LAST && request < RIL_SPRD_REQUEST_BASE)
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
-                || (request > RIL_SPRD_REQUEST_LAST && request < RIL_RADIOINTERACTOR_REQUEST_BASE)
-                || (request > RIL_RADIOINTERACTOR_REQUEST_LAST && request < RIL_OEM_REQUEST_BASE)
+#if defined (RIL_SUPPORTED_OEMSOCKET)
+                || (request > RIL_SPRD_REQUEST_LAST && request < RIL_EXT_REQUEST_BASE)
+                || (request > RIL_EXT_REQUEST_LAST && request < RIL_OEM_REQUEST_BASE)
 #else
                 || (request > RIL_SPRD_REQUEST_LAST && request < RIL_OEM_REQUEST_BASE)
 #endif
@@ -4971,9 +4971,9 @@ static void processCommandsCallback(int fd, short flags, void *param) {
 #else
 #if defined (RIL_SPRD_EXTENSION)
                 || (request > RIL_REQUEST_LAST && request < RIL_SPRD_REQUEST_BASE)
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
-                || (request > RIL_SPRD_REQUEST_LAST && request < RIL_RADIOINTERACTOR_REQUEST_BASE)
-                || (request > RIL_RADIOINTERACTOR_REQUEST_LAST)
+#if defined (RIL_SUPPORTED_OEMSOCKET)
+                || (request > RIL_SPRD_REQUEST_LAST && request < RIL_EXT_REQUEST_BASE)
+                || (request > RIL_EXT_REQUEST_LAST)
 #else
                 || (request > RIL_SPRD_REQUEST_LAST)
 #endif
@@ -4993,10 +4993,10 @@ static void processCommandsCallback(int fd, short flags, void *param) {
             if(request > RIL_SPRD_REQUEST_BASE && request <= RIL_SPRD_REQUEST_LAST) {
                 request = request - RIL_SPRD_REQUEST_BASE + RIL_REQUEST_LAST;
             }
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
-            else if (request > RIL_RADIOINTERACTOR_REQUEST_BASE &&
-                    request <= RIL_RADIOINTERACTOR_REQUEST_LAST) {
-                request = request - RIL_RADIOINTERACTOR_REQUEST_BASE +
+#if defined (RIL_SUPPORTED_OEMSOCKET)
+            else if (request > RIL_EXT_REQUEST_BASE &&
+                    request <= RIL_EXT_REQUEST_LAST) {
+                request = request - RIL_EXT_REQUEST_BASE +
                         RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE;
             }
 #endif
@@ -5004,10 +5004,10 @@ static void processCommandsCallback(int fd, short flags, void *param) {
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
             if(request > RIL_OEM_REQUEST_BASE && request <= RIL_OEM_REQUEST_LAST)
 #if defined (RIL_SPRD_EXTENSION)
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+#if defined (RIL_SUPPORTED_OEMSOCKET)
                 request = request - RIL_OEM_REQUEST_BASE + RIL_REQUEST_LAST
                         + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE
-                        + RIL_RADIOINTERACTOR_REQUEST_LAST - RIL_RADIOINTERACTOR_REQUEST_BASE;
+                        + RIL_EXT_REQUEST_LAST - RIL_EXT_REQUEST_BASE;
 #else
                 request = request - RIL_OEM_REQUEST_BASE + RIL_REQUEST_LAST
                                      + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE;
@@ -5782,20 +5782,20 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
         assert(i - RIL_REQUEST_LAST ==
                         s_commands[i].requestNumber - RIL_SPRD_REQUEST_BASE);
     }
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+#if defined (RIL_SUPPORTED_OEMSOCKET)
     count = RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE;
-    for (int i = count + 1; i <= count + RIL_RADIOINTERACTOR_REQUEST_LAST -
-                RIL_RADIOINTERACTOR_REQUEST_BASE; i++) {
-        assert(i - count == s_commands[i].requestNumber - RIL_RADIOINTERACTOR_REQUEST_BASE);
+    for (int i = count + 1; i <= count + RIL_EXT_REQUEST_LAST -
+                RIL_EXT_REQUEST_BASE; i++) {
+        assert(i - count == s_commands[i].requestNumber - RIL_EXT_REQUEST_BASE);
     }
 #endif
 #endif
 
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 #if defined (RIL_SPRD_EXTENSION)
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+#if defined (RIL_SUPPORTED_OEMSOCKET)
     count = RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE +
-            RIL_RADIOINTERACTOR_REQUEST_LAST - RIL_RADIOINTERACTOR_REQUEST_BASE;
+            RIL_EXT_REQUEST_LAST - RIL_EXT_REQUEST_BASE;
 #else
     count = RIL_REQUEST_LAST + RIL_SPRD_REQUEST_LAST - RIL_SPRD_REQUEST_BASE;
 #endif
@@ -5818,24 +5818,24 @@ RIL_register (const RIL_RadioFunctions *callbacks, int argc, char ** argv) {
         assert(i - count - 1 == s_unsolResponses[i].requestNumber
                         - RIL_SPRD_UNSOL_RESPONSE_BASE);
     }
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+#if defined (RIL_SUPPORTED_OEMSOCKET)
     count = RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE +
             RIL_SPRD_UNSOL_RESPONSE_LAST - RIL_SPRD_UNSOL_RESPONSE_BASE;
-    for (int i = count + 1; i <= count + RIL_RADIOINTERACTOR_UNSOL_RESPONSE_LAST
-              - RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE + 1; i++) {
+    for (int i = count + 1; i <= count + RIL_EXT_UNSOL_RESPONSE_LAST
+              - RIL_EXT_UNSOL_RESPONSE_BASE + 1; i++) {
         assert(i - count - 1 == s_unsolResponses[i].requestNumber
-                        - RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE);
+                        - RIL_EXT_UNSOL_RESPONSE_BASE);
     }
 #endif
 #endif
 
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
 #if defined (RIL_SPRD_EXTENSION)
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+#if defined (RIL_SUPPORTED_OEMSOCKET)
     count = RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE
             + RIL_SPRD_UNSOL_RESPONSE_LAST - RIL_SPRD_UNSOL_RESPONSE_BASE
-            + RIL_RADIOINTERACTOR_UNSOL_RESPONSE_LAST
-            - RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE + 1;
+            + RIL_EXT_UNSOL_RESPONSE_LAST
+            - RIL_EXT_UNSOL_RESPONSE_BASE + 1;
 #else
     count = RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE
             + RIL_SPRD_UNSOL_RESPONSE_LAST - RIL_SPRD_UNSOL_RESPONSE_BASE + 1;
@@ -6274,10 +6274,10 @@ void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
 #if defined (RIL_SPRD_EXTENSION)
         || (unsolResponse > RIL_UNSOL_LAST
                  && unsolResponse < RIL_SPRD_UNSOL_RESPONSE_BASE)
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+#if defined (RIL_SUPPORTED_OEMSOCKET)
         || (unsolResponse > RIL_SPRD_UNSOL_RESPONSE_LAST
-                && unsolResponse < RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE)
-        || (unsolResponse > RIL_RADIOINTERACTOR_UNSOL_RESPONSE_LAST
+                && unsolResponse < RIL_EXT_UNSOL_RESPONSE_BASE)
+        || (unsolResponse > RIL_EXT_UNSOL_RESPONSE_LAST
                 && unsolResponse < RIL_OEM_UNSOL_RESPONSE_BASE)
 #else
         || (unsolResponse > RIL_SPRD_UNSOL_RESPONSE_LAST
@@ -6292,10 +6292,10 @@ void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
 #if defined (RIL_SPRD_EXTENSION)
         || (unsolResponse > RIL_UNSOL_LAST
                  && unsolResponse < RIL_SPRD_UNSOL_RESPONSE_BASE)
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+#if defined (RIL_SUPPORTED_OEMSOCKET)
         || (unsolResponse > RIL_SPRD_UNSOL_RESPONSE_LAST
-                && unsolResponse < RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE)
-        || (unsolResponse > RIL_RADIOINTERACTOR_UNSOL_RESPONSE_LAST)
+                && unsolResponse < RIL_EXT_UNSOL_RESPONSE_BASE)
+        || (unsolResponse > RIL_EXT_UNSOL_RESPONSE_LAST)
 #else
         || (unsolResponse > RIL_SPRD_UNSOL_RESPONSE_LAST)
 #endif
@@ -6313,10 +6313,10 @@ void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
                   && unsolResponse <= RIL_SPRD_UNSOL_RESPONSE_LAST)
         unsolResponseIndex = unsolResponse - RIL_SPRD_UNSOL_RESPONSE_BASE
                                                 + RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE + 1;
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
-    else if (unsolResponse >= RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE
-                      && unsolResponse <= RIL_RADIOINTERACTOR_UNSOL_RESPONSE_LAST) {
-        unsolResponseIndex = unsolResponse - RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE
+#if defined (RIL_SUPPORTED_OEMSOCKET)
+    else if (unsolResponse >= RIL_EXT_UNSOL_RESPONSE_BASE
+                      && unsolResponse <= RIL_EXT_UNSOL_RESPONSE_LAST) {
+        unsolResponseIndex = unsolResponse - RIL_EXT_UNSOL_RESPONSE_BASE
                 + RIL_SPRD_UNSOL_RESPONSE_LAST - RIL_SPRD_UNSOL_RESPONSE_BASE
                 + RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE + 2;
         socket_type = RIL_OEM_SOCKET;
@@ -6328,10 +6328,10 @@ void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
     else if(unsolResponse >= RIL_OEM_UNSOL_RESPONSE_BASE
                   && unsolResponse <= RIL_OEM_UNSOL_LAST)
 #if defined (RIL_SPRD_EXTENSION)
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
+#if defined (RIL_SUPPORTED_OEMSOCKET)
         unsolResponseIndex = unsolResponse - RIL_OEM_UNSOL_RESPONSE_BASE
                 + RIL_SPRD_UNSOL_RESPONSE_LAST - RIL_SPRD_UNSOL_RESPONSE_BASE
-                + RIL_RADIOINTERACTOR_UNSOL_RESPONSE_LAST - RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE
+                + RIL_EXT_UNSOL_RESPONSE_LAST - RIL_EXT_UNSOL_RESPONSE_BASE
                 + RIL_UNSOL_LAST - RIL_UNSOL_RESPONSE_BASE + 3;
 #else
         unsolResponseIndex = unsolResponse - RIL_OEM_UNSOL_RESPONSE_BASE
@@ -6799,6 +6799,10 @@ requestToString(int request) {
         case RIL_REQUEST_STOP_QUERY_AVAILABLE_NETWORKS: return "RIL_REQUEST_STOP_QUERY_AVAILABLE_NETWORKS";
         /*@}*/
         case RIL_REQUEST_ENABLE_BROADCAST_SMS: return "RIL_REQUEST_ENABLE_BROADCAST_SMS";
+#if defined (RIL_SUPPORTED_OEMSOCKET)
+        case RIL_EXT_REQUEST_SIM_GET_ATR: return "SIM_GET_ATR";
+        case RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2: return "SIM_OPEN_CHANNEL_WITH_P2";
+#endif
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_SET_CELL_BROADCAST_CONFIG: return "SET_CELL_BROADCAST_CONFIG";

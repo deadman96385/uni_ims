@@ -121,6 +121,7 @@ typedef enum {
 
     ,RIL_E_MISSING_RESOURCE = 29,                /* no logical channel available */
     RIL_E_NO_SUCH_ELEMENT = 30,                 /* application not found on SIM */
+    RIL_E_INVALID_PARAMETER = 31,
     RIL_E_LCE_NOT_SUPPORTED = 36                /* LCE service not supported(36 in RILConstants.java) */
 } RIL_Errno;
 
@@ -6049,15 +6050,54 @@ typedef struct {
 #define RIL_REQUEST_ENABLE_BROADCAST_SMS (RIL_REQUEST_OTHER_BASE+41)
 #define RIL_SPRD_REQUEST_LAST RIL_REQUEST_ENABLE_BROADCAST_SMS
 
-#if defined (RIL_SUPPORTED_RADIOINTERACTOR)
-#define RIL_RADIOINTERACTOR_REQUEST_BASE            5500
-#define RIL_REQUEST_RADIOINTERACTOR                 (RIL_RADIOINTERACTOR_REQUEST_BASE + 1)
-#define RIL_RADIOINTERACTOR_REQUEST_LAST            RIL_REQUEST_RADIOINTERACTOR
 
-#define RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE     6500
-#define RIL_UNSOL_RADIOINTERACTOR                   (RIL_RADIOINTERACTOR_UNSOL_RESPONSE_BASE + 0)
-#define RIL_RADIOINTERACTOR_UNSOL_RESPONSE_LAST     RIL_UNSOL_RADIOINTERACTOR
+/*****************************OEM SOCKET REQUEST******************************/
+#if defined (RIL_SUPPORTED_OEMSOCKET)
+#define RIL_EXT_REQUEST_BASE                        5500
+#define RIL_EXT_REQUEST                             (RIL_EXT_REQUEST_BASE + 1)
+/**
+ * RIL_EXT_REQUEST_SIM_GET_ATR
+ *
+ * Retrieves the ATR from the UICC.
+ *
+ * "data" is null
+ * "response" is const char * to the ATR.
+ *
+ * Valid errors:
+ *  SUCCESS
+ *  GENERIC_FAILURE
+ */
+#define RIL_EXT_REQUEST_SIM_GET_ATR                 (RIL_EXT_REQUEST_BASE + 2)
+
+/**
+ * RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2
+ *
+ * Open a new logical channel and select the given application.
+ *
+ * "data" is const char * and set to AID value, See ETSI 102.221 and 101.220.
+ * "p2" is the p2 byte to set
+ *
+ * "response" is int *
+* ((int *)data)[0] contains the session id of the logical channel.
+ * ((int *)data)[1] onwards may optionally contain the select response for the
+ *     open channel command with one byte per integer.
+ *
+ * Valid errors:
+ *  SUCCESS
+ *  RADIO_NOT_AVAILABLE
+ *  GENERIC_FAILURE
+ *  MISSING_RESOURCE
+ *  NO_SUCH_ELEMENT
+ */
+#define RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2    (RIL_EXT_REQUEST_BASE + 3)
+#define RIL_EXT_REQUEST_LAST                        RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2
+
+#define RIL_EXT_UNSOL_RESPONSE_BASE                 6500
+#define RIL_EXT_UNSOL                               (RIL_EXT_UNSOL_RESPONSE_BASE + 0)
+#define RIL_EXT_UNSOL_RESPONSE_LAST                 RIL_EXT_UNSOL
 #endif
+/*****************************************************************************/
+
 
 #define RIL_SPRD_UNSOL_RESPONSE_BASE 6000
 #define RIL_UNSOL_VIDEOPHONE_DATA (RIL_SPRD_UNSOL_RESPONSE_BASE + 0)
