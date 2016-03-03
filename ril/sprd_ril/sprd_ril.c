@@ -6142,6 +6142,15 @@ static void requestScreeState(int channelID, int status, RIL_Token t)
         at_send_command(ATch_type[channelID], "AT+CGREG=2", NULL);
         if(isVoLteEnable()){
             at_send_command(ATch_type[channelID], "AT+CIREG=2", NULL);
+            /* add for bug 534775
+             * due to the unsol response is reported
+             * with a int value which means the IMS registration state,
+             * and the FWK does not use the response,
+             * so report the 0 response
+             */
+            int response = 0;
+            RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED,
+                            &response, sizeof(response));
         }
         if(isExistActivePdp() && !strcmp(prop, "0")){
             at_send_command(ATch_type[channelID], "AT*FDY=1,5", NULL);
