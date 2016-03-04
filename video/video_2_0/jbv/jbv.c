@@ -160,14 +160,13 @@ static void _JBV_putPkt(
         /* Cache the first packet time stamp for Frame period calculation. */
         if (updateFirstTs) {
             obj_ptr->firstTs  = unit_ptr->ts;
-            obj_ptr->statisticFirstTs = unit_ptr->ts;
             OSAL_logMsg("cache first seqn:%u first Ts:%llu",
                     pkt_ptr->seqn, obj_ptr->firstTs);
         }
 
-        JBV_dbgLog("Put packet seqn:%u at location %u of size %u ts %llu, tsOrig=%lu "
+        JBV_dbgLog("Put packet seqn:%u at location %u of size %u ts %llu "
                 "atime %llu key=%02x, mark=%02x firstinSeq=%02x\n",
-                pkt_ptr->seqn, seqn, unit_ptr->offset, unit_ptr->ts, unit_ptr->tsOrig,
+                pkt_ptr->seqn, seqn, unit_ptr->offset, unit_ptr->ts,
                 unit_ptr->atime, unit_ptr->key, unit_ptr->mark,
                 unit_ptr->firstInSeq);
 
@@ -204,25 +203,8 @@ static void _JBV_putPkt(
     }
 
     /* Update level and also find oldest frame */
-    while(1){
-        if(_JBV_findOldestSequence(obj_ptr, &firstSeqnNextFrame,
-            &lastSeqnNextFrame, &level)<0){
-                break;
-        }
-
-       // if the buffer level bigger than 1s, drop the oldest frame
-        if(level > JBV_MAX_JITTER_USEC){
-            _JBV_dropPacket(obj_ptr, &obj_ptr->unit[lastSeqnNextFrame], JBV_DROP_TOO_OLD);
-            JBV_wrnLog("Drop the the too old frame. First packet at location:%d, "
-                              "last packet at location:%d. Packet ts=%d, current time=%d\n",
-                              firstSeqnNextFrame,
-                              lastSeqnNextFrame,
-                              obj_ptr->unit[firstSeqnNextFrame].ts,
-                              ((uint64)tv_ptr->sec) * _JBV_SEC_TO_USEC + (uint64)tv_ptr->usec);
-        }else{
-            break;
-        }
-    }
+    _JBV_findOldestSequence(obj_ptr, &firstSeqnNextFrame, &lastSeqnNextFrame,
+            &level);
     /* Run state machine */
     state = _JBV_stateMachine(state, obj_ptr->jitter, level,
             obj_ptr->framePeriod + obj_ptr->framePeriodOffset);

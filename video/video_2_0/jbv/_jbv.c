@@ -33,38 +33,16 @@ void _JBV_updateFramePeriod(
      * Packets belonging to same frame is expected to have same time stamp.
      * Only update frame period if we detect time stamp change (which means we have a new frame).
      */
-    if ((unit_ptr->mark) && (unit_ptr->nalu != NALU_PPS) && (unit_ptr->nalu != NALU_SPS)
+    if ((obj_ptr->lastTs < unit_ptr->ts)
             && (obj_ptr->lastSeqn < unit_ptr->seqn)) {
-        if (obj_ptr->statisticFramesReceived> 1) {
-
-            elapsedTime = (int64)unit_ptr->ts - (int64)obj_ptr->statisticFirstTs;
-
-            /*
-             * elapsedTime may less than 0 because the network jitter, a later packet that arrived earlier.
-             * In this situation, we just skip to update frameFeriod for one time.
-             */
-            if ((elapsedTime > 0) && (obj_ptr->statisticFramesReceived < elapsedTime)) {
+        if (obj_ptr->totalFramesReceived > 0) {
+            elapsedTime = unit_ptr->ts - obj_ptr->firstTs;
+            if (obj_ptr->totalFramesReceived < elapsedTime) {
                 /* garuantee that obj_ptr->framePeriod is greater than 0 */
-                obj_ptr->framePeriod = elapsedTime / (obj_ptr->statisticFramesReceived -1);
-                JBV_dbgLog("DBG framePeriod=%llu, statisticFramesReceived=%d, elapsedTime=%llu\n",
-                        obj_ptr->framePeriod, obj_ptr->statisticFramesReceived, elapsedTime);
-                //if the framePeriod abnormal, restart the statistic data.
-                if((obj_ptr->framePeriod > JBV_FRAME_PERIOD_MAX_USEC) || (obj_ptr->framePeriod < JBV_FRAME_PERIOD_MIN_USEC)){
-                    JBV_wrnLog("framePeriod abnormal: framePeriod=%llu, statisticFramesReceived=%d,reset it\n",
-                            obj_ptr->framePeriod, obj_ptr->statisticFramesReceived);
-                    obj_ptr->statisticFirstTs = unit_ptr->ts;
-                    obj_ptr->statisticFramesReceived = 1;
-                    obj_ptr->framePeriod = JBV_INIT_FRAME_PERIOD_USEC;
-                }
-                else if(elapsedTime > (60*1000000)){
-                // restart the statistic data when the statistic duration is too long.
-                    JBV_wrnLog("statistic time longer than 1min, reset it\n");
-                    obj_ptr->statisticFirstTs = unit_ptr->ts;
-                    obj_ptr->statisticFramesReceived = 1;
-                }
+                obj_ptr->framePeriod = elapsedTime / obj_ptr->totalFramesReceived;
             } else {
-                JBV_wrnLog("elapsedTime %u, obj_ptr->statisticFramesReceived %d\n",
-                        elapsedTime, obj_ptr->statisticFramesReceived);
+                JBV_wrnLog("elapsedTime %u, obj_ptr->totalFramesReceived %d\n",
+                        elapsedTime, obj_ptr->totalFramesReceived);
             }
 /*
             JBV_dbgLog("currentSeqn:%hu currentTs:%llu firstTs:%llu"
