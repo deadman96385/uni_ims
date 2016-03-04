@@ -495,10 +495,6 @@ vint _JBV_processH264(
     unit_ptr->seqn      = pkt_ptr->seqn;
     unit_ptr->offset    = pkt_ptr->pSize;
     unit_ptr->valid     = 1;
-    if((pkt_ptr->mark) && (NALU_PPS != nalu) && (NALU_SPS != nalu)){
-        obj_ptr->totalFramesReceived ++;
-        obj_ptr->statisticFramesReceived ++;
-    }
     OSAL_memCpy(unit_ptr->data_ptr, pkt_ptr->data_ptr, pkt_ptr->pSize);
 
     return (0);
@@ -748,7 +744,7 @@ vint _JBV_reassembleH264(
         }
     }
 
-    // obj_ptr->totalFramesReceived += framesReceived;
+    obj_ptr->totalFramesReceived += framesReceived;
 
     if (unit_ptr->key) {
         obj_ptr->rtcpInfo.packetLoss.lostSinceIdr = 0;

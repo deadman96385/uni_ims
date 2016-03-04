@@ -84,7 +84,6 @@
 
 /* Max frame period */
 #define JBV_FRAME_PERIOD_MAX_USEC    (1000000)       /* 1000 ms i.e. 1fps */
-#define JBV_FRAME_PERIOD_MIN_USEC        (16666)       /* 16666 us i.e. 60fps */
 
 #define JBV_MAX_JITTER_USEC          (1000000)      /* in usecs */
 
@@ -177,7 +176,6 @@ typedef struct {
 typedef struct {
     uint64          firstUnNormTs;             /* RTP timestamp (unnormalized) of the first packet that was put into JBV. */
     uint64          firstTs;                   /* RTP timestamp (normalized) of the first packet that was put into JBV. This should be 0. */
-    uint64          statisticFirstTs;
     uint64          firstAtime;                /* Arrival time of the first packet that was put into JBV. */
     uint64          lastDrawnTs;               /* RTP timestamp of last drawn "frame" from JBV */
     uint64          lastDrawnSeqn;             /* RTP seqn of the last packet of the "frame" that was last drawn from JBV. */
@@ -198,7 +196,6 @@ typedef struct {
                                                 * This accounts for jitter and lipsync. Value in usec.
                                                 */
     vint            totalFramesReceived;       /* The count of number of frames received by JBV. Used for frame period calculation.  */
-    vint            statisticFramesReceived;
     uint64          lastCtime;                 /* Normalized Local time indicating when the last frame was drawn from JBV. */
     vint            drop;                      /* Number of packets that were received but dropped by JBV. */
     vint            ready;                     /* First packet is received (after init). JBV is ready. */
