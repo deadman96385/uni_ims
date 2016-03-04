@@ -718,14 +718,14 @@ static void os_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root
         [OS_YDST_TYPE_TCPDUMP] = {
             .file = "tcpdump/",
             .file_name = "tcpdump.log",
-            .max_segment = 4,
+            .max_segment = 6,
             .max_segment_size = 20*1024*1024,
             .cache = &os_cacheline[OS_YDST_TYPE_TCPDUMP],
         },
         [OS_YDST_TYPE_HCIDUMP] = {
             .file = "hcidump/",
             .file_name = "hcidump.log",
-            .max_segment = 6,
+            .max_segment = 10,
             .max_segment_size = 20*1024*1024,
             .cache = &os_cacheline[OS_YDST_TYPE_HCIDUMP],
             .nowrap = 1,
@@ -733,7 +733,7 @@ static void os_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root
         [OS_YDST_TYPE_TRACES] = {
             .file = "traces/",
             .file_name = "traces.log",
-            .max_segment = 10,
+            .max_segment = 2,
             .max_segment_size = 20*1024*1024,
         },
         [OS_YDST_TYPE_SYS_INFO] = {

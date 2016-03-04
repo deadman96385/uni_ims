@@ -932,13 +932,24 @@ static int cmd_space(struct command *cmd, char *buf, int buf_size, int fd, int i
     unsigned long long freespace;
     fsize = ylog_get_unit_size_float(root->quota_now ? root->quota_now : root->max_size, &unit);
     send(fd, buf, snprintf(buf, buf_size, "%.2f%c\t(quota)\n", fsize, unit), MSG_NOSIGNAL);
+#if 0
     ret = do_cmd(buf, buf_size, 1, "du -sh %s", root_path);
     if (historical_folder_root)
         ret += do_cmd(buf + ret, buf_size - ret, 1, "du -sh %s", historical_folder_root);
+#else
     freespace = calculate_path_disk_available(root_path);
     fsize = ylog_get_unit_size_float(freespace, &unit);
-    ret += snprintf(buf + ret, buf_size - ret, "%s -> %.2f%c (freespace)\n", root_path, fsize, unit);
+    ret = snprintf(buf, buf_size, "%s -> %.2f%c (freespace)\n", root_path, fsize, unit);
     send(fd, buf, ret, MSG_NOSIGNAL);
+
+    if (historical_folder_root) {
+        ret = do_cmd(buf, buf_size, 1, "du -sh %s", historical_folder_root);
+        send(fd, buf, ret, MSG_NOSIGNAL);
+    }
+
+    ret = do_cmd(buf, buf_size, 1, "du -sh %s", root_path);
+    send(fd, buf, ret, MSG_NOSIGNAL);
+#endif
     return 0;
     if (0) { /* avoid compiler warning */
         cmd = cmd;

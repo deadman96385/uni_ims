@@ -2,6 +2,8 @@
  * Copyright (C) 2016 Spreadtrum Communications Inc.
  */
 
+#include "analyzer_bottom_half_template.h"
+
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t mutex_journal_log = PTHREAD_MUTEX_INITIALIZER;
 static int fd_journal_file = -1;
@@ -676,6 +678,11 @@ static void create_outline(struct ydst *ydst) {
                 b = buf;
                 b += snprintf(b, bmax - b, "%03d -%s~", cur_seg, p);
                 if (from) {
+                    extern char *strptime(const char *s, const char *format, struct tm *tm);
+                    struct tm tm_before, tm_after, delta_tm;
+                    time_t time_t_before, time_t_after, delta_seconds;
+                    memset(&tm_before, 0, sizeof(struct tm));
+                    strptime(p, " %Y.%m.%d %H:%M:%S ", &tm_before);
                     read(fd_f, file_from, len);
                     file_from[len-1] = 0;
                     p = file_from;
@@ -685,8 +692,25 @@ static void create_outline(struct ydst *ydst) {
                         p = file_from;
                         strcpy(p, timestamp);
                     }
-                    p[strlen(p) - 1] = '\n';
-                    b += snprintf(b, bmax - b, "%s", p);
+                    memset(&tm_after, 0, sizeof(struct tm));
+                    strptime(p, " %Y.%m.%d %H:%M:%S ", &tm_after);
+                    time_t_before = mktime(&tm_before);
+                    time_t_after = mktime(&tm_after);
+                    if (time_t_before != -1 && time_t_after != -1) {
+                        delta_seconds = time_t_after - time_t_before;
+                        gmtime_r(&delta_seconds, &delta_tm);
+                        b += snprintf(b, bmax - b, "%s[%02d %02d:%02d:%02d]\n",
+                                p,
+                                delta_tm.tm_yday,
+                                delta_tm.tm_hour,
+                                delta_tm.tm_min,
+                                delta_tm.tm_sec);
+                    } else {
+                        p[strlen(p) - 1] = '\n';
+                        b += snprintf(b, bmax - b, "%s", p);
+                    }
+                } else {
+                    strcat(buf, "\n");
                 }
                 if (fd_outline > 0)
                     write(fd_outline, buf, strlen(buf));
@@ -1141,11 +1165,6 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
 "Copyright (C) 2016 Spreadtrum\n" \
 "Created on Jan 18, 2016\n" \
 "'''\n" \
-"import os\n" \
-"import re\n" \
-"import sys\n" \
-"import optparse\n" \
-"import shutil\n" \
 "\n";
 
 // "merged = 'all_log'\n"
@@ -1155,60 +1174,6 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
 // "'A':'main.log',\n"
 // "'B':'event.log'\n"
 // "}\n"
-
-        char *template_python2 = \
-"\n" \
-"def merge_logs(files, output):\n" \
-"    global cpath\n" \
-"    with open(os.path.join(cpath, output), 'w') as alllog:\n" \
-"        for f in files:\n" \
-"            with open(os.path.join(cpath, f), 'r') as sublog:\n" \
-"                shutil.copyfileobj(sublog, alllog)\n" \
-"\n" \
-"def split_log(infiles, logdict):\n" \
-"    global cpath\n" \
-"    fddict = {}\n" \
-"    keys = logdict.keys()\n" \
-"    for key in keys:\n" \
-"        fddict[key] = open(os.path.join(cpath, logdict[key]), 'w')\n" \
-"\n" \
-"    for eachfile in infiles:\n" \
-"        with open(os.path.join(cpath, eachfile), 'r') as f:\n" \
-"            for line in f.readlines():\n" \
-"                if line[0:id_token_len] in keys:\n" \
-"                    fddict[line[0:id_token_len]].write(line[id_token_len:])\n" \
-"\n" \
-"    for key in keys:\n" \
-"        fddict[key].close()\n" \
-"\n" \
-"def main():\n" \
-"    global cpath\n" \
-"    cpath = os.path.dirname(os.path.abspath(sys.argv[0]))\n" \
-"    parser = optparse.OptionParser()\n" \
-"    parser.add_option('-r', dest='remove', default=False, action='store_true', help='remove the original log files')\n" \
-"    parser.add_option('-m', dest='merge', default=False, action='store_true', help='merge all the log files')\n" \
-"    options, args = parser.parse_args()\n" \
-"\n" \
-"    if not args:\n" \
-"        allfiles = os.listdir(os.path.join(cpath, logpath))\n" \
-"        pat = re.compile('.*\\.?[0-9]+$')\n" \
-"        logfilenames = [f for f in allfiles if pat.match(f)]\n" \
-"    else:\n" \
-"        logfilenames = args;\n" \
-"\n" \
-"    logfilenames.sort(reverse = True)\n" \
-"\n" \
-"    if options.merge or not logdict :\n" \
-"        merge_logs(logfilenames, merged)\n" \
-"    else :\n" \
-"        split_log(logfilenames, logdict)\n" \
-"    if options.remove:\n" \
-"        for log in logfilenames:\n" \
-"            os.remove(os.path.join(cpath, log))\n" \
-"        os.remove(sys.argv[0])\n" \
-"\n" \
-"if __name__ == '__main__':\n" \
-"    main()";
 
         yds_new_segment_file_name(path, sizeof path, 0, ydst);
         dirname2(path);
@@ -1238,8 +1203,8 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
                     //write(fd, path, snprintf(path, sizeof(path), "'%s':'%s',\n", y->id_token, y->id_token_filename));
                 }
             }
-            write(fd, path, snprintf(path, sizeof(path), "}\n"));
-            write(fd, template_python2, strlen(template_python2));
+            write(fd, path, snprintf(path, sizeof(path), "}\n\n"));
+            write(fd, analyzer_bottom_half_template, strlen(analyzer_bottom_half_template));
             close(fd);
         } else {
             ylog_critical("Failed: create %s\n", path);
