@@ -28,7 +28,7 @@
 #define JBV_wrnLog(fmt, args...) \
         OSAL_logMsg("%s: WARNNING " fmt, __FUNCTION__, ## args)
 #define JBV_errLog(fmt, args...) \
-        OSAL_logMsg("%s %d: ERROR " fmt, __FUNCTION__, ## args)
+        OSAL_logMsg("%s %d: ERROR " fmt, __FUNCTION__, __LINE__, ## args)
 
 #define JBV_InfoLog(fmt, args...)
 #endif
