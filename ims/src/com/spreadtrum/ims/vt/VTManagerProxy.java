@@ -12,6 +12,7 @@ import android.telecom.Connection.VideoProvider;
 import android.telecom.VideoProfile;
 import android.view.Surface;
 
+import com.android.internal.telephony.ImsDriverCall;
 import com.spreadtrum.ims.ImsCallSessionImpl;
 import com.spreadtrum.ims.ImsService;
 import com.spreadtrum.ims.ImsServiceCallTracker;
@@ -153,6 +154,10 @@ public class VTManagerProxy{
 
     public void handleVTConnectionEstablished(ImsCallSessionImpl imsCallSessionImpl){
         log("VTConnectionEstablished->imsCallSessionImpl="+imsCallSessionImpl);
+        if (isImsCallAlive() && imsCallSessionImpl.mImsDriverCall != null
+                && imsCallSessionImpl.mImsDriverCall.state == ImsDriverCall.State.ACTIVE) {
+            mActiveImsCallSessionImpl = imsCallSessionImpl;
+        }
         if (isImsCallAlive()) {
             log("handleVTConnectionEstablished->Don't create VTManager cause : isVideoCallAlive()="
                     + isImsCallAlive());
