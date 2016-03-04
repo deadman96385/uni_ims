@@ -115,6 +115,7 @@ char RIL_SP_SIM_PIN_PROPERTYS[128]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.
 #define RIL_SIM_TYPE1  "ril.ICC_TYPE_1"
 #define RIL_SET_SPEED_MODE_COUNT  "ril.sim.speed_count"
 #define PROP_ATTACH_ENABLE "persist.sys.attach.enable"
+#define PROP_COPS_MODE "persist.sys.cops.mode"
 
 //3G/4G switch in different slot
 // {for LTE}
@@ -4046,6 +4047,15 @@ static void requestNetworkRegistration(int channelID,  void *data, size_t datale
 {
     char cmd[128] = {0};
     int err;
+    char copsmode_property[PROPERTY_VALUE_MAX] = { 0 };
+    int cops_mode = 1;
+    property_get(PROP_COPS_MODE, copsmode_property, "manual");
+    if (!strcmp(copsmode_property, "automatic")) {
+        cops_mode = 4;
+    } else {
+        cops_mode = 1;
+    }
+    RILLOGD("cops_mode = %d", cops_mode);
 #ifdef RIL_SPRD_EXTENSION
     RIL_NetworkList *network = (RIL_NetworkList *)data;
 #else
@@ -4062,13 +4072,13 @@ static void requestNetworkRegistration(int channelID,  void *data, size_t datale
             *p=0;
         }
         if (network->act >= 0) {
-            snprintf(cmd, sizeof(cmd), "AT+COPS=1,2,\"%s\",%d", network->operatorNumeric, network->act);
+            snprintf(cmd, sizeof(cmd), "AT+COPS=%d,2,\"%s\",%d", cops_mode, network->operatorNumeric, network->act);
         } else {
-            snprintf(cmd, sizeof(cmd), "AT+COPS=1,2,\"%s\"", network->operatorNumeric);
+            snprintf(cmd, sizeof(cmd), "AT+COPS=%d,2,\"%s\"", cops_mode, network->operatorNumeric);
         }
         /* Mod for bug267572 End   */
 #else
-        snprintf(cmd, sizeof(cmd), "AT+COPS=1,2,\"%s\"", network);
+        snprintf(cmd, sizeof(cmd), "AT+COPS=%d,2,\"%s\"", cops_mode, network);
 #endif
         err = at_send_command(ATch_type[channelID], cmd, &p_response);
         if (err != 0 || p_response->success == 0)
