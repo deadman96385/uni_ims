@@ -105,7 +105,9 @@ void _VC_rtcpHandleUpdateRtcpMinInterval(
         /* Store the Local AS bandwidth parameter in the _VC_RtcpObject. */
         rtcp_ptr->localVideoAsBwKbps = video_ptr->localVideoAsBwKbps;
         /* To start with TMMBR = Local AS Bandwidth parameter. */
-        rtcp_ptr->feedback.sendTmmbrInKbps = video_ptr->localVideoAsBwKbps;
+        rtcp_ptr->feedback.sendTmmbrInKbps = 0; //video_ptr->localVideoAsBwKbps;
+        OSAL_logMsg("%s: sendTmmbrInKbps init %u, localVideoAsBwKbps %u\n",
+                __FUNCTION__, rtcp_ptr->feedback.sendTmmbrInKbps, rtcp_ptr->localVideoAsBwKbps);
     }
 }
 

@@ -172,7 +172,7 @@ static void _VC_rtcpUtilProcessRtp(
     /* Store the count of total received packets for the next time this method is called */
     rtcp_ptr->receivedPrior = rtpInfo_ptr->received;
     /* Find the number of lost packets between now and the previously sent RTCP report */
-    lostInterval = expectedInterval - receivedInterval;
+    lostInterval = expectedInterval < receivedInterval ? 0 : (expectedInterval - receivedInterval);
 
     /* Accumulate lost packet total for TMMBR. */
     rtcp_ptr->feedback.lostPacketTotal += lostInterval;
@@ -266,17 +266,17 @@ static uint32 _VC_rtcpUtilRunTmmbrFsm2(
     dir = feedback_ptr->direction;
     bitrate_kbps = rtcp_ptr->curRxBitrate;
 
-    OSAL_logMsg("%s: TMMBR - state:%u dir:%d bitrate_kbps: %u expected:%u lost:%u\n",
+    OSAL_logMsg("%s: TMMBR - state:%u dir:%d bitrate_kbps: %u expected:%u lost:%u curr_tmmbr %u\n",
             __FUNCTION__, state, dir, bitrate_kbps, feedback_ptr->expectedPacketTotal,
-            feedback_ptr->lostPacketTotal);
+            feedback_ptr->lostPacketTotal, feedback_ptr->sendTmmbrInKbps);
 
     /*
      * if the bitrate is zero, it means we should accmulate more pkts in the first time.
-     * if the expected pkts is less than 500, should accmulate more pkts to reduce the tmmbr frequency.
+     * if the expected pkts is less than 256, should accmulate more pkts to reduce the tmmbr frequency.
      *
      * */
     if (bitrate_kbps == 0 ||
-            feedback_ptr->expectedPacketTotal < 500) {
+            feedback_ptr->expectedPacketTotal < 256) {
         return mask;
     }
 
@@ -317,20 +317,32 @@ static uint32 _VC_rtcpUtilRunTmmbrFsm2(
     switch (dir) {
         case _VC_TMMBR_DIR_LEVEL:
             if (lost_permillage >= 10) {
-                feedback_ptr->step = lost_permillage >= 30 ?
-                        (bitrate_kbps * 205) >> 10 : /* if lost_permillage > 3%, step = 0.2 * bitrate */
-                        (bitrate_kbps * 102) >> 10;  /* if 3% > lost_permillage > 1%, step = 0.1 * bitrate*/
+                feedback_ptr->step = lost_permillage >= 50 ?
+                        (bitrate_kbps * 203) >> 10 : /* if lost_permillage > 5%, step = 0.2 * bitrate */
+                        (bitrate_kbps * 102) >> 10;  /* if 5% > lost_permillage > 1%, step = 0.1 * bitrate*/
                 feedback_ptr->direction = _VC_TMMBR_DIR_DOWN;
                 feedback_ptr->state = _VC_TMMBR_STATE_PENDING;
                 feedback_ptr->sendTmmbrInKbps = bitrate_kbps - feedback_ptr->step;
+                mask = VTSP_MASK_RTCP_FB_TMMBR;
+            } else if (lost_permillage == 0) {
+                feedback_ptr->direction = _VC_TMMBR_DIR_LEVEL;
+                feedback_ptr->state = _VC_TMMBR_STATE_PENDING;
+                if (bitrate_kbps < feedback_ptr->sendTmmbrInKbps ||
+                        bitrate_kbps < _VC_TMMBR_SENT_MIN) {
+                    bitrate_kbps = _VC_TMMBR_SENT_MIN < feedback_ptr->sendTmmbrInKbps ?
+                        feedback_ptr->sendTmmbrInKbps : _VC_TMMBR_SENT_MIN;
+                }
+                //bitrate_kbps = feedback_ptr->sendTmmbrInKbps <= bitrate_kbps ? bitrate_kbps : feedback_ptr->sendTmmbrInKbps;
+                //bitrate_kbps = bitrate_kbps < _VC_TMMBR_SENT_MIN ? _VC_TMMBR_SENT_MIN : bitrate_kbps;
+                feedback_ptr->sendTmmbrInKbps = bitrate_kbps + ((bitrate_kbps * 51) >> 10); /* increase 5% bitrate*/
                 mask = VTSP_MASK_RTCP_FB_TMMBR;
             }
             break;
         case _VC_TMMBR_DIR_DOWN:
             if (lost_permillage >= 10) {
-                feedback_ptr->step = lost_permillage >= 30 ?
-                        (bitrate_kbps * 205) >> 10 : /* if lost_permillage > 3%, step = 0.2 * bitrate */
-                        (bitrate_kbps * 102) >> 10;  /* if 3% > lost_permillage > 1%, step = 0.1 * bitrate*/
+                feedback_ptr->step = lost_permillage >= 50 ?
+                        (bitrate_kbps * 203) >> 10 : /* if lost_permillage > 5%, step = 0.2 * bitrate */
+                        (bitrate_kbps * 102) >> 10;  /* if 5% > lost_permillage > 1%, step = 0.1 * bitrate*/
                 feedback_ptr->direction = _VC_TMMBR_DIR_DOWN;
                 feedback_ptr->state = _VC_TMMBR_STATE_PENDING;
                 feedback_ptr->sendTmmbrInKbps = bitrate_kbps - feedback_ptr->step;
@@ -355,14 +367,19 @@ static uint32 _VC_rtcpUtilRunTmmbrFsm2(
             break;
         case _VC_TMMBR_DIR_UP:
             if (lost_permillage >= 10) {
-                feedback_ptr->step = lost_permillage >= 30 ?
-                        (bitrate_kbps * 205) >> 10 : /* if lost_permillage > 3%, step = 0.2 * bitrate */
-                        (bitrate_kbps * 102) >> 10;  /* if 3% > lost_permillage > 1%, step = 0.1 * bitrate*/
+                feedback_ptr->step = lost_permillage >= 50 ?
+                        (bitrate_kbps * 203) >> 10 : /* if lost_permillage > 5%, step = 0.2 * bitrate */
+                        (bitrate_kbps * 102) >> 10;  /* if 5% > lost_permillage > 1%, step = 0.1 * bitrate*/
                 feedback_ptr->direction = _VC_TMMBR_DIR_DOWN;
                 feedback_ptr->state = _VC_TMMBR_STATE_PENDING;
                 feedback_ptr->sendTmmbrInKbps = bitrate_kbps - feedback_ptr->step;
                 mask = VTSP_MASK_RTCP_FB_TMMBR;
             } else {
+                if (bitrate_kbps < feedback_ptr->sendTmmbrInKbps ||
+                        bitrate_kbps < _VC_TMMBR_SENT_MIN) {
+                    bitrate_kbps = _VC_TMMBR_SENT_MIN < feedback_ptr->sendTmmbrInKbps ?
+                        feedback_ptr->sendTmmbrInKbps : _VC_TMMBR_SENT_MIN;
+                }
                 if (feedback_ptr->step < _VC_TMMBR_STEP_MIN) {
                     feedback_ptr->step = 0;
                     feedback_ptr->direction = _VC_TMMBR_DIR_LEVEL;
@@ -384,10 +401,13 @@ static uint32 _VC_rtcpUtilRunTmmbrFsm2(
             break;
     }
 
-    OSAL_logMsg("%s: TMMBR - state:%d->%d, dir:%d->%d, sendTmmbrInKbps:%u, step:%u, lost_permillage:%u, mask:0x%x\n",
-            __FUNCTION__, state, feedback_ptr->state, dir, feedback_ptr->direction,
-            feedback_ptr->sendTmmbrInKbps, feedback_ptr->step, lost_permillage, mask);
-
+    if (mask & VTSP_MASK_RTCP_FB_TMMBR) {
+        feedback_ptr->sendTmmbrInKbps = feedback_ptr->sendTmmbrInKbps > _VC_TMMBR_SENT_MIN ?
+                feedback_ptr->sendTmmbrInKbps : _VC_TMMBR_SENT_MIN;
+        OSAL_logMsg("%s: TMMBR - state:%d->%d, dir:%d->%d, sendTmmbrInKbps:%u, step:%u, lost_permillage:%u, mask:0x%x\n",
+                __FUNCTION__, state, feedback_ptr->state, dir, feedback_ptr->direction,
+                feedback_ptr->sendTmmbrInKbps, feedback_ptr->step, lost_permillage, mask);
+    }
     /* Reset the variables that keeps track of incoming video payload statistics. */
     feedback_ptr->expectedPacketTotal = 0;
     feedback_ptr->lostPacketTotal = 0;
