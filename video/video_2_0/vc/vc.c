@@ -293,6 +293,8 @@ static void _VC_rtcpSendRecvTask(
     rtcp_ptr->feedback.state = _VC_TMMBR_STATE_DONE;
     rtcp_ptr->feedback.direction = _VC_TMMBR_DIR_LEVEL;
     rtcp_ptr->feedback.sendTmmbrInKbps = 0;
+    rtcp_ptr->feedback.expectedPacketTotal = 0;
+    rtcp_ptr->feedback.lostPacketTotal = 0;
 
     /* register the handler to catch SIGALRM */
     OSAL_taskRegisterSignal(SIGALRM, _VC_alarmHandler);

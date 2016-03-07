@@ -70,7 +70,9 @@
 #define _VC_TMMBR_STATE_PENDING      (1)
 
 /* step threshold */
-#define _VC_TMMBR_STEP_MIN           (30) /* 30 Kbps */
+#define _VC_TMMBR_STEP_MIN           (25) /* 25 Kbps */
+/* the mininum sent tmmbr*/
+#define _VC_TMMBR_SENT_MIN           (100) /* 100 Kbps*/
 
 /* Number of incoming packets to be ignored when TMMBR state is inhibited. */
 #define _VC_TMMBR_N_INHIBT ((5) * JBV_OBSERVATION_WINDOW)
@@ -126,7 +128,7 @@
 #define _VC_RTP_SEQ_MOD        (1 << 16)
 
 /* Default min interval for RTCP reports. RFC */
-#define _VC_RTCP_MIN_INTERVAL_MILLIS    (5000)
+#define _VC_RTCP_MIN_INTERVAL_MILLIS    (1000)
 
 /*
  * RTCP Constants
