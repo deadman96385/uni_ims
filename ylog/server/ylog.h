@@ -68,6 +68,50 @@ enum loglevel {
 #define ylog_critical(msg...) ylog_printf(global_context, LOG_CRITICAL, "ylog<critical> "msg)
 #define ylog_error(msg...) ylog_printf(global_context, LOG_ERROR, "ylog<error> "msg)
 
+#define YTAG_TAG_PROPERTY       0x05
+#define YTAG_TAG_NEWFILE_BEGIN  0x10
+#define YTAG_TAG_NEWFILE_END    0x11
+#define YTAG_TAG_RAWDATA        0x12
+struct ytag {
+    unsigned int tag; /* u32bits le32_to_cpu; All of them are Little Endian stored */
+    unsigned int len;
+    /* unsigned int namelen; */
+    char data[0];
+};
+
+#define YTAG_MAGIC      0xf00e789a
+#define YTAG_VERSION    0x00000001
+struct ytag_header {
+    unsigned int tag; /* u32bits le32_to_cpu; All of them are Little Endian stored */
+    unsigned int len;
+    unsigned int version;
+    unsigned int reserved[65];
+};
+
+#define ytag_rawdata(buf, count) do { \
+    ytag.tag = YTAG_TAG_RAWDATA; \
+    ytag.len = sizeof(ytag) + count; \
+    write(STDOUT_FILENO, &ytag, sizeof(ytag)); \
+    if (count) \
+        write(STDOUT_FILENO, buf, count); \
+} while (0);
+
+#define ytag_newfile(_YTAG, _NAME) do { \
+    int ynlen; char *ylname = _NAME; \
+    ytag.tag = _YTAG; \
+    ytag.len = sizeof(ytag); \
+    if (ylname) { \
+        ynlen = strlen(ylname); \
+        ytag.len += ynlen; \
+    } \
+    write(STDOUT_FILENO, &ytag, sizeof(ytag)); \
+    if (ylname && ynlen) \
+        write(STDOUT_FILENO, ylname, ynlen); \
+} while (0);
+
+#define ytag_newfile_begin(_NAME) ytag_newfile(YTAG_TAG_NEWFILE_BEGIN, _NAME)
+#define ytag_newfile_end(_NAME) ytag_newfile(YTAG_TAG_NEWFILE_END, _NAME)
+
 enum contextual_model {
     C_FULL_LOG = 0,
     C_MINI_LOG,
@@ -362,6 +406,7 @@ struct ydst {
     long segments; /* all segment numbers generated till now */
     int max_segment; /* how many segment can be reached */
     int nowrap; /* when the log size reaches the max, stop it */
+    int ytag; /* 1: use ytag process in analyzer.py; 0: no ytag process in analyzer.py */
     enum ydst_segment_mode segment_mode;
 
     unsigned long long max_segment_size_now; /* the max size of each segment now in use */

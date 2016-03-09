@@ -729,6 +729,7 @@ static void os_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root
             .max_segment_size = 20*1024*1024,
             .cache = &os_cacheline[OS_YDST_TYPE_HCIDUMP],
             .nowrap = 1,
+            .ytag = 1,
         },
         [OS_YDST_TYPE_TRACES] = {
             .file = "traces/",
@@ -840,6 +841,7 @@ static void os_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root
             .file = "hcidump",
             .ydst = &ydst[OS_YDST_TYPE_HCIDUMP+OS_YDST_TYPE_BASE],
             .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY,
+            .status = YLOG_DISABLED,
             .raw_data = 1,
         },
         {

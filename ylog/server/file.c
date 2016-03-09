@@ -970,6 +970,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
     int ydst_change_seq_resize_segment;
     int moved = 0;
     int nowrap;
+    int generate_analyzer = 0;
 
     if (cl)
         ydst_cache_lock(ydst, cl);
@@ -1144,7 +1145,23 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
     }
 
     // if ((ydst->segments == 1 || moved) && (ydst->max_segment_now > 1 || ydst->max_segment > 1)) {
-    if ((ydst->segments == 1) && (ydst->max_segment_now > 1 || ydst->max_segment > 1)) {
+    if ((ydst->segments == 1) && (ydst->max_segment_now > 1 || ydst->max_segment > 1))
+        generate_analyzer = 1;
+
+    if (generate_analyzer && ydst->ytag) {
+        struct ytag_header ytag_header;
+        memset(&ytag_header, 0, sizeof(struct ytag_header));
+        ytag_header.tag = YTAG_MAGIC;
+        ytag_header.len = sizeof(struct ytag_header);
+        ytag_header.version = YTAG_VERSION;
+        /* append ytag in the first segment file */
+        written_count = ydst->write(y->id_token, y->id_token_len, (char*)&ytag_header, sizeof(struct ytag_header), ydst);
+        ydst->size += written_count;
+        y->size += written_count;
+        ydst->segment_size += written_count;
+    }
+
+    if (generate_analyzer) {
         int fd;
         /* First time to generate this ydst folder */
         /**
@@ -1161,19 +1178,32 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
         // sed 's/\\/\\\\/g;s/\(.*\)/"\1\\n" \\/' analyzer.py
         char *template_python1 = \
 "#!/usr/bin/env python\n" \
+"# -*- coding:utf-8 -*-\n" \
 "'''\n" \
 "Copyright (C) 2016 Spreadtrum\n" \
 "Created on Jan 18, 2016\n" \
+"2016.03.11 -- add ytag parser\n" \
 "'''\n" \
 "\n";
 
-// "merged = 'all_log'\n"
-// "logpath = './'\n"
-// "id_token_len = 1\n"
-// "logdict = {\n"
-// "'A':'main.log',\n"
-// "'B':'event.log'\n"
-// "}\n"
+#if 0
+"YTAG = 1\n" \
+"YTAG_MAGIC = 0xf00e789a\n" \
+"YTAG_VERSION = 1\n" \
+"YTAG_TAG_PROPERTY = 0x05\n" \
+"YTAG_TAG_NEWFILE_BEGIN = 0x10\n" \
+"YTAG_TAG_NEWFILE_END = 0x11\n" \
+"YTAG_TAG_RAWDATA = 0x12\n" \
+"YTAG_STRUCT_SIZE = 0x08\n" \
+"ytag_folder = 'ytag'\n" \
+"merged = 'all_log'\n"
+"logpath = ''\n"
+"id_token_len = 1\n"
+"logdict = {\n"
+"'A':'main.log',\n"
+"'B':'event.log'\n"
+"}\n"
+#endif
 
         yds_new_segment_file_name(path, sizeof path, 0, ydst);
         dirname2(path);
@@ -1184,8 +1214,17 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
             int i;
             char *p;
             write(fd, template_python1, strlen(template_python1));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG = %d\n", ydst->ytag));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG_MAGIC = 0x%08x\n", YTAG_MAGIC));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG_VERSION = 0x%08x\n", YTAG_VERSION));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG_TAG_PROPERTY = 0x%02x\n", YTAG_TAG_PROPERTY));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG_TAG_NEWFILE_BEGIN = 0x%02x\n", YTAG_TAG_NEWFILE_BEGIN));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG_TAG_NEWFILE_END = 0x%02x\n", YTAG_TAG_NEWFILE_END));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG_TAG_RAWDATA = 0x%02x\n", YTAG_TAG_RAWDATA));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG_STRUCT_SIZE = 0x%02x\n", (unsigned int)sizeof(struct ytag)));
+            write(fd, path, snprintf(path, sizeof(path), "ytag_folder = 'ytag'\n"));
             write(fd, path, snprintf(path, sizeof(path), "merged = '%s'\n", ydst->file_name));
-            write(fd, path, snprintf(path, sizeof(path), "logpath = './'\n"));
+            write(fd, path, snprintf(path, sizeof(path), "logpath = ''\n"));
             write(fd, path, snprintf(path, sizeof(path), "id_token_len = %d\n", y->id_token_len));
             write(fd, path, snprintf(path, sizeof(path), "logdict = {\n"));
             for_each_ylog(i, y, NULL) {
