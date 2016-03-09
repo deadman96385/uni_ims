@@ -13815,7 +13815,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RILLOGD("onUnsolicited(),SRVCC status: %d", status);
         RIL_onUnsolicitedResponse(RIL_UNSOL_SRVCC_STATE_NOTIFY, &status,
                 sizeof(status));
-        RIL_requestTimedCallback (sendCSCallStateChanged, NULL, &TIMEVAL_CSCALLSTATEPOLL);
+        if(status == SRVCC_PS_TO_CS_CANCELED || status == SRVCC_PS_TO_CS_FAILED){
+            RIL_requestTimedCallback (sendCallStateChanged, NULL, &TIMEVAL_CSCALLSTATEPOLL);
+        } else {
+            RIL_requestTimedCallback (sendCSCallStateChanged, NULL, &TIMEVAL_CSCALLSTATEPOLL);
+        }
     }
     /* @} */
     /*SPRD: add for VoLTE to handle emergency number report */
