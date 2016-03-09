@@ -11,5 +11,7 @@ include $(LOCAL_PATH)/system-ac702.mk
 MY_INCLUDE_DIR := \
 	$(LOCAL_PATH)/include_ac702
 
+MY_MODULES += vcecamera
+
 include $(call all-named-subdir-makefiles, $(MY_MODULES))
 
