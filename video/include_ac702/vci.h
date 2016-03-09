@@ -25,6 +25,8 @@ typedef enum {
     VC_EVENT_SEND_KEY_FRAME         = 8,
     VC_EVENT_NO_RTP                 = 9,
     VC_EVENT_PKT_LOSS_RATE          = 10,
+    VC_EVENT_RESOLUTION_CHANGED     = 11,
+    VC_EVENT_CODEC_TYPE_CHENGED     = 12,
 } VC_Event;
 
 typedef struct {

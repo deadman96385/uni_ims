@@ -681,7 +681,7 @@ _VPAD_READ_TASK_LOOP:
             _VPAD_muxFifoDestroy();
             OSAL_logMsg("%s: VPMD connection is lost.\n", __FUNCTION__);
         }
-        OSAL_logMsg("%s: VPMD read fail, retry later.\n");
+        OSAL_logMsg("%s: VPMD read fail, retry later.\n", __FUNCTION__);
         OSAL_taskDelay(VPAD_MUX_ERROR_RECOVERY_DELAY);
         goto _VPAD_READ_TASK_LOOP;
     }

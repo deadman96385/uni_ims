@@ -116,13 +116,22 @@ vint _VC_calcRxBitrate(_VC_RtpObject *rtp_ptr,
     time_us = tv->sec * 1000000;
     time_us += tv->usec;
 
+    /*
+     * if the pSize is greater than VIDEO_MAX_RTP_SZ+128, it seems an invalid rtp pkt.
+     * */
+    if (size > VIDEO_MAX_RTP_SZ + 128) {
+        JBV_wrnLog(" ts %u, seqn %u: pSize %u is beyond the size limit %u, NOT CALCULATE\n",
+                pkt_ptr->tsOrig, seqn, size, VIDEO_MAX_RTP_SZ + 128);
+        return _VC_ERROR;
+    }
+
     br_stat->totalSize += size;
 
     /*
      *
      * if a new period begins, we reset the statistics.
      *
-     * if the interval is greater than 500 ms and the seqn is sequencial,
+     * if the interval is greater than 2s and the seqn is sequencial,
      * we here assume that the peer UE is paused for a while then resumes,
      * but the session keeps running.
      *
