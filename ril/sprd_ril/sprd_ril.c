@@ -3742,7 +3742,9 @@ void requestLastDataFailCause(int channelID, void *data, size_t datalen, RIL_Tok
 void requestLastCallFailCause(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     int response = CALL_FAIL_ERROR_UNSPECIFIED;
-
+    char vendorCause[32];
+    RIL_LastCallFailCauseInfo *failCause =
+            (RIL_LastCallFailCauseInfo *)calloc(1, sizeof(RIL_LastCallFailCauseInfo));
     pthread_mutex_lock(&s_call_mutex);
     switch(call_fail_cause) {
         case 1:
@@ -3783,10 +3785,14 @@ void requestLastCallFailCause(int channelID, void *data, size_t datalen, RIL_Tok
         default:
             response = CALL_FAIL_ERROR_UNSPECIFIED;
     }
+    failCause->cause_code = response;
+    snprintf(vendorCause, sizeof(vendorCause), "%d", call_fail_cause);
+    failCause->vendor_cause = vendorCause;
     pthread_mutex_unlock(&s_call_mutex);
 
-    RIL_onRequestComplete(t, RIL_E_SUCCESS, &response,
-            sizeof(int));
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, failCause,
+            sizeof(RIL_LastCallFailCauseInfo));
+    free(failCause);
 }
 
 static void requestBasebandVersion(int channelID, void *data, size_t datalen, RIL_Token t)
@@ -8823,8 +8829,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SIM_CLOSE_CHANNEL
                 || request == RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL
                 || (request == RIL_REQUEST_DIAL && s_isstkcall)
-                || request == RIL_EXT_REQUEST_GET_HD_VOICE_STATE)
-       ) {
+#if defined (RIL_SPRD_EXTENSION)
+#if defined (RIL_SUPPORTED_OEMSOCKET)
+                || request == RIL_EXT_REQUEST_GET_HD_VOICE_STATE
+#endif
+#endif
+       )) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
         return;
     }
@@ -8848,7 +8858,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN
                 || request == RIL_REQUEST_SIM_CLOSE_CHANNEL
                 || request == RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL
+#if defined (RIL_SUPPORTED_OEMSOCKET)
                 || request == RIL_EXT_REQUEST_GET_HD_VOICE_STATE
+                || request == RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2
+                || request == RIL_EXT_REQUEST_SIM_GET_ATR
+                || request == RIL_EXT_REQUEST_ENABLE_RAU_NOTIFY
+#endif
 #endif
                 || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
                 || request == RIL_REQUEST_STK_SEND_TERMINAL_RESPONSE
@@ -8878,8 +8893,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_OEM_HOOK_RAW
                 || request == RIL_REQUEST_OEM_HOOK_STRINGS
                 || request == RIL_REQUEST_SIM_OPEN_CHANNEL
-                || request == RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2
-                || request == RIL_EXT_REQUEST_SIM_GET_ATR
                 || request == RIL_REQUEST_SET_INITIAL_ATTACH_APN
                 || request == RIL_REQUEST_GET_IMS_CURRENT_CALLS
                 || request == RIL_REQUEST_INIT_ISIM
@@ -8894,8 +8907,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SET_IMS_SMSC
                 || request == RIL_REQUEST_ALLOW_DATA
                 || request == RIL_REQUEST_SIM_AUTHENTICATION
-                || (request == RIL_REQUEST_DIAL && s_isstkcall))
-       ) {
+                || (request == RIL_REQUEST_DIAL && s_isstkcall)
+        )) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
         return;
     }
@@ -9133,12 +9146,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         case RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL:
             requestTransmitApdu(channelID, data, datalen, t);
-            break;
-        case RIL_EXT_REQUEST_SIM_GET_ATR:
-            requestSIM_GetAtr(channelID, t);
-            break;
-        case RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2:
-            requestSIM_OpenChannel_WITH_P2(channelID, data, datalen, t);
             break;
         case RIL_REQUEST_SIM_AUTHENTICATION:{
             RIL_SimAuthentication *sim_auth = (RIL_SimAuthentication *) data;
@@ -11351,8 +11358,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_IMS_ADD_TO_GROUP_CALL:
             requestAddGroupCall(channelID, data, datalen, t);
             break;
-        case RIL_EXT_REQUEST_GET_HD_VOICE_STATE:
-        {
+#if defined (RIL_SUPPORTED_OEMSOCKET)
+        case RIL_EXT_REQUEST_GET_HD_VOICE_STATE: {
             p_response = NULL;
             int response = 0;
             err = at_send_command_singleline(ATch_type[channelID], "AT+SPCAPABILITY=10,0",
@@ -11375,6 +11382,19 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             at_response_free(p_response);
             break;
         }
+        case RIL_EXT_REQUEST_SIM_GET_ATR:
+            requestSIM_GetAtr(channelID, t);
+            break;
+        case RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2:
+            requestSIM_OpenChannel_WITH_P2(channelID, data, datalen, t);
+            break;
+        case RIL_EXT_REQUEST_ENABLE_RAU_NOTIFY: {
+            // set RAU SUCCESS report to AP
+            at_send_command(ATch_type[channelID], "AT+SPREPORTRAU=1", NULL);
+            RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            break;
+        }
+#endif  // RIL_SUPPORTED_OEMSOCKET
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_GET_CELL_BROADCAST_CONFIG:
             requestGetCellBroadcastConfig(channelID,data, datalen, t);
@@ -12282,10 +12302,6 @@ static void initializeCallback(void *param)
     if (isSvLte()) {
         setTestMode(channelID);
     }
-    /* @} */
-
-    /* set RAU SUCCESS report to AP @{*/
-    at_send_command(ATch_type[channelID], "AT+SPREPORTRAU=1", NULL);
     /* @} */
 
     /* SPRD : for non-CMCC version @{ */
