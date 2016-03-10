@@ -57,7 +57,7 @@ static void *noopRemoveWarning( void *a ) { return a; }
 #define RIL_UNUSED_PARM(a) noopRemoveWarning((void *)&(a));
 
 // Default MTU value
-#define DEFAULT_MTU 1500
+//#define DEFAULT_MTU 1500
 
 typedef enum {
     SIM_ABSENT = 0,
@@ -2850,7 +2850,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
             } else {
                 RILLOGE("Unknown IP type!");
             }
-            responses[i].mtu = DEFAULT_MTU;
+//          responses[i].mtu = DEFAULT_MTU;
             if((cid != -1) && (t == NULL)){
                  RILLOGE("i = %d",i);
                  if((!responses[i].active) && strcmp(responses[i].addresses,"")){
