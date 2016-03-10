@@ -315,10 +315,12 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
      }
 
     public void handleClearLocalCallProfile(ImsCallSessionImpl session){
-          if(session.mImsDriverCall != null && (session.mImsDriverCall.isReuestAccept() || session.mImsDriverCall.isReuestReject()) || 
+          /* SPRD: Modify for Bug538938 @{ */
+          if(session.mImsDriverCall != null && (session.mImsDriverCall.isReuestAccept() || session.mImsDriverCall.isReuestReject() || session.mImsDriverCall.isRequestUpgradeToVideo() || session.mImsDriverCall.isRequestDowngradeToVoice()) ||
              mImsCallSessionImpl.getLocalRequestProfile().mCallType == mImsCallSessionImpl.mImsCallProfile.mCallType){
              mImsCallSessionImpl.getLocalRequestProfile().mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
           }
+          /* @} */
     }
 
     public void handleVolteCallMediaChange(ImsCallSessionImpl session){
