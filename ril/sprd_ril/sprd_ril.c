@@ -974,7 +974,7 @@ static inline void speaker_mute(void)
 
 static inline int all_calls(int channelID, int do_mute)
 {
-    ATResponse *p_response;
+    ATResponse *p_response = NULL;
     ATLine *p_cur;
     int countCalls;
 
@@ -1878,7 +1878,7 @@ error:
 static int getSimMode(int channelID){
     int err;
     int sim_type = 0;
-    ATResponse *p_response;
+    ATResponse *p_response = NULL;
     char *line;
 
     err = at_send_command_singleline(ATch_type[channelID], "AT^CARDMODE", "^CARDMODE:", &p_response);
@@ -2242,6 +2242,8 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
                 isSimCUCC = true;
             }
         }
+        at_response_free(p_response);
+        p_response = NULL;
         if (isSvLte()) {
           // if svlte, auto-attach is decided by framework
             if (strcmp(s_modem, "l") && isSimCUCC) {
@@ -2278,8 +2280,11 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
                 err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
             }
         }
-        if (err < 0 || p_response->success == 0)
+        if (err < 0 || (p_response != NULL && p_response->success == 0))
             RILLOGE("GPRS auto attach failed!");
+
+        at_response_free(p_response);
+        p_response = NULL;
 
         if (!(isSvLte()&& !strcmp(s_modem, "l") ) ) {
             err = at_send_command(ATch_type[channelID],  "AT+SFUN=4", &p_response);
@@ -2427,6 +2432,10 @@ static void onClass2SmsReceived(void *param)
     }
     sprintf(buf,"AT+CRSM=178,28476,%d,4,176,0,\"%x\"", *(int*)param, simtype[sim_type-1]);
     RILLOGD("buf : %s", buf);
+
+    at_response_free(p_response);
+    p_response = NULL;
+
     err = at_send_command_singleline(ATch_type[channelID], buf, "+CRSM:", &p_response);
     if (err < 0 || p_response->success == 0) {
         goto error;
@@ -2474,7 +2483,7 @@ static void requestDataCallList(int channelID, void *data, size_t datalen, RIL_T
 
 static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
 {
-    ATResponse *p_response;
+    ATResponse *p_response = NULL;
     ATLine *p_cur;
     int err;
     int n = 0;
@@ -2539,6 +2548,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
     }
 
     at_response_free(p_response);
+    p_response = NULL;
 
     err = at_send_command_multiline (ATch_type[channelID], "AT+CGDCONT?", "+CGDCONT:", &p_response);
     if (err != 0 || p_response->success == 0) {
@@ -2871,6 +2881,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
         }
 
         at_response_free(p_response);
+        p_response = NULL;
 
         if((t != NULL) && (cid > 0)) {
             RILLOGD("requestOrSendDataCallList is called by SetupDataCall!");
@@ -3167,6 +3178,10 @@ static bool doIPV4_IPV6_Fallback(int channelID, int index, void *data, char *qos
         snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", index+1);
     else
         snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"PPP\",%d", index+1);
+
+    at_response_free(p_response);
+    p_response = NULL;
+
     err = at_send_command(ATch_type[channelID], cmd, &p_response);
     if (errorHandlingForCGDATA(channelID, p_response, err, index))
         goto error;
@@ -3285,6 +3300,7 @@ static int activeSpecifiedCidProcess(int channelID, void *data, int primaryCid, 
         return ret;
     }
     at_response_free(p_response);
+    p_response = NULL;
     snprintf(cmd, sizeof(cmd), "AT+CGPCO=0,\"%s\",\"%s\",%d,%d", username, password, acitveCid, atoi(authtype));
     at_send_command(ATch_type[channelID], cmd, NULL);
 
@@ -3320,6 +3336,8 @@ static int activeSpecifiedCidProcess(int channelID, void *data, int primaryCid, 
         if (fb_ip_type != IPV4V6) {
             RILLOGD( "Fallback pdp type mismatch, do deactive");
             snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d", secondaryCid);
+            at_response_free(p_response);
+            p_response = NULL;
             at_send_command(ATch_type[channelID], cmd, &p_response);
             putPDP(cid_index);
             ret = -1;
@@ -3439,7 +3457,8 @@ RETRY:
                         snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d,%d", cid, 0);
                         RILLOGD("clean up seth cmd = %s", cmd);
                         err = at_send_command(ATch_type[channelID], cmd, &p_response);
-
+                        at_response_free(p_response);
+                        p_response = NULL;
                         snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"M-ETHER\",%d", cid);
                         err = at_send_command(ATch_type[channelID], cmd, &p_response);
 
@@ -3506,6 +3525,8 @@ RETRY:
             } else {
                 snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"%s\",\"%s\",\"\",0,0", index+1, pdp_type, apn);
             }
+            at_response_free(p_response);
+            p_response = NULL;
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0){
                 s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
@@ -3530,6 +3551,8 @@ retrycgatt:
                 pthread_mutex_lock(&s_lte_attach_mutex);
                 if (s_PSRegState == STATE_OUT_OF_SERVICE) {
                     pthread_mutex_unlock(&s_lte_attach_mutex);
+                    at_response_free(p_response);
+                    p_response = NULL;
                     err = at_send_command(ATch_type[channelID], "AT+CGATT=1", &p_response);
                     if (err < 0 || p_response->success == 0) {
                         /******************************************************/
@@ -3552,6 +3575,8 @@ retrycgatt:
                                 RILLOGD("CGATT fall Back Cause: 28");
                                 // Do IPV4 attach
                                 snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"IP\",\"%s\",\"\",0,0", index+1, apn);
+                                at_response_free(p_response);
+                                p_response = NULL;
                                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
                                 if (err < 0 || p_response->success == 0){
                                     s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
@@ -3628,6 +3653,8 @@ retrycgatt:
             } else {
                 snprintf(cmd, sizeof(cmd), "AT+CGDATA=\"PPP\",%d", index+1);
             }
+            at_response_free(p_response);
+            p_response = NULL;
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0) {
                 if (strStartsWith(p_response->finalResponse,"+CME ERROR:")) {
@@ -4155,7 +4182,7 @@ void sendVideoCallStateChanged(void *param)
 static void requestGetCurrentCalls(int channelID, void *data, size_t datalen, RIL_Token t, int bVideoCall)
 {
     int err;
-    ATResponse *p_response;
+    ATResponse *p_response = NULL;
     ATLine *p_cur;
     int countCalls;
     int countValidCalls;
@@ -4235,7 +4262,7 @@ static void requestGetCurrentCalls(int channelID, void *data, size_t datalen, RI
 static void requestGetCurrentCallsVoLTE(int channelID, void *data, size_t datalen, RIL_Token t, int bVideoCall)
 {
     int err;
-    ATResponse *p_response;
+    ATResponse *p_response = NULL;
     ATLine *p_cur;
     int countCalls;
     int countValidCalls;
@@ -4547,8 +4574,10 @@ static void requestWriteSmsToSim(int channelID, void *data, size_t datalen, RIL_
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     at_response_free(p_response);
     return;
+
 error:
-    if (strStartsWith(p_response->finalResponse,"+CMS ERROR:")) {
+    if (p_response != NULL &&
+        strStartsWith(p_response->finalResponse,"+CMS ERROR:")) {
         line = p_response->finalResponse;
         err = at_tok_start(&line);
         if (err < 0)
@@ -5127,6 +5156,7 @@ static void requestNeighboaringCellIds(int channelID, void *data, size_t datalen
             }
     } else {
         at_response_free(p_response);
+        p_response = NULL;
         err = at_send_command_singleline(ATch_type[channelID], "AT+Q3GNCELL",
             "+Q3GNCELL:", &p_response);
         if (err != 0 || p_response->success == 0)
@@ -5171,6 +5201,7 @@ static void requestNeighboaringCellIds(int channelID, void *data, size_t datalen
                 }
         } else {
             at_response_free(p_response);
+            p_response = NULL;
             err = at_send_command_singleline(ATch_type[channelID], "AT+SPQ4GNCELL",
                 "+SPQ4GNCELL:", &p_response);
             if (err != 0 || p_response->success == 0)
@@ -5481,7 +5512,7 @@ static void requestSendIMSSMS(int channelID, void *data, size_t datalen,
     char * line;
     int ret;
     RIL_IMS_SMS_Message *sms = NULL;
-    p_response = NULL;
+
     if (data != NULL) {
         sms = (RIL_IMS_SMS_Message *) data;
         if(sms->tech == RADIO_TECH_3GPP){
@@ -5754,6 +5785,8 @@ static void requestSendSSSMS(int channelID, void *data, size_t datalen, RIL_Toke
     }
 
 retry:
+    at_response_free(p_response);
+    p_response = NULL;
     err = at_send_command_sms(ATch_type[channelID], cmd1, cmd2, "+CMGS:", &p_response);
     if (err != 0 || p_response->success == 0)
         goto error;
@@ -5832,6 +5865,8 @@ static void requestResetRadio(int channelID, RIL_Token t)
 
     setRadioState(channelID, RADIO_STATE_OFF);
 
+    at_response_free(p_response);
+    p_response = NULL;
     err = at_send_command( ATch_type[channelID], "AT+CFUN=1", &p_response);
     if (err < 0|| p_response->success == 0)
     {
@@ -6343,6 +6378,7 @@ static void  requestVerifySimPin(int channelID, void*  data, size_t  datalen, RI
         }
         rsqtype = UNLOCK_PUK;
         at_response_free(p_response);
+        p_response = NULL;
     } else
         goto error;
 
@@ -7377,6 +7413,7 @@ static void requestGetPhonebookStorageInfo(int channelID, void *data, size_t dat
     if (err < 0 || p_response->success == 0) {
         goto error;
     }
+
     err = at_send_command_singleline(ATch_type[channelID], "AT+CPBS?", "+CPBS:", &p_response);
     if (err < 0 || p_response->success == 0) {
         goto error;
@@ -7759,6 +7796,8 @@ static void requestGetCellInfoList(void *data, size_t datalen, RIL_Token t,int c
         cell_type=RIL_CELL_INFO_TYPE_WCDMA;
     }
     // For net type,tac
+    at_response_free(p_response);
+    p_response = NULL;
     if(cell_type == RIL_CELL_INFO_TYPE_LTE ){
         err = at_send_command_singleline(ATch_type[channelID], "AT+CEREG?", "+CEREG:", &p_response);
     }else{
@@ -7805,6 +7844,8 @@ static void requestGetCellInfoList(void *data, size_t datalen, RIL_Token t,int c
     }
 
     // For cellinfo
+    at_response_free(p_response);
+    p_response = NULL;
     if(cell_type == RIL_CELL_INFO_TYPE_LTE){
         err = at_send_command_singleline(ATch_type[channelID], "AT+SPQ4GNCELL", "+SPQ4GNCELL", &p_response);
     }else if(cell_type == RIL_CELL_INFO_TYPE_GSM){
@@ -7866,6 +7907,8 @@ static void requestGetCellInfoList(void *data, size_t datalen, RIL_Token t,int c
         RILLOGD("requestGetCellInfoList cid 2/3G %d",cid);
     }
     */
+    at_response_free(p_response);
+    p_response = NULL;
     err = at_send_command_singleline(ATch_type[channelID], "AT+CESQ", "+CESQ:", &p_response);
     if (err < 0 || p_response->success == 0) {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
@@ -8094,11 +8137,11 @@ static void requestOpenLogicalChannel(int channelID, void *data, size_t datalen,
 
     asprintf(&cmd, "AT+SPCCHO=\"%s\"", (char *) data);
     err = at_send_command_singleline(ATch_type[channelID], cmd, "+SPCCHO:", &p_response);
-    if (err < 0 || p_response->success == 0) {
+    if (err < 0) goto error;
+    if (p_response != NULL && p_response->success == 0) {
         if (!strcmp(p_response->finalResponse, "+CME ERROR: 20")) {
             err_no = RIL_E_MISSING_RESOURCE;
-        } else if (!strcmp(p_response->finalResponse,
-                "+CME ERROR: 22")) {
+        } else if (!strcmp(p_response->finalResponse, "+CME ERROR: 22")) {
             err_no = RIL_E_NO_SUCH_ELEMENT;
         }
         goto error;
@@ -8170,12 +8213,11 @@ static void  requestSIM_OpenChannel_WITH_P2(int channelID, void *data, size_t da
     int response_length = 1;
     asprintf(&cmd, "AT+SPCCHO=\"%s,%s, %s\"", strings[0], rsp_type, strings[1]);
     err = at_send_command_singleline(ATch_type[channelID], cmd, "+SPCCHO:", &p_response);
-
-    if (err < 0 || p_response->success == 0) {
+    if (err < 0) goto error;
+    if (p_response != NULL && p_response->success == 0) {
         if (!strcmp(p_response->finalResponse, "+CME ERROR: 20")) {
             err_no = RIL_E_MISSING_RESOURCE;
-        }
-        else if (!strcmp(p_response->finalResponse, "+CME ERROR: 22")) {
+        } else if (!strcmp(p_response->finalResponse, "+CME ERROR: 22")) {
             err_no = RIL_E_NO_SUCH_ELEMENT;
         }
         goto error;
@@ -8279,10 +8321,10 @@ static void requestTransmitApdu(int channelID, void *data, size_t datalen, RIL_T
     }
 
     err = at_send_command_singleline(ATch_type[channelID], cmd, "+CGLA:", &p_response);
-    if (err < 0 || p_response->success == 0) {
-        if (!strcmp(p_response->finalResponse,
-                "+CME ERROR: 21") || !strcmp(p_response->finalResponse,
-                        "+CME ERROR: 50")) {
+    if (err < 0) goto error;
+    if (p_response != NULL && p_response->success == 0) {
+        if (!strcmp(p_response->finalResponse, "+CME ERROR: 21") ||
+            !strcmp(p_response->finalResponse, "+CME ERROR: 50")) {
             err_no = RIL_E_INVALID_PARAMETER;
         }
         goto error;
@@ -8353,12 +8395,11 @@ static void  requestSIM_GetAtr(int channelID, RIL_Token t)
     char *response;
 
     err = at_send_command_singleline(ATch_type[channelID], "AT+SPATR?", "+SPATR:", &p_response);
-
-    if (err < 0 || p_response->success == 0) {
+    if (err < 0) goto error;
+    if (p_response != NULL && p_response->success == 0) {
         if (!strcmp(p_response->finalResponse, "+CME ERROR: 20")) {
             err = RIL_E_MISSING_RESOURCE;
-        }
-        else {
+        } else {
             err = RIL_E_GENERIC_FAILURE;
         }
         goto error;
@@ -8810,7 +8851,7 @@ static void requestUSimAuthentication(int channelID, char *authData, RIL_Token t
 static void
 onRequest (int request, void *data, size_t datalen, RIL_Token t)
 {
-    ATResponse *p_response;
+    ATResponse *p_response = NULL;
     int err;
     int channelID = -1;
 
@@ -9561,6 +9602,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             p_response = NULL;
             err = at_send_command(ATch_type[channelID], "AT+COPS=0", &p_response);
             if (err >= 0 && p_response->success) {
+                at_response_free(p_response);
+                p_response = NULL;
                 err = at_send_command(ATch_type[channelID], "AT+CGAUTO=1", &p_response);
             }
             if (err < 0 || p_response->success == 0) {
@@ -11922,7 +11965,7 @@ static void freeCardStatus(RIL_CardStatus_v6 *p_card_status) {
 
 static void pollSIMState (void *param)
 {
-    ATResponse *p_response;
+    ATResponse *p_response = NULL;
     int ret;
     int channelID;
 
@@ -12056,7 +12099,7 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
         for(i = 0; i <  MAX_PDP; i++) {
             if ( getPDPCid(i) > 0 ) {
                 snprintf(cmd,sizeof(cmd),"AT+CGACT=0,%d",getPDPCid(i));
-                at_send_command(ATch_type[channelID], cmd, &p_response);
+                at_send_command(ATch_type[channelID], cmd, NULL);
                 RILLOGD("pdp[%d].state = %d", i, getPDPState(i));
                 if (pdp[i].state == PDP_BUSY) {
                     int cid = getPDPCid(i);
@@ -15048,6 +15091,7 @@ static void excuteSrvccPendingOperate(void *param){
                 RILLOGD("excuteSrvccPendingOperate fail!---cmd = %s", request->cmd);
             }
             at_response_free(p_response);
+            p_response = NULL;
             putChannel(channelID);
             s_srvccPendingRequest = request->p_next;
 
