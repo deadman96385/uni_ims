@@ -355,6 +355,7 @@ LOCAL void H264Dec_fill_frame_num_gap (H264DecContext *vo, DEC_DECODED_PICTURE_B
     while (curr_frame_num != unused_short_term_frm_num) {
         DEC_STORABLE_PICTURE_T *picture_ptr;
         DEC_FRAME_STORE_T *frame_store_ptr = H264Dec_get_one_free_pic_buffer (vo, dpb_ptr);
+        int32 size_y = vo->width * vo->height;
         DEC_STORABLE_PICTURE_T *prev = dpb_ptr->delayed_pic_num ? dpb_ptr->delayed_pic[dpb_ptr->delayed_pic_num-1] : PNULL;
 
 #if _H264_PROTECT_ & _LEVEL_HIGH_
@@ -377,9 +378,9 @@ LOCAL void H264Dec_fill_frame_num_gap (H264DecContext *vo, DEC_DECODED_PICTURE_B
         picture_ptr->idr_flag = 0;
         picture_ptr->adaptive_ref_pic_buffering_flag = 0;
 
-        picture_ptr->imgY = NULL;
-        picture_ptr->imgU = NULL;
-        picture_ptr->imgV = NULL;
+        picture_ptr->imgY = vo->g_rec_buf.imgY;
+        picture_ptr->imgU = vo->g_rec_buf.imgU;
+        picture_ptr->imgV = vo->g_rec_buf.imgV;
         picture_ptr->imgYAddr = vo->g_rec_buf.imgYAddr;
         picture_ptr->imgUAddr = NULL;
         picture_ptr->imgVAddr = NULL;
@@ -388,6 +389,12 @@ LOCAL void H264Dec_fill_frame_num_gap (H264DecContext *vo, DEC_DECODED_PICTURE_B
             picture_ptr->imgYUV[0] = prev->imgYUV[0];
             picture_ptr->imgYUV[1] = prev->imgYUV[1];
             picture_ptr->imgYUV[2] = prev->imgYUV[2];
+        } else if (vo->g_nFrame_dec_h264 == 0) {
+            int32 ext_size = vo->ext_width*vo->ext_height;
+
+            memset(picture_ptr->imgYUV[0], 16, sizeof(uint8)*ext_size);
+            memset(picture_ptr->imgYUV[1], 128, sizeof(uint8)*ext_size / 4);
+            memset(picture_ptr->imgYUV[2], 128, sizeof(uint8)*ext_size / 4);
         }
         vo->frame_num = unused_short_term_frm_num;
         if (vo->g_active_sps_ptr->pic_order_cnt_type!=0) {

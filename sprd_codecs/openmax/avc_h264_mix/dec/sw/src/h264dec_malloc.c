@@ -34,7 +34,7 @@ LOCAL void Init_Mem (H264DecContext *vo, MMCodecBuffer *pMem, int32 type)
     vo->mem[type].p_base = (uint_32or64)(pMem->common_buffer_ptr_phy) + dw_aligned;
     vo->mem[type].total_size = pMem->size - dw_aligned;
 
-    SCI_MEMSET((void *)(vo->mem[type].v_base), 0, vo->mem[type].total_size);
+    //SCI_MEMSET((void *)(vo->mem[type].v_base), 0, vo->mem[type].total_size);
 
     H264DEC_MALLOC_PRINT("%s: type:%d, dw_aligned, %d, v_base: %lx, p_base: %lx, mem_size:%d\n",
                          __FUNCTION__, type, dw_aligned, vo->mem[type].v_base, vo->mem[type].p_base, vo->mem[type].total_size);
