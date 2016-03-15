@@ -738,7 +738,6 @@ MMEncRet H264EncGenHeader(AVCHandle *avcHandle, MMEncOut *pOutput, int is_sps)
 //    *((volatile uint32*)(&img_ptr->pOneFrameBitstream[img_ptr->stm_offset])) = 0x01000000;
     img_ptr->stm_offset = ( VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + TOTAL_BITS_OFF,"TOTAL_BITS") >> 3);
     img_ptr->stm_offset += VSP_READ_REG(BSM_CTRL_REG_BASE_ADDR + DSTUF_NUM_OFF,"DSTUF_NUM");
-    img_ptr->stm_offset = (img_ptr->stm_offset+7)&(~0x7); // DWORD aligned
 
     img_ptr->pOneFrameBitstream[0] = 0x0;
     img_ptr->pOneFrameBitstream[1] = 0x0;
@@ -753,14 +752,14 @@ HEADER_EXIT:
     SPRD_CODEC_LOGD ("%s, %d, exit generating header, error_flag: %0x\n", __FUNCTION__, __LINE__, vo->error_flag);
     if (is_sps)
     {
-        vo->sps_header_len = pOutput->strmSize;
+        vo->sps_header_len = (pOutput->strmSize+7)&(~0x7); // DWORD aligned
         vo->sps_header = (uint8 *)H264Enc_MemAlloc (vo, pOutput->strmSize, 8, INTER_MEM);
         CHECK_MALLOC(vo->sps_header, "vo->sps_header");
 
         SCI_MEMCPY(vo->sps_header, img_ptr->pOneFrameBitstream, pOutput->strmSize);
     } else
     {
-        vo->pps_header_len = pOutput->strmSize;
+        vo->pps_header_len = (pOutput->strmSize+7)&(~0x7); // DWORD aligned
         vo->pps_header = (uint8 *)H264Enc_MemAlloc (vo, pOutput->strmSize, 8, INTER_MEM);
         CHECK_MALLOC(vo->pps_header, "vo->pps_header");
 
