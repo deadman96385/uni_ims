@@ -247,9 +247,7 @@ PUBLIC MMDecRet Mp4Dec_InitVop(Mp4DecObject *vo, MMDecInput *dec_input_ptr)
             if (vop_mode_ptr->pBckRefFrame->nTimeStamp < vop_mode_ptr->pCurRecFrame->nTimeStamp) {
                 uint64 nTimeStamp;
 
-                if (vo->trace_enabled) {
-                    SPRD_CODEC_LOGD ("%s, [Bck nTimeStamp: %lld], [Cur nTimeStamp: %lld]", __FUNCTION__, vop_mode_ptr->pBckRefFrame->nTimeStamp, vop_mode_ptr->pCurRecFrame->nTimeStamp);
-                }
+                SPRD_CODEC_LOGD ("%s, [Bck nTimeStamp: %lld], [Cur nTimeStamp: %lld]", __FUNCTION__, vop_mode_ptr->pBckRefFrame->nTimeStamp, vop_mode_ptr->pCurRecFrame->nTimeStamp);
                 nTimeStamp = vop_mode_ptr->pCurRecFrame->nTimeStamp;
                 vop_mode_ptr->pCurRecFrame->nTimeStamp = vop_mode_ptr->pBckRefFrame->nTimeStamp;
                 vop_mode_ptr->pBckRefFrame->nTimeStamp = nTimeStamp;
