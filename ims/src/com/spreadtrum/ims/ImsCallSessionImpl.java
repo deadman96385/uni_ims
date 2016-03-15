@@ -459,7 +459,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     }else{
                         LastCallFailCause failCause = (LastCallFailCause)ar.result;
                         mDisconnCause = failCause.causeCode;
-                        VTManagerUtils.showVideoCallFailToast(mContext, mDisconnCause);
+                        // SPRD: add for bug541710
+                        if (mDisconnCause == VTManagerUtils.VODEO_CALL_FDN_BLOCKED) {
+                            VTManagerUtils.showVideoCallFailToast(mContext, mDisconnCause);
+                        }
                     }
                     break;
                 default:
