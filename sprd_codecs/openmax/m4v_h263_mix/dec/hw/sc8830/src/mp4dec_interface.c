@@ -569,10 +569,8 @@ PUBLIC MMDecRet MP4DecDecode(MP4Handle *mp4Handle, MMDecInput *dec_input_ptr, MM
 
 DEC_EXIT:
 
-    if (vo->trace_enabled) {
-        SPRD_CODEC_LOGD ("%s, exit decoder, error flag: 0x%x, frame type:%s", __FUNCTION__, mp4Handle->g_mpeg4_dec_err_flag,
-                         (vop_mode_ptr->VopPredType ==  IVOP) ? "I" : ((vop_mode_ptr->VopPredType ==  PVOP) ? "P" : "B(N)"));
-    }
+    SPRD_CODEC_LOGD ("%s, exit decoder, error flag: 0x%x, frame type:%s", __FUNCTION__, mp4Handle->g_mpeg4_dec_err_flag,
+                     (vop_mode_ptr->VopPredType ==  IVOP) ? "I" : ((vop_mode_ptr->VopPredType ==  PVOP) ? "P" : "B(N)"));
     if (VSP_RELEASE_Dev((VSPObject *)vo) < 0)
     {
         return MMDEC_HW_ERROR;
