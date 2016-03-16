@@ -124,7 +124,8 @@ typedef struct {
     uint32  sendTmmbrInKbps;
     /* MBR value in kbps that was last sent in TMMBR. */
     uint32  recvTmmbrInKbps;
-
+    uint64  recvTmmbrMantissa;
+    uint64  recvTmmbrExponent;
     /*
      * Variable that keeps track of TMMBR state.
      */

@@ -102,6 +102,8 @@ vint _VC_rtcpRecv(
                 _VC_RTCP_LOG("RTCP received TMMBR MxTBR Overhead %x", message.arg3 & 0x1ff);
                 /* TMMBR in bits per second = mantissa * 2^exp. */
                 bitrateBps =  mantissa << exponent;
+                rtcp_ptr->feedback.recvTmmbrMantissa = mantissa;
+                rtcp_ptr->feedback.recvTmmbrExponent = exponent;
                 if (rtcp_ptr->configure.enableMask & VTSP_MASK_RTCP_FB_TMMBR) {
                     /* Store the received TMMBR value in kbps. */
                     rtcp_ptr->feedback.recvTmmbrInKbps = (bitrateBps >> 10);
