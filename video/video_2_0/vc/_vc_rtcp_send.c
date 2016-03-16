@@ -1087,9 +1087,9 @@ static vint _VC_rtcpFeedbackTmmbn(
     msg_ptr->msg.payload[newoffset++] = OSAL_netHtonl(0);
 
     /* FCI Entry for TMMBN. */
-    msg_ptr->msg.payload[newoffset++] = OSAL_netHtonl(rtcp_ptr->ssrc); /* SSRC of the Sender */
-    temp32 = 10 << 26;  /* MxTBR Exponent (6 bits). 1 kbps = 2^10 bps. */
-    temp32 |= (bitrateInKbps) << 9; /* MxTBR Mantissa (17 bits) */
+    msg_ptr->msg.payload[newoffset++] = OSAL_netHtonl(rtcp_ptr->mediaSsrc); /* SSRC of the Media Source */
+    temp32 = (rtcp_ptr->feedback.recvTmmbrExponent)<< 26;  /* MxTBR Exponent (6 bits). 1 kbps = 2^10 bps. */
+    temp32 |= (rtcp_ptr->feedback.recvTmmbrMantissa) << 9; /* MxTBR Mantissa (17 bits) */
     temp32 |= 15; /* RTP layer (H264) Packet Overhead. Approx = 15 bytes  */
     msg_ptr->msg.payload[newoffset++] = OSAL_netHtonl(temp32);
 
