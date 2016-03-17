@@ -64,6 +64,8 @@ sem sms_lock;
 extern struct ppp_info_struct ppp_info[];
 
 const struct cmd_table single_at_cmd_cvt_table[] = {
+    {AT_CMD_CFUN, AT_CMD_TYPE_PS, AT_CMD_STR("AT+SFUN=4"),
+            cvt_generic_cmd_req, 120},
     {AT_CMD_CGDCONT_READ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGDCONT?;"),
         cvt_generic_cmd_req, 10},
     {AT_CMD_CGDCONT_READ, AT_CMD_TYPE_PS, AT_CMD_STR("AT+CGDCONT?"),
@@ -207,6 +209,8 @@ const struct cmd_table single_at_cmd_cvt_table[] = {
         cvt_generic_cmd_req, 60},
     {AT_CMD_EUICC, AT_CMD_TYPE_SIM, AT_CMD_STR("AT+EUICC"),
         cvt_generic_cmd_req, 60},
+    {AT_CMD_EUICC, AT_CMD_TYPE_SIM, AT_CMD_STR("AT+XX"),
+        cvt_generic_cmd_req, 50},
 
 
     {AT_CMD_CMGS_TEST, AT_CMD_TYPE_SMS, AT_CMD_STR("AT+CMGS=?"),
@@ -270,8 +274,6 @@ const struct cmd_table single_at_cmd_cvt_table[] = {
         cvt_generic_cmd_req, 50},
     {AT_CMD_CFUN, AT_CMD_TYPE_GEN, AT_CMD_STR("AT+SFUN=2"),
         cvt_generic_cmd_req, 300},
-    {AT_CMD_CFUN, AT_CMD_TYPE_GEN, AT_CMD_STR("AT+SFUN=4"),
-        cvt_generic_cmd_req, 120},
     {AT_CMD_CTZU, AT_CMD_TYPE_GEN, AT_CMD_STR("AT+CTZU"),
         cvt_generic_cmd_req, 5},
     {AT_CMD_CTZR, AT_CMD_TYPE_GEN, AT_CMD_STR("AT+CTZR"),
