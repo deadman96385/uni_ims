@@ -406,6 +406,11 @@ struct ydst {
     long segments; /* all segment numbers generated till now */
     int max_segment; /* how many segment can be reached */
     int nowrap; /* when the log size reaches the max, stop it */
+    // begin of write_data2cache_first {
+    int write_data2cache_first; /* write data to cache first, then cache will call ylog_write_handler_default */
+    ylog_write_handler write_handler; /* used when write_data2cache_first is none 0 */
+    struct ylog *ylog; /* used when write_data2cache_first is none 0 */
+    // } end of write_data2cache_first
     int ytag; /* 1: use ytag process in analyzer.py; 0: no ytag process in analyzer.py */
     enum ydst_segment_mode segment_mode;
 

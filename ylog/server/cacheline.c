@@ -52,9 +52,15 @@ static void cacheline_drain(struct cacheline *cl, int reason) {
         memcpy(pcache, cacheline_line_pointer(cl->rclidx, cl), wpos);
         cl->writing = 1;
         pthread_mutex_unlock(&cl->mutex); /* give ydst more chance to use other free cachelines */
-        if (cl->bypass == 0)
-            ret = cl->ydst->fwrite(pcache, wpos, cl->ydst->fd);
-        else
+        if (cl->bypass == 0) {
+            if (cl->ydst->write_data2cache_first == 0)
+                ret = cl->ydst->fwrite(pcache, wpos, cl->ydst->fd);
+            else {
+                ret = cl->ydst->write_handler(pcache, wpos, cl->ydst->ylog);
+                if (ret > wpos)
+                    ret = wpos;
+            }
+        } else
             ret = wpos;
         if (ret != wpos)
             ylog_critical("%s cacheline write wrong %d -> %d\n", cl->name, wpos, ret);
@@ -176,9 +182,15 @@ static void *cacheline_thread_handler_default(void *arg) {
                 cl->writes_cachelines++;
             cl->writing = 1;
             pthread_mutex_unlock(&cl->mutex); /* give ydst more chance to use other free cachelines */
-            if (cl->bypass == 0)
-                ret = cl->ydst->fwrite(pcache, cl->size, cl->ydst->fd);
-            else
+            if (cl->bypass == 0) {
+                if (cl->ydst->write_data2cache_first == 0)
+                    ret = cl->ydst->fwrite(pcache, cl->size, cl->ydst->fd);
+                else {
+                    ret = cl->ydst->write_handler(pcache, cl->size, cl->ydst->ylog);
+                    if (ret > cl->size)
+                        ret = cl->size;
+                }
+            } else
                 ret = cl->size;
             if (ret != cl->size)
                 ylog_critical("%s cacheline write cacheline wrong %d -> %d\n", cl->name, cl->size, ret);

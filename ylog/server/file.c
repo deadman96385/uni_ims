@@ -972,8 +972,12 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
     int nowrap;
     int generate_analyzer = 0;
 
-    if (cl)
-        ydst_cache_lock(ydst, cl);
+    if (cl) {
+        if (ydst->write_data2cache_first == 0)
+            ydst_cache_lock(ydst, cl);
+        else
+            cl = NULL;
+    }
 
     pthread_mutex_lock(&root->mutex);
 
@@ -1372,6 +1376,26 @@ static int ydst_open_default(char *file, char *mode, struct ydst *ydst) {
     return 0;
 }
 
+static int ydst_close_default__write_data2cache_first(struct ydst *ydst) {
+    if (ydst->fp) {
+        /**
+         * As for write_data2cache_first == 1
+         * the data left in the current cacheline will be saved in the next segment
+         * cacheline_thread_handler_default thread may be calling
+         * cl->ydst->write_handler(), so ydst_close_default may be called
+         * so ydst->cache->flush(ydst->cache) will never have chance to return
+         * because cacheline_thread_handler_default thread is calling
+         * cl->ydst->write_handler() now by luther 2016.03.16
+         */
+        if (ydst->fp != stdout)
+            fclose(ydst->fp);
+        ydst->fd = -1;
+        ydst->fp = NULL;
+        return 1;
+    }
+    return 0;
+}
+
 static int ydst_close_default(struct ydst *ydst) {
     if (ydst->fp) {
         struct cacheline *cl = ydst->cache;
@@ -1398,6 +1422,20 @@ static int ydst_close_default(struct ydst *ydst) {
         return 1;
     }
     return 0;
+}
+
+static int ydst_flush_default__write_data2cache_first(struct ydst *ydst) {
+    /**
+     * when ydst->write_data2cache_first is set
+     * we can't use any ydst related mutex lock in ylog thread
+     * 1. pthread_mutex_lock(&ydst->mutex);
+     * 2. pthread_mutex_lock(&cl->mutex);
+     * it maybe cause deadlock in here
+     * because in cacheline thread, the mutex lock sequence is
+     * 1. pthread_mutex_lock(&cl->mutex);
+     * 2. pthread_mutex_lock(&ydst->mutex); -> cl->ydst->write_handler()
+     */
+    return ydst->cache->flush(ydst->cache);
 }
 
 static int ydst_flush_default(struct ydst *ydst) {
@@ -1428,11 +1466,24 @@ static int ydst_flush_default(struct ydst *ydst) {
     return ret;
 }
 
+static int ydst_write_default__write_data2cache_first(char *buf, int count, struct ydst *ydst) {
+    return ydst->fwrite(buf, count, ydst->fd);
+}
+
 static int ydst_write_default(char *buf, int count, struct ydst *ydst) {
     if (ydst->cache)
         return ydst->cache->write(buf, count, ydst->cache);
     else
         return ydst->fwrite(buf, count, ydst->fd);
+}
+
+static int ydst_write_default_with_token__write_data2cache_first(char *id_token, int id_token_len,
+        char *buf, int count, struct ydst *ydst) {
+    return ydst_write_default__write_data2cache_first(buf, count, ydst);
+    if (0) { /* avoid compiler warning */
+        id_token = id_token;
+        id_token_len = id_token_len;
+    }
 }
 
 static int ydst_write_default_with_token(char *id_token, int id_token_len,
@@ -1512,8 +1563,10 @@ static int ylog_write_handler_default(char *buf, int count, struct ylog *y) {
     int locked = 0;
     struct filter_pattern *p = y->fp_array;
     struct ydst *ydst = y->ydst;
-    /* bypass? */
-    if (buf != NULL) {
+    /**
+     * we don't support filter for ydst->write_data2cache_first 1
+     */
+    if (ydst->write_data2cache_first == 0 && buf != NULL) {
         int ignore = 0;
         if (y->bypass)
             return count;
@@ -1590,6 +1643,19 @@ static int ylog_write_handler_default(char *buf, int count, struct ylog *y) {
     if (locked)
         pthread_mutex_unlock(&ydst->mutex);
     return written_count;
+}
+
+static int ylog_write_handler_default__write_data2cache_first(char *buf, int count, struct ylog *y) {
+    struct ydst *ydst = y->ydst;
+
+    if (buf == NULL)
+        return y->ydst->write_handler(buf, count, y);
+    /**
+     * For cache first, there will be no timestamp, no id_token
+     * and cache has pthread_mutex_lock(&cl->mutex)
+     * to protect this ydst->cache->write action being atomic
+     */
+    return ydst->cache->write(buf, count, ydst->cache);
 }
 
 static int ylog_thread_new_state(enum ylog_thread_state state, struct ylog *y, int block) {
@@ -1754,6 +1820,17 @@ static void ydst_refs_inc(struct ylog *y) {
     pthread_mutex_lock(&mutex);
     pthread_mutex_lock(&ydst->root->mutex);
     if (ydst->refs++ == 0) {
+        if (y->ydst->write_data2cache_first) {
+            /**
+             * For write_data2cache_first, because cacheline thread and ylog_thread_handler_default
+             * can use ydst at the same time, so we need to let cacheline as another vritual ylog by luther
+             * cahceline is calling
+             * 1. cl->ydst->write_handler(pcache, wpos, cl->ydst->ylog);
+             * ylog_thread_handler_default here is processing pipe state change
+             * 2. y->write_handler(NULL, XXXX, y);
+             */
+            ydst->refs++;
+        }
         ydst->root->refs_cur = ++ydst->root->refs;
         ydst->root->max_size += ydst->max_size;
         ydst_pre_fill_zero_to_possession_storage_spaces(ydst, -1, NULL);
@@ -1764,16 +1841,47 @@ static void ydst_refs_inc(struct ylog *y) {
 
 static void ydst_refs_dec(struct ylog *y) {
     struct ydst *ydst = y->ydst;
+    int locked = 1;
     pthread_mutex_lock(&mutex);
     pthread_mutex_lock(&ydst->root->mutex);
+    if (y->ydst->write_data2cache_first) {
+        /**
+         * For write_data2cache_first, because cacheline thread and ylog_thread_handler_default
+         * can use ydst at the same time, so we need to let cacheline as another vritual ylog by luther
+         * cahceline is calling
+         * 1. cl->ydst->write_handler(pcache, wpos, cl->ydst->ylog);
+         * ylog_thread_handler_default here is processing pipe state change
+         * 2. y->write_handler(NULL, XXXX, y);
+         */
+        if (ydst->refs)
+            --ydst->refs;
+    }
     if (ydst->refs && --ydst->refs == 0) {
-        if (ydst->cache)
-            ydst->cache->exit(ydst->cache);
         ydst->root->refs_cur = --ydst->root->refs;
         ydst->root->max_size -= ydst->max_size;
+        if (ydst->cache) {
+            if (ydst->write_data2cache_first) {
+                /**
+                 * when ydst->write_data2cache_first is set
+                 * we can't use any ydst related mutex lock in ylog thread
+                 * 1. pthread_mutex_lock(&ydst->mutex);
+                 * 2. pthread_mutex_lock(&cl->mutex);
+                 * it maybe cause deadlock in here
+                 * because in cacheline thread, the mutex lock sequence is
+                 * 1. pthread_mutex_lock(&cl->mutex);
+                 * 2. pthread_mutex_lock(&ydst->mutex); -> cl->ydst->write_handler()
+                 */
+                locked = 0;
+                pthread_mutex_unlock(&ydst->root->mutex);
+                pthread_mutex_unlock(&mutex);
+            }
+            ydst->cache->exit(ydst->cache);
+        }
     }
-    pthread_mutex_unlock(&ydst->root->mutex);
-    pthread_mutex_unlock(&mutex);
+    if (locked) {
+        pthread_mutex_unlock(&ydst->root->mutex);
+        pthread_mutex_unlock(&mutex);
+    }
 }
 
 static void *ylog_event_thread_handler_default(void *arg);
@@ -2306,15 +2414,18 @@ static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *ro
         if (yd->mode == NULL)
             yd->mode = "w+";
         if (yd->write == NULL)
-            yd->write = ydst_write_default_with_token;
+            yd->write = yd->write_data2cache_first ? \
+                        ydst_write_default_with_token__write_data2cache_first:ydst_write_default_with_token;
         if (yd->fwrite == NULL)
             yd->fwrite = fd_write;
         if (yd->flush == NULL)
-            yd->flush = ydst_flush_default;
+            yd->flush = yd->write_data2cache_first ? \
+                        ydst_flush_default__write_data2cache_first:ydst_flush_default;
         if (yd->open == NULL)
             yd->open = ydst_open_default;
         if (yd->close == NULL)
-            yd->close = ydst_close_default;
+            yd->close = yd->write_data2cache_first ? \
+                        ydst_close_default__write_data2cache_first:ydst_close_default;
         if (yd->cache) {
             struct cacheline *cache = yd->cache;
             cache->ydst = yd;
@@ -2362,8 +2473,26 @@ static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *ro
             continue;
         ylog_info("ylog <%s> is initialized\n", y->name);
         yp = &y->yp;
-        if (y->write_handler == NULL)
-            y->write_handler = ylog_write_handler_default;
+        if (y->ydst == NULL)
+            y->ydst = &global_ydst[YDST_TYPE_DEFAULT];
+        if (y->write_handler == NULL) {
+            if (y->ydst->write_data2cache_first && y->ydst->cache == NULL) {
+                ylog_critical("Fatal: ylog -> cache -> ydst<%s>, cache is null, forced it write_data2cache_first to 0\n",
+                        y->ydst->file);
+                y->ydst->write_data2cache_first = 0;
+            }
+            if (y->ydst->write_data2cache_first == 0)
+                y->write_handler = ylog_write_handler_default;
+            else {
+                if (y->ydst->write_handler || y->ydst->ylog) {
+                    ylog_critical("Fatal: ylog -> cache -> ydst<%s> should only be used by one ylog %s\n",
+                            y->ydst->file, y->name);
+                }
+                y->write_handler = ylog_write_handler_default__write_data2cache_first;
+                y->ydst->write_handler = ylog_write_handler_default;
+                y->ydst->ylog = y;
+            }
+        }
         if (y->open == NULL)
             y->open = ylog_open_default;
         if (y->fread == NULL) {
@@ -2410,8 +2539,6 @@ static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *ro
         if (y->filter_so == NULL)
             y->filter_so = ylog_getfun_filter_so(y->name, "filter_log", c->filter_so_path);
 
-        if (y->ydst == NULL)
-            y->ydst = &global_ydst[YDST_TYPE_DEFAULT];
         y->state = YLOG_STOP;
         yp_invalid(YLOG_POLL_INDEX_INOTIFY, yp, y);
         yp_invalid(YLOG_POLL_INDEX_SERVER_SOCK, yp, y);
