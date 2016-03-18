@@ -59,6 +59,8 @@ public class ImsConfigImpl extends IImsConfig.Stub {
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
         mSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferenceListener);
         mCameraResolution = mSharedPreferences.getInt(VIDEO_CALL_RESOLUTION, VT_RESOLUTION_VGA_REVERSED_30);
+        mHandler.removeMessages(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE);
+        mHandler.sendEmptyMessageDelayed(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE, 1000);
     }
 
     /**
