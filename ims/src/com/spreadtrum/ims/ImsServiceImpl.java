@@ -129,9 +129,9 @@ public class ImsServiceImpl {
         mImsEcbmImpl = new ImsEcbmImpl(mCi);
         mHandler = new ImsHandler(mContext.getMainLooper());
         Intent intent = new Intent(ImsManager.ACTION_IMS_SERVICE_UP);
-        intent.addFlags(Intent.FLAG_RECEIVER_REPLACE_PENDING);
         intent.putExtra(ImsManager.EXTRA_PHONE_ID, phone.getPhoneId());
         mContext.sendStickyBroadcast(intent);
+        mContext.sendBroadcast(intent);
 
         mCi.registerForImsNetworkStateChanged(mHandler, EVENT_IMS_STATE_CHANGED, null);
         Log.i(TAG,"ImsServiceImpl onCreate->phoneId:"+phone.getPhoneId());
