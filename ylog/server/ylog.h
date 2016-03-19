@@ -142,7 +142,8 @@ struct context {
 
 enum file_type {
     FILE_NORMAL = 0,
-    FILE_SOCKET_LOCAL,
+    FILE_SOCKET_LOCAL_SERVER,
+    FILE_SOCKET_LOCAL_CLIENT,
     FILE_POPEN,
     FILE_INOTIFY,
 };

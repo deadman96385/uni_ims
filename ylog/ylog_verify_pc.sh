@@ -1,5 +1,13 @@
 #!/bin/bash
 
+cmds=(
+'[ -d ${y}/traces/ ] && ls -l ${y}/traces/'
+'du -shc ${y}/* | sort -h'
+'tail -n 1 ${y}/android/000'
+'tail -n 1 ${y}/kernel/000'
+'grep -E "Has run|killed" ${y}/ylog_debug | tail -n 2'
+)
+
 function usage() {
 cat <<__AEOF
 ylog_verfiy_pc.sh [command index1] [command index2] ...
@@ -14,7 +22,7 @@ while getopts hlr:c:C: op; do
     case $op in
         l)
             list_cmd=1; ;;
-		r)
+        r)
             runs=(${runs[@]} $OPTARG); ;;
         c)
             sub_cmds=("${sub_cmds[@]}" "$OPTARG"); ;;
@@ -30,14 +38,7 @@ done
 shift `expr $OPTIND - 1`
 runs=($@)
 
-cmds=(
-'[ -d ${y}/traces/ ] && ls -l ${y}/traces/'
-'du -shc ${y}/* | sort -h'
-'tail -n 1 ${y}/android/000'
-'tail -n 1 ${y}/kernel/000'
-'grep -E "Has run|killed" ${y}/ylog_debug | tail -n 2'
-)
-
+# [ "${runs[0]}${o_sub_cmds[0]}${sub_cmds[0]}" ] || list_cmd=1
 [ "${list_cmd}" ] && {
     count=1
     for c in "${cmds[@]}"; do

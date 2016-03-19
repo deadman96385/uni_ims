@@ -293,7 +293,7 @@ static struct ylog ylog_default[YLOG_MAX+1] = {
     },
     {
         .name = "socket",
-        .type = FILE_SOCKET_LOCAL,
+        .type = FILE_SOCKET_LOCAL_SERVER,
         .file = "ylog",
         .ydst = &ydst_default[YDST_TYPE_SOCKET],
         .mode = YLOG_READ_MODE_BLOCK,

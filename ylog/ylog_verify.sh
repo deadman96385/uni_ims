@@ -1,5 +1,15 @@
 #!/bin/bash
 
+cmds=(
+'${ADB} shell ls -l /storage/sdcard0/ylog/ylog/'
+'${ADB} shell ylog_cli space'
+'${ADB} shell ylog_cli ylog'
+'${ADB} shell tail /storage/sdcard0/ylog/ylog/ylog_journal_file'
+'${ADB} shell tail -n 1 /storage/sdcard0/ylog/ylog/android/000'
+'${ADB} shell tail -n 1 /storage/sdcard0/ylog/ylog/kernel/000'
+'${ADB} shell cat /storage/sdcard0/ylog/ylog/ylog_debug | grep -E "Has run|killed" | tail -n 2'
+)
+
 function usage() {
 cat <<__AEOF
 ylog_verfiy.sh [command index1] [command index2] ...
@@ -14,7 +24,7 @@ while getopts hlr:c:C: op; do
     case $op in
         l)
             list_cmd=1; ;;
-		r)
+        r)
             runs=(${runs[@]} $OPTARG); ;;
         c)
             sub_cmds=("${sub_cmds[@]}" "\${ADB} shell $OPTARG"); ;;
@@ -29,16 +39,6 @@ done
 
 shift `expr $OPTIND - 1`
 runs=($@)
-
-cmds=(
-'${ADB} shell ls -l /storage/sdcard0/ylog/ylog/'
-'${ADB} shell ylog_cli space'
-'${ADB} shell ylog_cli ylog'
-'${ADB} shell tail /storage/sdcard0/ylog/ylog/ylog_journal_file'
-'${ADB} shell tail -n 1 /storage/sdcard0/ylog/ylog/android/000'
-'${ADB} shell tail -n 1 /storage/sdcard0/ylog/ylog/kernel/000'
-'${ADB} shell cat /storage/sdcard0/ylog/ylog/ylog_debug | grep -E "Has run|killed" | tail -n 2'
-)
 
 [ "${list_cmd}" ] && {
     count=1
