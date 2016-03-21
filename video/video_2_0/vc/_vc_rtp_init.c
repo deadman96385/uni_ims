@@ -50,8 +50,8 @@ vint _VC_rtpInit(
     rtp_ptr->sendActive = _VC_RTP_NOTREADY;
     rtp_ptr->recvActive = _VC_RTP_NOTREADY;
     rtp_ptr->tos        = _VC_RTP_IP_TOS;
-    rtp_ptr->tsRandom   = 1;
-    rtp_ptr->seqRandom  = 1;
+    rtp_ptr->tsRandom   = 0;
+    rtp_ptr->seqRandom  = 0;
 
     return (_VC_RTP_OK);
 }

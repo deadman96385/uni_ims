@@ -67,6 +67,16 @@
 /* Flag to enable or disable mosic prevention. */
 #define JBV_MOSAIC_PREVENTION   (0)
 
+/* video encode clock rate is 90 Kbps*/
+#define JBV_VIDEO_CLOCK_RATE_IN_KHZ   (90)
+
+/* mosaic prevent*/
+#define JBV_MP_FRAME_INTERVAL_THRESHOLD  (100 * JBV_VIDEO_CLOCK_RATE_IN_KHZ) /*100 ms*/
+#define JBV_MP_STATE_PENDDING            (0)
+#define JBV_MP_STATE_READY               (1)
+#define JBV_MP_PLI_PERIOD_US             (1000000)
+
+
 /*
  * Assume New Jitter < Current Jitter
  *
@@ -173,6 +183,24 @@ typedef struct {
     JBV_PacketObserver observer;   /* Statistics on video media such as bitrate measured by observing incoming packets. */
 } JBV_RtcpInfo;
 
+/*
+ * this data data struct is used for mosaic prevention
+ * */
+typedef struct {
+    uint16 prevDrawFirstSeqn;  /* first seqn of previous drawn frame */
+    uint16 prevDrawLastSeqn;   /* last sqen of previous drawn frame */
+    vint frameDropFlag;        /* frame drop flag */
+    uint32 rtpTsGapThreshold;  /* interval threshold based on rtp timestamp */
+    uint32 prevDrawRtpTs;      /* rtp timestamp of previous drawn frame */
+    vint state;                /* state of mosaic prevent */
+    vint enable;               /* mosaic prevent enable*/
+    uint32 rtpTsDropAccum;     /* the accumulated time of undrawn frame in one intra frame period */
+    uint32 rtpTsLatestDrawIdr; /* rtp time stamp of the latest drawn Intra Frame */
+    uint32 totalIdr;           /* assume that the sendder transmits one Intra frame per second, it wiil wrap around 136 years later */
+    uint64 triggerPliTime;     /* the time trigger PLI rtcp feedback*/
+} JBV_MosaicPrevent;
+
+
 typedef struct {
     uint64          firstUnNormTs;             /* RTP timestamp (unnormalized) of the first packet that was put into JBV. */
     uint64          firstTs;                   /* RTP timestamp (normalized) of the first packet that was put into JBV. This should be 0. */
@@ -217,7 +245,9 @@ typedef struct {
     uint16          firstSeqnNextFrame;         /* First seqn of next frame to draw */
     uint16          lastSeqnNextFrame;          /* Last seqn of next frame to draw */
     vint            dropTillNextKey;
-    vint            eMscPrvt;                   /* Mosaic prevention enable flag */
+    vint            eMscPrvt;                   /* _STALE_ usage: Mosaic prevention enable flag */
+    uint32          tsLatestIdr;                /* RTP time stamp of the latest Intra frame in the JB */
+    JBV_MosaicPrevent mp;                       /* replace eMscPrvt to get enhanced implementation */
     uint8           data[VIDEO_NET_BUFFER_SZ];  /* Buffer for holding reassembled H264 Frame. */
     JBV_Unit        unit[_JBV_SEQN_MAXDIFF];    /* THE JITTER BUFFER. Array of JBV_unit. */
 } JBV_Obj;
@@ -227,11 +257,15 @@ typedef struct {
     vint      valid;            /* Valid flag */
     uint64    atime;            /* Packet arrival time, local clock (usecs) */
     JBV_Coder type;             /* Packet type */
-    uint16    seqn;             /* Sequence number */
+    uint16    seqn;             /* array index in jitter buffer */
     uint32    pSize;            /* Packet size in octets */
     vint      mark;
     uint8     rcsRtpExtnPayload;/* Rcs 5.1, 1-byte RTP extension payload. */
     uint8    *data_ptr;
+
+    uint16    firstSeqn;         /* Sequence number of the first pkt in next frame */
+    vint      lastSeqn;          /* Sequence number of the last pkt in next frame */
+    uint32    naluBitMask;       /* bit mask to mark the nalu type in the frame */
 } JBV_Pkt;
 
 /*
@@ -250,7 +284,7 @@ void JBV_getPkt(
     JBV_Obj     *obj_ptr,
     JBV_Pkt     *pkt_ptr,
     JBV_Timeval *tv_ptr);
-    
+
 void JBV_fpsAdjust(
     JBV_Obj    *obj_ptr,
     vint       skew);

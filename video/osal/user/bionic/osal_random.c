@@ -44,7 +44,7 @@ void OSAL_randomGetOctets(
 {
     int            i;
 //    unsigned int   scratch;
-    
+    srand((int)time(0));
     for (i = 0; i < size; i++) {
         *buf_ptr++ = rand();
     }

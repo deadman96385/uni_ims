@@ -525,6 +525,19 @@ static void _JBV_getPkt(
     obj_ptr->lastDrawnSeqn      = lastDrawnSeqn;
 }
 
+
+/*
+ * =======_JBV_MosaicPreventInit()======
+ *
+ * */
+void _JBV_MosaicPreventInit(JBV_MosaicPrevent *mp_ptr)
+{
+    mp_ptr->enable = 1;
+    mp_ptr->rtpTsGapThreshold = JBV_MP_FRAME_INTERVAL_THRESHOLD;
+    mp_ptr->frameDropFlag = 0;
+    mp_ptr->state = JBV_MP_STATE_PENDDING;
+}
+
 /*
  * ======== JBV_init() ========
  *
@@ -576,6 +589,8 @@ int JBV_init(
 
     OSAL_logMsg("accmRate:%d, initLevel:%llu, eMscPrvt:%d\n",
             obj_ptr->accmRate, obj_ptr->initLevel, obj_ptr->eMscPrvt);
+    /* Init mosaic prevent */
+    _JBV_MosaicPreventInit(&obj_ptr->mp);
 
     /* Give the mutex. */
     OSAL_semGive(mJBVMutex);

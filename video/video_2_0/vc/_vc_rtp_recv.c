@@ -149,6 +149,7 @@ vint _VC_calcRxBitrate(_VC_RtpObject *rtp_ptr,
         OSAL_logMsg("%s: cur_br update to %u Kbps, totalSize %llu, lastSize %llu, startTime %llu, time_us %llu, seqn %u\n",
                 __FUNCTION__, br_stat->bitrate, br_stat->totalSize, br_stat->lastSize, br_stat->startTime, time_us, seqn);
         br_stat->periodFlag = 0;
+        br_stat->startTime = time_us;
         br_stat->lastSize = br_stat->totalSize;
     }
 
@@ -269,6 +270,7 @@ vint _VC_rtpRecv(
     OSAL_SelectTimeval time;
     OSAL_Boolean       boolean;
     vint               headerExtnOffset = 0;
+    uint32             prevRecvSsrc = 0;
     OSAL_SelectTimeval tv;
 
     dsp_ptr = vc_ptr->dsp_ptr;
@@ -377,11 +379,21 @@ vint _VC_rtpRecv(
 
                     rtpObj_ptr = &(rtp_ptr->recvRtpObj);
 
+                    prevRecvSsrc = rtpObj_ptr->pkt.rtpMinHdr.ssrc;
+
                     /*
                      * Parse payload. The input packet to RTP is in buf_ptr. The
                      * output is placed in recvRtpObj.pkt.payload.
                      */
                     if (RTP_OK == RTP_recvPkt(rtpObj_ptr, buf_ptr, pktLen)) {
+                        if (prevRecvSsrc != 0 &&
+                                prevRecvSsrc != rtpObj_ptr->pkt.rtpMinHdr.ssrc) {
+                            /* if the recv_SSRC changed during the video call, reset the jitter */
+                            OSAL_logMsg("%s: OOPS, recv_SSRC changed, 0x%08x -> 0x%08x",
+                                    __FUNCTION__, prevRecvSsrc, rtpObj_ptr->pkt.rtpMinHdr.ssrc);
+                            JBV_init(&stream_ptr->dec.jbObj);
+                        }
+
                         /* Put redundant info and data into Jitter Buffer */
                         OSAL_selectGetTime(&time);
                         dsp_ptr->jbPutPkt.atime = (uint64)time.sec;

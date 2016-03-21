@@ -129,7 +129,7 @@ vint _VC_videoStreamSendEncodedData(
 
             /*
              * For the stream, sum all active peer streams, and
-             * put the sum in a dsp_ptr->confBuffer (a stack buffer) 
+             * put the sum in a dsp_ptr->confBuffer (a stack buffer)
              * for encoding to that stream.
              */
 
@@ -150,7 +150,7 @@ vint _VC_videoStreamSendEncodedData(
             encType = stream_ptr->streamParam.encoder;
             net_ptr = vc_ptr->net_ptr;
 
-            if ((stream_ptr->streamParam.encodeType[encType] 
+            if ((stream_ptr->streamParam.encodeType[encType]
                     != VTSP_CODER_UNAVAIL)) {
                 /*
                  * Get Data
@@ -212,7 +212,7 @@ vint _VC_videoStreamSendEncodedData(
                     rtp_ptr->payloadOffset = pkt.sz;
                     if (VTSP_MASK_EXT_RTP_EXTN == (blockHeader.extension & VTSP_MASK_EXT_RTP_EXTN)) {
                         rtp_ptr->payloadOffset += 8;
-                    } 
+                    }
 
                     /*
                      * Call _VC_rtpSend().
@@ -275,9 +275,9 @@ void _VC_populateFlags(
     uint8   nalu;
     int     offset = 0;
 
-    /* There could be some frames in one data buffer. For example, 
+    /* There could be some frames in one data buffer. For example,
      * it could contains SPS and PPS in one data buffer.
-     * But should only contain one frame in buffer for 
+     * But should only contain one frame in buffer for
      * I-Frame / P-Frame / B-Frame.
      */
     while(offset + 4 <= pSize) {
@@ -324,6 +324,134 @@ void _VC_populateFlags(
 }
 
 /*
+ * ======== _VC_videoCheckNonIdrDrawable() ========
+ *
+ * check whether the H.264 frame can be drawn
+ */
+vint _VC_videoCheckNonIdrDrawable(
+        JBV_Obj * obj_ptr,
+        JBV_Pkt * pkt_ptr)
+{
+    JBV_MosaicPrevent *mp_ptr;
+    vint ret = 0;
+    uint32 ts_interval;
+
+    mp_ptr = &obj_ptr->mp;
+
+    /* if there is no Intra Frame drawn before, undraw*/
+    if (mp_ptr->totalIdr == 0 || mp_ptr->state == JBV_MP_STATE_PENDDING) {
+        mp_ptr->frameDropFlag = 1;
+        return ret;
+    }
+
+    /* if the seqn is consecutive, draw*/
+    if ((uint16)(mp_ptr->prevDrawLastSeqn + 1) == (uint16)pkt_ptr->firstSeqn){
+        mp_ptr->frameDropFlag = 0;
+        ret = 1;
+    } else {
+        mp_ptr->rtpTsDropAccum += (pkt_ptr->tsOrig - mp_ptr->prevDrawRtpTs);
+
+        /* if the frameDropFlag is set, undraw */
+        if (mp_ptr->frameDropFlag) {
+            ret = 0;
+        /* if Intra Frame was left in the JB, undraw */
+        } else if ((int)(obj_ptr->tsLatestIdr - mp_ptr->rtpTsLatestDrawIdr) > 0 &&
+                (int)(pkt_ptr->tsOrig - obj_ptr->tsLatestIdr) > 0) {
+            OSAL_logMsg("%s: IDR left, pkt-tsOrig %u, mp-rtpTsLatestDrawIdr %u. jb-tsLatestIdr %u\n",
+                    __FUNCTION__, pkt_ptr->tsOrig, mp_ptr->rtpTsLatestDrawIdr, obj_ptr->tsLatestIdr);
+            mp_ptr->state = JBV_MP_STATE_PENDDING;
+            mp_ptr->frameDropFlag = 1;
+            ret = 0;
+        /* if the rtpTsDropAccum > threshold, undraw; otherwise, draw */
+        } else if (mp_ptr->rtpTsDropAccum > mp_ptr->rtpTsGapThreshold) {
+            mp_ptr->frameDropFlag = 1;
+            ret = 0;
+        } else {
+            ret = 1;
+            mp_ptr->frameDropFlag = 0;
+        }
+    }
+
+    return ret;
+}
+
+/*
+ * ======== _VC_videoCheckFrameDrawable() ========
+ *
+ * check whether the H.264 frame can be drawn
+ */
+vint _VC_videoCheckFrameDrawable(
+        _VC_StreamObj *stream_ptr,
+        _VC_Dsp *dsp_ptr,
+        OSAL_SelectTimeval *tv,
+        vint *need_pli)
+{
+    JBV_Pkt *pkt_ptr;
+    JBV_MosaicPrevent *mp_ptr;
+    uint64 time_us;
+
+    *need_pli = 0;
+
+    if (stream_ptr == NULL || dsp_ptr == NULL){
+        return 1;
+    }
+
+    mp_ptr = &stream_ptr->dec.jbObj.mp;
+    pkt_ptr = &dsp_ptr->jbGetPkt;
+
+    if (mp_ptr->enable == 0) {
+        return 1;
+    }
+
+    /* if the frame is idr, it's must be drawable*/
+    if (pkt_ptr->naluBitMask & ((1 << NALU_IDR) | (1 << NALU_PPS) | (1 << NALU_SPS)) ||
+            _VC_videoCheckNonIdrDrawable(&stream_ptr->dec.jbObj, pkt_ptr)) {
+        /* print a long piece of log */
+        _VC_LOG("%s: MP DRAW, prevDrawRtpTs %u, tsOrig %u, prevDrawFirstSeqn %u, \
+prevDrawLastSeqn %u, firstSeqn %u, lastSeqn %u, frameDropFlag %d, naluBitMask 0x%08x \
+rtpTsDropAccum %u, totalIdr %u, rtpTsLatestDrawIdr %u\n",
+                __FUNCTION__, mp_ptr->prevDrawRtpTs, pkt_ptr->tsOrig, mp_ptr->prevDrawFirstSeqn,
+                mp_ptr->prevDrawLastSeqn, pkt_ptr->firstSeqn, pkt_ptr->lastSeqn,
+                mp_ptr->frameDropFlag, pkt_ptr->naluBitMask, mp_ptr->rtpTsDropAccum,
+                mp_ptr->totalIdr, mp_ptr->rtpTsLatestDrawIdr);
+
+        mp_ptr->prevDrawFirstSeqn = pkt_ptr->firstSeqn;
+        mp_ptr->prevDrawLastSeqn = pkt_ptr->lastSeqn;
+        mp_ptr->prevDrawRtpTs = pkt_ptr->tsOrig;
+        if (pkt_ptr->naluBitMask & (1 << NALU_IDR)) {
+            mp_ptr->state = JBV_MP_STATE_READY;
+            mp_ptr->frameDropFlag = 0;
+            mp_ptr->rtpTsDropAccum = 0;
+            mp_ptr->rtpTsLatestDrawIdr = pkt_ptr->tsOrig;
+            mp_ptr->totalIdr += 1;
+        }
+        return 1;
+    }
+
+    time_us = tv->sec * 1000000;
+    time_us += tv->usec;
+
+    /* print a long piece of log */
+    _VC_LOG("%s: MP UNDRAW, prevDrawRtpTs %u, tsOrig %u, prevDrawFirstSeqn %u, \
+prevDrawLastSeqn %u, firstSeqn %u, lastSeqn %u, frameDropFlag %d, time_us %llu, \
+triggerPliTime %llu, naluBitMask 0x%08x, rtpTsDropAccum %u, totalIdr %u, rtpTsLatestDrawIdr %u\n",
+            __FUNCTION__, mp_ptr->prevDrawRtpTs, pkt_ptr->tsOrig, mp_ptr->prevDrawFirstSeqn,
+            mp_ptr->prevDrawLastSeqn, pkt_ptr->firstSeqn, pkt_ptr->lastSeqn, mp_ptr->frameDropFlag,
+            time_us, mp_ptr->triggerPliTime, pkt_ptr->naluBitMask, mp_ptr->rtpTsDropAccum,
+            mp_ptr->totalIdr, mp_ptr->rtpTsLatestDrawIdr);
+
+    /* trigger PLI once per sec */
+    if (time_us - mp_ptr->triggerPliTime > JBV_MP_PLI_PERIOD_US) {
+        mp_ptr->triggerPliTime = time_us;
+        *need_pli = 1;
+    }
+
+    mp_ptr->frameDropFlag = 1;
+
+    return 0;
+}
+
+/*
  * ======== _VC_videoStreamGetDataToDecode() ========
  *
  * gets the H264 Encoded Data from jitter buffer
@@ -347,7 +475,11 @@ vint _VC_videoStreamGetDataToDecode(
     uint8              *data;
     vint                ret;
     OSAL_SelectTimeval  tv;
+    _VC_RtcpCmdMsg     message;
+    _VC_TaskObj *      task_rtcp_ptr;
+    vint               need_pli;
 
+    task_rtcp_ptr = &vc_ptr->taskRtcp;
     q_ptr = vc_ptr->q_ptr;
     dsp_ptr = vc_ptr->dsp_ptr;
 
@@ -399,11 +531,27 @@ vint _VC_videoStreamGetDataToDecode(
                 _VC_LipSync_rtpTs(streamId, q_ptr, &dsp_ptr->jbGetPkt);
             }
 
+            /* if the frame is not drawable, drop it for mosaic prevention */
+            if (_VC_videoCheckFrameDrawable(stream_ptr, dsp_ptr, &tv, &need_pli) == 0){
+                /*trigger PLI to ask for intra frame*/
+                if (stream_ptr->rtcpEnable && need_pli) {
+                        message.cmd  = _VC_RTCP_CMD_SEND_RTCP_FB;
+                    message.streamId     = streamId;
+                    message.feedbackMask = VTSP_MASK_RTCP_FB_PLI;
+                    _VC_sendRtcpCommand(q_ptr, &message);
+                    OSAL_logMsg("%s: send SIGALRM to RTCP task\n", __FUNCTION__);
+                    OSAL_taskSendSignal(task_rtcp_ptr->taskId, SIGALRM);
+                }
+
+                return (_VC_ERROR);
+            }
+
             data = OSAL_memAlloc(pSize, 0);
             OSAL_memCpy(data, dsp_ptr->jbGetPkt.data_ptr, pSize);
 
             if (NALU_SEI == H264_READ_NALU(*data)) {
-                DBG("");
+                OSAL_logMsg("%s: receive a NALU_SEI frame, return error\n", __FUNCTION__);
+                OSAL_memFree(data, pSize);
                 return (_VC_ERROR);
             }
 
