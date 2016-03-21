@@ -29,11 +29,13 @@ vint _VC_rtcpRecv(
     uint64              mantissa;
     uint64              exponent;
     uint64              bitrateBps;
+    OSAL_SelectTimeval  currentTime;    /* Current time as OSAL Timeval */
+    uint32              recvTimeNTP;
     char                buffer[20];
 
     qId = q_ptr->rtcpEvent;
     _VC_RTCP_LOG("RTCP recv\n");
-    OSAL_TimeVal currentTime;
+    //OSAL_TimeVal currentTime;
 
     /*
      * Read and process messages. Then relay event to application.
@@ -50,18 +52,27 @@ vint _VC_rtcpRecv(
          */
         infc = message.infc;
         streamId = message.streamId;
-        
+
         stream_ptr = _VC_streamIdToStreamPtr(dsp_ptr, streamId);
 
         rtcp_ptr = _VC_streamIdToRtcpPtr(net_ptr, message.streamId);
 
+        OSAL_selectGetTime(&currentTime);
+        recvTimeNTP = (_VC_SEC_TO_NTP_MSW(currentTime.sec) << 16) +
+                (_VC_USEC_TO_NTP_LSW(currentTime.usec) >> 16);
+
         switch (message.reason) {
             case VTSP_EVENT_RTCP_SR:
-                OSAL_timeGetTimeOfDay(&currentTime);
+                //OSAL_timeGetTimeOfDay(&currentTime);
                 /* The middle 32 bits of the 64 bit NTP timestamp */
                 rtcp_ptr->lastSR = _VC_NTP_64_TO_32(message.arg1, message.arg2);
                 /* Create another 32 bit NTP timestamp from the current time */
-                rtcp_ptr->recvLastSR = message.receivedTime;
+                rtcp_ptr->recvLastSR = recvTimeNTP;
+
+                /* DAMN IT! The time does not sync between message's sender and receiver,
+                 * so the this message.receivedTime is useless.
+                 * */
+                //rtcp_ptr->recvLastSR = message.receivedTime;
 
                 rtcp_ptr->ntpTime.sec  = _VC_NTP_MSW_TO_SEC(message.arg1);
                 rtcp_ptr->ntpTime.usec = _VC_NTP_LSW_TO_USEC(message.arg2);
@@ -73,7 +84,7 @@ vint _VC_rtcpRecv(
                 _VC_LipSync_rtcpRecv(q_ptr, rtcp_ptr);
                 break;
             case VTSP_EVENT_RTCP_RR:
-                OSAL_timeGetTimeOfDay(&currentTime);
+                //OSAL_timeGetTimeOfDay(&currentTime);
                 rtcp_ptr = _VC_streamIdToRtcpPtr(net_ptr, message.streamId);
 
                 if (0 == message.arg5) {
@@ -82,12 +93,14 @@ vint _VC_rtcpRecv(
                 else {
                     /* Round trip time as per specification of RFC 3550. See DLSR/Page 39 */
                     rtcp_ptr->roundTripTime =
-                            message.receivedTime -     /* A    */
+                            recvTimeNTP -                /* A */
                             message.arg5 -              /* LSR  */
                             message.arg6;               /* DLSR */
                 }
 
-                _VC_RTCP_LOG("Round Trip Time: %d ms", _VC_NTP_32_TO_MSEC(rtcp_ptr->roundTripTime));
+                OSAL_logMsg("%s: recv RR, Round Trip Time: %d, receivedTime %u, arg5 %u, arg6 %u, recvTimeNTP %u\n",
+                        __FUNCTION__, _VC_NTP_32_TO_MSEC(rtcp_ptr->roundTripTime), message.receivedTime,
+                        message.arg5, message.arg6, recvTimeNTP);
                 break;
             case VTSP_EVENT_RTCP_FB_GNACK:
                 _VC_RTCP_LOG("RTCP received NACK PID %x", message.arg2);
@@ -141,12 +154,14 @@ vint _VC_rtcpRecv(
 
                 /* Check the restriction period. If not enough time has elapsed, ignore this PLI */
                 startTime = rtcp_ptr->feedback.lastPli;
-                if ((message.receivedTime - startTime) > restrictionPeriod) {
+                _VC_RTCP_LOG("%s: recv PLI, receivedTime %u, startTime %u, restrictionPeriod %u, recvTimeNTP %u\n",
+                        __FUNCTION__, message.receivedTime, startTime, restrictionPeriod, recvTimeNTP);
+                if (startTime == 0 || (recvTimeNTP - startTime) > restrictionPeriod) {
                     /* Restriction period has ended. Check if the feature is enabled */
                     if (rtcp_ptr->configure.enableMask & VTSP_MASK_RTCP_FB_PLI) {
                         _VC_sendAppEvent(q_ptr, VC_EVENT_SEND_KEY_FRAME, "VC - Restart Enc", stream_ptr->streamParam.encoder);
                     }
-                    rtcp_ptr->feedback.lastPli = message.receivedTime;
+                    rtcp_ptr->feedback.lastPli = recvTimeNTP;
                 }
                 else {
                     _VC_RTCP_LOG("Ignoring PLI due to restriction period");
@@ -156,20 +171,19 @@ vint _VC_rtcpRecv(
                 _VC_RTCP_LOG("RTCP received FIR SSRC %x", message.arg2);
                 _VC_RTCP_LOG("RTCP received FIR Sequence number %x", message.arg3);
                 rtcp_ptr = _VC_streamIdToRtcpPtr(net_ptr, message.streamId);
-                restrictionPeriod = 2000;//rtcp_ptr->roundTripTime + _VC_RTCP_IFRAME_GENERATION_DELAY;
+                restrictionPeriod = recvTimeNTP + _VC_RTCP_IFRAME_GENERATION_DELAY;
                 /* Check the restriction period. If not enough time has elapsed, ignore this FIR */
                 startTime = rtcp_ptr->feedback.lastFir;
-                if (_VC_NTP_32_TO_MSEC(message.receivedTime - startTime) > restrictionPeriod) {
+                if (_VC_NTP_32_TO_MSEC(recvTimeNTP - startTime) > restrictionPeriod) {
                     /* Restriction period has ended. Check if the feature is enabled */
                     if (rtcp_ptr->configure.enableMask & VTSP_MASK_RTCP_FB_FIR) {
                         _VC_RTCP_LOG("RTCP received FIR, sent FIR event to VCE for key frame");
                         _VC_sendAppEvent(q_ptr, VC_EVENT_SEND_KEY_FRAME, "VC - Restart Enc", stream_ptr->streamParam.encoder);
                         //update the lastFir once this event is sent to APP
-                        rtcp_ptr->feedback.lastFir = message.receivedTime;
+                        rtcp_ptr->feedback.lastFir = recvTimeNTP;
                     }
                 } else {
-                    //_VC_RTCP_LOG("RTCP received FIR, Ignoring due to restriction period");
-                    OSAL_logMsg("%s:RTCP received FIR, Ignoring due to restriction period\n " , __FUNCTION__);
+                    _VC_RTCP_LOG("RTCP received FIR, Ignoring due to restriction period");
                 }
                 break;
             default:

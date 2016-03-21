@@ -3,12 +3,11 @@ include $(CLEAR_VARS)
 
 include $(LOCAL_PATH)/config.mk
 
-include $(call all-subdir-makefiles, $(MY_MODULE_SUB_DIRS))
+include $(call all-named-subdir-makefiles, $(MY_MODULE_SUB_DIRS))
 
 include $(CLEAR_VARS)
 
 LOCAL_WHOLE_STATIC_LIBRARIES := $(MY_INCLUDE_LIBS)
-
 LOCAL_CFLAGS := \
 	 $(MY_SYSTEM_CFLAGS) \
 	 $(MY_CFLAGS)

@@ -232,6 +232,10 @@ vint _JBV_reassembleH263(
         pkt_ptr->valid = 1;
         pkt_ptr->seqn = unit_ptr->seqn;
         pkt_ptr->rcsRtpExtnPayload = unit_ptr->rcsRtpExtnPayload;
+
+        pkt_ptr->firstSeqn = obj_ptr->unit[m1Seqn].seqn;
+        pkt_ptr->lastSeqn = obj_ptr->unit[mSeqn].seqn;
+
         /*
          * Mark sequence invalid.
          */
@@ -335,7 +339,8 @@ vint _JBV_processH264(
     if(ts < obj_ptr->firstUnNormTs){
         *updateFirstTs = 1;
         obj_ptr->firstUnNormTs = pkt_ptr->tsOrig;
-        JBV_wrnLog("We got a packet that should arrive earlier than 1rst arrived one.  RTP_TS = %lu, seq = %u", pkt_ptr->tsOrig, pkt_ptr->seqn);
+        JBV_wrnLog("We got a packet that should arrive earlier than 1rst arrived one.  RTP_TS = %u, seq = %u",
+                pkt_ptr->tsOrig, pkt_ptr->seqn);
     }
 
     /* Keep the 90K ts for restoring to obj later */
@@ -484,6 +489,10 @@ vint _JBV_processH264(
     /* Store the paket as JBV_Unit. */
     obj_ptr->tsOvfl     = tsOvfl;
     obj_ptr->tsLast90K  = tsLast;
+    if (unit_ptr->key && obj_ptr->tsLatestIdr != pkt_ptr->tsOrig) {
+        obj_ptr->tsLatestIdr = pkt_ptr->tsOrig;
+    }
+
     unit_ptr->ts        = ts;
     unit_ptr->nalu      = unit_ptr->key? NALU_IDR: nalu;
     unit_ptr->tsOrig    = pkt_ptr->tsOrig;
@@ -654,6 +663,8 @@ vint _JBV_reassembleH264(
                 buf_ptr += 2;
                 pktsz -= 2;
 
+                *naluBitMask_ptr |= (1 << H264_READ_NALU(buf_ptr[0]));
+
                 if ((sz <= 0) || sz > pktsz) {
                     JBV_dbgLog("sz %d expire the range [0, %d]\n", sz, pktsz);
                     break;
@@ -730,6 +741,12 @@ vint _JBV_reassembleH264(
         pkt_ptr->valid = 1;
         pkt_ptr->seqn = unit_ptr->seqn;
 
+        pkt_ptr->firstSeqn = obj_ptr->unit[m1Seqn].seqn;
+        pkt_ptr->lastSeqn = obj_ptr->unit[mSeqn].seqn;
+        pkt_ptr->naluBitMask = *naluBitMask_ptr;
+
+        OSAL_logMsg("%s, mSeqn %u, m1Seqn %u, firstSeqn %u, lastSeqn %u\n",
+                __FUNCTION__, mSeqn, m1Seqn, pkt_ptr->firstSeqn, pkt_ptr->lastSeqn);
         /*
          * Mark sequence invalid.
          */

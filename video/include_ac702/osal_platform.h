@@ -210,18 +210,7 @@ typedef enum {
 
 #define OSAL_ENTRY\
     int main(int argc, char *argv_ptr[])\
-    {\
-        OSAL_logMsg(\
-                "\n\n"\
-                "    ====================================== \n"\
-                "                                           \n"\
-                "               D2 Technologies             \n"\
-                "         IP Communication Products         \n"\
-                "                www.d2tech.com             \n\n"\
-                "    %s                                     \n\n"\
-                "    Starting %s ...                        \n\n",\
-                D2_VPORT_REVISION,\
-                argv_ptr[0]);
+    {
 #define OSAL_EXIT\
     }
 

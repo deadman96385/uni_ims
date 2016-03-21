@@ -102,6 +102,9 @@ vint _VC_rtpOpen(
         RTP_init(&(rtp_ptr->sendRtpObj));
         RTP_init(&(rtp_ptr->recvRtpObj));
 
+        /* init ssrc of the recvRtpObj as 0*/
+        rtp_ptr->recvRtpObj.pkt.rtpMinHdr.ssrc = 0;
+
         rtp_ptr->rtpTime = firstRtpTime;
         rtp_ptr->tsMs            = 0;
         rtp_ptr->payloadOffset   = 0; /* bug 3782 */

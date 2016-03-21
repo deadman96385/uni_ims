@@ -455,18 +455,20 @@ static void _VC_vtspCommandTask(
      /*
      * Big D2 Banner with version information.
      */
-    OSAL_logMsg("\n"
-        "             D2 Technologies, Inc.\n"
-        "      _   _  __                           \n"
-        "     / | '/  /_  _  /_ _  _  /_  _  ._   _\n"
-        "    /_.'/_  //_'/_ / // //_///_//_///_'_\\ \n"
-        "                                _/        \n"
-        "\n"
-        "        Unified Communication Products\n");
-    OSAL_logMsg("               www.d2tech.com\n");
 
-    OSAL_logMsg("%s:%d RUNNING\n", __FILE__, __LINE__);
-
+     /*
+     * OSAL_logMsg("\n"
+     *   "             D2 Technologies, Inc.\n"
+     *   "      _   _  __                           \n"
+     *   "     / | '/  /_  _  /_ _  _  /_  _  ._   _\n"
+     *   "    /_.'/_  //_'/_ / // //_///_//_///_'_\\ \n"
+     *   "                                _/        \n"
+     *   "\n"
+     *   "        Unified Communication Products\n");
+     *OSAL_logMsg("               www.d2tech.com\n");
+     *
+     *OSAL_logMsg("%s:%d RUNNING\n", __FILE__, __LINE__);
+     */
 _VC_VTSP_COMMAND_TASK_LOOP:
     /* Block on command message from VTSP. */
     while (_VC_OK != _VC_getCommand(&q_ptr->cmdQ, cmd_ptr));

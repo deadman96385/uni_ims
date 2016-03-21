@@ -204,7 +204,11 @@ static void _VC_rtcpUtilProcessRtp(
 
     rtcp_ptr->rtpSendPacketCount = rtpInfo_ptr->sendPacketCount;
     rtcp_ptr->rtpSendOctetCount = rtpInfo_ptr->sendOctetCount;
-    rtcp_ptr->curRxBitrate = _VC_estimateBitrate(&rtpInfo_ptr->rxBitrateStat);
+
+    /* lock the rtp source */
+    OSAL_semAcquire(rtp_tmp_ptr->info.mutexLock, OSAL_WAIT_FOREVER);
+    rtcp_ptr->curRxBitrate = _VC_estimateBitrate(&(rtp_tmp_ptr->info.rxBitrateStat));
+    OSAL_semGive(rtp_tmp_ptr->info.mutexLock);
 }
 /*
  * ======== _VC_rtcpUtilBuildNackRows() ========
@@ -276,7 +280,7 @@ static uint32 _VC_rtcpUtilRunTmmbrFsm2(
      *
      * */
     if (bitrate_kbps == 0 ||
-            feedback_ptr->expectedPacketTotal < 256) {
+            (feedback_ptr->expectedPacketTotal < 256 && feedback_ptr->lostPacketTotal < 32)) {
         return mask;
     }
 
@@ -684,6 +688,7 @@ static vint _VC_rtcpReceptionReportBlock(
     msg_ptr->msg.payload[newoffset++] = OSAL_netHtonl(rtcp_ptr->lastSR); /* last SR timestamp. */
 
     temp32 = currentNtpTime - rtcp_ptr->recvLastSR;
+    _VC_RTCP_LOG("%s: send RR, currentNtpTime %u, recvLastSR %u\n", __FUNCTION__, currentNtpTime, rtcp_ptr->recvLastSR);
     msg_ptr->msg.payload[newoffset++] = OSAL_netHtonl(temp32); /* Delay since last SR. */
 
     msg_ptr->payloadSize += (newoffset - offset);

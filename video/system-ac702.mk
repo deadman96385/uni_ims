@@ -20,19 +20,19 @@ MY_HARDWARE	:= dummy
 MY_SYSTEM_CFLAGS += -DANDROID_JELLYBEAN
 
 # Extern library option flag, define this to include ezxml library
-MY_MY_EXTERN_ENABLE_EZXML = y
+MY_MY_EXTERN_ENABLE_EZXML = n
 
 # Extern library option flags, define this to include AUTH library
-MY_EXTERN_ENABLE_AUTH = y
+MY_EXTERN_ENABLE_AUTH = n
 
 # Extern library option flags, define this to include the milenage algorithm
-MY_EXTERN_ENABLE_MILENAGE = y
+MY_EXTERN_ENABLE_MILENAGE = n
 
 # C lexer parser, define to use it, required for XCAP
-MY_EXTERN_ENABLE_HTTP_PARSE = y
+MY_EXTERN_ENABLE_HTTP_PARSE = n
 
 # PDU convertor for PDU SMS messages
-MY_EXTERN_ENABLE_PDUCONV = y
+MY_EXTERN_ENABLE_PDUCONV = n
 
 # For input, what console device to use
 MY_SYSTEM_CFLAGS += -DCONSOLE="\"/dev/tty\""
