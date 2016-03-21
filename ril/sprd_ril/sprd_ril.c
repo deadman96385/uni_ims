@@ -1097,14 +1097,14 @@ static void updateAdditionBusinessCid(int channelID) {
     ip_type = atoi(cmd);
 
     if (ip_type & IPV4) {
-        snprintf(prop, sizeof(ipv4), "net.%s%d.ip", eth, cidIndex);
+        snprintf(prop, sizeof(prop), "net.%s%d.ip", eth, cidIndex);
         property_get(prop, ipv4, "");
     } else {
         strcpy(ipv4, "0.0.0.0");
     }
 
     if (ip_type & IPV6) {
-        snprintf(prop, sizeof(cmd), "net.%s%d.ipv6_ip", eth, cidIndex);
+        snprintf(prop, sizeof(prop), "net.%s%d.ipv6_ip", eth, cidIndex);
         property_get(prop, ipv6, "");
     } else {
         strcpy(ipv6, "FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF");
