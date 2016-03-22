@@ -8903,6 +8903,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2
                 || request == RIL_EXT_REQUEST_SIM_GET_ATR
                 || request == RIL_EXT_REQUEST_ENABLE_RAU_NOTIFY
+                || request == RIL_EXT_REQUEST_SET_COLP
 #endif
 #endif
                 || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
@@ -11434,6 +11435,13 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_EXT_REQUEST_ENABLE_RAU_NOTIFY: {
             // set RAU SUCCESS report to AP
             at_send_command(ATch_type[channelID], "AT+SPREPORTRAU=1", NULL);
+            RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            break;
+        }
+        case RIL_EXT_REQUEST_SET_COLP: {
+            char cmd[64];
+            snprintf(cmd, sizeof(cmd), "AT+COLP=%d", ((int *)data)[0]);
+            at_send_command(ATch_type[channelID], cmd, NULL);
             RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
             break;
         }

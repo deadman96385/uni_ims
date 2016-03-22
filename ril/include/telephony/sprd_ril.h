@@ -6091,11 +6091,12 @@ typedef struct {
  */
 #define RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2    (RIL_EXT_REQUEST_BASE + 3)
 #define RIL_EXT_REQUEST_ENABLE_RAU_NOTIFY           (RIL_EXT_REQUEST_BASE + 4)
-#define RIL_EXT_REQUEST_LAST                        RIL_EXT_REQUEST_ENABLE_RAU_NOTIFY
+#define RIL_EXT_REQUEST_SET_COLP                    (RIL_EXT_REQUEST_BASE + 5)
+#define RIL_EXT_REQUEST_LAST                        RIL_EXT_REQUEST_SET_COLP
 
 #define RIL_EXT_UNSOL_RESPONSE_BASE                 6500
-#define RIL_EXT_UNSOL                               (RIL_EXT_UNSOL_RESPONSE_BASE + 0)
-#define RIL_EXT_UNSOL_RESPONSE_LAST                 RIL_EXT_UNSOL
+#define RIL_EXT_UNSOL_RIL_CONNECTED                 (RIL_EXT_UNSOL_RESPONSE_BASE + 0)
+#define RIL_EXT_UNSOL_RESPONSE_LAST                 RIL_EXT_UNSOL_RIL_CONNECTED
 #endif
 /*****************************************************************************/
 
