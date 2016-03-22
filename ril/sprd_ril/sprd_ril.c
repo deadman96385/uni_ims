@@ -1646,7 +1646,6 @@ static void requestFacilityLock(int channelID,  char **data, size_t datalen, RIL
 
         result = 1;
         RIL_onRequestComplete(t, RIL_E_SUCCESS, &result, sizeof(result));
-        RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED,NULL, 0);
 
         at_response_free(p_response);
         return;
