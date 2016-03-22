@@ -247,6 +247,7 @@
     ,{RIL_EXT_REQUEST_SIM_GET_ATR, dispatchVoid, responseString}
     ,{RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2, dispatchStrings, responseInts}
     ,{RIL_EXT_REQUEST_ENABLE_RAU_NOTIFY, dispatchVoid, responseVoid}
+    ,{RIL_EXT_REQUEST_SET_COLP, dispatchInts, responseVoid}
 #endif
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)

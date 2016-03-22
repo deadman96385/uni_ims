@@ -5655,6 +5655,11 @@ static void listenCallbackOEM(int fd, short flags, void *param) {
     ril_event_set(p_info->commands_event, p_info->fdCommand, true,
             p_info->processCommandsCallback, p_info);
     rilEventAddWakeup(p_info->commands_event);
+
+#if defined (RIL_SUPPORTED_OEMSOCKET)
+    // Inform oem socket that modem maybe assert or reset
+    RIL_onUnsolicitedResponse(RIL_EXT_UNSOL_RIL_CONNECTED, NULL, 0);
+#endif
 }
 
 static void startListenOEM(RIL_SOCKET_ID socket_id, SocketListenParam *socket_listen_p) {
@@ -6804,6 +6809,7 @@ requestToString(int request) {
         case RIL_EXT_REQUEST_SIM_GET_ATR: return "SIM_GET_ATR";
         case RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2: return "SIM_OPEN_CHANNEL_WITH_P2";
         case RIL_EXT_REQUEST_ENABLE_RAU_NOTIFY: return "ENABLE_RAU_NOTIFY";
+        case RIL_EXT_REQUEST_SET_COLP: return "SET_COLP";
 #endif  // RIL_SUPPORTED_OEMSOCKET
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
@@ -6922,6 +6928,9 @@ requestToString(int request) {
         case RIL_UNSOL_GPRS_RAU: return "UNSOL_GPRS_RAU";
         case RIL_UNSOL_RESPONS_IMS_CONN_ENABLE: return "RIL_UNSOL_RESPONS_IMS_CONN_ENABLE";
         case RIL_UNSOL_CLEAR_CODE_FALLBACK: return "RIL_UNSOL_CLEAR_CODE_FALLBACK";
+#if defined (RIL_SUPPORTED_OEMSOCKET)
+        case RIL_EXT_UNSOL_RIL_CONNECTED: return "UNSOL_RIL_CONNECTED";
+#endif  // RIL_SUPPORTED_OEMSOCKET
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_UNSOL_RESPONSE_NEW_CB_MSG: return "UNSOL_RESPONSE_NEW_CB_MSG";
