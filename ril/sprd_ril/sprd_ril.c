@@ -340,6 +340,7 @@ void setModemtype();
 static void getIMEIPassword(int channeID,char pwd[]);//SPRD add for simlock
 static int activeSpecifiedCidProcess(int channelID, void *data, int primaryCid, int secondaryCid, char* pdp_type);
 static void radioPowerOnTimeout();
+static void queryVideoCid(void *param);
 
 /*** Static Variables ***/
 static const RIL_RadioFunctions s_callbacks = {
@@ -2376,6 +2377,71 @@ static void requestGetRadioCapability(RIL_Token t)
 }
 
 static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t);
+
+static void queryVideoCid(void *param)
+{
+    int channelID;
+    ATResponse *p_response = NULL;
+    int err = 0;
+    char cmd[32] = {0};
+    char *tmp = NULL, *line = NULL, *p = NULL;
+    int *response = NULL;
+    int commas = 0, i;
+    int *cid = NULL;
+    channelID = getChannel();
+
+    cid = (int *)param;
+    snprintf(cmd, sizeof(cmd), "AT+CGEQOSRDP=%d", *cid);
+    err = at_send_command_singleline(ATch_type[channelID], cmd,
+            "+CGEQOSRDP:", &p_response);
+    if (err < 0 || p_response->success == 0) {
+        goto ERROR;
+    }
+
+    tmp = strdup(p_response->p_intermediates->line);
+    line = tmp;
+
+    err = at_tok_start(&line);
+    if (err < 0) {
+        goto ERROR;
+    }
+
+    for (p = line ; *p != '\0' ;p++) {
+        if (*p == ',') {
+            commas++;
+        }
+    }
+
+    response = (int *) malloc((commas+1) * sizeof(int));
+
+    /* +CGEQOSRDP: <cid>,<QCI>,<DL_GBR>,<UL_GBR>,<DL_MBR>,<UL_MBR>,<DL_AMBR>,<UL_AMBR> */
+    for (i = 0; i <= commas; i++) {
+        err = at_tok_nextint(&line, &response[i]);
+        if (err < 0) {
+            goto ERROR;
+        }
+    }
+
+    if (commas >= 1) {
+        RILLOGD("queryVideoCid param=%d, commas = %d, cid=%d, QCI=%d",
+                *cid, commas, response[0], response[1]);
+        if (response[1] == 2) {
+            RILLOGD("QCI is 2, %d is video cid", response[0]);
+            RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_VIDEO_QUALITY,
+                    response, (commas+1) * sizeof(int));
+        }
+    }
+
+ERROR:
+    putChannel(channelID);
+    at_response_free(p_response);
+    if (tmp != NULL) {
+        free (tmp);
+    }
+    if (response != NULL ) {
+        free(response);
+    }
+}
 
 static void onDataCallListChanged(void *param )
 {
@@ -13441,9 +13507,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
          * RIL_UNSOL_DATA_CALL_LIST_CHANGED calls are tolerated
          */
         /* can't issue AT commands here -- call on main thread */
-        char *tmp;
+        char *tmp, *p_commaNext = NULL;
         int pdp_state = 1;
         int cid = -1;
+        static int activeCid = -1;
+        int networkChangeReason = -1;
         line = strdup(s);
         tmp = line;
         at_tok_start(&tmp);
@@ -13451,9 +13519,33 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             tmp += strlen(" NW PDN ACT ");
         } else if (strstr(tmp, "NW ACT ")) {
             tmp += strlen(" NW ACT ");
+            for (p_commaNext = tmp; *p_commaNext != '\0'; p_commaNext++) {
+                if (*p_commaNext == ',') {
+                    p_commaNext += 1;
+                    break;
+                }
+            }
+            activeCid = atoi(p_commaNext);
+            RILLOGD("activeCid = %d, networkChangeReason = %d", activeCid, networkChangeReason);
+            RIL_requestTimedCallback(queryVideoCid, &activeCid, NULL);
         } else if (strstr(tmp, "NW PDN DEACT")) {
             tmp += strlen(" NW PDN DEACT ");
             pdp_state = 0;
+        } else if (strstr(tmp," NW MODIFY ")) {
+            tmp += strlen(" NW MODIFY ");
+            activeCid = atoi(tmp);
+            for (p_commaNext = tmp; *p_commaNext != '\0'; p_commaNext++) {
+                if (*p_commaNext == ',') {
+                    p_commaNext += 1;
+                    break;
+                }
+            }
+            networkChangeReason = atoi(p_commaNext);
+            RILLOGD("activeCid = %d, networkChangeReason = %d", activeCid, networkChangeReason);
+            if (networkChangeReason == 2 || networkChangeReason == 3) {
+                RIL_requestTimedCallback(queryVideoCid, &activeCid, NULL);
+            }
+            goto out;
         } else {
             RILLOGD("Invalid CGEV");
             goto out;
