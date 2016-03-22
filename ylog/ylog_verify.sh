@@ -1,14 +1,35 @@
 #!/bin/bash
 
+default_run=(1)
 cmds=(
-'${ADB} shell ls -l /storage/sdcard0/ylog/ylog/'
+'report_summary'
+'${ADB} shell ls -l ${rootdir}/ylog/ylog/'
 '${ADB} shell ylog_cli space'
 '${ADB} shell ylog_cli ylog'
-'${ADB} shell tail /storage/sdcard0/ylog/ylog/ylog_journal_file'
-'${ADB} shell tail -n 1 /storage/sdcard0/ylog/ylog/android/000'
-'${ADB} shell tail -n 1 /storage/sdcard0/ylog/ylog/kernel/000'
-'${ADB} shell cat /storage/sdcard0/ylog/ylog/ylog_debug | grep -E "Has run|killed" | tail -n 2'
+'${ADB} shell tail ${rootdir}/ylog/ylog/ylog_journal_file'
+'${ADB} shell tail -n 1 ${rootdir}/ylog/ylog/android/000'
+'${ADB} shell tail -n 1 ${rootdir}/ylog/ylog/kernel/000'
+'${ADB} shell cat ${rootdir}/ylog/ylog/ylog_debug | grep -E "Has run|killed" | tail -n 2'
 )
+
+function report_summary() {
+    ylog_debug="${rootdir}/ylog/ylog/ylog_debug"
+    ylog_android="${rootdir}/ylog/ylog/android/000"
+    ylog_kernel="${rootdir}/ylog/ylog/kernel/000"
+    ylog_traces="${rootdir}/ylog/ylog/traces/"
+
+    eval '${ADB} shell "[ -d ${ylog_traces} ] && { echo \"ls -l ${ylog_traces}\"; ls -l ${ylog_traces}; }"'
+    eval 'echo'
+    eval '${ADB} shell ylog_cli space'
+    eval 'echo'
+    eval '${ADB} shell cat ${ylog_debug} | grep -E "Has run|killed" | tail -n 2 |
+        sed "s/.*Has run \(.*\) avg_speed.*/\1/;s/.*] \[/[/" | paste -s' # | sed "s/\(.*\) \[\(.*\)/[\2 \1/"'
+    eval '${ADB} shell ylog_cli speed | grep -E "Has run|killed" | tail -n 2 |
+        sed "s/.*Has run \(.*\) avg_speed.*/\1/;s/.*] \[/[/" | paste -s' # | sed "s/\(.*\) \[\(.*\)/[\2 \1/"'
+    eval '${ADB} shell tail -n 1 ${ylog_android} | cut -d" " -f1,2 | sed "s/..\(.*\)/      android - [\1]/"'
+    eval '${ADB} shell tail -n 1 ${ylog_kernel} | cut -d" " -f1,2 | sed "s/^/       kernel - /"'
+    eval 'echo'
+}
 
 function usage() {
 cat <<__AEOF
@@ -39,6 +60,9 @@ done
 
 shift `expr $OPTIND - 1`
 runs=($@)
+[ "${runs[0]}" ] || {
+    [ "${default_run[0]}" ] && runs=(${default_run[@]})
+}
 
 [ "${list_cmd}" ] && {
     count=1
@@ -90,6 +114,7 @@ for d in ${devices[@]}; do
     for c in "${do_cmds[@]}"; do
         echo; echo;
         ADB="adb -s ${d}"
+        rootdir="$(${ADB} shell ylog_cli rootdir | tr -d '\r')"
         eval "echo \"${count}. [ $(echo ${c} | sed 's/"/\\"/g') ] on device ${serial}\""
         eval "${c}"
     done

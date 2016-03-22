@@ -196,7 +196,7 @@ static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char
         pfd[0].fd = fd;
         pfd[0].events = POLLIN;
         do {
-            ret= poll(pfd, 1, 500);
+            ret = poll(pfd, 1, 500);
             if (ret <= 0) {
                 ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog cmd %s is failed, %s\n",
                         cmd, ret == 0 ? "timeout":strerror(errno));
@@ -1778,6 +1778,23 @@ void ylog_trigger_all(struct ylog *ylog) {
     show_ydst_storage_info(NULL);
 }
 
+/**
+ * Multi thread calling is not supported,
+ * you must call and use it one by one, step by step
+ */
+static struct ylog *ylog_get_empty_slot(void) {
+    struct ylog *ys;
+    int i;
+    for_each_ylog(i, ys, NULL) {
+        if (ys->name == NULL) {
+            ylog_info("Success: Get one empty ylog %d\n", i);
+            return ys;
+        }
+    }
+    ylog_critical("Failed: Get ylog there is no space to store %d\n", i);
+    return NULL;
+}
+
 static int ylog_insert(struct ylog *y) {
     struct ylog *ys;
     int i;
@@ -1816,10 +1833,69 @@ static int ydst_insert(struct ydst *ydi) {
     return -1;
 }
 
+/**
+ * Multi thread calling is not supported,
+ * you must call and use it one by one, step by step
+ */
+static struct ydst *ydst_get_empty_slot(void) {
+    struct ydst *yd;
+    int i;
+    for_each_ydst(i, yd, NULL) {
+        if (yd->file == NULL) {
+            ylog_info("Success: Get one empty ydst, index is %d\n", i);
+            return yd;
+        }
+    }
+    ylog_critical("Failed: Get ydst there is no space to store %d\n", i);
+    return NULL;
+}
+
 static int ydst_insert_all(struct ydst *yd) {
     for (;yd && yd->file; yd++)
         ydst_insert(yd);
     return 0;
+}
+
+static int ynode_insert(struct ynode *ynode) {
+    struct ydst *ydst;
+    struct ylog *ylog;
+    int i, ret = 1;
+    pthread_mutex_lock(&mutex);
+    ydst = ydst_get_empty_slot();
+    if (ydst) {
+        if (ynode->ydst.file) {
+            struct cacheline *cache = (ynode->cache.size && ynode->cache.num) ? calloc(sizeof(struct cacheline), 1) : NULL;
+            if (cache)
+                *cache = ynode->cache;
+            *ydst = ynode->ydst;
+            ylog_info("Install ydst : %s\n", ydst->file);
+            ydst->cache = cache;
+        } else {
+            ydst = NULL;
+            ylog_info("Empty ydst in this ynode\n");
+        }
+        ret = 0;
+        for (i = 0; ynode->ylog[i].file; i++) {
+            ylog = ylog_get_empty_slot();
+            if (ylog == NULL) {
+                ret |= 1;
+                break;
+            }
+            *ylog = ynode->ylog[i];
+            ylog->ydst = ydst;
+            ylog_info("Install ylog : %s\n", ylog->name);
+        }
+    }
+    pthread_mutex_unlock(&mutex);
+    return ret;
+}
+
+static int ynode_insert_all(struct ynode *ynode, int num) {
+    int ret = 0;
+    int i;
+    for (i = 0; i < num; i++)
+        ret |= ynode_insert(&ynode[i]);
+    return ret;
 }
 
 static void ydst_refs_inc(struct ylog *y) {
@@ -2374,8 +2450,8 @@ __exit:
     return y->exit(y);
 }
 
-static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root, struct context *c) {
-    struct ylog *y = ylog;
+static void ylog_init(struct ydst_root *root, struct context *c) {
+    struct ylog *y;
     struct ylog_poll *yp;
     struct ydst *yd;
     int i;
@@ -2394,10 +2470,11 @@ static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *ro
     gettimeofday(&c->tv, NULL);
     localtime_r(&c->tv.tv_sec, &c->tm);
     get_boottime(&c->ts);
+    ylog_get_format_time(c->timeBuf);
     ylog_historical_folder(root->root, c);
 
     /* for (; yd->refs >= 0; yd++) { */
-    for_each_ydst(i, yd, ydst) {
+    for_each_ydst(i, yd, NULL) {
         if (yd->file == NULL)
             continue;
         if (yd->file_name == NULL)
@@ -2474,8 +2551,7 @@ static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *ro
         yd->max_segment_new = yd->max_segment_now = yd->max_segment;
     }
 
-    /* for (;y && y->name; y++) { */
-    for_each_ylog(i, y, ylog) {
+    for_each_ylog(i, y, NULL) {
         if (y->name == NULL)
             continue;
         ylog_info("ylog <%s> is initialized\n", y->name);
@@ -2575,7 +2651,7 @@ static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *ro
     do {
         ylog_info("waiting for all ylog thread ready ...\n");
         all_thread_started = 1;
-        for_each_ylog(i, y, ylog) {
+        for_each_ylog(i, y, NULL) {
             if (y->name == NULL)
                 continue;
             if ((y->status & YLOG_STARTED) == 0) {

@@ -137,6 +137,7 @@ struct context {
     struct timeval tv;
     struct tm tm;
     struct timespec ts;
+    char timeBuf[32];
     int ignore_signal_process;
 };
 
@@ -550,6 +551,7 @@ struct ylog {
                                           * setprop logd.klogd false
                                           *
                                           */
+#define YLOG_GROUP_MODEM            0x8000
     int mode;
     int read_len_zero_count;
     int block_read; /* 1: the file will be a blocked file type, 0: others by luther */
@@ -583,6 +585,13 @@ struct ylog {
     ylog_thread_reset thread_reset;
     ylog_thread_nop thread_nop;
     ylog_filter_so filter_so;
+    void *privates;
+};
+
+struct ynode {
+    struct ylog ylog[10];
+    struct ydst ydst;
+    struct cacheline cache;
 };
 
 struct os_hooks {

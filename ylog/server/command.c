@@ -499,6 +499,33 @@ static int cmd_speed(struct command *cmd, char *buf, int buf_size, int fd, int i
     }
 }
 
+static int cmd_time(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    struct timespec ts;
+    time_t delta_speed_millisecond, delta_t;
+    struct tm delta_tm;
+    char timeBuf[32];
+    get_boottime(&ts);
+    delta_speed_millisecond = diff_ts_millisecond(&global_context->ts, &ts);
+    delta_t = delta_speed_millisecond / 1000;
+    gmtime_r(&delta_t, &delta_tm); /* UTC, don't support keep running more than 1 year by luther */
+    ylog_get_format_time(timeBuf);
+    send(fd, buf, snprintf(buf, buf_size,
+                "\n"
+                "%02d day %02d:%02d:%02d       -- runned\n"
+                "%s -- start time\n"
+                "%s -- current time\n"
+                "\n",
+                delta_tm.tm_yday, delta_tm.tm_hour,
+                delta_tm.tm_min, delta_tm.tm_sec,
+                global_context->timeBuf, timeBuf), MSG_NOSIGNAL);
+    return 0;
+    if (0) { /* avoid compiler warning */
+        cmd = cmd;
+        index = index;
+        yp = yp;
+    }
+}
+
 static int cmd_flush(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
     struct ylog *y = NULL;
     int i;
@@ -722,7 +749,7 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
     gmtime_r(&delta_t, &delta_tm); /* UTC, don't support keep running more than 1 year by luther */
     fsize1 = ylog_get_unit_size_float(root->quota_now ? root->quota_now : root->max_size, &unit1);
     send(fd, buf, snprintf(buf, buf_size, "--------------------------------------------------------------------------\n"\
-                "root = %s, quota = %.2f%c, running %02d day %02d:%02d:%02d\n"\
+                "root = %s quota = %.2f%c, running %02d day %02d:%02d:%02d\n"\
                 "--------------------------------------------------------------------------\n"
                 , global_ydst_root->root, fsize1, unit1,
                 delta_tm.tm_yday,
@@ -809,7 +836,7 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
             fsize2 = ylog_get_unit_size_float(y->ydst->max_size_now, &unit2);
             yds_new_segment_file_name(path, sizeof path, 0, y->ydst);
             send(fd, buf, snprintf(buf, buf_size, "%-20s -> %-8s -> %s (%dx%.2f%c/%.2f%c,%5.2f%%)",
-                        y->name, status, path, y->ydst->max_segment_now,
+                        y->name, status, path + strlen(y->ydst->root_folder) + 1, y->ydst->max_segment_now,
                         fsize1, unit1, fsize2, unit2, (100 * y->ydst->max_size_now) / (float)quota_now), MSG_NOSIGNAL);
             if (y->ydst->cache) {
                 fsize1 = ylog_get_unit_size_float(y->ydst->cache->size, &unit1);
@@ -1107,6 +1134,7 @@ static struct command commands[] = {
     {"flush", "flush all the data back to disk", cmd_flush, NULL},
     {"loglevel", "0:error, 1:critical, 2:warn, 3:info, 4:debug", cmd_loglevel, NULL},
     {"speed", "max speed since ylog start", cmd_speed, NULL},
+    {"time", "show the time info", cmd_time, NULL},
     {"ylog", "list all existing ylog, also can start or stop it, ex.\n"\
             "              ylog_cli ylog                    - show each ylog short description\n"\
             "              ylog_cli ylog kenrel             - show ylog kernel detailed description\n"\

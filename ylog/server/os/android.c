@@ -14,12 +14,37 @@
 #define YLOG_CONFIG        "/data/ylog/ylog.conf"
 #define YLOG_FILTER_PATH "/system/lib/"
 
+struct other_processor_property_cell {
+    const char *property_name;
+    const char *property_value_default;
+};
+
+struct other_processor_node {
+    struct other_processor_property_cell log;
+    struct other_processor_property_cell diag; /* File is for sending raw AT command string */
+};
+
+struct other_processor_log_privates {
+    char *file_diag;
+};
+
+struct other_processor_log {
+    const char *enabled;
+    struct other_processor_node pnode;
+    struct ynode ynode;
+    struct other_processor_log_privates privates;
+};
+
 struct os_status {
     int sdcard_online;
     char ylog_root_path_latest[512];
     char historical_folder_root_last[512];
+    char *file_diag[5];
+    int file_diag_num;
     int anr_fast;
-} oss, *pos = &oss;
+} oss = {
+    .file_diag_num = 5,
+}, *pos = &oss;
 
 struct os_config {
 #define KEEP_HISTORICAL_FOLDER_NUMBERS_DEFUALT 5
@@ -391,6 +416,67 @@ static int cmd_setprop(struct command *cmd, char *buf, int buf_size, int fd, int
     }
 }
 
+static int send_at_file_diag(int idx, char *buf, int count, char *retbuf, int *retcount_max) {
+    int fd, ret = 0;
+    char *file_diag;
+    if (idx >= pos->file_diag_num) {
+        return 1;
+    }
+    file_diag = pos->file_diag[idx];
+    fd = open(file_diag, O_RDWR);
+    if (fd < 0) {
+        ylog_info("open %s fail.%s", file_diag, strerror(errno));
+        return 1;
+    }
+    if (count != fd_write(buf, count, fd))
+        ret = 1;
+    ylog_debug("send to %s with %s\n", file_diag, buf);
+    if (retbuf && retcount_max) {
+        struct pollfd pfd[1];
+        pfd[0].fd = fd;
+        pfd[0].events = POLLIN;
+        do {
+            ret = poll(pfd, 1, 1000);
+            if (ret <= 0) {
+                ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog cp is failed, %s\n",
+                        ret == 0 ? "timeout":strerror(errno));
+                ret = 0;
+                break;
+            }
+            ret = read(fd, retbuf, *retcount_max);
+            if (ret >=0) {
+                *retcount_max = ret;
+                ret = 0;
+            } else {
+                ret = 1;
+                ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog read is failed, %s\n", strerror(errno));
+            }
+        } while (0/*ret > 0*/);
+    }
+    close(fd);
+    return ret;
+}
+
+static int cmd_at(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    int len = strlen(buf);
+    if (len < buf_size && (buf[len-1] != '\r')) {
+        buf[len++] = '\r';
+    }
+    if (send_at_file_diag(0, buf, len, NULL, NULL) == 0) {
+        len = 0;
+    } else {
+        len = snprintf(buf, buf_size, "Failed\n");
+    }
+    if (len)
+        send(fd, buf, len, MSG_NOSIGNAL);
+    return 0;
+    if (0) { /* avoid compiler warning */
+        cmd = cmd;
+        index = index;
+        yp = yp;
+    }
+}
+
 static struct command os_commands[] = {
     {"test", "test from android", cmd_test, NULL},
     {"\n", NULL, os_cmd_help, (void*)os_commands},
@@ -398,6 +484,7 @@ static struct command os_commands[] = {
     {"cpath_last", "get the last_ylog path", cmd_cpath_last, NULL},
     {"history_n", "set keep_historical_folder_numbers", cmd_history_n, NULL},
     {"setprop", "set property, ex. ylog_cli setprop persist.ylog.enabled 1", cmd_setprop, NULL},
+    {"at", "send AT command to cp side, ex. ylog_cli at at+armlog=1", cmd_at, NULL},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -563,10 +650,12 @@ static void ylog_ready(void) {
     if (y)
         ylog_trigger_and_wait_for_finish(y);
 
+#if 1
     if (drop_privs() < 0)
         ylog_error("ylog drop_privs failed: %s\n", strerror(errno));
     else
         ylog_critical("ylog drop_privs success\n");
+#endif
 
     mkdirs("/data/anr/"); /* For ylog traces.txt */
     mkdirs("/data/tombstones/"); /* For ylog tombstone_00 ~ tombstone_09 */
@@ -575,50 +664,6 @@ static void ylog_ready(void) {
 
     ylog_os_event_timer_create("android", pos->sdcard_online ? 5*1000:1*1000, event_timer_handler, NULL);
 }
-
-enum os_ydst_type {
-    OS_YDST_TYPE_ANDROID,
-    OS_YDST_TYPE_KERNEL,
-    OS_YDST_TYPE_TRACER,
-    OS_YDST_TYPE_TCPDUMP,
-    OS_YDST_TYPE_HCIDUMP,
-    OS_YDST_TYPE_TRACES,
-    OS_YDST_TYPE_SYS_INFO,
-    OS_YDST_TYPE_MAX
-};
-
-static struct cacheline os_cacheline[OS_YDST_TYPE_MAX] = {
-    [OS_YDST_TYPE_ANDROID] = {
-        .size = 512 * 1024,
-        .num = 4,
-        .timeout = 1000, /* ms */
-        .debuglevel = CACHELINE_DEBUG_CRITICAL,
-    },
-    [OS_YDST_TYPE_KERNEL] = {
-        .size = 512 * 1024,
-        .num = 2,
-        .timeout = 1000, /* ms */
-        .debuglevel = CACHELINE_DEBUG_CRITICAL,
-    },
-    [OS_YDST_TYPE_TRACER] = {
-        .size = 512 * 1024,
-        .num = 2,
-        .timeout = 1000, /* ms */
-        .debuglevel = CACHELINE_DEBUG_CRITICAL,
-    },
-    [OS_YDST_TYPE_TCPDUMP] = {
-        .size = 512 * 1024,
-        .num = 2,
-        .timeout = 1000, /* ms */
-        .debuglevel = CACHELINE_DEBUG_CRITICAL,
-    },
-    [OS_YDST_TYPE_HCIDUMP] = {
-        .size = 512 * 1024,
-        .num = 2,
-        .timeout = 1000, /* ms */
-        .debuglevel = CACHELINE_DEBUG_CRITICAL,
-    },
-};
 
 static struct context os_context[M_MODE_NUM] = {
     [M_USER] = {
@@ -668,8 +713,358 @@ static void os_env_prepare(void) {
 
 }
 
-static void os_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root,
-        struct context **c, struct os_hooks *hook) {
+static void insert_file_diag(char *file_diag, int mode) {
+    int i;
+    for (i = 0; i < pos->file_diag_num; i++) {
+        if (pos->file_diag[i] == NULL) {
+            pos->file_diag[i] = strdup(file_diag);
+        }
+    }
+    if (0) { /* avoid compiler warning */
+        mode = mode;
+    }
+}
+
+static void other_processor_ylog_insert(void) {
+    int i, flag;
+    struct ylog *ylog;
+    struct ydst *ydst;
+    struct other_processor_log *opl;
+    char prop[PROPERTY_VALUE_MAX];
+    struct other_processor_log_privates *privates;
+    char buf[4096];
+    struct other_processor_log opls[] = {
+        /* cp/wcdma/ */ {
+            .enabled = "persist.modem.w.enable",
+            .pnode = {
+                .log  = {"ro.modem.w.log", "/dev/slog_w"},
+                .diag = {"ro.modem.w.diag", "/dev/slog_w"},
+            },
+            .ynode = {
+                .ylog = {
+                    {
+                        .name = "cp_wcdma",
+                        .type = FILE_NORMAL,
+                        .file = NULL,
+                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
+                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS |
+                            YLOG_GROUP_MODEM,
+                        .restart_period = 3000,
+                        .status = YLOG_DISABLED,
+                        .raw_data = 1,
+                    },
+                },
+                .ydst = {
+                    .file = "cp/wcdma/",
+                    .file_name = "wcdma.log",
+                    .max_segment = 10,
+                    .max_segment_size = 200*1024*1024,
+                    .write_data2cache_first = 1,
+                },
+                .cache = {
+                    .size = 512 * 1024,
+                    .num = 8,
+                    .timeout = 1000,
+                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
+                },
+            },
+        },
+        /* cp/td-scdma/ */ {
+            .enabled = "persist.modem.t.enable",
+            .pnode = {
+                .log  = {"ro.modem.t.log", "/dev/slog_gge"},
+                .diag = {"ro.modem.t.diag", "/dev/slog_gge"},
+            },
+            .ynode = {
+                .ylog = {
+                    {
+                        .name = "cp_td-scdma",
+                        .type = FILE_NORMAL,
+                        .file = NULL,
+                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
+                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS |
+                            YLOG_GROUP_MODEM,
+                        .restart_period = 3000,
+                        .status = YLOG_DISABLED,
+                        .raw_data = 1,
+                    },
+                },
+                .ydst = {
+                    .file = "cp/td-scdma/",
+                    .file_name = "td-scdma.log",
+                    .max_segment = 10,
+                    .max_segment_size = 200*1024*1024,
+                    .write_data2cache_first = 1,
+                },
+                .cache = {
+                    .size = 512 * 1024,
+                    .num = 8,
+                    .timeout = 1000,
+                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
+                },
+            },
+        },
+        /* cp/5mode/ */ {
+            .enabled = "persist.modem.l.enable",
+            .pnode = {
+                .log  = {"ro.modem.l.log", "/dev/slog_lte"},
+                .diag = {"ro.modem.l.diag", "/dev/sdiag_lte"},
+            },
+            .ynode = {
+                .ylog = {
+                    {
+                        .name = "cp_5mode",
+                        .type = FILE_NORMAL,
+                        .file = NULL,
+                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
+                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS |
+                            YLOG_GROUP_MODEM,
+                        .restart_period = 3000,
+                        .status = YLOG_DISABLED,
+                        .raw_data = 1,
+                    },
+                },
+                .ydst = {
+                    .file = "cp/5mode/",
+                    .file_name = "5mode.log",
+                    .max_segment = 10,
+                    .max_segment_size = 200*1024*1024,
+                    .write_data2cache_first = 1,
+                },
+                .cache = {
+                    .size = 512 * 1024,
+                    .num = 8,
+                    .timeout = 1000,
+                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
+                },
+            },
+        },
+        /* cp/4mode/ */ {
+            .enabled = "persist.modem.lf.enable",
+            .pnode = {
+                .log  = {"ro.modem.lf.log", "/dev/slog_lte"},
+                .diag = {"ro.modem.lf.diag", "/dev/sdiag_lte"},
+            },
+            .ynode = {
+                .ylog = {
+                    {
+                        .name = "cp_4mode",
+                        .type = FILE_NORMAL,
+                        .file = NULL,
+                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
+                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS |
+                            YLOG_GROUP_MODEM,
+                        .restart_period = 3000,
+                        .status = YLOG_DISABLED,
+                        .raw_data = 1,
+                    },
+                },
+                .ydst = {
+                    .file = "cp/4mode/",
+                    .file_name = "4mode.log",
+                    .max_segment = 10,
+                    .max_segment_size = 200*1024*1024,
+                    .write_data2cache_first = 1,
+                },
+                .cache = {
+                    .size = 512 * 1024,
+                    .num = 8,
+                    .timeout = 1000,
+                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
+                },
+            },
+        },
+        /* cp/3mode/ */ {
+            .enabled = "persist.modem.tl.enable",
+            .pnode = {
+                .log  = {"ro.modem.tl.log", "/dev/slog_lte"},
+                .diag = {"ro.modem.tl.diag", "/dev/sdiag_lte"},
+            },
+            .ynode = {
+                .ylog = {
+                    {
+                        .name = "cp_3mode",
+                        .type = FILE_NORMAL,
+                        .file = NULL,
+                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
+                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS |
+                            YLOG_GROUP_MODEM,
+                        .restart_period = 3000,
+                        .status = YLOG_DISABLED,
+                        .raw_data = 1,
+                    },
+                },
+                .ydst = {
+                    .file = "cp/3mode/",
+                    .file_name = "3mode.log",
+                    .max_segment = 10,
+                    .max_segment_size = 200*1024*1024,
+                    .write_data2cache_first = 1,
+                },
+                .cache = {
+                    .size = 512 * 1024,
+                    .num = 8,
+                    .timeout = 1000,
+                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
+                },
+            },
+        },
+        /* cp/wcn/ */ {
+            .enabled = "ro.modem.wcn.enable",
+            .pnode = {
+                .log  = {"ro.modem.wcn.log", "/dev/slog_wcn"},
+                .diag = {"ro.modem.wcn.diag", "/dev/slog_wcn"},
+            },
+            .ynode = {
+                .ylog = {
+                    {
+                        .name = "cp_wcn",
+                        .type = FILE_NORMAL,
+                        .file = NULL,
+                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
+                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
+                        .restart_period = 3000,
+                        .status = YLOG_DISABLED,
+                        .raw_data = 1,
+                    },
+                },
+                .ydst = {
+                    .file = "cp/wcn/",
+                    .file_name = "wcn.log",
+                    .max_segment = 2,
+                    .max_segment_size = 100*1024*1024,
+                },
+                .cache = {
+                    .size = 512 * 1024,
+                    .num = 2,
+                    .timeout = 1000,
+                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
+                },
+            },
+        },
+        /* cp/gnss/ */ {
+            .enabled = "ro.modem.gnss.enable",
+            .pnode = {
+                .log  = {"ro.modem.gnss.log", "/dev/slog_gnss"},
+                .diag = {"ro.modem.gnss.diag", "/dev/slog_gnss"},
+            },
+            .ynode = {
+                .ylog = {
+                    {
+                        .name = "cp_gnss",
+                        .type = FILE_NORMAL,
+                        .file = NULL,
+                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
+                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
+                        .restart_period = 3000,
+                        .status = YLOG_DISABLED,
+                        .raw_data = 1,
+                    },
+                },
+                .ydst = {
+                    .file = "cp/gnss/",
+                    .file_name = "gnss.log",
+                    .max_segment = 2,
+                    .max_segment_size = 100*1024*1024,
+                },
+                .cache = {
+                    .size = 512 * 1024,
+                    .num = 4,
+                    .timeout = 1000,
+                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
+                },
+            },
+        },
+        /* cp/agdsp/ */ {
+            .enabled = "ro.modem.agdsp.enable",
+            .pnode = {
+                .log  = {"ro.modem.agdsp.log", "/dev/audio_dsp_log"},
+                .diag = {"ro.modem.agdsp.diag", "/dev/audio_dsp_log"},
+            },
+            .ynode = {
+                .ylog = {
+                    {
+                        .name = "cp_agdsp",
+                        .type = FILE_NORMAL,
+                        .file = NULL,
+                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
+                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
+                        .restart_period = 3000,
+                        .status = YLOG_DISABLED,
+                        .raw_data = 1,
+                    },
+                },
+                .ydst = {
+                    .file = "cp/agdsp/",
+                    .file_name = "agdsp.log",
+                    .max_segment = 2,
+                    .max_segment_size = 100*1024*1024,
+                    .write_data2cache_first = 1,
+                },
+                .cache = {
+                    .size = 512 * 1024,
+                    .num = 8,
+                    .timeout = 1000,
+                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
+                },
+            },
+        },
+    };
+
+    for (i = 0; i < (int)ARRAY_LEN(opls); i++) {
+        opl = &opls[i];
+        if (opl->enabled) {
+            property_get(opl->enabled, prop, "");
+            if (strcmp(prop, "1"))
+                continue;
+        }
+        flag = 0;
+        ylog = &opl->ynode.ylog[0];
+        ydst = &opl->ynode.ydst;
+#if 1
+        ydst->max_segment = 2;
+        ydst->max_segment_size = 10 * 1024 * 1024;
+#endif
+        privates = &opl->privates;
+        if (opl->pnode.log.property_name) {
+            property_get(opl->pnode.log.property_name, prop, opl->pnode.log.property_value_default);
+            if (prop[0] && ylog->file == NULL) {
+                ylog->file = strdup(prop);
+                flag |= 0x01;
+            }
+        }
+        if (opl->pnode.diag.property_name) {
+            property_get(opl->pnode.diag.property_name, prop, opl->pnode.diag.property_value_default);
+            if (prop[0]) {
+                privates->file_diag = strdup(prop);
+                if (ylog->mode & YLOG_GROUP_MODEM)
+                    insert_file_diag(privates->file_diag, YLOG_GROUP_MODEM);
+                ylog->privates = calloc(sizeof(struct other_processor_log_privates), 1);
+                *(struct other_processor_log_privates*)ylog->privates = *privates;
+                flag |= 0x02;
+                if (ylog->file == NULL) {
+                    /**
+                     * diag path will be used both for
+                     * log reading and AT command writing
+                     */
+                    ylog->file = privates->file_diag;
+                }
+            }
+        }
+        if (ylog->file) {
+            if (ynode_insert(&opl->ynode)) {
+                if (flag & 0x01)
+                    free(ylog->file);
+                if (flag & 0x02) {
+                    free(ylog->privates);
+                    free(privates->file_diag);
+                }
+            }
+        }
+    }
+}
+
+static void os_init(struct ydst_root *root, struct context **c, struct os_hooks *hook) {
     struct ylog *y;
     int i;
     char *value;
@@ -688,233 +1083,254 @@ static void os_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root
     };
     enum mode_types mode;
     /* Assume max size is 1G */
-    struct ydst os_ydst[OS_YDST_TYPE_MAX + 1] = {
-        [OS_YDST_TYPE_ANDROID] = {
-            .file = "android/",
-            .file_name = "android.log",
-            .max_segment = 30,
-            .max_segment_size = 50*1024*1024,
-            .cache = &os_cacheline[OS_YDST_TYPE_ANDROID],
-        },
-        [OS_YDST_TYPE_KERNEL] = {
-            .file = "kernel/",
-            .file_name = "kernel.log",
-            .max_segment = 10,
-            .max_segment_size = 50*1024*1024,
-            .cache = &os_cacheline[OS_YDST_TYPE_KERNEL],
-#if KERNEL_NOTIFY_MODE == 1
-            .fwrite = ydst_fwrite_kernel,
-#else
-            .write = ydst_write_kernel,
-#endif
-        },
-        [OS_YDST_TYPE_TRACER] = {
-            .file = "tracer/",
-            .file_name = "tracer.log",
-            .max_segment = 3,
-            .max_segment_size = 10*1024*1024,
-            .cache = &os_cacheline[OS_YDST_TYPE_TRACER],
-        },
-        [OS_YDST_TYPE_TCPDUMP] = {
-            .file = "tcpdump/",
-            .file_name = "tcpdump.log",
-            .max_segment = 6,
-            .max_segment_size = 20*1024*1024,
-            .cache = &os_cacheline[OS_YDST_TYPE_TCPDUMP],
-            .write_data2cache_first = 1,
-        },
-        [OS_YDST_TYPE_HCIDUMP] = {
-            .file = "hcidump/",
-            .file_name = "hcidump.log",
-            .max_segment = 10,
-            .max_segment_size = 20*1024*1024,
-            .cache = &os_cacheline[OS_YDST_TYPE_HCIDUMP],
-            .nowrap = 1,
-            .ytag = 1,
-            .write_data2cache_first = 1,
-        },
-        [OS_YDST_TYPE_TRACES] = {
-            .file = "traces/",
-            .file_name = "traces.log",
-            .max_segment = 2,
-            .max_segment_size = 20*1024*1024,
-        },
-        [OS_YDST_TYPE_SYS_INFO] = {
-            .file = "sys_info/",
-            .file_name = "sys_info.log",
-            .max_segment = 5,
-            .max_segment_size = 50*1024*1024,
-        },
-        { .file = NULL, }, /* .file = NULL to mark the end of the array */
-    };
-    struct ylog os_ylog[] = {
-        {
-            .name = "kernel",
-            .type = FILE_NORMAL,
-            .file = "/proc/kmsg",
-            .ydst = &ydst[OS_YDST_TYPE_KERNEL+OS_YDST_TYPE_BASE],
-            .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
-            .restart_period = 300,
-            .fp_array = NULL,
-            .timestamp = 1,
-        },
-        {
-            .name = "tracer",
-            .type = FILE_NORMAL,
-            .file = "/d/tracing/trace_pipe",
-            .ydst = &ydst[OS_YDST_TYPE_TRACER+OS_YDST_TYPE_BASE],
-            .mode = YLOG_READ_MODE_BLOCK,
-            .restart_period = 0,
-            .fp_array = NULL,
-        },
-        {
-            .name = "android_main",
-            .type = FILE_POPEN,
-            .file = "logcat -v threadtime -b main",
-            .ydst = &ydst[OS_YDST_TYPE_ANDROID+OS_YDST_TYPE_BASE],
-            .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
-            .restart_period = 2000,
-            .fp_array = NULL,
-            .id_token = "A0",
-            .id_token_len = 2,
-            .id_token_filename = "main.log",
-        },
-        {
-            .name = "android_system",
-            .type = FILE_POPEN,
-            .file = "logcat -v threadtime -b system",
-            .ydst = &ydst[OS_YDST_TYPE_ANDROID+OS_YDST_TYPE_BASE],
-            .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
-            .restart_period = 2000,
-            .fp_array = NULL,
-            .id_token = "A1",
-            .id_token_len = 2,
-            .id_token_filename = "system.log",
-        },
-        {
-            .name = "android_radio",
-            .type = FILE_POPEN,
-            .file = "logcat -v threadtime -b radio",
-            .ydst = &ydst[OS_YDST_TYPE_ANDROID+OS_YDST_TYPE_BASE],
-            .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
-            .restart_period = 2000,
-            .fp_array = NULL,
-            .id_token = "A2",
-            .id_token_len = 2,
-            .id_token_filename = "radio.log",
-        },
-        {
-            .name = "android_events",
-            .type = FILE_POPEN,
-            .file = "logcat -v threadtime -b events",
-            .ydst = &ydst[OS_YDST_TYPE_ANDROID+OS_YDST_TYPE_BASE],
-            .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
-            .restart_period = 2000,
-            .fp_array = NULL,
-            .id_token = "A3",
-            .id_token_len = 2,
-            .id_token_filename = "events.log",
-        },
-        {
-            .name = "android_crash",
-            .type = FILE_POPEN,
-            .file = "logcat -v threadtime -b crash",
-            .ydst = &ydst[OS_YDST_TYPE_ANDROID+OS_YDST_TYPE_BASE],
-            .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
-            .restart_period = 2000,
-            .fp_array = NULL,
-            .id_token = "A4",
-            .id_token_len = 2,
-            .id_token_filename = "crash.log",
-        },
-        {
-            .name = "tcpdump",
-            .type = FILE_POPEN,
-            .file = "tcpdump -i any -p",
-            .ydst = &ydst[OS_YDST_TYPE_TCPDUMP+OS_YDST_TYPE_BASE],
-            .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
-            .restart_period = 2000,
-            .status = YLOG_DISABLED,
-            .fp_array = NULL,
-        },
-        {
-            .name = "hcidump",
-            .type = FILE_POPEN,
-            .file = "hcidump",
-            .ydst = &ydst[OS_YDST_TYPE_HCIDUMP+OS_YDST_TYPE_BASE],
-            .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY,
-            .status = YLOG_DISABLED,
-            .raw_data = 1,
-        },
-        {
-            .name = "traces",
-            .type = FILE_INOTIFY,
-            .file = "inotify",
-            .ydst = &ydst[OS_YDST_TYPE_TRACES+OS_YDST_TYPE_BASE],
-            .yinotify = {
-                .cells[0] = {
-                    .pathname = "/data/anr/", /* this folder must make sure no one will delete anr folder */
-                    .filename = "traces.txt",
-                    .mask = IN_MODIFY,
-                    .type = YLOG_INOTIFY_TYPE_MASK_SUBSET_BIT,
-                    /* .timeout = 100, */
-                    .handler = os_inotify_handler_anr,
+    struct ynode os_ynode[] = {
+        /* kernel/ */ {
+           .ylog = {
+                {
+                    .name = "kernel",
+                    .type = FILE_NORMAL,
+                    .file = "/proc/kmsg",
+                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
+                    .restart_period = 1000,
+                    .fp_array = NULL,
+                    .timestamp = 1,
                 },
-                .cells[1] = { /* kill -6 pid of com.xxx */
-                    .pathname = "/data/tombstones/", /* this folder must make sure no one will delete tombstones folder */
-                    .mask = IN_MODIFY,
-                    .type = YLOG_INOTIFY_TYPE_MASK_SUBSET_BIT,
-                    .timeout = 100,
-                    .handler = os_inotify_handler_crash,
-                    .args = &tombstone, /* struct ylog_inotify_cell_args */
-                },
-                #if 0
-                .cells[0] = {
-                    .filename = "/data/anr/traces.txt",
-                    .mask = IN_MODIFY,
-                    .type = YLOG_INOTIFY_TYPE_MASK_SUBSET_BIT,
-                    .timeout = 100,
-                    .handler = os_inotify_handler_anr,
-                },
-                #endif
-                #if 0
-                .cells[1] = {
-                    .pathname = "/data/",
-                    .filename = "hello.c",
-                    .mask = IN_ACCESS,
-                    .type = YLOG_INOTIFY_TYPE_MASK_EQUAL,
-                    .timeout = 100,
-                    .handler = os_inotify_handler_test,
-                },
-                #endif
             },
-            .fp_array = NULL,
+            .ydst = {
+                .file = "kernel/",
+                .file_name = "kernel.log",
+                .max_segment = 10,
+                .max_segment_size = 50*1024*1024,
+#if KERNEL_NOTIFY_MODE == 1
+                .fwrite = ydst_fwrite_kernel,
+#else
+                .write = ydst_write_kernel,
+#endif
+            },
+            .cache = {
+                .size = 512 * 1024,
+                .num = 2,
+                .timeout = 1000,
+                .debuglevel = CACHELINE_DEBUG_CRITICAL,
+            },
         },
-        {
-            .name = "sys_info",
-            .type = FILE_NORMAL,
-            .file = "/dev/null",
-            .ydst = &ydst[OS_YDST_TYPE_SYS_INFO+OS_YDST_TYPE_BASE],
-            .restart_period = 1000 * 60 * 2,
-            .fread = ylog_read_sys_info,
-            .fp_array = NULL,
+        /* android/ */ {
+            .ylog = {
+                {
+                    .name = "android_main",
+                    .type = FILE_POPEN,
+                    .file = "logcat -v threadtime -b main",
+                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
+                    .restart_period = 2000,
+                    .fp_array = NULL,
+                    .id_token = "A0",
+                    .id_token_len = 2,
+                    .id_token_filename = "main.log",
+                },
+                {
+                    .name = "android_system",
+                    .type = FILE_POPEN,
+                    .file = "logcat -v threadtime -b system",
+                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
+                    .restart_period = 2000,
+                    .fp_array = NULL,
+                    .id_token = "A1",
+                    .id_token_len = 2,
+                    .id_token_filename = "system.log",
+                },
+                {
+                    .name = "android_radio",
+                    .type = FILE_POPEN,
+                    .file = "logcat -v threadtime -b radio",
+                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
+                    .restart_period = 2000,
+                    .fp_array = NULL,
+                    .id_token = "A2",
+                    .id_token_len = 2,
+                    .id_token_filename = "radio.log",
+                },
+                {
+                    .name = "android_events",
+                    .type = FILE_POPEN,
+                    .file = "logcat -v threadtime -b events",
+                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
+                    .restart_period = 2000,
+                    .fp_array = NULL,
+                    .id_token = "A3",
+                    .id_token_len = 2,
+                    .id_token_filename = "events.log",
+                },
+                {
+                    .name = "android_crash",
+                    .type = FILE_POPEN,
+                    .file = "logcat -v threadtime -b crash",
+                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
+                    .restart_period = 2000,
+                    .fp_array = NULL,
+                    .id_token = "A4",
+                    .id_token_len = 2,
+                    .id_token_filename = "crash.log",
+                },
+            },
+            .ydst = {
+                .file = "android/",
+                .file_name = "android.log",
+                .max_segment = 30,
+                .max_segment_size = 50*1024*1024,
+            },
+            .cache = {
+                .size = 512 * 1024,
+                .num = 4,
+                .timeout = 1000,
+                .debuglevel = CACHELINE_DEBUG_CRITICAL,
+            },
         },
-        {
-            .name = "sys_info_manual",
-            .type = FILE_NORMAL,
-            .file = "/dev/null",
-            .ydst = &ydst[OS_YDST_TYPE_SYS_INFO+OS_YDST_TYPE_BASE],
-            .fread = ylog_read_sys_info_manual,
-            .status = YLOG_DISABLED,
-            .fp_array = NULL,
+        /* tcpdump/ */ {
+            .ylog = {
+                {
+                    .name = "tcpdump",
+                    .type = FILE_POPEN,
+                    .file = "tcpdump -i any -p",
+                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
+                    .restart_period = 2000,
+                    .status = YLOG_DISABLED,
+                    .fp_array = NULL,
+                },
+            },
+            .ydst = {
+                .file = "tcpdump/",
+                .file_name = "tcpdump.log",
+                .max_segment = 3,
+                .max_segment_size = 50*1024*1024,
+                .write_data2cache_first = 1,
+            },
+            .cache = {
+                .size = 512 * 1024,
+                .num = 2,
+                .timeout = 1000,
+                .debuglevel = CACHELINE_DEBUG_CRITICAL,
+            },
+
         },
-        { .name = NULL, }, /* .name = NULL to mark the end of the array */
+        /* hcidump/ */ {
+            .ylog = {
+                {
+                    .name = "hcidump",
+                    .type = FILE_POPEN,
+                    .file = "hcidump",
+                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY,
+                    .status = YLOG_DISABLED,
+                    .raw_data = 1,
+                },
+            },
+            .ydst = {
+                .file = "hcidump/",
+                .file_name = "hcidump.log",
+                .max_segment = 4,
+                .max_segment_size = 50*1024*1024,
+                .nowrap = 1,
+                .ytag = 1,
+                .write_data2cache_first = 1,
+            },
+            .cache = {
+                .size = 512 * 1024,
+                .num = 2,
+                .timeout = 1000,
+                .debuglevel = CACHELINE_DEBUG_CRITICAL,
+            },
+        },
+        /* traces/ */ {
+            .ylog = {
+                {
+                    .name = "traces",
+                    .type = FILE_INOTIFY,
+                    .file = "inotify",
+                    .yinotify = {
+                        .cells[0] = {
+                            /* this folder must make sure no one will delete anr folder */
+                            .pathname = "/data/anr/",
+                            .filename = "traces.txt",
+                            .mask = IN_MODIFY,
+                            .type = YLOG_INOTIFY_TYPE_MASK_SUBSET_BIT,
+                            /* .timeout = 100, */
+                            .handler = os_inotify_handler_anr,
+                        },
+                        .cells[1] = { /* kill -6 pid of com.xxx */
+                            /* this folder must make sure no one will delete tombstones folder */
+                            .pathname = "/data/tombstones/",
+                            .mask = IN_MODIFY,
+                            .type = YLOG_INOTIFY_TYPE_MASK_SUBSET_BIT,
+                            .timeout = 1000,
+                            .handler = os_inotify_handler_crash,
+                            .args = &tombstone, /* struct ylog_inotify_cell_args */
+                        },
+                    },
+                    .fp_array = NULL,
+                },
+            },
+            .ydst = {
+                .file = "traces/",
+                .file_name = "traces.log",
+                .max_segment = 2,
+                .max_segment_size = 20*1024*1024,
+            },
+        },
+        /* sys_info/ */ {
+            .ylog = {
+                {
+                    .name = "sys_info",
+                    .type = FILE_NORMAL,
+                    .file = "/dev/null",
+                    .restart_period = 1000 * 60 * 2,
+                    .fread = ylog_read_sys_info,
+                    .fp_array = NULL,
+                },
+                {
+                    .name = "sys_info_manual",
+                    .type = FILE_NORMAL,
+                    .file = "/dev/null",
+                    .fread = ylog_read_sys_info_manual,
+                    .status = YLOG_DISABLED,
+                    .fp_array = NULL,
+                },
+            },
+            .ydst = {
+                .file = "sys_info/",
+                .file_name = "sys_info.log",
+                .max_segment = 5,
+                .max_segment_size = 50*1024*1024,
+            },
+        },
+        /* tracer/ */ {
+            .ylog = {
+                {
+                    .name = "tracer",
+                    .type = FILE_NORMAL,
+                    .file = "/d/tracing/trace_pipe",
+                    .mode = YLOG_READ_MODE_BLOCK,
+                    .restart_period = 0,
+                    .fp_array = NULL,
+                },
+            },
+            .ydst = {
+                .file = "tracer/",
+                .file_name = "tracer.log",
+                .max_segment = 3,
+                .max_segment_size = 10*1024*1024,
+            },
+            .cache = {
+                .size = 512 * 1024,
+                .num = 2,
+                .timeout = 1000,
+                .debuglevel = CACHELINE_DEBUG_CRITICAL,
+            },
+        },
     };
 
     property_get("persist.ylog.enabled", buf, "1");
     if (buf[0] == '0') {
         system("stop ylog");
-        sleep(60);
+        sleep(2);
         exit(0);
     }
 
@@ -922,8 +1338,8 @@ static void os_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root
     mode = M_USER_DEBUG;
     *c = &os_context[mode];
 
-    ydst_insert_all(os_ydst);
-    ylog_insert_all(os_ylog);
+    ynode_insert_all(os_ynode, (int)ARRAY_LEN(os_ynode));
+    other_processor_ylog_insert();
     os_parse_config();
 
     hook->ylog_read_ylog_debug_hook = ylog_read_ylog_debug_hook;
@@ -935,7 +1351,7 @@ static void os_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root
     poc->keep_historical_folder_numbers = KEEP_HISTORICAL_FOLDER_NUMBERS_DEFUALT;
     parse_config(YLOG_CONFIG);
 
-    for_each_ylog(i, y, ylog) {
+    for_each_ylog(i, y, NULL) {
         enum ylog_thread_state state;
         if (y->name == NULL)
             continue;
@@ -954,12 +1370,10 @@ static void os_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root
     pos->anr_fast = strtol(buf, NULL, 0);
 
     y = ylog_get_by_name("traces");
-    if (pos->anr_fast)
-        y->yinotify.cells[0].timeout = 50;
-    else
-        y->yinotify.cells[0].timeout = 2000;
-
-    if (0) { /* avoid compiler warning */
-        ylog = ylog;
+    if (y) {
+        if (pos->anr_fast)
+            y->yinotify.cells[0].timeout = 50;
+        else
+            y->yinotify.cells[0].timeout = 2000;
     }
 }

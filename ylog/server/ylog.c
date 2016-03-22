@@ -278,8 +278,6 @@ static struct ydst ydst_default[YDST_MAX+1] = {
         .max_segment = 1,
         .max_segment_size = 20*1024*1024,
     },
-    // [YLOG_DST_TYPE_MAX] = { .refs = -1, /* -1 to mark the end */ }
-    // [YLOG_DST_TYPE_MAX] = { .refs = -1, /* -1 to mark the end */ }
 };
 
 static struct ylog ylog_default[YLOG_MAX+1] = {
@@ -322,7 +320,6 @@ static struct ylog ylog_default[YLOG_MAX+1] = {
         .restart_period = 1000 * 60,
         .fread = ylog_read_journal,
     },
-    /* { .name = NULL, }, */ /* .name = NULL to mark the end of the array */
 };
 
 static int speed_statistics_event_timer_handler(void *arg, long tick, struct ylog_event_cond_wait *yewait) {
@@ -408,7 +405,7 @@ int main(int argc, char *argv[]) {
     pthread_t ptid;
     int ret;
     char uptimeb[128];
-    os_init(global_ylog, global_ydst, global_ydst_root, &global_context, &os_hooks);
+    os_init(global_ydst_root, &global_context, &os_hooks);
     os_env_prepare();
     ret = uptime(uptimeb, sizeof uptimeb);
     if (ret < 0)
@@ -419,7 +416,7 @@ int main(int argc, char *argv[]) {
         return -1; /* To avoid run ylog twice */
     }
     print2journal_file("ylog.start success - %s", uptimeb);
-    ylog_init(global_ylog, global_ydst, global_ydst_root, global_context);
+    ylog_init(global_ydst_root, global_context);
     hook_signals();
     pthread_create(&ptid, NULL, ylog_command_loop, NULL);
     ylog_ready();
