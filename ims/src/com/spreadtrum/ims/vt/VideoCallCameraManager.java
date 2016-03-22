@@ -779,6 +779,8 @@ public class VideoCallCameraManager {
 
     private void handleOrientationChange() {
         Log.i(TAG, "handleOrientationChange->mCamera:" + mCamera);
+        // SPRD:add startCameraPreView for bug541058
+        startCameraPreView();
     }
 
     private void updateCameraPara() {
