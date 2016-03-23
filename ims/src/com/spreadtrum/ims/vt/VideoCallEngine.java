@@ -526,4 +526,5 @@ public class VideoCallEngine {
 
     public static native void stopPreview();
 
+    public static native void setUplinkQos(int qos);
 }

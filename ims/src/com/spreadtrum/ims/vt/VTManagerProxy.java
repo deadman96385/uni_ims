@@ -23,7 +23,10 @@ import com.android.internal.telephony.Call;
 import com.android.internal.telephony.Connection;
 import com.android.internal.telephony.RIL;
 import com.android.internal.telephony.gsm.GSMPhone;
+import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneConstants;
+import com.android.internal.telephony.PhoneProxy;
+import com.android.internal.telephony.PhoneBase;
 import com.android.ims.internal.ImsCallSession;
 import com.android.ims.internal.IImsVideoCallProvider;
 import com.android.internal.telephony.ImsDriverCall;
@@ -47,6 +50,7 @@ public class VTManagerProxy{
     private static final int EVENT_VIDEO_CALL_CODEC = 300;
     private static final int EVENT_VIDEO_CALL_FAIL = 301;
     private static final int EVENT_VIDEO_CALL_FALL_BACK = 302;
+    private static final int EVENT_IMS_VIDEO_QOS = 303;
 
     /** video connection event code. */
     private static final int EVENT_CONNECTION_VIDEO_STATE_CHANGED = 400;
@@ -81,6 +85,8 @@ public class VTManagerProxy{
     public int mPreviewWidth = 480;
     public int mPreviewHeight = 640;
     private int mRotation = -1;
+    private int mImsVideoQos;
+
     private VTManagerProxy(ImsService imsService) {
         mImsService = imsService;
         mContext = (Context)mImsService;
@@ -149,6 +155,9 @@ public class VTManagerProxy{
                 case EVENT_ON_UPDATE_DEVICE_QUALITY:
                     handleUpdateVideoQuality((Integer) msg.obj);
                     break;
+                case EVENT_IMS_VIDEO_QOS:
+                    handleImsQosReport((AsyncResult) msg.obj);
+                    break;
                 default:
                     log("handleMessage,unkwon message:what =" + msg.what);
                     break;
@@ -179,6 +188,9 @@ public class VTManagerProxy{
                     synchronized (syncObj) {
                         mVideoCallEngine = new VideoCallEngine(ril, mContext,
                                 (ImsConfigImpl)mImsService.getConfigInterface(serviceId));
+                        if(mImsVideoQos != 0){
+                            mVideoCallEngine.setUplinkQos(mImsVideoQos);
+                        }
                         syncObj.notifyAll();
                     }
                     log("create mVideoCallEngine done");
@@ -466,6 +478,29 @@ public class VTManagerProxy{
             }
             phone.requestVolteCallMediaChange(!upgradeToVideo, null);
         }
+    }
+
+    public void registerForImsVideoQos(Phone phone){
+        PhoneProxy proxy = (PhoneProxy)phone;
+        PhoneBase base = (PhoneBase)proxy.getActivePhone();
+        base.mCi.registerForImsVideoQos(mHandler, EVENT_IMS_VIDEO_QOS, phone);
+    }
+
+    private void handleImsQosReport(AsyncResult ar){
+        if(ar == null || ar.result == null || ar.exception != null){
+            log("handleImsQosReport : ar = "+ ar +"exception = " + (ar == null ? null : ar.exception)
+                    + " ar.result= " + (ar == null ? null : ar.result));
+            return;
+        }
+        int[] result = (int[]) ar.result;
+        if(result.length >= 4){
+            mImsVideoQos = result[3];
+            log("handleImsQosReport : qos = "+mImsVideoQos);
+            if(mVideoCallEngine != null){
+                mVideoCallEngine.setUplinkQos(mImsVideoQos);
+            }
+        }
+        log("handleImsQosReport : result.length = "+result.length + " mVideoCallEngine:"+ mVideoCallEngine);
     }
 
     private void log(String string) {
