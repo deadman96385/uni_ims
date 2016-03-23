@@ -20,6 +20,8 @@ import android.widget.Toast;
 import com.spreadtrum.ims.R;
 import com.android.internal.telephony.ImsDriverCall;
 import com.android.ims.internal.ImsCallSession;
+import android.os.SystemClock;
+import android.app.KeyguardManager;
 
 public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallProvider {
     private static final String TAG = ImsVideoCallProvider.class.getSimpleName();
@@ -336,6 +338,18 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 msg.obj = mCi;
                 mVTHandler.removeMessages(EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT);
                 mVTHandler.sendMessageDelayed(msg, 10000);
+                /* SPRD: add for bug543928@{ */
+                KeyguardManager keyguardManager = (KeyguardManager) mContext.getSystemService(Context.KEYGUARD_SERVICE);
+                PowerManager powerManager = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
+                if(powerManager != null && !powerManager.isScreenOn()
+                        && keyguardManager != null && !keyguardManager.inKeyguardRestrictedInputMode()){
+                    powerManager.wakeUp(SystemClock.uptimeMillis(), "android.phone:WAKEUP");
+                }
+                VideoProfile mLoacalResponseProfile = new VideoProfile(VideoProfile.STATE_TX_ENABLED);
+                VideoProfile mLoacalRequstProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
+                receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+                        mLoacalRequstProfile,mLoacalResponseProfile);
+                /* @} */
             }else if(session.mImsDriverCall != null && session.mImsDriverCall.isRequestDowngradeToVoice()){
                 if(mVolteMediaDegradeDialog != null){
                    mVolteMediaDegradeDialog.dismiss();
