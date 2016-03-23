@@ -2255,13 +2255,16 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
             }
         } else if (isCSFB() && (!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf"))) {
             if (s_multiSimMode && !bOnlyOneSIMPresent) {
+                RILLOGD("s_sim_num=%d,allow_data=%d",s_sim_num, allow_data);
                 if (s_testmode == 10) {
-                    RILLOGD("s_sim_num=%d,allow_data=%d",s_sim_num, allow_data);
                     snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,%d", s_sim_num, allow_data);
                     at_send_command(ATch_type[channelID], cmd, NULL );
 //                    if(autoAttach && dataEnable){
 //                        err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
 //                    }
+                } else {
+                    snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,%d", 1 - s_sim_num, !allow_data);
+                    at_send_command(ATch_type[channelID], cmd, NULL );
                 }
                 //err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", &p_response);
              }else {
@@ -11987,7 +11990,7 @@ static void attachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
     char cmd[128];
     bool islte = isLte();
 
-     if (islte && s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
+     if (islte && s_multiSimMode && !bOnlyOneSIMPresent) {
          RILLOGD("attachGPRS attaching = %d", attaching);
          if(attaching != 1){
              attaching = 1;
@@ -11996,15 +11999,21 @@ static void attachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
              RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
              return;
          }
-         RILLOGD("attachGPRS s_sim_num = %d", s_sim_num);
-         snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,1", s_sim_num);
-         err = at_send_command(ATch_type[channelID], cmd, NULL );
-         err = at_send_command(ATch_type[channelID], "AT+CGATT=1", &p_response);
-         if (err < 0 || p_response->success == 0) {
-             at_response_free(p_response);
-             RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-             goto error;
-         }
+        RILLOGD("attachGPRS s_sim_num = %d, s_testmode = %d", s_sim_num, s_testmode);
+        if (s_testmode == 10) {
+            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,1", s_sim_num);
+            err = at_send_command(ATch_type[channelID], cmd, NULL);
+            err = at_send_command(ATch_type[channelID], "AT+CGATT=1", &p_response);
+            if (err < 0 || p_response->success == 0) {
+                at_response_free(p_response);
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                goto error;
+            }
+        } else {
+            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", 1 - s_sim_num);
+            err = at_send_command(ATch_type[channelID], cmd, NULL);
+        }
+
          pthread_mutex_lock(&attachingMutex);
          pthread_cond_signal(&attachingCond);
          attaching = 0;
@@ -12065,9 +12074,13 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
         if (err < 0 || p_response->success == 0) {
             goto error;
         }
-        if (s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10) {
-            RILLOGD("s_sim_num = %d", s_sim_num);
-            snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
+        if (s_multiSimMode && !bOnlyOneSIMPresent) {
+            RILLOGD("s_sim_num = %d, s_testmode = %d", s_sim_num, s_testmode);
+            if(s_testmode == 10) {
+                snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
+            } else {
+                snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,1", 1 - s_sim_num);
+            }
             err = at_send_command(ATch_type[channelID], cmd, NULL);
         }
     }else{
