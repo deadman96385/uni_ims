@@ -82,6 +82,7 @@ public class ImsService extends Service {
             for(Phone phone : phones){
                 ImsServiceImpl impl = new ImsServiceImpl(phone,this);
                 mImsServiceImplMap.put(impl.getServiceId(), impl);
+                VTManagerProxy.getInstance().registerForImsVideoQos(phone);
             }
         }
     }
