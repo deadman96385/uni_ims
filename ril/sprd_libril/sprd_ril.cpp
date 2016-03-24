@@ -4898,7 +4898,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
 
     RILLOGI("enter processCommandsCallback, socket type = %d\n", p_info->type);
 
-    assert(fd == s_fdCommand);
+    assert(fd == p_info->fdCommand);
 
     for (;;) {
          void *p_record;
@@ -6810,6 +6810,8 @@ requestToString(int request) {
         case RIL_EXT_REQUEST_SIM_OPEN_CHANNEL_WITH_P2: return "SIM_OPEN_CHANNEL_WITH_P2";
         case RIL_EXT_REQUEST_ENABLE_RAU_NOTIFY: return "ENABLE_RAU_NOTIFY";
         case RIL_EXT_REQUEST_SET_COLP: return "SET_COLP";
+        case RIL_EXT_REQUEST_STORE_SMS_TO_SIM: return "STORE_SMS_TO_SIM";
+        case RIL_EXT_REQUEST_QUERY_SMS_STORAGE_MODE: return "QUERY_SMS_STORAGE_MODE";
 #endif  // RIL_SUPPORTED_OEMSOCKET
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
