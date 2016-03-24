@@ -212,6 +212,7 @@ static void requestCallForwardUri(int channelID, RIL_CallForwardInfoUri *data, s
 static void requestInitialGroupCall(int channelID, void *data, size_t datalen, RIL_Token t);
 static void requestAddGroupCall(int channelID, void *data, size_t datalen, RIL_Token t);
 static void requestCallForwardU(int channelID, RIL_CallForwardInfo *data, size_t datalen, RIL_Token t);
+static void requestQuerySmsStorageMode(int channelID, void *data, size_t datalen, RIL_Token t, char *mode);
 static int isVoLteEnable();
 static bool isAttachEnable();
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
@@ -1908,7 +1909,11 @@ static void onRadioPowerOn(int channelID)
 /** do post- SIM ready initialization */
 static void onSIMReady(int channelID)
 {
+    char mode[64];
+
     at_send_command_singleline(ATch_type[channelID], "AT+CSMS=1", "+CSMS:", NULL);
+
+    requestQuerySmsStorageMode(channelID, NULL, 0, NULL, mode);
     /*
      * Always send SMS messages directly to the TE
      *
@@ -1919,7 +1924,11 @@ static void onSIMReady(int channelID)
      * ds = 1   // Status reports routed to TE
      * bfr = 1  // flush buffer
      */
-    at_send_command(ATch_type[channelID],"AT+CNMI=3,2,2,1,1", NULL);
+    if (strcmp(mode, "SM") == 0) {
+        at_send_command(ATch_type[channelID],"AT+CNMI=3,1,2,1,1", NULL);
+    } else {
+        at_send_command(ATch_type[channelID],"AT+CNMI=3,2,2,1,1", NULL);
+    }
 
     getSmsState(channelID);
 
@@ -8843,6 +8852,72 @@ static void requestUSimAuthentication(int channelID, char *authData, RIL_Token t
     at_response_free(p_response);
 }
 
+static void requestStoreSmsToSim(int channelID, void *data,
+        size_t datalen, RIL_Token t) {
+    int err;
+    ATResponse *p_response = NULL;
+
+    int value = ((int *)data)[0];
+
+    if (value == 1) {
+        at_send_command(ATch_type[channelID],"AT+CNMI=3,1,2,1,1", NULL);
+        err = at_send_command_singleline(ATch_type[channelID],
+                "AT+CPMS=\"ME\",\"ME\",\"SM\"", "+CPMS:", &p_response);
+    } else {
+        at_send_command(ATch_type[channelID],"AT+CNMI=3,2,2,1,1", NULL);
+        err = at_send_command_singleline(ATch_type[channelID],
+                "AT+CPMS=\"ME\",\"ME\",\"ME\"", "+CPMS:", &p_response);
+    }
+    if (err < 0 || p_response->success == 0) {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    } else {
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    }
+    at_response_free(p_response);
+}
+
+static void requestQuerySmsStorageMode(int channelID, void *data,
+        size_t datalen, RIL_Token t, char *mode) {
+    int err = -1;
+    int commas = 0;
+    char *response = NULL;
+    char *line = NULL;
+    ATResponse *p_response = NULL;
+
+    err = at_send_command_singleline(ATch_type[channelID], "AT+CPMS?",
+            "+CPMS:", &p_response);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+
+    line = p_response->p_intermediates->line;
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    // +CPMS:"ME",0,20,"ME",0,20, "SM",0,20
+    // +CPMS:"ME",0,20,"ME",0,20, "ME",0,20
+    for (commas = 0; commas < 6; commas++) {
+        skipNextComma(&line);
+    }
+    err = at_tok_nextstr(&line, &response);
+    if (err < 0) goto error;
+
+    if (t != NULL) {
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, response, strlen(response) + 1);
+    } else if (t == NULL && mode != NULL && response != NULL) {
+        strncpy(mode, response, strlen(response) + 1);
+    }
+    at_response_free(p_response);
+    return;
+
+error:
+    if (t != NULL) {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    }
+    at_response_free(p_response);
+}
+
+
 /*** Callback methods from the RIL library to us ***/
 
 /**
@@ -8914,6 +8989,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_EXT_REQUEST_SIM_GET_ATR
                 || request == RIL_EXT_REQUEST_ENABLE_RAU_NOTIFY
                 || request == RIL_EXT_REQUEST_SET_COLP
+                || request == RIL_EXT_REQUEST_STORE_SMS_TO_SIM
+                || request == RIL_EXT_REQUEST_QUERY_SMS_STORAGE_MODE
 #endif
 #endif
                 || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
@@ -11455,6 +11532,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
             break;
         }
+        case RIL_EXT_REQUEST_STORE_SMS_TO_SIM:
+            requestStoreSmsToSim(channelID, data, datalen, t);
+            break;
+        case RIL_EXT_REQUEST_QUERY_SMS_STORAGE_MODE:
+            requestQuerySmsStorageMode(channelID, data, datalen, t, NULL);
+            break;
 #endif  // RIL_SUPPORTED_OEMSOCKET
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_GET_CELL_BROADCAST_CONFIG:
