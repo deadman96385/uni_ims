@@ -41,7 +41,6 @@ public class ImsRegister {
     private TelephonyManager mTelephonyManager;
     private int mPhoneId;
     private BaseHandler mHandler;
-    private ContentObserver mEnhancedLTEObserver;
     private boolean mCurrentImsRegistered;
 
     protected static final int EVENT_RADIO_STATE_CHANGED               = 105;
@@ -55,28 +54,11 @@ public class ImsRegister {
         mTelephonyManager = TelephonyManager.from(mContext);
         mPhoneId = mPhone.getPhoneId();
         mHandler = new BaseHandler(mContext.getMainLooper());
-        mEnhancedLTEObserver = new ContentObserver(mHandler) {
-            @Override
-            public void onChange(boolean selfChange) {
-                boolean isEnhanced4gLteMode = ImsManager.isEnhanced4gLteModeSettingEnabledByUser(mContext);
-                if(mPhoneId != mTelephonyManager.getPrimaryCard()) return;
-                if (DBG) Log.i(TAG,"phone" + mPhoneId + " Enhanced4gLteMode changed " + isEnhanced4gLteMode);
-                if(!isEnhanced4gLteMode) {
-                    mCi.disableIms(null);
-                } else if(mInitISIM && mConnIMSEN) {
-                    mCi.enableIms(null);
-                }
-            }
-        };
-
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
         mContext.registerReceiver(mReceiver, intentFilter);
         mCi.registerForRadioStateChanged(mHandler, EVENT_RADIO_STATE_CHANGED, null);
         mCi.registerForConnImsen(mHandler, EVENT_CONN_IMS_ENABLE, null);
-        mContext.getContentResolver().registerContentObserver(
-                Settings.Global.getUriFor(android.provider.Settings.Global.ENHANCED_4G_MODE_ENABLED),
-                true, mEnhancedLTEObserver);
     }
 
     private class BaseHandler extends Handler {
@@ -127,7 +109,7 @@ public class ImsRegister {
                     }
                     mInitISIM = true;
                     if(initResult[0] == 1) mConnIMSEN = true;
-                    if(mConnIMSEN && ImsManager.isEnhanced4gLteModeSettingEnabledByUser(mContext)) {
+                    if(mConnIMSEN) {
                         mCi.enableIms(null);
                     }
                     break;
@@ -138,7 +120,7 @@ public class ImsRegister {
                     Log.i(TAG, "EVENT_CONN_IMSEN : conn = "+conn[0]);
                     if (conn[0] == 1) {
                         mConnIMSEN = true;
-                        if (mInitISIM && ImsManager.isEnhanced4gLteModeSettingEnabledByUser(mContext)) {
+                        if (mInitISIM) {
                             mCi.enableIms(null);
                         }
                     }

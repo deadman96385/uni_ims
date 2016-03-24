@@ -231,10 +231,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      */
     @Override
     public void getFeatureValue(int feature, int network, ImsConfigListener listener){
-        Log.i(TAG, "getFeatureValue->feature:"+feature+" network:"+network);
-        if(feature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE){
-            mCi.getImsVoiceCallAvailability(mHandler.obtainMessage(ACTION_GET_IMS_CALL_AVAILABILITY, listener));
-        }
     }
 
     /**
@@ -250,10 +246,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      */
     @Override
     public void setFeatureValue(int feature, int network, int value, ImsConfigListener listener){
-        Log.i(TAG, "setFeatureValue->feature:"+feature+" network:"+network+" value:"+value);
-        if(feature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE){
-            mCi.setImsVoiceCallAvailability(value, mHandler.obtainMessage(ACTION_SET_IMS_CALL_AVAILABILITY, listener));
-        }
     }
 
     /**
