@@ -393,11 +393,11 @@ public class ImsServiceImpl {
 
     public void turnOnIms(){
         Log.i(TAG,"turnOnIms.");
-        mCi.enableIms(null);
+        mCi.setImsVoiceCallAvailability(1 , null);
     }
 
     public void turnOffIms(){
         Log.i(TAG,"turnOffIms.");
-        mCi.disableIms(null);
+        mCi.setImsVoiceCallAvailability(0 , null);
     }
 }
