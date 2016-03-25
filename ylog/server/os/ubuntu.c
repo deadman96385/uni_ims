@@ -72,6 +72,18 @@ static void cmd_ylog_hook(int nargs, char **args) {
     ylog_update_config(YLOG_CONFIG, nargs, args, nargs - 1);
 }
 
+static void load_loglevel(struct ylog_keyword *kw, int nargs, char **args) {
+    struct context *c = global_context;
+    int loglevel = strtol(args[1], NULL, 0);
+    if (loglevel < 0 || loglevel >= LOG_LEVEL_MAX)
+        loglevel = LOG_DEBUG;
+    c->loglevel = loglevel;
+    if (0) { /* avoid compiler warning */
+        kw = kw;
+        nargs = nargs;
+    }
+}
+
 static void load_ylog(struct ylog_keyword *kw, int nargs, char **args) {
     /**
      * args 0    1       2    3
@@ -108,7 +120,7 @@ static void load_ylog(struct ylog_keyword *kw, int nargs, char **args) {
 }
 
 static struct ylog_keyword ylog_keyword[] = {
-    {"loglevel", NULL},
+    {"loglevel", load_loglevel},
     {"ylog", load_ylog},
     {NULL, NULL},
 };

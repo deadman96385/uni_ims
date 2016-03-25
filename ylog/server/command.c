@@ -348,6 +348,7 @@ static int os_cmd_help(struct command *cmd, char *buf, int buf_size, int fd, int
     }
 }
 
+static void ylog_update_config2(char *key, char *value);
 static int cmd_loglevel(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
     char *last;
     char *value = NULL;
@@ -359,6 +360,8 @@ static int cmd_loglevel(struct command *cmd, char *buf, int buf_size, int fd, in
         if (loglevel >= LOG_LEVEL_MAX)
             loglevel = LOG_LEVEL_MAX - 1;
         global_context->loglevel = loglevel;
+        snprintf(buf, buf_size, "%d", loglevel);
+        ylog_update_config2("loglevel", buf);
     }
     switch (global_context->loglevel) {
     case LOG_ERROR: level = "0:error"; break;

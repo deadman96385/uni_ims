@@ -21,11 +21,13 @@ struct other_processor_property_cell {
 
 struct other_processor_node {
     struct other_processor_property_cell log;
-    struct other_processor_property_cell diag; /* File is for sending raw AT command string */
+    struct other_processor_property_cell diag;
+    struct other_processor_property_cell atch; /* File is for sending raw AT command string */
 };
 
 struct other_processor_log_privates {
     char *file_diag;
+    char *file_atch;
 };
 
 struct other_processor_log {
@@ -39,11 +41,12 @@ struct os_status {
     int sdcard_online;
     char ylog_root_path_latest[512];
     char historical_folder_root_last[512];
-    char *file_diag[5];
-    int file_diag_num;
+    char *file_atch[5];
+    int file_atch_num;
     int anr_fast;
+    int fd_kmsg;
 } oss = {
-    .file_diag_num = 5,
+    .file_atch_num = 5,
 }, *pos = &oss;
 
 struct os_config {
@@ -416,23 +419,25 @@ static int cmd_setprop(struct command *cmd, char *buf, int buf_size, int fd, int
     }
 }
 
-static int send_at_file_diag(int idx, char *buf, int count, char *retbuf, int *retcount_max) {
-    int fd, ret = 0;
-    char *file_diag;
-    if (idx >= pos->file_diag_num) {
+static int send_at_file_atch(int idx, char *buf, int count, char *retbuf, int *retcount_max) {
+    int fd, result = 0, ret = 0;
+    char *file_atch;
+    if (idx >= pos->file_atch_num) {
         return 1;
     }
-    file_diag = pos->file_diag[idx];
-    fd = open(file_diag, O_RDWR);
+    file_atch = pos->file_atch[idx];
+    fd = open(file_atch, O_RDWR);
     if (fd < 0) {
-        ylog_info("open %s fail.%s", file_diag, strerror(errno));
+        ylog_info("open %s fail.%s", file_atch, strerror(errno));
         return 1;
     }
     if (count != fd_write(buf, count, fd))
-        ret = 1;
-    ylog_debug("send to %s with %s\n", file_diag, buf);
+        result = 1;
+    ylog_debug("send to %s with %s\n", file_atch, buf);
     if (retbuf && retcount_max) {
         struct pollfd pfd[1];
+        int ret_max = *retcount_max;
+        *retcount_max = 0;
         pfd[0].fd = fd;
         pfd[0].events = POLLIN;
         do {
@@ -440,35 +445,86 @@ static int send_at_file_diag(int idx, char *buf, int count, char *retbuf, int *r
             if (ret <= 0) {
                 ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog cp is failed, %s\n",
                         ret == 0 ? "timeout":strerror(errno));
-                ret = 0;
+                result = ret ? 1:0;
                 break;
             }
-            ret = read(fd, retbuf, *retcount_max);
-            if (ret >=0) {
-                *retcount_max = ret;
+            if (fcntl_read_nonblock(fd, "send_at_file_atch") == 0) {
+                ret = read(fd, retbuf, ret_max);
+                if (ret > 0)
+                    fcntl_read_block(fd, "send_at_file_atch");
+            } else
                 ret = 0;
+
+            if (ret >=0) {
+                *retcount_max += ret;
             } else {
-                ret = 1;
+                result = 0/*1*/;
                 ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog read is failed, %s\n", strerror(errno));
             }
         } while (0/*ret > 0*/);
     }
     close(fd);
-    return ret;
+    return result;
 }
 
 static int cmd_at(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
     int len = strlen(buf);
-    if (len < buf_size && (buf[len-1] != '\r')) {
-        buf[len++] = '\r';
+    int idx = 0;
+    int ret_size = buf_size;
+    if (len == 3) {
+        send(fd, buf, snprintf(buf, buf_size, "%s\n", pos->file_atch[idx]), MSG_NOSIGNAL);
+        return 0;
     }
-    if (send_at_file_diag(0, buf, len, NULL, NULL) == 0) {
-        len = 0;
+    strcat(buf, "\r");
+    len++;
+    if (send_at_file_atch(idx, buf + 3, len - 3, buf, &ret_size) == 0) {
+        if (ret_size <= 0) {
+            len = 0;
+            if (ret_size == 0) {
+                len = snprintf(buf, buf_size, "Try to stop engpc:\n"
+                        "getprop | grep init.svc.engpc | cut -d '.' -f 3 | cut -d ']' -f 0\n"
+                        "or\n"
+                        "stop engpcclientt; stop engpcclientlte; "
+                        "stop engpcclientw; stop engpcclienttl; stop engpcclientlf\n");
+            }
+        } else
+            len = ret_size;
     } else {
         len = snprintf(buf, buf_size, "Failed\n");
     }
     if (len)
         send(fd, buf, len, MSG_NOSIGNAL);
+    return 0;
+    if (0) { /* avoid compiler warning */
+        cmd = cmd;
+        index = index;
+        yp = yp;
+    }
+}
+
+static int cmd_print2android(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    ylog_warn("%s\n", buf);
+    return 0;
+    if (0) { /* avoid compiler warning */
+        cmd = cmd;
+        buf_size = buf_size;
+        fd = fd;
+        index = index;
+        yp = yp;
+    }
+}
+
+static int cmd_print2kernel(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    int ret = 1, len;
+    if (pos->fd_kmsg > 0) {
+        len = strlen(buf);
+        buf[len++] = '\n';
+        buf[len] = '\0';
+        if (len == fd_write(buf, len, pos->fd_kmsg))
+            ret = 0;
+    }
+    if (ret)
+        send(fd, buf, snprintf(buf, buf_size, "%s\n", "failed"), MSG_NOSIGNAL);
     return 0;
     if (0) { /* avoid compiler warning */
         cmd = cmd;
@@ -484,9 +540,23 @@ static struct command os_commands[] = {
     {"cpath_last", "get the last_ylog path", cmd_cpath_last, NULL},
     {"history_n", "set keep_historical_folder_numbers", cmd_history_n, NULL},
     {"setprop", "set property, ex. ylog_cli setprop persist.ylog.enabled 1", cmd_setprop, NULL},
-    {"at", "send AT command to cp side, ex. ylog_cli at at+armlog=1", cmd_at, NULL},
+    {"at", "send AT command to cp side, ex. ylog_cli at AT+ARMLOG=1 or ylog_cli at AT+CGMR", cmd_at, NULL},
+    {"print2android", "write data to android system log", cmd_print2android, NULL},
+    {"print2kernel ", "write data to kernel log", cmd_print2kernel, NULL},
     {NULL, NULL, NULL, NULL}
 };
+
+static void load_loglevel(struct ylog_keyword *kw, int nargs, char **args) {
+    struct context *c = global_context;
+    int loglevel = strtol(args[1], NULL, 0);
+    if (loglevel < 0 || loglevel >= LOG_LEVEL_MAX)
+        loglevel = LOG_DEBUG;
+    c->loglevel = loglevel;
+    if (0) { /* avoid compiler warning */
+        kw = kw;
+        nargs = nargs;
+    }
+}
 
 static void load_keep_historical_folder_numbers(struct ylog_keyword *kw, int nargs, char **args) {
     int history_n = strtol(args[1], NULL, 0);
@@ -544,6 +614,7 @@ static void load_ylog(struct ylog_keyword *kw, int nargs, char **args) {
 }
 
 static struct ylog_keyword ylog_keyword[] = {
+    {"loglevel", load_loglevel},
     {"keep_historical_folder_numbers", load_keep_historical_folder_numbers},
     {"ylog", load_ylog},
     {NULL, NULL},
@@ -650,6 +721,10 @@ static void ylog_ready(void) {
     if (y)
         ylog_trigger_and_wait_for_finish(y);
 
+    pos->fd_kmsg = open("/dev/kmsg", O_WRONLY);
+    if (pos->fd_kmsg < 0)
+        ylog_info("open %s fail. %s", "/dev/kmsg", strerror(errno));
+
 #if 1
     if (drop_privs() < 0)
         ylog_error("ylog drop_privs failed: %s\n", strerror(errno));
@@ -713,11 +788,11 @@ static void os_env_prepare(void) {
 
 }
 
-static void insert_file_diag(char *file_diag, int mode) {
+static void insert_file_atch(char *file_atch, int mode) {
     int i;
-    for (i = 0; i < pos->file_diag_num; i++) {
-        if (pos->file_diag[i] == NULL) {
-            pos->file_diag[i] = strdup(file_diag);
+    for (i = 0; i < pos->file_atch_num; i++) {
+        if (pos->file_atch[i] == NULL) {
+            pos->file_atch[i] = strdup(file_atch);
         }
     }
     if (0) { /* avoid compiler warning */
@@ -739,6 +814,7 @@ static void other_processor_ylog_insert(void) {
             .pnode = {
                 .log  = {"ro.modem.w.log", "/dev/slog_w"},
                 .diag = {"ro.modem.w.diag", "/dev/slog_w"},
+                .atch = {"ro.modem.w.tty", "/dev/stty_w31"},
             },
             .ynode = {
                 .ylog = {
@@ -774,6 +850,7 @@ static void other_processor_ylog_insert(void) {
             .pnode = {
                 .log  = {"ro.modem.t.log", "/dev/slog_gge"},
                 .diag = {"ro.modem.t.diag", "/dev/slog_gge"},
+                .atch = {"ro.modem.t.tty", "/dev/stty_t31"},
             },
             .ynode = {
                 .ylog = {
@@ -809,6 +886,7 @@ static void other_processor_ylog_insert(void) {
             .pnode = {
                 .log  = {"ro.modem.l.log", "/dev/slog_lte"},
                 .diag = {"ro.modem.l.diag", "/dev/sdiag_lte"},
+                .atch = {"ro.modem.l.tty", "/dev/stty_lte31"},
             },
             .ynode = {
                 .ylog = {
@@ -844,6 +922,7 @@ static void other_processor_ylog_insert(void) {
             .pnode = {
                 .log  = {"ro.modem.lf.log", "/dev/slog_lte"},
                 .diag = {"ro.modem.lf.diag", "/dev/sdiag_lte"},
+                .atch = {"ro.modem.lf.tty", "/dev/stty_lte31"},
             },
             .ynode = {
                 .ylog = {
@@ -879,6 +958,7 @@ static void other_processor_ylog_insert(void) {
             .pnode = {
                 .log  = {"ro.modem.tl.log", "/dev/slog_lte"},
                 .diag = {"ro.modem.tl.diag", "/dev/sdiag_lte"},
+                .atch = {"ro.modem.tl.tty", "/dev/stty_lte31"},
             },
             .ynode = {
                 .ylog = {
@@ -1012,15 +1092,55 @@ static void other_processor_ylog_insert(void) {
     };
 
     for (i = 0; i < (int)ARRAY_LEN(opls); i++) {
+        static int first_time_print = 1;
         opl = &opls[i];
+        ylog = &opl->ynode.ylog[0];
+        ydst = &opl->ynode.ydst;
+#if 1
+        if ((ylog->mode & YLOG_GROUP_MODEM) && first_time_print) {
+            first_time_print = 0;
+            property_get("ro.radio.modemtype", prop, "");
+            if (prop[0]) {
+                char modem_type[64];
+                char mprop[512];
+                strncpy(modem_type, prop, sizeof modem_type);
+
+                snprintf(mprop, sizeof mprop, "persist.modem.%s.enable", modem_type);
+                property_get(mprop, prop, "");
+                if (prop[0] && opl->enabled == NULL)
+                    opl->enabled = strdup(prop);
+                else
+                    ylog_info("%s = %s\n", mprop, prop);
+
+                snprintf(mprop, sizeof mprop, "ro.modem.%s.log", modem_type);
+                property_get(mprop, prop, "");
+                if (prop[0] && opl->pnode.log.property_name == NULL)
+                    opl->pnode.log.property_name = strdup(prop);
+                else
+                    ylog_info("%s = %s\n", mprop, prop);
+
+                snprintf(mprop, sizeof mprop, "ro.modem.%s.diag", modem_type);
+                property_get(mprop, prop, "");
+                if (prop[0] && opl->pnode.diag.property_name == NULL)
+                    opl->pnode.diag.property_name = strdup(prop);
+                else
+                    ylog_info("%s = %s\n", mprop, prop);
+
+                snprintf(mprop, sizeof mprop, "ro.modem.%s.tty", modem_type);
+                property_get(mprop, prop, "");
+                if (prop[0] && opl->pnode.atch.property_name == NULL)
+                    opl->pnode.atch.property_name = strdup(prop);
+                else
+                    ylog_info("%s = %s\n", mprop, prop);
+            }
+        }
+#endif
         if (opl->enabled) {
             property_get(opl->enabled, prop, "");
             if (strcmp(prop, "1"))
                 continue;
         }
         flag = 0;
-        ylog = &opl->ynode.ylog[0];
-        ydst = &opl->ynode.ydst;
 #if 1
         ydst->max_segment = 2;
         ydst->max_segment_size = 10 * 1024 * 1024;
@@ -1035,20 +1155,24 @@ static void other_processor_ylog_insert(void) {
         }
         if (opl->pnode.diag.property_name) {
             property_get(opl->pnode.diag.property_name, prop, opl->pnode.diag.property_value_default);
+            if (prop[0] && ylog->file == NULL) {
+                /**
+                 * diag path will be used both for log reading
+                 */
+                ylog->file = strdup(prop);
+                flag |= 0x01;
+            }
+        }
+        if (opl->pnode.atch.property_name) {
+            property_get(opl->pnode.atch.property_name, prop, opl->pnode.atch.property_value_default);
             if (prop[0]) {
-                privates->file_diag = strdup(prop);
+                strcat(prop, "31");
+                privates->file_atch = strdup(prop);
                 if (ylog->mode & YLOG_GROUP_MODEM)
-                    insert_file_diag(privates->file_diag, YLOG_GROUP_MODEM);
+                    insert_file_atch(privates->file_atch, YLOG_GROUP_MODEM);
                 ylog->privates = calloc(sizeof(struct other_processor_log_privates), 1);
                 *(struct other_processor_log_privates*)ylog->privates = *privates;
                 flag |= 0x02;
-                if (ylog->file == NULL) {
-                    /**
-                     * diag path will be used both for
-                     * log reading and AT command writing
-                     */
-                    ylog->file = privates->file_diag;
-                }
             }
         }
         if (ylog->file) {
@@ -1057,7 +1181,7 @@ static void other_processor_ylog_insert(void) {
                     free(ylog->file);
                 if (flag & 0x02) {
                     free(ylog->privates);
-                    free(privates->file_diag);
+                    free(privates->file_atch);
                 }
             }
         }

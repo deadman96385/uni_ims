@@ -172,6 +172,38 @@ static int send_speed(int fd, char *buf, int buf_size, struct speed *speed, int 
     return 0;
 }
 
+static int fcntl_read_nonblock(int fd, char *desc) {
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags < 0) {
+        ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog fcntl_nonblock %s is failed, %s\n",
+                desc, strerror(errno));
+        return 1;
+    }
+    flags |= O_NONBLOCK;
+    if (fcntl(fd, F_SETFL, flags) < 0) {
+        ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog fcntl_nonblock %s is failed, %s\n",
+                desc, strerror(errno));
+        return 1;
+    }
+    return 0;
+}
+
+static int fcntl_read_block(int fd, char *desc) {
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags < 0) {
+        ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog fcntl_block %s is failed, %s\n",
+                desc, strerror(errno));
+        return 1;
+    }
+    flags &= ~O_NONBLOCK;
+    if (fcntl(fd, F_SETFL, flags) < 0) {
+        ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog fcntl_block %s is failed, %s\n",
+                desc, strerror(errno));
+        return 1;
+    }
+    return 0;
+}
+
 static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char *prefix) {
     char buf[4096];
     int count = sizeof buf;
@@ -203,7 +235,12 @@ static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char
                 timeout = 1;
                 break;
             }
-            ret = read(fd, p, count);
+            if (fcntl_read_nonblock(fd, cmd) == 0) {
+                ret = read(fd, p, count);
+                if (ret > 0)
+                    fcntl_read_block(fd, cmd);
+            } else
+                ret = 0;
             if (ret > 0 && w)
                 w(p, ret, y);
         } while (ret > 0);
@@ -1040,7 +1077,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
             fsize6 = ylog_get_unit_size_float(root->quota_new, &unit6);
             fsize7 = ylog_get_unit_size_float(ydst->max_segment_size, &unit7);
             fsize8 = ylog_get_unit_size_float(ydst->max_size, &unit8);
-            ylog_info("\nydst <%s> resize_segment from:\n" \
+            ylog_debug("\nydst <%s> resize_segment from:\n" \
                     "quota %.2f%c -> %.2f%c\n"\
                     "max_segment_size %.2f%c -> %.2f%c (%.2f%c)\n"\
                     "max_segment %d -> %d (%d)\n"\
@@ -1759,12 +1796,12 @@ static void ylog_trigger(struct ylog *ylog) {
 void ylog_trigger_and_wait_for_finish(struct ylog *ylog) {
     char *name = ylog->name;
     ylog_trigger(ylog);
-    ylog_info("ylog <%s> waiting for finish\n", name);
+    ylog_debug("ylog <%s> waiting for finish\n", name);
     while ((ylog->status & YLOG_DISABLED) != YLOG_DISABLED) {
         usleep(200 * 1000);
-        ylog_info("ylog <%s> waiting for finish\n", name);
+        ylog_debug("ylog <%s> waiting for finish\n", name);
     }
-    ylog_info("ylog <%s> is finished\n", name);
+    ylog_debug("ylog <%s> is finished\n", name);
 }
 
 void ylog_trigger_all(struct ylog *ylog) {
@@ -1787,7 +1824,7 @@ static struct ylog *ylog_get_empty_slot(void) {
     int i;
     for_each_ylog(i, ys, NULL) {
         if (ys->name == NULL) {
-            ylog_info("Success: Get one empty ylog %d\n", i);
+            ylog_debug("Success: Get one empty ylog %d\n", i);
             return ys;
         }
     }
@@ -1803,7 +1840,7 @@ static int ylog_insert(struct ylog *y) {
     for_each_ylog(i, ys, NULL) {
         if (ys->name == NULL) {
             *ys = *y;
-            ylog_info("Success: insert ylog %s\n", y->name);
+            ylog_debug("Success: insert ylog %s\n", y->name);
             return i;
         }
     }
@@ -1825,7 +1862,7 @@ static int ydst_insert(struct ydst *ydi) {
     for_each_ydst(i, yd, NULL) {
         if (yd->file == NULL) {
             *yd = *ydi;
-            ylog_info("Success: insert ydst %s\n", yd->file);
+            ylog_debug("Success: insert ydst %s\n", yd->file);
             return i;
         }
     }
@@ -1842,7 +1879,7 @@ static struct ydst *ydst_get_empty_slot(void) {
     int i;
     for_each_ydst(i, yd, NULL) {
         if (yd->file == NULL) {
-            ylog_info("Success: Get one empty ydst, index is %d\n", i);
+            ylog_debug("Success: Get one empty ydst, index is %d\n", i);
             return yd;
         }
     }
@@ -1868,11 +1905,11 @@ static int ynode_insert(struct ynode *ynode) {
             if (cache)
                 *cache = ynode->cache;
             *ydst = ynode->ydst;
-            ylog_info("Install ydst : %s\n", ydst->file);
+            ylog_debug("Install ydst : %s\n", ydst->file);
             ydst->cache = cache;
         } else {
             ydst = NULL;
-            ylog_info("Empty ydst in this ynode\n");
+            ylog_debug("Empty ydst in this ynode\n");
         }
         ret = 0;
         for (i = 0; ynode->ylog[i].file; i++) {
@@ -1883,7 +1920,7 @@ static int ynode_insert(struct ynode *ynode) {
             }
             *ylog = ynode->ylog[i];
             ylog->ydst = ydst;
-            ylog_info("Install ylog : %s\n", ylog->name);
+            ylog_debug("Install ylog : %s\n", ylog->name);
         }
     }
     pthread_mutex_unlock(&mutex);
@@ -2141,7 +2178,7 @@ static ylog_filter_so ylog_get_filter_so(char *path, char *fun) {
         return NULL;
     handle = dlopen(path, RTLD_LAZY);
     if (!handle) {
-        ylog_error("ylog open %s failed: %s\n", path, dlerror());
+        ylog_debug("ylog open %s failed: %s\n", path, dlerror());
         return NULL;
     }
     /* clear error before */
@@ -2220,7 +2257,7 @@ static void *ylog_thread_handler_default(void *arg) {
             default: state_curr = YLOG_NOP; break;
             }
             y->state = state_curr;
-            ylog_info("%s control state to %d, count from %d to %d\n",
+            ylog_debug("%s control state to %d, count from %d to %d\n",
                     name, state_curr, y->state_pipe_count, y->state_pipe_count+1);
 __state_control:
             switch (state_curr) {
