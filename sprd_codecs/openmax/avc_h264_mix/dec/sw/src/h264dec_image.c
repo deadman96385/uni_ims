@@ -389,7 +389,7 @@ LOCAL void H264Dec_fill_frame_num_gap (H264DecContext *vo, DEC_DECODED_PICTURE_B
             picture_ptr->imgYUV[0] = prev->imgYUV[0];
             picture_ptr->imgYUV[1] = prev->imgYUV[1];
             picture_ptr->imgYUV[2] = prev->imgYUV[2];
-        } else if (vo->g_nFrame_dec_h264 == 0) {
+        } else if ((vo->g_nFrame_dec_h264 == 0) && picture_ptr->imgYUV[0] && picture_ptr->imgYUV[1] && picture_ptr->imgYUV[2]) {
             int32 ext_size = vo->ext_width*vo->ext_height;
 
             memset(picture_ptr->imgYUV[0], 16, sizeof(uint8)*ext_size);
