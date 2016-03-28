@@ -10,6 +10,7 @@ import android.os.Message;
 import android.os.Handler;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.gsm.GSMPhone;
+import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.PhoneProxy;
 import com.android.internal.telephony.CommandsInterface;
 import android.telephony.TelephonyManager;
@@ -84,14 +85,10 @@ public class ImsRegister {
                             needNotifyRegisterState = true;
                         } else {
                             int primaryCard = mTelephonyManager.getPrimaryCard();
-                            if (SubscriptionManager.isValidPhoneId(primaryCard)) {
-                                boolean isStandby = Settings.Global.getInt(
-                                        mPhone.getContext().getContentResolver(),
-                                        Settings.Global.SIM_STANDBY + primaryCard, 1) == 1;
-                                if(!isStandby) {
-                                    Log.i(TAG, "primary card standby is false, ImsRegestered state mCurrentImsRegistered = " + mCurrentImsRegistered);
-                                    needNotifyRegisterState = true;
-                                }
+                            PhoneProxy phone = (PhoneProxy)PhoneFactory.getPhone(primaryCard);
+                            if(SubscriptionManager.isValidPhoneId(primaryCard) && !((GSMPhone)phone.getActivePhone()).isRadioOn()){
+                                needNotifyRegisterState = true;
+                                Log.i(TAG, "primary card radio not on, notify ImsRegestered state mCurrentImsRegistered = " + mCurrentImsRegistered);
                             }
                         }
                         if(needNotifyRegisterState) {
