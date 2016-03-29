@@ -2262,9 +2262,6 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 //                    if(autoAttach && dataEnable){
 //                        err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
 //                    }
-                } else {
-                    snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,%d", 1 - s_sim_num, !allow_data);
-                    at_send_command(ATch_type[channelID], cmd, NULL );
                 }
                 //err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", &p_response);
              }else {
