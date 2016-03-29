@@ -11304,11 +11304,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE: {
             char cmd[20] = {0};
             p_response = NULL;
-            int isAccept = ((int *)data)[0];
+            int callId = ((int *)data)[0];
+            int isAccept = ((int *)data)[1];
             if(isAccept) {
-                snprintf(cmd, sizeof(cmd), "AT+CCMMD=1,3");
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,3", callId);
             } else {
-                snprintf(cmd, sizeof(cmd), "AT+CCMMD=1,4");
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,4", callId);
             }
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0) {

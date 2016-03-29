@@ -36,6 +36,8 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     private AlertDialog mVolteMediaDegradeDialog;
     private ImsCallSessionImplListner mImsCallSessionImplListner;
     private PowerManager.WakeLock mPartialWakeLock;
+    private Message mCallIdMessage;
+
     /** volte media event code. */
     private static final int EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 500;
     private Handler mVTHandler = new Handler(){
@@ -44,10 +46,13 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             log("handleMessage msg = " + msg.what);
             switch (msg.what) {
                 case EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT:
+                    /* SPRD: add for bug545171 @{ */
+                    mCallIdMessage.arg1 = Integer.parseInt(mImsCallSessionImpl.getCallId());
+                    /* @} */
                     if(mVolteMediaUpdateDialog != null && mVolteMediaUpdateDialog.isShowing()){
                         mVolteMediaUpdateDialog.dismiss();
                         CommandsInterface mCi = (CommandsInterface)msg.obj;
-                        mCi.responseVolteCallMediaChange(false,null);
+                        mCi.responseVolteCallMediaChange(false,mCallIdMessage);
                     }
                     break;
                 default:
@@ -74,6 +79,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         mNegotiatedCallProfile.mMediaProfile.mAudioDirection =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mAudioDirection;
         mNegotiatedCallProfile.mMediaProfile.mVideoQuality =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoQuality;
         mNegotiatedCallProfile.mMediaProfile.mVideoDirection =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoDirection;
+        mCallIdMessage = new Message();//SPRD: add for bug545171
     }
 
     public void onVTConnectionEstablished(ImsCallSessionImpl mImsCallSessionImpl){
@@ -327,11 +333,14 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
 
     public void handleVolteCallMediaChange(ImsCallSessionImpl session){
         log("handleVolteCallMediaChange->session="+session);
+        /* SPRD: add for bug545171 @{ */
+        mCallIdMessage.arg1 = Integer.parseInt(mImsCallSessionImpl.getCallId());
+        /* @} */
             if(session.mImsDriverCall != null && session.mImsDriverCall.isRequestUpgradeToVideo()){
                 if(mVolteMediaUpdateDialog != null){
                    mVolteMediaUpdateDialog.dismiss();
                 }
-                mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi);
+                mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage);
                 mVolteMediaUpdateDialog.show();
                 Message msg = new Message();
                 msg.what = EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT;
@@ -354,7 +363,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 if(mVolteMediaDegradeDialog != null){
                    mVolteMediaDegradeDialog.dismiss();
                 }
-                mVolteMediaDegradeDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi);
+                mVolteMediaDegradeDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage);
                 mVolteMediaDegradeDialog.show();
             }
     }
