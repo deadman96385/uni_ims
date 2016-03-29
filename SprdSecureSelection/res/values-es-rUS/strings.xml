@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="app_name">"Seleccionar seguridad especial"</string>
+<string name="action_settings">"Configuración"</string>
+<string name="hello_world">"“Esta terminal soporta aplicaciones y programas que establecen conexión con el puerto o que pueden iniciar conexiones tipo datos, es posible que ello tenga impacto en la seguridad de  los mensajes del usuario y conductas relacionadas que conduzcan a avisos por parte del equipo.  Si se arranca es  posible que el usuario experimente el impacto sobre algunas aplicaciones, si lo necesita por favor diríjase a  los programas de asignación de las habilidades sobre la seguridad que puedan efectuar las configuraciones requeridas.”"</string>
+<string name="timer">"Tiempo remanente:"</string>
+<string name="No">"No"</string>
+<string name="Yes">"Sí"</string>
+<string name="second">"s"</string>
+<string name="cancel">"Cancelar"</string>
+</resources>
