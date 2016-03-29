@@ -25,6 +25,7 @@ import static com.android.internal.telephony.PhoneConstants.SUBSCRIPTION_KEY;
 import com.android.internal.telephony.gsm.GSMPhone;
 import com.android.internal.telephony.CallStateException;
 import com.android.internal.telephony.CommandsInterface;
+import android.os.Message;
 
 public class VTManagerUtils {
     private static final String TAG = VTManagerUtils.class.getSimpleName();
@@ -198,13 +199,19 @@ public class VTManagerUtils {
         android.util.Log.i(TAG, string);
     }
 
-    public static AlertDialog showVolteCallMediaUpdateAlert(Context context, final CommandsInterface mCi) {
+    public static AlertDialog showVolteCallMediaUpdateAlert(Context context, final CommandsInterface mCi, Message response) {
+        /* SPRD: add for bug545171 @{ */
+        final Message reponseMsg = new Message();
+        if(response != null){
+            reponseMsg.arg1 = response.arg1;
+        }
+        /* @} */
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(context.getString(R.string.remote_request_change));
         builder.setMessage(context.getString(R.string.choose_accept_reject));
         builder.setPositiveButton(context.getString(R.string.remote_request_change_accept), new android.content.DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int which) {
-                mCi.responseVolteCallMediaChange(true,null);
+                mCi.responseVolteCallMediaChange(true,reponseMsg);
                 if(dialog != null){
                     dialog.dismiss();
                 }
@@ -212,7 +219,7 @@ public class VTManagerUtils {
         });
         builder.setNegativeButton(context.getString(R.string.remote_request_change_reject), new android.content.DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int which) {
-                mCi.responseVolteCallMediaChange(false,null);
+                mCi.responseVolteCallMediaChange(false,reponseMsg);
                 if(dialog != null){
                     dialog.dismiss();
                 }
