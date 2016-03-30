@@ -249,14 +249,14 @@ static struct ydst ydst_default[YDST_MAX+1] = {
     [YDST_TYPE_DEFAULT] = {
         .file = "default/default.", /* by default .file == NULL, then stdout will be used */
         .file_name = "default.log",
-        .max_segment = 5,
+        .max_segment = 2,
         .max_segment_size = 2*1024*1024,
     },
     [YDST_TYPE_SOCKET] = {
         .file = "socket/open/",
         .file_name = "socket.log",
-        .max_segment = 5,
-        .max_segment_size = 10*1024*1024,
+        .max_segment = 2,
+        .max_segment_size = YDST_TYPE_SOCKET_DEFAULT_SIZE,
         .cache = &cacheline_socket_open,
         /* .nowrap = 1, */
     },

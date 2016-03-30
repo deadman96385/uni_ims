@@ -15,6 +15,7 @@ LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES := client/ylog_cli.c
 LOCAL_MODULE := ylog_cli
 LOCAL_MODULE_TAGS := optional
+LOCAL_SHARED_LIBRARIES := libcutils liblog
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
@@ -58,7 +59,7 @@ LOCAL_MULTILIB := both
 LOCAL_MODULE_STEM_32 := ylog_cli.static
 LOCAL_MODULE_STEM_64 := ylog_cli.static64
 
-LOCAL_STATIC_LIBRARIES := libc libcutils
+LOCAL_STATIC_LIBRARIES := libc libcutils liblog
 include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)

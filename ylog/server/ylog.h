@@ -310,6 +310,7 @@ struct ydst_root {
     pthread_mutex_t mutex;
 };
 
+#define YDST_TYPE_SOCKET_DEFAULT_SIZE (1 * 1024 * 1024)
 enum ydst_type {
     YDST_TYPE_DEFAULT = 0,
     YDST_TYPE_SOCKET,

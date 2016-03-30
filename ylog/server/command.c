@@ -1039,7 +1039,7 @@ static void *cmd_benchmark_thread_handler(void *arg) {
     char delta_speed_unit;
     char path[PATH_MAX];
     int without_timestamp = 1;
-    int timestamp;
+    int timestamp = 0;
     char *p, *pbase, *pmax;
     int seq_hex_len = sizeof(seq) * 2;
     int str_len;
@@ -1052,14 +1052,26 @@ static void *cmd_benchmark_thread_handler(void *arg) {
 
     y = ylog_get_by_name(name);
     if (y) {
+        static pthread_mutex_t benchmark_mutex_command = PTHREAD_MUTEX_INITIALIZER;
+        static volatile int socket_ydst_resized = 0;
         yds_new_segment_file_name(path, sizeof path, 0, y->ydst);
         get_boottime(&ts);
-        ydst_refs_inc(y);
-        timestamp = y->timestamp;
-        if (without_timestamp)
-            y->timestamp = 0;
-        else
-            y->timestamp = 1;
+        pthread_mutex_lock(&benchmark_mutex_command);
+        if (++socket_ydst_resized == 1) {
+            timestamp = y->timestamp;
+            if (without_timestamp)
+                y->timestamp = 0;
+            else
+                y->timestamp = 1;
+            ydst_refs_inc(y);
+            ylog_warn("ylog socket's ydst size is default value, change to 200M per segment\n");
+            y->ydst->max_segment_size = y->ydst->max_segment_size_now = 200 * 1024 * 1024;
+#if 0
+            snprintf(buf, buf_size, "ylog_cli ylog socket ydst max_segment_size %d", 200);
+            pcmd(buf, NULL, NULL, y, NULL);
+#endif
+        }
+        pthread_mutex_unlock(&benchmark_mutex_command);
         p = pbase = buf_const;
         pmax = p + sizeof(buf_const);
         p += snprintf(p, pmax - p, "ylog_cli %s seq=0x", name);
@@ -1094,8 +1106,19 @@ static void *cmd_benchmark_thread_handler(void *arg) {
                 delta_speed_size += y->write_handler(buf, strlen(buf), y);
             }
         }
-        y->timestamp = timestamp;
-        ydst_refs_dec(y);
+        pthread_mutex_lock(&benchmark_mutex_command);
+        if (--socket_ydst_resized == 0) {
+            ylog_warn("ylog socket's ydst size changes back to default value %dM\n",
+                    YDST_TYPE_SOCKET_DEFAULT_SIZE >> 20);
+            y->ydst->max_segment_size = y->ydst->max_segment_size_now = YDST_TYPE_SOCKET_DEFAULT_SIZE;
+#if 0
+            snprintf(buf, buf_size, "ylog_cli ylog socket ydst max_segment_size %d", YDST_TYPE_SOCKET_DEFAULT_SIZE >> 20);
+            pcmd(buf, NULL, NULL, y, NULL);
+#endif
+            ydst_refs_dec(y);
+            y->timestamp = timestamp;
+        }
+        pthread_mutex_unlock(&benchmark_mutex_command);
     } else {
         send(fd, buf, snprintf(buf, buf_size, "cmd_benchmark can't find ylog named: %s\n", name), MSG_NOSIGNAL);
     }
