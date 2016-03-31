@@ -28,6 +28,7 @@ import android.telephony.SubscriptionManager;
 import android.provider.Settings;
 import android.telephony.VoLteServiceState;
 import com.android.ims.ImsManager;
+import com.sprd.android.internal.telephony.VolteConfig;
 
 public class ImsRegister {
     private static final String TAG = "ImsRegister";
@@ -43,10 +44,12 @@ public class ImsRegister {
     private int mPhoneId;
     private BaseHandler mHandler;
     private boolean mCurrentImsRegistered;
+    private VolteConfig mVolteConfig;
 
     protected static final int EVENT_RADIO_STATE_CHANGED               = 105;
     protected static final int EVENT_INIT_ISIM_DONE                    = 106;
     protected static final int EVENT_CONN_IMS_ENABLE                   = 107;
+    protected static final int EVENT_ENABLE_IMS                        = 108;
 
     public ImsRegister(GSMPhone phone , Context context, CommandsInterface ci) {
         mPhone = phone;
@@ -54,6 +57,7 @@ public class ImsRegister {
         mCi = ci;
         mTelephonyManager = TelephonyManager.from(mContext);
         mPhoneId = mPhone.getPhoneId();
+        mVolteConfig = VolteConfig.getInstance();
         mHandler = new BaseHandler(mContext.getMainLooper());
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
@@ -107,7 +111,7 @@ public class ImsRegister {
                     mInitISIM = true;
                     if(initResult[0] == 1) mConnIMSEN = true;
                     if(mConnIMSEN) {
-                        mCi.enableIms(null);
+                        mHandler.sendMessage(mHandler.obtainMessage(EVENT_ENABLE_IMS));
                     }
                     break;
                 case EVENT_CONN_IMS_ENABLE:
@@ -118,9 +122,20 @@ public class ImsRegister {
                     if (conn[0] == 1) {
                         mConnIMSEN = true;
                         if (mInitISIM) {
-                            mCi.enableIms(null);
+                            mHandler.sendMessage(obtainMessage(EVENT_ENABLE_IMS));
                         }
                     }
+                    break;
+                case EVENT_ENABLE_IMS:
+                    Log.i(TAG, "EVENT_ENABLE_IMS: operator numeric is "+ mTelephonyManager.getNetworkOperatorForPhone(mPhoneId));
+                    if("".equals(mTelephonyManager.getNetworkOperatorForPhone(mPhoneId))){
+                        mHandler.sendMessageDelayed(obtainMessage(EVENT_ENABLE_IMS), 2000);
+                   }else{
+                        mVolteConfig.loadVolteConfig(mContext);
+                        if(getSimConfig() && getNetworkConfig()){
+                            mCi.enableIms(null);
+                        }
+                   }
                     break;
                 default:
                     break;
@@ -235,4 +250,24 @@ public class ImsRegister {
     private void sendVolteServiceStateChanged() {
         mPhone.notifyVoLteServiceStateChanged(new VoLteServiceState(mCurrentImsRegistered ? VoLteServiceState.IMS_REG_STATE_REGISTERED : VoLteServiceState.IMS_REG_STATE_NOT_EGISTERED));
     }
+
+    /* SPRD: add for SIM Config and Network Config for VOLTE @{ */
+    private boolean getNetworkConfig(){
+        String numeric = mTelephonyManager.getNetworkOperatorForPhone(mPhoneId);
+        Log.d(TAG,"getNetworkConfig() numeric="+numeric);
+        if(mVolteConfig.containsCarrier(numeric)){
+            return mVolteConfig.getVolteEnable(numeric);
+        }
+        return false;
+    }
+
+    private boolean getSimConfig(){
+        String numeric = mTelephonyManager.getSimOperatorNumericForPhone(mPhoneId);
+        Log.d(TAG,"getSimConfig() numeric="+numeric);
+        if(mVolteConfig.containsCarrier(numeric)){
+            return mVolteConfig.getVolteEnable(numeric);
+        }
+        return false;
+    }
+    /* @} */
 }
