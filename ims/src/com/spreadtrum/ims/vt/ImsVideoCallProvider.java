@@ -88,6 +88,14 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     }
 
     public void onVTConnectionDisconnected(ImsCallSessionImpl mImsCallSessionImpl){
+        /* SPRD: fix for bug547597 @{ */
+        if (mLocalRequestProfile != null) {
+            int result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_FAIL;
+            VideoProfile responseProfile = new VideoProfile(VideoProfile.STATE_AUDIO_ONLY);
+            receiveSessionModifyResponse(result, mLocalRequestProfile, responseProfile);
+            mLocalRequestProfile = null;
+        }
+        /* @} */
         mHandler.obtainMessage(mVTManagerProxy.EVENT_ON_VT_DISCONNECT, mImsCallSessionImpl).sendToTarget();
         releaseWakeLock();
     }
