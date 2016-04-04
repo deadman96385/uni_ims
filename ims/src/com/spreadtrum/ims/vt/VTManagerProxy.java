@@ -284,7 +284,6 @@ public class VTManagerProxy{
             mVideoCallEngine.setImsRemoteSurface(mDisplaySurface);
         }
         if (surface != null){
-            setPreviewSize(mPreviewWidth,mPreviewHeight);
             setPeerDimensions(mPeerWidth,mPeerHeight);
         }
     }

@@ -519,7 +519,6 @@ public class VideoCallCameraManager {
         }
         boolean qualityChange = (mVideoQuality != videoQuality || !mIsVideoQualityReceived);
         mVideoQuality = videoQuality;
-        setPreviewSurfaceSize(mVideoQuality);
         mIsVideoQualityReceived = true;
         Log.i(TAG,"updateVideoQuality->qualityChange:"+qualityChange
                 + " mCameraId:"+mCameraId +" mLocalSurface:"+mVideoCallEngine.mLocalSurface);
