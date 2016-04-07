@@ -24,7 +24,7 @@ static int get_journal_file(char *buf, int buf_size) {
         journal_last_pos = 0; /* wrap happen */
     if (journal_last_pos != journal_file_size) {
         /* 1. seek to last reading place */
-        lseek(fd_journal_file, journal_last_pos, SEEK_SET);
+        LSEEK(fd_journal_file, journal_last_pos, SEEK_SET);
         len = journal_file_size - journal_last_pos;
         if (len > buf_size)
             len = buf_size;
@@ -32,7 +32,7 @@ static int get_journal_file(char *buf, int buf_size) {
         len = read(fd_journal_file, buf, len);
         journal_last_pos += len;
         /* 3. restore to the last place for print2journal_file writing */
-        lseek(fd_journal_file, journal_file_size, SEEK_SET);
+        LSEEK(fd_journal_file, journal_file_size, SEEK_SET);
     } else
         len = 0;
     pthread_mutex_unlock(&mutex_journal_log);
@@ -103,7 +103,7 @@ static int print2journal_file(const char *fmt, ...) {
     }
 #if 1
     fsize = get_journal_file_size();
-    lseek(fd_journal_file, fsize, SEEK_SET);
+    LSEEK(fd_journal_file, fsize, SEEK_SET);
 #endif
     len = write(fd_journal_file, buf, len);
     fsize += len;
@@ -154,21 +154,21 @@ static int send_speed(int fd, char *buf, int buf_size, struct speed *speed, int 
     struct tm delta_tm;
     char time_start[32], time_end[32];
     if (prefix)
-        send(fd, buf, snprintf(buf, buf_size, "%s", prefix), MSG_NOSIGNAL);
+        SEND(fd, buf, snprintf(buf, buf_size, "%s", prefix), MSG_NOSIGNAL);
     for (i = 0; i < max; i++) {
         ylog_tv2format_time(time_start, &speed[i].max_speed_tv_start);
         ylog_tv2format_time(time_end, &speed[i].max_speed_tv_end);
         vspeed = ylog_get_unit_size_float_with_speed(speed[i].max_speed_size,
                 &unit, speed[i].max_speed_millisecond);
         gmtime_r(&speed[i].second_since_start, &delta_tm); /* UTC, don't support keep running more than 1 year by luther */
-        send(fd, buf, snprintf(buf, buf_size, "%02d. %s~ %s%02d day %02d:%02d:%02d ago %.2f%c/s\n",
+        SEND(fd, buf, snprintf(buf, buf_size, "%02d. %s~ %s%02d day %02d:%02d:%02d ago %.2f%c/s\n",
                     i + 1,time_start, time_end,
                     delta_tm.tm_yday, delta_tm.tm_hour,
                     delta_tm.tm_min, delta_tm.tm_sec,
                     vspeed, unit), MSG_NOSIGNAL);
     }
     if (suffix)
-        send(fd, buf, snprintf(buf, buf_size, "%s", suffix), MSG_NOSIGNAL);
+        SEND(fd, buf, snprintf(buf, buf_size, "%s", suffix), MSG_NOSIGNAL);
     return 0;
 }
 
@@ -685,19 +685,27 @@ static void create_outline(struct ydst *ydst) {
          */
         {
             char *p, *last;
+            int ret;
             int len = 100;
             int fd_f = 0;
             int fd_t = open(file_to, O_RDONLY);
             if (from)
                 fd_f = open(file_from, O_RDONLY);
-            if (fd_f > 0 || fd_t > 0) {
-                if (fd_outline <= 0) {
+            if (fd_f >= 0 || fd_t >= 0) {
+                if (fd_outline < 0) {
                     dirname2(file_to);
                     strcpy(file_to + strlen(file_to), "/outline");
                     fd_outline = open(file_to, O_RDWR | O_CREAT | O_TRUNC, 0644);
                 }
-                read(fd_t, file_to, len);
-                file_to[len-1] = 0;
+                if (fd_t >= 0)
+                    ret = read(fd_t, file_to, len);
+                else
+                    ret = 0;
+                if (ret < 0) {
+                    ret = 0;
+                    ylog_error("create_outline read file_to failed: %s\n", strerror(errno));
+                }
+                file_to[ret] = 0;
                 p = file_to;
                 strtok_r(p, "]", &last);
                 p = strtok_r(NULL, "-", &last);
@@ -720,8 +728,15 @@ static void create_outline(struct ydst *ydst) {
                     time_t time_t_before, time_t_after, delta_seconds;
                     memset(&tm_before, 0, sizeof(struct tm));
                     strptime(p, " %Y.%m.%d %H:%M:%S ", &tm_before);
-                    read(fd_f, file_from, len);
-                    file_from[len-1] = 0;
+                    if (fd_f >= 0)
+                        ret = read(fd_f, file_from, len);
+                    else
+                        ret = 0;
+                    if (ret < 0) {
+                        ret = 0;
+                        ylog_error("create_outline read file_from failed: %s\n", strerror(errno));
+                    }
+                    file_from[ret] = 0;
                     p = file_from;
                     strtok_r(p, "]", &last);
                     p = strtok_r(NULL, "-", &last);
@@ -749,17 +764,17 @@ static void create_outline(struct ydst *ydst) {
                 } else {
                     strcat(buf, "\n");
                 }
-                if (fd_outline > 0)
+                if (fd_outline >= 0)
                     write(fd_outline, buf, strlen(buf));
             }
-            if (fd_f > 0)
+            if (fd_f >= 0)
                 close(fd_f);
-            if (fd_t > 0)
+            if (fd_t >= 0)
                 close(fd_t);
         }
     }
 _exit:
-    if (fd_outline > 0)
+    if (fd_outline >= 0)
         close(fd_outline);
 }
 
@@ -776,7 +791,7 @@ static int ydst_pre_fill_zero_to_possession_storage_spaces(struct ydst *ydst,
         int buf_size = sizeof buf;
         int fd;
 
-        memset(buf, '0', buf_size);
+        memset(buf, 0, buf_size);
         buf[buf_size - 1] = '\n';
 
         for (segment = 0; segment < ydst->max_segment_now; segment++) {
@@ -901,11 +916,9 @@ static int ylog_historical_folder(char *root, struct context *c) {
 }
 
 static void ydst_move_other_files(char *root_old, char *root_new) {
+    UNUSED(root_old);
+    UNUSED(root_new);
     return;
-    if (0) { /* avoid compiler warning */
-        root_old = root_old;
-        root_new = root_new;
-    }
 }
 
 static int ydst_move_root(struct ydst_root *root, struct ydst *ydst,
@@ -1251,7 +1264,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
         strcpy(path + strlen(path), "/analyzer.py");
         fd = open(path, O_RDWR | O_CREAT | O_TRUNC, 0755);
         ylog_info("create %s\n", path);
-        if (fd > 0) {
+        if (fd >= 0) {
             int i;
             char *p;
             write(fd, template_python1, strlen(template_python1));
@@ -1374,6 +1387,8 @@ static void *ylog_exit_default(struct ylog *y) {
 }
 
 static int ylog_read_default_line(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
+    UNUSED(y);
+    UNUSED(fd);
     /**
      * man fgets
      *
@@ -1391,18 +1406,12 @@ static int ylog_read_default_line(char *buf, int count, FILE *fp, int fd, struct
             return 0;
         }
     }
-    if (0) { /* avoid compiler warning */
-        y = y;
-        fd = fd;
-    }
 }
 
 static int ylog_read_default_binary(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
+    UNUSED(y);
+    UNUSED(fp);
     return read(fd, buf, count);
-    if (0) { /* avoid compiler warning */
-        y = y;
-        fp = fp;
-    }
 }
 
 static int ydst_open_default(char *file, char *mode, struct ydst *ydst) {
@@ -1523,11 +1532,9 @@ static int ydst_write_default(char *buf, int count, struct ydst *ydst) {
 
 static int ydst_write_default_with_token__write_data2cache_first(char *id_token, int id_token_len,
         char *buf, int count, struct ydst *ydst) {
+    UNUSED(id_token);
+    UNUSED(id_token_len);
     return ydst_write_default__write_data2cache_first(buf, count, ydst);
-    if (0) { /* avoid compiler warning */
-        id_token = id_token;
-        id_token_len = id_token_len;
-    }
 }
 
 static int ydst_write_default_with_token(char *id_token, int id_token_len,
@@ -1626,8 +1633,8 @@ static int ylog_write_handler_default(char *buf, int count, struct ylog *y) {
                     ignore = 1;
             p++;
         }
-        if (y->filter_so != NULL)
-            ignore |= y->filter_so(buf, count, NORMAL);
+        if (y->fplugin_filter_log.func != NULL)
+            ignore |= y->fplugin_filter_log.func(buf, count, NORMAL);
         if (ignore)
             return count;
     }
@@ -2031,13 +2038,14 @@ static void ylog_event_thread_del(struct ylog_event_thread *yevent_thread) {
     enum ylog_event_thread_type type = yevent_thread->type;
     pthread_mutex_lock(&mutex);
     for (last = NULL, cur = yevent_thread_lists[type]; cur; last = cur, cur = cur->next)
-        if (cur == yevent_thread)
+        if (cur == yevent_thread) {
+            /* Remove the entry from the linked list. */
+            if (last == NULL)
+                yevent_thread_lists[type] = cur->next;
+            else
+                last->next = cur->next;
             break;
-    /* Remove the entry from the linked list. */
-    if (last == NULL)
-        yevent_thread_lists[type] = cur->next;
-    else
-        last->next = cur->next;
+        }
     pthread_mutex_unlock(&mutex);
 }
 
@@ -2170,36 +2178,35 @@ int ylog_os_event_timer_create(char *name, int period, ylog_event_timer_handler 
                 event_timer_handler, arg, YLOG_EVENT_THREAD_TYPE_OS_TIMER);
 }
 
-static ylog_filter_so ylog_get_filter_so(char *path, char *fun) {
-    ylog_filter_so filter_so = NULL;
+static void ylog_load_filter_plugin_func(char *path, char *fun, struct sfilter_plugin *sfp) {
+    ylog_filter_plugin_func func = NULL;
     void *handle;
     const char *error;
     if (path == NULL)
-        return NULL;
+        return;
     handle = dlopen(path, RTLD_LAZY);
     if (!handle) {
         ylog_debug("ylog open %s failed: %s\n", path, dlerror());
-        return NULL;
+        return;
     }
     /* clear error before */
     dlerror();
-    filter_so = dlsym(handle, fun);
+    func = dlsym(handle, fun);
     if ((error = dlerror()) != NULL) {
         ylog_error("%s \n",error);
         dlclose(handle);
-        return NULL;
+        return;
     }
-    return filter_so;
+    sfp->handle = handle;
+    sfp->func = func;
 }
 
-static ylog_filter_so ylog_getfun_filter_so(char *in_name, char *fun, char *prefix) {
-    ylog_filter_so filter_so = NULL;
+static void ylog_load_filter_plugin(char *in_name, char *fun, char *prefix, struct sfilter_plugin *sfp) {
     char out_libfilter[PATH_MAX];
     if (in_name == NULL || fun == NULL)
-        return NULL;
+        return;
     sprintf(out_libfilter, "%slibfilter_%s.so", prefix, in_name);
-    filter_so = ylog_get_filter_so(out_libfilter, fun);
-    return filter_so;
+    ylog_load_filter_plugin_func(out_libfilter, fun, sfp);
 }
 
 static void *ylog_thread_handler_default(void *arg) {
@@ -2656,8 +2663,8 @@ static void ylog_init(struct ydst_root *root, struct context *c) {
             y->thread_reset = ylog_thread_reset_default;
         if (y->thread_nop == NULL)
             y->thread_nop = ylog_thread_nop_default;
-        if (y->filter_so == NULL)
-            y->filter_so = ylog_getfun_filter_so(y->name, "filter_log", c->filter_so_path);
+        if (y->fplugin_filter_log.func == NULL)
+            ylog_load_filter_plugin(y->name, "filter_log", c->filter_plugin_path, &y->fplugin_filter_log);
 
         y->state = YLOG_STOP;
         yp_invalid(YLOG_POLL_INDEX_INOTIFY, yp, y);

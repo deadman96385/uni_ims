@@ -201,7 +201,8 @@ static void ylog_update_config(const char *fn, int u_nargs, char **u_args, int u
     pthread_mutex_lock(&update_config_mutex);
     if (access(fn, F_OK)) {
         wfd = open(fn, O_RDWR | O_CREAT | O_TRUNC, 0644);
-        if (wfd > 0)
+        /* ftruncate(wfd, 0); */
+        if (wfd >= 0)
             close(wfd);
     }
 
@@ -270,7 +271,7 @@ static void ylog_update_config(const char *fn, int u_nargs, char **u_args, int u
 parser_done:
     if (found == 0) {
         int i;
-        lseek(wfd, 0, SEEK_END);
+        LSEEK(wfd, 0, SEEK_END);
         for (i = 0; i < u_nargs; i++) {
             fd_write(u_args[i], strlen(u_args[i]), wfd);
             fd_write(" ", 1, wfd);
@@ -335,6 +336,7 @@ parser_done:
 
 static struct ylog_keyword ylog_keyword[];
 void process_keyword(struct parse_state *state, int nargs, char **args) {
+    UNUSED(state);
     struct ylog_keyword *kw;
     for (kw = ylog_keyword; kw->key; kw++) {
         if (strcmp(args[0], kw->key) == 0) {
@@ -342,8 +344,5 @@ void process_keyword(struct parse_state *state, int nargs, char **args) {
                 kw->handler(kw, nargs, args);
             break;
         }
-    }
-    if (0) { /* avoid compiler warning */
-        state = state;
     }
 }

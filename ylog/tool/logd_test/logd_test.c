@@ -18,6 +18,8 @@
 #define ALOGE printf
 #endif
 
+#define UNUSED(x) (void)(x) /* avoid compiler warning */
+
 static volatile int g_delay_time = 100000;
 static time_t diff_ts_millisecond(struct timespec *b, struct timespec *a) {
 
@@ -98,7 +100,9 @@ static int parse_cmdline(int argc,char *argv[])
 
 int main(int argc, char *argv[])
 {
-int ylog;
+    UNUSED(argc);
+    UNUSED(argv);
+    int ylog;
     char buf[8192];
     char *p, *pbase, *pmax = buf + sizeof(buf);
     int i;
@@ -183,8 +187,4 @@ int ylog;
     }
 
     return 0;
-    if (0) { /* avoid compiler warning */
-        argc = argc;
-        argv = argv;
-    }
 }

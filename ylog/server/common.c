@@ -54,7 +54,10 @@ pid_t gettid(void) {
 static unsigned long long calculate_path_disk_available(char *path) {
     struct statfs diskInfo;
 
-    statfs(path, &diskInfo);
+    if (statfs(path, &diskInfo)) {
+        ylog_error("statfs failed %s %s\n", path, strerror(errno));
+        return 0;
+    }
 
     return diskInfo.f_bavail * diskInfo.f_bsize;
 }
@@ -117,15 +120,16 @@ int ylog_ts2format_time(char *timeBuf, struct timespec *ts) {
 //#endif
     /* strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%d %H:%M:%S", ptm); */
     len = strftime(timeBuf, 32, "[%m-%d %H:%M:%S", ptm);
-    if (1/* usec_time_output */) {
-        /* 01-01 22:14:36.000   826   826 D SignalClusterView_dual: */
-        len += snprintf(timeBuf + len, 32 - len,
-                ".%03ld] ", ts->tv_nsec / 1000000);
-    } else {
-        /* 01-01 22:14:36.000   826   826 D SignalClusterView_dual: */
-        len += snprintf(timeBuf + len, 32 - len,
-                 ".%03ld] ", ts->tv_nsec / 1000000);
-    }
+#if 1
+    /* usec_time_output */
+    /* 01-01 22:14:36.000   826   826 D SignalClusterView_dual: */
+    len += snprintf(timeBuf + len, 32 - len,
+            ".%03ld] ", ts->tv_nsec / 1000000);
+#else
+    /* 01-01 22:14:36.000   826   826 D SignalClusterView_dual: */
+    len += snprintf(timeBuf + len, 32 - len,
+             ".%03ld] ", ts->tv_nsec / 1000000);
+#endif
     return len;
 }
 
@@ -269,7 +273,7 @@ static unsigned long long currentTimeMillis(void) {
 #else
     struct timespec ts;
     get_monotime(&ts);
-    return (unsigned long long)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+    return (unsigned long long)(ts.tv_sec * 1000L + ts.tv_nsec / 1000000);
 #endif
 }
 

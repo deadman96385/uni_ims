@@ -25,6 +25,8 @@
 #define PATH_MAX 1024
 #endif
 
+#define UNUSED(x) (void)(x) /* avoid compiler warning */
+
 extern struct context *global_context;
 extern struct ydst *global_ydst;
 extern struct ylog *global_ylog;
@@ -38,6 +40,20 @@ static int ylog_printf_format(struct context *c, int level, const char *fmt, ...
 
 #define for_each_ydst(i, yd, inityd) \
     for (yd = inityd ? inityd : global_ydst, i = 0; i < YDST_MAX; i++, yd++)
+
+#define LSEEK(fd, offset, whence) ({\
+    int ll_ret = lseek(fd, offset, whence); \
+    if (ll_ret < 0) \
+        ylog_error("lseek %s %s\n", __func__, strerror(errno)); \
+    ll_ret; \
+})
+
+#define SEND(sockfd, buf, len, flags) ({ \
+    int ll_ret = send(sockfd, buf, len, flags); \
+    if (ll_ret < 0) \
+        ylog_error("send %s %s\n", __func__, strerror(errno)); \
+    ll_ret; \
+})
 
 enum loglevel {
     LOG_ERROR,
@@ -127,7 +143,7 @@ enum mode_types {
 struct context {
     char *config_file;
     char *journal_file;
-    char *filter_so_path;
+    char *filter_plugin_path;
     int journal_file_size;
     enum contextual_model model;
     enum loglevel loglevel;
@@ -209,7 +225,6 @@ typedef int (*ydst_fwrite)(char *buf, int count, int fd);
 typedef int (*ydst_flush)(struct ydst *ydst);
 typedef int (*ydst_open)(char *file, char *mode, struct ydst *ydst);
 typedef int (*ydst_close)(struct ydst *ydst);
-typedef int (*ylog_filter_so)(char *buf, int count, enum filter_status_t status);
 
 struct ylog_event_cond_wait {
     char *name;
@@ -509,6 +524,12 @@ struct ylog_inotify {
     struct ylog_inotify_cell cells[YLOG_INOTIFY_MAX];
 };
 
+typedef int (*ylog_filter_plugin_func)(char *buf, int count, enum filter_status_t status);
+struct sfilter_plugin {
+    void *handle;
+    ylog_filter_plugin_func func;
+};
+
 #define YLOG_MAX 100
 struct ylog {
     pid_t pid;
@@ -585,7 +606,8 @@ struct ylog {
     ylog_thread_flush thread_flush;
     ylog_thread_reset thread_reset;
     ylog_thread_nop thread_nop;
-    ylog_filter_so filter_so;
+
+    struct sfilter_plugin fplugin_filter_log;
     void *privates;
 };
 

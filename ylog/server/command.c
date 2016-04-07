@@ -39,10 +39,9 @@ void kernel_notify(char *buf, int count) {
             index = kernel_index[i].index;
             if (index >= 0) {
                 struct ylog_poll *yp = kernel_index[i].yp;
-                if (send(yp_fd(index, yp), buf, count, MSG_NOSIGNAL) < 0) {
+                if (SEND(yp_fd(index, yp), buf, count, MSG_NOSIGNAL) < 0) {
                     kernel_index[i].index = -1; /* release it, no need */
                     mark_it_can_be_free(index, yp); /* remote client should be closed, mark i will not use the fd */
-                    ylog_debug("send kernel log to this client failed, it should be offline: %s\n", strerror(errno));
                 }
             }
         }
@@ -138,7 +137,7 @@ static int process_command(char *buf, int buf_size, int fd, int index, struct yl
          * but in arm, ylog_cli ylog stop and ylog_cli ylog start, then ylog_cli will pending there
          * so add this string to exit ylog_cli by luther 2016.01.19
          */
-        send(fd, "____cli____exit____\n", 20, MSG_NOSIGNAL);
+        SEND(fd, "____cli____exit____\n", 20, MSG_NOSIGNAL);
     }
 
     return keep_open;
@@ -169,11 +168,27 @@ static void command_loop(int fd_server) {
         kernel_index[i].index = -1;
     kernel_index_ready = 1;
 
-    fd_server_index = yp_insert(NULL, fd_server, YLOG_POLL_INDEX_MAX, yp, "r");
+    ret = fd_server_index = fd_pipe = -1;
+    do {
+        if (fd_server_index < 0)
+            fd_server_index = yp_insert(NULL, fd_server, YLOG_POLL_INDEX_MAX, yp, "r");
 
-    if (pipe(command_pipe))
-        ylog_error("create pipe %s failed: %s\n", "command_loop", strerror(errno));
-    fd_pipe = yp_insert(NULL, command_pipe[0], YLOG_POLL_INDEX_MAX, yp, "r");
+        if (ret < 0) {
+            ret = pipe(command_pipe);
+            if (ret)
+                ylog_error("create pipe %s failed: %s\n", "command_loop", strerror(errno));
+        }
+
+        if (fd_pipe < 0)
+            fd_pipe = yp_insert(NULL, command_pipe[0], YLOG_POLL_INDEX_MAX, yp, "r");
+
+        if (ret == 0 && fd_server_index >= 0 && fd_pipe >= 0)
+            break;
+
+        ylog_critical("command_loop start failed, try again, fd_server_index=%d, fd_pipe=%d, ret=%d\n",
+                fd_server_index, fd_pipe, ret);
+        sleep(1);
+    } while (1);
 
     for (;;) {
         if (poll(yp->pfd, YLOG_POLL_INDEX_MAX, -1) < 0) {
@@ -182,8 +197,10 @@ static void command_loop(int fd_server) {
             continue;
         }
         if (yp_isset(fd_pipe, yp)) {
-            buf[0] = 0;
-            read(yp_fd(fd_pipe, yp), buf, 1);
+            if (read(yp_fd(fd_pipe, yp), buf, 1) <= 0) {
+                buf[0] = 0;
+                ylog_error("read fd_pipe failed: %s\n", strerror(errno));
+            }
             switch (buf[0]) {
             case 'R':
                 for (i = 0 ; i < YLOG_POLL_INDEX_MAX; i++) {
@@ -247,21 +264,21 @@ static void *command_thread_handler(void *arg) {
     int fd = yp_fd(index, yp);
     int buf_size = sizeof buf;
     FILE *wfp = yp->args[index];
-    int wfd = fileno(wfp);
 
     ya->flags = 0; /* *arg can be free now */
 
     if (wfp) {
+        int wfd = fileno(wfp);
         do {
             ret = read(wfd, p, buf_size);
             if (ret > 0) {
-                if (send(fd, p, ret, MSG_NOSIGNAL) < 0) /* remote client has quited */
+                if (SEND(fd, p, ret, MSG_NOSIGNAL) < 0) /* remote client has quited */
                     break;
             }
         } while (ret > 0);
         /* pclose2(wfp); */ /* we will call this in command_client_try_free */
     } else {
-        send(fd, buf + buf_size/2, snprintf(buf + buf_size/2, buf_size/2,
+        SEND(fd, buf + buf_size/2, snprintf(buf + buf_size/2, buf_size/2,
                         "%s failed: %s\n", buf, strerror(errno)), MSG_NOSIGNAL);
     }
 
@@ -271,13 +288,14 @@ static void *command_thread_handler(void *arg) {
 }
 
 static int cmd_command(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
     struct ylog_argument ya;
     pthread_t ptid;
 
     if (cmd_command_disabled == 0) {
         if (strlen(buf) <= strlen(cmd->name)) {
             strcat(buf, " length is wrong\n");
-            send(fd, buf, strlen(buf), MSG_NOSIGNAL);
+            SEND(fd, buf, strlen(buf), MSG_NOSIGNAL);
             return 0;
         }
         ya.args = &buf[3];
@@ -287,69 +305,70 @@ static int cmd_command(struct command *cmd, char *buf, int buf_size, int fd, int
         yp->flags[index] |= YLOG_POLL_FLAG_FREE_LATER | YLOG_POLL_FLAG_COMMAND_ONLINE;
         yp->args[index] = popen2(ya.args, "r");
         if (pthread_create(&ptid, NULL, command_thread_handler, &ya) == 0) {
-            while (ya.flags) usleep(10*1000); /* wait until thread start */
-        } else {
+            int wait_count = 0;
+            while (ya.flags) {
+                usleep(10*1000); /* wait until thread start */
+                if (wait_count++ > 100 * 30) /* wait 30s */
+                    break;
+            }
+        }
+        if (ya.flags) {
             pclose2(yp->args[index]);
             yp->flags[index] &= ~(YLOG_POLL_FLAG_FREE_LATER | YLOG_POLL_FLAG_COMMAND_ONLINE);
+            ylog_critical("cmd_command failed to pthread_create for %s\n", ya.args);
             return 0;
         }
         return 1; /* 1 keep this client opened */
     } else {
-        send(fd, buf, snprintf(buf, buf_size, "this version does not support this command\n"), MSG_NOSIGNAL);
+        SEND(fd, buf, snprintf(buf, buf_size, "this version does not support this command\n"), MSG_NOSIGNAL);
         return 0;
-    }
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
     }
 }
 
 static int cmd_kernel(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
     yp->flags[index] |= YLOG_POLL_FLAG_FREE_LATER;
     if (insert_ylog_argument(index, yp, kernel_index, ARRAY_LEN(kernel_index)) == 0) {
         yp->flags[index] &= ~YLOG_POLL_FLAG_FREE_LATER;
-        send(fd, buf, snprintf(buf, buf_size, "kernel reading online client number has reached max %d, reject you!\n", \
+        SEND(fd, buf, snprintf(buf, buf_size, "kernel reading online client number has reached max %d, reject you!\n", \
                     (int)ARRAY_LEN(kernel_index)), MSG_NOSIGNAL);
         ylog_debug("%s", buf);
         return 0; /* 0 close this client after return 0 */
     }
     return 1; /* 1 keep this client opened */
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-    }
 }
 
 static int cmd_help(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
     struct command *cmds = (struct command *)cmd->args;
-    send(fd, buf, snprintf(buf, buf_size, "=== [ ylog server supported commands ] ===\n"), MSG_NOSIGNAL);
+    SEND(fd, buf, snprintf(buf, buf_size, "=== [ ylog server supported commands ] ===\n"), MSG_NOSIGNAL);
     for (cmd = cmds; cmd->name; cmd++) {
         if (cmd->name[0] == '\n')
             continue;
-        send(fd, buf, snprintf(buf, buf_size, "%-10s -- %s\n", cmd->name, cmd->help ? cmd->help : ""), MSG_NOSIGNAL);
+        SEND(fd, buf, snprintf(buf, buf_size, "%-10s -- %s\n", cmd->name, cmd->help ? cmd->help : ""), MSG_NOSIGNAL);
     }
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int os_cmd_help(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(index);
+    UNUSED(yp);
     struct command *cmds = (struct command *)cmd->args;
     for (cmd = cmds; cmd->name; cmd++) {
         if (cmd->name[0] == '\n')
             continue;
-        send(fd, buf, snprintf(buf, buf_size, "%-10s -- %s\n", cmd->name, cmd->help ? cmd->help : ""), MSG_NOSIGNAL);
+        SEND(fd, buf, snprintf(buf, buf_size, "%-10s -- %s\n", cmd->name, cmd->help ? cmd->help : ""), MSG_NOSIGNAL);
     }
     return 0;
-    if (0) { /* avoid compiler warning */
-        index = index;
-        yp = yp;
-    }
 }
 
 static void ylog_update_config2(char *key, char *value);
 static int cmd_loglevel(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
     char *last;
     char *value = NULL;
     char *level;
@@ -371,16 +390,14 @@ static int cmd_loglevel(struct command *cmd, char *buf, int buf_size, int fd, in
     case LOG_DEBUG: level = "4:debug"; break;
     default: level = "wrong"; break;
     }
-    send(fd, buf, snprintf(buf, buf_size, "%s\n", level), MSG_NOSIGNAL);
+    SEND(fd, buf, snprintf(buf, buf_size, "%s\n", level), MSG_NOSIGNAL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_speed(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
     struct ydst_root *root = global_ydst_root;
     unsigned long long asizes = ydst_all_transfered_size();
     int i, j;
@@ -398,7 +415,7 @@ static int cmd_speed(struct command *cmd, char *buf, int buf_size, int fd, int i
     delta_t = delta_speed_millisecond / 1000;
     if (asizes == 0)
         asizes = 1;
-    // send(fd, buf, snprintf(buf, buf_size, "\n"), MSG_NOSIGNAL);
+    // SEND(fd, buf, snprintf(buf, buf_size, "\n"), MSG_NOSIGNAL);
     y_sort_num = 0;
     for_each_ylog(i, y, NULL) {
         if (y->name == NULL)
@@ -437,13 +454,13 @@ static int cmd_speed(struct command *cmd, char *buf, int buf_size, int fd, int i
         fsize1 = ylog_get_unit_size_float(y->size, &unit1);
         if (y->size)
             percent = (float)(100 * y->size) / asizes;
-        send(fd, buf, snprintf(buf, buf_size, "[ylog] %-20s -> %5.2f%% %.2f%c\n",
+        SEND(fd, buf, snprintf(buf, buf_size, "[ylog] %-20s -> %5.2f%% %.2f%c\n",
                     y->name, percent, fsize1, unit1), MSG_NOSIGNAL);
         if (i == (y_sort_num - 1))
             suffix = NULL;
         send_speed(fd, buf, buf_size, y_sort[i]->speed, YLOG_SPEED_NUM, NULL, suffix?suffix:NULL);
     }
-    send(fd, buf, snprintf(buf, buf_size,
+    SEND(fd, buf, snprintf(buf, buf_size,
                 "----------------------------------------------------------------------------\n"), MSG_NOSIGNAL);
 
     suffix = "\n";
@@ -453,13 +470,13 @@ static int cmd_speed(struct command *cmd, char *buf, int buf_size, int fd, int i
         if (yd->size)
             percent = (float)(100 * yd->size) / asizes;
         fsize1 = ylog_get_unit_size_float(yd->size, &unit1);
-        send(fd, buf, snprintf(buf, buf_size, "[ydst] %-20s -> %5.2f%% %.2f%c\n",
+        SEND(fd, buf, snprintf(buf, buf_size, "[ydst] %-20s -> %5.2f%% %.2f%c\n",
                     yd->file, percent, fsize1, unit1), MSG_NOSIGNAL);
         if (i == (ydst_sort_num - 1))
             suffix = NULL;
         send_speed(fd, buf, buf_size, ydst_sort[i]->speed, YDST_SPEED_NUM, NULL, suffix?suffix:NULL);
     }
-    send(fd, buf, snprintf(buf, buf_size,
+    SEND(fd, buf, snprintf(buf, buf_size,
                 "----------------------------------------------------------------------------\n"), MSG_NOSIGNAL);
 
     for (i = 0; i < y_sort_num; i++) {
@@ -468,10 +485,10 @@ static int cmd_speed(struct command *cmd, char *buf, int buf_size, int fd, int i
         fsize1 = ylog_get_unit_size_float(y->size, &unit1);
         if (y->size)
             percent = (float)(100 * y->size) / asizes;
-        send(fd, buf, snprintf(buf, buf_size, "[ylog] %-20s -> %5.2f%% %.2f%c\n",
+        SEND(fd, buf, snprintf(buf, buf_size, "[ylog] %-20s -> %5.2f%% %.2f%c\n",
                     y->name, percent, fsize1, unit1), MSG_NOSIGNAL);
     }
-    send(fd, buf, snprintf(buf, buf_size, "\n"), MSG_NOSIGNAL);
+    SEND(fd, buf, snprintf(buf, buf_size, "\n"), MSG_NOSIGNAL);
 
     for (i = 0; i < ydst_sort_num; i++) {
         float percent = 0;
@@ -480,7 +497,7 @@ static int cmd_speed(struct command *cmd, char *buf, int buf_size, int fd, int i
             percent = (float)(100 * yd->size) / asizes;
         fsize1 = ylog_get_unit_size_float(yd->size, &unit1);
         fsize2 = ylog_get_unit_size_float(yd->max_size_now, &unit2);
-        send(fd, buf, snprintf(buf, buf_size, "[ydst] %-20s -> %5.2f%% %.2f%c/%.2f%c\n",
+        SEND(fd, buf, snprintf(buf, buf_size, "[ydst] %-20s -> %5.2f%% %.2f%c/%.2f%c\n",
                     yd->file, percent, fsize1, unit1, fsize2, unit2), MSG_NOSIGNAL);
     }
 
@@ -488,21 +505,19 @@ static int cmd_speed(struct command *cmd, char *buf, int buf_size, int fd, int i
     if (delta_speed_millisecond)
         avg_speed = ylog_get_unit_size_float_with_speed(asizes, &avg_speed_unit, delta_speed_millisecond);
     gmtime_r(&delta_t, &delta_tm); /* UTC, don't support keep running more than 1 year by luther */
-    send(fd, buf, snprintf(buf, buf_size, "\nTransfered %.2f%c Has run %02d day %02d:%02d:%02d avg_speed=%.2f%c/s\n",
+    SEND(fd, buf, snprintf(buf, buf_size, "\nTransfered %.2f%c Has run %02d day %02d:%02d:%02d avg_speed=%.2f%c/s\n",
                 fsize1, unit1,
                 delta_tm.tm_yday, delta_tm.tm_hour,
                 delta_tm.tm_min, delta_tm.tm_sec,
                 avg_speed, avg_speed_unit), MSG_NOSIGNAL);
     send_speed(fd, buf, buf_size, root->speed, YDST_ROOT_SPEED_NUM, NULL, NULL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_time(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
     struct timespec ts;
     time_t delta_speed_millisecond, delta_t;
     struct tm delta_tm;
@@ -512,7 +527,7 @@ static int cmd_time(struct command *cmd, char *buf, int buf_size, int fd, int in
     delta_t = delta_speed_millisecond / 1000;
     gmtime_r(&delta_t, &delta_tm); /* UTC, don't support keep running more than 1 year by luther */
     ylog_get_format_time(timeBuf);
-    send(fd, buf, snprintf(buf, buf_size,
+    SEND(fd, buf, snprintf(buf, buf_size,
                 "\n"
                 "%02d day %02d:%02d:%02d       -- runned\n"
                 "%s -- start time\n"
@@ -522,14 +537,15 @@ static int cmd_time(struct command *cmd, char *buf, int buf_size, int fd, int in
                 delta_tm.tm_min, delta_tm.tm_sec,
                 global_context->timeBuf, timeBuf), MSG_NOSIGNAL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_flush(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(buf);
+    UNUSED(buf_size);
+    UNUSED(fd);
+    UNUSED(index);
+    UNUSED(yp);
     struct ylog *y = NULL;
     int i;
     for_each_ylog(i, y, NULL) {
@@ -538,17 +554,12 @@ static int cmd_flush(struct command *cmd, char *buf, int buf_size, int fd, int i
         y->thread_flush(y, 1);
     }
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        buf = buf;
-        buf_size = buf_size;
-        fd = fd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
     struct ylog *y = NULL;
     int i;
     int nargs;
@@ -595,7 +606,7 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
             all = 0;
             y = ylog_get_by_name(name);
             if (y == NULL) {
-                send(fd, buf, snprintf(buf, buf_size, "%s does not exist\n", name), MSG_NOSIGNAL);
+                SEND(fd, buf, snprintf(buf, buf_size, "%s does not exist\n", name), MSG_NOSIGNAL);
                 return 0;
             }
         } else {
@@ -619,7 +630,7 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
                     action_bypass = 1;
             } else if (strcmp(key, "cache") == 0) {
                 if (value == NULL || svalue1 == NULL || y == NULL || y->ydst->cache == NULL) {
-                    send(fd, buf, snprintf(buf, buf_size, "wrong format\n"), MSG_NOSIGNAL);
+                    SEND(fd, buf, snprintf(buf, buf_size, "wrong format\n"), MSG_NOSIGNAL);
                     return 0;
                 }
                 if (strcmp(value, "bypass") == 0)
@@ -630,7 +641,7 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
                     action_cacheline_debuglevel = 1;
             } else if (strcmp(key, "ydst") == 0) {
                 if (value == NULL || svalue1 == NULL) {
-                    send(fd, buf, snprintf(buf, buf_size, "wrong format\n"), MSG_NOSIGNAL);
+                    SEND(fd, buf, snprintf(buf, buf_size, "wrong format\n"), MSG_NOSIGNAL);
                     return 0;
                 }
                 if (strcmp(value, "max_segment") == 0)
@@ -643,7 +654,7 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
                 if (y) {
                     if (value) {
                         if (strcmp(value, "started") == 0)
-                            send(fd, buf, snprintf(buf, buf_size, "%d\n", !(y->status & YLOG_DISABLED_MASK)), MSG_NOSIGNAL);
+                            SEND(fd, buf, snprintf(buf, buf_size, "%d\n", !(y->status & YLOG_DISABLED_MASK)), MSG_NOSIGNAL);
                     }
                 }
                 return 0;
@@ -751,7 +762,7 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
     delta_t = ts.tv_sec - global_context->ts.tv_sec;
     gmtime_r(&delta_t, &delta_tm); /* UTC, don't support keep running more than 1 year by luther */
     fsize1 = ylog_get_unit_size_float(root->quota_now ? root->quota_now : root->max_size, &unit1);
-    send(fd, buf, snprintf(buf, buf_size, "--------------------------------------------------------------------------\n"\
+    SEND(fd, buf, snprintf(buf, buf_size, "--------------------------------------------------------------------------\n"\
                 "root = %s quota = %.2f%c, running %02d day %02d:%02d:%02d\n"\
                 "--------------------------------------------------------------------------\n"
                 , global_ydst_root->root, fsize1, unit1,
@@ -785,46 +796,44 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
                 continue;
             if (name && strcmp(name, y->name))
                 continue;
-            send(fd, buf, snprintf(buf, buf_size, "[ %s ] = %s {\n", y->name, (y->status & YLOG_DISABLED_MASK) ? "stopped" : "running"), MSG_NOSIGNAL);
-            send(fd, buf, snprintf(buf, buf_size, "%s.loglevel = %d\n", space_string, global_context->loglevel), MSG_NOSIGNAL);
-            send(fd, buf, snprintf(buf, buf_size, "%s.file = %s\n", space_string, y->file), MSG_NOSIGNAL);
-            send(fd, buf, snprintf(buf, buf_size, "%s.restart_period = %d\n", space_string, y->restart_period), MSG_NOSIGNAL);
-            send(fd, buf, snprintf(buf, buf_size, "%s.timestamp = %d\n", space_string, y->timestamp), MSG_NOSIGNAL);
-            send(fd, buf, snprintf(buf, buf_size, "%s.bypass = %d\n", space_string, y->bypass), MSG_NOSIGNAL);
-            send(fd, buf, snprintf(buf, buf_size, "%s.mode = %d\n", space_string, y->mode), MSG_NOSIGNAL);
+            SEND(fd, buf, snprintf(buf, buf_size, "[ %s ] = %s {\n", y->name, (y->status & YLOG_DISABLED_MASK) ? "stopped" : "running"), MSG_NOSIGNAL);
+            SEND(fd, buf, snprintf(buf, buf_size, "%s.loglevel = %d\n", space_string, global_context->loglevel), MSG_NOSIGNAL);
+            SEND(fd, buf, snprintf(buf, buf_size, "%s.file = %s\n", space_string, y->file), MSG_NOSIGNAL);
+            SEND(fd, buf, snprintf(buf, buf_size, "%s.restart_period = %d\n", space_string, y->restart_period), MSG_NOSIGNAL);
+            SEND(fd, buf, snprintf(buf, buf_size, "%s.timestamp = %d\n", space_string, y->timestamp), MSG_NOSIGNAL);
+            SEND(fd, buf, snprintf(buf, buf_size, "%s.bypass = %d\n", space_string, y->bypass), MSG_NOSIGNAL);
+            SEND(fd, buf, snprintf(buf, buf_size, "%s.mode = %d\n", space_string, y->mode), MSG_NOSIGNAL);
             fsize1 = ylog_get_unit_size_float(y->ydst->size, &unit1);
             fsize2 = ylog_get_unit_size_float(y->size, &unit2);
-            send(fd, buf, snprintf(buf, buf_size, "%s.ydst = %.2f%c/%.2f%c {\n", space_string, fsize2, unit2, fsize1, unit1), MSG_NOSIGNAL);
+            SEND(fd, buf, snprintf(buf, buf_size, "%s.ydst = %.2f%c/%.2f%c {\n", space_string, fsize2, unit2, fsize1, unit1), MSG_NOSIGNAL);
             yds_new_segment_file_name(path, sizeof path, 0, y->ydst);
-            send(fd, buf, snprintf(buf, buf_size, "%s%s.file = %s\n", space_string, space_string, path), MSG_NOSIGNAL);
-            send(fd, buf, snprintf(buf, buf_size, "%s%s.max_segment  = %d\n", space_string, space_string, y->ydst->max_segment_now), MSG_NOSIGNAL);
+            SEND(fd, buf, snprintf(buf, buf_size, "%s%s.file = %s\n", space_string, space_string, path), MSG_NOSIGNAL);
+            SEND(fd, buf, snprintf(buf, buf_size, "%s%s.max_segment  = %d\n", space_string, space_string, y->ydst->max_segment_now), MSG_NOSIGNAL);
             fsize1 = ylog_get_unit_size_float(y->ydst->max_segment_size_now, &unit1);
-            send(fd, buf, snprintf(buf, buf_size, "%s%s.max_segment_size  = %.2f%c\n", space_string, space_string, fsize1, unit1), MSG_NOSIGNAL);
+            SEND(fd, buf, snprintf(buf, buf_size, "%s%s.max_segment_size  = %.2f%c\n", space_string, space_string, fsize1, unit1), MSG_NOSIGNAL);
             if (y->ydst->cache) {
-                send(fd, buf, snprintf(buf, buf_size, "%s%s.cache= {\n", space_string, space_string), MSG_NOSIGNAL);
+                SEND(fd, buf, snprintf(buf, buf_size, "%s%s.cache= {\n", space_string, space_string), MSG_NOSIGNAL);
                 fsize1 = ylog_get_unit_size_float(y->ydst->cache->size, &unit1);
-                send(fd, buf, snprintf(buf, buf_size, "%s%s%s.size = %.2f%c\n",
+                SEND(fd, buf, snprintf(buf, buf_size, "%s%s%s.size = %.2f%c\n",
                             space_string, space_string, space_string, fsize1, unit1), MSG_NOSIGNAL);
-                send(fd, buf, snprintf(buf, buf_size, "%s%s%s.num = %d\n",
+                SEND(fd, buf, snprintf(buf, buf_size, "%s%s%s.num = %d\n",
                             space_string, space_string, space_string, y->ydst->cache->num), MSG_NOSIGNAL);
-                send(fd, buf, snprintf(buf, buf_size, "%s%s%s.bypass = %d\n",
+                SEND(fd, buf, snprintf(buf, buf_size, "%s%s%s.bypass = %d\n",
                             space_string, space_string, space_string, y->ydst->cache->bypass), MSG_NOSIGNAL);
-                send(fd, buf, snprintf(buf, buf_size, "%s%s%s.timeout = %dms\n",
+                SEND(fd, buf, snprintf(buf, buf_size, "%s%s%s.timeout = %dms\n",
                             space_string, space_string, space_string, y->ydst->cache->timeout), MSG_NOSIGNAL);
-                send(fd, buf, snprintf(buf, buf_size, "%s%s%s.debuglevel = 0x%02x\n",
+                SEND(fd, buf, snprintf(buf, buf_size, "%s%s%s.debuglevel = 0x%02x\n",
                             space_string, space_string, space_string, y->ydst->cache->debuglevel), MSG_NOSIGNAL);
-                send(fd, buf, snprintf(buf, buf_size, "%s%s}\n", space_string, space_string), MSG_NOSIGNAL);
+                SEND(fd, buf, snprintf(buf, buf_size, "%s%s}\n", space_string, space_string), MSG_NOSIGNAL);
             }
-            send(fd, buf, snprintf(buf, buf_size, "%s}\n", space_string), MSG_NOSIGNAL);
-            send(fd, buf, snprintf(buf, buf_size, "}\n"), MSG_NOSIGNAL);
+            SEND(fd, buf, snprintf(buf, buf_size, "%s}\n", space_string), MSG_NOSIGNAL);
+            SEND(fd, buf, snprintf(buf, buf_size, "}\n"), MSG_NOSIGNAL);
         }
     } else {
         char *status;
         unsigned long long quota_now = root->quota_now ? root->quota_now : root->max_size;
         for_each_ylog(i, y, NULL) {
             if (y->name == NULL)
-                continue;
-            if (name && strcmp(name, y->name))
                 continue;
             // ylog -> running -> ydst -> cacheline
             if (y->status & YLOG_DISABLED)
@@ -838,30 +847,28 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
             fsize1 = ylog_get_unit_size_float(y->ydst->max_segment_size_now, &unit1);
             fsize2 = ylog_get_unit_size_float(y->ydst->max_size_now, &unit2);
             yds_new_segment_file_name(path, sizeof path, 0, y->ydst);
-            send(fd, buf, snprintf(buf, buf_size, "%-20s -> %-8s -> %s (%dx%.2f%c/%.2f%c,%5.2f%%)",
+            SEND(fd, buf, snprintf(buf, buf_size, "%-20s -> %-8s -> %s (%dx%.2f%c/%.2f%c,%5.2f%%)",
                         y->name, status, path + strlen(y->ydst->root_folder) + 1, y->ydst->max_segment_now,
                         fsize1, unit1, fsize2, unit2, (100 * y->ydst->max_size_now) / (float)quota_now), MSG_NOSIGNAL);
             if (y->ydst->cache) {
                 fsize1 = ylog_get_unit_size_float(y->ydst->cache->size, &unit1);
-                send(fd, buf, snprintf(buf, buf_size, " -> cache.%s(%dx%.2f%c)",
+                SEND(fd, buf, snprintf(buf, buf_size, " -> cache.%s(%dx%.2f%c)",
                             y->ydst->cache->name, y->ydst->cache->num, fsize1, unit1), MSG_NOSIGNAL);
             }
             fsize1 = ylog_get_unit_size_float(y->size, &unit1);
             fsize2 = ylog_get_unit_size_float(y->ydst->size, &unit2);
-            send(fd, buf, snprintf(buf, buf_size, " [%.2f%c/%.2f%c]",
+            SEND(fd, buf, snprintf(buf, buf_size, " [%.2f%c/%.2f%c]",
                             fsize1, unit1, fsize2, unit2), MSG_NOSIGNAL);
-            send(fd, "\n", 1, MSG_NOSIGNAL);
+            SEND(fd, "\n", 1, MSG_NOSIGNAL);
         }
     }
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_cpath(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
     char *root_new, *last;
     char path[PATH_MAX];
     struct ydst_root *root = global_ydst_root;
@@ -871,16 +878,14 @@ static int cmd_cpath(struct command *cmd, char *buf, int buf_size, int fd, int i
         snprintf(path, sizeof path, "%s/ylog", root_new); /* we must append /ylog to avoid wrong rm -rf */
         ydst_root_new(NULL, path);
     }
-    send(fd, buf, snprintf(buf, buf_size, "%s\n", root->root), MSG_NOSIGNAL);
+    SEND(fd, buf, snprintf(buf, buf_size, "%s\n", root->root), MSG_NOSIGNAL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_quota(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
     float fsize1;
     char unit1;
     char *quotas, *last;
@@ -891,23 +896,20 @@ static int cmd_quota(struct command *cmd, char *buf, int buf_size, int fd, int i
         unsigned long long quota;
         quota = strtol(quotas, NULL, 0);
         if (quota == 0) {
-            send(fd, buf, snprintf(buf, buf_size, "%s is not a number\n", quotas), MSG_NOSIGNAL);
+            SEND(fd, buf, snprintf(buf, buf_size, "%s is not a number\n", quotas), MSG_NOSIGNAL);
             return 0;
         }
         quota *= 1024 * 1024;
         ydst_root_quota(NULL, quota);
     }
     fsize1 = ylog_get_unit_size_float(root->quota_now ? root->quota_now : root->max_size, &unit1);
-    send(fd, buf, snprintf(buf, buf_size, "%.2f%c\n", fsize1, unit1), MSG_NOSIGNAL);
+    SEND(fd, buf, snprintf(buf, buf_size, "%.2f%c\n", fsize1, unit1), MSG_NOSIGNAL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_clear_ylog(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(index);
+    UNUSED(yp);
     long mode = (long)cmd->args;
     struct context *c = global_context;
     struct ydst_root *root = global_ydst_root;
@@ -942,16 +944,15 @@ static int cmd_clear_ylog(struct command *cmd, char *buf, int buf_size, int fd, 
         print2journal_file("clear all ylog %s", root->root);
     }
 
-    send(fd, buf, snprintf(buf, buf_size, "done\n"), MSG_NOSIGNAL);
+    SEND(fd, buf, snprintf(buf, buf_size, "done\n"), MSG_NOSIGNAL);
 
     return 0;
-    if (0) { /* avoid compiler warning */
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_space(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
     struct ydst_root *root = global_ydst_root;
     struct context *c = global_context;
     char *root_path = root->root;
@@ -961,7 +962,7 @@ static int cmd_space(struct command *cmd, char *buf, int buf_size, int fd, int i
     float fsize;
     unsigned long long freespace;
     fsize = ylog_get_unit_size_float(root->quota_now ? root->quota_now : root->max_size, &unit);
-    send(fd, buf, snprintf(buf, buf_size, "%.2f%c\t(quota)\n", fsize, unit), MSG_NOSIGNAL);
+    SEND(fd, buf, snprintf(buf, buf_size, "%.2f%c\t(quota)\n", fsize, unit), MSG_NOSIGNAL);
 #if 0
     ret = do_cmd(buf, buf_size, 1, "du -sh %s", root_path);
     if (historical_folder_root)
@@ -970,40 +971,40 @@ static int cmd_space(struct command *cmd, char *buf, int buf_size, int fd, int i
     freespace = calculate_path_disk_available(root_path);
     fsize = ylog_get_unit_size_float(freespace, &unit);
     ret = snprintf(buf, buf_size, "%s -> %.2f%c (freespace)\n", root_path, fsize, unit);
-    send(fd, buf, ret, MSG_NOSIGNAL);
+    SEND(fd, buf, ret, MSG_NOSIGNAL);
 
     if (historical_folder_root) {
         ret = do_cmd(buf, buf_size, 1, "du -sh %s", historical_folder_root);
-        send(fd, buf, ret, MSG_NOSIGNAL);
+        if (ret <= 0)
+            ret = snprintf(buf, buf_size, "Failed to call du -sh %s", historical_folder_root);
+        SEND(fd, buf, ret, MSG_NOSIGNAL);
     }
 
     ret = do_cmd(buf, buf_size, 1, "du -sh %s", root_path);
-    send(fd, buf, ret, MSG_NOSIGNAL);
+    if (ret <= 0)
+        ret = snprintf(buf, buf_size, "Failed to call du -sh %s", root_path);
+    SEND(fd, buf, ret, MSG_NOSIGNAL);
 #endif
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_freespace(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
     struct ydst_root *root = global_ydst_root;
     char *root_path = root->root;
     unsigned long long freespace = calculate_path_disk_available(root_path);
     char unit;
     float fsize = ylog_get_unit_size_float(freespace, &unit);
-    send(fd, buf, snprintf(buf, buf_size, "%s -> %.2f%c\n", root_path, fsize, unit), MSG_NOSIGNAL);
+    SEND(fd, buf, snprintf(buf, buf_size, "%s -> %.2f%c\n", root_path, fsize, unit), MSG_NOSIGNAL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_isignal(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
     int *ignore_signal_process = &global_context->ignore_signal_process;
     char *last;
     char *signal;
@@ -1011,17 +1012,13 @@ static int cmd_isignal(struct command *cmd, char *buf, int buf_size, int fd, int
     signal = strtok_r(NULL, " ", &last);
     if (signal)
         *ignore_signal_process = !!strtol(signal, NULL, 0);
-    send(fd, buf, snprintf(buf, buf_size, "signal %s\n",
+    SEND(fd, buf, snprintf(buf, buf_size, "signal %s\n",
                 *ignore_signal_process ? "is ignored":"will be processed"), MSG_NOSIGNAL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static void *cmd_benchmark_thread_handler(void *arg) {
+    UNUSED(arg);
     struct ylog_argument *ya = (struct ylog_argument *)arg;
     char buf[2048];
     char buf_const[64];
@@ -1101,7 +1098,7 @@ static void *cmd_benchmark_thread_handler(void *arg) {
                                 &delta_speed_unit, delta_speed_millisecond);
                 ts = ts2;
                 delta_speed_size = 0;
-                if (send(fd, buf, snprintf(buf, buf_size, "cmd_benchmark -> %s speed %.2f%c/s\n", path, delta_speed_float, delta_speed_unit), MSG_NOSIGNAL) < 0)
+                if (SEND(fd, buf, snprintf(buf, buf_size, "cmd_benchmark -> %s speed %.2f%c/s\n", path, delta_speed_float, delta_speed_unit), MSG_NOSIGNAL) < 0)
                     break;
                 delta_speed_size += y->write_handler(buf, strlen(buf), y);
             }
@@ -1120,16 +1117,17 @@ static void *cmd_benchmark_thread_handler(void *arg) {
         }
         pthread_mutex_unlock(&benchmark_mutex_command);
     } else {
-        send(fd, buf, snprintf(buf, buf_size, "cmd_benchmark can't find ylog named: %s\n", name), MSG_NOSIGNAL);
+        SEND(fd, buf, snprintf(buf, buf_size, "cmd_benchmark can't find ylog named: %s\n", name), MSG_NOSIGNAL);
     }
     mark_it_can_be_free(index, yp);
     return NULL;
-    if (0) { /* avoid compiler warning */
-        arg = arg;
-    }
 }
 
 static int cmd_benchmark(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(buf);
+    UNUSED(buf_size);
+    UNUSED(fd);
     pthread_t ptid;
     struct ylog_argument ya;
 
@@ -1139,18 +1137,20 @@ static int cmd_benchmark(struct command *cmd, char *buf, int buf_size, int fd, i
     ya.flags = 1;
 
     yp->flags[index] |= YLOG_POLL_FLAG_FREE_LATER | YLOG_POLL_FLAG_THREAD;
-    if (pthread_create(&ptid, NULL, cmd_benchmark_thread_handler, &ya)) {
+    if (pthread_create(&ptid, NULL, cmd_benchmark_thread_handler, &ya) == 0) {
+        int wait_count = 0;
+        while (ya.flags) {
+            usleep(10*1000); /* wait until thread start */
+            if (wait_count++ > 100 * 30) /* wait 30s */
+                break;
+        }
+    }
+    if (ya.flags) {
         yp->flags[index] &= ~(YLOG_POLL_FLAG_FREE_LATER | YLOG_POLL_FLAG_THREAD);
+        ylog_critical("cmd_benchmark failed to pthread_create for %s\n", ya.args);
         return 0;
     }
-    while (ya.flags) usleep(10*1000); /* wait until thread start */
     return 1; /* 1 keep this client opened */
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        buf = buf;
-        buf_size = buf_size;
-        fd = fd;
-    }
 }
 
 static struct command commands[] = {

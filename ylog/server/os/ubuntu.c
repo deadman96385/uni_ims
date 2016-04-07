@@ -6,20 +6,21 @@
 #define YLOG_CONFIG        "data/ylog/ylog.conf"
 
 static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
+    UNUSED(buf);
+    UNUSED(count);
+    UNUSED(fp);
     char *cmd_list[] = {
         "cat /proc/interrupts",
         NULL
     };
     pcmds(cmd_list, &fd, y->write_handler, y, "ylog_info");
     return 0;
-    if (0) { /* avoid compiler warning */
-        buf = buf;
-        count = count;
-        fp = fp;
-    }
 }
 
 static int ylog_read_ylog_debug_hook(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
+    UNUSED(buf);
+    UNUSED(count);
+    UNUSED(fp);
     char *cmd_list[] = {
         "./ylog_cli ylog",
         "./ylog_cli speed",
@@ -29,11 +30,6 @@ static int ylog_read_ylog_debug_hook(char *buf, int count, FILE *fp, int fd, str
     };
     pcmds(cmd_list, &fd, y->write_handler, y, "ylog_debug");
     return 0;
-    if (0) { /* avoid compiler warning */
-        buf = buf;
-        count = count;
-        fp = fp;
-    }
 }
 
 static int ydst_fwrite_kernel(char *buf, int count, int fd) {
@@ -46,15 +42,14 @@ static int ydst_fwrite_kernel(char *buf, int count, int fd) {
 }
 
 static int cmd_test(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(buf);
+    UNUSED(buf_size);
+    UNUSED(index);
+    UNUSED(yp);
     buf[ylog_get_format_time(buf)] = '\n';
-    send(fd, buf, strlen(buf), MSG_NOSIGNAL);
+    SEND(fd, buf, strlen(buf), MSG_NOSIGNAL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        buf_size = buf_size;
-        index = index;
-        yp = yp;
-    }
 }
 
 static struct command os_commands[] = {
@@ -73,18 +68,17 @@ static void cmd_ylog_hook(int nargs, char **args) {
 }
 
 static void load_loglevel(struct ylog_keyword *kw, int nargs, char **args) {
+    UNUSED(kw);
+    UNUSED(nargs);
     struct context *c = global_context;
     int loglevel = strtol(args[1], NULL, 0);
     if (loglevel < 0 || loglevel >= LOG_LEVEL_MAX)
         loglevel = LOG_DEBUG;
     c->loglevel = loglevel;
-    if (0) { /* avoid compiler warning */
-        kw = kw;
-        nargs = nargs;
-    }
 }
 
 static void load_ylog(struct ylog_keyword *kw, int nargs, char **args) {
+    UNUSED(kw);
     /**
      * args 0    1       2    3
      * 1. ylog enabled kernel 0
@@ -113,9 +107,6 @@ static void load_ylog(struct ylog_keyword *kw, int nargs, char **args) {
         } else {
             ylog_critical("%s: value=%s, svalue1=%s\n", __func__, value, svalue1);
         }
-    }
-    if (0) { /* avoid compiler warning */
-        kw = kw;
     }
 }
 

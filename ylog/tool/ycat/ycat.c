@@ -7,7 +7,10 @@
 #include <string.h>
 #include "ytag.h"
 
+#define UNUSED(x) (void)(x) /* avoid compiler warning */
+
 int main(int argc, char *argv[]) {
+    UNUSED(argc);
     int fd;
     int ret;
     char buf[4096];
@@ -60,6 +63,4 @@ int main(int argc, char *argv[]) {
 
     close(fd);
     return 0;
-
-    argc = argc;
 }

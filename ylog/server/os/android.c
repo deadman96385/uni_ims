@@ -55,6 +55,7 @@ struct os_config {
 } oc, *poc = &oc;
 
 static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
+    UNUSED(fp);
     FILE *wfp;
     char tmp[PATH_MAX];
     char *cmd_list[] = {
@@ -67,23 +68,25 @@ static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct yl
     };
 
     wfp = popen("ls /*.rc", "r");
-    do {
-        if (fgets(buf, count, wfp) == NULL)
-            break;
-        snprintf(tmp, sizeof tmp, "cat %s", strtok(buf, "\n"));
-        pcmd(tmp, &fd, y->write_handler, y, "ylog_info");
-    } while (1);
-    pclose(wfp);
+    if (wfp) {
+        do {
+            if (fgets(buf, count, wfp) == NULL)
+                break;
+            snprintf(tmp, sizeof tmp, "cat %s", strtok(buf, "\n"));
+            pcmd(tmp, &fd, y->write_handler, y, "ylog_info");
+        } while (1);
+        pclose(wfp);
+    }
 
     pcmds(cmd_list, &fd, y->write_handler, y, "ylog_info");
 
     return 0;
-    if (0) { /* avoid compiler warning */
-        fp = fp;
-    }
 }
 
 static int ylog_read_ylog_debug_hook(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
+    UNUSED(buf);
+    UNUSED(count);
+    UNUSED(fp);
     char *cmd_list[] = {
         "/system/bin/ylog_cli ylog",
         "/system/bin/ylog_cli speed",
@@ -93,14 +96,13 @@ static int ylog_read_ylog_debug_hook(char *buf, int count, FILE *fp, int fd, str
     };
     pcmds(cmd_list, &fd, y->write_handler, y, "ylog_debug");
     return 0;
-    if (0) { /* avoid compiler warning */
-        buf = buf;
-        count = count;
-        fp = fp;
-    }
 }
 
 static int ylog_read_sys_info(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
+    UNUSED(buf);
+    UNUSED(count);
+    UNUSED(fp);
+    UNUSED(fd);
     int cnt = 0;
     char *cmd_list[] = {
         "cat /proc/slabinfo",
@@ -124,12 +126,6 @@ static int ylog_read_sys_info(char *buf, int count, FILE *fp, int fd, struct ylo
     };
     pcmds(cmd_list, &cnt, y->write_handler, y, "sys_info");
     return 0;
-    if (0) { /* avoid compiler warning */
-        buf = buf;
-        count = count;
-        fp = fp;
-        fd = fd;
-    }
 }
 
 static int ylog_read_sys_info_manual(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
@@ -280,6 +276,7 @@ static char *os_detect_root_folder(char *root) {
 }
 
 static int event_timer_handler(void *arg, long tick, struct ylog_event_cond_wait *yewait) {
+    UNUSED(arg);
     char log_path[PATH_MAX];
 
     if (os_search_root_path(log_path, sizeof(log_path))) {
@@ -308,9 +305,6 @@ static int event_timer_handler(void *arg, long tick, struct ylog_event_cond_wait
     }
 
     return 0;
-    if (0) { /* avoid compiler warning */
-        arg = arg;
-    }
 }
 
 #define KERNEL_NOTIFY_MODE  0
@@ -340,39 +334,36 @@ static int ydst_write_kernel(char *id_token, int id_token_len,
 #endif
 
 static int cmd_test(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(buf_size);
+    UNUSED(index);
+    UNUSED(yp);
     buf[ylog_get_format_time(buf)] = '\n';
-    send(fd, buf, strlen(buf), MSG_NOSIGNAL);
+    SEND(fd, buf, strlen(buf), MSG_NOSIGNAL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        buf_size = buf_size;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_rootdir(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
-    send(fd, buf, snprintf(buf, buf_size, "%s\n", pos->ylog_root_path_latest), MSG_NOSIGNAL);
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
+    SEND(fd, buf, snprintf(buf, buf_size, "%s\n", pos->ylog_root_path_latest), MSG_NOSIGNAL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_cpath_last(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
-    send(fd, buf, snprintf(buf, buf_size, "%s\n", pos->historical_folder_root_last), MSG_NOSIGNAL);
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
+    SEND(fd, buf, snprintf(buf, buf_size, "%s\n", pos->historical_folder_root_last), MSG_NOSIGNAL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static void ylog_update_config2(char *key, char *value);
 static int cmd_history_n(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
     char *last;
     char *value = NULL;
     char *level;
@@ -387,16 +378,14 @@ static int cmd_history_n(struct command *cmd, char *buf, int buf_size, int fd, i
         snprintf(buf, buf_size, "%d", poc->keep_historical_folder_numbers);
         ylog_update_config2("keep_historical_folder_numbers", buf);
     }
-    send(fd, buf, snprintf(buf, buf_size, "%d\n", c->keep_historical_folder_numbers), MSG_NOSIGNAL);
+    SEND(fd, buf, snprintf(buf, buf_size, "%d\n", c->keep_historical_folder_numbers), MSG_NOSIGNAL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_setprop(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
     char *last;
     char *property = NULL;
     char *value = NULL;
@@ -410,13 +399,8 @@ static int cmd_setprop(struct command *cmd, char *buf, int buf_size, int fd, int
         property_set(property, pp);
     }
     property_get(property, pp, "");
-    send(fd, buf, snprintf(buf, buf_size, "%s %s\n", property, pp), MSG_NOSIGNAL);
+    SEND(fd, buf, snprintf(buf, buf_size, "%s %s\n", property, pp), MSG_NOSIGNAL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int send_at_file_atch(int idx, char *buf, int count, char *retbuf, int *retcount_max) {
@@ -468,11 +452,14 @@ static int send_at_file_atch(int idx, char *buf, int count, char *retbuf, int *r
 }
 
 static int cmd_at(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
     int len = strlen(buf);
     int idx = 0;
     int ret_size = buf_size;
     if (len == 3) {
-        send(fd, buf, snprintf(buf, buf_size, "%s\n", pos->file_atch[idx]), MSG_NOSIGNAL);
+        SEND(fd, buf, snprintf(buf, buf_size, "%s\n", pos->file_atch[idx]), MSG_NOSIGNAL);
         return 0;
     }
     strcat(buf, "\r");
@@ -493,28 +480,24 @@ static int cmd_at(struct command *cmd, char *buf, int buf_size, int fd, int inde
         len = snprintf(buf, buf_size, "Failed\n");
     }
     if (len)
-        send(fd, buf, len, MSG_NOSIGNAL);
+        SEND(fd, buf, len, MSG_NOSIGNAL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_print2android(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(buf_size);
+    UNUSED(fd);
+    UNUSED(index);
+    UNUSED(yp);
     ylog_warn("%s\n", buf);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        buf_size = buf_size;
-        fd = fd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static int cmd_print2kernel(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
     int ret = 1, len;
     if (pos->fd_kmsg > 0) {
         len = strlen(buf);
@@ -524,13 +507,8 @@ static int cmd_print2kernel(struct command *cmd, char *buf, int buf_size, int fd
             ret = 0;
     }
     if (ret)
-        send(fd, buf, snprintf(buf, buf_size, "%s\n", "failed"), MSG_NOSIGNAL);
+        SEND(fd, buf, snprintf(buf, buf_size, "%s\n", "failed"), MSG_NOSIGNAL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        cmd = cmd;
-        index = index;
-        yp = yp;
-    }
 }
 
 static struct command os_commands[] = {
@@ -547,26 +525,22 @@ static struct command os_commands[] = {
 };
 
 static void load_loglevel(struct ylog_keyword *kw, int nargs, char **args) {
+    UNUSED(kw);
+    UNUSED(nargs);
     struct context *c = global_context;
     int loglevel = strtol(args[1], NULL, 0);
     if (loglevel < 0 || loglevel >= LOG_LEVEL_MAX)
         loglevel = LOG_DEBUG;
     c->loglevel = loglevel;
-    if (0) { /* avoid compiler warning */
-        kw = kw;
-        nargs = nargs;
-    }
 }
 
 static void load_keep_historical_folder_numbers(struct ylog_keyword *kw, int nargs, char **args) {
+    UNUSED(kw);
+    UNUSED(nargs);
     int history_n = strtol(args[1], NULL, 0);
     if (history_n == 0)
         history_n = KEEP_HISTORICAL_FOLDER_NUMBERS_DEFUALT;
     poc->keep_historical_folder_numbers = history_n;
-    if (0) { /* avoid compiler warning */
-        kw = kw;
-        nargs = nargs;
-    }
 }
 
 static void cmd_ylog_hook(int nargs, char **args) {
@@ -579,6 +553,7 @@ static void cmd_ylog_hook(int nargs, char **args) {
 }
 
 static void load_ylog(struct ylog_keyword *kw, int nargs, char **args) {
+    UNUSED(kw);
     /**
      * args 0    1       2    3
      * 1. ylog enabled kernel 0
@@ -589,7 +564,7 @@ static void load_ylog(struct ylog_keyword *kw, int nargs, char **args) {
     char *key = (nargs > 1 ? args[1] : NULL);
     char *value = (nargs > 2 ? args[2] : NULL);
     char *svalue1 = (nargs > 3 ? args[3] : NULL);
-    if (strcmp(key, "enabled") == 0) {
+    if (key && strcmp(key, "enabled") == 0) {
         if (value && svalue1) {
             y = ylog_get_by_name(value);
             if (y) {
@@ -607,9 +582,6 @@ static void load_ylog(struct ylog_keyword *kw, int nargs, char **args) {
         } else {
             ylog_critical("%s: value=%s, svalue1=%s\n", __func__, value, svalue1);
         }
-    }
-    if (0) { /* avoid compiler warning */
-        kw = kw;
     }
 }
 
@@ -657,10 +629,11 @@ static int os_inotify_handler_anr(struct ylog_inotify_cell *pcell, int timeout, 
             ylog_info("open %s fail.%s", "/data/anr/traces.txt", strerror(errno));
             return 0;
         }
-        lseek(fd, -3, SEEK_END);
+        LSEEK(fd, -3, SEEK_END);
         buf[0] = 0;
         buf[3] = 0;
-        read(fd, buf, 3);
+        if (read(fd, buf, 3) <= 0)
+            return -1;
         if (strcmp(buf, "EOF"))
             return -1;
     }
@@ -743,14 +716,14 @@ static void ylog_ready(void) {
 static struct context os_context[M_MODE_NUM] = {
     [M_USER] = {
         .config_file = "1.xml",
-        .filter_so_path = YLOG_FILTER_PATH,
+        .filter_plugin_path = YLOG_FILTER_PATH,
         .journal_file = YLOG_JOURNAL_FILE,
         .model = C_MINI_LOG,
         .loglevel = LOG_WARN,
     },
     [M_USER_DEBUG] = {
         .config_file = "2.xml",
-        .filter_so_path = YLOG_FILTER_PATH,
+        .filter_plugin_path = YLOG_FILTER_PATH,
         .journal_file = YLOG_JOURNAL_FILE,
         .model = C_FULL_LOG,
         .loglevel = LOG_INFO,
@@ -789,14 +762,12 @@ static void os_env_prepare(void) {
 }
 
 static void insert_file_atch(char *file_atch, int mode) {
+    UNUSED(mode);
     int i;
     for (i = 0; i < pos->file_atch_num; i++) {
         if (pos->file_atch[i] == NULL) {
             pos->file_atch[i] = strdup(file_atch);
         }
-    }
-    if (0) { /* avoid compiler warning */
-        mode = mode;
     }
 }
 

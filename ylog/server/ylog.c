@@ -174,20 +174,18 @@ static int ylog_read_info(char *buf, int count, FILE *fp, int fd, struct ylog *y
 }
 
 static int ylog_read_journal(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
+    UNUSED(fp);
+    UNUSED(fd);
     ylog_write_handler w = y->write_handler;
     if (fd == yp_fd(YLOG_POLL_INDEX_PIPE, &y->yp))
         return y->read(buf, count, fp, fd, y);
     do {
         count = get_journal_file(buf, count);
-        if (count == 0)
+        if (count <= 0)
             break;
         w(buf, count, y);
     } while (1);
     return 0; /* INT_MAX; */
-    if (0) { /* avoid compiler warning */
-        fp = fp;
-        fd = fd;
-    }
 }
 
 static int ylog_read_ylog_debug(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
@@ -323,6 +321,9 @@ static struct ylog ylog_default[YLOG_MAX+1] = {
 };
 
 static int speed_statistics_event_timer_handler(void *arg, long tick, struct ylog_event_cond_wait *yewait) {
+    UNUSED(arg);
+    UNUSED(tick);
+    UNUSED(yewait);
     static unsigned long long prev_size = 0;
     static struct timespec prev_ts;
     static struct timeval prev_tv;
@@ -383,11 +384,6 @@ static int speed_statistics_event_timer_handler(void *arg, long tick, struct ylo
     prev_ts = cur_ts;
     prev_tv = cur_tv;
     return 0;
-    if (0) { /* avoid compiler warning */
-        arg = arg;
-        tick = tick;
-        yewait = yewait;
-    }
 }
 
 static void *ylog_command_loop(void *arg) {
@@ -402,12 +398,14 @@ struct ylog *global_ylog = ylog_default;
 struct ydst_root *global_ydst_root = &ydst_root_default;
 
 int main(int argc, char *argv[]) {
+    UNUSED(argc);
+    UNUSED(argv);
     pthread_t ptid;
     int ret;
     char uptimeb[128];
     os_init(global_ydst_root, &global_context, &os_hooks);
     os_env_prepare();
-    ret = uptime(uptimeb, sizeof uptimeb);
+    ret = uptime(uptimeb, sizeof(uptimeb) - 1);
     if (ret < 0)
         ret = 0;
     uptimeb[ret] = 0;
@@ -424,8 +422,4 @@ int main(int argc, char *argv[]) {
     ylog_verify();
     pthread_join(ptid, NULL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        argc = argc;
-        argv = argv;
-    }
 }

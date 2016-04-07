@@ -188,39 +188,3 @@ int pclose2(FILE *iop) {
 
     return (pid == -1 ? -1 : pstat);
 }
-
-int pclose2_all(void) {
-    register struct pid *cur, *last;
-    int pstat;
-    pid_t pid;
-    int fd;
-    FILE *iop;
-    int num = 0;
-
-    pthread_mutex_lock(&popen2_pidlist_mutex);
-    /* Find the appropriate file pointer. */
-    for (last = NULL, cur = pidlist; cur; last = cur, cur = cur->next) {
-        /* Remove the entry from the linked list. */
-        if (last == NULL)
-            pidlist = cur->next;
-        else
-            last->next = cur->next;
-
-        fd = cur->pid;
-        iop = cur->fp;
-
-        kill(fd, SIGKILL);
-        //kill(fd, SIGINT);
-        //kill(fd, SIGTERM);
-
-        (void)fclose(iop);
-
-        do {
-            pid = waitpid(cur->pid, &pstat, 0);
-        } while (pid == -1 && errno == EINTR);
-
-        free(cur);
-    }
-    pthread_mutex_unlock(&popen2_pidlist_mutex);
-    return 0;
-}

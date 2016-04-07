@@ -64,6 +64,7 @@ int connect_socket_local_server(char *name) {
 
     if (connect(fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
         cli_error("%s connect %s failed: %s\n", __func__, name, strerror(errno));
+        close(fd);
         return -1;
     }
 

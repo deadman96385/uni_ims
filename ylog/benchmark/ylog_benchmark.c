@@ -15,6 +15,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#define UNUSED(x) (void)(x) /* avoid compiler warning */
+
 enum loglevel {
     LOG_ERROR,
     LOG_CRITICAL,
@@ -55,6 +57,7 @@ int connect_socket_local_server(char *name) {
 
     if (connect(fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
         ylog_error("%s connect %s failed: %s\n", __func__, name, strerror(errno));
+        close(fd);
         return -1;
     }
 
@@ -147,7 +150,7 @@ static void socket_send_file(char *file, int buf_size, int socket) {
         char *buf;
         int len;
         long long count = 0;
-        if (fd <= 0) {
+        if (fd < 0) {
             ylog_error("open %s failed: %s\n", file, strerror(errno));
             return;
         }
@@ -190,6 +193,8 @@ static void usage(void) {
 }
 
 int main(int argc, char *argv[]) {
+    UNUSED(argc);
+    UNUSED(argv);
     int ylog;
     char buf[8192];
     char data[8192];
@@ -297,8 +302,4 @@ int main(int argc, char *argv[]) {
     }
 
     return 0;
-    if (0) { /* avoid compiler warning */
-        argc = argc;
-        argv = argv;
-    }
 }

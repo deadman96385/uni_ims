@@ -12,6 +12,8 @@
 #include <sys/time.h>
 #include <time.h>
 
+#define UNUSED(x) (void)(x) /* avoid compiler warning */
+
 enum loglevel {
     LOG_ERROR,
     LOG_CRITICAL,
