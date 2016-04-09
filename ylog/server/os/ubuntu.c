@@ -43,7 +43,6 @@ static int ydst_fwrite_kernel(char *buf, int count, int fd) {
 
 static int cmd_test(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
     UNUSED(cmd);
-    UNUSED(buf);
     UNUSED(buf_size);
     UNUSED(index);
     UNUSED(yp);

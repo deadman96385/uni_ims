@@ -174,8 +174,6 @@ static int ylog_read_info(char *buf, int count, FILE *fp, int fd, struct ylog *y
 }
 
 static int ylog_read_journal(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
-    UNUSED(fp);
-    UNUSED(fd);
     ylog_write_handler w = y->write_handler;
     if (fd == yp_fd(YLOG_POLL_INDEX_PIPE, &y->yp))
         return y->read(buf, count, fp, fd, y);

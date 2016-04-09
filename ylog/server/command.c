@@ -288,7 +288,6 @@ static void *command_thread_handler(void *arg) {
 }
 
 static int cmd_command(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
-    UNUSED(cmd);
     struct ylog_argument ya;
     pthread_t ptid;
 
@@ -339,7 +338,6 @@ static int cmd_kernel(struct command *cmd, char *buf, int buf_size, int fd, int 
 }
 
 static int cmd_help(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
-    UNUSED(cmd);
     UNUSED(index);
     UNUSED(yp);
     struct command *cmds = (struct command *)cmd->args;
@@ -1124,7 +1122,6 @@ static void *cmd_benchmark_thread_handler(void *arg) {
 }
 
 static int cmd_benchmark(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
-    UNUSED(cmd);
     UNUSED(buf);
     UNUSED(buf_size);
     UNUSED(fd);

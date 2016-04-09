@@ -1387,8 +1387,8 @@ static void *ylog_exit_default(struct ylog *y) {
 }
 
 static int ylog_read_default_line(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
-    UNUSED(y);
     UNUSED(fd);
+    UNUSED(y);
     /**
      * man fgets
      *
@@ -2517,7 +2517,6 @@ static void ylog_init(struct ydst_root *root, struct context *c) {
     ylog_get_format_time(c->timeBuf);
     ylog_historical_folder(root->root, c);
 
-    /* for (; yd->refs >= 0; yd++) { */
     for_each_ydst(i, yd, NULL) {
         if (yd->file == NULL)
             continue;

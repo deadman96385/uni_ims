@@ -159,6 +159,7 @@ static void socket_send_file(char *file, int buf_size, int socket) {
         buf = malloc(buf_size);
         if (buf == NULL) {
             ylog_critical("Can't malloc %d\n", buf_size);
+            close(fd);
             return;
         }
         ylog_info("write file %s with size %d\n", file, buf_size);

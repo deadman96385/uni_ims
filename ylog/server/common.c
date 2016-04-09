@@ -54,6 +54,8 @@ pid_t gettid(void) {
 static unsigned long long calculate_path_disk_available(char *path) {
     struct statfs diskInfo;
 
+    memset(&diskInfo, 0, sizeof diskInfo);
+
     if (statfs(path, &diskInfo)) {
         ylog_error("statfs failed %s %s\n", path, strerror(errno));
         return 0;
@@ -273,7 +275,7 @@ static unsigned long long currentTimeMillis(void) {
 #else
     struct timespec ts;
     get_monotime(&ts);
-    return (unsigned long long)(ts.tv_sec * 1000L + ts.tv_nsec / 1000000);
+    return (unsigned long long)ts.tv_sec * 1000L + ts.tv_nsec / 1000000;
 #endif
 }
 
