@@ -1259,13 +1259,13 @@ int callFromCLCCLine(char *line, RIL_Call *p_call)
         /* tolerate null here */
         if (err < 0) return 0;
 
-        // Some lame implementations return strings
+        /* Some lame implementations return strings
         // like "NOT AVAILABLE" in the CLCC line
         if (p_call->number != NULL
                 && 0 == strspn(p_call->number, "+0123456789*#abc")
            ) {
             p_call->number = NULL;
-        }
+        }*/
 
         err = at_tok_nextint(&line, &p_call->toa);
         if (err < 0) goto error;

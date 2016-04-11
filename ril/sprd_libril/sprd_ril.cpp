@@ -2860,7 +2860,14 @@ static int responseCallList(Parcel &p, void *response, size_t responselen) {
         p.writeInt32(p_cur->als);
         p.writeInt32(p_cur->isVoice);
         p.writeInt32(p_cur->isVoicePrivacy);
-        writeStringToParcel(p, p_cur->number);
+        if(p_cur->number != NULL){
+            char* number_tmp = strdup(p_cur->number);
+            stripNumberFromSipAddress(p_cur->number, number_tmp, strlen(number_tmp) * sizeof(char));
+            writeStringToParcel(p, number_tmp);
+            free(number_tmp);
+        } else {
+            writeStringToParcel(p, p_cur->number);
+        }
         p.writeInt32(p_cur->numberPresentation);
         writeStringToParcel(p, p_cur->name);
         p.writeInt32(p_cur->namePresentation);
