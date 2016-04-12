@@ -432,7 +432,6 @@ static rilnet_tz_entry_t rilnet_tz_entry[] = {
  /* SPRD : for svlte & csfb @{ */
 static bool isSvLte(void);
 static bool isLte(void);
-static void setCeMode(int channelID);
 static bool isCSFB(void); 
 static bool isCMCC(void);
 static bool isCUCC(void);
@@ -2235,7 +2234,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         }
          /* SPRD : for svlte & csfb @{ */
         if (isLte()) {
-            setCeMode(channelID);
+            at_send_command(ATch_type[channelID], "AT+CEMODE=1", NULL);
         }
         bool isSimCUCC = false;
         err = at_send_command_numeric(ATch_type[channelID], "AT+CIMI", &p_response);
@@ -14904,44 +14903,6 @@ static bool isCUCC(void) {
         return true;
     }
     return false;
-}
-
-static int getCeMode(void) {
-    int cemode = 0;
-    switch(getTestMode()) {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-            cemode = 0;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-        case 8:
-        case 9:
-        case 10:
-        case 11:
-        case 12:
-        case 13:
-        case 14:
-            cemode = 1;
-            break;
-        default:
-            cemode = 0;
-            break;
-    }
-    return cemode;
-}
-
-static void setCeMode(int channelID) {
-    if (isLte()){
-        char cmd[20] = {0};
-        sprintf(cmd, "AT+CEMODE=%d", getCeMode());
-        RILLOGD("setCeMode: %s", cmd);
-        at_send_command(ATch_type[channelID], cmd, NULL);
-    }
 }
 
 void setTestMode(int channelID) {
