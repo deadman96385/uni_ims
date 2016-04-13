@@ -484,6 +484,33 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             }
         }
     }
+
+    /* SPRD: add for bug 552691 @{ */
+    private ImsCallSessionImpl mMergeHost;
+
+    public void onCallMergeStart(ImsCallSessionImpl mergeHost) {
+        synchronized (mSessionList) {
+            mMergeHost = mergeHost;
+            for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it = mSessionList.entrySet()
+                    .iterator(); it.hasNext();) {
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+                if (e.getValue().isBackgroundCall()) {
+                    e.getValue().setMergeState();
+                }
+            }
+        }
+    }
+
+    public void onCallMergeComplete() {
+        synchronized (mSessionList) {
+            if (mMergeHost != null) {
+                mMergeHost.notifyMergeComplete();
+                mMergeHost = null;
+            }
+        }
+    }
+    /* @} */
+
     public int getServiceId(){
         return mServiceId;
     }
