@@ -68,7 +68,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private String mCallee;
     private ImsVideoCallProvider mImsVideoCallProvider;
     // SPRD: add for bug524928
-    private boolean isMegerAction;
+    private boolean mIsMegerAction;
+    private boolean mShouldNotifyMegerd;
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             CommandsInterface ci, ImsServiceCallTracker callTracker){
@@ -207,13 +208,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             hasUpdate = true;
         }
         hasUpdate = mImsDriverCall.update(dc);
-        /* SPRD: add for bug524928 @{ */
-        if(mImsDriverCall.isMpty && isMegerAction){
-            try{
-                mIImsCallSessionListener.callSessionMergeComplete((IImsCallSession) this);
-                isMegerAction = false;
-            } catch(RemoteException e){
-                e.printStackTrace();
+        /* SPRD: add for bug524928 and bug 552691 @{ */
+        if (mImsDriverCall.isMpty && mImsDriverCall.state == ImsDriverCall.State.ACTIVE) {
+            if (mIsMegerAction) {
+                mIsMegerAction = false;
+                mImsServiceCallTracker.onCallMergeComplete();
+            } else if (mShouldNotifyMegerd) {
+                notifyMergeComplete();
             }
         }
         /* @} */
@@ -793,8 +794,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
      */
     @Override
     public void merge(){
-        // SPRD: add for bug524928
-        isMegerAction = true;
+        // SPRD: add for bug 552691
+        mImsServiceCallTracker.onCallMergeStart(this);
         mCi.conference(mHandler.obtainMessage(ACTION_COMPLETE_MERGE,this));
     }
 
@@ -995,4 +996,25 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public boolean isBackgroundCall(){
         return (mImsDriverCall != null && mImsDriverCall.state == ImsDriverCall.State.HOLDING);
     }
+
+    /* SPRD: add for bug 552691 @{ */
+    public void setMergeState() {
+        mIsMegerAction = true;
+    }
+
+    public void notifyMergeComplete() {
+        if (!isMultiparty()) {
+            mShouldNotifyMegerd = true;
+            return;
+        }
+        mShouldNotifyMegerd = false;
+        try {
+            mIImsCallSessionListener.callSessionMergeComplete((IImsCallSession) this);
+            mIsMegerAction = false;
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+    /* @} */
+
 }
