@@ -55,6 +55,20 @@ static int ylog_printf_format(struct context *c, int level, const char *fmt, ...
     ll_ret; \
 })
 
+#define CLOSE(fd) ({\
+    int ll_ret = -1; \
+    if (fd < 0) \
+        ylog_critical("BUG close fd is %d %s\n", fd, __func__); \
+    else {\
+        if (fd == 0) \
+            ylog_critical("BUG: close fd is %d %s\n", fd, __func__); \
+        ll_ret = close(fd); \
+        if (ll_ret < 0) \
+            ylog_error("close %s %s\n", __func__, strerror(errno)); \
+    } \
+    ll_ret; \
+})
+
 enum loglevel {
     LOG_ERROR,
     LOG_CRITICAL,
@@ -221,7 +235,7 @@ typedef int (*cacheline_write)(char *buf, int count, struct cacheline *cl);
 typedef int (*cacheline_exit)(struct cacheline *cl);
 typedef void*(*cacheline_thread_handler)(void *arg);
 typedef int (*ydst_write)(char *id_token, int id_token_len, char *buf, int count, struct ydst *ydst);
-typedef int (*ydst_fwrite)(char *buf, int count, int fd);
+typedef int (*ydst_fwrite)(char *buf, int count, int fd, char *desc);
 typedef int (*ydst_flush)(struct ydst *ydst);
 typedef int (*ydst_open)(char *file, char *mode, struct ydst *ydst);
 typedef int (*ydst_close)(struct ydst *ydst);
@@ -644,7 +658,7 @@ static inline void yp_invalid(int index, struct ylog_poll *yp, struct ylog *y) {
     if (fp) {
         y->close(fp, y);
     } else if (fd > 0) {
-        close(fd);
+        CLOSE(fd);
     }
     yp->fp[index] = NULL;
     yp_clr(index, yp);
@@ -670,7 +684,7 @@ static inline void yp_free(int index, struct ylog_poll *yp) {
     if (fp) {
         fclose(fp);
     } else if (fd > 0) {
-        close(fd);
+        CLOSE(fd);
     }
     yp->fp[index] = NULL;
     yp_clr(index, yp);
@@ -681,7 +695,7 @@ static inline void yp_set(FILE *fp, int fd, int index, struct ylog_poll *yp, cha
         fp = fdopen(fd, mode);
         if (fp == NULL) {
             ylog_error("fdopen failed: %s\n", strerror(errno));
-            close(fd);
+            CLOSE(fd);
             return;
         }
     }

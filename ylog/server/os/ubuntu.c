@@ -32,10 +32,10 @@ static int ylog_read_ylog_debug_hook(char *buf, int count, FILE *fp, int fd, str
     return 0;
 }
 
-static int ydst_fwrite_kernel(char *buf, int count, int fd) {
+static int ydst_fwrite_kernel(char *buf, int count, int fd, char *desc) {
     int ret = 0;
     if (count) {
-        ret = fd_write(buf, count, fd);
+        ret = fd_write(buf, count, fd, desc);
         kernel_notify(buf, count);
     }
     return ret;

@@ -2,7 +2,7 @@
  * Copyright (C) 2016 Spreadtrum Communications Inc.
  */
 
-static int fd_write(char *buf, int count, int fd) {
+static int fd_write(char *buf, int count, int fd, char *desc) {
     int c;
     int retries = 5;
     int written = 0;
@@ -23,7 +23,7 @@ static int fd_write(char *buf, int count, int fd) {
                 count -= c;
             }
         } else {
-            ylog_error("write failed %d: %s\n", c, strerror(errno));
+            ylog_error("%s write failed %d: %d %s\n", desc, c, fd, strerror(errno));
         }
         usleep(10*1000);
     } while (--retries);

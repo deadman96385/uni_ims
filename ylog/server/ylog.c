@@ -38,7 +38,7 @@ static void *ylog_sighandler_thread_default(void *arg) {
             y->thread_exit(y, 1);
             ylog_info("ylog %s exited\n", y->name);
         }
-        close(fd_command_server);
+        CLOSE(fd_command_server);
         print2journal_file("ylog.stop with signal %d, %s, sdcard is %s", *processing_signal, strsignal(*processing_signal), os_check_sdcard_online() ? "online" : "offline");
         #if 0
         exit(0); /* sometime it will pending there long time, don't know why */

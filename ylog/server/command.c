@@ -219,7 +219,7 @@ static void command_loop(int fd_server) {
             }
             if (yp_insert(NULL, fd_client, YLOG_POLL_INDEX_MAX, yp, "r") < 0) {
                 ylog_critical("server command online clients have reached maximum %d\n", YLOG_POLL_INDEX_MAX - 1);
-                close(fd_client);
+                CLOSE(fd_client);
                 continue;
             }
             online++;

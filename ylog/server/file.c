@@ -85,7 +85,7 @@ static int print2journal_file(const char *fmt, ...) {
         if (fd_journal_file != STDOUT_FILENO) {
             struct context *c = global_context;
             char *file = c->journal_file;
-            close(fd_journal_file);
+            CLOSE(fd_journal_file);
             if (file) {
                 mkdirs_with_file(file);
                 fd_journal_file = open(file, O_RDWR | O_CREAT | O_TRUNC, 0666); /* trunc mode */
@@ -687,7 +687,7 @@ static void create_outline(struct ydst *ydst) {
             char *p, *last;
             int ret;
             int len = 100;
-            int fd_f = 0;
+            int fd_f = -1;
             int fd_t = open(file_to, O_RDONLY);
             if (from)
                 fd_f = open(file_from, O_RDONLY);
@@ -768,14 +768,14 @@ static void create_outline(struct ydst *ydst) {
                     write(fd_outline, buf, strlen(buf));
             }
             if (fd_f >= 0)
-                close(fd_f);
+                CLOSE(fd_f);
             if (fd_t >= 0)
-                close(fd_t);
+                CLOSE(fd_t);
         }
     }
 _exit:
     if (fd_outline >= 0)
-        close(fd_outline);
+        CLOSE(fd_outline);
 }
 
 static int ydst_pre_fill_zero_to_possession_storage_spaces(struct ydst *ydst,
@@ -819,7 +819,7 @@ static int ydst_pre_fill_zero_to_possession_storage_spaces(struct ydst *ydst,
                     }
                     size -= ret;
                 } while (size);
-                close(fd);
+                CLOSE(fd);
             } else {
                 ylog_critical("Failed to create dir %s\n", path);
             }
@@ -1298,7 +1298,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
             }
             write(fd, path, snprintf(path, sizeof(path), "}\n\n"));
             write(fd, analyzer_bottom_half_template, strlen(analyzer_bottom_half_template));
-            close(fd);
+            CLOSE(fd);
         } else {
             ylog_critical("Failed: create %s\n", path);
         }
@@ -1520,14 +1520,14 @@ static int ydst_flush_default(struct ydst *ydst) {
 }
 
 static int ydst_write_default__write_data2cache_first(char *buf, int count, struct ydst *ydst) {
-    return ydst->fwrite(buf, count, ydst->fd);
+    return ydst->fwrite(buf, count, ydst->fd, ydst->file_name);
 }
 
 static int ydst_write_default(char *buf, int count, struct ydst *ydst) {
     if (ydst->cache)
         return ydst->cache->write(buf, count, ydst->cache);
     else
-        return ydst->fwrite(buf, count, ydst->fd);
+        return ydst->fwrite(buf, count, ydst->fd, ydst->file_name);
 }
 
 static int ydst_write_default_with_token__write_data2cache_first(char *id_token, int id_token_len,
@@ -2377,7 +2377,7 @@ __state_control:
                     yp_set(NULL, fd_client, YLOG_POLL_INDEX_DATA, yp, mode);
                 } else {
                     ylog_warn("%s %s server had accepted one client, forbid you\n", name, file);
-                    close(fd_client);
+                    CLOSE(fd_client);
                 }
             }
         }

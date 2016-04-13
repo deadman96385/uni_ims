@@ -309,10 +309,10 @@ static int event_timer_handler(void *arg, long tick, struct ylog_event_cond_wait
 
 #define KERNEL_NOTIFY_MODE  0
 #if KERNEL_NOTIFY_MODE == 1
-static int ydst_fwrite_kernel(char *buf, int count, int fd) {
+static int ydst_fwrite_kernel(char *buf, int count, int fd, char *desc) {
     int ret = 0;
     if (count) {
-        ret = fd_write(buf, count, fd);
+        ret = fd_write(buf, count, fd, desc);
         kernel_notify(buf, count);
     }
     return ret;
@@ -415,7 +415,7 @@ static int send_at_file_atch(int idx, char *buf, int count, char *retbuf, int *r
         ylog_info("open %s fail.%s", file_atch, strerror(errno));
         return 1;
     }
-    if (count != fd_write(buf, count, fd))
+    if (count != fd_write(buf, count, fd, "send_at_file_atch"))
         result = 1;
     ylog_debug("send to %s with %s\n", file_atch, buf);
     if (retbuf && retcount_max) {
@@ -447,7 +447,7 @@ static int send_at_file_atch(int idx, char *buf, int count, char *retbuf, int *r
             }
         } while (0/*ret > 0*/);
     }
-    close(fd);
+    CLOSE(fd);
     return result;
 }
 
@@ -503,7 +503,7 @@ static int cmd_print2kernel(struct command *cmd, char *buf, int buf_size, int fd
         len = strlen(buf);
         buf[len++] = '\n';
         buf[len] = '\0';
-        if (len == fd_write(buf, len, pos->fd_kmsg))
+        if (len == fd_write(buf, len, pos->fd_kmsg, "cmd_print2kernel"))
             ret = 0;
     }
     if (ret)

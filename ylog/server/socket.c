@@ -17,7 +17,7 @@ static int create_socket_local_server(int *fd, char *file) {
     /* Test with length +1 for the *initial* '\0'. */
     if ((namelen + 1) > (int)sizeof(address.sun_path)) {
         ylog_critical("%s length is too long\n", file);
-        close(*fd);
+        CLOSE(*fd);
         return -1;
     }
 
@@ -28,13 +28,13 @@ static int create_socket_local_server(int *fd, char *file) {
 
     if (bind(*fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
         ylog_error("bind %s failed: %s\n", file, strerror(errno));
-        close(*fd);
+        CLOSE(*fd);
         return -1;
     }
 
     if (listen(*fd, 3) < 0) {
         ylog_error("listen %s failed: %s\n", file, strerror(errno));
-        close(*fd);
+        CLOSE(*fd);
         return -1;
     }
 
@@ -61,7 +61,7 @@ static int connect_socket_local_server(int *fd, char *name) {
     /* Test with length +1 for the *initial* '\0'. */
     if ((namelen + 1) > (int)sizeof(address.sun_path)) {
         ylog_critical("%s %s length is too long\n", __func__, name);
-        close(*fd);
+        CLOSE(*fd);
         return -1;
     }
     /* Linux-style non-filesystem Unix Domain Sockets */

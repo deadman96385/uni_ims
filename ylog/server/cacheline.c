@@ -54,7 +54,7 @@ static void cacheline_drain(struct cacheline *cl, int reason) {
         pthread_mutex_unlock(&cl->mutex); /* give ydst more chance to use other free cachelines */
         if (cl->bypass == 0) {
             if (cl->ydst->write_data2cache_first == 0)
-                ret = cl->ydst->fwrite(pcache, wpos, cl->ydst->fd);
+                ret = cl->ydst->fwrite(pcache, wpos, cl->ydst->fd, cl->ydst->file_name);
             else {
                 ret = cl->ydst->write_handler(pcache, wpos, cl->ydst->ylog);
                 if (ret > wpos)
@@ -184,7 +184,7 @@ static void *cacheline_thread_handler_default(void *arg) {
             pthread_mutex_unlock(&cl->mutex); /* give ydst more chance to use other free cachelines */
             if (cl->bypass == 0) {
                 if (cl->ydst->write_data2cache_first == 0)
-                    ret = cl->ydst->fwrite(pcache, cl->size, cl->ydst->fd);
+                    ret = cl->ydst->fwrite(pcache, cl->size, cl->ydst->fd, cl->ydst->file_name);
                 else {
                     ret = cl->ydst->write_handler(pcache, cl->size, cl->ydst->ylog);
                     if (ret > cl->size)

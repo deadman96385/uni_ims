@@ -160,7 +160,7 @@ static char *ylog_load_config(const char *path) {
 
     if (fstat(fd, &sb) == -1) {
         ylog_error("fstat failed for '%s': %s\n", path, strerror(errno));
-        close(fd);
+        CLOSE(fd);
         return NULL;
     }
 
@@ -184,7 +184,7 @@ static char *ylog_load_config(const char *path) {
                 break;
         } while (p < pmax);
     }
-    close(fd);
+    CLOSE(fd);
 
     return data;
 }
@@ -197,13 +197,14 @@ static void ylog_update_config(const char *fn, int u_nargs, char **u_args, int u
     int wfd = 0;
     int found = 0;
     char *mptr;
+    char *desc = "ylog_update_config";
 
     pthread_mutex_lock(&update_config_mutex);
     if (access(fn, F_OK)) {
         wfd = open(fn, O_RDWR | O_CREAT | O_TRUNC, 0644);
         /* ftruncate(wfd, 0); */
         if (wfd >= 0)
-            close(wfd);
+            CLOSE(wfd);
     }
 
     state.filename = fn;
@@ -251,11 +252,11 @@ static void ylog_update_config(const char *fn, int u_nargs, char **u_args, int u
                     }
 
                     for (i = 0; i < s_nargs; i++) {
-                        fd_write(s_args[i], strlen(s_args[i]), wfd);
+                        fd_write(s_args[i], strlen(s_args[i]), wfd, desc);
                         if (i != (s_nargs - 1))
-                            fd_write(" ", 1, wfd);
+                            fd_write(" ", 1, wfd, desc);
                     }
-                    fd_write("\n", 1, wfd);
+                    fd_write("\n", 1, wfd, desc);
 
                     nargs = 0;
                 }
@@ -273,14 +274,14 @@ parser_done:
         int i;
         LSEEK(wfd, 0, SEEK_END);
         for (i = 0; i < u_nargs; i++) {
-            fd_write(u_args[i], strlen(u_args[i]), wfd);
-            fd_write(" ", 1, wfd);
+            fd_write(u_args[i], strlen(u_args[i]), wfd, desc);
+            fd_write(" ", 1, wfd, desc);
         }
-        fd_write("\n", 1, wfd);
+        fd_write("\n", 1, wfd, desc);
     }
     free(mptr);
     fsync(wfd);
-    close(wfd);
+    CLOSE(wfd);
     if (rename(tempPath, fn)) {
         unlink(tempPath);
         ylog_error("Unable to rename ylog confi file %s to %s\n", tempPath, fn);

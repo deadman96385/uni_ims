@@ -46,16 +46,16 @@ FILE *popen2(char *command, char *type) {
         return (NULL);
 
     if ((cur = malloc(sizeof(struct pid))) == NULL) {
-        (void)close(pdes[0]);
-        (void)close(pdes[1]);
+        (void)CLOSE(pdes[0]);
+        (void)CLOSE(pdes[1]);
         errno = ENOMEM;
         return (NULL);
     }
 
     switch (pid = vfork()) {
     case -1:            /* Error. */
-        (void)close(pdes[0]);
-        (void)close(pdes[1]);
+        (void)CLOSE(pdes[0]);
+        (void)CLOSE(pdes[1]);
         free(cur);
         return (NULL);
         /* NOTREACHED */
@@ -69,10 +69,10 @@ FILE *popen2(char *command, char *type) {
              * the compiler is free to corrupt all the local
              * variables.
              */
-            (void)close(pdes[0]);
+            (void)CLOSE(pdes[0]);
             if (pdes[1] != STDOUT_FILENO) {
                 (void)dup2(pdes[1], STDOUT_FILENO);
-                (void)close(pdes[1]);
+                (void)CLOSE(pdes[1]);
                 if (twoway)
                     (void)dup2(STDOUT_FILENO, STDIN_FILENO);
             } else if (twoway && (pdes[1] != STDIN_FILENO)) {
@@ -81,12 +81,12 @@ FILE *popen2(char *command, char *type) {
         } else {
             if (pdes[0] != STDIN_FILENO) {
                 (void)dup2(pdes[0], STDIN_FILENO);
-                (void)close(pdes[0]);
+                (void)CLOSE(pdes[0]);
             }
-            (void)close(pdes[1]);
+            (void)CLOSE(pdes[1]);
         }
         for (p = pidlist; p; p = p->next) {
-            (void)close(fileno(p->fp));
+            (void)CLOSE(fileno(p->fp));
         }
         //execl(_PATH_BSHELL, "sh", "-c", command, NULL);
         /**
@@ -129,10 +129,10 @@ FILE *popen2(char *command, char *type) {
     /* Parent; assume fdopen can't fail. */
     if (xtype[0] == 'r') {
         iop = fdopen(pdes[0], xtype);
-        (void)close(pdes[1]);
+        (void)CLOSE(pdes[1]);
     } else {
         iop = fdopen(pdes[1], xtype);
-        (void)close(pdes[0]);
+        (void)CLOSE(pdes[0]);
     }
 
     /* Link into list of file descriptors. */
