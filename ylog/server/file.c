@@ -1309,7 +1309,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
 
 static int ylog_open_default(char *file, char *mode, struct ylog *y) {
     FILE *f;
-    int fd;
+    int fd = -1;
     struct ylog_poll *yp = &y->yp;
 
     switch (y->type) {
@@ -1322,14 +1322,19 @@ static int ylog_open_default(char *file, char *mode, struct ylog *y) {
         yp_set(f, -1, YLOG_POLL_INDEX_DATA, yp, NULL);
         break;
     case FILE_SOCKET_LOCAL_SERVER:
-        if (yp_fd(YLOG_POLL_INDEX_SERVER_SOCK, yp) < 0) {
-            if (create_socket_local_server(&fd, file) == 0)
-                yp_set(NULL, fd, YLOG_POLL_INDEX_SERVER_SOCK, yp, mode);
+        if (create_socket_local_server(&fd, file) < 0) {
+            ylog_error("open %s failed: %s\n", file, strerror(errno));
+            if (fd >= 0)
+                CLOSE(fd);
+            return -1;
         }
+        yp_set(NULL, fd, YLOG_POLL_INDEX_SERVER_SOCK, yp, mode);
         break;
     case FILE_SOCKET_LOCAL_CLIENT:
         if (connect_socket_local_server(&fd, file) < 0) {
             ylog_error("open %s failed: %s\n", file, strerror(errno));
+            if (fd >= 0)
+                CLOSE(fd);
             return -1;
         }
         yp_set(NULL, fd, YLOG_POLL_INDEX_DATA, yp, mode);
@@ -1348,11 +1353,8 @@ static int ylog_open_default(char *file, char *mode, struct ylog *y) {
         yp_set(f, -1, YLOG_POLL_INDEX_DATA, yp, NULL);
         break;
     case FILE_INOTIFY:
-        if (yp_fd(YLOG_POLL_INDEX_INOTIFY, yp) < 0) {
-            int fd;
-            if (create_inotify(&fd, &y->yinotify) == 0)
-                yp_set(NULL, fd, YLOG_POLL_INDEX_INOTIFY, yp, mode);
-        }
+        if (create_inotify(&fd, &y->yinotify) == 0)
+            yp_set(NULL, fd, YLOG_POLL_INDEX_INOTIFY, yp, mode);
         break;
     }
 

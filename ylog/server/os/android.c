@@ -54,6 +54,12 @@ struct os_config {
     int keep_historical_folder_numbers;
 } oc, *poc = &oc;
 
+static int ylog_write_header_sgm_cpu_memory_header(struct ylog *y) {
+#define YLOG_SGM_CPU_MEMORY_HEADER "second,cpu-cpu_percent[0],cpu-iowtime[1],cpu-cpu_frequency[2],cpu-null[3],cpu-null[4],cpu-null[5],cpu0-cpu_percent[0],cpu0-iowtime[1],cpu0-cpu_frequency[2],cpu0-null[3],cpu0-null[4],cpu0-null[5],cpu1-cpu_percent[0],cpu1-iowtime[1],cpu1-cpu_frequency[2],cpu1-null[3],cpu1-null[4],cpu1-null[5],cpu2-cpu_percent[0],cpu2-iowtime[1],cpu2-cpu_frequency[2],cpu2-null[3],cpu2-null[4],cpu2-null[5],cpu3-cpu_percent[0],cpu3-iowtime[1],cpu3-cpu_frequency[2],cpu3-null[3],cpu3-null[4],cpu3-null[5],cpu4-cpu_percent[0],cpu4-iowtime[1],cpu4-cpu_frequency[2],cpu4-null[3],cpu4-null[4],cpu4-null[5],cpu5-cpu_percent[0],cpu5-iowtime[1],cpu5-cpu_frequency[2],cpu5-null[3],cpu5-null[4],cpu5-null[5],cpu6-cpu_percent[0],cpu6-iowtime[1],cpu6-cpu_frequency[2],cpu6-null[3],cpu6-null[4],cpu6-null[5],cpu7-cpu_percent[0],cpu7-iowtime[1],cpu7-cpu_frequency[2],cpu7-null[3],cpu7-null[4],cpu7-null[5],irqs,ctxt,processes,procs_running,procs_blocked,totalram,freeram,cached,Reserve01,Reserve02,Reserve03,Reserve04,Reserve05,Reserve06\n"
+    return y->ydst->write(y->id_token, y->id_token_len,
+            YLOG_SGM_CPU_MEMORY_HEADER, strlen(YLOG_SGM_CPU_MEMORY_HEADER), y->ydst);
+}
+
 static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
     UNUSED(fp);
     FILE *wfp;
@@ -1187,7 +1193,6 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .file = "/proc/kmsg",
                     .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
                     .restart_period = 1000,
-                    .fp_array = NULL,
                     .timestamp = 1,
                 },
             },
@@ -1217,7 +1222,6 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .file = "logcat -v threadtime -b main",
                     .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
                     .restart_period = 2000,
-                    .fp_array = NULL,
                     .id_token = "A0",
                     .id_token_len = 2,
                     .id_token_filename = "main.log",
@@ -1228,7 +1232,6 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .file = "logcat -v threadtime -b system",
                     .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
                     .restart_period = 2000,
-                    .fp_array = NULL,
                     .id_token = "A1",
                     .id_token_len = 2,
                     .id_token_filename = "system.log",
@@ -1239,7 +1242,6 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .file = "logcat -v threadtime -b radio",
                     .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
                     .restart_period = 2000,
-                    .fp_array = NULL,
                     .id_token = "A2",
                     .id_token_len = 2,
                     .id_token_filename = "radio.log",
@@ -1250,7 +1252,6 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .file = "logcat -v threadtime -b events",
                     .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
                     .restart_period = 2000,
-                    .fp_array = NULL,
                     .id_token = "A3",
                     .id_token_len = 2,
                     .id_token_filename = "events.log",
@@ -1261,7 +1262,6 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .file = "logcat -v threadtime -b crash",
                     .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
                     .restart_period = 2000,
-                    .fp_array = NULL,
                     .id_token = "A4",
                     .id_token_len = 2,
                     .id_token_filename = "crash.log",
@@ -1289,7 +1289,6 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
                     .restart_period = 2000,
                     .status = YLOG_DISABLED,
-                    .fp_array = NULL,
                 },
             },
             .ydst = {
@@ -1360,7 +1359,6 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                             .args = &tombstone, /* struct ylog_inotify_cell_args */
                         },
                     },
-                    .fp_array = NULL,
                 },
             },
             .ydst = {
@@ -1378,7 +1376,6 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .file = "/dev/null",
                     .restart_period = 1000 * 60 * 2,
                     .fread = ylog_read_sys_info,
-                    .fp_array = NULL,
                 },
                 {
                     .name = "sys_info_manual",
@@ -1386,7 +1383,6 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .file = "/dev/null",
                     .fread = ylog_read_sys_info_manual,
                     .status = YLOG_DISABLED,
-                    .fp_array = NULL,
                 },
             },
             .ydst = {
@@ -1404,7 +1400,6 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .file = "/d/tracing/trace_pipe",
                     .mode = YLOG_READ_MODE_BLOCK,
                     .restart_period = 0,
-                    .fp_array = NULL,
                 },
             },
             .ydst = {
@@ -1419,6 +1414,39 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                 .timeout = 1000,
                 .debuglevel = CACHELINE_DEBUG_CRITICAL,
             },
+        },
+        /* sgm/cpu_memory/ */ {
+            .ylog = {
+                {
+                    .name = "sgm.cpu_memory",
+                    .type = FILE_POPEN,
+                    /**
+                     * 1000ms per sample will create 200 Bytes data per second,
+                     * if we use default 100ms, 1 second will have 10 samples,
+                     * the sgm.cpu_memory cpu usage will be 4.6%, it is so huge
+                     * so we drop the sample freq to 1 sample per second,
+                     * and remove the cache because of the very little throughput
+                     */
+                    .file = "sgm.cpu_memory -t 1000 -z",
+                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
+                    .restart_period = 2000,
+                    .write_header = ylog_write_header_sgm_cpu_memory_header,
+                },
+            },
+            .ydst = {
+                .file = "sgm/cpu_memory/",
+                .file_name = "sgm.cpu_memory.log",
+                .max_segment = 2,
+                .max_segment_size = 30*1024*1024,
+            },
+            /*
+            .cache = {
+                .size = 15 * 1024,
+                .num = 2,
+                .timeout = 5000,
+                .debuglevel = CACHELINE_DEBUG_CRITICAL,
+            },
+            */
         },
     };
 
