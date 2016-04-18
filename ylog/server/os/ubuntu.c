@@ -130,7 +130,9 @@ static int os_inotify_handler(struct ylog_inotify_cell *pcell, int timeout, stru
 }
 
 static void ylog_ready(void) {
+    struct context *c = global_context;
     ylog_info("ylog_ready for ubuntu\n");
+    c->command_loop_ready = 1; /* mark it to work command_loop(); */
     ylog_trigger_all(global_ylog);
 }
 

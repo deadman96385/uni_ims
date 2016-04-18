@@ -227,8 +227,8 @@ static int os_search_root_path(char *path, int len) {
         pos->sdcard_online = 1;
     } else {
         strcpy(sdcard_path, YLOG_ROOT_FOLDER);
-        keep_historical_folder_numbers = 0;
-        historical_folder_root = NULL;
+        keep_historical_folder_numbers = poc->keep_historical_folder_numbers;
+        historical_folder_root = pos->historical_folder_root_last;
         quota = 200 * 1024 * 1024;
         if (pos->sdcard_online) {
             ylog_critical("sdcard is removed, exit ylog forcely\n");
@@ -685,6 +685,7 @@ static void ylog_ready(void) {
     struct ylog *y;
     char yk[PROPERTY_VALUE_MAX];
     int count;
+    struct context *c = global_context;
     struct ydst_root *root = global_ydst_root;
     ylog_info("ylog_ready for android\n");
 
@@ -696,6 +697,7 @@ static void ylog_ready(void) {
     if (root->quota_new && root->quota_now != root->quota_new)
         ydst_root_quota(NULL, root->quota_new); /* all ylog threads are ready to run */
 
+    c->command_loop_ready = 1; /* mark it to work command_loop(); */
     y = ylog_get_by_name("info");
     if (y)
         ylog_trigger_and_wait_for_finish(y);

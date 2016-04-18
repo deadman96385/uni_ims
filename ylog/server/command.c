@@ -154,6 +154,7 @@ static void command_loop(int fd_server) {
     int i, ret, fd_server_index, fd_pipe;
     char buf[8192];
     int online = 0;
+    struct context *c = global_context;
 
     //while (create_socket_local_server(&fd_server, "ylog_cli"))
     //    sleep(1);
@@ -194,6 +195,11 @@ static void command_loop(int fd_server) {
         if (poll(yp->pfd, YLOG_POLL_INDEX_MAX, -1) < 0) {
             ylog_error("poll failed: %s\n", strerror(errno));
             sleep(1);
+            continue;
+        }
+        if (c->command_loop_ready == 0) {
+            ylog_critical("command_loop is not ready now, waiting\n");
+            usleep(100*1000);
             continue;
         }
         if (yp_isset(fd_pipe, yp)) {

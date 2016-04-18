@@ -169,6 +169,7 @@ struct context {
     struct timespec ts;
     char timeBuf[32];
     int ignore_signal_process;
+    int command_loop_ready;
 };
 
 enum file_type {

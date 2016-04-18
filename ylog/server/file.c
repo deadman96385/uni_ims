@@ -892,6 +892,8 @@ static int ylog_historical_folder_do(char *root, char *historical_folder_root,
                 }
             }
         }
+        if (historical_folder_root)
+            rmdir(historical_folder_root);
     }
     return 0;
 }
