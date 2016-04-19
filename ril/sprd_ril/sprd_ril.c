@@ -1929,6 +1929,7 @@ static void onSIMReady(int channelID)
     RILLOGD("onSimPresent simMode = %d",simMode);
     isTest = ((simMode == 3) || (simMode == 4));
     RILLOGD("onSimPresent isTest = %d",isTest);
+
 }
 
 static void requestSIMPower(int channelID, void *data, size_t datalen, RIL_Token t)
@@ -8838,25 +8839,54 @@ static void requestUSimAuthentication(int channelID, char *authData, RIL_Token t
 
 static void requestStoreSmsToSim(int channelID, void *data,
         size_t datalen, RIL_Token t) {
-    int err;
+    int err, commas;
+    char *line = NULL;
+    char cmd[128];
+    char *memoryRD = NULL;  // memory for read and delete
+    char *memoryWS = NULL;  // memory for write and send
     ATResponse *p_response = NULL;
-
     int value = ((int *)data)[0];
+
+    err = at_send_command_singleline(ATch_type[channelID], "AT+CPMS?",
+                "+CPMS:", &p_response);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+
+    line = p_response->p_intermediates->line;
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextstr(&line, &memoryRD);
+    if (err < 0) goto error;
+
+    skipNextComma(&line);
+    skipNextComma(&line);
+
+    err = at_tok_nextstr(&line, &memoryWS);
+    if (err < 0) goto error;
 
     if (value == 1) {
         at_send_command(ATch_type[channelID],"AT+CNMI=3,1,2,1,1", NULL);
-        err = at_send_command_singleline(ATch_type[channelID],
-                "AT+CPMS=\"ME\",\"ME\",\"SM\"", "+CPMS:", &p_response);
+        snprintf(cmd, sizeof(cmd), "AT+CPMS=\"%s\",\"%s\",\"SM\"", memoryRD, memoryWS);
     } else {
         at_send_command(ATch_type[channelID],"AT+CNMI=3,2,2,1,1", NULL);
-        err = at_send_command_singleline(ATch_type[channelID],
-                "AT+CPMS=\"ME\",\"ME\",\"ME\"", "+CPMS:", &p_response);
+        snprintf(cmd, sizeof(cmd), "AT+CPMS=\"%s\",\"%s\",\"ME\"", memoryRD, memoryWS);
     }
+
+    at_response_free(p_response);
+    p_response = NULL;
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CPMS:", &p_response);
     if (err < 0 || p_response->success == 0) {
-        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-    } else {
-        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+        goto error;
     }
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    at_response_free(p_response);
+    return;
+
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
 }
 
