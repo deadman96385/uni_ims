@@ -16,6 +16,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <unistd.h>
+#include <errno.h>
 #include "common.h"
 
 static int is_cpu_basic_quit = 0;
@@ -32,6 +33,12 @@ static char title[2000];
 #define PAGE_SIZE_B ( sysconf(_SC_PAGESIZE) )
 #define ONE_K 1024L
 #define PAGE_SIZE_KB ( PAGE_SIZE / ONE_K )
+#define FSCANF(stream, fmt...) ({ \
+    int fscanf_ret = fscanf(stream, fmt); \
+    if (fscanf_ret < 0) \
+        printf(" %s call fscanf error, %s ", __func__, strerror(errno)); \
+    fscanf_ret;\
+})
 
 // struct sysinfo {
 //     __kernel_long_t uptime;        /* Seconds since boot */
@@ -82,7 +89,7 @@ static int update_pid_info(struct per_pid_info *info) {
             printf("open error!!\n");
             return -1;
         }
-        fscanf(p, "%*d %*s %*c"
+        FSCANF(p, "%*d %*s %*c"
             "%*d %*d %*d %*d %*d %*d"
             "%*u %*u %*u %*u"
             "%lu %lu %ld %ld" //utime, stime, cutime, cstime
@@ -99,7 +106,7 @@ static int update_pid_info(struct per_pid_info *info) {
             printf("open error!!\n");
             return -1;
         }
-        fscanf(p, "%*d %lu", &info->rss);
+        FSCANF(p, "%*d %lu", &info->rss);
         fclose(p);
     }
 
@@ -222,14 +229,14 @@ static int log_cpu__print_cpu_info(FILE *f, struct cpu_info *info_old, struct cp
     memset(info, 0, sizeof *info);
 
     for (i = 0; i < 5; i++)
-        cpu[i] = fgetc(f);
+        cpu[i] = (char)fgetc(f);
     if (cpu[0] == 'c' && cpu[1] == 'p' && cpu[2] == 'u') {
-        if (cpu[3] >= '0' && cpu[3] <='9' )
-            num = strtol(&cpu[3], NULL, 0);
+        if (cpu[3] >= '0' && cpu[3] <='9')
+            num = (int)strtol(&cpu[3], NULL, 0);
         else
             num = 0xff; /* all cpu */
         if (num == cpu_num) {
-            fscanf(f, "%lu %lu %lu %lu %lu %lu %lu\n", &info->utime, &info->ntime, &info->stime,
+            FSCANF(f, "%lu %lu %lu %lu %lu %lu %lu\n", &info->utime, &info->ntime, &info->stime,
                 &info->itime, &info->iowtime, &info->irqtime, &info->sirqtime);
             info->runtime = info->utime + info->ntime + info->stime + info->itime +
                         info->iowtime + info->irqtime + info->sirqtime;
@@ -321,7 +328,10 @@ static int read_stat(struct state *s) {
 
         if (per_pid) {
             ret = update_pid_info(&pid_info[get_index_new(pid_info_index)]);
-            if (ret < 0) return -1;
+            if (ret < 0) {
+                fclose(f);
+                return -1;
+            }
         }
         for (cpu = 0; cpu < (NR_CPUS + 1); cpu++) {
             if (cpu) printf(",");
@@ -350,7 +360,7 @@ static int read_stat(struct state *s) {
         }
         ++cpu_info_index;
 
-        fscanf(f, "intr %ld", &irqs[get_index_new(irqs_index)]);
+        FSCANF(f, "intr %ld", &irqs[get_index_new(irqs_index)]);
         if (get_index_old(irqs_index)) {
             irq = irqs[get_index_new(irqs_index)] - irqs[get_index_old(irqs_index)];
         } else {
@@ -361,7 +371,7 @@ static int read_stat(struct state *s) {
 
         while (fgetc(f) != '\n'); // read until meets '\n', nextline
 
-        fscanf(f, "ctxt %ld", &ctxts[get_index_new(ctxts_index)]);
+        FSCANF(f, "ctxt %ld", &ctxts[get_index_new(ctxts_index)]);
         if (get_index_old(ctxts_index)) {
             ctxt = ctxts[get_index_new(ctxts_index)] - ctxts[get_index_old(ctxts_index)];
         } else {
@@ -373,17 +383,17 @@ static int read_stat(struct state *s) {
         while (fgetc(f) != '\n'); // read until meets '\n', nextline
         while (fgetc(f) != '\n'); // read until meets '\n', nextline
 
-        fscanf(f, "processes %ld", &value);
+        FSCANF(f, "processes %ld", &value);
         printf(",%ld", value);
 
         while (fgetc(f) != '\n'); // read until meets '\n', nextline
 
-        fscanf(f, "procs_running %ld", &value);
+        FSCANF(f, "procs_running %ld", &value);
         printf(",%ld", value);
 
         while (fgetc(f) != '\n'); // read until meets '\n', nextline
 
-        fscanf(f, "procs_blocked %ld", &value);
+        FSCANF(f, "procs_blocked %ld", &value);
         printf(",%ld", value);
 
         fclose(f);
