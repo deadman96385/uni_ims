@@ -845,6 +845,8 @@ static int ylog_historical_folder_do(char *root, char *historical_folder_root,
     if (keep_historical_folder_numbers == 0) {
         ylog_critical("No need to keep historical ylog folder...\n");
         rm_sub_all(root);
+        if (rmdir(root) == 0)
+            ylog_error("rmdir %s remove empty folder\n", root);
     } else {
         /**
          * if keep_historical_folder_numbers == 0
@@ -886,6 +888,8 @@ static int ylog_historical_folder_do(char *root, char *historical_folder_root,
                 }
             }
             if (only_rm == 0) {
+                if (rmdir(root) == 0)
+                    ylog_error("rmdir %s remove empty folder\n", root);
                 if (i == 1 && access(root, F_OK) == 0) {
                     mkdirs_with_file(tmp);
                     mv(root, tmp);
