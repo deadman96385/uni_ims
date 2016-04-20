@@ -1911,11 +1911,8 @@ static void onRadioPowerOn(int channelID)
 /** do post- SIM ready initialization */
 static void onSIMReady(int channelID)
 {
-    char mode[64];
-
     at_send_command_singleline(ATch_type[channelID], "AT+CSMS=1", "+CSMS:", NULL);
 
-    requestQuerySmsStorageMode(channelID, NULL, 0, NULL, mode);
     /*
      * Always send SMS messages directly to the TE
      *
@@ -1926,11 +1923,7 @@ static void onSIMReady(int channelID)
      * ds = 1   // Status reports routed to TE
      * bfr = 1  // flush buffer
      */
-    if (strcmp(mode, "SM") == 0) {
-        at_send_command(ATch_type[channelID],"AT+CNMI=3,1,2,1,1", NULL);
-    } else {
-        at_send_command(ATch_type[channelID],"AT+CNMI=3,2,2,1,1", NULL);
-    }
+    at_send_command(ATch_type[channelID],"AT+CNMI=3,2,2,1,1", NULL);
 
     getSmsState(channelID);
 
