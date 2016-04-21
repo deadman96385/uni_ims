@@ -21,7 +21,7 @@
 
 
 struct killed_app_info{
-    char name[LMFS_NETLINK_MAX_NAME_LENGTH];
+    int uid;
     int pid;
     int adj;
 };
@@ -48,12 +48,15 @@ static void handle_lmfs_unix_socket_connect(){
 }
 
 static void handle_killing(struct killed_app_info* app_info){
-    char buffer[200];
-    int nameLen = strlen(app_info->name);
-
+    char buffer[10];
     memset(buffer,0,sizeof(buffer));
+    int nameLen = 0;
+
     if(lmfs_unix_client_socket > 0) {
-        memcpy(buffer,app_info->name,nameLen);
+        nameLen = snprintf(buffer,9,"%d",app_info->pid); 
+        if (nameLen < 0){
+            return;
+        }
         buffer[nameLen]='\n';
         write(lmfs_unix_client_socket,buffer,nameLen+1);
     }
@@ -80,7 +83,7 @@ static void handle_lmfs_netlink_socket_action(){
         ALOGE("lmfs netlink recv error,err=%d",errno);
     }else{
         app_info=(struct killed_app_info*)NLMSG_DATA((struct nlmsghdr*)buff);
-        ALOGD("received payload:%s,%d,%d\n",app_info->name,app_info->pid,app_info->adj);
+        ALOGD("received payload:%d,%d,%d\n",app_info->uid,app_info->pid,app_info->adj);
         handle_killing(app_info);
     }
 }
