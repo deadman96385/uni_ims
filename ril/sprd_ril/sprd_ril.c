@@ -116,6 +116,7 @@ char RIL_SP_SIM_PIN_PROPERTYS[128]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.
 #define RIL_SET_SPEED_MODE_COUNT  "ril.sim.speed_count"
 #define PROP_ATTACH_ENABLE "persist.sys.attach.enable"
 #define PROP_COPS_MODE "persist.sys.cops.mode"
+#define PROP_DUALPDP_ALLOWED "persist.sys.dualpdp.allowed"
 
 //3G/4G switch in different slot
 // {for LTE}
@@ -3498,12 +3499,16 @@ static char* checkNeedFallBack(int channelID,char * pdp_type,int cidIndex) {
     property_get(cmd, prop, "0");
     ip_type = atoi(prop);
     RLOGD("check FallBack prop = %s,ip type = %d", cmd, ip_type);
+    char is_dualpdp_allowed[PROPERTY_VALUE_MAX];
+    memset(is_dualpdp_allowed, 0, sizeof(is_dualpdp_allowed));
+    property_get(PROP_DUALPDP_ALLOWED, is_dualpdp_allowed, "false");
+    RLOGD("check FallBack is_dualpdp_allowed = %s", is_dualpdp_allowed);
     if (!strcmp(pdp_type,"IPV4V6") && ip_type != IPV4V6) {
         fbCause = getSPACTFBcause(channelID);
         RLOGD("fall Back Cause = %d", fbCause);
         if (fbCause < 0) {
             s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-        }else if (fbCause == 52) {
+        }else if (fbCause == 52 && ((strcmp(is_dualpdp_allowed, "true")) || cidIndex == 0)) {
             if (ip_type == IPV4) {
                 ret = "IPV6";
             } else if (ip_type == IPV6) {
