@@ -47,6 +47,8 @@ import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.DctConstants;
 import com.android.internal.util.ArrayUtils;
 import com.spreadtrum.ims.data.ApnUtils;
+import com.sprd.android.internal.telephony.VolteConfig;
+import android.text.TextUtils;
 
 public class ImsServiceImpl {
     private static final String TAG = ImsServiceImpl.class.getSimpleName();
@@ -64,6 +66,8 @@ public class ImsServiceImpl {
     protected static final int EVENT_IMS_STATE_CHANGED                 = 102;
     protected static final int EVENT_IMS_STATE_DONE                    = 103;
     protected static final int EVENT_IMS_CAPABILITY_CHANGED            = 104;
+    //SPRD:ADD for bug 551025
+    protected static final int EVENT_SERVICE_STATE_CHANGED             = 105;
 
     private GSMPhone mPhone;
     private ImsServiceState mImsServiceState;
@@ -83,6 +87,8 @@ public class ImsServiceImpl {
     private AtomicReference<IccRecords> mIccRecords = new AtomicReference<IccRecords>();
     private ApnChangeObserver mApnChangeObserver = null;
     private ImsRegister mImsRegister = null;
+    //SPRD:ADD for bug 551025
+    private VolteConfig mVolteConfig;
     /**
      * Handles changes to the APN db.
      */
@@ -137,6 +143,10 @@ public class ImsServiceImpl {
         Log.i(TAG,"ImsServiceImpl onCreate->phoneId:"+phone.getPhoneId());
         mUiccController = UiccController.getInstance();
         mUiccController.registerForIccChanged(mHandler, DctConstants.EVENT_ICC_CHANGED, null);
+        /*SPRD:ADD for bug 551025 @{*/
+        mVolteConfig = VolteConfig.getInstance();
+        mPhone.registerForServiceStateChanged(mHandler, EVENT_SERVICE_STATE_CHANGED, null);
+        /* @}*/
         mApnChangeObserver = new ApnChangeObserver();
         mPhone.getContext().getContentResolver().registerContentObserver(
                 Telephony.Carriers.CONTENT_URI, true, mApnChangeObserver);
@@ -226,6 +236,18 @@ public class ImsServiceImpl {
                     } catch (RemoteException e){
                         e.printStackTrace();
                     }
+                    break;
+                /*SPRD:ADD for bug 551025 @{*/
+                case EVENT_SERVICE_STATE_CHANGED:
+                     Log.i(TAG,"EVENT_SERVICE_STATE_CHANGED->ServiceStateChange");
+                     ServiceState state = (ServiceState) ((AsyncResult) msg.obj).result;
+                     if (state != null && state.getDataRegState() == ServiceState.STATE_IN_SERVICE
+                             && state.getRilDataRadioTechnology() == ServiceState.RIL_RADIO_TECHNOLOGY_LTE){
+                         mImsRegister.enableIms();
+                         setVideoResolution(state);
+                     }
+                     break;
+                /*@}*/
                 default:
                     break;
             }
@@ -400,4 +422,22 @@ public class ImsServiceImpl {
         Log.i(TAG,"turnOffIms.");
         mCi.setImsVoiceCallAvailability(0 , null);
     }
+    /*SPRD:ADD for bug 551025 @{*/
+    public void setVideoResolution(ServiceState state){
+           String registOperatorNumeric = state.getDataOperatorNumeric();
+           Log.i(TAG,"registOperatorNumeric = " + registOperatorNumeric);
+           if(registOperatorNumeric == null){
+               return;
+           }
+           String operatorCameraResolution = null;
+           mVolteConfig.loadVolteConfig(mContext);
+           if(mVolteConfig.containsCarrier(registOperatorNumeric)){
+               operatorCameraResolution = mVolteConfig.getCameraResolution(registOperatorNumeric);
+           }
+           if(operatorCameraResolution == null || TextUtils.isEmpty(operatorCameraResolution)){
+               return;
+           }
+           mImsConfigImpl.setVideoQualitytoPreference(Integer.parseInt(operatorCameraResolution));
+    }
+    /* @}*/
 }

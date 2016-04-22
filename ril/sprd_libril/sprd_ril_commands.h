@@ -198,6 +198,7 @@
     ,{RIL_REQUEST_IMS_INITIAL_GROUP_CALL, dispatchString, responseVoid}
     ,{RIL_REQUEST_IMS_ADD_TO_GROUP_CALL, dispatchString, responseVoid}
     ,{RIL_REQUEST_IMS_SET_CONFERENCE_URI, dispatchString, responseVoid}
+    ,{RIL_REQUEST_GET_IMS_BEARER_STATE, dispatchVoid, responseInts}
     ,{RIL_REQUEST_VIDEOPHONE_HANGUP, dispatchInts, responseVoid}
     ,{RIL_REQUEST_VIDEOPHONE_ANSWER, dispatchVoid, responseVoid}
     ,{RIL_REQUEST_VIDEOPHONE_FALLBACK, dispatchVoid, responseVoid}
