@@ -40,8 +40,8 @@
 /* the period of rx bitrate statistics is 10s */
 #define BITRATE_STAT_PERIOD         (10 * BITRATE_STAT_UNIT)
 
-/* the interval threshold of the two adjacent pkts is 600 ms*/
-#define BITRATE_PKT_INTV_THRESHOLD  (600000)
+/* the interval threshold of the two adjacent pkts is 2s */
+#define BITRATE_PKT_INTV_THRESHOLD  (2000000)
 
 /* bitrate factor level */
 #define BITRATE_FACTOR_LEVEL3       (3)

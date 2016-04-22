@@ -197,7 +197,7 @@ static void _JBV_putPkt(
          * Invalid packet. Drop it.
          */
         _JBV_dropPacket(obj_ptr, unit_ptr, JBV_DROP_INVALID);
-        JBV_errLog("Packet is larger than what can fit pSize=%d, fit=%d\n",
+        JBV_errLog("Packet is larger than what can fit pSize=%u, fit=%u\n",
                 pkt_ptr->pSize, sizeof(unit_ptr->data_ptr));
         return;
     }
