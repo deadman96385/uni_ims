@@ -23,6 +23,7 @@ int debug_level = LOG_INFO;
 #define LOG_TAG "YLOG_CLI"
 #include "cutils/log.h"
 #include "cutils/properties.h"
+#include <cutils/sockets.h>
 #define ___ylog_printf_trace___ SLOGW
 #define ___ylog_printf___ printf
 #else
@@ -39,6 +40,16 @@ int debug_level = LOG_INFO;
 #define cli_error(msg...) { cli_printf_debug(LOG_ERROR, "ylog<error> "msg); cli_trace("ylog<error> "msg); }
 #define ARRAY_LEN(A) (sizeof(A)/sizeof((A)[0]))
 
+#ifdef ANDROID
+int connect_socket_local_server(char *name) {
+    int fd = socket_local_client(name, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+    if (fd < 0) {
+        cli_error("%s open %s failed: %s\n", __func__, name, strerror(errno));
+        return -1;
+    }
+    return fd;
+}
+#else
 int connect_socket_local_server(char *name) {
     struct sockaddr_un address;
     int fd;
@@ -70,6 +81,7 @@ int connect_socket_local_server(char *name) {
 
     return fd;
 }
+#endif
 
 int main(int argc, char *argv[]) {
     int ylog;

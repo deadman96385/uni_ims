@@ -2,6 +2,16 @@
  * Copyright (C) 2016 Spreadtrum Communications Inc.
  */
 
+#ifdef ANDROID
+static int create_socket_local_server(int *fd, char *file) {
+    *fd = socket_local_server(file, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+    if (*fd < 0) {
+        ylog_error("open %s failed: %s\n", file, strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+#else
 static int create_socket_local_server(int *fd, char *file) {
     struct sockaddr_un address;
     int namelen;
@@ -40,6 +50,7 @@ static int create_socket_local_server(int *fd, char *file) {
 
     return 0;
 }
+#endif
 
 static int accept_client(int fd) {
     struct sockaddr addr;

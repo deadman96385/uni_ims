@@ -264,9 +264,22 @@ static int log_cpu__print_cpu_info(FILE *f, struct cpu_info *info_old, struct cp
                 cpu_percent = 0;
             }
         } else {
-            cpu_percent = 100 - (100 * (info->itime - info_old->itime)) / (info->runtime - info_old->runtime);
+            if ((info->itime < info_old->itime) || (info->iowtime < info_old->iowtime)) {
+                cpu_percent = 0;
+            } else {
+                cpu_percent = 100 - (100 * (info->itime - info_old->itime)) / (info->runtime - info_old->runtime);
+                if (cpu_percent < 0) {
+                    cpu_percent = 0;
+                } else if (cpu_percent > 100) {
+                    cpu_percent = 100;
+                }
+            }
         }
-        iowtime_percent = 100 * (info->iowtime - info_old->iowtime) / (info->runtime - info_old->runtime);
+        if ((info->itime < info_old->itime) || (info->iowtime < info_old->iowtime)) {
+            iowtime_percent = 0;
+        } else {
+            iowtime_percent = 100 * (info->iowtime - info_old->iowtime) / (info->runtime - info_old->runtime);
+        }
     } else {
         cpu_percent = iowtime_percent = 0;
     }

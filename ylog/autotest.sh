@@ -2,6 +2,45 @@
 # Copyright (C) 2016 Spreadtrum
 # Created on Mar 25, 2016
 
+rfuncs=(
+"ylog_check_ylog_cli_print2kernel"
+"ylog_check_ylog_service"
+"ylog_check_kernel_log"
+"ylog_check_android_log"
+"ylog_check_wcn_log"
+"ylog_check_wcdma_log"
+"ylog_check_td-scdma_log"
+"ylog_check_5mode_log"
+"ylog_check_4mode_log"
+"ylog_check_3mode_log"
+"ylog_check_ylog_cli_at"
+)
+
+# 函数：ylog_loop_start_stop()
+# 参数：无参数
+# 功能：压力测试ylog_cli接口, 可以打开多个terminal, 并行执行该操作
+# 历史：
+# 1. 创建函数 - 2016.04.21 by luther
+function ylog_loop_start_stop() #                                  #start & stop ylog one by one to have a stress test
+{
+    local y=""
+    local ylog_service=(
+    "android_main"
+    "android_system"
+    "android_radio"
+    "android_events"
+    "android_crash"
+    "tcpdump"
+    "hcidump"
+    )
+    while [ 1 ]; do
+        for y in ${ylog_service[@]}; do
+            $ADB_SHELL ylog_cli ylog ${y} start
+            $ADB_SHELL ylog_cli ylog ${y} stop
+        done
+    done
+}
+
 # 函数：ylog_check_ylog_cli_print2kernel()
 # 参数：无参数
 # 功能：检查ylog_cli print2kernel 8888888 命令,dmesg |grep 'print2kerne 8888888' 返回内容应包含print2kerne 8888888
@@ -203,7 +242,8 @@ echo -e "${COLOR_START_PINK}$@${COLOR_END}"
 
 if [ '1' ]; then
     if [ "$1" == "all" ]; then
-        rfuncs=(`${GREP} '^function ' ${program} | ${SED} 's/^function //;s/(.*//'`)
+        #rfuncs=(`${GREP} '^function ' ${program} | ${SED} 's/^function //;s/(.*//'`)
+        echo > /dev/null
     else
         rfuncs=($@)
     fi

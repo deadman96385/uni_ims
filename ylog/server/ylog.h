@@ -81,6 +81,7 @@ enum loglevel {
 #ifdef ANDROID
 #define LOG_TAG "YLOG"
 #include "cutils/log.h"
+#include <cutils/sockets.h>
 #define ___ylog_printf___ SLOGW
 #else
 #define ___ylog_printf___ printf

@@ -32,6 +32,17 @@ int debug_level = LOG_DEBUG;
 #define ylog_critical(msg...) ylog_printf(LOG_CRITICAL, "ylog<critical> "msg)
 #define ylog_error(msg...) ylog_printf(LOG_ERROR, "ylog<error> "msg)
 
+#ifdef ANDROID
+#include <cutils/sockets.h>
+int connect_socket_local_server(char *name) {
+    int fd = socket_local_client(name, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+    if (fd < 0) {
+        ylog_error("%s open %s failed: %s\n", __func__, name, strerror(errno));
+        return -1;
+    }
+    return fd;
+}
+#else
 int connect_socket_local_server(char *name) {
     struct sockaddr_un address;
     int fd;
@@ -63,6 +74,7 @@ int connect_socket_local_server(char *name) {
 
     return fd;
 }
+#endif
 
 static time_t diff_ts_millisecond(struct timespec *b, struct timespec *a) {
     /**
