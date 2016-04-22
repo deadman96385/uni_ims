@@ -29,6 +29,9 @@ import android.provider.Settings;
 import android.telephony.VoLteServiceState;
 import com.android.ims.ImsManager;
 import com.sprd.android.internal.telephony.VolteConfig;
+import android.text.TextUtils;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ImsRegister {
     private static final String TAG = "ImsRegister";
@@ -38,17 +41,19 @@ public class ImsRegister {
     private CommandsInterface mCi;
     private GSMPhone mPhone;
 
-    private boolean mInitISIM;
-    private boolean mConnIMSEN;
+    private boolean mInitISIMDone;
+    private boolean mIMSBearerEstablished;
     private TelephonyManager mTelephonyManager;
     private int mPhoneId;
     private BaseHandler mHandler;
     private boolean mCurrentImsRegistered;
     private VolteConfig mVolteConfig;
+    private String mNumeric;
+    private String mLastNumeric="";
 
     protected static final int EVENT_RADIO_STATE_CHANGED               = 105;
     protected static final int EVENT_INIT_ISIM_DONE                    = 106;
-    protected static final int EVENT_CONN_IMS_ENABLE                   = 107;
+    protected static final int EVENT_IMS_BEARER_ESTABLISTED            = 107;
     protected static final int EVENT_ENABLE_IMS                        = 108;
 
     public ImsRegister(GSMPhone phone , Context context, CommandsInterface ci) {
@@ -63,7 +68,8 @@ public class ImsRegister {
         intentFilter.addAction(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
         mContext.registerReceiver(mReceiver, intentFilter);
         mCi.registerForRadioStateChanged(mHandler, EVENT_RADIO_STATE_CHANGED, null);
-        mCi.registerForConnImsen(mHandler, EVENT_CONN_IMS_ENABLE, null);
+        mCi.registerForConnImsen(mHandler, EVENT_IMS_BEARER_ESTABLISTED, null);
+        mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
     }
 
     private class BaseHandler extends Handler {
@@ -72,27 +78,28 @@ public class ImsRegister {
         }
         @Override
         public void handleMessage(Message msg) {
-            if (DBG) Log.i(TAG,"handleMessage msg=" + msg);
+            log("handleMessage msg=" + msg);
             AsyncResult ar = (AsyncResult) msg.obj;
             switch (msg.what) {
                 case EVENT_RADIO_STATE_CHANGED:
                     if (mPhone.isRadioOn()) {
-                        Log.i(TAG,"EVENT_RADIO_STATE_CHANGED -> radio is on");
+                        log("EVENT_RADIO_STATE_CHANGED -> radio is on");
                         initISIM();
                     } else {
-                        mInitISIM = false;
-                        mConnIMSEN = false;
+                        mInitISIMDone = false;
+                        mIMSBearerEstablished = false;
+                        mLastNumeric="";
                         mCurrentImsRegistered = false;
                         boolean needNotifyRegisterState = false;
                         if(mPhone.getPhoneId() == mTelephonyManager.getPrimaryCard()){
-                            Log.i(TAG, "radio not on, notify ImsRegestered state mCurrentImsRegistered = " + mCurrentImsRegistered);
+                            log("radio not on, notify ImsRegestered state mCurrentImsRegistered = " + mCurrentImsRegistered);
                             needNotifyRegisterState = true;
                         } else {
                             int primaryCard = mTelephonyManager.getPrimaryCard();
                             PhoneProxy phone = (PhoneProxy)PhoneFactory.getPhone(primaryCard);
                             if(SubscriptionManager.isValidPhoneId(primaryCard) && !((GSMPhone)phone.getActivePhone()).isRadioOn()){
                                 needNotifyRegisterState = true;
-                                Log.i(TAG, "primary card radio not on, notify ImsRegestered state mCurrentImsRegistered = " + mCurrentImsRegistered);
+                                log("primary card radio not on, notify ImsRegestered state mCurrentImsRegistered = " + mCurrentImsRegistered);
                             }
                         }
                         if(needNotifyRegisterState) {
@@ -101,41 +108,38 @@ public class ImsRegister {
                     }
                     break;
                 case EVENT_INIT_ISIM_DONE:
-                    Log.i(TAG,"EVENT_INIT_ISIM_DONE");
+                    log("EVENT_INIT_ISIM_DONE");
                     ar = (AsyncResult) msg.obj;
                     int[] initResult = (int[]) ar.result;
                     if(ar.exception != null) {
-                        Log.i(TAG, "EVENT_INIT_ISIM_DONE ar.exception");
+                        log("EVENT_INIT_ISIM_DONE ar.exception");
                         break;
                     }
-                    mInitISIM = true;
-                    if(initResult[0] == 1) mConnIMSEN = true;
-                    if(mConnIMSEN) {
-                        mHandler.sendMessage(mHandler.obtainMessage(EVENT_ENABLE_IMS));
-                    }
+                    mInitISIMDone = true;
+                    enableIms();
                     break;
-                case EVENT_CONN_IMS_ENABLE:
+                case EVENT_IMS_BEARER_ESTABLISTED:
                     ar = (AsyncResult) msg.obj;
                     if(ar.exception != null) break;
                     int[] conn = (int[]) ar.result;
-                    Log.i(TAG, "EVENT_CONN_IMSEN : conn = "+conn[0]);
+                    log("EVENT_CONN_IMSEN : conn = "+conn[0]);
                     if (conn[0] == 1) {
-                        mConnIMSEN = true;
-                        if (mInitISIM) {
-                            mHandler.sendMessage(obtainMessage(EVENT_ENABLE_IMS));
-                        }
+                        mIMSBearerEstablished = true;
+                        enableIms();
                     }
                     break;
                 case EVENT_ENABLE_IMS:
-                    Log.i(TAG, "EVENT_ENABLE_IMS: operator numeric is "+ mTelephonyManager.getNetworkOperatorForPhone(mPhoneId));
-                    if("".equals(mTelephonyManager.getNetworkOperatorForPhone(mPhoneId))){
-                        mHandler.sendMessageDelayed(obtainMessage(EVENT_ENABLE_IMS), 2000);
-                   }else{
-                        mVolteConfig.loadVolteConfig(mContext);
-                        if(getSimConfig() && getNetworkConfig()){
-                            mCi.enableIms(null);
+                    mNumeric = mTelephonyManager.getNetworkOperatorForPhone(mPhoneId);
+                    mVolteConfig.loadVolteConfig(mContext);
+                    boolean isSimConfig = getSimConfig();
+                    if(!(mLastNumeric.equals(mNumeric))) {
+                        if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric))){
+                              mCi.enableIms(null);
+                        } else if(isSimConfig && getNetworkConfig(mLastNumeric) && !(getNetworkConfig(mNumeric))){
+                              mCi.disableIms(null);
                         }
-                   }
+                        mLastNumeric = mNumeric;
+                    }
                     break;
                 default:
                     break;
@@ -150,10 +154,10 @@ public class ImsRegister {
 
             if (action.equals(TelephonyIntents.ACTION_SIM_STATE_CHANGED)) {
                 String state = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);
-                Log.d(TAG, "action = " + action + ", state = " + state + ", phoneId = " + phoneId);
+                log("action = " + action + ", state = " + state + ", phoneId = " + phoneId);
                 if (IccCardConstants.INTENT_VALUE_ICC_LOADED.equals(state)) {
                     if (mPhone.isRadioOn()) {
-                        Log.i(TAG,"sim loaded and radio is on");
+                        log("sim loaded and radio is on");
                         initISIM();
                     }
                 }
@@ -162,7 +166,7 @@ public class ImsRegister {
     };
 
     private void initISIM() {
-        if (!mInitISIM
+        if (!mInitISIMDone
                 && mPhoneId == mTelephonyManager.getPrimaryCard()
                 && mTelephonyManager.getSimState(mPhoneId) == TelephonyManager.SIM_STATE_READY) {
             String impi = null;
@@ -186,56 +190,32 @@ public class ImsRegister {
                     if (mnc != null && mnc.length() == 2) {
                         mnc = "0" + mnc;
                     }
-                    domain = "ims.mnc" + mnc + ".mcc"
-                            + operatorNumberic.substring(0, 3)
-                            + ".3gppnetwork.org";
+                    /* SPRD: modify for CONFERENCEURI/NAF AND BSF @{*/
+                    mVolteConfig.loadVolteConfig(mContext);
+                    Map<String, String> data = new HashMap<String, String>();
+                    if(mVolteConfig.containsCarrier(operatorNumberic)){
+                        data = mVolteConfig.getVolteConfig(operatorNumberic);
+                    }
+                    domain = getImsConfigUri(VolteConfig.KEY_DOMAIN, data, operatorNumberic, mnc);
+                    xCap = getImsConfigUri(VolteConfig.KEY_XCAP, data, operatorNumberic, mnc);
+                    bspAddr = getImsConfigUri(VolteConfig.KEY_BSF, data, operatorNumberic, mnc);
+                    conferenceUri = getImsConfigUri(VolteConfig.KEY_CONFURI, data, operatorNumberic, mnc);
+                    /* @}*/
                     impi = iccRecords.getIMSI() + "@" + domain;
                     impu = "sip:" + impi;
-                    Log.i(TAG, "iccRecords.getServiceProviderName() = "
-                            + iccRecords.getServiceProviderName());
-                    String operatorName = null;
-                    try{
-                       operatorName = TeleUtils.updateOperator(
-                            operatorNumberic.substring(0, 3)
-                                    + Integer.parseInt(mnc),
-                            "numeric_to_operator");
-                    } catch(NumberFormatException ex){
-                        Log.d(TAG, "mcc mnc is invalid");
-                    }
-                    Log.i(TAG, "operatorName after update is " + operatorName);
-                    if (!(iccRecords instanceof IsimUiccRecords)
-                            && ("China Mobile".equals(operatorName)
-                                    || "China Mobile".equals(iccRecords
-                                            .getServiceProviderName()) || "CMCC"
-                                        .equals(iccRecords
-                                                .getServiceProviderName()))) {
-                        xCap = "xcap." + "ims.mnc000" + ".mcc"
-                                + operatorNumberic.substring(0, 3)
-                                + ".pub.3gppnetwork.org";
-                    } else {
-                        xCap = "xcap." + "ims.mnc" + mnc + ".mcc"
-                                + operatorNumberic.substring(0, 3)
-                                + ".pub.3gppnetwork.org";
-                    }
-                    bspAddr = "bsf." + "mnc" + mnc + ".mcc"
-                            + operatorNumberic.substring(0, 3)
-                            + ".pub.3gppnetwork.org";
-                    Log.i(TAG, "impu = " + impu);
-                    Log.i(TAG, "impi= " + impi);
-                    Log.i(TAG, "domain= " + domain);
-                    Log.i(TAG, "xCap = " + xCap);
-                    Log.i(TAG, "bspAddr = " + bspAddr);
+                    log("impu = " + impu);
+                    log("impi= " + impi);
+                    log("domain= " + domain);
+                    log("xCap = " + xCap);
+                    log("bspAddr = " + bspAddr);
+                    log("conferenceUri = " + conferenceUri);
                     String imei = mPhone.getDeviceId();
                     if (imei != null) {
                         instanceId = "urn:gsma:imei:" + imei.substring(0, 8)
                                 + "-" + imei.substring(8, 14) + "-"
                                 + imei.substring(14);
                     }
-                    Log.i(TAG, "instanceId = " + instanceId);
-                    conferenceUri = "sip:mmtel@conf-factory.ims.mnc" + mnc + ".mcc"
-                            + operatorNumberic.substring(0, 3)
-                            + ".3gppnetwork.org";
-                    Log.i(TAG, "conferenceUri = " + conferenceUri);
+                    log("instanceId = " + instanceId);
                 }
             }
             mCi.initISIM(conferenceUri, instanceId, impu, impi, domain, xCap,
@@ -256,10 +236,20 @@ public class ImsRegister {
         mPhone.notifyVoLteServiceStateChanged(new VoLteServiceState(mCurrentImsRegistered ? VoLteServiceState.IMS_REG_STATE_REGISTERED : VoLteServiceState.IMS_REG_STATE_NOT_EGISTERED));
     }
 
+    public void enableIms() {
+        if(mIMSBearerEstablished && mInitISIMDone) {
+        mHandler.sendMessage(mHandler.obtainMessage(EVENT_ENABLE_IMS));
+        }
+    }
+
+    private void log(String s) {
+        if (DBG) {
+            Log.d(TAG, "[ImsRegister" + mPhoneId + "] " + s);
+        }
+    }
+
     /* SPRD: add for SIM Config and Network Config for VOLTE @{ */
-    private boolean getNetworkConfig(){
-        String numeric = mTelephonyManager.getNetworkOperatorForPhone(mPhoneId);
-        Log.d(TAG,"getNetworkConfig() numeric="+numeric);
+    private boolean getNetworkConfig(String numeric){
         if(mVolteConfig.containsCarrier(numeric)){
             return mVolteConfig.getVolteEnable(numeric);
         }
@@ -268,11 +258,31 @@ public class ImsRegister {
 
     private boolean getSimConfig(){
         String numeric = mTelephonyManager.getSimOperatorNumericForPhone(mPhoneId);
-        Log.d(TAG,"getSimConfig() numeric="+numeric);
+        log("getSimConfig() numeric = " + numeric);
         if(mVolteConfig.containsCarrier(numeric)){
             return mVolteConfig.getVolteEnable(numeric);
         }
         return false;
+    }
+    /* @} */
+    /* SPRD: modify for CONFERENCEURI/NAF AND BSF @{*/
+    private String getImsConfigUri(String key, Map<String, String> data, String operatorNumberic, String mnc){
+        String imsConfigUri = null;
+
+        if("domain".equals(key)){
+            imsConfigUri = (data == null || TextUtils.isEmpty(data.get(key)) ? "ims.mnc" + mnc + ".mcc"
+                    + operatorNumberic.substring(0, 3) + ".3gppnetwork.org" : data.get(key));
+        } else if("xcap".equals(key)){
+            imsConfigUri = (data == null || TextUtils.isEmpty(data.get(key)) ? "xcap." + "ims.mnc" + mnc + ".mcc"
+                    + operatorNumberic.substring(0, 3) + ".pub.3gppnetwork.org" : data.get(key));
+        } else if("bsf".equals(key)){
+            imsConfigUri = (data == null || TextUtils.isEmpty(data.get(key)) ? "bsf." + "mnc" + mnc + ".mcc"
+                    + operatorNumberic.substring(0, 3) + ".pub.3gppnetwork.org" : data.get(key));
+        } else if("confuri".equals(key)){
+            imsConfigUri = (data == null || TextUtils.isEmpty(data.get(key)) ? "sip:mmtel@conf-factory.ims.mnc" + mnc + ".mcc"
+                    + operatorNumberic.substring(0, 3) + ".3gppnetwork.org" : data.get(key));
+        }
+        return imsConfigUri;
     }
     /* @} */
 }

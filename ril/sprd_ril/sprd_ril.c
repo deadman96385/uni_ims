@@ -148,7 +148,7 @@ int s_testmode = 0;
 static int allow_data = 0;
 int  g_maybe_addcall = 0;
 /** SPRD: Bug 503887 add ISIM for volte . @{*/
-int g_ImsConn = -1;
+int g_ImsBearerEstablished = -1;
 /** }@ */
 
 /** SPRD: Bug 523208 set pin/puk remain times to prop. @{*/
@@ -6420,7 +6420,7 @@ static void requestInitISIM(int channelID, void*  data, size_t  datalen, RIL_Tok
 {
     ATResponse   *p_response = NULL;
     int           err;
-    char          cmd[100] = {0};
+    char          cmd[128] = {0};
     char         *line;
     int           response = 0;
     const char**  strings = (const char**)data;
@@ -6475,7 +6475,7 @@ static void requestInitISIM(int channelID, void*  data, size_t  datalen, RIL_Tok
         RILLOGE("requestInitISIM confuri = \"%s\"", strings[0]);
         snprintf(cmd, sizeof(cmd), "AT+CONFURI=0,\"%s\"", strings[0]);
         err = at_send_command(ATch_type[channelID], cmd , NULL);
-        RIL_onRequestComplete(t, RIL_E_SUCCESS, &g_ImsConn, sizeof(int));
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(int));
     } else {
         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     }
@@ -9100,6 +9100,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SHUTDOWN
                 || request == RIL_REQUEST_SIM_CLOSE_CHANNEL
                 || request == RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL
+                || request == RIL_REQUEST_GET_IMS_BEARER_STATE
                 || (request == RIL_REQUEST_DIAL && s_isstkcall)
 #if defined (RIL_SPRD_EXTENSION)
 #if defined (RIL_SUPPORTED_OEMSOCKET)
@@ -9171,6 +9172,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SET_INITIAL_ATTACH_APN
                 || request == RIL_REQUEST_GET_IMS_CURRENT_CALLS
                 || request == RIL_REQUEST_INIT_ISIM
+                || request == RIL_REQUEST_GET_IMS_BEARER_STATE
                 || request == RIL_REQUEST_REGISTER_IMS_IMPU
                 || request == RIL_REQUEST_IMS_SET_CONFERENCE_URI
                 || request == RIL_REQUEST_REGISTER_IMS_IMPI
@@ -11345,6 +11347,10 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             requestInitISIM(channelID, data, datalen, t);
             break;
         }
+        case RIL_REQUEST_GET_IMS_BEARER_STATE: {
+            RIL_onRequestComplete(t, RIL_E_SUCCESS, &g_ImsBearerEstablished, sizeof(int));
+            break;
+        }
         case RIL_REQUEST_REGISTER_IMS_IMPU: {
             char cmd[100] = {0};
             const char *impu = NULL;
@@ -11360,7 +11366,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         }
         case RIL_REQUEST_IMS_SET_CONFERENCE_URI: {
-            char cmd[100] = {0};
+            char cmd[128] = {0};
             const char *uri = NULL;
             uri = (char*)(data);
             RILLOGE("RIL_REQUEST_IMS_SET_CONFERENCE_URI uri = \"%s\"", uri);
@@ -11871,7 +11877,7 @@ void setRadioState(int channelID, RIL_RadioState newState)
 
     /** SPRD: Bug 503887 add ISIM for volte . @{*/
     if(newState == RADIO_STATE_OFF || newState == RADIO_STATE_UNAVAILABLE) {
-       g_ImsConn = -1;
+       g_ImsBearerEstablished = -1;
     }
     /** }@ */
 
@@ -13079,8 +13085,8 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         }
         RILLOGD("onUnsolicited(), " "CONN:, cid: %d, active: %d", cid, active);
         if (cid == 11) {
-            g_ImsConn = active;
-            RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONS_IMS_CONN_ENABLE, (void *)&g_ImsConn, sizeof(int));
+            g_ImsBearerEstablished = active;
+            RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONS_IMS_CONN_ENABLE, (void *)&g_ImsBearerEstablished, sizeof(int));
         }
     }
 	else if (strStartsWith(s,"^CEND:")) {
