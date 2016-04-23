@@ -280,6 +280,8 @@ parser_done:
         fd_write("\n", 1, wfd, desc);
     }
     free(mptr);
+    if (fchmod(wfd, 0644))
+        ylog_error("Unable to chmod ylog confi file %s to 0644\n", fn);
     fsync(wfd);
     CLOSE(wfd);
     if (rename(tempPath, fn)) {
