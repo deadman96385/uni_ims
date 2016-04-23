@@ -50,7 +50,9 @@ static int ylog_printf_format(struct context *c, int level, const char *fmt, ...
 
 #define SEND(sockfd, buf, len, flags) ({ \
     int ll_ret = send(sockfd, buf, len, flags); \
-    if (ll_ret < 0) \
+    if (ll_ret > 0) \
+        ylog_debug("ylog_cli ack : %s", buf); \
+    else \
         ylog_error("send %s %s\n", __func__, strerror(errno)); \
     ll_ret; \
 })

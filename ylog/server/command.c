@@ -726,6 +726,8 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
             if (action)
                 action(y, 1);
             print2journal_file("ylog %s %s", y->name, en ? "start":"stop");
+            SEND(fd, buf, snprintf(buf, buf_size, "[ %s ] = %s\n",
+                        y->name, (y->status & YLOG_DISABLED_MASK) ? "stopped" : "running"), MSG_NOSIGNAL);
         } else {
             for_each_ylog(i, y, NULL) {
                 if (y->name == NULL)
@@ -759,7 +761,10 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
             else
                 ylog_event_thread_notify_all_stop_type();
             print2journal_file("ylog all %s", en ? "start":"stop");
+            SEND(fd, buf, snprintf(buf, buf_size, "[ %s ] = %s\n",
+                        "all", (!en) ? "stopped" : "running"), MSG_NOSIGNAL);
         }
+        return 0;
     }
 
     get_boottime(&ts);
