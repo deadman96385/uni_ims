@@ -7,6 +7,31 @@
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t mutex_journal_log = PTHREAD_MUTEX_INITIALIZER;
 static int fd_journal_file = -1;
+
+/**
+ * lock must be held before call open_journal_file
+ * pthread_mutex_lock(&mutex_journal_log);
+ * because when android security encrypt the phone,
+ * /data partion forbids any process always open one file not close
+ */
+static int open_journal_file(char *file) {
+    if (fd_journal_file >= 0)
+        return 1;
+    fd_journal_file = open(file, O_RDWR | O_CREAT | O_APPEND, 0666); /* append mode */
+    if (fd_journal_file < 0) {
+        ylog_error("open %s failed: %s\n", file, strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+static int close_journal_file(void) {
+    CLOSE(fd_journal_file);
+    fd_journal_file = -1;
+    return 0;
+}
+
+#ifdef HAVE_YLOG_JOURNAL
 static long journal_last_pos = 0;
 
 static void reset_journal_file(void) {
@@ -22,25 +47,29 @@ static int get_journal_file(char *buf, int buf_size) {
     journal_file_size = global_context->journal_file_size;
     if (journal_last_pos > journal_file_size)
         journal_last_pos = 0; /* wrap happen */
+    len = 0;
     if (journal_last_pos != journal_file_size) {
-        /* 1. seek to last reading place */
-        LSEEK(fd_journal_file, journal_last_pos, SEEK_SET);
-        len = journal_file_size - journal_last_pos;
-        if (len > buf_size)
-            len = buf_size;
-        /* 2. read len */
-        len = read(fd_journal_file, buf, len);
-        journal_last_pos += len;
-        /* 3. restore to the last place for print2journal_file writing */
-        LSEEK(fd_journal_file, journal_file_size, SEEK_SET);
-    } else
-        len = 0;
+        if (open_journal_file(global_context->journal_file) == 0) {
+            /* 1. seek to last reading place */
+            LSEEK(fd_journal_file, journal_last_pos, SEEK_SET);
+            len = journal_file_size - journal_last_pos;
+            if (len > buf_size)
+                len = buf_size;
+            /* 2. read len */
+            len = read(fd_journal_file, buf, len);
+            journal_last_pos += len;
+            /* 3. restore to the last place for print2journal_file writing */
+            LSEEK(fd_journal_file, journal_file_size, SEEK_SET);
+            close_journal_file();
+        }
+    }
     pthread_mutex_unlock(&mutex_journal_log);
     return len;
 }
+#endif
 
 static long get_journal_file_size(void) {
-    if (fd_journal_file > 0) {
+    if (fd_journal_file >= 0) {
         struct stat st;
         if (fstat(fd_journal_file, &st) == 0)
             return st.st_size;
@@ -53,25 +82,24 @@ static int print2journal_file(const char *fmt, ...) {
     char timeBuf[32];
     int len;
     va_list ap;
+    char *file = global_context->journal_file;
     static long fsize = 0; /* fsize = &global_context->journal_file_size; */
     pthread_mutex_lock(&mutex_journal_log);
     if (fd_journal_file < 0) {
-        struct context *c = global_context;
-        char *file = c->journal_file;
         if (file) {
             char unit;
             float fsize1;
             mkdirs_with_file(file);
-            fd_journal_file = open(file, O_RDWR | O_CREAT | O_APPEND, 0666); /* append mode */
+            open_journal_file(file);
             fsize = get_journal_file_size();
             fsize1 = ylog_get_unit_size_float(fsize, &unit);
             ylog_info("open %s, size is %.2f%c\n", file, fsize1, unit);
         }
-        if (fd_journal_file < 0) {
-            if (file)
-                ylog_error("open %s failed: %s\n", file, strerror(errno));
-            fd_journal_file = STDOUT_FILENO;
-        }
+    }
+    if (fd_journal_file < 0) {
+        ylog_info("%s fd_journal_file < 0\n", __func__);
+        pthread_mutex_unlock(&mutex_journal_log);
+        return 0;
     }
     len = ylog_get_format_time(buf);
     va_start(ap, fmt);
@@ -82,23 +110,9 @@ static int print2journal_file(const char *fmt, ...) {
     }
     va_end(ap);
     if ((fsize + len) > 10 * 1024 * 1024) {
-        if (fd_journal_file != STDOUT_FILENO) {
-            struct context *c = global_context;
-            char *file = c->journal_file;
-            CLOSE(fd_journal_file);
-            if (file) {
-                mkdirs_with_file(file);
-                fd_journal_file = open(file, O_RDWR | O_CREAT | O_TRUNC, 0666); /* trunc mode */
-                if (fd_journal_file > 0) {
-                    ylog_info("re-open %s, size is %s\n", len);
-                }
-            }
-            if (fd_journal_file < 0) {
-                if (file)
-                    ylog_error("open %s failed: %s\n", file, strerror(errno));
-                fd_journal_file = STDOUT_FILENO;
-            }
-        }
+        if (fd_journal_file >= 0)
+            if (ftruncate(fd_journal_file, 0))
+                ylog_error("ftruncate %s failed: %s\n", file, strerror(errno));
         fsize = 0;
     }
 #if 1
@@ -108,6 +122,7 @@ static int print2journal_file(const char *fmt, ...) {
     len = write(fd_journal_file, buf, len);
     fsize += len;
     global_context->journal_file_size = fsize;
+    close_journal_file();
     pthread_mutex_unlock(&mutex_journal_log);
     return 0;
 }
@@ -1204,7 +1219,6 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
             create_outline(ydst);
     }
 
-    // if ((ydst->segments == 1 || moved) && (ydst->max_segment_now > 1 || ydst->max_segment > 1)) {
     if ((ydst->segments == 1) && (ydst->max_segment_now > 1 || ydst->max_segment > 1))
         generate_analyzer = 1;
 

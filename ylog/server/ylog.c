@@ -173,6 +173,7 @@ static int ylog_read_info(char *buf, int count, FILE *fp, int fd, struct ylog *y
     return 0; /* INT_MAX; */
 }
 
+#ifdef HAVE_YLOG_JOURNAL
 static int ylog_read_journal(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
     ylog_write_handler w = y->write_handler;
     if (fd == yp_fd(YLOG_POLL_INDEX_PIPE, &y->yp))
@@ -185,6 +186,7 @@ static int ylog_read_journal(char *buf, int count, FILE *fp, int fd, struct ylog
     } while (1);
     return 0; /* INT_MAX; */
 }
+#endif
 
 static int ylog_read_ylog_debug(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
     static int cnt = 0;
@@ -268,12 +270,14 @@ static struct ydst ydst_default[YDST_MAX+1] = {
         .max_segment = 1,
         .max_segment_size = 20*1024*1024,
     },
+#ifdef HAVE_YLOG_JOURNAL
     [YDST_TYPE_JOURNAL] = {
         .file = "ylog_journal_file",
         .file_name = "ylog_journal_file.log",
         .max_segment = 1,
         .max_segment_size = 20*1024*1024,
     },
+#endif
 };
 
 static struct ylog ylog_default[YLOG_MAX+1] = {
@@ -308,6 +312,7 @@ static struct ylog ylog_default[YLOG_MAX+1] = {
         .ydst = &ydst_default[YDST_TYPE_INFO],
         .fread = ylog_read_info,
     },
+#ifdef HAVE_YLOG_JOURNAL
     {
         .name = "journal",
         .type = FILE_NORMAL,
@@ -316,6 +321,7 @@ static struct ylog ylog_default[YLOG_MAX+1] = {
         .restart_period = 1000 * 60,
         .fread = ylog_read_journal,
     },
+#endif
 };
 
 static int speed_statistics_event_timer_handler(void *arg, long tick, struct ylog_event_cond_wait *yewait) {

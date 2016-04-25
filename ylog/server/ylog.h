@@ -349,7 +349,9 @@ enum ydst_type {
     YDST_TYPE_SOCKET,
     YDST_TYPE_YLOG_DEBUG,
     YDST_TYPE_INFO,
+#ifdef HAVE_YLOG_JOURNAL
     YDST_TYPE_JOURNAL,
+#endif
     OS_YDST_TYPE_BASE,
 };
 

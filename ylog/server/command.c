@@ -950,7 +950,9 @@ static int cmd_clear_ylog(struct command *cmd, char *buf, int buf_size, int fd, 
                 continue;
             y->thread_reset(y, 1);
         }
+        #ifdef HAVE_YLOG_JOURNAL
         reset_journal_file();
+        #endif
         print2journal_file("clear all ylog %s", root->root);
     }
 

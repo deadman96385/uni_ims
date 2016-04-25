@@ -281,12 +281,12 @@ parser_done:
     }
     free(mptr);
     if (fchmod(wfd, 0644))
-        ylog_error("Unable to chmod ylog confi file %s to 0644\n", fn);
+        ylog_error("Unable to chmod ylog config file %s to 0644\n", fn);
     fsync(wfd);
     CLOSE(wfd);
     if (rename(tempPath, fn)) {
         unlink(tempPath);
-        ylog_error("Unable to rename ylog confi file %s to %s\n", tempPath, fn);
+        ylog_error("Unable to rename ylog config file %s to %s\n", tempPath, fn);
     }
     pthread_mutex_unlock(&update_config_mutex);
 }
