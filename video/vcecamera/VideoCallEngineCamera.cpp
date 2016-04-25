@@ -49,7 +49,7 @@ int startPreviewCalled = 0;
 int startRecordingCalled = 0;
 
 // default camera parmas
-int fps;
+int fps = 30;
 int height = 640;
 int width = 480;
 
@@ -76,10 +76,77 @@ void *executeCommand(int command, void *arg1, void *arg2, void *arg3) {
   cam_arg3 = arg3;
 
   signalNewCmdReady();
-  waitCmdExecuted();
+
+  int wait_cmd_ret = waitCmdExecuted();
+  if (wait_cmd_ret != 0){
+    camera_ret = (void *)wait_cmd_ret;
+    ALOGE("executeCommand %d timeout, ret = %d", camera_cmd, camera_ret);
+  }
 
   unlockExecuteCommand();
   return camera_ret;
+}
+
+void setCameraFPS(CameraParameters *ptr)
+{
+  char * fpsRanges = (char *)ptr->get("preview-fps-range-values");
+  Vector<FPSRanges> fpsRangeList;
+  ALOGI("setCameraFPS, supported = %s", fpsRanges);
+
+  if(fpsRanges == NULL){
+    ALOGE("setCameraFPS, no supported fps");
+    return;
+  }
+
+  // got fps range list
+  int i = 0;
+  while(fpsRanges[i]!='\0')
+  {
+    if(fpsRanges[i] == '(')
+    {
+      i++;
+    }
+    char* start = &fpsRanges[i];
+    while(fpsRanges[i] != ',')
+    {
+      i++;
+    }
+    char* end = &fpsRanges[i-1];
+    int minFps = (int)strtol(start, &end, 10);
+    if(fpsRanges[i] == ',')
+    {
+      i++;
+    }
+    start = &fpsRanges[i];
+    while(fpsRanges[i] != ')')
+    {
+      i++;
+    }
+    end = &fpsRanges[i-1];
+    int maxFps = (int)strtol(start, &end, 10);
+    fpsRangeList.push(FPSRanges(minFps,maxFps));
+    if(fpsRanges[i] == ')')
+    {
+      i++;
+    }
+    if(fpsRanges[i] == ',')
+    {
+      i++;
+    }
+  }
+
+  // get fps range for the target fps
+  for(i = fpsRangeList.size()-1;i >= 0;i--)
+  {
+    ALOGI("setCameraFPS, fps range %d -> %d",fpsRangeList[i].lo, fpsRangeList[i].hi);
+    if(fpsRangeList[i].hi <= fps*1000)
+    {
+      char str[20];
+      snprintf(str, sizeof(str), "%d,%d",fpsRangeList[i].lo,fpsRangeList[i].hi);
+      ptr->set("preview-fps-range", str);
+      break;
+    }
+  }
 }
 
 void setPreviewOrientationInternal(int rotation) {
@@ -127,6 +194,8 @@ void startPreviewInternal(ImsCameraClient *ptr) {
   cParams->setVideoSize(width, height);
 
   cParams->set("recording-hint", "true");
+
+  setCameraFPS(cParams);
 
   params = cParams->flatten();
 
@@ -454,7 +523,12 @@ short imsCameraRelease() {
 
   int ret = (int)executeCommand(CAMERA_CLOSE_CMD, 0, 0, 0);
 
-  (void)pthread_join(cameraLoopThread, NULL);
+  if (ret!= 0){
+    ALOGE("imsCameraRelease, thread exit timeout");
+  } else {
+    (void)pthread_join(cameraLoopThread, NULL);
+  }
+
   destroySem();
 
   delete packageName;

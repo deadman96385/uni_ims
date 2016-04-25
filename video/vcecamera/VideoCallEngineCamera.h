@@ -5,6 +5,9 @@
 #include <ICameraClient.h>
 #include <ICameraServiceListener.h>
 
+#undef LOG_TAG
+#define LOG_TAG "VCECamera"
+
 using namespace android;
 
 // camera operation cmd
@@ -42,7 +45,7 @@ static int sem_timedwait(sem_t* sem_var) {
   int result;
 
   clock_gettime(CLOCK_REALTIME, &ts);
-  ts.tv_sec += 5;
+  ts.tv_sec += 2; //timeout is 2 seconds
   result = sem_timedwait(sem_var, &ts);
   if (result) {
     ALOGI("Failure in [%s:%d] result = %d", __func__, __LINE__, result);
@@ -60,7 +63,7 @@ inline void signalNewCmdReady() { sem_post(&waitNewCmdSem); }
 inline void waitingNewCmd() { sem_wait(&waitNewCmdSem); }
 
 //-----used to signal/wait for the cmd being executed
-inline void waitCmdExecuted() { sem_timedwait(&cmdExecutedSem); }
+inline int waitCmdExecuted() { return sem_timedwait(&cmdExecutedSem); }
 inline void signalCmdExecuted() { sem_post(&cmdExecutedSem); }
 
 //-----used for freame release
@@ -82,6 +85,19 @@ void destroySem() {
   sem_destroy(&frameReleaseSem);
 }
 
+struct FPSRanges {
+int lo;
+int hi;
+FPSRanges() {
+      lo = 0;
+      hi = 0;
+   }
+FPSRanges(int low, int high) {
+      lo = low;
+      hi = high;
+   }
+};
+
 typedef enum {
   UNINITIALIZED = 0,
   INITIALIZING = 1,
@@ -91,15 +107,15 @@ typedef enum {
 
 class BufferClient : public BnCameraClient {
  public:
-  virtual ~BufferClient() { ALOGE("~BufferClient"); };
+  virtual ~BufferClient() { ALOGI("~BufferClient"); };
 
   void notifyCallback(int32_t msgType __unused, int32_t ext1 __unused,
                       int32_t ext2 __unused) {
-    ALOGE("notifyCallback");
+    ALOGI("notifyCallback");
   };
   void dataCallback(int32_t msgType __unused, const sp<IMemory>& data __unused,
                     camera_frame_metadata_t* metadata __unused) {
-    ALOGE("dataCallback");
+    ALOGI("dataCallback");
   };
   void dataCallbackTimestamp(nsecs_t timestamp, int32_t msgType,
                              const sp<IMemory>& data);
