@@ -1287,7 +1287,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                 {
                     .name = "tcpdump",
                     .type = FILE_POPEN,
-                    .file = "tcpdump -i any -p -s 0 -w -",
+                    .file = "tcpdump -i any -p -s 0 -C 60 -U -w -",
                     .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY,
                     .restart_period = 2000,
                     .status = YLOG_DISABLED,
@@ -1301,6 +1301,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                 .max_segment_size = 50*1024*1024,
                 .nowrap = 1,
                 .write_data2cache_first = 1,
+                .ytag = 1,
             },
             .cache = {
                 .size = 512 * 1024,
