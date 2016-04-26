@@ -95,7 +95,7 @@ fi
     done
 }
 
-ylog_log_folder=("`find -name ylog_debug`")
+ylog_log_folder=("`find -name ylog_debug | sort`")
 
 count=1
 for y in ${ylog_log_folder[@]}; do

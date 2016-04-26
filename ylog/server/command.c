@@ -916,6 +916,20 @@ static int cmd_quota(struct command *cmd, char *buf, int buf_size, int fd, int i
     return 0;
 }
 
+static void rm_root_others(void) {
+    char *root_path_others[] = {
+        "SYSDUMP",
+    };
+    char basename_root[PATH_MAX];
+    char *dirname;
+    struct ydst_root *root = global_ydst_root;
+    int i;
+    strcpy(basename_root, root->root);
+    dirname = dirname2(basename_root);
+    for (i = 0; i < (int)ARRAY_LEN(root_path_others); i++)
+        do_cmd(NULL, 0, 1, "rm -rf %s/%s", dirname, root_path_others[i]);
+}
+
 static int cmd_clear_ylog(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
     UNUSED(index);
     UNUSED(yp);
@@ -940,6 +954,7 @@ static int cmd_clear_ylog(struct command *cmd, char *buf, int buf_size, int fd, 
         }
         usleep(300 * 1000); /* wait 300ms for ylog thread exit itself */
         ylog_root_folder_delete(root->root, c->historical_folder_root, 0, 0);
+        rm_root_others();
         print2journal_file("clear all ylog and reboot %s", root->root);
         kill(getpid(), SIGKILL);
     }
