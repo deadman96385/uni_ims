@@ -188,6 +188,9 @@ typedef struct Srvccpendingrequest{
 #define VOLTE_ENABLE_PROP         "persist.sys.volte.enable"
 #define VOLTE_PCSCF_ADDRESS        "persist.sys.volte.pcscf"
 
+/*SPRD: add for NITZ operator info */
+#define NITZ_OPERATOR        "persist.sys.nitz.operator"
+
 static bool plmnFiltration(char *plmn);//Bug#476317 Eliminate unwanted PLMNs
 static VoLTE_SrvccState s_srvccState = SRVCC_PS_TO_CS_SUCCESS;
 static SrvccPendingRequest *s_srvccPendingRequest;
@@ -12895,6 +12898,54 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                     RIL_UNSOL_NITZ_TIME_RECEIVED,
                     response, strlen(response)+1);
 #endif
+        }
+    } else if (strStartsWith(s,"+SPNWNAME:")) {
+        /*NITZ operator name */
+        RILLOGD("UNSOL SPNWNAME %s", s);
+        char *tmp;
+        char *mcc;
+        char *mnc;
+        char *full_name;
+        char *short_name;
+
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+
+        err = at_tok_nextstr(&tmp, &mcc);
+        if(err < 0) goto out;
+        RILLOGD("UNSOL SPNWNAME MCC -> %s", mcc);
+
+        err = at_tok_nextstr(&tmp, &mnc);
+        if(err < 0) goto out;
+        RILLOGD("UNSOL SPNWNAME MNC -> %s", mnc);
+
+        err = at_tok_nextstr(&tmp, &full_name);
+        if(err < 0) goto out;
+        RILLOGD("UNSOL SPNWNAME FULL_NAME -> %s", full_name);
+
+        err = at_tok_nextstr(&tmp, &short_name);
+        if(err < 0) goto out;
+        RILLOGD("UNSOL SPNWNAME SHORT_NAME -> %s", short_name);
+
+        char nitz_operator_info[PROPERTY_VALUE_MAX] = { 0 };
+        char prop_name[PROP_NAME_MAX] = { 0 };
+        strcpy(prop_name, NITZ_OPERATOR);
+
+        extern int s_sim_num;
+        if(s_sim_num > 0) {
+            sprintf(prop_name, "%s%d", NITZ_OPERATOR, s_sim_num);
+        }
+
+        snprintf(nitz_operator_info, sizeof(nitz_operator_info),
+                "%s%s,%s,%s", mcc, mnc, full_name, short_name);
+
+        property_set(prop_name, nitz_operator_info);
+
+        if(sState == RADIO_STATE_SIM_READY) {
+            RIL_onUnsolicitedResponse (
+                RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED,
+                NULL, 0);
         }
     } else if (strStartsWith(s,"+CRING:")
             || strStartsWith(s,"RING")
