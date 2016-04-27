@@ -1174,7 +1174,8 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
         switch (ydst->segment_mode) {
         case YDST_SEGMENT_SEQUNCE:
             segment = 0;
-            yds_rename_segment_sequnce_file_and_left_segment0(ydst);
+            if (nowrap == 0)
+                yds_rename_segment_sequnce_file_and_left_segment0(ydst);
             break;
         case YDST_SEGMENT_CIRCLE:
             segment = ydst->segment;
