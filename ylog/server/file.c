@@ -2245,6 +2245,7 @@ static void *ylog_thread_handler_default(void *arg) {
     struct ylog_poll *yp = &y->yp;
     char *name = y->name;
     int nowrap;
+    int ylog_read_len_might_zero_wait_max_count = 0;
     ydst_refs_inc(y);
     y->pid = getpid();
     y->tid = gettid();
@@ -2448,6 +2449,8 @@ __state_control:
             if (count > 0) {
                 if (count != INT_MAX) /* INT_MAX to tell here, y->fread has called y->write_handler in itself */
                     y->write_handler(y->buf, count, y);
+                if (ylog_read_len_might_zero_wait_max_count)
+                    ylog_read_len_might_zero_wait_max_count = 0;
             } else {
                 if (y->mode & YLOG_READ_MODE_BLOCK) {
                     int go_to_stop = 1;
@@ -2468,7 +2471,17 @@ __state_control:
                         }
                     }
                     if (go_to_stop) {
-                        if (y->mode & YLOG_READ_LEN_MIGHT_ZERO) {
+                        int mode = y->mode;
+                        if (mode & YLOG_READ_LEN_MIGHT_ZERO_WAIT_MAX_COUNT) {
+                            if (++ylog_read_len_might_zero_wait_max_count > 10)
+                                mode = YLOG_READ_LEN_MIGHT_ZERO;
+                            else {
+                                ylog_critical("%s block read %s return 0, ylog_read_len_might_zero_wait_max_count=%d\n",
+                                        name, file, ylog_read_len_might_zero_wait_max_count);
+                                continue;
+                            }
+                        }
+                        if (mode & YLOG_READ_LEN_MIGHT_ZERO) {
                             ylog_critical("%s block read %s return 0, read_len_zero_count=%d\n",
                                     name, file, ++y->read_len_zero_count);
                             if (y->restart_period) {

@@ -944,6 +944,7 @@ static int cmd_clear_ylog(struct command *cmd, char *buf, int buf_size, int fd, 
             rm_all(c->historical_folder_root);
             print2journal_file("clear last_ylog %s", c->historical_folder_root);
         }
+        rm_root_others();
     }
 
     if (mode & YLOG_CLEAR_ALL_QUIT) {
@@ -954,7 +955,6 @@ static int cmd_clear_ylog(struct command *cmd, char *buf, int buf_size, int fd, 
         }
         usleep(300 * 1000); /* wait 300ms for ylog thread exit itself */
         ylog_root_folder_delete(root->root, c->historical_folder_root, 0, 0);
-        rm_root_others();
         print2journal_file("clear all ylog and reboot %s", root->root);
         kill(getpid(), SIGKILL);
     }

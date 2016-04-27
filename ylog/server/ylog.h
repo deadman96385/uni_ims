@@ -593,6 +593,7 @@ struct ylog {
                                           * setprop logd.klogd false
                                           *
                                           */
+#define YLOG_READ_LEN_MIGHT_ZERO_WAIT_MAX_COUNT 0x100
 #define YLOG_GROUP_MODEM            0x8000
     int mode;
     int read_len_zero_count;

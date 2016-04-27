@@ -16,15 +16,15 @@ struct ytag {
 #define ytag_rawdata(buf, count) do { \
     ytag.tag = YTAG_TAG_RAWDATA; \
     ytag.len = sizeof(ytag) + count; \
-    write(STDOUT_FILENO, &ytag, sizeof(ytag)); \
+    (void)fwrite(&ytag, sizeof(ytag), 1, stdout); \
     if (count) \
-        write(STDOUT_FILENO, buf, count); \
+        (void)fwrite(buf, count, 1, stdout); \
 } while (0);
 
 #define ytag_rawdata_len(dlen) do { \
     ytag.tag = YTAG_TAG_RAWDATA; \
     ytag.len = sizeof(ytag) + dlen; \
-    write(STDOUT_FILENO, &ytag, sizeof(ytag)); \
+    (void)fwrite(&ytag, sizeof(ytag), 1, stdout); \
 } while (0);
 
 #define ytag_newfile(_YTAG, _NAME) do { \
@@ -35,9 +35,9 @@ struct ytag {
         ynlen = strlen(ylname); \
         ytag.len += ynlen; \
     } \
-    write(STDOUT_FILENO, &ytag, sizeof(ytag)); \
+    (void)fwrite(&ytag, sizeof(ytag), 1, stdout); \
     if (ylname && ynlen) \
-        write(STDOUT_FILENO, ylname, ynlen); \
+        (void)fwrite(ylname, ynlen, 1, stdout); \
 } while (0);
 
 #define ytag_newfile_begin(_NAME) ytag_newfile(YTAG_TAG_NEWFILE_BEGIN, _NAME)
