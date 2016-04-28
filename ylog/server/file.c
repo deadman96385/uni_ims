@@ -1054,7 +1054,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
 
     ydst_change_seq_move_root = root->ydst_change_seq_move_root;
     ydst_change_seq_resize_segment = root->ydst_change_seq_resize_segment;
-    nowrap = ydst_nowrap_segment(ydst);
+    nowrap = (ydst_nowrap_segment(ydst) && ymode == YDST_SEGMENT_MODE_NEW) ? 1 : 0;
 
     if (ymode == YDST_SEGMENT_MODE_NEW ||
         ymode == YDST_SEGMENT_MODE_RESET ||
@@ -2288,8 +2288,8 @@ static void *ylog_thread_handler_default(void *arg) {
             default: state_curr = YLOG_NOP; break;
             }
             y->state = state_curr;
-            ylog_debug("%s control state to %d, count from %d to %d\n",
-                    name, state_curr, y->state_pipe_count, y->state_pipe_count+1);
+            ylog_debug("%s control state to %d.%c, count from %d to %d\n",
+                    name, state_curr, buf[0], y->state_pipe_count, y->state_pipe_count+1);
 __state_control:
             switch (state_curr) {
             case YLOG_RUN:
