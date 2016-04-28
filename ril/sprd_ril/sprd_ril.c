@@ -13842,9 +13842,16 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 goto out;
             } else if (response->type == 1) {
 #if defined (RIL_SPRD_EXTENSION)
-                RIL_onUnsolicitedResponse (
-                        RIL_UNSOL_RESPONSE_VIDEOCALL_STATE_CHANGED,
-                        NULL, 0);
+
+                if(s_ims_registered){
+                      RIL_onUnsolicitedResponse (
+                          RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
+                          NULL, 0);
+                  } else {
+                      RIL_onUnsolicitedResponse (
+                              RIL_UNSOL_RESPONSE_VIDEOCALL_STATE_CHANGED,
+                              NULL, 0);
+                  }
 
                 err = at_tok_nextint(&tmp, &response->num_type);
                 if (err < 0) {
@@ -14036,10 +14043,10 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RILLOGD("onUnsolicited(),SRVCC status: %d", status);
         RIL_onUnsolicitedResponse(RIL_UNSOL_SRVCC_STATE_NOTIFY, &status,
                 sizeof(status));
-        if(status == SRVCC_PS_TO_CS_CANCELED || status == SRVCC_PS_TO_CS_FAILED){
-            RIL_requestTimedCallback (sendCallStateChanged, NULL, &TIMEVAL_CSCALLSTATEPOLL);
-        } else {
+        if(status == SRVCC_PS_TO_CS_SUCCESS || status == VSRVCC_PS_TO_CS_SUCCESS){
             RIL_requestTimedCallback (sendCSCallStateChanged, NULL, &TIMEVAL_CSCALLSTATEPOLL);
+        } else {
+            RIL_requestTimedCallback (sendCallStateChanged, NULL, &TIMEVAL_CSCALLSTATEPOLL);
         }
     }
     /* @} */
