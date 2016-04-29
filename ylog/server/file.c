@@ -219,7 +219,7 @@ static int fcntl_read_block(int fd, char *desc) {
     return 0;
 }
 
-static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char *prefix) {
+static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char *prefix, int millisecond) {
     char buf[4096];
     int count = sizeof buf;
     char *p = buf;
@@ -242,11 +242,13 @@ static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char
         }
         pfd[0].fd = fd;
         pfd[0].events = POLLIN;
+        if (millisecond < 0)
+            millisecond = 500;
         do {
-            ret = poll(pfd, 1, 500);
+            ret = poll(pfd, 1, millisecond);
             if (ret <= 0) {
-                ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog cmd %s is failed, %s\n",
-                        cmd, ret == 0 ? "timeout":strerror(errno));
+                ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog cmd %s is failed %dms, %s\n",
+                        cmd, millisecond, ret == 0 ? "timeout":strerror(errno));
                 timeout = 1;
                 break;
             }
@@ -323,10 +325,43 @@ static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char
     }
 }
 
-static void pcmds(char *cmds[], int *cnt, ylog_write_handler w, struct ylog *y, char *prefix) {
+static void pcmds(char *cmds[], int *cnt, ylog_write_handler w, struct ylog *y, char *prefix, int millisecond) {
     char **cmd;
     for (cmd = cmds; *cmd; cmd++)
-        pcmd(*cmd, cnt, w, y, prefix);
+        pcmd(*cmd, cnt, w, y, prefix, millisecond);
+}
+
+static struct ydst *ydst_get_by_name(char *name) {
+    struct ydst *yd;
+    int i;
+    for_each_ydst(i, yd, NULL) {
+        if (yd->file == NULL || yd->refs <= 0)
+            continue;
+        if (strcmp(yd->file, name) == 0)
+            return yd;
+    }
+    return NULL;
+}
+
+static void pcmds_ydst(char *cmds[], char *ydst_name, int millisecond,
+        void (*callback)(struct ydst *ydst, int step, char *buf, int count)) {
+    char **cmd;
+    char buf[PATH_MAX];
+    struct ydst *ydst = ydst_get_by_name(ydst_name);
+    struct ydst_root *root;
+    if (ydst == NULL) {
+        ylog_critical("ydst %s does not found\n", ydst_name);
+        return;
+    }
+    root = ydst->root;
+    pthread_mutex_lock(&root->mutex); /* To avoid root folder change by ydst_move_root */
+    callback(ydst, 1, buf, sizeof buf);
+    if (cmds) {
+        for (cmd = cmds; *cmd; cmd++)
+            pcmd(*cmd, NULL, NULL, NULL, "pcmds_ydst", millisecond);
+    }
+    callback(ydst, 0, buf, sizeof buf);
+    pthread_mutex_unlock(&root->mutex);
 }
 
 static unsigned long long ydst_sum_all_storage_space(struct ydst *ydst) {
@@ -2230,6 +2265,18 @@ static void ylog_load_filter_plugin(char *in_name, char *fun, char *prefix, stru
         return;
     sprintf(out_libfilter, "%slibfilter_%s.so", prefix, in_name);
     ylog_load_filter_plugin_func(out_libfilter, fun, sfp);
+}
+
+static void ylog_all_thread_exit(void) {
+    struct ylog *y;
+    int i;
+    for_each_ylog(i, y, NULL) {
+        if (y->name == NULL)
+            continue;
+        ylog_info("ylog %s exiting...\n", y->name);
+        y->thread_exit(y, 1);
+        ylog_info("ylog %s exited\n", y->name);
+    }
 }
 
 static void *ylog_thread_handler_default(void *arg) {

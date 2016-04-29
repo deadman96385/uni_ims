@@ -948,11 +948,7 @@ static int cmd_clear_ylog(struct command *cmd, char *buf, int buf_size, int fd, 
     }
 
     if (mode & YLOG_CLEAR_ALL_QUIT) {
-        for_each_ylog(i, y, NULL) {
-            if (y->name == NULL)
-                continue;
-            y->thread_exit(y, 1);
-        }
+        ylog_all_thread_exit();
         usleep(300 * 1000); /* wait 300ms for ylog thread exit itself */
         ylog_root_folder_delete(root->root, c->historical_folder_root, 0, 0);
         print2journal_file("clear all ylog and reboot %s", root->root);

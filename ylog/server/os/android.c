@@ -60,6 +60,22 @@ static int ylog_write_header_sgm_cpu_memory_header(struct ylog *y) {
             YLOG_SGM_CPU_MEMORY_HEADER, strlen(YLOG_SGM_CPU_MEMORY_HEADER), y->ydst);
 }
 
+static void pcmds_ydst_kernel_callback(struct ydst *ydst, int step, char *buf, int count) {
+    /**
+     * ydst->root->mutex lock is held now
+     */
+    const char *last_kmsg = "/data/last_kmsg";
+    if (step == 1) { /* Start pcmd */
+        if (access(last_kmsg, F_OK) == 0) {
+            snprintf(buf, count, "%s/%s", ydst->root_folder, ydst->file);
+            if (mkdirs(buf) == 0) {
+                snprintf(buf, count, "cp %s %s/%s", last_kmsg, ydst->root_folder, ydst->file);
+                pcmd(buf, NULL, NULL, NULL, "pcmds_ydst", 1000);
+            }
+        }
+    }
+}
+
 static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
     UNUSED(fp);
     FILE *wfp;
@@ -79,12 +95,17 @@ static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct yl
             if (fgets(buf, count, wfp) == NULL)
                 break;
             snprintf(tmp, sizeof tmp, "cat %s", strtok(buf, "\n"));
-            pcmd(tmp, &fd, y->write_handler, y, "ylog_info");
+            pcmd(tmp, &fd, y->write_handler, y, "ylog_info", -1);
         } while (1);
         pclose(wfp);
     }
 
-    pcmds(cmd_list, &fd, y->write_handler, y, "ylog_info");
+    pcmds(cmd_list, &fd, y->write_handler, y, "ylog_info", -1);
+
+    /**
+     * copy last_kmsg to ydst kernel/ folder
+     */
+    pcmds_ydst(NULL, "kernel/", -1, pcmds_ydst_kernel_callback);
 
     return 0;
 }
@@ -100,7 +121,7 @@ static int ylog_read_ylog_debug_hook(char *buf, int count, FILE *fp, int fd, str
         "getprop ylog.killed",
         NULL
     };
-    pcmds(cmd_list, &fd, y->write_handler, y, "ylog_debug");
+    pcmds(cmd_list, &fd, y->write_handler, y, "ylog_debug", 1000);
     return 0;
 }
 
@@ -130,7 +151,7 @@ static int ylog_read_sys_info(char *buf, int count, FILE *fp, int fd, struct ylo
         "cat /sys/kernel/debug/sprd_debug/cpu/cpu_usage",
         NULL
     };
-    pcmds(cmd_list, &cnt, y->write_handler, y, "sys_info");
+    pcmds(cmd_list, &cnt, y->write_handler, y, "sys_info", 1000);
     return 0;
 }
 
@@ -142,7 +163,7 @@ static int ylog_read_sys_info_manual(char *buf, int count, FILE *fp, int fd, str
         NULL
     };
     ylog_read_sys_info(buf, count, fp, fd, y);
-    pcmds(cmd_list, &cnt, y->write_handler, y, "sys_info_manual");
+    pcmds(cmd_list, &cnt, y->write_handler, y, "sys_info_manual", 1000);
     return 0;
 }
 
@@ -517,6 +538,17 @@ static int cmd_print2kernel(struct command *cmd, char *buf, int buf_size, int fd
     return 0;
 }
 
+static int cmd_exit(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
+    ylog_all_thread_exit();
+    print2journal_file("exit command : %s", buf);
+    SEND(fd, buf, snprintf(buf, buf_size, "exit done\n"), MSG_NOSIGNAL);
+    kill(getpid(), SIGKILL);
+    return 0;
+}
+
 static struct command os_commands[] = {
     {"test", "test from android", cmd_test, NULL},
     {"\n", NULL, os_cmd_help, (void*)os_commands},
@@ -527,6 +559,7 @@ static struct command os_commands[] = {
     {"at", "send AT command to cp side, ex. ylog_cli at AT+ARMLOG=1 or ylog_cli at AT+CGMR", cmd_at, NULL},
     {"print2android", "write data to android system log", cmd_print2android, NULL},
     {"print2kernel ", "write data to kernel log", cmd_print2kernel, NULL},
+    {"exit", "quit all ylog threads, and kill ylog itself to protect sdcard", cmd_exit, NULL},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -644,7 +677,7 @@ static int os_inotify_handler_anr(struct ylog_inotify_cell *pcell, int timeout, 
             return -1;
     }
 
-    pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_traces");
+    pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_traces", 1000);
 
     return -1;
 }
@@ -672,7 +705,7 @@ static int os_inotify_handler_crash(struct ylog_inotify_cell *pcell, int timeout
         }
     }
 
-    pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_tombstones");
+    pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_tombstones", 1000);
 
     for (i = 0; i < file->num; i++) {
         a = file->files_array + i * file->len;

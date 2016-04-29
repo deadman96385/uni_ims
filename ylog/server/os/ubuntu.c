@@ -13,7 +13,7 @@ static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct yl
         "cat /proc/interrupts",
         NULL
     };
-    pcmds(cmd_list, &fd, y->write_handler, y, "ylog_info");
+    pcmds(cmd_list, &fd, y->write_handler, y, "ylog_info", -1);
     return 0;
 }
 
@@ -28,7 +28,7 @@ static int ylog_read_ylog_debug_hook(char *buf, int count, FILE *fp, int fd, str
         "echo 'ubuntu test'",
         NULL
     };
-    pcmds(cmd_list, &fd, y->write_handler, y, "ylog_debug");
+    pcmds(cmd_list, &fd, y->write_handler, y, "ylog_debug", 1000);
     return 0;
 }
 

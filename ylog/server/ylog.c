@@ -26,18 +26,10 @@ static int fd_command_server;
 static sigset_t signals_handled;
 //static pthread_mutex_t mutex_sig = PTHREAD_MUTEX_INITIALIZER;
 static void *ylog_sighandler_thread_default(void *arg) {
-    struct ylog *y;
-    int i;
     int *processing_signal = arg;
     ylog_info("ylog_sighandler_thread_default starts to run\n");
     if (global_context->ignore_signal_process == 0/**processing_signal == SIGPWR*/) {
-        for_each_ylog(i, y, NULL) {
-            if (y->name == NULL)
-                continue;
-            ylog_info("ylog %s exiting...\n", y->name);
-            y->thread_exit(y, 1);
-            ylog_info("ylog %s exited\n", y->name);
-        }
+        ylog_all_thread_exit();
         CLOSE(fd_command_server);
         print2journal_file("ylog.stop with signal %d, %s, sdcard is %s", *processing_signal, strsignal(*processing_signal), os_check_sdcard_online() ? "online" : "offline");
         #if 0
@@ -154,7 +146,7 @@ static int ylog_read_info(char *buf, int count, FILE *fp, int fd, struct ylog *y
     if (fd == yp_fd(YLOG_POLL_INDEX_PIPE, &y->yp))
         return y->read(buf, count, fp, fd, y);
 
-    pcmds(cmd_list, &cnt, w, y, "ylog_info");
+    pcmds(cmd_list, &cnt, w, y, "ylog_info", -1);
 
     if (os_hooks.ylog_read_info_hook)
         os_hooks.ylog_read_info_hook(buf, count, fp, cnt, y);
@@ -218,7 +210,7 @@ static int ylog_read_ylog_debug(char *buf, int count, FILE *fp, int fd, struct y
     delta_tm.tm_min,
     delta_tm.tm_sec), y);
 
-    pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_debug");
+    pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_debug", -1);
 
     if (os_hooks.ylog_read_ylog_debug_hook)
         os_hooks.ylog_read_ylog_debug_hook(buf, count, fp, cnt, y);
