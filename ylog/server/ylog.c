@@ -397,19 +397,13 @@ int main(int argc, char *argv[]) {
     UNUSED(argc);
     UNUSED(argv);
     pthread_t ptid;
-    int ret;
-    char uptimeb[128];
     os_init(global_ydst_root, &global_context, &os_hooks);
     os_env_prepare();
-    ret = uptime(uptimeb, sizeof(uptimeb) - 1);
-    if (ret < 0)
-        ret = 0;
-    uptimeb[ret] = 0;
     if (create_socket_local_server(&fd_command_server, "ylog_cli")) {
-        print2journal_file("ylog.start failed, ylog_cli socket create failed! - %s", uptimeb);
+        print2journal_file_string_with_uptime("ylog.start failed, ylog_cli socket create failed!");
         return -1; /* To avoid run ylog twice */
     }
-    print2journal_file("ylog.start success - %s", uptimeb);
+    print2journal_file_string_with_uptime("ylog.start success");
     ylog_init(global_ydst_root, global_context);
     hook_signals();
     pthread_create(&ptid, NULL, ylog_command_loop, NULL);

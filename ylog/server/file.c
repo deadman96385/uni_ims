@@ -127,6 +127,16 @@ static int print2journal_file(const char *fmt, ...) {
     return 0;
 }
 
+static void print2journal_file_string_with_uptime(char *string) {
+    int ret;
+    char uptimeb[128];
+    ret = uptime(uptimeb, sizeof(uptimeb) - 1);
+    if (ret < 0)
+        ret = 0;
+    uptimeb[ret] = 0;
+    print2journal_file("%s - %s", string, uptimeb);
+}
+
 static struct ylog *ylog_get_by_name(char *name) {
     struct ylog *y;
     int i;

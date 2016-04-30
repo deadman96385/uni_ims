@@ -14,29 +14,6 @@
 #define YLOG_CONFIG        "/data/ylog/ylog.conf"
 #define YLOG_FILTER_PATH "/system/lib/"
 
-struct other_processor_property_cell {
-    const char *property_name;
-    const char *property_value_default;
-};
-
-struct other_processor_node {
-    struct other_processor_property_cell log;
-    struct other_processor_property_cell diag;
-    struct other_processor_property_cell atch; /* File is for sending raw AT command string */
-};
-
-struct other_processor_log_privates {
-    char *file_diag;
-    char *file_atch;
-};
-
-struct other_processor_log {
-    const char *enabled;
-    struct other_processor_node pnode;
-    struct ynode ynode;
-    struct other_processor_log_privates privates;
-};
-
 struct os_status {
     int sdcard_online;
     char ylog_root_path_latest[512];
@@ -54,26 +31,30 @@ struct os_config {
     int keep_historical_folder_numbers;
 } oc, *poc = &oc;
 
+#include "modem.c"
+
 static int ylog_write_header_sgm_cpu_memory_header(struct ylog *y) {
 #define YLOG_SGM_CPU_MEMORY_HEADER "second,cpu-cpu_percent[0],cpu-iowtime[1],cpu-cpu_frequency[2],cpu-null[3],cpu-null[4],cpu-null[5],cpu0-cpu_percent[0],cpu0-iowtime[1],cpu0-cpu_frequency[2],cpu0-null[3],cpu0-null[4],cpu0-null[5],cpu1-cpu_percent[0],cpu1-iowtime[1],cpu1-cpu_frequency[2],cpu1-null[3],cpu1-null[4],cpu1-null[5],cpu2-cpu_percent[0],cpu2-iowtime[1],cpu2-cpu_frequency[2],cpu2-null[3],cpu2-null[4],cpu2-null[5],cpu3-cpu_percent[0],cpu3-iowtime[1],cpu3-cpu_frequency[2],cpu3-null[3],cpu3-null[4],cpu3-null[5],cpu4-cpu_percent[0],cpu4-iowtime[1],cpu4-cpu_frequency[2],cpu4-null[3],cpu4-null[4],cpu4-null[5],cpu5-cpu_percent[0],cpu5-iowtime[1],cpu5-cpu_frequency[2],cpu5-null[3],cpu5-null[4],cpu5-null[5],cpu6-cpu_percent[0],cpu6-iowtime[1],cpu6-cpu_frequency[2],cpu6-null[3],cpu6-null[4],cpu6-null[5],cpu7-cpu_percent[0],cpu7-iowtime[1],cpu7-cpu_frequency[2],cpu7-null[3],cpu7-null[4],cpu7-null[5],irqs,ctxt,processes,procs_running,procs_blocked,totalram,freeram,cached,Reserve01,Reserve02,Reserve03,Reserve04,Reserve05,Reserve06\n"
     return y->ydst->write(y->id_token, y->id_token_len,
             YLOG_SGM_CPU_MEMORY_HEADER, strlen(YLOG_SGM_CPU_MEMORY_HEADER), y->ydst);
 }
 
-static void pcmds_ydst_kernel_callback(struct ydst *ydst, int step, char *buf, int count) {
+static void pcmds_ydst_copy_file(char *file, char *buf, int count, struct ydst *ydst) {
     /**
      * ydst->root->mutex lock is held now
      */
-    const char *last_kmsg = "/data/last_kmsg";
-    if (step == 1) { /* Start pcmd */
-        if (access(last_kmsg, F_OK) == 0) {
-            snprintf(buf, count, "%s/%s", ydst->root_folder, ydst->file);
-            if (mkdirs(buf) == 0) {
-                snprintf(buf, count, "cp %s %s/%s", last_kmsg, ydst->root_folder, ydst->file);
-                pcmd(buf, NULL, NULL, NULL, "pcmds_ydst", 1000);
-            }
+    if (access(file, F_OK) == 0) {
+        snprintf(buf, count, "%s/%s", ydst->root_folder, ydst->file);
+        if (mkdirs(buf) == 0) {
+            snprintf(buf, count, "cp -r %s %s/%s", file, ydst->root_folder, ydst->file);
+            pcmd(buf, NULL, NULL, NULL, "pcmds_ydst", 1000);
         }
     }
+}
+
+static void pcmds_ydst_kernel_callback(struct ydst *ydst, int step, char *buf, int count) {
+    if (step == 1) /* Start pcmd */
+        pcmds_ydst_copy_file("/data/last_kmsg", buf, count, ydst);
 }
 
 static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
@@ -118,12 +99,20 @@ static int ylog_read_ylog_debug_hook(char *buf, int count, FILE *fp, int fd, str
         "/system/bin/ylog_cli ylog",
         "/system/bin/ylog_cli speed",
         "/system/bin/ylog_cli space",
+        "getprop ylog.monkey",
         "getprop ylog.killed",
         NULL
     };
     pcmds(cmd_list, &fd, y->write_handler, y, "ylog_debug", 1000);
     return 0;
 }
+
+#ifndef HAVE_YLOG_JOURNAL
+static void pcmds_ydst_sys_info_callback(struct ydst *ydst, int step, char *buf, int count) {
+    if (step == 1) /* Start pcmd */
+        pcmds_ydst_copy_file(global_context->journal_file, buf, count, ydst);
+}
+#endif
 
 static int ylog_read_sys_info(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
     UNUSED(buf);
@@ -152,6 +141,13 @@ static int ylog_read_sys_info(char *buf, int count, FILE *fp, int fd, struct ylo
         NULL
     };
     pcmds(cmd_list, &cnt, y->write_handler, y, "sys_info", 1000);
+    /**
+     * copy ylog_journal_file to ydst sys_info/ folder
+     */
+#ifndef HAVE_YLOG_JOURNAL
+    pcmds_ydst(NULL, "sys_info/", -1, pcmds_ydst_sys_info_callback);
+#endif
+
     return 0;
 }
 
@@ -426,88 +422,7 @@ static int cmd_setprop(struct command *cmd, char *buf, int buf_size, int fd, int
         property_set(property, pp);
     }
     property_get(property, pp, "");
-    SEND(fd, buf, snprintf(buf, buf_size, "%s %s\n", property, pp), MSG_NOSIGNAL);
-    return 0;
-}
-
-static int send_at_file_atch(int idx, char *buf, int count, char *retbuf, int *retcount_max) {
-    int fd, result = 0, ret = 0;
-    char *file_atch;
-    if (idx >= pos->file_atch_num) {
-        return 1;
-    }
-    file_atch = pos->file_atch[idx];
-    fd = open(file_atch, O_RDWR);
-    if (fd < 0) {
-        ylog_info("open %s fail.%s", file_atch, strerror(errno));
-        return 1;
-    }
-    if (count != fd_write(buf, count, fd, "send_at_file_atch"))
-        result = 1;
-    ylog_debug("send to %s with %s\n", file_atch, buf);
-    if (retbuf && retcount_max) {
-        struct pollfd pfd[1];
-        int ret_max = *retcount_max;
-        *retcount_max = 0;
-        pfd[0].fd = fd;
-        pfd[0].events = POLLIN;
-        do {
-            ret = poll(pfd, 1, 1000);
-            if (ret <= 0) {
-                ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog cp is failed, %s\n",
-                        ret == 0 ? "timeout":strerror(errno));
-                result = ret ? 1:0;
-                break;
-            }
-            if (fcntl_read_nonblock(fd, "send_at_file_atch") == 0) {
-                ret = read(fd, retbuf, ret_max);
-                if (ret > 0)
-                    fcntl_read_block(fd, "send_at_file_atch");
-            } else
-                ret = 0;
-
-            if (ret >=0) {
-                *retcount_max += ret;
-            } else {
-                result = 0/*1*/;
-                ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog read is failed, %s\n", strerror(errno));
-            }
-        } while (0/*ret > 0*/);
-    }
-    CLOSE(fd);
-    return result;
-}
-
-static int cmd_at(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
-    UNUSED(cmd);
-    UNUSED(index);
-    UNUSED(yp);
-    int len = strlen(buf);
-    int idx = 0;
-    int ret_size = buf_size;
-    if (len == 3) {
-        SEND(fd, buf, snprintf(buf, buf_size, "%s\n", pos->file_atch[idx]), MSG_NOSIGNAL);
-        return 0;
-    }
-    strcat(buf, "\r");
-    len++;
-    if (send_at_file_atch(idx, buf + 3, len - 3, buf, &ret_size) == 0) {
-        if (ret_size <= 0) {
-            len = 0;
-            if (ret_size == 0) {
-                len = snprintf(buf, buf_size, "Try to stop engpc:\n"
-                        "getprop | grep init.svc.engpc | cut -d '.' -f 3 | cut -d ']' -f 0\n"
-                        "or\n"
-                        "stop engpcclientt; stop engpcclientlte; "
-                        "stop engpcclientw; stop engpcclienttl; stop engpcclientlf\n");
-            }
-        } else
-            len = ret_size;
-    } else {
-        len = snprintf(buf, buf_size, "Failed\n");
-    }
-    if (len)
-        SEND(fd, buf, len, MSG_NOSIGNAL);
+    SEND(fd, buf, snprintf(buf, buf_size, "%s = %s\n", property, pp), MSG_NOSIGNAL);
     return 0;
 }
 
@@ -549,6 +464,26 @@ static int cmd_exit(struct command *cmd, char *buf, int buf_size, int fd, int in
     return 0;
 }
 
+static int cmd_monkey(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
+    char *last;
+    char *value = NULL;
+    const char *property = "ylog.monkey";
+    char *level;
+    char pp[PROPERTY_VALUE_MAX];
+    strtok_r(buf, " ", &last);
+    value = strtok_r(NULL, " ", &last);
+    if (value) {
+        strcpy(pp, value);
+        property_set(property, pp);
+    }
+    property_get(property, pp, "");
+    SEND(fd, buf, snprintf(buf, buf_size, "%s = %s\n", property, pp), MSG_NOSIGNAL);
+    return 0;
+}
+
 static struct command os_commands[] = {
     {"test", "test from android", cmd_test, NULL},
     {"\n", NULL, os_cmd_help, (void*)os_commands},
@@ -560,6 +495,7 @@ static struct command os_commands[] = {
     {"print2android", "write data to android system log", cmd_print2android, NULL},
     {"print2kernel ", "write data to kernel log", cmd_print2kernel, NULL},
     {"exit", "quit all ylog threads, and kill ylog itself to protect sdcard", cmd_exit, NULL},
+    {"monkey", "mark the status of monkey, ex. ylog_cli monkey 1 or ylog_cli monkey 0", cmd_monkey, NULL},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -800,404 +736,6 @@ static void os_env_prepare(void) {
      * all zombie process created by ylog popen2 will be killed in here by luther 2016.01.29
      */
 
-}
-
-static void insert_file_atch(char *file_atch, int mode) {
-    UNUSED(mode);
-    int i;
-    for (i = 0; i < pos->file_atch_num; i++) {
-        if (pos->file_atch[i] == NULL) {
-            pos->file_atch[i] = strdup(file_atch);
-        }
-    }
-}
-
-static void other_processor_ylog_insert(void) {
-    int i, flag;
-    struct ylog *ylog;
-    struct ydst *ydst;
-    struct other_processor_log *opl;
-    char prop[PROPERTY_VALUE_MAX];
-    struct other_processor_log_privates *privates;
-    char buf[4096];
-    struct other_processor_log opls[] = {
-        /* cp/wcdma/ */ {
-            .enabled = "persist.modem.w.enable",
-            .pnode = {
-                .log  = {"ro.modem.w.log", "/dev/slog_w"},
-                .diag = {"ro.modem.w.diag", "/dev/slog_w"},
-                .atch = {"ro.modem.w.tty", "/dev/stty_w31"},
-            },
-            .ynode = {
-                .ylog = {
-                    {
-                        .name = "cp_wcdma",
-                        .type = FILE_NORMAL,
-                        .file = NULL,
-                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
-                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS |
-                            YLOG_GROUP_MODEM,
-                        .restart_period = 3000,
-                        .status = YLOG_DISABLED,
-                        .raw_data = 1,
-                    },
-                },
-                .ydst = {
-                    .file = "cp/wcdma/",
-                    .file_name = "wcdma.log",
-                    .max_segment = 10,
-                    .max_segment_size = 200*1024*1024,
-                    .write_data2cache_first = 1,
-                },
-                .cache = {
-                    .size = 512 * 1024,
-                    .num = 8,
-                    .timeout = 1000,
-                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
-                },
-            },
-        },
-        /* cp/td-scdma/ */ {
-            .enabled = "persist.modem.t.enable",
-            .pnode = {
-                .log  = {"ro.modem.t.log", "/dev/slog_gge"},
-                .diag = {"ro.modem.t.diag", "/dev/slog_gge"},
-                .atch = {"ro.modem.t.tty", "/dev/stty_t31"},
-            },
-            .ynode = {
-                .ylog = {
-                    {
-                        .name = "cp_td-scdma",
-                        .type = FILE_NORMAL,
-                        .file = NULL,
-                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
-                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS |
-                            YLOG_GROUP_MODEM,
-                        .restart_period = 3000,
-                        .status = YLOG_DISABLED,
-                        .raw_data = 1,
-                    },
-                },
-                .ydst = {
-                    .file = "cp/td-scdma/",
-                    .file_name = "td-scdma.log",
-                    .max_segment = 10,
-                    .max_segment_size = 200*1024*1024,
-                    .write_data2cache_first = 1,
-                },
-                .cache = {
-                    .size = 512 * 1024,
-                    .num = 8,
-                    .timeout = 1000,
-                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
-                },
-            },
-        },
-        /* cp/5mode/ */ {
-            .enabled = "persist.modem.l.enable",
-            .pnode = {
-                .log  = {"ro.modem.l.log", "/dev/slog_lte"},
-                .diag = {"ro.modem.l.diag", "/dev/sdiag_lte"},
-                .atch = {"ro.modem.l.tty", "/dev/stty_lte31"},
-            },
-            .ynode = {
-                .ylog = {
-                    {
-                        .name = "cp_5mode",
-                        .type = FILE_NORMAL,
-                        .file = NULL,
-                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
-                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS |
-                            YLOG_GROUP_MODEM,
-                        .restart_period = 3000,
-                        .status = YLOG_DISABLED,
-                        .raw_data = 1,
-                    },
-                },
-                .ydst = {
-                    .file = "cp/5mode/",
-                    .file_name = "5mode.log",
-                    .max_segment = 10,
-                    .max_segment_size = 200*1024*1024,
-                    .write_data2cache_first = 1,
-                },
-                .cache = {
-                    .size = 512 * 1024,
-                    .num = 8,
-                    .timeout = 1000,
-                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
-                },
-            },
-        },
-        /* cp/4mode/ */ {
-            .enabled = "persist.modem.lf.enable",
-            .pnode = {
-                .log  = {"ro.modem.lf.log", "/dev/slog_lte"},
-                .diag = {"ro.modem.lf.diag", "/dev/sdiag_lte"},
-                .atch = {"ro.modem.lf.tty", "/dev/stty_lte31"},
-            },
-            .ynode = {
-                .ylog = {
-                    {
-                        .name = "cp_4mode",
-                        .type = FILE_NORMAL,
-                        .file = NULL,
-                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
-                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS |
-                            YLOG_GROUP_MODEM,
-                        .restart_period = 3000,
-                        .status = YLOG_DISABLED,
-                        .raw_data = 1,
-                    },
-                },
-                .ydst = {
-                    .file = "cp/4mode/",
-                    .file_name = "4mode.log",
-                    .max_segment = 10,
-                    .max_segment_size = 200*1024*1024,
-                    .write_data2cache_first = 1,
-                },
-                .cache = {
-                    .size = 512 * 1024,
-                    .num = 8,
-                    .timeout = 1000,
-                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
-                },
-            },
-        },
-        /* cp/3mode/ */ {
-            .enabled = "persist.modem.tl.enable",
-            .pnode = {
-                .log  = {"ro.modem.tl.log", "/dev/slog_lte"},
-                .diag = {"ro.modem.tl.diag", "/dev/sdiag_lte"},
-                .atch = {"ro.modem.tl.tty", "/dev/stty_lte31"},
-            },
-            .ynode = {
-                .ylog = {
-                    {
-                        .name = "cp_3mode",
-                        .type = FILE_NORMAL,
-                        .file = NULL,
-                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
-                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS |
-                            YLOG_GROUP_MODEM,
-                        .restart_period = 3000,
-                        .status = YLOG_DISABLED,
-                        .raw_data = 1,
-                    },
-                },
-                .ydst = {
-                    .file = "cp/3mode/",
-                    .file_name = "3mode.log",
-                    .max_segment = 10,
-                    .max_segment_size = 200*1024*1024,
-                    .write_data2cache_first = 1,
-                },
-                .cache = {
-                    .size = 512 * 1024,
-                    .num = 8,
-                    .timeout = 1000,
-                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
-                },
-            },
-        },
-        /* cp/wcn/ */ {
-            .enabled = "ro.modem.wcn.enable",
-            .pnode = {
-                .log  = {"ro.modem.wcn.log", "/dev/slog_wcn"},
-                .diag = {"ro.modem.wcn.diag", "/dev/slog_wcn"},
-            },
-            .ynode = {
-                .ylog = {
-                    {
-                        .name = "cp_wcn",
-                        .type = FILE_NORMAL,
-                        .file = NULL,
-                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
-                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
-                        .restart_period = 3000,
-                        .status = YLOG_DISABLED,
-                        .raw_data = 1,
-                    },
-                },
-                .ydst = {
-                    .file = "cp/wcn/",
-                    .file_name = "wcn.log",
-                    .max_segment = 2,
-                    .max_segment_size = 100*1024*1024,
-                },
-                .cache = {
-                    .size = 512 * 1024,
-                    .num = 2,
-                    .timeout = 1000,
-                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
-                },
-            },
-        },
-        /* cp/gnss/ */ {
-            .enabled = "ro.modem.gnss.enable",
-            .pnode = {
-                .log  = {"ro.modem.gnss.log", "/dev/slog_gnss"},
-                .diag = {"ro.modem.gnss.diag", "/dev/slog_gnss"},
-            },
-            .ynode = {
-                .ylog = {
-                    {
-                        .name = "cp_gnss",
-                        .type = FILE_NORMAL,
-                        .file = NULL,
-                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
-                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
-                        .restart_period = 3000,
-                        .status = YLOG_DISABLED,
-                        .raw_data = 1,
-                    },
-                },
-                .ydst = {
-                    .file = "cp/gnss/",
-                    .file_name = "gnss.log",
-                    .max_segment = 2,
-                    .max_segment_size = 100*1024*1024,
-                },
-                .cache = {
-                    .size = 512 * 1024,
-                    .num = 4,
-                    .timeout = 1000,
-                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
-                },
-            },
-        },
-        /* cp/agdsp/ */ {
-            .enabled = "ro.modem.agdsp.enable",
-            .pnode = {
-                .log  = {"ro.modem.agdsp.log", "/dev/audio_dsp_log"},
-                .diag = {"ro.modem.agdsp.diag", "/dev/audio_dsp_log"},
-            },
-            .ynode = {
-                .ylog = {
-                    {
-                        .name = "cp_agdsp",
-                        .type = FILE_NORMAL,
-                        .file = NULL,
-                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
-                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
-                        .restart_period = 3000,
-                        .status = YLOG_DISABLED,
-                        .raw_data = 1,
-                    },
-                },
-                .ydst = {
-                    .file = "cp/agdsp/",
-                    .file_name = "agdsp.log",
-                    .max_segment = 2,
-                    .max_segment_size = 100*1024*1024,
-                    .write_data2cache_first = 1,
-                },
-                .cache = {
-                    .size = 512 * 1024,
-                    .num = 8,
-                    .timeout = 1000,
-                    .debuglevel = CACHELINE_DEBUG_CRITICAL,
-                },
-            },
-        },
-    };
-
-    for (i = 0; i < (int)ARRAY_LEN(opls); i++) {
-        static int first_time_print = 1;
-        opl = &opls[i];
-        ylog = &opl->ynode.ylog[0];
-        ydst = &opl->ynode.ydst;
-#if 1
-        if ((ylog->mode & YLOG_GROUP_MODEM) && first_time_print) {
-            first_time_print = 0;
-            property_get("ro.radio.modemtype", prop, "");
-            if (prop[0]) {
-                char modem_type[64];
-                char mprop[512];
-                strncpy(modem_type, prop, sizeof modem_type);
-
-                snprintf(mprop, sizeof mprop, "persist.modem.%s.enable", modem_type);
-                property_get(mprop, prop, "");
-                if (prop[0] && opl->enabled == NULL)
-                    opl->enabled = strdup(prop);
-                else
-                    ylog_info("%s = %s\n", mprop, prop);
-
-                snprintf(mprop, sizeof mprop, "ro.modem.%s.log", modem_type);
-                property_get(mprop, prop, "");
-                if (prop[0] && opl->pnode.log.property_name == NULL)
-                    opl->pnode.log.property_name = strdup(prop);
-                else
-                    ylog_info("%s = %s\n", mprop, prop);
-
-                snprintf(mprop, sizeof mprop, "ro.modem.%s.diag", modem_type);
-                property_get(mprop, prop, "");
-                if (prop[0] && opl->pnode.diag.property_name == NULL)
-                    opl->pnode.diag.property_name = strdup(prop);
-                else
-                    ylog_info("%s = %s\n", mprop, prop);
-
-                snprintf(mprop, sizeof mprop, "ro.modem.%s.tty", modem_type);
-                property_get(mprop, prop, "");
-                if (prop[0] && opl->pnode.atch.property_name == NULL)
-                    opl->pnode.atch.property_name = strdup(prop);
-                else
-                    ylog_info("%s = %s\n", mprop, prop);
-            }
-        }
-#endif
-        if (opl->enabled) {
-            property_get(opl->enabled, prop, "");
-            if (strcmp(prop, "1"))
-                continue;
-        }
-        flag = 0;
-#if 1
-        ydst->max_segment = 2;
-        ydst->max_segment_size = 10 * 1024 * 1024;
-#endif
-        privates = &opl->privates;
-        if (opl->pnode.log.property_name) {
-            property_get(opl->pnode.log.property_name, prop, opl->pnode.log.property_value_default);
-            if (prop[0] && ylog->file == NULL) {
-                ylog->file = strdup(prop);
-                flag |= 0x01;
-            }
-        }
-        if (opl->pnode.diag.property_name) {
-            property_get(opl->pnode.diag.property_name, prop, opl->pnode.diag.property_value_default);
-            if (prop[0] && ylog->file == NULL) {
-                /**
-                 * diag path will be used both for log reading
-                 */
-                ylog->file = strdup(prop);
-                flag |= 0x01;
-            }
-        }
-        if (opl->pnode.atch.property_name) {
-            property_get(opl->pnode.atch.property_name, prop, opl->pnode.atch.property_value_default);
-            if (prop[0]) {
-                strcat(prop, "31");
-                privates->file_atch = strdup(prop);
-                if (ylog->mode & YLOG_GROUP_MODEM)
-                    insert_file_atch(privates->file_atch, YLOG_GROUP_MODEM);
-                ylog->privates = calloc(sizeof(struct other_processor_log_privates), 1);
-                *(struct other_processor_log_privates*)ylog->privates = *privates;
-                flag |= 0x02;
-            }
-        }
-        if (ylog->file) {
-            if (ynode_insert(&opl->ynode)) {
-                if (flag & 0x01)
-                    free(ylog->file);
-                if (flag & 0x02) {
-                    free(ylog->privates);
-                    free(privates->file_atch);
-                }
-            }
-        }
-    }
 }
 
 static void os_init(struct ydst_root *root, struct context **c, struct os_hooks *hook) {
@@ -1488,19 +1026,20 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
         },
     };
 
+    umask(0);
+    mode = M_USER_DEBUG;
+    *c = &os_context[mode];
+
     property_get("persist.ylog.enabled", buf, "1");
     if (buf[0] == '0') {
+        print2journal_file_string_with_uptime("persist.ylog.enabled is 0, stop ylog");
         system("stop ylog");
         sleep(2);
         exit(0);
     }
 
-    umask(0);
-    mode = M_USER_DEBUG;
-    *c = &os_context[mode];
-
     ynode_insert_all(os_ynode, (int)ARRAY_LEN(os_ynode));
-    other_processor_ylog_insert();
+    other_processor_ylog_insert(); /* in modem.c */
     os_parse_config();
 
     hook->ylog_read_ylog_debug_hook = ylog_read_ylog_debug_hook;
