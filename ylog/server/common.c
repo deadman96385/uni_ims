@@ -82,7 +82,51 @@ static int pthread_cond_timedwait_monotonic2(int millisecond, pthread_cond_t *co
     return pthread_cond_timedwait(cond, mutex, ts);
 }
 
-int ylog_tv2format_time(char *timeBuf, struct timeval *tv) {
+static int ylog_tv2format_time_year(char *timeBuf, struct timeval *tv) {
+    struct tm tm;
+    struct tm* ptm;
+    time_t t;
+    int len;
+
+    t = tv->tv_sec; //time(NULL);
+//#if defined(HAVE_LOCALTIME_R)
+    ptm = localtime_r(&t, &tm);
+//#else
+//    ptm = localtime(&t);
+//#endif
+    /* strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%d %H:%M:%S", ptm); */
+    len = strftime(timeBuf, 32, "%Y%m%d-%H%M%S", ptm);
+    if (1/* usec_time_output */) {
+        /* 20160501-221436.000 */
+        len += snprintf(timeBuf + len, 32 - len,
+                ".%03ld", tv->tv_usec / 1000);
+    } else {
+        /* 20160501-221436.000 */
+        len += snprintf(timeBuf + len, 32 - len,
+                 ".%03ld", tv->tv_usec / 1000000);
+    }
+    return len;
+}
+
+static int ylog_get_format_time_year(char *buf) {
+    char *timeBuf = buf;
+    struct timeval tv;
+    //char timeBuf[32];/* good margin, 23+nul for msec, 26+nul for usec */
+    /* From system/core/liblog/logprint.c */
+    /*
+     * Get the current date/time in pretty form
+     *
+     * It's often useful when examining a log with "less" to jump to
+     * a specific point in the file by searching for the date/time stamp.
+     * For this reason it's very annoying to have regexp meta characters
+     * in the time stamp.  Don't use forward slashes, parenthesis,
+     * brackets, asterisks, or other special chars here.
+     */
+    gettimeofday(&tv, NULL);
+    return ylog_tv2format_time_year(timeBuf, &tv);
+}
+
+static int ylog_tv2format_time(char *timeBuf, struct timeval *tv) {
     struct tm tm;
     struct tm* ptm;
     time_t t;
@@ -108,7 +152,7 @@ int ylog_tv2format_time(char *timeBuf, struct timeval *tv) {
     return len;
 }
 
-int ylog_ts2format_time(char *timeBuf, struct timespec *ts) {
+static int ylog_ts2format_time(char *timeBuf, struct timespec *ts) {
     struct tm tm;
     struct tm* ptm;
     time_t t;
@@ -135,7 +179,7 @@ int ylog_ts2format_time(char *timeBuf, struct timespec *ts) {
     return len;
 }
 
-int ylog_get_format_time(char *buf) {
+static int ylog_get_format_time(char *buf) {
     char *timeBuf = buf;
     struct timeval tv;
     //char timeBuf[32];/* good margin, 23+nul for msec, 26+nul for usec */

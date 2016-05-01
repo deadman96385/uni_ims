@@ -229,12 +229,12 @@ static int fcntl_read_block(int fd, char *desc) {
     return 0;
 }
 
-static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char *prefix, int millisecond) {
+static int pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char *prefix, int millisecond, int max_size) {
     char buf[4096];
     int count = sizeof buf;
     char *p = buf;
     char *pmax = p + sizeof(buf);
-    int ret, timeout = 0;
+    int ret, rcnt = 0, timeout = 0;
     FILE *wfp = popen2(cmd, "r");
     char timeBuf[32];
     if (wfp) {
@@ -245,10 +245,10 @@ static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char
             if (prefix == NULL)
                 prefix = "pcmd";
             if (cnt) {
-                w(p, snprintf(p, pmax - p, "\n%s %03d [ %s ] %s\n", prefix, *cnt, cmd, timeBuf), y);
+                rcnt += w(p, snprintf(p, pmax - p, "\n%s %03d [ %s ] %s\n", prefix, *cnt, cmd, timeBuf), y);
                 *cnt = *cnt + 1;
             } else
-                w(p, snprintf(p, pmax - p, "\n%s [ %s ]\n", prefix, cmd), y);
+                rcnt += w(p, snprintf(p, pmax - p, "\n%s [ %s ]\n", prefix, cmd), y);
         }
         pfd[0].fd = fd;
         pfd[0].events = POLLIN;
@@ -268,8 +268,18 @@ static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char
                     fcntl_read_block(fd, cmd);
             } else
                 ret = 0;
-            if (ret > 0 && w)
-                w(p, ret, y);
+            if (ret > 0) {
+                if (w)
+                    w(p, ret, y);
+                rcnt += ret;
+                if (max_size > 0) {
+                    // ylog_debug("%s rcnt=%d, max_size=%d\n", cmd, rcnt, max_size);
+                    if (rcnt >= max_size) { /* reach to the max size we want to receive */
+                        ylog_critical("pcmd %s cur size is %d, reaches the max value %d\n", cmd, rcnt, max_size);
+                        break;
+                    }
+                }
+            }
         } while (ret > 0);
         if (w) {
             if (timeout)
@@ -277,7 +287,7 @@ static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char
                         cmd, ret == 0 ? "timeout":strerror(errno));
             else
                 ret = snprintf(buf, count, "\n");
-            w(buf, ret, y);
+            rcnt += w(buf, ret, y);
         }
         /**
          * For ylog_cli space command
@@ -333,12 +343,15 @@ static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char
     } else {
         ylog_error("popen2 %s failed: %s\n", cmd, strerror(errno));
     }
+    return rcnt;
 }
 
-static void pcmds(char *cmds[], int *cnt, ylog_write_handler w, struct ylog *y, char *prefix, int millisecond) {
+static int pcmds(char *cmds[], int *cnt, ylog_write_handler w, struct ylog *y, char *prefix, int millisecond) {
     char **cmd;
+    int rcnt = 0;
     for (cmd = cmds; *cmd; cmd++)
-        pcmd(*cmd, cnt, w, y, prefix, millisecond);
+        rcnt += pcmd(*cmd, cnt, w, y, prefix, millisecond, -1);
+    return rcnt;
 }
 
 static struct ydst *ydst_get_by_name(char *name) {
@@ -353,25 +366,113 @@ static struct ydst *ydst_get_by_name(char *name) {
     return NULL;
 }
 
-static void pcmds_ydst(char *cmds[], char *ydst_name, int millisecond,
-        void (*callback)(struct ydst *ydst, int step, char *buf, int count)) {
+static void pcmds_ylog_call(char *cmds[], struct ylog *y, int millisecond,
+        void (*callback)(struct ylog *y, int step, char *buf, int count, void *private), void *private) {
     char **cmd;
     char buf[PATH_MAX];
-    struct ydst *ydst = ydst_get_by_name(ydst_name);
     struct ydst_root *root;
-    if (ydst == NULL) {
-        ylog_critical("ydst %s does not found\n", ydst_name);
-        return;
-    }
+    struct ydst *ydst = y->ydst;
+    /**
+     * In ylog_write_handler_default() the mutex sequence is
+     * 1. lock ydst->mutex in ylog_write_handler_default
+     * 2. lock root->mutex in ydst_new_segment_default
+     * so here we need to keep the same sequence to avoid dead lock in some race condition
+     */
+    pthread_mutex_lock(&ydst->mutex);
     root = ydst->root;
     pthread_mutex_lock(&root->mutex); /* To avoid root folder change by ydst_move_root */
-    callback(ydst, 1, buf, sizeof buf);
+    callback(y, 1, buf, sizeof buf, private);
     if (cmds) {
         for (cmd = cmds; *cmd; cmd++)
-            pcmd(*cmd, NULL, NULL, NULL, "pcmds_ydst", millisecond);
+            pcmd(*cmd, NULL, NULL, NULL, "pcmds_ylog_call", millisecond, -1);
     }
-    callback(ydst, 0, buf, sizeof buf);
+    callback(y, 0, buf, sizeof buf, private);
     pthread_mutex_unlock(&root->mutex);
+    pthread_mutex_unlock(&ydst->mutex);
+}
+
+static void pcmds_ylog(char *cmds[], char *ylog_name, int millisecond,
+        void (*callback)(struct ylog *y, int step, char *buf, int count, void *private), void *private) {
+    struct ylog *y = ylog_get_by_name(ylog_name);
+    if (y == NULL) {
+        ylog_critical("ylog %s does not found\n", ylog_name);
+        return;
+    }
+    pcmds_ylog_call(cmds, y, millisecond, callback, private);
+}
+
+static void ylog_close_by_nowrap(struct ylog *y) {
+    struct ydst *ydst = y->ydst;
+    ylog_critical("ylog %s is forced stop, because ydst %s has reached max_segment %d/%ld\n",
+            y->name, ydst->file, ydst->max_segment_now, ydst->segments);
+    print2journal_file("ylog %s is forced stop, because ydst %s has reached max_segment %d/%ld\n",
+            y->name, ydst->file, ydst->max_segment_now, ydst->segments);
+    y->thread_stop(y, 0);
+}
+
+static int ylog_write_handler__pcmd_print2file(char *buf, int count, struct ylog *y) {
+    int fd = (long)y->privates;
+    return fd_write(buf, count, fd, "ylog_write_handler__pcmd_print2file");
+}
+
+static int pcmds_print2file(char *cmds[], char *file, int *cnt, ylog_write_handler w,
+        struct ylog *y, char *prefix, int millisecond, int max_size) {
+    int rcnt = 0;
+    if (mkdirs_with_file(file) == 0) {
+        long fd;
+        int ret;
+        fd = open(file, O_RDWR | O_CREAT | O_TRUNC, 0664);
+        if (fd < 0)
+            ylog_critical("%s %s Failed to open %s\n", __func__, file, strerror(errno));
+        else {
+            char **cmd;
+            struct ydst *ydst = y->ydst;
+            if (w == NULL)
+                w = ylog_write_handler__pcmd_print2file;
+            y->privates = (void*)fd;
+            for (cmd = cmds; *cmd; cmd++) {
+                ret = pcmd(*cmd, cnt, w, y, prefix, millisecond, max_size);
+                ydst->size += ret;
+                y->size += ret;
+                rcnt += ret;
+                if (ydst->size >= ydst->max_size_now) {
+                    ylog_close_by_nowrap(y);
+                    break;
+                }
+            }
+            close(fd);
+        }
+    }
+    return rcnt;
+}
+
+/**
+ * similar with pcmds_ylog_copy_file
+ */
+static int pcmd_print2file(char *cmd, char *file, int *cnt, ylog_write_handler w,
+        struct ylog *y, char *prefix, int millisecond, int max_size) {
+    char *cmd_list[] = {
+        cmd,
+        NULL
+    };
+    return pcmds_print2file(cmd_list, file, cnt, w, y, prefix, millisecond, max_size);
+}
+
+/**
+ * similar with pcmd_print2file
+ */
+static void pcmds_ylog_copy_file(char *file, char *buf, int count, struct ylog *y) {
+    /**
+     * ydst->root->mutex and ydst->root->mutex both are held now
+     */
+    struct ydst *ydst = y->ydst;
+    if (access(file, F_OK) == 0) {
+        snprintf(buf, count, "%s/%s", ydst->root_folder, ydst->file);
+        if (mkdirs(buf) == 0) {
+            snprintf(buf, count, "cp -r %s %s/%s", file, ydst->root_folder, ydst->file);
+            pcmd(buf, NULL, NULL, NULL, "pcmds_ylog", 1000, -1);
+        }
+    }
 }
 
 static unsigned long long ydst_sum_all_storage_space(struct ydst *ydst) {
@@ -1287,11 +1388,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
             ydst->open(ydst_file, mode, ydst); /* if ydst has cache, restart cache line */
             ylog_debug("new_segment: fopen %s mode=%s\n", path, mode);
         } else {
-            ylog_critical("ylog %s is forced stop, because ydst %s has reached max_segment %d/%ld\n",
-                    y->name, ydst->file, ydst->max_segment_now, ydst->segments);
-            print2journal_file("ylog %s is forced stop, because ydst %s has reached max_segment %d/%ld\n",
-                    y->name, ydst->file, ydst->max_segment_now, ydst->segments);
-            y->thread_stop(y, 0);
+            ylog_close_by_nowrap(y);
         }
     }
 

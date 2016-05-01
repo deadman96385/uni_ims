@@ -39,22 +39,10 @@ static int ylog_write_header_sgm_cpu_memory_header(struct ylog *y) {
             YLOG_SGM_CPU_MEMORY_HEADER, strlen(YLOG_SGM_CPU_MEMORY_HEADER), y->ydst);
 }
 
-static void pcmds_ydst_copy_file(char *file, char *buf, int count, struct ydst *ydst) {
-    /**
-     * ydst->root->mutex lock is held now
-     */
-    if (access(file, F_OK) == 0) {
-        snprintf(buf, count, "%s/%s", ydst->root_folder, ydst->file);
-        if (mkdirs(buf) == 0) {
-            snprintf(buf, count, "cp -r %s %s/%s", file, ydst->root_folder, ydst->file);
-            pcmd(buf, NULL, NULL, NULL, "pcmds_ydst", 1000);
-        }
-    }
-}
-
-static void pcmds_ydst_kernel_callback(struct ydst *ydst, int step, char *buf, int count) {
+static void pcmds_ylog_kernel_callback(struct ylog *y, int step, char *buf, int count, void *private) {
+    UNUSED(private);
     if (step == 1) /* Start pcmd */
-        pcmds_ydst_copy_file("/data/last_kmsg", buf, count, ydst);
+        pcmds_ylog_copy_file("/data/last_kmsg", buf, count, y);
 }
 
 static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
@@ -76,7 +64,7 @@ static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct yl
             if (fgets(buf, count, wfp) == NULL)
                 break;
             snprintf(tmp, sizeof tmp, "cat %s", strtok(buf, "\n"));
-            pcmd(tmp, &fd, y->write_handler, y, "ylog_info", -1);
+            pcmd(tmp, &fd, y->write_handler, y, "ylog_info", -1, -1);
         } while (1);
         pclose(wfp);
     }
@@ -86,7 +74,7 @@ static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct yl
     /**
      * copy last_kmsg to ydst kernel/ folder
      */
-    pcmds_ydst(NULL, "kernel/", -1, pcmds_ydst_kernel_callback);
+    pcmds_ylog(NULL, "kernel", -1, pcmds_ylog_kernel_callback, NULL);
 
     return 0;
 }
@@ -96,6 +84,7 @@ static int ylog_read_ylog_debug_hook(char *buf, int count, FILE *fp, int fd, str
     UNUSED(count);
     UNUSED(fp);
     char *cmd_list[] = {
+        "logcat -S",
         "/system/bin/ylog_cli ylog",
         "/system/bin/ylog_cli speed",
         "/system/bin/ylog_cli space",
@@ -108,9 +97,10 @@ static int ylog_read_ylog_debug_hook(char *buf, int count, FILE *fp, int fd, str
 }
 
 #ifndef HAVE_YLOG_JOURNAL
-static void pcmds_ydst_sys_info_callback(struct ydst *ydst, int step, char *buf, int count) {
+static void pcmds_ylog_sys_info_callback(struct ylog *y, int step, char *buf, int count, void *private) {
+    UNUSED(private);
     if (step == 1) /* Start pcmd */
-        pcmds_ydst_copy_file(global_context->journal_file, buf, count, ydst);
+        pcmds_ylog_copy_file(global_context->journal_file, buf, count, y);
 }
 #endif
 
@@ -145,7 +135,7 @@ static int ylog_read_sys_info(char *buf, int count, FILE *fp, int fd, struct ylo
      * copy ylog_journal_file to ydst sys_info/ folder
      */
 #ifndef HAVE_YLOG_JOURNAL
-    pcmds_ydst(NULL, "sys_info/", -1, pcmds_ydst_sys_info_callback);
+    pcmds_ylog(NULL, "sys_info", -1, pcmds_ylog_sys_info_callback, NULL);
 #endif
 
     return 0;
@@ -589,13 +579,14 @@ static void ylog_status_hook(enum ylog_thread_state state, struct ylog *y) {
 }
 
 static int os_inotify_handler_anr(struct ylog_inotify_cell *pcell, int timeout, struct ylog *y) {
-    ylog_info("os_inotify_handler_anr is called for '%s %s' %dms %s now\n",
-                pcell->pathname ? pcell->pathname:"", pcell->filename, pcell->timeout, timeout ? "timeout":"normal");
     static int cnt = 1;
     char *cmd_list[] = {
         "cat /data/anr/traces.txt",
         NULL
     };
+
+    ylog_info("os_inotify_handler_anr is called for '%s %s' %dms %s now\n",
+                pcell->pathname ? pcell->pathname:"", pcell->filename, pcell->timeout, timeout ? "timeout":"normal");
 
     if (pos->anr_fast) {
         char buf[4];
@@ -618,9 +609,38 @@ static int os_inotify_handler_anr(struct ylog_inotify_cell *pcell, int timeout, 
     return -1;
 }
 
-static int os_inotify_handler_crash(struct ylog_inotify_cell *pcell, int timeout, struct ylog *y) {
-    ylog_info("os_inotify_handler_crash is called for '%s' %dms %s now\n",
-                pcell->pathname ? pcell->pathname:"", pcell->timeout, timeout ? "timeout":"normal");
+static void pcmds_ylog_anr_nowrap_callback(struct ylog *y, int step, char *buf, int count, void *private) {
+    UNUSED(private);
+    static int cnt = 1;
+    if (step == 1) { /* Start pcmd */
+        char timeBuf[32];
+        int len, cur_cnt;
+        struct ydst *ydst = y->ydst;
+        if (ydst->size < ydst->max_size_now) {
+            ylog_get_format_time_year(timeBuf);
+            cur_cnt = cnt;
+            snprintf(buf, count, "%s/%s/%04d.%s.anr", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
+            pcmd_print2file("cat /data/anr/traces.txt", buf, &cur_cnt, NULL, y, NULL, 1000, -1);
+            cur_cnt = cnt;
+            snprintf(buf, count, "%s/%s/%04d.%s.anr.logcat", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
+            pcmd_print2file("logcat -d", buf, &cur_cnt, NULL, y, NULL, 1000, 3*1024*1024);
+            cnt++;
+        } else {
+            ylog_critical("ylog %s is forced stop, because ydst %s has "
+                    "reached max_size %lld/%lld in pcmds_ylog_anr_nowrap_callback\n",
+                    y->name, ydst->file, ydst->size, ydst->max_size_now);
+        }
+    }
+}
+
+static int os_inotify_handler_anr_nowrap(struct ylog_inotify_cell *pcell, int timeout, struct ylog *y) {
+    ylog_info("os_inotify_handler_anr_nowrap is called for '%s %s' %dms %s now\n",
+                pcell->pathname ? pcell->pathname:"", pcell->filename, pcell->timeout, timeout ? "timeout":"normal");
+    pcmds_ylog_call(NULL, y, 1000, pcmds_ylog_anr_nowrap_callback, NULL);
+    return -1;
+}
+
+static int os_inotify_handler_tombstone(struct ylog_inotify_cell *pcell, int timeout, struct ylog *y) {
     static int cnt = 1;
     struct ylog_inotify_cell_args *pcella = pcell->args;
     struct ylog_inotify_files *file = &pcella->file;
@@ -632,14 +652,18 @@ static int os_inotify_handler_crash(struct ylog_inotify_cell *pcell, int timeout
     };
     int cmd_start_idx = 0;
 
+    ylog_info("os_inotify_handler_tombstone is called for '%s' %dms %s now\n",
+                pcell->pathname ? pcell->pathname:"", pcell->timeout, timeout ? "timeout":"normal");
+
     for (i = 0; i < file->num; i++) {
         a = file->files_array + i * file->len;
         if (a[0]) {
-            if (cmd_start_idx < (int)ARRAY_LEN(cmd_list))
+            if (cmd_start_idx < ((int)ARRAY_LEN(cmd_list) - 1))
                 cmd_list[cmd_start_idx++] = a;
-            ylog_info("os_inotify_handler_crash -> %s\n", a);
+            ylog_info("os_inotify_handler_tombstone -> %s\n", a);
         }
     }
+    cmd_list[cmd_start_idx] = NULL;
 
     pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_tombstones", 1000);
 
@@ -650,6 +674,67 @@ static int os_inotify_handler_crash(struct ylog_inotify_cell *pcell, int timeout
 
     return -1;
 }
+
+static void pcmds_ylog_tombstone_nowrap_callback(struct ylog *y, int step, char *buf, int count, void *private) {
+    static int cnt = 1;
+    if (step == 1) { /* Start pcmd */
+        char timeBuf[32];
+        int len, cur_cnt;
+        int i;
+        char *a;
+        char **cmd;
+        char *cmd_list[30] = {
+            "cat /data/tombstones/*",
+            NULL
+        };
+        int cmd_start_idx = 0;
+        struct ylog_inotify_cell *pcell = (struct ylog_inotify_cell *)private;
+        struct ylog_inotify_cell_args *pcella = pcell->args;
+        struct ylog_inotify_files *file = &pcella->file;
+        struct ydst *ydst = y->ydst;
+
+        ylog_get_format_time_year(timeBuf);
+
+        for (i = 0; i < file->num; i++) {
+            a = file->files_array + i * file->len;
+            if (a[0]) {
+                if (cmd_start_idx < ((int)ARRAY_LEN(cmd_list) - 1))
+                    cmd_list[cmd_start_idx++] = a;
+                ylog_info("os_inotify_handler_tombstone -> %s\n", a);
+            }
+        }
+        cmd_list[cmd_start_idx] = NULL;
+
+        if (ydst->size < ydst->max_size_now) {
+            for (cmd = cmd_list; *cmd; cmd++) {
+                cur_cnt = cnt;
+                snprintf(buf, count, "%s/%s/%04d.%s.tombstone", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
+                pcmd_print2file(*cmd, buf, &cur_cnt, NULL, y, NULL, 1000, -1);
+                cur_cnt = cnt;
+                snprintf(buf, count, "%s/%s/%04d.%s.tombstone.logcat", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
+                pcmd_print2file("logcat -d", buf, &cur_cnt, NULL, y, NULL, 1000, 3*1024*1024);
+                cnt++;
+            }
+        } else {
+            ylog_critical("ylog %s is forced stop, because ydst %s has "
+                    "reached max_size %lld/%lld in pcmds_ylog_tombstone_nowrap_callback\n",
+                    y->name, ydst->file, ydst->size, ydst->max_size_now);
+        }
+
+        for (i = 0; i < file->num; i++) {
+            a = file->files_array + i * file->len;
+            a[0] = 0;
+        }
+    }
+}
+
+static int os_inotify_handler_tombstone_nowrap(struct ylog_inotify_cell *pcell, int timeout, struct ylog *y) {
+    ylog_info("os_inotify_handler_tombstone_nowrap is called for '%s' %dms %s now\n",
+                pcell->pathname ? pcell->pathname:"", pcell->timeout, timeout ? "timeout":"normal");
+    pcmds_ylog_call(NULL, y, 1000, pcmds_ylog_tombstone_nowrap_callback, pcell);
+    return -1;
+}
+
 static void ylog_ready(void) {
     struct ylog *y;
     char yk[PROPERTY_VALUE_MAX];
@@ -930,7 +1015,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                             .mask = IN_MODIFY,
                             .type = YLOG_INOTIFY_TYPE_MASK_SUBSET_BIT,
                             .timeout = 1000,
-                            .handler = os_inotify_handler_crash,
+                            .handler = os_inotify_handler_tombstone,
                             .args = &tombstone, /* struct ylog_inotify_cell_args */
                         },
                     },
@@ -940,7 +1025,8 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                 .file = "traces/",
                 .file_name = "traces.log",
                 .max_segment = 2,
-                .max_segment_size = 20*1024*1024,
+                .max_segment_size = 50*1024*1024,
+                .nowrap = 1,
             },
         },
         /* sys_info/ */ {
@@ -1074,5 +1160,12 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
             y->yinotify.cells[0].timeout = 50;
         else
             y->yinotify.cells[0].timeout = 2000;
+        if (y->ydst->nowrap) {
+            y->yinotify.cells[0].handler = os_inotify_handler_anr_nowrap;
+            y->yinotify.cells[1].handler = os_inotify_handler_tombstone_nowrap;
+        } else {
+            y->yinotify.cells[0].handler = os_inotify_handler_anr;
+            y->yinotify.cells[1].handler = os_inotify_handler_tombstone;
+        }
     }
 }
