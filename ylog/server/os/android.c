@@ -889,7 +889,6 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .type = FILE_POPEN,
                     .file = "hcidump",
                     .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY,
-                    .status = YLOG_DISABLED,
                     .raw_data = 1,
                 },
             },

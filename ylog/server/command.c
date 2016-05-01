@@ -594,6 +594,7 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
     int action_ydst_max_segment = 0;
     int action_ydst_max_segment_size = 0;
     int action_ydst_segment_size = 0;
+    int action_ydst_quota = 0;
 
     strtok_r(buf, " ", &last);
     name = strtok_r(NULL, " ", &last);
@@ -654,6 +655,8 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
                     action_ydst_max_segment_size = 1;
                 if (strcmp(value, "segment_size") == 0)
                     action_ydst_segment_size = 1;
+                if (strcmp(value, "quota") == 0)
+                    action_ydst_quota = 1;
             } else if (strcmp(key, "get") == 0) {
                 if (y) {
                     if (value) {
@@ -667,6 +670,9 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
         show_info = 1;
     }
 
+    if (action_ydst_quota) {
+        ydst_requota_percent(atoi(svalue1), y, NULL);
+    }
     if (action_ydst_segment_size) {
         int max_segment = strtol(svalue1, NULL, 0);
         unsigned long long max_segment_size = strtoll(svalue2, NULL, 0) * 1024 * 1024;
@@ -1197,6 +1203,7 @@ static struct command commands[] = {
             "              ylog_cli ylog kernel ydst max_segment 5       - ajust ydst segments to 5\n"\
             "              ylog_cli ylog kernel ydst max_segment_size 20 - ajust ydst each segment size to 20M\n"\
             "              ylog_cli ylog kernel ydst segment_size 5 20   - ajust ydst segments to 5, size to 20M\n"\
+            "              ylog_cli ylog kernel ydst quota 60            - ajust ydst quota to occupy 60\% percent\n"\
             "              ylog_cli ylog kernel cache bypass 1           - data in the cache, 1 droped, 0 save to disk\n"\
             "              ylog_cli ylog kernel cache timeout 500        - cacheline timeout to 500ms\n"\
             "              ylog_cli ylog kernel cache debuglevel 0x03    - bit0: INFO, bit1: CRITICAL, bit7: DATA"

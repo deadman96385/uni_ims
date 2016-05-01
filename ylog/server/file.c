@@ -394,8 +394,8 @@ static unsigned long long ydst_sum_all_storage_space(struct ydst *ydst) {
         if (yd->file == NULL || yd->refs <= 0)
             continue;
         max_size_float = ylog_get_unit_size_float(yd->max_size_now, &max_unit);
-        ylog_info("%5.2f%% ydst %s size %.2f%c\n", (100 * yd->max_size_now) / (float)quota_now,
-                yd->file, max_size_float, max_unit);
+        ylog_info("%5.2f%% ydst %s size %.2f%c, %d/%d\n", (100 * yd->max_size_now) / (float)quota_now,
+                yd->file, max_size_float, max_unit, yd->max_segment, yd->max_segment_size >> 20);
     }
 
     return size;
@@ -433,6 +433,18 @@ static int ydst_size_new(unsigned long long max_segment_size_new, int max_segmen
     ydst->max_segment_size_new = max_segment_size_new;
     ydst->max_segment_new = max_segment_new;
     ydst->max_size_new = max_segment_size_new * max_segment_new;
+    return 0;
+}
+
+static int ydst_size_resize(unsigned long long max_size, struct ydst *ydst) {
+    if (ydst->max_segment > 1) {
+        ydst->max_segment = (max_size + ydst->max_segment_size - 1) / ydst->max_segment_size;
+        if (ydst->max_segment < 2)
+            ydst->max_segment = 2;
+    } else {
+        ydst->max_segment_size = max_size;
+    }
+    ydst->max_size = ydst->max_segment * ydst->max_segment_size;
     return 0;
 }
 
@@ -500,6 +512,8 @@ static int ydst_root_quota(struct ydst_root *root, unsigned long long quota) {
         root = global_ydst_root;
     pthread_mutex_lock(&root->mutex);
 
+    if (quota == 0)
+        quota = root->quota_now;
     root->quota_new = quota;
 
     for_each_ydst(i, yd, NULL) {
@@ -603,6 +617,38 @@ static int ydst_root_quota(struct ydst_root *root, unsigned long long quota) {
     pthread_mutex_unlock(&mutex);
 
     return 0;
+}
+
+static void ydst_requota_percent(int percent, struct ylog *y, struct ydst_root *root) {
+    struct ydst *ydst;
+    unsigned long long max_size = 0;
+
+    if (y == NULL)
+        return;
+
+    ydst = y->ydst;
+    pthread_mutex_lock(&mutex);
+    if (root == NULL)
+        root = global_ydst_root;
+    pthread_mutex_lock(&root->mutex);
+    root->max_size -= ydst->max_size; /* sub this ydst->max_size from root->max_size */
+    max_size = root->max_size;
+    /**
+     * YDST_NEW / (max_size + YDST_NEW) = percent
+     * YDST_NEW = (max_size * percent) / (100 - percent)
+     * YDST_NEW = (1024 * (max_size * percent)) / (1024*(100 - percent))
+     */
+    if (percent >= 100)
+        percent = 99;
+    max_size = 1024 * max_size * percent;
+    percent = 1024 * 100 - 1024 * percent;
+    max_size /= percent;
+    ydst_size_resize(max_size, ydst);
+    root->max_size += ydst->max_size; /* add this ydst->max_size to root->max_size */
+    pthread_mutex_unlock(&root->mutex);
+    pthread_mutex_unlock(&mutex);
+
+    ydst_root_quota(NULL, 0);
 }
 
 static int ydst_root_new(struct ydst_root *root, char *root_new) {
