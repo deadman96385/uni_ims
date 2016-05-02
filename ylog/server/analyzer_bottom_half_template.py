@@ -5,6 +5,15 @@ import optparse
 import shutil
 import struct
 
+# Python version check
+ver = sys.version_info
+
+if ver[0] == 3:
+    mopen = open;
+else:
+    def mopen(file, mode='r', buffering=-1, encoding=None, errors=None, newline=None, closefd=True, opener=None):
+        return open(file, mode)
+
 class ytag_fd(object):
     pass
 
@@ -73,7 +82,7 @@ def ytag_parse(ytag_logfile):
     global ytfd_file
     ytfd_file = {}
     sys.setrecursionlimit(90000) # otherwise will meet "RuntimeError: maximum recursion depth exceeded in cmp"
-    with open(os.path.join(analyzer_abspath, ytag_logfile), 'rb') as fd_src:
+    with open(os.path.join(analyzer_relative_path, ytag_logfile), 'rb') as fd_src:
         ytag_extract_file(fd_src, ytag_extract_file_ytfd(merged))
     for file_name in ytfd_file:
         ytfds = ytfd_file[file_name].ytfds
@@ -91,17 +100,17 @@ def ytag_parse(ytag_logfile):
 def merge_logs(files, output):
     with open(output, 'wb') as alllog:
         for f in files:
-            with open(os.path.join(analyzer_abspath, f), 'rb') as sublog:
+            with open(os.path.join(analyzer_relative_path, f), 'rb') as sublog:
                 shutil.copyfileobj(sublog, alllog)
 
 def split_log(infiles, logdict):
     fddict = {}
     keys = logdict.keys()
     for key in keys:
-        fddict[key] = open(os.path.join(analyzer_abspath, logdict[key]), 'w')
+        fddict[key] = mopen(os.path.join(analyzer_relative_path, logdict[key]), 'w', encoding='utf8', errors='replace')
 
     for eachfile in infiles:
-        with open(os.path.join(analyzer_abspath, eachfile), 'r') as f:
+        with mopen(os.path.join(analyzer_relative_path, eachfile), 'r', encoding='utf8', errors='replace') as f:
             for line in f.readlines():
                 if line[0:id_token_len] in keys:
                     fddict[line[0:id_token_len]].write(line[id_token_len:])
@@ -110,9 +119,10 @@ def split_log(infiles, logdict):
         fddict[key].close()
 
 def main():
-    global analyzer_abspath
+    global analyzer_relative_path
     global ytag_folder_abspath
-    analyzer_abspath = os.path.dirname(os.path.abspath(sys.argv[0]))
+    os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
+    analyzer_relative_path = '.'+os.sep
     parser = optparse.OptionParser()
     parser.add_option('-r', dest='remove', default=False, action='store_true', help='remove the original log files')
     parser.add_option('-m', dest='merge', default=False, action='store_true', help='merge all the log files')
@@ -121,7 +131,7 @@ def main():
     options, args = parser.parse_args()
 
     if not args:
-        allfiles = os.listdir(os.path.join(analyzer_abspath, logpath))
+        allfiles = os.listdir(os.path.join(analyzer_relative_path, logpath))
         pat = re.compile('.*\.?[0-9]+$')
         logfilenames = [f for f in allfiles if pat.match(f)]
     else:
@@ -134,9 +144,9 @@ def main():
 
     if options.merge or (not logdict or YTAG):
         if options.merge: # First priority checking
-            merge_logs(logfilenames, os.path.join(analyzer_abspath, merged))
+            merge_logs(logfilenames, os.path.join(analyzer_relative_path, merged))
         elif YTAG: # Second priority checking
-            ytag_folder_abspath = os.path.join(analyzer_abspath, ytag_folder)
+            ytag_folder_abspath = os.path.join(analyzer_relative_path, ytag_folder)
             if os.access(ytag_folder_abspath, os.F_OK):
                 shutil.rmtree(ytag_folder_abspath)
             os.mkdir(ytag_folder_abspath)
@@ -145,13 +155,13 @@ def main():
             ytag_parse(tmp_file)
             os.remove(tmp_file)
         else: # Last priority checking
-            merge_logs(logfilenames, os.path.join(analyzer_abspath, merged))
+            merge_logs(logfilenames, os.path.join(analyzer_relative_path, merged))
     else:
         split_log(logfilenames, logdict)
 
     if options.remove:
         for log in logfilenames:
-            os.remove(os.path.join(analyzer_abspath, log))
+            os.remove(os.path.join(analyzer_relative_path, log))
         os.remove(sys.argv[0])
 
 if __name__ == '__main__':

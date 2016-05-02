@@ -5,7 +5,7 @@
 /**
  * Auto created by analyzer_bottom_half_template.sh
  * base on analyzer_bottom_half_template.py
- * Sun, 13 Mar 2016 18:31:57 +0800
+ * Mon, 02 May 2016 17:51:08 +0800
  */
 
 #define analyzer_bottom_half_template \
@@ -15,6 +15,15 @@
 "import optparse\n" \
 "import shutil\n" \
 "import struct\n" \
+"\n" \
+"# Python version check\n" \
+"ver = sys.version_info\n" \
+"\n" \
+"if ver[0] == 3:\n" \
+"    mopen = open;\n" \
+"else:\n" \
+"    def mopen(file, mode='r', buffering=-1, encoding=None, errors=None, newline=None, closefd=True, opener=None):\n" \
+"        return open(file, mode)\n" \
 "\n" \
 "class ytag_fd(object):\n" \
 "    pass\n" \
@@ -84,7 +93,7 @@
 "    global ytfd_file\n" \
 "    ytfd_file = {}\n" \
 "    sys.setrecursionlimit(90000) # otherwise will meet \"RuntimeError: maximum recursion depth exceeded in cmp\"\n" \
-"    with open(os.path.join(analyzer_abspath, ytag_logfile), 'rb') as fd_src:\n" \
+"    with open(os.path.join(analyzer_relative_path, ytag_logfile), 'rb') as fd_src:\n" \
 "        ytag_extract_file(fd_src, ytag_extract_file_ytfd(merged))\n" \
 "    for file_name in ytfd_file:\n" \
 "        ytfds = ytfd_file[file_name].ytfds\n" \
@@ -102,17 +111,17 @@
 "def merge_logs(files, output):\n" \
 "    with open(output, 'wb') as alllog:\n" \
 "        for f in files:\n" \
-"            with open(os.path.join(analyzer_abspath, f), 'rb') as sublog:\n" \
+"            with open(os.path.join(analyzer_relative_path, f), 'rb') as sublog:\n" \
 "                shutil.copyfileobj(sublog, alllog)\n" \
 "\n" \
 "def split_log(infiles, logdict):\n" \
 "    fddict = {}\n" \
 "    keys = logdict.keys()\n" \
 "    for key in keys:\n" \
-"        fddict[key] = open(os.path.join(analyzer_abspath, logdict[key]), 'w')\n" \
+"        fddict[key] = mopen(os.path.join(analyzer_relative_path, logdict[key]), 'w', encoding='utf8', errors='replace')\n" \
 "\n" \
 "    for eachfile in infiles:\n" \
-"        with open(os.path.join(analyzer_abspath, eachfile), 'r') as f:\n" \
+"        with mopen(os.path.join(analyzer_relative_path, eachfile), 'r', encoding='utf8', errors='replace') as f:\n" \
 "            for line in f.readlines():\n" \
 "                if line[0:id_token_len] in keys:\n" \
 "                    fddict[line[0:id_token_len]].write(line[id_token_len:])\n" \
@@ -121,9 +130,10 @@
 "        fddict[key].close()\n" \
 "\n" \
 "def main():\n" \
-"    global analyzer_abspath\n" \
+"    global analyzer_relative_path\n" \
 "    global ytag_folder_abspath\n" \
-"    analyzer_abspath = os.path.dirname(os.path.abspath(sys.argv[0]))\n" \
+"    os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))\n" \
+"    analyzer_relative_path = '.'+os.sep\n" \
 "    parser = optparse.OptionParser()\n" \
 "    parser.add_option('-r', dest='remove', default=False, action='store_true', help='remove the original log files')\n" \
 "    parser.add_option('-m', dest='merge', default=False, action='store_true', help='merge all the log files')\n" \
@@ -132,7 +142,7 @@
 "    options, args = parser.parse_args()\n" \
 "\n" \
 "    if not args:\n" \
-"        allfiles = os.listdir(os.path.join(analyzer_abspath, logpath))\n" \
+"        allfiles = os.listdir(os.path.join(analyzer_relative_path, logpath))\n" \
 "        pat = re.compile('.*\\.?[0-9]+$')\n" \
 "        logfilenames = [f for f in allfiles if pat.match(f)]\n" \
 "    else:\n" \
@@ -145,9 +155,9 @@
 "\n" \
 "    if options.merge or (not logdict or YTAG):\n" \
 "        if options.merge: # First priority checking\n" \
-"            merge_logs(logfilenames, os.path.join(analyzer_abspath, merged))\n" \
+"            merge_logs(logfilenames, os.path.join(analyzer_relative_path, merged))\n" \
 "        elif YTAG: # Second priority checking\n" \
-"            ytag_folder_abspath = os.path.join(analyzer_abspath, ytag_folder)\n" \
+"            ytag_folder_abspath = os.path.join(analyzer_relative_path, ytag_folder)\n" \
 "            if os.access(ytag_folder_abspath, os.F_OK):\n" \
 "                shutil.rmtree(ytag_folder_abspath)\n" \
 "            os.mkdir(ytag_folder_abspath)\n" \
@@ -156,13 +166,13 @@
 "            ytag_parse(tmp_file)\n" \
 "            os.remove(tmp_file)\n" \
 "        else: # Last priority checking\n" \
-"            merge_logs(logfilenames, os.path.join(analyzer_abspath, merged))\n" \
+"            merge_logs(logfilenames, os.path.join(analyzer_relative_path, merged))\n" \
 "    else:\n" \
 "        split_log(logfilenames, logdict)\n" \
 "\n" \
 "    if options.remove:\n" \
 "        for log in logfilenames:\n" \
-"            os.remove(os.path.join(analyzer_abspath, log))\n" \
+"            os.remove(os.path.join(analyzer_relative_path, log))\n" \
 "        os.remove(sys.argv[0])\n" \
 "\n" \
 "if __name__ == '__main__':\n" \

@@ -461,18 +461,30 @@ static int pcmd_print2file(char *cmd, char *file, int *cnt, ylog_write_handler w
 /**
  * similar with pcmd_print2file
  */
-static void pcmds_ylog_copy_file(char *file, char *buf, int count, struct ylog *y) {
+static int pcmds_ylog_copy_file(char *file, char *buf, int count, struct ylog *y) {
     /**
      * ydst->root->mutex and ydst->root->mutex both are held now
      */
     struct ydst *ydst = y->ydst;
     if (access(file, F_OK) == 0) {
-        snprintf(buf, count, "%s/%s", ydst->root_folder, ydst->file);
-        if (mkdirs(buf) == 0) {
-            snprintf(buf, count, "cp -r %s %s/%s", file, ydst->root_folder, ydst->file);
-            pcmd(buf, NULL, NULL, NULL, "pcmds_ylog", 1000, -1);
+        struct stat st;
+        if (stat(file, &st) != 0) {
+            ylog_error("fstat %s failed: %s\n", file, strerror(errno));
+            return -1;
         }
+        if (st.st_size) {
+            snprintf(buf, count, "%s/%s", ydst->root_folder, ydst->file);
+            if (mkdirs(buf) == 0) {
+                snprintf(buf, count, "cp -r %s %s/%s", file, ydst->root_folder, ydst->file);
+                pcmd(buf, NULL, NULL, NULL, "pcmds_ylog", 1000, -1);
+            }
+            return 2; /* has size */
+        } else {
+            ylog_info("%s size is 0\n", file);
+        }
+        return 0;
     }
+    return 1;
 }
 
 static unsigned long long ydst_sum_all_storage_space(struct ydst *ydst) {

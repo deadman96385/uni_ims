@@ -41,8 +41,32 @@ static int ylog_write_header_sgm_cpu_memory_header(struct ylog *y) {
 
 static void pcmds_ylog_kernel_callback(struct ylog *y, int step, char *buf, int count, void *private) {
     UNUSED(private);
-    if (step == 1) /* Start pcmd */
-        pcmds_ylog_copy_file("/data/last_kmsg", buf, count, y);
+    if (step == 1) { /* Start pcmd */
+        char *file = "/data/ylog/last_kmsg";
+        char *file2 = "/data/ylog/last_kmsg1";
+        int ret = pcmds_ylog_copy_file(file, buf, count, y);
+        if (ret == 2)
+            mv(file, file2);
+        if (ret != 0) {
+            long fd;
+            int ret;
+            /**
+             * Because of SELinux policy, if bootloader create /data/ylog/last_kmsg directly
+             * SELinux info will lose, so /data/ylog/last_kmsg should be created by android process, so in here
+             * ylog will create this file, bootloader should check /data/ylog/last_kmsg first
+             * if /data/ylog/last_kmsg exits then overwrite this file, otherwise bootloader give a warning
+             * but should not create /data/ylog/last_kmsg in bootloader
+             */
+            mkdirs_with_file(file);
+            unlink(file);
+            fd = open(file, O_RDWR | O_CREAT | O_TRUNC, 0664);
+            if (fd < 0) {
+                ylog_critical("%s %s Failed to open %s\n", __func__, file, strerror(errno));
+            } else {
+                close(fd);
+            }
+        }
+    }
 }
 
 static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
@@ -634,8 +658,13 @@ static void pcmds_ylog_anr_nowrap_callback(struct ylog *y, int step, char *buf, 
 }
 
 static int os_inotify_handler_anr_nowrap(struct ylog_inotify_cell *pcell, int timeout, struct ylog *y) {
+    static struct ylog *sys_info = NULL;
     ylog_info("os_inotify_handler_anr_nowrap is called for '%s %s' %dms %s now\n",
                 pcell->pathname ? pcell->pathname:"", pcell->filename, pcell->timeout, timeout ? "timeout":"normal");
+    if (sys_info == NULL)
+        sys_info = ylog_get_by_name("sys_info");
+    if (sys_info)
+        sys_info->thread_restart(sys_info, 0); /* Trigger sys_info to capture again */
     pcmds_ylog_call(NULL, y, 1000, pcmds_ylog_anr_nowrap_callback, NULL);
     return -1;
 }
