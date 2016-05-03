@@ -366,29 +366,35 @@ static struct ydst *ydst_get_by_name(char *name) {
     return NULL;
 }
 
-static void pcmds_ylog_call(char *cmds[], struct ylog *y, int millisecond,
-        void (*callback)(struct ylog *y, int step, char *buf, int count, void *private), void *private) {
-    char **cmd;
-    char buf[PATH_MAX];
-    struct ydst_root *root;
-    struct ydst *ydst = y->ydst;
+#define PCMDS_YLOG_CALL_LOCK(y) \
+    struct ydst *ydst = y->ydst; \
+    struct ydst_root *root; \
     /**
      * In ylog_write_handler_default() the mutex sequence is
      * 1. lock ydst->mutex in ylog_write_handler_default
      * 2. lock root->mutex in ydst_new_segment_default
      * so here we need to keep the same sequence to avoid dead lock in some race condition
-     */
-    pthread_mutex_lock(&ydst->mutex);
-    root = ydst->root;
+     */ \
+    pthread_mutex_lock(&ydst->mutex); \
+    root = ydst->root; \
     pthread_mutex_lock(&root->mutex); /* To avoid root folder change by ydst_move_root */
+
+#define PCMDS_YLOG_CALL_UNLOCK() \
+    pthread_mutex_unlock(&root->mutex); \
+    pthread_mutex_unlock(&ydst->mutex);
+
+static void pcmds_ylog_call(char *cmds[], struct ylog *y, int millisecond,
+        void (*callback)(struct ylog *y, int step, char *buf, int count, void *private), void *private) {
+    char **cmd;
+    char buf[PATH_MAX];
+    PCMDS_YLOG_CALL_LOCK(y);
     callback(y, 1, buf, sizeof buf, private);
     if (cmds) {
         for (cmd = cmds; *cmd; cmd++)
             pcmd(*cmd, NULL, NULL, NULL, "pcmds_ylog_call", millisecond, -1);
     }
     callback(y, 0, buf, sizeof buf, private);
-    pthread_mutex_unlock(&root->mutex);
-    pthread_mutex_unlock(&ydst->mutex);
+    PCMDS_YLOG_CALL_UNLOCK();
 }
 
 static void pcmds_ylog(char *cmds[], char *ylog_name, int millisecond,
@@ -442,6 +448,8 @@ static int pcmds_print2file(char *cmds[], char *file, int *cnt, ylog_write_handl
             }
             close(fd);
         }
+    } else {
+        ylog_warn("Failed to create %s %s\n", __func__, file);
     }
     return rcnt;
 }
@@ -456,6 +464,36 @@ static int pcmd_print2file(char *cmd, char *file, int *cnt, ylog_write_handler w
         NULL
     };
     return pcmds_print2file(cmd_list, file, cnt, w, y, prefix, millisecond, max_size);
+}
+
+static int pcmds_snapshots(char *cmds[], struct ylog *y, int millisecond, int max_size, const char *fmt, ...) {
+    int len;
+    va_list ap;
+    char file[4096];
+    va_start(ap, fmt);
+    vsnprintf(file, sizeof(file), fmt, ap);
+    va_end(ap);
+    PCMDS_YLOG_CALL_LOCK(y);
+    len = pcmds_print2file(cmds, file, NULL, NULL, y, "pcmds_snapshots", millisecond, max_size);
+    PCMDS_YLOG_CALL_UNLOCK();
+    return len;
+}
+
+static int pcmd_snapshots(char *cmd, struct ylog *y, int millisecond, int max_size, const char *fmt, ...) {
+    int len;
+    va_list ap;
+    char file[4096];
+    char *cmd_list[] = {
+        cmd,
+        NULL
+    };
+    va_start(ap, fmt);
+    vsnprintf(file, sizeof(file), fmt, ap);
+    va_end(ap);
+    PCMDS_YLOG_CALL_LOCK(y);
+    len = pcmds_print2file(cmd_list, file, NULL, NULL, y, "pcmd_snapshots", millisecond, max_size);
+    PCMDS_YLOG_CALL_UNLOCK();
+    return len;
 }
 
 /**

@@ -22,6 +22,7 @@ struct os_status {
     int file_atch_num;
     int anr_fast;
     int fd_kmsg;
+    struct ylog *snapshots;
 } oss = {
     .file_atch_num = 5,
 }, *pos = &oss;
@@ -32,6 +33,7 @@ struct os_config {
 } oc, *poc = &oc;
 
 #include "modem.c"
+#include "android-snapshots.c"
 
 static int ylog_write_header_sgm_cpu_memory_header(struct ylog *y) {
 #define YLOG_SGM_CPU_MEMORY_HEADER "second,cpu-cpu_percent[0],cpu-iowtime[1],cpu-cpu_frequency[2],cpu-null[3],cpu-null[4],cpu-null[5],cpu0-cpu_percent[0],cpu0-iowtime[1],cpu0-cpu_frequency[2],cpu0-null[3],cpu0-null[4],cpu0-null[5],cpu1-cpu_percent[0],cpu1-iowtime[1],cpu1-cpu_frequency[2],cpu1-null[3],cpu1-null[4],cpu1-null[5],cpu2-cpu_percent[0],cpu2-iowtime[1],cpu2-cpu_frequency[2],cpu2-null[3],cpu2-null[4],cpu2-null[5],cpu3-cpu_percent[0],cpu3-iowtime[1],cpu3-cpu_frequency[2],cpu3-null[3],cpu3-null[4],cpu3-null[5],cpu4-cpu_percent[0],cpu4-iowtime[1],cpu4-cpu_frequency[2],cpu4-null[3],cpu4-null[4],cpu4-null[5],cpu5-cpu_percent[0],cpu5-iowtime[1],cpu5-cpu_frequency[2],cpu5-null[3],cpu5-null[4],cpu5-null[5],cpu6-cpu_percent[0],cpu6-iowtime[1],cpu6-cpu_frequency[2],cpu6-null[3],cpu6-null[4],cpu6-null[5],cpu7-cpu_percent[0],cpu7-iowtime[1],cpu7-cpu_frequency[2],cpu7-null[3],cpu7-null[4],cpu7-null[5],irqs,ctxt,processes,procs_running,procs_blocked,totalram,freeram,cached,Reserve01,Reserve02,Reserve03,Reserve04,Reserve05,Reserve06\n"
@@ -162,6 +164,15 @@ static int ylog_read_sys_info(char *buf, int count, FILE *fp, int fd, struct ylo
     pcmds_ylog(NULL, "sys_info", -1, pcmds_ylog_sys_info_callback, NULL);
 #endif
 
+    return 0;
+}
+
+static int ylog_read_snapshots(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
+    UNUSED(buf);
+    UNUSED(count);
+    UNUSED(fp);
+    UNUSED(fd);
+    UNUSED(y);
     return 0;
 }
 
@@ -498,6 +509,44 @@ static int cmd_monkey(struct command *cmd, char *buf, int buf_size, int fd, int 
     return 0;
 }
 
+static int cmd_snapshot(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
+    char *last;
+    char *snp;
+    int i;
+    struct ylog_snapshots_list_s *sl;
+
+    strtok_r(buf, " ", &last);
+    snp = strtok_r(NULL, " ", &last);
+
+    if (snp) {
+        struct ylog_snapshots_args sargs;
+        char *result = "Failed";
+        for (i = 0; i < (int)ARRAY_LEN(ylog_snapshots_list); i++) {
+            sl = &ylog_snapshots_list[i];
+            if (strcmp(sl->name, snp) == 0) {
+                sargs.result[0] = 0;
+                sl->f(&sargs);
+                if (sargs.result[0] != 0)
+                    result = sargs.result;
+                else
+                    result = "OK";
+                break;
+            }
+        }
+        SEND(fd, buf, snprintf(buf, buf_size, "%s %s\n", snp, result), MSG_NOSIGNAL);
+    } else {
+        for (i = 0; i < (int)ARRAY_LEN(ylog_snapshots_list); i++) {
+            sl = &ylog_snapshots_list[i];
+            SEND(fd, buf, snprintf(buf, buf_size, "%s\n", sl->name), MSG_NOSIGNAL);
+        }
+    }
+
+    return 0;
+}
+
 static struct command os_commands[] = {
     {"test", "test from android", cmd_test, NULL},
     {"\n", NULL, os_cmd_help, (void*)os_commands},
@@ -510,6 +559,7 @@ static struct command os_commands[] = {
     {"print2kernel ", "write data to kernel log", cmd_print2kernel, NULL},
     {"exit", "quit all ylog threads, and kill ylog itself to protect sdcard", cmd_exit, NULL},
     {"monkey", "mark the status of monkey, ex. ylog_cli monkey 1 or ylog_cli monkey 0", cmd_monkey, NULL},
+    {"snapshot", "call ylog snapshot, ex. ylog_cli snapshot startup", cmd_snapshot, NULL},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -788,6 +838,8 @@ static void ylog_ready(void) {
     pos->fd_kmsg = open("/dev/kmsg", O_WRONLY);
     if (pos->fd_kmsg < 0)
         ylog_info("open %s fail. %s", "/dev/kmsg", strerror(errno));
+
+    ylog_snapshots___case___startup(NULL);
 
 #if 1
     if (drop_privs() < 0)
@@ -1138,6 +1190,23 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
             },
             */
         },
+        /* snapshots/xxxx */ {
+            .ylog = {
+                {
+                    .name = "snapshots",
+                    .type = FILE_NORMAL,
+                    .file = "/dev/null",
+                    .restart_period = -1,
+                    .fread = ylog_read_snapshots,
+                },
+            },
+            .ydst = {
+                .file = "snapshots/",
+                .file_name = "snapshots.log",
+                .max_segment = 2,
+                .max_segment_size = 50*1024*1024,
+            },
+        },
     };
 
     umask(0);
@@ -1183,6 +1252,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
     property_get("ylog.anr.flag", buf, "0");
     pos->anr_fast = strtol(buf, NULL, 0);
 
+    pos->snapshots = ylog_get_by_name("snapshots");
     y = ylog_get_by_name("traces");
     if (y) {
         if (pos->anr_fast)

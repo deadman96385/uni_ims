@@ -15,6 +15,7 @@ function report_summary() {
     eval 'echo'
     eval 'echo "du -shc ${y}/* | sort -h"; du -shc ${y}/* | sort -h'
     eval 'echo'
+    eval 'head -n 1 ${y}/ylog_debug'
     eval 'cat ${y}/ylog_debug | grep -E "Has run|killed" | tail -n 2 |
         sed "s/.*Has run \(.*\) avg_speed.*/\1/;s/.*] \[/[/" | paste -s' # | sed "s/\(.*\) \[\(.*\)/[\2 \1/"'
     eval 'tail -n 1 ${y}/android/000 | cut -d" " -f1,2 | sed "s/..\(.*\)/      android - [\1]/"'
@@ -95,7 +96,7 @@ fi
     done
 }
 
-ylog_log_folder=("`find -name ylog_debug | sort`")
+ylog_log_folder=("`find -name ylog_debug | sort -r`")
 
 count=1
 for y in ${ylog_log_folder[@]}; do
