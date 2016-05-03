@@ -358,8 +358,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 /* SPRD: add for bug543928@{ */
                 KeyguardManager keyguardManager = (KeyguardManager) mContext.getSystemService(Context.KEYGUARD_SERVICE);
                 PowerManager powerManager = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
-                if(powerManager != null && !powerManager.isScreenOn()
-                        && keyguardManager != null && !keyguardManager.inKeyguardRestrictedInputMode()){
+                if(powerManager != null && !powerManager.isScreenOn()){
                     powerManager.wakeUp(SystemClock.uptimeMillis(), "android.phone:WAKEUP");
                 }
                 VideoProfile mLoacalResponseProfile = new VideoProfile(VideoProfile.STATE_TX_ENABLED);
