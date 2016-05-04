@@ -22,7 +22,7 @@ struct os_status {
     int file_atch_num;
     int anr_fast;
     int fd_kmsg;
-    struct ylog *snapshots;
+    struct ylog *snapshot;
 } oss = {
     .file_atch_num = 5,
 }, *pos = &oss;
@@ -33,42 +33,12 @@ struct os_config {
 } oc, *poc = &oc;
 
 #include "modem.c"
-#include "android-snapshots.c"
+#include "snapshot-android.c"
 
 static int ylog_write_header_sgm_cpu_memory_header(struct ylog *y) {
 #define YLOG_SGM_CPU_MEMORY_HEADER "second,cpu-cpu_percent[0],cpu-iowtime[1],cpu-cpu_frequency[2],cpu-null[3],cpu-null[4],cpu-null[5],cpu0-cpu_percent[0],cpu0-iowtime[1],cpu0-cpu_frequency[2],cpu0-null[3],cpu0-null[4],cpu0-null[5],cpu1-cpu_percent[0],cpu1-iowtime[1],cpu1-cpu_frequency[2],cpu1-null[3],cpu1-null[4],cpu1-null[5],cpu2-cpu_percent[0],cpu2-iowtime[1],cpu2-cpu_frequency[2],cpu2-null[3],cpu2-null[4],cpu2-null[5],cpu3-cpu_percent[0],cpu3-iowtime[1],cpu3-cpu_frequency[2],cpu3-null[3],cpu3-null[4],cpu3-null[5],cpu4-cpu_percent[0],cpu4-iowtime[1],cpu4-cpu_frequency[2],cpu4-null[3],cpu4-null[4],cpu4-null[5],cpu5-cpu_percent[0],cpu5-iowtime[1],cpu5-cpu_frequency[2],cpu5-null[3],cpu5-null[4],cpu5-null[5],cpu6-cpu_percent[0],cpu6-iowtime[1],cpu6-cpu_frequency[2],cpu6-null[3],cpu6-null[4],cpu6-null[5],cpu7-cpu_percent[0],cpu7-iowtime[1],cpu7-cpu_frequency[2],cpu7-null[3],cpu7-null[4],cpu7-null[5],irqs,ctxt,processes,procs_running,procs_blocked,totalram,freeram,cached,Reserve01,Reserve02,Reserve03,Reserve04,Reserve05,Reserve06\n"
     return y->ydst->write(y->id_token, y->id_token_len,
             YLOG_SGM_CPU_MEMORY_HEADER, strlen(YLOG_SGM_CPU_MEMORY_HEADER), y->ydst);
-}
-
-static void pcmds_ylog_kernel_callback(struct ylog *y, int step, char *buf, int count, void *private) {
-    UNUSED(private);
-    if (step == 1) { /* Start pcmd */
-        char *file = "/data/ylog/last_kmsg";
-        char *file2 = "/data/ylog/last_kmsg1";
-        int ret = pcmds_ylog_copy_file(file, buf, count, y);
-        if (ret == 2)
-            mv(file, file2);
-        if (ret != 0) {
-            long fd;
-            int ret;
-            /**
-             * Because of SELinux policy, if bootloader create /data/ylog/last_kmsg directly
-             * SELinux info will lose, so /data/ylog/last_kmsg should be created by android process, so in here
-             * ylog will create this file, bootloader should check /data/ylog/last_kmsg first
-             * if /data/ylog/last_kmsg exits then overwrite this file, otherwise bootloader give a warning
-             * but should not create /data/ylog/last_kmsg in bootloader
-             */
-            mkdirs_with_file(file);
-            unlink(file);
-            fd = open(file, O_RDWR | O_CREAT | O_TRUNC, 0664);
-            if (fd < 0) {
-                ylog_critical("%s %s Failed to open %s\n", __func__, file, strerror(errno));
-            } else {
-                close(fd);
-            }
-        }
-    }
 }
 
 static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
@@ -80,7 +50,6 @@ static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct yl
         "ls -l /dev/",
         "cat /default.prop",
         "getprop",
-        "cat /data/ylog/ylog.conf",
         NULL
     };
 
@@ -96,11 +65,6 @@ static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct yl
     }
 
     pcmds(cmd_list, &fd, y->write_handler, y, "ylog_info", -1);
-
-    /**
-     * copy last_kmsg to ydst kernel/ folder
-     */
-    pcmds_ylog(NULL, "kernel", -1, pcmds_ylog_kernel_callback, NULL);
 
     return 0;
 }
@@ -121,14 +85,6 @@ static int ylog_read_ylog_debug_hook(char *buf, int count, FILE *fp, int fd, str
     pcmds(cmd_list, &fd, y->write_handler, y, "ylog_debug", 1000);
     return 0;
 }
-
-#ifndef HAVE_YLOG_JOURNAL
-static void pcmds_ylog_sys_info_callback(struct ylog *y, int step, char *buf, int count, void *private) {
-    UNUSED(private);
-    if (step == 1) /* Start pcmd */
-        pcmds_ylog_copy_file(global_context->journal_file, buf, count, y);
-}
-#endif
 
 static int ylog_read_sys_info(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
     UNUSED(buf);
@@ -157,17 +113,10 @@ static int ylog_read_sys_info(char *buf, int count, FILE *fp, int fd, struct ylo
         NULL
     };
     pcmds(cmd_list, &cnt, y->write_handler, y, "sys_info", 1000);
-    /**
-     * copy ylog_journal_file to ydst sys_info/ folder
-     */
-#ifndef HAVE_YLOG_JOURNAL
-    pcmds_ylog(NULL, "sys_info", -1, pcmds_ylog_sys_info_callback, NULL);
-#endif
-
     return 0;
 }
 
-static int ylog_read_snapshots(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
+static int ylog_read_snapshot(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
     UNUSED(buf);
     UNUSED(count);
     UNUSED(fp);
@@ -516,21 +465,32 @@ static int cmd_snapshot(struct command *cmd, char *buf, int buf_size, int fd, in
     char *last;
     char *snp;
     int i;
-    struct ylog_snapshots_list_s *sl;
+    struct ylog_snapshot_list_s *sl;
 
     strtok_r(buf, " ", &last);
     snp = strtok_r(NULL, " ", &last);
 
     if (snp) {
-        struct ylog_snapshots_args sargs;
+        struct ylog_snapshot_args sargs;
         char *result = "Failed";
-        for (i = 0; i < (int)ARRAY_LEN(ylog_snapshots_list); i++) {
-            sl = &ylog_snapshots_list[i];
+        char *arg;
+        sargs.argc = 0;
+        do {
+            arg = strtok_r(NULL, " ", &last);
+            if (arg == NULL)
+                break;
+            sargs.argv[sargs.argc++] = arg;
+            if (sargs.argc >= (int)ARRAY_LEN(sargs.argv))
+                break;
+        } while (1);
+        for (i = 0; i < (int)ARRAY_LEN(ylog_snapshot_list); i++) {
+            sl = &ylog_snapshot_list[i];
             if (strcmp(sl->name, snp) == 0) {
-                sargs.result[0] = 0;
+                sargs.data[0] = 0;
+                sargs.offset = 0;
                 sl->f(&sargs);
-                if (sargs.result[0] != 0)
-                    result = sargs.result;
+                if (sargs.data[sargs.offset] != 0)
+                    result = sargs.data + sargs.offset;
                 else
                     result = "OK";
                 break;
@@ -538,9 +498,9 @@ static int cmd_snapshot(struct command *cmd, char *buf, int buf_size, int fd, in
         }
         SEND(fd, buf, snprintf(buf, buf_size, "%s %s\n", snp, result), MSG_NOSIGNAL);
     } else {
-        for (i = 0; i < (int)ARRAY_LEN(ylog_snapshots_list); i++) {
-            sl = &ylog_snapshots_list[i];
-            SEND(fd, buf, snprintf(buf, buf_size, "%s\n", sl->name), MSG_NOSIGNAL);
+        for (i = 0; i < (int)ARRAY_LEN(ylog_snapshot_list); i++) {
+            sl = &ylog_snapshot_list[i];
+            SEND(fd, buf, snprintf(buf, buf_size, "%-10s -- %s\n", sl->name, sl->usage), MSG_NOSIGNAL);
         }
     }
 
@@ -559,7 +519,7 @@ static struct command os_commands[] = {
     {"print2kernel ", "write data to kernel log", cmd_print2kernel, NULL},
     {"exit", "quit all ylog threads, and kill ylog itself to protect sdcard", cmd_exit, NULL},
     {"monkey", "mark the status of monkey, ex. ylog_cli monkey 1 or ylog_cli monkey 0", cmd_monkey, NULL},
-    {"snapshot", "call ylog snapshot, ex. ylog_cli snapshot startup", cmd_snapshot, NULL},
+    {"snapshot", "snapshot the android, ex. ylog_cli snapshot", cmd_snapshot, NULL},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -697,7 +657,7 @@ static void pcmds_ylog_anr_nowrap_callback(struct ylog *y, int step, char *buf, 
             pcmd_print2file("cat /data/anr/traces.txt", buf, &cur_cnt, NULL, y, NULL, 1000, -1);
             cur_cnt = cnt;
             snprintf(buf, count, "%s/%s/%04d.%s.anr.logcat", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
-            pcmd_print2file("logcat -d", buf, &cur_cnt, NULL, y, NULL, 1000, 3*1024*1024);
+            pcmd_print2file("logcat -d", buf, &cur_cnt, NULL, y, NULL, 1000, 5*1024*1024);
             cnt++;
         } else {
             ylog_critical("ylog %s is forced stop, because ydst %s has "
@@ -791,7 +751,7 @@ static void pcmds_ylog_tombstone_nowrap_callback(struct ylog *y, int step, char 
                 pcmd_print2file(*cmd, buf, &cur_cnt, NULL, y, NULL, 1000, -1);
                 cur_cnt = cnt;
                 snprintf(buf, count, "%s/%s/%04d.%s.tombstone.logcat", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
-                pcmd_print2file("logcat -d", buf, &cur_cnt, NULL, y, NULL, 1000, 3*1024*1024);
+                pcmd_print2file("logcat -d", buf, &cur_cnt, NULL, y, NULL, 1000, 5*1024*1024);
                 cnt++;
             }
         } else {
@@ -831,6 +791,9 @@ static void ylog_ready(void) {
         ydst_root_quota(NULL, root->quota_new); /* all ylog threads are ready to run */
 
     c->command_loop_ready = 1; /* mark it to work command_loop(); */
+
+    ylog_snapshot_startup(count == -1 ? 1:0); /* count == -1 meas powering on the phone just */
+
     y = ylog_get_by_name("info");
     if (y)
         ylog_trigger_and_wait_for_finish(y);
@@ -838,8 +801,6 @@ static void ylog_ready(void) {
     pos->fd_kmsg = open("/dev/kmsg", O_WRONLY);
     if (pos->fd_kmsg < 0)
         ylog_info("open %s fail. %s", "/dev/kmsg", strerror(errno));
-
-    ylog_snapshots___case___startup(NULL);
 
 #if 1
     if (drop_privs() < 0)
@@ -1190,19 +1151,19 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
             },
             */
         },
-        /* snapshots/xxxx */ {
+        /* snapshot/xxxx */ {
             .ylog = {
                 {
-                    .name = "snapshots",
+                    .name = "snapshot",
                     .type = FILE_NORMAL,
                     .file = "/dev/null",
                     .restart_period = -1,
-                    .fread = ylog_read_snapshots,
+                    .fread = ylog_read_snapshot,
                 },
             },
             .ydst = {
-                .file = "snapshots/",
-                .file_name = "snapshots.log",
+                .file = "snapshot/",
+                .file_name = "snapshot.log",
                 .max_segment = 2,
                 .max_segment_size = 50*1024*1024,
             },
@@ -1252,7 +1213,11 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
     property_get("ylog.anr.flag", buf, "0");
     pos->anr_fast = strtol(buf, NULL, 0);
 
-    pos->snapshots = ylog_get_by_name("snapshots");
+    property_get("ylog.killed", buf, "-1");
+    if (atoi(buf) == -1)
+        print2journal_file_string_with_uptime("power on");
+
+    pos->snapshot = ylog_get_by_name("snapshot");
     y = ylog_get_by_name("traces");
     if (y) {
         if (pos->anr_fast)

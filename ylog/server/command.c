@@ -922,9 +922,12 @@ static int cmd_quota(struct command *cmd, char *buf, int buf_size, int fd, int i
     return 0;
 }
 
-static void rm_root_others(void) {
+static void rm_root_others_last(void) {
     char *root_path_others[] = {
         "SYSDUMP",
+    };
+    char *root_path_others_abs_path[] = {
+        "/data/ylog/last_ylog",
     };
     char basename_root[PATH_MAX];
     char *dirname;
@@ -934,6 +937,17 @@ static void rm_root_others(void) {
     dirname = dirname2(basename_root);
     for (i = 0; i < (int)ARRAY_LEN(root_path_others); i++)
         do_cmd(NULL, 0, 1, "rm -rf %s/%s", dirname, root_path_others[i]);
+    for (i = 0; i < (int)ARRAY_LEN(root_path_others_abs_path); i++)
+        do_cmd(NULL, 0, 1, "rm -rf %s", root_path_others_abs_path[i]);
+}
+
+static void rm_root_others_live(void) {
+    int i;
+    char *root_path_others_abs_path[] = {
+        "/data/ylog/ylog",
+    };
+    for (i = 0; i < (int)ARRAY_LEN(root_path_others_abs_path); i++)
+        do_cmd(NULL, 0, 1, "rm -rf %s", root_path_others_abs_path[i]);
 }
 
 static int cmd_clear_ylog(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
@@ -950,7 +964,7 @@ static int cmd_clear_ylog(struct command *cmd, char *buf, int buf_size, int fd, 
             rm_all(c->historical_folder_root);
             print2journal_file("clear last_ylog %s", c->historical_folder_root);
         }
-        rm_root_others();
+        rm_root_others_last();
     }
 
     if (mode & YLOG_CLEAR_ALL_QUIT) {
@@ -958,6 +972,7 @@ static int cmd_clear_ylog(struct command *cmd, char *buf, int buf_size, int fd, 
         usleep(300 * 1000); /* wait 300ms for ylog thread exit itself */
         ylog_root_folder_delete(root->root, c->historical_folder_root, 0, 0);
         print2journal_file("clear all ylog and reboot %s", root->root);
+        rm_root_others_live();
         kill(getpid(), SIGKILL);
     }
 
