@@ -25,7 +25,7 @@
     <string name="choose_accept_reject">Please choose accept or reject</string>
     <string name="remote_request_change_accept">Accept</string>
     <string name="remote_request_change_reject">Reject</string>
-    <string name="remote_reject_request">Remote reject request </string>
-    <string name="remote_accept_request">Remote accept request</string>
+    <string name="remote_reject_request">Remote request rejected </string>
+    <string name="remote_accept_request">Remote request accepted</string>
     <string name="callFailed_fdn_only">Outgoing calls are restricted by FDN</string>
 </resources>

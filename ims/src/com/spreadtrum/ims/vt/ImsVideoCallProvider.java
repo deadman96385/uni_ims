@@ -302,9 +302,9 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                  result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS;
              }
              receiveSessionModifyResponse(result, mLocalRequestProfile, responseProfile);
-             showRequestStateToast();
              mLocalRequestProfile = null;
          }
+         showRequestStateToast();
          if(mNegotiatedCallProfile.mCallType != imsCallProfile.mCallType){
              mNegotiatedCallProfile.mCallType = imsCallProfile.mCallType;
          }
