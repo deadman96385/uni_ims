@@ -193,10 +193,15 @@ public class ImsRegister {
                     impu = "sip:" + impi;
                     Log.i(TAG, "iccRecords.getServiceProviderName() = "
                             + iccRecords.getServiceProviderName());
-                    String operatorName = TeleUtils.updateOperator(
+                    String operatorName = null;
+                    try{
+                       operatorName = TeleUtils.updateOperator(
                             operatorNumberic.substring(0, 3)
                                     + Integer.parseInt(mnc),
                             "numeric_to_operator");
+                    } catch(NumberFormatException ex){
+                        Log.d(TAG, "mcc mnc is invalid");
+                    }
                     Log.i(TAG, "operatorName after update is " + operatorName);
                     if (!(iccRecords instanceof IsimUiccRecords)
                             && ("China Mobile".equals(operatorName)
