@@ -44,6 +44,9 @@ public class ImsService extends Service {
 
     private Map<Integer, ImsServiceImpl> mImsServiceImplMap = new HashMap<Integer, ImsServiceImpl>();
 
+    private TelephonyManager mTelephonyManager;
+    private int mPhoneCount;
+
     /**
      * Used to listen to events.
      */
@@ -71,6 +74,8 @@ public class ImsService extends Service {
         super.onCreate();
         ServiceManager.addService("ims", mImsBinder);
         ServiceManager.addService("imsutex", mImsUtExBinder);
+        mTelephonyManager = (TelephonyManager) TelephonyManager.getDefault();
+        mPhoneCount = mTelephonyManager.getPhoneCount();
         Phone[] phones = PhoneFactory.getPhones();
         VTManagerProxy.init(this);
         if(phones != null){
@@ -199,11 +204,13 @@ public class ImsService extends Service {
          */
         @Override
         public void turnOnIms(int phoneId){
-            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(phoneId+1));
-            if (service == null) {
-                Log.e (TAG, "Invalid phoneId " + phoneId);
+            for(int i = 0; i < mPhoneCount; i++){
+                ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(i+1));
+                if(impl == null){
+                    continue;
+                }
+                impl.turnOnIms();
             }
-            service.turnOnIms();
         }
 
         /**
@@ -212,11 +219,13 @@ public class ImsService extends Service {
          */
         @Override
         public void turnOffIms(int phoneId) {
-            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(phoneId+1));
-            if (service == null) {
-                Log.e (TAG, "Invalid phoneId " + phoneId);
+            for(int i = 0; i < mPhoneCount; i++){
+                ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(i+1));
+                if(impl == null){
+                    continue;
+                }
+                impl.turnOffIms();
             }
-            service.turnOffIms();
         }
 
         /**
