@@ -627,15 +627,17 @@ static int os_inotify_handler_anr(struct ylog_inotify_cell *pcell, int timeout, 
         int fd = open("/data/anr/traces.txt", O_RDONLY);
         if (fd < 0) {
             ylog_info("open %s fail.%s", "/data/anr/traces.txt", strerror(errno));
-            return 0;
+            return -1;
         }
         LSEEK(fd, -3, SEEK_END);
         buf[0] = 0;
         buf[3] = 0;
-        if (read(fd, buf, 3) <= 0)
+        if ((read(fd, buf, 3) != 3) || (strcmp(buf, "EOF"))) {
+            ylog_info("read %s fail.%s", "/data/anr/traces.txt", strerror(errno));
+            close(fd);
             return -1;
-        if (strcmp(buf, "EOF"))
-            return -1;
+        }
+        close(fd);
     }
 
     pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_traces", 1000);
@@ -1016,6 +1018,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .type = FILE_POPEN,
                     .file = "hcidump",
                     .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY,
+                    .restart_period = 2000,
                     .raw_data = 1,
                 },
             },
@@ -1103,6 +1106,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .file = "/d/tracing/trace_pipe",
                     .mode = YLOG_READ_MODE_BLOCK,
                     .restart_period = 0,
+                    .status = YLOG_DISABLED,
                 },
             },
             .ydst = {
