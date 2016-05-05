@@ -11485,14 +11485,33 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             char cmd[20] = {0};
             p_response = NULL;
             int state = ((int *)data)[0];
+            /*Bug 558197 begin*/
+            int lastState = -1;
+            err = at_send_command_singleline(ATch_type[channelID], "AT+CAVIMS?","+CAVIMS:", &p_response);
+            if (err >= 0 && p_response->success) {
+                char *line = p_response->p_intermediates->line;
+                err = at_tok_start(&line);
+                if (err >= 0) {
+                    err = at_tok_nextint(&line, &lastState);
+                    RILLOGD("GET_IMS_VOICE_CALL_AVAILABILITY:%d",lastState);
+                }
+
+            }
+            at_response_free(p_response);
+            p_response = NULL;
+            if(lastState == state) {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                break;
+            }
+            /*BuG 558197 end*/
 
             snprintf(cmd, sizeof(cmd), "AT+CAVIMS=%d", state);
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0) {
-                RILLOGD("SET_IMS_VOICE_CALL_AVAILABILITY:%d",state);
+                RILLOGD("SET_IMS_VOICE_CALL_AVAILABILITY failure!");
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
             } else {
-                RILLOGD("SET_IMS_VOICE_CALL_AVAILABILITY failure!");
+                RILLOGD("SET_IMS_VOICE_CALL_AVAILABILITY:%d",state);
                 RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
             }
             if(p_response)
