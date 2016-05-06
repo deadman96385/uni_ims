@@ -639,6 +639,7 @@ static int ydst_quota(unsigned long long max_segment_size_new, int max_segment_n
     ylog_critical("Waiting for ydst '%s' resizing\n", ydst->file);
     do {
         waiting = 0;
+        usleep(100*1000);
             if (ydst->refs &&
                 (ydst->max_segment_size_new != ydst->max_segment_size_now ||
                  ydst->max_segment_new != ydst->max_segment_now
@@ -653,7 +654,7 @@ static int ydst_quota(unsigned long long max_segment_size_new, int max_segment_n
                 waiting = 1;
             }
         if (waiting)
-            usleep(100*1000);
+            usleep(200*1000);
     } while (ydst->ydst_change_seq_resize_segment != root->ydst_change_seq_resize_segment);
 
     ylog_critical("ydst '%s' resize done\n", ydst->file);
@@ -1538,7 +1539,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
         dirname2(path);
         strcpy(path + strlen(path), "/analyzer.py");
         fd = open(path, O_RDWR | O_CREAT | O_TRUNC, 0755);
-        ylog_info("create %s\n", path);
+        ylog_debug("create %s\n", path);
         if (fd >= 0) {
             int i;
             char *p;
@@ -1616,7 +1617,7 @@ static int ylog_open_default(char *file, char *mode, struct ylog *y) {
         break;
     case FILE_POPEN:
         if (y->mode & YLOG_READ_MODE_BLOCK) {
-            ylog_critical("popen2 %s, because its mode & YLOG_READ_MODE_BLOCK = 1\n", y->file);
+            ylog_debug("popen2 %s, because its mode & YLOG_READ_MODE_BLOCK = 1\n", y->file);
             f = popen2(file, mode);
         } else {
             f = popen2(file, mode);
@@ -1639,10 +1640,10 @@ static int ylog_open_default(char *file, char *mode, struct ylog *y) {
 static int ylog_close_default(FILE *fp, struct ylog *y) {
     if (y->type == FILE_POPEN) {
         if (y->mode & YLOG_READ_MODE_BLOCK) {
-            ylog_critical("pclose2 %s, because its mode & YLOG_READ_MODE_BLOCK = 1\n", y->file);
+            ylog_debug("pclose2 %s, because its mode & YLOG_READ_MODE_BLOCK = 1\n", y->file);
             return pclose2(fp);
         } else {
-            //ylog_info("pclose %s\n", y->file);
+            ylog_debug("pclose %s\n", y->file);
             return pclose2(fp);
         }
     } else
@@ -2329,7 +2330,7 @@ static void ylog_event_thread_del(struct ylog_event_thread *yevent_thread) {
 static void ylog_event_thread_notify_stop(struct ylog_event_thread *yevent_thread) {
     struct ylog_event_cond_wait *yewait = &yevent_thread->yewait;
     pthread_mutex_lock(&yewait->mutex);
-    ylog_info("ylog_event notify %s stop\n", yevent_thread->yewait.name);
+    ylog_debug("ylog_event notify %s stop\n", yevent_thread->yewait.name);
     yevent_thread->state = YLOG_STOP;
     pthread_cond_broadcast(&yevent_thread->yewait.cond);
     pthread_mutex_unlock(&yewait->mutex);
@@ -2350,7 +2351,7 @@ void ylog_event_thread_notify_all_stop_type(void) {
 static void ylog_event_thread_notify_run(struct ylog_event_thread *yevent_thread) {
     struct ylog_event_cond_wait *yewait = &yevent_thread->yewait;
     pthread_mutex_lock(&yewait->mutex);
-    ylog_info("ylog_event notify %s run\n", yevent_thread->yewait.name);
+    ylog_debug("ylog_event notify %s run\n", yevent_thread->yewait.name);
     yevent_thread->state = YLOG_RUN;
     pthread_cond_broadcast(&yevent_thread->yewait.cond);
     pthread_mutex_unlock(&yewait->mutex);
@@ -2410,10 +2411,14 @@ static void *ylog_event_thread_handler_default(void *arg) {
     int ret;
     enum ylog_thread_state *state = &yevent_thread->state;
     int wait_period = yewait->period;
+
+    if (yevent_thread->arg != (void*)-1)
+        os_hooks.pthread_create_hook(NULL, "event-handler %s", yewait->name);
+
     yevent_thread->pid = getpid();
     yevent_thread->tid = gettid();
     pthread_mutex_lock(&yewait->mutex);
-    ylog_info("event %s --> %dms is started, pid=%d, tid=%d\n",
+    ylog_debug("event %s --> %dms is started, pid=%d, tid=%d\n",
             yewait->name, wait_period, yevent_thread->pid, yevent_thread->tid);
     for (;;) {
         if (*state == YLOG_RUN) {
@@ -2519,7 +2524,8 @@ static void *ylog_thread_handler_default(void *arg) {
     get_boottime(&y->ts);
     ms_prev = currentTimeMillis();
     y->status |= YLOG_STARTED;
-    ylog_warn("Start ylog thread <%s, %s, file type is %d> --> %s %d started, pid=%d, tid=%d\n",
+    os_hooks.pthread_create_hook(NULL, "ylog %s", name);
+    ylog_debug("Start ylog thread <%s, %s, file type is %d> --> %s %d started, pid=%d, tid=%d\n",
             name, y->file, y->type, y->ydst->file, y->ydst->refs, y->pid, y->tid);
     for (;;) {
         /* Step 1: waiting for control, client, inotify or data by luther */
@@ -2578,7 +2584,7 @@ __state_control:
                             }
                             ms_prev = currentTimeMillis();
                             state_timeout = YLOG_RESTART;
-                            //ylog_info("%s block will restart in %dms\n", file, timeout);
+                            ylog_debug("%s block will restart in %dms\n", file, timeout);
                         }
                     } else {
                         pthread_mutex_lock(&mutex);
@@ -2734,7 +2740,7 @@ __state_control:
                             }
                             ms_prev = currentTimeMillis();
                             state_timeout = YLOG_RESTART;
-                            //ylog_info("%s block will restart in %dms\n", file, timeout);
+                            ylog_debug("%s block will restart in %dms\n", file, timeout);
                         }
                     }
                     if (go_to_stop) {
@@ -2775,7 +2781,7 @@ __state_control:
                         ms_prev = currentTimeMillis();
                         state_timeout = YLOG_RESTART;
                         yp_clr(YLOG_POLL_INDEX_DATA, yp);
-                        //ylog_info("%s will restart in %dms\n", file, timeout);
+                        ylog_debug("%s will restart in %dms\n", file, timeout);
                     } else {
                         if (count < 0) {
                             ylog_error("%s read %s failed: %s\n", name, file, strerror(errno));
@@ -2824,7 +2830,7 @@ static void ylog_init(struct ydst_root *root, struct context *c) {
             continue;
         if (yd->file_name == NULL)
             yd->file_name = "ylog_all";
-        ylog_info("ydst <%s> is initialized\n", yd->file);
+        ylog_debug("ydst <%s> is initialized\n", yd->file);
         pthread_mutex_init(&yd->mutex, NULL);
         yd->refs = 0;
         yd->fp = NULL;
@@ -2899,7 +2905,7 @@ static void ylog_init(struct ydst_root *root, struct context *c) {
     for_each_ylog(i, y, NULL) {
         if (y->name == NULL)
             continue;
-        ylog_info("ylog <%s> is initialized\n", y->name);
+        ylog_debug("ylog <%s> is initialized\n", y->name);
         yp = &y->yp;
         if (y->ydst == NULL)
             y->ydst = &global_ydst[YDST_TYPE_DEFAULT];
@@ -2994,7 +3000,7 @@ static void ylog_init(struct ydst_root *root, struct context *c) {
 
     /* waiting for all created thread start */
     do {
-        ylog_info("waiting for all ylog thread ready ...\n");
+        ylog_debug("waiting for all ylog thread ready ...\n");
         all_thread_started = 1;
         for_each_ylog(i, y, NULL) {
             if (y->name == NULL)

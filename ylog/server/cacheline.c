@@ -152,6 +152,8 @@ static void *cacheline_thread_handler_default(void *arg) {
     char *pcache;
     int ret;
 
+    os_hooks.pthread_create_hook(NULL, "cacheline %s", cl->name);
+
     cl->pid = getpid();
     cl->tid = gettid();
 

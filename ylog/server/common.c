@@ -460,7 +460,7 @@ static int do_cmd(char *buf, int count, int print_cmd, const char *fmt, ...) {
             return -1;
         } else {
             if (print_cmd)
-                ylog_info("do_cmd %s success, ret=%d\n", cmd, ret);
+                ylog_debug("do_cmd %s success, ret=%d\n", cmd, ret);
         }
         return ret;
     } else {

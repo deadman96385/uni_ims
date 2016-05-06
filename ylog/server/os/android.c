@@ -140,35 +140,69 @@ static int ylog_read_sys_info_manual(char *buf, int count, FILE *fp, int fd, str
 /**
  * system/core/logd/main.cpp
  */
-static int drop_privs() {
+static int drop_privs(char *description) {
     struct sched_param param;
+    int pid = getpid();
+    int tid = gettid();
     memset(&param, 0, sizeof(param));
 
+#if 0
     if (set_sched_policy(0, SP_BACKGROUND) < 0) {
+        ylog_error("ylog drop_privs pid=%d, tid=%d for %s failed set_sched_policy: %s\n",
+                pid, tid, description, strerror(errno));
         return -1;
     }
 
     if (sched_setscheduler((pid_t) 0, SCHED_BATCH, &param) < 0) {
+        ylog_error("ylog drop_privs pid=%d, tid=%d for %s failed sched_setscheduler: %s\n",
+                pid, tid, description, strerror(errno));
         return -1;
     }
 
     if (setpriority(PRIO_PROCESS, 0, ANDROID_PRIORITY_BACKGROUND) < 0) {
+        ylog_error("ylog drop_privs pid=%d, tid=%d for %s failed setpriority: %s\n",
+                pid, tid, description, strerror(errno));
         return -1;
     }
+#endif
 
     if (prctl(PR_SET_KEEPCAPS, 1) < 0) {
+        ylog_error("ylog drop_privs pid=%d, tid=%d for %s failed prctl: %s\n",
+                pid, tid, description, strerror(errno));
         return -1;
     }
 
-    if (setgroups(0, NULL) == -1) {
+    /**
+     * we get this groups[] from system/core/adb/adb_main.cpp
+     */
+    /* add extra groups:
+    ** AID_ADB to access the USB driver
+    ** AID_LOG to read system logs (adb logcat)
+    ** AID_INPUT to diagnose input issues (getevent)
+    ** AID_INET to diagnose network issues (ping)
+    ** AID_NET_BT and AID_NET_BT_ADMIN to diagnose bluetooth (hcidump)
+    ** AID_SDCARD_R to allow reading from the SD card
+    ** AID_SDCARD_RW to allow writing to the SD card
+    ** AID_NET_BW_STATS to read out qtaguid statistics
+    */
+    gid_t groups[] = { AID_ADB, AID_LOG, AID_INPUT, AID_INET, AID_NET_BT,
+                       AID_NET_BT_ADMIN, AID_SDCARD_R, AID_SDCARD_RW,
+                       AID_NET_BW_STATS };
+    if (setgroups(sizeof(groups)/sizeof(groups[0]), groups) != 0) {
+        ylog_error("ylog drop_privs pid=%d, tid=%d for %s failed setgroups: %s\n",
+                pid, tid, description, strerror(errno));
         return -1;
     }
 
     if (setgid(AID_SYSTEM) != 0) {
+        ylog_error("ylog drop_privs pid=%d, tid=%d for %s failed setgid: %s\n",
+                pid, tid, description, strerror(errno));
         return -1;
     }
 
     if (setuid(AID_SYSTEM) != 0) {
+        ylog_error("ylog drop_privs pid=%d, tid=%d for %s failed setuid: %s\n",
+                pid, tid, description, strerror(errno));
         return -1;
     }
 
@@ -188,8 +222,12 @@ static int drop_privs() {
     capdata[1].inheritable = 0;
 
     if (capset(&capheader, &capdata[0]) < 0) {
+        ylog_error("ylog drop_privs pid=%d, tid=%d for %s failed capset: %s\n",
+                pid, tid, description, strerror(errno));
         return -1;
     }
+
+    ylog_debug("ylog drop_privs pid=%d, tid=%d for %s success\n", pid, tid, description);
 
     return 0;
 }
@@ -608,8 +646,19 @@ static void ylog_status_hook(enum ylog_thread_state state, struct ylog *y) {
     case YLOG_NOP: value = "waiting"; break;
     default: value = "unknown"; break;
     }
-    ylog_info("ylog %s setprop %s %s\n", y->name, buf, value);
+    if (state == YLOG_STOP || state == YLOG_RUN)
+        ylog_info("ylog %s setprop %s %s\n", y->name, buf, value);
     property_set(buf, value);
+}
+
+static void pthread_create_hook(void *args, const char *fmt, ...) {
+    UNUSED(args);
+    va_list ap;
+    char buf[4096];
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    drop_privs(buf);
 }
 
 static int os_inotify_handler_anr(struct ylog_inotify_cell *pcell, int timeout, struct ylog *y) {
@@ -652,7 +701,12 @@ static void pcmds_ylog_anr_nowrap_callback(struct ylog *y, int step, char *buf, 
         char timeBuf[32];
         int len, cur_cnt;
         struct ydst *ydst = y->ydst;
-        if (ydst->size < ydst->max_size_now) {
+        /**
+         * if cnt is less than 20, although quta has reached,
+         * we also need to continue save it, because some other ylog
+         * fill full the shared ydst, but here does not even have 20 counts
+         */
+        if (ydst->size < ydst->max_size_now || cnt < 20) {
             ylog_get_format_time_year(timeBuf);
             cur_cnt = cnt;
             snprintf(buf, count, "%s/%s/%04d.%s.anr", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
@@ -662,9 +716,9 @@ static void pcmds_ylog_anr_nowrap_callback(struct ylog *y, int step, char *buf, 
             pcmd_print2file("logcat -d", buf, &cur_cnt, NULL, y, NULL, 1000, 5*1024*1024);
             cnt++;
         } else {
-            ylog_critical("ylog %s is forced stop, because ydst %s has "
+            ylog_critical("ylog %s is forced stop, cnt=%d, because ydst %s has "
                     "reached max_size %lld/%lld in pcmds_ylog_anr_nowrap_callback\n",
-                    y->name, ydst->file, ydst->size, ydst->max_size_now);
+                    y->name, cnt, ydst->file, ydst->size, ydst->max_size_now);
         }
     }
 }
@@ -746,7 +800,12 @@ static void pcmds_ylog_tombstone_nowrap_callback(struct ylog *y, int step, char 
         }
         cmd_list[cmd_start_idx] = NULL;
 
-        if (ydst->size < ydst->max_size_now) {
+        /**
+         * if cnt is less than 20, although quta has reached,
+         * we also need to continue save it, because some other ylog
+         * fill full the shared ydst, but here does not even have 20 counts
+         */
+        if (ydst->size < ydst->max_size_now || cnt < 20) {
             for (cmd = cmd_list; *cmd; cmd++) {
                 cur_cnt = cnt;
                 snprintf(buf, count, "%s/%s/%04d.%s.tombstone", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
@@ -757,9 +816,9 @@ static void pcmds_ylog_tombstone_nowrap_callback(struct ylog *y, int step, char 
                 cnt++;
             }
         } else {
-            ylog_critical("ylog %s is forced stop, because ydst %s has "
+            ylog_critical("ylog %s is forced stop, cnt=%d, because ydst %s has "
                     "reached max_size %lld/%lld in pcmds_ylog_tombstone_nowrap_callback\n",
-                    y->name, ydst->file, ydst->size, ydst->max_size_now);
+                    y->name, cnt, ydst->file, ydst->size, ydst->max_size_now);
         }
 
         for (i = 0; i < file->num; i++) {
@@ -782,7 +841,7 @@ static void ylog_ready(void) {
     int count;
     struct context *c = global_context;
     struct ydst_root *root = global_ydst_root;
-    ylog_info("ylog_ready for android\n");
+    ylog_debug("ylog_ready for android\n");
 
     property_get("ylog.killed", yk, "-1");
     count = atoi(yk);
@@ -804,19 +863,14 @@ static void ylog_ready(void) {
     if (pos->fd_kmsg < 0)
         ylog_info("open %s fail. %s", "/dev/kmsg", strerror(errno));
 
-#if 1
-    if (drop_privs() < 0)
-        ylog_error("ylog drop_privs failed: %s\n", strerror(errno));
-    else
-        ylog_critical("ylog drop_privs success\n");
-#endif
-
     mkdirs("/data/anr/"); /* For ylog traces.txt */
     mkdirs("/data/tombstones/"); /* For ylog tombstone_00 ~ tombstone_09 */
 
     ylog_trigger_all(global_ylog); /* mark ylog status from ready to run */
 
-    ylog_os_event_timer_create("android", pos->sdcard_online ? 5*1000:1*1000, event_timer_handler, NULL);
+    ylog_os_event_timer_create("android", pos->sdcard_online ? 5*1000:1*1000, event_timer_handler, (void*)-1);
+
+    os_hooks.pthread_create_hook(NULL, "main ylog_ready");
 }
 
 static struct context os_context[M_MODE_NUM] = {
@@ -1098,10 +1152,10 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                 .max_segment_size = 50*1024*1024,
             },
         },
-        /* tracer/ */ {
+        /* ftrace/ */ {
             .ylog = {
                 {
-                    .name = "tracer",
+                    .name = "ftrace",
                     .type = FILE_NORMAL,
                     .file = "/d/tracing/trace_pipe",
                     .mode = YLOG_READ_MODE_BLOCK,
@@ -1110,8 +1164,8 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                 },
             },
             .ydst = {
-                .file = "tracer/",
-                .file_name = "tracer.log",
+                .file = "ftrace/",
+                .file_name = "ftrace.log",
                 .max_segment = 3,
                 .max_segment_size = 10*1024*1024,
             },
@@ -1186,6 +1240,8 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
         exit(0);
     }
 
+    ylog_warn("ylog start\n");
+
     ynode_insert_all(os_ynode, (int)ARRAY_LEN(os_ynode));
     other_processor_ylog_insert(); /* in modem.c */
     os_parse_config();
@@ -1195,6 +1251,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
     hook->process_command_hook = process_command_hook;
     hook->cmd_ylog_hook = cmd_ylog_hook;
     hook->ylog_status_hook = ylog_status_hook;
+    hook->pthread_create_hook = pthread_create_hook;
 
     poc->keep_historical_folder_numbers = KEEP_HISTORICAL_FOLDER_NUMBERS_DEFUALT;
     parse_config(YLOG_CONFIG);

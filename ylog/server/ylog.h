@@ -644,6 +644,7 @@ struct os_hooks {
     int (*process_command_hook)(char *buf, int buf_size, int fd, int index, struct ylog_poll *yp);
     void (*cmd_ylog_hook)(int nargs, char **args);
     void (*ylog_status_hook)(enum ylog_thread_state state, struct ylog *y);
+    void (*pthread_create_hook)(void *args, const char *fmt, ...);
 };
 
 static inline void yp_clr(int index, struct ylog_poll *yp) {

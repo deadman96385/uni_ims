@@ -382,7 +382,13 @@ static int speed_statistics_event_timer_handler(void *arg, long tick, struct ylo
     return 0;
 }
 
+static void pthread_create_hook_default(void *args, const char *fmt, ...) {
+    UNUSED(args);
+    UNUSED(fmt);
+}
+
 static void *ylog_command_loop(void *arg) {
+    os_hooks.pthread_create_hook(NULL, "ylog_command_loop");
     command_loop(fd_command_server);
     arg = arg;
     return NULL;
@@ -398,6 +404,8 @@ int main(int argc, char *argv[]) {
     UNUSED(argv);
     pthread_t ptid;
     os_init(global_ydst_root, &global_context, &os_hooks);
+    if (os_hooks.pthread_create_hook == NULL)
+        os_hooks.pthread_create_hook = pthread_create_hook_default;
     os_env_prepare();
     if (create_socket_local_server(&fd_command_server, "ylog_cli")) {
         print2journal_file_string_with_uptime("ylog.start failed, ylog_cli socket create failed!");
@@ -408,7 +416,7 @@ int main(int argc, char *argv[]) {
     hook_signals();
     pthread_create(&ptid, NULL, ylog_command_loop, NULL);
     ylog_ready();
-    ylog_os_event_timer_create("speed", 1000, speed_statistics_event_timer_handler, NULL);
+    ylog_os_event_timer_create("speed", 1000, speed_statistics_event_timer_handler, (void*)-1);
     ylog_verify();
     pthread_join(ptid, NULL);
     return 0;
