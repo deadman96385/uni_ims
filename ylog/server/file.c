@@ -421,13 +421,15 @@ static int ylog_write_handler__pcmd_print2file(char *buf, int count, struct ylog
     return fd_write(buf, count, fd, "ylog_write_handler__pcmd_print2file");
 }
 
-static int pcmds_print2file(char *cmds[], char *file, int *cnt, ylog_write_handler w,
+static int pcmds_print2file(char *cmds[], char *file, int flags, int *cnt, ylog_write_handler w,
         struct ylog *y, char *prefix, int millisecond, int max_size) {
     int rcnt = 0;
     if (mkdirs_with_file(file) == 0) {
         long fd;
         int ret;
-        fd = open(file, O_RDWR | O_CREAT | O_TRUNC, 0664);
+        if (flags == -1)
+            flags = O_RDWR | O_CREAT | O_TRUNC;
+        fd = open(file, flags, 0664);
         if (fd < 0)
             ylog_critical("%s %s Failed to open %s\n", __func__, file, strerror(errno));
         else {
@@ -463,10 +465,11 @@ static int pcmd_print2file(char *cmd, char *file, int *cnt, ylog_write_handler w
         cmd,
         NULL
     };
-    return pcmds_print2file(cmd_list, file, cnt, w, y, prefix, millisecond, max_size);
+    return pcmds_print2file(cmd_list, file, -1, cnt, w, y, prefix, millisecond, max_size);
 }
 
-static int pcmds_snapshot(char *cmds[], struct ylog *y, int millisecond, int max_size, const char *fmt, ...) {
+static int pcmds_snapshot(char *cmds[], struct ylog *y, int millisecond, int max_size,
+        int *cnt, int flags, const char *fmt, ...) {
     int len;
     va_list ap;
     char file[4096];
@@ -474,7 +477,7 @@ static int pcmds_snapshot(char *cmds[], struct ylog *y, int millisecond, int max
     vsnprintf(file, sizeof(file), fmt, ap);
     va_end(ap);
     PCMDS_YLOG_CALL_LOCK(y);
-    len = pcmds_print2file(cmds, file, NULL, NULL, y, "pcmds_snapshot", millisecond, max_size);
+    len = pcmds_print2file(cmds, file, flags, cnt, NULL, y, "pcmds_snapshot", millisecond, max_size);
     PCMDS_YLOG_CALL_UNLOCK();
     return len;
 }
@@ -495,7 +498,8 @@ static int pcmd_snapshot_exec(char *cmd, struct ylog *y, int millisecond, int ma
     return 0;
 }
 
-static int pcmd_snapshot(char *cmd, struct ylog *y, int millisecond, int max_size, const char *fmt, ...) {
+static int pcmd_snapshot(char *cmd, struct ylog *y, int millisecond, int max_size,
+        int *cnt, int flags, const char *fmt, ...) {
     int len;
     va_list ap;
     char file[4096];
@@ -507,7 +511,7 @@ static int pcmd_snapshot(char *cmd, struct ylog *y, int millisecond, int max_siz
     vsnprintf(file, sizeof(file), fmt, ap);
     va_end(ap);
     PCMDS_YLOG_CALL_LOCK(y);
-    len = pcmds_print2file(cmd_list, file, NULL, NULL, y, "pcmd_snapshot", millisecond, max_size);
+    len = pcmds_print2file(cmd_list, file, flags, cnt, NULL, y, "pcmds_snapshot", millisecond, max_size);
     PCMDS_YLOG_CALL_UNLOCK();
     return len;
 }

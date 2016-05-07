@@ -70,6 +70,43 @@ static void ylog_snapshot_startup(long poweron) {
 #endif
     pcmds_ylog_copy_file(YLOG_CONFIG, NULL, buf, count, y);
     PCMDS_YLOG_CALL_UNLOCK();
+#ifndef HAVE_YLOG_INFO
+    {
+        int cnt = 0;
+        struct ydst *ydst = y->ydst;
+        char *cmd_list[] = {
+            "cat /proc/cmdline",
+            "cat /proc/version",
+            "cat /proc/meminfo",
+            "cat /proc/mounts",
+            "cat /proc/partitions",
+            "cat /proc/diskstats",
+            "cat /proc/modules",
+            "cat /proc/cpuinfo",
+            "ls -l /",
+            // "ls -l /dev/block/platform/*/by-name/",
+            "ls -l /dev/",
+            "getprop",
+            NULL
+        };
+        pcmds_snapshot(cmd_list, y, 1000, -1, &cnt, -1, "%s/%s/phone.info", ydst->root_folder, ydst->file);
+
+        FILE *wfp;
+        wfp = popen("ls /*.rc", "r");
+        if (wfp) {
+            char *last;
+            char tmp[4096];
+            do {
+                if (fgets(buf, count, wfp) == NULL)
+                    break;
+                snprintf(tmp, sizeof tmp, "cat %s", strtok_r(buf, "\n", &last));
+                pcmd_snapshot(tmp, y, 200, -1, &cnt, O_RDWR | O_CREAT | O_APPEND,
+                        "%s/%s/phone.info", ydst->root_folder, ydst->file);
+            } while (1);
+            pclose(wfp);
+        }
+    }
+#endif
 }
 
 static void ylog_snapshot___case___log(struct ylog_snapshot_args *args) {
@@ -78,9 +115,9 @@ static void ylog_snapshot___case___log(struct ylog_snapshot_args *args) {
     struct ydst *ydst = y->ydst;
 
     ylog_get_format_time_year(timeBuf);
-    pcmd_snapshot("dmesg", y, 1000, 3*1024*1024,
+    pcmd_snapshot("dmesg", y, 1000, 3*1024*1024, NULL, -1,
             "%s/%slog/%s/kmsg", ydst->root_folder, ydst->file, timeBuf);
-    pcmd_snapshot("logcat -d", y, 1000, 5*1024*1024,
+    pcmd_snapshot("logcat -d", y, 1000, 5*1024*1024, NULL, -1,
             "%s/%slog/%s/logcat", ydst->root_folder, ydst->file, timeBuf);
     snprintf(args->data, sizeof args->data, "%s/%slog/%s/", ydst->root_folder, ydst->file, timeBuf);
 }
@@ -95,7 +132,7 @@ static void ylog_snapshot___case___mtp(struct ylog_snapshot_args *args) {
     snprintf(args->data, sizeof args->data,
             "am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_DIR -d file:///%s/%s",
             pos->ylog_root_path_latest, mtp_path);
-    pcmd_snapshot(args->data, y, 2*60*1000, -1, "/dev/null");
+    pcmd_snapshot(args->data, y, 2*60*1000, -1, NULL, -1, "/dev/null");
     snprintf(args->data, sizeof args->data, "%s/%s", pos->ylog_root_path_latest, mtp_path);
 }
 

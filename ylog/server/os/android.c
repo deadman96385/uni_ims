@@ -41,6 +41,7 @@ static int ylog_write_header_sgm_cpu_memory_header(struct ylog *y) {
             YLOG_SGM_CPU_MEMORY_HEADER, strlen(YLOG_SGM_CPU_MEMORY_HEADER), y->ydst);
 }
 
+#ifdef HAVE_YLOG_INFO
 static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
     UNUSED(fp);
     FILE *wfp;
@@ -55,10 +56,11 @@ static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct yl
 
     wfp = popen("ls /*.rc", "r");
     if (wfp) {
+        char *last;
         do {
             if (fgets(buf, count, wfp) == NULL)
                 break;
-            snprintf(tmp, sizeof tmp, "cat %s", strtok(buf, "\n"));
+            snprintf(tmp, sizeof tmp, "cat %s", strtok_r(buf, "\n", &last));
             pcmd(tmp, &fd, y->write_handler, y, "ylog_info", -1, -1);
         } while (1);
         pclose(wfp);
@@ -68,6 +70,7 @@ static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct yl
 
     return 0;
 }
+#endif
 
 static int ylog_read_ylog_debug_hook(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
     UNUSED(buf);
@@ -93,8 +96,12 @@ static int ylog_read_sys_info(char *buf, int count, FILE *fp, int fd, struct ylo
     UNUSED(fd);
     int cnt = 0;
     char *cmd_list[] = {
-        "cat /proc/slabinfo",
+        "free",
+        "vmstat",
+        "df",
         "cat /proc/buddyinfo",
+        "cat /proc/meminfo",
+        "cat /proc/slabinfo",
         "cat /proc/zoneinfo",
         "cat /proc/vmstat",
         "cat /proc/vmallocinfo",
@@ -110,6 +117,7 @@ static int ylog_read_sys_info(char *buf, int count, FILE *fp, int fd, struct ylo
         "cat /sys/kernel/debug/binder/stats",
         "cat /sys/kernel/debug/binder/state",
         "cat /sys/kernel/debug/sprd_debug/cpu/cpu_usage",
+        "cat /proc/interrupts",
         NULL
     };
     pcmds(cmd_list, &cnt, y->write_handler, y, "sys_info", 1000);
@@ -122,18 +130,6 @@ static int ylog_read_snapshot(char *buf, int count, FILE *fp, int fd, struct ylo
     UNUSED(fp);
     UNUSED(fd);
     UNUSED(y);
-    return 0;
-}
-
-static int ylog_read_sys_info_manual(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
-    int cnt = 0;
-    char *cmd_list[] = {
-        "busybox netstat -ap",
-        "ps -t",
-        NULL
-    };
-    ylog_read_sys_info(buf, count, fp, fd, y);
-    pcmds(cmd_list, &cnt, y->write_handler, y, "sys_info_manual", 1000);
     return 0;
 }
 
@@ -661,6 +657,41 @@ static void pthread_create_hook(void *args, const char *fmt, ...) {
     drop_privs(buf);
 }
 
+static void ready_go(void) {
+    int i;
+    pid_t ctid;
+    struct ylog *yi;
+    struct ylog_event_thread *e;
+    char buf[4096];
+    int count = sizeof buf;
+    struct ylog *y = pos->snapshot;
+    struct ydst *ydst = y->ydst;
+    int fd;
+
+    snprintf(buf, count, "%s/%s/phone.info", ydst->root_folder, ydst->file);
+    fd = open(buf, O_RDWR | O_CREAT | O_APPEND, 0664);
+    if (fd < 0) {
+        ylog_error("open %s failed: %s\n", buf, strerror(errno));
+        return;
+    }
+
+    for_each_ylog(i, yi, NULL) {
+        if (yi->name == NULL)
+            continue;
+        ctid = yi->ydst->cache ? yi->ydst->cache->tid : -1;
+        write(fd, buf, snprintf(buf, count,
+                    "[ylog] %s pid=%d, tid=%d, cache tid=%d\n", yi->name, yi->pid, yi->tid, ctid));
+    }
+
+    for_each_event_thread_start(e)
+    write(fd, buf, snprintf(buf, count, "[event] %s pid=%d, tid=%d\n", e->yewait.name, e->pid, e->tid));
+    for_each_event_thread_end();
+
+    close(fd);
+
+    ylog_info("ylog ready to go\n");
+}
+
 static int os_inotify_handler_anr(struct ylog_inotify_cell *pcell, int timeout, struct ylog *y) {
     static int cnt = 1;
     char *cmd_list[] = {
@@ -711,6 +742,9 @@ static void pcmds_ylog_anr_nowrap_callback(struct ylog *y, int step, char *buf, 
             cur_cnt = cnt;
             snprintf(buf, count, "%s/%s/%04d.%s.anr", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
             pcmd_print2file("cat /data/anr/traces.txt", buf, &cur_cnt, NULL, y, NULL, 1000, -1);
+            cur_cnt = cnt;
+            snprintf(buf, count, "%s/%s/%04d.%s.anr.kmsg", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
+            pcmd_print2file("dmesg", buf, &cur_cnt, NULL, y, NULL, 1000, 3*1024*1024);
             cur_cnt = cnt;
             snprintf(buf, count, "%s/%s/%04d.%s.anr.logcat", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
             pcmd_print2file("logcat -d", buf, &cur_cnt, NULL, y, NULL, 1000, 5*1024*1024);
@@ -811,6 +845,9 @@ static void pcmds_ylog_tombstone_nowrap_callback(struct ylog *y, int step, char 
                 snprintf(buf, count, "%s/%s/%04d.%s.tombstone", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
                 pcmd_print2file(*cmd, buf, &cur_cnt, NULL, y, NULL, 1000, -1);
                 cur_cnt = cnt;
+                snprintf(buf, count, "%s/%s/%04d.%s.tombstone.kmsg", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
+                pcmd_print2file("dmesg", buf, &cur_cnt, NULL, y, NULL, 1000, 3*1024*1024);
+                cur_cnt = cnt;
                 snprintf(buf, count, "%s/%s/%04d.%s.tombstone.logcat", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
                 pcmd_print2file("logcat -d", buf, &cur_cnt, NULL, y, NULL, 1000, 5*1024*1024);
                 cnt++;
@@ -841,7 +878,6 @@ static void ylog_ready(void) {
     int count;
     struct context *c = global_context;
     struct ydst_root *root = global_ydst_root;
-    ylog_debug("ylog_ready for android\n");
 
     property_get("ylog.killed", yk, "-1");
     count = atoi(yk);
@@ -853,11 +889,15 @@ static void ylog_ready(void) {
 
     c->command_loop_ready = 1; /* mark it to work command_loop(); */
 
+    if (setgid(AID_SYSTEM) != 0)
+        ylog_error("ylog_ready failed setgid AID_SYSTEM: %s\n", strerror(errno));
     ylog_snapshot_startup(count == -1 ? 1:0); /* count == -1 meas powering on the phone just */
 
+#ifdef HAVE_YLOG_INFO
     y = ylog_get_by_name("info");
     if (y)
         ylog_trigger_and_wait_for_finish(y);
+#endif
 
     pos->fd_kmsg = open("/dev/kmsg", O_WRONLY);
     if (pos->fd_kmsg < 0)
@@ -1137,13 +1177,6 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .restart_period = 1000 * 60 * 2,
                     .fread = ylog_read_sys_info,
                 },
-                {
-                    .name = "sys_info_manual",
-                    .type = FILE_NORMAL,
-                    .file = "/dev/null",
-                    .fread = ylog_read_sys_info_manual,
-                    .status = YLOG_DISABLED,
-                },
             },
             .ydst = {
                 .file = "sys_info/",
@@ -1247,11 +1280,14 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
     os_parse_config();
 
     hook->ylog_read_ylog_debug_hook = ylog_read_ylog_debug_hook;
+#ifdef HAVE_YLOG_INFO
     hook->ylog_read_info_hook = ylog_read_info_hook;
+#endif
     hook->process_command_hook = process_command_hook;
     hook->cmd_ylog_hook = cmd_ylog_hook;
     hook->ylog_status_hook = ylog_status_hook;
     hook->pthread_create_hook = pthread_create_hook;
+    hook->ready_go = ready_go;
 
     poc->keep_historical_folder_numbers = KEEP_HISTORICAL_FOLDER_NUMBERS_DEFUALT;
     parse_config(YLOG_CONFIG);

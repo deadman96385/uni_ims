@@ -122,6 +122,7 @@ static void hook_signals(void) {
 #endif
 }
 
+#ifdef HAVE_YLOG_INFO
 static int ylog_read_info(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
     static int cnt = 0;
     int i;
@@ -164,6 +165,7 @@ static int ylog_read_info(char *buf, int count, FILE *fp, int fd, struct ylog *y
 
     return 0; /* INT_MAX; */
 }
+#endif
 
 #ifdef HAVE_YLOG_JOURNAL
 static int ylog_read_journal(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
@@ -256,12 +258,14 @@ static struct ydst ydst_default[YDST_MAX+1] = {
         .max_segment = 1,
         .max_segment_size = 20*1024*1024,
     },
+#ifdef HAVE_YLOG_INFO
     [YDST_TYPE_INFO] = {
         .file = "info",
         .file_name = "info.log",
         .max_segment = 1,
         .max_segment_size = 20*1024*1024,
     },
+#endif
 #ifdef HAVE_YLOG_JOURNAL
     [YDST_TYPE_JOURNAL] = {
         .file = "ylog_journal_file",
@@ -297,6 +301,7 @@ static struct ylog ylog_default[YLOG_MAX+1] = {
         .restart_period = 1000 * 60 * 20,
         .fread = ylog_read_ylog_debug,
     },
+#ifdef HAVE_YLOG_INFO
     {
         .name = "info",
         .type = FILE_NORMAL,
@@ -304,6 +309,7 @@ static struct ylog ylog_default[YLOG_MAX+1] = {
         .ydst = &ydst_default[YDST_TYPE_INFO],
         .fread = ylog_read_info,
     },
+#endif
 #ifdef HAVE_YLOG_JOURNAL
     {
         .name = "journal",
@@ -418,6 +424,8 @@ int main(int argc, char *argv[]) {
     ylog_ready();
     ylog_os_event_timer_create("speed", 1000, speed_statistics_event_timer_handler, (void*)-1);
     ylog_verify();
+    if (os_hooks.ready_go)
+        os_hooks.ready_go();
     pthread_join(ptid, NULL);
     return 0;
 }

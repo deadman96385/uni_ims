@@ -348,7 +348,9 @@ enum ydst_type {
     YDST_TYPE_DEFAULT = 0,
     YDST_TYPE_SOCKET,
     YDST_TYPE_YLOG_DEBUG,
+#ifdef HAVE_YLOG_INFO
     YDST_TYPE_INFO,
+#endif
 #ifdef HAVE_YLOG_JOURNAL
     YDST_TYPE_JOURNAL,
 #endif
@@ -645,6 +647,7 @@ struct os_hooks {
     void (*cmd_ylog_hook)(int nargs, char **args);
     void (*ylog_status_hook)(enum ylog_thread_state state, struct ylog *y);
     void (*pthread_create_hook)(void *args, const char *fmt, ...);
+    void (*ready_go)(void);
 };
 
 static inline void yp_clr(int index, struct ylog_poll *yp) {
