@@ -11,6 +11,7 @@
 #include <jbv.h>
 #include <vtsp_constant.h>
 #include "_vc_rtcp.h"
+#include "vier.h"
 
 #define CLEAR_FLAG(rtcp_ptr, flag) rtcp_ptr->configure.rtcpFeedbackSendMask &= ~flag;
 
@@ -1238,11 +1239,10 @@ vint _VC_rtcpBye(
     /* convert the payload size into bytes. */
     msg_ptr->payloadSize *= sizeof(uint32);
 
-    /* Send message. */
-    if (OSAL_SUCCESS != OSAL_msgQSend(q_ptr->rtcpMsg, (char *) msg_ptr,
-            sizeof(_VTSP_RtcpCmdMsg), OSAL_NO_WAIT, NULL)) {
-        _VC_TRACE(__FILE__, __LINE__);
-        return (_VC_RTP_ERROR);
+    /* transmit the RTCP cmd to VPAD directly, not forwarded by VIER_daemon anymore */
+    if (OSAL_SUCCESS != VIER_writeRtcpCmd((void*)msg_ptr, sizeof(_VTSP_RtcpCmdMsg))) {
+        OSAL_logMsg("%s: fail to write the RTCP to VIER", __FUNCTION__);
+        return(_VC_RTP_ERROR);
     }
 
     return (_VC_RTP_OK);
@@ -1376,10 +1376,11 @@ vint _VC_rtcpSend(
     rtcp_ptr->sendPacketCount += 1;
     _VC_LOG("RTCP send packet count: %d, lostSeqnLength:%u\n",
 		    rtcp_ptr->sendPacketCount, packetLoss.lostSeqnLength);
-    if (OSAL_SUCCESS != OSAL_msgQSend(q_ptr->rtcpMsg, (char *) msg_ptr,
-                    sizeof(_VTSP_RtcpCmdMsg), OSAL_NO_WAIT, NULL)) {
-        _VC_TRACE(__FILE__, __LINE__);
-        return (_VC_RTP_ERROR);
+
+    /* transmit the RTCP cmd to VPAD directly, not forwarded by VIER_daemon anymore */
+    if (OSAL_SUCCESS != VIER_writeRtcpCmd((void*)msg_ptr, sizeof(_VTSP_RtcpCmdMsg))) {
+        OSAL_logMsg("%s: fail to write the RTCP to VIER", __FUNCTION__);
+        return(_VC_RTP_ERROR);
     }
 
     return (_VC_RTP_OK);

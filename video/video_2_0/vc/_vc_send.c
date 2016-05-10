@@ -11,26 +11,24 @@
  * This file is the voice read interface
  */
 #include "_vc_private.h"
-
+#include "vier.h"
 /*
  * ======== _VC_sendVtspEvent() ========
  *
  * place event in vtsp event q
- * 
+ *
  */
 void _VC_sendVtspEvent(
     _VC_Queues   *q_ptr,
     VTSP_EventMsg  *msg_ptr)
 {
-    if (NULL != msg_ptr) { 
+    if (NULL != msg_ptr) {
         /* send this msg */
-        if (OSAL_SUCCESS != (OSAL_msgQSend(q_ptr->eventQ, (char *)msg_ptr,
-                        sizeof(VTSP_EventMsg), OSAL_NO_WAIT, NULL))) { 
-            /* Queue Full error; vtsp needs to service queue */
-            //_VC_TRACE(__FILE__, __LINE__);
+
+        /* transmit the VTSP event to VPAD directly, not forwarded by VIER_daemon anymore */
+        if (OSAL_SUCCESS != VIER_writeVtspEvt((void *)msg_ptr, sizeof(VTSP_EventMsg))){
             OSAL_logMsg("%s:failed to send msg\n", __FUNCTION__);
         }
-
         /* After sending event, zero event buffer for next call
          */
         OSAL_memSet(msg_ptr, 0, sizeof(VTSP_EventMsg));

@@ -73,10 +73,10 @@ vint _VC_rtcpHandleClose(
      * Send message to the task to close the sockets after the BYE message was
      * sent.
      */
-    if (OSAL_SUCCESS != OSAL_msgQSend(q_ptr->rtcpMsg, (char *)&msg,
-                sizeof(_VTSP_RtcpCmdMsg), OSAL_NO_WAIT, NULL)) {
-        _VC_TRACE(__FILE__, __LINE__);
-        return (_VC_RTP_ERROR);
+    if (OSAL_SUCCESS != VIER_writeRtcpCmd((void*)&msg, sizeof(_VTSP_RtcpCmdMsg))) {
+        OSAL_logMsg("%s: fail to write the RTCP_CMD_CLOSE to VIER", __FUNCTION__);
+        return(_VC_RTP_ERROR);
     }
+
     return (_VC_RTP_OK);
 }

@@ -31,5 +31,11 @@ OSAL_Status VIER_init(
 OSAL_Status VIER_shutdown(
     void);
 
+OSAL_Status VIER_writeVtspEvt(
+    void* data, uint32 length);
+
+OSAL_Status VIER_writeRtcpCmd(
+    void* data, uint32 length);
+
 #endif
 #endif

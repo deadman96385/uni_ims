@@ -75,10 +75,10 @@ vint _VC_rtcpHandleOpen(
     /*
      * Send message
      */
-    if (OSAL_SUCCESS != OSAL_msgQSend(q_ptr->rtcpMsg, (char *)&message,
-                sizeof(_VTSP_RtcpCmdMsg), OSAL_NO_WAIT, NULL)) {
-        _VC_TRACE(__FILE__, __LINE__);
-        return (_VC_RTP_ERROR);
+    /* transmit the RTCP cmd to VPAD directly, not forwarded by VIER_daemon anymore */
+    if (OSAL_SUCCESS != VIER_writeRtcpCmd((void*)&message, sizeof(_VTSP_RtcpCmdMsg))) {
+        OSAL_logMsg("%s: fail to write the RTCP to VIER", __FUNCTION__);
+        return(_VC_RTP_ERROR);
     }
 
     return (_VC_RTP_OK);

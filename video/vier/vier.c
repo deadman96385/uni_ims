@@ -25,7 +25,7 @@ extern VIER_Obj *_VIER_Obj_ptr;
  * ======== VIER_init() ========
  * Public function to initialize ViER.
  *
- * Returns: 
+ * Returns:
  * OSAL_SUCCESS: ViER successfully initialized.
  * OSAL_FAIL: Error in ViER initialization.
  */
@@ -44,7 +44,7 @@ OSAL_Status VIER_init(
 
     /* Initialize VIER_Socket array */
     for (idx = 0; idx < VIER_MAX_VIDEO_STREAMS; idx++) {
-        _VIER_Obj_ptr->socket[idx].socketId = VIER_SOCKET_ID_NONE;        
+        _VIER_Obj_ptr->socket[idx].socketId = VIER_SOCKET_ID_NONE;
 
         /*
          * Create msg queues for each video stream.
@@ -56,7 +56,7 @@ OSAL_Status VIER_init(
                 OSAL_msgQCreate(qName,
                 OSAL_MODULE_VIER, OSAL_MODULE_VIER, OSAL_DATA_STRUCT_VPR_Comm,
                 VIER_SOCKET_Q_DEPTH,
-                sizeof(VPR_Comm), 0))) { 
+                sizeof(VPR_Comm), 0))) {
             OSAL_logMsg("%s %d Failed creating %s queue\n",
                     __FUNCTION__, __LINE__, qName);
             return (OSAL_FAIL);
@@ -106,26 +106,30 @@ OSAL_Status VIER_init(
                 __LINE__, VIDEO_VTSP_RTCP_EVT_Q_NAME);
         return (OSAL_FAIL);
     }
-    /* Start vier task */
-    if (0 == (_VIER_Obj_ptr->taskId = OSAL_taskCreate( 
-            VIER_TASK_NAME, 
+
+    /* Start vier read-task */
+    if (0 == (_VIER_Obj_ptr->taskId = OSAL_taskCreate(
+            VIER_TASK_NAME,
             OSAL_TASK_PRIO_VTSPR,
-            VIER_TASK_STACK_BYTES, 
-            _VIER_daemon, 
-            (void *)_VIER_Obj_ptr))) { 
-        OSAL_logMsg("Failed creating %s daemon\n", VIER_TASK_NAME); 
-        return (OSAL_FAIL); 
-    } 
+            VIER_TASK_STACK_BYTES,
+            _VIER_daemon,
+            (void *)_VIER_Obj_ptr))) {
+            OSAL_logMsg("Failed creating %s daemon\n", VIER_TASK_NAME);
+        return (OSAL_FAIL);
+    }
+
+    /* init the vtspSendMutex to protect commVtspSend buffer */
+    _VIER_Obj_ptr->vtspSendMutex = OSAL_semCountCreate(1);
 
     return (OSAL_SUCCESS);
 }
 
-/* 
+/*
  * ======== VIER_shutdown() ========
  * Public function to shutdown ViER.
  *
- * Returns: 
- * OSAL_SUCCESS: ViER shutdown successfully 
+ * Returns:
+ * OSAL_SUCCESS: ViER shutdown successfully
  * OSAL_FAIL: Error in ViER shutdown
  */
 OSAL_Status VIER_shutdown(
@@ -157,7 +161,7 @@ OSAL_Status VIER_shutdown(
     return (OSAL_SUCCESS);
 }
 
-/* 
+/*
  * ======== VIER_netSocket() ========
  *
  * Wrapper function of net socket function.
@@ -294,5 +298,39 @@ OSAL_Status VIER_netSetSocketOptions(
         return _VIER_netSetSocketOptions(socket_ptr, option, value);
     }
     return OSAL_netSetSocketOptions(socket_ptr, option, value);
+}
+
+
+/*
+ * ======== _VIER_writeRtcpCmd() ========
+ *
+ * Private function to receive rtcp command message from video engine and
+ * send to vpr
+ *
+ * Returns:
+ *  OSAL_SUCCESS: Success.
+ *  OSAL_FAIL:    Failure.
+ */
+OSAL_Status VIER_writeRtcpCmd(
+    void* data,
+    uint32 length)
+{
+    return _VIER_writeRtcpCmd(data, length);
+}
+
+/*
+ * ======== VIER_writeVtspEvt() ========
+ * This is used to receive video vtsp event from video engine.
+ * If there is any event, send it to VPAD.
+ *
+ * Returns:
+ *  OSAL_SUCCESS: Success.
+ *  OSAL_FAIL:    Failure.
+ */
+OSAL_Status VIER_writeVtspEvt(
+    void* data,
+    uint32 length)
+{
+    return _VIER_writeVtspEvt(data, length);
 }
 
