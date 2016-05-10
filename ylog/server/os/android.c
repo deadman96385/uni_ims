@@ -9,6 +9,9 @@
 #include <sys/capability.h>
 #include <cutils/properties.h>
 
+#define DROP_PRIVS_UID AID_SYSTEM
+#define DROP_PRIVS_GID AID_SYSTEM
+
 #define YLOG_ROOT_FOLDER "/data"
 #define YLOG_JOURNAL_FILE "/data/ylog/ylog_journal_file"
 #define YLOG_CONFIG        "/data/ylog/ylog.conf"
@@ -190,13 +193,13 @@ static int drop_privs(char *description) {
         return -1;
     }
 
-    if (setgid(AID_SYSTEM) != 0) {
+    if (setgid(DROP_PRIVS_GID) != 0) {
         ylog_error("ylog drop_privs pid=%d, tid=%d for %s failed setgid: %s\n",
                 pid, tid, description, strerror(errno));
         return -1;
     }
 
-    if (setuid(AID_SYSTEM) != 0) {
+    if (setuid(DROP_PRIVS_UID) != 0) {
         ylog_error("ylog drop_privs pid=%d, tid=%d for %s failed setuid: %s\n",
                 pid, tid, description, strerror(errno));
         return -1;
@@ -647,14 +650,21 @@ static void ylog_status_hook(enum ylog_thread_state state, struct ylog *y) {
     property_set(buf, value);
 }
 
-static void pthread_create_hook(void *args, const char *fmt, ...) {
+static void pthread_create_hook(struct ylog *y, void *args, const char *fmt, ...) {
     UNUSED(args);
     va_list ap;
     char buf[4096];
     va_start(ap, fmt);
     vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
-    drop_privs(buf);
+    if (y == NULL || ((y->mode & YLOG_READ_ROOT_USER) != YLOG_READ_ROOT_USER))
+        drop_privs(buf);
+    else {
+        if (setgid(DROP_PRIVS_GID) != 0)
+            ylog_error("ylog_ready failed setgid %d: %s\n", DROP_PRIVS_GID, strerror(errno));
+        else
+            ylog_debug("ylog %s setgid to %d success\n", buf, DROP_PRIVS_GID);
+    }
 }
 
 static void ready_go(void) {
@@ -889,8 +899,8 @@ static void ylog_ready(void) {
 
     c->command_loop_ready = 1; /* mark it to work command_loop(); */
 
-    if (setgid(AID_SYSTEM) != 0)
-        ylog_error("ylog_ready failed setgid AID_SYSTEM: %s\n", strerror(errno));
+    if (setgid(DROP_PRIVS_GID) != 0)
+        ylog_error("ylog_ready failed setgid %d: %s\n", DROP_PRIVS_GID, strerror(errno));
     ylog_snapshot_startup(count == -1 ? 1:0); /* count == -1 meas powering on the phone just */
 
 #ifdef HAVE_YLOG_INFO
@@ -910,7 +920,7 @@ static void ylog_ready(void) {
 
     ylog_os_event_timer_create("android", pos->sdcard_online ? 5*1000:1*1000, event_timer_handler, (void*)-1);
 
-    os_hooks.pthread_create_hook(NULL, "main ylog_ready");
+    os_hooks.pthread_create_hook(NULL, NULL, "main ylog_ready");
 }
 
 static struct context os_context[M_MODE_NUM] = {
@@ -1082,7 +1092,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .name = "tcpdump",
                     .type = FILE_POPEN,
                     .file = "tcpdump -i any -p -s 0 -C 60 -U -w -",
-                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY,
+                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY | YLOG_READ_ROOT_USER,
                     .restart_period = 2000,
                     .status = YLOG_DISABLED,
                     .raw_data = 1,
@@ -1111,7 +1121,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .name = "hcidump",
                     .type = FILE_POPEN,
                     .file = "hcidump",
-                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY,
+                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY | YLOG_READ_ROOT_USER,
                     .restart_period = 2000,
                     .raw_data = 1,
                 },

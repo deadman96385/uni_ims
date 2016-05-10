@@ -19,7 +19,7 @@ function report_summary() {
     eval 'cat ${y}/ylog_debug | grep -E "Has run|killed" | tail -n 2 |
         sed "s/.*Has run \(.*\) avg_speed.*/\1/;s/.*] \[/[/" | paste -s' # | sed "s/\(.*\) \[\(.*\)/[\2 \1/"'
     eval 'tail -n 1 ${y}/android/000 | cut -d" " -f1,2 | sed "s/..\(.*\)/      android - [\1]/"'
-    eval 'tail -n 1 ${y}/kernel/000 | cut -d" " -f1,2 | sed "s/^/       kernel - /"'
+    eval 'tail -n 1 ${y}/kernel/000 | cut -d"]" -f1-2 | sed "s/^/       kernel - /;s/$/]/"'
     eval 'echo'
 }
 

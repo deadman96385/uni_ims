@@ -597,6 +597,7 @@ struct ylog {
                                           */
 #define YLOG_READ_LEN_MIGHT_ZERO_WAIT_MAX_COUNT 0x100
 #define YLOG_GROUP_MODEM            0x8000
+#define YLOG_READ_ROOT_USER         0x40000000
     int mode;
     int read_len_zero_count;
     int block_read; /* 1: the file will be a blocked file type, 0: others by luther */
@@ -646,7 +647,7 @@ struct os_hooks {
     int (*process_command_hook)(char *buf, int buf_size, int fd, int index, struct ylog_poll *yp);
     void (*cmd_ylog_hook)(int nargs, char **args);
     void (*ylog_status_hook)(enum ylog_thread_state state, struct ylog *y);
-    void (*pthread_create_hook)(void *args, const char *fmt, ...);
+    void (*pthread_create_hook)(struct ylog *y, void *args, const char *fmt, ...);
     void (*ready_go)(void);
 };
 

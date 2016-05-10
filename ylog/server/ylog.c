@@ -388,13 +388,14 @@ static int speed_statistics_event_timer_handler(void *arg, long tick, struct ylo
     return 0;
 }
 
-static void pthread_create_hook_default(void *args, const char *fmt, ...) {
+static void pthread_create_hook_default(struct ylog *y, void *args, const char *fmt, ...) {
+    UNUSED(y);
     UNUSED(args);
     UNUSED(fmt);
 }
 
 static void *ylog_command_loop(void *arg) {
-    os_hooks.pthread_create_hook(NULL, "ylog_command_loop");
+    os_hooks.pthread_create_hook(NULL, NULL, "ylog_command_loop");
     command_loop(fd_command_server);
     arg = arg;
     return NULL;

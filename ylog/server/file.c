@@ -2417,7 +2417,7 @@ static void *ylog_event_thread_handler_default(void *arg) {
     int wait_period = yewait->period;
 
     if (yevent_thread->arg != (void*)-1)
-        os_hooks.pthread_create_hook(NULL, "event-handler %s", yewait->name);
+        os_hooks.pthread_create_hook(NULL, NULL, "event-handler %s", yewait->name);
 
     yevent_thread->pid = getpid();
     yevent_thread->tid = gettid();
@@ -2528,7 +2528,7 @@ static void *ylog_thread_handler_default(void *arg) {
     get_boottime(&y->ts);
     ms_prev = currentTimeMillis();
     y->status |= YLOG_STARTED;
-    os_hooks.pthread_create_hook(NULL, "ylog %s", name);
+    os_hooks.pthread_create_hook(y, NULL, "ylog %s", name);
     ylog_debug("Start ylog thread <%s, %s, file type is %d> --> %s %d started, pid=%d, tid=%d\n",
             name, y->file, y->type, y->ydst->file, y->ydst->refs, y->pid, y->tid);
     for (;;) {
