@@ -137,7 +137,6 @@ OSAL_Status _VIER_recvVtspEvt(
 
     return (OSAL_SUCCESS);
 }
-
 /*
  * ======== _VIER_recvRtcpCmd() ========
  *
@@ -176,6 +175,99 @@ OSAL_Status _VIER_recvRtcpCmd(
     return (OSAL_SUCCESS);
 }
 
+
+/*
+ * ======== _VIER_writeVtspEvt() ========
+ * This is used to receive video vtsp event from video engine.
+ * If there is any event, send it to VPAD.
+ *
+ * Returns:
+ *  OSAL_SUCCESS: Success.
+ *  OSAL_FAIL:    Failure.
+ */
+OSAL_Status _VIER_writeVtspEvt(
+    void* data,
+    uint32 length)
+{
+    VIER_Obj *vier_ptr = _VIER_Obj_ptr;
+    VPR_Comm *comm_ptr;
+    vint   size;
+    uint8 *msg_ptr;
+
+    if (vier_ptr == NULL || length != _VTSP_Q_RTCP_MSG_SZ) {
+        return OSAL_FAIL;
+    }
+    /* lock */
+    OSAL_semAcquire(vier_ptr->vtspSendMutex, OSAL_WAIT_FOREVER);
+
+    comm_ptr = &vier_ptr->commVtspSend;
+    msg_ptr = (uint8 *)&comm_ptr->u.vtspEvt;
+    OSAL_memCpy(msg_ptr, data, length);
+
+    comm_ptr->type = VPR_TYPE_VTSP_EVT;
+    if (OSAL_SUCCESS != VPAD_WRITE_VIDEO_CMDEVT(comm_ptr, sizeof(VPR_Comm))) {
+        /* unlock */
+        OSAL_semGive(vier_ptr->vtspSendMutex);
+        OSAL_logMsg("%s: Fail to write vtsp event message to VPAD\n", __FUNCTION__);
+        return (OSAL_FAIL);
+    }
+
+    /* unlock */
+    OSAL_semGive(vier_ptr->vtspSendMutex);
+    OSAL_logMsg("%s: write VPR_TYPE_VTSP_EVT done\n", __FUNCTION__);
+
+    return (OSAL_SUCCESS);
+}
+
+
+/*
+ * ======== _VIER_writeRtcpCmd() ========
+ *
+ * Private function to receive rtcp command message from video engine and
+ * send to vpr
+ *
+ * Returns:
+ *  OSAL_SUCCESS: Success.
+ *  OSAL_FAIL:    Failure.
+ */
+OSAL_Status _VIER_writeRtcpCmd(
+    void* data,
+    uint32 length)
+{
+    VIER_Obj *vier_ptr = _VIER_Obj_ptr;
+    VPR_Comm *comm_ptr;
+    vint   size;
+    uint8 *msg_ptr;
+
+    if (vier_ptr == NULL || length != _VTSP_Q_RTCP_MSG_SZ) {
+        return OSAL_FAIL;
+    }
+
+#ifndef VIER_DISABLE_RTCP
+    /* lock */
+    OSAL_semAcquire(vier_ptr->vtspSendMutex, OSAL_WAIT_FOREVER);
+
+    comm_ptr = &vier_ptr->commVtspSend;
+    msg_ptr = (uint8 *)&comm_ptr->u.vtspRtcpCmd;
+    OSAL_memCpy(msg_ptr, data, length);
+
+    comm_ptr->type = VPR_TYPE_RTCP_CMD;
+    if (OSAL_SUCCESS != VPAD_WRITE_VIDEO_CMDEVT(comm_ptr,
+            sizeof(VPR_Comm))) {
+        /* unlock */
+        OSAL_semGive(vier_ptr->vtspSendMutex);
+        OSAL_logMsg("%s: Fail to write rtcp msg to VPAD\n", __FUNCTION__);
+        return (OSAL_FAIL);
+    }
+
+    /* unlock */
+    OSAL_semGive(vier_ptr->vtspSendMutex);
+    OSAL_logMsg("%s: write VPR_TYPE_RTCP_CMD done\n", __FUNCTION__);
+#endif /* not defined VIER_DISABLE_RTCP */
+
+    return (OSAL_SUCCESS);
+}
+
 /*
  * ======== _VIER_daemon() ========
  *
@@ -193,7 +285,7 @@ OSAL_TaskReturn _VIER_daemon(
     vint          timeout = 10;
 #endif
 
-    OSAL_logMsg("%s: vier task is running\n", __FUNCTION__);
+    OSAL_logMsg("%s: vier read task is running\n", __FUNCTION__);
 _VIER_DAEMON_WAIT_VPAD:
     /* Wait for VPAD ready */
     while (OSAL_FALSE == VPAD_IS_READY()) {
@@ -229,22 +321,6 @@ _VIER_DAEMON_LOOP:
             OSAL_NO_WAIT)) {
         OSAL_logMsg("%s: get video CMDEVT, type %d\n", __FUNCTION__, comm_ptr->type);
         _VIER_processVprComm(vier_ptr, comm_ptr);
-    }
-
-    /*
-     * Receive and process rtcp command msg from video engine.
-     * It's non-blocking.
-     */
-    if (OSAL_SUCCESS != _VIER_recvRtcpCmd(vier_ptr, comm_ptr)) {
-        VIER_dbgPrintf("Failed on receiving rtcp from video engine\n");
-    }
-
-    /*
-     * Receive and process video vtsp event msg from video engine.
-     * It's non-blocking.
-     */
-    if (OSAL_SUCCESS != _VIER_recvVtspEvt(vier_ptr, comm_ptr)) {
-        VIER_dbgPrintf("Failed on receiving vtsp event from video engine\n");
     }
 
     goto _VIER_DAEMON_LOOP;

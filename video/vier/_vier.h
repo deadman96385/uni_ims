@@ -47,8 +47,10 @@ typedef struct {
     VIER_Socket     socket[VIER_MAX_VIDEO_STREAMS];
     VPR_Comm        commRecv;
     VPR_Comm        commSend;
+    VPR_Comm        commVtspSend;
     VPR_Comm        commRtpRecv; /* For rtp recv task of ve use */
     VPR_NetworkMode networkMode;
+    OSAL_SemId      vtspSendMutex;
     struct {
         OSAL_MsgQId    cmdQVideo;
         OSAL_MsgQId    evtQVideo;
@@ -111,5 +113,13 @@ OSAL_Status _VIER_netSetSocketOptions(
     OSAL_NetSockId  *socket_ptr,
     OSAL_NetSockopt  option,
     int              value);
+
+OSAL_Status _VIER_writeVtspEvt(
+    void * data,
+    uint32 length);
+
+OSAL_Status _VIER_writeRtcpCmd(
+    void * data,
+    uint32 length);
 
 #endif

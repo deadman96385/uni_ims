@@ -197,7 +197,6 @@ vint _VC_rtpOpen(
      * effectively is closing the port.
      */
     _VC_rtpDir(rtp_ptr, dir);
-
     if ((localAddr.port != 0) && (newBind == 1)) {
         if (_VC_RTP_OK != _VC_netBind(rtp_ptr->socket, localAddr)) {
             /*
