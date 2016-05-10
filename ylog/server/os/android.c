@@ -464,6 +464,28 @@ static int cmd_print2kernel(struct command *cmd, char *buf, int buf_size, int fd
     return 0;
 }
 
+static int cmd_anr(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(buf);
+    UNUSED(buf_size);
+    UNUSED(fd);
+    UNUSED(index);
+    UNUSED(yp);
+    pcmd("cp /data/ylog/ylog_journal_file /data/anr/traces.txt", NULL, NULL, NULL, "cmd_anr", -1, -1);
+    return 0;
+}
+
+static int cmd_tombstone(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(buf);
+    UNUSED(buf_size);
+    UNUSED(fd);
+    UNUSED(index);
+    UNUSED(yp);
+    pcmd("cp /data/ylog/ylog_journal_file /data/tombstones/cmd_tombstone.txt", NULL, NULL, NULL, "cmd_tombstone", -1, -1);
+    return 0;
+}
+
 static int cmd_exit(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
     UNUSED(cmd);
     UNUSED(index);
@@ -554,6 +576,8 @@ static struct command os_commands[] = {
     {"at", "send AT command to cp side, ex. ylog_cli at AT+ARMLOG=1 or ylog_cli at AT+CGMR", cmd_at, NULL},
     {"print2android", "write data to android system log", cmd_print2android, NULL},
     {"print2kernel ", "write data to kernel log", cmd_print2kernel, NULL},
+    {"anr", "trigger anr action for auto test", cmd_anr, NULL},
+    {"tombstone", "trigger tombstone action for auto test", cmd_tombstone, NULL},
     {"exit", "quit all ylog threads, and kill ylog itself to protect sdcard", cmd_exit, NULL},
     {"monkey", "mark the status of monkey, ex. ylog_cli monkey 1 or ylog_cli monkey 0", cmd_monkey, NULL},
     {"snapshot", "snapshot the android, ex. ylog_cli snapshot", cmd_snapshot, NULL},

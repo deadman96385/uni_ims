@@ -3,18 +3,133 @@
 # Created on Mar 25, 2016
 
 rfuncs=(
-"ylog_check_ylog_cli_print2kernel"
 "ylog_check_ylog_service"
-"ylog_check_kernel_log"
+"ylog_check_ylog_cli_print2kernel"
 "ylog_check_android_log"
-"ylog_check_wcn_log"
-"ylog_check_wcdma_log"
-"ylog_check_td-scdma_log"
-"ylog_check_5mode_log"
-"ylog_check_4mode_log"
-"ylog_check_3mode_log"
+"ylog_check_kernel_log"
+"ylog_check_tcpdump_log"
+"ylog_check_hcidump_log"
 "ylog_check_ylog_cli_at"
+"ylog_check_ylog_cli_snapshot_log_kmsg"
+"ylog_check_ylog_cli_snapshot_screen"
+"ylog_check_ylog_traces_anr"
+"ylog_check_ylog_traces_tombstone"
 )
+
+# 函数：ylog_check_ylog_traces_tombstone()
+# 参数：无参数
+# 功能：检查anr log是否正常捕获
+# 历史：
+# 1. 创建函数 - 2016.05.10 by luther
+function ylog_check_ylog_traces_tombstone() #                      #check tombstone log cmd
+{
+    $ADB_SHELL ylog_cli -c rm -rf ${rootdir_ylog}/traces
+    $ADB_SHELL ylog_cli tombstone
+    count=0
+    while ((count++ < 8)); do
+        sleep 0.5
+        files="`$ADB_SHELL ylog_cli -c ls ${rootdir_ylog}/traces/`"
+        [ "${files}" ] && {
+            result="pass"
+            break
+        }
+    done
+}
+
+# 函数：ylog_check_ylog_traces_anr()
+# 参数：无参数
+# 功能：检查anr log是否正常捕获
+# 历史：
+# 1. 创建函数 - 2016.05.10 by luther
+function ylog_check_ylog_traces_anr() #                            #check anr log cmd
+{
+    $ADB_SHELL ylog_cli -c rm -rf ${rootdir_ylog}/traces
+    $ADB_SHELL ylog_cli anr
+    count=0
+    while ((count++ < 8)); do
+        sleep 0.5
+        files="`$ADB_SHELL ylog_cli -c ls ${rootdir_ylog}/traces/`"
+        [ "${files}" ] && {
+            result="pass"
+            break
+        }
+    done
+}
+
+# 函数：ylog_check_ylog_cli_snapshot_log_kmsg()
+# 参数：无参数
+# 功能：检查ylog_cli snapshot log命令
+# 历史：
+# 1. 创建函数 - 2016.05.10 by luther
+function ylog_check_ylog_cli_snapshot_log_kmsg() #                 #check ylog_cli snapshot log cmd
+{
+    file_log="`$ADB_SHELL ylog_cli snapshot log 2>/dev/null | cut -d' ' -f2 | tr -d '\r'`"
+    file_log_size=`$ADB_SHELL wc -c ${file_log}/kmsg 2>/dev/null | cut -d' ' -f1`
+    [ ${file_log_size} -gt 200 ] && result="pass"
+}
+
+# 函数：ylog_check_ylog_cli_snapshot_screen()
+# 参数：无参数
+# 功能：检查ylog_cli snapshot screen命令
+# 历史：
+# 1. 创建函数 - 2016.05.10 by luther
+function ylog_check_ylog_cli_snapshot_screen() #                   #check ylog_cli snapshot screen cmd
+{
+    file_screen="`$ADB_SHELL ylog_cli snapshot screen 2>/dev/null | cut -d' ' -f2 | tr -d '\r'`"
+    file_screen_size=`$ADB_SHELL wc -c ${file_screen} 2>/dev/null | cut -d' ' -f1`
+    [ ${file_screen_size} -gt 0 ] && result="pass"
+}
+
+# 函数：ylog_check_hcidump_log()
+# 参数：无参数
+# 功能：检查hcidump log是否正常捕获
+# 历史：
+# 1. 创建函数 - 2016.05.10 by luther
+function ylog_check_hcidump_log() #                                #check hcidump log capture
+{
+    $ADB_SHELL am start -a android.bluetooth.adapter.action.REQUEST_ENABLE >/dev/null
+    $ADB_SHELL ylog_cli ylog hcidump start >/dev/null
+#timeout 5 bash -x <<__EOF
+timeout 5 bash <<__EOF
+    prev_size=\$($ADB_SHELL wc -c ${rootdir_ylog}/hcidump/000)
+    while [ 1 ]; do
+        $ADB_SHELL ping -c 2 127.0.0.1 >/dev/null
+        curr_size=\$($ADB_SHELL wc -c ${rootdir_ylog}/hcidump/000)
+        if [ "\${prev_size}" != "\${curr_size}" ]; then
+            #echo "1111=\${prev_line}"
+            #echo "2222=\${curr_line}"
+            exit 0
+        fi
+        sleep 0.2
+    done
+__EOF
+    [ "$?" == "0" ] && result="pass"
+}
+
+# 函数：ylog_check_tcpdump_log()
+# 参数：无参数
+# 功能：检查tcpdump log是否正常捕获
+# 历史：
+# 1. 创建函数 - 2016.05.10 by luther
+function ylog_check_tcpdump_log() #                                #check tcpdump log capture
+{
+    $ADB_SHELL ylog_cli ylog tcpdump start >/dev/null
+#timeout 5 bash -x <<__EOF
+timeout 5 bash <<__EOF
+    prev_size=\$($ADB_SHELL wc -c ${rootdir_ylog}/tcpdump/000)
+    while [ 1 ]; do
+        $ADB_SHELL ping -c 2 127.0.0.1 >/dev/null
+        curr_size=\$($ADB_SHELL wc -c ${rootdir_ylog}/tcpdump/000)
+        if [ "\${prev_size}" != "\${curr_size}" ]; then
+            #echo "1111=\${prev_line}"
+            #echo "2222=\${curr_line}"
+            exit 0
+        fi
+        sleep 0.2
+    done
+__EOF
+    [ "$?" == "0" ] && result="pass"
+}
 
 # 函数：ylog_loop_start_stop()
 # 参数：无参数
@@ -69,6 +184,7 @@ function ylog_check_ylog_service() #                               #check ylog s
 # 1. 创建函数 - 2016.03.25 by luther
 function ylog_check_kernel_log() #                                 #check kernel log capture
 {
+    $ADB_SHELL ylog_cli ylog kernel start >/dev/null
 #timeout 5 bash -x <<__EOF
 timeout 5 bash <<__EOF
     prev_line='$($ADB_SHELL tail -n 1 ${rootdir_ylog}/kernel/000)'
@@ -94,6 +210,7 @@ __EOF
 # 1. 创建函数 - 2016.03.25 by luther
 function ylog_check_android_log() #                                #check android log capture
 {
+    $ADB_SHELL ylog_cli ylog android start >/dev/null
 #timeout 5 bash -x <<__EOF
 timeout 5 bash <<__EOF
     prev_line='$($ADB_SHELL tail -n 1 ${rootdir_ylog}/android/000)'
@@ -222,22 +339,22 @@ COLOR_START_YELOW='\E[1;33m'
 COLOR_END='\E[0m'
 
  function my_echo_normal() {
-echo "$@"
+echo -n "$@"
 }
  function my_echo_red() {
-echo -e "${COLOR_START_RED}$@${COLOR_END}"
+echo -e -n "${COLOR_START_RED}$@${COLOR_END}"
 }
 
  function my_echo_yellow() {
-echo -e "${COLOR_START_YELOW}$@${COLOR_END}"
+echo -e -n "${COLOR_START_YELOW}$@${COLOR_END}"
 }
 
  function my_echo_green() {
-echo -e "${COLOR_START_GREEN}$@${COLOR_END}"
+echo -e -n "${COLOR_START_GREEN}$@${COLOR_END}"
 }
 
  function my_echo_pink() {
-echo -e "${COLOR_START_PINK}$@${COLOR_END}"
+echo -e -n "${COLOR_START_PINK}$@${COLOR_END}"
 }
 
 if [ '1' ]; then
@@ -245,6 +362,7 @@ if [ '1' ]; then
         #rfuncs=(`${GREP} '^function ' ${program} | ${SED} 's/^function //;s/(.*//'`)
         echo > /dev/null
     else
+        rfuncs_o=(${rfuncs[@]})
         rfuncs=($@)
     fi
     if [ "${rfuncs[0]}" ]; then
@@ -267,15 +385,24 @@ if [ '1' ]; then
                 eval ${f}
                 if [ "${result}" != "pass" ]; then
                     printf "%03d. " ${count}
-                    my_echo_red "${f} --> fail"
+                    my_echo_normal "${f} --> "
+                    my_echo_red "fail"
+                    echo
                 else
                     printf "%03d. " ${count}
-                    my_echo_normal "${f} --> pass"
+                    my_echo_normal "${f} --> "
+                    my_echo_green "pass"
+                    echo
                 fi
                 ((count++))
             done
         done
     else
+        echo "++++++++ all ++++++++++"
+        for f in "${rfuncs_o[@]}"; do
+            echo $f
+        done
+        echo "-----------------------"
         ${GREP} '^function ' ${program} | ${SED} 's/^function //;s/()//;s/#//' | ${AWK} '{printf "%03d. %s\n", NR, $0}'
     fi
 else
