@@ -12479,9 +12479,7 @@ static void initializeCallback(void *param)
 
     /* SPRD : for non-CMCC version @{ */
     if (isCSFB()) {
-        if (isCUCC()) {
-            at_send_command(ATch_type[channelID], "at+spcapability=32,1,2", NULL);
-        } else if (!isCMCC()){
+        if (!isCMCC()){
             at_send_command(ATch_type[channelID], "at+spcapability=32,1,0", NULL);
         }
     }
