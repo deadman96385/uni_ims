@@ -155,7 +155,9 @@ static struct context os_context[M_MODE_NUM] = {
     },
 };
 
-static int os_check_sdcard_online(void) {
+static int os_check_sdcard_online(char *sdcard_path, int count) {
+    UNUSED(sdcard_path);
+    UNUSED(count);
     return 0;
 }
 

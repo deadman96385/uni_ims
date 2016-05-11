@@ -231,10 +231,54 @@ static int drop_privs(char *description) {
     return 0;
 }
 
-static int os_check_sdcard_online(void) {
+static int check_sdcard_mounted_default(char *sdcard, int count) {
+    char str[4096];
+    char *token, *last;
+    const char *mountPath = "/mnt/media_rw/";
+    FILE *fp = fopen("/proc/mounts", "r");
+
+    if (sdcard)
+        sdcard[0] = 0;
+
+    if(fp != NULL) {
+        while (fgets(str, sizeof(str), fp)) {
+            token = strtok_r(str, " ", &last);
+            if (token != NULL) {
+                token = strtok_r(NULL, " ", &last);
+                if (strstr(token, mountPath)) {
+                    snprintf(sdcard, count, "/storage/%s", token + strlen(mountPath));
+                    break;
+                }
+            }
+        }
+        fclose(fp);
+    }
+
+    if (!access(sdcard, F_OK))
+        return 1;
+
+    return 0;
+}
+
+static int os_check_sdcard_online(char *sdcard_path, int count) {
     char sdcard_status[PROPERTY_VALUE_MAX];
-    property_get("vold.sdcard0.state", sdcard_status, "unmounted");
-    return !strncmp(sdcard_status, "mounted", 7);
+
+    property_get("vold.sdcard0.state", sdcard_status, "");
+    if (sdcard_status[0]) {
+        if (!strncmp(sdcard_status, "mounted", 7)) {
+            if (sdcard_path)
+                property_get("vold.sdcard0.path", sdcard_path, "/storage/sdcard0");
+            return 1;
+        }
+        return 0;
+    }
+
+    if (sdcard_path == NULL) {
+        sdcard_path = sdcard_status;
+        count = sizeof(sdcard_status);
+    }
+
+    return check_sdcard_mounted_default(sdcard_path, count);
 }
 
 static int os_search_root_path(char *path, int len) {
@@ -248,8 +292,7 @@ static int os_search_root_path(char *path, int len) {
     char *historical_folder_root = NULL;
     unsigned long long quota = 0;
 
-    if (os_check_sdcard_online()) {
-        property_get("vold.sdcard0.path", sdcard_path, "/storage/sdcard0");
+    if (os_check_sdcard_online(sdcard_path, sizeof(sdcard_path))) {
         keep_historical_folder_numbers = poc->keep_historical_folder_numbers;
         historical_folder_root = pos->historical_folder_root_last;
         pos->sdcard_online = 1;

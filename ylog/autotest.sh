@@ -25,10 +25,10 @@ function ylog_check_ylog_traces_tombstone() #                      #check tombst
 {
     $ADB_SHELL ylog_cli -c rm -rf ${rootdir_ylog}/traces
     $ADB_SHELL ylog_cli tombstone
-    count=0
-    while ((count++ < 8)); do
+    local num=0
+    while ((num++ < 8)); do
         sleep 0.5
-        files="`$ADB_SHELL ylog_cli -c ls ${rootdir_ylog}/traces/`"
+        local files="`$ADB_SHELL ylog_cli -c ls ${rootdir_ylog}/traces/`"
         [ "${files}" ] && {
             result="pass"
             break
@@ -45,10 +45,10 @@ function ylog_check_ylog_traces_anr() #                            #check anr lo
 {
     $ADB_SHELL ylog_cli -c rm -rf ${rootdir_ylog}/traces
     $ADB_SHELL ylog_cli anr
-    count=0
-    while ((count++ < 8)); do
+    local num=0
+    while ((num++ < 8)); do
         sleep 0.5
-        files="`$ADB_SHELL ylog_cli -c ls ${rootdir_ylog}/traces/`"
+        local files="`$ADB_SHELL ylog_cli -c ls ${rootdir_ylog}/traces/`"
         [ "${files}" ] && {
             result="pass"
             break
@@ -63,8 +63,8 @@ function ylog_check_ylog_traces_anr() #                            #check anr lo
 # 1. 创建函数 - 2016.05.10 by luther
 function ylog_check_ylog_cli_snapshot_log_kmsg() #                 #check ylog_cli snapshot log cmd
 {
-    file_log="`$ADB_SHELL ylog_cli snapshot log 2>/dev/null | cut -d' ' -f2 | tr -d '\r'`"
-    file_log_size=`$ADB_SHELL wc -c ${file_log}/kmsg 2>/dev/null | cut -d' ' -f1`
+    local file_log="`$ADB_SHELL ylog_cli snapshot log 2>/dev/null | cut -d' ' -f2 | tr -d '\r'`"
+    local file_log_size=`$ADB_SHELL wc -c ${file_log}/kmsg 2>/dev/null | cut -d' ' -f1`
     [ ${file_log_size} -gt 200 ] && result="pass"
 }
 
@@ -75,8 +75,8 @@ function ylog_check_ylog_cli_snapshot_log_kmsg() #                 #check ylog_c
 # 1. 创建函数 - 2016.05.10 by luther
 function ylog_check_ylog_cli_snapshot_screen() #                   #check ylog_cli snapshot screen cmd
 {
-    file_screen="`$ADB_SHELL ylog_cli snapshot screen 2>/dev/null | cut -d' ' -f2 | tr -d '\r'`"
-    file_screen_size=`$ADB_SHELL wc -c ${file_screen} 2>/dev/null | cut -d' ' -f1`
+    local file_screen="`$ADB_SHELL ylog_cli snapshot screen 2>/dev/null | cut -d' ' -f2 | tr -d '\r'`"
+    local file_screen_size=`$ADB_SHELL wc -c ${file_screen} 2>/dev/null | cut -d' ' -f1`
     [ ${file_screen_size} -gt 0 ] && result="pass"
 }
 
@@ -382,15 +382,13 @@ if [ '1' ]; then
             export rootdir_ylog="${rootdir}/ylog/ylog"
             for f in "${rfuncs[@]}"; do
                 result="fail"
+                printf "%03d. " ${count}
+                my_echo_normal "${f} --> "
                 eval ${f}
                 if [ "${result}" != "pass" ]; then
-                    printf "%03d. " ${count}
-                    my_echo_normal "${f} --> "
                     my_echo_red "fail"
                     echo
                 else
-                    printf "%03d. " ${count}
-                    my_echo_normal "${f} --> "
                     my_echo_green "pass"
                     echo
                 fi

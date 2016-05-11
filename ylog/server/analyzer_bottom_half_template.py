@@ -11,8 +11,8 @@ ver = sys.version_info
 if ver[0] == 3:
     mopen = open;
 else:
-    def mopen(file, mode='r', buffering=-1, encoding=None, errors=None, newline=None, closefd=True, opener=None):
-        return open(file, mode)
+    def mopen(file, mode='rb', buffering=-1, encoding=None, errors=None, newline=None, closefd=True, opener=None):
+        return open(file, mode+'b')
 
 class ytag_fd(object):
     pass

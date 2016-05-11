@@ -31,7 +31,7 @@ static void *ylog_sighandler_thread_default(void *arg) {
     if (global_context->ignore_signal_process == 0/**processing_signal == SIGPWR*/) {
         ylog_all_thread_exit();
         CLOSE(fd_command_server);
-        print2journal_file("ylog.stop with signal %d, %s, sdcard is %s", *processing_signal, strsignal(*processing_signal), os_check_sdcard_online() ? "online" : "offline");
+        print2journal_file("ylog.stop with signal %d, %s, sdcard is %s", *processing_signal, strsignal(*processing_signal), os_check_sdcard_online(NULL, 0) ? "online" : "offline");
         #if 0
         exit(0); /* sometime it will pending there long time, don't know why */
         #else

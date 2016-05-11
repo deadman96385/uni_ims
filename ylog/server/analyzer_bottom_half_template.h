@@ -5,7 +5,7 @@
 /**
  * Auto created by analyzer_bottom_half_template.sh
  * base on analyzer_bottom_half_template.py
- * Mon, 02 May 2016 17:51:08 +0800
+ * Wed, 11 May 2016 18:04:23 +0800
  */
 
 #define analyzer_bottom_half_template \
@@ -22,8 +22,8 @@
 "if ver[0] == 3:\n" \
 "    mopen = open;\n" \
 "else:\n" \
-"    def mopen(file, mode='r', buffering=-1, encoding=None, errors=None, newline=None, closefd=True, opener=None):\n" \
-"        return open(file, mode)\n" \
+"    def mopen(file, mode='rb', buffering=-1, encoding=None, errors=None, newline=None, closefd=True, opener=None):\n" \
+"        return open(file, mode+'b')\n" \
 "\n" \
 "class ytag_fd(object):\n" \
 "    pass\n" \
