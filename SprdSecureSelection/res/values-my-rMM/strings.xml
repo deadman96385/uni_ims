@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-<string name="app_name">"လံုျခံဳစြာ ေရြးခ်ယ္"</string>
-<string name="action_settings">"်တပ်ဆင်ြခင်း"</string>
-<string name="hello_world">"ေအပီပီ လက္ခံရန္ (သို ့) ေဒတာခ်ိတ္ဆက္မွဳ ဖြင့္ရန္ အင္တာေဖ့စ္ စနစ္ ကို ေထာက္ပံ့မည္, သံုးစြဲသူ သတင္းအခ်က္ လံုျခံဳမွဳ နွင့္ ဆက္သြယ္သူ, သင္ေအပီပီ တစ္ခ်ိဳ ့ ကို ဖြင့္လွ်င္ သံုးစြဲသူ  ကို ထိခိုက္လိမ့္မည္ , လံုျခံဳေရး ေအပီပီမွ လိုအပ္သလို ဖြင့္ ပိတ္ လုပ္ပါ ."</string>
-<string name="timer">"လက္က်န္ အခ်ိန္:"</string>
-<string name="No">မလုပ္</string>
-<string name="Yes">ဟုတ်ကဲ့</string>
-<string name="second">"စက္"</string>
-<string name="cancel">"မလုပ္ပါ"</string>
+    <string name="app_name">"လံုျခံဳစြာ ေရြးခ်ယ္"</string>
+    <string name="action_settings">"ဆက္တင္မ်ား"</string>
+    <string name="hello_world">"ေအပီပီ လက္ခံရန္ (သို ့) ေဒတာခ်ိတ္ဆက္မ ဖြင့္ရန္ အင္တာေဖ့စ္ စနစ္ ကို ေထာက္ပံ့မည္, သံုးစြဲသူ သတင္းအခ်က္ လံုျခံဳမ နွင့္ ဆက္သြယ္သူ, သင္ေအပီပီ တစ္ခ်ိဳ ့ ကို ဖြင့္လွ်င္ သံုးစြဲသူ  ကို ထိခိုက္လိမ့္မည္ , လံုျခံဳေရး ေအပီပီမွ လိုအပ္သလို ဖြင့္ ပိတ္ လုပ္ပါ ."</string>
+    <string name="timer">"လက္က်န္ အခ်ိန္:"</string>
+    <string name="No">မဟုတ္ပါ</string>
+    <string name="Yes">"မွန္သည္"</string>
+    <string name="second">စကၠန္ ့</string>
+    <string name="cancel">"မလုပ္ပါ"</string>
 </resources>
