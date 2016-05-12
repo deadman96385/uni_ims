@@ -3,7 +3,8 @@
  */
 
 #define YLOG_ROOT_FOLDER "data/ylog/ylog"
-#define YLOG_CONFIG        "data/ylog/ylog.conf"
+#define YLOG_JOURNAL_FILE "ylog_journal_file"
+#define YLOG_CONFIG_FILE "data/ylog/ylog.conf"
 
 static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
     UNUSED(buf);
@@ -57,71 +58,6 @@ static struct command os_commands[] = {
     {NULL, NULL, NULL, NULL}
 };
 
-static void cmd_ylog_hook(int nargs, char **args) {
-    /**
-     * args 0    1       2    3
-     * 1. ylog enabled kernel 0
-     * 2.
-     */
-    ylog_update_config(YLOG_CONFIG, nargs, args, nargs - 1);
-}
-
-static void load_loglevel(struct ylog_keyword *kw, int nargs, char **args) {
-    UNUSED(kw);
-    UNUSED(nargs);
-    struct context *c = global_context;
-    int loglevel = strtol(args[1], NULL, 0);
-    if (loglevel < 0 || loglevel >= LOG_LEVEL_MAX)
-        loglevel = LOG_DEBUG;
-    c->loglevel = loglevel;
-}
-
-static void load_ylog(struct ylog_keyword *kw, int nargs, char **args) {
-    UNUSED(kw);
-    /**
-     * args 0    1       2    3
-     * 1. ylog enabled kernel 0
-     * 2.
-     */
-    struct ylog *y;
-    int v;
-    char *key = (nargs > 1 ? args[1] : NULL);
-    char *value = (nargs > 2 ? args[2] : NULL);
-    char *svalue1 = (nargs > 3 ? args[3] : NULL);
-    if (strcmp(key, "enabled") == 0) {
-        if (value && svalue1) {
-            y = ylog_get_by_name(value);
-            if (y) {
-                v = !!atoi(svalue1);
-                if (v == 0) {
-                    y->status |= YLOG_DISABLED_FORCED_RUNNING | YLOG_DISABLED;
-                } else {
-                    y->status &= ~YLOG_DISABLED;
-                }
-                ylog_info("ylog <%s> is %s forcely by ylog.conf\n",
-                        y->name, (y->status & YLOG_DISABLED) ? "disabled":"enabled");
-            } else {
-                ylog_critical("%s: can't find ylog %s\n", __func__, value);
-            }
-        } else {
-            ylog_critical("%s: value=%s, svalue1=%s\n", __func__, value, svalue1);
-        }
-    }
-}
-
-static struct ylog_keyword ylog_keyword[] = {
-    {"loglevel", load_loglevel},
-    {"ylog", load_ylog},
-    {NULL, NULL},
-};
-
-static void ylog_update_config2(char *key, char *value) {
-    char *argv[2];
-    argv[0] = key;
-    argv[1] = value;
-    ylog_update_config(YLOG_CONFIG, 2, argv, 1);
-}
-
 static int os_inotify_handler(struct ylog_inotify_cell *pcell, int timeout, struct ylog *y) {
     ylog_info("os_inotify_handler is called for '%s %s' %dms %s now\n",
                 pcell->pathname ? pcell->pathname:"", pcell->filename, pcell->timeout, timeout ? "timeout":"normal");
@@ -136,22 +72,41 @@ static void ylog_ready(void) {
     ylog_trigger_all(global_ylog);
 }
 
+static struct ylog_keyword os_ylog_keyword[] = {
+    {"loglevel", load_loglevel},
+    {"keep_historical_folder_numbers", load_keep_historical_folder_numbers},
+    {"ylog", load_ylog},
+    {NULL, NULL},
+};
+
+static struct ylog_snapshot_list_s os_ylog_snapshot_list[] = {
+    {"xxxxxxxxx", "2222222", NULL},
+};
+
 static struct context os_context[M_MODE_NUM] = {
     [M_USER] = {
         .config_file = "1.xml",
-        .journal_file = "ylog_journal_file",
+        .journal_file = YLOG_JOURNAL_FILE,
+        .ylog_config_file = YLOG_CONFIG_FILE,
         .model = C_MINI_LOG,
         .loglevel = LOG_WARN,
         .keep_historical_folder_numbers = 2,
+        .keep_historical_folder_numbers_default = 5,
+        .ylog_keyword = os_ylog_keyword,
+        .ylog_snapshot_list = os_ylog_snapshot_list,
     },
     [M_USER_DEBUG] = {
         .config_file = "2.xml",
-        .journal_file = "ylog_journal_file",
+        .journal_file = YLOG_JOURNAL_FILE,
+        .ylog_config_file = YLOG_CONFIG_FILE,
         .model = C_FULL_LOG,
         .loglevel = LOG_DEBUG,
         .pre_fill_zero_to_possession_storage_spaces = 0,
         .historical_folder_root = "data/ylog/last_ylog",
         .keep_historical_folder_numbers = 2,
+        .keep_historical_folder_numbers_default = 5,
+        .ylog_keyword = os_ylog_keyword,
+        .ylog_snapshot_list = os_ylog_snapshot_list,
     },
 };
 
@@ -290,7 +245,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
     hook->process_command_hook = process_command_hook;
     hook->cmd_ylog_hook = cmd_ylog_hook;
 
-    parse_config(YLOG_CONFIG);
+    parse_config(global_context->ylog_config_file);
 
     root->root = strdup(YLOG_ROOT_FOLDER); /* Remember to call free */
 }

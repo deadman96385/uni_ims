@@ -20,11 +20,6 @@ static pthread_mutex_t update_config_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define INIT_PARSER_MAXARGS 64
 
-struct ylog_keyword {
-    const char *key;
-    void (*handler)(struct ylog_keyword *kw, int nargs, char **args);
-};
-
 struct parse_state {
     char *ptr;
     char *text;
@@ -291,6 +286,13 @@ parser_done:
     pthread_mutex_unlock(&update_config_mutex);
 }
 
+static void ylog_update_config2(char *key, char *value) {
+    char *argv[2];
+    argv[0] = key;
+    argv[1] = value;
+    ylog_update_config(global_context->ylog_config_file, 2, argv, 1);
+}
+
 void process_keyword(struct parse_state *state, int nargs, char **args);
 static void parse_config(const char *fn) {
     char *args[INIT_PARSER_MAXARGS];
@@ -337,11 +339,10 @@ parser_done:
     free(mptr);
 }
 
-static struct ylog_keyword ylog_keyword[];
 void process_keyword(struct parse_state *state, int nargs, char **args) {
     UNUSED(state);
     struct ylog_keyword *kw;
-    for (kw = ylog_keyword; kw->key; kw++) {
+    for (kw = global_context->ylog_keyword; kw->key; kw++) {
         if (strcmp(args[0], kw->key) == 0) {
             if (kw->handler)
                 kw->handler(kw, nargs, args);

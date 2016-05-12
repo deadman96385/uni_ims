@@ -14,8 +14,14 @@
 
 #define YLOG_ROOT_FOLDER "/data"
 #define YLOG_JOURNAL_FILE "/data/ylog/ylog_journal_file"
-#define YLOG_CONFIG        "/data/ylog/ylog.conf"
+#define YLOG_CONFIG_FILE "/data/ylog/ylog.conf"
 #define YLOG_FILTER_PATH "/system/lib/"
+
+#define ANR_OR_TOMSTONE_UNIFILE_MODE
+#define ANR_FAST_COPY_MODE
+#define ANR_FAST_COPY_MODE_ANR_FILE "/data/anr/traces.txt"
+#define ANR_FAST_COPY_MODE_TMP "/data/ylog/traces.txt.ylog.tmp"
+#define ANR_FAST_COPY_MODE_YLOG "/data/ylog/traces.txt.ylog"
 
 struct os_status {
     int sdcard_online;
@@ -26,14 +32,12 @@ struct os_status {
     int anr_fast;
     int fd_kmsg;
     struct ylog *snapshot;
+#ifdef ANR_FAST_COPY_MODE
+    int anr_fast_copy_count;
+#endif
 } oss = {
     .file_atch_num = 5,
 }, *pos = &oss;
-
-struct os_config {
-#define KEEP_HISTORICAL_FOLDER_NUMBERS_DEFUALT 5
-    int keep_historical_folder_numbers;
-} oc, *poc = &oc;
 
 #include "modem.c"
 #include "snapshot-android.c"
@@ -236,9 +240,11 @@ static int check_sdcard_mounted_default(char *sdcard, int count) {
     char *token, *last;
     const char *mountPath = "/mnt/media_rw/";
     FILE *fp = fopen("/proc/mounts", "r");
-
-    if (sdcard)
-        sdcard[0] = 0;
+    /**
+     * # cat /proc/mounts | grep vfat
+     * /dev/block/vold/public:179,129 /mnt/media_rw/0B07-10F1 vfat rw,dirsync,nosuid,nodev,noexec,relatime,uid=1023,gid=1023,fmask=0007,dmask=0007,allow_utime=0020,codepage=437,iocharset=iso8859-1,shortname=mixed,utf8,errors=remount-ro 0 0
+     */
+    sdcard[0] = 0;
 
     if(fp != NULL) {
         while (fgets(str, sizeof(str), fp)) {
@@ -293,12 +299,12 @@ static int os_search_root_path(char *path, int len) {
     unsigned long long quota = 0;
 
     if (os_check_sdcard_online(sdcard_path, sizeof(sdcard_path))) {
-        keep_historical_folder_numbers = poc->keep_historical_folder_numbers;
+        keep_historical_folder_numbers = c->keep_historical_folder_numbers;
         historical_folder_root = pos->historical_folder_root_last;
         pos->sdcard_online = 1;
     } else {
         strcpy(sdcard_path, YLOG_ROOT_FOLDER);
-        keep_historical_folder_numbers = poc->keep_historical_folder_numbers;
+        keep_historical_folder_numbers = c->keep_historical_folder_numbers;
         historical_folder_root = pos->historical_folder_root_last;
         quota = 200 * 1024 * 1024;
         if (pos->sdcard_online) {
@@ -334,7 +340,7 @@ static int os_search_root_path(char *path, int len) {
         root->quota_new = quota;
 
         if (quota < 50 * 1024 * 1024)
-            ylog_root_folder_delete(path, historical_folder_root_tmp, poc->keep_historical_folder_numbers, poc->keep_historical_folder_numbers);
+            ylog_root_folder_delete(path, historical_folder_root_tmp, c->keep_historical_folder_numbers, c->keep_historical_folder_numbers);
 
         changed = 1;
     }
@@ -436,29 +442,6 @@ static int cmd_cpath_last(struct command *cmd, char *buf, int buf_size, int fd, 
     return 0;
 }
 
-static void ylog_update_config2(char *key, char *value);
-static int cmd_history_n(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
-    UNUSED(cmd);
-    UNUSED(index);
-    UNUSED(yp);
-    char *last;
-    char *value = NULL;
-    char *level;
-    struct context *c = global_context;
-    strtok_r(buf, " ", &last);
-    value = strtok_r(NULL, " ", &last);
-    if (value) {
-        int history_n = strtol(value, NULL, 0);
-        if (history_n == 0)
-            history_n = KEEP_HISTORICAL_FOLDER_NUMBERS_DEFUALT;
-        c->keep_historical_folder_numbers = poc->keep_historical_folder_numbers = history_n;
-        snprintf(buf, buf_size, "%d", poc->keep_historical_folder_numbers);
-        ylog_update_config2("keep_historical_folder_numbers", buf);
-    }
-    SEND(fd, buf, snprintf(buf, buf_size, "%d\n", c->keep_historical_folder_numbers), MSG_NOSIGNAL);
-    return 0;
-}
-
 static int cmd_setprop(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
     UNUSED(cmd);
     UNUSED(index);
@@ -529,17 +512,6 @@ static int cmd_tombstone(struct command *cmd, char *buf, int buf_size, int fd, i
     return 0;
 }
 
-static int cmd_exit(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
-    UNUSED(cmd);
-    UNUSED(index);
-    UNUSED(yp);
-    ylog_all_thread_exit();
-    print2journal_file("exit command : %s", buf);
-    SEND(fd, buf, snprintf(buf, buf_size, "exit done\n"), MSG_NOSIGNAL);
-    kill(getpid(), SIGKILL);
-    return 0;
-}
-
 static int cmd_monkey(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
     UNUSED(cmd);
     UNUSED(index);
@@ -560,147 +532,20 @@ static int cmd_monkey(struct command *cmd, char *buf, int buf_size, int fd, int 
     return 0;
 }
 
-static int cmd_snapshot(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
-    UNUSED(cmd);
-    UNUSED(index);
-    UNUSED(yp);
-    char *last;
-    char *snp;
-    int i;
-    struct ylog_snapshot_list_s *sl;
-
-    strtok_r(buf, " ", &last);
-    snp = strtok_r(NULL, " ", &last);
-
-    if (snp) {
-        struct ylog_snapshot_args sargs;
-        char *result = "Failed";
-        char *arg;
-        sargs.argc = 0;
-        do {
-            arg = strtok_r(NULL, " ", &last);
-            if (arg == NULL)
-                break;
-            sargs.argv[sargs.argc++] = arg;
-            if (sargs.argc >= (int)ARRAY_LEN(sargs.argv))
-                break;
-        } while (1);
-        for (i = 0; i < (int)ARRAY_LEN(ylog_snapshot_list); i++) {
-            sl = &ylog_snapshot_list[i];
-            if (strcmp(sl->name, snp) == 0) {
-                sargs.data[0] = 0;
-                sargs.offset = 0;
-                sl->f(&sargs);
-                if (sargs.data[sargs.offset] != 0)
-                    result = sargs.data + sargs.offset;
-                else
-                    result = "OK";
-                break;
-            }
-        }
-        SEND(fd, buf, snprintf(buf, buf_size, "%s %s\n", snp, result), MSG_NOSIGNAL);
-    } else {
-        for (i = 0; i < (int)ARRAY_LEN(ylog_snapshot_list); i++) {
-            sl = &ylog_snapshot_list[i];
-            SEND(fd, buf, snprintf(buf, buf_size, "%-10s -- %s\n", sl->name, sl->usage), MSG_NOSIGNAL);
-        }
-    }
-
-    return 0;
-}
-
 static struct command os_commands[] = {
     {"test", "test from android", cmd_test, NULL},
     {"\n", NULL, os_cmd_help, (void*)os_commands},
     {"rootdir", "get the log disk root dir", cmd_rootdir, NULL},
     {"cpath_last", "get the last_ylog path", cmd_cpath_last, NULL},
-    {"history_n", "set keep_historical_folder_numbers", cmd_history_n, NULL},
     {"setprop", "set property, ex. ylog_cli setprop persist.ylog.enabled 1", cmd_setprop, NULL},
     {"at", "send AT command to cp side, ex. ylog_cli at AT+ARMLOG=1 or ylog_cli at AT+CGMR", cmd_at, NULL},
     {"print2android", "write data to android system log", cmd_print2android, NULL},
     {"print2kernel ", "write data to kernel log", cmd_print2kernel, NULL},
     {"anr", "trigger anr action for auto test", cmd_anr, NULL},
     {"tombstone", "trigger tombstone action for auto test", cmd_tombstone, NULL},
-    {"exit", "quit all ylog threads, and kill ylog itself to protect sdcard", cmd_exit, NULL},
     {"monkey", "mark the status of monkey, ex. ylog_cli monkey 1 or ylog_cli monkey 0", cmd_monkey, NULL},
-    {"snapshot", "snapshot the android, ex. ylog_cli snapshot", cmd_snapshot, NULL},
     {NULL, NULL, NULL, NULL}
 };
-
-static void load_loglevel(struct ylog_keyword *kw, int nargs, char **args) {
-    UNUSED(kw);
-    UNUSED(nargs);
-    struct context *c = global_context;
-    int loglevel = strtol(args[1], NULL, 0);
-    if (loglevel < 0 || loglevel >= LOG_LEVEL_MAX)
-        loglevel = LOG_DEBUG;
-    c->loglevel = loglevel;
-}
-
-static void load_keep_historical_folder_numbers(struct ylog_keyword *kw, int nargs, char **args) {
-    UNUSED(kw);
-    UNUSED(nargs);
-    int history_n = strtol(args[1], NULL, 0);
-    if (history_n == 0)
-        history_n = KEEP_HISTORICAL_FOLDER_NUMBERS_DEFUALT;
-    poc->keep_historical_folder_numbers = history_n;
-}
-
-static void cmd_ylog_hook(int nargs, char **args) {
-    /**
-     * args 0    1       2    3
-     * 1. ylog enabled kernel 0
-     * 2.
-     */
-    ylog_update_config(YLOG_CONFIG, nargs, args, nargs - 1);
-}
-
-static void load_ylog(struct ylog_keyword *kw, int nargs, char **args) {
-    UNUSED(kw);
-    /**
-     * args 0    1       2    3
-     * 1. ylog enabled kernel 0
-     * 2.
-     */
-    struct ylog *y;
-    int v;
-    char *key = (nargs > 1 ? args[1] : NULL);
-    char *value = (nargs > 2 ? args[2] : NULL);
-    char *svalue1 = (nargs > 3 ? args[3] : NULL);
-    if (key && strcmp(key, "enabled") == 0) {
-        if (value && svalue1) {
-            y = ylog_get_by_name(value);
-            if (y) {
-                v = !!atoi(svalue1);
-                if (v == 0) {
-                    y->status |= YLOG_DISABLED_FORCED_RUNNING | YLOG_DISABLED;
-                } else {
-                    y->status &= ~YLOG_DISABLED;
-                }
-                ylog_info("ylog <%s> is %s forcely by ylog.conf\n",
-                        y->name, (y->status & YLOG_DISABLED) ? "disabled":"enabled");
-            } else {
-                ylog_critical("%s: can't find ylog %s\n", __func__, value);
-            }
-        } else {
-            ylog_critical("%s: value=%s, svalue1=%s\n", __func__, value, svalue1);
-        }
-    }
-}
-
-static struct ylog_keyword ylog_keyword[] = {
-    {"loglevel", load_loglevel},
-    {"keep_historical_folder_numbers", load_keep_historical_folder_numbers},
-    {"ylog", load_ylog},
-    {NULL, NULL},
-};
-
-static void ylog_update_config2(char *key, char *value) {
-    char *argv[2];
-    argv[0] = key;
-    argv[1] = value;
-    ylog_update_config(YLOG_CONFIG, 2, argv, 1);
-}
 
 static void ylog_status_hook(enum ylog_thread_state state, struct ylog *y) {
     char *value;
@@ -802,6 +647,70 @@ static int os_inotify_handler_anr(struct ylog_inotify_cell *pcell, int timeout, 
     return -1;
 }
 
+static int os_inotify_handler_anr_nowrap(struct ylog_inotify_cell *pcell, int timeout, struct ylog *y);
+static int os_inotify_handler_anr_delete_create(struct ylog_inotify_cell *pcell, int timeout, struct ylog *y) {
+    UNUSED(timeout);
+    UNUSED(y);
+    unsigned long event_mask = pcell->event_mask;
+    if (event_mask & IN_DELETE) {
+        ylog_info("Wrote stack traces to /data/anr/traces.txt, os_inotify_handler_anr is deleted\n");
+#ifdef ANR_FAST_COPY_MODE
+        if (pcell->status & YLOG_INOTIFY_WAITING_TIMEOUT) {
+            /* copy from ylog_inotfiy_file_handler_timeout to skip this timeout process because of unlink action */
+            pcell->status &= ~YLOG_INOTIFY_WAITING_TIMEOUT;
+            os_inotify_handler_anr_nowrap(pcell, 0, y);
+            pcell->step = 0;
+        }
+#endif
+    }
+    if (event_mask & IN_CREATE) {
+        ylog_info("Wrote stack traces to /data/anr/traces.txt, os_inotify_handler_anr is created\n");
+#ifdef ANR_FAST_COPY_MODE
+        pos->anr_fast_copy_count = 0;
+#endif
+    }
+    event_mask &= ~(IN_DELETE | IN_CREATE);
+#ifdef ANR_FAST_COPY_MODE
+    if (event_mask && timeout == 0) {
+        /* IN_MODIFY */
+        int fd_from = open(ANR_FAST_COPY_MODE_ANR_FILE, O_RDONLY);
+        if (fd_from < 0) {
+            ylog_info("open %s fail.%s", ANR_FAST_COPY_MODE_ANR_FILE, strerror(errno));
+        } else {
+            int fd_to = open(ANR_FAST_COPY_MODE_TMP, O_RDWR | O_CREAT | O_TRUNC, 0664);
+            if (fd_to >= 0) {
+                struct stat stat_dst0, stat_dst;
+                /**
+                 * Todo...
+                 * to avoid anr data lost, we do not add timeout gap filter,
+                 * ex. let copy_file action happens every 200ms
+                 */
+                copy_file(fd_to, fd_from, 10 * 1024 * 1024, ANR_FAST_COPY_MODE_TMP);
+                pos->anr_fast_copy_count++;
+                close(fd_to);
+                if (access(ANR_FAST_COPY_MODE_YLOG, F_OK) == 0) {
+                    if (stat(ANR_FAST_COPY_MODE_TMP, &stat_dst0) || stat(ANR_FAST_COPY_MODE_YLOG, &stat_dst))
+                        ylog_error("stat %s, %s failed: %s\n", ANR_FAST_COPY_MODE_TMP,
+                                ANR_FAST_COPY_MODE_YLOG, strerror(errno));
+                    else {
+                        if (stat_dst0.st_size > stat_dst.st_size)
+                            rename(ANR_FAST_COPY_MODE_TMP, ANR_FAST_COPY_MODE_YLOG);
+                        else {
+                            if (stat_dst0.st_size < stat_dst.st_size)
+                                ylog_critical("os_inotify_handler_anr_delete_create does not delete, why?\n");
+                        }
+                    }
+                } else
+                    rename(ANR_FAST_COPY_MODE_TMP, ANR_FAST_COPY_MODE_YLOG);
+            } else
+                ylog_info("open %s fail.%s", "/data/anr/traces.txt", strerror(errno));
+            close(fd_from);
+        }
+    }
+#endif
+    return event_mask ? 1:0;
+}
+
 static void pcmds_ylog_anr_nowrap_callback(struct ylog *y, int step, char *buf, int count, void *private) {
     UNUSED(private);
     static int cnt = 1;
@@ -809,23 +718,61 @@ static void pcmds_ylog_anr_nowrap_callback(struct ylog *y, int step, char *buf, 
         char timeBuf[32];
         int len, cur_cnt;
         struct ydst *ydst = y->ydst;
+        struct ylog_inotify_cell *pcell = (struct ylog_inotify_cell *)private;
         /**
          * if cnt is less than 20, although quta has reached,
          * we also need to continue save it, because some other ylog
          * fill full the shared ydst, but here does not even have 20 counts
          */
         if (ydst->size < ydst->max_size_now || cnt < 20) {
-            ylog_get_format_time_year(timeBuf);
+            char timeBuf0[32];
+            char timeBuf1[32];
             cur_cnt = cnt;
+            ylog_get_format_time_year(timeBuf);
+
             snprintf(buf, count, "%s/%s/%04d.%s.anr", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
+#ifdef ANR_OR_TOMSTONE_UNIFILE_MODE
+            char *cmd_list[] = {
+#ifdef ANR_FAST_COPY_MODE
+                "cat "ANR_FAST_COPY_MODE_YLOG,
+#else
+                "cat /data/anr/traces.txt",
+#endif
+                "logcat -d",
+                "dmesg",
+                NULL
+            };
+            cur_cnt = 0;
+            pcmds_print2file(cmd_list, buf, -1, &cur_cnt, NULL, y, "ylog.anr", 1000, 8*1024*1024);
+#else
+#ifdef ANR_FAST_COPY_MODE
+            pcmd_print2file("cat "ANR_FAST_COPY_MODE_YLOG, buf, &cur_cnt, NULL, y, NULL, 1000, -1);
+#else
             pcmd_print2file("cat /data/anr/traces.txt", buf, &cur_cnt, NULL, y, NULL, 1000, -1);
+#endif
             cur_cnt = cnt;
             snprintf(buf, count, "%s/%s/%04d.%s.anr.kmsg", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
             pcmd_print2file("dmesg", buf, &cur_cnt, NULL, y, NULL, 1000, 3*1024*1024);
             cur_cnt = cnt;
             snprintf(buf, count, "%s/%s/%04d.%s.anr.logcat", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
             pcmd_print2file("logcat -d", buf, &cur_cnt, NULL, y, NULL, 1000, 5*1024*1024);
+#endif
             cnt++;
+            ylog_tv2format_time(timeBuf0, &pcell->tvf); /* after traces.txt copied, format following info for more faster */
+            ylog_tv2format_time(timeBuf1, &pcell->tv);
+            ylog_info("ylog traces create %s, %d, %s~ %s, anr_fast_copy_count=%d\n",
+                    buf, pcell->step, timeBuf0, timeBuf1
+#ifdef ANR_FAST_COPY_MODE
+                    ,pos->anr_fast_copy_count
+#else
+                    ,0
+#endif
+                    );
+#ifdef ANR_FAST_COPY_MODE
+            unlink(ANR_FAST_COPY_MODE_TMP);
+            unlink(ANR_FAST_COPY_MODE_YLOG);
+            pos->anr_fast_copy_count = 0;
+#endif
         } else {
             ylog_critical("ylog %s is forced stop, cnt=%d, because ydst %s has "
                     "reached max_size %lld/%lld in pcmds_ylog_anr_nowrap_callback\n",
@@ -838,11 +785,11 @@ static int os_inotify_handler_anr_nowrap(struct ylog_inotify_cell *pcell, int ti
     static struct ylog *sys_info = NULL;
     ylog_info("os_inotify_handler_anr_nowrap is called for '%s %s' %dms %s now\n",
                 pcell->pathname ? pcell->pathname:"", pcell->filename, pcell->timeout, timeout ? "timeout":"normal");
+    pcmds_ylog_call(NULL, y, 1000, pcmds_ylog_anr_nowrap_callback, pcell);
     if (sys_info == NULL)
         sys_info = ylog_get_by_name("sys_info");
     if (sys_info)
         sys_info->thread_restart(sys_info, 0); /* Trigger sys_info to capture again */
-    pcmds_ylog_call(NULL, y, 1000, pcmds_ylog_anr_nowrap_callback, NULL);
     return -1;
 }
 
@@ -917,16 +864,32 @@ static void pcmds_ylog_tombstone_nowrap_callback(struct ylog *y, int step, char 
          * fill full the shared ydst, but here does not even have 20 counts
          */
         if (ydst->size < ydst->max_size_now || cnt < 20) {
+            char timeBuf0[32];
+            char timeBuf1[32];
+            ylog_tv2format_time(timeBuf0, &pcell->tvf);
+            ylog_tv2format_time(timeBuf1, &pcell->tv);
             for (cmd = cmd_list; *cmd; cmd++) {
                 cur_cnt = cnt;
                 snprintf(buf, count, "%s/%s/%04d.%s.tombstone", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
+#ifdef ANR_OR_TOMSTONE_UNIFILE_MODE
+                char *cmd_list_one[] = {
+                    *cmd,
+                    "logcat -d",
+                    "dmesg",
+                    NULL
+                };
+                cur_cnt = 0;
+                pcmds_print2file(cmd_list_one, buf, -1, &cur_cnt, NULL, y, "ylog.tombstone", 1000, 8*1024*1024);
+#else
                 pcmd_print2file(*cmd, buf, &cur_cnt, NULL, y, NULL, 1000, -1);
+                ylog_info("ylog traces create %s, %d, %s~ %s\n", buf, pcell->step, timeBuf0, timeBuf1);
                 cur_cnt = cnt;
                 snprintf(buf, count, "%s/%s/%04d.%s.tombstone.kmsg", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
                 pcmd_print2file("dmesg", buf, &cur_cnt, NULL, y, NULL, 1000, 3*1024*1024);
                 cur_cnt = cnt;
                 snprintf(buf, count, "%s/%s/%04d.%s.tombstone.logcat", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
                 pcmd_print2file("logcat -d", buf, &cur_cnt, NULL, y, NULL, 1000, 5*1024*1024);
+#endif
                 cnt++;
             }
         } else {
@@ -990,20 +953,35 @@ static void ylog_ready(void) {
     os_hooks.pthread_create_hook(NULL, NULL, "main ylog_ready");
 }
 
+static struct ylog_keyword os_ylog_keyword[] = {
+    {"loglevel", load_loglevel},
+    {"keep_historical_folder_numbers", load_keep_historical_folder_numbers},
+    {"ylog", load_ylog},
+    {NULL, NULL},
+};
+
 static struct context os_context[M_MODE_NUM] = {
     [M_USER] = {
         .config_file = "1.xml",
         .filter_plugin_path = YLOG_FILTER_PATH,
         .journal_file = YLOG_JOURNAL_FILE,
+        .ylog_config_file = YLOG_CONFIG_FILE,
         .model = C_MINI_LOG,
         .loglevel = LOG_WARN,
+        .keep_historical_folder_numbers_default = 5,
+        .ylog_keyword = os_ylog_keyword,
+        .ylog_snapshot_list = os_ylog_snapshot_list,
     },
     [M_USER_DEBUG] = {
         .config_file = "2.xml",
         .filter_plugin_path = YLOG_FILTER_PATH,
         .journal_file = YLOG_JOURNAL_FILE,
+        .ylog_config_file = YLOG_CONFIG_FILE,
         .model = C_FULL_LOG,
         .loglevel = LOG_INFO,
+        .keep_historical_folder_numbers_default = 5,
+        .ylog_keyword = os_ylog_keyword,
+        .ylog_snapshot_list = os_ylog_snapshot_list,
     },
 };
 
@@ -1057,6 +1035,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
     };
     enum mode_types mode;
     /* Assume max size is 1G */
+    /* ylog_cli quota 1024 */
     struct ynode os_ynode[] = {
         /* kernel/ */ {
            .ylog = {
@@ -1082,7 +1061,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
             },
             .cache = {
                 .size = 512 * 1024,
-                .num = 2,
+                .num = 8,
                 .timeout = 1000,
                 .debuglevel = CACHELINE_DEBUG_CRITICAL,
             },
@@ -1148,7 +1127,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
             },
             .cache = {
                 .size = 512 * 1024,
-                .num = 4,
+                .num = 8,
                 .timeout = 1000,
                 .debuglevel = CACHELINE_DEBUG_CRITICAL,
             },
@@ -1176,7 +1155,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
             },
             .cache = {
                 .size = 512 * 1024,
-                .num = 2,
+                .num = 40,
                 .timeout = 1000,
                 .debuglevel = CACHELINE_DEBUG_CRITICAL,
             },
@@ -1204,7 +1183,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
             },
             .cache = {
                 .size = 512 * 1024,
-                .num = 2,
+                .num = 40,
                 .timeout = 1000,
                 .debuglevel = CACHELINE_DEBUG_CRITICAL,
             },
@@ -1220,9 +1199,10 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                             /* this folder must make sure no one will delete anr folder */
                             .pathname = "/data/anr/",
                             .filename = "traces.txt",
-                            .mask = IN_MODIFY,
+                            .mask = IN_MODIFY | IN_DELETE | IN_CREATE,
                             .type = YLOG_INOTIFY_TYPE_MASK_SUBSET_BIT,
                             /* .timeout = 100, */
+                            .handler_prev = os_inotify_handler_anr_delete_create,
                             .handler = os_inotify_handler_anr,
                         },
                         .cells[1] = { /* kill -6 pid of com.xxx */
@@ -1276,12 +1256,12 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
             .ydst = {
                 .file = "ftrace/",
                 .file_name = "ftrace.log",
-                .max_segment = 3,
+                .max_segment = 2,
                 .max_segment_size = 10*1024*1024,
             },
             .cache = {
                 .size = 512 * 1024,
-                .num = 2,
+                .num = 30,
                 .timeout = 1000,
                 .debuglevel = CACHELINE_DEBUG_CRITICAL,
             },
@@ -1308,7 +1288,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                 .file = "sgm/cpu_memory/",
                 .file_name = "sgm.cpu_memory.log",
                 .max_segment = 2,
-                .max_segment_size = 30*1024*1024,
+                .max_segment_size = 35*1024*1024,
             },
             /*
             .cache = {
@@ -1352,6 +1332,11 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
 
     ylog_warn("ylog start\n");
 
+#ifdef ANR_FAST_COPY_MODE
+    unlink(ANR_FAST_COPY_MODE_TMP);
+    unlink(ANR_FAST_COPY_MODE_YLOG);
+#endif
+
     ynode_insert_all(os_ynode, (int)ARRAY_LEN(os_ynode));
     other_processor_ylog_insert(); /* in modem.c */
     os_parse_config();
@@ -1366,8 +1351,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
     hook->pthread_create_hook = pthread_create_hook;
     hook->ready_go = ready_go;
 
-    poc->keep_historical_folder_numbers = KEEP_HISTORICAL_FOLDER_NUMBERS_DEFUALT;
-    parse_config(YLOG_CONFIG);
+    parse_config(global_context->ylog_config_file);
 
     for_each_ylog(i, y, NULL) {
         enum ylog_thread_state state;

@@ -202,6 +202,8 @@ static void usage(void) {
     printf(
 "ylog_benchmark [-s socket-name] [-d string data to send] [-f flie.bin to send]\n"
 "               [-b buffer size for each sending with -f]\n"
+"example:\n"
+"ylog_benchmark -s ylog_benchmark_socket_server -f /system/bin/wpa_supplicant\n"
 );
 }
 
@@ -228,7 +230,7 @@ int main(int argc, char *argv[]) {
     int buf_size = 4096;
     int send_file = 0;
 
-    snprintf(buf, sizeof buf, "ylog");
+    snprintf(buf, sizeof buf, "ylog_socket");
     while ((arg = getopt(argc, argv, "s:d:f:b:h")) != (char)-1) {
         switch (arg) {
         case 's': snprintf(buf, sizeof buf, "%s", optarg); break;

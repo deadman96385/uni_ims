@@ -21,6 +21,10 @@
 #include <sys/vfs.h>
 #include <dlfcn.h>
 
+#define NEW_SEGMENT_FAST_METHOD
+#define NEW_SEGMENT_FAST_METHOD_NUM_WIDTH 4
+#define NEW_SEGMENT_MAX_NUM 50
+
 #ifndef PATH_MAX
 #define PATH_MAX 1024
 #endif
@@ -59,14 +63,14 @@ static int ylog_printf_format(struct context *c, int level, const char *fmt, ...
 
 #define CLOSE(fd) ({\
     int ll_ret = -1; \
-    if (fd < 0) \
+    if (fd < 0) { \
         ylog_critical("BUG close fd is %d %s\n", fd, __func__); \
-    else {\
+    } else {\
         if (fd == 0) \
             ylog_critical("BUG: close fd is %d %s\n", fd, __func__); \
         ll_ret = close(fd); \
         if (ll_ret < 0) \
-            ylog_error("close %s %s\n", __func__, strerror(errno)); \
+            ylog_error("close %d %s %s\n", fd, __func__, strerror(errno)); \
     } \
     ll_ret; \
 })
@@ -145,6 +149,28 @@ struct ytag_header {
 #define ytag_newfile_begin(_NAME) ytag_newfile(YTAG_TAG_NEWFILE_BEGIN, _NAME)
 #define ytag_newfile_end(_NAME) ytag_newfile(YTAG_TAG_NEWFILE_END, _NAME)
 
+struct ylog_snapshot_args {
+    union {
+        int ret;
+        char *p;
+    } u;
+    int argc;
+    char *argv[16];
+    char data[4096];
+    int offset;
+};
+
+struct ylog_snapshot_list_s {
+    char *name;
+    char *usage;
+    void (*f)(struct ylog_snapshot_args *args);
+};
+
+struct ylog_keyword {
+    const char *key;
+    void (*handler)(struct ylog_keyword *kw, int nargs, char **args);
+};
+
 enum contextual_model {
     C_FULL_LOG = 0,
     C_MINI_LOG,
@@ -160,12 +186,14 @@ enum mode_types {
 struct context {
     char *config_file;
     char *journal_file;
+    char *ylog_config_file;
     char *filter_plugin_path;
     int journal_file_size;
     enum contextual_model model;
     enum loglevel loglevel;
     char *historical_folder_root;
     int keep_historical_folder_numbers;
+    int keep_historical_folder_numbers_default;
     int pre_fill_zero_to_possession_storage_spaces;
     struct timeval tv;
     struct tm tm;
@@ -173,6 +201,8 @@ struct context {
     char timeBuf[32];
     int ignore_signal_process;
     int command_loop_ready;
+    struct ylog_keyword *ylog_keyword;
+    struct ylog_snapshot_list_s *ylog_snapshot_list;
 };
 
 enum file_type {
@@ -371,6 +401,7 @@ enum cacheline_status {
 
 #define CACHELINE_DEBUG_INFO     0x01
 #define CACHELINE_DEBUG_CRITICAL 0x02
+#define CACHELINE_DEBUG_WCLIDX_WRAP 0x04
 #define CACHELINE_DEBUG_DATA     0x80
 struct cacheline {
     char *name;
@@ -384,6 +415,7 @@ struct cacheline {
     int debuglevel; /* for debug */
     long size; /* cacheline size */
     int num; /* cacheline numbers */
+    int wclidx_max; /* cache line index ever reached max number */
     int wclidx; /* current cache line index being used for writing now */
     int rclidx; /* read cache line index */
     long wpos; /* write pos in current wclidx*/
@@ -528,6 +560,7 @@ struct ylog_inotify_cell {
     char *pathname; /* if pathname != NULL, YLOG_INOTIFY_TYPE_WATCH_FILE_FOLDER will be set*/
     char *filename;
     unsigned long mask;
+    unsigned long event_mask;
 #define YLOG_INOTIFY_TYPE_WATCH_FOLDER 0x01 /* only watch the folder */
 #define YLOG_INOTIFY_TYPE_WATCH_FILE_FOLDER 0x02 /* watch the file under this folder */
 #define YLOG_INOTIFY_TYPE_MASK_EQUAL 0x04 /* must be equal */
@@ -537,8 +570,12 @@ struct ylog_inotify_cell {
     int status;
     int wd; /* watch descriptor - unique id */
     long timeout; /* unit is millisecond */
+    int step; /* to mark process step */
+    struct timeval tvf; /* first active time */
+    struct timeval tv; /* last active time */
     struct timespec ts; /* last active time */
     int (*handler)(struct ylog_inotify_cell *cell, int timeout, struct ylog *y); /* return timeout value, unit is millisecond, -1 means pending wait */
+    int (*handler_prev)(struct ylog_inotify_cell *cell, int timeout, struct ylog *y);
     void *args; /* for extension */
 };
 

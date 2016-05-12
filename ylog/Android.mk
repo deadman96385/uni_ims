@@ -34,6 +34,7 @@ LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES := benchmark/ylog_benchmark_socket_server.c
 LOCAL_MODULE := ylog_benchmark_socket_server
 LOCAL_MODULE_TAGS := optional
+LOCAL_SHARED_LIBRARIES := libcutils
 include $(BUILD_EXECUTABLE)
 CUSTOM_MODULES += ylog_benchmark_socket_server # no need appending this module in PRODUCT_PACKAGES
 # ---------------------------------------------------

@@ -10,8 +10,8 @@
 #include "filter.c"
 #include "inotify.c"
 #include "file.c"
-#include "command.c"
 #include "parser.c"
+#include "command.c"
 #ifdef ANDROID
 #include "os/android.c"
 #else
@@ -229,20 +229,29 @@ static struct ydst_root ydst_root_default = {
     .root = NULL,
 };
 
+struct cacheline cacheline_default = {
+    .size = 512 * 1024,
+    .num = 16,
+    .timeout = 1000, /* ms */
+    .debuglevel = CACHELINE_DEBUG_INFO | CACHELINE_DEBUG_CRITICAL | CACHELINE_DEBUG_WCLIDX_WRAP,
+};
+
 struct cacheline cacheline_socket_open = {
     .size = 512 * 1024,
-    .num = 2,
+    .num = 16,
     .timeout = 1000, /* ms */
-    .debuglevel = CACHELINE_DEBUG_INFO | CACHELINE_DEBUG_CRITICAL,
+    .debuglevel = CACHELINE_DEBUG_INFO | CACHELINE_DEBUG_CRITICAL | CACHELINE_DEBUG_WCLIDX_WRAP,
 };
 
 /* Assume max size is 1G */
+/* ylog_cli quota 1024 */
 static struct ydst ydst_default[YDST_MAX+1] = {
     [YDST_TYPE_DEFAULT] = {
         .file = "default/default.", /* by default .file == NULL, then stdout will be used */
         .file_name = "default.log",
         .max_segment = 2,
         .max_segment_size = 2*1024*1024,
+        .cache = &cacheline_default,
     },
     [YDST_TYPE_SOCKET] = {
         .file = "socket/open/",
@@ -250,13 +259,14 @@ static struct ydst ydst_default[YDST_MAX+1] = {
         .max_segment = 2,
         .max_segment_size = YDST_TYPE_SOCKET_DEFAULT_SIZE,
         .cache = &cacheline_socket_open,
+        .write_data2cache_first = 1,
         /* .nowrap = 1, */
     },
     [YDST_TYPE_YLOG_DEBUG] = {
         .file = "ylog_debug",
         .file_name = "ylog_debug.log",
         .max_segment = 1,
-        .max_segment_size = 20*1024*1024,
+        .max_segment_size = 30*1024*1024,
     },
 #ifdef HAVE_YLOG_INFO
     [YDST_TYPE_INFO] = {
@@ -281,17 +291,17 @@ static struct ylog ylog_default[YLOG_MAX+1] = {
         .name = "benchmark_socket",
         .type = FILE_POPEN,
         .file = "ylog_benchmark_socket_server",
-        .ydst = &ydst_default[YDST_TYPE_SOCKET],
-        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY,
+        .ydst = &ydst_default[YDST_TYPE_DEFAULT],
+        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY | YLOG_READ_LEN_MIGHT_ZERO,
         .raw_data = 1,
     },
     {
         .name = "socket",
         .type = FILE_SOCKET_LOCAL_SERVER,
-        .file = "ylog",
+        .file = "ylog_socket",
         .ydst = &ydst_default[YDST_TYPE_SOCKET],
-        .mode = YLOG_READ_MODE_BLOCK,
-        .timestamp = 1,
+        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY | YLOG_READ_LEN_MIGHT_ZERO,
+        .raw_data = 1,
     },
     {
         .name = "ylog_debug",

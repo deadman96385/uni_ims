@@ -35,6 +35,28 @@ static int fd_write(char *buf, int count, int fd, char *desc) {
     return written;
 }
 
+static int copy_file(int fd_to, int fd_from, int max_size_limit, char *desc) {
+    char buf[64 * 1024];
+    int ret, cnt = 0;
+    do {
+        ret = read(fd_from, buf, sizeof buf);
+        if (ret > 0) {
+            cnt += ret;
+            if (ret != fd_write(buf, ret, fd_to, desc)) {
+                ylog_info("write %s fail.%s", desc, strerror(errno));
+                ret = -1;
+                break;
+            }
+        } else {
+            if (ret < 0)
+                ylog_info("read %s fail.%s", desc, strerror(errno));
+            break;
+        }
+    } while (cnt < max_size_limit);
+
+    return ret < 0 ? -1:0;
+}
+
 pid_t gettid(void) {
     /**
      * man gettid

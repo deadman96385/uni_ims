@@ -7,15 +7,15 @@ cmds=(
 '${ADB} shell ylog_cli space'
 '${ADB} shell ylog_cli ylog'
 '${ADB} shell tail ${rootdir}/ylog/ylog/ylog_journal_file'
-'${ADB} shell tail -n 1 ${rootdir}/ylog/ylog/android/000'
-'${ADB} shell tail -n 1 ${rootdir}/ylog/ylog/kernel/000'
+'${ADB} shell tail -n 1 ${rootdir}/ylog/ylog/android/0000'
+'${ADB} shell tail -n 1 ${rootdir}/ylog/ylog/kernel/0000'
 '${ADB} shell cat ${rootdir}/ylog/ylog/ylog_debug | grep -E "Has run|killed" | tail -n 2'
 )
 
 function report_summary() {
     ylog_debug="${rootdir}/ylog/ylog/ylog_debug"
-    ylog_android="${rootdir}/ylog/ylog/android/000"
-    ylog_kernel="${rootdir}/ylog/ylog/kernel/000"
+    ylog_android="${rootdir}/ylog/ylog/android/0000"
+    ylog_kernel="${rootdir}/ylog/ylog/kernel/0000"
     ylog_traces="${rootdir}/ylog/ylog/traces/"
 
     eval '${ADB} shell "[ -d ${ylog_traces} ] && { echo \"ls -l ${ylog_traces}\"; ls -l ${ylog_traces}; }"'

@@ -155,7 +155,7 @@ static void other_processor_ylog_insert(void) {
                 },
                 .cache = {
                     .size = 512 * 1024,
-                    .num = 8,
+                    .num = 80,
                     .timeout = 1000,
                     .debuglevel = CACHELINE_DEBUG_CRITICAL,
                 },
@@ -191,7 +191,7 @@ static void other_processor_ylog_insert(void) {
                 },
                 .cache = {
                     .size = 512 * 1024,
-                    .num = 8,
+                    .num = 80,
                     .timeout = 1000,
                     .debuglevel = CACHELINE_DEBUG_CRITICAL,
                 },
@@ -227,7 +227,7 @@ static void other_processor_ylog_insert(void) {
                 },
                 .cache = {
                     .size = 512 * 1024,
-                    .num = 8,
+                    .num = 80,
                     .timeout = 1000,
                     .debuglevel = CACHELINE_DEBUG_CRITICAL,
                 },
@@ -263,7 +263,7 @@ static void other_processor_ylog_insert(void) {
                 },
                 .cache = {
                     .size = 512 * 1024,
-                    .num = 8,
+                    .num = 80,
                     .timeout = 1000,
                     .debuglevel = CACHELINE_DEBUG_CRITICAL,
                 },
@@ -299,7 +299,7 @@ static void other_processor_ylog_insert(void) {
                 },
                 .cache = {
                     .size = 512 * 1024,
-                    .num = 8,
+                    .num = 80,
                     .timeout = 1000,
                     .debuglevel = CACHELINE_DEBUG_CRITICAL,
                 },
@@ -332,7 +332,7 @@ static void other_processor_ylog_insert(void) {
                 },
                 .cache = {
                     .size = 512 * 1024,
-                    .num = 2,
+                    .num = 80,
                     .timeout = 1000,
                     .debuglevel = CACHELINE_DEBUG_CRITICAL,
                 },
@@ -365,7 +365,7 @@ static void other_processor_ylog_insert(void) {
                 },
                 .cache = {
                     .size = 512 * 1024,
-                    .num = 4,
+                    .num = 80,
                     .timeout = 1000,
                     .debuglevel = CACHELINE_DEBUG_CRITICAL,
                 },
@@ -399,7 +399,7 @@ static void other_processor_ylog_insert(void) {
                 },
                 .cache = {
                     .size = 512 * 1024,
-                    .num = 8,
+                    .num = 80,
                     .timeout = 1000,
                     .debuglevel = CACHELINE_DEBUG_CRITICAL,
                 },

@@ -29,12 +29,38 @@ int debug_level = LOG_DEBUG;
 #define ylog_critical(msg...) ylog_printf(LOG_CRITICAL, "ylog<critical> "msg)
 #define ylog_error(msg...) ylog_printf(LOG_ERROR, "ylog<error> "msg)
 
+#ifdef ANDROID
+#include <cutils/sockets.h>
+static int create_socket_local_server(int *fd, char *file) {
+    *fd = socket_local_server(file, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+    if (*fd < 0) {
+        ylog_error("open %s failed: %s\n", file, strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+#else
+#define CLOSE(fd) ({\
+    int ll_ret = -1; \
+    if (fd < 0) { \
+        ylog_critical("BUG close fd is %d %s\n", fd, __func__); \
+    } else {\
+        if (fd == 0) \
+            ylog_critical("BUG: close fd is %d %s\n", fd, __func__); \
+        ll_ret = close(fd); \
+        if (ll_ret < 0) \
+            ylog_error("close %s %s\n", __func__, strerror(errno)); \
+    } \
+    ll_ret; \
+})
+
 static int create_socket_local_server(int *fd, char *file) {
     struct sockaddr_un address;
     int namelen;
+    int ffd;
 
     /* init unix domain socket */
-    *fd = socket(PF_LOCAL, SOCK_STREAM, 0);
+    ffd = *fd = socket(PF_LOCAL, SOCK_STREAM, 0);
     if (*fd < 0) {
         ylog_error("open %s failed: %s\n", file, strerror(errno));
         return -1;
@@ -44,7 +70,7 @@ static int create_socket_local_server(int *fd, char *file) {
     /* Test with length +1 for the *initial* '\0'. */
     if ((namelen + 1) > (int)sizeof(address.sun_path)) {
         ylog_critical("%s length is too long\n", file);
-        close(*fd);
+        CLOSE(ffd);
         return -1;
     }
 
@@ -55,18 +81,19 @@ static int create_socket_local_server(int *fd, char *file) {
 
     if (bind(*fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
         ylog_error("bind %s failed: %s\n", file, strerror(errno));
-        close(*fd);
+        CLOSE(ffd);
         return -1;
     }
 
     if (listen(*fd, 3) < 0) {
         ylog_error("listen %s failed: %s\n", file, strerror(errno));
-        close(*fd);
+        CLOSE(ffd);
         return -1;
     }
 
     return 0;
 }
+#endif
 
 static int accept_client(int fd) {
     struct sockaddr addr;

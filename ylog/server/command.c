@@ -368,7 +368,6 @@ static int os_cmd_help(struct command *cmd, char *buf, int buf_size, int fd, int
     return 0;
 }
 
-static void ylog_update_config2(char *key, char *value);
 static int cmd_loglevel(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
     UNUSED(cmd);
     UNUSED(index);
@@ -839,6 +838,8 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
                             space_string, space_string, space_string, y->ydst->cache->timeout), MSG_NOSIGNAL);
                 SEND(fd, buf, snprintf(buf, buf_size, "%s%s%s.debuglevel = 0x%02x\n",
                             space_string, space_string, space_string, y->ydst->cache->debuglevel), MSG_NOSIGNAL);
+                SEND(fd, buf, snprintf(buf, buf_size, "%s%s%s.wclidx_max = %d\n",
+                            space_string, space_string, space_string, y->ydst->cache->wclidx_max), MSG_NOSIGNAL);
                 SEND(fd, buf, snprintf(buf, buf_size, "%s%s}\n", space_string, space_string), MSG_NOSIGNAL);
             }
             SEND(fd, buf, snprintf(buf, buf_size, "%s}\n", space_string), MSG_NOSIGNAL);
@@ -867,8 +868,9 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
                         fsize1, unit1, fsize2, unit2, (100 * y->ydst->max_size_now) / (float)quota_now), MSG_NOSIGNAL);
             if (y->ydst->cache) {
                 fsize1 = ylog_get_unit_size_float(y->ydst->cache->size, &unit1);
-                SEND(fd, buf, snprintf(buf, buf_size, " -> cache.%s(%dx%.2f%c)",
-                            y->ydst->cache->name, y->ydst->cache->num, fsize1, unit1), MSG_NOSIGNAL);
+                SEND(fd, buf, snprintf(buf, buf_size, " -> cache.%s(%dx%.2f%c/%d,%d)",
+                            y->ydst->cache->name, y->ydst->cache->num,
+                            fsize1, unit1, y->ydst->cache->wclidx, y->ydst->cache->wclidx_max), MSG_NOSIGNAL);
             }
             fsize1 = ylog_get_unit_size_float(y->size, &unit1);
             fsize2 = ylog_get_unit_size_float(y->ydst->size, &unit2);
@@ -1167,33 +1169,211 @@ static void *cmd_benchmark_thread_handler(void *arg) {
     return NULL;
 }
 
-static int cmd_benchmark(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
-    UNUSED(buf);
-    UNUSED(buf_size);
-    UNUSED(fd);
+static int cmd_thread(int index, struct ylog_poll *yp, ylog_thread_handler thread_handler, void *args) {
     pthread_t ptid;
     struct ylog_argument ya;
 
-    ya.args = cmd->args;
+    ya.args = args;
     ya.index = index;
     ya.yp = yp;
     ya.flags = 1;
 
     yp->flags[index] |= YLOG_POLL_FLAG_FREE_LATER | YLOG_POLL_FLAG_THREAD;
-    if (pthread_create(&ptid, NULL, cmd_benchmark_thread_handler, &ya) == 0) {
+    if (pthread_create(&ptid, NULL, thread_handler, &ya) == 0) {
         int wait_count = 0;
         while (ya.flags) {
             usleep(10*1000); /* wait until thread start */
-            if (wait_count++ > 100 * 30) /* wait 30s */
+            if (wait_count++ > 100 * 5) /* wait 5s */
                 break;
         }
     }
     if (ya.flags) {
         yp->flags[index] &= ~(YLOG_POLL_FLAG_FREE_LATER | YLOG_POLL_FLAG_THREAD);
-        ylog_critical("cmd_benchmark failed to pthread_create for %s\n", ya.args);
+        ylog_critical("cmd_thread failed to pthread_create for %s\n", ya.args);
         return 0;
     }
+
     return 1; /* 1 keep this client opened */
+}
+
+static int cmd_benchmark(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(buf);
+    UNUSED(buf_size);
+    UNUSED(fd);
+    return cmd_thread(index, yp, cmd_benchmark_thread_handler, cmd->args);
+}
+
+static int cmd_history_n(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
+    char *last;
+    char *value = NULL;
+    char *level;
+    struct context *c = global_context;
+    strtok_r(buf, " ", &last);
+    value = strtok_r(NULL, " ", &last);
+    if (value) {
+        int history_n = strtol(value, NULL, 0);
+        if (history_n == 0)
+            history_n = c->keep_historical_folder_numbers_default;
+        c->keep_historical_folder_numbers = history_n;
+        snprintf(buf, buf_size, "%d", c->keep_historical_folder_numbers);
+        ylog_update_config2("keep_historical_folder_numbers", buf);
+    }
+    SEND(fd, buf, snprintf(buf, buf_size, "%d\n", c->keep_historical_folder_numbers), MSG_NOSIGNAL);
+    return 0;
+}
+
+static int cmd_exit(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
+    ylog_all_thread_exit();
+    print2journal_file("exit command : %s", buf);
+    SEND(fd, buf, snprintf(buf, buf_size, "exit done\n"), MSG_NOSIGNAL);
+    kill(getpid(), SIGKILL);
+    return 0;
+}
+
+static void load_loglevel(struct ylog_keyword *kw, int nargs, char **args) {
+    UNUSED(kw);
+    UNUSED(nargs);
+    struct context *c = global_context;
+    int loglevel = strtol(args[1], NULL, 0);
+    if (loglevel < 0 || loglevel >= LOG_LEVEL_MAX)
+        loglevel = LOG_DEBUG;
+    c->loglevel = loglevel;
+}
+
+static void load_keep_historical_folder_numbers(struct ylog_keyword *kw, int nargs, char **args) {
+    UNUSED(kw);
+    UNUSED(nargs);
+    int history_n = strtol(args[1], NULL, 0);
+    if (history_n == 0)
+        history_n = global_context->keep_historical_folder_numbers_default;
+    global_context->keep_historical_folder_numbers = history_n;
+}
+
+static void load_ylog(struct ylog_keyword *kw, int nargs, char **args) {
+    UNUSED(kw);
+    /**
+     * args 0    1       2    3
+     * 1. ylog enabled kernel 0
+     * 2.
+     */
+    struct ylog *y;
+    int v;
+    char *key = (nargs > 1 ? args[1] : NULL);
+    char *value = (nargs > 2 ? args[2] : NULL);
+    char *svalue1 = (nargs > 3 ? args[3] : NULL);
+    if (key && strcmp(key, "enabled") == 0) {
+        if (value && svalue1) {
+            y = ylog_get_by_name(value);
+            if (y) {
+                v = !!atoi(svalue1);
+                if (v == 0) {
+                    y->status |= YLOG_DISABLED_FORCED_RUNNING | YLOG_DISABLED;
+                } else {
+                    y->status &= ~YLOG_DISABLED;
+                }
+                ylog_info("ylog <%s> is %s forcely by ylog.conf\n",
+                        y->name, (y->status & YLOG_DISABLED) ? "disabled":"enabled");
+            } else {
+                ylog_critical("%s: can't find ylog %s\n", __func__, value);
+            }
+        } else {
+            ylog_critical("%s: value=%s, svalue1=%s\n", __func__, value, svalue1);
+        }
+    }
+}
+
+static void *cmd_snapshot_thread_handler(void *arg) {
+    struct ylog_argument *ya = (struct ylog_argument *)arg;
+    int index = ya->index;
+    struct ylog_poll *yp = ya->yp;
+    int fd = yp_fd(index, yp);
+    char *cmd = ya->args;
+
+    char buf[2048];
+    int buf_size = sizeof buf;
+    char *last;
+    char *snp;
+    int i;
+    struct ylog_snapshot_list_s *sl;
+    struct ylog_snapshot_list_s *ylog_snapshot_list = global_context->ylog_snapshot_list;
+
+    ya->flags = 0; /* cmd_thread must call this in here, *arg can be free now */
+
+    strtok_r(cmd, " ", &last);
+    snp = strtok_r(NULL, " ", &last);
+
+    if (snp) {
+        struct ylog_snapshot_args sargs;
+        char *result = "Failed";
+        char *arg;
+        sargs.argc = 0;
+        do {
+            arg = strtok_r(NULL, " ", &last);
+            if (arg == NULL)
+                break;
+            sargs.argv[sargs.argc++] = arg;
+            if (sargs.argc >= (int)ARRAY_LEN(sargs.argv))
+                break;
+        } while (1);
+        for (i = 0; ylog_snapshot_list && ylog_snapshot_list[i].name != NULL; i++) {
+            sl = &ylog_snapshot_list[i];
+            if (strcmp(sl->name, snp) == 0) {
+                sargs.data[0] = 0;
+                sargs.offset = 0;
+                if (sl->f)
+                    sl->f(&sargs);
+                if (sargs.data[sargs.offset] != 0)
+                    result = sargs.data + sargs.offset;
+                else
+                    result = "OK";
+                break;
+            }
+        }
+        SEND(fd, buf, snprintf(buf, buf_size, "%s %s\n", snp, result), MSG_NOSIGNAL);
+    } else {
+        for (i = 0; ylog_snapshot_list && ylog_snapshot_list[i].name != NULL; i++) {
+            sl = &ylog_snapshot_list[i];
+            SEND(fd, buf, snprintf(buf, buf_size, "%-10s -- %s\n", sl->name, sl->usage), MSG_NOSIGNAL);
+        }
+    }
+
+    free(cmd); /* from char *buf_dup = strdup(buf); */
+    mark_it_can_be_free(index, yp); /* cmd_thread must call this in here */
+    return NULL;
+}
+
+static int cmd_snapshot(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(buf_size);
+    UNUSED(fd);
+    char *buf_dup = strdup(buf);
+
+    if (buf_dup) {
+        if (cmd_thread(index, yp, cmd_snapshot_thread_handler, buf_dup) == 0) {
+            free(buf_dup);
+            return 0;
+        }
+    } else {
+        ylog_error("%s strdup %s failed: %s\n", __func__, buf, strerror(errno));
+        return 0;
+    }
+
+    return 1;
+}
+
+static void cmd_ylog_hook(int nargs, char **args) {
+    /**
+     * args 0    1       2    3
+     * 1. ylog enabled kernel 0
+     * 2.
+     */
+    ylog_update_config(global_context->ylog_config_file, nargs, args, nargs - 1);
 }
 
 static struct command commands[] = {
@@ -1202,6 +1382,7 @@ static struct command commands[] = {
     {"\n", NULL, cmd_help, (void*)commands},
     {"flush", "flush all the data back to disk", cmd_flush, NULL},
     {"loglevel", "0:error, 1:critical, 2:warn, 3:info, 4:debug", cmd_loglevel, NULL},
+    {"history_n", "set keep_historical_folder_numbers", cmd_history_n, NULL},
     {"speed", "max speed since ylog start", cmd_speed, NULL},
     {"time", "show the time info", cmd_time, NULL},
     {"ylog", "list all existing ylog, also can start or stop it, ex.\n"\
@@ -1221,7 +1402,7 @@ static struct command commands[] = {
             "              ylog_cli ylog kernel ydst quota 60            - ajust ydst quota to occupy 60\% percent\n"\
             "              ylog_cli ylog kernel cache bypass 1           - data in the cache, 1 droped, 0 save to disk\n"\
             "              ylog_cli ylog kernel cache timeout 500        - cacheline timeout to 500ms\n"\
-            "              ylog_cli ylog kernel cache debuglevel 0x03    - bit0: INFO, bit1: CRITICAL, bit7: DATA"
+            "              ylog_cli ylog kernel cache debuglevel 0x03    - bit0: INFO, bit1: CRITICAL, bit2: WRAP, bit7: DATA"
             , cmd_ylog, NULL},
     {"cpath", "change log path, named 'ylog' will be created under it, ex. ylog_cli cpath /sdcard/", cmd_cpath, NULL},
     {"quota", "give a new quota for the ylog (unit is 'M') 500M ex. ylog_cli quota 500", cmd_quota, NULL},
@@ -1235,5 +1416,7 @@ static struct command commands[] = {
     {"isignal", "1:ignore signal, 0:process signal(default)", cmd_isignal, NULL},
     {"benchmark", "while (1) write data to ylog/socket/open/ without timestamp", cmd_benchmark, NULL},
     {"benchmarkt", "while (1) write data to ylog/socket/open/ with timestamp", cmd_benchmark, "2"},
+    {"exit", "quit all ylog threads, and kill ylog itself to protect sdcard", cmd_exit, NULL},
+    {"snapshot", "snapshot the ecosystem, ex. ylog_cli snapshot", cmd_snapshot, NULL},
     {NULL, NULL, NULL, NULL}
 };

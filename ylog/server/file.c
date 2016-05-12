@@ -721,7 +721,11 @@ static int ydst_root_quota(struct ydst_root *root, unsigned long long quota) {
             max_segment_new = yd->max_segment * scale;
             if (max_segment_new == 0)
                 max_segment_new = 1;
-            max_segment_size_new = yd->max_segment_size;
+            if (max_segment_new > NEW_SEGMENT_MAX_NUM) {
+                max_segment_size_new = (yd->max_segment_size * max_segment_new) / NEW_SEGMENT_MAX_NUM;
+                max_segment_new = NEW_SEGMENT_MAX_NUM;
+            } else
+                max_segment_size_new = yd->max_segment_size;
         } else {
             max_segment_new = yd->max_segment;
             max_segment_size_new = yd->max_segment_size * scale;
@@ -746,7 +750,12 @@ static int ydst_root_quota(struct ydst_root *root, unsigned long long quota) {
     max_segment_new = max_size / yd_max->max_segment_size_new;
     if (max_segment_new == 0)
         max_segment_new = 1;
-    ydst_size_new(yd_max->max_segment_size_new, max_segment_new, yd_max);
+    if (max_segment_new > NEW_SEGMENT_MAX_NUM) {
+        max_segment_size_new = (yd_max->max_segment_size * max_segment_new) / NEW_SEGMENT_MAX_NUM;
+        max_segment_new = NEW_SEGMENT_MAX_NUM;
+    } else
+        max_segment_size_new = yd_max->max_segment_size;
+    ydst_size_new(max_segment_size_new, max_segment_new, yd_max);
 
     show_ydst_storage_info(root);
 
@@ -874,11 +883,19 @@ static int ydst_root_new(struct ydst_root *root, char *root_new) {
     return 0;
 }
 
+static inline void format2char_num(char *p, int num) {
+    /* we assume 0000 -> 9999 can't reach NEW_SEGMENT_FAST_METHOD_NUM_WIDTH */
+    p[0] = '0' + (num / 1000) % 10;
+    p[1] = '0' + (num / 100) % 10;
+    p[2] = '0' + (num / 10) % 10;
+    p[3] = '0' + num % 10;
+}
+
 static int yds_new_segment_file_name(char *path, int len, int segment, struct ydst *ydst) {
     int multi = 1;
     char *file = ydst->file;
-    if (ydst->max_segment_now > 1 || ydst->max_segment > 1)
-        snprintf(path, len, "%s/%s%03d", ydst->root_folder, file, segment);
+    if (ydst->max_segment_now > 1 || ydst->max_segment > 1) /* we assume 0000 -> 9999 can't reach */
+        snprintf(path, len, "%s/%s%04d", ydst->root_folder, file, segment);
     else {
         multi = 0;
         if (file[strlen(file) - 1] != '/')
@@ -893,10 +910,24 @@ static int ydst_shrink_file(int segment_from, int segment_to, struct ydst *ydst)
     char file_to[PATH_MAX];
     int i;
     /* Do i need to shrink or inflate myself by luther */
+    if (segment_from >= segment_to)
+        return 0;
+#ifdef NEW_SEGMENT_FAST_METHOD
+    int basename_offset;
+    char *pnum_t;
+    /* we assume 0000 -> 9999 can't reach */
+    yds_new_segment_file_name(file_to, sizeof file_to, 0, ydst);
+    basename_offset = strlen(file_to) - NEW_SEGMENT_FAST_METHOD_NUM_WIDTH;
+    pnum_t = file_to + basename_offset;
+#endif
     for (i = segment_from; i < segment_to; i++) {
+#ifdef NEW_SEGMENT_FAST_METHOD
+        format2char_num(pnum_t, i);
+#else
         yds_new_segment_file_name(file_to, sizeof file_to, i, ydst);
+#endif
         if (access(file_to, F_OK) == 0) {
-            rm_all(file_to);
+            unlink(file_to);
         }
     }
     return 0;
@@ -907,17 +938,37 @@ static int yds_rename_segment_sequnce_file_and_left_segment0(struct ydst *ydst) 
     char file_to[PATH_MAX];
     int i;
 
+    ylog_info("%s rename segemnt %d/%d, begin\n", ydst->file, ydst->max_segment, ydst->max_segment_now);
+
+#ifdef NEW_SEGMENT_FAST_METHOD
+    /* we assume 0000 -> 9999 can't reach */
+    yds_new_segment_file_name(file_from, sizeof file_from, 0, ydst);
+    strcpy(file_to, file_from);
+    int basename_offset = strlen(file_from) - NEW_SEGMENT_FAST_METHOD_NUM_WIDTH;
+    char *pnum_f = file_from + basename_offset;
+    char *pnum_t = file_to + basename_offset;
+#endif
     for (i = ydst->max_segment_now - 1; i; i--) {
+#ifdef NEW_SEGMENT_FAST_METHOD
+        format2char_num(pnum_f, i - 1);
+#else
         yds_new_segment_file_name(file_from, sizeof file_from, i - 1, ydst);
+#endif
         if (access(file_from, F_OK)) {
             // ylog_debug("%s does not exist.\n", file_from);
         } else {
+#ifdef NEW_SEGMENT_FAST_METHOD
+            format2char_num(pnum_t, i);
+#else
             yds_new_segment_file_name(file_to, sizeof file_to, i, ydst);
-            mv(file_from, file_to);
+#endif
+            rename(file_from, file_to);
         }
     }
 
     ydst_shrink_file(ydst->max_segment_now, ydst->max_segment, ydst);
+
+    ylog_info("%s rename segemnt %d/%d, done\n", ydst->file, ydst->max_segment, ydst->max_segment_now);
 
     return 0;
 }
@@ -933,9 +984,21 @@ static void create_outline(struct ydst *ydst) {
     int from;
     int fd_outline = -1;
 
+#ifdef NEW_SEGMENT_FAST_METHOD
+    /* we assume 0000 -> 9999 can't reach */
+    multi = yds_new_segment_file_name(file_from, sizeof file_from, 0, ydst);
+    strcpy(file_to, file_from);
+    int basename_offset = strlen(file_from) - NEW_SEGMENT_FAST_METHOD_NUM_WIDTH;
+    char *pnum_f = file_from + basename_offset;
+    char *pnum_t = file_to + basename_offset;
+#endif
     for (i = ydst->max_segment_now - 1; i >= 0;) {
         cur_seg = i;
+#ifdef NEW_SEGMENT_FAST_METHOD
+        format2char_num(pnum_t, i);
+#else
         multi = yds_new_segment_file_name(file_to, sizeof file_to, i, ydst);
+#endif
         if (multi == 0)
             goto _exit;
         i--;
@@ -945,7 +1008,11 @@ static void create_outline(struct ydst *ydst) {
         ylog_debug("yyyyyyyyyyyyyyyyyyy=%s\n", file_to);
         from = 0;
         for (; i >= 0; i--) {
+#ifdef NEW_SEGMENT_FAST_METHOD
+            format2char_num(pnum_f, i);
+#else
             yds_new_segment_file_name(file_from, sizeof file_from, i, ydst);
+#endif
             if (access(file_from, F_OK))
                 continue;
             from = 1;
@@ -965,26 +1032,29 @@ static void create_outline(struct ydst *ydst) {
             char *p, *last;
             int ret;
             int len = 100;
+            char data[200];
+            char tmp_path[PATH_MAX];
             int fd_f = -1;
             int fd_t = open(file_to, O_RDONLY);
             if (from)
                 fd_f = open(file_from, O_RDONLY);
             if (fd_f >= 0 || fd_t >= 0) {
                 if (fd_outline < 0) {
-                    dirname2(file_to);
-                    strcpy(file_to + strlen(file_to), "/outline");
-                    fd_outline = open(file_to, O_RDWR | O_CREAT | O_TRUNC, 0644);
+                    strcpy(tmp_path, file_to);
+                    dirname2(tmp_path);
+                    strcpy(tmp_path + strlen(tmp_path), "/outline");
+                    fd_outline = open(tmp_path, O_RDWR | O_CREAT | O_TRUNC, 0644);
                 }
                 if (fd_t >= 0)
-                    ret = read(fd_t, file_to, len);
+                    ret = read(fd_t, data, len);
                 else
                     ret = 0;
                 if (ret < 0) {
                     ret = 0;
                     ylog_error("create_outline read file_to failed: %s\n", strerror(errno));
                 }
-                file_to[ret] = 0;
-                p = file_to;
+                data[ret] = 0;
+                p = data;
                 strtok_r(p, "]", &last);
                 p = strtok_r(NULL, "-", &last);
                 buf[0] = 0;
@@ -1007,19 +1077,19 @@ static void create_outline(struct ydst *ydst) {
                     memset(&tm_before, 0, sizeof(struct tm));
                     strptime(p, " %Y.%m.%d %H:%M:%S ", &tm_before);
                     if (fd_f >= 0)
-                        ret = read(fd_f, file_from, len);
+                        ret = read(fd_f, data, len);
                     else
                         ret = 0;
                     if (ret < 0) {
                         ret = 0;
                         ylog_error("create_outline read file_from failed: %s\n", strerror(errno));
                     }
-                    file_from[ret] = 0;
-                    p = file_from;
+                    data[ret] = 0;
+                    p = data;
                     strtok_r(p, "]", &last);
                     p = strtok_r(NULL, "-", &last);
                     if (p == NULL) { /* ydst cache maybe does not flush back now luther */
-                        p = file_from;
+                        p = data;
                         strcpy(p, timestamp);
                     }
                     memset(&tm_after, 0, sizeof(struct tm));
@@ -1072,8 +1142,18 @@ static int ydst_pre_fill_zero_to_possession_storage_spaces(struct ydst *ydst,
         memset(buf, 0, buf_size);
         buf[buf_size - 1] = '\n';
 
+#ifdef NEW_SEGMENT_FAST_METHOD
+        /* we assume 0000 -> 9999 can't reach */
+        yds_new_segment_file_name(path, sizeof path, 0, ydst);
+        int basename_offset = strlen(path) - NEW_SEGMENT_FAST_METHOD_NUM_WIDTH;
+        char *pnum_t = path + basename_offset;
+#endif
         for (segment = 0; segment < ydst->max_segment_now; segment++) {
+#ifdef NEW_SEGMENT_FAST_METHOD
+            format2char_num(pnum_t, segment);
+#else
             yds_new_segment_file_name(path, sizeof path, segment, ydst);
+#endif
             if (excluded_segment == segment) {
                 ylog_critical("excluded_segment %d to %s is ignored\n", excluded_segment, path);
                 continue;
@@ -1105,9 +1185,13 @@ static int ydst_pre_fill_zero_to_possession_storage_spaces(struct ydst *ydst,
 
         /* Do i need to shrink or inflate myself by luther */
         for (segment = ydst->max_segment_now; segment < ydst->max_segment; segment++) {
+#ifdef NEW_SEGMENT_FAST_METHOD
+            format2char_num(pnum_t, segment);
+#else
             yds_new_segment_file_name(path, sizeof path, segment, ydst);
+#endif
             if (access(path, F_OK) == 0) {
-                rm_all(path);
+                unlink(path);
             }
         }
     }
@@ -1159,7 +1243,7 @@ static int ylog_historical_folder_do(char *root, char *historical_folder_root,
                             snprintf(tmp_to, sizeof(tmp_to), "%s%d", root, i+1);
                         if (access(tmp_to, F_OK) == 0)
                             rm_all(tmp_to);
-                        mv(tmp, tmp_to);
+                        rename(tmp, tmp_to);
                     }
                 } else {
                     rm_all(tmp);
@@ -1170,7 +1254,7 @@ static int ylog_historical_folder_do(char *root, char *historical_folder_root,
                     ylog_warn("rmdir %s remove empty folder\n", root);
                 if (i == 1 && access(root, F_OK) == 0) {
                     mkdirs_with_file(tmp);
-                    mv(root, tmp);
+                    rename(root, tmp);
                 }
             }
         }
@@ -1475,8 +1559,11 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
         ydst->segment_size = written_count;
         ydst->segment = (segment + 1) % ydst->max_segment_now;
         ydst->segments++;
-        if (y->raw_data == 0)
+        if (y->raw_data == 0) {
+            ylog_info("create_outline start for %s\n", file);
             create_outline(ydst);
+            ylog_info("create_outline done for %s\n", file);
+        }
     }
 
     if ((ydst->segments == 1) && (ydst->max_segment_now > 1 || ydst->max_segment > 1))

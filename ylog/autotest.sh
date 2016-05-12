@@ -14,7 +14,142 @@ rfuncs=(
 "ylog_check_ylog_cli_snapshot_screen"
 "ylog_check_ylog_traces_anr"
 "ylog_check_ylog_traces_tombstone"
+"ylog_check_cache_write4all"
 )
+
+# 函数：ylog_check_cache_write4all()
+# 参数：无参数
+# 功能：可以添加到all里面的轻型测试cache数据写入
+# 历史：
+# 1. 创建函数 - 2016.05.14 by luther
+function ylog_check_cache_write4all() #                            #check ylog->ydst->cache and ylog->cache->ydst
+{
+    # 1. ylog -> ydst -> cache
+    local ylog_name="benchmark_socket"
+    local ylog_ydst="${rootdir_ylog}/default"
+    local ylog_ydst_name="default.log"
+    local ylog_socket_name="ylog_benchmark_socket_server"
+    local hinfo="[ ylog -> ydst -> cache ]"
+    ylog_check_cache_write_one_time 1K.bin 1k 1 20 200 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 10K.bin 1k 10 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 512K.bin 512k 1 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 3M.bin 1m 3 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 10M.bin 1m 10 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    # 2. ylog -> cache ->ydst
+    local ylog_name="socket"
+    local ylog_ydst="${rootdir_ylog}/socket/open"
+    local ylog_ydst_name="socket.log"
+    local ylog_socket_name="ylog_socket"
+    local hinfo="[ ylog -> cache -> ydst ]"
+    ylog_check_cache_write_one_time 1K.bin 1k 1 20 200 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 10K.bin 1k 10 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 512K.bin 512k 1 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 10M.bin 1m 10 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 3M.bin 1m 3 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 50M.bin 10m 5 20 20 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+}
+
+# 函数：ylog_check_cache_write()
+# 参数：无参数
+# 功能：测试cache数据写入
+# 历史：
+# 1. 创建函数 - 2016.05.10 by luther
+function ylog_check_cache_write() #                                #while [ 1 ]; do ./autotest.sh ylog_check_cache_write; done
+{
+    # 1. ylog -> ydst -> cache
+    local ylog_name="benchmark_socket"
+    local ylog_ydst="${rootdir_ylog}/default"
+    local ylog_ydst_name="default.log"
+    local ylog_socket_name="ylog_benchmark_socket_server"
+    local hinfo="[ ylog -> ydst -> cache ]"
+    ylog_check_cache_write_one_time 1K.bin 1k 1 20 200 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 10K.bin 1k 10 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 512K.bin 512k 1 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 10M.bin 1m 10 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 50M.bin 10m 5 20 20 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 100M.bin 10m 10 20 200 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 200M.bin 20m 10 20 100 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 500M.bin 50m 10 20 100 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    # 2. ylog -> cache ->ydst
+    local ylog_name="socket"
+    local ylog_ydst="${rootdir_ylog}/socket/open"
+    local ylog_ydst_name="socket.log"
+    local ylog_socket_name="ylog_socket"
+    local hinfo="[ ylog -> cache -> ydst ]"
+    ylog_check_cache_write_one_time 1K.bin 1k 1 20 200 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 10K.bin 1k 10 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 512K.bin 512k 1 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 10M.bin 1m 10 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 50M.bin 10m 5 20 20 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 100M.bin 10m 10 20 200 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 200M.bin 20m 10 20 100 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+    ylog_check_cache_write_one_time 500M.bin 50m 10 20 100 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
+}
+
+ function ylog_check_cache_write_one_time()
+{
+    local name=$1
+    local bs=$2
+    local count=$3
+    local segment=$4
+    local segmett_size=$5
+    local ylog_name=$6
+    local ylog_ydst=$7
+    local ylog_ydst_name=$8
+    local ylog_socket_name=$9
+    local hinfo=${10}
+
+    $ADB_SHELL stop ylog
+    $ADB_SHELL start ylog
+    local file="/data/ylog/${name}"
+    my_echo_yellow ${file} ${hinfo} ${ylog_name} ${ylog_ydst_name} ${ylog_socket_name}; echo
+    md5sum_ylog_check_cache_write_test_logs="`mktemp -d md5sum_ylog_check_cache_write_test_logs.XXXX_${d}`"
+    # $ADB_SHELL "[ -e ${file} ] || dd if=/dev/zero of=${file} bs=${bs} count=${count}"
+    [ "`$ADB_SHELL "[ -e ${file} ] || echo 'no'"`" ] && {
+        local tempf="${md5sum_ylog_check_cache_write_test_logs}"
+        local tempfb="${tempf}/temp.bin"
+        local outputb="${tempf}/${name}"
+        local bs2=`echo ${bs} | sed 's/[kK]/ * 1024/;s/[mM]/ * 1024 * 1024/'`
+        local tsize=`echo "${bs2} * ${count}" | bc`
+        local csize=0
+        while ((csize < tsize)); do
+            cat /boot/initrd* >> ${tempfb}
+            csize=`wc -c ${tempfb} | cut -d' ' -f1`
+        done
+        dd if=${tempfb} of=${outputb} bs=`echo ${bs} | tr a-z A-Z` count=${count}
+        rm -f ${tempfb}
+        $ADB push ${outputb} ${file}
+    }
+    $ADB_SHELL ylog_cli rylog >/dev/null
+    $ADB_SHELL ylog_cli ylog ${ylog_name} ydst segment_size ${segment} ${segmett_size} 2>&1>/dev/null
+    sleep 2
+    $ADB_SHELL ylog_benchmark -s ${ylog_socket_name} -f ${file}
+    $ADB_SHELL ylog_cli flush
+    sleep 2
+    $ADB shell ls -l ${ylog_ydst}/
+    $ADB pull ${ylog_ydst} "${md5sum_ylog_check_cache_write_test_logs}" 2>&1>/dev/null;
+    $ADB_SHELL ylog_cli ylog | egrep "^${ylog_name} " | cut -d '>' -f 3-
+    python "${md5sum_ylog_check_cache_write_test_logs}"/analyzer.py
+    local m1="md5sum `md5sum ${md5sum_ylog_check_cache_write_test_logs}/${ylog_ydst_name}`"
+    local m2="md5sum `$ADB_SHELL md5sum ${file}`"
+    local m1_md5=`echo ${m1} | cut -d' ' -f2`
+    local m2_md5=`echo ${m2} | cut -d' ' -f2`
+    if [ "${m1_md5}" == "${m2_md5}" ]; then
+        echo "md5sum pass"
+        my_echo_green ${m1}
+        echo
+        my_echo_green ${m2}
+        echo
+        rm -rf "${md5sum_ylog_check_cache_write_test_logs}"
+    else
+        echo "md5sum fail"
+        my_echo_red ${m1}
+        echo
+        my_echo_red ${m2}
+        echo
+    fi
+    result="pass"
+}
 
 # 函数：ylog_check_ylog_traces_tombstone()
 # 参数：无参数
@@ -87,14 +222,16 @@ function ylog_check_ylog_cli_snapshot_screen() #                   #check ylog_c
 # 1. 创建函数 - 2016.05.10 by luther
 function ylog_check_hcidump_log() #                                #check hcidump log capture
 {
+    home
+    $ADB_SHELL am start -a android.settings.BLUETOOTH_SETTINGS >/dev/null
     $ADB_SHELL am start -a android.bluetooth.adapter.action.REQUEST_ENABLE >/dev/null
     $ADB_SHELL ylog_cli ylog hcidump start >/dev/null
 #timeout 5 bash -x <<__EOF
 timeout 5 bash <<__EOF
-    prev_size=\$($ADB_SHELL wc -c ${rootdir_ylog}/hcidump/000)
+    prev_size=\$($ADB_SHELL wc -c ${rootdir_ylog}/hcidump/0000)
     while [ 1 ]; do
         $ADB_SHELL ping -c 2 127.0.0.1 >/dev/null
-        curr_size=\$($ADB_SHELL wc -c ${rootdir_ylog}/hcidump/000)
+        curr_size=\$($ADB_SHELL wc -c ${rootdir_ylog}/hcidump/0000)
         if [ "\${prev_size}" != "\${curr_size}" ]; then
             #echo "1111=\${prev_line}"
             #echo "2222=\${curr_line}"
@@ -104,6 +241,7 @@ timeout 5 bash <<__EOF
     done
 __EOF
     [ "$?" == "0" ] && result="pass"
+    screen_off
 }
 
 # 函数：ylog_check_tcpdump_log()
@@ -116,10 +254,10 @@ function ylog_check_tcpdump_log() #                                #check tcpdum
     $ADB_SHELL ylog_cli ylog tcpdump start >/dev/null
 #timeout 5 bash -x <<__EOF
 timeout 5 bash <<__EOF
-    prev_size=\$($ADB_SHELL wc -c ${rootdir_ylog}/tcpdump/000)
+    prev_size=\$($ADB_SHELL wc -c ${rootdir_ylog}/tcpdump/0000)
     while [ 1 ]; do
         $ADB_SHELL ping -c 2 127.0.0.1 >/dev/null
-        curr_size=\$($ADB_SHELL wc -c ${rootdir_ylog}/tcpdump/000)
+        curr_size=\$($ADB_SHELL wc -c ${rootdir_ylog}/tcpdump/0000)
         if [ "\${prev_size}" != "\${curr_size}" ]; then
             #echo "1111=\${prev_line}"
             #echo "2222=\${curr_line}"
@@ -187,11 +325,11 @@ function ylog_check_kernel_log() #                                 #check kernel
     $ADB_SHELL ylog_cli ylog kernel start >/dev/null
 #timeout 5 bash -x <<__EOF
 timeout 5 bash <<__EOF
-    prev_line='$($ADB_SHELL tail -n 1 ${rootdir_ylog}/kernel/000)'
+    prev_line='$($ADB_SHELL tail -n 1 ${rootdir_ylog}/kernel/0000)'
     while [ 1 ]; do
         $ADB_SHELL ylog_cli print2kernel autotest >/dev/null
         $ADB_SHELL ylog_cli flush >/dev/null
-        curr_line="\$($ADB_SHELL tail -n 1 ${rootdir_ylog}/kernel/000)"
+        curr_line="\$($ADB_SHELL tail -n 1 ${rootdir_ylog}/kernel/0000)"
         if [ "\${prev_line}" != "\${curr_line}" ]; then
             #echo "1111=\${prev_line}"
             #echo "2222=\${curr_line}"
@@ -213,11 +351,11 @@ function ylog_check_android_log() #                                #check androi
     $ADB_SHELL ylog_cli ylog android start >/dev/null
 #timeout 5 bash -x <<__EOF
 timeout 5 bash <<__EOF
-    prev_line='$($ADB_SHELL tail -n 1 ${rootdir_ylog}/android/000)'
+    prev_line='$($ADB_SHELL tail -n 1 ${rootdir_ylog}/android/0000)'
     while [ 1 ]; do
         $ADB_SHELL ylog_cli print2android autotest >/dev/null
         $ADB_SHELL ylog_cli flush >/dev/null >/dev/null
-        curr_line="\$($ADB_SHELL tail -n 1 ${rootdir_ylog}/android/000)"
+        curr_line="\$($ADB_SHELL tail -n 1 ${rootdir_ylog}/android/0000)"
         if [ "\${prev_line}" != "\${curr_line}" ]; then
             #echo "1111=\${prev_line}"
             #echo "2222=\${curr_line}"
@@ -236,7 +374,7 @@ __EOF
 # 1. 创建函数 - 2016.03.25 by luther
 function ylog_check_wcn_log() #                                    #check wcn log capture
 {
-    [ "`$ADB_SHELL \"[ -e ${rootdir_ylog}/cp/wcn/000 ] && echo 1\"`" ] && result="pass"
+    [ "`$ADB_SHELL \"[ -e ${rootdir_ylog}/cp/wcn/0000 ] && echo 1\"`" ] && result="pass"
 }
 
 # 函数：ylog_check_wcdma_log()
@@ -246,7 +384,7 @@ function ylog_check_wcn_log() #                                    #check wcn lo
 # 1. 创建函数 - 2016.03.25 by luther
 function ylog_check_wcdma_log() #                                  #check wcdma log capture
 {
-    [ "`$ADB_SHELL \"[ -e ${rootdir_ylog}/cp/wcdma/000 ] && echo 1\"`" ] && result="pass"
+    [ "`$ADB_SHELL \"[ -e ${rootdir_ylog}/cp/wcdma/0000 ] && echo 1\"`" ] && result="pass"
 }
 
 # 函数：ylog_check_td-scdma_log()
@@ -256,7 +394,7 @@ function ylog_check_wcdma_log() #                                  #check wcdma 
 # 1. 创建函数 - 2016.03.25 by luther
 function ylog_check_td-scdma_log() #                               #check td-scdma log capture
 {
-    [ "`$ADB_SHELL \"[ -e ${rootdir_ylog}/cp/td-scdma/000 ] && echo 1\"`" ] && result="pass"
+    [ "`$ADB_SHELL \"[ -e ${rootdir_ylog}/cp/td-scdma/0000 ] && echo 1\"`" ] && result="pass"
 }
 
 # 函数：ylog_check_5mode_log()
@@ -266,7 +404,7 @@ function ylog_check_td-scdma_log() #                               #check td-scd
 # 1. 创建函数 - 2016.03.25 by luther
 function ylog_check_5mode_log() #                                  #check 5mode log capture
 {
-    [ "`$ADB_SHELL \"[ -e ${rootdir_ylog}/cp/5mode/000 ] && echo 1\"`" ] && result="pass"
+    [ "`$ADB_SHELL \"[ -e ${rootdir_ylog}/cp/5mode/0000 ] && echo 1\"`" ] && result="pass"
 }
 
 # 函数：ylog_check_4mode_log()
@@ -276,7 +414,7 @@ function ylog_check_5mode_log() #                                  #check 5mode 
 # 1. 创建函数 - 2016.03.25 by luther
 function ylog_check_4mode_log() #                                  #check 4mode log capture
 {
-    [ "`$ADB_SHELL \"[ -e ${rootdir_ylog}/cp/4mode/000 ] && echo 1\"`" ] && result="pass"
+    [ "`$ADB_SHELL \"[ -e ${rootdir_ylog}/cp/4mode/0000 ] && echo 1\"`" ] && result="pass"
 }
 
 # 函数：ylog_check_3mode_log()
@@ -286,7 +424,7 @@ function ylog_check_4mode_log() #                                  #check 4mode 
 # 1. 创建函数 - 2016.03.25 by luther
 function ylog_check_3mode_log() #                                  #check 3mode log capture
 {
-    [ "`$ADB_SHELL \"[ -e ${rootdir_ylog}/cp/3mode/000 ] && echo 1\"`" ] && result="pass"
+    [ "`$ADB_SHELL \"[ -e ${rootdir_ylog}/cp/3mode/0000 ] && echo 1\"`" ] && result="pass"
 }
 
 # 函数：ylog_check_ylog_cli_at()
@@ -357,6 +495,20 @@ echo -e -n "${COLOR_START_GREEN}$@${COLOR_END}"
 echo -e -n "${COLOR_START_PINK}$@${COLOR_END}"
 }
 
+ function screen_off()
+{
+    $ADB_SHELL svc power stayon false
+}
+
+ function home()
+{
+    $ADB_SHELL svc power stayon true
+    $ADB_SHELL input keyevent BACK
+    $ADB_SHELL input swipe 50 500 300 500
+    $ADB_SHELL input swipe 100 500 100 200
+    $ADB_SHELL input keyevent HOME
+}
+
 if [ '1' ]; then
     if [ "$1" == "all" ]; then
         #rfuncs=(`${GREP} '^function ' ${program} | ${SED} 's/^function //;s/(.*//'`)
@@ -373,7 +525,7 @@ if [ '1' ]; then
             ((pcount++))
             echo "------- ${pcount} device ${d} , ${serial}-------"
             count=1
-            export ADB="adb -s ${d}"
+            export ADB="adb -s ${d} wait-for-device"
             export ADB_SHELL="${ADB} shell"
             export rootdir="$(${ADB} shell ylog_cli rootdir | tr -d '\r')"
             result="fail"

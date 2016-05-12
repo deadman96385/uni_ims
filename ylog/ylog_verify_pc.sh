@@ -5,8 +5,8 @@ cmds=(
 'report_summary'
 '[ -d ${y}/traces/ ] && ls -l ${y}/traces/'
 'du -shc ${y}/* | sort -h'
-'tail -n 1 ${y}/android/000'
-'tail -n 1 ${y}/kernel/000'
+'tail -n 1 ${y}/android/0000'
+'tail -n 1 ${y}/kernel/0000'
 'grep -E "Has run|killed" ${y}/ylog_debug | tail -n 2'
 )
 
@@ -18,8 +18,8 @@ function report_summary() {
     eval 'head -n 1 ${y}/ylog_debug'
     eval 'cat ${y}/ylog_debug | grep -E "Has run|killed" | tail -n 2 |
         sed "s/.*Has run \(.*\) avg_speed.*/\1/;s/.*] \[/[/" | paste -s' # | sed "s/\(.*\) \[\(.*\)/[\2 \1/"'
-    eval 'tail -n 1 ${y}/android/000 | cut -d" " -f1,2 | sed "s/..\(.*\)/      android - [\1]/"'
-    eval 'tail -n 1 ${y}/kernel/000 | cut -d"]" -f1-2 | sed "s/^/       kernel - /;s/$/]/"'
+    eval 'tail -n 1 ${y}/android/0000 | cut -d" " -f1,2 | sed "s/..\(.*\)/      android - [\1]/"'
+    eval 'tail -n 1 ${y}/kernel/0000 | cut -d"]" -f1-2 | sed "s/^/       kernel - /;s/$/]/"'
     eval 'echo'
 }
 

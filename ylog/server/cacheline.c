@@ -199,6 +199,25 @@ static void *cacheline_thread_handler_default(void *arg) {
             cl->writing = 0;
             pthread_mutex_lock(&cl->mutex);
             cl->rclidx = (cl->rclidx + 1) % cl->num; /* free this cacheline to let ydst use */
+            if (cl->wclidx_max < cl->wclidx)
+                cl->wclidx_max = cl->wclidx;
+        }
+        /* Step X. wrap back the wclidx pointer to let malloc avoid doing more physical memory page missing request */
+        if (cl->wclidx == cl->rclidx) {
+            if (cl->wclidx != 0) { /* wclidx will be wrapped back to index 0 slot */
+                long wpos = cl->wpos;
+                if (wpos) {
+                    char *pcache = cacheline_line_pointer(0, cl);
+                    memcpy(pcache, cacheline_line_pointer(cl->wclidx, cl), wpos);
+                }
+                if (cl->debuglevel & CACHELINE_DEBUG_WCLIDX_WRAP)
+                    ylog_info("%s cacheline wrap back to 0 from %d %dbytes\n", cl->name, cl->wclidx, wpos);
+                cl->wclidx = cl->rclidx = 0;
+            }
+        } else {
+            if (cl->status == CACHELINE_RUN)
+                ylog_critical("%s cacheline fatal error, wclidx=%d, rclidx=%d, wpos=%d\n",
+                        cl->name, cl->wclidx, cl->rclidx, cl->wpos);
         }
         /* Step 3. flush or exit */
         if (cl->status != CACHELINE_RUN) {
