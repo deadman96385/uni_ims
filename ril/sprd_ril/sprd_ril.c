@@ -179,6 +179,7 @@ static int ussdRun = 0;/* 0: ussd to end. 1: ussd to start. */
 int s_isstkcall = 0;
 static int add_ip_cid = -1;   //for volte addtional business
 static int s_screenState = 1;
+static int s_video_call_id = -1;
 /*SPRD: add for VoLTE to handle SRVCC */
 typedef struct Srvccpendingrequest{
     char *cmd;
@@ -221,6 +222,7 @@ static void requestCallForwardU(int channelID, RIL_CallForwardInfo *data, size_t
 static void requestQuerySmsStorageMode(int channelID, void *data, size_t datalen, RIL_Token t, char *mode);
 static int isVoLteEnable();
 static bool isAttachEnable();
+static void requestDowngradeToVoice();
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 
 struct listnode
@@ -13846,6 +13848,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 RILLOGD("get type fail");
                 goto out;
             }
+            if(response->stat == 6 /*disconnected*/ && s_video_call_id == response->id){
+                s_video_call_id = -1;
+            } else if(response->type > 0/*video*/ && response->stat == RIL_CALL_ACTIVE){
+                s_video_call_id = response->id;
+            }
 
             //stat:6 is disconnected
             if (response->stat == 6 && g_csfb_processing) {
@@ -14263,6 +14270,36 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         record->number = (char *)strdup(number);
         record->category = category;
         RIL_requestTimedCallback (addEmergencyNumbertoEccList, (void *)record, NULL);
+    }
+    /* @} */
+    /*SPRD: add for VoLTE to handle video call bearing lost */
+    else if (strStartsWith(s, "+SPIMSPDPINFO")) {
+        char *tmp;
+        int cid;
+        int state;
+        int qci;
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+
+        err = at_tok_nextint(&tmp, &cid);
+        if (err < 0) {
+            RILLOGD("%s get cid fail", s);
+        }
+        err = at_tok_nextint(&tmp, &state);
+        if (err < 0) {
+            RILLOGD("%s get state fail", s);
+            goto out;
+        }
+        err = at_tok_nextint(&tmp, &qci);
+        if (err < 0) {
+            RILLOGD("%s get qci fail", s);
+            goto out;
+        }
+        RILLOGD("onUnsolicited(),SPIMSPDPINFO state:%d  qci:%d",state,qci);
+        if(state == 0/*deactive*/ && qci == 2/*video*/){
+            RIL_requestTimedCallback (requestDowngradeToVoice, NULL, NULL);
+        }
     }
     /* @} */
 
@@ -16101,4 +16138,26 @@ static bool isAttachEnable() {
         return false;
     }
     return true;
+}
+
+static void requestDowngradeToVoice(){
+    if(s_video_call_id == -1){
+        RILLOGD("requestDowngradeToVoice cancel id:%d",s_video_call_id);
+        return;
+    }
+    int channelID = getChannel();
+    int err = 0;
+    char cmd[32] = {0};
+    ATResponse *p_response = NULL;
+    snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,1,\"m=audio\"", s_video_call_id);
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    if (err < 0 || p_response->success == 0) {
+        RILLOGD("requestDowngradeToVoice failure!");
+    } else {
+        RILLOGD("requestDowngradeToVoice->id:%d",s_video_call_id);
+    }
+    if(p_response){
+        at_response_free(p_response);
+    }
+    putChannel(channelID);
 }
