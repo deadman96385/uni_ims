@@ -38,7 +38,7 @@ end:	printf("\r\n");
 void cal_sha256(uint8_t * input, uint32_t bytes_num, uint8_t * output)
 {
 	if ((NULL != input) && (NULL != output)) {
-		sha256_csum_wd(input, bytes_num, output, NULL);
+		sha256_csum_wd(input, bytes_num, output, 0);
 	} else {
 		secf("\r\tthe pointer is error,pls check it\n");
 	}
@@ -297,7 +297,7 @@ bool getpubkeyfrmPEM(sprd_rsapubkey * sprdPubk, char *path_key)
 	int flen, rsa_len;
 	if ((file = fopen(path_key, "r")) == NULL) {
 		perror("open key file error");
-		return NULL;
+		return false;
 	}
 	if ((p_rsa = PEM_read_RSA_PUBKEY(file, NULL, NULL, NULL)) == NULL) {
 		//if((p_rsa=PEM_read_RSAPublicKey(file,NULL,NULL,NULL))==NULL){   换成这句死活通不过，无论是否将公钥分离源文件
@@ -332,7 +332,7 @@ bool calcSignature(uint8_t * hash_data, int hashLen, uint8_t * signature, char *
 	FILE *file;
 	if ((file = fopen(path_key, "r")) == NULL) {
 		perror("open key file error");
-		return NULL;
+		return false;
 	}
 	if ((p_rsa = PEM_read_RSAPrivateKey(file, NULL, NULL, NULL)) == NULL) {
 		ERR_print_errors_fp(stdout);

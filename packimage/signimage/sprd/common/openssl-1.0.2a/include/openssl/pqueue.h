@@ -1,4 +1,3 @@
-/* crypto/pqueue/pqueue.h */
 /*
  * DTLS implementation written by Nagendra Modadugu
  * (nagendra@cs.stanford.edu) for the OpenSSL project 2005.
@@ -53,47 +52,95 @@
  *
  * This product includes cryptographic software written by Eric Young
  * (eay@cryptsoft.com).  This product includes software written by Tim
- * Hudson (tjh@cryptsoft.com).
- *
- */
+ * Hudson (tjh@cryptsoft.com). */
 
-#ifndef HEADER_PQUEUE_H
-# define HEADER_PQUEUE_H
+#ifndef OPENSSL_HEADER_PQUEUE_H
+#define OPENSSL_HEADER_PQUEUE_H
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
+#include <openssl/base.h>
 
-#ifdef  __cplusplus
+#if defined(__cplusplus)
 extern "C" {
 #endif
+
+
+/* Priority queue.
+ *
+ * The priority queue maintains a linked-list of nodes, each with a unique,
+ * 64-bit priority, in ascending priority order. */
+
 typedef struct _pqueue *pqueue;
 
 typedef struct _pitem {
-    unsigned char priority[8];  /* 64-bit value in big-endian encoding */
-    void *data;
-    struct _pitem *next;
+  uint8_t priority[8]; /* 64-bit value in big-endian encoding */
+  void *data;
+  struct _pitem *next;
 } pitem;
 
 typedef struct _pitem *piterator;
 
-pitem *pitem_new(unsigned char *prio64be, void *data);
-void pitem_free(pitem *item);
 
-pqueue pqueue_new(void);
-void pqueue_free(pqueue pq);
+/* Creating and freeing queues. */
 
-pitem *pqueue_insert(pqueue pq, pitem *item);
-pitem *pqueue_peek(pqueue pq);
-pitem *pqueue_pop(pqueue pq);
-pitem *pqueue_find(pqueue pq, unsigned char *prio64be);
-pitem *pqueue_iterator(pqueue pq);
-pitem *pqueue_next(piterator *iter);
+/* pqueue_new allocates a fresh, empty priority queue object and returns it, or
+ * NULL on error. */
+OPENSSL_EXPORT pqueue pqueue_new(void);
 
-void pqueue_print(pqueue pq);
-int pqueue_size(pqueue pq);
+/* pqueue_free frees |pq| but not any of the items it points to. Thus |pq| must
+ * be empty or a memory leak will occur. */
+OPENSSL_EXPORT void pqueue_free(pqueue pq);
 
-#ifdef  __cplusplus
-}
+
+/* Creating and freeing items. */
+
+/* pitem_new allocates a fresh priority queue item that points at |data| and
+ * has a priority given by |prio64be|, which is a 64-bit, unsigned number
+ * expressed in big-endian form. It returns the fresh item, or NULL on
+ * error. */
+OPENSSL_EXPORT pitem *pitem_new(uint8_t prio64be[8], void *data);
+
+/* pitem_free frees |item|, but not any data that it points to. */
+OPENSSL_EXPORT void pitem_free(pitem *item);
+
+
+/* Queue accessor functions */
+
+/* pqueue_peek returns the item with the smallest priority from |pq|, or NULL
+ * if empty. */
+OPENSSL_EXPORT pitem *pqueue_peek(pqueue pq);
+
+/* pqueue_find returns the item whose priority matches |prio64be| or NULL if no
+ * such item exists. */
+OPENSSL_EXPORT pitem *pqueue_find(pqueue pq, uint8_t *prio64be);
+
+
+/* Queue mutation functions */
+
+/* pqueue_insert inserts |item| into |pq| and returns item. */
+OPENSSL_EXPORT pitem *pqueue_insert(pqueue pq, pitem *item);
+
+/* pqueue_pop takes the item with the least priority from |pq| and returns it,
+ * or NULL if |pq| is empty. */
+OPENSSL_EXPORT pitem *pqueue_pop(pqueue pq);
+
+/* pqueue_size returns the number of items in |pq|. */
+OPENSSL_EXPORT size_t pqueue_size(pqueue pq);
+
+
+/* Iterating */
+
+/* pqueue_iterator returns an iterator that can be used to iterate over the
+ * contents of the queue. */
+OPENSSL_EXPORT piterator pqueue_iterator(pqueue pq);
+
+/* pqueue_next returns the current value of |iter| and advances it to the next
+ * position. If the iterator has advanced over all the elements, it returns
+ * NULL. */
+OPENSSL_EXPORT pitem *pqueue_next(piterator *iter);
+
+
+#if defined(__cplusplus)
+}  /* extern C */
 #endif
-#endif                          /* ! HEADER_PQUEUE_H */
+
+#endif  /* OPENSSL_HEADER_PQUEUE_H */
