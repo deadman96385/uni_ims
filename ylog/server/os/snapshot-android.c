@@ -77,19 +77,34 @@ static void ylog_snapshot_startup(long poweron) {
         "getprop",
         NULL
     };
-    pcmds_snapshot(cmd_list, y, 1000, -1, &cnt, -1, "%s/%s/phone.info", ydst->root_folder, ydst->file);
+
+    struct pcmds_print2file_args ppa = {
+        .cmds = cmd_list,
+        .file = NULL,
+        .flags = -1,
+        .cnt = &cnt,
+        .w = NULL,
+        .y = y,
+        .prefix = NULL,
+        .millisecond = 1000,
+        .max_size = -1,
+    };
+
+    pcmds_snapshot(&ppa, "%s/%s/phone.info", ydst->root_folder, ydst->file);
 
     FILE *wfp;
     wfp = popen("ls /*.rc", "r");
     if (wfp) {
         char *last;
         char tmp[4096];
+        ppa.cmd = tmp;
+        ppa.flags = O_RDWR | O_CREAT | O_APPEND;
+        ppa.millisecond = 200;
         do {
             if (fgets(buf, count, wfp) == NULL)
                 break;
             snprintf(tmp, sizeof tmp, "cat %s", strtok_r(buf, "\n", &last));
-            pcmd_snapshot(tmp, y, 200, -1, &cnt, O_RDWR | O_CREAT | O_APPEND,
-                    "%s/%s/phone.info", ydst->root_folder, ydst->file);
+            pcmd_snapshot(&ppa, "%s/%s/phone.info", ydst->root_folder, ydst->file);
         } while (1);
         pclose(wfp);
     }
@@ -100,26 +115,53 @@ static void ylog_snapshot___case___log(struct ylog_snapshot_args *args) {
     char timeBuf[32];
     struct ylog *y = pos->snapshot;
     struct ydst *ydst = y->ydst;
+    struct pcmds_print2file_args ppa = {
+        .cmds = NULL,
+        .file = NULL,
+        .flags = -1,
+        .cnt = NULL,
+        .w = NULL,
+        .y = y,
+        .prefix = NULL,
+        .millisecond = 1000,
+        .max_size = -1,
+    };
 
     ylog_get_format_time_year(timeBuf);
-    pcmd_snapshot("dmesg", y, 1000, 3*1024*1024, NULL, -1,
-            "%s/%slog/%s/kmsg", ydst->root_folder, ydst->file, timeBuf);
-    pcmd_snapshot("logcat -d", y, 1000, 5*1024*1024, NULL, -1,
-            "%s/%slog/%s/logcat", ydst->root_folder, ydst->file, timeBuf);
-    snprintf(args->data, sizeof args->data, "%s/%slog/%s/", ydst->root_folder, ydst->file, timeBuf);
+    ppa.cmd = "dmesg";
+    ppa.max_size = 3*1024*1024;
+    pcmd_snapshot(&ppa, "%s/%slog/%s/kmsg", ydst->root_folder, ydst->file, timeBuf);
+    ppa.cmd = "logcat -d";
+    ppa.max_size = 5*1024*1024;
+    pcmd_snapshot(&ppa, "%s/%slog/%s/logcat", ydst->root_folder, ydst->file, timeBuf);
+    if (args)
+        snprintf(args->data, sizeof args->data, "%s/%slog/%s/", ydst->root_folder, ydst->file, timeBuf);
 }
 
 static void ylog_snapshot___case___mtp(struct ylog_snapshot_args *args) {
     struct ylog *y = pos->snapshot;
     struct ydst *ydst = y->ydst;
     char *mtp_path = "ylog";
+    struct pcmds_print2file_args ppa = {
+        .cmds = NULL,
+        .file = NULL,
+        .flags = -1,
+        .cnt = NULL,
+        .w = NULL,
+        .y = y,
+        .prefix = NULL,
+        .millisecond = 1000,
+        .max_size = -1,
+    };
 
     if (args->argc)
         mtp_path = args->argv[0];
     snprintf(args->data, sizeof args->data,
             "am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_DIR -d file:///%s/%s",
             pos->ylog_root_path_latest, mtp_path);
-    pcmd_snapshot(args->data, y, 2*60*1000, -1, NULL, -1, "/dev/null");
+    ppa.cmd = args->data;
+    ppa.millisecond = 2*60*1000;
+    pcmd_snapshot(&ppa, "/dev/null");
     snprintf(args->data, sizeof args->data, "%s/%s", pos->ylog_root_path_latest, mtp_path);
 }
 

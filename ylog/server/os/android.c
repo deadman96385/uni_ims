@@ -18,6 +18,7 @@
 #define YLOG_FILTER_PATH "/system/lib/"
 
 #define ANR_OR_TOMSTONE_UNIFILE_MODE
+#define ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
 #define ANR_FAST_COPY_MODE
 #define ANR_FAST_COPY_MODE_ANR_FILE "/data/anr/traces.txt"
 #define ANR_FAST_COPY_MODE_TMP "/data/ylog/traces.txt.ylog.tmp"
@@ -28,7 +29,9 @@ struct os_status {
     char ylog_root_path_latest[512];
     char historical_folder_root_last[512];
     char *file_atch[5];
+    char *file_atloop[5];
     int file_atch_num;
+    int file_atloop_num;
     int anr_fast;
     int fd_kmsg;
     struct ylog *snapshot;
@@ -37,6 +40,7 @@ struct os_status {
 #endif
 } oss = {
     .file_atch_num = 5,
+    .file_atloop_num = 5,
 }, *pos = &oss;
 
 #include "modem.c"
@@ -544,6 +548,8 @@ static struct command os_commands[] = {
     {"anr", "trigger anr action for auto test", cmd_anr, NULL},
     {"tombstone", "trigger tombstone action for auto test", cmd_tombstone, NULL},
     {"monkey", "mark the status of monkey, ex. ylog_cli monkey 1 or ylog_cli monkey 0", cmd_monkey, NULL},
+    {"atloop", "send AT loop command to cp side, ex. ylog_cli atloop AT+SPREF=\\\"AUTODLOADER\\\" for ResearchDownload auto pac flash", cmd_atloop, NULL},
+    {"pac", "Trigger phone to download mode for ResearchDownload auto pac flash", cmd_pac, NULL},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -558,7 +564,7 @@ static void ylog_status_hook(enum ylog_thread_state state, struct ylog *y) {
     default: value = "unknown"; break;
     }
     if (state == YLOG_STOP || state == YLOG_RUN)
-        ylog_info("ylog %s setprop %s %s\n", y->name, buf, value);
+        ylog_debug("ylog %s setprop %s %s\n", y->name, buf, value);
     property_set(buf, value);
 }
 
@@ -621,21 +627,21 @@ static int os_inotify_handler_anr(struct ylog_inotify_cell *pcell, int timeout, 
         NULL
     };
 
-    ylog_info("os_inotify_handler_anr is called for '%s %s' %dms %s now\n",
+    ylog_debug("os_inotify_handler_anr is called for '%s %s' %dms %s now\n",
                 pcell->pathname ? pcell->pathname:"", pcell->filename, pcell->timeout, timeout ? "timeout":"normal");
 
     if (pos->anr_fast) {
         char buf[4];
         int fd = open("/data/anr/traces.txt", O_RDONLY);
         if (fd < 0) {
-            ylog_info("open %s fail.%s", "/data/anr/traces.txt", strerror(errno));
+            ylog_error("open %s fail.%s", "/data/anr/traces.txt", strerror(errno));
             return -1;
         }
         LSEEK(fd, -3, SEEK_END);
         buf[0] = 0;
         buf[3] = 0;
         if ((read(fd, buf, 3) != 3) || (strcmp(buf, "EOF"))) {
-            ylog_info("read %s fail.%s", "/data/anr/traces.txt", strerror(errno));
+            ylog_error("read %s fail.%s", "/data/anr/traces.txt", strerror(errno));
             close(fd);
             return -1;
         }
@@ -675,8 +681,9 @@ static int os_inotify_handler_anr_delete_create(struct ylog_inotify_cell *pcell,
         /* IN_MODIFY */
         int fd_from = open(ANR_FAST_COPY_MODE_ANR_FILE, O_RDONLY);
         if (fd_from < 0) {
-            ylog_info("open %s fail.%s", ANR_FAST_COPY_MODE_ANR_FILE, strerror(errno));
+            ylog_error("open %s fail.%s", ANR_FAST_COPY_MODE_ANR_FILE, strerror(errno));
         } else {
+            static int warning = 0;
             int fd_to = open(ANR_FAST_COPY_MODE_TMP, O_RDWR | O_CREAT | O_TRUNC, 0664);
             if (fd_to >= 0) {
                 struct stat stat_dst0, stat_dst;
@@ -693,17 +700,24 @@ static int os_inotify_handler_anr_delete_create(struct ylog_inotify_cell *pcell,
                         ylog_error("stat %s, %s failed: %s\n", ANR_FAST_COPY_MODE_TMP,
                                 ANR_FAST_COPY_MODE_YLOG, strerror(errno));
                     else {
-                        if (stat_dst0.st_size > stat_dst.st_size)
+                        if (stat_dst0.st_size > stat_dst.st_size) {
+                            warning = 0;
                             rename(ANR_FAST_COPY_MODE_TMP, ANR_FAST_COPY_MODE_YLOG);
-                        else {
-                            if (stat_dst0.st_size < stat_dst.st_size)
+                        } else {
+                            if (stat_dst0.st_size < stat_dst.st_size && warning == 0) {
+                                warning = 1;
                                 ylog_critical("os_inotify_handler_anr_delete_create does not delete, why?\n");
+                            }
                         }
                     }
-                } else
+                } else {
+                    warning = 0;
                     rename(ANR_FAST_COPY_MODE_TMP, ANR_FAST_COPY_MODE_YLOG);
-            } else
-                ylog_info("open %s fail.%s", "/data/anr/traces.txt", strerror(errno));
+                }
+            } else {
+                warning = 0;
+                ylog_error("open %s fail.%s", ANR_FAST_COPY_MODE_TMP, strerror(errno));
+            }
             close(fd_from);
         }
     }
@@ -711,81 +725,165 @@ static int os_inotify_handler_anr_delete_create(struct ylog_inotify_cell *pcell,
     return event_mask ? 1:0;
 }
 
-static void pcmds_ylog_anr_nowrap_callback(struct ylog *y, int step, char *buf, int count, void *private) {
-    UNUSED(private);
-    static int cnt = 1;
-    if (step == 1) { /* Start pcmd */
-        char timeBuf[32];
-        int len, cur_cnt;
-        struct ydst *ydst = y->ydst;
-        struct ylog_inotify_cell *pcell = (struct ylog_inotify_cell *)private;
-        /**
-         * if cnt is less than 20, although quta has reached,
-         * we also need to continue save it, because some other ylog
-         * fill full the shared ydst, but here does not even have 20 counts
-         */
-        if (ydst->size < ydst->max_size_now || cnt < 20) {
-            char timeBuf0[32];
-            char timeBuf1[32];
-            cur_cnt = cnt;
-            ylog_get_format_time_year(timeBuf);
+#ifdef ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
+static void *ylog_pthread_handler_anr_unifile_thread_copy_bottom_half(void *arg) {
+    struct pcmds_print2file_args *ppa = arg;
+    int fd = ppa->fd_dup;
+    if (fd == PCMDS_PRINT2FILE_FD_DUP)
+        return NULL;
+    char *cmd_list[] = {
+        "logcat -d",
+        "dmesg",
+        NULL
+    };
+    int cur_cnt = 1;
+    ppa->cmds = cmd_list;
+    ppa->file = NULL;
+    ppa->cnt = &cur_cnt;
+    pcmds_print2fd(ppa);
+    if (ppa->malloced)
+        free(ppa);
+    return NULL;
+}
+#endif
 
-            snprintf(buf, count, "%s/%s/%04d.%s.anr", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
+/**
+ * because anr process should as soon as possible,
+ * we assume when anr happens, cpath will not change
+ * pcmd_print2file calls pcmd to copy file to the current root folder
+ * because of pcmd may call logcat -d and some other time costing commands,
+ * so we can't use PCMDS_YLOG_CALL_LOCK(y); in the whole function
+ * it may happen following thing:
+ * 1. /data/ylog/traces is writing
+ * 2. sdcard ready
+ * 3. move whole /data/ylog to sdcard (because lacking of PCMDS_YLOG_CALL_LOCK)
+ * 4. still write /data/ylog/traces
+ * (we can use a.mutex->locked() struct pcmds_print2file_args .locked++; a.mutex->unlock()  in anr and tombstones function)
+ * if .locked > 1, then ....
+ */
+static void pcmds_ylog_anr_nowrap_callback(struct ylog *y, char *buf, int count, struct ylog_inotify_cell *pcell) {
+    static int cnt = 1;
+    char timeBuf[32];
+    int len, cur_cnt;
+    PCMDS_YLOG_CALL_LOCK(y);
+    /**
+     * if cnt is less than 20, although quta has reached,
+     * we also need to continue save it, because some other ylog
+     * fill full the shared ydst, but here does not even have 20 counts
+     */
+    if (ydst->size < ydst->max_size_now || cnt < 20) {
+        char timeBuf0[32];
+        char timeBuf1[32];
+        cur_cnt = cnt;
+        ylog_get_format_time_year(timeBuf);
+
+        snprintf(buf, count, "%s/%s/%04d.%s.anr", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
 #ifdef ANR_OR_TOMSTONE_UNIFILE_MODE
-            char *cmd_list[] = {
+        char *cmd_list[] = {
 #ifdef ANR_FAST_COPY_MODE
-                "cat "ANR_FAST_COPY_MODE_YLOG,
+            "cat "ANR_FAST_COPY_MODE_YLOG,
 #else
-                "cat /data/anr/traces.txt",
+            "cat /data/anr/traces.txt",
 #endif
-                "logcat -d",
-                "dmesg",
-                NULL
-            };
-            cur_cnt = 0;
-            pcmds_print2file(cmd_list, buf, -1, &cur_cnt, NULL, y, "ylog.anr", 1000, 8*1024*1024);
-#else
-#ifdef ANR_FAST_COPY_MODE
-            pcmd_print2file("cat "ANR_FAST_COPY_MODE_YLOG, buf, &cur_cnt, NULL, y, NULL, 1000, -1);
-#else
-            pcmd_print2file("cat /data/anr/traces.txt", buf, &cur_cnt, NULL, y, NULL, 1000, -1);
+#ifndef ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
+            "logcat -d",
+            "dmesg",
 #endif
-            cur_cnt = cnt;
-            snprintf(buf, count, "%s/%s/%04d.%s.anr.kmsg", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
-            pcmd_print2file("dmesg", buf, &cur_cnt, NULL, y, NULL, 1000, 3*1024*1024);
-            cur_cnt = cnt;
-            snprintf(buf, count, "%s/%s/%04d.%s.anr.logcat", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
-            pcmd_print2file("logcat -d", buf, &cur_cnt, NULL, y, NULL, 1000, 5*1024*1024);
+            NULL
+        };
+        cur_cnt = 0;
+        struct pcmds_print2file_args ppa = {
+            .cmds = cmd_list,
+            .file = buf,
+            .flags = -1,
+            .cnt = &cur_cnt,
+            .w = NULL,
+            .y = y,
+            .prefix = "ylog.anr",
+            .millisecond = 1000,
+            .max_size = 8*1024*1024,
+#ifdef ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
+            .fd_dup = PCMDS_PRINT2FILE_FD_DUP,
 #endif
-            cnt++;
-            ylog_tv2format_time(timeBuf0, &pcell->tvf); /* after traces.txt copied, format following info for more faster */
-            ylog_tv2format_time(timeBuf1, &pcell->tv);
-            ylog_info("ylog traces create %s, %d, %s~ %s, anr_fast_copy_count=%d\n",
-                    buf, pcell->step, timeBuf0, timeBuf1
-#ifdef ANR_FAST_COPY_MODE
-                    ,pos->anr_fast_copy_count
-#else
-                    ,0
-#endif
-                    );
-#ifdef ANR_FAST_COPY_MODE
-            unlink(ANR_FAST_COPY_MODE_TMP);
-            unlink(ANR_FAST_COPY_MODE_YLOG);
-            pos->anr_fast_copy_count = 0;
-#endif
+            .locked = PCMDS_PRINT2FILE_LOCKED,
+        };
+        pcmds_print2file(&ppa);
+#ifdef ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
+        struct pcmds_print2file_args *tppa = malloc(sizeof(struct pcmds_print2file_args));
+        if (tppa) {
+            *tppa = ppa;
+            tppa->malloced = 1;
+            tppa->locked = 0;
+            if (ylog_pthread_create(ylog_pthread_handler_anr_unifile_thread_copy_bottom_half, tppa)) {
+                tppa->locked = PCMDS_PRINT2FILE_LOCKED;
+                ylog_pthread_handler_anr_unifile_thread_copy_bottom_half(tppa);
+            }
         } else {
-            ylog_critical("ylog %s is forced stop, cnt=%d, because ydst %s has "
-                    "reached max_size %lld/%lld in pcmds_ylog_anr_nowrap_callback\n",
-                    y->name, cnt, ydst->file, ydst->size, ydst->max_size_now);
+            ylog_error("malloc %s fail.%s", "pcmds_print2file_args anr", strerror(errno));
+            ylog_pthread_handler_anr_unifile_thread_copy_bottom_half(&ppa);
         }
+#endif
+#else
+        struct pcmds_print2file_args ppa = {
+#ifdef ANR_FAST_COPY_MODE
+            .cmd = "cat "ANR_FAST_COPY_MODE_YLOG,
+#else
+            .cmd = "cat /data/anr/traces.txt",
+#endif
+            .file = buf,
+            .flags = -1,
+            .cnt = &cur_cnt,
+            .w = NULL,
+            .y = y,
+            .prefix = "ylog.anr",
+            .millisecond = 1000,
+            .max_size = -1,
+            .locked = PCMDS_PRINT2FILE_LOCKED,
+        };
+        pcmd_print2file(&ppa);
+
+        cur_cnt = cnt;
+        snprintf(buf, count, "%s/%s/%04d.%s.anr.kmsg", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
+        ppa.cmd = "dmesg";
+        ppa.max_size = 3*1024*1024;
+        pcmd_print2file(&ppa);
+
+        cur_cnt = cnt;
+        snprintf(buf, count, "%s/%s/%04d.%s.anr.logcat", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
+        ppa.cmd = "logcat -d";
+        ppa.max_size = 5*1024*1024;
+        pcmd_print2file(&ppa);
+#endif
+        cnt++;
+        ylog_tv2format_time(timeBuf0, &pcell->tvf); /* after traces.txt copied, format following info for more faster */
+        ylog_tv2format_time(timeBuf1, &pcell->tv);
+        ylog_info("ylog traces create %s, %d, %s~ %s, anr_fast_copy_count=%d\n",
+                buf, pcell->step, timeBuf0, timeBuf1
+#ifdef ANR_FAST_COPY_MODE
+                ,pos->anr_fast_copy_count
+#else
+                ,0
+#endif
+                );
+#ifdef ANR_FAST_COPY_MODE
+        unlink(ANR_FAST_COPY_MODE_TMP);
+        unlink(ANR_FAST_COPY_MODE_YLOG);
+        pos->anr_fast_copy_count = 0;
+#endif
+    } else {
+        ylog_critical("ylog %s is forced stop, cnt=%d, because ydst %s has "
+                "reached max_size %lld/%lld in pcmds_ylog_anr_nowrap_callback\n",
+                y->name, cnt, ydst->file, ydst->size, ydst->max_size_now);
     }
+    PCMDS_YLOG_CALL_UNLOCK();
 }
 
 static int os_inotify_handler_anr_nowrap(struct ylog_inotify_cell *pcell, int timeout, struct ylog *y) {
     static struct ylog *sys_info = NULL;
+    char buf[PATH_MAX];
     ylog_info("os_inotify_handler_anr_nowrap is called for '%s %s' %dms %s now\n",
                 pcell->pathname ? pcell->pathname:"", pcell->filename, pcell->timeout, timeout ? "timeout":"normal");
-    pcmds_ylog_call(NULL, y, 1000, pcmds_ylog_anr_nowrap_callback, pcell);
+    pcmds_ylog_anr_nowrap_callback(y, buf, sizeof buf, pcell);
     if (sys_info == NULL)
         sys_info = ylog_get_by_name("sys_info");
     if (sys_info)
@@ -805,7 +903,7 @@ static int os_inotify_handler_tombstone(struct ylog_inotify_cell *pcell, int tim
     };
     int cmd_start_idx = 0;
 
-    ylog_info("os_inotify_handler_tombstone is called for '%s' %dms %s now\n",
+    ylog_debug("os_inotify_handler_tombstone is called for '%s' %dms %s now\n",
                 pcell->pathname ? pcell->pathname:"", pcell->timeout, timeout ? "timeout":"normal");
 
     for (i = 0; i < file->num; i++) {
@@ -813,7 +911,7 @@ static int os_inotify_handler_tombstone(struct ylog_inotify_cell *pcell, int tim
         if (a[0]) {
             if (cmd_start_idx < ((int)ARRAY_LEN(cmd_list) - 1))
                 cmd_list[cmd_start_idx++] = a;
-            ylog_info("os_inotify_handler_tombstone -> %s\n", a);
+            ylog_debug("os_inotify_handler_tombstone -> %s\n", a);
         }
     }
     cmd_list[cmd_start_idx] = NULL;
@@ -828,87 +926,150 @@ static int os_inotify_handler_tombstone(struct ylog_inotify_cell *pcell, int tim
     return -1;
 }
 
-static void pcmds_ylog_tombstone_nowrap_callback(struct ylog *y, int step, char *buf, int count, void *private) {
-    static int cnt = 1;
-    if (step == 1) { /* Start pcmd */
-        char timeBuf[32];
-        int len, cur_cnt;
-        int i;
-        char *a;
-        char **cmd;
-        char *cmd_list[30] = {
-            "cat /data/tombstones/*",
-            NULL
-        };
-        int cmd_start_idx = 0;
-        struct ylog_inotify_cell *pcell = (struct ylog_inotify_cell *)private;
-        struct ylog_inotify_cell_args *pcella = pcell->args;
-        struct ylog_inotify_files *file = &pcella->file;
-        struct ydst *ydst = y->ydst;
-
-        ylog_get_format_time_year(timeBuf);
-
-        for (i = 0; i < file->num; i++) {
-            a = file->files_array + i * file->len;
-            if (a[0]) {
-                if (cmd_start_idx < ((int)ARRAY_LEN(cmd_list) - 1))
-                    cmd_list[cmd_start_idx++] = a;
-                ylog_info("os_inotify_handler_tombstone -> %s\n", a);
-            }
-        }
-        cmd_list[cmd_start_idx] = NULL;
-
-        /**
-         * if cnt is less than 20, although quta has reached,
-         * we also need to continue save it, because some other ylog
-         * fill full the shared ydst, but here does not even have 20 counts
-         */
-        if (ydst->size < ydst->max_size_now || cnt < 20) {
-            char timeBuf0[32];
-            char timeBuf1[32];
-            ylog_tv2format_time(timeBuf0, &pcell->tvf);
-            ylog_tv2format_time(timeBuf1, &pcell->tv);
-            for (cmd = cmd_list; *cmd; cmd++) {
-                cur_cnt = cnt;
-                snprintf(buf, count, "%s/%s/%04d.%s.tombstone", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
-#ifdef ANR_OR_TOMSTONE_UNIFILE_MODE
-                char *cmd_list_one[] = {
-                    *cmd,
-                    "logcat -d",
-                    "dmesg",
-                    NULL
-                };
-                cur_cnt = 0;
-                pcmds_print2file(cmd_list_one, buf, -1, &cur_cnt, NULL, y, "ylog.tombstone", 1000, 8*1024*1024);
-#else
-                pcmd_print2file(*cmd, buf, &cur_cnt, NULL, y, NULL, 1000, -1);
-                ylog_info("ylog traces create %s, %d, %s~ %s\n", buf, pcell->step, timeBuf0, timeBuf1);
-                cur_cnt = cnt;
-                snprintf(buf, count, "%s/%s/%04d.%s.tombstone.kmsg", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
-                pcmd_print2file("dmesg", buf, &cur_cnt, NULL, y, NULL, 1000, 3*1024*1024);
-                cur_cnt = cnt;
-                snprintf(buf, count, "%s/%s/%04d.%s.tombstone.logcat", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
-                pcmd_print2file("logcat -d", buf, &cur_cnt, NULL, y, NULL, 1000, 5*1024*1024);
+#ifdef ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
+static void *ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half(void *arg) {
+    struct pcmds_print2file_args *ppa = arg;
+    int fd = ppa->fd_dup;
+    if (fd == PCMDS_PRINT2FILE_FD_DUP)
+        return NULL;
+    char *cmd_list[] = {
+        "logcat -d",
+        "dmesg",
+        NULL
+    };
+    int cur_cnt = 1;
+    ppa->cmds = cmd_list;
+    ppa->file = NULL;
+    ppa->cnt = &cur_cnt;
+    pcmds_print2fd(ppa);
+    if (ppa->malloced)
+        free(ppa);
+    return NULL;
+}
 #endif
-                cnt++;
+
+static void pcmds_ylog_tombstone_nowrap_callback(struct ylog *y, char *buf, int count, struct ylog_inotify_cell *pcell) {
+    static int cnt = 1;
+    char timeBuf[32];
+    int len, cur_cnt;
+    int i;
+    char *a;
+    char **cmd;
+    char *cmd_list[30] = {
+        "cat /data/tombstones/*",
+        NULL
+    };
+    int cmd_start_idx = 0;
+    struct ylog_inotify_cell_args *pcella = pcell->args;
+    struct ylog_inotify_files *file = &pcella->file;
+
+    ylog_get_format_time_year(timeBuf);
+
+    for (i = 0; i < file->num; i++) {
+        a = file->files_array + i * file->len;
+        if (a[0]) {
+            if (cmd_start_idx < ((int)ARRAY_LEN(cmd_list) - 1))
+                cmd_list[cmd_start_idx++] = a;
+            ylog_debug("os_inotify_handler_tombstone -> %s\n", a);
+        }
+    }
+    cmd_list[cmd_start_idx] = NULL;
+
+    /**
+     * if cnt is less than 20, although quta has reached,
+     * we also need to continue save it, because some other ylog
+     * fill full the shared ydst, but here does not even have 20 counts
+     */
+    PCMDS_YLOG_CALL_LOCK(y);
+    if (ydst->size < ydst->max_size_now || cnt < 20) {
+        char timeBuf0[32];
+        char timeBuf1[32];
+        ylog_tv2format_time(timeBuf0, &pcell->tvf);
+        ylog_tv2format_time(timeBuf1, &pcell->tv);
+        snprintf(buf, count, "%s/%s/%04d.%s.tombstone", ydst->root_folder, ydst->file, cnt, timeBuf);
+        ylog_info("ylog traces create %s, %d, %s~ %s\n", buf, pcell->step, timeBuf0, timeBuf1);
+        struct pcmds_print2file_args ppa = {
+            .cmds = NULL,
+            .file = buf,
+            .flags = -1,
+            .cnt = &cur_cnt,
+            .w = NULL,
+            .y = y,
+            .prefix = "ylog.tombstone",
+            .millisecond = 1000,
+            .max_size = 8*1024*1024,
+#ifdef ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
+            .fd_dup = PCMDS_PRINT2FILE_FD_DUP,
+#endif
+            .locked = PCMDS_PRINT2FILE_LOCKED,
+        };
+        for (cmd = cmd_list; *cmd; cmd++) {
+            cur_cnt = cnt;
+            snprintf(buf, count, "%s/%s/%04d.%s.tombstone", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
+#ifdef ANR_OR_TOMSTONE_UNIFILE_MODE
+            char *cmd_list_one[] = {
+                *cmd,
+#ifndef ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
+                "logcat -d",
+                "dmesg",
+#endif
+                NULL
+            };
+            cur_cnt = 0;
+            ppa.cmds = cmd_list_one;
+            pcmds_print2file(&ppa);
+#ifdef ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
+        struct pcmds_print2file_args *tppa = malloc(sizeof(struct pcmds_print2file_args));
+        if (tppa) {
+            *tppa = ppa;
+            tppa->malloced = 1;
+            tppa->locked = 0;
+            if (ylog_pthread_create(ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half, tppa)) {
+                tppa->locked = PCMDS_PRINT2FILE_LOCKED;
+                ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half(&ppa);
             }
         } else {
-            ylog_critical("ylog %s is forced stop, cnt=%d, because ydst %s has "
-                    "reached max_size %lld/%lld in pcmds_ylog_tombstone_nowrap_callback\n",
-                    y->name, cnt, ydst->file, ydst->size, ydst->max_size_now);
+            ylog_error("malloc %s fail.%s", "pcmds_print2file_args tombstone", strerror(errno));
+            ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half(&ppa);
         }
+#endif
+#else
+            ppa.cmd = *cmd;
+            ppa.max_size = -1;
+            pcmd_print2file(&ppa);
 
-        for (i = 0; i < file->num; i++) {
-            a = file->files_array + i * file->len;
-            a[0] = 0;
+            cur_cnt = cnt;
+            snprintf(buf, count, "%s/%s/%04d.%s.tombstone.kmsg", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
+            ppa.cmd = "dmesg";
+            ppa.max_size = 3*1024*1024;
+            pcmd_print2file(&ppa);
+
+            cur_cnt = cnt;
+            snprintf(buf, count, "%s/%s/%04d.%s.tombstone.logcat", ydst->root_folder, ydst->file, cur_cnt, timeBuf);
+            ppa.cmd = "logcat -d";
+            ppa.max_size = 5*1024*1024;
+            pcmd_print2file(&ppa);
+#endif
+            cnt++;
         }
+    } else {
+        ylog_critical("ylog %s is forced stop, cnt=%d, because ydst %s has "
+                "reached max_size %lld/%lld in pcmds_ylog_tombstone_nowrap_callback\n",
+                y->name, cnt, ydst->file, ydst->size, ydst->max_size_now);
+    }
+    PCMDS_YLOG_CALL_UNLOCK();
+
+    for (i = 0; i < file->num; i++) {
+        a = file->files_array + i * file->len;
+        a[0] = 0;
     }
 }
 
 static int os_inotify_handler_tombstone_nowrap(struct ylog_inotify_cell *pcell, int timeout, struct ylog *y) {
+    char buf[PATH_MAX];
     ylog_info("os_inotify_handler_tombstone_nowrap is called for '%s' %dms %s now\n",
                 pcell->pathname ? pcell->pathname:"", pcell->timeout, timeout ? "timeout":"normal");
-    pcmds_ylog_call(NULL, y, 1000, pcmds_ylog_tombstone_nowrap_callback, pcell);
+    pcmds_ylog_tombstone_nowrap_callback(y, buf, sizeof buf, pcell);
     return -1;
 }
 
@@ -941,7 +1102,7 @@ static void ylog_ready(void) {
 
     pos->fd_kmsg = open("/dev/kmsg", O_WRONLY);
     if (pos->fd_kmsg < 0)
-        ylog_info("open %s fail. %s", "/dev/kmsg", strerror(errno));
+        ylog_error("open %s fail. %s", "/dev/kmsg", strerror(errno));
 
     mkdirs("/data/anr/"); /* For ylog traces.txt */
     mkdirs("/data/tombstones/"); /* For ylog tombstone_00 ~ tombstone_09 */

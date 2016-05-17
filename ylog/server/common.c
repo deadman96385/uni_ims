@@ -73,6 +73,15 @@ pid_t gettid(void) {
     return syscall(SYS_gettid);
 }
 
+static int ylog_pthread_create(ylog_pthread_handler handler, void *arg) {
+    pthread_t ptid;
+    if (pthread_create(&ptid, NULL, handler, arg)) {
+        ylog_error("Failed to pthread_create %s\n", strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
 static unsigned long long calculate_path_disk_available(char *path) {
     struct statfs diskInfo;
 

@@ -366,47 +366,6 @@ static struct ydst *ydst_get_by_name(char *name) {
     return NULL;
 }
 
-#define PCMDS_YLOG_CALL_LOCK(y) \
-    struct ydst *ydst = y->ydst; \
-    struct ydst_root *root; \
-    /**
-     * In ylog_write_handler_default() the mutex sequence is
-     * 1. lock ydst->mutex in ylog_write_handler_default
-     * 2. lock root->mutex in ydst_new_segment_default
-     * so here we need to keep the same sequence to avoid dead lock in some race condition
-     */ \
-    pthread_mutex_lock(&ydst->mutex); \
-    root = ydst->root; \
-    pthread_mutex_lock(&root->mutex); /* To avoid root folder change by ydst_move_root */
-
-#define PCMDS_YLOG_CALL_UNLOCK() \
-    pthread_mutex_unlock(&root->mutex); \
-    pthread_mutex_unlock(&ydst->mutex);
-
-static void pcmds_ylog_call(char *cmds[], struct ylog *y, int millisecond,
-        void (*callback)(struct ylog *y, int step, char *buf, int count, void *private), void *private) {
-    char **cmd;
-    char buf[PATH_MAX];
-    PCMDS_YLOG_CALL_LOCK(y);
-    callback(y, 1, buf, sizeof buf, private);
-    if (cmds) {
-        for (cmd = cmds; *cmd; cmd++)
-            pcmd(*cmd, NULL, NULL, NULL, "pcmds_ylog_call", millisecond, -1);
-    }
-    callback(y, 0, buf, sizeof buf, private);
-    PCMDS_YLOG_CALL_UNLOCK();
-}
-
-static void pcmds_ylog(char *cmds[], char *ylog_name, int millisecond,
-        void (*callback)(struct ylog *y, int step, char *buf, int count, void *private), void *private) {
-    struct ylog *y = ylog_get_by_name(ylog_name);
-    if (y == NULL) {
-        ylog_critical("ylog %s does not found\n", ylog_name);
-        return;
-    }
-    pcmds_ylog_call(cmds, y, millisecond, callback, private);
-}
-
 static void ylog_close_by_nowrap(struct ylog *y) {
     struct ydst *ydst = y->ydst;
     ylog_critical("ylog %s is forced stop, because ydst %s has reached max_segment %d/%ld\n",
@@ -421,34 +380,54 @@ static int ylog_write_handler__pcmd_print2file(char *buf, int count, struct ylog
     return fd_write(buf, count, fd, "ylog_write_handler__pcmd_print2file");
 }
 
-static int pcmds_print2file(char *cmds[], char *file, int flags, int *cnt, ylog_write_handler w,
-        struct ylog *y, char *prefix, int millisecond, int max_size) {
+static int pcmds_print2file(struct pcmds_print2file_args *ppa) {
     int rcnt = 0;
-    if (mkdirs_with_file(file) == 0) {
+    char *file = NULL;
+    if (ppa->print2fd == PCMDS_PRINT2FD || mkdirs_with_file(ppa->file) == 0) {
         long fd;
         int ret;
-        if (flags == -1)
-            flags = O_RDWR | O_CREAT | O_TRUNC;
-        fd = open(file, flags, 0664);
+        if (ppa->flags == -1)
+            ppa->flags = O_RDWR | O_CREAT | O_TRUNC;
+        if (ppa->print2fd != PCMDS_PRINT2FD) {
+            file = ppa->file;
+            fd = open(file, ppa->flags, 0664);
+        } else
+            fd = ppa->fd_dup;
         if (fd < 0)
             ylog_critical("%s %s Failed to open %s\n", __func__, file, strerror(errno));
         else {
             char **cmd;
+            struct ylog *y = ppa->y;
             struct ydst *ydst = y->ydst;
-            if (w == NULL)
-                w = ylog_write_handler__pcmd_print2file;
+            struct ydst_root *root = ydst->root;
+            if (ppa->w == NULL)
+                ppa->w = ylog_write_handler__pcmd_print2file;
             y->privates = (void*)fd;
-            for (cmd = cmds; *cmd; cmd++) {
-                ret = pcmd(*cmd, cnt, w, y, prefix, millisecond, max_size);
+            for (cmd = ppa->cmds; *cmd; cmd++) {
+                ret = pcmd(*cmd, ppa->cnt, ppa->w, y, ppa->prefix, ppa->millisecond, ppa->max_size);
+                rcnt += ret;
+                if (ppa->locked != PCMDS_PRINT2FILE_LOCKED) {
+                    PCMDS_YLOG_CALL_LOCK(y);
+                }
                 ydst->size += ret;
                 y->size += ret;
-                rcnt += ret;
                 if (ydst->size >= ydst->max_size_now) {
+                    if (ppa->locked != PCMDS_PRINT2FILE_LOCKED) {
+                        PCMDS_YLOG_CALL_UNLOCK();
+                    }
                     ylog_close_by_nowrap(y);
                     break;
                 }
+                if (ppa->locked != PCMDS_PRINT2FILE_LOCKED) {
+                    PCMDS_YLOG_CALL_UNLOCK();
+                }
             }
-            close(fd);
+            if (ppa->fd_dup != PCMDS_PRINT2FILE_FD_DUP) {
+                close(fd);
+            } else {
+                // ppa->fd_dup = dup(fd); close(fd);
+                ppa->fd_dup = fd; /* will close this fd in thread_handler */
+            }
         }
     } else {
         ylog_warn("Failed to create %s %s\n", __func__, file);
@@ -456,28 +435,36 @@ static int pcmds_print2file(char *cmds[], char *file, int flags, int *cnt, ylog_
     return rcnt;
 }
 
+static int pcmds_print2fd(struct pcmds_print2file_args *ppa) {
+    ppa->print2fd = PCMDS_PRINT2FD;
+    return pcmds_print2file(ppa);
+}
+
 /**
  * similar with pcmds_ylog_copy_file
  */
-static int pcmd_print2file(char *cmd, char *file, int *cnt, ylog_write_handler w,
-        struct ylog *y, char *prefix, int millisecond, int max_size) {
+static int pcmd_print2file(struct pcmds_print2file_args *ppa) {
     char *cmd_list[] = {
-        cmd,
+        ppa->cmd,
         NULL
     };
-    return pcmds_print2file(cmd_list, file, -1, cnt, w, y, prefix, millisecond, max_size);
+    ppa->cmds = cmd_list;
+    return pcmds_print2file(ppa);
 }
 
-static int pcmds_snapshot(char *cmds[], struct ylog *y, int millisecond, int max_size,
-        int *cnt, int flags, const char *fmt, ...) {
+static int pcmds_snapshot(struct pcmds_print2file_args *ppa, const char *fmt, ...) {
     int len;
     va_list ap;
     char file[4096];
     va_start(ap, fmt);
     vsnprintf(file, sizeof(file), fmt, ap);
     va_end(ap);
-    PCMDS_YLOG_CALL_LOCK(y);
-    len = pcmds_print2file(cmds, file, flags, cnt, NULL, y, "pcmds_snapshot", millisecond, max_size);
+    ppa->file = file;
+    ppa->w = NULL;
+    ppa->prefix = "pcmds_snapshot";
+    ppa->locked = PCMDS_PRINT2FILE_LOCKED;
+    PCMDS_YLOG_CALL_LOCK(ppa->y);
+    len = pcmds_print2file(ppa);
     PCMDS_YLOG_CALL_UNLOCK();
     return len;
 }
@@ -498,20 +485,24 @@ static int pcmd_snapshot_exec(char *cmd, struct ylog *y, int millisecond, int ma
     return 0;
 }
 
-static int pcmd_snapshot(char *cmd, struct ylog *y, int millisecond, int max_size,
-        int *cnt, int flags, const char *fmt, ...) {
+static int pcmd_snapshot(struct pcmds_print2file_args *ppa, const char *fmt, ...) {
     int len;
     va_list ap;
     char file[4096];
     char *cmd_list[] = {
-        cmd,
+        ppa->cmd,
         NULL
     };
     va_start(ap, fmt);
     vsnprintf(file, sizeof(file), fmt, ap);
     va_end(ap);
-    PCMDS_YLOG_CALL_LOCK(y);
-    len = pcmds_print2file(cmd_list, file, flags, cnt, NULL, y, "pcmds_snapshot", millisecond, max_size);
+    ppa->cmds = cmd_list;
+    ppa->file = file;
+    ppa->w = NULL;
+    ppa->prefix = "pcmds_snapshot";
+    ppa->locked = PCMDS_PRINT2FILE_LOCKED;
+    PCMDS_YLOG_CALL_LOCK(ppa->y);
+    len = pcmds_print2file(ppa);
     PCMDS_YLOG_CALL_UNLOCK();
     return len;
 }

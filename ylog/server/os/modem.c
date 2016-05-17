@@ -11,11 +11,13 @@ struct other_processor_node {
     struct other_processor_property_cell log;
     struct other_processor_property_cell diag;
     struct other_processor_property_cell atch; /* File is for sending raw AT command string */
+    struct other_processor_property_cell atloop; /* File is for sending auto download at swith command AT AUTODLOADER */
 };
 
 struct other_processor_log_privates {
     char *file_diag;
     char *file_atch;
+    char *file_atloop;
 };
 
 struct other_processor_log {
@@ -24,6 +26,54 @@ struct other_processor_log {
     struct ynode ynode;
     struct other_processor_log_privates privates;
 };
+
+static int send_at_file_atloop(int idx, char *buf, int count, char *retbuf, int *retcount_max) {
+    int fd, result = 0, ret = 0;
+    char *file_atloop;
+    if (idx >= pos->file_atloop_num) {
+        return 1;
+    }
+    file_atloop = pos->file_atloop[idx];
+    fd = open(file_atloop, O_RDWR);
+    if (fd < 0) {
+        ylog_info("open %s fail.%s", file_atloop, strerror(errno));
+        return 1;
+    }
+    if (count != fd_write(buf, count, fd, "send_at_file_atloop"))
+        result = 1;
+    ylog_debug("send to %s with %s\n", file_atloop, buf);
+    if (retbuf && retcount_max) {
+        struct pollfd pfd[1];
+        int ret_max = *retcount_max;
+        *retcount_max = 0;
+        pfd[0].fd = fd;
+        pfd[0].events = POLLIN;
+        do {
+            ret = poll(pfd, 1, 1000);
+            if (ret <= 0) {
+                ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog cp is failed, %s\n",
+                        ret == 0 ? "timeout":strerror(errno));
+                result = ret ? 1:0;
+                break;
+            }
+            if (fcntl_read_nonblock(fd, "send_at_file_atloop") == 0) {
+                ret = read(fd, retbuf, ret_max);
+                if (ret > 0)
+                    fcntl_read_block(fd, "send_at_file_atloop");
+            } else
+                ret = 0;
+
+            if (ret >=0) {
+                *retcount_max += ret;
+            } else {
+                result = 0/*1*/;
+                ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog read is failed, %s\n", strerror(errno));
+            }
+        } while (0/*ret > 0*/);
+    }
+    CLOSE(fd);
+    return result;
+}
 
 static int send_at_file_atch(int idx, char *buf, int count, char *retbuf, int *retcount_max) {
     int fd, result = 0, ret = 0;
@@ -86,6 +136,7 @@ static int cmd_at(struct command *cmd, char *buf, int buf_size, int fd, int inde
     }
     strcat(buf, "\r");
     len++;
+    /* skip "at " first 3 bytes */
     if (send_at_file_atch(idx, buf + 3, len - 3, buf, &ret_size) == 0) {
         if (ret_size <= 0) {
             len = 0;
@@ -106,12 +157,51 @@ static int cmd_at(struct command *cmd, char *buf, int buf_size, int fd, int inde
     return 0;
 }
 
+static int cmd_atloop(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
+    int len = strlen(buf);
+    int idx = 0;
+    int ret_size = buf_size;
+    if (len == 7) {
+        SEND(fd, buf, snprintf(buf, buf_size, "%s\n", pos->file_atch[idx]), MSG_NOSIGNAL);
+        return 0;
+    }
+    strcat(buf, "\r");
+    len++;
+    /* skip "atloop " first 7 bytes */
+    if (send_at_file_atloop(idx, buf + 7, len - 7, NULL, NULL) == 0) {
+        len = snprintf(buf, buf_size, "OK\n");
+    } else {
+        len = snprintf(buf, buf_size, "Failed\n");
+    }
+    if (len)
+        SEND(fd, buf, len, MSG_NOSIGNAL);
+    return 0;
+}
+
+static int cmd_pac(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    snprintf(buf, buf_size, "atloop AT+SPREF=\"AUTODLOADER\"");
+    return cmd_atloop(cmd, buf, buf_size, fd, index, yp);
+}
+
 static void insert_file_atch(char *file_atch, int mode) {
     UNUSED(mode);
     int i;
     for (i = 0; i < pos->file_atch_num; i++) {
         if (pos->file_atch[i] == NULL) {
             pos->file_atch[i] = strdup(file_atch);
+        }
+    }
+}
+
+static void insert_file_atloop(char *file_atloop, int mode) {
+    UNUSED(mode);
+    int i;
+    for (i = 0; i < pos->file_atloop_num; i++) {
+        if (pos->file_atloop[i] == NULL) {
+            pos->file_atloop[i] = strdup(file_atloop);
         }
     }
 }
@@ -131,6 +221,7 @@ static void other_processor_ylog_insert(void) {
                 .log  = {"ro.modem.w.log", "/dev/slog_w"},
                 .diag = {"ro.modem.w.diag", "/dev/slog_w"},
                 .atch = {"ro.modem.w.tty", "/dev/stty_w31"},
+                .atloop = {"ro.modem.w.loop", "/dev/stty_w0"},
             },
             .ynode = {
                 .ylog = {
@@ -167,6 +258,7 @@ static void other_processor_ylog_insert(void) {
                 .log  = {"ro.modem.t.log", "/dev/slog_gge"},
                 .diag = {"ro.modem.t.diag", "/dev/slog_gge"},
                 .atch = {"ro.modem.t.tty", "/dev/stty_t31"},
+                .atloop = {"ro.modem.t.loop", "/dev/stty_t0"},
             },
             .ynode = {
                 .ylog = {
@@ -203,6 +295,7 @@ static void other_processor_ylog_insert(void) {
                 .log  = {"ro.modem.l.log", "/dev/slog_lte"},
                 .diag = {"ro.modem.l.diag", "/dev/sdiag_lte"},
                 .atch = {"ro.modem.l.tty", "/dev/stty_lte31"},
+                .atloop = {"ro.modem.l.loop", "/dev/stty_lte0"},
             },
             .ynode = {
                 .ylog = {
@@ -239,6 +332,7 @@ static void other_processor_ylog_insert(void) {
                 .log  = {"ro.modem.lf.log", "/dev/slog_lte"},
                 .diag = {"ro.modem.lf.diag", "/dev/sdiag_lte"},
                 .atch = {"ro.modem.lf.tty", "/dev/stty_lte31"},
+                .atloop = {"ro.modem.lf.loop", "/dev/stty_lte0"},
             },
             .ynode = {
                 .ylog = {
@@ -275,6 +369,7 @@ static void other_processor_ylog_insert(void) {
                 .log  = {"ro.modem.tl.log", "/dev/slog_lte"},
                 .diag = {"ro.modem.tl.diag", "/dev/sdiag_lte"},
                 .atch = {"ro.modem.tl.tty", "/dev/stty_lte31"},
+                .atloop = {"ro.modem.tl.loop", "/dev/stty_lte0"},
             },
             .ynode = {
                 .ylog = {
@@ -448,6 +543,13 @@ static void other_processor_ylog_insert(void) {
                     opl->pnode.atch.property_name = strdup(prop);
                 else
                     ylog_info("%s = %s\n", mprop, prop);
+
+                snprintf(mprop, sizeof mprop, "ro.modem.%s.loop", modem_type);
+                property_get(mprop, prop, "");
+                if (prop[0] && opl->pnode.atloop.property_name == NULL)
+                    opl->pnode.atloop.property_name = strdup(prop);
+                else
+                    ylog_info("%s = %s\n", mprop, prop);
             }
         }
 #endif
@@ -486,6 +588,23 @@ static void other_processor_ylog_insert(void) {
                 privates->file_atch = strdup(prop);
                 if (ylog->mode & YLOG_GROUP_MODEM)
                     insert_file_atch(privates->file_atch, YLOG_GROUP_MODEM);
+                ylog->privates = calloc(sizeof(struct other_processor_log_privates), 1);
+                *(struct other_processor_log_privates*)ylog->privates = *privates;
+                flag |= 0x02;
+            }
+        }
+        if (opl->pnode.atloop.property_name) {
+            property_get(opl->pnode.atloop.property_name, prop, opl->pnode.atloop.property_value_default);
+            if (prop[0]) {
+                strcat(prop, "0");
+#if 1
+                ylog_info("%s has bug, property value is %s, it should be %s\n",
+                        opl->pnode.atloop.property_name, prop, opl->pnode.atloop.property_value_default);
+                strcpy(prop, opl->pnode.atloop.property_value_default);
+#endif
+                privates->file_atloop = strdup(prop);
+                if (ylog->mode & YLOG_GROUP_MODEM)
+                    insert_file_atloop(privates->file_atloop, YLOG_GROUP_MODEM);
                 ylog->privates = calloc(sizeof(struct other_processor_log_privates), 1);
                 *(struct other_processor_log_privates*)ylog->privates = *privates;
                 flag |= 0x02;

@@ -75,6 +75,24 @@ static int ylog_printf_format(struct context *c, int level, const char *fmt, ...
     ll_ret; \
 })
 
+/* it is used for pending cpath hotplug */
+#define PCMDS_YLOG_CALL_LOCK(y) \
+    struct ydst *ydst = y->ydst; \
+    struct ydst_root *root; \
+    /**
+     * In ylog_write_handler_default() the mutex sequence is
+     * 1. lock ydst->mutex in ylog_write_handler_default
+     * 2. lock root->mutex in ydst_new_segment_default
+     * so here we need to keep the same sequence to avoid dead lock in some race condition
+     */ \
+    pthread_mutex_lock(&ydst->mutex); \
+    root = ydst->root; \
+    pthread_mutex_lock(&root->mutex); /* To avoid root folder change by ydst_move_root */
+
+#define PCMDS_YLOG_CALL_UNLOCK() \
+    pthread_mutex_unlock(&root->mutex); \
+    pthread_mutex_unlock(&ydst->mutex);
+
 enum loglevel {
     LOG_ERROR,
     LOG_CRITICAL,
@@ -273,6 +291,7 @@ typedef int (*ydst_fwrite)(char *buf, int count, int fd, char *desc);
 typedef int (*ydst_flush)(struct ydst *ydst);
 typedef int (*ydst_open)(char *file, char *mode, struct ydst *ydst);
 typedef int (*ydst_close)(struct ydst *ydst);
+typedef void*(*ylog_pthread_handler)(void *arg);
 
 struct ylog_event_cond_wait {
     char *name;
@@ -577,6 +596,7 @@ struct ylog_inotify_cell {
     int (*handler)(struct ylog_inotify_cell *cell, int timeout, struct ylog *y); /* return timeout value, unit is millisecond, -1 means pending wait */
     int (*handler_prev)(struct ylog_inotify_cell *cell, int timeout, struct ylog *y);
     void *args; /* for extension */
+    int cache_full; /* cache is full */
 };
 
 struct ylog_inotify {
@@ -686,6 +706,26 @@ struct os_hooks {
     void (*ylog_status_hook)(enum ylog_thread_state state, struct ylog *y);
     void (*pthread_create_hook)(struct ylog *y, void *args, const char *fmt, ...);
     void (*ready_go)(void);
+};
+
+struct pcmds_print2file_args {
+    char **cmds;
+    char *cmd;
+    char *file;
+    int flags;
+    int *cnt;
+#define PCMDS_PRINT2FILE_FD_DUP (9999999)
+    int fd_dup;
+    ylog_write_handler w;
+    struct ylog *y;
+    char *prefix;
+    int millisecond;
+    int max_size;
+#define PCMDS_PRINT2FILE_LOCKED 0xffff
+    int locked;
+    int malloced;
+#define PCMDS_PRINT2FD  0xffff
+    int print2fd;
 };
 
 static inline void yp_clr(int index, struct ylog_poll *yp) {

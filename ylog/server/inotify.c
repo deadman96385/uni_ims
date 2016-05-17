@@ -143,6 +143,7 @@ static int ylog_inotfiy_file_handler(struct ylog *y) {
                                             empty = a;
                                     }
                                     if (empty) {
+                                        pcell->cache_full = 0;
                                         if (found == 0) {
                                             snprintf(empty, file->len, "%s%s%s",
                                                     prefix ? prefix:"", event->name, suffix ? suffix:"");
@@ -150,11 +151,23 @@ static int ylog_inotfiy_file_handler(struct ylog *y) {
                                         } else {
                                             ylog_debug("%s already has %s\n", pcella->name, fempty);
                                         }
-                                    } else {
+                                    } else if (pcell->cache_full == 0) {
+                                        /**
+                                         * when this pcell in timeout watching stage,
+                                         * then full info will be printed out
+                                         * we can process it like ylog_inotfiy_file_handler_timeout
+                                         *
+                                         * pcell->status &= ~YLOG_INOTIFY_WAITING_TIMEOUT;
+                                         * pcell->handler(pcell, 0, y);
+                                         * pcell->step = 0;
+                                         *
+                                         * Todo, description like above
+                                         */
+                                        pcell->cache_full = 1;
                                         ylog_info("ylog_inotify_cell_args %s is full\n", pcella->name);
                                         for (i = 0; i < file->num; i++) {
                                             a = file->files_array + i * file->len;
-                                            ylog_info("%s -> %s\n", pcella->name, a);
+                                            ylog_debug("%s -> %s\n", pcella->name, a);
                                         }
                                     }
                                 }
