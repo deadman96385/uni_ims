@@ -147,7 +147,7 @@ static int ylog_read_info(char *buf, int count, FILE *fp, int fd, struct ylog *y
     if (fd == yp_fd(YLOG_POLL_INDEX_PIPE, &y->yp))
         return y->read(buf, count, fp, fd, y);
 
-    pcmds(cmd_list, &cnt, w, y, "ylog_info", -1);
+    pcmds(cmd_list, &cnt, w, y, "ylog_info", -1, NULL);
 
     if (os_hooks.ylog_read_info_hook)
         os_hooks.ylog_read_info_hook(buf, count, fp, cnt, y);
@@ -156,11 +156,11 @@ static int ylog_read_info(char *buf, int count, FILE *fp, int fd, struct ylog *y
         if (yi->name == NULL)
             continue;
         ctid = yi->ydst->cache ? yi->ydst->cache->tid : -1;
-        w(buf, snprintf(buf, count, "[ylog] %s pid=%d, tid=%d, cache tid=%d\n", yi->name, yi->pid, yi->tid, ctid), y);
+        w(buf, snprintf(buf, count, "[ylog] %s pid=%d, tid=%d, cache tid=%d\n", yi->name, yi->pid, yi->tid, ctid), y, NULL);
     }
 
     for_each_event_thread_start(e)
-    w(buf, snprintf(buf, count, "[event] %s pid=%d, tid=%d\n", e->yewait.name, e->pid, e->tid), y);
+    w(buf, snprintf(buf, count, "[event] %s pid=%d, tid=%d\n", e->yewait.name, e->pid, e->tid), y, NULL);
     for_each_event_thread_end();
 
     return 0; /* INT_MAX; */
@@ -176,7 +176,7 @@ static int ylog_read_journal(char *buf, int count, FILE *fp, int fd, struct ylog
         count = get_journal_file(buf, count);
         if (count <= 0)
             break;
-        w(buf, count, y);
+        w(buf, count, y, NULL);
     } while (1);
     return 0; /* INT_MAX; */
 }
@@ -210,9 +210,9 @@ static int ylog_read_ylog_debug(char *buf, int count, FILE *fp, int fd, struct y
     delta_tm.tm_yday,
     delta_tm.tm_hour,
     delta_tm.tm_min,
-    delta_tm.tm_sec), y);
+    delta_tm.tm_sec), y, NULL);
 
-    pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_debug", -1);
+    pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_debug", -1, NULL);
 
     if (os_hooks.ylog_read_ylog_debug_hook)
         os_hooks.ylog_read_ylog_debug_hook(buf, count, fp, cnt, y);

@@ -72,12 +72,12 @@ static int ylog_read_info_hook(char *buf, int count, FILE *fp, int fd, struct yl
             if (fgets(buf, count, wfp) == NULL)
                 break;
             snprintf(tmp, sizeof tmp, "cat %s", strtok_r(buf, "\n", &last));
-            pcmd(tmp, &fd, y->write_handler, y, "ylog_info", -1, -1);
+            pcmd(tmp, &fd, y->write_handler, y, "ylog_info", -1, -1, NULL);
         } while (1);
         pclose(wfp);
     }
 
-    pcmds(cmd_list, &fd, y->write_handler, y, "ylog_info", -1);
+    pcmds(cmd_list, &fd, y->write_handler, y, "ylog_info", -1, NULL);
 
     return 0;
 }
@@ -96,7 +96,7 @@ static int ylog_read_ylog_debug_hook(char *buf, int count, FILE *fp, int fd, str
         "getprop ylog.killed",
         NULL
     };
-    pcmds(cmd_list, &fd, y->write_handler, y, "ylog_debug", 1000);
+    pcmds(cmd_list, &fd, y->write_handler, y, "ylog_debug", 1000, NULL);
     return 0;
 }
 
@@ -131,7 +131,7 @@ static int ylog_read_sys_info(char *buf, int count, FILE *fp, int fd, struct ylo
         "cat /proc/interrupts",
         NULL
     };
-    pcmds(cmd_list, &cnt, y->write_handler, y, "sys_info", 1000);
+    pcmds(cmd_list, &cnt, y->write_handler, y, "sys_info", 1000, NULL);
     return 0;
 }
 
@@ -501,7 +501,7 @@ static int cmd_anr(struct command *cmd, char *buf, int buf_size, int fd, int ind
     UNUSED(fd);
     UNUSED(index);
     UNUSED(yp);
-    pcmd("cp /data/ylog/ylog_journal_file /data/anr/traces.txt", NULL, NULL, NULL, "cmd_anr", -1, -1);
+    pcmd("cp /data/ylog/ylog_journal_file /data/anr/traces.txt", NULL, NULL, NULL, "cmd_anr", -1, -1, NULL);
     return 0;
 }
 
@@ -512,7 +512,10 @@ static int cmd_tombstone(struct command *cmd, char *buf, int buf_size, int fd, i
     UNUSED(fd);
     UNUSED(index);
     UNUSED(yp);
-    pcmd("cp /data/ylog/ylog_journal_file /data/tombstones/cmd_tombstone.txt", NULL, NULL, NULL, "cmd_tombstone", -1, -1);
+    pcmd("cp /data/ylog/ylog_journal_file /data/tombstones/tombstone_90", NULL, NULL, NULL, "cmd_tombstone", -1, -1, NULL);
+    pcmd("cp /data/ylog/ylog_journal_file /data/tombstones/tombstone_91", NULL, NULL, NULL, "cmd_tombstone", -1, -1, NULL);
+    pcmd("cp /data/ylog/ylog_journal_file /data/tombstones/tombstone_92", NULL, NULL, NULL, "cmd_tombstone", -1, -1, NULL);
+    pcmd("cp /data/ylog/ylog_journal_file /data/tombstones/tombstone_93", NULL, NULL, NULL, "cmd_tombstone", -1, -1, NULL);
     return 0;
 }
 
@@ -648,7 +651,7 @@ static int os_inotify_handler_anr(struct ylog_inotify_cell *pcell, int timeout, 
         close(fd);
     }
 
-    pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_traces", 1000);
+    pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_traces", 1000, NULL);
 
     return -1;
 }
@@ -728,8 +731,7 @@ static int os_inotify_handler_anr_delete_create(struct ylog_inotify_cell *pcell,
 #ifdef ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
 static void *ylog_pthread_handler_anr_unifile_thread_copy_bottom_half(void *arg) {
     struct pcmds_print2file_args *ppa = arg;
-    int fd = ppa->fd_dup;
-    if (fd == PCMDS_PRINT2FILE_FD_DUP)
+    if (ppa->fd_dup_flag != PCMDS_PRINT2FILE_FD_DUP || ppa->fd < 0)
         return NULL;
     char *cmd_list[] = {
         "logcat -d",
@@ -740,6 +742,7 @@ static void *ylog_pthread_handler_anr_unifile_thread_copy_bottom_half(void *arg)
     ppa->cmds = cmd_list;
     ppa->file = NULL;
     ppa->cnt = &cur_cnt;
+    ppa->fd_dup_flag = 0; /* assigne 0, then pcmds_print2fd will close(fd); */
     pcmds_print2fd(ppa);
     if (ppa->malloced)
         free(ppa);
@@ -803,10 +806,11 @@ static void pcmds_ylog_anr_nowrap_callback(struct ylog *y, char *buf, int count,
             .millisecond = 1000,
             .max_size = 8*1024*1024,
 #ifdef ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
-            .fd_dup = PCMDS_PRINT2FILE_FD_DUP,
+            .fd_dup_flag = PCMDS_PRINT2FILE_FD_DUP,
 #endif
             .locked = PCMDS_PRINT2FILE_LOCKED,
         };
+        ppa.fd = -1;
         pcmds_print2file(&ppa);
 #ifdef ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
         struct pcmds_print2file_args *tppa = malloc(sizeof(struct pcmds_print2file_args));
@@ -916,7 +920,7 @@ static int os_inotify_handler_tombstone(struct ylog_inotify_cell *pcell, int tim
     }
     cmd_list[cmd_start_idx] = NULL;
 
-    pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_tombstones", 1000);
+    pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_tombstones", 1000, NULL);
 
     for (i = 0; i < file->num; i++) {
         a = file->files_array + i * file->len;
@@ -929,8 +933,7 @@ static int os_inotify_handler_tombstone(struct ylog_inotify_cell *pcell, int tim
 #ifdef ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
 static void *ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half(void *arg) {
     struct pcmds_print2file_args *ppa = arg;
-    int fd = ppa->fd_dup;
-    if (fd == PCMDS_PRINT2FILE_FD_DUP)
+    if (ppa->fd_dup_flag != PCMDS_PRINT2FILE_FD_DUP || ppa->fd < 0)
         return NULL;
     char *cmd_list[] = {
         "logcat -d",
@@ -941,6 +944,7 @@ static void *ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half(void
     ppa->cmds = cmd_list;
     ppa->file = NULL;
     ppa->cnt = &cur_cnt;
+    ppa->fd_dup_flag = 0; /* assigne 0, then pcmds_print2fd will close(fd); */
     pcmds_print2fd(ppa);
     if (ppa->malloced)
         free(ppa);
@@ -999,7 +1003,7 @@ static void pcmds_ylog_tombstone_nowrap_callback(struct ylog *y, char *buf, int 
             .millisecond = 1000,
             .max_size = 8*1024*1024,
 #ifdef ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
-            .fd_dup = PCMDS_PRINT2FILE_FD_DUP,
+            .fd_dup_flag = PCMDS_PRINT2FILE_FD_DUP,
 #endif
             .locked = PCMDS_PRINT2FILE_LOCKED,
         };
@@ -1017,21 +1021,22 @@ static void pcmds_ylog_tombstone_nowrap_callback(struct ylog *y, char *buf, int 
             };
             cur_cnt = 0;
             ppa.cmds = cmd_list_one;
+            ppa.fd = -1;
             pcmds_print2file(&ppa);
 #ifdef ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
-        struct pcmds_print2file_args *tppa = malloc(sizeof(struct pcmds_print2file_args));
-        if (tppa) {
-            *tppa = ppa;
-            tppa->malloced = 1;
-            tppa->locked = 0;
-            if (ylog_pthread_create(ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half, tppa)) {
-                tppa->locked = PCMDS_PRINT2FILE_LOCKED;
+            struct pcmds_print2file_args *tppa = malloc(sizeof(struct pcmds_print2file_args));
+            if (tppa) {
+                *tppa = ppa;
+                tppa->malloced = 1;
+                tppa->locked = 0;
+                if (ylog_pthread_create(ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half, tppa)) {
+                    tppa->locked = PCMDS_PRINT2FILE_LOCKED;
+                    ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half(&ppa);
+                }
+            } else {
+                ylog_error("malloc %s fail.%s", "pcmds_print2file_args tombstone", strerror(errno));
                 ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half(&ppa);
             }
-        } else {
-            ylog_error("malloc %s fail.%s", "pcmds_print2file_args tombstone", strerror(errno));
-            ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half(&ppa);
-        }
 #endif
 #else
             ppa.cmd = *cmd;

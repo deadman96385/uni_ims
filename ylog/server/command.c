@@ -1128,14 +1128,14 @@ static void *cmd_benchmark_thread_handler(void *arg) {
                     p[i] = cindex[seqt & 0xf];
                     seqt >>= 4;
                 }
-                delta_speed_size += y->write_handler(buf_const, str_len, y);
+                delta_speed_size += y->write_handler(buf_const, str_len, y, NULL);
 #else
                 /**
                  * snprintf will cost so many time, let the ylog_cli benchmark2 very slow
                  * so you need to take care of the android bionic libraries by luther 2016.01.19
                  */
                 delta_speed_size += y->write_handler(buf, snprintf(buf, buf_size,
-                            "cmd_benchmark_thread_handler write data seq = %lld\n", seq++), y);
+                            "cmd_benchmark_thread_handler write data seq = %lld\n", seq++), y, NULL);
 #endif
             if (delta_speed_size >= 20*1024*1024) {
                 get_boottime(&ts2);
@@ -1146,7 +1146,7 @@ static void *cmd_benchmark_thread_handler(void *arg) {
                 delta_speed_size = 0;
                 if (SEND(fd, buf, snprintf(buf, buf_size, "cmd_benchmark -> %s speed %.2f%c/s\n", path, delta_speed_float, delta_speed_unit), MSG_NOSIGNAL) < 0)
                     break;
-                delta_speed_size += y->write_handler(buf, strlen(buf), y);
+                delta_speed_size += y->write_handler(buf, strlen(buf), y, NULL);
             }
         }
         pthread_mutex_lock(&benchmark_mutex_command);

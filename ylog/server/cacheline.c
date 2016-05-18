@@ -56,7 +56,7 @@ static void cacheline_drain(struct cacheline *cl, int reason) {
             if (cl->ydst->write_data2cache_first == 0)
                 ret = cl->ydst->fwrite(pcache, wpos, cl->ydst->fd, cl->ydst->file_name);
             else {
-                ret = cl->ydst->write_handler(pcache, wpos, cl->ydst->ylog);
+                ret = cl->ydst->write_handler(pcache, wpos, cl->ydst->ylog, NULL);
                 if (ret > wpos)
                     ret = wpos;
             }
@@ -188,7 +188,7 @@ static void *cacheline_thread_handler_default(void *arg) {
                 if (cl->ydst->write_data2cache_first == 0)
                     ret = cl->ydst->fwrite(pcache, cl->size, cl->ydst->fd, cl->ydst->file_name);
                 else {
-                    ret = cl->ydst->write_handler(pcache, cl->size, cl->ydst->ylog);
+                    ret = cl->ydst->write_handler(pcache, cl->size, cl->ydst->ylog, NULL);
                     if (ret > cl->size)
                         ret = cl->size;
                 }

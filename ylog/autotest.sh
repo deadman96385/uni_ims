@@ -24,6 +24,9 @@ rfuncs=(
 # 1. 创建函数 - 2016.05.14 by luther
 function ylog_check_cache_write4all() #                            #check ylog->ydst->cache and ylog->cache->ydst
 {
+    my_echo_pink "sleep 5 seconds here, give you chance to ctrl+c"
+    echo
+    sleep 5
     # 1. ylog -> ydst -> cache
     local ylog_name="benchmark_socket"
     local ylog_ydst="${rootdir_ylog}/default"
@@ -31,10 +34,7 @@ function ylog_check_cache_write4all() #                            #check ylog->
     local ylog_socket_name="ylog_benchmark_socket_server"
     local hinfo="[ ylog -> ydst -> cache ]"
     ylog_check_cache_write_one_time 1K.bin 1k 1 20 200 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
-    ylog_check_cache_write_one_time 10K.bin 1k 10 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
-    ylog_check_cache_write_one_time 512K.bin 512k 1 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
     ylog_check_cache_write_one_time 3M.bin 1m 3 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
-    ylog_check_cache_write_one_time 10M.bin 1m 10 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
     # 2. ylog -> cache ->ydst
     local ylog_name="socket"
     local ylog_ydst="${rootdir_ylog}/socket/open"
@@ -42,11 +42,7 @@ function ylog_check_cache_write4all() #                            #check ylog->
     local ylog_socket_name="ylog_socket"
     local hinfo="[ ylog -> cache -> ydst ]"
     ylog_check_cache_write_one_time 1K.bin 1k 1 20 200 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
-    ylog_check_cache_write_one_time 10K.bin 1k 10 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
-    ylog_check_cache_write_one_time 512K.bin 512k 1 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
-    ylog_check_cache_write_one_time 10M.bin 1m 10 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
     ylog_check_cache_write_one_time 3M.bin 1m 3 20 1 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
-    ylog_check_cache_write_one_time 50M.bin 10m 5 20 20 ${ylog_name} ${ylog_ydst} ${ylog_ydst_name} ${ylog_socket_name} "${hinfo}"
 }
 
 # 函数：ylog_check_cache_write()
@@ -101,7 +97,10 @@ function ylog_check_cache_write() #                                #while [ 1 ];
 
     $ADB_SHELL stop ylog
     $ADB_SHELL start ylog
-    local file="/data/ylog/${name}"
+    # local file="/data/ylog/${name}"
+    local file_root="/data/local/tmp/ylog"
+    $ADB_SHELL mkdir -p ${file_root}
+    local file="${file_root}/${name}"
     my_echo_yellow ${file} ${hinfo} ${ylog_name} ${ylog_ydst_name} ${ylog_socket_name}; echo
     md5sum_ylog_check_cache_write_test_logs="`mktemp -d md5sum_ylog_check_cache_write_test_logs.XXXX_${d}`"
     # $ADB_SHELL "[ -e ${file} ] || dd if=/dev/zero of=${file} bs=${bs} count=${count}"
@@ -151,6 +150,18 @@ function ylog_check_cache_write() #                                #while [ 1 ];
     result="pass"
 }
 
+ function ylog_create_one_tombstone() {
+    local tombstone_nums=`$ADB_SHELL ls "${rootdir_ylog}/traces/*.tombstone" | sed '/No such/d' | wc -l`
+    $ADB_SHELL ylog_cli tombstone
+    local num=0
+    while ((num++ < 4)); do
+        sleep 0.5
+        local tombstone_nums_now=`$ADB_SHELL ls "${rootdir_ylog}/traces/*.tombstone" | sed '/No such/d' | wc -l`
+        ((${tombstone_nums_now}-${tombstone_nums} >= 4)) && return 0
+    done
+    return 1
+}
+
 # 函数：ylog_check_ylog_traces_tombstone()
 # 参数：无参数
 # 功能：检查anr log是否正常捕获
@@ -158,17 +169,23 @@ function ylog_check_cache_write() #                                #while [ 1 ];
 # 1. 创建函数 - 2016.05.10 by luther
 function ylog_check_ylog_traces_tombstone() #                      #check tombstone log cmd
 {
-    $ADB_SHELL ylog_cli -c rm -rf ${rootdir_ylog}/traces
-    $ADB_SHELL ylog_cli tombstone
+    ylog_create_one_tombstone
+    [ $? -eq 0 ] && {
+        ylog_create_one_tombstone
+        [ $? -eq 0 ] && result="pass"
+    }
+}
+
+ function ylog_create_one_anr() {
+    local anr_nums=`$ADB_SHELL ls "${rootdir_ylog}/traces/*.anr" | sed '/No such/d' | wc -l`
+    $ADB_SHELL ylog_cli anr
     local num=0
-    while ((num++ < 8)); do
+    while ((num++ < 6)); do
         sleep 0.5
-        local files="`$ADB_SHELL ylog_cli -c ls ${rootdir_ylog}/traces/`"
-        [ "${files}" ] && {
-            result="pass"
-            break
-        }
+        local anr_nums_now=`$ADB_SHELL ls "${rootdir_ylog}/traces/*.anr" | sed '/No such/d' | wc -l`
+        [ ${anr_nums} -ne ${anr_nums_now} ] && return 0
     done
+    return 1
 }
 
 # 函数：ylog_check_ylog_traces_anr()
@@ -178,17 +195,11 @@ function ylog_check_ylog_traces_tombstone() #                      #check tombst
 # 1. 创建函数 - 2016.05.10 by luther
 function ylog_check_ylog_traces_anr() #                            #check anr log cmd
 {
-    $ADB_SHELL ylog_cli -c rm -rf ${rootdir_ylog}/traces
-    $ADB_SHELL ylog_cli anr
-    local num=0
-    while ((num++ < 8)); do
-        sleep 0.5
-        local files="`$ADB_SHELL ylog_cli -c ls ${rootdir_ylog}/traces/`"
-        [ "${files}" ] && {
-            result="pass"
-            break
-        }
-    done
+    ylog_create_one_anr
+    [ $? -eq 0 ] && {
+        ylog_create_one_anr
+        [ $? -eq 0 ] && result="pass"
+    }
 }
 
 # 函数：ylog_check_ylog_cli_snapshot_log_kmsg()
@@ -296,13 +307,14 @@ function ylog_loop_start_stop() #                                  #start & stop
 
 # 函数：ylog_check_ylog_cli_print2kernel()
 # 参数：无参数
-# 功能：检查ylog_cli print2kernel 8888888 命令,dmesg |grep 'print2kerne 8888888' 返回内容应包含print2kerne 8888888
+# 功能：检查ylog_cli print2kernel 8888888 命令,dmesg | grep 'print2kerne 8888888' 返回内容应包含print2kerne 8888888
 # 历史：
 # 1. 创建函数 - 2016.03.26 by yanli
 function ylog_check_ylog_cli_print2kernel() #                      #check ylog_cli print2kernel cmd
 {
-    $ADB_SHELL ylog_cli print2kernel 8888888
-    [ "$($ADB_SHELL dmesg | grep 'print2kernel 8888888')" ] && result="pass"
+    local key_string="print2kernel8888888`date | md5sum | cut -d' ' -f1`"
+    $ADB_SHELL ylog_cli print2kernel "${key_string}"
+    [ "$($ADB_SHELL dmesg | grep ${key_string})" ] && result="pass"
 }
 
 # 函数：ylog_check_ylog_service()
@@ -312,7 +324,7 @@ function ylog_check_ylog_cli_print2kernel() #                      #check ylog_c
 # 1. 创建函数 - 2016.03.25 by luther
 function ylog_check_ylog_service() #                               #check ylog service running or not
 {
-    [ "$($ADB_SHELL ps |grep /system/bin/ylog)" ] && result="pass"
+    [ "$($ADB_SHELL ps | grep /system/bin/ylog)" ] && result="pass"
 }
 
 # 函数：ylog_check_kernel_log()
@@ -549,8 +561,10 @@ if [ '1' ]; then
         done
     else
         echo "++++++++ all ++++++++++"
+        i=1
         for f in "${rfuncs_o[@]}"; do
-            echo $f
+            printf "%03d. %s\n" ${i} $f
+            ((i++))
         done
         echo "-----------------------"
         ${GREP} '^function ' ${program} | ${SED} 's/^function //;s/()//;s/#//' | ${AWK} '{printf "%03d. %s\n", NR, $0}'

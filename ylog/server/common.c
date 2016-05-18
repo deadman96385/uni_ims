@@ -8,7 +8,7 @@ static int fd_write(char *buf, int count, int fd, char *desc) {
     int written = 0;
 
     if (fd < 0) {
-        ylog_critical("write fd does not open\n");
+        ylog_critical("write fd does not open %s\n", desc);
         return 0;
     }
 
@@ -29,7 +29,7 @@ static int fd_write(char *buf, int count, int fd, char *desc) {
     } while (--retries);
 
     if (retries == 0) {
-        ylog_critical("write failed: retries all\n");
+        ylog_critical("write failed: retries all %s\n", desc);
     }
 
     return written;

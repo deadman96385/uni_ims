@@ -261,7 +261,7 @@ struct filter_pattern;
 struct ylog_event_cond_wait;
 typedef int (*ydst_new_segment)(struct ylog *y, int mode);
 typedef int (*ylog_filter)(char *line, struct filter_pattern *p);
-typedef int (*ylog_write_handler)(char *buf, int count, struct ylog *y);
+typedef int (*ylog_write_handler)(char *buf, int count, struct ylog *y, void *private);
 typedef int (*ylog_open)(char *file, char *mode, struct ylog *y);
 typedef int (*ylog_read)(char *buf, int count, FILE *fp, int fd, struct ylog *y);
 typedef int (*ylog_close)(FILE *fp, struct ylog *y);
@@ -715,7 +715,8 @@ struct pcmds_print2file_args {
     int flags;
     int *cnt;
 #define PCMDS_PRINT2FILE_FD_DUP (9999999)
-    int fd_dup;
+    int fd_dup_flag;
+    int fd;
     ylog_write_handler w;
     struct ylog *y;
     char *prefix;

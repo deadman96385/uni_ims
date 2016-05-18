@@ -229,7 +229,8 @@ static int fcntl_read_block(int fd, char *desc) {
     return 0;
 }
 
-static int pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char *prefix, int millisecond, int max_size) {
+static int pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y,
+        char *prefix, int millisecond, int max_size, void *private) {
     char buf[4096];
     int count = sizeof buf;
     char *p = buf;
@@ -245,10 +246,10 @@ static int pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char 
             if (prefix == NULL)
                 prefix = "pcmd";
             if (cnt) {
-                rcnt += w(p, snprintf(p, pmax - p, "\n%s %03d [ %s ] %s\n", prefix, *cnt, cmd, timeBuf), y);
+                rcnt += w(p, snprintf(p, pmax - p, "\n%s %03d [ %s ] %s\n", prefix, *cnt, cmd, timeBuf), y, private);
                 *cnt = *cnt + 1;
             } else
-                rcnt += w(p, snprintf(p, pmax - p, "\n%s [ %s ]\n", prefix, cmd), y);
+                rcnt += w(p, snprintf(p, pmax - p, "\n%s [ %s ]\n", prefix, cmd), y, private);
         }
         pfd[0].fd = fd;
         pfd[0].events = POLLIN;
@@ -270,7 +271,7 @@ static int pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char 
                 ret = 0;
             if (ret > 0) {
                 if (w)
-                    w(p, ret, y);
+                    w(p, ret, y, private);
                 rcnt += ret;
                 if (max_size > 0) {
                     // ylog_debug("%s rcnt=%d, max_size=%d\n", cmd, rcnt, max_size);
@@ -287,7 +288,7 @@ static int pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char 
                         cmd, ret == 0 ? "timeout":strerror(errno));
             else
                 ret = snprintf(buf, count, "\n");
-            rcnt += w(buf, ret, y);
+            rcnt += w(buf, ret, y, private);
         }
         /**
          * For ylog_cli space command
@@ -346,11 +347,12 @@ static int pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char 
     return rcnt;
 }
 
-static int pcmds(char *cmds[], int *cnt, ylog_write_handler w, struct ylog *y, char *prefix, int millisecond) {
+static int pcmds(char *cmds[], int *cnt, ylog_write_handler w,
+        struct ylog *y, char *prefix, int millisecond, void *private) {
     char **cmd;
     int rcnt = 0;
     for (cmd = cmds; *cmd; cmd++)
-        rcnt += pcmd(*cmd, cnt, w, y, prefix, millisecond, -1);
+        rcnt += pcmd(*cmd, cnt, w, y, prefix, millisecond, -1, private);
     return rcnt;
 }
 
@@ -375,8 +377,10 @@ static void ylog_close_by_nowrap(struct ylog *y) {
     y->thread_stop(y, 0);
 }
 
-static int ylog_write_handler__pcmd_print2file(char *buf, int count, struct ylog *y) {
-    int fd = (long)y->privates;
+static int ylog_write_handler__pcmd_print2file(char *buf, int count, struct ylog *y, void *private) {
+    UNUSED(y);
+    struct pcmds_print2file_args *ppa = (struct pcmds_print2file_args *)private;
+    int fd = ppa->fd;
     return fd_write(buf, count, fd, "ylog_write_handler__pcmd_print2file");
 }
 
@@ -390,9 +394,9 @@ static int pcmds_print2file(struct pcmds_print2file_args *ppa) {
             ppa->flags = O_RDWR | O_CREAT | O_TRUNC;
         if (ppa->print2fd != PCMDS_PRINT2FD) {
             file = ppa->file;
-            fd = open(file, ppa->flags, 0664);
+            ppa->fd = fd = open(file, ppa->flags, 0664);
         } else
-            fd = ppa->fd_dup;
+            fd = ppa->fd;
         if (fd < 0)
             ylog_critical("%s %s Failed to open %s\n", __func__, file, strerror(errno));
         else {
@@ -402,9 +406,8 @@ static int pcmds_print2file(struct pcmds_print2file_args *ppa) {
             struct ydst_root *root = ydst->root;
             if (ppa->w == NULL)
                 ppa->w = ylog_write_handler__pcmd_print2file;
-            y->privates = (void*)fd;
             for (cmd = ppa->cmds; *cmd; cmd++) {
-                ret = pcmd(*cmd, ppa->cnt, ppa->w, y, ppa->prefix, ppa->millisecond, ppa->max_size);
+                ret = pcmd(*cmd, ppa->cnt, ppa->w, y, ppa->prefix, ppa->millisecond, ppa->max_size, ppa);
                 rcnt += ret;
                 if (ppa->locked != PCMDS_PRINT2FILE_LOCKED) {
                     PCMDS_YLOG_CALL_LOCK(y);
@@ -422,11 +425,11 @@ static int pcmds_print2file(struct pcmds_print2file_args *ppa) {
                     PCMDS_YLOG_CALL_UNLOCK();
                 }
             }
-            if (ppa->fd_dup != PCMDS_PRINT2FILE_FD_DUP) {
+            if (ppa->fd_dup_flag != PCMDS_PRINT2FILE_FD_DUP) {
                 close(fd);
             } else {
-                // ppa->fd_dup = dup(fd); close(fd);
-                ppa->fd_dup = fd; /* will close this fd in thread_handler */
+                // ppa->fd = dup(fd); close(fd);
+                /* it will close this fd in thread_handler */
             }
         }
     } else {
@@ -473,14 +476,14 @@ static int pcmds_snapshot_exec(char *cmds[], struct ylog *y, int millisecond, in
     char **cmd;
     PCMDS_YLOG_CALL_LOCK(y);
     for (cmd = cmds; *cmd; cmd++)
-        pcmd(*cmd, NULL, NULL, y, "pcmds_snapshot_exec", millisecond, max_size);
+        pcmd(*cmd, NULL, NULL, y, "pcmds_snapshot_exec", millisecond, max_size, NULL);
     PCMDS_YLOG_CALL_UNLOCK();
     return 0;
 }
 
 static int pcmd_snapshot_exec(char *cmd, struct ylog *y, int millisecond, int max_size) {
     PCMDS_YLOG_CALL_LOCK(y);
-    pcmd(cmd, NULL, NULL, y, "pcmds_snapshot_exec", millisecond, max_size);
+    pcmd(cmd, NULL, NULL, y, "pcmds_snapshot_exec", millisecond, max_size, NULL);
     PCMDS_YLOG_CALL_UNLOCK();
     return 0;
 }
@@ -525,7 +528,7 @@ static int pcmds_ylog_copy_file(char *file, char *file_to, char *buf, int count,
             snprintf(buf, count, "%s/%s", ydst->root_folder, ydst->file);
             if (mkdirs(buf) == 0) {
                 snprintf(buf, count, "cp -r %s %s/%s/%s", file, ydst->root_folder, ydst->file, file_to ? file_to:"");
-                pcmd(buf, NULL, NULL, NULL, "pcmds_ylog", 1000, -1);
+                pcmd(buf, NULL, NULL, NULL, "pcmds_ylog", 1000, -1, NULL);
             }
             return 2; /* has size */
         } else {
@@ -1969,7 +1972,8 @@ static int ylog_write_header_default(struct ylog *y) {
     return ydst->write(y->id_token, y->id_token_len, buf, count, ydst);
 }
 
-static int ylog_write_handler_default(char *buf, int count, struct ylog *y) {
+static int ylog_write_handler_default(char *buf, int count, struct ylog *y, void *private) {
+    UNUSED(private);
     int written_count = 0;
     int locked = 0;
     struct filter_pattern *p = y->fp_array;
@@ -2056,11 +2060,12 @@ static int ylog_write_handler_default(char *buf, int count, struct ylog *y) {
     return written_count;
 }
 
-static int ylog_write_handler_default__write_data2cache_first(char *buf, int count, struct ylog *y) {
+static int ylog_write_handler_default__write_data2cache_first(char *buf, int count, struct ylog *y, void *private) {
+    UNUSED(private);
     struct ydst *ydst = y->ydst;
 
     if (buf == NULL)
-        return y->ydst->write_handler(buf, count, y);
+        return y->ydst->write_handler(buf, count, y, NULL);
     /**
      * For cache first, there will be no timestamp, no id_token
      * and cache has pthread_mutex_lock(&cl->mutex)
@@ -2717,11 +2722,11 @@ __state_control:
                 y->state_pipe_count++;
                 continue;
             case YLOG_MOVE_ROOT:
-                y->write_handler(NULL, YDST_SEGMENT_MODE_UPDATE, y);
+                y->write_handler(NULL, YDST_SEGMENT_MODE_UPDATE, y, NULL);
                 y->state_pipe_count++;
                 continue;
             case YLOG_RESIZE_SEGMENT:
-                y->write_handler(NULL, YDST_SEGMENT_MODE_UPDATE, y);
+                y->write_handler(NULL, YDST_SEGMENT_MODE_UPDATE, y, NULL);
                 y->state_pipe_count++;
                 continue;
             case YLOG_FLUSH:
@@ -2729,7 +2734,7 @@ __state_control:
                 y->state_pipe_count++;
                 continue;
             case YLOG_RESET:
-                y->write_handler(NULL, YDST_SEGMENT_MODE_RESET, y);
+                y->write_handler(NULL, YDST_SEGMENT_MODE_RESET, y, NULL);
                 y->state_pipe_count++;
                 continue;
             case YLOG_EXIT:
@@ -2803,7 +2808,7 @@ __state_control:
             count = y->fread(y->buf, y->buf_size, yp_fp(YLOG_POLL_INDEX_DATA, yp), yp_fd(YLOG_POLL_INDEX_DATA, yp), y);
             if (count > 0) {
                 if (count != INT_MAX) /* INT_MAX to tell here, y->fread has called y->write_handler in itself */
-                    y->write_handler(y->buf, count, y);
+                    y->write_handler(y->buf, count, y, NULL);
                 if (ylog_read_len_might_zero_wait_max_count)
                     ylog_read_len_might_zero_wait_max_count = 0;
             } else {

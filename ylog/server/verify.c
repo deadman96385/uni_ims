@@ -20,7 +20,7 @@ static void ylog_verify(void) {
         if (y) {
             while (times--) {
                 count = snprintf(buf, sizeof(buf), "%d\n", numbers++);
-                y->write_handler(buf, count, y);
+                y->write_handler(buf, count, y, NULL);
             }
         }
     }

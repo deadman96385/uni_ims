@@ -27,7 +27,7 @@ static void ylog_snapshot_startup(long poweron) {
             if (stat(file, &st) == 0) {
                 if (st.st_size) {
                     snprintf(buf, count, "cp -r %s %s", file, file2);
-                    pcmd(buf, NULL, NULL, NULL, "ylog_snapshot_startup", 2000, -1);
+                    pcmd(buf, NULL, NULL, NULL, "ylog_snapshot_startup", 2000, -1, NULL);
                 }
             } else {
                 ylog_error("fstat %s failed: %s\n", file, strerror(errno));
@@ -171,7 +171,7 @@ static void ylog_snapshot___case___screen(struct ylog_snapshot_args *args) {
 
     snprintf(args->data, sizeof args->data, "mkdir -p %s/%sscreen", ydst->root_folder, ydst->file);
     if (access(args->data + 9, F_OK))
-        pcmd(args->data, NULL, NULL, y, "ylog_snapshot___case___screen", 10*1000, -1);
+        pcmd(args->data, NULL, NULL, y, "ylog_snapshot___case___screen", 10*1000, -1, NULL);
     if (args->argc == 0) {
         char timeBuf[32];
         ylog_get_format_time_year(timeBuf);
