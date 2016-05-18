@@ -298,7 +298,7 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
     MMEncConfig *enc_config = vo->g_h264_enc_config;
     ENC_IMAGE_PARAMS_T *img_ptr = vo->g_enc_image_ptr;
     uint32 target_bitrate_max, target_bitrate_min;
-    uint32 mb_rate, total_mbs = (vo->g_enc_image_ptr->width * vo->g_enc_image_ptr->height)>>8;
+    uint32 mb_rate, total_mbs = (img_ptr->width * img_ptr->height)>>8;
     int32 i, level_idx;
     uint32 max_framerate;
     LEVEL_LIMITS_T *level_infos = &g_level_infos;
@@ -404,9 +404,47 @@ MMEncRet H264EncSetConf(AVCHandle *avcHandle, MMEncConfig *pConf)
         init_GOPRC(&(vo->rc_inout_paras));
     }
 
-    SPRD_CODEC_LOGD ("%s, actual, FrameRate: %d, targetBitRate: %d, intra_period: %d, QP_I: %d, QP_P: %d, level: %s, RC_mode: %d\n",
+    //for volte
+    switch (total_mbs)
+    {
+    case 3600: // 1280x720
+        img_ptr->sps->i_level_idc = AVC_LEVEL3_1;
+        break;
+    case 1200: // 640x480
+        if (enc_config->FrameRate == 15) {
+            img_ptr->sps->i_level_idc = AVC_LEVEL2_2;
+        } else {
+            img_ptr->sps->i_level_idc = AVC_LEVEL3;
+        }
+        break;
+    case 300: // 320x240
+        if (enc_config->FrameRate == 15) {
+            img_ptr->sps->i_level_idc = AVC_LEVEL1_2;
+        } else {
+            img_ptr->sps->i_level_idc = AVC_LEVEL1_3;
+        }
+        break;
+    case 396: // 352x288
+        if (enc_config->FrameRate == 15) {
+            img_ptr->sps->i_level_idc = AVC_LEVEL1_2;
+        } else {
+            img_ptr->sps->i_level_idc = AVC_LEVEL1_3;
+        }
+        break;
+    case 99: // 176x144
+        if (enc_config->FrameRate == 15) {
+            img_ptr->sps->i_level_idc = AVC_LEVEL1;
+        } else {
+            img_ptr->sps->i_level_idc = AVC_LEVEL1_1;
+        }
+        break;
+    default:
+        break;
+    }
+
+    SPRD_CODEC_LOGD ("%s, actual, FrameRate: %d, targetBitRate: %d, intra_period: %d, QP_I: %d, QP_P: %d, level: %s, RC_mode: %d, img_ptr->sps->i_level_idc: %d\n",
                      __FUNCTION__, enc_config->FrameRate, enc_config->targetBitRate, vo->rc_inout_paras.nIntra_Period,
-                     enc_config->QP_IVOP, enc_config->QP_PVOP, level_infos[level_idx].level_str, vo->rc_inout_paras.nRate_control_en);
+                     enc_config->QP_IVOP, enc_config->QP_PVOP, level_infos[level_idx].level_str, vo->rc_inout_paras.nRate_control_en, img_ptr->sps->i_level_idc);
 
     return MMENC_OK;
 }
