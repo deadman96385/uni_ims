@@ -298,17 +298,14 @@ static int os_search_root_path(char *path, int len) {
     int changed = 0;
     /* Should detect sdcard mount status, then fill the path */
     char sdcard_path[PATH_MAX];
-    int keep_historical_folder_numbers = 0;
     char *historical_folder_root = NULL;
     unsigned long long quota = 0;
 
     if (os_check_sdcard_online(sdcard_path, sizeof(sdcard_path))) {
-        keep_historical_folder_numbers = c->keep_historical_folder_numbers;
         historical_folder_root = pos->historical_folder_root_last;
         pos->sdcard_online = 1;
     } else {
         strcpy(sdcard_path, YLOG_ROOT_FOLDER);
-        keep_historical_folder_numbers = c->keep_historical_folder_numbers;
         historical_folder_root = pos->historical_folder_root_last;
         quota = 200 * 1024 * 1024;
         if (pos->sdcard_online) {
@@ -339,7 +336,6 @@ static int os_search_root_path(char *path, int len) {
             // ylog_root_folder_delete(path, historical_folder_root_tmp, 1, 2);
             quota = calculate_path_disk_available(sdcard_path) * 0.9;
         }
-        c->keep_historical_folder_numbers = keep_historical_folder_numbers;
         c->historical_folder_root = historical_folder_root;
         root->quota_new = quota;
 
@@ -705,7 +701,7 @@ static int os_inotify_handler_anr_delete_create(struct ylog_inotify_cell *pcell,
                     else {
                         if (stat_dst0.st_size > stat_dst.st_size) {
                             warning = 0;
-                            rename(ANR_FAST_COPY_MODE_TMP, ANR_FAST_COPY_MODE_YLOG);
+                            RENAME(ANR_FAST_COPY_MODE_TMP, ANR_FAST_COPY_MODE_YLOG);
                         } else {
                             if (stat_dst0.st_size < stat_dst.st_size && warning == 0) {
                                 warning = 1;
@@ -715,7 +711,7 @@ static int os_inotify_handler_anr_delete_create(struct ylog_inotify_cell *pcell,
                     }
                 } else {
                     warning = 0;
-                    rename(ANR_FAST_COPY_MODE_TMP, ANR_FAST_COPY_MODE_YLOG);
+                    RENAME(ANR_FAST_COPY_MODE_TMP, ANR_FAST_COPY_MODE_YLOG);
                 }
             } else {
                 warning = 0;
@@ -823,8 +819,9 @@ static void pcmds_ylog_anr_nowrap_callback(struct ylog *y, char *buf, int count,
                 ylog_pthread_handler_anr_unifile_thread_copy_bottom_half(tppa);
             }
         } else {
+            struct pcmds_print2file_args ppa0 = ppa;
             ylog_error("malloc %s fail.%s", "pcmds_print2file_args anr", strerror(errno));
-            ylog_pthread_handler_anr_unifile_thread_copy_bottom_half(&ppa);
+            ylog_pthread_handler_anr_unifile_thread_copy_bottom_half(&ppa0);
         }
 #endif
 #else
@@ -1031,11 +1028,12 @@ static void pcmds_ylog_tombstone_nowrap_callback(struct ylog *y, char *buf, int 
                 tppa->locked = 0;
                 if (ylog_pthread_create(ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half, tppa)) {
                     tppa->locked = PCMDS_PRINT2FILE_LOCKED;
-                    ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half(&ppa);
+                    ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half(tppa);
                 }
             } else {
+                struct pcmds_print2file_args ppa0 = ppa;
                 ylog_error("malloc %s fail.%s", "pcmds_print2file_args tombstone", strerror(errno));
-                ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half(&ppa);
+                ylog_pthread_handler_tombstone_unifile_thread_copy_bottom_half(&ppa0);
             }
 #endif
 #else
@@ -1134,6 +1132,7 @@ static struct context os_context[M_MODE_NUM] = {
         .ylog_config_file = YLOG_CONFIG_FILE,
         .model = C_MINI_LOG,
         .loglevel = LOG_WARN,
+        .keep_historical_folder_numbers = 5,
         .keep_historical_folder_numbers_default = 5,
         .ylog_keyword = os_ylog_keyword,
         .ylog_snapshot_list = os_ylog_snapshot_list,
@@ -1145,6 +1144,7 @@ static struct context os_context[M_MODE_NUM] = {
         .ylog_config_file = YLOG_CONFIG_FILE,
         .model = C_FULL_LOG,
         .loglevel = LOG_INFO,
+        .keep_historical_folder_numbers = 5,
         .keep_historical_folder_numbers_default = 5,
         .ylog_keyword = os_ylog_keyword,
         .ylog_snapshot_list = os_ylog_snapshot_list,

@@ -956,7 +956,7 @@ static int yds_rename_segment_sequnce_file_and_left_segment0(struct ydst *ydst) 
 #else
             yds_new_segment_file_name(file_to, sizeof file_to, i, ydst);
 #endif
-            rename(file_from, file_to);
+            RENAME(file_from, file_to);
         }
     }
 
@@ -1237,7 +1237,7 @@ static int ylog_historical_folder_do(char *root, char *historical_folder_root,
                             snprintf(tmp_to, sizeof(tmp_to), "%s%d", root, i+1);
                         if (access(tmp_to, F_OK) == 0)
                             rm_all(tmp_to);
-                        rename(tmp, tmp_to);
+                        RENAME(tmp, tmp_to);
                     }
                 } else {
                     rm_all(tmp);
@@ -1248,7 +1248,7 @@ static int ylog_historical_folder_do(char *root, char *historical_folder_root,
                     ylog_warn("rmdir %s remove empty folder\n", root);
                 if (i == 1 && access(root, F_OK) == 0) {
                     mkdirs_with_file(tmp);
-                    rename(root, tmp);
+                    RENAME(root, tmp);
                 }
             }
         }

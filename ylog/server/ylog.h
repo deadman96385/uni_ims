@@ -75,6 +75,14 @@ static int ylog_printf_format(struct context *c, int level, const char *fmt, ...
     ll_ret; \
 })
 
+#define RENAME(from, to) ({\
+    int ll_ret; \
+    ll_ret = rename(from, to); \
+    if (ll_ret < 0) \
+        ylog_error("rename %s -> %s %s %s\n", from, to, __func__, strerror(errno)); \
+    ll_ret; \
+})
+
 /* it is used for pending cpath hotplug */
 #define PCMDS_YLOG_CALL_LOCK(y) \
     struct ydst *ydst = y->ydst; \
