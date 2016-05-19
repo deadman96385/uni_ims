@@ -1019,7 +1019,7 @@ static int cmd_space(struct command *cmd, char *buf, int buf_size, int fd, int i
     ret = snprintf(buf, buf_size, "%s -> %.2f%c (freespace)\n", root_path, fsize, unit);
     SEND(fd, buf, ret, MSG_NOSIGNAL);
 
-    if (historical_folder_root) {
+    if (historical_folder_root && access(historical_folder_root, F_OK) == 0) {
         ret = do_cmd(buf, buf_size, 1, "du -sh %s", historical_folder_root);
         if (ret <= 0)
             ret = snprintf(buf, buf_size, "Failed to call du -sh %s", historical_folder_root);

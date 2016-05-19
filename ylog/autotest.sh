@@ -4,6 +4,7 @@
 
 rfuncs=(
 "ylog_check_ylog_service"
+"ylog_check_last_ylog"
 "ylog_check_ylog_cli_print2kernel"
 "ylog_check_android_log"
 "ylog_check_kernel_log"
@@ -16,6 +17,28 @@ rfuncs=(
 "ylog_check_ylog_traces_tombstone"
 "ylog_check_cache_write4all"
 )
+
+# 函数：ylog_check_last_ylog()
+# 参数：无参数
+# 功能：检查last_ylog是否生成
+# 历史：
+# 1. 创建函数 - 2016.05.19 by luther
+function ylog_check_last_ylog() #                                  #check last_ylog
+{
+    local history_num=`$ADB_SHELL ylog_cli history_n | tr -d '\r'`
+    [ ${history_num} -gt 0 ] && {
+        local i=0
+        $ADB_SHELL ylog_cli rylog >/dev/null
+        while ((i++ <  history_num)); do
+            $ADB_SHELL stop ylog
+            $ADB_SHELL start ylog
+            $ADB_SHELL ylog_cli history_n >/dev/null # wait until last_ylog folder created
+        done
+        sleep 2
+        local last_ylog_nums=`$ADB_SHELL ls "${rootdir}/ylog/last_ylog/" | sed '/No such/d' | wc -l`
+        [ ${history_num} -eq ${last_ylog_nums} ] && result="pass"
+    }
+}
 
 # 函数：ylog_check_cache_write4all()
 # 参数：无参数
