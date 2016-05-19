@@ -47,6 +47,36 @@ PUBLIC void H264Dec_ReleaseRefBuffers(AVCHandle *avcHandle)
     }
 }
 
+PUBLIC DEC_STORABLE_PICTURE_T* H264Dec_GetOneOutputFrame(H264DecObject *vo)
+{
+    DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr =  vo->g_dpb_layer[0];
+    DEC_STORABLE_PICTURE_T *out;
+    uint32 i, out_idx;
+
+    if(dpb_ptr->delayed_pic_num == 0){
+        return NULL;
+    }
+
+    out = dpb_ptr->delayed_pic[0];
+    out_idx = 0;
+
+    for (i = 1; i < dpb_ptr->delayed_pic_num; i++){
+        if(dpb_ptr->delayed_pic[i]->poc < out->poc){
+            out_idx = i;
+            out = dpb_ptr->delayed_pic[i];
+        }
+    }
+
+    for(i = out_idx; i < dpb_ptr->delayed_pic_num; i++)
+    {
+        dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
+    }
+
+
+    dpb_ptr->delayed_pic_num--;
+
+    return out;
+}
 PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int32 *picId, uint64 *pts)
 {
     H264DecObject *vo = (H264DecObject *)avcHandle->videoDecoderData;
@@ -68,7 +98,7 @@ PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int3
         //pop one picture from delayed picture queue.
         if (dpb_ptr->delayed_pic_num)
         {
-            DEC_STORABLE_PICTURE_T *out = dpb_ptr->delayed_pic[0];
+            DEC_STORABLE_PICTURE_T *out = H264Dec_GetOneOutputFrame(vo);
             DEC_FRAME_STORE_T *fs = H264Dec_search_frame_from_DBP(vo, out);
 
             if (!fs)
@@ -79,19 +109,13 @@ PUBLIC MMDecRet H264Dec_GetLastDspFrm(AVCHandle *avcHandle, void **pOutput, int3
                 return MMDEC_ERROR;
             }
 
-            for(i = 0; i < dpb_ptr->delayed_pic_num; i++)
-            {
-                dpb_ptr->delayed_pic[i] = dpb_ptr->delayed_pic[i+1];
-            }
-            dpb_ptr->delayed_pic_num--;
-
-            H264Dec_find_smallest_pts(vo, out);
-
             *pOutput = out->pBufferHeader;
             *picId = out->mPicId;
             *pts = out->nTimeStamp;
 
-            SPRD_CODEC_LOGD ("%s, %d, fs->is_reference: %0x\n", __FUNCTION__, __LINE__, fs->is_reference);
+            SPRD_CODEC_LOGD("%s, %d, remove delayed frame: out: %p, poc: %d, is_reference: %d\n",
+                __FUNCTION__, __LINE__, out, out->poc, fs->is_reference);
+
             fs->is_reference = 0;
             H264DEC_UNBIND_FRAME(vo, fs->frame);
 

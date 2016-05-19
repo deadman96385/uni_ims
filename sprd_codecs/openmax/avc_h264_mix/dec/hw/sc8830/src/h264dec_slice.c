@@ -458,7 +458,7 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
     //find the smallest POC frame in dpb buffer
     out = dpb_ptr->delayed_pic[0];
     out_idx = 0;
-    for(i = 1; (i < MAX_DELAYED_PIC_NUM) && dpb_ptr->delayed_pic[i] && !dpb_ptr->delayed_pic[i]->idr_flag; i++)
+    for(i = 1; (i < dpb_ptr->delayed_pic_num) && dpb_ptr->delayed_pic[i] && !dpb_ptr->delayed_pic[i]->idr_flag; i++)
     {
         if(dpb_ptr->delayed_pic[i]->poc < out->poc)
         {
@@ -539,13 +539,11 @@ LOCAL void H264Dec_output_one_frame (H264DecObject *vo, DEC_IMAGE_PARAMS_T *img_
         }
     }
 
-    if (out)
-    {
-        SCI_TRACE_LOW_DPB("out poc: %d, effective: %d\t", out->poc, dec_out->frameEffective);
-    }
 
 #if 0   //only for debug
     {
+        SCI_TRACE_LOW_DPB("out poc: %d, effective: %d\t", out->poc, dec_out->frameEffective);
+
         int32 list_size0 = vo->g_list_size[0];
         int32 list_size1 = vo->g_list_size[1];
         SCI_TRACE_LOW_DPB("list_size: (%d, %d), total: %d", list_size0, list_size1, list_size0 + list_size1);
