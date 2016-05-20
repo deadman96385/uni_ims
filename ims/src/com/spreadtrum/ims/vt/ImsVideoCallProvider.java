@@ -22,6 +22,8 @@ import com.android.internal.telephony.ImsDriverCall;
 import com.android.ims.internal.ImsCallSession;
 import android.os.SystemClock;
 import android.app.KeyguardManager;
+import android.os.AsyncResult;
+import android.telephony.VoLteServiceState;
 
 public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallProvider {
     private static final String TAG = ImsVideoCallProvider.class.getSimpleName();
@@ -37,13 +39,17 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     private ImsCallSessionImplListner mImsCallSessionImplListner;
     private PowerManager.WakeLock mPartialWakeLock;
     private Message mCallIdMessage;
+    private boolean mIsVideo;//SPRD:add for bug563112
 
     /** volte media event code. */
     private static final int EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 500;
+    private static final int EVENT_SRVCC_STATE_CHANGED = 100;
+
     private Handler mVTHandler = new Handler(){
         @Override
         public void handleMessage(Message msg) {
             log("handleMessage msg = " + msg.what);
+            AsyncResult ar;
             switch (msg.what) {
                 case EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT:
                     /* SPRD: add for bug545171 @{ */
@@ -55,12 +61,40 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                         mCi.responseVolteCallMediaChange(false,mCallIdMessage);
                     }
                     break;
+                 /* SPRD:add for bug563112 @{ */
+                 case EVENT_SRVCC_STATE_CHANGED:
+                     ar = (AsyncResult)msg.obj;
+                     if (ar.exception == null) {
+                         handleSrvccStateChanged((int[]) ar.result);
+                     } else {
+                         log("Srvcc exception: " + ar.exception);
+                     }
+                    break;
+                /* @} */
                 default:
                     break;
             }
         }
     };
-
+    /* SPRD:add for bug563112 @{ */
+    private void handleSrvccStateChanged(int[] ret) {
+        log("handleSrvccStateChanged");
+        if (ret != null && ret.length != 0) {
+            int state = ret[0];
+            log("handleSrvccStateChanged..state:"+state+"   mIsVideo="+mIsVideo+"   mContext:"+mContext);
+            switch(state) {
+                case VoLteServiceState.HANDOVER_COMPLETED:
+                    if(mIsVideo && (mContext != null)){
+                       mIsVideo = false;
+                       Toast.makeText(mContext,mContext.getResources().getString(com.android.internal.R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
+                    }
+                    break;
+                default:
+                    return;
+            }
+        }
+    }
+    /* @} */
     public ImsVideoCallProvider(ImsCallSessionImpl imsCallSessionImpl,CommandsInterface ci,Context context) {
         super();
         mVTManagerProxy = VTManagerProxy.getInstance();
@@ -80,6 +114,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         mNegotiatedCallProfile.mMediaProfile.mVideoQuality =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoQuality;
         mNegotiatedCallProfile.mMediaProfile.mVideoDirection =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoDirection;
         mCallIdMessage = new Message();//SPRD: add for bug545171
+        mCi.registerForSrvccStateChanged(mVTHandler, EVENT_SRVCC_STATE_CHANGED, null);//SPRD:add for bug563112
     }
 
     public void onVTConnectionEstablished(ImsCallSessionImpl mImsCallSessionImpl){
@@ -291,9 +326,16 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
          VideoProfile responseProfile = new VideoProfile(VideoProfile.STATE_AUDIO_ONLY);
          log("updateNegotiatedCallProfilee->mCallType="+imsCallProfile.mCallType);
          if(imsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT){
+             mIsVideo = true;//SPRD:add for bug563112
              responseProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
              onVTConnectionEstablished(session);
          } else {
+             /* SPRD:add for bug563112 @{ */
+             if(mIsVideo && (session != null && session.mImsDriverCall != null)){
+                 Toast.makeText(mContext,mContext.getResources().getString(com.android.internal.R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
+                 mIsVideo = false;
+             }
+             /* @} */
              onVTConnectionDisconnected(session);
          }
          if (mLocalRequestProfile != null) {
