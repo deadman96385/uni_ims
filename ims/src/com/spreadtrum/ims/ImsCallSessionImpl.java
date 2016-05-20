@@ -99,8 +99,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             CommandsInterface ci, ImsServiceCallTracker callTracker){
         mImsDriverCall = new ImsDriverCall(dc);
         updateImsCallProfileFromDC(dc);
-        // SPRD:add for bug555524
-        updateFromDc(dc);
         mContext = context;
         mCi = ci;
         mImsServiceCallTracker = callTracker;
@@ -137,8 +135,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         updateImsCallProfileFromDC(dc);//SPRD:add for bug523375 updata dc when fallback to voice
         switch(dc.state){
             case DIALING:
-             // SPRD:add for bug555524
-                mState = ImsCallSession.State.INITIATED;
                 try{
                     if (mImsDriverCall == null && mIImsCallSessionListener != null) {
                         mIImsCallSessionListener.callSessionProgressing((IImsCallSession) this,
