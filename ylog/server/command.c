@@ -246,13 +246,14 @@ static void command_loop(int fd_server) {
     }
 }
 
-static int insert_ylog_argument(int index, struct ylog_poll *yp, struct ylog_argument *ya, int max) {
+static int insert_ylog_argument(int index, struct ylog_poll *yp, struct ylog_argument *ya, int max, void *args) {
     int i;
     int inserted = 0;
     for (i = 0; i < max; i++) {
         if (ya[i].index < 0) {
-            ya[i].index = index;
+            ya[i].args = args;
             ya[i].yp = yp;
+            ya[i].index = index;
             inserted = 1;
             break;
         }
@@ -333,7 +334,7 @@ static int cmd_command(struct command *cmd, char *buf, int buf_size, int fd, int
 static int cmd_kernel(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
     UNUSED(cmd);
     yp->flags[index] |= YLOG_POLL_FLAG_FREE_LATER;
-    if (insert_ylog_argument(index, yp, kernel_index, ARRAY_LEN(kernel_index)) == 0) {
+    if (insert_ylog_argument(index, yp, kernel_index, ARRAY_LEN(kernel_index), NULL) == 0) {
         yp->flags[index] &= ~YLOG_POLL_FLAG_FREE_LATER;
         SEND(fd, buf, snprintf(buf, buf_size, "kernel reading online client number has reached max %d, reject you!\n", \
                     (int)ARRAY_LEN(kernel_index)), MSG_NOSIGNAL);
@@ -868,7 +869,8 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
                         fsize1, unit1, fsize2, unit2, (100 * y->ydst->max_size_now) / (float)quota_now), MSG_NOSIGNAL);
             if (y->ydst->cache) {
                 fsize1 = ylog_get_unit_size_float(y->ydst->cache->size, &unit1);
-                SEND(fd, buf, snprintf(buf, buf_size, " -> cache.%s(%dx%.2f%c/%d,%d)",
+                SEND(fd, buf, snprintf(buf, buf_size, " -> %scache.%s(%dx%.2f%c/%d,%d)",
+                            y->ydst->write_data2cache_first ? "*" : "",
                             y->ydst->cache->name, y->ydst->cache->num,
                             fsize1, unit1, y->ydst->cache->wclidx, y->ydst->cache->wclidx_max), MSG_NOSIGNAL);
             }

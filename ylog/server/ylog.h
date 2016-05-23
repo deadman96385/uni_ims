@@ -294,7 +294,7 @@ typedef int (*cacheline_flush)(struct cacheline *cl);
 typedef int (*cacheline_write)(char *buf, int count, struct cacheline *cl);
 typedef int (*cacheline_exit)(struct cacheline *cl);
 typedef void*(*cacheline_thread_handler)(void *arg);
-typedef int (*ydst_write)(char *id_token, int id_token_len, char *buf, int count, struct ydst *ydst);
+typedef int (*ydst_write)(char *buf, int count, struct ydst *ydst);
 typedef int (*ydst_fwrite)(char *buf, int count, int fd, char *desc);
 typedef int (*ydst_flush)(struct ydst *ydst);
 typedef int (*ydst_open)(char *file, char *mode, struct ydst *ydst);
@@ -508,7 +508,8 @@ struct ydst {
     // begin of write_data2cache_first {
     int write_data2cache_first; /* write data to cache first, then cache will call ylog_write_handler_default */
     ylog_write_handler write_handler; /* used when write_data2cache_first is none 0 */
-    struct ylog *ylog; /* used when write_data2cache_first is none 0 */
+    struct ylog *ylog[64]; /* used when write_data2cache_first is none 0 */
+    int ylog_num;
     // } end of write_data2cache_first
     int ytag; /* 1: use ytag process in analyzer.py; 0: no ytag process in analyzer.py */
     enum ydst_segment_mode segment_mode;
@@ -622,7 +623,9 @@ struct ylog {
     pid_t pid;
     pid_t tid;
     char *buf;
+    char *rbuf;
     int buf_size;
+    int rbuf_size;
     char *name;
 
 #define YLOG_DISABLED                    0x01
@@ -636,6 +639,7 @@ struct ylog {
     int timestamp;
     char *id_token_filename; /* splited filename for this token in python script */
     char *id_token; /* like bio, as a identifier used in mux and demux */
+    char *id_token_desc;
     int id_token_len;
     int restart_period; /* ms */
     struct filter_pattern *fp_array;
@@ -696,6 +700,7 @@ struct ylog {
     ylog_thread_reset thread_reset;
     ylog_thread_nop thread_nop;
 
+    ylog_filter_plugin_func write_data2cache_first_filter;
     struct sfilter_plugin fplugin_filter_log;
     void *privates;
 };
@@ -707,6 +712,7 @@ struct ynode {
 };
 
 struct os_hooks {
+    int (*check_execute_file)(char *exec_file);
     ylog_read ylog_read_ylog_debug_hook;
     ylog_read ylog_read_info_hook;
     int (*process_command_hook)(char *buf, int buf_size, int fd, int index, struct ylog_poll *yp);

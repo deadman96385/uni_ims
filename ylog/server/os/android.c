@@ -48,8 +48,7 @@ struct os_status {
 
 static int ylog_write_header_sgm_cpu_memory_header(struct ylog *y) {
 #define YLOG_SGM_CPU_MEMORY_HEADER "second,cpu-cpu_percent[0],cpu-iowtime[1],cpu-cpu_frequency[2],cpu-null[3],cpu-null[4],cpu-null[5],cpu0-cpu_percent[0],cpu0-iowtime[1],cpu0-cpu_frequency[2],cpu0-null[3],cpu0-null[4],cpu0-null[5],cpu1-cpu_percent[0],cpu1-iowtime[1],cpu1-cpu_frequency[2],cpu1-null[3],cpu1-null[4],cpu1-null[5],cpu2-cpu_percent[0],cpu2-iowtime[1],cpu2-cpu_frequency[2],cpu2-null[3],cpu2-null[4],cpu2-null[5],cpu3-cpu_percent[0],cpu3-iowtime[1],cpu3-cpu_frequency[2],cpu3-null[3],cpu3-null[4],cpu3-null[5],cpu4-cpu_percent[0],cpu4-iowtime[1],cpu4-cpu_frequency[2],cpu4-null[3],cpu4-null[4],cpu4-null[5],cpu5-cpu_percent[0],cpu5-iowtime[1],cpu5-cpu_frequency[2],cpu5-null[3],cpu5-null[4],cpu5-null[5],cpu6-cpu_percent[0],cpu6-iowtime[1],cpu6-cpu_frequency[2],cpu6-null[3],cpu6-null[4],cpu6-null[5],cpu7-cpu_percent[0],cpu7-iowtime[1],cpu7-cpu_frequency[2],cpu7-null[3],cpu7-null[4],cpu7-null[5],irqs,ctxt,processes,procs_running,procs_blocked,totalram,freeram,cached,Reserve01,Reserve02,Reserve03,Reserve04,Reserve05,Reserve06\n"
-    return y->ydst->write(y->id_token, y->id_token_len,
-            YLOG_SGM_CPU_MEMORY_HEADER, strlen(YLOG_SGM_CPU_MEMORY_HEADER), y->ydst);
+    return y->ydst->write(YLOG_SGM_CPU_MEMORY_HEADER, strlen(YLOG_SGM_CPU_MEMORY_HEADER), y->ydst);
 }
 
 #ifdef HAVE_YLOG_INFO
@@ -247,6 +246,7 @@ static int check_sdcard_mounted_default(char *sdcard, int count) {
     /**
      * # cat /proc/mounts | grep vfat
      * /dev/block/vold/public:179,129 /mnt/media_rw/0B07-10F1 vfat rw,dirsync,nosuid,nodev,noexec,relatime,uid=1023,gid=1023,fmask=0007,dmask=0007,allow_utime=0020,codepage=437,iocharset=iso8859-1,shortname=mixed,utf8,errors=remount-ro 0 0
+     * exfat type sdcard path and status judge way is same as vfat. Match "/mnt/media_rw/" can get sdcard path no matter vfat or exfat.
      */
     sdcard[0] = 0;
 
@@ -401,13 +401,8 @@ static int ydst_fwrite_kernel(char *buf, int count, int fd, char *desc) {
     return ret;
 }
 #else
-static int ydst_write_kernel(char *id_token, int id_token_len,
-        char *buf, int count, struct ydst *ydst) {
+static int ydst_write_kernel(char *buf, int count, struct ydst *ydst) {
     int ret = 0;
-    if (id_token_len) {
-        ret += ydst_write_default(id_token, id_token_len, ydst);
-        kernel_notify(id_token, id_token_len);
-    }
     if (count) {
         ret += ydst_write_default(buf, count, ydst);
         kernel_notify(buf, count);
@@ -535,6 +530,82 @@ static int cmd_monkey(struct command *cmd, char *buf, int buf_size, int fd, int 
     return 0;
 }
 
+static struct ylog_argument android_index[8];
+static int android_index_ready = 0;
+static int cmd_android(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    char *args = "*";
+    char *last;
+    char *value = NULL;
+    strtok_r(buf, " ", &last);
+    value = strtok_r(NULL, " ", &last);
+
+    if (value) {
+#if 0
+    'Y0':'main.ylog'
+    'Y1':'system.ylog'
+    'Y2':'radio.ylog'
+    'Y*': for all log
+#endif
+        if (strcmp("main", value) == 0)
+            args = "0";
+        else if (strcmp("system", value) == 0)
+            args = "1";
+        else if (strcmp("radio", value) == 0)
+            args = "2";
+        else {
+            SEND(fd, buf, snprintf(buf, buf_size,
+                    "ylog_cli android\n"
+                    "ylog_cli android main\n"
+                    "ylog_cli android system\n"
+                    "ylog_cli android radio\n"), MSG_NOSIGNAL);
+            return 0;
+        }
+    }
+
+    yp->flags[index] |= YLOG_POLL_FLAG_FREE_LATER;
+    if (insert_ylog_argument(index, yp, android_index, ARRAY_LEN(android_index), args) == 0) {
+        yp->flags[index] &= ~YLOG_POLL_FLAG_FREE_LATER;
+        SEND(fd, buf, snprintf(buf, buf_size, "android reading online client number has reached max %d, reject you!\n", \
+                    (int)ARRAY_LEN(android_index)), MSG_NOSIGNAL);
+        ylog_debug("%s", buf);
+        return 0; /* 0 close this client after return 0 */
+    }
+    return 1; /* 1 keep this client opened */
+}
+
+static void android_notify(char *buf, int count) {
+    int i;
+    int index;
+    if (android_index_ready) {
+        for (i = 0; i < (int)ARRAY_LEN(android_index); i++) {
+            index = android_index[i].index;
+            if (index >= 0) {
+                struct ylog_poll *yp = android_index[i].yp;
+                char *id_token = android_index[i].args;
+#if 0
+                'Y0':'main.ylog'
+                'Y1':'system.ylog'
+                'Y2':'radio.ylog'
+                'Y*': for all log
+#endif
+                if (id_token[0] == buf[1] || id_token[0] == '*') {
+                    if (SEND(yp_fd(index, yp), buf + 2, count - 2, MSG_NOSIGNAL) < 0) {
+                        android_index[i].index = -1; /* release it, no need */
+                        mark_it_can_be_free(index, yp); /* remote client should be closed, mark i will not use the fd */
+                    }
+                }
+            }
+        }
+    }
+}
+
+static int ylogd_write_data2cache_first_filter(char *buf, int count, enum filter_status_t status) {
+    UNUSED(status);
+    android_notify(buf, count);
+    return 0;
+}
+
 static struct command os_commands[] = {
     {"test", "test from android", cmd_test, NULL},
     {"\n", NULL, os_cmd_help, (void*)os_commands},
@@ -549,6 +620,7 @@ static struct command os_commands[] = {
     {"monkey", "mark the status of monkey, ex. ylog_cli monkey 1 or ylog_cli monkey 0", cmd_monkey, NULL},
     {"atloop", "send AT loop command to cp side, ex. ylog_cli atloop AT+SPREF=\\\"AUTODLOADER\\\" for ResearchDownload auto pac flash", cmd_atloop, NULL},
     {"pac", "Trigger phone to download mode for ResearchDownload auto pac flash", cmd_pac, NULL},
+    {"android", "get log from ylogd, ex. ylog_cli android, ylog_cli android main/system/radio", cmd_android, NULL},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -615,6 +687,10 @@ static void ready_go(void) {
     for_each_event_thread_end();
 
     close(fd);
+
+    for (i = 0; i < (int)ARRAY_LEN(android_index); i++)
+        android_index[i].index = -1;
+    android_index_ready = 1;
 
     ylog_info("ylog ready to go\n");
 }
@@ -1182,6 +1258,30 @@ static void os_env_prepare(void) {
 
 }
 
+static int check_execute_file(char *exec_file) {
+    static const char *PATH[] = {
+        "/sbin",
+        "/vendor/bin",
+        "/system/sbin",
+        "/system/bin",
+        "/system/xbin"
+    };
+    int i;
+    char path[PATH_MAX];
+    char *exec;
+    for (i = 0; i < (int)ARRAY_LEN(PATH); i++) {
+        if (exec_file[0] != '/')
+            snprintf(path, sizeof path, "%s/%s", PATH[i], exec_file);
+        else
+            snprintf(path, sizeof path, "%s", exec_file);
+        exec = strtok(path, " ");
+        if (access(exec, X_OK) == 0)
+            return 0;
+    }
+    ylog_warn("execute file does not exist : %s\n", exec_file);
+    return -1;
+}
+
 static void os_init(struct ydst_root *root, struct context **c, struct os_hooks *hook) {
     struct ylog *y;
     int i;
@@ -1284,12 +1384,26 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .id_token_len = 2,
                     .id_token_filename = "crash.log",
                 },
+                {
+                    .name = "ylogd",
+                    .type = FILE_POPEN,
+                    .file = "ylogd",
+                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS | YLOG_READ_ROOT_USER,
+                    .restart_period = 2000,
+                    .id_token_desc =
+                        "'Y0':'main.ylog',\n"
+                        "'Y1':'system.ylog',\n"
+                        "'Y2':'radio.ylog',\n",
+                    .write_data2cache_first_filter = ylogd_write_data2cache_first_filter,
+                    .status = YLOG_DISABLED,
+                },
             },
             .ydst = {
                 .file = "android/",
                 .file_name = "android.log",
                 .max_segment = 30,
                 .max_segment_size = 50*1024*1024,
+                .write_data2cache_first = 1,
             },
             .cache = {
                 .size = 512 * 1024,
@@ -1503,10 +1617,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
     unlink(ANR_FAST_COPY_MODE_YLOG);
 #endif
 
-    ynode_insert_all(os_ynode, (int)ARRAY_LEN(os_ynode));
-    other_processor_ylog_insert(); /* in modem.c */
-    os_parse_config();
-
+    hook->check_execute_file = check_execute_file;
     hook->ylog_read_ylog_debug_hook = ylog_read_ylog_debug_hook;
 #ifdef HAVE_YLOG_INFO
     hook->ylog_read_info_hook = ylog_read_info_hook;
@@ -1516,6 +1627,10 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
     hook->ylog_status_hook = ylog_status_hook;
     hook->pthread_create_hook = pthread_create_hook;
     hook->ready_go = ready_go;
+
+    ynode_insert_all(os_ynode, (int)ARRAY_LEN(os_ynode));
+    other_processor_ylog_insert(); /* in modem.c */
+    os_parse_config();
 
     parse_config(global_context->ylog_config_file);
 

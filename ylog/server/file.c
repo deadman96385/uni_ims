@@ -1570,7 +1570,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
         ytag_header.len = sizeof(struct ytag_header);
         ytag_header.version = YTAG_VERSION;
         /* append ytag in the first segment file */
-        written_count = ydst->write(y->id_token, y->id_token_len, (char*)&ytag_header, sizeof(struct ytag_header), ydst);
+        written_count = ydst->write((char*)&ytag_header, sizeof(struct ytag_header), ydst);
         ydst->size += written_count;
         y->size += written_count;
         ydst->segment_size += written_count;
@@ -1645,16 +1645,20 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
             for_each_ylog(i, y, NULL) {
                 if (y->name == NULL)
                     continue;
-                if (y->ydst == ydst && y->id_token_len) {
-                    char *pmax = path + sizeof(path);
-                    p = path;
-                    *p++ = '\'';
-                    memcpy(p, y->id_token, y->id_token_len);
-                    p += y->id_token_len;
-                    *p++ = '\'';
-                    p += snprintf(p, pmax - p, ":'%s',\n", y->id_token_filename);
-                    write(fd, path, p - path);
-                    //write(fd, path, snprintf(path, sizeof(path), "'%s':'%s',\n", y->id_token, y->id_token_filename));
+                if (y->ydst == ydst) {
+                   if (y->id_token_len) {
+                        char *pmax = path + sizeof(path);
+                        p = path;
+                        *p++ = '\'';
+                        memcpy(p, y->id_token, y->id_token_len);
+                        p += y->id_token_len;
+                        *p++ = '\'';
+                        p += snprintf(p, pmax - p, ":'%s',\n", y->id_token_filename);
+                        write(fd, path, p - path);
+                        //write(fd, path, snprintf(path, sizeof(path), "'%s':'%s',\n", y->id_token, y->id_token_filename));
+                    } else if (y->id_token_desc) {
+                        write(fd, y->id_token_desc, strlen(y->id_token_desc));
+                    }
                 }
             }
             write(fd, path, snprintf(path, sizeof(path), "}\n\n"));
@@ -1893,27 +1897,18 @@ static int ydst_write_default(char *buf, int count, struct ydst *ydst) {
         return ydst->fwrite(buf, count, ydst->fd, ydst->file_name);
 }
 
-static int ydst_write_default_with_token__write_data2cache_first(char *id_token, int id_token_len,
-        char *buf, int count, struct ydst *ydst) {
-    UNUSED(id_token);
-    UNUSED(id_token_len);
-    return ydst_write_default__write_data2cache_first(buf, count, ydst);
-}
-
-static int ydst_write_default_with_token(char *id_token, int id_token_len,
-        char *buf, int count, struct ydst *ydst) {
-    int ret = 0;
-    if (id_token_len)
-        ret += ydst_write_default(id_token, id_token_len, ydst);
-    if (count)
-        ret += ydst_write_default(buf, count, ydst);
-    return ret;
-}
-
 static int ylog_write_timestamp_default(struct ylog *y) {
-    char timeBuf[32];
+    char timeBuf[32+16];
+    char *buf = timeBuf;
+    int len = 0;
     struct ydst *ydst = y->ydst;
-    return ydst->write(y->id_token, y->id_token_len, timeBuf, ylog_get_format_time(timeBuf), ydst);
+    if (y->id_token_len) {
+        memcpy(buf, y->id_token, y->id_token_len);
+        buf += y->id_token_len;
+        len += y->id_token_len;
+    }
+    len += ylog_get_format_time(buf);
+    return ydst->write(timeBuf, len, ydst);
 }
 
 static int ylog_write_header_default(struct ylog *y) {
@@ -1947,7 +1942,7 @@ static int ylog_write_header_default(struct ylog *y) {
     max_size_float = ylog_get_unit_size_float(ydst->max_size_now, &max_unit);
     segment_size_float = ylog_get_unit_size_float(ydst->max_segment_size_now, &segment_unit);
 
-    count = snprintf(buf, sizeof(buf), "[ylog_segment=%ld/%d,%.2f%c] 20%02d.%02d.%02d %02d:%02d:%02d -%02dd%02d:%02d:%02d/%ldms %.2f%c/%.2f%c %.2f%c/s\n",
+    count = snprintf(buf + y->id_token_len, sizeof(buf) - y->id_token_len, "[ylog_segment=%ld/%d,%.2f%c] 20%02d.%02d.%02d %02d:%02d:%02d -%02dd%02d:%02d:%02d/%ldms %.2f%c/%.2f%c %.2f%c/s\n",
                 ydst->segments,
                 ydst->max_segment_now,
                 segment_size_float,
@@ -1969,7 +1964,11 @@ static int ylog_write_header_default(struct ylog *y) {
                 max_unit,
                 delta_speed_float,
                 delta_speed_unit);
-    return ydst->write(y->id_token, y->id_token_len, buf, count, ydst);
+    if (y->id_token_len) {
+        memcpy(buf, y->id_token, y->id_token_len);
+        count += y->id_token_len;
+    }
+    return ydst->write(buf, count, ydst);
 }
 
 static int ylog_write_handler_default(char *buf, int count, struct ylog *y, void *private) {
@@ -2031,16 +2030,17 @@ static int ylog_write_handler_default(char *buf, int count, struct ylog *y, void
     /* append timestamp before the buf line */
     if (y->timestamp) {
         written_count += y->write_timestamp(y);
-        written_count += ydst->write(NULL, 0, buf, count, ydst);
+        written_count += ydst->write(buf + y->id_token_len, count - y->id_token_len, ydst);
     } else {
-        written_count += ydst->write(y->id_token, y->id_token_len, buf, count, ydst);
+        written_count += ydst->write(buf, count, ydst);
     }
     /**
      * Check the size, segment, and do something
      */
     if (written_count) {
         ydst->size += written_count;
-        y->size += written_count;
+        if (ydst->write_data2cache_first == 0)
+            y->size += written_count;
         ydst->segment_size += written_count;
         if (ydst->segment_size >= ydst->max_segment_size_now) {
             /**
@@ -2062,6 +2062,7 @@ static int ylog_write_handler_default(char *buf, int count, struct ylog *y, void
 
 static int ylog_write_handler_default__write_data2cache_first(char *buf, int count, struct ylog *y, void *private) {
     UNUSED(private);
+    int ret;
     struct ydst *ydst = y->ydst;
 
     if (buf == NULL)
@@ -2071,7 +2072,11 @@ static int ylog_write_handler_default__write_data2cache_first(char *buf, int cou
      * and cache has pthread_mutex_lock(&cl->mutex)
      * to protect this ydst->cache->write action being atomic
      */
-    return ydst->cache->write(buf, count, ydst->cache);
+    y->size += count;
+    ret = ydst->cache->write(buf, count, ydst->cache);
+    if (y->write_data2cache_first_filter)
+        y->write_data2cache_first_filter(buf, count, NORMAL);
+    return ret;
 }
 
 static int ylog_thread_new_state(enum ylog_thread_state state, struct ylog *y, int block) {
@@ -2267,7 +2272,7 @@ static int ydst_insert_all(struct ydst *yd) {
 
 static int ynode_insert(struct ynode *ynode) {
     struct ydst *ydst;
-    struct ylog *ylog;
+    struct ylog *ylog, *y;
     int i, ret = 1;
     pthread_mutex_lock(&mutex);
     ydst = ydst_get_empty_slot();
@@ -2290,7 +2295,14 @@ static int ynode_insert(struct ynode *ynode) {
                 ret |= 1;
                 break;
             }
-            *ylog = ynode->ylog[i];
+            y = &ynode->ylog[i];
+            if (os_hooks.check_execute_file && y->type == FILE_POPEN) {
+                if (os_hooks.check_execute_file(y->file)) {
+                    ylog_warn("ylog : %s can't locate executable %s\n", y->name, y->file);
+                    continue;
+                }
+            }
+            *ylog = *y;
             ylog->ydst = ydst;
             ylog_debug("Install ylog : %s\n", ylog->name);
         }
@@ -2805,10 +2817,13 @@ __state_control:
         }
         /* Step 6: read data and save them */
         if (yp_isset(YLOG_POLL_INDEX_DATA, yp)) {
-            count = y->fread(y->buf, y->buf_size, yp_fp(YLOG_POLL_INDEX_DATA, yp), yp_fd(YLOG_POLL_INDEX_DATA, yp), y);
+            count = y->fread(y->rbuf, y->rbuf_size, yp_fp(YLOG_POLL_INDEX_DATA, yp), yp_fd(YLOG_POLL_INDEX_DATA, yp), y);
             if (count > 0) {
-                if (count != INT_MAX) /* INT_MAX to tell here, y->fread has called y->write_handler in itself */
+                if (count != INT_MAX) { /* INT_MAX to tell here, y->fread has called y->write_handler in itself */
+                    if (y->id_token_len)
+                        count += y->id_token_len;
                     y->write_handler(y->buf, count, y, NULL);
+                }
                 if (ylog_read_len_might_zero_wait_max_count)
                     ylog_read_len_might_zero_wait_max_count = 0;
             } else {
@@ -2937,7 +2952,7 @@ static void ylog_init(struct ydst_root *root, struct context *c) {
             yd->mode = "w+";
         if (yd->write == NULL)
             yd->write = yd->write_data2cache_first ? \
-                        ydst_write_default_with_token__write_data2cache_first:ydst_write_default_with_token;
+                        ydst_write_default__write_data2cache_first:ydst_write_default;
         if (yd->fwrite == NULL)
             yd->fwrite = fd_write;
         if (yd->flush == NULL)
@@ -3005,13 +3020,9 @@ static void ylog_init(struct ydst_root *root, struct context *c) {
             if (y->ydst->write_data2cache_first == 0)
                 y->write_handler = ylog_write_handler_default;
             else {
-                if (y->ydst->write_handler || y->ydst->ylog) {
-                    ylog_critical("Fatal: ylog -> cache -> ydst<%s> should only be used by one ylog %s\n",
-                            y->ydst->file, y->name);
-                }
                 y->write_handler = ylog_write_handler_default__write_data2cache_first;
                 y->ydst->write_handler = ylog_write_handler_default;
-                y->ydst->ylog = y;
+                y->ydst->ylog[y->ydst->ylog_num++] = y;
             }
         }
         if (y->open == NULL)
@@ -3076,6 +3087,10 @@ static void ylog_init(struct ydst_root *root, struct context *c) {
             ylog_error("malloc %ld failed: %s\n", y->buf_size, strerror(errno));
             exit(0);
         }
+        y->rbuf = y->buf + y->id_token_len;
+        y->rbuf_size = y->buf_size - y->id_token_len;
+        if (y->id_token_len)
+            memcpy(y->buf, y->id_token, y->id_token_len);
 
         if (pipe(y->state_pipe))
             ylog_error("create pipe %s failed: %s\n", y->name, strerror(errno));

@@ -98,4 +98,5 @@ include $(BUILD_EXECUTABLE)
 
 include $(LOCAL_PATH)/tool/logd_test/Android.mk \
         $(LOCAL_PATH)/tool/ycat/Android.mk \
-        $(LOCAL_PATH)/tool/sgm.toolkits/Android.mk
+        $(LOCAL_PATH)/tool/sgm.toolkits/Android.mk \
+        $(LOCAL_PATH)/tool/ylogd/ylogd/Android.mk

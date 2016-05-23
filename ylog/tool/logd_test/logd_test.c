@@ -21,6 +21,8 @@
 #define UNUSED(x) (void)(x) /* avoid compiler warning */
 
 static volatile int g_delay_time = 100000;
+static volatile int g_total_lines = 0;
+static volatile int define_line_num = 0;
 static time_t diff_ts_millisecond(struct timespec *b, struct timespec *a) {
 
     /*
@@ -78,11 +80,14 @@ static int parse_cmdline(int argc,char *argv[])
         return 0;
     }
     if (strrchr(argv[1],'-')) {
-        while((oc = getopt(argc,argv,"t:")) != -1){
+        while((oc = getopt(argc,argv,"t:l:")) != -1){
             switch(oc){
                 case 't':
                 g_delay_time = strtoul(optarg,NULL,0);
                     break;
+				case 'l':
+					define_line_num = 1;
+					g_total_lines = strtoul(optarg, NULL, 0);
                 case '?':
                     printf("no this argv\n");
                     break;
@@ -156,6 +161,9 @@ int main(int argc, char *argv[])
             p[i] = cindex[seqt & 0xf];
             seqt >>= 4;
         }
+		if (define_line_num) {
+			if(!g_total_lines--) break;
+		}
         ALOGE(buf);
 
         log_count ++;
