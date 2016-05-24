@@ -2626,6 +2626,8 @@ static void *ylog_thread_handler_default(void *arg) {
     os_hooks.pthread_create_hook(y, NULL, "ylog %s", name);
     ylog_debug("Start ylog thread <%s, %s, file type is %d> --> %s %d started, pid=%d, tid=%d\n",
             name, y->file, y->type, y->ydst->file, y->ydst->refs, y->pid, y->tid);
+    if (y->start_callback)
+        y->start_callback(y, NULL);
     for (;;) {
         /* Step 1: waiting for control, client, inotify or data by luther */
         if (poll(yp->pfd, YLOG_POLL_INDEX_MAX, timeout) < 0) {
@@ -2714,6 +2716,8 @@ __state_control:
                 if (os_hooks.ylog_status_hook)
                     os_hooks.ylog_status_hook(YLOG_STOP, y);
                 yp_invalid(YLOG_POLL_INDEX_DATA, yp, y);
+                if (y->stop_callback)
+                    y->stop_callback(y, NULL);
                 pthread_mutex_lock(&mutex);
                 timeout = -1;
                 if (y->status & YLOG_DISABLED_FORCED) {
@@ -2901,7 +2905,10 @@ __state_control:
     }
 __exit:
     ydst_refs_dec(y);
-    return y->exit(y);
+    y->exit(y);
+    if (y->exit_callback)
+        y->exit_callback(y, NULL);
+    return NULL;
 }
 
 static void ylog_init(struct ydst_root *root, struct context *c) {

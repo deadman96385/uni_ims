@@ -606,6 +606,36 @@ static int ylogd_write_data2cache_first_filter(char *buf, int count, enum filter
     return 0;
 }
 
+static int ylogd_start_callback(struct ylog *y, void *private) {
+    UNUSED(y);
+    UNUSED(private);
+/**
+ * logd is a daemon, so power on log can be saved in the buffer
+ * 1. so we can't stop logd before ylogd start,
+ * (but we can add some logic in sys_info, stop logd after 2 minutes
+ * 2. when system server restart vold will kill ylog service
+ * so ylogd will be killed at the same time, and many people use logcat has become a habit
+ *
+ * Conclusion: stop logd is infeasible (2016.05.24 by luther)
+ *
+ */
+#if 0 // #ifdef STOP_LOGD_ONLY_USE_YLOGD
+    return system("stop logd");
+#else
+    return 0;
+#endif
+}
+
+static int ylogd_stop_callback(struct ylog *y, void *private) {
+    UNUSED(y);
+    UNUSED(private);
+    return unlink("/dev/socket/ylog/ylogdw");
+}
+
+static int ylogd_exit_callback(struct ylog *y, void *private) {
+    return ylogd_stop_callback(y, private);
+}
+
 static struct command os_commands[] = {
     {"test", "test from android", cmd_test, NULL},
     {"\n", NULL, os_cmd_help, (void*)os_commands},
@@ -1255,16 +1285,15 @@ static void os_env_prepare(void) {
      * if you did not do that, here will have a unabashed thinking,
      * all zombie process created by ylog popen2 will be killed in here by luther 2016.01.29
      */
-
 }
 
 static int check_execute_file(char *exec_file) {
     static const char *PATH[] = {
-        "/sbin",
-        "/vendor/bin",
-        "/system/sbin",
         "/system/bin",
         "/system/xbin"
+        "/vendor/bin",
+        "/system/sbin",
+        "/sbin"
     };
     int i;
     char path[PATH_MAX];
@@ -1395,6 +1424,9 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                         "'Y1':'system.ylog',\n"
                         "'Y2':'radio.ylog',\n",
                     .write_data2cache_first_filter = ylogd_write_data2cache_first_filter,
+                    .start_callback = ylogd_start_callback,
+                    .stop_callback = ylogd_stop_callback,
+                    .exit_callback = ylogd_exit_callback,
                     .status = YLOG_DISABLED,
                 },
             },

@@ -6,6 +6,12 @@
 
 #define SOCKET_UDP_DGRAM_TYPE
 
+#ifdef SOCKET_UDP_DGRAM_TYPE
+#define YLOGD_SOCKET_FILE "/dev/socket/ylog/ylogdw"
+#else
+#define YLOGD_SOCKET_FILE "ylogdw"
+#endif
+
 /**
  * Steps:
  * 1. open file system/core/liblog/logd_write.c
@@ -133,7 +139,7 @@ static int __write_to_ylog_initialize(void) {
         struct sockaddr_un un;
         memset(&un, 0, sizeof(struct sockaddr_un));
         un.sun_family = AF_UNIX;
-        strcpy(un.sun_path, "/dev/socket/ylogdw");
+        strcpy(un.sun_path, YLOGD_SOCKET_FILE);
 
         if (TEMP_FAILURE_RETRY(connect(i, (struct sockaddr *)&un,
                         sizeof(struct sockaddr_un))) < 0) {
@@ -144,7 +150,7 @@ static int __write_to_ylog_initialize(void) {
         }
     }
 #else
-    i = socket_local_client("ylogdw", ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+    i = socket_local_client(YLOGD_SOCKET_FILE, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
     if (i < 0) {
         ret = -errno;
     } else if (TEMP_FAILURE_RETRY(fcntl(i, F_SETFL, O_NONBLOCK)) < 0) {
@@ -165,6 +171,23 @@ static int write_to_ylogd(struct iovec *vec, size_t nr, ylogd_header_t *yh) {
     int ret, i, cnt;
 
     if (ylogd_fd < 0) {
+#ifdef SOCKET_UDP_DGRAM_TYPE
+#if 0
+        /**
+         * 1. YLOGD_SOCKET_FILE will be created when ylogd started, and deleted when ylogd stopped
+         * 2. access /dev/ ramfs should be faster than socket + fcntl + connnect
+         *
+         * we use access_socket_fcnt_connect_close_test to test this thing
+         *
+         * 1. in x80, access is always faster than socket+fcntl+connect
+         * 2. in arm, access is unstable, but more time is slower than socket+fcntl+connect
+         *
+         * Conclusion: in arm still keep using orignal method socket+fcntl+connect
+         */
+        if (access(YLOGD_SOCKET_FILE, W_OK))
+            return -EBADF;
+#endif
+#endif
         lock();
         if (ylogd_fd < 0)
             ret = __write_to_ylog_initialize();

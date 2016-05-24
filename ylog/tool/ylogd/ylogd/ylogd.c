@@ -15,8 +15,17 @@
 #include <log/log.h>
 #include <log/log_read.h>
 #include <log/logprint.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #define SOCKET_UDP_DGRAM_TYPE
+
+#ifdef SOCKET_UDP_DGRAM_TYPE
+#define ANDROID_RESERVED_SOCKET_PREFIX "/dev/socket/ylog"
+#define YLOGD_SOCKET_FILE ANDROID_RESERVED_SOCKET_PREFIX"/ylogdw"
+#else
+#define YLOGD_SOCKET_FILE "ylogdw"
+#endif
 
 #define UNUSED(x) (void)(x) /* avoid compiler warning */
 
@@ -55,7 +64,9 @@ static int create_socket_local_server(char *socket_name) {
     int sock = android_get_control_socket(socket_name);
     if (sock < 0) {
         d_error("android_get_control_socket %s failed: %s\n", socket_name, strerror(errno));
-        sock = socket_local_server(socket_name, ANDROID_SOCKET_NAMESPACE_RESERVED, SOCK_DGRAM); /* DGRAM no need listen */
+        sock = socket_local_server(socket_name,
+                socket_name[0] == '/' ? ANDROID_SOCKET_NAMESPACE_FILESYSTEM : ANDROID_SOCKET_NAMESPACE_RESERVED,
+                SOCK_DGRAM); /* DGRAM no need listen */
         if (sock < 0) {
             d_error("socket_local_server %s failed: %s\n", socket_name, strerror(errno));
         }
@@ -267,8 +278,16 @@ int main(int argc, char *argv[]) {
     UNUSED(argv);
     char buf[32*1024];
 
-    if ((fd_socket_server = create_socket_local_server("ylogdw")) < 0)
+#ifdef SOCKET_UDP_DGRAM_TYPE
+    if (access(ANDROID_RESERVED_SOCKET_PREFIX, X_OK) && \
+        mkdir(ANDROID_RESERVED_SOCKET_PREFIX, 0755))
+        d_error("mkdir error %s\n", strerror(errno));
+#endif
+
+    umask(0555);
+    if ((fd_socket_server = create_socket_local_server(YLOGD_SOCKET_FILE)) < 0)
         return 0;
+    /* umask(0); */
 
     insert_fd(fd_socket_server);
 

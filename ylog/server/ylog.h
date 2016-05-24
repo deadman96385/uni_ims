@@ -700,6 +700,9 @@ struct ylog {
     ylog_thread_reset thread_reset;
     ylog_thread_nop thread_nop;
 
+    int (*start_callback)(struct ylog *y, void *private);
+    int (*stop_callback)(struct ylog *y, void *private);
+    int (*exit_callback)(struct ylog *y, void *private);
     ylog_filter_plugin_func write_data2cache_first_filter;
     struct sfilter_plugin fplugin_filter_log;
     void *privates;
