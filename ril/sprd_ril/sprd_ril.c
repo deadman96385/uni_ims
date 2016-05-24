@@ -385,7 +385,6 @@ typedef enum {
 }LTE_PS_REG_STATE;
 
 static LTE_PS_REG_STATE s_PSRegState = STATE_OUT_OF_SERVICE;
-static s_PSAttachAllowed;
 
 /* trigger change to this with s_state_cond */
 static int s_closed = 0;
@@ -5092,11 +5091,7 @@ static void requestRegistrationState(int channelID, int request, void *data,
     } else if (request == RIL_REQUEST_DATA_REGISTRATION_STATE) {
         sprintf(res[4], "3");
         responseStr[5] = res[4];
-        if(s_PSAttachAllowed == 1 || s_PSRegState != STATE_IN_SERVICE){
-            RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, 6*sizeof(char*));
-        }else{
-            goto error;
-        }
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, 6*sizeof(char*));
     } else if(request == RIL_REQUEST_IMS_REGISTRATION_STATE){
         s_ims_registered = response[1];
         RILLOGD("s_ims_registered= %d", s_ims_registered);
@@ -9153,12 +9148,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_ALLOW_DATA:
             allow_data = ((int*)data)[0];
-            if(s_PSAttachAllowed == 0){
-                s_PSAttachAllowed = 1;
-                RIL_onUnsolicitedResponse (
-                        RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED,
-                        NULL, 0);
-            }
             if(desiredRadioState > 0 && isAttachEnable()){
                 if(allow_data){
                     attachGPRS(channelID, data, datalen, t);
