@@ -233,10 +233,13 @@ struct context {
 
 enum file_type {
     FILE_NORMAL = 0,
+    FILE_SOCKET_LOCAL_SERVER_UDP,
+    FILE_SOCKET_LOCAL_CLIENT_UDP,
     FILE_SOCKET_LOCAL_SERVER,
     FILE_SOCKET_LOCAL_CLIENT,
     FILE_POPEN,
     FILE_INOTIFY,
+    FILE_OS,
 };
 
 enum ylog_thread_state {
@@ -640,7 +643,11 @@ struct ylog {
     char *id_token_filename; /* splited filename for this token in python script */
     char *id_token; /* like bio, as a identifier used in mux and demux */
     char *id_token_desc;
+    int id_token_len_desc;
+    char *id_token_buf;
     int id_token_len;
+    char *reserved_buf;
+    int reserved_len;
     int restart_period; /* ms */
     struct filter_pattern *fp_array;
     struct ylog_poll yp;
@@ -700,9 +707,12 @@ struct ylog {
     ylog_thread_reset thread_reset;
     ylog_thread_nop thread_nop;
 
+    void (*write_handler_write_hook)(char **buf, int *count, struct ylog *y);
+    int (*reserved_filed_process)(char *reserved_buf, int reserved_len, char *data, int data_len, void *private);
     int (*start_callback)(struct ylog *y, void *private);
     int (*stop_callback)(struct ylog *y, void *private);
     int (*exit_callback)(struct ylog *y, void *private);
+    int (*status_callback)(struct ylog *y, void *private);
     ylog_filter_plugin_func write_data2cache_first_filter;
     struct sfilter_plugin fplugin_filter_log;
     void *privates;
@@ -715,7 +725,9 @@ struct ynode {
 };
 
 struct os_hooks {
-    int (*check_execute_file)(char *exec_file);
+    int (*ylog_open_default_hook)(char *file, char *mode, struct ylog *y);
+    int (*check_file_execute)(char *exec_file);
+    int (*check_file_exist)(char *file);
     ylog_read ylog_read_ylog_debug_hook;
     ylog_read ylog_read_info_hook;
     int (*process_command_hook)(char *buf, int buf_size, int fd, int index, struct ylog_poll *yp);

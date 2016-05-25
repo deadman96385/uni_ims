@@ -2,6 +2,31 @@
  * Copyright (C) 2016 Spreadtrum Communications Inc.
  */
 
+#include <stdatomic.h>
+
+enum agdsp_log_type {
+    AGDSP_DLT_TP,
+    AGDSP_DLT_MEMORY,
+    AGDSP_DLT_DUMP,
+    AGDSP_DLT_AUDIO
+};
+
+struct __attribute__((__packed__)) agdsp_header {
+    /* 20 bytes */
+    uint32_t flags; /* 0x7e7e7e7e */
+
+    uint16_t packet_len; /* exclude flags, len + 16, Little Endian */
+    uint8_t  channel;
+    uint8_t  type;
+    uint16_t reserved; /* 0x5a5a */
+    uint16_t checksum; /* packet_len + channel + type + reserved */
+
+    uint32_t serial_no; /* Little Endian */
+    uint16_t len; /* len + 8 */
+    uint8_t  type0;
+    uint8_t  subtype0;
+};
+
 struct other_processor_property_cell {
     const char *property_name;
     const char *property_value_default;
@@ -26,6 +51,54 @@ struct other_processor_log {
     struct ynode ynode;
     struct other_processor_log_privates privates;
 };
+
+static volatile atomic_int agdsp_serial_no;
+static int agdsp_reserved_filed_process(char *reserved_buf, int reserved_len,
+        char *data, int data_len, void *private) {
+    UNUSED(data);
+    uint16_t pkl;
+    uint32_t checksum, serial_no;
+    enum agdsp_log_type subtype = (enum agdsp_log_type)private;
+    struct agdsp_header *agh = (struct agdsp_header *)reserved_buf;
+    agh->flags = 0x7e7e7e7e;
+    agh->channel = 0;
+    agh->type = 0;
+    agh->reserved = 0x5a5a;
+    agh->type0 = 0x9d;
+
+    pkl = data_len + reserved_len - 4; /* data_len + 16 */
+    agh->packet_len = pkl;
+
+    checksum = agh->channel + agh->type + agh->reserved + pkl;
+    checksum = (checksum & 0xffff) + (checksum >> 16);
+    checksum = ~checksum;
+    agh->checksum = checksum & 0xffff;
+
+    serial_no = atomic_fetch_add(&agdsp_serial_no, 1) + 1;
+
+    agh->serial_no = serial_no;
+
+    pkl = data_len + 8;
+
+    agh->len = pkl;
+    agh->subtype0 = 0x40 | subtype;
+
+    return 0;
+}
+
+static int modem_status_callback(struct ylog *y, void *private) {
+    UNUSED(y);
+    enum ylog_thread_state state = (enum ylog_thread_state)private;
+    int ret = 0;
+    switch (state) {
+    case YLOG_RUN:
+        ret = system("stop slogmodem");
+        usleep(200*1000); /* wait until init process stop action done */
+        break;
+    default: break;
+    }
+    return ret;
+}
 
 static int send_at_file_atloop(int idx, char *buf, int count, char *retbuf, int *retcount_max) {
     int fd, result = 0, ret = 0;
@@ -235,6 +308,7 @@ static void other_processor_ylog_insert(void) {
                         .restart_period = 3000,
                         .status = YLOG_DISABLED,
                         .raw_data = 1,
+                        .status_callback = modem_status_callback,
                     },
                 },
                 .ydst = {
@@ -272,6 +346,7 @@ static void other_processor_ylog_insert(void) {
                         .restart_period = 3000,
                         .status = YLOG_DISABLED,
                         .raw_data = 1,
+                        .status_callback = modem_status_callback,
                     },
                 },
                 .ydst = {
@@ -309,6 +384,7 @@ static void other_processor_ylog_insert(void) {
                         .restart_period = 3000,
                         .status = YLOG_DISABLED,
                         .raw_data = 1,
+                        .status_callback = modem_status_callback,
                     },
                 },
                 .ydst = {
@@ -346,6 +422,7 @@ static void other_processor_ylog_insert(void) {
                         .restart_period = 3000,
                         .status = YLOG_DISABLED,
                         .raw_data = 1,
+                        .status_callback = modem_status_callback,
                     },
                 },
                 .ydst = {
@@ -383,6 +460,7 @@ static void other_processor_ylog_insert(void) {
                         .restart_period = 3000,
                         .status = YLOG_DISABLED,
                         .raw_data = 1,
+                        .status_callback = modem_status_callback,
                     },
                 },
                 .ydst = {
@@ -417,6 +495,7 @@ static void other_processor_ylog_insert(void) {
                         .restart_period = 3000,
                         .status = YLOG_DISABLED,
                         .raw_data = 1,
+                        .status_callback = modem_status_callback,
                     },
                 },
                 .ydst = {
@@ -424,6 +503,7 @@ static void other_processor_ylog_insert(void) {
                     .file_name = "wcn.log",
                     .max_segment = 2,
                     .max_segment_size = 100*1024*1024,
+                    .write_data2cache_first = 1,
                 },
                 .cache = {
                     .size = 512 * 1024,
@@ -450,6 +530,7 @@ static void other_processor_ylog_insert(void) {
                         .restart_period = 3000,
                         .status = YLOG_DISABLED,
                         .raw_data = 1,
+                        .status_callback = modem_status_callback,
                     },
                 },
                 .ydst = {
@@ -457,6 +538,7 @@ static void other_processor_ylog_insert(void) {
                     .file_name = "gnss.log",
                     .max_segment = 2,
                     .max_segment_size = 100*1024*1024,
+                    .write_data2cache_first = 1,
                 },
                 .cache = {
                     .size = 512 * 1024,
@@ -467,7 +549,7 @@ static void other_processor_ylog_insert(void) {
             },
         },
         /* cp/agdsp/ */ {
-            .enabled = "ro.modem.agdsp.enable",
+            .enabled = NULL, // "ro.modem.agdsp.enable",
             .pnode = {
                 .log  = {"ro.modem.agdsp.log", "/dev/audio_dsp_log"},
                 .diag = {"ro.modem.agdsp.diag", "/dev/audio_dsp_log"},
@@ -483,6 +565,24 @@ static void other_processor_ylog_insert(void) {
                         .restart_period = 3000,
                         .status = YLOG_DISABLED,
                         .raw_data = 1,
+                        .reserved_len = sizeof(struct agdsp_header),
+                        .reserved_filed_process = agdsp_reserved_filed_process,
+                        .status_callback = modem_status_callback,
+                        .privates = (void*)AGDSP_DLT_TP,
+                    },
+                    {
+                        .name = "cp_agdsp_pcm",
+                        .type = FILE_NORMAL,
+                        .file = "/dev/audio_dsp_pcm",
+                        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY |
+                            YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
+                        .restart_period = 3000,
+                        .status = YLOG_DISABLED,
+                        .raw_data = 1,
+                        .reserved_len = sizeof(struct agdsp_header),
+                        .reserved_filed_process = agdsp_reserved_filed_process,
+                        .status_callback = modem_status_callback,
+                        .privates = (void*)AGDSP_DLT_MEMORY,
                     },
                 },
                 .ydst = {

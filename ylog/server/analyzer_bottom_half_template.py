@@ -117,6 +117,8 @@ def split_log(infiles, logdict):
 
     for key in keys:
         fddict[key].close()
+        if os.stat(os.path.join(analyzer_relative_path, logdict[key])).st_size == 0:
+            os.remove(os.path.join(analyzer_relative_path, logdict[key]))
 
 def main():
     global analyzer_relative_path

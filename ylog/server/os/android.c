@@ -24,6 +24,10 @@
 #define ANR_FAST_COPY_MODE_TMP "/data/ylog/traces.txt.ylog.tmp"
 #define ANR_FAST_COPY_MODE_YLOG "/data/ylog/traces.txt.ylog"
 
+enum os_file_type {
+    FILE_OS_START = FILE_OS,
+};
+
 struct os_status {
     int sdcard_online;
     char ylog_root_path_latest[512];
@@ -45,6 +49,13 @@ struct os_status {
 
 #include "modem.c"
 #include "snapshot-android.c"
+
+static int ylog_open_default_hook(char *file, char *mode, struct ylog *y) {
+    UNUSED(file);
+    UNUSED(mode);
+    UNUSED(y);
+    return 0;
+}
 
 static int ylog_write_header_sgm_cpu_memory_header(struct ylog *y) {
 #define YLOG_SGM_CPU_MEMORY_HEADER "second,cpu-cpu_percent[0],cpu-iowtime[1],cpu-cpu_frequency[2],cpu-null[3],cpu-null[4],cpu-null[5],cpu0-cpu_percent[0],cpu0-iowtime[1],cpu0-cpu_frequency[2],cpu0-null[3],cpu0-null[4],cpu0-null[5],cpu1-cpu_percent[0],cpu1-iowtime[1],cpu1-cpu_frequency[2],cpu1-null[3],cpu1-null[4],cpu1-null[5],cpu2-cpu_percent[0],cpu2-iowtime[1],cpu2-cpu_frequency[2],cpu2-null[3],cpu2-null[4],cpu2-null[5],cpu3-cpu_percent[0],cpu3-iowtime[1],cpu3-cpu_frequency[2],cpu3-null[3],cpu3-null[4],cpu3-null[5],cpu4-cpu_percent[0],cpu4-iowtime[1],cpu4-cpu_frequency[2],cpu4-null[3],cpu4-null[4],cpu4-null[5],cpu5-cpu_percent[0],cpu5-iowtime[1],cpu5-cpu_frequency[2],cpu5-null[3],cpu5-null[4],cpu5-null[5],cpu6-cpu_percent[0],cpu6-iowtime[1],cpu6-cpu_frequency[2],cpu6-null[3],cpu6-null[4],cpu6-null[5],cpu7-cpu_percent[0],cpu7-iowtime[1],cpu7-cpu_frequency[2],cpu7-null[3],cpu7-null[4],cpu7-null[5],irqs,ctxt,processes,procs_running,procs_blocked,totalram,freeram,cached,Reserve01,Reserve02,Reserve03,Reserve04,Reserve05,Reserve06\n"
@@ -634,6 +645,27 @@ static int ylogd_stop_callback(struct ylog *y, void *private) {
 
 static int ylogd_exit_callback(struct ylog *y, void *private) {
     return ylogd_stop_callback(y, private);
+}
+
+static void ylogd_write_handler_write_hook(char **buf, int *count, struct ylog *y) {
+    UNUSED(y);
+#if 0
+    'Y0':'main.ylog'
+    'Y1':'system.ylog'
+    'Y2':'radio.ylog'
+#endif
+    static char last_id_token[2];
+    char *token = *buf + 2;
+    if (token[0] == 'Y' && (token[1] == '0' || token[1] == '1' || token[1] == '2')) {
+        *buf = token;
+        last_id_token[0] = token[0];
+        last_id_token[1] = token[1];
+    } else {
+       token = *buf;
+       token[0] = last_id_token[0];
+       token[1] = last_id_token[1];
+       *count += 2;
+    }
 }
 
 static struct command os_commands[] = {
@@ -1287,13 +1319,13 @@ static void os_env_prepare(void) {
      */
 }
 
-static int check_execute_file(char *exec_file) {
+static int check_file_execute(char *exec_file) {
     static const char *PATH[] = {
         "/system/bin",
-        "/system/xbin"
+        "/system/xbin",
         "/vendor/bin",
         "/system/sbin",
-        "/sbin"
+        "/sbin",
     };
     int i;
     char path[PATH_MAX];
@@ -1309,6 +1341,10 @@ static int check_execute_file(char *exec_file) {
     }
     ylog_warn("execute file does not exist : %s\n", exec_file);
     return -1;
+}
+
+static int check_file_exist(char *file) {
+    return access(file, R_OK);
 }
 
 static void os_init(struct ydst_root *root, struct context **c, struct os_hooks *hook) {
@@ -1417,12 +1453,14 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                     .name = "ylogd",
                     .type = FILE_POPEN,
                     .file = "ylogd",
-                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS | YLOG_READ_ROOT_USER,
+                    .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_LEN_MIGHT_ZERO | YLOG_READ_MODE_BLOCK_RESTART_ALWAYS,
                     .restart_period = 2000,
+                    .id_token_len_desc = 2,
                     .id_token_desc =
                         "'Y0':'main.ylog',\n"
                         "'Y1':'system.ylog',\n"
                         "'Y2':'radio.ylog',\n",
+                    .write_handler_write_hook = ylogd_write_handler_write_hook,
                     .write_data2cache_first_filter = ylogd_write_data2cache_first_filter,
                     .start_callback = ylogd_start_callback,
                     .stop_callback = ylogd_stop_callback,
@@ -1649,7 +1687,9 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
     unlink(ANR_FAST_COPY_MODE_YLOG);
 #endif
 
-    hook->check_execute_file = check_execute_file;
+    hook->ylog_open_default_hook = ylog_open_default_hook;
+    hook->check_file_execute = check_file_execute;
+    hook->check_file_exist = check_file_exist;
     hook->ylog_read_ylog_debug_hook = ylog_read_ylog_debug_hook;
 #ifdef HAVE_YLOG_INFO
     hook->ylog_read_info_hook = ylog_read_info_hook;

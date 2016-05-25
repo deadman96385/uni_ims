@@ -1640,7 +1640,8 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
             write(fd, path, snprintf(path, sizeof(path), "ytag_folder = 'ytag'\n"));
             write(fd, path, snprintf(path, sizeof(path), "merged = '%s'\n", ydst->file_name));
             write(fd, path, snprintf(path, sizeof(path), "logpath = ''\n"));
-            write(fd, path, snprintf(path, sizeof(path), "id_token_len = %d\n", y->id_token_len));
+            write(fd, path, snprintf(path, sizeof(path), "id_token_len = %d\n",
+                        y->id_token_len > y->id_token_len_desc ? y->id_token_len : y->id_token_len_desc));
             write(fd, path, snprintf(path, sizeof(path), "logdict = {\n"));
             for_each_ylog(i, y, NULL) {
                 if (y->name == NULL)
@@ -1686,6 +1687,24 @@ static int ylog_open_default(char *file, char *mode, struct ylog *y) {
         }
         yp_set(f, -1, YLOG_POLL_INDEX_DATA, yp, NULL);
         break;
+    case FILE_SOCKET_LOCAL_SERVER_UDP:
+        if (create_socket_local_server_udp(&fd, file) < 0) {
+            ylog_error("open %s failed: %s\n", file, strerror(errno));
+            if (fd >= 0)
+                CLOSE(fd);
+            return -1;
+        }
+        yp_set(NULL, fd, YLOG_POLL_INDEX_DATA, yp, mode); /* udp no listen & accept action, just reading is enough */
+        break;
+    case FILE_SOCKET_LOCAL_CLIENT_UDP:
+        if (connect_socket_local_server_udp(&fd, file) < 0) {
+            ylog_error("open %s failed: %s\n", file, strerror(errno));
+            if (fd >= 0)
+                CLOSE(fd);
+            return -1;
+        }
+        yp_set(NULL, fd, YLOG_POLL_INDEX_DATA, yp, mode);
+        break;
     case FILE_SOCKET_LOCAL_SERVER:
         if (create_socket_local_server(&fd, file) < 0) {
             ylog_error("open %s failed: %s\n", file, strerror(errno));
@@ -1720,6 +1739,10 @@ static int ylog_open_default(char *file, char *mode, struct ylog *y) {
     case FILE_INOTIFY:
         if (create_inotify(&fd, &y->yinotify) == 0)
             yp_set(NULL, fd, YLOG_POLL_INDEX_INOTIFY, yp, mode);
+        break;
+    default:
+        if (os_hooks.ylog_open_default_hook)
+            os_hooks.ylog_open_default_hook(file, mode, y);
         break;
     }
 
@@ -2072,6 +2095,8 @@ static int ylog_write_handler_default__write_data2cache_first(char *buf, int cou
      * and cache has pthread_mutex_lock(&cl->mutex)
      * to protect this ydst->cache->write action being atomic
      */
+    if (y->write_handler_write_hook)
+        y->write_handler_write_hook(&buf, &count, y);
     y->size += count;
     ret = ydst->cache->write(buf, count, ydst->cache);
     if (y->write_data2cache_first_filter)
@@ -2296,9 +2321,15 @@ static int ynode_insert(struct ynode *ynode) {
                 break;
             }
             y = &ynode->ylog[i];
-            if (os_hooks.check_execute_file && y->type == FILE_POPEN) {
-                if (os_hooks.check_execute_file(y->file)) {
+            if (os_hooks.check_file_execute && y->type == FILE_POPEN) {
+                if (os_hooks.check_file_execute(y->file)) {
                     ylog_warn("ylog : %s can't locate executable %s\n", y->name, y->file);
+                    continue;
+                }
+            }
+            if (os_hooks.check_file_exist && y->type == FILE_NORMAL) {
+                if (os_hooks.check_file_exist(y->file)) {
+                    ylog_warn("ylog : %s can't locate file %s\n", y->name, y->file);
                     continue;
                 }
             }
@@ -2676,6 +2707,8 @@ __state_control:
                         pthread_mutex_unlock(&mutex);
                         if (os_hooks.ylog_status_hook)
                             os_hooks.ylog_status_hook(YLOG_STOP, y);
+                        if (y->status_callback)
+                            y->status_callback(y, (void*)YLOG_STOP);
                         if (y->mode & YLOG_READ_MODE_BLOCK_RESTART_ALWAYS) {
                             y->state = YLOG_RESTART;
                             if (y->restart_period) {
@@ -2693,6 +2726,8 @@ __state_control:
                         pthread_mutex_unlock(&mutex);
                         if (os_hooks.ylog_status_hook)
                             os_hooks.ylog_status_hook(YLOG_RUN, y);
+                        if (y->status_callback)
+                            y->status_callback(y, (void*)YLOG_RUN);
                     }
                 } else {
                     if (nowrap == 0)
@@ -2715,6 +2750,8 @@ __state_control:
             case YLOG_RESTART:
                 if (os_hooks.ylog_status_hook)
                     os_hooks.ylog_status_hook(YLOG_STOP, y);
+                if (y->status_callback)
+                    y->status_callback(y, (void*)YLOG_STOP);
                 yp_invalid(YLOG_POLL_INDEX_DATA, yp, y);
                 if (y->stop_callback)
                     y->stop_callback(y, NULL);
@@ -2824,9 +2861,15 @@ __state_control:
             count = y->fread(y->rbuf, y->rbuf_size, yp_fp(YLOG_POLL_INDEX_DATA, yp), yp_fd(YLOG_POLL_INDEX_DATA, yp), y);
             if (count > 0) {
                 if (count != INT_MAX) { /* INT_MAX to tell here, y->fread has called y->write_handler in itself */
+                    int wcount = count;
                     if (y->id_token_len)
-                        count += y->id_token_len;
-                    y->write_handler(y->buf, count, y, NULL);
+                        wcount += y->id_token_len;
+                    if (y->reserved_len) {
+                        if (y->reserved_filed_process)
+                            y->reserved_filed_process(y->reserved_buf, y->reserved_len, y->rbuf, count, y->privates);
+                        wcount += y->reserved_len;
+                    }
+                    y->write_handler(y->buf, wcount, y, NULL);
                 }
                 if (ylog_read_len_might_zero_wait_max_count)
                     ylog_read_len_might_zero_wait_max_count = 0;
@@ -3094,10 +3137,15 @@ static void ylog_init(struct ydst_root *root, struct context *c) {
             ylog_error("malloc %ld failed: %s\n", y->buf_size, strerror(errno));
             exit(0);
         }
-        y->rbuf = y->buf + y->id_token_len;
-        y->rbuf_size = y->buf_size - y->id_token_len;
+        // memset(y->buf, 0, y->buf_size);
         if (y->id_token_len)
-            memcpy(y->buf, y->id_token, y->id_token_len);
+            y->id_token_buf = y->buf;
+        if (y->reserved_len)
+            y->reserved_buf = y->buf + y->id_token_len;
+        y->rbuf = y->buf + y->id_token_len + y->reserved_len + y->id_token_len_desc;
+        y->rbuf_size = y->buf_size - y->id_token_len - y->reserved_len - y->id_token_len_desc;
+        if (y->id_token_len)
+            memcpy(y->id_token_buf, y->id_token, y->id_token_len);
 
         if (pipe(y->state_pipe))
             ylog_error("create pipe %s failed: %s\n", y->name, strerror(errno));

@@ -5,7 +5,7 @@
 /**
  * Auto created by analyzer_bottom_half_template.sh
  * base on analyzer_bottom_half_template.py
- * Wed, 11 May 2016 18:04:23 +0800
+ * Wed, 25 May 2016 17:39:13 +0800
  */
 
 #define analyzer_bottom_half_template \
@@ -128,6 +128,8 @@
 "\n" \
 "    for key in keys:\n" \
 "        fddict[key].close()\n" \
+"        if os.stat(os.path.join(analyzer_relative_path, logdict[key])).st_size == 0:\n" \
+"            os.remove(os.path.join(analyzer_relative_path, logdict[key]))\n" \
 "\n" \
 "def main():\n" \
 "    global analyzer_relative_path\n" \

@@ -61,12 +61,16 @@ static char ylogd_tag[][2] = {"Y0"/*main*/, "Y2"/*radio*/, "Y3"/*events*/, "Y1"/
 
 #ifdef SOCKET_UDP_DGRAM_TYPE
 static int create_socket_local_server(char *socket_name) {
+    int on = 1;
     int sock = android_get_control_socket(socket_name);
     if (sock < 0) {
         d_error("android_get_control_socket %s failed: %s\n", socket_name, strerror(errno));
         sock = socket_local_server(socket_name,
                 socket_name[0] == '/' ? ANDROID_SOCKET_NAMESPACE_FILESYSTEM : ANDROID_SOCKET_NAMESPACE_RESERVED,
                 SOCK_DGRAM); /* DGRAM no need listen */
+        if (setsockopt(sock, SOL_SOCKET, SO_PASSCRED, &on, sizeof(on)) < 0) {
+            return -1;
+        }
         if (sock < 0) {
             d_error("socket_local_server %s failed: %s\n", socket_name, strerror(errno));
         }
@@ -201,7 +205,7 @@ static char *ylogd_log_format_logline(int fd, AndroidLogEntry *entry, int id) {
     return 0;
 }
 
-static void parse_log(char *buf, int len) {
+static void parse_log(char *buf, int len, struct ucred *cred) {
     struct ylogd_header_t *yh;
     char *prio;
     char *tag;
@@ -212,6 +216,7 @@ static void parse_log(char *buf, int len) {
     yh = (struct ylogd_header_t *)buf;
 
     tlen = yh->msg_offset + yh->msg_len;
+
     if (yh->msg_len < 1 || tlen > len) {
         d_critical("wrong packet size, msg_offset=%d, msg_len=%d, len=%d\n",
                 yh->msg_offset, yh->msg_len, len);
@@ -230,8 +235,8 @@ static void parse_log(char *buf, int len) {
         entry.tv_sec = yh->realtime.tv_sec;
         entry.tv_nsec = yh->realtime.tv_nsec;
         entry.priority = *(buf+sizeof(struct ylogd_header_t));
-        entry.uid = yh->uid;
-        entry.pid = yh->pid;
+        entry.uid = cred->uid;
+        entry.pid = cred->pid;
         entry.tid = yh->tid;
         entry.tag = tag;
         entry.messageLen = yh->msg_len - 1;
@@ -246,9 +251,32 @@ static void parse_log(char *buf, int len) {
 
 static void process_client_data(int fd, char *buf, int buf_size) {
     int ret;
-    ret = read(fd, buf, buf_size);
-    if (ret > 0)
-        parse_log(buf, ret);
+    struct ucred *cred = NULL;
+    struct cmsghdr *cmsg = NULL;
+    struct iovec iov = { buf, buf_size };
+    char control[CMSG_SPACE(sizeof(struct ucred))] __aligned(4);
+    struct msghdr hdr = {
+        NULL,
+        0,
+        &iov,
+        1,
+        control,
+        sizeof(control),
+        0,
+    };
+    ret = recvmsg(fd, &hdr, 0);
+
+    cmsg = CMSG_FIRSTHDR(&hdr);
+    while (cmsg != NULL) {
+        if (cmsg->cmsg_level == SOL_SOCKET
+            && cmsg->cmsg_type  == SCM_CREDENTIALS) {
+            cred = (struct ucred *)CMSG_DATA(cmsg);
+            break;
+        }
+        cmsg = CMSG_NXTHDR(&hdr, cmsg);
+    }
+    if (cred != NULL && ret > 0)
+        parse_log(buf, ret, cred);
     else
         erase_fd(fd);
 }
