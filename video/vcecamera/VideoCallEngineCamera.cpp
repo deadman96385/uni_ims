@@ -493,9 +493,12 @@ short imsCameraOpen(unsigned int cameraid) {
 
   // Cleanup the resources we have allocated
   if (ret != 0) {
-    ALOGI("ImsCameraOpen failed");
+    ALOGI("ImsCameraOpen failed, ret = %d", ret);
     ptr->state = UNINITIALIZED;
-    (void)pthread_join(cameraLoopThread, NULL);
+
+    if (ret != -1){
+        (void)pthread_join(cameraLoopThread, NULL);
+    }
 
     destroySem();
 
