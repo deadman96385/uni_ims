@@ -697,11 +697,11 @@ static void other_processor_ylog_insert(void) {
             property_get(opl->pnode.atloop.property_name, prop, opl->pnode.atloop.property_value_default);
             if (prop[0]) {
                 strcat(prop, "0");
-#if 1
-                ylog_info("%s has bug, property value is %s, it should be %s\n",
-                        opl->pnode.atloop.property_name, prop, opl->pnode.atloop.property_value_default);
-                strcpy(prop, opl->pnode.atloop.property_value_default);
-#endif
+                if (strcmp(prop, opl->pnode.atloop.property_value_default)) {
+                    ylog_info("%s config is wrong, now is %s, but it should be %s\n",
+                            opl->pnode.atloop.property_name, prop, opl->pnode.atloop.property_value_default);
+                    strcpy(prop, opl->pnode.atloop.property_value_default);
+                }
                 privates->file_atloop = strdup(prop);
                 if (ylog->mode & YLOG_GROUP_MODEM)
                     insert_file_atloop(privates->file_atloop, YLOG_GROUP_MODEM);

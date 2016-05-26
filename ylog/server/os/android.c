@@ -1344,7 +1344,13 @@ static int check_file_execute(char *exec_file) {
 }
 
 static int check_file_exist(char *file) {
-    return access(file, R_OK);
+    int ret = access(file, R_OK);
+    if (ret < 0) {
+        ylog_error("%s failed %d with %s", file, -errno, strerror(errno));
+        if (errno != ENOENT) /* The file does not exist */
+            ret = 0;
+    }
+    return ret;
 }
 
 static void os_init(struct ydst_root *root, struct context **c, struct os_hooks *hook) {
