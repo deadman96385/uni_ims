@@ -194,7 +194,7 @@ static int check_fd(char *buf, int buf_size) {
 #ifndef SOCKET_UDP_DGRAM_TYPE
             if (fd == fd_socket_server) {
                 int fd_client = accept_client(fd_socket_server);
-                if (fd_client > 0)
+                if (fd_client >= 0)
                     insert_fd(fd_client);
             } else
 #endif

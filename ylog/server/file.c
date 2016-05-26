@@ -3041,6 +3041,7 @@ static void ylog_init(struct ydst_root *root, struct context *c) {
             if (cache->cache == NULL) {
                 ylog_error("ydst malloc %ld failed: %s\n", cache->size * cache->num, strerror(errno));
                 exit(0);
+                return; /* For coverity */
             }
             pthread_mutex_lock(&cache->mutex);
             pthread_create(&cache->ptid, NULL, cache->handler, cache);
@@ -3136,6 +3137,7 @@ static void ylog_init(struct ydst_root *root, struct context *c) {
         if (y->buf == NULL) {
             ylog_error("malloc %ld failed: %s\n", y->buf_size, strerror(errno));
             exit(0);
+            return; /* For coverity */
         }
         // memset(y->buf, 0, y->buf_size);
         if (y->id_token_len)
