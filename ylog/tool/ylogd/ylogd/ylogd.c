@@ -68,7 +68,9 @@ static int create_socket_local_server(char *socket_name) {
         sock = socket_local_server(socket_name,
                 socket_name[0] == '/' ? ANDROID_SOCKET_NAMESPACE_FILESYSTEM : ANDROID_SOCKET_NAMESPACE_RESERVED,
                 SOCK_DGRAM); /* DGRAM no need listen */
-        if (setsockopt(sock, SOL_SOCKET, SO_PASSCRED, &on, sizeof(on)) < 0) {
+        if (sock >= 0 && setsockopt(sock, SOL_SOCKET, SO_PASSCRED, &on, sizeof(on)) < 0) {
+            d_error("setsockopt %s SOL_SOCKET, SO_PASSCRED failed: %s\n", socket_name, strerror(errno));
+            close(sock);
             return -1;
         }
         if (sock < 0) {

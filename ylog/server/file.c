@@ -3146,7 +3146,7 @@ static void ylog_init(struct ydst_root *root, struct context *c) {
             y->reserved_buf = y->buf + y->id_token_len;
         y->rbuf = y->buf + y->id_token_len + y->reserved_len + y->id_token_len_desc;
         y->rbuf_size = y->buf_size - y->id_token_len - y->reserved_len - y->id_token_len_desc;
-        if (y->id_token_len)
+        if (y->id_token_len && y->id_token_buf)
             memcpy(y->id_token_buf, y->id_token, y->id_token_len);
 
         if (pipe(y->state_pipe))
