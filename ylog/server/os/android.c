@@ -15,6 +15,7 @@
 #define YLOG_ROOT_FOLDER "/data"
 #define YLOG_JOURNAL_FILE "/data/ylog/ylog_journal_file"
 #define YLOG_CONFIG_FILE "/data/ylog/ylog.conf"
+#define YLOGD_ON         "/data/ylog/ylogd"
 #define YLOG_FILTER_PATH "/system/lib/"
 
 #define ANR_OR_TOMSTONE_UNIFILE_MODE
@@ -1354,6 +1355,23 @@ static int check_file_exist(char *file) {
     return ret;
 }
 
+static void android_cmd_ylog_hook(int nargs, char **args) {
+    if (nargs > 3 && strcmp("ylogd", args[2]) == 0) {
+        property_set("persist.ylog.ylogd.enabled", args[3]);
+        if (args[3][0] == '1') {
+            int fd = open(YLOGD_ON, O_RDWR | O_CREAT, 0664);
+            if (fd >= 0)
+                close(fd);
+            else {
+                ylog_error("%s failed %d with %s", YLOGD_ON, -errno, strerror(errno));
+            }
+        } else {
+            unlink(YLOGD_ON);
+        }
+    }
+    cmd_ylog_hook(nargs, args);
+}
+
 static void os_init(struct ydst_root *root, struct context **c, struct os_hooks *hook) {
     struct ylog *y;
     int i;
@@ -1702,7 +1720,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
     hook->ylog_read_info_hook = ylog_read_info_hook;
 #endif
     hook->process_command_hook = process_command_hook;
-    hook->cmd_ylog_hook = cmd_ylog_hook;
+    hook->cmd_ylog_hook = android_cmd_ylog_hook;
     hook->ylog_status_hook = ylog_status_hook;
     hook->pthread_create_hook = pthread_create_hook;
     hook->ready_go = ready_go;
