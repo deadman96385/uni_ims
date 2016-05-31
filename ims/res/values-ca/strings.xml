@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"La videotrucada s\'ha tornat a perdre"</string>
+<string name="videophone_failcause_1000">"La última videotrucada s\'ha interromput de manera anormal, torneu-ho a provar d\'aquí a una estona"</string>
+<string name="videophone_failcause_1">"El número que heu marcat està fora de servei"</string>
+<string name="videophone_failcause_3">"L\'usuari no està disponible"</string>
+<string name="videophone_failcause_8">"Trucada limitada"</string>
+<string name="videophone_failcause_17">"L\'usuari està ocupat"</string>
+<string name="videophone_failcause_19">"L\'usuari amb el que voleu contactar no contesta"</string>
+<string name="videophone_failcause_27">"No es pot contactar amb l\'usuari"</string>
+<string name="videophone_failcause_34">"Connexió desconnectada"</string>
+<string name="videophone_failcause_63_modify">"No s\'ha pogut establir la videotrucada"</string>
+<string name="videophone_failcause_79">"El receptor no pot realitzar videotrucades"</string>
+<string name="videophone_failcause_47">"Disculpeu les molèsties, la videotrucada no està disponible"</string>
+<string name="videophone_failcause_50">"No es poden realitzar videotrucades"</string>
+<string name="videophone_failcause_57_remote">"El número que heu marcat no pot realitzar videotrucades"</string>
+<string name="videophone_failcause_58">"El receptor no pot realitzar videotrucades"</string>
+<string name="videophone_failcause_157">"EL telèfon mòbil no ha iniciat el servei de videotrucades"</string>
+<string name="videophone_failcause_88">"L\'usuari selecciona la videotrucada"</string>
+<string name="videophone_failcause_minus_1">"El servei 3G no està disponible"</string>
+<string name="videophone_failcause_default">"L\'usuari no està disponible"</string>
+<string name="net_connection_disconnect">"Connexió en xarxa desconnectada"</string>
+<string name="no_vt_service">"No es poden realitzar videotrucades"</string>
+<string name="remote_request_change">"Sol·licitud de canvi de mitjà remot"</string>
+<string name="choose_accept_reject">"Escolliu acceptar o rebutjar"</string>
+<string name="remote_request_change_accept">"Accept"</string>
+<string name="remote_request_change_reject">"Rebutjar"</string>
+<string name="remote_reject_request">"Remote request rejected"</string>
+<string name="remote_accept_request">"Remote request accepted"</string>
+<string name="callFailed_fdn_only">"Outgoing calls are restricted by FDN"</string>
+</resources>

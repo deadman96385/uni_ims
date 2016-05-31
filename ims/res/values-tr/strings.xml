@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"Görüntülü geri arama başarısız"</string>
+<string name="videophone_failcause_1000">"Son video araması normal olarak sonlandırılmadı, lütfen bir süre sonra tekrar deneyin"</string>
+<string name="videophone_failcause_1">"Aradığınız numara kullanım dışı"</string>
+<string name="videophone_failcause_3">"Kullanıcıya ulaşılamıyor"</string>
+<string name="videophone_failcause_8">"Arama engellendi"</string>
+<string name="videophone_failcause_17">"Kullanıcı meşgul"</string>
+<string name="videophone_failcause_19">"Aradığınız kullanıcı cevap vermiyor"</string>
+<string name="videophone_failcause_27">"Kullanıcıya ulaşılamaz"</string>
+<string name="videophone_failcause_34">"Bağlantı kesildi"</string>
+<string name="videophone_failcause_63_modify">"Görüntülü görüşme gerçekleştirilemedi"</string>
+<string name="videophone_failcause_79">"VT diğer taraf tarafından desteklenmiyor"</string>
+<string name="videophone_failcause_47">"Maalesef görüntülü arama kullanılamıyor"</string>
+<string name="videophone_failcause_50">"VT desteklenmiyor"</string>
+<string name="videophone_failcause_57_remote">"Aradığınız numara VT\'yi desteklemiyor"</string>
+<string name="videophone_failcause_58">"VT diğer taraf tarafından desteklenmiyor"</string>
+<string name="videophone_failcause_157">Mobil telefonda VT hizmeti başlatılmamış</string>
+<string name="videophone_failcause_88">"Kullanıcı sesli aramayı seçiyor"</string>
+<string name="videophone_failcause_minus_1">"3G hizmeti kullanılamaz"</string>
+<string name="videophone_failcause_default">"Kullanıcıya ulaşılamıyor"</string>
+<string name="net_connection_disconnect">Ağ Bağlantısını Kes</string>
+<string name="no_vt_service">"Görüntülü çağrı yapılamaz "</string>
+<string name="remote_request_change">"Uzaktan istekli medya değişikliği"</string>
+<string name="choose_accept_reject">"Lütfen kabul ya da reddi seçin"</string>
+<string name="remote_request_change_accept">"Kabul et"</string>
+<string name="remote_request_change_reject">"Reddet" </string>
+<string name="remote_reject_request">"Uzaktan yapılan istek reddedildi"</string>
+<string name="remote_accept_request">"Uzaktan yapılan istek kabul edildi"</string>
+<string name="callFailed_fdn_only">"Giden aramalar FDN ile sınırlandırıldı"</string>
+</resources>

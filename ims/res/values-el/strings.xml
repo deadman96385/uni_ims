@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"Επιστροφή κλήσης βίντεο"</string>
+<string name="videophone_failcause_1000">"Η τελευταία κλήση βίντεο δεν σταμάτησε κανονικά, παρακαλώ προσπαθήστε ξανά αργότερα"</string>
+<string name="videophone_failcause_1">"Ο αριθμός που καλέσατε δεν λειτουργεί"</string>
+<string name="videophone_failcause_3">"Ο χρήστης δεν είναι διαθέσιμος"</string>
+<string name="videophone_failcause_8">"Φραγή κλήσης"</string>
+<string name="videophone_failcause_17">"Χρήστης απασχολημένος"</string>
+<string name="videophone_failcause_19">"Ο χρήστης που καλέσατε δεν απαντά"</string>
+<string name="videophone_failcause_27">"Ο χρήστης δεν είναι προσιτός"</string>
+<string name="videophone_failcause_34">"Η σύνδεση αποσυνδέθηκε"</string>
+<string name="videophone_failcause_63_modify">"Η κλήση βίντεο δεν δημιουργήθηκε"</string>
+<string name="videophone_failcause_79">"Το VT δεν υποστηρίζεται από τον άλλο"</string>
+<string name="videophone_failcause_47">"Συγγνώμη, η κλήση βίντεο δεν είναι διαθέσιμη"</string>
+<string name="videophone_failcause_50">"VT δεν υποστηρίζεται</string>
+<string name="videophone_failcause_57_remote">"Ο αριθμός που καλέσατε δεν υποστηρίζει το VT"</string>
+<string name="videophone_failcause_58">"Το VT δεν υποστηρίζεται από τον άλλο"</string>
+<string name="videophone_failcause_157">Το κινητό τηλέφωνο δεν έχει ξεκινήσει την υπηρεσία VT</string>
+<string name="videophone_failcause_88">"Ο χρήστης επιλέγει φωνητική κλήση"</string>
+<string name="videophone_failcause_minus_1">"Η υπηρεσία 3G δεν είναι διαθέσιμη"</string>
+<string name="videophone_failcause_default">"Ο χρήστης δεν είναι διαθέσιμος"</string>
+<string name="net_connection_disconnect">"Αποσύνδεση σύνδεσης δικτύου"</string>
+<string name="no_vt_service">"Δεν μπορείτε να κάνετε βιντεοκλήσεις"</string>
+<string name="remote_request_change">"Απομακρυσμένο αίτημα αλλαγής πολυμέσων"</string>
+<string name="choose_accept_reject">"Παρακαλούμε επιλέξτε αποδοχή ή απόρριψη"</string>
+<string name="remote_request_change_accept">"Αποδοχή"</string>
+<string name="remote_request_change_reject">"Απόρριψη"</string>
+<string name="remote_reject_request">"Το απομακρυσμένο αίτημα απορρίφθηκε"</string>
+<string name="remote_accept_request">"Το απομακρυσμένο αίτημα έγινε αποδεκτό"</string>
+<string name="callFailed_fdn_only">"Οι εξερχόμενες κλήσεις περιορίζονται από τους σταθερούς αριθμούς κλήσης"</string>
+</resources>

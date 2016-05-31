@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"வீடியோ அழைப்பு திரும்ப வீழ்ந்துள்ளது"</string>
+<string name="videophone_failcause_1000">"கடந்த வீடியோஅழைப்பு சாதாரணமாக நிறைவடையவில்லை, தயவுசெய்து சிறிதுநேரம் கழித்து மீண்டும் முயற்சிக்கவும்."</string>
+<string name="videophone_failcause_1">"நீங்கள் டயல் செய்த எண் சேவையில் இல்லை"</string>
+<string name="videophone_failcause_3">"பயனர் கிடைக்கப்பெறவில்லை"</string>
+<string name="videophone_failcause_8">"அழைப்புத் தடுக்கப்பட்டுள்ளது"</string>
+<string name="videophone_failcause_17">"பயனர் பணிமிகுதியாக உள்ளார்"</string>
+<string name="videophone_failcause_19">"நீங்கள் டயல்செய்த பயனர் மறுமொழியளிக்கவில்லை"</string>
+<string name="videophone_failcause_27">"பயனரை அடைய முடியாது"</string>
+<string name="videophone_failcause_34">"இணைப்பு துண்டிக்கப்பட்டது"</string>
+<string name="videophone_failcause_63_modify">"வீடியோ ஃபோன் நிறுவப்பட முடியவில்லை"</string>
+<string name="videophone_failcause_79">"VT பிறரால் ஆதரவளிக்கப்படவில்லை"</string>
+<string name="videophone_failcause_47">"மன்னிக்கவும், வீடியோ அழைப்பு கிடைக்கப்பெறவில்லை"</string>
+<string name="videophone_failcause_50">"VT ஆதரிக்கப்படவில்லை"</string>
+<string name="videophone_failcause_57_remote">"நீங்கள் டயல் செய்த எண் VT ஐ ஆதரிக்கவில்லை"</string>
+<string name="videophone_failcause_58">"VT பிறரால் ஆதரவளிக்கப்படவில்லை"</string>
+<string name="videophone_failcause_157">"மொபைல் ஃபோன் VT சேவையைத் தொடங்கவில்லை"</string>
+<string name="videophone_failcause_88">"பயனர் குரல் அழைப்பைத் தேர்வுசெய்கின்றார்"</string>
+<string name="videophone_failcause_minus_1">"3G சேவை கிடைக்கப்பெறவில்லை"</string>
+<string name="videophone_failcause_default">"பயனர் கிடைக்கப்பெறவில்லை"</string>
+<string name="net_connection_disconnect">வலை இணைப்பு துண்டிக்கவும்</string>
+<string name="no_vt_service">"வீடியோ அழைப்பைச் செய்ய முடியாது"</string>
+<string name="remote_request_change">"தொலைநிலை கோருதல் ஊடக மாற்றம்"</string>
+<string name="choose_accept_reject">"தயவு செய்து ஏற்பதை அல்லது மறுப்பதைத் தேர்ந்தெடுக்கவும்"</string>
+<string name="remote_request_change_accept">"ஏற்றுக்கொள்"</string>
+<string name="remote_request_change_reject">"மறுக்கவும்"</string>
+<string name="remote_reject_request">"தொலை கோரிக்கை நிராகரிக்கப்பட்டது"</string>
+<string name="remote_accept_request">"தொலை கோரிக்கை ஏற்றுக்கொள்ளப்பட்டது"</string>
+<string name="callFailed_fdn_only">"வெளிப்புற அழைப்புகளை FDN வறையரைப்படுத்தியுள்ளது"</string>
+</resources>

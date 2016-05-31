@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"تماس تصویری ناموفق بود"</string>
+<string name="videophone_failcause_1000">"آخرین تماس تصویری به صورت معمولی پایان نیافت، لطفا پس از چند لحظه امتحان کنید"</string>
+<string name="videophone_failcause_1">"شماره ای که با آن تماس گرفتید در شبکه موجود نیست"</string>
+<string name="videophone_failcause_3">"کاربر در دسترس نیست"</string>
+<string name="videophone_failcause_8">"تماس مسدود شد"</string>
+<string name="videophone_failcause_17">"کاربر مشغول است"</string>
+<string name="videophone_failcause_19">"کاربری که با آن تماس گرفتید پاسخ نمی دهد"</string>
+<string name="videophone_failcause_27">"کاربر در دسترس نیست"</string>
+<string name="videophone_failcause_34">"ارتباط قطع شد"</string>
+<string name="videophone_failcause_63_modify">"تماس تصویری ایجاد نمی شود"</string>
+<string name="videophone_failcause_79">"VT از طرف فرد دیگر پشتیبانی نمی شود"</string>
+<string name="videophone_failcause_47">"متاسفیم، تماس تصویری موجود نیست"</string>
+<string name="videophone_failcause_50">"از کنفرانس ویدئویی پشتیبانی نمی شود"</string>
+<string name="videophone_failcause_57_remote">"شماره ای که با آن تماس گرفتید از VT پشتیبانی نمی کند"</string>
+<string name="videophone_failcause_58">"VT از طرف فرد دیگر پشتیبانی نمی شود"</string>
+<string name="videophone_failcause_157">موبایل سرویس VT را شروع نکرده است</string>
+<string name="videophone_failcause_88">"کاربر تماس صوتی را انتخاب کرد"</string>
+<string name="videophone_failcause_minus_1">"سرویس 3G موجود نیست"</string>
+<string name="videophone_failcause_default">"کاربر در دسترس نیست"</string>
+<string name="net_connection_disconnect">قطع ارتباط شبکه</string>
+<string name="no_vt_service">"امکان برقراری تماس ویدئویی وجود ندارد"</string>
+<string name="remote_request_change">"درخواست از راه دور تغییر رسانه"</string>
+<string name="choose_accept_reject">"لطفاً پذیرفتن یا رد را انتخاب کنید"</string>
+<string name="remote_request_change_accept">"پذیرفتن"</string>
+<string name="remote_request_change_reject">"رد"</string>
+<string name="remote_reject_request">"درخواست از راه دور رد شد"</string>
+<string name="remote_accept_request">"درخواست از راه دور پذیرفته شد"</string>
+<string name="callFailed_fdn_only">"تماس های خروجی توسط FDN محدود شده اند"</string>
+</resources>

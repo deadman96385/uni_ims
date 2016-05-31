@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"Repliegue de videollamada"</string>
+<string name="videophone_failcause_1000">"La última llamada de video no termino con normalidad, por favor reeintente en un momento"</string>
+<string name="videophone_failcause_1">"El número al que está llamado no está en servicio"</string>
+<string name="videophone_failcause_3">"El usuario no está disponible"</string>
+<string name="videophone_failcause_8">"Llamada restringida"</string>
+<string name="videophone_failcause_17">"Usuario ocupado"</string>
+<string name="videophone_failcause_19">"El usuario a quien llamó no está respondiendo"</string>
+<string name="videophone_failcause_27">"El usuario no puede ser localizado"</string>
+<string name="videophone_failcause_34">"La conexión se ha interrumpido"</string>
+<string name="videophone_failcause_63_modify">"La videollamada no pudo ser establecida"</string>
+<string name="videophone_failcause_79">"VT no soportado por el otro usuario"</string>
+<string name="videophone_failcause_47">"Lo lamentamos, videollamada no disponible"</string>
+<string name="videophone_failcause_50">"VT no está soportado"</string>
+<string name="videophone_failcause_57_remote">"El número al cual llamó no soporta VT"</string>
+<string name="videophone_failcause_58">"VT no soportado por el otro usuario"</string>
+<string name="videophone_failcause_157">"El teléfono no ha iniciado el servicio VT"</string>
+<string name="videophone_failcause_88">"El usuario ha preferido usar llamada de voz"</string>
+<string name="videophone_failcause_minus_1">"El servicio 3G no está disponible"</string>
+<string name="videophone_failcause_default">"El usuario no está disponible"</string>
+<string name="net_connection_disconnect">"La conexión de red se ha interrumpido"</string>
+<string name="no_vt_service">"No se pueden realizar llamadas de video"</string>
+<string name="remote_request_change">"Solicitud remota de cambio de multimedia"</string>
+<string name="choose_accept_reject">"Por favor seleccione aceptar o cancelar"</string>
+<string name="remote_request_change_accept">"Aceptar"</string>
+<string name="remote_request_change_reject">"Rechazo"</string>
+<string name="remote_reject_request">"Solicitud remota rechazada"</string>
+<string name="remote_accept_request">"Solicitud remota aceptada"</string>
+<string name="callFailed_fdn_only">"Las llamadas salientes están restringidas por FDN"</string>
+</resources>

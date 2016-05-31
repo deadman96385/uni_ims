@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"वीडियो कॉल वापिस आ गई"</string>
+<string name="videophone_failcause_1000">"अंतिम वीडियो कॉल सामान्य रूप से समाप्त नहीं हुआ है, कृपया थोड़ी देर बाद पुनः प्रयास करें।"</string>
+<string name="videophone_failcause_1">"आपके द्वारा डायल किया गया नंबर सेवा में नहीं है"</string>
+<string name="videophone_failcause_3">"प्रयोगकर्ता उपलब्ध नहीं है"</string>
+<string name="videophone_failcause_8">"कॉल बैरड"</string>
+<string name="videophone_failcause_17">"प्रयोगकर्ता व्यस्त"</string>
+<string name="videophone_failcause_19">"आपके द्वारा डायल किया गया उपयोक्ता उत्तर नहीं दे रहा है"</string>
+<string name="videophone_failcause_27">"प्रयोक्ता तक नहीं पहुंचा जा सकता है"</string>
+<string name="videophone_failcause_34">"कनैक्शन टूट गया"</string>
+<string name="videophone_failcause_63_modify">"वीडियो फोन स्थापित नहीं हो सका"</string>
+<string name="videophone_failcause_79">"VT अन्य द्वारा सपोर्ट नहीं किया गया"</string>
+<string name="videophone_failcause_47">"क्षमा करें, वीडियो कॉल उपलब्ध नहीं है"</string>
+<string name="videophone_failcause_50">"VT असमर्थित है"</string>
+<string name="videophone_failcause_57_remote">"जो नंबर आपने डायल किया है वह VT का समर्थन नहीं करता"</string>
+<string name="videophone_failcause_58">"VT अन्य द्वारा सपोर्ट नहीं किया गया"</string>
+<string name="videophone_failcause_157">“मोबाइल फोन में वीटी सेवा शुरू नहीं हुई है”</string>
+<string name="videophone_failcause_88">"प्रयोगकर्ता आवाज़ कॉल चुनता है"</string>
+<string name="videophone_failcause_minus_1">"3G सेवा उपलब्ध नहीं"</string>
+<string name="videophone_failcause_default">"प्रयोगकर्ता उपलब्ध नहीं है"</string>
+<string name="net_connection_disconnect">"नैट कनैक्शन डिस्कनैक्ट"</string>
+<string name="no_vt_service">"वीडियो कॉल नहीं की जा सकती हैं"</string>
+<string name="remote_request_change">"रिमोट निवेदन मीडिया बदलाव"</string>
+<string name="choose_accept_reject">"कृपया स्वीकार करें अथवा अस्वीकार करें को चुनें"</string>
+<string name="remote_request_change_accept">"स्वीकार करें"</string>
+<string name="remote_request_change_reject">"अस्वीकार करें"</string>
+<string name="remote_reject_request">"रिमोट निवेदन अस्वीकृत"</string>
+<string name="remote_accept_request">"रिमोट निवेदन स्वीकृत"</string>
+<string name="callFailed_fdn_only">"आउटगोइंग कॉल्स FDN द्वारा प्रतिबंधित हैं"</string>
+</resources>

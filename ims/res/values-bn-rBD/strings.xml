@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"ভিডিও কল ফেরত আসবে"</string>
+<string name="videophone_failcause_1000">"শেষ ভিডিও কল সাধারণত শেষ হয়নি, একটা সময় পরে আবার চেষ্টা করতে দয়া করে"</string>
+<string name="videophone_failcause_1">"আপনি যে নম্বরটি ডায়েল করেছেন তা পরিষেবার বাইরে"</string>
+<string name="videophone_failcause_3">"ব্যবহারকারী অনুপলব্ধ"</string>
+<string name="videophone_failcause_8">"কল বেয়ার্ড"</string>
+<string name="videophone_failcause_17">"ব্যবহারকারী ব্যস্ত"</string>
+<string name="videophone_failcause_19">"ব্যবহারকারী আপনি ডায়াল করেছিলেন উত্তর দিচ্ছে না "</string>
+<string name="videophone_failcause_27">"ব্যবহারকারীর কাছে পৌছানো যাবে না"      </string>
+<string name="videophone_failcause_34">"সংযোগ বিচ্ছিন্ন"</string>
+<string name="videophone_failcause_63_modify">"ভিডিও ফোন প্রতিষ্ঠিত করা যায় নি"</string>
+<string name="videophone_failcause_79">"অন্যান্য দ্বারা অসমর্থিত ভিটি"</string>
+<string name="videophone_failcause_47">"দুঃখিত, ভিডিও কল অনুপলব্ধ"</string>
+<string name="videophone_failcause_50">"VT অসমর্থিত"</string>
+<string name="videophone_failcause_57_remote">"আপনি যে নম্বরটি ডায়াল করেছেন সেটি VT সমর্থন করে না"</string>
+<string name="videophone_failcause_58">"অন্যান্য দ্বারা অসমর্থিত ভিটি"</string>
+<string name="videophone_failcause_157">"মোবাইল ফোন VT পরিসেবাটি আরম্ভ করা হয়েছে কি না"</string>
+<string name="videophone_failcause_88">"ব্যবহারকারীর ভয়েস কল পছন্দ করেছেন"</string>
+<string name="videophone_failcause_minus_1">"3G পরিসেবা অনুপলব্ধ"</string>
+<string name="videophone_failcause_default">"ব্যবহারকারী অনুপলব্ধ"</string>
+<string name="net_connection_disconnect">"নেট সংযোগ বিচ্ছিন্ন"</string>
+<string name="no_vt_service">"ভিডিও কল্ করা যায় না"      </string>
+<string name="remote_request_change">"দূর অনুরোধ মিডিয়া পরিবর্তন"</string>
+<string name="choose_accept_reject">"অনুগ্রহ করে গ্রহণ অথবা অস্বীকার বেছে নিন"</string>
+<string name="remote_request_change_accept">"গ্রহণ"</string>
+<string name="remote_request_change_reject">"অস্বীকার"</string>
+<string name="remote_reject_request">"দূরবর্তী অনুরোধ অস্বীকার করা হয়েছে"</string>
+<string name="remote_accept_request">"দূরবর্তী অনুরোধ গ্রহণ করা হয়েছে"</string>
+<string name="callFailed_fdn_only">"FDN এর মাধ্যমে আউটগোয়িং কলগুলি সীমিত করা আছে"</string>
+</resources>
