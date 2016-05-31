@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"Bidyo tawag nahulog balik"</string>
+<string name="videophone_failcause_1000">"Ang huling tawag ay hindi natapos, paki subukan muli mayamaya"</string>
+<string name="videophone_failcause_1">"Ang numero na iyong pinindot ay walang serbisyo"</string>
+<string name="videophone_failcause_3">"Tagagamitay hindi pupuwede"</string>
+<string name="videophone_failcause_8">"Tawag Tinaggihan"</string>
+<string name="videophone_failcause_17">"Ang gumagamit ay bisi"</string>
+<string name="videophone_failcause_19">"Ang tagagamit na iyong tinatawagan ay hindi sumasagot"</string>
+<string name="videophone_failcause_27">"Ang gumagamit ay hindi maabot"</string>
+<string name="videophone_failcause_34">"Koneksiyon na diskonekta"</string>
+<string name="videophone_failcause_63_modify">"Bidyo telepono ay hindi maitatag"</string>
+<string name="videophone_failcause_79">"VT hindi supurtado ng iba"</string>
+<string name="videophone_failcause_47">"Pasensya, bidyo tawag ay hindi gumagana"</string>
+<string name="videophone_failcause_50">"VT ay hindi suportado"</string>
+<string name="videophone_failcause_57_remote">"Ang numerong iyong dinayal ang hindi sumusuporta sa VT"</string>
+<string name="videophone_failcause_58">"VT hindi supurtado ng iba"</string>
+<string name="videophone_failcause_157">"Ang mobile phone ay hindi pa nakapagsimula sa serbisyo ng VT"</string>
+<string name="videophone_failcause_88">"Tagagamit ay pinili ang boses na tawag"</string>
+<string name="videophone_failcause_minus_1">"3G serbisyo ay hindi gumagana"</string>
+<string name="videophone_failcause_default">"Tagagamitay hindi pupuwede"</string>
+<string name="net_connection_disconnect">Koneksyon sa Net hindi kunektado</string>
+<string name="no_vt_service">"Hindi makagawa ng bidyo na tawag"</string>
+<string name="remote_request_change">"Hiling sa malayong pagpalit ng medya"</string>
+<string name="choose_accept_reject">"Pakiusap pumili tanggapin o tanggihan"</string>
+<string name="remote_request_change_accept">"Tanggapin"</string>
+<string name="remote_request_change_reject">"Tanggi"</string>
+<string name="remote_reject_request">"Hiling pang-malayo ay tnanggihan"</string>
+<string name="remote_accept_request">"Hiling pang-malayo ay tinanggap"</string>
+<string name="callFailed_fdn_only">"Mga papalabas na tawag ay ipinagbabawal ng FDN"</string>
+</resources>

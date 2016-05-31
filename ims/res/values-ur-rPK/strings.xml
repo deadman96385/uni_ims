@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">ویڈیو کال فال بیک</string>
+<string name="videophone_failcause_1000">آخری ویڈیو کال صحیح طور پر ختم نہیں ہوئی ہے، تھوڑی دیر کے بعد دوبارہ کوشش کریں</string>
+<string name="videophone_failcause_1">جو نمبر آپ نے ملایا ہے وہ بند ہے</string>
+<string name="videophone_failcause_3">صارف دستیاب نہیں</string>
+<string name="videophone_failcause_8">کال پر پابندی لگا دی گئی</string>
+<string name="videophone_failcause_17">صارف مصروف ہے</string>
+<string name="videophone_failcause_19">آپ کا ملایا گیا صارف جواب نہیں دے رہا</string>
+<string name="videophone_failcause_27">صارف نہیں پہنچ سکتا</string>
+<string name="videophone_failcause_34">کنکشن منقطع</string>
+<string name="videophone_failcause_63_modify">ویڈیو فون قائم نہیں کیا جا سکتا</string>
+<string name="videophone_failcause_79">دوسرے کی طرف سے VT اَن سَپورٹڈ ہے</string>
+<string name="videophone_failcause_47">معاف کیجئے گا، ویڈیو کال دستیاب نہیں</string>
+<string name="videophone_failcause_50">۔VT دستیاب نہیں</string>
+<string name="videophone_failcause_57_remote">آپ نے جو نمبر ملایا وہ VT کو سپورٹ نہیں کرتا</string>
+<string name="videophone_failcause_58">دوسرے کی طرف سے VT اَن سَپورٹڈ ہے</string>
+<string name="videophone_failcause_157">"موبائل فون نے VT سروس شروع نہیں کی ہے"</string>
+<string name="videophone_failcause_88">صارف صوتی کال کا انتخاب کرتا ہے</string>
+<string name="videophone_failcause_minus_1">۔3G سروس دستیاب نہیں</string>
+<string name="videophone_failcause_default">صارف دستیاب نہیں</string>
+<string name="net_connection_disconnect">نیٹ کنکشن منقطع</string>
+<string name="no_vt_service">ویڈیو کال نہیں بنائی جاسکتی</string>
+<string name="remote_request_change">"بعید درخواست ذرائع ابلاغ تبدیلی"</string>
+<string name="choose_accept_reject">"براہ مہربانی قبول یا مسترد کریں منتخب کریں"</string>
+<string name="remote_request_change_accept">"قبول کریں"</string>
+<string name="remote_request_change_reject">مسترد</string>
+<string name="remote_reject_request">"بعید درخواست مسترد کردی گئی"</string>
+<string name="remote_accept_request">"بعید درخواست قبول کر لی گئی"</string>
+<string name="callFailed_fdn_only">"باہر کی جانیوالی کالز کو FDN سے محدود کیا جاتا ہے"</string>
+</resources>

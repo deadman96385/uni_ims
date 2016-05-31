@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">Зворотній відеовиклик</string>
+<string name="videophone_failcause_1000">"Останній дзвінок відео закінчився надзвичайно, будь ласка, повторіть спробу через деякий час"</string>
+<string name="videophone_failcause_1">"Набираний номер не обслуговується"</string>
+<string name="videophone_failcause_3">"Користувач є недоступним"</string>
+<string name="videophone_failcause_8">"Виклик заблоковано"</string>
+<string name="videophone_failcause_17">"Користувач зайнятий"</string>
+<string name="videophone_failcause_19">"Набраний користувач не відповідає"</string>
+<string name="videophone_failcause_27">"абонент недоступний"</string>
+<string name="videophone_failcause_34">"З’єднання розірвано"</string>
+<string name="videophone_failcause_63_modify">Відео телефон не може бути встановлений</string>
+<string name="videophone_failcause_79">"VT не підтримується іншим"</string>
+<string name="videophone_failcause_47">На жаль, відео-дзвінок недоступні</string>
+<string name="videophone_failcause_50">"VT не підтримується"</string>
+<string name="videophone_failcause_57_remote">Набраний номер не підтримує VT</string>
+<string name="videophone_failcause_58">"VT не підтримується іншим"</string>
+<string name="videophone_failcause_157">"На мобільному телефоні не активовано функцію відеодзвінку"</string>
+<string name="videophone_failcause_88">"Користувач вибирає голосове повідомлення"</string>
+<string name="videophone_failcause_minus_1">"Послуги 3G не надані"</string>
+<string name="videophone_failcause_default">"Користувач є недоступним"</string>
+<string name="net_connection_disconnect">Вимкніть мережеве з\'єднання</string>
+<string name="no_vt_service">"недоступні відео дзінки"</string>
+<string name="remote_request_change">"Дистанційний запит на зміну носія"</string>
+<string name="choose_accept_reject">"Будь ласка, оберіть "прийняти або відхилити"</string>
+<string name="remote_request_change_accept">"Прийняти"</string>
+<string name="remote_request_change_reject">"Відхилити"</string>
+<string name="remote_reject_request">"дистанційний запит відхилено"</string>
+<string name="remote_accept_request">"дистанційний запит прийнято"</string>
+<string name="callFailed_fdn_only">"Віихідні дзвінки обмежені фіксованим набором"</string>
+</resources>

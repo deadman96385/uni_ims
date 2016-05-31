@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"Videoanruf erwiedern"</string>
+<string name="videophone_failcause_1000">"Der letzte Viedeoanruf hat nicht normal geendet, bitte versuchen Sie es nach einer Zeit nochmal"</string>
+<string name="videophone_failcause_1">"Die Nummer, die sie gewählt haben ist zur Zeit nicht verfügbar"</string>
+<string name="videophone_failcause_3">"Nutzer ist nicht verfügbar"</string>
+<string name="videophone_failcause_8">"Anruf gesperrt"</string>
+<string name="videophone_failcause_17">"Nutzer beschäftigt"</string>
+<string name="videophone_failcause_19">"Der angerufene Nutzer antwortet nicht"</string>
+<string name="videophone_failcause_27">"Nutzer kann nicht erreicht werden"</string>
+<string name="videophone_failcause_34">"Verbindung getrennt"</string>
+<string name="videophone_failcause_63_modify">"Videotelefon konnte nicht eingerichtet werden"</string>
+<string name="videophone_failcause_79">"VT vom Anderen nicht unterstützt"</string>
+<string name="videophone_failcause_47">"Entschuldigung, Videoanruf nicht verfügbar"</string>
+<string name="videophone_failcause_50">"VT ist nicht unterstützt"</string>
+<string name="videophone_failcause_57_remote">"Die von Ihnen gewählte Nummer unterstützt kein VT"</string>
+<string name="videophone_failcause_58">"VT vom Anderen nicht unterstützt"</string>
+<string name="videophone_failcause_157">Das Handy hat den VT-Dienst nicht gestartet</string>
+<string name="videophone_failcause_88">"Nutzer wählt Sprachanruf"</string>
+<string name="videophone_failcause_minus_1">"3G-Dienst nicht verfügbar"</string>
+<string name="videophone_failcause_default">"Nutzer ist nicht verfügbar"</string>
+<string name="net_connection_disconnect">"Netzwerkverbindung getrennt"</string>
+<string name="no_vt_service">"Es können keine Videoanrufe getätigt werden"</string>
+<string name="remote_request_change">"Fernanfrage auf Medienwechsel"</string>
+<string name="choose_accept_reject">"Bitte wählen Sie akzeptieren oder ablehnen aus"</string>
+<string name="remote_request_change_accept">"Akzeptieren"</string>
+<string name="remote_request_change_reject">"Ablehnen"</string>
+<string name="remote_reject_request">"Fernanfrage abgelehnt"</string>
+<string name="remote_accept_request">"Fernanfrage angenommen"</string>
+<string name="callFailed_fdn_only">"Ausgehende Anrufe werden vom FDN eingeschränkt"</string>
+</resources>

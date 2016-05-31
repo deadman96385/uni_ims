@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"Cuộc gọi video ngược lại"</string>
+<string name="videophone_failcause_1000">"Cuộc gọi video trước chưa kết thúc như bình thường, vui lòng thử lại sau một lúc"</string>
+<string name="videophone_failcause_1">"Số bạn đã quay số đang không phục vụ"</string>
+<string name="videophone_failcause_3">"Người dùng không khả dụng"</string>
+<string name="videophone_failcause_8">"Cuộc gọi bị chặn"</string>
+<string name="videophone_failcause_17">"Người dùng bận"</string>
+<string name="videophone_failcause_19">"Người dùng bạn vừa quay số không trả lời"</string>
+<string name="videophone_failcause_27">"Người dùng không thể được tiếp cận"</string>
+<string name="videophone_failcause_34">"Kết nối bị ngắt kết nối"</string>
+<string name="videophone_failcause_63_modify">"Không thể thiết lập điện thoại video"</string>
+<string name="videophone_failcause_79">"VT không được hỗ trợ bởi máy kia"</string>
+<string name="videophone_failcause_47">"Xin lỗi, cuộc gọi video không khả dụng"</string>
+<string name="videophone_failcause_50">"VT không được hỗ trợ"</string>
+<string name="videophone_failcause_57_remote">"Số bạn quay số không hỗ trợ VT"</string>
+<string name="videophone_failcause_58">"VT không được hỗ trợ bởi máy kia"</string>
+<string name="videophone_failcause_157">"Điện thoại di động chưa khởi động dịch vụ VT"</string>
+<string name="videophone_failcause_88">"Người dùng chọn cuộc gọi thoại"</string>
+<string name="videophone_failcause_minus_1">"Dịch vụ 3G không khả dụng"</string>
+<string name="videophone_failcause_default">"Người dùng không khả dụng"</string>
+<string name="net_connection_disconnect">Ngắt kết nối Mạng</string>
+<string name="no_vt_service">"Không thể tạo cuộc gọi video" </string>
+<string name="remote_request_change">"Thay đổi phương tiện yêu cầu từ xa"</string>
+<string name="choose_accept_reject">"Hãy chọn chấp nhận hoặc từ chối"</string>
+<string name="remote_request_change_accept">"Chấp nhận"</string>
+<string name="remote_request_change_reject">"Từ chối"</string>
+<string name="remote_reject_request">"Yêu cầu từ xa bị từ chối"</string>
+<string name="remote_accept_request">"Yêu cầu từ xa được chấp nhận"</string>
+<string name="callFailed_fdn_only">"Các cuộc gọi đi bị hạn chế bởi FDN"</string>
+</resources>

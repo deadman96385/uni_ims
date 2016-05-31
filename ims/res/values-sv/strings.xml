@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"Återställning av videosamtal"</string>
+<string name="videophone_failcause_1000">"Det senaste videosamtalet avslutades inte normalt, försök igen lite senare"</string>
+<string name="videophone_failcause_1">"Numret du har ringt har ingen abonnent"</string>
+<string name="videophone_failcause_3">"Användaren är inte tillgänglig"</string>
+<string name="videophone_failcause_8">"Samtalet har spärrats"</string>
+<string name="videophone_failcause_17">"Användaren är upptagen"</string>
+<string name="videophone_failcause_19">"Användaren du ringde är upptagen"</string>
+<string name="videophone_failcause_27">"Användaren kan inte nås för tillfället"</string>
+<string name="videophone_failcause_34">"Anslutningen är frånkopplad"</string>
+<string name="videophone_failcause_63_modify">"Videotelefon kunde inte upprättas"</string>
+<string name="videophone_failcause_79">"VT stöds inte av den andra"</string>
+<string name="videophone_failcause_47">"Videosamtal är inte tillgängligt"</string>
+<string name="videophone_failcause_50">"VT stöds inte"</string>
+<string name="videophone_failcause_57_remote">"Numret du har ringt stöds inte av VT"</string>
+<string name="videophone_failcause_58">"VT stöds inte av den andra"</string>
+<string name="videophone_failcause_157">"Mobiltelefonen har inte startat VT-tjänsten"</string>
+<string name="videophone_failcause_88">"Användaren väljer röstsamtal "</string>
+<string name="videophone_failcause_minus_1">"3G-service är inte tillgängligt"</string>
+<string name="videophone_failcause_default">"Användaren är inte tillgänglig"</string>
+<string name="net_connection_disconnect">"Nätverksanslutning är frånkopplad"</string>
+<string name="no_vt_service">"Kan inte genomföra videosamtal"</string>
+<string name="remote_request_change">"Fjärrbegäran av mediaändring "</string>
+<string name="choose_accept_reject">"Välj godkänn eller avvisa"</string>
+<string name="remote_request_change_accept">"Godkänn"</string>
+<string name="remote_request_change_reject">"Neka"</string>
+<string name="remote_reject_request">"Fjärrbegäran har nekats"</string>
+<string name="remote_accept_request">"Fjärrbegäran har godkänts"</string>
+<string name="callFailed_fdn_only">"Utgående samtal är begränsade av FDN"</string>
+</resources>
