@@ -152,6 +152,8 @@ static int allow_data = 0;
 int  g_maybe_addcall = 0;
 /** SPRD: Bug 503887 add ISIM for volte . @{*/
 int g_ImsBearerEstablished = -1;
+static int s_ImsISIM = -1;
+static int s_sessionId = -1;
 /** }@ */
 
 /** SPRD: Bug 523208 set pin/puk remain times to prop. @{*/
@@ -5978,6 +5980,10 @@ static void requestResetRadio(int channelID, RIL_Token t)
     return;
 }
 
+static bool isISIMFileId(int fileId) {
+    return fileId == 0x6f04 || fileId == 0x6f02 || fileId == 0x6f03 || fileId == 0x6f07  || fileId == 0x6f09 || fileId == 0x6fe5;
+}
+
 static void  requestSIM_IO(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     ATResponse *p_response = NULL;
@@ -5992,6 +5998,7 @@ static void  requestSIM_IO(int channelID, void *data, size_t datalen, RIL_Token 
     memset(&sr, 0, sizeof(sr));
 
     p_args = (RIL_SIM_IO_v6 *)data;
+    bool isISIMfile = isISIMFileId(p_args->fileid);
 
     /* FIXME handle pin2 */
 
@@ -6000,14 +6007,26 @@ static void  requestSIM_IO(int channelID, void *data, size_t datalen, RIL_Token 
         RILLOGI("Reference-ril. requestSIM_IO pin2 %s",p_args->pin2);
     }
     if (p_args->data == NULL) {
-        err = asprintf(&cmd, "AT+CRSM=%d,%d,%d,%d,%d,%c,\"%s\"",
-                p_args->command, p_args->fileid,
-                p_args->p1, p_args->p2, p_args->p3,pad_data,p_args->path);
+        if(isISIMfile) {
+            err = asprintf(&cmd, "AT+CRLA=%d,%d,%d,%d,%d,%d,%c,\"%s\"", s_sessionId,
+                    p_args->command, p_args->fileid,
+                    p_args->p1, p_args->p2, p_args->p3,pad_data,p_args->path);
+        } else {
+            err = asprintf(&cmd, "AT+CRSM=%d,%d,%d,%d,%d,%c,\"%s\"",
+                    p_args->command, p_args->fileid,
+                    p_args->p1, p_args->p2, p_args->p3,pad_data,p_args->path);
+        }
 
     } else {
-        err = asprintf(&cmd, "AT+CRSM=%d,%d,%d,%d,%d,\"%s\",\"%s\"",
-                p_args->command, p_args->fileid,
-                p_args->p1, p_args->p2, p_args->p3, p_args->data,p_args->path);
+        if(isISIMfile) {
+            err = asprintf(&cmd, "AT+CRLA=%d,%d,%d,%d,%d,%d,\"%s\",\"%s\"", s_sessionId,
+                    p_args->command, p_args->fileid,
+                    p_args->p1, p_args->p2, p_args->p3, p_args->data,p_args->path);
+        } else {
+            err = asprintf(&cmd, "AT+CRSM=%d,%d,%d,%d,%d,\"%s\",\"%s\"",
+                    p_args->command, p_args->fileid,
+                    p_args->p1, p_args->p2, p_args->p3, p_args->data,p_args->path);
+        }
     }
     if(err < 0) {
         RILLOGE("Failed to allocate memory");
@@ -6015,7 +6034,7 @@ static void  requestSIM_IO(int channelID, void *data, size_t datalen, RIL_Token 
         goto error;
     }
 
-    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CRSM:", &p_response);
+    err = at_send_command_singleline(ATch_type[channelID], cmd, isISIMfile ? "+CRLA:": "+CRSM:", &p_response);
 
     free(cmd);
     if (err < 0 || p_response->success == 0) {
@@ -6370,27 +6389,43 @@ void setPinPukRemainTimes(SimUnlockType type, int remainTimes) {
 }
 /** }@ */
 
-static void requestInitISIM(int channelID, void*  data, size_t  datalen, RIL_Token  t)
-{
+static int initISIM(int channelID) {
+    if(s_ImsISIM != -1) {
+        return s_ImsISIM;
+    }
     ATResponse   *p_response = NULL;
-    int           err;
-    char          cmd[128] = {0};
     char         *line;
-    int           response = 0;
-    const char**  strings = (const char**)data;
+    int           err;
     err = at_send_command_singleline(ATch_type[channelID], "AT+ISIM=1", "+ISIM:", &p_response);
     if (err >= 0 && p_response->success) {
         line = p_response->p_intermediates->line;
         err = at_tok_start(&line);
         if (err >= 0) {
-            err = at_tok_nextint(&line, &response);
+            err = at_tok_nextint(&line, &s_ImsISIM);
             if(err >= 0) {
-                RILLOGE("Response of ISIM is %d", response);
+                RILLOGE("Response of ISIM is %d", s_ImsISIM);
+                if(s_ImsISIM == 1) {
+                    err = at_tok_nextint(&line, &s_sessionId);
+                    RILLOGE("SessionId of ISIM is %d", s_sessionId);
+                }
             }
         }
     }
     at_response_free(p_response);
+    return s_ImsISIM;
+}
 
+static void requestInitISIM(int channelID, void*  data, size_t  datalen, RIL_Token  t)
+{
+    ATResponse   *p_response = NULL;
+    int           err;
+    char          cmd[100] = {0};
+    int           response = initISIM(channelID);
+    const char**  strings = (const char**)data;
+    if(response == 1){
+        RILLOGE("ISIM card, need send AT+IMSCOUNTCFG=1 to CP");
+        err = at_send_command(ATch_type[channelID], "AT+IMSCOUNTCFG=1" , NULL);
+    }
     if(datalen == 7 * sizeof(char *) && strings[0] != NULL && strlen(strings[0]) > 0)
     {
         if(response == 0)
@@ -12299,6 +12334,8 @@ getSIMStatus(int channelID)
     } else if(ret == SIM_ABSENT) {
         g_NeedQueryPinTimes = true;
         g_NeedQueryPukTimes = true;
+        s_ImsISIM = -1;
+        s_sessionId = -1;
     }
     /** }@ */
     return ret;
@@ -12381,6 +12418,10 @@ static int getCardStatus(int channelID, RIL_CardStatus_v6 **pp_card_status)
                                                                                                                                                                             NULL, NULL, 0, RIL_PINSTATE_ENABLED_NOT_VERIFIED, RIL_PINSTATE_UNKNOWN  }
             //Added for bug#242159 end
     };
+    static RIL_AppStatus ims_app_status_array[] = {
+        { RIL_APPTYPE_ISIM, RIL_APPSTATE_READY, RIL_PERSOSUBSTATE_READY,
+            NULL, NULL, 0, RIL_PINSTATE_UNKNOWN, RIL_PINSTATE_UNKNOWN }
+    };
     RIL_CardState card_state;
     int num_apps;
 
@@ -12405,6 +12446,12 @@ static int getCardStatus(int channelID, RIL_CardStatus_v6 **pp_card_status)
     RIL_AppType app_type = getSimType( channelID);
     RILLOGD("app type %d",app_type);
 
+    int isimResp = 0;
+    if(sim_status == SIM_READY && app_type == RIL_APPTYPE_USIM) {
+        isimResp = initISIM(channelID);
+        RILLOGD("app type %d", isimResp);
+    }
+
     /* Initialize application status */
     unsigned int i;
     for (i = 0; i < RIL_CARD_MAX_APPS; i++) {
@@ -12418,12 +12465,20 @@ static int getCardStatus(int channelID, RIL_CardStatus_v6 **pp_card_status)
      * that reflects sim_status for gsm.
      */
     if (num_apps != 0) {
-        /* Only support one app, gsm */
-        p_card_status->num_applications = 1;
-        p_card_status->gsm_umts_subscription_app_index = 0;
+        if(isimResp != 1)  {
+            /* Only support one app, gsm */
+            p_card_status->num_applications = 1;
+            p_card_status->gsm_umts_subscription_app_index = 0;
 
-        /* Get the correct app status */
-        p_card_status->applications[0] = app_status_array[sim_status];
+            /* Get the correct app status */
+            p_card_status->applications[0] = app_status_array[sim_status];
+        } else {
+            p_card_status->num_applications = 2;
+            p_card_status->gsm_umts_subscription_app_index = 0;
+            p_card_status->ims_subscription_app_index = 1;
+            p_card_status->applications[0] = app_status_array[sim_status];
+            p_card_status->applications[1] = ims_app_status_array[0];
+        }
     }
 
     *pp_card_status = p_card_status;
