@@ -4977,6 +4977,9 @@ static int mapCgregResponse(int in_response)
         case 7:
             out_response = 14;   /* LTE */
             break;
+        case 16:
+            out_response = 19;   /* LTE_CA */
+            break;
         default:
             out_response = 0;    /* UNKNOWN */
             break;
