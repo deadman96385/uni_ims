@@ -239,19 +239,24 @@ static void ylog_update_config(const char *fn, int u_nargs, char **u_args, int u
 
                     if (i == un) {
                         s_args = u_args;
-                        s_nargs = u_nargs;
                         found = 1;
+                        if (u_args[un])
+                            s_nargs = u_nargs;
+                        else
+                            s_nargs = 0; /* delete this item */
                     } else {
                         s_args = args;
                         s_nargs = nargs;
                     }
 
-                    for (i = 0; i < s_nargs; i++) {
-                        fd_write(s_args[i], strlen(s_args[i]), wfd, desc);
-                        if (i != (s_nargs - 1))
-                            fd_write(" ", 1, wfd, desc);
+                    if (s_nargs) {
+                        for (i = 0; i < s_nargs; i++) {
+                            fd_write(s_args[i], strlen(s_args[i]), wfd, desc);
+                            if (i != (s_nargs - 1))
+                                fd_write(" ", 1, wfd, desc);
+                        }
+                        fd_write("\n", 1, wfd, desc);
                     }
-                    fd_write("\n", 1, wfd, desc);
 
                     nargs = 0;
                 }
@@ -268,11 +273,13 @@ parser_done:
     if (found == 0) {
         int i;
         LSEEK(wfd, 0, SEEK_END);
-        for (i = 0; i < u_nargs; i++) {
-            fd_write(u_args[i], strlen(u_args[i]), wfd, desc);
-            fd_write(" ", 1, wfd, desc);
+        if (u_args[un]) {
+            for (i = 0; i < u_nargs; i++) {
+                fd_write(u_args[i], strlen(u_args[i]), wfd, desc);
+                fd_write(" ", 1, wfd, desc);
+            }
+            fd_write("\n", 1, wfd, desc);
         }
-        fd_write("\n", 1, wfd, desc);
     }
     free(mptr);
     if (fchmod(wfd, 0644))
@@ -282,6 +289,11 @@ parser_done:
     if (rename(tempPath, fn)) {
         unlink(tempPath);
         ylog_error("Unable to rename ylog config file %s to %s\n", tempPath, fn);
+    }
+    struct stat stat_buf;
+    if (stat(fn, &stat_buf) == 0 && stat_buf.st_size == 0) {
+        ylog_critical("%s size is 0, delete it\n", fn);
+        unlink(fn);
     }
     pthread_mutex_unlock(&update_config_mutex);
 }

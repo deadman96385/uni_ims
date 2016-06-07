@@ -2,14 +2,50 @@
  * Copyright (C) 2016 Spreadtrum Communications Inc.
  */
 
+static void selinux_override_copy_file(char *file_raw, char *file_cur) {
+    /* first power on, move file_raw to file_cur,
+       file_cur will be the current processing file for ylog,
+       file_raw will be used for waiting next future last_kmsg */
+    long fd;
+    char buf[4096];
+    int count = sizeof buf;
+    unlink(file_cur);
+    if (access(file_raw, F_OK) == 0) {
+        struct stat st;
+        if (stat(file_raw, &st) == 0) {
+            if (st.st_size) {
+                snprintf(buf, count, "cp -r %s %s", file_raw, file_cur);
+                pcmd(buf, NULL, NULL, NULL, "ylog_snapshot_startup", 2000, -1, NULL);
+            }
+        } else {
+            ylog_error("fstat %s failed: %s\n", file_raw, strerror(errno));
+        }
+    }
+    /**
+     * Because of SELinux policy, if bootloader create /data/ylog/last_kmsg or bootloader.log directly
+     * SELinux info will lose, so /data/ylog/last_kmsg or bootloader.log should be created by android process, so in here
+     * ylog will create this file, bootloader should check /data/ylog/last_kmsg or bootloader.log first
+     * if /data/ylog/last_kmsg exits then overwrite this file, otherwise bootloader give a warning
+     * but should not create /data/ylog/last_kmsg in bootloader
+     */
+    mkdirs_with_file(file_raw);
+    // unlink(file_raw);
+    fd = open(file_raw, O_RDWR | O_CREAT | O_TRUNC, 0664);
+    if (fd < 0) {
+        ylog_critical("%s %s Failed to open %s\n", __func__, file_raw, strerror(errno));
+    } else {
+        close(fd);
+    }
+}
+
 static void ylog_snapshot___case___log(struct ylog_snapshot_args *args);
 static void ylog_snapshot_startup(long poweron) {
     struct ylog_snapshot_args args;
     char buf[4096];
     int count = sizeof buf;
     struct ylog *y = pos->snapshot;
-    char *file = "/data/ylog/last_kmsg";
-    char *file2 = "/data/ylog/last_kmsg.current";
+    char *file_last_kmsg = "/data/ylog/last_kmsg.current";
+    char *file_bootloader = "/data/ylog/bootloader.log.current";
 
     ylog_snapshot___case___log(&args);
 
@@ -17,39 +53,12 @@ static void ylog_snapshot_startup(long poweron) {
     /**
      * copy last_kmsg to ydst snapshot/ folder
      */
-    if (poweron) { /* first power on, move it to file2,
-                      file2 will be the current last_kmsg,
-                      file1 will be used for waiting next future last_kmsg */
-        long fd;
-        unlink(file2);
-        if (access(file, F_OK) == 0) {
-            struct stat st;
-            if (stat(file, &st) == 0) {
-                if (st.st_size) {
-                    snprintf(buf, count, "cp -r %s %s", file, file2);
-                    pcmd(buf, NULL, NULL, NULL, "ylog_snapshot_startup", 2000, -1, NULL);
-                }
-            } else {
-                ylog_error("fstat %s failed: %s\n", file, strerror(errno));
-            }
-        }
-        /**
-         * Because of SELinux policy, if bootloader create /data/ylog/last_kmsg directly
-         * SELinux info will lose, so /data/ylog/last_kmsg should be created by android process, so in here
-         * ylog will create this file, bootloader should check /data/ylog/last_kmsg first
-         * if /data/ylog/last_kmsg exits then overwrite this file, otherwise bootloader give a warning
-         * but should not create /data/ylog/last_kmsg in bootloader
-         */
-        mkdirs_with_file(file);
-        // unlink(file);
-        fd = open(file, O_RDWR | O_CREAT | O_TRUNC, 0664);
-        if (fd < 0) {
-            ylog_critical("%s %s Failed to open %s\n", __func__, file, strerror(errno));
-        } else {
-            close(fd);
-        }
+    if (poweron) {
+        selinux_override_copy_file("/data/ylog/last_kmsg", file_last_kmsg);
+        selinux_override_copy_file("/data/ylog/bootloader.log", file_bootloader);
     }
-    pcmds_ylog_copy_file(file2, "last_kmsg", buf, count, y);
+    pcmds_ylog_copy_file(file_last_kmsg, "last_kmsg", buf, count, y);
+    pcmds_ylog_copy_file(file_bootloader, "bootloader.log", buf, count, y);
 
     /**
      * copy ylog_journal_file to snapshot/ folder

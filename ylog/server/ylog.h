@@ -387,6 +387,7 @@ struct speed {
 
 struct ydst_root {
     char *root;
+    char *sroot;
     int ydst_change_seq;
     int ydst_change_seq_move_root; /* sequnce number */
     int ydst_change_seq_resize_segment; /* sequnce number */

@@ -826,6 +826,37 @@ static void ydst_requota_percent(int percent, struct ylog *y, struct ydst_root *
     ydst_root_quota(NULL, 0);
 }
 
+static int ydst_sroot(struct ydst_root *root, char *sroot_new) {
+    char *old;
+
+    if (sroot_new == NULL)
+        return 0;
+
+    pthread_mutex_lock(&mutex);
+
+    if (root == NULL)
+        root = global_ydst_root;
+
+    old = root->sroot;
+
+    if (sroot_new[0] == '/') {
+        root->sroot = strdup(sroot_new);
+        if (root->sroot == NULL) {
+            ylog_error("strdup %s failed: %s, we will use %s\n", sroot_new, strerror(errno), old);
+            root->sroot = old;
+            old = NULL;
+        }
+    } else
+        root->sroot = NULL;
+
+    if (old)
+        free(old);
+
+    pthread_mutex_unlock(&mutex);
+
+    return 0;
+}
+
 static int ydst_root_new(struct ydst_root *root, char *root_new) {
     struct ylog *y;
     int i;
@@ -3146,7 +3177,7 @@ static void ylog_init(struct ydst_root *root, struct context *c) {
             y->reserved_buf = y->buf + y->id_token_len;
         y->rbuf = y->buf + y->id_token_len + y->reserved_len + y->id_token_len_desc;
         y->rbuf_size = y->buf_size - y->id_token_len - y->reserved_len - y->id_token_len_desc;
-        if (y->id_token_len && y->id_token_buf)
+        if (y->id_token_buf && y->id_token)
             memcpy(y->id_token_buf, y->id_token, y->id_token_len);
 
         if (pipe(y->state_pipe))

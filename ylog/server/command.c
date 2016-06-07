@@ -901,6 +901,23 @@ static int cmd_cpath(struct command *cmd, char *buf, int buf_size, int fd, int i
     return 0;
 }
 
+static int cmd_sroot(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
+    UNUSED(cmd);
+    UNUSED(index);
+    UNUSED(yp);
+    char *root_new, *last;
+    char path[PATH_MAX];
+    struct ydst_root *root = global_ydst_root;
+    strtok_r(buf, " ", &last);
+    root_new = strtok_r(NULL, " ", &last);
+    if (root_new) {
+        ydst_sroot(NULL, root_new);
+        ylog_update_config2("sroot", root->sroot);
+    }
+    SEND(fd, buf, snprintf(buf, buf_size, "%s\n", root->sroot ? root->sroot : ""), MSG_NOSIGNAL);
+    return 0;
+}
+
 static int cmd_quota(struct command *cmd, char *buf, int buf_size, int fd, int index, struct ylog_poll *yp) {
     UNUSED(cmd);
     UNUSED(index);
@@ -1290,6 +1307,19 @@ static void load_ylog(struct ylog_keyword *kw, int nargs, char **args) {
     }
 }
 
+static void load_sroot(struct ylog_keyword *kw, int nargs, char **args) {
+    UNUSED(kw);
+    UNUSED(nargs);
+    char *sroot = args[1];
+    if (sroot[0] == '/') {
+        if (access(sroot, F_OK) == 0) {
+            ydst_sroot(NULL, sroot);
+            return;
+        }
+    }
+    ylog_critical("sroot path is wrong %s\n", sroot);
+}
+
 static void *cmd_snapshot_thread_handler(void *arg) {
     struct ylog_argument *ya = (struct ylog_argument *)arg;
     int index = ya->index;
@@ -1407,6 +1437,7 @@ static struct command commands[] = {
             "              ylog_cli ylog kernel cache debuglevel 0x03    - bit0: INFO, bit1: CRITICAL, bit2: WRAP, bit7: DATA"
             , cmd_ylog, NULL},
     {"cpath", "change log path, named 'ylog' will be created under it, ex. ylog_cli cpath /sdcard/", cmd_cpath, NULL},
+    {"sroot", "set log root permanently, must use absolute path, ex. ylog_cli sroot /data/, ylog_cli sroot drop will delete it", cmd_sroot, NULL},
     {"quota", "give a new quota for the ylog (unit is 'M') 500M ex. ylog_cli quota 500", cmd_quota, NULL},
     {"rylog", "last_ylog, remove the last_ylog folder", cmd_clear_ylog, (void*)(YLOG_CLEAR_LAST_YLOG)},
     {"ryloga", "all ylog, remove the last_ylog folder and also all the current saved ylog",

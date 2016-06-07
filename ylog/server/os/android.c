@@ -313,7 +313,11 @@ static int os_search_root_path(char *path, int len) {
     char *historical_folder_root = NULL;
     unsigned long long quota = 0;
 
-    if (os_check_sdcard_online(sdcard_path, sizeof(sdcard_path))) {
+    if (root->sroot) {
+        strncpy(sdcard_path, root->sroot, sizeof(sdcard_path));
+        historical_folder_root = pos->historical_folder_root_last;
+        pos->sdcard_online = 1;
+    } else if (os_check_sdcard_online(sdcard_path, sizeof(sdcard_path))) {
         historical_folder_root = pos->historical_folder_root_last;
         pos->sdcard_online = 1;
     } else {
@@ -1260,6 +1264,7 @@ static struct ylog_keyword os_ylog_keyword[] = {
     {"loglevel", load_loglevel},
     {"keep_historical_folder_numbers", load_keep_historical_folder_numbers},
     {"ylog", load_ylog},
+    {"sroot", load_sroot},
     {NULL, NULL},
 };
 
@@ -1561,6 +1566,36 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
                 .num = 40,
                 .timeout = 1000,
                 .debuglevel = CACHELINE_DEBUG_CRITICAL,
+            },
+        },
+        /* iodebug/ */ {
+            .ylog = {
+                {
+                    .name = "iodebug_normal",
+                    .type = FILE_POPEN,
+                    .file = "iodebug -v",
+                    .mode = YLOG_READ_ROOT_USER,
+                    .id_token = "B0-",
+                    .id_token_len = 3,
+                    .id_token_filename = "iodebug.log",
+
+                },
+                {
+                    .name = "iodebug_iosnoop",
+                    .type = FILE_POPEN,
+                    .file = "iodebug -i",
+                    .mode = YLOG_READ_ROOT_USER,
+                    .id_token = "B1-",
+                    .id_token_len = 3,
+                    .id_token_filename = "iosnoop.log",
+
+                },
+            },
+            .ydst = {
+                .file = "iodebug/",
+                .file_name = "iodebug.log",
+                .max_segment = 2,
+                .max_segment_size = 10*1024*1024,
             },
         },
         /* traces/ */ {
