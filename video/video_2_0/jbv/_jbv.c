@@ -11,6 +11,27 @@
 #include "jbv.h"
 #include "_jbv.h"
 
+vint _JBV_checkIfUpdateFP(
+    JBV_Obj  *obj_ptr,
+    uint64      ts)
+{
+    vint      count;
+
+    if (ts < obj_ptr->lastDrawnTs){
+        return (0);
+    }
+    for (count = 0; count < RECV_TS_MAXDIFF; count ++){
+        if (ts == obj_ptr->recvFrameTs[count]){
+            return (0);
+        }
+    }
+    obj_ptr->recvFrameTs[obj_ptr->numTs & (RECV_TS_MAXDIFF-1)] = ts;
+    obj_ptr->numTs ++;
+
+    //JBV_dbgLog("numTs:%d Ts:%llu\n",obj_ptr->numTs, ts);
+    return (1);
+}
+
 /*
  * ======== _JBV_updateFramePeriod() ========
  *
@@ -33,22 +54,43 @@ void _JBV_updateFramePeriod(
      * Packets belonging to same frame is expected to have same time stamp.
      * Only update frame period if we detect time stamp change (which means we have a new frame).
      */
-    if ((obj_ptr->lastTs < unit_ptr->ts)
-            && (obj_ptr->lastSeqn < unit_ptr->seqn)) {
-        if (obj_ptr->totalFramesReceived > 0) {
-            elapsedTime = unit_ptr->ts - obj_ptr->firstTs;
-            if (obj_ptr->totalFramesReceived < elapsedTime) {
-                /* garuantee that obj_ptr->framePeriod is greater than 0 */
-                obj_ptr->framePeriod = elapsedTime / obj_ptr->totalFramesReceived;
-            } else {
-                JBV_wrnLog("elapsedTime %u, obj_ptr->totalFramesReceived %d\n",
+    if (_JBV_checkIfUpdateFP(obj_ptr,unit_ptr->ts)) {
+        obj_ptr->totalFramesReceived += 1;
+        if (unit_ptr->ts - obj_ptr->lastTs > JBV_ABNORMAL_PERIOD_USEC){
+            obj_ptr->totalFramesReceived = 1;
+            obj_ptr->firstTs = unit_ptr->ts;
+            obj_ptr->maxTs = unit_ptr->ts;
+        }
+        else{
+            if (obj_ptr->totalFramesReceived > 1) {
+                if (obj_ptr->firstTs > unit_ptr->ts){
+                    obj_ptr->firstTs = unit_ptr->ts;
+                }
+                if (obj_ptr->maxTs < unit_ptr->ts){
+                    obj_ptr->maxTs = unit_ptr->ts;
+                }
+                elapsedTime = obj_ptr->maxTs - obj_ptr->firstTs;
+                if (obj_ptr->totalFramesReceived < elapsedTime) {
+                    /* garuantee that obj_ptr->framePeriod is greater than 0 */
+                    obj_ptr->framePeriod = elapsedTime / (obj_ptr->totalFramesReceived-1);
+                    if (obj_ptr->framePeriod > JBV_FRAME_PERIOD_MAX_USEC){
+                        obj_ptr->framePeriod = JBV_FRAME_PERIOD_MAX_USEC;
+                    }
+                } else {
+                    JBV_wrnLog("elapsedTime %u, obj_ptr->totalFramesReceived %d\n",
                         elapsedTime, obj_ptr->totalFramesReceived);
+                }
+                if (unit_ptr->ts - obj_ptr->firstTs > 5000000){
+                    obj_ptr->totalFramesReceived = 1;
+                    obj_ptr->firstTs = unit_ptr->ts;
+                    obj_ptr->maxTs = unit_ptr->ts;
+                }
             }
 /*
             JBV_dbgLog("currentSeqn:%hu currentTs:%llu firstTs:%llu"
                     "Frame period is %llu (%llu fps)"
                     "Frame Count:%d\n",
-                    unit_ptr->seqn,    unit_ptr->ts, obj_ptr->firstTs,
+                    unit_ptr->seqn,    obj_ptr->maxTs, obj_ptr->firstTs,
                     obj_ptr->framePeriod,
                     1000000L / obj_ptr->framePeriod, obj_ptr->totalFramesReceived);
 */

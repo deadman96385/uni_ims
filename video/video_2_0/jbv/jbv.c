@@ -160,6 +160,9 @@ static void _JBV_putPkt(
         /* Cache the first packet time stamp for Frame period calculation. */
         if (updateFirstTs) {
             obj_ptr->firstTs  = unit_ptr->ts;
+            obj_ptr->maxTs = unit_ptr->ts;
+            obj_ptr->recvFrameTs[obj_ptr->numTs] = unit_ptr->ts;
+            obj_ptr->numTs ++;
             OSAL_logMsg("cache first seqn:%u first Ts:%llu",
                     pkt_ptr->seqn, obj_ptr->firstTs);
         }
@@ -586,6 +589,9 @@ int JBV_init(
 
     /* Init state */
     obj_ptr->state = JBV_STATE_EMPTY;
+
+    /* Init numTs */
+    obj_ptr->numTs = 0;
 
     OSAL_logMsg("accmRate:%d, initLevel:%llu, eMscPrvt:%d\n",
             obj_ptr->accmRate, obj_ptr->initLevel, obj_ptr->eMscPrvt);
