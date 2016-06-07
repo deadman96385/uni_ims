@@ -264,9 +264,16 @@ public class VideoCallCameraManager {
             default:
                 break;
         }
-        VTManagerProxy.getInstance().mPreviewWidth = mWidth;
-        VTManagerProxy.getInstance().mPreviewHeight = mHeight;
-        setPreviewSize(mWidth,mHeight);
+        /* SPRD: modify for bug569661 @ { */
+        if((mDeviceRotation == 90) || (mDeviceRotation == 270)){
+           VTManagerProxy.getInstance().mPreviewWidth = mHeight;
+           VTManagerProxy.getInstance().mPreviewHeight = mWidth;
+        }else{
+        /* @ } */
+           VTManagerProxy.getInstance().mPreviewWidth = mWidth;
+           VTManagerProxy.getInstance().mPreviewHeight = mHeight;
+        }
+        setPreviewSize(VTManagerProxy.getInstance().mPreviewWidth,VTManagerProxy.getInstance().mPreviewHeight);
         Log.i(TAG, "setPreviewSurfaceSize, mWidth: " + mWidth+"   mHeight="+mHeight+"   mVideoQuality="+mVideoQuality);
     }
     private void tryReopenCamera(){
