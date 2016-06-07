@@ -55,6 +55,8 @@
  */
 #define _JBV_SEQN_MAXDIFF    (256)
 
+#define RECV_TS_MAXDIFF      (8)
+
 /* JBV Init level. */
 #define JBV_INIT_LEVEL   (0)
 
@@ -94,6 +96,7 @@
 
 /* Max frame period */
 #define JBV_FRAME_PERIOD_MAX_USEC    (1000000)       /* 1000 ms i.e. 1fps */
+#define JBV_ABNORMAL_PERIOD_USEC     (2000000)       /* >2s, abnormal frame period*/
 
 #define JBV_MAX_JITTER_USEC          (1000000)      /* in usecs */
 
@@ -250,6 +253,10 @@ typedef struct {
     JBV_MosaicPrevent mp;                       /* replace eMscPrvt to get enhanced implementation */
     uint8           data[VIDEO_NET_BUFFER_SZ];  /* Buffer for holding reassembled H264 Frame. */
     JBV_Unit        unit[_JBV_SEQN_MAXDIFF];    /* THE JITTER BUFFER. Array of JBV_unit. */
+
+    uint64          recvFrameTs[RECV_TS_MAXDIFF]; /*Buffer for saving ts of frames*/
+    uint32          numTs;                        /*number of frame in diferent timestamp*/
+    uint64          maxTs;                        /*Maximum frame timestamp in a certain of time*/
 } JBV_Obj;
 
 typedef struct {

@@ -761,7 +761,7 @@ vint _JBV_reassembleH264(
         }
     }
 
-    obj_ptr->totalFramesReceived += framesReceived;
+  //  obj_ptr->totalFramesReceived += framesReceived;
 
     if (unit_ptr->key) {
         obj_ptr->rtcpInfo.packetLoss.lostSinceIdr = 0;
