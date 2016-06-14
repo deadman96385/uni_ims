@@ -9144,6 +9144,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_EXT_REQUEST_SET_COLP
                 || request == RIL_EXT_REQUEST_STORE_SMS_TO_SIM
                 || request == RIL_EXT_REQUEST_QUERY_SMS_STORAGE_MODE
+                || request == RIL_EXT_REQUEST_GET_BAND_INFO
+                || request == RIL_EXT_REQUEST_SET_BAND_INFO_MODE
 #endif
 #endif
                 || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
@@ -11709,6 +11711,37 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_EXT_REQUEST_QUERY_SMS_STORAGE_MODE:
             requestQuerySmsStorageMode(channelID, data, datalen, t, NULL);
             break;
+        case RIL_EXT_REQUEST_GET_BAND_INFO: {
+            p_response = NULL;
+            char* line = NULL;
+            err = at_send_command_singleline(ATch_type[channelID], "AT+SPCLB?",
+                    "+SPCLB:", &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                line = p_response->p_intermediates->line;
+                at_tok_start(&line);
+                skipWhiteSpace(&line);
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, line, strlen(line)+1);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        case RIL_EXT_REQUEST_SET_BAND_INFO_MODE: {
+            p_response = NULL;
+            int n = ((int*)data)[0];
+            char cmd[32] = {0};
+            snprintf(cmd, sizeof(cmd), "AT+SPCLB=%d", n);
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+
+            at_response_free(p_response);
+            break;
+        }
 #endif  // RIL_SUPPORTED_OEMSOCKET
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_GET_CELL_BROADCAST_CONFIG:
@@ -14343,23 +14376,20 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
         RILLOGI("SPGS Cid : %d, OnOff : %d \n", sGsCid, sEthOnOff);
         RIL_requestTimedCallback(startGSps, NULL, NULL);
-    }
-    //SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 START
-    else if (strStartsWith(s, "+SPCLB:")) {
+    } else if (strStartsWith(s, "+SPCLB:")) {
         char *tmp;
         char *response = NULL;
 
-        RILLOGI("Enter SPCLB %s", s);
         line = strdup(s);
         tmp = line;
         at_tok_start(&tmp);
-
         skipWhiteSpace(&tmp);
-        RILLOGI("Retrun SPCLB: %s", tmp);
         response = tmp;
-        RIL_onUnsolicitedResponse (RIL_UNSOL_BAND_INFO, response, strlen(response) + 1);
+#if defined (RIL_SUPPORTED_OEMSOCKET)
+        RIL_onUnsolicitedResponse(RIL_EXT_UNSOL_BAND_INFO, response,
+                strlen(response) + 1);
+#endif
     }
-    //SPRD: For WIFI get BandInfo report from modem, BRCM4343+9620, Zhanlei Feng added. 2014.06.20 END
     /* SPRD: add AGPS feature for bug 436461 @{ */
     else if(strStartsWith(s, "+SPPCI:")) {
         char *tmp;

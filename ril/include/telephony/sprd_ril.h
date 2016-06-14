@@ -6097,11 +6097,14 @@ typedef struct {
 #define RIL_EXT_REQUEST_SET_COLP                    (RIL_EXT_REQUEST_BASE + 5)
 #define RIL_EXT_REQUEST_STORE_SMS_TO_SIM            (RIL_EXT_REQUEST_BASE + 6)
 #define RIL_EXT_REQUEST_QUERY_SMS_STORAGE_MODE      (RIL_EXT_REQUEST_BASE + 7)
-#define RIL_EXT_REQUEST_LAST                        RIL_EXT_REQUEST_QUERY_SMS_STORAGE_MODE
+#define RIL_EXT_REQUEST_GET_BAND_INFO               (RIL_EXT_REQUEST_BASE + 8)
+#define RIL_EXT_REQUEST_SET_BAND_INFO_MODE          (RIL_EXT_REQUEST_BASE + 9)
+#define RIL_EXT_REQUEST_LAST                        RIL_EXT_REQUEST_SET_BAND_INFO_MODE
 
 #define RIL_EXT_UNSOL_RESPONSE_BASE                 6500
 #define RIL_EXT_UNSOL_RIL_CONNECTED                 (RIL_EXT_UNSOL_RESPONSE_BASE + 0)
-#define RIL_EXT_UNSOL_RESPONSE_LAST                 RIL_EXT_UNSOL_RIL_CONNECTED
+#define RIL_EXT_UNSOL_BAND_INFO                     (RIL_EXT_UNSOL_RESPONSE_BASE + 1)
+#define RIL_EXT_UNSOL_RESPONSE_LAST                 RIL_EXT_UNSOL_BAND_INFO
 #endif
 /*****************************************************************************/
 
