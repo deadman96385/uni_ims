@@ -8,6 +8,7 @@ import android.content.ContentResolver;
 import android.database.ContentObserver;
 import android.os.Message;
 import android.os.Handler;
+import android.os.SystemProperties;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.gsm.GSMPhone;
 import com.android.internal.telephony.PhoneFactory;
@@ -55,6 +56,8 @@ public class ImsRegister {
     protected static final int EVENT_INIT_ISIM_DONE                    = 106;
     protected static final int EVENT_IMS_BEARER_ESTABLISTED            = 107;
     protected static final int EVENT_ENABLE_IMS                        = 108;
+
+    private static String PROP_TEST_MODE = "persist.radio.ssda.testmode";
 
     public ImsRegister(GSMPhone phone , Context context, CommandsInterface ci) {
         mPhone = phone;
@@ -167,7 +170,7 @@ public class ImsRegister {
 
     private void initISIM() {
         if (!mInitISIMDone
-                && mPhoneId == mTelephonyManager.getPrimaryCard()
+                && mPhoneId == getPrimaryCard()
                 && mTelephonyManager.getSimState(mPhoneId) == TelephonyManager.SIM_STATE_READY) {
             String impi = null;
             String impu = null;
@@ -283,6 +286,38 @@ public class ImsRegister {
                     + operatorNumberic.substring(0, 3) + ".3gppnetwork.org" : data.get(key));
         }
         return imsConfigUri;
+    }
+    /* @} */
+
+    /* SPRD: Bug 570819 Sometimes radio state is on and AT+SPTESTMODEM is correct sent, but 'service_primary_card' value in database may be -1.
+     * In this sisuation, we should get the primarycard by the prop. @{*/
+    private int getPrimaryCard(){
+        int primaryCard = mTelephonyManager.getPrimaryCard();
+        if(SubscriptionManager.isValidPhoneId(primaryCard)){
+            return primaryCard;
+        }
+
+        String radioTestMode;
+        int[] testMode = new int[2];
+        for(int i = 0; i < mTelephonyManager.getPhoneCount(); i++){
+            radioTestMode = i == 0 ? PROP_TEST_MODE: PROP_TEST_MODE + i;
+            testMode[i] = getTestMode(radioTestMode);
+        }
+
+        if(testMode[0] == 10){
+            if(testMode[1] != 10 && testMode[1] != 254){
+                return 1;
+            }
+        } else if(testMode[0] == 254){
+            if(testMode[1] != 254){
+                return 0;
+            }
+        }
+        return 0;
+    }
+
+    private int getTestMode(String radioTestMode){
+        return SystemProperties.getInt(radioTestMode, -1);
     }
     /* @} */
 }

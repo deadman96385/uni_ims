@@ -15597,7 +15597,9 @@ static void reopenSimCardAndProtocolStack(void *param){
     at_send_command(ATch_type[channelID], "AT+SFUN=5", NULL);
     at_send_command(ATch_type[channelID], "AT+SFUN=3", NULL);
     at_send_command(ATch_type[channelID], "AT+SFUN=2", NULL);
+    setRadioState(channelID, RADIO_STATE_OFF);
     at_send_command(ATch_type[channelID], "AT+SFUN=4", NULL);
+    setRadioState(channelID, RADIO_STATE_SIM_NOT_READY);
 
     putChannel(channelID);
 }
