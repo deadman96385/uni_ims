@@ -252,22 +252,22 @@ static int log_cpu__print_cpu_info(FILE *f, struct cpu_info *info_old, struct cp
             ungetc(cpu[i], f);
     }
     {
-    int iowtime_percent;
-    int cpu_percent;
+    int iowtime_percent = 0;
+    int cpu_percent = 0;
     if (info_old->runtime) {
         if (per_pid) {
             if (cpu_num == pid_info[get_index_new(pid_info_index)].current_cpu) {
                 cpu_percent = 100.0 * (pid_info[get_index_new(pid_info_index)].pid_runtime - pid_info[get_index_old(pid_info_index)].pid_runtime) / (cpu_info[get_index_new(cpu_info_index)][0].runtime - cpu_info[get_index_old(cpu_info_index)][0].runtime);
             } else if (cpu_num == 0xff) {
-                cpu_percent = 100 - (100 * (info->itime - info_old->itime)) / (info->runtime - info_old->runtime);
-            } else {
-                cpu_percent = 0;
+                if (info->runtime != info_old->runtime)
+                    cpu_percent = 100 - (100 * (info->itime - info_old->itime)) / (info->runtime - info_old->runtime);
             }
         } else {
             if ((info->itime < info_old->itime) || (info->iowtime < info_old->iowtime)) {
                 cpu_percent = 0;
             } else {
-                cpu_percent = 100 - (100 * (info->itime - info_old->itime)) / (info->runtime - info_old->runtime);
+                if (info->runtime != info_old->runtime)
+                    cpu_percent = 100 - (100 * (info->itime - info_old->itime)) / (info->runtime - info_old->runtime);
                 if (cpu_percent < 0) {
                     cpu_percent = 0;
                 } else if (cpu_percent > 100) {
@@ -278,7 +278,8 @@ static int log_cpu__print_cpu_info(FILE *f, struct cpu_info *info_old, struct cp
         if ((info->itime < info_old->itime) || (info->iowtime < info_old->iowtime)) {
             iowtime_percent = 0;
         } else {
-            iowtime_percent = 100 * (info->iowtime - info_old->iowtime) / (info->runtime - info_old->runtime);
+            if (info->runtime != info_old->runtime)
+                iowtime_percent = 100 * (info->iowtime - info_old->iowtime) / (info->runtime - info_old->runtime);
         }
     } else {
         cpu_percent = iowtime_percent = 0;
