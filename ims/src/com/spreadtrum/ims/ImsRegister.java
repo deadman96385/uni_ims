@@ -125,6 +125,7 @@ public class ImsRegister {
                     log("EVENT_CONN_IMSEN : conn = "+conn[0]);
                     if (conn[0] == 1) {
                         mIMSBearerEstablished = true;
+                        mLastNumeric = "";
                         enableIms();
                     }
                     break;
