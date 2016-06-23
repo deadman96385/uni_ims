@@ -152,14 +152,18 @@ void setCameraFPS(CameraParameters *ptr)
 void setPreviewOrientationInternal(int rotation) {
   ALOGI("setPreviewOrientationInternal, rotation = %d", rotation);
   ImsCameraClient *ptr = ImsCameraClient::getInstance();
+  if (ptr->iCamera.get() == NULL) {
+    camera_ret = (void *)VCE_CAMERA_UNINITED;
+    return;
+  }
   ptr->iCamera->sendCommand(CAMERA_CMD_SET_DISPLAY_ORIENTATION, rotation, 0);
-  camera_ret = (void *)0;
+  camera_ret = (void *)VCE_CAMERA_NO_ERR;
 }
 
 void startPreviewInternal(ImsCameraClient *ptr) {
   ALOGI("startPreviewInternal");
   if (ptr->iCamera.get() == NULL) {
-    camera_ret = (void *)-1;
+    camera_ret = (void *)VCE_CAMERA_UNINITED;
     return;
   }
   String8 params = ptr->iCamera->getParameters();
@@ -214,13 +218,13 @@ void startPreviewInternal(ImsCameraClient *ptr) {
           ptr->iCamera->startPreview());
   }
   startPreviewCalled = 1;
-  camera_ret = (void *)0;
+  camera_ret = (void *)VCE_CAMERA_NO_ERR;
 }
 
 void startRecordingInternal(ImsCameraClient *ptr) {
   ALOGI("startRecordingInternal");
   if (ptr->iCamera.get() == NULL) {
-    camera_ret = (void *)-1;
+    camera_ret = (void *)VCE_CAMERA_UNINITED;
     return;
   }
   if (previewSurfaceReady == 1) {
@@ -232,7 +236,7 @@ void startRecordingInternal(ImsCameraClient *ptr) {
           ptr->iCamera->recordingEnabled());
   }
   startRecordingCalled = 1;
-  camera_ret = (void *)0;
+  camera_ret = (void *)VCE_CAMERA_NO_ERR;
 }
 
 void cleanEncoderNotification() {
@@ -259,8 +263,9 @@ void *cameraProcessThread(void *param __unused) {
     switch (camera_cmd) {
       case CAMERA_OPEN_CMD: {
         if (cameraService == NULL) {
-          camera_ret = (void *)(-2);
+          camera_ret = (void *)(VCE_CAMERA_UNINITED);
           signalCmdExecuted();
+          ALOGE("cameraProcessThread, end");
           return NULL;
         }
 
@@ -273,8 +278,9 @@ void *cameraProcessThread(void *param __unused) {
         status_t rc = cameraService->getCameraInfo(cameraId, &info);
         if (rc != 0) {
           ALOGE("cameraProcessThread, getCameraInfo failed %d", rc);
-          camera_ret = (void *)(-2);
+          camera_ret = (void *)(VCE_CAMERA_FAILED);
           signalCmdExecuted();
+          ALOGE("cameraProcessThread, end");
           return NULL;
         }
         usingFaceCamera = info.facing;
@@ -298,8 +304,10 @@ void *cameraProcessThread(void *param __unused) {
                                       (const String16 &)*packageName, -1,
                                       ptr->iCamera);
           if (NO_ERROR != rc) {
-            ALOGI("camera service connect failed, rc = %d", rc);
+            ALOGI("cameraProcessThread, camera service connect err, rc = %d", rc);
             signalCmdExecuted();
+            camera_ret = (void *)(VCE_CAMERA_FAILED);
+            ALOGE("cameraProcessThread, end");
             return NULL;
           }
         }
@@ -308,8 +316,9 @@ void *cameraProcessThread(void *param __unused) {
         if (ptr->iCamera.get() == NULL) {
           ALOGI("cameraProcessThread, camera service connect failed %p",
                 ptr->iCamera.get());
-          camera_ret = (void *)-1;
+          camera_ret = (void *)VCE_CAMERA_UNINITED;
           signalCmdExecuted();
+          ALOGE("cameraProcessThread, end");
           return NULL;
         }
         ptr->state = INITIALIZED;
@@ -320,14 +329,15 @@ void *cameraProcessThread(void *param __unused) {
         startRecordingCalled = 0;
         previewTransform = 0;
 
-        camera_ret = (void *)0;
+        camera_ret = (void *)VCE_CAMERA_NO_ERR;
       } break;
 
       case CAMERA_CLOSE_CMD: {
         if (ptr->iCamera.get() == NULL) {
           ALOGI("cameraProcessThread, CAMERA_CLOSE_CMD error");
-          camera_ret = (void *)-1;
+          camera_ret = (void *)VCE_CAMERA_UNINITED;
           signalCmdExecuted();
+          ALOGE("cameraProcessThread, end");
           return 0;
         }
 
@@ -355,6 +365,7 @@ void *cameraProcessThread(void *param __unused) {
         previewRotationOffset = 0;
         previewRotationAngle = 0;
         signalCmdExecuted();
+        ALOGI("cameraProcessThread, end");
         return 0;
       }
 
@@ -374,9 +385,9 @@ void *cameraProcessThread(void *param __unused) {
           if (startRecordingCalled) {
             startRecordingInternal(ptr);
           }
-          camera_ret = (void *)0;
+          camera_ret = (void *)VCE_CAMERA_NO_ERR;
         } else {
-          camera_ret = (void *)-1;
+          camera_ret = (void *)VCE_CAMERA_UNINITED;
         }
       } break;
 
@@ -407,7 +418,7 @@ void *cameraProcessThread(void *param __unused) {
           }
         }
         startPreviewCalled = 0;
-        camera_ret = (void *)0;
+        camera_ret = (void *)VCE_CAMERA_NO_ERR;
       } break;
 
       case START_RECORDING_CMD: {
@@ -425,7 +436,7 @@ void *cameraProcessThread(void *param __unused) {
         ALOGI("cameraProcessThread, processingFrameCount = %d",
               processingFrameCount);
         startRecordingCalled = 0;
-        camera_ret = (void *)0;
+        camera_ret = (void *)VCE_CAMERA_NO_ERR;
       } break;
 
       case SET_CAMERA_PARAM_CMD: {
@@ -444,7 +455,7 @@ void *cameraProcessThread(void *param __unused) {
           default:
             break;
         }
-        camera_ret = (void *)0;
+        camera_ret = (void *)VCE_CAMERA_NO_ERR;
       } break;
 
       case GET_CAMERA_PARAM_CMD:
@@ -496,7 +507,7 @@ short imsCameraOpen(unsigned int cameraid) {
     ALOGI("ImsCameraOpen failed, ret = %d", ret);
     ptr->state = UNINITIALIZED;
 
-    if (ret != -1){
+    if (ret != VCE_CAMERA_TIME_OUT){
         (void)pthread_join(cameraLoopThread, NULL);
     }
 

@@ -72,8 +72,12 @@ typedef struct {
 
 } CustomCallbackParam;
 
-
-
+typedef enum {
+    VCE_CAMERA_NO_ERR      = 0,
+    VCE_CAMERA_TIME_OUT    = -1,
+    VCE_CAMERA_FAILED      = -2,
+    VCE_CAMERA_UNINITED    = -3,
+} VCE_CAMERA_ERR;
 
 #ifdef __cplusplus
 extern "C" {
