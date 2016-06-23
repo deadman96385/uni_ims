@@ -12,6 +12,8 @@ import android.util.Log;
 import android.view.OrientationEventListener;
 import android.view.Surface;
 import com.spreadtrum.ims.ImsConfigImpl;
+import android.widget.Toast;
+import com.spreadtrum.ims.R;
 
 public class VideoCallCameraManager {
     private static String TAG = VideoCallCameraManager.class.getSimpleName();
@@ -21,6 +23,7 @@ public class VideoCallCameraManager {
     private static final int EVENT_DELAYED_CREATE_CAMERA = 999;
     private static final int EVENT_CHANGE_ORIENTATION = 1000;
     private static final short OPERATION_SUCCESS = 0;
+    private static final int EVENT_CAMERA_FAIL = 100;//SPRD:Add for bug571839
 
     public static final String CAMERA_PARAMETERS_BRIGHTNESS = "brightness";
     public static final String CAMERA_PARAMETERS_CONTRAST = "contrast";
@@ -61,6 +64,7 @@ public class VideoCallCameraManager {
     private boolean mIsOpened;
     private boolean mIsPreviewing;
     private boolean mIsRecording;
+    private Context mContext;//SPRD:Add for bug571839
 
     private Handler mHandler = new Handler() {
         @Override
@@ -73,6 +77,11 @@ public class VideoCallCameraManager {
                 case EVENT_CHANGE_ORIENTATION:
                     handleOrientationChange();
                     break;
+                /* SPRD: Modify for bug571839 @ { */
+                case EVENT_CAMERA_FAIL:
+                     Toast.makeText(mContext, R.string.camera_open_fail,Toast.LENGTH_SHORT).show();
+                     break;
+                /* @ } */
                 default:
                     Log.w(TAG, "unsupport message: " + msg.what);
                     break;
@@ -87,6 +96,7 @@ public class VideoCallCameraManager {
         mOrientationListener = new MyOrientationEventListener(context);
         mOrientationListener.enable();
         mVideoQuality = mVideoCallEngine.getCameraResolution();
+        mContext = context;//SPRD:Add for bug571839
     }
 
     /**
@@ -189,8 +199,15 @@ public class VideoCallCameraManager {
                     // released and we need to open the camera.
                     String cameraId = getCamerID();
                     if(cameraId != null){
-                        mVideoCallEngine.setCameraId(Integer.parseInt(cameraId));
-                        mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation);
+                        /* SPRD: Modify for bug571839 @ { */
+                        if (mVideoCallEngine.setCameraId(Integer.parseInt(cameraId)) != 0) {
+                            mHandler.removeMessages(EVENT_CAMERA_FAIL);
+                            mHandler.sendEmptyMessageDelayed(EVENT_CAMERA_FAIL,200);
+                            return;
+                        } else {
+                            mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation);
+                        }
+                        /* @ } */
                     }
                     mVideoCallEngine.setCameraPreviewSize(mVideoQuality);
                     setPreviewSurfaceSize(mVideoQuality);
@@ -206,7 +223,6 @@ public class VideoCallCameraManager {
         } catch (Exception e) {
             Log.w(TAG, "Open Camera Fail: " + e);
             closeCamera();
-            tryReopenCamera();
         }
     }
 

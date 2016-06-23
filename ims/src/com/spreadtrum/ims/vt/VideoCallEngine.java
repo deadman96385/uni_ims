@@ -516,7 +516,7 @@ public class VideoCallEngine {
 
     public static native void setRecordMaxFileSize(long max_filesize_bytes);
 
-    public static native void setCameraId(int id);
+    public static native int setCameraId(int id);
 
     public static native void setCameraPreviewSize(int size);
 
