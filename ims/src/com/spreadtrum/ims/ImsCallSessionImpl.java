@@ -746,22 +746,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         mDisconnCause = reason;
         if(mImsDriverCall != null){
-            if(isMultiparty()){
-                Log.i(TAG, "terminate-> isMultiparty state:"+mImsDriverCall.state
-                        + " isForegroundCall():"+isForegroundCall()
-                        + " isBackgroundCall():"+isBackgroundCall());
-                if(isForegroundCall()){
-                    mImsServiceCallTracker.hangupAllMultipartyCall(true);
-                } else if(isBackgroundCall()){
-                    mImsServiceCallTracker.hangupAllMultipartyCall(false);
-                } else {
-                    mCi.hangupConnection(mImsDriverCall.index,
-                            mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
-                }
-            } else {
-                mCi.hangupConnection(mImsDriverCall.index,
-                        mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
-            }
+            Log.d(TAG,"ck-terminate index = "+mImsDriverCall.index);
+            mCi.hangupConnection(mImsDriverCall.index,
+                    mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
         } else {
             Log.w(TAG, "terminate-> mImsDriverCall is null!");
         }
