@@ -194,7 +194,7 @@ OSAL_Status _VIER_writeVtspEvt(
     vint   size;
     uint8 *msg_ptr;
 
-    if (vier_ptr == NULL || length != _VTSP_Q_RTCP_MSG_SZ) {
+    if (vier_ptr == NULL || length != _VTSP_Q_EVENT_MSG_SZ) {
         return OSAL_FAIL;
     }
     /* lock */
