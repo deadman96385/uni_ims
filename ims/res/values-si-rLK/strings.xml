@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"වීඩියෝ ඇමතුම නතර විය"</string>
+<string name="videophone_failcause_1000">"අවසන් වීඩියෝ ඇමතුම සාමාන්‍ය පෙස අවසන් නොවීය. කරුණාකර මද වේලාවකින් නැවත උත්සාහ කරන්න"</string>
+<string name="videophone_failcause_1">"ඔබ ඇමතූ අංකය සේවයෙහි නැත"</string>
+<string name="videophone_failcause_3">"පරිශීලක ලබා ගත නොහැකිය"</string>
+<string name="videophone_failcause_8">"ඇමතුම අවහිර කරන ලදී"</string>
+<string name="videophone_failcause_17">"පරිශීලකයා කිර්ය බහුලයි"</string>
+<string name="videophone_failcause_19">"ඔබ ඇමතූ පරිශීලකයා ප්‍රතිචාර නොදක්වයි"</string>
+<string name="videophone_failcause_27">"පරිශීලකයා වෙත ළඟා වීමට නොහැකිය"</string>
+<string name="videophone_failcause_34">"සබැඳුම විසන්ධි විය"</string>
+<string name="videophone_failcause_63_modify">"වීඩියෝ දුරකථනය ස්ථාපනය කළ නොහැකි විය"</string>
+<string name="videophone_failcause_79">"VT අනෙකා සහාය නොදක්වයි"</string>
+<string name="videophone_failcause_47">"කනගාටුයි, වීඩියෝ ඇමතුම ලබා ගත නොහැකිය"</string>
+<string name="videophone_failcause_50">"VT සහාය නොදක්වයි"</string>
+<string name="videophone_failcause_57_remote">"ඔබ ඇමතූ අංකය VT සහාය නොදකිවයි"</string>
+<string name="videophone_failcause_58">"VT අනෙකා සහාය නොදක්වයි"</string>
+<string name="videophone_failcause_157">"ජංගම දුරකථනය VT සේවාව ආරම්භ කර නැත"</string>
+<string name="videophone_failcause_88">"පරිශීලකයා හඬ ඇමතුම තෝරයි"</string>
+<string name="videophone_failcause_minus_1">"3G සේවාව ලබා ගත නොහැකිය"</string>
+<string name="videophone_failcause_default">"පරිශීලක ලබා ගත නොහැකිය"</string>
+<string name="net_connection_disconnect">"ජාල සබැඳුම විසන්ධි විය"</string>
+<string name="no_vt_service">"වීඩියෝ ඇමතුම් සිදු කළ නොහැකිය"</string>
+<string name="remote_request_change">"දුරස්ථ ඉල්ලීම් මාධ්‍ය වෙනස් කිරීම"</string>
+<string name="choose_accept_reject">"කරුණාකර පිළිගන්න හෝ ප්‍රතික්ෂේප කරන්න තෝරන්න"</string>
+<string name="remote_request_change_accept">"පිළිගන්න"</string>
+<string name="remote_request_change_reject">"ප්‍රතික්ෂේප කරන්න"</string>
+<string name="remote_reject_request">"දුරස්ථ ඉල්ලීම ප්‍රතික්ෂේප කෙරිණි"</string>
+<string name="remote_accept_request">"දුරස්ථ ඉල්ලීම පිළි ගන්නා ලදී"</string>
+<string name="callFailed_fdn_only">"කෙරෙමින් පවතින ඇමතුම් FDN මගින් අවහිර කර ඇත"</string>
+</resources>
