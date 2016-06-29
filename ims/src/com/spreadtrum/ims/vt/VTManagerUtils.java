@@ -27,6 +27,9 @@ import com.android.internal.telephony.CallStateException;
 import com.android.internal.telephony.CommandsInterface;
 import android.os.Message;
 
+import android.telephony.TelephonyManager;
+import com.android.internal.telephony.RIL;
+
 public class VTManagerUtils {
     private static final String TAG = VTManagerUtils.class.getSimpleName();
 
@@ -208,7 +211,9 @@ public class VTManagerUtils {
         /* @} */
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(context.getString(R.string.remote_request_change));
-        builder.setMessage(context.getString(R.string.choose_accept_reject));
+        /* SPRD: Add function for bug579975 @{ */
+        builder.setMessage(TelephonyManager.isBatteryLow()? context.getString(R.string.low_battery_warning_media_alert_message):context.getString(R.string.choose_accept_reject));
+        /* @} */
         builder.setPositiveButton(context.getString(R.string.remote_request_change_accept), new android.content.DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int which) {
                 mCi.responseVolteCallMediaChange(true,reponseMsg);
@@ -231,4 +236,39 @@ public class VTManagerUtils {
         dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
         return dialog;
     }
+
+    /* SPRD: Add function for bug579975 @{ */
+    public static AlertDialog showLowBatteryMediaChangeAlert(final Context context, final RIL ril) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle(context.getString(R.string.low_battery_warning_title));
+        builder.setMessage(context.getString(R.string.low_battery_warning_message));
+        builder.setPositiveButton(
+                context.getString(R.string.low_battery_continue_video_call),
+                new android.content.DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        if (dialog != null) {
+                            dialog.dismiss();
+                        }
+                    }
+                });
+        builder.setNegativeButton(
+                context.getString(R.string.low_battery_convert_to_voice_call),
+                new android.content.DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        if (ril != null) {
+                            ril.requestVolteCallMediaChange(true, null);
+                            log("Battery is low,user choose to downgrade to voice call.");
+                        }
+                        if (dialog != null) {
+                            dialog.dismiss();
+                        }
+                    }
+                });
+        builder.setCancelable(false);
+        AlertDialog dialog = builder.create();
+        dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_DIALOG);
+        dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
+        return dialog;
+    }
+    /* @} */
 }

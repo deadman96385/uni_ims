@@ -31,6 +31,13 @@ import com.android.ims.internal.ImsCallSession;
 import com.android.ims.internal.IImsVideoCallProvider;
 import com.android.internal.telephony.ImsDriverCall;
 
+import android.telephony.TelephonyManager;
+import android.content.BroadcastReceiver;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.app.AlertDialog;
+import com.android.internal.telephony.RIL;
+
 public class VTManagerProxy{
     private static final String TAG = "ImsVTManagerProxy";
 
@@ -86,6 +93,11 @@ public class VTManagerProxy{
     public int mPreviewHeight = 640;
     private int mRotation = -1;
     private int mImsVideoQos;
+
+    private IntentFilter mIntentFilter;//SPRD:Add for bug579975
+    private boolean mIsBroadcastReceiverRegisterd;//SPRD:Add for bug579975
+    private AlertDialog mVolteMediaDialog;//SPRD:Add for bug579975
+    private RIL mRIL;//SPRD:Add for bug579975
 
     private VTManagerProxy(ImsService imsService) {
         mImsService = imsService;
@@ -164,6 +176,37 @@ public class VTManagerProxy{
             }
         }
     };
+    /* SPRD: Add function for bug579975 @{ */
+    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().equals(Intent.ACTION_BATTERY_LOW) && TelephonyManager.isBatteryLow()) {
+                    if (mVolteMediaDialog != null) {
+                        mVolteMediaDialog.dismiss();
+                    }
+                    mVolteMediaDialog = VTManagerUtils.showLowBatteryMediaChangeAlert(context, mRIL);
+                    mVolteMediaDialog.show();
+            }
+        }
+    };
+
+    public void registerForLowBatteryNotify(RIL ril) {
+        mRIL = ril;
+        mIntentFilter = new IntentFilter();//SPRD:Add function for bug579975
+        mIntentFilter.addAction(Intent.ACTION_BATTERY_LOW);//SPRD:Add function for bug579975
+        mContext.registerReceiver(mReceiver, mIntentFilter);
+        mIsBroadcastReceiverRegisterd = true;
+        log("registerForLowBatteryNotify");
+    }
+
+    public void unregisterForLowBatteryNotify() {
+        if (mIsBroadcastReceiverRegisterd) {
+            mContext.unregisterReceiver(mReceiver);
+            mIsBroadcastReceiverRegisterd = false;
+            log("unregisterForLowBatteryNotify");
+        }
+    }
+    /* @} */
 
     public void handleVTConnectionEstablished(ImsCallSessionImpl imsCallSessionImpl){
         log("VTConnectionEstablished->imsCallSessionImpl="+imsCallSessionImpl);
@@ -211,8 +254,10 @@ public class VTManagerProxy{
             }
             log("after wait mVideoCallEngine, mVideoCallEngine is null?:" + (mVideoCallEngine == null));
             log("wait mVideoCallEngine done.");
+            /* SPRD: Add function for bug579975 @{ */
+            registerForLowBatteryNotify(ril);
+            /* @} */
         }
-
     }
 
     private void handleDisconnect(ImsCallSessionImpl imsCallSessionImpl) {
@@ -223,6 +268,12 @@ public class VTManagerProxy{
     }
 
     public void onVTConnectionDisconnected() {
+        /* SPRD: Add function for bug579975 @{ */
+        unregisterForLowBatteryNotify();
+        if (mVolteMediaDialog != null) {
+            mVolteMediaDialog.dismiss();
+        }
+        /* @} */
         if (!isImsCallAlive()) {
             log("No active video call!");
             return;
