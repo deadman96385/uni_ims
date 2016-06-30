@@ -1287,6 +1287,7 @@ int callFromCLCCLine(char *line, RIL_Call *p_call)
     int err;
     int state;
     int mode;
+    int isMpty;
 
     err = at_tok_start(&line);
     if (err < 0) goto error;
@@ -1311,8 +1312,9 @@ int callFromCLCCLine(char *line, RIL_Call *p_call)
 
     p_call->isVoice = (mode == 0);
 
-    err = at_tok_nextbool(&line, &(p_call->isMpty));
+    err = at_tok_nextint(&line, &isMpty);
     if (err < 0) goto error;
+    p_call->isMpty = isMpty;
 
     if (at_tok_hasmore(&line)) {
         err = at_tok_nextstr(&line, &(p_call->number));
