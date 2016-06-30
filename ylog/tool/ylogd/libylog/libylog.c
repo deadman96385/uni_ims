@@ -6,7 +6,6 @@
 #include <cutils/properties.h>
 
 #define YLOGD_SOCKET_FILE "/dev/socket/ylog/ylogdw"
-#define YLOGD_ON          "/data/ylog/ylogd"
 
 /**
  * Steps:
@@ -42,26 +41,6 @@ static int ylogd_enabled = -1;
 
 static int __write_to_ylog_initialize(void) {
     int i, ret = 0;
-#ifndef USERDEBUG
-    if (ylogd_enabled < 0) {
-#if 0
-        /* property needs libcutils */
-        char buf[PROPERTY_VALUE_MAX];
-        property_get("persist.ylog.ylogd.enabled", buf, "0");
-        if (buf[0] == '1')
-            ylogd_enabled = 1;
-        else
-            ylogd_enabled = 0;
-#else
-        if (access(YLOGD_ON, F_OK) == 0)
-            ylogd_enabled = 1;
-        else
-            ylogd_enabled = 0;
-#endif
-    }
-    if (ylogd_enabled == 0)
-        return -1;
-#endif
     i = TEMP_FAILURE_RETRY(socket(PF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0));
     if (i < 0) {
         ret = -errno;
