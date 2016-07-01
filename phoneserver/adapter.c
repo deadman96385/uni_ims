@@ -59,7 +59,7 @@ struct ind_table {
 static int tem_value = 0;
 static int rsp_tem[4] = { 0 };
 static int g_call_status_array[10] = {0};
-sem sms_lock;
+sem sms_lock[4];
 
 extern struct ppp_info_struct ppp_info[];
 
@@ -539,6 +539,29 @@ const struct ind_table at_ind_cvt_table[] = {
     {AT_CMD_ECIND_IND, AT_CMD_STR("+ECIND:"), cvt_ecind0_cmd_ind},
     {AT_CMD_CESQ_IND, AT_CMD_STR("+CESQ:"), cvt_cesq_cmd_ind}
 };
+
+int getSimIdByPty(pty_t *pty) {
+    int simId = 0;
+
+    if (pty != NULL) {
+        switch (pty->type) {
+            case AT:
+            case AT_SIM1 :
+                simId = 0;
+                break;
+            case AT_SIM2:
+                simId = 1;
+                break;
+            case AT_SIM3:
+                simId = 2;
+                break;
+            case AT_SIM4:
+                simId = 3;
+                break;
+        }
+    }
+    return simId;
+}
 
 // Returns 1 if found, 0 otherwise. needle must be null-terminated.
 // strstr might not work because WebBox sends garbage before the first OKread
@@ -2677,6 +2700,9 @@ int cvt_cmgs_cmgw_recovery(cmux_t *mux,pty_t *pty)
 int cvt_cmgs_cmgw_edit_callback(pty_t * pty, char *cmd, int len, unsigned long user_data)
 {
     int ret=AT_RESULT_OK;
+    int simId;
+
+    simId = getSimIdByPty(pty);
 
     cmux_t *mux = (cmux_t *) (user_data);
     PHS_LOGD("\n enter cvt_cmgs_cmgw_edit_callback!\n");
@@ -2691,7 +2717,7 @@ int cvt_cmgs_cmgw_edit_callback(pty_t * pty, char *cmd, int len, unsigned long u
         adapter_pty_write_error(pty, CME_ERROR_NOT_SUPPORT);
         adapter_pty_end_cmd(pty);
         adapter_free_cmux_for_ps(mux);
-        sem_unlock(&sms_lock);
+        sem_unlock(&(sms_lock[simId]));
         return AT_RESULT_OK;
     }
 
@@ -2699,7 +2725,7 @@ int cvt_cmgs_cmgw_edit_callback(pty_t * pty, char *cmd, int len, unsigned long u
     {
         adapter_pty_end_cmd(pty);
         adapter_free_cmux_for_ps(mux);
-        sem_unlock(&sms_lock);
+        sem_unlock(&(sms_lock[simId]));
         return AT_RESULT_OK;
     }
     PHS_LOGD("\n Send sms failure\n");
@@ -2742,7 +2768,7 @@ int cvt_cmgs_cmgw_edit_callback(pty_t * pty, char *cmd, int len, unsigned long u
 #endif
     adapter_pty_end_cmd(pty);
     adapter_free_cmux_for_ps(mux);
-    sem_unlock(&sms_lock);
+    sem_unlock(&(sms_lock[simId]));
     return AT_RESULT_OK;
 }
 
@@ -2754,9 +2780,11 @@ int cvt_cmgs_cmgw_set_req(AT_CMD_REQ_T * req)
         return AT_RESULT_NG;
     }
 
+    int simId = getSimIdByPty(req->recv_pty);
+
     mux = adapter_get_cmux(req->cmd_type, TRUE);
 
-    sem_lock(&sms_lock);
+    sem_lock(&(sms_lock[simId]));
     req->recv_pty->cmgs_cmgw_set_result = 0;
     adapter_cmux_register_callback(mux, cvt_cmgs_cmgw_set_rsp2,
            (unsigned long) req->recv_pty);
@@ -2771,13 +2799,13 @@ int cvt_cmgs_cmgw_set_req(AT_CMD_REQ_T * req)
     }else if(req->recv_pty->cmgs_cmgw_set_result == 2){
         adapter_pty_end_cmd(req->recv_pty);
         adapter_free_cmux_for_ps(mux);
-        sem_unlock(&sms_lock);
+        sem_unlock(&(sms_lock[simId]));
         return AT_RESULT_OK;
     } else {
         adapter_pty_write_error(req->recv_pty, CME_ERROR_NOT_SUPPORT);
         adapter_pty_end_cmd(req->recv_pty);
         adapter_free_cmux_for_ps(mux);
-        sem_unlock(&sms_lock);
+        sem_unlock(&(sms_lock[simId]));
         return AT_RESULT_OK;
     }
 }
@@ -3450,7 +3478,8 @@ int cvt_snvm_set_req(AT_CMD_REQ_T * req)
 
     mux = adapter_get_cmux(req->cmd_type, TRUE);
 
-    sem_lock(&sms_lock);
+    int simId = getSimIdByPty(req->recv_pty);
+    sem_lock(&(sms_lock[simId]));
     req->recv_pty->cmgs_cmgw_set_result = 0;
     adapter_cmux_register_callback(mux, cvt_snvm_set_rsp,
            (unsigned long) req->recv_pty);
@@ -3465,13 +3494,13 @@ int cvt_snvm_set_req(AT_CMD_REQ_T * req)
     }else if(req->recv_pty->cmgs_cmgw_set_result == 2){
         adapter_pty_end_cmd(req->recv_pty);
         adapter_free_cmux_for_ps(mux);
-        sem_unlock(&sms_lock);
+        sem_unlock(&(sms_lock[simId]));
         return AT_RESULT_OK;
     } else {
         adapter_pty_write_error(req->recv_pty, CME_ERROR_NOT_SUPPORT);
         adapter_pty_end_cmd(req->recv_pty);
         adapter_free_cmux_for_ps(mux);
-        sem_unlock(&sms_lock);
+        sem_unlock(&(sms_lock[simId]));
         return AT_RESULT_OK;
     }
 }
@@ -3625,6 +3654,9 @@ int cvt_cesq_cmd_rsp(AT_CMD_RSP_T * rsp, unsigned long user_data)
 int cvt_snvm_edit_callback(pty_t * pty, char *cmd, int len, unsigned long user_data)
 {
     int ret = AT_RESULT_OK;
+    int simId;
+
+    simId = getSimIdByPty(pty);
 
     cmux_t *mux = (cmux_t *) (user_data);
     PHS_LOGD("\n enter cvt_snvm_edit_callback!\n");
@@ -3638,7 +3670,7 @@ int cvt_snvm_edit_callback(pty_t * pty, char *cmd, int len, unsigned long user_d
         adapter_pty_write_error(pty, CME_ERROR_NOT_SUPPORT);
         adapter_pty_end_cmd(pty);
         adapter_free_cmux_for_ps(mux);
-        sem_unlock(&sms_lock);
+        sem_unlock(&(sms_lock[simId]));
         return AT_RESULT_OK;
     }
 
@@ -3646,13 +3678,13 @@ int cvt_snvm_edit_callback(pty_t * pty, char *cmd, int len, unsigned long user_d
     {
         adapter_pty_end_cmd(pty);
         adapter_free_cmux_for_ps(mux);
-        sem_unlock(&sms_lock);
+        sem_unlock(&(sms_lock[simId]));
         return AT_RESULT_OK;
     }
     PHS_LOGD("\n Send snvm failure\n");
     adapter_pty_end_cmd(pty);
     adapter_free_cmux_for_ps(mux);
-    sem_unlock(&sms_lock);
+    sem_unlock(&(sms_lock[simId]));
     return AT_RESULT_OK;
 }
 
