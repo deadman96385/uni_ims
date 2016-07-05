@@ -28,4 +28,5 @@
     <string name="remote_reject_request">Remote reject request </string>
     <string name="remote_accept_request">Remote accept request</string>
     <string name="callFailed_fdn_only">Outgoing calls are restricted by FDN</string>
+    <string name="ims_switch_failed">Network error, please try again later</string>
 </resources>

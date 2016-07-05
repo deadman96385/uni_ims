@@ -27,4 +27,5 @@
     <string name="remote_reject_request">"對端拒絕請求"</string>
     <string name="remote_accept_request">"對端接收請求" </string>
     <string name="callFailed_fdn_only">外撥電話受固定撥號限制</string>
+    <string name="ims_switch_failed">網絡錯誤，請稍後重試</string>
 </resources>
