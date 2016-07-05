@@ -33,6 +33,7 @@ import com.sprd.android.internal.telephony.VolteConfig;
 import android.text.TextUtils;
 import java.util.HashMap;
 import java.util.Map;
+import android.telephony.ServiceState;
 
 public class ImsRegister {
     private static final String TAG = "ImsRegister";
@@ -232,7 +233,11 @@ public class ImsRegister {
             mCurrentImsRegistered = imsRegistered;
             if( mPhone.getPhoneId() == mTelephonyManager.getPrimaryCard()) {
                 sendVolteServiceStateChanged();
-              }
+                if (mPhone.isRadioOn() && getServiceState().getState() != ServiceState.STATE_IN_SERVICE) {
+                    log("voice regstate not in service, will call ImsNotifier to notifyServiceStateChanged");
+                    mPhone.notifyServiceStateChangedForIms(getServiceState());
+                }
+            }
         }
     }
 
@@ -321,4 +326,12 @@ public class ImsRegister {
         return SystemProperties.getInt(radioTestMode, -1);
     }
     /* @} */
+
+    private ServiceState getServiceState() {
+        if (mPhone.getServiceStateTracker() != null) {
+            return mPhone.getServiceStateTracker().mSS;
+        } else {
+            return new ServiceState();
+        }
+    }
 }
