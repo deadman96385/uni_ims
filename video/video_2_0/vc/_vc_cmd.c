@@ -187,10 +187,10 @@ static void _VC_notifyAppWhenStreamChange(
             _VC_TRACE(__FILE__, __LINE__);
         }
 
+        JBV_init(&stream_ptr->dec.jbObj);
         if (!stream_ptr->dec.decRunning) {
             /* Dec is currently NOT running. */
             stream_ptr->dec.decRunning = 1;
-            JBV_init(&stream_ptr->dec.jbObj);
             /* start the rtp receive task. */
             _VC_startRtpRecvTask(stream_ptr);
             /* Notify App to Start Dec. */
