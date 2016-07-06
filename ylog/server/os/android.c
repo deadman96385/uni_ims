@@ -722,6 +722,18 @@ static void pthread_create_hook(struct ylog *y, void *args, const char *fmt, ...
     }
 }
 
+static void ydst_root_new_hook(struct ydst_root *root, char *root_new) {
+    UNUSED(root);
+    UNUSED(root_new);
+    struct ylog *ytmp = NULL;
+    ytmp = ylog_get_by_name("sys_info");
+    if (ytmp)
+        ytmp->thread_restart(ytmp, 0); /* Trigger sys_info to capture again */
+    ytmp = ylog_get_by_name("ylog_debug");
+    if (ytmp)
+        ytmp->thread_restart(ytmp, 0); /* Trigger ylog_debug to capture again */
+}
+
 static void ready_go(void) {
     int i;
     pid_t ctid;
@@ -1740,6 +1752,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
     hook->cmd_ylog_hook = cmd_ylog_hook;
     hook->ylog_status_hook = ylog_status_hook;
     hook->pthread_create_hook = pthread_create_hook;
+    hook->ydst_root_new_hook = ydst_root_new_hook;
     hook->ready_go = ready_go;
 
     ynode_insert_all(os_ynode, (int)ARRAY_LEN(os_ynode));

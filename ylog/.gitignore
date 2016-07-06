@@ -126,5 +126,4 @@ data/
 sdcard/
 cli
 ylog_journal_file
-ycat
 md5sum*

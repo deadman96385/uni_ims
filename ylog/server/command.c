@@ -712,7 +712,7 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
         int en = strcmp(value, "0");
         ylog_thread_run action = NULL;
         if (all == 0) {
-            pthread_mutex_lock(&mutex);
+            pthread_mutex_lock(&y_mutex);
             if (en) {
                 y->status &= ~YLOG_DISABLED_MASK;
                 action = y->thread_run;
@@ -728,7 +728,7 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
             nargs = 4;
             if (os_hooks.cmd_ylog_hook)
                 os_hooks.cmd_ylog_hook(nargs, args);
-            pthread_mutex_unlock(&mutex);
+            pthread_mutex_unlock(&y_mutex);
             if (action)
                 action(y, 1);
             print2journal_file("ylog %s %s", y->name, en ? "start":"stop");
@@ -739,7 +739,7 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
                 if (y->name == NULL)
                     continue;
                 action = NULL;
-                pthread_mutex_lock(&mutex);
+                pthread_mutex_lock(&y_mutex);
                 if (en) {
                     if (y->status & YLOG_DISABLED_FORCED_RUNNING) {
                         y->status &= ~YLOG_DISABLED_MASK;
@@ -756,7 +756,7 @@ static int cmd_ylog(struct command *cmd, char *buf, int buf_size, int fd, int in
                 nargs = 4;
                 if (os_hooks.cmd_ylog_hook)
                     os_hooks.cmd_ylog_hook(nargs, args);
-                pthread_mutex_unlock(&mutex);
+                pthread_mutex_unlock(&y_mutex);
                 ylog_info("ylog %s %s enter...\n", en ? "start":"stop", y->name);
                 if (action)
                     action(y, 1);

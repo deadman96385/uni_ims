@@ -428,7 +428,7 @@ int main(int argc, char *argv[]) {
         print2journal_file_string_with_uptime("ylog.start failed, ylog_cli socket create failed!");
         return -1; /* To avoid run ylog twice */
     }
-    print2journal_file_string_with_uptime("ylog.start success");
+    print2journal_file_string_with_uptime("ylog_cli socket done");
     ylog_init(global_ydst_root, global_context);
     hook_signals();
     pthread_create(&ptid, NULL, ylog_command_loop, NULL);
@@ -437,6 +437,7 @@ int main(int argc, char *argv[]) {
     ylog_verify();
     if (os_hooks.ready_go)
         os_hooks.ready_go();
+    print2journal_file_string_with_uptime("ylog.start success");
     pthread_join(ptid, NULL);
     return 0;
 }

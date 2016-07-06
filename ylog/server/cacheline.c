@@ -157,7 +157,7 @@ static void *cacheline_thread_handler_default(void *arg) {
     cl->pid = getpid();
     cl->tid = gettid();
 
-    ylog_info("cacheline %s --> %s is started, pid=%d, tid=%d\n", cl->name, cl->ydst->file, cl->pid, cl->tid);
+    ylog_debug("cacheline %s --> %s is started, pid=%d, tid=%d\n", cl->name, cl->ydst->file, cl->pid, cl->tid);
 
     for (;;) {
         /* Step 1. wait for cacheline data full */

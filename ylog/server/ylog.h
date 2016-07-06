@@ -735,6 +735,7 @@ struct os_hooks {
     void (*cmd_ylog_hook)(int nargs, char **args);
     void (*ylog_status_hook)(enum ylog_thread_state state, struct ylog *y);
     void (*pthread_create_hook)(struct ylog *y, void *args, const char *fmt, ...);
+    void (*ydst_root_new_hook)(struct ydst_root *root, char *root_new);
     void (*ready_go)(void);
 };
 

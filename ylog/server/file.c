@@ -5,6 +5,7 @@
 #include "analyzer_bottom_half_template.h"
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t y_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t mutex_journal_log = PTHREAD_MUTEX_INITIALIZER;
 static int fd_journal_file = -1;
 
@@ -646,7 +647,7 @@ static int ydst_quota(unsigned long long max_segment_size_new, int max_segment_n
                 char unit1, unit2;
                 fsize1 = ylog_get_unit_size_float(ydst->max_segment_size_now, &unit1);
                 fsize2 = ylog_get_unit_size_float(ydst->max_segment_size_new, &unit2);
-                ylog_warn("%s is resizing... max_segment %d -> %d, max_segment_size %.2f%c -> %.2f%c\n",
+                ylog_debug("%s is resizing... max_segment %d -> %d, max_segment_size %.2f%c -> %.2f%c\n",
                         ydst->file, ydst->max_segment_now, ydst->max_segment_new,
                         fsize1, unit1, fsize2, unit2);
                 waiting = 1;
@@ -777,7 +778,7 @@ static int ydst_root_quota(struct ydst_root *root, unsigned long long quota) {
                 char unit1, unit2;
                 fsize1 = ylog_get_unit_size_float(yd->max_segment_size_now, &unit1);
                 fsize2 = ylog_get_unit_size_float(yd->max_segment_size_new, &unit2);
-                ylog_warn("%s is resizing... max_segment %d -> %d, max_segment_size %.2f%c -> %.2f%c\n",
+                ylog_debug("%s is resizing... max_segment %d -> %d, max_segment_size %.2f%c -> %.2f%c\n",
                         yd->file, yd->max_segment_now, yd->max_segment_new,
                         fsize1, unit1, fsize2, unit2);
                 waiting = 1;
@@ -893,7 +894,7 @@ static int ydst_root_new(struct ydst_root *root, char *root_new) {
         waiting = 0;
         for_each_ydst(i, yd, NULL) {
             if (yd->refs && yd->ydst_change_seq_move_root != root->ydst_change_seq_move_root) {
-                ylog_warn("<index %d> %s is moving... %d,%d\n",
+                ylog_debug("<index %d> %s is moving... %d,%d\n",
                         num++, yd->file, yd->ydst_change_seq_move_root, root->ydst_change_seq_move_root);
                 waiting = 1;
             }
@@ -905,6 +906,13 @@ static int ydst_root_new(struct ydst_root *root, char *root_new) {
 
     pthread_mutex_unlock(&mutex);
 
+#if 1
+    /**
+     * give more info for the new root disk
+     */
+    if (os_hooks.ydst_root_new_hook)
+        os_hooks.ydst_root_new_hook(root, root_new);
+#endif
     return 0;
 }
 
@@ -1256,7 +1264,7 @@ static int ylog_historical_folder_do(char *root, char *historical_folder_root,
                 snprintf(tmp, sizeof(tmp), "%s%d", root, i);
             if (access(tmp, F_OK)) {
                 if (only_rm == 0)
-                    ylog_critical("%s does not exist.\n", tmp);
+                    ylog_debug("%s does not exist.\n", tmp);
             } else {
                 if (only_rm == 0) {
                     if (i == keep_historical_folder_numbers)
@@ -1268,6 +1276,7 @@ static int ylog_historical_folder_do(char *root, char *historical_folder_root,
                             snprintf(tmp_to, sizeof(tmp_to), "%s%d", root, i+1);
                         if (access(tmp_to, F_OK) == 0)
                             rm_all(tmp_to);
+                        ylog_critical("rename %s to %s\n", tmp, tmp_to);
                         RENAME(tmp, tmp_to);
                     }
                 } else {
@@ -1278,6 +1287,7 @@ static int ylog_historical_folder_do(char *root, char *historical_folder_root,
                 if (rmdir(root) == 0)
                     ylog_warn("rmdir %s remove empty folder\n", root);
                 if (i == 1 && access(root, F_OK) == 0) {
+                    ylog_critical("rename %s to %s\n", root, tmp);
                     mkdirs_with_file(tmp);
                     RENAME(root, tmp);
                 }
@@ -1348,10 +1358,9 @@ static int ydst_move_root(struct ydst_root *root, struct ydst *ydst,
                 while (strcmp(tmp, ydst->root_folder)) {
                     dirname2(tmp);
                     rmdir(tmp);
-                    ylog_critical("rmdir %s\n", tmp);
                 }
             } else
-                ylog_warn("File %s does not exist\n", tmp);
+                ylog_debug("File %s does not exist\n", tmp);
         }
         ydst->root_folder = root->root_new;
         ydst_pre_fill_zero_to_possession_storage_spaces(ydst, excluded_segment, NULL);
@@ -1364,7 +1373,7 @@ static int ydst_move_root(struct ydst_root *root, struct ydst *ydst,
             free(root->root); /* root->root must be with strdup or malloc */
             root->root = root->root_new;
         } else {
-            ylog_warn("%d sub folder is left, they are moving...\n", refs_cur_move_root);
+            ylog_debug("%d sub folder is left, they are moving...\n", refs_cur_move_root);
         }
         ydst->ydst_change_seq_move_root = ydst_change_seq_move_root;
         root->refs_cur_move_root = refs_cur_move_root;
@@ -1507,7 +1516,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
                 ylog_critical("All ydst has finished resize: quota %.2f%c -> %.2f%c\n",
                         fsize5, unit5, fsize6, unit6);
             } else {
-                ylog_warn("%d sub ydst is left, they are resizing...\n", refs_cur_resize_segment);
+                ylog_debug("%d sub ydst is left, they are resizing...\n", refs_cur_resize_segment);
             }
             ydst->ydst_change_seq_resize_segment = ydst_change_seq_resize_segment;
             root->refs_cur_resize_segment = refs_cur_resize_segment;
@@ -2733,9 +2742,9 @@ __state_control:
                     if (y->open(file, mode, y)) {
                         ylog_critical("open %s failed\n", file);
                         y->state = YLOG_STOP;
-                        pthread_mutex_lock(&mutex);
+                        pthread_mutex_lock(&y_mutex);
                         y->status |= YLOG_DISABLED;
-                        pthread_mutex_unlock(&mutex);
+                        pthread_mutex_unlock(&y_mutex);
                         if (os_hooks.ylog_status_hook)
                             os_hooks.ylog_status_hook(YLOG_STOP, y);
                         if (y->status_callback)
@@ -2752,9 +2761,9 @@ __state_control:
                             ylog_debug("%s block will restart in %dms\n", file, timeout);
                         }
                     } else {
-                        pthread_mutex_lock(&mutex);
+                        pthread_mutex_lock(&y_mutex);
                         y->status &= ~YLOG_DISABLED;
-                        pthread_mutex_unlock(&mutex);
+                        pthread_mutex_unlock(&y_mutex);
                         if (os_hooks.ylog_status_hook)
                             os_hooks.ylog_status_hook(YLOG_RUN, y);
                         if (y->status_callback)
@@ -2786,7 +2795,7 @@ __state_control:
                 yp_invalid(YLOG_POLL_INDEX_DATA, yp, y);
                 if (y->stop_callback)
                     y->stop_callback(y, NULL);
-                pthread_mutex_lock(&mutex);
+                pthread_mutex_lock(&y_mutex);
                 timeout = -1;
                 if (y->status & YLOG_DISABLED_FORCED) {
                     if ((y->status & YLOG_DISABLED) == 0)
@@ -2795,14 +2804,14 @@ __state_control:
                 if (state_curr == YLOG_RESTART) {
                     if ((y->status & YLOG_DISABLED_FORCED) == 0) {
                         y->state = state_curr = YLOG_RUN;
-                        pthread_mutex_unlock(&mutex);
+                        pthread_mutex_unlock(&y_mutex);
                         goto __state_control;
                     } else {
                         ylog_info("ylog <%s> is disabled forcely by ylog_cli\n", name);
                     }
                 }
                 y->status |= YLOG_DISABLED;
-                pthread_mutex_unlock(&mutex);
+                pthread_mutex_unlock(&y_mutex);
                 y->state_pipe_count++;
                 continue;
             case YLOG_MOVE_ROOT:
