@@ -6694,17 +6694,25 @@ static void requestSetSmsBroadcastConfig(int channelID,  void *data, size_t data
         if(i == 0){
             enable = gsmBci.selected ? 0 : 1;
         }
+
+        /**
+         * AT+CSCB = <mode>, <mids>, <dcss>
+         * When mids are all different possible combinations of CBM message
+         * identifiers, we send the range to modem. e.g. AT+CSCB=0,"4373-4383"
+         */
         memset(tmp, 0,20);
         setSmsBroadcastConfigData(gsmBci.fromServiceId,i,1,channel,&len,tmp);
         memcpy(channel+channelLen,tmp,strlen(tmp));
         channelLen += len;
         RILLOGI("Reference-ril. requestSetSmsBroadcastConfig channel %s ,%d ",channel, channelLen);
 
-        memset(tmp, 0,20);
-        setSmsBroadcastConfigData(gsmBci.toServiceId,i,0,channel,&len,tmp);
-        memcpy(channel+channelLen,tmp,strlen(tmp));
-        channelLen += len;
-        RILLOGI("Reference-ril. requestSetSmsBroadcastConfig channel %s ,%d",channel, channelLen);
+        if(gsmBci.fromServiceId != gsmBci.toServiceId){
+            memset(tmp, 0,20);
+            setSmsBroadcastConfigData(gsmBci.toServiceId,i,2,channel,&len,tmp);
+            memcpy(channel+channelLen,tmp,strlen(tmp));
+            channelLen += len;
+            RILLOGI("Reference-ril. requestSetSmsBroadcastConfig channel %s ,%d",channel, channelLen);
+        }
 
         memset(tmp, 0,20);
         setSmsBroadcastConfigData(gsmBci.fromCodeScheme,i,1,lang,&len,tmp);
