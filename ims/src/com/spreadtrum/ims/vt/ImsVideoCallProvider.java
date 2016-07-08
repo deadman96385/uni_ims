@@ -287,8 +287,12 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     }
 
     private void acquireWakeLock() {
-        log("acquireWakeLock");
-        mPartialWakeLock.acquire();
+        log("acquireWakeLock, isHeld:"+mPartialWakeLock.isHeld());
+        synchronized (mPartialWakeLock) {
+            if (!mPartialWakeLock.isHeld()) {
+                mPartialWakeLock.acquire();
+            }
+        }
     }
 
     private void releaseWakeLock() {
