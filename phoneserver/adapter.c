@@ -38,6 +38,7 @@ extern int soc_client;
 
 int rxlev[4], ber[4], rscp[4], ecno[4], rsrq[4], rsrp[4];
 int rssi[4], berr[4];
+int psOpened[4] = {0}; // add for bug577920
 
 struct cmd_table {
     AT_CMD_ID_T cmd_id;
@@ -970,6 +971,11 @@ int cvt_generic_cmd_req(AT_CMD_REQ_T * req)
        int maxPDPNum = getMaxPDPNum();
         for(i = 0; i < maxPDPNum; i++)
             ppp_info[i].state = PPP_STATE_IDLE;
+    } else if (strStartsWith(req->cmd_str, "AT+SFUN=4")) {
+        int simId = getSimIdByPty(req->recv_pty);
+        psOpened[simId] = 1;
+        PHS_LOGD("psOpened[%d] = %d, send SFUN=4 to CP\n", simId,
+                  psOpened[simId]);
     }
 
     adapter_cmux_write(mux, req->cmd_str, req->len, req->timeout);
@@ -1353,10 +1359,6 @@ int cvt_csq_cmd_ind(AT_CMD_IND_T * ind)
     extern int g_signalHanded;
 
     if(multiSimMode == 1) {
-        if(g_signalHanded <= 0) {
-            ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
-            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
-        }
         switch(ind->recv_cmux->type){
             case INDM_SIM1:
                 ind_sim =0;
@@ -1374,8 +1376,12 @@ int cvt_csq_cmd_ind(AT_CMD_IND_T * ind)
                 ind_sim =0;
                 break;
         }
+        if(g_signalHanded <= 0 || psOpened[ind_sim] == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
+        }
     } else {
-        if(g_signalHanded <= 0) {
+        if(g_signalHanded <= 0 || psOpened[ind_sim] == 1) {
             ind_pty = adapter_get_default_ind_pty();
             ind_eng_pty = adapter_single_get_eng_ind_pty();
         }
@@ -1410,10 +1416,16 @@ int cvt_csq_cmd_ind(AT_CMD_IND_T * ind)
     }
 
    if(berr[ind_sim] > 99) berr[ind_sim] = 99;
-   if(g_signalHanded <= 0) {
+   if(g_signalHanded <= 0 || psOpened[ind_sim] == 1) {
+       if (!strcmp(modem, "t") || !strcmp(modem, "w")) {
+           PHS_LOGD("sim%d receive first CSQ after send SFUN=4 to cp\n",
+                     ind_sim);
+           psOpened[ind_sim] = 0;
+       }
         snprintf(ind_str, sizeof(ind_str), "\r\n+CSQ: %d,%d\r\n", rssi[ind_sim],berr[ind_sim]);
         if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
             ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
+            PHS_LOGD("sim%d first CSQ pty write end\n", ind_sim);
         } else {
             PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
         }
@@ -1436,10 +1448,6 @@ int cvt_cesq_cmd_ind(AT_CMD_IND_T * ind)
 
     PHS_LOGD("cvt_cesq_cmd_ind enter\n");
     if(multiSimMode == 1) {
-        if(g_signalHanded <= 0) {
-            ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
-            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
-        }
         switch(ind->recv_cmux->type){
             case INDM_SIM1:
                 ind_sim =0;
@@ -1457,8 +1465,12 @@ int cvt_cesq_cmd_ind(AT_CMD_IND_T * ind)
                 ind_sim =0;
                 break;
         }
+        if(g_signalHanded <= 0 || psOpened[ind_sim] == 1) {
+            ind_pty = adapter_get_ind_pty((mux_type)(ind->recv_cmux->type));
+            ind_eng_pty = adapter_multi_get_eng_ind_pty((mux_type)(ind->recv_cmux->type));
+        }
     } else {
-        if(g_signalHanded <= 0) {
+        if(g_signalHanded <= 0 || psOpened[ind_sim] == 1) {
             ind_pty = adapter_get_default_ind_pty();
             ind_eng_pty = adapter_single_get_eng_ind_pty();
         }
@@ -1526,12 +1538,19 @@ int cvt_cesq_cmd_ind(AT_CMD_IND_T * ind)
     } else {
         rsrp[ind_sim] = 141 - rsrp[ind_sim];//modified by bug#450497
     }
-    if(g_signalHanded <= 0) {
+    if(g_signalHanded <= 0 || psOpened[ind_sim] == 1) {
+        if (!strcmp(modem, "l") || !strcmp(modem, "tl") ||
+             !strcmp(modem, "lf")) {
+            PHS_LOGD("sim%d receive first CESQ after send SFUN=4 to cp\n",
+                      ind_sim);
+            psOpened[ind_sim] = 0;
+        }
         snprintf(ind_str, sizeof(ind_str), "\r\n+CESQ: %d,%d,%d,%d,%d,%d\r\n",
              rxlev[ind_sim], ber[ind_sim], rscp[ind_sim], ecno[ind_sim],
              rsrq[ind_sim], rsrp[ind_sim]);
         if (ind_pty && ind_pty->ops && ind->len < MAX_AT_CMD_LEN) {
             ind_pty->ops->pty_write(ind_pty, ind_str, strlen(ind_str));
+            PHS_LOGD("sim%d first CESQ pty write end\n", ind_sim);
         } else {
             PHS_LOGE("ind string size > %d\n", MAX_AT_CMD_LEN);
         }
