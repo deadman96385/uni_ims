@@ -394,8 +394,13 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 if(mVolteMediaUpdateDialog != null){
                    mVolteMediaUpdateDialog.dismiss();
                 }
-                mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage);
-                mVolteMediaUpdateDialog.show();
+                if(ImsCmccUtils.getInstance(mContext).rejectMediaChange(mImsCallSessionImpl,mCi,mCallIdMessage)){
+                    log("handleVolteCallMediaChange-is cmcc project, has one active adn one hold call reject MediaChange");
+                }else{
+                    mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage);
+                    mVolteMediaUpdateDialog.show();
+                }
+
                 Message msg = new Message();
                 msg.what = EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT;
                 msg.obj = mCi;
