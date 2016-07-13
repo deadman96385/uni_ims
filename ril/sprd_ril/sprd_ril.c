@@ -5205,7 +5205,7 @@ static void requestRegistrationState(int channelID, int request, void *data,
                 s_PSRegState = STATE_IN_SERVICE;
             }
             pthread_mutex_unlock(&s_lte_attach_mutex);
-            if (response[3] == 14) {
+            if (response[3] == 14 || response[3] == 19) {
                 in4G = 1;
             } else {
                 in4G = 0;
@@ -13069,7 +13069,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 err = at_tok_nextint(&tmp, &net_type);
                 if (err < 0) goto out;
             }
-            if(net_type == 7){
+            if (net_type == 7 || net_type == 16) {
                 in4G = 1;
             }
             RILLOGD("requestRegistration net_type is %d",net_type);
