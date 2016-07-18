@@ -579,7 +579,7 @@ public class VideoCallCameraManager {
 
     public void releaseVideoCamera() {
         // SPRD: remove camera orientationListener for bug 427421
-        // mOrientationListener.disable();
+        mOrientationListener.disable();
         /* SPRD: modify for bug 546928 @ { */
         if (mOperateCameraThread != null) {
             try {
