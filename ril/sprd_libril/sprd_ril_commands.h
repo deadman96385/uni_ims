@@ -198,7 +198,6 @@
     ,{RIL_REQUEST_IMS_INITIAL_GROUP_CALL, dispatchString, responseVoid}
     ,{RIL_REQUEST_IMS_ADD_TO_GROUP_CALL, dispatchString, responseVoid}
     ,{RIL_REQUEST_IMS_SET_CONFERENCE_URI, dispatchString, responseVoid}
-    ,{RIL_REQUEST_GET_IMS_BEARER_STATE, dispatchVoid, responseInts}
     ,{RIL_REQUEST_VIDEOPHONE_HANGUP, dispatchInts, responseVoid}
     ,{RIL_REQUEST_VIDEOPHONE_ANSWER, dispatchVoid, responseVoid}
     ,{RIL_REQUEST_VIDEOPHONE_FALLBACK, dispatchVoid, responseVoid}
@@ -243,6 +242,7 @@
     ,{RIL_REQUEST_STOP_QUERY_AVAILABLE_NETWORKS, dispatchVoid, responseVoid}
     ,{RIL_REQUEST_SET_FACILITY_LOCK_FOR_USER, dispatchStrings, responseVoid}
     ,{RIL_REQUEST_ENABLE_BROADCAST_SMS, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_GET_IMS_BEARER_STATE, dispatchVoid, responseInts}
 #if defined (RIL_SUPPORTED_OEMSOCKET)
     ,{RIL_EXT_REQUEST_GET_HD_VOICE_STATE, dispatchVoid, responseInts}
     ,{RIL_EXT_REQUEST_SIM_GET_ATR, dispatchVoid, responseString}
