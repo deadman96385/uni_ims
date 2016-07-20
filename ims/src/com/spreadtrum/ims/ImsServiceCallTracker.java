@@ -44,10 +44,12 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final int EVENT_POLL_CURRENT_CALLS            = 6;
     private static final int EVENT_POLL_CURRENT_CALLS_RESULT     = 7;
 
+    private final String IMSVERSION = "sprdroid6.0_trunk_16b_16.25.5_p4_lib_patch_cus_20160720_V1.0_bug579147";
+
     private PendingIntent mIncomingCallIntent;
     private CommandsInterface mCi;
     private Context mContext;
-    private int mServiceId; 
+    private int mServiceId;
     private ImsServiceImpl mImsServiceImpl;
     private ImsHandler mHandler;
 
@@ -231,6 +233,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private void handlePollCalls(AsyncResult ar){
         ArrayList<ImsDriverCall> imsDcList;
         Map <String, ImsDriverCall> validDriverCall = new HashMap<String, ImsDriverCall>();
+        android.util.Log.i("IMSVERSION", IMSVERSION);
         if (ar.exception == null) {
             imsDcList = (ArrayList<ImsDriverCall>)ar.result;
         } else if (isCommandExceptionRadioNotAvailable(ar.exception)) {
