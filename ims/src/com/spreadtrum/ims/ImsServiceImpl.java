@@ -18,6 +18,7 @@ import android.os.AsyncResult;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import android.provider.Telephony;
 import com.android.internal.telephony.CommandsInterface;
@@ -68,6 +69,7 @@ public class ImsServiceImpl {
     protected static final int EVENT_IMS_CAPABILITY_CHANGED            = 104;
     //SPRD:ADD for bug 551025
     protected static final int EVENT_SERVICE_STATE_CHANGED             = 105;
+    protected static final int EVENT_SET_VOICE_CALL_AVAILABILITY_DONE  = 106;
 
     private GSMPhone mPhone;
     private ImsServiceState mImsServiceState;
@@ -248,6 +250,17 @@ public class ImsServiceImpl {
                      }
                      break;
                 /*@}*/
+                case EVENT_SET_VOICE_CALL_AVAILABILITY_DONE:
+                    if(ar.exception != null && ar.userObj != null){
+                        Log.i(TAG,"EVENT_SET_VOICE_CALL_AVAILABILITY_DONE: exception");
+                        int value = ((Integer) ar.userObj).intValue();
+                        if (DBG) Log.i(TAG, "value = " + value);
+                        android.provider.Settings.Global.putInt(mContext.getContentResolver(),
+                                android.provider.Settings.Global.ENHANCED_4G_MODE_ENABLED, value);
+                        Toast.makeText(mContext.getApplicationContext(), mContext.getString(R.string.ims_switch_failed), Toast.LENGTH_SHORT).show();
+
+                    }
+                    break;
                 default:
                     break;
             }
@@ -415,12 +428,12 @@ public class ImsServiceImpl {
 
     public void turnOnIms(){
         Log.i(TAG,"turnOnIms.");
-        mCi.setImsVoiceCallAvailability(1 , null);
+        mCi.setImsVoiceCallAvailability(1, mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, 0));
     }
 
     public void turnOffIms(){
         Log.i(TAG,"turnOffIms.");
-        mCi.setImsVoiceCallAvailability(0 , null);
+        mCi.setImsVoiceCallAvailability(0, mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, 1));
     }
     /*SPRD:ADD for bug 551025 @{*/
     public void setVideoResolution(ServiceState state){
