@@ -13592,7 +13592,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         } else {
             if (ussdError == 1) {/* for ussd */
                 RILLOGD("+CUSD ussdError");
-                response[0] = "2";//2:USSD_MODE_NW_RELEASE; 4:network does not support the current operation
+                response[0] = "4";//4:network does not support the current operation
                 ussdError = 0;
             }
 
