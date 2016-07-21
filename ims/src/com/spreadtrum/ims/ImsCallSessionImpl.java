@@ -729,7 +729,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         mDisconnCause = reason;
         if(mImsDriverCall != null){
-            if(isMultiparty()){
+            /*if(isMultiparty()){
                 Log.i(TAG, "terminate-> isMultiparty state:"+mImsDriverCall.state
                         + " isForegroundCall():"+isForegroundCall()
                         + " isBackgroundCall():"+isBackgroundCall());
@@ -744,11 +744,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             } else {
                 mCi.hangupConnection(mImsDriverCall.index,
                         mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
-            }
+            }*/
+             Log.d(TAG,"ck-terminate index = "+mImsDriverCall.index);
+              mCi.hangupConnection(mImsDriverCall.index, mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
         } else {
             Log.w(TAG, "terminate-> mImsDriverCall is null!");
         }
     }
+
 
     /**
      * Puts a call on hold. When it succeeds, {@link Listener#callSessionHeld} is called.

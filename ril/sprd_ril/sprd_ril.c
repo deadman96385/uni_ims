@@ -433,7 +433,7 @@ static rilnet_tz_entry_t rilnet_tz_entry[] = {
  /* SPRD : for svlte & csfb @{ */
 static bool isSvLte(void);
 static bool isLte(void);
-static bool isCSFB(void); 
+static bool isCSFB(void);
 static bool isCMCC(void);
 static bool isCUCC(void);
 static bool bOnlyOneSIMPresent = false;
@@ -931,7 +931,7 @@ static int getPDP(int *index)
 
 #if 0
 #define WRITE_PPP_OPTION(option) write(fd, option, strlen(option))
-#endif  
+#endif
 
 void process_calls(int _calls)
 {
@@ -1226,7 +1226,7 @@ int callFromCLCCLine(char *line, RIL_Call *p_call)
     int err;
     int state;
     int mode;
-
+    int isMpty;
     err = at_tok_start(&line);
     if (err < 0) goto error;
 
@@ -1250,9 +1250,9 @@ int callFromCLCCLine(char *line, RIL_Call *p_call)
 
     p_call->isVoice = (mode == 0);
 
-    err = at_tok_nextbool(&line, &(p_call->isMpty));
+    err = at_tok_nextint(&line, &isMpty);
     if (err < 0) goto error;
-
+    p_call->isMpty = isMpty;
     if (at_tok_hasmore(&line)) {
         err = at_tok_nextstr(&line, &(p_call->number));
 
@@ -2953,7 +2953,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                     n * sizeof(RIL_Data_Call_Response_v11));
 //    }
 
-    
+
     bLteDetached = false;
 
     return;
@@ -3575,7 +3575,7 @@ retrycgatt:
                         /*  2)33: Switch ps to TD                             */
                         /*  3)other values: Do nothing                        */
                         /******************************************************/
-                        if (!strcmp(pdp_type, "IPV4V6") && 
+                        if (!strcmp(pdp_type, "IPV4V6") &&
                             isMatchedErrorcause(p_response, 119)) {
                             RILLOGD("CGATT get 119 error,do fallback");
                             fbCause = getSPACTFBcause(channelID);
@@ -7168,7 +7168,7 @@ void requestSendAT(int channelID, char *data, size_t datalen, RIL_Token t)
     ATLine *p_cur = NULL;
     char *cmd;
     char *pdu;
-    char *response[1]={NULL};   
+    char *response[1]={NULL};
 
     if(at_cmd == NULL) {
         RILLOGE("Invalid AT command");
@@ -7492,7 +7492,7 @@ static void requestGetPhonebookEntry(int channelID, void *data, size_t datalen, 
     RIL_SIM_PB_Response *pbResponse;
     int response[2] = {0};
     char* storage_info[4] = {"SM","SN","FD","ON"};//ADN:SM,SDN:SN,FDN:FD,MSISDN:ON
-    int fileidIndex = 0;  // CONTACT_Init_JEM #2 
+    int fileidIndex = 0;  // CONTACT_Init_JEM #2
 
     p_args = (RIL_SIM_PB*)data;
 
@@ -7660,7 +7660,7 @@ static void requestAccessPhonebookEntry(int channelID, void *data, size_t datale
                        p_args->alphaTag? alphaTag : "",
                        p_args->alphaTag? p_args->alphaTagDCS : 0,
                        p_args->email? email : "",
-                       p_args->sne? "80":"",                       
+                       p_args->sne? "80":"",
                        p_args->sne? sne : "",
                        p_args->sne? p_args->sneDCS : 0,
                        p_args->anrC? strReplace(p_args->anrC,',') : "",
@@ -15046,7 +15046,7 @@ unsigned char* convertUsimToSim(unsigned char const* byteUSIM, int len, unsigned
             == EF_TYPE_CYCLIC){
         RILLOGE("EF_TYPE_CYCLIC");
         byteSIM[RESPONSE_DATA_STRUCTURE] = 3;
-        byteSIM[RESPONSE_DATA_RECORD_LENGTH] = 
+        byteSIM[RESPONSE_DATA_RECORD_LENGTH] =
                 ((byteUSIM[RESPONSE_DATA_FILE_RECORD_LEN_1] & 0xff) << 8)
                         + (byteUSIM[RESPONSE_DATA_FILE_RECORD_LEN_2] & 0xff);
     }
