@@ -1338,6 +1338,18 @@ int callFromCLCCLine(char *line, RIL_Call *p_call)
 
         err = at_tok_nextint(&line, &p_call->toa);
         if (err < 0) goto error;
+
+        if (at_tok_hasmore(&line)) {
+            char *p = line;
+            for (p = line ; *p != '\0' ;p++) {
+                if (*p == ',') {
+                    skipNextComma(&line);
+                }
+            }
+            err = at_tok_nextint(&line, &p_call->numberPresentation);
+            if (err < 0)
+                goto error;
+        }
     }
 
     p_call->uusInfo = NULL;
