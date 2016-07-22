@@ -1,0 +1,24 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.spreadtrum.ims"
+    android:sharedUserId="android.uid.phone" >
+
+    <uses-permission android:name="android.permission.BROADCAST_STICKY" />
+
+    <application
+        android:name="ImsApp"
+        android:allowBackup="false"
+        android:process="com.android.phone" >
+        <receiver android:name=".ImsBroadcastReceiver" >
+            <intent-filter>
+                <action android:name="android.intent.action.SIM_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".ImsService"
+            android:enabled="true"
+            android:exported="true"
+            android:process="com.android.phone" />
+    </application>
+
+</manifest>
