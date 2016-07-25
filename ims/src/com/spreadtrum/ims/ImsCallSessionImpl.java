@@ -31,6 +31,8 @@ import android.util.Log;
 import java.util.concurrent.CopyOnWriteArrayList;
 import android.telecom.VideoProfile;
 
+import com.android.internal.telephony.gsm.SuppServiceNotification;
+
 public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final String TAG = ImsCallSessionImpl.class.getSimpleName();
 
@@ -47,6 +49,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final int ACTION_COMPLETE_RINGBACK_TONE = 11;
     private static final int ACTION_COMPLETE_REMOVE_PARTICIPANT = 12;
     private static final int ACTION_COMPLETE_GET_CALL_FAIL_CAUSE = 13;
+
+    private static final int EVENT_SSN = 101;//SPRD:Add for bug582072
 
     private List<Listener>  mCallSessionImplListeners = new CopyOnWriteArrayList<Listener>();
     private int mState = ImsCallSession.State.IDLE;
@@ -81,6 +85,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mImsServiceCallTracker = callTracker;
         mHandler = new ImsHandler(context.getMainLooper(),this);
         mImsVideoCallProvider = new ImsVideoCallProvider(this,ci,mContext) ;
+        mCi.setOnSuppServiceNotification(mHandler,EVENT_SSN,null);//SPRD:Add for bug582072
     }
 
     public ImsCallSessionImpl(ImsDriverCall dc, IImsCallSessionListener listener, Context context,
@@ -94,6 +99,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mHandler = new ImsHandler(context.getMainLooper(),this);
         mImsVideoCallProvider = new ImsVideoCallProvider(this,ci,mContext) ;
         updateVideoProfile(mImsDriverCall);
+        mCi.setOnSuppServiceNotification(mHandler,EVENT_SSN,null);//SPRD:Add for bug582072
     }
 
     public ImsCallSessionImpl(ImsDriverCall dc, Context context,
@@ -106,6 +112,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mHandler = new ImsHandler(context.getMainLooper(),this);
         mImsVideoCallProvider = new ImsVideoCallProvider(this,ci,mContext) ;
         updateVideoProfile(mImsDriverCall);
+        mCi.setOnSuppServiceNotification(mHandler,EVENT_SSN,null);//SPRD:Add for bug582072
     }
 
     private void updateImsCallProfileFromDC(ImsDriverCall dc){
@@ -484,6 +491,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         }
                     }
                     break;
+                /* SPRD:add for bug582072 @{ */
+                case EVENT_SSN:
+                    notifyRemoteVideoProfile(ar);
+                    break;
+                /* @} */
                 default:
                     Log.w(TAG,"handleMessage->unsupport message:"+msg.what);
                     break;
@@ -504,6 +516,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mImsDriverCall = null;
         mCallee = null;
         mImsVideoCallProvider = null;
+        mCi.unSetOnSuppServiceNotification(mHandler);//SPRD:Add for bug582072
     }
 
     /**
@@ -1067,4 +1080,19 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
     /* @} */
 
+    /* SPRD:Add for bug582072 @{ */
+    public void notifyRemoteVideoProfile(AsyncResult ar) {
+        SuppServiceNotification notification = (SuppServiceNotification) ar.result;
+            switch (notification.code) {
+            case SuppServiceNotification.MT_CODE_CALL_ON_HOLD:
+                mRemoteCallProfile = new ImsCallProfile(
+                        ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VOICE);
+                break;
+            case SuppServiceNotification.MT_CODE_CALL_RETRIEVED:
+                mRemoteCallProfile = new ImsCallProfile(
+                        ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VT);
+                break;
+            }
+    }
+    /* @} */
 }
