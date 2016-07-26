@@ -224,11 +224,14 @@ public class ImsRegister {
                     bspAddr, mHandler.obtainMessage(EVENT_INIT_ISIM_DONE));
         }
     }
-
-    public void notifyImsStateChanged(boolean imsRegistered) {
-        if( mCurrentImsRegistered != imsRegistered) {
+    /* SPRD:Modify for bug576993 @{ */
+    public synchronized void notifyImsStateChanged(boolean imsRegistered) {
+        boolean isPrimaryCard = mPhone.getPhoneId() == mTelephonyManager.getPrimaryCard();
+        Log.i(TAG, "notifyImsStateChanged mCurrentImsRegistered:" + mCurrentImsRegistered
+                 + " imsRegistered:" + imsRegistered + " isPrimaryCard:" + isPrimaryCard);
+        if(mCurrentImsRegistered != imsRegistered) {
             mCurrentImsRegistered = imsRegistered;
-            if( mPhone.getPhoneId() == mTelephonyManager.getPrimaryCard()) {
+            if(isPrimaryCard) {
                 sendVolteServiceStateChanged();
                 if (mPhone.isRadioOn() && getServiceState().getState() != ServiceState.STATE_IN_SERVICE) {
                     log("voice regstate not in service, will call ImsNotifier to notifyServiceStateChanged");
@@ -237,6 +240,7 @@ public class ImsRegister {
             }
         }
     }
+    /* @} */
 
     private void sendVolteServiceStateChanged() {
         mPhone.notifyVoLteServiceStateChanged(new VoLteServiceState(mCurrentImsRegistered ? VoLteServiceState.IMS_REG_STATE_REGISTERED : VoLteServiceState.IMS_REG_STATE_NOT_EGISTERED));
