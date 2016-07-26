@@ -1588,8 +1588,8 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
             .ydst = {
                 .file = "iodebug/",
                 .file_name = "iodebug.log",
-                .max_segment = 2,
-                .max_segment_size = 10*1024*1024,
+                .max_segment = 6,
+                .max_segment_size = 20*1024*1024,
             },
         },
         /* traces/ */ {
