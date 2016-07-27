@@ -298,9 +298,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                 // This is a existing call
                 if(!callSession.isConferenceHost()){
                     callSession.updateFromDc(imsDc);
-                    Log.d(TAG, "handlePollCalls known session->imsDc.isMpty:"+imsDc.isMpty + " imsDc.isMT:"+imsDc.isMT
+                    Log.d(TAG, "handlePollCalls known session->imsDc.isMpty:"+imsDc.isMpty
                             +" mConferenceSession is null:"+(mConferenceSession == null));
-                    if(imsDc.isMpty && !imsDc.isMT && mConferenceSession != null
+                    if(imsDc.isMpty && mConferenceSession != null
                             && mConferenceSession.inSameConference(imsDc)){
                         Log.d(TAG, "mConferenceSession member found");
                         isConferenceStateChange = mConferenceSession.updateImsConfrenceMember(imsDc);
@@ -310,9 +310,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                     Log.d(TAG, "handlePollCalls->updateconferenceDc:"+imsDc.index);
                 }
             } else {
-                Log.d(TAG, "handlePollCalls unknown session->imsDc.isMpty:"+imsDc.isMpty + " imsDc.isMT:"+imsDc.isMT
+                Log.d(TAG, "handlePollCalls unknown session->imsDc.isMpty:"+imsDc.isMpty
                         +" mConferenceSession is null:"+(mConferenceSession == null));
-                if(imsDc.isMpty && !imsDc.isMT && mConferenceSession != null
+                if(imsDc.isMpty && mConferenceSession != null
                         && mConferenceSession.inSameConference(imsDc)){
                     Log.d(TAG, "mConferenceSession member found");
                     isConferenceStateChange = mConferenceSession.updateImsConfrenceMember(imsDc);
@@ -347,8 +347,10 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         }
         removeInvalidSessionFromList(validDriverCall);
         if(mConferenceSession != null){
-            isConferenceStateChange = mConferenceSession.updateImsConfrenceMember(conferenceDc)  || isConferenceStateChange;
-            isConferenceStateChange = mConferenceSession.updateFromDc(conferenceDc) || isConferenceStateChange;
+            if(conferenceDc != null){
+                isConferenceStateChange = mConferenceSession.updateImsConfrenceMember(conferenceDc)  || isConferenceStateChange;
+                isConferenceStateChange = mConferenceSession.updateFromDc(conferenceDc) || isConferenceStateChange;
+            }
             mConferenceSession.removeInvalidSessionFromConference(validDriverCall);
         }
         if(isConferenceStateChange && mConferenceSession != null){
@@ -557,7 +559,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     public void onCallMergeStart(ImsCallSessionImpl mergeHost) {
         synchronized (mSessionList) {
             mMergeHost = mergeHost;
-            mConferenceSession = mergeHost;
+            if(mConferenceSession == null){
+                mConferenceSession = mergeHost;
+            }
             for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it = mSessionList.entrySet()
                     .iterator(); it.hasNext();) {
                 Map.Entry<String, ImsCallSessionImpl> e = it.next();
@@ -568,15 +572,31 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         }
     }
 
-    public void onCallMergeComplete() {
+    public void onCallMergeComplete(ImsCallSessionImpl conferenceMember) {
         synchronized (mSessionList) {
             if (mMergeHost != null) {
                 mMergeHost.notifyMergeComplete();
+                if(!mMergeHost.isConferenceHost()){
+                    mMergeHost.disconnectForConferenceMember();
+                }
                 mMergeHost = null;
             }
         }
     }
+
+    public void removeConferenceMemberSession(ImsCallSessionImpl conferenceMember){
+        Log.d(TAG,"removeConferenceMemberSession -> conferenceMember="+conferenceMember);
+        removeDisconncetedSessionFromList(conferenceMember);
+    }
     /* @} */
+
+    public boolean hasConferenceSession(){
+        return mConferenceSession != null;
+    }
+
+    public boolean isConferenceSession(ImsCallSessionImpl session){
+        return mConferenceSession == session;
+    }
 
     public int getServiceId(){
         return mServiceId;

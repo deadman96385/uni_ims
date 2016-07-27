@@ -135,7 +135,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     public boolean updateFromDc(ImsDriverCall dc){
-        if(isImsSessionInvalid()){
+        if(isImsSessionInvalid() || dc == null){
             Log.d(TAG, "updateFromDc->ImsSessionInvalid! dc:" + dc);
             return false;
         }
@@ -177,7 +177,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 state = ImsDriverCall.State.ACTIVE;
             }
         }
-        Log.d(TAG, "updateFromDc->mIsConferenceHeld:" + mIsConferenceHeld + " mIsConferenceActived:"+mIsConferenceActived);
+        Log.d(TAG, "updateFromDc->mIsConferenceHeld:" + mIsConferenceHeld + " mIsConferenceActived:"+mIsConferenceActived
+                +" mIsMegerAction:"+mIsMegerAction);
         switch(state){
             case DIALING:
                 try{
@@ -254,16 +255,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             hasUpdate = true;
         }
         hasUpdate = mImsDriverCall.update(dc) || hasUpdate;
-        /* SPRD: add for bug524928 and bug 552691 @{ */
-        if (mImsDriverCall.isMpty && mImsDriverCall.state == ImsDriverCall.State.ACTIVE) {
+        if (mImsDriverCall.state == ImsDriverCall.State.ACTIVE) {
             if (mIsMegerAction) {
                 mIsMegerAction = false;
-                mImsServiceCallTracker.onCallMergeComplete();
-            } else if (mShouldNotifyMegerd) {
-                notifyMergeComplete();
+                mImsServiceCallTracker.onCallMergeComplete(this);
+                if(!mConferenceHost){
+                    disconnectForConferenceMember();
+                    return false;
+                }
             }
         }
-        /* @} */
         try{
             if(hasUpdate && knownState
                     && mIImsCallSessionListener != null){
@@ -837,16 +838,18 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     @Override
     public void merge(){
         // SPRD: add for bug 552691
-        mImsServiceCallTracker.onCallMergeStart(this);
-        synchronized(mConferenceLock){
-            mConferenceHost = true;
-            mImsConferenceState = new ImsConferenceState();
-            if(mImsDriverCall != null){
-                updateImsConfrenceMember(mImsDriverCall);
-            } else {
-                Log.w(TAG, "merge-> mImsDriverCall is null!");
+        if(!mImsServiceCallTracker.hasConferenceSession()){
+            synchronized(mConferenceLock){
+                mConferenceHost = true;
+                mImsConferenceState = new ImsConferenceState();
+                if(mImsDriverCall != null){
+                    updateImsConfrenceMember(mImsDriverCall);
+                } else {
+                    Log.w(TAG, "merge-> mImsDriverCall is null!");
+                }
             }
         }
+        mImsServiceCallTracker.onCallMergeStart(this);
         mCi.conference(mHandler.obtainMessage(ACTION_COMPLETE_MERGE,this));
     }
 
@@ -1073,11 +1076,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mIsMegerAction = true;
     }
 
+    public boolean inMergeState(){
+        return mIsMegerAction;
+    }
+
     public void notifyMergeComplete() {
-        if (!isMultiparty()) {
-            mShouldNotifyMegerd = true;
-            return;
-        }
         mShouldNotifyMegerd = false;
         try {
             mIImsCallSessionListener.callSessionMergeComplete((IImsCallSession) this);
@@ -1156,7 +1159,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         try {
             mIImsCallSessionListener.callSessionConferenceStateUpdated((IImsCallSession) this, mImsConferenceState);
-            mIsMegerAction = false;
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -1202,5 +1204,19 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
             }
         }
+    }
+
+    public void disconnectForConferenceMember(){
+        mState = ImsCallSession.State.TERMINATED;
+        try{
+            if (mIImsCallSessionListener != null){
+                mIImsCallSessionListener.callSessionTerminated((IImsCallSession)this,
+                        new ImsReasonInfo(mDisconnCause, 0));
+            }
+            Log.d(TAG, "disconnectForConferenceMember->this is 3 way conference member.");
+        } catch(RemoteException e){
+            e.printStackTrace();
+        }
+        mImsServiceCallTracker.removeConferenceMemberSession(this);
     }
 }
