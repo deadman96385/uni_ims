@@ -12272,13 +12272,14 @@ static void detachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
                 }
             }
         }
-        err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
-        if (err < 0 || p_response->success == 0) {
-            goto error;
-        }
+
         if (s_multiSimMode && !bOnlyOneSIMPresent) {
             RILLOGD("s_sim_num = %d, s_testmode = %d", s_sim_num, s_testmode);
             if(s_testmode == 10) {
+                err = at_send_command(ATch_type[channelID], "AT+SGFD", &p_response);
+                if (err < 0 || p_response->success == 0) {
+                    goto error;
+                }
                 snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,0", s_sim_num);
             } else {
                 snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,1", 1 - s_sim_num);
