@@ -328,7 +328,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
          } else {
              /* SPRD:add for bug563112 @{ */
              if(mIsVideo && (session != null && session.mImsDriverCall != null)){
-                 Toast.makeText(mContext,mContext.getResources().getString(com.android.internal.R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
+                 Toast.makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
                  mIsVideo = false;
              }
              /* @} */
