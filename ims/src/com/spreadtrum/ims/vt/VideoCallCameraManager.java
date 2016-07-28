@@ -58,7 +58,8 @@ public class VideoCallCameraManager {
     private boolean mIsSurfacePreviewFailed = false;
     private int mVideoQuality;
     private boolean mIsVideoQualityReceived = false;
-
+    private int mCurrentDeviceRotation = 0;
+    
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -138,17 +139,17 @@ public class VideoCallCameraManager {
     private int getSensorRotation(String cameraId) {
         int cameraRotation;
         if (cameraId != null && cameraId.equals(mRearFacingCameraId)) {
-            cameraRotation = mDeviceRotation + 90;
+            cameraRotation = mCurrentDeviceRotation + 90;
         } else {
-            if (mDeviceRotation >= 270) {
-                cameraRotation = 270 + mDeviceRotation;
+            if (mCurrentDeviceRotation >= 270) {
+                cameraRotation = 270 + mCurrentDeviceRotation;
             } else {
-                cameraRotation = 270 - mDeviceRotation;
+                cameraRotation = 270 - mCurrentDeviceRotation;
             }
         }
         Log.i(TAG, "getSensorRotation()->cameraId:" + cameraId + " cameraRotation:"
                 + cameraRotation
-                + " mDeviceRotation:" + mDeviceRotation);
+                + " mCurrentDeviceRotation:" + mCurrentDeviceRotation);
         return cameraRotation;
     }
 
@@ -645,6 +646,12 @@ public class VideoCallCameraManager {
     }
 
     public void onSetDeviceRotation(int rotation) {
+        Log.i(TAG, "onSetDeviceRotation, mCurrentDeviceRotation: " + mCurrentDeviceRotation +" rotation = " + rotation);	
+        
+        if(mCurrentDeviceRotation != rotation && rotation != 180 ){	
+            mCurrentDeviceRotation = rotation;	
+            handleOrientationChange();	
+        }
     }
 
     /**
@@ -781,8 +788,8 @@ public class VideoCallCameraManager {
                     && displayOrientation != OrientationEventListener.ORIENTATION_UNKNOWN) {
                 Log.i(TAG, "onOrientationChanged: " + displayOrientation);
                 mDeviceRotation = displayOrientation;
-                mHandler.removeMessages(EVENT_CHANGE_ORIENTATION);
-                mHandler.sendEmptyMessageDelayed(EVENT_CHANGE_ORIENTATION, 500);
+                //mHandler.removeMessages(EVENT_CHANGE_ORIENTATION);
+                //mHandler.sendEmptyMessageDelayed(EVENT_CHANGE_ORIENTATION, 500);
             }
         }
     }
