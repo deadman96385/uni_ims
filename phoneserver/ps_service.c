@@ -1744,8 +1744,8 @@ int isLte(void) {
     char prop[PROPERTY_VALUE_MAX]="";
     property_get(SSDA_MODE, prop, "0");
     PHS_LOGD("ssda mode: %s", prop);
-    if ((!strcmp(prop,"svlte")) || (!strcmp(prop,"tdd-csfb")) || (!strcmp(prop,"fdd-csfb"))
-        || (!strcmp(prop,"csfb"))) {
+    if ((!strcmp(prop,"svlte")) || !strcmp(modem, "l") ||
+         !strcmp(modem, "tl") || !strcmp(modem, "lf") ) {
         return 1;
     }
     return 0;
