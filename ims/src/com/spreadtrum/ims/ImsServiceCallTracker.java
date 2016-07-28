@@ -44,7 +44,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final int EVENT_POLL_CURRENT_CALLS            = 6;
     private static final int EVENT_POLL_CURRENT_CALLS_RESULT     = 7;
 
-    private final String IMSVERSION = "sprdroid6.0_trunk_16b_16.25.5_p4_lib_patch_cus_20160728_V1.0_bug584317";
+    private final String IMSVERSION = "sprdroid6.0_trunk_16b_16.25.5_p4_lib_patch_cus_20160728_V1.1_bug582412";
 
     private PendingIntent mIncomingCallIntent;
     private CommandsInterface mCi;
@@ -52,7 +52,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private int mServiceId;
     private ImsServiceImpl mImsServiceImpl;
     private ImsHandler mHandler;
-
+    private Object mUpdateLock = new Object();
+	
     protected int mPendingOperations;
     protected boolean mNeedsPoll;
     protected Message mLastRelevantPoll;
@@ -166,10 +167,15 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     protected void pollCallsWhenSafe() {
         mHandler.removeMessages(EVENT_POLL_CURRENT_CALLS);
         mNeedsPoll = true;
-
+		
+    synchronized(mUpdateLock){
         if (checkNoOperationsPending()) {
             mLastRelevantPoll = mHandler.obtainMessage(EVENT_POLL_CALLS_RESULT);
+			 if (mLastRelevantPoll != null) {
+			   Log.i(TAG, "pollCallsWhenSafe: mLastRelevantPoll " + mLastRelevantPoll.what);
+			 }
             mCi.getImsCurrentCalls  (mLastRelevantPoll);
+			}
         }
     }
 
@@ -250,25 +256,29 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         for (int i = 0; imsDcList!= null && i < imsDcList.size(); i++) {
             ImsCallSessionImpl callSession = null;
             ImsDriverCall imsDc = imsDcList.get(i);
-            synchronized(mPendingSessionList) {
-                //SPRD: add for bug525777
-                int index = -1;
-                for(int j=0;j<mPendingSessionList.size();j++){
-                    ImsCallSessionImpl session = mPendingSessionList.get(j);
-                    if (imsDc.state == ImsDriverCall.State.DIALING) {
-                        Log.d(TAG, "PendingSession found, index:"+j+" session:" + session);
-                        addSessionToList(imsDc.index, session);
-                        index = j;
-                        break;
-                    }
-                }
-                if(index != -1){
-                    Log.d(TAG, "PendingSession remove, index:"+index);
-                    mPendingSessionList.remove(index);
-                }
-            }
+          
             synchronized(mSessionList) {
                 callSession = mSessionList.get(Integer.toString(imsDc.index));
+			          Log.d(TAG, "PendingSession GET, index:"+imsDc.index);
+            }
+            // Add new feature can add call when conference call has the state of dialing for fix bug 569061 
+            if(callSession == null){
+                synchronized(mPendingSessionList) {
+                    int index = -1;
+                    for(int j=0;j<mPendingSessionList.size();j++){
+                        if (imsDc.state == ImsDriverCall.State.DIALING || imsDc.state ==ImsDriverCall.State.ALERTING) {
+                            Log.d(TAG, "PendingSession found, index:"+imsDc.index);
+			                            callSession = mPendingSessionList.get(j);
+                            addSessionToList(Integer.valueOf(imsDc.index), callSession);
+                            index = j;
+                            break;
+                        }
+                    }
+                    if(index != -1){
+                        Log.d(TAG, "PendingSession remove, index:"+index);
+                        mPendingSessionList.remove(index);
+                    }
+                }	
             }
             if (callSession != null){
                 // This is a existing call
@@ -281,7 +291,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                 }
                 callSession = new ImsCallSessionImpl(imsDc, mContext, mCi, this);
                 callSession.addListener(this);
-                addSessionToList(imsDc.index, callSession);
+                addSessionToList(Integer.valueOf(imsDc.index), callSession);
                 if (imsDc.isMT) {
                     Log.d(TAG, "This is a MT Call.");
                     sendNewSessionIntent(callSession, imsDc.index, false, imsDc.state, imsDc.number);
@@ -302,6 +312,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             }
         }
         removeInvalidSessionFromList(validDriverCall);
+		updateConferenceState();
     }
 
     protected void pollCurrentCallsWhenSafe() {
@@ -330,15 +341,20 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         }
         for (int i = 0; imsDcList!= null && i < imsDcList.size(); i++) {
             ImsCallSessionImpl callSession = null;
-            ImsDriverCall imsDc = imsDcList.get(i);
-            if (mPendingSessionList != null) {
+            ImsDriverCall imsDc = imsDcList.get(i);	
+			 synchronized(mSessionList) {
+			                callSession = mSessionList.get(Integer.toString(imsDc.index));
+                Log.d(TAG, "PendingSession GET, index:"+imsDc.index);
+            }
+            if (mPendingSessionList != null && callSession == null) {
                 synchronized(mPendingSessionList) {
                     int index = -1;
                     for(int j=0;j<mPendingSessionList.size();j++){
                         ImsCallSessionImpl session = mPendingSessionList.get(j);
                         if (imsDc.state == ImsDriverCall.State.DIALING) {
-                            Log.d(TAG, "PendingSession found, index:"+j+" session:" + session);
-                            addSessionToList(imsDc.index, session);
+                             Log.d(TAG, "PendingSession found, index:"+imsDc.index);
+                            addSessionToList(Integer.valueOf(imsDc.index), session);
+							 callSession = session;
                             index = j;
                             break;
                         }
@@ -348,9 +364,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                         mPendingSessionList.remove(index);
                     }
                 }
-            }
-            synchronized(mSessionList) {
-                callSession = mSessionList.get(Integer.toString(imsDc.index));
+           
             }
             if (callSession != null){
                 // This is a existing call
@@ -517,4 +531,29 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     public int getServiceId(){
         return mServiceId;
     }
+	 /*
+     * SPRD: Add new feature can add call when conference call has the state of
+     * dialing for fix bug 569061 @{
+     */
+	public void updateConferenceState() {
+        synchronized (mSessionList) {
+            boolean isConferenceHeld = false;
+            for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it = mSessionList.entrySet().iterator(); it.hasNext();) {
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+                if (e.getValue().isConferenceHost() && e.getValue().isBackgroundCall()) {
+                    isConferenceHeld = true;
+                }
+            }
+            for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it = mSessionList.entrySet().iterator(); it.hasNext();) {
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+                if (e.getValue().isConferenceHost() && e.getValue().isDialingCall() && isConferenceHeld) {
+                    e.getValue().setConferenceHeld(true);
+                } else if (e.getValue().isConferenceHost() && e.getValue().isConferenceHeld() && !isConferenceHeld) {
+                    e.getValue().setConferenceHeld(false);
+                }
+            }
+            Log.d(TAG, "updateConferenceState -> isConferenceHeld=" + isConferenceHeld);
+        }
+    }
+    /* @} */
 }
