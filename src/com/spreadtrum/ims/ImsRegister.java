@@ -155,6 +155,7 @@ public class ImsRegister {
                     mLastNumeric = "";
                     enableIms();
                 }
+               break;
             case EVENT_ENABLE_IMS:
                 mNumeric = mTelephonyManager.getNetworkOperatorForPhone(mPhoneId);
                 mVolteConfig.loadVolteConfig(mContext);
