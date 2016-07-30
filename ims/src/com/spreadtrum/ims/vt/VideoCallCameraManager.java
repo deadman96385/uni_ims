@@ -648,10 +648,10 @@ public class VideoCallCameraManager {
     public void onSetDeviceRotation(int rotation) {
         Log.i(TAG, "onSetDeviceRotation, mCurrentDeviceRotation: " + mCurrentDeviceRotation +" rotation = " + rotation);	
         
-        if(mCurrentDeviceRotation != rotation && rotation != 180 ){	
+        /*if(mCurrentDeviceRotation != rotation && rotation != 180 ){
             mCurrentDeviceRotation = rotation;	
             handleOrientationChange();	
-        }
+        }*/
     }
 
     /**
