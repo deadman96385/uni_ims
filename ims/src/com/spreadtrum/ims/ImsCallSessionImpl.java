@@ -70,7 +70,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     // SPRD: add for bug524928
     private boolean mIsMegerAction;
     private boolean mShouldNotifyMegerd;
-	private boolean mIsConferenceHeld;
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             CommandsInterface ci, ImsServiceCallTracker callTracker){
@@ -136,10 +135,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         updateImsCallProfileFromDC(dc);//SPRD:add for bug523375 updata dc when fallback to voice
         switch(dc.state){
             case DIALING:
-			if (mIsConferenceHeld) {
-			   Log.d(TAG, "updateFromDc->this dc in held conference:" + dc);
-			   break;
-			 }
                 try{
                     if (mImsDriverCall == null && mIImsCallSessionListener != null) {
                         mIImsCallSessionListener.callSessionProgressing((IImsCallSession) this,
@@ -150,10 +145,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 }
                 break;
             case ALERTING:
-			if (mIsConferenceHeld) {
-			  Log.d(TAG, "updateFromDc->this dc in held conference:" + dc);
-			  break;
-			  }
                 try{
                     mState = ImsCallSession.State.NEGOTIATING;
                     if (mImsDriverCall.state != ImsDriverCall.State.ALERTING
@@ -166,10 +157,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 }
                 break;
             case ACTIVE:
-			if (mIsConferenceHeld) {
-			    Log.d(TAG, "updateFromDc->resume from held conference.");
-			    mIsConferenceHeld = false;
-				}
                 mState = ImsCallSession.State.ESTABLISHED;
                 try{
                     if (mIImsCallSessionListener != null) {
@@ -187,12 +174,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 }
                 break;
             case HOLDING:
-			    if (mIsConferenceHeld) {
-				   Log.d(TAG, "updateFromDc->already held.");
-				   mIsConferenceHeld = false;
-				  }
                 try{
-                    if (mIImsCallSessionListener != null && mImsDriverCall != null &&
+                    if (mIImsCallSessionListener != null &&
                             mImsDriverCall.state != ImsDriverCall.State.HOLDING) {
                         mIImsCallSessionListener.callSessionHeld((IImsCallSession)this, mImsCallProfile);
                     }
@@ -1036,51 +1019,5 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
     }
     /* @} */
-	
-	/*
-     * SPRD: Add new feature can add call when conference call has the state of
-     * dialing for fix bug 569061 @{
-     */
-    public boolean isConferenceHost() {
-        if (isImsSessionInvalid()) {
-            Log.w(TAG, "isMultiparty->session is invalid");
-            return false;
-        }
-        if (mImsDriverCall == null) {
-            return false;
-			}
-        return mImsDriverCall.mptyState == 1;
-    }
-
-    public boolean isDialingCall() {
-        return (mImsDriverCall != null && (mImsDriverCall.state == ImsDriverCall.State.DIALING || mImsDriverCall.state == ImsDriverCall.State.ALERTING));
-    }
-
-    public boolean isConferenceHeld() {
-        return mIsConferenceHeld;
-    }
-
-    public void setConferenceHeld(boolean held) {
-        Log.i(TAG, "setConferenceHeld->old:" + mIsConferenceHeld + " new:" + held);
-        if (mIsConferenceHeld == held) {
-            return;
-        }
-        mIsConferenceHeld = held;
-        try {
-            if (mIImsCallSessionListener != null) {
-                if (mIsConferenceHeld) {
-                    mIImsCallSessionListener.callSessionHeld((IImsCallSession) this,
-                            mImsCallProfile);
-                } else {
-                    mIImsCallSessionListener.callSessionResumed((IImsCallSession) this,
-                            mImsCallProfile);
-                }
-            }
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-    }
-    /* @} */
-
 
 }
