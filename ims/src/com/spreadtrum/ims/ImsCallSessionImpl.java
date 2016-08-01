@@ -315,7 +315,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mState = ImsCallSession.State.TERMINATED;
         try {
             if ((mIImsCallSessionListener != null) && (mImsDriverCall != null)) {
-                if (mImsDriverCall.state == ImsDriverCall.State.INCOMING) {
+				if ((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING)
+						&& (mDisconnCause != ImsReasonInfo.CODE_USER_DECLINE)) { //SPRD add for bug582920
+
                     mDisconnCause = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
                 }
                 Log.w(TAG, "notifySessionDisconnected  mDisconnCause=" + mDisconnCause);
@@ -744,6 +746,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.w(TAG, "reject-> ImsSessionInvalid!");
             return;
         }
+        //SPRD add for bug582920
+        mDisconnCause = reason;
         mCi.rejectCall(mHandler.obtainMessage(ACTION_COMPLETE_REJECT,this));
     }
 
