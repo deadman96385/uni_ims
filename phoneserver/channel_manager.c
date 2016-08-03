@@ -576,25 +576,14 @@ static cmux_t *chnmng_get_cmux(void *const chnmng, const AT_CMD_TYPE_T type,
     }
 
     while (mux == NULL && block) {
-        if (index == 0) {
-            if(multiSimMode == 1)
-                mux = multi_find_cmux(me, type);
-            else
-                mux = single_find_cmux(me, type);
+        if (multiSimMode == 1) {
+            mux = multi_find_cmux(me, type);
+        } else {
+            mux = single_find_cmux(me, type);
         }
-        if (mux)
+        if (mux) {
             break;
-        PHS_LOGI
-            ("Send thread TID [%d] CHNMNG block at channel_manager_get_cmux ",
-             tid);
-        sem_lock(&pty->get_mux_lock);
-        if (mux == 0) {
-            if(multiSimMode == 1)
-                mux = multi_find_cmux(me, type);
-            else
-                mux = single_find_cmux(me, type);
         }
-        sem_unlock(&pty->get_mux_lock);
     }
     if (mux) {
         mux->pty = pty;
@@ -604,26 +593,6 @@ static cmux_t *chnmng_get_cmux(void *const chnmng, const AT_CMD_TYPE_T type,
              tid, mux->name);
     }
     return mux;
-}
-
-void select_send_thread_run(struct channel_manager_t *const me,
-			    AT_CMD_TYPE_T type)
-{
-    int array_size;
-    pty_t **wait_array = NULL;
-
-    PHS_LOGI("Enter select_send_thread_run");
-    if(multiSimMode == 1)
-        wait_array = multi_get_mux_wait_array(me, type, &array_size);
-    else
-        wait_array = single_get_mux_wait_array(me, type, &array_size);
-
-    pty_t *pty = wait_array[0];
-    if (pty != NULL) {
-        PHS_LOGI("select thread tid [%d] run...", wait_array[0]->tid);
-        sem_unlock(&pty->get_mux_lock);
-    }
-    PHS_LOGI("Leave select_send_thread_run");
 }
 
 /*## operation free_cmux(cmux_struct) */
@@ -658,7 +627,6 @@ static void chnmng_free_cmux(void *const chnmng, struct cmux_t *cmux)
     }
     sem_lock(&me->get_mux_lock);
     cmux->ops->cmux_free(cmux);
-    select_send_thread_run(me, cmux->cmd_type);
     sem_unlock(&me->get_mux_lock);
     sem_unlock(&me->array_lock);
     PHS_LOGI("CHNMNG Leave channel_manager_free_cmux cmux=%s ", cmux->name);
