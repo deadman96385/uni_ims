@@ -12336,7 +12336,7 @@ static void initializeCallback(void *param)
     int channelID;
     channelID = getChannel();
     setRadioState (channelID, RADIO_STATE_OFF);
-
+     RILLOGD("sprdroid6.0_trunk_16b_16.25.5__p4_lib_patch_cus_20160803_V1.0_bug585726");
 
 #ifdef SIM_AUTO_POWERON
 #if 0
@@ -12797,15 +12797,6 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             || strStartsWith(s,"NO CARRIER")
             || strStartsWith(s,"+CCWA")
             ) {
-        if(s_ims_registered){
-            RIL_onUnsolicitedResponse (
-                RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
-                NULL, 0);
-        } else {
-            RIL_onUnsolicitedResponse (
-                RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
-                NULL, 0);
-        }
     } else if (strStartsWith(s,"+CREG:")
             || strStartsWith(s,"+CGREG:")
             ) {
@@ -13713,7 +13704,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                     RIL_requestTimedCallback(redialWhileCallFailed,
                             (char *) strdup(response->number), NULL);
                 } else {
-                    if(s_ims_registered){
+                    if(response->type == 1 || response->type == 3/*ps call*/){
                         RIL_onUnsolicitedResponse (
                             RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
                             NULL, 0);
@@ -13749,7 +13740,8 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 }
 #endif
             } else {
-                    if(s_ims_registered){
+                    if(response->type == 1 || response->type == 3/*ps call*/){
+                         RILLOGD("get location fail");
                         RIL_onUnsolicitedResponse (
                             RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
                             NULL, 0);
@@ -13828,7 +13820,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             }
 #endif
             if (response->type == 0) {
-                    if(s_ims_registered){
+                    if(response->type == 1 || response->type == 3/*ps call*/){
                         RIL_onUnsolicitedResponse (
                             RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
                             NULL, 0);
@@ -13840,10 +13832,15 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 goto out;
             } else if (response->type == 1) {
 #if defined (RIL_SPRD_EXTENSION)
+                if(response->type == 1 || response->type == 3/*ps call*/){
+                 RIL_onUnsolicitedResponse (
+                        RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
+                        NULL, 0);
+                }else{
                 RIL_onUnsolicitedResponse (
                         RIL_UNSOL_RESPONSE_VIDEOCALL_STATE_CHANGED,
                         NULL, 0);
-
+                }
                 err = at_tok_nextint(&tmp, &response->num_type);
                 if (err < 0) {
                     RILLOGD("get num_type fail");
@@ -13960,7 +13957,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             RILLOGD("get exit_cause fail");
             goto out;
         }
-        if (s_ims_registered) {
+        if (response->cs_mod == 0) {
             RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED, response,sizeof(RIL_IMSPHONE_CMCCSI));
         }
     } else if (strStartsWith(s, "+CMCCSS")) {
@@ -14100,9 +14097,6 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 #if defined (RIL_SPRD_EXTENSION)
     else if (strStartsWith(s,AT_PREFIX"DVTRING:")
             || strStartsWith(s,AT_PREFIX"DVTCLOSED")) {
-        RIL_onUnsolicitedResponse (
-            RIL_UNSOL_RESPONSE_VIDEOCALL_STATE_CHANGED,
-            NULL, 0);
     } else if (strStartsWith(s, AT_PREFIX"VTMDSTRT")) {
         int response;
         int index = 0;
