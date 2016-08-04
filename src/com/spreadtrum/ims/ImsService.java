@@ -521,6 +521,7 @@ public class ImsService extends Service {
                 ImsServiceImpl service = mImsServiceImplMap.get(id);
                 if(service.isImsRegisterState()){
                     mIsVoLteRegistered = true;
+                    return;
                 }
             }
             mIsVoLteRegistered = false;

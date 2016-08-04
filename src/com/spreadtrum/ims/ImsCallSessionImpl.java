@@ -805,6 +805,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.w(TAG, "hold-> ImsSessionInvalid!");
             return;
         }
+        if(mIsMegerAction){
+            try{
+                Log.w(TAG, "hold-> mIsMegerAction!");
+                mIImsCallSessionListener.callSessionHoldFailed(this,
+                        new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,"Hold Failed"));
+            } catch(RemoteException e){
+                e.printStackTrace();
+            }
+            return;
+        }
         mCi.switchWaitingOrHoldingAndActive(
                 mHandler.obtainMessage(ACTION_COMPLETE_HOLD,this));
     }
