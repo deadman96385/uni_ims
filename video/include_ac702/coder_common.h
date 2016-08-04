@@ -15,6 +15,12 @@
  */
 #define ENC_MAX_PKTS     (64)
 
+typedef struct {
+    int arvg_len;  /* arverage length of every packet */
+    int mod_len;   /* rest length after fragment by arvg_len*/
+    int cnt;       /* num of fragments */
+} Frame_FragInfo;
+
 /*
  * Encoder/Decoder objects.
  * Note: These objects are all provate and application has no data in them.
@@ -35,6 +41,7 @@ typedef struct {
         uint8      *start2_ptr[ENC_MAX_PKTS];
         int         index;
         uint8       hdr[8];                     /* Only for H263 */
+        Frame_FragInfo  ff_info;                /* store the frame fragment info */
     } pkt;
 } Video_EncObj;
 

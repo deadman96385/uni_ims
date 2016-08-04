@@ -82,6 +82,39 @@ static void _H264_encFindFullPacket(
 }
 
 /*
+ * ======== _H264_encFindFullPacket() ========
+ * This function make a frame fragmented equally to reduce the IP fragmenting.
+ * info_ptr: points the data struct of Frame_FragInfo
+ * sz:       the total len of the frame
+ * mtu:      the max payload size
+ *
+ * Returns:
+ */
+void _H264_encFrameEqualFrag(
+    Frame_FragInfo *info_ptr,
+    int sz,
+    int mtu)
+{
+    if (info_ptr->cnt > 0) {
+        return;
+    }
+    /* round up to the nearest integer */
+    info_ptr->cnt = (sz + mtu - 1) / mtu;
+    /* FU pkt should add FU indicator and header in the front */
+    if ((info_ptr->cnt * 2 + sz - 1) > (info_ptr->cnt * mtu)) {
+        info_ptr->cnt ++;
+    }
+    info_ptr->arvg_len = (sz + info_ptr->cnt * 2 - 1) / info_ptr->cnt;
+    info_ptr->mod_len = (sz + info_ptr->cnt * 2 - 1) % info_ptr->cnt;
+
+/*
+    OSAL_logMsg("%s: qiuyi sz %d, arvg %d, cnt %d, mod %d\n",
+            __FUNCTION__, sz, info->arvg_len, info->cnt, info->mod_len);
+*/
+}
+
+
+/*
  * ======== H264_encGetData() ========
  * This function gets encoded data from the encoder.
  * In pkt_ptr:
@@ -110,6 +143,8 @@ int H264_encGetData(
     uint8 *start2_ptr;
     int nal;
     int end;
+    int pkt_len = 0;
+    Frame_FragInfo *ff_info_ptr = NULL;
 
     if ((NULL == obj_ptr) || (NULL == pkt_ptr)) {
         DBG("FAILURE\n");
@@ -269,26 +304,37 @@ int H264_encGetData(
     hdr[0] = NALU_FU_A | (start1_ptr[0] & 0x60);    /* FU - A, Type = 28, and NRI */
     hdr[1] = H264_READ_NALU(start1_ptr[0]);         /* Actual type */
 
+    ff_info_ptr = &(obj_ptr->pkt.ff_info);
+
+    /* fragment the frame equally */
+    _H264_encFrameEqualFrag(ff_info_ptr, sz, H264_ENC_MAX_RTP_SIZE);
+
+    pkt_len = ff_info_ptr->arvg_len;
+    if (ff_info_ptr->mod_len) {
+        pkt_len += 1;
+        ff_info_ptr->mod_len -= 1;
+    }
+
     if (0 == consumed) {
         /*
          * First packet.
          */
         hdr[1] |= 1 << 7;        /* set start bit */
         OSAL_memCpy(pkt_ptr->buf_ptr, hdr, 2);
-        OSAL_memCpy((char *)pkt_ptr->buf_ptr + 2, (char *)start1_ptr + 1, H264_ENC_MAX_RTP_SIZE - 2);
-        pkt_ptr->sz = H264_ENC_MAX_RTP_SIZE;
+        OSAL_memCpy((char *)pkt_ptr->buf_ptr + 2, (char *)start1_ptr + 1, pkt_len - 2);
+        pkt_ptr->sz = pkt_len;
         pkt_ptr->mark = 0;
-        obj_ptr->pkt.consumed += H264_ENC_MAX_RTP_SIZE - 1;
+        obj_ptr->pkt.consumed += pkt_len - 1;
     }
-    else if ((consumed + H264_ENC_MAX_RTP_SIZE - 2) < sz) {
+    else if ((consumed + pkt_len - 2) < sz) {
         /*
          * Intermediate packet.
          */
         OSAL_memCpy(pkt_ptr->buf_ptr, hdr, 2);
-        OSAL_memCpy((char *)pkt_ptr->buf_ptr + 2, (char *)start1_ptr + consumed, H264_ENC_MAX_RTP_SIZE - 2);
-        pkt_ptr->sz = H264_ENC_MAX_RTP_SIZE;
+        OSAL_memCpy((char *)pkt_ptr->buf_ptr + 2, (char *)start1_ptr + consumed, pkt_len - 2);
+        pkt_ptr->sz = pkt_len;
         pkt_ptr->mark = 0;
-        obj_ptr->pkt.consumed += H264_ENC_MAX_RTP_SIZE - 2;
+        obj_ptr->pkt.consumed += pkt_len - 2;
     }
     else {
         /*
@@ -317,6 +363,8 @@ int H264_encGetData(
 
     if (end) {
         obj_ptr->lastType = nal;
+        /*clear the fragment count*/
+        ff_info_ptr->cnt = 0;
     }
 
     return (1);
