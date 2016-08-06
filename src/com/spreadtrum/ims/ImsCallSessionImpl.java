@@ -58,9 +58,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private ImsHandler mHandler;
     public ImsCallProfile mImsCallProfile = new ImsCallProfile();
     private ImsCallProfile mLocalCallProfile = new ImsCallProfile(
-            ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VT);
+            ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE);
     private ImsCallProfile mRemoteCallProfile = new ImsCallProfile(
-            ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VT);
+            ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE);
     private ImsCallProfile mLocalRequestProfile = new ImsCallProfile();
     private ImsCallProfile mRemoteRequestProfile = new ImsCallProfile();
     private IImsCallSessionListener mIImsCallSessionListener;
@@ -182,7 +182,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         switch(state){
             case DIALING:
                 try{
-                    if (mImsDriverCall == null && mIImsCallSessionListener != null) {
+                    if (mIImsCallSessionListener != null) {
                         mIImsCallSessionListener.callSessionProgressing((IImsCallSession) this,
                                 new ImsStreamMediaProfile());
                     }

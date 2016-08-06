@@ -2339,9 +2339,15 @@ public final class ImsRIL {
     public void
     requestVolteCallMediaChange(boolean isVideo, Message response) {
         RILRequest rr
-        = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE , response);
+        = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE , null);
 
-        rr.mParcel.writeInt(1);
+        rr.mParcel.writeInt(2);
+        if(response != null){
+            rr.mParcel.writeInt(response.arg1);
+        }else{
+            rr.mParcel.writeInt(1);
+        }
+        /* @} */
         rr.mParcel.writeInt(isVideo?1:0);
 
         if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
@@ -2353,9 +2359,14 @@ public final class ImsRIL {
     public void
     responseVolteCallMediaChange(boolean isAccept, Message response) {
         RILRequest rr
-        = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE, response);
+        = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE, null);
 
-        rr.mParcel.writeInt(1);
+        rr.mParcel.writeInt(2);
+        if(response != null){
+            rr.mParcel.writeInt(response.arg1);
+        }else{
+            rr.mParcel.writeInt(1);
+        }
         rr.mParcel.writeInt(isAccept?1:0);
 
         if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
