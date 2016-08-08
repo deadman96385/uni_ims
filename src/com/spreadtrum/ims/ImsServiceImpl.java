@@ -132,7 +132,7 @@ public class ImsServiceImpl {
         mImsRegister = new ImsRegister(mPhone, mContext, mCi);
         mImsServiceState = new ImsServiceState(false,IMS_REG_STATE_INACTIVE);
         mImsConfigImpl = new ImsConfigImpl(mCi,context);
-        mImsUtImpl = new ImsUtImpl(mCi,context);
+        mImsUtImpl = new ImsUtImpl(mCi,context,phone);
         mImsEcbmImpl = new ImsEcbmImpl(mCi);
         mHandler = new ImsHandler(mContext.getMainLooper());
         Intent intent = new Intent(ImsManager.ACTION_IMS_SERVICE_UP);

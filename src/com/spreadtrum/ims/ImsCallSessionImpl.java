@@ -146,6 +146,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         ImsDriverCall.State state = dc.state;
         boolean conferenceHeldStateChange = false;
         boolean conferenceActiveStateChange = false;
+        boolean conferenceResumed = false;
         if(mConferenceHost){
             boolean conferenceHeld = false;
             boolean conferenceActive = false;
@@ -162,15 +163,19 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 conferenceActive = false;
                 Log.d(TAG, "updateFromDc->conferenceHeld and conferenceActive both true!");
             }
+            if(conferenceActive && mIsConferenceHeld){
+                conferenceResumed = true;
+            }
             if(conferenceHeld != mIsConferenceHeld){
                 mIsConferenceHeld = conferenceHeld;
                 conferenceHeldStateChange = true;
             }
             if(mIsConferenceActived != conferenceActive){
-                mIsConferenceActived = mIsConferenceActived;
+                mIsConferenceActived = conferenceActive;
                 conferenceActiveStateChange = true;
             }
-            Log.d(TAG, "updateFromDc->conferenceHeld:" + conferenceHeld + " conferenceActive:"+conferenceActive);
+
+            Log.d(TAG, "updateFromDc->conferenceHeld:" + conferenceHeld + " conferenceResumed:"+conferenceResumed);
             if(mIsConferenceHeld){
                 state = ImsDriverCall.State.HOLDING;
             } else if(mIsConferenceActived){
@@ -207,7 +212,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 try{
                     if (mIImsCallSessionListener != null) {
                         if(mImsDriverCall != null && mImsDriverCall.state == ImsDriverCall.State.HOLDING
-                                || conferenceActiveStateChange){
+                                || conferenceResumed){
                             mIImsCallSessionListener.callSessionResumed((IImsCallSession)this, mImsCallProfile);
                         } else if (mImsDriverCall != null && ((mImsDriverCall.state == ImsDriverCall.State.DIALING)
                                 || (mImsDriverCall.state == ImsDriverCall.State.ALERTING)

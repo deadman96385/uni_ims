@@ -20,6 +20,20 @@ import com.android.ims.ImsUtInterface;
 import com.android.ims.ImsCallForwardInfo;
 import com.android.ims.internal.ImsCallForwardInfoEx;
 import com.android.ims.internal.IImsUtListenerEx;
+import com.android.internal.telephony.Phone;
+
+import static com.android.internal.telephony.CommandsInterface.CF_ACTION_DISABLE;
+import static com.android.internal.telephony.CommandsInterface.CF_ACTION_ENABLE;
+import static com.android.internal.telephony.CommandsInterface.CF_ACTION_ERASURE;
+import static com.android.internal.telephony.CommandsInterface.CF_ACTION_REGISTRATION;
+import static com.android.internal.telephony.CommandsInterface.CF_REASON_ALL;
+import static com.android.internal.telephony.CommandsInterface.CF_REASON_ALL_CONDITIONAL;
+import static com.android.internal.telephony.CommandsInterface.CF_REASON_NO_REPLY;
+import static com.android.internal.telephony.CommandsInterface.CF_REASON_NOT_REACHABLE;
+import static com.android.internal.telephony.CommandsInterface.CF_REASON_BUSY;
+import static com.android.internal.telephony.CommandsInterface.CF_REASON_UNCONDITIONAL;
+import static com.android.internal.telephony.CommandsInterface.SERVICE_CLASS_VOICE;
+import static com.android.internal.telephony.CommandsInterface.SERVICE_CLASS_NONE;
 
 public class ImsUtImpl extends IImsUt.Stub {
     private static final String TAG = ImsUtImpl.class.getSimpleName();
@@ -42,6 +56,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private static final int ACTION_QUERY_CF_EX = 16;
     private static final int ACTION_UPDATE_CF_EX= 17;
 
+    private Phone mPhone;
     private ImsRIL mCi;
     private ImsHandler mHandler;
     private Context mContext;
@@ -50,18 +65,21 @@ public class ImsUtImpl extends IImsUt.Stub {
     private int mRequestId = -1;
     private Object mLock = new Object();
 
-    public ImsUtImpl(ImsRIL ci,Context context){
+    public ImsUtImpl(ImsRIL ci,Context context, Phone phone){
         mCi = ci;
         mContext = context;
-        mHandler = new ImsHandler(mContext.getMainLooper());
+        mHandler = new ImsHandler(mContext.getMainLooper(), (IImsUt)this);
+        mPhone = phone;
     }
 
     /**
      * Used to listen to events.
      */
     private class ImsHandler extends Handler {
-        ImsHandler(Looper looper) {
+        public IImsUt mIImsUt;
+        ImsHandler(Looper looper, IImsUt ut) {
             super(looper);
+            mIImsUt = ut;
         }
         @Override
         public void handleMessage(Message msg) {
@@ -299,15 +317,28 @@ public class ImsUtImpl extends IImsUt.Stub {
                                         new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
                             } else {
                                 ImsCallForwardInfoEx infos[] = (ImsCallForwardInfoEx[]) ar.result;
-                                if(infos.length == 0 || ar.userObj instanceof Throwable){
+                                if(ar.userObj instanceof Throwable){
                                     mImsUtListenerEx.utConfigurationQueryFailed((IImsUt)ar.userObj,
                                             msg.arg1,
                                             new ImsReasonInfo(ImsReasonInfo.CODE_UT_OPERATION_NOT_ALLOWED, 0));
                                 } else {
+                                    if(infos != null && infos.length == 0){
+                                        Log.i(TAG,"ACTION_QUERY_CF_EX->setVoiceCallForwardingFlag false infos:"+infos);
+                                    } else {
+                                        for (int i = 0, s = infos.length; i < s; i++) {
+                                            if ((infos[i].mCondition == ImsUtInterface.CDIV_CF_UNCONDITIONAL)
+                                                    && ((infos[i].mServiceClass & CommandsInterface.SERVICE_CLASS_VOICE) != 0)) {
+                                                mPhone.setVoiceCallForwardingFlag(1, (infos[i].mStatus == 1),
+                                                        infos[i].mNumber);
+                                                Log.i(TAG,"ACTION_QUERY_CF_EX->setVoiceCallForwardingFlag:"
+                                                        +(infos[i].mStatus == 1));
+                                            }
+                                        }
+                                    }
                                     mImsUtListenerEx.utConfigurationCallForwardQueried(
                                             (IImsUt)ar.userObj, msg.arg1, infos);
                                 }
-                                Log.i(TAG,"ACTION_QUERY_CF_EX->infos:"+infos);
+                                Log.i(TAG,"ACTION_QUERY_CF_EX->infos:"+infos+" id:"+msg.arg1);
                             }
                         } else {
                             mImsUtListenerEx.utConfigurationQueryFailed((IImsUt)ar.userObj,
@@ -320,16 +351,23 @@ public class ImsUtImpl extends IImsUt.Stub {
                     break;
                 case ACTION_UPDATE_CF_EX:
                     try {
-                        if(ar != null){
+                        if(ar != null && !(ar.userObj instanceof Throwable)){
+                            Cf cf = (Cf)ar.userObj;
                             if (ar.exception != null) {
-                                mImsUtListenerEx.utConfigurationUpdateFailed((IImsUt)ar.userObj, msg.arg1,
+                                mImsUtListenerEx.utConfigurationUpdateFailed(mIImsUt, msg.arg1,
                                         new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
                             } else {
-                                mImsUtListenerEx.utConfigurationUpdated((IImsUt)ar.userObj, msg.arg1);
-                                Log.i(TAG,"ACTION_UPDATE_CF_EX->success!");
+                                if(cf != null && cf.mIsCfu &&
+                                        ((cf.mServiceClass & CommandsInterface.SERVICE_CLASS_VOICE) != 0)){
+                                    mPhone.setVoiceCallForwardingFlag(1, cf.mIsCfEnable, cf.mSetCfNumber);
+                                    Log.i(TAG,"ACTION_UPDATE_CF_EX->setVoiceCallForwardingFlag:"
+                                            +cf.mIsCfEnable);
+                                }
+                                mImsUtListenerEx.utConfigurationUpdated(mIImsUt, msg.arg1);
+                                Log.i(TAG,"ACTION_UPDATE_CF_EX->success,id:"+msg.arg1);
                             }
                         } else {
-                            mImsUtListenerEx.utConfigurationUpdateFailed((IImsUt)ar.userObj, msg.arg1,
+                            mImsUtListenerEx.utConfigurationUpdateFailed(mIImsUt, msg.arg1,
                                     new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
                         }
                     } catch(RemoteException e){
@@ -587,9 +625,24 @@ public class ImsUtImpl extends IImsUt.Stub {
             int commandInterfaceCFReason,int serviceClass, String dialingNumber,
             int timerSeconds, String ruleSet){
         int id = getReuestId();
+        Cf cf = new Cf();
+        if(commandInterfaceCFReason == CF_REASON_UNCONDITIONAL){
+            if((commandInterfaceCFAction == CF_ACTION_ENABLE)
+                    || commandInterfaceCFAction == CF_ACTION_REGISTRATION){
+                cf.mIsCfEnable = true;
+            } else {
+                cf.mIsCfEnable = false;
+            }
+            cf.mIsCfu = true;
+        } else {
+            cf.mIsCfu = false;
+        }
+        cf.mSetCfNumber = dialingNumber;
+        cf.mServiceClass = serviceClass;
         mCi.setCallForward(commandInterfaceCFAction, commandInterfaceCFReason, serviceClass,
                 dialingNumber, timerSeconds, ruleSet,
-                mHandler.obtainMessage(ACTION_UPDATE_CF_EX, id, 0, this));
+                mHandler.obtainMessage(ACTION_UPDATE_CF_EX, id, 0,cf));
+        Log.i(TAG,"setCallForwardingOption->id:"+id);
         return id;
     }
 
@@ -601,6 +654,21 @@ public class ImsUtImpl extends IImsUt.Stub {
         int id = getReuestId();
         mCi.queryCallForwardStatus(commandInterfaceCFReason, serviceClass,
                 "", ruleSet, mHandler.obtainMessage(ACTION_QUERY_CF_EX, id, 0, this));
+        Log.i(TAG,"getCallForwardingOption->id:"+id);
         return id;
+    }
+
+    // Create Cf (Call forward) so that dialling number &
+    // mIsCfu (true if reason is call forward unconditional)
+    // mOnComplete (Message object passed by client) can be packed &
+    // given as a single Cf object as user data to UtInterface.
+    private static class Cf {
+        String mSetCfNumber;
+        Message mOnComplete;
+        boolean mIsCfu;
+        boolean mIsCfEnable;
+        int mServiceClass;
+        Cf(){
+        }
     }
 }
