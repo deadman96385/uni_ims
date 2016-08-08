@@ -13035,11 +13035,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             || strStartsWith(s,"NO CARRIER")
             || strStartsWith(s,"+CCWA")
             ) {
-        if(s_ims_registered){
-            RIL_onUnsolicitedResponse (
-                RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
-                NULL, 0);
-        } else {
+        if(!isVoLteEnable()) {
             RIL_onUnsolicitedResponse (
                 RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
                 NULL, 0);
@@ -13976,15 +13972,22 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                     RIL_requestTimedCallback(redialWhileCallFailed,
                             (char *) strdup(response->number), NULL);
                 } else {
-                    if(s_ims_registered){
-                        RIL_onUnsolicitedResponse (
+                    if(isVoLteEnable()){
+                        if(response->type == 1 || response->type == 3/*ps call*/){
+                            RIL_onUnsolicitedResponse (
                             RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
                             NULL, 0);
+                        } else {
+                            RIL_onUnsolicitedResponse (
+                            RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
+                            NULL, 0);
+                        }
                     } else {
                         RIL_onUnsolicitedResponse (
                             RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
                             NULL, 0);
                     }
+
                 }
 #if defined (RIL_SPRD_EXTENSION)
                 if(response->type == 1 || response->type == 3) {
@@ -14012,7 +14015,8 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                 }
 #endif
             } else {
-                    if(s_ims_registered){
+                if (isVoLteEnable()) {
+                    if (response->type == 1 || response->type == 3/* ps call */) {
                         RIL_onUnsolicitedResponse (
                             RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
                             NULL, 0);
@@ -14021,6 +14025,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
                             RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
                             NULL, 0);
                     }
+                } else {
+                    RIL_onUnsolicitedResponse (
+                        RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
+                        NULL, 0);
+                }
             }
 
         } else {
@@ -14091,28 +14100,41 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             }
 #endif
             if (response->type == 0) {
-                    if(s_ims_registered){
+                if(isVoLteEnable()){
+                    if(response->type == 1 || response->type == 3/*ps call*/){
                         RIL_onUnsolicitedResponse (
-                            RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
-                            NULL, 0);
+                        RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
+                        NULL, 0);
                     } else {
                         RIL_onUnsolicitedResponse (
                             RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
                             NULL, 0);
                     }
+                } else {
+                    RIL_onUnsolicitedResponse (
+                        RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,
+                        NULL, 0);
+                }
+
                 goto out;
             } else if (response->type == 1) {
 #if defined (RIL_SPRD_EXTENSION)
 
-                if(s_ims_registered){
-                      RIL_onUnsolicitedResponse (
-                          RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
-                          NULL, 0);
-                  } else {
-                      RIL_onUnsolicitedResponse (
-                              RIL_UNSOL_RESPONSE_VIDEOCALL_STATE_CHANGED,
-                              NULL, 0);
-                  }
+                if(isVoLteEnable()){
+                    if(response->type == 1 || response->type == 3/*ps call*/){
+                        RIL_onUnsolicitedResponse (
+                        RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED,
+                        NULL, 0);
+                    } else {
+                        RIL_onUnsolicitedResponse (
+                        RIL_UNSOL_RESPONSE_VIDEOCALL_STATE_CHANGED,
+                        NULL, 0);
+                    }
+                } else {
+                    RIL_onUnsolicitedResponse (
+                        RIL_UNSOL_RESPONSE_VIDEOCALL_STATE_CHANGED,
+                        NULL, 0);
+                }
 
                 err = at_tok_nextint(&tmp, &response->num_type);
                 if (err < 0) {
@@ -14230,8 +14252,10 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             RILLOGD("get exit_cause fail");
             goto out;
         }
-        if (s_ims_registered) {
-            RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED, response,sizeof(RIL_IMSPHONE_CMCCSI));
+        if (isVoLteEnable()) {
+            if(response->cs_mod == 0){
+                    RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED, response,sizeof(RIL_IMSPHONE_CMCCSI));
+                }
         }
     } else if (strStartsWith(s, "+CMCCSS")) {
         /* CMCCSS1, CMCCSS2, ... CMCCSS7, just report ims state change */
@@ -14370,9 +14394,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 #if defined (RIL_SPRD_EXTENSION)
     else if (strStartsWith(s,AT_PREFIX"DVTRING:")
             || strStartsWith(s,AT_PREFIX"DVTCLOSED")) {
-        RIL_onUnsolicitedResponse (
+        if(!isVoLteEnable()){
+            RIL_onUnsolicitedResponse (
             RIL_UNSOL_RESPONSE_VIDEOCALL_STATE_CHANGED,
             NULL, 0);
+        }
     } else if (strStartsWith(s, AT_PREFIX"VTMDSTRT")) {
         int response;
         int index = 0;
