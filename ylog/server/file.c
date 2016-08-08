@@ -2663,14 +2663,30 @@ static void ylog_load_filter_plugin(char *in_name, char *fun, char *prefix, stru
 
 static void ylog_all_thread_exit(void) {
     struct ylog *y;
-    int i;
+    int i, still_running_ylog_thread;
     for_each_ylog(i, y, NULL) {
         if (y->name == NULL)
             continue;
-        ylog_info("ylog %s exiting...\n", y->name);
+        ylog_info("trigger exit signal to ylog %s\n", y->name);
         y->thread_exit(y, 1);
-        ylog_info("ylog %s exited\n", y->name);
+        ylog_info("ylog %s got exit signal\n", y->name);
     }
+    do {
+        still_running_ylog_thread = 0;
+        for_each_ylog(i, y, NULL) {
+            if (y->name == NULL)
+                continue;
+            /* y->exit will call ylog_exit_default and y->status &= ~YLOG_STARTED; */
+            if (y->status & YLOG_STARTED) {
+                still_running_ylog_thread = 1;
+                break;
+            }
+        }
+        if (still_running_ylog_thread) {
+            ylog_info("ylog %s is exiting...\n", y->name);
+            usleep(200*1000);
+        }
+    } while (still_running_ylog_thread);
 }
 
 static void *ylog_thread_handler_default(void *arg) {
