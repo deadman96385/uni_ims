@@ -1143,7 +1143,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     b.remove(ImsConferenceState.ENDPOINT);
                     b.remove(ImsConferenceState.USER);
                     b.putString(ImsConferenceState.ENDPOINT,dc.number);
-                    b.putString(ImsConferenceState.USER,dc.number);
+                    b.putString(ImsConferenceState.USER,dc.number+"@"+dc.index);
                     isChanged = true;
                 }
                 String state = b.getString(ImsConferenceState.STATUS);
@@ -1155,7 +1155,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             } else {
                 b = new Bundle();
                 b.putString(IMS_CONFERENCE_ID,Integer.toString(dc.index));
-                b.putString(ImsConferenceState.USER,dc.number);
+                b.putString(ImsConferenceState.USER,dc.number+"@"+dc.index);
                 b.putString(ImsConferenceState.ENDPOINT,dc.number);
                 b.putString(ImsConferenceState.STATUS,ImsDriverCall.stateToConferenceString(dc.state));
                 mImsConferenceState.mParticipants.put(Integer.toString(dc.index),b);
