@@ -130,6 +130,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         } else {
             mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
         }
+        //SPRD:update ImsCallProfile according to the CLCCS fix for bug 585690
+        if(isPsMode()){
+            mImsCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB;
+            mLocalCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB;
+        } else {
+            mImsCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_NONE;
+            mLocalCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_NONE;
+        }
     }
 
     public void updateFromDc(ImsDriverCall dc){
@@ -150,7 +158,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 try {
                     if (mImsDriverCall == null && mIImsCallSessionListener != null) {
                         mIImsCallSessionListener.callSessionProgressing((IImsCallSession) this,
-                                new ImsStreamMediaProfile());
+                                mImsCallProfile.mMediaProfile);
                     }
                 } catch(RemoteException e){
                     e.printStackTrace();
@@ -167,7 +175,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                             && mImsDriverCall.state != ImsDriverCall.State.ALERTING
                             && mIImsCallSessionListener != null) {
                         mIImsCallSessionListener.callSessionProgressing((IImsCallSession) this,
-                                new ImsStreamMediaProfile());
+                                mImsCallProfile.mMediaProfile);
                     }
                 } catch(RemoteException e){
                     e.printStackTrace();
@@ -1090,6 +1098,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return false;
         }
         return mImsDriverCall.mptyState == 1;
+    }
+    public boolean isPsMode() {
+        if (isImsSessionInvalid()) {
+            return false;
+        }
+        if (mImsDriverCall == null) {
+            return false;
+        }
+        return mImsDriverCall.csMode == 0;
     }
 
     public boolean isDialingCall() {
