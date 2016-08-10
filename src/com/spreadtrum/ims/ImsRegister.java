@@ -26,12 +26,12 @@ import com.android.internal.telephony.IccCardConstants;
 import com.android.internal.telephony.CommandException;
 import android.telephony.SubscriptionManager;
 import android.provider.Settings;
-import android.telephony.VoLteServiceState;
 import android.content.res.Resources;
 import android.text.TextUtils;
 import com.android.internal.telephony.VolteConfig;
 import java.util.HashMap;
 import java.util.Map;
+import android.telephony.ServiceState;
 
 public class ImsRegister {
     private static final String TAG = "ImsRegister";
@@ -40,7 +40,7 @@ public class ImsRegister {
 
     private Context mContext;
     private ImsRIL mCi;
-    private Phone mPhone;
+    private GsmCdmaPhone mPhone;
     private int mPhoneCount;
 
     private boolean mInitISIMDone;
@@ -66,7 +66,7 @@ public class ImsRegister {
     private static final int EVENT_IMS_BEARER_ESTABLISTED            = 205;
     private static final int EVENT_ENABLE_IMS                        = 206;
 
-    public ImsRegister(Phone phone , Context context, ImsRIL ci) {
+    public ImsRegister(GsmCdmaPhone phone , Context context, ImsRIL ci) {
         mPhone = phone;
         mContext = context;
         mCi = ci;
@@ -105,21 +105,6 @@ public class ImsRegister {
                     mIMSBearerEstablished = false;
                     mLastNumeric="";
                     mCurrentImsRegistered = false;
-                    boolean needNotifyRegisterState = false;
-                    if(mPhoneId == getPrimaryCard()){
-                        log("radio not on, notify ImsRegestered state mCurrentImsRegistered = " + mCurrentImsRegistered);
-                        needNotifyRegisterState = true;
-                    } else {
-                        int primaryCard = getPrimaryCard();
-                        Phone phone = PhoneFactory.getPhone(primaryCard);
-                        if(SubscriptionManager.isValidPhoneId(primaryCard) && !((GsmCdmaPhone)phone).isRadioOn()){
-                            needNotifyRegisterState = true;
-                            log("primary card radio not on, notify ImsRegestered state mCurrentImsRegistered = " + mCurrentImsRegistered);
-                        }
-                    }
-                    if(needNotifyRegisterState) {
-                        sendVolteServiceStateChanged();
-                    }
                 } else {
                     log("EVENT_RADIO_STATE_CHANGED -> radio is on");
                     initISIM();
@@ -238,14 +223,12 @@ public class ImsRegister {
         if( mCurrentImsRegistered != imsRegistered) {
             mCurrentImsRegistered = imsRegistered;
             if( mPhoneId == getPrimaryCard()) {
-                sendVolteServiceStateChanged();
-              }
+                if (mPhone.isRadioOn() && getServiceState().getState() != ServiceState.STATE_IN_SERVICE) {
+                    log("voice regstate not in service, will call ImsNotifier to notifyServiceStateChanged");
+                    mPhone.notifyServiceStateChanged(getServiceState());
+                }
+            }
         }
-    }
-
-    private void sendVolteServiceStateChanged() {
-        //mPhone.notifyVoLteServiceStateChanged(new VoLteServiceState(mCurrentImsRegistered ? VoLteServiceState.IMS_REG_STATE_REGISTERED : VoLteServiceState.IMS_REG_STATE_NOT_EGISTERED));
-        //TODO ACTION: notify or cancel volte icon
     }
 
     private int getPrimaryCard() {
@@ -360,5 +343,13 @@ public class ImsRegister {
                     + operatorNumberic.substring(0, 3) + ".3gppnetwork.org" : data.get(key));
         }
         return imsConfigUri;
+    }
+
+    private ServiceState getServiceState() {
+        if (mPhone.getServiceStateTracker() != null) {
+            return mPhone.getServiceStateTracker().mSS;
+        } else {
+            return new ServiceState();
+        }
     }
 }
