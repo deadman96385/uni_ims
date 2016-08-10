@@ -2615,4 +2615,12 @@ public final class ImsRIL {
         send(rr);
     }
     /* @} */
+
+    public void setOnSuppServiceNotification(Handler h, int what, Object obj) {
+        mCi.setOnSuppServiceNotification(h,what,obj);
+    }
+
+    public void unSetOnSuppServiceNotification(Handler h) {
+        mCi.unSetOnSuppServiceNotification(h);
+    }
 }

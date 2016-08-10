@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"ហៅវីដេអូទៅវិញ"</string>
+<string name="videophone_failcause_1000">"ការហៅវីដេអូលើកចុងក្រោយបានបញ្ចប់ដោយមិនប្រក្រតី សូមសាកល្បងម្តងទៀតនៅពេលក្រោយ"</string>
+<string name="videophone_failcause_1">"ទូរស័ព្ទដែលលោកអ្នកបានហៅមិនស្ថិតក្នុងតំបន់សេវាទេ"</string>
+<string name="videophone_failcause_3">"ភាគីម្ខាងទៀតមិនអាចទាក់ទងបានទេ"</string>
+<string name="videophone_failcause_8">"ការហៅត្រូវបានទប់ស្កាត់"</string>
+<string name="videophone_failcause_17">"ភាគីម្ខាងទៀតរវល់"</string>
+<string name="videophone_failcause_19">"ភាគីម្ខាងទៀតដែលលោកអ្នកបានហៅមិនមានការឆ្លើយតបទេ"</string>
+<string name="videophone_failcause_27">អ្នកប្រើប្រាស់មិនអាចទាក់ទងបានទេ</string>
+<string name="videophone_failcause_34">"ការភ្ជាប់បណ្តាញបានដាច់"</string>
+<string name="videophone_failcause_63_modify">"មិនអាចភ្ជាប់ការហៅវិដេអូលើកនេះបានទេ"</string>
+<string name="videophone_failcause_79">"ភាគីម្ខាងទៀតមិនគាំទ្រការហៅវីដេអូបានទេ"</string>
+<string name="videophone_failcause_47">"សូមអភ័យទោស ទូរស័ព្ទលោកអ្នកមិនទាន់បានបើកសេវាការហៅវីដេអូទេ"</string>
+<string name="videophone_failcause_50">មិនគាំទ្រVTទេ</string>
+<string name="videophone_failcause_57_remote">លេខទូរស័ព្ទដែលលោកអ្នកបានចុចហៅមិនគាំទ្រVTទេ</string>
+<string name="videophone_failcause_58">"ភាគីម្ខាងទៀតមិនគាំទ្រការហៅវីដេអូបានទេ"</string>
+<string name="videophone_failcause_157">ទូរស័ព្ទចល័តនេះមិនទាន់បើកសេវាVTទេ</string>
+<string name="videophone_failcause_88">"ភាគីម្ខាងទៀតជ្រើសរើសការហៅជាសម្លេង"</string>
+<string name="videophone_failcause_minus_1">"មិនអាចបើកប្រើសេវា3Gបានទេ"</string>
+<string name="videophone_failcause_default">"ភាគីម្ខាងទៀតមិនអាចទាក់ទងបានទេ"</string>
+<string name="net_connection_disconnect">តំណភ្ជាប់បានផ្តាច់</string>
+<string name="no_vt_service">មិនអាចធ្វើការហៅជាវីដេអូបានទេ</string>
+<string name="remote_request_change">សំណើរផ្លាស់ប្តូរមីឌាពីចម្ងាយ</string>
+<string name="choose_accept_reject">សូមជ្រើសរើសថាទទួលឬបដិសេធ</string>
+<string name="remote_request_change_accept">"ព្រម​ទទួល"</string>
+<string name="remote_request_change_reject">បដិសេធ</string>
+<string name="remote_reject_request">"បដិសេធន៍សំណើរសុំពីចម្ងាយ"</string>
+<string name="remote_accept_request">"ទទួលសំណើរសុំពីចម្ងាយ"</string>
+<string name="callFailed_fdn_only">"ការហៅទូរស័ព្ទចេញត្រូវបានកម្រិតដោយលេខទូរស័ព្ទហៅថេរ"</string>
+
+</resources>

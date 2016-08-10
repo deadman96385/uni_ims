@@ -218,6 +218,9 @@ public class VTManagerProxy{
         }
         if (mVideoCallEngine != null) {
             mVideoCallEngine.releaseVideocallEngine();
+            if(mVideoCallCameraManager != null){
+                mVideoCallCameraManager.releaseVideoCamera();
+            }
             mVideoCallCameraManager = null;
             mVideoCallEngine = null;
             mActiveImsCallSessionImpl = null;

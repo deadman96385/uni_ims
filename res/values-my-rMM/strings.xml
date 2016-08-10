@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"ဗီဒီယိုဖုန္းေခၚဆိုမႈ ျပန္လည္မေခၚဆိုပါ"</string>
+<string name="videophone_failcause_1000">"ေနာက္ဆံုးအေခါက္ဗီဒီယိုေခၚဆုိမႈမွာ ပံုမွန္ျပီးဆံုးသြားျခင္းမဟုတ္၊ ခဏၾကာလွ်င္ ျပန္ၾကိဳးစားၾကည့္ပါ"</string>
+<string name="videophone_failcause_1">"သင္ေခၚဆိုေသာနံပါတ္သည္ 1န္ေဆာင္မႈတြင္မရွိပါ"</string>
+<string name="videophone_failcause_3">"အသံုးျပဳသူ မရွိပါ"</string>
+<string name="videophone_failcause_8">"ဖုန္းေခၚမရ"</string>
+<string name="videophone_failcause_17">"အသံုးျပဳသူ မအားပါ"</string>
+<string name="videophone_failcause_19">"သင္ေခၚဆိုေသာ ဖုန္းနံပါတ္မွာ တုန္႔ျပန္မႈမ႐ွိပါ"</string>
+<string name="videophone_failcause_27">"သံုးစြဲသူထံ မေရာက္ရွိနိုင္"</string>
+<string name="videophone_failcause_34">"ကြန္ရက္ခ်ိတ္ဆက္မွဳျပတ္ေတာက္"</string>
+<string name="videophone_failcause_63_modify">"ဗီဒီယိုဖုန္း မတည္ေဆာက္နိုင္ပါ"</string>
+<string name="videophone_failcause_79">"VTကိုတျခားမွမေထာက္ပံပါ"</string>
+<string name="videophone_failcause_47">"ေဆာရီး,ဗီဒီယိုဖုန္းမေထာက္ပံ့ပါ"</string>
+<string name="videophone_failcause_50">"VT ကို အေထာက္အပံ့ မျပဳပါ"</string>
+<string name="videophone_failcause_57_remote">"သင္ေခၚဆိုသည့္နံပါတ္သည္ VT ကိုမေထာက္ပံပါ"</string>
+<string name="videophone_failcause_58">"VTကိုတျခားမွမေထာက္ပံပါ"</string>
+<string name="videophone_failcause_157">"မိုဘိုင္းဖုန္း VT ၀န္ေဆာင္မွဳ မစတင္ပါ"</string>
+<string name="videophone_failcause_88">"အသံုးျပဳသူ အသံဖုန္းေရြးခ်ယ္"</string>
+<string name="videophone_failcause_minus_1">"3G ၀န္ေဆာင္မွဳမေထာက္ပံ့"</string>
+<string name="videophone_failcause_default">"အသံုးျပဳသူ မရွိပါ"</string>
+<string name="net_connection_disconnect">"ကြန္ယက္ ခ်ိတ္ဆက္မႈျပတ္ေတာက္"</string>
+<string name="no_vt_service">"ဗီဒီယိုျဖင့္ ဖုန္းေခၚျခင္း မျပဳလုပ္ႏိုင္ပါ"</string>
+<string name="remote_request_change">"ရီမုတ္​ ​ေတာင္​းဆို မီဒီယာ ​ေျပာင္​းပါ​"</string>
+<string name="choose_accept_reject">"​ေက်းဇူးျပဳ၍ လက္​ခံ (သို႔) ျငင္​းပယ္​ ​ေရြးခ်ယ္​ပါ"</string>
+<string name="remote_request_change_accept">"လက္ခံ"</string>
+<string name="remote_request_change_reject">"ျငင္းပယ္သည္"</string>
+<string name="remote_reject_request">"ရီမုတ္​ ​ေတာင္​းဆို ျငင္​းပယ္​ၿပီး"</string>
+<string name="remote_accept_request">"ရီမုတ္​ ​ေတာင္းဆိ​ု လက္​ခံၿပီး"</string>
+<string name="callFailed_fdn_only">"အထြက္​ဖုန္​းမ်ား FDN မွ တားျမစ္​ထား"</string>
+</resources>

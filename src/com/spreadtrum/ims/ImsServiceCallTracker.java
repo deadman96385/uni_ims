@@ -272,8 +272,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                 synchronized(mPendingSessionList) {
                     int index = -1;
                     for(int j=0;j<mPendingSessionList.size();j++){
-                        ImsCallSessionImpl session = mPendingSessionList.get(j);
                         if (imsDc.state == ImsDriverCall.State.DIALING || imsDc.state ==ImsDriverCall.State.ALERTING) {
+                            ImsCallSessionImpl session = mPendingSessionList.get(j);
                             Log.d(TAG, "PendingSession found, index:"+imsDc.index+" session:" + session);
                             addSessionToList(Integer.valueOf(imsDc.index), session);
                             callSession = session;

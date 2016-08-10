@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"ভিডিঅ’ কল ফল বেক"</string>
+<string name="videophone_failcause_1000">"অন্তিম ভিডিঅ’ কল স্বাভাৱিকভাৱে সমাপ্ত হোৱা নাই, অলপ পিছতপুনৰ চেষ্টা কৰিব"</string>
+<string name="videophone_failcause_1">"আপুনি ডায়েল কৰা নম্বৰটো সেৱাত নাই"</string>
+<string name="videophone_failcause_3">"ব্যৱহাৰকৰ্তা অনুপলব্ধ"</string>
+<string name="videophone_failcause_8">"কল প্ৰতিবন্ধিত"</string>
+<string name="videophone_failcause_17">"ব্যৱহাৰকাৰী ব্যস্ত"</string>
+<string name="videophone_failcause_19">"আপুনি ডায়েল কৰা ব্যৱহাৰকৰ্তাই সঁহাৰি দিয়া নাই"</string>
+<string name="videophone_failcause_27">"ব্যৱহাৰকাৰীলৈ উপনীত হ\'ব পৰা নাই"</string>
+<string name="videophone_failcause_34">"সংযোগ বিচ্ছিন্ন হৈছে"</string>
+<string name="videophone_failcause_63_modify">"ভিডিঅ’ ফোন স্থাপন কৰিব পৰা নগ’ল"</string>
+<string name="videophone_failcause_79">"VT অন্যান্যৰ দ্বাৰা সমৰ্থিত নহয়"</string>
+<string name="videophone_failcause_47">"দুঃখিত, ভিডিঅ’ কল অনুপলব্ধ"</string>
+<string name="videophone_failcause_50">"VT অসমৰ্থিত"</string>
+<string name="videophone_failcause_57_remote">"আপুনি ডায়েল কৰা নম্বৰটোৱে VT সমৰ্থন নকৰে"</string>
+<string name="videophone_failcause_58">"VT অন্যান্যৰ দ্বাৰা সমৰ্থিত নহয়"</string>
+<string name="videophone_failcause_157">"মোবাইল ফোনটোৱে VT সেৱা আৰম্ভ কৰা নাই"</string>
+<string name="videophone_failcause_88">"ব্যৱহাৰকৰ্তাই ধ্বনি কল বাছনি কৰিছে"</string>
+<string name="videophone_failcause_minus_1">"3G সেৱা উপলব্ধ নহয়।"</string>
+<string name="videophone_failcause_default">"ব্যৱহাৰকৰ্তা অনুপলব্ধ"</string>
+<string name="net_connection_disconnect">"নেট সংযোগ বিচ্ছিন্ন"</string>
+<string name="no_vt_service">"ভিডিঅ’ কল কৰিব নোৱাৰি"</string>
+<string name="remote_request_change">"ৰিম\'ট অনুৰোধ মিডিয়া পৰিবৰ্তন"</string>
+<string name="choose_accept_reject">"অনুগ্ৰহ কৰি স্বীকাৰ বা প্ৰত্যাখ্যান পচন্দ কৰক"</string>
+<string name="remote_request_change_accept">"গ্ৰহণ"</string>
+<string name="remote_request_change_reject">"অস্বীকাৰ কৰক"</string>
+<string name="remote_reject_request">"ৰিম’ট অনুৰোধ বাতিল হৈছে"</string>
+<string name="remote_accept_request">"ৰিম’ট অনুৰোধ গ্ৰহণ হৈছে"</string>
+<string name="callFailed_fdn_only">"আউটগ’য়িং কলসমূহ FDN ৰ দ্বাৰা ৰদ কৰা হৈছে"</string>
+</resources>

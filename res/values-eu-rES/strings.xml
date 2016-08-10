@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">Bideo-deiaren alternatiba</string>
+<string name="videophone_failcause_1000">"Azken bideo deia ez da normal bukatu,  berriro saiatu pixka bat geroago"</string>
+<string name="videophone_failcause_1">Markatu duzun zenbakia ez dago funtzionatzen</string>
+<string name="videophone_failcause_3">Erablitzailea ez dago erabilgarri</string>
+<string name="videophone_failcause_8">Dei desestalia</string>
+<string name="videophone_failcause_17">Erabiltzailea lanpetuta</string>
+<string name="videophone_failcause_19">"Markatutako erabiltzaileak ez du erantzuten"</string>
+<string name="videophone_failcause_27">Ezin da erabiltzailearekin harremanetan jarri</string>
+<string name="videophone_failcause_34">Konexioa deskonektatuta</string>
+<string name="videophone_failcause_63_modify">Bideo telefonoa ezin izan da ezarri</string>
+<string name="videophone_failcause_79">VT ez du besteak onartzen</string>
+<string name="videophone_failcause_47">Barkatu, bideo deia ez dago erabilgarri</string>
+<string name="videophone_failcause_50">VT ez da onartzen</string>
+<string name="videophone_failcause_57_remote">Markatu duzun zenbakiak ez du VT onartzen</string>
+<string name="videophone_failcause_58">VT ez du besteak onartzen</string>
+<string name="videophone_failcause_157">"Mugikorrak ez du VT zerbitzua abiarazi"</string>
+<string name="videophone_failcause_88">Erabiltzaileak aukeratzen ditu ahots-deiak</string>
+<string name="videophone_failcause_minus_1">3G zerbitzua ez dago erabilgarri</string>
+<string name="videophone_failcause_default">Erablitzailea ez dago erabilgarri</string>
+<string name="net_connection_disconnect">Sareko Konexioa Deskonektatu</string>
+<string name="no_vt_service">"Bideo deiak ezin dira egin"</string>
+<string name="remote_request_change">"Euskarria aldatzeko urruneko eskaria"</string>
+<string name="choose_accept_reject">"Onartu edo ukatu aukeratu"</string>
+<string name="remote_request_change_accept">Onartu</string>
+<string name="remote_request_change_reject">Ukatu</string>
+<string name="remote_reject_request">"Urruneko eskaera ukatu da"</string>
+<string name="remote_accept_request">"Urruneko eskaera onartu da"</string>
+<string name="callFailed_fdn_only">"FDNak irteerako deiak mugatzen ditu"</string>
+</resources>

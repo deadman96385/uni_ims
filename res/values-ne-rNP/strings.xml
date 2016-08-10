@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"भिडियो कल हुन सकेन"</string>
+<string name="videophone_failcause_1000">"पछिल्लो भिडिया कल राम्ररी सम्पन्न भएको छैन, कृपया केही समय पछि फेरि प्रयास गर्नुहोस्"</string>
+<string name="videophone_failcause_1">"तपाईंले डायल गर्नुभएको नम्बर सेवामा छैन"</string>
+<string name="videophone_failcause_3">"प्रयोगकर्ता अनुपलब्ध छ"</string>
+<string name="videophone_failcause_8">"कल रोकियो"</string>
+<string name="videophone_failcause_17">"प्रयोगकर्ता व्यस्त छ"</string>
+<string name="videophone_failcause_19">"तपाईंले डायल गर्नुभएको प्रयोगकर्ताले जवाफ दिइरहेको छैन"</string>
+<string name="videophone_failcause_27">"प्रयोगकर्तासम्म पुग्न सकिँदैन"</string>
+<string name="videophone_failcause_34">"जडान विच्छेद गरियो"</string>
+<string name="videophone_failcause_63_modify">"भिडियो कलका लागि सम्पर्क स्थापना गर्न सकिएन"</string>
+<string name="videophone_failcause_79">"अर्को पक्षले VT समर्थन गर्दैन"</string>
+<string name="videophone_failcause_47">"माफ गर्नुहोस्, भिडियो कल अनुपलब्ध छ"</string>
+<string name="videophone_failcause_50">"VT असमर्थित छ"</string>
+<string name="videophone_failcause_57_remote">"तपाईंले डायल गर्नुभएको नम्बरले VT समर्थन गर्दैन"</string>
+<string name="videophone_failcause_58">"अर्को पक्षले VT समर्थन गर्दैन"</string>
+<string name="videophone_failcause_157">"उक्त मोबाइल फोनले VT सेवा सुरु गरेको छैन"</string>
+<string name="videophone_failcause_88">"प्रयोगकर्ताले भ्वाइस कल छनोट गरेको छ"</string>
+<string name="videophone_failcause_minus_1">"3G सेवा उपलब्ध छैन"</string>
+<string name="videophone_failcause_default">"प्रयोगकर्ता अनुपलब्ध छ"</string>
+<string name="net_connection_disconnect">"इन्टरनेटको जडान छैन"</string>
+<string name="no_vt_service">"भिडियो कल गर्न सकिँदैन"</string>
+<string name="remote_request_change">"दूरवर्तीले मिडिया परिवर्तन गर्ने अनुरोध गरेको छ"</string>
+<string name="choose_accept_reject">"कृपया स्वीकार गर्ने वा नगर्ने भनी छनोट गर्नुहोस्"</string>
+<string name="remote_request_change_accept">"स्वीकार्नुहोस्"</string>
+<string name="remote_request_change_reject">"अस्वीकार गर्नुहोस्"</string>
+<string name="remote_reject_request">"दूरवर्ती अनुरोधलाई अस्वीकार गरियो"</string>
+<string name="remote_accept_request">"दूरवर्ती अनुरोधलाई स्वीकार गरियो"</string>
+<string name="callFailed_fdn_only">"FDN द्वारा आउटगोइङ करहरूमाथि बन्देज लगाइएको छ"</string>
+</resources>

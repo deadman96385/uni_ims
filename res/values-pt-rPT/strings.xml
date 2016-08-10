@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"Chamada de vídeo caída"</string>
+<string name="videophone_failcause_1000">"A última chamada de vídeo não acaba normalmente, favor retente depois de um momento."</string>
+<string name="videophone_failcause_1">"O número que você entrou não é no serviço"</string>
+<string name="videophone_failcause_3">"O usuário é indisponível"</string>
+<string name="videophone_failcause_8">"Chamada descoberta"</string>
+<string name="videophone_failcause_17">"Usuário ocupado"</string>
+<string name="videophone_failcause_19">"Usuário entrou não está respondendo"</string>
+<string name="videophone_failcause_27">"O usuário não pode ser alcançado"</string>
+<string name="videophone_failcause_34">"Conexão desligada"</string>
+<string name="videophone_failcause_63_modify">"O telefone de vídeo não pode ser estabelecido"</string>
+<string name="videophone_failcause_79">"VT não suportado por outro"</string>
+<string name="videophone_failcause_47">"Desculpe, chamada de vídeo indisponível"</string>
+<string name="videophone_failcause_50">"VT é não suportado"</string>
+<string name="videophone_failcause_57_remote">"O número que entrou não suporta VT"</string>
+<string name="videophone_failcause_58">"VT não suportado por outro"</string>
+<string name="videophone_failcause_157">O telemóvel não tem VT serviço</string>
+<string name="videophone_failcause_88">"Usuário escolhe a chamada de voz"</string>
+<string name="videophone_failcause_minus_1">"Serviço de 3G não disponível"</string>
+<string name="videophone_failcause_default">"O usuário é indisponível"</string>
+<string name="net_connection_disconnect">Conexão de rede desligada</string>
+<string name="no_vt_service">"Não pode fazer as chamadas de vídeo"</string>
+<string name="remote_request_change">"Solicitação de média remota muda"</string>
+<string name="choose_accept_reject">"Favor escolha aceitar ou rejeitar"</string>
+<string name="remote_request_change_accept">"Aceitar"</string>
+<string name="remote_request_change_reject">"Rejeitar"</string>
+<string name="remote_reject_request">"Solicitação remota rejectada"</string>
+<string name="remote_accept_request">"Solicitação remota aceitada"</string>
+<string name="callFailed_fdn_only">"As chamadas de saída são limitadas por FDN"</string>
+</resources>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">Падение назад Видеозвонок </string>
+<string name="videophone_failcause_1000">Последний видеовызов завершен неправильно, повторите попытку позже" </string>
+<string name="videophone_failcause_1">Незарегистрированный номер</string>
+<string name="videophone_failcause_3">Пользователь недоступен </string>
+<string name="videophone_failcause_8">Звонок заблокирован</string>
+<string name="videophone_failcause_17">Пользователь занят</string>
+<string name="videophone_failcause_19">Пользователь не отвечает </string>
+<string name="videophone_failcause_27">"абонент недоступен"</string>
+<string name="videophone_failcause_34">Подключение прервано</string>
+<string name="videophone_failcause_63_modify">Видео телефон не может быть установлено </string>
+<string name="videophone_failcause_79">VT не поддерживается другой стороной</string>
+<string name="videophone_failcause_47">Видеовызов недоступен</string>
+<string name="videophone_failcause_50">"VT не поддерживается"</string>
+<string name="videophone_failcause_57_remote">Набранный номер не поддерживает VT</string>
+<string name="videophone_failcause_58">VT не поддерживается другой стороной</string>
+<string name="videophone_failcause_157">Мобильный телефон не запустил сервис VT</string>
+<string name="videophone_failcause_88">Польз-ль выбирает видеовызов</string>
+<string name="videophone_failcause_minus_1">Сеть 3G не доступна</string>
+<string name="videophone_failcause_default">Пользователь недоступен </string>
+<string name="net_connection_disconnect">Нет соединения</string>
+<string name="no_vt_service">"недоступны видеозвонки"</string>
+<string name="remote_request_change">"Удаленный запрос на изменение носителя"</string>
+<string name="choose_accept_reject">"Пожалуйста, выберите "принять или отклонить"</string>
+<string name="remote_request_change_accept">"Принять"</string>
+<string name="remote_request_change_reject">"Отклонить"</string>
+<string name="remote_reject_request">"Удаленный запрос отклонен"</string>
+<string name="remote_accept_request">"Удаленный запрос принят"</string>
+<string name="callFailed_fdn_only">"Исходящие звонки ограничены фиксированным набором"</string>
+</resources>
