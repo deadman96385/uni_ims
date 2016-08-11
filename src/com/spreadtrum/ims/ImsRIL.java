@@ -2385,7 +2385,13 @@ public final class ImsRIL {
 
 
     public void requestVolteCallFallBackToVoice(Message response) {
-        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE, response);
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE, null);
+        rr.mParcel.writeInt(1);
+        if(response != null){
+            rr.mParcel.writeInt(response.arg1);
+        }else{
+            rr.mParcel.writeInt(1);
+        }
         if (RILJ_LOGD)
             riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
         send(rr);
