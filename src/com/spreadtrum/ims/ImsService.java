@@ -218,12 +218,13 @@ public class ImsService extends Service {
          */
         @Override
         public void turnOnIms(int phoneId){
-            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(phoneId+1));
-            if (service == null) {
-                Log.e (TAG, "turnOnIms Invalid phoneId " + phoneId);
-                return;
+            for(int i = 0; i < TelephonyManager.getDefault().getPhoneCount(); i++){
+                ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(i+1));
+                if(impl == null){
+                    continue;
+                }
+                impl.turnOnIms();
             }
-            service.turnOnIms();
         }
 
         /**
@@ -232,12 +233,13 @@ public class ImsService extends Service {
          */
         @Override
         public void turnOffIms(int phoneId) {
-            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(phoneId+1));
-            if (service == null) {
-                Log.e (TAG, "turnOffIms Invalid phoneId " + phoneId);
-                return;
+            for(int i = 0; i < TelephonyManager.getDefault().getPhoneCount(); i++){
+                ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(i+1));
+                if(impl == null){
+                    continue;
+                }
+                impl.turnOffIms();
             }
-            service.turnOffIms();
         }
 
         /**
