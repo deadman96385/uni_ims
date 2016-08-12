@@ -125,6 +125,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     private void updateImsCallProfileFromDC(ImsDriverCall dc){
+        if(dc == null){
+            return;
+        }
         if(mImsCallProfile == null) {
             mImsCallProfile = new ImsCallProfile();
         }

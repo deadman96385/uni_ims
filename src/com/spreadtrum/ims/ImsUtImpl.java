@@ -11,6 +11,8 @@ import android.util.Log;
 
 import com.android.internal.telephony.CallForwardInfo;
 import com.android.internal.telephony.CommandsInterface;
+import com.android.internal.telephony.CommandException;
+import com.android.internal.telephony.CommandException.Error;
 import com.android.internal.telephony.imsphone.ImsPhoneMmiCode;
 import com.android.ims.internal.IImsUt;
 import com.android.ims.internal.IImsUtListener;
@@ -91,9 +93,13 @@ public class ImsUtImpl extends IImsUt.Stub {
                         if(ar != null){
 
                             if (ar.exception != null) {
+                                int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+                                if (ar.exception instanceof CommandException) {
+                                    info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
+                                }
                                 mImsUtListener.utConfigurationQueryFailed((IImsUt)ar.userObj,
                                         msg.arg1,
-                                        new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
+                                        new ImsReasonInfo(info, 0));
                             } else {
                                 int infoArray[] = (int[]) ar.result;
                                 if(infoArray.length == 0 || ar.userObj instanceof Throwable){
@@ -124,9 +130,13 @@ public class ImsUtImpl extends IImsUt.Stub {
                         if(ar != null){
 
                             if (ar.exception != null) {
+                                int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+                                if (ar.exception instanceof CommandException) {
+                                    info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
+                                }
                                 mImsUtListener.utConfigurationQueryFailed((IImsUt)ar.userObj,
                                         msg.arg1,
-                                        new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
+                                        new ImsReasonInfo(info, 0));
                             } else {
                                 CallForwardInfo infos[] = (CallForwardInfo[]) ar.result;
                                 if(infos.length == 0 || ar.userObj instanceof Throwable){
@@ -169,9 +179,13 @@ public class ImsUtImpl extends IImsUt.Stub {
                         if(ar != null){
 
                             if (ar.exception != null) {
+                                int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+                                if (ar.exception instanceof CommandException) {
+                                    info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
+                                }
                                 mImsUtListener.utConfigurationQueryFailed((IImsUt)ar.userObj,
                                         msg.arg1,
-                                        new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
+                                        new ImsReasonInfo(info, 0));
                             } else {
                                 int infoArray[] = (int[]) ar.result;
                                 if(infoArray.length == 0 || ar.userObj instanceof Throwable){
@@ -204,9 +218,13 @@ public class ImsUtImpl extends IImsUt.Stub {
                     try {
                         if(ar != null){
                             if (ar.exception != null) {
+                                int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+                                if (ar.exception instanceof CommandException) {
+                                    info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
+                                }
                                 mImsUtListener.utConfigurationQueryFailed((IImsUt)ar.userObj,
                                         msg.arg1,
-                                        new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
+                                        new ImsReasonInfo(info, 0));
                             } else {
                                 int[] clirResp = (int[]) ar.result;
                                 Bundle clirInfo = new Bundle();
@@ -237,8 +255,13 @@ public class ImsUtImpl extends IImsUt.Stub {
                     try {
                         if(ar != null){
                             if (ar.exception != null) {
-                                mImsUtListener.utConfigurationUpdateFailed((IImsUt)ar.userObj, msg.arg1,
-                                        new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
+                                int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+                                if (ar.exception instanceof CommandException) {
+                                    info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
+                                }
+                                mImsUtListener.utConfigurationUpdateFailed((IImsUt)ar.userObj,
+                                        msg.arg1,
+                                        new ImsReasonInfo(info, 0));
                             } else {
                                 mImsUtListener.utConfigurationUpdated((IImsUt)ar.userObj, msg.arg1);
                                 Log.i(TAG,"ACTION_UPDATE_CB->success!");
@@ -255,8 +278,13 @@ public class ImsUtImpl extends IImsUt.Stub {
                     try {
                         if(ar != null){
                             if (ar.exception != null) {
-                                mImsUtListener.utConfigurationUpdateFailed((IImsUt)ar.userObj, msg.arg1,
-                                        new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
+                                int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+                                if (ar.exception instanceof CommandException) {
+                                    info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
+                                }
+                                mImsUtListener.utConfigurationUpdateFailed((IImsUt)ar.userObj,
+                                        msg.arg1,
+                                        new ImsReasonInfo(info, 0));
                             } else {
                                 mImsUtListener.utConfigurationUpdated((IImsUt)ar.userObj, msg.arg1);
                                 Log.i(TAG,"ACTION_UPDATE_CF->success!");
@@ -273,8 +301,13 @@ public class ImsUtImpl extends IImsUt.Stub {
                     try {
                         if(ar != null){
                             if (ar.exception != null) {
-                                mImsUtListener.utConfigurationUpdateFailed((IImsUt)ar.userObj, msg.arg1,
-                                        new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
+                                int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+                                if (ar.exception instanceof CommandException) {
+                                    info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
+                                }
+                                mImsUtListener.utConfigurationUpdateFailed((IImsUt)ar.userObj,
+                                        msg.arg1,
+                                        new ImsReasonInfo(info, 0));
                             } else {
                                 mImsUtListener.utConfigurationUpdated((IImsUt)ar.userObj, msg.arg1);
                                 Log.i(TAG,"ACTION_UPDATE_CW->success!");
@@ -294,8 +327,13 @@ public class ImsUtImpl extends IImsUt.Stub {
                     try {
                         if(ar != null){
                             if (ar.exception != null) {
-                                mImsUtListener.utConfigurationUpdateFailed((IImsUt)ar.userObj, msg.arg1,
-                                        new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
+                                int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+                                if (ar.exception instanceof CommandException) {
+                                    info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
+                                }
+                                mImsUtListener.utConfigurationUpdateFailed((IImsUt)ar.userObj,
+                                        msg.arg1,
+                                        new ImsReasonInfo(info, 0));
                             } else {
                                 mImsUtListener.utConfigurationUpdated((IImsUt)ar.userObj, msg.arg1);
                                 Log.i(TAG,"ACTION_UPDATE->success!");
@@ -312,9 +350,13 @@ public class ImsUtImpl extends IImsUt.Stub {
                     try {
                         if(ar != null){
                             if (ar.exception != null) {
-                                mImsUtListenerEx.utConfigurationQueryFailed((IImsUt)ar.userObj,
+                                int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+                                if (ar.exception instanceof CommandException) {
+                                    info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
+                                }
+                                mImsUtListener.utConfigurationQueryFailed((IImsUt)ar.userObj,
                                         msg.arg1,
-                                        new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
+                                        new ImsReasonInfo(info, 0));
                             } else {
                                 ImsCallForwardInfoEx infos[] = (ImsCallForwardInfoEx[]) ar.result;
                                 if(ar.userObj instanceof Throwable){
@@ -354,8 +396,13 @@ public class ImsUtImpl extends IImsUt.Stub {
                         if(ar != null && !(ar.userObj instanceof Throwable)){
                             Cf cf = (Cf)ar.userObj;
                             if (ar.exception != null) {
-                                mImsUtListenerEx.utConfigurationUpdateFailed(mIImsUt, msg.arg1,
-                                        new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
+                                int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+                                if (ar.exception instanceof CommandException) {
+                                    info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
+                                }
+                                mImsUtListener.utConfigurationUpdateFailed(mIImsUt,
+                                        msg.arg1,
+                                        new ImsReasonInfo(info, 0));
                             } else {
                                 if(cf != null && cf.mIsCfu &&
                                         ((cf.mServiceClass & CommandsInterface.SERVICE_CLASS_VOICE) != 0)){
@@ -670,5 +717,20 @@ public class ImsUtImpl extends IImsUt.Stub {
         int mServiceClass;
         Cf(){
         }
+    }
+
+    private int getImsReasonInfoFromCommandException(CommandException ce){
+        int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+        if(ce != null){
+            switch(ce.getCommandError()){
+                case FDN_CHECK_FAILURE:
+                    info = ImsReasonInfo.CODE_FDN_BLOCKED;
+                    break;
+                case RADIO_NOT_AVAILABLE:
+                    info = ImsReasonInfo.CODE_UT_SERVICE_UNAVAILABLE;
+                    break;
+            }
+        }
+        return info;
     }
 }
