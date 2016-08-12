@@ -405,15 +405,13 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 mVTHandler.removeMessages(EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT);
                 mVTHandler.sendMessageDelayed(msg, 10000);
                 /* SPRD: add for bug543928@{ */
-                KeyguardManager keyguardManager = (KeyguardManager) mContext.getSystemService(Context.KEYGUARD_SERVICE);
                 PowerManager powerManager = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
                 if(powerManager != null && !powerManager.isScreenOn()){
                     powerManager.wakeUp(SystemClock.uptimeMillis(), "android.phone:WAKEUP");
                 }
-                VideoProfile mLoacalResponseProfile = new VideoProfile(VideoProfile.STATE_TX_ENABLED);
-                VideoProfile mLoacalRequstProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
-                receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
-                        mLoacalRequstProfile,mLoacalResponseProfile);
+
+                VideoProfile requstProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
+                receiveSessionModifyRequest(requstProfile);
                 /* @} */
             }else if(session.mImsDriverCall != null && session.mImsDriverCall.isRequestDowngradeToVoice()){
                 if(mVolteMediaDegradeDialog != null){
