@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"දුරස්ථ ඉල්ලීම ප්‍රතික්ෂේප කෙරිණි"</string>
 <string name="remote_accept_request">"දුරස්ථ ඉල්ලීම පිළි ගන්නා ලදී"</string>
 <string name="callFailed_fdn_only">"කෙරෙමින් පවතින ඇමතුම් FDN මගින් අවහිර කර ඇත"</string>
+<string name="camera_open_fail">"කැමරාව විවෘත කිරීම අසමත්"</string>
+<string name="ims_switch_failed">"ජාලයේ දෝෂයකි, කරුණාකර පසුව නැවත උත්සාහ කරන්න."</string>
 </resources>

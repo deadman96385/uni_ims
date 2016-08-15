@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"રિમોટ સંબંધિત વિનંતી નકારે છે"</string>
 <string name="remote_accept_request">"રિમોટ સંબંધિત વિનંતી સ્વીકારવામાં આવે છે"</string>
 <string name="callFailed_fdn_only">"એફડીએન દ્વારા આઉટગોઈંગ કોલ્સ નિયંત્રિત છે"</string>
+<string name="camera_open_fail">"કેમેરો ખોલવામાં નિષ્ફળ ગયો"</string>
+<string name="ims_switch_failed">"નેટવર્કમાં ખામી, કૃપા કરી ફરી પ્રયાસ કરશો"</string>
 </resources>

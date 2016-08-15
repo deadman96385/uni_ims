@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"റിമോട്ട് റിക്വസ്റ്റ് നിരസിച്ചു"</string>
 <string name="remote_accept_request">"റിമോട്ട് റിക്വസ്റ്റ് സ്വീകരിച്ചു"</string>
 <string name="callFailed_fdn_only">"പുറത്തേക്ക് പോകുന്ന കോളുകൾ എഫ് ഡിഎൻ മുഖേനെ നിയന്ത്രിക്കപ്പെടുന്നു"</string>
+<string name="camera_open_fail">"ക്യാമറ  തുറക്കുന്നതിൽ പരാചയപ്പെട്ടു"</string>
+<string name="ims_switch_failed">"നെറ്റ്‌വർക്ക് തകരാർ, അല്പസമയത്തിനു ശേഷം വീണ്ടും ശ്രമിക്കുക"</string>
 </resources>

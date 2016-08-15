@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"የርቀት ጥሪው ተቀባይ አልሆነም"</string>
 <string name="remote_accept_request">"የርቀት ጥሪው ተቀባይ ሆኗል"</string>
 <string name="callFailed_fdn_only">"የርቀት ጥሪው በ FDN ተገድቧል"</string>
+<string name="camera_open_fail">"ካሜራ መክፈቱ አልሰራም"</string>
+<string name="ims_switch_failed">"የኔትዎርክ ስህተት፣ እባክዎን እንደገና ይሞክሩ"</string>
 </resources>

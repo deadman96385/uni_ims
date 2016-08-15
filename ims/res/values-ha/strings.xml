@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"An ki karbar bukatar nesa"</string>
 <string name="remote_accept_request">"An karbi bukatar nesa"</string>
 <string name="callFailed_fdn_only">"FDN yana takaice kira da suke fita"</string>
+<string name="camera_open_fail">"kyamara ba ta budu ba"</string>
+<string name="ims_switch_failed">"Matsalar netwok, a sake jarrabawa nan gaba"</string>
 </resources>

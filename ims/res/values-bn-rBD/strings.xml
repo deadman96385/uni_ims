@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"দূরবর্তী অনুরোধ অস্বীকার করা হয়েছে"</string>
 <string name="remote_accept_request">"দূরবর্তী অনুরোধ গ্রহণ করা হয়েছে"</string>
 <string name="callFailed_fdn_only">"FDN এর মাধ্যমে আউটগোয়িং কলগুলি সীমিত করা আছে"</string>
+<string name="camera_open_fail">"ক্যামেরা চালু করা ব্যর্থ হয়েছে"</string>
+<string name="ims_switch_failed">"নেটওয়ার্কের ত্রুটি, অনুগ্রহ করে পরে চেষ্টা করুন"</string>
 </resources>

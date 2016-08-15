@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"தொலை கோரிக்கை நிராகரிக்கப்பட்டது"</string>
 <string name="remote_accept_request">"தொலை கோரிக்கை ஏற்றுக்கொள்ளப்பட்டது"</string>
 <string name="callFailed_fdn_only">"வெளிப்புற அழைப்புகளை FDN வறையரைப்படுத்தியுள்ளது"</string>
+<string name="camera_open_fail">"கேமரா திறப்பது தோல்லியடைந்துள்ளது"</string>
+<string name="ims_switch_failed">"நெட்வொர்க் கோளாறு, தயவுசெய்து மீண்டும் பின்னர் முயற்சிக்கவும்"</string>
 </resources>

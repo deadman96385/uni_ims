@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"Oddaljena zahteva je bila zavrnjena"</string>
 <string name="remote_accept_request">"Oddaljena zahteva je bila sprejeta"</string>
 <string name="callFailed_fdn_only">"Odhodne klice omejuje FDN"</string>
+<string name="camera_open_fail">"Odpiranje fotoaparata ni uspelo"</string>
+<string name="ims_switch_failed">"Napaka omrežja, poskusite ponovno kasneje"</string>
 </resources>

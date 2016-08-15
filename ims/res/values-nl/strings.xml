@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"Verzoek van op afstand geweigerd"</string>
 <string name="remote_accept_request">"Verzoek van op afstand aanvaard"</string>
 <string name="callFailed_fdn_only">"Uitgaande oproepen worden beperkt door FDN"</string>
+<string name="camera_open_fail">"Camera openen mislukt"</string>
+<string name="ims_switch_failed">"Netwerkfout, probeer later opnieuw"</string>
 </resources>

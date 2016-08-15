@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"Ekstern forespørsel ble avslått"</string>
 <string name="remote_accept_request">"Ekstern forespørsel ble godtatt"</string>
 <string name="callFailed_fdn_only">"Utgående samtaler er begrenset av FDN"</string>
+<string name="camera_open_fail">"Åpning av kamera feilet"</string>
+<string name="ims_switch_failed">"Nettverksfeil, vennligst prøv igjen senere"</string>
 </resources>

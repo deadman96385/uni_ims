@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"रिमोटची विनंती नाकारली"</string>
 <string name="remote_accept_request">"रिमोटची विनंती स्वीकारली आहे"</string>
 <string name="callFailed_fdn_only">"एफडीएन ने कॉल प्रतिबंधित केले आहेत"</string>
+<string name="camera_open_fail">"कॅमेरा उघडणे अपयशी"</string>
+<string name="ims_switch_failed">"नेटवर्क त्रुटी, कृपया नंतर पुन्हा प्रयत्न करा"</string>
 </resources>

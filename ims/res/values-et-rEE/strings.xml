@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"Kaugkäsklus tagasi lükatud"</string>
 <string name="remote_accept_request">"Kaugkäsklus aktsepteeritud"</string>
 <string name="callFailed_fdn_only">""Väljuvad kõned on piiratud FDN poolt" "</string>
+<string name="camera_open_fail">"Kaamera avamine nurjus"</string>
+<string name="ims_switch_failed">"Võrgu viga, Palun proovi hiljem uuesti"</string>
 </resources>
