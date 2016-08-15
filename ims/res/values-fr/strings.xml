@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"Demande de prise de main rejetée"</string>
 <string name="remote_accept_request">"Demande de prise de main acceptée"</string>
 <string name="callFailed_fdn_only">"Restriction des appels sortant par FDN"</string>
+<string name="camera_open_fail">"Echec d’ouverture de caméra"</string>
+<string name="ims_switch_failed">"Erreur de réseau, veuillez essayer à nouveau plus tard"</string>
 </resources>

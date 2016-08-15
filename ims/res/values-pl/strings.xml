@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"Żądanie zdalne odrzucone"</string>
 <string name="remote_accept_request">"Żądanie zdalne zaakceptowane"</string>
 <string name="callFailed_fdn_only">"Połączenia wychodzące są ograniczone przez Wybieranie Ustalone"</string>
+<string name="camera_open_fail">"Otwarcie aparatu nieudane"</string>
+<string name="ims_switch_failed">"Błąd sieci, spróbuj ponownie pózniej"</string>
 </resources>

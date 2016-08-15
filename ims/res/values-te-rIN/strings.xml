@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"రిమోట్ అభ్యర్థన తిరస్కరించబడింది"</string>
 <string name="remote_accept_request">"రిమోట్ అభ్యర్థన ఆమోదించబడింది"</string>
 <string name="callFailed_fdn_only">"బైటికి వెళ్ళే కాల్స్ FDN ద్వారా పరిమితం చేయబడ్డాయి"</string>
+<string name="camera_open_fail">"కేమెరా ఓపెన్ విఫలం"</string>
+<string name="ims_switch_failed">"నెట్వర్క్ లోపం, దయచేసి తర్వాత మళ్లీ ప్రయత్నించండి"</string>
 </resources>

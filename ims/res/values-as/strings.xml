@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"ৰিম’ট অনুৰোধ বাতিল হৈছে"</string>
 <string name="remote_accept_request">"ৰিম’ট অনুৰোধ গ্ৰহণ হৈছে"</string>
 <string name="callFailed_fdn_only">"আউটগ’য়িং কলসমূহ FDN ৰ দ্বাৰা ৰদ কৰা হৈছে"</string>
+<string name="camera_open_fail">"কেমেৰা খুলাত ব্যৰ্থ"</string>
+<string name="ims_switch_failed">"নেটওৱাৰ্কৰ সমস্যা, অনুগ্ৰহ কৰি আকৌ চেষ্টা কৰক"</string>
 </resources>

@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"Далечинското барање е одбиено"</string>
 <string name="remote_accept_request">"Далечинското барање е прифатено"</string>
 <string name="callFailed_fdn_only">"Појдовните повици се ограничени соFDN"</string>
+<string name="camera_open_fail">"Неуспешно отворање на камерата"</string>
+<string name="ims_switch_failed">"Мрежна грешка, ве молиме обидете се повторно подоцна"</string>
 </resources>

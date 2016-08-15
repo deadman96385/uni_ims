@@ -28,5 +28,6 @@
 <string name="remote_reject_request">"បដិសេធន៍សំណើរសុំពីចម្ងាយ"</string>
 <string name="remote_accept_request">"ទទួលសំណើរសុំពីចម្ងាយ"</string>
 <string name="callFailed_fdn_only">"ការហៅទូរស័ព្ទចេញត្រូវបានកម្រិតដោយលេខទូរស័ព្ទហៅថេរ"</string>
-
+<string name="camera_open_fail">"បរាជ័យក្នុងការបើកកាមេរ៉ា"</string>
+<string name="ims_switch_failed">"បណ្តាញមានកំហុស សូមសាកល្បងម្តងទៀត"</string>
 </resources>

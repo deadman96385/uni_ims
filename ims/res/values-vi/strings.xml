@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"Yêu cầu từ xa bị từ chối"</string>
 <string name="remote_accept_request">"Yêu cầu từ xa được chấp nhận"</string>
 <string name="callFailed_fdn_only">"Các cuộc gọi đi bị hạn chế bởi FDN"</string>
+<string name="camera_open_fail">"Không mở được camera"</string>
+<string name="ims_switch_failed">"Lỗi mạng, vui lòng thử lại sau"</string>
 </resources>

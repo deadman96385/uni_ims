@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"Hiling pang-malayo ay tnanggihan"</string>
 <string name="remote_accept_request">"Hiling pang-malayo ay tinanggap"</string>
 <string name="callFailed_fdn_only">"Mga papalabas na tawag ay ipinagbabawal ng FDN"</string>
+<string name="camera_open_fail">"Ang pagbukas ng kamera ay nabigo"</string>
+<string name="ims_switch_failed">"Kamalian sa network, subukang muli mamaya"</string>
 </resources>

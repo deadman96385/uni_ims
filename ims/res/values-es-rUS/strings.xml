@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"Solicitud remota rechazada"</string>
 <string name="remote_accept_request">"Solicitud remota aceptada"</string>
 <string name="callFailed_fdn_only">"Las llamadas salientes están restringidas por FDN"</string>
+<string name="camera_open_fail">"Falla en abrir la cámara"</string>
+<string name="ims_switch_failed">"Error de la red, por favor trate nuevamente más tarde"</string>
 </resources>

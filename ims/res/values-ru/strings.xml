@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"Удаленный запрос отклонен"</string>
 <string name="remote_accept_request">"Удаленный запрос принят"</string>
 <string name="callFailed_fdn_only">"Исходящие звонки ограничены фиксированным набором"</string>
+<string name="camera_open_fail">"Активировать режим камеры не удалось"</string>
+<string name="ims_switch_failed">"Ошибка сети, пожалуйста, повторите попытку позже"</string>
 </resources>

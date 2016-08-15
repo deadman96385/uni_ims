@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"Permintaan jauh telah ditolak"</string>
 <string name="remote_accept_request">"Permintaan jauh telah diterima"</string>
 <string name="callFailed_fdn_only">"Panggilan jauh dilarang oleh FDN"</string>
+<string name="camera_open_fail">"Gagal membuka kamera"</string>
+<string name="ims_switch_failed">"Ralat rangkaian, sila cuba lagi kemudian"</string>
 </resources>

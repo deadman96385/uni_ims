@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"Etäpyyntö hylätty"</string>
 <string name="remote_accept_request">"Etäpyyntö hyväksytty"</string>
 <string name="callFailed_fdn_only">"FDN rajoittaa ulosmeneviä puheluita"</string>
+<string name="camera_open_fail">"Kameran käynnistys epäonnistui"</string>
+<string name="ims_switch_failed">"Verkkovirhe, kokeile myöhemmin uudestaan"</string>
 </resources>
