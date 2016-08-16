@@ -39,6 +39,8 @@ int usingFaceCamera = 1;
 int sensorRotate = 0;
 int numberOfCameras = 0;
 
+int incomingFrames = 0;
+
 camera_module_t *hw;
 int previewTransform = 0;
 int previewRotationAngle = 0;
@@ -464,6 +466,7 @@ void *cameraProcessThread(void *param __unused) {
       case RELEASE_CAMERA_FRAME:
         const sp<IMemory> *dataPtr;
         dataPtr = (const sp<IMemory> *)cam_arg1;
+        adjustOutgoingANWBuffer(dataPtr->get());
         DLOG("cameraProcessThread, release recording frame %p", dataPtr->get());
         if (ptr->iCamera.get() != NULL) {
           ptr->iCamera->releaseRecordingFrame(*dataPtr);
@@ -521,6 +524,7 @@ short imsCameraOpen(unsigned int cameraid) {
       cameraClient = NULL;
     }
   }
+  incomingFrames = 0;
   ALOGI("ImsCameraOpen, ret = %d", ret);
   return ret;
 }
@@ -711,13 +715,14 @@ ImsCameraClient *ImsCameraClient::getInstance() {
 }
 void BufferClient::dataCallbackTimestamp(nsecs_t timestamp, int32_t msgType,
                                          const sp<IMemory> &data) {
-  DLOG("dataCallbackTimestamp %p", data.get());
+  DLOG("dataCallbackTimestamp %p, incoming frame %d", data.get(), incomingFrames++);
   ImsCameraClient *ptr = ImsCameraClient::getInstance();
 
   if (global_imscamera_cb.data_cb_timestamp && (stoppingRecord != 1)) {
     waitFrameReleased();
     if (stoppingRecord != 1) {
       processingFrameCount++;
+      adjustIncomingANWBuffer(data.get());
       global_imscamera_cb.data_cb_timestamp(timestamp, msgType, data, NULL);
       executeCommand(RELEASE_CAMERA_FRAME, (void *)(&data), 0, 0);
       DLOG("dataCallbackTimestamp releasing data frame %p", data.get());
@@ -726,6 +731,26 @@ void BufferClient::dataCallbackTimestamp(nsecs_t timestamp, int32_t msgType,
     signalReleaseFrame();
   }
   DLOG("dataCallbackTimestamp end");
+}
+
+void adjustIncomingANWBuffer(IMemory* data) {
+    VideoNativeMetadata *payload =
+                        reinterpret_cast<VideoNativeMetadata*>(data->pointer());
+    if (payload->eType == kMetadataBufferTypeANWBuffer) {
+        payload->pBuffer = (ANativeWindowBuffer*)(((uint8_t*)payload->pBuffer) +
+                ICameraRecordingProxy::getCommonBaseAddress());
+        DLOG("adjustIncomingANWBuffer, type = %d, adjust = %d",
+                payload->eType, ICameraRecordingProxy::getCommonBaseAddress());
+    }
+}
+
+void adjustOutgoingANWBuffer(IMemory* data) {
+    VideoNativeMetadata *payload =
+            reinterpret_cast<VideoNativeMetadata*>(data->pointer());
+    if (payload->eType == kMetadataBufferTypeANWBuffer) {
+        payload->pBuffer = (ANativeWindowBuffer*)(((uint8_t*)payload->pBuffer) -
+                ICameraRecordingProxy::getCommonBaseAddress());
+    }
 }
 
 int ImsCameraClient::init(void *params __unused) { return 0; }
