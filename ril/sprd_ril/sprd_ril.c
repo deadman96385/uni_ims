@@ -13682,6 +13682,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         int type;
         int err_code;
         char *tmp;
+        extern int s_sim_num;
 
         RILLOGD("SPERROR for SS");
         //if (ussdRun != 1)
@@ -13707,6 +13708,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         else if (type == 10) { // it means ps business in this sim/usim is rejected by network
             RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_PS_REJECT, NULL, 0);
         } else if (type == 1) {
+            char propName[PROPERTY_VALUE_MAX];
+            snprintf(propName, sizeof(propName),"ril.sim.ps.reject%d", s_sim_num);
+            property_set(propName, "1");
             if ((err_code == 3) || (err_code == 6) || (err_code == 7) || (err_code == 8) || (err_code == 14)) { // it means ps business in this sim/usim is rejected by network
                 RIL_onUnsolicitedResponse (RIL_UNSOL_SIM_PS_REJECT, NULL, 0);
             }
