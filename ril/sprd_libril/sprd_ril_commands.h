@@ -251,6 +251,8 @@
     ,{RIL_EXT_REQUEST_SET_COLP, dispatchInts, responseVoid}
     ,{RIL_EXT_REQUEST_STORE_SMS_TO_SIM, dispatchInts, responseVoid}
     ,{RIL_EXT_REQUEST_QUERY_SMS_STORAGE_MODE, dispatchVoid, responseString}
+    ,{RIL_EXT_REQUEST_QUERY_LTE_CTCC, dispatchVoid, responseString}
+    ,{RIL_EXT_REQUEST_QUERY_LTE_CTCC_SINR, dispatchVoid, responseString}
 #endif
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
