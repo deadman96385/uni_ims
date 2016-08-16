@@ -4,6 +4,8 @@
 #include <ICamera.h>
 #include <ICameraClient.h>
 #include <ICameraServiceListener.h>
+#include <camera/ICameraRecordingProxy.h>
+#include <media/hardware/HardwareAPI.h>
 
 #undef LOG_TAG
 #define LOG_TAG "VCECamera"
@@ -104,6 +106,9 @@ typedef enum {
   INITIALIZED = 2,
   DEINITIALIZING = 3
 } eCameraClientState;
+
+void adjustIncomingANWBuffer(IMemory* data);
+void adjustOutgoingANWBuffer(IMemory* data);
 
 class BufferClient : public BnCameraClient {
  public:

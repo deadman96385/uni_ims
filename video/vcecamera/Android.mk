@@ -28,6 +28,8 @@ LOCAL_C_INCLUDES := \
     frameworks/native/include/binder \
     frameworks/av/include/camera \
     frameworks/base/include/media \
+    frameworks/native/include/media/openmax \
+    vendor/sprd/open-source/libs/libstagefrighthw/include/openmax \
     frameworks/av/services/camera/libcameraservice \
     frameworks/av/services/camera/libcameraservice/device1 \
     hardware/libhardware/include/hardware \
