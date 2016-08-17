@@ -601,4 +601,26 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     public int getServiceId(){
         return mServiceId;
     }
+
+    //SPRD: add for bug579560
+    public boolean isHasBackgroundCallAndActiveCall(){
+        synchronized(mSessionList){
+            boolean flagActive = false;
+            boolean flagHold = false;
+            for(Iterator<Map.Entry<String, ImsCallSessionImpl>> it = mSessionList.entrySet().iterator(); it.hasNext();){
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+
+                if(e.getValue().isBackgroundCall()){
+                    flagHold = true;
+                }else if(e.getValue().isForegroundCall()){
+                    flagActive = true;
+                }
+                if(flagHold == true && flagActive == true){
+                    Log.d(TAG, "updateConferenceState -flagHold = true, flagActive = true");
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }

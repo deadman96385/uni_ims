@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="ims_cmcc_ImsCmccHelper">
+        com.spreadtrum.ims.imsCmccPlugin.ImsCmccPlugin
+    </string>
+</resources>
