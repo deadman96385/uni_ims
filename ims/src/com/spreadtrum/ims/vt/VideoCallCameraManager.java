@@ -774,8 +774,8 @@ public class VideoCallCameraManager {
 
         @Override
         public void onOrientationChanged(int orientation) {
-            int displayOrientation = mDeviceRotation; 
-            /*if (orientation != OrientationEventListener.ORIENTATION_UNKNOWN) {
+            int displayOrientation = mDeviceRotation;
+            if (orientation != OrientationEventListener.ORIENTATION_UNKNOWN) {
                 if (orientation >= 350 || orientation <= 10) {
                     displayOrientation = 0;
                 } else if (orientation >= 80 && orientation <= 100) {
@@ -790,11 +790,11 @@ public class VideoCallCameraManager {
                 mDeviceRotation = displayOrientation;
                 //mHandler.removeMessages(EVENT_CHANGE_ORIENTATION);
                 //mHandler.sendEmptyMessageDelayed(EVENT_CHANGE_ORIENTATION, 500);
-            }*/
+            }
         }
     }
 
-    private void handleOrientationChange() { 
+    private void handleOrientationChange() {
         Log.i(TAG, "handleOrientationChange->mCamera:" + mCamera);
         // SPRD:add startCameraPreView for bug541058
         startCameraPreView();
