@@ -8979,6 +8979,53 @@ error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     at_response_free(p_response);
 }
+
+static void requestQueryLTECtccSimtype(int channelID, void *data,
+        size_t datalen, RIL_Token t) {
+    int err = -1;
+    int sim_type = 0;
+    char *line = NULL;
+    ATResponse *p_response = NULL;
+    err = at_send_command_singleline(ATch_type[channelID], "AT^CARDMODE",
+            "^CARDMODE:", &p_response);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+    line = p_response->p_intermediates->line;
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextint(&line, &sim_type);
+    if (err < 0) goto error;
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, &sim_type, sizeof(sim_type));
+    at_response_free(p_response);
+    return;
+
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+}
+
+static void requestQueryLTECtccMmei(int channelID, void *data,
+        size_t datalen, RIL_Token t) {
+    int err = -1;
+    char cmd[128];
+    char *line = NULL;
+    ATResponse *p_response = NULL;
+    snprintf(cmd, sizeof(cmd), "%s", "AT+SPENGMD=0,2,1");
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "", &p_response);
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+    line = p_response->p_intermediates->line;
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, line, strlen(line) + 1);
+    at_response_free(p_response);
+    return;
+
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+}
 /*** Callback methods from the RIL library to us ***/
 
 /**
@@ -9055,6 +9102,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_EXT_REQUEST_QUERY_SMS_STORAGE_MODE
                 || request == RIL_EXT_REQUEST_QUERY_LTE_CTCC
                 || request == RIL_EXT_REQUEST_QUERY_LTE_CTCC_SINR
+                || request == RIL_EXT_REQUEST_QUERY_LTE_CTCC_SIMTYPE
+                || request == RIL_EXT_REQUEST_QUERY_LTE_CTCC_MMEI
 #endif
 #endif
                 || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
@@ -11625,6 +11674,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         case RIL_EXT_REQUEST_QUERY_LTE_CTCC_SINR:
             requestQueryLTECtcc(channelID, data, datalen, t, 1);
+            break;
+        case RIL_EXT_REQUEST_QUERY_LTE_CTCC_SIMTYPE:
+            requestQueryLTECtccSimtype(channelID, data, datalen, t);
+            break;
+        case RIL_EXT_REQUEST_QUERY_LTE_CTCC_MMEI:
+            requestQueryLTECtccMmei(channelID, data, datalen, t);
             break;
 #endif  // RIL_SUPPORTED_OEMSOCKET
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
