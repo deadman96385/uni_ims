@@ -44,7 +44,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final int EVENT_POLL_CURRENT_CALLS            = 6;
     private static final int EVENT_POLL_CURRENT_CALLS_RESULT     = 7;
 
-    private final String IMSVERSION = "sprdroid6.0_trunk_16b_16.25.5_p4_lib_patch_cus_20160731_V1.0_bug582412";
+    private final String IMSVERSION = "sprdroid6.0_trunk_16b_16.25.5_p4_lib_patch_cus_20160819_V1.0_bug590779";
 
     private PendingIntent mIncomingCallIntent;
     private CommandsInterface mCi;

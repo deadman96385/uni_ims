@@ -12336,7 +12336,7 @@ static void initializeCallback(void *param)
     int channelID;
     channelID = getChannel();
     setRadioState (channelID, RADIO_STATE_OFF);
-     RILLOGD("sprdroid6.0_trunk_16b_16.25.5__p4_lib_patch_cus_20160803_V1.0_bug585726");
+     RILLOGD("sprdroid6.0_trunk_16b_16.25.5__p4_lib_patch_cus_20160819_V1.0_bug590779");
 
 #ifdef SIM_AUTO_POWERON
 #if 0
@@ -14031,10 +14031,10 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RILLOGD("onUnsolicited(),SRVCC status: %d", status);
         RIL_onUnsolicitedResponse(RIL_UNSOL_SRVCC_STATE_NOTIFY, &status,
                 sizeof(status));
-        if(status == SRVCC_PS_TO_CS_CANCELED || status == SRVCC_PS_TO_CS_FAILED){
-            RIL_requestTimedCallback (sendCallStateChanged, NULL, &TIMEVAL_CSCALLSTATEPOLL);
+        if(status == SRVCC_PS_TO_CS_SUCCESS || status == VSRVCC_PS_TO_CS_SUCCESS){
+           RIL_requestTimedCallback (sendCSCallStateChanged, NULL, &TIMEVAL_CSCALLSTATEPOLL);
         } else {
-            RIL_requestTimedCallback (sendCSCallStateChanged, NULL, &TIMEVAL_CSCALLSTATEPOLL);
+           RIL_requestTimedCallback (sendCallStateChanged, NULL, &TIMEVAL_CSCALLSTATEPOLL);
         }
     }
     /* @} */
