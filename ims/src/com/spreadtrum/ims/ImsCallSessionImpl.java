@@ -1041,8 +1041,18 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             }
             Log.w(TAG,"vdc.mediaDescription: " + vdc.mediaDescription + " quality:"+quality);
         }
-    }
-
+        /* SPRD: add for new feature@{ */
+        if((vdc!= null) && (vdc.mediaDescription != null) && (vdc.mediaDescription.contains("cap:"))){
+            String media = vdc.mediaDescription.substring(vdc.mediaDescription.indexOf("cap:"));
+            if(media != null && media.contains("video")){
+               mRemoteCallProfile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VT);
+            }else{
+               mRemoteCallProfile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VOICE);
+            }
+            Log.i(TAG,"vdc.mediaDescription: " + vdc.mediaDescription + " mRemoteCallProfile:"+mRemoteCallProfile);
+         }
+        /* @}*/
+   }
     public boolean isForegroundCall(){
         return (mImsDriverCall != null &&
                 (mImsDriverCall.state == ImsDriverCall.State.ACTIVE
@@ -1148,6 +1158,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     /* SPRD:Add for bug582072 @{ */
     public void notifyRemoteVideoProfile(AsyncResult ar) {
         SuppServiceNotification notification = (SuppServiceNotification) ar.result;
+
             switch (notification.code) {
             case SuppServiceNotification.MT_CODE_CALL_ON_HOLD:
                 mRemoteCallProfile = new ImsCallProfile(
