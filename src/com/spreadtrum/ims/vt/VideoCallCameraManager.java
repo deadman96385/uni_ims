@@ -280,13 +280,6 @@ public class VideoCallCameraManager {
             default:
                 break;
         }
-        if((mDeviceRotation == 90) || (mDeviceRotation == 270)){
-            VTManagerProxy.getInstance().mPreviewWidth = mHeight;
-            VTManagerProxy.getInstance().mPreviewHeight = mWidth;
-        } else {
-            VTManagerProxy.getInstance().mPreviewWidth = mWidth;
-            VTManagerProxy.getInstance().mPreviewHeight = mHeight;
-        }
         setPreviewSize(VTManagerProxy.getInstance().mPreviewWidth,VTManagerProxy.getInstance().mPreviewHeight);
         Log.i(TAG, "setPreviewSurfaceSize, mWidth: " + mWidth+"   mHeight="+mHeight+"   mVideoQuality="+mVideoQuality);
     }
@@ -412,7 +405,6 @@ public class VideoCallCameraManager {
             public void run() {
                 Log.i(TAG, "operateCamera() E, type: " + type);
                 mThreadRunning = true;
-                mVTManagerProxy.setCameraSwitching(true);
                 if (WorkerTaskType.CAMERA_CLOSE == type || WorkerTaskType.CAMERA_OPEN == type) {
                     if (WorkerTaskType.CAMERA_CLOSE == type) {
                         closeCamera();
@@ -423,7 +415,6 @@ public class VideoCallCameraManager {
                     closeCamera();
                     openCamera();
                 }
-                mVTManagerProxy.setCameraSwitching(false);
                 Log.i(TAG, "closeOrSwitchCamera() X");
                 mThreadRunning = false;
                 return;
@@ -563,10 +554,8 @@ public class VideoCallCameraManager {
         mOperateCameraThread = new Thread(new Runnable() {
             public void run() {
                 mThreadRunning = true;
-                mVTManagerProxy.setCameraSwitching(true);
                 closeCamera();
                 openCamera();
-                mVTManagerProxy.setCameraSwitching(false);
                 mThreadRunning = false;
                 return;
             }

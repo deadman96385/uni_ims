@@ -354,14 +354,6 @@ public class VTManagerProxy{
         if (rotation != null && (mRotation != rotation)) {
             mRotation = rotation;
             mVideoCallCameraManager.onSetDeviceRotation(rotation.intValue());
-            if((mRotation == 90) || (mRotation == 270)){
-                mPreviewWidth = mVideoCallCameraManager.mHeight;
-                mPreviewHeight = mVideoCallCameraManager.mWidth;
-            }else if((mRotation == 0) || (mRotation == 180)){
-                mPreviewWidth = mVideoCallCameraManager.mWidth;
-                mPreviewHeight = mVideoCallCameraManager.mHeight;
-            }
-            setPreviewSize(mPreviewWidth,mPreviewHeight);
         }
     }
 
@@ -487,19 +479,6 @@ public class VTManagerProxy{
             }
         }
     }
-    public void setCameraSwitching(boolean isSwitching) {
-        if (mActiveImsCallSessionImpl != null) {
-            ImsVideoCallProvider vp = (ImsVideoCallProvider)mActiveImsCallSessionImpl
-                    .getImsVideoCallProvider();
-            if (vp != null) {
-                log("setCameraSwitching->isSwitching=" + isSwitching);
-                VideoProfile.CameraCapabilities cc = new VideoProfile.CameraCapabilities(0, 0,
-                        false, 0);
-                vp.changeCameraCapabilities(cc);
-            }
-        }
-    };
-
 
     public void registerForImsVideoQos(Phone phone){
         //TODO: ImsVideoQos should porting
