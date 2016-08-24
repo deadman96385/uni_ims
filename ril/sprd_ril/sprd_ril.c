@@ -3053,7 +3053,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                             RIL_onRequestComplete(*t, RIL_E_SUCCESS, &responses[i],
                                 sizeof(RIL_Data_Call_Response_v11));
                             /* send IP for volte addtional business */
-                            if (!(IsLte && bLteDetached) && isVoLteEnable() ) {
+                            if (!(s_multiSimMode && !bOnlyOneSIMPresent && s_testmode == 10)) {
                                 char cmd[180] = {0};
                                 char prop0[PROPERTY_VALUE_MAX] = {0};
                                 char prop1[PROPERTY_VALUE_MAX] = {0};
