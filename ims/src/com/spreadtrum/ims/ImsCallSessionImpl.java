@@ -132,8 +132,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         } else {
             mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
         }
-        //SPRD:update ImsCallProfile according to the CLCCS fix for bug 585690
-        if(isPsMode()){
+        //SPRD:update ImsCallProfile according to the CLCCS fix for bug 589158
+        if(dc != null && dc.mediaDescription != null && dc.mediaDescription.contains("hd=1")){
             mImsCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB;
             mLocalCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB;
         } else {
