@@ -450,7 +450,7 @@ public class ImsServiceImpl {
            if(operatorCameraResolution == null || TextUtils.isEmpty(operatorCameraResolution)){
                return;
            }
-           mImsConfigImpl.setVideoQualitytoPreference(Integer.parseInt(operatorCameraResolution));
+           mImsConfigImpl.mDefaultVtResolution = Integer.parseInt(operatorCameraResolution);
     }
     /* @}*/
 }
