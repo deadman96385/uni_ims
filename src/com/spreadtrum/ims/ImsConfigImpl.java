@@ -41,6 +41,11 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     public static final int VT_RESOLUTION_QVGA_15 = 9;             //320*240 Frame rate:15
     public static final int VT_RESOLUTION_QVGA_30 = 10;            //320*240 Frame rate:30
 
+    public static class VideoQualityConstants {
+        public static final int FEATURE_VT_RESOLUTION = 50;
+        public static final int NETWORK_VT_RESOLUTION = 51;
+    }
+
     private ImsRIL mCi;
     private ImsHandler mHandler;
     private Context mContext;
@@ -232,6 +237,12 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      */
     @Override
     public void getFeatureValue(int feature, int network, ImsConfigListener listener){
+        if(feature == VideoQualityConstants.FEATURE_VT_RESOLUTION
+                && network == VideoQualityConstants.NETWORK_VT_RESOLUTION){
+            if(listener != null){
+                getVideoQuality(listener);
+            }
+        }
     }
 
     /**
@@ -247,6 +258,12 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      */
     @Override
     public void setFeatureValue(int feature, int network, int value, ImsConfigListener listener){
+        if(feature == VideoQualityConstants.FEATURE_VT_RESOLUTION
+                && network == VideoQualityConstants.NETWORK_VT_RESOLUTION){
+            if(listener != null){
+                setVideoQuality(value,listener);
+            }
+        }
     }
 
     /**
