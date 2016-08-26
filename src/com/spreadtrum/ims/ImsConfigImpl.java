@@ -47,6 +47,7 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     private SharedPreferences mSharedPreferences;
     private static final String VIDEO_CALL_RESOLUTION = "vt_resolution";
     private int mCameraResolution = VT_RESOLUTION_VGA_REVERSED_30;
+    public int mDefaultVtResolution = VT_RESOLUTION_VGA_REVERSED_30;
 
     /**
      * Creates the Ims Config interface object for a sub.
@@ -58,7 +59,7 @@ public class ImsConfigImpl extends IImsConfig.Stub {
         mContext = context;
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
         mSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferenceListener);
-        mCameraResolution = mSharedPreferences.getInt(VIDEO_CALL_RESOLUTION, VT_RESOLUTION_VGA_REVERSED_30);
+        mCameraResolution = mSharedPreferences.getInt(VIDEO_CALL_RESOLUTION, mDefaultVtResolution);
         mHandler.removeMessages(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE);
         mHandler.sendEmptyMessageDelayed(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE, 1000);
     }
@@ -299,7 +300,7 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     }
 
     public int getVideoQualityFromPreference(){
-        return mSharedPreferences.getInt(VT_RESOLUTION_VALUE, VT_RESOLUTION_VGA_REVERSED_30);
+        return mSharedPreferences.getInt(VT_RESOLUTION_VALUE, mDefaultVtResolution);
     }
 
     public static boolean isVolteEnabledBySystemProperties(){
@@ -310,7 +311,7 @@ public class ImsConfigImpl extends IImsConfig.Stub {
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
             Log.d(TAG,"onSharedPreferenceChanged()->key:"+key);
             if(VIDEO_CALL_RESOLUTION.equals(key)){
-                mCameraResolution = sharedPreferences.getInt(VIDEO_CALL_RESOLUTION, VT_RESOLUTION_VGA_REVERSED_30);
+                mCameraResolution = sharedPreferences.getInt(VIDEO_CALL_RESOLUTION, mDefaultVtResolution);
                 mHandler.removeMessages(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE);
                 mHandler.sendEmptyMessageDelayed(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE, 1000);
                 Log.d(TAG,"onSharedPreferenceChanged()->mCameraResolution:"+mCameraResolution);
