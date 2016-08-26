@@ -997,7 +997,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.w(TAG, "sendDtmf-> ImsSessionInvalid!");
             return;
         }
-        mCi.sendDtmf(c, null);
+        //SPRD:modify for bug597496
+        mCi.sendDtmf(c, result);
     }
 
     /**
