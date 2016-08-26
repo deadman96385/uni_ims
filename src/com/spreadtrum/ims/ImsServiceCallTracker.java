@@ -623,4 +623,17 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         }
         return false;
     }
+
+    public boolean hasRingingCall(){
+        synchronized(mSessionList) {
+            for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it =
+                    mSessionList.entrySet().iterator(); it.hasNext();) {
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+                if (e.getValue().isRingingCall()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }

@@ -816,6 +816,28 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
         mDisconnCause = reason;
+        if(mConferenceHost){
+            boolean hasRinging = mImsServiceCallTracker.hasRingingCall();
+            boolean allActive = isAllConferenceCallActive();
+            boolean allHeld = isAllConferenceCallHeld();
+            Log.i(TAG, "terminate conference->hasRinging:"+hasRinging
+                    +" isAllConferenceCallActive():"+allActive
+                    +" isAllConferenceCallHeld():"+allHeld);
+            if(isForegroundCall()){
+                if(allActive && !hasRinging){
+                    mCi.hangupForegroundResumeBackground(mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
+                } else {
+                    hangupAllConferenceCall();
+                }
+            } else if(isBackgroundCall()){
+                if(allHeld && !hasRinging){
+                    mCi.hangupWaitingOrBackground(mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
+                } else {
+                    hangupAllConferenceCall();
+                }
+            }
+            return;
+        }
         if(mImsDriverCall != null){
             mCi.hangupConnection(mImsDriverCall.index,
                     mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
@@ -1260,6 +1282,62 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
             }
         }
+    }
+
+    public void hangupAllConferenceCall(){
+        if(mImsConferenceState == null){
+            Log.w(TAG, "removeSessionFromConference->mImsConferenceState is null:"+(mImsConferenceState == null));
+            return;
+        }
+        for (Iterator<Map.Entry<String, Bundle>> it =
+                mImsConferenceState.mParticipants.entrySet().iterator(); it.hasNext();) {
+            Map.Entry<String, Bundle> e = it.next();
+            String index = e.getValue().getString(IMS_CONFERENCE_ID);
+            mCi.hangupConnection(Integer.parseInt(index),
+                    mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
+        }
+    }
+
+    public boolean isAllConferenceCallActive(){
+        if(mImsConferenceState == null){
+            Log.w(TAG, "isAllConferenceCallActive->mImsConferenceState is null:"+(mImsConferenceState == null));
+            return false;
+        }
+        for (Iterator<Map.Entry<String, Bundle>> it =
+                mImsConferenceState.mParticipants.entrySet().iterator(); it.hasNext();) {
+            Map.Entry<String, Bundle> e = it.next();
+            String status = e.getValue().getString(ImsConferenceState.STATUS);
+            if(status != null &&
+                    ImsDriverCall.ConferenceStringToState(status) != ImsDriverCall.State.ACTIVE &&
+                    ImsDriverCall.ConferenceStringToState(status) != ImsDriverCall.State.DISCONNECTED){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean isAllConferenceCallHeld(){
+        if(mImsConferenceState == null){
+            Log.w(TAG, "isAllConferenceCallHeld->mImsConferenceState is null:"+(mImsConferenceState == null));
+            return false;
+        }
+        for (Iterator<Map.Entry<String, Bundle>> it =
+                mImsConferenceState.mParticipants.entrySet().iterator(); it.hasNext();) {
+            Map.Entry<String, Bundle> e = it.next();
+            String status = e.getValue().getString(ImsConferenceState.STATUS);
+            if(status != null &&
+                    ImsDriverCall.ConferenceStringToState(status) != ImsDriverCall.State.HOLDING &&
+                    ImsDriverCall.ConferenceStringToState(status) != ImsDriverCall.State.DISCONNECTED){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean isRingingCall(){
+        return (mImsDriverCall != null &&
+                (mImsDriverCall.state == ImsDriverCall.State.INCOMING
+                || mImsDriverCall.state == ImsDriverCall.State.WAITING));
     }
 
     public void disconnectForConferenceMember(){
