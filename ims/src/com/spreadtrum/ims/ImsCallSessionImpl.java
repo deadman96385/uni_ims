@@ -75,6 +75,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsMegerAction;
     private boolean mShouldNotifyMegerd;
     private boolean mIsConferenceHeld;
+    private boolean mRomteCallHolding;
+    private boolean mRomteCallSupportVT = true;
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             CommandsInterface ci, ImsServiceCallTracker callTracker){
@@ -1042,11 +1044,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.w(TAG,"vdc.mediaDescription: " + vdc.mediaDescription + " quality:"+quality);
         }
         /* SPRD: add for new feature@{ */
+        if(mRomteCallHolding){
+           return;
+        }
         if((vdc!= null) && (vdc.mediaDescription != null) && (vdc.mediaDescription.contains("cap:"))){
             String media = vdc.mediaDescription.substring(vdc.mediaDescription.indexOf("cap:"));
             if(media != null && media.contains("video")){
+               mRomteCallSupportVT = true;
                mRemoteCallProfile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VT);
             }else{
+               mRomteCallSupportVT = false;
                mRemoteCallProfile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VOICE);
             }
             Log.i(TAG,"vdc.mediaDescription: " + vdc.mediaDescription + " mRemoteCallProfile:"+mRemoteCallProfile);
@@ -1158,13 +1165,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     /* SPRD:Add for bug582072 @{ */
     public void notifyRemoteVideoProfile(AsyncResult ar) {
         SuppServiceNotification notification = (SuppServiceNotification) ar.result;
-
+            if(!mRomteCallSupportVT) return;
             switch (notification.code) {
             case SuppServiceNotification.MT_CODE_CALL_ON_HOLD:
+                mRomteCallHolding = true;
                 mRemoteCallProfile = new ImsCallProfile(
                         ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VOICE);
                 break;
             case SuppServiceNotification.MT_CODE_CALL_RETRIEVED:
+                mRomteCallHolding = false;
                 mRemoteCallProfile = new ImsCallProfile(
                         ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VT);
                 break;
