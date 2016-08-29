@@ -1284,6 +1284,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
     }
 
+    public boolean isConferenceAlive(){
+        if(mImsConferenceState == null){
+            Log.w(TAG, "isConferenceDisconnected->mImsConferenceState is null!");
+            return false;
+        }
+        return mImsConferenceState.mParticipants.size() > 0;
+    }
+
     public void hangupAllConferenceCall(){
         if(mImsConferenceState == null){
             Log.w(TAG, "removeSessionFromConference->mImsConferenceState is null:"+(mImsConferenceState == null));

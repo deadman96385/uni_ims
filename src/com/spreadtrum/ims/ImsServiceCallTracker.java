@@ -345,7 +345,6 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                 validDriverCall.put(Integer.toString(imsDc.index), imsDc);
             }
         }
-        removeInvalidSessionFromList(validDriverCall);
         if(mConferenceSession != null){
             if(conferenceDc != null){
                 isConferenceStateChange = mConferenceSession.updateImsConfrenceMember(conferenceDc)  || isConferenceStateChange;
@@ -353,6 +352,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             }
             mConferenceSession.removeInvalidSessionFromConference(validDriverCall);
         }
+        removeInvalidSessionFromList(validDriverCall);
         if(isConferenceStateChange && mConferenceSession != null){
             mConferenceSession.notifyConferenceStateChange();
             Log.d(TAG, "handlePollCalls->isConferenceStateChange:"+isConferenceStateChange);
@@ -446,12 +446,17 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                     mSessionList.entrySet().iterator(); it.hasNext();) {
                 Map.Entry<String, ImsCallSessionImpl> e = it.next();
                 if (validDriverCall.get(e.getValue().getCallId()) == null) {
-                    it.remove();
                     ImsCallSessionImpl session = e.getValue();
                     if(mConferenceSession == session){
+                        //check conference disconnected
+                        if(mConferenceSession.isConferenceAlive()){
+                            Log.d(TAG, "removeInvalidSessionFromList->conference call does not disconnected.");
+                            continue;
+                        }
                         mConferenceSession = null;
                         Log.d(TAG, "removeInvalidSessionFromList->clear conference call.");
                     }
+                    it.remove();
                     Log.d(TAG, "removeInvalidSessionFromList: " + session);
                     session.notifySessionDisconnected();
                     notifySessionDisonnected(session);
