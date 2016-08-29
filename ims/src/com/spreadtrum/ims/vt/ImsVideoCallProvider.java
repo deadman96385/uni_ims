@@ -24,6 +24,7 @@ import android.os.SystemClock;
 import android.app.KeyguardManager;
 import android.os.AsyncResult;
 import android.telephony.VoLteServiceState;
+import android.telephony.TelephonyManager;
 
 public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallProvider {
     private static final String TAG = ImsVideoCallProvider.class.getSimpleName();
@@ -394,11 +395,18 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 if(mVolteMediaUpdateDialog != null){
                    mVolteMediaUpdateDialog.dismiss();
                 }
-                if(ImsCmccUtils.getInstance(mContext).rejectMediaChange(mImsCallSessionImpl,mCi,mCallIdMessage)){
-                    log("handleVolteCallMediaChange-is cmcc project, has one active adn one hold call reject MediaChange");
-                }else{
-                    mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage);
-                    mVolteMediaUpdateDialog.show();
+                /*Add for bug591946 @{*/
+                if(!TelephonyManager.isSupportVT()){
+                    Log.d(TAG, "reject change voice to video because disabled vt on pikeL");
+                    mCi.responseVolteCallMediaChange(false, mCallIdMessage);
+                }/*@}*/
+                else{
+                    if(ImsCmccUtils.getInstance(mContext).rejectMediaChange(mImsCallSessionImpl,mCi,mCallIdMessage)){
+                        log("handleVolteCallMediaChange-is cmcc project, has one active adn one hold call reject MediaChange");
+                    }else{
+                        mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage);
+                        mVolteMediaUpdateDialog.show();
+                    }
                 }
 
                 Message msg = new Message();
