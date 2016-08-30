@@ -676,6 +676,13 @@ PUBLIC void Mp4Dec_DecMBHeaderBVOP(DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *
 
         mbmode = Mp4Dec_GetMbType(bitstrm_ptr);
 
+        if(mbmode < 0)//avoid negative array index in line716 's_mbmode_mcatype_map[mbmode]'
+        {
+            PRINTF ("decode mb_type of B-VOP error!\n");
+            vop_mode_ptr->error_flag = TRUE;
+            return;
+        }
+
         if(!modb2)/* modb=='00' */
         {
             cbp = (int32)Mp4Dec_ReadBits(bitstrm_ptr, 6);

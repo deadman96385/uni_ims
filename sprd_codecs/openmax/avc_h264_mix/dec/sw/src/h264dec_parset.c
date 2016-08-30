@@ -536,7 +536,7 @@ LOCAL MMDecRet H264Dec_interpret_pps (DEC_PPS_T *pps_ptr, H264DecContext *vo)
     pps_ptr->num_slice_groups_minus1 = UE_V();
 
 #if _H264_PROTECT_ & _LEVEL_LOW_
-    if (pps_ptr->num_slice_groups_minus1 >MAX_NUM_SLICE_GROUPS_MINUS1) {
+    if (pps_ptr->num_slice_groups_minus1 >=MAX_NUM_SLICE_GROUPS_MINUS1) {
         vo->error_flag |= ER_BSM_ID;
         vo->return_pos1 |= (1<<23);
         return MMDEC_STREAM_ERROR;

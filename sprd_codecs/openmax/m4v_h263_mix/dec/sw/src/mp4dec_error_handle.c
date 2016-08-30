@@ -622,7 +622,7 @@ LOCAL int32 GetNeiAvail (DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode_pt
 
         if ((top_avail) && (top_mb_mode_ptr->bIntra))
         {
-            *nei_intra_num++;
+            (*nei_intra_num)++;
         }
 
         if (mb_x < mb_num_x -1)
@@ -653,7 +653,7 @@ LOCAL int32 GetNeiAvail (DEC_VOP_MODE_T *vop_mode_ptr, DEC_MB_MODE_T *mb_mode_pt
 
         if ((bot_avail) && (bot_mb_mode_ptr->bIntra))
         {
-            *nei_intra_num++;
+            (*nei_intra_num)++;
         }
     }
 
