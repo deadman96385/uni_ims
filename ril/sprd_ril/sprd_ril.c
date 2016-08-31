@@ -9343,7 +9343,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_ALLOW_DATA:
             allow_data = ((int*)data)[0];
-            if(desiredRadioState > 0 && isAttachEnable()){
+            if (desiredRadioState > 0 && isAttachEnable()
+                && !(sState == RADIO_STATE_OFF || sState == RADIO_STATE_UNAVAILABLE)) {
                 if(allow_data){
                     attachGPRS(channelID, data, datalen, t);
                 }else{
