@@ -14,16 +14,16 @@
 
 #define LOG_TAG "RIL"
 
-#if defined (RIL_SUPPORTED_OEM_PROTOBUF)
-
-#define PROP_BUILD_TYPE "ro.build.type"
-
 // {for get sim lock infors,like dummy,white list}
 #define REQUEST_SIMLOCK_WHITE_LIST_PS 1
 #define REQUEST_SIMLOCK_WHITE_LIST_PN 2
 #define REQUEST_SIMLOCK_WHITE_LIST_PU 3
 #define REQUEST_SIMLOCK_WHITE_LIST_PP 4
 #define REQUEST_SIMLOCK_WHITE_LIST_PC 5
+
+#if defined (RIL_SUPPORTED_OEM_PROTOBUF)
+
+#define PROP_BUILD_TYPE "ro.build.type"
 
 extern int s_isuserdebug;
 
@@ -1583,7 +1583,7 @@ static void requestGetSimLockWhiteList(int channelID, void *data, size_t datalen
         cmd = NULL;
         goto error;
     }
-    err = at_send_command_singleline(ATch_type[channelID], cmd, "+spsmnw:", &p_response);
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+SPSMNW:", &p_response);
     RILLOGD(" requestGetSimLockWhiteList cmd = %s",cmd);
     free(cmd);
 
@@ -2453,6 +2453,300 @@ error:
     return;
 }
 
+static void requestGetSimLockDummys(int channelID, RIL_Token t)
+{
+    ATResponse *p_response = NULL;
+    int err,i;
+    char *line;
+    int dummy[8];
+    RILLOGD(" requestGetSimLockDummys");
+    err = at_send_command_singleline(ATch_type[channelID],"AT+SPSLDUM?","+SPSLDUM:",&p_response);
+    if (err < 0 || p_response->success == 0)
+        goto error;
+
+    line = p_response->p_intermediates->line;
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    for(i = 0;i < 8;i++)
+    {
+        err = at_tok_nextint(&line, &dummy[i]);
+        RILLOGD(" requestGetSimLockDummys dummy[%d] = ",dummy[i]);
+        if (err < 0) goto error;
+    }
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, dummy, sizeof(dummy));
+    at_response_free(p_response);
+    return;
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+    return;
+}
+
+static void requestGetSimLockWhiteList(int channelID, void *data, size_t datalen, RIL_Token t)
+{
+    ATResponse *p_response = NULL;
+    int err,i;
+    int result;
+    int status;
+    char *cmd, *line,*mcc,*mnc,*plmn,*type_ret,*numlocks_ret;
+    int errNum = -1;
+    int ret = -1;
+    int type,type_back,numlocks,mnc_digit;
+
+    type = ((int*)data)[2];
+
+    RILLOGD("requestGetSimLockWhiteList");
+    ret = asprintf(&cmd, "AT+SPSMNW=%d,\"%s\",%d", type, "12345678", 1);
+    if(ret < 0) {
+        RILLOGE("Failed to allocate memory");
+        cmd = NULL;
+        goto error;
+    }
+    err = at_send_command_singleline(ATch_type[channelID], cmd, "+spsmnw:", &p_response);
+    RILLOGD(" requestGetSimLockWhiteList cmd = %s",cmd);
+    free(cmd);
+
+    if (err < 0 || p_response->success == 0) {
+        goto error;
+    }
+
+    line = p_response->p_intermediates->line;
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    err = at_tok_nextstr(&line, &type_ret);
+    if (err < 0) goto error;
+    type_back = atoi(type_ret);
+    RILLOGD(" requestGetSimLockWhiteList type_back = %d tpye_ret = %s",type_back,type_ret);
+
+    err = at_tok_nextstr(&line, &numlocks_ret);
+    if (err < 0 ) goto error;
+    numlocks = atoi(numlocks_ret);
+    RILLOGD(" requestGetSimLockWhiteList numlocks = %d numlocks_ret = %s",numlocks,numlocks_ret);
+    if (numlocks < 0) goto error;
+
+    switch (type_back) {
+        case REQUEST_SIMLOCK_WHITE_LIST_PS:
+        {
+            char *imsi_len,*imsi_val[8];
+            int imsi_index;
+            plmn = (char*)alloca(sizeof(char)*numlocks*(19+1)+5);
+            memset(plmn, 0, sizeof(char)*numlocks*(19+1)+5);
+            strcat(plmn,type_ret);
+            strcat(plmn,",");
+            strcat(plmn,numlocks_ret);
+            strcat(plmn,",");
+            for(i = 0;i < numlocks;i++)
+            {
+                err = at_tok_nextstr(&line,&imsi_len);
+                strcat(plmn,imsi_len);
+                if (err < 0) goto error;
+                strcat(plmn,",");
+
+                for(imsi_index = 0;imsi_index < 8;imsi_index++)
+                {
+                    err = at_tok_nextstr(&line,&imsi_val[imsi_index]);
+                    if (err < 0) goto error;
+                    int toFillLen = strlen(imsi_val[imsi_index]);
+                    if (toFillLen == 1) {
+                        strcat(plmn,"0");
+                    }
+                    strcat(plmn,imsi_val[imsi_index]);
+                }
+
+                if ((i + 1) < numlocks) strcat(plmn,",");
+            }
+            break;
+        }
+        case REQUEST_SIMLOCK_WHITE_LIST_PN:
+            plmn = (char*)alloca(sizeof(char)*numlocks*(6+1)+5);
+            memset(plmn, 0, sizeof(char)*numlocks*(6+1)+5);
+            strcat(plmn,type_ret);
+            strcat(plmn,",");
+            strcat(plmn,numlocks_ret);
+            strcat(plmn,",");
+            for(i = 0;i < numlocks;i++)
+            {
+                err = at_tok_nextstr(&line,&mcc);
+                if (err < 0) goto error;
+                //add for test sim card:mcc=001
+                if (strlen(mcc) == 1) {
+                    strcat(plmn,"00");
+                } else if (strlen(mcc) == 2) {
+                    strcat(plmn,"0");
+                }
+                strcat(plmn,mcc);
+
+                err = at_tok_nextstr(&line,&mnc);
+                if (err < 0) goto error;
+
+                err = at_tok_nextint(&line, &mnc_digit);
+                if (err < 0) goto error;
+                int toFillLen = mnc_digit - strlen(mnc);
+                if (toFillLen == 1) {
+                    strcat(plmn,"0");
+                } else if (toFillLen == 2) {
+                    strcat(plmn,"00");
+                }
+                strcat(plmn,mnc);
+
+                if ((i + 1) < numlocks) strcat(plmn,",");
+            }
+            break;
+        case REQUEST_SIMLOCK_WHITE_LIST_PU:
+        {
+            char *network_subset1,*network_subset2;
+            plmn = (char*)alloca(sizeof(char)*numlocks*(8+1)+5);
+            memset(plmn, 0, sizeof(char)*numlocks*(8+1)+5);
+            strcat(plmn,type_ret);
+            strcat(plmn,",");
+            strcat(plmn,numlocks_ret);
+            strcat(plmn,",");
+            for(i = 0;i < numlocks;i++)
+            {
+                err = at_tok_nextstr(&line,&mcc);
+                if (err < 0) goto error;
+                //add for test sim card:mcc=001
+                if (strlen(mcc) == 1) {
+                    strcat(plmn,"00");
+                } else if (strlen(mcc) == 2) {
+                    strcat(plmn,"0");
+                }
+                strcat(plmn,mcc);
+
+                err = at_tok_nextstr(&line,&mnc);
+                if (err < 0) goto error;
+
+                err = at_tok_nextint(&line, &mnc_digit);
+                if (err < 0) goto error;
+                int toFillLen = mnc_digit - strlen(mnc);
+                if (toFillLen == 1) {
+                    strcat(plmn,"0");
+                } else if (toFillLen == 2) {
+                    strcat(plmn,"00");
+                }
+                strcat(plmn,mnc);
+
+                err = at_tok_nextstr(&line,&network_subset1);
+                if (err < 0) goto error;
+                strcat(plmn,network_subset1);
+
+                err = at_tok_nextstr(&line,&network_subset2);
+                if (err < 0) goto error;
+                strcat(plmn,network_subset2);
+
+                if ((i + 1) < numlocks) strcat(plmn,",");
+            }
+            break;
+        }
+        case REQUEST_SIMLOCK_WHITE_LIST_PP:
+        {
+            char *gid1;
+            plmn = (char*)alloca(sizeof(char)*numlocks*(10+1)+5);
+            memset(plmn, 0, sizeof(char)*numlocks*(10+1)+5);
+            strcat(plmn,type_ret);
+            strcat(plmn,",");
+            strcat(plmn,numlocks_ret);
+            strcat(plmn,",");
+            for(i = 0;i < numlocks;i++)
+            {
+                err = at_tok_nextstr(&line,&mcc);
+                if (err < 0) goto error;
+                //add for test sim card:mcc=001
+                if (strlen(mcc) == 1) {
+                    strcat(plmn,"00");
+                } else if (strlen(mcc) == 2) {
+                    strcat(plmn,"0");
+                }
+                strcat(plmn,mcc);
+
+                err = at_tok_nextstr(&line,&mnc);
+                if (err < 0) goto error;
+
+                err = at_tok_nextint(&line, &mnc_digit);
+                if (err < 0) goto error;
+                int toFillLen = mnc_digit - strlen(mnc);
+                if (toFillLen == 1) {
+                    strcat(plmn,"0");
+                } else if (toFillLen == 2) {
+                    strcat(plmn,"00");
+                }
+                strcat(plmn,mnc);
+                strcat(plmn,",");
+
+                err = at_tok_nextstr(&line,&gid1);
+                if (err < 0) goto error;
+                strcat(plmn,gid1);
+
+                if ((i + 1) < numlocks) strcat(plmn,",");
+            }
+            break;
+        }
+        case REQUEST_SIMLOCK_WHITE_LIST_PC:
+        {
+            char *gid1,*gid2;
+            plmn = (char*)alloca(sizeof(char)*numlocks*(14+1)+5);
+            memset(plmn, 0, sizeof(char)*numlocks*(14+1)+5);
+            strcat(plmn,type_ret);
+            strcat(plmn,",");
+            strcat(plmn,numlocks_ret);
+            strcat(plmn,",");
+            for(i = 0;i < numlocks;i++)
+            {
+                err = at_tok_nextstr(&line,&mcc);
+                if (err < 0) goto error;
+                //add for test sim card:mcc=001
+                if (strlen(mcc) == 1) {
+                    strcat(plmn,"00");
+                } else if (strlen(mcc) == 2) {
+                    strcat(plmn,"0");
+                }
+                strcat(plmn,mcc);
+
+                err = at_tok_nextstr(&line,&mnc);
+                if (err < 0) goto error;
+                err = at_tok_nextint(&line, &mnc_digit);
+                if (err < 0) goto error;
+                int toFillLen = mnc_digit - strlen(mnc);
+                if (toFillLen == 1) {
+                    strcat(plmn,"0");
+                } else if (toFillLen == 2) {
+                    strcat(plmn,"00");
+                }
+                strcat(plmn,mnc);
+                strcat(plmn,",");
+
+                err = at_tok_nextstr(&line,&gid1);
+                if (err < 0) goto error;
+                strcat(plmn,gid1);
+                strcat(plmn,",");
+
+                err = at_tok_nextstr(&line,&gid2);
+                if (err < 0) goto error;
+                strcat(plmn,gid2);
+
+                if ((i + 1) < numlocks) strcat(plmn,",");
+            }
+            break;
+        }
+        default:
+            goto error;
+            break;
+    }
+    RILLOGD("telefk requestGetSimLockWhiteList plmn = %s",plmn);
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, plmn, strlen(plmn)+1);
+    at_response_free(p_response);
+    return;
+error:
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    at_response_free(p_response);
+    return;
+
+}
+
 void requestSimLock(int channelID, void *data, size_t datalen, RIL_Token t) {
     int err;
     ATResponse *p_response = NULL;
@@ -2498,6 +2792,12 @@ void requestSimLock(int channelID, void *data, size_t datalen, RIL_Token t) {
         }
         case OEM_REQ_SUBFUNCID_GET_SIMLOCK_STATUS:
             requestGetSimLockStatus(channelID, data, datalen, t);
+            break;
+        case OEM_REQ_SUBFUNCID_GET_SIMLOCK_DUMMYS :
+            requestGetSimLockDummys(channelID, t);
+            break;
+        case OEM_REQ_SUBFUNCID_GET_SIMLOCK_WHITELIST :
+            requestGetSimLockWhiteList(channelID, data, datalen, t);
             break;
         default:
             RIL_onRequestComplete(t, RIL_E_REQUEST_NOT_SUPPORTED, NULL, 0);
