@@ -87,7 +87,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 case VoLteServiceState.HANDOVER_COMPLETED:
                     if(mIsVideo && (mContext != null)){
                        mIsVideo = false;
-                       Toast.makeText(mContext,mContext.getResources().getString(com.android.internal.R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
+                       Toast.makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();//modify by bug593544
                     }
                     break;
                 default:
@@ -313,6 +313,10 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             log("onDisconnected->session="+session);
             onVTConnectionDisconnected(session);
             mImsCallSessionImpl.removeListener(mImsCallSessionImplListner);
+            /*add for bug593544 @{*/
+            if(mCi != null && mVTHandler != null ){
+                mCi.unregisterForSrvccStateChanged(mVTHandler);
+            }/*@}*/
         }
 
         @Override
@@ -338,7 +342,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
          } else {
              /* SPRD:add for bug563112 @{ */
              if(mIsVideo && (session != null && session.mImsDriverCall != null)){
-                 Toast.makeText(mContext,mContext.getResources().getString(com.android.internal.R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
+                 Toast.makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();//modify by bug593544
              }
              /* @} */
              onVTConnectionDisconnected(session);
