@@ -13702,7 +13702,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RILLOGD("SPERROR type = %d, err_code = %d", type, err_code);
         if (err_code == 336) {
             RIL_onUnsolicitedResponse (RIL_UNSOL_CLEAR_CODE_FALLBACK, NULL, 0);
-        }else if (type == 5) {/* 5: for SS */
+        } else if ((type == 5) && (ussdRun == 1)) {/* 5: for SS */
             ussdError = 1;
         }
         /* SPRD : seriouse error for ps affair @{ */
