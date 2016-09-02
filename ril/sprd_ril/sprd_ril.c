@@ -12075,8 +12075,17 @@ getSIMStatus(int channelID)
         if (!strcmp(prop, "1")) {
             extern int s_sim_num;
             if (s_sim_num == 0) {
+                snprintf(RIL_SP_SIM_PIN_PROPERTY,
+                    sizeof(RIL_SP_SIM_PIN_PROPERTY), "ril.%s.sim.pin", s_modem);
                 strcpy(sim_prop, RIL_SP_SIM_PIN_PROPERTY);
             } else {
+                char tmp[128] = { 0 };
+                snprintf(RIL_SP_SIM_PIN_PROPERTYS, sizeof(RIL_SP_SIM_PIN_PROPERTYS),
+                    "ril.%s.sim.pin", s_modem);
+                strcpy(tmp, RIL_SP_SIM_PIN_PROPERTYS);
+                strcat(tmp, "%d");
+                snprintf(RIL_SP_SIM_PIN_PROPERTYS, sizeof(RIL_SP_SIM_PIN_PROPERTYS),
+                    tmp, s_sim_num);
                 strcpy(sim_prop, RIL_SP_SIM_PIN_PROPERTYS);
             }
             property_get(sim_prop, prop, "");
