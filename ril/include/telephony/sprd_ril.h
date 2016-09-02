@@ -1777,6 +1777,12 @@ typedef struct {
    int exit_cause;
 } RIL_IMSPHONE_CMCCSI;
 
+/** Used by RIL_EXT_UNSOL_VT_CAPABILITY */
+typedef struct {
+   int id;
+   char *md_cap;
+} RIL_VT_CAPABILITY;
+
 /** Used by RIL_UNSOL_CALL_CSFALLBACK to handle CS fall back of MT call  */
 typedef struct {
    int id;
@@ -6156,7 +6162,9 @@ typedef struct {
 #define RIL_UNSOL_RESPONS_IMS_CONN_ENABLE (RIL_SPRD_UNSOL_RESPONSE_BASE + 25)
 #define RIL_UNSOL_CLEAR_CODE_FALLBACK (RIL_SPRD_UNSOL_RESPONSE_BASE + 26)
 #define RIL_UNSOL_RESPONSE_VIDEO_QUALITY (RIL_SPRD_UNSOL_RESPONSE_BASE + 27)
-#define RIL_SPRD_UNSOL_RESPONSE_LAST RIL_UNSOL_RESPONSE_VIDEO_QUALITY
+/** add for URC +MDCAPU */
+#define RIL_UNSOL_VT_CAPABILITY (RIL_SPRD_UNSOL_RESPONSE_BASE + 28)
+#define RIL_SPRD_UNSOL_RESPONSE_LAST RIL_UNSOL_VT_CAPABILITY
 /* @} */
 #endif
 

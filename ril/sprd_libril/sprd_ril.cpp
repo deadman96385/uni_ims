@@ -315,6 +315,7 @@ static int responseCallForwardsUri(Parcel &p, void *response, size_t responselen
 extern "C" void stripNumberFromSipAddress(const char *sipAddress, char *number, int len);
 static int responseBroadcastSmsLte(Parcel &p, void *response, size_t responselen);
 static int responseBroadcastSms(Parcel &p, void *response, size_t responselen);
+static int responseMDCAPU(Parcel &p, void *response, size_t responselen);
 #endif
 
 static int decodeVoiceRadioTechnology (RIL_RadioState radioState);
@@ -4802,6 +4803,28 @@ static int responseBroadcastSms(Parcel &p, void *response, size_t responselen) {
 
     return 0;
 }
+
+static int responseMDCAPU(Parcel &p, void *response, size_t responselen) {
+    if (response == NULL) {
+        RILLOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    if (responselen != sizeof(RIL_VT_CAPABILITY)) {
+        RILLOGE("invalid response length was %d expected %d",
+                (int)responselen, (int)sizeof (RIL_VT_CAPABILITY));
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    RIL_VT_CAPABILITY *p_cur = (RIL_VT_CAPABILITY *) response;
+    p.writeInt32(p_cur->id);
+    writeStringToParcel(p, p_cur->md_cap);
+    startResponse;
+    closeResponse;
+
+    return 0;
+}
+
 #endif
 
 /**
@@ -6949,6 +6972,7 @@ requestToString(int request) {
         case RIL_EXT_UNSOL_BAND_INFO: return "UNSOL_BAND_INFO";
 #endif  // RIL_SUPPORTED_OEMSOCKET
         case RIL_UNSOL_RESPONSE_VIDEO_QUALITY:return "RIL_UNSOL_RESPONSE_VIDEO_QUALITY";
+        case RIL_UNSOL_VT_CAPABILITY: return "UNSOL_VT_CAPABILITY";
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_UNSOL_RESPONSE_NEW_CB_MSG: return "UNSOL_RESPONSE_NEW_CB_MSG";

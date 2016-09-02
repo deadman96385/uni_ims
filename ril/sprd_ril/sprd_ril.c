@@ -14509,6 +14509,38 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         sprintf(response, "%d%d", OEM_UNSOL_FUNCTION_ID_EXPIREDSIM, simID);
         RILLOGD("response %s", response);
         RIL_onUnsolicitedResponse (RIL_UNSOL_OEM_HOOK_RAW, response, strlen(response));
+    } else if (strStartsWith(s, "+MDCAPU:")) {
+        /* Urc command to notify the AP that the current all volte call media
+         * description capability.
+         * +MDCAPU: <ccidx>,<md_cap>
+         * <ccidx>: int,  call index 1-7;
+         * <md_cap>:string , volte call media description for call capability
+         */
+        char *tmp;
+        RIL_VT_CAPABILITY *response;
+        response = (RIL_VT_CAPABILITY *) alloca(sizeof(RIL_VT_CAPABILITY));
+
+        line = strdup(s);
+        tmp = line;
+
+        err = at_tok_start(&tmp);
+        if (err < 0) goto out;
+
+        err = at_tok_nextint(&tmp, &response->id);
+        if (err < 0) {
+            RILLOGD("get id fail");
+            goto out;
+        }
+
+        err = at_tok_nextstr(&tmp, &response->md_cap);
+        if (err < 0) {
+            RILLOGD("get VT capbility fail");
+            goto out;
+        }
+
+        RIL_onUnsolicitedResponse(RIL_UNSOL_VT_CAPABILITY, response,
+                                  sizeof(RIL_VT_CAPABILITY));
+
     }
 #endif
     else if (strStartsWith(s, "^SMOF:")) {
