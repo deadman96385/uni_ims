@@ -68,6 +68,7 @@ public class ImsServiceImpl {
     protected static final int EVENT_IMS_CAPABILITY_CHANGED            = 104;
     protected static final int EVENT_SRVCC_STATE_CHANGED               = 105;
     protected static final int EVENT_SERVICE_STATE_CHANGED             = 106;
+    protected static final int EVENT_RADIO_STATE_CHANGED               = 107;
 
     private GsmCdmaPhone mPhone;
     private ImsServiceState mImsServiceState;
@@ -150,6 +151,7 @@ public class ImsServiceImpl {
         mPhone.registerForServiceStateChanged(mHandler, EVENT_SERVICE_STATE_CHANGED, null);
         mPhone.getContext().getContentResolver().registerContentObserver(
                 Telephony.Carriers.CONTENT_URI, true, mApnChangeObserver);
+        mCi.registerForRadioStateChanged(mHandler, EVENT_RADIO_STATE_CHANGED, null);//SPRD:add for bug594553
     }
 
     /**
@@ -260,6 +262,15 @@ public class ImsServiceImpl {
                         setVideoResolution(state);
                     }
                     break;
+                /* SPRD: add for bug594553 @{ */
+                case EVENT_RADIO_STATE_CHANGED:
+                    Log.i(TAG,"EVENT_RADIO_STATE_CHANGED->mImsRegistered:" + mImsServiceState.mImsRegistered +"  isRaidoOn=" + mPhone.isRadioOn());
+                    if (!mPhone.isRadioOn() && mImsServiceState.mImsRegistered) {
+                        mImsServiceState.mImsRegistered = false;
+                        mImsService.notifyImsRegisterState(mServiceId-1, getImsRegisterState());
+                    }
+                   break;
+                /* @} */
                 default:
                     break;
             }
