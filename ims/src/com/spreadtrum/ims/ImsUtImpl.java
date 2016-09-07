@@ -64,6 +64,10 @@ public class ImsUtImpl extends IImsUt.Stub {
         public void handleMessage(Message msg) {
             Log.i(TAG,"handleMessage msg=" + msg);
             AsyncResult ar = (AsyncResult) msg.obj;
+            if(mImsUtListener == null){
+                Log.w(TAG,"handleMessage mImsUtListener=" + mImsUtListener);
+                return;
+            }
             switch (msg.what) {
                 case ACTION_QUERY_CB:
                     try {

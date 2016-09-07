@@ -18,7 +18,6 @@ import android.os.AsyncResult;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.util.Log;
-import android.widget.Toast;
 
 import android.provider.Telephony;
 import com.android.internal.telephony.CommandsInterface;
@@ -47,13 +46,23 @@ import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.DctConstants;
 import com.android.internal.util.ArrayUtils;
+import com.spreadtrum.ims.ImsService;
 import com.spreadtrum.ims.data.ApnUtils;
-import com.sprd.android.internal.telephony.VolteConfig;
-import android.text.TextUtils;
+import com.spreadtrum.ims.vowifi.VoWifiServiceImpl;
+import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.DataRouterState;
+import com.android.internal.telephony.ImsNetworkInfo;
+
+import com.android.ims.internal.IImsServiceListenerEx;
+import com.android.sprd.telephony.RadioInteractor;
+import com.android.sprd.telephony.RadioInteractorCallbackListener;
+import android.content.ComponentName;
+import android.content.ServiceConnection;
+
 
 public class ImsServiceImpl {
     private static final String TAG = ImsServiceImpl.class.getSimpleName();
     private static final boolean DBG = true;
+    private static final int IMS_CALLING_RTP_TIME_OUT        = 1;
 
     public static final int IMS_REG_STATE_INACTIVE            = 0;
     public static final int IMS_REG_STATE_REGISTERED          = 1;
@@ -67,9 +76,11 @@ public class ImsServiceImpl {
     protected static final int EVENT_IMS_STATE_CHANGED                 = 102;
     protected static final int EVENT_IMS_STATE_DONE                    = 103;
     protected static final int EVENT_IMS_CAPABILITY_CHANGED            = 104;
-    //SPRD:ADD for bug 551025
-    protected static final int EVENT_SERVICE_STATE_CHANGED             = 105;
-    protected static final int EVENT_SET_VOICE_CALL_AVAILABILITY_DONE  = 106;
+    protected static final int EVENT_IMS_REGISTER_ADDRESS_CHANGED      = 105;
+    protected static final int EVENT_IMS_HANDOVER_STATE_CHANGED        = 106;
+    protected static final int EVENT_IMS_HANDOVER_ACTION_COMPLETE      = 107;
+    protected static final int EVENT_IMS_PND_STATE_CHANGED             = 108;
+    protected static final int EVENT_IMS_NETWORK_INFO_UPDATE           = 109;
 
     private GSMPhone mPhone;
     private ImsServiceState mImsServiceState;
@@ -89,8 +100,15 @@ public class ImsServiceImpl {
     private AtomicReference<IccRecords> mIccRecords = new AtomicReference<IccRecords>();
     private ApnChangeObserver mApnChangeObserver = null;
     private ImsRegister mImsRegister = null;
-    //SPRD:ADD for bug 551025
-    private VolteConfig mVolteConfig;
+    private ArrayList<Listener> mListeners = new ArrayList<Listener>();
+    private ImsService mImsService;
+    private VoWifiServiceImpl mWifiService;//Add for data router
+    private String mImsRegAddress = "";
+    private RadioInteractor mRadioInteractor;
+    private RadioInteractorCallbackListener mRadioInteractorCallbackListener;
+    private int mAliveCallLose = -1;
+    private int mAliveCallJitter = -1;
+    private int mAliveCallRtt = -1;
     /**
      * Handles changes to the APN db.
      */
@@ -124,7 +142,9 @@ public class ImsServiceImpl {
     };
 
 
-    public ImsServiceImpl(Phone phone , Context context){
+    public ImsServiceImpl(Phone phone , Context context, VoWifiServiceImpl wifiService){
+        mImsService = (ImsService)context;
+        mWifiService = wifiService;//Add for data router
         PhoneProxy proxy = (PhoneProxy)phone;
         mPhone = (GSMPhone)proxy.getActivePhone();
         mContext = context;
@@ -141,17 +161,17 @@ public class ImsServiceImpl {
         mContext.sendStickyBroadcast(intent);
         mContext.sendBroadcast(intent);
 
+        mCi.registerForConnImsen(mHandler, EVENT_IMS_PND_STATE_CHANGED, null);
         mCi.registerForImsNetworkStateChanged(mHandler, EVENT_IMS_STATE_CHANGED, null);
+        mCi.registerImsHandoverStatus(mHandler, EVENT_IMS_HANDOVER_STATE_CHANGED, null);
+        mCi.registerImsNetworkInfo(mHandler, EVENT_IMS_NETWORK_INFO_UPDATE, null);
         Log.i(TAG,"ImsServiceImpl onCreate->phoneId:"+phone.getPhoneId());
         mUiccController = UiccController.getInstance();
         mUiccController.registerForIccChanged(mHandler, DctConstants.EVENT_ICC_CHANGED, null);
-        /*SPRD:ADD for bug 551025 @{*/
-        mVolteConfig = VolteConfig.getInstance();
-        mPhone.registerForServiceStateChanged(mHandler, EVENT_SERVICE_STATE_CHANGED, null);
-        /* @}*/
         mApnChangeObserver = new ApnChangeObserver();
         mPhone.getContext().getContentResolver().registerContentObserver(
                 Telephony.Carriers.CONTENT_URI, true, mApnChangeObserver);
+        mCi.registerImsRegAddress(mHandler, EVENT_IMS_REGISTER_ADDRESS_CHANGED, null);
     }
 
     /**
@@ -205,21 +225,12 @@ public class ImsServiceImpl {
                         if(responseArray != null && responseArray.length >1){
                             mImsServiceState.mImsRegistered = (responseArray[0] != 0 && responseArray[1]== 1);
                         }
-                        try{
-                            if(mListener == null){
-                                Log.w(TAG,"handleMessage msg=" + msg.what+" mListener is null!");
-                                break;
-                            }
-                            if(mImsServiceState.mImsRegistered){
-                                mListener.registrationConnected();
-                            } else {
-                                mListener.registrationDisconnected(new ImsReasonInfo());
-                            }
-                        } catch (RemoteException e){
-                            e.printStackTrace();
+                        notifyRegisterStateChange();
+                        if(mListener == null){
+                            Log.w(TAG,"handleMessage msg=" + msg.what+" mListener is null!");
+                            break;
                         }
                         Log.i(TAG,"EVENT_IMS_STATE_CHANGED->mServiceState:" + mImsServiceState.mImsRegistered);
-                        mImsRegister.notifyImsStateChanged(mImsServiceState.mImsRegistered);
                     }
                     break;
                 case DctConstants.EVENT_ICC_CHANGED:
@@ -239,26 +250,40 @@ public class ImsServiceImpl {
                         e.printStackTrace();
                     }
                     break;
-                /*SPRD:ADD for bug 551025 @{*/
-                case EVENT_SERVICE_STATE_CHANGED:
-                     Log.i(TAG,"EVENT_SERVICE_STATE_CHANGED->ServiceStateChange");
-                     ServiceState state = (ServiceState) ((AsyncResult) msg.obj).result;
-                     if (state != null && state.getDataRegState() == ServiceState.STATE_IN_SERVICE
-                             && state.getRilDataRadioTechnology() == ServiceState.RIL_RADIO_TECHNOLOGY_LTE){
-                         mImsRegister.enableIms();
-                         setVideoResolution(state);
-                     }
-                     break;
-                /*@}*/
-                case EVENT_SET_VOICE_CALL_AVAILABILITY_DONE:
-                    if(ar.exception != null && ar.userObj != null){
-                        Log.i(TAG,"EVENT_SET_VOICE_CALL_AVAILABILITY_DONE: exception");
-                        int value = ((Integer) ar.userObj).intValue();
-                        if (DBG) Log.i(TAG, "value = " + value);
-                        android.provider.Settings.Global.putInt(mContext.getContentResolver(),
-                                android.provider.Settings.Global.ENHANCED_4G_MODE_ENABLED, value);
-                        Toast.makeText(mContext.getApplicationContext(), mContext.getString(R.string.ims_switch_failed), Toast.LENGTH_SHORT).show();
-
+                case EVENT_IMS_REGISTER_ADDRESS_CHANGED:
+                    if(ar.exception == null && ar.result != null){
+                         if (ar.result instanceof String) {
+                             String addr = (String)ar.result;
+                             setIMSRegAddress(addr);
+                         }
+                    }else{
+                        Log.e(TAG,"EVENT_IMS_REGISTER_ADDRESS_CHANGED has exception!");
+                    }
+                    break;
+                case EVENT_IMS_HANDOVER_STATE_CHANGED:
+                    if (ar != null && ar.exception == null && ar.result != null) {
+                        int[] responseArray = (int[])ar.result;
+                        mImsService.onImsHandoverStateChange(true, responseArray[0]);
+                    }
+                    break;
+                case EVENT_IMS_HANDOVER_ACTION_COMPLETE:
+                    if (ar == null || ar.exception != null) {
+                        mImsService.onImsHandoverStateChange(false, ImsService.IMS_HANDOVER_ACTION_CONFIRMED);
+                    } else {
+                        mImsService.onImsHandoverStateChange(true, ImsService.IMS_HANDOVER_ACTION_CONFIRMED);
+                    }
+                    break;
+                case EVENT_IMS_PND_STATE_CHANGED:
+                    if (ar != null && ar.exception == null && ar.result != null) {
+                        int[] responseArray = (int[])ar.result;
+                        mImsService.onImsPdnStatusChange(mServiceId,responseArray[0]);
+                    }
+                    break;
+                case EVENT_IMS_NETWORK_INFO_UPDATE:
+                    if (ar != null && ar.exception == null && ar.result != null) {
+                        ImsNetworkInfo info = (ImsNetworkInfo)ar.result;
+                        Log.i(TAG,"EVENT_IMS_NETWORK_INFO_UPDATE->info.mType: " + info.mType + "info.mInfo: " + info.mInfo);
+                        mImsService.onImsNetworkInfoChange(info.mType, info.mInfo);
                     }
                     break;
                 default:
@@ -272,12 +297,19 @@ public class ImsServiceImpl {
         mServiceClass = serviceClass;
         mIncomingCallIntent = incomingCallIntent;
         mListener = listener;
-        mImsServiceCallTracker = new ImsServiceCallTracker(mContext,mCi,mIncomingCallIntent,mServiceId,this);
+        mImsServiceCallTracker = new ImsServiceCallTracker(
+                mContext, mCi, mIncomingCallIntent, mServiceId, this, mWifiService);
+        SessionListListener listListener = new SessionListListener();
+        mImsServiceCallTracker.addListener(listListener);
         try{
             mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
                     = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
             mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
                     = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE;
+            mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI]
+                    = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
+            mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
+                    = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI;
             mListener.registrationFeatureCapabilityChanged(
                     ImsServiceClass.MMTEL,mEnabledFeatures, mDisabledFeatures);
         } catch (RemoteException e){
@@ -347,6 +379,26 @@ public class ImsServiceImpl {
         return mUiccController.getIccRecords(mPhone.getPhoneId(), appFamily);
     }
     private void onRecordsLoaded() {
+        mRadioInteractor = new RadioInteractor(mPhone.getContext());
+        mContext.bindService(
+                new
+                Intent("com.android.sprd.telephony.server.RADIOINTERACTOR_SERVICE")
+                .setPackage("com.android.sprd.telephony.server"),
+                new ServiceConnection() {
+                    @Override
+                    public void onServiceConnected(ComponentName name,
+                            IBinder service) {
+                        Log.d(TAG, "on radioInteractor service connected");
+                        mRadioInteractorCallbackListener = getRadioInteractorCallbackListener(mPhone.getPhoneId());
+                        mRadioInteractor.listen(mRadioInteractorCallbackListener,
+                                RadioInteractorCallbackListener.LISTEN_WIFIPARAM_EVENT, false);
+                    }
+                    @Override
+                    public void onServiceDisconnected(ComponentName name) {
+                        mRadioInteractor.listen(mRadioInteractorCallbackListener,
+                                RadioInteractorCallbackListener.LISTEN_NONE);
+                    }
+                }, Context.BIND_AUTO_CREATE);
         if (DBG) Log.i(TAG,"onRecordsLoaded: createAllApnList");
         createAllApnList();
         if(ImsManager.isVolteEnabledByPlatform(mPhone.getContext())){
@@ -428,29 +480,277 @@ public class ImsServiceImpl {
 
     public void turnOnIms(){
         Log.i(TAG,"turnOnIms.");
-        mCi.setImsVoiceCallAvailability(1, mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, 0));
+        mCi.enableIms(null);
     }
 
     public void turnOffIms(){
         Log.i(TAG,"turnOffIms.");
-        mCi.setImsVoiceCallAvailability(0, mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, 1));
+        mCi.disableIms(null);
     }
-    /*SPRD:ADD for bug 551025 @{*/
-    public void setVideoResolution(ServiceState state){
-           String registOperatorNumeric = state.getDataOperatorNumeric();
-           Log.i(TAG,"registOperatorNumeric = " + registOperatorNumeric);
-           if(registOperatorNumeric == null){
-               return;
-           }
-           String operatorCameraResolution = null;
-           mVolteConfig.loadVolteConfig(mContext);
-           if(mVolteConfig.containsCarrier(registOperatorNumeric)){
-               operatorCameraResolution = mVolteConfig.getCameraResolution(registOperatorNumeric);
-           }
-           if(operatorCameraResolution == null || TextUtils.isEmpty(operatorCameraResolution)){
-               return;
-           }
-           mImsConfigImpl.mDefaultVtResolution = Integer.parseInt(operatorCameraResolution);
+
+    class SessionListListener implements ImsServiceCallTracker.SessionListListener {
+        @Override
+        public void onSessionConnected(ImsCallSessionImpl callSession){
+        }
+
+        @Override
+        public void  onSessionDisonnected(ImsCallSessionImpl callSession){
+            if(mImsServiceCallTracker.isSessionListEmpty()){
+                notifySessionEmpty();
+            }
+        }
     }
-    /* @}*/
+
+    public interface Listener {
+        void onRegisterStateChange(int serviceId);
+        void onSessionEmpty(int serviceId);
+    }
+
+    public void addListener(Listener listener){
+        if (listener == null) {
+            Log.w(TAG,"addListener-> listener is null!");
+            return;
+        }
+        if (!mListeners.contains(listener)) {
+            mListeners.add(listener);
+        } else {
+            Log.w(TAG,"addListener-> listener already add!");
+        }
+    }
+
+    public void removeListener(Listener listener){
+        if (listener == null) {
+            Log.w(TAG,"removeListener-> listener is null!");
+            return;
+        }
+        if (mListeners.contains(listener)) {
+            mListeners.remove(listener);
+        } else {
+            Log.w(TAG,"addListener-> listener already remove!");
+        }
+    }
+
+    public void notifyRegisterStateChange() {
+        for (Listener listener : mListeners) {
+            listener.onRegisterStateChange(mServiceId);
+        }
+    }
+
+    public void notifySessionEmpty() {
+        for (Listener listener : mListeners) {
+            listener.onSessionEmpty(mServiceId);
+        }
+    }
+
+    public boolean isImsRegistered(){
+        return mImsServiceState.mImsRegistered;
+    }
+
+    public ImsRegister getImsRegister() {
+        return mImsRegister;
+    }
+
+    public void notifyImsRegister(boolean isRegistered){
+        try{
+            if(mListener == null){
+                Log.w(TAG,"notifyImsRegister->mListener is null!");
+                return;
+            }
+            if(isRegistered){
+                mListener.registrationConnected();
+            } else {
+                mListener.registrationDisconnected(new ImsReasonInfo());
+            }
+            Log.i(TAG,"notifyImsRegister->isRegistered:" + isRegistered
+                    + " isImsEnabled():"+mImsService.isImsEnabled()
+                    + " mImsService.isVoLTEEnabled():"+mImsService.isVoLTEEnabled()
+                    + " mImsService.isVoWifiEnabled():"+mImsService.isVoWifiEnabled());
+            Log.i(TAG,"notifyImsRegister->mServiceState:" + isRegistered);
+            mImsRegister.notifyImsStateChanged(isRegistered);
+        } catch (RemoteException e){
+            e.printStackTrace();
+        }
+    }
+
+    public void sendIncomingCallIntent(String callId) {
+        try {
+            Intent intent = new Intent();
+            intent.putExtra(ImsManager.EXTRA_CALL_ID, callId);
+            intent.putExtra(ImsManager.EXTRA_USSD, false);
+            intent.putExtra(ImsManager.EXTRA_SERVICE_ID, mServiceId);
+            /*SPRD: Modify for bug586758{@*/
+            Log.i (TAG,"sendIncomingCallIntent-> startVoWifiCall"
+                    + " mIsVowifiCall: " + mImsService.isVowifiCall()
+                    + " mIsVolteCall: " + mImsService.isVolteCall()
+                    + " isVoWifiEnabled(): " + mImsService.isVoWifiEnabled()
+                    + " isVoLTEEnabled(): " + mImsService.isVoLTEEnabled());
+            if (mImsService.isVoWifiEnabled() && !mImsService.isVowifiCall() && !mImsService.isVolteCall()) {
+                mWifiService.updateDataRouterState(DataRouterState.CALL_VOWIFI);
+            }
+            /*@}*/
+            mIncomingCallIntent.send(mContext, ImsManager.INCOMING_CALL_RESULT_CODE,intent);
+        } catch (PendingIntent.CanceledException e) {
+            Log.e(TAG, "PendingIntent Canceled " + e);
+        }
+    }
+
+    public String getIMSRegAddress() {
+        if(DBG){
+            Log.i(TAG, "getIMSRegAddress mImsRegAddress = " + mImsRegAddress);
+        }
+        return mImsRegAddress;
+    }
+
+    public void setIMSRegAddress(String addr) {
+        if(DBG){
+            Log.i(TAG, "setIMSRegAddress addr = " + addr);
+        }
+        if(addr != null){
+            mImsRegAddress = addr;
+        }
+    }
+    public void requestImsHandover(int type){
+        Log.i(TAG,"requestImsHandover->type:" + type);
+        mCi.requestImsHandover(type,mHandler.obtainMessage(EVENT_IMS_HANDOVER_ACTION_COMPLETE));
+    }
+
+    public void notifyImsHandoverStatus(int status){
+        Log.i(TAG,"notifyImsHandoverStatus->status:" + status);
+        mCi.notifyImsHandoverStatus(status,null);
+    }
+
+    public void notifyImsCallEnd(int type){
+        Log.i(TAG,"notifyImsCallEnd.");
+        mCi.notifyImsCallEnd(type,null);
+    }
+
+    public void notifyVoWifiEnable(boolean enable){
+        Log.i(TAG,"notifyVoWifiEnable.");
+        mCi.notifyVoWifiEnable(enable,null);
+    }
+    /*SPRD: Add for get network info{@*/
+    public void notifyImsNetworkInfo(int type, String info){
+        Log.i(TAG,"notifyImsNetworkInfo->type:"+type+" info:"+info);
+        mCi.notifyImsNetworkInfo(type, info,null);
+    }
+    /*@}*/
+    public void onImsCallEnd(){
+        mImsService.onImsCallEnd(mServiceId);
+    }
+
+    public void notifyWifiCalling(boolean inCall){
+        mCi.notifyWifiCallState(inCall,null);
+    }
+    /*SPRD: Add for notify data router{@*/
+    public void notifyDataRouter(){
+        Log.i(TAG,"notifyDataRouter");
+        mCi.notifyDataRouter(null);
+    }
+    /*@}*/
+    /*SPRD: Add for bug586758{@*/
+    public boolean isVolteSessionListEmpty() {
+        if (mImsServiceCallTracker != null) {
+            Log.i(TAG,"isSessionListEmpty: " + mImsServiceCallTracker.isSessionListEmpty());
+            return mImsServiceCallTracker.isSessionListEmpty();
+        }
+        return false;
+    }
+    public boolean isVowifiSessionListEmpty() {
+        if (mWifiService != null) {
+            Log.i(TAG,"mWifiService.getCallCount(): " + mWifiService.getCallCount());
+            return mWifiService.getCallCount()==0;
+        }
+        return false;
+    }
+    /*@}*/
+
+    private RadioInteractorCallbackListener getRadioInteractorCallbackListener(final int phoneId) {
+        return new RadioInteractorCallbackListener(phoneId){
+            @Override
+            public void onWifiParamEvent(Object object){
+                AsyncResult ar =(AsyncResult)object;
+                int resultArray[] = (int[]) ar.result;
+                Log.i(TAG,"getRadioInteractorCallbackListener->onWifiParamEvent->rtp_time_Out:" + resultArray[3]);
+                mAliveCallLose = resultArray[1];
+                mAliveCallJitter = resultArray[2];
+                mAliveCallRtt = resultArray[0];
+                IImsServiceListenerEx imsServiceListenerEx = mImsService.getImsServiceListenerEx();
+                try {
+                    if (imsServiceListenerEx != null) {
+                        Log.i(TAG,"getRadioInteractorCallbackListener->onWifiParamEvent->onMediaQualityChanged->isvideo:false"
+                                    + " mAliveCallLose:" + mAliveCallLose + " mAliveCallJitter:" + mAliveCallJitter
+                                    + " mAliveCallRtt:" + mAliveCallRtt);
+                        imsServiceListenerEx.onMediaQualityChanged(false,mAliveCallLose,mAliveCallJitter,mAliveCallRtt);
+                        if (resultArray[3] == IMS_CALLING_RTP_TIME_OUT) {
+                            Log.i(TAG,"getRadioInteractorCallbackListener->onWifiParamEvent->onRtpReceived->isvideo:false");
+                            imsServiceListenerEx.onNoRtpReceived(false);
+                        }
+                    } else {
+                        Log.i(TAG,"getRadioInteractorCallbackListener->imsServiceListenerEx is null");
+                    }
+                } catch(RemoteException e){
+                    e.printStackTrace();
+                }
+            }
+        };
+    }
+
+    public int getAliveCallLose() {
+        Log.i(TAG,"getAliveCallLose->mAliveCallLose:" + mAliveCallLose);
+        return mAliveCallLose;
+    }
+
+    public int getAliveCallJitter() {
+        Log.i(TAG,"getAliveCallJitter->mAliveCallJitter:" + mAliveCallJitter);
+        return mAliveCallJitter;
+    }
+
+    public int getAliveCallRtt() {
+        Log.i(TAG,"getAliveCallRtt->mAliveCallRtt:" + mAliveCallRtt);
+        return mAliveCallRtt;
+    }
+
+    public void updateImsFeatures(boolean volteEnable, boolean wifiEnable){
+        Log.i(TAG,"updateImsFeatures->volteEnable:" + volteEnable + " wifiEnable:" + wifiEnable);
+        try{
+            if(volteEnable){
+                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
+                        = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
+                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
+                        = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE;
+            } else {
+                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
+                        = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
+                        = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+            }
+            if(wifiEnable){
+                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI]
+                        = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
+                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
+                        = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI;
+            } else {
+                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI]
+                        = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
+                        = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+            }
+            mListener.registrationFeatureCapabilityChanged(
+                    ImsServiceClass.MMTEL,mEnabledFeatures, mDisabledFeatures);
+        } catch (RemoteException e){
+            e.printStackTrace();
+        }
+    }
+    public int getVolteRegisterState() {
+        Log.i(TAG,"getVolteRegisterState->VolteRegisterState:" + mImsServiceState.mRegState);
+        return mImsServiceState.mRegState;
+    }
+    public void terminateVolteCall(){
+        if(mImsServiceCallTracker != null){
+            mImsServiceCallTracker.terminateVolteCall();
+            Log.i(TAG," terminateVolteCall->ok");
+        }else{
+            Log.i(TAG," terminateVolteCall->mImsServiceCallTracker is null");
+        }
+    }
 }

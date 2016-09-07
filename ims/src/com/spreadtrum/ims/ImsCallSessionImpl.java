@@ -116,6 +116,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     private void updateImsCallProfileFromDC(ImsDriverCall dc){
+        if (dc == null) {
+            Log.d(TAG, "updateImsCallProfileFromDC->dc is null!");
+            return;
+        }
         if(mImsCallProfile == null) {
             mImsCallProfile = new ImsCallProfile();
         }
@@ -141,8 +145,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     public void updateFromDc(ImsDriverCall dc){
-        if(isImsSessionInvalid()){
-            Log.d(TAG, "updateFromDc->ImsSessionInvalid! dc:" + dc);
+        if(isImsSessionInvalid() || dc==null){
+            Log.d(TAG, "updateFromDc->isImsSessionInvalid: " + isImsSessionInvalid() + " dc: " + dc);
             return;
         }
         boolean knownState = mImsDriverCall != null && dc != null &&

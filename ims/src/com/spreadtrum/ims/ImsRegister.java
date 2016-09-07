@@ -231,12 +231,12 @@ public class ImsRegister {
                  + " imsRegistered:" + imsRegistered + " isPrimaryCard:" + isPrimaryCard);
         if(mCurrentImsRegistered != imsRegistered) {
             mCurrentImsRegistered = imsRegistered;
-            if(isPrimaryCard) {
-                sendVolteServiceStateChanged();
-                if (mPhone.isRadioOn() && getServiceState().getState() != ServiceState.STATE_IN_SERVICE) {
-                    log("voice regstate not in service, will call ImsNotifier to notifyServiceStateChanged");
-                    mPhone.notifyServiceStateChangedForIms(getServiceState());
-                }
+        }
+        if(isPrimaryCard) {
+            sendVolteServiceStateChanged();
+            if (mPhone.isRadioOn() && getServiceState().getState() != ServiceState.STATE_IN_SERVICE) {
+                log("voice regstate not in service, will call ImsNotifier to notifyServiceStateChanged");
+                mPhone.notifyServiceStateChangedForIms(getServiceState());
             }
         }
     }

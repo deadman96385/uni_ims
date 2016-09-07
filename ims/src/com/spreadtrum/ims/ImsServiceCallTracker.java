@@ -29,7 +29,9 @@ import com.android.ims.internal.IImsRegistrationListener;
 import com.android.ims.internal.ImsCallSession;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-
+import com.spreadtrum.ims.ImsService;
+import com.spreadtrum.ims.vowifi.VoWifiServiceImpl;
+import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.DataRouterState;
 
 public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final String TAG = ImsServiceCallTracker.class.getSimpleName();
@@ -50,6 +52,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private int mServiceId; 
     private ImsServiceImpl mImsServiceImpl;
     private ImsHandler mHandler;
+    private ImsService mImsService;//Add for data router
+    private VoWifiServiceImpl mWifiService;//Add for data router
     private Object mUpdateLock = new Object();
 
     protected int mPendingOperations;
@@ -59,12 +63,14 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private Map<String, ImsCallSessionImpl> mSessionList = new HashMap<String, ImsCallSessionImpl>();
     private List<ImsCallSessionImpl> mPendingSessionList = new CopyOnWriteArrayList<ImsCallSessionImpl>();
     private List<SessionListListener> mSessionListListeners = new CopyOnWriteArrayList<SessionListListener>();
-    public ImsServiceCallTracker(Context context,CommandsInterface ci, PendingIntent intent, int id, ImsServiceImpl service){
+    public ImsServiceCallTracker(Context context,CommandsInterface ci, PendingIntent intent, int id, ImsServiceImpl service, VoWifiServiceImpl wifiService){
         mContext = context;
         mCi = ci;
         mIncomingCallIntent = intent;
         mServiceId = id;
         mImsServiceImpl = service;
+        mImsService = (ImsService)context;//Add for data router
+        mWifiService = wifiService;//Add for data router
         mHandler = new ImsHandler(mContext.getMainLooper());
         mCi.registerForImsCallStateChanged(mHandler, EVENT_IMS_CALL_STATE_CHANGED, null);
         mCi.registerForCallStateChanged(mHandler, EVENT_CALL_STATE_CHANGE, null);
@@ -127,6 +133,16 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             intent.putExtra(ImsManager.EXTRA_IMS_UNKNOWN_CALL, unknownSession);
             intent.putExtra(ImsManager.EXTRA_IMS_UNKNOWN_CALL_ADDRESS, number);
             intent.putExtra(ImsManager.EXTRA_IMS_UNKNOWN_CALL_STATE, ImsDriverCall.stateToInt(state));
+            /*SPRD: Modify for bug586758{@*/
+            Log.i (TAG,"sendNewSessionIntent-> startVolteCall"
+                    + " mIsVowifiCall: " + mImsService.isVowifiCall()
+                    + " mIsVolteCall: " + mImsService.isVolteCall()
+                    + " isVoWifiEnabled(): " + mImsService.isVoWifiEnabled()
+                    + " isVoLTEEnabled(): " + mImsService.isVoLTEEnabled());
+            if (mImsService.isVoLTEEnabled() && !mImsService.isVowifiCall() && !mImsService.isVolteCall()) {
+                mWifiService.updateDataRouterState(DataRouterState.CALL_VOLTE);
+            }
+            /*@}*/
             mIncomingCallIntent.send(mContext, ImsManager.INCOMING_CALL_RESULT_CODE,intent);
         } catch (PendingIntent.CanceledException e) {
             Log.e(TAG, "PendingIntent Canceled " + e);
@@ -308,6 +324,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             }
         }
         removeInvalidSessionFromList(validDriverCall);
+        if(mSessionList.isEmpty()){
+            mImsServiceImpl.onImsCallEnd();
+        }
         updateConferenceState();
     }
 
@@ -371,6 +390,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             }
         }
         removeInvalidSessionFromList(validDriverCall);
+        if(mSessionList.isEmpty()){
+            mImsServiceImpl.onImsCallEnd();
+        }
     }
 
     public void addSessionToList(Integer id, ImsCallSessionImpl session) {
@@ -594,5 +616,13 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             }
         }
         return true;
+    }
+
+    public boolean isSessionListEmpty(){
+        boolean isEmpty;
+        synchronized(mSessionList) {
+            isEmpty = mSessionList.isEmpty();
+        }
+        return isEmpty;
     }
 }
