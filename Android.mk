@@ -13,6 +13,7 @@ LOCAL_PROTOC_OPTIMIZE_TYPE := micro
 res_dirs := res
 LOCAL_SRC_FILES := $(call all-subdir-java-files)
 LOCAL_RESOURCE_DIR := $(addprefix $(LOCAL_PATH)/, $(res_dirs))
+LOCAL_DEX_PREOPT := false
 include $(BUILD_PACKAGE)
 include $(call all-makefiles-under,$(LOCAL_PATH))
 
