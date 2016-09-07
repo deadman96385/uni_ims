@@ -354,7 +354,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                                 if (ar.exception instanceof CommandException) {
                                     info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
                                 }
-                                mImsUtListener.utConfigurationQueryFailed((IImsUt)ar.userObj,
+                                mImsUtListenerEx.utConfigurationQueryFailed((IImsUt)ar.userObj,
                                         msg.arg1,
                                         new ImsReasonInfo(info, 0));
                             } else {
@@ -400,7 +400,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                                 if (ar.exception instanceof CommandException) {
                                     info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
                                 }
-                                mImsUtListener.utConfigurationUpdateFailed(mIImsUt,
+                                mImsUtListenerEx.utConfigurationUpdateFailed(mIImsUt,
                                         msg.arg1,
                                         new ImsReasonInfo(info, 0));
                             } else {
