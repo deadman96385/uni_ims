@@ -7,7 +7,7 @@ LOCAL_MODULE_TAGS := optional
 
 LOCAL_SRC_FILES := $(call all-subdir-java-files)
 
-LOCAL_PACKAGE_NAME := choose_secure
+LOCAL_PACKAGE_NAME := choose_secure_sign
 LOCAL_CERTIFICATE := platform
 
 include $(BUILD_PACKAGE)
