@@ -473,6 +473,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                             mConferenceHost = false;
                             mImsConferenceState = null;
                         }
+                        mImsServiceCallTracker.onCallMergeFailed((ImsCallSessionImpl)ar.userObj);
                         if(ar.userObj != null) {
                             try{
                                 mIImsCallSessionListener.callSessionMergeFailed((IImsCallSession)ar.userObj,
@@ -1135,9 +1136,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         return (mImsDriverCall != null && mImsDriverCall.state == ImsDriverCall.State.HOLDING);
     }
 
-    /* SPRD: add for bug 552691 @{ */
-    public void setMergeState() {
-        mIsMegerAction = true;
+    /* SPRD: add for bug 552691 & bug 596461 @{ */
+    public void setMergeState(boolean isMerge) {
+        mIsMegerAction = isMerge;
     }
 
     public boolean inMergeState(){
