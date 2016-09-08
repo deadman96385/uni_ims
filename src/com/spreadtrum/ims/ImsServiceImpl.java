@@ -265,7 +265,7 @@ public class ImsServiceImpl {
                 /* SPRD: add for bug594553 @{ */
                 case EVENT_RADIO_STATE_CHANGED:
                     Log.i(TAG,"EVENT_RADIO_STATE_CHANGED->mImsRegistered:" + mImsServiceState.mImsRegistered +"  isRaidoOn=" + mPhone.isRadioOn());
-                    if (!mPhone.isRadioOn() && mImsServiceState.mImsRegistered) {
+                    if (!mPhone.isRadioOn()) {
                         mImsServiceState.mImsRegistered = false;
                         mImsService.notifyImsRegisterState(mServiceId-1, getImsRegisterState());
                     }
