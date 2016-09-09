@@ -332,8 +332,10 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
      public void updateNegotiatedCallProfile(ImsCallSessionImpl session){
          ImsCallProfile imsCallProfile = session.getCallProfile();
          VideoProfile responseProfile = new VideoProfile(VideoProfile.STATE_AUDIO_ONLY);
-         log("updateNegotiatedCallProfilee->mCallType="+imsCallProfile.mCallType);
-         if(imsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT){
+         log("updateNegotiatedCallProfilee->mCallType="+imsCallProfile.mCallType );
+         //SPRD:fix for bug 597075
+         if(imsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT
+                 && (session != null && session.mImsDriverCall != null && session.mImsDriverCall.state != ImsDriverCall.State.HOLDING)){
              mIsVideo = true;//SPRD:add for bug563112
              responseProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
              onVTConnectionEstablished(session);
