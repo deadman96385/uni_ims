@@ -1028,7 +1028,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             String qualityString = null;
             int quality = -1;
             if(index >=0){
-                qualityString = vdc.mediaDescription.substring(index+8);
+                int proIndex = vdc.mediaDescription.indexOf("\\hd=");
+                if(proIndex >= (index+8)){
+                    qualityString = vdc.mediaDescription.substring(index+8,proIndex);
+                }else{
+                    qualityString = vdc.mediaDescription.substring(index+8);
+                }
                 if(qualityString != null){
                     try {
                         quality = Integer.parseInt(qualityString);
