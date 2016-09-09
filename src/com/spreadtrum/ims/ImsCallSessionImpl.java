@@ -84,6 +84,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mConferenceHost = false;
     private boolean mIsConferenceHeld = false;
     private boolean mIsConferenceActived = false;
+    private boolean mIsTxDisable = false;
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
@@ -138,7 +139,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mImsCallProfile.setCallExtraInt(ImsCallProfile.EXTRA_CNAP,
                 ImsCallProfile.presentationToOIR(dc.namePresentation));
         if(dc.isVideoCall()){
-            mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
+            if(mIsTxDisable){
+                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_RX;
+            } else {
+                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
+            }
         } else {
             mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
         }
@@ -149,6 +154,29 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         } else {
             mImsCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_NONE;
             mLocalCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_NONE;
+        }
+    }
+
+    public void updateVideoTxState(boolean disable){
+        Log.d(TAG, "updateVideoTxState-> mIsTxDisable:" + mIsTxDisable +" ->"+disable);
+        if(mImsDriverCall == null || mIsTxDisable == disable){
+            Log.d(TAG, "updateVideoTxState-> dc:" + mImsDriverCall);
+            return;
+        }
+        mIsTxDisable = disable;
+        if(mImsDriverCall.isVideoCall()){
+            if(mIsTxDisable){
+                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_RX;
+            } else {
+                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
+            }
+        }
+        try{
+            if(mIImsCallSessionListener != null){
+                mIImsCallSessionListener.callSessionUpdated((IImsCallSession)this, mImsCallProfile);
+            }
+        } catch(RemoteException e){
+            e.printStackTrace();
         }
     }
 

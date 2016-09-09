@@ -109,7 +109,9 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         mImsCallSessionImplListner = new ImsCallSessionImplListner();
         mImsCallSessionImpl.addListener(mImsCallSessionImplListner);
         createWakeLock(mContext.getApplicationContext());
-        if(mImsCallSessionImpl.mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT){
+        if(mImsCallSessionImpl.mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT
+                || mImsCallSessionImpl.mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT_RX
+                || mImsCallSessionImpl.mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT_TX){
            onVTConnectionEstablished(mImsCallSessionImpl);
         }
         mNegotiatedCallProfile.mCallType = mImsCallSessionImpl.mImsCallProfile.mCallType;
@@ -232,6 +234,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             }
             requestImsCallProfile = null;
         }
+        mImsCallSessionImpl.updateVideoTxState(!VideoProfile.isTransmissionEnabled(toProfile.getVideoState()));
     }
 
     /**
@@ -334,7 +337,9 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
          VideoProfile responseProfile = new VideoProfile(VideoProfile.STATE_AUDIO_ONLY);
          log("updateNegotiatedCallProfilee->mCallType="+imsCallProfile.mCallType );
          //SPRD:fix for bug 597075
-         if(imsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT
+         if((imsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT
+                 || imsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT_RX
+                 || imsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT_TX)
                  && (session != null && session.mImsDriverCall != null && session.mImsDriverCall.state != ImsDriverCall.State.HOLDING)){
              mIsVideo = true;//SPRD:add for bug563112
              responseProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
