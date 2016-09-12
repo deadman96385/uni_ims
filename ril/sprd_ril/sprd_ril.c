@@ -117,6 +117,7 @@ char RIL_SP_SIM_PIN_PROPERTYS[128]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.
 #define PROP_ATTACH_ENABLE "persist.sys.attach.enable"
 #define PROP_COPS_MODE "persist.sys.cops.mode"
 #define PROP_DUALPDP_ALLOWED "persist.sys.dualpdp.allowed"
+#define PROP_CEMODE "persist.radio.cemode"
 
 //3G/4G switch in different slot
 // {for LTE}
@@ -2310,7 +2311,13 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
         }
          /* SPRD : for svlte & csfb @{ */
         if (isLte()) {
-            at_send_command(ATch_type[channelID], "AT+CEMODE=1", NULL);
+            int cemode = 0;
+            char cmd[20] = {0};
+            char prop[PROPERTY_VALUE_MAX] = { 0 };
+            property_get(PROP_CEMODE, prop, "1");
+            cemode = atoi(prop);
+            sprintf(cmd, "AT+CEMODE=%d", cemode);
+            at_send_command(ATch_type[channelID], cmd, NULL);
         }
         bool isSimCUCC = false;
         err = at_send_command_numeric(ATch_type[channelID], "AT+CIMI", &p_response);
