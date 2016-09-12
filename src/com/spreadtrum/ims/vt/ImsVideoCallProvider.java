@@ -109,9 +109,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         mImsCallSessionImplListner = new ImsCallSessionImplListner();
         mImsCallSessionImpl.addListener(mImsCallSessionImplListner);
         createWakeLock(mContext.getApplicationContext());
-        if(mImsCallSessionImpl.mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT
-                || mImsCallSessionImpl.mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT_RX
-                || mImsCallSessionImpl.mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT_TX){
+        if(isVideoCall(mImsCallSessionImpl.mImsCallProfile.mCallType)){
            onVTConnectionEstablished(mImsCallSessionImpl);
         }
         mNegotiatedCallProfile.mCallType = mImsCallSessionImpl.mImsCallProfile.mCallType;
@@ -211,12 +209,20 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             requestImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VOICE;
         }else if(VideoProfile.isTransmissionEnabled(toProfile.getVideoState())){
             requestImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
+        }else if(VideoProfile.isReceptionEnabled(toProfile.getVideoState())){
+            requestImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_RX;
         }
 
         if (mImsCallSessionImpl == null || mImsCallSessionImpl.mImsCallProfile == null) {
             log("onSendSessionModifyRequest mImsCallSessionImpl = "+ mImsCallSessionImpl);
             log("onSendSessionModifyRequest mImsCallProfile = "+ mImsCallSessionImpl.mImsCallProfile);
             return ;
+        }
+        mImsCallSessionImpl.updateVideoTxState(!VideoProfile.isTransmissionEnabled(toProfile.getVideoState()));
+        if(requestImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT_RX ||
+                (isVideoCall(mImsCallSessionImpl.mImsCallProfile.mCallType) && isVideoCall(requestImsCallProfile.mCallType))){
+            log("onSendSessionModifyRequest is pause or resume request.");
+            return;
         }
 
         if(requestImsCallProfile.mCallType != mImsCallSessionImpl.mImsCallProfile.mCallType
@@ -234,7 +240,6 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             }
             requestImsCallProfile = null;
         }
-        mImsCallSessionImpl.updateVideoTxState(!VideoProfile.isTransmissionEnabled(toProfile.getVideoState()));
     }
 
     /**
@@ -337,9 +342,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
          VideoProfile responseProfile = new VideoProfile(VideoProfile.STATE_AUDIO_ONLY);
          log("updateNegotiatedCallProfilee->mCallType="+imsCallProfile.mCallType );
          //SPRD:fix for bug 597075
-         if((imsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT
-                 || imsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT_RX
-                 || imsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT_TX)
+         if(isVideoCall(imsCallProfile.mCallType)
                  && (session != null && session.mImsDriverCall != null && session.mImsDriverCall.state != ImsDriverCall.State.HOLDING)){
              mIsVideo = true;//SPRD:add for bug563112
              responseProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
@@ -423,8 +426,10 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                     powerManager.wakeUp(SystemClock.uptimeMillis(), "android.phone:WAKEUP");
                 }
 
-                VideoProfile requstProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
-                receiveSessionModifyRequest(requstProfile);
+                VideoProfile mLoacalResponseProfile = new VideoProfile(VideoProfile.STATE_TX_ENABLED);
+                VideoProfile mLoacalRequstProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
+                receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+                        mLoacalRequstProfile,mLoacalResponseProfile);
                 /* @} */
             }else if(session.mImsDriverCall != null && session.mImsDriverCall.isRequestDowngradeToVoice()){
                 if(mVolteMediaDegradeDialog != null){
@@ -454,5 +459,11 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             Toast.makeText(mContext.getApplicationContext(),
                     mContext.getString(R.string.remote_reject_request), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    public boolean isVideoCall(int calltype){
+        return calltype == ImsCallProfile.CALL_TYPE_VT
+                || calltype == ImsCallProfile.CALL_TYPE_VT_RX
+                || calltype == ImsCallProfile.CALL_TYPE_VT_TX;
     }
 }
