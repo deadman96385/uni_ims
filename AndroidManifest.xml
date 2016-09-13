@@ -9,7 +9,7 @@
         android:allowBackup="false"
         android:process="com.android.phone" >
         <receiver android:name=".ImsBroadcastReceiver" >
-            <intent-filter>
+            <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.SIM_STATE_CHANGED" />
             </intent-filter>
         </receiver>
