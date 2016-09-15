@@ -519,17 +519,17 @@ static void queryAllActivePDN(int channelID) {
          if (err < 0){
              pdns->nCid = -1;
          }
-
          err = at_tok_nextint(&line, &pdns->nCid);
          if (err < 0){
              pdns->nCid= -1;
          }
-         RILLOGI("queryAllActivePDN CGACT? cid= %d", pdns->nCid);
+         if (pdns->nCid > MAX_PDP) {
+             continue;
+         }
          err = at_tok_nextint(&line, &active);
          if (err < 0 || active == 0){
              pdns->nCid = -1;
          }
-         RILLOGI("queryAllActivePDN CGACT? active= %d", active);
          if(active == 1){
              activePDN++;
          }
@@ -549,14 +549,12 @@ static void queryAllActivePDN(int channelID) {
         char *apn;
         err = at_tok_start(&line);
         if (err < 0) {
-            RILLOGI("queryAllActivePDN CGDCONT? read line failed!");
         	continue;
         }
 
         err = at_tok_nextint(&line, &cid);
 
-        if ((err < 0) || (cid != pdn[cid-1].nCid)) {
-            RILLOGI("queryAllActivePDN CGDCONT? read cid failed!");
+        if ((err < 0) || (cid != pdn[cid-1].nCid) || cid > MAX_PDP) {
             continue;
         }
 
@@ -1102,11 +1100,6 @@ static void deactivateDataConnection(int channelID, void *data, size_t datalen, 
         if (in4G) {
             queryAllActivePDN(channelID);
             if (activePDN == 1) {
-                for (i = 0; i < 11; i++) {
-                    if ((pdn[i].nCid == (i + 1)) && (pdn[i].nCid != cid)) {
-                        RILLOGD("deactivateDataConnection: cid(%d) is not the last one when there is only one(%d)!",cid, pdn[i].nCid);
-                    }
-                }
                 snprintf(cmd, sizeof(cmd), "AT+CGACT=0,%d,%d", cid, 0);
                 RILLOGD("deactivateLastDataConnection cmd = %s", cmd);
                 err = at_send_command(ATch_type[channelID], cmd, &p_response);
@@ -10500,8 +10493,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         char cmd[128] = { 0 };
         char qos_state[PROPERTY_VALUE_MAX] = { 0 };
         int initial_attach_id = 1;
+        bool IsLte = isLte();
         p_response = NULL;
-        int need_ipchange = 0;
+        int isApnInfoChange = 0;
         if (initialAttachApn == NULL) {
             initialAttachApn = (RIL_InitialAttachApn *) malloc(
                     sizeof(RIL_InitialAttachApn));
@@ -10510,55 +10504,62 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         if (data != NULL) {
             RIL_InitialAttachApn *pIAApn = (RIL_InitialAttachApn *) data;
             if (pIAApn->apn != NULL) {
-                if ((initialAttachApn->apn != NULL)
-                        && (strcmp(initialAttachApn->apn, pIAApn->apn) == 0)) {
-                    need_ipchange = 1;
-                    free(initialAttachApn->apn);
+                if (initialAttachApn->apn != NULL &&
+                    strcmp(initialAttachApn->apn, pIAApn->apn) != 0) {
+                    isApnInfoChange++;
                 }
+                free(initialAttachApn->apn);
                 initialAttachApn->apn = (char *) malloc(
                         strlen(pIAApn->apn) + 1);
                 strcpy(initialAttachApn->apn, pIAApn->apn);
             }
 
             if (pIAApn->protocol != NULL) {
-                if (need_ipchange && (initialAttachApn->protocol != NULL)
-                        && strcmp(initialAttachApn->protocol,
-                                pIAApn->protocol)) {
-                    need_ipchange = 2;
-                    free(initialAttachApn->protocol);
+                if (initialAttachApn->protocol != NULL &&
+                    strcmp(initialAttachApn->protocol, pIAApn->protocol) != 0) {
+                    isApnInfoChange++;
                 }
+                free(initialAttachApn->protocol);
                 initialAttachApn->protocol = (char *) malloc(
                         strlen(pIAApn->protocol) + 1);
-
                 strcpy(initialAttachApn->protocol, pIAApn->protocol);
             }
 
             initialAttachApn->authtype = pIAApn->authtype;
 
             if (pIAApn->username != NULL) {
+                free(initialAttachApn->username);
                 initialAttachApn->username = (char *) malloc(
                         strlen(pIAApn->username) + 1);
                 strcpy(initialAttachApn->username, pIAApn->username);
             }
 
             if (pIAApn->password != NULL) {
+                free(initialAttachApn->password);
                 initialAttachApn->password = (char *) malloc(
                         strlen(pIAApn->password) + 1);
                 strcpy(initialAttachApn->password, pIAApn->password);
             }
         }
 
-        RILLOGD("IMS_INITIAL_ATTACH_APN apn = %s",
-                initialAttachApn->apn);
-        RILLOGD("IMS_INITIAL_ATTACH_APN protocol = %s",
-                initialAttachApn->protocol);
-        RILLOGD("IMS_INITIAL_ATTACH_APN authtype = %d",
-                initialAttachApn->authtype);
-        RILLOGD("IMS_INITIAL_ATTACH_APN username = %s",
-                initialAttachApn->username);
-        RILLOGD("IMS_INITIAL_ATTACH_APN password = %s",
-                initialAttachApn->password);
+        RILLOGD("INITIAL_ATTACH_APN apn = %s, protocol = %s",
+                initialAttachApn->apn, initialAttachApn->protocol);
 
+        if (IsLte && s_testmode != 10 && isApnInfoChange == 0) {
+            char strApnName[128] = {0};
+            int index = initial_attach_id - 1;
+            queryAllActivePDN(channelID);
+            char *apn = getPDNAPN(index);
+            if (getPDNCid(index) == 1 && apn != NULL) {
+                strncpy(strApnName, apn, checkCmpAnchor(apn));
+                strApnName[strlen(strApnName)] = '\0';
+                if ((strcasecmp(apn, initialAttachApn->apn) != 0 &&
+                     strcasecmp(strApnName, initialAttachApn->apn) != 0)) {
+                     RILLOGD("INITIAL_ATTACH_APN apn had change");
+                     isApnInfoChange++;
+                }
+            }
+        }
         snprintf(cmd, sizeof(cmd), "AT+CGDCONT=%d,\"%s\",\"%s\",\"\",0,0",
                 initial_attach_id, initialAttachApn->protocol,
                 initialAttachApn->apn);
@@ -10577,7 +10578,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     initial_attach_id, trafficclass);
             err = at_send_command(ATch_type[channelID], cmd, NULL);
         }
-        if (need_ipchange == 2) {
+        if (isApnInfoChange != 0) {
             at_send_command(ATch_type[channelID], "AT+SPIPTYPECHANGE=1", NULL);
         }
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
