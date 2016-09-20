@@ -11739,11 +11739,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             char cmd[30] = {0};
             p_response = NULL;
             int callId = ((int *)data)[0];
-            int isVideo = ((int *)data)[1];
+            int requestId = ((int *)data)[1];
+            int isVideo = ((int *)data)[2];
             if(isVideo) {
-                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,2,\"m=audio\"", callId);
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,%d,\"m=audio\"",callId, requestId);
             } else {
-                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,2,\"m=video\"", callId);
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,%d,\"m=video\"",callId, requestId);
             }
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0) {

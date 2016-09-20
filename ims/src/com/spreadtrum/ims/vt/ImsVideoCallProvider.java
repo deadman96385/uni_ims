@@ -190,6 +190,19 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         log("onSendSessionModifyRequest->fromProfile:" + fromProfile + "  toProfile ="
                 + toProfile);
 
+         if((fromProfile == null || toProfile == null)){
+              return;
+          }else if(fromProfile.getVideoState() == toProfile.getVideoState()){
+              Message message = new Message();
+              message.arg1 = Integer.parseInt(mImsCallSessionImpl.getCallId());
+              message.arg2 = 7;
+              mCi.requestVolteCallMediaChange(false,message);
+          }else if(VideoProfile.isReceptionEnabled(toProfile.getVideoState())){
+              Message message = new Message();
+              message.arg1 = Integer.parseInt(mImsCallSessionImpl.getCallId());
+              message.arg2 = 6;
+              mCi.requestVolteCallMediaChange(false,message);
+          }
         if ((fromProfile == null || toProfile == null)
                 || (fromProfile.getVideoState() == toProfile.getVideoState())) {
             log("onSendSessionModifyRequest->fromProfile = toProfile");
@@ -215,6 +228,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             /* SPRD: add for bug533562 @{ */
             Message message = new Message();
             message.arg1 = Integer.parseInt(mImsCallSessionImpl.getCallId());
+            message.arg2 = 2;
             /* @} */
             if(requestImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT){
                mCi.requestVolteCallMediaChange(false,message);
