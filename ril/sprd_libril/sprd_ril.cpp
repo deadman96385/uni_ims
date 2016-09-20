@@ -5028,6 +5028,8 @@ static void processCommandsCallback(int fd, short flags, void *param) {
 
             if(s_multiSimMode) {
                 if(pCI->requestNumber == RIL_REQUEST_SEND_SMS
+                        || pCI->requestNumber == RIL_REQUEST_SEND_SMS_EXPECT_MORE
+                        || pCI->requestNumber == RIL_REQUEST_IMS_SEND_SMS
                         || pCI->requestNumber == RIL_REQUEST_QUERY_FACILITY_LOCK
                         || pCI->requestNumber == RIL_REQUEST_SET_FACILITY_LOCK
                         || pCI->requestNumber == RIL_REQUEST_QUERY_CALL_FORWARD_STATUS
