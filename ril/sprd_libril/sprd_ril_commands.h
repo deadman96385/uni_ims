@@ -255,6 +255,7 @@
     ,{RIL_EXT_REQUEST_QUERY_LTE_CTCC_SINR, dispatchVoid, responseString}
     ,{RIL_EXT_REQUEST_QUERY_LTE_CTCC_SIMTYPE, dispatchVoid, responseInts}
     ,{RIL_EXT_REQUEST_QUERY_LTE_CTCC_MMEI, dispatchVoid, responseString}
+    ,{RIL_EXT_REQUEST_QUERY_DCE_SOFTWARE_VERSION, dispatchVoid, responseString}
 #endif
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
