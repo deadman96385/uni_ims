@@ -155,6 +155,17 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             mImsCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_NONE;
             mLocalCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_NONE;
         }
+        /* SPRD: add for new feature for bug 602040 @{ */
+        if((dc!= null) && (dc.mediaDescription != null) && (dc.mediaDescription.contains("cap:"))){
+            String media = dc.mediaDescription.substring(dc.mediaDescription.indexOf("cap:"));
+            if(media != null && media.contains("video")){
+                mRemoteCallProfile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VT);
+            }else{
+                mRemoteCallProfile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VOICE);
+            }
+            Log.i(TAG,"vdc.mediaDescription: " + dc.mediaDescription + " mRemoteCallProfile:"+mRemoteCallProfile);
+        }
+        /* @}*/
     }
 
     public void updateVideoTxState(boolean disable){

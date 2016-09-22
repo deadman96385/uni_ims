@@ -293,7 +293,7 @@ public class  ImsDriverCall extends DriverCall{
             hasUpdate = true;
         }
         boolean oldVideoMode = isVoice;
-        boolean videoMode = mediaDescription != null && mediaDescription.contains("video")
+        boolean videoMode = mediaDescription != null && mediaDescription.contains("video") && !dc.mediaDescription.contains("cap:")
                 && ((negStatusPresent == PRESENTATION_VALID && negStatus == PRESENTATION_VALID)
                         ||(negStatusPresent == PRESENTATION_VALID && negStatus == PRESENTATION_REQUEST && state == State.INCOMING)
                         ||(negStatusPresent == PRESENTATION_VALID && negStatus == PRESENTATION_ACCEPT)

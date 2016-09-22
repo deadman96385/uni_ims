@@ -2225,7 +2225,10 @@ public final class ImsRIL {
             csMode = p.readInt();
             dc.csMode = csMode;
             dc.state = ImsDriverCall.stateFromCLCCS(p.readInt());
-            boolean videoMediaPresent = dc.mediaDescription != null && dc.mediaDescription.contains("video");
+            boolean videoMediaPresent = false;
+            if(dc.mediaDescription != null && dc.mediaDescription.contains("video") && !dc.mediaDescription.contains("cap:")){
+               videoMediaPresent = true;
+            }
             boolean videoMode = videoMediaPresent &&
                     ((dc.negStatusPresent == 1 && dc.negStatus == 1)
                             ||(dc.negStatusPresent == 1 && dc.negStatus == 2 && dc.state == ImsDriverCall.State.INCOMING)
