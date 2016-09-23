@@ -420,7 +420,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 msg.obj = mCi;
                 mVTHandler.removeMessages(EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT);
                 mVTHandler.sendMessageDelayed(msg, 10000);
-                /* SPRD: add for bug543928@{ */
+                /* SPRD: add for bug543928 and bug601503@{ */
                 PowerManager powerManager = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
                 if(powerManager != null && !powerManager.isScreenOn()){
                     powerManager.wakeUp(SystemClock.uptimeMillis(), "android.phone:WAKEUP");
@@ -428,6 +428,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
 
                 VideoProfile mLoacalResponseProfile = new VideoProfile(VideoProfile.STATE_TX_ENABLED);
                 VideoProfile mLoacalRequstProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
+                receiveSessionModifyRequest(mLoacalRequstProfile);
                 receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
                         mLoacalRequstProfile,mLoacalResponseProfile);
                 /* @} */
