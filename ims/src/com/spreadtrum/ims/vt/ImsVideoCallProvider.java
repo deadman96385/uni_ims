@@ -403,6 +403,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 if(!TelephonyManager.isSupportVT()){
                     Log.d(TAG, "reject change voice to video because disabled vt on pikeL");
                     mCi.responseVolteCallMediaChange(false, mCallIdMessage);
+                    return;
                 }/*@}*/
                 else{
                     if(ImsCmccUtils.getInstance(mContext).rejectMediaChange(mImsCallSessionImpl,mCi,mCallIdMessage)){
