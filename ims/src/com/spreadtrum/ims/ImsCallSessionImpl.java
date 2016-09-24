@@ -1161,6 +1161,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
     /* @} */
 
+    //SPRD: add for 586269
+    public void setRemoteVideoProfile(ImsCallProfile profile){
+        mRemoteCallProfile = profile;
+    }
+
     //SPRD: add for bug579560
     public boolean isHasBackgroundCallAndActiveCall(){
         Log.i(TAG, "isHasBackgroundCallAndActiveCall()");

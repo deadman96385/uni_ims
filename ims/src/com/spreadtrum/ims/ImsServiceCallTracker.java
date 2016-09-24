@@ -43,6 +43,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final int EVENT_IMS_CALL_STATE_CHANGED        = 5;
     private static final int EVENT_POLL_CURRENT_CALLS            = 6;
     private static final int EVENT_POLL_CURRENT_CALLS_RESULT     = 7;
+    private static final int EVENT_REMOTE_VIDEO_CAP              = 8;//SPRD: add for bug586269
 
     private PendingIntent mIncomingCallIntent;
     private CommandsInterface mCi;
@@ -68,6 +69,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         mHandler = new ImsHandler(mContext.getMainLooper());
         mCi.registerForImsCallStateChanged(mHandler, EVENT_IMS_CALL_STATE_CHANGED, null);
         mCi.registerForCallStateChanged(mHandler, EVENT_CALL_STATE_CHANGE, null);
+        mCi.registerForRemoteVideoCap(mHandler,EVENT_REMOTE_VIDEO_CAP,null);//SPRD: add for 586269
     }
 
     /**
@@ -82,6 +84,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             AsyncResult ar = (AsyncResult) msg.obj;
             Log.i(TAG, "handleMessage: "+msg.what);
             switch (msg.what) {
+                case EVENT_REMOTE_VIDEO_CAP: //SPRD: add for bug586269  550
+                    notifyRemoteVideoCapForMedia((AsyncResult) msg.obj);
+                    break;
                 case EVENT_CALL_STATE_CHANGE:
                     removeMessages(EVENT_POLL_CURRENT_CALLS);
                     sendEmptyMessageDelayed(EVENT_POLL_CURRENT_CALLS,500);
@@ -595,6 +600,32 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         }
         return true;
     }
+    /* SPRD:add for bug586269 remote video capbility report@{ */
+    public void notifyRemoteVideoCapForMedia(AsyncResult ar) {
+        if (ar != null && ar.result != null) {
+            String result = (String) ar.result;
+            int index = Integer.parseInt(result.substring(0, result.indexOf(",")));
+            boolean isVideo = result.contains("video");
+            Log.d(TAG, "notifyRemoteVideoCapForMedia result = " + result + " index=" + index
+                    + " isvideo=" + isVideo);
+
+            synchronized (mSessionList) {
+                ImsCallProfile profile;
+                ImsCallSessionImpl callSession = mSessionList.get(Integer.toString(index));
+                if (callSession != null) {
+                    Log.d(TAG, "notifyRemoteVideoCapForMedia find callSession : " + callSession);
+                    if (isVideo) {
+                        profile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL,
+                                ImsCallProfile.CALL_TYPE_VT);
+                    } else {
+                        profile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL,
+                                ImsCallProfile.CALL_TYPE_VOICE);
+                    }
+                    callSession.setRemoteVideoProfile(profile);
+                }
+            }
+        }
+    }/*@}*/
 
   //SPRD: add for bug579560
     public boolean isHasBackgroundCallAndActiveCall(){
