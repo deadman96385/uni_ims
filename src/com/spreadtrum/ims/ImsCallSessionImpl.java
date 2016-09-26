@@ -1394,7 +1394,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         try{
             if (mIImsCallSessionListener != null){
                 mIImsCallSessionListener.callSessionTerminated((IImsCallSession)this,
-                        new ImsReasonInfo(mDisconnCause, 0));
+                        new ImsReasonInfo(ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED, 0));
             }
             Log.d(TAG, "disconnectForConferenceMember->this is 3 way conference member.");
         } catch(RemoteException e){
