@@ -145,6 +145,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
             }
         } else {
+            mIsTxDisable = false;//SPRD:modify for bug602883
             mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
         }
         //SPRD:update ImsCallProfile according to the CLCCS fix for bug 585690
