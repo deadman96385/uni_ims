@@ -5054,6 +5054,7 @@ static void processCommandsCallback(int fd, short flags, void *param) {
                     pthread_cond_signal(&s_dispatchCond);
                     pthread_mutex_unlock(&s_dispatchMutex);
                 } else if(pCI->requestNumber == RIL_REQUEST_DIAL
+                        || pCI->requestNumber == RIL_REQUEST_RADIO_POWER
                         || pCI->requestNumber == RIL_REQUEST_DTMF
                         || pCI->requestNumber == RIL_REQUEST_DTMF_START
                         || pCI->requestNumber == RIL_REQUEST_DTMF_STOP
