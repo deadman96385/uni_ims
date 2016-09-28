@@ -214,6 +214,7 @@ typedef struct
 
     int32 bitrate;
     BOOLEAN ischangebitrate;
+    int32    yuv_format;
 } MMEncIn;
 
 // Encoder output structure

@@ -540,6 +540,7 @@ MMEncRet H264EncStrmEncode(AVCHandle *avcHandle, MMEncIn *pInput, MMEncOut *pOut
     MMEncRet ret = MMENC_OK;
 
     vo->error_flag = 0;
+    vo->yuv_format = pInput->yuv_format;
 
     anti_shark_ptr->input_width = pInput->org_img_width;
     anti_shark_ptr->input_height = pInput->org_img_height;
