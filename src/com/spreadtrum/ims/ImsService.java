@@ -54,7 +54,8 @@ public class ImsService extends Service {
     private static final int EVENT = 100;
 
     private Map<Integer, ImsServiceImpl> mImsServiceImplMap = new HashMap<Integer, ImsServiceImpl>();
-    private List<IImsRegisterListener>  mImsRegisterListeners = new CopyOnWriteArrayList<IImsRegisterListener>();
+
+    private HashMap<IBinder, IImsRegisterListener> mImsRegisterListeners = new HashMap<IBinder, IImsRegisterListener>();
  
     private int mRequestId = -1;
     private Object mRequestLock = new Object();
@@ -433,10 +434,12 @@ public class ImsService extends Service {
         public void registerforImsRegisterStateChanged(IImsRegisterListener listener){
             if (listener == null) {
                 Log.w(TAG,"registerforImsRegisterStateChanged->Listener is null!");
+                Thread.dumpStack();
+                return;
             }
             synchronized (mImsRegisterListeners) {
-                if (!mImsRegisterListeners.contains(listener)) {
-                    mImsRegisterListeners.add(listener);
+                if (!mImsRegisterListeners.keySet().contains(listener.asBinder())) {
+                    mImsRegisterListeners.put(listener.asBinder(), listener);
                     notifyListenerWhenRegister(listener);
                 } else {
                     Log.w(TAG,"Listener already add :" + listener);
@@ -451,11 +454,13 @@ public class ImsService extends Service {
         public void unregisterforImsRegisterStateChanged(IImsRegisterListener listener){
             if (listener == null) {
                 Log.w(TAG,"unregisterforImsRegisterStateChanged->Listener is null!");
+                Thread.dumpStack();
+                return;
             }
 
             synchronized (mImsRegisterListeners) {
-                if (mImsRegisterListeners.contains(listener)) {
-                    mImsRegisterListeners.remove(listener);
+                if (mImsRegisterListeners.keySet().contains(listener.asBinder())) {
+                    mImsRegisterListeners.remove(listener.asBinder());
                 } else {
                     Log.w(TAG,"Listener not find " + listener);
                 }
@@ -495,7 +500,7 @@ public class ImsService extends Service {
         updateImsRegisterState();
         synchronized (mImsRegisterListeners) {
             try{
-                for(IImsRegisterListener l : mImsRegisterListeners) {
+                for(IImsRegisterListener l : mImsRegisterListeners.values()) {
                     l.imsRegisterStateChange(mIsVoLteRegistered);
                 }
             } catch(RemoteException e){
@@ -508,7 +513,7 @@ public class ImsService extends Service {
         updateImsRegisterState();
         synchronized (mImsRegisterListeners) {
             try{
-                for(IImsRegisterListener l : mImsRegisterListeners) {
+                for(IImsRegisterListener l : mImsRegisterListeners.values()) {
                     l.imsRegisterStateChange(mIsVoLteRegistered);
                 }
             } catch(RemoteException e){
