@@ -457,7 +457,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     public int queryCallForward(int condition, String number){
         int id = getReuestId();
         mCi.queryCallForwardStatus(condition,
-                CommandsInterface.SERVICE_CLASS_NONE,number,
+                CommandsInterface.SERVICE_CLASS_VOICE,number,
                 mHandler.obtainMessage(ACTION_QUERY_CF, id, 0, this));
         return id;
     }
