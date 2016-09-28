@@ -123,14 +123,8 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     }
 
     public void onVTConnectionDisconnected(ImsCallSessionImpl mImsCallSessionImpl){
-        /* SPRD: fix for bug547597 and for bug588497@{ */
-        if (mLocalRequestProfile != null) {
-            mIsVideo = false;
-            int result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_FAIL;
-            VideoProfile responseProfile = new VideoProfile(VideoProfile.STATE_AUDIO_ONLY);
-            receiveSessionModifyResponse(result, mLocalRequestProfile, responseProfile);
-            mLocalRequestProfile = null;
-        }
+        /* SPRD: fix for bug588497@{ */
+        mIsVideo = false;
         /* @} */
         mHandler.obtainMessage(mVTManagerProxy.EVENT_ON_VT_DISCONNECT, mImsCallSessionImpl).sendToTarget();
         releaseWakeLock();
@@ -310,6 +304,14 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         @Override
         public void onDisconnected(ImsCallSessionImpl session){
             log("onDisconnected->session="+session);
+            /* SPRD: fix for bug547597@{ */
+            if (mLocalRequestProfile != null) {
+                int result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_FAIL;
+                VideoProfile responseProfile = new VideoProfile(VideoProfile.STATE_AUDIO_ONLY);
+                receiveSessionModifyResponse(result, mLocalRequestProfile, responseProfile);
+                mLocalRequestProfile = null;
+            }
+            /* @} */
             onVTConnectionDisconnected(session);
             mImsCallSessionImpl.removeListener(mImsCallSessionImplListner);
             /*add for bug593544 @{*/
@@ -349,7 +351,9 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
          }
          if (mLocalRequestProfile != null) {
              int result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_FAIL;
-             if(mImsCallSessionImpl.getLocalRequestProfile().mCallType == imsCallProfile.mCallType){
+             if(mImsCallSessionImpl.getLocalRequestProfile().mCallType == imsCallProfile.mCallType
+                     || ((mImsCallSessionImpl.getLocalRequestProfile().mCallType == ImsCallProfile.CALL_TYPE_VOICE)
+                             && (imsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO))){
                  result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS;
              }
              receiveSessionModifyResponse(result, mLocalRequestProfile, responseProfile);
