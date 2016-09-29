@@ -143,6 +143,9 @@ void setCameraFPS(CameraParameters *ptr)
     ALOGI("setCameraFPS, fps range %d -> %d",fpsRangeList[i].lo, fpsRangeList[i].hi);
     if(fpsRangeList[i].hi <= fps*1000)
     {
+      char str_fps[20];
+      snprintf(str_fps, sizeof(str_fps), "%d", fps);
+      ptr->set("preview-frame-rate", str_fps);
       char str[20];
       snprintf(str, sizeof(str), "%d,%d",fpsRangeList[i].lo,fpsRangeList[i].hi);
       ptr->set("preview-fps-range", str);
