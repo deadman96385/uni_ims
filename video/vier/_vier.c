@@ -414,7 +414,7 @@ VIER_Socket* _VIER_getSocketById(
 {
     vint idx;
 
-    if (NULL == vierObj_ptr) {
+    if (NULL == vierObj_ptr || socketId == -1) {
         return (NULL);
     }
 
