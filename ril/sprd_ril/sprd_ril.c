@@ -199,21 +199,14 @@ static bool isSrvccStrated();
 static void addSrvccPendingOperate(char *cmd);
 static void excuteSrvccPendingOperate();
 
-#define SIM_ECC_LIST_PROPERTY "ril.ecclist"
-
-typedef struct Ecc_record{
-    char * number;
-    int category;
-    struct Ecc_record *next;
-    struct Ecc_record *prev;
-}Ecc_Record;
-Ecc_Record * s_sim_ecclist = NULL;
-static pthread_mutex_t s_ecclist_mutex = PTHREAD_MUTEX_INITIALIZER;
+#define ECC_LIST_PROP "ril.ecclist"
+#define ECC_LIST_REAL_PROP "ril.ecclist.real"
+#define ECC_LIST_FAKE_PROP "ril.ecclist.fake"
 
 static int getEccRecordCategory(char *number);
 static void reopenSimCardAndProtocolStack(void *param);
 static void dialEmergencyWhileCallFailed(void *param);
-static void addEmergencyNumbertoEccList(Ecc_Record *record);
+
 static void redialWhileCallFailed(void *param);
 static void requestCallForwardUri(int channelID, RIL_CallForwardInfoUri *data, size_t datalen, RIL_Token t);
 static void requestInitialGroupCall(int channelID, void *data, size_t datalen, RIL_Token t);
@@ -4410,49 +4403,142 @@ static void requestGetCurrentCallsVoLTE(int channelID, void *data, size_t datale
     return;
 }
 
-int isEccNumber(int s_sim_num, char *dial_number) {
-    char eccNumberList[PROPERTY_VALUE_MAX] = { 0 };
-    char *tmpPtr;
+int isEccNumber(char *dialNumber, int *catgry) {
+    char propName[PROPERTY_VALUE_MAX] = {0};
+    char eccNumberList[PROPERTY_VALUE_MAX] = {0};
+    char *tmpList = NULL;
     char *tmpNumber = NULL;
+    char *outer_ptr = NULL;
+    char *inner_ptr = NULL;
     char ecc3GPP_NoSIM[] = "112,911,000,08,110,118,119,999";
     char ecc3GPP_SIM[] = "112,911";
-    int eccNumber = 0;
+    int numberExist = 0;
+    int ret = 0;
+    extern int s_sim_num;
 
-    if (s_sim_num == 0) {
-        property_get("ril.ecclist", eccNumberList, "0");
-    } else {
-        char eccListProperty[64] = { 0 };
-        snprintf(eccListProperty, sizeof(eccListProperty), "ril.ecclist%d", s_sim_num);
-        property_get(eccListProperty, eccNumberList, "0");
+    strncpy(propName, ECC_LIST_FAKE_PROP, sizeof(ECC_LIST_FAKE_PROP));
+    if (s_sim_num != 0) {
+        snprintf(propName, sizeof(propName), "ril.ecclist.fake%d", s_sim_num);
     }
-    RILLOGD("dial_number=%s, eccNumberList=%s", dial_number, eccNumberList);
-    if (strcmp(eccNumberList, "0") == 0) {
-        property_get("ro.ril.ecclist", eccNumberList, "0");
+    property_get(propName, eccNumberList, "");
+    if (strcmp(eccNumberList, "") != 0) {
+        tmpList = eccNumberList;
+        while ((tmpNumber = strtok_r(tmpList, ",", &outer_ptr)) != NULL) {
+            if (strcmp(tmpNumber, dialNumber) == 0) {
+                numberExist = 1;
+                return 0;
+            }
+            tmpList = NULL;
+        }
     }
-    RILLOGD("dial_number=%s, eccNumberList=%s", dial_number, eccNumberList);
-    tmpNumber = eccNumberList;
-    if (strcmp(eccNumberList, "0") == 0) {
+
+    strncpy(propName, ECC_LIST_REAL_PROP, sizeof(ECC_LIST_REAL_PROP));
+    if (s_sim_num != 0) {
+        snprintf(propName, sizeof(propName), "ril.ecclist.real%d", s_sim_num);
+    }
+    property_get(propName, eccNumberList, "");
+    if (strcmp(eccNumberList, "") != 0) {
+        tmpList = eccNumberList;
+        while ((tmpNumber = strtok_r(tmpList, ",", &outer_ptr)) != NULL) {
+            tmpList = tmpNumber;
+            while ((tmpNumber = strtok_r(tmpList, "@", &inner_ptr)) != NULL) {
+                if (strcmp(tmpNumber, dialNumber) == 0) {
+                    numberExist = 1;
+                    if (inner_ptr != NULL) {
+                        *catgry = atoi(inner_ptr);
+                    }
+                    break;
+                }
+                tmpList = NULL;
+            }
+            if (numberExist) {
+                break;
+            }
+            tmpList = NULL;
+        }
+        return numberExist;
+    }
+
+    property_get("ro.ril.ecclist", eccNumberList, "");
+    tmpList = eccNumberList;
+    if (strcmp(eccNumberList, "") == 0) {
         if (hasSimInner(s_sim_num) == 1) {
-            tmpNumber = ecc3GPP_SIM;
+            tmpList = ecc3GPP_SIM;
         } else {
-            tmpNumber = ecc3GPP_NoSIM;
+            tmpList = ecc3GPP_NoSIM;
         }
     }
-    while (tmpNumber != NULL) {
-        tmpPtr = strchr(tmpNumber, ',');
-        if (tmpPtr != NULL) {
-            *tmpPtr = '\0';
-        }
-        if (strcmp(tmpNumber, dial_number) == 0) {
-            eccNumber = 1;
+    while ((tmpNumber = strtok_r(tmpList, ",", &outer_ptr)) != NULL) {
+        if (strcmp(tmpNumber, dialNumber) == 0) {
+            numberExist = 1;
             break;
-        } else if (tmpPtr == NULL) {
-            break;
-        } else {
-            tmpNumber = tmpPtr + 1;
         }
+        tmpList = NULL;
     }
-    return eccNumber;
+    return numberExist;
+}
+
+void queryEccNetworkList() {
+    char *number = NULL;
+    char eccNetList[256] = {0};
+    int category;
+    int channelID;
+    int err, cen2Num = 1;
+
+    ATResponse *p_response = NULL;
+    ATLine *p_cur = NULL;
+
+    channelID = getChannel();
+    err = at_send_command_multiline(ATch_type[channelID], "AT+CEN?", "+CEN",
+                                    &p_response);
+    /* AT+CEN? Return:
+     * +CEN1:<reporting >,<mcc>,<mnc>
+     * +CEN2:<cat>,<number>
+     * +CEN2:<cat>,<number>
+     * ...
+     */
+    if (err < 0 || p_response->success == 0) {
+        RLOGE("queryEccNetworkList fail!");
+        goto done;
+    }
+
+    for (p_cur = p_response->p_intermediates->p_next; p_cur != NULL;
+         p_cur = p_cur->p_next, cen2Num++) {
+        char *line = p_cur->line;
+
+        err = at_tok_start(&line);
+        if (err < 0) goto done;
+
+        err = at_tok_nextint(&line, &category);
+        if (err < 0) {
+            RLOGE("%s get cat fail", p_cur->line);
+            goto done;
+        }
+
+        err = at_tok_nextstr(&line, &number);
+        if (err < 0) {
+            RLOGE("%s get number fail", p_cur->line);
+            goto done;
+        }
+
+        if (cen2Num == 1) {
+            snprintf(eccNetList, sizeof(eccNetList), "%s@%d", number,
+                      category);
+        } else {
+            snprintf(eccNetList, sizeof(eccNetList), "%s,%s@%d", eccNetList,
+                      number, category);
+        }
+        RLOGD("queryEccNetworkList category:%d, number:%s, eccNetList:%s",
+               category, number, eccNetList);
+    }
+    if (strlen(eccNetList) > 0) {
+        RIL_onUnsolicitedResponse(RIL_EXT_UNSOL_ECC_NETWORKLIST_CHANGED,
+                eccNetList, strlen(eccNetList) + 1);
+    }
+
+done:
+    at_response_free(p_response);
+    putChannel(channelID);
 }
 
 static void requestDial(int channelID, void *data, size_t datalen, RIL_Token t)
@@ -4502,8 +4588,8 @@ error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
 }
 
-static void requestEccDial(int channelID, void *data, size_t datalen, RIL_Token t)
-{
+static void requestEccDial(int channelID, void *data, size_t datalen,
+                              RIL_Token t, int catgry) {
     RIL_Dial *p_dial = NULL;
     char *cmd= NULL;
     const char *clir= NULL;
@@ -4521,13 +4607,11 @@ static void requestEccDial(int channelID, void *data, size_t datalen, RIL_Token 
         default: break;
     }
 
-    category = getEccRecordCategory(p_dial->address);
-    if(category != -1){
-        ret = asprintf(&cmd, "ATD%s@%d,#%s;", p_dial->address, category, clir);
+    if (catgry != -1) {
+        ret = asprintf(&cmd, "ATD%s@%d,#%s;", p_dial->address, catgry, clir);
     } else {
-            ret = asprintf(&cmd, "ATD%s@,#%s;", p_dial->address, clir);
+        ret = asprintf(&cmd, "ATD%s@,#%s;", p_dial->address, clir);
     }
-
     if(ret < 0) {
         RILLOGE("Failed to allocate memory");
         cmd = NULL;
@@ -9267,13 +9351,11 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_DIAL:
         {
             RIL_Dial *p_dial = (RIL_Dial *)data;
-            extern int s_sim_num;
-            int ret = 0;
+            int ret = 0, category = -1;
 
-            ret = isEccNumber(s_sim_num, p_dial->address);
-            RILLOGD("p_dial->address=%s, isEccNumber=%d", p_dial->address, ret);
+            ret = isEccNumber(p_dial->address, &category);
             if (ret == 1) {
-                requestEccDial(channelID, data, datalen, t);
+                requestEccDial(channelID, data, datalen, t, category);
             } else {
                 requestDial(channelID, data, datalen, t);
             }
@@ -14231,28 +14313,18 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
     }
     /* @} */
     /*SPRD: add for VoLTE to handle emergency number report */
-    else if (strStartsWith(s, "+CEN2")) {
-        char *tmp;
-        char *number;
-        int category;
-        line = strdup(s);
-        tmp = line;
-        at_tok_start(&tmp);
-
-        err = at_tok_nextint(&tmp, &category);
-        if (err < 0) {
-            RILLOGD("%s get cat fail", s);
+    else if (strStartsWith(s, "+CEN1")) {
+        int ret;
+        pthread_t tid;
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+        ret = pthread_create(&tid, &attr, (void *)queryEccNetworkList,
+                               NULL);
+        if (ret < 0) {
+            RLOGE("Failed to create slow dispatch thread errno: %s",
+                   strerror(errno));
         }
-        err = at_tok_nextstr(&tmp, &number);
-        if (err < 0) {
-            RILLOGD("%s fail", s);
-            goto out;
-        }
-        RILLOGD("onUnsolicited(),ecc category:%d  number:%s",category,number);
-        Ecc_Record *record = (Ecc_Record *)calloc(1, sizeof(Ecc_Record));
-        record->number = (char *)strdup(number);
-        record->category = category;
-        RIL_requestTimedCallback (addEmergencyNumbertoEccList, (void *)record, NULL);
     }
     /* @} */
     /*SPRD: add for VoLTE to handle video call bearing lost */
@@ -15479,104 +15551,6 @@ static void excuteSrvccPendingOperate(void *param){
 }
 /* @} */
 
-/*SPRD: add for VoLTE to handle emergency call*/
-static void addEccRecord(Ecc_Record *record){
-    if(record == NULL){
-        return;
-    }
-    RILLOGD("addEccRecord->number:%s category:%d",record->number,record->category);
-    pthread_mutex_lock(&s_ecclist_mutex);
-    if(s_sim_ecclist == NULL){
-        s_sim_ecclist = record;
-        s_sim_ecclist->prev = NULL;
-        s_sim_ecclist->next = NULL;
-    } else {
-        s_sim_ecclist->next = record;
-        record->prev = s_sim_ecclist;
-        record->next = NULL;
-        s_sim_ecclist = record;
-    }
-    pthread_mutex_unlock(&s_ecclist_mutex);
-}
-
-static void updateEccRecord(Ecc_Record *record){
-    if(s_sim_ecclist == NULL || record == NULL){
-        return;
-    }
-    RILLOGD("updateEccRecord->number:%s category:%d",record->number,record->category);
-    pthread_mutex_lock(&s_ecclist_mutex);
-    Ecc_Record *tem_record = s_sim_ecclist;
-    if (record->number != NULL){
-        while(tem_record != NULL && tem_record->number != NULL){
-            if(strcmp(record->number,tem_record->number) == 0){
-                tem_record->category = record->category;
-                break;
-            }
-            tem_record = tem_record->prev;
-        }
-    }
-    pthread_mutex_unlock(&s_ecclist_mutex);
-}
-
-static int getEccRecordCategory(char *number){
-    if(number == NULL || s_sim_ecclist == NULL){
-        return -1;
-    }
-    int category = -1;
-    Ecc_Record *tem_record = s_sim_ecclist;
-    while(tem_record != NULL && tem_record->number != NULL){
-        if(strcmp(number,tem_record->number) == 0){
-            category = tem_record->category;
-            break;
-        }
-        tem_record = tem_record->prev;
-    }
-    RILLOGD("getEccRecordCategory->number:%s category:%d",number,category);
-    return category;
-}
-
-static void addEmergencyNumbertoEccList(Ecc_Record *record){
-    extern int s_sim_num;
-    char ecc_list[PROPERTY_VALUE_MAX] = {0};
-    char prop_name[PROPERTY_VALUE_MAX] = {0};
-    char tmp_list[PROPERTY_VALUE_MAX] = {0};
-    char *tmp;
-    int number_exist = 0;
-    strcpy(prop_name, SIM_ECC_LIST_PROPERTY);
-    if(s_sim_num > 0){
-        sprintf(prop_name,"%s%d",prop_name,s_sim_num);
-    }
-    property_get(prop_name, ecc_list, "");
-
-    if(strlen(ecc_list) == 0){
-        number_exist = 1;
-    } else {
-        strncpy(tmp_list,ecc_list,strlen(ecc_list));
-
-        tmp = strtok(tmp_list,",");
-        if(tmp != NULL && strcmp(tmp,record->number) == 0){
-            number_exist = 1;
-        }
-        while(tmp != NULL && !number_exist) {
-            if(strcmp(tmp,record->number) == 0){
-                number_exist = 1;
-            }
-            tmp = strtok( NULL, "," );
-        }
-    }
-
-    if(!number_exist){
-        sprintf(ecc_list,"%s,%s,",ecc_list,record->number);
-        property_set(prop_name, ecc_list);
-        addEccRecord(record);
-    } else {
-        updateEccRecord(record);
-        free(record->number);
-        free(record);
-    }
-    RILLOGD("addEmergencyNumbertoEccList->ecc list =%s number_exist:%d",ecc_list,number_exist);
-}
-
 static void reopenSimCardAndProtocolStack(void *param){
     int channelID;
     channelID = getChannel();
@@ -15589,21 +15563,23 @@ static void reopenSimCardAndProtocolStack(void *param){
     putChannel(channelID);
 }
 
-static void dialEmergencyWhileCallFailed(void *param){
-    RILLOGD("dialEmergencyWhileCallFailed->address =%s", (char *)param);
-
-    if(param != NULL){
+static void dialEmergencyWhileCallFailed(void *param) {
+    if (param != NULL) {
+        char eccNumber[128] = {0};
+        int channelID;
         char *number = (char *)param;
         RIL_Dial *p_dial = (RIL_Dial *)calloc(1, sizeof(RIL_Dial));
-        Ecc_Record *record = (Ecc_Record *)calloc(1, sizeof(Ecc_Record));
-        record->number = (char *)strdup(number);
-        addEmergencyNumbertoEccList(record);
 
         p_dial->address = number;
         p_dial->clir = 0;
         p_dial->uusInfo = NULL;
-        int channelID = getChannel();
-        requestEccDial(channelID, p_dial, sizeof(*p_dial), NULL);
+        channelID = getChannel();
+
+        snprintf(eccNumber, sizeof(eccNumber), "%s@%d", p_dial->address, -1);
+        RIL_onUnsolicitedResponse(RIL_EXT_UNSOL_ECC_NETWORKLIST_CHANGED,
+                eccNumber, strlen(eccNumber) + 1);
+
+        requestEccDial(channelID, p_dial, sizeof(*p_dial), NULL, -1);
         putChannel(channelID);
 
         free(p_dial->address);
