@@ -405,11 +405,14 @@ public class VideoCallCameraManager {
      * When user click menu to control the camera, this method will be called.
      */
     private void operateCamera(final WorkerTaskType type) {
-        if (mThreadRunning) {
-            Log.e(TAG, "operateCamera(), CODEC is closed or work task locked!");
-            mIsSurfacePreviewFailed = true;
-            return;
+        if (mOperateCameraThread != null) {
+            try {
+                mOperateCameraThread.join();
+            } catch (InterruptedException ex) {
+                Log.d(TAG, "operateCamera() exception " + ex);
+            }
         }
+
         mOperateCameraThread = new Thread(new Runnable() {
             public void run() {
                 Log.i(TAG, "operateCamera() E, type: " + type);
