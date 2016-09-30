@@ -6144,7 +6144,8 @@ typedef struct {
 #define RIL_EXT_UNSOL_RESPONSE_BASE                 6500
 #define RIL_EXT_UNSOL_RIL_CONNECTED                 (RIL_EXT_UNSOL_RESPONSE_BASE + 0)
 #define RIL_EXT_UNSOL_WIFIPARAM                     (RIL_EXT_UNSOL_RESPONSE_BASE + 1)
-#define RIL_EXT_UNSOL_RESPONSE_LAST                 RIL_EXT_UNSOL_WIFIPARAM
+#define RIL_EXT_UNSOL_ECC_NETWORKLIST_CHANGED       (RIL_EXT_UNSOL_RESPONSE_BASE + 2)
+#define RIL_EXT_UNSOL_RESPONSE_LAST                 RIL_EXT_UNSOL_ECC_NETWORKLIST_CHANGED
 #endif
 /*****************************************************************************/
 
