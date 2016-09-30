@@ -139,6 +139,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mImsCallProfile.setCallExtraInt(ImsCallProfile.EXTRA_CNAP,
                 ImsCallProfile.presentationToOIR(dc.namePresentation));
         if(dc.isVideoCall()){
+            if(dc.state == ImsDriverCall.State.HOLDING){//SPRD:add for bug604148
+                mIsTxDisable = false;
+            }
             if(mIsTxDisable){
                 mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_RX;
             } else {
