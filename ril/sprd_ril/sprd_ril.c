@@ -12433,6 +12433,7 @@ static void attachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
             err = at_send_command(ATch_type[channelID], cmd, NULL);
             err = at_send_command(ATch_type[channelID], "AT+CGATT=1", &p_response);
             if (err < 0 || p_response->success == 0) {
+                at_send_command(ATch_type[channelID], "AT+SGFD", NULL);
                 at_response_free(p_response);
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 goto error;
