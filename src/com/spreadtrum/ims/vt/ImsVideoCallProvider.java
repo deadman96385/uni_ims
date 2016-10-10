@@ -3,6 +3,7 @@ package com.spreadtrum.ims.vt;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Handler;
+import android.os.UserHandle;
 import android.telecom.VideoProfile;
 import android.view.Surface;
 import android.util.Log;
@@ -409,9 +410,11 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 if(mVolteMediaUpdateDialog != null){
                    mVolteMediaUpdateDialog.dismiss();
                 }
-                /*SPRD: add for bug606122 @{*/
-                if(!TelephonyManager.getDefault().isVideoCallingEnabled()){
+                /*SPRD: add for bug606122, 605475@{*/
+                if(!TelephonyManager.getDefault().isVideoCallingEnabled()
+                        || mImsCallSessionImpl.getCurrentUserId() != UserHandle.USER_OWNER){
                     mCi.responseVolteCallMediaChange(false, mCallIdMessage);
+                    return;
                 }/*@}*/
                 else if(ImsCmccHelper.getInstance(mContext).rejectMediaChange(mImsCallSessionImpl,mCi,mCallIdMessage)){
                     log("handleVolteCallMediaChange-is cmcc project, has one active adn one hold call reject MediaChange");

@@ -9,11 +9,14 @@ import java.util.List;
 
 
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.os.UserHandle;
 import android.os.AsyncResult;
 import android.util.Log;
 
@@ -62,6 +65,18 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private Map<String, ImsCallSessionImpl> mSessionList = new HashMap<String, ImsCallSessionImpl>();
     private List<ImsCallSessionImpl> mPendingSessionList = new CopyOnWriteArrayList<ImsCallSessionImpl>();
     private List<SessionListListener> mSessionListListeners = new CopyOnWriteArrayList<SessionListListener>();
+    /*SPRD: add for 605475@{*/
+    private int mCurrentUserId = UserHandle.USER_OWNER;
+    private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().equals(Intent.ACTION_USER_SWITCHED)) {
+                mCurrentUserId = intent.getIntExtra(Intent.EXTRA_USER_HANDLE, 0);
+                Log.i(TAG,"onReceive mCurrentUserId = " + mCurrentUserId);
+            }
+        }
+    };
+    /* @} */
     public ImsServiceCallTracker(Context context,ImsRIL ci, PendingIntent intent, int id, ImsServiceImpl service){
         mContext = context;
         mCi = ci;
@@ -71,6 +86,11 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         mHandler = new ImsHandler(mContext.getMainLooper());
         mCi.registerForImsCallStateChanged(mHandler, EVENT_IMS_CALL_STATE_CHANGED, null);
         mCi.registerForCallStateChanged(mHandler, EVENT_CALL_STATE_CHANGE, null);
+        /*SPRD: add for 605475@{*/
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_USER_SWITCHED);
+        mContext.registerReceiver(mBroadcastReceiver, filter);
+        /* @} */
     }
 
     /**
@@ -659,4 +679,14 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         }
         return false;
     }
+    /*SPRD: add for 605475@{*/
+    @Override
+    protected void finalize() throws Throwable {
+        mContext.unregisterReceiver(mBroadcastReceiver);
+        super.finalize();
+    }
+    public int getCurrentUserId(){
+        return mCurrentUserId;
+    }
+    /* @} */
 }

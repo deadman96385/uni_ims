@@ -1428,4 +1428,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         Log.i(TAG, "isHasBackgroundCallAndActiveCall()");
         return mImsServiceCallTracker.isHasBackgroundCallAndActiveCall();
     }
+    /*SPRD: add for 605475@{*/
+    public int getCurrentUserId(){
+        return mImsServiceCallTracker.getCurrentUserId();
+    }
+    /* @} */
 }
