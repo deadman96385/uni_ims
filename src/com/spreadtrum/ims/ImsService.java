@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import android.app.PendingIntent;
@@ -55,7 +56,7 @@ public class ImsService extends Service {
 
     private Map<Integer, ImsServiceImpl> mImsServiceImplMap = new HashMap<Integer, ImsServiceImpl>();
 
-    private HashMap<IBinder, IImsRegisterListener> mImsRegisterListeners = new HashMap<IBinder, IImsRegisterListener>();
+    private ConcurrentHashMap<IBinder, IImsRegisterListener> mImsRegisterListeners = new ConcurrentHashMap<IBinder, IImsRegisterListener>();
  
     private int mRequestId = -1;
     private Object mRequestLock = new Object();
