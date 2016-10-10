@@ -198,9 +198,12 @@ public class VideoCallCameraManager {
                     // If the activity is paused and resumed, camera device has been
                     // released and we need to open the camera.
                     String cameraId = getCamerID();
+                    Log.i(TAG, "openCamera(), cameraId: " + cameraId);
                     if(cameraId != null){
-                        /* SPRD: Modify for bug571839 @ { */
-                        if (mVideoCallEngine.setCameraId(Integer.parseInt(cameraId)) != 0) {
+                        /* SPRD: Modify for bug571839 and bug 564721@ { */
+                        if(Integer.parseInt(cameraId) == -1){
+                            return;
+                        } else if (mVideoCallEngine.setCameraId(Integer.parseInt(cameraId)) != 0) {
                             mHandler.removeMessages(EVENT_CAMERA_FAIL);
                             mHandler.sendEmptyMessageDelayed(EVENT_CAMERA_FAIL,200);
                             return;
