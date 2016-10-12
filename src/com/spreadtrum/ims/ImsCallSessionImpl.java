@@ -151,14 +151,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             mIsTxDisable = false;//SPRD:modify for bug602883
             mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
         }
-        //SPRD:update ImsCallProfile according to the CLCCS fix for bug 585690
-        if(isPsMode()){
+        /* SPRD: add for new feature for bug 589158/607084 @{ */
+        if(dc != null && dc.mediaDescription != null && dc.mediaDescription.contains("hd=1")){
             mImsCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB;
             mLocalCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB;
         } else {
             mImsCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_NONE;
             mLocalCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_NONE;
         }
+        /* @}*/
         /* SPRD: add for new feature for bug 602040 @{ */
         if((dc!= null) && (dc.mediaDescription != null) && (dc.mediaDescription.contains("cap:"))){
             String media = dc.mediaDescription.substring(dc.mediaDescription.indexOf("cap:"));
@@ -1140,7 +1141,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             String qualityString = null;
             int quality = -1;
             if(index >=0){
-                qualityString = vdc.mediaDescription.substring(index+8);
+                /* SPRD: add for new feature for bug 589158/607084 @{ */
+                int proIndex = vdc.mediaDescription.indexOf("\\hd=");
+                if(proIndex >= (index+8)){
+                    qualityString = vdc.mediaDescription.substring(index+8,proIndex);
+                }else{/* @} */
+                    qualityString = vdc.mediaDescription.substring(index+8);
+                }
                 if(qualityString != null){
                     try {
                         quality = Integer.parseInt(qualityString);
