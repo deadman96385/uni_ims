@@ -396,10 +396,20 @@ public class VideoCallCameraManager {
      * When user click menu to control the camera, this method will be called.
      */
     private void operateCamera(final WorkerTaskType type) {
-        if (mThreadRunning) {
-            Log.e(TAG, "operateCamera(), CODEC is closed or work task locked!");
-            mIsSurfacePreviewFailed = true;
-            return;
+        if (mThreadRunning && mOperateCameraThread!=null) {
+
+            if(WorkerTaskType.CAMERA_SWITCH == type){
+                Log.e(TAG, "operateCamera(), CODEC is closed or work task locked!");
+                mIsSurfacePreviewFailed = true;
+                return;
+            }else{//SPRD add for bug606383
+                Log.e(TAG, "operateCamera(), CODEC is closed or work task locked! operateCamera join");
+                try{
+                    mOperateCameraThread.join();
+                }catch (InterruptedException ex){
+                    Log.e(TAG, "updateVideoCameraQuality.quit() exception " + ex);
+                }
+            }
         }
         mOperateCameraThread = new Thread(new Runnable() {
             public void run() {
