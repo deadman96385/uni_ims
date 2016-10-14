@@ -65,6 +65,7 @@ public class ImsRegister {
     private static final int EVENT_INIT_ISIM_DONE                    = 204;
     private static final int EVENT_IMS_BEARER_ESTABLISTED            = 205;
     private static final int EVENT_ENABLE_IMS                        = 206;
+    private static final int EVENT_RADIO_CAPABILITY_CHANGED          = 207;
 
     public ImsRegister(GsmCdmaPhone phone , Context context, ImsRIL ci) {
         mPhone = phone;
@@ -81,6 +82,7 @@ public class ImsRegister {
         mCi.registerForRadioStateChanged(mHandler, EVENT_RADIO_STATE_CHANGED, null);
         mCi.registerForImsBearerStateChanged(mHandler, EVENT_IMS_BEARER_ESTABLISTED, null);
         mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
+        mPhone.registerForRadioCapabilityChanged(mHandler, EVENT_RADIO_CAPABILITY_CHANGED, null);
     }
 
     private class BaseHandler extends Handler {
@@ -152,6 +154,17 @@ public class ImsRegister {
                           mCi.disableIms(null);
                     }
                     mLastNumeric = mNumeric;
+                }
+                break;
+            case EVENT_RADIO_CAPABILITY_CHANGED:
+                if (mPhoneId != getPrimaryCard() ) {
+                    mInitISIMDone = false;
+                    mIMSBearerEstablished = false;
+                    mLastNumeric = "";
+                    mCurrentImsRegistered = false;
+                } else {
+                    log("EVENT_RADIO_CAPABILITY_CHANGED -> initisim");
+                    initISIM();
                 }
                 break;
             default:
