@@ -4396,10 +4396,40 @@ int isEccNumber(char *dialNumber, int *catgry) {
     }
     property_get(propName, eccNumberList, "");
     if (strcmp(eccNumberList, "") != 0) {
+        int i, propNum = 0;
+        char realEccList[PROPERTY_VALUE_MAX] = {0};
+
         tmpList = eccNumberList;
+        for (i = 1; strcmp(tmpList, "") != 0; i++) {
+            snprintf(propName, sizeof(propName), "ril.ecclist.real%d",
+                    (s_sim_num == 0) ? (2 * i) : (2 * i + 1));
+            property_get(propName, realEccList, "");
+            tmpList = realEccList;
+        }
+        // propNum is the quantity of ril.ecclist.real
+        propNum = i - 1;
+        if (propNum > 1) {
+            int propValueSize = propNum * PROPERTY_VALUE_MAX;
+            tmpList = (char *)alloca(propValueSize);
+            memset(tmpList, 0, propValueSize);
+            strncat(tmpList, eccNumberList, strlen(eccNumberList));
+            for (i = 1; i < propNum; i++) {
+                snprintf(propName, sizeof(propName), "ril.ecclist.real%d",
+                        (s_sim_num == 0) ? (2 * i ) : (2 * i + 1));
+                property_get(propName, realEccList, "");
+                strncat(tmpList, ",", 1);
+                strncat(tmpList, realEccList, strlen(realEccList));
+            }
+            RLOGD("real ecclist:%s", tmpList);
+        } else {
+            tmpList = eccNumberList;
+        }
+
         while ((tmpNumber = strtok_r(tmpList, ",", &outer_ptr)) != NULL) {
+            int round = 0;
             tmpList = tmpNumber;
-            while ((tmpNumber = strtok_r(tmpList, "@", &inner_ptr)) != NULL) {
+            while ((tmpNumber = strtok_r(tmpList, "@", &inner_ptr)) != NULL &&
+                    round == 0) {
                 if (strcmp(tmpNumber, dialNumber) == 0) {
                     numberExist = 1;
                     if (inner_ptr != NULL) {
