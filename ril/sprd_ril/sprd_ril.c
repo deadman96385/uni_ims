@@ -202,7 +202,6 @@ static bool isSrvccStrated();
 static void addSrvccPendingOperate(char *cmd);
 static void excuteSrvccPendingOperate();
 
-#define ECC_LIST_PROP "ril.ecclist"
 #define ECC_LIST_REAL_PROP "ril.ecclist.real"
 #define ECC_LIST_FAKE_PROP "ril.ecclist.fake"
 
@@ -4509,14 +4508,14 @@ static void requestGetCurrentCallsVoLTE(int channelID, void *data, size_t datale
 int isEccNumber(char *dialNumber, int *catgry) {
     char propName[PROPERTY_VALUE_MAX] = {0};
     char eccNumberList[PROPERTY_VALUE_MAX] = {0};
+    char propValue[PROPERTY_VALUE_MAX] = {0};
     char *tmpList = NULL;
     char *tmpNumber = NULL;
     char *outer_ptr = NULL;
     char *inner_ptr = NULL;
     char ecc3GPP_NoSIM[] = "112,911,000,08,110,118,119,999";
     char ecc3GPP_SIM[] = "112,911";
-    int numberExist = 0;
-    int ret = 0;
+    int numberExist = 0, i = 0, phoneCount = 0;
     extern int s_sim_num;
 
     strncpy(propName, ECC_LIST_FAKE_PROP, sizeof(ECC_LIST_FAKE_PROP));
@@ -4528,7 +4527,6 @@ int isEccNumber(char *dialNumber, int *catgry) {
         tmpList = eccNumberList;
         while ((tmpNumber = strtok_r(tmpList, ",", &outer_ptr)) != NULL) {
             if (strcmp(tmpNumber, dialNumber) == 0) {
-                numberExist = 1;
                 return 0;
             }
             tmpList = NULL;
@@ -4540,54 +4538,27 @@ int isEccNumber(char *dialNumber, int *catgry) {
         snprintf(propName, sizeof(propName), "ril.ecclist.real%d", s_sim_num);
     }
     property_get(propName, eccNumberList, "");
+    property_get(PHONE_COUNT, propValue, "1");
+    phoneCount = atoi(propValue);
     if (strcmp(eccNumberList, "") != 0) {
-        int i, propNum = 0;
-        char realEccList[PROPERTY_VALUE_MAX] = {0};
-
-        tmpList = eccNumberList;
-        for (i = 1; strcmp(tmpList, "") != 0; i++) {
-            snprintf(propName, sizeof(propName), "ril.ecclist.real%d",
-                    (s_sim_num == 0) ? (2 * i) : (2 * i + 1));
-            property_get(propName, realEccList, "");
-            tmpList = realEccList;
-        }
-        // propNum is the quantity of ril.ecclist.real
-        propNum = i - 1;
-        if (propNum > 1) {
-            int propValueSize = propNum * PROPERTY_VALUE_MAX;
-            tmpList = (char *)alloca(propValueSize);
-            memset(tmpList, 0, propValueSize);
-            strncat(tmpList, eccNumberList, strlen(eccNumberList));
-            for (i = 1; i < propNum; i++) {
-                snprintf(propName, sizeof(propName), "ril.ecclist.real%d",
-                        (s_sim_num == 0) ? (2 * i ) : (2 * i + 1));
-                property_get(propName, realEccList, "");
-                strncat(tmpList, ",", 1);
-                strncat(tmpList, realEccList, strlen(realEccList));
-            }
-            RLOGD("real ecclist:%s", tmpList);
-        } else {
+        for (i = 1; strcmp(eccNumberList, "") != 0; i++) {
             tmpList = eccNumberList;
-        }
-
-        while ((tmpNumber = strtok_r(tmpList, ",", &outer_ptr)) != NULL) {
-            int round = 0;
-            tmpList = tmpNumber;
-            while ((tmpNumber = strtok_r(tmpList, "@", &inner_ptr)) != NULL &&
-                    round == 0) {
-                if (strcmp(tmpNumber, dialNumber) == 0) {
-                    numberExist = 1;
-                    if (inner_ptr != NULL) {
-                        *catgry = atoi(inner_ptr);
+            while ((tmpNumber = strtok_r(tmpList, ",", &outer_ptr)) != NULL) {
+                tmpList = tmpNumber;
+                if ((tmpNumber = strtok_r(tmpList, "@", &inner_ptr)) != NULL) {
+                    if (strcmp(tmpNumber, dialNumber) == 0) {
+                        numberExist = 1;
+                        if (inner_ptr != NULL) {
+                            *catgry = atoi(inner_ptr);
+                        }
+                        return numberExist;
                     }
-                    break;
                 }
                 tmpList = NULL;
             }
-            if (numberExist) {
-                break;
-            }
-            tmpList = NULL;
+            snprintf(propName, sizeof(propName), "ril.ecclist.real%d",
+                     i * phoneCount + s_sim_num);
+            property_get(propName, eccNumberList, "");
         }
         return numberExist;
     }
