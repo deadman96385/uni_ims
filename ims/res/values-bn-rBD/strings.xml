@@ -30,4 +30,9 @@
 <string name="callFailed_fdn_only">"FDN এর মাধ্যমে আউটগোয়িং কলগুলি সীমিত করা আছে"</string>
 <string name="camera_open_fail">"ক্যামেরা চালু করা ব্যর্থ হয়েছে"</string>
 <string name="ims_switch_failed">"নেটওয়ার্কের ত্রুটি, অনুগ্রহ করে পরে চেষ্টা করুন"</string>
+<string name="low_battery_warning_media_alert_message">"আপনার ব্যাটারির মাত্রা 15% - এর নিচে। অনুগ্রহ করে স্বীকার অথবা প্রত্যাখ্যান বেছে নিন।"</string>
+<string name="low_battery_warning_title">"ব্যাটারি কম থাকার সতর্কতা"</string>
+<string name="low_battery_warning_message">"আপনার ব্যাটারির মাত্রা 15% এর নিচে। আপনি কি ভিডিও কলটি জারী রাখতে চান নাকি ভয়েস কলে পরিবর্তন করবেন?"</string>
+<string name="low_battery_continue_video_call">হ্যাঁ</string>
+<string name="low_battery_convert_to_voice_call">"পরিবর্তন করুন"</string>
 </resources>

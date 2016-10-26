@@ -30,4 +30,9 @@
 <string name="callFailed_fdn_only">"బైటికి వెళ్ళే కాల్స్ FDN ద్వారా పరిమితం చేయబడ్డాయి"</string>
 <string name="camera_open_fail">"కేమెరా ఓపెన్ విఫలం"</string>
 <string name="ims_switch_failed">"నెట్వర్క్ లోపం, దయచేసి తర్వాత మళ్లీ ప్రయత్నించండి"</string>
+<string name="low_battery_warning_media_alert_message">"మీ బ్యాటరీ స్థాయి 15% కంటే తక్కువగా ఉంది.దయచేసి అంగీకరించాలా, తిరస్కరించాలా ఎంచుకోండి."</string>
+<string name="low_battery_warning_title">"తక్కువ బ్యాటరీ హెచ్చరిక"</string>
+<string name="low_battery_warning_message">"మీ బ్యాటరీ స్థాయి 15% కంటే తక్కువగా ఉంది. వీడియో కాల్‌లో కొనసాగాలనుకుంటున్నారా లేక వాయిస్‌ కాల్‌కు మార్చమంటారా?"</string>
+<string name="low_battery_continue_video_call">అవును</string>
+<string name="low_battery_convert_to_voice_call">"మార్చు"</string>
 </resources>

@@ -30,4 +30,9 @@
 <string name="callFailed_fdn_only">"ಎಫ್ ಡಿ ಎನ್ ನಿಂದ ಹೊರಹೋಗುವ ಕರೆಗಳು ನಿರ್ಬಂಧಿತಗೊಂಡಿವೆ"</string>
 <string name="camera_open_fail">"ಕ್ಯಾಮರಾ ಓಪನ್ ಮಾಡುವಲ್ಲಿ ವಿಫಲ"</string>
 <string name="ims_switch_failed">"ನೆಟ್ವರ್ಕ್ ದೋಷ, ದಯವಿಟ್ಟು ನಂತರದಲ್ಲಿ ಇನ್ನೊಮ್ಮೆ ಪ್ರಯತ್ನಿಸಿ"</string>
+<string name="low_battery_warning_media_alert_message">"ನಿಮ್ಮ ಬ್ಯಾಟರಿ(ಮಿಂತಿಣಿ)ಮಟ್ಟ 15% ಗಿ೦ತ ಕಡಿಮೆ ಇದೆ.ದಯವಿಟ್ಟು ಸ್ವೀಕರಿಸು ಅಥವಾ ತಿರಸ್ಕರಿಸು  ಆರಿಸಿ"</string>
+<string name="low_battery_warning_title">"ಕಡಿಮೆ ಬ್ಯಾಟರಿ (ವಿದ್ಯುತ್ಕೋಶ)ಎಚ್ಚರಿಕೆ(ಮುನ್ಸೂಚನೆ)"</string>
+<string name="low_battery_warning_message">"ನಿಮ್ಮ ಬ್ಯಾಟರಿ ಮಟ್ಟ 15% ಗಿ೦ತ ಕಡಿಮೆ ಇದೆ.ನೀವು ವಿಡಿಯೋ(ದೃಶ್ಯ)ಕರೆಯ ಜೊತೆ ಮು೦ದುವರಿಯುವಿರಾ ಅಥವಾ ಧ್ವನಿಕರೆಗೆ ಪರಿವರ್ತಿತರಾಗುವಿರಾ?"</string>
+<string name="low_battery_continue_video_call">"ಹೌದು"</string>
+<string name="low_battery_convert_to_voice_call">"ಪರಿವರ್ತಿಸು"</string>
 </resources>
