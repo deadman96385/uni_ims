@@ -56,6 +56,7 @@ public class ImsRegister {
     private VolteConfig mVolteConfig;
     private String mNumeric;
     private String mLastNumeric="";
+    private int mRetryCount = 0;
     private static final int DEFAULT_PHONE_ID   = 0;
     private static final int SLOTTWO_PHONE_ID   = 1;
 
@@ -131,7 +132,10 @@ public class ImsRegister {
                         err = ((CommandException)(ar.exception)).getCommandError();
                     }
                     if (err == CommandException.Error.RADIO_NOT_AVAILABLE) {
-                        mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
+                        if (mRetryCount < 8) {
+                            mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
+                            mRetryCount++;
+                        }
                     }
                     break;
                 }
