@@ -304,10 +304,20 @@ void *cameraProcessThread(void *param __unused) {
                                           ICameraService::USE_CALLING_UID,
                                           ptr->iCamera);
         if (NO_ERROR != rc) {
-          ALOGI("cameraProcessThread, connectLegacy failed, try connect");
-          rc = cameraService->connect(client, cameraId,
-                                      (const String16 &)*packageName, -1,
-                                      ptr->iCamera);
+          ALOGI("cameraProcessThread, connectLegacy failed, retry connect");
+          int retry_times = 8;
+          while (NO_ERROR != rc && retry_times --){
+            usleep(200*1000);
+            ALOGI("cameraProcessThread, retry connect %d",8 - retry_times);
+            rc = cameraService->connectLegacy(client, cameraId,
+                                          /*CAMERA_DEVICE_API_VERSION_3_2*/ -1,
+                                          (const String16 &)*packageName,
+                                          ICameraService::USE_CALLING_UID,
+                                          ptr->iCamera);
+            if (NO_ERROR == rc){
+                break;
+            }
+          }
           if (NO_ERROR != rc) {
             ALOGI("cameraProcessThread, camera service connect err, rc = %d", rc);
             signalCmdExecuted();
