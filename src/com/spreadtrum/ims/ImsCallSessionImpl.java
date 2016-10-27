@@ -86,6 +86,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsConferenceActived = false;
     private boolean mIsTxDisable = false;
 
+    private boolean mIsMegerActionHost;
+
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
         mImsCallProfile = profile;
@@ -323,7 +325,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         hasUpdate = mImsDriverCall.update(dc) || hasUpdate;
         if (mImsDriverCall.state == ImsDriverCall.State.ACTIVE) {
-            if (mIsMegerAction) {
+            if (mIsMegerAction && !mImsServiceCallTracker.isMegerActionHost()) {
                 mIsMegerAction = false;
                 mImsServiceCallTracker.onCallMergeComplete(this);
                 if(!mConferenceHost){
@@ -527,6 +529,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                                 e.printStackTrace();
                             }
                         }
+                    }
+                    synchronized(mConferenceLock){
+                        mIsMegerActionHost = false;
                     }
                     break;
                 case ACTION_COMPLETE_CONFERENCE:
@@ -950,6 +955,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             synchronized(mConferenceLock){
                 mConferenceHost = true;
                 mImsConferenceState = new ImsConferenceState();
+                mIsMegerActionHost = true;
                 if(mImsDriverCall != null){
                     updateImsConfrenceMember(mImsDriverCall);
                 } else {
@@ -1107,7 +1113,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.w(TAG, "isMultiparty->session is invalid");
             return false;
         }
-        if(mConferenceHost){
+        if(mConferenceHost && !mIsMegerActionHost){
             return true;
         }
         if (mImsDriverCall == null) {
@@ -1440,4 +1446,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         return mImsServiceCallTracker.getCurrentUserId();
     }
     /* @} */
+    public boolean isMegerActionHost(){
+        return mIsMegerActionHost;
+    }
 }

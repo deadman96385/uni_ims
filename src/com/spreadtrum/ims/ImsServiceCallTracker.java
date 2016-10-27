@@ -640,6 +640,12 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     public boolean isConferenceSession(ImsCallSessionImpl session){
         return mConferenceSession == session;
     }
+    public boolean isMegerActionHost(){
+        if(mMergeHost != null){
+            return mMergeHost.isMegerActionHost();
+        }
+        return false;
+    }
 
     public int getServiceId(){
         return mServiceId;
