@@ -19,6 +19,7 @@ import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.telephony.VoLteServiceState;
 import android.util.Log;
+import android.widget.Toast;
 
 import android.provider.Telephony;
 import com.android.internal.telephony.CommandsInterface;
@@ -69,6 +70,8 @@ public class ImsServiceImpl {
     protected static final int EVENT_SRVCC_STATE_CHANGED               = 105;
     protected static final int EVENT_SERVICE_STATE_CHANGED             = 106;
     protected static final int EVENT_RADIO_STATE_CHANGED               = 107;
+    //add for bug612670
+    protected static final int EVENT_SET_VOICE_CALL_AVAILABILITY_DONE  = 108;
 
     private GsmCdmaPhone mPhone;
     private ImsServiceState mImsServiceState;
@@ -271,6 +274,14 @@ public class ImsServiceImpl {
                     }
                    break;
                 /* @} */
+                /*SPRD: add for bug612670 @{ */
+                case EVENT_SET_VOICE_CALL_AVAILABILITY_DONE:
+                    if(ar.exception != null){
+                        Log.i(TAG,"EVENT_SET_VOICE_CALL_AVAILABILITY_DONE: exception");
+                        Toast.makeText(mContext.getApplicationContext(), mContext.getString(R.string.ims_switch_failed), Toast.LENGTH_SHORT).show();
+                    }
+                    break;
+                /*@}*/
                 default:
                     break;
             }
@@ -438,12 +449,14 @@ public class ImsServiceImpl {
 
     public void turnOnIms(){
         Log.i(TAG,"turnOnIms.");
-        mCi.setImsVoiceCallAvailability(1 , null);
+        //add for bug 612670
+        mCi.setImsVoiceCallAvailability(1 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE));
     }
 
     public void turnOffIms(){
         Log.i(TAG,"turnOffIms.");
-        mCi.setImsVoiceCallAvailability(0 , null);
+        //add for bug 612670
+        mCi.setImsVoiceCallAvailability(0 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE));
     }
 
     public int getImsRegisterState(){
