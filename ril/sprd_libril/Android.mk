@@ -10,8 +10,7 @@ LOCAL_SRC_FILES:= \
     ril_event.cpp \
     sprd_thread_pool.cpp \
     RilSocket.cpp \
-    RilATCISocket.cpp \
-    ril_oem.cpp
+    RilATCISocket.cpp
 
 LOCAL_SHARED_LIBRARIES := \
     liblog \
@@ -19,11 +18,7 @@ LOCAL_SHARED_LIBRARIES := \
     libbinder \
     libcutils \
     libhardware_legacy \
-    librilutils_sp \
-    libril_oem
-
-LOCAL_SHARED_LIBRARIES += \
-    libprotobuf-cpp-lite \
+    librilutils_sp
 
 LOCAL_PROTOC_OPTIMIZE_TYPE := lite
 

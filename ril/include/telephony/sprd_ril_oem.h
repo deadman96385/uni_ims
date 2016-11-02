@@ -5,14 +5,6 @@
  * RIL_REQUEST_OEM_HOOK_RAW
  * request data struct
  */
-#if defined (RIL_SUPPORTED_OEM_PROTOBUF)
-typedef struct _OemRequest
-{
-    int funcId;
-    int subFuncId;
-    void * payload;
-} OemRequest;
-#else
 typedef struct _OemRequest
 {
     unsigned char funcId;
@@ -20,7 +12,6 @@ typedef struct _OemRequest
     int len;
     void *payload;
 } OemRequest;
-#endif
 
 /*
  * RIL_UNSOL_OEM_HOOK_RAW

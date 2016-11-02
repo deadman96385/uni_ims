@@ -103,8 +103,6 @@ static int make_argv(char * args, char ** argv)
  * Our group, cache, was set by init.
  */
 void switchUser() {
-    char debuggable[PROP_VALUE_MAX];
-
     prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
     setuid(AID_RADIO);
 
@@ -113,30 +111,17 @@ void switchUser() {
     header.version = _LINUX_CAPABILITY_VERSION_3;
     header.pid = 0;
 
-    struct __user_cap_data_struct data[MAX_CAP_NUM];
+    struct __user_cap_data_struct data[2];
     memset(&data, 0, sizeof(data));
 
     data[CAP_TO_INDEX(CAP_NET_ADMIN)].effective |= CAP_TO_MASK(CAP_NET_ADMIN);
     data[CAP_TO_INDEX(CAP_NET_ADMIN)].permitted |= CAP_TO_MASK(CAP_NET_ADMIN);
-
     data[CAP_TO_INDEX(CAP_NET_RAW)].effective |= CAP_TO_MASK(CAP_NET_RAW);
     data[CAP_TO_INDEX(CAP_NET_RAW)].permitted |= CAP_TO_MASK(CAP_NET_RAW);
-
-    data[CAP_TO_INDEX(CAP_BLOCK_SUSPEND)].effective |= CAP_TO_MASK(CAP_BLOCK_SUSPEND);
-    data[CAP_TO_INDEX(CAP_BLOCK_SUSPEND)].permitted |= CAP_TO_MASK(CAP_BLOCK_SUSPEND);
 
     if (capset(&header, &data[0]) == -1) {
         RLOGE("capset failed: %s", strerror(errno));
         exit(EXIT_FAILURE);
-    }
-
-    /*
-     * Debuggable build only:
-     * Set DUMPABLE that was cleared by setuid() to have tombstone on RIL crash
-     */
-    property_get("ro.debuggable", debuggable, "0");
-    if (strcmp(debuggable, "1") == 0) {
-        prctl(PR_SET_DUMPABLE, 1, 0, 0, 0);
     }
 }
 
