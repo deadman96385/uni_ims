@@ -33,6 +33,8 @@ import com.spreadtrum.ims.ImsService;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.DataRouterState;
 
+import com.android.ims.ImsReasonInfo;
+
 public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final String TAG = ImsServiceCallTracker.class.getSimpleName();
     private static final boolean DBG_POLL = false;
@@ -624,5 +626,17 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             isEmpty = mSessionList.isEmpty();
         }
         return isEmpty;
+    }
+
+    public void terminateVolteCall() {
+        synchronized(mSessionList) {
+            for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it =
+                    mSessionList.entrySet().iterator(); it.hasNext();) {
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+                ImsCallSessionImpl session = e.getValue();
+                session.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
+                Log.d(TAG, "terminateVolteCall->session: " + session);
+            }
+        }
     }
 }
