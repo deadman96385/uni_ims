@@ -2945,38 +2945,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
                         putPDP(cid-1);
                         s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
                         RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                    } else {
-                        RIL_onRequestComplete(*t, RIL_E_SUCCESS, &responses[i],
-                                sizeof(RIL_Data_Call_Response_v11));
-                        /* send IP for volte addtional business */
-                        if (add_ip_cid ==0 &&  !(IsLte && bLteDetached) && isVoLteEnable() ) {
-                            char cmd[180] = {0};
-                            char prop0[PROPERTY_VALUE_MAX] = {0};
-                            char prop1[PROPERTY_VALUE_MAX] = {0};
-                            if (!strcmp(responses[i].type,"IPV4V6") ) {
-                                snprintf(cmd, sizeof(cmd), "net.%s%d.ip", eth, responses[i].cid-1);
-                                property_get(cmd, prop0, NULL);
-                                snprintf(cmd, sizeof(cmd), "net.%s%d.ipv6_ip", eth, responses[i].cid-1);
-                                property_get(cmd, prop1, NULL);
-                                snprintf(cmd, sizeof(cmd),"AT+XCAPIP=%d,\"%s,[%s]\"",
-                                        responses[i].cid,prop0,prop1);
-                            } else if (!strcmp( responses[i].type,"IP")) {
-                                snprintf(cmd, sizeof(cmd),"AT+XCAPIP=%d,\"%s,[FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF]\"",
-                                        responses[i].cid,responses[i].addresses);
-                            } else {
-                                snprintf(cmd, sizeof(cmd),"AT+XCAPIP=%d,\"0.0.0.0,[%s]\"",
-                                        responses[i].cid,responses[i].addresses);
-                            }
-                            at_send_command(ATch_type[channelID],cmd,NULL);
-                            add_ip_cid = responses[i].cid;
-                        }
                     }
-                }else{
-                    putPDP(getFallbackCid(cid-1)-1);
-                    putPDP(cid-1);
-                    s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
-                    RIL_onRequestComplete(*t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                }
                 return;
             }
         }
