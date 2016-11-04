@@ -1499,6 +1499,7 @@ public class ImsService extends Service {
                             mWifiService.deregister();
                             mWifiService.deattach();
                             mWifiRegistered= false;//Set wifi registered state as false when make de-register operation in handover.
+                            updateImsFeature();
                         }
                         mIsPendingRegisterVolte = false;
                         if(mImsServiceListenerEx != null){
@@ -1731,6 +1732,7 @@ public class ImsService extends Service {
             mIsCPImsPdnActived = false;
             if(!mIsAPImsPdnActived){
                 mWifiRegistered = false;
+                updateImsFeature();
             }
         }
         Log.i(TAG,"onImsPdnStatusChange->serviceId:"+serviceId +" state:" + state
