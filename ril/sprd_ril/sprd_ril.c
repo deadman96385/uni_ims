@@ -6267,7 +6267,7 @@ static void requestScreeState(int channelID, int status, RIL_Token t)
              * and the FWK does not use the response,
              * so report the 0 response
              */
-            int response = 0;
+            int response = s_ims_registered;
             RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED,
                     &response, sizeof(response));
         }
