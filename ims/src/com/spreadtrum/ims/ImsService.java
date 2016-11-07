@@ -204,6 +204,7 @@ public class ImsService extends Service {
     private boolean mIsS2bStopped = false;
     private boolean mIsCPImsPdnActived = false;
     private boolean mIsAPImsPdnActived = false;
+    private boolean mIsLoggingIn =false;
     private class ImsServiceRequest {
         public int mRequestId;
         public int mEventCode;
@@ -440,9 +441,9 @@ public class ImsService extends Service {
                         Boolean result = (Boolean)msg.obj;
                         if (result == null) break;
                         Log.i(TAG, "EVENT_WIFI_REGISTER_RESAULT -> mWifiRegistered:" + result.booleanValue()
-                                + ", mFeatureSwitchRequest:" + mFeatureSwitchRequest);
+                                + ", mFeatureSwitchRequest:" + mFeatureSwitchRequest + " mIsLoggingIn:" + mIsLoggingIn);
                         mWifiRegistered = result.booleanValue();
-
+                        mIsLoggingIn = false;
                         updateImsFeature();
                         if (mFeatureSwitchRequest != null) {
                             ImsServiceImpl requestService = mImsServiceImplMap.get(
@@ -1476,15 +1477,20 @@ public class ImsService extends Service {
                 /*SPRD: Modify for bug596304{@*/
                 ImsServiceImpl service = mImsServiceImplMap.get(Integer.valueOf(serviceId));
                 Log.i(TAG,"VoLTERegisterListener-> mFeatureSwitchRequest:"+mFeatureSwitchRequest
-                        +" mIsCalling:"+ mIsCalling + " mVolteRegistered:" + mVolteRegistered + " service.isImsRegistered():" + service.isImsRegistered());
+                        +" mIsCalling:"+ mIsCalling + " mVolteRegistered:" + mVolteRegistered + " service.isImsRegistered():" + service.isImsRegistered()
+                        + " mIsLoggingIn:" + mIsLoggingIn);
                 //If CP reports CIREGU as 1,3 , IMS Feature will be updated as Volte registered state firstly.
                 if (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED || service.getVolteRegisterState() == IMS_REG_STATE_REG_FAIL){
                     mVolteRegistered = (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED);
-                    updateImsFeature();
+                    if(!mIsLoggingIn){
+                        updateImsFeature();
+                    }
                 } else {
                     if (mVolteRegistered != service.isImsRegistered()){
                         mVolteRegistered = service.isImsRegistered();
-                        updateImsFeature();
+                        if(!mIsLoggingIn){
+                            updateImsFeature();
+                        }
                     }
                 }
                 /*@}*/
@@ -1552,10 +1558,11 @@ public class ImsService extends Service {
                             if(mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
                                 if (mIsVolteCall && mIsPendingRegisterVowifi) {
                                     mWifiService.register();
+                                    mIsLoggingIn = true;
                                 }
                                 mIsPendingRegisterVowifi = false;
                             }
-                            Log.i(TAG,"onSessionEmpty-> mPendingAttachVowifiSuccess:" + mPendingAttachVowifiSuccess + " mPendingActivePdnSuccess:" + mPendingActivePdnSuccess);
+                            Log.i(TAG,"onSessionEmpty-> mPendingAttachVowifiSuccess:" + mPendingAttachVowifiSuccess + " mPendingActivePdnSuccess:" + mPendingActivePdnSuccess + " mIsLoggingIn:" + mIsLoggingIn);
                             if (mIsVolteCall && mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE && !mPendingAttachVowifiSuccess && !mPendingActivePdnSuccess) {
                                 mFeatureSwitchRequest = null;
                                 Log.i(TAG,"onSessionEmpty-> This is volte call,so mFeatureSwitchRequest has been emptyed.");
