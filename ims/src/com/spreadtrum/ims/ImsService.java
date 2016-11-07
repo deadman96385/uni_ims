@@ -95,6 +95,7 @@ public class ImsService extends Service {
     private static final int EVENT_WIFI_UNSOL_UPDATE = 211;
     private static final int EVENT_WIFI_RTP_RECEIVED = 212;
     private static final int EVENT_UPDATE_DATA_ROUTER_FINISHED = 213;
+    private static final int EVENT_NOTIFY_CP_VOWIFI_ATTACH_SUCCESSED = 214;
 
     class ImsOperationType{
         public static final int IMS_OPERATION_SWITCH_TO_VOWIFI = 0;
@@ -296,9 +297,7 @@ public class ImsService extends Service {
                                 + " mPendingVowifiHandoverVowifiSuccess:" + mPendingVowifiHandoverVowifiSuccess + " mIsS2bStopped" + mIsS2bStopped
                                 + " mAttachVowifiSuccess:" + mAttachVowifiSuccess);
                         if(mFeatureSwitchRequest != null){
-                            ImsServiceImpl service = mImsServiceImplMap.get(
-                                    Integer.valueOf(mFeatureSwitchRequest.mServiceId));
-                            service.notifyImsHandoverStatus(ImsHandoverResult.IMS_HANDOVER_ATTACH_SUCCESS);
+                            notifyCPVowifiAttachSucceed();
                             if(mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER){
                                 /*SPRD: Modify for bug595321 and 610503{@*/
                                 if (mIsCalling) {
@@ -750,8 +749,15 @@ public class ImsService extends Service {
                                 }
                             }
                     }
-                    default:
-                        break;
+                    break;
+                case EVENT_NOTIFY_CP_VOWIFI_ATTACH_SUCCESSED:
+                    Log.i(TAG,"EVENT_NOTIFY_CP_VOWIFI_ATTACH_SUCCESSED-> notifyImsHandoverStatus:" + ImsHandoverResult.IMS_HANDOVER_ATTACH_SUCCESS);
+                    ImsServiceImpl Impl = mImsServiceImplMap.get(
+                            Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
+                    Impl.notifyImsHandoverStatus(ImsHandoverResult.IMS_HANDOVER_ATTACH_SUCCESS);
+                    break;
+                default:
+                    break;
                 }
             } catch(RemoteException e){
                 e.printStackTrace();
@@ -1925,5 +1931,9 @@ public class ImsService extends Service {
                 Log.i(TAG,"terminateAllCalls->VowifiServiceImpl is null.");
             }
         }
+    }
+
+    public void notifyCPVowifiAttachSucceed(){
+        mHandler.sendMessageDelayed(mHandler.obtainMessage(EVENT_NOTIFY_CP_VOWIFI_ATTACH_SUCCESSED),1000);
     }
 }
