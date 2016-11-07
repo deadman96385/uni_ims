@@ -4522,6 +4522,9 @@ void queryEccNetworkList() {
     if (strlen(eccNetList) > 0) {
         RIL_onUnsolicitedResponse(RIL_EXT_UNSOL_ECC_NETWORKLIST_CHANGED,
                 eccNetList, strlen(eccNetList) + 1);
+    } else {
+        RIL_onUnsolicitedResponse(RIL_EXT_UNSOL_ECC_NETWORKLIST_CHANGED,
+                                  NULL, 0);
     }
 
 done:
