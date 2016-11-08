@@ -177,6 +177,7 @@ public class ImsService extends Service {
     private int mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
     private int mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
     private TelephonyManager mTelephonyManager;
+    private int mPhoneCount;
     private IImsServiceListenerEx mImsServiceListenerEx;
     private ImsServiceRequest mFeatureSwitchRequest;
     private ImsServiceRequest mReleaseVowifiRequest;
@@ -793,6 +794,7 @@ public class ImsService extends Service {
             }
         }
         mTelephonyManager = TelephonyManager.from(this);
+        mPhoneCount = mTelephonyManager.getPhoneCount();
         PhoneStateListener mListener = new PhoneStateListener() {
             @Override
             public void onCallStateChanged(int state, String incomingNumber) {
@@ -991,11 +993,13 @@ public class ImsService extends Service {
          */
         @Override
         public void turnOnIms(int phoneId){
-            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(phoneId+1));
-            if (service == null) {
-                Log.e (TAG, "Invalid phoneId " + phoneId);
+            for(int i = 0; i < mPhoneCount; i++){
+                ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(i+1));
+                if(impl == null){
+                    continue;
+                }
+                impl.turnOnIms();
             }
-            //service.turnOnIms();
         }
 
         /**
@@ -1004,11 +1008,13 @@ public class ImsService extends Service {
          */
         @Override
         public void turnOffIms(int phoneId) {
-            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(phoneId+1));
-            if (service == null) {
-                Log.e (TAG, "Invalid phoneId " + phoneId);
+            for(int i = 0; i < mPhoneCount; i++){
+                ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(i+1));
+                if(impl == null){
+                    continue;
+                }
+                impl.turnOffIms();
             }
-            //service.turnOffIms();
         }
 
         /**

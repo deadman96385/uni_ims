@@ -18,6 +18,7 @@ import android.os.AsyncResult;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import android.provider.Telephony;
 import com.android.internal.telephony.CommandsInterface;
@@ -81,6 +82,7 @@ public class ImsServiceImpl {
     protected static final int EVENT_IMS_HANDOVER_ACTION_COMPLETE      = 107;
     protected static final int EVENT_IMS_PND_STATE_CHANGED             = 108;
     protected static final int EVENT_IMS_NETWORK_INFO_UPDATE           = 109;
+    protected static final int EVENT_SET_VOICE_CALL_AVAILABILITY_DONE  = 110;
 
     private GSMPhone mPhone;
     private ImsServiceState mImsServiceState;
@@ -286,6 +288,12 @@ public class ImsServiceImpl {
                         mImsService.onImsNetworkInfoChange(info.mType, info.mInfo);
                     }
                     break;
+                case EVENT_SET_VOICE_CALL_AVAILABILITY_DONE:
+                    if(ar.exception != null){
+                        Log.i(TAG,"EVENT_SET_VOICE_CALL_AVAILABILITY_DONE: exception");
+                        Toast.makeText(mContext.getApplicationContext(), mContext.getString(R.string.ims_switch_failed), Toast.LENGTH_SHORT).show();
+                    }
+                    break;
                 default:
                     break;
             }
@@ -480,12 +488,12 @@ public class ImsServiceImpl {
 
     public void turnOnIms(){
         Log.i(TAG,"turnOnIms.");
-        mCi.enableIms(null);
+        mCi.setImsVoiceCallAvailability(1 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE));
     }
 
     public void turnOffIms(){
         Log.i(TAG,"turnOffIms.");
-        mCi.disableIms(null);
+        mCi.setImsVoiceCallAvailability(0 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE));
     }
 
     class SessionListListener implements ImsServiceCallTracker.SessionListListener {
