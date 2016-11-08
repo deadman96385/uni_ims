@@ -701,13 +701,14 @@ public class ImsService extends Service {
                                     StringBuffer info = new StringBuffer();
                                     WifiInfo wifiInfo;
                                     String wifiInfoHead = "IEEE-802.11;i-wlan-node-id=";
+                                    info.append(wifiInfoHead);
                                     WifiManager wifiManager = (WifiManager)ImsService.this.getSystemService(Context.WIFI_SERVICE);
                                     if (wifiManager != null) {
                                         Log.i(TAG,"EVENT_UPDATE_DATA_ROUTER_FINISHED-> wifiManager :" + wifiManager);
                                         wifiInfo = wifiManager.getConnectionInfo();
-                                        if (wifiInfo != null) {
+                                        if (wifiInfo != null && wifiInfo.getBSSID() != null) {
                                             Log.i(TAG,"EVENT_UPDATE_DATA_ROUTER_FINISHED-> wifiInfo.getBSSID(): " + wifiInfo.getBSSID());
-                                            info.append(wifiInfoHead).append(wifiInfo.getBSSID().replace(":",""));
+                                            info.append(wifiInfo.getBSSID().replace(":",""));
                                         }
                                     }
                                     Log.i(TAG,"EVENT_UPDATE_DATA_ROUTER_FINISHED->notifyImsNetworkInfo->type: " + type + " info: " + info.toString());
