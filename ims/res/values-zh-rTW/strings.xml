@@ -37,5 +37,5 @@
     <!-- @} -->
     <string name="camera_open_fail">攝像頭故障</string><!-- SPRD: Add for bug571839 -->
     <string name="vowifi_attation">Vowifi 提示</string>
-    <string name="vowifi_regist_fail_content">當前網絡不知持vowifi</string>
+    <string name="vowifi_regist_fail_content">當前網絡不支持vowifi</string>
 </resources>
