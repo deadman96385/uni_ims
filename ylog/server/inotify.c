@@ -51,6 +51,9 @@ static int ylog_inotfiy_file_handler_timeout(struct ylog *y) {
                         pcell->pathname ? pcell->pathname:"", pcell->filename ? pcell->filename:"", pcell->timeout);
                 if (pcell->handler)
                     pcell->handler(pcell, 1, y); /* 1 for timeout */
+                ylog_info("ylog inotify '%s %s' %dms timeout done\n",
+                        pcell->pathname ? pcell->pathname:"", pcell->filename ? pcell->filename:"", pcell->timeout);
+                pcell->step = 0;
                 left = elapsed = -1;
             } else {
                 left = pcell->timeout - elapsed;
@@ -98,6 +101,7 @@ static int ylog_inotfiy_file_handler(struct ylog *y) {
             if (pcell->wd == event->wd) {
                 int found = 0;
                 int match = 0;
+                pcell->event_mask = event->mask;
                 if (pcell->type & YLOG_INOTIFY_TYPE_WATCH_FILE_FOLDER) {
                     if (event->len && !strcmp(pcell->filename, event->name))
                         match = 1;
@@ -108,10 +112,10 @@ static int ylog_inotfiy_file_handler(struct ylog *y) {
                 }
                 if (match) {
                     if ((pcell->type & YLOG_INOTIFY_TYPE_MASK_EQUAL) &&
-                        (pcell->mask == event->mask))
+                        (pcell->mask == pcell->event_mask))
                         found = 1;
                     if ((pcell->type & YLOG_INOTIFY_TYPE_MASK_SUBSET_BIT) &&
-                        ((pcell->mask & event->mask) == pcell->mask))
+                        (pcell->mask & pcell->event_mask))
                         found = 1;
                 }
                 if (found) {
@@ -139,6 +143,7 @@ static int ylog_inotfiy_file_handler(struct ylog *y) {
                                             empty = a;
                                     }
                                     if (empty) {
+                                        pcell->cache_full = 0;
                                         if (found == 0) {
                                             snprintf(empty, file->len, "%s%s%s",
                                                     prefix ? prefix:"", event->name, suffix ? suffix:"");
@@ -146,11 +151,23 @@ static int ylog_inotfiy_file_handler(struct ylog *y) {
                                         } else {
                                             ylog_debug("%s already has %s\n", pcella->name, fempty);
                                         }
-                                    } else {
+                                    } else if (pcell->cache_full == 0) {
+                                        /**
+                                         * when this pcell in timeout watching stage,
+                                         * then full info will be printed out
+                                         * we can process it like ylog_inotfiy_file_handler_timeout
+                                         *
+                                         * pcell->status &= ~YLOG_INOTIFY_WAITING_TIMEOUT;
+                                         * pcell->handler(pcell, 0, y);
+                                         * pcell->step = 0;
+                                         *
+                                         * Todo, description like above
+                                         */
+                                        pcell->cache_full = 1;
                                         ylog_info("ylog_inotify_cell_args %s is full\n", pcella->name);
                                         for (i = 0; i < file->num; i++) {
                                             a = file->files_array + i * file->len;
-                                            ylog_info("%s -> %s\n", pcella->name, a);
+                                            ylog_debug("%s -> %s\n", pcella->name, a);
                                         }
                                     }
                                 }
@@ -158,15 +175,30 @@ static int ylog_inotfiy_file_handler(struct ylog *y) {
                         }
                     }
                     if (pcell->timeout > 0) {
-                        get_boottime(&pcell->ts);
-                        ret = pcell->timeout; /* remove dithering, wait for dither timeout happen */
-                        pcell->status |= YLOG_INOTIFY_WAITING_TIMEOUT;
-                        ylog_debug("ylog inotify '%s %s'' waiting %dms timeout\n",
-                                pcell->pathname ? pcell->pathname:"", pcell->filename ? pcell->filename:"", ret);
+                        int timeout = 1;
+                        if (pcell->handler_prev)
+                            timeout = pcell->handler_prev(pcell, 0, y);
+                        if (timeout > 0) {
+                            get_boottime(&pcell->ts);
+                            gettimeofday(&pcell->tv, NULL);
+                            if (pcell->step++ == 0)
+                                pcell->tvf = pcell->tv;
+                            ret = pcell->timeout; /* remove dithering, wait for dither timeout happen */
+                            pcell->status |= YLOG_INOTIFY_WAITING_TIMEOUT;
+                            ylog_debug("ylog inotify '%s %s'' waiting %dms timeout\n",
+                                    pcell->pathname ? pcell->pathname:"", pcell->filename ? pcell->filename:"", ret);
+                            if (pcell->handler_prev)
+                                timeout = pcell->handler_prev(pcell, 1, y);
+                        } else
+                            ret = -1;
                     } else {
-                        if (pcell->handler)
+                        if (pcell->handler) {
+                            ylog_info("ylog inotify '%s %s' %dms no-timeout now\n",
+                                    pcell->pathname ? pcell->pathname:"", pcell->filename ? pcell->filename:"", pcell->timeout);
                             ret = pcell->handler(pcell, 0, y); /* 0 for not timeout */
-                        else
+                            ylog_info("ylog inotify '%s %s' %dms no-timeout done\n",
+                                    pcell->pathname ? pcell->pathname:"", pcell->filename ? pcell->filename:"", pcell->timeout);
+                        } else
                             ret = -1;
                     }
                     if (ret > 0) {

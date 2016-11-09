@@ -46,16 +46,16 @@ FILE *popen2(char *command, char *type) {
         return (NULL);
 
     if ((cur = malloc(sizeof(struct pid))) == NULL) {
-        (void)close(pdes[0]);
-        (void)close(pdes[1]);
+        (void)CLOSE(pdes[0]);
+        (void)CLOSE(pdes[1]);
         errno = ENOMEM;
         return (NULL);
     }
 
     switch (pid = vfork()) {
     case -1:            /* Error. */
-        (void)close(pdes[0]);
-        (void)close(pdes[1]);
+        (void)CLOSE(pdes[0]);
+        (void)CLOSE(pdes[1]);
         free(cur);
         return (NULL);
         /* NOTREACHED */
@@ -69,10 +69,10 @@ FILE *popen2(char *command, char *type) {
              * the compiler is free to corrupt all the local
              * variables.
              */
-            (void)close(pdes[0]);
+            (void)CLOSE(pdes[0]);
             if (pdes[1] != STDOUT_FILENO) {
                 (void)dup2(pdes[1], STDOUT_FILENO);
-                (void)close(pdes[1]);
+                (void)CLOSE(pdes[1]);
                 if (twoway)
                     (void)dup2(STDOUT_FILENO, STDIN_FILENO);
             } else if (twoway && (pdes[1] != STDIN_FILENO)) {
@@ -81,12 +81,12 @@ FILE *popen2(char *command, char *type) {
         } else {
             if (pdes[0] != STDIN_FILENO) {
                 (void)dup2(pdes[0], STDIN_FILENO);
-                (void)close(pdes[0]);
+                (void)CLOSE(pdes[0]);
             }
-            (void)close(pdes[1]);
+            (void)CLOSE(pdes[1]);
         }
         for (p = pidlist; p; p = p->next) {
-            (void)close(fileno(p->fp));
+            (void)CLOSE(fileno(p->fp));
         }
         //execl(_PATH_BSHELL, "sh", "-c", command, NULL);
         /**
@@ -129,10 +129,10 @@ FILE *popen2(char *command, char *type) {
     /* Parent; assume fdopen can't fail. */
     if (xtype[0] == 'r') {
         iop = fdopen(pdes[0], xtype);
-        (void)close(pdes[1]);
+        (void)CLOSE(pdes[1]);
     } else {
         iop = fdopen(pdes[1], xtype);
-        (void)close(pdes[0]);
+        (void)CLOSE(pdes[0]);
     }
 
     /* Link into list of file descriptors. */
@@ -187,40 +187,4 @@ int pclose2(FILE *iop) {
     free(cur);
 
     return (pid == -1 ? -1 : pstat);
-}
-
-int pclose2_all(void) {
-    register struct pid *cur, *last;
-    int pstat;
-    pid_t pid;
-    int fd;
-    FILE *iop;
-    int num = 0;
-
-    pthread_mutex_lock(&popen2_pidlist_mutex);
-    /* Find the appropriate file pointer. */
-    for (last = NULL, cur = pidlist; cur; last = cur, cur = cur->next) {
-        /* Remove the entry from the linked list. */
-        if (last == NULL)
-            pidlist = cur->next;
-        else
-            last->next = cur->next;
-
-        fd = cur->pid;
-        iop = cur->fp;
-
-        kill(fd, SIGKILL);
-        //kill(fd, SIGINT);
-        //kill(fd, SIGTERM);
-
-        (void)fclose(iop);
-
-        do {
-            pid = waitpid(cur->pid, &pstat, 0);
-        } while (pid == -1 && errno == EINTR);
-
-        free(cur);
-    }
-    pthread_mutex_unlock(&popen2_pidlist_mutex);
-    return 0;
 }

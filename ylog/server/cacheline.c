@@ -52,9 +52,15 @@ static void cacheline_drain(struct cacheline *cl, int reason) {
         memcpy(pcache, cacheline_line_pointer(cl->rclidx, cl), wpos);
         cl->writing = 1;
         pthread_mutex_unlock(&cl->mutex); /* give ydst more chance to use other free cachelines */
-        if (cl->bypass == 0)
-            ret = cl->ydst->fwrite(pcache, wpos, cl->ydst->fd);
-        else
+        if (cl->bypass == 0) {
+            if (cl->ydst->write_data2cache_first == 0)
+                ret = cl->ydst->fwrite(pcache, wpos, cl->ydst->fd, cl->ydst->file_name);
+            else {
+                ret = cl->ydst->write_handler(pcache, wpos, cl->ydst->ylog[0], NULL);
+                if (ret > wpos)
+                    ret = wpos;
+            }
+        } else
             ret = wpos;
         if (ret != wpos)
             ylog_critical("%s cacheline write wrong %d -> %d\n", cl->name, wpos, ret);
@@ -146,10 +152,12 @@ static void *cacheline_thread_handler_default(void *arg) {
     char *pcache;
     int ret;
 
+    os_hooks.pthread_create_hook(NULL, "cacheline %s", cl->name);
+
     cl->pid = getpid();
     cl->tid = gettid();
 
-    ylog_info("cacheline %s --> %s is started, pid=%d, tid=%d\n", cl->name, cl->ydst->file, cl->pid, cl->tid);
+    ylog_debug("cacheline %s --> %s is started, pid=%d, tid=%d\n", cl->name, cl->ydst->file, cl->pid, cl->tid);
 
     for (;;) {
         /* Step 1. wait for cacheline data full */
@@ -176,15 +184,40 @@ static void *cacheline_thread_handler_default(void *arg) {
                 cl->writes_cachelines++;
             cl->writing = 1;
             pthread_mutex_unlock(&cl->mutex); /* give ydst more chance to use other free cachelines */
-            if (cl->bypass == 0)
-                ret = cl->ydst->fwrite(pcache, cl->size, cl->ydst->fd);
-            else
+            if (cl->bypass == 0) {
+                if (cl->ydst->write_data2cache_first == 0)
+                    ret = cl->ydst->fwrite(pcache, cl->size, cl->ydst->fd, cl->ydst->file_name);
+                else {
+                    ret = cl->ydst->write_handler(pcache, cl->size, cl->ydst->ylog[0], NULL);
+                    if (ret > cl->size)
+                        ret = cl->size;
+                }
+            } else
                 ret = cl->size;
             if (ret != cl->size)
                 ylog_critical("%s cacheline write cacheline wrong %d -> %d\n", cl->name, cl->size, ret);
             cl->writing = 0;
             pthread_mutex_lock(&cl->mutex);
             cl->rclidx = (cl->rclidx + 1) % cl->num; /* free this cacheline to let ydst use */
+            if (cl->wclidx_max < cl->wclidx)
+                cl->wclidx_max = cl->wclidx;
+        }
+        /* Step X. wrap back the wclidx pointer to let malloc avoid doing more physical memory page missing request */
+        if (cl->wclidx == cl->rclidx) {
+            if (cl->wclidx != 0) { /* wclidx will be wrapped back to index 0 slot */
+                long wpos = cl->wpos;
+                if (wpos) {
+                    char *pcache = cacheline_line_pointer(0, cl);
+                    memcpy(pcache, cacheline_line_pointer(cl->wclidx, cl), wpos);
+                }
+                if (cl->debuglevel & CACHELINE_DEBUG_WCLIDX_WRAP)
+                    ylog_info("%s cacheline wrap back to 0 from %d %dbytes\n", cl->name, cl->wclidx, wpos);
+                cl->wclidx = cl->rclidx = 0;
+            }
+        } else {
+            if (cl->status == CACHELINE_RUN)
+                ylog_critical("%s cacheline fatal error, wclidx=%d, rclidx=%d, wpos=%d\n",
+                        cl->name, cl->wclidx, cl->rclidx, cl->wpos);
         }
         /* Step 3. flush or exit */
         if (cl->status != CACHELINE_RUN) {

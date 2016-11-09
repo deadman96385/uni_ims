@@ -2,13 +2,13 @@
  * Copyright (C) 2016 Spreadtrum Communications Inc.
  */
 
-static int fd_write(char *buf, int count, int fd) {
+static int fd_write(char *buf, int count, int fd, char *desc) {
     int c;
     int retries = 5;
     int written = 0;
 
     if (fd < 0) {
-        ylog_critical("write fd does not open\n");
+        ylog_critical("write fd does not open %s\n", desc);
         return 0;
     }
 
@@ -23,16 +23,38 @@ static int fd_write(char *buf, int count, int fd) {
                 count -= c;
             }
         } else {
-            ylog_error("write failed %d: %s\n", c, strerror(errno));
+            ylog_error("%s write failed %d: %d %s\n", desc, c, fd, strerror(errno));
         }
         usleep(10*1000);
     } while (--retries);
 
     if (retries == 0) {
-        ylog_critical("write failed: retries all\n");
+        ylog_critical("write failed: retries all %s\n", desc);
     }
 
     return written;
+}
+
+static int copy_file(int fd_to, int fd_from, int max_size_limit, char *desc) {
+    char buf[64 * 1024];
+    int ret, cnt = 0;
+    do {
+        ret = read(fd_from, buf, sizeof buf);
+        if (ret > 0) {
+            cnt += ret;
+            if (ret != fd_write(buf, ret, fd_to, desc)) {
+                ylog_info("write %s fail.%s", desc, strerror(errno));
+                ret = -1;
+                break;
+            }
+        } else {
+            if (ret < 0)
+                ylog_info("read %s fail.%s", desc, strerror(errno));
+            break;
+        }
+    } while (cnt < max_size_limit);
+
+    return ret < 0 ? -1:0;
 }
 
 pid_t gettid(void) {
@@ -51,10 +73,24 @@ pid_t gettid(void) {
     return syscall(SYS_gettid);
 }
 
+static int ylog_pthread_create(ylog_pthread_handler handler, void *arg) {
+    pthread_t ptid;
+    if (pthread_create(&ptid, NULL, handler, arg)) {
+        ylog_error("Failed to pthread_create %s\n", strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
 static unsigned long long calculate_path_disk_available(char *path) {
     struct statfs diskInfo;
 
-    statfs(path, &diskInfo);
+    memset(&diskInfo, 0, sizeof diskInfo);
+
+    if (statfs(path, &diskInfo)) {
+        ylog_error("statfs failed %s %s\n", path, strerror(errno));
+        return 0;
+    }
 
     return diskInfo.f_bavail * diskInfo.f_bsize;
 }
@@ -77,7 +113,51 @@ static int pthread_cond_timedwait_monotonic2(int millisecond, pthread_cond_t *co
     return pthread_cond_timedwait(cond, mutex, ts);
 }
 
-int ylog_tv2format_time(char *timeBuf, struct timeval *tv) {
+static int ylog_tv2format_time_year(char *timeBuf, struct timeval *tv) {
+    struct tm tm;
+    struct tm* ptm;
+    time_t t;
+    int len;
+
+    t = tv->tv_sec; //time(NULL);
+//#if defined(HAVE_LOCALTIME_R)
+    ptm = localtime_r(&t, &tm);
+//#else
+//    ptm = localtime(&t);
+//#endif
+    /* strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%d %H:%M:%S", ptm); */
+    len = strftime(timeBuf, 32, "%Y%m%d-%H%M%S", ptm);
+    if (1/* usec_time_output */) {
+        /* 20160501-221436.000 */
+        len += snprintf(timeBuf + len, 32 - len,
+                ".%03ld", tv->tv_usec / 1000);
+    } else {
+        /* 20160501-221436.000 */
+        len += snprintf(timeBuf + len, 32 - len,
+                 ".%03ld", tv->tv_usec / 1000000);
+    }
+    return len;
+}
+
+static int ylog_get_format_time_year(char *buf) {
+    char *timeBuf = buf;
+    struct timeval tv;
+    //char timeBuf[32];/* good margin, 23+nul for msec, 26+nul for usec */
+    /* From system/core/liblog/logprint.c */
+    /*
+     * Get the current date/time in pretty form
+     *
+     * It's often useful when examining a log with "less" to jump to
+     * a specific point in the file by searching for the date/time stamp.
+     * For this reason it's very annoying to have regexp meta characters
+     * in the time stamp.  Don't use forward slashes, parenthesis,
+     * brackets, asterisks, or other special chars here.
+     */
+    gettimeofday(&tv, NULL);
+    return ylog_tv2format_time_year(timeBuf, &tv);
+}
+
+static int ylog_tv2format_time(char *timeBuf, struct timeval *tv) {
     struct tm tm;
     struct tm* ptm;
     time_t t;
@@ -103,7 +183,7 @@ int ylog_tv2format_time(char *timeBuf, struct timeval *tv) {
     return len;
 }
 
-int ylog_ts2format_time(char *timeBuf, struct timespec *ts) {
+static int ylog_ts2format_time(char *timeBuf, struct timespec *ts) {
     struct tm tm;
     struct tm* ptm;
     time_t t;
@@ -117,19 +197,20 @@ int ylog_ts2format_time(char *timeBuf, struct timespec *ts) {
 //#endif
     /* strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%d %H:%M:%S", ptm); */
     len = strftime(timeBuf, 32, "[%m-%d %H:%M:%S", ptm);
-    if (1/* usec_time_output */) {
-        /* 01-01 22:14:36.000   826   826 D SignalClusterView_dual: */
-        len += snprintf(timeBuf + len, 32 - len,
-                ".%03ld] ", ts->tv_nsec / 1000000);
-    } else {
-        /* 01-01 22:14:36.000   826   826 D SignalClusterView_dual: */
-        len += snprintf(timeBuf + len, 32 - len,
-                 ".%03ld] ", ts->tv_nsec / 1000000);
-    }
+#if 1
+    /* usec_time_output */
+    /* 01-01 22:14:36.000   826   826 D SignalClusterView_dual: */
+    len += snprintf(timeBuf + len, 32 - len,
+            ".%03ld] ", ts->tv_nsec / 1000000);
+#else
+    /* 01-01 22:14:36.000   826   826 D SignalClusterView_dual: */
+    len += snprintf(timeBuf + len, 32 - len,
+             ".%03ld] ", ts->tv_nsec / 1000000);
+#endif
     return len;
 }
 
-int ylog_get_format_time(char *buf) {
+static int ylog_get_format_time(char *buf) {
     char *timeBuf = buf;
     struct timeval tv;
     //char timeBuf[32];/* good margin, 23+nul for msec, 26+nul for usec */
@@ -269,7 +350,7 @@ static unsigned long long currentTimeMillis(void) {
 #else
     struct timespec ts;
     get_monotime(&ts);
-    return (unsigned long long)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+    return (unsigned long long)ts.tv_sec * 1000L + ts.tv_nsec / 1000000;
 #endif
 }
 
@@ -410,7 +491,7 @@ static int do_cmd(char *buf, int count, int print_cmd, const char *fmt, ...) {
             return -1;
         } else {
             if (print_cmd)
-                ylog_info("do_cmd %s success, ret=%d\n", cmd, ret);
+                ylog_debug("do_cmd %s success, ret=%d\n", cmd, ret);
         }
         return ret;
     } else {

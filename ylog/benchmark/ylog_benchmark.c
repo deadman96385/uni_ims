@@ -15,6 +15,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#define UNUSED(x) (void)(x) /* avoid compiler warning */
+
 enum loglevel {
     LOG_ERROR,
     LOG_CRITICAL,
@@ -30,6 +32,17 @@ int debug_level = LOG_DEBUG;
 #define ylog_critical(msg...) ylog_printf(LOG_CRITICAL, "ylog<critical> "msg)
 #define ylog_error(msg...) ylog_printf(LOG_ERROR, "ylog<error> "msg)
 
+#ifdef ANDROID
+#include <cutils/sockets.h>
+int connect_socket_local_server(char *name) {
+    int fd = socket_local_client(name, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+    if (fd < 0) {
+        ylog_error("%s open %s failed: %s\n", __func__, name, strerror(errno));
+        return -1;
+    }
+    return fd;
+}
+#else
 int connect_socket_local_server(char *name) {
     struct sockaddr_un address;
     int fd;
@@ -55,11 +68,13 @@ int connect_socket_local_server(char *name) {
 
     if (connect(fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
         ylog_error("%s connect %s failed: %s\n", __func__, name, strerror(errno));
+        close(fd);
         return -1;
     }
 
     return fd;
 }
+#endif
 
 static time_t diff_ts_millisecond(struct timespec *b, struct timespec *a) {
     /**
@@ -147,7 +162,7 @@ static void socket_send_file(char *file, int buf_size, int socket) {
         char *buf;
         int len;
         long long count = 0;
-        if (fd <= 0) {
+        if (fd < 0) {
             ylog_error("open %s failed: %s\n", file, strerror(errno));
             return;
         }
@@ -156,6 +171,7 @@ static void socket_send_file(char *file, int buf_size, int socket) {
         buf = malloc(buf_size);
         if (buf == NULL) {
             ylog_critical("Can't malloc %d\n", buf_size);
+            close(fd);
             return;
         }
         ylog_info("write file %s with size %d\n", file, buf_size);
@@ -186,10 +202,14 @@ static void usage(void) {
     printf(
 "ylog_benchmark [-s socket-name] [-d string data to send] [-f flie.bin to send]\n"
 "               [-b buffer size for each sending with -f]\n"
+"example:\n"
+"ylog_benchmark -s ylog_benchmark_socket_server -f /system/bin/wpa_supplicant\n"
 );
 }
 
 int main(int argc, char *argv[]) {
+    UNUSED(argc);
+    UNUSED(argv);
     int ylog;
     char buf[8192];
     char data[8192];
@@ -210,7 +230,7 @@ int main(int argc, char *argv[]) {
     int buf_size = 4096;
     int send_file = 0;
 
-    snprintf(buf, sizeof buf, "ylog");
+    snprintf(buf, sizeof buf, "ylog_socket");
     while ((arg = getopt(argc, argv, "s:d:f:b:h")) != (char)-1) {
         switch (arg) {
         case 's': snprintf(buf, sizeof buf, "%s", optarg); break;
@@ -297,8 +317,4 @@ int main(int argc, char *argv[]) {
     }
 
     return 0;
-    if (0) { /* avoid compiler warning */
-        argc = argc;
-        argv = argv;
-    }
 }

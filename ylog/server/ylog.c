@@ -10,8 +10,8 @@
 #include "filter.c"
 #include "inotify.c"
 #include "file.c"
-#include "command.c"
 #include "parser.c"
+#include "command.c"
 #ifdef ANDROID
 #include "os/android.c"
 #else
@@ -26,20 +26,12 @@ static int fd_command_server;
 static sigset_t signals_handled;
 //static pthread_mutex_t mutex_sig = PTHREAD_MUTEX_INITIALIZER;
 static void *ylog_sighandler_thread_default(void *arg) {
-    struct ylog *y;
-    int i;
     int *processing_signal = arg;
     ylog_info("ylog_sighandler_thread_default starts to run\n");
     if (global_context->ignore_signal_process == 0/**processing_signal == SIGPWR*/) {
-        for_each_ylog(i, y, NULL) {
-            if (y->name == NULL)
-                continue;
-            ylog_info("ylog %s exiting...\n", y->name);
-            y->thread_exit(y, 1);
-            ylog_info("ylog %s exited\n", y->name);
-        }
-        close(fd_command_server);
-        print2journal_file("ylog.stop with signal %d, %s, sdcard is %s", *processing_signal, strsignal(*processing_signal), os_check_sdcard_online() ? "online" : "offline");
+        ylog_all_thread_exit();
+        CLOSE(fd_command_server);
+        print2journal_file("ylog.stop with signal %d, %s, sdcard is %s", *processing_signal, strsignal(*processing_signal), os_check_sdcard_online(NULL, 0) ? "online" : "offline");
         #if 0
         exit(0); /* sometime it will pending there long time, don't know why */
         #else
@@ -130,6 +122,7 @@ static void hook_signals(void) {
 #endif
 }
 
+#ifdef HAVE_YLOG_INFO
 static int ylog_read_info(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
     static int cnt = 0;
     int i;
@@ -154,7 +147,7 @@ static int ylog_read_info(char *buf, int count, FILE *fp, int fd, struct ylog *y
     if (fd == yp_fd(YLOG_POLL_INDEX_PIPE, &y->yp))
         return y->read(buf, count, fp, fd, y);
 
-    pcmds(cmd_list, &cnt, w, y, "ylog_info");
+    pcmds(cmd_list, &cnt, w, y, "ylog_info", -1, NULL);
 
     if (os_hooks.ylog_read_info_hook)
         os_hooks.ylog_read_info_hook(buf, count, fp, cnt, y);
@@ -163,32 +156,31 @@ static int ylog_read_info(char *buf, int count, FILE *fp, int fd, struct ylog *y
         if (yi->name == NULL)
             continue;
         ctid = yi->ydst->cache ? yi->ydst->cache->tid : -1;
-        w(buf, snprintf(buf, count, "[ylog] %s pid=%d, tid=%d, cache tid=%d\n", yi->name, yi->pid, yi->tid, ctid), y);
+        w(buf, snprintf(buf, count, "[ylog] %s pid=%d, tid=%d, cache tid=%d\n", yi->name, yi->pid, yi->tid, ctid), y, NULL);
     }
 
     for_each_event_thread_start(e)
-    w(buf, snprintf(buf, count, "[event] %s pid=%d, tid=%d\n", e->yewait.name, e->pid, e->tid), y);
+    w(buf, snprintf(buf, count, "[event] %s pid=%d, tid=%d\n", e->yewait.name, e->pid, e->tid), y, NULL);
     for_each_event_thread_end();
 
     return 0; /* INT_MAX; */
 }
+#endif
 
+#ifdef HAVE_YLOG_JOURNAL
 static int ylog_read_journal(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
     ylog_write_handler w = y->write_handler;
     if (fd == yp_fd(YLOG_POLL_INDEX_PIPE, &y->yp))
         return y->read(buf, count, fp, fd, y);
     do {
         count = get_journal_file(buf, count);
-        if (count == 0)
+        if (count <= 0)
             break;
-        w(buf, count, y);
+        w(buf, count, y, NULL);
     } while (1);
     return 0; /* INT_MAX; */
-    if (0) { /* avoid compiler warning */
-        fp = fp;
-        fd = fd;
-    }
 }
+#endif
 
 static int ylog_read_ylog_debug(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
     static int cnt = 0;
@@ -218,9 +210,9 @@ static int ylog_read_ylog_debug(char *buf, int count, FILE *fp, int fd, struct y
     delta_tm.tm_yday,
     delta_tm.tm_hour,
     delta_tm.tm_min,
-    delta_tm.tm_sec), y);
+    delta_tm.tm_sec), y, NULL);
 
-    pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_debug");
+    pcmds(cmd_list, &cnt, y->write_handler, y, "ylog_debug", -1, NULL);
 
     if (os_hooks.ylog_read_ylog_debug_hook)
         os_hooks.ylog_read_ylog_debug_hook(buf, count, fp, cnt, y);
@@ -237,49 +229,61 @@ static struct ydst_root ydst_root_default = {
     .root = NULL,
 };
 
+struct cacheline cacheline_default = {
+    .size = 512 * 1024,
+    .num = 16,
+    .timeout = 1000, /* ms */
+    .debuglevel = CACHELINE_DEBUG_INFO | CACHELINE_DEBUG_CRITICAL | CACHELINE_DEBUG_WCLIDX_WRAP,
+};
+
 struct cacheline cacheline_socket_open = {
     .size = 512 * 1024,
-    .num = 2,
+    .num = 16,
     .timeout = 1000, /* ms */
-    .debuglevel = CACHELINE_DEBUG_INFO | CACHELINE_DEBUG_CRITICAL,
+    .debuglevel = CACHELINE_DEBUG_INFO | CACHELINE_DEBUG_CRITICAL | CACHELINE_DEBUG_WCLIDX_WRAP,
 };
 
 /* Assume max size is 1G */
+/* ylog_cli quota 1024 */
 static struct ydst ydst_default[YDST_MAX+1] = {
     [YDST_TYPE_DEFAULT] = {
         .file = "default/default.", /* by default .file == NULL, then stdout will be used */
         .file_name = "default.log",
-        .max_segment = 5,
+        .max_segment = 2,
         .max_segment_size = 2*1024*1024,
+        .cache = &cacheline_default,
     },
     [YDST_TYPE_SOCKET] = {
         .file = "socket/open/",
         .file_name = "socket.log",
-        .max_segment = 5,
-        .max_segment_size = 10*1024*1024,
+        .max_segment = 2,
+        .max_segment_size = YDST_TYPE_SOCKET_DEFAULT_SIZE,
         .cache = &cacheline_socket_open,
+        .write_data2cache_first = 1,
         /* .nowrap = 1, */
     },
     [YDST_TYPE_YLOG_DEBUG] = {
         .file = "ylog_debug",
         .file_name = "ylog_debug.log",
         .max_segment = 1,
-        .max_segment_size = 20*1024*1024,
+        .max_segment_size = 30*1024*1024,
     },
+#ifdef HAVE_YLOG_INFO
     [YDST_TYPE_INFO] = {
         .file = "info",
         .file_name = "info.log",
         .max_segment = 1,
         .max_segment_size = 20*1024*1024,
     },
+#endif
+#ifdef HAVE_YLOG_JOURNAL
     [YDST_TYPE_JOURNAL] = {
         .file = "ylog_journal_file",
         .file_name = "ylog_journal_file.log",
         .max_segment = 1,
         .max_segment_size = 20*1024*1024,
     },
-    // [YLOG_DST_TYPE_MAX] = { .refs = -1, /* -1 to mark the end */ }
-    // [YLOG_DST_TYPE_MAX] = { .refs = -1, /* -1 to mark the end */ }
+#endif
 };
 
 static struct ylog ylog_default[YLOG_MAX+1] = {
@@ -287,17 +291,17 @@ static struct ylog ylog_default[YLOG_MAX+1] = {
         .name = "benchmark_socket",
         .type = FILE_POPEN,
         .file = "ylog_benchmark_socket_server",
-        .ydst = &ydst_default[YDST_TYPE_SOCKET],
-        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY,
+        .ydst = &ydst_default[YDST_TYPE_DEFAULT],
+        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY | YLOG_READ_LEN_MIGHT_ZERO,
         .raw_data = 1,
     },
     {
         .name = "socket",
-        .type = FILE_SOCKET_LOCAL,
-        .file = "ylog",
+        .type = FILE_SOCKET_LOCAL_SERVER,
+        .file = "ylog_socket",
         .ydst = &ydst_default[YDST_TYPE_SOCKET],
-        .mode = YLOG_READ_MODE_BLOCK,
-        .timestamp = 1,
+        .mode = YLOG_READ_MODE_BLOCK | YLOG_READ_MODE_BINARY | YLOG_READ_LEN_MIGHT_ZERO,
+        .raw_data = 1,
     },
     {
         .name = "ylog_debug",
@@ -307,6 +311,7 @@ static struct ylog ylog_default[YLOG_MAX+1] = {
         .restart_period = 1000 * 60 * 20,
         .fread = ylog_read_ylog_debug,
     },
+#ifdef HAVE_YLOG_INFO
     {
         .name = "info",
         .type = FILE_NORMAL,
@@ -314,6 +319,8 @@ static struct ylog ylog_default[YLOG_MAX+1] = {
         .ydst = &ydst_default[YDST_TYPE_INFO],
         .fread = ylog_read_info,
     },
+#endif
+#ifdef HAVE_YLOG_JOURNAL
     {
         .name = "journal",
         .type = FILE_NORMAL,
@@ -322,10 +329,13 @@ static struct ylog ylog_default[YLOG_MAX+1] = {
         .restart_period = 1000 * 60,
         .fread = ylog_read_journal,
     },
-    /* { .name = NULL, }, */ /* .name = NULL to mark the end of the array */
+#endif
 };
 
 static int speed_statistics_event_timer_handler(void *arg, long tick, struct ylog_event_cond_wait *yewait) {
+    UNUSED(arg);
+    UNUSED(tick);
+    UNUSED(yewait);
     static unsigned long long prev_size = 0;
     static struct timespec prev_ts;
     static struct timeval prev_tv;
@@ -386,14 +396,16 @@ static int speed_statistics_event_timer_handler(void *arg, long tick, struct ylo
     prev_ts = cur_ts;
     prev_tv = cur_tv;
     return 0;
-    if (0) { /* avoid compiler warning */
-        arg = arg;
-        tick = tick;
-        yewait = yewait;
-    }
+}
+
+static void pthread_create_hook_default(struct ylog *y, void *args, const char *fmt, ...) {
+    UNUSED(y);
+    UNUSED(args);
+    UNUSED(fmt);
 }
 
 static void *ylog_command_loop(void *arg) {
+    os_hooks.pthread_create_hook(NULL, NULL, "ylog_command_loop");
     command_loop(fd_command_server);
     arg = arg;
     return NULL;
@@ -405,30 +417,27 @@ struct ylog *global_ylog = ylog_default;
 struct ydst_root *global_ydst_root = &ydst_root_default;
 
 int main(int argc, char *argv[]) {
+    UNUSED(argc);
+    UNUSED(argv);
     pthread_t ptid;
-    int ret;
-    char uptimeb[128];
-    os_init(global_ylog, global_ydst, global_ydst_root, &global_context, &os_hooks);
+    os_init(global_ydst_root, &global_context, &os_hooks);
+    if (os_hooks.pthread_create_hook == NULL)
+        os_hooks.pthread_create_hook = pthread_create_hook_default;
     os_env_prepare();
-    ret = uptime(uptimeb, sizeof uptimeb);
-    if (ret < 0)
-        ret = 0;
-    uptimeb[ret] = 0;
     if (create_socket_local_server(&fd_command_server, "ylog_cli")) {
-        print2journal_file("ylog.start failed, ylog_cli socket create failed! - %s", uptimeb);
+        print2journal_file_string_with_uptime("ylog.start failed, ylog_cli socket create failed!");
         return -1; /* To avoid run ylog twice */
     }
-    print2journal_file("ylog.start success - %s", uptimeb);
-    ylog_init(global_ylog, global_ydst, global_ydst_root, global_context);
+    print2journal_file_string_with_uptime("ylog_cli socket done");
+    ylog_init(global_ydst_root, global_context);
     hook_signals();
     pthread_create(&ptid, NULL, ylog_command_loop, NULL);
     ylog_ready();
-    ylog_os_event_timer_create("speed", 1000, speed_statistics_event_timer_handler, NULL);
+    ylog_os_event_timer_create("speed", 1000, speed_statistics_event_timer_handler, (void*)-1);
     ylog_verify();
+    if (os_hooks.ready_go)
+        os_hooks.ready_go();
+    print2journal_file_string_with_uptime("ylog.start success");
     pthread_join(ptid, NULL);
     return 0;
-    if (0) { /* avoid compiler warning */
-        argc = argc;
-        argv = argv;
-    }
 }

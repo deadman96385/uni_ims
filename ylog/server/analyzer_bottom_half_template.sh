@@ -13,5 +13,5 @@ cat > ${file_name_base}.h <<__EOF
 
 #define ${file_name_base} \\
 __EOF
-sed 's/\\/\\\\/g;s/\(.*\)/"\1\\n" \\/' ${file_name_base}.py >> ${file_name_base}.h
+sed 's/\\/\\\\/g;s/"/\\"/g;s/\(.*\)/"\1\\n" \\/' ${file_name_base}.py >> ${file_name_base}.h
 echo '""' >> ${file_name_base}.h

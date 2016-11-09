@@ -20,11 +20,6 @@ static pthread_mutex_t update_config_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define INIT_PARSER_MAXARGS 64
 
-struct ylog_keyword {
-    const char *key;
-    void (*handler)(struct ylog_keyword *kw, int nargs, char **args);
-};
-
 struct parse_state {
     char *ptr;
     char *text;
@@ -160,7 +155,7 @@ static char *ylog_load_config(const char *path) {
 
     if (fstat(fd, &sb) == -1) {
         ylog_error("fstat failed for '%s': %s\n", path, strerror(errno));
-        close(fd);
+        CLOSE(fd);
         return NULL;
     }
 
@@ -184,7 +179,7 @@ static char *ylog_load_config(const char *path) {
                 break;
         } while (p < pmax);
     }
-    close(fd);
+    CLOSE(fd);
 
     return data;
 }
@@ -197,12 +192,14 @@ static void ylog_update_config(const char *fn, int u_nargs, char **u_args, int u
     int wfd = 0;
     int found = 0;
     char *mptr;
+    char *desc = "ylog_update_config";
 
     pthread_mutex_lock(&update_config_mutex);
     if (access(fn, F_OK)) {
         wfd = open(fn, O_RDWR | O_CREAT | O_TRUNC, 0644);
-        if (wfd > 0)
-            close(wfd);
+        /* ftruncate(wfd, 0); */
+        if (wfd >= 0)
+            CLOSE(wfd);
     }
 
     state.filename = fn;
@@ -242,19 +239,24 @@ static void ylog_update_config(const char *fn, int u_nargs, char **u_args, int u
 
                     if (i == un) {
                         s_args = u_args;
-                        s_nargs = u_nargs;
                         found = 1;
+                        if (u_args[un])
+                            s_nargs = u_nargs;
+                        else
+                            s_nargs = 0; /* delete this item */
                     } else {
                         s_args = args;
                         s_nargs = nargs;
                     }
 
-                    for (i = 0; i < s_nargs; i++) {
-                        fd_write(s_args[i], strlen(s_args[i]), wfd);
-                        if (i != (s_nargs - 1))
-                            fd_write(" ", 1, wfd);
+                    if (s_nargs) {
+                        for (i = 0; i < s_nargs; i++) {
+                            fd_write(s_args[i], strlen(s_args[i]), wfd, desc);
+                            if (i != (s_nargs - 1))
+                                fd_write(" ", 1, wfd, desc);
+                        }
+                        fd_write("\n", 1, wfd, desc);
                     }
-                    fd_write("\n", 1, wfd);
 
                     nargs = 0;
                 }
@@ -270,21 +272,37 @@ static void ylog_update_config(const char *fn, int u_nargs, char **u_args, int u
 parser_done:
     if (found == 0) {
         int i;
-        lseek(wfd, 0, SEEK_END);
-        for (i = 0; i < u_nargs; i++) {
-            fd_write(u_args[i], strlen(u_args[i]), wfd);
-            fd_write(" ", 1, wfd);
+        LSEEK(wfd, 0, SEEK_END);
+        if (u_args[un]) {
+            for (i = 0; i < u_nargs; i++) {
+                fd_write(u_args[i], strlen(u_args[i]), wfd, desc);
+                fd_write(" ", 1, wfd, desc);
+            }
+            fd_write("\n", 1, wfd, desc);
         }
-        fd_write("\n", 1, wfd);
     }
     free(mptr);
+    if (fchmod(wfd, 0644))
+        ylog_error("Unable to chmod ylog config file %s to 0644\n", fn);
     fsync(wfd);
-    close(wfd);
+    CLOSE(wfd);
     if (rename(tempPath, fn)) {
         unlink(tempPath);
-        ylog_error("Unable to rename ylog confi file %s to %s\n", tempPath, fn);
+        ylog_error("Unable to rename ylog config file %s to %s\n", tempPath, fn);
+    }
+    struct stat stat_buf;
+    if (stat(fn, &stat_buf) == 0 && stat_buf.st_size == 0) {
+        ylog_critical("%s size is 0, delete it\n", fn);
+        unlink(fn);
     }
     pthread_mutex_unlock(&update_config_mutex);
+}
+
+static void ylog_update_config2(char *key, char *value) {
+    char *argv[2];
+    argv[0] = key;
+    argv[1] = value;
+    ylog_update_config(global_context->ylog_config_file, 2, argv, 1);
 }
 
 void process_keyword(struct parse_state *state, int nargs, char **args);
@@ -333,17 +351,14 @@ parser_done:
     free(mptr);
 }
 
-static struct ylog_keyword ylog_keyword[];
 void process_keyword(struct parse_state *state, int nargs, char **args) {
+    UNUSED(state);
     struct ylog_keyword *kw;
-    for (kw = ylog_keyword; kw->key; kw++) {
+    for (kw = global_context->ylog_keyword; kw->key; kw++) {
         if (strcmp(args[0], kw->key) == 0) {
             if (kw->handler)
                 kw->handler(kw, nargs, args);
             break;
         }
-    }
-    if (0) { /* avoid compiler warning */
-        state = state;
     }
 }

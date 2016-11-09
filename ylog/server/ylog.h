@@ -21,9 +21,15 @@
 #include <sys/vfs.h>
 #include <dlfcn.h>
 
+#define NEW_SEGMENT_FAST_METHOD
+#define NEW_SEGMENT_FAST_METHOD_NUM_WIDTH 4
+#define NEW_SEGMENT_MAX_NUM 50
+
 #ifndef PATH_MAX
 #define PATH_MAX 1024
 #endif
+
+#define UNUSED(x) (void)(x) /* avoid compiler warning */
 
 extern struct context *global_context;
 extern struct ydst *global_ydst;
@@ -39,6 +45,62 @@ static int ylog_printf_format(struct context *c, int level, const char *fmt, ...
 #define for_each_ydst(i, yd, inityd) \
     for (yd = inityd ? inityd : global_ydst, i = 0; i < YDST_MAX; i++, yd++)
 
+#define LSEEK(fd, offset, whence) ({\
+    int ll_ret = lseek(fd, offset, whence); \
+    if (ll_ret < 0) \
+        ylog_error("lseek %s %s\n", __func__, strerror(errno)); \
+    ll_ret; \
+})
+
+#define SEND(sockfd, buf, len, flags) ({ \
+    int ll_ret = send(sockfd, buf, len, flags); \
+    if (ll_ret > 0) \
+        ylog_debug("ylog_cli ack : %s", buf); \
+    else \
+        ylog_error("send %s %s\n", __func__, strerror(errno)); \
+    ll_ret; \
+})
+
+#define CLOSE(fd) ({\
+    int ll_ret = -1; \
+    if (fd < 0) { \
+        ylog_critical("BUG close fd is %d %s\n", fd, __func__); \
+    } else {\
+        if (fd == 0) \
+            ylog_critical("BUG: close fd is %d %s\n", fd, __func__); \
+        ll_ret = close(fd); \
+        if (ll_ret < 0) \
+            ylog_error("close %d %s %s\n", fd, __func__, strerror(errno)); \
+    } \
+    ll_ret; \
+})
+
+#define RENAME(from, to) ({\
+    int ll_ret; \
+    ll_ret = rename(from, to); \
+    if (ll_ret < 0) \
+        ylog_error("rename %s -> %s %s %s\n", from, to, __func__, strerror(errno)); \
+    ll_ret; \
+})
+
+/* it is used for pending cpath hotplug */
+#define PCMDS_YLOG_CALL_LOCK(y) \
+    struct ydst *ydst = y->ydst; \
+    struct ydst_root *root; \
+    /**
+     * In ylog_write_handler_default() the mutex sequence is
+     * 1. lock ydst->mutex in ylog_write_handler_default
+     * 2. lock root->mutex in ydst_new_segment_default
+     * so here we need to keep the same sequence to avoid dead lock in some race condition
+     */ \
+    pthread_mutex_lock(&ydst->mutex); \
+    root = ydst->root; \
+    pthread_mutex_lock(&root->mutex); /* To avoid root folder change by ydst_move_root */
+
+#define PCMDS_YLOG_CALL_UNLOCK() \
+    pthread_mutex_unlock(&root->mutex); \
+    pthread_mutex_unlock(&ydst->mutex);
+
 enum loglevel {
     LOG_ERROR,
     LOG_CRITICAL,
@@ -51,6 +113,7 @@ enum loglevel {
 #ifdef ANDROID
 #define LOG_TAG "YLOG"
 #include "cutils/log.h"
+#include <cutils/sockets.h>
 #define ___ylog_printf___ SLOGW
 #else
 #define ___ylog_printf___ printf
@@ -68,6 +131,72 @@ enum loglevel {
 #define ylog_critical(msg...) ylog_printf(global_context, LOG_CRITICAL, "ylog<critical> "msg)
 #define ylog_error(msg...) ylog_printf(global_context, LOG_ERROR, "ylog<error> "msg)
 
+#define YTAG_TAG_PROPERTY       0x05
+#define YTAG_TAG_NEWFILE_BEGIN  0x10
+#define YTAG_TAG_NEWFILE_END    0x11
+#define YTAG_TAG_RAWDATA        0x12
+struct ytag {
+    unsigned int tag; /* u32bits le32_to_cpu; All of them are Little Endian stored */
+    unsigned int len;
+    /* unsigned int namelen; */
+    char data[0];
+};
+
+#define YTAG_MAGIC      0xf00e789a
+#define YTAG_VERSION    0x00000001
+struct ytag_header {
+    unsigned int tag; /* u32bits le32_to_cpu; All of them are Little Endian stored */
+    unsigned int len;
+    unsigned int version;
+    unsigned int reserved[65];
+};
+
+#define ytag_rawdata(buf, count) do { \
+    ytag.tag = YTAG_TAG_RAWDATA; \
+    ytag.len = sizeof(ytag) + count; \
+    write(STDOUT_FILENO, &ytag, sizeof(ytag)); \
+    if (count) \
+        write(STDOUT_FILENO, buf, count); \
+} while (0);
+
+#define ytag_newfile(_YTAG, _NAME) do { \
+    int ynlen; char *ylname = _NAME; \
+    ytag.tag = _YTAG; \
+    ytag.len = sizeof(ytag); \
+    if (ylname) { \
+        ynlen = strlen(ylname); \
+        ytag.len += ynlen; \
+    } \
+    write(STDOUT_FILENO, &ytag, sizeof(ytag)); \
+    if (ylname && ynlen) \
+        write(STDOUT_FILENO, ylname, ynlen); \
+} while (0);
+
+#define ytag_newfile_begin(_NAME) ytag_newfile(YTAG_TAG_NEWFILE_BEGIN, _NAME)
+#define ytag_newfile_end(_NAME) ytag_newfile(YTAG_TAG_NEWFILE_END, _NAME)
+
+struct ylog_snapshot_args {
+    union {
+        int ret;
+        char *p;
+    } u;
+    int argc;
+    char *argv[16];
+    char data[4096];
+    int offset;
+};
+
+struct ylog_snapshot_list_s {
+    char *name;
+    char *usage;
+    void (*f)(struct ylog_snapshot_args *args);
+};
+
+struct ylog_keyword {
+    const char *key;
+    void (*handler)(struct ylog_keyword *kw, int nargs, char **args);
+};
+
 enum contextual_model {
     C_FULL_LOG = 0,
     C_MINI_LOG,
@@ -83,24 +212,34 @@ enum mode_types {
 struct context {
     char *config_file;
     char *journal_file;
-    char *filter_so_path;
+    char *ylog_config_file;
+    char *filter_plugin_path;
     int journal_file_size;
     enum contextual_model model;
     enum loglevel loglevel;
     char *historical_folder_root;
     int keep_historical_folder_numbers;
+    int keep_historical_folder_numbers_default;
     int pre_fill_zero_to_possession_storage_spaces;
     struct timeval tv;
     struct tm tm;
     struct timespec ts;
+    char timeBuf[32];
     int ignore_signal_process;
+    int command_loop_ready;
+    struct ylog_keyword *ylog_keyword;
+    struct ylog_snapshot_list_s *ylog_snapshot_list;
 };
 
 enum file_type {
     FILE_NORMAL = 0,
-    FILE_SOCKET_LOCAL,
+    FILE_SOCKET_LOCAL_SERVER_UDP,
+    FILE_SOCKET_LOCAL_CLIENT_UDP,
+    FILE_SOCKET_LOCAL_SERVER,
+    FILE_SOCKET_LOCAL_CLIENT,
     FILE_POPEN,
     FILE_INOTIFY,
+    FILE_OS,
 };
 
 enum ylog_thread_state {
@@ -133,7 +272,7 @@ struct filter_pattern;
 struct ylog_event_cond_wait;
 typedef int (*ydst_new_segment)(struct ylog *y, int mode);
 typedef int (*ylog_filter)(char *line, struct filter_pattern *p);
-typedef int (*ylog_write_handler)(char *buf, int count, struct ylog *y);
+typedef int (*ylog_write_handler)(char *buf, int count, struct ylog *y, void *private);
 typedef int (*ylog_open)(char *file, char *mode, struct ylog *y);
 typedef int (*ylog_read)(char *buf, int count, FILE *fp, int fd, struct ylog *y);
 typedef int (*ylog_close)(FILE *fp, struct ylog *y);
@@ -158,12 +297,12 @@ typedef int (*cacheline_flush)(struct cacheline *cl);
 typedef int (*cacheline_write)(char *buf, int count, struct cacheline *cl);
 typedef int (*cacheline_exit)(struct cacheline *cl);
 typedef void*(*cacheline_thread_handler)(void *arg);
-typedef int (*ydst_write)(char *id_token, int id_token_len, char *buf, int count, struct ydst *ydst);
-typedef int (*ydst_fwrite)(char *buf, int count, int fd);
+typedef int (*ydst_write)(char *buf, int count, struct ydst *ydst);
+typedef int (*ydst_fwrite)(char *buf, int count, int fd, char *desc);
 typedef int (*ydst_flush)(struct ydst *ydst);
 typedef int (*ydst_open)(char *file, char *mode, struct ydst *ydst);
 typedef int (*ydst_close)(struct ydst *ydst);
-typedef int (*ylog_filter_so)(char *buf, int count, enum filter_status_t status);
+typedef void*(*ylog_pthread_handler)(void *arg);
 
 struct ylog_event_cond_wait {
     char *name;
@@ -248,6 +387,7 @@ struct speed {
 
 struct ydst_root {
     char *root;
+    char *sroot;
     int ydst_change_seq;
     int ydst_change_seq_move_root; /* sequnce number */
     int ydst_change_seq_resize_segment; /* sequnce number */
@@ -264,12 +404,17 @@ struct ydst_root {
     pthread_mutex_t mutex;
 };
 
+#define YDST_TYPE_SOCKET_DEFAULT_SIZE (1 * 1024 * 1024)
 enum ydst_type {
     YDST_TYPE_DEFAULT = 0,
     YDST_TYPE_SOCKET,
     YDST_TYPE_YLOG_DEBUG,
+#ifdef HAVE_YLOG_INFO
     YDST_TYPE_INFO,
+#endif
+#ifdef HAVE_YLOG_JOURNAL
     YDST_TYPE_JOURNAL,
+#endif
     OS_YDST_TYPE_BASE,
 };
 
@@ -287,6 +432,7 @@ enum cacheline_status {
 
 #define CACHELINE_DEBUG_INFO     0x01
 #define CACHELINE_DEBUG_CRITICAL 0x02
+#define CACHELINE_DEBUG_WCLIDX_WRAP 0x04
 #define CACHELINE_DEBUG_DATA     0x80
 struct cacheline {
     char *name;
@@ -300,6 +446,7 @@ struct cacheline {
     int debuglevel; /* for debug */
     long size; /* cacheline size */
     int num; /* cacheline numbers */
+    int wclidx_max; /* cache line index ever reached max number */
     int wclidx; /* current cache line index being used for writing now */
     int rclidx; /* read cache line index */
     long wpos; /* write pos in current wclidx*/
@@ -362,6 +509,13 @@ struct ydst {
     long segments; /* all segment numbers generated till now */
     int max_segment; /* how many segment can be reached */
     int nowrap; /* when the log size reaches the max, stop it */
+    // begin of write_data2cache_first {
+    int write_data2cache_first; /* write data to cache first, then cache will call ylog_write_handler_default */
+    ylog_write_handler write_handler; /* used when write_data2cache_first is none 0 */
+    struct ylog *ylog[64]; /* used when write_data2cache_first is none 0 */
+    int ylog_num;
+    // } end of write_data2cache_first
+    int ytag; /* 1: use ytag process in analyzer.py; 0: no ytag process in analyzer.py */
     enum ydst_segment_mode segment_mode;
 
     unsigned long long max_segment_size_now; /* the max size of each segment now in use */
@@ -438,6 +592,7 @@ struct ylog_inotify_cell {
     char *pathname; /* if pathname != NULL, YLOG_INOTIFY_TYPE_WATCH_FILE_FOLDER will be set*/
     char *filename;
     unsigned long mask;
+    unsigned long event_mask;
 #define YLOG_INOTIFY_TYPE_WATCH_FOLDER 0x01 /* only watch the folder */
 #define YLOG_INOTIFY_TYPE_WATCH_FILE_FOLDER 0x02 /* watch the file under this folder */
 #define YLOG_INOTIFY_TYPE_MASK_EQUAL 0x04 /* must be equal */
@@ -447,13 +602,24 @@ struct ylog_inotify_cell {
     int status;
     int wd; /* watch descriptor - unique id */
     long timeout; /* unit is millisecond */
+    int step; /* to mark process step */
+    struct timeval tvf; /* first active time */
+    struct timeval tv; /* last active time */
     struct timespec ts; /* last active time */
     int (*handler)(struct ylog_inotify_cell *cell, int timeout, struct ylog *y); /* return timeout value, unit is millisecond, -1 means pending wait */
+    int (*handler_prev)(struct ylog_inotify_cell *cell, int timeout, struct ylog *y);
     void *args; /* for extension */
+    int cache_full; /* cache is full */
 };
 
 struct ylog_inotify {
     struct ylog_inotify_cell cells[YLOG_INOTIFY_MAX];
+};
+
+typedef int (*ylog_filter_plugin_func)(char *buf, int count, enum filter_status_t status);
+struct sfilter_plugin {
+    void *handle;
+    ylog_filter_plugin_func func;
 };
 
 #define YLOG_MAX 100
@@ -461,7 +627,9 @@ struct ylog {
     pid_t pid;
     pid_t tid;
     char *buf;
+    char *rbuf;
     int buf_size;
+    int rbuf_size;
     char *name;
 
 #define YLOG_DISABLED                    0x01
@@ -475,7 +643,12 @@ struct ylog {
     int timestamp;
     char *id_token_filename; /* splited filename for this token in python script */
     char *id_token; /* like bio, as a identifier used in mux and demux */
+    char *id_token_desc;
+    int id_token_len_desc;
+    char *id_token_buf;
     int id_token_len;
+    char *reserved_buf;
+    int reserved_len;
     int restart_period; /* ms */
     struct filter_pattern *fp_array;
     struct ylog_poll yp;
@@ -499,6 +672,9 @@ struct ylog {
                                           * setprop logd.klogd false
                                           *
                                           */
+#define YLOG_READ_LEN_MIGHT_ZERO_WAIT_MAX_COUNT 0x100
+#define YLOG_GROUP_MODEM            0x8000
+#define YLOG_READ_ROOT_USER         0x40000000
     int mode;
     int read_len_zero_count;
     int block_read; /* 1: the file will be a blocked file type, 0: others by luther */
@@ -531,15 +707,57 @@ struct ylog {
     ylog_thread_flush thread_flush;
     ylog_thread_reset thread_reset;
     ylog_thread_nop thread_nop;
-    ylog_filter_so filter_so;
+
+    void (*write_handler_write_hook)(char **buf, int *count, struct ylog *y);
+    int (*reserved_filed_process)(char *reserved_buf, int reserved_len, char *data, int data_len, void *private);
+    int (*start_callback)(struct ylog *y, void *private);
+    int (*stop_callback)(struct ylog *y, void *private);
+    int (*exit_callback)(struct ylog *y, void *private);
+    int (*status_callback)(struct ylog *y, void *private);
+    ylog_filter_plugin_func write_data2cache_first_filter;
+    struct sfilter_plugin fplugin_filter_log;
+    void *privates;
+};
+
+struct ynode {
+    struct ylog ylog[10];
+    struct ydst ydst;
+    struct cacheline cache;
 };
 
 struct os_hooks {
+    int (*ylog_open_default_hook)(char *file, char *mode, struct ylog *y);
+    int (*check_file_execute)(char *exec_file);
+    int (*check_file_exist)(char *file);
     ylog_read ylog_read_ylog_debug_hook;
     ylog_read ylog_read_info_hook;
     int (*process_command_hook)(char *buf, int buf_size, int fd, int index, struct ylog_poll *yp);
     void (*cmd_ylog_hook)(int nargs, char **args);
     void (*ylog_status_hook)(enum ylog_thread_state state, struct ylog *y);
+    void (*pthread_create_hook)(struct ylog *y, void *args, const char *fmt, ...);
+    void (*ydst_root_new_hook)(struct ydst_root *root, char *root_new);
+    void (*ready_go)(void);
+};
+
+struct pcmds_print2file_args {
+    char **cmds;
+    char *cmd;
+    char *file;
+    int flags;
+    int *cnt;
+#define PCMDS_PRINT2FILE_FD_DUP (9999999)
+    int fd_dup_flag;
+    int fd;
+    ylog_write_handler w;
+    struct ylog *y;
+    char *prefix;
+    int millisecond;
+    int max_size;
+#define PCMDS_PRINT2FILE_LOCKED 0xffff
+    int locked;
+    int malloced;
+#define PCMDS_PRINT2FD  0xffff
+    int print2fd;
 };
 
 static inline void yp_clr(int index, struct ylog_poll *yp) {
@@ -561,7 +779,7 @@ static inline void yp_invalid(int index, struct ylog_poll *yp, struct ylog *y) {
     if (fp) {
         y->close(fp, y);
     } else if (fd > 0) {
-        close(fd);
+        CLOSE(fd);
     }
     yp->fp[index] = NULL;
     yp_clr(index, yp);
@@ -587,7 +805,7 @@ static inline void yp_free(int index, struct ylog_poll *yp) {
     if (fp) {
         fclose(fp);
     } else if (fd > 0) {
-        close(fd);
+        CLOSE(fd);
     }
     yp->fp[index] = NULL;
     yp_clr(index, yp);
@@ -598,7 +816,7 @@ static inline void yp_set(FILE *fp, int fd, int index, struct ylog_poll *yp, cha
         fp = fdopen(fd, mode);
         if (fp == NULL) {
             ylog_error("fdopen failed: %s\n", strerror(errno));
-            close(fd);
+            CLOSE(fd);
             return;
         }
     }

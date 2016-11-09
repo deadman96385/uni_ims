@@ -19,15 +19,37 @@ enum loglevel {
     LOG_DEBUG,
 };
 int debug_level = LOG_INFO;
-#define cli_printf(msg...) printf(msg)
+#ifdef ANDROID
+#define LOG_TAG "YLOG_CLI"
+#include "cutils/log.h"
+#include "cutils/properties.h"
+#include <cutils/sockets.h>
+#define ___ylog_printf_trace___ SLOGW
+#define ___ylog_printf___ printf
+#else
+#define ___ylog_printf_trace___(x...)
+#define ___ylog_printf___ printf
+#endif
+#define cli_trace(msg...)  ___ylog_printf_trace___(msg)
+#define cli_printf(msg...) ___ylog_printf___(msg)
 #define cli_printf_debug(l, msg...) if (debug_level >= l) cli_printf(msg)
 #define cli_debug(msg...) cli_printf_debug(LOG_DEBUG, "ylog<debug> "msg)
 #define cli_info(msg...) cli_printf_debug(LOG_INFO, "ylog<info> "msg)
 #define cli_warn(msg...) cli_printf_debug(LOG_WARN, "ylog<warn> "msg)
 #define cli_critical(msg...) cli_printf_debug(LOG_CRITICAL, "ylog<critical> "msg)
-#define cli_error(msg...) cli_printf_debug(LOG_ERROR, "ylog<error> "msg)
+#define cli_error(msg...) { cli_printf_debug(LOG_ERROR, "ylog<error> "msg); cli_trace("ylog<error> "msg); }
 #define ARRAY_LEN(A) (sizeof(A)/sizeof((A)[0]))
 
+#ifdef ANDROID
+int connect_socket_local_server(char *name) {
+    int fd = socket_local_client(name, ANDROID_SOCKET_NAMESPACE_ABSTRACT, SOCK_STREAM);
+    if (fd < 0) {
+        cli_error("%s open %s failed: %s\n", __func__, name, strerror(errno));
+        return -1;
+    }
+    return fd;
+}
+#else
 int connect_socket_local_server(char *name) {
     struct sockaddr_un address;
     int fd;
@@ -53,11 +75,13 @@ int connect_socket_local_server(char *name) {
 
     if (connect(fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
         cli_error("%s connect %s failed: %s\n", __func__, name, strerror(errno));
+        close(fd);
         return -1;
     }
 
     return fd;
 }
+#endif
 
 int main(int argc, char *argv[]) {
     int ylog;
@@ -69,9 +93,32 @@ int main(int argc, char *argv[]) {
     struct pollfd pfd[2];
     int forced_exit = 0;
 
+#ifdef ANDROID
+    i = 0;
+    do {
+        char prop0[PROPERTY_VALUE_MAX];
+        char prop1[PROPERTY_VALUE_MAX];
+        property_get("init.svc.ylog", prop0, "stopped");
+        property_get("persist.ylog.enabled", prop1, "0");
+        if ((i++ < 25) && ( \
+            (strcmp(prop0, "running") == 0) || \
+            (strcmp(prop1, "1") == 0))) {
+            ylog = connect_socket_local_server("ylog_cli");
+            if (ylog < 0) {
+                cli_trace("waiting for ylog service ready -> msleep(200)");
+                usleep(200*1000);
+            } else
+                break;
+        } else {
+            cli_trace("ylog service does not run now");
+            return -1;
+        }
+    } while (1);
+#else
     ylog = connect_socket_local_server("ylog_cli");
     if (ylog < 0)
         return -1;
+#endif
 
     p = buf;
     pmax = buf + buf_size;
@@ -82,6 +129,7 @@ int main(int argc, char *argv[]) {
     cli_debug("cli -> server :%s", buf);
 
     write(ylog, buf, strlen(buf));
+    cli_trace("%s", buf);
 
     pfd[0].fd = ylog;
     pfd[0].events = POLLIN;

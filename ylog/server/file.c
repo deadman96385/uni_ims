@@ -5,8 +5,34 @@
 #include "analyzer_bottom_half_template.h"
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t y_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t mutex_journal_log = PTHREAD_MUTEX_INITIALIZER;
 static int fd_journal_file = -1;
+
+/**
+ * lock must be held before call open_journal_file
+ * pthread_mutex_lock(&mutex_journal_log);
+ * because when android security encrypt the phone,
+ * /data partion forbids any process always open one file not close
+ */
+static int open_journal_file(char *file) {
+    if (fd_journal_file >= 0)
+        return 1;
+    fd_journal_file = open(file, O_RDWR | O_CREAT | O_APPEND, 0666); /* append mode */
+    if (fd_journal_file < 0) {
+        ylog_error("open %s failed: %s\n", file, strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+static int close_journal_file(void) {
+    CLOSE(fd_journal_file);
+    fd_journal_file = -1;
+    return 0;
+}
+
+#ifdef HAVE_YLOG_JOURNAL
 static long journal_last_pos = 0;
 
 static void reset_journal_file(void) {
@@ -22,25 +48,29 @@ static int get_journal_file(char *buf, int buf_size) {
     journal_file_size = global_context->journal_file_size;
     if (journal_last_pos > journal_file_size)
         journal_last_pos = 0; /* wrap happen */
+    len = 0;
     if (journal_last_pos != journal_file_size) {
-        /* 1. seek to last reading place */
-        lseek(fd_journal_file, journal_last_pos, SEEK_SET);
-        len = journal_file_size - journal_last_pos;
-        if (len > buf_size)
-            len = buf_size;
-        /* 2. read len */
-        len = read(fd_journal_file, buf, len);
-        journal_last_pos += len;
-        /* 3. restore to the last place for print2journal_file writing */
-        lseek(fd_journal_file, journal_file_size, SEEK_SET);
-    } else
-        len = 0;
+        if (open_journal_file(global_context->journal_file) == 0) {
+            /* 1. seek to last reading place */
+            LSEEK(fd_journal_file, journal_last_pos, SEEK_SET);
+            len = journal_file_size - journal_last_pos;
+            if (len > buf_size)
+                len = buf_size;
+            /* 2. read len */
+            len = read(fd_journal_file, buf, len);
+            journal_last_pos += len;
+            /* 3. restore to the last place for print2journal_file writing */
+            LSEEK(fd_journal_file, journal_file_size, SEEK_SET);
+            close_journal_file();
+        }
+    }
     pthread_mutex_unlock(&mutex_journal_log);
     return len;
 }
+#endif
 
 static long get_journal_file_size(void) {
-    if (fd_journal_file > 0) {
+    if (fd_journal_file >= 0) {
         struct stat st;
         if (fstat(fd_journal_file, &st) == 0)
             return st.st_size;
@@ -53,25 +83,24 @@ static int print2journal_file(const char *fmt, ...) {
     char timeBuf[32];
     int len;
     va_list ap;
+    char *file = global_context->journal_file;
     static long fsize = 0; /* fsize = &global_context->journal_file_size; */
     pthread_mutex_lock(&mutex_journal_log);
     if (fd_journal_file < 0) {
-        struct context *c = global_context;
-        char *file = c->journal_file;
         if (file) {
             char unit;
             float fsize1;
             mkdirs_with_file(file);
-            fd_journal_file = open(file, O_RDWR | O_CREAT | O_APPEND, 0666); /* append mode */
+            open_journal_file(file);
             fsize = get_journal_file_size();
             fsize1 = ylog_get_unit_size_float(fsize, &unit);
             ylog_info("open %s, size is %.2f%c\n", file, fsize1, unit);
         }
-        if (fd_journal_file < 0) {
-            if (file)
-                ylog_error("open %s failed: %s\n", file, strerror(errno));
-            fd_journal_file = STDOUT_FILENO;
-        }
+    }
+    if (fd_journal_file < 0) {
+        ylog_info("%s fd_journal_file < 0\n", __func__);
+        pthread_mutex_unlock(&mutex_journal_log);
+        return 0;
     }
     len = ylog_get_format_time(buf);
     va_start(ap, fmt);
@@ -82,34 +111,31 @@ static int print2journal_file(const char *fmt, ...) {
     }
     va_end(ap);
     if ((fsize + len) > 10 * 1024 * 1024) {
-        if (fd_journal_file != STDOUT_FILENO) {
-            struct context *c = global_context;
-            char *file = c->journal_file;
-            close(fd_journal_file);
-            if (file) {
-                mkdirs_with_file(file);
-                fd_journal_file = open(file, O_RDWR | O_CREAT | O_TRUNC, 0666); /* trunc mode */
-                if (fd_journal_file > 0) {
-                    ylog_info("re-open %s, size is %s\n", len);
-                }
-            }
-            if (fd_journal_file < 0) {
-                if (file)
-                    ylog_error("open %s failed: %s\n", file, strerror(errno));
-                fd_journal_file = STDOUT_FILENO;
-            }
-        }
+        if (fd_journal_file >= 0)
+            if (ftruncate(fd_journal_file, 0))
+                ylog_error("ftruncate %s failed: %s\n", file, strerror(errno));
         fsize = 0;
     }
 #if 1
     fsize = get_journal_file_size();
-    lseek(fd_journal_file, fsize, SEEK_SET);
+    LSEEK(fd_journal_file, fsize, SEEK_SET);
 #endif
     len = write(fd_journal_file, buf, len);
     fsize += len;
     global_context->journal_file_size = fsize;
+    close_journal_file();
     pthread_mutex_unlock(&mutex_journal_log);
     return 0;
+}
+
+static void print2journal_file_string_with_uptime(char *string) {
+    int ret;
+    char uptimeb[128];
+    ret = uptime(uptimeb, sizeof(uptimeb) - 1);
+    if (ret < 0)
+        ret = 0;
+    uptimeb[ret] = 0;
+    print2journal_file("%s - %s", string, uptimeb);
 }
 
 static struct ylog *ylog_get_by_name(char *name) {
@@ -154,30 +180,63 @@ static int send_speed(int fd, char *buf, int buf_size, struct speed *speed, int 
     struct tm delta_tm;
     char time_start[32], time_end[32];
     if (prefix)
-        send(fd, buf, snprintf(buf, buf_size, "%s", prefix), MSG_NOSIGNAL);
+        SEND(fd, buf, snprintf(buf, buf_size, "%s", prefix), MSG_NOSIGNAL);
     for (i = 0; i < max; i++) {
         ylog_tv2format_time(time_start, &speed[i].max_speed_tv_start);
         ylog_tv2format_time(time_end, &speed[i].max_speed_tv_end);
         vspeed = ylog_get_unit_size_float_with_speed(speed[i].max_speed_size,
                 &unit, speed[i].max_speed_millisecond);
         gmtime_r(&speed[i].second_since_start, &delta_tm); /* UTC, don't support keep running more than 1 year by luther */
-        send(fd, buf, snprintf(buf, buf_size, "%02d. %s~ %s%02d day %02d:%02d:%02d ago %.2f%c/s\n",
+        SEND(fd, buf, snprintf(buf, buf_size, "%02d. %s~ %s%02d day %02d:%02d:%02d ago %.2f%c/s\n",
                     i + 1,time_start, time_end,
                     delta_tm.tm_yday, delta_tm.tm_hour,
                     delta_tm.tm_min, delta_tm.tm_sec,
                     vspeed, unit), MSG_NOSIGNAL);
     }
     if (suffix)
-        send(fd, buf, snprintf(buf, buf_size, "%s", suffix), MSG_NOSIGNAL);
+        SEND(fd, buf, snprintf(buf, buf_size, "%s", suffix), MSG_NOSIGNAL);
     return 0;
 }
 
-static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char *prefix) {
+static int fcntl_read_nonblock(int fd, char *desc) {
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags < 0) {
+        ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog fcntl_nonblock %s is failed, %s\n",
+                desc, strerror(errno));
+        return 1;
+    }
+    flags |= O_NONBLOCK;
+    if (fcntl(fd, F_SETFL, flags) < 0) {
+        ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog fcntl_nonblock %s is failed, %s\n",
+                desc, strerror(errno));
+        return 1;
+    }
+    return 0;
+}
+
+static int fcntl_read_block(int fd, char *desc) {
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags < 0) {
+        ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog fcntl_block %s is failed, %s\n",
+                desc, strerror(errno));
+        return 1;
+    }
+    flags &= ~O_NONBLOCK;
+    if (fcntl(fd, F_SETFL, flags) < 0) {
+        ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog fcntl_block %s is failed, %s\n",
+                desc, strerror(errno));
+        return 1;
+    }
+    return 0;
+}
+
+static int pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y,
+        char *prefix, int millisecond, int max_size, void *private) {
     char buf[4096];
     int count = sizeof buf;
     char *p = buf;
     char *pmax = p + sizeof(buf);
-    int ret, timeout = 0;
+    int ret, rcnt = 0, timeout = 0;
     FILE *wfp = popen2(cmd, "r");
     char timeBuf[32];
     if (wfp) {
@@ -188,24 +247,41 @@ static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char
             if (prefix == NULL)
                 prefix = "pcmd";
             if (cnt) {
-                w(p, snprintf(p, pmax - p, "\n%s %03d [ %s ] %s\n", prefix, *cnt, cmd, timeBuf), y);
+                rcnt += w(p, snprintf(p, pmax - p, "\n%s %03d [ %s ] %s\n", prefix, *cnt, cmd, timeBuf), y, private);
                 *cnt = *cnt + 1;
             } else
-                w(p, snprintf(p, pmax - p, "\n%s [ %s ]\n", prefix, cmd), y);
+                rcnt += w(p, snprintf(p, pmax - p, "\n%s [ %s ]\n", prefix, cmd), y, private);
         }
         pfd[0].fd = fd;
         pfd[0].events = POLLIN;
+        if (millisecond < 0)
+            millisecond = 500;
         do {
-            ret= poll(pfd, 1, 500);
+            ret = poll(pfd, 1, millisecond);
             if (ret <= 0) {
-                ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog cmd %s is failed, %s\n",
-                        cmd, ret == 0 ? "timeout":strerror(errno));
+                ylog_critical("xxxxxxxxxxxxxxxxxxxxxx ylog cmd %s is failed %dms, %s\n",
+                        cmd, millisecond, ret == 0 ? "timeout":strerror(errno));
                 timeout = 1;
                 break;
             }
-            ret = read(fd, p, count);
-            if (ret > 0 && w)
-                w(p, ret, y);
+            if (fcntl_read_nonblock(fd, cmd) == 0) {
+                ret = read(fd, p, count);
+                if (ret > 0)
+                    fcntl_read_block(fd, cmd);
+            } else
+                ret = 0;
+            if (ret > 0) {
+                if (w)
+                    w(p, ret, y, private);
+                rcnt += ret;
+                if (max_size > 0) {
+                    // ylog_debug("%s rcnt=%d, max_size=%d\n", cmd, rcnt, max_size);
+                    if (rcnt >= max_size) { /* reach to the max size we want to receive */
+                        ylog_critical("pcmd %s cur size is %d, reaches the max value %d\n", cmd, rcnt, max_size);
+                        break;
+                    }
+                }
+            }
         } while (ret > 0);
         if (w) {
             if (timeout)
@@ -213,7 +289,7 @@ static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char
                         cmd, ret == 0 ? "timeout":strerror(errno));
             else
                 ret = snprintf(buf, count, "\n");
-            w(buf, ret, y);
+            rcnt += w(buf, ret, y, private);
         }
         /**
          * For ylog_cli space command
@@ -269,12 +345,199 @@ static void pcmd(char *cmd, int *cnt, ylog_write_handler w, struct ylog *y, char
     } else {
         ylog_error("popen2 %s failed: %s\n", cmd, strerror(errno));
     }
+    return rcnt;
 }
 
-static void pcmds(char *cmds[], int *cnt, ylog_write_handler w, struct ylog *y, char *prefix) {
+static int pcmds(char *cmds[], int *cnt, ylog_write_handler w,
+        struct ylog *y, char *prefix, int millisecond, void *private) {
     char **cmd;
+    int rcnt = 0;
     for (cmd = cmds; *cmd; cmd++)
-        pcmd(*cmd, cnt, w, y, prefix);
+        rcnt += pcmd(*cmd, cnt, w, y, prefix, millisecond, -1, private);
+    return rcnt;
+}
+
+static struct ydst *ydst_get_by_name(char *name) {
+    struct ydst *yd;
+    int i;
+    for_each_ydst(i, yd, NULL) {
+        if (yd->file == NULL || yd->refs <= 0)
+            continue;
+        if (strcmp(yd->file, name) == 0)
+            return yd;
+    }
+    return NULL;
+}
+
+static void ylog_close_by_nowrap(struct ylog *y) {
+    struct ydst *ydst = y->ydst;
+    ylog_critical("ylog %s is forced stop, because ydst %s has reached max_segment %d/%ld\n",
+            y->name, ydst->file, ydst->max_segment_now, ydst->segments);
+    print2journal_file("ylog %s is forced stop, because ydst %s has reached max_segment %d/%ld\n",
+            y->name, ydst->file, ydst->max_segment_now, ydst->segments);
+    y->thread_stop(y, 0);
+}
+
+static int ylog_write_handler__pcmd_print2file(char *buf, int count, struct ylog *y, void *private) {
+    UNUSED(y);
+    struct pcmds_print2file_args *ppa = (struct pcmds_print2file_args *)private;
+    int fd = ppa->fd;
+    return fd_write(buf, count, fd, "ylog_write_handler__pcmd_print2file");
+}
+
+static int pcmds_print2file(struct pcmds_print2file_args *ppa) {
+    int rcnt = 0;
+    char *file = NULL;
+    if (ppa->print2fd == PCMDS_PRINT2FD || mkdirs_with_file(ppa->file) == 0) {
+        long fd;
+        int ret;
+        if (ppa->flags == -1)
+            ppa->flags = O_RDWR | O_CREAT | O_TRUNC;
+        if (ppa->print2fd != PCMDS_PRINT2FD) {
+            file = ppa->file;
+            ppa->fd = fd = open(file, ppa->flags, 0664);
+        } else
+            fd = ppa->fd;
+        if (fd < 0)
+            ylog_critical("%s %s Failed to open %s\n", __func__, file, strerror(errno));
+        else {
+            char **cmd;
+            struct ylog *y = ppa->y;
+            struct ydst *ydst = y->ydst;
+            struct ydst_root *root = ydst->root;
+            if (ppa->w == NULL)
+                ppa->w = ylog_write_handler__pcmd_print2file;
+            for (cmd = ppa->cmds; *cmd; cmd++) {
+                ret = pcmd(*cmd, ppa->cnt, ppa->w, y, ppa->prefix, ppa->millisecond, ppa->max_size, ppa);
+                rcnt += ret;
+                if (ppa->locked != PCMDS_PRINT2FILE_LOCKED) {
+                    PCMDS_YLOG_CALL_LOCK(y);
+                }
+                ydst->size += ret;
+                y->size += ret;
+                if (ydst->size >= ydst->max_size_now) {
+                    if (ppa->locked != PCMDS_PRINT2FILE_LOCKED) {
+                        PCMDS_YLOG_CALL_UNLOCK();
+                    }
+                    ylog_close_by_nowrap(y);
+                    break;
+                }
+                if (ppa->locked != PCMDS_PRINT2FILE_LOCKED) {
+                    PCMDS_YLOG_CALL_UNLOCK();
+                }
+            }
+            if (ppa->fd_dup_flag != PCMDS_PRINT2FILE_FD_DUP) {
+                close(fd);
+            } else {
+                // ppa->fd = dup(fd); close(fd);
+                /* it will close this fd in thread_handler */
+            }
+        }
+    } else {
+        ylog_warn("Failed to create %s %s\n", __func__, file);
+    }
+    return rcnt;
+}
+
+static int pcmds_print2fd(struct pcmds_print2file_args *ppa) {
+    ppa->print2fd = PCMDS_PRINT2FD;
+    return pcmds_print2file(ppa);
+}
+
+/**
+ * similar with pcmds_ylog_copy_file
+ */
+static int pcmd_print2file(struct pcmds_print2file_args *ppa) {
+    char *cmd_list[] = {
+        ppa->cmd,
+        NULL
+    };
+    ppa->cmds = cmd_list;
+    return pcmds_print2file(ppa);
+}
+
+static int pcmds_snapshot(struct pcmds_print2file_args *ppa, const char *fmt, ...) {
+    int len;
+    va_list ap;
+    char file[4096];
+    va_start(ap, fmt);
+    vsnprintf(file, sizeof(file), fmt, ap);
+    va_end(ap);
+    ppa->file = file;
+    ppa->w = NULL;
+    ppa->prefix = "pcmds_snapshot";
+    ppa->locked = PCMDS_PRINT2FILE_LOCKED;
+    PCMDS_YLOG_CALL_LOCK(ppa->y);
+    len = pcmds_print2file(ppa);
+    PCMDS_YLOG_CALL_UNLOCK();
+    return len;
+}
+
+static int pcmds_snapshot_exec(char *cmds[], struct ylog *y, int millisecond, int max_size) {
+    char **cmd;
+    PCMDS_YLOG_CALL_LOCK(y);
+    for (cmd = cmds; *cmd; cmd++)
+        pcmd(*cmd, NULL, NULL, y, "pcmds_snapshot_exec", millisecond, max_size, NULL);
+    PCMDS_YLOG_CALL_UNLOCK();
+    return 0;
+}
+
+static int pcmd_snapshot_exec(char *cmd, struct ylog *y, int millisecond, int max_size) {
+    PCMDS_YLOG_CALL_LOCK(y);
+    pcmd(cmd, NULL, NULL, y, "pcmds_snapshot_exec", millisecond, max_size, NULL);
+    PCMDS_YLOG_CALL_UNLOCK();
+    return 0;
+}
+
+static int pcmd_snapshot(struct pcmds_print2file_args *ppa, const char *fmt, ...) {
+    int len;
+    va_list ap;
+    char file[4096];
+    char *cmd_list[] = {
+        ppa->cmd,
+        NULL
+    };
+    va_start(ap, fmt);
+    vsnprintf(file, sizeof(file), fmt, ap);
+    va_end(ap);
+    ppa->cmds = cmd_list;
+    ppa->file = file;
+    ppa->w = NULL;
+    ppa->prefix = "pcmds_snapshot";
+    ppa->locked = PCMDS_PRINT2FILE_LOCKED;
+    PCMDS_YLOG_CALL_LOCK(ppa->y);
+    len = pcmds_print2file(ppa);
+    PCMDS_YLOG_CALL_UNLOCK();
+    return len;
+}
+
+/**
+ * similar with pcmd_print2file
+ */
+static int pcmds_ylog_copy_file(char *file, char *file_to, char *buf, int count, struct ylog *y) {
+    /**
+     * ydst->root->mutex and ydst->root->mutex both are held now
+     */
+    struct ydst *ydst = y->ydst;
+    if (access(file, F_OK) == 0) {
+        struct stat st;
+        if (stat(file, &st) != 0) {
+            ylog_error("fstat %s failed: %s\n", file, strerror(errno));
+            return -1;
+        }
+        if (st.st_size) {
+            snprintf(buf, count, "%s/%s", ydst->root_folder, ydst->file);
+            if (mkdirs(buf) == 0) {
+                snprintf(buf, count, "cp -r %s %s/%s/%s", file, ydst->root_folder, ydst->file, file_to ? file_to:"");
+                pcmd(buf, NULL, NULL, NULL, "pcmds_ylog", 1000, -1, NULL);
+            }
+            return 2; /* has size */
+        } else {
+            ylog_info("%s size is 0\n", file);
+        }
+        return 0;
+    }
+    return 1;
 }
 
 static unsigned long long ydst_sum_all_storage_space(struct ydst *ydst) {
@@ -297,8 +560,8 @@ static unsigned long long ydst_sum_all_storage_space(struct ydst *ydst) {
         if (yd->file == NULL || yd->refs <= 0)
             continue;
         max_size_float = ylog_get_unit_size_float(yd->max_size_now, &max_unit);
-        ylog_info("%5.2f%% ydst %s size %.2f%c\n", (100 * yd->max_size_now) / (float)quota_now,
-                yd->file, max_size_float, max_unit);
+        ylog_info("%5.2f%% ydst %s size %.2f%c, %d/%d\n", (100 * yd->max_size_now) / (float)quota_now,
+                yd->file, max_size_float, max_unit, yd->max_segment, yd->max_segment_size >> 20);
     }
 
     return size;
@@ -339,6 +602,18 @@ static int ydst_size_new(unsigned long long max_segment_size_new, int max_segmen
     return 0;
 }
 
+static int ydst_size_resize(unsigned long long max_size, struct ydst *ydst) {
+    if (ydst->max_segment > 1) {
+        ydst->max_segment = (max_size + ydst->max_segment_size - 1) / ydst->max_segment_size;
+        if (ydst->max_segment < 2)
+            ydst->max_segment = 2;
+    } else {
+        ydst->max_segment_size = max_size;
+    }
+    ydst->max_size = ydst->max_segment * ydst->max_segment_size;
+    return 0;
+}
+
 static int ydst_quota(unsigned long long max_segment_size_new, int max_segment_new,
         struct ylog *y, struct ydst_root *root) {
     int waiting;
@@ -363,6 +638,7 @@ static int ydst_quota(unsigned long long max_segment_size_new, int max_segment_n
     ylog_critical("Waiting for ydst '%s' resizing\n", ydst->file);
     do {
         waiting = 0;
+        usleep(100*1000);
             if (ydst->refs &&
                 (ydst->max_segment_size_new != ydst->max_segment_size_now ||
                  ydst->max_segment_new != ydst->max_segment_now
@@ -371,13 +647,13 @@ static int ydst_quota(unsigned long long max_segment_size_new, int max_segment_n
                 char unit1, unit2;
                 fsize1 = ylog_get_unit_size_float(ydst->max_segment_size_now, &unit1);
                 fsize2 = ylog_get_unit_size_float(ydst->max_segment_size_new, &unit2);
-                ylog_warn("%s is resizing... max_segment %d -> %d, max_segment_size %.2f%c -> %.2f%c\n",
+                ylog_debug("%s is resizing... max_segment %d -> %d, max_segment_size %.2f%c -> %.2f%c\n",
                         ydst->file, ydst->max_segment_now, ydst->max_segment_new,
                         fsize1, unit1, fsize2, unit2);
                 waiting = 1;
             }
         if (waiting)
-            usleep(100*1000);
+            usleep(200*1000);
     } while (ydst->ydst_change_seq_resize_segment != root->ydst_change_seq_resize_segment);
 
     ylog_critical("ydst '%s' resize done\n", ydst->file);
@@ -403,6 +679,8 @@ static int ydst_root_quota(struct ydst_root *root, unsigned long long quota) {
         root = global_ydst_root;
     pthread_mutex_lock(&root->mutex);
 
+    if (quota == 0)
+        quota = root->quota_now;
     root->quota_new = quota;
 
     for_each_ydst(i, yd, NULL) {
@@ -438,7 +716,11 @@ static int ydst_root_quota(struct ydst_root *root, unsigned long long quota) {
             max_segment_new = yd->max_segment * scale;
             if (max_segment_new == 0)
                 max_segment_new = 1;
-            max_segment_size_new = yd->max_segment_size;
+            if (max_segment_new > NEW_SEGMENT_MAX_NUM) {
+                max_segment_size_new = (yd->max_segment_size * max_segment_new) / NEW_SEGMENT_MAX_NUM;
+                max_segment_new = NEW_SEGMENT_MAX_NUM;
+            } else
+                max_segment_size_new = yd->max_segment_size;
         } else {
             max_segment_new = yd->max_segment;
             max_segment_size_new = yd->max_segment_size * scale;
@@ -463,7 +745,12 @@ static int ydst_root_quota(struct ydst_root *root, unsigned long long quota) {
     max_segment_new = max_size / yd_max->max_segment_size_new;
     if (max_segment_new == 0)
         max_segment_new = 1;
-    ydst_size_new(yd_max->max_segment_size_new, max_segment_new, yd_max);
+    if (max_segment_new > NEW_SEGMENT_MAX_NUM) {
+        max_segment_size_new = (yd_max->max_segment_size * max_segment_new) / NEW_SEGMENT_MAX_NUM;
+        max_segment_new = NEW_SEGMENT_MAX_NUM;
+    } else
+        max_segment_size_new = yd_max->max_segment_size;
+    ydst_size_new(max_segment_size_new, max_segment_new, yd_max);
 
     show_ydst_storage_info(root);
 
@@ -491,7 +778,7 @@ static int ydst_root_quota(struct ydst_root *root, unsigned long long quota) {
                 char unit1, unit2;
                 fsize1 = ylog_get_unit_size_float(yd->max_segment_size_now, &unit1);
                 fsize2 = ylog_get_unit_size_float(yd->max_segment_size_new, &unit2);
-                ylog_warn("%s is resizing... max_segment %d -> %d, max_segment_size %.2f%c -> %.2f%c\n",
+                ylog_debug("%s is resizing... max_segment %d -> %d, max_segment_size %.2f%c -> %.2f%c\n",
                         yd->file, yd->max_segment_now, yd->max_segment_new,
                         fsize1, unit1, fsize2, unit2);
                 waiting = 1;
@@ -503,6 +790,69 @@ static int ydst_root_quota(struct ydst_root *root, unsigned long long quota) {
 
     ylog_critical("All ydst resize done\n");
     show_ydst_storage_info(root);
+    pthread_mutex_unlock(&mutex);
+
+    return 0;
+}
+
+static void ydst_requota_percent(int percent, struct ylog *y, struct ydst_root *root) {
+    struct ydst *ydst;
+    unsigned long long max_size = 0;
+
+    if (y == NULL)
+        return;
+
+    ydst = y->ydst;
+    pthread_mutex_lock(&mutex);
+    if (root == NULL)
+        root = global_ydst_root;
+    pthread_mutex_lock(&root->mutex);
+    root->max_size -= ydst->max_size; /* sub this ydst->max_size from root->max_size */
+    max_size = root->max_size;
+    /**
+     * YDST_NEW / (max_size + YDST_NEW) = percent
+     * YDST_NEW = (max_size * percent) / (100 - percent)
+     * YDST_NEW = (1024 * (max_size * percent)) / (1024*(100 - percent))
+     */
+    if (percent >= 100)
+        percent = 99;
+    max_size = 1024 * max_size * percent;
+    percent = 1024 * 100 - 1024 * percent;
+    max_size /= percent;
+    ydst_size_resize(max_size, ydst);
+    root->max_size += ydst->max_size; /* add this ydst->max_size to root->max_size */
+    pthread_mutex_unlock(&root->mutex);
+    pthread_mutex_unlock(&mutex);
+
+    ydst_root_quota(NULL, 0);
+}
+
+static int ydst_sroot(struct ydst_root *root, char *sroot_new) {
+    char *old;
+
+    if (sroot_new == NULL)
+        return 0;
+
+    pthread_mutex_lock(&mutex);
+
+    if (root == NULL)
+        root = global_ydst_root;
+
+    old = root->sroot;
+
+    if (sroot_new[0] == '/') {
+        root->sroot = strdup(sroot_new);
+        if (root->sroot == NULL) {
+            ylog_error("strdup %s failed: %s, we will use %s\n", sroot_new, strerror(errno), old);
+            root->sroot = old;
+            old = NULL;
+        }
+    } else
+        root->sroot = NULL;
+
+    if (old)
+        free(old);
+
     pthread_mutex_unlock(&mutex);
 
     return 0;
@@ -544,7 +894,7 @@ static int ydst_root_new(struct ydst_root *root, char *root_new) {
         waiting = 0;
         for_each_ydst(i, yd, NULL) {
             if (yd->refs && yd->ydst_change_seq_move_root != root->ydst_change_seq_move_root) {
-                ylog_warn("<index %d> %s is moving... %d,%d\n",
+                ylog_debug("<index %d> %s is moving... %d,%d\n",
                         num++, yd->file, yd->ydst_change_seq_move_root, root->ydst_change_seq_move_root);
                 waiting = 1;
             }
@@ -556,14 +906,29 @@ static int ydst_root_new(struct ydst_root *root, char *root_new) {
 
     pthread_mutex_unlock(&mutex);
 
+#if 1
+    /**
+     * give more info for the new root disk
+     */
+    if (os_hooks.ydst_root_new_hook)
+        os_hooks.ydst_root_new_hook(root, root_new);
+#endif
     return 0;
+}
+
+static inline void format2char_num(char *p, int num) {
+    /* we assume 0000 -> 9999 can't reach NEW_SEGMENT_FAST_METHOD_NUM_WIDTH */
+    p[0] = '0' + (num / 1000) % 10;
+    p[1] = '0' + (num / 100) % 10;
+    p[2] = '0' + (num / 10) % 10;
+    p[3] = '0' + num % 10;
 }
 
 static int yds_new_segment_file_name(char *path, int len, int segment, struct ydst *ydst) {
     int multi = 1;
     char *file = ydst->file;
-    if (ydst->max_segment_now > 1 || ydst->max_segment > 1)
-        snprintf(path, len, "%s/%s%03d", ydst->root_folder, file, segment);
+    if (ydst->max_segment_now > 1 || ydst->max_segment > 1) /* we assume 0000 -> 9999 can't reach */
+        snprintf(path, len, "%s/%s%04d", ydst->root_folder, file, segment);
     else {
         multi = 0;
         if (file[strlen(file) - 1] != '/')
@@ -578,10 +943,24 @@ static int ydst_shrink_file(int segment_from, int segment_to, struct ydst *ydst)
     char file_to[PATH_MAX];
     int i;
     /* Do i need to shrink or inflate myself by luther */
+    if (segment_from >= segment_to)
+        return 0;
+#ifdef NEW_SEGMENT_FAST_METHOD
+    int basename_offset;
+    char *pnum_t;
+    /* we assume 0000 -> 9999 can't reach */
+    yds_new_segment_file_name(file_to, sizeof file_to, 0, ydst);
+    basename_offset = strlen(file_to) - NEW_SEGMENT_FAST_METHOD_NUM_WIDTH;
+    pnum_t = file_to + basename_offset;
+#endif
     for (i = segment_from; i < segment_to; i++) {
+#ifdef NEW_SEGMENT_FAST_METHOD
+        format2char_num(pnum_t, i);
+#else
         yds_new_segment_file_name(file_to, sizeof file_to, i, ydst);
+#endif
         if (access(file_to, F_OK) == 0) {
-            rm_all(file_to);
+            unlink(file_to);
         }
     }
     return 0;
@@ -592,17 +971,37 @@ static int yds_rename_segment_sequnce_file_and_left_segment0(struct ydst *ydst) 
     char file_to[PATH_MAX];
     int i;
 
+    ylog_info("%s rename segemnt %d/%d, begin\n", ydst->file, ydst->max_segment, ydst->max_segment_now);
+
+#ifdef NEW_SEGMENT_FAST_METHOD
+    /* we assume 0000 -> 9999 can't reach */
+    yds_new_segment_file_name(file_from, sizeof file_from, 0, ydst);
+    strcpy(file_to, file_from);
+    int basename_offset = strlen(file_from) - NEW_SEGMENT_FAST_METHOD_NUM_WIDTH;
+    char *pnum_f = file_from + basename_offset;
+    char *pnum_t = file_to + basename_offset;
+#endif
     for (i = ydst->max_segment_now - 1; i; i--) {
+#ifdef NEW_SEGMENT_FAST_METHOD
+        format2char_num(pnum_f, i - 1);
+#else
         yds_new_segment_file_name(file_from, sizeof file_from, i - 1, ydst);
+#endif
         if (access(file_from, F_OK)) {
             // ylog_debug("%s does not exist.\n", file_from);
         } else {
+#ifdef NEW_SEGMENT_FAST_METHOD
+            format2char_num(pnum_t, i);
+#else
             yds_new_segment_file_name(file_to, sizeof file_to, i, ydst);
-            mv(file_from, file_to);
+#endif
+            RENAME(file_from, file_to);
         }
     }
 
     ydst_shrink_file(ydst->max_segment_now, ydst->max_segment, ydst);
+
+    ylog_info("%s rename segemnt %d/%d, done\n", ydst->file, ydst->max_segment, ydst->max_segment_now);
 
     return 0;
 }
@@ -618,9 +1017,21 @@ static void create_outline(struct ydst *ydst) {
     int from;
     int fd_outline = -1;
 
+#ifdef NEW_SEGMENT_FAST_METHOD
+    /* we assume 0000 -> 9999 can't reach */
+    multi = yds_new_segment_file_name(file_from, sizeof file_from, 0, ydst);
+    strcpy(file_to, file_from);
+    int basename_offset = strlen(file_from) - NEW_SEGMENT_FAST_METHOD_NUM_WIDTH;
+    char *pnum_f = file_from + basename_offset;
+    char *pnum_t = file_to + basename_offset;
+#endif
     for (i = ydst->max_segment_now - 1; i >= 0;) {
         cur_seg = i;
+#ifdef NEW_SEGMENT_FAST_METHOD
+        format2char_num(pnum_t, i);
+#else
         multi = yds_new_segment_file_name(file_to, sizeof file_to, i, ydst);
+#endif
         if (multi == 0)
             goto _exit;
         i--;
@@ -630,7 +1041,11 @@ static void create_outline(struct ydst *ydst) {
         ylog_debug("yyyyyyyyyyyyyyyyyyy=%s\n", file_to);
         from = 0;
         for (; i >= 0; i--) {
+#ifdef NEW_SEGMENT_FAST_METHOD
+            format2char_num(pnum_f, i);
+#else
             yds_new_segment_file_name(file_from, sizeof file_from, i, ydst);
+#endif
             if (access(file_from, F_OK))
                 continue;
             from = 1;
@@ -648,20 +1063,31 @@ static void create_outline(struct ydst *ydst) {
          */
         {
             char *p, *last;
+            int ret;
             int len = 100;
-            int fd_f = 0;
+            char data[200];
+            char tmp_path[PATH_MAX];
+            int fd_f = -1;
             int fd_t = open(file_to, O_RDONLY);
             if (from)
                 fd_f = open(file_from, O_RDONLY);
-            if (fd_f > 0 || fd_t > 0) {
-                if (fd_outline <= 0) {
-                    dirname2(file_to);
-                    strcpy(file_to + strlen(file_to), "/outline");
-                    fd_outline = open(file_to, O_RDWR | O_CREAT | O_TRUNC, 0644);
+            if (fd_f >= 0 || fd_t >= 0) {
+                if (fd_outline < 0) {
+                    strcpy(tmp_path, file_to);
+                    dirname2(tmp_path);
+                    strcpy(tmp_path + strlen(tmp_path), "/outline");
+                    fd_outline = open(tmp_path, O_RDWR | O_CREAT | O_TRUNC, 0644);
                 }
-                read(fd_t, file_to, len);
-                file_to[len-1] = 0;
-                p = file_to;
+                if (fd_t >= 0)
+                    ret = read(fd_t, data, len);
+                else
+                    ret = 0;
+                if (ret < 0) {
+                    ret = 0;
+                    ylog_error("create_outline read file_to failed: %s\n", strerror(errno));
+                }
+                data[ret] = 0;
+                p = data;
                 strtok_r(p, "]", &last);
                 p = strtok_r(NULL, "-", &last);
                 buf[0] = 0;
@@ -683,13 +1109,20 @@ static void create_outline(struct ydst *ydst) {
                     time_t time_t_before, time_t_after, delta_seconds;
                     memset(&tm_before, 0, sizeof(struct tm));
                     strptime(p, " %Y.%m.%d %H:%M:%S ", &tm_before);
-                    read(fd_f, file_from, len);
-                    file_from[len-1] = 0;
-                    p = file_from;
+                    if (fd_f >= 0)
+                        ret = read(fd_f, data, len);
+                    else
+                        ret = 0;
+                    if (ret < 0) {
+                        ret = 0;
+                        ylog_error("create_outline read file_from failed: %s\n", strerror(errno));
+                    }
+                    data[ret] = 0;
+                    p = data;
                     strtok_r(p, "]", &last);
                     p = strtok_r(NULL, "-", &last);
                     if (p == NULL) { /* ydst cache maybe does not flush back now luther */
-                        p = file_from;
+                        p = data;
                         strcpy(p, timestamp);
                     }
                     memset(&tm_after, 0, sizeof(struct tm));
@@ -712,18 +1145,18 @@ static void create_outline(struct ydst *ydst) {
                 } else {
                     strcat(buf, "\n");
                 }
-                if (fd_outline > 0)
+                if (fd_outline >= 0)
                     write(fd_outline, buf, strlen(buf));
             }
-            if (fd_f > 0)
-                close(fd_f);
-            if (fd_t > 0)
-                close(fd_t);
+            if (fd_f >= 0)
+                CLOSE(fd_f);
+            if (fd_t >= 0)
+                CLOSE(fd_t);
         }
     }
 _exit:
-    if (fd_outline > 0)
-        close(fd_outline);
+    if (fd_outline >= 0)
+        CLOSE(fd_outline);
 }
 
 static int ydst_pre_fill_zero_to_possession_storage_spaces(struct ydst *ydst,
@@ -739,11 +1172,21 @@ static int ydst_pre_fill_zero_to_possession_storage_spaces(struct ydst *ydst,
         int buf_size = sizeof buf;
         int fd;
 
-        memset(buf, '0', buf_size);
+        memset(buf, 0, buf_size);
         buf[buf_size - 1] = '\n';
 
+#ifdef NEW_SEGMENT_FAST_METHOD
+        /* we assume 0000 -> 9999 can't reach */
+        yds_new_segment_file_name(path, sizeof path, 0, ydst);
+        int basename_offset = strlen(path) - NEW_SEGMENT_FAST_METHOD_NUM_WIDTH;
+        char *pnum_t = path + basename_offset;
+#endif
         for (segment = 0; segment < ydst->max_segment_now; segment++) {
+#ifdef NEW_SEGMENT_FAST_METHOD
+            format2char_num(pnum_t, segment);
+#else
             yds_new_segment_file_name(path, sizeof path, segment, ydst);
+#endif
             if (excluded_segment == segment) {
                 ylog_critical("excluded_segment %d to %s is ignored\n", excluded_segment, path);
                 continue;
@@ -767,7 +1210,7 @@ static int ydst_pre_fill_zero_to_possession_storage_spaces(struct ydst *ydst,
                     }
                     size -= ret;
                 } while (size);
-                close(fd);
+                CLOSE(fd);
             } else {
                 ylog_critical("Failed to create dir %s\n", path);
             }
@@ -775,9 +1218,13 @@ static int ydst_pre_fill_zero_to_possession_storage_spaces(struct ydst *ydst,
 
         /* Do i need to shrink or inflate myself by luther */
         for (segment = ydst->max_segment_now; segment < ydst->max_segment; segment++) {
+#ifdef NEW_SEGMENT_FAST_METHOD
+            format2char_num(pnum_t, segment);
+#else
             yds_new_segment_file_name(path, sizeof path, segment, ydst);
+#endif
             if (access(path, F_OK) == 0) {
-                rm_all(path);
+                unlink(path);
             }
         }
     }
@@ -793,6 +1240,8 @@ static int ylog_historical_folder_do(char *root, char *historical_folder_root,
     if (keep_historical_folder_numbers == 0) {
         ylog_critical("No need to keep historical ylog folder...\n");
         rm_sub_all(root);
+        if (rmdir(root) == 0)
+            ylog_warn("rmdir %s remove empty folder\n", root);
     } else {
         /**
          * if keep_historical_folder_numbers == 0
@@ -815,7 +1264,7 @@ static int ylog_historical_folder_do(char *root, char *historical_folder_root,
                 snprintf(tmp, sizeof(tmp), "%s%d", root, i);
             if (access(tmp, F_OK)) {
                 if (only_rm == 0)
-                    ylog_critical("%s does not exist.\n", tmp);
+                    ylog_debug("%s does not exist.\n", tmp);
             } else {
                 if (only_rm == 0) {
                     if (i == keep_historical_folder_numbers)
@@ -827,19 +1276,25 @@ static int ylog_historical_folder_do(char *root, char *historical_folder_root,
                             snprintf(tmp_to, sizeof(tmp_to), "%s%d", root, i+1);
                         if (access(tmp_to, F_OK) == 0)
                             rm_all(tmp_to);
-                        mv(tmp, tmp_to);
+                        ylog_critical("rename %s to %s\n", tmp, tmp_to);
+                        RENAME(tmp, tmp_to);
                     }
                 } else {
                     rm_all(tmp);
                 }
             }
             if (only_rm == 0) {
+                if (rmdir(root) == 0)
+                    ylog_warn("rmdir %s remove empty folder\n", root);
                 if (i == 1 && access(root, F_OK) == 0) {
+                    ylog_critical("rename %s to %s\n", root, tmp);
                     mkdirs_with_file(tmp);
-                    mv(root, tmp);
+                    RENAME(root, tmp);
                 }
             }
         }
+        if (historical_folder_root)
+            rmdir(historical_folder_root);
     }
     return 0;
 }
@@ -864,11 +1319,9 @@ static int ylog_historical_folder(char *root, struct context *c) {
 }
 
 static void ydst_move_other_files(char *root_old, char *root_new) {
+    UNUSED(root_old);
+    UNUSED(root_new);
     return;
-    if (0) { /* avoid compiler warning */
-        root_old = root_old;
-        root_new = root_new;
-    }
 }
 
 static int ydst_move_root(struct ydst_root *root, struct ydst *ydst,
@@ -905,10 +1358,9 @@ static int ydst_move_root(struct ydst_root *root, struct ydst *ydst,
                 while (strcmp(tmp, ydst->root_folder)) {
                     dirname2(tmp);
                     rmdir(tmp);
-                    ylog_critical("rmdir %s\n", tmp);
                 }
             } else
-                ylog_warn("File %s does not exist\n", tmp);
+                ylog_debug("File %s does not exist\n", tmp);
         }
         ydst->root_folder = root->root_new;
         ydst_pre_fill_zero_to_possession_storage_spaces(ydst, excluded_segment, NULL);
@@ -921,7 +1373,7 @@ static int ydst_move_root(struct ydst_root *root, struct ydst *ydst,
             free(root->root); /* root->root must be with strdup or malloc */
             root->root = root->root_new;
         } else {
-            ylog_warn("%d sub folder is left, they are moving...\n", refs_cur_move_root);
+            ylog_debug("%d sub folder is left, they are moving...\n", refs_cur_move_root);
         }
         ydst->ydst_change_seq_move_root = ydst_change_seq_move_root;
         root->refs_cur_move_root = refs_cur_move_root;
@@ -970,15 +1422,20 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
     int ydst_change_seq_resize_segment;
     int moved = 0;
     int nowrap;
+    int generate_analyzer = 0;
 
-    if (cl)
-        ydst_cache_lock(ydst, cl);
+    if (cl) {
+        if (ydst->write_data2cache_first == 0)
+            ydst_cache_lock(ydst, cl);
+        else
+            cl = NULL;
+    }
 
     pthread_mutex_lock(&root->mutex);
 
     ydst_change_seq_move_root = root->ydst_change_seq_move_root;
     ydst_change_seq_resize_segment = root->ydst_change_seq_resize_segment;
-    nowrap = ydst_nowrap_segment(ydst);
+    nowrap = (ydst_nowrap_segment(ydst) && ymode == YDST_SEGMENT_MODE_NEW) ? 1 : 0;
 
     if (ymode == YDST_SEGMENT_MODE_NEW ||
         ymode == YDST_SEGMENT_MODE_RESET ||
@@ -1035,7 +1492,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
             fsize6 = ylog_get_unit_size_float(root->quota_new, &unit6);
             fsize7 = ylog_get_unit_size_float(ydst->max_segment_size, &unit7);
             fsize8 = ylog_get_unit_size_float(ydst->max_size, &unit8);
-            ylog_info("\nydst <%s> resize_segment from:\n" \
+            ylog_debug("\nydst <%s> resize_segment from:\n" \
                     "quota %.2f%c -> %.2f%c\n"\
                     "max_segment_size %.2f%c -> %.2f%c (%.2f%c)\n"\
                     "max_segment %d -> %d (%d)\n"\
@@ -1059,7 +1516,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
                 ylog_critical("All ydst has finished resize: quota %.2f%c -> %.2f%c\n",
                         fsize5, unit5, fsize6, unit6);
             } else {
-                ylog_warn("%d sub ydst is left, they are resizing...\n", refs_cur_resize_segment);
+                ylog_debug("%d sub ydst is left, they are resizing...\n", refs_cur_resize_segment);
             }
             ydst->ydst_change_seq_resize_segment = ydst_change_seq_resize_segment;
             root->refs_cur_resize_segment = refs_cur_resize_segment;
@@ -1098,7 +1555,8 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
         switch (ydst->segment_mode) {
         case YDST_SEGMENT_SEQUNCE:
             segment = 0;
-            yds_rename_segment_sequnce_file_and_left_segment0(ydst);
+            if (nowrap == 0)
+                yds_rename_segment_sequnce_file_and_left_segment0(ydst);
             break;
         case YDST_SEGMENT_CIRCLE:
             segment = ydst->segment;
@@ -1119,11 +1577,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
             ydst->open(ydst_file, mode, ydst); /* if ydst has cache, restart cache line */
             ylog_debug("new_segment: fopen %s mode=%s\n", path, mode);
         } else {
-            ylog_critical("ylog %s is forced stop, because ydst %s has reached max_segment %d/%ld\n",
-                    y->name, ydst->file, ydst->max_segment_now, ydst->segments);
-            print2journal_file("ylog %s is forced stop, because ydst %s has reached max_segment %d/%ld\n",
-                    y->name, ydst->file, ydst->max_segment_now, ydst->segments);
-            y->thread_stop(y, 0);
+            ylog_close_by_nowrap(y);
         }
     }
 
@@ -1139,12 +1593,30 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
         ydst->segment_size = written_count;
         ydst->segment = (segment + 1) % ydst->max_segment_now;
         ydst->segments++;
-        if (y->raw_data == 0)
+        if (y->raw_data == 0) {
+            ylog_info("create_outline start for %s\n", file);
             create_outline(ydst);
+            ylog_info("create_outline done for %s\n", file);
+        }
     }
 
-    // if ((ydst->segments == 1 || moved) && (ydst->max_segment_now > 1 || ydst->max_segment > 1)) {
-    if ((ydst->segments == 1) && (ydst->max_segment_now > 1 || ydst->max_segment > 1)) {
+    if ((ydst->segments == 1) && (ydst->max_segment_now > 1 || ydst->max_segment > 1))
+        generate_analyzer = 1;
+
+    if (generate_analyzer && ydst->ytag) {
+        struct ytag_header ytag_header;
+        memset(&ytag_header, 0, sizeof(struct ytag_header));
+        ytag_header.tag = YTAG_MAGIC;
+        ytag_header.len = sizeof(struct ytag_header);
+        ytag_header.version = YTAG_VERSION;
+        /* append ytag in the first segment file */
+        written_count = ydst->write((char*)&ytag_header, sizeof(struct ytag_header), ydst);
+        ydst->size += written_count;
+        y->size += written_count;
+        ydst->segment_size += written_count;
+    }
+
+    if (generate_analyzer) {
         int fd;
         /* First time to generate this ydst folder */
         /**
@@ -1161,51 +1633,78 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
         // sed 's/\\/\\\\/g;s/\(.*\)/"\1\\n" \\/' analyzer.py
         char *template_python1 = \
 "#!/usr/bin/env python\n" \
+"# -*- coding:utf-8 -*-\n" \
 "'''\n" \
 "Copyright (C) 2016 Spreadtrum\n" \
 "Created on Jan 18, 2016\n" \
+"2016.03.11 -- add ytag parser\n" \
 "'''\n" \
 "\n";
 
-// "merged = 'all_log'\n"
-// "logpath = './'\n"
-// "id_token_len = 1\n"
-// "logdict = {\n"
-// "'A':'main.log',\n"
-// "'B':'event.log'\n"
-// "}\n"
+#if 0
+"YTAG = 1\n" \
+"YTAG_MAGIC = 0xf00e789a\n" \
+"YTAG_VERSION = 1\n" \
+"YTAG_TAG_PROPERTY = 0x05\n" \
+"YTAG_TAG_NEWFILE_BEGIN = 0x10\n" \
+"YTAG_TAG_NEWFILE_END = 0x11\n" \
+"YTAG_TAG_RAWDATA = 0x12\n" \
+"YTAG_STRUCT_SIZE = 0x08\n" \
+"ytag_folder = 'ytag'\n" \
+"merged = 'all_log'\n"
+"logpath = ''\n"
+"id_token_len = 1\n"
+"logdict = {\n"
+"'A':'main.log',\n"
+"'B':'event.log'\n"
+"}\n"
+#endif
 
         yds_new_segment_file_name(path, sizeof path, 0, ydst);
         dirname2(path);
         strcpy(path + strlen(path), "/analyzer.py");
         fd = open(path, O_RDWR | O_CREAT | O_TRUNC, 0755);
-        ylog_info("create %s\n", path);
-        if (fd > 0) {
+        ylog_debug("create %s\n", path);
+        if (fd >= 0) {
             int i;
             char *p;
             write(fd, template_python1, strlen(template_python1));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG = %d\n", ydst->ytag));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG_MAGIC = 0x%08x\n", YTAG_MAGIC));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG_VERSION = 0x%08x\n", YTAG_VERSION));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG_TAG_PROPERTY = 0x%02x\n", YTAG_TAG_PROPERTY));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG_TAG_NEWFILE_BEGIN = 0x%02x\n", YTAG_TAG_NEWFILE_BEGIN));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG_TAG_NEWFILE_END = 0x%02x\n", YTAG_TAG_NEWFILE_END));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG_TAG_RAWDATA = 0x%02x\n", YTAG_TAG_RAWDATA));
+            write(fd, path, snprintf(path, sizeof(path), "YTAG_STRUCT_SIZE = 0x%02x\n", (unsigned int)sizeof(struct ytag)));
+            write(fd, path, snprintf(path, sizeof(path), "ytag_folder = 'ytag'\n"));
             write(fd, path, snprintf(path, sizeof(path), "merged = '%s'\n", ydst->file_name));
-            write(fd, path, snprintf(path, sizeof(path), "logpath = './'\n"));
-            write(fd, path, snprintf(path, sizeof(path), "id_token_len = %d\n", y->id_token_len));
+            write(fd, path, snprintf(path, sizeof(path), "logpath = ''\n"));
+            write(fd, path, snprintf(path, sizeof(path), "id_token_len = %d\n",
+                        y->id_token_len > y->id_token_len_desc ? y->id_token_len : y->id_token_len_desc));
             write(fd, path, snprintf(path, sizeof(path), "logdict = {\n"));
             for_each_ylog(i, y, NULL) {
                 if (y->name == NULL)
                     continue;
-                if (y->ydst == ydst && y->id_token_len) {
-                    char *pmax = path + sizeof(path);
-                    p = path;
-                    *p++ = '\'';
-                    memcpy(p, y->id_token, y->id_token_len);
-                    p += y->id_token_len;
-                    *p++ = '\'';
-                    p += snprintf(p, pmax - p, ":'%s',\n", y->id_token_filename);
-                    write(fd, path, p - path);
-                    //write(fd, path, snprintf(path, sizeof(path), "'%s':'%s',\n", y->id_token, y->id_token_filename));
+                if (y->ydst == ydst) {
+                   if (y->id_token_len) {
+                        char *pmax = path + sizeof(path);
+                        p = path;
+                        *p++ = '\'';
+                        memcpy(p, y->id_token, y->id_token_len);
+                        p += y->id_token_len;
+                        *p++ = '\'';
+                        p += snprintf(p, pmax - p, ":'%s',\n", y->id_token_filename);
+                        write(fd, path, p - path);
+                        //write(fd, path, snprintf(path, sizeof(path), "'%s':'%s',\n", y->id_token, y->id_token_filename));
+                    } else if (y->id_token_desc) {
+                        write(fd, y->id_token_desc, strlen(y->id_token_desc));
+                    }
                 }
             }
             write(fd, path, snprintf(path, sizeof(path), "}\n\n"));
             write(fd, analyzer_bottom_half_template, strlen(analyzer_bottom_half_template));
-            close(fd);
+            CLOSE(fd);
         } else {
             ylog_critical("Failed: create %s\n", path);
         }
@@ -1216,6 +1715,7 @@ static int ydst_new_segment_default(struct ylog *y, int ymode) {
 
 static int ylog_open_default(char *file, char *mode, struct ylog *y) {
     FILE *f;
+    int fd = -1;
     struct ylog_poll *yp = &y->yp;
 
     switch (y->type) {
@@ -1227,16 +1727,45 @@ static int ylog_open_default(char *file, char *mode, struct ylog *y) {
         }
         yp_set(f, -1, YLOG_POLL_INDEX_DATA, yp, NULL);
         break;
-    case FILE_SOCKET_LOCAL:
-        if (yp_fd(YLOG_POLL_INDEX_SERVER_SOCK, yp) < 0) {
-            int fd;
-            if (create_socket_local_server(&fd, file) == 0)
-                yp_set(NULL, fd, YLOG_POLL_INDEX_SERVER_SOCK, yp, mode);
+    case FILE_SOCKET_LOCAL_SERVER_UDP:
+        if (create_socket_local_server_udp(&fd, file) < 0) {
+            ylog_error("open %s failed: %s\n", file, strerror(errno));
+            if (fd >= 0)
+                CLOSE(fd);
+            return -1;
         }
+        yp_set(NULL, fd, YLOG_POLL_INDEX_DATA, yp, mode); /* udp no listen & accept action, just reading is enough */
+        break;
+    case FILE_SOCKET_LOCAL_CLIENT_UDP:
+        if (connect_socket_local_server_udp(&fd, file) < 0) {
+            ylog_error("open %s failed: %s\n", file, strerror(errno));
+            if (fd >= 0)
+                CLOSE(fd);
+            return -1;
+        }
+        yp_set(NULL, fd, YLOG_POLL_INDEX_DATA, yp, mode);
+        break;
+    case FILE_SOCKET_LOCAL_SERVER:
+        if (create_socket_local_server(&fd, file) < 0) {
+            ylog_error("open %s failed: %s\n", file, strerror(errno));
+            if (fd >= 0)
+                CLOSE(fd);
+            return -1;
+        }
+        yp_set(NULL, fd, YLOG_POLL_INDEX_SERVER_SOCK, yp, mode);
+        break;
+    case FILE_SOCKET_LOCAL_CLIENT:
+        if (connect_socket_local_server(&fd, file) < 0) {
+            ylog_error("open %s failed: %s\n", file, strerror(errno));
+            if (fd >= 0)
+                CLOSE(fd);
+            return -1;
+        }
+        yp_set(NULL, fd, YLOG_POLL_INDEX_DATA, yp, mode);
         break;
     case FILE_POPEN:
         if (y->mode & YLOG_READ_MODE_BLOCK) {
-            ylog_critical("popen2 %s, because its mode & YLOG_READ_MODE_BLOCK = 1\n", y->file);
+            ylog_debug("popen2 %s, because its mode & YLOG_READ_MODE_BLOCK = 1\n", y->file);
             f = popen2(file, mode);
         } else {
             f = popen2(file, mode);
@@ -1248,11 +1777,12 @@ static int ylog_open_default(char *file, char *mode, struct ylog *y) {
         yp_set(f, -1, YLOG_POLL_INDEX_DATA, yp, NULL);
         break;
     case FILE_INOTIFY:
-        if (yp_fd(YLOG_POLL_INDEX_INOTIFY, yp) < 0) {
-            int fd;
-            if (create_inotify(&fd, &y->yinotify) == 0)
-                yp_set(NULL, fd, YLOG_POLL_INDEX_INOTIFY, yp, mode);
-        }
+        if (create_inotify(&fd, &y->yinotify) == 0)
+            yp_set(NULL, fd, YLOG_POLL_INDEX_INOTIFY, yp, mode);
+        break;
+    default:
+        if (os_hooks.ylog_open_default_hook)
+            os_hooks.ylog_open_default_hook(file, mode, y);
         break;
     }
 
@@ -1262,10 +1792,10 @@ static int ylog_open_default(char *file, char *mode, struct ylog *y) {
 static int ylog_close_default(FILE *fp, struct ylog *y) {
     if (y->type == FILE_POPEN) {
         if (y->mode & YLOG_READ_MODE_BLOCK) {
-            ylog_critical("pclose2 %s, because its mode & YLOG_READ_MODE_BLOCK = 1\n", y->file);
+            ylog_debug("pclose2 %s, because its mode & YLOG_READ_MODE_BLOCK = 1\n", y->file);
             return pclose2(fp);
         } else {
-            //ylog_info("pclose %s\n", y->file);
+            ylog_debug("pclose %s\n", y->file);
             return pclose2(fp);
         }
     } else
@@ -1287,6 +1817,8 @@ static void *ylog_exit_default(struct ylog *y) {
 }
 
 static int ylog_read_default_line(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
+    UNUSED(fd);
+    UNUSED(y);
     /**
      * man fgets
      *
@@ -1304,18 +1836,12 @@ static int ylog_read_default_line(char *buf, int count, FILE *fp, int fd, struct
             return 0;
         }
     }
-    if (0) { /* avoid compiler warning */
-        y = y;
-        fd = fd;
-    }
 }
 
 static int ylog_read_default_binary(char *buf, int count, FILE *fp, int fd, struct ylog *y) {
+    UNUSED(y);
+    UNUSED(fp);
     return read(fd, buf, count);
-    if (0) { /* avoid compiler warning */
-        y = y;
-        fp = fp;
-    }
 }
 
 static int ydst_open_default(char *file, char *mode, struct ydst *ydst) {
@@ -1330,6 +1856,26 @@ static int ydst_open_default(char *file, char *mode, struct ydst *ydst) {
         ydst->fp = stdout;
     }
     ydst->fd = fileno(ydst->fp);
+    return 0;
+}
+
+static int ydst_close_default__write_data2cache_first(struct ydst *ydst) {
+    if (ydst->fp) {
+        /**
+         * As for write_data2cache_first == 1
+         * the data left in the current cacheline will be saved in the next segment
+         * cacheline_thread_handler_default thread may be calling
+         * cl->ydst->write_handler(), so ydst_close_default may be called
+         * so ydst->cache->flush(ydst->cache) will never have chance to return
+         * because cacheline_thread_handler_default thread is calling
+         * cl->ydst->write_handler() now by luther 2016.03.16
+         */
+        if (ydst->fp != stdout)
+            fclose(ydst->fp);
+        ydst->fd = -1;
+        ydst->fp = NULL;
+        return 1;
+    }
     return 0;
 }
 
@@ -1361,6 +1907,20 @@ static int ydst_close_default(struct ydst *ydst) {
     return 0;
 }
 
+static int ydst_flush_default__write_data2cache_first(struct ydst *ydst) {
+    /**
+     * when ydst->write_data2cache_first is set
+     * we can't use any ydst related mutex lock in ylog thread
+     * 1. pthread_mutex_lock(&ydst->mutex);
+     * 2. pthread_mutex_lock(&cl->mutex);
+     * it maybe cause deadlock in here
+     * because in cacheline thread, the mutex lock sequence is
+     * 1. pthread_mutex_lock(&cl->mutex);
+     * 2. pthread_mutex_lock(&ydst->mutex); -> cl->ydst->write_handler()
+     */
+    return ydst->cache->flush(ydst->cache);
+}
+
 static int ydst_flush_default(struct ydst *ydst) {
     int ret = 0;
     int locked = 0;
@@ -1389,27 +1949,29 @@ static int ydst_flush_default(struct ydst *ydst) {
     return ret;
 }
 
+static int ydst_write_default__write_data2cache_first(char *buf, int count, struct ydst *ydst) {
+    return ydst->fwrite(buf, count, ydst->fd, ydst->file_name);
+}
+
 static int ydst_write_default(char *buf, int count, struct ydst *ydst) {
     if (ydst->cache)
         return ydst->cache->write(buf, count, ydst->cache);
     else
-        return ydst->fwrite(buf, count, ydst->fd);
-}
-
-static int ydst_write_default_with_token(char *id_token, int id_token_len,
-        char *buf, int count, struct ydst *ydst) {
-    int ret = 0;
-    if (id_token_len)
-        ret += ydst_write_default(id_token, id_token_len, ydst);
-    if (count)
-        ret += ydst_write_default(buf, count, ydst);
-    return ret;
+        return ydst->fwrite(buf, count, ydst->fd, ydst->file_name);
 }
 
 static int ylog_write_timestamp_default(struct ylog *y) {
-    char timeBuf[32];
+    char timeBuf[32+16];
+    char *buf = timeBuf;
+    int len = 0;
     struct ydst *ydst = y->ydst;
-    return ydst->write(y->id_token, y->id_token_len, timeBuf, ylog_get_format_time(timeBuf), ydst);
+    if (y->id_token_len) {
+        memcpy(buf, y->id_token, y->id_token_len);
+        buf += y->id_token_len;
+        len += y->id_token_len;
+    }
+    len += ylog_get_format_time(buf);
+    return ydst->write(timeBuf, len, ydst);
 }
 
 static int ylog_write_header_default(struct ylog *y) {
@@ -1443,7 +2005,7 @@ static int ylog_write_header_default(struct ylog *y) {
     max_size_float = ylog_get_unit_size_float(ydst->max_size_now, &max_unit);
     segment_size_float = ylog_get_unit_size_float(ydst->max_segment_size_now, &segment_unit);
 
-    count = snprintf(buf, sizeof(buf), "[ylog_segment=%ld/%d,%.2f%c] 20%02d.%02d.%02d %02d:%02d:%02d -%02dd%02d:%02d:%02d/%ldms %.2f%c/%.2f%c %.2f%c/s\n",
+    count = snprintf(buf + y->id_token_len, sizeof(buf) - y->id_token_len, "[ylog_segment=%ld/%d,%.2f%c] 20%02d.%02d.%02d %02d:%02d:%02d -%02dd%02d:%02d:%02d/%ldms %.2f%c/%.2f%c %.2f%c/s\n",
                 ydst->segments,
                 ydst->max_segment_now,
                 segment_size_float,
@@ -1465,16 +2027,23 @@ static int ylog_write_header_default(struct ylog *y) {
                 max_unit,
                 delta_speed_float,
                 delta_speed_unit);
-    return ydst->write(y->id_token, y->id_token_len, buf, count, ydst);
+    if (y->id_token_len) {
+        memcpy(buf, y->id_token, y->id_token_len);
+        count += y->id_token_len;
+    }
+    return ydst->write(buf, count, ydst);
 }
 
-static int ylog_write_handler_default(char *buf, int count, struct ylog *y) {
+static int ylog_write_handler_default(char *buf, int count, struct ylog *y, void *private) {
+    UNUSED(private);
     int written_count = 0;
     int locked = 0;
     struct filter_pattern *p = y->fp_array;
     struct ydst *ydst = y->ydst;
-    /* bypass? */
-    if (buf != NULL) {
+    /**
+     * we don't support filter for ydst->write_data2cache_first 1
+     */
+    if (ydst->write_data2cache_first == 0 && buf != NULL) {
         int ignore = 0;
         if (y->bypass)
             return count;
@@ -1490,8 +2059,8 @@ static int ylog_write_handler_default(char *buf, int count, struct ylog *y) {
                     ignore = 1;
             p++;
         }
-        if (y->filter_so != NULL)
-            ignore |= y->filter_so(buf, count, NORMAL);
+        if (y->fplugin_filter_log.func != NULL)
+            ignore |= y->fplugin_filter_log.func(buf, count, NORMAL);
         if (ignore)
             return count;
     }
@@ -1524,16 +2093,17 @@ static int ylog_write_handler_default(char *buf, int count, struct ylog *y) {
     /* append timestamp before the buf line */
     if (y->timestamp) {
         written_count += y->write_timestamp(y);
-        written_count += ydst->write(NULL, 0, buf, count, ydst);
+        written_count += ydst->write(buf + y->id_token_len, count - y->id_token_len, ydst);
     } else {
-        written_count += ydst->write(y->id_token, y->id_token_len, buf, count, ydst);
+        written_count += ydst->write(buf, count, ydst);
     }
     /**
      * Check the size, segment, and do something
      */
     if (written_count) {
         ydst->size += written_count;
-        y->size += written_count;
+        if (ydst->write_data2cache_first == 0)
+            y->size += written_count;
         ydst->segment_size += written_count;
         if (ydst->segment_size >= ydst->max_segment_size_now) {
             /**
@@ -1551,6 +2121,27 @@ static int ylog_write_handler_default(char *buf, int count, struct ylog *y) {
     if (locked)
         pthread_mutex_unlock(&ydst->mutex);
     return written_count;
+}
+
+static int ylog_write_handler_default__write_data2cache_first(char *buf, int count, struct ylog *y, void *private) {
+    UNUSED(private);
+    int ret;
+    struct ydst *ydst = y->ydst;
+
+    if (buf == NULL)
+        return y->ydst->write_handler(buf, count, y, NULL);
+    /**
+     * For cache first, there will be no timestamp, no id_token
+     * and cache has pthread_mutex_lock(&cl->mutex)
+     * to protect this ydst->cache->write action being atomic
+     */
+    if (y->write_handler_write_hook)
+        y->write_handler_write_hook(&buf, &count, y);
+    y->size += count;
+    ret = ydst->cache->write(buf, count, ydst->cache);
+    if (y->write_data2cache_first_filter)
+        y->write_data2cache_first_filter(buf, count, NORMAL);
+    return ret;
 }
 
 static int ylog_thread_new_state(enum ylog_thread_state state, struct ylog *y, int block) {
@@ -1647,12 +2238,12 @@ static void ylog_trigger(struct ylog *ylog) {
 void ylog_trigger_and_wait_for_finish(struct ylog *ylog) {
     char *name = ylog->name;
     ylog_trigger(ylog);
-    ylog_info("ylog <%s> waiting for finish\n", name);
+    ylog_debug("ylog <%s> waiting for finish\n", name);
     while ((ylog->status & YLOG_DISABLED) != YLOG_DISABLED) {
         usleep(200 * 1000);
-        ylog_info("ylog <%s> waiting for finish\n", name);
+        ylog_debug("ylog <%s> waiting for finish\n", name);
     }
-    ylog_info("ylog <%s> is finished\n", name);
+    ylog_debug("ylog <%s> is finished\n", name);
 }
 
 void ylog_trigger_all(struct ylog *ylog) {
@@ -1666,6 +2257,23 @@ void ylog_trigger_all(struct ylog *ylog) {
     show_ydst_storage_info(NULL);
 }
 
+/**
+ * Multi thread calling is not supported,
+ * you must call and use it one by one, step by step
+ */
+static struct ylog *ylog_get_empty_slot(void) {
+    struct ylog *ys;
+    int i;
+    for_each_ylog(i, ys, NULL) {
+        if (ys->name == NULL) {
+            ylog_debug("Success: Get one empty ylog %d\n", i);
+            return ys;
+        }
+    }
+    ylog_critical("Failed: Get ylog there is no space to store %d\n", i);
+    return NULL;
+}
+
 static int ylog_insert(struct ylog *y) {
     struct ylog *ys;
     int i;
@@ -1674,7 +2282,7 @@ static int ylog_insert(struct ylog *y) {
     for_each_ylog(i, ys, NULL) {
         if (ys->name == NULL) {
             *ys = *y;
-            ylog_info("Success: insert ylog %s\n", y->name);
+            ylog_debug("Success: insert ylog %s\n", y->name);
             return i;
         }
     }
@@ -1696,12 +2304,29 @@ static int ydst_insert(struct ydst *ydi) {
     for_each_ydst(i, yd, NULL) {
         if (yd->file == NULL) {
             *yd = *ydi;
-            ylog_info("Success: insert ydst %s\n", yd->file);
+            ylog_debug("Success: insert ydst %s\n", yd->file);
             return i;
         }
     }
     ylog_critical("Failed: insert ydst %s, there is no space to store\n", ydi->file);
     return -1;
+}
+
+/**
+ * Multi thread calling is not supported,
+ * you must call and use it one by one, step by step
+ */
+static struct ydst *ydst_get_empty_slot(void) {
+    struct ydst *yd;
+    int i;
+    for_each_ydst(i, yd, NULL) {
+        if (yd->file == NULL) {
+            ylog_debug("Success: Get one empty ydst, index is %d\n", i);
+            return yd;
+        }
+    }
+    ylog_critical("Failed: Get ydst there is no space to store %d\n", i);
+    return NULL;
 }
 
 static int ydst_insert_all(struct ydst *yd) {
@@ -1710,11 +2335,77 @@ static int ydst_insert_all(struct ydst *yd) {
     return 0;
 }
 
+static int ynode_insert(struct ynode *ynode) {
+    struct ydst *ydst;
+    struct ylog *ylog, *y;
+    int i, ret = 1;
+    pthread_mutex_lock(&mutex);
+    ydst = ydst_get_empty_slot();
+    if (ydst) {
+        if (ynode->ydst.file) {
+            struct cacheline *cache = (ynode->cache.size && ynode->cache.num) ? calloc(sizeof(struct cacheline), 1) : NULL;
+            if (cache)
+                *cache = ynode->cache;
+            *ydst = ynode->ydst;
+            ylog_debug("Install ydst : %s\n", ydst->file);
+            ydst->cache = cache;
+        } else {
+            ydst = NULL;
+            ylog_debug("Empty ydst in this ynode\n");
+        }
+        ret = 0;
+        for (i = 0; ynode->ylog[i].file; i++) {
+            ylog = ylog_get_empty_slot();
+            if (ylog == NULL) {
+                ret |= 1;
+                break;
+            }
+            y = &ynode->ylog[i];
+            if (os_hooks.check_file_execute && y->type == FILE_POPEN) {
+                if (os_hooks.check_file_execute(y->file)) {
+                    ylog_warn("ylog : %s can't locate executable %s\n", y->name, y->file);
+                    continue;
+                }
+            }
+            if (os_hooks.check_file_exist && y->type == FILE_NORMAL) {
+                if (os_hooks.check_file_exist(y->file)) {
+                    ylog_warn("ylog : %s can't locate file %s\n", y->name, y->file);
+                    continue;
+                }
+            }
+            *ylog = *y;
+            ylog->ydst = ydst;
+            ylog_debug("Install ylog : %s\n", ylog->name);
+        }
+    }
+    pthread_mutex_unlock(&mutex);
+    return ret;
+}
+
+static int ynode_insert_all(struct ynode *ynode, int num) {
+    int ret = 0;
+    int i;
+    for (i = 0; i < num; i++)
+        ret |= ynode_insert(&ynode[i]);
+    return ret;
+}
+
 static void ydst_refs_inc(struct ylog *y) {
     struct ydst *ydst = y->ydst;
     pthread_mutex_lock(&mutex);
     pthread_mutex_lock(&ydst->root->mutex);
     if (ydst->refs++ == 0) {
+        if (y->ydst->write_data2cache_first) {
+            /**
+             * For write_data2cache_first, because cacheline thread and ylog_thread_handler_default
+             * can use ydst at the same time, so we need to let cacheline as another vritual ylog by luther
+             * cahceline is calling
+             * 1. cl->ydst->write_handler(pcache, wpos, cl->ydst->ylog);
+             * ylog_thread_handler_default here is processing pipe state change
+             * 2. y->write_handler(NULL, XXXX, y);
+             */
+            ydst->refs++;
+        }
         ydst->root->refs_cur = ++ydst->root->refs;
         ydst->root->max_size += ydst->max_size;
         ydst_pre_fill_zero_to_possession_storage_spaces(ydst, -1, NULL);
@@ -1725,16 +2416,47 @@ static void ydst_refs_inc(struct ylog *y) {
 
 static void ydst_refs_dec(struct ylog *y) {
     struct ydst *ydst = y->ydst;
+    int locked = 1;
     pthread_mutex_lock(&mutex);
     pthread_mutex_lock(&ydst->root->mutex);
+    if (y->ydst->write_data2cache_first) {
+        /**
+         * For write_data2cache_first, because cacheline thread and ylog_thread_handler_default
+         * can use ydst at the same time, so we need to let cacheline as another vritual ylog by luther
+         * cahceline is calling
+         * 1. cl->ydst->write_handler(pcache, wpos, cl->ydst->ylog);
+         * ylog_thread_handler_default here is processing pipe state change
+         * 2. y->write_handler(NULL, XXXX, y);
+         */
+        if (ydst->refs)
+            --ydst->refs;
+    }
     if (ydst->refs && --ydst->refs == 0) {
-        if (ydst->cache)
-            ydst->cache->exit(ydst->cache);
         ydst->root->refs_cur = --ydst->root->refs;
         ydst->root->max_size -= ydst->max_size;
+        if (ydst->cache) {
+            if (ydst->write_data2cache_first) {
+                /**
+                 * when ydst->write_data2cache_first is set
+                 * we can't use any ydst related mutex lock in ylog thread
+                 * 1. pthread_mutex_lock(&ydst->mutex);
+                 * 2. pthread_mutex_lock(&cl->mutex);
+                 * it maybe cause deadlock in here
+                 * because in cacheline thread, the mutex lock sequence is
+                 * 1. pthread_mutex_lock(&cl->mutex);
+                 * 2. pthread_mutex_lock(&ydst->mutex); -> cl->ydst->write_handler()
+                 */
+                locked = 0;
+                pthread_mutex_unlock(&ydst->root->mutex);
+                pthread_mutex_unlock(&mutex);
+            }
+            ydst->cache->exit(ydst->cache);
+        }
     }
-    pthread_mutex_unlock(&ydst->root->mutex);
-    pthread_mutex_unlock(&mutex);
+    if (locked) {
+        pthread_mutex_unlock(&ydst->root->mutex);
+        pthread_mutex_unlock(&mutex);
+    }
 }
 
 static void *ylog_event_thread_handler_default(void *arg);
@@ -1764,20 +2486,21 @@ static void ylog_event_thread_del(struct ylog_event_thread *yevent_thread) {
     enum ylog_event_thread_type type = yevent_thread->type;
     pthread_mutex_lock(&mutex);
     for (last = NULL, cur = yevent_thread_lists[type]; cur; last = cur, cur = cur->next)
-        if (cur == yevent_thread)
+        if (cur == yevent_thread) {
+            /* Remove the entry from the linked list. */
+            if (last == NULL)
+                yevent_thread_lists[type] = cur->next;
+            else
+                last->next = cur->next;
             break;
-    /* Remove the entry from the linked list. */
-    if (last == NULL)
-        yevent_thread_lists[type] = cur->next;
-    else
-        last->next = cur->next;
+        }
     pthread_mutex_unlock(&mutex);
 }
 
 static void ylog_event_thread_notify_stop(struct ylog_event_thread *yevent_thread) {
     struct ylog_event_cond_wait *yewait = &yevent_thread->yewait;
     pthread_mutex_lock(&yewait->mutex);
-    ylog_info("ylog_event notify %s stop\n", yevent_thread->yewait.name);
+    ylog_debug("ylog_event notify %s stop\n", yevent_thread->yewait.name);
     yevent_thread->state = YLOG_STOP;
     pthread_cond_broadcast(&yevent_thread->yewait.cond);
     pthread_mutex_unlock(&yewait->mutex);
@@ -1798,7 +2521,7 @@ void ylog_event_thread_notify_all_stop_type(void) {
 static void ylog_event_thread_notify_run(struct ylog_event_thread *yevent_thread) {
     struct ylog_event_cond_wait *yewait = &yevent_thread->yewait;
     pthread_mutex_lock(&yewait->mutex);
-    ylog_info("ylog_event notify %s run\n", yevent_thread->yewait.name);
+    ylog_debug("ylog_event notify %s run\n", yevent_thread->yewait.name);
     yevent_thread->state = YLOG_RUN;
     pthread_cond_broadcast(&yevent_thread->yewait.cond);
     pthread_mutex_unlock(&yewait->mutex);
@@ -1858,10 +2581,14 @@ static void *ylog_event_thread_handler_default(void *arg) {
     int ret;
     enum ylog_thread_state *state = &yevent_thread->state;
     int wait_period = yewait->period;
+
+    if (yevent_thread->arg != (void*)-1)
+        os_hooks.pthread_create_hook(NULL, NULL, "event-handler %s", yewait->name);
+
     yevent_thread->pid = getpid();
     yevent_thread->tid = gettid();
     pthread_mutex_lock(&yewait->mutex);
-    ylog_info("event %s --> %dms is started, pid=%d, tid=%d\n",
+    ylog_debug("event %s --> %dms is started, pid=%d, tid=%d\n",
             yewait->name, wait_period, yevent_thread->pid, yevent_thread->tid);
     for (;;) {
         if (*state == YLOG_RUN) {
@@ -1903,36 +2630,63 @@ int ylog_os_event_timer_create(char *name, int period, ylog_event_timer_handler 
                 event_timer_handler, arg, YLOG_EVENT_THREAD_TYPE_OS_TIMER);
 }
 
-static ylog_filter_so ylog_get_filter_so(char *path, char *fun) {
-    ylog_filter_so filter_so = NULL;
+static void ylog_load_filter_plugin_func(char *path, char *fun, struct sfilter_plugin *sfp) {
+    ylog_filter_plugin_func func = NULL;
     void *handle;
     const char *error;
     if (path == NULL)
-        return NULL;
+        return;
     handle = dlopen(path, RTLD_LAZY);
     if (!handle) {
-        ylog_error("ylog open %s failed: %s\n", path, dlerror());
-        return NULL;
+        ylog_debug("ylog open %s failed: %s\n", path, dlerror());
+        return;
     }
     /* clear error before */
     dlerror();
-    filter_so = dlsym(handle, fun);
+    func = dlsym(handle, fun);
     if ((error = dlerror()) != NULL) {
         ylog_error("%s \n",error);
         dlclose(handle);
-        return NULL;
+        return;
     }
-    return filter_so;
+    sfp->handle = handle;
+    sfp->func = func;
 }
 
-static ylog_filter_so ylog_getfun_filter_so(char *in_name, char *fun, char *prefix) {
-    ylog_filter_so filter_so = NULL;
+static void ylog_load_filter_plugin(char *in_name, char *fun, char *prefix, struct sfilter_plugin *sfp) {
     char out_libfilter[PATH_MAX];
     if (in_name == NULL || fun == NULL)
-        return NULL;
+        return;
     sprintf(out_libfilter, "%slibfilter_%s.so", prefix, in_name);
-    filter_so = ylog_get_filter_so(out_libfilter, fun);
-    return filter_so;
+    ylog_load_filter_plugin_func(out_libfilter, fun, sfp);
+}
+
+static void ylog_all_thread_exit(void) {
+    struct ylog *y;
+    int i, still_running_ylog_thread;
+    for_each_ylog(i, y, NULL) {
+        if (y->name == NULL)
+            continue;
+        ylog_info("trigger exit signal to ylog %s\n", y->name);
+        y->thread_exit(y, 1);
+        ylog_info("ylog %s got exit signal\n", y->name);
+    }
+    do {
+        still_running_ylog_thread = 0;
+        for_each_ylog(i, y, NULL) {
+            if (y->name == NULL)
+                continue;
+            /* y->exit will call ylog_exit_default and y->status &= ~YLOG_STARTED; */
+            if (y->status & YLOG_STARTED) {
+                still_running_ylog_thread = 1;
+                break;
+            }
+        }
+        if (still_running_ylog_thread) {
+            ylog_info("ylog %s is exiting...\n", y->name);
+            usleep(200*1000);
+        }
+    } while (still_running_ylog_thread);
 }
 
 static void *ylog_thread_handler_default(void *arg) {
@@ -1949,14 +2703,18 @@ static void *ylog_thread_handler_default(void *arg) {
     struct ylog_poll *yp = &y->yp;
     char *name = y->name;
     int nowrap;
+    int ylog_read_len_might_zero_wait_max_count = 0;
     ydst_refs_inc(y);
     y->pid = getpid();
     y->tid = gettid();
     get_boottime(&y->ts);
     ms_prev = currentTimeMillis();
     y->status |= YLOG_STARTED;
-    ylog_warn("Start ylog thread <%s, %s, file type is %d> --> %s %d started, pid=%d, tid=%d\n",
+    os_hooks.pthread_create_hook(y, NULL, "ylog %s", name);
+    ylog_debug("Start ylog thread <%s, %s, file type is %d> --> %s %d started, pid=%d, tid=%d\n",
             name, y->file, y->type, y->ydst->file, y->ydst->refs, y->pid, y->tid);
+    if (y->start_callback)
+        y->start_callback(y, NULL);
     for (;;) {
         /* Step 1: waiting for control, client, inotify or data by luther */
         if (poll(yp->pfd, YLOG_POLL_INDEX_MAX, timeout) < 0) {
@@ -1990,8 +2748,8 @@ static void *ylog_thread_handler_default(void *arg) {
             default: state_curr = YLOG_NOP; break;
             }
             y->state = state_curr;
-            ylog_info("%s control state to %d, count from %d to %d\n",
-                    name, state_curr, y->state_pipe_count, y->state_pipe_count+1);
+            ylog_debug("%s control state to %d.%c, count from %d to %d\n",
+                    name, state_curr, buf[0], y->state_pipe_count, y->state_pipe_count+1);
 __state_control:
             switch (state_curr) {
             case YLOG_RUN:
@@ -2000,11 +2758,13 @@ __state_control:
                     if (y->open(file, mode, y)) {
                         ylog_critical("open %s failed\n", file);
                         y->state = YLOG_STOP;
-                        pthread_mutex_lock(&mutex);
+                        pthread_mutex_lock(&y_mutex);
                         y->status |= YLOG_DISABLED;
-                        pthread_mutex_unlock(&mutex);
+                        pthread_mutex_unlock(&y_mutex);
                         if (os_hooks.ylog_status_hook)
                             os_hooks.ylog_status_hook(YLOG_STOP, y);
+                        if (y->status_callback)
+                            y->status_callback(y, (void*)YLOG_STOP);
                         if (y->mode & YLOG_READ_MODE_BLOCK_RESTART_ALWAYS) {
                             y->state = YLOG_RESTART;
                             if (y->restart_period) {
@@ -2014,14 +2774,16 @@ __state_control:
                             }
                             ms_prev = currentTimeMillis();
                             state_timeout = YLOG_RESTART;
-                            //ylog_info("%s block will restart in %dms\n", file, timeout);
+                            ylog_debug("%s block will restart in %dms\n", file, timeout);
                         }
                     } else {
-                        pthread_mutex_lock(&mutex);
+                        pthread_mutex_lock(&y_mutex);
                         y->status &= ~YLOG_DISABLED;
-                        pthread_mutex_unlock(&mutex);
+                        pthread_mutex_unlock(&y_mutex);
                         if (os_hooks.ylog_status_hook)
                             os_hooks.ylog_status_hook(YLOG_RUN, y);
+                        if (y->status_callback)
+                            y->status_callback(y, (void*)YLOG_RUN);
                     }
                 } else {
                     if (nowrap == 0)
@@ -2044,8 +2806,12 @@ __state_control:
             case YLOG_RESTART:
                 if (os_hooks.ylog_status_hook)
                     os_hooks.ylog_status_hook(YLOG_STOP, y);
+                if (y->status_callback)
+                    y->status_callback(y, (void*)YLOG_STOP);
                 yp_invalid(YLOG_POLL_INDEX_DATA, yp, y);
-                pthread_mutex_lock(&mutex);
+                if (y->stop_callback)
+                    y->stop_callback(y, NULL);
+                pthread_mutex_lock(&y_mutex);
                 timeout = -1;
                 if (y->status & YLOG_DISABLED_FORCED) {
                     if ((y->status & YLOG_DISABLED) == 0)
@@ -2054,22 +2820,22 @@ __state_control:
                 if (state_curr == YLOG_RESTART) {
                     if ((y->status & YLOG_DISABLED_FORCED) == 0) {
                         y->state = state_curr = YLOG_RUN;
-                        pthread_mutex_unlock(&mutex);
+                        pthread_mutex_unlock(&y_mutex);
                         goto __state_control;
                     } else {
                         ylog_info("ylog <%s> is disabled forcely by ylog_cli\n", name);
                     }
                 }
                 y->status |= YLOG_DISABLED;
-                pthread_mutex_unlock(&mutex);
+                pthread_mutex_unlock(&y_mutex);
                 y->state_pipe_count++;
                 continue;
             case YLOG_MOVE_ROOT:
-                y->write_handler(NULL, YDST_SEGMENT_MODE_UPDATE, y);
+                y->write_handler(NULL, YDST_SEGMENT_MODE_UPDATE, y, NULL);
                 y->state_pipe_count++;
                 continue;
             case YLOG_RESIZE_SEGMENT:
-                y->write_handler(NULL, YDST_SEGMENT_MODE_UPDATE, y);
+                y->write_handler(NULL, YDST_SEGMENT_MODE_UPDATE, y, NULL);
                 y->state_pipe_count++;
                 continue;
             case YLOG_FLUSH:
@@ -2077,7 +2843,7 @@ __state_control:
                 y->state_pipe_count++;
                 continue;
             case YLOG_RESET:
-                y->write_handler(NULL, YDST_SEGMENT_MODE_RESET, y);
+                y->write_handler(NULL, YDST_SEGMENT_MODE_RESET, y, NULL);
                 y->state_pipe_count++;
                 continue;
             case YLOG_EXIT:
@@ -2103,7 +2869,7 @@ __state_control:
                     yp_set(NULL, fd_client, YLOG_POLL_INDEX_DATA, yp, mode);
                 } else {
                     ylog_warn("%s %s server had accepted one client, forbid you\n", name, file);
-                    close(fd_client);
+                    CLOSE(fd_client);
                 }
             }
         }
@@ -2148,10 +2914,21 @@ __state_control:
         }
         /* Step 6: read data and save them */
         if (yp_isset(YLOG_POLL_INDEX_DATA, yp)) {
-            count = y->fread(y->buf, y->buf_size, yp_fp(YLOG_POLL_INDEX_DATA, yp), yp_fd(YLOG_POLL_INDEX_DATA, yp), y);
+            count = y->fread(y->rbuf, y->rbuf_size, yp_fp(YLOG_POLL_INDEX_DATA, yp), yp_fd(YLOG_POLL_INDEX_DATA, yp), y);
             if (count > 0) {
-                if (count != INT_MAX) /* INT_MAX to tell here, y->fread has called y->write_handler in itself */
-                    y->write_handler(y->buf, count, y);
+                if (count != INT_MAX) { /* INT_MAX to tell here, y->fread has called y->write_handler in itself */
+                    int wcount = count;
+                    if (y->id_token_len)
+                        wcount += y->id_token_len;
+                    if (y->reserved_len) {
+                        if (y->reserved_filed_process)
+                            y->reserved_filed_process(y->reserved_buf, y->reserved_len, y->rbuf, count, y->privates);
+                        wcount += y->reserved_len;
+                    }
+                    y->write_handler(y->buf, wcount, y, NULL);
+                }
+                if (ylog_read_len_might_zero_wait_max_count)
+                    ylog_read_len_might_zero_wait_max_count = 0;
             } else {
                 if (y->mode & YLOG_READ_MODE_BLOCK) {
                     int go_to_stop = 1;
@@ -2159,7 +2936,7 @@ __state_control:
                     if (count < 0) {
                         ylog_error("%s block read %s failed: %s\n", name, file, strerror(errno));
                         // if (y->mode & YLOG_READ_MODE_BINARY == 0) clearerr(yp_fp(YLOG_POLL_INDEX_DATA, yp));
-                        if (y->type != FILE_SOCKET_LOCAL) {
+                        if (y->type != FILE_SOCKET_LOCAL_SERVER) {
                             go_to_stop = 0;
                             if (y->restart_period) {
                                 timeout = y->restart_period;
@@ -2168,11 +2945,21 @@ __state_control:
                             }
                             ms_prev = currentTimeMillis();
                             state_timeout = YLOG_RESTART;
-                            //ylog_info("%s block will restart in %dms\n", file, timeout);
+                            ylog_debug("%s block will restart in %dms\n", file, timeout);
                         }
                     }
                     if (go_to_stop) {
-                        if (y->mode & YLOG_READ_LEN_MIGHT_ZERO) {
+                        int mode = y->mode;
+                        if (mode & YLOG_READ_LEN_MIGHT_ZERO_WAIT_MAX_COUNT) {
+                            if (++ylog_read_len_might_zero_wait_max_count > 10)
+                                mode = YLOG_READ_LEN_MIGHT_ZERO;
+                            else {
+                                ylog_critical("%s block read %s return 0, ylog_read_len_might_zero_wait_max_count=%d\n",
+                                        name, file, ylog_read_len_might_zero_wait_max_count);
+                                continue;
+                            }
+                        }
+                        if (mode & YLOG_READ_LEN_MIGHT_ZERO) {
                             ylog_critical("%s block read %s return 0, read_len_zero_count=%d\n",
                                     name, file, ++y->read_len_zero_count);
                             if (y->restart_period) {
@@ -2199,7 +2986,7 @@ __state_control:
                         ms_prev = currentTimeMillis();
                         state_timeout = YLOG_RESTART;
                         yp_clr(YLOG_POLL_INDEX_DATA, yp);
-                        //ylog_info("%s will restart in %dms\n", file, timeout);
+                        ylog_debug("%s will restart in %dms\n", file, timeout);
                     } else {
                         if (count < 0) {
                             ylog_error("%s read %s failed: %s\n", name, file, strerror(errno));
@@ -2217,11 +3004,14 @@ __state_control:
     }
 __exit:
     ydst_refs_dec(y);
-    return y->exit(y);
+    y->exit(y);
+    if (y->exit_callback)
+        y->exit_callback(y, NULL);
+    return NULL;
 }
 
-static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *root, struct context *c) {
-    struct ylog *y = ylog;
+static void ylog_init(struct ydst_root *root, struct context *c) {
+    struct ylog *y;
     struct ylog_poll *yp;
     struct ydst *yd;
     int i;
@@ -2240,15 +3030,15 @@ static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *ro
     gettimeofday(&c->tv, NULL);
     localtime_r(&c->tv.tv_sec, &c->tm);
     get_boottime(&c->ts);
+    ylog_get_format_time(c->timeBuf);
     ylog_historical_folder(root->root, c);
 
-    /* for (; yd->refs >= 0; yd++) { */
-    for_each_ydst(i, yd, ydst) {
+    for_each_ydst(i, yd, NULL) {
         if (yd->file == NULL)
             continue;
         if (yd->file_name == NULL)
             yd->file_name = "ylog_all";
-        ylog_info("ydst <%s> is initialized\n", yd->file);
+        ylog_debug("ydst <%s> is initialized\n", yd->file);
         pthread_mutex_init(&yd->mutex, NULL);
         yd->refs = 0;
         yd->fp = NULL;
@@ -2267,15 +3057,18 @@ static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *ro
         if (yd->mode == NULL)
             yd->mode = "w+";
         if (yd->write == NULL)
-            yd->write = ydst_write_default_with_token;
+            yd->write = yd->write_data2cache_first ? \
+                        ydst_write_default__write_data2cache_first:ydst_write_default;
         if (yd->fwrite == NULL)
             yd->fwrite = fd_write;
         if (yd->flush == NULL)
-            yd->flush = ydst_flush_default;
+            yd->flush = yd->write_data2cache_first ? \
+                        ydst_flush_default__write_data2cache_first:ydst_flush_default;
         if (yd->open == NULL)
             yd->open = ydst_open_default;
         if (yd->close == NULL)
-            yd->close = ydst_close_default;
+            yd->close = yd->write_data2cache_first ? \
+                        ydst_close_default__write_data2cache_first:ydst_close_default;
         if (yd->cache) {
             struct cacheline *cache = yd->cache;
             cache->ydst = yd;
@@ -2304,6 +3097,7 @@ static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *ro
             if (cache->cache == NULL) {
                 ylog_error("ydst malloc %ld failed: %s\n", cache->size * cache->num, strerror(errno));
                 exit(0);
+                return; /* For coverity */
             }
             pthread_mutex_lock(&cache->mutex);
             pthread_create(&cache->ptid, NULL, cache->handler, cache);
@@ -2317,14 +3111,27 @@ static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *ro
         yd->max_segment_new = yd->max_segment_now = yd->max_segment;
     }
 
-    /* for (;y && y->name; y++) { */
-    for_each_ylog(i, y, ylog) {
+    for_each_ylog(i, y, NULL) {
         if (y->name == NULL)
             continue;
-        ylog_info("ylog <%s> is initialized\n", y->name);
+        ylog_debug("ylog <%s> is initialized\n", y->name);
         yp = &y->yp;
-        if (y->write_handler == NULL)
-            y->write_handler = ylog_write_handler_default;
+        if (y->ydst == NULL)
+            y->ydst = &global_ydst[YDST_TYPE_DEFAULT];
+        if (y->write_handler == NULL) {
+            if (y->ydst->write_data2cache_first && y->ydst->cache == NULL) {
+                ylog_critical("Fatal: ylog -> cache -> ydst<%s>, cache is null, forced it write_data2cache_first to 0\n",
+                        y->ydst->file);
+                y->ydst->write_data2cache_first = 0;
+            }
+            if (y->ydst->write_data2cache_first == 0)
+                y->write_handler = ylog_write_handler_default;
+            else {
+                y->write_handler = ylog_write_handler_default__write_data2cache_first;
+                y->ydst->write_handler = ylog_write_handler_default;
+                y->ydst->ylog[y->ydst->ylog_num++] = y;
+            }
+        }
         if (y->open == NULL)
             y->open = ylog_open_default;
         if (y->fread == NULL) {
@@ -2368,11 +3175,9 @@ static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *ro
             y->thread_reset = ylog_thread_reset_default;
         if (y->thread_nop == NULL)
             y->thread_nop = ylog_thread_nop_default;
-        if (y->filter_so == NULL)
-            y->filter_so = ylog_getfun_filter_so(y->name, "filter_log", c->filter_so_path);
+        if (y->fplugin_filter_log.func == NULL)
+            ylog_load_filter_plugin(y->name, "filter_log", c->filter_plugin_path, &y->fplugin_filter_log);
 
-        if (y->ydst == NULL)
-            y->ydst = &global_ydst[YDST_TYPE_DEFAULT];
         y->state = YLOG_STOP;
         yp_invalid(YLOG_POLL_INDEX_INOTIFY, yp, y);
         yp_invalid(YLOG_POLL_INDEX_SERVER_SOCK, yp, y);
@@ -2388,7 +3193,17 @@ static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *ro
         if (y->buf == NULL) {
             ylog_error("malloc %ld failed: %s\n", y->buf_size, strerror(errno));
             exit(0);
+            return; /* For coverity */
         }
+        // memset(y->buf, 0, y->buf_size);
+        if (y->id_token_len)
+            y->id_token_buf = y->buf;
+        if (y->reserved_len)
+            y->reserved_buf = y->buf + y->id_token_len;
+        y->rbuf = y->buf + y->id_token_len + y->reserved_len + y->id_token_len_desc;
+        y->rbuf_size = y->buf_size - y->id_token_len - y->reserved_len - y->id_token_len_desc;
+        if (y->id_token_buf && y->id_token)
+            memcpy(y->id_token_buf, y->id_token, y->id_token_len);
 
         if (pipe(y->state_pipe))
             ylog_error("create pipe %s failed: %s\n", y->name, strerror(errno));
@@ -2400,9 +3215,9 @@ static void ylog_init(struct ylog *ylog, struct ydst *ydst, struct ydst_root *ro
 
     /* waiting for all created thread start */
     do {
-        ylog_info("waiting for all ylog thread ready ...\n");
+        ylog_debug("waiting for all ylog thread ready ...\n");
         all_thread_started = 1;
-        for_each_ylog(i, y, ylog) {
+        for_each_ylog(i, y, NULL) {
             if (y->name == NULL)
                 continue;
             if ((y->status & YLOG_STARTED) == 0) {
