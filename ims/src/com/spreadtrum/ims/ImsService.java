@@ -207,6 +207,7 @@ public class ImsService extends Service {
     private boolean mIsCPImsPdnActived = false;
     private boolean mIsAPImsPdnActived = false;
     private boolean mIsLoggingIn =false;
+    private boolean mPendingCPSelfManagement = false;
     private class ImsServiceRequest {
         public int mRequestId;
         public int mEventCode;
@@ -527,7 +528,8 @@ public class ImsService extends Service {
                                         Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
                                 if(imsService != null){
                                     imsService.notifyVoWifiEnable(false);
-                                    Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> notifyVoWifiUnavaliable");
+                                    mPendingCPSelfManagement = true;
+                                    Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:" + mPendingCPSelfManagement);
                                 }
                             }
                             if (mFeatureSwitchRequest != null) {
@@ -616,7 +618,8 @@ public class ImsService extends Service {
                             }
                             if(imsService != null){
                                 imsService.notifyVoWifiEnable(false);
-                                Log.i(TAG,"ACTION_CANCEL_CURRENT_REQUEST-> notifyVoWifiUnavaliable");
+                                mPendingCPSelfManagement = true;
+                                Log.i(TAG,"ACTION_CANCEL_CURRENT_REQUEST-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:" + mPendingCPSelfManagement);
                             }
                             mAttachVowifiSuccess = false;
                             mFeatureSwitchRequest = null;
@@ -1756,18 +1759,29 @@ public class ImsService extends Service {
         if(state == ImsPDNStatus.IMS_PDN_READY){
             mIsAPImsPdnActived = false;
             mIsCPImsPdnActived = true;
+            mPendingCPSelfManagement = false;
         }else{
             mIsCPImsPdnActived = false;
             if(!mIsAPImsPdnActived){
                 mWifiRegistered = false;
                 updateImsFeature();
             }
+            if(state == ImsPDNStatus.IMS_PDN_ACTIVE_FAILED){
+                if(mPendingCPSelfManagement){
+                    ImsServiceImpl service = mImsServiceImplMap.get(
+                            Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
+                    if(service != null){
+                       service.setIMSRegAddress(null);
+                    }
+                }
+            }
         }
         Log.i(TAG,"onImsPdnStatusChange->serviceId:"+serviceId +" state:" + state
                 + " mFeatureSwitchRequitchRequest:" + mFeatureSwitchRequest
                 + " mIsCalling:" + mIsCalling
                 + " mIsCPImsPdnActived:" + mIsCPImsPdnActived + " mIsAPImsPdnActived:" + mIsAPImsPdnActived
-                + " mWifiRegistered:" + mWifiRegistered + " mVolteRegistered:" + mVolteRegistered);
+                + " mWifiRegistered:" + mWifiRegistered + " mVolteRegistered:" + mVolteRegistered
+                + " mPendingCPSelfManagement:" + mPendingCPSelfManagement);
         try{
             if (mImsServiceListenerEx != null &&
                     serviceId == mTelephonyManager.getPrimaryCard()+1) {

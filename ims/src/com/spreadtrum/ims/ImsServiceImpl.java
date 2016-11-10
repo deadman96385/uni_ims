@@ -623,9 +623,7 @@ public class ImsServiceImpl {
         if(DBG){
             Log.i(TAG, "setIMSRegAddress addr = " + addr);
         }
-        if(addr != null){
-            mImsRegAddress = addr;
-        }
+        mImsRegAddress = addr;
     }
     public void requestImsHandover(int type){
         Log.i(TAG,"requestImsHandover->type:" + type);
