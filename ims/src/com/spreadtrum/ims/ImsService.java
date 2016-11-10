@@ -368,7 +368,8 @@ public class ImsService extends Service {
                         if (mImsServiceListenerEx != null) {
                             mImsServiceListenerEx.imsCallEnd(
                                     ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI);
-                            Log.i(TAG,"EVENT_WIFI_ALL_CALLS_END-> mFeatureSwitchRequest:" + mFeatureSwitchRequest + " mIsVowifiCall:" + mIsVowifiCall + " mIsVolteCall:" + mIsVolteCall + " mInCallHandoverFeature:" + mInCallHandoverFeature);
+                            Log.i(TAG,"EVENT_WIFI_ALL_CALLS_END-> mFeatureSwitchRequest:" + mFeatureSwitchRequest + " mIsVowifiCall:" + mIsVowifiCall + " mIsVolteCall:" + mIsVolteCall + " mInCallHandoverFeature:" + mInCallHandoverFeature
+                                    + " mIsPendingRegisterVolte:" + mIsPendingRegisterVolte + " mIsPendingRegisterVowifi:" + mIsPendingRegisterVowifi);
                             if(mFeatureSwitchRequest != null){
                                 if(mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER){
                                     /*SPRD: Add for bug586758,595321,610799{@*/
@@ -413,6 +414,9 @@ public class ImsService extends Service {
                                         Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
                                 if (currentService != null){
                                     if (currentService.isVolteSessionListEmpty() && currentService.isVowifiSessionListEmpty()) {
+                                        if(mIsPendingRegisterVolte){
+                                            currentService.notifyImsCallEnd(CallEndEvent.WIFI_CALL_END);
+                                        }
                                         mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                                         mWifiService.updateDataRouterState(DataRouterState.CALL_NONE);
                                     }
@@ -603,12 +607,16 @@ public class ImsService extends Service {
                             }
                             mWifiService.resetAll(WifiState.DISCONNECTED /* Do not attached now, same as wifi do not connected */);
                             /*SPRD: Modify for bug604833{@*/
+                            ImsServiceImpl imsService = mImsServiceImplMap.get(
+                                    Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
                             if (mFeatureSwitchRequest.mEventCode== ACTION_SWITCH_IMS_FEATURE && mAttachVowifiSuccess) {
-                                ImsServiceImpl imsService = mImsServiceImplMap.get(
-                                        Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
                                 if(imsService != null){
                                     imsService.setIMSRegAddress(null);
                                 }
+                            }
+                            if(imsService != null){
+                                imsService.notifyVoWifiEnable(false);
+                                Log.i(TAG,"ACTION_CANCEL_CURRENT_REQUEST-> notifyVoWifiUnavaliable");
                             }
                             mAttachVowifiSuccess = false;
                             mFeatureSwitchRequest = null;
@@ -1776,10 +1784,10 @@ public class ImsService extends Service {
             // If pdn is ready when handover from vowifi to volte but volte is not registered , never to turn on ims.
             // If Volte is registered , never to turn on ims.
             if(!((mIsPendingRegisterVolte && !service.isImsRegistered()) || service.isImsRegistered())){
-                service.turnOnIms();
+                Log.d(TAG, "Switch request is null, but the pdn start, will enable the ims.");
+                service.enableIms();
             }
             /*@}*/
-            Log.d(TAG, "Switch request is null, but the pdn start, will enable the ims.");
         } else if(mFeatureSwitchRequest != null && mFeatureSwitchRequest.mTargetType
                 == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE){
             if(state == ImsPDNStatus.IMS_PDN_ACTIVE_FAILED){

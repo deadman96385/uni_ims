@@ -486,6 +486,16 @@ public class ImsServiceImpl {
         }
     }
 
+    public void enableIms(){
+        Log.i(TAG,"enableIms.");
+        mCi.enableIms(null);
+    }
+
+    public void disableIms(){
+        Log.i(TAG,"disableIms.");
+        mCi.disableIms(null);
+    }
+
     public void turnOnIms(){
         Log.i(TAG,"turnOnIms.");
         mCi.setImsVoiceCallAvailability(1 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE));
