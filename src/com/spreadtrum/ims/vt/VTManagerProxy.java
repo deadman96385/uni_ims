@@ -186,12 +186,14 @@ public class VTManagerProxy{
         mIntentFilter.addAction(Intent.ACTION_BATTERY_LOW);
         mContext.registerReceiver(mReceiver, mIntentFilter);
         mIsBroadcastReceiverRegisterd = true;
+        mRIL.registerForImsVideoQos(mHandler, EVENT_IMS_VIDEO_QOS, null);
         log("registerForLowBatteryNotify");
     }
 
     public void unregisterForLowBatteryNotify() {
         if (mIsBroadcastReceiverRegisterd) {
             mContext.unregisterReceiver(mReceiver);
+            mRIL.unregisterForImsVideoQos(mHandler);
             mIsBroadcastReceiverRegisterd = false;
             log("unregisterForLowBatteryNotify");
         }
@@ -480,10 +482,6 @@ public class VTManagerProxy{
         }
     }
 
-    public void registerForImsVideoQos(Phone phone){
-        //TODO: ImsVideoQos should porting
-/*       phone.registerForImsVideoQos(mHandler, EVENT_IMS_VIDEO_QOS, phone);*/
-    }
 
     private void handleImsQosReport(AsyncResult ar){
         if(ar == null || ar.result == null || ar.exception != null){
