@@ -2253,7 +2253,7 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
             goto error;
 
         for(i = 0; i < MAX_PDP; i++) {
-            if (getPDPCid(i) > 0) {
+            if (pdp[i].state == PDP_BUSY) {
                 RILLOGD("pdp[%d].state = %d", i, getPDPState(i));
                 putPDP(i);
             }
