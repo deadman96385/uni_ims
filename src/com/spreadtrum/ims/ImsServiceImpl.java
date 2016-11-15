@@ -276,7 +276,7 @@ public class ImsServiceImpl {
                 /* @} */
                 /*SPRD: add for bug612670 @{ */
                 case EVENT_SET_VOICE_CALL_AVAILABILITY_DONE:
-                    if(ar.exception != null){
+                    if(mPhone.isRadioAvailable() && ar.exception != null){
                         Log.i(TAG,"EVENT_SET_VOICE_CALL_AVAILABILITY_DONE: exception");
                         Toast.makeText(mContext.getApplicationContext(), mContext.getString(R.string.ims_switch_failed), Toast.LENGTH_SHORT).show();
                     }
