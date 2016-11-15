@@ -6891,6 +6891,15 @@ static void setSmsBroadcastConfigData(int data, int idx, int isFirst, char *toSt
     RILLOGI("Reference-ril. setSmsBroadcastConfigData  ret_char %s , len %d",retStr , *strLength);
 }
 
+// Add for command SPPWS
+static void skipFirstQuotes(char **p_cur) {
+    if (*p_cur == NULL) return;
+
+    if (**p_cur == '"') {
+        (*p_cur)++;
+    }
+}
+
 static void requestSetSmsBroadcastConfig(int channelID,  void *data, size_t datalen, RIL_Token t)
 {
     ATResponse    *p_response = NULL;
@@ -6988,6 +6997,59 @@ static void requestSetSmsBroadcastConfig(int channelID,  void *data, size_t data
         RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
     }
     at_response_free(p_response);
+
+    /* Add for at command SPPWS @{ */
+    RLOGD("requestSetSmsBroadcastConfig enable %d", enable);
+    if (enable == 0) {
+        int cmas = 0;
+        int etws = 0;
+        int current = 0;
+        int channel1[128] = {0};
+        int tempo;
+        char *delim = ",";
+        char *temp;
+        char *pChannel;
+        char *outer_ptr = NULL;
+        char *inner_ptr = NULL;
+
+        pChannel = channel;
+        skipFirstQuotes(&pChannel);
+
+        temp = strtok_r(pChannel, delim, &outer_ptr);
+        while (temp != NULL) {
+            tempo = atoi(temp);
+            if (tempo != 4370 && tempo != 4383) {
+                channel1[j] = tempo;
+            }
+            RLOGD("requestSetSmsBroadcastConfig channel1[j] = %d", channel1[j]);
+            temp = strtok_r(NULL, delim, &inner_ptr);
+            j++;
+        }
+        for (current = 0; current < j; current = current + 2) {
+            // cmas message under LTE, channel is from 4371 to 4382
+            if (channel1[current] >= 4371 && channel1[current] <= 4382 &&
+                    channel1[current + 1] >= 4371 &&
+                    channel1[current + 1] <= 4382) {
+                cmas++;
+            } else if (4355 == channel1[current] &&
+                    4355 == channel1[current + 1]) {
+                // etws sec message under LTE, channel is 4355
+                etws++;
+            }
+        }
+        if (0 != cmas && 0 != etws) {  // enable etws sec and cmas message
+            at_send_command(ATch_type[channelID], "AT+SPPWS=2,1,2,1", NULL);
+        } else {
+            if (0 != cmas) {  // enable cmas message
+                at_send_command(ATch_type[channelID], "AT+SPPWS=2,2,2,1",
+                        NULL);
+            } else if (0 != etws) {  // enable etws message
+                at_send_command(ATch_type[channelID], "AT+SPPWS=2,1,2,2",
+                        NULL);
+            }
+        }
+    }
+    /* }@ Add for at command SPPWS end */
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
     gsmBci =*(RIL_GSM_BroadcastSmsConfigInfo *)(gsmBciPtrs[0]);
     enable = gsmBci.selected;
@@ -13493,38 +13555,105 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         } else
             RILLOGE("Convert hex to bin failed for SMSCB");
     } else if (strStartsWith(s, "+SPWRN")) {
-        RIL_BROADCAST_SMS_LTE *response = NULL;
-        response = (RIL_BROADCAST_SMS_LTE *)alloca(sizeof(RIL_BROADCAST_SMS_LTE));
-        char *tmp;
+        int skip;
+        int segmentId;
+        int totalSegments;
+        static int count = 0;
+        static int dataLen = 0;
 
-        RILLOGD("+SPWRN: enter %s", s);
+        static char **pdus;
+        char *msg = NULL;
+        char *tmp = NULL;
+        char *data = NULL;
+        char *binData = NULL;
+
         line = strdup(s);
         tmp = line;
         at_tok_start(&tmp);
 
-        err = at_tok_nextint(&tmp, &response->segment_id);
+        err = at_tok_nextint(&tmp, &segmentId);
         if (err < 0) goto out;
 
-        err = at_tok_nextint(&tmp, &response->total_segments);
+        err = at_tok_nextint(&tmp, &totalSegments);
         if (err < 0) goto out;
 
-        err = at_tok_nextint(&tmp, &response->serial_number);
+        err = at_tok_nextint(&tmp, &skip);
         if (err < 0) goto out;
 
-        err = at_tok_nextint(&tmp, &response->message_identifier);
+        err = at_tok_nextint(&tmp, &skip);
         if (err < 0) goto out;
 
-        err = at_tok_nextint(&tmp, &response->dcs);
+        err = at_tok_nextint(&tmp, &skip);
         if (err < 0) goto out;
 
-        err = at_tok_nextint(&tmp, &response->length);
+        err = at_tok_nextint(&tmp, &skip);
         if (err < 0) goto out;
 
-        err = at_tok_nextstr(&tmp, &response->data);
+        err = at_tok_nextstr(&tmp, &data);
         if (err < 0) goto out;
+        // exchange the 0102 and 0304 byte to match FW.
+        int i;
+        for (i = 0; i < 4; i++) {
+            *(data + i) ^= *(data + i + 4);
+            *(data + i + 4) ^= *(data + i);
+            *(data + i) ^= *(data + i + 4);
+        }
+        RLOGD("after data : %s", data);
 
-        RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_NEW_BROADCAST_SMS_LTE,
-            response,sizeof(RIL_BROADCAST_SMS_LTE));
+        /* Max length of SPWRN message is
+         * 9600 byte and each time ATC can only send 1k. When 9600 is divided
+         * by 1024, the quotient is 9 with a remainder of 1.
+         */
+
+        if (totalSegments < 10 && count == 0) {
+            pdus = (char **)calloc(totalSegments, sizeof(char *));
+            if (pdus == NULL) goto out;
+        }
+
+        if (segmentId <= totalSegments) {
+            pdus[segmentId -1] =
+                    (char *)calloc((strlen(data)+1), sizeof(char));
+            snprintf(pdus[segmentId -1], strlen(data) + 1, "%s", data);
+
+            count++;
+            dataLen += strlen(data);
+        }
+
+        // To make sure no missing pages, then concat all pages.
+        if (count == totalSegments) {
+            msg = (char *)calloc((dataLen + sizeof("01")), sizeof(char));
+            int index = 0;
+            strncat(msg, "01", sizeof("01"));  // concat message_type and msg
+            for (; index < count; index++) {
+                if (pdus[index] != NULL) {
+                    strncat(msg, pdus[index], strlen(pdus[index]));
+                }
+            }
+            RLOGD("concat pdu: %s", msg);
+            /* +SPWRN:1,N,<xx>,<xx>,<xx>,<xx>,<data1>
+             * +SPWRN:2,N,<xx>,<xx>,<xx>,<xx>,<data2>
+             * ...
+             * +SPWRN:N,N,<xx>,<xx>,<xx>,<xx>,<dataN>
+             * Response message_type + data1 + data2 + ... + dataN to framework
+             */
+            binData = (char *)calloc(strlen(msg) / 2, sizeof(char));
+            if (!convertHexToBin(msg, strlen(msg), binData)) {
+                RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_NEW_BROADCAST_SMS,
+                        binData, strlen(msg) / 2);
+            } else {
+                RLOGD("Convert hex to bin failed for SPWRN");
+            }
+            free(msg);
+            free(binData);
+            for (index = 0; index < count; index++) {
+                 free(pdus[index]);
+            }
+            free(pdus);
+            pdus = NULL;
+            dataLen = 0;
+            count = 0;
+        }
+
     }
     else if (strStartsWith(s, "+CDS:")) {
         RIL_onUnsolicitedResponse (
