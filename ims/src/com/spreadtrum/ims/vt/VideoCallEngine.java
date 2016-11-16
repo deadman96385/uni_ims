@@ -145,7 +145,11 @@ public class VideoCallEngine {
     }
 
     public void initCameraResolution(){
-        mCameraResolution = mImsConfigImpl.getVideoQualityFromPreference();
+        if(SystemProperties.getBoolean("persist.vt_resolution_qvga", false)){
+            mCameraResolution = ImsConfigImpl.VT_RESOLUTION_QVGA_REVERSED_15;
+        } else {
+            mCameraResolution = mImsConfigImpl.getVideoQualityFromPreference();
+        }
         Log.i(TAG, "initCameraResolution():"+mCameraResolution);
     }
 
