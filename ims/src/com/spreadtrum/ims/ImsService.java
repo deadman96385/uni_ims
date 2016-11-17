@@ -975,10 +975,6 @@ public class ImsService extends Service {
          */
         @Override
         public IImsUt getUtInterface(int serviceId){
-            if(!isImsEnabled()){
-                Log.e (TAG,"getUtInterface-> ims is disable!");
-                return null;
-            }
             ImsServiceImpl service = mImsServiceImplMap.get(new Integer(serviceId));
             if (service == null) {
                 Log.e (TAG, "Invalid ServiceId " + serviceId);
