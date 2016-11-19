@@ -87,6 +87,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsTxDisable = false;
 
     private boolean mIsMegerActionHost;
+    private boolean mIsPendingTerminate;   // BUG 616259
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
@@ -348,6 +349,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         updateVideoProfile(mImsDriverCall);
         hasUpdate = hasUpdate || conferenceHeldStateChange || conferenceActiveStateChange;
         Log.d(TAG, "updateFromDc->hasUpdate:"+hasUpdate+" dc:" + dc);
+
+        // BUG 616259
+        if (mIsPendingTerminate) {
+            terminate(ImsReasonInfo.CODE_USER_TERMINATED);
+        }
         return hasUpdate;
     }
 
@@ -891,7 +897,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if(mImsDriverCall != null){
             mCi.hangupConnection(mImsDriverCall.index,
                     mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
+            mIsPendingTerminate = false;
         } else {
+            mIsPendingTerminate = true;
             Log.w(TAG, "terminate-> mImsDriverCall is null!");
         }
     }
