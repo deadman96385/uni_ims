@@ -950,8 +950,10 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid ServiceId ");
                 return null;
             }
-            mIsVolteCall = true;
-            mWifiService.updateDataRouterState(DataRouterState.CALL_VOLTE);//Add for data router
+            if (isVoLTEEnabled() && !mIsVowifiCall && !mIsVolteCall) {
+                mIsVolteCall = true;
+                mWifiService.updateDataRouterState(DataRouterState.CALL_VOLTE);//Add for data router
+            }
             Log.e (TAG,"createCallSession-> startVoLteCall");
             return service.createCallSession(serviceId, profile, listener);
         }
@@ -976,7 +978,9 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid arguments " + service + " " + callId);
                 return null;
             }
-            mIsVolteCall = true;
+            if (isVoLTEEnabled() && !mIsVowifiCall && !mIsVolteCall) {
+                mIsVolteCall = true;
+            }
             Log.i (TAG,"getPendingCallSession->service.getPendingCallSession(callId): " + service.getPendingCallSession(callId));
             return service.getPendingCallSession(callId);
         }
