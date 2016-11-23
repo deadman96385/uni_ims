@@ -724,6 +724,11 @@ PUBLIC void H264Dec_ProcessSPS (H264DecObject *vo)
 #if _MVC_
     get_max_dec_frame_buf_size(vo, vo->g_sps_ptr);
 #endif
+    if(vo->g_active_sps_ptr&&memcmp((uint8*)vo->g_sps_ptr,(uint8*)vo->g_active_sps_ptr,sizeof(DEC_SPS_T)))
+    {
+        vo->g_active_sps_ptr  = NULL;
+    }
+
     if(vo->g_sps_ptr->seq_parameter_set_id < MAX_SPS)
     {
         H264Dec_make_sps_availabe (vo, vo->g_sps_ptr->seq_parameter_set_id, vo->g_sps_ptr);
@@ -737,7 +742,6 @@ PUBLIC void H264Dec_ProcessSPS (H264DecObject *vo)
     {
         vo->g_old_pps_id = -1;
     }
-    vo->g_active_sps_ptr  = NULL;
 #if _MVC_
     if(vo->g_image_ptr->profile_idc < (int)vo->g_sps_ptr->profile_idc)
     {

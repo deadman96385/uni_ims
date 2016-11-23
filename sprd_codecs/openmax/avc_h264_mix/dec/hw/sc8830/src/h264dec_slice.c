@@ -77,6 +77,34 @@ PUBLIC int32 H264Dec_Process_slice (H264DecObject *vo)
 
     new_picture = H264Dec_is_new_picture (vo);
     //new_picture |=  (g_dec_picture_ptr==NULL);  //for error stream//weihu
+    if(!new_picture)
+    {
+        //SPRD_CODEC_LOGI("old picture found,curr mb:%d\n",img_ptr->curr_mb_nr);
+        if(img_ptr->curr_mb_nr==0)
+        {
+            vo->g_ready_to_decode_slice = FALSE;
+            return MMDEC_OK;
+        }
+    }
+    if(img_ptr->idr_flag&&new_picture)
+    {
+        int type;
+        SPRD_CODEC_LOGI("%s,%d,IDR found\n",__FUNCTION__,__LINE__);
+        if (vo->avcHandle->VSP_clearDpbCb)
+        {
+            (*(vo->avcHandle->VSP_clearDpbCb))(vo->avcHandle->userdata);
+        }
+        for (type = 1; type < 3; type++)
+        {
+            DEC_DECODED_PICTURE_BUFFER_T *dpb_ptr = vo->g_dpb_layer[type-1];
+            int32 i;
+            for (i = 0; i < MAX_REF_FRAME_NUMBER+1; i++)
+            {
+                dpb_ptr->fs[i]->frame->DPB_addr_index = i + (type==1 ? 0 : MAX_REF_FRAME_NUMBER+1);//weihu
+                dpb_ptr->fs[i]->frame->direct_mb_info_Addr = 0;
+            }
+        }
+    }
 
     if(vo->g_dec_picture_ptr==NULL)//for error stream//weihu
         new_picture=TRUE;

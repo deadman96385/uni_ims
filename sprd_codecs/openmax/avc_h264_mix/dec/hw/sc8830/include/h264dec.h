@@ -29,6 +29,7 @@ extern   "C"
 typedef int (*FunctionType_BufCB)(void *userdata,void *pHeader);
 typedef int (*FunctionType_MallocCB)(void* aUserData, unsigned int size_extra);
 typedef int (*FunctionType_MbinfoMallocCB)(void* aUserData, unsigned int size_mbinfo, unsigned long *pPhyAddr);
+typedef int (*FunctionType_ClearDpbCB)(void *aUserData);
 
 typedef enum
 {
@@ -136,6 +137,7 @@ typedef struct tagAVCHandle
     FunctionType_BufCB VSP_unbindCb;
     FunctionType_MallocCB VSP_extMemCb;
     FunctionType_MbinfoMallocCB VSP_mbinfoMemCb;
+    FunctionType_ClearDpbCB VSP_clearDpbCb;
 } AVCHandle;
 
 /**----------------------------------------------------------------------------*
