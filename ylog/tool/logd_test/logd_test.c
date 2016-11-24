@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
 		if (define_line_num) {
 			if(!g_total_lines--) break;
 		}
-        ALOGE(buf);
+        ALOGE("%s", buf);
 
         log_count ++;
         delta_speed_size += str_len;

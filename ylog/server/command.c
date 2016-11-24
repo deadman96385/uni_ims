@@ -908,6 +908,7 @@ static int cmd_sroot(struct command *cmd, char *buf, int buf_size, int fd, int i
     char *root_new, *last;
     char path[PATH_MAX];
     struct ydst_root *root = global_ydst_root;
+
     strtok_r(buf, " ", &last);
     root_new = strtok_r(NULL, " ", &last);
     if (root_new) {
@@ -986,6 +987,7 @@ static int cmd_clear_ylog(struct command *cmd, char *buf, int buf_size, int fd, 
             print2journal_file("clear last_ylog %s", c->historical_folder_root);
         }
         rm_root_others_last();
+        print2journal_file("rm_root_others_last end");
     }
 
     if (mode & YLOG_CLEAR_ALL_QUIT) {
@@ -1008,7 +1010,7 @@ static int cmd_clear_ylog(struct command *cmd, char *buf, int buf_size, int fd, 
         #endif
         print2journal_file("clear all ylog %s", root->root);
     }
-
+    print2journal_file("cmd_clear_ylog done %s", root->root);
     SEND(fd, buf, snprintf(buf, buf_size, "done\n"), MSG_NOSIGNAL);
 
     return 0;
@@ -1311,7 +1313,9 @@ static void load_sroot(struct ylog_keyword *kw, int nargs, char **args) {
     UNUSED(kw);
     UNUSED(nargs);
     char *sroot = args[1];
+    struct ydst_root *root = global_ydst_root;
     if (sroot[0] == '/') {
+        root->sroot_flag = 1;
         if (access(sroot, F_OK) == 0) {
             ydst_sroot(NULL, sroot);
             return;

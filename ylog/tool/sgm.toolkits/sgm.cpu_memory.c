@@ -532,7 +532,7 @@ int main(int argc, char *argv[]) {
     struct tm *cur;
     struct timespec tp;
     struct timeval tv;
-    char cur_time[33];
+    char cur_time[256];
 
     ret = parse_cmdline(argc, argv);
     if (ret < 0)

@@ -305,8 +305,8 @@ static void ylog_update_config2(char *key, char *value) {
     ylog_update_config(global_context->ylog_config_file, 2, argv, 1);
 }
 
-void process_keyword(struct parse_state *state, int nargs, char **args);
-static void parse_config(const char *fn) {
+void process_keyword(struct parse_state *state, int nargs, char **args, struct ylog_keyword *kw);
+static void parse_config(const char *fn, struct ylog_keyword *kw) {
     char *args[INIT_PARSER_MAXARGS];
     struct parse_state state;
     int nargs = 0;
@@ -335,7 +335,7 @@ static void parse_config(const char *fn) {
             case T_NEWLINE:
                 state.line++;
                 if (nargs) {
-                    process_keyword(&state, nargs, args);
+                    process_keyword(&state, nargs, args, kw);
                     nargs = 0;
                 }
                 break;
@@ -351,10 +351,11 @@ parser_done:
     free(mptr);
 }
 
-void process_keyword(struct parse_state *state, int nargs, char **args) {
+void process_keyword(struct parse_state *state, int nargs, char **args, struct ylog_keyword *kw) {
     UNUSED(state);
-    struct ylog_keyword *kw;
-    for (kw = global_context->ylog_keyword; kw->key; kw++) {
+    if (kw == NULL)
+        kw = global_context->ylog_keyword;
+    for (kw; kw->key; kw++) {
         if (strcmp(args[0], kw->key) == 0) {
             if (kw->handler)
                 kw->handler(kw, nargs, args);

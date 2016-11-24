@@ -199,5 +199,5 @@ static struct ylog_snapshot_list_s os_ylog_snapshot_list[] = {
     { "log", "snapshot current android & kernel log, ex. ylog_cli snapshot log", ylog_snapshot___case___log },
     { "mtp", "snapshot current sdcard contents for mtp, ex. ylog_cli snapshot mtp", ylog_snapshot___case___mtp },
     { "screen", "snapshot current screen, ex. ylog_cli snapshot screen", ylog_snapshot___case___screen },
-    { NULL },
+    { NULL, NULL, NULL},
 };

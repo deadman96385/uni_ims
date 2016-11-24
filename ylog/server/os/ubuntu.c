@@ -245,7 +245,7 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
     hook->process_command_hook = process_command_hook;
     hook->cmd_ylog_hook = cmd_ylog_hook;
 
-    parse_config(global_context->ylog_config_file);
+    parse_config(global_context->ylog_config_file, NULL);
 
     root->root = strdup(YLOG_ROOT_FOLDER); /* Remember to call free */
 }

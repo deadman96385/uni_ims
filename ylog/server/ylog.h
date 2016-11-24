@@ -402,6 +402,7 @@ struct ydst_root {
 #define YDST_ROOT_SPEED_NUM 10
     struct speed speed[YDST_ROOT_SPEED_NUM];
     pthread_mutex_t mutex;
+    int sroot_flag;
 };
 
 #define YDST_TYPE_SOCKET_DEFAULT_SIZE (1 * 1024 * 1024)

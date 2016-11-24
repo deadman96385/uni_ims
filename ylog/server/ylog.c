@@ -405,9 +405,9 @@ static void pthread_create_hook_default(struct ylog *y, void *args, const char *
 }
 
 static void *ylog_command_loop(void *arg) {
+    UNUSED(arg);
     os_hooks.pthread_create_hook(NULL, NULL, "ylog_command_loop");
     command_loop(fd_command_server);
-    arg = arg;
     return NULL;
 }
 
