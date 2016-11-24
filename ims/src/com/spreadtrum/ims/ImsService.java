@@ -1778,7 +1778,7 @@ public class ImsService extends Service {
                 updateImsFeature();
             }
             if(state == ImsPDNStatus.IMS_PDN_ACTIVE_FAILED){
-                if(mPendingCPSelfManagement){
+                if(mPendingCPSelfManagement || mFeatureSwitchRequest == null){
                     ImsServiceImpl service = mImsServiceImplMap.get(
                             Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
                     if(service != null){
