@@ -11308,7 +11308,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 break;
             }
         case RIL_REQUEST_SEND_AT:
-//            requestSendAT(channelID,data, datalen, t);
+            requestSendAT(channelID,data, datalen, t);
             break;
 
         //Added for bug#213435 sim lock begin
