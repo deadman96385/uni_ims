@@ -460,21 +460,29 @@ public class ImsServiceImpl {
     }
 
     public int getImsRegisterState(){
-        if(mImsServiceState.mImsRegistered &&
-                mImsServiceState.mSrvccState != VoLteServiceState.HANDOVER_STARTED){
-            return ImsManagerEx.IMS_REGISTERED;
-        } else {
-            return ImsManagerEx.IMS_UNREGISTERED;
+        //add for Bug 620214
+        if (mImsServiceState.mImsRegistered) {
+            if (mPhone.getState() == PhoneConstants.State.IDLE) {
+                return ImsManagerEx.IMS_REGISTERED;
+            } else if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED
+                    || mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
+                return ImsManagerEx.IMS_UNREGISTERED;
+            }
         }
+        return ImsManagerEx.IMS_UNREGISTERED;
     }
 
     public boolean isImsRegisterState(){
-        if(mImsServiceState.mImsRegistered &&
-                mImsServiceState.mSrvccState != VoLteServiceState.HANDOVER_STARTED){
-            return true;
-        } else {
-            return false;
+        //add for Bug 620214
+        if(mImsServiceState.mImsRegistered){
+            if(mPhone.getState() == PhoneConstants.State.IDLE){
+                return true;
+            } else if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED
+                    || mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
+                return false;
+            }
         }
+        return false;
     }
 
 
