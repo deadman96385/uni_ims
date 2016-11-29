@@ -107,7 +107,6 @@ public class ImsService extends Service {
         public static final int IMS_OPERATION_CP_REJECT_SWITCH_TO_VOWIFI = 6;
         public static final int IMS_OPERATION_CP_REJECT_HANDOVER_TO_VOWIFI = 7;
         public static final int IMS_OPERATION_RELEASE_WIFI_RESOURCE = 8;
-        public static final int IMS_OPERATION_VOWIFI_ATTACH_STOPED = 9;
     }
 
     public static final int IMS_HANDOVER_ACTION_CONFIRMED = 999;
@@ -343,7 +342,7 @@ public class ImsService extends Service {
                         if(mImsServiceListenerEx != null){
                             if(mFeatureSwitchRequest != null){
                                 mImsServiceListenerEx.operationFailed(mFeatureSwitchRequest.mRequestId,
-                                        "VoWifi attach failed:"+msg.arg1
+                                        ""+msg.arg1
                                         ,(mFeatureSwitchRequest.mEventCode== ACTION_SWITCH_IMS_FEATURE)
                                         ? ImsOperationType.IMS_OPERATION_SWITCH_TO_VOWIFI
                                                 : ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOWIFI);
@@ -361,17 +360,7 @@ public class ImsService extends Service {
                         mAttachVowifiSuccess = false;//SPRD:Add for bug604833
                         break;
                     case EVENT_WIFI_ATTACH_STOPED:
-                        Log.i(TAG, "EVENT_WIFI_ATTACH_STOPED, mWifiRegistered:" + mWifiRegistered
-                                +" mFeatureSwitchRequest:"+mFeatureSwitchRequest);
-                        if(mImsServiceListenerEx != null){
-                            if(mFeatureSwitchRequest != null){
-                                mImsServiceListenerEx.operationFailed(
-                                        mFeatureSwitchRequest.mRequestId,
-                                        ""+msg.arg1, ImsOperationType.IMS_OPERATION_VOWIFI_ATTACH_STOPED);
-                            }
-                        } else {
-                            Log.w(TAG, "EVENT_WIFI_ATTACH_STOPED, mImsServiceListenerEx is null!");
-                        }
+                        Log.i(TAG, "EVENT_WIFI_ATTACH_STOPED, mWifiRegistered:" + mWifiRegistered);
                         mIsAPImsPdnActived = false;
                         mAttachVowifiSuccess = false;//SPRD:Add for bug604833
                         break;
@@ -1430,7 +1419,7 @@ public class ImsService extends Service {
 
         @Override
         public void onAttachStopped(int stoppedReason) {
-            mHandler.obtainMessage(EVENT_WIFI_ATTACH_STOPED, stoppedReason, -1, null).sendToTarget();
+            mHandler.obtainMessage(EVENT_WIFI_ATTACH_STOPED).sendToTarget();
         }
 
         @Override
