@@ -350,6 +350,11 @@ public class ImsService extends Service {
                                 ImsServiceImpl service = mImsServiceImplMap.get(
                                         Integer.valueOf(mFeatureSwitchRequest.mServiceId));
                                 service.notifyImsHandoverStatus(ImsHandoverResult.IMS_HANDOVER_ATTACH_FAIL);
+                                if(mPendingAttachVowifiSuccess && !mIsCalling &&
+                                        mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER){
+                                    mPendingAttachVowifiSuccess = false;
+                                    mWifiService.updateDataRouterState(DataRouterState.CALL_NONE);
+                                }
                             }
                         }
                         mIsAPImsPdnActived = false;
@@ -1831,6 +1836,10 @@ public class ImsService extends Service {
                     }
                 } else {
                     Log.w(TAG, "onImsPdnStatusChange->mImsServiceListenerEx is null!");
+                }
+                if (!mIsCalling && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER){
+                    mPendingActivePdnSuccess = false;
+                    mWifiService.updateDataRouterState(DataRouterState.CALL_NONE);
                 }
                 mFeatureSwitchRequest = null;
                 if (!mIsAPImsPdnActived){
