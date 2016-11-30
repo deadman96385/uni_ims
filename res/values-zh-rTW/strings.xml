@@ -35,7 +35,7 @@
         <item>@string/videophone_fallback_menu_cancel</item>
     </string-array>
     <string name="videophone_fallback_menu_videocall">視訊通話</string>
-    <string name="videophone_fallback_menu_voicecall">語音電話</string>
+    <string name="videophone_fallback_menu_voicecall">語音通話</string>
     <string name="videophone_fallback_menu_cancel">取消</string>
     <string name="videophone_fallback_question">您要進行什麼操作?</string>
     <!-- SPRD: Add feature of low battery for Reliance @{ -->
