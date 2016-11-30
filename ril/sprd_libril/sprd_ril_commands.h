@@ -223,7 +223,7 @@
     ,{RIL_REQUEST_GET_REMAIN_TIMES, dispatchInts, responseInts}
     ,{RIL_REQUEST_SET_CMMS, dispatchInts, responseVoid}
     ,{RIL_REQUEST_SIM_POWER, dispatchInts, responseVoid}
-    ,{RIL_REQUEST_SEND_AT, dispatchString, responseStrings}
+    ,{RIL_REQUEST_SEND_AT, dispatchString, responseString}
     ,{RIL_REQUEST_SET_SPEED_MODE, dispatchInts, responseVoid}
     ,{RIL_REQUEST_SET_SIM_SLOT_CFG, dispatchInts, responseVoid}//SPRD:added for choosing WCDMA SIM
     ,{RIL_REQUEST_GET_SIMLOCK_REMAIN_TIMES, dispatchInts, responseInts}
