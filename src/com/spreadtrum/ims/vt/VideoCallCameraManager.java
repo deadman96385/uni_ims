@@ -280,7 +280,8 @@ public class VideoCallCameraManager {
             default:
                 break;
         }
-        setPreviewSize(VTManagerProxy.getInstance().mPreviewWidth,VTManagerProxy.getInstance().mPreviewHeight);
+        // SPRD: modify by bug620813
+        setPreviewSize(mWidth,mHeight);
         Log.i(TAG, "setPreviewSurfaceSize, mWidth: " + mWidth+"   mHeight="+mHeight+"   mVideoQuality="+mVideoQuality);
     }
     private void tryReopenCamera(){
