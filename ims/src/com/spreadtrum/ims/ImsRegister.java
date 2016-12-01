@@ -125,7 +125,7 @@ public class ImsRegister {
                     int[] conn = (int[]) ar.result;
                     log("EVENT_CONN_IMSEN : conn = "+conn[0]);
                     if (conn[0] == 1) {
-                        mIMSBearerEstablished = true;
+                        onImsPDNReady();
                         mLastNumeric = "";
                         enableIms();
                     }
@@ -247,9 +247,14 @@ public class ImsRegister {
     }
 
     public void enableIms() {
+        Log.i(TAG, "enableIms ->mIMSBearerEstablished:" + mIMSBearerEstablished + " mInitISIMDone:" + mInitISIMDone);
         if(mIMSBearerEstablished && mInitISIMDone) {
-        mHandler.sendMessage(mHandler.obtainMessage(EVENT_ENABLE_IMS));
+            mCi.enableIms(null);
         }
+    }
+
+    public void onImsPDNReady(){
+        mIMSBearerEstablished = true;
     }
 
     private void log(String s) {

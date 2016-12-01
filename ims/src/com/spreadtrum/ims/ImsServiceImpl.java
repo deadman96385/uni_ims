@@ -486,9 +486,10 @@ public class ImsServiceImpl {
         }
     }
 
-    public void enableIms(){
-        Log.i(TAG,"enableIms.");
-        mCi.enableIms(null);
+    public void enableImsWhenPDNReady(){
+        Log.i(TAG,"enableImsWhenPDNReady.");
+        mImsRegister.onImsPDNReady();
+        mImsRegister.enableIms();
     }
 
     public void disableIms(){

@@ -1805,7 +1805,7 @@ public class ImsService extends Service {
             // If Volte is registered , never to turn on ims.
             if(!((mIsPendingRegisterVolte && !service.isImsRegistered()) || service.isImsRegistered())){
                 Log.d(TAG, "Switch request is null, but the pdn start, will enable the ims.");
-                service.enableIms();
+                service.enableImsWhenPDNReady();
             }
             /*@}*/
         } else if(mFeatureSwitchRequest != null && mFeatureSwitchRequest.mTargetType
