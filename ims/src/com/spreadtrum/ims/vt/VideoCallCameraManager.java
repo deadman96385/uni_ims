@@ -54,8 +54,8 @@ public class VideoCallCameraManager {
     private int mCameraTimes = START_CAMERA_TIMES;
     private int mCameraNumbers = 0;
     private boolean mThreadRunning;
-    public int mWidth = 176;
-    public int mHeight = 144;
+    public int mWidth = 480;
+    public int mHeight = 640;
     private int mDeviceRotation = 0;
     private boolean mIsFirstInit = true;
     private boolean mIsSurfacePreviewFailed = false;
