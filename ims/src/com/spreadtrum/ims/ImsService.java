@@ -1831,6 +1831,7 @@ public class ImsService extends Service {
                     mWifiService.updateDataRouterState(DataRouterState.CALL_NONE);
                 }
                 mFeatureSwitchRequest = null;
+                mIsPendingRegisterVolte = false;
                 if (!mIsAPImsPdnActived){
                     terminateAllCalls(0 /*WIFI_DISCONNECTED*/);
                 }
