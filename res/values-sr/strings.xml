@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"Даљински захтев је одбијен"</string>
 <string name="remote_accept_request">"Даљински захтев је прихваћен"</string>
 <string name="callFailed_fdn_only">"Одлазећи повици су ограничени од FDN"</string>
+    <string name="camera_open_fail">"Неуспешно отварање камере"</string>
+     <string name="ims_switch_failed">"Мрежна грешка, молимо вас покушајте поново касније"</string>
+     <string name="videophone_fallback_menu_videocall">"Видео поз."</string>
+     <string name="videophone_fallback_menu_voicecall">Гласовни позив</string>
+     <string name="videophone_fallback_menu_cancel">"Откажи"</string>
+     <string name="videophone_fallback_question">"Шта желите урадити?"</string>
+     <string name="low_battery_warning_media_alert_message">"Ниво ваше батерије је испод 15%.Молимо вас изаберите прихвати или одбаци."</string>
+     <string name="low_battery_warning_title">"Упозорење о слабој батерији"</string>
+     <string name="low_battery_warning_message">"Ниво ваше батерије је испод 15%.Да ли желите да продужите  са видео позивом или да га претворите у гласовни позив?"</string>
+     <string name="low_battery_continue_video_call">"Да"</string>
+     <string name="low_battery_convert_to_voice_call">"Конвертирај"</string>
+
 </resources>

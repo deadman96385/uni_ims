@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"දුරස්ථ ඉල්ලීම ප්‍රතික්ෂේප කෙරිණි"</string>
 <string name="remote_accept_request">"දුරස්ථ ඉල්ලීම පිළි ගන්නා ලදී"</string>
 <string name="callFailed_fdn_only">"කෙරෙමින් පවතින ඇමතුම් FDN මගින් අවහිර කර ඇත"</string>
+    <string name="camera_open_fail">"කැමරාව විවෘත කිරීම අසමත්"</string>
+     <string name="ims_switch_failed">"ජාලයේ දෝෂයකි, කරුණාකර පසුව නැවත උත්සාහ කරන්න."</string>
+     <string name="videophone_fallback_menu_videocall">"වීඩියෝ ඇමතුම"</string>
+     <string name="videophone_fallback_menu_voicecall">"හඬ ඇමතුම"</string>
+     <string name="videophone_fallback_menu_cancel">"අවලංගු කරන්න"</string>
+     <string name="videophone_fallback_question">"ඔබට කිරීමට අවශ්‍ය කුමක්ද?"</string>
+     <string name="low_battery_warning_media_alert_message">"ඔබේ බැටරි මට්ටම 15%ට වඩා අඩුය.කරුණාකර පිළිගන්න හෝ ප්‍රතික්ෂේප කරන්න තෝරන්න."</string>
+     <string name="low_battery_warning_title">"අඩු බැටරි අනතුරු ඇඟවීම"</string>
+     <string name="low_battery_warning_message">"ඔබේ බැටරි මට්ටම 15%ට අඩුය. ඔබට වීඩියෝ ඇමතුම කරගෙන යාමට හෝ හඬ ඇමතුමට පරිවර්තනය කිරීමට අවශ්‍යද?"</string>
+     <string name="low_battery_continue_video_call">"ඔව්"</string>
+     <string name="low_battery_convert_to_voice_call">"පරිවර්තනය කරන්න"</string>
+
 </resources>

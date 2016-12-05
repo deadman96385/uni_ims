@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"Zahtjev na daljinu je odbijen"</string>
 <string name="remote_accept_request">"Zahtjev na daljinu je prihvaćen"</string>
 <string name="callFailed_fdn_only">"Odlazni pozivi su ograničeni sa FDN"</string>
+    <string name="camera_open_fail">"Otvaranje kamere nije uspjelo"</string>
+     <string name="ims_switch_failed">"Mrežna pogreška, molimo pokušajte ponovo kasnije."</string>
+     <string name="videophone_fallback_menu_videocall">"Videopoziv"</string>
+     <string name="videophone_fallback_menu_voicecall">Glasovni poziv</string>
+     <string name="videophone_fallback_menu_cancel">"Odustani"</string>
+     <string name="videophone_fallback_question">"Što želite uraditi?"</string>
+     <string name="low_battery_warning_media_alert_message">"Razina vaše baterije je ispod 15%. Molimo odaberite prihvatiti ili odbiti."</string>
+     <string name="low_battery_warning_title">"Upozorenje za nisku razinu baterije"</string>
+     <string name="low_battery_warning_message">"Razina vaše baterije je ispod 15%. Želite li nastaviti sa videom pozivom ili ćete se prebaciti na glasovni poziv?"</string>
+     <string name="low_battery_continue_video_call">"Da"</string>
+     <string name="low_battery_convert_to_voice_call">"Zamijeniti"</string>
+
 </resources>

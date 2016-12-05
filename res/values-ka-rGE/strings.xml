@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"დისტანციური მოთხოვნა უარყოფილია"</string>
 <string name="remote_accept_request">"დისტანციური მოთხოვნა მიღებულია"</string>
 <string name="callFailed_fdn_only">"გამავალი ზარები შეზღუდულია FDN-ის მიერ"</string>
+    <string name="camera_open_fail">"კამერის გახსნა ვერ მოხერხდა"</string>
+     <string name="ims_switch_failed">"ქსელის შეცდომა, გთხოვთ, სცადეთ ისევ მოგვიანებით"</string>
+     <string name="videophone_fallback_menu_videocall">"ვიდეოზარი"</string>
+     <string name="videophone_fallback_menu_voicecall">"ხმოვანი ზარი"</string>
+     <string name="videophone_fallback_menu_cancel">"გაუქმება"</string>
+     <string name="videophone_fallback_question">"რისი გაკეთება გსურთ?"</string>
+     <string name="low_battery_warning_media_alert_message">"თქვენი აკუმულატორის დონე 15%-ზე დაბალია.გთხოვთ, აირჩიეთ მიღება ან უარყოფა."</string>
+     <string name="low_battery_warning_title">"გაფრთხილება აკუმულატორის დაცლის შესახებ"</string>
+     <string name="low_battery_warning_message">"თქვენი აკუმულატორის დონე 15%-ზე ნაკლებია.გსურთ ვიდეო ზარის გაგრძელება ან ხმოვან ზარზე კონვერტირება?"</string>
+     <string name="low_battery_continue_video_call">"დიახ"</string>
+     <string name="low_battery_convert_to_voice_call">"კონვერტირება"</string>
+
 </resources>

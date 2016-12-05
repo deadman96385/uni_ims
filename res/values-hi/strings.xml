@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"रिमोट निवेदन अस्वीकृत"</string>
 <string name="remote_accept_request">"रिमोट निवेदन स्वीकृत"</string>
 <string name="callFailed_fdn_only">"आउटगोइंग कॉल्स FDN द्वारा प्रतिबंधित हैं"</string>
+    <string name="camera_open_fail">"कैमरा खोलना असफल"</string>
+     <string name="ims_switch_failed">"नेटवर्क त्रुटि, कृपया बाद में दुबारा कोशिश करें"</string>
+     <string name="videophone_fallback_menu_videocall">वीडियो कॉल </string>
+     <string name="videophone_fallback_menu_voicecall">वॉइस कॉल</string>
+     <string name="videophone_fallback_menu_cancel">निरस्त करें</string>
+     <string name="videophone_fallback_question">"आप क्या करना चाहते हैं?"</string>
+     <string name="low_battery_warning_media_alert_message">"आपकी बैटरी का स्तर 15% से कम है। कृपया स्वीकार करें या अस्वीकार करें को चुनें।"</string>
+     <string name="low_battery_warning_title">"कम बैटरी चेतावनी"</string>
+     <string name="low_battery_warning_message">"आपकी बैटरी का स्तर 15% से कम है। क्या आप वीडियो कॉल जारी रखना चाहते हैं या वॉयस कॉल में बदलना चाहते हैं?"</string>
+     <string name="low_battery_continue_video_call">"हां"</string>
+     <string name="low_battery_convert_to_voice_call">"बदलें"</string>
+
 </resources>

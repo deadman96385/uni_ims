@@ -28,4 +28,6 @@
 <string name="remote_reject_request">"Demande de prise de main rejetée"</string>
 <string name="remote_accept_request">"Demande de prise de main acceptée"</string>
 <string name="callFailed_fdn_only">"Restriction des appels sortant par FDN"</string>
+    <string name="low_battery_warning_media_alert_message">"Votre niveau de batterie est inférieur à 15%. Veuillez choisir d\'accepter ou de rejeter."</string>
+
 </resources>

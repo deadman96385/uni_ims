@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"Uzaktan yapılan istek reddedildi"</string>
 <string name="remote_accept_request">"Uzaktan yapılan istek kabul edildi"</string>
 <string name="callFailed_fdn_only">"Giden aramalar FDN ile sınırlandırıldı"</string>
+    <string name="camera_open_fail">"Kamera açma başarısızlığı"</string>
+     <string name="ims_switch_failed">" Ağ hatası, lütfen daha sonra yeniden deneyin "</string>
+     <string name="videophone_fallback_menu_videocall">Görüntülü Arama</string>
+     <string name="videophone_fallback_menu_voicecall">Sesli çağrı</string>
+     <string name="videophone_fallback_menu_cancel">İptal</string>
+     <string name="videophone_fallback_question">"Ne yapmak istiyorsunuz?"</string>
+     <string name="low_battery_warning_media_alert_message">"Pil seviyeniz %15\'in altında. Lütfen kabul etme veya reddetmeyi seçin."</string>
+     <string name="low_battery_warning_title">"Düşük pil uyarısı"</string>
+     <string name="low_battery_warning_message">"Pil seviyeniz % 15\'in altında  Görüntülü arama ile devam etmek istiyor musunuz yoksa sesli aramaya mı geçmek istiyorsunuz?"</string>
+     <string name="low_battery_continue_video_call">"Evet"</string>
+     <string name="low_battery_convert_to_voice_call">"Dönüştür"</string>
+
 </resources>

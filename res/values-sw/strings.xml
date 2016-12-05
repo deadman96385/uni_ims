@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"Ombi la ndani kukataliwa"</string>
 <string name="remote_accept_request">"Ombi la ndani kukubaliwa"</string>
 <string name="callFailed_fdn_only">"Simu zakupigwa zimezuiliwa na FDN"</string>
+    <string name="camera_open_fail">"Kamera imefeli kufunguka"</string>
+     <string name="ims_switch_failed">"Kuna kasoro na mtandao, tafadhali jaribu tena baadaye"</string>
+     <string name="videophone_fallback_menu_videocall">Simu ya Video</string>
+     <string name="videophone_fallback_menu_voicecall">Simu ya Sauti</string>
+     <string name="videophone_fallback_menu_cancel">"Ghairi"</string>
+     <string name="videophone_fallback_question">"Unataka kufanya nini?"</string>
+     <string name="low_battery_warning_media_alert_message">"Nguvu ya betri ni chini ya 15%. Tafadhali chagua kukubali au kukataa."</string>
+     <string name="low_battery_warning_title">"Onyo la betri kuisha nguvu"</string>
+     <string name="low_battery_warning_message">"Nguvu ya betri ni chini ya 15%. Unataka kuendelea na simu ya video au kugeuza kwa simu ya sauti?"</string>
+     <string name="low_battery_continue_video_call">Ndio</string>
+     <string name="low_battery_convert_to_voice_call">"Geuza"</string>
+
 </resources>

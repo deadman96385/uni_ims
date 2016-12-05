@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"Yêu cầu từ xa bị từ chối"</string>
 <string name="remote_accept_request">"Yêu cầu từ xa được chấp nhận"</string>
 <string name="callFailed_fdn_only">"Các cuộc gọi đi bị hạn chế bởi FDN"</string>
+    <string name="camera_open_fail">"Không mở được camera"</string>
+     <string name="ims_switch_failed">"Lỗi mạng, vui lòng thử lại sau"</string>
+     <string name="videophone_fallback_menu_videocall">Cuộc gọi video</string>
+     <string name="videophone_fallback_menu_voicecall">Cuộc gọi thoại</string>
+     <string name="videophone_fallback_menu_cancel">"Hủy"</string>
+     <string name="videophone_fallback_question">"Bạn muốn làm gì?"</string>
+     <string name="low_battery_warning_media_alert_message">"Mức pin của bạn là dưới 15%. Xin vui lòng chọn chấp nhận hoặc từ chối."</string>
+     <string name="low_battery_warning_title">"Cảnh báo Pin thấp"</string>
+     <string name="low_battery_warning_message">""Mức pin của bạn là dưới 15%. Bạn có muốn tiếp tục với các cuộc gọi video hoặc chuyển sang cuộc gọi video không"?"</string>
+     <string name="low_battery_continue_video_call">"Có"</string>
+     <string name="low_battery_convert_to_voice_call">"Chuyển đổi"</string>
+
 </resources>

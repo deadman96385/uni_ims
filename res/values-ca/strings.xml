@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"Remote request rejected"</string>
 <string name="remote_accept_request">"Remote request accepted"</string>
 <string name="callFailed_fdn_only">"Outgoing calls are restricted by FDN"</string>
+    <string name="camera_open_fail">"No s\'ha pogut encendre la càmera"</string>
+     <string name="ims_switch_failed">"Error de xarxa, torneu a intentar-ho més tard"</string>
+     <string name="videophone_fallback_menu_videocall">"Videotrucada"</string>
+     <string name="videophone_fallback_menu_voicecall">Trucada de veu</string>
+     <string name="videophone_fallback_menu_cancel">"Cancel·la"</string>
+     <string name="videophone_fallback_question">"Què voleu fer?"</string>
+     <string name="low_battery_warning_media_alert_message">"Queda menys d\'un 15% de bateria. Voleu acceptar o rebutjar?"</string>
+     <string name="low_battery_warning_title">"Avís de bateria baixa"</string>
+     <string name="low_battery_warning_message">"El nivell de bateria és inferior al 15%. Voleu continuar amb la vídeo trucada o preferiu passar a trucada de veu?"</string>
+     <string name="low_battery_continue_video_call">"Sí"</string>
+     <string name="low_battery_convert_to_voice_call">"Convertir"</string>
+
 </resources>

@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"дистанційний запит відхилено"</string>
 <string name="remote_accept_request">"дистанційний запит прийнято"</string>
 <string name="callFailed_fdn_only">"Віихідні дзвінки обмежені фіксованим набором"</string>
+    <string name="camera_open_fail">"Активувати режим камери не вдалося"</string>
+     <string name="ims_switch_failed">"Помилка мережі, будь ласка, спробуйте ще раз пізніше"</string>
+     <string name="videophone_fallback_menu_videocall">Відео дзвінок</string>
+     <string name="videophone_fallback_menu_voicecall">"Голосовой виклик"</string>
+     <string name="videophone_fallback_menu_cancel">"    скасувати"</string>
+     <string name="videophone_fallback_question">"Що ви хочете зробити?"</string>
+     <string name="low_battery_warning_media_alert_message">""Заряд батареї нижче 15%. Будь ласка, виберіть: прийняти або відхилити"."</string>
+     <string name="low_battery_warning_title">"Попередження про низький заряд батареї"</string>
+     <string name="low_battery_warning_message">"Рівень заряду батареї нижче 15%. Бажаєте продовжити відеодзвінки або перейти в голосовий режим?"</string>
+     <string name="low_battery_continue_video_call">"да"</string>
+     <string name="low_battery_convert_to_voice_call">"Конвертувати"</string>
+
 </resources>

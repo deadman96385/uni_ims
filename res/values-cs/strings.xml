@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"Vzdáelný požadavek byl zamítnutý"</string>
 <string name="remote_accept_request">"Vzdáelný požadavek byl přijatý"</string>
 <string name="callFailed_fdn_only">"Odchozí hovory jsou omezeny na povolená čísla (FDN)"</string>
+    <string name="camera_open_fail">"Otevírání fotoaparátu se nepovedlo"</string>
+     <string name="ims_switch_failed">"Chyba sítě, prosím, zkuste znovu později"</string>
+     <string name="videophone_fallback_menu_videocall">Videohovor</string>
+     <string name="videophone_fallback_menu_voicecall">Hlasový hovor</string>
+     <string name="videophone_fallback_menu_cancel">Zrušit</string>
+     <string name="videophone_fallback_question">"Co chcete dělat?"</string>
+     <string name="low_battery_warning_media_alert_message">"Vaše úroveň baterie je pod 15 %. Prosím vyberte přijmout nebo odmítnout."</string>
+     <string name="low_battery_warning_title">"Upozornění na nízký stav baterie"</string>
+     <string name="low_battery_warning_message">"Stav vaší baterie je nižší než 15 %. Chcete pokračovat ve video hovoru nebo přejít na hlasový hovor?"</string>
+     <string name="low_battery_continue_video_call">"Ano"</string>
+     <string name="low_battery_convert_to_voice_call">"Přejít"</string>
+
 </resources>

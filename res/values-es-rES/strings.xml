@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"Solicitud remota rechazada"</string>
 <string name="remote_accept_request">"Solicitud remota aceptada"</string>
 <string name="callFailed_fdn_only">"Las llamadas salientes están restringidas por FDN"</string>
+    <string name="camera_open_fail">"Falla en abrir la cámara"</string>
+     <string name="ims_switch_failed">"Error de la red, por favor trate nuevamente más tarde"</string>
+     <string name="videophone_fallback_menu_videocall">"Vídeo Llamada"</string>
+     <string name="videophone_fallback_menu_voicecall">"Llamada de Voz"</string>
+     <string name="videophone_fallback_menu_cancel">"Cancelar"</string>
+     <string name="videophone_fallback_question">"¿Qué desea realizar?"</string>
+     <string name="low_battery_warning_media_alert_message">""El nivel de la batería está por debajo del 15%. Por favor, elija aceptar o rechazar"."</string>
+     <string name="low_battery_warning_title">"Advertencia de Batería Baja"</string>
+     <string name="low_battery_warning_message">"El nivel de su batería está por debajo del 15%. ¿Desea continuar con la videollamada o convertirla en llamada de voz?"</string>
+     <string name="low_battery_continue_video_call">"Sí"</string>
+     <string name="low_battery_convert_to_voice_call">"Convertir"</string>
+
 </resources>

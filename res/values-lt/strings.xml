@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"Nuotolinis prašymas atmestas"</string>
 <string name="remote_accept_request">"Nuotolinis prašymas priimtas"</string>
 <string name="callFailed_fdn_only">"Išeinantys skambučiai yra ribojami FDN"</string>
+    <string name="camera_open_fail">"Nepavyko įjunti kameros"</string>
+     <string name="ims_switch_failed">"Tinklo klaida, bandykite dar kartą"</string>
+     <string name="videophone_fallback_menu_videocall">"Vaizdo sk."</string>
+     <string name="videophone_fallback_menu_voicecall">Balso skambutis</string>
+     <string name="videophone_fallback_menu_cancel">"Atšaukti"</string>
+     <string name="videophone_fallback_question">"Ką jūs norite daryti?"</string>
+     <string name="low_battery_warning_media_alert_message">"Jūsų baterijos lygis yra žemiau 15%.Prašome pasirinkti - priimti ar atmesti."</string>
+     <string name="low_battery_warning_title">"Perspėjimas apie išsikraunančią bateriją"</string>
+     <string name="low_battery_warning_message">"Jūsų baterijos lygis yra žemiau 15%.Ar norite tęsti vaizdinį skambutį ar pakeisti į balso skambutį?"</string>
+     <string name="low_battery_continue_video_call">"Taip"</string>
+     <string name="low_battery_convert_to_voice_call">"Pakeisti"</string>
+
 </resources>

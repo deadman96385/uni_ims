@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"Távoli kérés elutasítva"</string>
 <string name="remote_accept_request">"Távoli kérés elfogadva"</string>
 <string name="callFailed_fdn_only">"Az FDN korlátozza a kimenő hívásokat"</string>
+    <string name="camera_open_fail">"A kamera nyitása sikertelen"</string>
+     <string name="ims_switch_failed">Hálózati hiba, kérem, próbálja újra később..."</string>
+     <string name="videophone_fallback_menu_videocall">Videohívás</string>
+     <string name="videophone_fallback_menu_voicecall">Hanghívás</string>
+     <string name="videophone_fallback_menu_cancel">"Mégse"</string>
+     <string name="videophone_fallback_question">Mit szeretne tenni?</string>
+     <string name="low_battery_warning_media_alert_message">"Az akkumulátorszint 15 % alatt van. Elfogadja vagy elutasítja?"</string>
+     <string name="low_battery_warning_title">"Alacsony töltöttség figyelmeztetés"</string>
+     <string name="low_battery_warning_message">"Az akkumulátor 15% alatt van. Folytatja a videóhívást, vagy átvált hanghívásra?"</string>
+     <string name="low_battery_continue_video_call">"Igen"</string>
+     <string name="low_battery_convert_to_voice_call">"Átváltás"</string>
+
 </resources>

@@ -28,4 +28,16 @@
 <string name="remote_reject_request">"تم رفض الطلب عن بعد"</string>
 <string name="remote_accept_request">"تم قبول الطلب عن بعد"</string>
 <string name="callFailed_fdn_only">"يتم حظر المكالمات الصادرة بواسطة FDN"</string>
+    <string name="camera_open_fail">"فشل فتح الكاميرا"</string>
+     <string name="ims_switch_failed">"خطأ بالشبكة، يرجى إعادة المحاولة لاحقا"</string>
+     <string name="videophone_fallback_menu_videocall">مكالمة فيديو</string>
+     <string name="videophone_fallback_menu_voicecall">مكالمة صوتية</string>
+     <string name="videophone_fallback_menu_cancel">"إلغاء"</string>
+     <string name="videophone_fallback_question">"ماذا تريد أن تفعل؟"</string>
+     <string name="low_battery_warning_media_alert_message">"مستوى البطارية أقل من 15%. يرجى اختيار القبول أو الرفض."</string>
+     <string name="low_battery_warning_title">"تحذير انخفاض البطارية"</string>
+     <string name="low_battery_warning_message">"مستوى البطارية أقل من 15%. هل ترغب بالاستمرار في مكالمة الفيديو أم التحويل إلى مكالمة صوتية؟"</string>
+     <string name="low_battery_continue_video_call">"نعم"</string>
+     <string name="low_battery_convert_to_voice_call">"تحويل"</string>
+
 </resources>
