@@ -273,8 +273,8 @@ public class ImsService extends Service {
                             if(mImsServiceListenerEx != null){
                                 mImsServiceListenerEx.operationFailed(msg.arg1, "Already handle one request.",
                                         (msg.arg2 == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)
-                                        ? ImsOperationType.IMS_OPERATION_SWITCH_TO_VOLTE
-                                                : ImsOperationType.IMS_OPERATION_SWITCH_TO_VOWIFI);
+                                        ? ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOLTE
+                                                : ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOWIFI);
                             }
                             Log.w(TAG,"ACTION_START_HANDOVER-> mFeatureSwitchRequest is exist!");
                         } else {
@@ -420,9 +420,7 @@ public class ImsService extends Service {
                                         Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
                                 if (currentService != null){
                                     if (currentService.isVolteSessionListEmpty() && currentService.isVowifiSessionListEmpty()) {
-                                        if(mIsPendingRegisterVolte){
-                                            currentService.notifyImsCallEnd(CallEndEvent.WIFI_CALL_END);
-                                        }
+                                        currentService.notifyImsCallEnd(CallEndEvent.WIFI_CALL_END);
                                         mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                                         mWifiService.updateDataRouterState(DataRouterState.CALL_NONE);
                                     }
@@ -1570,10 +1568,10 @@ public class ImsService extends Service {
                 ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(serviceId));
                 if (impl != null) {
                     if (impl.isVolteSessionListEmpty() && impl.isVowifiSessionListEmpty()) {
+                        impl.notifyImsCallEnd(CallEndEvent.VOLTE_CALL_END);
                         /*SPRD: Modify for bug595321 and 610799{@*/
                         Log.i(TAG,"onSessionEmpty-> mFeatureSwitchRequest:"+mFeatureSwitchRequest + " mIsVowifiCall:" + mIsVowifiCall + " mIsVolteCall:" + mIsVolteCall +" mInCallHandoverFeature" + mInCallHandoverFeature);
                         if(mFeatureSwitchRequest != null && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER && serviceId == mFeatureSwitchRequest.mServiceId){
-                            impl.notifyImsCallEnd(CallEndEvent.VOLTE_CALL_END);
                             if (mInCallHandoverFeature != mFeatureSwitchRequest.mTargetType) {
                                 if (mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
                                     mPendingAttachVowifiSuccess = true;
