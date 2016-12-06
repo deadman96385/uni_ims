@@ -539,6 +539,10 @@ public class ImsService extends Service {
                                 mFeatureSwitchRequest = null;
                             }
                         }
+                        if(mPendingAttachVowifiSuccess){
+                            Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE->mPendingAttachVowifiSuccess is true. ");
+                            mPendingAttachVowifiSuccess = false;
+                        }
                         mAttachVowifiSuccess = false;//SPRD:Add for bug604833
                         break;
                     case EVENT_WIFI_RESET_RESAULT:
@@ -626,6 +630,10 @@ public class ImsService extends Service {
                             }
                             mAttachVowifiSuccess = false;
                             mFeatureSwitchRequest = null;
+                            if(mPendingAttachVowifiSuccess){
+                                mPendingAttachVowifiSuccess = false;
+                                Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> mPendingAttachVowifiSuccess is true!");
+                            }
                             /*@}*/
                         } else {
                             if(mImsServiceListenerEx != null){
@@ -1672,7 +1680,14 @@ public class ImsService extends Service {
 
     public void onReceiveHandoverEvent(boolean isCalling, int requestId, int targetType){
         Log.i(TAG,"onReceiveHandoverEvent->isCalling:" + isCalling + " requestId:" + requestId
-                +" targetType:" + targetType + " mCurrentImsFeature:" + mCurrentImsFeature);
+                +" targetType:" + targetType + " mCurrentImsFeature:" + mCurrentImsFeature
+                + " mPendingActivePdnSuccess:"+mPendingActivePdnSuccess+" mPendingAttachVowifiSuccess:"+mPendingAttachVowifiSuccess);
+        if (!mIsCalling && mPendingActivePdnSuccess){
+            mPendingActivePdnSuccess =  false;
+        }
+        if (!mIsCalling && mPendingAttachVowifiSuccess){
+            mPendingAttachVowifiSuccess =  false;
+        }
         mFeatureSwitchRequest = new ImsServiceRequest(requestId,
                 isCalling ? ACTION_START_HANDOVER : ACTION_SWITCH_IMS_FEATURE /*eventCode*/,
                         mTelephonyManager.getPrimaryCard()+1/*serviceId*/,
@@ -1745,6 +1760,9 @@ public class ImsService extends Service {
                         mImsServiceListenerEx.operationFailed(mFeatureSwitchRequest.mRequestId, "VOLTE pdn failed.",
                                 ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOLTE);
                         mFeatureSwitchRequest = null;
+                        if (!mIsCalling && mPendingActivePdnSuccess){
+                            mPendingActivePdnSuccess =  false;
+                        }
                     }
                 } else if(mFeatureSwitchRequest.mTargetType ==
                         ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
@@ -1770,6 +1788,7 @@ public class ImsService extends Service {
                 updateImsFeature();
             }
             if(state == ImsPDNStatus.IMS_PDN_ACTIVE_FAILED){
+                mPendingCPSelfManagement = false;
                 if(mPendingCPSelfManagement || mFeatureSwitchRequest == null){
                     ImsServiceImpl service = mImsServiceImplMap.get(
                             Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
@@ -1784,7 +1803,8 @@ public class ImsService extends Service {
                 + " mIsCalling:" + mIsCalling
                 + " mIsCPImsPdnActived:" + mIsCPImsPdnActived + " mIsAPImsPdnActived:" + mIsAPImsPdnActived
                 + " mWifiRegistered:" + mWifiRegistered + " mVolteRegistered:" + mVolteRegistered
-                + " mPendingCPSelfManagement:" + mPendingCPSelfManagement);
+                + " mPendingCPSelfManagement:" + mPendingCPSelfManagement
+                + " mPendingActivePdnSuccess:"+mPendingActivePdnSuccess);
         try{
             if (mImsServiceListenerEx != null &&
                     serviceId == mTelephonyManager.getPrimaryCard()+1) {
@@ -1864,6 +1884,7 @@ public class ImsService extends Service {
                             }
                         }
                         mWifiService.deattach(true);
+                        mPendingActivePdnSuccess = false;
                         mWifiService.updateDataRouterState(DataRouterState.CALL_VOLTE);
                     } else {
                         mIsPendingRegisterVolte = true;
