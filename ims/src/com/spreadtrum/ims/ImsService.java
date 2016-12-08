@@ -209,6 +209,8 @@ public class ImsService extends Service {
     private boolean mIsLoggingIn =false;
     private boolean mPendingCPSelfManagement = false;
     private int mCallEndType = -1;
+    private int mInCallPhoneId = -1;
+
     private class ImsServiceRequest {
         public int mRequestId;
         public int mEventCode;
@@ -384,6 +386,10 @@ public class ImsService extends Service {
                                             Integer.valueOf(mFeatureSwitchRequest.mServiceId));
                                     if (currentService != null) {
                                         if (currentService.isVolteSessionListEmpty() && currentService.isVowifiSessionListEmpty()) {
+                                            if(mCurrentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
+                                                Log.i(TAG,"EVENT_WIFI_ALL_CALLS_END->mCurrentImsFeature:"+mCurrentImsFeature);
+                                                updateInCallState(false);
+                                            }
                                             mCallEndType = CallEndEvent.WIFI_CALL_END;
                                             if (mInCallHandoverFeature != mFeatureSwitchRequest.mTargetType) {
                                                 if (mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
@@ -421,6 +427,10 @@ public class ImsService extends Service {
                                         Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
                                 if (currentService != null){
                                     if (currentService.isVolteSessionListEmpty() && currentService.isVowifiSessionListEmpty()) {
+                                        if(mCurrentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
+                                            Log.i(TAG,"EVENT_WIFI_ALL_CALLS_END->mCurrentImsFeature:"+mCurrentImsFeature);
+                                            updateInCallState(false);
+                                        }
                                         mCallEndType = CallEndEvent.WIFI_CALL_END;
                                         mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                                         mWifiService.updateDataRouterState(DataRouterState.CALL_NONE);
@@ -836,39 +846,22 @@ public class ImsService extends Service {
             @Override
             public void onCallStateChanged(int state, String incomingNumber) {
                 boolean isInCall = false;
-                int inCallPhoneId = -1;
+                mInCallPhoneId = -1;
                 if(state != TelephonyManager.CALL_STATE_IDLE){
                     isInCall = true;
                     Phone[] phones = PhoneFactory.getPhones();
                     if(phones != null){
                         for(Phone phone : phones){
                             if(phone.getState() != PhoneConstants.State.IDLE){
-                                inCallPhoneId = phone.getPhoneId();
+                                mInCallPhoneId = phone.getPhoneId();
                                 break;
                             }
                         }
                     }
                 }
-                if(mIsCalling != isInCall){
-                    mIsCalling = isInCall;
-                    if(mIsCalling &&
-                            (mCurrentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI
-                            || inCallPhoneId != mTelephonyManager.getPrimaryCard())){
-                        mWifiService.updateIncomingCallAction(IncomingCallAction.REJECT);
-                    } else {
-                        mWifiService.updateIncomingCallAction(IncomingCallAction.NORMAL);
-                    }
-                }
-                if((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI
-                        && isInCall != mIsWifiCalling)
-                        || (!isInCall && mIsWifiCalling)){
-                    mIsWifiCalling = isInCall;
-                    for (Map.Entry<Integer, ImsServiceImpl> entry : mImsServiceImplMap.entrySet()) {
-                        entry.getValue().notifyWifiCalling(mIsWifiCalling);
-                    }
-                }
+                updateInCallState(isInCall);
                 iLog("onCallStateChanged->isInCall:"+isInCall+" mIsWifiCalling:"+mIsWifiCalling
-                        +" inCallPhoneId:"+inCallPhoneId);
+                        +" inCallPhoneId:"+mInCallPhoneId);
             }
         };
         mTelephonyManager.listen(mListener, PhoneStateListener.LISTEN_CALL_STATE);
@@ -1591,6 +1584,10 @@ public class ImsService extends Service {
                 if (impl != null) {
                     if (impl.isVolteSessionListEmpty() && impl.isVowifiSessionListEmpty()) {
                         mCallEndType = CallEndEvent.VOLTE_CALL_END;
+                        if(mCurrentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
+                            Log.i(TAG,"onSessionEmpty->mCurrentImsFeature:"+mCurrentImsFeature);
+                            updateInCallState(false);
+                        }
                         /*SPRD: Modify for bug595321 and 610799{@*/
                         Log.i(TAG,"onSessionEmpty-> mFeatureSwitchRequest:"+mFeatureSwitchRequest + " mIsVowifiCall:" + mIsVowifiCall + " mIsVolteCall:" + mIsVolteCall +" mInCallHandoverFeature" + mInCallHandoverFeature);
                         if(mFeatureSwitchRequest != null && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER && serviceId == mFeatureSwitchRequest.mServiceId){
@@ -2031,5 +2028,28 @@ public class ImsService extends Service {
                 Log.w(TAG,"notifyCpCallEnd->notifyImsCallEnd-> ImsServiceImpl is null");
             }
         }
+    }
+
+    public void updateInCallState(boolean isInCall){
+        if(mIsCalling != isInCall){
+            mIsCalling = isInCall;
+            if(mIsCalling &&
+                    (mCurrentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI
+                    || mInCallPhoneId != mTelephonyManager.getPrimaryCard())){
+                mWifiService.updateIncomingCallAction(IncomingCallAction.REJECT);
+            } else {
+                mWifiService.updateIncomingCallAction(IncomingCallAction.NORMAL);
+            }
+        }
+        if((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI
+                && isInCall != mIsWifiCalling)
+                || (!isInCall && mIsWifiCalling)){
+            mIsWifiCalling = isInCall;
+            for (Map.Entry<Integer, ImsServiceImpl> entry : mImsServiceImplMap.entrySet()) {
+                entry.getValue().notifyWifiCalling(mIsWifiCalling);
+            }
+        }
+        iLog("updateInCallState->isInCall:"+isInCall+" mIsWifiCalling:"+mIsWifiCalling
+                +" inCallPhoneId:"+mInCallPhoneId);
     }
 }
