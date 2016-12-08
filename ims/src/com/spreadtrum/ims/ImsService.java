@@ -529,7 +529,12 @@ public class ImsService extends Service {
                                 mReleaseVowifiRequest = null;
                             }else{
                                 if(!isOnlySendAT){
-                                    mWifiService.resetAll(msg.arg2 == 0 ? WifiState.DISCONNECTED : WifiState.CONNECTED);
+                                    if(mFeatureSwitchRequest == null ||
+                                            mFeatureSwitchRequest.mEventCode != ACTION_START_HANDOVER){
+                                        mWifiService.resetAll(msg.arg2 == 0 ? WifiState.DISCONNECTED : WifiState.CONNECTED,500);
+                                    } else {
+                                        mWifiService.resetAll(msg.arg2 == 0 ? WifiState.DISCONNECTED : WifiState.CONNECTED);
+                                    }
                                 } else {
                                     Log.i(TAG, "ACTION_NOTIFY_VOWIFI_UNAVAILABLE -> operationSuccessed -> IMS_OPERATION_SET_VOWIFI_UNAVAILABLE");
                                     mImsServiceListenerEx.operationSuccessed(
