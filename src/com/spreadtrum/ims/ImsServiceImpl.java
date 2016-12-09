@@ -276,8 +276,13 @@ public class ImsServiceImpl {
                 /* @} */
                 /*SPRD: add for bug612670 @{ */
                 case EVENT_SET_VOICE_CALL_AVAILABILITY_DONE:
-                    if(mPhone.isRadioAvailable() && ar.exception != null){
+                    if(mPhone.isRadioAvailable() && ar.exception != null && ar.userObj != null){
                         Log.i(TAG,"EVENT_SET_VOICE_CALL_AVAILABILITY_DONE: exception");
+                        //SPRD: Bug 623247
+                        int value = ((Integer) ar.userObj).intValue();
+                        if (DBG) Log.i(TAG, "value = " + value);
+                        android.provider.Settings.Global.putInt(mContext.getContentResolver(),
+                                android.provider.Settings.Global.ENHANCED_4G_MODE_ENABLED, value);
                         Toast.makeText(mContext.getApplicationContext(), mContext.getString(R.string.ims_switch_failed), Toast.LENGTH_SHORT).show();
                     }
                     break;
@@ -450,13 +455,13 @@ public class ImsServiceImpl {
     public void turnOnIms(){
         Log.i(TAG,"turnOnIms.");
         //add for bug 612670
-        mCi.setImsVoiceCallAvailability(1 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE));
+        mCi.setImsVoiceCallAvailability(1 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, ImsConfig.FeatureValueConstants.OFF));
     }
 
     public void turnOffIms(){
         Log.i(TAG,"turnOffIms.");
         //add for bug 612670
-        mCi.setImsVoiceCallAvailability(0 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE));
+        mCi.setImsVoiceCallAvailability(0 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, ImsConfig.FeatureValueConstants.ON));
     }
 
     public int getImsRegisterState(){
