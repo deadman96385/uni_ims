@@ -503,7 +503,9 @@ public class ImsService extends Service {
                                 /*@}*/
                             }
                         }
-                        mFeatureSwitchRequest = null;
+                        if(mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
+                            mFeatureSwitchRequest = null;
+                        }
                         break;
                     case ACTION_NOTIFY_VOWIFI_UNAVAILABLE:
                         Boolean isOnlySendAT = (Boolean)msg.obj;
@@ -1560,9 +1562,11 @@ public class ImsService extends Service {
                                 Log.i(TAG, "VoLTERegisterListener -> operationSuccessed -> IMS_OPERATION_SWITCH_TO_VOLTE");
                                 mImsServiceListenerEx.operationSuccessed(mFeatureSwitchRequest.mRequestId,
                                         ImsOperationType.IMS_OPERATION_SWITCH_TO_VOLTE);
+                                mFeatureSwitchRequest = null;
                             }
+                         } else {
+                             Log.w(TAG, "VoLTERegisterListener -> operationSuccessed, mImsServiceListenerEx is null!");
                          }
-                        mFeatureSwitchRequest = null;
                     } else if(mImsServiceListenerEx != null){
                         if(mFeatureSwitchRequest.mEventCode == ACTION_SWITCH_IMS_FEATURE){
                             Log.i(TAG, "VoLTERegisterListener -> operationFailed -> IMS_OPERATION_SWITCH_TO_VOLTE");
@@ -1570,6 +1574,8 @@ public class ImsService extends Service {
                                     "VoLTE register failed",
                                     ImsOperationType.IMS_OPERATION_SWITCH_TO_VOLTE);
                             mFeatureSwitchRequest = null;
+                        } else {
+                            Log.w(TAG, "VoLTERegisterListener -> operationSuccessed, mImsServiceListenerEx is null!");
                         }
                     }
                 }
