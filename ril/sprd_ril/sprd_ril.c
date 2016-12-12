@@ -218,7 +218,11 @@ static void requestQuerySmsStorageMode(int channelID, void *data, size_t datalen
 static int isVoLteEnable();
 static bool isAttachEnable();
 static void requestDowngradeToVoice();
+//SPRD: Bug 625003 Add for Reliance simlock
+static void requestGetSimLockStatus(int channelID, void *data, size_t datalen, RIL_Token t);
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
+
+
 
 struct listnode
 {
@@ -435,6 +439,7 @@ static bool isLte(void);
 static bool isCSFB(void); 
 static bool isCMCC(void);
 static bool isCUCC(void);
+static bool isReliance(void);
 static bool bOnlyOneSIMPresent = false;
 typedef struct {
     int nCid;
@@ -9306,6 +9311,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SIM_CLOSE_CHANNEL
                 || request == RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL
                 || request == RIL_REQUEST_GET_IMS_BEARER_STATE
+                || request == RIL_REQUEST_GET_SIMLOCK_STATUS
                 || (request == RIL_REQUEST_DIAL && s_isstkcall)
 #if defined (RIL_SPRD_EXTENSION)
 #if defined (RIL_SUPPORTED_OEMSOCKET)
@@ -9393,6 +9399,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SET_IMS_SMSC
                 || request == RIL_REQUEST_ALLOW_DATA
                 || request == RIL_REQUEST_SIM_AUTHENTICATION
+                || request == RIL_REQUEST_GET_SIMLOCK_STATUS
                 || (request == RIL_REQUEST_DIAL && s_isstkcall)
         )) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
@@ -11351,6 +11358,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         }
         //Added for bug#213435 sim lock end
+        /* SPRD: Bug 625003 Add for Reliance simlock @{*/
+        case RIL_REQUEST_GET_SIMLOCK_STATUS: {
+            requestGetSimLockStatus(channelID, data, datalen, t);
+            break;
+        }
+        /* @} */
         case RIL_REQUEST_GET_IMS_CURRENT_CALLS:
             requestGetCurrentCallsVoLTE(channelID, data, datalen, t, 0);
             break;
@@ -15446,6 +15459,18 @@ static bool isCUCC(void) {
     return false;
 }
 
+/* SPRD: Bug 625003 Add for Reliance simlock @{ */
+static bool isReliance(void){
+    char prop[PROPERTY_VALUE_MAX]="";
+    property_get("ro.operator", prop, NULL);
+    RILLOGD("ro.operator is: %s", prop);
+    if (!strcmp(prop, "reliance")) {
+        return true;
+    }
+    return false;
+}
+/* @} */
+
 void setTestMode(int channelID) {
     if (isLte()) {
         char cmd[20] = {0};
@@ -15643,6 +15668,14 @@ int getNetLockRemainTimes(int channelID, int type){
 
         if (err == 0) {
             ret= result[0] - result[1];
+            /* SPRD: Bug 625003 Add for Reliance simlock @{*/
+            if(isReliance()) {
+                if (fac == 2) {  // NETWORK LOCK
+                    ALOGD("For Reliance simlock, just return retrial times %d", result[1]);
+                    ret = result[1];
+                }
+            }
+            /* @}*/
         }
         else {
             ret= 10;
@@ -15651,6 +15684,55 @@ int getNetLockRemainTimes(int channelID, int type){
     at_response_free(p_response);
     return ret;
 }
+
+/* SPRD: Bug 625003 Add for Reliance simlock @{*/
+static void requestGetSimLockStatus(int channelID, void *data, size_t datalen, RIL_Token t) {
+	RILLOGD("panpan requestGetSimLockStatus");
+	ATResponse *p_response = NULL;
+	int err,skip,status;
+	char *cmd, *line;
+	int ret = -1;
+
+	int fac = ((int *)(data))[0];
+	int ck_type = ((int *)(data))[1];
+
+	RILLOGD("data[0] = %d, data[1] = %d", fac, ck_type);
+
+	ret = asprintf(&cmd, "AT+SPSMPN=%d,%d", fac, ck_type);
+	if(ret < 0) {
+		RILLOGE("Failed to allocate memory");
+		cmd = NULL;
+		goto error;
+	}
+	RILLOGD("requestGetSimLockStatus: %s", cmd);
+
+	err = at_send_command_singleline(ATch_type[channelID], cmd, "+SPSMPN:", &p_response);
+	free(cmd);
+
+	if (err < 0 || p_response->success == 0)
+		goto error;
+
+	line = p_response->p_intermediates->line;
+	err = at_tok_start(&line);
+	if (err < 0) goto error;
+
+	err = at_tok_nextint(&line, &skip);
+	if (err < 0) goto error;
+
+	err = at_tok_nextint(&line, &status);
+	if (err < 0) goto error;
+
+	RILLOGD("requestGetSimLockStatus fac = %d status = %d ", fac, status);
+
+	RIL_onRequestComplete(t, RIL_E_SUCCESS, &status, sizeof(status));
+	at_response_free(p_response);
+	return;
+	error:
+	RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+	at_response_free(p_response);
+	return;
+}
+/* @} */
 
 int getRemainTimes(int channelID, char *type){
   if(0 == strcmp(type, "PS")){
