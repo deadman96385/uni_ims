@@ -146,7 +146,9 @@ void _VC_rtcpHandleSetControl(
             rtcp_ptr->sendCountFixed = config.u.data[2];
             break;
         case VTSP_TEMPL_CONTROL_RTCP_MASK:
-            rtcp_ptr->configure.enableMask |= config.u.data[2];
+            OSAL_logMsg("%s, origMask 0x%x, newMask 0x%x\n", __FUNCTION__,
+                    rtcp_ptr->configure.enableMask, config.u.data[2]);
+            rtcp_ptr->configure.enableMask = config.u.data[2];
             break;
         case VTSP_TEMPL_CONTROL_RTCP_TOS:
             rtcp_ptr->tos = config.u.data[2];
@@ -179,6 +181,7 @@ vint _VC_rtcpReadCommand(
                OSAL_logMsg("%s: _VC_RTCP_CMD_SEND_RTCP_FB\n", __FUNCTION__);
                break;
            case _VC_RTCP_CMD_CONFIGURE:
+               OSAL_logMsg("%s: _VC_RTCP_CMD_CONFIGURE\n", __FUNCTION__);
                _VC_rtcpHandleSetControl(rtcp_ptr, message.config);
                break;
            case _VC_RTCP_CMD_UPDATE_MIN_INTERVAL:

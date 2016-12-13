@@ -337,6 +337,7 @@ void _VC_runDnCmd(
             switch (cmd_ptr->msg.config.templCode) {
                 case VTSP_TEMPL_CODE_RTCP:
                     streamId = cmd_ptr->msg.config.u.data[1];
+                    OSAL_logMsg("%s: recv _VTSP_CMD_CONFIG\n", __FUNCTION__);
                     _VC_rtcpSetControl(q_ptr, streamId, &cmd_ptr->msg.config);
                     break;
                 case VTSP_TEMPL_CODE_RTP:
