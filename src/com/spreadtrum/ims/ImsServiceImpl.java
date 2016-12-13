@@ -469,9 +469,12 @@ public class ImsServiceImpl {
         if (mImsServiceState.mImsRegistered) {
             if (mPhone.getState() == PhoneConstants.State.IDLE) {
                 return ImsManagerEx.IMS_REGISTERED;
-            } else if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED
-                    || mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
-                return ImsManagerEx.IMS_UNREGISTERED;
+            } else {
+                if(mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED
+                        || mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED){
+                    return ImsManagerEx.IMS_UNREGISTERED;
+                }
+                return ImsManagerEx.IMS_REGISTERED;
             }
         }
         return ImsManagerEx.IMS_UNREGISTERED;
@@ -482,14 +485,16 @@ public class ImsServiceImpl {
         if(mImsServiceState.mImsRegistered){
             if(mPhone.getState() == PhoneConstants.State.IDLE){
                 return true;
-            } else if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED
-                    || mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
-                return false;
+            } else {
+                if(mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED
+                        || mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED){
+                    return false;
+                }
+                return true;
             }
         }
         return false;
     }
-
 
     public int getSrvccState(){
         return mImsServiceState.mSrvccState;
