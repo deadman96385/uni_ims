@@ -502,9 +502,9 @@ public class ImsService extends Service {
                                 mAttachVowifiSuccess = false;
                                 /*@}*/
                             }
-                        }
-                        if(mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
-                            mFeatureSwitchRequest = null;
+                            if(mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
+                                mFeatureSwitchRequest = null;
+                            }
                         }
                         break;
                     case ACTION_NOTIFY_VOWIFI_UNAVAILABLE:
@@ -707,9 +707,8 @@ public class ImsService extends Service {
                                     }
                                 }
                             }
-                        } else {
-                            notifyWiFiError(msg.arg1);
                         }
+                        notifyWiFiError(msg.arg1);
                         break;
                     case EVENT_WIFI_RTP_RECEIVED:
                         Boolean rtpIsVideo = (Boolean)msg.obj;
@@ -1574,10 +1573,17 @@ public class ImsService extends Service {
                                     "VoLTE register failed",
                                     ImsOperationType.IMS_OPERATION_SWITCH_TO_VOLTE);
                             mFeatureSwitchRequest = null;
-                        } else {
-                            Log.w(TAG, "VoLTERegisterListener -> operationSuccessed, mImsServiceListenerEx is null!");
                         }
+                    } else {
+                        Log.w(TAG, "VoLTERegisterListener -> operationFailed, mImsServiceListenerEx is null!");
                     }
+                    Log.i(TAG,"VoLTERegisterListener-> mPendingActivePdnSuccess"+ mPendingActivePdnSuccess
+                            +" mIsCPImsPdnActived:"+mIsCPImsPdnActived);
+                     if(!mPendingActivePdnSuccess && mIsCPImsPdnActived && mFeatureSwitchRequest != null
+                             && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER){
+                         Log.i(TAG, "VoLTERegisterListener -> ACTION_START_HANDOVER, clear mFeatureSwitchRequest");
+                         mFeatureSwitchRequest = null;
+                     }
                 }
                 Log.i(TAG,"VoLTERegisterListener-> mCurrentImsFeature:"+mCurrentImsFeature
                         + "serviceId:"+serviceId + " service is null:"+(service == null)
