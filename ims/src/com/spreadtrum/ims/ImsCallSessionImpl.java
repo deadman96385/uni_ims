@@ -771,10 +771,20 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
         mDisconnCause = reason;
-        if(mImsDriverCall != null){
-            Log.d(TAG,"ck-terminate index = "+mImsDriverCall.index);
+        if (isMultiparty() && mImsServiceCallTracker.onlyOneConferenceCall(this) //SPRD:add for bug597107
+                && !mImsServiceCallTracker.hasRingingCall()) {
+            if (isActiveCall()) {
+                mCi.hangupForegroundResumeBackground(mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,
+                        this));
+                return;
+            } else if (isBackgroundCall()) {
+                mCi.hangupWaitingOrBackground(mHandler.obtainMessage(ACTION_COMPLETE_HANGUP, this));
+                return;
+            }
+        }
+        if (mImsDriverCall != null) {
             mCi.hangupConnection(mImsDriverCall.index,
-                    mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
+                    mHandler.obtainMessage(ACTION_COMPLETE_HANGUP, this));
         } else {
             Log.w(TAG, "terminate-> mImsDriverCall is null!");
         }
