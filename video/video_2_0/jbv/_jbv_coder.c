@@ -389,7 +389,7 @@ vint _JBV_processH264(
             continue;
         }
 
-        if ((ts == unit1_ptr->ts) && unit1_ptr->firstInSeq) {
+        if ((ts == unit1_ptr->ts) && (unit1_ptr->firstInSeq)&&(!unit1_ptr->mark)) {
             /* Found the packet with firstInSeq */
             m1Seqn = seqn;
         }

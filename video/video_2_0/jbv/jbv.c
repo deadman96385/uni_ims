@@ -85,17 +85,20 @@ static void _JBV_putPkt(
 
     /* Return if jbv or pkt ptr is null. */
     if ((NULL == obj_ptr) || (NULL == pkt_ptr)) {
+        JBV_errLog("jbv or pkt is null. obj_ptr=0x%x, pkt_ptr=0x%x\n", obj_ptr, pkt_ptr);
         return;
     }
 
     /* Return if packet is not valid. */
     if (!pkt_ptr->valid) {
+        JBV_errLog("pkt is not valid. valid=%d\n", pkt_ptr->valid);
         return;
     }
 
     /* Return if type not H264 or H263. */
     if (pkt_ptr->type != VTSP_CODER_VIDEO_H263 &&
             pkt_ptr->type != VTSP_CODER_VIDEO_H264) {
+        JBV_errLog("pkt type is not valid. type=%d\n", pkt_ptr->type);
         return;
     }
 

@@ -528,8 +528,10 @@ vint _JBV_findOldestSequence(
                         break;
                     }
                 }
+                tsMin = foundTs;
             }
         }
+        tsMin = foundTs;
         seqn = JBV_PREVIOUS_SEQN(seqn);
         if (seqn == maxSeqn) {
             break;
