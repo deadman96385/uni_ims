@@ -13476,10 +13476,10 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         err = at_tok_nextint(&tmp, &response->total_segments);
         if (err < 0) goto out;
 
-        err = at_tok_nextint(&tmp, &response->serial_number);
+        err = at_tok_nexthexint(&tmp, &response->serial_number);
         if (err < 0) goto out;
 
-        err = at_tok_nextint(&tmp, &response->message_identifier);
+        err = at_tok_nexthexint(&tmp, &response->message_identifier);
         if (err < 0) goto out;
 
         err = at_tok_nextint(&tmp, &response->dcs);
