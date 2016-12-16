@@ -63,6 +63,8 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                         mVolteMediaUpdateDialog.dismiss();
                         ImsRIL mCi = (ImsRIL)msg.obj;
                         mCi.responseVolteCallMediaChange(false,mCallIdMessage);
+                        receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+                                null,null); //SPRD:add for bug610607
                     }
                     break;
                  /* SPRD:add for bug563112 @{ */
@@ -419,7 +421,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 else if(ImsCmccHelper.getInstance(mContext).rejectMediaChange(mImsCallSessionImpl,mCi,mCallIdMessage)){
                     log("handleVolteCallMediaChange-is cmcc project, has one active adn one hold call reject MediaChange");
                 }else{
-                    mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage);
+                    mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage,this);
                     mVolteMediaUpdateDialog.show();
                 }
 
@@ -437,14 +439,12 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 VideoProfile mLoacalResponseProfile = new VideoProfile(VideoProfile.STATE_TX_ENABLED);
                 VideoProfile mLoacalRequstProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
                 receiveSessionModifyRequest(mLoacalRequstProfile);
-                receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
-                        mLoacalRequstProfile,mLoacalResponseProfile);
-                /* @} */
+
             }else if(session.mImsDriverCall != null && session.mImsDriverCall.isRequestDowngradeToVoice()){
                 if(mVolteMediaDegradeDialog != null){
                    mVolteMediaDegradeDialog.dismiss();
                 }
-                mVolteMediaDegradeDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage);
+                mVolteMediaDegradeDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage,this);
                 mVolteMediaDegradeDialog.show();
             }
     }

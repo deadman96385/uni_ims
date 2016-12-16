@@ -203,7 +203,7 @@ public class VTManagerUtils {
         android.util.Log.i(TAG, string);
     }
 
-    public static AlertDialog showVolteCallMediaUpdateAlert(Context context, final ImsRIL mCi, Message response) {
+    public static AlertDialog showVolteCallMediaUpdateAlert(Context context, final ImsRIL mCi, Message response,ImsVideoCallProvider vtprovide) {
         /* SPRD: add for bug545171 @{ */
         final Message reponseMsg = new Message();
         if(response != null){
@@ -218,6 +218,8 @@ public class VTManagerUtils {
         builder.setPositiveButton(context.getString(R.string.remote_request_change_accept), new android.content.DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int which) {
                 mCi.responseVolteCallMediaChange(true,reponseMsg);
+                vtprovide.receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+                        null,null);//SPRD:add for bug610607
                 if(dialog != null){
                     dialog.dismiss();
                 }
@@ -226,6 +228,8 @@ public class VTManagerUtils {
         builder.setNegativeButton(context.getString(R.string.remote_request_change_reject), new android.content.DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int which) {
                 mCi.responseVolteCallMediaChange(false,reponseMsg);
+                vtprovide.receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+                        null,null);//SPRD:add for bug610607
                 if(dialog != null){
                     dialog.dismiss();
                 }
