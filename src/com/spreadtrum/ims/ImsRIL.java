@@ -1546,6 +1546,13 @@ public final class ImsRIL {
                 case ImsRILConstants.RIL_REQUEST_GET_IMS_BEARER_STATE: ret = responseInts(p); break;
                 case ImsRILConstants.RIL_REQUEST_VIDEOPHONE_DIAL: ret = responseVoid(p); break;
                 case ImsRILConstants.RIL_REQUEST_SET_SOS_INITIAL_ATTACH_APN: ret = responseVoid(p); break;
+                case ImsRILConstants.RIL_REQUEST_IMS_UPDATE_DATA_ROUTER: ret = responseVoid(p);break;
+                case ImsRILConstants.RIL_REQUEST_IMS_HANDOVER: ret =  responseVoid(p);break;
+                case ImsRILConstants.RIL_REQUEST_IMS_HANDOVER_STATUS_UPDATE: ret =  responseVoid(p);break;
+                case ImsRILConstants.RIL_REQUEST_IMS_NETWORK_INFO_CHANGE: ret =  responseVoid(p);break;
+                case ImsRILConstants.RIL_REQUEST_IMS_HANDOVER_CALL_END: ret =  responseVoid(p);break;
+                case ImsRILConstants.RIL_REQUEST_IMS_WIFI_ENABLE: ret =  responseVoid(p);break;
+                case ImsRILConstants.RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE: ret =  responseVoid(p);break;
                 default:
                     throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
                     //break;
@@ -1686,9 +1693,15 @@ public final class ImsRIL {
  | egrep "^ *{RIL_" \
  | sed -re 's/\{([^,]+),[^,]+,([^}]+).+/case \1: \2(rr, p); break;/'
              */
+            case ImsRILConstants.RIL_UNSOL_IMS_NETWORK_STATE_CHANGED: ret =  responseInts(p); break;
             case ImsRILConstants.RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED: ret = responseVoid(p); break;
             case ImsRILConstants.RIL_UNSOL_RESPONSE_IMS_BEARER_ESTABLISTED: ret = responseInts(p); break;
             case ImsRILConstants.RIL_UNSOL_RESPONSE_VIDEO_QUALITY: ret = responseInts(p); break;
+            case ImsRILConstants.RIL_UNSOL_IMS_HANDOVER_REQUEST: ret = responseInts(p); break;
+            case ImsRILConstants.RIL_UNSOL_IMS_HANDOVER_STATUS_CHANGE: ret = responseInts(p); break;
+            case ImsRILConstants.RIL_UNSOL_IMS_NETWORK_INFO_CHANGE: ret = responseImsNetworkInfo(p); break;
+            case ImsRILConstants.RIL_UNSOL_IMS_REGISTER_ADDRESS_CHANGE: ret = responseString(p); break;
+            case ImsRILConstants.RIL_UNSOL_IMS_WIFI_PARAM: ret = responseInts(p); break;
             default:
                 throw new RuntimeException("Unrecognized unsol response: " + response);
                 //break; (implied)
@@ -1699,18 +1712,49 @@ public final class ImsRIL {
         }
 
         switch(response) {
+            case ImsRILConstants.RIL_UNSOL_IMS_NETWORK_STATE_CHANGED:
+                if (RILJ_LOGD) unsljLog(response);
+                mImsNetworkStateChangedRegistrants
+                    .notifyRegistrants(new AsyncResult(null, ret, null));
+            break;
             case ImsRILConstants.RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED:
                 if (RILJ_LOGD) unsljLog(response);
                 mImsCallStateRegistrants.notifyRegistrants(new AsyncResult(null, null, null));
                 break;
             case ImsRILConstants.RIL_UNSOL_RESPONSE_IMS_BEARER_ESTABLISTED:
                 if (mImsBearerStateRegistrant != null) {
-                    mImsBearerStateRegistrant.notifyRegistrant(new AsyncResult(null, ret, null));
+                    mImsBearerStateRegistrant.notifyRegistrants(new AsyncResult(null, ret, null));
                 }
                 break;
             case ImsRILConstants.RIL_UNSOL_RESPONSE_VIDEO_QUALITY:
                 if (mImsVideoQosRegistrant != null) {
                     mImsVideoQosRegistrant.notifyRegistrant(new AsyncResult(null, ret, null));
+                }
+                break;
+            case ImsRILConstants.RIL_UNSOL_IMS_HANDOVER_REQUEST:
+                if (mImsHandoverRequestRegistrant != null) {
+                    mImsHandoverRequestRegistrant.notifyRegistrant(new AsyncResult(null, ret, null));
+                }
+                break;
+            case ImsRILConstants.RIL_UNSOL_IMS_HANDOVER_STATUS_CHANGE:
+                if (mImsHandoverStatusRegistrant != null) {
+                    mImsHandoverStatusRegistrant.notifyRegistrant(new AsyncResult(null, ret, null));
+                }
+                break;
+            case ImsRILConstants.RIL_UNSOL_IMS_NETWORK_INFO_CHANGE:
+                if (mImsNetworkInfoRegistrant != null) {
+                    mImsNetworkInfoRegistrant.notifyRegistrant(new AsyncResult(null, ret, null));
+                }
+                break;
+            case ImsRILConstants.RIL_UNSOL_IMS_REGISTER_ADDRESS_CHANGE:
+                if (RILJ_LOGD) unsljLog(response);
+                if (mImsRegAddressRegistrant != null) {
+                    mImsRegAddressRegistrant.notifyRegistrant(new AsyncResult(null, ret, null));
+                }
+                break;
+            case ImsRILConstants.RIL_UNSOL_IMS_WIFI_PARAM:
+                if (mImsWiFiParamRegistrant != null) {
+                    mImsWiFiParamRegistrant.notifyRegistrant(new AsyncResult(null, ret, null));
                 }
                 break;
         }
@@ -1947,12 +1991,13 @@ public final class ImsRIL {
  | sed -re 's/\{RIL_([^,]+),[^,]+,([^}]+).+/case RIL_\1: return "\1";/'
          */
         switch(request) {
-            case RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED:
+            case ImsRILConstants.RIL_UNSOL_IMS_NETWORK_STATE_CHANGED:
                 return "UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED";
             case RIL_UNSOL_SRVCC_STATE_NOTIFY:
                 return "UNSOL_SRVCC_STATE_NOTIFY";
             case ImsRILConstants.RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED: return " RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED";
             case ImsRILConstants.RIL_UNSOL_RESPONSE_IMS_BEARER_ESTABLISTED: return "RIL_UNSOL_RESPONSE_IMS_BEARER_ESTABLISTED";
+            case ImsRILConstants.RIL_UNSOL_IMS_REGISTER_ADDRESS_CHANGE: return "RIL_UNSOL_IMS_REGISTER_ADDRESS_CHANGE";
             default: return "<unknown response>";
         }
     }
@@ -2562,14 +2607,6 @@ public final class ImsRIL {
         mImsCallStateRegistrants.remove(h);
     }
 
-    public void registerForImsNetworkStateChanged(Handler h, int what, Object obj) {
-        mCi.registerForImsNetworkStateChanged(h, what, obj);
-    }
-
-    public void unregisterForImsNetworkStateChanged(Handler h) {
-        mCi.unregisterForImsNetworkStateChanged(h);
-    }
-
     public void registerForRadioStateChanged(Handler h, int what, Object obj) {
         mCi.registerForRadioStateChanged(h, what, obj);
     }
@@ -2611,17 +2648,26 @@ public final class ImsRIL {
             case ImsRILConstants.RIL_REQUEST_GET_IMS_BEARER_STATE: return "RIL_REQUEST_GET_IMS_BEARER_STATE";
             case ImsRILConstants.RIL_REQUEST_VIDEOPHONE_DIAL: return "VIDEOPHONE_DIAL";
             case ImsRILConstants.RIL_REQUEST_SET_SOS_INITIAL_ATTACH_APN: return "RIL_REQUEST_SET_SOS_INITIAL_ATTACH_APN";
+            case ImsRILConstants.RIL_REQUEST_IMS_HANDOVER: return "RIL_REQUEST_IMS_HANDOVER";
+            case ImsRILConstants.RIL_REQUEST_IMS_HANDOVER_STATUS_UPDATE: return "RIL_REQUEST_IMS_HANDOVER_STATUS_UPDATE";
+            case ImsRILConstants.RIL_REQUEST_IMS_NETWORK_INFO_CHANGE: return "RIL_REQUEST_IMS_NETWORK_INFO_CHANGE";
+            case ImsRILConstants.RIL_REQUEST_IMS_HANDOVER_CALL_END: return "RIL_REQUEST_IMS_HANDOVER_CALL_END";
+            case ImsRILConstants.RIL_REQUEST_IMS_WIFI_ENABLE: return "RIL_REQUEST_IMS_WIFI_ENABLE";
+            case ImsRILConstants.RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE: return "RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE";
+            case ImsRILConstants.RIL_REQUEST_GET_TPMR_STATE: return "RIL_REQUEST_GET_TPMR_STATE";
+            case ImsRILConstants.RIL_REQUEST_IMS_UPDATE_DATA_ROUTER: return "RIL_REQUEST_IMS_UPDATE_DATA_ROUTER";
             default: return requestToString(request);
         }
     }
 
-    protected Registrant mImsBearerStateRegistrant;
+    protected RegistrantList mImsBearerStateRegistrant = new RegistrantList();
     public void registerForImsBearerStateChanged(Handler h, int what, Object obj) {
-        mImsBearerStateRegistrant = new Registrant(h, what, obj);
+        Registrant r = new Registrant (h, what, obj);
+        mImsBearerStateRegistrant.add(r);
     }
 
     public void unregisterForImsBearerStateChanged(Handler h) {
-        mImsBearerStateRegistrant.clear();
+        mImsBearerStateRegistrant.remove(h);
     }
 
     protected Registrant mImsVideoQosRegistrant;
@@ -2647,5 +2693,153 @@ public final class ImsRIL {
 
     public void unSetOnSuppServiceNotification(Handler h) {
         mCi.unSetOnSuppServiceNotification(h);
+    }
+
+    public void notifyVoWifiEnable(boolean enable, Message response) {
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_WIFI_ENABLE, response);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest) + " " +
+                enable);
+
+        rr.mParcel.writeInt(1);
+        if(enable){
+            rr.mParcel.writeInt(1);
+        } else {
+            rr.mParcel.writeInt(0);
+        }
+        send(rr);
+    }
+
+    public void notifyWifiCallState(boolean incall, Message response){
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE, response);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest) + " " +
+                incall);
+
+        rr.mParcel.writeInt(1);
+        if(incall){
+            rr.mParcel.writeInt(1);
+        } else {
+            rr.mParcel.writeInt(0);
+        }
+        send(rr);
+    }
+
+    public void notifyDataRouter(Message response){
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_UPDATE_DATA_ROUTER, response);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
+        send(rr);
+    }
+
+    /* SPRD: add for VoWiFi
+     */
+    protected Registrant mImsHandoverRequestRegistrant;
+    protected Registrant mImsHandoverStatusRegistrant;
+    protected Registrant mImsNetworkInfoRegistrant;
+    protected Registrant mImsRegAddressRegistrant;
+    protected Registrant mImsWiFiParamRegistrant;
+    protected RegistrantList mImsNetworkStateChangedRegistrants = new RegistrantList();
+
+    public void registerForImsNetworkStateChanged(Handler h, int what, Object obj) {
+        Registrant r = new Registrant (h, what, obj);
+        mImsNetworkStateChangedRegistrants.add(r);
+    }
+
+    public void unregisterForImsNetworkStateChanged(Handler h) {
+        mImsNetworkStateChangedRegistrants.remove(h);
+    }
+
+    public void registerImsHandoverRequest(Handler h, int what, Object obj){
+        mImsHandoverRequestRegistrant = new Registrant(h, what, obj);
+    }
+
+
+    public void unregisterImsHandoverRequest(Handler h){
+        mImsHandoverRequestRegistrant.clear();
+    }
+
+    public void registerImsHandoverStatus(Handler h, int what, Object obj){
+        mImsHandoverStatusRegistrant = new Registrant(h, what, obj);
+    }
+
+    public void unregisterImsHandoverStatus(Handler h){
+        mImsHandoverStatusRegistrant.clear();
+    }
+
+    public void registerImsNetworkInfo(Handler h, int what, Object obj){
+        mImsNetworkInfoRegistrant = new Registrant(h, what, obj);
+    }
+
+    public void unregisterImsNetworkInfo(Handler h){
+        mImsNetworkInfoRegistrant.clear();
+    }
+
+    public void registerImsRegAddress(Handler h, int what, Object obj) {
+        mImsRegAddressRegistrant = new Registrant(h, what, obj);
+    }
+
+    public void unregisterImsRegAddress(Handler h){
+        mImsRegAddressRegistrant.clear();
+    }
+
+    public void registerImsWiFiParam(Handler h, int what, Object obj){
+        mImsWiFiParamRegistrant = new Registrant(h, what, obj);
+    }
+
+
+    public void unregisterImsWiFiParam(Handler h){
+        mImsWiFiParamRegistrant.clear();
+    }
+
+    public void requestImsHandover(int type, Message response) {
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_HANDOVER, response);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest) + " " +
+                type);
+
+        rr.mParcel.writeInt(1);
+        rr.mParcel.writeInt(type);
+        send(rr);
+    }
+
+    public void notifyImsHandoverStatus(int status, Message response){
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_HANDOVER_STATUS_UPDATE, response);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest) + " " +
+                status);
+
+        rr.mParcel.writeInt(1);
+        rr.mParcel.writeInt(status);
+        send(rr);
+    }
+
+    public void notifyImsNetworkInfo(int type, String info, Message response){
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_NETWORK_INFO_CHANGE, response);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest)
+                + " type:" +type + " info:"+info);
+
+        rr.mParcel.writeInt(type);
+        rr.mParcel.writeString(info);
+        send(rr);
+    }
+
+    public void notifyImsCallEnd(int type, Message response){
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_HANDOVER_CALL_END, response);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest) + " " +
+                type);
+
+        rr.mParcel.writeInt(1);
+        rr.mParcel.writeInt(type);
+        send(rr);
+    }
+
+    protected ImsNetworkInfo responseImsNetworkInfo(Parcel p) {
+        ImsNetworkInfo info = new ImsNetworkInfo();
+        info.mType = p.readInt();
+        info.mInfo = p.readString();
+        return info;
     }
 }
