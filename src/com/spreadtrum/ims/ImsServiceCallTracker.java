@@ -34,7 +34,11 @@ import com.android.ims.internal.ImsCallSession;
 import com.android.ims.ImsConferenceState;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import com.spreadtrum.ims.ImsService;
+import com.spreadtrum.ims.vowifi.VoWifiServiceImpl;
+import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.DataRouterState;
 
+import com.android.ims.ImsReasonInfo;
 
 public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final String TAG = ImsServiceCallTracker.class.getSimpleName();
@@ -57,10 +61,13 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private ImsHandler mHandler;
     private ImsCallSessionImpl mConferenceSession;
 
+    private ImsService mImsService;//Add for data router
+    private VoWifiServiceImpl mWifiService;//Add for data router
+    private Object mUpdateLock = new Object();
+
     protected int mPendingOperations;
     protected boolean mNeedsPoll;
     protected Message mLastRelevantPoll;
-    private Object mUpdateLock = new Object();
 
     private Map<String, ImsCallSessionImpl> mSessionList = new HashMap<String, ImsCallSessionImpl>();
     private List<ImsCallSessionImpl> mPendingSessionList = new CopyOnWriteArrayList<ImsCallSessionImpl>();
@@ -77,12 +84,15 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         }
     };
     /* @} */
-    public ImsServiceCallTracker(Context context,ImsRIL ci, PendingIntent intent, int id, ImsServiceImpl service){
+    public ImsServiceCallTracker(Context context,ImsRIL ci, PendingIntent intent, int id, ImsServiceImpl service,
+               VoWifiServiceImpl wifiService){
         mContext = context;
         mCi = ci;
         mIncomingCallIntent = intent;
         mServiceId = id;
         mImsServiceImpl = service;
+        mImsService = (ImsService)context;//Add for data router
+        mWifiService = wifiService;//Add for data router
         mHandler = new ImsHandler(mContext.getMainLooper());
         mCi.registerForImsCallStateChanged(mHandler, EVENT_IMS_CALL_STATE_CHANGED, null);
         mCi.registerForCallStateChanged(mHandler, EVENT_CALL_STATE_CHANGE, null);
@@ -148,6 +158,16 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             intent.putExtra(ImsManager.EXTRA_USSD, false);
             intent.putExtra(ImsManager.EXTRA_SERVICE_ID, mServiceId);
             intent.putExtra(ImsManager.EXTRA_IS_UNKNOWN_CALL, unknownSession);
+            /*SPRD: Modify for bug586758{@*/
+            Log.i (TAG,"sendNewSessionIntent-> startVolteCall"
+                    + " mIsVowifiCall: " + mImsService.isVowifiCall()
+                    + " mIsVolteCall: " + mImsService.isVolteCall()
+                    + " isVoWifiEnabled(): " + mImsService.isVoWifiEnabled()
+                    + " isVoLTEEnabled(): " + mImsService.isVoLTEEnabled());
+            if (mImsService.isVoLTEEnabled() && !mImsService.isVowifiCall() && !mImsService.isVolteCall()) {
+                mWifiService.updateDataRouterState(DataRouterState.CALL_VOLTE);
+            }
+            /*@}*/
             mIncomingCallIntent.send(mContext, ImsManager.INCOMING_CALL_RESULT_CODE,intent);
         } catch (PendingIntent.CanceledException e) {
             Log.e(TAG, "PendingIntent Canceled " + e);
@@ -377,6 +397,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             mConferenceSession.notifyConferenceStateChange();
             Log.d(TAG, "handlePollCalls->isConferenceStateChange:"+isConferenceStateChange);
         }
+        if(mSessionList.isEmpty()){
+            mImsServiceImpl.onImsCallEnd();
+        }
     }
 
     protected void pollCurrentCallsWhenSafe() {
@@ -439,6 +462,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             }
         }
         removeInvalidSessionFromList(validDriverCall);
+        if(mSessionList.isEmpty()){
+            mImsServiceImpl.onImsCallEnd();
+        }
     }
 
     public void addSessionToList(Integer id, ImsCallSessionImpl session) {
@@ -695,4 +721,23 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         return mCurrentUserId;
     }
     /* @} */
+    public boolean isSessionListEmpty(){
+        boolean isEmpty;
+        synchronized(mSessionList) {
+            isEmpty = mSessionList.isEmpty();
+        }
+        return isEmpty;
+    }
+
+    public void terminateVolteCall() {
+        synchronized(mSessionList) {
+            for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it =
+                    mSessionList.entrySet().iterator(); it.hasNext();) {
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+                ImsCallSessionImpl session = e.getValue();
+                session.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
+                Log.d(TAG, "terminateVolteCall->session: " + session);
+            }
+        }
+    }
 }

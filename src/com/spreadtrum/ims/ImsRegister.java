@@ -43,6 +43,7 @@ public class ImsRegister {
     private ImsRIL mCi;
     private GsmCdmaPhone mPhone;
     private int mPhoneCount;
+    private ImsService mImsService;
 
     private boolean mInitISIMDone;
     private boolean mIMSBearerEstablished;
@@ -74,6 +75,7 @@ public class ImsRegister {
     public ImsRegister(GsmCdmaPhone phone , Context context, ImsRIL ci) {
         mPhone = phone;
         mContext = context;
+        mImsService = (ImsService)context;
         mCi = ci;
         mTelephonyManager = TelephonyManager.from(mContext);
         mPhoneId = mPhone.getPhoneId();
@@ -126,7 +128,9 @@ public class ImsRegister {
                     break;
                 }
                 mInitISIMDone = true;
-                enableIms();
+                if(mImsService.allowEnableIms()){
+                    enableIms();
+                }
                 break;
             case EVENT_IMS_BEARER_ESTABLISTED:
                 ar = (AsyncResult) msg.obj;
@@ -148,7 +152,6 @@ public class ImsRegister {
                 if (conn[0] == 1) {
                     mIMSBearerEstablished = true;
                     mLastNumeric = "";
-                    enableIms();
                 }
                break;
             case EVENT_ENABLE_IMS:
@@ -291,7 +294,24 @@ public class ImsRegister {
         return DEFAULT_PHONE_ID;
     }
 
-    private int getPrimaryCardFromProp(int[] workMode) {
+    public static int getPrimaryCard(int phoneCount) {
+        if (phoneCount == 1) {
+            return DEFAULT_PHONE_ID;
+        }
+
+        String prop = SystemProperties.get(MODEM_WORKMODE_PROP);
+        if ((prop != null) && (prop.length() > 0)) {
+            String values[] = prop.split(",");
+            int[] workMode = new int[phoneCount];
+            for(int i = 0; i < phoneCount; i++) {
+                workMode[i] = Integer.parseInt(values[i]);
+            }
+            return getPrimaryCardFromProp(workMode);
+        }
+        return DEFAULT_PHONE_ID;
+    }
+
+    private static int getPrimaryCardFromProp(int[] workMode) {
         switch (workMode[DEFAULT_PHONE_ID]) {
         case 10:
             if(workMode[SLOTTWO_PHONE_ID] != 10 && workMode[SLOTTWO_PHONE_ID] != 254) {
@@ -348,6 +368,7 @@ public class ImsRegister {
     }
 
     public void enableIms() {
+        Log.i(TAG, "enableIms ->mIMSBearerEstablished:" + mIMSBearerEstablished + " mInitISIMDone:" + mInitISIMDone);
         if(mIMSBearerEstablished && mInitISIMDone) {
             mHandler.sendMessage(mHandler.obtainMessage(EVENT_ENABLE_IMS));
         }
@@ -394,5 +415,9 @@ public class ImsRegister {
         } else {
             return new ServiceState();
         }
+    }
+
+    public void onImsPDNReady(){
+        mIMSBearerEstablished = true;
     }
 }
