@@ -1670,7 +1670,7 @@ public class ImsService extends Service {
     public void updateImsFeature(){
         boolean volteRegistered = isVoLTERegisted();
         ImsServiceImpl imsService = mImsServiceImplMap.get(
-                Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
+                Integer.valueOf(mTelephonyManager.getPrimaryCardForIms()+1));
         if(mInCallHandoverFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
             if(mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;

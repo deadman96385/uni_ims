@@ -169,7 +169,7 @@ public class ImsRegister {
 
     private void initISIM() {
         if (!mInitISIMDone
-                && mPhoneId == mTelephonyManager.getPrimaryCard()
+                && mPhoneId == mTelephonyManager.getPrimaryCardForIms()
                 && mTelephonyManager.getSimState(mPhoneId) == TelephonyManager.SIM_STATE_READY) {
             String impi = null;
             String impu = null;
@@ -226,7 +226,7 @@ public class ImsRegister {
     }
     /* SPRD:Modify for bug576993 @{ */
     public synchronized void notifyImsStateChanged(boolean imsRegistered) {
-        boolean isPrimaryCard = mPhone.getPhoneId() == mTelephonyManager.getPrimaryCard();
+        boolean isPrimaryCard = mPhone.getPhoneId() == mTelephonyManager.getPrimaryCardForIms();
         Log.i(TAG, "notifyImsStateChanged mCurrentImsRegistered:" + mCurrentImsRegistered
                  + " imsRegistered:" + imsRegistered + " isPrimaryCard:" + isPrimaryCard);
         if(mCurrentImsRegistered != imsRegistered) {
