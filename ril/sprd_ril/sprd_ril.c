@@ -1351,7 +1351,10 @@ int callFromCLCCLineVoLTE(char *line, RIL_Call_VoLTE *p_call)
 
         /* tolerate null here */
         if (err < 0) return 0;
-
+        if (p_call->number != NULL &&
+           (strstr(p_call->number, "anonymous@anonymous.invalid") != NULL)) {
+            p_call->number = "";
+        }
     }
     err = at_tok_nextint(&line, &(p_call->prioritypresent));
     if (err < 0){
