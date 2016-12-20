@@ -1526,7 +1526,7 @@ public class ImsService extends Service {
                 ImsServiceImpl service = mImsServiceImplMap.get(Integer.valueOf(serviceId));
                 Log.i(TAG,"VoLTERegisterListener-> mFeatureSwitchRequest:"+mFeatureSwitchRequest
                         +" mIsCalling:"+ mIsCalling + " mVolteRegistered:" + mVolteRegistered + " service.isImsRegistered():" + service.isImsRegistered()
-                        + " mIsLoggingIn:" + mIsLoggingIn);
+                        + " mIsLoggingIn:" + mIsLoggingIn +" mIsPendingRegisterVolte:"+mIsPendingRegisterVolte);
                 //If CP reports CIREGU as 1,3 , IMS Feature will be updated as Volte registered state firstly.
                 if (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED || service.getVolteRegisterState() == IMS_REG_STATE_REG_FAIL){
                     mVolteRegistered = (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED);
@@ -1573,6 +1573,7 @@ public class ImsService extends Service {
                                     "VoLTE register failed",
                                     ImsOperationType.IMS_OPERATION_SWITCH_TO_VOLTE);
                             mFeatureSwitchRequest = null;
+                            mIsPendingRegisterVolte = false;
                         }
                     } else {
                         Log.w(TAG, "VoLTERegisterListener -> operationFailed, mImsServiceListenerEx is null!");
@@ -1583,6 +1584,7 @@ public class ImsService extends Service {
                              && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER){
                          Log.i(TAG, "VoLTERegisterListener -> ACTION_START_HANDOVER, clear mFeatureSwitchRequest");
                          mFeatureSwitchRequest = null;
+                         mIsPendingRegisterVolte = false;
                      }
                 }
                 Log.i(TAG,"VoLTERegisterListener-> mCurrentImsFeature:"+mCurrentImsFeature
