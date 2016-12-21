@@ -13888,10 +13888,9 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         if (SIM_RESET == result) {
             RIL_requestTimedCallback (reopenSimCardAndProtocolStack, NULL, NULL);
         }
-        else {
-            response->result = result;
-            RIL_onUnsolicitedResponse(RIL_UNSOL_SIM_REFRESH, response, sizeof(RIL_SimRefreshResponse_v7));
-        }
+        response->result = result;
+        RIL_onUnsolicitedResponse(RIL_UNSOL_SIM_REFRESH, response, sizeof(RIL_SimRefreshResponse_v7));
+        
     } else if (strStartsWith(s, "+CSSI:")) {
         RIL_SuppSvcNotification *response = NULL;
         int code = 0;
@@ -15957,10 +15956,7 @@ static void reopenSimCardAndProtocolStack(void *param){
     at_send_command(ATch_type[channelID], "AT+SFUN=5", NULL);
     at_send_command(ATch_type[channelID], "AT+SFUN=3", NULL);
     at_send_command(ATch_type[channelID], "AT+SFUN=2", NULL);
-    setRadioState(channelID, RADIO_STATE_OFF);
     at_send_command(ATch_type[channelID], "AT+SFUN=4", NULL);
-    setRadioState(channelID, RADIO_STATE_SIM_NOT_READY);
-
     putChannel(channelID);
 }
 
