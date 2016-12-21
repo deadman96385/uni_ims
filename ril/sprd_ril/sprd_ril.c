@@ -11445,14 +11445,17 @@ RIL_onRequestComplete(t, RIL_E_SUCCESS,
     case RIL_REQUEST_IMS_HANDOVER: {
         int type = ((int*)data)[0];
         char cmd[20] = {0};
+        p_response = NULL;
+
         RILLOGD("RIL_REQUEST_IMS_HANDOVER type: %d", type);
         snprintf(cmd, sizeof(cmd), "AT+IMSHO=%d", type);
-        err = at_send_command(ATch_type[channelID], cmd , NULL);
-        if (err < 0) {
+        err = at_send_command(ATch_type[channelID], cmd , &p_response);
+        if (err < 0 || p_response->success == 0) {
             RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
         } else {
             RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
         }
+        at_response_free(p_response);
         break;
     }
     case RIL_REQUEST_IMS_HANDOVER_STATUS_UPDATE: {
