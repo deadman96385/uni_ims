@@ -9319,6 +9319,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_EXT_REQUEST_QUERY_LTE_CTCC_SIMTYPE
                 || request == RIL_EXT_REQUEST_QUERY_LTE_CTCC_MMEI
                 || request == RIL_EXT_REQUEST_QUERY_DCE_SOFTWARE_VERSION
+                || request == RIL_EXT_REQUEST_SET_SPECIAL_RATCAP
 #endif
 #endif
                 || request == RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING
@@ -11906,6 +11907,21 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_EXT_REQUEST_QUERY_DCE_SOFTWARE_VERSION:
             requestDceSoftwareVersion(channelID, data, datalen, t);
             break;
+        case RIL_EXT_REQUEST_SET_SPECIAL_RATCAP:{
+            p_response = NULL;
+            int value = ((int*)data)[0];
+            char cmd[32] = {0};
+            snprintf(cmd, sizeof(cmd), "AT+SPOPRCAP=1,1,%d", value);
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+
+            at_response_free(p_response);
+            break;
+        }
 #endif  // RIL_SUPPORTED_OEMSOCKET
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_GET_CELL_BROADCAST_CONFIG:
