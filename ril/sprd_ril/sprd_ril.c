@@ -2347,6 +2347,9 @@ static void requestRadioPower(int channelID, void *data, size_t datalen, RIL_Tok
 //                    if(autoAttach && dataEnable){
 //                        err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=1", &p_response);
 //                    }
+                } else {
+                    snprintf(cmd, sizeof(cmd), "AT+SPSWITCHDATACARD=%d,%d", 1 - s_sim_num, 1 - allow_data);
+                    at_send_command(ATch_type[channelID], cmd, NULL );
                 }
                 //err = at_send_command(ATch_type[channelID], "AT+SAUTOATT=0", &p_response);
              }else {
@@ -9401,6 +9404,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SIM_AUTHENTICATION
                 || request == RIL_REQUEST_GET_SIMLOCK_STATUS
                 || (request == RIL_REQUEST_DIAL && s_isstkcall)
+                || request == RIL_REQUEST_GPRS_ATTACH
+                || request == RIL_REQUEST_GPRS_DETACH
         )) {
         RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
         return;
@@ -9757,6 +9762,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         requestSendIMSSMS(channelID, data, datalen, t);
         break;
     case RIL_REQUEST_SETUP_DATA_CALL:
+        allow_data = 1;
         if(isAttachEnable()) {
             if (isLte()) {
                 RILLOGD("RIL_REQUEST_SETUP_DATA_CALL testmode= %d, s_PSRegState = %d", s_testmode, s_PSRegState);
@@ -10818,10 +10824,24 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             requestSIMPower(channelID, data, datalen, t);
             break;
         case RIL_REQUEST_GPRS_ATTACH:
-            attachGPRS(channelID, data, datalen, t);
+            allow_data = 1;
+            if (desiredRadioState > 0 && isAttachEnable()
+                && !(sState == RADIO_STATE_OFF || sState == RADIO_STATE_UNAVAILABLE)) {
+                attachGPRS(channelID, data, datalen, t);
+            } else{
+                RILLOGD("gprs attach when radio is off or engineer mode disable");
+                RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
+            }
             break;
         case RIL_REQUEST_GPRS_DETACH:
-            detachGPRS(channelID, data, datalen, t);
+            allow_data = 0;
+            if (desiredRadioState > 0 && isAttachEnable()
+                && !(sState == RADIO_STATE_OFF || sState == RADIO_STATE_UNAVAILABLE)) {
+                detachGPRS(channelID, data, datalen, t);
+            } else{
+                RILLOGD("gprs deattach when radio is off or engineer mode disable");
+                RIL_onRequestComplete(t, RIL_E_RADIO_NOT_AVAILABLE, NULL, 0);
+            }
             break;
        case RIL_REQUEST_SET_CMMS:
             requestSetCmms(channelID, data, datalen, t);
@@ -15351,7 +15371,13 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
     if (s_sim_num == 0) {
         setHwVerPorp();
     }
-
+    if (isLte()) {
+        s_testmode = getTestMode();
+        if (s_testmode != 10) {
+            RILLOGD("allow_data init 1!");
+            allow_data = 1;
+        }
+    }
     return &s_callbacks;
 }
 #else /* RIL_SHLIB */
@@ -15769,7 +15795,6 @@ void open_dev(char *dev,int* fd)
         }
         retry_count ++;
     }
-
 }
 
 static void* dump_sleep_log(){
