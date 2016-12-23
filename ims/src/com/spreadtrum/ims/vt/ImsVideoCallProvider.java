@@ -44,6 +44,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     /** volte media event code. */
     private static final int EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 500;
     private static final int EVENT_SRVCC_STATE_CHANGED = 100;
+    private static final int EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT = 101;
 
     private Handler mVTHandler = new Handler(){
         @Override
@@ -71,6 +72,18 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                      }
                     break;
                 /* @} */
+                 case EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT:{//SPRD: add for bug596628
+                    if (mImsCallSessionImpl != null
+                            && mImsCallSessionImpl.mImsCallProfile != null
+                            && mImsCallSessionImpl.mImsCallProfile.mCallType != ImsCallProfile.CALL_TYPE_VT
+                            && mContext != null) {
+
+                        CancleVideoRequestUtils.getInstance(mContext).handMessage(
+                                Integer.parseInt(mImsCallSessionImpl.getCallId()), msg);
+                        log("EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT cmd[0]");
+                    }
+                 }
+                 break;
                 default:
                     break;
             }
@@ -197,7 +210,8 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
               message.arg1 = Integer.parseInt(mImsCallSessionImpl.getCallId());
               message.arg2 = 7;
               mCi.requestVolteCallMediaChange(false,message);
-          }else if(VideoProfile.isReceptionEnabled(toProfile.getVideoState())){
+          }else if(VideoProfile.isReceptionEnabled(toProfile.getVideoState())&&
+                  !VideoProfile.isTransmissionEnabled(toProfile.getVideoState())){
               Message message = new Message();
               message.arg1 = Integer.parseInt(mImsCallSessionImpl.getCallId());
               message.arg2 = 6;
@@ -211,7 +225,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         ImsCallProfile requestImsCallProfile = new ImsCallProfile();
         if(VideoProfile.isAudioOnly(toProfile.getVideoState())){
             requestImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VOICE;
-        }else if(VideoProfile.isTransmissionEnabled(toProfile.getVideoState())){
+        }else if(VideoProfile.isBidirectional(toProfile.getVideoState())){
             requestImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
         }
 
@@ -230,8 +244,15 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             message.arg1 = Integer.parseInt(mImsCallSessionImpl.getCallId());
             message.arg2 = 2;
             /* @} */
+
             if(requestImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT){
                mCi.requestVolteCallMediaChange(false,message);
+
+               //SPRD: add for bug596628
+               if(mContext!=null){
+                   CancleVideoRequestUtils.getInstance(mContext).sendMessage(mVTHandler, EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT, mCi);
+               }
+
             } else {
                mCi.requestVolteCallMediaChange(true,message);
             }
@@ -404,8 +425,13 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
           if(session.mImsDriverCall != null && (session.mImsDriverCall.isReuestAccept() || session.mImsDriverCall.isReuestReject() || session.mImsDriverCall.isRequestUpgradeToVideo() || session.mImsDriverCall.isRequestDowngradeToVoice()) ||
              mImsCallSessionImpl.getLocalRequestProfile().mCallType == mImsCallSessionImpl.mImsCallProfile.mCallType){
              mImsCallSessionImpl.getLocalRequestProfile().mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
-          }
-          /* @} */
+             /*SPRD: add for bug596628*/
+             if(mVTHandler != null &&  mVTHandler.hasMessages(EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT)&&mContext!=null){
+                 log("handleClearLocalCallProfile remove EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT");
+
+                 CancleVideoRequestUtils.getInstance(mContext).removeMessage(mVTHandler, EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT);
+             }/* @} */
+          }/* @} */
     }
 
     public void handleVolteCallMediaChange(ImsCallSessionImpl session){

@@ -37,4 +37,5 @@
     <string name="low_battery_convert_to_voice_call">"Convert"</string>
     <!-- @} -->
     <string name="camera_open_fail">Camera open fail</string><!-- SPRD: Add for bug571839 -->
+    <string name="feature_cancle_video_request">plugin.sprd.operatorfeatures.AddonCancleVideoRequestUtils</string><!-- SPRD: Add for bug596628 -->
 </resources>
