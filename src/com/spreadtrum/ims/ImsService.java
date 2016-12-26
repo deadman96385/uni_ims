@@ -24,6 +24,7 @@ import android.os.RemoteException;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.telephony.PhoneStateListener;
+import android.telephony.VoLteServiceState;
 import android.util.Log;
 import android.widget.Toast;
 import android.telecom.VideoProfile;
@@ -59,6 +60,7 @@ import com.android.ims.internal.IImsUtListenerEx;
 import com.android.ims.internal.ImsManagerEx;
 import com.android.ims.internal.IImsMultiEndpoint;
 import com.android.ims.internal.IImsExternalCallStateListener;
+import com.android.ims.internal.ImsSrvccCallInfo;
 import com.spreadtrum.ims.vowifi.Utilities.AttachState;
 import com.spreadtrum.ims.vowifi.Utilities.RegisterState;
 import com.spreadtrum.ims.vowifi.Utilities.SecurityConfig;
@@ -1332,9 +1334,7 @@ public class ImsService extends Service {
          */
        @Override
        public void setMonitorPeriodForNoData(int millis){
-           if(mWifiService != null){
-               mWifiService.setMonitorPeriodForNoData(millis);
-           }
+           // Needn't, remove later.
        }
 
        /* SPRD: add for VoWiFi @{ */
@@ -1485,6 +1485,26 @@ public class ImsService extends Service {
            }
            return CallType.NO_CALL;
        }
+
+       /**
+        * notify SRVCC Call Info
+        */
+       @Override
+       public void notifySrvccCallInfos(List<ImsSrvccCallInfo> list){
+            ImsServiceImpl imsService = mImsServiceImplMap.get(
+                    Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
+            if(list != null && imsService != null){
+                String commands = "";
+                for(int i=0;i<list.size();i++){
+                    commands = commands + ((ImsSrvccCallInfo)list.get(i)).toAtCommands();
+                    if(i != list.size()-1){
+                        commands = commands +",";
+                    }
+                }
+                Log.i(TAG,"notifySrvccCallInfos->commands:"+commands);
+                imsService.notifyHandoverCallInfo(commands);
+            }
+        }
     };
 
     private final IImsMultiEndpoint.Stub mImsMultiEndpointBinder = new IImsMultiEndpoint.Stub()  {
@@ -1822,7 +1842,10 @@ class MyVoWifiCallback implements VoWifiCallback {
             if(mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
                 if(imsService != null) imsService.notifyImsRegister(true);
-            } else {
+            } else if (imsService != null && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
+                mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                imsService.notifyImsRegister(false);
+            }else {
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
                 if(imsService != null) imsService.notifyImsRegister(true);
             }
@@ -2238,4 +2261,21 @@ class MyVoWifiCallback implements VoWifiCallback {
         iLog("updateInCallState->isInCall:"+isInCall+" mIsWifiCalling:"+mIsWifiCalling
                 +" inCallPhoneId:"+mInCallPhoneId);
     }
+
+    public void notifySrvccCapbility(int cap){
+        if (mWifiService != null) {
+            mWifiService.setSRVCCSupport(cap != 0 ? true : false);
+        }
+    }
+
+    public void notifySrvccState(int phoneId,int status){
+        int primaryPhoneId = ImsRegister.getPrimaryCard(mPhoneCount);
+        iLog("notifySrvccState->phoneId:"+phoneId+" primaryPhoneId:"+primaryPhoneId
+                +" status:"+status);
+        if(phoneId == primaryPhoneId+1){
+            updateImsFeature();
+            mWifiService.onSRVCCStateChanged(status);
+        }
+    }
+
 }

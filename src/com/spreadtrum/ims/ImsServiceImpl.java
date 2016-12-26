@@ -88,6 +88,7 @@ public class ImsServiceImpl {
     protected static final int EVENT_IMS_PND_STATE_CHANGED             = 112;
     protected static final int EVENT_IMS_NETWORK_INFO_UPDATE           = 113;
     protected static final int EVENT_IMS_WIFI_PARAM                    = 114;
+    protected static final int EVENT_IMS_GET_SRVCC_CAPBILITY           = 115;
 
     private GsmCdmaPhone mPhone;
     private ImsServiceState mImsServiceState;
@@ -116,6 +117,7 @@ public class ImsServiceImpl {
     private int mAliveCallLose = -1;
     private int mAliveCallJitter = -1;
     private int mAliveCallRtt = -1;
+    private int mSrvccCapbility = -1;
 
     /**
      * Handles changes to the APN db.
@@ -281,6 +283,7 @@ public class ImsServiceImpl {
                         if(ret != null && ret.length != 0){
                             mImsServiceState.mSrvccState = ret[0];
                             mImsService.notifyImsRegisterState();
+                            mImsService.notifySrvccState(mServiceId,mImsServiceState.mSrvccState);
                             Log.i(TAG, "Srvcc state: " + ret[0]);
                         } else {
                             Log.w(TAG, "Srvcc error ret: " + ret);
@@ -350,6 +353,14 @@ public class ImsServiceImpl {
                 case EVENT_IMS_WIFI_PARAM:
                     if (ar != null && ar.exception == null && ar.result != null) {
                         onWifiParamEvent(ar);
+                    }
+                    break;
+                case EVENT_IMS_GET_SRVCC_CAPBILITY:
+                    if (ar != null && ar.exception == null && ar.result != null) {
+                        int[] conn = (int[]) ar.result;
+                        mSrvccCapbility = conn[0];
+                        mImsService.notifySrvccCapbility(mSrvccCapbility);
+                        Log.i(TAG,"EVENT_SET_VOICE_CALL_AVAILABILITY_DONE:"+mSrvccCapbility);
                     }
                     break;
                 default:
@@ -878,5 +889,13 @@ public class ImsServiceImpl {
         }else{
             Log.i(TAG," terminateVolteCall->mImsServiceCallTracker is null");
         }
+    }
+
+    public void notifyHandoverCallInfo(String callInfo) {
+        mCi.notifyHandoverCallInfo(callInfo,null);
+    }
+
+    public void getSrvccCapbility() {
+        mCi.getSrvccCapbility(mHandler.obtainMessage(EVENT_IMS_GET_SRVCC_CAPBILITY));
     }
 }
