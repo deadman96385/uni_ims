@@ -1553,6 +1553,8 @@ public final class ImsRIL {
                 case ImsRILConstants.RIL_REQUEST_IMS_HANDOVER_CALL_END: ret =  responseVoid(p);break;
                 case ImsRILConstants.RIL_REQUEST_IMS_WIFI_ENABLE: ret =  responseVoid(p);break;
                 case ImsRILConstants.RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE: ret =  responseVoid(p);break;
+                case ImsRILConstants.RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO: ret =  responseVoid(p);break;
+                case ImsRILConstants.RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY: ret = responseInts(p); break;
                 default:
                     throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
                     //break;
@@ -2660,6 +2662,8 @@ public final class ImsRIL {
             case ImsRILConstants.RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE: return "RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE";
             case ImsRILConstants.RIL_REQUEST_GET_TPMR_STATE: return "RIL_REQUEST_GET_TPMR_STATE";
             case ImsRILConstants.RIL_REQUEST_IMS_UPDATE_DATA_ROUTER: return "RIL_REQUEST_IMS_UPDATE_DATA_ROUTER";
+            case ImsRILConstants.RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO: return "RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO";
+            case ImsRILConstants.RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY: return "RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY";
             default: return requestToString(request);
         }
     }
@@ -2845,5 +2849,21 @@ public final class ImsRIL {
         info.mType = p.readInt();
         info.mInfo = p.readString();
         return info;
+    }
+
+    public void notifyHandoverCallInfo(String callInfo,Message response) {
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO, response);
+        if (RILJ_LOGD)
+            riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
+        rr.mParcel.writeInt(1);
+        rr.mParcel.writeString(callInfo);
+        send(rr);
+    }
+
+    public void getSrvccCapbility(Message response) {
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY, response);
+        if (RILJ_LOGD)
+            riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
+        send(rr);
     }
 }
