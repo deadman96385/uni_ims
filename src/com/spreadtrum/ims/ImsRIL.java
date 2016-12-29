@@ -1545,6 +1545,7 @@ public final class ImsRIL {
                 case ImsRILConstants.RIL_REQUEST_ENABLE_IMS: ret = responseVoid(p); break;
                 case ImsRILConstants.RIL_REQUEST_GET_IMS_BEARER_STATE: ret = responseInts(p); break;
                 case ImsRILConstants.RIL_REQUEST_VIDEOPHONE_DIAL: ret = responseVoid(p); break;
+                case ImsRILConstants.RIL_REQUEST_SET_SOS_INITIAL_ATTACH_APN: ret = responseVoid(p); break;
                 default:
                     throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
                     //break;
@@ -2405,7 +2406,21 @@ public final class ImsRIL {
             String password, Message result) {
         RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN, null);
 
-        if (RILJ_LOGD) riljLog("Set RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN");
+        rr.mParcel.writeString(apn);
+        rr.mParcel.writeString(protocol);
+        rr.mParcel.writeInt(authType);
+        rr.mParcel.writeString(username);
+        rr.mParcel.writeString(password);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest)
+                + ", apn:" + apn + ", protocol:" + protocol + ", authType:" + authType
+                + ", username:" + username + ", password:" + password);
+        send(rr);
+    }
+
+    public void setInitialAttachSOSApn(String apn, String protocol, int authType, String username,
+            String password, Message result) {
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_SET_SOS_INITIAL_ATTACH_APN, null);
 
         rr.mParcel.writeString(apn);
         rr.mParcel.writeString(protocol);
@@ -2595,6 +2610,7 @@ public final class ImsRIL {
             case ImsRILConstants.RIL_REQUEST_ENABLE_IMS: return "RIL_REQUEST_ENABLE_IMS";
             case ImsRILConstants.RIL_REQUEST_GET_IMS_BEARER_STATE: return "RIL_REQUEST_GET_IMS_BEARER_STATE";
             case ImsRILConstants.RIL_REQUEST_VIDEOPHONE_DIAL: return "VIDEOPHONE_DIAL";
+            case ImsRILConstants.RIL_REQUEST_SET_SOS_INITIAL_ATTACH_APN: return "RIL_REQUEST_SET_SOS_INITIAL_ATTACH_APN";
             default: return requestToString(request);
         }
     }
