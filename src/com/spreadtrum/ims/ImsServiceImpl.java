@@ -590,24 +590,6 @@ public class ImsServiceImpl {
         mImsConfigImpl.mDefaultVtResolution = Integer.parseInt(operatorCameraResolution);
     }
 
-    /* SPRD: 630048 add sos apn for yes 4G @{*/
-    public void setInitialAttachSosApn(ServiceState state){
-        String carrier = state.getOperatorNumeric();
-        if (carrier != null && !carrier.isEmpty()) {
-            String apn = mVolteConfig.getApn(carrier);
-            if (apn != null && !apn.isEmpty()) {
-                if (DBG) Log.i(TAG,"SosApn: apn=" + apn + ", set sos apn = " + mSetSosApn);
-                if (mSetSosApn) {
-                    mSetSosApn = false;
-//                    mCi.setInitialAttachSOSApn(apn, "IPV4V6", 0, "", "", null);
-                }
-            }
-        } else {
-            if (DBG) Log.i(TAG,"carrier is null");
-            mSetSosApn = true;
-        }
-    }
-    /* @} */
 
     class SessionListListener implements ImsServiceCallTracker.SessionListListener {
         @Override

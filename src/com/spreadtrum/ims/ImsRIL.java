@@ -2451,7 +2451,21 @@ public final class ImsRIL {
             String password, Message result) {
         RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN, null);
 
-        if (RILJ_LOGD) riljLog("Set RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN");
+        rr.mParcel.writeString(apn);
+        rr.mParcel.writeString(protocol);
+        rr.mParcel.writeInt(authType);
+        rr.mParcel.writeString(username);
+        rr.mParcel.writeString(password);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest)
+                + ", apn:" + apn + ", protocol:" + protocol + ", authType:" + authType
+                + ", username:" + username + ", password:" + password);
+        send(rr);
+    }
+
+    public void setInitialAttachSOSApn(String apn, String protocol, int authType, String username,
+            String password, Message result) {
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_SET_SOS_INITIAL_ATTACH_APN, null);
 
         rr.mParcel.writeString(apn);
         rr.mParcel.writeString(protocol);
