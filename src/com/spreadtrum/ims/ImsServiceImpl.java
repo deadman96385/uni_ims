@@ -93,6 +93,7 @@ public class ImsServiceImpl {
     private ImsRegister mImsRegister = null;
     private ImsService mImsService;
     private VolteConfig mVolteConfig;
+    private boolean mSetSosApn = true;
 
     /**
      * Handles changes to the APN db.
@@ -266,6 +267,7 @@ public class ImsServiceImpl {
                         mImsRegister.enableIms();
                         setVideoResolution(state);
                     }
+                    setInitialAttachSosApn(state);
                     break;
                 /* SPRD: add for bug594553 @{ */
                 case EVENT_RADIO_STATE_CHANGED:
@@ -513,4 +515,22 @@ public class ImsServiceImpl {
         }
         mImsConfigImpl.mDefaultVtResolution = Integer.parseInt(operatorCameraResolution);
     }
+    /* SPRD: 630048 add sos apn for yes 4G @{*/
+    public void setInitialAttachSosApn(ServiceState state){
+        String carrier = state.getOperatorNumeric();
+        if (carrier != null && !carrier.isEmpty()) {
+            String apn = mVolteConfig.getApn(carrier);
+            if (apn != null && !apn.isEmpty()) {
+                if (DBG) Log.i(TAG,"SosApn: apn=" + apn + ", set sos apn = " + mSetSosApn);
+                if (mSetSosApn) {
+                    mSetSosApn = false;
+                    mCi.setInitialAttachSOSApn(apn, "IPV4V6", 0, "", "", null);
+                }
+            }
+        } else {
+            if (DBG) Log.i(TAG,"carrier is null");
+            mSetSosApn = true;
+        }
+    }
+    /* @} */
 }

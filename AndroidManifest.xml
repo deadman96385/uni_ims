@@ -7,7 +7,8 @@
     <application
         android:name="ImsApp"
         android:allowBackup="false"
-        android:process="com.android.phone" >
+        android:process="com.android.phone"
+        android:directBootAware="true">
         <receiver android:name=".ImsBroadcastReceiver" >
             <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.SIM_STATE_CHANGED" />
