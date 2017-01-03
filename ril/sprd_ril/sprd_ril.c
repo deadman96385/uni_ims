@@ -4087,10 +4087,6 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
     cur = responses;
     tmp = (char *) malloc(count * sizeof(char) *30);
     startTmp=tmp;
-
-    /** Bug#476317 Eliminate unwanted PLMNs @{ **/
-    int count_unwanted_plmn = 0;
-    /** @} **/
     while ( (line = strchr(line, '(')) && (i++ < count) ) {
         line++;
         err = at_tok_nextint(&line, &stat);
@@ -4106,12 +4102,6 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
 
         err = at_tok_nextstr(&line, &(cur[2]));
         if (err < 0) continue;
-        /** Bug#476317 Do not report unwanted PLMNs @{ **/
-        if(plmnFiltration(cur[2])){
-            count_unwanted_plmn++;
-            continue;
-        }
-        /** @} **/
 
 #if defined (RIL_SPRD_EXTENSION)
         err = at_tok_nextint(&line, &act);
@@ -4127,7 +4117,7 @@ static void requestNetworkList(int channelID, void *data, size_t datalen, RIL_To
         cur += 4;
         tmp += 30;
     }
-    RIL_onRequestComplete(t, RIL_E_SUCCESS, responses, (count - count_unwanted_plmn) * 4 * sizeof(char *));
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, responses, count * 4 * sizeof(char *));
     at_response_free(p_response);
     free(startTmp);
     return;
