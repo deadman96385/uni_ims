@@ -29,6 +29,7 @@ endef
 include $(CLEAR_VARS)
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := BaiduNetworkLocation
+LOCAL_MODULE_STEM := BaiduNetworkLocation.apk
 LOCAL_MODULE_CLASS := APPS
 LOCAL_CERTIFICATE := PRESIGNED
 LOCAL_PRIVILEGED_MODULE := true
