@@ -371,6 +371,7 @@ public class ImsService extends Service {
                         ImsServiceImpl service = mImsServiceImplMap.get(
                                 Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
                         service.sendIncomingCallIntent((String)msg.obj);
+                        updateInCallState(true);
                         Log.i(TAG,"EVENT_WIFI_INCOMING_CALL-> callId:"+msg.obj);
                         break;
                     case EVENT_WIFI_ALL_CALLS_END:
@@ -946,6 +947,7 @@ public class ImsService extends Service {
             Log.e (TAG,"createCallSession->mIsVowifiCall: " + mIsVowifiCall
                     + " mIsVolteCall: " + mIsVolteCall + " isVoWifiEnabled(): " + isVoWifiEnabled()
                     + " isVoLTEEnabled(): " + isVoLTEEnabled());
+            updateInCallState(true);
             if(!isImsEnabled()){
                 Log.e (TAG,"createCallSession-> ims is disable!");
                 return null;
@@ -975,6 +977,7 @@ public class ImsService extends Service {
         public IImsCallSession getPendingCallSession(int serviceId, String callId){
             Log.i (TAG," getPendingCallSession-> serviceId: " + serviceId + "  callId: " + callId + " mIsVowifiCall: " + mIsVowifiCall
                     + " mIsVolteCall: " + mIsVolteCall + " isVoWifiEnabled(): " + isVoWifiEnabled() + " isVoLTEEnabled(): " + isVoLTEEnabled());
+            updateInCallState(true);
             /*SPRD: Modify for bug586758{@*/
             if(!isImsEnabled()){
                 Log.e (TAG,"getPendingCallSession-> ims is disable!");
