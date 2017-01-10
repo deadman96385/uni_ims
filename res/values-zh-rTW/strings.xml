@@ -14,7 +14,7 @@
     <string name="videophone_failcause_50">暫不支援視訊通話</string>
     <string name="videophone_failcause_57_remote">對方未開通視訊通話</string>
     <string name="videophone_failcause_58">對方暫不支援視訊通話</string>
-    <string name="videophone_failcause_157">本机未开通可视电话服务</string>
+    <string name="videophone_failcause_157">本機未開通視訊通話服務</string>
     <string name="videophone_failcause_88">被叫選擇語音呼叫</string>
     <string name="videophone_failcause_minus_1">無法獲得3G網路</string>
     <string name="videophone_failcause_default">對方無法接通</string>
