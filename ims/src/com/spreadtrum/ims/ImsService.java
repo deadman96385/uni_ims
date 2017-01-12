@@ -1530,6 +1530,11 @@ public class ImsService extends Service {
                 Log.i(TAG,"VoLTERegisterListener-> mFeatureSwitchRequest:"+mFeatureSwitchRequest
                         +" mIsCalling:"+ mIsCalling + " mVolteRegistered:" + mVolteRegistered + " service.isImsRegistered():" + service.isImsRegistered()
                         + " mIsLoggingIn:" + mIsLoggingIn +" mIsPendingRegisterVolte:"+mIsPendingRegisterVolte);
+                if(service.getVolteRegisterState() == IMS_REG_STATE_REGISTERING
+                        || service.getVolteRegisterState() == IMS_REG_STATE_DEREGISTERING){
+                    Log.i(TAG,"VoLTERegisterListener-> pending status service.getVolteRegisterState():"+service.getVolteRegisterState());
+                    return;
+                }
                 //If CP reports CIREGU as 1,3 , IMS Feature will be updated as Volte registered state firstly.
                 if (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED || service.getVolteRegisterState() == IMS_REG_STATE_REG_FAIL){
                     mVolteRegistered = (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED);
