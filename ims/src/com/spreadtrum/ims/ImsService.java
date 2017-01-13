@@ -652,16 +652,14 @@ public class ImsService extends Service {
                                 mPendingCPSelfManagement = true;
                                 Log.i(TAG,"ACTION_CANCEL_CURRENT_REQUEST-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:" + mPendingCPSelfManagement);
                             }
+                            if(mPendingAttachVowifiSuccess  && !mIsCalling &&
+                                    mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER){
+                                Log.i(TAG,"ACTION_CANCEL_CURRENT_REQUEST-> mPendingAttachVowifiSuccess is true!");
+                                mPendingAttachVowifiSuccess = false;
+                                mWifiService.updateDataRouterState(DataRouterState.CALL_NONE);
+                            }
                             mAttachVowifiSuccess = false;
                             mFeatureSwitchRequest = null;
-                            if(mPendingAttachVowifiSuccess){
-                                mPendingAttachVowifiSuccess = false;
-                                Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> mPendingAttachVowifiSuccess is true!");
-                                if(mCallEndType != -1 && !mIsCalling){
-                                    Log.i(TAG,"EVENT_UPDATE_DATA_ROUTER_FINISHED-> mCallEndType:"+mCallEndType);
-                                    notifyCpCallEnd();
-                                }
-                            }
                             /*@}*/
                         } else {
                             if(mImsServiceListenerEx != null){
