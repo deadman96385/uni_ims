@@ -3083,6 +3083,8 @@ static void ylog_all_thread_exit(void)
 {
 	struct ylog *y;
 	int i, still_running_ylog_thread;
+	/*all thread exit must in 2s time*/
+	int max_loop_time = 10;
 	ylog_info("ylog_all_thread_exit enter\n");
 	for_each_ylog(i, y, NULL)
 	{
@@ -3114,8 +3116,13 @@ static void ylog_all_thread_exit(void)
 			ylog_info("ylog %s is exiting...\n", y->name);
 			usleep(200*1000);
 		}
+		max_loop_time--;
 	}
-	while (still_running_ylog_thread);
+	while (still_running_ylog_thread&&max_loop_time>0);
+	if(max_loop_time<= 0)
+	{
+	    print2journal_file("all thread  may exit  time out");
+	}
 	ylog_info("ylog_all_thread_exit exit\n");
 }
 
@@ -3436,7 +3443,7 @@ __state_control:
 
 								q = x+1;
 
-								print2journal_file("ylog r name %s: new line %s",y->name,line);
+								//print2journal_file("ylog r name %s: new line %s",y->name,line);
 								memset(line+2,0,sizeof(line)-2);
 								break;
 							}

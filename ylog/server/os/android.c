@@ -16,6 +16,7 @@
 #define YLOG_JOURNAL_FILE "/data/ylog/ylog_journal_file"
 #define YLOG_CONFIG_FILE "/data/ylog/ylog.conf"
 #define YLOG_FILTER_PATH "/system/lib/"
+#define DEFUALT_INTERNAL_PATH "/storage/emulated/0"
 
 #define ANR_OR_TOMSTONE_UNIFILE_MODE
 #define ANR_OR_TOMSTONE_UNIFILE_THREAD_COPY_MODE
@@ -372,6 +373,10 @@ static int os_search_root_path(char *path, int len)
 	char sdcard_path[PATH_MAX];
 	char *historical_folder_root = NULL;
 	unsigned long long quota = 0;
+	/*for internal storage path*/
+	struct statfs diskInfo;
+	memset(&diskInfo, 0, sizeof (diskInfo));
+
 	int sroot = os_check_sroot(root, sdcard_path, &historical_folder_root);
 
 	if (sroot == 1 && \
@@ -382,18 +387,29 @@ static int os_search_root_path(char *path, int len)
 	}
 	else if (sroot != 2)
 	{
-		strcpy(sdcard_path, YLOG_ROOT_FOLDER);
-		historical_folder_root = pos->historical_folder_root_last;
-		quota = 200 * 1024 * 1024;
-		if (pos->sdcard_online)
+		/*defualt internal storage path*/
+		if (0 == statfs(DEFUALT_INTERNAL_PATH, &diskInfo))
 		{
-			ylog_critical("sdcard is removed, exit ylog forcely\n");
-			kill(getpid(), SIGTERM);
-			while (1)
+			strcpy(sdcard_path, DEFUALT_INTERNAL_PATH);
+			historical_folder_root = pos->historical_folder_root_last;
+			pos->sdcard_online = 1;
+		}
+		else
+		{
+			strcpy(sdcard_path, YLOG_ROOT_FOLDER);
+			historical_folder_root = pos->historical_folder_root_last;
+			quota = 200 * 1024 * 1024;
+			if (pos->sdcard_online)
 			{
-				sleep(1);
+				ylog_critical("sdcard is removed, exit ylog forcely\n");
+				kill(getpid(), SIGTERM);
+				while (1)
+				{
+					sleep(1);
+				}
 			}
 		}
+
 	}
 
 	if (strcmp(sdcard_path, pos->ylog_root_path_latest))
@@ -446,6 +462,10 @@ static int event_timer_handler(void *arg, long tick, struct ylog_event_cond_wait
 {
 	UNUSED(arg);
 	char log_path[PATH_MAX];
+	struct statfs diskInfo;
+	char ylog_dir[PATH_MAX];
+	memset(ylog_dir,0,sizeof(ylog_dir));
+	memset(&diskInfo, 0, sizeof diskInfo);
 
 	if (os_search_root_path(log_path, sizeof(log_path)))
 	{
@@ -478,20 +498,26 @@ static int event_timer_handler(void *arg, long tick, struct ylog_event_cond_wait
 			ydst_root_new(NULL, log_path);
 		}
 	}
-	struct statfs diskInfo;
-
-	memset(&diskInfo, 0, sizeof diskInfo);
-	if(global_ydst_root->root!=NULL&&strlen(global_ydst_root->root)!=0)
+	/********************************************
+	check if ylog dir be deleted,if deleted ,then reboot ylog
+	when the ylog boot ,the ylog dir is not create,is there any problem?
+	*********************************************/
+	if(strlen(pos->ylog_root_path_latest)!=0)
 	{
-		if (statfs(global_ydst_root->root, &diskInfo))
+		sprintf(ylog_dir, "%s/ylog", pos->ylog_root_path_latest);
+		if (statfs(ylog_dir, &diskInfo))
 		{
-			ylog_error("statfs failed %s %s\n", global_ydst_root->root, strerror(errno));
-			print2journal_file("ylog folder maybe delete  already,ylog will exit . %s %s\n", global_ydst_root->root,strerror(errno));
-			kill(getpid(), SIGTERM);
-			while (1)
+			if(errno == ENOENT)
 			{
-				sleep(1);
+				print2journal_file("statfs failed %s %s\n", ylog_dir, strerror(errno));
+				print2journal_file("ylog folder maybe delete  already,ylog will exit . %s %s\n",ylog_dir,strerror(errno));
+				kill(getpid(), SIGTERM);
+				while (1)
+				{
+					sleep(1);
+				}
 			}
+
 		}
 
 	}
@@ -1988,7 +2014,10 @@ static void os_init(struct ydst_root *root, struct context **c, struct os_hooks 
 	hook->ready_go = ready_go;
 
 	ynode_insert_all(os_ynode, (int)ARRAY_LEN(os_ynode));
+	/*modem log created by slogmodem process,no need modem log in ylog*/
+#ifdef MODEM_LOG_IN_YLOG
 	other_processor_ylog_insert(); /* in modem.c */
+#endif
 	os_parse_config();
 
 	parse_config(global_context->ylog_config_file, NULL);
