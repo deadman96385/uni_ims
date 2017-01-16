@@ -3927,9 +3927,6 @@ void requestLastDataFailCause(int channelID, void *data, size_t datalen, RIL_Tok
 void requestLastCallFailCause(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     int response = CALL_FAIL_ERROR_UNSPECIFIED;
-    char vendorCause[32];
-    RIL_LastCallFailCauseInfo *failCause =
-            (RIL_LastCallFailCauseInfo *)calloc(1, sizeof(RIL_LastCallFailCauseInfo));
     pthread_mutex_lock(&s_call_mutex);
     switch(call_fail_cause) {
         case 1:
@@ -3969,15 +3966,11 @@ void requestLastCallFailCause(int channelID, void *data, size_t datalen, RIL_Tok
             break;
         default:
             response = CALL_FAIL_ERROR_UNSPECIFIED;
+            break;
     }
-    failCause->cause_code = response;
-    snprintf(vendorCause, sizeof(vendorCause), "%d", call_fail_cause);
-    failCause->vendor_cause = vendorCause;
     pthread_mutex_unlock(&s_call_mutex);
 
-    RIL_onRequestComplete(t, RIL_E_SUCCESS, failCause,
-            sizeof(RIL_LastCallFailCauseInfo));
-    free(failCause);
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, sizeof(int));
 }
 
 static void requestBasebandVersion(int channelID, void *data, size_t datalen, RIL_Token t)
