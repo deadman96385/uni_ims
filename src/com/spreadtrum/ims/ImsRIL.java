@@ -2792,6 +2792,10 @@ public final class ImsRIL {
         mImsWiFiParamRegistrant.clear();
     }
 
+    public void registerForIccRefresh(Handler h, int what, Object obj){
+        mCi.registerForIccRefresh(h, what, obj);
+    }
+
     public void requestImsHandover(int type, Message response) {
         RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_HANDOVER, response);
 
