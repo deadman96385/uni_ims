@@ -2575,6 +2575,10 @@ public final class ImsRIL {
         mCi.registerForSrvccStateChanged(h, what, obj);
     }
 
+    public void registerForIccRefresh(Handler h, int what, Object obj){
+        mCi.registerForIccRefresh(h, what, obj);
+    }
+
     static String
     imsRequestToString(int request) {
         switch(request) {
