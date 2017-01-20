@@ -909,11 +909,6 @@ public class VoWifiCallManager extends ServiceManager {
             case JSONUtils.EVENT_CODE_CONF_HOLD_OK: {
                 toastTextResId = R.string.vowifi_hold_success;
                 callSession.updateAliveState(false /* held, do not alive */);
-                // Similar as remove video, need stop remote render first.
-                ImsVideoCallProviderImpl videoProvider = callSession.getVideoCallProviderImpl();
-                if (videoProvider != null) {
-                    videoProvider.stopRemoteRender();
-                }
                 listener.callSessionHeld(callSession, callSession.getCallProfile());
                 break;
             }
@@ -942,11 +937,6 @@ public class VoWifiCallManager extends ServiceManager {
             }
             case JSONUtils.EVENT_CODE_CALL_HOLD_RECEIVED:
             case JSONUtils.EVENT_CODE_CONF_HOLD_RECEIVED: {
-                // Similar as remove video, need stop remote render first.
-                ImsVideoCallProviderImpl videoProvider = callSession.getVideoCallProviderImpl();
-                if (videoProvider != null) {
-                    videoProvider.stopRemoteRender();
-                }
                 listener.callSessionHoldReceived(callSession, callSession.getCallProfile());
                 break;
             }
