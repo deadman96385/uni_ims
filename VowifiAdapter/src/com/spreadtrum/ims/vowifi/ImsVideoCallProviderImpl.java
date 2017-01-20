@@ -18,7 +18,6 @@ import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.WindowManager;
 
-import com.android.ims.internal.ImsCallSession.State;
 import com.android.ims.internal.ImsVideoCallProvider;
 import com.spreadtrum.ims.vowifi.Utilities.Camera;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
@@ -94,7 +93,6 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                 }
                 case MSG_STOP_CAMERA: {
                     int res = Result.SUCCESS;
-                    res = res & mCallSession.stopVideoTransmission();
                     res = res & mCallSession.stopLocalRender(mPreviewSurface, mCameraId);
                     res = res & mCallSession.stopCamera();
                     res = res & mCallSession.stopCapture(mCameraId);
@@ -125,7 +123,8 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                 }
                 case MSG_SET_DISPLAY_SURFACE: {
                     Surface displaySurface = (Surface) msg.obj;
-                    if (mCallSession.startRemoteRender(displaySurface) == Result.SUCCESS) {
+                    if (mDisplaySurface == null
+                            && mCallSession.startRemoteRender(displaySurface) == Result.SUCCESS) {
                         mDisplaySurface = displaySurface;
                     }
                     break;
@@ -141,13 +140,6 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                         res = res & mCallSession.startLocalRender(previewSurface, mCameraId);
                     }
 
-                    // If the call is established, we need start the video transmission. For
-                    // example, after the video call established, the user press the "HOME"
-                    // key, and then return the video call, it need reset the preview surface.
-                    // So we need start the video transmission again.
-                    if (mCallSession.getState() == State.ESTABLISHED) {
-                        res = res & mCallSession.startVideoTransmission();
-                    }
                     if (res == Result.SUCCESS) {
                         mPreviewSurface = previewSurface;
                     } else {
@@ -413,12 +405,6 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
     public boolean isWaitForModifyResponse() {
         return mWaitForModifyResponse;
-    }
-
-    public void stopRemoteRender() {
-        if (mCameraId != null) {
-            mHandler.sendEmptyMessage(MSG_STOP_REMOTE_RENDER);
-        }
     }
 
     public void stopAll() {
