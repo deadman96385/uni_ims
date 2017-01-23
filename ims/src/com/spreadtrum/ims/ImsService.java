@@ -1536,6 +1536,9 @@ public class ImsService extends Service {
                     Log.i(TAG,"VoLTERegisterListener-> pending status service.getVolteRegisterState():"+service.getVolteRegisterState());
                     return;
                 }
+                if(mFeatureSwitchRequest == null && mIsPendingRegisterVolte){
+                    mIsPendingRegisterVolte = false;
+                }
                 //If CP reports CIREGU as 1,3 , IMS Feature will be updated as Volte registered state firstly.
                 if (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED || service.getVolteRegisterState() == IMS_REG_STATE_REG_FAIL){
                     mVolteRegistered = (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED);
