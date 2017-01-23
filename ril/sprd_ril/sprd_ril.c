@@ -15295,7 +15295,7 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
 {
     int ret;
     int fd = -1;
-    int opt;
+    int opt,testmode;
     pthread_attr_t attr;
     char phoneCount[PROPERTY_VALUE_MAX];
     char prop[PROPERTY_VALUE_MAX];
@@ -15367,8 +15367,8 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
         setHwVerPorp();
     }
     if (isLte()) {
-        s_testmode = getTestMode();
-        if (s_testmode != 10) {
+        testmode = getTestMode();
+        if (testmode != 10 && testmode != 254) {
             RILLOGD("allow_data init 1!");
             allow_data = 1;
         }
