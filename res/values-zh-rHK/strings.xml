@@ -40,5 +40,5 @@
      <string name="low_battery_continue_video_call">開啟</string>
      <string name="low_battery_convert_to_voice_call">"降為語音"</string>
 <string name="vowifi_attation">Vowifi 提示</string>
-<string name="vowifi_regist_fail_content">當前網絡不知持vowifi</string>
+<string name="vowifi_regist_fail_content">當前網路不支援 vowifi</string>
 </resources>
