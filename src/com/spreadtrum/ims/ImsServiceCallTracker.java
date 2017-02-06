@@ -209,7 +209,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
 
     }
 
-    protected void pollCallsWhenSafe() {
+    public void pollCallsWhenSafe() {
         mHandler.removeMessages(EVENT_POLL_CURRENT_CALLS);
         mNeedsPoll = true;
 
@@ -312,7 +312,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                 synchronized(mPendingSessionList) {
                     int index = -1;
                     for(int j=0;j<mPendingSessionList.size();j++){
-                        if (imsDc.state == ImsDriverCall.State.DIALING || imsDc.state ==ImsDriverCall.State.ALERTING) {
+                        if (imsDc.state == ImsDriverCall.State.DIALING || imsDc.state ==ImsDriverCall.State.ALERTING
+                                || (!imsDc.isMT && imsDc.state ==ImsDriverCall.State.ACTIVE)) {
                             ImsCallSessionImpl session = mPendingSessionList.get(j);
                             Log.d(TAG, "PendingSession found, index:"+imsDc.index+" session:" + session);
                             addSessionToList(Integer.valueOf(imsDc.index), session);
@@ -739,5 +740,19 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                 Log.d(TAG, "terminateVolteCall->session: " + session);
             }
         }
+    }
+
+    public boolean isDualCallActive(){
+        int count = 0;
+        synchronized(mSessionList) {
+            for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it =
+                    mSessionList.entrySet().iterator(); it.hasNext();) {
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+                if (e.getValue().isActiveCall() && !e.getValue().isMultiparty()) {
+                    count++;
+                }
+            }
+        }
+        return count >1;
     }
 }

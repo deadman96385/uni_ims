@@ -237,9 +237,16 @@ public class ImsServiceImpl {
                         if(responseArray != null && responseArray.length >1){
                             mImsServiceState.mImsRegistered = (responseArray[0] != 0 && responseArray[1]== 1);
                         }
-                        Log.i(TAG,"EVENT_IMS_STATE_CHANGED->mServiceState:" + mImsServiceState.mImsRegistered);
+                        if(ImsManagerEx.isDualVoLTEActive()){
+                            TelephonyManager.setTelephonyProperty(mServiceId-1, "gsm.sys.volte.state",
+                                    mImsServiceState.mImsRegistered ? "1" :"0");
+                        }
+                        notifyRegisterStateChange();
+                    } else {
+                        mImsServiceState.mImsRegistered = false;
                         notifyRegisterStateChange();
                     }
+                    Log.i(TAG,"EVENT_IMS_STATE_CHANGED->mServiceState:" + mImsServiceState.mImsRegistered);
                     break;
                 case DctConstants.EVENT_ICC_CHANGED:
                     onUpdateIcc();

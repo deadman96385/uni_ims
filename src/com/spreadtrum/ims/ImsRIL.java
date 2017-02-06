@@ -1553,6 +1553,10 @@ public final class ImsRIL {
                 case ImsRILConstants.RIL_REQUEST_IMS_HANDOVER_CALL_END: ret =  responseVoid(p);break;
                 case ImsRILConstants.RIL_REQUEST_IMS_WIFI_ENABLE: ret =  responseVoid(p);break;
                 case ImsRILConstants.RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE: ret =  responseVoid(p);break;
+                case ImsRILConstants.RIL_REQUEST_IMS_HOLD_SINGLE_CALL: ret = responseVoid(p); break;
+                case ImsRILConstants.RIL_REQUEST_IMS_MUTE_SINGLE_CALL: ret = responseVoid(p); break;
+                case ImsRILConstants.RIL_REQUEST_IMS_SILENCE_SINGLE_CALL: ret = responseVoid(p); break;
+                case ImsRILConstants.RIL_REQUEST_IMS_ENABLE_LOCAL_CONFERENCE: ret = responseVoid(p); break;
                 default:
                     throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
                     //break;
@@ -2656,6 +2660,10 @@ public final class ImsRIL {
             case ImsRILConstants.RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE: return "RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE";
             case ImsRILConstants.RIL_REQUEST_GET_TPMR_STATE: return "RIL_REQUEST_GET_TPMR_STATE";
             case ImsRILConstants.RIL_REQUEST_IMS_UPDATE_DATA_ROUTER: return "RIL_REQUEST_IMS_UPDATE_DATA_ROUTER";
+            case ImsRILConstants.RIL_REQUEST_IMS_HOLD_SINGLE_CALL: return "RIL_REQUEST_IMS_HOLD_SINGLE_CALL";
+            case ImsRILConstants.RIL_REQUEST_IMS_MUTE_SINGLE_CALL: return "RIL_REQUEST_IMS_MUTE_SINGLE_CALL";
+            case ImsRILConstants.RIL_REQUEST_IMS_SILENCE_SINGLE_CALL: return "RIL_REQUEST_IMS_SILENCE_SINGLE_CALL";
+            case ImsRILConstants.RIL_REQUEST_IMS_ENABLE_LOCAL_CONFERENCE: return "RIL_REQUEST_IMS_ENABLE_LOCAL_CONFERENCE";
             default: return requestToString(request);
         }
     }
@@ -2845,5 +2853,52 @@ public final class ImsRIL {
         info.mType = p.readInt();
         info.mInfo = p.readString();
         return info;
+    }
+
+    public void imsHoldSingleCall(int callid, boolean enable, Message response){
+        RILRequest rr
+            = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_HOLD_SINGLE_CALL, null);
+        rr.mParcel.writeInt(2);
+        rr.mParcel.writeInt(callid);
+        rr.mParcel.writeInt(enable?1:0);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
+
+        send(rr);
+    }
+
+    public void imsMuteSingleCall(int callid, boolean enable, Message response){
+        RILRequest rr
+            = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_MUTE_SINGLE_CALL, null);
+        rr.mParcel.writeInt(2);
+        rr.mParcel.writeInt(callid);
+        rr.mParcel.writeInt(enable?1:0);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
+
+        send(rr);
+    }
+
+    public void imsSilenceSingleCall(int callid, boolean enable, Message response){
+        RILRequest rr
+            = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_SILENCE_SINGLE_CALL, null);
+        rr.mParcel.writeInt(2);
+        rr.mParcel.writeInt(callid);
+        rr.mParcel.writeInt(enable?1:0);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
+
+        send(rr);
+    }
+
+    public void imsEnableLocalConference(boolean enable, Message response){
+        RILRequest rr
+            = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_ENABLE_LOCAL_CONFERENCE, null);
+        rr.mParcel.writeInt(1);
+        rr.mParcel.writeInt(enable?1:0);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
+
+        send(rr);
     }
 }

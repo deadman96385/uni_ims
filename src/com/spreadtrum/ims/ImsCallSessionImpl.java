@@ -30,6 +30,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
+import android.os.SystemProperties;
 import android.util.Log;
 import java.util.concurrent.CopyOnWriteArrayList;
 import android.telecom.VideoProfile;
@@ -85,6 +86,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsConferenceHeld = false;
     private boolean mIsConferenceActived = false;
     private boolean mIsTxDisable = false;
+    private boolean mIsLocalHold;
+    private boolean mLocalConferenceUpdate;
 
     private boolean mIsMegerActionHost;
     private boolean mIsPendingTerminate;   // BUG 616259
@@ -249,6 +252,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         Log.d(TAG, "updateFromDc->mIsConferenceHeld:" + mIsConferenceHeld + " mIsConferenceActived:"+mIsConferenceActived
                 +" mIsMegerAction:"+mIsMegerAction);
+        if(mIsLocalHold){
+            if(dc != null){
+                if(dc.state == ImsDriverCall.State.ACTIVE){
+                    dc.state = ImsDriverCall.State.HOLDING;
+                } else if(dc.state == ImsDriverCall.State.HOLDING){
+                    mIsLocalHold = false;
+                }
+            }
+        }
         switch(state){
             case DIALING:
                 try{
@@ -274,6 +286,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 break;
             case ACTIVE:
                 mState = ImsCallSession.State.ESTABLISHED;
+                if(mLocalConferenceUpdate){
+                    mLocalConferenceUpdate = false;
+                    mCi.imsEnableLocalConference(true,null);
+                }
                 try{
                     if (mIImsCallSessionListener != null) {
                         if(mImsDriverCall != null && mImsDriverCall.state == ImsDriverCall.State.HOLDING
@@ -282,7 +298,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         } else if (mImsDriverCall != null && ((mImsDriverCall.state == ImsDriverCall.State.DIALING)
                                 || (mImsDriverCall.state == ImsDriverCall.State.ALERTING)
                                 || (mImsDriverCall.state == ImsDriverCall.State.INCOMING)
-                                || (mImsDriverCall.state == ImsDriverCall.State.WAITING))) {
+                                || (mImsDriverCall.state == ImsDriverCall.State.WAITING))
+                                || (mImsDriverCall == null)) {
                             mIImsCallSessionListener.callSessionStarted((IImsCallSession) this,mImsCallProfile);
                         }
                     }
@@ -291,6 +308,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 }
                 break;
             case HOLDING:
+                if(mLocalConferenceUpdate){
+                    mLocalConferenceUpdate = false;
+                    mCi.imsEnableLocalConference(false,null);
+                }
                 try{
                     if (mIImsCallSessionListener != null &&
                             (mImsDriverCall.state != ImsDriverCall.State.HOLDING || conferenceHeldStateChange)) {
@@ -464,7 +485,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     break;
                 case ACTION_COMPLETE_HOLD:
                     if (ar != null && ar.exception != null) {
-                        Log.w(TAG,"handleMessage->ACTION_COMPLETE_HOLD error!");
+                        Log.w(TAG,"handleMessage->ACTION_COMPLETE_HOLD error! mIsLocalHold:"+mIsLocalHold);
+                        if(mIsLocalHold){
+                            return;
+                        }
                         if(ar.userObj != null) {
                             try{
                                 mIImsCallSessionListener.callSessionHoldFailed((IImsCallSession)ar.userObj,
@@ -473,6 +497,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                                 e.printStackTrace();
                             }
                         }
+                    } else {
+                        mIsLocalHold = false;
                     }
                     break;
                 case ACTION_COMPLETE_RESUME:
@@ -916,6 +942,20 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.w(TAG, "hold-> ImsSessionInvalid!");
             return;
         }
+        if(mIsLocalHold){
+            Log.i(TAG, "hold-> clear mIsLocalHold!");
+            mIsLocalHold = false;
+        } else {
+            String value = SystemProperties.get("gsm.sys.volte.localhold","0");
+            if(value != null && value.equalsIgnoreCase("1")){
+                SystemProperties.set("gsm.sys.volte.localhold","0");
+                Log.i(TAG,"localhold is true.");
+                mIsLocalHold = true;
+                enableLocalHold(true);
+                mImsServiceCallTracker.pollCallsWhenSafe();
+            }
+
+        }
         if(mIsMegerAction){
             try{
                 Log.w(TAG, "hold-> mIsMegerAction!");
@@ -941,6 +981,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public void resume(ImsStreamMediaProfile profile){
         if(isImsSessionInvalid()){
             Log.w(TAG, "resume-> ImsSessionInvalid!");
+            return;
+        }
+        if(mIsLocalHold){
+            mIsLocalHold = false;
+            Log.i(TAG, "resume-> clear mIsLocalHold!");
+            mImsServiceCallTracker.pollCallsWhenSafe();
             return;
         }
         mCi.switchWaitingOrHoldingAndActive(
@@ -984,7 +1030,21 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
      */
     @Override
     public void update(int callType, ImsStreamMediaProfile profile){
-
+        if(mImsDriverCall == null){
+            Log.w(TAG, "update-> ImsSessionInvalid!");
+            return;
+        }
+        if(profile.mAudioDirection == ImsStreamMediaProfile.DIRECTION_RECEIVE){
+            //mute, do not send audio data
+            mCi.imsMuteSingleCall(mImsDriverCall.index, true, null);
+        } else if(profile.mAudioDirection == ImsStreamMediaProfile.DIRECTION_SEND){
+            //do not allow speak
+            mCi.imsSilenceSingleCall(mImsDriverCall.index, true, null);
+        } else if(profile.mAudioDirection == ImsStreamMediaProfile.DIRECTION_SEND_RECEIVE){
+            //normal
+            mCi.imsMuteSingleCall(mImsDriverCall.index, false, null);
+            mCi.imsSilenceSingleCall(mImsDriverCall.index, false, null);
+        }
     }
 
     /**
@@ -995,7 +1055,20 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
      */
     @Override
     public void extendToConference(String[] participants){
-
+        if(participants != null && participants[0] != null && mImsDriverCall != null){
+            Log.i(TAG, "extendToConference-> action:"+participants[0]);
+            if(participants[0].contentEquals("hold")){
+                mCi.imsHoldSingleCall(mImsDriverCall.index, true,
+                        mHandler.obtainMessage(ACTION_COMPLETE_HOLD,this));
+                mLocalConferenceUpdate = true;
+            } else if(participants[0].contentEquals("resume")){
+                mCi.imsHoldSingleCall(mImsDriverCall.index, false,
+                        mHandler.obtainMessage(ACTION_COMPLETE_HOLD,this));
+                mLocalConferenceUpdate = true;
+            }
+        } else {
+            Log.w(TAG, "extendToConference-> participants:"+participants +" mImsDriverCall:"+mImsDriverCall);
+        }
     }
 
     /**
@@ -1456,5 +1529,18 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     /* @} */
     public boolean isMegerActionHost(){
         return mIsMegerActionHost;
+    }
+
+    public boolean isActiveCall(){
+        return (mImsDriverCall != null &&
+                mImsDriverCall.state == ImsDriverCall.State.ACTIVE);
+    }
+
+    public void enableLocalHold(boolean enable){
+        String[] cmd=new String[1];
+        if(enable){
+            cmd[0] = "AT+SPLOCALHOLD=1;";
+        }
+        mCi.invokeOemRilRequestStrings(cmd, null);
     }
 }

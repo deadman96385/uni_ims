@@ -33,6 +33,7 @@ import com.android.internal.telephony.VolteConfig;
 import java.util.HashMap;
 import java.util.Map;
 import android.telephony.ServiceState;
+import com.android.ims.internal.ImsManagerEx;
 
 public class ImsRegister {
     private static final String TAG = "ImsRegister";
@@ -111,7 +112,10 @@ public class ImsRegister {
             case EVENT_RADIO_STATE_CHANGED:
                 if (!mPhone.isRadioOn()) {
                     mInitISIMDone = false;
-                    mIMSBearerEstablished = false;
+                    //add for L+G dual volte, if secondary card no need to reset mIMSBearerEstablished
+                    if(mPhoneId == getPrimaryCard() || !ImsManagerEx.isDualVoLTEActive()){
+                        mIMSBearerEstablished = false;
+                    }
                     mLastNumeric="";
                     mCurrentImsRegistered = false;
                 } else {
@@ -128,7 +132,7 @@ public class ImsRegister {
                     break;
                 }
                 mInitISIMDone = true;
-                if(mImsService.allowEnableIms()){
+                if(mImsService.allowEnableIms() || (ImsManagerEx.isDualVoLTEActive() && mPhoneId != getPrimaryCard())){
                     enableIms();
                 }
                 break;
@@ -152,19 +156,39 @@ public class ImsRegister {
                 if (conn[0] == 1) {
                     mIMSBearerEstablished = true;
                     mLastNumeric = "";
+                    if(ImsManagerEx.isDualVoLTEActive() && mPhoneId != getPrimaryCard()){
+                        enableIms();
+                    }
+                } else //add for L+G dual volte, if secondary card no need to reset mIMSBearerEstablished
+                    if(mPhoneId == getPrimaryCard() && ImsManagerEx.isDualVoLTEActive()){
+                    mIMSBearerEstablished = false;
                 }
                break;
             case EVENT_ENABLE_IMS:
+                log("EVENT_ENABLE_IMS");
                 mNumeric = mTelephonyManager.getNetworkOperatorForPhone(mPhoneId);
-                mVolteConfig.loadVolteConfig(mContext);
                 boolean isSimConfig = getSimConfig();
-                if(!(mLastNumeric.equals(mNumeric))) {
-                    if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric))){
-                          mCi.enableIms(null);
-                    } else if(isSimConfig && getNetworkConfig(mLastNumeric) && !(getNetworkConfig(mNumeric))){
-                          mCi.disableIms(null);
+                log("current mNumeric = "+mNumeric);
+                if(mPhoneId == getPrimaryCard()){
+                    mVolteConfig.loadVolteConfig(mContext);
+                    log("PrimaryCard : mLastNumeric = "+mLastNumeric);
+                    if(!(mLastNumeric.equals(mNumeric))) {
+                        if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric))){
+                              mCi.enableIms(null);
+                        } else if(isSimConfig && getNetworkConfig(mLastNumeric) && !(getNetworkConfig(mNumeric))){
+                              mCi.disableIms(null);
+                        }
+                        mLastNumeric = mNumeric;
                     }
-                    mLastNumeric = mNumeric;
+                }else if(dualVoLTEActive()){
+                    //need disable ims when primary card not register to whilte list network?
+                    log("Secondary Card, mLastNumeric = " + mLastNumeric);
+                    if(!(mLastNumeric.equals(mNumeric))){
+                        mLastNumeric = mNumeric;
+                    }
+                    if(dualVoLTEActive()){
+                        mCi.enableIms(null);
+                    }
                 }
                 break;
             case EVENT_RADIO_CAPABILITY_CHANGED:
@@ -202,7 +226,8 @@ public class ImsRegister {
 
     private void initISIM() {
         if (mSIMLoaded && mPhone.isRadioOn() && !mInitISIMDone
-                && mTelephonyManager.getSimState(mPhoneId) == TelephonyManager.SIM_STATE_READY && mPhoneId == getPrimaryCard()) {
+                && mTelephonyManager.getSimState(mPhoneId) == TelephonyManager.SIM_STATE_READY
+                && (mPhoneId == getPrimaryCard() || dualVoLTEActive())) {
             String impi = null;
             String impu = null;
             String domain = null;
@@ -413,5 +438,45 @@ public class ImsRegister {
 
     public void onImsPDNReady(){
         mIMSBearerEstablished = true;
+    }
+
+    private boolean dualVoLTEActive() {
+        if (!ImsManagerEx.isDualVoLTEActive()) {
+            Log.d(TAG, "not support Dual volte");
+            return false;
+        }
+        Log.d(TAG, "lei support Dual volte");
+        int primaryCard = getPrimaryCard();
+        String primaryOperator = mTelephonyManager
+                .getSimOperatorNameForPhone(primaryCard);
+        String secondOperator = mTelephonyManager
+                .getSimOperatorNameForPhone(mPhoneId);
+        boolean sameOperator = secondOperator != null && primaryOperator != null
+                && secondOperator.length() > 3 && primaryOperator.length() > 3
+                && (secondOperator.equals(primaryOperator) ||
+                        isRelianceCard(primaryOperator) && isRelianceCard(secondOperator));
+       try{
+        if (sameOperator) {
+            Log.d(TAG, "same operator, check mcc");
+            primaryOperator = mTelephonyManager.getSimOperatorNumericForPhone(
+                    primaryCard).substring(0, 3);
+            secondOperator = mTelephonyManager.getSimOperatorNumericForPhone(
+                    mPhoneId).substring(0, 3);
+            sameOperator = secondOperator != null
+                    && secondOperator.equals(primaryOperator);
+        }
+        }catch(StringIndexOutOfBoundsException e){
+            e.printStackTrace();
+            return false;
+        }
+        return sameOperator;
+    }
+
+    private boolean isRelianceCard(String operatorName){
+        if(operatorName != null &&(operatorName.equalsIgnoreCase("Reliance")
+                || operatorName.equalsIgnoreCase("Jio"))){
+            return true;
+        }
+        return false;
     }
 }
