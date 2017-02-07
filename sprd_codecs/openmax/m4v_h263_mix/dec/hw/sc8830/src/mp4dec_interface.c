@@ -181,7 +181,6 @@ PUBLIC MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *max_width, in
     case SHARK:	//limited under 1080p
     case TSHARK:
     case SHARKL:
-    case PIKEL:
     case SHARKL64:
     case SHARKLT8:
         *max_width = 1920;
@@ -189,6 +188,7 @@ PUBLIC MMDecRet MP4GetCodecCapability(MP4Handle *mp4Handle, int32 *max_width, in
         break;
     case DOLPHIN://limited under 720p
     case PIKE:
+    case PIKEL:
         *max_width = 1280;
         *max_height = 1023; //720;
         break;
