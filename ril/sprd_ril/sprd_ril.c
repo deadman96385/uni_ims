@@ -12856,6 +12856,8 @@ static void initializeCallback(void *param)
     if (isCSFB()) {
         if (!isCMCC()){
             at_send_command(ATch_type[channelID], "at+spcapability=32,1,0", NULL);
+        } else {
+            at_send_command(ATch_type[channelID], "at+spcapability=32,1,1", NULL);
         }
     }
     /* @} */
