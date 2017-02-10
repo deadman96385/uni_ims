@@ -486,8 +486,7 @@ public class ImsServiceImpl {
             if(mPhone.getState() == PhoneConstants.State.IDLE){
                 return true;
             } else {
-                if(mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED
-                        || mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED){
+                if(mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED){//SPRD:modify by bug637926
                     return false;
                 }
                 return true;
