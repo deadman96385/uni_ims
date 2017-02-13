@@ -66,7 +66,7 @@ public class VoWifiCallManager extends ServiceManager {
     private static final String SERVICE_PACKAGE = "com.spreadtrum.vowifi";
     private static final String SERVICE_CLASS = "com.spreadtrum.vowifi.service.VoWifiSerService";
 
-    private static final String PROP_KEY_AUTO_ANSWER = "persist.ims.vowifi.autoanswer";
+    private static final String PROP_KEY_AUTO_ANSWER = "persist.sys.vowifi.autoanswer";
 
     private int mUseAudioStreamCount = 0;
     private int mRegisterState = RegisterState.STATE_IDLE;
