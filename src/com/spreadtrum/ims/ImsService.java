@@ -27,6 +27,7 @@ import android.telephony.PhoneStateListener;
 import android.util.Log;
 import android.widget.Toast;
 import android.telecom.VideoProfile;
+import android.provider.Settings;
 
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneFactory;
@@ -1960,6 +1961,7 @@ class MyVoWifiCallback implements VoWifiCallback {
     }
 
     public void onImsPdnStatusChange(int serviceId,int state){
+        boolean isAirplaneModeOn = false;
         if(state == ImsPDNStatus.IMS_PDN_READY){
             mIsAPImsPdnActived = false;
             mIsCPImsPdnActived = true;
@@ -1970,7 +1972,10 @@ class MyVoWifiCallback implements VoWifiCallback {
                 mWifiRegistered = false;
                 updateImsFeature();
             }
-            if(state == ImsPDNStatus.IMS_PDN_ACTIVE_FAILED){
+            //SPRD: add for bug642021
+            isAirplaneModeOn = Settings.Global.getInt(getApplicationContext().getContentResolver(),
+                    Settings.Global.AIRPLANE_MODE_ON, 0) > 0;
+            if(state == ImsPDNStatus.IMS_PDN_ACTIVE_FAILED ||isAirplaneModeOn){
                 mPendingCPSelfManagement = false;
                 if(mPendingCPSelfManagement || mFeatureSwitchRequest == null){
                     ImsServiceImpl service = mImsServiceImplMap.get(
@@ -1987,7 +1992,7 @@ class MyVoWifiCallback implements VoWifiCallback {
                 + " mIsCPImsPdnActived:" + mIsCPImsPdnActived + " mIsAPImsPdnActived:" + mIsAPImsPdnActived
                 + " mWifiRegistered:" + mWifiRegistered + " mVolteRegistered:" + mVolteRegistered
                 + " mPendingCPSelfManagement:" + mPendingCPSelfManagement
-                + " mPendingActivePdnSuccess:"+mPendingActivePdnSuccess);
+                + " mPendingActivePdnSuccess:"+mPendingActivePdnSuccess+" isAirplaneModeOn:"+isAirplaneModeOn);
         try{
             if (mImsServiceListenerEx != null &&
                     serviceId == ImsRegister.getPrimaryCard(mPhoneCount)+1) {
