@@ -174,8 +174,10 @@ public class ImsRegister {
                     log("PrimaryCard : mLastNumeric = "+mLastNumeric);
                     if(!(mLastNumeric.equals(mNumeric))) {
                         if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric))){
+                              SystemProperties.set("gsm.ims.enable" + mPhoneId, "1");
                               mCi.enableIms(null);
                         } else if(isSimConfig && getNetworkConfig(mLastNumeric) && !(getNetworkConfig(mNumeric))){
+                              SystemProperties.set("gsm.ims.enable" + mPhoneId, "0");
                               mCi.disableIms(null);
                         }
                         mLastNumeric = mNumeric;
@@ -187,6 +189,7 @@ public class ImsRegister {
                         mLastNumeric = mNumeric;
                     }
                     if(dualVoLTEActive()){
+                        SystemProperties.set("gsm.ims.enable" + mPhoneId, "1");
                         mCi.enableIms(null);
                     }
                 }
