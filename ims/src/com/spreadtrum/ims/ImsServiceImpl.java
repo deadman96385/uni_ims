@@ -232,7 +232,10 @@ public class ImsServiceImpl {
                             Log.w(TAG,"handleMessage msg=" + msg.what+" mListener is null!");
                             break;
                         }
-                        Log.i(TAG,"EVENT_IMS_STATE_CHANGED->mServiceState:" + mImsServiceState.mImsRegistered);
+                        Log.i(TAG,"EVENT_IMS_STATE_DONE->mImsRegistered:" + mImsServiceState.mImsRegistered);
+                    } else {
+                        mImsServiceState.mImsRegistered = false;
+                        Log.i(TAG,"EVENT_IMS_STATE_DONE: error");
                     }
                     break;
                 case DctConstants.EVENT_ICC_CHANGED:
