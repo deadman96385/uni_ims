@@ -1083,6 +1083,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         return mImsStreamMediaProfile;
     }
 
+    public String getCallee() {
+        return mParticipants.get(0);
+    }
+
     public String findCallee(String phoneNumber) {
         if (TextUtils.isEmpty(phoneNumber)) return null;
 
@@ -1096,6 +1100,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     public ArrayList<String> getParticipants() {
         return mParticipants;
+    }
+
+    public ImsCallProfile updateCallee(String phoneNumber) {
+        mParticipants.clear();
+        mParticipants.add(phoneNumber);
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, phoneNumber);
+
+        return mCallProfile;
     }
 
     public void updateMediaProfile(ImsStreamMediaProfile profile) {
@@ -1708,7 +1720,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
             // For normal call, there will be only one participant, and we need add it to this
             // conference participants list.
-            String participant = getParticipants().get(0);
+            String participant = getCallee();
             confSession.addCallee(participant);
         } else {
             // Failed to invite this call to conference. Prompt the toast to alert the user.
