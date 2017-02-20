@@ -515,22 +515,6 @@ public class VoWifiCallManager extends ServiceManager {
         return null;
     }
 
-    public String getCallSessionId(String callee) {
-        if (TextUtils.isEmpty(callee)) {
-            Log.w(TAG, "Can not get the call session id from the empty callee.");
-            return null;
-        }
-
-        for (ImsCallSessionImpl session : mCallSessionList) {
-            if (session.getParticipants().contains(callee)) {
-                return session.getCallId();
-            }
-        }
-
-        Log.d(TAG, "Can not found any call cotains this callee: " + callee);
-        return null;
-    }
-
     private void dismissAlertDialog(int sessionId) {
         if (mAlertDialog != null
                 && mAlertDialog._sessionId == sessionId
@@ -563,7 +547,7 @@ public class VoWifiCallManager extends ServiceManager {
                 // Invite this call failed.
                 Log.w(TAG, "Failed to invite the call " + callSession);
                 String text = mContext.getString(R.string.vowifi_conf_invite_failed)
-                        + callSession.getParticipants().get(0);
+                        + callSession.getCallee();
                 Toast.makeText(mContext, text, Toast.LENGTH_LONG).show();
             } else {
                 success = true;
@@ -607,8 +591,9 @@ public class VoWifiCallManager extends ServiceManager {
                     Log.d(TAG, "Do nothing when the call or conference outgoing.");
                     break;
                 case JSONUtils.EVENT_CODE_CALL_ALERTED: {
+                    String phoneNumber = jObject.optString(JSONUtils.KEY_PHONE_NUM);
                     boolean isVideo = jObject.optBoolean(JSONUtils.KEY_IS_VIDEO, false);
-                    handleCallAlerted(callSession, isVideo);
+                    handleCallAlerted(callSession, phoneNumber, isVideo);
                     break;
                 }
                 case JSONUtils.EVENT_CODE_CALL_TALKING: {
@@ -735,8 +720,8 @@ public class VoWifiCallManager extends ServiceManager {
         }
     }
 
-    private void handleCallAlerted(ImsCallSessionImpl callSession, boolean isVideo)
-            throws RemoteException {
+    private void handleCallAlerted(ImsCallSessionImpl callSession, String phoneNumber,
+            boolean isVideo) throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Handle the alerted or outgoing call.");
         if (callSession == null) {
             Log.w(TAG, "[handleAlertedOrOutgoing] The call session is null");
@@ -755,9 +740,14 @@ public class VoWifiCallManager extends ServiceManager {
         }
         callSession.updateMediaProfile(mediaProfile);
         callSession.updateState(State.NEGOTIATING);
+
         IImsCallSessionListener listener = callSession.getListener();
         if (listener != null) {
             listener.callSessionProgressing(callSession, mediaProfile);
+            String callee = callSession.getCallee();
+            if (!callee.equals(phoneNumber)) {
+                listener.callSessionUpdated(callSession, callSession.updateCallee(phoneNumber));
+            }
         }
     }
 
@@ -1215,7 +1205,7 @@ public class VoWifiCallManager extends ServiceManager {
 
             // For normal call, there will be only one participant, and we need add it to this
             // conference participants list.
-            String participant = callSession.getParticipants().get(0);
+            String participant = callSession.getCallee();
             confSession.addCallee(participant);
             confSession.addAsWaitForInvite(callSession);
         }
@@ -1282,7 +1272,7 @@ public class VoWifiCallManager extends ServiceManager {
                 Log.d(TAG, "Get the invite accept result for the user: " + phoneNumber);
                 // It means the call accept to join the conference.
                 ImsCallSessionImpl callSession = confSession.getInInviteCall();
-                String callee = callSession.getParticipants().get(0);
+                String callee = callSession.getCallee();
 
                 bundleKey = callee;
                 bundle.putString(ImsConferenceState.USER, callee);
@@ -1297,7 +1287,7 @@ public class VoWifiCallManager extends ServiceManager {
                 Log.d(TAG, "Get the invite failed result for the user: " + phoneNumber);
                 // It means failed to invite the call to this conference.
                 ImsCallSessionImpl callSession = confSession.getInInviteCall();
-                String callee = callSession.getParticipants().get(0);
+                String callee = callSession.getCallee();
 
                 bundleKey = callee;
                 bundle.putString(ImsConferenceState.USER, callee);
