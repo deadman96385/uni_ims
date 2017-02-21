@@ -389,9 +389,9 @@ public class ImsServiceImpl {
             mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
                     = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE;
             mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI]
-                    = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
+                    = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
             mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
-                    = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI;
+                    = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
             mListener.registrationFeatureCapabilityChanged(
                     ImsServiceClass.MMTEL,mEnabledFeatures, mDisabledFeatures);
         } catch (RemoteException e){
