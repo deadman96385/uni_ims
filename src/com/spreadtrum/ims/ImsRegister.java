@@ -288,14 +288,20 @@ public class ImsRegister {
     }
 
     public void notifyImsStateChanged(boolean imsRegistered) {
+    	log("--notifyImsStateChanged : imsRegistered = " + imsRegistered + " | mCurrentImsRegistered = " + mCurrentImsRegistered);
         if( mCurrentImsRegistered != imsRegistered) {
             mCurrentImsRegistered = imsRegistered;
-            if( mPhoneId == getPrimaryCard()) {
-                if (mPhone.isRadioOn() && getServiceState().getState() != ServiceState.STATE_IN_SERVICE) {
-                    log("voice regstate not in service, will call ImsNotifier to notifyServiceStateChanged");
-                    mPhone.notifyServiceStateChanged(getServiceState());
-                }
+            /**
+             * SPRD bug644157 should limit action to primary card
+             * so remove if(){}
+             */
+//            if( mPhoneId == getPrimaryCard()) {
+			if (mPhone.isRadioOn()
+					&& getServiceState().getState() != ServiceState.STATE_IN_SERVICE) {
+				log("voice regstate not in service, will call ImsNotifier to notifyServiceStateChanged");
+				mPhone.notifyServiceStateChanged(getServiceState());
             }
+//            }
         }
     }
 
