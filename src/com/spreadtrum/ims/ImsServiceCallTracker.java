@@ -463,9 +463,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             }
         }
         removeInvalidSessionFromList(validDriverCall);
-        if(mSessionList.isEmpty()){
+        /*if(mSessionList.isEmpty()){
             mImsServiceImpl.onImsCallEnd();
-        }
+        }*/
     }
 
     public void addSessionToList(Integer id, ImsCallSessionImpl session) {
