@@ -275,7 +275,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             case ALERTING:
                 try{
                     mState = ImsCallSession.State.NEGOTIATING;
-                    if (mImsDriverCall != null && mImsDriverCall.state != ImsDriverCall.State.ALERTING
+                    if (!(mImsDriverCall != null && mImsDriverCall.state == ImsDriverCall.State.ALERTING)
                             && mIImsCallSessionListener != null) {
                         mIImsCallSessionListener.callSessionProgressing((IImsCallSession) this,
                                 mImsCallProfile.mMediaProfile);
