@@ -419,6 +419,10 @@ public class ImsUtImpl extends IImsUt.Stub {
                         }
                     } catch(RemoteException e){
                         e.printStackTrace();
+                        // SPRD bug 645393 add null avoid
+                    } catch (NullPointerException e) {
+                    	e.printStackTrace();
+                    	Log.i(TAG,"nullpointerException" + e.getMessage());
                     }
                     break;
                 default:
