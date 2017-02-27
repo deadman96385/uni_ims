@@ -1528,12 +1528,17 @@ public class ImsService extends Service {
         boolean isImsRegistered = ((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)
                 || (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
         synchronized (mImsRegisterListeners) {
-            try{
-                for(IImsRegisterListener l : mImsRegisterListeners.values()) {
+            /**
+             * SPRD bug647508
+             */
+            for (IImsRegisterListener l : mImsRegisterListeners.values()) {
+                try{
                     l.imsRegisterStateChange(isImsRegistered);
+                } catch(RemoteException e){
+                    iLog("DeadObjectException : l = " + l);
+                    e.printStackTrace();
+                    continue;
                 }
-            } catch(RemoteException e){
-                e.printStackTrace();
             }
         }
     }
