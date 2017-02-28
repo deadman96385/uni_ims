@@ -1041,7 +1041,9 @@ public class ImsService extends Service {
                 if(impl == null){
                     continue;
                 }
-                impl.turnOnIms();
+                if(ImsManager.isEnhanced4gLteModeSettingEnabledByUser(getApplicationContext())){//SPRD: bug644353
+                    impl.turnOnIms();
+                }
             }
         }
 
