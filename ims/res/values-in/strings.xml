@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Panggian keluar adalah terbatas oleh FDN"</string>
 <string name="camera_open_fail">"Membuka kamera gagal"</string>
 <string name="ims_switch_failed">"Kesalahan jaringan, silahkan ulangi lagi nanti"</string>
+
 </resources>

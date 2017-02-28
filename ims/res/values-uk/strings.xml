@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Віихідні дзвінки обмежені фіксованим набором"</string>
 <string name="camera_open_fail">"Активувати режим камери не вдалося"</string>
 <string name="ims_switch_failed">"Помилка мережі, будь ласка, спробуйте ще раз пізніше"</string>
+
 </resources>

@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Apelurile formate sunt restricționate de către FDN"</string>
 <string name="camera_open_fail">"Deschidere cameră eșuată"</string>
 <string name="ims_switch_failed">"Eroare de rețea, reîncercați mai târziu"</string>
+
 </resources>

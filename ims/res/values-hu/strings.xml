@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Az FDN korlátozza a kimenő hívásokat"</string>
 <string name="camera_open_fail">"A kamera nyitása sikertelen"</string>
 <string name="ims_switch_failed">"Hálózati hiba, kérem, próbálja újra később...""</string>
+
 </resources>

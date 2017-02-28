@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Појдовните повици се ограничени соFDN"</string>
 <string name="camera_open_fail">"Неуспешно отворање на камерата"</string>
 <string name="ims_switch_failed">"Мрежна грешка, ве молиме обидете се повторно подоцна"</string>
+
 </resources>

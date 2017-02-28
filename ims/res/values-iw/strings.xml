@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"שיחות יוצאות מוגבלות על ידי FDN"</string>
 <string name="camera_open_fail">"פתיחת המצלמה נכשלה"</string>
 <string name="ims_switch_failed">"שגיאת רשת, בבקשה נסו שוב מאוחר יותר"</string>
+
 </resources>

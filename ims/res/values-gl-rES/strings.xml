@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"As chamadas saínter están restrinxidas por FDN"</string>
 <string name="camera_open_fail">"Error de apertura de cámara"</string>
 <string name="ims_switch_failed">"Erro de rede, volva a inténtalo máis tarde"</string>
+
 </resources>

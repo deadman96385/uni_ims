@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Chamadas efetuadas são restritas pelo FDN"</string>
 <string name="camera_open_fail">"Falha ao abrir câmera"</string>
 <string name="ims_switch_failed">"Erro de rede. Tente novamente mais tarde"</string>
+
 </resources>

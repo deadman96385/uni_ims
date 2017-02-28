@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Chiamate in uscita limitate da FDN"</string>
 <string name="camera_open_fail">"Avvio fotocamera non riuscito"</string>
 <string name="ims_switch_failed">"Errore di rete, per favore ritentare più tardi"</string>
+
 </resources>

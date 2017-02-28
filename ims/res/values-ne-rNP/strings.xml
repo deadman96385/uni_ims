@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"FDN द्वारा आउटगोइङ करहरूमाथि बन्देज लगाइएको छ"</string>
 <string name="camera_open_fail">"क्यामेरा खोल्न सकिएन"</string>
 <string name="ims_switch_failed">"नेटवर्क सम्बन्धी त्रुटि भयो, कृपया पछि फेरि प्रयास गर्नुहोस्।"</string>
+
 </resources>

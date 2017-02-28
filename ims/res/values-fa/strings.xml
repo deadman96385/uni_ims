@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"تماس های خروجی توسط FDN محدود شده اند"</string>
 <string name="camera_open_fail">"دوربین باز نشد"</string>
 <string name="ims_switch_failed">"خطای شبکه، لطفاً دوباره امتحان کنید."</string>
+
 </resources>

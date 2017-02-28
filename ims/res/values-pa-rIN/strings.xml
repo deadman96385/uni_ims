@@ -30,4 +30,10 @@
 <string name="callFailed_fdn_only">"ਆਊਟਗੋਇੰਗ ਕਾਲਾਂ ਤੇ FDN ਦ੍ਆਰਾ ਪਾਬੰਦੀ ਹੈ"</string>
 <string name="camera_open_fail">"ਕੈਮਰਾ ਖੋਲ੍ਹਣਾ ਅਸਫਲ"</string>
 <string name="ims_switch_failed">"ਨੈਟਵਰਕ ਤਰੁੱਟੀ, ਕਿਰਪਾ ਕਰਕੇ ਬਾਅਦ ਵਿੱਚ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ"</string>
+    <string name="low_battery_warning_media_alert_message">"ਤੁਹਾਡਾ ਬੈਟਰੀ ਪੱਧਰ 15% ਤੋਂ ਘੱਟ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਸਵੀਕਾਰ ਕਰੋ ਜਾਂ ਅਸਵੀਕਾਰ ਕਰੋ ਨੂੰ ਚੁਣੋ।"</string>
+     <string name="low_battery_warning_title">"ਘੱਟ ਬੈਟਰੀ ਚਿਤਾਵਨੀ"</string>
+     <string name="low_battery_warning_message">"ਤੁਹਾਡਾ ਬੈਟਰੀ ਪੱਧਰ 15% ਤੋਂ ਘੱਟ ਹੈ। ਕੀ ਤੁਸੀਂ ਵੀਡੀਓ ਕਾਲ ਜਾਰੀ ਰੱਖਣਾ ਚਾਹੁੰਦੇ ਹੋ ਜਾਂ ਵੌਇਸ ਕਾਲ ਵਿੱਚ ਬਦਲਣਾ ਹੈ?"</string>
+     <string name="low_battery_continue_video_call">ਹਾਂ</string>
+     <string name="low_battery_convert_to_voice_call">"ਬਦਲੋ"</string>
+
 </resources>

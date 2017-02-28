@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"يتم حظر المكالمات الصادرة بواسطة FDN"</string>
 <string name="camera_open_fail">"فشل فتح الكاميرا"</string>
 <string name="ims_switch_failed">"خطأ بالشبكة، يرجى إعادة المحاولة لاحقا"</string>
+
 </resources>

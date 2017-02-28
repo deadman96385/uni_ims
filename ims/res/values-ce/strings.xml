@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Mga tawag nga pagawas gidili sa FDN"</string>
 <string name="camera_open_fail">"Pag-abli sa Kamera pakyas"</string>
 <string name="ims_switch_failed">"Sayop ang network, palihug sulayi og usab unya "</string>
+
 </resources>

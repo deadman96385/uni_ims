@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Οι εξερχόμενες κλήσεις περιορίζονται από τους σταθερούς αριθμούς κλήσης"</string>
 <string name="camera_open_fail">"Το άνοιγμα κάμερας απέτυχε"</string>
 <string name="ims_switch_failed">"Σφάλμα δικτύου, παρακαλούμε προσπαθήστε ξανά αργότερα"</string>
+
 </resources>

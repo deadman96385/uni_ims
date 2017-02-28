@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"FDNak irteerako deiak mugatzen ditu"</string>
 <string name="camera_open_fail">"Kamera ezin izan da ireki"</string>
 <string name="ims_switch_failed">"Sareko akatsa, saiatu beranduago"</string>
+
 </resources>

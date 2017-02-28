@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Simu zakupigwa zimezuiliwa na FDN"</string>
 <string name="camera_open_fail">"Kamera imefeli kufunguka"</string>
 <string name="ims_switch_failed">"Kuna kasoro na mtandao, tafadhali jaribu tena baadaye"</string>
+
 </resources>

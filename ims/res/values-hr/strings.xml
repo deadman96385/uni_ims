@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Odlazni pozivi su ograničeni sa FDN"</string>
 <string name="camera_open_fail">"Otvaranje kamere nije uspjelo"</string>
 <string name="ims_switch_failed">"Mrežna pogreška, molimo pokušajte ponovo kasnije."</string>
+
 </resources>

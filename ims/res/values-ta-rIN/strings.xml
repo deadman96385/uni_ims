@@ -30,4 +30,10 @@
 <string name="callFailed_fdn_only">"வெளிப்புற அழைப்புகளை FDN வறையரைப்படுத்தியுள்ளது"</string>
 <string name="camera_open_fail">"கேமரா திறப்பது தோல்லியடைந்துள்ளது"</string>
 <string name="ims_switch_failed">"நெட்வொர்க் கோளாறு, தயவுசெய்து மீண்டும் பின்னர் முயற்சிக்கவும்"</string>
+    <string name="low_battery_warning_media_alert_message">"உங்கள் பேட்டரி அளவு 15%க்கு குறைவாக உள்ளது. தயவுசெய்து ஏற்றுக்கொள்ளவும் அல்லது புறக்கணிக்கவும் என்பதை தேர்ந்தெடுக்கவும்."</string>
+     <string name="low_battery_warning_title">"குறைவான அளவு பேட்டரி எச்சரிக்கை"</string>
+     <string name="low_battery_warning_message">"உங்களது பேட்டரி அளவு 15%க்கு குறைவாக உள்ளது. நீங்கள் வீடியோ அழைப்பை தொடர விரும்புகிறீர்களா அல்லது குரல் அழைப்புக்கு மாற விரும்புகிறீர்களா?"</string>
+     <string name="low_battery_continue_video_call">ஆம்</string>
+     <string name="low_battery_convert_to_voice_call">"மாற்றவும்"</string>
+
 </resources>

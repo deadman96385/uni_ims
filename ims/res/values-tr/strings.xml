@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Giden aramalar FDN ile sınırlandırıldı"</string>
 <string name="camera_open_fail">"Kamera açma başarısızlığı"</string>
 <string name="ims_switch_failed">" Ağ hatası, lütfen daha sonra yeniden deneyin "</string>
+
 </resources>

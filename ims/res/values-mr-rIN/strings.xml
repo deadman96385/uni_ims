@@ -30,4 +30,10 @@
 <string name="callFailed_fdn_only">"एफडीएन ने कॉल प्रतिबंधित केले आहेत"</string>
 <string name="camera_open_fail">"कॅमेरा उघडणे अपयशी"</string>
 <string name="ims_switch_failed">"नेटवर्क त्रुटी, कृपया नंतर पुन्हा प्रयत्न करा"</string>
+    <string name="low_battery_warning_media_alert_message">"आपली बॅटरी 15 % पेक्षा कमी राहीली आहे. कृपया मान्य किंवा अमान्य निवडा."</string>
+     <string name="low_battery_warning_title">"बॅटरी कमी असल्याची सूचना"</string>
+     <string name="low_battery_warning_message">"आपली बॅटरी 15 % पेक्षा कमी राहीली आहे.आपल्याला व्हिडिओ कॉल सुरु ठेवायचा आहे का व्हॉइस कॉल मध्ये रुपांतर करायचे आहे?" </string>
+     <string name="low_battery_continue_video_call">"होय"</string>
+     <string name="low_battery_convert_to_voice_call">"रुपांतर"</string>
+
 </resources>

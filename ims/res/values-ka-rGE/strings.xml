@@ -28,4 +28,5 @@
 <string name="remote_reject_request">"დისტანციური მოთხოვნა უარყოფილია"</string>
 <string name="remote_accept_request">"დისტანციური მოთხოვნა მიღებულია"</string>
 <string name="callFailed_fdn_only">"გამავალი ზარები შეზღუდულია FDN-ის მიერ"</string>
+
 </resources>

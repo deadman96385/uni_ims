@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Odhodne klice omejuje FDN"</string>
 <string name="camera_open_fail">"Odpiranje fotoaparata ni uspelo"</string>
 <string name="ims_switch_failed">"Napaka omrežja, poskusite ponovno kasneje"</string>
+
 </resources>

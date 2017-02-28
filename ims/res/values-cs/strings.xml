@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Odchozí hovory jsou omezeny na povolená čísla (FDN)"</string>
 <string name="camera_open_fail">"Otevírání fotoaparátu se nepovedlo"</string>
 <string name="ims_switch_failed">"Chyba sítě, prosím, zkuste znovu později"</string>
+
 </resources>

@@ -30,4 +30,10 @@
 <string name="callFailed_fdn_only">"പുറത്തേക്ക് പോകുന്ന കോളുകൾ എഫ് ഡിഎൻ മുഖേനെ നിയന്ത്രിക്കപ്പെടുന്നു"</string>
 <string name="camera_open_fail">"ക്യാമറ  തുറക്കുന്നതിൽ പരാചയപ്പെട്ടു"</string>
 <string name="ims_switch_failed">"നെറ്റ്‌വർക്ക് തകരാർ, അല്പസമയത്തിനു ശേഷം വീണ്ടും ശ്രമിക്കുക"</string>
+    <string name="low_battery_warning_media_alert_message">"നിങ്ങളുടെ ബാറ്ററി 15 %-ത്തിലും കുറവ്. ദയവായി സ്വീകരിക്കുകയോ നിരസിക്കുകയോ തെരഞ്ഞെടുക്കുക"</string>
+     <string name="low_battery_warning_title">"ബാറ്ററി കുറവ് മുന്നറിയിപ്പ്" </string>
+     <string name="low_battery_warning_message">"നിങ്ങളുടെ ബാറ്ററി 15%-ത്തിലും കുറവാണ്. ഈ വീഡിയോ കോൾ നിങ്ങൾക്ക് തുടരണമെന്നുണ്ടോ അതോ വോയ്‌സ് കോളിലേക്ക് മാറ്റട്ടെ?" </string>
+     <string name="low_battery_continue_video_call">"അതെ"</string>
+     <string name="low_battery_convert_to_voice_call">"മാറ്റൂ"</string>
+
 </resources>

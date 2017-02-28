@@ -30,4 +30,5 @@
 <string name="callFailed_fdn_only">"Udgående opkald er begrænset af listen begrænset nummer"</string>
 <string name="camera_open_fail">"Kunne ikke åbne kameraet"</string>
 <string name="ims_switch_failed">"Netværksfejl. Prøv igen senere"</string>
+
 </resources>
