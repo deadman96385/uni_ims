@@ -532,15 +532,27 @@ public class VoWifiCallManager extends ServiceManager {
             return;
         }
 
-        ImsCallSessionImpl callSession = confSession.getNeedInviteCall();
-        if (callSession == null) {
-            Log.d(TAG, "All the calls already sent the invite. Do nothing.");
-            return;
-        }
-
         // Invite participant.
         boolean success = false;
         try {
+            ImsCallSessionImpl callSession = confSession.getNeedInviteCall();
+            if (callSession == null) {
+                Log.d(TAG, "All the calls already finish invite. Resume the conference call.");
+                IImsCallSessionListener confListener = confSession.getListener();
+                if (confListener != null) {
+                    boolean isHeld = confSession.isHeld() || confSession.isAlive();
+                    Log.d(TAG, "The conference call session is held: " + isHeld);
+                    if (isHeld) {
+                        // As conference connected, update it as resumed.
+                        confSession.resume(confSession.getResumeMediaProfile());
+
+                        confSession.updateAliveState(true);
+                        confListener.callSessionResumed(confSession, confSession.getCallProfile());
+                    }
+                }
+                return;
+            }
+
             int res = mICall.confAddMembers(Integer.valueOf(confSession.getCallId()), null,
                     new int[] { Integer.valueOf(callSession.getCallId()) });
             if (res == Result.FAIL) {
@@ -826,11 +838,13 @@ public class VoWifiCallManager extends ServiceManager {
             videoCallProvider.stopAll();
         }
 
+        int oldState = callSession.getState();
+        callSession.updateState(State.TERMINATED);
         IImsCallSessionListener listener = callSession.getListener();
         if (listener != null) {
             ImsReasonInfo info = new ImsReasonInfo(termReasonCode, termReasonCode,
                     "The call terminated.");
-            if (callSession.getState() < State.NEGOTIATING) {
+            if (oldState < State.NEGOTIATING) {
                 // It means the call do not ringing now, so we need give the call session start
                 // failed call back.
                 listener.callSessionStartFailed(callSession, info);
@@ -849,7 +863,6 @@ public class VoWifiCallManager extends ServiceManager {
             }
         }
 
-        callSession.updateState(State.TERMINATED);
         removeCall(callSession);
     }
 
@@ -1158,12 +1171,6 @@ public class VoWifiCallManager extends ServiceManager {
         IImsCallSessionListener confListener = confSession.getListener();
         // Notify the multi-party state changed.
         if (confListener != null) {
-            if (confSession.isHeld() || confSession.isAlive()) {
-                // As conference connected, update it as resumed.
-                confSession.updateAliveState(true);
-                confListener.callSessionResumed(confSession, confSession.getCallProfile());
-            }
-
             confListener.callSessionMultipartyStateChanged(confSession, true);
         }
 
@@ -1309,6 +1316,7 @@ public class VoWifiCallManager extends ServiceManager {
                 Log.d(TAG, "Get the kick accept result for the user: " + phoneNumber);
                 // It means this call already disconnect.
                 String callee = confSession.removeCallee(phoneNumber);
+                confSession.kickActionFinished(callee);
                 if (TextUtils.isEmpty(callee)) callee = phoneNumber;
 
                 bundleKey = callee;
@@ -1320,9 +1328,13 @@ public class VoWifiCallManager extends ServiceManager {
             case JSONUtils.EVENT_CODE_CONF_KICK_FAILED: {
                 Log.d(TAG, "Get the kick failed for the user: " + phoneNumber);
                 needUpdateState = false;
-                // Show the notify toast to user.
-                Toast.makeText(mContext, R.string.vowifi_conf_kick_failed, Toast.LENGTH_LONG)
-                        .show();
+                String callee = confSession.findCallee(phoneNumber);
+                confSession.kickActionFinished(callee);
+                if (!TextUtils.isEmpty(callee)) {
+                    // Find the callee, then show the notify toast to user.
+                    Toast.makeText(mContext, R.string.vowifi_conf_kick_failed, Toast.LENGTH_LONG)
+                            .show();
+                }
                 break;
             }
             case JSONUtils.EVENT_CODE_CONF_PART_UPDATE: {
@@ -1346,7 +1358,7 @@ public class VoWifiCallManager extends ServiceManager {
         }
 
         // After update the participants, if there isn't any participant, need terminate it.
-        if (confSession.getParticipantsNumber() < 1) {
+        if (confSession.getParticipantsCount() < 1) {
             // Terminate this conference call.
             handleCallTermed(confSession, ImsReasonInfo.CODE_LOCAL_CALL_TERMINATED);
             Toast.makeText(mContext, R.string.vowifi_conf_none_participant, Toast.LENGTH_LONG)

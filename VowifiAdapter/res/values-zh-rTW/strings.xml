@@ -15,6 +15,7 @@
     <string name="vowifi_resume_success">恢復通話成功</string>
     <string name="vowifi_resume_fail">恢復通話失敗</string>
 
+    <string name="vowifi_call_retry">請稍後再試</string>
     <string name="vowifi_call_is_focus">加入會議</string>
     <string name="vowifi_conf_disconnect">創建會議失敗</string>
     <string name="vowifi_conf_finished">會議電話結束</string>
