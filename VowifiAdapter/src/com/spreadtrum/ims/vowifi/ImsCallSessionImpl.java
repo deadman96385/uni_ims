@@ -63,6 +63,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private ImsCallSessionImpl mConfCallSession = null;
     private ImsCallSessionImpl mHostCallSession = null;
     private ImsCallSessionImpl mInInviteSession = null;
+    private ArrayList<String> mInKickParticipants = new ArrayList<String>();
     private ArrayList<String> mParticipants = new ArrayList<String>();
     private HashMap<String, Bundle> mConfParticipantStates = new HashMap<String, Bundle>();
     private LinkedList<ImsCallSessionImpl> mWaitForInviteSessions =
@@ -272,7 +273,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
 
         mCallProfile = null;
-        mParticipants = null;
         mListener = null;
         mImsStreamMediaProfile = null;
         mVideoCallProvider = null;
@@ -345,7 +345,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
      */
     @Override
     public boolean isInCall() {
-        if (Utilities.DEBUG) Log.i(TAG, "Get the in call state: " + State.toString(mState));
         if (mICall == null) {
             // The ser service is null, so this call shouldn't be in call.
             return false;
@@ -418,6 +417,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
         if (!mCallManager.isCallFunEnabled() || TextUtils.isEmpty(callee) || profile == null) {
             handleStartActionFailed("Start the call failed. Check the callee or profile.");
+            Toast.makeText(mContext, R.string.vowifi_call_retry, Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -685,9 +685,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     mVideoCallProvider.stopAll();
                 }
 
+                int oldState = mState;
+                mState = State.TERMINATED;
                 if (mListener != null) {
                     ImsReasonInfo info = new ImsReasonInfo(reason, reason, "reason: " + reason);
-                    if (mState < State.NEGOTIATING) {
+                    if (oldState < State.NEGOTIATING) {
                         // It means the call do not ringing now, so we need give the call session
                         // start failed call back.
                         mListener.callSessionStartFailed(this, info);
@@ -696,7 +698,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     }
                 }
 
-                mState = State.TERMINATED;
                 mCallManager.removeCall(this);
             } else {
                 Log.e(TAG, "Native terminate a call failed, res = " + res);
@@ -976,14 +977,25 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
 
+        String[] needRemoveParticipants = findNeedRemove(participants);
+        if (needRemoveParticipants == null || needRemoveParticipants.length < 1) {
+            Log.d(TAG, "There isn't any participant need remove this time: "
+                    + Utilities.getString(participants));
+            return;
+        }
+
         if (mICall == null) {
             handleRemoveParticipantsFailed("The call interface is null.");
             return;
         }
 
-        int ret = mICall.confKickMembers(mCallId, participants);
+        int ret = mICall.confKickMembers(mCallId, needRemoveParticipants);
         if (ret == Result.FAIL) {
             handleRemoveParticipantsFailed("Native failed to remove the participants.");
+        } else {
+            for (String participant : needRemoveParticipants) {
+                mInKickParticipants.add(participant);
+            }
         }
     }
 
@@ -1177,12 +1189,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
     }
 
-    public int getParticipantsNumber() {
+    public int getParticipantsCount() {
         return mParticipants.size();
     }
 
     public void updateConfParticipants(String participant, Bundle state) {
         mConfParticipantStates.put(participant, state);
+    }
+
+    public void kickActionFinished(String participant) {
+        mInKickParticipants.remove(participant);
     }
 
     public ImsConferenceState getConfParticipantsState() {
@@ -1697,16 +1713,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
             IImsCallSessionListener confListener = confSession.getListener();
             if (confListener != null) {
-                boolean isHeld = confSession.isHeld() || confSession.isAlive();
-                Log.d(TAG, "The conference call session is held: " + isHeld);
-                if (isHeld) {
-                    // As conference connected, update it as resumed.
-                    confSession.resume(getResumeMediaProfile());
-
-                    confSession.updateAliveState(true);
-                    confListener.callSessionResumed(confSession, confSession.getCallProfile());
-                }
-
                 // Invite participants success.
                 confListener.callSessionInviteParticipantsRequestDelivered(confSession);
             }
@@ -1725,8 +1731,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         } else {
             // Failed to invite this call to conference. Prompt the toast to alert the user.
             Log.w(TAG, "Failed to invite this call " + mCallId + " to conference.");
-            String errorText = mContext.getString(R.string.vowifi_conf_invite_failed)
-                    + mParticipants.get(0);
+            String errorText =
+                    mContext.getString(R.string.vowifi_conf_invite_failed) + getCallee();
             Toast.makeText(mContext, errorText, Toast.LENGTH_LONG).show();
         }
     }
@@ -1753,7 +1759,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             // Create the new call session for the conference.
             int callType = isVideo ? ImsCallProfile.CALL_TYPE_VT : ImsCallProfile.CALL_TYPE_VOICE;
             ImsCallProfile imsCallProfile = new ImsCallProfile(mCallProfile.mServiceType, callType);
-            imsCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, mParticipants.get(0));
+            imsCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, getCallee());
             imsCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
             // TODO: why not {@link ImsCallProfile#OIR_DEFAULT}
             imsCallProfile.setCallExtraInt(
@@ -1858,5 +1864,17 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
 
         return false;
+    }
+
+    private String[] findNeedRemove(String[] participants) {
+        String[] remove = new String[participants.length];
+        int index = 0;
+        for (String participant : participants) {
+            if (!mInKickParticipants.contains(participant)) {
+                remove[index] = participant;
+                index = index + 1;
+            }
+        }
+        return remove;
     }
 }
