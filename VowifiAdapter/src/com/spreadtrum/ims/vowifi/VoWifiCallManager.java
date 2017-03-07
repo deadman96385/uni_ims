@@ -913,6 +913,9 @@ public class VoWifiCallManager extends ServiceManager {
                 toastTextResId = R.string.vowifi_hold_success;
                 callSession.updateAliveState(false /* held, do not alive */);
                 listener.callSessionHeld(callSession, callSession.getCallProfile());
+                // As the call hold, if the call is video call, we need stop all the video.
+                ImsVideoCallProviderImpl videoProvider = callSession.getVideoCallProviderImpl();
+                if (videoProvider != null) videoProvider.stopAll();
                 break;
             }
             case JSONUtils.EVENT_CODE_CALL_HOLD_FAILED:
