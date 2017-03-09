@@ -5,12 +5,17 @@
 package com.spreadtrum.ims.vowifi;
 
 import android.content.Context;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.RemoteException;
+import android.os.SystemProperties;
 import android.telecom.VideoProfile.CameraCapabilities;
+import android.telephony.PhoneNumberUtils;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Surface;
@@ -24,11 +29,13 @@ import com.android.ims.internal.IImsCallSession;
 import com.android.ims.internal.IImsCallSessionListener;
 import com.android.ims.internal.IImsVideoCallProvider;
 import com.android.ims.internal.ImsCallSession.State;
+import com.android.ims.internal.ImsSrvccCallInfo;
+import com.android.internal.telephony.TelephonyProperties;
 import com.spreadtrum.ims.R;
 import com.spreadtrum.ims.vowifi.Utilities.Camera;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
-import com.spreadtrum.ims.vowifi.Utilities.UnsupportedCallTypeException;
+import com.spreadtrum.ims.vowifi.Utilities.SRVCCSyncInfo;
 import com.spreadtrum.ims.vowifi.Utilities.VideoQuality;
 import com.spreadtrum.ims.vowifi.VoWifiCallManager.ICallChangedListener;
 import com.spreadtrum.vowifi.service.IVoWifiSerService;
@@ -37,22 +44,30 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map.Entry;
 
-public class ImsCallSessionImpl extends IImsCallSession.Stub {
+public class ImsCallSessionImpl extends IImsCallSession.Stub implements LocationListener {
     private static final String TAG = Utilities.getTag(ImsCallSessionImpl.class.getSimpleName());
+
+    // Temp, used to test emergency call.
+    private static final String PROP_KEY_FORCE_SOS_CALL = "persist.vowifi.force.soscall";
 
     private static final boolean SUPPORT_START_CONFERENCE = false;
 
     private static final String PARTICIPANTS_SEP = ";";
 
-    private int mState = State.IDLE;
     private int mCallId = -1;
     private boolean mIsAlive = false;
     private boolean mIsConfHost = false;
     private boolean mAudioStart = false;
+    private boolean mIsEmergency = false;
+    private boolean mInSRVCC = false;
 
     private Context mContext;
+    private Location mSosLocation;
+    private VoWifiCallStateTracker mCallStateTracker;
+    private LocationManager mLocationManager;
     private VoWifiCallManager mCallManager;
     private IVoWifiSerService mICall = null;
 
@@ -65,6 +80,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private ImsCallSessionImpl mInInviteSession = null;
     private ArrayList<String> mInKickParticipants = new ArrayList<String>();
     private ArrayList<String> mParticipants = new ArrayList<String>();
+    private HashMap<String, ImsCallSessionImpl> mParticipantSessions =
+            new HashMap<String, ImsCallSessionImpl>();
     private HashMap<String, Bundle> mConfParticipantStates = new HashMap<String, Bundle>();
     private LinkedList<ImsCallSessionImpl> mWaitForInviteSessions =
             new LinkedList<ImsCallSessionImpl>();
@@ -190,8 +207,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         return;
                     }
 
-                    Iterator<Entry<String, PendingAction>> iterator =
-                            mPendingActions.entrySet().iterator();
+                    Iterator<Entry<String, PendingAction>> iterator = mPendingActions.entrySet()
+                            .iterator();
                     while (iterator.hasNext()) {
                         Entry<String, PendingAction> entry = iterator.next();
                         Message msg = new Message();
@@ -200,37 +217,21 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         mHandler.sendMessage(msg);
                     }
                 }
-            } else {
-                if (mICall != null) {
-                    Log.w(TAG, "The call interface changed to null, terminate the call.");
-                    mICall = newCallInterface;
-                    // It means the call interface disconnect. If the current call do not close,
-                    // we'd like to terminate this call.
-                    mState = State.TERMINATED;
-                    mCallManager.removeCall(ImsCallSessionImpl.this);
-                    if (mListener != null) {
-                        try {
-                            ImsReasonInfo info = new ImsReasonInfo(
-                                    ImsReasonInfo.CODE_USER_TERMINATED,
-                                    ImsReasonInfo.CODE_LOCAL_IMS_SERVICE_DOWN,
-                                    "The call interface changed to null. Terminate the call.");
-                            mListener.callSessionTerminated(ImsCallSessionImpl.this, info);
-                        } catch (RemoteException e) {
-                            Log.e(TAG, "Catch the remote exception for call session terminate.");
-                        }
-                    }
-                } else {
-                    // The old mICall is null, same as the new, do nothing.
-                    Log.d(TAG, "The call interface changed to null same as the old, do nothing.");
-                }
+            } else if (mICall != null) {
+                Log.w(TAG, "The call interface changed to null, terminate the call.");
+                mICall = newCallInterface;
+                // It means the call interface disconnect. If the current call do not close,
+                // we'd like to terminate this call.
+                terminateCall(ImsReasonInfo.CODE_USER_TERMINATED);
             }
         }
     };
 
     protected ImsCallSessionImpl(Context context, VoWifiCallManager callManager,
             ImsCallProfile profile, IImsCallSessionListener listener,
-            ImsVideoCallProviderImpl videoCallProvider) {
+            ImsVideoCallProviderImpl videoCallProvider, int callDir) {
         mContext = context;
+        mCallStateTracker = new VoWifiCallStateTracker(State.IDLE, callDir);
         mCallManager = callManager;
         mCallProfile = profile;
         mListener = listener;
@@ -252,7 +253,31 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     @Override
     public String toString() {
-        return "callId = " + mCallId + ", state = " + mState + ", isAlive = " + mIsAlive;
+        StringBuilder builder = new StringBuilder()
+                .append("[callId = " + mCallId)
+                .append(", state = " + mCallStateTracker)
+                .append(", isAlive = " + mIsAlive + "]");
+        return builder.toString();
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        mSosLocation = location;
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+        // Do nothing.
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+        // Do nothing.
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+        // Do nothing.
     }
 
     /**
@@ -262,21 +287,25 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public void close() {
         if (Utilities.DEBUG) Log.i(TAG, "The call session(" + this + ") will be closed.");
 
-        // TODO: For SRVCC temp edit. As it will close the call session here but no terminate.
-        //       So we'd like to terminate the call first.
-        if (mState < State.TERMINATED) {
-            try {
-                terminate(ImsReasonInfo.CODE_USER_TERMINATED);
-            } catch (RemoteException e) {
-                Log.e(TAG, "Failed to terminate the call when close the call session.");
-            }
+        if (mInSRVCC) {
+            Log.d(TAG, "In SRVCC process, this call session will be closed after SRVCC success.");
+            return;
         }
 
         mCallProfile = null;
         mListener = null;
         mImsStreamMediaProfile = null;
         mVideoCallProvider = null;
-        mState = State.INVALID;
+        mCallStateTracker = null;
+
+        if (mLocationManager != null) {
+            mLocationManager.removeUpdates(this);
+            mSosLocation = null;
+            mLocationManager = null;
+        }
+
+        // If this call session closed, remove it.
+        mCallManager.removeCall(this);
     }
 
     /**
@@ -335,9 +364,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
      */
     @Override
     public int getState() {
-        if (Utilities.DEBUG) Log.i(TAG, "Get the current state: " + State.toString(mState));
-
-        return mState;
+        return mCallStateTracker != null ? mCallStateTracker.getCallState() : State.INVALID;
     }
 
     /**
@@ -350,7 +377,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return false;
         }
 
-        return mState > State.INITIATED && mState < State.TERMINATED;
+        int state = getState();
+        return state > State.INITIATED && state < State.TERMINATED;
     }
 
     /**
@@ -421,48 +449,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
 
-        // As the vowifi service is null, need add this action to pending action.
-        if (mICall == null) {
-            synchronized (mPendingActions) {
-                String key = String.valueOf(System.currentTimeMillis());
-                PendingAction action = new PendingAction("start", MSG_START, callee, profile);
-                mPendingActions.put(key, action);
-            }
-            return;
-        }
+        // Check if emergency call.
+        boolean isPhoneInEcmMode =
+                SystemProperties.getBoolean(TelephonyProperties.PROPERTY_INECM_MODE, false);
+        boolean isEmergencyNumber = PhoneNumberUtils.isEmergencyNumber(callee);
+        boolean forceSosCall = SystemProperties.getBoolean(PROP_KEY_FORCE_SOS_CALL, false);
 
-        // The vowifi service is not null, init the IMS call.
-        mParticipants.add(callee);
-
-        // TODO: update the profile
-        mCallProfile = profile;
-        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, callee);
-        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
-        // TODO: why not {@link ImsCallProfile#OIR_DEFAULT}
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-
-        try {
-            // Start the call.
-            boolean isVideoCall = Utilities.isVideoCall(mCallProfile.mCallType);
-
-            int id = mICall.sessCall(callee, null, true, isVideoCall, false);
-            Log.d(TAG, "Start the call, and get the call id: " + id);
-
-            if (id == Result.INVALID_ID) {
-                handleStartActionFailed("Native start the call failed.");
-            } else {
-                mCallId = id;
-                mState = State.INITIATED;
-                mIsAlive = true;
-                startAudio();
-            }
-        } catch (UnsupportedCallTypeException e) {
-            // Do not support the call type. Set the start failed.
-            handleStartActionFailed("Try to start the call, but DO NOT support this call type: "
-                    + mCallProfile.mCallType);
+        if (forceSosCall || (isPhoneInEcmMode && isEmergencyNumber)) {
+            startEmergencyCall(callee, profile);
+        } else {
+            startNormalCall(callee, profile);
         }
     }
 
@@ -538,7 +534,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             handleStartActionFailed("Native start the conference call failed.");
         } else {
             mCallId = res;
-            mState = State.INITIATED;
+            updateState(State.INITIATED);
         }
     }
 
@@ -571,22 +567,19 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
 
         int res = Result.FAIL;
-        try {
-            if (isConferenceCall()) {
-                res = mICall.confAcceptInvite(mCallId);
-            } else {
-                boolean isVideoCall = Utilities.isVideoCall(callType);
-                res = mICall.sessAnswer(mCallId, null, true, isVideoCall);
-            }
-        } catch (UnsupportedCallTypeException e) {
-            // Do not support the call type. Set the accept failed.
-            Log.w(TAG, "The call type " + callType + " do not support.");
-            return;
+        if (isConferenceCall()) {
+            res = mICall.confAcceptInvite(mCallId);
+        } else {
+            boolean isVideoCall = Utilities.isVideoCall(callType);
+            res = mICall.sessAnswer(mCallId, null, true, isVideoCall);
         }
 
         if (res == Result.SUCCESS) {
             mIsAlive = true;
             startAudio();
+
+            // Accept action success, update the last call action to accept.
+            updateRequestAction(VoWifiCallStateTracker.ACTION_ACCEPT);
         } else {
             // Accept action failed.
             Log.e(TAG, "Native accept the incoming call failed, res = " + res);
@@ -595,9 +588,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     private void handleStartActionFailed(String failMessage) {
-        // As start action failed, remove the call first.
-        mCallManager.removeCall(this);
-
         // When #ImsCall received the call session start failed callback will set the call session
         // to null. Then sometimes it will meet the NullPointerException. So we'd like to delay
         // 500ms to send this callback to let the ImsCall handle the left logic.
@@ -624,28 +614,25 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
 
-        try {
-            int res = Result.FAIL;
-            if (isConferenceCall()) {
-                res = mICall.confTerm(mCallId, reason);
-            } else {
-                boolean isVideoCall = Utilities.isVideoCall(mCallProfile.mCallType);
-                res = mICall.sessTerm(mCallId, reason, isVideoCall);
-            }
+        int res = Result.FAIL;
+        if (isConferenceCall()) {
+            res = mICall.confTerm(mCallId, reason);
+        } else {
+            res = mICall.sessTerm(mCallId, reason);
+        }
 
-            if (res == Result.SUCCESS) {
-                mCallManager.removeCall(this);
-                // As the result is OK, terminate the call session.
-                if (mListener != null) {
-                    mListener.callSessionTerminated(this,
-                            new ImsReasonInfo(reason, reason, "reason: " + reason));
-                }
-            } else {
-                // Reject the call failed.
-                Log.e(TAG, "Native reject the incoming call failed, res = " + res);
+        if (res == Result.SUCCESS) {
+            // Reject action success, update the last call action as reject.
+            updateRequestAction(VoWifiCallStateTracker.ACTION_REJECT);
+
+            // As the result is OK, terminate the call session.
+            if (mListener != null) {
+                mListener.callSessionTerminated(this,
+                        new ImsReasonInfo(reason, reason, "reason: " + reason));
             }
-        } catch (UnsupportedCallTypeException e) {
-            Log.e(TAG, "Can not reject the call as the call type do not support. exception: " + e);
+        } else {
+            // Reject the call failed.
+            Log.e(TAG, "Native reject the incoming call failed, res = " + res);
         }
     }
 
@@ -667,44 +654,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
 
-        try {
-            boolean isVideoCall = Utilities.isVideoCall(mCallProfile.mCallType);
-
-            int res = Result.FAIL;
-            if (isConferenceCall()) {
-                res = mICall.confTerm(mCallId, reason);
-            } else {
-                res = mICall.sessTerm(mCallId, reason, isVideoCall);
-            }
-
-            if (res == Result.SUCCESS) {
-                // As call terminated, stop all the video.
-                // Note: This stop action need before call session terminated callback. Otherwise,
-                //       the video call provider maybe changed to null.
-                if (mVideoCallProvider != null) {
-                    mVideoCallProvider.stopAll();
-                }
-
-                int oldState = mState;
-                mState = State.TERMINATED;
-                if (mListener != null) {
-                    ImsReasonInfo info = new ImsReasonInfo(reason, reason, "reason: " + reason);
-                    if (oldState < State.NEGOTIATING) {
-                        // It means the call do not ringing now, so we need give the call session
-                        // start failed call back.
-                        mListener.callSessionStartFailed(this, info);
-                    } else {
-                        mListener.callSessionTerminated(this, info);
-                    }
-                }
-
-                mCallManager.removeCall(this);
-            } else {
-                Log.e(TAG, "Native terminate a call failed, res = " + res);
-            }
-        } catch (UnsupportedCallTypeException e) {
-            Log.e(TAG, "Can not terminate call as the call type do not support. exception: " + e);
-        }
+        // Terminate the call
+        terminateCall(reason);
     }
 
     /**
@@ -741,6 +692,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if (res == Result.SUCCESS) {
             // Hold success will be handled in the callback.
             mImsStreamMediaProfile = profile;
+
+            // Hold action success, update the last call action as hold.
+            updateRequestAction(VoWifiCallStateTracker.ACTION_HOLD);
         } else {
             // Hold action failed.
             handleHoldActionFailed("Native hold the call failed, res = " + res);
@@ -750,8 +704,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private void handleHoldActionFailed(String failMessage) throws RemoteException {
         Log.e(TAG, failMessage);
         if (mListener != null) {
-            mListener.callSessionHoldFailed(this, new ImsReasonInfo(
-                    ImsReasonInfo.CODE_UNSPECIFIED, ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
+            mListener.callSessionHoldFailed(this, new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED,
+                    ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
         }
     }
 
@@ -790,6 +744,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if (res == Result.SUCCESS) {
             // Resume result will be handled in the callback.
             mImsStreamMediaProfile = profile;
+
+            // Resume action success, update the last call action as resume.
+            updateRequestAction(VoWifiCallStateTracker.ACTION_RESUME);
         } else {
             // Resume the call failed.
             handleResumeActionFailed("Native resume the call failed, res = " + res);
@@ -843,8 +800,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private void handleMergeActionFailed(String failMessage) throws RemoteException {
         Log.e(TAG, failMessage);
         if (mListener != null) {
-            mListener.callSessionMergeFailed(this, new ImsReasonInfo(
-                    ImsReasonInfo.CODE_UNSPECIFIED, ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
+            mListener.callSessionMergeFailed(this, new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED,
+                    ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
         }
     }
 
@@ -874,20 +831,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
 
-        int res = Result.FAIL;
-        String failMsg = null;
-        try {
-            res = mICall.sessUpdate(mCallId, true, Utilities.isVideoCall(callType));
+        int res = mICall.sessUpdate(mCallId, true, Utilities.isVideoCall(callType));
+        if (res == Result.FAIL) {
+            handleUpdateActionFailed("Native update result is " + res);
+        } else {
             // TODO: change to update the media profile.
             mImsStreamMediaProfile = profile;
-            failMsg = "Native update result is " + res;
-        } catch (UnsupportedCallTypeException e) {
-            Log.e(TAG, "Failed to update the call as the type " + callType + " do not support.");
-            failMsg = "The call type do not support.";
-        }
-
-        if (res == Result.FAIL) {
-            handleUpdateActionFailed(failMsg);
         }
     }
 
@@ -1135,8 +1084,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCallId = id;
     }
 
+    public VoWifiCallStateTracker getCallStateTracker() {
+        return mCallStateTracker;
+    }
+
     public void updateState(int state) {
-        mState = state;
+        if (mCallStateTracker != null) mCallStateTracker.updateCallState(state);
+    }
+
+    public void updateRequestAction(int requestAction){
+        if (mCallStateTracker != null)  mCallStateTracker.updateRequestAction(requestAction);
     }
 
     public void updateAliveState(boolean alive) {
@@ -1240,6 +1197,58 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         return mInInviteSession;
     }
 
+    public void addParticipant(String phoneNumber, ImsCallSessionImpl callSession) {
+        if (TextUtils.isEmpty(phoneNumber) || callSession == null) {
+            Log.e(TAG, "Failed to add this call: " + callSession + " as one participant.");
+            return;
+        }
+
+        mParticipantSessions.put(phoneNumber, callSession);
+    }
+
+    public void removeParticipant(String phoneNumber) {
+        if (TextUtils.isEmpty(phoneNumber)) {
+            Log.e(TAG, "Can not remove the participant for the number: " + phoneNumber);
+            return;
+        }
+
+        mParticipantSessions.remove(phoneNumber);
+    }
+
+    public void prepareSRVCCSyncInfo(ArrayList<ImsSrvccCallInfo> infoList, int multipartyOrder) {
+        if (Utilities.DEBUG) Log.i(TAG, "Prepare the SRVCC sync info for the call: " + this);
+
+        if (infoList == null) return;
+
+        mInSRVCC = true;
+        if (mParticipantSessions.size() > 0) {
+            // If this call is conference, we need prepare she SRVCC call info for each child.
+            Iterator<Entry<String, ImsCallSessionImpl>> iterator =
+                    mParticipantSessions.entrySet().iterator();
+            int order = 0;
+            while (iterator.hasNext()) {
+                Entry<String, ImsCallSessionImpl> entry = iterator.next();
+                ImsCallSessionImpl callSession = entry.getValue();
+                callSession.prepareSRVCCSyncInfo(infoList, order);
+                order = order + 1;
+            }
+        } else {
+            // Prepare this call session's call info.
+            ImsSrvccCallInfo info = new ImsSrvccCallInfo();
+            info.mCallId = mCallId;
+            info.mDir = mCallStateTracker.getSRVCCCallDirection();
+            info.mCallState = mCallStateTracker.getSRVCCCallState();
+            info.mHoldState = mCallStateTracker.getSRVCCCallHoldState();
+            info.mMptyState = isConferenceCall() ? SRVCCSyncInfo.MultipartyState.YES
+                    : SRVCCSyncInfo.MultipartyState.NO;
+            info.mMptyOrder = multipartyOrder;
+            info.mCallType = getSRVCCCallType();
+            info.mNumType = SRVCCSyncInfo.PhoneNumberType.NATIONAL;
+            info.mNumber = getCallee();
+            infoList.add(info);
+        }
+    }
+
     public ImsStreamMediaProfile getHoldMediaProfile() {
         ImsStreamMediaProfile mediaProfile = new ImsStreamMediaProfile();
 
@@ -1276,6 +1285,72 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         return mediaProfile;
     }
 
+    public int releaseCall() {
+        if (Utilities.DEBUG) Log.i(TAG, "Try to release the call: " + mCallId);
+
+        if (mICall == null) {
+            Log.e(TAG, "Can not release the call as the call interface is null.");
+            return Result.FAIL;
+        }
+
+        try {
+            // The call will be relaeased if the SRVCC success, update the mInSRVCC state.
+            mInSRVCC = false;
+
+            int res = Result.FAIL;
+            if (isConferenceCall()) {
+                res = mICall.confRelease(mCallId);
+            } else {
+                res = mICall.sessRelease(mCallId);
+            }
+
+            if (res == Result.SUCCESS) {
+                boolean isVideoCall = Utilities.isVideoCall(mCallProfile.mCallType);
+                if (isVideoCall && mVideoCallProvider != null) {
+                    Log.d(TAG, "Need to stop all the video as SRVCC success.");
+                    // Stop all the video
+                    mVideoCallProvider.stopAll();
+                }
+            } else {
+                Log.e(TAG, "Native failed to release the call.");
+            }
+            return res;
+        } catch (RemoteException e) {
+            Log.e(TAG, "Can not release as catch the RemoteException e: " + e);
+            return Result.FAIL;
+        }
+    }
+
+    public int updateSRVCCResult(int srvccResult) {
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "Try to update the SRVCC result for the call: " + mCallId);
+        }
+
+        if (mICall == null) {
+            Log.e(TAG, "Can not update the SRVCC result as the call interface is null.");
+            return Result.FAIL;
+        }
+
+        try {
+            // update the SRVCC result as SRVCC canceled or failed, update the mInSRVCC state.
+            mInSRVCC = false;
+
+            int res = Result.FAIL;
+            if (isConferenceCall()) {
+                res = mICall.confUpdateSRVCCResult(mCallId, srvccResult);
+            } else {
+                res = mICall.sessUpdateSRVCCResult(mCallId, srvccResult);
+            }
+            if (res == Result.FAIL) {
+                Log.e(TAG, "Native failed to update the SRVCC result.");
+            }
+            return res;
+        } catch (RemoteException e) {
+            Log.e(TAG, "Can not update the SRVCC result as catch the RemoteException e: " + e);
+            return Result.FAIL;
+        }
+    }
+
     public CameraCapabilities requestCameraCapabilites(int videoQuality) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to request the camera capabilites for call: " + mCallId);
@@ -1288,7 +1363,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
         try {
             // If the call do not establish, the camera capabilities do not consult, return null.
-            if (mState < State.ESTABLISHED) {
+            if (getState() < State.ESTABLISHED) {
                 // Use the given video quality to build the camera capabilities.
                 VideoQuality video = Utilities.sVideoQualityList.get(videoQuality);
                 return new CameraCapabilities(video._width, video._height);
@@ -1646,8 +1721,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return mICall.getMediaLostRatio(mCallId, isConferenceCall(), isVideo);
         } catch (RemoteException e) {
             Log.e(TAG, "Catch the remote exception when get the media lose, e: " + e);
-        } catch (UnsupportedCallTypeException e) {
-            Log.e(TAG, "Do not support the call type: " + mCallProfile.mCallType);
         }
 
         return Result.FAIL;
@@ -1665,8 +1738,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return mICall.getMediaJitter(mCallId, isConferenceCall(), isVideo);
         } catch (RemoteException e) {
             Log.e(TAG, "Catch the remote exception when get the media jitter, e: " + e);
-        } catch (UnsupportedCallTypeException e) {
-            Log.e(TAG, "Do not support the call type: " + mCallProfile.mCallType);
         }
 
         return Result.FAIL;
@@ -1684,11 +1755,184 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return mICall.getMediaRtt(mCallId, isConferenceCall(), isVideo);
         } catch (RemoteException e) {
             Log.e(TAG, "Catch the remote exception when get the media rtt, e: " + e);
-        } catch (UnsupportedCallTypeException e) {
-            Log.e(TAG, "Do not support the call type: " + mCallProfile.mCallType);
         }
 
         return Result.FAIL;
+    }
+
+    public void dialEmergencyCall() {
+        if (Utilities.DEBUG) Log.i(TAG, "Try to dial this emergency call: " + this);
+
+        try {
+            startCall(mParticipants.get(0), mSosLocation);
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to dial the emergency call as catch the RemoteException e: " + e);
+        }
+    }
+
+    public void terminateCall(int reason) {
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "Terminate this call: " + this + " for reason: " + reason);
+        }
+
+        if (mICall == null) return;
+
+        try {
+            int res = Result.FAIL;
+            if (isConferenceCall()) {
+                res = mICall.confTerm(mCallId, reason);
+            } else {
+                res = mICall.sessTerm(mCallId, reason);
+            }
+
+            if (res == Result.SUCCESS) {
+                // As call terminated, stop all the video.
+                // Note: This stop action need before call session terminated callback. Otherwise,
+                //       the video call provider maybe changed to null.
+                if (mVideoCallProvider != null) {
+                    mVideoCallProvider.stopAll();
+                }
+
+                int oldState = getState();
+                updateState(State.TERMINATED);
+                if (mListener != null) {
+                    ImsReasonInfo info = new ImsReasonInfo(reason, reason, "reason: " + reason);
+                    if (oldState < State.NEGOTIATING) {
+                        // It means the call do not ringing now, so we need give the call session
+                        // start failed call back.
+                        mListener.callSessionStartFailed(this, info);
+                    } else {
+                        mListener.callSessionTerminated(this, info);
+                    }
+                }
+            } else {
+                Log.e(TAG, "Native terminate a call failed, res = " + res);
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "Can not terminate the call as catch the RemoteException: " + e);
+        }
+    }
+
+    public void processNoResponseAction() {
+        if (Utilities.DEBUG) Log.i(TAG, "Process no response action.");
+
+        try {
+            ImsReasonInfo failedReason = new ImsReasonInfo(
+                    ImsReasonInfo.CODE_LOCAL_HO_NOT_FEASIBLE,
+                    ImsReasonInfo.CODE_UNSPECIFIED,
+                    "No response when SRVCC");
+
+            switch (mCallStateTracker.getSRVCCNoResponseAction()) {
+                case VoWifiCallStateTracker.ACTION_ACCEPT:
+                    mListener.callSessionStartFailed(ImsCallSessionImpl.this, failedReason);
+                    break;
+                case VoWifiCallStateTracker.ACTION_REJECT:
+                case VoWifiCallStateTracker.ACTION_TERMINATE:
+                    mListener.callSessionTerminated(ImsCallSessionImpl.this, failedReason);
+                case VoWifiCallStateTracker.ACTION_HOLD:
+                    mListener.callSessionHoldFailed(ImsCallSessionImpl.this, failedReason);
+                case VoWifiCallStateTracker.ACTION_RESUME:
+                    mListener.callSessionResumeFailed(ImsCallSessionImpl.this, failedReason);
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to process the no response action as catch the exception: " + e);
+        }
+    }
+
+    private void startEmergencyCall(String callee, ImsCallProfile profile) {
+        if (Utilities.DEBUG) Log.i(TAG, "Try to start the emergency call.");
+
+        mIsEmergency = true;
+        mParticipants.add(callee);
+
+        mCallProfile = profile;
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, callee);
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
+        mCallProfile.setCallExtraInt(
+                ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+        mCallProfile.setCallExtraInt(
+                ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+
+        mLocationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+        List<String> providers = mLocationManager.getProviders(true);
+        String locationProvider = null;
+        if (providers.contains(LocationManager.GPS_PROVIDER)) {
+            locationProvider = LocationManager.GPS_PROVIDER;
+        } else if (providers.contains(LocationManager.NETWORK_PROVIDER)) {
+            locationProvider = LocationManager.NETWORK_PROVIDER;
+        } else {
+            Log.w(TAG, "Failed to get the location provider. Can not provider the location info!");
+        }
+
+        if (!TextUtils.isEmpty(locationProvider)) {
+            mSosLocation = mLocationManager.getLastKnownLocation(locationProvider);
+            mLocationManager.requestLocationUpdates(locationProvider, 1000, 2.0f, this);
+        } else {
+            mLocationManager = null;
+            mSosLocation = null;
+        }
+
+        mCallManager.enterECBMWithCallSession(this);
+    }
+
+    private void startNormalCall(String callee, ImsCallProfile profile) throws RemoteException {
+        if (Utilities.DEBUG) Log.i(TAG, "Try to start the normal call.");
+
+        // As the vowifi service is null, need add this action to pending action.
+        if (mICall == null) {
+            synchronized (mPendingActions) {
+                String key = String.valueOf(System.currentTimeMillis());
+                PendingAction action = new PendingAction("start", MSG_START, callee, profile);
+                mPendingActions.put(key, action);
+            }
+            return;
+        }
+
+        // The vowifi service is not null, init the IMS call.
+        mParticipants.add(callee);
+
+        // TODO: update the profile
+        mCallProfile = profile;
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, callee);
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
+        // TODO: why not {@link ImsCallProfile#OIR_DEFAULT}
+        mCallProfile.setCallExtraInt(
+                ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+        mCallProfile.setCallExtraInt(
+                ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+
+        startCall(callee, null);
+    }
+
+    private void startCall(String callee, Location location) throws RemoteException {
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "Start the call with the callee: " + callee + ", location: " + location);
+        }
+
+        // Start the call.
+        boolean isVideoCall = Utilities.isVideoCall(mCallProfile.mCallType);
+
+        int id = Result.INVALID_ID;
+        if (!mIsEmergency) {
+            id = mICall.sessCall(callee, null, true, isVideoCall, false);
+        } else {
+            double latitude = location == null ? 0 : location.getLatitude();
+            double longitude = location == null ? 0 : location.getLongitude();
+            id = mICall.sessCallWithGeo(callee, null, true, isVideoCall, latitude, longitude);
+        }
+        Log.d(TAG, "Start a normal call, and get the call id: " + id);
+
+        if (id == Result.INVALID_ID) {
+            handleStartActionFailed("Native start the call failed.");
+        } else {
+            mCallId = id;
+            updateState(State.INITIATED);
+            mIsAlive = true;
+            startAudio();
+
+            // Start action success, update the last call action as start.
+            updateRequestAction(VoWifiCallStateTracker.ACTION_START);
+        }
     }
 
     private void inviteToConference(ImsCallSessionImpl confSession) throws RemoteException {
@@ -1721,7 +1965,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             // As this call session will be invited to the conference, update the state and
             // stop all the video.
             mIsAlive = false;
-            mState = State.TERMINATING;
+            updateState(State.TERMINATING);
             mVideoCallProvider.stopAll();
 
             // For normal call, there will be only one participant, and we need add it to this
@@ -1769,7 +2013,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
             imsCallProfile.setCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE, true);
             ImsCallSessionImpl newConfSession =
-                    mCallManager.createCallSession(imsCallProfile, null);
+                    mCallManager.createMOCallSession(imsCallProfile, null);
             newConfSession.setCallId(confId);
             newConfSession.updateMediaProfile(mImsStreamMediaProfile);
             newConfSession.setHostCallSession(this);
@@ -1876,5 +2120,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             }
         }
         return remove;
+    }
+
+    private int getSRVCCCallType() {
+        if (mIsEmergency) {
+            return SRVCCSyncInfo.CallType.EMERGENCY;
+        } else {
+            // CP only supports audio SRVCC now, so set callType to NORMAL here.
+            return SRVCCSyncInfo.CallType.NORMAL;
+        }
     }
 }

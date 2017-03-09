@@ -6,6 +6,9 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.os.SystemProperties;
@@ -22,14 +25,19 @@ import com.android.ims.ImsConferenceState;
 import com.android.ims.ImsReasonInfo;
 import com.android.ims.ImsStreamMediaProfile;
 import com.android.ims.internal.IImsCallSessionListener;
+import com.android.ims.internal.IImsServiceEx;
 import com.android.ims.internal.ImsCallSession;
+import com.android.ims.internal.ImsSrvccCallInfo;
 import com.android.ims.internal.ImsCallSession.State;
+import com.android.ims.internal.ImsManagerEx;
 import com.spreadtrum.ims.R;
 import com.spreadtrum.ims.vowifi.Utilities.CallStateForDataRouter;
 import com.spreadtrum.ims.vowifi.Utilities.JSONUtils;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.RegisterState;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
+import com.spreadtrum.ims.vowifi.Utilities.SRVCCResult;
+import com.spreadtrum.ims.vowifi.Utilities.SRVCCSyncInfo;
 import com.spreadtrum.ims.vowifi.Utilities.UnsupportedCallTypeException;
 import com.spreadtrum.ims.vowifi.Utilities.VideoQuality;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.IncomingCallAction;
@@ -47,9 +55,12 @@ public class VoWifiCallManager extends ServiceManager {
 
     public interface CallListener {
         public void onCallIncoming(ImsCallSessionImpl callSession);
+        public void onCallIsEmergency(ImsCallSessionImpl callSession);
         public void onCallEnd(ImsCallSessionImpl callSession);
         public void onCallRTPReceived(boolean isVideoCall, boolean isReceived);
         public void onCallRTCPChanged(boolean isVideoCall, int lose, int jitter, int rtt);
+        public void onEnterECBM(ImsCallSessionImpl callSession);
+        public void onExitECBM();
     }
 
     public interface ICallChangedListener {
@@ -59,8 +70,8 @@ public class VoWifiCallManager extends ServiceManager {
     private static final String TAG = Utilities.getTag(VoWifiCallManager.class.getSimpleName());
 
     private static final int MSG_ACTION_START_AUDIO_STREAM = 1;
-    private static final int MSG_ACTION_STOP_AUDIO_STREAM = 2;
-    private static final int MSG_ACTION_SET_VIDEO_QUALITY = 3;
+    private static final int MSG_ACTION_STOP_AUDIO_STREAM  = 2;
+    private static final int MSG_ACTION_SET_VIDEO_QUALITY  = 3;
 
     private static final String SERVICE_ACTION = "com.spreadtrum.vowifi.service.IVowifiService";
     private static final String SERVICE_PACKAGE = "com.spreadtrum.vowifi";
@@ -72,10 +83,13 @@ public class VoWifiCallManager extends ServiceManager {
     private int mRegisterState = RegisterState.STATE_IDLE;
 
     private MyAlertDialog mAlertDialog = null;
+    private ImsCallSessionImpl mConferenceCallSession = null;
+    private ImsCallSessionImpl mEmergencyCallSession = null;
 
     private CallListener mListener;
     private IncomingCallAction mIncomingCallAction = IncomingCallAction.NORMAL;
-    private ArrayList<ImsCallSessionImpl> mCallSessionList = new ArrayList<ImsCallSessionImpl>();
+    private ArrayList<ImsCallSessionImpl> mSessionList = new ArrayList<ImsCallSessionImpl>();
+    private ArrayList<ImsCallSessionImpl> mSRVCCSessionList = new ArrayList<ImsCallSessionImpl>();
 
     private IVoWifiSerService mICall;
     private ArrayList<ICallChangedListener> mICallChangedListeners =
@@ -98,8 +112,96 @@ public class VoWifiCallManager extends ServiceManager {
         }
     };
 
+    // Please do not change this defined, it samed as the state change value.
+    private static final int MSG_SRVCC_START   = 0;
+    private static final int MSG_SRVCC_SUCCESS = 1;
+    private static final int MSG_SRVCC_CANCEL  = 2;
+    private static final int MSG_SRVCC_FAILED  = 3;
+    private SRVCCHandler mSRVCCHandler = null;
+    private class SRVCCHandler extends Handler {
+        private ArrayList<ImsSrvccCallInfo> mInfoList = new ArrayList<ImsSrvccCallInfo>();
+
+        public SRVCCHandler(Looper looper) {
+            super(looper);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            switch(msg.what) {
+                case MSG_SRVCC_START:
+                    Log.d(TAG, "Will handle the SRVCC start event.");
+                    // When SRVCC start, put all the call session to SRVCC session list.
+                    mInfoList.clear();
+                    mSRVCCSessionList.clear();
+                    mSRVCCSessionList.addAll(mSessionList);
+
+                    // Prepare the call state which will need sync to modem if SRVCC success.
+                    for (ImsCallSessionImpl session : mSRVCCSessionList) {
+                        session.prepareSRVCCSyncInfo(mInfoList, 0);
+                    }
+                    break;
+                case MSG_SRVCC_SUCCESS:
+                    Log.d(TAG, "Will handle the SRVCC success event.");
+                    // If SRVCC success, we need do as this:
+                    // 1. Sync the calls info to CP.
+                    //    Inform UI-layer to update call UI for Video SRVCC.
+                    // 2. Release the native call resource.
+                    // 3. Give the callback to telephony if there is no response action,
+                    //    and the failed reason should be ImsReasonInfo.CODE_LOCAL_HO_NOT_FEASIBLE.
+                    // 4. Close the call session.
+                    // 5. Clear the session list.
+
+                    // Sync the calls' info.
+                    IBinder binder =
+                            android.os.ServiceManager.getService(ImsManagerEx.IMS_SERVICE_EX);
+                    IImsServiceEx imsServiceEx = IImsServiceEx.Stub.asInterface(binder);
+                    if (imsServiceEx == null) {
+                        Log.e(TAG, "Can not get the ims ex service.");
+                    } else {
+                        try {
+                            Log.d(TAG, "Notify the SRVCC call infos.");
+                            imsServiceEx.notifySrvccCallInfos(mInfoList);
+                        } catch (RemoteException e) {
+                            Log.e(TAG, "Failed to sync the infos as catch the exception: " + e);
+                        }
+                    }
+
+                    for (ImsCallSessionImpl session : mSRVCCSessionList) {
+                        // Release the native call resource, but do not terminate the UI.
+                        session.releaseCall();
+                        // Give the callback if there is pending action.
+                        session.processNoResponseAction();
+                        // Close this call session.
+                        session.close();
+                    }
+
+                    // Clear the SRVCC session list.
+                    mInfoList.clear();
+                    mSRVCCSessionList.clear();
+                    break;
+                case MSG_SRVCC_FAILED:
+                case MSG_SRVCC_CANCEL:
+                    Log.d(TAG, "Will handle the SRVCC failed/cancel event.");
+                    for (ImsCallSessionImpl session : mSRVCCSessionList) {
+                        int result = (msg.what == MSG_SRVCC_FAILED ? SRVCCResult.FAILURE
+                                : SRVCCResult.CANCEL);
+                        session.updateSRVCCResult(result);
+                    }
+                    mInfoList.clear();
+                    mSRVCCSessionList.clear();
+                    break;
+            }
+        }
+    }
+
     protected VoWifiCallManager(Context context) {
         super(context);
+
+        // New a thread to handle the SRVCC event.
+        HandlerThread thread = new HandlerThread("SRVCC");
+        thread.start();
+        Looper looper = thread.getLooper();
+        mSRVCCHandler = new SRVCCHandler(looper);
     }
 
     @Override
@@ -187,20 +289,14 @@ public class VoWifiCallManager extends ServiceManager {
         return mICallChangedListeners.remove(listener);
     }
 
-    public ImsCallSessionImpl createCallSession(ImsCallProfile profile,
+    public ImsCallSessionImpl createMOCallSession(ImsCallProfile profile,
             IImsCallSessionListener listener) {
-        return createCallSession(profile, listener, null);
+        return createCallSession(profile, listener, null, SRVCCSyncInfo.CallDirection.MO);
     }
 
-    public ImsCallSessionImpl createCallSession(ImsCallProfile profile,
-            IImsCallSessionListener listener, ImsVideoCallProviderImpl videoCallProvider) {
-        ImsCallSessionImpl session =
-                new ImsCallSessionImpl(mContext, this, profile, listener, videoCallProvider);
-
-        // Add this call session to the list.
-        addCall(session);
-
-        return session;
+    public ImsCallSessionImpl createMTCallSession(ImsCallProfile profile,
+            IImsCallSessionListener listener) {
+        return createCallSession(profile, listener, null, SRVCCSyncInfo.CallDirection.MT);
     }
 
     public void terminateCalls(WifiState state) throws RemoteException {
@@ -210,7 +306,7 @@ public class VoWifiCallManager extends ServiceManager {
         }
 
         ArrayList<ImsCallSessionImpl> callList =
-                (ArrayList<ImsCallSessionImpl>) mCallSessionList.clone();
+                (ArrayList<ImsCallSessionImpl>) mSessionList.clone();
         for (ImsCallSessionImpl callSession : callList) {
             Log.d(TAG, "Terminate the call: " + callSession);
             switch (state) {
@@ -386,16 +482,7 @@ public class VoWifiCallManager extends ServiceManager {
             return;
         }
 
-        mCallSessionList.add(callSession);
-    }
-
-    public void removeCall(String sessionId) {
-        if (TextUtils.isEmpty(sessionId)) {
-            Log.e(TAG, "Try to remove the call session, but the session id is empty.");
-            return;
-        }
-
-        removeCall(getCallSession(sessionId));
+        mSessionList.add(callSession);
     }
 
     public void removeCall(ImsCallSessionImpl callSession) {
@@ -406,25 +493,41 @@ public class VoWifiCallManager extends ServiceManager {
         }
 
         // Remove the call session from the list.
-        if (mCallSessionList.remove(callSession)) {
+        if (mSessionList.remove(callSession)) {
             Log.d(TAG, "The call[" + callSession + "] removed from the list.");
-            // If the call removed, we need dismiss the alter dialog of this call session.
+            // If the call removed, we need dismiss the alert dialog of this call session.
             dismissAlertDialog(Integer.parseInt(callSession.getCallId()));
 
             // It means the call is end now.
-            if (mListener != null) mListener.onCallEnd(callSession);
-            // After remove the session, if the session list is empty, need stop the audio stream.
-            if (callSession.isAudioStart()) stopAudioStream();
+            if (mEmergencyCallSession != null
+                    && callSession.equals(mEmergencyCallSession)) {
+                // It means the emergency call end. Exit the ECBM.
+                if (mListener != null) mListener.onExitECBM();
+            } else if (mListener != null) {
+                mListener.onCallEnd(callSession);
+                if (mEmergencyCallSession != null) {
+                    Log.e(TAG, "There is a call end, but not emergency call. Shouldn't be here.");
+                }
+            }
         } else {
-            Log.w(TAG, "Failed to remove the call[" + callSession + "] from the list.");
+            Log.e(TAG, "Failed to remove the call[" + callSession + "] from the list.");
         }
+
+        // After remove the session, if the session list is empty, we need stop the audio stream.
+        if (callSession.isAudioStart()) stopAudioStream();
+    }
+
+    public void enterECBMWithCallSession(ImsCallSessionImpl emergencyCallSession) {
+        mEmergencyCallSession = emergencyCallSession;
+
+        if (mListener != null) mListener.onEnterECBM(mEmergencyCallSession);
     }
 
     /**
      * Return the call session list. This list may be empty if there isn't any call.
      */
     public ArrayList<ImsCallSessionImpl> getCallSessionList() {
-        return mCallSessionList;
+        return mSessionList;
     }
 
     public boolean isCallFunEnabled() {
@@ -432,7 +535,7 @@ public class VoWifiCallManager extends ServiceManager {
     }
 
     public int getCallCount() {
-        return mCallSessionList.size();
+        return mSessionList.size();
     }
 
     /**
@@ -447,7 +550,7 @@ public class VoWifiCallManager extends ServiceManager {
             return null;
         }
 
-        for (ImsCallSessionImpl session : mCallSessionList) {
+        for (ImsCallSessionImpl session : mSessionList) {
             if (id.equals(session.getCallId())) {
                 Log.d(TAG, "Found the call session for this id: " + id);
                 return session;
@@ -464,14 +567,9 @@ public class VoWifiCallManager extends ServiceManager {
      */
     public ArrayList<ImsCallSessionImpl> getVideoCallSessions() {
         ArrayList<ImsCallSessionImpl> videoSessionList = new ArrayList<ImsCallSessionImpl>();
-        for (ImsCallSessionImpl session : mCallSessionList) {
-            try {
-                if (Utilities.isVideoCall(session.getCallProfile().mCallType)) {
-                    videoSessionList.add(session);
-                }
-            } catch (UnsupportedCallTypeException e) {
-                // Shouldn't be here.
-                Log.e(TAG, "This session(" + session + ")'s call type do not support, need check.");
+        for (ImsCallSessionImpl session : mSessionList) {
+            if (Utilities.isVideoCall(session.getCallProfile().mCallType)) {
+                videoSessionList.add(session);
             }
         }
 
@@ -481,16 +579,11 @@ public class VoWifiCallManager extends ServiceManager {
 
     public ImsCallSessionImpl getAliveVideoCallSession() {
         ImsCallSessionImpl session = null;
-        try {
-            session = getAliveCallSession();
-            if (session == null) return null;
+        session = getAliveCallSession();
+        if (session == null) return null;
 
-            if (Utilities.isVideoCall(session.getCallProfile().mCallType)) {
-                return session;
-            }
-        } catch (UnsupportedCallTypeException e) {
-            // Shouldn't be here.
-            Log.e(TAG, "This session(" + session + ")'s call type do not support, need check.");
+        if (Utilities.isVideoCall(session.getCallProfile().mCallType)) {
+            return session;
         }
 
         Log.d(TAG, "Can not found any video call in alive state, return null.");
@@ -498,7 +591,7 @@ public class VoWifiCallManager extends ServiceManager {
     }
 
     public ImsCallSessionImpl getAliveCallSession() {
-        for (ImsCallSessionImpl session : mCallSessionList) {
+        for (ImsCallSessionImpl session : mSessionList) {
             if (session.isAlive()) return session;
         }
 
@@ -507,12 +600,34 @@ public class VoWifiCallManager extends ServiceManager {
     }
 
     public ImsCallSessionImpl getConfCallSession() {
-        for (ImsCallSessionImpl session : mCallSessionList) {
+        for (ImsCallSessionImpl session : mSessionList) {
             if (session.isMultiparty()) return session;
         }
 
         Log.w(TAG, "Can not found any conference call.");
         return null;
+    }
+
+    public void onSRVCCStateChanged(int state) {
+        if (!isCallFunEnabled()) {
+            Log.d(TAG, "As call function disabled, do not handle the SRVCC state changed.");
+            return;
+        }
+
+        Log.d(TAG, "The SRVCC state changed, state: " + state);
+        mSRVCCHandler.sendEmptyMessage(state);
+    }
+
+    private ImsCallSessionImpl createCallSession(ImsCallProfile profile,
+            IImsCallSessionListener listener, ImsVideoCallProviderImpl videoCallProvider,
+            int callDir) {
+        ImsCallSessionImpl session = new ImsCallSessionImpl(mContext, this, profile, listener,
+                videoCallProvider, callDir);
+
+        // Add this call session to the list.
+        addCall(session);
+
+        return session;
     }
 
     private void dismissAlertDialog(int sessionId) {
@@ -591,6 +706,13 @@ public class VoWifiCallManager extends ServiceManager {
             Log.d(TAG, "Handle the event '" + eventName + "' for the call: " + sessionId);
 
             int eventCode = jObject.optInt(JSONUtils.KEY_EVENT_CODE, -1);
+            if (callSession != null) {
+                VoWifiCallStateTracker tracker = callSession.getCallStateTracker();
+                if (tracker != null) {
+                    tracker.updateActionResponse(eventCode);
+                }
+            }
+
             switch (eventCode) {
                 case JSONUtils.EVENT_CODE_CALL_INCOMING: {
                     boolean isVideo = jObject.optBoolean(JSONUtils.KEY_IS_VIDEO, false);
@@ -658,6 +780,10 @@ public class VoWifiCallManager extends ServiceManager {
                 }
                 case JSONUtils.EVENT_CODE_CALL_IS_FOCUS: {
                     handleCallIsFocus(callSession);
+                    break;
+                }
+                case JSONUtils.EVENT_CODE_CALL_IS_EMERGENCY: {
+                    handleCallIsEmergency(callSession);
                     break;
                 }
                 case JSONUtils.EVENT_CODE_CONF_ALERTED: {
@@ -792,11 +918,12 @@ public class VoWifiCallManager extends ServiceManager {
                 ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
         callProfile.setCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE, isConference);
 
-        ImsCallSessionImpl callSession = createCallSession(callProfile, null);
+        ImsCallSessionImpl callSession = createMTCallSession(callProfile, null);
         callSession.addCallee(callee);
         callSession.setCallId(sessionId);
         callSession.updateMediaProfile(mediaProfile);
         callSession.updateState(State.NEGOTIATING);
+        callSession.updateRequestAction(VoWifiCallStateTracker.ACTION_INCOMING);
 
         // If the current incoming call action is reject or call function is disabled,
         // we need reject the incoming call and give the reason as the local call is busy.
@@ -862,8 +989,6 @@ public class VoWifiCallManager extends ServiceManager {
                 listener.callSessionTerminated(callSession, info);
             }
         }
-
-        removeCall(callSession);
     }
 
     private void handleCallTalking(ImsCallSessionImpl callSession, boolean isVideo)
@@ -881,9 +1006,6 @@ public class VoWifiCallManager extends ServiceManager {
         ImsCallProfile profile = callSession.getCallProfile();
         if (!isVideo) {
             profile.mCallType = ImsCallProfile.CALL_TYPE_VOICE;
-        } else {
-            // If the call is video call, we need start the video transmission.
-            callSession.startVideoTransmission();
         }
 
         IImsCallSessionListener listener = callSession.getListener();
@@ -1089,6 +1211,16 @@ public class VoWifiCallManager extends ServiceManager {
         }
     }
 
+    private void handleCallIsEmergency(ImsCallSessionImpl callSession) {
+        if (Utilities.DEBUG) Log.i(TAG, "Handle the call is emergency.");
+        if (callSession == null) {
+            Log.w(TAG, "[handleCallIsEmergency] The call session is null.");
+            return;
+        }
+
+        if (mListener != null) mListener.onCallIsEmergency(callSession);
+    }
+
     private void handleVideoResize(int eventCode, ImsCallSessionImpl callSession, int width,
             int height) {
         if (Utilities.DEBUG) Log.i(TAG, "Handle video resize.");
@@ -1283,6 +1415,8 @@ public class VoWifiCallManager extends ServiceManager {
                 // It means the call accept to join the conference.
                 ImsCallSessionImpl callSession = confSession.getInInviteCall();
                 String callee = callSession.getCallee();
+                // Add this call session as the conference's participant.
+                confSession.addParticipant(callee, callSession);
 
                 bundleKey = callee;
                 bundle.putString(ImsConferenceState.USER, callee);
@@ -1319,8 +1453,14 @@ public class VoWifiCallManager extends ServiceManager {
                 Log.d(TAG, "Get the kick accept result for the user: " + phoneNumber);
                 // It means this call already disconnect.
                 String callee = confSession.removeCallee(phoneNumber);
-                confSession.kickActionFinished(callee);
-                if (TextUtils.isEmpty(callee)) callee = phoneNumber;
+                if (TextUtils.isEmpty(callee)) {
+                    Log.w(TAG, "Can not find the phoneNumber from callee list.");
+                    callee = phoneNumber;
+                } else {
+                    // Remove from the conference's participants.
+                    confSession.removeParticipant(callee);
+                    confSession.kickActionFinished(callee);
+                }
 
                 bundleKey = callee;
                 bundle.putString(ImsConferenceState.USER, callee);
@@ -1346,7 +1486,13 @@ public class VoWifiCallManager extends ServiceManager {
                         && ImsConferenceState.STATUS_DISCONNECTED.equals(newStatus)) {
                     // If the new status is disconnected, we need remove it from the participants.
                     String callee = confSession.removeCallee(phoneNumber);
-                    if (TextUtils.isEmpty(callee)) callee = phoneNumber;
+                    if (TextUtils.isEmpty(callee)) {
+                        Log.w(TAG, "Can not find the phoneNumber from callee list.");
+                        callee = phoneNumber;
+                    } else {
+                        // Remove from the conference's participants.
+                        confSession.removeParticipant(callee);
+                    }
 
                     bundleKey = callee;
                     bundle.putString(ImsConferenceState.USER, callee);

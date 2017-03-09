@@ -119,8 +119,8 @@ public class VoWifiRegisterManager extends ServiceManager {
         switch (msg.what) {
             case MSG_ACTION_LOGIN: {
                 PendingAction action = (PendingAction) msg.obj;
-                login((Boolean) action._params.get(0), (String) action._params.get(1),
-                        (String) action._params.get(2));
+                login((Boolean) action._params.get(0), (Boolean) action._params.get(1),
+                        (String) action._params.get(2), (String) action._params.get(3));
                 handle = true;
                 break;
             }
@@ -142,7 +142,7 @@ public class VoWifiRegisterManager extends ServiceManager {
             }
             case MSG_ACTION_PREPARE_FOR_LOGIN: {
                 PendingAction action = (PendingAction) msg.obj;
-                prepareForLogin((Integer) action._params.get(0));
+                prepareForLogin((Integer) action._params.get(0), (Boolean) action._params.get(1));
                 break;
             }
         }
@@ -150,7 +150,7 @@ public class VoWifiRegisterManager extends ServiceManager {
         return handle;
     }
 
-    public void prepareForLogin(int subId) {
+    public void prepareForLogin(int subId, boolean isSupportSRVCC) {
         if (Utilities.DEBUG) Log.i(TAG, "Prepare the info before login, subId is: " + subId);
 
         boolean handle = false;
@@ -169,7 +169,7 @@ public class VoWifiRegisterManager extends ServiceManager {
                 }
 
                 // Prepare for login, need open account, start client and update settings.
-                if (cliOpen(info) && cliStart() && cliUpdateSettings(info)) {
+                if (cliOpen(info) && cliStart() && cliUpdateSettings(info, isSupportSRVCC)) {
                     mLoginPrepared = true;
                 }
 
@@ -185,13 +185,14 @@ public class VoWifiRegisterManager extends ServiceManager {
             // If we catch the remote exception or register interface is null, handle is false.
             // And we will add this action to pending list.
             addToPendingList(new PendingAction("prepareForLogin", MSG_ACTION_PREPARE_FOR_LOGIN,
-                    Integer.valueOf(subId)));
+                    Integer.valueOf(subId), Boolean.valueOf(isSupportSRVCC)));
         }
     }
 
-    public void login(boolean isIPv4, String localIP, String pcscfIP) {
+    public void login(boolean forSos, boolean isIPv4, String localIP, String pcscfIP) {
         if (Utilities.DEBUG) {
-            Log.i(TAG, "Try to login to the ims, current register state: " + mRegisterState);
+            Log.i(TAG, "Try to login to the ims, for sos: " + forSos + ", is IPv4: " + isIPv4
+                    + ", current register state: " + mRegisterState);
             Log.i(TAG, "Login with the local ip: " + localIP + ", pcscf ip: " + pcscfIP);
         }
 
@@ -214,7 +215,7 @@ public class VoWifiRegisterManager extends ServiceManager {
         if (mIRegister != null) {
             try {
                 updateRegisterState(RegisterState.STATE_PROGRESSING);
-                int res = mIRegister.cliLogin(isIPv4, localIP, pcscfIP);
+                int res = mIRegister.cliLogin(forSos, isIPv4, localIP, pcscfIP);
                 if (res == Result.FAIL) {
                     Log.e(TAG, "Login to the ims service failed, Please check!");
                     updateRegisterState(RegisterState.STATE_IDLE);
@@ -231,7 +232,7 @@ public class VoWifiRegisterManager extends ServiceManager {
         if (!handle) {
             // Do not handle the register action, add to pending list.
             PendingAction action = new PendingAction("login", MSG_ACTION_LOGIN,
-                    Boolean.valueOf(isIPv4), localIP, pcscfIP);
+                    Boolean.valueOf(forSos), Boolean.valueOf(isIPv4), localIP, pcscfIP);
             addToPendingList(action);
         }
     }
@@ -358,7 +359,8 @@ public class VoWifiRegisterManager extends ServiceManager {
         return mIRegister.cliStart() == Result.SUCCESS;
     }
 
-    private boolean cliUpdateSettings(SIMAccountInfo info) throws RemoteException {
+    private boolean cliUpdateSettings(SIMAccountInfo info, boolean isSupportSRVCC)
+            throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Try to update the account settings.");
 
         if (mIRegister == null) {
@@ -367,7 +369,7 @@ public class VoWifiRegisterManager extends ServiceManager {
         }
 
         int res = mIRegister.cliUpdateSettings(info._subId, info._spn, info._imei, info._userName,
-                info._authName, info._authPass, info._realm, info._impu);
+                info._authName, info._authPass, info._realm, info._impu, isSupportSRVCC);
         return res == Result.SUCCESS;
     }
 
@@ -510,7 +512,7 @@ public class VoWifiRegisterManager extends ServiceManager {
                 }
                 if (!isIMSIValid(imsi)) return null;
 
-                String simOperator = tm.getSimOperator();
+                String simOperator = tm.getSimOperator(subId);
                 if (TextUtils.isEmpty(simOperator)) return null;
 
                 String mcc = simOperator.substring(0, 3);

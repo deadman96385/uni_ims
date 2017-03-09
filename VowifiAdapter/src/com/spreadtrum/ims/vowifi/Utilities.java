@@ -71,12 +71,7 @@ public class Utilities {
         return DEFAULT_PHONE_ID;
     }
 
-    public static boolean isVideoCall(int callType) throws UnsupportedCallTypeException {
-        if (callType < ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO
-                || callType > ImsCallProfile.CALL_TYPE_VS_RX) {
-            Log.e(TAG, "The call type " + callType + " do not exist. Please check!");
-            throw new UnsupportedCallTypeException(callType);
-        }
+    public static boolean isVideoCall(int callType) {
         return callType != ImsCallProfile.CALL_TYPE_VOICE;
     }
 
@@ -133,16 +128,16 @@ public class Utilities {
     // This defined is match the error used by CM. Please do not change.
     public static class UnsolicitedCode {
         public static final int SECURITY_DPD_DISCONNECTED = 1;
-        public static final int SIP_TIMEOUT = 2;
-        public static final int SIP_LOGOUT = 3;
-        public static final int SECURITY_REKEY_FAILED = 4;
-        public static final int SECURITY_STOP = 5;
+        public static final int SIP_TIMEOUT               = 2;
+        public static final int SIP_LOGOUT                = 3;
+        public static final int SECURITY_REKEY_FAILED     = 4;
+        public static final int SECURITY_STOP             = 5;
     }
 
     public static class CallType {
         public static final int CALL_TYPE_UNKNOWN = 0;
-        public static final int CALL_TYPE_VOICE = 1;
-        public static final int CALL_TYPE_VIDEO = 2;
+        public static final int CALL_TYPE_VOICE   = 1;
+        public static final int CALL_TYPE_VIDEO   = 2;
     }
 
     public static class VolteNetworkType {
@@ -153,48 +148,99 @@ public class Utilities {
 
     public static class VowifiNetworkType {
         public static final int IEEE_802_11 = 1;
-        public static final int E_UTRAN_FDD = 9; // 3gpp
+        public static final int E_UTRAN_FDD = 9;  // 3gpp
         public static final int E_UTRAN_TDD = 10; // 3gpp
     }
 
     public static class AttachState {
-        public static final int STATE_IDLE = 0;
+        public static final int STATE_IDLE        = 0;
         public static final int STATE_PROGRESSING = 1;
-        public static final int STATE_CONNECTED = 2;
+        public static final int STATE_CONNECTED   = 2;
     }
 
     public static class NativeErrorCode {
-        public static final int IKE_INTERRUPT_STOP = 0xD200 + 198;
-        public static final int DPD_DISCONNECT = 0xD200 + 15;
-        public static final int IPSEC_REKEY_FAIL = 0xD200 + 10;
-        public static final int IKE_REKEY_FAIL = 0xD200 + 11;
-        public static final int REG_TIMEOUT = 0xE100 + 5;
+        public static final int IKE_INTERRUPT_STOP   = 0xD200 + 198;
+        public static final int DPD_DISCONNECT       = 0xD200 + 15;
+        public static final int IPSEC_REKEY_FAIL     = 0xD200 + 10;
+        public static final int IKE_REKEY_FAIL       = 0xD200 + 11;
+        public static final int REG_TIMEOUT          = 0xE100 + 5;
         public static final int REG_SERVER_FORBIDDEN = 0xE100 + 8;
     }
 
     public static class RegisterState {
-        public static final int STATE_IDLE = 0;
+        public static final int STATE_IDLE        = 0;
         public static final int STATE_PROGRESSING = 1;
-        public static final int STATE_CONNECTED = 2;
+        public static final int STATE_CONNECTED   = 2;
     }
 
     public static class Result {
-        public static final int FAIL = 0;
-        public static final int SUCCESS = 1;
-
         public static final int INVALID_ID = -1;
+
+        public static final int FAIL       = 0;
+        public static final int SUCCESS    = 1;
     }
 
     public static class CallStateForDataRouter {
-        public static final int VOLTE = 0;
+        public static final int VOLTE  = 0;
         public static final int VOWIFI = 1;
-        public static final int NONE = 2;
+        public static final int NONE   = 2;
     }
 
     public static class IPVersion {
         public static final int NONE = -1;
         public static final int IP_V4 = 0;
         public static final int IP_V6 = 1;
+    }
+
+    // Note: Do not change this defined value, as it matched the call state used in CP.
+    public static class SRVCCSyncInfo {
+
+        public static class CallState {
+            public static final int IDLE_STATE           = 0;
+            public static final int DIALING_STATE        = 1;
+            public static final int OUTGOING_STATE       = 2;
+            public static final int ACTIVE_STATE         = 3;
+            public static final int INCOMING_STATE       = 4;
+            public static final int ACCEPT_STATE         = 5;
+            public static final int MODIFY_PENDING_STATE = 6;
+            public static final int RELEASE_STATE        = 7;
+            public static final int CCBS_RECALL_STATE    = 8;
+            public static final int MT_CSFB_STATE        = 9;
+            public static final int MAX_STATE            = 10;
+        }
+
+        public static class HoldState {
+            public static final int IDLE = 0;
+            public static final int HELD = 2;
+        }
+
+        public static class MultipartyState {
+            public static final int NO  = 0;
+            public static final int YES = 2;
+        }
+
+        public static class CallDirection {
+            public static final int MO = 0;
+            public static final int MT = 1;
+        }
+
+        public static class CallType {
+            public static final int NORMAL    = 0;
+            public static final int EMERGENCY = 1;
+            public static final int VIDEO     = 2;
+        }
+
+        public static class PhoneNumberType {
+            public static final int INTERNATIONAL = 1;
+            public static final int NATIONAL = 2;
+            public static final int NETWORK = 3;
+        }
+    }
+
+    public static class SRVCCResult {
+        public static final int SUCCESS = 1;
+        public static final int CANCEL  = 2;
+        public static final int FAILURE  = 3;
     }
 
     public static class SecurityConfig {
@@ -205,11 +251,12 @@ public class Utilities {
         public String _ip4;
         public String _ip6;
         public boolean _prefIPv4;
+        public boolean _isSos;
 
         public int _useIPVersion = IPVersion.NONE;
 
         public SecurityConfig(String pcscf4, String pcscf6, String dns4, String dns6, String ip4,
-                String ip6, boolean prefIPv4) {
+                String ip6, boolean prefIPv4, boolean isSos) {
             _pcscf4 = pcscf4;
             _pcscf6 = pcscf6;
             _dns4 = dns4;
@@ -217,6 +264,7 @@ public class Utilities {
             _ip4 = ip4;
             _ip6 = ip6;
             _prefIPv4 = prefIPv4;
+            _isSos = isSos;
         }
 
         @Override
@@ -383,6 +431,8 @@ public class Utilities {
     }
 
     public static class UnsupportedCallTypeException extends Exception {
+        private static final long serialVersionUID = 6637697999534612205L;
+
         public UnsupportedCallTypeException(int callType) {
             super("The call type " + callType + " do not exist.");
         }
@@ -496,8 +546,9 @@ public class Utilities {
         public static final int EVENT_CODE_CALL_ADD_VIDEO_REQUEST = CALL_EVENT_CODE_BASE + 16;
         public static final int EVENT_CODE_CALL_ADD_VIDEO_CANCEL = CALL_EVENT_CODE_BASE + 17;
         public static final int EVENT_CODE_CALL_RTP_RECEIVED = CALL_EVENT_CODE_BASE + 18;
-        public static final int EVENT_CODE_CALL_IS_FOCUS = CALL_EVENT_CODE_BASE + 19;
-        public static final int EVENT_CODE_CALL_RTCP_CHANGED = CALL_EVENT_CODE_BASE + 20;
+        public static final int EVENT_CODE_CALL_RTCP_CHANGED = CALL_EVENT_CODE_BASE + 19;
+        public static final int EVENT_CODE_CALL_IS_FOCUS = CALL_EVENT_CODE_BASE + 20;
+        public static final int EVENT_CODE_CALL_IS_EMERGENCY = CALL_EVENT_CODE_BASE + 21;
 
         public static final String EVENT_CALL_INCOMING = "call_incoming";
         public static final String EVENT_CALL_OUTGOING = "call_outgoing";
@@ -517,8 +568,9 @@ public class Utilities {
         public static final String EVENT_CALL_ADD_VIDEO_REQUEST = "call_add_video_request";
         public static final String EVENT_CALL_ADD_VIDEO_CANCEL = "call_add_video_cancel";
         public static final String EVENT_CALL_RTP_RECEIVED = "call_rtp_received";
-        public static final String EVENT_CALL_IS_FOCUS = "call_is_focus";
         public static final String EVENT_CALL_RTCP_CHANGED = "call_rtcp_changed";
+        public static final String EVENT_CALL_IS_FOCUS = "call_is_focus";
+        public static final String EVENT_CALL_IS_EMERGENCY = "call_is_emergency";
 
         // Conference
         public static final int CONF_EVENT_CODE_BASE = 200;

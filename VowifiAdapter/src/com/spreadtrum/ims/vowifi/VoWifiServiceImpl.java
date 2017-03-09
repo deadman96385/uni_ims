@@ -12,11 +12,11 @@ import android.os.Message;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.telephony.SubscriptionManager;
-import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import com.android.ims.ImsCallProfile;
 import com.android.ims.internal.IImsCallSessionListener;
+import com.android.ims.internal.ImsCallSession.State;
 import com.spreadtrum.ims.ImsConfigImpl;
 import com.spreadtrum.ims.vowifi.Utilities.AttachState;
 import com.spreadtrum.ims.vowifi.Utilities.CallStateForDataRouter;
@@ -28,7 +28,6 @@ import com.spreadtrum.ims.vowifi.Utilities.RegisterState;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.SecurityConfig;
 import com.spreadtrum.ims.vowifi.Utilities.UnsolicitedCode;
-import com.spreadtrum.ims.vowifi.Utilities.UnsupportedCallTypeException;
 import com.spreadtrum.ims.vowifi.VoWifiCallManager.CallListener;
 import com.spreadtrum.ims.vowifi.VoWifiRegisterManager.RegisterListener;
 import com.spreadtrum.ims.vowifi.VoWifiSecurityManager.SecurityListener;
@@ -46,7 +45,27 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private static final int RESET_STEP_DEATTACH = 2;
     private static final int RESET_STEP_FORCE_RESET = 3;
 
+    private static final int ECBM_TIMEOUT = 30 * 1000; // 30s
+    private static final int ECBM_STEP_INVALID = 0;
+
+    // For ECBM normal step.
+    private static final int ECBM_STEP_DEREGISTER_FOR_SOS = 1;
+    private static final int ECBM_STEP_DEATTACH_FOR_SOS = 2;
+    private static final int ECBM_STEP_ATTACH_FOR_SOS = 3;
+    private static final int ECBM_STEP_REGISTER_FOR_SOS = 4;
+    private static final int ECBM_STEP_START_EMERGENCY_CALL = 5;
+    private static final int ECBM_STEP_DEREGISTER = 6;
+    private static final int ECBM_STEP_DEATTACH = 7;
+    private static final int ECBM_STEP_ATTACH = 8;
+    private static final int ECBM_STEP_REGISTER = 9;
+
+    // For ECBM error step.
+    private static final int ECBM_STEP_FORCE_RESET = 10;
+
     private int mResetStep = RESET_STEP_INVALID;
+    private int mEcbmStep = ECBM_STEP_INVALID;
+
+    private boolean mIsSRVCCSupport = true;
 
     private Context mContext;
     private SharedPreferences mPreferences = null;
@@ -54,6 +73,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private RegisterIPAddress mRegisterIP = null;
 
     private ImsUtImpl mImsUt;
+    private ImsEcbmImpl mImsEcbm;
     private VoWifiCallManager mCallMgr;
     private VoWifiRegisterManager mRegisterMgr;
     private VoWifiSecurityManager mSecurityMgr;
@@ -72,6 +92,9 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private static final int MSG_REREGISTER = 7;
     private static final int MSG_UPDATE_DATAROUTER_STATE = 8;
     private static final int MSG_TERMINATE_CALLS = 9;
+
+    private static final int MSG_ECBM = 10;
+    private static final int MSG_ECBM_TIMEOUT = 11;
     private class MyHandler extends Handler {
         public MyHandler(Looper looper) {
             super(looper);
@@ -123,6 +146,13 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                         Log.e(TAG, "Catch the RemoteException when terminate calls. e: " + e);
                     }
                     break;
+                case MSG_ECBM:
+                    mEcbmStep = msg.arg1;
+                    handleMsgECBM(mEcbmStep);
+                    break;
+                case MSG_ECBM_TIMEOUT:
+                    handleMsgECBMTimeout(msg.arg1);
+                    break;
             }
         }
 
@@ -150,10 +180,61 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             }
         }
 
+        private void handleMsgECBM(int step) {
+            // For enter ECBM, we need de-register & de-attach. Then attach & register for
+            // emergency. After register success finished, start the emergency call.
+            // Then try to exit ECBM, we need de-register & de-attach. Then attach & register
+            // for normal.
+            Log.d(TAG, "Handle the ECBM message as step: " + step);
+
+            switch (step) {
+                case ECBM_STEP_DEREGISTER_FOR_SOS:
+                case ECBM_STEP_DEREGISTER:
+                    deregister();
+                    break;
+                case ECBM_STEP_DEATTACH_FOR_SOS:
+                case ECBM_STEP_DEATTACH:
+                    deattach();
+                    break;
+                case ECBM_STEP_ATTACH_FOR_SOS:
+                case ECBM_STEP_ATTACH:
+                    attach();
+                    break;
+                case ECBM_STEP_REGISTER_FOR_SOS:
+                case ECBM_STEP_REGISTER:
+                    register();
+                    break;
+                case ECBM_STEP_START_EMERGENCY_CALL:
+                    ImsCallSessionImpl callSession = mImsEcbm.getEmergencyCall();
+                    if (callSession == null || callSession.getState() > State.IDLE) {
+                        Log.e(TAG, "Failed to start the emergency call: " + callSession);
+                        // Handle this error as meet ecbm timeout.
+                        mHandler.sendEmptyMessage(MSG_ECBM_TIMEOUT);
+                        break;
+                    }
+
+                    callSession.dialEmergencyCall();
+                    break;
+                case ECBM_STEP_INVALID:
+                    exitECBM();
+                    break;
+            }
+        }
+
+        private void handleMsgECBMTimeout(int forStep) {
+            Log.d(TAG, "Handle the ECBM timeout message, for step: " + forStep
+                    + ", and current ECBM step: " + mEcbmStep);
+            // Exit the ECBM, and it will terminate the emergency call session.
+            exitECBM();
+
+            // Reset the security and sip stack.
+            resetAll(WifiState.DISCONNECTED);
+        }
     }
 
     public VoWifiServiceImpl(Context context) {
         mContext = context;
+
         mPreferences = PreferenceManager.getDefaultSharedPreferences(mContext);
         mPreferences.registerOnSharedPreferenceChangeListener(this);
 
@@ -216,7 +297,16 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         if (mImsUt == null) {
             mImsUt = new ImsUtImpl(mContext, mCallMgr);
         }
+
         return mImsUt;
+    }
+
+    public ImsEcbmImpl getEcbmInterface() {
+        if (mImsEcbm == null) {
+            mImsEcbm = new ImsEcbmImpl(mContext);
+        }
+
+        return mImsEcbm;
     }
 
     public void resetAll(WifiState state) {
@@ -256,7 +346,11 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     private void attachInternal() {
-        mSecurityMgr.attach();
+        if (mEcbmStep == ECBM_STEP_ATTACH_FOR_SOS) {
+            mSecurityMgr.attachForSos();
+        } else {
+            mSecurityMgr.attach();
+        }
     }
 
     public void deattach() {
@@ -314,7 +408,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         // 2. If prepare finished, start the login process with the first local IP and PCSCF IP.
         // 3. If login failed, need try the left local IP and PCSCF IP until all of them already
         //    failed, then need notify the user login failed.
-        mRegisterMgr.prepareForLogin(subId[0]);
+        mRegisterMgr.prepareForLogin(subId[0], mIsSRVCCSupport);
     }
 
     public void deregister() {
@@ -380,7 +474,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
      */
     public ImsCallSessionImpl createCallSession(ImsCallProfile profile,
             IImsCallSessionListener listener) {
-        return mCallMgr.createCallSession(profile, listener);
+        return mCallMgr.createMOCallSession(profile, listener);
     }
 
     public ImsCallSessionImpl getPendingCallSession(String callId) {
@@ -410,13 +504,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             return CallType.CALL_TYPE_UNKNOWN;
         }
 
-        try {
-            boolean isVideo = Utilities.isVideoCall(callSession.getCallProfile().mCallType);
-            return isVideo ? CallType.CALL_TYPE_VIDEO : CallType.CALL_TYPE_VOICE;
-        } catch (UnsupportedCallTypeException e) {
-            Log.e(TAG, "Catch the UnsupportedCallTypeException when get the call type. e: " + e);
-            return CallType.CALL_TYPE_UNKNOWN;
-        }
+        boolean isVideo = Utilities.isVideoCall(callSession.getCallProfile().mCallType);
+        return isVideo ? CallType.CALL_TYPE_VIDEO : CallType.CALL_TYPE_VOICE;
     }
 
     public int getAliveCallLose() {
@@ -463,8 +552,12 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         mHandler.sendMessageDelayed(msg, delay);
     }
 
-    public void setMonitorPeriodForNoData(int millis) {
-        // TODO:
+    public void setSRVCCSupport(boolean support) {
+        mIsSRVCCSupport = support;
+    }
+
+    public void onSRVCCStateChanged(int state) {
+        if (mCallMgr != null) mCallMgr.onSRVCCStateChanged(state);
     }
 
     private void init() {
@@ -491,7 +584,13 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         mHandler.removeMessages(MSG_RESET);
         mHandler.removeMessages(MSG_RESET_FORCE);
 
-        mCallback.onResetFinished(Result.SUCCESS, 0);
+        if (mEcbmStep == ECBM_STEP_FORCE_RESET) {
+            Message msg = mHandler.obtainMessage(MSG_ECBM);
+            msg.arg1 = ECBM_STEP_ATTACH;
+            mHandler.sendMessage(msg);
+        } else if (mCallback != null) {
+            mCallback.onResetFinished(Result.SUCCESS, 0);
+        }
     }
 
     private void registerLogin() {
@@ -514,7 +613,9 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 startRegister = true;
                 String localIP = mRegisterIP.getLocalIP(useIPv4);
                 String pcscfIP = mRegisterIP.getPcscfIP(useIPv4);
-                mRegisterMgr.login(useIPv4, localIP, pcscfIP);
+
+                boolean forSos = (mEcbmStep == ECBM_STEP_REGISTER_FOR_SOS);
+                mRegisterMgr.login(forSos, useIPv4, localIP, pcscfIP);
             }
         }
 
@@ -525,10 +626,53 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         }
     }
 
+    private void registerSuccess(int stateCode) {
+        // As login success, we need set the video quality.
+        mCallMgr.setVideoQuality(Utilities.getDefaultVideoQuality(mPreferences));
+
+        if (mCallback != null) {
+            mCallback.onRegisterStateChanged(mRegisterMgr.getCurRegisterState(), stateCode);
+        }
+    }
+
     private void registerFailed() {
         mRegisterIP = null;
+        if (mEcbmStep != ECBM_STEP_INVALID) {
+            // Exit the ECBM.
+            exitECBM();
+
+            // Notify the register as register logout.
+            registerLogout(0);
+        } else if (mCallback != null) {
+            mCallback.onRegisterStateChanged(mRegisterMgr.getCurRegisterState(), 0);
+        }
+
         mRegisterMgr.forceStop();
-        mCallback.onRegisterStateChanged(mRegisterMgr.getCurRegisterState(), 0);
+    }
+
+    private void registerLogout(int stateCode) {
+        mRegisterIP = null;
+        if (mCallback != null) {
+            mCallback.onRegisterStateChanged(mRegisterMgr.getCurRegisterState(), 0);
+            mCallback.onUnsolicitedUpdate(stateCode == NativeErrorCode.REG_TIMEOUT
+                    ? UnsolicitedCode.SIP_TIMEOUT : UnsolicitedCode.SIP_LOGOUT);
+        }
+
+        mRegisterMgr.forceStop();
+    }
+
+    private void sendECBMTimeoutMsg(int forStep) {
+        mHandler.removeMessages(MSG_ECBM_TIMEOUT);
+
+        Message msg = mHandler.obtainMessage(MSG_ECBM_TIMEOUT);
+        msg.arg1 = forStep;
+        mHandler.sendMessageDelayed(msg, ECBM_TIMEOUT);
+    }
+
+    private void exitECBM() {
+        if (mImsEcbm != null) mImsEcbm.updateEcbm(false, null);
+
+        mEcbmStep = ECBM_STEP_INVALID;
     }
 
     private class MyCallListener implements CallListener {
@@ -538,6 +682,14 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 mCallback.onCallIncoming(
                         callSession.getCallId(), callSession.getCallProfile().mCallType);
             }
+        }
+
+        @Override
+        public void onCallIsEmergency(ImsCallSessionImpl callSession) {
+            // It means we received the network reply as this call is emergency call. We need
+            // notify this to ImsService, and it will transfer this call to CP to handle.
+            Log.d(TAG, "The call " + callSession + " is emergency call. Notify the result!");
+//            if (mCallback != null) mCallback.onCallIsEmergency(callSession);
         }
 
         @Override
@@ -564,23 +716,67 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 mCallback.onMediaQualityChanged(isVideoCall, lose, jitter, rtt);
             }
         }
+
+        @Override
+        public void onEnterECBM(ImsCallSessionImpl callSession) {
+            Log.d(TAG, "Need enter ECBM for the emergency call: " + callSession);
+
+            ImsEcbmImpl imsEcbm = getEcbmInterface();
+            imsEcbm.updateEcbm(true, callSession);
+
+            sendECBMTimeoutMsg(ECBM_STEP_DEREGISTER_FOR_SOS);
+
+            Message msg = mHandler.obtainMessage(MSG_ECBM);
+            msg.arg1 = ECBM_STEP_DEREGISTER_FOR_SOS;
+            mHandler.sendMessage(msg);
+        }
+
+        @Override
+        public void onExitECBM() {
+            Log.d(TAG, "Exit ECBM.");
+
+            ImsEcbmImpl imsEcbm = getEcbmInterface();
+            imsEcbm.updateEcbm(false, null);
+
+            sendECBMTimeoutMsg(ECBM_STEP_DEREGISTER);
+
+            Message msg = mHandler.obtainMessage(MSG_ECBM);
+            msg.arg1 = ECBM_STEP_DEREGISTER;
+            mHandler.sendMessage(msg);
+        }
     }
 
     private class MyRegisterListener implements RegisterListener {
         @Override
         public void onReregisterFinished(boolean success, int errorCode) {
-            mCallback.onReregisterFinished(success, errorCode);
+            if (mCallback != null) mCallback.onReregisterFinished(success, errorCode);
         }
 
         @Override
         public void onLoginFinished(boolean success, int stateCode, int retryAfter) {
             if (success || retryAfter > 0) {
                 // If login success or get retry-after, notify the register state changed.
-                if (mCallback != null) {
-                    mCallback.onRegisterStateChanged(mRegisterMgr.getCurRegisterState(), stateCode);
+                if (success && mEcbmStep != ECBM_STEP_INVALID) {
+                    if (mEcbmStep == ECBM_STEP_REGISTER_FOR_SOS) {
+                        mHandler.removeMessages(MSG_ECBM_TIMEOUT);
+
+                        Message msg = mHandler.obtainMessage(MSG_ECBM);
+                        msg.arg1 = ECBM_STEP_START_EMERGENCY_CALL;
+                        mHandler.sendMessage(msg);
+                    } else if (mEcbmStep == ECBM_STEP_REGISTER) {
+                        mHandler.removeMessages(MSG_ECBM_TIMEOUT);
+
+                        Message msg = mHandler.obtainMessage(MSG_ECBM);
+                        msg.arg1 = ECBM_STEP_INVALID;
+                        mHandler.sendMessage(msg);
+                    } else {
+                        // Shouldn't be here.
+                        Log.e(TAG, "[onLoginFinished] Shouldn't be here, please check! "
+                                + "The ECBM step: " + mEcbmStep);
+                    }
+                } else {
+                    registerSuccess(stateCode);
                 }
-                // After login success, we need set the video quality.
-                mCallMgr.setVideoQuality(Utilities.getDefaultVideoQuality(mPreferences));
             } else if (!success && stateCode == NativeErrorCode.REG_SERVER_FORBIDDEN) {
                 // If failed caused by server forbidden, set register failed.
                 Log.e(TAG, "Login failed as server forbidden. state code: " + stateCode);
@@ -596,7 +792,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         @Override
         public void onLogout(int stateCode) {
             if (mResetStep != RESET_STEP_INVALID) {
-                Log.d(TAG, "Get the register state changed for reset action.");
+                Log.d(TAG, "Get the register state changed to logout for reset action.");
                 if (mResetStep == RESET_STEP_DEREGISTER) {
                     // Register state changed caused by reset. Update the step and send the message.
                     Message msg = mHandler.obtainMessage(MSG_RESET);
@@ -604,16 +800,35 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     mHandler.sendMessage(msg);
                 } else {
                     // Shouldn't be here, do nothing, ignore this event.
-                    Log.w(TAG, "Do nothing for reset action ignore this register state change.");
+                    Log.w(TAG, "Do nothing for reset action as reset step is: " + mResetStep);
+                }
+            } if (mEcbmStep != ECBM_STEP_INVALID) {
+                Log.d(TAG, "Get the register state changed to logout in ECBM.");
+                if (mEcbmStep == ECBM_STEP_DEREGISTER_FOR_SOS) {
+                    sendECBMTimeoutMsg(ECBM_STEP_DEATTACH_FOR_SOS);
+
+                    Message msg = mHandler.obtainMessage(MSG_ECBM);
+                    msg.arg1 = ECBM_STEP_DEATTACH_FOR_SOS;
+                    mHandler.sendMessage(msg);
+                } else if (mEcbmStep == ECBM_STEP_DEREGISTER) {
+                    sendECBMTimeoutMsg(ECBM_STEP_DEATTACH);
+
+                    Message msg = mHandler.obtainMessage(MSG_ECBM);
+                    msg.arg1 = ECBM_STEP_DEATTACH;
+                    mHandler.sendMessage(msg);
+                } else {
+                    // Normal, shouldn't be here.
+                    // If logout from the IMS service, but in ECBM, we'd like to handle it as
+                    // emergency call failed. And notify this register state changed.
+                    Log.w(TAG, "Logout from IMS service, but current ecbm step is: " + mEcbmStep);
+
+                    // Exit the ECBM.
+                    exitECBM();
+                    registerLogout(stateCode);
                 }
             } else {
-                mRegisterIP = null;
-                mCallback.onRegisterStateChanged(mRegisterMgr.getCurRegisterState(), 0);
-                mCallback.onUnsolicitedUpdate(stateCode == NativeErrorCode.REG_TIMEOUT
-                        ? UnsolicitedCode.SIP_TIMEOUT : UnsolicitedCode.SIP_LOGOUT);
+                registerLogout(stateCode);
             }
-            // As already logout, force stop to reset sip stack.
-            mRegisterMgr.forceStop();
         }
 
         @Override
@@ -640,34 +855,86 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private class MySecurityListener implements SecurityListener {
         @Override
         public void onProgress(int state) {
-            mCallback.onAttachStateChanged(state);
+            if (mCallback != null) mCallback.onAttachStateChanged(state);
         }
 
         @Override
         public void onSuccessed() {
-            mCallback.onAttachFinished(true, 0);
+            if (mEcbmStep != ECBM_STEP_INVALID) {
+                if (mEcbmStep == ECBM_STEP_ATTACH_FOR_SOS) {
+                    sendECBMTimeoutMsg(ECBM_STEP_REGISTER_FOR_SOS);
+
+                    Message msg = mHandler.obtainMessage(MSG_ECBM);
+                    msg.arg1 = ECBM_STEP_REGISTER_FOR_SOS;
+                    mHandler.sendMessage(msg);
+                } else if (mEcbmStep == ECBM_STEP_ATTACH) {
+                    sendECBMTimeoutMsg(ECBM_STEP_REGISTER);
+
+                    Message msg = mHandler.obtainMessage(MSG_ECBM);
+                    msg.arg1 = ECBM_STEP_REGISTER;
+                    mHandler.sendMessage(msg);
+                } else {
+                    // Shouldn't be here.
+                    Log.e(TAG, "[onSuccessed] Shouldn't be here, please check! The ECBM step: "
+                            + mEcbmStep);
+                }
+            } else if (mCallback != null) {
+                mCallback.onAttachFinished(true, 0);
+            }
         }
 
         @Override
         public void onFailed(int reason) {
-            mCallback.onAttachFinished(false, reason);
-            if (mResetStep >= RESET_STEP_DEATTACH
-                    && reason == Utilities.NativeErrorCode.IKE_INTERRUPT_STOP) {
-                Log.d(TAG, "Attached failed cased by interrupt. It means reset finished.");
-                resetFinished();
+            if (mEcbmStep != ECBM_STEP_INVALID) {
+                // Failed in ECBM. Exit the ECBM, and notify the state.
+                exitECBM();
+                if (mCallback != null) {
+                    mCallback.onAttachStopped(0);
+                    mCallback.onUnsolicitedUpdate(UnsolicitedCode.SECURITY_STOP);
+                }
+            } else if (mCallback != null) {
+                mCallback.onAttachFinished(false, reason);
+                if (mResetStep >= RESET_STEP_DEATTACH
+                        && reason == Utilities.NativeErrorCode.IKE_INTERRUPT_STOP) {
+                    Log.d(TAG, "Attached failed cased by interrupt. It means reset finished.");
+                    resetFinished();
+                }
             }
         }
 
         @Override
         public void onStopped(boolean forHandover, int errorCode) {
-            // If the stop action is for reset, we will notify the reset finished result.
             if (!forHandover && mResetStep != RESET_STEP_INVALID) {
+                // If the stop action is for reset, we will notify the reset finished result.
                 if (mResetStep == RESET_STEP_DEREGISTER) {
                     // It means the de-register do not finished. We'd like to force stop register.
                     registerForceStop();
                 }
                 Log.d(TAG, "S2b stopped, it means the reset action finished. Notify the result.");
                 resetFinished();
+            } else if (!forHandover && mEcbmStep != ECBM_STEP_INVALID) {
+                if (mEcbmStep == ECBM_STEP_DEATTACH_FOR_SOS) {
+                    sendECBMTimeoutMsg(ECBM_STEP_ATTACH_FOR_SOS);
+
+                    Message msg = mHandler.obtainMessage(MSG_ECBM);
+                    msg.arg1 = ECBM_STEP_ATTACH_FOR_SOS;
+                    mHandler.sendMessage(msg);
+                } else if (mEcbmStep == ECBM_STEP_DEATTACH) {
+                    sendECBMTimeoutMsg(ECBM_STEP_ATTACH);
+
+                    Message msg = mHandler.obtainMessage(MSG_ECBM);
+                    msg.arg1 = ECBM_STEP_ATTACH;
+                    mHandler.sendMessage(msg);
+                } else {
+                    // Normal, shouldn't be here.
+                    // If stopped connect to EPDG, but in ECBM, we'd like to handle it as
+                    // emergency call failed. And notify this register state changed.
+                    exitECBM();
+                    if (mCallback != null) {
+                        mCallback.onAttachStopped(0);
+                        mCallback.onUnsolicitedUpdate(UnsolicitedCode.SECURITY_STOP);
+                    }
+                }
             } else if (mCallback != null) {
                 mCallback.onAttachStopped(errorCode);
                 if (errorCode == NativeErrorCode.DPD_DISCONNECT) {
@@ -744,6 +1011,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onRtpReceived(boolean isVideo);
 
         public void onUnsolicitedUpdate(int stateCode);
+
+//        public void onCallIsEmergency(IImsCallSession callSession);
     }
 
 }

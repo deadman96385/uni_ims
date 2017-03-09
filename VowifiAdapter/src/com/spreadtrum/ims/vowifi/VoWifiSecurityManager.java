@@ -107,14 +107,34 @@ public class VoWifiSecurityManager extends ServiceManager {
     }
 
     public void attach() {
-        if (Utilities.DEBUG) Log.i(TAG, "Start the s2b attach.");
+        attach("");
+    }
+
+    public void attachForSos() {
+        try {
+            // Build the attach config string for sos.
+            JSONObject jObject = new JSONObject();
+            jObject.put(SecurityS2bCallback.SECURITY_JSON_PARAM_SOS, true);
+
+            attach(jObject.toString());
+        } catch (JSONException e) {
+            Log.e(TAG, "Can not build the sos config string as catch the JSONException e: " + e);
+        }
+    }
+
+    private void attach(String config) {
+        if (Utilities.DEBUG) Log.i(TAG, "Start the s2b attach. config: " + config);
+        if (config == null) {
+            Log.e(TAG, "Can not start attach as the config is null.");
+            return;
+        }
 
         boolean handle = false;
         if (mISecurity != null) {
             try {
                 if (mState <= AttachState.STATE_IDLE) {
                     // If the s2b state is idle, start the attach action.
-                    mISecurity.Mtc_S2bStart("");
+                    mISecurity.Mtc_S2bStart(config);
                 } else {
                     Log.e(TAG, "Can not start attach as the current state is: " + mState);
                 }
@@ -208,6 +228,7 @@ public class VoWifiSecurityManager extends ServiceManager {
         private static final String SECURITY_JSON_PARAM_DNS_IP6 = "security_json_param_dns_ip6";
         private static final String SECURITY_JSON_PARAM_PREF_IP4 = "security_json_param_pref_ip4";
         private static final String SECURITY_JSON_PARAM_HANDOVER = "security_json_param_handover";
+        private static final String SECURITY_JSON_PARAM_SOS = "security_json_param_sos";
 
         @Override
         public void onJsonCallback(String json) throws RemoteException {
@@ -230,8 +251,9 @@ public class VoWifiSecurityManager extends ServiceManager {
                     String dnsIP4 = jObject.optString(SECURITY_JSON_PARAM_DNS_IP4, null);
                     String dnsIP6 = jObject.optString(SECURITY_JSON_PARAM_DNS_IP6, null);
                     boolean prefIPv4 = jObject.optBoolean(SECURITY_JSON_PARAM_PREF_IP4, false);
-                    mSecurityConfig = new SecurityConfig(
-                            pcscfIP4, pcscfIP6, dnsIP4, dnsIP6, localIP4, localIP6, prefIPv4);
+                    boolean isSos = jObject.optBoolean(SECURITY_JSON_PARAM_SOS, false);
+                    mSecurityConfig = new SecurityConfig(pcscfIP4, pcscfIP6, dnsIP4, dnsIP6,
+                            localIP4, localIP6, prefIPv4, isSos);
 
                     // Switch the IP version as preferred first, then notify the result and
                     // update the state.
