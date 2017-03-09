@@ -983,10 +983,7 @@ public class ImsService extends Service {
             mInCallPhoneId = serviceId-1;//SPRD:add for bug635699
             updateInCallState(true);
             /*SPRD: Modify for bug586758{@*/
-            if(!isImsEnabled()){
-                Log.e (TAG,"getPendingCallSession-> ims is disable!");
-                return null;
-            } else if((isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall) || mIsVowifiCall){
+           if((isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall) || mIsVowifiCall){
                 mIsVowifiCall = true;
                 IImsCallSession session = mWifiService.getPendingCallSession(callId);
                 Log.i (TAG,"getPendingCallSession-> session: " + session);
@@ -997,8 +994,8 @@ public class ImsService extends Service {
             if (service == null || callId == null) {
                 Log.e (TAG, "Invalid arguments " + service + " " + callId);
                 return null;
-            }
-            if (isVoLTEEnabled() && !mIsVowifiCall && !mIsVolteCall) {
+            }//SPRD:modify by bug650141
+            if ((isVoLTEEnabled()||service.getPendingCallSession(callId)!=null) && !mIsVowifiCall && !mIsVolteCall) {
                 mIsVolteCall = true;
             }
             Log.i (TAG,"getPendingCallSession->service.getPendingCallSession(callId): " + service.getPendingCallSession(callId));
