@@ -22,6 +22,9 @@ interface IVoWifiSerService {
     int sessCall(String peerNumber, String cookie, boolean needAudio, boolean needVideo,
             boolean ussd);
 
+    int sessCallWithGeo(String peerNumber, String cookie, boolean needAudio, boolean needVideo,
+            double latitude, double longitude);
+
     /**
      * Set the mute status of microphone.
      *
@@ -36,7 +39,7 @@ interface IVoWifiSerService {
      * @return {@link Utils#RESULT_FAIL} as fail.
      *         {@link Utils#RESULT_SUCCESS} as success.
      */
-    int sessTerm(int sessionId, int termReason, boolean isVideoCall);
+    int sessTerm(int sessionId, int termReason);
 
     /**
      * Hold the call for the given seesion id.
@@ -79,6 +82,10 @@ interface IVoWifiSerService {
      */
     int sessUpdate(int sessionId, boolean isAudio, boolean isVideo);
 
+    int sessRelease(int sessionId);
+
+    int sessUpdateSRVCCResult(int sessionId, int result);
+
     int confCall(in String[] phoneNumbers, String cookie, boolean isVideo);
 
     int confInit(boolean isVideo);
@@ -100,6 +107,10 @@ interface IVoWifiSerService {
     int confSetMute(int confId, boolean needMute);
 
     int confSetLocalImageForTrans(int confId, String uri, boolean start);
+
+    int confRelease(int confId);
+
+    int confUpdateSRVCCResult(int confId, int result);
 
     // Camera
     /**

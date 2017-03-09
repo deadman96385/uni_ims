@@ -13,7 +13,7 @@ interface IRegisterService {
     int cliStart();
 
     int cliUpdateSettings(int subId, String spn, String imei, String userName, String authName,
-            String authPass, String realm, String impu);
+            String authPass, String realm, String impu, boolean isSRVCCSupport);
 
     /**
      * Start the SIP register process. Before login, you need open, start and update
@@ -22,7 +22,7 @@ interface IRegisterService {
      * @return {@link Utils#RESULT_FAIL} as fail. If login failed, please handle it.
      *         {@link Utils#RESULT_SUCCESS} as success.
      */
-    int cliLogin(boolean isIPv4, String localIP, String pcscfIP);
+    int cliLogin(boolean forSos, boolean isIPv4, String localIP, String pcscfIP);
 
     /**
      * Start the SIP re-register process.
