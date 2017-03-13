@@ -191,6 +191,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if (dc != null && dc.isMpty && dc.isMT) {
             mImsCallProfile.setCallExtraBoolean(ImsCallProfile.EXTRA_MT_CONFERENCE_CALL, true);
         }
+        // SPRD: Fix bug#651203
+        if (dc != null && dc.isMpty && dc.isMT) {
+            mImsCallProfile.setCallExtraBoolean(ImsCallProfile.EXTRA_MT_CONFERENCE_CALL, true);
+        }
         /* @}*/
     }
 
