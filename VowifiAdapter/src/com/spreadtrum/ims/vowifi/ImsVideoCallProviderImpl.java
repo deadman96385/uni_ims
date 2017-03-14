@@ -67,7 +67,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
             switch (msg.what) {
                 case MSG_ROTATE: {
-                    if (mCameraId != null && mDisplaySurface != null) {
+                    if (mCameraId != null) {
                         Log.d(TAG, "Handle the rotate message, the device orientation: "
                                 + mDeviceOrientation + ", the angle: " + mAngle);
                         mCallSession.localRenderRotate(mCameraId, mAngle, mDeviceOrientation);
@@ -123,7 +123,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                 }
                 case MSG_SET_DISPLAY_SURFACE: {
                     Surface displaySurface = (Surface) msg.obj;
-                    if (mDisplaySurface == null
+                    if (displaySurface != null
                             && mCallSession.startRemoteRender(displaySurface) == Result.SUCCESS) {
                         mDisplaySurface = displaySurface;
                     }
@@ -327,7 +327,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
         if (mCameraId != null && cameraId == null) {
             // Set the camera to null, it means stop the camera capture.
-            mHandler.sendMessage(mHandler.obtainMessage(MSG_STOP_CAMERA, cameraId));
+            mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
         } else if (cameraId != null && !cameraId.equals(mCameraId)) {
             // Start the camera or switch the camera.
             if (mCameraId == null) {

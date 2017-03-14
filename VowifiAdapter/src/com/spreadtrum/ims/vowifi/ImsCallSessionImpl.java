@@ -926,24 +926,24 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             return;
         }
 
-        String[] needRemoveParticipants = findNeedRemove(participants);
-        if (needRemoveParticipants == null || needRemoveParticipants.length < 1) {
-            Log.d(TAG, "There isn't any participant need remove this time: "
-                    + Utilities.getString(participants));
-            return;
-        }
+        synchronized (mInKickParticipants) {
+            String[] needRemoveParticipants = findNeedRemove(participants);
+            if (needRemoveParticipants == null || needRemoveParticipants.length < 1) {
+                Log.d(TAG, "There isn't any participant need remove this time: "
+                        + Utilities.getString(participants));
+                return;
+            }
 
-        if (mICall == null) {
-            handleRemoveParticipantsFailed("The call interface is null.");
-            return;
-        }
+            if (mICall == null) {
+                handleRemoveParticipantsFailed("The call interface is null.");
+                return;
+            }
 
-        int ret = mICall.confKickMembers(mCallId, needRemoveParticipants);
-        if (ret == Result.FAIL) {
-            handleRemoveParticipantsFailed("Native failed to remove the participants.");
-        } else {
-            for (String participant : needRemoveParticipants) {
-                mInKickParticipants.add(participant);
+            addAsInKickProcess(needRemoveParticipants);
+            int ret = mICall.confKickMembers(mCallId, needRemoveParticipants);
+            if (ret == Result.FAIL) {
+                removeFromInKick(needRemoveParticipants);
+                handleRemoveParticipantsFailed("Native failed to remove the participants.");
             }
         }
     }
@@ -1562,58 +1562,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
     }
 
-    public int startVideoTransmission() {
-        if (Utilities.DEBUG) {
-            Log.i(TAG, "Try to start the video transmission for the call: " + mCallId);
-        }
-
-        if (mICall == null) {
-            Log.e(TAG, "Can not start the video transmission as call interface is null.");
-            return Result.FAIL;
-        }
-
-        // Temp add as this, after monitor this change two weeks, if no side effect, need
-        // remove this function.
-        if (true) return Result.SUCCESS;
-
-        try {
-            int res = mICall.videoStart(isConferenceCall(), mCallId);
-            if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to start the video transmission for the call: " + mCallId);
-            }
-            return res;
-        } catch (RemoteException e) {
-            Log.e(TAG, "Failed to start the video transmission as catch RemoteException e: " + e);
-            return Result.FAIL;
-        }
-    }
-
-    public int stopVideoTransmission() {
-        if (Utilities.DEBUG) {
-            Log.i(TAG, "Try to stop the video transmission for the call: " + mCallId);
-        }
-
-        if (mICall == null) {
-            Log.e(TAG, "Can not stop the video transmission as call interface is null.");
-            return Result.FAIL;
-        }
-
-        // Temp add as this, after monitor this change two weeks, if no side effect, need
-        // remove this function.
-        if (true) return Result.SUCCESS;
-
-        try {
-            int res = mICall.videoStop(isConferenceCall(), mCallId);
-            if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to stop the video transmission for the call: " + mCallId);
-            }
-            return res;
-        } catch (RemoteException e) {
-            Log.e(TAG, "Failed to stop the video transmission as catch RemoteException e: " + e);
-            return Result.FAIL;
-        }
-    }
-
     public int localRenderRotate(String cameraId, int angle, int deviceOrientation) {
         if (Utilities.DEBUG) Log.i(TAG, "Try to rotate local render for the call: " + mCallId);
 
@@ -2120,6 +2068,28 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             }
         }
         return remove;
+    }
+
+    private void addAsInKickProcess(String[] participants) {
+        if (participants == null || participants.length <1) {
+            Log.w(TAG, "The list which set as in kick is null, please check!");
+            return;
+        }
+
+        for (String participant : participants) {
+            mInKickParticipants.add(participant);
+        }
+    }
+
+    private void removeFromInKick(String[] participants) {
+        if (participants == null || participants.length <1) {
+            Log.w(TAG, "The list which remove from in kick is null, please check!");
+            return;
+        }
+
+        for (String participant : participants) {
+            mInKickParticipants.remove(participant);
+        }
     }
 
     private int getSRVCCCallType() {
