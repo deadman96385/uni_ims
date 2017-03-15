@@ -987,6 +987,14 @@ public class ImsService extends Service {
                 mIsVowifiCall = true;
                 IImsCallSession session = mWifiService.getPendingCallSession(callId);
                 Log.i (TAG,"getPendingCallSession-> session: " + session);
+
+                //SPRD:add for bug650614
+                ImsServiceImpl service = mImsServiceImplMap.get(new Integer(serviceId));
+                if (session == null && service.getPendingCallSession(callId) != null) {
+                    Log.i(TAG, "a emergency call on volte");
+                    mIsVolteCall = true;
+                    return service.getPendingCallSession(callId);
+                }
                 return session;
             }
             /*@}*/
