@@ -579,7 +579,9 @@ public class ImsServiceImpl {
             if(mPhone.getState() == PhoneConstants.State.IDLE){
                 return true;
             } else {
-                if(mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED){
+            	// SPRD:654852 add srvcc broadcast
+                if(mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED
+                		|| mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED){
                     return false;
                 }
                 return true;
