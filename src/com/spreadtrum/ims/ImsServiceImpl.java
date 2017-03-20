@@ -281,6 +281,12 @@ public class ImsServiceImpl {
                     if (ar.exception == null) {
                         int[] ret = (int[]) ar.result;
                         if(ret != null && ret.length != 0){
+                        	// SPRD:654852 add srvcc broadcast
+                        	if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED
+                                    || mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
+                        		mImsServiceState.mImsRegistered = false;
+                        		
+                        	}
                             mImsServiceState.mSrvccState = ret[0];
                             mImsService.notifyImsRegisterState();
                             mImsService.notifySrvccState(mServiceId,mImsServiceState.mSrvccState);
@@ -579,9 +585,7 @@ public class ImsServiceImpl {
             if(mPhone.getState() == PhoneConstants.State.IDLE){
                 return true;
             } else {
-            	// SPRD:654852 add srvcc broadcast
-                if(mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED
-                		|| mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED){
+                if(mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED){
                     return false;
                 }
                 return true;
