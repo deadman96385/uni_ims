@@ -53,6 +53,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
     // Temp, used to test emergency call.
     private static final String PROP_KEY_FORCE_SOS_CALL = "persist.vowifi.force.soscall";
 
+    private static final int MERGE_TIMEOUT = 15 * 1000;
+
     private static final boolean SUPPORT_START_CONFERENCE = false;
 
     private static final String PARTICIPANTS_SEP = ";";
@@ -106,6 +108,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
     private static final int MSG_UPDATE         = 10;
     private static final int MSG_EXTEND_TO_CONF = 11;
     private static final int MSG_START_FAIL     = 12;
+    private static final int MSG_MERGE_FAILED   = 13;
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -181,6 +184,17 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                     case MSG_EXTEND_TO_CONF:
                         String participants = (String) action._params.get(0);
                         extendToConference(participants.split(PARTICIPANTS_SEP));
+                        break;
+                    case MSG_MERGE_FAILED:
+                        // Give a toast for connect timeout.
+                        String text = mContext.getString(R.string.vowifi_conf_connect_timeout);
+                        Toast.makeText(mContext, text, Toast.LENGTH_LONG).show();
+                        // Handle as merge action failed.
+                        handleMergeActionFailed(text);
+                        // If the call is held, resume this call.
+                        if (!mIsAlive) {
+                            resume(getResumeMediaProfile());
+                        }
                         break;
                 }
             } catch (RemoteException e) {
@@ -656,6 +670,17 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
         // Terminate the call
         terminateCall(reason);
+
+        // As user terminate the call, we need to check if there is conference call.
+        ImsCallSessionImpl confSession = mCallManager.getConfCallSession();
+        if (confSession != null) {
+            ImsCallSessionImpl hostSession = confSession.getHostCallSession();
+            if (this.equals(hostSession)) {
+                // Terminate the conference call and the close it.
+                confSession.terminate(reason);
+                confSession.close();
+            }
+        }
     }
 
     /**
@@ -1170,6 +1195,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
     public void setConfCallSession(ImsCallSessionImpl confCallSession) {
         mConfCallSession = confCallSession;
+        if (confCallSession != null) {
+            // It means the conference connected to server.
+            mHandler.removeMessages(MSG_MERGE_FAILED);
+        }
     }
 
     public ImsCallSessionImpl getHostCallSession() {
@@ -1972,6 +2001,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             if (mListener != null) {
                 mListener.callSessionMergeStarted(this, newConfSession, imsCallProfile);
             }
+            mHandler.sendEmptyMessageDelayed(MSG_MERGE_FAILED, MERGE_TIMEOUT);
         }
     }
 

@@ -509,12 +509,12 @@ public class VoWifiCallManager extends ServiceManager {
                     Log.e(TAG, "There is a call end, but not emergency call. Shouldn't be here.");
                 }
             }
-        } else {
-            Log.e(TAG, "Failed to remove the call[" + callSession + "] from the list.");
-        }
 
-        // After remove the session, if the session list is empty, we need stop the audio stream.
-        if (callSession.isAudioStart()) stopAudioStream();
+            // After remove the session, if the session list is empty, we need stop the audio.
+            if (callSession.isAudioStart()) stopAudioStream();
+        } else {
+            Log.d(TAG, "Do not remove the call[" + callSession + "] from the list.");
+        }
     }
 
     public void enterECBMWithCallSession(ImsCallSessionImpl emergencyCallSession) {
@@ -987,6 +987,10 @@ public class VoWifiCallManager extends ServiceManager {
 
                 // Terminate the call as normal.
                 listener.callSessionTerminated(callSession, info);
+
+                // After give the callback, close this call session if it is a participant
+                // of a conference.
+                if (confSession != null) callSession.close();
             }
         }
     }
@@ -1301,6 +1305,8 @@ public class VoWifiCallManager extends ServiceManager {
         if (hostListener != null) {
             Log.d(TAG, "Notify the merge complete.");
             hostListener.callSessionMergeComplete(confSession);
+            // As merge complete, set the host call session as null.
+            confSession.setHostCallSession(null);
         }
 
         IImsCallSessionListener confListener = confSession.getListener();

@@ -17,6 +17,7 @@
 
     <string name="vowifi_call_retry">请稍后再试</string>
     <string name="vowifi_call_is_focus">加入会议</string>
+    <string name="vowifi_conf_connect_timeout">连接会议中心超时.</string>
     <string name="vowifi_conf_disconnect">创建会议失败</string>
     <string name="vowifi_conf_finished">会议电话结束</string>
     <string name="vowifi_conf_invite_request_failed">邀请与会者失败，无法创建会议</string>
