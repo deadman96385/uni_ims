@@ -17,6 +17,7 @@
 
     <string name="vowifi_call_retry">Please retry after a moment</string>
     <string name="vowifi_call_is_focus">Add to conference</string>
+    <string name="vowifi_conf_connect_timeout">Connect to conference server timeout.</string>
     <string name="vowifi_conf_disconnect">Failed to setup conference</string>
     <string name="vowifi_conf_finished">Conference finished</string>
     <string name="vowifi_conf_invite_request_failed">Failed to send the invite request. Conference can not be setup.</string>
