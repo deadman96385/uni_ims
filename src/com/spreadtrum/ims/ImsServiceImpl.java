@@ -245,10 +245,11 @@ public class ImsServiceImpl {
                         }
                         notifyRegisterStateChange();
                     } else {
+                    	Log.i(TAG,"EVENT_IMS_STATE_DONE->ar.exception");
                         mImsServiceState.mImsRegistered = false;
                         notifyRegisterStateChange();
                     }
-                    Log.i(TAG,"EVENT_IMS_STATE_CHANGED->mServiceState:" + mImsServiceState.mImsRegistered);
+                    Log.i(TAG,"EVENT_IMS_STATE_DONE->mServiceState:" + mImsServiceState.mImsRegistered);
                     break;
                 case DctConstants.EVENT_ICC_CHANGED:
                     onUpdateIcc();
