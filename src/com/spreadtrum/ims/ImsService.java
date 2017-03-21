@@ -536,9 +536,12 @@ public class ImsService extends Service {
                                 mReleaseVowifiRequest = null;
                             }else{
                                 if(!isOnlySendAT){
+                                    //SPRD: add for bug645935
+                                    int delaySend = Settings.Global.getInt(getApplicationContext().getContentResolver(),
+                                            Settings.Global.AIRPLANE_MODE_ON, 0) > 0 ? 0:500;
                                     if(mFeatureSwitchRequest == null ||
                                             mFeatureSwitchRequest.mEventCode != ACTION_START_HANDOVER){
-                                        mWifiService.resetAll(msg.arg2 == 0 ? WifiState.DISCONNECTED : WifiState.CONNECTED,500);
+                                        mWifiService.resetAll(msg.arg2 == 0 ? WifiState.DISCONNECTED : WifiState.CONNECTED,delaySend);
                                     } else {
                                         mWifiService.resetAll(msg.arg2 == 0 ? WifiState.DISCONNECTED : WifiState.CONNECTED);
                                     }
