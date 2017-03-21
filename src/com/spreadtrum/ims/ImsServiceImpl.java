@@ -209,14 +209,16 @@ public class ImsServiceImpl {
                             mImsServiceState.mImsRegistered = (responseArray[0] != 0 && responseArray[1]== 1);
                         }
                         try{
-                            if(mListener == null){
+                        	// SPRD :bug 656122
+                            if (mListener == null) {
                                 Log.w(TAG,"handleMessage msg=" + msg.what+" mListener is null!");
-                                break;
-                            }
-                            if(mImsServiceState.mImsRegistered){
-                                mListener.registrationConnected();
+//                                break;
                             } else {
-                                mListener.registrationDisconnected(new ImsReasonInfo());
+	                            if(mImsServiceState.mImsRegistered){
+	                                mListener.registrationConnected();
+	                            } else {
+	                                mListener.registrationDisconnected(new ImsReasonInfo());
+	                            }
                             }
                         } catch (RemoteException e){
                             e.printStackTrace();
