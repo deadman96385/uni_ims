@@ -993,6 +993,8 @@ public class VoWifiCallManager extends ServiceManager {
                 if (confSession != null) callSession.close();
             }
         }
+
+        removeCall(callSession);
     }
 
     private void handleCallTalking(ImsCallSessionImpl callSession, boolean isVideo)
