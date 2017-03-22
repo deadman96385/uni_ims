@@ -317,9 +317,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             mSosLocation = null;
             mLocationManager = null;
         }
-
-        // If this call session closed, remove it.
-        mCallManager.removeCall(this);
     }
 
     /**
@@ -602,6 +599,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
     }
 
     private void handleStartActionFailed(String failMessage) {
+        // As start action failed, remove the call first.
+        mCallManager.removeCall(this);
+
         // When #ImsCall received the call session start failed callback will set the call session
         // to null. Then sometimes it will meet the NullPointerException. So we'd like to delay
         // 500ms to send this callback to let the ImsCall handle the left logic.
@@ -644,6 +644,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                 mListener.callSessionTerminated(this,
                         new ImsReasonInfo(reason, reason, "reason: " + reason));
             }
+            mCallManager.removeCall(this);
         } else {
             // Reject the call failed.
             Log.e(TAG, "Native reject the incoming call failed, res = " + res);
@@ -1782,6 +1783,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                         mListener.callSessionTerminated(this, info);
                     }
                 }
+                mCallManager.removeCall(this);
             } else {
                 Log.e(TAG, "Native terminate a call failed, res = " + res);
             }
