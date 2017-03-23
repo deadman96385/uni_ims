@@ -593,8 +593,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         }
     }
 
-    private void registerLogin() {
-        if (Utilities.DEBUG) Log.i(TAG, "Try to start the register login process.");
+    private void registerLogin(boolean isRelogin) {
+        if (Utilities.DEBUG) Log.i(TAG, "Try to start the register login process. is Relogin: " + isRelogin);
 
         if (mRegisterIP == null) {
             // Can not get the register IP.
@@ -605,6 +605,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
         boolean startRegister = false;
         int regVersion = mRegisterIP.getValidIPVersion(mSecurityMgr.getConfig()._prefIPv4);
+	if (Utilities.DEBUG) Log.i(TAG, "Try to start the register login process. regVersion: " +regVersion);
         if (regVersion != IPVersion.NONE) {
             boolean useIPv4 = regVersion == IPVersion.IP_V4;
             if (regVersion == mSecurityMgr.getConfig()._useIPVersion
@@ -615,7 +616,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 String pcscfIP = mRegisterIP.getPcscfIP(useIPv4);
 
                 boolean forSos = (mEcbmStep == ECBM_STEP_REGISTER_FOR_SOS);
-                mRegisterMgr.login(forSos, useIPv4, localIP, pcscfIP);
+                mRegisterMgr.login(forSos, useIPv4, localIP, pcscfIP, isRelogin);
+
             }
         }
 
@@ -781,11 +783,17 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 // If failed caused by server forbidden, set register failed.
                 Log.e(TAG, "Login failed as server forbidden. state code: " + stateCode);
                 registerFailed();
-            } else {
+            }
+	    else if(!success && stateCode == NativeErrorCode.SERVER_TIMEOUT){
+		  // If failed caused when UE is calling and server return 504, need to relogin.
+                Log.e(TAG, "reLogin  as UE send invite and server response 504. state code: " + stateCode);
+		registerLogin(true);
+            }
+	    else {
                 // As the PCSCF address may be not only one. For example, there are two IPv6
                 // addresses and two IPv4 addresses. So we will try to login again.
                 Log.d(TAG, "Last login action is failed, try to use exist address to login again");
-                registerLogin();
+                registerLogin(false);
             }
         }
 
@@ -838,7 +846,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 SecurityConfig config = mSecurityMgr.getConfig();
                 mRegisterIP = RegisterIPAddress.getInstance(
                         config._ip4, config._ip6, config._pcscf4, config._pcscf6);
-                registerLogin();
+                registerLogin(false);
             } else {
                 // Prepare failed, give the register result as failed.
                 registerFailed();
