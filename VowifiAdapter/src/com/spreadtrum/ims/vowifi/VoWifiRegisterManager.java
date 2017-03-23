@@ -14,6 +14,7 @@ import com.spreadtrum.ims.vowifi.Utilities.JSONUtils;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.RegisterState;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
+import com.spreadtrum.ims.vowifi.Utilities.NativeErrorCode;
 import com.spreadtrum.ims.vowifi.Utilities.VolteNetworkType;
 import com.spreadtrum.ims.vowifi.Utilities.VowifiNetworkType;
 import com.spreadtrum.vowifi.service.IRegisterService;
@@ -120,7 +121,7 @@ public class VoWifiRegisterManager extends ServiceManager {
             case MSG_ACTION_LOGIN: {
                 PendingAction action = (PendingAction) msg.obj;
                 login((Boolean) action._params.get(0), (Boolean) action._params.get(1),
-                        (String) action._params.get(2), (String) action._params.get(3));
+                        (String) action._params.get(2), (String) action._params.get(3), (Boolean)action._params.get(4));
                 handle = true;
                 break;
             }
@@ -189,11 +190,12 @@ public class VoWifiRegisterManager extends ServiceManager {
         }
     }
 
-    public void login(boolean forSos, boolean isIPv4, String localIP, String pcscfIP) {
+    public void login(boolean forSos, boolean isIPv4, String localIP, String pcscfIP, boolean isRelogin) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to login to the ims, for sos: " + forSos + ", is IPv4: " + isIPv4
                     + ", current register state: " + mRegisterState);
-            Log.i(TAG, "Login with the local ip: " + localIP + ", pcscf ip: " + pcscfIP);
+            Log.i(TAG, "Login with the local ip: " + localIP + ", pcscf ip: " + pcscfIP );
+	     Log.i(TAG, "isRelogin: " + isRelogin);
         }
 
         if (mRegisterState == RegisterState.STATE_CONNECTED) {
@@ -215,7 +217,7 @@ public class VoWifiRegisterManager extends ServiceManager {
         if (mIRegister != null) {
             try {
                 updateRegisterState(RegisterState.STATE_PROGRESSING);
-                int res = mIRegister.cliLogin(forSos, isIPv4, localIP, pcscfIP);
+                int res = mIRegister.cliLogin(forSos, isIPv4, localIP, pcscfIP, isRelogin);
                 if (res == Result.FAIL) {
                     Log.e(TAG, "Login to the ims service failed, Please check!");
                     updateRegisterState(RegisterState.STATE_IDLE);
@@ -232,7 +234,7 @@ public class VoWifiRegisterManager extends ServiceManager {
         if (!handle) {
             // Do not handle the register action, add to pending list.
             PendingAction action = new PendingAction("login", MSG_ACTION_LOGIN,
-                    Boolean.valueOf(forSos), Boolean.valueOf(isIPv4), localIP, pcscfIP);
+                    Boolean.valueOf(forSos), Boolean.valueOf(isIPv4), localIP, pcscfIP, Boolean.valueOf(isRelogin));
             addToPendingList(action);
         }
     }
@@ -440,7 +442,15 @@ public class VoWifiRegisterManager extends ServiceManager {
                         if (mListener != null) mListener.onReregisterFinished(false, 0);
                         break;
                     case JSONUtils.EVENT_CODE_REGISTER_STATE_UPDATE:
-                        // Do not handle this event now.
+			    // Update the register state to unknown, and notify the state changed.
+                        if (mListener != null) {
+                            int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
+                            int retryAfter = jObject.optInt(JSONUtils.KEY_RETRY_AFTER, 0);
+				if(stateCode == NativeErrorCode.SERVER_TIMEOUT){
+				    updateRegisterState(RegisterState.STATE_IDLE);
+                                mListener.onLoginFinished(false, stateCode, retryAfter);
+				}
+                        }
                         break;
                 }
             } catch (JSONException e) {
