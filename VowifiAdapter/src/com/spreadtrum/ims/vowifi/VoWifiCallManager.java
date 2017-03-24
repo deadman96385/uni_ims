@@ -155,15 +155,15 @@ public class VoWifiCallManager extends ServiceManager {
                     IBinder binder =
                             android.os.ServiceManager.getService(ImsManagerEx.IMS_SERVICE_EX);
                     IImsServiceEx imsServiceEx = IImsServiceEx.Stub.asInterface(binder);
-                    if (imsServiceEx == null) {
-                        Log.e(TAG, "Can not get the ims ex service.");
-                    } else {
+                    if (imsServiceEx != null) {
                         try {
                             Log.d(TAG, "Notify the SRVCC call infos.");
                             imsServiceEx.notifySrvccCallInfos(mInfoList);
                         } catch (RemoteException e) {
                             Log.e(TAG, "Failed to sync the infos as catch the exception: " + e);
                         }
+                    } else {
+                        Log.e(TAG, "Can not get the ims ex service.");
                     }
 
                     for (ImsCallSessionImpl session : mSRVCCSessionList) {
@@ -1382,6 +1382,17 @@ public class VoWifiCallManager extends ServiceManager {
                 Log.d(TAG, "Notify the merge failed.");
                 ImsReasonInfo info = new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, stateCode);
                 hostListener.callSessionMergeFailed(confSession, info);
+
+                // FIXME: As the call may be held or resumed before merge which can not tracked by
+                //        ImsCallTracker, so before we give the merge failed callback, we'd like to
+                //        give this callback refer to current state.
+                //        Another, if this issue should be fixed by framework?
+                ImsCallProfile callProfile = hostCallSession.getCallProfile();
+                if (hostCallSession.isAlive()) {
+                    hostListener.callSessionResumed(hostCallSession, callProfile);
+                } else {
+                    hostListener.callSessionHeld(hostCallSession, callProfile);
+                }
             }
         }
 
