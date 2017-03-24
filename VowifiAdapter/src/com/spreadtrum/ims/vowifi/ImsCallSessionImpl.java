@@ -828,6 +828,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         if (mListener != null) {
             mListener.callSessionMergeFailed(this, new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED,
                     ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
+
+            // FIXME: As the call may be held or resumed before merge which can not tracked by
+            //        ImsCallTracker, so before we give the merge failed callback, we'd like to
+            //        give this callback refer to current state.
+            //        Another, if this issue should be fixed by framework?
+            if (mIsAlive) {
+                mListener.callSessionResumed(this, mCallProfile);
+            } else {
+                mListener.callSessionHeld(this, mCallProfile);
+            }
         }
     }
 
