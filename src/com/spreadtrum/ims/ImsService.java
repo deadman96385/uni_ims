@@ -2266,6 +2266,13 @@ class MyVoWifiCallback implements VoWifiCallback {
                 entry.getValue().notifyWifiCalling(mIsWifiCalling);
             }
         }
+
+        ImsServiceImpl imsService = mImsServiceImplMap.get(
+                Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount) + 1));
+        if(!mIsCalling && imsService != null
+                && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
+            imsService.setSrvccState(-1);
+        }
         iLog("updateInCallState->isInCall:"+isInCall+" mIsWifiCalling:"+mIsWifiCalling
                 +" inCallPhoneId:"+mInCallPhoneId);
     }

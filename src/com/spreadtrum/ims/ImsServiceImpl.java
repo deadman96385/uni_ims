@@ -905,4 +905,8 @@ public class ImsServiceImpl {
     public void getSrvccCapbility() {
         mCi.getSrvccCapbility(mHandler.obtainMessage(EVENT_IMS_GET_SRVCC_CAPBILITY));
     }
+
+    public void setSrvccState(int srvccState){
+        mImsServiceState.mSrvccState = srvccState;
+    }
 }
