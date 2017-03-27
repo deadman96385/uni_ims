@@ -321,6 +321,37 @@ public class ImsService extends Service {
             ImsUtImpl ut = service.getUtImpl();
             ut.setListenerEx(listener);
         }
+
+        public int setFacilityLock(int phoneId, String facility, boolean lockState, String password,
+                int serviceClass){
+            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(phoneId +1));
+            if (service == null) {
+                Log.e (TAG, "Invalid phoneId " + phoneId);
+                return -1;
+            }
+            ImsUtImpl ut = service.getUtImpl();
+            return ut.setFacilityLock(facility, lockState, password, serviceClass);
+        }
+
+        public int changeBarringPassword(int phoneId, String facility, String oldPwd, String newPwd){
+            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(phoneId +1));
+            if (service == null) {
+                Log.e (TAG, "Invalid phoneId " + phoneId);
+                return -1;
+            }
+            ImsUtImpl ut = service.getUtImpl();
+            return ut.changeBarringPassword(facility, oldPwd, newPwd);
+        }
+
+        public int queryFacilityLock(int phoneId, String facility, String password, int serviceClass){
+            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(phoneId +1));
+            if (service == null) {
+                Log.e (TAG, "Invalid phoneId " + phoneId);
+                return -1;
+            }
+            ImsUtImpl ut = service.getUtImpl();
+            return ut.queryFacilityLock(facility, password, serviceClass);
+        }
     };
 
     public IImsConfig getConfigInterface(int serviceId) {
