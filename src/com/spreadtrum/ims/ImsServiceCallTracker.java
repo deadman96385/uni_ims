@@ -39,6 +39,7 @@ import com.spreadtrum.ims.vowifi.VoWifiServiceImpl;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.DataRouterState;
 
 import com.android.ims.ImsReasonInfo;
+import android.os.SystemProperties;
 
 public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final String TAG = ImsServiceCallTracker.class.getSimpleName();
@@ -282,6 +283,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     }
 
     private void handlePollCalls(AsyncResult ar){
+        boolean peerIsVideo = false;
         ArrayList<ImsDriverCall> imsDcList;
         Map <String, ImsDriverCall> validDriverCall = new HashMap<String, ImsDriverCall>();
         if (ar.exception == null) {
@@ -322,6 +324,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                                 mConferenceSession = session;
                                 mConferenceSession.initConferenceDc(imsDc);
                                 isConferenceStateChange = mConferenceSession.updateImsConfrenceMember(imsDc);
+                                if(imsDc.isVideoCall()){
+                                   peerIsVideo = true;
+                                }
                             }
                             index = j;
                             break;
@@ -344,6 +349,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                             && mConferenceSession.inSameConference(imsDc)){
                         Log.d(TAG, "mConferenceSession member found");
                         isConferenceStateChange = mConferenceSession.updateImsConfrenceMember(imsDc);
+                        if(imsDc.isVideoCall()){
+                            peerIsVideo = true;
+                         }
                     }
                 } else {
                     conferenceDc = imsDc;
@@ -356,6 +364,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                         && mConferenceSession.inSameConference(imsDc)){
                     Log.d(TAG, "mConferenceSession member found");
                     isConferenceStateChange = mConferenceSession.updateImsConfrenceMember(imsDc);
+                    if(imsDc.isVideoCall()){
+                        peerIsVideo = true;
+                     }
                 } else {
                     boolean shouldNotify = false;
                     if (imsDc.state == ImsDriverCall.State.DISCONNECTED) {
@@ -393,9 +404,20 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             mConferenceSession.removeInvalidSessionFromConference(validDriverCall);
         }
         removeInvalidSessionFromList(validDriverCall);
-        if(isConferenceStateChange && mConferenceSession != null){
+        if(SystemProperties.getBoolean("persist.sys.support.vtconf", false)){
+               isConferenceStateChange = isConferenceStateChange || peerIsVideo;
+               if(conferenceDc != null){
+                  isConferenceStateChange = isConferenceStateChange || conferenceDc.isVideoCall();
+               }
+        }
+        if(isConferenceStateChange && (mConferenceSession != null)){
+           if(SystemProperties.getBoolean("persist.sys.support.vtconf", false) && (peerIsVideo || (conferenceDc != null && conferenceDc.isVideoCall()))){
+              if(mConferenceSession != null && mConferenceSession.getCallProfile()!= null){
+                  mConferenceSession.getCallProfile().mCallType = ImsCallProfile.CALL_TYPE_VT;
+              }
+           }
             mConferenceSession.notifyConferenceStateChange();
-            Log.d(TAG, "handlePollCalls->isConferenceStateChange:"+isConferenceStateChange);
+            Log.d(TAG, "handlePollCalls->isConferenceStateChange:"+isConferenceStateChange+"  peerIsVideo:" +peerIsVideo +" conferenceDc:"+conferenceDc);
         }
         if(mSessionList.isEmpty()){
             mImsServiceImpl.onImsCallEnd();
