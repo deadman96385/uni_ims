@@ -101,7 +101,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                         // Sometimes, we will stop the camera failed as the camera already
                         // disconnect. For example, refer to this log:
                         // "Disconnect called on already disconnected client for device 1"
-                        Log.w(TAG, "The camera stopped failed, please check the reason.");
+                        Log.w(TAG, "The camera can not stopped now, please check the reason.");
                     }
 
                     // Reset the values.
@@ -143,7 +143,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                     if (res == Result.SUCCESS) {
                         mPreviewSurface = previewSurface;
                     } else {
-                        Log.e(TAG, "Failed to set the preview surface.");
+                        Log.w(TAG, "Can not set the preview surface now.");
                     }
                 }
                 case MSG_REQUEST_CAMERA_CAPABILITIES: {
@@ -189,14 +189,14 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                         // Stop the remote render success, set the display surface to null.
                         mDisplaySurface = null;
                     } else {
-                        Log.e(TAG, "Failed to stop remote render.");
+                        Log.w(TAG, "Can not stop remote render now.");
                     }
                     break;
                 }
                 case MSG_SEND_MODIFY_REQUEST: {
                     boolean isVideo = (Boolean) msg.obj;
                     if (mCallSession.sendModifyRequest(isVideo) == Result.FAIL) {
-                        Log.e(TAG, "Failed to send the modify request.");
+                        Log.w(TAG, "Can not send the modify request now.");
                         receiveSessionModifyResponse(
                                 VideoProvider.SESSION_MODIFY_REQUEST_FAIL, null, null);
                     } else {
