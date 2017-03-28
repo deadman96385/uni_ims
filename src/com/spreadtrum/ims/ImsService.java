@@ -499,17 +499,12 @@ public class ImsService extends Service {
     public void notifyImsRegisterState(int phoneId, int state){
         updateImsRegisterState();
         synchronized (mImsRegisterListeners) {
-            /**
-             * SPRD bug647508
-             */
-            for(IImsRegisterListener l : mImsRegisterListeners.values()) {
-                try{
+            try{
+                for(IImsRegisterListener l : mImsRegisterListeners.values()) {
                     l.imsRegisterStateChange(mIsVoLteRegistered);
-                } catch (RemoteException e) {
-                    iLog("DeadObjectException : l = " + l);
-                    e.printStackTrace();
-                    continue;
                 }
+            } catch(RemoteException e){
+                e.printStackTrace();
             }
         }
     }
