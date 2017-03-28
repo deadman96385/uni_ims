@@ -1354,6 +1354,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             } else {
                 Log.e(TAG, "Native failed to release the call.");
             }
+
+            // Even native failed, we'd like to remove this call from the list.
+            mCallManager.removeCall(this);
             return res;
         } catch (RemoteException e) {
             Log.e(TAG, "Can not release as catch the RemoteException e: " + e);
@@ -1411,7 +1414,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
             String res = mICall.sessGetCameraCapabilities(mCallId);
             if (TextUtils.isEmpty(res)) {
-                Log.w(TAG, "Failed to request the camera capabilites for the call " + mCallId);
+                Log.w(TAG, "Can not request the camera capabilites for the call " + mCallId);
                 VideoQuality video = Utilities.sVideoQualityList.get(videoQuality);
                 return new CameraCapabilities(video._width, video._height);
             } else {
@@ -1448,7 +1451,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         try {
             int res = mICall.cameraAttach(isConferenceCall(), mCallId, Camera.isFront(cameraId));
             if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to start the camera as " + cameraId);
+                Log.w(TAG, "Can not start the camera as " + cameraId);
             }
             return res;
         } catch (RemoteException e) {
@@ -1468,7 +1471,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         try {
             int res = mICall.cameraDetach(isConferenceCall(), mCallId);
             if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to stop the camera.");
+                Log.w(TAG, "Can not stop the camera.");
             }
             return res;
         } catch (RemoteException e) {
@@ -1488,7 +1491,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         try {
             int res = mICall.localRenderAdd(previewSurface, Camera.isFront(cameraId));
             if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to start the local render.");
+                Log.w(TAG, "Can not start the local render.");
             }
             return res;
         } catch (RemoteException e) {
@@ -1508,7 +1511,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         try {
             int res = mICall.localRenderRemove(previewSurface, Camera.isFront(cameraId));
             if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to stop the local render.");
+                Log.w(TAG, "Can not stop the local render.");
             }
             return res;
         } catch (RemoteException e) {
@@ -1528,7 +1531,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         try {
             int res = mICall.remoteRenderAdd(displaySurface, isConferenceCall(), mCallId);
             if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to start the remote render.");
+                Log.w(TAG, "Can not start the remote render.");
             }
             return res;
         } catch (RemoteException e) {
@@ -1548,7 +1551,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         try {
             int res = mICall.remoteRenderRemove(displaySurface, isConferenceCall(), mCallId);
             if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to stop the remote render.");
+                Log.w(TAG, "Can not stop the remote render.");
             }
             return res;
         } catch (RemoteException e) {
@@ -1573,7 +1576,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             int res = mICall.captureStart(
                     Camera.isFront(cameraId), video._width, video._height, video._frameRate);
             if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to start capture.");
+                Log.w(TAG, "Can not start capture.");
             }
             return res;
         } catch (RemoteException e) {
@@ -1593,7 +1596,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         try {
             int res = mICall.captureStop(Camera.isFront(cameraId));
             if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to stop capture.");
+                Log.w(TAG, "Can not stop capture.");
             }
             return res;
         } catch (RemoteException e) {
@@ -1613,7 +1616,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         try {
             int res = mICall.localRenderRotate(Camera.isFront(cameraId), angle, deviceOrientation);
             if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to rotate local render for the call: " + mCallId);
+                Log.w(TAG, "Can not rotate local render for the call: " + mCallId);
             }
             return res;
         } catch (RemoteException e) {
@@ -1633,7 +1636,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         try {
             int res = mICall.remoteRenderRotate(isConferenceCall(), mCallId, angle);
             if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to rotate remote render for the call: " + mCallId);
+                Log.w(TAG, "Can not rotate remote render for the call: " + mCallId);
             }
             return res;
         } catch (RemoteException e) {
@@ -1687,7 +1690,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
             int res = mICall.confSetLocalImageForTrans(mCallId, uriString, start);
             if (res == Result.FAIL) {
-                Log.e(TAG, "Failed to set the pause image to " + uri + " as "
+                Log.w(TAG, "Can not set the pause image to " + uri + " as "
                         + (start ? "start." : "stop."));
             }
             return res;
