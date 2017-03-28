@@ -433,10 +433,8 @@ public class ImsService extends Service {
                                         Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
                                 if (currentService != null){
                                     if (currentService.isVolteSessionListEmpty() && currentService.isVowifiSessionListEmpty()) {
-                                        if(mCurrentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
-                                            Log.i(TAG,"EVENT_WIFI_ALL_CALLS_END->mCurrentImsFeature:"+mCurrentImsFeature);
-                                            updateInCallState(false);
-                                        }
+                                        Log.i(TAG,"EVENT_WIFI_ALL_CALLS_END->mCurrentImsFeature:"+mCurrentImsFeature);
+                                        updateInCallState(false);
                                         mCallEndType = CallEndEvent.WIFI_CALL_END;
                                         mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                                         mWifiService.updateDataRouterState(DataRouterState.CALL_NONE);
