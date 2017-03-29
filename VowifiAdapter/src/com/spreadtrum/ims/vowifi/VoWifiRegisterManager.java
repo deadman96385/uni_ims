@@ -14,6 +14,7 @@ import com.spreadtrum.ims.vowifi.Utilities.JSONUtils;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.RegisterState;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
+import com.spreadtrum.ims.vowifi.Utilities.SIMAccountInfo;
 import com.spreadtrum.ims.vowifi.Utilities.NativeErrorCode;
 import com.spreadtrum.ims.vowifi.Utilities.VolteNetworkType;
 import com.spreadtrum.ims.vowifi.Utilities.VowifiNetworkType;
@@ -58,13 +59,11 @@ public class VoWifiRegisterManager extends ServiceManager {
 
     private RegisterListener mListener = null;
 
-    private TelephonyManager mTeleMgr = null;
     private IRegisterService mIRegister = null;
     private RegisterCallback mCallback = new RegisterCallback();
 
     protected VoWifiRegisterManager(Context context) {
         super(context);
-        mTeleMgr = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
     }
 
     public void bindService() {
@@ -121,7 +120,8 @@ public class VoWifiRegisterManager extends ServiceManager {
             case MSG_ACTION_LOGIN: {
                 PendingAction action = (PendingAction) msg.obj;
                 login((Boolean) action._params.get(0), (Boolean) action._params.get(1),
-                        (String) action._params.get(2), (String) action._params.get(3), (Boolean)action._params.get(4));
+                        (String) action._params.get(2), (String) action._params.get(3),
+                        (Boolean)action._params.get(4));
                 handle = true;
                 break;
             }
@@ -143,7 +143,8 @@ public class VoWifiRegisterManager extends ServiceManager {
             }
             case MSG_ACTION_PREPARE_FOR_LOGIN: {
                 PendingAction action = (PendingAction) msg.obj;
-                prepareForLogin((Integer) action._params.get(0), (Boolean) action._params.get(1));
+                prepareForLogin((SIMAccountInfo) action._params.get(0),
+                        (Boolean) action._params.get(1));
                 break;
             }
         }
@@ -151,8 +152,13 @@ public class VoWifiRegisterManager extends ServiceManager {
         return handle;
     }
 
-    public void prepareForLogin(int subId, boolean isSupportSRVCC) {
-        if (Utilities.DEBUG) Log.i(TAG, "Prepare the info before login, subId is: " + subId);
+    public void prepareForLogin(SIMAccountInfo info, boolean isSupportSRVCC) {
+        if (Utilities.DEBUG) Log.i(TAG, "Prepare the info before login, sim info: " + info);
+        if (info == null) {
+            Log.e(TAG, "Can not get the account info as it is null.");
+            if (mListener != null) mListener.onPrepareFinished(false, 0);
+            return;
+        }
 
         boolean handle = false;
         if (mIRegister != null) {
@@ -161,13 +167,6 @@ public class VoWifiRegisterManager extends ServiceManager {
                 mIRegister.cliReset();
                 mLoginPrepared = false;
                 updateRegisterState(RegisterState.STATE_IDLE);
-
-                SIMAccountInfo info = SIMAccountInfo.generate(mTeleMgr, subId);
-                if (info == null) {
-                    Log.e(TAG, "Can not get the account info for the sub: " + subId);
-                    if (mListener != null) mListener.onPrepareFinished(false, 0);
-                    return;
-                }
 
                 // Prepare for login, need open account, start client and update settings.
                 if (cliOpen(info) && cliStart() && cliUpdateSettings(info, isSupportSRVCC)) {
@@ -186,16 +185,16 @@ public class VoWifiRegisterManager extends ServiceManager {
             // If we catch the remote exception or register interface is null, handle is false.
             // And we will add this action to pending list.
             addToPendingList(new PendingAction("prepareForLogin", MSG_ACTION_PREPARE_FOR_LOGIN,
-                    Integer.valueOf(subId), Boolean.valueOf(isSupportSRVCC)));
+                    info, Boolean.valueOf(isSupportSRVCC)));
         }
     }
 
-    public void login(boolean forSos, boolean isIPv4, String localIP, String pcscfIP, boolean isRelogin) {
+    public void login(boolean forSos, boolean isIPv4, String localIP, String pcscfIP,
+            boolean isRelogin) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to login to the ims, for sos: " + forSos + ", is IPv4: " + isIPv4
-                    + ", current register state: " + mRegisterState);
+                    + ", current register state: " + mRegisterState + ", re-login: " + isRelogin);
             Log.i(TAG, "Login with the local ip: " + localIP + ", pcscf ip: " + pcscfIP );
-	     Log.i(TAG, "isRelogin: " + isRelogin);
         }
 
         if (mRegisterState == RegisterState.STATE_CONNECTED) {
@@ -234,7 +233,8 @@ public class VoWifiRegisterManager extends ServiceManager {
         if (!handle) {
             // Do not handle the register action, add to pending list.
             PendingAction action = new PendingAction("login", MSG_ACTION_LOGIN,
-                    Boolean.valueOf(forSos), Boolean.valueOf(isIPv4), localIP, pcscfIP, Boolean.valueOf(isRelogin));
+                    Boolean.valueOf(forSos), Boolean.valueOf(isIPv4), localIP, pcscfIP,
+                    Boolean.valueOf(isRelogin));
             addToPendingList(action);
         }
     }
@@ -449,7 +449,7 @@ public class VoWifiRegisterManager extends ServiceManager {
                         if (mListener != null) {
                             int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
                             int retryAfter = jObject.optInt(JSONUtils.KEY_RETRY_AFTER, 0);
-                            if(stateCode == NativeErrorCode.SERVER_TIMEOUT){
+                            if (stateCode == NativeErrorCode.SERVER_TIMEOUT) {
                                 updateRegisterState(RegisterState.STATE_IDLE);
                                 mListener.onLoginFinished(false, stateCode, retryAfter);
                             }
@@ -462,108 +462,4 @@ public class VoWifiRegisterManager extends ServiceManager {
         }
     }
 
-    private static class SIMAccountInfo {
-        // TODO: Temp used to get the IMSI for the ISIM card.
-        private static final String PROP_KEY_IMSI = "persist.sys.sprd.temp.imsi";
-
-        public int _subId;
-        public String _spn;
-        public String _accountName;
-        public String _imei;
-        public String _impu;
-        public String _userName;
-        public String _authName;
-        public String _authPass;
-        public String _realm;
-
-        public static SIMAccountInfo generate(TelephonyManager tm, int subId) {
-            SIMAccountInfo info = new SIMAccountInfo();
-            info._subId = subId;
-
-            int phoneId = SubscriptionManager.getPhoneId(subId);
-            info._spn = tm.getSimOperatorNameForPhone(phoneId);
-
-            // Get the IMEI for the sub.
-            String imei = tm.getDeviceId(phoneId);
-            if (!isIMEIValid(imei)) return null;
-
-            info._accountName = imei;
-            info._imei = imei;
-
-            // Try to get the IMPU/IMPI first, if can not get the IMPU/IMPI, it means this card not
-            // may be ISIM, we'd like to use the IMSI instead.
-            boolean generated = false;
-            String impi = tm.getIsimImpi();
-            if (!TextUtils.isEmpty(impi)) {
-                Log.d(TAG, "IMPI is " + impi);
-                info._authName = impi;
-                String[] temp = info._authName.split("@");
-                if (temp != null && temp.length == 2) {
-                    info._userName = temp[0];
-                    info._realm = temp[1];
-                    generated = true;
-                } else {
-                    Log.e(TAG, "The IMPI is invalid, IMPI: " + info._authName);
-                }
-            }
-
-            String[] impus = tm.getIsimImpu();
-            if (impus != null && impus.length > 0) {
-                // FIXME: Use the first one in the IMPU list, it may depend on the service
-                //        provider's decision.
-                Log.d(TAG, "IMPU array length is " + impus.length + ", choose first one: "
-                        + impus[0]);
-                info._impu = impus[0];
-            }
-
-            // If do not generate from the IMPI/IMPU, we need generate the info from the IMSI.
-            if (!generated) {
-                // Failed to generate from the IMPI, use IMSI instead.
-                String imsi = SystemProperties.get(PROP_KEY_IMSI, null);
-                if (TextUtils.isEmpty(imsi)) {
-                    imsi = tm.getSubscriberId(subId);
-                }
-                if (!isIMSIValid(imsi)) return null;
-
-                String simOperator = tm.getSimOperator(subId);
-                if (TextUtils.isEmpty(simOperator)) return null;
-
-                String mcc = simOperator.substring(0, 3);
-                String mnc = simOperator.length() == 5 ? "0" + simOperator.substring(3)
-                        : simOperator.substring(3);
-                Log.d(TAG, "Generate the SIM mcc is " + mcc + ", mnc is " + mnc);
-
-                info._userName = imsi;
-                info._realm = "ims.mnc" + mnc + ".mcc" + mcc + ".3gppnetwork.org";
-                info._authName = imsi + "@" + info._realm;
-                info._impu = "sip:" + info._authName;
-            }
-
-            return info;
-        }
-
-        private SIMAccountInfo() {
-            _authPass = "todo";    // Do not used, hard code here.
-        }
-
-        private static boolean isIMEIValid(String imei) {
-            if (TextUtils.isEmpty(imei) || !imei.matches("^[0-9]{15}$")) {
-                // The IMEI & IMSI is invalid. Do not process the login action.
-                Log.e(TAG, "The imei " + imei + " is invalid");
-                return false;
-            }
-
-            return true;
-        }
-
-        private static boolean isIMSIValid(String imsi) {
-            if (TextUtils.isEmpty(imsi) || !imsi.matches("^[0-9]{15}$")) {
-                // The IMEI & IMSI is invalid. Do not process the login action.
-                Log.e(TAG, "The imsi " + imsi + " is invalid");
-                return false;
-            }
-
-            return true;
-        }
-    }
 }
