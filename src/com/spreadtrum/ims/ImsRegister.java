@@ -158,8 +158,9 @@ public class ImsRegister {
                 mNumeric = mTelephonyManager.getNetworkOperatorForPhone(mPhoneId);
                 mVolteConfig.loadVolteConfig(mContext);
                 boolean isSimConfig = getSimConfig();
+                log("EVENT_ENABLE_IMS : mNumeric = "+ mNumeric + " | mLastNumeric = " + mLastNumeric);
                 if(!(mLastNumeric.equals(mNumeric))) {
-                    if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric))){
+                    if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric)) && mImsService.allowEnableIms()){
                           mCi.enableIms(null);
                     } else if(isSimConfig && getNetworkConfig(mLastNumeric) && !(getNetworkConfig(mNumeric))){
                           mCi.disableIms(null);
