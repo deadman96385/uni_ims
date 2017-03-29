@@ -173,7 +173,7 @@ public class ImsRegister {
                     mVolteConfig.loadVolteConfig(mContext);
                     log("PrimaryCard : mLastNumeric = "+mLastNumeric);
                     if(!(mLastNumeric.equals(mNumeric))) {
-                        if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric))){
+                        if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric)) && mImsService.allowEnableIms()){
                               SystemProperties.set("gsm.ims.enable" + mPhoneId, "1");
                               mCi.enableIms(null);
                         } else if(isSimConfig && getNetworkConfig(mLastNumeric) && !(getNetworkConfig(mNumeric))){
