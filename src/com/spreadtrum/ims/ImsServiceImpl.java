@@ -303,7 +303,8 @@ public class ImsServiceImpl {
                     Log.i(TAG,"EVENT_SERVICE_STATE_CHANGED->ServiceStateChange");
                     ServiceState state = (ServiceState) ((AsyncResult) msg.obj).result;
                     if (state != null && state.getDataRegState() == ServiceState.STATE_IN_SERVICE
-                            && state.getRilDataRadioTechnology() == ServiceState.RIL_RADIO_TECHNOLOGY_LTE){
+                            && (state.getRilDataRadioTechnology() == ServiceState.RIL_RADIO_TECHNOLOGY_LTE
+                            || state.getRilDataRadioTechnology() == ServiceState.RIL_RADIO_TECHNOLOGY_LTE_CA)){
                         mImsRegister.enableIms();
                         setVideoResolution(state);
                     }
@@ -614,6 +615,8 @@ public class ImsServiceImpl {
             return;
         }
         mImsConfigImpl.mDefaultVtResolution = Integer.parseInt(operatorCameraResolution);
+        Log.i(TAG, "ImsServiceImpl ==> setVideoResolution mDefaultVtResolution = " + operatorCameraResolution);
+        mImsConfigImpl.setVideoQualitytoPreference(Integer.parseInt(operatorCameraResolution));
     }
 
     /* SPRD: 630048 add sos apn for yes 4G @{*/
