@@ -1528,7 +1528,7 @@ public class VoWifiCallManager extends ServiceManager {
         // After update the participants, if there isn't any participant, need terminate it.
         if (confSession.getParticipantsCount() < 1) {
             // Terminate this conference call.
-            handleCallTermed(confSession, ImsReasonInfo.CODE_LOCAL_CALL_TERMINATED);
+            confSession.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
             Toast.makeText(mContext, R.string.vowifi_conf_none_participant, Toast.LENGTH_LONG)
                     .show();
         } else if (needUpdateState) {
