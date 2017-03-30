@@ -16,6 +16,7 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.AsyncResult;
 import android.telephony.ServiceState;
+import android.telephony.VoLteServiceState;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.widget.Toast;
@@ -70,6 +71,9 @@ public class ImsServiceImpl {
     //SPRD:ADD for bug 551025
     protected static final int EVENT_SERVICE_STATE_CHANGED             = 105;
     protected static final int EVENT_SET_VOICE_CALL_AVAILABILITY_DONE  = 106;
+    
+    //SPRD:ADD for bug 660388/629253
+    protected static final int EVENT_SRVCC_STATE_CHANGED               = 107;
 
     private GSMPhone mPhone;
     private ImsServiceState mImsServiceState;
@@ -91,6 +95,8 @@ public class ImsServiceImpl {
     private ImsRegister mImsRegister = null;
     //SPRD:ADD for bug 551025
     private VolteConfig mVolteConfig;
+    
+    private boolean mIsVoLteRegistered = false;//SPRD:ADD for bug 660388/629253
     /**
      * Handles changes to the APN db.
      */
@@ -142,6 +148,8 @@ public class ImsServiceImpl {
         mContext.sendBroadcast(intent);
 
         mCi.registerForImsNetworkStateChanged(mHandler, EVENT_IMS_STATE_CHANGED, null);
+        //SPRD:ADD for bug 660388/629253
+        mCi.registerForSrvccStateChanged(mHandler, EVENT_SRVCC_STATE_CHANGED, null);
         Log.i(TAG,"ImsServiceImpl onCreate->phoneId:"+phone.getPhoneId());
         mUiccController = UiccController.getInstance();
         mUiccController.registerForIccChanged(mHandler, DctConstants.EVENT_ICC_CHANGED, null);
@@ -261,6 +269,24 @@ public class ImsServiceImpl {
 
                     }
                     break;
+                
+                /*SPRD:ADD for bug 660388/629253 @{*/
+                case EVENT_SRVCC_STATE_CHANGED:
+                    Log.i(TAG,"EVENT_SRVCC_STATE_CHANGED->ServiceStateChange");
+                    if (ar.exception == null) {
+                        int[] ret = (int[]) ar.result;
+                        if(ret != null && ret.length != 0){
+                            mImsServiceState.mSrvccState = ret[0];
+                            notifyImsSrvccState(mServiceId-1, ret[0]);
+                            Log.i(TAG, "Srvcc state: " + ret[0]);
+                        } else {
+                            Log.w(TAG, "Srvcc error ret: " + ret);
+                        }
+                    } else {
+                        Log.w(TAG, "Srvcc exception: " + ar.exception);
+                    }
+                    break;
+                    /*@}*/
                 default:
                     break;
             }
@@ -451,6 +477,40 @@ public class ImsServiceImpl {
                return;
            }
            mImsConfigImpl.mDefaultVtResolution = Integer.parseInt(operatorCameraResolution);
+    }
+    /* @}*/
+    
+    /*SPRD:ADD for bug 660338/625186 @{*/
+    public void notifyImsSrvccState(int phoneId, int state){
+        updateImsRegisterState();
+        mImsRegister.notifyImsStateChanged(mIsVoLteRegistered);
+    }
+
+    public void updateImsRegisterState(){
+        if(isImsRegisterState()){
+            mIsVoLteRegistered = true;
+            return;
+        }
+        mIsVoLteRegistered = false;
+    }
+
+    public boolean isImsRegisterState(){
+        if(mImsServiceState.mImsRegistered){
+            if(mPhone.getState() == PhoneConstants.State.IDLE){
+                return true;
+            } else {
+				if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED
+						|| mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
+					return false;
+				}
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public int getSrvccState(){
+        return mImsServiceState.mSrvccState;
     }
     /* @}*/
 }
