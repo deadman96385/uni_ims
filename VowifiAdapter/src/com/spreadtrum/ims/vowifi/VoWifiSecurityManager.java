@@ -158,7 +158,7 @@ public class VoWifiSecurityManager extends ServiceManager {
                 mISecurity.Mtc_S2bStop(isHandover);
                 handle = true;
             } catch (RemoteException e) {
-                Log.e(TAG, "Catch the remote exception when start the s2b attach. e: " + e);
+                Log.e(TAG, "Catch the remote exception when start the s2b deattach. e: " + e);
             }
         }
         if (!handle) {
@@ -265,8 +265,12 @@ public class VoWifiSecurityManager extends ServiceManager {
                         if (mListener != null) mListener.onSuccessed();
                         mState = AttachState.STATE_CONNECTED;
                     } else {
+                        Log.e(TAG, "S2b attach success. with setIPVersion fail!");
                         if (mListener != null) mListener.onFailed(0);
                         mState = AttachState.STATE_IDLE;
+                        // S2b start success with invalid ip info means S2b failed,
+                        // and need to call S2b stop here for abnoraml situation.
+                        forceStop();
                     }
                 } else if (SECURITY_JSON_ACTION_S2B_FAILED.equals(flag)) {
                     int errorCode = jObject.optInt(SECURITY_JSON_PARAM_ERROR_CODE);
