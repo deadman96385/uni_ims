@@ -327,6 +327,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mState = ImsCallSession.State.TERMINATED;
         try {
             if ((mIImsCallSessionListener != null) && (mImsDriverCall != null)) {
+                Log.i(TAG, "notifySessionDisconnected  mShouldNotifyMegerd=" + mShouldNotifyMegerd +" mIsMegerAction="+mIsMegerAction);
+                if (mShouldNotifyMegerd){
+                    mIImsCallSessionListener.callSessionMergeFailed(this,
+                            new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,
+                                    "Merge Failed"));
+                } else if(mIsMegerAction){
+                    mIsMegerAction = false;
+                    mImsServiceCallTracker.onCallMergeFailed();
+                }
 				if ((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING)
 						&& (mDisconnCause != ImsReasonInfo.CODE_USER_DECLINE)) { //SPRD add for bug582920
 
@@ -435,6 +444,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 case ACTION_COMPLETE_MERGE:
                     if (ar != null && ar.exception != null) {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_MERGE error!");
+                        mImsServiceCallTracker.onCallMergeFailed((ImsCallSessionImpl)ar.userObj);
                         if(ar.userObj != null) {
                             try{
                                 mIImsCallSessionListener.callSessionMergeFailed((IImsCallSession)ar.userObj,
@@ -1076,8 +1086,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     /* SPRD: add for bug 552691 @{ */
-    public void setMergeState() {
-        mIsMegerAction = true;
+    public void setMergeState(boolean isMerge) {
+        mIsMegerAction = isMerge;
     }
 
     public void notifyMergeComplete() {
@@ -1088,6 +1098,18 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mShouldNotifyMegerd = false;
         try {
             mIImsCallSessionListener.callSessionMergeComplete((IImsCallSession) this);
+            mIsMegerAction = false;
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void notifyMergeFailed() {
+        mShouldNotifyMegerd = false;
+        try {
+            mIImsCallSessionListener.callSessionMergeFailed((IImsCallSession)this,
+                new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,
+                "Merge Failed"));
             mIsMegerAction = false;
         } catch (RemoteException e) {
             e.printStackTrace();
