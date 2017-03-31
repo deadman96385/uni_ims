@@ -558,6 +558,8 @@ public class ImsService extends Service {
                                     mReleaseVowifiRequest = null;
                                 }
                                 Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> wifi state: " + msg.arg2);
+                            }
+                            if(!mIsCalling){
                                 ImsServiceImpl imsService = mImsServiceImplMap.get(
                                         Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
                                 if(imsService != null){
