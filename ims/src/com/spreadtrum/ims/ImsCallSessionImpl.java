@@ -323,6 +323,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mState = ImsCallSession.State.TERMINATED;
         try {
             if ((mIImsCallSessionListener != null) && (mImsDriverCall != null)) {
+                if (mShouldNotifyMegerd){
+                    mIImsCallSessionListener.callSessionMergeFailed(this,
+                            new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,
+                                    "Merge Failed"));
+                }
 				if ((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING)
 						&& (mDisconnCause != ImsReasonInfo.CODE_USER_DECLINE)) { //SPRD add for bug582920
 
