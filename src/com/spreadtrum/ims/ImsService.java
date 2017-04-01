@@ -360,6 +360,12 @@ public class ImsService extends Service {
                                     mPendingAttachVowifiSuccess = false;
                                     mWifiService.updateDataRouterState(DataRouterState.CALL_NONE);
                                 }
+                                Log.i(TAG,"EVENT_WIFI_ATTACH_FAILED-> operationFailed, clear mFeatureSwitchRequest.");
+                                mIsPendingRegisterVowifi = false;
+                                mFeatureSwitchRequest = null;
+                                if (msg.arg1 == 53766) {//SPRD: add for bug661375
+                                    service.setIMSRegAddress(null);
+                                }
                             }
                         }
                         mIsAPImsPdnActived = false;
