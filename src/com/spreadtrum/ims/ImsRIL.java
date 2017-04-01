@@ -2655,8 +2655,14 @@ public final class ImsRIL {
         mCi.registerForSrvccStateChanged(h, what, obj);
     }
 
-    public void registerForIccRefresh(Handler h, int what, Object obj){
+
+    public void registerForIccRefresh(Handler h, int what, Object obj) {
         mCi.registerForIccRefresh(h, what, obj);
+    }
+
+    //SPRR:add for bug700081
+    public  void unregisterForSrvccStateChanged(Handler h){
+        mCi.unregisterForSrvccStateChanged(h);
     }
 
     static String

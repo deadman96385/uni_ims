@@ -262,6 +262,7 @@ public class ImsServiceImpl {
                         int[] responseArray = (int[])ar.result;
                         if(responseArray != null && responseArray.length >1){
                             mImsServiceState.mImsRegistered = (responseArray[0] != 0 && responseArray[1]== 1);
+                            mImsServiceState.mSrvccState = -1;
                         }
                         Log.i(TAG,"EVENT_IMS_STATE_CHANGED->mServiceState:" + mImsServiceState.mImsRegistered);
                         notifyRegisterStateChange();
@@ -300,6 +301,7 @@ public class ImsServiceImpl {
                     if (ar.exception == null) {
                         int[] ret = (int[]) ar.result;
                         if(ret != null && ret.length != 0){
+
                             mImsServiceState.mSrvccState = ret[0];
                             mImsService.notifyImsRegisterState();
                             mImsService.notifySrvccState(mServiceId,mImsServiceState.mSrvccState);
@@ -620,8 +622,11 @@ public class ImsServiceImpl {
             if(mPhone.getState() == PhoneConstants.State.IDLE){
                 return true;
             } else {
-                if(mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED){//SPRD:modify by bug637926
+                // SPRD 659914
+                if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
                     return false;
+                } else if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_FAILED || mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_CANCELED) {
+                    return true;
                 }
                 return true;
             }

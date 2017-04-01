@@ -135,6 +135,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     }
 
     public void onVTConnectionDisconnected(ImsCallSessionImpl mImsCallSessionImpl){
+        mCi.unregisterForSrvccStateChanged(mVTHandler);//SPRR:add for bug700081
         /* SPRD: fix for bug547597 @{ */
         if (mLocalRequestProfile != null) {
             int result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_FAIL;
