@@ -238,6 +238,7 @@ public class ImsServiceImpl {
                         int[] responseArray = (int[])ar.result;
                         if(responseArray != null && responseArray.length >1){
                             mImsServiceState.mImsRegistered = (responseArray[0] != 0 && responseArray[1]== 1);
+                            mImsServiceState.mSrvccState = -1;
                         }
                         if(ImsManagerEx.isDualVoLTEActive()){
                             TelephonyManager.setTelephonyProperty(mServiceId-1, "gsm.sys.volte.state",
@@ -283,11 +284,11 @@ public class ImsServiceImpl {
                         int[] ret = (int[]) ar.result;
                         if(ret != null && ret.length != 0){
                         	// SPRD:654852 add srvcc broadcast
-                        	if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED
-                                    || mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
-                        		mImsServiceState.mImsRegistered = false;
-                        		
-                        	}
+//                        	if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED
+//                                    || mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
+//                        		mImsServiceState.mImsRegistered = false;
+//                        		
+//                        	}
                             mImsServiceState.mSrvccState = ret[0];
                             mImsService.notifyImsRegisterState();
                             mImsService.notifySrvccState(mServiceId,mImsServiceState.mSrvccState);
@@ -587,8 +588,12 @@ public class ImsServiceImpl {
             if(mPhone.getState() == PhoneConstants.State.IDLE){
                 return true;
             } else {
-                if(mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_STARTED){
+            	// SPRD 659914
+                if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
                     return false;
+                } else if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_FAILED || 
+                		mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_CANCELED) {
+                	return true;
                 }
                 return true;
             }
