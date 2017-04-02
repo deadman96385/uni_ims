@@ -457,6 +457,11 @@ public class VoWifiCallManager extends ServiceManager {
     public void setVideoQuality(int quality) {
         if (Utilities.DEBUG) Log.i(TAG, "Set the video quality as index is: " + quality);
 
+        if (!isCallFunEnabled()) {
+            // As call function is disabled. Do nothing.
+            return;
+        }
+
         boolean handle = false;
         if (mICall != null) {
             try {
