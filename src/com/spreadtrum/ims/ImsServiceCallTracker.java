@@ -53,6 +53,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final int EVENT_IMS_CALL_STATE_CHANGED        = 5;
     private static final int EVENT_POLL_CURRENT_CALLS            = 6;
     private static final int EVENT_POLL_CURRENT_CALLS_RESULT     = 7;
+    private static final int EVENT_RADIO_NOT_AVAILABLE           = 8;
 
     private PendingIntent mIncomingCallIntent;
     private ImsRIL mCi;
@@ -97,6 +98,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         mHandler = new ImsHandler(mContext.getMainLooper());
         mCi.registerForImsCallStateChanged(mHandler, EVENT_IMS_CALL_STATE_CHANGED, null);
         mCi.registerForCallStateChanged(mHandler, EVENT_CALL_STATE_CHANGE, null);
+        mCi.registerForNotAvailable(mHandler, EVENT_RADIO_NOT_AVAILABLE, null);
         /*SPRD: add for 605475@{*/
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_USER_SWITCHED);
@@ -122,6 +124,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                     break;
                 case EVENT_GET_CURRENT_CALLS:
                 case EVENT_IMS_CALL_STATE_CHANGED:
+                case EVENT_RADIO_NOT_AVAILABLE:
                     pollCallsWhenSafe();
                     break;
                 case EVENT_OPERATION_COMPLETE:

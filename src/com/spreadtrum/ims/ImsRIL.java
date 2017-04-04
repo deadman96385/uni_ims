@@ -2962,4 +2962,8 @@ public final class ImsRIL {
                                 "> getImsPcscfAddress: " + imsRequestToString(rr.mRequest));
           send(rr);
      }
+
+    public void registerForNotAvailable(Handler h, int what, Object obj) {
+        mCi.registerForNotAvailable(h,what,obj);
+    }
 }
