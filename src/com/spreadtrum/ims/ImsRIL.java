@@ -1426,6 +1426,9 @@ public final class ImsRIL {
         mCi.setGsmBroadcastActivation(activate, response);
     }
 
+    public  void unregisterForSrvccStateChanged(Handler h){
+        mCi.unregisterForSrvccStateChanged(h);
+    }
 
 //***** google default Private Methods
 
@@ -2926,10 +2929,18 @@ public final class ImsRIL {
      */
     private static int convertToHalMvnoType(String mvnoType) {
         switch (mvnoType) {
-            case "imsi" : return MvnoType.IMSI;
-            case "gid" : return MvnoType.GID;
-            case "spn" : return MvnoType.SPN;
-            default: return MvnoType.NONE;
+            case "imsi":
+                return MvnoType.IMSI;
+            case "gid":
+                return MvnoType.GID;
+            case "spn":
+                return MvnoType.SPN;
+            default:
+                return MvnoType.NONE;
         }
+    }
+
+    public void registerForNotAvailable(Handler h, int what, Object obj) {
+        mCi.registerForNotAvailable(h,what,obj);
     }
 }

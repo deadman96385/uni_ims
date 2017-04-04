@@ -1964,7 +1964,6 @@ public class ImsService extends Service {
                     l.imsRegisterStateChange(isImsRegistered);
                 } catch(RemoteException e){
                     iLog("DeadObjectException : l = " + l);
-                    e.printStackTrace();
                     continue;
                 }
             }
@@ -2202,10 +2201,6 @@ class MyVoWifiCallback implements VoWifiCallback {
                 if (impl != null) {
                     if (impl.isVolteSessionListEmpty() && impl.isVowifiSessionListEmpty()) {
                         mCallEndType = CallEndEvent.VOLTE_CALL_END;
-                        if(mCurrentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
-                            Log.i(TAG,"onSessionEmpty->mCurrentImsFeature:"+mCurrentImsFeature);
-                            updateInCallState(false);
-                        }
                         /*SPRD: Modify for bug595321 and 610799{@*/
                         Log.i(TAG,"onSessionEmpty-> mFeatureSwitchRequest:"+mFeatureSwitchRequest + " mIsVowifiCall:" + mIsVowifiCall + " mIsVolteCall:" + mIsVolteCall +" mInCallHandoverFeature" + mInCallHandoverFeature);
                         if(mFeatureSwitchRequest != null && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER && serviceId == mFeatureSwitchRequest.mServiceId){
@@ -2231,6 +2226,10 @@ class MyVoWifiCallback implements VoWifiCallback {
                                 mFeatureSwitchRequest = null;
                                 Log.i(TAG,"onSessionEmpty-> This is volte call,so mFeatureSwitchRequest has been emptyed.");
                             }
+                        }
+                        if(mCurrentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
+                            Log.i(TAG,"onSessionEmpty->mCurrentImsFeature:"+mCurrentImsFeature);
+                            updateInCallState(false);
                         }
                         mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                         if (!mPendingAttachVowifiSuccess && !mPendingActivePdnSuccess ) {

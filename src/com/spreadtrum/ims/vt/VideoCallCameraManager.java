@@ -396,7 +396,7 @@ public class VideoCallCameraManager {
     /**
      * When user click menu to control the camera, this method will be called.
      */
-    private void operateCamera(final WorkerTaskType type) {
+    private synchronized void operateCamera(final WorkerTaskType type) {
         if (mThreadRunning && mOperateCameraThread!=null) {
 
             if(WorkerTaskType.CAMERA_SWITCH == type){
