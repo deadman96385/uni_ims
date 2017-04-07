@@ -36,4 +36,6 @@
     <string name="low_battery_convert_to_voice_call">"降为语音"</string>
     <!-- @} -->
     <string name="camera_open_fail">摄像头故障</string> <!-- SPRD: Add for bug571839 -->
+    <!-- SPRD: Add for 663321 @{ -->
+    <string name="ims_registered_failed">"注册失败,VOLTE相关功能不可用"</string>
 </resources>

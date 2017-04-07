@@ -38,4 +38,6 @@
     <!-- @} -->
     <string name="camera_open_fail">Camera open fail</string><!-- SPRD: Add for bug571839 -->
     <string name="feature_cancle_video_request">plugin.sprd.operatorfeatures.AddonCancleVideoRequestUtils</string><!-- SPRD: Add for bug596628 -->
+    <!-- SPRD: Add for 663321 @{ -->
+    <string name="ims_registered_failed">Register fail, VOLTE related functions are not available</string>
 </resources>

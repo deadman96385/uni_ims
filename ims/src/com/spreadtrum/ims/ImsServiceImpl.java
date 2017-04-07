@@ -186,6 +186,8 @@ public class ImsServiceImpl {
                             case IMS_REG_STATE_REGISTERED:
                                 break;
                             case IMS_REG_STATE_REG_FAIL:
+                                // SPRD: If fail, need toast to user
+                                toastFailMessage();
                                 break;
                             case IMS_REG_STATE_UNKNOWN:
                                 break;
@@ -292,6 +294,13 @@ public class ImsServiceImpl {
             }
         }
     };
+
+    /**
+     * SPRD: If fail, need toast to user
+     */
+    private void toastFailMessage(){
+    	Toast.makeText(mContext.getApplicationContext(), mContext.getString(R.string.ims_registered_failed), Toast.LENGTH_SHORT).show();
+    }
 
     public int open(int serviceClass, PendingIntent incomingCallIntent,
             IImsRegistrationListener listener){
