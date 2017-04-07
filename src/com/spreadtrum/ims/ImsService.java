@@ -363,7 +363,7 @@ public class ImsService extends Service {
                                 Log.i(TAG,"EVENT_WIFI_ATTACH_FAILED-> operationFailed, clear mFeatureSwitchRequest.");
                                 mIsPendingRegisterVowifi = false;
                                 mFeatureSwitchRequest = null;
-                                if (msg.arg1 == 53766) {//SPRD: add for bug661375
+                                if (msg.arg1 == 53766 && !mIsCalling) {//SPRD: add for bug661375 661372
                                     service.setIMSRegAddress(null);
                                 }
                             }
