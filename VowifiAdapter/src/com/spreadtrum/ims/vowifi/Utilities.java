@@ -164,8 +164,10 @@ public class Utilities {
         public static final int IPSEC_REKEY_FAIL     = 0xD200 + 10;
         public static final int IKE_REKEY_FAIL       = 0xD200 + 11;
         public static final int REG_TIMEOUT          = 0xE100 + 5;
-	 public static final int SERVER_TIMEOUT     = 0xE100 + 6;
+        public static final int SERVER_TIMEOUT       = 0xE100 + 6;
         public static final int REG_SERVER_FORBIDDEN = 0xE100 + 8;
+        public static final int REG_EXPIRED_TIMEOUT  = 0xE100 + 17;
+        public static final int REG_EXPIRED_OTHER    = 0xE100 + 18;
     }
 
     public static class RegisterState {

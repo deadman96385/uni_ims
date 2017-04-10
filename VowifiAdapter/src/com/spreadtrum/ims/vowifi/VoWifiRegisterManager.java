@@ -439,17 +439,20 @@ public class VoWifiRegisterManager extends ServiceManager {
                         if (mListener != null) mListener.onReregisterFinished(true, 0);
                         break;
                     case JSONUtils.EVENT_CODE_REREGISTER_FAILED:
-                        if (mListener != null) mListener.onReregisterFinished(false, 0);
+                        if (mListener != null) {
+                            int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
+                            mListener.onReregisterFinished(false, stateCode);
+                        }
                         break;
                     case JSONUtils.EVENT_CODE_REGISTER_STATE_UPDATE:
-			    // Update the register state to unknown, and notify the state changed.
+                        // Update the register state to unknown, and notify the state changed.
                         if (mListener != null) {
                             int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
                             int retryAfter = jObject.optInt(JSONUtils.KEY_RETRY_AFTER, 0);
-				if(stateCode == NativeErrorCode.SERVER_TIMEOUT){
-				    updateRegisterState(RegisterState.STATE_IDLE);
+                            if(stateCode == NativeErrorCode.SERVER_TIMEOUT){
+                                updateRegisterState(RegisterState.STATE_IDLE);
                                 mListener.onLoginFinished(false, stateCode, retryAfter);
-				}
+                            }
                         }
                         break;
                 }
