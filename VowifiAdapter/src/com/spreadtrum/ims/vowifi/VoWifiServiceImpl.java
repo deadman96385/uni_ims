@@ -751,7 +751,20 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private class MyRegisterListener implements RegisterListener {
         @Override
         public void onReregisterFinished(boolean success, int errorCode) {
-            if (mCallback != null) mCallback.onReregisterFinished(success, errorCode);
+            if (success) {
+                if (mCallback != null) mCallback.onReregisterFinished(success, errorCode);
+            } else {
+                // Handle the failed in non-HO sutuation
+                if ((errorCode == NativeErrorCode.REG_EXPIRED_TIMEOUT)
+                        || (errorCode == NativeErrorCode.REG_EXPIRED_OTHER)) {
+                    // the up-layer will need to handle TIMEOUT
+                    errorCode = (errorCode == NativeErrorCode.REG_EXPIRED_TIMEOUT)
+                            ? NativeErrorCode.REG_TIMEOUT: errorCode;
+                    registerLogout(errorCode);
+                } else {
+                    // don't handle the reregister fail in HO situation.
+                }
+            }
         }
 
         @Override
