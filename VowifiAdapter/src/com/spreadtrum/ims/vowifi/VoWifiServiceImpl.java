@@ -190,19 +190,19 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             switch (step) {
                 case ECBM_STEP_DEREGISTER_FOR_SOS:
                 case ECBM_STEP_DEREGISTER:
-                    deregister();
+                    deregisterInternal();
                     break;
                 case ECBM_STEP_DEATTACH_FOR_SOS:
                 case ECBM_STEP_DEATTACH:
-                    deattach();
+                    deattachInternal(false);
                     break;
                 case ECBM_STEP_ATTACH_FOR_SOS:
                 case ECBM_STEP_ATTACH:
-                    attach();
+                    attachInternal();
                     break;
                 case ECBM_STEP_REGISTER_FOR_SOS:
                 case ECBM_STEP_REGISTER:
-                    register();
+                    registerInternal();
                     break;
                 case ECBM_STEP_START_EMERGENCY_CALL:
                     ImsCallSessionImpl callSession = mImsEcbm.getEmergencyCall();

@@ -528,6 +528,9 @@ public class Utilities {
         public static final String KEY_RTCP_JITTER = "rtcp_jitter";
         public static final String KEY_RTCP_RTT = "rtcp_rtt";
         public static final String KEY_CONF_PART_NEW_STATUS = "conf_part_new_status";
+        public static final String KEY_EMERGENCY_CALL_IND_URN_URI = "emergency_call_ind_urn_uri";
+        public static final String KEY_EMERGENCY_CALL_IND_REASON = "emergency_call_ind_reason";
+        public static final String KEY_EMERGENCY_CALL_IND_ACTION_TYPE = "emergency_call_ind_action_type";
 
         // Call
         public static final int CALL_EVENT_CODE_BASE = 100;
@@ -661,4 +664,19 @@ public class Utilities {
         public static final String RULE_MEDIA_AUDIO = "audio";
         public static final String RULE_MEDIA_VIDEO = "video";
     }
+
+    // for emergency service see 3GPP TS 22.101 clause 10
+    // the default based emergency service urn format
+    public static final String DEFAULT_EMERGENCY_SERVICE_URN = "urn:service:sos";
+    // Police
+    public static final String EMERGENCY_SERVICE_CATEGORY_BIT1 = "police";
+    // Ambulance
+    public static final String EMERGENCY_SERVICE_CATEGORY_BIT2 = "ambulance";
+    // Fire Brigade
+    public static final String EMERGENCY_SERVICE_CATEGORY_BIT3 = "fire";
+    // Marine Guard
+    public static final String EMERGENCY_SERVICE_CATEGORY_BIT4 = "marine";
+    // Mountain Rescue
+    public static final String EMERGENCY_SERVICE_CATEGORY_BIT5 = "mountain";
+
 }
