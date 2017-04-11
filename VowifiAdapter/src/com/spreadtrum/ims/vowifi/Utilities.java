@@ -440,19 +440,27 @@ public class Utilities {
         private String mLocalIPv6;
         private String[] mPcscfIPv4;
         private String[] mPcscfIPv6;
-
+        private String mDnsSerIPv4;
+        private String mDnsSerIPv6;
         private int mIPv4Index = 0;
         private int mIPv6Index = 0;
 
         private String mUsedLocalIP;
         private String mUsedPcscfIP;
+	 private String mUsedDnsSerlIP;
 
         public static RegisterIPAddress getInstance(String localIPv4, String localIPv6,
-                String pcscfIPv4, String pcscfIPv6, String usedPcscfAddr) {
+                String pcscfIPv4, String pcscfIPv6, String usedPcscfAddr, String dns4, String dns6) {
             if (Utilities.DEBUG) {
                 Log.i(TAG, "Get the s2b ip address from localIPv4: " + localIPv4 + ", localIPv6: "
-                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: " + pcscfIPv6 + ", usedPcscfAddr: " + usedPcscfAddr);
+                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: " + pcscfIPv6 + ", pcscfdns4: "  + dns4 + ", pcscfdns6: " + dns6);
             }
+			
+	     if(TextUtils.isEmpty(dns4) && TextUtils.isEmpty(dns6)){
+		  Log.i(TAG, "Can not get the dns server address: pcscfdns4: " + dns4 + ", pcscfdns6: "
+                        + dns6);	
+            }
+		 
             boolean b1 = (TextUtils.isEmpty(localIPv4) || TextUtils.isEmpty(pcscfIPv4));
             boolean b2 = (TextUtils.isEmpty(localIPv6) || TextUtils.isEmpty(pcscfIPv6));
             boolean b3 = TextUtils.isEmpty(usedPcscfAddr);
@@ -471,13 +479,13 @@ public class Utilities {
                    {
                        String[] newPcscfIPv4s = new String[1];
                        newPcscfIPv4s[0] = usedPcscfAddr;
-                       return new RegisterIPAddress(localIPv4, localIPv6, newPcscfIPv4s, null);
+                       return new RegisterIPAddress(localIPv4, localIPv6, newPcscfIPv4s, null, dns4, dns6);
                    }
                    else
                    {
                        String[] newPcscfIPv6s = new String[1];
                        newPcscfIPv6s[0] = usedPcscfAddr;
-                       return new RegisterIPAddress(localIPv4, localIPv6, null, newPcscfIPv6s);
+                       return new RegisterIPAddress(localIPv4, localIPv6, null, newPcscfIPv6s, dns4, dns6);
                    }
                }
                else
@@ -492,16 +500,18 @@ public class Utilities {
                     TextUtils.isEmpty(pcscfIPv4) ? null : pcscfIPv4.split(JSON_PCSCF_SEP);
                 String[] pcscfIPv6s =
                     TextUtils.isEmpty(pcscfIPv6) ? null : pcscfIPv6.split(JSON_PCSCF_SEP);
-                return new RegisterIPAddress(localIPv4, localIPv6, pcscfIPv4s, pcscfIPv6s);
+		 return new RegisterIPAddress(localIPv4, localIPv6, pcscfIPv4s, pcscfIPv6s, dns4, dns6);
             }
         }
 
         private RegisterIPAddress(String localIPv4, String localIPv6, String[] pcscfIPv4,
-                String[] pcscfIPv6) {
+                String[] pcscfIPv6, String dns4, String dns6) {
             mLocalIPv4 = localIPv4;
             mLocalIPv6 = localIPv6;
             mPcscfIPv4 = pcscfIPv4;
             mPcscfIPv6 = pcscfIPv6;
+	     mDnsSerIPv4 = dns4;
+	     mDnsSerIPv6 = dns6;
         }
 
         public String getCurUsedLocalIP() {
@@ -511,12 +521,21 @@ public class Utilities {
         public String getCurUsedPcscfIP() {
             return mUsedPcscfIP;
         }
+		
+        public String getCurUsedDnsSerIP() {
+            return mUsedDnsSerlIP;
+        }
 
         public String getLocalIP(boolean isIPv4) {
             mUsedLocalIP = isIPv4 ? getLocalIPv4() : getLocalIPv6();
             return mUsedLocalIP;
         }
 
+        public String getDnsSerIP(boolean isIPv4) {
+            mUsedDnsSerlIP = isIPv4 ? getDnsSerIPv4() : getDnsSerIPv6();
+            return mUsedDnsSerlIP;
+        }
+		
         public String getPcscfIP(boolean isIPv4) {
             mUsedPcscfIP = isIPv4 ? getPcscfIPv4() : getPcscfIPv6();
             return mUsedPcscfIP;
@@ -537,11 +556,19 @@ public class Utilities {
         private String getLocalIPv4() {
             return mLocalIPv4;
         }
+		
+        private String getDnsSerIPv4() {
+            return mDnsSerIPv4;
+        }
 
         private String getLocalIPv6() {
             return mLocalIPv6;
         }
 
+        private String getDnsSerIPv6() {
+            return mDnsSerIPv6;
+        }
+		
         private String getPcscfIPv4() {
             String pcscfIPv4 = null;
             if (mIPv4Index < mPcscfIPv4.length) {
@@ -610,6 +637,8 @@ public class Utilities {
                     builder.append(", pcscfIPv6[" + i + "] = " + mPcscfIPv6[i]);
                 }
             }
+	     builder.append("pcscfDnsSerIPv4 = " + mDnsSerIPv4);
+            builder.append(", pcscfDnsSerIPv6 = " + mDnsSerIPv6);
             return builder.toString();
         }
     }
@@ -666,6 +695,24 @@ public class Utilities {
         }
     }
 
+   public static class CallBarringInfo
+   {
+         // Refer to ImsUtInterface#CDIV_CF_XXX
+        public int mCondition;
+        // 0: disabled, 1: enabled
+        public int mStatus;
+	 public CallBarringInfo(){
+        }
+
+	 public void setCondition(int conditon){
+	 	mCondition = conditon;
+	 }
+	 
+	 public void setStatus(int status){
+	 	mStatus = status;
+	 }	 
+   }
+   
     public static class VideoQuality {
         public int _width;
         public int _height;
@@ -875,6 +922,9 @@ public class Utilities {
         public static final String KEY_UT_CF_CONDS = "ut_cf_conditions";
         public static final String KEY_UT_CF_ACTION_TARGET = "ut_cf_action_target";
         public static final String KEY_UT_CW_ENABLED = "ut_cw_enabled";
+        public static final String KEY_UT_CB_RULES = "ut_cb_rules";
+        public static final String KEY_UT_CB_RULE_ENABLED = "ut_cb_rule_enabled";
+        public static final String KEY_UT_CB_CONDS = "ut_cb_conditions";
 
         public static final int UT_EVENT_CODE_BASE = 350;
         public static final int EVENT_CODE_UT_QUERY_CB_OK = UT_EVENT_CODE_BASE + 1;

@@ -307,7 +307,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         if (mImsUt == null) {
             mImsUt = new ImsUtImpl(mContext, mCallMgr);
         }
-
+        if (Utilities.DEBUG) Log.i(TAG, "getUtInterface");
         return mImsUt;
     }
 
@@ -646,9 +646,10 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 startRegister = true;
                 String localIP = mRegisterIP.getLocalIP(useIPv4);
                 String pcscfIP = mRegisterIP.getPcscfIP(useIPv4);
-
+                String dnsSerIP = mRegisterIP.getDnsSerIP(useIPv4);
                 boolean forSos = (mEcbmStep == ECBM_STEP_REGISTER_FOR_SOS);
-                mRegisterMgr.login(forSos, useIPv4, localIP, pcscfIP, isRelogin);
+                mRegisterMgr.login(forSos, useIPv4, localIP, pcscfIP, dnsSerIP, isRelogin);
+
             }
         }
 
@@ -887,8 +888,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             if (success) {
                 // As prepare success, start the login process now. And try from the IPv6;
                 SecurityConfig config = mSecurityMgr.getConfig();
-                mRegisterIP = RegisterIPAddress.getInstance(config._ip4, config._ip6,
-                        config._pcscf4, config._pcscf6, getUsedPcscfAddr());
+                mRegisterIP = RegisterIPAddress.getInstance(config._ip4, config._ip6, 
+                        config._pcscf4, config._pcscf6, getUsedPcscfAddr(), config._dns4, config._dns6);
                 registerLogin(false);
             } else {
                 // Prepare failed, give the register result as failed.

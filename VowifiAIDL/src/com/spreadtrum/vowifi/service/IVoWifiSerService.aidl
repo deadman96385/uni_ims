@@ -276,7 +276,7 @@ interface IVoWifiSerService {
     /**
      * Retrieves the configuration of the call barring.
      */
-    int queryCallBarring();
+    int queryCallBarring(int cbType);
 
     /**
      * Retrieves the configuration of the call forward.
