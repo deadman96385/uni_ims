@@ -465,8 +465,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                 SystemProperties.getBoolean(TelephonyProperties.PROPERTY_INECM_MODE, false);
         boolean isEmergencyNumber = PhoneNumberUtils.isEmergencyNumber(callee);
         boolean forceSosCall = SystemProperties.getBoolean(PROP_KEY_FORCE_SOS_CALL, false);
+        Log.i(TAG, "Emergency isPhoneInEcmMode = " + isPhoneInEcmMode +
+                " isEmergencyNumber = " + isEmergencyNumber);
 
-        if (forceSosCall || (isPhoneInEcmMode && isEmergencyNumber)) {
+        if (isEmergencyNumber || forceSosCall) {
             startEmergencyCall(callee, profile);
         } else {
             startNormalCall(callee, profile);
@@ -1864,7 +1866,19 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             mSosLocation = null;
         }
 
-        mCallManager.enterECBMWithCallSession(this);
+        boolean isPhoneInEcmMode =
+                SystemProperties.getBoolean(TelephonyProperties.PROPERTY_INECM_MODE, false);
+
+        if (isPhoneInEcmMode) {
+            mCallManager.enterECBMWithCallSession(this);
+        } else {
+            // make an emergency session directly without Em-PDN and Em-Register.
+            try {
+                startCall(callee, mSosLocation);
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to start the emergency call as catch the RemoteException e: " + e);
+            }
+        }
     }
 
     private void startNormalCall(String callee, ImsCallProfile profile) throws RemoteException {
@@ -1910,7 +1924,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         } else {
             double latitude = location == null ? 0 : location.getLatitude();
             double longitude = location == null ? 0 : location.getLongitude();
-            id = mICall.sessCallWithGeo(callee, null, true, isVideoCall, latitude, longitude);
+            String uriUrn = mCallManager.getEmergencyCallUrn(mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO));
+            id = mICall.sessCallWithGeo(uriUrn, null, true, isVideoCall, latitude, longitude);
         }
         Log.d(TAG, "Start a normal call, and get the call id: " + id);
 
@@ -2144,5 +2159,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             // CP only supports audio SRVCC now, so set callType to NORMAL here.
             return SRVCCSyncInfo.CallType.NORMAL;
         }
+    }
+
+    public boolean getIsEmergency() {
+        return mIsEmergency;
     }
 }
