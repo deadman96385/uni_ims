@@ -124,8 +124,7 @@ public class VoWifiRegisterManager extends ServiceManager {
             case MSG_ACTION_LOGIN: {
                 PendingAction action = (PendingAction) msg.obj;
                 login((Boolean) action._params.get(0), (Boolean) action._params.get(1),
-                        (String) action._params.get(2), (String) action._params.get(3),
-                        (Boolean)action._params.get(4));
+                        (String) action._params.get(2), (String) action._params.get(3), (String) action._params.get(4), (Boolean)action._params.get(5));
                 handle = true;
                 break;
             }
@@ -220,12 +219,13 @@ public class VoWifiRegisterManager extends ServiceManager {
         }
     }
 
-    public void login(boolean forSos, boolean isIPv4, String localIP, String pcscfIP,
-            boolean isRelogin) {
+    public void login(boolean forSos, boolean isIPv4, String localIP, String pcscfIP, String dnsSerIP, boolean isRelogin) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to login to the ims, for sos: " + forSos + ", is IPv4: " + isIPv4
-                    + ", current register state: " + mRegisterState + ", re-login: " + isRelogin);
-            Log.i(TAG, "Login with the local ip: " + localIP + ", pcscf ip: " + pcscfIP );
+                    + ", current register state: " + mRegisterState);
+            Log.i(TAG, "Login with the local ip: " + localIP + ", pcscf ip: " + pcscfIP  + ", dns server ip: " + dnsSerIP );
+	     Log.i(TAG, "isRelogin: " + isRelogin);
+
         }
 
         if (mRegisterState == RegisterState.STATE_CONNECTED) {
@@ -247,7 +247,7 @@ public class VoWifiRegisterManager extends ServiceManager {
         if (mIRegister != null) {
             try {
                 updateRegisterState(RegisterState.STATE_PROGRESSING);
-                int res = mIRegister.cliLogin(forSos, isIPv4, localIP, pcscfIP, isRelogin);
+                int res = mIRegister.cliLogin(forSos, isIPv4, localIP, pcscfIP, dnsSerIP, isRelogin);
                 if (res == Result.FAIL) {
                     Log.e(TAG, "Login to the ims service failed, Please check!");
                     updateRegisterState(RegisterState.STATE_IDLE);
@@ -264,8 +264,8 @@ public class VoWifiRegisterManager extends ServiceManager {
         if (!handle) {
             // Do not handle the register action, add to pending list.
             PendingAction action = new PendingAction("login", MSG_ACTION_LOGIN,
-                    Boolean.valueOf(forSos), Boolean.valueOf(isIPv4), localIP, pcscfIP,
-                    Boolean.valueOf(isRelogin));
+                    Boolean.valueOf(forSos), Boolean.valueOf(isIPv4), localIP, pcscfIP,  dnsSerIP, Boolean.valueOf(isRelogin));
+
             addToPendingList(action);
         }
     }
