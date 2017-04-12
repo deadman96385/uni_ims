@@ -38,4 +38,5 @@
     <string name="camera_open_fail">攝像頭故障</string><!-- SPRD: Add for bug571839 -->
     <!-- SPRD: Add for 663321 @{ -->
     <string name="ims_registered_failed">"注册失敗，VOLTE相關功能不可用"</string>
+    <string name="low_video_quality">"當前視頻通話質量不佳"</string>
 </resources>

@@ -36,7 +36,10 @@ import android.content.BroadcastReceiver;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.app.AlertDialog;
+import android.widget.Toast;
+import com.spreadtrum.ims.R;
 import com.android.internal.telephony.RIL;
+import android.view.Gravity;
 
 public class VTManagerProxy{
     private static final String TAG = "ImsVTManagerProxy";
@@ -572,4 +575,14 @@ public class VTManagerProxy{
      * >= 1 && PackageManager.PERMISSION_GRANTED == grantResults[0]) { mHasCameraPermission = true;
      * } } }
      */
+
+    /* SPRD: prompt when video call quality low for bug664806 @{ */
+    public void showLowVideoQualityToast(){
+         Toast toast = Toast.makeText(mContext.getApplicationContext(),
+                mContext.getString(R.string.low_video_quality), Toast.LENGTH_SHORT);
+         toast.setGravity(Gravity.CENTER, 0, 0);
+         toast.show();
+    }
+    /* @} */
+
 }

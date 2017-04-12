@@ -44,6 +44,7 @@ public class VideoCallEngine {
     public static final int VCE_EVENT_STOP_DEC           = 1005;
     public static final int VCE_EVENT_SHUTDOWN           = 1006;
     public static final int VCE_EVENT_REMOTE_ROTATE_CHANGE           = 1011;
+    public static final int VC_EVENT_VIDEO_QUALITY_LOW     = 1013 ;
     /* Do not change these values without updating their counterparts
      * in include/media/mediaphone.h
      */
@@ -370,6 +371,13 @@ public class VideoCallEngine {
                             VTManagerProxy.getInstance().setPeerDimensions(width, height);
                         }
                         log("VCE_EVENT_REMOTE_ROTATE_CHANGE, width = " + width + "height = " + height);
+                    }
+                    return;
+                }
+                case VC_EVENT_VIDEO_QUALITY_LOW:{
+                    Log.d(TAG, "handleMessage VC_EVENT_VIDEO_QUALITY_LOW");
+                    if(VTManagerProxy.getInstance() != null){
+                        VTManagerProxy.getInstance().showLowVideoQualityToast();
                     }
                     return;
                 }
