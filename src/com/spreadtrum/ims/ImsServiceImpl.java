@@ -377,9 +377,7 @@ public class ImsServiceImpl {
     private void onRecordsLoaded() {
         if (DBG) Log.i(TAG,"onRecordsLoaded: createAllApnList");
         createAllApnList();
-        if(ImsManager.isVolteEnabledByPlatform(mPhone.getContext())){
-            setInitialAttachIMSApn();
-        }
+        setInitialAttachIMSApn();
     }
     private void createAllApnList(){
         mAllApnSettings = new ArrayList<ApnSetting>();
@@ -424,9 +422,7 @@ public class ImsServiceImpl {
     private void onApnChanged() {
         if (DBG) Log.i(TAG,"onApnChanged: createAllApnList");
         createAllApnList();
-        if(ImsManager.isVolteProvisionedOnDevice(mPhone.getContext())){
-            setInitialAttachIMSApn();
-        }
+        setInitialAttachIMSApn();
     }
 
     public int getServiceId(){
