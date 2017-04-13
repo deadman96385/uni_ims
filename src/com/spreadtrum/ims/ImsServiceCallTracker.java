@@ -511,6 +511,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             }
         }/* @} */
         synchronized(mSessionList) {
+            int changeSessonId = -1;
             for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it =
                     mSessionList.entrySet().iterator(); it.hasNext();) {
                 Map.Entry<String, ImsCallSessionImpl> e = it.next();
@@ -519,7 +520,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                     if(mConferenceSession == session){
                         //check conference disconnected
                         if(mConferenceSession.isConferenceAlive()){
-                            Log.d(TAG, "removeInvalidSessionFromList->conference call does not disconnected.");
+                            Log.d(TAG, "removeInvalidSessionFromList->conference call does not disconnected.host is disconnected id = "+mConferenceSession.getCallId());
+                            changeSessonId = Integer.parseInt(mConferenceSession.getCallId());
                             continue;
                         }
                         mConferenceSession = null;
@@ -531,6 +533,17 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                     notifySessionDisonnected(session);
                 }
             }
+            /*SPRD:add for bug664628 @*/
+            if (changeSessonId != -1) {
+                mSessionList.remove(String.valueOf(changeSessonId));
+                int newHostId = mConferenceSession.getOneConferenceMember();
+                Log.d(TAG, "removeInvalidSessionFromList->change mConferenceSession linked to new DriverCall. id = " + newHostId);
+                if (newHostId != -1) {
+                    mSessionList.put(String.valueOf(newHostId), mConferenceSession);
+                    mConferenceSession.mImsDriverCall = validDriverCall.get(String.valueOf(newHostId));
+                    Log.d(TAG, "removeInvalidSessionFromList->" + mConferenceSession.mImsDriverCall);
+                }
+            }/*@}*/
         }
     }
 

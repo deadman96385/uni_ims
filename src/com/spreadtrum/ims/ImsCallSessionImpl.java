@@ -1521,6 +1521,23 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
     /* @} */
 
+    /*SPRD:add for bug664628 @*/
+    public int getOneConferenceMember() {
+        if (mImsConferenceState == null) {
+            Log.w(TAG, "getOneConferenceMember->mImsConferenceState is null!");
+            return -1;
+        }
+        for (Iterator<Map.Entry<String, Bundle>> it =
+             mImsConferenceState.mParticipants.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<String, Bundle> e = it.next();
+            String index = e.getValue().getString(IMS_CONFERENCE_ID);
+            if (index != null) {
+                return Integer.parseInt(index);
+            }
+        }
+        return -1;
+    }/*@}*/
+
     //SPRD: add for bug579560
     public boolean isHasBackgroundCallAndActiveCall(){
         Log.i(TAG, "isHasBackgroundCallAndActiveCall()");
