@@ -7,16 +7,12 @@ import android.os.RemoteException;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.juphoon.sprd.security.ISecurityS2b;
+import com.juphoon.sprd.security.ISecurityS2bCallback;
 import com.spreadtrum.ims.vowifi.Utilities.AttachState;
 import com.spreadtrum.ims.vowifi.Utilities.IPVersion;
-import com.spreadtrum.ims.vowifi.Utilities.JSONUtils;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
-import com.spreadtrum.ims.vowifi.Utilities.Result;
-import com.spreadtrum.ims.vowifi.Utilities.S2bType;
-import com.spreadtrum.ims.vowifi.Utilities.SIMAccountInfo;
 import com.spreadtrum.ims.vowifi.Utilities.SecurityConfig;
-import com.spreadtrum.vowifi.service.ISecurityService;
-import com.spreadtrum.vowifi.service.ISecurityServiceCallback;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -29,16 +25,16 @@ public class VoWifiSecurityManager extends ServiceManager {
     private static final int MSG_ACTION_FORCE_STOP = 3;
 
     private final static String SERVICE_ACTION =
-            "com.spreadtrum.vowifi.service.ISecurityService";
-    private static final String SERVICE_PACKAGE = "com.spreadtrum.vowifi";
-    private static final String SERVICE_CLASS = "com.spreadtrum.vowifi.service.SecurityService";
+            "com.juphoon.sprd.security.SecurityS2bService.action";
+    private static final String SERVICE_PACKAGE = "com.sprd.vowifi.security";
+    private static final String SERVICE_CLASS = "com.juphoon.sprd.security.SecurityS2bService";
 
     private int mState = -1;
     private SecurityConfig mSecurityConfig = null;
     private SecurityListener mListener = null;
 
-    private ISecurityService mISecurity = null;
-    private SecurityCallback mCallback = new SecurityCallback();
+    private ISecurityS2b mISecurity = null;
+    private SecurityS2bCallback mCallback = new SecurityS2bCallback();
 
     protected VoWifiSecurityManager(Context context) {
         super(context);
@@ -68,7 +64,7 @@ public class VoWifiSecurityManager extends ServiceManager {
         try {
             mISecurity = null;
             if (mServiceBinder != null) {
-                mISecurity = ISecurityService.Stub.asInterface(mServiceBinder);
+                mISecurity = ISecurityS2b.Stub.asInterface(mServiceBinder);
                 mISecurity.registerCallback(mCallback);
             } else {
                 Log.d(TAG, "The security service disconnect. Update the attach state.");
@@ -90,8 +86,7 @@ public class VoWifiSecurityManager extends ServiceManager {
         boolean handle = false;
         switch (msg.what) {
             case MSG_ACTION_ATTACH: {
-                PendingAction action = (PendingAction) msg.obj;
-                attach((Integer) action._params.get(0), (SIMAccountInfo) action._params.get(1));
+                attach();
                 handle = true;
                 break;
             }
@@ -111,21 +106,26 @@ public class VoWifiSecurityManager extends ServiceManager {
         return handle;
     }
 
-    public void attach(SIMAccountInfo info) {
-        attach(S2bType.NORMAL, info);
+    public void attach() {
+        attach("");
     }
 
-    public void attachForSos(SIMAccountInfo info) {
-        attach(S2bType.SOS, info);
-    }
+    public void attachForSos() {
+        try {
+            // Build the attach config string for sos.
+            JSONObject jObject = new JSONObject();
+            jObject.put(SecurityS2bCallback.SECURITY_JSON_PARAM_SOS, true);
 
-    private void attach(int type, SIMAccountInfo info) {
-        if (Utilities.DEBUG) {
-            Log.i(TAG, "Start the s2b attach. type: " + type + ", sim info: " + info);
+            attach(jObject.toString());
+        } catch (JSONException e) {
+            Log.e(TAG, "Can not build the sos config string as catch the JSONException e: " + e);
         }
-        if (info == null) {
+    }
+
+    private void attach(String config) {
+        if (Utilities.DEBUG) Log.i(TAG, "Start the s2b attach. config: " + config);
+        if (config == null) {
             Log.e(TAG, "Can not start attach as the config is null.");
-            attachFailed(0);
             return;
         }
 
@@ -134,14 +134,7 @@ public class VoWifiSecurityManager extends ServiceManager {
             try {
                 if (mState <= AttachState.STATE_IDLE) {
                     // If the s2b state is idle, start the attach action.
-                    int sessionId = mISecurity.start(
-                            type, info._subId, info._imsi, info._hplmn, info._vplmn, info._imei);
-                    if (sessionId == Result.INVALID_ID) {
-                        // It means attach failed.
-                        attachFailed(0);
-                    } else {
-                        mSecurityConfig = new SecurityConfig(sessionId);
-                    }
+                    mISecurity.Mtc_S2bStart(config);
                 } else {
                     Log.e(TAG, "Can not start attach as the current state is: " + mState);
                 }
@@ -152,8 +145,7 @@ public class VoWifiSecurityManager extends ServiceManager {
         }
         if (!handle) {
             // Do not handle the attach action, add to pending list.
-            addToPendingList(
-                    new PendingAction("attach", MSG_ACTION_ATTACH, Integer.valueOf(type), info));
+            addToPendingList(new PendingAction("attach", MSG_ACTION_ATTACH));
         }
     }
 
@@ -163,12 +155,7 @@ public class VoWifiSecurityManager extends ServiceManager {
         boolean handle = false;
         if (mISecurity != null) {
             try {
-                if (mSecurityConfig != null) {
-                    mISecurity.stop(mSecurityConfig._sessionId, isHandover);
-                } else {
-                    // Handle it as stop finished.
-                    attachStopped(isHandover, 0);
-                }
+                mISecurity.Mtc_S2bStop(isHandover);
                 handle = true;
             } catch (RemoteException e) {
                 Log.e(TAG, "Catch the remote exception when start the s2b deattach. e: " + e);
@@ -197,11 +184,11 @@ public class VoWifiSecurityManager extends ServiceManager {
 
         try {
             if (ipVersion == IPVersion.NONE) {
-                mISecurity.deleteTunelIpsec(mSecurityConfig._sessionId);
+                mISecurity.Mtc_S2bDeleteTunelIpsec();
                 // Will be always true.
                 return true;
             } else {
-                return mISecurity.switchLoginIpVersion(mSecurityConfig._sessionId, ipVersion);
+                return mISecurity.Mtc_S2bSwitchLogin(ipVersion);
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Catc the remote exception when set the IP version. e: " + e);
@@ -217,32 +204,34 @@ public class VoWifiSecurityManager extends ServiceManager {
         return mState;
     }
 
-    private void attachSuccess() {
-        if (mListener != null) mListener.onSuccessed();
-        mState = AttachState.STATE_CONNECTED;
-    }
+    private class SecurityS2bCallback extends ISecurityS2bCallback.Stub {
+        private static final String SECURITY_JSON_ACTION = "security_json_action";
 
-    private void attachFailed(int errorCode) {
-        if (mListener != null) mListener.onFailed(errorCode);
-        mState = AttachState.STATE_IDLE;
-        mSecurityConfig = null;
-    }
+        private static final String SECURITY_JSON_ACTION_S2B_SUCCESSED =
+                "security_json_action_s2b_successed";
+        private static final String SECURITY_JSON_ACTION_S2B_FAILED =
+                "security_json_action_s2b_failed";
+        private static final String SECURITY_JSON_ACTION_S2B_PROGRESSING =
+                "security_json_action_s2b_progressing";
+        private static final String SECURITY_JSON_ACTION_S2B_STOPPED =
+                "security_json_action_s2b_stopped";
 
-    private void attachProcessing(int stateCode) {
-        if (mListener != null) mListener.onProgress(stateCode);
-        mState = AttachState.STATE_PROGRESSING;
-    }
-
-    private void attachStopped(boolean forHandover, int errorCode) {
-        if (mListener != null) mListener.onStopped(forHandover, errorCode);
-        mState = AttachState.STATE_IDLE;
-        mSecurityConfig = null;
-    }
-
-    private class SecurityCallback extends ISecurityServiceCallback.Stub {
+        private static final String SECURITY_JSON_PARAM_ERROR_CODE =
+                "security_json_param_error_code";
+        private static final String SECURITY_JSON_PARAM_PROGRESS_STATE =
+                "security_json_param_progress_state";
+        private static final String SECURITY_JSON_PARAM_LOCAL_IP4 = "security_json_param_local_ip4";
+        private static final String SECURITY_JSON_PARAM_LOCAL_IP6 = "security_json_param_local_ip6";
+        private static final String SECURITY_JSON_PARAM_PCSCF_IP4 = "security_json_param_pcscf_ip4";
+        private static final String SECURITY_JSON_PARAM_PCSCF_IP6 = "security_json_param_pcscf_ip6";
+        private static final String SECURITY_JSON_PARAM_DNS_IP4 = "security_json_param_dns_ip4";
+        private static final String SECURITY_JSON_PARAM_DNS_IP6 = "security_json_param_dns_ip6";
+        private static final String SECURITY_JSON_PARAM_PREF_IP4 = "security_json_param_pref_ip4";
+        private static final String SECURITY_JSON_PARAM_HANDOVER = "security_json_param_handover";
+        private static final String SECURITY_JSON_PARAM_SOS = "security_json_param_sos";
 
         @Override
-        public void onS2bStateChanged(String json) throws RemoteException {
+        public void onJsonCallback(String json) throws RemoteException {
             if (Utilities.DEBUG) Log.i(TAG, "Get the security callback: " + json);
 
             if (TextUtils.isEmpty(json)) {
@@ -252,64 +241,63 @@ public class VoWifiSecurityManager extends ServiceManager {
 
             try {
                 JSONObject jObject = new JSONObject(json);
-                int eventCode = jObject.optInt(JSONUtils.KEY_EVENT_CODE);
-                switch (eventCode) {
-                    case JSONUtils.EVENT_CODE_ATTACH_SUCCESSED: {
-                        Log.d(TAG, "S2b attach success.");
-                        int sessionId = jObject.optInt(JSONUtils.KEY_SESSION_ID, -1);
-                        String localIP4 = jObject.optString(JSONUtils.KEY_LOCAL_IP4, null);
-                        String localIP6 = jObject.optString(JSONUtils.KEY_LOCAL_IP6, null);
-                        String pcscfIP4 = jObject.optString(JSONUtils.KEY_PCSCF_IP4, null);
-                        String pcscfIP6 = jObject.optString(JSONUtils.KEY_PCSCF_IP6, null);
-                        String dnsIP4 = jObject.optString(JSONUtils.KEY_DNS_IP4, null);
-                        String dnsIP6 = jObject.optString(JSONUtils.KEY_DNS_IP6, null);
-                        boolean prefIPv4 = jObject.optBoolean(JSONUtils.KEY_PREF_IP4, false);
-                        boolean isSos = jObject.optBoolean(JSONUtils.KEY_SOS, false);
-                        if (sessionId < 0) {
-                            Log.w(TAG, "Get the attach success callback, but the sessionId is: "
-                                    + sessionId);
-                            break;
-                        }
+                String flag = jObject.optString(SECURITY_JSON_ACTION);
+                if (SECURITY_JSON_ACTION_S2B_SUCCESSED.equals(flag)) {
+                    Log.d(TAG, "S2b attach success.");
+                    String localIP4 = jObject.optString(SECURITY_JSON_PARAM_LOCAL_IP4, null);
+                    String localIP6 = jObject.optString(SECURITY_JSON_PARAM_LOCAL_IP6, null);
+                    String pcscfIP4 = jObject.optString(SECURITY_JSON_PARAM_PCSCF_IP4, null);
+                    String pcscfIP6 = jObject.optString(SECURITY_JSON_PARAM_PCSCF_IP6, null);
+                    String dnsIP4 = jObject.optString(SECURITY_JSON_PARAM_DNS_IP4, null);
+                    String dnsIP6 = jObject.optString(SECURITY_JSON_PARAM_DNS_IP6, null);
+                    boolean prefIPv4 = jObject.optBoolean(SECURITY_JSON_PARAM_PREF_IP4, false);
+                    boolean isSos = jObject.optBoolean(SECURITY_JSON_PARAM_SOS, false);
+                    mSecurityConfig = new SecurityConfig(pcscfIP4, pcscfIP6, dnsIP4, dnsIP6,
+                            localIP4, localIP6, prefIPv4, isSos);
 
-                        if (mSecurityConfig == null) {
-                            mSecurityConfig = new SecurityConfig(sessionId);
-                        }
-                        mSecurityConfig.update(pcscfIP4, pcscfIP6, dnsIP4, dnsIP6, localIP4,
-                                localIP6, prefIPv4, isSos);
+                    // Switch the IP version as preferred first, then notify the result and
+                    // update the state.
+                    int useIPVersion =
+                            mSecurityConfig._prefIPv4 ? IPVersion.IP_V4 : IPVersion.IP_V6;
+                    if (setIPVersion(useIPVersion)) {
+                        mSecurityConfig._useIPVersion = useIPVersion;
 
-                        // Switch the IP version as preferred first, then notify the result and
-                        // update the state.
-                        int useIPVersion =
-                                mSecurityConfig._prefIPv4 ? IPVersion.IP_V4 : IPVersion.IP_V6;
-                        if (setIPVersion(useIPVersion)) {
-                            mSecurityConfig._useIPVersion = useIPVersion;
-                            attachSuccess();
-                        } else {
-                            attachFailed(0);
-                        }
-                        break;
+                        if (mListener != null) mListener.onSuccessed();
+                        mState = AttachState.STATE_CONNECTED;
+                    } else {
+                        Log.e(TAG, "S2b attach success. with setIPVersion fail!");
+                        if (mListener != null) mListener.onFailed(0);
+                        mState = AttachState.STATE_IDLE;
+                        // S2b start success with invalid ip info means S2b failed,
+                        // and need to call S2b stop here for abnoraml situation.
+                        forceStop();
                     }
-                    case JSONUtils.EVENT_CODE_ATTACH_FAILED: {
-                        int errorCode = jObject.optInt(JSONUtils.KEY_STATE_CODE);
-                        Log.d(TAG, "S2b attach failed, errorCode: " + errorCode);
-                        attachFailed(errorCode);
-                        break;
-                    }
-                    case JSONUtils.EVENT_CODE_ATTACH_PROGRESSING: {
-                        int state = jObject.optInt(JSONUtils.KEY_PROGRESS_STATE);
-                        Log.d(TAG, "S2b attach progress state changed to " + state);
-                        attachProcessing(state);
-                        break;
-                    }
-                    case JSONUtils.EVENT_CODE_ATTACH_STOPPED: {
-                        int errorCode = jObject.optInt(JSONUtils.KEY_STATE_CODE);
-                        boolean forHandover = jObject.optBoolean(JSONUtils.KEY_HANDOVER, false);
-                        Log.d(TAG, "S2b attach stopped, errorCode: " + errorCode + ", for handover: "
-                                + forHandover);
+                } else if (SECURITY_JSON_ACTION_S2B_FAILED.equals(flag)) {
+                    int errorCode = jObject.optInt(SECURITY_JSON_PARAM_ERROR_CODE);
+                    Log.d(TAG, "S2b attach failed, errorCode: " + errorCode);
 
-                        attachStopped(forHandover, errorCode);
-                        break;
+                    if (mListener != null) {
+                        mListener.onFailed(errorCode);
                     }
+                    mState = AttachState.STATE_IDLE;
+                } else if (SECURITY_JSON_ACTION_S2B_PROGRESSING.equals(flag)) {
+                    int state = jObject.optInt(SECURITY_JSON_PARAM_PROGRESS_STATE);
+                    Log.d(TAG, "S2b attach progress state changed to " + state);
+
+                    if (mListener != null) {
+                        mListener.onProgress(state);
+                    }
+                    mState = AttachState.STATE_PROGRESSING;
+                } else if (SECURITY_JSON_ACTION_S2B_STOPPED.equals(flag)) {
+                    int errorCode = jObject.optInt(SECURITY_JSON_PARAM_ERROR_CODE);
+                    boolean forHandover = jObject.optBoolean(SECURITY_JSON_PARAM_HANDOVER, false);
+                    Log.d(TAG, "S2b attach stopped, errorCode: " + errorCode + ", for handover: "
+                            + forHandover);
+
+                    if (mListener != null) {
+                        mListener.onStopped(forHandover, errorCode);
+                    }
+                    mState = AttachState.STATE_IDLE;
                 }
             } catch (JSONException e) {
                 Log.e(TAG, "Failed to parse the security callback as catch the JSONException, e: "

@@ -12,7 +12,6 @@ import android.os.Message;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.telephony.SubscriptionManager;
-import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import com.android.ims.ImsCallProfile;
@@ -27,7 +26,6 @@ import com.spreadtrum.ims.vowifi.Utilities.NativeErrorCode;
 import com.spreadtrum.ims.vowifi.Utilities.RegisterIPAddress;
 import com.spreadtrum.ims.vowifi.Utilities.RegisterState;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
-import com.spreadtrum.ims.vowifi.Utilities.SIMAccountInfo;
 import com.spreadtrum.ims.vowifi.Utilities.SecurityConfig;
 import com.spreadtrum.ims.vowifi.Utilities.UnsolicitedCode;
 import com.spreadtrum.ims.vowifi.VoWifiCallManager.CallListener;
@@ -70,10 +68,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private boolean mIsSRVCCSupport = true;
 
     private Context mContext;
-    private TelephonyManager mTeleMgr = null;
     private SharedPreferences mPreferences = null;
     private VoWifiCallback mCallback = null;
-    private SIMAccountInfo mSIMAccountInfo = null;
     private RegisterIPAddress mRegisterIP = null;
 
     private ImsUtImpl mImsUt;
@@ -239,8 +235,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     public VoWifiServiceImpl(Context context) {
         mContext = context;
 
-        mTeleMgr = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-
         mPreferences = PreferenceManager.getDefaultSharedPreferences(mContext);
         mPreferences.registerOnSharedPreferenceChangeListener(this);
 
@@ -352,21 +346,10 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     private void attachInternal() {
-        // Before start attach process, need get the SIM account info.
-        // We will always use the primary card to attach and register now.
-        int phoneId = Utilities.getPrimaryCard(mContext);
-        int[] subId = SubscriptionManager.getSubId(phoneId);
-        if (subId == null || subId.length == 0) {
-            Log.e(TAG, "Can not get the sub id from the phone id: " + phoneId);
-            if (mCallback != null) mCallback.onAttachFinished(false, 0);
-            return;
-        }
-        mSIMAccountInfo = SIMAccountInfo.generate(mTeleMgr, subId[0]);
-
         if (mEcbmStep == ECBM_STEP_ATTACH_FOR_SOS) {
-            mSecurityMgr.attachForSos(mSIMAccountInfo);
+            mSecurityMgr.attachForSos();
         } else {
-            mSecurityMgr.attach(mSIMAccountInfo);
+            mSecurityMgr.attach();
         }
     }
 
@@ -411,12 +394,21 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             return;
         }
 
+        // We will always use the primary card to register.
+        int phoneId = Utilities.getPrimaryCard(mContext);
+        int[] subId = SubscriptionManager.getSubId(phoneId);
+        if (subId == null || subId.length == 0) {
+            Log.e(TAG, "Can not get the sub id from the phone id: " + phoneId);
+            if (mCallback != null) mCallback.onReregisterFinished(false, 0);
+            return;
+        }
+
         // For register process, step as this:
         // 1. Prepare for login.
         // 2. If prepare finished, start the login process with the first local IP and PCSCF IP.
         // 3. If login failed, need try the left local IP and PCSCF IP until all of them already
         //    failed, then need notify the user login failed.
-        mRegisterMgr.prepareForLogin(mSIMAccountInfo, mIsSRVCCSupport);
+        mRegisterMgr.prepareForLogin(subId[0], mIsSRVCCSupport);
     }
 
     public void deregister() {
@@ -602,9 +594,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     private void registerLogin(boolean isRelogin) {
-        if (Utilities.DEBUG) {
-            Log.i(TAG, "Try to start the register login process, re-login: " + isRelogin);
-        }
+        if (Utilities.DEBUG) Log.i(TAG, "Try to start the register login process. is Relogin: " + isRelogin);
 
         if (mRegisterIP == null) {
             // Can not get the register IP.
@@ -615,6 +605,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
         boolean startRegister = false;
         int regVersion = mRegisterIP.getValidIPVersion(mSecurityMgr.getConfig()._prefIPv4);
+	if (Utilities.DEBUG) Log.i(TAG, "Try to start the register login process. regVersion: " +regVersion);
         if (regVersion != IPVersion.NONE) {
             boolean useIPv4 = regVersion == IPVersion.IP_V4;
             if (regVersion == mSecurityMgr.getConfig()._useIPVersion
@@ -626,6 +617,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
                 boolean forSos = (mEcbmStep == ECBM_STEP_REGISTER_FOR_SOS);
                 mRegisterMgr.login(forSos, useIPv4, localIP, pcscfIP, isRelogin);
+
             }
         }
 
@@ -765,12 +757,12 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 // Handle the failed in non-HO sutuation
                 if ((errorCode == NativeErrorCode.REG_EXPIRED_TIMEOUT)
                         || (errorCode == NativeErrorCode.REG_EXPIRED_OTHER)) {
-                    // The up-layer will need to handle TIMEOUT
+                    // the up-layer will need to handle TIMEOUT
                     errorCode = (errorCode == NativeErrorCode.REG_EXPIRED_TIMEOUT)
-                            ? NativeErrorCode.REG_TIMEOUT : errorCode;
+                            ? NativeErrorCode.REG_TIMEOUT: errorCode;
                     registerLogout(errorCode);
                 } else {
-                    // Don't handle the reregister fail in HO situation.
+                    // don't handle the reregister fail in HO situation.
                 }
             }
         }
@@ -804,12 +796,13 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 // If failed caused by server forbidden, set register failed.
                 Log.e(TAG, "Login failed as server forbidden. state code: " + stateCode);
                 registerFailed();
-            } else if(!success && stateCode == NativeErrorCode.SERVER_TIMEOUT){
-                // If failed caused when UE is calling and server return 504, need to relogin.
-                Log.d(TAG, "Re-login as UE send invite and server response 504, stateCode: "
-                        + stateCode);
-                registerLogin(true /* re-login */);
-            } else {
+            }
+	    else if(!success && stateCode == NativeErrorCode.SERVER_TIMEOUT){
+		  // If failed caused when UE is calling and server return 504, need to relogin.
+                Log.e(TAG, "reLogin  as UE send invite and server response 504. state code: " + stateCode);
+		registerLogin(true);
+            }
+	    else {
                 // As the PCSCF address may be not only one. For example, there are two IPv6
                 // addresses and two IPv4 addresses. So we will try to login again.
                 Log.d(TAG, "Last login action is failed, try to use exist address to login again");

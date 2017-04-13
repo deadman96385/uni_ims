@@ -98,8 +98,8 @@ public class VoWifiCallManager extends ServiceManager {
 
     private static final int MSG_HANDLE_EVENT = 0;
     private static final int MSG_INVITE_CALL = 1;
-    private static final int MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 2;
-    private static final int MEDIA_CHANGED_TIMEOUT = 10000;
+    private static final int MSG_VOWIFI_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 2; //Added for bug 662008
+    private static final int TIMEOUT_IN_MILLS = 10000; //Added for bug 662008
 
     private Handler mHandler = new Handler() {
         @Override
@@ -111,17 +111,15 @@ public class VoWifiCallManager extends ServiceManager {
                 case MSG_INVITE_CALL:
                     inviteCall((ImsCallSessionImpl) msg.obj);
                     break;
-                case MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT:    //Added for bug 662008
-                    if (mAlertDialog != null
-                            && mAlertDialog._dialog != null
-                            && mAlertDialog._dialog.isShowing()) {
-                        int sessionId = msg.arg1;
+                case MSG_VOWIFI_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT:    //Added for bug 662008
+                    if(mAlertDialog !=  null && mAlertDialog._dialog!=null && mAlertDialog._dialog.isShowing()){
+                        int sessionId = msg.getData().getInt("sessionId");
                         dismissAlertDialog(sessionId);
-                        Log.d(TAG, "Popup dismissed due to timeout.");
+                        Log.d(TAG , "Popup dismissed due to timeout ");
                         try {
-                            mICall.sendSessionModifyResponse(sessionId, true, false);
-                        } catch (RemoteException e) {
-                            Log.e(TAG, "Failed to send reject response. e: " + e);
+                          mICall.sendSessionModifyResponse(sessionId, true, false);
+                        }catch (RemoteException e) {
+                          Log.e(TAG, "Failed to send reject response. e: " + e);
                         }
                     }
                     break;
@@ -1636,13 +1634,15 @@ public class VoWifiCallManager extends ServiceManager {
         if (isUpgrade) {
             title = mContext.getString(R.string.vowifi_request_upgrade_title);
             message = mContext.getString(R.string.vowifi_request_upgrade_text);
-
-            // Send the timeout message to handle the request timeout event.
+	    //Added for bug 662008
             Message msg = new Message();
-            msg.what = MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT;
-            msg.arg1 = sessionId;
-            mHandler.removeMessages(MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT);
-            mHandler.sendMessageDelayed(msg, MEDIA_CHANGED_TIMEOUT);
+            msg.what = MSG_VOWIFI_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT;
+            Bundle bundle = new Bundle();
+            bundle.putInt("sessionId", sessionId);
+            msg.setData(bundle);
+            mHandler.removeMessages(MSG_VOWIFI_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT);
+            mHandler.sendMessageDelayed(msg, TIMEOUT_IN_MILLS);
+            Log.d(TAG , "MSG_VOWIFI_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT sent");
         } else {
             title = mContext.getString(R.string.vowifi_request_downgrade_title);
             message = mContext.getString(R.string.vowifi_request_downgrade_text);
