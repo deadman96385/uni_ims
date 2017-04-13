@@ -128,6 +128,9 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         /* @} */
         mHandler.obtainMessage(mVTManagerProxy.EVENT_ON_VT_DISCONNECT, mImsCallSessionImpl).sendToTarget();
         releaseWakeLock();
+        if(mVolteMediaUpdateDialog != null && mVolteMediaUpdateDialog.isShowing()){
+            mVolteMediaUpdateDialog.dismiss();
+        }
     }
     /**
      * Sets the camera to be used for video recording in a video call.
