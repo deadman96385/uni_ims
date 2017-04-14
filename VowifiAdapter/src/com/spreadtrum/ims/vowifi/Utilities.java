@@ -3,6 +3,7 @@ package com.spreadtrum.ims.vowifi;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.SystemProperties;
+import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
@@ -183,6 +184,13 @@ public class Utilities {
         public static final int SUCCESS    = 1;
     }
 
+    public static class S2bType {
+        public static final int NORMAL = 1;
+        public static final int SOS    = 2;
+        public static final int XCAP   = 3;
+        public static final int MMS    = 4;
+    }
+
     public static class CallStateForDataRouter {
         public static final int VOLTE  = 0;
         public static final int VOWIFI = 1;
@@ -247,6 +255,8 @@ public class Utilities {
     }
 
     public static class SecurityConfig {
+        public int _sessionId;
+
         public String _pcscf4;
         public String _pcscf6;
         public String _dns4;
@@ -258,7 +268,11 @@ public class Utilities {
 
         public int _useIPVersion = IPVersion.NONE;
 
-        public SecurityConfig(String pcscf4, String pcscf6, String dns4, String dns6, String ip4,
+        public SecurityConfig(int sessionId) {
+            _sessionId = sessionId;
+        }
+
+        public void update(String pcscf4, String pcscf6, String dns4, String dns6, String ip4,
                 String ip6, boolean prefIPv4, boolean isSos) {
             _pcscf4 = pcscf4;
             _pcscf6 = pcscf6;
@@ -274,6 +288,145 @@ public class Utilities {
         public String toString() {
             return "[pcscf4=" + _pcscf4 + ", pcscf6=" + _pcscf6 + ", dns4=" + _dns4 + ", dns6="
                     + _dns6 + ", ip4=" + _ip4 + ", ip6=" + _ip6 + ", pref IPv4=" + _prefIPv4 + "]";
+        }
+    }
+
+    public static class SIMAccountInfo {
+        public int _subId;
+        public String _spn;
+        public String _imei;
+        public String _imsi;
+        public String _impi;
+        public String _impu;
+
+        // Used by s2b process.
+        public String _hplmn;
+        public String _vplmn;
+
+        // Used by register process.
+        public String _accountName;
+        public String _userName;
+        public String _authName;
+        public String _authPass;
+        public String _realm;
+
+        public static SIMAccountInfo generate(TelephonyManager tm, int subId) {
+            SIMAccountInfo info = new SIMAccountInfo();
+            info._subId = subId;
+
+            int phoneId = SubscriptionManager.getPhoneId(subId);
+            // Get the IMEI for the phone.
+            String imei = tm.getDeviceId(phoneId);
+            if (!isIMEIValid(imei)) return null;
+
+            // Get the spn, IMSI, hplmn and vplmn.
+            info._spn = tm.getSimOperatorNameForPhone(phoneId);
+            info._imsi = tm.getSubscriberId(subId);
+            info._hplmn = tm.getSimOperator(subId);
+            info._vplmn = tm.getNetworkOperator(subId);
+
+            info._accountName = imei;
+            info._imei = imei;
+
+            // Try to get the IMPU/IMPI first, if can not get the IMPU/IMPI, it means this card not
+            // may be ISIM, we'd like to use the IMSI instead.
+            boolean generated = false;
+            String impi = tm.getIsimImpi();
+            if (!TextUtils.isEmpty(impi)) {
+                Log.d(TAG, "IMPI is " + impi);
+                info._impi = impi;
+                info._authName = impi;
+                String[] temp = info._authName.split("@");
+                if (temp != null && temp.length == 2) {
+                    info._userName = temp[0];
+                    info._realm = temp[1];
+                    generated = true;
+                } else {
+                    Log.e(TAG, "The IMPI is invalid, IMPI: " + info._authName);
+                }
+
+                // Generate the plmn and imsi from impi.
+                int indexMCC = info._impi.indexOf("mcc");
+                int indexMNC = info._impi.indexOf("mnc");
+                String mcc = info._impi.substring(indexMCC + 3, indexMCC + 6);
+                String mnc = info._impi.substring(indexMNC + 3, indexMNC + 6);
+                if (mnc.startsWith("00")) {
+                    mnc = mnc.substring(1);
+                }
+                info._hplmn = mcc + mnc;
+                info._imsi = info._userName;
+            }
+
+            String[] impus = tm.getIsimImpu();
+            if (impus != null && impus.length > 0) {
+                // FIXME: Use the first one in the IMPU list, it may depend on the service
+                //        provider's decision.
+                Log.d(TAG, "IMPU array length is " + impus.length + ", choose first one: "
+                        + impus[0]);
+                info._impu = impus[0];
+            }
+
+            // If do not generate from the IMPI/IMPU, we need generate the info from the IMSI.
+            if (!generated) {
+                // Failed to generate from the IMPI, use IMSI instead.
+                if (!isIMSIValid(info._imsi)
+                        || TextUtils.isEmpty(info._hplmn)) {
+                    return null;
+                }
+
+                String mcc = info._hplmn.substring(0, 3);
+                String mnc = info._hplmn.length() == 5 ? "0" + info._hplmn.substring(3)
+                        : info._hplmn.substring(3);
+                Log.d(TAG, "Generate the SIM mcc is " + mcc + ", mnc is " + mnc);
+
+                info._userName = info._imsi;
+                info._realm = "ims.mnc" + mnc + ".mcc" + mcc + ".3gppnetwork.org";
+                info._authName = info._imsi + "@" + info._realm;
+                info._impu = "sip:" + info._authName;
+            }
+
+            return info;
+        }
+
+        private SIMAccountInfo() {
+            _authPass = "todo";    // Do not used, hard code here.
+        }
+
+        @Override
+        public String toString() {
+            return "SIMAccountInfo: subId[" + _subId
+                    + "], spn[" + _spn
+                    + "], imei[" + _imei
+                    + "], imsi[" + _imsi
+                    + "], impi[" + _impi
+                    + "], impu[" + _impu
+                    + "], hplmn[" + _hplmn
+                    + "], vplmn[" + _vplmn
+                    + "], accountName[" + _accountName
+                    + "], userName[" + _userName
+                    + "], authName[" + _authName
+                    + "], authPass[" + _authPass
+                    + "], realm[" + _realm + "]";
+        }
+
+        private static boolean isIMEIValid(String imei) {
+            if (TextUtils.isEmpty(imei) || !imei.matches("^[0-9]{15}$")) {
+                // The IMEI & IMSI is invalid. Do not process the login action.
+                Log.e(TAG, "The imei " + imei + " is invalid");
+                return false;
+            }
+
+            return true;
+        }
+
+        private static boolean isIMSIValid(String imsi) {
+            if (TextUtils.isEmpty(imsi) || !imsi.matches("^[0-9]{15}$")) {
+                // The IMEI & IMSI is invalid. Do not process the login action.
+                Log.e(TAG, "The imsi " + imsi + " is invalid");
+                return false;
+            }
+
+            return true;
         }
     }
 
@@ -495,11 +648,48 @@ public class Utilities {
         public static final String KEY_EVENT_CODE = "event_code";
         public static final String KEY_EVENT_NAME = "event_name";
 
+        // Security
+        public static final String KEY_SESSION_ID = "session_id";
+
+        public static final int STATE_CODE_SECURITY_INVALID_ID = 1;
+        public static final int STATE_CODE_SECURITY_AUTH_FAILED = 2;
+
+        public final static int SECURITY_EVENT_CODE_BASE = 0;
+        public final static int EVENT_CODE_ATTACH_SUCCESSED = SECURITY_EVENT_CODE_BASE + 1;
+        public final static int EVENT_CODE_ATTACH_FAILED = SECURITY_EVENT_CODE_BASE + 2;
+        public final static int EVENT_CODE_ATTACH_PROGRESSING = SECURITY_EVENT_CODE_BASE + 3;
+        public final static int EVENT_CODE_ATTACH_STOPPED = SECURITY_EVENT_CODE_BASE + 4;
+
+        public final static String EVENT_ATTACH_SUCCESSED = "attach_successed";
+        public final static String EVENT_ATTACH_FAILED = "attach_failed";
+        public final static String EVENT_ATTACH_PROGRESSING = "attach_progressing";
+        public final static String EVENT_ATTACH_STOPPED = "attach_stopped";
+
+        // Keys for security callback
+        public final static String KEY_ERROR_CODE = "error_code";
+        public final static String KEY_PROGRESS_STATE = "progress_state";
+        public final static String KEY_LOCAL_IP4 = "local_ip4";
+        public final static String KEY_LOCAL_IP6 = "local_ip6";
+        public final static String KEY_PCSCF_IP4 = "pcscf_ip4";
+        public final static String KEY_PCSCF_IP6 = "pcscf_ip6";
+        public final static String KEY_DNS_IP4 = "dns_ip4";
+        public final static String KEY_DNS_IP6 = "dns_ip6";
+        public final static String KEY_PREF_IP4 = "pref_ip4";
+        public final static String KEY_HANDOVER = "is_handover";
+        public final static String KEY_SOS = "is_sos";
+
+        public final static int USE_IP4 = 0;
+        public final static int USE_IP6 = 1;
+
         // Register
         public static final String KEY_STATE_CODE = "state_code";
         public static final String KEY_RETRY_AFTER = "retry_after";
 
-        public static final int REGISTER_EVENT_CODE_BASE = 0;
+        public static final int STATE_CODE_REG_PING_FAILED = 1;
+        public static final int STATE_CODE_REG_NATIVE_FAILED = 2;
+        public static final int STATE_CODE_REG_AUTH_FAILED = 3;
+
+        public static final int REGISTER_EVENT_CODE_BASE = 50;
         public static final int EVENT_CODE_LOGIN_OK = REGISTER_EVENT_CODE_BASE + 1;
         public static final int EVENT_CODE_LOGIN_FAILED = REGISTER_EVENT_CODE_BASE + 2;
         public static final int EVENT_CODE_LOGOUTED = REGISTER_EVENT_CODE_BASE + 3;
