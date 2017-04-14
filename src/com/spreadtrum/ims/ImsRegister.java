@@ -454,24 +454,26 @@ public class ImsRegister {
             Log.d(TAG, "not support Dual volte");
             return false;
         }
-        Log.d(TAG, "lei support Dual volte");
+        Log.d(TAG, "support Dual volte");
         int primaryCard = getPrimaryCard();
         String primaryOperator = mTelephonyManager
                 .getSimOperatorNameForPhone(primaryCard);
         String secondOperator = mTelephonyManager
                 .getSimOperatorNameForPhone(mPhoneId);
         boolean sameOperator = secondOperator != null && primaryOperator != null
-                && secondOperator.length() > 3 && primaryOperator.length() > 3
+                && secondOperator.length() > 0 && primaryOperator.length() > 0
                 && (secondOperator.equals(primaryOperator) ||
                         isRelianceCard(primaryOperator) && isRelianceCard(secondOperator));
        try{
         if (sameOperator) {
             Log.d(TAG, "same operator, check mcc");
             primaryOperator = mTelephonyManager.getSimOperatorNumericForPhone(
-                    primaryCard).substring(0, 3);
+                    primaryCard).length() > 3 ? mTelephonyManager.getSimOperatorNumericForPhone(
+                    primaryCard).substring(0, 3): null;
             secondOperator = mTelephonyManager.getSimOperatorNumericForPhone(
-                    mPhoneId).substring(0, 3);
-            sameOperator = secondOperator != null
+                    mPhoneId).length() > 3 ? mTelephonyManager.getSimOperatorNumericForPhone(
+                    mPhoneId).substring(0, 3): null;
+            sameOperator = secondOperator != null && primaryOperator != null
                     && secondOperator.equals(primaryOperator);
         }
         }catch(StringIndexOutOfBoundsException e){
