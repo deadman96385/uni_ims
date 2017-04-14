@@ -81,16 +81,20 @@ PUBLIC int32 H264Dec_Read_SPS_PPS_SliceHeader(H264DecContext *vo, uint8 *bitstrm
         }
         break;
     case NALU_TYPE_PPS:
+        if (vo->sawPPS != TRUE) {
+            H264Dec_process_pps (vo);
+        }
         vo->sawPPS = TRUE;
-        H264Dec_process_pps (vo);
         break;
     case NALU_TYPE_SPS:
-        vo->sawSPS = TRUE;
-        H264Dec_process_sps (vo);
-        if(dec_output_ptr) {
-            dec_output_ptr->frame_width = (vo->g_sps_ptr->pic_width_in_mbs_minus1+1) * 16;
-            dec_output_ptr->frame_height= (vo->g_sps_ptr->pic_height_in_map_units_minus1+1) *(2-(uint8)vo->g_sps_ptr->frame_mbs_only_flag) *16;
+        if (vo->sawSPS != TRUE) {
+            H264Dec_process_sps (vo);
+            if(dec_output_ptr) {
+                dec_output_ptr->frame_width = (vo->g_sps_ptr->pic_width_in_mbs_minus1+1) * 16;
+                dec_output_ptr->frame_height= (vo->g_sps_ptr->pic_height_in_map_units_minus1+1) *(2-(uint8)vo->g_sps_ptr->frame_mbs_only_flag) *16;
+            }
         }
+        vo->sawSPS = TRUE;
         break;
     case NALU_TYPE_SEI:
         H264Dec_interpret_sei_message ();
