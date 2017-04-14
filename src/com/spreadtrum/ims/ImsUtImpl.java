@@ -273,11 +273,16 @@ public class ImsUtImpl extends IImsUt.Stub {
                     releaseNetwork();
                     break;
                 case ACTION_QUERY_CLIP:
+                    processQueryResult(msg);
                     releaseNetwork();
                     break;
                 case ACTION_QUERY_COLR:
+                    processQueryResult(msg);
+                    releaseNetwork();
                     break;
                 case ACTION_QUERY_COLP:
+                    processQueryResult(msg);
+                    releaseNetwork();
                     break;
                 case ACTION_TRANSACT:
                     break;
@@ -644,6 +649,10 @@ public class ImsUtImpl extends IImsUt.Stub {
     @Override
     public int queryCOLR(){
         int id = getReuestId();
+        Bundle bundle = new Bundle();
+        bundle.putInt(EXTRA_ACTION, ACTION_QUERY_COLR);
+        bundle.putInt(EXTRA_ID, id);
+        requestNetwork(bundle);
         return id;
     }
 
@@ -654,6 +663,10 @@ public class ImsUtImpl extends IImsUt.Stub {
     @Override
     public int queryCOLP(){
         int id = getReuestId();
+        Bundle bundle = new Bundle();
+        bundle.putInt(EXTRA_ACTION, ACTION_QUERY_COLP);
+        bundle.putInt(EXTRA_ID, id);
+        requestNetwork(bundle);
         return id;
     }
 
@@ -960,8 +973,10 @@ public class ImsUtImpl extends IImsUt.Stub {
                 queryCLIP(bundle);
                 break;
             case ACTION_QUERY_COLR:
+                queryCOLR(bundle);
                 break;
             case ACTION_QUERY_COLP:
+                queryCOLP(bundle);
                 break;
             case ACTION_TRANSACT:
                 break;
@@ -1042,6 +1057,18 @@ public class ImsUtImpl extends IImsUt.Stub {
         Log.d(TAG, "onexcue queryCLIP = " + bundle.toString());
         int id = bundle.getInt(EXTRA_ID, -1);
         mCi.queryCLIP(mHandler.obtainMessage(ACTION_QUERY_CLIP, id, 0, this));
+    }
+
+    private void queryCOLP(Bundle bundle) {
+        Log.d(TAG, "onexcue queryCOLP = " + bundle.toString());
+        int id = bundle.getInt(EXTRA_ID, -1);
+        mCi.queryCOLP(mHandler.obtainMessage(ACTION_QUERY_COLP, id, 0, this));
+    }
+
+    private void queryCOLR(Bundle bundle) {
+        Log.d(TAG, "onexcue queryCOLR = " + bundle.toString());
+        int id = bundle.getInt(EXTRA_ID, -1);
+        mCi.queryCOLR(mHandler.obtainMessage(ACTION_QUERY_COLR, id, 0, this));
     }
 
     private void updateCallBarring(Bundle bundle) {
@@ -1156,6 +1183,38 @@ public class ImsUtImpl extends IImsUt.Stub {
         String password = bundle.getString(EXTRA_PASSWORD, "");
         mCi.queryFacilityLock(facility, password, serviceClass,
                 mHandler.obtainMessage(ACTION_QUERY_CB_EX, id, 0, this));
+    }
+
+    private void processQueryResult(Message msg) {
+        AsyncResult ar = (AsyncResult) msg.obj;
+        try {
+            if(ar != null){
+                if (ar.exception != null || ar.result == null) {
+                    int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+                    if (ar.exception instanceof CommandException) {
+                        info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
+                    }
+                    mImsUtListener.utConfigurationQueryFailed((IImsUt)ar.userObj,
+                            msg.arg1,
+                            new ImsReasonInfo(info, 0));
+                } else {
+                    int[] result = (int[]) ar.result;
+                    Bundle bundle = new Bundle();
+                    ImsSsInfo ssinfo = new ImsSsInfo();
+                    ssinfo.mStatus = result[0];
+                    bundle.putParcelable(ImsPhoneMmiCode.UT_BUNDLE_KEY_SSINFO, ssinfo);
+                    mImsUtListener.utConfigurationQueried((IImsUt) ar.userObj, msg.arg1,
+                            bundle);
+                    Log.i(TAG,"ACTION_QUERY bundle = " + bundle);
+                }
+            } else {
+                mImsUtListener.utConfigurationQueryFailed((IImsUt)ar.userObj,
+                        msg.arg1,
+                        new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
+            }
+        } catch(RemoteException e){
+            e.printStackTrace();
+        }
     }
 
 }

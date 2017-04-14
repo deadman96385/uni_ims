@@ -257,7 +257,8 @@ public final class ImsRIL {
     // ussd format type.
     private static final int GSM_TYPE = 15;
     private static final int UCS2_TYPE = 72;
-
+    private static final int RI_REQUEST_QUERY_COLP = 4033;
+    private static final int RI_REQUEST_QUERY_COLR = 4034;
     enum RadioState {
         RADIO_OFF,         /* Radio explicitly powered off (eg CFUN=0) */
         RADIO_UNAVAILABLE, /* Radio unavailable (eg, resetting or not booted) */
@@ -1167,7 +1168,24 @@ public final class ImsRIL {
         mCi.queryCLIP(response);
     }
 
+    public void
+    queryCOLP(Message response) {
+        RILRequest rr;
+        rr = RILRequest.obtain(RI_REQUEST_QUERY_COLP, response);
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
 
+        send(rr);
+    }
+
+    public void
+    queryCOLR(Message response) {
+
+        RILRequest rr;
+        rr = RILRequest.obtain(RI_REQUEST_QUERY_COLR, response);
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
+
+        send(rr);
+    }
 
     public void
     getBasebandVersion (Message response) {
@@ -1559,6 +1577,8 @@ public final class ImsRIL {
                 case ImsRILConstants.RIL_REQUEST_IMS_ENABLE_LOCAL_CONFERENCE: ret = responseVoid(p); break;
                 case ImsRILConstants.RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO: ret =  responseVoid(p);break;
                 case ImsRILConstants.RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY: ret = responseInts(p); break;
+                case RI_REQUEST_QUERY_COLP: ret = responseInts(p); break;
+                case RI_REQUEST_QUERY_COLR: ret = responseInts(p); break;
                 default:
                     throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
                     //break;
@@ -2668,6 +2688,8 @@ public final class ImsRIL {
             case ImsRILConstants.RIL_REQUEST_IMS_ENABLE_LOCAL_CONFERENCE: return "RIL_REQUEST_IMS_ENABLE_LOCAL_CONFERENCE";
             case ImsRILConstants.RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO: return "RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO";
             case ImsRILConstants.RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY: return "RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY";
+            case RI_REQUEST_QUERY_COLP: return "RI_REQUEST_QUERY_COLP";
+            case RI_REQUEST_QUERY_COLR: return "RI_REQUEST_QUERY_COLR";
             default: return requestToString(request);
         }
     }
