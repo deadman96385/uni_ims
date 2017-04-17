@@ -1747,13 +1747,21 @@ class MyVoWifiCallback implements VoWifiCallback {
                 if (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED || service.getVolteRegisterState() == IMS_REG_STATE_REG_FAIL){
                     mVolteRegistered = (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED);
                     if(!mIsLoggingIn){
-                        updateImsFeature();
+                        if (ImsManagerEx.isDualVoLTEActive()){
+                            updateImsFeature(serviceId);
+                        } else {
+                            updateImsFeature();
+                        }
                     }
                 } else {
                     if (mVolteRegistered != service.isImsRegistered()){
                         mVolteRegistered = service.isImsRegistered();
                         if(!mIsLoggingIn){
-                            updateImsFeature();
+                            if (ImsManagerEx.isDualVoLTEActive()){
+                                updateImsFeature(serviceId);
+                            } else {
+                                updateImsFeature();
+                            }
                         }
                     }
                 }
@@ -1769,7 +1777,11 @@ class MyVoWifiCallback implements VoWifiCallback {
                             mWifiService.deregister();
                             mWifiService.deattach();
                             mWifiRegistered= false;//Set wifi registered state as false when make de-register operation in handover.
-                            updateImsFeature();
+                            if (ImsManagerEx.isDualVoLTEActive()){
+                                updateImsFeature(serviceId);
+                            } else {
+                                updateImsFeature();
+                            }
                         }
                         mIsPendingRegisterVolte = false;
                         if(mImsServiceListenerEx != null){
@@ -1884,9 +1896,14 @@ class MyVoWifiCallback implements VoWifiCallback {
     }
 
     public void updateImsFeature(){
+        int serviceId = Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1);
+        updateImsFeature(serviceId);
+    }
+
+    public void updateImsFeature(int serviceId){
         updateImsRegisterState();
         ImsServiceImpl imsService = mImsServiceImplMap.get(
-                Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
+                Integer.valueOf(serviceId));
         if(mInCallHandoverFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
             if(mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
