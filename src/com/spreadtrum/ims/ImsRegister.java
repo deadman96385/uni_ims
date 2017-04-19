@@ -30,8 +30,17 @@ import android.provider.Settings;
 import android.content.res.Resources;
 import android.text.TextUtils;
 import com.android.internal.telephony.VolteConfig;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import android.os.Environment;
+import android.util.Xml;
+import com.android.internal.util.XmlUtils;
 import android.telephony.ServiceState;
 import com.android.ims.internal.ImsManagerEx;
 
@@ -63,6 +72,11 @@ public class ImsRegister {
     private static final int DEFAULT_PHONE_ID   = 0;
     private static final int SLOTTWO_PHONE_ID   = 1;
 
+    private HashMap<String, String> mCarrierSpnMap;
+    static final String PARTNER_SPN_OVERRIDE_PATH ="etc/spn-conf.xml";
+    static final String OEM_SPN_OVERRIDE_PATH = "telephony/spn-conf.xml";
+
+
     private static final int EVENT_ICC_CHANGED                       = 201;
     private static final int EVENT_RECORDS_LOADED                    = 202;
     private static final int EVENT_RADIO_STATE_CHANGED               = 203;
@@ -91,6 +105,10 @@ public class ImsRegister {
         mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
         mCi.registerForIccRefresh(mHandler, EVENT_SIM_REFRESH, null);
         mPhone.registerForRadioCapabilityChanged(mHandler, EVENT_RADIO_CAPABILITY_CHANGED, null);
+        if(ImsManagerEx.isDualVoLTEActive()){
+            mCarrierSpnMap = new HashMap<String, String>();
+            loadSpnOverrides();
+        }
     }
 
     private class BaseHandler extends Handler {
@@ -106,6 +124,7 @@ public class ImsRegister {
                 onUpdateIccAvailability();
                 break;
             case EVENT_RECORDS_LOADED:
+                log("EVENT_RECORDS_LOADED");
                 mSIMLoaded = true;
                 initISIM();
                 break;
@@ -230,7 +249,7 @@ public class ImsRegister {
     private void initISIM() {
         if (mSIMLoaded && mPhone.isRadioOn() && !mInitISIMDone
                 && mTelephonyManager.getSimState(mPhoneId) == TelephonyManager.SIM_STATE_READY
-                && (mPhoneId == getPrimaryCard() || dualVoLTEActive())) {
+                && (mPhoneId == getPrimaryCard() || ImsManagerEx.isDualVoLTEActive())) {
             String impi = null;
             String impu = null;
             String domain = null;
@@ -396,7 +415,7 @@ public class ImsRegister {
     }
 
     public void enableIms() {
-        Log.i(TAG, "enableIms ->mIMSBearerEstablished:" + mIMSBearerEstablished + " mInitISIMDone:" + mInitISIMDone);
+        log("enableIms ->mIMSBearerEstablished:" + mIMSBearerEstablished + " mInitISIMDone:" + mInitISIMDone);
         if(mIMSBearerEstablished && mInitISIMDone) {
             mHandler.sendMessage(mHandler.obtainMessage(EVENT_ENABLE_IMS));
         }
@@ -451,28 +470,45 @@ public class ImsRegister {
 
     private boolean dualVoLTEActive() {
         if (!ImsManagerEx.isDualVoLTEActive()) {
-            Log.d(TAG, "not support Dual volte");
+            log("not support Dual volte");
             return false;
         }
-        Log.d(TAG, "support Dual volte");
         int primaryCard = getPrimaryCard();
-        String primaryOperator = mTelephonyManager
-                .getSimOperatorNameForPhone(primaryCard);
-        String secondOperator = mTelephonyManager
-                .getSimOperatorNameForPhone(mPhoneId);
+        String primaryOperator = null;
+        String secondOperator = null;
+        IccRecords priIccRecords = mUiccController.getIccRecords(primaryCard,
+                UiccController.APP_FAM_3GPP);
+        IccRecords secIccRecords = mUiccController.getIccRecords(mPhoneId,
+                UiccController.APP_FAM_3GPP);
+        if (priIccRecords != null
+                && priIccRecords.getOperatorNumeric() != null
+                && priIccRecords.getOperatorNumeric().length() > 0) {
+            if (mCarrierSpnMap.containsKey(priIccRecords.getOperatorNumeric())) {
+                primaryOperator = mCarrierSpnMap.get(priIccRecords.getOperatorNumeric());
+            }
+        }
+        if (secIccRecords != null
+                && secIccRecords.getOperatorNumeric() != null
+                && secIccRecords.getOperatorNumeric().length() > 0) {
+            if (mCarrierSpnMap.containsKey(secIccRecords.getOperatorNumeric())) {
+                secondOperator = mCarrierSpnMap.get(secIccRecords.getOperatorNumeric());
+            }
+        }
+        log("primaryOperator = " + primaryOperator);
+        log("secondOperator = " + secondOperator);
         boolean sameOperator = secondOperator != null && primaryOperator != null
                 && secondOperator.length() > 0 && primaryOperator.length() > 0
                 && (secondOperator.equals(primaryOperator) ||
                         isRelianceCard(primaryOperator) && isRelianceCard(secondOperator));
        try{
         if (sameOperator) {
-            Log.d(TAG, "same operator, check mcc");
-            primaryOperator = mTelephonyManager.getSimOperatorNumericForPhone(
-                    primaryCard).length() > 3 ? mTelephonyManager.getSimOperatorNumericForPhone(
-                    primaryCard).substring(0, 3): null;
-            secondOperator = mTelephonyManager.getSimOperatorNumericForPhone(
-                    mPhoneId).length() > 3 ? mTelephonyManager.getSimOperatorNumericForPhone(
-                    mPhoneId).substring(0, 3): null;
+            log("same operator, check mcc");
+            primaryOperator = priIccRecords != null
+                    && priIccRecords.getOperatorNumeric() != null
+                    && priIccRecords.getOperatorNumeric().length() > 3 ?priIccRecords.getOperatorNumeric().substring(0, 3): null;
+            secondOperator = secIccRecords != null
+                    && secIccRecords.getOperatorNumeric() != null
+                    && secIccRecords.getOperatorNumeric().length() > 3 ?secIccRecords.getOperatorNumeric().substring(0, 3): null;
             sameOperator = secondOperator != null && primaryOperator != null
                     && secondOperator.equals(primaryOperator);
         }
@@ -480,6 +516,7 @@ public class ImsRegister {
             e.printStackTrace();
             return false;
         }
+        log("sameOperator = " + sameOperator);
         return sameOperator;
     }
 
@@ -489,5 +526,64 @@ public class ImsRegister {
             return true;
         }
         return false;
+    }
+
+    private void loadSpnOverrides() {
+        FileReader spnReader;
+
+        File spnFile = new File(Environment.getRootDirectory(),
+                PARTNER_SPN_OVERRIDE_PATH);
+        File oemSpnFile = new File(Environment.getOemDirectory(),
+                OEM_SPN_OVERRIDE_PATH);
+
+        if (oemSpnFile.exists()) {
+            // OEM image exist SPN xml, get the timestamp from OEM & System image for comparison.
+            long oemSpnTime = oemSpnFile.lastModified();
+            long sysSpnTime = spnFile.lastModified();
+            log("SPN Timestamp: oemTime = " + oemSpnTime + " sysTime = " + sysSpnTime);
+
+            // To get the newer version of SPN from OEM image
+            if (oemSpnTime > sysSpnTime) {
+                log("SPN in OEM image is newer than System image");
+                spnFile = oemSpnFile;
+            }
+        } else {
+            // No SPN in OEM image, so load it from system image.
+            log("No SPN in OEM image = " + oemSpnFile.getPath() +
+                " Load SPN from system image");
+        }
+
+        try {
+            spnReader = new FileReader(spnFile);
+        } catch (FileNotFoundException e) {
+            log("Can not open " + spnFile.getAbsolutePath());
+            return;
+        }
+
+        try {
+            XmlPullParser parser = Xml.newPullParser();
+            parser.setInput(spnReader);
+
+            XmlUtils.beginDocument(parser, "spnOverrides");
+
+            while (true) {
+                XmlUtils.nextElement(parser);
+
+                String name = parser.getName();
+                if (!"spnOverride".equals(name)) {
+                    break;
+                }
+
+                String numeric = parser.getAttributeValue(null, "numeric");
+                String data    = parser.getAttributeValue(null, "spn");
+
+                mCarrierSpnMap.put(numeric, data);
+            }
+            spnReader.close();
+        } catch (XmlPullParserException e) {
+            log("Exception in spn-conf parser " + e);
+        } catch (IOException e) {
+            log("Exception in spn-conf parser " + e);
+        }
     }
 }
