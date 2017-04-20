@@ -260,7 +260,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if(mIsLocalHold){
             if(dc != null){
                 if(dc.state == ImsDriverCall.State.ACTIVE){
-                    dc.state = ImsDriverCall.State.HOLDING;
+                    // SPRD: add for bug667038
+                    state = ImsDriverCall.State.HOLDING;
                 } else if(dc.state == ImsDriverCall.State.HOLDING){
                     mIsLocalHold = false;
                 }
