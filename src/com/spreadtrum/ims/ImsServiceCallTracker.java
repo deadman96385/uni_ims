@@ -779,4 +779,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             }
         }
     }
+    public void onVideoStateChanged(int videoState){
+        if(mImsService != null){
+            mImsService.onVideoStateChanged(videoState);
+        }
+    }
 }

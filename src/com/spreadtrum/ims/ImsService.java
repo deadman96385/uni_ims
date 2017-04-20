@@ -1700,6 +1700,11 @@ class MyVoWifiCallback implements VoWifiCallback {
         }
 
         @Override
+        public void onAliveCallUpdate(boolean isVideoCall){
+            onVideoStateChanged(isVideoCall ? VideoProfile.STATE_BIDIRECTIONAL : VideoProfile.STATE_AUDIO_ONLY);
+        }
+
+        @Override
         public void onAllCallsEnd(){
             mHandler.obtainMessage(EVENT_WIFI_ALL_CALLS_END).sendToTarget();
         }
@@ -2375,6 +2380,16 @@ class MyVoWifiCallback implements VoWifiCallback {
         if(phoneId == primaryPhoneId+1){
             updateImsFeature();
             mWifiService.onSRVCCStateChanged(status);
+        }
+    }
+    public void onVideoStateChanged(int videoState){
+        Log.i(TAG,"onVideoStateChanged videoState:" + videoState);
+        try{
+            if (mImsServiceListenerEx != null) {
+                mImsServiceListenerEx.onVideoStateChanged(videoState);
+            }
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
     }
 

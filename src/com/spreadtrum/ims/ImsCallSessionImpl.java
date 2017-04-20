@@ -88,6 +88,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     private boolean mIsMegerActionHost;
     private boolean mIsPendingTerminate;   // BUG 616259
+    private int mVideoState;
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
@@ -99,6 +100,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mHandler = new ImsHandler(context.getMainLooper(),this);
         mImsVideoCallProvider = new ImsVideoCallProvider(this,ci,mContext) ;
         mCi.setOnSuppServiceNotification(mHandler,EVENT_SSN,null);//SPRD:Add for bug582072
+        mVideoState = ImsCallProfile
+                .getVideoStateFromImsCallProfile(mImsCallProfile);
     }
 
     public ImsCallSessionImpl(ImsDriverCall dc, IImsCallSessionListener listener, Context context,
@@ -113,6 +116,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mImsVideoCallProvider = new ImsVideoCallProvider(this,ci,mContext) ;
         updateVideoProfile(mImsDriverCall);
         mCi.setOnSuppServiceNotification(mHandler,EVENT_SSN,null);//SPRD:Add for bug582072
+        mVideoState = ImsCallProfile
+                .getVideoStateFromImsCallProfile(mImsCallProfile);
     }
 
     public ImsCallSessionImpl(ImsDriverCall dc, Context context,
@@ -126,6 +131,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mImsVideoCallProvider = new ImsVideoCallProvider(this,ci,mContext) ;
         updateVideoProfile(mImsDriverCall);
         mCi.setOnSuppServiceNotification(mHandler,EVENT_SSN,null);//SPRD:Add for bug582072
+        mVideoState = ImsCallProfile
+                .getVideoStateFromImsCallProfile(mImsCallProfile);
     }
 
     private void updateImsCallProfileFromDC(ImsDriverCall dc){
@@ -194,6 +201,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
             }
         }
+        updateVideoState();
         try{
             if(mIImsCallSessionListener != null){
                 mIImsCallSessionListener.callSessionUpdated((IImsCallSession)this, mImsCallProfile);
@@ -212,6 +220,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 mImsDriverCall.state == dc.state;
 
         updateImsCallProfileFromDC(dc);
+        updateVideoState();
         ImsDriverCall.State state = dc.state;
         boolean conferenceHeldStateChange = false;
         boolean conferenceActiveStateChange = false;
@@ -791,6 +800,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         } else {
             mCi.dial(mCallee,clir,null,mHandler.obtainMessage(ACTION_COMPLETE_DIAL,this));
         }
+        mVideoState = ImsCallProfile
+                .getVideoStateFromImsCallProfile(mImsCallProfile);
     }
 
     /**
@@ -1486,5 +1497,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     /* @} */
     public boolean isMegerActionHost(){
         return mIsMegerActionHost;
+    }
+    public void updateVideoState(){
+        int newVideoState = ImsCallProfile
+                .getVideoStateFromImsCallProfile(mImsCallProfile);
+
+        if (mVideoState != newVideoState) {
+            mVideoState = newVideoState;
+            mImsServiceCallTracker.onVideoStateChanged(mVideoState);
+        }
     }
 }
