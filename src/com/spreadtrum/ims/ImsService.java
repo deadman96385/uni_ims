@@ -1917,7 +1917,16 @@ class MyVoWifiCallback implements VoWifiCallback {
             }
         } else if(mVolteRegistered) {
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
-            if(imsService != null) imsService.notifyImsRegister(true);
+//            if(imsService != null) imsService.notifyImsRegister(true);
+            /*SPRD: Bug 667760 If dual volte avtive, need to notify ims state according serviceId.*/
+            if(imsService != null) {
+                if (ImsManagerEx.isDualVoLTEActive()) {
+                    imsService.notifyImsRegister(imsService.isImsRegisterState());
+                } else {
+                    imsService.notifyImsRegister(true);
+                }
+            }
+            /* @} */
         } else if(mWifiRegistered){
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
             if(imsService != null) imsService.notifyImsRegister(true);
