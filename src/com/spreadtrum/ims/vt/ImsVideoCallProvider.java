@@ -95,6 +95,10 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                        mIsVideo = false;
                        Toast.makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
                     }
+                    if(mVolteMediaUpdateDialog != null && mVolteMediaUpdateDialog.isShowing()){
+                        receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+                                null,null); //SPRD:add for bug610607
+                    }
                     break;
                 default:
                     return;
@@ -141,6 +145,13 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         /* @} */
         mHandler.obtainMessage(mVTManagerProxy.EVENT_ON_VT_DISCONNECT, mImsCallSessionImpl).sendToTarget();
         releaseWakeLock();
+        /* SPRD: fix for bug662570@{ */
+        if(mVolteMediaUpdateDialog != null && mVolteMediaUpdateDialog.isShowing()){
+            mVolteMediaUpdateDialog.dismiss();
+            receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+                    null,null); //SPRD:add for bug610607
+        }
+        /* @} */
     }
     /**
      * Sets the camera to be used for video recording in a video call.
