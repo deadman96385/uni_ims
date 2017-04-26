@@ -34,6 +34,8 @@ import com.android.ims.ImsReasonInfo;
 import com.android.ims.ImsServiceClass;
 import com.android.ims.ImsCallProfile;
 import com.android.ims.ImsConfig;
+import com.spreadtrum.ims.ut.ImsUtImpl;
+import com.spreadtrum.ims.ut.ImsUtProxy;
 import com.android.ims.internal.IImsCallSession;
 import com.android.ims.internal.IImsCallSessionListener;
 import com.android.ims.internal.IImsRegistrationListener;
@@ -51,7 +53,6 @@ import com.spreadtrum.ims.ImsService;
 import com.spreadtrum.ims.data.ApnUtils;
 import com.android.internal.telephony.VolteConfig;
 import android.text.TextUtils;
-
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.DataRouterState;
 
@@ -100,7 +101,7 @@ public class ImsServiceImpl {
     private Context mContext;
     private ImsRIL mCi;
     private ImsConfigImpl mImsConfigImpl;
-    private ImsUtImpl mImsUtImpl;
+    private com.spreadtrum.ims.ut.ImsUtImpl mImsUtImpl;
     private ImsEcbmImpl mImsEcbmImpl;
     private ImsServiceCallTracker mImsServiceCallTracker;
     private ImsHandler mHandler;
@@ -114,6 +115,7 @@ public class ImsServiceImpl {
     private VolteConfig mVolteConfig;
     private boolean mSetSosApn = true;
     private VoWifiServiceImpl mWifiService;//Add for data router
+    private ImsUtProxy mImsUtProxy = null;
     private String mImsRegAddress = "";
     private String mImsPscfAddress = "";
     private int mAliveCallLose = -1;
@@ -165,6 +167,8 @@ public class ImsServiceImpl {
         mImsServiceState = new ImsServiceState(false,IMS_REG_STATE_INACTIVE);
         mImsConfigImpl = new ImsConfigImpl(mCi,context);
         mImsUtImpl = new ImsUtImpl(mCi,context,phone);
+        com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl =  mWifiService.getUtInterface();
+        mImsUtProxy = new ImsUtProxy(context, mImsUtImpl, voWifiUtImpl);
         mImsEcbmImpl = new ImsEcbmImpl(mCi);
         mHandler = new ImsHandler(mContext.getMainLooper());
         Intent intent = new Intent(ImsManager.ACTION_IMS_SERVICE_UP);
@@ -445,6 +449,10 @@ public class ImsServiceImpl {
 
     public ImsUtImpl getUtImpl(){
         return mImsUtImpl;
+    }
+
+    public IImsUt getUTProxy(){
+        return mImsUtProxy;
     }
 
     public IImsEcbm getEcbmInterface() {

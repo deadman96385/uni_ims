@@ -1,6 +1,7 @@
-package com.spreadtrum.ims;
+package com.spreadtrum.ims.ut;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -11,6 +12,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
+import android.telephony.TelephonyManagerEx;
 import android.util.Log;
 import com.android.internal.telephony.CallForwardInfo;
 import com.android.internal.telephony.CommandsInterface;
@@ -25,6 +27,7 @@ import com.android.ims.ImsUtInterface;
 import com.android.ims.ImsCallForwardInfo;
 import com.android.ims.internal.ImsCallForwardInfoEx;
 import com.android.ims.internal.IImsUtListenerEx;
+import com.spreadtrum.ims.ImsRIL;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.dataconnection.DcNetworkManager;
 import android.os.Bundle;
@@ -91,6 +94,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private int mRequestId = -1;
     private Object mLock = new Object();
     private DcNetworkManager mDcNetworkManager = null;
+    private List<Integer> mRequestedNetwork = new ArrayList<Integer>();
     public ImsUtImpl(ImsRIL ci,Context context, Phone phone){
         mCi = ci;
         mContext = context;
@@ -430,7 +434,9 @@ public class ImsUtImpl extends IImsUt.Stub {
                     } catch(RemoteException e){
                         e.printStackTrace();
                     }
-                    releaseNetwork();
+                    if (mRequestedNetwork.remove(Integer.valueOf(ACTION_QUERY_CF_EX))) {
+                        releaseNetwork();
+                    }
                     break;
                 case ACTION_UPDATE_CF_EX:
                     try {
@@ -465,7 +471,9 @@ public class ImsUtImpl extends IImsUt.Stub {
                     	e.printStackTrace();
                     	Log.i(TAG,"nullpointerException" + e.getMessage());
                     }
-                    releaseNetwork();
+                    if (mRequestedNetwork.remove(Integer.valueOf(ACTION_UPDATE_CF_EX))) {
+                        releaseNetwork();
+                    }
                     break;
                 case EVENT_REQUEST_NETWORK_DONE:
                     Bundle bundle = msg.getData();
@@ -851,7 +859,12 @@ public class ImsUtImpl extends IImsUt.Stub {
         bundle.putString(EXTRA_DIALING_NUM, dialingNumber);
         bundle.putInt(EXTRA_TIMER_SECONDS, timerSeconds);
         bundle.putString(EXTRA_RULE_SET, ruleSet);
-        requestNetwork(bundle);
+        if (isSimSlotSupportLTE()) {
+            mRequestedNetwork.add(Integer.valueOf(ACTION_UPDATE_CF_EX));
+            requestNetwork(bundle);
+        } else {
+            setCallForwardingOption(bundle);
+        }
         return id;
     }
 
@@ -868,10 +881,21 @@ public class ImsUtImpl extends IImsUt.Stub {
         bundle.putInt(EXTRA_SERVICE_CLASS, serviceClass);
         bundle.putString(EXTRA_RULE_SET, ruleSet);
         bundle.putString(EXTRA_DIALING_NUM, "");
-        requestNetwork(bundle);
+        if (isSimSlotSupportLTE()) {
+            mRequestedNetwork.add(Integer.valueOf(ACTION_QUERY_CF_EX));
+            requestNetwork(bundle);
+        } else {
+            getCallForwardingOption(bundle);
+        }
         return id;
     }
-
+    private boolean isSimSlotSupportLTE() {
+        TelephonyManagerEx tm = TelephonyManagerEx.from(mPhone.getContext());
+        if (tm != null && tm.isSimSlotSupportLte(mPhone.getPhoneId())) {
+            return true;
+        }
+        return  false;
+    }
     // Create Cf (Call forward) so that dialling number &
     // mIsCfu (true if reason is call forward unconditional)
     // mOnComplete (Message object passed by client) can be packed &
@@ -947,7 +971,6 @@ public class ImsUtImpl extends IImsUt.Stub {
     }
 
     private void releaseNetwork() {
-        Log.d(TAG, "releaseNetwork");
         mDcNetworkManager.releaseNetworkRequest();
     }
 

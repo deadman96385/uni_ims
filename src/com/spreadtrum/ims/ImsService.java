@@ -53,6 +53,8 @@ import com.android.ims.internal.IImsConfig;
 import com.android.ims.internal.ImsCallSession;
 import com.spreadtrum.ims.ImsCallSessionImpl.Listener;
 import com.spreadtrum.ims.vt.VTManagerProxy;
+import com.spreadtrum.ims.ut.ImsUtImpl;
+import com.spreadtrum.ims.ut.ImsUtProxy;
 import com.android.ims.internal.IImsServiceEx;
 import com.android.ims.internal.IImsServiceListenerEx;
 import com.android.ims.internal.IImsRegisterListener;
@@ -1033,7 +1035,7 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid ServiceId " + serviceId);
                 return null;
             }
-            return service.getUtInterface();
+            return service.getUTProxy();
         }
 
         /**
@@ -1127,7 +1129,7 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid phoneId " + phoneId);
                 return -1;
             }
-            ImsUtImpl ut = service.getUtImpl();
+            ImsUtProxy ut = (ImsUtProxy) service.getUTProxy();
             return ut.setCallForwardingOption(commandInterfaceCFAction, commandInterfaceCFReason,
                     serviceClass, dialingNumber, timerSeconds, ruleSet);
         }
@@ -1142,7 +1144,7 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid phoneId " + phoneId);
                 return -1;
             }
-            ImsUtImpl ut = service.getUtImpl();
+            ImsUtProxy ut = (ImsUtProxy) service.getUTProxy();
             return ut.getCallForwardingOption(commandInterfaceCFReason, serviceClass, ruleSet);
         }
 
@@ -1155,7 +1157,7 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid phoneId " + phoneId);
                 return;
             }
-            ImsUtImpl ut = service.getUtImpl();
+            ImsUtProxy ut = (ImsUtProxy) service.getUTProxy();
             ut.setListenerEx(listener);
         }
 
@@ -1166,7 +1168,7 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid phoneId " + phoneId);
                 return -1;
             }
-            ImsUtImpl ut = service.getUtImpl();
+            ImsUtProxy ut = (ImsUtProxy) service.getUTProxy();
             return ut.setFacilityLock(facility, lockState, password, serviceClass);
         }
 
@@ -1176,7 +1178,7 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid phoneId " + phoneId);
                 return -1;
             }
-            ImsUtImpl ut = service.getUtImpl();
+            ImsUtProxy ut = (ImsUtProxy) service.getUTProxy();
             return ut.changeBarringPassword(facility, oldPwd, newPwd);
         }
 
@@ -1186,7 +1188,7 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid phoneId " + phoneId);
                 return -1;
             }
-            ImsUtImpl ut = service.getUtImpl();
+            ImsUtProxy ut = (ImsUtProxy) service.getUTProxy();
             return ut.queryFacilityLock(facility, password, serviceClass);
         }
     };
