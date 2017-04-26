@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-
+import com.android.ims.ImsUtInterface;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -53,6 +53,8 @@ import com.android.ims.internal.IImsConfig;
 import com.android.ims.internal.ImsCallSession;
 import com.spreadtrum.ims.ImsCallSessionImpl.Listener;
 import com.spreadtrum.ims.vt.VTManagerProxy;
+import com.spreadtrum.ims.ut.ImsUtImpl;
+import com.spreadtrum.ims.ut.ImsUtProxy;
 import com.android.ims.internal.IImsServiceEx;
 import com.android.ims.internal.IImsServiceListenerEx;
 import com.android.ims.internal.IImsRegisterListener;
@@ -1030,7 +1032,7 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid ServiceId " + serviceId);
                 return null;
             }
-            return service.getUtInterface();
+            return service.getUTProxy();
         }
 
         /**
@@ -1124,7 +1126,7 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid phoneId " + phoneId);
                 return -1;
             }
-            ImsUtImpl ut = service.getUtImpl();
+            ImsUtProxy ut = (ImsUtProxy) service.getUTProxy();
             return ut.setCallForwardingOption(commandInterfaceCFAction, commandInterfaceCFReason,
                     serviceClass, dialingNumber, timerSeconds, ruleSet);
         }
@@ -1139,7 +1141,7 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid phoneId " + phoneId);
                 return -1;
             }
-            ImsUtImpl ut = service.getUtImpl();
+            ImsUtProxy ut = (ImsUtProxy) service.getUTProxy();
             return ut.getCallForwardingOption(commandInterfaceCFReason, serviceClass, ruleSet);
         }
 
@@ -1152,7 +1154,7 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid phoneId " + phoneId);
                 return;
             }
-            ImsUtImpl ut = service.getUtImpl();
+            ImsUtProxy ut = (ImsUtProxy) service.getUTProxy();
             ut.setListenerEx(listener);
         }
 
@@ -1163,7 +1165,7 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid phoneId " + phoneId);
                 return -1;
             }
-            ImsUtImpl ut = service.getUtImpl();
+            ImsUtProxy ut = (ImsUtProxy) service.getUTProxy();
             return ut.setFacilityLock(facility, lockState, password, serviceClass);
         }
 
@@ -1173,7 +1175,7 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid phoneId " + phoneId);
                 return -1;
             }
-            ImsUtImpl ut = service.getUtImpl();
+            ImsUtProxy ut = (ImsUtProxy) service.getUTProxy();
             return ut.changeBarringPassword(facility, oldPwd, newPwd);
         }
 
@@ -1183,7 +1185,7 @@ public class ImsService extends Service {
                 Log.e (TAG, "Invalid phoneId " + phoneId);
                 return -1;
             }
-            ImsUtImpl ut = service.getUtImpl();
+            ImsUtProxy ut = (ImsUtProxy) service.getUTProxy();
             return ut.queryFacilityLock(facility, password, serviceClass);
         }
     };
@@ -1581,6 +1583,40 @@ public class ImsService extends Service {
                e.printStackTrace();
            }
        }
+        /**
+         * used for VOWIFI get CLIR states from CP
+         * return: ut request id
+         *
+         * **/
+        @Override
+        public int getCLIRStatus(int phoneId) {
+            ImsServiceImpl imsService = mImsServiceImplMap.get(
+                    Integer.valueOf(phoneId+1));
+            int id = -1;
+            Log.i(TAG, "getCLIRStatus phoneId = " + phoneId);
+            if (imsService != null) {
+                ImsUtImpl ut = imsService.getUtImpl();
+                if (ut != null) {
+                    id = ut.getCLIRStatus();
+                    return id;
+                }
+            }
+            return id;
+        }
+        public int updateCLIRStatus(int action) {
+            com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl =
+                    mWifiService.getUtInterface();
+            int id = -1;
+            Log.i(TAG, "updateCLIRStatus action = " + action);
+            if (voWifiUtImpl != null) {
+                try {
+                    id = voWifiUtImpl.updateCLIR(action);
+                } catch (RemoteException e) {
+                    e.printStackTrace();;
+                }
+            }
+            return id;
+        }
     };
 
     private final IImsMultiEndpoint.Stub mImsMultiEndpointBinder = new IImsMultiEndpoint.Stub()  {
