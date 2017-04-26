@@ -348,12 +348,15 @@ public class Utilities {
                 // Generate the plmn and imsi from impi.
                 int indexMCC = info._impi.indexOf("mcc");
                 int indexMNC = info._impi.indexOf("mnc");
-                String mcc = info._impi.substring(indexMCC + 3, indexMCC + 6);
-                String mnc = info._impi.substring(indexMNC + 3, indexMNC + 6);
-                if (mnc.startsWith("00")) {
-                    mnc = mnc.substring(1);
+                if (indexMCC >= 0 && indexMNC >= 0) {
+                    String mcc = info._impi.substring(indexMCC + 3, indexMCC + 6);
+                    String mnc = info._impi.substring(indexMNC + 3, indexMCC - 1);
+                    if (mnc.length() == 3 && mnc.startsWith("00")) {
+                        mnc = mnc.substring(1);
+                    }
+                    info._hplmn = mcc + mnc;
                 }
-                info._hplmn = mcc + mnc;
+
                 info._imsi = info._userName;
             }
 
