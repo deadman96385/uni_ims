@@ -276,6 +276,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
     @Override
     public void onLocationChanged(Location location) {
+        if (Utilities.DEBUG) Log.i(TAG, "onLocationChanged");
         mSosLocation = location;
     }
 
@@ -467,6 +468,40 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         boolean forceSosCall = SystemProperties.getBoolean(PROP_KEY_FORCE_SOS_CALL, false);
         Log.i(TAG, "Emergency isPhoneInEcmMode = " + isPhoneInEcmMode +
                 " isEmergencyNumber = " + isEmergencyNumber);
+
+        // todo: need location for some special Operator
+        boolean isNeedGeoLocation = false;
+        if (isEmergencyNumber || forceSosCall) {
+            isNeedGeoLocation = true;
+        }
+        if (isNeedGeoLocation) {
+            mLocationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+            List<String> providers = mLocationManager.getProviders(true);
+            String locationProvider = null;
+            if (providers.contains(LocationManager.GPS_PROVIDER)) {
+                locationProvider = LocationManager.GPS_PROVIDER;
+            } else if (providers.contains(LocationManager.NETWORK_PROVIDER)) {
+                locationProvider = LocationManager.NETWORK_PROVIDER;
+            } else {
+                Log.w(TAG, "Failed to get the location provider.!");
+            }
+            if (Utilities.DEBUG) {
+                Location netLocation = mLocationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                if (netLocation != null) Log.w(TAG, "NETWORK_PROVIDER:get Latitude = " + netLocation.getLatitude() + "get Longitude=" + netLocation.getLongitude());
+                Location passiveLocation = mLocationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
+                if (passiveLocation != null) Log.w(TAG, "PASSIVE_PROVIDER:get Latitude = " + passiveLocation.getLatitude() + "get Longitude=" + passiveLocation.getLongitude());
+                Location gpsLocation = mLocationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                if (gpsLocation != null) Log.w(TAG, "GPS LOCATION:get Latitude = " + gpsLocation.getLatitude() + "get Longitude=" + gpsLocation.getLongitude()); 
+            }
+            if (!TextUtils.isEmpty(locationProvider)) {
+                mSosLocation = mLocationManager.getLastKnownLocation(locationProvider);
+                mLocationManager.requestLocationUpdates(locationProvider, 1000, 2.0f, this);
+            } else {
+                mLocationManager = null;
+                mSosLocation = null;
+                Log.w(TAG, "Failed to get provider the location info!");
+            }
+        }
 
         if (isEmergencyNumber || forceSosCall) {
             startEmergencyCall(callee, profile);
@@ -1757,7 +1792,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         if (Utilities.DEBUG) Log.i(TAG, "Try to dial this emergency call: " + this);
 
         try {
-            startCall(mParticipants.get(0), mSosLocation);
+            startCall(mParticipants.get(0));
         } catch (RemoteException e) {
             Log.e(TAG, "Failed to dial the emergency call as catch the RemoteException e: " + e);
         }
@@ -1847,25 +1882,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         mCallProfile.setCallExtraInt(
                 ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
 
-        mLocationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
-        List<String> providers = mLocationManager.getProviders(true);
-        String locationProvider = null;
-        if (providers.contains(LocationManager.GPS_PROVIDER)) {
-            locationProvider = LocationManager.GPS_PROVIDER;
-        } else if (providers.contains(LocationManager.NETWORK_PROVIDER)) {
-            locationProvider = LocationManager.NETWORK_PROVIDER;
-        } else {
-            Log.w(TAG, "Failed to get the location provider. Can not provider the location info!");
-        }
-
-        if (!TextUtils.isEmpty(locationProvider)) {
-            mSosLocation = mLocationManager.getLastKnownLocation(locationProvider);
-            mLocationManager.requestLocationUpdates(locationProvider, 1000, 2.0f, this);
-        } else {
-            mLocationManager = null;
-            mSosLocation = null;
-        }
-
         boolean isPhoneInEcmMode =
                 SystemProperties.getBoolean(TelephonyProperties.PROPERTY_INECM_MODE, false);
 
@@ -1874,7 +1890,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         } else {
             // make an emergency session directly without Em-PDN and Em-Register.
             try {
-                startCall(callee, mSosLocation);
+                startCall(callee);
             } catch (RemoteException e) {
                 Log.e(TAG, "Failed to start the emergency call as catch the RemoteException e: " + e);
             }
@@ -1907,26 +1923,38 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         mCallProfile.setCallExtraInt(
                 ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
 
-        startCall(callee, null);
+        startCall(callee);
     }
 
-    private void startCall(String callee, Location location) throws RemoteException {
+    private void startCall(String callee) throws RemoteException {
         if (Utilities.DEBUG) {
-            Log.i(TAG, "Start the call with the callee: " + callee + ", location: " + location);
+            Log.i(TAG, "Start the call with the callee: " + callee + ", mSosLocation: " + mSosLocation);
         }
 
         // Start the call.
         boolean isVideoCall = Utilities.isVideoCall(mCallProfile.mCallType);
 
         int id = Result.INVALID_ID;
-        if (!mIsEmergency) {
-            id = mICall.sessCall(callee, null, true, isVideoCall, false);
-        } else {
-            double latitude = location == null ? 0 : location.getLatitude();
-            double longitude = location == null ? 0 : location.getLongitude();
-            String uriUrn = mCallManager.getEmergencyCallUrn(mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO));
-            id = mICall.sessCallWithGeo(uriUrn, null, true, isVideoCall, latitude, longitude);
+
+        // todo: need location for some special Operator
+        boolean isNeedGeoLocation = false;
+        if (mIsEmergency) {
+            isNeedGeoLocation = true;
         }
+        if (isNeedGeoLocation) {
+            double latitude = mSosLocation == null ? 0 : mSosLocation.getLatitude();
+            double longitude = mSosLocation == null ? 0 : mSosLocation.getLongitude();
+            Log.i(TAG, "set session call with latitude= " + latitude + ";longitude=" + longitude);
+            mICall.sessCallSetGeolocation(latitude, longitude);
+        }
+
+        String peerNumber = callee; //default
+        if (mIsEmergency) {
+            peerNumber = mCallManager.getEmergencyCallUrn(mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO));
+            Log.d(TAG, "Start an emergency call.");
+        }
+        id = mICall.sessCall(peerNumber, null, true, isVideoCall, false, mIsEmergency);
+
         Log.d(TAG, "Start a normal call, and get the call id: " + id);
 
         if (id == Result.INVALID_ID) {

@@ -2,6 +2,8 @@
 package com.spreadtrum.ims.vowifi;
 
 import android.content.Context;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Message;
 import android.os.RemoteException;
 import android.os.SystemProperties;
@@ -23,6 +25,8 @@ import com.spreadtrum.vowifi.service.IRegisterServiceCallback;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.List;
 
 public class VoWifiRegisterManager extends ServiceManager {
     private static final String TAG = Utilities.getTag(VoWifiRegisterManager.class.getSimpleName());
@@ -171,6 +175,33 @@ public class VoWifiRegisterManager extends ServiceManager {
                 // Prepare for login, need open account, start client and update settings.
                 if (cliOpen(info) && cliStart() && cliUpdateSettings(info, isSupportSRVCC)) {
                     mLoginPrepared = true;
+                }
+
+                // todo: need location for some special Operator
+                boolean isNeedGeoLocation = false;
+                if (isNeedGeoLocation) {
+                    LocationManager locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+                    List<String> providers = locationManager.getProviders(true);
+                    String locationProvider = null;
+                    if (providers.contains(LocationManager.GPS_PROVIDER)) {
+                        locationProvider = LocationManager.GPS_PROVIDER;
+                    } else if (providers.contains(LocationManager.NETWORK_PROVIDER)) {
+                        locationProvider = LocationManager.NETWORK_PROVIDER;
+                    } else {
+                        Log.w(TAG, "Failed to get the location provider. Can not provider the location info!");
+                    }
+                    if (!TextUtils.isEmpty(locationProvider)) {
+                        Location sosLocation = locationManager.getLastKnownLocation(locationProvider);
+                        mIRegister.SetGeolocEnable(true);
+                        double latitude = sosLocation == null ? 0 : sosLocation.getLatitude();
+                        double longitude = sosLocation == null ? 0 : sosLocation.getLongitude();
+                        Log.i(TAG, "Start register. set latitude= " + latitude + ";longitude=" + longitude);
+                        mIRegister.SetGeolocation(latitude, longitude);
+                    } else {
+                        Log.w(TAG, "register Failed to get the location info!");
+                    }
+                } else {
+                    mIRegister.SetGeolocEnable(false);
                 }
 
                 if (mListener != null) mListener.onPrepareFinished(mLoginPrepared, 0);

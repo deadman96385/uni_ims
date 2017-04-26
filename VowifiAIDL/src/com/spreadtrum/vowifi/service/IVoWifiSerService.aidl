@@ -20,10 +20,15 @@ interface IVoWifiSerService {
      *         {@link Utils#RESULT_INVALID_ID}.
      */
     int sessCall(String peerNumber, String cookie, boolean needAudio, boolean needVideo,
-            boolean ussd);
+            boolean ussd, boolean isEmergency);
 
-    int sessCallWithGeo(String peerNumber, String cookie, boolean needAudio, boolean needVideo,
-            double latitude, double longitude);
+    /**
+     * set GeoLocation infomation for call session
+     *
+     * @return {@link Utils#RESULT_FAIL} as fail.
+     *         {@link Utils#RESULT_SUCCESS} as success.
+     */
+    int sessCallSetGeolocation(double longitude, double latitude);
 
     /**
      * Set the mute status of microphone.
