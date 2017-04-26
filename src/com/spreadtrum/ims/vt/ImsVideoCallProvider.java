@@ -44,6 +44,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     private PowerManager.WakeLock mPartialWakeLock;
     private Message mCallIdMessage;
     private boolean mIsVideo;//SPRD:add for bug563112
+    private boolean mIsAlertVideo = false;
 
     /** volte media event code. */
     private static final int EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 500;
@@ -362,9 +363,14 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
              mIsVideo = true;//SPRD:add for bug563112
              responseProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
              onVTConnectionEstablished(session);
+             //SPRD:add for bug669739
+             if(session.getState() == ImsCallSession.State.NEGOTIATING){
+                 log("updateNegotiatedCallProfilee->mIsAlertVideo ="+mIsAlertVideo);
+                 mIsAlertVideo = true;
+             }
          } else {
              /* SPRD:add for bug563112 @{ */
-             if(!isVideoCall(imsCallProfile.mCallType) && mIsVideo && (session != null && session.mImsDriverCall != null)){
+             if(!isVideoCall(imsCallProfile.mCallType) && mIsVideo && (session != null && session.mImsDriverCall != null) &&!mIsAlertVideo){
                  Toast.makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
                  mIsVideo = false;
              }
