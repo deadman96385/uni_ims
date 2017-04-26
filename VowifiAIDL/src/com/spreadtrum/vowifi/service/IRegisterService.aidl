@@ -41,4 +41,20 @@ interface IRegisterService {
     int cliLogout();
 
     int cliReset();
+
+    /**
+     * set the GeoLocation enable flag for register and call session.
+     *
+     * @return {@link Utils#RESULT_FAIL} as fail.
+     *         {@link Utils#RESULT_SUCCESS} as success.
+     */
+    int SetGeolocEnable(boolean enable);
+
+    /**
+     * set GeoLocation infomation for register
+     *
+     * @return {@link Utils#RESULT_FAIL} as fail.
+     *         {@link Utils#RESULT_SUCCESS} as success.
+     */
+    int SetGeolocation(double longitude, double latitude);
 }
