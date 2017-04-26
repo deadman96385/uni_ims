@@ -16,6 +16,7 @@ import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import com.android.ims.ImsCallProfile;
+import com.android.ims.ImsManager;
 import com.android.ims.internal.IImsCallSessionListener;
 import com.android.ims.internal.ImsCallSession.State;
 import com.spreadtrum.ims.ImsConfigImpl;
@@ -107,6 +108,10 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         @Override
         public void handleMessage(Message msg) {
             if (Utilities.DEBUG) Log.i(TAG, "The handler get the message: " + msg.what);
+            if (!ImsManager.isWfcEnabledByPlatform(mContext)) {
+                Log.d(TAG, "WFC disabled by platform. Do nothing.");
+                return;
+            }
 
             switch (msg.what) {
                 case MSG_RESET:
@@ -127,7 +132,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     deattachInternal(forHandover);
                     break;
                 case MSG_REGISTER:
-                    registerInternal();
+                    registerPrepare();
                     break;
                 case MSG_DEREGISTER:
                     deregisterInternal();
@@ -206,7 +211,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     break;
                 case ECBM_STEP_REGISTER_FOR_SOS:
                 case ECBM_STEP_REGISTER:
-                    registerInternal();
+                    registerPrepare();
                     break;
                 case ECBM_STEP_START_EMERGENCY_CALL:
                     ImsCallSessionImpl callSession = mImsEcbm.getEmergencyCall();
@@ -241,13 +246,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
         mTeleMgr = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
 
-        mPreferences = PreferenceManager.getDefaultSharedPreferences(mContext);
-        mPreferences.registerOnSharedPreferenceChangeListener(this);
-
-        mCallMgr = new VoWifiCallManager(context);
-        mRegisterMgr = new VoWifiRegisterManager(context);
-        mSecurityMgr = new VoWifiSecurityManager(context);
-
         HandlerThread thread = new HandlerThread("VoWifi");
         thread.start();
         Looper looper = thread.getLooper();
@@ -259,6 +257,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     @Override
     protected void finalize() throws Throwable {
         uninit();
+
         if (mHandler != null) {
             mHandler.removeCallbacksAndMessages(null);
             Looper looper = mHandler.getLooper();
@@ -300,6 +299,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
      * Ut interface for the supplementary service configuration.
      */
     public ImsUtImpl getUtInterface() {
+        if (!ImsManager.isWfcEnabledByPlatform(mContext)) return null;
+
         if (mImsUt == null) {
             mImsUt = new ImsUtImpl(mContext, mCallMgr);
         }
@@ -308,6 +309,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     public ImsEcbmImpl getEcbmInterface() {
+        if (!ImsManager.isWfcEnabledByPlatform(mContext)) return null;
+
         if (mImsEcbm == null) {
             mImsEcbm = new ImsEcbmImpl(mContext);
         }
@@ -390,7 +393,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     public SecurityConfig getSecurityConfig() {
-        return mSecurityMgr.getConfig();
+        return mSecurityMgr == null ? null : mSecurityMgr.getConfig();
     }
 
     public void register() {
@@ -400,7 +403,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     /**
      * Register to the IMS service.
      */
-    private void registerInternal() {
+    private void registerPrepare() {
         // Check the security state, if it is attached. We could start the register process.
         if (mSecurityMgr.getCurSecurityState() != AttachState.STATE_CONNECTED
                 && mSecurityMgr.getConfig() == null) {
@@ -463,6 +466,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
     public String getCurLocalAddress() {
         if (mRegisterIP != null
+                && mRegisterMgr != null
                 && mRegisterMgr.getCurRegisterState() == RegisterState.STATE_CONNECTED) {
             return mRegisterIP.getCurUsedLocalIP();
         }
@@ -471,6 +475,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
     public String getCurPcscfAddress() {
         if (mRegisterIP != null
+                && mRegisterMgr != null
                 && mRegisterMgr.getCurRegisterState() == RegisterState.STATE_CONNECTED) {
             return mRegisterIP.getCurUsedPcscfIP();
         }
@@ -482,11 +487,11 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
      */
     public ImsCallSessionImpl createCallSession(ImsCallProfile profile,
             IImsCallSessionListener listener) {
-        return mCallMgr.createMOCallSession(profile, listener);
+        return mCallMgr == null ? null : mCallMgr.createMOCallSession(profile, listener);
     }
 
     public ImsCallSessionImpl getPendingCallSession(String callId) {
-        return mCallMgr.getCallSession(callId);
+        return mCallMgr == null ? null : mCallMgr.getCallSession(callId);
     }
 
     public void terminateCalls(WifiState state) {
@@ -500,11 +505,13 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     public int getCallCount() {
         if (Utilities.DEBUG) Log.i(TAG, "Get call count.");
 
-        return mCallMgr.getCallCount();
+        return mCallMgr == null ? 0 :mCallMgr.getCallCount();
     }
 
     public int getAliveCallType() {
         if (Utilities.DEBUG) Log.i(TAG, "Get alive call type.");
+
+        if (mCallMgr == null) return CallType.CALL_TYPE_UNKNOWN;
 
         ImsCallSessionImpl callSession = mCallMgr.getAliveCallSession();
         if (callSession == null) {
@@ -517,15 +524,15 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     public int getAliveCallLose() {
-        return mCallMgr.getPacketLose();
+        return mCallMgr == null ? 0 : mCallMgr.getPacketLose();
     }
 
     public int getAliveCallJitter() {
-        return mCallMgr.getJitter();
+        return mCallMgr == null ? 0 : mCallMgr.getJitter();
     }
 
     public int getAliveCallRtt() {
-        return mCallMgr.getRtt();
+        return mCallMgr == null ? 0 : mCallMgr.getRtt();
     }
 
     public void updateIncomingCallAction(IncomingCallAction action) {
@@ -533,7 +540,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             throw new NullPointerException("The incoming call action couldn't be null.");
         }
 
-        mCallMgr.updateIncomingCallAction(action);
+        if (mCallMgr != null) mCallMgr.updateIncomingCallAction(action);
     }
 
     public void updateDataRouterState(DataRouterState dataRouterState) {
@@ -569,22 +576,35 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     private void init() {
-        mCallMgr.bindService();
-        mRegisterMgr.bindService();
-        mSecurityMgr.bindService();
-        mCallMgr.registerListener(mCallListener);
-        mRegisterMgr.registerListener(mRegisterListener);
-        mSecurityMgr.registerListener(mSecurityListener);
+        if (ImsManager.isWfcEnabledByPlatform(mContext)) {
+            mPreferences = PreferenceManager.getDefaultSharedPreferences(mContext);
+            mPreferences.registerOnSharedPreferenceChangeListener(this);
+
+            mCallMgr = new VoWifiCallManager(mContext);
+            mRegisterMgr = new VoWifiRegisterManager(mContext);
+            mSecurityMgr = new VoWifiSecurityManager(mContext);
+
+            mCallMgr.bindService();
+            mRegisterMgr.bindService();
+            mSecurityMgr.bindService();
+            mCallMgr.registerListener(mCallListener);
+            mRegisterMgr.registerListener(mRegisterListener);
+            mSecurityMgr.registerListener(mSecurityListener);
+        }
     }
 
     private void uninit() {
-        // Unbind the service.
-        mCallMgr.unbindService();
-        mRegisterMgr.unbindService();
-        mSecurityMgr.unbindService();
-        mCallMgr.unregisterListener();
-        mRegisterMgr.unregisterListener();
-        mSecurityMgr.unregisterListener();
+        if (ImsManager.isWfcEnabledByPlatform(mContext)) {
+            // Unbind the service.
+            mCallMgr.unbindService();
+            mRegisterMgr.unbindService();
+            mSecurityMgr.unbindService();
+            mCallMgr.unregisterListener();
+            mRegisterMgr.unregisterListener();
+            mSecurityMgr.unregisterListener();
+
+            mPreferences.unregisterOnSharedPreferenceChangeListener(this);
+        }
     }
 
     private void resetFinished() {
@@ -606,7 +626,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             Log.i(TAG, "Try to start the register login process, re-login: " + isRelogin);
         }
 
-        if (mRegisterIP == null) {
+        if (mRegisterIP == null || mSecurityMgr.getConfig() == null) {
             // Can not get the register IP.
             Log.e(TAG, "Failed to login as the register IP is null.");
             registerFailed();

@@ -445,7 +445,7 @@ public class VoWifiRegisterManager extends ServiceManager {
                         }
                         break;
                     case JSONUtils.EVENT_CODE_REGISTER_STATE_UPDATE:
-                        // Update the register state to unknown, and notify the state changed.
+                        // Update the register state, and notify the state changed.
                         if (mListener != null) {
                             int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
                             int retryAfter = jObject.optInt(JSONUtils.KEY_RETRY_AFTER, 0);
