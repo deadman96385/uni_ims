@@ -449,9 +449,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 mIImsCallSessionListener.callSessionTerminated((IImsCallSession) this,
                         new ImsReasonInfo(mDisconnCause, 0));
             }else if(mImsDriverCall == null){/* SPRD: add for bug525777 @{ */
-                Log.w(TAG, "notifySessionDisconnected(Fdn)  mDisconnCause=" + mDisconnCause);
-                mIImsCallSessionListener.callSessionStartFailed((IImsCallSession) this,
-                        new ImsReasonInfo(mDisconnCause, 0));
+                Log.w(TAG, "notifySessionDisconnected  mImsDriverCall = null");
                 mCi.getLastCallFailCause(mHandler.obtainMessage(ACTION_COMPLETE_GET_CALL_FAIL_CAUSE,this));
             }/* @} */
         } catch (RemoteException e) {
@@ -620,14 +618,24 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     }
                     break;
                 case ACTION_COMPLETE_GET_CALL_FAIL_CAUSE:
-                    if(ar != null && ar.exception != null){
+                    if(ar != null && (ar.exception != null || ar.result == null)){
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_GET_CALL_FAIL_CAUSE error!");
-                    }else{
-                        LastCallFailCause failCause = (LastCallFailCause)ar.result;
+                    }else {
+                        LastCallFailCause failCause = (LastCallFailCause) ar.result;
                         mDisconnCause = failCause.causeCode;
+                        ImsReasonInfo reasonInfo = null;
                         // SPRD: add for bug541710
                         if (mDisconnCause == VTManagerUtils.VODEO_CALL_FDN_BLOCKED) {
                             VTManagerUtils.showVideoCallFailToast(mContext, mDisconnCause);
+                            reasonInfo = new ImsReasonInfo(mDisconnCause, 0);
+                        } else if (failCause.causeCode == 501) { //SPRD: add for bug663110 mo failed handover vowifi,^CEND： 1,,104,501
+                            reasonInfo = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_IMS_HANDOVER_RETRY, 0);
+                        }
+
+                        try {
+                            mIImsCallSessionListener.callSessionStartFailed(mImsCallSessionImpl, reasonInfo);
+                        } catch (RemoteException e) {
+                            e.printStackTrace();
                         }
                     }
                     break;
@@ -804,6 +812,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mState = ImsCallSession.State.INITIATED;
         mCallee = callee;
         int clir = profile.getCallExtraInt(ImsCallProfile.EXTRA_OIR);
+
         if(mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT
                 || mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE){
             mCi.dialVP(mCallee,null,0,mHandler.obtainMessage(ACTION_COMPLETE_DIAL,this));

@@ -317,6 +317,10 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                         if (imsDc.state == ImsDriverCall.State.DIALING || imsDc.state ==ImsDriverCall.State.ALERTING
                                 || (!imsDc.isMT && imsDc.state ==ImsDriverCall.State.ACTIVE)) {
                             ImsCallSessionImpl session = mPendingSessionList.get(j);
+                            if(session.getState() == ImsCallSession.State.INVALID){//SPRD: add for bug663110
+                                Log.d(TAG, "PendingSession found session is INVALID remove");
+                                continue;
+                            }
                             Log.d(TAG, "PendingSession found, index:"+imsDc.index+" session:" + session);
                             addSessionToList(Integer.valueOf(imsDc.index), session);
                             callSession = session;
