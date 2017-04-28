@@ -12,6 +12,9 @@ import com.android.ims.ImsCallProfile;
 import com.spreadtrum.ims.ImsConfigImpl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map.Entry;
 
 public class Utilities {
     private static final String TAG = getTag(Utilities.class.getSimpleName());
@@ -23,6 +26,32 @@ public class Utilities {
     private static final int DEFAULT_PHONE_ID   = 0;
     private static final int SLOTTWO_PHONE_ID   = 1;
     private static final String PROP_MODEM_WORKMODE = "persist.radio.modem.workmode";
+
+    public static HashMap<Integer, VideoQuality> sVideoQualitys =
+            new HashMap<Integer, VideoQuality>();
+    static {
+        // Refer to ImsConfigImpl#VT_RESOLUTION_720P}
+        sVideoQualitys.put(ImsConfigImpl.VT_RESOLUTION_720P, new VideoQuality(
+                31, 1280, 720, 30, 3000 * 1000, 4000 * 1000, 200 * 1000, 30, 1));
+        // Refer to ImsConfigImpl#VT_RESOLUTION_VGA_REVERSED_15
+        sVideoQualitys.put(ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_15, new VideoQuality(
+                22, 480, 640, 15, 400 * 1000, 660 * 1000, 150 * 1000, 15, 1));
+        // Refer to ImsConfigImpl#VT_RESOLUTION_VGA_REVERSED_30
+        sVideoQualitys.put(ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_30, new VideoQuality(
+                30, 480, 640, 30, 600 * 1000, 980 * 1000, 150 * 1000, 30, 1));
+        // Refer to ImsConfigImpl#VT_RESOLUTION_QVGA_REVERSED_15
+        sVideoQualitys.put(ImsConfigImpl.VT_RESOLUTION_QVGA_REVERSED_15, new VideoQuality(
+                12, 240, 320, 15, 256 * 1000, 320 * 1000, 100 * 1000, 15, 1));
+        // Refer to ImsConfigImpl#VT_RESOLUTION_QVGA_REVERSED_30
+        sVideoQualitys.put(ImsConfigImpl.VT_RESOLUTION_QVGA_REVERSED_30, new VideoQuality(
+                13, 240, 320, 30, 384 * 1000, 512 * 1000, 100 * 1000, 30, 1));
+        // Refer to ImsConfigImpl#VT_RESOLUTION_CIF
+        sVideoQualitys.put(ImsConfigImpl.VT_RESOLUTION_CIF, new VideoQuality(
+                14, 352, 288, 30, 300 * 1000, 400 * 1000, 100 * 1000, 30, 1));
+        // Refer to ImsConfigImpl#VT_RESOLUTION_QCIF
+        sVideoQualitys.put(ImsConfigImpl.VT_RESOLUTION_QCIF, new VideoQuality(
+                11, 176, 144, 30, 100 * 1000, 300 * 1000, 60 * 1000, 30, 1));
+    }
 
     public static String getTag(String tag) {
         return "[Adapter]" + tag;
@@ -76,54 +105,41 @@ public class Utilities {
         return callType != ImsCallProfile.CALL_TYPE_VOICE;
     }
 
-    public static int getDefaultVideoQuality(SharedPreferences preference) {
-        if (preference == null) {
-            // If the preferences is null, return the default value.
-            return ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_30;
+    public static VideoQuality getDefaultVideoQuality(SharedPreferences preference) {
+        int resolution = ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_30;
+        if (preference != null) {
+            resolution = preference.getInt(ImsConfigImpl.VT_RESOLUTION_VALUE,
+                    ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_30);
+            // As do not accept none reversed resolution, need adjust to reversed resolution.
+            switch (resolution) {
+                case ImsConfigImpl.VT_RESOLUTION_VGA_15:
+                    resolution = ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_15;
+                    break;
+                case ImsConfigImpl.VT_RESOLUTION_VGA_30:
+                    resolution = ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_30;
+                    break;
+                case ImsConfigImpl.VT_RESOLUTION_QVGA_15:
+                    resolution = ImsConfigImpl.VT_RESOLUTION_QVGA_REVERSED_15;
+                    break;
+                case ImsConfigImpl.VT_RESOLUTION_QVGA_30:
+                    resolution = ImsConfigImpl.VT_RESOLUTION_QVGA_REVERSED_30;
+                    break;
+            }
         }
 
-        int quality = preference.getInt(ImsConfigImpl.VT_RESOLUTION_VALUE,
-                ImsConfigImpl.VT_RESOLUTION_VGA_REVERSED_30);
-        // TODO: As there is some problem when we use the quality as VGA 30 now, hard code first.
-        quality = ImsConfigImpl.VT_RESOLUTION_QVGA_REVERSED_15;
-        return quality;
+        return sVideoQualitys.get((Integer) resolution);
     }
 
-    public static ArrayList<VideoQuality> sVideoQualityList = new ArrayList<VideoQuality>();
-    static {
-        // Refer to ImsConfigImpl#VT_RESOLUTION_720P}
-        sVideoQualityList.add(
-                new VideoQuality(1280, 720, 30, 3000 * 1000, 4000 * 1000, 200 * 1000, 30, 1));
-        // Refer to ImsConfigImpl#VT_RESOLUTION_VGA_REVERSED_15
-        sVideoQualityList.add(
-                new VideoQuality(480, 640, 15, 400 * 1000, 660 * 1000, 150 * 1000, 15, 1));
-        // Refer to ImsConfigImpl#VT_RESOLUTION_VGA_REVERSED_30
-        sVideoQualityList.add(
-                new VideoQuality(480, 640, 30, 600 * 1000, 980 * 1000, 150 * 1000, 30, 1));
-        // Refer to ImsConfigImpl#VT_RESOLUTION_QVGA_REVERSED_15
-        sVideoQualityList.add(
-                new VideoQuality(240, 320, 15, 256 * 1000, 320 * 1000, 100 * 1000, 15, 1));
-        // Refer to ImsConfigImpl#VT_RESOLUTION_QVGA_REVERSED_30
-        sVideoQualityList.add(
-                new VideoQuality(240, 320, 30, 384 * 1000, 512 * 1000, 100 * 1000, 30, 1));
-        // Refer to ImsConfigImpl#VT_RESOLUTION_CIF
-        sVideoQualityList.add(
-                new VideoQuality(352, 288, 30, 300 * 1000, 400 * 1000, 100 * 1000, 30, 1));
-        // Refer to ImsConfigImpl#VT_RESOLUTION_QCIF
-        sVideoQualityList.add(
-                new VideoQuality(176, 144, 30, 100 * 1000, 300 * 1000, 60 * 1000, 30, 1));
-        // Refer to ImsConfigImpl#VT_RESOLUTION_VGA_15
-        sVideoQualityList.add(
-                new VideoQuality(640, 480, 15, 400 * 1000, 660 * 1000, 150 * 1000, 15, 1));
-        // Refer to ImsConfigImpl#VT_RESOLUTION_VGA_30
-        sVideoQualityList.add(
-                new VideoQuality(640, 480, 30, 600 * 1000, 980 * 1000, 150 * 1000, 30, 1));
-        // Refer to ImsConfigImpl#VT_RESOLUTION_QVGA_15
-        sVideoQualityList.add(
-                new VideoQuality(320, 240, 15, 256 * 1000, 320 * 1000, 100 * 1000, 15, 1));
-        // Refer to ImsConfigImpl#VT_RESOLUTION_QVGA_30
-        sVideoQualityList.add(
-                new VideoQuality(320, 240, 30, 384 * 1000, 512 * 1000, 100 * 1000, 30, 1));
+    public static VideoQuality findVideoQuality(float videoLevel) {
+        Iterator<Entry<Integer, VideoQuality>> it = sVideoQualitys.entrySet().iterator();
+        while (it.hasNext()) {
+            VideoQuality quality = it.next().getValue();
+            if (quality._level == videoLevel) {
+                return quality;
+            }
+        }
+
+        return null;
     }
 
     // This defined is match the error used by CM. Please do not change.
@@ -718,6 +734,7 @@ public class Utilities {
     }
 
     public static class VideoQuality {
+        public int _level;
         public int _width;
         public int _height;
         public int _frameRate;
@@ -727,8 +744,9 @@ public class Utilities {
         public int _frHi;
         public int _frLo;
 
-        public VideoQuality(int width, int height, int frameRate, int bitRate, int brHi, int brLo,
-                int frHi, int frLo) {
+        public VideoQuality(int level, int width, int height, int frameRate, int bitRate, int brHi,
+                int brLo, int frHi, int frLo) {
+            _level = level;
             _width = width;
             _height = height;
             _frameRate = frameRate;
@@ -741,9 +759,9 @@ public class Utilities {
 
         @Override
         public String toString() {
-            return "[width=" + _width + ", height=" + _height + ", frameRate=" + _frameRate
-                    + ", bitRate=" + _bitRate + ", BrHi=" + _brHi + ", BrLo=" + _brLo
-                    + ", FrHi=" + _frHi + ", FrLo=" + _frLo + "]";
+            return "[level=" + _level + ", width=" + _width + ", height=" + _height
+                    + ", frameRate=" + _frameRate + ", bitRate=" + _bitRate + ", BrHi=" + _brHi
+                    + ", BrLo=" + _brLo + ", FrHi=" + _frHi + ", FrLo=" + _frLo + "]";
         }
     }
 
@@ -816,7 +834,7 @@ public class Utilities {
         public static final String KEY_SIP_URI = "sip_uri";
         public static final String KEY_VIDEO_HEIGHT = "video_height";
         public static final String KEY_VIDEO_WIDTH = "video_width";
-        public static final String KEY_VIDEO_ORIENTATION = "video_orientation";
+        public static final String KEY_VIDEO_LEVEL = "video_level";
         public static final String KEY_RTP_RECEIVED = "rtp_received";
         public static final String KEY_RTCP_LOSE = "rtcp_lose";
         public static final String KEY_RTCP_JITTER = "rtcp_jitter";
@@ -911,12 +929,14 @@ public class Utilities {
         public static final String EVENT_CONF_RTCP_CHANGED = "conf_rtcp_changed";
 
         // Video resize
-        public static final int RESIZE_EVENT_CODE_BASE = 300;
-        public static final int EVENT_CODE_LOCAL_VIDEO_RESIZE = RESIZE_EVENT_CODE_BASE + 1;
-        public static final int EVENT_CODE_REMOTE_VIDEO_RESIZE = RESIZE_EVENT_CODE_BASE + 2;
+        public static final int VIDEO_EVENT_CODE_BASE = 300;
+        public static final int EVENT_CODE_LOCAL_VIDEO_RESIZE = VIDEO_EVENT_CODE_BASE + 1;
+        public static final int EVENT_CODE_REMOTE_VIDEO_RESIZE = VIDEO_EVENT_CODE_BASE + 2;
+        public static final int EVENT_CODE_LOCAL_VIDEO_LEVEL_UPDATE = VIDEO_EVENT_CODE_BASE + 3;
 
         public static final String EVENT_LOCAL_VIDEO_RESIZE = "local_video_resize";
         public static final String EVENT_REMOTE_VIDEO_RESIZE = "remote_video_resize";
+        public static final String EVENT_LOCAL_VIDEO_LEVEL_UPDATE = "local_video_level_update";
 
         // UT
         public static final String KEY_UT_CF_TIME_SECONDS = "ut_cf_time_seconds";
