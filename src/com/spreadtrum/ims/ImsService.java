@@ -2085,7 +2085,9 @@ class MyVoWifiCallback implements VoWifiCallback {
             Log.i(TAG,"onImsPdnStatusChange->mIsPendingRegisterVolte:" + mIsPendingRegisterVolte + " service.isImsRegistered():" + service.isImsRegistered());
             // If pdn is ready when handover from vowifi to volte but volte is not registered , never to turn on ims.
             // If Volte is registered , never to turn on ims.
-            if(!((mIsPendingRegisterVolte && !service.isImsRegistered()) || service.isImsRegistered())){
+            Log.i(TAG,"onImsPdnStatusChange->mIsVolteCall:"+mIsVolteCall +" mIsVowifiCall:"+mIsVowifiCall);
+
+            if(!((mIsPendingRegisterVolte && !service.isImsRegistered()) || service.isImsRegistered()) && !mIsVolteCall && !mIsVowifiCall){
                 Log.d(TAG, "Switch request is null, but the pdn start, will enable the ims.");
                 service.enableImsWhenPDNReady();
             }
@@ -2278,6 +2280,10 @@ class MyVoWifiCallback implements VoWifiCallback {
                 Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
         Log.i(TAG,"allowEnableIms->service:"+service +" mFeatureSwitchRequest:"+mFeatureSwitchRequest);
         if(mFeatureSwitchRequest != null || service == null){
+            return false;
+        }
+        if(mIsVolteCall || mIsVowifiCall){
+            Log.i(TAG,"allowEnableIms->mIsVolteCall:"+mIsVolteCall +" mIsVowifiCall:"+mIsVowifiCall);
             return false;
         }
         Log.i(TAG,"allowEnableIms->mIsPendingRegisterVolte:"+mIsPendingRegisterVolte+
