@@ -119,22 +119,6 @@ interface IVoWifiSerService {
 
     // Camera
     /**
-     * Set the camera capabilities as default.
-     *
-     * @return {@link Utils#RESULT_FAIL} as fail.
-     *         {@link Utils#RESULT_SUCCESS} as success.
-     */
-    int sessSetCameraCapabilities(int width, int height, int frameRate);
-
-    /**
-     * Get the camera capabilities for the session.
-     *
-     * @return If success the string with width and height, and them will be separated with ",".
-     *         Otherwise it will return null.
-     */
-    String sessGetCameraCapabilities(int sessionId);
-
-    /**
      * Session attach the camera.
      *
      * @return {@link Utils#RESULT_FAIL} as fail.
@@ -256,10 +240,9 @@ interface IVoWifiSerService {
      */
     int localRenderRemove(in Surface surface, boolean isFrontCamera);
 
-    int setVideoQuality(int width, int height, int frameRate, int bitRate, int brHi, int brLo,
-            int frHi, int frLo);
+    int setDefaultVideoLevel(int videoLevel);
 
-    int getVideoQuality();
+    int getDefaultVideoLevel();
 
     int sendSessionModifyRequest(int sessionId, boolean bAudio, boolean bVideo);
 

@@ -1431,43 +1431,21 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
     }
 
-    public CameraCapabilities requestCameraCapabilites(int videoQuality) {
+    public int getDefaultVideoLevel() {
         if (Utilities.DEBUG) {
-            Log.i(TAG, "Try to request the camera capabilites for call: " + mCallId);
+            Log.i(TAG, "Try to get the default video level for call: " + mCallId);
         }
 
         if (mICall == null) {
             Log.e(TAG, "Can not start the camera as the call interface is null.");
-            return null;
+            return -1;
         }
 
         try {
-            // If the call do not establish, the camera capabilities do not consult, return null.
-            if (getState() < State.ESTABLISHED) {
-                // Use the given video quality to build the camera capabilities.
-                VideoQuality video = Utilities.sVideoQualityList.get(videoQuality);
-                return new CameraCapabilities(video._width, video._height);
-            }
-
-            String res = mICall.sessGetCameraCapabilities(mCallId);
-            if (TextUtils.isEmpty(res)) {
-                Log.w(TAG, "Can not request the camera capabilites for the call " + mCallId);
-                VideoQuality video = Utilities.sVideoQualityList.get(videoQuality);
-                return new CameraCapabilities(video._width, video._height);
-            } else {
-                String[] capabilites = res.split(",");
-                if (capabilites.length != 2) {
-                    Log.e(TAG, "The camera capabilites do not match the format: " + res);
-                    return null;
-                }
-
-                int width = Integer.valueOf(capabilites[0]);
-                int height = Integer.valueOf(capabilites[1]);
-                return new CameraCapabilities(width, height);
-            }
+            return mICall.getDefaultVideoLevel();
         } catch (RemoteException e) {
             Log.e(TAG, "Can not get the camera capabilities as catch the RemoteException e: " + e);
-            return null;
+            return -1;
         }
     }
 
@@ -1597,10 +1575,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
     }
 
-    public int startCapture(String cameraId, int videoQuality) {
+    public int startCapture(String cameraId, int width, int height, int frameRate) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to start capture for the call: " + mCallId + ", cameraId: " + cameraId
-                    + ", videoQuality index: " + videoQuality);
+                    + ", width: " + width + ", height: " + height + ", frameRate: " + frameRate);
         }
 
         if (mICall == null) {
@@ -1609,9 +1587,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
 
         try {
-            VideoQuality video = Utilities.sVideoQualityList.get(videoQuality);
-            int res = mICall.captureStart(
-                    Camera.isFront(cameraId), video._width, video._height, video._frameRate);
+            int res = mICall.captureStart(Camera.isFront(cameraId), width, height, frameRate);
             if (res == Result.FAIL) {
                 Log.w(TAG, "Can not start capture.");
             }
