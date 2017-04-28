@@ -14,6 +14,9 @@ import android.preference.PreferenceManager;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.os.IBinder;
+import com.android.ims.internal.IImsServiceEx;
+import com.android.ims.internal.ImsManagerEx;
 
 import com.android.ims.ImsCallProfile;
 import com.android.ims.ImsManager;
@@ -884,8 +887,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             if (success) {
                 // As prepare success, start the login process now. And try from the IPv6;
                 SecurityConfig config = mSecurityMgr.getConfig();
-                mRegisterIP = RegisterIPAddress.getInstance(
-                        config._ip4, config._ip6, config._pcscf4, config._pcscf6);
+                mRegisterIP = RegisterIPAddress.getInstance(config._ip4, config._ip6,
+                        config._pcscf4, config._pcscf6, getUsedPcscfAddr());
                 registerLogin(false);
             } else {
                 // Prepare failed, give the register result as failed.
@@ -898,6 +901,21 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             // If the register state changed, update the register state to call manager.
             if (mCallMgr != null) mCallMgr.updateRegisterState(newState);
         }
+
+        private String getUsedPcscfAddr() {
+            try {
+                IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
+                if (imsServiceEx != null) {
+                    return imsServiceEx.getImsPcscfAddress();
+                }
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to get the volte register ip as catch the RemoteException: "
+                        + e.toString());
+            }
+
+            return "";
+        }
+
     }
 
     private class MySecurityListener implements SecurityListener {

@@ -35,6 +35,7 @@ public class ImsRILConstants {
     final static int RIL_REQUEST_IMS_UPDATE_DATA_ROUTER = RIL_SPRD_REQUEST_BASE +28;
     final static int RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO = RIL_SPRD_REQUEST_BASE + 29;
     final static int RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY = RIL_SPRD_REQUEST_BASE + 30;
+    final static int RIL_REQUEST_GET_IMS_PCSCF_ADDR  = RIL_SPRD_REQUEST_BASE + 31;
     /* @} */
 
     final static int RIL_SPRD_UNSOL_RESPONSE_BASE = 3000;

@@ -89,6 +89,7 @@ public class ImsServiceImpl {
     protected static final int EVENT_IMS_NETWORK_INFO_UPDATE           = 113;
     protected static final int EVENT_IMS_WIFI_PARAM                    = 114;
     protected static final int EVENT_IMS_GET_SRVCC_CAPBILITY           = 115;
+    protected static final int EVENT_IMS_GET_PCSCF_ADDRESS             = 116;
 
     private GsmCdmaPhone mPhone;
     private ImsServiceState mImsServiceState;
@@ -114,6 +115,7 @@ public class ImsServiceImpl {
     private boolean mSetSosApn = true;
     private VoWifiServiceImpl mWifiService;//Add for data router
     private String mImsRegAddress = "";
+    private String mImsPscfAddress = "";
     private int mAliveCallLose = -1;
     private int mAliveCallJitter = -1;
     private int mAliveCallRtt = -1;
@@ -186,6 +188,8 @@ public class ImsServiceImpl {
         mPhone.getContext().getContentResolver().registerContentObserver(
                 Telephony.Carriers.CONTENT_URI, true, mApnChangeObserver);
         mCi.registerForRadioStateChanged(mHandler, EVENT_RADIO_STATE_CHANGED, null);//SPRD:add for bug594553
+
+        mCi.getImsPcscfAddress(mHandler.obtainMessage(EVENT_IMS_GET_PCSCF_ADDRESS));//SPRD: add for bug357667
     }
 
     /**
@@ -321,6 +325,9 @@ public class ImsServiceImpl {
                     if (ar != null && ar.exception == null && ar.result != null) {
                         int[] responseArray = (int[])ar.result;
                         mImsService.onImsPdnStatusChange(mServiceId,responseArray[0]);
+                        if(responseArray[0] == ImsService.ImsPDNStatus.IMS_PDN_READY){
+                                mCi.getImsPcscfAddress(mHandler.obtainMessage(EVENT_IMS_GET_PCSCF_ADDRESS));
+                        }
                     }
                     break;
                 case EVENT_IMS_NETWORK_INFO_UPDATE:
@@ -356,6 +363,12 @@ public class ImsServiceImpl {
                         Log.i(TAG,"EVENT_SET_VOICE_CALL_AVAILABILITY_DONE:"+mSrvccCapbility);
                     }
                     break;
+                case EVENT_IMS_GET_PCSCF_ADDRESS:
+                    if (ar != null && ar.exception == null && ar.result != null){
+                        mImsPscfAddress = (String)ar.result;
+                        Log.i(TAG,"EVENT_IMS_GET_PCSCF_ADDRESS,mImsPscfAddress:"+mImsPscfAddress);
+                    }
+                        break;
                 default:
                     break;
             }
@@ -728,6 +741,13 @@ public class ImsServiceImpl {
             Log.i(TAG, "getIMSRegAddress mImsRegAddress = " + mImsRegAddress);
         }
         return mImsRegAddress;
+    }
+
+    public String getImsPcscfAddress(){
+        if(DBG){
+            Log.i(TAG, "getImsPcscfAddress mImsPscfAddress = " + mImsPscfAddress);
+        }
+        return mImsPscfAddress;
     }
 
     public void setIMSRegAddress(String addr) {
