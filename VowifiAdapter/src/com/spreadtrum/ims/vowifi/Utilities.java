@@ -448,23 +448,52 @@ public class Utilities {
         private String mUsedPcscfIP;
 
         public static RegisterIPAddress getInstance(String localIPv4, String localIPv6,
-                String pcscfIPv4, String pcscfIPv6) {
+                String pcscfIPv4, String pcscfIPv6, String usedPcscfAddr) {
             if (Utilities.DEBUG) {
                 Log.i(TAG, "Get the s2b ip address from localIPv4: " + localIPv4 + ", localIPv6: "
-                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: " + pcscfIPv6);
+                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: " + pcscfIPv6 + ", usedPcscfAddr: " + usedPcscfAddr);
             }
-            if ((TextUtils.isEmpty(localIPv4) || TextUtils.isEmpty(pcscfIPv4))
-                    && (TextUtils.isEmpty(localIPv6) || TextUtils.isEmpty(pcscfIPv6))) {
+            boolean b1 = (TextUtils.isEmpty(localIPv4) || TextUtils.isEmpty(pcscfIPv4));
+            boolean b2 = (TextUtils.isEmpty(localIPv6) || TextUtils.isEmpty(pcscfIPv6));
+            boolean b3 = TextUtils.isEmpty(usedPcscfAddr);
+            Log.d(TAG, "b1:" + b1 + ",b2:" + b2 + ",b3:" + b3);
+            if ( b1 && b2 && b3) {
                 Log.e(TAG, "Can not get the ip address: localIPv4: " + localIPv4 + ", localIPv6: "
-                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: " + pcscfIPv6);
+                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: " + pcscfIPv6 + ", usedPcscfAddr: " + usedPcscfAddr);
                 return null;
             }
 
-            String[] pcscfIPv4s =
+            if (TextUtils.isEmpty(pcscfIPv4) && TextUtils.isEmpty(pcscfIPv6) )
+            {
+               if (!TextUtils.isEmpty(usedPcscfAddr))
+               {
+                   if(isIPv4(usedPcscfAddr))
+                   {
+                       String[] newPcscfIPv4s = new String[1];
+                       newPcscfIPv4s[0] = usedPcscfAddr;
+                       return new RegisterIPAddress(localIPv4, localIPv6, newPcscfIPv4s, null);
+                   }
+                   else
+                   {
+                       String[] newPcscfIPv6s = new String[1];
+                       newPcscfIPv6s[0] = usedPcscfAddr;
+                       return new RegisterIPAddress(localIPv4, localIPv6, null, newPcscfIPv6s);
+                   }
+               }
+               else
+               {
+                   Log.d(TAG,"all pcscf addr is null");
+                   return null;
+               }
+            }
+            else
+            {
+                String[] pcscfIPv4s =
                     TextUtils.isEmpty(pcscfIPv4) ? null : pcscfIPv4.split(JSON_PCSCF_SEP);
-            String[] pcscfIPv6s =
+                String[] pcscfIPv6s =
                     TextUtils.isEmpty(pcscfIPv6) ? null : pcscfIPv6.split(JSON_PCSCF_SEP);
-            return new RegisterIPAddress(localIPv4, localIPv6, pcscfIPv4s, pcscfIPv6s);
+                return new RegisterIPAddress(localIPv4, localIPv6, pcscfIPv4s, pcscfIPv6s);
+            }
         }
 
         private RegisterIPAddress(String localIPv4, String localIPv6, String[] pcscfIPv4,
@@ -543,6 +572,27 @@ public class Utilities {
                     && mPcscfIPv6 != null
                     && mPcscfIPv6.length > 0
                     && mIPv6Index < mPcscfIPv6.length;
+        }
+
+        private static boolean isIPv4(String ipAddr) {
+            return ipAddr.contains(".");
+        }
+
+        private static String[] addAddr(String[] oldAddrs, String addr, boolean asIPv4) {
+            if (TextUtils.isEmpty(addr)) return oldAddrs;
+
+            if (isIPv4(addr) != asIPv4) {
+                return oldAddrs;
+            }
+
+            String[] newAddrs = new String[oldAddrs.length + 1];
+            int index = 0;
+            for (String oldAddr : oldAddrs) {
+                newAddrs[index] = oldAddr;
+                index = index + 1;
+            }
+            newAddrs[index] = addr;
+            return newAddrs;
         }
 
         @Override

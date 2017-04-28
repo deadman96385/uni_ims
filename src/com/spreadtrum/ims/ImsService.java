@@ -1554,6 +1554,18 @@ public class ImsService extends Service {
                 imsService.notifyHandoverCallInfo(commands);
             }
         }
+
+        /**
+         * Used for get local address.
+         */
+       public String getImsPcscfAddress(){
+            ImsServiceImpl imsService = mImsServiceImplMap.get(
+                    Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
+            if(imsService != null){
+                return imsService.getImsPcscfAddress();
+            }
+            return "";
+        }
     };
 
     private final IImsMultiEndpoint.Stub mImsMultiEndpointBinder = new IImsMultiEndpoint.Stub()  {
