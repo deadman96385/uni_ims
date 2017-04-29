@@ -473,6 +473,11 @@ public class ImsRegister {
             log("not support Dual volte");
             return false;
         }
+        // SPRD: Add for DSDA Dual VoLTE switch
+        if(mCarrierSpnMap == null) {
+            mCarrierSpnMap = new HashMap<String, String>();
+            loadSpnOverrides();
+        }
         int primaryCard = getPrimaryCard();
         String primaryOperator = null;
         String secondOperator = null;
