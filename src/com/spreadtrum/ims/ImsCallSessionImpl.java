@@ -1049,16 +1049,24 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.w(TAG, "update-> ImsSessionInvalid!");
             return;
         }
-        if(profile.mAudioDirection == ImsStreamMediaProfile.DIRECTION_RECEIVE){
-            //mute, do not send audio data
-            mCi.imsMuteSingleCall(mImsDriverCall.index, true, null);
-        } else if(profile.mAudioDirection == ImsStreamMediaProfile.DIRECTION_SEND){
-            //do not allow speak
-            mCi.imsSilenceSingleCall(mImsDriverCall.index, true, null);
-        } else if(profile.mAudioDirection == ImsStreamMediaProfile.DIRECTION_SEND_RECEIVE){
-            //normal
-            mCi.imsMuteSingleCall(mImsDriverCall.index, false, null);
-            mCi.imsSilenceSingleCall(mImsDriverCall.index, false, null);
+        if(callType == ImsCallProfile.CALL_TYPE_VS_RX){
+             if(profile.mAudioDirection == ImsStreamMediaProfile.DIRECTION_SEND){
+                //do not allow speak
+                mCi.imsSilenceSingleCall(mImsDriverCall.index, true, null);
+            } else if(profile.mAudioDirection == ImsStreamMediaProfile.DIRECTION_SEND_RECEIVE){
+                //normal
+                mCi.imsSilenceSingleCall(mImsDriverCall.index, false, null);
+            }
+
+        } else if(callType == ImsCallProfile.CALL_TYPE_VS_TX){
+            if(profile.mAudioDirection == ImsStreamMediaProfile.DIRECTION_RECEIVE){
+                //mute, do not send audio data
+                mCi.imsMuteSingleCall(mImsDriverCall.index, true, null);
+            } else if(profile.mAudioDirection == ImsStreamMediaProfile.DIRECTION_SEND_RECEIVE){
+                //normal
+                mCi.imsMuteSingleCall(mImsDriverCall.index, false, null);
+            }
+
         }
     }
 
