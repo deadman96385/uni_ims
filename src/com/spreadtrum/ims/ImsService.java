@@ -140,6 +140,7 @@ public class ImsService extends Service {
         public static final int IMS_HANDOVER_RE_REGISTER_FAIL = 3;
         public static final int IMS_HANDOVER_ATTACH_FAIL = 4;
         public static final int IMS_HANDOVER_ATTACH_SUCCESS = 5;
+        public static final int IMS_HANDOVER_SRVCC_FAILED = 6;
     }
     /** Call end event. */
     public static class CallEndEvent {
@@ -2044,6 +2045,9 @@ class MyVoWifiCallback implements VoWifiCallback {
                             mWifiService.updateDataRouterState(DataRouterState.CALL_NONE);
                             Log.i(TAG,"onImsHandoverStateChange->ACTION_START_HANDOVER fail,mPendingActivePdnSuccess is true!");
                         }
+                    } else if(state == ImsHandoverResult.IMS_HANDOVER_SRVCC_FAILED){
+                        mImsServiceListenerEx.onSrvccFaild();
+                        Log.i(TAG,"onImsHandoverStateChange->IMS_HANDOVER_SRVCC_FAILED.");
                     }
                 } else if(mFeatureSwitchRequest.mTargetType ==
                         ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
