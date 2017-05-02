@@ -14,7 +14,7 @@
     <string name="videophone_failcause_50">暫不支援視訊通話</string>
     <string name="videophone_failcause_57_remote">對方未開通視訊通話</string>
     <string name="videophone_failcause_58">對方暫不支援視訊通話</string>
-    <string name="videophone_failcause_157">本机未开通可视电话服务</string>
+    <string name="videophone_failcause_157">本機未開通視訊通話服務</string>
     <string name="videophone_failcause_88">被叫選擇語音呼叫</string>
     <string name="videophone_failcause_minus_1">無法獲得3G網路</string>
     <string name="videophone_failcause_default">對方無法接通</string>
@@ -28,7 +28,7 @@
     <string name="remote_accept_request">"對端接收請求" </string>
     <string name="callFailed_fdn_only">外撥電話受固定撥號限制</string>
     <string name="camera_open_fail">攝像頭故障</string>
-    <string name="ims_switch_failed">網絡錯誤，請稍後重試</string>
+    <string name="ims_switch_failed">網路錯誤，請稍後重試</string>
     <!-- SPRD: Add for bug579975 @{ -->
     <string name="low_battery_warning_media_alert_message">"電量低於15%,請選擇接受或拒絕"</string>
     <string name="low_battery_warnig_title">"低電量提醒"</string>
