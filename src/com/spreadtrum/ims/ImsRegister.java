@@ -214,8 +214,11 @@ public class ImsRegister {
                 }
                 break;
             case EVENT_RADIO_CAPABILITY_CHANGED:
-                if (mPhoneId != getPrimaryCard() ) {
-                    mInitISIMDone = false;
+                if (mPhoneId != getPrimaryCard()) {
+                    //SPRD: Bug 671074 If dual volte active, need to reset some variables.
+                    if(!ImsManagerEx.isDualVoLTEActive()){
+                        mInitISIMDone = false;
+                    }
                     mIMSBearerEstablished = false;
                     mLastNumeric = "";
                     mCurrentImsRegistered = false;
