@@ -19,6 +19,8 @@ import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.telephony.TeleUtils;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.IsimUiccRecords;
+import com.android.internal.telephony.uicc.UiccCardApplication;
+
 import android.os.AsyncResult;
 import android.os.Looper;
 import android.util.Log;
@@ -52,10 +54,19 @@ public class ImsRegister {
     private String mNumeric;
     private String mLastNumeric="";
 
+    // SPRD add for 670748
+    private UiccController mUiccController;
+    private IccRecords mIccRecords = null;
+    private UiccCardApplication mUiccApplcation = null;
+    private boolean mSIMLoaded;
+
     protected static final int EVENT_RADIO_STATE_CHANGED               = 105;
     protected static final int EVENT_INIT_ISIM_DONE                    = 106;
     protected static final int EVENT_IMS_BEARER_ESTABLISTED            = 107;
     protected static final int EVENT_ENABLE_IMS                        = 108;
+    // SPRD add for 670748
+    private static final int EVENT_ICC_CHANGED                       = 110;
+    private static final int EVENT_RECORDS_LOADED                    = 111;
 
     public ImsRegister(GSMPhone phone , Context context, CommandsInterface ci) {
         mPhone = phone;
@@ -71,6 +82,9 @@ public class ImsRegister {
         mCi.registerForRadioStateChanged(mHandler, EVENT_RADIO_STATE_CHANGED, null);
         mCi.registerForConnImsen(mHandler, EVENT_IMS_BEARER_ESTABLISTED, null);
         mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
+        // SPRD add for 670748
+        mUiccController = UiccController.getInstance();
+        mUiccController.registerForIccChanged(mHandler, EVENT_ICC_CHANGED, null);
     }
 
     private class BaseHandler extends Handler {
@@ -82,6 +96,17 @@ public class ImsRegister {
             log("handleMessage msg=" + msg);
             AsyncResult ar = (AsyncResult) msg.obj;
             switch (msg.what) {
+                /**
+                 * SPRD add for 670748
+                 */
+                case EVENT_ICC_CHANGED:
+                    onUpdateIccAvailability();
+                    break;
+                case EVENT_RECORDS_LOADED:
+                    log("EVENT_RECORDS_LOADED");
+                    mSIMLoaded = true;
+                    initISIM();
+                    break;
                 case EVENT_RADIO_STATE_CHANGED:
                     if (mPhone.isRadioOn()) {
                         log("EVENT_RADIO_STATE_CHANGED -> radio is on");
@@ -168,7 +193,7 @@ public class ImsRegister {
     };
 
     private void initISIM() {
-        if (!mInitISIMDone
+        if (mSIMLoaded && mPhone.isRadioOn() && !mInitISIMDone
                 && mPhoneId == mTelephonyManager.getPrimaryCard()
                 && mTelephonyManager.getSimState(mPhoneId) == TelephonyManager.SIM_STATE_READY) {
             String impi = null;
@@ -302,5 +327,39 @@ public class ImsRegister {
         } else {
             return new ServiceState();
         }
+    }
+
+    private void onUpdateIccAvailability() {
+        if (mUiccController == null ) {
+            return;
+        }
+
+        UiccCardApplication newUiccApplication = getUiccCardApplication();
+
+        if (mUiccApplcation != newUiccApplication) {
+            if (mUiccApplcation != null) {
+                log("Removing stale icc objects.");
+                if (mIccRecords != null) {
+                    mIccRecords.unregisterForRecordsLoaded(mHandler);
+                }
+                mIccRecords = null;
+                mUiccApplcation = null;
+                mInitISIMDone = false;
+                mSIMLoaded    = false;
+            }
+            if (newUiccApplication != null) {
+                log("New card found");
+                mUiccApplcation = newUiccApplication;
+                mIccRecords = mUiccApplcation.getIccRecords();
+                if (mIccRecords != null) {
+                    mIccRecords.registerForRecordsLoaded(mHandler, EVENT_RECORDS_LOADED, null);
+                }
+            }
+        }
+    }
+
+    private UiccCardApplication getUiccCardApplication() {
+        return mUiccController.getUiccCardApplication(mPhoneId,
+                UiccController.APP_FAM_3GPP);
     }
 }
