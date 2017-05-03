@@ -1949,8 +1949,17 @@ class MyVoWifiCallback implements VoWifiCallback {
         if(imsService != null) {
             imsService.updateImsFeatures(mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE,
                     mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI);
+
+            //SPRD: add for bug671964
+            if(mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
+                if(mWifiService != null){
+                    String addr = mWifiService.getCurPcscfAddress();
+                    imsService.setImsPcscfAddress(addr);
+                }
+            }
         }
         notifyImsRegisterState();
+
         Log.i(TAG,"updateImsFeature->mWifiRegistered:"+mWifiRegistered +" mVolteRegistered:"+mVolteRegistered
                 +" mCurrentImsFeature:"+mCurrentImsFeature +" mInCallHandoverFeature:"+mInCallHandoverFeature);
     }

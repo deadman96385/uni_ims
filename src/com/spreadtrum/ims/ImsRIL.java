@@ -2938,6 +2938,16 @@ public final class ImsRIL {
         send(rr);
     }
 
+    //SPRD:add for bug671964
+    public void setImsPcscfAddress(String addr,Message response){
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_SET_IMS_PCSCF_ADDR, response);
+        if (RILJ_LOGD)
+            riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
+        rr.mParcel.writeInt(1);
+        rr.mParcel.writeString(addr);
+        send(rr);
+    }
+
     public void getSrvccCapbility(Message response) {
         RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY, response);
         if (RILJ_LOGD)
