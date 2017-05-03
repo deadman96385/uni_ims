@@ -327,6 +327,9 @@ public class VoWifiCallManager extends ServiceManager {
                 (ArrayList<ImsCallSessionImpl>) mSessionList.clone();
         for (ImsCallSessionImpl callSession : callList) {
             Log.d(TAG, "Terminate the call: " + callSession);
+            callSession.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
+            handleCallTermed(callSession, ImsReasonInfo.CODE_USER_TERMINATED);
+            /*
             switch (state) {
                 case CONNECTED:
                     // If the current wifi is connect, we'd like to send the terminate request.
@@ -340,6 +343,7 @@ public class VoWifiCallManager extends ServiceManager {
                     handleCallTermed(callSession, ImsReasonInfo.CODE_USER_TERMINATED);
                     break;
             }
+            */
         }
     }
 
