@@ -1576,6 +1576,7 @@ public final class ImsRIL {
                 case RI_REQUEST_QUERY_COLP: ret = responseInts(p); break;
                 case RI_REQUEST_QUERY_COLR: ret = responseInts(p); break;
                 case ImsRILConstants.RIL_REQUEST_GET_IMS_PCSCF_ADDR: ret =  responseString(p); break;
+                case ImsRILConstants.RIL_REQUEST_SET_IMS_PCSCF_ADDR: ret =  responseVoid(p); break;
                 default:
                     throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
                     //break;
@@ -2688,6 +2689,7 @@ public final class ImsRIL {
             case RI_REQUEST_QUERY_COLP: return "RI_REQUEST_QUERY_COLP";
             case RI_REQUEST_QUERY_COLR: return "RI_REQUEST_QUERY_COLR";
             case ImsRILConstants.RIL_REQUEST_GET_IMS_PCSCF_ADDR: return "RIL_REQUEST_GET_IMS_PCSCF_ADDR";
+            case ImsRILConstants.RIL_REQUEST_SET_IMS_PCSCF_ADDR: return "RIL_REQUEST_SET_IMS_PCSCF_ADDR";
             default: return requestToString(request);
         }
     }
@@ -2881,6 +2883,16 @@ public final class ImsRIL {
             riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
         rr.mParcel.writeInt(1);
         rr.mParcel.writeString(callInfo);
+        send(rr);
+    }
+
+    //SPRD:add for bug671964
+    public void setImsPcscfAddress(String addr,Message response){
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_SET_IMS_PCSCF_ADDR, response);
+        if (RILJ_LOGD)
+            riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
+        rr.mParcel.writeInt(1);
+        rr.mParcel.writeString(addr);
         send(rr);
     }
 

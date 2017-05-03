@@ -908,6 +908,22 @@ public class ImsServiceImpl {
         mCi.getSrvccCapbility(mHandler.obtainMessage(EVENT_IMS_GET_SRVCC_CAPBILITY));
     }
 
+    //SPRD: add for bug671964
+    public void setImsPcscfAddress(String addr) {
+        Log.d(TAG, "setImsPcscfAddress addr = " + addr);
+        String pcscfAdd = "";
+        if (addr != null && addr.length() != 0) {
+            if (addr.matches("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}")) {
+                pcscfAdd = "1,\"" + addr + "\"";
+            } else if(addr.contains(":")){
+                pcscfAdd = "2,\"" + addr + "\"";
+            }
+            Log.d(TAG, "setImsPcscfAddress pcscfAdd = " + pcscfAdd);
+            if (pcscfAdd.length() != 0) {
+                mCi.setImsPcscfAddress(pcscfAdd, null);
+            }
+        }
+    }
     public void setSrvccState(int srvccState){
         mImsServiceState.mSrvccState = srvccState;
     }
