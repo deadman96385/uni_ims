@@ -59,6 +59,9 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      * @param senderRxr
      */
     public ImsConfigImpl(ImsRIL ci,Context context) {
+        if (SystemProperties.getBoolean("persist.sys.videodefault", false)) {
+            mDefaultVtResolution = VT_RESOLUTION_QVGA_REVERSED_15;
+        }
         mCi = ci;
         mHandler = new ImsHandler(context.getMainLooper());
         mContext = context;
@@ -162,6 +165,10 @@ public class ImsConfigImpl extends IImsConfig.Stub {
                 case EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE:
                     String[] cmd=new String[1];
                     cmd[0] = "AT+CDEFMP=1,\""+mCameraResolution+"\"";
+                    if (SystemProperties.getBoolean("persist.sys.videodefault", false) 
+                            && (mSharedPreferences.getInt(VT_RESOLUTION_VALUE, -1) == -1)) {
+                        cmd[0] = "AT+CDEFMP=1,\"3\"";
+                    }
                     mCi.invokeOemRilRequestStrings(cmd, null);
                     break;
                 default:
