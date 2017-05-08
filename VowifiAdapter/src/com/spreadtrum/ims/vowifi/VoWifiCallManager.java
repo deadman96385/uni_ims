@@ -59,6 +59,7 @@ public class VoWifiCallManager extends ServiceManager {
         public void onCallEnd(ImsCallSessionImpl callSession);
         public void onCallRTPReceived(boolean isVideoCall, boolean isReceived);
         public void onCallRTCPChanged(boolean isVideoCall, int lose, int jitter, int rtt);
+        public void onAliveCallUpdate(boolean isVideoCall);
         public void onEnterECBM(ImsCallSessionImpl callSession);
         public void onExitECBM();
     }
@@ -1174,6 +1175,10 @@ public class VoWifiCallManager extends ServiceManager {
                         VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS,
                         videoProfile /* request profile */,
                         videoProfile /* response profile */);
+
+                if (callSession.isAlive() && mListener != null) {
+                    mListener.onAliveCallUpdate(isVideo);
+                }
             } else {
                 Log.e(TAG, "The video call provider is null, can not give the response.");
             }
