@@ -595,10 +595,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     }else {
                         LastCallFailCause failCause = (LastCallFailCause) ar.result;
                         mDisconnCause = failCause.causeCode;
-                        ImsReasonInfo reasonInfo = null;
+                        ImsReasonInfo reasonInfo = new ImsReasonInfo();
                         // SPRD: add for bug541710
                         if (mDisconnCause == VTManagerUtils.VODEO_CALL_FDN_BLOCKED) {
-                            VTManagerUtils.showVideoCallFailToast(mContext, mDisconnCause);
                             reasonInfo = new ImsReasonInfo(mDisconnCause, 0);
                         } else if (failCause.causeCode == 501) { //SPRD: add for bug663110 mo failed handover vowifi,^CEND： 1,,104,501
                             reasonInfo = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_IMS_HANDOVER_RETRY, 0);
