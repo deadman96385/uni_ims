@@ -752,6 +752,13 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         }
 
         @Override
+        public void onAliveCallUpdate(boolean isVideo) {
+            if (mCallback != null) {
+                mCallback.onAliveCallUpdate(isVideo);
+            }
+        }
+
+        @Override
         public void onEnterECBM(ImsCallSessionImpl callSession) {
             Log.d(TAG, "Need enter ECBM for the emergency call: " + callSession);
 
@@ -1053,6 +1060,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
          * @param type   See the definition of ImsCallProfile
          */
         public void onCallIncoming(String callId, int type);
+
+        public void onAliveCallUpdate(boolean isVideoCall);
 
         /**
          * Call this interface after all calls end.
