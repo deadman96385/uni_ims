@@ -2367,8 +2367,19 @@ class MyVoWifiCallback implements VoWifiCallback {
                 && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
             imsService.setSrvccState(-1);
         }
+        /**
+         * SPRD: 673414
+         */
+        if (ImsManagerEx.isDualVoLTEActive() && !isInCall) {
+            if (mIsVowifiCall) {
+                mIsVowifiCall = false;
+            } else if (mIsVolteCall) {
+                mIsVolteCall = false;
+            }
+        }
+
         iLog("updateInCallState->isInCall:"+isInCall+" mIsWifiCalling:"+mIsWifiCalling
-                +" inCallPhoneId:"+mInCallPhoneId);
+                +" inCallPhoneId:"+mInCallPhoneId + " mIsVolteCall: " + mIsVolteCall);
     }
 
     public void notifySrvccCapbility(int cap){
