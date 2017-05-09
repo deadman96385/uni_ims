@@ -69,7 +69,6 @@ import com.android.ims.internal.ImsSrvccCallInfo;
 import com.android.ims.internal.IImsServiceController;
 import com.android.ims.internal.IImsServiceFeatureListener;
 import com.android.ims.internal.IImsFeatureStatusCallback;
-import com.spreadtrum.ims.vowifi.Utilities.AttachState;
 import com.spreadtrum.ims.vowifi.Utilities.RegisterState;
 import com.spreadtrum.ims.vowifi.Utilities.SecurityConfig;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl;

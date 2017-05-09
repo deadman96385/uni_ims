@@ -13,7 +13,6 @@ import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
 
 public abstract class ServiceManager {
@@ -44,8 +43,8 @@ public abstract class ServiceManager {
         }
     };
 
+    private static final int MSG_REBIND_SERVICE = -1;
     private static final int MSG_PROCESS_PENDING_ACTION = 0;
-    private static final int MSG_REBIND_SERVICE = 1;
     protected Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -150,18 +149,11 @@ public abstract class ServiceManager {
 
     private class PendingActionMap extends HashMap<Integer, PendingAction> {
         @Override
-        public PendingAction put(Integer key, PendingAction value) {
-            PendingAction res = super.put(key, value);
+        public PendingAction put(Integer key, PendingAction action) {
+            PendingAction res = super.put(key, action);
             mHandler.removeMessages(MSG_PROCESS_PENDING_ACTION);
             mHandler.sendEmptyMessageDelayed(MSG_PROCESS_PENDING_ACTION, 15 * 1000);
             return res;
-        }
-
-        @Override
-        public void putAll(Map<? extends Integer, ? extends PendingAction> map) {
-            super.putAll(map);
-            mHandler.removeMessages(MSG_PROCESS_PENDING_ACTION);
-            mHandler.sendEmptyMessageDelayed(MSG_PROCESS_PENDING_ACTION, 15 * 1000);
         }
     }
 }

@@ -17,14 +17,14 @@ import com.android.ims.ImsUtInterface;
 import com.android.ims.internal.IImsUt;
 import com.android.ims.internal.IImsUtListener;
 import com.android.ims.internal.IImsUtListenerEx;
+import com.android.ims.internal.IVoWifiXCAP;
+import com.android.ims.internal.IVoWifiXCAPCallback;
 import com.android.internal.telephony.CommandsInterface;
 import com.spreadtrum.ims.vowifi.Utilities.JSONUtils;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
+import com.spreadtrum.ims.vowifi.VoWifiXCAPManager.XCAPStateChangedListener;
 import com.spreadtrum.ims.vowifi.Utilities.CallBarringInfo;
-import com.spreadtrum.ims.vowifi.VoWifiCallManager.ICallChangedListener;
-import com.spreadtrum.vowifi.service.IVoWifiSerService;
-import com.spreadtrum.vowifi.service.IVoWifiSerServiceCallback;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -43,26 +43,29 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ImsUtImpl extends IImsUt.Stub {
     private static final String TAG = Utilities.getTag(ImsUtImpl.class.getSimpleName());
 
-    // We'd like to handle the timeout in the native. Disable the timeout action now.
-    private static final boolean HANDLE_TIMEOUT = false;
-
     // Call forward service class
     private static final int SERVICE_CLASS_VOICE = CommandsInterface.SERVICE_CLASS_VOICE;
     // FIXME: This value defined in CallForwardEditPreference but not CommandsInterface.
     private static final int SERVICE_CLASS_VIDEO = 2;
 
     private Context mContext;
+    private boolean mXCAPEnabled;
 
     private IImsUtListener mListener = null;
     private IImsUtListenerEx mListenerEx = null;
 
     private CmdManager mCmdManager = null;
-    private VoWifiCallManager mCallManager = null;
-    private IVoWifiSerService mICall = null;
-    private MySerServiceCallback mSerServiceCallback = new MySerServiceCallback();
+    private VoWifiXCAPManager mXCAPManager = null;
+    private IVoWifiXCAP mIXCAP = null;
+    private XCAPServiceCallback mXCAPServiceCallback = new XCAPServiceCallback();
 
-    private static final int CMD_TIMEOUT = 10000; // 10s
+    // If there isn't any CMD to disabled the xcap after 2min.
+    private static final int DELAY_DISALBE_XCAP = 2 * 60 * 1000;
 
+    // We'd like to handle the timeout in the native. Disable the timeout action now.
+    private static final int CMD_TIMEOUT = -1;
+
+    private static final int MSG_DISABLE_XCAP = -2;
     private static final int MSG_HANDLE_EVENT = -1;
     private static final int MSG_CMD_TIMEOUT = 0;
 
@@ -82,6 +85,11 @@ public class ImsUtImpl extends IImsUt.Stub {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
+                case MSG_DISABLE_XCAP: {
+                    mXCAPManager.disabled();
+                    mXCAPEnabled = false;
+                    break;
+                }
                 case MSG_HANDLE_EVENT: {
                     handleEvent((String) msg.obj);
                     break;
@@ -142,47 +150,65 @@ public class ImsUtImpl extends IImsUt.Stub {
                     nativeUpdateCallWaiting((Boolean) action._params.get(0));
                     break;
                 }
-                case MSG_ACTION_CHANGE_LOCK_PWD:{
+                case MSG_ACTION_CHANGE_LOCK_PWD: {
                     UTAction action = (UTAction) msg.obj;
-                    String condition =  (String) action._params.get(0);
-                    String oldPwd =  (String) action._params.get(1);
-                    String newPwd =  (String) action._params.get(2);
+                    String condition = (String) action._params.get(0);
+                    String oldPwd = (String) action._params.get(1);
+                    String newPwd = (String) action._params.get(2);
                     nativeChangeBarringPwd(condition, oldPwd, newPwd);
                     break;
-               }
+                }
             }
         }
     };
 
     // To listener the IVoWifiSerService changed.
-    private ICallChangedListener mICallChangedListener = new ICallChangedListener() {
+    private XCAPStateChangedListener mIXCAPChangedListener = new XCAPStateChangedListener() {
+
         @Override
-        public void onChanged(IVoWifiSerService newCallInterface) {
-            mICall = newCallInterface;
-            if (mICall == null) return;
+        public void onInterfaceChanged(IVoWifiXCAP newInterface) {
+            mIXCAP = newInterface;
+            if (mIXCAP == null) return;
 
             // The new call Interface is not null now, register the callback.
             try {
-                mICall.registerCallback(mSerServiceCallback);
+                mIXCAP.registerCallback(mXCAPServiceCallback);
             } catch (RemoteException e) {
                 Log.e(TAG, "Failed to register callback for UT as catch RemoteException: " + e);
             }
         }
+
+        @Override
+        public void onPrepareFinished(boolean success) {
+            // As prepare finished, we could process the action now.
+            mXCAPEnabled = success;
+            mCmdManager.processPendingAction();
+        }
+
+        @Override
+        public void onDisabled() {
+            mXCAPEnabled = false;
+
+            // As xcap disabled, handle the cmd as failed.
+            ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR,
+                    ImsReasonInfo.CODE_UNSPECIFIED);
+            mCmdManager.onActionFailed(error);
+        }
     };
 
-    protected ImsUtImpl(Context context, VoWifiCallManager callManager) {
+    protected ImsUtImpl(Context context, VoWifiXCAPManager xcapManager) {
         mContext = context;
         mCmdManager = new CmdManager();
-        mCallManager = callManager;
+        mXCAPManager = xcapManager;
 
         // Register the service changed to get the IVowifiService.
-        mCallManager.registerCallInterfaceChanged(mICallChangedListener);
+        mXCAPManager.registerXCAPInterfaceChanged(mIXCAPChangedListener);
     }
 
     @Override
     protected void finalize() throws Throwable {
         // Un-register the service changed.
-        mCallManager.unregisterCallInterfaceChanged(mICallChangedListener);
+        mXCAPManager.unregisterXCAPInterfaceChanged(mIXCAPChangedListener);
         super.finalize();
     }
 
@@ -289,10 +315,9 @@ public class ImsUtImpl extends IImsUt.Stub {
             Log.i(TAG, "Try to update the call barring with the type: " + cbType + ", enabled: "
                     + enable + ", barrList: " + Utilities.getString(barrList));
         }
-        String tempString ="to do";
-        UTAction action = new UTAction("updateCallBarring",
-                MSG_ACTION_UPDATE_CALL_BARRING, CMD_TIMEOUT,
-                Integer.valueOf(cbType), Integer.valueOf(enable), tempString);
+        String tempString = "to do";
+        UTAction action = new UTAction("updateCallBarring", MSG_ACTION_UPDATE_CALL_BARRING,
+                CMD_TIMEOUT, Integer.valueOf(cbType), Integer.valueOf(enable), tempString);
         return mCmdManager.addCmd(action);
     }
 
@@ -307,10 +332,10 @@ public class ImsUtImpl extends IImsUt.Stub {
                     + condition + ", number: " + number + ", timeSeconds: " + timeSeconds);
         }
 
-        UTAction utaction = new UTAction("updateCallForward",
-                MSG_ACTION_UPDATE_CALL_FORWARD, CMD_TIMEOUT,
-                Integer.valueOf(action), Integer.valueOf(condition), number, Integer.valueOf(serviceClass), Integer.valueOf(timeSeconds));
-        return mCmdManager.addCmd(utaction);
+        UTAction utAction = new UTAction("updateCallForward", MSG_ACTION_UPDATE_CALL_FORWARD,
+                CMD_TIMEOUT, Integer.valueOf(action), Integer.valueOf(condition), number,
+                Integer.valueOf(serviceClass), Integer.valueOf(timeSeconds));
+        return mCmdManager.addCmd(utAction);
     }
 
     /**
@@ -369,7 +394,6 @@ public class ImsUtImpl extends IImsUt.Stub {
         mListener = listener;
     }
 
- 
     public void setListenerEx(IImsUtListenerEx listenerEx){
         mListenerEx = listenerEx;
     }
@@ -422,9 +446,8 @@ public class ImsUtImpl extends IImsUt.Stub {
                     + ", lock state: " + lockState + ", password: " + password);
         }
 
-	UTAction action = new UTAction("setFacilityLock",
-                MSG_ACTION_SET_FACILITY_LOCK, CMD_TIMEOUT,
-               facility, Boolean.valueOf(lockState), password);
+        UTAction action = new UTAction("setFacilityLock", MSG_ACTION_SET_FACILITY_LOCK, CMD_TIMEOUT,
+                facility, Boolean.valueOf(lockState), password);
         return mCmdManager.addCmd(action);
     }
 
@@ -434,21 +457,19 @@ public class ImsUtImpl extends IImsUt.Stub {
                     + ", password: " + password + ", serviceclass: " + serviceClass);
         }
 
-	UTAction action = new UTAction("queryFacilityLock",
-                MSG_ACTION_QUERY_FACILITY_LOCK, CMD_TIMEOUT,
-               facility, password, Integer.valueOf(serviceClass));
+        UTAction action = new UTAction("queryFacilityLock", MSG_ACTION_QUERY_FACILITY_LOCK,
+                CMD_TIMEOUT, facility, password, Integer.valueOf(serviceClass));
         return mCmdManager.addCmd(action);
     }
 
-    public int changeBarringPassword(String facility, String oldPwd, String newPwd){
-
-		if (Utilities.DEBUG) {
-            Log.i(TAG, "changeBarringPassword, reason: " + facility
-                    + ", old password: " + oldPwd + ", new password: " + newPwd);
+    public int changeBarringPassword(String facility, String oldPwd, String newPwd) {
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "changeBarringPassword, reason: " + facility + ", old password: " + oldPwd
+                    + ", new password: " + newPwd);
         }
-	UTAction action = new UTAction("changeBarringPassword",
-                MSG_ACTION_CHANGE_LOCK_PWD, CMD_TIMEOUT,
-               facility, oldPwd, newPwd);
+
+        UTAction action = new UTAction("changeBarringPassword", MSG_ACTION_CHANGE_LOCK_PWD,
+                CMD_TIMEOUT, facility, oldPwd, newPwd);
         return mCmdManager.addCmd(action);
     }
 
@@ -457,8 +478,8 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         boolean success = false;
         try {
-            if (mICall != null) {
-                int res = mICall.queryCallBarring(condition);
+            if (mIXCAP != null) {
+                int res = mIXCAP.queryCallBarring(condition);
                 if (res == Result.SUCCESS) success = true;
             }
         } catch (RemoteException e) {
@@ -479,8 +500,8 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         boolean success = false;
         try {
-            if (mICall != null) {
-                int res = mICall.queryCallForward();
+            if (mIXCAP != null) {
+                int res = mIXCAP.queryCallForward();
                 if (res == Result.SUCCESS) success = true;
             }
         } catch (RemoteException e) {
@@ -501,8 +522,8 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         boolean success = false;
         try {
-            if (mICall != null) {
-                int res = mICall.queryCallWaiting();
+            if (mIXCAP != null) {
+                int res = mIXCAP.queryCallWaiting();
                 if (res == Result.SUCCESS) success = true;
             }
         } catch (RemoteException e) {
@@ -528,8 +549,8 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         boolean success = false;
         try {
-            if (mICall != null) {
-                int res = mICall.updateCallForward(
+            if (mIXCAP != null) {
+                int res = mIXCAP.updateCallForward(
                         action, condition, number, serviceClass, timeSeconds);
                 if (res == Result.SUCCESS) success = true;
             }
@@ -551,8 +572,8 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         boolean success = false;
         try {
-            if (mICall != null) {
-                int res = mICall.updateCallWaiting(enabled);
+            if (mIXCAP != null) {
+                int res = mIXCAP.updateCallWaiting(enabled);
                 if (res == Result.SUCCESS) success = true;
             }
         } catch (RemoteException e) {
@@ -571,7 +592,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private void nativeChangeBarringPwd(String condition, String oldPwd, String newPwd) {
         if (Utilities.DEBUG) Log.i(TAG, "Native change the call barring password to : " + newPwd);
     }
-	
+
     private void handleEvent(String json) {
         try {
             JSONObject jObject = new JSONObject(json);
@@ -584,7 +605,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     handleQueryCallForwardOK(parseCallForwardInfos(json));
                     break;
                 }
-		  case JSONUtils.EVENT_CODE_UT_QUERY_CB_OK: {
+                case JSONUtils.EVENT_CODE_UT_QUERY_CB_OK: {
                     handleQueryCallBarringOK(parseCallBarringInfos(json));
                     break;
                 }
@@ -710,7 +731,7 @@ public class ImsUtImpl extends IImsUt.Stub {
             JSONObject rule = rules.getJSONObject(i);
             boolean enabled = rule.optBoolean(JSONUtils.KEY_UT_CB_RULE_ENABLED, true);
             JSONArray conditions = rule.optJSONArray(JSONUtils.KEY_UT_CB_CONDS);
-            status =  enabled?1:0;
+            status = enabled ? 1 : 0;
             if (conditions != null && conditions.length() == 1) {
                 // This is the normal result.
                 condition = conditions.getInt(0);
@@ -777,8 +798,8 @@ public class ImsUtImpl extends IImsUt.Stub {
             newInfo.mServiceClass = matchedInfo.mServiceClass;
             newInfo.mNumber = matchedInfo.mNumber;
             newInfo.mStatus = matchedInfo.mStatus; // Set it as deactivate
-            newInfo.mNumberType =  0; 
-            newInfo.mRuleset = ruleset; 
+            newInfo.mNumberType = 0;
+            newInfo.mRuleset = ruleset;
             Log.d(TAG, "Build the CF infoEx: " + newInfo);
             return newInfo;
         } else {
@@ -789,8 +810,8 @@ public class ImsUtImpl extends IImsUt.Stub {
             newInfo.mServiceClass = serviceClass;
             newInfo.mNumber = number;
             newInfo.mStatus = 0; // Set it as deactivate
-            newInfo.mNumberType = 0; 
-            newInfo.mRuleset = ruleset; 
+            newInfo.mNumberType = 0;
+            newInfo.mRuleset = ruleset;
             Log.d(TAG, "Build the CF infoEx: " + newInfo);
             return newInfo;
         }
@@ -814,6 +835,7 @@ public class ImsUtImpl extends IImsUt.Stub {
             // Do not found the matched CB info, we'd like to give the result as deactivate.
             return null;
         }
+
     }
 
     private int getConditionFromCFReason(int reason) {
@@ -839,9 +861,9 @@ public class ImsUtImpl extends IImsUt.Stub {
 
     private int getConditionFromCBReason(String sc) {
         if (sc == null) {
-            throw new RuntimeException ("invalid call barring sc");
+            throw new RuntimeException("invalid call barring sc");
         }
-        Log.d(TAG, "getConditionFromCBReason the reason is : " + sc);
+        Log.d(TAG, "getConditionFromCBReason the reason is: " + sc);
 
         if (sc.equals(CommandsInterface.CB_FACILITY_BAOC)) {
             return ImsUtInterface.CB_BAOC;
@@ -865,8 +887,8 @@ public class ImsUtImpl extends IImsUt.Stub {
     }
 
     private int getActionFromCFAction(int cfAction) {
-       switch(cfAction) {
-           case CommandsInterface.CF_ACTION_DISABLE:
+        switch (cfAction) {
+            case CommandsInterface.CF_ACTION_DISABLE:
                return ImsUtInterface.ACTION_DEACTIVATION;
            case CommandsInterface.CF_ACTION_ENABLE:
                return ImsUtInterface.ACTION_ACTIVATION;
@@ -907,7 +929,12 @@ public class ImsUtImpl extends IImsUt.Stub {
                 mUTActions.put(key, action);
             }
 
-            processPendingAction();
+            if (mXCAPEnabled) {
+                mHandler.removeMessages(MSG_DISABLE_XCAP);
+                processPendingAction();
+            } else {
+                mXCAPManager.prepare(Utilities.getPrimaryCardSubId(mContext));
+            }
             return key;
         }
 
@@ -918,28 +945,36 @@ public class ImsUtImpl extends IImsUt.Stub {
             }
 
             if (mCmds.size() < 1) {
-                Log.e(TAG, "There isn't any pending action, do nothing.");
+                Log.d(TAG, "There isn't any pending action, Disable the xcap.");
+                mHandler.sendEmptyMessageDelayed(MSG_DISABLE_XCAP, DELAY_DISALBE_XCAP);
                 return;
             }
 
-            // Get the first cmd, send the pending action to handler.
-            mHandleCmd = true;
+            if (mXCAPEnabled) {
+                // Get the first cmd, send the pending action to handler.
+                mHandleCmd = true;
 
-            Integer key = mCmds.getFirst();
-            UTAction action = mUTActions.get(key);
+                Integer key = mCmds.getFirst();
+                UTAction action = mUTActions.get(key);
 
-            Message msg = new Message();
-            msg.what = action._action;
-            msg.obj = action;
+                Message msg = new Message();
+                msg.what = action._action;
+                msg.obj = action;
 
-            mHandler.sendMessage(msg);
-            Log.d(TAG, "The cmd " + action._name + " will be handled now.");
+                mHandler.sendMessage(msg);
+                Log.d(TAG, "The cmd " + action._name + " will be handled now.");
 
-            if (HANDLE_TIMEOUT && action._timeoutMillis > 0) {
-                Message timeoutMsg = new Message();
-                timeoutMsg.what = MSG_CMD_TIMEOUT;
-                timeoutMsg.arg1 = key;
-                mHandler.sendMessageDelayed(timeoutMsg, action._timeoutMillis);
+                if (action._timeoutMillis > 0) {
+                    Message timeoutMsg = new Message();
+                    timeoutMsg.what = MSG_CMD_TIMEOUT;
+                    timeoutMsg.arg1 = key;
+                    mHandler.sendMessageDelayed(timeoutMsg, action._timeoutMillis);
+                }
+            } else {
+                // As xcap disabled, handle the cmd as failed.
+                ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR,
+                        ImsReasonInfo.CODE_UNSPECIFIED);
+                onActionFailed(error);
             }
         }
 
@@ -948,11 +983,6 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
 
         public void onActionFailed(ImsReasonInfo error) {
-            if (!mHandleCmd) {
-                Log.e(TAG, "Do not handle any cmd now, shouldn't action failed.");
-                return;
-            }
-
             if (mCmds.size() < 1) {
                 Log.e(TAG, "There isn't any pending action, shouldn't action failed.");
                 return;
@@ -964,27 +994,21 @@ public class ImsUtImpl extends IImsUt.Stub {
                 Log.d(TAG, "actionType is : " + actionType);
                 try {
                     // Notify the action failed.
-                    switch (actionType) {
-                        case ACTION_TYPE_QUERY:
-                            if (mListener != null) {
+                    if (mListenerEx != null) {
+                        switch (actionType) {
+                            case ACTION_TYPE_QUERY:
                                 mListener.utConfigurationQueryFailed(ImsUtImpl.this, key, error);
-                            }
-                            break;
-                        case ACTION_TYPE_QUERY_EX:
-                            if (mListenerEx!= null) {
+                                break;
+                            case ACTION_TYPE_QUERY_EX:
                                 mListenerEx.utConfigurationQueryFailed(ImsUtImpl.this, key, error);
-                            }
-                            break;
-                        case ACTION_TYPE_UPDATE:
-                            if (mListener!= null) {
+                                break;
+                            case ACTION_TYPE_UPDATE:
                                 mListener.utConfigurationUpdateFailed(ImsUtImpl.this, key, error);
-                            }
-                            break;
-                        case ACTION_TYPE_UPDATE_EX:
-                            if (mListenerEx!= null) {
+                                break;
+                            case ACTION_TYPE_UPDATE_EX:
                                 mListenerEx.utConfigurationUpdateFailed(ImsUtImpl.this, key, error);
-                            }
-                            break;
+                                break;
+                        }
                     }
                 } catch (RemoteException e) {
                     Log.e(TAG, "Failed to notify the ut configuration acton failed result.");
@@ -1016,7 +1040,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                 UTAction action = mUTActions.get(key);
                 ImsCallForwardInfo info = null;
                 ImsCallForwardInfoEx infoEx = null;
-                Log.d(TAG, "action._action is : " + action._action);
+                Log.d(TAG, "action._action is: " + action._action);
                 if (action._action == MSG_ACTION_QUERY_CALL_FORWARD) {
                     info = findCallForwardInfo(callForwardInfos,
                             (Integer) action._params.get(0), // condition
@@ -1034,31 +1058,31 @@ public class ImsUtImpl extends IImsUt.Stub {
                         // Can not find the call forward info for this action.
                         Log.w(TAG, "Failed to query call forward as can not found matched item.");
                         if (mListener != null) {
-                            mListener.utConfigurationQueryFailed(
-                                    ImsUtImpl.this, key, new ImsReasonInfo());
+                            mListener.utConfigurationQueryFailed(ImsUtImpl.this, key,
+                                    new ImsReasonInfo());
                         }
-                   }
+                    }
                 } else if (action._action == MSG_ACTION_QUERY_CALL_FORWARDING_OPTION) {
                     infoEx = findCallForwardInfoEx(callForwardInfos,
-                            getConditionFromCFReason((Integer) action._params.get(0)),
-                            null,
-                            (Integer) action._params.get(1),
-                            (String) action._params.get(2));
+                            getConditionFromCFReason((Integer) action._params.get(0)), null,
+                            (Integer) action._params.get(1), (String) action._params.get(2));
                     if (infoEx != null) {
                         // Find the call forward info for this action.
                         Log.d(TAG, "Success to query the call forward infoEx: " + infoEx);
-                        if (mListenerEx!= null) {
-                            mListenerEx.utConfigurationCallForwardQueried(
-                                    ImsUtImpl.this, key, new ImsCallForwardInfoEx[] { infoEx });
+                        if (mListenerEx != null) {
+                            mListenerEx.utConfigurationCallForwardQueried(ImsUtImpl.this, key,
+                                    new ImsCallForwardInfoEx[] {
+                                            infoEx
+                                    });
                         }
                     } else {
                         // Can not find the call forward info for this action.
                         Log.w(TAG, "Failed to query call forward as can not found matched item.");
                         if (mListenerEx != null) {
-                            mListenerEx.utConfigurationQueryFailed(
-                                    ImsUtImpl.this, key, new ImsReasonInfo());
+                            mListenerEx.utConfigurationQueryFailed(ImsUtImpl.this, key,
+                                    new ImsReasonInfo());
                         }
-                   }
+                    }
                 } else {
                     Log.e(TAG, "The action do not handle: " + action._action);
                 }
@@ -1072,8 +1096,9 @@ public class ImsUtImpl extends IImsUt.Stub {
             processPendingAction();
         }
 
-        public void onQueryCallBarringFinished(ArrayList<CallBarringInfo> infolist) throws RemoteException {
-           if (!mHandleCmd) {
+        public void onQueryCallBarringFinished(ArrayList<CallBarringInfo> infolist)
+                throws RemoteException {
+            if (!mHandleCmd) {
                 Log.e(TAG, "Do not handle any cmd now, shouldn't query CB finished.");
                 return;
             }
@@ -1092,8 +1117,8 @@ public class ImsUtImpl extends IImsUt.Stub {
                 // Find the call barring info for this action.
                 Log.d(TAG, "Success to query the call barring info: " + info);
                 if (info != null) {
-                    if (mListenerEx!= null) {
-                           mListenerEx.utConfigurationCallBarringResult(key, info);
+                    if (mListenerEx != null) {
+                        mListenerEx.utConfigurationCallBarringResult(key, info);
                     }
                 } else {
                     mListenerEx.utConfigurationCallBarringResult(key, null);
@@ -1104,7 +1129,7 @@ public class ImsUtImpl extends IImsUt.Stub {
             }
             // After action finished, we need try to start the next pending action.
             processPendingAction();
-    }
+        }
 
         public void onQueryCallWaitingFinished(boolean enabled) throws RemoteException {
             if (!mHandleCmd) {
@@ -1189,7 +1214,7 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
     }
 
-    private class MySerServiceCallback extends IVoWifiSerServiceCallback.Stub {
+    private class XCAPServiceCallback extends IVoWifiXCAPCallback.Stub {
         @Override
         public void onEvent(String json) {
             if (Utilities.DEBUG) Log.i(TAG, "Get the vowifi ser event callback.");

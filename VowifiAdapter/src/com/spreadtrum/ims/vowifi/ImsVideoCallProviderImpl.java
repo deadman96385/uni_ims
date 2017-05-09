@@ -81,38 +81,42 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                     break;
                 }
                 case MSG_START_CAMERA: {
-                    String cameraId = (String) msg.obj;
-                    if (mCallSession.startCamera(cameraId) == Result.SUCCESS) {
-                        mCameraId = cameraId;
-                        // As set camera success, we'd like to request the camera capabilities.
-                        mHandler.sendEmptyMessage(MSG_REQUEST_CAMERA_CAPABILITIES);
-                    }
+                    synchronized (this) {
+                        String cameraId = (String) msg.obj;
+                        if (mCallSession.startCamera(cameraId) == Result.SUCCESS) {
+                            mCameraId = cameraId;
+                            // As set camera success, we'd like to request the camera capabilities.
+                            mHandler.sendEmptyMessage(MSG_REQUEST_CAMERA_CAPABILITIES);
+                        }
 
-                    // Enable the rotate now.
-                    mOrientationListener.enable();
-                    break;
+                        // Enable the rotate now.
+                        mOrientationListener.enable();
+                        break;
+                    }
                 }
                 case MSG_STOP_CAMERA: {
-                    int res = Result.SUCCESS;
-                    res = res & mCallSession.stopLocalRender(mPreviewSurface, mCameraId);
-                    res = res & mCallSession.stopCamera();
-                    res = res & mCallSession.stopCapture(mCameraId);
+                    synchronized (this) {
+                        int res = Result.SUCCESS;
+                        res = res & mCallSession.stopLocalRender(mPreviewSurface, mCameraId);
+                        res = res & mCallSession.stopCamera();
+                        res = res & mCallSession.stopCapture(mCameraId);
 
-                    if (res == Result.FAIL) {
-                        // Sometimes, we will stop the camera failed as the camera already
-                        // disconnect. For example, refer to this log:
-                        // "Disconnect called on already disconnected client for device 1"
-                        Log.w(TAG, "The camera can not stopped now, please check the reason.");
+                        if (res == Result.FAIL) {
+                            // Sometimes, we will stop the camera failed as the camera already
+                            // disconnect. For example, refer to this log:
+                            // "Disconnect called on already disconnected client for device 1"
+                            Log.w(TAG, "The camera can not stopped now, please check the reason.");
+                        }
+
+                        // Reset the values.
+                        mCameraId = null;
+                        mCameraCapabilities = null;
+                        mPreviewSurface = null;
+
+                        // Disable the rotate now.
+                        mOrientationListener.disable();
+                        break;
                     }
-
-                    // Reset the values.
-                    mCameraId = null;
-                    mCameraCapabilities = null;
-                    mPreviewSurface = null;
-
-                    // Disable the rotate now.
-                    mOrientationListener.disable();
-                    break;
                 }
                 case MSG_SWITCH_CAMERA: {
                     // For switch the camera, we'd like to split this action to two step:
@@ -123,12 +127,14 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                     break;
                 }
                 case MSG_SET_DISPLAY_SURFACE: {
-                    Surface displaySurface = (Surface) msg.obj;
-                    if (displaySurface != null
-                            && mCallSession.startRemoteRender(displaySurface) == Result.SUCCESS) {
-                        mDisplaySurface = displaySurface;
+                    synchronized (this) {
+                        Surface displaySurface = (Surface) msg.obj;
+                        if (displaySurface != null) {
+                            int res = mCallSession.startRemoteRender(displaySurface);
+                            if (res == Result.SUCCESS) mDisplaySurface = displaySurface;
+                        }
+                        break;
                     }
-                    break;
                 }
                 case MSG_SET_PREVIEW_SURFACE: {
                     Surface previewSurface = (Surface) msg.obj;
@@ -166,12 +172,6 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                                     + cameraCapabilities.getWidth() + ", height = "
                                     + cameraCapabilities.getHeight());
                             changeCameraCapabilities(cameraCapabilities);
-                            if (mCallSession.isMultiparty()) {
-                                // FIXME: For conference video call, as there isn't the preview
-                                //        surface, so need set preview surface msg with null
-                                //        surface here.
-                                mHandler.obtainMessage(MSG_SET_PREVIEW_SURFACE).sendToTarget();
-                            }
                         }
                         mCameraCapabilities = cameraCapabilities;
                     } else {
@@ -181,18 +181,21 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                     break;
                 }
                 case MSG_STOP_REMOTE_RENDER: {
-                    if (mDisplaySurface == null) {
-                        Log.e(TAG, "Failed to stop remote render as the display surface is null.");
+                    synchronized (this) {
+                        if (mDisplaySurface == null) {
+                            Log.e(TAG, "Failed to stop remote render, display surface is null.");
+                            break;
+                        }
+
+                        int res = mCallSession.stopRemoteRender(mDisplaySurface, false);
+                        if (res == Result.SUCCESS) {
+                            // Stop the remote render success, set the display surface to null.
+                            mDisplaySurface = null;
+                        } else {
+                            Log.w(TAG, "Can not stop remote render now.");
+                        }
                         break;
                     }
-
-                    if (mCallSession.stopRemoteRender(mDisplaySurface, false) == Result.SUCCESS) {
-                        // Stop the remote render success, set the display surface to null.
-                        mDisplaySurface = null;
-                    } else {
-                        Log.w(TAG, "Can not stop remote render now.");
-                    }
-                    break;
                 }
                 case MSG_SEND_MODIFY_REQUEST: {
                     boolean isVideo = (Boolean) msg.obj;
@@ -322,36 +325,38 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
     @Override
     public void onSetCamera(String cameraId) {
-        if (Utilities.DEBUG) {
-            Log.i(TAG, "On set the camera from " + Camera.toString(mCameraId) + " to "
-                    + Camera.toString(cameraId));
-        }
-
-        if (mCameraId != null && cameraId == null) {
-            // Set the camera to null, it means stop the camera capture.
-            mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
-        } else if (cameraId != null && !cameraId.equals(mCameraId)) {
-            // Start the camera or switch the camera.
-            if (mCameraId == null) {
-                // Start the camera.
-                mHandler.sendMessage(mHandler.obtainMessage(MSG_START_CAMERA, cameraId));
-            } else {
-                mHandler.sendMessage(mHandler.obtainMessage(MSG_SWITCH_CAMERA, cameraId));
+        synchronized (this) {
+            if (Utilities.DEBUG) {
+                Log.i(TAG, "On set the camera from " + Camera.toString(mCameraId) + " to "
+                        + Camera.toString(cameraId));
             }
-        } else {
-            // case: mCameraId == null && cameraId == null or cameraId equals mCameraId
-            Log.d(TAG, "Set the camera to " + Camera.toString(cameraId) + ", but the old camera is "
-                    + Camera.toString(mCameraId));
-            if (cameraId == null) {
-                // If the new camera is null, and the old camera is null, it means the start camera
-                // action do not handle now. So we'd like to remove the start camera action to keep
-                // the last camera state as null.
-                mHandler.removeMessages(MSG_START_CAMERA);
+
+            if (mCameraId != null && cameraId == null) {
+                // Set the camera to null, it means stop the camera capture.
+                mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
+            } else if (cameraId != null && !cameraId.equals(mCameraId)) {
+                // Start the camera or switch the camera.
+                if (mCameraId == null) {
+                    // Start the camera.
+                    mHandler.sendMessage(mHandler.obtainMessage(MSG_START_CAMERA, cameraId));
+                } else {
+                    mHandler.sendMessage(mHandler.obtainMessage(MSG_SWITCH_CAMERA, cameraId));
+                }
             } else {
-                // If the new camera is front or back, and it is same as the old, it means the stop
-                // camera action do not handle now. So we'd like to remove the stop camera action
-                // to keep the last camera state.
-                mHandler.removeMessages(MSG_STOP_CAMERA);
+                // case: mCameraId == null && cameraId == null or cameraId equals mCameraId
+                Log.d(TAG, "Set the camera to " + Camera.toString(cameraId)
+                        + ", but the old camera is " + Camera.toString(mCameraId));
+                if (cameraId == null) {
+                    // If the new camera is null, and the old camera is null, it means the start
+                    // camera action do not handle now. So we'd like to remove the start camera
+                    // action to keep the last camera state as null.
+                    mHandler.removeMessages(MSG_START_CAMERA);
+                } else {
+                    // If the new camera is front or back, and it is same as the old, it means the
+                    // stop camera action do not handle now. So we'd like to remove the stop camera
+                    // action to keep the last camera state.
+                    mHandler.removeMessages(MSG_STOP_CAMERA);
+                }
             }
         }
     }
@@ -367,8 +372,13 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
     @Override
     public void onSetDisplaySurface(Surface surface) {
-        if (Utilities.DEBUG) Log.i(TAG, "On set the display surface to: " + surface);
-        mHandler.sendMessage(mHandler.obtainMessage(MSG_SET_DISPLAY_SURFACE, surface));
+        synchronized (this) {
+            if (Utilities.DEBUG) Log.i(TAG, "On set the display surface to: " + surface);
+            if (mDisplaySurface != null) {
+                mHandler.sendEmptyMessage(MSG_STOP_REMOTE_RENDER);
+            }
+            mHandler.sendMessage(mHandler.obtainMessage(MSG_SET_DISPLAY_SURFACE, surface));
+        }
     }
 
     @Override
@@ -422,10 +432,15 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     }
 
     public void stopAll() {
-        if (mCameraId != null) {
+        synchronized (this) {
             Log.d(TAG, "Stop all the video action.");
-            mHandler.sendEmptyMessage(MSG_STOP_REMOTE_RENDER);
-            mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
+            if (mDisplaySurface != null) {
+                mHandler.sendEmptyMessage(MSG_STOP_REMOTE_RENDER);
+            }
+
+            if (mCameraId != null) {
+                mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
+            }
         }
     }
 

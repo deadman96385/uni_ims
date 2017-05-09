@@ -10,7 +10,7 @@ LOCAL_CERTIFICATE := platform
 
 LOCAL_JAVA_LIBRARIES := telephony-common ims-common radio_interactor_common
 
-LOCAL_STATIC_JAVA_LIBRARIES := vowifi_aidl \
+LOCAL_STATIC_JAVA_LIBRARIES := \
     android.hardware.radio-V1.0-java-static \
     android.hardware.radio.deprecated-V1.0-java-static \
     vendor.sprd.hardware.radio-V1.0-java-static
@@ -25,7 +25,6 @@ LOCAL_SRC_FILES += $(call all-java-files-under, $(vowifi_adapter_dir)/src)
 res_dirs := res $(vowifi_adapter_dir)/res
 LOCAL_RESOURCE_DIR := $(addprefix $(LOCAL_PATH)/, $(res_dirs))
 LOCAL_AAPT_FLAGS := --auto-add-overlay
-
 
 LOCAL_DEX_PREOPT := false
 
