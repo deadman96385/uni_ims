@@ -28,6 +28,10 @@ import com.android.internal.telephony.GsmCdmaPhone;
 import com.android.internal.telephony.CallStateException;
 import com.android.internal.telephony.CommandsInterface;
 import android.os.Message;
+import android.widget.CheckBox;
+import android.preference.PreferenceManager;
+import android.content.SharedPreferences;
+import com.android.ims.ImsManager;
 
 import android.telephony.TelephonyManagerEx;
 
@@ -240,6 +244,64 @@ public class VTManagerUtils {
         dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_KEYGUARD_DIALOG);
         dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
         return dialog;
+    }
+    /*SPRD: add for bug673215 Vodafone new feature*/
+    public static AlertDialog showVowifiRegisterToast(Context context) {
+
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+        boolean nomore = sp.getBoolean("nomore", false);
+        if (nomore) {
+            log("showVoWifiNotification nomore ");
+            return null;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+
+        LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View view = inflater.inflate(R.xml.vowifi_register_dialog, null);
+
+        builder.setView(view);
+        builder.setTitle(context.getString(R.string.vowifi_attation));
+        builder.setMessage(context.getString(R.string.vowifi_connected_message));
+        CheckBox cb = (CheckBox) view.findViewById(R.id.nomore);
+
+        builder.setPositiveButton(context.getString(R.string.vowifi_connected_continue), new android.content.DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                if (cb.isChecked()) {
+                    SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+                    SharedPreferences.Editor editor = sp.edit();
+                    editor.putBoolean("nomore", true);
+                    editor.apply();
+                }
+                log("Vowifi service Continue, cb.isChecked = " + cb.isChecked());
+                if (dialog != null) {
+                    dialog.dismiss();
+                    dialog = null;
+                }
+            }
+        });
+        builder.setNegativeButton(context.getString(R.string.vowifi_connected_disable), new android.content.DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                if (cb.isChecked()) {
+                    SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+                    SharedPreferences.Editor editor = sp.edit();
+                    editor.putBoolean("nomore", true);
+                    editor.apply();
+                }
+                log("Vowifi service disable, cb.isChecked = " + cb.isChecked());
+                ImsManager.setWfcSetting(context, false);
+                if (dialog != null) {
+                    dialog.dismiss();
+                    dialog = null;
+                }
+            }
+        });
+        builder.setCancelable(false);
+        AlertDialog dialog = builder.create();
+        dialog = builder.create();
+        dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_DIALOG);
+        dialog.show();
+        return  dialog;
     }
 
     /* SPRD: Add feature of low battery for Reliance @{ */

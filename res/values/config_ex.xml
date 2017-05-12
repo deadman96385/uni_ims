@@ -3,4 +3,7 @@
 <string name="ims_cmcc_ImsCmccHelper">
         com.spreadtrum.ims.imsCmccPlugin.ImsCmccPlugin
     </string>
+    <string name="ims_vodafone_ImsVodafonePlugin">
+        com.spreadtrum.vodafoneplugin.ImsVodafonePlugin
+    </string>
 </resources>

@@ -41,4 +41,8 @@
      <string name="low_battery_convert_to_voice_call">"降為語音"</string>
 <string name="vowifi_attation">Vowifi 提示</string>
 <string name="vowifi_regist_fail_content">當前網絡不支持vowifi</string>
+ <string name="vowifi_connected_continue">繼續</string>
+ <string name="vowifi_connected_disable">關閉</string>
+ <string name="vowifi_connected_checkbox_text">不再提示</string>
+ <string name="vowifi_connected_message">當前是vowifi網絡，緊急呼叫可能無法正常工作，繼續使用vowifi服務或是關閉wifi calling?</string>
 </resources>
