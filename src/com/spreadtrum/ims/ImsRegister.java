@@ -373,6 +373,15 @@ public class ImsRegister {
                 return SLOTTWO_PHONE_ID;
             }
             break;
+        // L+W mode SRPD: 675103
+        case 255:
+            if (workMode[SLOTTWO_PHONE_ID] == 9
+                || workMode[SLOTTWO_PHONE_ID] == 6
+                || workMode[SLOTTWO_PHONE_ID] == 7) {
+
+                return SLOTTWO_PHONE_ID;
+            }
+            break;
         }
         return DEFAULT_PHONE_ID;
     }
