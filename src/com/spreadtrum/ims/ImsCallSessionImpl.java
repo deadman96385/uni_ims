@@ -664,6 +664,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCallee = null;
         mImsVideoCallProvider = null;
         mCi.unSetOnSuppServiceNotification(mHandler);//SPRD:Add for bug582072
+        mImsConferenceState = null; //SPRD:Add for bug672538
     }
 
     /**
