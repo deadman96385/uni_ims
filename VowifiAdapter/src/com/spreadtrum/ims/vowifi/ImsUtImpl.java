@@ -882,7 +882,7 @@ public class ImsUtImpl extends IImsUt.Stub {
         private HashMap<Integer, UTAction> mUTActions = null;
 
         public CmdManager() {
-            mCmdKeyMgr = new AtomicInteger(1);
+            mCmdKeyMgr = new AtomicInteger(101);
             mCmds = new LinkedList<Integer>();
             mUTActions = new HashMap<Integer, UTAction>();
         }
