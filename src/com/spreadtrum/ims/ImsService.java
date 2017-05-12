@@ -69,7 +69,7 @@ import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.DataRouterState;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.IncomingCallAction;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.VoWifiCallback;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.WifiState;
-
+import com.spreadtrum.ims.ImsVodafoneHelper;
 
 public class ImsService extends Service {
     private static final String TAG = ImsService.class.getSimpleName();
@@ -1904,6 +1904,8 @@ class MyVoWifiCallback implements VoWifiCallback {
         updateImsRegisterState();
         ImsServiceImpl imsService = mImsServiceImplMap.get(
                 Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
+        int oldImsFeature = mCurrentImsFeature;//SPRD:add for bug673215
+
         if(mInCallHandoverFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
             if(mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
@@ -1938,6 +1940,13 @@ class MyVoWifiCallback implements VoWifiCallback {
             }
         }
         notifyImsRegisterState();
+
+        //SPRD:add for bug673215
+        Log.d(TAG,"updateImsFeature oldImsFeature = "+oldImsFeature);
+        if(mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI && oldImsFeature != mCurrentImsFeature){
+            ImsVodafoneHelper.getInstance(getApplicationContext()).showVowifiRegisterToast(getApplicationContext());
+
+        }
 
         Log.i(TAG,"updateImsFeature->mWifiRegistered:"+mWifiRegistered +" mVolteRegistered:"+mVolteRegistered
                 +" mCurrentImsFeature:"+mCurrentImsFeature +" mInCallHandoverFeature:"+mInCallHandoverFeature);
