@@ -1567,6 +1567,21 @@ public class ImsService extends Service {
             }
             return "";
         }
+        /**
+         * used for set register or de-regesiter Vowifi
+         * para action
+         * 0 de-register before start call
+         * 1 register after call end
+         * **/
+       public void setVowifiRegister(int action) {
+           try {
+               if (mImsServiceListenerEx != null) {
+                   mImsServiceListenerEx.onSetVowifiRegister(action);
+               }
+           } catch (RemoteException e) {
+               e.printStackTrace();
+           }
+       }
     };
 
     private final IImsMultiEndpoint.Stub mImsMultiEndpointBinder = new IImsMultiEndpoint.Stub()  {
