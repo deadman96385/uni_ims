@@ -55,6 +55,7 @@ import com.android.internal.telephony.VolteConfig;
 import android.text.TextUtils;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.DataRouterState;
+import com.android.internal.telephony.GsmCdmaCallTrackerEx;
 
 import com.android.ims.internal.IImsServiceListenerEx;
 import android.content.ComponentName;
@@ -349,6 +350,9 @@ public class ImsServiceImpl {
                         if(responseArray[0] == ImsService.ImsPDNStatus.IMS_PDN_READY){
                                 mCi.getImsPcscfAddress(mHandler.obtainMessage(EVENT_IMS_GET_PCSCF_ADDRESS));
                         }
+                        //SPRD: add for bug362615
+                        Message mess = mPhone.getCallTracker().obtainMessage(GsmCdmaCallTrackerEx.EVENT_PDN_STATE_CHANGE,responseArray[0],0);
+                        mPhone.getCallTracker().sendMessage(mess);
                     }
                     break;
                 case EVENT_IMS_NETWORK_INFO_UPDATE:
