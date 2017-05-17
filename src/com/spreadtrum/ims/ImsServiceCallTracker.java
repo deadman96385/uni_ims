@@ -794,9 +794,25 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         }
         return count >1;
     }
+
     public void onVideoStateChanged(int videoState){
         if(mImsService != null){
             mImsService.onVideoStateChanged(videoState);
         }
     }
+
+    /* SPRD: add for bug676047 @{ */
+    public boolean isHasInLocalConferenceSession(){
+        synchronized(mSessionList) {
+            for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it =
+                 mSessionList.entrySet().iterator(); it.hasNext();) {
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+                if (e.getValue().isInLocalConference() && e.getValue().isActiveCall()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    /* @} */
 }

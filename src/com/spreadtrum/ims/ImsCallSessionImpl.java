@@ -88,6 +88,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsTxDisable = false;
     private boolean mIsLocalHold;
     private boolean mLocalConferenceUpdate;
+    // SPRD: add for bug676047
+    private boolean mIsInLocalConference = false;
     private boolean mIsRemoteHold;//SPRD: modify by bug666088
 
     private boolean mIsMegerActionHost;
@@ -301,7 +303,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 break;
             case ACTIVE:
                 mState = ImsCallSession.State.ESTABLISHED;
-                if(mLocalConferenceUpdate){
+                if(mLocalConferenceUpdate && mIsInLocalConference){
                     mLocalConferenceUpdate = false;
                     mCi.imsEnableLocalConference(true,null);
                 }
@@ -323,7 +325,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 }
                 break;
             case HOLDING:
-                if(mLocalConferenceUpdate){
+                if(mLocalConferenceUpdate && !mIsInLocalConference){
                     mLocalConferenceUpdate = false;
                     mCi.imsEnableLocalConference(false,null);
                 }
@@ -1095,10 +1097,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 mCi.imsHoldSingleCall(mImsDriverCall.index, true,
                         mHandler.obtainMessage(ACTION_COMPLETE_HOLD,this));
                 mLocalConferenceUpdate = true;
+                // SPRD: add for bug676047
+                mIsInLocalConference = false;
             } else if(participants[0].contentEquals("resume")){
                 mCi.imsHoldSingleCall(mImsDriverCall.index, false,
                         mHandler.obtainMessage(ACTION_COMPLETE_HOLD,this));
                 mLocalConferenceUpdate = true;
+                // SPRD: add for bug676047
+                mIsInLocalConference = true;
             }
         } else {
             Log.w(TAG, "extendToConference-> participants:"+participants +" mImsDriverCall:"+mImsDriverCall);
@@ -1596,6 +1602,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         mCi.invokeOemRilRequestStrings(cmd, null);
     }
+
     public void updateVideoState(){
         int newVideoState = ImsCallProfile
                 .getVideoStateFromImsCallProfile(mImsCallProfile);
@@ -1605,4 +1612,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             mImsServiceCallTracker.onVideoStateChanged(mVideoState);
         }
     }
+
+    /* SPRD: add for bug676047 @{ */
+    public boolean isInLocalConference(){
+        return mIsInLocalConference;
+    }
+
+    public boolean getIsInLocalConference(){
+        return mImsServiceCallTracker.isHasInLocalConferenceSession();
+    }
+    /* @} */
 }

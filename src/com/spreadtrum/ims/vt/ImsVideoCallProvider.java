@@ -461,9 +461,10 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 if(mVolteMediaUpdateDialog != null){
                    mVolteMediaUpdateDialog.dismiss();
                 }
-                /*SPRD: add for bug606122, 605475@{*/
+                /*SPRD: add for bug606122, 605475, 676047@{*/
                 if(!TelephonyManager.getDefault().isVideoCallingEnabled()
-                        || mImsCallSessionImpl.getCurrentUserId() != UserHandle.USER_OWNER){
+                        || mImsCallSessionImpl.getCurrentUserId() != UserHandle.USER_OWNER
+                        || mImsCallSessionImpl.getIsInLocalConference()){
                     mCi.responseVolteCallMediaChange(false, mCallIdMessage);
                     return;
                 }/*@}*/
