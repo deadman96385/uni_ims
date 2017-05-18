@@ -137,7 +137,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                 }
 		case MSG_ACTION_CHANGE_LOCK_PWD:{
 		     UTAction action = (UTAction) msg.obj;
-		     int condition =  (Integer) action._params.get(0);
+		     String condition =  (String) action._params.get(0);
 		     String oldPwd =  (String) action._params.get(1);
 		     String newPwd =  (String) action._params.get(2);
 		     nativeChangeBarringPwd(condition, oldPwd, newPwd);
@@ -555,7 +555,7 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
     }
 
-    private void nativeChangeBarringPwd(int condition, String oldPwd, String newPwd) {
+    private void nativeChangeBarringPwd(String condition, String oldPwd, String newPwd) {
         if (Utilities.DEBUG) Log.i(TAG, "Native change the call barring password to : " + newPwd);
     }
 	
