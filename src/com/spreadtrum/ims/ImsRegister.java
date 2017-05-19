@@ -117,6 +117,7 @@ public class ImsRegister {
                 } else {
                     log("EVENT_RADIO_STATE_CHANGED -> radio is on");
                     initISIM();
+                    SetUserAgent();//SPRD:add for user agent future 670075
                 }
                 break;
             case EVENT_INIT_ISIM_DONE:
@@ -421,4 +422,20 @@ public class ImsRegister {
     public void onImsPDNReady(){
         mIMSBearerEstablished = true;
     }
+    /**
+     * SPRD:add for user agent future
+     * userAgent: deviceName_SW version
+     ***/
+    private void SetUserAgent() {
+        String userAgent = SystemProperties.get("ro.config.useragent", "SPRD VOLTE");
+        log("SetUserAgent() userAgent = " + userAgent);
+        if ("SPRD VOLTE".equals(userAgent)) {
+            return;
+        }
+        String[] cmd = new String[1];
+        cmd[0] = "AT+SPENGMDVOLTE=22,1," + "\"" + userAgent + "\"";
+        log("SetUserAgent :" + cmd[0]);
+        mCi.invokeOemRilRequestStrings(cmd, null);
+    }/* @} */
+
 }
