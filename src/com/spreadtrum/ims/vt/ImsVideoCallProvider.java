@@ -44,7 +44,8 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     private PowerManager.WakeLock mPartialWakeLock;
     private Message mCallIdMessage;
     private boolean mIsVideo;//SPRD:add for bug563112
-    private boolean mIsAlertVideo = false;
+    public boolean mIsVoiceRingTone = false;//SPRD: add for bug677255
+    public boolean mIsOrigionVideo = false;
 
     /** volte media event code. */
     private static final int EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 500;
@@ -138,6 +139,9 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         createWakeLock(mContext.getApplicationContext());
         if(isVideoCall(mImsCallSessionImpl.mImsCallProfile.mCallType)){
            onVTConnectionEstablished(mImsCallSessionImpl);
+            log("ImsVideoCallProvider mIsOrigionVideo = true");
+            mIsOrigionVideo = true;
+            mIsVoiceRingTone = false;
         }
         mNegotiatedCallProfile.mCallType = mImsCallSessionImpl.mImsCallProfile.mCallType;
         mNegotiatedCallProfile.mMediaProfile.mAudioQuality =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mAudioQuality;
@@ -382,27 +386,37 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
      public void updateNegotiatedCallProfile(ImsCallSessionImpl session){
          ImsCallProfile imsCallProfile = session.getCallProfile();
          VideoProfile responseProfile = new VideoProfile(VideoProfile.STATE_AUDIO_ONLY);
-         log("updateNegotiatedCallProfilee->mCallType="+imsCallProfile.mCallType );
+         log("updateNegotiatedCallProfilee->mCallType="+imsCallProfile.mCallType+" session state = "+session.getState()+ "mIsVoiceRingTone ="+mIsVoiceRingTone);
          //SPRD:fix for bug 597075
          if(isVideoCall(imsCallProfile.mCallType)
                  && (session != null && session.mImsDriverCall != null && session.mImsDriverCall.state != ImsDriverCall.State.HOLDING)){
              mIsVideo = true;//SPRD:add for bug563112
              responseProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
              onVTConnectionEstablished(session);
-             //SPRD:add for bug669739
-             if(session.getState() == ImsCallSession.State.NEGOTIATING){
-                 log("updateNegotiatedCallProfilee->mIsAlertVideo ="+mIsAlertVideo);
-                 mIsAlertVideo = true;
+             //SPRD:add for bug669739 & bug677255
+             if (session.getState() == ImsCallSession.State.NEGOTIATING && !mIsOrigionVideo && !session.mImsDriverCall.isMT) {
+                 log("updateNegotiatedCallProfilee->set mIsVoiceRingTone = true");
+                 mIsVoiceRingTone = true;
              }
          } else {
-             /* SPRD:add for bug563112 @{ */
-             if(!isVideoCall(imsCallProfile.mCallType) && mIsVideo && (session != null && session.mImsDriverCall != null) &&!mIsAlertVideo){
-                 Toast.makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
+             /* SPRD:add for bug563112 & 677255@{ */
+             if(!isVideoCall(imsCallProfile.mCallType) && mIsVideo && (session != null && session.mImsDriverCall != null) ){
+                 if(!mIsVoiceRingTone) {
+                     Toast.makeText(mContext, mContext.getResources().getString(R.string.videophone_fallback_title), Toast.LENGTH_LONG).show();
+                 }
+                 log("updateNegotiatedCallProfilee->makeText");
                  mIsVideo = false;
              }
              /* @} */
              onVTConnectionDisconnected(session);
          }
+
+         if (session.getState() == ImsCallSession.State.ESTABLISHED && mIsVoiceRingTone) {
+             //SPRD: add for bug677255
+             log("updateNegotiatedCallProfilee->set mIsVoiceRingTone false");
+             mIsVoiceRingTone = false;
+         }
+
          if (mLocalRequestProfile != null) {
              int result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_FAIL;
              if(mImsCallSessionImpl.getLocalRequestProfile().mCallType == imsCallProfile.mCallType){
