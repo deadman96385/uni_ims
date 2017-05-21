@@ -10,6 +10,7 @@ import android.util.Log;
 import com.spreadtrum.ims.vowifi.Utilities.AttachState;
 import com.spreadtrum.ims.vowifi.Utilities.IPVersion;
 import com.spreadtrum.ims.vowifi.Utilities.JSONUtils;
+import com.spreadtrum.ims.vowifi.Utilities.NativeErrorCode;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.S2bType;
@@ -303,7 +304,7 @@ public class VoWifiSecurityManager extends ServiceManager {
                     }
                     case JSONUtils.EVENT_CODE_ATTACH_STOPPED: {
                         int errorCode = jObject.optInt(JSONUtils.KEY_STATE_CODE);
-                        boolean forHandover = jObject.optBoolean(JSONUtils.KEY_HANDOVER, false);
+                        boolean forHandover = (errorCode == NativeErrorCode.IKE_HANDOVER_STOP);
                         Log.d(TAG, "S2b attach stopped, errorCode: " + errorCode + ", for handover: "
                                 + forHandover);
 

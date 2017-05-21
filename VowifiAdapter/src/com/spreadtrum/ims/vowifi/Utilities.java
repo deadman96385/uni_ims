@@ -161,6 +161,7 @@ public class Utilities {
 
     public static class NativeErrorCode {
         public static final int IKE_INTERRUPT_STOP   = 0xD200 + 198;
+        public static final int IKE_HANDOVER_STOP    = 0xD200 + 199;
         public static final int DPD_DISCONNECT       = 0xD200 + 15;
         public static final int IPSEC_REKEY_FAIL     = 0xD200 + 10;
         public static final int IKE_REKEY_FAIL       = 0xD200 + 11;
