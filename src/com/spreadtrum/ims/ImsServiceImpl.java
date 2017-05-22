@@ -247,16 +247,18 @@ public class ImsServiceImpl {
                             mImsServiceState.mImsRegistered = (responseArray[0] != 0 && responseArray[1]== 1);
                             mImsServiceState.mSrvccState = -1;
                         }
-                        if(ImsManagerEx.isDualVoLTEActive()){
-                            TelephonyManager.setTelephonyProperty(mServiceId-1, "gsm.sys.volte.state",
-                                    mImsServiceState.mImsRegistered ? "1" :"0");
-                        }
-                        notifyRegisterStateChange();
+                        //if(ImsManagerEx.isDualVoLTEActive()){
+                        //}
                     } else {
-                    	Log.i(TAG,"EVENT_IMS_STATE_DONE->ar.exception");
+                        Log.i(TAG,"EVENT_IMS_STATE_DONE->ar.exception mServiceId:"+mServiceId);
                         mImsServiceState.mImsRegistered = false;
-                        notifyRegisterStateChange();
                     }
+                    //add for SPRD:Bug 678430
+                    Log.i(TAG, "setTelephonyProperty mServiceId:"+mServiceId+"mImsRegistered:"+mImsServiceState.mImsRegistered);
+                    Log.i(TAG, "setTelephonyProperty isDualVolte:"+ImsManagerEx.isDualVoLTEActive());
+                    TelephonyManager.setTelephonyProperty(mServiceId-1, "gsm.sys.volte.state",
+                            mImsServiceState.mImsRegistered ? "1" :"0");
+                    notifyRegisterStateChange();
                     Log.i(TAG,"EVENT_IMS_STATE_DONE->mServiceState:" + mImsServiceState.mImsRegistered);
                     break;
                 case DctConstants.EVENT_ICC_CHANGED:
