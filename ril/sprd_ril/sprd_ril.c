@@ -11976,6 +11976,21 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_EXT_REQUEST_QUERY_LTE_CTCC_SINR:
             requestQueryLTECtcc(channelID, data, datalen, t, 1);
             break;
+        case RIL_EXT_REQUEST_SET_SMS_BEARER:{
+            p_response = NULL;
+            int n = ((int*)data)[0];
+            char cmd[32] = {0};
+            snprintf(cmd, sizeof(cmd), "AT+CASIMS=%d", n);
+            err = at_send_command(ATch_type[channelID], cmd, &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+
+            at_response_free(p_response);
+            break;
+        }
 #endif  // RIL_SUPPORTED_OEMSOCKET
 #elif defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
         case RIL_REQUEST_GET_CELL_BROADCAST_CONFIG:

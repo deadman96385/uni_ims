@@ -256,6 +256,7 @@
     ,{RIL_EXT_REQUEST_SET_BAND_INFO_MODE, dispatchInts, responseVoid}
     ,{RIL_EXT_REQUEST_QUERY_LTE_CTCC, dispatchVoid, responseString}
     ,{RIL_EXT_REQUEST_QUERY_LTE_CTCC_SINR, dispatchVoid, responseString}
+    ,{RIL_EXT_REQUEST_SET_SMS_BEARER, dispatchInts, responseVoid}
 #endif
 #endif
 #if defined (GLOBALCONFIG_RIL_SAMSUNG_LIBRIL_INTF_EXTENSION)
