@@ -501,7 +501,7 @@ public class VideoCallCameraManager {
 
         @Override
         public void onOrientationChanged(int orientation) {
-            /*int displayOrientation = mDeviceRotation;
+            int displayOrientation = mDeviceRotation;
             if (orientation != OrientationEventListener.ORIENTATION_UNKNOWN) {
                 if (orientation >= 350 || orientation <= 10) {
                     displayOrientation = 0;
@@ -519,7 +519,7 @@ public class VideoCallCameraManager {
                 mDeviceRotation = displayOrientation;
                 mHandler.removeMessages(EVENT_CHANGE_ORIENTATION);
                 mHandler.sendEmptyMessageDelayed(EVENT_CHANGE_ORIENTATION, 200);
-            }*/
+            }
         }
     }
 
