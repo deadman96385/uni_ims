@@ -146,6 +146,11 @@ public class VoWifiCallManager extends ServiceManager {
 
         @Override
         public void handleMessage(Message msg) {
+            if (mSessionList == null || mSessionList.isEmpty()) {
+                Log.d(TAG, "There isn't any call, ignore the SRVCC event: " + msg.what);
+                return;
+            }
+
             switch(msg.what) {
                 case MSG_SRVCC_START:
                     Log.d(TAG, "Will handle the SRVCC start event.");
