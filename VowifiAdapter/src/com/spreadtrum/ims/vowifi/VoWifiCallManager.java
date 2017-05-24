@@ -1074,7 +1074,6 @@ public class VoWifiCallManager extends ServiceManager {
         switch (eventCode) {
             case JSONUtils.EVENT_CODE_CALL_HOLD_OK:
             case JSONUtils.EVENT_CODE_CONF_HOLD_OK: {
-                toastTextResId = R.string.vowifi_hold_success;
                 callSession.updateAliveState(false /* held, do not alive */);
                 listener.callSessionHeld(callSession, callSession.getCallProfile());
                 // As the call hold, if the call is video call, we need stop all the video.
