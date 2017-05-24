@@ -1272,13 +1272,13 @@ public class VoWifiCallManager extends ServiceManager {
                 ImsReasonInfo info;
                 String category = getEmergencyCallCategory(urnUri);
                 if (category != null) {
-                    // need to retry by cellular
+                    // need to retry an emergency call by cellular
                     info = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED,
                             ImsReasonInfo.EXTRA_CODE_CALL_RETRY_NORMAL, category);
                 } else {
-                    // alert fail
-                    info = new ImsReasonInfo(ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE,
-                            ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE, reason);
+                 // need to retry an normal call by cellular
+                    info = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED,
+                            ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED, reason);
                 }
                 listener.callSessionStartFailed(callSession, info);
             }
