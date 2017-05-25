@@ -174,7 +174,6 @@ MMEncRet MP4EncGetCodecCapability(MP4Handle *mp4Handle, MMEncCapability *Capabil
     case SHARK:	//limited under 1080p
     case TSHARK:
     case SHARKL:
-    case PIKEL:
     case SHARKL64:
     case SHARKLT8:
         Capability->max_width = 1920;
@@ -182,6 +181,7 @@ MMEncRet MP4EncGetCodecCapability(MP4Handle *mp4Handle, MMEncCapability *Capabil
         break;
     case DOLPHIN://limited under 720p
     case PIKE:
+    case PIKEL:
         Capability->max_width = 1280;
         Capability->max_height = 1023; //720;
         break;
