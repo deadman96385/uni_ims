@@ -40,4 +40,6 @@
      <string name="low_battery_continue_video_call">হ্যাঁ</string>
      <string name="low_battery_convert_to_voice_call">"রূপান্তরিত করুন"</string>
 
+    <string name="vowifi_attation">"Vowifi মনোযোগ"</string>
+     <string name="vowifi_regist_fail_content">"নেটওয়ার্ক Vowifi সমর্থন করেনা"</string>
 </resources>

@@ -40,4 +40,6 @@
      <string name="low_battery_continue_video_call">"होय"</string>
      <string name="low_battery_convert_to_voice_call">"रुपांतर"</string>
 
+    <string name="vowifi_attation">"Vowifi लक्षवेध"</string>
+     <string name="vowifi_regist_fail_content">"नेटवर्क vowifi सह काम करत नाही"</string>
 </resources>

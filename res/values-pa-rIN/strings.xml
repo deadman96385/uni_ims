@@ -40,4 +40,6 @@
      <string name="low_battery_continue_video_call">ਹਾਂ</string>
      <string name="low_battery_convert_to_voice_call">"ਬਦਲੋ"</string>
 
+    <string name="vowifi_attation">"Vowifi ਲਈ ਸਾਵਧਾਨੀ"</string>
+     <string name="vowifi_regist_fail_content">"ਨੈੱਟਵਰਕ vowifi ਦਾ ਸਮਰਥਨ ਨਹੀਂ ਕਰਦਾ ਹੈ"</string>
 </resources>
