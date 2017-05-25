@@ -40,4 +40,6 @@
      <string name="low_battery_continue_video_call">అవును</string>
      <string name="low_battery_convert_to_voice_call">"మార్చు"</string>
 
+    <string name="vowifi_attation">"వొవైఫై అటెన్షన్"</string>
+     <string name="vowifi_regist_fail_content">"నెట్ వర్క్ వొవైఫై కి అనుమతి౦చదు"</string>
 </resources>

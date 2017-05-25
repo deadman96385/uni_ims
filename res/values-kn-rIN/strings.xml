@@ -40,4 +40,6 @@
      <string name="low_battery_continue_video_call">"ಹೌದು"</string>
      <string name="low_battery_convert_to_voice_call">"ಪರಿವರ್ತಿಸು"</string>
 
+    <string name="vowifi_attation">"Vowifi ಗಮನ"</string>
+     <string name="vowifi_regist_fail_content">"ನೆಟ್ವರ್ಕ್ vowifi ಬೆಂಬಲಿಸುವುದಿಲ್ಲ"</string>
 </resources>
