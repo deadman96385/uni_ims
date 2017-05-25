@@ -40,4 +40,6 @@
      <string name="low_battery_continue_video_call">ஆம்</string>
      <string name="low_battery_convert_to_voice_call">"மாற்றவும்"</string>
 
+    <string name="vowifi_attation">"Vowifi கவனம்"</string>
+     <string name="vowifi_regist_fail_content">"நெட்வொர்க், vowifi -ஐ ஆதரிக்கவில்லை"</string>
 </resources>
