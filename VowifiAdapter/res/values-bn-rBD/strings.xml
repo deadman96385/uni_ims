@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="vowifi_request_upgrade_title">"হালনাগাদের জন্য দূরবর্তী অনুরোধ"</string>
+<string name="vowifi_request_upgrade_text">"বর্তমান কল কে ভিডিও কলে উন্নত করার অনুরোধ, দয়াকরে গ্রহণ বা প্রত্যাখ্যান নির্বাচন করুন।"</string>
+<string name="vowifi_request_downgrade_title">""ডাউনগ্রেড করতে দূরবর্তী অনুরোধ" "</string>
+<string name="vowifi_request_downgrade_text">"বর্তমান কল কে ভিডিও কলে ডাউনগ্রেড  করার অনুরোধ, দয়াকরে গ্রহণ বা প্রত্যাখ্যান নির্বাচন করুন।"</string>
+<string name="vowifi_add_video_failed">"দূরবর্তী প্রত্যাখ্যান অনুরধ।"</string>
+<string name="vowifi_add_video_success">"দূরবর্তী গ্রহণ অনুরধ।"</string>
+<string name="vowifi_remove_video_failed">"ভিডিও সরাতে ব্যর্থ।"</string>
+<string name="vowifi_remove_video_success">"ভিডিও কল ফল-ব্যক।"</string>
+<string name="vowifi_hold_success">"সাফল্য ধরে রাখুন"</string>
+<string name="vowifi_hold_fail">"ব্যর্থ ধরে রাখুন"</string>
+<string name="vowifi_resume_success">"পুনরারম্ভ সফল"</string>
+<string name="vowifi_resume_fail">"পুনরারম্ভ ব্যর্থ"</string>
+<string name="vowifi_call_retry">"একটু পর আবার চেষ্টা করুন"</string>
+<string name="vowifi_call_is_focus">"কনফারেন্স-এ যুক্ত করুন"</string>
+<string name="vowifi_conf_disconnect">"কনফারেন্স সেটআপ করতে ব্যর্থ"</string>
+<string name="vowifi_conf_finished">"চনফারেন্স শেষ"</string>
+<string name="vowifi_conf_invite_request_failed">"আমন্ত্রণ অনুরোধটি প্রেরণে ব্যর্থ। কনফারেন্স সেটআপ করা যায়নি।"</string>
+<string name="vowifi_conf_invite_failed">"অংশগ্রহণকারীদের আমন্ত্রণ জানাতে ব্যর্থঃ"</string>
+<string name="vowifi_conf_kick_failed">"অংশগ্রহণকারীদের সরাতে ব্যর্থ"</string>
+<string name="vowifi_conf_none_participant">"কোন অংশগ্রহণকারী নাই, কল শেষ করুন"</string>
+<string name="vowifi_conf_do_not_support">"এখন এই কাজটি সমর্থন করেন না"</string>
+</resources>

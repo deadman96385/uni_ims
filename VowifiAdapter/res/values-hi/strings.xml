@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="vowifi_request_upgrade_title">"अपग्रेड करने के लिए दूरस्थ अनुरोध"</string>
+<string name="vowifi_request_upgrade_text">"वर्तमान कॉल को वीडियो कॉल में अपग्रेड करने का अनुरोध करें, कृपया स्वीकार करने या अस्वीकार करने का चयन करें।"</string>
+<string name="vowifi_request_downgrade_title">"डाउनग्रेड करने के लिए दूरस्थ अनुरोध"</string>
+<string name="vowifi_request_downgrade_text">"वर्तमान कॉल को वौइस् कॉल में डाउनग्रेड करने का अनुरोध करें, कृपया स्वीकार करने या अस्वीकार करने का चयन करेंरें।"</string>
+<string name="vowifi_add_video_failed">"रिमोट अस्वीकार अनुरोध।"</string>
+<string name="vowifi_add_video_success">"दूरस्थ स्वीकार अनुरोध।"</string>
+<string name="vowifi_remove_video_failed">"वीडियो को हटाने में असफल रहा।"</string>
+<string name="vowifi_remove_video_success">"वीडियो कॉल फ़ॉल-बैक।"</string>
+<string name="vowifi_hold_success">"होल्ड सफल रहा"</string>
+<string name="vowifi_hold_fail">"होल्ड असफल रहा"</string>
+<string name="vowifi_resume_success">"फिर से शुरू सफल रहा"</string>
+<string name="vowifi_resume_fail">"फिर से शुरू असफल रहा"</string>
+<string name="vowifi_call_retry">"कृपया एक क्षण के बाद पुन: प्रयास करें"</string>
+<string name="vowifi_call_is_focus">"सम्मेलन में जोड़ें"</string>
+<string name="vowifi_conf_disconnect">"कांफ्रेंस सेटअप असफल रहा"</string>
+<string name="vowifi_conf_finished">"सम्मेलन समाप्त"</string>
+<string name="vowifi_conf_invite_request_failed">"आमंत्रण अनुरोध भेजने में असफल। कांफ्रेंस सेटअप नहीं की जा सकती।"</string>
+<string name="vowifi_conf_invite_failed">"सहभागी को आमंत्रित करने में असफल रहा:"</string>
+<string name="vowifi_conf_kick_failed">"प्रतिभागी को हटाने में असफल रहा"</string>
+<string name="vowifi_conf_none_participant">"कोई भागीदार नहीं है, कॉल समाप्त करें।"</string>
+<string name="vowifi_conf_do_not_support">"इस समय इस क्रिया का समर्थन नहीं किया जाता।"</string>
+</resources>
