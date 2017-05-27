@@ -501,8 +501,9 @@ public class ImsService extends Service {
                                         ? ImsOperationType.IMS_OPERATION_SWITCH_TO_VOWIFI
                                                 : ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOWIFI);
                                 requestService.notifyImsHandoverStatus(ImsHandoverResult.IMS_HANDOVER_REGISTER_FAIL);
-                                Toast.makeText(ImsService.this, R.string.vowifi_register_error,
-                                        Toast.LENGTH_LONG).show();
+                                // SPCSS00387344 CUSTOMER need remove toast fail message.
+//                                Toast.makeText(ImsService.this, R.string.vowifi_register_error,
+//                                        Toast.LENGTH_LONG).show();
                                 /*SPRD: Modify for bug604833{@*/
                                 if(mFeatureSwitchRequest.mEventCode== ACTION_SWITCH_IMS_FEATURE) {
                                     if (requestService != null){
@@ -1390,7 +1391,9 @@ public class ImsService extends Service {
        @Override
        public void showVowifiNotification(){
            Log.i(TAG,"showVowifiNotification");
-           mNotificationManager =(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+           // SPCSS00387344 CUSTOMER need remove toast fail message.
+           return;
+           /*mNotificationManager =(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
            mNotificationManager.cancel(mCurrentVowifiNotification);
            Intent intent = new Intent();
            intent.setClassName("com.android.settings","com.android.settings.Settings$WifiCallingSettingsActivity");
@@ -1402,7 +1405,7 @@ public class ImsService extends Service {
            Notification notification = new Notification(android.R.drawable.stat_sys_warning,mVowifiRegisterMsg, System.currentTimeMillis());
            notification.flags = Notification.FLAG_AUTO_CANCEL;
            notification.setLatestEventInfo(ImsService.this, vowifiTitle, vowifiContent, contentIntent);
-           mNotificationManager.notify(mCurrentVowifiNotification, notification);
+           mNotificationManager.notify(mCurrentVowifiNotification, notification);*/
        }
        /* @} */
 
