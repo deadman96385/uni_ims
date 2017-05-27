@@ -642,21 +642,24 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             boolean useIPv4 = regVersion == IPVersion.IP_V4;
             if (regVersion == mSecurityMgr.getConfig()._useIPVersion
                     || mSecurityMgr.setIPVersion(regVersion)) {
-                mSecurityMgr.getConfig()._useIPVersion= regVersion;
+                mSecurityMgr.getConfig()._useIPVersion = regVersion;
                 startRegister = true;
                 String localIP = mRegisterIP.getLocalIP(useIPv4);
                 String pcscfIP = mRegisterIP.getPcscfIP(useIPv4);
                 String dnsSerIP = mRegisterIP.getDnsSerIP(useIPv4);
                 boolean forSos = (mEcbmStep == ECBM_STEP_REGISTER_FOR_SOS);
                 mRegisterMgr.login(forSos, useIPv4, localIP, pcscfIP, dnsSerIP, isRelogin);
-
             }
         }
 
         if (!startRegister) {
             // The IPv6 & IPv4 invalid, it means login failed. Update the result.
             // Can not get the register IP.
-            registerFailed();
+            if (isRelogin) {
+                registerLogout(NativeErrorCode.REG_TIMEOUT);
+            } else {
+                registerFailed();
+            }
         }
     }
 
