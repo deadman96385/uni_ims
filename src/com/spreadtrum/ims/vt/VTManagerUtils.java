@@ -261,7 +261,7 @@ public class VTManagerUtils {
         View view = inflater.inflate(R.xml.vowifi_register_dialog, null);
 
         builder.setView(view);
-        builder.setTitle(context.getString(R.string.vowifi_attation));
+        builder.setTitle(context.getString(R.string.vowifi_connected_title));
         builder.setMessage(context.getString(R.string.vowifi_connected_message));
         CheckBox cb = (CheckBox) view.findViewById(R.id.nomore);
 
