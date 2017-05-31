@@ -80,7 +80,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                      }
                     break;
                 /* @} */
-                case EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT:{//SPRD: add for bug596628
+                case EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT:{
                     log("handle message EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT");
                     if (mImsCallSessionImpl != null
                             && mImsCallSessionImpl.mImsCallProfile != null
@@ -95,6 +95,9 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                             Log.d(TAG, "EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT cmd[0]"+ cmd[0]);
                         }
                     }
+                    mImsCallSessionImpl.getLocalRequestProfile().mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
+                    receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+                            null,null);
                 }
                 break;
                 default:
