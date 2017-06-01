@@ -95,6 +95,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsMegerActionHost;
     private boolean mIsPendingTerminate;   // BUG 616259
     private int mVideoState;
+    public  boolean mInLocalCallForward = false;
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
@@ -1091,20 +1092,30 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
      */
     @Override
     public void extendToConference(String[] participants){
-        if(participants != null && participants[0] != null && mImsDriverCall != null){
-            Log.i(TAG, "extendToConference-> action:"+participants[0]);
-            if(participants[0].contentEquals("hold")){
-                mCi.imsHoldSingleCall(mImsDriverCall.index, true,
-                        mHandler.obtainMessage(ACTION_COMPLETE_HOLD,this));
-                mLocalConferenceUpdate = true;
-                // SPRD: add for bug676047
-                mIsInLocalConference = false;
-            } else if(participants[0].contentEquals("resume")){
-                mCi.imsHoldSingleCall(mImsDriverCall.index, false,
-                        mHandler.obtainMessage(ACTION_COMPLETE_HOLD,this));
-                mLocalConferenceUpdate = true;
-                // SPRD: add for bug676047
-                mIsInLocalConference = true;
+        if(participants != null && participants[0] != null) {
+            //SPRD:add for bug682362
+            Log.i(TAG, "extendToConference-> inLocalCallForward:" + participants[0]);
+            if (participants[0].contains("inLocalCallForward")) {
+                if(participants[0].contains("true")){
+                    mInLocalCallForward = true;
+                }else{
+                    mInLocalCallForward = false;
+                }
+            } else if (mImsDriverCall != null) {
+                Log.i(TAG, "extendToConference-> action:" + participants[0]);
+                if (participants[0].contentEquals("hold")) {
+                    mCi.imsHoldSingleCall(mImsDriverCall.index, true,
+                            mHandler.obtainMessage(ACTION_COMPLETE_HOLD, this));
+                    mLocalConferenceUpdate = true;
+                    // SPRD: add for bug676047
+                    mIsInLocalConference = false;
+                } else if (participants[0].contentEquals("resume")) {
+                    mCi.imsHoldSingleCall(mImsDriverCall.index, false,
+                            mHandler.obtainMessage(ACTION_COMPLETE_HOLD, this));
+                    mLocalConferenceUpdate = true;
+                    // SPRD: add for bug676047
+                    mIsInLocalConference = true;
+                }
             }
         } else {
             Log.w(TAG, "extendToConference-> participants:"+participants +" mImsDriverCall:"+mImsDriverCall);
