@@ -2365,8 +2365,8 @@ class MyVoWifiCallback implements VoWifiCallback {
         if(mFeatureSwitchRequest != null || service == null){
             return false;
         }
-        if(mIsVolteCall || mIsVowifiCall){
-            Log.i(TAG,"allowEnableIms->mIsVolteCall:"+mIsVolteCall +" mIsVowifiCall:"+mIsVowifiCall);
+        if(mIsVolteCall || mIsVowifiCall || mIsAPImsPdnActived){
+            Log.i(TAG,"allowEnableIms->mIsVolteCall:"+mIsVolteCall +" mIsVowifiCall:"+mIsVowifiCall + " mIsAPImsPdnActived:" +mIsAPImsPdnActived);
             return false;
         }
         Log.i(TAG,"allowEnableIms->mIsPendingRegisterVolte:"+mIsPendingRegisterVolte+
