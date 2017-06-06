@@ -1094,7 +1094,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public void extendToConference(String[] participants){
         if(participants != null && participants[0] != null) {
             //SPRD:add for bug682362
-            Log.i(TAG, "extendToConference-> inLocalCallForward:" + participants[0]);
+            Log.i(TAG, "extendToConference :" + participants[0]);
             if (participants[0].contains("inLocalCallForward")) {
                 if(participants[0].contains("true")){
                     mInLocalCallForward = true;
@@ -1103,7 +1103,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 }
             } else if (mImsDriverCall != null) {
                 Log.i(TAG, "extendToConference-> action:" + participants[0]);
-                if (participants[0].contentEquals("hold")) {
+                if (participants[0].contentEquals("hold") || participants[0].contentEquals("quit_local_conference")) {
                     mCi.imsHoldSingleCall(mImsDriverCall.index, true,
                             mHandler.obtainMessage(ACTION_COMPLETE_HOLD, this));
                     mLocalConferenceUpdate = true;
