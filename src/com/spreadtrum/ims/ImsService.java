@@ -964,15 +964,12 @@ public class ImsService extends Service {
                     + " isVoLTEEnabled(): " + isVoLTEEnabled());
             mInCallPhoneId = serviceId-1;//SPRD:add for bug635699
             updateInCallState(true);
-            if(!isImsEnabled()){
-                Log.e (TAG,"createCallSession-> ims is disable!");
-                return null;
-            } else if((isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall) || mIsVowifiCall){
+            if ((isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall) || mIsVowifiCall) {
                 if (isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall) {
                     mIsVowifiCall = true;
                     mWifiService.updateDataRouterState(DataRouterState.CALL_VOWIFI); //Add for data router
                 }
-                Log.e (TAG,"createCallSession-> startVoWifiCall");
+                Log.e(TAG, "createCallSession-> startVoWifiCall");
                 return mWifiService.createCallSession(profile, listener);
             }
             /*@}*/
