@@ -169,7 +169,7 @@ public class ImsServiceImpl {
         mImsConfigImpl = new ImsConfigImpl(mCi,context);
         mImsUtImpl = new ImsUtImpl(mCi,context,phone);
         com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl =  mWifiService.getUtInterface();
-        mImsUtProxy = new ImsUtProxy(context, mImsUtImpl, voWifiUtImpl);
+        mImsUtProxy = new ImsUtProxy(context, mImsUtImpl, voWifiUtImpl, mPhone);
         mImsEcbmImpl = new ImsEcbmImpl(mCi);
         mHandler = new ImsHandler(mContext.getMainLooper());
         Intent intent = new Intent(ImsManager.ACTION_IMS_SERVICE_UP);

@@ -13,6 +13,9 @@ import android.os.RemoteException;
 import com.spreadtrum.ims.ImsService;
 import com.android.ims.ImsManager;
 import com.spreadtrum.ims.vowifi.ImsUtImpl;
+import com.android.internal.telephony.Phone;
+import android.telephony.TelephonyManager;
+import android.text.TextUtils;
 import android.util.Log;
 import com.android.ims.internal.IImsUtListenerEx;
 import com.android.internal.telephony.CommandsInterface;
@@ -73,13 +76,15 @@ public class ImsUtProxy extends IImsUt.Stub {
     private boolean mQueryOnVoLTE = false;
     private Context mContext;
     private ImsService mImsService;
+    private Phone mPhone;
     private HashMap<Integer, Bundle> mPendingMap = new HashMap<Integer, Bundle>();
     private HashMap<Integer, Integer> mQueryOnVoLTEId = new HashMap<Integer, Integer>();
     public ImsUtProxy(Context context, com.spreadtrum.ims.ut.ImsUtImpl VoLTEUtImpl,
-            com.spreadtrum.ims.vowifi.ImsUtImpl VoWifiUtImpl) {
+            com.spreadtrum.ims.vowifi.ImsUtImpl VoWifiUtImpl, Phone phone) {
         mContext = context;
         mVoLTEUtImpl = VoLTEUtImpl;
         mVoWifiUtImpl = VoWifiUtImpl;
+        mPhone = phone;
     }
 
     /**
@@ -100,7 +105,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         int id = INVALID_ID;
         if (isVowifiUtEnable()) {
             id = mVoWifiUtImpl.queryCallBarring(cbType);
-            if (mQueryOnVoLTE) {
+            if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                 Bundle bundle = new Bundle();
                 bundle.putInt(EXTRA_ACTION, ACTION_QUERY_CB);
                 bundle.putInt(EXTRA_FACILITY, cbType);
@@ -120,7 +125,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         int id = INVALID_ID;
         if (isVowifiUtEnable()) {
             id = mVoWifiUtImpl.queryCallForward(condition, number);
-            if (mQueryOnVoLTE) {
+            if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                 Bundle bundle = new Bundle();
                 bundle.putInt(EXTRA_ACTION, ACTION_QUERY_CF);
                 bundle.putInt(EXTRA_CFREASON, condition);
@@ -142,7 +147,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         try {
             if (isVowifiUtEnable()) {
                 id = mVoWifiUtImpl.queryCallWaiting();
-                if (mQueryOnVoLTE) {
+                if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                     Bundle bundle = new Bundle();
                     bundle.putInt(EXTRA_ACTION, ACTION_QUERY_CW);
                     mPendingMap.put(id, bundle);
@@ -165,7 +170,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         try {
             if (isVowifiUtEnable()) {
                 id = mVoWifiUtImpl.queryCLIR();
-                if (mQueryOnVoLTE) {
+                if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                     Bundle bundle = new Bundle();
                     bundle.putInt(EXTRA_ACTION, ACTION_QUERY_CLIR);
                     mPendingMap.put(id, bundle);
@@ -188,7 +193,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         try {
             if (isVowifiUtEnable()) {
                 id = mVoWifiUtImpl.queryCLIP();
-                if (mQueryOnVoLTE) {
+                if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                     Bundle bundle = new Bundle();
                     bundle.putInt(EXTRA_ACTION, ACTION_QUERY_CLIP);
                     mPendingMap.put(id, bundle);
@@ -211,7 +216,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         try {
             if (isVowifiUtEnable()) {
                 id = mVoWifiUtImpl.queryCOLR();
-                if (mQueryOnVoLTE) {
+                if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                     Bundle bundle = new Bundle();
                     bundle.putInt(EXTRA_ACTION, ACTION_QUERY_COLR);
                     mPendingMap.put(id, bundle);
@@ -234,7 +239,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         try {
             if (isVowifiUtEnable()) {
                 id = mVoWifiUtImpl.queryCOLP();
-                if (mQueryOnVoLTE) {
+                if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                     Bundle bundle = new Bundle();
                     bundle.putInt(EXTRA_ACTION, ACTION_QUERY_COLP);
                     mPendingMap.put(id, bundle);
@@ -269,7 +274,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         int id = INVALID_ID;
         if (isVowifiUtEnable()) {
             id = mVoWifiUtImpl.updateCallBarring(cbType, action, barrList);
-            if (mQueryOnVoLTE) {
+            if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                 Bundle bundle = new Bundle();
                 StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < barrList.length; i++) {
@@ -297,7 +302,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         int id = INVALID_ID;
         if (isVowifiUtEnable()) {
             id = mVoWifiUtImpl.updateCallForward(action, condition,number, serviceClass, timeSeconds);
-            if (mQueryOnVoLTE) {
+            if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                 Bundle bundle = new Bundle();
                 bundle.putInt(EXTRA_ACTION, ACTION_UPDATE_CF);
                 bundle.putInt(EXTRA_CFACTION, action);
@@ -322,7 +327,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         try {
             if (isVowifiUtEnable()) {
                 id = mVoWifiUtImpl.updateCallWaiting(enable, serviceClass);
-                if (mQueryOnVoLTE) {
+                if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                     Bundle bundle = new Bundle();
                     bundle.putInt(EXTRA_ACTION, ACTION_UPDATE_CW);
                     bundle.putBoolean(EXTRA_LOCK_STATE, enable);
@@ -347,7 +352,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         try {
             if (isVowifiUtEnable()) {
                 id = mVoWifiUtImpl.updateCLIR(clirMode);
-                if (mQueryOnVoLTE) {
+                if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                     Bundle bundle = new Bundle();
                     bundle.putInt(EXTRA_ACTION, ACTION_UPDATE_CLIR);
                     bundle.putInt(EXTRA_CLIR_MODE, clirMode);
@@ -422,7 +427,23 @@ public class ImsUtProxy extends IImsUt.Stub {
      */
     public void setListener(IImsUtListener listener) {
         mListener = listener;
-        getUTConfig();
+        TelephonyManager tm = TelephonyManager.from(mContext);
+        String carrier = "";
+        String impi = tm.getIsimImpi();
+	 int indexMCC = impi.indexOf("mcc");
+        int indexMNC = impi.indexOf("mnc");
+        String mccValue = impi.substring(indexMCC + 3, indexMCC + 6);
+        String mncValue = impi.substring(indexMNC + 3, indexMCC - 1);
+            if (mncValue.length() == 3 && mccValue.startsWith("00")) {
+                carrier = mccValue + mncValue.substring(1);
+            } else {
+                carrier = mccValue + mncValue;
+            }
+	 log("carrier = " + carrier);
+
+        if (!TextUtils.isEmpty(carrier)) {
+            getUTConfig(carrier);
+        }
         try {
             if (isVowifiUtEnable()) {
                 mVoWifiUtImpl.setListener(mImsUtListener);
@@ -443,7 +464,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         if (isVowifiUtEnable()) {
             id = mVoWifiUtImpl.setCallForwardingOption(commandInterfaceCFAction, commandInterfaceCFReason,
                     serviceClass, dialingNumber, timerSeconds, ruleSet);
-            if (mQueryOnVoLTE) {
+            if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                 Bundle bundle = new Bundle();
                 bundle.putInt(EXTRA_ACTION, ACTION_UPDATE_CF_EX);
                 bundle.putInt(EXTRA_CFREASON, commandInterfaceCFReason);
@@ -471,7 +492,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         if (isVowifiUtEnable()) {
             id = mVoWifiUtImpl.getCallForwardingOption(commandInterfaceCFReason,
                     serviceClass, ruleSet);
-            if (mQueryOnVoLTE) {
+            if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                 Bundle bundle = new Bundle();
                 bundle.putInt(EXTRA_ACTION, ACTION_QUERY_CF_EX);
                 bundle.putInt(EXTRA_CFREASON, commandInterfaceCFReason);
@@ -492,7 +513,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         if (isVowifiUtEnable()) {
             id = mVoWifiUtImpl.changeBarringPassword(facility,
                   oldPwd, newPwd);
-            if (mQueryOnVoLTE) {
+            if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                 Bundle bundle = new Bundle();
                 bundle.putInt(EXTRA_ACTION, ACTION_CHANGE_CB_PW);
                 bundle.putString(EXTRA_FACILITY, facility);
@@ -514,7 +535,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         if (isVowifiUtEnable()) {
             id = mVoWifiUtImpl.setFacilityLock(facility,
                   lockState, password, serviceClass);
-          if (mQueryOnVoLTE) {
+          if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
               Bundle bundle = new Bundle();
               bundle.putInt(EXTRA_ACTION, ACTION_UPDATE_CB_EX);
               bundle.putString(EXTRA_FACILITY, facility);
@@ -536,7 +557,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         if (isVowifiUtEnable()) {
             id = mVoWifiUtImpl.queryFacilityLock(facility,
                     password, serviceClass);
-            if (mQueryOnVoLTE) {
+            if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
                 Bundle bundle = new Bundle();
                 bundle.putInt(EXTRA_ACTION, ACTION_QUERY_CB_EX);
                 bundle.putString(EXTRA_FACILITY, facility);
@@ -561,7 +582,22 @@ public class ImsUtProxy extends IImsUt.Stub {
 
     public void setListenerEx(IImsUtListenerEx listenerEx) {
         mListenerEx = listenerEx;
-        getUTConfig();
+        TelephonyManager tm = TelephonyManager.from(mContext);
+	 String carrier = "";
+        String impi = tm.getIsimImpi();
+	 int indexMCC = impi.indexOf("mcc");
+        int indexMNC = impi.indexOf("mnc");
+        String mccValue = impi.substring(indexMCC + 3, indexMCC + 6);
+        String mncValue = impi.substring(indexMNC + 3, indexMCC - 1);
+            if (mncValue.length() == 3 && mccValue.startsWith("00")) {
+                carrier = mccValue + mncValue.substring(1);
+            } else {
+                carrier = mccValue + mncValue;
+            }
+	 log("carrier = " + carrier);
+        if (!TextUtils.isEmpty(carrier)) {
+            getUTConfig(carrier);
+        }
         log("setListenerEx");
         if (isVowifiUtEnable()) {
             mVoWifiUtImpl.setListenerEx(mImsUtListenerExBinder);
@@ -569,17 +605,39 @@ public class ImsUtProxy extends IImsUt.Stub {
         mVoLTEUtImpl.setListenerEx(mImsUtListenerExBinder);
     }
 
-    private void getUTConfig() {
+    private void getUTConfig(String carrier) {
+        String priorityPlmns = "";
+        String queryOnVoLTEPlmns = "";
+        log("carrier = " + carrier);
         mImsService = (ImsService) mContext;
         if (mImsService.isVoWifiEnabled()) {
             CarrierConfigManagerEx carrierConfig = CarrierConfigManagerEx.from(mContext);
             if (carrierConfig != null) {
                 PersistableBundle config = carrierConfig.getConfig();
                 if (config != null){
-                    mPriority = config.getInt(
-                            CarrierConfigManagerEx.KEY_UT_PRIORITY, PRIORITY_VOLTE_UT);
-                    mQueryOnVoLTE = config.getBoolean(
-                            CarrierConfigManagerEx.KEY_UT_FALLBACK_VOLTE, false);
+                    priorityPlmns = config.getString(
+                            CarrierConfigManagerEx.KEY_UT_PRIORITY, "");
+                    queryOnVoLTEPlmns = config.getString(
+                            CarrierConfigManagerEx.KEY_UT_FALLBACK_VOLTE, "");
+                }
+                log("vowifiplmns = " + priorityPlmns + ", plmns = " + queryOnVoLTEPlmns);
+                if (!TextUtils.isEmpty(priorityPlmns)) {
+                    String[] plmns = priorityPlmns.split(",");
+                    for (int i = 0; i < plmns.length; i++) {
+                        if (!TextUtils.isEmpty(plmns[i]) && plmns[i].equals(carrier)) {
+                            mPriority = PRIORITY_VOWIFI_UT;
+			      log("mPriority = " + mPriority);
+                        }
+                    }
+                }
+                if (!TextUtils.isEmpty(queryOnVoLTEPlmns)) {
+                    String[] plmns = priorityPlmns.split(",");
+                    for (int i = 0; i < plmns.length; i++) {
+                        if (!TextUtils.isEmpty(plmns[i]) && plmns[i].equals(carrier)) {
+                            mQueryOnVoLTE = true;
+				log("mQueryOnVoLTE = " + mQueryOnVoLTE);
+                        }
+                    }
                 }
             }
         } else {
@@ -861,10 +919,10 @@ public class ImsUtProxy extends IImsUt.Stub {
             Integer resultId = mQueryOnVoLTEId.remove(id);
             if (resultId != null) {
                 id = resultId;
-                mPendingMap.remove(id);
             }
             try {
                 mListener.utConfigurationCallBarringQueried(ut, id, cbInfo);
+                mPendingMap.remove(id);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
