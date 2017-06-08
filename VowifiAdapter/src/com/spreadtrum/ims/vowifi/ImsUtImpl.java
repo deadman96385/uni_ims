@@ -119,7 +119,16 @@ public class ImsUtImpl extends IImsUt.Stub {
 		  case MSG_ACTION_SET_FACILITY_LOCK:
                     break;
                 case MSG_ACTION_UPDATE_CALL_FORWARD:
+		     {
+                    UTAction action = (UTAction) msg.obj;
+                    int utAction = getActionFromCFAction((Integer) action._params.get(0));
+                    int condition = getConditionFromCFReason((Integer) action._params.get(1));
+                    String number = (String) action._params.get(2);
+		      int serviceClass = (Integer) action._params.get(3);
+                    int timeSeconds = (Integer) action._params.get(4);
+                    nativeUpdateCallForward(utAction, condition, number, serviceClass, timeSeconds);
                     break;
+                }
                 case MSG_ACTION_UPDATE_CALL_FORWARDING_OPTION: {
                     UTAction action = (UTAction) msg.obj;
                     int utAction = getActionFromCFAction((Integer) action._params.get(0));
@@ -282,8 +291,11 @@ public class ImsUtImpl extends IImsUt.Stub {
             Log.i(TAG, "Try to update the call barring with the type: " + cbType + ", enabled: "
                     + enable + ", barrList: " + Utilities.getString(barrList));
         }
-
-        return ImsUtInterface.INVALID;
+        String tempString ="to do";
+        UTAction action = new UTAction("updateCallBarring",
+                MSG_ACTION_UPDATE_CALL_BARRING, CMD_TIMEOUT,
+                Integer.valueOf(cbType), Integer.valueOf(enable), tempString);
+        return mCmdManager.addCmd(action);
     }
 
     /**
@@ -297,7 +309,10 @@ public class ImsUtImpl extends IImsUt.Stub {
                     + condition + ", number: " + number + ", timeSeconds: " + timeSeconds);
         }
 
-        return ImsUtInterface.INVALID;
+        UTAction utaction = new UTAction("updateCallForward",
+                MSG_ACTION_UPDATE_CALL_FORWARD, CMD_TIMEOUT,
+                Integer.valueOf(action), Integer.valueOf(condition), number, Integer.valueOf(serviceClass), Integer.valueOf(timeSeconds));
+        return mCmdManager.addCmd(utaction);
     }
 
     /**
