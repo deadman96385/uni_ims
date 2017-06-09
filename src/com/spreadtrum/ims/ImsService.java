@@ -2401,9 +2401,9 @@ class MyVoWifiCallback implements VoWifiCallback {
             imsService.setSrvccState(-1);
         }
         /**
-         * SPRD: 673414
+         * SPRD: 673414 687400
          */
-        if (ImsManagerEx.isDualVoLTEActive() && !isInCall) {
+        if (!isInCall) {
             if (mIsVowifiCall) {
                 mIsVowifiCall = false;
             } else if (mIsVolteCall) {
