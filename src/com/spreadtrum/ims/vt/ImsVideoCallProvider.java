@@ -390,6 +390,10 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
          ImsCallProfile imsCallProfile = session.getCallProfile();
          VideoProfile responseProfile = new VideoProfile(VideoProfile.STATE_AUDIO_ONLY);
          log("updateNegotiatedCallProfilee->mCallType="+imsCallProfile.mCallType+" session state = "+session.getState()+ "mIsVoiceRingTone ="+mIsVoiceRingTone);
+	 //SPRD:add for bug685749
+	 if(mLocalRequestProfile != null){
+            showRequestStateToast();
+         }
          //SPRD:fix for bug 597075
          if(isVideoCall(imsCallProfile.mCallType)
                  && (session != null && session.mImsDriverCall != null && session.mImsDriverCall.state != ImsDriverCall.State.HOLDING)){
@@ -428,7 +432,6 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
              receiveSessionModifyResponse(result, mLocalRequestProfile, responseProfile);
              mLocalRequestProfile = null;
          }
-         showRequestStateToast();
          if(mNegotiatedCallProfile.mCallType != imsCallProfile.mCallType){
              mNegotiatedCallProfile.mCallType = imsCallProfile.mCallType;
          }
