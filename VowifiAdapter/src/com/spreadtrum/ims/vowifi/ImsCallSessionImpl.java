@@ -14,8 +14,10 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.RemoteException;
 import android.os.SystemProperties;
+import android.telecom.VideoProfile;
 import android.telecom.VideoProfile.CameraCapabilities;
 import android.telephony.PhoneNumberUtils;
+import android.telephony.ServiceState;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Surface;
@@ -254,6 +256,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             // The video call provider is null, create it.
             mVideoCallProvider = new ImsVideoCallProviderImpl(mContext, callManager, this);
         }
+        VideoProfile videoProfile = new VideoProfile(Utilities.isVideoCall(mCallProfile.mCallType)
+                ? VideoProfile.STATE_BIDIRECTIONAL : VideoProfile.STATE_AUDIO_ONLY);
+        mVideoCallProvider.updateVideoProfile(videoProfile);
 
         // Register the service changed to get the IVowifiService.
         mCallManager.registerCallInterfaceChanged(mICallChangedListener);
@@ -1694,7 +1699,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             int res = mICall.sendSessionModifyRequest(mCallId, true, isVideo);
             if (res == Result.FAIL) {
                 Log.e(TAG, "Failed to send the modify request for the call: " + mCallId);
-                mListener.callSessionUpdateFailed(this, new ImsReasonInfo());
+                if (mListener != null) {
+                    mListener.callSessionUpdateFailed(this, new ImsReasonInfo());
+                }
                 // Show toast for failed action.
                 int toastTextResId = isVideo ? R.string.vowifi_add_video_failed
                         : R.string.vowifi_remove_video_failed;
@@ -1845,6 +1852,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
     public void processNoResponseAction() {
         if (Utilities.DEBUG) Log.i(TAG, "Process no response action.");
 
+        if (mListener == null) return;
+
         try {
             ImsReasonInfo failedReason = new ImsReasonInfo(
                     ImsReasonInfo.CODE_LOCAL_HO_NOT_FEASIBLE,
@@ -1881,6 +1890,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                 ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
         mCallProfile.setCallExtraInt(
                 ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+        mCallProfile.setCallExtraInt(
+                ImsCallProfile.EXTRA_CALL_RAT_TYPE, ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN);
 
         boolean isPhoneInEcmMode =
                 SystemProperties.getBoolean(TelephonyProperties.PROPERTY_INECM_MODE, false);
@@ -1892,7 +1903,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             try {
                 startCall(callee);
             } catch (RemoteException e) {
-                Log.e(TAG, "Failed to start the emergency call as catch the RemoteException e: " + e);
+                Log.e(TAG, "Failed to start the emergency call as catch the e: " + e);
             }
         }
     }
@@ -1922,13 +1933,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                 ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
         mCallProfile.setCallExtraInt(
                 ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+        mCallProfile.setCallExtraInt(
+                ImsCallProfile.EXTRA_CALL_RAT_TYPE, ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN);
 
         startCall(callee);
     }
 
     private void startCall(String callee) throws RemoteException {
         if (Utilities.DEBUG) {
-            Log.i(TAG, "Start the call with the callee: " + callee + ", mSosLocation: " + mSosLocation);
+            Log.i(TAG, "Start the call with the callee: " + callee + ", mSosLocation: "
+                    + mSosLocation);
         }
 
         // Start the call.

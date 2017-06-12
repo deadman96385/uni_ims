@@ -334,7 +334,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     public void resetAll(WifiState state, int delayMillis) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Reset the security and sip stack with wifi state: "
-                    + (WifiState.CONNECTED.equals(state) ? "connect" : "disconnect"));
+                    + (WifiState.CONNECTED.equals(state) ? "connect" : "disconnect")
+                    + ", delay millis: " + delayMillis);
         }
 
         if (state == null) {
@@ -509,6 +510,26 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         if (Utilities.DEBUG) Log.i(TAG, "Get call count.");
 
         return mCallMgr == null ? 0 :mCallMgr.getCallCount();
+    }
+
+    public int getCurrentImsVideoState() {
+        if (Utilities.DEBUG) Log.i(TAG, "Get alive call type.");
+
+        if (mCallMgr == null) return -1;
+
+        ImsCallSessionImpl callSession = mCallMgr.getCurrentCallSession();
+        if (callSession == null) {
+            Log.w(TAG, "There isn't any call, return unknown.");
+            return -1;
+        }
+
+        ImsVideoCallProviderImpl videoProvider = callSession.getVideoCallProviderImpl();
+        if (videoProvider == null) {
+            Log.w(TAG, "There isn't video provider, return unknown.");
+            return -1;
+        }
+
+        return videoProvider.getVideoState();
     }
 
     public int getAliveCallType() {

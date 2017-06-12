@@ -74,7 +74,7 @@ public class VoWifiCallManager extends ServiceManager {
     private static final int MSG_ACTION_STOP_AUDIO_STREAM  = 2;
     private static final int MSG_ACTION_SET_VIDEO_QUALITY  = 3;
 
-    public static final int CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED = 150;
+    private static final int CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED = 150;
 
     private static final String SERVICE_ACTION = "com.spreadtrum.vowifi.service.IVowifiService";
     private static final String SERVICE_PACKAGE = "com.spreadtrum.vowifi";
@@ -632,6 +632,34 @@ public class VoWifiCallManager extends ServiceManager {
 
         Log.w(TAG, "Can not found any call in active state, return null.");
         return null;
+    }
+
+    /**
+     * The current call:
+     * 1. The incoming call or out going call.
+     * 2. The alive call.
+     * 3. The first call if all the call isn't alive.
+     */
+    public ImsCallSessionImpl getCurrentCallSession() {
+        ImsCallSessionImpl aliveCall = null;
+        for (ImsCallSessionImpl session : mSessionList) {
+            if (session.isAlive()) {
+                aliveCall = session;
+            }
+            if (session.getState() < State.ESTABLISHED) {
+                // As it is the incoming call or out going call, return it.
+                return session;
+            }
+        }
+
+        // Do not find the incoming call or out going call.
+        if (aliveCall != null) {
+            return aliveCall;
+        } else if (mSessionList != null && mSessionList.size() > 0){
+            return mSessionList.get(0);
+        } else {
+            return null;
+        }
     }
 
     public ImsCallSessionImpl getConfCallSession() {
@@ -1272,7 +1300,7 @@ public class VoWifiCallManager extends ServiceManager {
                 ImsReasonInfo info = new ImsReasonInfo(ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE,
                     ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE, reason);
                 listener.callSessionStartFailed(callSession, info);
-            }else {
+            } else {
                 // receive 380 alternativce service for a normal call
                 if (Utilities.DEBUG) Log.i(TAG, "Handle the call is emergency. urnUri =" + urnUri);
                 ImsReasonInfo info;
@@ -1282,7 +1310,7 @@ public class VoWifiCallManager extends ServiceManager {
                     info = new ImsReasonInfo(CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED,
                             ImsReasonInfo.EXTRA_CODE_CALL_RETRY_NORMAL, category);
                 } else {
-                 // need to retry an normal call by cellular
+                    // need to retry an normal call by cellular
                     info = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED,
                             ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED, reason);
                 }

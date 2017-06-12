@@ -355,10 +355,16 @@ public class Utilities {
                     if (mnc.length() == 3 && mnc.startsWith("00")) {
                         mnc = mnc.substring(1);
                     }
-                    info._hplmn = mcc + mnc;
+                    String hplmn = mcc + mnc;
+                    if (!hplmn.equals(info._hplmn)) {
+                        // If the sim hplmn do not equals the hplmn generate from IMPI,
+                        // we need edit the values.
+                        Log.d(TAG, "HPLMN from [" + info._hplmn + "] to [" + hplmn + "].");
+                        Log.d(TAG, "IMSI from [" + info._imsi + "] to [" + info._userName + "].");
+                        info._hplmn = hplmn;
+                        info._imsi = info._userName;
+                    }
                 }
-
-                info._imsi = info._userName;
             }
 
             String[] impus = tm.getIsimImpu();
@@ -536,7 +542,7 @@ public class Utilities {
             mUsedDnsSerlIP = isIPv4 ? getDnsSerIPv4() : getDnsSerIPv6();
             return mUsedDnsSerlIP;
         }
-		
+
         public String getPcscfIP(boolean isIPv4) {
             mUsedPcscfIP = isIPv4 ? getPcscfIPv4() : getPcscfIPv6();
             return mUsedPcscfIP;
@@ -557,7 +563,7 @@ public class Utilities {
         private String getLocalIPv4() {
             return mLocalIPv4;
         }
-		
+
         private String getDnsSerIPv4() {
             return mDnsSerIPv4;
         }
@@ -569,7 +575,7 @@ public class Utilities {
         private String getDnsSerIPv6() {
             return mDnsSerIPv6;
         }
-		
+
         private String getPcscfIPv4() {
             String pcscfIPv4 = null;
             if (mIPv4Index < mPcscfIPv4.length) {
@@ -638,7 +644,7 @@ public class Utilities {
                     builder.append(", pcscfIPv6[" + i + "] = " + mPcscfIPv6[i]);
                 }
             }
-	     builder.append("pcscfDnsSerIPv4 = " + mDnsSerIPv4);
+            builder.append(", pcscfDnsSerIPv4 = " + mDnsSerIPv4);
             builder.append(", pcscfDnsSerIPv6 = " + mDnsSerIPv6);
             return builder.toString();
         }
@@ -696,24 +702,24 @@ public class Utilities {
         }
     }
 
-   public static class CallBarringInfo
-   {
-         // Refer to ImsUtInterface#CDIV_CF_XXX
+    public static class CallBarringInfo {
+        // Refer to ImsUtInterface#CDIV_CF_XXX
         public int mCondition;
         // 0: disabled, 1: enabled
         public int mStatus;
-	 public CallBarringInfo(){
+
+        public CallBarringInfo() {
         }
 
-	 public void setCondition(int conditon){
-	 	mCondition = conditon;
-	 }
-	 
-	 public void setStatus(int status){
-	 	mStatus = status;
-	 }	 
-   }
-   
+        public void setCondition(int conditon) {
+            mCondition = conditon;
+        }
+
+        public void setStatus(int status) {
+            mStatus = status;
+        }
+    }
+
     public static class VideoQuality {
         public int _width;
         public int _height;

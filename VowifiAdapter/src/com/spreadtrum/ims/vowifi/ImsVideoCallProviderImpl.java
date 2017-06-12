@@ -40,6 +40,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private MyHandler mHandler = null;
     private Surface mPreviewSurface = null;
     private Surface mDisplaySurface = null;
+    private VideoProfile mVideoProfile = null;
     private SharedPreferences mPreferences = null;
     private CameraCapabilities mCameraCapabilities = null;
     private MyOrientationListener mOrientationListener = null;
@@ -252,6 +253,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
         // So do not change "mWaitForModifyResponse" here.
         if (status != VideoProvider.SESSION_MODIFY_REQUEST_INVALID) {
             mWaitForModifyResponse = false;
+            mVideoProfile = responseProfile;
         }
     }
 
@@ -397,6 +399,18 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
     public Surface getPreviewSurface() {
         return mPreviewSurface;
+    }
+
+    public VideoProfile getVideoProfile() {
+        return mVideoProfile;
+    }
+
+    public int getVideoState() {
+        return mVideoProfile == null ? -1 : mVideoProfile.getVideoState();
+    }
+
+    public void updateVideoProfile(VideoProfile profile) {
+        mVideoProfile = profile;
     }
 
     public CameraCapabilities getCurCameraCapabilities() {
