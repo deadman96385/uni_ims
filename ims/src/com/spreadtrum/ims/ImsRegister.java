@@ -9,27 +9,33 @@ import android.database.ContentObserver;
 import android.os.Message;
 import android.os.Handler;
 import android.os.SystemProperties;
+import android.sim.SimManager;
+import com.android.internal.telephony.CommandsInterface.RadioState;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.gsm.GSMPhone;
 import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.PhoneProxy;
+import com.android.internal.telephony.CommandException;
 import com.android.internal.telephony.CommandsInterface;
 import android.telephony.TelephonyManager;
 import com.android.internal.telephony.TelephonyIntents;
+import com.android.internal.telephony.uicc.UiccCardApplication;
 import com.android.internal.telephony.uicc.UiccController;
-import com.android.internal.telephony.TeleUtils;
+import com.sprd.internal.telephony.uicc.MsUiccController;
+//import com.android.internal.telephony.TeleUtils;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.IsimUiccRecords;
+
 import android.os.AsyncResult;
 import android.os.Looper;
 import android.util.Log;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.IccCardConstants;
-import android.telephony.SubscriptionManager;
+//import android.telephony.SubscriptionManager;
 import android.provider.Settings;
 import android.telephony.VoLteServiceState;
 import com.android.ims.ImsManager;
-import com.sprd.android.internal.telephony.VolteConfig;
+import com.sprd.internal.telephony.VolteConfig;
 import android.text.TextUtils;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,10 +55,17 @@ public class ImsRegister {
     private int mPhoneId;
     private BaseHandler mHandler;
     private boolean mCurrentImsRegistered;
+    private UiccController mUiccController;
+    private IccRecords mIccRecords = null;
+    private UiccCardApplication mUiccApplcation = null;
     private VolteConfig mVolteConfig;
     private String mNumeric;
     private String mLastNumeric="";
+    private boolean mSIMLoaded;
+    private int mRetryCount = 0;
 
+    protected static final int EVENT_ICC_CHANGED                       = 103;
+    protected static final int EVENT_RECORDS_LOADED                    = 104;
     protected static final int EVENT_RADIO_STATE_CHANGED               = 105;
     protected static final int EVENT_INIT_ISIM_DONE                    = 106;
     protected static final int EVENT_IMS_BEARER_ESTABLISTED            = 107;
@@ -64,13 +77,16 @@ public class ImsRegister {
         mPhone = phone;
         mContext = context;
         mCi = ci;
-        mTelephonyManager = TelephonyManager.from(mContext);
+        //mTelephonyManager = TelephonyManager.from(mContext);
         mPhoneId = mPhone.getPhoneId();
+        mTelephonyManager = (TelephonyManager)mContext.getSystemService(TelephonyManager.getServiceName(Context.TELEPHONY_SERVICE, mPhoneId));
         mVolteConfig = VolteConfig.getInstance();
         mHandler = new BaseHandler(mContext.getMainLooper());
-        IntentFilter intentFilter = new IntentFilter();
+        /*IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
-        mContext.registerReceiver(mReceiver, intentFilter);
+        mContext.registerReceiver(mReceiver, intentFilter);*/
+        mUiccController = MsUiccController.getInstance(mPhoneId);
+        mUiccController.registerForIccChanged(mHandler, EVENT_ICC_CHANGED, null);
         mCi.registerForRadioStateChanged(mHandler, EVENT_RADIO_STATE_CHANGED, null);
         mCi.registerForConnImsen(mHandler, EVENT_IMS_BEARER_ESTABLISTED, null);
         mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
@@ -85,30 +101,24 @@ public class ImsRegister {
             log("handleMessage msg=" + msg);
             AsyncResult ar = (AsyncResult) msg.obj;
             switch (msg.what) {
+                case EVENT_ICC_CHANGED:
+                    onUpdateIccAvailability();
+                    break;
+                case EVENT_RECORDS_LOADED:
+                    log("EVENT_RECORDS_LOADED");
+                    mSIMLoaded = true;
+                    initISIM();
+                    break;
                 case EVENT_RADIO_STATE_CHANGED:
-                    if (mPhone.isRadioOn()) {
-                        log("EVENT_RADIO_STATE_CHANGED -> radio is on");
-                        initISIM();
-                    } else {
+                    if (mCi.getRadioState() == CommandsInterface.RadioState.RADIO_UNAVAILABLE
+                    || mCi.getRadioState() == CommandsInterface.RadioState.RADIO_OFF) {
                         mInitISIMDone = false;
                         mIMSBearerEstablished = false;
-                        mLastNumeric="";
+                        mLastNumeric = "";
                         mCurrentImsRegistered = false;
-                        boolean needNotifyRegisterState = false;
-                        if(mPhone.getPhoneId() == mTelephonyManager.getPrimaryCard()){
-                            log("radio not on, notify ImsRegestered state mCurrentImsRegistered = " + mCurrentImsRegistered);
-                            needNotifyRegisterState = true;
-                        } else {
-                            int primaryCard = mTelephonyManager.getPrimaryCard();
-                            PhoneProxy phone = (PhoneProxy)PhoneFactory.getPhone(primaryCard);
-                            if(SubscriptionManager.isValidPhoneId(primaryCard) && !((GSMPhone)phone.getActivePhone()).isRadioOn()){
-                                needNotifyRegisterState = true;
-                                log("primary card radio not on, notify ImsRegestered state mCurrentImsRegistered = " + mCurrentImsRegistered);
-                            }
-                        }
-                        if(needNotifyRegisterState) {
-                            sendVolteServiceStateChanged();
-                        }
+                    } else {
+                        log("VOLTE EVENT_RADIO_STATE_CHANGED -> radio is on");
+                        initISIM();
                     }
                     break;
                 case EVENT_INIT_ISIM_DONE:
@@ -124,7 +134,19 @@ public class ImsRegister {
                     break;
                 case EVENT_IMS_BEARER_ESTABLISTED:
                     ar = (AsyncResult) msg.obj;
-                    if(ar.exception != null) break;
+                    if(ar.exception != null) {
+                        CommandException.Error err=null;
+                        if (ar.exception instanceof CommandException) {
+                            err = ((CommandException)(ar.exception)).getCommandError();
+                        }
+                        if (err == CommandException.Error.RADIO_NOT_AVAILABLE) {
+                            if (mRetryCount < 8) {
+                                mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
+                                mRetryCount++;
+                            }
+                        }
+                        break;
+                    }
                     int[] conn = (int[]) ar.result;
                     log("EVENT_CONN_IMSEN : conn = "+conn[0]);
                     if (conn[0] == 1) {
@@ -134,9 +156,10 @@ public class ImsRegister {
                     }
                     break;
                 case EVENT_ENABLE_IMS:
-                    mNumeric = mTelephonyManager.getNetworkOperatorForPhone(mPhoneId);
+                    mNumeric = mTelephonyManager.getNetworkOperator();
                     mVolteConfig.loadVolteConfig(mContext);
                     boolean isSimConfig = getSimConfig();
+                    log("EVENT_ENABLE_IMS : mNumeric = "+ mNumeric + "  mLastNumeric = " + mLastNumeric);
                     if(!(mLastNumeric.equals(mNumeric))) {
                         if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric))){
                               mCi.enableIms(null);
@@ -151,7 +174,7 @@ public class ImsRegister {
             }
         }
     };
-    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+    /*private BroadcastReceiver mReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             int phoneId = intent.getIntExtra(PhoneConstants.PHONE_KEY,
@@ -168,12 +191,15 @@ public class ImsRegister {
                 }
             }
         }
-    };
+    };*/
 
     private void initISIM() {
         if (!mInitISIMDone
                 && mPhoneId == getPrimaryCard()
-                && mTelephonyManager.getSimState(mPhoneId) == TelephonyManager.SIM_STATE_READY) {
+                && mTelephonyManager.getSimState() == TelephonyManager.SIM_STATE_READY
+                && mSIMLoaded
+                && !(mCi.getRadioState() == CommandsInterface.RadioState.RADIO_UNAVAILABLE
+                        || mCi.getRadioState() == CommandsInterface.RadioState.RADIO_OFF)) {
             String impi = null;
             String impu = null;
             String domain = null;
@@ -181,12 +207,11 @@ public class ImsRegister {
             String bspAddr = null;
             String instanceId = null;
             String conferenceUri = null;
-            UiccController uc = UiccController.getInstance();
+            UiccController uc = MsUiccController.getInstance(mPhoneId);
             IccRecords iccRecords = null;
             String operatorNumberic = null;
             if (uc != null) {
-                iccRecords = uc.getIccRecords(mPhoneId,
-                        UiccController.APP_FAM_3GPP);
+                iccRecords = uc.getIccRecords(UiccController.APP_FAM_3GPP);
                 if (iccRecords != null
                         && iccRecords.getOperatorNumeric() != null
                         && iccRecords.getOperatorNumeric().length() > 0) {
@@ -221,6 +246,9 @@ public class ImsRegister {
                                 + imei.substring(14);
                     }
                     log("instanceId = " + instanceId);
+                } else {
+                    log("sim"+ mPhoneId +" may has not loaded!");
+                    return;
                 }
             }
             mCi.initISIM(conferenceUri, instanceId, impu, impi, domain, xCap,
@@ -236,7 +264,9 @@ public class ImsRegister {
             mCurrentImsRegistered = imsRegistered;
             if(isPrimaryCard) {
                 sendVolteServiceStateChanged();
-                if (mPhone.isRadioOn() && getServiceState().getState() != ServiceState.STATE_IN_SERVICE) {
+                if (!(mCi.getRadioState() == CommandsInterface.RadioState.RADIO_UNAVAILABLE
+                        || mCi.getRadioState() == CommandsInterface.RadioState.RADIO_OFF)
+                        && getServiceState().getState() != ServiceState.STATE_IN_SERVICE) {
                     log("voice regstate not in service, will call ImsNotifier to notifyServiceStateChanged");
                     mPhone.notifyServiceStateChangedForIms(getServiceState());
                 }
@@ -246,10 +276,13 @@ public class ImsRegister {
     /* @} */
 
     private void sendVolteServiceStateChanged() {
-        mPhone.notifyVoLteServiceStateChanged(new VoLteServiceState(mCurrentImsRegistered ? VoLteServiceState.IMS_REG_STATE_REGISTERED : VoLteServiceState.IMS_REG_STATE_NOT_EGISTERED));
+        VoLteServiceState volteSS = new VoLteServiceState();
+        volteSS.setImsState(mCurrentImsRegistered ? 1 : 0);
+        mPhone.notifyVoLteServiceStateChanged(volteSS);
     }
 
     public void enableIms() {
+        Log.i(TAG, "enableIms ->mIMSBearerEstablished:" + mIMSBearerEstablished + " mInitISIMDone:" + mInitISIMDone);
         if(mIMSBearerEstablished && mInitISIMDone) {
         mHandler.sendMessage(mHandler.obtainMessage(EVENT_ENABLE_IMS));
         }
@@ -270,7 +303,7 @@ public class ImsRegister {
     }
 
     private boolean getSimConfig(){
-        String numeric = mTelephonyManager.getSimOperatorNumericForPhone(mPhoneId);
+        String numeric = mTelephonyManager.getSimOperator();
         log("getSimConfig() numeric = " + numeric);
         if(mVolteConfig.containsCarrier(numeric)){
             return mVolteConfig.getVolteEnable(numeric);
@@ -303,7 +336,7 @@ public class ImsRegister {
      * In this sisuation, we should get the primarycard by the prop. @{*/
     private int getPrimaryCard(){
         int primaryCard = mTelephonyManager.getPrimaryCard();
-        if(SubscriptionManager.isValidPhoneId(primaryCard)){
+        if(SimManager.isValidPhoneId(primaryCard)){
             return primaryCard;
         }
 
@@ -337,5 +370,41 @@ public class ImsRegister {
         } else {
             return new ServiceState();
         }
+    }
+    private void onUpdateIccAvailability() {
+        if (mUiccController == null ) {
+            return;
+        }
+
+        UiccCardApplication newUiccApplication = getUiccCardApplication();
+
+        if (mUiccApplcation != newUiccApplication) {
+            if (mUiccApplcation != null) {
+                log("Removing stale icc objects.");
+                if (mIccRecords != null) {
+                    mIccRecords.unregisterForRecordsLoaded(mHandler);
+                }
+                mIccRecords = null;
+                mUiccApplcation = null;
+                mInitISIMDone = false;
+                mSIMLoaded    = false;
+            }
+            if (newUiccApplication != null) {
+                log("New card found");
+                mUiccApplcation = newUiccApplication;
+                mIccRecords = mUiccApplcation.getIccRecords();
+                if (mIccRecords != null) {
+                    mIccRecords.registerForRecordsLoaded(mHandler, EVENT_RECORDS_LOADED, null);
+                }
+            }
+        }
+    }
+
+    private UiccCardApplication getUiccCardApplication() {
+        return mUiccController.getUiccCardApplication(UiccController.APP_FAM_3GPP);
+    }
+
+    public void onImsPDNReady(){
+        mIMSBearerEstablished = true;
     }
 }

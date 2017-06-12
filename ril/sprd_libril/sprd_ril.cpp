@@ -255,6 +255,7 @@ static void dispatchVideoPhoneInit(Parcel& p, RequestInfo *pRI);
 static void dispatchVideoPhoneDial(Parcel& p, RequestInfo *pRI);
 static void dispatchVideoPhoneCodec(Parcel& p, RequestInfo *pRI);
 static void dispatchCallForwardUri(Parcel& p, RequestInfo *pRI);
+static void dispatchImsNetworkInfo(Parcel& p, RequestInfo *pRI);
 #endif
 
 
@@ -315,6 +316,7 @@ extern "C" void stripNumberFromSipAddress(const char *sipAddress, char *number, 
 static int responseBroadcastSmsLte(Parcel &p, void *response, size_t responselen);
 static int responseBroadcastSms(Parcel &p, void *response, size_t responselen);
 static int responseMDCAPU(Parcel &p, void *response, size_t responselen);
+static int responseImsNetworkInfo(Parcel &p, void *response, size_t responselen);
 #endif
 
 static int decodeVoiceRadioTechnology (RIL_RadioState radioState);
@@ -2362,9 +2364,51 @@ dispatchCallForwardUri(Parcel &p, RequestInfo *pRI) {
     invalidCommandBlock(pRI);
     return;
 }
+
+static void dispatchImsNetworkInfo(Parcel& p, RequestInfo *pRI){
+    IMS_NetworkInfo info;
+    int32_t t;
+    status_t status;
+
+    memset (&info, 0, sizeof(info));
+
+    // note we only check status at the end
+
+    status = p.readInt32(&t);
+    info.type = (int)t;
+
+    info.info = strdupReadString(p);
+
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+
+    // special case: number 0-length fields is null
+    if (info.info != NULL && strlen (info.info) == 0) {
+        info.info = NULL;
+    }
+
+    startRequest;
+    appendPrintBuf("%s,type=%d,info=%s", printBuf, info.type, info.info);
+    closeRequest;
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    s_callbacks.onRequest(pRI->pCI->requestNumber, &info, sizeof(info), pRI);
+
+#ifdef MEMSET_FREED
+    memsetString(info.info);
+#endif
+    free (info.info);
+#ifdef MEMSET_FREED
+    memset(&info, 0, sizeof(info));
 #endif
 
-
+    return;
+    invalid:
+    invalidCommandBlock(pRI);
+    return;
+}
+#endif
 
 static void dispatchNVReadItem(Parcel &p, RequestInfo *pRI) {
     RIL_NV_ReadItem nvri;
@@ -4683,6 +4727,26 @@ static int responseCallForwardsUri(Parcel &p, void *response, size_t responselen
     return 0;
 }
 
+static int responseImsNetworkInfo(Parcel &p, void *response, size_t responselen){
+    if (response == NULL) {
+        RILLOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    if (responselen != sizeof(IMS_NetworkInfo)) {
+        RILLOGE("invalid IMS_NetworkInfo response length was %d expected %d",
+                (int)responselen, (int)sizeof (IMS_NetworkInfo));
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+    IMS_NetworkInfo *p_cur = (IMS_NetworkInfo *) response;
+    p.writeInt32(p_cur->type);
+    writeStringToParcel(p, p_cur->info);
+    startResponse;
+    appendPrintBuf("responseImsNetworkInfo: type=%d, info=%s", p_cur->type, p_cur->info);
+    closeResponse;
+    return 0;
+}
+
 static int responseBroadcastSmsLte(Parcel &p, void *response, size_t responselen) {
     if (response == NULL) {
         RILLOGE("invalid response: NULL");
@@ -6755,6 +6819,21 @@ requestToString(int request) {
         case RIL_REQUEST_IMS_INITIAL_GROUP_CALL: return "RIL_REQUEST_IMS_INITIAL_GROUP_CALL";
         case RIL_REQUEST_IMS_ADD_TO_GROUP_CALL: return "RIL_REQUEST_IMS_ADD_TO_GROUP_CALL";
         case RIL_REQUEST_IMS_SET_CONFERENCE_URI: return "RIL_REQUEST_IMS_SET_CONFERENCE_URI";
+        /* SPRD: add for VoWifi @{ */
+        case RIL_REQUEST_IMS_HANDOVER: return "RIL_REQUEST_IMS_HANDOVER";
+        case RIL_REQUEST_IMS_HANDOVER_STATUS_UPDATE: return "RIL_REQUEST_IMS_HANDOVER_STATUS_UPDATE";
+        case RIL_REQUEST_IMS_NETWORK_INFO_CHANGE: return "RIL_REQUEST_IMS_NETWORK_INFO_CHANGE";
+        case RIL_REQUEST_IMS_HANDOVER_CALL_END: return "RIL_REQUEST_IMS_HANDOVER_CALL_END";
+        case RIL_REQUEST_IMS_WIFI_ENABLE: return "RIL_REQUEST_IMS_WIFI_ENABLE";
+        case RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE: return "RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE";
+        case RIL_REQUEST_IMS_UPDATE_DATA_ROUTER: return "RIL_REQUEST_IMS_UPDATE_DATA_ROUTER";
+        case RIL_REQUEST_GET_TPMR_STATE: return "RIL_REQUEST_GET_TPMR_STATE";
+        case RIL_REQUEST_SET_TPMR_STATE: return "RIL_REQUEST_SET_TPMR_STATE";
+        case RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO: return "RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO";
+        case RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY: return "RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY";
+        case RIL_REQUEST_GET_IMS_PCSCF_ADDR: return "GET_IMS_PCSCF_ADDR";
+        case RIL_REQUEST_SET_VOWIFI_PCSCF_ADDR: return "SET_VOWIFI_PCSCF_ADDR";
+        /* @} */
         case RIL_REQUEST_GET_IMS_BEARER_STATE: return "RIL_REQUEST_GET_IMS_BEARER_STATE";
         case RIL_REQUEST_GET_SIMLOCK_STATUS: return "RIL_REQUEST_GET_SIMLOCK_STATUS";
         case RIL_REQUEST_VIDEOPHONE_DIAL: return "VIDEOPHONE_DIAL";
@@ -6930,6 +7009,13 @@ requestToString(int request) {
         case RIL_UNSOL_GPRS_RAU: return "UNSOL_GPRS_RAU";
         case RIL_UNSOL_RESPONS_IMS_CONN_ENABLE: return "RIL_UNSOL_RESPONS_IMS_CONN_ENABLE";
         case RIL_UNSOL_CLEAR_CODE_FALLBACK: return "RIL_UNSOL_CLEAR_CODE_FALLBACK";
+        /* SPRD: add for VoWifi @{ */
+        case RIL_UNSOL_IMS_HANDOVER_REQUEST: return "RIL_UNSOL_IMS_HANDOVER_REQUEST";
+        case RIL_UNSOL_IMS_HANDOVER_STATUS_CHANGE: return "RIL_UNSOL_IMS_HANDOVER_STATUS_CHANGE";
+        case RIL_UNSOL_IMS_NETWORK_INFO_CHANGE: return "RIL_UNSOL_IMS_NETWORK_INFO_CHANGE";
+        case RIL_UNSOL_IMS_REGISTER_ADDRESS_CHANGE: return "RIL_UNSOL_IMS_REGISTER_ADDRESS_CHANGE";
+        case RIL_UNSOL_IMS_WIFI_PARAM: return "RIL_UNSOL_IMS_WIFI_PARAM";
+        /* @} */
 #if defined (RIL_SUPPORTED_OEMSOCKET)
         case RIL_EXT_UNSOL_RIL_CONNECTED: return "UNSOL_RIL_CONNECTED";
         case RIL_EXT_UNSOL_BAND_INFO: return "UNSOL_BAND_INFO";

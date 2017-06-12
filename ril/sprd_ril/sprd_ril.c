@@ -153,6 +153,8 @@ int  g_maybe_addcall = 0;
 /** SPRD: Bug 503887 add ISIM for volte . @{*/
 int g_ImsBearerEstablished = -1;
 /** }@ */
+static int s_ImsISIM = -1;
+static int s_sessionId = -1;
 
 /** SPRD: Bug 523208 set pin/puk remain times to prop. @{*/
 #define PIN_PUK_PROP_SIZE 20
@@ -214,6 +216,7 @@ static void requestCallForwardUri(int channelID, RIL_CallForwardInfoUri *data, s
 static void requestInitialGroupCall(int channelID, void *data, size_t datalen, RIL_Token t);
 static void requestAddGroupCall(int channelID, void *data, size_t datalen, RIL_Token t);
 static void requestCallForwardU(int channelID, RIL_CallForwardInfo *data, size_t datalen, RIL_Token t);
+static void requestUpdateImsNetworkInfo(int channelID, void *data, size_t datalen, RIL_Token t);
 static void requestQuerySmsStorageMode(int channelID, void *data, size_t datalen, RIL_Token t, char *mode);
 static int isVoLteEnable();
 static bool isAttachEnable();
@@ -4320,6 +4323,11 @@ void sendCSCallStateChanged(void *param)
     RIL_onUnsolicitedResponse (RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED,NULL, 0);
 }
 
+void sendIMSCallStateChanged(void *param) {
+    RILLOGI("sendIMSCallStateChanged");
+    RIL_onUnsolicitedResponse(RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED, NULL, 0);
+}
+
 void sendVideoCallStateChanged(void *param)
 {
 #if defined (RIL_SPRD_EXTENSION)
@@ -6130,6 +6138,11 @@ error:
     return;
 }
 
+static bool isISIMFileId(int fileId) {
+    return (fileId == 0x6f04 || fileId == 0x6f02 || fileId == 0x6f03 ||
+            fileId == 0x6f07  || fileId == 0x6f09 || fileId == 0x6fe5);
+}
+
 static void  requestSIM_IO(int channelID, void *data, size_t datalen, RIL_Token t)
 {
     ATResponse *p_response = NULL;
@@ -6144,6 +6157,7 @@ static void  requestSIM_IO(int channelID, void *data, size_t datalen, RIL_Token 
     memset(&sr, 0, sizeof(sr));
 
     p_args = (RIL_SIM_IO_v6 *)data;
+    bool isISIMfile = isISIMFileId(p_args->fileid);
 
     /* FIXME handle pin2 */
 
@@ -6152,14 +6166,26 @@ static void  requestSIM_IO(int channelID, void *data, size_t datalen, RIL_Token 
         RILLOGI("Reference-ril. requestSIM_IO pin2 %s",p_args->pin2);
     }
     if (p_args->data == NULL) {
-        err = asprintf(&cmd, "AT+CRSM=%d,%d,%d,%d,%d,%c,\"%s\"",
-                p_args->command, p_args->fileid,
-                p_args->p1, p_args->p2, p_args->p3,pad_data,p_args->path);
+        if (isISIMfile) {
+            err = asprintf(&cmd, "AT+CRLA=%d,%d,%d,%d,%d,%d,%c,\"%s\"", s_sessionId,
+                    p_args->command, p_args->fileid,
+                    p_args->p1, p_args->p2, p_args->p3, pad_data, p_args->path);
 
+        } else {
+            err = asprintf(&cmd, "AT+CRSM=%d,%d,%d,%d,%d,%c,\"%s\"",
+                    p_args->command, p_args->fileid,
+                    p_args->p1, p_args->p2, p_args->p3,pad_data, p_args->path);
+        }
     } else {
-        err = asprintf(&cmd, "AT+CRSM=%d,%d,%d,%d,%d,\"%s\",\"%s\"",
-                p_args->command, p_args->fileid,
-                p_args->p1, p_args->p2, p_args->p3, p_args->data,p_args->path);
+        if (isISIMfile) {
+            err = asprintf(&cmd, "AT+CRLA=%d,%d,%d,%d,%d,%d,\"%s\",\"%s\"", s_sessionId,
+                    p_args->command, p_args->fileid,
+                    p_args->p1, p_args->p2, p_args->p3, p_args->data, p_args->path);
+        } else {
+            err = asprintf(&cmd, "AT+CRSM=%d,%d,%d,%d,%d,\"%s\",\"%s\"",
+                    p_args->command, p_args->fileid,
+                    p_args->p1, p_args->p2, p_args->p3, p_args->data, p_args->path);
+        }
     }
     if(err < 0) {
         RILLOGE("Failed to allocate memory");
@@ -6167,7 +6193,7 @@ static void  requestSIM_IO(int channelID, void *data, size_t datalen, RIL_Token 
         goto error;
     }
 
-    err = at_send_command_singleline(ATch_type[channelID], cmd, "+CRSM:", &p_response);
+    err = at_send_command_singleline(ATch_type[channelID], cmd, isISIMfile ? "+CRLA:" : "+CRSM:", &p_response);
 
     free(cmd);
     if (err < 0 || p_response->success == 0) {
@@ -6522,26 +6548,44 @@ void setPinPukRemainTimes(SimUnlockType type, int remainTimes) {
 }
 /** }@ */
 
+static int initISIM(int channelID) {
+    if(s_ImsISIM != -1) {
+        return s_ImsISIM;
+    }
+    ATResponse   *p_response = NULL;
+    char         *line;
+    int           err;
+    err = at_send_command_singleline(ATch_type[channelID], "AT+ISIM=1", "+ISIM:", &p_response);
+    if (err >= 0 && p_response->success) {
+        line = p_response->p_intermediates->line;
+        err = at_tok_start(&line);
+        if (err >= 0) {
+            err = at_tok_nextint(&line, &s_ImsISIM);
+            if(err >= 0) {
+                RILLOGE("Response of ISIM is %d", s_ImsISIM);
+                if(s_ImsISIM == 1) {
+                    err = at_tok_nextint(&line, &s_sessionId);
+                    RILLOGE("SessionId of ISIM is %d", s_sessionId);
+                }
+            }
+         }
+    }
+    at_response_free(p_response);
+    return s_ImsISIM;
+}
+
 static void requestInitISIM(int channelID, void*  data, size_t  datalen, RIL_Token  t)
 {
     ATResponse   *p_response = NULL;
     int           err;
     char          cmd[128] = {0};
     char         *line;
-    int           response = 0;
+    int           response = initISIM(channelID);
     const char**  strings = (const char**)data;
-    err = at_send_command_singleline(ATch_type[channelID], "AT+ISIM=1", "+ISIM:", &p_response);
-    if (err >= 0 && p_response->success) {
-        line = p_response->p_intermediates->line;
-        err = at_tok_start(&line);
-        if (err >= 0) {
-            err = at_tok_nextint(&line, &response);
-            if(err >= 0) {
-                RILLOGE("Response of ISIM is %d", response);
-            }
-        }
+    if(response == 1){
+        RILLOGE("ISIM card, need send AT+IMSCOUNTCFG=1 to CP");
+        err = at_send_command(ATch_type[channelID], "AT+IMSCOUNTCFG=1" , NULL);
     }
-    at_response_free(p_response);
 
     if(datalen == 7 * sizeof(char *) && strings[0] != NULL && strlen(strings[0]) > 0)
     {
@@ -9300,6 +9344,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_SIM_CLOSE_CHANNEL
                 || request == RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL
                 || request == RIL_REQUEST_GET_IMS_BEARER_STATE
+                || request == RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY
                 || request == RIL_REQUEST_GET_SIMLOCK_STATUS
                 || (request == RIL_REQUEST_DIAL && s_isstkcall)
 #if defined (RIL_SPRD_EXTENSION)
@@ -9379,6 +9424,21 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_GET_IMS_BEARER_STATE
                 || request == RIL_REQUEST_REGISTER_IMS_IMPU
                 || request == RIL_REQUEST_IMS_SET_CONFERENCE_URI
+                /* SPRD: add for VoWifi @{ */
+                || request == RIL_REQUEST_GET_TPMR_STATE
+                || request == RIL_REQUEST_SET_TPMR_STATE
+                || request == RIL_REQUEST_IMS_HANDOVER
+                || request == RIL_REQUEST_IMS_HANDOVER_STATUS_UPDATE
+                || request == RIL_REQUEST_IMS_NETWORK_INFO_CHANGE
+                || request == RIL_REQUEST_IMS_HANDOVER_CALL_END
+                || request == RIL_REQUEST_IMS_WIFI_ENABLE
+                || request == RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE
+                || request == RIL_REQUEST_IMS_UPDATE_DATA_ROUTER
+                || request == RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO
+                || request == RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY
+                || request == RIL_REQUEST_GET_IMS_PCSCF_ADDR
+                || request == RIL_REQUEST_SET_VOWIFI_PCSCF_ADDR
+                /* @} */
                 || request == RIL_REQUEST_REGISTER_IMS_IMPI
                 || request == RIL_REQUEST_REGISTER_IMS_DOMAIN
                 || request == RIL_REQUEST_REGISTER_IMS_IMEI
@@ -11614,6 +11674,265 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
             break;
         }
+/* SPRD: add for VoWifi @{ */
+        case RIL_REQUEST_IMS_HANDOVER: {
+            int type = ((int*)data)[0];
+            char cmd[20] = {0};
+            p_response = NULL;
+
+            RILLOGD("RIL_REQUEST_IMS_HANDOVER type: %d", type);
+            snprintf(cmd, sizeof(cmd), "AT+IMSHO=%d", type);
+            err = at_send_command(ATch_type[channelID], cmd , &p_response);
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        case RIL_REQUEST_IMS_HANDOVER_STATUS_UPDATE: {
+            int type = ((int*)data)[0];
+            char cmd[30] = {0};
+            RILLOGD("RIL_REQUEST_IMS_HANDOVER_STATUS_UPDATE status: %d", type);
+            if(type == IMS_HANDOVER_REGISTER_FAIL || type == IMS_HANDOVER_SUCCESS) {
+                snprintf(cmd, sizeof(cmd), "AT+VOWFREG=%d", type);
+                err = at_send_command(ATch_type[channelID], cmd , NULL);
+            } else if(type == IMS_HANDOVER_ATTACH_FAIL || type == IMS_HANDOVER_ATTACH_SUCCESS) {
+                if(type == IMS_HANDOVER_ATTACH_FAIL) {
+                    type = 0; //fail
+                } else {
+                    type = 1; //success
+                }
+                snprintf(cmd, sizeof(cmd), "AT+IMSWFATT=%d", type);
+                err = at_send_command(ATch_type[channelID], cmd , NULL);
+            } else {
+                snprintf(cmd, sizeof(cmd), "AT+IMSHORST=%d", type);
+                err = at_send_command(ATch_type[channelID], cmd , NULL);
+            }
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+        case RIL_REQUEST_IMS_NETWORK_INFO_CHANGE: {
+            requestUpdateImsNetworkInfo(channelID, data, datalen, t);
+            break;
+        }
+        case RIL_REQUEST_IMS_HANDOVER_CALL_END: {
+            int type = ((int*)data)[0];
+            char cmd[100] = {0};
+            snprintf(cmd, sizeof(cmd), "AT+IMSHOCALLEND=%d", type);
+            RILLOGD("RIL_REQUEST_IMS_HANDOVER_CALL_END: %d", type);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+        /*SPRD: Add for notify data router{@*/
+        case RIL_REQUEST_IMS_UPDATE_DATA_ROUTER: {
+            char cmd[100] = {0};
+            snprintf(cmd, sizeof(cmd), "AT+IMSHODATAROUTER=1");
+            RILLOGD("RIL_REQUEST_IMS_UPDATE_DATA_ROUTER.");
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+        /* @} */
+        case RIL_REQUEST_IMS_WIFI_ENABLE: {
+            int type = ((int*)data)[0];
+            char cmd[20] = {0};
+            RILLOGD("RIL_REQUEST_IMS_WIFI_ENABLE type: %d", type);
+            snprintf(cmd, sizeof(cmd), "AT+VOWIFIEN=%d", type);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+        case RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE: {
+            int state = ((int*)data)[0];
+            char cmd[32] = {0};
+            RILLOGD("RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE state: %d", state);
+            snprintf(cmd, sizeof(cmd), "AT+SPCPFS=1,%d", state);
+            err = at_send_command(ATch_type[channelID], cmd , NULL);
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+        case RIL_REQUEST_GET_TPMR_STATE: {
+            p_response = NULL;
+            int response = 0;
+            err = at_send_command_singleline(ATch_type[channelID], "AT+SPTPMR?",
+                    "+SPTPMR:", &p_response);
+            if (err >= 0 && p_response->success) {
+                char *line = p_response->p_intermediates->line;
+                err = at_tok_start(&line);
+                if (err == 0)err = at_tok_nextint(&line, &response);
+                RILLOGD("RIL_EXT_REQUEST_GET_TPMR_STATE:%d",response);
+                if(err >= 0) {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, &response,
+                            sizeof(response));
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                }
+            } else {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        case RIL_REQUEST_SET_TPMR_STATE: {
+            char cmd[64];
+            snprintf(cmd, sizeof(cmd), "AT+SPTPMR=%d", ((int *)data)[0]);
+            err = at_send_command(ATch_type[channelID], cmd, NULL);
+            if (err < 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+        case RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO: {
+            int err;
+            int response;
+            char cmd[512] = {0};
+            const char **strings = (const char **)data;
+            ATResponse *p_response = NULL;
+            RLOGD("RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO datalen = \"%d\"", datalen);
+
+            if (datalen > 0 && strings[0] != NULL && strlen(strings[0]) > 0) {
+                memset(cmd, 0, sizeof(cmd));
+                snprintf(cmd, sizeof(cmd), "AT+VOWIFCALLINF=%s", strings[0]);
+                err = at_send_command(ATch_type[channelID], cmd , NULL);
+                RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+            } else {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            }
+            break;
+        }
+        case RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY:{
+            p_response = NULL;
+            int response = 0;
+            err = at_send_command_singleline(ATch_type[channelID], "AT+CISRVCC?",
+                    "+CISRVCC:", &p_response);
+            if (err >= 0 && p_response->success) {
+                char *line = p_response->p_intermediates->line;
+                err = at_tok_start(&line);
+                if (err == 0){
+                    err = at_tok_nextint(&line, &response);
+                }
+                RLOGD("RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY:%d",response);
+                if(err >= 0){
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, &response,
+                            sizeof(response));
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                }
+            } else {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            }
+            at_response_free(p_response);
+            break;
+        }
+        case RIL_REQUEST_GET_IMS_PCSCF_ADDR: {
+            ATLine *p_cur = NULL;
+            char *input;
+            char *sskip;
+            char *tmp;
+            char *pcscf_prim_addr = NULL;
+            int skip;
+
+            err = at_send_command_multiline(ATch_type[channelID], "AT+CGCONTRDP=11",
+                    "+CGCONTRDP:", &p_response);
+
+            if (err < 0 || p_response->success == 0) {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            } else {
+                for (p_cur = p_response->p_intermediates; p_cur != NULL;
+                     p_cur = p_cur->p_next) {
+                     input = p_cur->line;
+                     err = at_tok_start(&input);
+                     if (err < 0) break;
+
+                     err = at_tok_nextint(&input, &skip);  // cid
+                     if (err < 0) break;
+
+                     err = at_tok_nextint(&input, &skip);  // bearer_id
+                     if (err < 0) break;
+
+                     err = at_tok_nextstr(&input, &sskip);  // apn
+                     if (err < 0) break;
+
+                     if (at_tok_hasmore(&input)) {
+                         err = at_tok_nextstr(&input, &sskip);  // local_addr_and_subnet_mask
+                         if (err < 0) break;
+
+                         if (at_tok_hasmore(&input)) {
+                             err = at_tok_nextstr(&input, &sskip);  // gw_addr
+                             if (err < 0) break;
+
+                             if (at_tok_hasmore(&input)) {
+                                 err = at_tok_nextstr(&input, &sskip);  // dns_prim_addr
+                                 if (err < 0) break;
+
+                                 if (at_tok_hasmore(&input)) {
+                                     err = at_tok_nextstr(&input, &sskip);  // dns_sec_addr
+                                     if (err < 0) break;
+
+                                     if (at_tok_hasmore(&input)) {  // PCSCF_prim_addr
+                                         err = at_tok_nextstr(&input, &pcscf_prim_addr);
+                                         if (err < 0) break;
+                                     }
+                                 }
+                             }
+                         }
+                     }
+                     if(pcscf_prim_addr != NULL){
+                         RIL_onRequestComplete(t, RIL_E_SUCCESS, pcscf_prim_addr, strlen(pcscf_prim_addr) + 1);
+                     } else {
+                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                     }
+                     break;
+                }  // for
+            }  // success
+            at_response_free(p_response);
+            break;
+        }
+        case RIL_REQUEST_SET_VOWIFI_PCSCF_ADDR: {
+            int err;
+            char cmd[128] = {0};
+            const char **strings = (const char **)data;
+
+            if (datalen > 0 && strings[0] != NULL && strlen(strings[0]) > 0) {
+                snprintf(cmd, sizeof(cmd), "AT+VOWIFIPCSCF=%s", strings[0]);
+                err = at_send_command(ATch_type[channelID], cmd , NULL);
+                if (err != 0) {
+                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+                } else {
+                    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+                }
+            } else {
+                RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+            }
+            break;
+
+        }
+        /* @} */
         case RIL_REQUEST_REGISTER_IMS_IMPI: {
             char cmd[100] = {0};
             const char *impi = NULL;
@@ -12382,6 +12701,8 @@ done:
     } else if(ret == SIM_ABSENT) {
         g_NeedQueryPinTimes = true;
         g_NeedQueryPukTimes = true;
+        s_ImsISIM = -1;
+        s_sessionId = -1;
     }
     /** }@ */
     return ret;
@@ -12464,6 +12785,12 @@ static int getCardStatus(int channelID, RIL_CardStatus_v6 **pp_card_status)
           NULL, NULL, 0, RIL_PINSTATE_ENABLED_NOT_VERIFIED, RIL_PINSTATE_UNKNOWN  }
         //Added for bug#242159 end
     };
+
+    static RIL_AppStatus ims_app_status_array[] = {
+        {RIL_APPTYPE_ISIM, RIL_APPSTATE_READY, RIL_PERSOSUBSTATE_READY,
+         NULL, NULL, 0, RIL_PINSTATE_UNKNOWN, RIL_PINSTATE_UNKNOWN}
+    };
+
     RIL_CardState card_state;
     int num_apps;
 
@@ -12488,6 +12815,12 @@ static int getCardStatus(int channelID, RIL_CardStatus_v6 **pp_card_status)
     RIL_AppType app_type = getSimType( channelID);
     RILLOGD("app type %d",app_type);
 
+    int isimResp = 0;
+    if (sim_status == SIM_READY && app_type == RIL_APPTYPE_USIM) {
+        isimResp = initISIM(channelID);
+        RLOGD("app type %d", isimResp);
+    }
+
     /* Initialize application status */
     unsigned int i;
     for (i = 0; i < RIL_CARD_MAX_APPS; i++) {
@@ -12501,12 +12834,20 @@ static int getCardStatus(int channelID, RIL_CardStatus_v6 **pp_card_status)
      * that reflects sim_status for gsm.
      */
     if (num_apps != 0) {
-        /* Only support one app, gsm */
-        p_card_status->num_applications = 1;
-        p_card_status->gsm_umts_subscription_app_index = 0;
+        if (isimResp != 1)  {
+            /* Only support one app, gsm */
+            p_card_status->num_applications = 1;
+            p_card_status->gsm_umts_subscription_app_index = 0;
 
-        /* Get the correct app status */
-        p_card_status->applications[0] = app_status_array[sim_status];
+            /* Get the correct app status */
+            p_card_status->applications[0] = app_status_array[sim_status];
+        } else {
+            p_card_status->num_applications = 2;
+            p_card_status->gsm_umts_subscription_app_index = 0;
+            p_card_status->ims_subscription_app_index = 1;
+            p_card_status->applications[0] = app_status_array[sim_status];
+            p_card_status->applications[1] = ims_app_status_array[0];
+        }
     }
 
     *pp_card_status = p_card_status;
@@ -13887,11 +14228,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             goto out;
         }
         if (SIM_RESET == result) {
+            s_ImsISIM = -1;
             RIL_requestTimedCallback (reopenSimCardAndProtocolStack, NULL, NULL);
         }
         response->result = result;
         RIL_onUnsolicitedResponse(RIL_UNSOL_SIM_REFRESH, response, sizeof(RIL_SimRefreshResponse_v7));
-        
     } else if (strStartsWith(s, "+CSSI:")) {
         RIL_SuppSvcNotification *response = NULL;
         int code = 0;
@@ -14606,8 +14947,116 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         if(status == SRVCC_PS_TO_CS_SUCCESS || status == VSRVCC_PS_TO_CS_SUCCESS){
             RIL_requestTimedCallback (sendCSCallStateChanged, NULL, &TIMEVAL_CSCALLSTATEPOLL);
         } else {
-            RIL_requestTimedCallback (sendCallStateChanged, NULL, &TIMEVAL_CSCALLSTATEPOLL);
+            RIL_requestTimedCallback (sendIMSCallStateChanged, NULL, &TIMEVAL_CSCALLSTATEPOLL);
         }
+    }
+    /* @} */
+    /* SPRD: add for VoWifi @{ */
+    else if (strStartsWith(s, "+IMSHOU")) {
+        int status;
+        char *tmp;
+
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+
+        err = at_tok_nextint(&tmp, &status);
+        if (err < 0) {
+            RLOGD("%s fail", s);
+            goto out;
+        }
+
+        RLOGD("onUnsolicited(),IMS_HANDOVER status: %d", status);
+        RIL_onUnsolicitedResponse(RIL_UNSOL_IMS_HANDOVER_REQUEST, &status,
+                sizeof(status));
+    } else if (strStartsWith(s, "+IMSHORSTU")) {
+        int status;
+        char *tmp;
+
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+
+        err = at_tok_nextint(&tmp, &status);
+        if (err < 0) {
+            RLOGD("%s fail", s);
+            goto out;
+        }
+
+        RLOGD("onUnsolicited(),IMS_HANDOVER_STATUS_CHANGE status: %d", status);
+        RIL_onUnsolicitedResponse(RIL_UNSOL_IMS_HANDOVER_STATUS_CHANGE, &status,
+                sizeof(status));
+    } else if (strStartsWith(s, "+IMSHOLTEINFU")) {
+        int status;
+        char *tmp;
+        char *info;
+
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+
+        IMS_NetworkInfo *response = (IMS_NetworkInfo *) alloca(
+                sizeof(IMS_NetworkInfo));
+        err = at_tok_nextint(&tmp, &response->type);
+        if (err < 0) {
+            RLOGD("get neg_stat fail");
+            goto out;
+        }
+        err = at_tok_nextstr(&tmp, &response->info);
+        if (err < 0) {
+            RLOGD("get SDP_md fail");
+            goto out;
+        }
+        RLOGD("onUnsolicited(),IMS_NETWORK_INFO_CHANGE status: %d, info: %s",
+                status, info);
+
+        RIL_onUnsolicitedResponse(RIL_UNSOL_IMS_NETWORK_INFO_CHANGE, response,
+                sizeof(IMS_NetworkInfo));
+    } else if (strStartsWith(s, "+IMSREGADDR:")) {
+        char *response = NULL;
+        char *tmp;
+
+        line = strdup(s);
+        tmp = line;
+        at_tok_start(&tmp);
+        err = at_tok_nextstr(&tmp, &response);
+        if (err < 0) {
+            RLOGD("%s fail", s);
+            goto out;
+        }
+
+        RIL_onUnsolicitedResponse(RIL_UNSOL_IMS_REGISTER_ADDRESS_CHANGE,
+                response, strlen(response));
+    } else if (strStartsWith(s, "+WIFIPARAM:")) {
+        char *tmp = NULL;
+        int response[4] = { 0 };
+
+        /* +WIFIPARAM:<latency>,<loss>,<jitter>,<rtpTimeout> */
+        line = strdup(s);
+        tmp = line;
+
+        err = at_tok_start(&tmp);
+        if (err < 0)
+            goto out;
+
+        err = at_tok_nextint(&tmp, &response[0]);
+        if (err < 0)
+            goto out;
+
+        err = at_tok_nextint(&tmp, &response[1]);
+        if (err < 0)
+            goto out;
+
+        err = at_tok_nextint(&tmp, &response[2]);
+        if (err < 0)
+            goto out;
+
+        err = at_tok_nextint(&tmp, &response[3]);
+        if (err < 0)
+            goto out;
+
+        RIL_onUnsolicitedResponse(RIL_UNSOL_IMS_WIFI_PARAM, response,
+                sizeof(response));
     }
     /* @} */
     /*SPRD: add for VoLTE to handle emergency number report */
@@ -16454,6 +16903,34 @@ static void requestAddGroupCall(int channelID, void *data, size_t datalen, RIL_T
 error:
     RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
     return;
+}
+
+static void requestUpdateImsNetworkInfo(int channelID, void *data, size_t datalen, RIL_Token t)
+{
+    IMS_NetworkInfo *p_info;
+    ATResponse   *p_response = NULL;
+    int err;
+    char *cmd;
+    int ret;
+
+    p_info = (IMS_NetworkInfo *)data;
+
+    ret = asprintf(&cmd, "AT+IMSHOWFINF=%d,\"%s\"", p_info->type, p_info->info);
+    if(ret < 0) {
+        RILLOGE("Failed to allocate memory");
+        cmd = NULL;
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        return;
+    }
+
+    err = at_send_command(ATch_type[channelID], cmd, &p_response);
+    free(cmd);
+    if (err < 0 || p_response->success == 0) {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    } else {
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    }
+    at_response_free(p_response);
 }
 
 static int isVoLteEnable(){

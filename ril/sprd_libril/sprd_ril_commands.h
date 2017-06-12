@@ -244,6 +244,21 @@
     ,{RIL_REQUEST_ENABLE_BROADCAST_SMS, dispatchInts, responseVoid}
     ,{RIL_REQUEST_GET_IMS_BEARER_STATE, dispatchVoid, responseInts}
     ,{RIL_REQUEST_GET_SIMLOCK_STATUS, dispatchInts, responseInts}
+    /* SPRD: add for VoWifi @{ */
+    ,{RIL_REQUEST_IMS_HANDOVER, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_IMS_HANDOVER_STATUS_UPDATE, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_IMS_NETWORK_INFO_CHANGE, dispatchImsNetworkInfo, responseVoid}
+    ,{RIL_REQUEST_IMS_HANDOVER_CALL_END, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_GET_TPMR_STATE, dispatchVoid, responseInts}
+    ,{RIL_REQUEST_SET_TPMR_STATE, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_IMS_WIFI_ENABLE, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE, dispatchInts, responseVoid}
+    ,{RIL_REQUEST_IMS_UPDATE_DATA_ROUTER, dispatchVoid, responseVoid}
+    ,{RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO, dispatchStrings, responseVoid}
+    ,{RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY, dispatchVoid, responseInts}
+    ,{RIL_REQUEST_GET_IMS_PCSCF_ADDR, dispatchVoid, responseString}
+    ,{RIL_REQUEST_SET_VOWIFI_PCSCF_ADDR, dispatchStrings, responseVoid}
+    /* @} */
 #if defined (RIL_SUPPORTED_OEMSOCKET)
     ,{RIL_EXT_REQUEST_GET_HD_VOICE_STATE, dispatchVoid, responseInts}
     ,{RIL_EXT_REQUEST_SIM_GET_ATR, dispatchVoid, responseString}
