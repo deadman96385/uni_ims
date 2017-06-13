@@ -430,16 +430,19 @@ public class ImsUtProxy extends IImsUt.Stub {
         TelephonyManager tm = TelephonyManager.from(mContext);
         String carrier = "";
         String impi = tm.getIsimImpi();
-	 int indexMCC = impi.indexOf("mcc");
-        int indexMNC = impi.indexOf("mnc");
-        String mccValue = impi.substring(indexMCC + 3, indexMCC + 6);
-        String mncValue = impi.substring(indexMNC + 3, indexMCC - 1);
+        if (!TextUtils.isEmpty(impi)) {
+            int indexMCC = impi.indexOf("mcc");
+            int indexMNC = impi.indexOf("mnc");
+            String mccValue = impi.substring(indexMCC + 3, indexMCC + 6);
+            String mncValue = impi.substring(indexMNC + 3, indexMCC - 1);
             if (mncValue.length() == 3 && mccValue.startsWith("00")) {
                 carrier = mccValue + mncValue.substring(1);
             } else {
                 carrier = mccValue + mncValue;
             }
-	 log("carrier = " + carrier);
+        }
+
+        log("carrier = " + carrier);
 
         if (!TextUtils.isEmpty(carrier)) {
             getUTConfig(carrier);
@@ -583,18 +586,21 @@ public class ImsUtProxy extends IImsUt.Stub {
     public void setListenerEx(IImsUtListenerEx listenerEx) {
         mListenerEx = listenerEx;
         TelephonyManager tm = TelephonyManager.from(mContext);
-	 String carrier = "";
+        String carrier = "";
         String impi = tm.getIsimImpi();
-	 int indexMCC = impi.indexOf("mcc");
-        int indexMNC = impi.indexOf("mnc");
-        String mccValue = impi.substring(indexMCC + 3, indexMCC + 6);
-        String mncValue = impi.substring(indexMNC + 3, indexMCC - 1);
+        if (!TextUtils.isEmpty(impi)) {
+            int indexMCC = impi.indexOf("mcc");
+            int indexMNC = impi.indexOf("mnc");
+            String mccValue = impi.substring(indexMCC + 3, indexMCC + 6);
+            String mncValue = impi.substring(indexMNC + 3, indexMCC - 1);
             if (mncValue.length() == 3 && mccValue.startsWith("00")) {
                 carrier = mccValue + mncValue.substring(1);
             } else {
                 carrier = mccValue + mncValue;
             }
-	 log("carrier = " + carrier);
+            log("carrier = " + carrier);
+        }
+
         if (!TextUtils.isEmpty(carrier)) {
             getUTConfig(carrier);
         }
@@ -626,7 +632,7 @@ public class ImsUtProxy extends IImsUt.Stub {
                     for (int i = 0; i < plmns.length; i++) {
                         if (!TextUtils.isEmpty(plmns[i]) && plmns[i].equals(carrier)) {
                             mPriority = PRIORITY_VOWIFI_UT;
-			      log("mPriority = " + mPriority);
+                            log("mPriority = " + mPriority);
                         }
                     }
                 }
@@ -635,7 +641,7 @@ public class ImsUtProxy extends IImsUt.Stub {
                     for (int i = 0; i < plmns.length; i++) {
                         if (!TextUtils.isEmpty(plmns[i]) && plmns[i].equals(carrier)) {
                             mQueryOnVoLTE = true;
-				log("mQueryOnVoLTE = " + mQueryOnVoLTE);
+                            log("mQueryOnVoLTE = " + mQueryOnVoLTE);
                         }
                     }
                 }
