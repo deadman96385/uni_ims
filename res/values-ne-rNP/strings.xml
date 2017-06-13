@@ -40,4 +40,6 @@
      <string name="low_battery_continue_video_call">"हो"</string>
      <string name="low_battery_convert_to_voice_call">"बदल्नुहोस्"</string>
 
+    <string name="vowifi_attation">"Vowifi सावधानी"</string>
+     <string name="vowifi_regist_fail_content">"नेटवर्कले vowifi लाई समर्थन गर्दैन"</string>
 </resources>

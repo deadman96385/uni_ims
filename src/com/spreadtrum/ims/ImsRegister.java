@@ -140,6 +140,7 @@ public class ImsRegister {
                 } else {
                     log("EVENT_RADIO_STATE_CHANGED -> radio is on");
                     initISIM();
+                    SetUserAgent();//SPRD:add for user agent future 670075
                 }
                 break;
             case EVENT_INIT_ISIM_DONE:
@@ -157,7 +158,8 @@ public class ImsRegister {
                 break;
             case EVENT_IMS_BEARER_ESTABLISTED:
                 ar = (AsyncResult) msg.obj;
-                if(ar.exception != null) {
+                if(ar.exception != null || ar.result == null || !(ar.result instanceof Integer)) {
+                    log("EVENT_IMS_BEARER_ESTABLISTED : ar.exception = "+ar.exception +" ar.result:"+ar.result);
                     CommandException.Error err=null;
                     if (ar.exception instanceof CommandException) {
                         err = ((CommandException)(ar.exception)).getCommandError();
@@ -170,9 +172,9 @@ public class ImsRegister {
                     }
                     break;
                 }
-                int[] conn = (int[]) ar.result;
-                log("EVENT_IMS_BEARER_ESTABLISTED : conn = "+conn[0]);
-                if (conn[0] == 1) {
+                Integer conn = (Integer) ar.result;
+                log("EVENT_IMS_BEARER_ESTABLISTED : conn = "+conn);
+                if (conn.intValue() == 1) {
                     mIMSBearerEstablished = true;
                     mLastNumeric = "";
                     if(ImsManagerEx.isDualVoLTEActive() && mPhoneId != getPrimaryCard()){
@@ -214,8 +216,11 @@ public class ImsRegister {
                 }
                 break;
             case EVENT_RADIO_CAPABILITY_CHANGED:
-                if (mPhoneId != getPrimaryCard() ) {
-                    mInitISIMDone = false;
+                if (mPhoneId != getPrimaryCard()) {
+                    //SPRD: Bug 671074 If dual volte active, need to reset some variables.
+                    if(!ImsManagerEx.isDualVoLTEActive()){
+                        mInitISIMDone = false;
+                    }
                     mIMSBearerEstablished = false;
                     mLastNumeric = "";
                     mCurrentImsRegistered = false;
@@ -370,6 +375,15 @@ public class ImsRegister {
                 return SLOTTWO_PHONE_ID;
             }
             break;
+        // L+W mode SRPD: 675103
+        case 255:
+            if (workMode[SLOTTWO_PHONE_ID] == 9
+                || workMode[SLOTTWO_PHONE_ID] == 6
+                || workMode[SLOTTWO_PHONE_ID] == 7) {
+
+                return SLOTTWO_PHONE_ID;
+            }
+            break;
         }
         return DEFAULT_PHONE_ID;
     }
@@ -472,6 +486,11 @@ public class ImsRegister {
         if (!ImsManagerEx.isDualVoLTEActive()) {
             log("not support Dual volte");
             return false;
+        }
+        // SPRD: Add for DSDA Dual VoLTE switch
+        if(mCarrierSpnMap == null) {
+            mCarrierSpnMap = new HashMap<String, String>();
+            loadSpnOverrides();
         }
         int primaryCard = getPrimaryCard();
         String primaryOperator = null;
@@ -586,4 +605,19 @@ public class ImsRegister {
             log("Exception in spn-conf parser " + e);
         }
     }
+    /**
+     * SPRD:add for user agent future
+     * userAgent: deviceName_SW version
+     ***/
+    private void SetUserAgent() {
+        String userAgent = SystemProperties.get("ro.config.useragent", "SPRD VOLTE");
+        if ("SPRD VOLTE".equals(userAgent)) {
+            return;
+        }
+        String[] cmd = new String[1];
+        cmd[0] = "AT+SPENGMDVOLTE=22,1," + "\"" + userAgent + "\"";
+        log("SetUserAgent :" + cmd[0]);
+        mCi.invokeOemRilRequestStrings(cmd, null);
+    }/* @} */
+
 }

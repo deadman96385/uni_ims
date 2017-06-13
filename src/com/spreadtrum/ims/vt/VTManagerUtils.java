@@ -28,8 +28,12 @@ import com.android.internal.telephony.GsmCdmaPhone;
 import com.android.internal.telephony.CallStateException;
 import com.android.internal.telephony.CommandsInterface;
 import android.os.Message;
+import android.widget.CheckBox;
+import android.preference.PreferenceManager;
+import android.content.SharedPreferences;
+import com.android.ims.ImsManager;
 
-import android.telephony.TelephonyManagerEx;
+//TODO: import android.telephony.TelephonyManagerEx;
 
 public class VTManagerUtils {
     private static final String TAG = VTManagerUtils.class.getSimpleName();
@@ -213,11 +217,11 @@ public class VTManagerUtils {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(context.getString(R.string.remote_request_change));
         /* SPRD: Add feature of low battery for Reliance@{ */
-        builder.setMessage(TelephonyManagerEx.isBatteryLow()? context.getString(R.string.low_battery_warning_media_alert_message):context.getString(R.string.choose_accept_reject));
+        builder.setMessage(/*TelephonyManagerEx.isBatteryLow() TODO:*/false? context.getString(R.string.low_battery_warning_media_alert_message):context.getString(R.string.choose_accept_reject));
         /* @} */
         builder.setPositiveButton(context.getString(R.string.remote_request_change_accept), new android.content.DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int which) {
-                mCi.responseVolteCallMediaChange(true,reponseMsg);
+                mCi.responseVolteCallMediaChange(true, (reponseMsg != null) ? reponseMsg.arg1: 0,null);
                 vtprovide.receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
                         null,null);//SPRD:add for bug610607
                 if(dialog != null){
@@ -227,7 +231,7 @@ public class VTManagerUtils {
         });
         builder.setNegativeButton(context.getString(R.string.remote_request_change_reject), new android.content.DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int which) {
-                mCi.responseVolteCallMediaChange(false,reponseMsg);
+                mCi.responseVolteCallMediaChange(false, (reponseMsg != null) ? reponseMsg.arg1: 0,null);
                 vtprovide.receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
                         null,null);//SPRD:add for bug610607
                 if(dialog != null){
@@ -241,9 +245,67 @@ public class VTManagerUtils {
         dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
         return dialog;
     }
+    /*SPRD: add for bug673215 Vodafone new feature*/
+    public static AlertDialog showVowifiRegisterToast(Context context) {
+
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+        boolean nomore = sp.getBoolean("nomore", false);
+        if (nomore) {
+            log("showVoWifiNotification nomore ");
+            return null;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+
+        LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View view = inflater.inflate(R.xml.vowifi_register_dialog, null);
+
+        builder.setView(view);
+        builder.setTitle(context.getString(R.string.vowifi_connected_title));
+        builder.setMessage(context.getString(R.string.vowifi_connected_message));
+        CheckBox cb = (CheckBox) view.findViewById(R.id.nomore);
+
+        builder.setPositiveButton(context.getString(R.string.vowifi_connected_continue), new android.content.DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                if (cb.isChecked()) {
+                    SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+                    SharedPreferences.Editor editor = sp.edit();
+                    editor.putBoolean("nomore", true);
+                    editor.apply();
+                }
+                log("Vowifi service Continue, cb.isChecked = " + cb.isChecked());
+                if (dialog != null) {
+                    dialog.dismiss();
+                    dialog = null;
+                }
+            }
+        });
+        builder.setNegativeButton(context.getString(R.string.vowifi_connected_disable), new android.content.DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                if (cb.isChecked()) {
+                    SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+                    SharedPreferences.Editor editor = sp.edit();
+                    editor.putBoolean("nomore", true);
+                    editor.apply();
+                }
+                log("Vowifi service disable, cb.isChecked = " + cb.isChecked());
+                ImsManager.setWfcSetting(context, false);
+                if (dialog != null) {
+                    dialog.dismiss();
+                    dialog = null;
+                }
+            }
+        });
+        builder.setCancelable(false);
+        AlertDialog dialog = builder.create();
+        dialog = builder.create();
+        dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_DIALOG);
+        dialog.show();
+        return  dialog;
+    }
 
     /* SPRD: Add feature of low battery for Reliance @{ */
-    public static AlertDialog showLowBatteryMediaChangeAlert(final Context context, final ImsRIL ril) {
+    public static AlertDialog showLowBatteryMediaChangeAlert(final Context context, final int id, final ImsRIL ril) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(context.getString(R.string.low_battery_warning_title));
         builder.setMessage(context.getString(R.string.low_battery_warning_message));
@@ -261,7 +323,7 @@ public class VTManagerUtils {
                 new android.content.DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         if (ril != null) {
-                            ril.requestVolteCallMediaChange(true, null);
+                            ril.requestVolteCallMediaChange(ImsRIL.CALL_MEDIA_CHANGE_ACTION_UPGRADE_TO_VIDEO, id, null);
                             log("Battery is low,user choose to downgrade to voice call.");
                         }
                         if (dialog != null) {

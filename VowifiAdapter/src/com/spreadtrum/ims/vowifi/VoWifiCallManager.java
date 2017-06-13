@@ -59,6 +59,7 @@ public class VoWifiCallManager extends ServiceManager {
         public void onCallEnd(ImsCallSessionImpl callSession);
         public void onCallRTPReceived(boolean isVideoCall, boolean isReceived);
         public void onCallRTCPChanged(boolean isVideoCall, int lose, int jitter, int rtt);
+        public void onAliveCallUpdate(boolean isVideoCall);
         public void onEnterECBM(ImsCallSessionImpl callSession);
         public void onExitECBM();
     }
@@ -72,6 +73,8 @@ public class VoWifiCallManager extends ServiceManager {
     private static final int MSG_ACTION_START_AUDIO_STREAM = 1;
     private static final int MSG_ACTION_STOP_AUDIO_STREAM  = 2;
     private static final int MSG_ACTION_SET_VIDEO_QUALITY  = 3;
+
+    public static final int CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED = 150;
 
     private static final String SERVICE_ACTION = "com.spreadtrum.vowifi.service.IVowifiService";
     private static final String SERVICE_PACKAGE = "com.spreadtrum.vowifi";
@@ -98,8 +101,8 @@ public class VoWifiCallManager extends ServiceManager {
 
     private static final int MSG_HANDLE_EVENT = 0;
     private static final int MSG_INVITE_CALL = 1;
-    private static final int MSG_VOWIFI_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 2; //Added for bug 662008
-    private static final int TIMEOUT_IN_MILLS = 10000; //Added for bug 662008
+    private static final int MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 2;
+    private static final int MEDIA_CHANGED_TIMEOUT = 10000;
 
     private Handler mHandler = new Handler() {
         @Override
@@ -111,15 +114,17 @@ public class VoWifiCallManager extends ServiceManager {
                 case MSG_INVITE_CALL:
                     inviteCall((ImsCallSessionImpl) msg.obj);
                     break;
-                case MSG_VOWIFI_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT:    //Added for bug 662008
-                    if(mAlertDialog !=  null && mAlertDialog._dialog!=null && mAlertDialog._dialog.isShowing()){
-                        int sessionId = msg.getData().getInt("sessionId");
+                case MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT:    //Added for bug 662008
+                    if (mAlertDialog != null
+                            && mAlertDialog._dialog != null
+                            && mAlertDialog._dialog.isShowing()) {
+                        int sessionId = msg.arg1;
                         dismissAlertDialog(sessionId);
-                        Log.d(TAG , "Popup dismissed due to timeout ");
+                        Log.d(TAG, "Popup dismissed due to timeout.");
                         try {
-                          mICall.sendSessionModifyResponse(sessionId, true, false);
-                        }catch (RemoteException e) {
-                          Log.e(TAG, "Failed to send reject response. e: " + e);
+                            mICall.sendSessionModifyResponse(sessionId, true, false);
+                        } catch (RemoteException e) {
+                            Log.e(TAG, "Failed to send reject response. e: " + e);
                         }
                     }
                     break;
@@ -143,6 +148,11 @@ public class VoWifiCallManager extends ServiceManager {
 
         @Override
         public void handleMessage(Message msg) {
+            if (mSessionList == null || mSessionList.isEmpty()) {
+                Log.d(TAG, "There isn't any call, ignore the SRVCC event: " + msg.what);
+                return;
+            }
+
             switch(msg.what) {
                 case MSG_SRVCC_START:
                     Log.d(TAG, "Will handle the SRVCC start event.");
@@ -325,6 +335,9 @@ public class VoWifiCallManager extends ServiceManager {
                 (ArrayList<ImsCallSessionImpl>) mSessionList.clone();
         for (ImsCallSessionImpl callSession : callList) {
             Log.d(TAG, "Terminate the call: " + callSession);
+            callSession.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
+            handleCallTermed(callSession, ImsReasonInfo.CODE_USER_TERMINATED);
+            /*
             switch (state) {
                 case CONNECTED:
                     // If the current wifi is connect, we'd like to send the terminate request.
@@ -338,6 +351,7 @@ public class VoWifiCallManager extends ServiceManager {
                     handleCallTermed(callSession, ImsReasonInfo.CODE_USER_TERMINATED);
                     break;
             }
+            */
         }
     }
 
@@ -1062,7 +1076,6 @@ public class VoWifiCallManager extends ServiceManager {
         switch (eventCode) {
             case JSONUtils.EVENT_CODE_CALL_HOLD_OK:
             case JSONUtils.EVENT_CODE_CONF_HOLD_OK: {
-                toastTextResId = R.string.vowifi_hold_success;
                 callSession.updateAliveState(false /* held, do not alive */);
                 listener.callSessionHeld(callSession, callSession.getCallProfile());
                 // As the call hold, if the call is video call, we need stop all the video.
@@ -1168,6 +1181,10 @@ public class VoWifiCallManager extends ServiceManager {
                         VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS,
                         videoProfile /* request profile */,
                         videoProfile /* response profile */);
+
+                if (callSession.isAlive() && mListener != null) {
+                    mListener.onAliveCallUpdate(isVideo);
+                }
             } else {
                 Log.e(TAG, "The video call provider is null, can not give the response.");
             }
@@ -1261,13 +1278,13 @@ public class VoWifiCallManager extends ServiceManager {
                 ImsReasonInfo info;
                 String category = getEmergencyCallCategory(urnUri);
                 if (category != null) {
-                    // need to retry by cellular
-                    info = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED,
+                    // need to retry an emergency call by cellular
+                    info = new ImsReasonInfo(CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED,
                             ImsReasonInfo.EXTRA_CODE_CALL_RETRY_NORMAL, category);
                 } else {
-                    // alert fail
-                    info = new ImsReasonInfo(ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE,
-                            ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE, reason);
+                 // need to retry an normal call by cellular
+                    info = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED,
+                            ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED, reason);
                 }
                 listener.callSessionStartFailed(callSession, info);
             }
@@ -1634,15 +1651,13 @@ public class VoWifiCallManager extends ServiceManager {
         if (isUpgrade) {
             title = mContext.getString(R.string.vowifi_request_upgrade_title);
             message = mContext.getString(R.string.vowifi_request_upgrade_text);
-	    //Added for bug 662008
+
+            // Send the timeout message to handle the request timeout event.
             Message msg = new Message();
-            msg.what = MSG_VOWIFI_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT;
-            Bundle bundle = new Bundle();
-            bundle.putInt("sessionId", sessionId);
-            msg.setData(bundle);
-            mHandler.removeMessages(MSG_VOWIFI_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT);
-            mHandler.sendMessageDelayed(msg, TIMEOUT_IN_MILLS);
-            Log.d(TAG , "MSG_VOWIFI_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT sent");
+            msg.what = MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT;
+            msg.arg1 = sessionId;
+            mHandler.removeMessages(MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT);
+            mHandler.sendMessageDelayed(msg, MEDIA_CHANGED_TIMEOUT);
         } else {
             title = mContext.getString(R.string.vowifi_request_downgrade_title);
             message = mContext.getString(R.string.vowifi_request_downgrade_text);

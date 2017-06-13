@@ -8,18 +8,23 @@
         android:name="ImsApp"
         android:allowBackup="false"
         android:process="com.android.phone"
+        android:defaultToDeviceProtectedStorage="true"
         android:directBootAware="true">
         <receiver android:name=".ImsBroadcastReceiver" >
-            <intent-filter android:priority="1000">
-                <action android:name="android.intent.action.SIM_STATE_CHANGED" />
-            </intent-filter>
         </receiver>
 
         <service
             android:name=".ImsService"
+            android:permission="android.permission.BIND_IMS_SERVICE"
             android:enabled="true"
             android:exported="true"
-            android:process="com.android.phone" />
+            android:process="com.android.phone">
+            <meta-data android:name="android.telephony.ims.MMTEL_FEATURE" android:value="true" />
+            <meta-data android:name="android.telephony.ims.EMERGENCY_MMTEL_FEATURE" android:value="true" />
+             <intent-filter>
+                 <action android:name="android.telephony.ims.ImsService" />
+             </intent-filter>
+        </service>
     </application>
 
 </manifest>

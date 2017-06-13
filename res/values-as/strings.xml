@@ -40,4 +40,6 @@
      <string name="low_battery_continue_video_call">"হয়"</string>
      <string name="low_battery_convert_to_voice_call">"ৰূপান্তৰ কৰক"</string>
 
+    <string name="vowifi_attation">"Vo WiFi মনোযোগ"</string>
+     <string name="vowifi_regist_fail_content">"নেটৱৰ্কে vowifi সমৰ্থন নকৰে"</string>
 </resources>

@@ -3,6 +3,7 @@ package com.spreadtrum.ims.vowifi;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.SystemProperties;
+import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
@@ -160,6 +161,7 @@ public class Utilities {
 
     public static class NativeErrorCode {
         public static final int IKE_INTERRUPT_STOP   = 0xD200 + 198;
+        public static final int IKE_HANDOVER_STOP    = 0xD200 + 199;
         public static final int DPD_DISCONNECT       = 0xD200 + 15;
         public static final int IPSEC_REKEY_FAIL     = 0xD200 + 10;
         public static final int IKE_REKEY_FAIL       = 0xD200 + 11;
@@ -181,6 +183,13 @@ public class Utilities {
 
         public static final int FAIL       = 0;
         public static final int SUCCESS    = 1;
+    }
+
+    public static class S2bType {
+        public static final int NORMAL = 1;
+        public static final int SOS    = 2;
+        public static final int XCAP   = 3;
+        public static final int MMS    = 4;
     }
 
     public static class CallStateForDataRouter {
@@ -247,6 +256,8 @@ public class Utilities {
     }
 
     public static class SecurityConfig {
+        public int _sessionId;
+
         public String _pcscf4;
         public String _pcscf6;
         public String _dns4;
@@ -258,7 +269,11 @@ public class Utilities {
 
         public int _useIPVersion = IPVersion.NONE;
 
-        public SecurityConfig(String pcscf4, String pcscf6, String dns4, String dns6, String ip4,
+        public SecurityConfig(int sessionId) {
+            _sessionId = sessionId;
+        }
+
+        public void update(String pcscf4, String pcscf6, String dns4, String dns6, String ip4,
                 String ip6, boolean prefIPv4, boolean isSos) {
             _pcscf4 = pcscf4;
             _pcscf6 = pcscf6;
@@ -277,6 +292,148 @@ public class Utilities {
         }
     }
 
+    public static class SIMAccountInfo {
+        public int _subId;
+        public String _spn;
+        public String _imei;
+        public String _imsi;
+        public String _impi;
+        public String _impu;
+
+        // Used by s2b process.
+        public String _hplmn;
+        public String _vplmn;
+
+        // Used by register process.
+        public String _accountName;
+        public String _userName;
+        public String _authName;
+        public String _authPass;
+        public String _realm;
+
+        public static SIMAccountInfo generate(TelephonyManager tm, int subId) {
+            SIMAccountInfo info = new SIMAccountInfo();
+            info._subId = subId;
+
+            int phoneId = SubscriptionManager.getPhoneId(subId);
+            // Get the IMEI for the phone.
+            String imei = tm.getDeviceId(phoneId);
+            if (!isIMEIValid(imei)) return null;
+
+            // Get the spn, IMSI, hplmn and vplmn.
+            info._spn = tm.getSimOperatorNameForPhone(phoneId);
+            info._imsi = tm.getSubscriberId(subId);
+            info._hplmn = tm.getSimOperator(subId);
+            info._vplmn = tm.getNetworkOperator(subId);
+
+            info._accountName = imei;
+            info._imei = imei;
+
+            // Try to get the IMPU/IMPI first, if can not get the IMPU/IMPI, it means this card not
+            // may be ISIM, we'd like to use the IMSI instead.
+            boolean generated = false;
+            String impi = tm.getIsimImpi();
+            if (!TextUtils.isEmpty(impi)) {
+                Log.d(TAG, "IMPI is " + impi);
+                info._impi = impi;
+                info._authName = impi;
+                String[] temp = info._authName.split("@");
+                if (temp != null && temp.length == 2) {
+                    info._userName = temp[0];
+                    info._realm = temp[1];
+                    generated = true;
+                } else {
+                    Log.e(TAG, "The IMPI is invalid, IMPI: " + info._authName);
+                }
+
+                // Generate the plmn and imsi from impi.
+                int indexMCC = info._impi.indexOf("mcc");
+                int indexMNC = info._impi.indexOf("mnc");
+                if (indexMCC >= 0 && indexMNC >= 0) {
+                    String mcc = info._impi.substring(indexMCC + 3, indexMCC + 6);
+                    String mnc = info._impi.substring(indexMNC + 3, indexMCC - 1);
+                    if (mnc.length() == 3 && mnc.startsWith("00")) {
+                        mnc = mnc.substring(1);
+                    }
+                    info._hplmn = mcc + mnc;
+                }
+
+                info._imsi = info._userName;
+            }
+
+            String[] impus = tm.getIsimImpu();
+            if (impus != null && impus.length > 0) {
+                // FIXME: Use the first one in the IMPU list, it may depend on the service
+                //        provider's decision.
+                Log.d(TAG, "IMPU array length is " + impus.length + ", choose first one: "
+                        + impus[0]);
+                info._impu = impus[0];
+            }
+
+            // If do not generate from the IMPI/IMPU, we need generate the info from the IMSI.
+            if (!generated) {
+                // Failed to generate from the IMPI, use IMSI instead.
+                if (!isIMSIValid(info._imsi)
+                        || TextUtils.isEmpty(info._hplmn)) {
+                    return null;
+                }
+
+                String mcc = info._hplmn.substring(0, 3);
+                String mnc = info._hplmn.length() == 5 ? "0" + info._hplmn.substring(3)
+                        : info._hplmn.substring(3);
+                Log.d(TAG, "Generate the SIM mcc is " + mcc + ", mnc is " + mnc);
+
+                info._userName = info._imsi;
+                info._realm = "ims.mnc" + mnc + ".mcc" + mcc + ".3gppnetwork.org";
+                info._authName = info._imsi + "@" + info._realm;
+                info._impu = "sip:" + info._authName;
+            }
+
+            return info;
+        }
+
+        private SIMAccountInfo() {
+            _authPass = "todo";    // Do not used, hard code here.
+        }
+
+        @Override
+        public String toString() {
+            return "SIMAccountInfo: subId[" + _subId
+                    + "], spn[" + _spn
+                    + "], imei[" + _imei
+                    + "], imsi[" + _imsi
+                    + "], impi[" + _impi
+                    + "], impu[" + _impu
+                    + "], hplmn[" + _hplmn
+                    + "], vplmn[" + _vplmn
+                    + "], accountName[" + _accountName
+                    + "], userName[" + _userName
+                    + "], authName[" + _authName
+                    + "], authPass[" + _authPass
+                    + "], realm[" + _realm + "]";
+        }
+
+        private static boolean isIMEIValid(String imei) {
+            if (TextUtils.isEmpty(imei) || !imei.matches("^[0-9]{15}$")) {
+                // The IMEI & IMSI is invalid. Do not process the login action.
+                Log.e(TAG, "The imei " + imei + " is invalid");
+                return false;
+            }
+
+            return true;
+        }
+
+        private static boolean isIMSIValid(String imsi) {
+            if (TextUtils.isEmpty(imsi) || !imsi.matches("^[0-9]{15}$")) {
+                // The IMEI & IMSI is invalid. Do not process the login action.
+                Log.e(TAG, "The imsi " + imsi + " is invalid");
+                return false;
+            }
+
+            return true;
+        }
+    }
+
     public static class RegisterIPAddress {
         private static final String JSON_PCSCF_SEP = ";";
 
@@ -284,39 +441,78 @@ public class Utilities {
         private String mLocalIPv6;
         private String[] mPcscfIPv4;
         private String[] mPcscfIPv6;
-
+        private String mDnsSerIPv4;
+        private String mDnsSerIPv6;
         private int mIPv4Index = 0;
         private int mIPv6Index = 0;
 
         private String mUsedLocalIP;
         private String mUsedPcscfIP;
+	 private String mUsedDnsSerlIP;
 
         public static RegisterIPAddress getInstance(String localIPv4, String localIPv6,
-                String pcscfIPv4, String pcscfIPv6) {
+                String pcscfIPv4, String pcscfIPv6, String usedPcscfAddr, String dns4, String dns6) {
             if (Utilities.DEBUG) {
                 Log.i(TAG, "Get the s2b ip address from localIPv4: " + localIPv4 + ", localIPv6: "
-                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: " + pcscfIPv6);
+                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: " + pcscfIPv6 + ", pcscfdns4: "  + dns4 + ", pcscfdns6: " + dns6);
             }
-            if ((TextUtils.isEmpty(localIPv4) || TextUtils.isEmpty(pcscfIPv4))
-                    && (TextUtils.isEmpty(localIPv6) || TextUtils.isEmpty(pcscfIPv6))) {
+			
+	     if(TextUtils.isEmpty(dns4) && TextUtils.isEmpty(dns6)){
+		  Log.i(TAG, "Can not get the dns server address: pcscfdns4: " + dns4 + ", pcscfdns6: "
+                        + dns6);	
+            }
+		 
+            boolean b1 = (TextUtils.isEmpty(localIPv4) || TextUtils.isEmpty(pcscfIPv4));
+            boolean b2 = (TextUtils.isEmpty(localIPv6) || TextUtils.isEmpty(pcscfIPv6));
+            boolean b3 = TextUtils.isEmpty(usedPcscfAddr);
+            Log.d(TAG, "b1:" + b1 + ",b2:" + b2 + ",b3:" + b3);
+            if ( b1 && b2 && b3) {
                 Log.e(TAG, "Can not get the ip address: localIPv4: " + localIPv4 + ", localIPv6: "
-                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: " + pcscfIPv6);
+                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: " + pcscfIPv6 + ", usedPcscfAddr: " + usedPcscfAddr);
                 return null;
             }
 
-            String[] pcscfIPv4s =
+            if (TextUtils.isEmpty(pcscfIPv4) && TextUtils.isEmpty(pcscfIPv6) )
+            {
+               if (!TextUtils.isEmpty(usedPcscfAddr))
+               {
+                   if(isIPv4(usedPcscfAddr))
+                   {
+                       String[] newPcscfIPv4s = new String[1];
+                       newPcscfIPv4s[0] = usedPcscfAddr;
+                       return new RegisterIPAddress(localIPv4, localIPv6, newPcscfIPv4s, null, dns4, dns6);
+                   }
+                   else
+                   {
+                       String[] newPcscfIPv6s = new String[1];
+                       newPcscfIPv6s[0] = usedPcscfAddr;
+                       return new RegisterIPAddress(localIPv4, localIPv6, null, newPcscfIPv6s, dns4, dns6);
+                   }
+               }
+               else
+               {
+                   Log.d(TAG,"all pcscf addr is null");
+                   return null;
+               }
+            }
+            else
+            {
+                String[] pcscfIPv4s =
                     TextUtils.isEmpty(pcscfIPv4) ? null : pcscfIPv4.split(JSON_PCSCF_SEP);
-            String[] pcscfIPv6s =
+                String[] pcscfIPv6s =
                     TextUtils.isEmpty(pcscfIPv6) ? null : pcscfIPv6.split(JSON_PCSCF_SEP);
-            return new RegisterIPAddress(localIPv4, localIPv6, pcscfIPv4s, pcscfIPv6s);
+		 return new RegisterIPAddress(localIPv4, localIPv6, pcscfIPv4s, pcscfIPv6s, dns4, dns6);
+            }
         }
 
         private RegisterIPAddress(String localIPv4, String localIPv6, String[] pcscfIPv4,
-                String[] pcscfIPv6) {
+                String[] pcscfIPv6, String dns4, String dns6) {
             mLocalIPv4 = localIPv4;
             mLocalIPv6 = localIPv6;
             mPcscfIPv4 = pcscfIPv4;
             mPcscfIPv6 = pcscfIPv6;
+	     mDnsSerIPv4 = dns4;
+	     mDnsSerIPv6 = dns6;
         }
 
         public String getCurUsedLocalIP() {
@@ -326,12 +522,21 @@ public class Utilities {
         public String getCurUsedPcscfIP() {
             return mUsedPcscfIP;
         }
+		
+        public String getCurUsedDnsSerIP() {
+            return mUsedDnsSerlIP;
+        }
 
         public String getLocalIP(boolean isIPv4) {
             mUsedLocalIP = isIPv4 ? getLocalIPv4() : getLocalIPv6();
             return mUsedLocalIP;
         }
 
+        public String getDnsSerIP(boolean isIPv4) {
+            mUsedDnsSerlIP = isIPv4 ? getDnsSerIPv4() : getDnsSerIPv6();
+            return mUsedDnsSerlIP;
+        }
+		
         public String getPcscfIP(boolean isIPv4) {
             mUsedPcscfIP = isIPv4 ? getPcscfIPv4() : getPcscfIPv6();
             return mUsedPcscfIP;
@@ -352,11 +557,19 @@ public class Utilities {
         private String getLocalIPv4() {
             return mLocalIPv4;
         }
+		
+        private String getDnsSerIPv4() {
+            return mDnsSerIPv4;
+        }
 
         private String getLocalIPv6() {
             return mLocalIPv6;
         }
 
+        private String getDnsSerIPv6() {
+            return mDnsSerIPv6;
+        }
+		
         private String getPcscfIPv4() {
             String pcscfIPv4 = null;
             if (mIPv4Index < mPcscfIPv4.length) {
@@ -389,6 +602,27 @@ public class Utilities {
                     && mIPv6Index < mPcscfIPv6.length;
         }
 
+        private static boolean isIPv4(String ipAddr) {
+            return ipAddr.contains(".");
+        }
+
+        private static String[] addAddr(String[] oldAddrs, String addr, boolean asIPv4) {
+            if (TextUtils.isEmpty(addr)) return oldAddrs;
+
+            if (isIPv4(addr) != asIPv4) {
+                return oldAddrs;
+            }
+
+            String[] newAddrs = new String[oldAddrs.length + 1];
+            int index = 0;
+            for (String oldAddr : oldAddrs) {
+                newAddrs[index] = oldAddr;
+                index = index + 1;
+            }
+            newAddrs[index] = addr;
+            return newAddrs;
+        }
+
         @Override
         public String toString() {
             StringBuilder builder = new StringBuilder();
@@ -404,6 +638,8 @@ public class Utilities {
                     builder.append(", pcscfIPv6[" + i + "] = " + mPcscfIPv6[i]);
                 }
             }
+	     builder.append("pcscfDnsSerIPv4 = " + mDnsSerIPv4);
+            builder.append(", pcscfDnsSerIPv6 = " + mDnsSerIPv6);
             return builder.toString();
         }
     }
@@ -460,6 +696,24 @@ public class Utilities {
         }
     }
 
+   public static class CallBarringInfo
+   {
+         // Refer to ImsUtInterface#CDIV_CF_XXX
+        public int mCondition;
+        // 0: disabled, 1: enabled
+        public int mStatus;
+	 public CallBarringInfo(){
+        }
+
+	 public void setCondition(int conditon){
+	 	mCondition = conditon;
+	 }
+	 
+	 public void setStatus(int status){
+	 	mStatus = status;
+	 }	 
+   }
+   
     public static class VideoQuality {
         public int _width;
         public int _height;
@@ -495,11 +749,48 @@ public class Utilities {
         public static final String KEY_EVENT_CODE = "event_code";
         public static final String KEY_EVENT_NAME = "event_name";
 
+        // Security
+        public static final String KEY_SESSION_ID = "session_id";
+
+        public static final int STATE_CODE_SECURITY_INVALID_ID = 1;
+        public static final int STATE_CODE_SECURITY_AUTH_FAILED = 2;
+
+        public final static int SECURITY_EVENT_CODE_BASE = 0;
+        public final static int EVENT_CODE_ATTACH_SUCCESSED = SECURITY_EVENT_CODE_BASE + 1;
+        public final static int EVENT_CODE_ATTACH_FAILED = SECURITY_EVENT_CODE_BASE + 2;
+        public final static int EVENT_CODE_ATTACH_PROGRESSING = SECURITY_EVENT_CODE_BASE + 3;
+        public final static int EVENT_CODE_ATTACH_STOPPED = SECURITY_EVENT_CODE_BASE + 4;
+
+        public final static String EVENT_ATTACH_SUCCESSED = "attach_successed";
+        public final static String EVENT_ATTACH_FAILED = "attach_failed";
+        public final static String EVENT_ATTACH_PROGRESSING = "attach_progressing";
+        public final static String EVENT_ATTACH_STOPPED = "attach_stopped";
+
+        // Keys for security callback
+        public final static String KEY_ERROR_CODE = "error_code";
+        public final static String KEY_PROGRESS_STATE = "progress_state";
+        public final static String KEY_LOCAL_IP4 = "local_ip4";
+        public final static String KEY_LOCAL_IP6 = "local_ip6";
+        public final static String KEY_PCSCF_IP4 = "pcscf_ip4";
+        public final static String KEY_PCSCF_IP6 = "pcscf_ip6";
+        public final static String KEY_DNS_IP4 = "dns_ip4";
+        public final static String KEY_DNS_IP6 = "dns_ip6";
+        public final static String KEY_PREF_IP4 = "pref_ip4";
+        public final static String KEY_HANDOVER = "is_handover";
+        public final static String KEY_SOS = "is_sos";
+
+        public final static int USE_IP4 = 0;
+        public final static int USE_IP6 = 1;
+
         // Register
         public static final String KEY_STATE_CODE = "state_code";
         public static final String KEY_RETRY_AFTER = "retry_after";
 
-        public static final int REGISTER_EVENT_CODE_BASE = 0;
+        public static final int STATE_CODE_REG_PING_FAILED = 1;
+        public static final int STATE_CODE_REG_NATIVE_FAILED = 2;
+        public static final int STATE_CODE_REG_AUTH_FAILED = 3;
+
+        public static final int REGISTER_EVENT_CODE_BASE = 50;
         public static final int EVENT_CODE_LOGIN_OK = REGISTER_EVENT_CODE_BASE + 1;
         public static final int EVENT_CODE_LOGIN_FAILED = REGISTER_EVENT_CODE_BASE + 2;
         public static final int EVENT_CODE_LOGOUTED = REGISTER_EVENT_CODE_BASE + 3;
@@ -632,6 +923,9 @@ public class Utilities {
         public static final String KEY_UT_CF_CONDS = "ut_cf_conditions";
         public static final String KEY_UT_CF_ACTION_TARGET = "ut_cf_action_target";
         public static final String KEY_UT_CW_ENABLED = "ut_cw_enabled";
+        public static final String KEY_UT_CB_RULES = "ut_cb_rules";
+        public static final String KEY_UT_CB_RULE_ENABLED = "ut_cb_rule_enabled";
+        public static final String KEY_UT_CB_CONDS = "ut_cb_conditions";
 
         public static final int UT_EVENT_CODE_BASE = 350;
         public static final int EVENT_CODE_UT_QUERY_CB_OK = UT_EVENT_CODE_BASE + 1;

@@ -22,7 +22,7 @@ interface IRegisterService {
      * @return {@link Utils#RESULT_FAIL} as fail. If login failed, please handle it.
      *         {@link Utils#RESULT_SUCCESS} as success.
      */
-    int cliLogin(boolean forSos, boolean isIPv4, String localIP, String pcscfIP,boolean isRelogin);
+    int cliLogin(boolean forSos, boolean isIPv4, String localIP, String pcscfIP,String dnsSerIP, boolean isRelogin);
 
     /**
      * Start the SIP re-register process.
@@ -41,4 +41,20 @@ interface IRegisterService {
     int cliLogout();
 
     int cliReset();
+
+    /**
+     * set the GeoLocation enable flag for register and call session.
+     *
+     * @return {@link Utils#RESULT_FAIL} as fail.
+     *         {@link Utils#RESULT_SUCCESS} as success.
+     */
+    int SetGeolocEnable(boolean enable);
+
+    /**
+     * set GeoLocation infomation for register
+     *
+     * @return {@link Utils#RESULT_FAIL} as fail.
+     *         {@link Utils#RESULT_SUCCESS} as success.
+     */
+    int SetGeolocation(double longitude, double latitude);
 }

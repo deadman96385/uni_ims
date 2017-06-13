@@ -47,4 +47,9 @@
     <!-- @} -->
     <string name="vowifi_attation">Vowifi 提示</string>
     <string name="vowifi_regist_fail_content">当前网络不支持vowifi</string>
+    <string name="vowifi_connected_title">Wi-Fi Calling的紧急呼叫</string>
+    <string name="vowifi_connected_continue">继续</string>
+    <string name="vowifi_connected_disable">关闭</string>
+    <string name="vowifi_connected_checkbox_text">不再提示</string>
+    <string name="vowifi_connected_message">当前是Wi-Fi Calling网络，紧急呼叫无法正常工作，设备会自动使用（2G/3G）网络进行紧急呼叫。继续使用Wi-Fi Calling服务或是关闭wifi calling？</string>
 </resources>
