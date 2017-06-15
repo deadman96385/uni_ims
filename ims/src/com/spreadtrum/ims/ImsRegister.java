@@ -63,6 +63,7 @@ public class ImsRegister {
     private String mLastNumeric="";
     private boolean mSIMLoaded;
     private int mRetryCount = 0;
+    private ImsService mImsService;
 
     protected static final int EVENT_ICC_CHANGED                       = 103;
     protected static final int EVENT_RECORDS_LOADED                    = 104;
@@ -76,6 +77,7 @@ public class ImsRegister {
     public ImsRegister(GSMPhone phone , Context context, CommandsInterface ci) {
         mPhone = phone;
         mContext = context;
+        mImsService = (ImsService)context;
         mCi = ci;
         //mTelephonyManager = TelephonyManager.from(mContext);
         mPhoneId = mPhone.getPhoneId();
@@ -130,7 +132,9 @@ public class ImsRegister {
                         break;
                     }
                     mInitISIMDone = true;
-                    enableIms();
+                    if(mImsService.allowEnableIms()){
+                        enableIms();
+                    }
                     break;
                 case EVENT_IMS_BEARER_ESTABLISTED:
                     ar = (AsyncResult) msg.obj;
@@ -152,7 +156,6 @@ public class ImsRegister {
                     if (conn[0] == 1) {
                         mIMSBearerEstablished = true;
                         mLastNumeric = "";
-                        enableIms();
                     }
                     break;
                 case EVENT_ENABLE_IMS:
@@ -161,7 +164,7 @@ public class ImsRegister {
                     boolean isSimConfig = getSimConfig();
                     log("EVENT_ENABLE_IMS : mNumeric = "+ mNumeric + "  mLastNumeric = " + mLastNumeric);
                     if(!(mLastNumeric.equals(mNumeric))) {
-                        if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric))){
+                        if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric)) && mImsService.allowEnableIms()){
                               mCi.enableIms(null);
                         } else if(isSimConfig && getNetworkConfig(mLastNumeric) && !(getNetworkConfig(mNumeric))){
                               mCi.disableIms(null);
@@ -256,11 +259,12 @@ public class ImsRegister {
         }
     }
     /* SPRD:Modify for bug576993 @{ */
-    public synchronized void notifyImsStateChanged(boolean imsRegistered) {
+    public synchronized void notifyImsStateChanged(boolean imsRegistered, boolean isImsFeatureChanged) {
         boolean isPrimaryCard = mPhone.getPhoneId() == mTelephonyManager.getPrimaryCard();
         Log.i(TAG, "notifyImsStateChanged mCurrentImsRegistered:" + mCurrentImsRegistered
-                 + " imsRegistered:" + imsRegistered + " isPrimaryCard:" + isPrimaryCard);
-        if(mCurrentImsRegistered != imsRegistered) {
+                 + " imsRegistered:" + imsRegistered + " isPrimaryCard:" + isPrimaryCard
+                 + " isImsFeatureChanged:" + isImsFeatureChanged);
+        if(mCurrentImsRegistered != imsRegistered || isImsFeatureChanged) {
             mCurrentImsRegistered = imsRegistered;
             if(isPrimaryCard) {
                 sendVolteServiceStateChanged();

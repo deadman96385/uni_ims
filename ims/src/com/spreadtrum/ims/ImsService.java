@@ -1904,26 +1904,27 @@ class MyVoWifiCallback implements VoWifiCallback {
         updateImsRegisterState();
         ImsServiceImpl imsService = mImsServiceImplMap.get(
                 Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
+        int currentImsFeature = mCurrentImsFeature;
         if(mInCallHandoverFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
             if(mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
-                if(imsService != null) imsService.notifyImsRegister(true);
+                if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature);
             } else if (imsService != null && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-                imsService.notifyImsRegister(false);
+                imsService.notifyImsRegister(false, currentImsFeature != mCurrentImsFeature);
             }else {
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
-                if(imsService != null) imsService.notifyImsRegister(true);
+                if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature);
             }
         } else if(mVolteRegistered) {
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
-            if(imsService != null) imsService.notifyImsRegister(true);
+            if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature);
         } else if(mWifiRegistered){
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
-            if(imsService != null) imsService.notifyImsRegister(true);
+            if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature);
         } else {
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-            if(imsService != null) imsService.notifyImsRegister(false);
+            if(imsService != null) imsService.notifyImsRegister(false, currentImsFeature != mCurrentImsFeature);
         }
         if(imsService != null) {
             imsService.updateImsFeatures(mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE,
@@ -1939,7 +1940,8 @@ class MyVoWifiCallback implements VoWifiCallback {
         }
         notifyImsRegisterState();
         Log.i(TAG,"updateImsFeature->mWifiRegistered:"+mWifiRegistered +" mVolteRegistered:"+mVolteRegistered
-                +" mCurrentImsFeature:"+mCurrentImsFeature +" mInCallHandoverFeature:"+mInCallHandoverFeature);
+                +" mCurrentImsFeature:"+mCurrentImsFeature +" mInCallHandoverFeature:"+mInCallHandoverFeature
+                + " currentImsFeature:" + currentImsFeature);
     }
 
     private boolean isVoLTERegisted() {
@@ -2329,6 +2331,17 @@ class MyVoWifiCallback implements VoWifiCallback {
         if(!mIsCalling && imsService != null
                 && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
             imsService.setSrvccState(-1);
+        }
+
+        /**
+         * SPRD: 673414 687400
+         */
+        if (!isInCall) {
+            if (mIsVowifiCall) {
+                mIsVowifiCall = false;
+            } else if (mIsVolteCall) {
+                mIsVolteCall = false;
+            }
         }
         iLog("updateInCallState->isInCall:"+isInCall+" mIsWifiCalling:"+mIsWifiCalling
                 +" inCallPhoneId:"+mInCallPhoneId);

@@ -672,7 +672,7 @@ public class ImsServiceImpl {
         return false;
     }
 
-    public void notifyImsRegister(boolean isRegistered){
+    public void notifyImsRegister(boolean isRegistered, boolean isImsFeatureChanged){
         try{
             if(mListener == null){
                 Log.w(TAG,"notifyImsRegister->mListener is null!");
@@ -687,8 +687,8 @@ public class ImsServiceImpl {
                     + " isImsEnabled():"+mImsService.isImsEnabled()
                     + " mImsService.isVoLTEEnabled():"+mImsService.isVoLTEEnabled()
                     + " mImsService.isVoWifiEnabled():"+mImsService.isVoWifiEnabled());
-            Log.i(TAG,"notifyImsRegister->mServiceState:" + isRegistered);
-            mImsRegister.notifyImsStateChanged(isRegistered);
+            Log.i(TAG,"notifyImsRegister->mServiceState:" + isRegistered + " isImsFeatureChanged:" + isImsFeatureChanged);
+            mImsRegister.notifyImsStateChanged(isRegistered, isImsFeatureChanged);
         } catch (RemoteException e){
             e.printStackTrace();
         }
