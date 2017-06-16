@@ -301,6 +301,11 @@ public class ImsServiceImpl {
 //                        		
 //                        	}
                             mImsServiceState.mSrvccState = ret[0];
+                            // SPRD 689713
+                            if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
+                                Log.i(TAG, "Srvcc HANDOVER_COMPLETED : setTelephonyProperty mServiceId = " + mServiceId);
+                                TelephonyManager.setTelephonyProperty(mServiceId-1, "gsm.sys.volte.state", "0");
+                            }
                             mImsService.notifyImsRegisterState();
                             mImsService.notifySrvccState(mServiceId,mImsServiceState.mSrvccState);
                             Log.i(TAG, "Srvcc state: " + ret[0]);
