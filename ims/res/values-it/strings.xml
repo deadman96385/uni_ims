@@ -31,4 +31,9 @@
 <string name="camera_open_fail">"Avvio fotocamera non riuscito"</string>
 <string name="ims_switch_failed">"Errore di rete, per favore ritentare più tardi"</string>
 
+    <string name="low_battery_warning_media_alert_message">"Livello batteria inferiore al 15%. Scegliere se accettare o rifiutare."</string>
+     <string name="low_battery_warning_title">"Avviso batteria bassa"</string>
+     <string name="low_battery_warning_message">"Livello batteria inferiore al 15%. Proseguire con chiamata video o passare a chiamata vocale?"</string>
+     <string name="low_battery_continue_video_call">Sì</string>
+     <string name="low_battery_convert_to_voice_call">"Convertire"</string>
 </resources>

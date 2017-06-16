@@ -35,4 +35,5 @@
 <string name="low_battery_warning_message">"तुहुन्ज़ बैटरी तह छु कम 15% खोत.तुही छिवा यसन जारी रोज़ून वीडियो कॉल सीथ या आवाज़ कॉल कुन बदलुन?"</string>
 <string name="low_battery_continue_video_call">"अवा"</string>
 <string name="low_battery_convert_to_voice_call">"तब्दील"</string>
+
 </resources>
