@@ -31,4 +31,9 @@
 <string name="camera_open_fail">"क्यामेरा खोल्न सकिएन"</string>
 <string name="ims_switch_failed">"नेटवर्क सम्बन्धी त्रुटि भयो, कृपया पछि फेरि प्रयास गर्नुहोस्।"</string>
 
+    <string name="low_battery_warning_media_alert_message">"तपाईंको ब्याट्रीको स्तर १५% भन्दा तल छ। कृपया स्वीकार गर्ने वा अस्वीकार गर्ने भनी रोज्नुहोस्।"</string>
+     <string name="low_battery_warning_title">"न्यून ब्याट्री सम्बन्धी चेतावनी"</string>
+     <string name="low_battery_warning_message">"तपाईंको बैटरीको स्तर १५% भन्दा तल छ। तपाईं भिडियो कल जारी राख्न चाहनुहुन्छ वा भ्वाइस कलमा बदल्न चाहनुहुन्छ?"</string>
+     <string name="low_battery_continue_video_call">"हो"</string>
+     <string name="low_battery_convert_to_voice_call">"बदल्नुहोस्"</string>
 </resources>

@@ -31,4 +31,9 @@
 <string name="camera_open_fail">"Falha ao abrir câmera"</string>
 <string name="ims_switch_failed">"Erro de rede. Tente novamente mais tarde"</string>
 
+    <string name="low_battery_warning_media_alert_message">"O seu nível de bateria está inferior a 15%. Escolha aceitar ou rejeitar."</string>
+     <string name="low_battery_warning_title">"Aviso de Bateria Fraca"</string>
+     <string name="low_battery_warning_message">"O seu nível de bateria está inferior a 15%. Deseja continuar com a chamada de vídeo ou converter para chamada de voz?"</string>
+     <string name="low_battery_continue_video_call">"Sim"</string>
+     <string name="low_battery_convert_to_voice_call">"Converter"</string>
 </resources>

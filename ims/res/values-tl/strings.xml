@@ -31,4 +31,9 @@
 <string name="camera_open_fail">"Ang pagbukas ng kamera ay nabigo"</string>
 <string name="ims_switch_failed">"Kamalian sa network, subukang muli mamaya"</string>
 
+    <string name="low_battery_warning_media_alert_message">"Ang lebel ng iyong baterya ay mababa sa 15%. Mangyari piliin ang tanggapin o tanggihan."</string>
+     <string name="low_battery_warning_title">"Babala ng Mababang Baterya"</string>
+     <string name="low_battery_warning_message">"Ang antas ng iyong baterya ay mababa sa 15%. Gusto mo bang magpatuloy ng tawag sa bidyo o lumipat sa tawag boses?"</string>
+     <string name="low_battery_continue_video_call">"Oo"</string>
+     <string name="low_battery_convert_to_voice_call">"Lumipat"</string>
 </resources>
