@@ -1018,7 +1018,7 @@ public class VoWifiCallManager extends ServiceManager {
                     // invite as the participant, and when it received the terminate action,
                     // need set the info code as CODE_USER_TERMINATED_BY_REMOTE, and it will
                     // do not play the tone when disconnect.
-                    info.mCode = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
+                    info.mCode = ImsReasonInfo.CODE_LOCAL_PART_MERGE;
                 }
 
                 // Terminate the call as normal.
