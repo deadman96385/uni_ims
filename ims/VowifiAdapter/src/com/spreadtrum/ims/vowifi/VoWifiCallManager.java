@@ -1501,6 +1501,7 @@ public class VoWifiCallManager extends ServiceManager {
                 confSession.addParticipant(callee, callSession);
 
                 bundleKey = callee;
+                bundle.putString(ImsConferenceState.CALL_INDEX, callSession.getCallId());
                 bundle.putString(ImsConferenceState.USER, callee);
                 bundle.putString(ImsConferenceState.DISPLAY_TEXT, callee);
                 bundle.putString(ImsConferenceState.STATUS, ImsConferenceState.STATUS_CONNECTED);
@@ -1516,6 +1517,7 @@ public class VoWifiCallManager extends ServiceManager {
                 String callee = callSession.getCallee();
 
                 bundleKey = callee;
+                bundle.putString(ImsConferenceState.CALL_INDEX, callSession.getCallId());
                 bundle.putString(ImsConferenceState.USER, callee);
                 bundle.putString(ImsConferenceState.DISPLAY_TEXT, callee);
                 bundle.putString(ImsConferenceState.STATUS, ImsConferenceState.STATUS_DISCONNECTED);
@@ -1539,6 +1541,8 @@ public class VoWifiCallManager extends ServiceManager {
                     Log.w(TAG, "Can not find the phoneNumber from callee list.");
                     callee = phoneNumber;
                 } else {
+                    bundle.putString(ImsConferenceState.CALL_INDEX,
+                            confSession.getParticipantSessionId(callee));
                     // Remove from the conference's participants.
                     confSession.removeParticipant(callee);
                     confSession.kickActionFinished(callee);
@@ -1572,6 +1576,8 @@ public class VoWifiCallManager extends ServiceManager {
                         Log.w(TAG, "Can not find the phoneNumber from callee list.");
                         callee = phoneNumber;
                     } else {
+                        bundle.putString(ImsConferenceState.CALL_INDEX,
+                                confSession.getParticipantSessionId(callee));
                         // Remove from the conference's participants.
                         confSession.removeParticipant(callee);
                     }

@@ -1283,6 +1283,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         mParticipantSessions.put(phoneNumber, callSession);
     }
 
+    public String getParticipantSessionId(String phoneNumber) {
+        ImsCallSessionImpl session = mParticipantSessions.get(phoneNumber);
+        if (session != null) {
+            return session.getCallId();
+        } else {
+            return String.valueOf(Result.INVALID_ID);
+        }
+    }
+
     public void removeParticipant(String phoneNumber) {
         if (TextUtils.isEmpty(phoneNumber)) {
             Log.e(TAG, "Can not remove the participant for the number: " + phoneNumber);
