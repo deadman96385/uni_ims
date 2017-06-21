@@ -71,7 +71,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private IImsCallSessionListener mIImsCallSessionListener;
     private Context mContext;
     public ImsRIL mCi;
-    private ImsServiceCallTracker mImsServiceCallTracker;
+    public ImsServiceCallTracker mImsServiceCallTracker;//SPRD:add for bug694379
     public ImsDriverCall mImsDriverCall;
     private int mDisconnCause = ImsReasonInfo.CODE_UNSPECIFIED;
     private boolean mDesiredMute = false;
