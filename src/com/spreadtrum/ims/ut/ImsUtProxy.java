@@ -428,18 +428,20 @@ public class ImsUtProxy extends IImsUt.Stub {
     public void setListener(IImsUtListener listener) {
         mListener = listener;
         TelephonyManager tm = TelephonyManager.from(mContext);
-        String carrier = "";
+        String carrier = tm.getSimOperatorNumericForPhone(mPhone.getPhoneId());
         String impi = tm.getIsimImpi();
         if (!TextUtils.isEmpty(impi)) {
             int indexMCC = impi.indexOf("mcc");
             int indexMNC = impi.indexOf("mnc");
-            String mccValue = impi.substring(indexMCC + 3, indexMCC + 6);
-            String mncValue = impi.substring(indexMNC + 3, indexMCC - 1);
-            if (mncValue.length() == 3 && mccValue.startsWith("00")) {
-                carrier = mccValue + mncValue.substring(1);
-            } else {
-                carrier = mccValue + mncValue;
-            }
+	     if (indexMCC >= 0 && indexMNC >= 0) {
+                String mccValue = impi.substring(indexMCC + 3, indexMCC + 6);
+                String mncValue = impi.substring(indexMNC + 3, indexMCC - 1);
+                if (mncValue.length() == 3 && mccValue.startsWith("00")) {
+                    carrier = mccValue + mncValue.substring(1);
+                } else {
+                    carrier = mccValue + mncValue;
+                }
+	     }
         }
 
         log("carrier = " + carrier);
@@ -586,20 +588,23 @@ public class ImsUtProxy extends IImsUt.Stub {
     public void setListenerEx(IImsUtListenerEx listenerEx) {
         mListenerEx = listenerEx;
         TelephonyManager tm = TelephonyManager.from(mContext);
-        String carrier = "";
+        String carrier = tm.getSimOperatorNumericForPhone(mPhone.getPhoneId());
         String impi = tm.getIsimImpi();
         if (!TextUtils.isEmpty(impi)) {
             int indexMCC = impi.indexOf("mcc");
             int indexMNC = impi.indexOf("mnc");
-            String mccValue = impi.substring(indexMCC + 3, indexMCC + 6);
-            String mncValue = impi.substring(indexMNC + 3, indexMCC - 1);
-            if (mncValue.length() == 3 && mccValue.startsWith("00")) {
-                carrier = mccValue + mncValue.substring(1);
-            } else {
-                carrier = mccValue + mncValue;
+            if (indexMCC >= 0 && indexMNC >= 0) {
+                String mccValue = impi.substring(indexMCC + 3, indexMCC + 6);
+                String mncValue = impi.substring(indexMNC + 3, indexMCC - 1);
+                if (mncValue.length() == 3 && mccValue.startsWith("00")) {
+                    carrier = mccValue + mncValue.substring(1);
+                } else {
+                    carrier = mccValue + mncValue;
+                }
             }
-            log("carrier = " + carrier);
         }
+
+        log("carrier = " + carrier);
 
         if (!TextUtils.isEmpty(carrier)) {
             getUTConfig(carrier);
