@@ -1940,7 +1940,7 @@ class MyVoWifiCallback implements VoWifiCallback {
         updateImsRegisterState();
         ImsServiceImpl imsService = mImsServiceImplMap.get(
                 Integer.valueOf(serviceId));
-        int oldImsFeature = mCurrentImsFeature;//SPRD:add for bug673215
+
         if(mInCallHandoverFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
             if(mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
@@ -1984,13 +1984,6 @@ class MyVoWifiCallback implements VoWifiCallback {
             }
         }
         notifyImsRegisterState();
-
-        //SPRD:add for bug673215
-        Log.d(TAG,"updateImsFeature oldImsFeature = "+oldImsFeature);
-        if(mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI && oldImsFeature != mCurrentImsFeature){
-            ImsVodafoneHelper.getInstance(getApplicationContext()).showVowifiRegisterToast(getApplicationContext());
-
-        }
 
         Log.i(TAG,"updateImsFeature->mWifiRegistered:"+mWifiRegistered +" mVolteRegistered:"+mVolteRegistered
                 +" mCurrentImsFeature:"+mCurrentImsFeature +" mInCallHandoverFeature:"+mInCallHandoverFeature);
