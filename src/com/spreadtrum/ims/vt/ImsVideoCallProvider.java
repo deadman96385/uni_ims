@@ -28,6 +28,7 @@ import android.app.KeyguardManager;
 import android.os.AsyncResult;
 import android.telephony.VoLteServiceState;
 import android.telephony.TelephonyManager;
+import com.android.ims.internal.ImsManagerEx;
 
 public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallProvider {
     private static final String TAG = ImsVideoCallProvider.class.getSimpleName();
@@ -483,6 +484,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 }
                 /*SPRD: add for bug606122, 605475, 676047@{*/
                 if(!TelephonyManager.getDefault().isVideoCallingEnabled()
+                        || (ImsManagerEx.isDualVoLTEActive() && mImsCallSessionImpl.mImsServiceCallTracker.isHasBackgroundCallAndActiveCall()) // SPRD:add for bug696648
                         || mImsCallSessionImpl.getCurrentUserId() != UserHandle.USER_OWNER
                         || mImsCallSessionImpl.getIsInLocalConference()
                         || mImsCallSessionImpl.mInLocalCallForward
