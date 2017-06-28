@@ -485,6 +485,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 /*SPRD: add for bug606122, 605475, 676047@{*/
                 if(!TelephonyManager.getDefault().isVideoCallingEnabled()
                         || (ImsManagerEx.isDualVoLTEActive() && mImsCallSessionImpl.mImsServiceCallTracker.isHasBackgroundCallAndActiveCall()) // SPRD:add for bug696648
+                        || (ImsManagerEx.isDualVoLTEActive() && mImsCallSessionImpl.mImsServiceCallTracker.moreThanOnePhoneHasCall()) // SPRD:add for bug696648
                         || mImsCallSessionImpl.getCurrentUserId() != UserHandle.USER_OWNER
                         || mImsCallSessionImpl.getIsInLocalConference()
                         || mImsCallSessionImpl.mInLocalCallForward

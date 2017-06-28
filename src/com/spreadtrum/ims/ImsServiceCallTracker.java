@@ -815,4 +815,14 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         return false;
     }
     /* @} */
+
+    // SPRD Add for bug696648
+    public boolean hasCall() {
+        return (mSessionList.size() + mPendingSessionList.size()) > 0;
+    }
+
+    // SPRD Add for bug696648
+    public boolean moreThanOnePhoneHasCall() {
+        return mImsService.moreThanOnePhoneHasCall();
+    }
 }

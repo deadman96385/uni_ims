@@ -966,4 +966,9 @@ public class ImsServiceImpl {
     public void setSrvccState(int srvccState){
         mImsServiceState.mSrvccState = srvccState;
     }
+
+    // SPRD Add for bug696648
+    public boolean hasCall() {
+        return mImsServiceCallTracker.hasCall();
+    }
 }
