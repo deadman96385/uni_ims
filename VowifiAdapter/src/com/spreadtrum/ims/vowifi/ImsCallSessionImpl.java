@@ -1950,7 +1950,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
         String peerNumber = callee; //default
         if (mIsEmergency) {
-            peerNumber = mCallManager.getEmergencyCallUrn(mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO));
+            String category = null;
+            Bundle b = null;
+            if(mCallProfile.mCallExtras != null) {
+                b = mCallProfile.mCallExtras.getBundle(ImsCallProfile.EXTRA_OEM_EXTRAS);
+            }
+            if(b != null){
+                category = b.getString(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO);
+            }
+            peerNumber = mCallManager.getEmergencyCallUrn(category);
             Log.d(TAG, "Start an emergency call.");
         }
         id = mICall.sessCall(peerNumber, null, true, isVideoCall, false, mIsEmergency);
