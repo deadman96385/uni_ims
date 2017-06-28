@@ -181,7 +181,7 @@ public class ImsServiceImpl extends MMTelFeature {
         mImsConfigImpl = new ImsConfigImpl(mCi,context);
         mImsUtImpl = new ImsUtImpl(mCi,context,phone);
         com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl =  mWifiService.getUtInterface();
-        mImsUtProxy = new ImsUtProxy(context, mImsUtImpl, voWifiUtImpl);
+        mImsUtProxy = new ImsUtProxy(context, mImsUtImpl, voWifiUtImpl, phone);
         mImsEcbmImpl = new ImsEcbmImpl(mCi);
         mHandler = new ImsHandler(mContext.getMainLooper());
         Intent intent = new Intent(ImsManager.ACTION_IMS_SERVICE_UP);
@@ -532,7 +532,7 @@ public class ImsServiceImpl extends MMTelFeature {
 
     @Override
     public IImsUt getUtInterface() {
-        return mImsUtImpl;
+        return mImsUtProxy;
     }
 
     @Override

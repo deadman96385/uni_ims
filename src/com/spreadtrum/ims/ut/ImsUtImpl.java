@@ -12,7 +12,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
-/*TODO:import android.telephony.TelephonyManagerEx; */
 import android.util.Log;
 import com.android.internal.telephony.CallForwardInfo;
 import com.android.internal.telephony.CommandsInterface;
@@ -29,7 +28,8 @@ import com.android.ims.internal.ImsCallForwardInfoEx;
 import com.android.ims.internal.IImsUtListenerEx;
 import com.spreadtrum.ims.ImsRIL;
 import com.android.internal.telephony.Phone;
-/*TODO:import com.android.internal.telephony.dataconnection.DcNetworkManager; */
+import android.telephony.RadioAccessFamily;
+import com.android.internal.telephony.dataconnection.DcNetworkManager;
 import android.os.Bundle;
 import android.telephony.SubscriptionManager;
 import static com.android.internal.telephony.CommandsInterface.CF_ACTION_DISABLE;
@@ -93,14 +93,14 @@ public class ImsUtImpl extends IImsUt.Stub {
     private IImsUtListenerEx mImsUtListenerEx;
     private int mRequestId = -1;
     private Object mLock = new Object();
-    /*TODO:private DcNetworkManager mDcNetworkManager = null;*/
+    private DcNetworkManager mDcNetworkManager = null;
     private List<Integer> mRequestedNetwork = new ArrayList<Integer>();
     public ImsUtImpl(ImsRIL ci,Context context, Phone phone){
         mCi = ci;
         mContext = context;
         mHandler = new ImsHandler(mContext.getMainLooper(), (IImsUt)this);
         mPhone = phone;
-        /*TODO:mDcNetworkManager = new DcNetworkManager(mContext);*/
+        mDcNetworkManager = new DcNetworkManager(mContext);
     }
 
     /**
@@ -890,13 +890,12 @@ public class ImsUtImpl extends IImsUt.Stub {
         return id;
     }
     private boolean isSimSlotSupportLTE() {
-        /*TODO:
-        TelephonyManagerEx tm = TelephonyManagerEx.from(mPhone.getContext());
-        if (tm != null && tm.isSimSlotSupportLte(mPhone.getPhoneId())) {
-            return true;
+        if (mPhone != null) {
+            int rafMax = mPhone.getRadioAccessFamily();
+            return (rafMax & RadioAccessFamily.RAF_LTE) == RadioAccessFamily.RAF_LTE ||
+                    (rafMax & RadioAccessFamily.RAF_LTE_CA) == RadioAccessFamily.RAF_LTE_CA;
         }
-        */
-        return  false;
+        return false;
     }
     // Create Cf (Call forward) so that dialling number &
     // mIsCfu (true if reason is call forward unconditional)
@@ -969,11 +968,11 @@ public class ImsUtImpl extends IImsUt.Stub {
         int subId = mPhone.getSubId();
         Message request = mHandler.obtainMessage(EVENT_REQUEST_NETWORK_DONE);
         request.setData(bundle);
-        /*TODO:mDcNetworkManager.requestNetwork(subId, request);*/
+        mDcNetworkManager.requestNetwork(subId, request);
     }
 
     private void releaseNetwork() {
-        /*TODO:mDcNetworkManager.releaseNetworkRequest();*/
+        mDcNetworkManager.releaseNetworkRequest();
     }
 
     private void onRequestNetworkDone(Bundle bundle) {
