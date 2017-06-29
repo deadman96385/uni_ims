@@ -42,6 +42,7 @@ import com.spreadtrum.ims.ut.ImsUtProxy;
 import com.android.ims.internal.IImsCallSession;
 import com.android.ims.internal.IImsCallSessionListener;
 import com.android.ims.internal.IImsRegistrationListener;
+import com.android.ims.internal.IImsPdnStateListener;
 import com.android.ims.internal.IImsEcbm;
 import com.android.ims.internal.IImsService;
 import com.android.ims.internal.IImsUt;
@@ -107,6 +108,7 @@ public class ImsServiceImpl extends MMTelFeature {
     private IImsRegistrationListener mListener;
     private IImsFeatureStatusCallback mImsFeatureStatusCallback;
     private ConcurrentHashMap<IBinder, IImsRegistrationListener> mImsRegisterListeners = new ConcurrentHashMap<IBinder, IImsRegistrationListener>();
+    private ConcurrentHashMap<IBinder, IImsPdnStateListener> mImsPdnStateListeners = new ConcurrentHashMap<IBinder, IImsPdnStateListener>();
     private Context mContext;
     private ImsRIL mCi;
     private ImsConfigImpl mImsConfigImpl;
@@ -359,6 +361,7 @@ public class ImsServiceImpl extends MMTelFeature {
                     if (ar != null && ar.exception == null && ar.result != null && ar.result instanceof Integer) {
                         Integer responseArray = (Integer)ar.result;
                         mImsService.onImsPdnStatusChange(mServiceId,responseArray.intValue());
+                        notifyImsPdnStateChange(responseArray.intValue());
                         if(responseArray.intValue() == ImsService.ImsPDNStatus.IMS_PDN_READY){
                                 mCi.getImsPcscfAddress(mHandler.obtainMessage(EVENT_IMS_GET_PCSCF_ADDRESS));
                         }
@@ -1147,5 +1150,54 @@ public class ImsServiceImpl extends MMTelFeature {
     }
     public void setSrvccState(int srvccState){
         mImsServiceState.mSrvccState = srvccState;
+    }
+
+    /**
+     * Used for add IMS PDN State Listener.
+     */
+    public void addImsPdnStateListener(IImsPdnStateListener listener){
+        if (listener == null) {
+            Log.w(TAG,"addImsPdnStateListener->Listener is null!");
+            Thread.dumpStack();
+            return;
+        }
+        synchronized (mImsPdnStateListeners) {
+            if (!mImsPdnStateListeners.keySet().contains(listener.asBinder())) {
+                mImsPdnStateListeners.put(listener.asBinder(), listener);
+            } else {
+                Log.w(TAG,"addImsPdnStateListener Listener already add :" + listener);
+            }
+        }
+    }
+
+    /**
+     * Used for remove IMS PDN State Listener.
+     */
+    public void removeImsPdnStateListener(IImsPdnStateListener listener){
+        if (listener == null) {
+            Log.w(TAG,"removeImsPdnStateListener->Listener is null!");
+            Thread.dumpStack();
+            return;
+        }
+        synchronized (mImsPdnStateListeners) {
+            if (mImsPdnStateListeners.keySet().contains(listener.asBinder())) {
+                mImsPdnStateListeners.remove(listener.asBinder());
+            } else {
+                Log.w(TAG,"removeImsPdnStateListener Listener already add :" + listener);
+            }
+        }
+    }
+
+    public void notifyImsPdnStateChange(int state){
+        synchronized (mImsPdnStateListeners) {
+            for (IImsPdnStateListener l : mImsPdnStateListeners.values()) {
+                try{
+                    l.imsPdnStateChange(state);
+                } catch(RemoteException e){
+                    e.printStackTrace();
+                    continue;
+                }
+            }
+        }
     }
 }

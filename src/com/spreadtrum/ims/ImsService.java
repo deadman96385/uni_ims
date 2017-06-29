@@ -58,6 +58,7 @@ import com.android.ims.internal.ImsCallSession;
 import com.spreadtrum.ims.ImsCallSessionImpl.Listener;
 import com.spreadtrum.ims.vt.VTManagerProxy;
 import com.android.ims.internal.IImsServiceEx;
+import com.android.ims.internal.IImsPdnStateListener;
 import com.android.ims.internal.IImsServiceListenerEx;
 import com.android.ims.internal.IImsRegisterListener;
 import com.android.ims.internal.IImsUtListenerEx;
@@ -1891,6 +1892,30 @@ public class ImsService extends Service {
                e.printStackTrace();
            }
        }
+
+        /**
+         * Used for add IMS PDN State Listener.
+         */
+        public void addImsPdnStateListener(int slotId,IImsPdnStateListener listener){
+            if(slotId < 0 || slotId >= mPhoneCount){
+                Log.w(TAG,"addImsPdnStateListener->slotId:"+slotId);
+                return;
+            }
+            ImsServiceImpl imsService = mImsServiceImplMap.get(slotId+1);
+            imsService.addImsPdnStateListener(listener);
+        }
+
+        /**
+         * Used for remove IMS PDN State Listener.
+         */
+        public void removeImsPdnStateListener(int slotId, IImsPdnStateListener listener){
+            if(slotId < 0 || slotId >= mPhoneCount){
+                Log.w(TAG,"removeImsPdnStateListener->slotId:"+slotId);
+                return;
+            }
+            ImsServiceImpl imsService = mImsServiceImplMap.get(slotId+1);
+            imsService.removeImsPdnStateListener(listener);
+        }
     };
 
     private final IImsMultiEndpoint.Stub mImsMultiEndpointBinder = new IImsMultiEndpoint.Stub()  {
