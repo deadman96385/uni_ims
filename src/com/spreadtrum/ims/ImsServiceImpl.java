@@ -574,7 +574,7 @@ public class ImsServiceImpl {
         Log.i(TAG,"getPendingCallSession->callId:" + callId +
                 " mImsServiceCallTracker:"+mImsServiceCallTracker);
         if(mImsServiceCallTracker != null){
-            return mImsServiceCallTracker.getCallSession(callId);
+            return mImsServiceCallTracker.getPendingCallSession(callId);
         } else {
             return null;
         }
@@ -639,7 +639,7 @@ public class ImsServiceImpl {
             	// SPRD 659914
                 if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
                     return false;
-                } else if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_FAILED || 
+                } else if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_FAILED ||
                 		mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_CANCELED) {
                 	return true;
                 }

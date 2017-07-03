@@ -409,6 +409,20 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         return hasUpdate;
     }
 
+    /**
+     * SPRD: Fix bug#696881
+     * Notify call state changed to ACTIVE.
+     */
+    public void updateActiveChanged() {
+        try {
+            if (mIImsCallSessionListener != null) {
+                mIImsCallSessionListener.callSessionStarted((IImsCallSession) this, mImsCallProfile);
+            }
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
     private boolean isImsSessionInvalid() {
         boolean invalid = (mState == ImsCallSession.State.INVALID);
         if (invalid) {

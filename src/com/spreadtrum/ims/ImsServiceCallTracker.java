@@ -54,11 +54,12 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final int EVENT_POLL_CURRENT_CALLS            = 6;
     private static final int EVENT_POLL_CURRENT_CALLS_RESULT     = 7;
     private static final int EVENT_RADIO_NOT_AVAILABLE           = 8;
+    private static final int EVENT_IMS_CALL_ACTIVE_CHANGED       = 9;
 
     private PendingIntent mIncomingCallIntent;
     private ImsRIL mCi;
     private Context mContext;
-    private int mServiceId; 
+    private int mServiceId;
     private ImsServiceImpl mImsServiceImpl;
     private ImsHandler mHandler;
     private ImsCallSessionImpl mConferenceSession;
@@ -115,7 +116,6 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         }
         @Override
         public void handleMessage(Message msg) {
-            AsyncResult ar = (AsyncResult) msg.obj;
             Log.i(TAG, "handleMessage: "+msg.what);
             switch (msg.what) {
                 case EVENT_CALL_STATE_CHANGE:
@@ -148,6 +148,13 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                         mLastRelevantPoll = null;
                         updateCurrentCalls((AsyncResult)msg.obj);
                     }
+                    break;
+                case EVENT_IMS_CALL_ACTIVE_CHANGED:
+                    ImsCallSessionImpl callSession = (ImsCallSessionImpl) msg.obj;
+                    if (callSession != null) {
+                        callSession.updateActiveChanged();
+                    }
+
                 default:
                     break;
             }
@@ -167,7 +174,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                     + " mIsVowifiCall: " + mImsService.isVowifiCall()
                     + " mIsVolteCall: " + mImsService.isVolteCall()
                     + " isVoWifiEnabled(): " + mImsService.isVoWifiEnabled()
-                    + " isVoLTEEnabled(): " + mImsService.isVoLTEEnabled());
+                    + " isVoLTEEnabled(): " + mImsService.isVoLTEEnabled()
+                    + ", mState : " + state);
             if (mImsService.isVoLTEEnabled() && !mImsService.isVowifiCall() && !mImsService.isVolteCall()) {
                 mWifiService.updateDataRouterState(DataRouterState.CALL_VOLTE);
             }
@@ -202,6 +210,27 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         return session;
     }
 
+    /**
+     * SPRD: Fix bug#696881
+     * @param callId
+     * @return ImsCallSessionImpl if find
+     */
+    public ImsCallSessionImpl getPendingCallSession (String callId) {
+        ImsCallSessionImpl session;
+        synchronized (mSessionList) {
+            session = mSessionList.get(callId);
+            if (session != null && session.mImsDriverCall != null
+                    && session.mImsDriverCall.isMT
+                    && session.mImsDriverCall.state == ImsDriverCall.State.ACTIVE) {
+                Message message = new Message();
+                message.what = EVENT_IMS_CALL_ACTIVE_CHANGED;
+                message.obj = session;
+                mHandler.removeMessages(EVENT_IMS_CALL_ACTIVE_CHANGED);
+                mHandler.sendMessageDelayed(message, POLL_DELAY_MSEC);
+            }
+        }
+        return session;
+    }
 
     @Override
     public void onDisconnected(ImsCallSessionImpl session){
@@ -385,7 +414,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                     callSession.addListener(this);
                     addSessionToList(Integer.valueOf(imsDc.index), callSession);
                     if (imsDc.isMT) {
-                        Log.d(TAG, "This is a MT Call.");
+                        Log.d(TAG, "This is a MT Call.    MT call state = " + imsDc.state);
                         sendNewSessionIntent(callSession, imsDc.index, false, imsDc.state, imsDc.number);
                     } else if (imsDc.isMpty) {
                         Log.d(TAG, "This is a invalid conference session!");
