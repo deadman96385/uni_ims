@@ -283,7 +283,6 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     }
 
     private void handlePollCalls(AsyncResult ar){
-        boolean peerIsVideo = false;
         ArrayList<ImsDriverCall> imsDcList;
         Map <String, ImsDriverCall> validDriverCall = new HashMap<String, ImsDriverCall>();
         if (ar.exception == null) {
@@ -329,9 +328,6 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                                 mConferenceSession = session;
                                 mConferenceSession.initConferenceDc(imsDc);
                                 isConferenceStateChange = mConferenceSession.updateImsConfrenceMember(imsDc);
-                                if(imsDc.isVideoCall()){
-                                   peerIsVideo = true;
-                                }
                             }
                             index = j;
                             break;
@@ -354,9 +350,6 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                             && mConferenceSession.inSameConference(imsDc)){
                         Log.d(TAG, "mConferenceSession member found");
                         isConferenceStateChange = mConferenceSession.updateImsConfrenceMember(imsDc);
-                        if(imsDc.isVideoCall()){
-                            peerIsVideo = true;
-                         }
                     }
                 } else {
                     conferenceDc = imsDc;
@@ -369,9 +362,6 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                         && mConferenceSession.inSameConference(imsDc)){
                     Log.d(TAG, "mConferenceSession member found");
                     isConferenceStateChange = mConferenceSession.updateImsConfrenceMember(imsDc);
-                    if(imsDc.isVideoCall()){
-                        peerIsVideo = true;
-                     }
                 } else {
                     boolean shouldNotify = false;
                     if (imsDc.state == ImsDriverCall.State.DISCONNECTED) {
@@ -402,6 +392,23 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             }
         }
         if(mConferenceSession != null){
+            boolean isConNumberVideoCall = false;
+            for (Iterator<Map.Entry<String, ImsDriverCall>> it =
+                validDriverCall.entrySet().iterator(); it.hasNext();) {
+                Map.Entry<String, ImsDriverCall> e = it.next();
+                ImsDriverCall imsdc = e.getValue();
+                if(mConferenceSession.inSameConference(imsdc) && imsdc.isVideoCall()){
+                    isConNumberVideoCall = true;
+                    break;
+                }
+            }
+            if(mConferenceSession.getImsVideoCallProvider().isVideoCall(mConferenceSession.getCallProfile().mCallType)
+                    && !isConNumberVideoCall){
+                mConferenceSession.getCallProfile().mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
+            } else if (!mConferenceSession.getImsVideoCallProvider().isVideoCall(mConferenceSession.getCallProfile().mCallType)
+                    && isConNumberVideoCall){
+                mConferenceSession.getCallProfile().mCallType = ImsCallProfile.CALL_TYPE_VT;
+            }
             if(conferenceDc != null){
                 isConferenceStateChange = mConferenceSession.updateImsConfrenceMember(conferenceDc)  || isConferenceStateChange;
                 isConferenceStateChange = mConferenceSession.updateFromDc(conferenceDc) || isConferenceStateChange;
@@ -409,20 +416,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             mConferenceSession.removeInvalidSessionFromConference(validDriverCall);
         }
         removeInvalidSessionFromList(validDriverCall);
-        if(SystemProperties.getBoolean("persist.sys.support.vtconf", false)){
-               isConferenceStateChange = isConferenceStateChange || peerIsVideo;
-               if(conferenceDc != null){
-                  isConferenceStateChange = isConferenceStateChange || conferenceDc.isVideoCall();
-               }
-        }
         if(isConferenceStateChange && (mConferenceSession != null)){
-           if(SystemProperties.getBoolean("persist.sys.support.vtconf", false) && (peerIsVideo || (conferenceDc != null && conferenceDc.isVideoCall()))){
-              if(mConferenceSession != null && mConferenceSession.getCallProfile()!= null){
-                  mConferenceSession.getCallProfile().mCallType = ImsCallProfile.CALL_TYPE_VT;
-              }
-           }
             mConferenceSession.notifyConferenceStateChange();
-            Log.d(TAG, "handlePollCalls->isConferenceStateChange:"+isConferenceStateChange+"  peerIsVideo:" +peerIsVideo +" conferenceDc:"+conferenceDc);
+            Log.d(TAG, "handlePollCalls->isConferenceStateChange:"+isConferenceStateChange);
         }
         if(mSessionList.isEmpty()){
             mImsServiceImpl.onImsCallEnd();
