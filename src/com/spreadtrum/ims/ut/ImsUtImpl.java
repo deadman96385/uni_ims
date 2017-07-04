@@ -617,7 +617,7 @@ public class ImsUtImpl extends IImsUt.Stub {
         Bundle bundle = new Bundle();
         bundle.putInt(EXTRA_ACTION, ACTION_QUERY_CW);
         bundle.putInt(EXTRA_ID, id);
-        bundle.putInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_NONE);
+        bundle.putInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
         requestNetwork(bundle);
         return id;
     }
@@ -1049,7 +1049,7 @@ public class ImsUtImpl extends IImsUt.Stub {
         String facility = bundle.getString(EXTRA_FACILITY, "");
         String password = bundle.getString(EXTRA_PASSWORD, "");
         int serviceClass = bundle.getInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
-        mCi.queryFacilityLock(facility, password, serviceClass,
+        mCi.queryFacilityLockForAppExt(facility, password, serviceClass,
                 mHandler.obtainMessage(ACTION_QUERY_CB, id, 0, this));
     }
 
@@ -1066,7 +1066,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private void queryCallWaiting(Bundle bundle) {
         Log.d(TAG, "onexcue queryCallWaiting = " + bundle.toString());
         int id = bundle.getInt(EXTRA_ID, -1);
-        int serviceClass = bundle.getInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_NONE);
+        int serviceClass = bundle.getInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
         mCi.queryCallWaiting(serviceClass,
                 mHandler.obtainMessage(ACTION_QUERY_CW, id, 0, this));
     }

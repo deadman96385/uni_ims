@@ -1227,6 +1227,24 @@ public final class ImsRIL {
         mCi.queryFacilityLockForApp(facility, password, serviceClass, appId, response);
     }
 
+    public void
+    queryFacilityLockForAppExt(String facility, String password, int serviceClass,
+                               Message response) {
+        IExtRadio radioProxy = getRadioProxy(response);
+        if (radioProxy != null) {
+            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_QUERY_FACILITY_LOCK_EXT, response,
+                    mRILDefaultWorkSource);
+
+            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
+
+            try {
+                radioProxy.getFacilityLockForAppExt(rr.mSerial, convertNullToEmptyString(facility),
+                        convertNullToEmptyString(password), serviceClass, "");
+            } catch (RemoteException | RuntimeException e) {
+                handleRadioProxyExceptionForRR(rr, "queryFacilityLockForAppExt", e);
+            }
+        }
+    }
 
     public void
     setFacilityLock (String facility, boolean lockState, String password,
@@ -2508,6 +2526,7 @@ public final class ImsRIL {
             case ImsRILConstants.RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO: return "RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO";
             case ImsRILConstants.RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY: return "RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY";
             case ImsRILConstants.RIL_REQUEST_GET_IMS_PCSCF_ADDR: return "RIL_REQUEST_GET_IMS_PCSCF_ADDR";
+            case ImsRILConstants.RIL_REQUEST_QUERY_FACILITY_LOCK_EXT: return "RIL_REQUEST_QUERY_FACILITY_LOCK_EXT";
             default: return requestToString(request);
         }
     }

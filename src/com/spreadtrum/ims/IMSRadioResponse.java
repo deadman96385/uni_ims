@@ -232,6 +232,10 @@ public class IMSRadioResponse extends IIMSRadioResponse.Stub {
         }
     }
 
+    public void getFacilityLockForAppExtResponse(RadioResponseInfo responseInfo, int status, int serviceClass) {
+        responseInts(responseInfo, status, serviceClass);
+    }
+
     public void setCallForwardUriResponse(RadioResponseInfo info){
         responseVoid(info);
     }
