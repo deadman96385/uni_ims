@@ -296,7 +296,16 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
      */
     @Override
     public void onSendSessionModifyResponse(VideoProfile responseProfile) {
-            log("onSendSessionModifyResponse->responseProfile:" + responseProfile);
+            log("onSendSessionModifyResponse->responseProfile:" + responseProfile +" callId:"+mImsCallSessionImpl.getCallId());
+            if(VideoProfile.isVideo(responseProfile.getVideoState())){
+                mCi.responseVolteCallMediaChange(true, Integer.parseInt(mImsCallSessionImpl.getCallId()),null);
+                receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+                        null,null);
+            }else if (VideoProfile.isAudioOnly(responseProfile.getVideoState())){
+                mCi.responseVolteCallMediaChange(false, Integer.parseInt(mImsCallSessionImpl.getCallId()),null);
+                receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+                        null,null);
+            }
     }
 
     public void updateVideoQuality(VideoProfile responseProfile) {
