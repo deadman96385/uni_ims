@@ -12,6 +12,8 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.util.Log;
+import android.telephony.TelephonyManagerEx;
+import com.android.ims.internal.ImsManagerEx;
 import com.android.internal.telephony.CallForwardInfo;
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.CommandException;
@@ -91,6 +93,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private int mRequestId = -1;
     private Object mLock = new Object();
     private DcNetworkManager mDcNetworkManager = null;
+    private List<Integer> mRequestedNetwork = new ArrayList<Integer>();
     public ImsUtImpl(ImsRIL ci,Context context, Phone phone){
         mCi = ci;
         mContext = context;
@@ -430,7 +433,9 @@ public class ImsUtImpl extends IImsUt.Stub {
                     } catch(RemoteException e){
                         e.printStackTrace();
                     }
-                    releaseNetwork();
+                    if (mRequestedNetwork.remove(Integer.valueOf(ACTION_QUERY_CF_EX))) {
+                        releaseNetwork();
+                    }
                     break;
                 case ACTION_UPDATE_CF_EX:
                     try {
@@ -465,7 +470,9 @@ public class ImsUtImpl extends IImsUt.Stub {
                     	e.printStackTrace();
                     	Log.i(TAG,"nullpointerException" + e.getMessage());
                     }
-                    releaseNetwork();
+                    if (mRequestedNetwork.remove(Integer.valueOf(ACTION_UPDATE_CF_EX))) {
+                        releaseNetwork();
+                    }
                     break;
                 case EVENT_REQUEST_NETWORK_DONE:
                     Bundle bundle = msg.getData();
@@ -851,7 +858,12 @@ public class ImsUtImpl extends IImsUt.Stub {
         bundle.putString(EXTRA_DIALING_NUM, dialingNumber);
         bundle.putInt(EXTRA_TIMER_SECONDS, timerSeconds);
         bundle.putString(EXTRA_RULE_SET, ruleSet);
-        requestNetwork(bundle);
+        if (isSimSlotSupportLTE()) {
+            mRequestedNetwork.add(Integer.valueOf(ACTION_UPDATE_CF_EX));
+            requestNetwork(bundle);
+        } else {
+            setCallForwardingOption(bundle);
+        }
         return id;
     }
 
@@ -868,7 +880,12 @@ public class ImsUtImpl extends IImsUt.Stub {
         bundle.putInt(EXTRA_SERVICE_CLASS, serviceClass);
         bundle.putString(EXTRA_RULE_SET, ruleSet);
         bundle.putString(EXTRA_DIALING_NUM, "");
-        requestNetwork(bundle);
+        if (isSimSlotSupportLTE()) {
+            mRequestedNetwork.add(Integer.valueOf(ACTION_QUERY_CF_EX));
+            requestNetwork(bundle);
+        } else {
+            getCallForwardingOption(bundle);
+        }
         return id;
     }
 
@@ -941,6 +958,13 @@ public class ImsUtImpl extends IImsUt.Stub {
 
     private void requestNetwork(Bundle bundle) {
         int subId = mPhone.getSubId();
+        if (ImsManagerEx.isDualVoLTEActive()) {
+            int defaultSubId = SubscriptionManager.getDefaultDataSubscriptionId();
+            if (SubscriptionManager.isValidSubscriptionId(defaultSubId)) {
+                Log.d(TAG, "use default sub id!");
+                subId = defaultSubId;
+            }
+        }
         Message request = mHandler.obtainMessage(EVENT_REQUEST_NETWORK_DONE);
         request.setData(bundle);
         mDcNetworkManager.requestNetwork(subId, request);
@@ -950,7 +974,13 @@ public class ImsUtImpl extends IImsUt.Stub {
         Log.d(TAG, "releaseNetwork");
         mDcNetworkManager.releaseNetworkRequest();
     }
-
+    private boolean isSimSlotSupportLTE() {
+        TelephonyManagerEx tm = TelephonyManagerEx.from(mPhone.getContext());
+        if (tm != null && tm.isSimSlotSupportLte(mPhone.getPhoneId())) {
+            return true;
+        }
+        return  false;
+    }
     private void onRequestNetworkDone(Bundle bundle) {
         int action = -1;
         if (bundle != null) {
