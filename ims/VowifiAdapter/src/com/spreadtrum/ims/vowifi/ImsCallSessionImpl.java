@@ -464,7 +464,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         boolean isVideo = Utilities.isVideoCall(profile.mCallType);
         if (isVideo) {
             handleStartActionFailed("Do not support video call on vowifi.");
-            Toast.makeText(mContext, R.string.vowifi_conf_do_not_support, Toast.LENGTH_LONG).show();
+            Toast.makeText(mContext, R.string.vowifi_video_call_do_not_support, Toast.LENGTH_LONG).show();
             return;
         }
 

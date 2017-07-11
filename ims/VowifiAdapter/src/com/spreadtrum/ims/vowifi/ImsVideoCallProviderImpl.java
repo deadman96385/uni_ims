@@ -284,7 +284,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
         boolean wasVideo = VideoProfile.isVideo(fromProfile.getVideoState());
         boolean isVideo = VideoProfile.isVideo(toProfile.getVideoState());
         if (isVideo) {
-            Toast.makeText(mContext, R.string.vowifi_conf_do_not_support, Toast.LENGTH_LONG).show();
+            Toast.makeText(mContext, R.string.vowifi_video_call_do_not_support, Toast.LENGTH_LONG).show();
             return;
         }
 

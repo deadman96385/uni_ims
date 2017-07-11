@@ -25,4 +25,5 @@
     <string name="vowifi_conf_kick_failed">Failed to remove the participant</string>
     <string name="vowifi_conf_none_participant">"There isn't any participant, end the call."</string>
     <string name="vowifi_conf_do_not_support">Do not support this action now.</string>
+    <string name="vowifi_video_call_do_not_support">Do not support this action now.</string>
 </resources>

@@ -25,4 +25,5 @@
     <string name="vowifi_conf_kick_failed">移除参与者失败</string>
     <string name="vowifi_conf_none_participant">无任何参与者，结束通话</string>
     <string name="vowifi_conf_do_not_support">不支持一键发起会议</string>
+    <string name="vowifi_video_call_do_not_support">不支持视频通话</string>
 </resources>
