@@ -326,8 +326,7 @@ public class ImsServiceImpl extends MMTelFeature {
                     Log.i(TAG,"EVENT_SERVICE_STATE_CHANGED->ServiceStateChange");
                     ServiceState state = (ServiceState) ((AsyncResult) msg.obj).result;
                     if (state != null && state.getDataRegState() == ServiceState.STATE_IN_SERVICE
-                            && (state.getRilDataRadioTechnology() == ServiceState.RIL_RADIO_TECHNOLOGY_LTE
-                            || state.getRilDataRadioTechnology() == ServiceState.RIL_RADIO_TECHNOLOGY_LTE_CA)){
+                            && state.getRilDataRadioTechnology() == ServiceState.RIL_RADIO_TECHNOLOGY_LTE){
                         mImsRegister.enableIms();
                         setVideoResolution(state);
                     }
