@@ -283,10 +283,6 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
         boolean wasVideo = VideoProfile.isVideo(fromProfile.getVideoState());
         boolean isVideo = VideoProfile.isVideo(toProfile.getVideoState());
-        if (isVideo) {
-            Toast.makeText(mContext, R.string.vowifi_video_call_do_not_support, Toast.LENGTH_LONG).show();
-            return;
-        }
 
         if (wasVideo != isVideo) {
             // For video type changed, we need send the modify request to server.

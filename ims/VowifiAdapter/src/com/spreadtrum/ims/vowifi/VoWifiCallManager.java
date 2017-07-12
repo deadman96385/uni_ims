@@ -969,11 +969,6 @@ public class VoWifiCallManager extends ServiceManager {
             String callee) throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Handle the incoming call.");
 
-        if (isVideo) {
-            Toast.makeText(mContext, R.string.vowifi_remove_video_success, Toast.LENGTH_LONG).show();
-            isVideo = false;
-        }
-
         // Create the profile for this incoming call.
         ImsCallProfile callProfile = null;
         ImsStreamMediaProfile mediaProfile = null;
@@ -1253,12 +1248,6 @@ public class VoWifiCallManager extends ServiceManager {
         if (callSession == null) {
             Log.w(TAG, "[handleCallAddVideoRequest] The call session is null.");
             return;
-        }
-        try {
-            mICall.sendSessionModifyResponse(Integer.valueOf(callSession.getCallId()), true, false);
-            return;
-        } catch (RemoteException e) {
-            Log.e(TAG, "Failed to send reject response. e: " + e);
         }
 
         // Receive the add video request, we need prompt one dialog to alert the user.
