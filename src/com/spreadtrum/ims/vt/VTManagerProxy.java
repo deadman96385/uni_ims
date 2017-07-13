@@ -28,6 +28,7 @@ import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.ims.internal.ImsCallSession;
 import com.android.ims.internal.IImsVideoCallProvider;
+import android.telephony.TelephonyManagerEx;
 
 //TODO:import android.telephony.TelephonyManagerEx;
 import android.content.BroadcastReceiver;
@@ -170,7 +171,7 @@ public class VTManagerProxy{
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(Intent.ACTION_BATTERY_LOW) /* &&TelephonyManagerEx.isBatteryLow() TODO:*/) {
+            if (intent.getAction().equals(Intent.ACTION_BATTERY_LOW) && TelephonyManagerEx.isBatteryLow()) {
                     if (mVolteMediaDialog != null) {
                         mVolteMediaDialog.dismiss();
                     }

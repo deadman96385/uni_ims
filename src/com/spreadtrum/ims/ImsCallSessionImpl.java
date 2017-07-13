@@ -56,8 +56,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final int ACTION_COMPLETE_REMOVE_PARTICIPANT = 12;
     private static final int ACTION_COMPLETE_GET_CALL_FAIL_CAUSE = 13;
     private static final int ACTION_COMPLETE_SEND_USSD = 14;
+    private static final int ACTION_COMPLETE_ACCEPT_AS_AUDIO = 15;
 
     public static final int CODE_LOCAL_CALL_IMS_HANDOVER_RETRY = 151;
+
 
     public static final String EXTRA_MT_CONFERENCE_CALL = "is_mt_conf_call";
 
@@ -892,11 +894,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.w(TAG, "accept-> ImsSessionInvalid!");
             return;
         }
-        Message message = new Message();
         /*SPRD:bug523375 add voice accept video call @{*/
         if(callType == ImsCallProfile.CALL_TYPE_VOICE && (mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT)){
             Log.i(TAG, "voice accept video call!");
-            mCi.requestVolteCallFallBackToVoice(Integer.getInteger(getCallId()),message);
+            mCi.requestVolteCallFallBackToVoice(Integer.valueOf(getCallId()),mHandler.obtainMessage(ACTION_COMPLETE_ACCEPT_AS_AUDIO,this));
         }/*@}*/
 
         mImsCallProfile.mMediaProfile = profile;
