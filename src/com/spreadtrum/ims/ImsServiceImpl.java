@@ -209,10 +209,18 @@ public class ImsServiceImpl {
                     if (ar.exception == null && ar.result != null) {
                         int[] responseArray = (int[])ar.result;
                         mImsServiceState.mRegState = responseArray[0];
-                        // SPRD 681641
-                        if (responseArray != null && responseArray.length >1) {
-                            mImsServiceState.mImsRegistered = (responseArray[0] != 0 && responseArray[1]== 1);
-                            mImsServiceState.mSrvccState = -1;
+                        // SPRD 681641 701983
+                        if (responseArray != null) {
+                            if (responseArray.length >1) {
+                                mImsServiceState.mImsRegistered = (responseArray[0] != 0 && responseArray[1]== 1);
+                            } else if (responseArray.length == 1) {
+                                mImsServiceState.mImsRegistered = (mImsServiceState.mRegState == IMS_REG_STATE_REGISTERED
+                                    ? true : false);
+                            }
+                            Log.i(TAG, "EVENT_IMS_STATE_CHANGED --mImsServiceState.mImsRegistered : "
+                                        + mImsServiceState.mImsRegistered
+                                        + " | responseArray.length = "
+                                        + responseArray.length);
                         }
                         Log.i(TAG,"EVENT_IMS_STATE_CHANGED->mRegState:"+mImsServiceState.mRegState);
                         switch(mImsServiceState.mRegState){
