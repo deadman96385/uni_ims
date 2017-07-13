@@ -564,8 +564,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     if (ar != null && ar.exception != null) {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_MERGE error!");
                         synchronized(mConferenceLock){
-                            mConferenceHost = false;
-                            mImsConferenceState = null;
+                            //SPRD: add for bug704849
+                            if (!isMultiparty()) {
+                                mConferenceHost = false;
+                                mImsConferenceState = null;
+                            }
                         }
                         mImsServiceCallTracker.onCallMergeFailed((ImsCallSessionImpl)ar.userObj);
                         if(ar.userObj != null) {
