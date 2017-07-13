@@ -3648,13 +3648,17 @@ static int responseSimRefresh(Parcel &p, void *response, size_t responselen) {
     }
 
     startResponse;
-    if (s_callbacks.version == 7) {
+    if (s_callbacks.version >= 7) {
         RIL_SimRefreshResponse_v7 *p_cur = ((RIL_SimRefreshResponse_v7 *) response);
         p.writeInt32(p_cur->result);
-        p.writeInt32(p_cur->ef_id);
-        writeStringToParcel(p, p_cur->aid);
+        writeStringToParcel(p, p_cur->ef_id);
+        if (p_cur->aid != NULL && strcmp(p_cur->aid, "")) {
+            writeStringToParcel(p, p_cur->aid);
+        } else {
+            writeStringToParcel(p, NULL);
+        }
 
-        appendPrintBuf("%sresult=%d, ef_id=%d, aid=%s",
+        appendPrintBuf("%sresult=%d, ef_id=%s, aid=%s",
                 printBuf,
                 p_cur->result,
                 p_cur->ef_id,

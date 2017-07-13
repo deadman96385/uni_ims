@@ -14204,6 +14204,10 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
     } else if (strStartsWith(s, "+SPUSATREFRESH:")) {
         char *tmp;
         int result = 0;
+        int i, num = 0;
+        char *ef_id = NULL;
+        char file_path[128] = {0};
+
         RIL_SimRefreshResponse_v7 *response = NULL;
 
         RILLOGD("[stk unsl]SPUSATREFRESH");
@@ -14214,19 +14218,37 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         at_tok_start(&tmp);
         err = at_tok_nextint(&tmp, &result);
         if (err < 0) {
-            RILLOGD("%s fail", s);
+            RILLOGE("%s fail", s);
             goto out;
         }
-        err = at_tok_nextint(&tmp, &response->ef_id);
+        err = at_tok_nextint(&tmp, &num);
         if (err < 0) {
-            RILLOGD("%s fail", s);
+            RILLOGE("%s fail", s);
             goto out;
         }
-        err = at_tok_nextstr(&tmp, &response->aid);
-        if (err < 0) {
-            RILLOGD("%s fail", s);
-            goto out;
+        if (num == 0) {
+            err = at_tok_nextstr(&tmp, &response->ef_id);
+            if (err < 0) {
+                RILLOGE("%s fail", s);
+                goto out;
+            }
+        } else {
+            for (i = 0; i < num; i++) {
+                err = at_tok_nextstr(&tmp, &ef_id);
+                if (err < 0) {
+                    RILLOGE("%s fail", s);
+                    goto out;
+                }
+                if (i > 0) {
+                    strlcat(file_path, ",", sizeof(file_path));
+                }
+                strlcat(file_path, ef_id, sizeof(file_path));
+            }
+            response->ef_id = file_path;
         }
+        response->result = result;
+        response->aid = "";
+
         if (SIM_RESET == result) {
             s_ImsISIM = -1;
             RIL_requestTimedCallback (reopenSimCardAndProtocolStack, NULL, NULL);

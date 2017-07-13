@@ -1191,7 +1191,7 @@ typedef enum {
 
 typedef struct {
     RIL_SimRefreshResult result;
-    int                  ef_id; /* is the EFID of the updated file if the result is */
+    char *               ef_id; /* is the EFID of the updated file if the result is */
                                 /* SIM_FILE_UPDATE or 0 for any other result. */
     char *               aid;   /* is AID(application ID) of the card application */
                                 /* See ETSI 102.221 8.1 and 101.220 4 */
