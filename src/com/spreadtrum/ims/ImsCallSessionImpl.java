@@ -89,6 +89,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsMegerActionHost;
     private boolean mIsPendingTerminate;   // BUG 616259
 
+    /* SPRD: Local Tone Feature. @{ */
+    private static final String ACTION_SUPP_SERVICE_NOTIFICATION =
+            "com.android.ACTION_SUPP_SERVICE_NOTIFICATION";
+    private static final String SUPP_SERV_CODE_EXTRA = "supp_serv_code";
+    /* @} */
+
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
         mImsCallProfile = profile;
@@ -1435,7 +1441,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     /* SPRD:Add for bug582072 @{ */
     public void notifyRemoteVideoProfile(AsyncResult ar) {
         SuppServiceNotification notification = (SuppServiceNotification) ar.result;
-            switch (notification.code) {
+        /* SPRD: Local Tone Feature. @{ */
+        if (notification != null) {
+            int code = notification.code;
+            Intent intent = new Intent();
+            intent.setAction(ACTION_SUPP_SERVICE_NOTIFICATION);
+            intent.putExtra(SUPP_SERV_CODE_EXTRA, code);
+            mContext.sendBroadcast(intent);
+        }
+        /* @} */
+        switch (notification.code) {
             case SuppServiceNotification.MT_CODE_CALL_ON_HOLD:
                 mRemoteCallProfile = new ImsCallProfile(
                         ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VOICE);
@@ -1444,7 +1459,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 mRemoteCallProfile = new ImsCallProfile(
                         ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE);
                 break;
-            }
+        }
     }
     /* @} */
 
