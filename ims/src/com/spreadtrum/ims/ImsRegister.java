@@ -25,6 +25,7 @@ import com.sprd.internal.telephony.uicc.MsUiccController;
 //import com.android.internal.telephony.TeleUtils;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.IsimUiccRecords;
+import com.android.internal.telephony.uicc.IccRefreshResponse;
 
 import android.os.AsyncResult;
 import android.os.Looper;
@@ -71,6 +72,7 @@ public class ImsRegister {
     protected static final int EVENT_INIT_ISIM_DONE                    = 106;
     protected static final int EVENT_IMS_BEARER_ESTABLISTED            = 107;
     protected static final int EVENT_ENABLE_IMS                        = 108;
+    protected static final int EVENT_SIM_REFRESH                       = 109;
 
     private static String PROP_TEST_MODE = "persist.radio.ssda.testmode";
 
@@ -92,6 +94,7 @@ public class ImsRegister {
         mCi.registerForRadioStateChanged(mHandler, EVENT_RADIO_STATE_CHANGED, null);
         mCi.registerForConnImsen(mHandler, EVENT_IMS_BEARER_ESTABLISTED, null);
         mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
+        mCi.registerForIccRefresh(mHandler, EVENT_SIM_REFRESH, null);
     }
 
     private class BaseHandler extends Handler {
@@ -170,6 +173,21 @@ public class ImsRegister {
                               mCi.disableIms(null);
                         }
                         mLastNumeric = mNumeric;
+                    }
+                    break;
+                case EVENT_SIM_REFRESH:
+                    log("EVENT_SIM_REFRESH");
+                    ar = (AsyncResult)msg.obj;
+                    if (ar != null && ar.exception == null) {
+                        IccRefreshResponse resp = (IccRefreshResponse)ar.result;
+                        if(resp != null && (resp.refreshResult == IccRefreshResponse.REFRESH_RESULT_INIT
+                                || resp.refreshResult == IccRefreshResponse.REFRESH_RESULT_RESET)){//uicc init
+                            log("Uicc initialized, need to init ISIM again.");
+                            mInitISIMDone = false;
+                            mLastNumeric = "";
+                        }
+                    } else {
+                        log("Sim REFRESH with exception: " + ar.exception);
                     }
                     break;
                 default:
