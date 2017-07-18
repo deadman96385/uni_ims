@@ -357,10 +357,16 @@ public class Utilities {
                     if (mnc.length() == 3 && mnc.startsWith("00")) {
                         mnc = mnc.substring(1);
                     }
-                    info._hplmn = mcc + mnc;
+                    String hplmn = mcc + mnc;
+                    if (!hplmn.equals(info._hplmn)) {
+                        // If the sim hplmn do not equals the hplmn generate from IMPI,
+                        // we need edit the values.
+                        Log.d(TAG, "HPLMN from [" + info._hplmn + "] to [" + hplmn + "].");
+                        Log.d(TAG, "IMSI from [" + info._imsi + "] to [" + info._userName + "].");
+                        info._hplmn = hplmn;
+                        info._imsi = info._userName;
+                    }
                 }
-
-                info._imsi = info._userName;
             }
 
             String[] impus = tm.getIsimImpu();
