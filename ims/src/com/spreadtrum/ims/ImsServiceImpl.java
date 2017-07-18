@@ -196,6 +196,8 @@ public class ImsServiceImpl {
         mCi.registerImsWiFiParam(mHandler, EVENT_IMS_WIFI_PARAM, null);
         //mTelephonyManager = (TelephonyManager)mContext.getSystemService(Context.TELEPHONY_SERVICE);
         mTelephonyManager = (TelephonyManager)mContext.getSystemService(TelephonyManager.getServiceName(Context.TELEPHONY_SERVICE, mPhone.getPhoneId()));
+        //add for Bug 707696
+        mCi.registerForSrvccStateChanged(mHandler, EVENT_SRVCC_STATE_CHANGED, null);
     }
 
     /**
