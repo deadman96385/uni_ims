@@ -217,6 +217,10 @@ public class ImsServiceImpl {
                     if (ar.exception == null && ar.result != null) {
                         int[] responseArray = (int[])ar.result;
                         mImsServiceState.mRegState = responseArray[0];
+                        if (responseArray != null && responseArray.length >1) {
+                            mImsServiceState.mImsRegistered = (responseArray[0] != 0 && responseArray[1]== 1);
+                            mImsServiceState.mSrvccState = -1;
+                        }
                         Log.i(TAG,"EVENT_IMS_STATE_CHANGED->mRegState:"+mImsServiceState.mRegState);
                         switch(mImsServiceState.mRegState){
                             case IMS_REG_STATE_INACTIVE:
