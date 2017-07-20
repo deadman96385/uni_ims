@@ -576,7 +576,7 @@ public class ImsService extends Service {
                                     +mCallEndType +" mIsCalling:"+mIsCalling);
                             mPendingAttachVowifiSuccess = false;
                             if(mCallEndType != -1 && !mIsCalling){
-                                Log.i(TAG,"EVENT_UPDATE_DATA_ROUTER_FINISHED-> mCallEndType:"+mCallEndType);
+                                Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> mCallEndType:"+mCallEndType);
                                 notifyCpCallEnd();
                             }
                         }
@@ -643,7 +643,7 @@ public class ImsService extends Service {
                                     mImsServiceListenerEx.operationFailed(msg.arg1, "Already handle one request.",
                                             ImsOperationType.IMS_OPERATION_CANCEL_CURRENT_REQUEST);
                                 }
-                                Log.w(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> mReleaseVowifiRequest is exist!");
+                                Log.w(TAG,"ACTION_CANCEL_CURRENT_REQUEST-> mReleaseVowifiRequest is exist!");
                                 return;
                             } else {
                                 mReleaseVowifiRequest = new ImsServiceRequest(msg.arg1/*requestId*/,
@@ -669,9 +669,9 @@ public class ImsService extends Service {
                             mFeatureSwitchRequest = null;
                             if(mPendingAttachVowifiSuccess){
                                 mPendingAttachVowifiSuccess = false;
-                                Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> mPendingAttachVowifiSuccess is true!");
+                                Log.i(TAG,"ACTION_CANCEL_CURRENT_REQUEST-> mPendingAttachVowifiSuccess is true!");
                                 if(mCallEndType != -1 && !mIsCalling){
-                                    Log.i(TAG,"EVENT_UPDATE_DATA_ROUTER_FINISHED-> mCallEndType:"+mCallEndType);
+                                    Log.i(TAG,"ACTION_CANCEL_CURRENT_REQUEST-> mCallEndType:"+mCallEndType);
                                     notifyCpCallEnd();
                                 }
                             }
