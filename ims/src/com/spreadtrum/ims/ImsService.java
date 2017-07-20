@@ -2097,7 +2097,6 @@ class MyVoWifiCallback implements VoWifiCallback {
             isAirplaneModeOn = Settings.Global.getInt(getApplicationContext().getContentResolver(),
                     Settings.Global.AIRPLANE_MODE_ON, 0) > 0;
             if(state == ImsPDNStatus.IMS_PDN_ACTIVE_FAILED ||isAirplaneModeOn){
-                mPendingCPSelfManagement = false;
                 if(mPendingCPSelfManagement || mFeatureSwitchRequest == null){
                     ImsServiceImpl service = mImsServiceImplMap.get(
                             Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
@@ -2105,6 +2104,7 @@ class MyVoWifiCallback implements VoWifiCallback {
                        service.setIMSRegAddress(null);
                     }
                 }
+                mPendingCPSelfManagement = false;
             }
         }
         Log.i(TAG,"onImsPdnStatusChange->serviceId:"+serviceId +" state:" + state
@@ -2290,7 +2290,11 @@ class MyVoWifiCallback implements VoWifiCallback {
     }
 
     public void notifyCPVowifiAttachSucceed(){
-        mHandler.sendMessageDelayed(mHandler.obtainMessage(EVENT_NOTIFY_CP_VOWIFI_ATTACH_SUCCESSED),1000);
+       // mHandler.sendMessageDelayed(mHandler.obtainMessage(EVENT_NOTIFY_CP_VOWIFI_ATTACH_SUCCESSED),1000);
+        Log.i(TAG,"EVENT_NOTIFY_CP_VOWIFI_ATTACH_SUCCESSED-> notifyImsHandoverStatus:" + ImsHandoverResult.IMS_HANDOVER_ATTACH_SUCCESS);
+        ImsServiceImpl Impl = mImsServiceImplMap.get(
+                Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
+        Impl.notifyImsHandoverStatus(ImsHandoverResult.IMS_HANDOVER_ATTACH_SUCCESS);
     }
 
     public void notifyCpCallEnd(){
