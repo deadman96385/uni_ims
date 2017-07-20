@@ -44,7 +44,7 @@ import android.os.SystemProperties;
 public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final String TAG = ImsServiceCallTracker.class.getSimpleName();
     private static final boolean DBG_POLL = false;
-    private static final int POLL_DELAY_MSEC = 250;
+    private static final int POLL_DELAY_MSEC = 100;
 
     private static final int EVENT_CALL_STATE_CHANGE             = 1;
     private static final int EVENT_GET_CURRENT_CALLS             = 2;
@@ -53,6 +53,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final int EVENT_IMS_CALL_STATE_CHANGED        = 5;
     private static final int EVENT_POLL_CURRENT_CALLS            = 6;
     private static final int EVENT_POLL_CURRENT_CALLS_RESULT     = 7;
+    private static final int EVENT_GET_CURRENT_CALLS_DELAY       = 8;
 
     private PendingIntent mIncomingCallIntent;
     private ImsRIL mCi;
@@ -122,7 +123,14 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                     break;
                 case EVENT_GET_CURRENT_CALLS:
                 case EVENT_IMS_CALL_STATE_CHANGED:
-                    pollCallsWhenSafe();
+                    if(hasMessages(POLL_DELAY_MSEC) || hasMessages(EVENT_GET_CURRENT_CALLS_DELAY)){
+                        removeMessages(POLL_DELAY_MSEC);
+                        removeMessages(EVENT_GET_CURRENT_CALLS_DELAY);
+                        sendEmptyMessageDelayed(EVENT_GET_CURRENT_CALLS_DELAY,POLL_DELAY_MSEC);
+                    } else {
+                        sendEmptyMessageDelayed(POLL_DELAY_MSEC,POLL_DELAY_MSEC);
+                        pollCallsWhenSafe();
+                    }
                     break;
                 case EVENT_OPERATION_COMPLETE:
                     operationComplete();
@@ -145,6 +153,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                         mLastRelevantPoll = null;
                         updateCurrentCalls((AsyncResult)msg.obj);
                     }
+                case EVENT_GET_CURRENT_CALLS_DELAY:
+                    pollCallsWhenSafe();
                 default:
                     break;
             }
