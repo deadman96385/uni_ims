@@ -360,6 +360,12 @@ public class ImsService extends Service {
                                     mPendingAttachVowifiSuccess = false;
                                     mWifiService.updateDataRouterState(DataRouterState.CALL_NONE);
                                 }
+                                Log.i(TAG,"EVENT_WIFI_ATTACH_FAILED-> operationFailed, clear mFeatureSwitchRequest.");
+                                mIsPendingRegisterVowifi = false;
+                                mFeatureSwitchRequest = null;
+                                if (msg.arg1 == 53766 && !mIsCalling) {//SPRD: add for bug661375 661372
+                                    service.setIMSRegAddress(null);
+                                }
                             }
                         }
                         mIsAPImsPdnActived = false;
@@ -551,6 +557,8 @@ public class ImsService extends Service {
                                     mReleaseVowifiRequest = null;
                                 }
                                 Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> wifi state: " + msg.arg2);
+                            }
+                            if(!mIsCalling){
                                 ImsServiceImpl imsService = mImsServiceImplMap.get(
                                         Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
                                 if(imsService != null){
