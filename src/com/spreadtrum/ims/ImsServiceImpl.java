@@ -223,9 +223,18 @@ public class ImsServiceImpl extends MMTelFeature {
             switch (msg.what) {
                 case EVENT_IMS_STATE_CHANGED:
                     mCi.getImsRegistrationState(this.obtainMessage(EVENT_IMS_STATE_DONE));
+                    // SPRD 681641 701983
+                    if (ar.exception == null && ar.result != null) {
+                        int[] responseArray = (int[])ar.result;
+                        if(responseArray != null && responseArray.length >1){
+                            mImsServiceState.mImsRegistered = (responseArray[0]== 1);
+                        }
+                    }
                     if (ar.exception == null && ar.result != null && ar.result instanceof Integer) {
                         Integer responseArray = (Integer)ar.result;
                         mImsServiceState.mRegState = responseArray.intValue();
+                        mImsServiceState.mImsRegistered = (mImsServiceState.mRegState == IMS_REG_STATE_REGISTERED
+                                ? true : false);
                         Log.i(TAG,"EVENT_IMS_STATE_CHANGED->mRegState:"+mImsServiceState.mRegState);
                         switch(mImsServiceState.mRegState){
                             case IMS_REG_STATE_INACTIVE:
@@ -312,6 +321,11 @@ public class ImsServiceImpl extends MMTelFeature {
 //                        		
 //                        	}
                             mImsServiceState.mSrvccState = ret[0];
+                            // SPRD 689713
+                            if (mImsServiceState.mSrvccState == VoLteServiceState.HANDOVER_COMPLETED) {
+                                Log.i(TAG, "Srvcc HANDOVER_COMPLETED : setTelephonyProperty mServiceId = " + mServiceId);
+                                TelephonyManager.setTelephonyProperty(mServiceId-1, "gsm.sys.volte.state", "0");
+                            }
                             mImsService.notifyImsRegisterState();
                             mImsService.notifySrvccState(mServiceId,mImsServiceState.mSrvccState);
                             Log.i(TAG, "Srvcc state: " + ret[0]);
