@@ -224,12 +224,6 @@ public class ImsServiceImpl extends MMTelFeature {
                 case EVENT_IMS_STATE_CHANGED:
                     mCi.getImsRegistrationState(this.obtainMessage(EVENT_IMS_STATE_DONE));
                     // SPRD 681641 701983
-                    if (ar.exception == null && ar.result != null) {
-                        int[] responseArray = (int[])ar.result;
-                        if(responseArray != null && responseArray.length >1){
-                            mImsServiceState.mImsRegistered = (responseArray[0]== 1);
-                        }
-                    }
                     if (ar.exception == null && ar.result != null && ar.result instanceof Integer) {
                         Integer responseArray = (Integer)ar.result;
                         mImsServiceState.mRegState = responseArray.intValue();
