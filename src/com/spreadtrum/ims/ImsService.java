@@ -1322,9 +1322,11 @@ public class ImsService extends Service {
                 Thread.dumpStack();
                 return;
             }
+            Log.i(TAG," registerforImsRegisterStateChanged() -> ");
             synchronized (mImsRegisterListeners) {
                 if (!mImsRegisterListeners.keySet().contains(listener.asBinder())) {
                     mImsRegisterListeners.put(listener.asBinder(), listener);
+                    Log.i(TAG," registerforImsRegisterStateChanged() -> notifyListenerWhenRegister");
                     notifyListenerWhenRegister(listener);
                 } else {
                     Log.w(TAG,"Listener already add :" + listener);
@@ -1602,7 +1604,9 @@ public class ImsService extends Service {
     };
 
     private void notifyListenerWhenRegister(IImsRegisterListener listener){
-        updateImsRegisterState();
+        Log.i(TAG," notifyListenerWhenRegister() -> ");
+        // SPRD 708609 when switch data card, VOLTE icon also display
+//        updateImsRegisterState();
         boolean isImsRegistered = ((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)
                 || (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
         synchronized (mImsRegisterListeners) {
@@ -1615,6 +1619,7 @@ public class ImsService extends Service {
     }
 
     public void notifyImsRegisterState(){
+        Log.i(TAG," notifyImsRegisterState() -> ");
         updateImsRegisterState();
         boolean isImsRegistered = ((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)
                 || (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
@@ -1635,14 +1640,17 @@ public class ImsService extends Service {
     }
 
     public void updateImsRegisterState(){
+        Log.i(TAG,"updateImsRegisterState() -> ");
         synchronized (mImsRegisterListeners) {
             for(Integer id : mImsServiceImplMap.keySet()){
                 ImsServiceImpl service = mImsServiceImplMap.get(id);
-                if(service.isImsRegisterState()){
+                Log.i(TAG,"     -> for loop service.isImsRegisterState() = " + service.isImsRegisterState());
+                if (service.isImsRegisterState()) {
                     mVolteRegistered = true;
                     return;
                 }
             }
+            Log.i(TAG,"     -> for loop end mVolteRegistered = " + mVolteRegistered);
             mVolteRegistered = false;
         }
     }
