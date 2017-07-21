@@ -2179,7 +2179,7 @@ class MyVoWifiCallback implements VoWifiCallback {
                                 Log.i(TAG, "onImsPdnStatusChange -> operationSuccessed-> IMS_OPERATION_HANDOVER_TO_VOLTE");
                                 mImsServiceListenerEx.operationSuccessed(mFeatureSwitchRequest.mRequestId,
                                         ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOLTE);
-                                Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_LONG).show();
+                                Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_SHORT).show();
                             } catch (RemoteException e) {
                                 e.printStackTrace();
                             }
@@ -2197,7 +2197,7 @@ class MyVoWifiCallback implements VoWifiCallback {
                                 Log.i(TAG, "onImsPdnStatusChange -> operationSuccessed-> IMS_OPERATION_HANDOVER_TO_VOLTE");
                                 mImsServiceListenerEx.operationSuccessed(mFeatureSwitchRequest.mRequestId,
                                         ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOLTE);
-                                Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_LONG).show();
+                                Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_SHORT).show();
                             } catch (RemoteException e) {
                                 e.printStackTrace();
                             }
