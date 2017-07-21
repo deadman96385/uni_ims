@@ -15912,11 +15912,8 @@ static bool isSvLte(void) {
 }
 
 static bool isCSFB(void) {
-    char prop[PROPERTY_VALUE_MAX]="";
-    property_get(SSDA_MODE, prop, "0");
-    RILLOGD("ssda mode: %s", prop);
-    if ((!strcmp(prop,"tdd-csfb")) || (!strcmp(prop,"fdd-csfb"))
-            || (!strcmp(prop,"csfb"))) {
+    if (!strcmp(s_modem, "l") || !strcmp(s_modem, "tl") ||
+        !strcmp(s_modem, "lf")) {
         RILLOGD("is CSFB ");
         return true;
     }
@@ -15929,8 +15926,8 @@ static bool isLte(void) {
     char prop[PROPERTY_VALUE_MAX]="";
     property_get(SSDA_MODE, prop, "0");
     RILLOGD("ssda mode: %s", prop);
-    if ((!strcmp(prop, "svlte")) || (!strcmp(prop, "tdd-csfb"))
-            || (!strcmp(prop, "fdd-csfb")) || (!strcmp(prop, "csfb"))) {
+    if ((!strcmp(prop, "svlte")) || !strcmp(s_modem, "l") ||
+         !strcmp(s_modem, "tl") || !strcmp(s_modem, "lf")) {
         return true;
     }
     return false;
