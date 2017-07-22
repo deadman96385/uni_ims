@@ -209,6 +209,11 @@ public class ImsServiceImpl {
                     if (ar.exception == null && ar.result != null) {
                         int[] responseArray = (int[])ar.result;
                         mImsServiceState.mRegState = responseArray[0];
+                        // SPRD 711039
+                        Log.i(TAG,"EVENT_IMS_STATE_CHANGED ->setTelephonyProperty:"+mServiceId);
+                        TelephonyManager.setTelephonyProperty(mServiceId-1, "gsm.sys.volte.state",
+                                mImsServiceState.mRegState == IMS_REG_STATE_REGISTERED ? "1" :"0");
+
                         // SPRD 681641 701983
                         if (responseArray != null) {
                             if (responseArray.length >1) {
