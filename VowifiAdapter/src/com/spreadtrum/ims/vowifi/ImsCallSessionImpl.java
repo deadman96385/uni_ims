@@ -1694,7 +1694,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             int res = mICall.sendSessionModifyRequest(mCallId, true, isVideo);
             if (res == Result.FAIL) {
                 Log.e(TAG, "Failed to send the modify request for the call: " + mCallId);
-                mListener.callSessionUpdateFailed(this, new ImsReasonInfo());
+                if (mListener != null) {
+                    mListener.callSessionUpdateFailed(this, new ImsReasonInfo());
+                }
                 // Show toast for failed action.
                 int toastTextResId = isVideo ? R.string.vowifi_add_video_failed
                         : R.string.vowifi_remove_video_failed;
@@ -1844,6 +1846,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
     public void processNoResponseAction() {
         if (Utilities.DEBUG) Log.i(TAG, "Process no response action.");
+
+        if (mListener == null) return;
 
         try {
             ImsReasonInfo failedReason = new ImsReasonInfo(
