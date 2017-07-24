@@ -11819,6 +11819,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 memset(cmd, 0, sizeof(cmd));
                 snprintf(cmd, sizeof(cmd), "AT+VOWIFCALLINF=%s", strings[0]);
                 err = at_send_command(ATch_type[channelID], cmd , NULL);
+                if(err >= 0){
+                    sendCallStateChanged(NULL);
+                }
                 RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
             } else {
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
