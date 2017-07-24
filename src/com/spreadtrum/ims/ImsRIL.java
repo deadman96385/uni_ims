@@ -2427,7 +2427,9 @@ public final class ImsRIL {
         info.serviceClass = serviceClass;
         info.number = number;
         info.ruleset = ruleSet;
-
+        info.status = 2; //Bug710475:
+                         //AT+CCFCU <mode>: integer type :2---query status
+        if (RILJ_LOGD) riljLog("[queryCallForwardStatus]CallForwardInfoUri status: 2");
         IExtRadio radioProxy = getRadioProxy(response);
         if (radioProxy != null) {
             RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI, response,
