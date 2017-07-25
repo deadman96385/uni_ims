@@ -153,8 +153,10 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                         mLastRelevantPoll = null;
                         updateCurrentCalls((AsyncResult)msg.obj);
                     }
+                    break;
                 case EVENT_GET_CURRENT_CALLS_DELAY:
                     pollCallsWhenSafe();
+                    break;
                 default:
                     break;
             }

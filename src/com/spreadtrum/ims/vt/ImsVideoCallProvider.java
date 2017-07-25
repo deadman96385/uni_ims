@@ -143,7 +143,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         mNegotiatedCallProfile.mMediaProfile.mAudioDirection =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mAudioDirection;
         mNegotiatedCallProfile.mMediaProfile.mVideoQuality =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoQuality;
         mNegotiatedCallProfile.mMediaProfile.mVideoDirection =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoDirection;
-        mCallIdMessage = new Message();//SPRD: add for bug545171
+        mCallIdMessage = mHandler.obtainMessage();//SPRD: add for bug545171
         mCi.registerForSrvccStateChanged(mVTHandler, EVENT_SRVCC_STATE_CHANGED, null);//SPRD:add for bug563112
     }
 
