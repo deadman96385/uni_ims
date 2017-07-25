@@ -53,16 +53,17 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     private static final String VIDEO_CALL_RESOLUTION = "vt_resolution";
     private int mCameraResolution = VT_RESOLUTION_VGA_REVERSED_30;
     public int mDefaultVtResolution = VT_RESOLUTION_VGA_REVERSED_30;
-
+    private ImsServiceImpl mImsServiceImpl = null;
     /**
      * Creates the Ims Config interface object for a sub.
      * @param senderRxr
      */
-    public ImsConfigImpl(ImsRIL ci,Context context) {
+    public ImsConfigImpl(ImsRIL ci,Context context,ImsServiceImpl imsService) {
         if (SystemProperties.getBoolean("persist.sys.videodefault", false)) {
             mDefaultVtResolution = VT_RESOLUTION_QVGA_REVERSED_15;
         }
         mCi = ci;
+        mImsServiceImpl = imsService;
         mHandler = new ImsHandler(context.getMainLooper());
         mContext = context;
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
@@ -265,10 +266,16 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      */
     @Override
     public void setFeatureValue(int feature, int network, int value, ImsConfigListener listener){
+        Log.d(TAG, "setFeatureValue: feature = " + feature + ", network =" + network +
+                ", value =" + value + ", listener =" + listener);
         if(feature == VideoQualityConstants.FEATURE_VT_RESOLUTION
                 && network == VideoQualityConstants.NETWORK_VT_RESOLUTION){
             if(listener != null){
                 setVideoQuality(value,listener);
+            }
+        }else if(feature == ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE){//SPRD: add for bug712024
+            if(listener != null && mImsServiceImpl != null){
+                mImsServiceImpl.updateImsFeature(feature,value);
             }
         }
     }

@@ -180,7 +180,7 @@ public class ImsServiceImpl extends MMTelFeature {
         mServiceId = phone.getPhoneId() + 1;
         mImsRegister = new ImsRegister(mPhone, mContext, mCi);
         mImsServiceState = new ImsServiceState(false,IMS_REG_STATE_INACTIVE);
-        mImsConfigImpl = new ImsConfigImpl(mCi,context);
+        mImsConfigImpl = new ImsConfigImpl(mCi,context,this);
         mImsUtImpl = new ImsUtImpl(mCi,context,phone);
         com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl =  mWifiService.getUtInterface();
         mImsUtProxy = new ImsUtProxy(context, mImsUtImpl, voWifiUtImpl, phone);
@@ -1079,8 +1079,13 @@ public class ImsServiceImpl extends MMTelFeature {
             if(volteEnable){
                 mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
                         = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
+                if(ImsManager.isVtEnabledByUser(mContext)){
                 mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
                         = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE;
+                }else{
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                }
                 mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE]
                         = ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_LTE;
             } else {
@@ -1094,8 +1099,13 @@ public class ImsServiceImpl extends MMTelFeature {
             if(wifiEnable){
                 mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI]
                         = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
-                mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
-                        = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI;
+                if(ImsManager.isVtEnabledByUser(mContext)){
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI;
+                }else{
+                    mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
+                            = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                }
                 mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI]
                         = ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI;
             } else {
@@ -1194,6 +1204,12 @@ public class ImsServiceImpl extends MMTelFeature {
             }
         }
     }
+
+    /*sprd: add for bug712024 @{*/
+    public void updateImsFeature(int feature, int value) {
+        Log.i(TAG, "updateImsFeatures->feature:" + feature + " value:" + value);
+        updateImsFeatures(mImsService.isVoLTEEnabled(), mImsService.isVoWifiEnabled());
+    }/*@}*/
 
     public void notifyImsPdnStateChange(int state){
         synchronized (mImsPdnStateListeners) {
