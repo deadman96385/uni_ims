@@ -8144,13 +8144,14 @@ static void requestGetCellInfoList(void *data, size_t datalen, RIL_Token t,int c
     s_mnc = atoi(plmn) - s_mcc *100;
     RILLOGD("requestGetCellInfoList mnc %d",s_mnc);
     RILLOGD("requestGetCellInfoList net_type %d",net_type);
-    if(net_type == 7){
+    if (net_type == 7 || net_type == 16) {
         cell_type=RIL_CELL_INFO_TYPE_LTE;
-    }else if(net_type == 1 || net_type == 0){
+    } else if (net_type == 1 || net_type == 0 || net_type == 3) {
         cell_type=RIL_CELL_INFO_TYPE_GSM;
-    }else{
+    } else {
         cell_type=RIL_CELL_INFO_TYPE_WCDMA;
     }
+
     // For net type,tac
     at_response_free(p_response);
     p_response = NULL;
