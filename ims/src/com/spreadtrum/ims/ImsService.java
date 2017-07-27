@@ -2198,8 +2198,8 @@ class MyVoWifiCallback implements VoWifiCallback {
                         mWifiService.updateDataRouterState(DataRouterState.CALL_VOLTE);
                     } else {
                         mIsPendingRegisterVolte = true;
-                        updateImsFeature();
                         mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
+                        updateImsFeature();
                         Log.i(TAG, "onImsPdnStatusChange -> mCurrentImsFeature:" + ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE + " mIsCalling:" + mIsCalling);
                         if (mImsServiceListenerEx != null) {
                             try {
