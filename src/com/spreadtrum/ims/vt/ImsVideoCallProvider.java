@@ -42,7 +42,6 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     private AlertDialog mVolteMediaDegradeDialog;
     private ImsCallSessionImplListner mImsCallSessionImplListner;
     private PowerManager.WakeLock mPartialWakeLock;
-    private Message mCallIdMessage;
     private boolean mIsVideo;//SPRD:add for bug563112
     public boolean mIsVoiceRingTone = false;//SPRD: add for bug677255
     public boolean mIsOrigionVideo = false;
@@ -143,7 +142,6 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         mNegotiatedCallProfile.mMediaProfile.mAudioDirection =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mAudioDirection;
         mNegotiatedCallProfile.mMediaProfile.mVideoQuality =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoQuality;
         mNegotiatedCallProfile.mMediaProfile.mVideoDirection =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoDirection;
-        mCallIdMessage = mHandler.obtainMessage();//SPRD: add for bug545171
         mCi.registerForSrvccStateChanged(mVTHandler, EVENT_SRVCC_STATE_CHANGED, null);//SPRD:add for bug563112
     }
 
@@ -482,14 +480,16 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                         || mImsCallSessionImpl.mImsServiceCallTracker.hasRingingCall()){
                     //SPRD:add for bug682362
                     log("handleVolteCallMediaChange reject");
-                    mCi.responseVolteCallMediaChange(false, Integer.parseInt(mImsCallSessionImpl.getCallId()),mCallIdMessage);
+                    mCi.responseVolteCallMediaChange(false, Integer.parseInt(mImsCallSessionImpl.getCallId()),null);
                     return;
                 }/*@}*/
-                else if(ImsCmccHelper.getInstance(mContext).rejectMediaChange(mImsCallSessionImpl,mCi,mCallIdMessage)){
+                else if(ImsCmccHelper.getInstance(mContext).rejectMediaChange(mImsCallSessionImpl)){
                     log("handleVolteCallMediaChange-is cmcc project, has one active adn one hold call reject MediaChange");
+                    mCi.responseVolteCallMediaChange(false, Integer.parseInt(mImsCallSessionImpl.getCallId()),null);
+                    return;
                 }else{
                     /*TODO: remove for 8.0
-                    mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage,this);
+                    mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,null,this);
                     mVolteMediaUpdateDialog.show();
                    */
                 }
@@ -513,7 +513,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 if(mVolteMediaDegradeDialog != null){
                    mVolteMediaDegradeDialog.dismiss();
                 }
-                mVolteMediaDegradeDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage,this);
+                mVolteMediaDegradeDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,null,this);
                 mVolteMediaDegradeDialog.show();
             }
     }

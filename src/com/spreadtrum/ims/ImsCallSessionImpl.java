@@ -103,6 +103,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsPendingTerminate;   // BUG 616259
     private int mVideoState;
     public  boolean mInLocalCallForward = false;
+    private boolean mIsCmccNetwork;
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
@@ -116,6 +117,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCi.setOnSuppServiceNotification(mHandler,EVENT_SSN,null);//SPRD:Add for bug582072
         mVideoState = ImsCallProfile
                 .getVideoStateFromImsCallProfile(mImsCallProfile);
+        mIsCmccNetwork = ImsCmccHelper.getInstance(mContext).isCmccNetwork();
     }
 
     public ImsCallSessionImpl(ImsDriverCall dc, IImsCallSessionListener listener, Context context,
@@ -132,6 +134,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCi.setOnSuppServiceNotification(mHandler,EVENT_SSN,null);//SPRD:Add for bug582072
         mVideoState = ImsCallProfile
                 .getVideoStateFromImsCallProfile(mImsCallProfile);
+        mIsCmccNetwork = ImsCmccHelper.getInstance(mContext).isCmccNetwork();
     }
 
     public ImsCallSessionImpl(ImsDriverCall dc, Context context,
@@ -147,6 +150,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCi.setOnSuppServiceNotification(mHandler,EVENT_SSN,null);//SPRD:Add for bug582072
         mVideoState = ImsCallProfile
                 .getVideoStateFromImsCallProfile(mImsCallProfile);
+        mIsCmccNetwork = ImsCmccHelper.getInstance(mContext).isCmccNetwork();
+
     }
 
     private void updateImsCallProfileFromDC(ImsDriverCall dc){
@@ -187,7 +192,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         /* SPRD: add for new feature for bug 602040 and bug 666088@{ */
         if((dc!= null) && (dc.mediaDescription != null) && (dc.mediaDescription.contains("cap:"))){
             String media = dc.mediaDescription.substring(dc.mediaDescription.indexOf("cap:"));
-            if(media != null && media.contains("video") && !mIsRemoteHold){
+            if(media != null && media.contains("video") && !mIsRemoteHold
+                    && !(mIsCmccNetwork && isHasBackgroundCallAndActiveCall())){
                 mRemoteCallProfile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE);//SPRD:modify by bug641686
             }else{
                 mRemoteCallProfile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VOICE);
@@ -878,7 +884,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         Log.d(TAG, "startConference-> participantList:"+participantList.toString());
         mCi.requestInitialGroupCall(participantList.toString(),
-                mHandler.obtainMessage(ACTION_COMPLETE_CONFERENCE));
+                mHandler.obtainMessage(ACTION_COMPLETE_DIAL,this));
     }
 
     /**

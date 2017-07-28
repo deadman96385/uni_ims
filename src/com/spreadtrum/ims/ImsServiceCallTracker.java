@@ -134,7 +134,6 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                         sendEmptyMessageDelayed(POLL_DELAY_MSEC,POLL_DELAY_MSEC);
                         pollCallsWhenSafe();
                     }
-                    pollCallsWhenSafe();
                     break;
                 case EVENT_OPERATION_COMPLETE:
                     operationComplete();
@@ -418,12 +417,14 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                     break;
                 }
             }
-            if(mConferenceSession.getImsVideoCallProvider().isVideoCall(mConferenceSession.getCallProfile().mCallType)
-                    && !isConNumberVideoCall){
-                mConferenceSession.getCallProfile().mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
-            } else if (!mConferenceSession.getImsVideoCallProvider().isVideoCall(mConferenceSession.getCallProfile().mCallType)
-                    && isConNumberVideoCall){
-                mConferenceSession.getCallProfile().mCallType = ImsCallProfile.CALL_TYPE_VT;
+            if(mConferenceSession.getImsVideoCallProvider() != null && mConferenceSession.getCallProfile() != null) {
+                if (mConferenceSession.getImsVideoCallProvider().isVideoCall(mConferenceSession.getCallProfile().mCallType)
+                        && !isConNumberVideoCall) {
+                    mConferenceSession.getCallProfile().mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
+                } else if (!mConferenceSession.getImsVideoCallProvider().isVideoCall(mConferenceSession.getCallProfile().mCallType)
+                        && isConNumberVideoCall) {
+                    mConferenceSession.getCallProfile().mCallType = ImsCallProfile.CALL_TYPE_VT;
+                }
             }
             if(conferenceDc != null){
                 isConferenceStateChange = mConferenceSession.updateImsConfrenceMember(conferenceDc)  || isConferenceStateChange;
