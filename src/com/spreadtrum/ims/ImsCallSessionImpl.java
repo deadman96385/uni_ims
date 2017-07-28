@@ -90,7 +90,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mLocalConferenceUpdate;
     // SPRD: add for bug676047
     private boolean mIsInLocalConference = false;
-    private boolean mIsRemoteHold;//SPRD: modify by bug666088
 
     private boolean mIsMegerActionHost;
     private boolean mIsPendingTerminate;   // BUG 616259
@@ -183,10 +182,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             mLocalCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_NONE;
         }
         /* @}*/
-        /* SPRD: add for new feature for bug 602040 and bug 666088@{ */
+        /* SPRD: add for new feature for bug 602040@{ */
         if((dc!= null) && (dc.mediaDescription != null) && (dc.mediaDescription.contains("cap:"))){
             String media = dc.mediaDescription.substring(dc.mediaDescription.indexOf("cap:"));
-            if(media != null && media.contains("video") && !mIsRemoteHold){
+            if(media != null && media.contains("video")){
                 mRemoteCallProfile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE);//SPRD:modify by bug641686
             }else{
                 mRemoteCallProfile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VOICE);
@@ -1579,12 +1578,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         /* @} */
         switch (notification.code) {
             case SuppServiceNotification.MT_CODE_CALL_ON_HOLD:
-                mIsRemoteHold = true;//SPRD: modify by bug666088
                 mRemoteCallProfile = new ImsCallProfile(
                         ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VOICE);
                 break;
             case SuppServiceNotification.MT_CODE_CALL_RETRIEVED:
-                mIsRemoteHold = false;//SPRD: modify by bug666088
                 mRemoteCallProfile = new ImsCallProfile(
                         ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE);
                 break;
