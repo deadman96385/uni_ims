@@ -413,7 +413,7 @@ public class ImsService extends Service {
                                                     mPendingActivePdnSuccess = true;
                                                 }
                                             }
-                                            Log.i(TAG,"EVENT_WIFI_ALL_CALLS_END->mPendingAttachVowifiSuccess:" + mPendingAttachVowifiSuccess + " mPendingActivePdnSuccess:" + mPendingActivePdnSuccess);
+                                            Log.i(TAG,"EVENT_WIFI_ALL_CALLS_END->mPendingAttachVowifiSuccess:" + mPendingAttachVowifiSuccess + " mPendingActivePdnSuccess:" + mPendingActivePdnSuccess+" mIsVolteCall = "+mIsVolteCall+" mIsVowifiCall = "+mIsVowifiCall);
                                             if(mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
                                                 if (mIsVolteCall && mIsPendingRegisterVowifi) {
                                                     mWifiService.register();
@@ -2356,16 +2356,7 @@ class MyVoWifiCallback implements VoWifiCallback {
                 && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
             imsService.setSrvccState(-1);
         }
-        /**
-         * SPRD: 673414 687400
-         */
-        if (!isInCall) {
-            if (mIsVowifiCall) {
-                mIsVowifiCall = false;
-            } else if (mIsVolteCall) {
-                mIsVolteCall = false;
-            }
-        }
+
         iLog("updateInCallState->isInCall:"+isInCall+" mIsWifiCalling:"+mIsWifiCalling
                 +" inCallPhoneId:"+mInCallPhoneId);
     }
