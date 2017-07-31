@@ -40,5 +40,5 @@
     <string name="vowifi_register_error">Network does not support vowifi</string>
     <string name="handover_to_volte_success">Switching to VoLTE for better Voice quality</string>
     <string name="vowifi_attation">Vowifi attention</string>
-    <string name="vowifi_regist_fail_content">Network does not support vowifi</string>
+    <string name="vowifi_regist_fail_content">vowifi network issue, please reuse this service five minutes later</string>
 </resources>
