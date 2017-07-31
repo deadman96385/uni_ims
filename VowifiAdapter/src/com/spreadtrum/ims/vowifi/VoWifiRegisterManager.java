@@ -219,13 +219,13 @@ public class VoWifiRegisterManager extends ServiceManager {
         }
     }
 
-    public void login(boolean forSos, boolean isIPv4, String localIP, String pcscfIP, String dnsSerIP, boolean isRelogin) {
+    public void login(boolean forSos, boolean isIPv4, String localIP, String pcscfIP,
+            String dnsSerIP, boolean isRelogin) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to login to the ims, for sos: " + forSos + ", is IPv4: " + isIPv4
-                    + ", current register state: " + mRegisterState);
-            Log.i(TAG, "Login with the local ip: " + localIP + ", pcscf ip: " + pcscfIP  + ", dns server ip: " + dnsSerIP );
-	     Log.i(TAG, "isRelogin: " + isRelogin);
-
+                    + ", current register state: " + mRegisterState + ", re-login: " + isRelogin);
+            Log.i(TAG, "Login with the local ip: " + localIP + ", pcscf ip: " + pcscfIP
+                    + ", dns server ip: " + dnsSerIP);
         }
 
         if (mRegisterState == RegisterState.STATE_CONNECTED) {

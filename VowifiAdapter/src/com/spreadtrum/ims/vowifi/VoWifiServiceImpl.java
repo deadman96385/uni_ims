@@ -14,12 +14,12 @@ import android.preference.PreferenceManager;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
-import android.os.IBinder;
 import com.android.ims.internal.IImsServiceEx;
 import com.android.ims.internal.ImsManagerEx;
 
 import com.android.ims.ImsCallProfile;
 import com.android.ims.ImsManager;
+import com.android.ims.ImsUtInterface;
 import com.android.ims.internal.IImsCallSessionListener;
 import com.android.ims.internal.ImsCallSession.State;
 import com.spreadtrum.ims.ImsConfigImpl;
@@ -334,7 +334,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     public void resetAll(WifiState state, int delayMillis) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Reset the security and sip stack with wifi state: "
-                    + (WifiState.CONNECTED.equals(state) ? "connect" : "disconnect"));
+                    + (WifiState.CONNECTED.equals(state) ? "connect" : "disconnect")
+                    + ", delay millis: " + delayMillis);
         }
 
         if (state == null) {
@@ -898,8 +899,9 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             if (success) {
                 // As prepare success, start the login process now. And try from the IPv6;
                 SecurityConfig config = mSecurityMgr.getConfig();
-                mRegisterIP = RegisterIPAddress.getInstance(config._ip4, config._ip6, 
-                        config._pcscf4, config._pcscf6, getUsedPcscfAddr(), config._dns4, config._dns6);
+                mRegisterIP = RegisterIPAddress.getInstance(config._ip4, config._ip6,
+                        config._pcscf4, config._pcscf6, getUsedPcscfAddr(), config._dns4,
+                        config._dns6);
                 registerLogin(false);
             } else {
                 // Prepare failed, give the register result as failed.
@@ -911,6 +913,12 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onRegisterStateChanged(int newState) {
             // If the register state changed, update the register state to call manager.
             if (mCallMgr != null) mCallMgr.updateRegisterState(newState);
+
+            // If the new state is registered, we need query the CLIR state from CP.
+            // And if the query action success, telephony will update the CLIR via UtInterface.
+            if (newState == RegisterState.STATE_CONNECTED) {
+                queryCLIRStatus();
+            }
         }
 
         private String getUsedPcscfAddr() {
@@ -927,6 +935,20 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             return "";
         }
 
+        private void queryCLIRStatus() {
+            try {
+                IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
+                if (imsServiceEx != null) {
+                    int id = imsServiceEx.getCLIRStatus(Utilities.getPrimaryCard(mContext));
+                    if (id < 0) {
+                        Log.w(TAG, "Can not to get CLIR status, please check!");
+                    }
+                }
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to get the CLIR statue as catch the RemoteException: "
+                        + e.toString());
+            }
+        }
     }
 
     private class MySecurityListener implements SecurityListener {
