@@ -304,6 +304,8 @@ interface IVoWifiSerService {
      */
     int updateCallWaiting(boolean enabled);
 
+    int updateCLIR(boolean enabled);
+
     int updateDataRouterState(int state);
 
 }

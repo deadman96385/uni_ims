@@ -1896,7 +1896,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             try {
                 startCall(callee);
             } catch (RemoteException e) {
-                Log.e(TAG, "Failed to start the emergency call as catch the RemoteException e: " + e);
+                Log.e(TAG, "Failed to start the emergency call as catch the e: " + e);
             }
         }
     }
@@ -1932,7 +1932,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
     private void startCall(String callee) throws RemoteException {
         if (Utilities.DEBUG) {
-            Log.i(TAG, "Start the call with the callee: " + callee + ", mSosLocation: " + mSosLocation);
+            Log.i(TAG, "Start the call with the callee: " + callee + ", mSosLocation: "
+                    + mSosLocation);
         }
 
         // Start the call.
@@ -1954,7 +1955,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
         String peerNumber = callee; //default
         if (mIsEmergency) {
-            peerNumber = mCallManager.getEmergencyCallUrn(mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO));
+            peerNumber = mCallManager.getEmergencyCallUrn(
+                    mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO));
             Log.d(TAG, "Start an emergency call.");
         }
         id = mICall.sessCall(peerNumber, null, true, isVideoCall, false, mIsEmergency);

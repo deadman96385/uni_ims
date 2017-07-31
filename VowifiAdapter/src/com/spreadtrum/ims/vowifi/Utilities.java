@@ -454,60 +454,57 @@ public class Utilities {
 
         private String mUsedLocalIP;
         private String mUsedPcscfIP;
-	 private String mUsedDnsSerlIP;
+        private String mUsedDnsSerlIP;
 
         public static RegisterIPAddress getInstance(String localIPv4, String localIPv6,
-                String pcscfIPv4, String pcscfIPv6, String usedPcscfAddr, String dns4, String dns6) {
+                String pcscfIPv4, String pcscfIPv6, String usedPcscfAddr, String dns4,
+                String dns6) {
             if (Utilities.DEBUG) {
                 Log.i(TAG, "Get the s2b ip address from localIPv4: " + localIPv4 + ", localIPv6: "
-                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: " + pcscfIPv6 + ", pcscfdns4: "  + dns4 + ", pcscfdns6: " + dns6);
+                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: "
+                        + pcscfIPv6 + ", pcscfdns4: " + dns4 + ", pcscfdns6: " + dns6);
             }
-			
-	     if(TextUtils.isEmpty(dns4) && TextUtils.isEmpty(dns6)){
-		  Log.i(TAG, "Can not get the dns server address: pcscfdns4: " + dns4 + ", pcscfdns6: "
-                        + dns6);	
+
+            if (TextUtils.isEmpty(dns4) && TextUtils.isEmpty(dns6)) {
+                Log.d(TAG, "Can not get the dns server address: pcscfdns4: " + dns4
+                        + ", pcscfdns6: " + dns6);
             }
-		 
+
             boolean b1 = (TextUtils.isEmpty(localIPv4) || TextUtils.isEmpty(pcscfIPv4));
             boolean b2 = (TextUtils.isEmpty(localIPv6) || TextUtils.isEmpty(pcscfIPv6));
             boolean b3 = TextUtils.isEmpty(usedPcscfAddr);
             Log.d(TAG, "b1:" + b1 + ",b2:" + b2 + ",b3:" + b3);
-            if ( b1 && b2 && b3) {
+            if (b1 && b2 && b3) {
                 Log.e(TAG, "Can not get the ip address: localIPv4: " + localIPv4 + ", localIPv6: "
-                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: " + pcscfIPv6 + ", usedPcscfAddr: " + usedPcscfAddr);
+                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: " + pcscfIPv6
+                        + ", usedPcscfAddr: " + usedPcscfAddr);
                 return null;
             }
 
-            if (TextUtils.isEmpty(pcscfIPv4) && TextUtils.isEmpty(pcscfIPv6) )
-            {
-               if (!TextUtils.isEmpty(usedPcscfAddr))
-               {
-                   if(isIPv4(usedPcscfAddr))
-                   {
-                       String[] newPcscfIPv4s = new String[1];
-                       newPcscfIPv4s[0] = usedPcscfAddr;
-                       return new RegisterIPAddress(localIPv4, localIPv6, newPcscfIPv4s, null, dns4, dns6);
-                   }
-                   else
-                   {
-                       String[] newPcscfIPv6s = new String[1];
-                       newPcscfIPv6s[0] = usedPcscfAddr;
-                       return new RegisterIPAddress(localIPv4, localIPv6, null, newPcscfIPv6s, dns4, dns6);
-                   }
-               }
-               else
-               {
-                   Log.d(TAG,"all pcscf addr is null");
-                   return null;
-               }
-            }
-            else
-            {
+            if (TextUtils.isEmpty(pcscfIPv4) && TextUtils.isEmpty(pcscfIPv6)) {
+                if (!TextUtils.isEmpty(usedPcscfAddr)) {
+                    if (isIPv4(usedPcscfAddr)) {
+                        String[] newPcscfIPv4s = new String[1];
+                        newPcscfIPv4s[0] = usedPcscfAddr;
+                        return new RegisterIPAddress(localIPv4, localIPv6, newPcscfIPv4s, null,
+                                dns4, dns6);
+                    } else {
+                        String[] newPcscfIPv6s = new String[1];
+                        newPcscfIPv6s[0] = usedPcscfAddr;
+                        return new RegisterIPAddress(localIPv4, localIPv6, null, newPcscfIPv6s,
+                                dns4, dns6);
+                    }
+                } else {
+                    Log.d(TAG, "all pcscf addr is null");
+                    return null;
+                }
+            } else {
                 String[] pcscfIPv4s =
                     TextUtils.isEmpty(pcscfIPv4) ? null : pcscfIPv4.split(JSON_PCSCF_SEP);
                 String[] pcscfIPv6s =
                     TextUtils.isEmpty(pcscfIPv6) ? null : pcscfIPv6.split(JSON_PCSCF_SEP);
-		 return new RegisterIPAddress(localIPv4, localIPv6, pcscfIPv4s, pcscfIPv6s, dns4, dns6);
+                return new RegisterIPAddress(localIPv4, localIPv6, pcscfIPv4s, pcscfIPv6s, dns4,
+                        dns6);
             }
         }
 
@@ -517,8 +514,8 @@ public class Utilities {
             mLocalIPv6 = localIPv6;
             mPcscfIPv4 = pcscfIPv4;
             mPcscfIPv6 = pcscfIPv6;
-	     mDnsSerIPv4 = dns4;
-	     mDnsSerIPv6 = dns6;
+            mDnsSerIPv4 = dns4;
+            mDnsSerIPv6 = dns6;
         }
 
         public String getCurUsedLocalIP() {
@@ -528,7 +525,7 @@ public class Utilities {
         public String getCurUsedPcscfIP() {
             return mUsedPcscfIP;
         }
-		
+
         public String getCurUsedDnsSerIP() {
             return mUsedDnsSerlIP;
         }
@@ -542,7 +539,7 @@ public class Utilities {
             mUsedDnsSerlIP = isIPv4 ? getDnsSerIPv4() : getDnsSerIPv6();
             return mUsedDnsSerlIP;
         }
-		
+
         public String getPcscfIP(boolean isIPv4) {
             mUsedPcscfIP = isIPv4 ? getPcscfIPv4() : getPcscfIPv6();
             return mUsedPcscfIP;
@@ -563,7 +560,7 @@ public class Utilities {
         private String getLocalIPv4() {
             return mLocalIPv4;
         }
-		
+
         private String getDnsSerIPv4() {
             return mDnsSerIPv4;
         }
@@ -575,7 +572,7 @@ public class Utilities {
         private String getDnsSerIPv6() {
             return mDnsSerIPv6;
         }
-		
+
         private String getPcscfIPv4() {
             String pcscfIPv4 = null;
             if (mIPv4Index < mPcscfIPv4.length) {
@@ -644,7 +641,7 @@ public class Utilities {
                     builder.append(", pcscfIPv6[" + i + "] = " + mPcscfIPv6[i]);
                 }
             }
-	     builder.append("pcscfDnsSerIPv4 = " + mDnsSerIPv4);
+            builder.append(", pcscfDnsSerIPv4 = " + mDnsSerIPv4);
             builder.append(", pcscfDnsSerIPv6 = " + mDnsSerIPv6);
             return builder.toString();
         }
@@ -702,24 +699,24 @@ public class Utilities {
         }
     }
 
-   public static class CallBarringInfo
-   {
-         // Refer to ImsUtInterface#CDIV_CF_XXX
+    public static class CallBarringInfo {
+        // Refer to ImsUtInterface#CDIV_CF_XXX
         public int mCondition;
         // 0: disabled, 1: enabled
         public int mStatus;
-	 public CallBarringInfo(){
+
+        public CallBarringInfo() {
         }
 
-	 public void setCondition(int conditon){
-	 	mCondition = conditon;
-	 }
-	 
-	 public void setStatus(int status){
-	 	mStatus = status;
-	 }	 
-   }
-   
+        public void setCondition(int conditon) {
+            mCondition = conditon;
+        }
+
+        public void setStatus(int status) {
+            mStatus = status;
+        }
+    }
+
     public static class VideoQuality {
         public int _width;
         public int _height;
