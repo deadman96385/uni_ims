@@ -1223,4 +1223,9 @@ public class ImsServiceImpl extends MMTelFeature {
             }
         }
     }
+
+    // SPRD Add for bug696648
+    public boolean hasCall() {
+        return mImsServiceCallTracker.hasCall();
+    }
 }

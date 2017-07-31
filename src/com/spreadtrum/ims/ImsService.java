@@ -2812,4 +2812,15 @@ class MyVoWifiCallback implements VoWifiCallback {
         }
     }
 
+    // SPRD Add for bug696648
+    public boolean moreThanOnePhoneHasCall() {
+        int count = 0;
+        for(int i = 1 ; i <= mImsServiceImplMap.size(); i ++) {
+            ImsServiceImpl imsServiceImpl = mImsServiceImplMap.get(i);
+            if(imsServiceImpl != null && imsServiceImpl.hasCall())
+                count ++;
+        }
+        Log.i(TAG,"moreThanOnePhoneHasCall count=" + count);
+        return count > 1;
+    }
 }
