@@ -13,6 +13,8 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.util.Log;
+import com.android.ims.internal.IImsServiceEx;
+import com.android.ims.internal.ImsManagerEx;
 import com.android.internal.telephony.CallForwardInfo;
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.CommandException;
@@ -68,6 +70,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private static final int ACTION_UPDATE_CB_EX= 18;
     private static final int ACTION_QUERY_CB_EX= 19;
     private static final int ACTION_CHANGE_CB_PW= 20;
+    private static final int ACTION_GET_CLIR_STATUS  = 21;
 
     private static final int EVENT_REQUEST_NETWORK_DONE = 100;
 
@@ -84,6 +87,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private static final String EXTRA_RULE_SET = "ruleSet";
     private static final String EXTRA_LOCK_STATE = "lockState";
     private static final String EXTRA_CLIR_MODE = "clirMode";
+    private static final String EXTRA_RESULT = "result";
 
     private Phone mPhone;
     private ImsRIL mCi;
@@ -271,6 +275,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                                     msg.arg1,
                                     new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
                         }
+                        updateCLIRStatus(ar);
                     } catch(RemoteException e){
                         e.printStackTrace();
                     }
@@ -557,6 +562,11 @@ public class ImsUtImpl extends IImsUt.Stub {
                     }
                     releaseNetwork();
                     break;
+                case ACTION_GET_CLIR_STATUS:{
+                    updateCLIRStatus(ar);
+                    releaseNetwork();
+                    break;
+                }
                 default:
                     break;
             }
@@ -963,6 +973,14 @@ public class ImsUtImpl extends IImsUt.Stub {
         requestNetwork(bundle);
         return id;
     }
+    public int getCLIRStatus() {
+        int id = getReuestId();
+        Bundle bundle = new Bundle();
+        bundle.putInt(EXTRA_ACTION, ACTION_GET_CLIR_STATUS);
+        bundle.putInt(EXTRA_ID, id);
+        requestNetwork(bundle);
+        return id;
+    }
 
     private void requestNetwork(Bundle bundle) {
         int subId = mPhone.getSubId();
@@ -1036,6 +1054,9 @@ public class ImsUtImpl extends IImsUt.Stub {
                 break;
             case ACTION_CHANGE_CB_PW:
                 changeBarringPassword(bundle);
+                break;
+            case ACTION_GET_CLIR_STATUS:
+                getCLIRStatus(bundle);
                 break;
             default:
                 break;
@@ -1208,7 +1229,36 @@ public class ImsUtImpl extends IImsUt.Stub {
         mCi.queryFacilityLock(facility, password, serviceClass,
                 mHandler.obtainMessage(ACTION_QUERY_CB_EX, id, 0, this));
     }
+    private void getCLIRStatus(Bundle bundle) {
+        Log.d(TAG, "onexcue getCLIRStatus = " + bundle.toString());
+        int id = bundle.getInt(EXTRA_ID, -1);
+        mCi.getCLIR(mHandler.obtainMessage(ACTION_GET_CLIR_STATUS, id, 0, this));
+    }
 
+    private void updateCLIRStatus(AsyncResult ar) {
+        IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
+        int action = ImsUtInterface.OIR_PRESENTATION_NOT_RESTRICTED;
+        Log.d(TAG, "updateCLIRStatus");
+        try {
+            if(ar != null){
+                if (ar.exception == null) {
+                    int[] clirResp = (int[]) ar.result;
+                    Log.i(TAG,"ACTION_QUERY_CLIR->clirResp:" + clirResp.length);
+                    if (clirResp.length >= 2) {
+                        Log.i(TAG,"ACTION_QUERY_CLIR->clirResp[0]:" + clirResp[0] + ", clirResp[1]" + clirResp[1]);
+                        if (clirResp[0] == 1 && clirResp[1] == 4) {
+                            action = ImsUtInterface.OIR_PRESENTATION_RESTRICTED;
+                        }
+                    }
+                }
+            }
+            if (imsServiceEx != null) {
+                imsServiceEx.updateCLIRStatus(action);
+            }
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
     private void processQueryResult(Message msg) {
         AsyncResult ar = (AsyncResult) msg.obj;
         try {
