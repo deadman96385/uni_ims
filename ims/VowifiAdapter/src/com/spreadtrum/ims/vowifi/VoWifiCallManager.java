@@ -641,6 +641,18 @@ public class VoWifiCallManager extends ServiceManager {
         return null;
     }
 
+    public ImsCallSessionImpl getCouldInviteCallSession() {
+        for (ImsCallSessionImpl session : mSessionList) {
+            if (session.isMultiparty()) {
+                continue;
+            } else if (session.getState() > State.NEGOTIATING) {
+                return session;
+            }
+        }
+
+        return null;
+    }
+
     public void onSRVCCStateChanged(int state) {
         if (!isCallFunEnabled()) {
             Log.d(TAG, "As call function disabled, do not handle the SRVCC state changed.");
@@ -1282,7 +1294,7 @@ public class VoWifiCallManager extends ServiceManager {
                 ImsReasonInfo info = new ImsReasonInfo(ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE,
                     ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE, reason);
                 listener.callSessionStartFailed(callSession, info);
-            }else {
+            } else {
                 // receive 380 alternativce service for a normal call
                 if (Utilities.DEBUG) Log.i(TAG, "Handle the call is emergency. urnUri =" + urnUri);
                 ImsReasonInfo info;
@@ -1292,7 +1304,7 @@ public class VoWifiCallManager extends ServiceManager {
                     info = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED,
                             ImsReasonInfo.EXTRA_CODE_CALL_RETRY_NORMAL, category);
                 } else {
-                 // need to retry an normal call by cellular
+                    // need to retry an normal call by cellular
                     info = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED,
                             ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED, reason);
                 }

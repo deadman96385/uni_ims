@@ -859,8 +859,27 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         // To check if there is conference, if yes, we needn't init a new call session.
         ImsCallSessionImpl confSession = mCallManager.getConfCallSession();
         if (confSession != null) {
-            // If there is conference call, we need invite this call to the conference.
-            inviteToConference(confSession);
+            if (confSession.getParticipantsCount() >= 5) {
+                // It means the conference already contains 6 person. Can not invite more.
+                // Give a toast to alert user.
+                String failMessage = mContext.getString(R.string.vowifi_conf_can_not_invite_more);
+                Toast.makeText(mContext, failMessage, Toast.LENGTH_LONG).show();
+                // Give the merge failed callback.
+                handleMergeActionFailed(failMessage);
+            } else {
+                if (confSession != this) {
+                    // If there is conference call, we need invite this call to the conference.
+                    inviteThisCallToConference(confSession, mListener);
+                } else {
+                    ImsCallSessionImpl callSession = mCallManager.getCouldInviteCallSession();
+                    if (callSession == null) {
+                        // Give the merge failed callback.
+                        handleMergeActionFailed("There isn't could invite call.");
+                    } else {
+                        callSession.merge(confSession, mListener);
+                    }
+                }
+            }
         } else {
             // If there isn't conference call, we need create a new call session for it.
             createConfCall();
@@ -1994,7 +2013,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
     }
 
-    private void inviteToConference(ImsCallSessionImpl confSession) throws RemoteException {
+    private void inviteThisCallToConference(ImsCallSessionImpl confSession,
+            IImsCallSessionListener hostlistener) throws RemoteException {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to invite this call " + mCallId + " to the conference call "
                     + confSession.getCallId());
@@ -2008,10 +2028,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             confSession.setInInviteCall(this);
 
             // Notify merge complete.
-            if (mListener != null) {
+            if (hostlistener != null) {
                 // As there is a conference call at background or foreground. As this callback
                 // defined in the framework, we need give this callback with null object.
-                mListener.callSessionMergeComplete(null);
+                hostlistener.callSessionMergeComplete(null);
             }
 
             IImsCallSessionListener confListener = confSession.getListener();
@@ -2038,6 +2058,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                     mContext.getString(R.string.vowifi_conf_invite_failed) + getCallee();
             Toast.makeText(mContext, errorText, Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void merge(ImsCallSessionImpl confSession, IImsCallSessionListener hostlistener)
+            throws RemoteException {
+        inviteThisCallToConference(confSession, hostlistener);
     }
 
     private void createConfCall() throws RemoteException {
