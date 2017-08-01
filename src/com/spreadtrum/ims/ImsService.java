@@ -1584,6 +1584,40 @@ public class ImsService extends Service {
                e.printStackTrace();
            }
        }
+        /**
+         * used for VOWIFI get CLIR states from CP
+         * return: ut request id
+         *
+         * **/
+        @Override
+        public int getCLIRStatus(int phoneId) {
+            ImsServiceImpl imsService = mImsServiceImplMap.get(
+                    Integer.valueOf(phoneId+1));
+            int id = -1;
+            Log.i(TAG, "getCLIRStatus phoneId = " + phoneId);
+            if (imsService != null) {
+                ImsUtImpl ut = imsService.getUtImpl();
+                if (ut != null) {
+                    id = ut.getCLIRStatus();
+                    return id;
+                }
+            }
+            return id;
+        }
+        public int updateCLIRStatus(int action) {
+            com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl =
+                    mWifiService.getUtInterface();
+            int id = -1;
+            Log.i(TAG, "updateCLIRStatus action = " + action);
+            if (voWifiUtImpl != null) {
+                try {
+                    id = voWifiUtImpl.updateCLIR(action);
+                } catch (RemoteException e) {
+                    e.printStackTrace();;
+                }
+            }
+            return id;
+        }
     };
 
     private final IImsMultiEndpoint.Stub mImsMultiEndpointBinder = new IImsMultiEndpoint.Stub()  {
