@@ -25,4 +25,5 @@
     <string name="vowifi_conf_kick_failed">移除與會者失敗</string>
     <string name="vowifi_conf_none_participant">無任何與會者，通話結束</string>
     <string name="vowifi_conf_do_not_support">不支援一鍵發起會議</string>
+    <string name="vowifi_conf_can_not_invite_more">與會者已達到最大個數，無法繼續邀請與會者。</string>
 </resources>
