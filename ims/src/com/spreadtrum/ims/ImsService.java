@@ -1825,9 +1825,10 @@ class MyVoWifiCallback implements VoWifiCallback {
                         Log.w(TAG, "VoLTERegisterListener -> operationFailed, mImsServiceListenerEx is null!");
                     }
                     Log.i(TAG,"VoLTERegisterListener-> mPendingActivePdnSuccess"+ mPendingActivePdnSuccess
-                            +" mIsCPImsPdnActived:"+mIsCPImsPdnActived);
+                            +" mIsCPImsPdnActived:"+mIsCPImsPdnActived + " mIsCalling:"+mIsCalling);
+                    //SPRD:modify by bug718074
                      if(!mPendingActivePdnSuccess && mIsCPImsPdnActived && mFeatureSwitchRequest != null
-                             && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER){
+                             && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER && !mIsCalling){
                          Log.i(TAG, "VoLTERegisterListener -> ACTION_START_HANDOVER, clear mFeatureSwitchRequest");
                          mFeatureSwitchRequest = null;
                          mIsPendingRegisterVolte = false;
