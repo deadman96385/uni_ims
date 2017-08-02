@@ -9439,6 +9439,9 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_GET_IMS_BEARER_STATE
                 || request == RIL_REQUEST_REGISTER_IMS_IMPU
                 || request == RIL_REQUEST_IMS_SET_CONFERENCE_URI
+                || request == RIL_REQUEST_GSM_GET_BROADCAST_SMS_CONFIG
+                || request == RIL_REQUEST_GSM_SET_BROADCAST_SMS_CONFIG
+                || request == RIL_REQUEST_GSM_SMS_BROADCAST_ACTIVATION
                 /* SPRD: add for VoWifi @{ */
                 || request == RIL_REQUEST_GET_TPMR_STATE
                 || request == RIL_REQUEST_SET_TPMR_STATE
