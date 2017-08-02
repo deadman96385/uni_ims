@@ -370,6 +370,12 @@ public class ImsService extends Service {
                         }
                         mIsAPImsPdnActived = false;
                         mAttachVowifiSuccess = false;//SPRD:Add for bug604833
+                        //SPRD:add for bug720289
+                        if(mIsCalling && mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI){
+                            Log.i(TAG,"EVENT_WIFI_ATTACH_FAILED-> handover to vowifi attach failed, set mInCallHandoverFeature unknow");
+                            mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                            updateImsFeature();
+                        }
                         break;
                     case EVENT_WIFI_ATTACH_STOPED:
                         Log.i(TAG, "EVENT_WIFI_ATTACH_STOPED, mWifiRegistered:" + mWifiRegistered);
@@ -2114,7 +2120,8 @@ class MyVoWifiCallback implements VoWifiCallback {
                 + " mIsCPImsPdnActived:" + mIsCPImsPdnActived + " mIsAPImsPdnActived:" + mIsAPImsPdnActived
                 + " mWifiRegistered:" + mWifiRegistered + " mVolteRegistered:" + mVolteRegistered
                 + " mPendingCPSelfManagement:" + mPendingCPSelfManagement
-                + " mPendingActivePdnSuccess:"+mPendingActivePdnSuccess+" isAirplaneModeOn:"+isAirplaneModeOn);
+                + " mPendingActivePdnSuccess:"+mPendingActivePdnSuccess+" isAirplaneModeOn:"+isAirplaneModeOn
+                + " mInCallHandoverFeature:"+mInCallHandoverFeature);
         try{
             if (mImsServiceListenerEx != null &&
                     serviceId == mTelephonyManager.getPrimaryCard()+1) {
@@ -2219,6 +2226,12 @@ class MyVoWifiCallback implements VoWifiCallback {
                     /*@}*/
                 }
             }
+        }
+        //SPR:add for bug720289
+        if (mIsCalling && mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE && state == ImsPDNStatus.IMS_PDN_ACTIVE_FAILED) {
+            Log.i(TAG, "onImsPdnStatusChange -> handvoer to Volte failed,set mInCallHandoverFeature unknow");
+            mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+            updateImsFeature();
         }
     }
 
