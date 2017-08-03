@@ -24,6 +24,7 @@ import android.os.SystemClock;
 import android.app.KeyguardManager;
 import android.os.AsyncResult;
 import android.telephony.VoLteServiceState;
+import android.os.SystemProperties;
 
 public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallProvider {
     private static final String TAG = ImsVideoCallProvider.class.getSimpleName();
@@ -402,6 +403,11 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             if(session.mImsDriverCall != null && session.mImsDriverCall.isRequestUpgradeToVideo()){
                 if(mVolteMediaUpdateDialog != null){
                    mVolteMediaUpdateDialog.dismiss();
+                }
+                if(!SystemProperties.getBoolean("persist.sys.support.vt", false)){
+                    log("handleVolteCallMediaChange reject");
+                    mCi.responseVolteCallMediaChange(false,mCallIdMessage);
+                    return;
                 }
                 mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage);
                 mVolteMediaUpdateDialog.show();
