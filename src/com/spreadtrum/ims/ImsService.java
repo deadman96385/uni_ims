@@ -378,6 +378,12 @@ public class ImsService extends Service {
                         }
                         mIsAPImsPdnActived = false;
                         mAttachVowifiSuccess = false;//SPRD:Add for bug604833
+                        //SPRD:add for bug718067
+                        if(mIsCalling && mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI){
+                            Log.i(TAG,"EVENT_WIFI_ATTACH_FAILED-> handover to vowifi attach failed, set mInCallHandoverFeature unknow");
+                            mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                            updateImsFeature();
+                        }
                         break;
                     case EVENT_WIFI_ATTACH_STOPED:
                         Log.i(TAG, "EVENT_WIFI_ATTACH_STOPED, mWifiRegistered:" + mWifiRegistered);
@@ -1890,9 +1896,9 @@ class MyVoWifiCallback implements VoWifiCallback {
                         Log.w(TAG, "VoLTERegisterListener -> operationFailed, mImsServiceListenerEx is null!");
                     }
                     Log.i(TAG,"VoLTERegisterListener-> mPendingActivePdnSuccess"+ mPendingActivePdnSuccess
-                            +" mIsCPImsPdnActived:"+mIsCPImsPdnActived);
+                            +" mIsCPImsPdnActived:"+mIsCPImsPdnActived+" mIsCalling:"+mIsCalling);
                      if(!mPendingActivePdnSuccess && mIsCPImsPdnActived && mFeatureSwitchRequest != null
-                             && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER){
+                             && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER && !mIsCalling){//SPRD:add for bug718074
                          Log.i(TAG, "VoLTERegisterListener -> ACTION_START_HANDOVER, clear mFeatureSwitchRequest");
                          mFeatureSwitchRequest = null;
                          mIsPendingRegisterVolte = false;
@@ -2300,6 +2306,12 @@ class MyVoWifiCallback implements VoWifiCallback {
                     /*@}*/
                 }
             }
+        }
+        //SPR:add for bug718067
+        if (mIsCalling && mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE && state == ImsPDNStatus.IMS_PDN_ACTIVE_FAILED) {
+            Log.i(TAG, "onImsPdnStatusChange -> handvoer to Volte failed,set mInCallHandoverFeature unknow");
+            mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+            updateImsFeature();
         }
     }
 
