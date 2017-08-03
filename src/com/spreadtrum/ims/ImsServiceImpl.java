@@ -1001,4 +1001,16 @@ public class ImsServiceImpl {
     public boolean hasCall() {
         return mImsServiceCallTracker.hasCall();
     }
+
+    public void enableWiFiParamReport(){
+        String[] cmd=new String[1];
+        cmd[0] = "AT+WIFIPARAM=1,0,0,0,5";
+        mCi.invokeOemRilRequestStrings(cmd, null);
+    }
+
+    public void disableWiFiParamReport(){
+        String[] cmd=new String[1];
+        cmd[0] = "AT+WIFIPARAM=0,0,0,0,0";
+        mCi.invokeOemRilRequestStrings(cmd, null);
+    }
 }
