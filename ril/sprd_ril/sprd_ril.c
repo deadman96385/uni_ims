@@ -5420,6 +5420,8 @@ static void requestNeighboaringCellIds(int channelID, void *data, size_t datalen
 
         if(at_tok_hasmore(&line)) { //only in 3G
             char *sskip = NULL;
+            char *arfcn = NULL;
+            char *bsic = NULL;
             int skip;
 
             err = at_tok_nextstr(&line, &sskip);
@@ -5436,19 +5438,31 @@ static void requestNeighboaringCellIds(int channelID, void *data, size_t datalen
 
             NeighboringCell = (RIL_NeighboringCell *) alloca(cell_id_number *
                                 sizeof(RIL_NeighboringCell));
-               for (current = 0; at_tok_hasmore(&line), current < cell_id_number; current++) {
-                 err = at_tok_nextstr(&line, &(NeighboringCell[current].cid));
-                 if (err < 0)
-                 goto error;
+            char **wcdmaCid = (char **)alloca(cell_id_number * sizeof(char *));
+            int i = 0;
+            for (i = 0; i < cell_id_number; i++) {
+                wcdmaCid[i] = (char *)alloca(128 * sizeof(char));
+            }
 
-                 err = at_tok_nextint(&line, &(NeighboringCell[current].rssi));
-                 if (err < 0)
-                 goto error;
+            for (current = 0; at_tok_hasmore(&line), current < cell_id_number;
+                    current++) {
+                err = at_tok_nextstr(&line, &(arfcn));
+                if (err < 0) goto error;
 
-                 RILLOGD("Neighbor cell_id %s = %d", NeighboringCell[current].cid, NeighboringCell[current].rssi);
+                err = at_tok_nextstr(&line, &(bsic));
+                if (err < 0) goto error;
 
-                 NeighboringCellList[current] = &NeighboringCell[current];
-                }
+                err = at_tok_nextint(&line, &(NeighboringCell[current].rssi));
+                if (err < 0) goto error;
+
+                snprintf(wcdmaCid[current], 128, "%s,%s", arfcn, bsic);
+                NeighboringCell[current].cid = wcdmaCid[current];
+
+                RLOGD("Neighbor cell_id %s = %d", NeighboringCell[current].cid,
+                      NeighboringCell[current].rssi);
+
+                NeighboringCellList[current] = &NeighboringCell[current];
+            }
         } else {
             at_response_free(p_response);
             p_response = NULL;
