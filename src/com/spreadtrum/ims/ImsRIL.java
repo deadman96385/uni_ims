@@ -2401,6 +2401,13 @@ public final class ImsRIL {
         CallForwardInfoUri info = new CallForwardInfoUri();
         info.status = action;
         info.reason = cfReason;
+        //number type
+        if(number != null && PhoneNumberUtils.isUriNumber(number)){
+            info.numberType = 1;
+        } else {
+            info.numberType = 2;
+        }
+        info.ton = PhoneNumberUtils.toaFromString(number);
         info.serviceClass = serviceClass;
         info.number = number;
         info.timeSeconds = timeSeconds;
@@ -2427,11 +2434,19 @@ public final class ImsRIL {
 
         CallForwardInfoUri info = new CallForwardInfoUri();
         info.reason = cfReason;//TODO:check this param
+        //number type
+        if(number != null && PhoneNumberUtils.isUriNumber(number)){
+            info.numberType = 1;
+        } else {
+            info.numberType = 2;
+        }
+        info.ton = PhoneNumberUtils.toaFromString(number);
         info.serviceClass = serviceClass;
         info.number = number;
         info.ruleset = ruleSet;
         info.status = 2; //Bug710475:
                          //AT+CCFCU <mode>: integer type :2---query status
+        info.timeSeconds = 0;
         if (RILJ_LOGD) riljLog("[queryCallForwardStatus]CallForwardInfoUri status: 2");
         IExtRadio radioProxy = getRadioProxy(response);
         if (radioProxy != null) {
