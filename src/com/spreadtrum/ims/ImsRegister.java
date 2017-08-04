@@ -251,6 +251,11 @@ public class ImsRegister {
     };
 
     private void initISIM() {
+        log("nitISIM() : mSIMLoaded = " + mSIMLoaded
+                + " | mPhone.isRadioOn() = " + mPhone.isRadioOn()
+                + " | mTelephonyManager.getSimState(mPhoneId) = "
+                + mTelephonyManager.getSimState(mPhoneId) + " | mPhoneId = "
+                + mPhoneId + " | getPrimaryCard = " + getPrimaryCard());
         if (mSIMLoaded && mPhone.isRadioOn() && !mInitISIMDone
                 && mTelephonyManager.getSimState(mPhoneId) == TelephonyManager.SIM_STATE_READY
                 && (mPhoneId == getPrimaryCard() || ImsManagerEx.isDualVoLTEActive())) {
@@ -329,11 +334,13 @@ public class ImsRegister {
     }
 
     private int getPrimaryCard() {
+        log("-getPrimaryCard() mPhoneCount = " + mPhoneCount);
         if (mPhoneCount == 1) {
             return DEFAULT_PHONE_ID;
         }
 
         String prop = SystemProperties.get(MODEM_WORKMODE_PROP);
+        log("-getPrimaryCard() prop = " + prop);
         if ((prop != null) && (prop.length() > 0)) {
             String values[] = prop.split(",");
             int[] workMode = new int[mPhoneCount];
@@ -374,11 +381,13 @@ public class ImsRegister {
                 return SLOTTWO_PHONE_ID;
             }
             break;
-        // L+W mode SRPD: 675103
+        // L+W mode SRPD: 675103 721982
         case 255:
+            Log.d(TAG,"-getPrimaryCardFromProp() workMode[2] = " + workMode[SLOTTWO_PHONE_ID]);
             if (workMode[SLOTTWO_PHONE_ID] == 9
                 || workMode[SLOTTWO_PHONE_ID] == 6
-                || workMode[SLOTTWO_PHONE_ID] == 7) {
+                || workMode[SLOTTWO_PHONE_ID] == 7
+                || workMode[SLOTTWO_PHONE_ID] == 20) {
 
                 return SLOTTWO_PHONE_ID;
             }
