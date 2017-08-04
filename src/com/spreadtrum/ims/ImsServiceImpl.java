@@ -731,6 +731,15 @@ public class ImsServiceImpl {
     }
 
     public void notifyRegisterStateChange() {
+        // SPRD Add for DSDA bug707975 and bug719824:
+        // If dual volte active, update RAT to 4G and voice reg state to in service.
+        // And if dual volte not active, service state need to be set to correct state.
+        int phoneCount = TelephonyManager.from(mContext).getPhoneCount();
+        if(phoneCount > 1 && mPhone.getPhoneId() != getImsRegister().getPrimaryCard(phoneCount)) {
+            Log.d(TAG, "Ims Register State Changed, poll state again on vice SIM,"
+                    + "phone Id = " + mPhone.getPhoneId());
+            mPhone.getServiceStateTracker().pollState();
+        }
         for (Listener listener : mListeners) {
             listener.onRegisterStateChange(mServiceId);
         }

@@ -314,12 +314,6 @@ public class ImsRegister {
         log("--notifyImsStateChanged : imsRegistered = " + imsRegistered + " | mCurrentImsRegistered = " + mCurrentImsRegistered);
         if( mCurrentImsRegistered != imsRegistered) {
             mCurrentImsRegistered = imsRegistered;
-            // SPRD Add for DSDA:
-            // If dual volte active, update RAT to 4G and voice reg state to in service.
-            if(mPhoneId != getPrimaryCard()) {
-                log("notifyImsStateChanged-> poll state again phone Id = " + mPhoneId);
-                mPhone.getServiceStateTracker().pollState();
-            }
             /**
              * SPRD bug644157 should limit action to primary card
              * so remove if(){}
