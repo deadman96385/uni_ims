@@ -223,6 +223,8 @@ public class ImsService extends Service {
     private boolean mPendingCPSelfManagement = false;
     private int mCallEndType = -1;
     private int mInCallPhoneId = -1;
+    private boolean mPreWifiRegistered = false;
+    private boolean mPreVolteRegistered = false;
 
     private class ImsServiceRequest {
         public int mRequestId;
@@ -576,6 +578,7 @@ public class ImsService extends Service {
                             if (mFeatureSwitchRequest != null) {
                                 mFeatureSwitchRequest = null;
                             }
+                            mIsPendingRegisterVolte = false;//SPRD: add for bug723080
                         }
                         if(mPendingAttachVowifiSuccess){
                             Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE->mPendingAttachVowifiSuccess is true->mCallEndType:"
@@ -1930,23 +1933,29 @@ class MyVoWifiCallback implements VoWifiCallback {
         if(mInCallHandoverFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
             if(mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
-                if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature);
+                if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature
+                        || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered);
             } else if (imsService != null && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-                imsService.notifyImsRegister(false, currentImsFeature != mCurrentImsFeature);
+                imsService.notifyImsRegister(false, currentImsFeature != mCurrentImsFeature
+                        || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered);
             }else {
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
-                if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature);
+                if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature
+                        || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered);
             }
         } else if(mVolteRegistered) {
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
-            if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature);
+            if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature
+                    || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered);
         } else if(mWifiRegistered){
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
-            if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature);
+            if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature
+                    || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered);
         } else {
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-            if(imsService != null) imsService.notifyImsRegister(false, currentImsFeature != mCurrentImsFeature);
+            if(imsService != null) imsService.notifyImsRegister(false, currentImsFeature != mCurrentImsFeature
+                    || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered);
         }
         if(imsService != null) {
             imsService.updateImsFeatures(mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE,
@@ -1961,9 +1970,12 @@ class MyVoWifiCallback implements VoWifiCallback {
             }
         }
         notifyImsRegisterState();
+        mPreVolteRegistered = mVolteRegistered;
+        mPreWifiRegistered = mWifiRegistered;
         Log.i(TAG,"updateImsFeature->mWifiRegistered:"+mWifiRegistered +" mVolteRegistered:"+mVolteRegistered
                 +" mCurrentImsFeature:"+mCurrentImsFeature +" mInCallHandoverFeature:"+mInCallHandoverFeature
-                + " currentImsFeature:" + currentImsFeature);
+                + " currentImsFeature:" + currentImsFeature + " mPreVolteRegistered:" + mPreVolteRegistered
+                + " mPreWifiRegistered:" + mPreWifiRegistered);
     }
 
     private boolean isVoLTERegisted() {
@@ -2107,7 +2119,7 @@ class MyVoWifiCallback implements VoWifiCallback {
                 if(mPendingCPSelfManagement || mFeatureSwitchRequest == null){
                     ImsServiceImpl service = mImsServiceImplMap.get(
                             Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
-                    if(service != null){
+                    if(service != null && !mIsCalling){//SPRD: add for bug717045
                        service.setIMSRegAddress(null);
                     }
                 }
@@ -2138,8 +2150,8 @@ class MyVoWifiCallback implements VoWifiCallback {
             Log.i(TAG,"onImsPdnStatusChange->mIsPendingRegisterVolte:" + mIsPendingRegisterVolte + " service.isImsRegistered():" + service.isImsRegistered());
             // If pdn is ready when handover from vowifi to volte but volte is not registered , never to turn on ims.
             // If Volte is registered , never to turn on ims.
-            Log.i(TAG,"onImsPdnStatusChange->mIsVolteCall:"+mIsVolteCall +" mIsVowifiCall:"+mIsVowifiCall);
-            if(!((mIsPendingRegisterVolte && !service.isImsRegistered()) || service.isImsRegistered()) && !mIsVolteCall && !mIsVowifiCall){
+            Log.i(TAG,"onImsPdnStatusChange->mIsVolteCall:"+mIsVolteCall +" mIsVowifiCall:"+mIsVowifiCall +" mIsAPImsPdnActived:"+mIsAPImsPdnActived);
+            if(!mIsAPImsPdnActived && !mIsVolteCall && !mIsVowifiCall){
                 Log.d(TAG, "Switch request is null, but the pdn start, will enable the ims.");
                 service.enableImsWhenPDNReady();
             }
