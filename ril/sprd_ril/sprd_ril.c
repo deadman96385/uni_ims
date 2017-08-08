@@ -141,6 +141,8 @@ char RIL_SP_SIM_PIN_PROPERTYS[128]; // ril.*.sim.pin* --ril.*.sim.pin1 or ril.*.
 
 #define OEM_FUNCTION_ID_TRAFFICCLASS 1
 
+#define MAX_AT_RESPONSE 0x1000
+
 int s_isuserdebug = 0;
 
 int modem;
@@ -7519,7 +7521,7 @@ void requestSendAT(int channelID, char *data, size_t datalen, RIL_Token t)
     char *at_cmd = (char *)data;
     int i, err;
     ATResponse *p_response = NULL;
-    char buf[1024] = {0};
+    char buf[MAX_AT_RESPONSE] = {0};
     ATLine *p_cur = NULL;
     char *cmd;
     char *pdu;
