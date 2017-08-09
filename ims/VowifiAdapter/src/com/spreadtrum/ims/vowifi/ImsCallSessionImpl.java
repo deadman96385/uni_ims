@@ -1819,14 +1819,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             Log.i(TAG, "Terminate this call: " + this + " for reason: " + reason);
         }
 
-        if (mICall == null) return;
-
         try {
-            int res = Result.FAIL;
-            if (isConferenceCall()) {
-                res = mICall.confTerm(mCallId, reason);
+            int res = Result.SUCCESS;
+            if (mICall != null) {
+                if (isConferenceCall()) {
+                    res = mICall.confTerm(mCallId, reason);
+                } else {
+                    res = mICall.sessTerm(mCallId, reason);
+                }
             } else {
-                res = mICall.sessTerm(mCallId, reason);
+                Log.w(TAG, "Call interface is null, can not send the terminate action.");
             }
 
             if (res == Result.SUCCESS) {
