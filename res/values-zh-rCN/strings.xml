@@ -45,8 +45,10 @@
     <string name="low_battery_continue_video_call">"继续"</string>
     <string name="low_battery_convert_to_voice_call">"降为语音"</string>
     <!-- @} -->
+    <string name="handover_to_volte_success">成功切换到VoLTE获取更好的语音质量</string>
     <string name="vowifi_attation">Vowifi 提示</string>
     <string name="vowifi_regist_fail_content">当前网络不支持vowifi</string>
+    <string name="vowifi_register_error">当前网络不支持vowifi</string>
     <string name="vowifi_connected_continue">继续</string>
     <string name="vowifi_connected_disable">关闭</string>
     <string name="vowifi_connected_checkbox_text">不再提示</string>

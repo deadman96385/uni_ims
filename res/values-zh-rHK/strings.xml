@@ -39,8 +39,10 @@
      <string name="low_battery_warning_message">"您的電量低於15%，繼續視訊通話或是切換到語音通話?"</string>
      <string name="low_battery_continue_video_call">開啟</string>
      <string name="low_battery_convert_to_voice_call">"降為語音"</string>
+<string name="handover_to_volte_success">成功切換到VoLTE獲取更好的語音質量</string>
 <string name="vowifi_attation">Vowifi 提示</string>
 <string name="vowifi_regist_fail_content">當前網絡不支持vowifi</string>
+<string name="vowifi_register_error">當前網絡不支持vowifi</string>
  <string name="vowifi_connected_continue">繼續</string>
  <string name="vowifi_connected_disable">關閉</string>
  <string name="vowifi_connected_checkbox_text">不再提示</string>
