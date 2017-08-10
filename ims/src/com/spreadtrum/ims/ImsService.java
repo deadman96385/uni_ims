@@ -320,6 +320,11 @@ public class ImsService extends Service {
                                         mImsServiceListenerEx.operationSuccessed(mFeatureSwitchRequest.mRequestId,
                                                 ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOWIFI);
                                     }
+                                    if(mIsVolteCall){
+                                        ImsServiceImpl service = mImsServiceImplMap.get(
+                                                Integer.valueOf(mFeatureSwitchRequest.mServiceId));
+                                        service.enableWiFiParamReport();
+                                    }
                                 } else {
                                     updateImsFeature();
                                     mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
@@ -2216,6 +2221,11 @@ class MyVoWifiCallback implements VoWifiCallback {
                         mWifiService.deattach(true);
                         mPendingActivePdnSuccess = false;
                         mWifiService.updateDataRouterState(DataRouterState.CALL_VOLTE);
+                        if(mIsVolteCall){
+                            ImsServiceImpl reportService = mImsServiceImplMap.get(
+                                    Integer.valueOf(mFeatureSwitchRequest.mServiceId));
+                            reportService.disableWiFiParamReport();
+                        }
                     } else {
                         mIsPendingRegisterVolte = true;
                         mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
@@ -2381,6 +2391,9 @@ class MyVoWifiCallback implements VoWifiCallback {
         if(!mIsCalling && imsService != null
                 && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
             imsService.setSrvccState(-1);
+        }
+        if(!isInCall){
+            imsService.disableWiFiParamReport();
         }
 
         iLog("updateInCallState->isInCall:"+isInCall+" mIsWifiCalling:"+mIsWifiCalling
