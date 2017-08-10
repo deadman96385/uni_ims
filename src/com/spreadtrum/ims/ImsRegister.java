@@ -515,10 +515,22 @@ public class ImsRegister {
         }
         log("primaryOperator = " + primaryOperator);
         log("secondOperator = " + secondOperator);
-        boolean sameOperator = secondOperator != null && primaryOperator != null
-                && secondOperator.length() > 0 && primaryOperator.length() > 0
-                && (secondOperator.equals(primaryOperator) ||
-                        isRelianceCard(primaryOperator) && isRelianceCard(secondOperator));
+        boolean ignoreWhiteList = SystemProperties.getBoolean(
+                "persist.radio.dsda.wl.ignore", false);
+        log("ignoreWhiteList = " + ignoreWhiteList);
+        boolean sameOperator = false;
+        if (ignoreWhiteList) {
+            sameOperator = secondOperator != null
+                    && primaryOperator != null
+                    && secondOperator.length() > 0
+                    && primaryOperator.length() > 0
+                    && (secondOperator.equals(primaryOperator) || isRelianceCard(primaryOperator)
+                            && isRelianceCard(secondOperator));
+        } else {
+            sameOperator = isCmccCard(primaryOperator)
+                    && primaryOperator.equals(secondOperator);
+        }
+
        try{
         if (sameOperator) {
             log("same operator, check mcc");
@@ -542,6 +554,13 @@ public class ImsRegister {
     private boolean isRelianceCard(String operatorName){
         if(operatorName != null &&(operatorName.equalsIgnoreCase("Reliance")
                 || operatorName.equalsIgnoreCase("Jio"))){
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isCmccCard(String operatorName){
+        if(operatorName != null &&operatorName.equalsIgnoreCase("China Mobile")){
             return true;
         }
         return false;
