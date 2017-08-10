@@ -38,6 +38,8 @@ public class VoWifiRegisterManager extends ServiceManager {
         void onRefreshRegFinished(boolean success, int errorCode);
 
         void onRegisterStateChanged(int newState, int errorCode);
+
+        void onResetBlocked();
     }
 
     private static final String SERVICE_ACTION = IVoWifiRegister.class.getCanonicalName();
@@ -85,7 +87,6 @@ public class VoWifiRegisterManager extends ServiceManager {
                 }
                 updateRegisterState(RegisterState.STATE_IDLE);
                 clearPendingList();
-                addToPendingList(new PendingAction("registerFroceStop", MSG_ACTION_FORCE_STOP));
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Can not register callback as catch the RemoteException. e: " + e);
@@ -107,18 +108,14 @@ public class VoWifiRegisterManager extends ServiceManager {
                 break;
             }
             case MSG_ACTION_DE_REGISTER: {
-                deregister();
+                PendingAction action = (PendingAction) msg.obj;
+                deregister((RegisterListener) action._params.get(0));
                 handle = true;
                 break;
             }
             case MSG_ACTION_RE_REGISTER: {
                 PendingAction action = (PendingAction) msg.obj;
                 reRegister((Integer) action._params.get(0), (String) action._params.get(1));
-                handle = true;
-                break;
-            }
-            case MSG_ACTION_FORCE_STOP: {
-                forceStop();
                 handle = true;
                 break;
             }
@@ -148,8 +145,13 @@ public class VoWifiRegisterManager extends ServiceManager {
             try {
                 // Reset first, then prepare.
                 mRequest = null;
-                mIRegister.cliReset();
+                int res = mIRegister.cliReset();
                 updateRegisterState(RegisterState.STATE_IDLE);
+                if (res == Result.FAIL) {
+                    Log.w(TAG, "Reset action failed, notify as prepare failed.");
+                    if (listener != null) listener.onPrepareFinished(false);
+                    return;
+                }
 
                 // Prepare for login, need open account, start client and update settings.
                 boolean success = false;
@@ -224,19 +226,19 @@ public class VoWifiRegisterManager extends ServiceManager {
         }
     }
 
-    public void deregister() {
+    public void deregister(RegisterListener listener) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to logout from the ims.");
         }
 
         if (mRequest == null) {
-            forceStop();
+            forceStop(listener);
         } else if (mRequest.mState == RegisterState.STATE_IDLE) {
             // The current status is idle or unknown, give the callback immediately.
             if (mRequest.mListener != null) mRequest.mListener.onLogout(0);
         } else if (mRequest.mState == RegisterState.STATE_PROGRESSING) {
             // Already in the register progress, we'd like to cancel current process.
-            forceStop();
+            forceStop(mRequest.mListener);
         } else if (mRequest.mState == RegisterState.STATE_CONNECTED) {
             // The current register status is true;
             boolean handle = false;
@@ -256,7 +258,7 @@ public class VoWifiRegisterManager extends ServiceManager {
             }
             if (!handle) {
                 // Do not handle the unregister action, add to pending list.
-                addToPendingList(new PendingAction("de-register", MSG_ACTION_DE_REGISTER));
+                addToPendingList(new PendingAction("de-register", MSG_ACTION_DE_REGISTER, listener));
             }
         } else {
             // Shouldn't be here.
@@ -299,7 +301,7 @@ public class VoWifiRegisterManager extends ServiceManager {
         }
     }
 
-    public boolean forceStop() {
+    public boolean forceStop(RegisterListener listener) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Force stop current register process.");
         }
@@ -308,7 +310,8 @@ public class VoWifiRegisterManager extends ServiceManager {
             try {
                 int res = mIRegister.cliReset();
                 if (res == Result.FAIL) {
-                    Log.e(TAG, "Failed to reset the sip stack, please check!");
+                    Log.e(TAG, "Failed to reset the sip stack, notify as reset block.");
+                    if (listener != null) listener.onResetBlocked();
                 }
             } catch (RemoteException e) {
                 Log.e(TAG, "Catch the remote exception when unregister, e: " + e);

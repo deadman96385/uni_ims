@@ -11,7 +11,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
-import android.telephony.SubscriptionManager;
 import android.util.Log;
 
 import com.android.ims.ImsCallProfile;
@@ -259,8 +258,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         // If the video quality changed, we need update the video quality.
         if (ImsConfigImpl.VT_RESOLUTION_VALUE.equals(key)) {
             // The video quality is changed.
-            int quality = Utilities.getDefaultVideoQuality(mPreferences);
-            mCallMgr.setVideoQuality(quality);
+            mCallMgr.updateVideoQuality(Utilities.getDefaultVideoQuality(mPreferences));
         }
     }
 
@@ -422,7 +420,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
      * Unregister to the IMS service.
      */
     private void deregisterInternal() {
-        mRegisterMgr.deregister();
+        mRegisterMgr.deregister(mRegisterListener);
     }
 
     /**
@@ -450,7 +448,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
      * @return true if stop and close the sip stack, otherwise false.
      */
     private boolean registerForceStop() {
-        return mRegisterMgr.forceStop();
+        return mRegisterMgr.forceStop(mRegisterListener);
     }
 
     public String getCurLocalAddress() {
@@ -688,7 +686,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
     private void registerSuccess(int stateCode) {
         // As login success, we need set the video quality.
-        mCallMgr.setVideoQuality(Utilities.getDefaultVideoQuality(mPreferences));
+        mCallMgr.updateVideoQuality(Utilities.getDefaultVideoQuality(mPreferences));
 
         if (mCallback != null) {
             mCallback.onRegisterStateChanged(mRegisterMgr.getCurRegisterState(), stateCode);
@@ -706,7 +704,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             mCallback.onRegisterStateChanged(mRegisterMgr.getCurRegisterState(), 0);
         }
 
-        mRegisterMgr.forceStop();
+        mRegisterMgr.forceStop(mRegisterListener);
     }
 
     private void registerLogout(int stateCode) {
@@ -716,7 +714,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     ? UnsolicitedCode.SIP_TIMEOUT : UnsolicitedCode.SIP_LOGOUT);
         }
 
-        mRegisterMgr.forceStop();
+        mRegisterMgr.forceStop(mRegisterListener);
     }
 
     private void sendECBMTimeoutMsg(int forStep) {
@@ -915,6 +913,13 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onRegisterStateChanged(int newState, int errorCode) {
             // If the register state changed, update the register state to call manager.
             if (mCallMgr != null) mCallMgr.updateRegisterState(newState);
+
+            // If the new state is registered, we need query the CLIR state from CP.
+            // And if the query action success, telephony will update the CLIR via UtInterface.
+            if (newState == RegisterState.STATE_CONNECTED) {
+                queryCLIRStatus();
+            }
+
             if (errorCode == NativeErrorCode.SERVER_TIMEOUT) {
                 // If register state changed caused by server return 504 when UE is calling,
                 // need to re-login.
@@ -924,6 +929,30 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             }
         }
 
+        @Override
+        public void onResetBlocked() {
+            // As the reset blocked, and the vowifi service will be kill soon,
+            // We'd like to notify as reset finished if in reset step.
+            if (mResetStep != RESET_STEP_INVALID) {
+                Log.d(TAG, "Reset blocked, and the current reset step is " + mResetStep);
+                resetFinished();
+            }
+        }
+
+        private void queryCLIRStatus() {
+//            try {
+//                IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
+//                if (imsServiceEx != null) {
+//                    int id = imsServiceEx.getCLIRStatus(Utilities.getPrimaryCard(mContext));
+//                    if (id < 1) {
+//                        Log.w(TAG, "Failed to get CLIR status, please check!");
+//                    }
+//                }
+//            } catch (RemoteException e) {
+//                Log.e(TAG, "Failed to get the CLIR statue as catch the RemoteException: "
+//                        + e.toString());
+//            }
+        }
     }
 
     private class MySecurityListener implements SecurityListener {

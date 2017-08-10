@@ -69,17 +69,18 @@ public class ImsUtImpl extends IImsUt.Stub {
     private static final int MSG_HANDLE_EVENT = -1;
     private static final int MSG_CMD_TIMEOUT = 0;
 
-    private static final int MSG_ACTION_QUERY_CALL_BARRING = 1 << 0;
-    private static final int MSG_ACTION_QUERY_CALL_FORWARD = 1 << 1;
-    private static final int MSG_ACTION_QUERY_CALL_FORWARDING_OPTION = 1 << 2;
-    private static final int MSG_ACTION_QUERY_CALL_WAITING = 1 << 3;
-    private static final int MSG_ACTION_UPDATE_CALL_BARRING = 1 << 4;
-    private static final int MSG_ACTION_UPDATE_CALL_FORWARD = 1 << 5;
-    private static final int MSG_ACTION_UPDATE_CALL_FORWARDING_OPTION = 1 << 6;
-    private static final int MSG_ACTION_UPDATE_CALL_WAITING = 1 << 7;
-    private static final int MSG_ACTION_SET_FACILITY_LOCK = 1 << 8;
-    private static final int MSG_ACTION_QUERY_FACILITY_LOCK = 1 << 9;
-    private static final int MSG_ACTION_CHANGE_LOCK_PWD = 1 << 10;
+    private static final int MSG_ACTION_QUERY_CALL_BARRING = 101;
+    private static final int MSG_ACTION_QUERY_CALL_FORWARD = 102;
+    private static final int MSG_ACTION_QUERY_CALL_FORWARDING_OPTION = 103;
+    private static final int MSG_ACTION_QUERY_CALL_WAITING = 104;
+    private static final int MSG_ACTION_UPDATE_CALL_BARRING = 105;
+    private static final int MSG_ACTION_UPDATE_CALL_FORWARD = 106;
+    private static final int MSG_ACTION_UPDATE_CALL_FORWARDING_OPTION = 107;
+    private static final int MSG_ACTION_UPDATE_CALL_WAITING = 108;
+    private static final int MSG_ACTION_SET_FACILITY_LOCK = 109;
+    private static final int MSG_ACTION_QUERY_FACILITY_LOCK = 110;
+    private static final int MSG_ACTION_CHANGE_LOCK_PWD = 111;
+    private static final int MSG_ACTION_UPDATE_CLIR = 112;
 
     private Handler mHandler = new Handler() {
         @Override
@@ -156,6 +157,12 @@ public class ImsUtImpl extends IImsUt.Stub {
                     String oldPwd = (String) action._params.get(1);
                     String newPwd = (String) action._params.get(2);
                     nativeChangeBarringPwd(condition, oldPwd, newPwd);
+                    break;
+                }
+                case MSG_ACTION_UPDATE_CLIR: {
+                    UTAction action = (UTAction) msg.obj;
+                    boolean enabled = (Boolean) action._params.get(0);
+                    nativeUpdateCLIR(enabled);
                     break;
                 }
             }
@@ -355,8 +362,11 @@ public class ImsUtImpl extends IImsUt.Stub {
      */
     @Override
     public int updateCLIR(int clirMode) throws RemoteException {
-        Log.w(TAG, "Do not support update CLIR now.");
-        return ImsUtInterface.INVALID;
+        if (Utilities.DEBUG) Log.i(TAG, "Try to update CLIR to mode: " + clirMode);
+
+        UTAction action = new UTAction("updateCLIR", MSG_ACTION_UPDATE_CLIR, CMD_TIMEOUT,
+                Boolean.valueOf(clirMode == ImsUtInterface.OIR_PRESENTATION_RESTRICTED));
+        return mCmdManager.addCmd(action);
     }
 
     /**
@@ -591,6 +601,31 @@ public class ImsUtImpl extends IImsUt.Stub {
 
     private void nativeChangeBarringPwd(String condition, String oldPwd, String newPwd) {
         if (Utilities.DEBUG) Log.i(TAG, "Native change the call barring password to : " + newPwd);
+    }
+
+    private void nativeUpdateCLIR(boolean enabled) {
+        if (Utilities.DEBUG) Log.i(TAG, "Native update the CLIR as enabled: " + enabled);
+
+        boolean success = false;
+        try {
+            if (mIXCAP != null) {
+                int res = mIXCAP.updateCLIR(enabled);
+                if (res == Result.SUCCESS) {
+                    success = true;
+                    handleUpdateActionOK();
+                }
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to update CLIR as catch the RemoteException: " + e);
+        }
+
+        // If the action is failed, process action failed.
+        if (!success) {
+            Log.e(TAG, "Native failed to update CLIR.");
+            ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR,
+                    ImsReasonInfo.CODE_UNSPECIFIED);
+            mCmdManager.onActionFailed(error);
+        }
     }
 
     private void handleEvent(String json) {
@@ -835,7 +870,6 @@ public class ImsUtImpl extends IImsUt.Stub {
             // Do not found the matched CB info, we'd like to give the result as deactivate.
             return null;
         }
-
     }
 
     private int getConditionFromCFReason(int reason) {
@@ -889,18 +923,18 @@ public class ImsUtImpl extends IImsUt.Stub {
     private int getActionFromCFAction(int cfAction) {
         switch (cfAction) {
             case CommandsInterface.CF_ACTION_DISABLE:
-               return ImsUtInterface.ACTION_DEACTIVATION;
-           case CommandsInterface.CF_ACTION_ENABLE:
-               return ImsUtInterface.ACTION_ACTIVATION;
-           case CommandsInterface.CF_ACTION_ERASURE:
-               return ImsUtInterface.ACTION_ERASURE;
-           case CommandsInterface.CF_ACTION_REGISTRATION:
-               return ImsUtInterface.ACTION_REGISTRATION;
-           default:
-               break;
-       }
+                return ImsUtInterface.ACTION_DEACTIVATION;
+            case CommandsInterface.CF_ACTION_ENABLE:
+                return ImsUtInterface.ACTION_ACTIVATION;
+            case CommandsInterface.CF_ACTION_ERASURE:
+                return ImsUtInterface.ACTION_ERASURE;
+            case CommandsInterface.CF_ACTION_REGISTRATION:
+                return ImsUtInterface.ACTION_REGISTRATION;
+            default:
+                break;
+        }
 
-       return ImsUtInterface.INVALID;
+        return ImsUtInterface.INVALID;
     }
 
     private class CmdManager {

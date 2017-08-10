@@ -25,4 +25,5 @@
     <string name="vowifi_conf_kick_failed">移除参与者失败</string>
     <string name="vowifi_conf_none_participant">无任何参与者，结束通话</string>
     <string name="vowifi_conf_do_not_support">不支持一键发起会议</string>
+    <string name="vowifi_conf_can_not_invite_more">当前会议参与者已经达到最大值，无法继续邀请与会者。</string>
 </resources>

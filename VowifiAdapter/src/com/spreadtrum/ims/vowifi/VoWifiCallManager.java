@@ -13,7 +13,6 @@ import android.os.RemoteException;
 import android.os.SystemProperties;
 import android.telecom.VideoProfile;
 import android.telecom.Connection.VideoProvider;
-import android.telecom.VideoProfile.CameraCapabilities;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.WindowManager;
@@ -72,7 +71,6 @@ public class VoWifiCallManager extends ServiceManager {
 
     private static final int MSG_ACTION_START_AUDIO_STREAM = 1;
     private static final int MSG_ACTION_STOP_AUDIO_STREAM  = 2;
-    private static final int MSG_ACTION_SET_VIDEO_QUALITY  = 3;
 
     private static final int CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED = 150;
 
@@ -99,10 +97,13 @@ public class VoWifiCallManager extends ServiceManager {
             new ArrayList<ICallChangedListener>();
     private MySerServiceCallback mVoWifiServiceCallback = new MySerServiceCallback();
 
+    private static final int MEDIA_CHANGED_TIMEOUT = 10000;
+    private static final int RELEASE_CALL_DELAY = 2 * 1000;
+
     private static final int MSG_HANDLE_EVENT = 0;
     private static final int MSG_INVITE_CALL = 1;
     private static final int MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 2;
-    private static final int MEDIA_CHANGED_TIMEOUT = 10000;
+    private static final int MSG_RELEASE_CALL = 3;
 
     private Handler mHandler = new Handler() {
         @Override
@@ -128,7 +129,19 @@ public class VoWifiCallManager extends ServiceManager {
                         }
                     }
                     break;
-
+                case MSG_RELEASE_CALL:
+                    String callId = (String) msg.obj;
+                    ImsCallSessionImpl callSession = getCallSession(callId);
+                    if (callSession != null) {
+                        Log.d(TAG, "The call do not receive BYE until now, release it.");
+                        callSession.releaseCall();
+                        try {
+                            handleCallTermed(callSession, ImsReasonInfo.CODE_USER_TERMINATED);
+                        } catch (RemoteException e) {
+                            Log.e(TAG, "Failed to handle release call as catch e: " + e);
+                        }
+                    }
+                    break;
             }
         }
     };
@@ -264,11 +277,6 @@ public class VoWifiCallManager extends ServiceManager {
                 stopAudioStream();
                 break;
             }
-            case MSG_ACTION_SET_VIDEO_QUALITY: {
-                PendingAction action = (PendingAction) msg.obj;
-                setVideoQuality((Integer) action._params.get(0));
-                break;
-            }
         }
         return handle;
     }
@@ -335,21 +343,6 @@ public class VoWifiCallManager extends ServiceManager {
             Log.d(TAG, "Terminate the call: " + callSession);
             callSession.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
             handleCallTermed(callSession, ImsReasonInfo.CODE_USER_TERMINATED);
-            /*
-            switch (state) {
-                case CONNECTED:
-                    // If the current wifi is connect, we'd like to send the terminate request.
-                    callSession.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
-
-                    // If the user disabled the "WIFI calling" button, then we will receive this
-                    // action, and at the same time, we will also receive the de-register action.
-                    // So we don't know if the terminate action could be sent to the IMS service.
-                    // Then we'd like to terminate the call immediately.
-                case DISCONNECTED:
-                    handleCallTermed(callSession, ImsReasonInfo.CODE_USER_TERMINATED);
-                    break;
-            }
-            */
         }
     }
 
@@ -482,25 +475,18 @@ public class VoWifiCallManager extends ServiceManager {
         }
     }
 
-    public void setVideoQuality(int quality) {
+    public void updateVideoQuality(VideoQuality quality) {
         if (Utilities.DEBUG) Log.i(TAG, "Set the video quality as index is: " + quality);
 
-        if (!isCallFunEnabled()) {
+        if (!isCallFunEnabled() || mICall == null || quality == null) {
             // As call function is disabled. Do nothing.
             return;
         }
 
-        if (mICall != null) {
-            try {
-                VideoQuality video = Utilities.sVideoQualityList.get(quality);
-                int res = mICall.setVideoQuality(video._width, video._height, video._frameRate,
-                        video._bitRate, video._brHi, video._brLo, video._frHi, video._frLo);
-                if (res != Result.SUCCESS) {
-                    Log.e(TAG, "Failed to set the video quality. Please check!");
-                }
-            } catch (RemoteException e) {
-                Log.e(TAG, "Failed to set the video quality as catch the RemoteException e: " + e);
-            }
+        try {
+            mICall.setDefaultVideoLevel(quality._level);
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to set the video quality as catch the RemoteException e: " + e);
         }
     }
 
@@ -661,6 +647,18 @@ public class VoWifiCallManager extends ServiceManager {
         }
 
         Log.w(TAG, "Can not found any conference call.");
+        return null;
+    }
+
+    public ImsCallSessionImpl getCouldInviteCallSession() {
+        for (ImsCallSessionImpl session : mSessionList) {
+            if (session.isMultiparty()) {
+                continue;
+            } else if (session.getState() > State.NEGOTIATING) {
+                return session;
+            }
+        }
+
         return null;
     }
 
@@ -839,9 +837,9 @@ public class VoWifiCallManager extends ServiceManager {
                     break;
                 }
                 case JSONUtils.EVENT_CODE_CALL_IS_EMERGENCY: {
-                    String urnUri = jObject.optString(JSONUtils.KEY_EMERGENCY_CALL_IND_URN_URI, "");
-                    int type = jObject.optInt(JSONUtils.KEY_EMERGENCY_CALL_IND_ACTION_TYPE, -1);
-                    String reason = jObject.optString(JSONUtils.KEY_EMERGENCY_CALL_IND_REASON, "");
+                    String urnUri = jObject.optString(JSONUtils.KEY_ECALL_IND_URN_URI, "");
+                    int type = jObject.optInt(JSONUtils.KEY_ECALL_IND_ACTION_TYPE, -1);
+                    String reason = jObject.optString(JSONUtils.KEY_ECALL_IND_REASON, "");
                     handleCallIsEmergency(callSession, urnUri, reason, type);
                     break;
                 }
@@ -890,6 +888,11 @@ public class VoWifiCallManager extends ServiceManager {
                     handleVideoResize(eventCode, callSession, width, height);
                     break;
                 }
+                case JSONUtils.EVENT_CODE_LOCAL_VIDEO_LEVEL_UPDATE: {
+                    int level = jObject.optInt(JSONUtils.KEY_VIDEO_LEVEL, -1);
+                    handleVideoLevelUpdate(callSession, level);
+                    break;
+                }
                 case JSONUtils.EVENT_CODE_CALL_RTCP_CHANGED:
                 case JSONUtils.EVENT_CODE_CONF_RTCP_CHANGED: {
                     ImsCallSessionImpl aliveCallSession = getAliveCallSession();
@@ -903,6 +906,12 @@ public class VoWifiCallManager extends ServiceManager {
                         Log.w(TAG, "The alive call do not same as the rtcp changed. Ignore this: "
                                 + callSession + ", and the alive call is: " + aliveCallSession);
                     }
+                    break;
+                }
+                case JSONUtils.EVENT_CODE_USSD_INFO_RECEIVED: {
+                    String info = jObject.optString(JSONUtils.KEY_USSD_INFO_RECEIVED, "");
+                    int mode = jObject.optInt(JSONUtils.KEY_USSD_MODE, -1);
+                    handleUssdInfoReceived(callSession, info, mode);
                     break;
                 }
                 default:
@@ -1335,16 +1344,47 @@ public class VoWifiCallManager extends ServiceManager {
                     + width + "," + height);
             videoProvider.changePeerDimensions(width, height);
         } else if (eventCode == JSONUtils.EVENT_CODE_LOCAL_VIDEO_RESIZE) {
-            if (!callSession.isMultiparty()) {
-                // If the call do not conference, change the camera capabilities.
-                CameraCapabilities newCap = new CameraCapabilities(width, height);
-                if (!videoProvider.cameraCapabilitiesEquals(newCap)) {
-                    Log.d(TAG, "The call " + callSession.getCallId() + " local video resize: "
-                            + width + "," + height);
-                    videoProvider.changeCameraCapabilities(newCap);
-                }
-            }
+            Log.w(TAG, "Shouldn't handle the local video resize here. Please check!");
         }
+    }
+
+    private void handleVideoLevelUpdate(ImsCallSessionImpl callSession, int level) {
+        if (Utilities.DEBUG) Log.i(TAG, "Handle video level update to " + level);
+        if (callSession == null) {
+            Log.w(TAG, "[handleVideoLevelUpdate] The call session is null.");
+            return;
+        }
+
+        ImsVideoCallProviderImpl videoProvider = callSession.getVideoCallProviderImpl();
+        if (videoProvider == null) {
+            Log.e(TAG, "Failed to update the video level as video provider is null.");
+            return;
+        }
+
+        videoProvider.updateVideoQualityLevel(level);
+    }
+
+    private void handleRTPReceived(ImsCallSessionImpl callSession, boolean isVideo,
+            boolean isReceived) {
+        if (Utilities.DEBUG) Log.i(TAG, "Handle the call RTP received: " + isReceived);
+        if (callSession == null) {
+            Log.e(TAG, "[handleRTPReceived] The call session is null.");
+            return;
+        }
+
+        if (!callSession.isAlive()) {
+            Log.d(TAG, "The call " + callSession.getCallId() + " isn't alive, do nothing.");
+            return;
+        }
+
+        ImsCallSessionImpl confSession = callSession.getConfCallSession();
+        if (confSession != null) {
+            Log.d(TAG, "The call " + callSession.getCallId() + " will be invited to conference: "
+                    + confSession.getCallId() + ", do nothing.");
+            return;
+        }
+
+        if (mListener != null) mListener.onCallRTPReceived(isVideo, isReceived);
     }
 
     private void handleRTCPChanged(ImsCallSessionImpl callSession, int lose, int jitter, int rtt,
@@ -1357,6 +1397,24 @@ public class VoWifiCallManager extends ServiceManager {
 
         if (mListener != null) {
             mListener.onCallRTCPChanged(isVideo, lose, jitter, rtt);
+        }
+    }
+
+    private void handleUssdInfoReceived(ImsCallSessionImpl callSession, String info, int mode) {
+        if (Utilities.DEBUG) Log.i(TAG, "Handle the received ussd info.");
+        if (callSession == null) {
+            Log.w(TAG, "[handleUssdInfoReceived] The call session is null");
+            return;
+        }
+
+        callSession.updateState(ImsCallSession.State.ESTABLISHED);
+        IImsCallSessionListener listener = callSession.getListener();
+        if (listener != null) {
+            try {
+                listener.callSessionUssdMessageReceived(callSession, mode, info);
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to send the ussd info. e: " + e);
+            }
         }
     }
 
@@ -1528,6 +1586,13 @@ public class VoWifiCallManager extends ServiceManager {
 
                 // As invite success, need invite the next participant.
                 needInviteNext = true;
+
+                // Sometimes, can not receive the "BYE", and it will leader to the call can
+                // not receive the terminate callback. We'd like to release the call.
+                Message msg = new Message();
+                msg.what = MSG_RELEASE_CALL;
+                msg.obj = callSession.getCallId();
+                mHandler.sendMessageDelayed(msg, RELEASE_CALL_DELAY);
                 break;
             }
             case JSONUtils.EVENT_CODE_CONF_INVITE_FAILED: {
@@ -1629,29 +1694,6 @@ public class VoWifiCallManager extends ServiceManager {
             // Send the message to invite the next participant.
             mHandler.sendMessage(mHandler.obtainMessage(MSG_INVITE_CALL, confSession));
         }
-    }
-
-    private void handleRTPReceived(ImsCallSessionImpl callSession, boolean isVideo,
-            boolean isReceived) {
-        if (Utilities.DEBUG) Log.i(TAG, "Handle the call RTP received: " + isReceived);
-        if (callSession == null) {
-            Log.e(TAG, "[handleRTPReceived] The call session is null.");
-            return;
-        }
-
-        if (!callSession.isAlive()) {
-            Log.d(TAG, "The call " + callSession.getCallId() + " isn't alive, do nothing.");
-            return;
-        }
-
-        ImsCallSessionImpl confSession = callSession.getConfCallSession();
-        if (confSession != null) {
-            Log.d(TAG, "The call " + callSession.getCallId() + " will be invited to conference: "
-                    + confSession.getCallId() + ", do nothing.");
-            return;
-        }
-
-        if (mListener != null) mListener.onCallRTPReceived(isVideo, isReceived);
     }
 
     /**

@@ -21,6 +21,7 @@ import android.view.WindowManager;
 import com.android.ims.internal.ImsVideoCallProvider;
 import com.spreadtrum.ims.vowifi.Utilities.Camera;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
+import com.spreadtrum.ims.vowifi.Utilities.VideoQuality;
 
 public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private static final String TAG =
@@ -33,6 +34,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private int mAngle = -1;
     private int mScreenRotation = -1;
     private int mDeviceOrientation = -1;
+    private int mVideoQualityLevel = -1;
     private boolean mWaitForModifyResponse = false;
 
     private String mCameraId = null;
@@ -96,6 +98,11 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                 }
                 case MSG_STOP_CAMERA: {
                     synchronized (this) {
+                        if (mCameraId == null) {
+                            Log.d(TAG, "Camera already stopped, do nothing.");
+                            break;
+                        }
+
                         int res = Result.SUCCESS;
                         res = res & mCallSession.stopLocalRender(mPreviewSurface, mCameraId);
                         res = res & mCallSession.stopCamera();
@@ -141,8 +148,9 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
                     int res = Result.SUCCESS;
                     // Start the capture and start the render.
-                    int quality = Utilities.getDefaultVideoQuality(mPreferences);
-                    res = res & mCallSession.startCapture(mCameraId, quality);
+                    VideoQuality quality = Utilities.findVideoQuality(getVideoQualityLevel());
+                    res = res & mCallSession.startCapture(
+                            mCameraId, quality._width, quality._height, quality._frameRate);
                     if (previewSurface != null) {
                         res = res & mCallSession.startLocalRender(previewSurface, mCameraId);
                     }
@@ -154,9 +162,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                     }
                 }
                 case MSG_REQUEST_CAMERA_CAPABILITIES: {
-                    int quality = Utilities.getDefaultVideoQuality(mPreferences);
-                    CameraCapabilities cameraCapabilities =
-                            mCallSession.requestCameraCapabilites(quality);
+                    CameraCapabilities cameraCapabilities = getCameraCapabilities();
 
                     // If the device rotate to 90 or 270, we need exchange the height and width.
                     if ((mDeviceOrientation == 90 || mDeviceOrientation == 270)
@@ -444,7 +450,27 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
         }
     }
 
-    public boolean cameraCapabilitiesEquals(CameraCapabilities capabilities) {
+    public void updateVideoQualityLevel(int newLevel) {
+        synchronized (this) {
+            Log.d(TAG, "Update the video quality level from " + mVideoQualityLevel
+                    + " to " + newLevel);
+            if (newLevel > 0 && newLevel != mVideoQualityLevel) {
+                mVideoQualityLevel = newLevel;
+                // As video quality level changed, we need stop camera & start camera again.
+                String oldCameraId = mCameraId;
+                if (mCameraId != null) {
+                    mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
+                }
+
+                // Start the camera with old camera.
+                if (oldCameraId != null) {
+                    mHandler.sendMessage(mHandler.obtainMessage(MSG_START_CAMERA, oldCameraId));
+                }
+            }
+        }
+    }
+
+    private boolean cameraCapabilitiesEquals(CameraCapabilities capabilities) {
         if ((mCameraCapabilities == null && capabilities == null)
                 || (mCameraCapabilities == capabilities)) {
             return true;
@@ -458,6 +484,28 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                     && mCameraCapabilities.getMaxZoom() == capabilities.getMaxZoom()
                     && mCameraCapabilities.isZoomSupported() == capabilities.isZoomSupported();
         }
+    }
+
+    private float getVideoQualityLevel() {
+        if (mVideoQualityLevel < 0) {
+            mVideoQualityLevel = mCallSession.getDefaultVideoLevel();
+            if (mVideoQualityLevel < 0) {
+                Log.w(TAG, "Can not get the default video level, set it as default.");
+                mVideoQualityLevel = Utilities.getDefaultVideoQuality(mPreferences)._level;
+            }
+        }
+
+        return mVideoQualityLevel;
+    }
+
+    private CameraCapabilities getCameraCapabilities() {
+        float videoLevel = getVideoQualityLevel();
+        VideoQuality quality = Utilities.findVideoQuality(videoLevel);
+        if (quality == null) {
+            quality = Utilities.getDefaultVideoQuality(mPreferences);
+        }
+
+        return new CameraCapabilities(quality._width, quality._height);
     }
 
     private void calculateAngle(int deviceOrientation) {

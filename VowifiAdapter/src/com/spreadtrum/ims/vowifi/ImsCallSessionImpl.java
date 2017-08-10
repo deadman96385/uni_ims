@@ -6,9 +6,6 @@ package com.spreadtrum.ims.vowifi;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -16,7 +13,6 @@ import android.os.Message;
 import android.os.RemoteException;
 import android.os.SystemProperties;
 import android.telecom.VideoProfile;
-import android.telecom.VideoProfile.CameraCapabilities;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.ServiceState;
 import android.text.TextUtils;
@@ -43,20 +39,20 @@ import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.ProviderUtils;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.SRVCCSyncInfo;
-import com.spreadtrum.ims.vowifi.Utilities.VideoQuality;
 import com.spreadtrum.ims.vowifi.VoWifiCallManager.ICallChangedListener;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-public class ImsCallSessionImpl extends IImsCallSession.Stub implements LocationListener {
+public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final String TAG = Utilities.getTag(ImsCallSessionImpl.class.getSimpleName());
 
-    // Temp, used to test emergency call.
+    // Used to force phone number as emergency call.
     private static final String PROP_KEY_FORCE_SOS_CALL = "persist.vowifi.force.soscall";
 
     private static final int MERGE_TIMEOUT = 15 * 1000;
@@ -64,6 +60,21 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
     private static final boolean SUPPORT_START_CONFERENCE = false;
 
     private static final String PARTICIPANTS_SEP = ";";
+
+    // It is defined in #ImsPhoneMmiCode.
+    // And could refer to TS 22.030 6.5.2 "Structure of the MMI"
+    private static final Pattern PATTERN_SUPP_SERVICE = Pattern.compile(
+            "((\\*|#|\\*#|\\*\\*|##)(\\d{2,3})(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*))?)?)?)?#)(.*)");
+    /*       1  2                    3          4  5       6   7         8    9     10  11             12
+
+             1 = Full string up to and including #
+             2 = action (activation/interrogation/registration/erasure)
+             3 = service code
+             5 = SIA
+             7 = SIB
+             9 = SIC
+             10 = dialing number
+    */
 
     private int mCallId = -1;
     private boolean mIsAlive = false;
@@ -73,10 +84,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
     private boolean mInSRVCC = false;
 
     private Context mContext;
-    private Location mSosLocation;
     private CallCursor mCursor;
     private VoWifiCallStateTracker mCallStateTracker;
-    private LocationManager mLocationManager;
     private VoWifiCallManager mCallManager;
     private IVoWifiCall mICall = null;
 
@@ -289,26 +298,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         return builder.toString();
     }
 
-    @Override
-    public void onLocationChanged(Location location) {
-        mSosLocation = location;
-    }
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-        // Do nothing.
-    }
-
-    @Override
-    public void onProviderEnabled(String provider) {
-        // Do nothing.
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
-        // Do nothing.
-    }
-
     /**
      * Closes the object. This object is not usable after being closed.
      */
@@ -325,12 +314,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
         if (mCursor != null) {
             mCursor.close();
-        }
-
-        if (mLocationManager != null) {
-            mLocationManager.removeUpdates(this);
-            mSosLocation = null;
-            mLocationManager = null;
         }
     }
 
@@ -475,35 +458,18 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             return;
         }
 
+        Matcher m = PATTERN_SUPP_SERVICE.matcher(callee);
+        // Is this formatted like a standard supplementary service code?
+        if (m.matches()) {
+            startUssdCall(callee);
+            return;
+        }
+
         // Check if emergency call.
         boolean isEmergencyNumber = PhoneNumberUtils.isEmergencyNumber(callee);
         String sosNumber = SystemProperties.get(PROP_KEY_FORCE_SOS_CALL, null);
         boolean forceSos = callee.equals(sosNumber);
         Log.d(TAG, "If the phone number is emergency number: " + isEmergencyNumber);
-
-        boolean needLocationInfo = mCursor != null ? mCursor.needWithLocation() : false;
-        if (isEmergencyNumber || needLocationInfo || forceSos) {
-            mLocationManager =
-                    (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
-            List<String> providers = mLocationManager.getProviders(true);
-            String locationProvider = null;
-            if (providers.contains(LocationManager.GPS_PROVIDER)) {
-                locationProvider = LocationManager.GPS_PROVIDER;
-            } else if (providers.contains(LocationManager.NETWORK_PROVIDER)) {
-                locationProvider = LocationManager.NETWORK_PROVIDER;
-            } else {
-                Log.w(TAG, "Failed to get the location provider!");
-            }
-
-            if (!TextUtils.isEmpty(locationProvider)) {
-                mSosLocation = mLocationManager.getLastKnownLocation(locationProvider);
-                mLocationManager.requestLocationUpdates(locationProvider, 1000, 2.0f, this);
-            } else {
-                mLocationManager = null;
-                mSosLocation = null;
-                Log.w(TAG, "Failed to get provider used to get the location info!");
-            }
-        }
 
         // Update the participants and call profile.
         mParticipants.add(callee);
@@ -870,8 +836,27 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         // To check if there is conference, if yes, we needn't init a new call session.
         ImsCallSessionImpl confSession = mCallManager.getConfCallSession();
         if (confSession != null) {
-            // If there is conference call, we need invite this call to the conference.
-            inviteToConference(confSession);
+            if (confSession.getParticipantsCount() >= 5) {
+                // It means the conference already contains 6 person. Can not invite more.
+                // Give a toast to alert user.
+                String failMessage = mContext.getString(R.string.vowifi_conf_can_not_invite_more);
+                Toast.makeText(mContext, failMessage, Toast.LENGTH_LONG).show();
+                // Give the merge failed callback.
+                handleMergeActionFailed(failMessage);
+            } else {
+                if (confSession != this) {
+                    // If there is conference call, we need invite this call to the conference.
+                    inviteThisCallToConference(confSession, mListener);
+                } else {
+                    ImsCallSessionImpl callSession = mCallManager.getCouldInviteCallSession();
+                    if (callSession == null) {
+                        // Give the merge failed callback.
+                        handleMergeActionFailed("There isn't could invite call.");
+                    } else {
+                        callSession.merge(confSession, mListener);
+                    }
+                }
+            }
         } else {
             // If there isn't conference call, we need create a new call session for it.
             createConfCall();
@@ -1453,43 +1438,21 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
     }
 
-    public CameraCapabilities requestCameraCapabilites(int videoQuality) {
+    public int getDefaultVideoLevel() {
         if (Utilities.DEBUG) {
-            Log.i(TAG, "Try to request the camera capabilites for call: " + mCallId);
+            Log.i(TAG, "Try to get the default video level for call: " + mCallId);
         }
 
         if (mICall == null) {
             Log.e(TAG, "Can not start the camera as the call interface is null.");
-            return null;
+            return -1;
         }
 
         try {
-            // If the call do not establish, the camera capabilities do not consult, return null.
-            if (getState() < State.ESTABLISHED) {
-                // Use the given video quality to build the camera capabilities.
-                VideoQuality video = Utilities.sVideoQualityList.get(videoQuality);
-                return new CameraCapabilities(video._width, video._height);
-            }
-
-            String res = mICall.sessGetCameraCapabilities(mCallId);
-            if (TextUtils.isEmpty(res)) {
-                Log.w(TAG, "Can not request the camera capabilites for the call " + mCallId);
-                VideoQuality video = Utilities.sVideoQualityList.get(videoQuality);
-                return new CameraCapabilities(video._width, video._height);
-            } else {
-                String[] capabilites = res.split(",");
-                if (capabilites.length != 2) {
-                    Log.e(TAG, "The camera capabilites do not match the format: " + res);
-                    return null;
-                }
-
-                int width = Integer.valueOf(capabilites[0]);
-                int height = Integer.valueOf(capabilites[1]);
-                return new CameraCapabilities(width, height);
-            }
+            return mICall.getDefaultVideoLevel();
         } catch (RemoteException e) {
             Log.e(TAG, "Can not get the camera capabilities as catch the RemoteException e: " + e);
-            return null;
+            return -1;
         }
     }
 
@@ -1619,10 +1582,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
     }
 
-    public int startCapture(String cameraId, int videoQuality) {
+    public int startCapture(String cameraId, int width, int height, int frameRate) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to start capture for the call: " + mCallId + ", cameraId: " + cameraId
-                    + ", videoQuality index: " + videoQuality);
+                    + ", width: " + width + ", height: " + height + ", frameRate: " + frameRate);
         }
 
         if (mICall == null) {
@@ -1631,9 +1594,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
 
         try {
-            VideoQuality video = Utilities.sVideoQualityList.get(videoQuality);
-            int res = mICall.captureStart(
-                    Camera.isFront(cameraId), video._width, video._height, video._frameRate);
+            int res = mICall.captureStart(Camera.isFront(cameraId), width, height, frameRate);
             if (res == Result.FAIL) {
                 Log.w(TAG, "Can not start capture.");
             }
@@ -1827,14 +1788,17 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             Log.i(TAG, "Terminate this call: " + this + " for reason: " + reason);
         }
 
-        if (mICall == null) return;
-
         try {
-            int res = Result.FAIL;
-            if (isConferenceCall()) {
-                res = mICall.confTerm(mCallId, reason);
+            int res = Result.SUCCESS;
+            if (mICall != null && mCallId > 0) {
+                if (isConferenceCall()) {
+                    res = mICall.confTerm(mCallId, reason);
+                } else {
+                    res = mICall.sessTerm(mCallId, reason);
+                }
             } else {
-                res = mICall.sessTerm(mCallId, reason);
+                Log.w(TAG, "Can not send the terminate action as call interface is null or id is "
+                        + mCallId);
             }
 
             if (res == Result.SUCCESS) {
@@ -1921,14 +1885,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
     private void startCall(String callee) throws RemoteException {
         if (Utilities.DEBUG) {
-            Log.i(TAG, "Start the call with the callee: " + callee + ", location: " + mSosLocation);
-        }
-
-        if (mSosLocation != null) {
-            double latitude = mSosLocation.getLatitude();
-            double longitude = mSosLocation.getLongitude();
-            Log.d(TAG, "Set call's location latitude: " + latitude + ", longitude: " + longitude);
-            mICall.sessCallSetGeolocation(latitude, longitude);
+            Log.i(TAG, "Start the call with the callee: " + callee);
         }
 
         String peerNumber = callee;
@@ -1954,7 +1911,30 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
     }
 
-    private void inviteToConference(ImsCallSessionImpl confSession) throws RemoteException {
+    /**
+     * Initiate an USSD call.
+     *
+     * @param ussd uri to send
+     */
+    private void startUssdCall(String ussdMessage) throws RemoteException {
+        if (Utilities.DEBUG)
+            Log.i(TAG, "Start an ussd call: " + ussdMessage);
+
+        int id = mICall.sessCall(ussdMessage, null, true, false, true, false);
+        if (id == Result.INVALID_ID) {
+            handleStartActionFailed("Native start the ussd call failed.");
+        } else {
+            mCallId = id;
+            updateState(State.INITIATED);
+            mIsAlive = true;
+
+            // Start action success, update the last call action as start.
+            updateRequestAction(VoWifiCallStateTracker.ACTION_START);
+        }
+    }
+
+    private void inviteThisCallToConference(ImsCallSessionImpl confSession,
+            IImsCallSessionListener hostlistener) throws RemoteException {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to invite this call " + mCallId + " to the conference call "
                     + confSession.getCallId());
@@ -1968,10 +1948,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             confSession.setInInviteCall(this);
 
             // Notify merge complete.
-            if (mListener != null) {
+            if (hostlistener != null) {
                 // As there is a conference call at background or foreground. As this callback
                 // defined in the framework, we need give this callback with null object.
-                mListener.callSessionMergeComplete(null);
+                hostlistener.callSessionMergeComplete(null);
             }
 
             IImsCallSessionListener confListener = confSession.getListener();
@@ -1998,6 +1978,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                     mContext.getString(R.string.vowifi_conf_invite_failed) + getCallee();
             Toast.makeText(mContext, errorText, Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void merge(ImsCallSessionImpl confSession, IImsCallSessionListener hostlistener)
+            throws RemoteException {
+        inviteThisCallToConference(confSession, hostlistener);
     }
 
     private void createConfCall() throws RemoteException {
