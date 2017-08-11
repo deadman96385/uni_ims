@@ -45,6 +45,8 @@ public class VoWifiRegisterManager extends ServiceManager {
         void onPrepareFinished(boolean success, int errorCode);
 
         void onRegisterStateChanged(int newState);
+
+        void onResetBlocked();
     }
 
     private static final String SERVICE_ACTION = "com.spreadtrum.vowifi.service.IRegisterService";
@@ -107,7 +109,6 @@ public class VoWifiRegisterManager extends ServiceManager {
                 }
                 updateRegisterState(RegisterState.STATE_IDLE);
                 clearPendingList();
-                addToPendingList(new PendingAction("registerFroceStop", MSG_ACTION_FORCE_STOP));
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Can not register callback as catch the RemoteException. e: " + e);
@@ -123,7 +124,8 @@ public class VoWifiRegisterManager extends ServiceManager {
             case MSG_ACTION_LOGIN: {
                 PendingAction action = (PendingAction) msg.obj;
                 login((Boolean) action._params.get(0), (Boolean) action._params.get(1),
-                        (String) action._params.get(2), (String) action._params.get(3), (String) action._params.get(4), (Boolean)action._params.get(5));
+                        (String) action._params.get(2), (String) action._params.get(3),
+                        (String) action._params.get(4), (Boolean)action._params.get(5));
                 handle = true;
                 break;
             }
@@ -166,9 +168,14 @@ public class VoWifiRegisterManager extends ServiceManager {
         if (mIRegister != null) {
             try {
                 // Reset first, then prepare.
-                mIRegister.cliReset();
+                int res = mIRegister.cliReset();
                 mLoginPrepared = false;
                 updateRegisterState(RegisterState.STATE_IDLE);
+                if (res == Result.FAIL) {
+                    Log.w(TAG, "Reset action failed, notify as prepare failed.");
+                    if (mListener != null) mListener.onPrepareFinished(mLoginPrepared, 0);
+                    return;
+                }
 
                 // Prepare for login, need open account, start client and update settings.
                 if (cliOpen(info) && cliStart() && cliUpdateSettings(info, isSupportSRVCC)) {
@@ -178,7 +185,8 @@ public class VoWifiRegisterManager extends ServiceManager {
                 // todo: need location for some special Operator
                 boolean isNeedGeoLocation = false;
                 if (isNeedGeoLocation) {
-                    LocationManager locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+                    LocationManager locationManager =
+                            (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
                     List<String> providers = locationManager.getProviders(true);
                     String locationProvider = null;
                     if (providers.contains(LocationManager.GPS_PROVIDER)) {
@@ -186,14 +194,14 @@ public class VoWifiRegisterManager extends ServiceManager {
                     } else if (providers.contains(LocationManager.NETWORK_PROVIDER)) {
                         locationProvider = LocationManager.NETWORK_PROVIDER;
                     } else {
-                        Log.w(TAG, "Failed to get the location provider. Can not provider the location info!");
+                        Log.w(TAG, "Can not provider the location info as provider is null.");
                     }
                     if (!TextUtils.isEmpty(locationProvider)) {
                         Location sosLocation = locationManager.getLastKnownLocation(locationProvider);
                         mIRegister.SetGeolocEnable(true);
                         double latitude = sosLocation == null ? 0 : sosLocation.getLatitude();
                         double longitude = sosLocation == null ? 0 : sosLocation.getLongitude();
-                        Log.i(TAG, "Start register. set latitude= " + latitude + ";longitude=" + longitude);
+                        Log.d(TAG, "Start register. set latitude= " + latitude + ";longitude=" + longitude);
                         mIRegister.SetGeolocation(latitude, longitude);
                     } else {
                         Log.w(TAG, "register Failed to get the location info!");
@@ -218,13 +226,13 @@ public class VoWifiRegisterManager extends ServiceManager {
         }
     }
 
-    public void login(boolean forSos, boolean isIPv4, String localIP, String pcscfIP, String dnsSerIP, boolean isRelogin) {
+    public void login(boolean forSos, boolean isIPv4, String localIP, String pcscfIP,
+            String dnsSerIP, boolean isRelogin) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to login to the ims, for sos: " + forSos + ", is IPv4: " + isIPv4
-                    + ", current register state: " + mRegisterState);
-            Log.i(TAG, "Login with the local ip: " + localIP + ", pcscf ip: " + pcscfIP  + ", dns server ip: " + dnsSerIP );
-	     Log.i(TAG, "isRelogin: " + isRelogin);
-
+                    + ", current register state: " + mRegisterState + ", re-login: " + isRelogin);
+            Log.i(TAG, "Login with the local ip: " + localIP + ", pcscf ip: " + pcscfIP
+                    + ", dns server ip: " + dnsSerIP);
         }
 
         if (mRegisterState == RegisterState.STATE_CONNECTED) {
@@ -351,7 +359,8 @@ public class VoWifiRegisterManager extends ServiceManager {
             try {
                 int res = mIRegister.cliReset();
                 if (res == Result.FAIL) {
-                    Log.e(TAG, "Failed to reset the sip stack, please check!");
+                    Log.e(TAG, "Failed to reset the sip stack, notify as reset block.");
+                    if (mListener != null) mListener.onResetBlocked();
                 }
             } catch (RemoteException e) {
                 Log.e(TAG, "Catch the remote exception when unregister, e: " + e);

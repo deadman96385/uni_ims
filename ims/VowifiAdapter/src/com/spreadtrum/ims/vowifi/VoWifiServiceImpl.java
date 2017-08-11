@@ -334,7 +334,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     public void resetAll(WifiState state, int delayMillis) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Reset the security and sip stack with wifi state: "
-                    + (WifiState.CONNECTED.equals(state) ? "connect" : "disconnect"));
+                    + (WifiState.CONNECTED.equals(state) ? "connect" : "disconnect")
+                    + ", delay millis: " + delayMillis);
         }
 
         if (state == null) {
@@ -898,8 +899,9 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             if (success) {
                 // As prepare success, start the login process now. And try from the IPv6;
                 SecurityConfig config = mSecurityMgr.getConfig();
-                mRegisterIP = RegisterIPAddress.getInstance(config._ip4, config._ip6, 
-                        config._pcscf4, config._pcscf6, getUsedPcscfAddr(), config._dns4, config._dns6);
+                mRegisterIP = RegisterIPAddress.getInstance(config._ip4, config._ip6,
+                        config._pcscf4, config._pcscf6, getUsedPcscfAddr(), config._dns4,
+                        config._dns6);
                 registerLogin(false);
             } else {
                 // Prepare failed, give the register result as failed.
@@ -911,6 +913,16 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onRegisterStateChanged(int newState) {
             // If the register state changed, update the register state to call manager.
             if (mCallMgr != null) mCallMgr.updateRegisterState(newState);
+        }
+
+        @Override
+        public void onResetBlocked() {
+            // As the reset blocked, and the vowifi service will be kill soon,
+            // We'd like to notify as reset finished if in reset step.
+            if (mResetStep != RESET_STEP_INVALID) {
+                Log.d(TAG, "Reset blocked, and the current reset step is " + mResetStep);
+                resetFinished();
+            }
         }
 
         private String getUsedPcscfAddr() {
