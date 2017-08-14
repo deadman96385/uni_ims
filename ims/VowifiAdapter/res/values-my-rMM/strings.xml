@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="vowifi_request_upgrade_title">"အပ္ဂရိတ္လုပ္ရန္ ေတာင္းဆို"</string>
+<string name="vowifi_request_upgrade_text">"ဗြီဒီယိုဖုန္းသို ့ အပ္ဂရိတ္လုပ္ရန္ ေတာင္းဆို, ေက်းဇူးျပဳ၍ လက္ခံ သို ့မဟုတ္ ျငင္းပယ္ ေရြးခ်ယ္ပါ."</string>
+<string name="vowifi_request_downgrade_title">"ေဒါင္းဂရိတ္ရန္ ေတာင္းဆို"</string>
+<string name="vowifi_request_downgrade_text">"ဗြီဒီယိုဖုန္းသို ့ ေဒါင္းဂရိတ္လုပ္ရန္ ေတာင္းဆို, ေက်းဇူးျပဳ၍ လက္ခံ သို ့မဟုတ္ ျငင္းပယ္ ေရြးခ်ယ္ပါ."</string>
+<string name="vowifi_add_video_failed">"ျငင္းပယ္ရန္ ေတာင္းဆို."</string>
+<string name="vowifi_add_video_success">"လက္ခံရန္ ေတာင္းဆို."</string>
+<string name="vowifi_remove_video_failed">"ဗြီဒီယို ဖယ္မရ."</string>
+<string name="vowifi_remove_video_success">"ဗြီဒီယို ဖုန္း လိုင္းက်ေန."</string>
+<string name="vowifi_hold_success">"ဖုန္းကိုင္ျပီး"</string>
+<string name="vowifi_hold_fail">"ဖုန္းမရ"</string>
+<string name="vowifi_resume_success">"ျပန္လုပ္ ေအာင္ျမင္"</string>
+<string name="vowifi_resume_fail">"ျပန္လုပ္ မေအာင္ျမင္"</string>
+<string name="vowifi_call_retry">"ေက်းဇူးျပဳ၍ ခဏေနမွ ျပန္ျကိုးစားပါ"</string>
+<string name="vowifi_call_is_focus">"ကြန္ဖရင့္သို ့ထည့္ပါ"</string>
+<string name="vowifi_conf_connect_timeout">"ကြန္ဖရင့္ ဆာဗာ ခ်ိတ္ဆက္အခ်ိန္ျပည့္ျပီ."</string>
+<string name="vowifi_conf_disconnect">"ကြန္ဖရင့္ ဆက္တင္မရ"</string>
+<string name="vowifi_conf_finished">"ကြန္ဖရင့္ ျပီးျပီ"</string>
+<string name="vowifi_conf_invite_request_failed">"ဖိတ္ေခၚေတာင္းဆို ပို ့မရ. ကြန္ဖရင့္ ဆက္တင္မရနိုင္."</string>
+<string name="vowifi_conf_invite_failed">"ပါ၀င္သူ ဖိတ္မရ:"</string>
+<string name="vowifi_conf_kick_failed">"ပါ၀င္သူ ဖယ္မရ"</string>
+<string name="vowifi_conf_none_participant">"ပါ၀င္သူမရွိ , ဖုန္းခ်လိုက္ပါ."</string>
+<string name="vowifi_conf_do_not_support">"အက္ရွင္ ယခု မေထာက္ပံ့ပါ."</string>
+<string name="vowifi_video_call_do_not_support">"အက္ရွင္ ယခု မေထာက္ပံ့ပါ."</string>
+</resources>
