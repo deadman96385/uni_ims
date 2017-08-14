@@ -288,6 +288,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     @Override
     public void onSendSessionModifyResponse(VideoProfile responseProfile) {
             log("onSendSessionModifyResponse->responseProfile:" + responseProfile +" callId:"+mImsCallSessionImpl.getCallId());
+            mVTHandler.removeMessages(EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT);
             if(VideoProfile.isVideo(responseProfile.getVideoState())){
                 mCi.responseVolteCallMediaChange(true, Integer.parseInt(mImsCallSessionImpl.getCallId()),null);
                 receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
