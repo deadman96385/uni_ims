@@ -31,4 +31,13 @@
 <string name="camera_open_fail">"เปิดกล้องผิดพลาด"</string>
 <string name="ims_switch_failed">"ข้อผิดพลาด,เครือข่ายโปรดลองอีกครั้งในภายหลัง"</string>
 
+    <string name="low_battery_warning_media_alert_message">"ระดับแบตเตอรี่อยู่ต่ำกว่า 15% โปรดเลือกยอมรับหรือปฏิเสธ."</string>
+     <string name="low_battery_warning_title">"คำเตือนแบตเตอรี่ต่ำ"</string>
+     <string name="low_battery_warning_message">"ระดับแบตเตอรี่ของคุณอยู่ด้านล่าง 15% .ต้องการที่จะดำเนินการต่อด้วยการโทรวิดีโอหรือแปลงให้เสียงเรียก?"</string>
+     <string name="low_battery_continue_video_call">ใช่</string>
+     <string name="low_battery_convert_to_voice_call">"แปลง"</string>
+     <string name="handover_to_volte_success">"เปลี่ยนไปใช้ VoLTE เพื่อคุณภาพเสียงที่ดีกว่า"</string>
+     <string name="vowifi_regist_fail_content">"เครือข่ายไม่รองรับ VoWi-Fi"</string>
+     <string name="vowifi_attation">"มีคำขอใช้ VoWi-Fi"</string>
+     <string name="vowifi_register_error">"เครือข่ายไม่รองรับ VoWi-Fi"</string>
 </resources>

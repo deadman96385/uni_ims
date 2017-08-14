@@ -31,4 +31,13 @@
 <string name="camera_open_fail">"ເປີດກ້ອງຖ່າຍຮູບບໍ່ສຳເລັດ"</string>
 <string name="ims_switch_failed">"ເຄືອຂ່າຍຂັດຂ້ອງ, ກະລຸນາລອງໃໝ່ພາຍຫຼັງ"</string>
 
+    <string name="low_battery_warning_media_alert_message">"ແບັດເຕີຣີຂອງທ່ານຕ່ຳກ່ວາ15% ກະລຸນາເລືອກຮັບເອົາຫລືປະຕິເສດ"</string>
+     <string name="low_battery_warning_title">"ແຈ້ງເຕືອນແບັດເຕີຣີຕ່ຳ"</string>
+     <string name="low_battery_warning_message">"ແບດເຕີຣີຂອງທ່ານຕ່ຳກ່ວາ15%ດຳເນີນການໂທຕໍ່ຫລືບ?"</string>
+     <string name="low_battery_continue_video_call">"ຕົກລົງ"</string>
+     <string name="low_battery_convert_to_voice_call">"ແປງເປັນສຽງ"</string>
+     <string name="handover_to_volte_success">"ການປ່ຽນເປັນ VOLTE ສໍາລັບການໂທທີ່ມີຄຸນນະພາບສຽງທີ່ດີກວ່າ"</string>
+     <string name="vowifi_regist_fail_content">"ເຄືອຂ່າຍບໍ່ສະຫນັບສະຫນູນ Vowifi"</string>
+     <string name="vowifi_attation">"ການພິຈາລະນາ Vowifi"</string>
+     <string name="vowifi_register_error">"ເຄືອຂ່າຍບໍ່ສະຫນັບສະຫນູນ Vowifi"</string>
 </resources>

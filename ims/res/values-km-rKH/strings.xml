@@ -31,4 +31,13 @@
 <string name="camera_open_fail">"បរាជ័យក្នុងការបើកកាមេរ៉ា"</string>
 <string name="ims_switch_failed">"បណ្តាញមានកំហុស សូមសាកល្បងម្តងទៀត"</string>
 
+    <string name="low_battery_warning_media_alert_message">"កម្រិតថ្មរបស់លោកអ្នកនៅសល់ទាបជាង15%។សូមជ្រើសរើសទទួលឬបដិសេធ។"</string>
+     <string name="low_battery_warning_title">"ការព្រមានពេលថ្មសល់តិច"</string>
+     <string name="low_battery_warning_message">"កម្រិតថ្មរបស់លោកអ្នកទាបជាង15%។តើលោកអ្នកចង់បន្តការហៅវីដេអូរប្តូរទៅជាការហៅជាសម្លងវិញ?"</string>
+     <string name="low_battery_continue_video_call">"បាទ/ចាស"</string>
+     <string name="low_battery_convert_to_voice_call">"បម្លែង"</string>
+     <string name="handover_to_volte_success">"កំពុងប្តូរទៅជាVoLTEសម្រាប់គុណភាពសម្លេងកាន់តែប្រសើរ"</string>
+     <string name="vowifi_regist_fail_content">"បណ្តាញមិនគាំទ្រvowifiទេ"</string>
+     <string name="vowifi_attation">"ការរំលឹកពីvowifi"</string>
+     <string name="vowifi_register_error">"បណ្តាញមិនគាំទ្រvowifiទេ"</string>
 </resources>

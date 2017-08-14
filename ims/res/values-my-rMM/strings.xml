@@ -36,4 +36,8 @@
      <string name="low_battery_warning_message">"ဘကၳရီ ပါ၀ါအား 15% ေအာက္မွာ.ဗါီဒိယိုဖုန္း ဆက္ေခၚမွာလား (သို ့) အသံဖုန္း ေျပာင္းမွာလား?"</string>
      <string name="low_battery_continue_video_call">"မွန္သည္"</string>
      <string name="low_battery_convert_to_voice_call">"ေျပာင္းပါ"</string>
+    <string name="handover_to_volte_success">"အသံအရည္အေသြးပိုေကာင္းရန္ VoLTE ဖြင့္ပါ"</string>
+     <string name="vowifi_regist_fail_content">"ကြန္ရက္ vowifi မေထာက္ပံ့"</string>
+     <string name="vowifi_attation">"Vowifi သတိေပးခ်က္"</string>
+     <string name="vowifi_register_error">"ကြန္ရက္ vowifi မေထာက္ပံ့"</string>
 </resources>
