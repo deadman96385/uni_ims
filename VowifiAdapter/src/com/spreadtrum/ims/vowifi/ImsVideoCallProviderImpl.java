@@ -449,7 +449,9 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                 }
 
                 // Start the camera with old camera.
-                mHandler.sendMessage(mHandler.obtainMessage(MSG_START_CAMERA, oldCameraId));
+                if (oldCameraId != null) {
+                    mHandler.sendMessage(mHandler.obtainMessage(MSG_START_CAMERA, oldCameraId));
+                }
             }
         }
     }

@@ -1044,11 +1044,12 @@ public class VoWifiCallManager extends ServiceManager {
         switch (eventCode) {
             case JSONUtils.EVENT_CODE_CALL_HOLD_OK:
             case JSONUtils.EVENT_CODE_CONF_HOLD_OK: {
-                callSession.updateAliveState(false /* held, do not alive */);
-                listener.callSessionHeld(callSession, callSession.getCallProfile());
                 // As the call hold, if the call is video call, we need stop all the video.
                 ImsVideoCallProviderImpl videoProvider = callSession.getVideoCallProviderImpl();
                 if (videoProvider != null) videoProvider.stopAll();
+
+                callSession.updateAliveState(false /* held, do not alive */);
+                listener.callSessionHeld(callSession, callSession.getCallProfile());
                 break;
             }
             case JSONUtils.EVENT_CODE_CALL_HOLD_FAILED:

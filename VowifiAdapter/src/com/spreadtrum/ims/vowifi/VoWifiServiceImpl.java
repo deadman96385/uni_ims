@@ -920,6 +920,16 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             }
         }
 
+        @Override
+        public void onResetBlocked() {
+            // As the reset blocked, and the vowifi service will be kill soon,
+            // We'd like to notify as reset finished if in reset step.
+            if (mResetStep != RESET_STEP_INVALID) {
+                Log.d(TAG, "Reset blocked, and the current reset step is " + mResetStep);
+                resetFinished();
+            }
+        }
+
         private String getUsedPcscfAddr() {
             try {
                 IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();

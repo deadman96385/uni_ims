@@ -744,7 +744,7 @@ public class ImsUtImpl extends IImsUt.Stub {
             JSONObject rule = rules.getJSONObject(i);
             boolean enabled = rule.optBoolean(JSONUtils.KEY_UT_CB_RULE_ENABLED, true);
             JSONArray conditions = rule.optJSONArray(JSONUtils.KEY_UT_CB_CONDS);
-            status =  enabled?1:0;
+            status = enabled ? 1 : 0;
             if (conditions != null && conditions.length() == 1) {
                 // This is the normal result.
                 condition = conditions.getInt(0);
@@ -899,20 +899,20 @@ public class ImsUtImpl extends IImsUt.Stub {
     }
 
     private int getActionFromCFAction(int cfAction) {
-       switch(cfAction) {
-           case CommandsInterface.CF_ACTION_DISABLE:
-               return ImsUtInterface.ACTION_DEACTIVATION;
-           case CommandsInterface.CF_ACTION_ENABLE:
-               return ImsUtInterface.ACTION_ACTIVATION;
-           case CommandsInterface.CF_ACTION_ERASURE:
-               return ImsUtInterface.ACTION_ERASURE;
-           case CommandsInterface.CF_ACTION_REGISTRATION:
-               return ImsUtInterface.ACTION_REGISTRATION;
-           default:
-               break;
-       }
+        switch (cfAction) {
+            case CommandsInterface.CF_ACTION_DISABLE:
+                return ImsUtInterface.ACTION_DEACTIVATION;
+            case CommandsInterface.CF_ACTION_ENABLE:
+                return ImsUtInterface.ACTION_ACTIVATION;
+            case CommandsInterface.CF_ACTION_ERASURE:
+                return ImsUtInterface.ACTION_ERASURE;
+            case CommandsInterface.CF_ACTION_REGISTRATION:
+                return ImsUtInterface.ACTION_REGISTRATION;
+            default:
+                break;
+        }
 
-       return ImsUtInterface.INVALID;
+        return ImsUtInterface.INVALID;
     }
 
     private class CmdManager {
@@ -1108,7 +1108,7 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         public void onQueryCallBarringFinished(ArrayList<CallBarringInfo> infolist)
                 throws RemoteException {
-           if (!mHandleCmd) {
+            if (!mHandleCmd) {
                 Log.e(TAG, "Do not handle any cmd now, shouldn't query CB finished.");
                 return;
             }
@@ -1127,8 +1127,8 @@ public class ImsUtImpl extends IImsUt.Stub {
                 // Find the call barring info for this action.
                 Log.d(TAG, "Success to query the call barring info: " + info);
                 if (info != null) {
-                    if (mListenerEx!= null) {
-                           mListenerEx.utConfigurationCallBarringResult(key, info);
+                    if (mListenerEx != null) {
+                        mListenerEx.utConfigurationCallBarringResult(key, info);
                     }
                 } else {
                     mListenerEx.utConfigurationCallBarringResult(key, null);
