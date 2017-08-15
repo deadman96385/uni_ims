@@ -1588,6 +1588,15 @@ public class ImsService extends Service {
            }
            return "";
        }
+
+        //SPRD:add for bug718036
+        public int getFeatureRequestType() {
+            int requestType = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+            if (mFeatureSwitchRequest != null && !mIsCalling) {
+                requestType = mFeatureSwitchRequest.mTargetType;
+            }
+            return requestType;
+        }
    };
 
     private final IImsMultiEndpoint.Stub mImsMultiEndpointBinder = new IImsMultiEndpoint.Stub()  {
