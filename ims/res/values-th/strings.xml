@@ -37,7 +37,7 @@
      <string name="low_battery_continue_video_call">ใช่</string>
      <string name="low_battery_convert_to_voice_call">"แปลง"</string>
      <string name="handover_to_volte_success">"เปลี่ยนไปใช้ VoLTE เพื่อคุณภาพเสียงที่ดีกว่า"</string>
-     <string name="vowifi_regist_fail_content">"เครือข่ายไม่รองรับ VoWi-Fi"</string>
+     <string name="vowifi_regist_fail_content">ระบบ WiFi calling ขัดข้อง, กรุณาเปิดใช้อีกครั้งภายหลัง 5 นาที</string>
      <string name="vowifi_attation">"มีคำขอใช้ VoWi-Fi"</string>
-     <string name="vowifi_register_error">"เครือข่ายไม่รองรับ VoWi-Fi"</string>
+     <string name="vowifi_register_error">เครือข่ายไม่รองรับ VoWiFi</string>
 </resources>

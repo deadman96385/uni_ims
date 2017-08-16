@@ -38,7 +38,7 @@
     <!-- @} -->
     <string name="handover_to_volte_success">成功切换到VoLTE获取更好的语音质量</string>
     <string name="vowifi_attation">Vowifi 提示</string>
-    <string name="vowifi_regist_fail_content">当前网络不支持vowifi</string>
+    <string name="vowifi_regist_fail_content">当前网络不支持vowifi,请在五分钟后重新使用这个服务</string>
     <string name="vowifi_register_error">当前网络不支持vowifi</string>
 
 </resources>
