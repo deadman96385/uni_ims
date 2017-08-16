@@ -36,4 +36,8 @@
      <string name="low_battery_warning_message">"O seu nível de bateria está inferior a 15%. Deseja continuar com a chamada de vídeo ou converter para chamada de voz?"</string>
      <string name="low_battery_continue_video_call">"Sim"</string>
      <string name="low_battery_convert_to_voice_call">"Converter"</string>
+    <string name="handover_to_volte_success">"Alternando para VoLTE para melhor Qualidade de voz"</string>
+     <string name="vowifi_regist_fail_content">"Rede não suporta vowifi"</string>
+     <string name="vowifi_attation">"Atenção de vowifi"</string>
+     <string name="vowifi_register_error">"Rede não suporta vowifi"</string>
 </resources>
