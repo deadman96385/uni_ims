@@ -181,6 +181,7 @@ public class ImsServiceImpl {
         mContext.sendBroadcast(intent);
 
         mCi.registerForConnImsen(mHandler, EVENT_IMS_PND_STATE_CHANGED, null);
+        mCi.getImsPcscfAddress(mHandler.obtainMessage(EVENT_IMS_GET_PCSCF_ADDRESS));
         mCi.registerForImsNetworkStateChanged(mHandler, EVENT_IMS_STATE_CHANGED, null);
         mCi.registerForRadioStateChanged(mHandler, EVENT_RADIO_STATE_CHANGED, null);
         mCi.registerImsHandoverStatus(mHandler, EVENT_IMS_HANDOVER_STATE_CHANGED, null);
