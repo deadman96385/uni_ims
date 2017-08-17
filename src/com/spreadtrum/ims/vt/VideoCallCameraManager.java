@@ -11,6 +11,7 @@ import android.os.Message;
 import android.util.Log;
 import android.view.OrientationEventListener;
 import android.view.Surface;
+import android.view.WindowManager;
 import com.spreadtrum.ims.ImsConfigImpl;
 import android.widget.Toast;
 import com.spreadtrum.ims.R;
@@ -65,6 +66,10 @@ public class VideoCallCameraManager {
     private boolean mIsPreviewing;
     private boolean mIsRecording;
     private Context mContext;//SPRD:Add for bug571839
+    /* SPRD: bug729242 @{ */
+    private WindowManager mWinMana;
+    private int mScreenRotation = 0;
+    /*@}*/
 
     private Handler mHandler = new Handler() {
         @Override
@@ -97,6 +102,7 @@ public class VideoCallCameraManager {
         mOrientationListener.enable();
         mVideoQuality = mVideoCallEngine.getCameraResolution();
         mContext = context;//SPRD:Add for bug571839
+        mWinMana = ((WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE));//SPRD: bug729242
     }
 
     /**
@@ -205,7 +211,7 @@ public class VideoCallCameraManager {
                             mHandler.sendEmptyMessageDelayed(EVENT_CAMERA_FAIL,200);
                             return;
                         } else {
-                            mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation);
+                            mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation, mScreenRotation);//SPRD: bug729242
                         }
                         /* @ } */
                     }
@@ -499,6 +505,7 @@ public class VideoCallCameraManager {
         @Override
         public void onOrientationChanged(int orientation) {
             int displayOrientation = mDeviceRotation;
+            int screenRotation = mWinMana.getDefaultDisplay().getRotation();//SPRD: bug729242
             if (orientation != OrientationEventListener.ORIENTATION_UNKNOWN) {
                 if (orientation >= 350 || orientation <= 10) {
                     displayOrientation = 0;
@@ -510,10 +517,12 @@ public class VideoCallCameraManager {
                     displayOrientation = 270;
                 }
             }
-            if (displayOrientation != mDeviceRotation
-                    && displayOrientation != OrientationEventListener.ORIENTATION_UNKNOWN) {
-                Log.i(TAG, "onOrientationChanged: " + displayOrientation);
+            if ((displayOrientation != mDeviceRotation
+                    && displayOrientation != OrientationEventListener.ORIENTATION_UNKNOWN)
+                    || screenRotation != mScreenRotation) {//SPRD: bug729242
+                Log.i(TAG, "onOrientationChanged: " + displayOrientation + " screenRotation: " + screenRotation);
                 mDeviceRotation = displayOrientation;
+                mScreenRotation = screenRotation;
                 mHandler.removeMessages(EVENT_CHANGE_ORIENTATION);
                 mHandler.sendEmptyMessageDelayed(EVENT_CHANGE_ORIENTATION, 200);
             }
@@ -521,7 +530,7 @@ public class VideoCallCameraManager {
     }
 
     private void handleOrientationChange() {
-        Log.i(TAG, "handleOrientationChange->mDeviceRotation: " + mDeviceRotation);
+        Log.i(TAG, "handleOrientationChange->mDeviceRotation: " + mDeviceRotation + " mScreenRotation: " + mScreenRotation);
         if((mDeviceRotation == 90) || (mDeviceRotation == 270)){
             VTManagerProxy.getInstance().mPreviewWidth = mHeight;
             VTManagerProxy.getInstance().mPreviewHeight = mWidth;
@@ -533,7 +542,7 @@ public class VideoCallCameraManager {
     }
 
     private void updateCameraPara() {
-        mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation);
+        mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation, mScreenRotation);//SPRD: bug729242
     }
 
     public void updateVideoQuality(int videoQuality){
