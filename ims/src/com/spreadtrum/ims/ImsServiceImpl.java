@@ -737,7 +737,9 @@ public class ImsServiceImpl {
             Log.i(TAG, "setIMSRegAddress addr = " + addr);
         }
         mImsRegAddress = addr;
+        mWifiService.setVolteUsedLocalAddr(addr);
     }
+
     public void requestImsHandover(int type){
         Log.i(TAG,"requestImsHandover->type:" + type);
         mCi.requestImsHandover(type,mHandler.obtainMessage(EVENT_IMS_HANDOVER_ACTION_COMPLETE));

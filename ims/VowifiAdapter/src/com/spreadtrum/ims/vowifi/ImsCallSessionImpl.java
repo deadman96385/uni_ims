@@ -720,8 +720,20 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         ImsCallSessionImpl confSession = mCallManager.getConfCallSession();
         if (confSession != null) {
             ImsCallSessionImpl hostSession = confSession.getHostCallSession();
-            if (this.equals(hostSession)) {
-                // Terminate the conference call and the close it.
+            if (this.equals(confSession)
+                    && hostSession != null
+                    && hostSession.getState() > State.INVALID
+                    && hostSession.getState() < State.TERMINATED) {
+                // The conference call already connected, but the host call do not accept the
+                // invite. If terminate the conference call, we need terminate the host call.
+                hostSession.terminate(reason);
+                hostSession.close();
+            } else if (this.equals(hostSession)
+                    && confSession != null
+                    && confSession.getState() > State.INVALID
+                    && confSession.getState() < State.TERMINATED) {
+                // The conference call already outgoing but not connect. If terminate the host
+                // call, we need terminate the conference call and the close it.
                 confSession.terminate(reason);
                 confSession.close();
             }
@@ -1428,6 +1440,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             }
 
             // Even native failed, we'd like to remove this call from the list.
+            updateState(State.TERMINATED);
             mCallManager.removeCall(this);
             return res;
         } catch (RemoteException e) {
@@ -2020,7 +2033,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                     + confSession.getCallId());
         }
 
-        // Invite the this call session as the participants.
+        // Invite this call session as the participants.
         int res = mICall.confAddMembers(
                 Integer.valueOf(confSession.getCallId()), null, new int[] { mCallId });
         if (res == Result.SUCCESS) {
