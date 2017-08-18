@@ -123,6 +123,8 @@ public class ImsServiceImpl {
     private int mAliveCallJitter = -1;
     private int mAliveCallRtt = -1;
     private int mSrvccCapbility = -1;
+    // SPRD: 730973
+    private boolean mVolteRegisterStateOld = false;
 
     /**
      * Handles changes to the APN db.
@@ -761,6 +763,12 @@ public class ImsServiceImpl {
 
     public void notifyImsRegister(boolean isRegistered){
         try{
+         // SPRD: 730973
+            if(isRegistered){
+                mVolteRegisterStateOld = true;
+            } else {
+                mVolteRegisterStateOld = false;
+            }
             if(mListener == null){
                 Log.w(TAG,"notifyImsRegister->mListener is null!");
                 return;
@@ -1012,5 +1020,13 @@ public class ImsServiceImpl {
         String[] cmd=new String[1];
         cmd[0] = "AT+WIFIPARAM=0,0,0,0,0";
         mCi.invokeOemRilRequestStrings(cmd, null);
+    }
+    // SPRD: 730973
+    public boolean getVolteRegisterStateOld(){
+        return mVolteRegisterStateOld;
+    }
+
+    public void setVolteRegisterStateOld(boolean state){
+        mVolteRegisterStateOld = state;
     }
 }

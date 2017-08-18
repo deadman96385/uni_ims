@@ -1835,6 +1835,8 @@ class MyVoWifiCallback implements VoWifiCallback {
                 //If CP reports CIREGU as 1,3 , IMS Feature will be updated as Volte registered state firstly.
                 if (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED || service.getVolteRegisterState() == IMS_REG_STATE_REG_FAIL){
                     mVolteRegistered = (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED);
+                    // SPRD: 730973
+                    service.setVolteRegisterStateOld(service.isImsRegistered());
                     if(!mIsLoggingIn){
                         if (ImsManagerEx.isDualVoLTEActive()){
                             updateImsFeature(serviceId);
@@ -1843,7 +1845,10 @@ class MyVoWifiCallback implements VoWifiCallback {
                         }
                     }
                 } else {
-                    if (mVolteRegistered != service.isImsRegistered()){
+                    // SPRD: 730973
+//                    if (mVolteRegistered != service.isImsRegistered()){
+                    if (service.getVolteRegisterStateOld() != service.isImsRegistered()){
+                        service.setVolteRegisterStateOld(service.isImsRegistered());
                         mVolteRegistered = service.isImsRegistered();
                         if(!mIsLoggingIn){
                             if (ImsManagerEx.isDualVoLTEActive()){
