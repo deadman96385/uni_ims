@@ -11,6 +11,7 @@ import android.util.Log;
 
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -138,8 +139,26 @@ public abstract class ServiceManager {
     }
 
     protected void clearPendingList() {
+        clearPendingList(null);
+    }
+
+    protected void clearPendingList(ArrayList<Integer> exceptMsgs) {
         synchronized (mPendingActions) {
-            mPendingActions.clear();
+            if (exceptMsgs == null || exceptMsgs.size() < 1) {
+                mPendingActions.clear();
+                Log.d(TAG, "All the pending action will be clear.");
+            } else {
+                Iterator<Entry<Integer, PendingAction>> it = mPendingActions.entrySet().iterator();
+                while (it.hasNext()) {
+                    Entry<Integer, PendingAction> entry = it.next();
+                    PendingAction action = entry.getValue();
+                    if (!exceptMsgs.contains(action._action)) {
+                        mPendingActions.remove(entry.getKey());
+                        Log.d(TAG, "The pending action[msg.what=" + action._action
+                                + "] will be removed.");
+                    }
+                }
+            }
         }
     }
 
