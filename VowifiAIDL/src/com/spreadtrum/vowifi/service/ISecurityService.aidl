@@ -17,4 +17,6 @@ interface ISecurityService {
     boolean switchLoginIpVersion(int sessionId, int ipVersion);
 
     boolean deleteTunelIpsec(int sessionId);
+
+    void setVolteUsedLocalAddr(String addr);
 }

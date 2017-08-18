@@ -394,6 +394,10 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         mSecurityMgr.forceStop();
     }
 
+    public void setVolteUsedLocalAddr(String addr) {
+        if (mSecurityMgr != null) mSecurityMgr.setVolteUsedLocalAddr(addr);
+    }
+
     public SecurityConfig getSecurityConfig() {
         return mSecurityMgr == null ? null : mSecurityMgr.getConfig();
     }

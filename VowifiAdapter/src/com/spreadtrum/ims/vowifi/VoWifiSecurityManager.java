@@ -22,12 +22,15 @@ import com.spreadtrum.vowifi.service.ISecurityServiceCallback;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+
 public class VoWifiSecurityManager extends ServiceManager {
     private static final String TAG = Utilities.getTag(VoWifiSecurityManager.class.getSimpleName());
 
     private static final int MSG_ACTION_ATTACH = 1;
     private static final int MSG_ACTION_DEATTACH = 2;
     private static final int MSG_ACTION_FORCE_STOP = 3;
+    private static final int MSG_ACTION_SET_VOLTE_ADDR = 4;
 
     private final static String SERVICE_ACTION =
             "com.spreadtrum.vowifi.service.ISecurityService";
@@ -82,7 +85,11 @@ public class VoWifiSecurityManager extends ServiceManager {
                         mListener.onStopped(false, 0);
                     }
                 }
-                clearPendingList();
+
+                // Clear all the pending action except MSG_ACTION_SET_VOLTE_ADDR.
+                ArrayList<Integer> notRemove = new ArrayList<Integer>();
+                notRemove.add(MSG_ACTION_SET_VOLTE_ADDR);
+                clearPendingList(notRemove);
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Can not register callback as catch the RemoteException. e: " + e);
@@ -109,6 +116,12 @@ public class VoWifiSecurityManager extends ServiceManager {
             }
             case MSG_ACTION_FORCE_STOP: {
                 forceStop();
+                handle = true;
+                break;
+            }
+            case MSG_ACTION_SET_VOLTE_ADDR: {
+                PendingAction action = (PendingAction) msg.obj;
+                setVolteUsedLocalAddr((String) action._params.get(0));
                 handle = true;
                 break;
             }
@@ -191,6 +204,24 @@ public class VoWifiSecurityManager extends ServiceManager {
         if (Utilities.DEBUG) Log.i(TAG, "Force stop the s2b. Do as de-attach for no handover.");
 
         deattach(false);
+    }
+
+    public void setVolteUsedLocalAddr(String addr) {
+        if (Utilities.DEBUG) Log.i(TAG, "Set volte used local address to : " + addr);
+
+        boolean handle = false;
+        if (mISecurity != null) {
+            try {
+                mISecurity.setVolteUsedLocalAddr(addr);
+                handle = true;
+            } catch (RemoteException e) {
+                Log.e(TAG, "Catch the remote exception when set volte addr. e: " + e);
+            }
+        }
+        if (!handle) {
+            // Do not handle the attach action, add to pending list.
+            addToPendingList(new PendingAction("set_volte_addr", MSG_ACTION_SET_VOLTE_ADDR, addr));
+        }
     }
 
     public boolean setIPVersion(int ipVersion) {

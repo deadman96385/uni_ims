@@ -540,8 +540,20 @@ public class Utilities {
                     TextUtils.isEmpty(pcscfIPv4) ? null : pcscfIPv4.split(JSON_PCSCF_SEP);
                 String[] pcscfIPv6s =
                     TextUtils.isEmpty(pcscfIPv6) ? null : pcscfIPv6.split(JSON_PCSCF_SEP);
-                return new RegisterIPAddress(localIPv4, localIPv6, pcscfIPv4s, pcscfIPv6s, dns4,
-                        dns6);
+                if (!TextUtils.isEmpty(usedPcscfAddr)) {
+                    if (isIPv4(usedPcscfAddr)) {
+                        String[] newPcscfIPv4s = rebuildAddr(pcscfIPv4s, usedPcscfAddr);
+                        return new RegisterIPAddress(localIPv4, localIPv6, newPcscfIPv4s,
+                                pcscfIPv6s, dns4, dns6);
+                    } else {
+                        String[] newPcscfIPv6s = rebuildAddr(pcscfIPv6s, usedPcscfAddr);
+                        return new RegisterIPAddress(localIPv4, localIPv6, pcscfIPv4s,
+                                newPcscfIPv6s, dns4, dns6);
+                    }
+                } else {
+                    return new RegisterIPAddress(localIPv4, localIPv6, pcscfIPv4s, pcscfIPv6s, dns4,
+                            dns6);
+                }
             }
         }
 
@@ -661,6 +673,24 @@ public class Utilities {
             }
             newAddrs[index] = addr;
             return newAddrs;
+        }
+
+        private static String[] rebuildAddr(String[] oldAddrs, String firstAddr) {
+            if (oldAddrs == null
+                    || oldAddrs.length == 1
+                    || TextUtils.isEmpty(firstAddr)) {
+                return oldAddrs;
+            }
+
+            for (int i = 0; i < oldAddrs.length; i++) {
+                if (firstAddr.equals(oldAddrs[i])) {
+                    String oldFirstAddr = oldAddrs[0];
+                    oldAddrs[0] = firstAddr;
+                    oldAddrs[i] = oldFirstAddr;
+                    break;
+                }
+            }
+            return oldAddrs;
         }
 
         @Override
