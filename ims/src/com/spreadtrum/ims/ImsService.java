@@ -2405,7 +2405,7 @@ class MyVoWifiCallback implements VoWifiCallback {
                 && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
             imsService.setSrvccState(-1);
         }
-        if(!isInCall){
+        if(!isInCall && imsService != null){
             imsService.disableWiFiParamReport();
         }
 
