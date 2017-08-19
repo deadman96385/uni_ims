@@ -225,6 +225,7 @@ public class ImsService extends Service {
     private int mInCallPhoneId = -1;
     private boolean mPreWifiRegistered = false;
     private boolean mPreVolteRegistered = false;
+    private int mPreVolteRegState = -1;
 
     private class ImsServiceRequest {
         public int mRequestId;
@@ -388,7 +389,6 @@ public class ImsService extends Service {
                         Log.i(TAG, "EVENT_WIFI_ATTACH_STOPED, mWifiRegistered:" + mWifiRegistered);
                         mIsAPImsPdnActived = false;
                         mAttachVowifiSuccess = false;//SPRD:Add for bug604833
-                        mWifiRegistered = false;////SPRD:add for bug707540
                         break;
                     case EVENT_WIFI_INCOMING_CALL:
                         ImsServiceImpl service = mImsServiceImplMap.get(
@@ -1783,7 +1783,7 @@ class MyVoWifiCallback implements VoWifiCallback {
                         + " mIsLoggingIn:" + mIsLoggingIn +" mIsPendingRegisterVolte:"+mIsPendingRegisterVolte);
                 if(service.getVolteRegisterState() == IMS_REG_STATE_REGISTERING
                         || service.getVolteRegisterState() == IMS_REG_STATE_DEREGISTERING
-                        || mIsVolteCall || mIsWifiCalling){
+                        || (mIsVolteCall && service.isImsRegistered()) || mIsWifiCalling){
                     Log.i(TAG,"VoLTERegisterListener-> pending status service.getVolteRegisterState():"+service.getVolteRegisterState()
                             +" mIsVolteCall:"+mIsVolteCall +" mIsWifiCalling:"+mIsWifiCalling);
                     return;
@@ -1888,11 +1888,14 @@ class MyVoWifiCallback implements VoWifiCallback {
                                 if (mIsVolteCall && mIsPendingRegisterVowifi) {
                                     mWifiService.register();
                                     mIsLoggingIn = true;
+                                    mFeatureSwitchRequest = null;
                                 }
                                 mIsPendingRegisterVowifi = false;
                             }
                             Log.i(TAG,"onSessionEmpty-> mPendingAttachVowifiSuccess:" + mPendingAttachVowifiSuccess + " mPendingActivePdnSuccess:" + mPendingActivePdnSuccess + " mIsLoggingIn:" + mIsLoggingIn);
-                            if (mIsVolteCall && mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE && !mPendingAttachVowifiSuccess && !mPendingActivePdnSuccess) {
+                            if (mIsVolteCall && mFeatureSwitchRequest != null
+                                    && mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE
+                                    && !mPendingAttachVowifiSuccess && !mPendingActivePdnSuccess) {
                                 mFeatureSwitchRequest = null;
                                 Log.i(TAG,"onSessionEmpty-> This is volte call,so mFeatureSwitchRequest has been emptyed.");
                             }
@@ -1936,36 +1939,47 @@ class MyVoWifiCallback implements VoWifiCallback {
     }
 
     public void updateImsFeature(){
+        int volteRegState = -1;
         updateImsRegisterState();
         ImsServiceImpl imsService = mImsServiceImplMap.get(
                 Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
+        if(imsService != null){
+            volteRegState = imsService.getVolteRegisterState();
+        }
+
         int currentImsFeature = mCurrentImsFeature;
         if(mInCallHandoverFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
             if(mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
                 if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature
-                        || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered);
+                        || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered
+                        || mPreVolteRegState != volteRegState);
             } else if (imsService != null && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                 imsService.notifyImsRegister(false, currentImsFeature != mCurrentImsFeature
-                        || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered);
+                        || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered
+                        || mPreVolteRegState != volteRegState);
             }else {
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
                 if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature
-                        || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered);
+                        || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered
+                        || mPreVolteRegState != volteRegState);
             }
         } else if(mVolteRegistered) {
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
             if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature
-                    || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered);
+                    || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered
+                    || mPreVolteRegState != volteRegState);
         } else if(mWifiRegistered){
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
             if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature
-                    || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered);
+                    || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered
+                    || mPreVolteRegState != volteRegState);
         } else {
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
             if(imsService != null) imsService.notifyImsRegister(false, currentImsFeature != mCurrentImsFeature
-                    || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered);
+                    || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered
+                    || mPreVolteRegState != volteRegState);
         }
         if(imsService != null) {
             imsService.updateImsFeatures(mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE,
@@ -1982,6 +1996,7 @@ class MyVoWifiCallback implements VoWifiCallback {
         notifyImsRegisterState();
         mPreVolteRegistered = mVolteRegistered;
         mPreWifiRegistered = mWifiRegistered;
+        mPreVolteRegState = volteRegState;
         Log.i(TAG,"updateImsFeature->mWifiRegistered:"+mWifiRegistered +" mVolteRegistered:"+mVolteRegistered
                 +" mCurrentImsFeature:"+mCurrentImsFeature +" mInCallHandoverFeature:"+mInCallHandoverFeature
                 + " currentImsFeature:" + currentImsFeature + " mPreVolteRegistered:" + mPreVolteRegistered
