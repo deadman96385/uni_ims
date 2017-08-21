@@ -232,6 +232,7 @@ public class ImsServiceImpl {
                                         + mImsServiceState.mImsRegistered
                                         + " | responseArray.length = "
                                         + responseArray.length);
+                            mImsServiceState.mSrvccState = -1;
                         }
                         Log.i(TAG,"EVENT_IMS_STATE_CHANGED->mRegState:"+mImsServiceState.mRegState);
                         switch(mImsServiceState.mRegState){
@@ -263,13 +264,13 @@ public class ImsServiceImpl {
                     break;
                 case EVENT_IMS_STATE_DONE:
                     if (ar.exception == null && ar.result != null) {
-                        int[] responseArray = (int[])ar.result;
-                        if(responseArray != null && responseArray.length >1){
-                            mImsServiceState.mImsRegistered = (responseArray[0] != 0 && responseArray[1]== 1);
-                            mImsServiceState.mSrvccState = -1;
-                        }
-                        //if(ImsManagerEx.isDualVoLTEActive()){
-                        //}
+                        // to be done
+                        // SPRD 723085 mImsRegistered shouldn't be set twice time.
+//                        int[] responseArray = (int[])ar.result;
+//                        if(responseArray != null && responseArray.length >1){
+//                            mImsServiceState.mImsRegistered = (responseArray[0] != 0 && responseArray[1]== 1);
+//                            mImsServiceState.mSrvccState = -1;
+//                        }
                     } else {
                         Log.i(TAG,"EVENT_IMS_STATE_DONE->ar.exception mServiceId:"+mServiceId);
                         mImsServiceState.mImsRegistered = false;
