@@ -65,6 +65,7 @@ public class ImsRegister {
     private boolean mSIMLoaded;
     private int mRetryCount = 0;
     private ImsService mImsService;
+    private boolean mFirstNotify;
 
     protected static final int EVENT_ICC_CHANGED                       = 103;
     protected static final int EVENT_RECORDS_LOADED                    = 104;
@@ -95,6 +96,8 @@ public class ImsRegister {
         mCi.registerForConnImsen(mHandler, EVENT_IMS_BEARER_ESTABLISTED, null);
         mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
         mCi.registerForIccRefresh(mHandler, EVENT_SIM_REFRESH, null);
+        mFirstNotify = true;
+        Log.i(TAG,"ImsRegister onCreate->phoneId:"+mPhoneId);
     }
 
     private class BaseHandler extends Handler {
@@ -282,7 +285,8 @@ public class ImsRegister {
         Log.i(TAG, "notifyImsStateChanged mCurrentImsRegistered:" + mCurrentImsRegistered
                  + " imsRegistered:" + imsRegistered + " isPrimaryCard:" + isPrimaryCard
                  + " isImsFeatureChanged:" + isImsFeatureChanged);
-        if(mCurrentImsRegistered != imsRegistered || isImsFeatureChanged) {
+        if(mCurrentImsRegistered != imsRegistered || isImsFeatureChanged || mFirstNotify) {
+            mFirstNotify = false;
             mCurrentImsRegistered = imsRegistered;
             if(isPrimaryCard) {
                 sendVolteServiceStateChanged();

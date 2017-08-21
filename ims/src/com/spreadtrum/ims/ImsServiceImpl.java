@@ -681,6 +681,12 @@ public class ImsServiceImpl {
 
     public void notifyImsRegister(boolean isRegistered, boolean isImsFeatureChanged){
         try{
+            Log.i(TAG,"notifyImsRegister->isRegistered:" + isRegistered
+                    + " isImsEnabled():"+mImsService.isImsEnabled()
+                    + " mImsService.isVoLTEEnabled():"+mImsService.isVoLTEEnabled()
+                    + " mImsService.isVoWifiEnabled():"+mImsService.isVoWifiEnabled());
+            Log.i(TAG,"notifyImsRegister->mServiceState:" + isRegistered + " isImsFeatureChanged:" + isImsFeatureChanged);
+            mImsRegister.notifyImsStateChanged(isRegistered, isImsFeatureChanged);
             if(mListener == null){
                 Log.w(TAG,"notifyImsRegister->mListener is null!");
                 return;
@@ -690,12 +696,6 @@ public class ImsServiceImpl {
             } else {
                 mListener.registrationDisconnected(new ImsReasonInfo());
             }
-            Log.i(TAG,"notifyImsRegister->isRegistered:" + isRegistered
-                    + " isImsEnabled():"+mImsService.isImsEnabled()
-                    + " mImsService.isVoLTEEnabled():"+mImsService.isVoLTEEnabled()
-                    + " mImsService.isVoWifiEnabled():"+mImsService.isVoWifiEnabled());
-            Log.i(TAG,"notifyImsRegister->mServiceState:" + isRegistered + " isImsFeatureChanged:" + isImsFeatureChanged);
-            mImsRegister.notifyImsStateChanged(isRegistered, isImsFeatureChanged);
         } catch (RemoteException e){
             e.printStackTrace();
         }
