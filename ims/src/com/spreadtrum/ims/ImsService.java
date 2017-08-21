@@ -514,8 +514,8 @@ public class ImsService extends Service {
                                         ? ImsOperationType.IMS_OPERATION_SWITCH_TO_VOWIFI
                                                 : ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOWIFI);
                                 requestService.notifyImsHandoverStatus(ImsHandoverResult.IMS_HANDOVER_REGISTER_FAIL);
-                                Toast.makeText(ImsService.this, R.string.vowifi_register_error,
-                                        Toast.LENGTH_LONG).show();
+                                //SPRD add for bug 730004
+                                // Toast.makeText(ImsService.this, R.string.vowifi_register_error,Toast.LENGTH_LONG).show();
                                 /*SPRD: Modify for bug604833{@*/
                                 if(mFeatureSwitchRequest.mEventCode== ACTION_SWITCH_IMS_FEATURE) {
                                     if (requestService != null){
