@@ -389,7 +389,6 @@ public class ImsService extends Service {
                         Log.i(TAG, "EVENT_WIFI_ATTACH_STOPED, mWifiRegistered:" + mWifiRegistered);
                         mIsAPImsPdnActived = false;
                         mAttachVowifiSuccess = false;//SPRD:Add for bug604833
-                        mWifiRegistered = false; //SPRD:add for bug659097
                         break;
                     case EVENT_WIFI_INCOMING_CALL:
                         ImsServiceImpl service = mImsServiceImplMap.get(
@@ -401,8 +400,6 @@ public class ImsService extends Service {
                         break;
                     case EVENT_WIFI_ALL_CALLS_END:
                         if (mImsServiceListenerEx != null) {
-                            mImsServiceListenerEx.imsCallEnd(
-                                    ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI);
                             Log.i(TAG,"EVENT_WIFI_ALL_CALLS_END-> mFeatureSwitchRequest:" + mFeatureSwitchRequest + " mIsVowifiCall:" + mIsVowifiCall + " mIsVolteCall:" + mIsVolteCall + " mInCallHandoverFeature:" + mInCallHandoverFeature
                                     + " mIsPendingRegisterVolte:" + mIsPendingRegisterVolte + " mIsPendingRegisterVowifi:" + mIsPendingRegisterVowifi);
                             if(mFeatureSwitchRequest != null){
@@ -423,7 +420,7 @@ public class ImsService extends Service {
                                                     mPendingActivePdnSuccess = true;
                                                 }
                                             }
-                                            Log.i(TAG,"EVENT_WIFI_ALL_CALLS_END->mPendingAttachVowifiSuccess:" + mPendingAttachVowifiSuccess + " mPendingActivePdnSuccess:" + mPendingActivePdnSuccess);
+                                            Log.i(TAG,"EVENT_WIFI_ALL_CALLS_END->mPendingAttachVowifiSuccess:" + mPendingAttachVowifiSuccess + " mPendingActivePdnSuccess:" + mPendingActivePdnSuccess +" mIsVolteCall = "+mIsVolteCall+" mIsVowifiCall = "+mIsVowifiCall);
                                             if(mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
                                                 if (mIsVolteCall && mIsPendingRegisterVowifi) {
                                                     mWifiService.register();
@@ -585,6 +582,7 @@ public class ImsService extends Service {
                             if (mFeatureSwitchRequest != null) {
                                 mFeatureSwitchRequest = null;
                             }
+                            mIsPendingRegisterVolte = false;//SPRD: add for bug723080
                         }
                         if(mPendingAttachVowifiSuccess){
                             Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE->mPendingAttachVowifiSuccess is true->mCallEndType:"
@@ -691,6 +689,10 @@ public class ImsService extends Service {
                                 }
                             }
                             /*@}*/
+                            Log.i(TAG,"ACTION_CANCEL_CURRENT_REQUEST-> mIsCalling:"+mIsCalling);
+                            if(!mIsCalling){
+                                mWifiService.updateDataRouterState(DataRouterState.CALL_NONE);
+                            }
                         } else {
                             if(mImsServiceListenerEx != null){
                                 mImsServiceListenerEx.operationFailed(msg.arg1/*requestId*/,"Invalid Request",
@@ -1824,8 +1826,10 @@ class MyVoWifiCallback implements VoWifiCallback {
                         +" mIsCalling:"+ mIsCalling + " mVolteRegistered:" + mVolteRegistered + " service.isImsRegistered():" + service.isImsRegistered()
                         + " mIsLoggingIn:" + mIsLoggingIn +" mIsPendingRegisterVolte:"+mIsPendingRegisterVolte);
                 if(service.getVolteRegisterState() == IMS_REG_STATE_REGISTERING
-                        || service.getVolteRegisterState() == IMS_REG_STATE_DEREGISTERING){
-                    Log.i(TAG,"VoLTERegisterListener-> pending status service.getVolteRegisterState():"+service.getVolteRegisterState());
+                        || service.getVolteRegisterState() == IMS_REG_STATE_DEREGISTERING
+                        || mIsVolteCall || mIsWifiCalling){
+                    Log.i(TAG,"VoLTERegisterListener-> pending status service.getVolteRegisterState():"+service.getVolteRegisterState()
+                            +" mIsVolteCall:"+mIsVolteCall +" mIsWifiCalling:"+mIsWifiCalling);
                     return;
                 }
                 //SPRD:add for bug674494
@@ -1943,11 +1947,14 @@ class MyVoWifiCallback implements VoWifiCallback {
                                 if (mIsVolteCall && mIsPendingRegisterVowifi) {
                                     mWifiService.register();
                                     mIsLoggingIn = true;
+                                    mFeatureSwitchRequest = null;
                                 }
                                 mIsPendingRegisterVowifi = false;
                             }
                             Log.i(TAG,"onSessionEmpty-> mPendingAttachVowifiSuccess:" + mPendingAttachVowifiSuccess + " mPendingActivePdnSuccess:" + mPendingActivePdnSuccess + " mIsLoggingIn:" + mIsLoggingIn);
-                            if (mIsVolteCall && mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE && !mPendingAttachVowifiSuccess && !mPendingActivePdnSuccess) {
+                            if (mIsVolteCall && mFeatureSwitchRequest != null
+                                    && mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE
+                                    && !mPendingAttachVowifiSuccess && !mPendingActivePdnSuccess) {
                                 mFeatureSwitchRequest = null;
                                 Log.i(TAG,"onSessionEmpty-> This is volte call,so mFeatureSwitchRequest has been emptyed.");
                             }
@@ -2190,7 +2197,7 @@ class MyVoWifiCallback implements VoWifiCallback {
                 if(mPendingCPSelfManagement || mFeatureSwitchRequest == null && !mWifiRegistered){
                     ImsServiceImpl service = mImsServiceImplMap.get(
                             Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
-                    if(service != null){
+                    if(service != null && !mIsCalling){//SPRD: add for bug717045
                        service.setIMSRegAddress(null);
                     }
                 }
@@ -2203,7 +2210,8 @@ class MyVoWifiCallback implements VoWifiCallback {
                 + " mIsCPImsPdnActived:" + mIsCPImsPdnActived + " mIsAPImsPdnActived:" + mIsAPImsPdnActived
                 + " mWifiRegistered:" + mWifiRegistered + " mVolteRegistered:" + mVolteRegistered
                 + " mPendingCPSelfManagement:" + mPendingCPSelfManagement
-                + " mPendingActivePdnSuccess:"+mPendingActivePdnSuccess+" isAirplaneModeOn:"+isAirplaneModeOn);
+                + " mPendingActivePdnSuccess:"+mPendingActivePdnSuccess+" isAirplaneModeOn:"+isAirplaneModeOn
+                + " mInCallHandoverFeature:"+mInCallHandoverFeature);
         try{
             if (mImsServiceListenerEx != null &&
                     serviceId == ImsRegister.getPrimaryCard(mPhoneCount)+1) {
@@ -2220,9 +2228,9 @@ class MyVoWifiCallback implements VoWifiCallback {
             Log.i(TAG,"onImsPdnStatusChange->mIsPendingRegisterVolte:" + mIsPendingRegisterVolte + " service.isImsRegistered():" + service.isImsRegistered());
             // If pdn is ready when handover from vowifi to volte but volte is not registered , never to turn on ims.
             // If Volte is registered , never to turn on ims.
-            Log.i(TAG,"onImsPdnStatusChange->mIsVolteCall:"+mIsVolteCall +" mIsVowifiCall:"+mIsVowifiCall);
+            Log.i(TAG,"onImsPdnStatusChange->mIsVolteCall:"+mIsVolteCall +" mIsVowifiCall:"+mIsVowifiCall +" mIsAPImsPdnActived:"+mIsAPImsPdnActived);
 
-            if(!((mIsPendingRegisterVolte && !service.isImsRegistered()) || service.isImsRegistered()) && !mIsVolteCall && !mIsVowifiCall){
+            if(!mIsAPImsPdnActived && !mIsVolteCall && !mIsVowifiCall){
                 Log.d(TAG, "Switch request is null, but the pdn start, will enable the ims.");
                 service.enableImsWhenPDNReady();
             }
@@ -2291,8 +2299,8 @@ class MyVoWifiCallback implements VoWifiCallback {
                         }
                     } else {
                         mIsPendingRegisterVolte = true;
-                        updateImsFeature();
                         mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
+                        updateImsFeature();
                         Log.i(TAG, "onImsPdnStatusChange -> mCurrentImsFeature:" + ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE + " mIsCalling:" + mIsCalling);
                         if (mImsServiceListenerEx != null) {
                             try {
@@ -2321,14 +2329,6 @@ class MyVoWifiCallback implements VoWifiCallback {
     }
 
     public void onImsCallEnd(int serviceId){
-        try{
-            if (mImsServiceListenerEx != null) {
-                mImsServiceListenerEx.imsCallEnd(
-                        ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE);
-            }
-        } catch(RemoteException e){
-            e.printStackTrace();
-        }
     }
 
     public void onImsNetworkInfoChange(int type, String info){
@@ -2414,6 +2414,14 @@ class MyVoWifiCallback implements VoWifiCallback {
             ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(primaryPhoneId+1));
             if(impl != null){
                 impl.notifyImsCallEnd(mCallEndType);
+                try{
+                    if (mImsServiceListenerEx != null) {
+                        mImsServiceListenerEx.imsCallEnd((mCallEndType == CallEndEvent.VOLTE_CALL_END) ?
+                                ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE : ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI);
+                    }
+                } catch(RemoteException e){
+                    e.printStackTrace();
+                }
                 mCallEndType = -1;
             } else {
                 Log.w(TAG,"notifyCpCallEnd->notifyImsCallEnd-> ImsServiceImpl is null");
