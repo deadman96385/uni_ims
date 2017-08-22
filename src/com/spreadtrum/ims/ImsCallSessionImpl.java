@@ -464,22 +464,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     public void notifySessionDisconnected() {
         mState = ImsCallSession.State.TERMINATED;
-        try {
-            if ((mIImsCallSessionListener != null) && (mImsDriverCall != null)) {
-                if ((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING)
-                        && (mDisconnCause != ImsReasonInfo.CODE_USER_DECLINE)) { ////add for set cause when reject incoming call
-                    mDisconnCause = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
-                }
-                Log.w(TAG, "notifySessionDisconnected  mDisconnCause=" + mDisconnCause);
-                mIImsCallSessionListener.callSessionTerminated((IImsCallSession) this,
-                        new ImsReasonInfo(mDisconnCause, 0));
-            }else if(mImsDriverCall == null){/* SPRD: add for bug525777 @{ */
-                Log.w(TAG, "notifySessionDisconnected  mImsDriverCall = null");
-                mCi.getLastCallFailCause(mHandler.obtainMessage(ACTION_COMPLETE_GET_CALL_FAIL_CAUSE,this));
-            }/* @} */
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+
+        /* SPRD: add for bug713220 @{ */
+        mCi.getLastCallFailCause(mHandler.obtainMessage(ACTION_COMPLETE_GET_CALL_FAIL_CAUSE,this));
+        /* @} */
+
         synchronized (mCallSessionImplListeners) {
             for (Listener l : mCallSessionImplListeners) {
                 l.onDisconnected(this);
@@ -650,6 +639,24 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_GET_CALL_FAIL_CAUSE error!");
                     }else {
                         LastCallFailCause failCause = (LastCallFailCause) ar.result;
+                        /* SPRD: add for bug713220 @{ */
+                        try {
+                            if ((mIImsCallSessionListener != null) && (mImsDriverCall != null)) {
+                                if ((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING)
+                                        && (mDisconnCause != ImsReasonInfo.CODE_USER_DECLINE)) { ////add for set cause when reject incoming call
+                                    mDisconnCause = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
+                                }else if(failCause.causeCode == 17){//AT< ^CEND: 1,,104,17
+                                    mDisconnCause = ImsReasonInfo.CODE_SIP_BUSY;
+                                }
+                                Log.w(TAG, "callSessionTerminated  mDisconnCause=" + mDisconnCause);
+                                mIImsCallSessionListener.callSessionTerminated(mImsCallSessionImpl,
+                                        new ImsReasonInfo(mDisconnCause, 0));
+                                return;
+                            }
+                        } catch (RemoteException e) {
+                            e.printStackTrace();
+                        }
+                        /* @} */
                         mDisconnCause = failCause.causeCode;
                         ImsReasonInfo reasonInfo = new ImsReasonInfo();
                         // SPRD: add for bug541710
