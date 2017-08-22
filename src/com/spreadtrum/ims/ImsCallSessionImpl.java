@@ -412,24 +412,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     public void notifySessionDisconnected() {
         mState = ImsCallSession.State.TERMINATED;
-        try {
-            if ((mIImsCallSessionListener != null) && (mImsDriverCall != null)) {
-                if ((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING)
-                        && (mDisconnCause != ImsReasonInfo.CODE_USER_DECLINE)) { ////add for set cause when reject incoming call
-                    mDisconnCause = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
-                }
-                Log.w(TAG, "notifySessionDisconnected  mDisconnCause=" + mDisconnCause);
-                mIImsCallSessionListener.callSessionTerminated((IImsCallSession) this,
-                        new ImsReasonInfo(mDisconnCause, 0));
-            }else if(mImsDriverCall == null){/* SPRD: add for bug525777 @{ */
-                Log.w(TAG, "notifySessionDisconnected(Fdn)  mDisconnCause=" + mDisconnCause);
-                mIImsCallSessionListener.callSessionStartFailed((IImsCallSession) this,
-                        new ImsReasonInfo(mDisconnCause, 0));
-                mCi.getLastCallFailCause(mHandler.obtainMessage(ACTION_COMPLETE_GET_CALL_FAIL_CAUSE,this));
-            }/* @} */
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+
+        /* SPRD: add for bug713220 @{ */
+        mCi.getLastCallFailCause(mHandler.obtainMessage(ACTION_COMPLETE_GET_CALL_FAIL_CAUSE,this));
+        /* @} */
+
         synchronized (mCallSessionImplListeners) {
             for (Listener l : mCallSessionImplListeners) {
                 l.onDisconnected(this);
@@ -450,7 +437,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.i(TAG,"handleMessage->message:"+msg.what);
             switch (msg.what) {
                 case ACTION_COMPLETE_DIAL:
-                    if (ar != null && ar.exception != null) {
+                    if (ar != null && ar.exception != null  && mIImsCallSessionListener != null) {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_DIAL error!");
                         try{
                             mIImsCallSessionListener.callSessionStartFailed(mImsCallSessionImpl,
@@ -465,7 +452,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 case ACTION_COMPLETE_HOLD:
                     if (ar != null && ar.exception != null) {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_HOLD error!");
-                        if(ar.userObj != null) {
+                        if(ar.userObj != null && mIImsCallSessionListener != null) {
                             try{
                                 mIImsCallSessionListener.callSessionHoldFailed((IImsCallSession)ar.userObj,
                                         new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,"Hold Failed"));
@@ -478,7 +465,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 case ACTION_COMPLETE_RESUME:
                     if (ar != null && ar.exception != null) {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_RESUME error!");
-                        if(ar.userObj != null) {
+                        if(ar.userObj != null && mIImsCallSessionListener != null) {
                             try{
                                 mIImsCallSessionListener.callSessionResumeFailed((IImsCallSession)ar.userObj,
                                         new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,"Resume Failed"));
@@ -502,7 +489,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 case ACTION_COMPLETE_REJECT:
                     if (ar != null && ar.exception != null) {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_REJECT error!");
-                        if(ar.userObj != null) {
+                        if(ar.userObj != null && mIImsCallSessionListener != null) {
                             try{
                                 mIImsCallSessionListener.callSessionStartFailed((IImsCallSession)ar.userObj,
                                         new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,"Reject Failed"));
@@ -526,7 +513,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                             mImsConferenceState = null;
                         }
                         mImsServiceCallTracker.onCallMergeFailed((ImsCallSessionImpl)ar.userObj);
-                        if(ar.userObj != null) {
+                        if(ar.userObj != null && mIImsCallSessionListener != null) {
                             try{
                                 mIImsCallSessionListener.callSessionMergeFailed((IImsCallSession)ar.userObj,
                                         new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,
@@ -546,7 +533,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                                 +"  ar.userObj:"+ar.userObj);
                     }
                     if (ar != null && ar.exception != null) {
-                        if(ar.userObj != null) {
+                        if(ar.userObj != null && mIImsCallSessionListener != null) {
                             try{
                                 mIImsCallSessionListener.callSessionStartFailed((IImsCallSession)mImsCallSessionImpl,
                                         new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,
@@ -559,7 +546,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     break;
                 case ACTION_COMPLETE_ADD_PARTICIPANT:
                     try{
-                        if(ar.userObj != null) {
+                        if(ar.userObj != null && mIImsCallSessionListener != null) {
                             if (ar != null && ar.exception != null) {
                                 Log.w(TAG,"handleMessage->ACTION_COMPLETE_ADD_PARTICIPANT error!");
                                 mIImsCallSessionListener.callSessionInviteParticipantsRequestFailed(
@@ -588,14 +575,53 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     }
                     break;
                 case ACTION_COMPLETE_GET_CALL_FAIL_CAUSE:
-                    if(ar != null && ar.exception != null){
-                        Log.w(TAG,"handleMessage->ACTION_COMPLETE_GET_CALL_FAIL_CAUSE error!");
-                    }else{
-                        LastCallFailCause failCause = (LastCallFailCause)ar.result;
-                        mDisconnCause = failCause.causeCode;
-                        // SPRD: add for bug541710
-                        if (mDisconnCause == VTManagerUtils.VODEO_CALL_FDN_BLOCKED) {
-                            VTManagerUtils.showVideoCallFailToast(mContext, mDisconnCause);
+                    //SPRD: add for bug751898
+                   LastCallFailCause failCause = null;
+                   if(mIImsCallSessionListener != null){
+                        //SPRD: add for bug751898
+                        if(ar != null && (ar.exception != null || ar.result == null)) {
+                            Log.i(TAG, "handleMessage->ACTION_COMPLETE_GET_CALL_FAIL_CAUSE error!");
+                        } else {
+                            failCause = (LastCallFailCause) ar.result;
+                        }
+
+                        /* SPRD: add for bug713220 @{ */
+                        try {
+                            if (mImsDriverCall != null) {
+                                if ((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING)
+                                        && (mDisconnCause != ImsReasonInfo.CODE_USER_DECLINE)) { ////add for set cause when reject incoming call
+                                    mDisconnCause = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
+                                //SPRD: add for bug751898
+                                }else if(failCause != null && failCause.causeCode == 17){//AT< ^CEND: 1,,104,17
+                                    mDisconnCause = ImsReasonInfo.CODE_SIP_BUSY;
+                                }
+                                Log.i(TAG, "callSessionTerminated  mDisconnCause=" + mDisconnCause);
+                                mIImsCallSessionListener.callSessionTerminated(mImsCallSessionImpl,
+                                        new ImsReasonInfo(mDisconnCause, 0));
+                                return;
+                            }
+                        } catch (RemoteException e) {
+                            e.printStackTrace();
+                        }
+                        /* @} */
+
+                        ImsReasonInfo reasonInfo = new ImsReasonInfo();
+                        //SPRD: add for bug751898
+                        if(failCause != null){
+                            mDisconnCause = failCause.causeCode;
+                            // SPRD: add for bug541710
+                            if (mDisconnCause == VTManagerUtils.VODEO_CALL_FDN_BLOCKED) {
+                                reasonInfo = new ImsReasonInfo(mDisconnCause, 0);
+                            }else if(mDisconnCause == 17){//AT< ^CEND: 1,,104,17
+                                reasonInfo = new ImsReasonInfo(ImsReasonInfo.CODE_SIP_BUSY, 0);
+                            }
+                        }
+
+                        Log.i(TAG, "callSessionStartFailed  mDisconnCause=" + mDisconnCause);
+                        try {
+                            mIImsCallSessionListener.callSessionStartFailed(mImsCallSessionImpl, reasonInfo);
+                        } catch (RemoteException e) {
+                            e.printStackTrace();
                         }
                     }
                     break;
@@ -919,8 +945,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if(mIsMegerAction){
             try{
                 Log.w(TAG, "hold-> mIsMegerAction!");
-                mIImsCallSessionListener.callSessionHoldFailed(this,
-                        new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,"Hold Failed"));
+                if(mIImsCallSessionListener != null){
+                    mIImsCallSessionListener.callSessionHoldFailed(this,
+                            new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,"Hold Failed"));
+                }
             } catch(RemoteException e){
                 e.printStackTrace();
             }
@@ -1212,7 +1240,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public void notifyMergeComplete() {
         mShouldNotifyMegerd = false;
         try {
-            mIImsCallSessionListener.callSessionMergeComplete((IImsCallSession) this);
+            if(mIImsCallSessionListener != null){
+                mIImsCallSessionListener.callSessionMergeComplete((IImsCallSession) this);
+            }
             mIsMegerAction = false;
         } catch (RemoteException e) {
             e.printStackTrace();
@@ -1302,7 +1332,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
         try {
-            mIImsCallSessionListener.callSessionConferenceStateUpdated((IImsCallSession) this, mImsConferenceState);
+            if(mIImsCallSessionListener != null){
+                mIImsCallSessionListener.callSessionConferenceStateUpdated((IImsCallSession) this, mImsConferenceState);
+            }
         } catch (RemoteException e) {
             e.printStackTrace();
         }
