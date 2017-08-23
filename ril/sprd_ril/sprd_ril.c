@@ -197,7 +197,7 @@ typedef struct Srvccpendingrequest{
 #define VOLTE_PCSCF_ADDRESS        "persist.sys.volte.pcscf"
 
 /*SPRD: add for NITZ operator info */
-#define NITZ_OPERATOR        "persist.sys.nitz.operator"
+#define NITZ_OPERATOR        "persist.radio.nitz.operator"
 
 static bool plmnFiltration(char *plmn);//Bug#476317 Eliminate unwanted PLMNs
 static VoLTE_SrvccState s_srvccState = SRVCC_PS_TO_CS_SUCCESS;
