@@ -187,8 +187,8 @@ public class Utilities {
     public static class S2bType {
         public static final int NORMAL = 1;
         public static final int SOS    = 2;
-        public static final int XCAP   = 3;
-        public static final int MMS    = 4;
+        public static final int XCAP   = 4;
+        public static final int MMS    = 8;
     }
 
     public static class CallStateForDataRouter {
@@ -751,8 +751,12 @@ public class Utilities {
         // Security
         public static final String KEY_SESSION_ID = "session_id";
 
-        public static final int STATE_CODE_SECURITY_INVALID_ID = 1;
-        public static final int STATE_CODE_SECURITY_AUTH_FAILED = 2;
+        public static final int STATE_CODE_SECURITY_INVALID_ID       = -1;
+        public static final int STATE_CODE_SECURITY_AUTH_FAILED      = -2;
+        public static final int STATE_CODE_SECURITY_LOCAL_IP_IS_NULL = -3;
+        public static final int STATE_CODE_SECURITY_DNS_IS_NULL      = -4;
+        public static final int STATE_CODE_SECURITY_PCSCF_IS_NULL    = -5;
+        public static final int STATE_CODE_SECURITY_STOP_TIMEOUT     = -6;
 
         public final static int SECURITY_EVENT_CODE_BASE = 0;
         public final static int EVENT_CODE_ATTACH_SUCCESSED = SECURITY_EVENT_CODE_BASE + 1;

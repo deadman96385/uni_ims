@@ -96,10 +96,13 @@ public class VoWifiCallManager extends ServiceManager {
             new ArrayList<ICallChangedListener>();
     private MySerServiceCallback mVoWifiServiceCallback = new MySerServiceCallback();
 
+    private static final int MEDIA_CHANGED_TIMEOUT = 10000;
+    private static final int RELEASE_CALL_DELAY = 2 * 1000;
+
     private static final int MSG_HANDLE_EVENT = 0;
     private static final int MSG_INVITE_CALL = 1;
     private static final int MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 2;
-    private static final int MEDIA_CHANGED_TIMEOUT = 10000;
+    private static final int MSG_RELEASE_CALL = 3;
 
     private Handler mHandler = new Handler() {
         @Override
@@ -125,7 +128,19 @@ public class VoWifiCallManager extends ServiceManager {
                         }
                     }
                     break;
-
+                case MSG_RELEASE_CALL:
+                    String callId = (String) msg.obj;
+                    ImsCallSessionImpl callSession = getCallSession(callId);
+                    if (callSession != null) {
+                        Log.d(TAG, "The call do not receive BYE until now, release it.");
+                        callSession.releaseCall();
+                        try {
+                            handleCallTermed(callSession, ImsReasonInfo.CODE_USER_TERMINATED);
+                        } catch (RemoteException e) {
+                            Log.e(TAG, "Failed to handle release call as catch e: " + e);
+                        }
+                    }
+                    break;
             }
         }
     };
@@ -145,6 +160,11 @@ public class VoWifiCallManager extends ServiceManager {
 
         @Override
         public void handleMessage(Message msg) {
+            if (mSessionList == null || mSessionList.isEmpty()) {
+                Log.d(TAG, "There isn't any call, ignore the SRVCC event: " + msg.what);
+                return;
+            }
+
             switch(msg.what) {
                 case MSG_SRVCC_START:
                     Log.d(TAG, "Will handle the SRVCC start event.");
@@ -1497,6 +1517,13 @@ public class VoWifiCallManager extends ServiceManager {
 
                 // As invite success, need invite the next participant.
                 needInviteNext = true;
+
+                // Sometimes, can not receive the "BYE", and it will leader to the call can
+                // not receive the terminate callback. We'd like to release the call.
+                Message msg = new Message();
+                msg.what = MSG_RELEASE_CALL;
+                msg.obj = callSession.getCallId();
+                mHandler.sendMessageDelayed(msg, RELEASE_CALL_DELAY);
                 break;
             }
             case JSONUtils.EVENT_CODE_CONF_INVITE_FAILED: {
