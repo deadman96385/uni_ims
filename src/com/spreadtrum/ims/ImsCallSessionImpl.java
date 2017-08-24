@@ -181,6 +181,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             mImsCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_NONE;
             mLocalCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_NONE;
         }
+        //SPRD add for bug 730493
+        if(mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT){
+            mRemoteCallProfile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE);
+        }
         /* @}*/
         /* SPRD: add for new feature for bug 602040@{ */
         if((dc!= null) && (dc.mediaDescription != null) && (dc.mediaDescription.contains("cap:"))){
