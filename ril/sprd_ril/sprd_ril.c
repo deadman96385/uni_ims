@@ -15067,20 +15067,33 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         RIL_onUnsolicitedResponse(RIL_UNSOL_IMS_NETWORK_INFO_CHANGE, response,
                 sizeof(IMS_NetworkInfo));
     } else if (strStartsWith(s, "+IMSREGADDR:")) {
-        char *response = NULL;
+
+        char *response[2] = { NULL, NULL};
         char *tmp;
 
         line = strdup(s);
         tmp = line;
         at_tok_start(&tmp);
-        err = at_tok_nextstr(&tmp, &response);
-        if (err < 0) {
-            RLOGD("%s fail", s);
-            goto out;
-        }
+        err = at_tok_nextstr(&tmp, &(response[0]));
 
-        RIL_onUnsolicitedResponse(RIL_UNSOL_IMS_REGISTER_ADDRESS_CHANGE,
-                response, strlen(response));
+        if (err < 0) {
+           RLOGD("%s fail", s);
+                goto out;
+        }
+        if (at_tok_hasmore(&tmp)) {//SPRD:add for bug731711
+           err = at_tok_nextstr(&tmp, &(response[1]));
+           if (err < 0) {
+               RLOGD("%s fail", s);
+               goto out;
+           }
+
+           RIL_onUnsolicitedResponse(RIL_UNSOL_IMS_REGISTER_ADDRESS_CHANGE,
+               &response, 2*sizeof(char*));
+        } else {
+
+            RIL_onUnsolicitedResponse(RIL_UNSOL_IMS_REGISTER_ADDRESS_CHANGE,
+               &response[0], 1*sizeof(char*));
+        }
     } else if (strStartsWith(s, "+WIFIPARAM:")) {
         char *tmp = NULL;
         int response[4] = { 0 };
