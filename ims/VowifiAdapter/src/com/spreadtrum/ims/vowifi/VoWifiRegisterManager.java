@@ -102,10 +102,12 @@ public class VoWifiRegisterManager extends ServiceManager {
                 // state and notify the result. As we do not know why it disconnect, we
                 // will add the "forceStop" to pending list first used to reset the native
                 // sip stack, and it will be process in next loop.
-                if (mRegisterState == RegisterState.STATE_PROGRESSING && mListener != null) {
-                    mListener.onLoginFinished(false, 0, 0);
-                } else if (mRegisterState == RegisterState.STATE_CONNECTED && mListener != null) {
-                    mListener.onLogout(0);
+                if (mListener != null) {
+                    if (mRegisterState == RegisterState.STATE_PROGRESSING) {
+                        mListener.onLoginFinished(false, 0, 0);
+                    } else if (mRegisterState == RegisterState.STATE_CONNECTED) {
+                        mListener.onLogout(0);
+                    }
                 }
                 updateRegisterState(RegisterState.STATE_IDLE);
                 clearPendingList();

@@ -92,6 +92,27 @@ public class Utilities {
         return quality;
     }
 
+    public static boolean isSameCallee(String calleeNumber, String phoneNumber) {
+        if (TextUtils.isEmpty(calleeNumber)
+                || TextUtils.isEmpty(phoneNumber)) {
+            return false;
+        }
+
+        if (phoneNumber.indexOf(calleeNumber) >= 0
+                || calleeNumber.indexOf(phoneNumber) >= 0) {
+            return true;
+        } else if (calleeNumber.startsWith("0")) {
+            // Sometimes, the phone number will be start will 0, we'd like to sub the string.
+            String tempCallee = calleeNumber.substring(1);
+            if (phoneNumber.indexOf(tempCallee) >= 0
+                    || tempCallee.indexOf(phoneNumber) >= 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static ArrayList<VideoQuality> sVideoQualityList = new ArrayList<VideoQuality>();
     static {
         // Refer to ImsConfigImpl#VT_RESOLUTION_720P}
