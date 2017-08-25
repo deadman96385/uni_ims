@@ -21,7 +21,7 @@
 <string name="videophone_failcause_default">"El usuario no está disponible"</string>
 <string name="net_connection_disconnect">"La conexión de red se ha interrumpido"</string>
 <string name="no_vt_service">"No se pueden realizar llamadas de video"</string>
-<string name="remote_request_change">"Solicitud remota de cambio de multimedia"</string>
+<string name="remote_request_change">"Solicitud remota de cambio a video llamada"</string>
 <string name="choose_accept_reject">"Por favor seleccione aceptar o cancelar"</string>
 <string name="remote_request_change_accept">"Aceptar"</string>
 <string name="remote_request_change_reject">"Rechazo"</string>
