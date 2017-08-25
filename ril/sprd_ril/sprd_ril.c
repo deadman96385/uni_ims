@@ -8159,11 +8159,6 @@ static void requestGetCellInfoList(void *data, size_t datalen, RIL_Token t,int c
     char cmd[20]={0},rsp[20]={0};
     int commas = 0,cell_num=0,sskip=0,registered = 0,net_type = 0,cell_type = 0,biterr_2g=0,biterr_3g=0;
 
-    if (!s_screenState) {
-        RILLOGD("GetCellInfo ScreenState %d",s_screenState);
-        goto ERROR;
-    }
-
     response = (RIL_CellInfo**) malloc(count * sizeof(RIL_CellInfo*));
     if (response == NULL) {
         goto ERROR;
