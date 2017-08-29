@@ -1727,7 +1727,7 @@ public final class ImsRIL {
             case ImsRILConstants.RIL_UNSOL_IMS_HANDOVER_REQUEST: ret = responseInts(p); break;
             case ImsRILConstants.RIL_UNSOL_IMS_HANDOVER_STATUS_CHANGE: ret = responseInts(p); break;
             case ImsRILConstants.RIL_UNSOL_IMS_NETWORK_INFO_CHANGE: ret = responseImsNetworkInfo(p); break;
-            case ImsRILConstants.RIL_UNSOL_IMS_REGISTER_ADDRESS_CHANGE: ret = responseString(p); break;
+            case ImsRILConstants.RIL_UNSOL_IMS_REGISTER_ADDRESS_CHANGE: ret = responseStrings(p); break;
             case ImsRILConstants.RIL_UNSOL_IMS_WIFI_PARAM: ret = responseInts(p); break;
             default:
                 throw new RuntimeException("Unrecognized unsol response: " + response);
@@ -1776,7 +1776,9 @@ public final class ImsRIL {
             case ImsRILConstants.RIL_UNSOL_IMS_REGISTER_ADDRESS_CHANGE:
                 if (RILJ_LOGD) unsljLog(response);
                 if (mImsRegAddressRegistrant != null) {
-                    mImsRegAddressRegistrant.notifyRegistrant(new AsyncResult(null, ret, null));
+                    //SPRD: add for bug731711
+                    String[] resp = (String[]) ret;
+                    mImsRegAddressRegistrant.notifyRegistrant(new AsyncResult(null, resp, null));
                 }
                 break;
             case ImsRILConstants.RIL_UNSOL_IMS_WIFI_PARAM:
