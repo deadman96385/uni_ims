@@ -1504,6 +1504,12 @@ public class VoWifiCallManager extends ServiceManager {
                 Log.d(TAG, "Get the invite accept result for the user: " + phoneNumber);
                 // It means the call accept to join the conference.
                 ImsCallSessionImpl callSession = confSession.getInInviteCall();
+                if (callSession == null
+                        || !Utilities.isSameCallee(callSession.getCallee(), phoneNumber)) {
+                    Log.w(TAG, "Can not find in invite call or phoneNumber mis-match.");
+                    return;
+                }
+
                 String callee = callSession.getCallee();
                 // Add this call session as the conference's participant.
                 confSession.addParticipant(callee, callSession);
@@ -1528,6 +1534,12 @@ public class VoWifiCallManager extends ServiceManager {
                 Log.d(TAG, "Get the invite failed result for the user: " + phoneNumber);
                 // It means failed to invite the call to this conference.
                 ImsCallSessionImpl callSession = confSession.getInInviteCall();
+                if (callSession == null
+                        || !Utilities.isSameCallee(callSession.getCallee(), phoneNumber)) {
+                    Log.w(TAG, "Can not find in invite call or phoneNumber mis-match.");
+                    return;
+                }
+
                 String callee = callSession.getCallee();
 
                 bundleKey = callee;
