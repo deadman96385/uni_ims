@@ -19,7 +19,6 @@ import com.android.ims.internal.ImsManagerEx;
 
 import com.android.ims.ImsCallProfile;
 import com.android.ims.ImsManager;
-import com.android.ims.ImsUtInterface;
 import com.android.ims.internal.IImsCallSessionListener;
 import com.android.ims.internal.ImsCallSession.State;
 import com.spreadtrum.ims.ImsConfigImpl;
@@ -1121,8 +1120,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onRtpReceived(boolean isVideo);
 
         public void onUnsolicitedUpdate(int stateCode);
-
-//        public void onCallIsEmergency(IImsCallSession callSession);
     }
 
 }
