@@ -283,11 +283,13 @@ public class ImsServiceImpl {
                     }
                     break;
                 case EVENT_IMS_REGISTER_ADDRESS_CHANGED:
-                    if(ar.exception == null && ar.result != null){
-                         if (ar.result instanceof String) {
-                             String addr = (String)ar.result;
-                             setIMSRegAddress(addr);
-                         }
+                    if(ar.exception == null && ar.result != null) {
+                        String[] address = (String[]) ar.result;
+                        setIMSRegAddress(address[0]);
+                        if (address.length > 1) {//SPRD: add for bug731711
+                            Log.d(TAG, "EVENT_IMS_REGISTER_ADDRESS_CHANGED psfcsAddr:" + address[1]);
+                            mImsPscfAddress = address[1];
+                        }
                     }else{
                         Log.e(TAG,"EVENT_IMS_REGISTER_ADDRESS_CHANGED has exception!");
                     }
