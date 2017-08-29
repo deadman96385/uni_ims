@@ -7,7 +7,6 @@ import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
@@ -252,7 +251,11 @@ public class VoWifiCallManager extends ServiceManager {
             if (mServiceBinder != null) {
                 mICall = IVoWifiSerService.Stub.asInterface(mServiceBinder);
                 mICall.registerCallback(mVoWifiServiceCallback);
+            } else {
+                clearPendingList();
             }
+
+            // Notify the call interface changed.
             for (ICallChangedListener listener : mICallChangedListeners) {
                 listener.onChanged(mICall);
             }

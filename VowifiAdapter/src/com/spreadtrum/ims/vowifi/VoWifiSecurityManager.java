@@ -73,9 +73,14 @@ public class VoWifiSecurityManager extends ServiceManager {
                 mISecurity.registerCallback(mCallback);
             } else {
                 Log.d(TAG, "The security service disconnect. Update the attach state.");
+                int oldState = mState;
                 mState = AttachState.STATE_IDLE;
                 if (mListener != null) {
-                    mListener.onStopped(false, 0);
+                    if (oldState == AttachState.STATE_PROGRESSING) {
+                        mListener.onFailed(0);
+                    } else if (oldState == AttachState.STATE_CONNECTED){
+                        mListener.onStopped(false, 0);
+                    }
                 }
                 clearPendingList();
             }
