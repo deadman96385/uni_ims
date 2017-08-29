@@ -1827,7 +1827,7 @@ class MyVoWifiCallback implements VoWifiCallback {
                         + " mIsLoggingIn:" + mIsLoggingIn +" mIsPendingRegisterVolte:"+mIsPendingRegisterVolte);
                 if(service.getVolteRegisterState() == IMS_REG_STATE_REGISTERING
                         || service.getVolteRegisterState() == IMS_REG_STATE_DEREGISTERING
-                        || mIsVolteCall || mIsWifiCalling){
+                        || (mIsVolteCall && service.isImsRegistered()) || mIsWifiCalling){
                     Log.i(TAG,"VoLTERegisterListener-> pending status service.getVolteRegisterState():"+service.getVolteRegisterState()
                             +" mIsVolteCall:"+mIsVolteCall +" mIsWifiCalling:"+mIsWifiCalling);
                     return;
