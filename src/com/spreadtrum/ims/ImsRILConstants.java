@@ -42,6 +42,7 @@ public class ImsRILConstants {
     final static int RIL_REQUEST_GET_IMS_PCSCF_ADDR  = RIL_SPRD_REQUEST_BASE + 35;
     final static int RIL_REQUEST_SET_IMS_PCSCF_ADDR  = RIL_SPRD_REQUEST_BASE + 36;
     final static int RIL_REQUEST_GET_IMS_REGADDR = RIL_SPRD_REQUEST_BASE + 37;
+    final static int RIL_REQUEST_UPDATE_CLIP  = RIL_SPRD_REQUEST_BASE + 38;
 
     /* @} */
 
