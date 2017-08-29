@@ -1154,7 +1154,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         if (TextUtils.isEmpty(phoneNumber)) return null;
 
         for (String participant : mParticipants) {
-            if (isSameCallee(participant, phoneNumber)) {
+            if (Utilities.isSameCallee(participant, phoneNumber)) {
                 return participant;
             }
         }
@@ -1228,7 +1228,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
         for (int i = 0; i < mParticipants.size(); i++) {
             String participant = mParticipants.get(i);
-            if (isSameCallee(participant, phoneNumber)) {
+            if (Utilities.isSameCallee(participant, phoneNumber)) {
                 mParticipants.remove(i);
                 return participant;
             }
@@ -2143,27 +2143,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
     private boolean isConferenceCall() {
         return mIsConfHost && (mCallProfile == null ? false
                 : mCallProfile.getCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE, false));
-    }
-
-    private boolean isSameCallee(String calleeNumber, String phoneNumber) {
-        if (TextUtils.isEmpty(calleeNumber)
-                || TextUtils.isEmpty(phoneNumber)) {
-            return false;
-        }
-
-        if (phoneNumber.indexOf(calleeNumber) >= 0
-                || calleeNumber.indexOf(phoneNumber) >= 0) {
-            return true;
-        } else if (calleeNumber.startsWith("0")) {
-            // Sometimes, the phone number will be start will 0, we'd like to sub the string.
-            String tempCallee = calleeNumber.substring(1);
-            if (phoneNumber.indexOf(tempCallee) >= 0
-                    || tempCallee.indexOf(phoneNumber) >= 0) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private String[] findNeedRemove(String[] participants) {
