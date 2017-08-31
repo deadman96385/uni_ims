@@ -940,18 +940,18 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         }
 
         private void queryCLIRStatus() {
-//            try {
-//                IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
-//                if (imsServiceEx != null) {
-//                    int id = imsServiceEx.getCLIRStatus(Utilities.getPrimaryCard(mContext));
-//                    if (id < 1) {
-//                        Log.w(TAG, "Failed to get CLIR status, please check!");
-//                    }
-//                }
-//            } catch (RemoteException e) {
-//                Log.e(TAG, "Failed to get the CLIR statue as catch the RemoteException: "
-//                        + e.toString());
-//            }
+            try {
+                IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
+                if (imsServiceEx != null) {
+                    int id = imsServiceEx.getCLIRStatus(Utilities.getPrimaryCard(mContext));
+                    if (id < 1) {
+                        Log.w(TAG, "Failed to get CLIR status, please check!");
+                    }
+                }
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to get the CLIR statue as catch the RemoteException: "
+                        + e.toString());
+            }
         }
     }
 
