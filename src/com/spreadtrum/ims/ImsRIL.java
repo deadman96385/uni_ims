@@ -1580,6 +1580,7 @@ public final class ImsRIL {
                 case RI_REQUEST_QUERY_COLP: ret = responseInts(p); break;
                 case RI_REQUEST_QUERY_COLR: ret = responseInts(p); break;
                 case ImsRILConstants.RIL_REQUEST_GET_IMS_PCSCF_ADDR: ret =  responseString(p); break;
+                case ImsRILConstants.RIL_REQUEST_GET_IMS_REGADDR: ret =  responseStrings(p); break;
                 default:
                     throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
                     //break;
@@ -2694,6 +2695,7 @@ public final class ImsRIL {
             case RI_REQUEST_QUERY_COLP: return "RI_REQUEST_QUERY_COLP";
             case RI_REQUEST_QUERY_COLR: return "RI_REQUEST_QUERY_COLR";
             case ImsRILConstants.RIL_REQUEST_GET_IMS_PCSCF_ADDR: return "RIL_REQUEST_GET_IMS_PCSCF_ADDR";
+            case ImsRILConstants.RIL_REQUEST_GET_IMS_REGADDR: return "RIL_REQUEST_GET_IMS_REGADDR";
             default: return requestToString(request);
         }
     }
@@ -2964,6 +2966,13 @@ public final class ImsRIL {
                                 "> getImsPcscfAddress: " + imsRequestToString(rr.mRequest));
           send(rr);
      }
+
+    public void getImsRegAddress(Message response) {
+        RILRequest rr = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_GET_IMS_REGADDR, response);
+        if (RILJ_LOGD) riljLog(rr.serialString() +
+                "> " + imsRequestToString(rr.mRequest));
+        send(rr);
+    }
 
     public void registerForNotAvailable(Handler h, int what, Object obj) {
         mCi.registerForNotAvailable(h,what,obj);
