@@ -100,6 +100,7 @@ public class ImsService extends Service {
     private static final int ACTION_NOTIFY_VOWIFI_UNAVAILABLE = 103;
     private static final int ACTION_CANCEL_CURRENT_REQUEST = 104;
     private static final int ACTION_RELEASE_WIFI_RESOURCE = 105;
+    private static final int ACTION_NOTIFY_VIDEO_CAPABILITY_CHANGE = 106;
 
      /** WIFI service event. */
     private static final int EVENT_WIFI_ATTACH_STATE_UPDATE = 200;
@@ -845,6 +846,9 @@ public class ImsService extends Service {
                     ImsServiceImpl Impl = mImsServiceImplMap.get(
                             Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
                     Impl.notifyImsHandoverStatus(ImsHandoverResult.IMS_HANDOVER_ATTACH_SUCCESS);
+                    break;
+                case ACTION_NOTIFY_VIDEO_CAPABILITY_CHANGE:
+                    updateImsFeatureForAllService();
                     break;
                 default:
                     break;
@@ -1969,6 +1973,12 @@ public class ImsService extends Service {
             }
             return id;
         }
+
+        @Override
+        public void notifyVideoCapabilityChange(){
+            mHandler.removeMessages(ACTION_NOTIFY_VIDEO_CAPABILITY_CHANGE);
+            mHandler.sendMessageDelayed(mHandler.obtainMessage(ACTION_NOTIFY_VIDEO_CAPABILITY_CHANGE),100);
+        }
     };
 
     private final IImsMultiEndpoint.Stub mImsMultiEndpointBinder = new IImsMultiEndpoint.Stub()  {
@@ -2326,21 +2336,31 @@ class MyVoWifiCallback implements VoWifiCallback {
         updateImsFeature(serviceId);
     }
 
+    public void updateImsFeatureForAllService(){
+        synchronized (mImsRegisterListeners) {
+            for(Integer id : mImsServiceImplMap.keySet()){
+                ImsServiceImpl service = mImsServiceImplMap.get(id);
+                updateImsFeature(service.getServiceId());
+            }
+        }
+    }
+
     public void updateImsFeature(int serviceId){
         updateImsRegisterState();
         ImsServiceImpl imsService = mImsServiceImplMap.get(
                 Integer.valueOf(serviceId));
         int oldImsFeature = mCurrentImsFeature;//SPRD:add for bug673215
+        boolean isImsRegistered = false;
         if(mInCallHandoverFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
             if(mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
-                if(imsService != null) imsService.notifyImsRegister(true);
+                isImsRegistered = true;
             } else if (imsService != null && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-                imsService.notifyImsRegister(false);
+                isImsRegistered = false;
             }else {
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
-                if(imsService != null) imsService.notifyImsRegister(true);
+                isImsRegistered = true;
             }
         } else if(mVolteRegistered) {
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
@@ -2348,18 +2368,18 @@ class MyVoWifiCallback implements VoWifiCallback {
             /*SPRD: Bug 667760 If dual volte avtive, need to notify ims state according serviceId.*/
             if(imsService != null) {
                 if (ImsManagerEx.isDualVoLTEActive()) {
-                    imsService.notifyImsRegister(imsService.isImsRegisterState());
+                    isImsRegistered = imsService.isImsRegisterState();
                 } else {
-                    imsService.notifyImsRegister(true);
+                    isImsRegistered = true;
                 }
             }
             /* @} */
         } else if(mWifiRegistered){
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
-            if(imsService != null) imsService.notifyImsRegister(true);
+            isImsRegistered = true;
         } else {
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-            if(imsService != null) imsService.notifyImsRegister(false);
+            isImsRegistered = false;
         }
         if(imsService != null) {
             imsService.updateImsFeatures(mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE,
@@ -2372,8 +2392,9 @@ class MyVoWifiCallback implements VoWifiCallback {
                     imsService.setImsPcscfAddress(addr);
                 }
             }
+            imsService.notifyImsRegister(isImsRegistered);
+            notifyImsRegisterState();
         }
-        notifyImsRegisterState();
 
         //SPRD:add for bug673215
         Log.d(TAG,"updateImsFeature oldImsFeature = "+oldImsFeature);

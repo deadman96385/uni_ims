@@ -1217,7 +1217,7 @@ public class ImsServiceImpl extends MMTelFeature {
     /*sprd: add for bug712024 @{*/
     public void updateImsFeature(int feature, int value) {
         Log.i(TAG, "updateImsFeatures->feature:" + feature + " value:" + value);
-        updateImsFeatures(mImsService.isVoLTEEnabled(), mImsService.isVoWifiEnabled());
+        mImsService.updateImsFeatureForAllService();
     }/*@}*/
 
     public void notifyImsPdnStateChange(int state){
