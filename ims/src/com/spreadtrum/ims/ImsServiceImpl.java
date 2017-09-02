@@ -96,11 +96,12 @@ public class ImsServiceImpl {
     protected static final int EVENT_IMS_GET_SRVCC_CAPBILITY           = 114;
     protected static final int EVENT_IMS_WIFI_PARAM                    = 115;
     protected static final int EVENT_IMS_GET_PCSCF_ADDRESS             = 116;
+    protected static final int EVENT_IMS_GET_IMS_REG_ADDRESS           = 117;
 
     private GSMPhone mPhone;
     private ImsServiceState mImsServiceState;
     private int mServiceClass = ImsServiceClass.MMTEL;
-    private int mServiceId; 
+    private int mServiceId;
     private PendingIntent mIncomingCallIntent;
     private IImsRegistrationListener mListener;
     private Context mContext;
@@ -199,6 +200,7 @@ public class ImsServiceImpl {
         mTelephonyManager = (TelephonyManager)mContext.getSystemService(TelephonyManager.getServiceName(Context.TELEPHONY_SERVICE, mPhone.getPhoneId()));
         //add for Bug 707696
         mCi.registerForSrvccStateChanged(mHandler, EVENT_SRVCC_STATE_CHANGED, null);
+        mCi.getImsRegAddress(mHandler.obtainMessage(EVENT_IMS_GET_IMS_REG_ADDRESS));
     }
 
     /**
@@ -385,6 +387,16 @@ public class ImsServiceImpl {
                             && state.getRilDataRadioTechnology() == ServiceState.RIL_RADIO_TECHNOLOGY_LTE){
                         mImsRegister.enableIms();
                         //setVideoResolution(state);
+                    }
+                    break;
+                case EVENT_IMS_GET_IMS_REG_ADDRESS:
+                    if (ar != null && ar.exception == null && ar.result != null) {
+                        String[] address = (String[]) ar.result;
+                        if (address.length >= 2) {
+                            setIMSRegAddress(address[0]);
+                            mImsPscfAddress = address[1];
+                            Log.i(TAG, "EVENT_IMS_GET_PCSCF_ADDRESS,mImsPscfAddress:" + mImsPscfAddress);
+                        }
                     }
                     break;
                 default:
