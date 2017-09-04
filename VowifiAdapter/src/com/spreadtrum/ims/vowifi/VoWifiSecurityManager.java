@@ -75,17 +75,12 @@ public class VoWifiSecurityManager extends ServiceManager {
                 mISecurity = ISecurityService.Stub.asInterface(mServiceBinder);
                 mISecurity.registerCallback(mCallback);
             } else {
-                Log.d(TAG, "The security service disconnect. Update the attach state.");
-                int oldState = mState;
-                mState = AttachState.STATE_IDLE;
+                Log.d(TAG, "The security service disconnect. Notify the service disconnected.");
                 if (mListener != null) {
-                    if (oldState == AttachState.STATE_PROGRESSING) {
-                        mListener.onFailed(0);
-                    } else if (oldState == AttachState.STATE_CONNECTED){
-                        mListener.onStopped(false, 0);
-                    }
+                    mListener.onDisconnected();
                 }
 
+                mState = AttachState.STATE_IDLE;
                 // Clear all the pending action except MSG_ACTION_SET_VOLTE_ADDR.
                 ArrayList<Integer> notRemove = new ArrayList<Integer>();
                 notRemove.add(MSG_ACTION_SET_VOLTE_ADDR);
@@ -382,6 +377,8 @@ public class VoWifiSecurityManager extends ServiceManager {
          * Attached to stop callback, call stop IS2b () will trigger the callback
          */
         void onStopped(boolean forHandover, int errorCode);
+
+        void onDisconnected();
     }
 
 }

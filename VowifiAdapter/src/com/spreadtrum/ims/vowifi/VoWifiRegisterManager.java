@@ -45,6 +45,8 @@ public class VoWifiRegisterManager extends ServiceManager {
         void onRegisterStateChanged(int newState);
 
         void onResetBlocked();
+
+        void onDisconnected();
     }
 
     private static final String SERVICE_ACTION = "com.spreadtrum.vowifi.service.IRegisterService";
@@ -97,16 +99,9 @@ public class VoWifiRegisterManager extends ServiceManager {
                 mIRegister.registerCallback(mCallback);
             } else {
                 // As the register service disconnected, we'd like to update the register
-                // state and notify the result. As we do not know why it disconnect, we
-                // will add the "forceStop" to pending list first used to reset the native
-                // sip stack, and it will be process in next loop.
-                if (mListener != null) {
-                    if (mRegisterState == RegisterState.STATE_PROGRESSING) {
-                        mListener.onLoginFinished(false, 0, 0);
-                    } else if (mRegisterState == RegisterState.STATE_CONNECTED) {
-                        mListener.onLogout(0);
-                    }
-                }
+                // state and notify as service disconnected.
+                if (mListener != null) mListener.onDisconnected();
+
                 updateRegisterState(RegisterState.STATE_IDLE);
                 clearPendingList();
             }
