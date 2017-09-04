@@ -148,7 +148,9 @@ public abstract class ServiceManager {
                 mPendingActions.clear();
                 Log.d(TAG, "All the pending action will be clear.");
             } else {
-                Iterator<Entry<Integer, PendingAction>> it = mPendingActions.entrySet().iterator();
+                HashMap<Integer, PendingAction> actionMap =
+                        (HashMap<Integer, PendingAction>) mPendingActions.clone();
+                Iterator<Entry<Integer, PendingAction>> it = actionMap.entrySet().iterator();
                 while (it.hasNext()) {
                     Entry<Integer, PendingAction> entry = it.next();
                     PendingAction action = entry.getValue();
