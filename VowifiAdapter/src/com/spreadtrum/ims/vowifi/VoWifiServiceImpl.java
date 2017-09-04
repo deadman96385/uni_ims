@@ -44,6 +44,10 @@ import com.spreadtrum.ims.vowifi.VoWifiSecurityManager.SecurityListener;
 public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private static final String TAG = Utilities.getTag(VoWifiServiceImpl.class.getSimpleName());
 
+    private static final int CMD_STATE_INVALID = 0;
+    private static final int CMD_STATE_PROGRESS = 1;
+    private static final int CMD_STATE_FINISHED = 2;
+
     private static final int RESET_TIMEOUT = 5000; // 5s
     private static final int RESET_STEP_INVALID = 0;
     private static final int RESET_STEP_DEREGISTER = 1;
@@ -69,6 +73,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
     private int mResetStep = RESET_STEP_INVALID;
     private int mEcbmStep = ECBM_STEP_INVALID;
+    private int mCmdAttachState = CMD_STATE_INVALID;
+    private int mCmdRegisterState = CMD_STATE_INVALID;
 
     private boolean mIsSRVCCSupport = true;
 
@@ -353,6 +359,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     public void attach() {
+        mCmdAttachState = CMD_STATE_PROGRESS;
         mHandler.sendEmptyMessage(MSG_ATTACH);
     }
 
@@ -403,6 +410,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     public void register() {
+        mCmdRegisterState = CMD_STATE_PROGRESS;
         mHandler.sendEmptyMessage(MSG_REGISTER);
     }
 
@@ -667,6 +675,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     private void registerSuccess(int stateCode) {
+        mCmdRegisterState = CMD_STATE_FINISHED;
         // As login success, we need set the video quality.
         mCallMgr.updateVideoQuality(Utilities.getDefaultVideoQuality(mPreferences));
 
@@ -676,6 +685,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     private void registerFailed() {
+        mCmdRegisterState = CMD_STATE_INVALID;
         mRegisterIP = null;
         if (mEcbmStep != ECBM_STEP_INVALID) {
             // Exit the ECBM.
@@ -691,6 +701,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     private void registerLogout(int stateCode) {
+        mCmdRegisterState = CMD_STATE_INVALID;
         mRegisterIP = null;
         if (mCallback != null) {
             mCallback.onRegisterStateChanged(mRegisterMgr.getCurRegisterState(), 0);
@@ -933,6 +944,24 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             }
         }
 
+        @Override
+        public void onDisconnected() {
+            Log.d(TAG, "Register service disconnected, and current register cmd state is: "
+                    + mCmdRegisterState);
+            if (mCallback == null || mRegisterMgr == null) return;
+
+            switch (mCmdRegisterState) {
+                case CMD_STATE_INVALID:
+                    // Do nothing as there isn't any register command.
+                    break;
+                case CMD_STATE_FINISHED:
+                    mCallback.onUnsolicitedUpdate(UnsolicitedCode.SIP_LOGOUT);
+                case CMD_STATE_PROGRESS:
+                    mCallback.onRegisterStateChanged(RegisterState.STATE_IDLE, 0);
+                    break;
+            }
+        }
+
         private String getUsedPcscfAddr() {
             try {
                 IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
@@ -990,6 +1019,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                             + mEcbmStep);
                 }
             } else if (mCallback != null) {
+                mCmdAttachState = CMD_STATE_FINISHED;
                 mCallback.onAttachFinished(true, 0);
             }
         }
@@ -1004,6 +1034,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     mCallback.onUnsolicitedUpdate(UnsolicitedCode.SECURITY_STOP);
                 }
             } else if (mCallback != null) {
+                mCmdAttachState = CMD_STATE_INVALID;
                 mCallback.onAttachFinished(false, reason);
                 if (mResetStep >= RESET_STEP_DEATTACH
                         && reason == Utilities.NativeErrorCode.IKE_INTERRUPT_STOP) {
@@ -1016,6 +1047,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         @Override
         public void onStopped(boolean forHandover, int errorCode) {
             if (!forHandover && mResetStep != RESET_STEP_INVALID) {
+                mCmdAttachState = CMD_STATE_INVALID;
                 // If the stop action is for reset, we will notify the reset finished result.
                 if (mResetStep == RESET_STEP_DEREGISTER) {
                     // It means the de-register do not finished. We'd like to force stop register.
@@ -1047,6 +1079,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     }
                 }
             } else if (mCallback != null) {
+                mCmdAttachState = CMD_STATE_INVALID;
                 mCallback.onAttachStopped(errorCode);
                 if (errorCode == NativeErrorCode.DPD_DISCONNECT) {
                     mCallback.onUnsolicitedUpdate(UnsolicitedCode.SECURITY_DPD_DISCONNECTED);
@@ -1056,6 +1089,24 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 } else {
                     mCallback.onUnsolicitedUpdate(UnsolicitedCode.SECURITY_STOP);
                 }
+            }
+        }
+
+        @Override
+        public void onDisconnected() {
+            Log.d(TAG, "Security service disconnected, and current attach cmd state is: "
+                    + mCmdAttachState);
+            if (mCallback == null) return;
+
+            switch (mCmdAttachState) {
+                case CMD_STATE_INVALID:
+                case CMD_STATE_PROGRESS:
+                    mCallback.onAttachFinished(false, 0);
+                    break;
+                case CMD_STATE_FINISHED:
+                    mCallback.onAttachStopped(0);
+                    mCallback.onUnsolicitedUpdate(UnsolicitedCode.SECURITY_STOP);
+                    break;
             }
         }
     }
