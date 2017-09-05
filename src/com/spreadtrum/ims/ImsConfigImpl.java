@@ -275,7 +275,7 @@ public class ImsConfigImpl extends IImsConfig.Stub {
             }
         }else if(feature == ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE){//SPRD: add for bug712024
             if(listener != null && mImsServiceImpl != null){
-                mImsServiceImpl.updateImsFeature(feature,value);
+                mImsServiceImpl.updateImsFeatureForAllService();
             }
         }
     }
