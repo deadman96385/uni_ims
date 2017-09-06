@@ -327,8 +327,11 @@ public class VideoCallCameraManager {
             Log.w(TAG,"handleSetCameraPreSurface()->mIsVideoQualityReceived:"+mIsVideoQualityReceived);
             return;
         }
-        if (!mIsOpened && !mCameraId.equals(String.valueOf(-1))) {
-            openVideoCamera();
+        // SPRD: add for bug 732419
+        if(mCameraId != null) {
+            if (!mIsOpened && !mCameraId.equals(String.valueOf(-1))) {
+                openVideoCamera();
+            }
         }
     }
 
