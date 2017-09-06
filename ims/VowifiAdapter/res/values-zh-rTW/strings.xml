@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="vowifi_request_upgrade_title">對方請求升級</string>
-    <string name="vowifi_request_upgrade_text">請求升級為視訊通話，請選擇接受或拒絕.</string>
+    <string name="vowifi_request_upgrade_text">請求升級為視訊通話，請選擇接受或拒絕</string>
     <string name="vowifi_request_downgrade_title">對方請求拒絕</string>
-    <string name="vowifi_request_downgrade_text">請求降級到語音通話，請選擇接受或拒絕。</string>
+    <string name="vowifi_request_downgrade_text">請求降級到語音通話，請選擇接受或拒絕</string>
 
     <string name="vowifi_add_video_failed">升級請求被拒絕</string>
     <string name="vowifi_add_video_success">升級為視訊通話</string>
@@ -17,7 +17,7 @@
 
     <string name="vowifi_call_retry">請稍後再試</string>
     <string name="vowifi_call_is_focus">加入會議</string>
-    <string name="vowifi_conf_connect_timeout">接入會議中心超時.</string>
+    <string name="vowifi_conf_connect_timeout">接入會議中心超時</string>
     <string name="vowifi_conf_disconnect">創建會議失敗</string>
     <string name="vowifi_conf_finished">會議電話結束</string>
     <string name="vowifi_conf_invite_request_failed">邀請與會者失敗，無法創建會議</string>
@@ -26,5 +26,5 @@
     <string name="vowifi_conf_none_participant">無任何與會者，通話結束</string>
     <string name="vowifi_conf_do_not_support">不支援一鍵發起會議</string>
     <string name="vowifi_video_call_do_not_support">不支援視訊通話</string>
-    <string name="vowifi_conf_can_not_invite_more">與會者已達到最大個數，無法繼續邀請與會者。</string>
+    <string name="vowifi_conf_can_not_invite_more">與會者已達到最大個數，無法繼續邀請與會者</string>
 </resources>

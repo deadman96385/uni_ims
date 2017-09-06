@@ -78,6 +78,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private int mCmdRegisterState = CMD_STATE_INVALID;
 
     private boolean mIsSRVCCSupport = true;
+    private boolean mNeedResetAfterCall = false;
 
     private Context mContext;
     private TelephonyManager mTeleMgr = null;
@@ -666,9 +667,11 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         }
 
         if (!startRegister) {
-            // The IPv6 & IPv4 invalid, it means login failed. Update the result.
-            // Can not get the register IP.
+            // Do not start register as there isn't valid IPv6 & IPv4 address,
+            // it means login failed. Notify the result.
             if (isRelogin) {
+                // If is re-login, it means already notify register success before.
+                // So we'd like to notify as register logout here.
                 registerLogout(NativeErrorCode.REG_TIMEOUT);
             } else {
                 registerFailed();
@@ -706,7 +709,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         mCmdRegisterState = CMD_STATE_INVALID;
         mRegisterIP = null;
         if (mCallback != null) {
-            mCallback.onRegisterStateChanged(mRegisterMgr.getCurRegisterState(), 0);
+            mCallback.onRegisterStateChanged(RegisterState.STATE_IDLE, 0);
             mCallback.onUnsolicitedUpdate(stateCode == NativeErrorCode.REG_TIMEOUT
                     ? UnsolicitedCode.SIP_TIMEOUT : UnsolicitedCode.SIP_LOGOUT);
         }
@@ -749,6 +752,13 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onCallEnd(ImsCallSessionImpl callSession) {
             if (mCallMgr.getCallCount() < 1 && mCallback != null) {
                 mCallback.onAllCallsEnd();
+                // Check if need reset after all the calls end.
+                if (mNeedResetAfterCall) {
+                    mNeedResetAfterCall = false;
+
+                    // Notify as register logout.
+                    registerLogout(0);
+                }
             }
         }
 
@@ -812,15 +822,17 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             if (success) {
                 if (mCallback != null) mCallback.onReregisterFinished(success, errorCode);
             } else {
-                // Handle the failed in non-HO sutuation
-                if ((errorCode == NativeErrorCode.REG_EXPIRED_TIMEOUT)
-                        || (errorCode == NativeErrorCode.REG_EXPIRED_OTHER)) {
-                    // The up-layer will need to handle TIMEOUT
+                int callCount = mCallMgr.getCallCount();
+                if (callCount > 0) {
+                    // It means there is call, and we'd like to notify as register logout after
+                    // all the call ends.
+                    mNeedResetAfterCall = true;
+                } else {
+                    // There isn't any calls. As get the re-register failed, we'd like to notify
+                    // as register logout now.
                     errorCode = (errorCode == NativeErrorCode.REG_EXPIRED_TIMEOUT)
                             ? NativeErrorCode.REG_TIMEOUT : errorCode;
                     registerLogout(errorCode);
-                } else {
-                    // Don't handle the reregister fail in HO situation.
                 }
             }
         }
@@ -956,6 +968,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     mCallback.onRegisterStateChanged(RegisterState.STATE_IDLE, 0);
                     break;
             }
+
+            mCmdRegisterState = CMD_STATE_INVALID;
         }
 
         private String getUsedPcscfAddr() {
@@ -1090,6 +1104,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     mCallback.onUnsolicitedUpdate(UnsolicitedCode.SECURITY_STOP);
                     break;
             }
+
+            mCmdAttachState = CMD_STATE_INVALID;
         }
     }
 
