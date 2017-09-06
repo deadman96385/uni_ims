@@ -6819,11 +6819,34 @@ static void  requestEnterSimPin(int channelID, void*  data, size_t  datalen, RIL
     ATResponse   *p_response = NULL;
     int err;
     char *cmd = NULL;
+    char *cpinLine = NULL, *cpinResult = NULL;
     const char **strings = (const char**)data;
     int ret;
     int remaintime = 3;
-    if ( datalen == 3*sizeof(char*) ) {
-        ret = asprintf(&cmd, "AT+CPWD=\"SC\",\"%s\",\"%s\"", strings[0], strings[1]);
+    if (datalen == 3 * sizeof(char*)) {
+        err = at_send_command_singleline(ATch_type[channelID], "AT+CPIN?",
+                "+CPIN:", &p_response);
+        if (err < 0 || p_response->success == 0) {
+            goto error;
+        }
+
+        cpinLine = p_response->p_intermediates->line;
+        err = at_tok_start(&cpinLine);
+        if (err < 0)
+            goto error;
+
+        err = at_tok_nextstr(&cpinLine, &cpinResult);
+        if (err < 0)
+            goto error;
+
+        if (0 == strcmp(cpinResult, "SIM PIN")) {
+            ret = asprintf(&cmd, "ATD**04*%s*%s*%s#", strings[0], strings[1],
+                            strings[1]);
+        } else {
+            ret = asprintf(&cmd, "AT+CPWD=\"SC\",\"%s\",\"%s\"", strings[0],
+                            strings[1]);
+        }
+        at_response_free(p_response);
     } else
         goto error;
 
