@@ -94,6 +94,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             "com.android.ACTION_SUPP_SERVICE_NOTIFICATION";
     private static final String SUPP_SERV_CODE_EXTRA = "supp_serv_code";
     private static final String SUPP_SERV_NOTIFICATION_TYPE_EXTRA = "supp_serv_notification_type";
+    private static final String ACTION_CALL_ALERTING =
+            "com.android.ACTION_CALL_ALERTING";
     /* @} */
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
@@ -268,6 +270,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 }
                 break;
             case ALERTING:
+                /* SPRD: Local Tone Feature. */
+                Intent intent = new Intent();
+                intent.setAction(ACTION_CALL_ALERTING);
+                mContext.sendBroadcast(intent);
+                /* @} */
                 try{
                     mState = ImsCallSession.State.NEGOTIATING;
                     if (mImsDriverCall != null && mImsDriverCall.state != ImsDriverCall.State.ALERTING
