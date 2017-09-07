@@ -3,6 +3,7 @@ package com.spreadtrum.ims.vowifi;
 
 import android.content.Context;
 import android.os.RemoteException;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.ims.internal.IVoWifiXCAP;
@@ -30,6 +31,7 @@ public class VoWifiXCAPManager extends ServiceManager {
     private int mSessionId = -1;
     private int mRegisterState = RegisterState.STATE_IDLE;
     private int mCurIPVersion = IPVersion.NONE;
+    private int mCurRegIPVersion = IPVersion.NONE;
     private SecurityConfig mSecurityConfig;
     private VoWifiSecurityManager mSecurityMgr;
     private MySecurityListener mSecurityListener;
@@ -89,13 +91,13 @@ public class VoWifiXCAPManager extends ServiceManager {
 
     public void updateRegisterState(int newState, int ipVersion) {
         mRegisterState = newState;
-        mCurIPVersion = ipVersion;
+        mCurRegIPVersion = ipVersion;
 
         updateServiceState();
     }
 
     public void prepare(int subId) {
-        if (subId > 0 || mRegisterState != RegisterState.STATE_CONNECTED) {
+        if (subId < 0 || mRegisterState != RegisterState.STATE_CONNECTED) {
             // Do not register now. set as prepare failed.
             resetConfig();
             notifyPrepareResult(false);
@@ -103,7 +105,7 @@ public class VoWifiXCAPManager extends ServiceManager {
         }
 
         // Start the attach process for XCAP.
-        mSecurityMgr.attach(subId, S2bType.XCAP, mSecurityListener);
+        mSecurityMgr.attach(subId, S2bType.XCAP, null, mSecurityListener);
     }
 
     public void disabled() {
@@ -175,6 +177,22 @@ public class VoWifiXCAPManager extends ServiceManager {
         public void onSuccessed(int sessionId) {
             mSessionId = sessionId;
             mSecurityConfig = mSecurityMgr.getConfig(mSessionId);
+            mCurIPVersion = mSecurityConfig._useIPVersion;
+
+            // If the register IP version do not same as the attach IP version.
+            // We'd like to adjust the XCAP IPVersion.
+            if (mCurIPVersion != mCurRegIPVersion) {
+                if (mCurRegIPVersion == IPVersion.IP_V4
+                        && !TextUtils.isEmpty(mSecurityConfig._ip4)
+                        && mSecurityMgr.setIPVersion(mSessionId, IPVersion.IP_V4)) {
+                    mCurIPVersion = IPVersion.IP_V4;
+                } else if (mCurRegIPVersion == IPVersion.IP_V6
+                        && !TextUtils.isEmpty(mSecurityConfig._ip6)
+                        && mSecurityMgr.setIPVersion(mSessionId, IPVersion.IP_V6)) {
+                    mCurIPVersion = IPVersion.IP_V6;
+                }
+            }
+
             // After attach success, we need update the settings to native stack.
             if (updateSettings()) {
                 notifyPrepareResult(true);
@@ -198,6 +216,12 @@ public class VoWifiXCAPManager extends ServiceManager {
             updateServiceState();
         }
 
+        @Override
+        public void onDisconnected() {
+            resetConfig();
+            // Update the service state as attach stopped.
+            updateServiceState();
+        }
     }
 
 }

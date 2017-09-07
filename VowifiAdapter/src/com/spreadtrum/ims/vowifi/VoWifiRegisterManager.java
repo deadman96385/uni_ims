@@ -32,14 +32,14 @@ public class VoWifiRegisterManager extends ServiceManager {
 
         /**
          * Refresh the registration result callback
-         *
-         * @param success true if success or false if failed.
          */
         void onRefreshRegFinished(boolean success, int errorCode);
 
         void onRegisterStateChanged(int newState, int errorCode);
 
         void onResetBlocked();
+
+        void onDisconnected();
     }
 
     private static final String SERVICE_ACTION = IVoWifiRegister.class.getCanonicalName();
@@ -72,18 +72,11 @@ public class VoWifiRegisterManager extends ServiceManager {
                 mIRegister = IVoWifiRegister.Stub.asInterface(mServiceBinder);
                 mIRegister.registerCallback(mCallback);
             } else {
+                Log.d(TAG, "The register service disconnect. Notify the service disconnected.");
                 // As the register service disconnected, we'd like to update the register
-                // state and notify the result. As we do not know why it disconnect, we
-                // will add the "forceStop" to pending list first used to reset the native
-                // sip stack, and it will be process in next loop.
-                if (mRequest != null
-                        && mRequest.mState == RegisterState.STATE_PROGRESSING
-                        && mRequest.mListener != null) {
-                    mRequest.mListener.onLoginFinished(false, 0, 0);
-                } else if (mRequest != null
-                        && mRequest.mState == RegisterState.STATE_CONNECTED
-                        && mRequest.mListener != null) {
-                    mRequest.mListener.onLogout(0);
+                // state and notify as service disconnected
+                if (mRequest != null && mRequest.mListener != null) {
+                    mRequest.mListener.onDisconnected();
                 }
                 updateRegisterState(RegisterState.STATE_IDLE);
                 clearPendingList();

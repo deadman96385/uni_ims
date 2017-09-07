@@ -999,6 +999,7 @@ public class ImsServiceImpl extends MMTelFeature {
             Log.i(TAG, "setIMSRegAddress addr = " + addr);
         }
         mImsRegAddress = addr;
+        mWifiService.setUsedLocalAddr(addr);
     }
     public void requestImsHandover(int type){
         Log.i(TAG,"requestImsHandover->type:" + type);

@@ -1927,14 +1927,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mIsEmergency = true;
 
         boolean sosAsNormal = mCursor != null ? mCursor.sosAsNormalCall() : true;
+        boolean needRemoveOldS2b = true;
         if (sosAsNormal) {
             // Start an emergency call directly.
             startCall(callee);
         } else {
-            boolean needRemoveOldS2b = mCursor != null ? mCursor.sosNeedRemoveOldS2b() : false;
-            ECBMRequest request = ECBMRequest.get(needRemoveOldS2b);
-            mCallManager.enterECBMWithCallSession(this, request);
+            needRemoveOldS2b = mCursor != null ? mCursor.sosNeedRemoveOldS2b() : true;
         }
+        ECBMRequest request = ECBMRequest.get(sosAsNormal, needRemoveOldS2b);
+        mCallManager.enterECBMWithCallSession(this, request);
     }
 
     private void startCall(String callee) throws RemoteException {

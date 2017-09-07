@@ -59,11 +59,11 @@ public class ImsUtImpl extends IImsUt.Stub {
     private IVoWifiXCAP mIXCAP = null;
     private XCAPServiceCallback mXCAPServiceCallback = new XCAPServiceCallback();
 
-    // If there isn't any CMD to disabled the xcap after 2min.
+    // If there isn't any CMD to disabled the XCAP after 2min.
     private static final int DELAY_DISALBE_XCAP = 2 * 60 * 1000;
 
-    // We'd like to handle the timeout in the native. Disable the timeout action now.
-    private static final int CMD_TIMEOUT = -1;
+    // Set the commands timeout as 1 minutes.
+    private static final int CMD_TIMEOUT = 60 * 1000;
 
     private static final int MSG_DISABLE_XCAP = -2;
     private static final int MSG_HANDLE_EVENT = -1;

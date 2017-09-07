@@ -355,13 +355,10 @@ public class Utilities {
             if (Utilities.DEBUG) {
                 Log.i(TAG, "Get the s2b ip address from localIPv4: " + localIPv4 + ", localIPv6: "
                         + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: "
-                        + pcscfIPv6 + ", dns4: " + dns4 + ", dns6: " + dns6);
+                        + pcscfIPv6 + ", usedPcscfAddr: " + usedPcscfAddr + ", dns4: " + dns4
+                        + ", dns6: " + dns6);
             }
 
-            if (TextUtils.isEmpty(dns4) && TextUtils.isEmpty(dns6)) {
-                Log.e(TAG, "Can not get the dns server address: pcscfdns4: " + dns4
-                        + ", pcscfdns6: " + dns6);
-            }
             if ((TextUtils.isEmpty(localIPv4) || TextUtils.isEmpty(pcscfIPv4))
                     && (TextUtils.isEmpty(localIPv6) || TextUtils.isEmpty(pcscfIPv6))
                     && TextUtils.isEmpty(usedPcscfAddr)) {
@@ -380,8 +377,8 @@ public class Utilities {
                 return new RegisterConfig(
                         localIPv4, localIPv6, pcscfIPv4s, pcscfIPv6s, dns4, dns6);
             } else {
-                String[] newPcscfIPv4s = addAddr(pcscfIPv4s, usedPcscfAddr, true);
-                String[] newPcscfIPv6s = addAddr(pcscfIPv6s, usedPcscfAddr, false);
+                String[] newPcscfIPv4s = rebuildAddr(pcscfIPv4s, usedPcscfAddr, true);
+                String[] newPcscfIPv6s = rebuildAddr(pcscfIPv6s, usedPcscfAddr, false);
                 return new RegisterConfig(
                         localIPv4, localIPv6, newPcscfIPv4s, newPcscfIPv6s, dns4, dns6);
             }
@@ -492,21 +489,23 @@ public class Utilities {
             return ipAddr.contains(".");
         }
 
-        private static String[] addAddr(String[] oldAddrs, String addr, boolean asIPv4) {
-            if (TextUtils.isEmpty(addr)) return oldAddrs;
-
-            if (isIPv4(addr) != asIPv4) {
+        private static String[] rebuildAddr(String[] oldAddrs, String firstAddr, boolean asIPv4) {
+            if (oldAddrs == null
+                    || oldAddrs.length == 1
+                    || TextUtils.isEmpty(firstAddr)
+                    || isIPv4(firstAddr) != asIPv4) {
                 return oldAddrs;
             }
 
-            String[] newAddrs = new String[oldAddrs.length + 1];
-            int index = 0;
-            for (String oldAddr : oldAddrs) {
-                newAddrs[index] = oldAddr;
-                index = index + 1;
+            for (int i = 0; i < oldAddrs.length; i++) {
+                if (firstAddr.equals(oldAddrs[i])) {
+                    String oldFirstAddr = oldAddrs[0];
+                    oldAddrs[0] = firstAddr;
+                    oldAddrs[i] = oldFirstAddr;
+                    break;
+                }
             }
-            newAddrs[index] = addr;
-            return newAddrs;
+            return oldAddrs;
         }
 
         @Override
@@ -678,9 +677,11 @@ public class Utilities {
             }
         }
 
-        public static ECBMRequest get(boolean needRemoveOldS2b) {
+        public static ECBMRequest get(boolean asNormalCall, boolean needRemoveOldS2b) {
             // TODO: Do not support needn't remove old s2b now.
-            if (true /*needRemoveOldS2b*/) {
+            if (asNormalCall) {
+                return new ECBMRequest(ECBM_STEP_INVALID);
+            } else if (true /*needRemoveOldS2b*/) {
                 return new ECBMRequest(
                         ECBM_STEP_DEREGISTER_NORMAL,
                         ECBM_STEP_DEATTACH_NORMAL,
@@ -720,7 +721,11 @@ public class Utilities {
         }
 
         public int getExitECBMStep() {
-            mIndex = (mRequestSteps.size() / 2) + 1;
+            if (mRequestSteps.size() == 1) {
+                mIndex = 0;
+            } else {
+                mIndex = (mRequestSteps.size() / 2) + 1;
+            }
             return mRequestSteps.get(mIndex);
         }
     }

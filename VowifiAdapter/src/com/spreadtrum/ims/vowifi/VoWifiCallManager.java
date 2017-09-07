@@ -254,7 +254,11 @@ public class VoWifiCallManager extends ServiceManager {
             if (mServiceBinder != null) {
                 mICall = IVoWifiCall.Stub.asInterface(mServiceBinder);
                 mICall.registerCallback(mVoWifiServiceCallback);
+            } else {
+                clearPendingList();
             }
+
+            // Notify the call interface changed.
             for (ICallChangedListener listener : mICallChangedListeners) {
                 listener.onChanged(mICall);
             }

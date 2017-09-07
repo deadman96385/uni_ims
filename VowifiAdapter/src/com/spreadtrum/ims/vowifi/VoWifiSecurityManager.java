@@ -26,6 +26,33 @@ import java.util.Iterator;
 public class VoWifiSecurityManager extends ServiceManager {
     private static final String TAG = Utilities.getTag(VoWifiSecurityManager.class.getSimpleName());
 
+    public interface SecurityListener {
+        /**
+         * Attachment process callback
+         */
+        void onProgress(int state);
+
+        /**
+         * Attachment success callback
+         */
+        void onSuccessed(int sessionId);
+
+        /**
+         * Attachment failure callback
+         */
+        void onFailed(int reason);
+
+        /**
+         * Attached to stop callback, call stop IS2b () will trigger the callback
+         */
+        void onStopped(boolean forHandover, int errorCode);
+
+        /**
+         * Security service disconnect callback.
+         */
+        void onDisconnected();
+    }
+
     private static final int MSG_ACTION_ATTACH = 1;
 
     private static final String SERVICE_ACTION = IVoWifiSecurity.class.getCanonicalName();
@@ -53,8 +80,8 @@ public class VoWifiSecurityManager extends ServiceManager {
                 mISecurity = IVoWifiSecurity.Stub.asInterface(mServiceBinder);
                 mISecurity.registerCallback(mCallback);
             } else {
-                Log.d(TAG, "The security service disconnect. Update the attach state.");
-                notifyAllStopped();
+                Log.d(TAG, "The security service disconnect. Notify the service disconnected.");
+                notifyAllDisconnected();
                 clearPendingList();
             }
         } catch (RemoteException e) {
@@ -69,14 +96,14 @@ public class VoWifiSecurityManager extends ServiceManager {
         if (msg.what == MSG_ACTION_ATTACH) {
             PendingAction action = (PendingAction) msg.obj;
             attach((Integer) action._params.get(0), (Integer) action._params.get(1),
-                    (SecurityListener) action._params.get(2));
+                    (String) action._params.get(2), (SecurityListener) action._params.get(3));
             return true;
         }
 
         return false;
     }
 
-    public void attach(int subId, int type, SecurityListener listener) {
+    public void attach(int subId, int type, String localAddr, SecurityListener listener) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Start the s2b attach. type: " + type + ", subId: " + subId);
         }
@@ -85,7 +112,8 @@ public class VoWifiSecurityManager extends ServiceManager {
         if (mISecurity != null) {
             try {
                 // If the s2b state is idle, start the attach action.
-                int sessionId = mISecurity.start(type, subId);
+                int sessionId = mISecurity.startWithAddr(
+                        type, subId, TextUtils.isEmpty(localAddr) ? "" : localAddr);
                 if (sessionId == Result.INVALID_ID) {
                     // It means attach failed.
                     listener.onFailed(0);
@@ -100,8 +128,9 @@ public class VoWifiSecurityManager extends ServiceManager {
         }
         if (!handle) {
             // Do not handle the attach action, add to pending list.
+            if (TextUtils.isEmpty(localAddr)) localAddr = "";
             addToPendingList(new PendingAction("attach", MSG_ACTION_ATTACH, Integer.valueOf(type),
-                    Integer.valueOf(subId), listener));
+                    Integer.valueOf(subId), localAddr, listener));
         }
     }
 
@@ -157,7 +186,7 @@ public class VoWifiSecurityManager extends ServiceManager {
         return request != null ? setIPVersion(request.mSessionId, ipVersion) : false;
     }
 
-    private boolean setIPVersion(int sessionId, int ipVersion) {
+    public boolean setIPVersion(int sessionId, int ipVersion) {
         if (Utilities.DEBUG) Log.i(TAG, "Set the IP version: " + ipVersion);
 
         if (mISecurity == null) {
@@ -204,12 +233,17 @@ public class VoWifiSecurityManager extends ServiceManager {
         return null;
     }
 
-    private void notifyAllStopped() {
+    private void notifyAllDisconnected() {
         Iterator<SecurityRequest> it = mRequestMap.values().iterator();
         while (it.hasNext()) {
             SecurityRequest request = it.next();
-            attachStopped(request, false, 0);
+            if (request != null) {
+                if (request.mListener != null) {
+                    request.mListener.onDisconnected();
+                }
+            }
         }
+        mRequestMap.clear();
     }
 
     private void attachSuccess(SecurityRequest request) {
@@ -356,35 +390,6 @@ public class VoWifiSecurityManager extends ServiceManager {
 
             return super.equals(obj);
         }
-    }
-
-    public interface SecurityListener {
-        /**
-         * Attachment process callback
-         *
-         * @param state:See S2bConfig related definitions
-         */
-        void onProgress(int state);
-
-        /**
-         * Attachment success callback
-         *
-         * @param config:Contains the pcscf address, DNS address, IP address, and other information
-         *            distribution
-         */
-        void onSuccessed(int sessionId);
-
-        /**
-         * Attachment failure callback
-         *
-         * @param reason:Enumeration of causes for failure, see S2bConfig related definitions
-         */
-        void onFailed(int reason);
-
-        /**
-         * Attached to stop callback, call stop IS2b () will trigger the callback
-         */
-        void onStopped(boolean forHandover, int errorCode);
     }
 
 }
