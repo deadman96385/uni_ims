@@ -2763,11 +2763,16 @@ public class ImsService extends Service {
     }
 
     public void updateImsFeature(int serviceId) {
+        if (!ImsManagerEx.isDualVoLTEActive() && ImsRegister.getPrimaryCard(mPhoneCount) != (serviceId-1)) {
+            Log.d(TAG, "updateImsFeature->this is DSDS version, do not update for secondary card.");
+            return;
+        }
         updateImsRegisterState();
         ImsServiceImpl imsService = mImsServiceImplMap.get(Integer
                 .valueOf(serviceId));
         int oldImsFeature = mCurrentImsFeature;// SPRD:add for bug673215
         boolean isImsRegistered = false;
+        boolean volteRegistered = (imsService != null) ? imsService.isImsRegisterState() : false;
         if (mInCallHandoverFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN) {
             if (mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
@@ -2780,7 +2785,7 @@ public class ImsService extends Service {
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
                 isImsRegistered = true;
             }
-        } else if (mVolteRegistered) {
+        } else if (volteRegistered) {
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
             // if(imsService != null) imsService.notifyImsRegister(true);
             /*
@@ -2796,7 +2801,9 @@ public class ImsService extends Service {
             /* @} */
         } else if (mWifiRegistered) {
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
-            isImsRegistered = true;
+            if(ImsRegister.getPrimaryCard(mPhoneCount) == (serviceId-1)) {
+                isImsRegistered = true;
+            }
         } else {
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
             isImsRegistered = false;
@@ -2828,9 +2835,10 @@ public class ImsService extends Service {
         }
 
         Log.i(TAG, "updateImsFeature->mWifiRegistered:" + mWifiRegistered
-                + " mVolteRegistered:" + mVolteRegistered
+                + " volteRegistered:" + volteRegistered
                 + " mCurrentImsFeature:" + mCurrentImsFeature
-                + " mInCallHandoverFeature:" + mInCallHandoverFeature);
+                + " mInCallHandoverFeature:" + mInCallHandoverFeature
+                + " serviceId:" + serviceId);
     }
 
     private boolean isVoLTERegisted() {
