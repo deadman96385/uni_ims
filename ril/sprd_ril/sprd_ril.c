@@ -382,6 +382,7 @@ static pthread_mutex_t s_lte_attach_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t s_pdp_mapping_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t s_lte_cgatt_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t wait_cpin_unlock_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t s_simStatusMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int s_port = -1;
 static const char * s_device_path = NULL;
@@ -12607,6 +12608,7 @@ getSIMStatus(int channelID)
         goto done;
     }
 
+    pthread_mutex_lock(&s_simStatusMutex);
     err = at_send_command_singleline(ATch_type[channelID], "AT+CPIN?", "+CPIN:", &p_response);
 
     if (err != 0) {
@@ -12788,6 +12790,8 @@ done:
         s_ImsISIM = -1;
         s_sessionId = -1;
     }
+
+    pthread_mutex_unlock(&s_simStatusMutex);
     /** }@ */
     return ret;
 }
