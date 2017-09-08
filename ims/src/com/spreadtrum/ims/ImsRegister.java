@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.database.ContentObserver;
 import android.os.Message;
+import android.os.SystemProperties;
 import android.os.Handler;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.gsm.GSMPhone;
@@ -91,6 +92,7 @@ public class ImsRegister {
                     if (mPhone.isRadioOn()) {
                         log("EVENT_RADIO_STATE_CHANGED -> radio is on");
                         initISIM();
+                        SetUserAgent();//SPRD:add for user agent future 670075
                     } else {
                         mInitISIMDone = false;
                         mIMSBearerEstablished = false;
@@ -329,4 +331,20 @@ public class ImsRegister {
             return new ServiceState();
         }
     }
+    /**
+     * SPRD:add for user agent future
+     * userAgent: deviceName_SW version
+     ***/
+    private void SetUserAgent() {
+        String userAgent = SystemProperties.get("ro.config.useragent", "SPRD VOLTE");
+        userAgent = "SMART 4G MAX 4.0";
+        log("SetUserAgent() userAgent = " + userAgent);
+        if ("SPRD VOLTE".equals(userAgent)) {
+            return;
+        }
+        String[] cmd = new String[1];
+        cmd[0] = "AT+SPENGMDVOLTE=22,1," + "\"" + userAgent + "\"";
+        log("SetUserAgent :" + cmd[0]);
+        mCi.invokeOemRilRequestStrings(cmd, null);
+    }/* @} */
 }
