@@ -178,6 +178,11 @@ public class VideoCallEngine {
     }
 
     public void setImsCamera(Camera cam){
+        //SPRD:add fot bug 735567
+        if(cam == null) {
+            log("setCameraId as -1.");
+            this.setCameraId(-1);
+        }else
         this.setCamera(cam, mCameraResolution);
     }
     public static final int MEDIA_CALLEVENT_CAMERACLOSE = 100;
