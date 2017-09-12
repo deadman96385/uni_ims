@@ -596,7 +596,7 @@ public class ImsUtProxy extends IImsUt.Stub {
             if (indexMCC >= 0 && indexMNC >= 0) {
                 String mccValue = impi.substring(indexMCC + 3, indexMCC + 6);
                 String mncValue = impi.substring(indexMNC + 3, indexMCC - 1);
-                if (mncValue.length() == 3 && mccValue.startsWith("00")) {
+                if (mncValue.length() == 3 && mncValue.startsWith("00")) {
                     carrier = mccValue + mncValue.substring(1);
                 } else {
                     carrier = mccValue + mncValue;
