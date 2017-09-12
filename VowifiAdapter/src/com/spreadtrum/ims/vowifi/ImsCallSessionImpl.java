@@ -276,8 +276,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mVideoCallProvider.updateVideoProfile(videoProfile);
 
         // Set radio technology to WLAN.
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_CALL_RAT_TYPE, ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN);
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE,
+                String.valueOf(ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN));
 
         // Register the service changed to get the IVowifiService.
         mCallManager.registerCallInterfaceChanged(mICallChangedListener);
@@ -482,8 +482,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
         mCallProfile.setCallExtraInt(
                 ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_CALL_RAT_TYPE, ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN);
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE,
+                String.valueOf(ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN));
 
         if (isEmergencyNumber || forceSos) {
             startEmergencyCall(callee);
@@ -547,8 +547,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
         mCallProfile.setCallExtraInt(
                 ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_CALL_RAT_TYPE, ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN);
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE,
+                String.valueOf(ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN));
 
         StringBuilder phoneNumbers = new StringBuilder();
         for (int i = 0; i < participants.length; i++) {
@@ -2014,8 +2014,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
             imsCallProfile.setCallExtraInt(
                     ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-            imsCallProfile.setCallExtraInt(
-                    ImsCallProfile.EXTRA_CALL_RAT_TYPE, ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN);
+            imsCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE,
+                    String.valueOf(ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN));
 
             imsCallProfile.setCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE, true);
             ImsCallSessionImpl newConfSession =
