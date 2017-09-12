@@ -20,6 +20,7 @@ import android.util.Log;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import com.android.ims.ImsCall;
 import com.android.ims.ImsCallProfile;
 import com.android.ims.ImsConferenceState;
 import com.android.ims.ImsReasonInfo;
@@ -913,6 +914,14 @@ public class VoWifiCallManager extends ServiceManager {
                     }
                     break;
                 }
+		 case JSONUtils.EVENT_CODE_USSD_INFO_RECEIVED: {
+		      boolean isVideo = jObject.optBoolean(JSONUtils.KEY_IS_VIDEO, false);
+                    String info = jObject.optString(JSONUtils.KEY_USSD_INFO_RECEIVED, "");
+		      int mode = jObject.optInt(JSONUtils.KEY_USSD_MODE, -1);
+                    handleUssdInfoReceived(callSession, sessionId, info, mode);
+                    break;
+                }
+
                 default:
                     Log.w(TAG, "The event '" + eventName + "' do not handle, please check!");
             }
@@ -1700,6 +1709,23 @@ public class VoWifiCallManager extends ServiceManager {
         if (mListener != null) mListener.onCallRTPReceived(isVideo, isReceived);
     }
 
+    private void handleUssdInfoReceived(ImsCallSessionImpl callSession, int sessionId, String info, int mode){
+        if (Utilities.DEBUG) Log.i(TAG, "Handle the received ussd info.");
+        if (callSession == null) {
+            Log.w(TAG, "[handleUssdInfoReceived] The call session is null");
+            return;
+        }
+        callSession.updateState(ImsCallSession.State.ESTABLISHED);
+        IImsCallSessionListener listener = callSession.getListener();
+        if (listener != null) {
+	     try {
+                    listener.callSessionUssdMessageReceived(callSession, mode, info);
+                } catch (RemoteException e) {
+                    Log.e(TAG, "Failed to send the ussd info. e: " + e);
+                }
+
+        }
+    }
     /**
      * This dialog will be shown when the call upgrade or downgrade.
      *

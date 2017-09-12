@@ -882,6 +882,8 @@ public class Utilities {
         public static final String KEY_EMERGENCY_CALL_IND_URN_URI = "emergency_call_ind_urn_uri";
         public static final String KEY_EMERGENCY_CALL_IND_REASON = "emergency_call_ind_reason";
         public static final String KEY_EMERGENCY_CALL_IND_ACTION_TYPE = "emergency_call_ind_action_type";
+	 public static final String KEY_USSD_INFO_RECEIVED = "ussd_info_received";
+	 public static final String KEY_USSD_MODE = "ussd_mode";
 
         // Call
         public static final int CALL_EVENT_CODE_BASE = 100;
@@ -906,6 +908,7 @@ public class Utilities {
         public static final int EVENT_CODE_CALL_RTCP_CHANGED = CALL_EVENT_CODE_BASE + 19;
         public static final int EVENT_CODE_CALL_IS_FOCUS = CALL_EVENT_CODE_BASE + 20;
         public static final int EVENT_CODE_CALL_IS_EMERGENCY = CALL_EVENT_CODE_BASE + 21;
+	 public static final int EVENT_CODE_USSD_INFO_RECEIVED = CALL_EVENT_CODE_BASE + 22;
 
         public static final String EVENT_CALL_INCOMING = "call_incoming";
         public static final String EVENT_CALL_OUTGOING = "call_outgoing";
@@ -928,6 +931,7 @@ public class Utilities {
         public static final String EVENT_CALL_RTCP_CHANGED = "call_rtcp_changed";
         public static final String EVENT_CALL_IS_FOCUS = "call_is_focus";
         public static final String EVENT_CALL_IS_EMERGENCY = "call_is_emergency";
+	 public static final String EVENT_USSD_INFO_RECEIVED = "ussd_info_received";
 
         // Conference
         public static final int CONF_EVENT_CODE_BASE = 200;

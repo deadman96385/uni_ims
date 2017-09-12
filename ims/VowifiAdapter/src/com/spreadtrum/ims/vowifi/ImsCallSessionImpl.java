@@ -46,6 +46,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 public class ImsCallSessionImpl extends IImsCallSession.Stub implements LocationListener {
     private static final String TAG = Utilities.getTag(ImsCallSessionImpl.class.getSimpleName());
@@ -1126,6 +1128,32 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
     }
 
+
+    /**
+     * Initiate an USSD call.
+     *
+     * @param ussd uri  to send
+     */
+    public void startUssdCall(String ussdMessage) throws RemoteException {
+        if (Utilities.DEBUG) Log.i(TAG, "start an ussd call: " + ussdMessage);
+        // TODO: need change
+        if (mICall != null) {
+            //mCallId = mICall.sendUSSDMessage(mCallId, ussdMessage);
+            int id = 0;
+	     id = mICall.sessCall(ussdMessage, null, true, false, true, false);
+	     if (id == Result.INVALID_ID) {
+                handleStartActionFailed("Native start the ussd call failed.");
+            } else {
+               mCallId = id;
+		 updateState(State.INITIATED);
+               mIsAlive = true;
+               // Start action success, update the last call action as start.
+               updateRequestAction(VoWifiCallStateTracker.ACTION_START);
+            }
+       }
+
+    }
+
     /**
      * Returns a binder for the video call provider implementation contained within the IMS service
      * process. This binder is used by the VideoCallProvider subclass in Telephony which
@@ -1980,10 +2008,22 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         startCall(callee);
     }
 
+    private static Pattern sPatternSuppService = Pattern.compile(
+    "((\\*|#|\\*#|\\*\\*|##)(\\d{2,3})(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*))?)?)?)?#)(.*)");
+
     private void startCall(String callee) throws RemoteException {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Start the call with the callee: " + callee + ", mSosLocation: "
                     + mSosLocation);
+        }
+
+         Matcher m;
+         m = sPatternSuppService.matcher(callee);
+        // Is this formatted like a standard supplementary service code?
+        if (m.matches()) {
+	    Log.i(TAG, "Start the ussd");
+	    startUssdCall(callee);  //start USSD
+	    return;
         }
 
         // Start the call.
