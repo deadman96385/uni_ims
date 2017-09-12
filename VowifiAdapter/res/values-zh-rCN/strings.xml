@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="vowifi_request_upgrade_title">对方请求升级</string>
-    <string name="vowifi_request_upgrade_text">请求升级到视频通话，请选择接受或拒绝.</string>
+    <string name="vowifi_request_upgrade_text">请求升级到视频通话，请选择接受或拒绝。</string>
     <string name="vowifi_request_downgrade_title">对方请求降级</string>
     <string name="vowifi_request_downgrade_text">请求降级到语音通话，请选择接受或拒绝。</string>
 
