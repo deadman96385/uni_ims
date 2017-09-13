@@ -2336,6 +2336,22 @@ public class ImsService extends Service {
             mHandler.sendMessageDelayed(mHandler
                     .obtainMessage(ACTION_NOTIFY_VIDEO_CAPABILITY_CHANGE), 100);
         }
+
+        /**
+         * Used for start Mobike
+         */
+        @Override
+        public void startMobike(){
+            mWifiService.startMobike();
+        }
+
+        /**
+         * Used for check Mobike whether support
+         */
+        @Override
+        public boolean isSupportMobike(){
+            return mWifiService.isSupportMobike();
+        }
     };
 
     private final IImsMultiEndpoint.Stub mImsMultiEndpointBinder = new IImsMultiEndpoint.Stub() {
