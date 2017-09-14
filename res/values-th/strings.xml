@@ -39,5 +39,8 @@
      <string name="low_battery_warning_message">"ระดับแบตเตอรี่ของคุณอยู่ด้านล่าง 15% .ต้องการที่จะดำเนินการต่อด้วยการโทรวิดีโอหรือแปลงให้เสียงเรียก?"</string>
      <string name="low_battery_continue_video_call">ใช่</string>
      <string name="low_battery_convert_to_voice_call">"แปลง"</string>
+     <string name="vowifi_attation">แจ้งเตือนระบบ VoWiFi</string>
+     <string name="vowifi_regist_fail_content">ระบบ WiFi calling ขัดข้อง, กรุณาเปิดใช้อีกครั้งภายหลัง 5 นาที</string>
+     <string name="vowifi_register_error">เครือข่ายไม่รองรับ VoWiFi</string>
 
 </resources>
