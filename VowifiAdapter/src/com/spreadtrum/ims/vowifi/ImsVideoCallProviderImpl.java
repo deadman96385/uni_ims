@@ -18,6 +18,7 @@ import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.WindowManager;
 
+import com.android.ims.ImsCallProfile;
 import com.android.ims.internal.ImsVideoCallProvider;
 import com.spreadtrum.ims.vowifi.Utilities.Camera;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
@@ -57,6 +58,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private static final int MSG_STOP_REMOTE_RENDER = 7;
     private static final int MSG_SEND_MODIFY_REQUEST = 8;
     private static final int MSG_SET_PAUSE_IMAGE = 9;
+    private static final int MSG_SEND_MODIFY_RESPONSE = 10;
     private class MyHandler extends Handler {
         private int mRotateRetryTimes = 0;
 
@@ -216,6 +218,21 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                         mCallSession.setPauseImage((Uri) msg.obj);
                         break;
                     }
+                    case MSG_SEND_MODIFY_RESPONSE: {
+                        VideoProfile profile = (VideoProfile) msg.obj;
+                        receiveSessionModifyResponse(
+                                VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS, profile, profile);
+
+                        // If the video type do not changed. we need handle the transmission changed.
+                        boolean isTrans =
+                                VideoProfile.isTransmissionEnabled(profile.getVideoState());
+                        if (isTrans) {
+                            mCallSession.updateCallType(ImsCallProfile.CALL_TYPE_VT);
+                        } else {
+                            mCallSession.updateCallType(ImsCallProfile.CALL_TYPE_VT_RX);
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -310,14 +327,12 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                 // It means start the video transmission. And "setCamera" will start the
                 // camera, so we need request the camera capabilities
                 Log.d(TAG, "Start the video transmission successfully.");
-                receiveSessionModifyResponse(
-                        VideoProvider.SESSION_EVENT_TX_START, fromProfile, toProfile);
+                mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_RESPONSE, toProfile));
             } else {
                 // It means stop the video transmission. And this action will be handled
                 // when the camera set to null.
                 Log.d(TAG, "Stop the video transmission successfully.");
-                receiveSessionModifyResponse(
-                        VideoProvider.SESSION_EVENT_TX_STOP, fromProfile, toProfile);
+                mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_RESPONSE, toProfile));
             }
         }
     }

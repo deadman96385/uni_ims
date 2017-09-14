@@ -1171,17 +1171,8 @@ public class VoWifiCallManager extends ServiceManager {
                 || eventCode == JSONUtils.EVENT_CODE_CALL_REMOVE_VIDEO_OK) {
             // Update the call type success.
             boolean isVideo = eventCode == JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_OK;
-            ImsCallProfile callProfile = callSession.getCallProfile();
-            if (callProfile != null) {
-                callProfile.mCallType =
-                        isVideo ? ImsCallProfile.CALL_TYPE_VT : ImsCallProfile.CALL_TYPE_VOICE;
-            } else {
-                Log.e(TAG, "The call profile is null for this call: " + callSession);
-            }
-
-            if (listener != null) {
-                listener.callSessionUpdated(callSession, callProfile);
-            }
+            callSession.updateCallType(
+                    isVideo ? ImsCallProfile.CALL_TYPE_VT : ImsCallProfile.CALL_TYPE_VOICE);
 
             if (videoCallProvider != null) {
                 if (eventCode == JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_OK

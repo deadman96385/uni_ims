@@ -1168,6 +1168,19 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if (mCallStateTracker != null) mCallStateTracker.updateCallState(state);
     }
 
+    public void updateCallType(int newType) {
+        if (mCallProfile == null) return;
+
+        mCallProfile.mCallType = newType;
+        try {
+            if (mListener != null) {
+                mListener.callSessionUpdated(this, mCallProfile);
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to update the call type as catch the RemoteException e: " + e);
+        }
+    }
+
     public void updateRequestAction(int requestAction){
         if (mCallStateTracker != null)  mCallStateTracker.updateRequestAction(requestAction);
     }
