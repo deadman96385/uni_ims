@@ -1083,7 +1083,7 @@ public class ImsServiceImpl extends MMTelFeature {
     }
 
     public void updateImsFeatures(boolean volteEnable, boolean wifiEnable){
-        Log.i(TAG,"updateImsFeatures->volteEnable:" + volteEnable + " wifiEnable:" + wifiEnable);
+        Log.i(TAG,"updateImsFeatures->volteEnable:" + volteEnable + " wifiEnable:" + wifiEnable+" id:"+mServiceId);
         try{
             if(volteEnable){
                 mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
@@ -1219,6 +1219,13 @@ public class ImsServiceImpl extends MMTelFeature {
         Log.i(TAG, "updateImsFeatures->feature:" + feature + " value:" + value);
         updateImsFeatures(mImsService.isVoLTEEnabled(), mImsService.isVoWifiEnabled());
     }/*@}*/
+
+    public boolean isImsEnabled(){
+        return ((mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
+                == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE) ||
+                (mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI]
+                == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
+    }
 
     public void updateImsFeatureForAllService(){
         mImsService.updateImsFeatureForAllService();

@@ -2763,16 +2763,28 @@ public class ImsService extends Service {
     }
 
     public void updateImsFeature(int serviceId) {
-        if (!ImsManagerEx.isDualVoLTEActive() && ImsRegister.getPrimaryCard(mPhoneCount) != (serviceId-1)) {
-            Log.d(TAG, "updateImsFeature->this is DSDS version, do not update for secondary card.");
+        ImsServiceImpl imsService = mImsServiceImplMap.get(Integer
+                .valueOf(serviceId));
+        boolean isPrimaryCard = ImsRegister.getPrimaryCard(mPhoneCount) == (serviceId-1);
+        boolean volteRegistered = (imsService != null) ? imsService.isImsRegisterState() : false;
+        if (!isPrimaryCard && imsService != null) {
+            Log.i(TAG, "updateImsFeature->isPrimaryCard:" + isPrimaryCard
+                    + " volteRegistered:" + volteRegistered
+                    + " serviceId:" + serviceId);
+            if(ImsManagerEx.isDualVoLTEActive()) {
+                imsService.updateImsFeatures(volteRegistered, false);
+                imsService.notifyImsRegister(volteRegistered);
+                notifyImsRegisterState();
+            } else {
+                if(imsService.isImsEnabled()) {
+                    imsService.updateImsFeatures(false, false);
+                }
+            }
             return;
         }
         updateImsRegisterState();
-        ImsServiceImpl imsService = mImsServiceImplMap.get(Integer
-                .valueOf(serviceId));
         int oldImsFeature = mCurrentImsFeature;// SPRD:add for bug673215
         boolean isImsRegistered = false;
-        boolean volteRegistered = (imsService != null) ? imsService.isImsRegisterState() : false;
         if (mInCallHandoverFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN) {
             if (mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
