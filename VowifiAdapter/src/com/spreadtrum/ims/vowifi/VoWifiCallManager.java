@@ -785,8 +785,9 @@ public class VoWifiCallManager extends ServiceManager {
                     break;
                 }
                 case JSONUtils.EVENT_CODE_CALL_TALKING: {
+                    String phoneNumber = jObject.optString(JSONUtils.KEY_PHONE_NUM);
                     boolean isVideo = jObject.optBoolean(JSONUtils.KEY_IS_VIDEO, false);
-                    handleCallTalking(callSession, isVideo);
+                    handleCallTalking(callSession, phoneNumber, isVideo);
                     break;
                 }
                 case JSONUtils.EVENT_CODE_CALL_TERMINATE: {
@@ -945,12 +946,18 @@ public class VoWifiCallManager extends ServiceManager {
         callSession.updateMediaProfile(mediaProfile);
         callSession.updateState(State.NEGOTIATING);
 
+        ImsCallProfile newCallProfile = null;
+        String callee = callSession.getCallee();
+        if (!callee.equals(phoneNumber)) {
+            // The callee do not same the the phone number, it means there is DIV.
+            // We need set the callee as the new phone number, and notify the update.
+            newCallProfile = callSession.setCallee(phoneNumber);
+        }
         IImsCallSessionListener listener = callSession.getListener();
         if (listener != null) {
             listener.callSessionProgressing(callSession, mediaProfile);
-            String callee = callSession.getCallee();
-            if (!callee.equals(phoneNumber)) {
-                listener.callSessionUpdated(callSession, callSession.updateCallee(phoneNumber));
+            if (newCallProfile != null) {
+                listener.callSessionUpdated(callSession, newCallProfile);
             }
         }
     }
@@ -985,7 +992,7 @@ public class VoWifiCallManager extends ServiceManager {
         callProfile.setCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE, isConference);
 
         ImsCallSessionImpl callSession = createMTCallSession(callProfile, null);
-        callSession.addCallee(callee);
+        callSession.setCallee(callee);
         callSession.setCallId(sessionId);
         callSession.updateMediaProfile(mediaProfile);
         callSession.updateState(State.NEGOTIATING);
@@ -1063,8 +1070,8 @@ public class VoWifiCallManager extends ServiceManager {
         removeCall(callSession);
     }
 
-    private void handleCallTalking(ImsCallSessionImpl callSession, boolean isVideo)
-            throws RemoteException {
+    private void handleCallTalking(ImsCallSessionImpl callSession, String phoneNumber,
+            boolean isVideo) throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Handle the talking call.");
         if (callSession == null) {
             Log.w(TAG, "[handleCallTalking] The call session is null.");
@@ -1078,6 +1085,13 @@ public class VoWifiCallManager extends ServiceManager {
         ImsCallProfile profile = callSession.getCallProfile();
         if (!isVideo) {
             profile.mCallType = ImsCallProfile.CALL_TYPE_VOICE;
+        }
+
+        // Set the new phone number as the secondary callee.
+        String callee = callSession.getCallee();
+        if (!callee.equals(phoneNumber)) {
+            Log.d(TAG, "The number changed to " + phoneNumber + ", save as secondary callee.");
+            callSession.setSecondaryCallee(phoneNumber);
         }
 
         IImsCallSessionListener listener = callSession.getListener();
@@ -1485,12 +1499,20 @@ public class VoWifiCallManager extends ServiceManager {
             callSession.updateAliveState(false);
             callSession.updateState(State.TERMINATING);
             callSession.getVideoCallProviderImpl().stopAll();
-
-            // For normal call, there will be only one participant, and we need add it to this
-            // conference participants list.
-            String participant = callSession.getCallee();
-            confSession.addCallee(participant);
             confSession.addAsWaitForInvite(callSession);
+
+            Bundle bundle = new Bundle();
+            bundle.putString(ImsConferenceState.USER, callSession.getConfUSER());
+            bundle.putString(ImsConferenceState.DISPLAY_TEXT, callSession.getCallee());
+            bundle.putString(ImsConferenceState.ENDPOINT, "");
+            bundle.putString(ImsConferenceState.STATUS, ImsConferenceState.STATUS_PENDING);
+            confSession.updateConfParticipants(callSession.getConfUSER(), bundle);
+        }
+
+        // Notify the conference participants' state.
+        if (confListener != null) {
+            confListener.callSessionConferenceStateUpdated(
+                    confSession, confSession.getConfParticipantsState());
         }
 
         // Start to invite the calls.
@@ -1566,13 +1588,19 @@ public class VoWifiCallManager extends ServiceManager {
                 Log.d(TAG, "Get the invite accept result for the user: " + phoneNumber);
                 // It means the call accept to join the conference.
                 ImsCallSessionImpl callSession = confSession.getInInviteCall();
-                String callee = callSession.getCallee();
-                // Add this call session as the conference's participant.
-                confSession.addParticipant(callee, callSession);
+                if (callSession == null
+                        || !callSession.isMatched(phoneNumber)) {
+                    Log.w(TAG, "Can not find in invite call or phoneNumber mis-match.");
+                    return;
+                }
 
-                bundleKey = callee;
-                bundle.putString(ImsConferenceState.USER, callee);
-                bundle.putString(ImsConferenceState.DISPLAY_TEXT, callee);
+                String user = callSession.getConfUSER();
+                // Add this call session as the conference's participant.
+                confSession.addParticipant(callSession);
+
+                bundleKey = user;
+                bundle.putString(ImsConferenceState.USER, user);
+                bundle.putString(ImsConferenceState.DISPLAY_TEXT, callSession.getCallee());
                 bundle.putString(ImsConferenceState.STATUS, ImsConferenceState.STATUS_CONNECTED);
 
                 // As invite success, need invite the next participant.
@@ -1590,17 +1618,22 @@ public class VoWifiCallManager extends ServiceManager {
                 Log.d(TAG, "Get the invite failed result for the user: " + phoneNumber);
                 // It means failed to invite the call to this conference.
                 ImsCallSessionImpl callSession = confSession.getInInviteCall();
-                String callee = callSession.getCallee();
+                if (callSession == null
+                        || !callSession.isMatched(phoneNumber)) {
+                    Log.w(TAG, "Can not find in invite call or phoneNumber mis-match.");
+                    return;
+                }
 
-                bundleKey = callee;
-                bundle.putString(ImsConferenceState.USER, callee);
-                bundle.putString(ImsConferenceState.DISPLAY_TEXT, callee);
+                String user = callSession.getConfUSER();
+
+                bundleKey = user;
+                bundle.putString(ImsConferenceState.USER, user);
+                bundle.putString(ImsConferenceState.DISPLAY_TEXT, callSession.getCallee());
                 bundle.putString(ImsConferenceState.STATUS, ImsConferenceState.STATUS_DISCONNECTED);
 
                 // As invite failed, need invite the next participant.
                 needInviteNext = true;
                 // If this call invite failed, remove the callee and terminate the failed call.
-                confSession.removeCallee(callee);
                 callSession.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
 
                 // Show the notify toast to the user.
@@ -1608,58 +1641,33 @@ public class VoWifiCallManager extends ServiceManager {
                 Toast.makeText(mContext, text, Toast.LENGTH_LONG).show();
                 break;
             }
-            case JSONUtils.EVENT_CODE_CONF_KICK_ACCEPT: {
-                Log.d(TAG, "Get the kick accept result for the user: " + phoneNumber);
-                // It means this call already disconnect.
-                String callee = confSession.removeCallee(phoneNumber);
-                if (TextUtils.isEmpty(callee)) {
-                    Log.w(TAG, "Can not find the phoneNumber from callee list.");
-                    callee = phoneNumber;
-                } else {
-                    // Remove from the conference's participants.
-                    confSession.removeParticipant(callee);
-                    confSession.kickActionFinished(callee);
-                }
-
-                bundleKey = callee;
-                bundle.putString(ImsConferenceState.USER, callee);
-                bundle.putString(ImsConferenceState.DISPLAY_TEXT, callee);
-                bundle.putString(ImsConferenceState.STATUS, ImsConferenceState.STATUS_DISCONNECTED);
-                break;
-            }
+            case JSONUtils.EVENT_CODE_CONF_KICK_ACCEPT:
             case JSONUtils.EVENT_CODE_CONF_KICK_FAILED: {
-                Log.d(TAG, "Get the kick failed for the user: " + phoneNumber);
+                // The kick off action will be handled when remove participant.
+                Log.d(TAG, "Get the kick accept or failed for the user: " + phoneNumber);
                 needUpdateState = false;
-                String callee = confSession.findCallee(phoneNumber);
-                confSession.kickActionFinished(callee);
-                if (!TextUtils.isEmpty(callee)) {
-                    // Find the callee, then show the notify toast to user.
-                    Toast.makeText(mContext, R.string.vowifi_conf_kick_failed, Toast.LENGTH_LONG)
-                            .show();
-                }
                 break;
             }
             case JSONUtils.EVENT_CODE_CONF_PART_UPDATE: {
                 Log.d(TAG, "Get the new status for the user: " + phoneNumber);
-                if (!TextUtils.isEmpty(newStatus)
-                        && ImsConferenceState.STATUS_DISCONNECTED.equals(newStatus)) {
+                if (!TextUtils.isEmpty(newStatus)) {
                     // If the new status is disconnected, we need remove it from the participants.
-                    String callee = confSession.removeCallee(phoneNumber);
-                    if (TextUtils.isEmpty(callee)) {
+                    String user = confSession.findUser(phoneNumber);
+                    if (TextUtils.isEmpty(user)) {
                         Log.w(TAG, "Can not find the phoneNumber from callee list.");
-                        callee = phoneNumber;
-                    } else {
-                        // Remove from the conference's participants.
-                        confSession.removeParticipant(callee);
+                        user = phoneNumber;
+                    }
+                    if (ImsConferenceState.STATUS_DISCONNECTED.equals(newStatus)) {
+                        confSession.removeParticipant(user);
                     }
 
-                    bundleKey = callee;
-                    bundle.putString(ImsConferenceState.USER, callee);
-                    bundle.putString(ImsConferenceState.DISPLAY_TEXT, callee);
+                    bundleKey = user;
+                    bundle.putString(ImsConferenceState.USER, user);
+                    bundle.putString(ImsConferenceState.DISPLAY_TEXT, user);
                     bundle.putString(ImsConferenceState.STATUS, newStatus);
                 } else {
                     needUpdateState = false;
-                    Log.e(TAG, "Failed to update the participant new status: " + newStatus);
+                    Log.w(TAG, "Do not update the participant with new status: " + newStatus);
                 }
                 break;
             }
@@ -1667,6 +1675,7 @@ public class VoWifiCallManager extends ServiceManager {
 
         // After update the participants, if there isn't any participant, need terminate it.
         if (confSession.getParticipantsCount() < 1) {
+            Log.d(TAG, "There isn't any participant, terminate this conference call.");
             // Terminate this conference call.
             confSession.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
             Toast.makeText(mContext, R.string.vowifi_conf_none_participant, Toast.LENGTH_LONG)

@@ -82,6 +82,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mAudioStart = false;
     private boolean mIsEmergency = false;
     private boolean mInSRVCC = false;
+    private String mPrimaryCallee = null;
+    private String mSecondaryCallee = null;
 
     private Context mContext;
     private CallCursor mCursor;
@@ -96,10 +98,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private ImsCallSessionImpl mConfCallSession = null;
     private ImsCallSessionImpl mHostCallSession = null;
     private ImsCallSessionImpl mInInviteSession = null;
-    private ArrayList<String> mInKickParticipants = new ArrayList<String>();
-    private ArrayList<String> mParticipants = new ArrayList<String>();
+    // The key will be build as this "phoneNumber@callId" which same the ImsConferenceState.USER.
     private HashMap<String, ImsCallSessionImpl> mParticipantSessions =
             new HashMap<String, ImsCallSessionImpl>();
+    // The key will be build as this "phoneNumber@callId" which same the ImsConferenceState.USER.
     private HashMap<String, Bundle> mConfParticipantStates = new HashMap<String, Bundle>();
     private LinkedList<ImsCallSessionImpl> mWaitForInviteSessions =
             new LinkedList<ImsCallSessionImpl>();
@@ -458,6 +460,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
 
+        // Update the participants and call profile.
+        setCallee(callee);
+
         Matcher m = PATTERN_SUPP_SERVICE.matcher(callee);
         // Is this formatted like a standard supplementary service code?
         if (m.matches()) {
@@ -470,9 +475,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         String sosNumber = SystemProperties.get(PROP_KEY_FORCE_SOS_CALL, null);
         boolean forceSos = callee.equals(sosNumber);
         Log.d(TAG, "If the phone number is emergency number: " + isEmergencyNumber);
-
-        // Update the participants and call profile.
-        mParticipants.add(callee);
 
         // TODO: Update the profile but not replace.
         mCallProfile = profile;
@@ -554,7 +556,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         for (int i = 0; i < participants.length; i++) {
             if (i > 0) phoneNumbers.append(PARTICIPANTS_SEP);
             phoneNumbers.append(participants[i]);
-            mParticipants.add(participants[i]);
         }
         Log.d(TAG, "Start the conference with phone numbers: " + phoneNumbers);
 
@@ -697,8 +698,20 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         ImsCallSessionImpl confSession = mCallManager.getConfCallSession();
         if (confSession != null) {
             ImsCallSessionImpl hostSession = confSession.getHostCallSession();
-            if (this.equals(hostSession)) {
-                // Terminate the conference call and the close it.
+            if (this.equals(confSession)
+                    && hostSession != null
+                    && hostSession.getState() > State.INVALID
+                    && hostSession.getState() < State.TERMINATED) {
+                // The conference call already connected, but the host call do not accept the
+                // invite. If terminate the conference call, we need terminate the host call.
+                hostSession.terminate(reason);
+                hostSession.close();
+            } else if (this.equals(hostSession)
+                    && confSession != null
+                    && confSession.getState() > State.INVALID
+                    && confSession.getState() < State.TERMINATED) {
+                // The conference call already outgoing but not connect. If terminate the host
+                // call, we need terminate the conference call and the close it.
                 confSession.terminate(reason);
                 confSession.close();
             }
@@ -1002,11 +1015,20 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
 
-        synchronized (mInKickParticipants) {
-            String[] needRemoveParticipants = findNeedRemove(participants);
-            if (needRemoveParticipants == null || needRemoveParticipants.length < 1) {
-                Log.d(TAG, "There isn't any participant need remove this time: "
-                        + Utilities.getString(participants));
+        synchronized (mParticipantSessions) {
+            ArrayList<String> needRemoveUser = findNeedRemoveUser(participants);
+            if (needRemoveUser == null || needRemoveUser.size() < 1) {
+                Log.d(TAG, "There isn't any participant need remove.");
+                return;
+            }
+
+            if (needRemoveUser.size() == getParticipantsCount()) {
+                Log.d(TAG, "All the user will be removed from the conference call.");
+                // As all the user will be removed from this conference, we'd like to terminate
+                // this conference call instead.
+                Toast.makeText(mContext, R.string.vowifi_conf_none_participant,
+                        Toast.LENGTH_LONG).show();
+                terminate(ImsReasonInfo.CODE_USER_TERMINATED);
                 return;
             }
 
@@ -1015,10 +1037,28 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 return;
             }
 
-            addAsInKickProcess(needRemoveParticipants);
+            String[] needRemoveParticipants = buildKickParticipants(needRemoveUser);
             int ret = mICall.confKickMembers(mCallId, needRemoveParticipants);
-            if (ret == Result.FAIL) {
-                removeFromInKick(needRemoveParticipants);
+            if (ret == Result.SUCCESS) {
+                // We'd like to handle as kick off action success.
+                for (String user : needRemoveUser) {
+                    ImsCallSessionImpl callSession = removeParticipant(user);
+                    Bundle bundle = new Bundle();
+                    bundle.putString(ImsConferenceState.USER, user);
+                    bundle.putString(ImsConferenceState.DISPLAY_TEXT,
+                            callSession == null ? "" : callSession.getCallee());
+                    bundle.putString(ImsConferenceState.STATUS,
+                            ImsConferenceState.STATUS_DISCONNECTED);
+                    updateConfParticipants(user, bundle);
+                }
+
+                // Give the state update notify.
+                if (mListener != null) {
+                    mListener.callSessionConferenceStateUpdated(this, getConfParticipantsState());
+                }
+            } else if (ret == Result.FAIL) {
+                Toast.makeText(mContext, R.string.vowifi_conf_kick_failed, Toast.LENGTH_LONG)
+                        .show();
                 handleRemoveParticipantsFailed("Native failed to remove the participants.");
             }
         }
@@ -1120,31 +1160,48 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         return mImsStreamMediaProfile;
     }
 
-    public String getCallee() {
-        return mParticipants.get(0);
+    public ImsCallProfile setCallee(String phoneNumber) {
+        mPrimaryCallee = phoneNumber;
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, mPrimaryCallee);
+
+        return mCallProfile;
     }
 
-    public String findCallee(String phoneNumber) {
+    public String getCallee() {
+        return mPrimaryCallee;
+    }
+
+    /**
+     * Find the user for the given phone number.
+     * @param phoneNumber
+     * @return user which used as {@link ImsConferenceState#USER} build as phoneNumber@callId.
+     */
+    public String findUser(String phoneNumber) {
         if (TextUtils.isEmpty(phoneNumber)) return null;
 
-        for (String participant : mParticipants) {
-            if (isSameCallee(participant, phoneNumber)) {
-                return participant;
+        if (mParticipantSessions.get(phoneNumber) != null) {
+            // It means the phone number is the key.
+            return phoneNumber;
+        }
+
+        Iterator<Entry<String, ImsCallSessionImpl>> it = mParticipantSessions.entrySet().iterator();
+        while(it.hasNext()) {
+            Entry<String, ImsCallSessionImpl> entry = it.next();
+            String user = entry.getKey();
+            ImsCallSessionImpl callSession = entry.getValue();
+            if (callSession.isMatched(phoneNumber)) {
+                return user;
             }
         }
         return null;
     }
 
-    public ArrayList<String> getParticipants() {
-        return mParticipants;
+    public void setSecondaryCallee(String phoneNumber) {
+        mSecondaryCallee = phoneNumber;
     }
 
-    public ImsCallProfile updateCallee(String phoneNumber) {
-        mParticipants.clear();
-        mParticipants.add(phoneNumber);
-        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, phoneNumber);
-
-        return mCallProfile;
+    public String getSecondaryCallee() {
+        return mSecondaryCallee;
     }
 
     public void updateMediaProfile(ImsStreamMediaProfile profile) {
@@ -1214,41 +1271,30 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         return mIsEmergency;
     }
 
-    public String removeCallee(String phoneNumber) {
+    public ImsCallSessionImpl removeParticipant(String phoneNumber) {
         if (TextUtils.isEmpty(phoneNumber)) return null;
 
-        for (int i = 0; i < mParticipants.size(); i++) {
-            String participant = mParticipants.get(i);
-            if (isSameCallee(participant, phoneNumber)) {
-                mParticipants.remove(i);
-                return participant;
-            }
+        String user = findUser(phoneNumber);
+        if (!TextUtils.isEmpty(user)) {
+            ImsCallSessionImpl callSession = mParticipantSessions.get(user);
+            mParticipantSessions.remove(user);
+            return callSession;
         }
+
         return null;
     }
 
-    public void addCallee(String callee) {
-        boolean flag = false;
-        for (int i = 0; i < mParticipants.size(); i++) {
-            if (mParticipants.get(i).equals(callee)) {
-                flag = true;
-            }
-        }
-        if (!flag) {
-            mParticipants.add(callee);
-        }
+    public boolean isMatched(String phoneNumber) {
+        return Utilities.isSameCallee(mPrimaryCallee, phoneNumber)
+                || Utilities.isSameCallee(mSecondaryCallee, phoneNumber);
     }
 
     public int getParticipantsCount() {
-        return mParticipants.size();
+        return mParticipantSessions.size();
     }
 
-    public void updateConfParticipants(String participant, Bundle state) {
-        mConfParticipantStates.put(participant, state);
-    }
-
-    public void kickActionFinished(String participant) {
-        mInKickParticipants.remove(participant);
+    public void updateConfParticipants(String user, Bundle state) {
+        mConfParticipantStates.put(user, state);
     }
 
     public ImsConferenceState getConfParticipantsState() {
@@ -1294,22 +1340,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         return mInInviteSession;
     }
 
-    public void addParticipant(String phoneNumber, ImsCallSessionImpl callSession) {
-        if (TextUtils.isEmpty(phoneNumber) || callSession == null) {
+    public void addParticipant(ImsCallSessionImpl callSession) {
+        if (callSession == null) {
             Log.e(TAG, "Failed to add this call: " + callSession + " as one participant.");
             return;
         }
 
-        mParticipantSessions.put(phoneNumber, callSession);
-    }
-
-    public void removeParticipant(String phoneNumber) {
-        if (TextUtils.isEmpty(phoneNumber)) {
-            Log.e(TAG, "Can not remove the participant for the number: " + phoneNumber);
-            return;
-        }
-
-        mParticipantSessions.remove(phoneNumber);
+        mParticipantSessions.put(callSession.getConfUSER(), callSession);
     }
 
     public void prepareSRVCCSyncInfo(ArrayList<ImsSrvccCallInfo> infoList, int multipartyOrder) {
@@ -1413,6 +1450,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             }
 
             // Even native failed, we'd like to remove this call from the list.
+            updateState(State.TERMINATED);
             mCallManager.removeCall(this);
             return res;
         } catch (RemoteException e) {
@@ -1790,7 +1828,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if (Utilities.DEBUG) Log.i(TAG, "Try to dial this emergency call: " + this);
 
         try {
-            startCall(mParticipants.get(0));
+            startCall(mPrimaryCallee);
         } catch (RemoteException e) {
             Log.e(TAG, "Failed to dial the emergency call as catch the RemoteException e: " + e);
         }
@@ -1810,8 +1848,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     res = mICall.sessTerm(mCallId, reason);
                 }
             } else {
-                Log.w(TAG, "Can not send the terminate action as call interface is null or id is "
-                        + mCallId);
+                Log.w(TAG, "Call interface is null, can not send the terminate action.");
             }
 
             if (res == Result.SUCCESS) {
@@ -1869,6 +1906,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         } catch (RemoteException e) {
             Log.e(TAG, "Failed to process the no response action as catch the exception: " + e);
         }
+    }
+
+    public String getConfUSER() {
+        return mPrimaryCallee + "@" + mCallId;
     }
 
     private CallCursor getCallCursor() {
@@ -1953,7 +1994,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     + confSession.getCallId());
         }
 
-        // Invite the this call session as the participants.
+        // Invite this call session as the participants.
         int res = mICall.confAddMembers(
                 Integer.valueOf(confSession.getCallId()), null, new int[] { mCallId });
         if (res == Result.SUCCESS) {
@@ -1980,10 +2021,18 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             updateState(State.TERMINATING);
             mVideoCallProvider.stopAll();
 
-            // For normal call, there will be only one participant, and we need add it to this
-            // conference participants list.
-            String participant = getCallee();
-            confSession.addCallee(participant);
+            // Notify the conference participants' state.
+            Bundle bundle = new Bundle();
+            String user = getConfUSER();
+            bundle.putString(ImsConferenceState.USER, user);
+            bundle.putString(ImsConferenceState.DISPLAY_TEXT, getCallee());
+            bundle.putString(ImsConferenceState.ENDPOINT, getCallee());
+            bundle.putString(ImsConferenceState.STATUS, ImsConferenceState.STATUS_PENDING);
+            confSession.updateConfParticipants(user, bundle);
+            if (confListener != null) {
+                confListener.callSessionConferenceStateUpdated(
+                        confSession, confSession.getConfParticipantsState());
+            }
         } else {
             // Failed to invite this call to conference. Prompt the toast to alert the user.
             Log.w(TAG, "Failed to invite this call " + mCallId + " to conference.");
@@ -2109,59 +2158,53 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 : mCallProfile.getCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE, false));
     }
 
-    private boolean isSameCallee(String calleeNumber, String phoneNumber) {
-        if (TextUtils.isEmpty(calleeNumber)
-                || TextUtils.isEmpty(phoneNumber)) {
-            return false;
+    private ArrayList<String> findNeedRemoveUser(String[] participants) {
+        if (participants == null
+                || participants.length < 1
+                || getParticipantsCount() < 1) {
+            return null;
         }
 
-        if (phoneNumber.indexOf(calleeNumber) >= 0
-                || calleeNumber.indexOf(phoneNumber) >= 0) {
-            return true;
-        } else if (calleeNumber.startsWith("0")) {
-            // Sometimes, the phone number will be start will 0, we'd like to sub the string.
-            String tempCallee = calleeNumber.substring(1);
-            if (phoneNumber.indexOf(tempCallee) >= 0
-                    || tempCallee.indexOf(phoneNumber) >= 0) {
-                return true;
+        ArrayList<String> removeList = new ArrayList<String>();
+        Iterator<Entry<String, ImsCallSessionImpl>> it = mParticipantSessions.entrySet().iterator();
+        while(it.hasNext()) {
+            Entry<String, ImsCallSessionImpl> entry = it.next();
+            String user = entry.getKey();
+            ImsCallSessionImpl callSession = entry.getValue();
+            for (String participant : participants) {
+                if (callSession.isMatched(participant)) {
+                    removeList.add(user);
+                }
             }
         }
 
-        return false;
+        return removeList;
     }
 
-    private String[] findNeedRemove(String[] participants) {
-        String[] remove = new String[participants.length];
-        int index = 0;
-        for (String participant : participants) {
-            if (!mInKickParticipants.contains(participant)) {
-                remove[index] = participant;
-                index = index + 1;
+    private String[] buildKickParticipants(ArrayList<String> needKickUsers) {
+        if (needKickUsers == null || needKickUsers.size() < 1) {
+            return null;
+        }
+
+        ArrayList<String> participantList = new ArrayList<String>();
+        for (String user : needKickUsers) {
+            ImsCallSessionImpl callSession = mParticipantSessions.get(user);
+            if (callSession == null) continue;
+
+            String participant = callSession.getSecondaryCallee();
+            if (TextUtils.isEmpty(participant)) {
+                participant = callSession.getCallee();
+            }
+            if (!TextUtils.isEmpty(participant)) {
+                participantList.add(participant);
             }
         }
-        return remove;
-    }
 
-    private void addAsInKickProcess(String[] participants) {
-        if (participants == null || participants.length <1) {
-            Log.w(TAG, "The list which set as in kick is null, please check!");
-            return;
-        }
+        if (participantList.size() < 1) return null;
 
-        for (String participant : participants) {
-            mInKickParticipants.add(participant);
-        }
-    }
-
-    private void removeFromInKick(String[] participants) {
-        if (participants == null || participants.length <1) {
-            Log.w(TAG, "The list which remove from in kick is null, please check!");
-            return;
-        }
-
-        for (String participant : participants) {
-            mInKickParticipants.remove(participant);
-        }
+        String[] participants = new String[participantList.size()];
+        participantList.toArray(participants);
+        return participants;
     }
 
     private int getSRVCCCallType() {
