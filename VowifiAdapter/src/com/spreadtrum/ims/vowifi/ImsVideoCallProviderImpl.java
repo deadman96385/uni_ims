@@ -134,23 +134,23 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                     }
                     case MSG_SET_DISPLAY_SURFACE: {
                         Surface displaySurface = (Surface) msg.obj;
-                        if (displaySurface != null) {
-                            int res = mCallSession.startRemoteRender(displaySurface);
-                            if (res == Result.SUCCESS) mDisplaySurface = displaySurface;
+                        if (displaySurface == null) break;
+
+                        if (mCallSession.startRemoteRender(displaySurface) == Result.SUCCESS) {
+                            mDisplaySurface = displaySurface;
                         }
                         break;
                     }
                     case MSG_SET_PREVIEW_SURFACE: {
                         Surface previewSurface = (Surface) msg.obj;
+                        if (previewSurface == null || mCameraId == null) break;
 
                         int res = Result.SUCCESS;
                         // Start the capture and start the render.
                         VideoQuality quality = Utilities.findVideoQuality(getVideoQualityLevel());
                         res = res & mCallSession.startCapture(
                                 mCameraId, quality._width, quality._height, quality._frameRate);
-                        if (previewSurface != null) {
-                            res = res & mCallSession.startLocalRender(previewSurface, mCameraId);
-                        }
+                        res = res & mCallSession.startLocalRender(previewSurface, mCameraId);
 
                         if (res == Result.SUCCESS) {
                             mPreviewSurface = previewSurface;
@@ -161,7 +161,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                     }
                     case MSG_REQUEST_CAMERA_CAPABILITIES: {
                         if (mCameraId == null) {
-                            Log.w(TAG, "The camera is null, needn't request camera capability.");
+                            Log.d(TAG, "The camera is null, needn't request camera capability.");
                             break;
                         }
 
@@ -393,6 +393,11 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     public void onSetDisplaySurface(Surface surface) {
         synchronized (mContext) {
             if (Utilities.DEBUG) Log.i(TAG, "On set the display surface to: " + surface);
+            if (surface == null) {
+                Log.d(TAG, "Set the display surface to null, ignore this request.");
+                return;
+            }
+
             if (mDisplaySurface != null) {
                 mHandler.sendEmptyMessage(MSG_STOP_REMOTE_RENDER);
             }
@@ -408,8 +413,15 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
     @Override
     public void onSetPreviewSurface(Surface surface) {
-        if (Utilities.DEBUG) Log.i(TAG, "On set the preview surface as: " + surface);
-        mHandler.sendMessage(mHandler.obtainMessage(MSG_SET_PREVIEW_SURFACE, surface));
+        synchronized (mContext) {
+            if (Utilities.DEBUG) Log.i(TAG, "On set the preview surface as: " + surface);
+            if (surface == null) {
+                Log.d(TAG, "Set the preview surface to null, ignore this request.");
+                return;
+            }
+
+            mHandler.sendMessage(mHandler.obtainMessage(MSG_SET_PREVIEW_SURFACE, surface));
+        }
     }
 
     @Override
