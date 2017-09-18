@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="vowifi_request_upgrade_title">Remote request to upgrade</string>
-    <string name="vowifi_request_upgrade_text">Request to upgrade the current call to video call, please choose accept or reject</string>
+    <string name="vowifi_request_upgrade_text">Request to upgrade the current call to video call, please choose accept or reject.</string>
     <string name="vowifi_request_downgrade_title">Remote request to downgrade</string>
-    <string name="vowifi_request_downgrade_text">Request to downgrade the current call to voice call, please choose accept or reject</string>
+    <string name="vowifi_request_downgrade_text">Request to downgrade the current call to voice call, please choose accept or reject.</string>
 
     <string name="vowifi_add_video_failed">Remote reject request</string>
     <string name="vowifi_add_video_success">Remote accept request</string>
@@ -20,7 +20,7 @@
     <string name="vowifi_conf_connect_timeout">Connect to conference server timeout</string>
     <string name="vowifi_conf_disconnect">Failed to setup conference</string>
     <string name="vowifi_conf_finished">Conference finished</string>
-    <string name="vowifi_conf_invite_request_failed">Failed to send the invite request. Conference can not be setup</string>
+    <string name="vowifi_conf_invite_request_failed">Failed to send the invite request</string>
     <string name="vowifi_conf_invite_failed">Failed to invite the participant: </string>
     <string name="vowifi_conf_kick_failed">Failed to remove the participant</string>
     <string name="vowifi_conf_none_participant">"There isn't any participant, end the call"</string>
