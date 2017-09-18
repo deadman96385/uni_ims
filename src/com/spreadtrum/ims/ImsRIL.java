@@ -2547,6 +2547,7 @@ public final class ImsRIL {
             case ImsRILConstants.RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY: return "RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY";
             case ImsRILConstants.RIL_REQUEST_GET_IMS_PCSCF_ADDR: return "RIL_REQUEST_GET_IMS_PCSCF_ADDR";
             case ImsRILConstants.RIL_REQUEST_QUERY_FACILITY_LOCK_EXT: return "RIL_REQUEST_QUERY_FACILITY_LOCK_EXT";
+            case ImsRILConstants.RIL_REQUEST_GET_IMS_REGADDR: return "RIL_REQUEST_GET_IMS_REGADDR";
             default: return requestToString(request);
         }
     }
@@ -2907,6 +2908,21 @@ public final class ImsRIL {
             }
         }
      }
+
+    public void getImsRegAddress(Message result){
+        IExtRadio radioProxy = getRadioProxy(result);
+        if(radioProxy != null){
+            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_GET_IMS_REGADDR,result,mRILDefaultWorkSource);
+
+            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
+
+            try {
+                radioProxy.getImsRegAddress(rr.mSerial);
+            } catch (RemoteException | RuntimeException e) {
+                handleRadioProxyExceptionForRR(rr, "getImsRegAddress", e);
+            }
+        }
+    }
 
     /**
      * Convert to DataProfileInfo defined in types.hal

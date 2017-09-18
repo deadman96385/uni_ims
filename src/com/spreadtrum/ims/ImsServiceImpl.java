@@ -99,6 +99,7 @@ public class ImsServiceImpl extends MMTelFeature {
     protected static final int EVENT_IMS_WIFI_PARAM                    = 114;
     protected static final int EVENT_IMS_GET_SRVCC_CAPBILITY           = 115;
     protected static final int EVENT_IMS_GET_PCSCF_ADDRESS             = 116;
+    protected static final int EVENT_IMS_GET_IMS_REG_ADDRESS           = 117;
 
     private GsmCdmaPhone mPhone;
     private ImsServiceState mImsServiceState;
@@ -207,6 +208,7 @@ public class ImsServiceImpl extends MMTelFeature {
         mPhone.getContext().getContentResolver().registerContentObserver(
                 Telephony.Carriers.CONTENT_URI, true, mApnChangeObserver);
         mCi.registerForRadioStateChanged(mHandler, EVENT_RADIO_STATE_CHANGED, null);//SPRD:add for bug594553
+        mCi.getImsRegAddress(mHandler.obtainMessage(EVENT_IMS_GET_IMS_REG_ADDRESS));//SPRD: add for bug739660
     }
 
     /**
@@ -296,10 +298,12 @@ public class ImsServiceImpl extends MMTelFeature {
                     break;
                 case EVENT_IMS_REGISTER_ADDRESS_CHANGED:
                     if(ar.exception == null && ar.result != null){
-                         if (ar.result instanceof String) {
-                             String addr = (String)ar.result;
-                             setIMSRegAddress(addr);
-                         }
+                        String[] address = (String[]) ar.result;
+                        setIMSRegAddress(address[0]);
+                        if (address.length > 1) {//SPRD: add for bug731711
+                            Log.d(TAG, "EVENT_IMS_REGISTER_ADDRESS_CHANGED psfcsAddr:" + address[1]);
+                            mImsPscfAddress = address[1];
+                        }
                     }else{
                         Log.e(TAG,"EVENT_IMS_REGISTER_ADDRESS_CHANGED has exception!");
                     }
@@ -414,7 +418,17 @@ public class ImsServiceImpl extends MMTelFeature {
                         mImsPscfAddress = (String)ar.result;
                         Log.i(TAG,"EVENT_IMS_GET_PCSCF_ADDRESS,mImsPscfAddress:"+mImsPscfAddress);
                     }
-                        break;
+                    break;
+                case EVENT_IMS_GET_IMS_REG_ADDRESS:
+                    if (ar != null && ar.exception == null && ar.result != null) {
+                        String[] address = (String[]) ar.result;
+                        if (address.length >= 2) {
+                            setIMSRegAddress(address[0]);
+                            mImsPscfAddress = address[1];
+                            Log.i(TAG, "EVENT_IMS_GET_IMS_REG_ADDRESS,mImsPscfAddress:" + mImsPscfAddress);
+                        }
+                    }
+                    break;
                 default:
                     break;
             }

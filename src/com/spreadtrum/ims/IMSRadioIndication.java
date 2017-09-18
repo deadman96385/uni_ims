@@ -111,11 +111,11 @@ public class IMSRadioIndication extends IIMSRadioIndication.Stub {
         }
     }
 
-    public void IMSRegisterAddressChangedInd(int type, String addr){
+    public void IMSRegisterAddressChangedInd(int type,  ArrayList<String> addr){
         mRil.processIndication(type);
         mRil.unsljLog(ImsRILConstants.RIL_UNSOL_IMS_REGISTER_ADDRESS_CHANGE);
         if(mRil.mImsRegAddressRegistrant != null) {
-            mRil.mImsRegAddressRegistrant.notifyRegistrant(new AsyncResult(null, addr, null));
+            mRil.mImsRegAddressRegistrant.notifyRegistrant(new AsyncResult(null, arrayListToStringArray(addr), null));
         }
     }
 
@@ -141,5 +141,13 @@ public class IMSRadioIndication extends IIMSRadioIndication.Stub {
             ret[i] = ints.get(i);
         }
         return ret;
+    }
+
+    public static String[] arrayListToStringArray(ArrayList<String> data){
+        String[] ret = new String[data.size()];
+        for(int i = 0; i<ret.length; i++){
+            ret[i] = data.get(i);
+        }
+        return  ret;
     }
 }

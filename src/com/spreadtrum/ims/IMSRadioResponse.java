@@ -332,6 +332,10 @@ public class IMSRadioResponse extends IIMSRadioResponse.Stub {
         responseVoid(info);
     }
 
+    public void getImsRegAddressResponse(RadioResponseInfo info, ArrayList<String> addr){
+        responseStringArrayList(mRil,info,addr);
+    }
+
     /*response method*/
     private void responseInts(RadioResponseInfo responseInfo, int ...var) {
         final ArrayList<Integer> ints = new ArrayList<>();
