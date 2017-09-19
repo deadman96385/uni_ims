@@ -642,7 +642,7 @@ public class ImsService extends Service {
                                 requestService
                                         .notifyImsHandoverStatus(ImsHandoverResult.IMS_HANDOVER_REGISTER_FAIL);
                                 Toast.makeText(ImsService.this,
-                                        R.string.vowifi_register_error,
+                                        R.string.vowifi_regist_fail_content,// SPRD: Modify for bug746036
                                         Toast.LENGTH_LONG).show();
                                 /* SPRD: Modify for bug604833{@ */
                                 if (mFeatureSwitchRequest.mEventCode == ACTION_SWITCH_IMS_FEATURE) {
