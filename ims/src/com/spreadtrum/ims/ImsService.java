@@ -1044,13 +1044,12 @@ public class ImsService extends Service {
          */
         @Override
         public IImsUt getUtInterface(int serviceId){
-//            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(serviceId));
-//            if (service == null) {
-//                Log.e (TAG, "Invalid ServiceId " + serviceId);
-//                return null;
-//            }
-//            return service.getUtInterface();
-        	return null;
+            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(serviceId));
+            if (service == null) {
+                Log.e (TAG, "Invalid ServiceId " + serviceId);
+                return null;
+            }
+            return service.getUtInterface();
         }
 
         /**

@@ -2,6 +2,7 @@ package com.spreadtrum.ims;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
+
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
@@ -107,7 +108,8 @@ public class ImsServiceImpl {
     private Context mContext;
     private CommandsInterface mCi;
     private ImsConfigImpl mImsConfigImpl;
-//    private ImsUtImpl mImsUtImpl;
+    private ImsUtImpl mImsUtImpl;
+    private ImsUtProxy mImsUtProxy = null;
     private ImsEcbmImpl mImsEcbmImpl;
    // private ImsServiceCallTracker mImsServiceCallTracker;
     private ImsHandler mHandler;
@@ -173,7 +175,9 @@ public class ImsServiceImpl {
         mImsRegister = new ImsRegister(mPhone, mContext, mCi);
         mImsServiceState = new ImsServiceState(false,IMS_REG_STATE_INACTIVE);
         mImsConfigImpl = new ImsConfigImpl(mCi,context);
-        //mImsUtImpl = new ImsUtImpl(mCi,context);
+        mImsUtImpl = new ImsUtImpl(mCi,context);
+        com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl =  mWifiService.getUtInterface();
+        mImsUtProxy = new ImsUtProxy(context, mImsUtImpl, voWifiUtImpl, mPhone);
         mImsEcbmImpl = new ImsEcbmImpl(mCi);
         mHandler = new ImsHandler(mContext.getMainLooper());
         Intent intent = new Intent(ImsManager.ACTION_IMS_SERVICE_UP);
@@ -455,13 +459,13 @@ public class ImsServiceImpl {
         return mImsConfigImpl;
     }
 
-//    public IImsUt getUtInterface(){
-//        return mImsUtImpl;
-//    }
-//
-//    public ImsUtImpl getUtImpl(){
-//        return mImsUtImpl;
-//    }
+    public IImsUt getUtInterface(){
+        return mImsUtProxy;
+    }
+
+    public ImsUtImpl getUtImpl(){
+        return mImsUtImpl;
+    }
 
     public IImsEcbm getEcbmInterface() {
         return mImsEcbmImpl;
