@@ -452,7 +452,9 @@ public class VoWifiRegisterManager extends ServiceManager {
                         }
                         break;
                     case JSONUtils.EVENT_CODE_REREGISTER_OK:
-                        if (mRequest.mListener != null) mRequest.mListener.onRefreshRegFinished(true, 0);
+                        if (mRequest.mListener != null) {
+                            mRequest.mListener.onRefreshRegFinished(true, 0);
+                        }
                         break;
                     case JSONUtils.EVENT_CODE_REREGISTER_FAILED:
                         if (mRequest.mListener != null) {
@@ -464,7 +466,7 @@ public class VoWifiRegisterManager extends ServiceManager {
                         // Update the register state, and notify the state changed.
                         if (mRequest.mListener != null) {
                             int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
-                            mRequest.mListener.onRegisterStateChanged(RegisterState.STATE_IDLE, stateCode);
+                            mRequest.mListener.onRegisterStateChanged(mRequest.mState, stateCode);
                         }
                         break;
                 }

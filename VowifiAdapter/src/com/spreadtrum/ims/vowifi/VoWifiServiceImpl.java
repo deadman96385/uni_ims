@@ -362,7 +362,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private void deattachInternal(boolean forHandover) {
         int s2bType =
                 mEcbmStep == ECBMRequest.ECBM_STEP_DEATTACH_SOS ? S2bType.SOS : S2bType.NORMAL;
-        mSecurityMgr.deattach(mSubId, s2bType, forHandover);
+        mSecurityMgr.deattach(mSubId, s2bType, forHandover, mSecurityListener);
     }
 
     /**

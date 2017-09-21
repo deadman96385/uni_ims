@@ -105,8 +105,15 @@ public class VoWifiSecurityManager extends ServiceManager {
         }
     }
 
-    public void deattach(int subId, int s2bType, boolean isHandover) {
-        deattach(findRequest(subId, s2bType), isHandover);
+    public void deattach(int subId, int s2bType, boolean isHandover, SecurityListener listener) {
+        SecurityRequest request = findRequest(subId, s2bType);
+        if (request == null) {
+            Log.d(TAG, "Do not find the matched request for sub[" + subId + "], type[" + s2bType
+                    + "], and it means it already stopped, give the result now.");
+            listener.onStopped(false, 0);
+        } else {
+            deattach(request, isHandover);
+        }
     }
 
     public void deattach(int sessionId, boolean isHandover) {
