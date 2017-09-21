@@ -3368,9 +3368,11 @@ public class ImsService extends Service {
         if (phoneId == primaryPhoneId + 1) {
             updateImsFeature();
             mWifiService.onSRVCCStateChanged(status);
-            if (status == VoLteServiceState.HANDOVER_COMPLETED
-                    && mWifiRegistered) {
-                mWifiRegistered = false; // SPRD:add for bug659097
+            if (status == VoLteServiceState.HANDOVER_COMPLETED){
+                mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                if(mWifiRegistered) {
+                    mWifiRegistered = false; // SPRD:add for bug659097
+                }
             }
         }
     }

@@ -2621,7 +2621,7 @@ public final class ImsRIL {
             if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
 
             try {
-                radioProxy.notifyVoWifiEnable(rr.mSerial, incall);
+                radioProxy.notifyVoWifiCallStateChanged(rr.mSerial, incall);
             } catch (RemoteException | RuntimeException e) {
                 handleRadioProxyExceptionForRR(rr, "notifyWifiCallState", e);
             }
