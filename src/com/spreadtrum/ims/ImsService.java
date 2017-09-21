@@ -2697,6 +2697,7 @@ public class ImsService extends Service {
                                             + mPendingActivePdnSuccess
                                             + " mIsLoggingIn:" + mIsLoggingIn);
                             if (mIsVolteCall
+                                    && mFeatureSwitchRequest != null //SPRD modify for bug 751516
                                     && mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE
                                     && !mPendingAttachVowifiSuccess
                                     && !mPendingActivePdnSuccess) {
