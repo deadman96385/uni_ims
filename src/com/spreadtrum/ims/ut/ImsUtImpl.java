@@ -88,6 +88,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private static final String EXTRA_LOCK_STATE = "lockState";
     private static final String EXTRA_CLIR_MODE = "clirMode";
     private static final String EXTRA_RESULT = "result";
+    private static final String EXTRA_ENABLE = "enable";
 
     private Phone mPhone;
     private ImsRIL mCi;
@@ -392,6 +393,29 @@ public class ImsUtImpl extends IImsUt.Stub {
                     releaseNetwork();
                     break;
                 case ACTION_UPDATE_CLIP:
+                    try {
+                        if(ar != null){
+                            if (ar.exception != null) {
+                                int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+                                if (ar.exception instanceof CommandException) {
+                                    info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
+                                }
+                                mImsUtListener.utConfigurationUpdateFailed((IImsUt)ar.userObj,
+                                        msg.arg1,
+                                        new ImsReasonInfo(info, 0));
+                            } else {
+                                mImsUtListener.utConfigurationUpdated((IImsUt)ar.userObj, msg.arg1);
+                                Log.i(TAG,"ACTION_UPDATE->success!");
+                            }
+                        } else {
+                            mImsUtListener.utConfigurationUpdateFailed((IImsUt)ar.userObj, msg.arg1,
+                                    new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR, 0));
+                        }
+                    } catch(RemoteException e){
+                        e.printStackTrace();
+                    }
+                    releaseNetwork();
+                    break;
                 case ACTION_UPDATE_CLOR:
                 case ACTION_UPDATE_COLP:
                     break;
@@ -779,6 +803,11 @@ public class ImsUtImpl extends IImsUt.Stub {
     @Override
     public int updateCLIP(boolean enable){
         int id = getReuestId();
+        Bundle bundle = new Bundle();
+        bundle.putInt(EXTRA_ACTION, ACTION_UPDATE_CLIP);
+        bundle.putInt(EXTRA_ID, id);
+        bundle.putInt(EXTRA_ENABLE, enable ? 1 : 0);
+        requestNetwork(bundle);
         return id;
     }
 
@@ -1035,6 +1064,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                 updateCLIR(bundle);
                 break;
             case ACTION_UPDATE_CLIP:
+                updateCLIP(bundle);
                 break;
             case ACTION_UPDATE_CLOR:
                 break;
@@ -1258,6 +1288,12 @@ public class ImsUtImpl extends IImsUt.Stub {
         } catch (RemoteException e) {
             e.printStackTrace();
         }
+    }
+    private void updateCLIP(Bundle bundle) {
+        Log.d(TAG, "onexcue updateCLIP = " + bundle.toString());
+        int id = bundle.getInt(EXTRA_ID, -1);
+        int enable = bundle.getInt(EXTRA_ENABLE, 0);
+        mCi.updateCLIP(enable, mHandler.obtainMessage(ACTION_UPDATE_CLIP, id, 0, this));
     }
     private void processQueryResult(Message msg) {
         AsyncResult ar = (AsyncResult) msg.obj;

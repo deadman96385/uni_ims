@@ -2907,7 +2907,7 @@ public final class ImsRIL {
                 handleRadioProxyExceptionForRR(rr, "getIMSPcscfAddress", e);
             }
         }
-     }
+    }
 
     public void getImsRegAddress(Message result){
         IExtRadio radioProxy = getRadioProxy(result);
@@ -2924,6 +2924,12 @@ public final class ImsRIL {
         }
     }
 
+    public void
+    updateCLIP(int enable, Message response) {
+        if (getRadioInteractor() != null) {
+            mRadioInteractor.updateCLIP(enable, response);
+        }
+    }
     /**
      * Convert to DataProfileInfo defined in types.hal
      * @param dp Data profile
