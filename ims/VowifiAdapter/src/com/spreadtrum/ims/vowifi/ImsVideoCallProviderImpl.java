@@ -18,11 +18,12 @@ import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.WindowManager;
 import android.widget.Toast;
-
+import com.android.ims.ImsCallProfile;
 import com.android.ims.internal.ImsVideoCallProvider;
 import com.spreadtrum.ims.R;
 import com.spreadtrum.ims.vowifi.Utilities.Camera;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
+import com.spreadtrum.ims.vowifi.Utilities.VideoQuality;
 
 public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private static final String TAG =
@@ -35,6 +36,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private int mAngle = -1;
     private int mScreenRotation = -1;
     private int mDeviceOrientation = -1;
+    private int mVideoQualityLevel = -1;
     private boolean mWaitForModifyResponse = false;
 
     private String mCameraId = null;
@@ -42,6 +44,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private MyHandler mHandler = null;
     private Surface mPreviewSurface = null;
     private Surface mDisplaySurface = null;
+    private VideoProfile mVideoProfile = null;
     private SharedPreferences mPreferences = null;
     private CameraCapabilities mCameraCapabilities = null;
     private MyOrientationListener mOrientationListener = null;
@@ -56,6 +59,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private static final int MSG_STOP_REMOTE_RENDER = 7;
     private static final int MSG_SEND_MODIFY_REQUEST = 8;
     private static final int MSG_SET_PAUSE_IMAGE = 9;
+    private static final int MSG_SEND_MODIFY_RESPONSE = 10;
     private class MyHandler extends Handler {
         private int mRotateRetryTimes = 0;
 
@@ -67,149 +71,169 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
         public void handleMessage(Message msg) {
             if (Utilities.DEBUG) Log.i(TAG, "Handle the message: " + msg.what);
 
-            switch (msg.what) {
-                case MSG_ROTATE: {
-                    if (mCameraId != null) {
-                        Log.d(TAG, "Handle the rotate message, the device orientation: "
-                                + mDeviceOrientation + ", the angle: " + mAngle);
-                        mCallSession.localRenderRotate(mCameraId, mAngle, mDeviceOrientation);
-                        mCallSession.remoteRenderRotate(mAngle);
-                        mRotateRetryTimes = 0;
-                    } else if (mRotateRetryTimes < 5){
-                        mHandler.sendEmptyMessageDelayed(MSG_ROTATE, 500);
-                        mRotateRetryTimes = mRotateRetryTimes + 1;
-                    }
-                    break;
-                }
-                case MSG_START_CAMERA: {
-                    String cameraId = (String) msg.obj;
-                    if (mCallSession.startCamera(cameraId) == Result.SUCCESS) {
-                        mCameraId = cameraId;
-                        // As set camera success, we'd like to request the camera capabilities.
-                        mHandler.sendEmptyMessage(MSG_REQUEST_CAMERA_CAPABILITIES);
-                    }
-
-                    // Enable the rotate now.
-                    mOrientationListener.enable();
-                    break;
-                }
-                case MSG_STOP_CAMERA: {
-                    int res = Result.SUCCESS;
-                    res = res & mCallSession.stopLocalRender(mPreviewSurface, mCameraId);
-                    res = res & mCallSession.stopCamera();
-                    res = res & mCallSession.stopCapture(mCameraId);
-
-                    if (res == Result.FAIL) {
-                        // Sometimes, we will stop the camera failed as the camera already
-                        // disconnect. For example, refer to this log:
-                        // "Disconnect called on already disconnected client for device 1"
-                        Log.w(TAG, "The camera can not stopped now, please check the reason.");
-                    }
-
-                    // Reset the values.
-                    mCameraId = null;
-                    mCameraCapabilities = null;
-                    mPreviewSurface = null;
-
-                    // Disable the rotate now.
-                    mOrientationListener.disable();
-                    break;
-                }
-                case MSG_SWITCH_CAMERA: {
-                    // For switch the camera, we'd like to split this action to two step:
-                    // 1. stop the old camera
-                    // 2. start the new camera
-                    mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
-                    mHandler.sendMessage(mHandler.obtainMessage(MSG_START_CAMERA, msg.obj));
-                    break;
-                }
-                case MSG_SET_DISPLAY_SURFACE: {
-                    Surface displaySurface = (Surface) msg.obj;
-                    if (displaySurface != null
-                            && mCallSession.startRemoteRender(displaySurface) == Result.SUCCESS) {
-                        mDisplaySurface = displaySurface;
-                    }
-                    break;
-                }
-                case MSG_SET_PREVIEW_SURFACE: {
-                    Surface previewSurface = (Surface) msg.obj;
-
-                    int res = Result.SUCCESS;
-                    // Start the capture and start the render.
-                    int quality = Utilities.getDefaultVideoQuality(mPreferences);
-                    res = res & mCallSession.startCapture(mCameraId, quality);
-                    if (previewSurface != null) {
-                        res = res & mCallSession.startLocalRender(previewSurface, mCameraId);
-                    }
-
-                    if (res == Result.SUCCESS) {
-                        mPreviewSurface = previewSurface;
-                    } else {
-                        Log.w(TAG, "Can not set the preview surface now.");
-                    }
-                }
-                case MSG_REQUEST_CAMERA_CAPABILITIES: {
-                    int quality = Utilities.getDefaultVideoQuality(mPreferences);
-                    CameraCapabilities cameraCapabilities =
-                            mCallSession.requestCameraCapabilites(quality);
-
-                    // If the device rotate to 90 or 270, we need exchange the height and width.
-                    if ((mDeviceOrientation == 90 || mDeviceOrientation == 270)
-                            && cameraCapabilities != null) {
-                        Log.d(TAG, "The current orientation is 90 or 270, adjest capabilities.");
-                        cameraCapabilities = new CameraCapabilities(
-                                cameraCapabilities.getHeight(), cameraCapabilities.getWidth());
-                    }
-
-                    if (!cameraCapabilitiesEquals(cameraCapabilities)) {
-                        if (cameraCapabilities != null) {
-                            Log.d(TAG, "Change the camera capabilities: width = "
-                                    + cameraCapabilities.getWidth() + ", height = "
-                                    + cameraCapabilities.getHeight());
-                            changeCameraCapabilities(cameraCapabilities);
-                            if (mCallSession.isMultiparty()) {
-                                // FIXME: For conference video call, as there isn't the preview
-                                //        surface, so need set preview surface msg with null
-                                //        surface here.
-                                mHandler.obtainMessage(MSG_SET_PREVIEW_SURFACE).sendToTarget();
-                            }
+            synchronized (mContext) {
+                switch (msg.what) {
+                    case MSG_ROTATE: {
+                        if (mCameraId != null) {
+                            Log.d(TAG, "Handle the rotate message, the device orientation: "
+                                    + mDeviceOrientation + ", the angle: " + mAngle);
+                            mCallSession.localRenderRotate(mCameraId, mAngle, mDeviceOrientation);
+                            mCallSession.remoteRenderRotate(mAngle);
+                            mRotateRetryTimes = 0;
+                        } else if (mRotateRetryTimes < 5){
+                            mHandler.sendEmptyMessageDelayed(MSG_ROTATE, 500);
+                            mRotateRetryTimes = mRotateRetryTimes + 1;
                         }
-                        mCameraCapabilities = cameraCapabilities;
-                    } else {
-                        Log.d(TAG, "The old camera capabilities is same as the new one.");
-                    }
-
-                    break;
-                }
-                case MSG_STOP_REMOTE_RENDER: {
-                    if (mDisplaySurface == null) {
-                        Log.e(TAG, "Failed to stop remote render as the display surface is null.");
                         break;
                     }
+                    case MSG_START_CAMERA: {
+                        String cameraId = (String) msg.obj;
+                        if (mCallSession.startCamera(cameraId) == Result.SUCCESS) {
+                            mCameraId = cameraId;
+                            // As set camera success, we'd like to request the camera capabilities.
+                            mHandler.sendEmptyMessage(MSG_REQUEST_CAMERA_CAPABILITIES);
+                        }
 
-                    if (mCallSession.stopRemoteRender(mDisplaySurface, false) == Result.SUCCESS) {
-                        // Stop the remote render success, set the display surface to null.
-                        mDisplaySurface = null;
-                    } else {
-                        Log.w(TAG, "Can not stop remote render now.");
+                        // Enable the rotate now.
+                        mOrientationListener.enable();
+                        break;
                     }
-                    break;
-                }
-                case MSG_SEND_MODIFY_REQUEST: {
-                    boolean isVideo = (Boolean) msg.obj;
-                    if (mCallSession.sendModifyRequest(isVideo) == Result.FAIL) {
-                        Log.w(TAG, "Can not send the modify request now.");
+                    case MSG_STOP_CAMERA: {
+                        if (mCameraId == null) {
+                            Log.d(TAG, "Camera already stopped, do nothing.");
+                            break;
+                        }
+
+                        int res = Result.SUCCESS;
+                        res = res & mCallSession.stopLocalRender(mPreviewSurface, mCameraId);
+                        res = res & mCallSession.stopCamera();
+                        res = res & mCallSession.stopCapture(mCameraId);
+
+                        if (res == Result.FAIL) {
+                            // Sometimes, we will stop the camera failed as the camera already
+                            // disconnect. For example, refer to this log:
+                            // "Disconnect called on already disconnected client for device 1"
+                            Log.w(TAG, "The camera can not stopped now, please check the reason.");
+                        }
+
+                        // Reset the values.
+                        mCameraId = null;
+                        mCameraCapabilities = null;
+                        mPreviewSurface = null;
+
+                        // Disable the rotate now.
+                        mOrientationListener.disable();
+                        break;
+                    }
+                    case MSG_SWITCH_CAMERA: {
+                        // For switch the camera, we'd like to split this action to two step:
+                        // 1. stop the old camera
+                        // 2. start the new camera
+                        mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
+                        mHandler.sendMessage(mHandler.obtainMessage(MSG_START_CAMERA, msg.obj));
+                        break;
+                    }
+                    case MSG_SET_DISPLAY_SURFACE: {
+                        Surface displaySurface = (Surface) msg.obj;
+                        if (displaySurface == null) break;
+
+                        if (mCallSession.startRemoteRender(displaySurface) == Result.SUCCESS) {
+                            mDisplaySurface = displaySurface;
+                        }
+                        break;
+                    }
+                    case MSG_SET_PREVIEW_SURFACE: {
+                        Surface previewSurface = (Surface) msg.obj;
+                        if (previewSurface == null || mCameraId == null) break;
+
+                        int res = Result.SUCCESS;
+                        // Start the capture and start the render.
+                        VideoQuality quality = Utilities.findVideoQuality(getVideoQualityLevel());
+                        res = res & mCallSession.startCapture(
+                                mCameraId, quality._width, quality._height, quality._frameRate);
+                        res = res & mCallSession.startLocalRender(previewSurface, mCameraId);
+
+                        if (res == Result.SUCCESS) {
+                            mPreviewSurface = previewSurface;
+                        } else {
+                            Log.w(TAG, "Can not set the preview surface now.");
+                        }
+                        break;
+                    }
+                    case MSG_REQUEST_CAMERA_CAPABILITIES: {
+                        if (mCameraId == null) {
+                            Log.d(TAG, "The camera is null, needn't request camera capability.");
+                            break;
+                        }
+
+                        CameraCapabilities cameraCapabilities = getCameraCapabilities();
+                        // If the device rotate to 90 or 270, we need exchange the height and width.
+                        if ((mDeviceOrientation == 90 || mDeviceOrientation == 270)
+                                && cameraCapabilities != null) {
+                            Log.d(TAG, "The current orientation is 90 or 270, adjest capability.");
+                            cameraCapabilities = new CameraCapabilities(
+                                    cameraCapabilities.getHeight(), cameraCapabilities.getWidth());
+                        }
+
+                        if (!cameraCapabilitiesEquals(cameraCapabilities)) {
+                            if (cameraCapabilities != null) {
+                                Log.d(TAG, "Change the camera capability: width = "
+                                        + cameraCapabilities.getWidth() + ", height = "
+                                        + cameraCapabilities.getHeight());
+                                changeCameraCapabilities(cameraCapabilities);
+                            }
+                            mCameraCapabilities = cameraCapabilities;
+                        } else {
+                            Log.d(TAG, "The old camera capabilities is same as the new one.");
+                        }
+                        break;
+                    }
+                    case MSG_STOP_REMOTE_RENDER: {
+                        if (mDisplaySurface == null) {
+                            Log.w(TAG, "Failed to stop remote render, display surface is null.");
+                            break;
+                        }
+
+                        int res = mCallSession.stopRemoteRender(mDisplaySurface, false);
+                        if (res == Result.SUCCESS) {
+                            // Stop the remote render success, set the display surface to null.
+                            mDisplaySurface = null;
+                        } else {
+                            Log.w(TAG, "Can not stop remote render now.");
+                        }
+                        break;
+                    }
+                    case MSG_SEND_MODIFY_REQUEST: {
+                        boolean isVideo = (Boolean) msg.obj;
+                        if (mCallSession.sendModifyRequest(isVideo) == Result.FAIL) {
+                            Log.w(TAG, "Can not send the modify request now.");
+                            receiveSessionModifyResponse(
+                                    VideoProvider.SESSION_MODIFY_REQUEST_FAIL, null, null);
+                        } else {
+                            // Send the modify request successfully.
+                            mWaitForModifyResponse = true;
+                        }
+                        break;
+                    }
+                    case MSG_SET_PAUSE_IMAGE: {
+                        mCallSession.setPauseImage((Uri) msg.obj);
+                        break;
+                    }
+                    case MSG_SEND_MODIFY_RESPONSE: {
+                        VideoProfile profile = (VideoProfile) msg.obj;
                         receiveSessionModifyResponse(
-                                VideoProvider.SESSION_MODIFY_REQUEST_FAIL, null, null);
-                    } else {
-                        // Send the modify request successfully.
-                        mWaitForModifyResponse = true;
+                                VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS, profile, profile);
+
+                        // If the video type do not changed. we need handle the transmission changed.
+                        boolean isTrans =
+                                VideoProfile.isTransmissionEnabled(profile.getVideoState());
+                        if (isTrans) {
+                            mCallSession.updateCallType(ImsCallProfile.CALL_TYPE_VT);
+                        } else {
+                            mCallSession.updateCallType(ImsCallProfile.CALL_TYPE_VT_RX);
+                        }
+                        break;
                     }
-                    break;
-                }
-                case MSG_SET_PAUSE_IMAGE: {
-                    mCallSession.setPauseImage((Uri) msg.obj);
-                    break;
                 }
             }
         }
@@ -254,6 +278,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
         // So do not change "mWaitForModifyResponse" here.
         if (status != VideoProvider.SESSION_MODIFY_REQUEST_INVALID) {
             mWaitForModifyResponse = false;
+            mVideoProfile = responseProfile;
         }
     }
 
@@ -283,7 +308,6 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
         boolean wasVideo = VideoProfile.isVideo(fromProfile.getVideoState());
         boolean isVideo = VideoProfile.isVideo(toProfile.getVideoState());
-
         if (wasVideo != isVideo) {
             // For video type changed, we need send the modify request to server.
             mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_REQUEST, isVideo));
@@ -304,14 +328,12 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                 // It means start the video transmission. And "setCamera" will start the
                 // camera, so we need request the camera capabilities
                 Log.d(TAG, "Start the video transmission successfully.");
-                receiveSessionModifyResponse(
-                        VideoProvider.SESSION_EVENT_TX_START, fromProfile, toProfile);
+                mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_RESPONSE, toProfile));
             } else {
                 // It means stop the video transmission. And this action will be handled
                 // when the camera set to null.
                 Log.d(TAG, "Stop the video transmission successfully.");
-                receiveSessionModifyResponse(
-                        VideoProvider.SESSION_EVENT_TX_STOP, fromProfile, toProfile);
+                mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_RESPONSE, toProfile));
             }
         }
     }
@@ -323,36 +345,38 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
     @Override
     public void onSetCamera(String cameraId) {
-        if (Utilities.DEBUG) {
-            Log.i(TAG, "On set the camera from " + Camera.toString(mCameraId) + " to "
-                    + Camera.toString(cameraId));
-        }
-
-        if (mCameraId != null && cameraId == null) {
-            // Set the camera to null, it means stop the camera capture.
-            mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
-        } else if (cameraId != null && !cameraId.equals(mCameraId)) {
-            // Start the camera or switch the camera.
-            if (mCameraId == null) {
-                // Start the camera.
-                mHandler.sendMessage(mHandler.obtainMessage(MSG_START_CAMERA, cameraId));
-            } else {
-                mHandler.sendMessage(mHandler.obtainMessage(MSG_SWITCH_CAMERA, cameraId));
+        synchronized (mContext) {
+            if (Utilities.DEBUG) {
+                Log.i(TAG, "On set the camera from " + Camera.toString(mCameraId) + " to "
+                        + Camera.toString(cameraId));
             }
-        } else {
-            // case: mCameraId == null && cameraId == null or cameraId equals mCameraId
-            Log.d(TAG, "Set the camera to " + Camera.toString(cameraId) + ", but the old camera is "
-                    + Camera.toString(mCameraId));
-            if (cameraId == null) {
-                // If the new camera is null, and the old camera is null, it means the start camera
-                // action do not handle now. So we'd like to remove the start camera action to keep
-                // the last camera state as null.
-                mHandler.removeMessages(MSG_START_CAMERA);
+
+            if (mCameraId != null && cameraId == null) {
+                // Set the camera to null, it means stop the camera capture.
+                mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
+            } else if (cameraId != null && !cameraId.equals(mCameraId)) {
+                // Start the camera or switch the camera.
+                if (mCameraId == null) {
+                    // Start the camera.
+                    mHandler.sendMessage(mHandler.obtainMessage(MSG_START_CAMERA, cameraId));
+                } else {
+                    mHandler.sendMessage(mHandler.obtainMessage(MSG_SWITCH_CAMERA, cameraId));
+                }
             } else {
-                // If the new camera is front or back, and it is same as the old, it means the stop
-                // camera action do not handle now. So we'd like to remove the stop camera action
-                // to keep the last camera state.
-                mHandler.removeMessages(MSG_STOP_CAMERA);
+                // case: mCameraId == null && cameraId == null or cameraId equals mCameraId
+                Log.d(TAG, "Set the camera to " + Camera.toString(cameraId)
+                        + ", but the old camera is " + Camera.toString(mCameraId));
+                if (cameraId == null) {
+                    // If the new camera is null, and the old camera is null, it means the start
+                    // camera action do not handle now. So we'd like to remove the start camera
+                    // action to keep the last camera state as null.
+                    mHandler.removeMessages(MSG_START_CAMERA);
+                } else {
+                    // If the new camera is front or back, and it is same as the old, it means the
+                    // stop camera action do not handle now. So we'd like to remove the stop camera
+                    // action to keep the last camera state.
+                    mHandler.removeMessages(MSG_STOP_CAMERA);
+                }
             }
         }
     }
@@ -368,8 +392,18 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
     @Override
     public void onSetDisplaySurface(Surface surface) {
-        if (Utilities.DEBUG) Log.i(TAG, "On set the display surface to: " + surface);
-        mHandler.sendMessage(mHandler.obtainMessage(MSG_SET_DISPLAY_SURFACE, surface));
+        synchronized (mContext) {
+            if (Utilities.DEBUG) Log.i(TAG, "On set the display surface to: " + surface);
+            if (surface == null) {
+                Log.d(TAG, "Set the display surface to null, ignore this request.");
+                return;
+            }
+
+            if (mDisplaySurface != null) {
+                mHandler.sendEmptyMessage(MSG_STOP_REMOTE_RENDER);
+            }
+            mHandler.sendMessage(mHandler.obtainMessage(MSG_SET_DISPLAY_SURFACE, surface));
+        }
     }
 
     @Override
@@ -380,8 +414,15 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
     @Override
     public void onSetPreviewSurface(Surface surface) {
-        if (Utilities.DEBUG) Log.i(TAG, "On set the preview surface as: " + surface);
-        mHandler.sendMessage(mHandler.obtainMessage(MSG_SET_PREVIEW_SURFACE, surface));
+        synchronized (mContext) {
+            if (Utilities.DEBUG) Log.i(TAG, "On set the preview surface as: " + surface);
+            if (surface == null) {
+                Log.d(TAG, "Set the preview surface to null, ignore this request.");
+                return;
+            }
+
+            mHandler.sendMessage(mHandler.obtainMessage(MSG_SET_PREVIEW_SURFACE, surface));
+        }
     }
 
     @Override
@@ -402,6 +443,18 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
         return mPreviewSurface;
     }
 
+    public VideoProfile getVideoProfile() {
+        return mVideoProfile;
+    }
+
+    public int getVideoState() {
+        return mVideoProfile == null ? -1 : mVideoProfile.getVideoState();
+    }
+
+    public void updateVideoProfile(VideoProfile profile) {
+        mVideoProfile = profile;
+    }
+
     public CameraCapabilities getCurCameraCapabilities() {
         return mCameraCapabilities;
     }
@@ -411,14 +464,39 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     }
 
     public void stopAll() {
-        if (mCameraId != null) {
+        synchronized (mContext) {
             Log.d(TAG, "Stop all the video action.");
-            mHandler.sendEmptyMessage(MSG_STOP_REMOTE_RENDER);
-            mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
+            if (mDisplaySurface != null) {
+                mHandler.sendEmptyMessage(MSG_STOP_REMOTE_RENDER);
+            }
+
+            if (mCameraId != null) {
+                mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
+            }
         }
     }
 
-    public boolean cameraCapabilitiesEquals(CameraCapabilities capabilities) {
+    public void updateVideoQualityLevel(int newLevel) {
+        synchronized (mContext) {
+            Log.d(TAG, "Update the video quality level from " + mVideoQualityLevel
+                    + " to " + newLevel);
+            if (newLevel > 0 && newLevel != mVideoQualityLevel) {
+                mVideoQualityLevel = newLevel;
+                // As video quality level changed, we need stop camera & start camera again.
+                String oldCameraId = mCameraId;
+                if (mCameraId != null) {
+                    mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
+                }
+
+                // Start the camera with old camera.
+                if (oldCameraId != null) {
+                    mHandler.sendMessage(mHandler.obtainMessage(MSG_START_CAMERA, oldCameraId));
+                }
+            }
+        }
+    }
+
+    private boolean cameraCapabilitiesEquals(CameraCapabilities capabilities) {
         if ((mCameraCapabilities == null && capabilities == null)
                 || (mCameraCapabilities == capabilities)) {
             return true;
@@ -432,6 +510,28 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                     && mCameraCapabilities.getMaxZoom() == capabilities.getMaxZoom()
                     && mCameraCapabilities.isZoomSupported() == capabilities.isZoomSupported();
         }
+    }
+
+    private float getVideoQualityLevel() {
+        if (mVideoQualityLevel < 0) {
+            mVideoQualityLevel = mCallSession.getDefaultVideoLevel();
+            if (mVideoQualityLevel < 0) {
+                Log.w(TAG, "Can not get the default video level, set it as default.");
+                mVideoQualityLevel = Utilities.getDefaultVideoQuality(mPreferences)._level;
+            }
+        }
+
+        return mVideoQualityLevel;
+    }
+
+    private CameraCapabilities getCameraCapabilities() {
+        float videoLevel = getVideoQualityLevel();
+        VideoQuality quality = Utilities.findVideoQuality(videoLevel);
+        if (quality == null) {
+            quality = Utilities.getDefaultVideoQuality(mPreferences);
+        }
+
+        return new CameraCapabilities(quality._width, quality._height);
     }
 
     private void calculateAngle(int deviceOrientation) {

@@ -14,7 +14,6 @@ import android.os.RemoteException;
 import android.os.SystemProperties;
 import android.telecom.VideoProfile;
 import android.telecom.VideoProvider;
-import android.telecom.VideoProfile.CameraCapabilities;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.WindowManager;
@@ -73,7 +72,6 @@ public class VoWifiCallManager extends ServiceManager {
 
     private static final int MSG_ACTION_START_AUDIO_STREAM = 1;
     private static final int MSG_ACTION_STOP_AUDIO_STREAM  = 2;
-    private static final int MSG_ACTION_SET_VIDEO_QUALITY  = 3;
 
     private static final String SERVICE_ACTION = "com.spreadtrum.vowifi.service.IVowifiService";
     private static final String SERVICE_PACKAGE = "com.spreadtrum.vowifi";
@@ -284,11 +282,6 @@ public class VoWifiCallManager extends ServiceManager {
                 stopAudioStream();
                 break;
             }
-            case MSG_ACTION_SET_VIDEO_QUALITY: {
-                PendingAction action = (PendingAction) msg.obj;
-                setVideoQuality((Integer) action._params.get(0));
-                break;
-            }
         }
         return handle;
     }
@@ -355,21 +348,6 @@ public class VoWifiCallManager extends ServiceManager {
             Log.d(TAG, "Terminate the call: " + callSession);
             callSession.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
             handleCallTermed(callSession, ImsReasonInfo.CODE_USER_TERMINATED);
-            /*
-            switch (state) {
-                case CONNECTED:
-                    // If the current wifi is connect, we'd like to send the terminate request.
-                    callSession.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
-
-                    // If the user disabled the "WIFI calling" button, then we will receive this
-                    // action, and at the same time, we will also receive the de-register action.
-                    // So we don't know if the terminate action could be sent to the IMS service.
-                    // Then we'd like to terminate the call immediately.
-                case DISCONNECTED:
-                    handleCallTermed(callSession, ImsReasonInfo.CODE_USER_TERMINATED);
-                    break;
-            }
-            */
         }
     }
 
@@ -502,29 +480,18 @@ public class VoWifiCallManager extends ServiceManager {
         }
     }
 
-    public void setVideoQuality(int quality) {
+    public void updateVideoQuality(VideoQuality quality) {
         if (Utilities.DEBUG) Log.i(TAG, "Set the video quality as index is: " + quality);
 
-        if (!isCallFunEnabled()) {
+        if (!isCallFunEnabled() || mICall == null || quality == null) {
             // As call function is disabled. Do nothing.
             return;
         }
 
-        boolean handle = false;
-        if (mICall != null) {
-            try {
-                VideoQuality video = Utilities.sVideoQualityList.get(quality);
-                int res = mICall.setVideoQuality(video._width, video._height, video._frameRate,
-                        video._bitRate, video._brHi, video._brLo, video._frHi, video._frLo);
-                if (res == Result.SUCCESS) handle = true;
-            } catch (RemoteException e) {
-                Log.e(TAG, "Failed to set the video quality as catch the RemoteException e: " + e);
-            }
-        }
-        if (!handle) {
-            // The stop action is failed, need add this action to pending list.
-            addToPendingList(new PendingAction("setVideoQuality", MSG_ACTION_SET_VIDEO_QUALITY,
-                    Integer.valueOf(quality)));
+        try {
+            mICall.setDefaultVideoLevel(quality._level);
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to set the video quality as catch the RemoteException e: " + e);
         }
     }
 
@@ -899,6 +866,11 @@ public class VoWifiCallManager extends ServiceManager {
                     handleVideoResize(eventCode, callSession, width, height);
                     break;
                 }
+                case JSONUtils.EVENT_CODE_LOCAL_VIDEO_LEVEL_UPDATE: {
+                    int level = jObject.optInt(JSONUtils.KEY_VIDEO_LEVEL, -1);
+                    handleVideoLevelUpdate(callSession, level);
+                    break;
+                }
                 case JSONUtils.EVENT_CODE_CALL_RTCP_CHANGED:
                 case JSONUtils.EVENT_CODE_CONF_RTCP_CHANGED: {
                     ImsCallSessionImpl aliveCallSession = getAliveCallSession();
@@ -1115,11 +1087,13 @@ public class VoWifiCallManager extends ServiceManager {
             case JSONUtils.EVENT_CODE_CALL_HOLD_OK:
             case JSONUtils.EVENT_CODE_CONF_HOLD_OK: {
                 toastTextResId = R.string.vowifi_hold_success;
-                callSession.updateAliveState(false /* held, do not alive */);
-                listener.callSessionHeld(callSession, callSession.getCallProfile());
+
                 // As the call hold, if the call is video call, we need stop all the video.
                 ImsVideoCallProviderImpl videoProvider = callSession.getVideoCallProviderImpl();
                 if (videoProvider != null) videoProvider.stopAll();
+
+                callSession.updateAliveState(false /* held, do not alive */);
+                listener.callSessionHeld(callSession, callSession.getCallProfile());
                 break;
             }
             case JSONUtils.EVENT_CODE_CALL_HOLD_FAILED:
@@ -1181,17 +1155,8 @@ public class VoWifiCallManager extends ServiceManager {
                 || eventCode == JSONUtils.EVENT_CODE_CALL_REMOVE_VIDEO_OK) {
             // Update the call type success.
             boolean isVideo = eventCode == JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_OK;
-            ImsCallProfile callProfile = callSession.getCallProfile();
-            if (callProfile != null) {
-                callProfile.mCallType =
-                        isVideo ? ImsCallProfile.CALL_TYPE_VT : ImsCallProfile.CALL_TYPE_VOICE;
-            } else {
-                Log.e(TAG, "The call profile is null for this call: " + callSession);
-            }
-
-            if (listener != null) {
-                listener.callSessionUpdated(callSession, callProfile);
-            }
+            callSession.updateCallType(
+                    isVideo ? ImsCallProfile.CALL_TYPE_VT : ImsCallProfile.CALL_TYPE_VOICE);
 
             if (videoCallProvider != null) {
                 if (eventCode == JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_OK
@@ -1354,16 +1319,24 @@ public class VoWifiCallManager extends ServiceManager {
                     + width + "," + height);
             videoProvider.changePeerDimensions(width, height);
         } else if (eventCode == JSONUtils.EVENT_CODE_LOCAL_VIDEO_RESIZE) {
-            if (!callSession.isMultiparty()) {
-                // If the call do not conference, change the camera capabilities.
-                CameraCapabilities newCap = new CameraCapabilities(width, height);
-                if (!videoProvider.cameraCapabilitiesEquals(newCap)) {
-                    Log.d(TAG, "The call " + callSession.getCallId() + " local video resize: "
-                            + width + "," + height);
-                    videoProvider.changeCameraCapabilities(newCap);
-                }
-            }
+            Log.w(TAG, "Shouldn't handle the local video resize here. Please check!");
         }
+    }
+
+    private void handleVideoLevelUpdate(ImsCallSessionImpl callSession, int level) {
+        if (Utilities.DEBUG) Log.i(TAG, "Handle video level update to " + level);
+        if (callSession == null) {
+            Log.w(TAG, "[handleVideoLevelUpdate] The call session is null.");
+            return;
+        }
+
+        ImsVideoCallProviderImpl videoProvider = callSession.getVideoCallProviderImpl();
+        if (videoProvider == null) {
+            Log.e(TAG, "Failed to update the video level as video provider is null.");
+            return;
+        }
+
+        videoProvider.updateVideoQualityLevel(level);
     }
 
     private void handleRTCPChanged(ImsCallSessionImpl callSession, int lose, int jitter, int rtt,

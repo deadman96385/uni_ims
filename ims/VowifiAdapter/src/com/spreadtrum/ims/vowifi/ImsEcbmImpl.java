@@ -59,4 +59,5 @@ public class ImsEcbmImpl extends IImsEcbm.Stub {
     public ImsCallSessionImpl getEmergencyCall() {
         return mEmergencyCallSession;
     }
+
 }

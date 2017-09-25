@@ -22,7 +22,7 @@ interface IRegisterService {
      * @return {@link Utils#RESULT_FAIL} as fail. If login failed, please handle it.
      *         {@link Utils#RESULT_SUCCESS} as success.
      */
-    int cliLogin(boolean forSos, boolean isIPv4, String localIP, String pcscfIP,String dnsSerIP, boolean isRelogin);
+    int cliLogin(boolean forSos, boolean isIPv4, String localIP, String pcscfIP, String dnsSerIP, boolean isRelogin);
 
     /**
      * Start the SIP re-register process.

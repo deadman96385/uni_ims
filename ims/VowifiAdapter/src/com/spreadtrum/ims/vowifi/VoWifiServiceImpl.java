@@ -285,8 +285,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         // If the video quality changed, we need update the video quality.
         if (ImsConfigImpl.VT_RESOLUTION_VALUE.equals(key)) {
             // The video quality is changed.
-            int quality = Utilities.getDefaultVideoQuality(mPreferences);
-            mCallMgr.setVideoQuality(quality);
+            mCallMgr.updateVideoQuality(Utilities.getDefaultVideoQuality(mPreferences));
         }
     }
 
@@ -682,7 +681,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private void registerSuccess(int stateCode) {
         mCmdRegisterState = CMD_STATE_FINISHED;
         // As login success, we need set the video quality.
-        mCallMgr.setVideoQuality(Utilities.getDefaultVideoQuality(mPreferences));
+        mCallMgr.updateVideoQuality(Utilities.getDefaultVideoQuality(mPreferences));
 
         if (mCallback != null) {
             mCallback.onRegisterStateChanged(mRegisterMgr.getCurRegisterState(), stateCode);
