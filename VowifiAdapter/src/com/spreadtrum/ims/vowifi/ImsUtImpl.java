@@ -44,7 +44,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private static final String TAG = Utilities.getTag(ImsUtImpl.class.getSimpleName());
 
     // We'd like to handle the timeout in the native. Disable the timeout action now.
-    private static final boolean HANDLE_TIMEOUT = false;
+    private static final boolean HANDLE_TIMEOUT = true;
 
     // Call forward service class
     private static final int SERVICE_CLASS_VOICE = CommandsInterface.SERVICE_CLASS_VOICE;
@@ -61,7 +61,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private IVoWifiSerService mICall = null;
     private MySerServiceCallback mSerServiceCallback = new MySerServiceCallback();
 
-    private static final int CMD_TIMEOUT = 10000; // 10s
+    private static final int CMD_TIMEOUT = 60 * 1000; // 60s
 
     private static final int MSG_HANDLE_EVENT = -1;
     private static final int MSG_CMD_TIMEOUT = 0;
