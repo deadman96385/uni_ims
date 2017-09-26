@@ -1593,6 +1593,7 @@ public final class ImsRIL {
                 case RI_REQUEST_QUERY_COLR: ret = responseInts(p); break;
                 case ImsRILConstants.RIL_REQUEST_GET_IMS_PCSCF_ADDR: ret =  responseString(p); break;
                 case ImsRILConstants.RIL_REQUEST_GET_IMS_REGADDR: ret =  responseStrings(p); break;
+                case ImsRILConstants.RIL_REQUEST_UPDATE_CLIP: ret =  responseVoid(p); break;
                 default:
                     throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
                     //break;
