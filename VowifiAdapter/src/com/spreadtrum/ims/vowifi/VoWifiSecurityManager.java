@@ -181,6 +181,19 @@ public class VoWifiSecurityManager extends ServiceManager {
         }
     }
 
+    public void startMobike(int subId) {
+        if (Utilities.DEBUG) Log.i(TAG, "Start mobike for sub[" + subId + "] as normal type.");
+
+        SecurityRequest request = findRequest(subId, S2bType.NORMAL);
+        if (mISecurity == null || request == null) return;
+
+        try {
+            mISecurity.startMobike(request.mSessionId);
+        } catch (RemoteException e) {
+            Log.e(TAG, "Catch the remote exception when start mobike. e: " + e);
+        }
+    }
+
     public boolean setIPVersion(int subId, int s2bType, int ipVersion) {
         SecurityRequest request = findRequest(subId, s2bType);
         return request != null ? setIPVersion(request.mSessionId, ipVersion) : false;
@@ -307,9 +320,11 @@ public class VoWifiSecurityManager extends ServiceManager {
                         String dnsIP4 = jObject.optString(JSONUtils.KEY_DNS_IP4, null);
                         String dnsIP6 = jObject.optString(JSONUtils.KEY_DNS_IP6, null);
                         boolean prefIPv4 = jObject.optBoolean(JSONUtils.KEY_PREF_IP4, false);
+                        boolean supportMobike =
+                                jObject.optBoolean(JSONUtils.KEY_SUPPORT_MOBIKE, false);
 
                         SecurityConfig config = new SecurityConfig(pcscfIP4, pcscfIP6, dnsIP4,
-                                dnsIP6, localIP4, localIP6, prefIPv4);
+                                dnsIP6, localIP4, localIP6, prefIPv4, supportMobike);
                         // For handover attach or xcap attach, we need set the IP version as
                         // preferred first, then notify the result and update the state.
                         int useIPVersion = prefIPv4 ? IPVersion.IP_V4 : IPVersion.IP_V6;

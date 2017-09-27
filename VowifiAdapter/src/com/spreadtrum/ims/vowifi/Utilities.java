@@ -312,11 +312,12 @@ public class Utilities {
         public String _ip4;
         public String _ip6;
         public boolean _prefIPv4;
+        public boolean _isSupportMobike;
 
         public int _useIPVersion = IPVersion.NONE;
 
         public SecurityConfig(String pcscf4, String pcscf6, String dns4, String dns6, String ip4,
-                String ip6, boolean prefIPv4) {
+                String ip6, boolean prefIPv4, boolean isSupportMobike) {
             _pcscf4 = pcscf4;
             _pcscf6 = pcscf6;
             _dns4 = dns4;
@@ -324,12 +325,14 @@ public class Utilities {
             _ip4 = ip4;
             _ip6 = ip6;
             _prefIPv4 = prefIPv4;
+            _isSupportMobike = isSupportMobike;
         }
 
         @Override
         public String toString() {
             return "[pcscf4=" + _pcscf4 + ", pcscf6=" + _pcscf6 + ", dns4=" + _dns4 + ", dns6="
-                    + _dns6 + ", ip4=" + _ip4 + ", ip6=" + _ip6 + ", pref IPv4=" + _prefIPv4 + "]";
+                    + _dns6 + ", ip4=" + _ip4 + ", ip6=" + _ip6 + ", prefIPv4=" + _prefIPv4
+                    + ", supportMobike=" + _isSupportMobike + "]";
         }
     }
 
@@ -886,6 +889,7 @@ public class Utilities {
         public final static String KEY_DNS_IP6 = "dns_ip6";
         public final static String KEY_PREF_IP4 = "pref_ip4";
         public final static String KEY_TYPE = "type";
+        public final static String KEY_SUPPORT_MOBIKE = "support_mobike";
 
         public final static int USE_IP4 = 0;
         public final static int USE_IP6 = 1;

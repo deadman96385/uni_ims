@@ -84,13 +84,14 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private static final int MSG_RESET_FORCE = 2;
     private static final int MSG_ATTACH = 3;
     private static final int MSG_DEATTACH = 4;
-    private static final int MSG_REGISTER = 5;
-    private static final int MSG_DEREGISTER = 6;
-    private static final int MSG_REREGISTER = 7;
-    private static final int MSG_UPDATE_DATAROUTER_STATE = 8;
-    private static final int MSG_TERMINATE_CALLS = 9;
-    private static final int MSG_ECBM = 10;
-    private static final int MSG_ECBM_TIMEOUT = 11;
+    private static final int MSG_START_MOBIKE = 5;
+    private static final int MSG_REGISTER = 6;
+    private static final int MSG_DEREGISTER = 7;
+    private static final int MSG_REREGISTER = 8;
+    private static final int MSG_UPDATE_DATAROUTER_STATE = 9;
+    private static final int MSG_TERMINATE_CALLS = 10;
+    private static final int MSG_ECBM = 11;
+    private static final int MSG_ECBM_TIMEOUT = 12;
 
     private class MyHandler extends Handler {
         public MyHandler(Looper looper) {
@@ -122,6 +123,9 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 case MSG_DEATTACH:
                     boolean forHandover = (Boolean) msg.obj;
                     deattachInternal(forHandover);
+                    break;
+                case MSG_START_MOBIKE:
+                    startMobikeInternal();
                     break;
                 case MSG_REGISTER:
                     registerPrepare();
@@ -378,6 +382,19 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
      */
     private void securityForceStop() {
         mSecurityMgr.forceStop(mSubId, mSecurityListener);
+    }
+
+    public void startMobike() {
+        mHandler.sendEmptyMessage(MSG_START_MOBIKE);
+    }
+
+    private void startMobikeInternal() {
+        mSecurityMgr.startMobike(mSubId);
+    }
+
+    public boolean isSupportMobike() {
+        SecurityConfig config = getSecurityConfig();
+        return config == null ? false : config._isSupportMobike;
     }
 
     public SecurityConfig getSecurityConfig() {
