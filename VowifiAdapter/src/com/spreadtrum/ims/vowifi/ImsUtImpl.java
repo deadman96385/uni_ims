@@ -61,7 +61,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private IVoWifiSerService mICall = null;
     private MySerServiceCallback mSerServiceCallback = new MySerServiceCallback();
 
-    private static final int CMD_TIMEOUT = 60 * 1000; // 60s
+    private static final int CMD_TIMEOUT = 30 * 1000; // 30s
 
     private static final int MSG_HANDLE_EVENT = -1;
     private static final int MSG_CMD_TIMEOUT = 0;
@@ -96,6 +96,9 @@ public class ImsUtImpl extends IImsUt.Stub {
                         ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR,
                                 ImsReasonInfo.CODE_UNSPECIFIED);
                         mCmdManager.onActionFailed(error);
+                    } else {
+                        Log.d(TAG, "Ignore the cmd timeout as timeout key is " + timeoutKey
+                                + ", but the first cmd key is " + key);
                     }
                     break;
                 }
@@ -117,6 +120,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                 }
                 case MSG_ACTION_UPDATE_CALL_BARRING:
                 case MSG_ACTION_SET_FACILITY_LOCK:
+                    nativeUpdateCallBarring();
                     break;
                 case MSG_ACTION_UPDATE_CALL_FORWARD: {
                     UTAction action = (UTAction) msg.obj;
@@ -577,8 +581,20 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
     }
 
+    private void nativeUpdateCallBarring() {
+        // Do not support now, handle it as failed.
+        Log.e(TAG, "Native failed to update the call barring.");
+        ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR,
+                ImsReasonInfo.CODE_UNSPECIFIED);
+        mCmdManager.onActionFailed(error);
+    }
+
     private void nativeChangeBarringPwd(String condition, String oldPwd, String newPwd) {
-        if (Utilities.DEBUG) Log.i(TAG, "Native change the call barring password to : " + newPwd);
+        // Do not support now, handle it as failed.
+        Log.e(TAG, "Native failed to change barring pwd.");
+        ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR,
+                ImsReasonInfo.CODE_UNSPECIFIED);
+        mCmdManager.onActionFailed(error);
     }
 
     private void nativeUpdateCLIR(boolean enabled) {
