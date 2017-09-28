@@ -650,17 +650,24 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     }
                     break;
                 case ACTION_COMPLETE_GET_CALL_FAIL_CAUSE:
-                    if(ar != null && (ar.exception != null || ar.result == null)){
-                        Log.w(TAG,"handleMessage->ACTION_COMPLETE_GET_CALL_FAIL_CAUSE error!");
-                    }else {
-                        LastCallFailCause failCause = (LastCallFailCause) ar.result;
+                   //SPRD: add for bug751898
+                   LastCallFailCause failCause = null;
+                   if(mIImsCallSessionListener != null){
+                        //SPRD: add for bug751898
+                        if(ar != null && (ar.exception != null || ar.result == null)) {
+                            Log.w(TAG, "handleMessage->ACTION_COMPLETE_GET_CALL_FAIL_CAUSE error!");
+                        } else {
+                            failCause = (LastCallFailCause) ar.result;
+                        }
+
                         /* SPRD: add for bug713220 @{ */
                         try {
                             if ((mIImsCallSessionListener != null) && (mImsDriverCall != null)) {
                                 if ((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING)
                                         && (mDisconnCause != ImsReasonInfo.CODE_USER_DECLINE)) { ////add for set cause when reject incoming call
                                     mDisconnCause = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
-                                }else if(failCause.causeCode == 17){//AT< ^CEND: 1,,104,17
+                                //SPRD: add for bug751898
+                                }else if(failCause != null && failCause.causeCode == 17){//AT< ^CEND: 1,,104,17
                                     mDisconnCause = ImsReasonInfo.CODE_SIP_BUSY;
                                 }
                                 Log.w(TAG, "callSessionTerminated  mDisconnCause=" + mDisconnCause);
@@ -672,13 +679,17 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                             e.printStackTrace();
                         }
                         /* @} */
-                        mDisconnCause = failCause.causeCode;
+
                         ImsReasonInfo reasonInfo = new ImsReasonInfo();
-                        // SPRD: add for bug541710
-                        if (mDisconnCause == VTManagerUtils.VODEO_CALL_FDN_BLOCKED) {
-                            reasonInfo = new ImsReasonInfo(mDisconnCause, 0);
-                        } else if (failCause.causeCode == 501) { //SPRD: add for bug663110 mo failed handover vowifi,^CEND： 1,,104,501
-                            reasonInfo = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_IMS_HANDOVER_RETRY, 0);
+                        //SPRD: add for bug751898
+                        if(failCause != null){
+                            mDisconnCause = failCause.causeCode;
+                            // SPRD: add for bug541710
+                            if (mDisconnCause == VTManagerUtils.VODEO_CALL_FDN_BLOCKED) {
+                                reasonInfo = new ImsReasonInfo(mDisconnCause, 0);
+                            } else if (failCause.causeCode == 501) { //SPRD: add for bug663110 mo failed handover vowifi,^CEND: 1,,104,501
+                                reasonInfo = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_IMS_HANDOVER_RETRY, 0);
+                            }
                         }
 
                         try {
