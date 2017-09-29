@@ -2267,6 +2267,7 @@ class MyVoWifiCallback implements VoWifiCallback {
                     }
                 } else if(mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER){
                     /*SPRD: Modify for bug595321{@*/
+                    int oldImsFeature = mCurrentImsFeature;
                     if (mIsCalling){
                         mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
                         mIsPendingRegisterVolte = true;
@@ -2276,7 +2277,9 @@ class MyVoWifiCallback implements VoWifiCallback {
                                 Log.i(TAG, "onImsPdnStatusChange -> operationSuccessed-> IMS_OPERATION_HANDOVER_TO_VOLTE");
                                 mImsServiceListenerEx.operationSuccessed(mFeatureSwitchRequest.mRequestId,
                                         ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOLTE);
-                                Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_SHORT).show();
+                                if(oldImsFeature != mCurrentImsFeature){
+                                    Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_SHORT).show();
+                                }
                             } catch (RemoteException e) {
                                 e.printStackTrace();
                             }
@@ -2299,7 +2302,9 @@ class MyVoWifiCallback implements VoWifiCallback {
                                 Log.i(TAG, "onImsPdnStatusChange -> operationSuccessed-> IMS_OPERATION_HANDOVER_TO_VOLTE");
                                 mImsServiceListenerEx.operationSuccessed(mFeatureSwitchRequest.mRequestId,
                                         ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOLTE);
-                                Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_SHORT).show();
+                                if(oldImsFeature != mCurrentImsFeature){
+                                    Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_SHORT).show();
+                                }
                             } catch (RemoteException e) {
                                 e.printStackTrace();
                             }
