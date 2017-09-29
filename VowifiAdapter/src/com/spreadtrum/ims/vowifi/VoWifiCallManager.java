@@ -1,9 +1,7 @@
 package com.spreadtrum.ims.vowifi;
 
 import android.annotation.TargetApi;
-import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -15,7 +13,6 @@ import android.telecom.VideoProfile;
 import android.telecom.Connection.VideoProvider;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.WindowManager;
 import android.widget.Toast;
 
 import com.android.ims.ImsCallProfile;
@@ -83,7 +80,6 @@ public class VoWifiCallManager extends ServiceManager {
     private int mUseAudioStreamCount = 0;
     private int mRegisterState = RegisterState.STATE_IDLE;
 
-    private MyAlertDialog mAlertDialog = null;
     private ImsCallSessionImpl mConferenceCallSession = null;
     private ImsCallSessionImpl mEmergencyCallSession = null;
 
@@ -97,13 +93,11 @@ public class VoWifiCallManager extends ServiceManager {
             new ArrayList<ICallChangedListener>();
     private MySerServiceCallback mVoWifiServiceCallback = new MySerServiceCallback();
 
-    private static final int MEDIA_CHANGED_TIMEOUT = 10000;
     private static final int RELEASE_CALL_DELAY = 2 * 1000;
 
     private static final int MSG_HANDLE_EVENT = 0;
     private static final int MSG_INVITE_CALL = 1;
-    private static final int MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 2;
-    private static final int MSG_RELEASE_CALL = 3;
+    private static final int MSG_RELEASE_CALL = 2;
 
     private Handler mHandler = new Handler() {
         @Override
@@ -114,20 +108,6 @@ public class VoWifiCallManager extends ServiceManager {
                     break;
                 case MSG_INVITE_CALL:
                     inviteCall((ImsCallSessionImpl) msg.obj);
-                    break;
-                case MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT:    //Added for bug 662008
-                    if (mAlertDialog != null
-                            && mAlertDialog._dialog != null
-                            && mAlertDialog._dialog.isShowing()) {
-                        int sessionId = msg.arg1;
-                        dismissAlertDialog(sessionId);
-                        Log.d(TAG, "Popup dismissed due to timeout.");
-                        try {
-                            mICall.sendSessionModifyResponse(sessionId, true, false);
-                        } catch (RemoteException e) {
-                            Log.e(TAG, "Failed to send reject response. e: " + e);
-                        }
-                    }
                     break;
                 case MSG_RELEASE_CALL:
                     String callId = (String) msg.obj;
@@ -514,8 +494,6 @@ public class VoWifiCallManager extends ServiceManager {
         // Remove the call session from the list.
         if (mSessionList.remove(callSession)) {
             Log.d(TAG, "The call[" + callSession + "] removed from the list.");
-            // If the call removed, we need dismiss the alert dialog of this call session.
-            dismissAlertDialog(Integer.parseInt(callSession.getCallId()));
 
             // It means the call is end now.
             if (mEmergencyCallSession != null
@@ -686,15 +664,6 @@ public class VoWifiCallManager extends ServiceManager {
         addCall(session);
 
         return session;
-    }
-
-    private void dismissAlertDialog(int sessionId) {
-        if (mAlertDialog != null
-                && mAlertDialog._sessionId == sessionId
-                && mAlertDialog._dialog != null
-                && mAlertDialog._dialog.isShowing()) {
-            mAlertDialog._dialog.dismiss();
-        }
     }
 
     private void inviteCall(ImsCallSessionImpl confSession) {
@@ -1249,23 +1218,10 @@ public class VoWifiCallManager extends ServiceManager {
             return;
         }
 
-        // Receive the add video request, we need prompt one dialog to alert the user.
-        // And the user could accept or reject this action.
-        mAlertDialog = getVideoChangeRequestDialog(
-                Integer.valueOf(callSession.getCallId()), true /* add video is upgrade action */);
-        mAlertDialog._dialog.show();
-
-        // For most situation, when we receive the upgrade video request, the screen is off.
-        // And the user do not focus on the screen. So we'd like to give a tone alert when
-        // the user receive this request.
-        // FIXME: As InCallUI will give the tone when it receive "SessionModifyResponse"
-        //        with the status is VideoProvider.SESSION_MODIFY_REQUEST_INVALID. Couldn't
-        //        very understand, why not use the "SessionModifyRequest"?
         ImsVideoCallProviderImpl videoProvider = callSession.getVideoCallProviderImpl();
         if (videoProvider != null) {
-            videoProvider.receiveSessionModifyResponse(
-                    VideoProvider.SESSION_MODIFY_REQUEST_INVALID /* used to play the tone */,
-                    null /* not used */, null /* not used */);
+            VideoProfile newProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
+            videoProvider.receiveSessionModifyRequest(newProfile);
         }
     }
 
@@ -1276,7 +1232,11 @@ public class VoWifiCallManager extends ServiceManager {
             return;
         }
 
-        dismissAlertDialog(Integer.valueOf(callSession.getCallId()));
+        ImsVideoCallProviderImpl videoProvider = callSession.getVideoCallProviderImpl();
+        if (videoProvider != null) {
+            videoProvider.receiveSessionModifyResponse(
+                    VideoProvider.SESSION_MODIFY_REQUEST_FAIL, null, null);
+        }
     }
 
     private void handleCallIsFocus(ImsCallSessionImpl callSession) throws RemoteException {
@@ -1700,98 +1660,6 @@ public class VoWifiCallManager extends ServiceManager {
         }
     }
 
-    /**
-     * This dialog will be shown when the call upgrade or downgrade.
-     *
-     * @param sessionId
-     * @param isUpgrade
-     * @return
-     */
-    private MyAlertDialog getVideoChangeRequestDialog(final int sessionId,
-            final boolean isUpgrade) {
-        // Build the dialog.
-        String title = "";
-        String message = "";
-        String acceptText = mContext.getString(R.string.remote_request_change_accept);
-        String rejectText = mContext.getString(R.string.remote_request_change_reject);
-        if (isUpgrade) {
-            title = mContext.getString(R.string.vowifi_request_upgrade_title);
-            message = mContext.getString(R.string.vowifi_request_upgrade_text);
-
-            // Send the timeout message to handle the request timeout event.
-            Message msg = new Message();
-            msg.what = MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT;
-            msg.arg1 = sessionId;
-            mHandler.removeMessages(MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT);
-            mHandler.sendMessageDelayed(msg, MEDIA_CHANGED_TIMEOUT);
-        } else {
-            title = mContext.getString(R.string.vowifi_request_downgrade_title);
-            message = mContext.getString(R.string.vowifi_request_downgrade_text);
-        }
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
-        builder.setTitle(title);
-        builder.setMessage(message);
-        builder.setPositiveButton(acceptText, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                // Accept the request, send the modify response.
-                if (mICall == null) {
-                    Log.e(TAG, "Can not send the session modify request for accept.");
-                    return;
-                }
-
-                // If the user accept the upgrade action, it should be upgrade to video call,
-                // so isVideo is true. And if the user accept the downgrade action, it should
-                // be downgrade to voice call, so isVideo is false.
-                boolean isVideo = isUpgrade ? true : false;
-                try {
-                    mICall.sendSessionModifyResponse(sessionId, true, isVideo);
-                } catch (RemoteException e) {
-                    Log.e(TAG, "Failed to send the accept response. e: " + e);
-                }
-            }
-        });
-        builder.setNegativeButton(rejectText, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                // Reject the request, send the modify response.
-                if (mICall == null) {
-                    Log.e(TAG, "Can not send the session modify request for reject.");
-                    return;
-                }
-
-                // If the user reject the upgrade action, it should be keep as voice call,
-                // so isVideo is false. And if the user reject the downgrade action, it
-                // should be keep as video call, so isVideo is true.
-                boolean isVideo = isUpgrade ? false : true;
-                try {
-                    mICall.sendSessionModifyResponse(sessionId, true, isVideo);
-                } catch (RemoteException e) {
-                    Log.e(TAG, "Failed to send reject response. e: " + e);
-                }
-            }
-        });
-        builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                if (mAlertDialog != null
-                        && mAlertDialog._sessionId == sessionId) {
-                    mAlertDialog = null;
-                }
-            }
-        });
-        builder.setCancelable(false);
-
-        AlertDialog dialog = builder.create();
-        dialog.setCanceledOnTouchOutside(false);
-        dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_KEYGUARD_DIALOG);
-        dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND
-                | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
-                | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
-                | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
-
-        return new MyAlertDialog(sessionId, dialog);
-    }
-
     private String getDRStateString(int state) {
         switch (state) {
             case CallStateForDataRouter.VOLTE:
@@ -1817,16 +1685,6 @@ public class VoWifiCallManager extends ServiceManager {
             Message msg = mHandler.obtainMessage(MSG_HANDLE_EVENT);
             msg.obj = json;
             mHandler.sendMessage(msg);
-        }
-    }
-
-    private class MyAlertDialog {
-        public int _sessionId;
-        public AlertDialog _dialog;
-
-        public MyAlertDialog(int sessionId, AlertDialog dialog) {
-            _sessionId = sessionId;
-            _dialog = dialog;
         }
     }
 

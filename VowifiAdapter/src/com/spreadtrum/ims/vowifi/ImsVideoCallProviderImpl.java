@@ -219,17 +219,12 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                         break;
                     }
                     case MSG_SEND_MODIFY_RESPONSE: {
-                        VideoProfile profile = (VideoProfile) msg.obj;
-                        receiveSessionModifyResponse(
-                                VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS, profile, profile);
-
-                        // If the video type do not changed. we need handle the transmission changed.
-                        boolean isTrans =
-                                VideoProfile.isTransmissionEnabled(profile.getVideoState());
-                        if (isTrans) {
-                            mCallSession.updateCallType(ImsCallProfile.CALL_TYPE_VT);
-                        } else {
-                            mCallSession.updateCallType(ImsCallProfile.CALL_TYPE_VT_RX);
+                        boolean isVideo = (Boolean) msg.obj;
+                        int res = mCallSession.sendModifyResponse(isVideo);
+                        if (res == Result.FAIL) {
+                            Log.w(TAG, "Can not send the modify response now.");
+                            receiveSessionModifyResponse(
+                                    VideoProvider.SESSION_MODIFY_REQUEST_FAIL, null, null);
                         }
                         break;
                     }
@@ -323,23 +318,31 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
             // For transmission changed, needn't send the modify request. So give the
             // response immediately.
+            receiveSessionModifyResponse(
+                    VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS, toProfile, toProfile);
+
             if (isTrans) {
                 // It means start the video transmission. And "setCamera" will start the
-                // camera, so we need request the camera capabilities
+                // camera, so we need request the camera capabilities when camera start.
                 Log.d(TAG, "Start the video transmission successfully.");
-                mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_RESPONSE, toProfile));
+                mCallSession.updateCallType(ImsCallProfile.CALL_TYPE_VT);
             } else {
                 // It means stop the video transmission. And this action will be handled
                 // when the camera set to null.
                 Log.d(TAG, "Stop the video transmission successfully.");
-                mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_RESPONSE, toProfile));
+                mCallSession.updateCallType(ImsCallProfile.CALL_TYPE_VT_RX);
             }
         }
     }
 
     @Override
     public void onSendSessionModifyResponse(VideoProfile responseProfile) {
-        Log.d(TAG, "On send session modify response. Do not handle.");
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "On send session modify response. response profile: " + responseProfile);
+        }
+
+        boolean isVideo = VideoProfile.isVideo(responseProfile.getVideoState());
+        mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_RESPONSE, isVideo));
     }
 
     @Override

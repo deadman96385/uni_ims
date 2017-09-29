@@ -1743,6 +1743,24 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
     }
 
+    public int sendModifyResponse(boolean isVideo) {
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "Send session modify response as isVideo[" + isVideo + "]");
+        }
+
+        if (mICall == null) {
+            Log.e(TAG, "Can not send session modify response as call interface is null.");
+            return Result.FAIL;
+        }
+
+        try {
+            return mICall.sendSessionModifyResponse(mCallId, true, isVideo);
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to send the modify response. e: " + e);
+            return Result.FAIL;
+        }
+    }
+
     public int setPauseImage(Uri uri) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Set the pause image to " + uri + " for the call: " + mCallId);
