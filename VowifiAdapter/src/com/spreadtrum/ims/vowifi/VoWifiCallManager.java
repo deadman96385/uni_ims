@@ -1228,14 +1228,10 @@ public class VoWifiCallManager extends ServiceManager {
         // For most situation, when we receive the upgrade video request, the screen is off.
         // And the user do not focus on the screen. So we'd like to give a tone alert when
         // the user receive this request.
-        // FIXME: As InCallUI will give the tone when it receive "SessionModifyResponse"
-        //        with the status is VideoProvider.SESSION_MODIFY_REQUEST_INVALID. Couldn't
-        //        very understand, why not use the "SessionModifyRequest"?
         ImsVideoCallProviderImpl videoProvider = callSession.getVideoCallProviderImpl();
         if (videoProvider != null) {
-            videoProvider.receiveSessionModifyResponse(
-                    VideoProvider.SESSION_MODIFY_REQUEST_INVALID /* used to play the tone */,
-                    null /* not used */, null /* not used */);
+            VideoProfile newProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
+            videoProvider.receiveSessionModifyRequest(newProfile);
         }
     }
 
