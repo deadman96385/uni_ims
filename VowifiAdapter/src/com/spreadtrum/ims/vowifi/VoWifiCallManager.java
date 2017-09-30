@@ -883,14 +883,12 @@ public class VoWifiCallManager extends ServiceManager {
                     }
                     break;
                 }
-		 case JSONUtils.EVENT_CODE_USSD_INFO_RECEIVED: {
-		      boolean isVideo = jObject.optBoolean(JSONUtils.KEY_IS_VIDEO, false);
+                case JSONUtils.EVENT_CODE_USSD_INFO_RECEIVED: {
                     String info = jObject.optString(JSONUtils.KEY_USSD_INFO_RECEIVED, "");
-		      int mode = jObject.optInt(JSONUtils.KEY_USSD_MODE, -1);
-                    handleUssdInfoReceived(callSession, sessionId, info, mode);
+                    int mode = jObject.optInt(JSONUtils.KEY_USSD_MODE, -1);
+                    handleUssdInfoReceived(callSession, info, mode);
                     break;
                 }
-
                 default:
                     Log.w(TAG, "The event '" + eventName + "' do not handle, please check!");
             }
@@ -1150,17 +1148,8 @@ public class VoWifiCallManager extends ServiceManager {
                 || eventCode == JSONUtils.EVENT_CODE_CALL_REMOVE_VIDEO_OK) {
             // Update the call type success.
             boolean isVideo = eventCode == JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_OK;
-            ImsCallProfile callProfile = callSession.getCallProfile();
-            if (callProfile != null) {
-                callProfile.mCallType =
-                        isVideo ? ImsCallProfile.CALL_TYPE_VT : ImsCallProfile.CALL_TYPE_VOICE;
-            } else {
-                Log.e(TAG, "The call profile is null for this call: " + callSession);
-            }
-
-            if (listener != null) {
-                listener.callSessionUpdated(callSession, callProfile);
-            }
+            callSession.updateCallType(
+                    isVideo ? ImsCallProfile.CALL_TYPE_VT : ImsCallProfile.CALL_TYPE_VOICE);
 
             if (videoCallProvider != null) {
                 if (eventCode == JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_OK
@@ -1349,6 +1338,24 @@ public class VoWifiCallManager extends ServiceManager {
 
         if (mListener != null) {
             mListener.onCallRTCPChanged(isVideo, lose, jitter, rtt);
+        }
+    }
+
+    private void handleUssdInfoReceived(ImsCallSessionImpl callSession, String info, int mode) {
+        if (Utilities.DEBUG) Log.i(TAG, "Handle the received ussd info.");
+        if (callSession == null) {
+            Log.w(TAG, "[handleUssdInfoReceived] The call session is null");
+            return;
+        }
+
+        callSession.updateState(ImsCallSession.State.ESTABLISHED);
+        IImsCallSessionListener listener = callSession.getListener();
+        if (listener != null) {
+            try {
+                listener.callSessionUssdMessageReceived(callSession, mode, info);
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to send the ussd info. e: " + e);
+            }
         }
     }
 
@@ -1665,23 +1672,6 @@ public class VoWifiCallManager extends ServiceManager {
         if (mListener != null) mListener.onCallRTPReceived(isVideo, isReceived);
     }
 
-    private void handleUssdInfoReceived(ImsCallSessionImpl callSession, int sessionId, String info, int mode){
-        if (Utilities.DEBUG) Log.i(TAG, "Handle the received ussd info.");
-        if (callSession == null) {
-            Log.w(TAG, "[handleUssdInfoReceived] The call session is null");
-            return;
-        }
-        callSession.updateState(ImsCallSession.State.ESTABLISHED);
-        IImsCallSessionListener listener = callSession.getListener();
-        if (listener != null) {
-	     try {
-                    listener.callSessionUssdMessageReceived(callSession, mode, info);
-                } catch (RemoteException e) {
-                    Log.e(TAG, "Failed to send the ussd info. e: " + e);
-                }
-
-        }
-    }
     /**
      * This dialog will be shown when the call upgrade or downgrade.
      *
