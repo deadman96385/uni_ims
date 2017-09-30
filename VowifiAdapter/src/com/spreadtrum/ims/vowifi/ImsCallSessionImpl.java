@@ -44,8 +44,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ImsCallSessionImpl extends IImsCallSession.Stub implements LocationListener {
     private static final String TAG = Utilities.getTag(ImsCallSessionImpl.class.getSimpleName());
@@ -58,6 +58,21 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
     private static final boolean SUPPORT_START_CONFERENCE = false;
 
     private static final String PARTICIPANTS_SEP = ";";
+
+    // It is defined in #ImsPhoneMmiCode.
+    // And could refer to TS 22.030 6.5.2 "Structure of the MMI"
+    private static final Pattern PATTERN_SUPP_SERVICE = Pattern.compile(
+            "((\\*|#|\\*#|\\*\\*|##)(\\d{2,3})(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*))?)?)?)?#)(.*)");
+    /*       1  2                    3          4  5       6   7         8    9     10  11             12
+
+             1 = Full string up to and including #
+             2 = action (activation/interrogation/registration/erasure)
+             3 = service code
+             5 = SIA
+             7 = SIB
+             9 = SIC
+             10 = dialing number
+    */
 
     private int mCallId = -1;
     private boolean mIsAlive = false;
@@ -1119,30 +1134,25 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
     }
 
-
     /**
      * Initiate an USSD call.
      *
-     * @param ussd uri  to send
+     * @param ussd uri to send
      */
-    public void startUssdCall(String ussdMessage) throws RemoteException {
-        if (Utilities.DEBUG) Log.i(TAG, "start an ussd call: " + ussdMessage);
-        // TODO: need change
-        if (mICall != null) {
-            //mCallId = mICall.sendUSSDMessage(mCallId, ussdMessage);
-            int id = 0;
-	     id = mICall.sessCall(ussdMessage, null, true, false, true, false);
-	     if (id == Result.INVALID_ID) {
-                handleStartActionFailed("Native start the ussd call failed.");
-            } else {
-               mCallId = id;
-		 updateState(State.INITIATED);
-               mIsAlive = true;
-               // Start action success, update the last call action as start.
-               updateRequestAction(VoWifiCallStateTracker.ACTION_START);
-            }
-       }
+    private void startUssdCall(String ussdMessage) throws RemoteException {
+        if (Utilities.DEBUG) Log.i(TAG, "Start an ussd call: " + ussdMessage);
 
+        int id = mICall.sessCall(ussdMessage, null, true, false, true, false);
+        if (id == Result.INVALID_ID) {
+            handleStartActionFailed("Native start the ussd call failed.");
+        } else {
+            mCallId = id;
+            updateState(State.INITIATED);
+            mIsAlive = true;
+
+            // Start action success, update the last call action as start.
+            updateRequestAction(VoWifiCallStateTracker.ACTION_START);
+        }
     }
 
     /**
@@ -1220,6 +1230,19 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
     public void updateState(int state) {
         if (mCallStateTracker != null) mCallStateTracker.updateCallState(state);
+    }
+
+    public void updateCallType(int newType) {
+        if (mCallProfile == null) return;
+
+        mCallProfile.mCallType = newType;
+        try {
+            if (mListener != null) {
+                mListener.callSessionUpdated(this, mCallProfile);
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to update the call type as catch the RemoteException e: " + e);
+        }
     }
 
     public void updateRequestAction(int requestAction){
@@ -1966,22 +1989,17 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         startCall(callee);
     }
 
-    private static Pattern sPatternSuppService = Pattern.compile(
-    "((\\*|#|\\*#|\\*\\*|##)(\\d{2,3})(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*))?)?)?)?#)(.*)");
-
     private void startCall(String callee) throws RemoteException {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Start the call with the callee: " + callee + ", mSosLocation: "
                     + mSosLocation);
         }
 
-         Matcher m;
-         m = sPatternSuppService.matcher(callee);
+        Matcher m = PATTERN_SUPP_SERVICE.matcher(callee);
         // Is this formatted like a standard supplementary service code?
         if (m.matches()) {
-	    Log.i(TAG, "Start the ussd");
-	    startUssdCall(callee);  //start USSD
-	    return;
+            startUssdCall(callee);
+            return;
         }
 
         // Start the call.
