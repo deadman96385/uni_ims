@@ -169,6 +169,12 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     // If the de-register is timeout, force reset.
                     mHandler.sendEmptyMessageDelayed(MSG_RESET_FORCE, RESET_TIMEOUT);
                 } else {
+                    if (mCmdRegisterState > CMD_STATE_INVALID) {
+                        // It means already in register process, but do not register success now.
+                        // But we need reset the sip stack now, so we'd like to give the callback
+                        // as register failed here.
+                        registerFailed();
+                    }
                     // As do not register, we'd like to force reset.
                     Log.d(TAG, "Do not register now, transfer to force reset.");
                     mHandler.sendEmptyMessage(MSG_RESET_FORCE);
