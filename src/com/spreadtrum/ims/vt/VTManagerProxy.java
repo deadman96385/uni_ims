@@ -322,10 +322,11 @@ public class VTManagerProxy{
         log("handleSetPreviewSurface->Surface=" + surface);
         mPreviewSurface = surface;
         if (mVideoCallEngine != null) {
-            if (surface == null) {
+        // SPRD: delete for bug 752052
+/*            if (surface == null) {
                 log("handleSetPreviewSurface->Clean up camera object");
                 mVideoCallEngine.setImsCamera(null);
-            }
+            }*/
             mVideoCallEngine.setImsLocalSurface(mPreviewSurface);
             mVideoCallEngine.startPreview();
         }
