@@ -227,8 +227,6 @@ static void requestDowngradeToVoice();
 static void requestGetSimLockStatus(int channelID, void *data, size_t datalen, RIL_Token t);
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 
-
-
 struct listnode
 {
     char data;
@@ -542,12 +540,13 @@ static void queryAllActivePDN(int channelID) {
          }
          pdns++;
     }
-    RILLOGI("queryAllActivePDN activePDN= %d", activePDN);
+    at_response_free(pdnResponse);
+    pdnResponse = NULL;
+    RILLOGI("queryAllActivePDN:activePDN= %d", activePDN);
     err = at_send_command_multiline (ATch_type[channelID], "AT+CGDCONT?", "+CGDCONT:", &pdnResponse);
     if (err != 0 || pdnResponse->success == 0) {
         //TODO
     }
-
     for (pCur = pdnResponse->p_intermediates; pCur != NULL;
     pCur =pCur->p_next) {
         char *line = pCur->line;
@@ -580,6 +579,7 @@ static void queryAllActivePDN(int channelID) {
         strcpy(pdn[cid-1].strApn, apn);
         RILLOGI("queryAllActivePDN CGDCONT? active pdn: cid = %d, iptype = %s, apn = %s", pdn[cid-1].nCid, pdn[cid-1].strIPType, pdn[cid-1].strApn);
     }
+    at_response_free(pdnResponse);
 }
 
 /* @} */
@@ -2718,6 +2718,7 @@ static void requestOrSendDataCallList(int channelID, int cid, RIL_Token *t)
         else
             RIL_onUnsolicitedResponse(RIL_UNSOL_DATA_CALL_LIST_CHANGED,
                                       NULL, 0);
+        at_response_free(p_response);
         return;
     }
 
@@ -3459,6 +3460,7 @@ static int activeSpecifiedCidProcess(int channelID, void *data, int primaryCid, 
     if (err < 0 || p_response->success == 0) {
         s_lastPdpFailCause = PDP_FAIL_ERROR_UNSPECIFIED;
         putPDP(cid_index);
+        at_response_free(p_response);
         return ret;
     }
     at_response_free(p_response);
@@ -3647,6 +3649,7 @@ RETRY:
                             }
                         }
                         requestOrSendDataCallList(channelID, cid, &t);
+                        at_response_free(p_response);
                         return;
                     }
                 } else if (i < MAX_PDP) {
@@ -4733,10 +4736,14 @@ static void requestEccDial(int channelID, void *data, size_t datalen,
 
     /* success or failure is ignored by the upper layer here.
        it will call GET_CURRENT_CALLS and determine success that way */
-    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    if (t != NULL) {
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    }
     return;
 error:
-    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    if (t != NULL) {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+    }
 }
 
 /* SPRD: add for LTE-CSFB to handle CS fall back of MT call @{*/
@@ -6848,6 +6855,7 @@ static void  requestEnterSimPin(int channelID, void*  data, size_t  datalen, RIL
                             strings[1]);
         }
         at_response_free(p_response);
+        p_response = NULL;
     } else
         goto error;
 
@@ -7818,7 +7826,8 @@ static void requestGetPhonebookStorageInfo(int channelID, void *data, size_t dat
     if (err < 0 || p_response->success == 0) {
         goto error;
     }
-
+    at_response_free(p_response);
+    p_response = NULL;
     err = at_send_command_singleline(ATch_type[channelID], "AT+CPBS?", "+CPBS:", &p_response);
     if (err < 0 || p_response->success == 0) {
         goto error;
@@ -7917,7 +7926,8 @@ static void requestGetPhonebookEntry(int channelID, void *data, size_t datalen, 
     if (err < 0 || p_response->success == 0) {
         goto error;
     }
-
+    at_response_free(p_response);
+    p_response = NULL;
     snprintf(cmd, sizeof(cmd), "AT^SCPBR=%d",p_args->index);
     err = at_send_command_singleline(ATch_type[channelID], cmd, "^SCPBR:", &p_response);
     if (err < 0 || p_response->success == 0) {
@@ -8060,6 +8070,8 @@ static void requestAccessPhonebookEntry(int channelID, void *data, size_t datale
         cmd = NULL;
         goto error;
     }
+    at_response_free(p_response);
+    p_response = NULL;
     err = at_send_command_singleline(ATch_type[channelID], cmd, "^SCPBW:", &p_response);
     free(cmd);
     if (err < 0 || p_response->success == 0) {
@@ -12473,6 +12485,7 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                         RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                     }
                 }
+                at_response_free(p_response);
                 break;
             }
 
@@ -13043,6 +13056,7 @@ static void attachGPRS(int channelID, void *data, size_t datalen, RIL_Token t)
             if (err < 0 || p_response->success == 0) {
                 at_send_command(ATch_type[channelID], "AT+SGFD", NULL);
                 at_response_free(p_response);
+                p_response = NULL;
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
                 goto error;
             }
@@ -13475,6 +13489,7 @@ static void onNitzReceived(void *param)
     RIL_onUnsolicitedResponse (
             RIL_UNSOL_NITZ_TIME_RECEIVED,
             nitz_str, strlen(nitz_str)+1);
+    at_response_free(p_response);
     free(raw_str);
     return;
 error:
