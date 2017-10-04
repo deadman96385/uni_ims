@@ -128,6 +128,7 @@ public class IMSRadioResponse extends IIMSRadioResponse.Stub {
                         ((dc.negStatusPresent == 1 && dc.negStatus == 1)
                                 ||(dc.negStatusPresent == 1 && dc.negStatus == 2 && dc.state == ImsDriverCall.State.INCOMING)
                                 ||(dc.negStatusPresent == 1 && dc.negStatus == 3)
+                                ||(dc.negStatusPresent == 1 && dc.negStatus == 4)
                                 ||(dc.negStatusPresent == 0 && dc.csMode == 0));
                 if(videoMode || dc.csMode == 2 || dc.csMode >= 7){
                     dc.isVoice = false;

@@ -12,6 +12,9 @@ import com.android.ims.ImsConferenceState;
 
 import android.telephony.PhoneNumberUtils;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class  ImsDriverCall extends DriverCall{
     static final String LOG_TAG =   ImsDriverCall.class.getSimpleName();
     static final int PRESENTATION_INVALID         = 0;
@@ -27,12 +30,16 @@ public class  ImsDriverCall extends DriverCall{
     public static final int STATE_INCOMING       = 4;
     public static final int STATE_WAITING        = 5;
     public static final int STATE_DISCONNECTED   = 6;
+    public static final int VIDEO_CALL_MEDIA_DIRECTION_INVALID = 1000;
+    public static final int VIDEO_CALL_MEDIA_DIRECTION_SENDRECV = VIDEO_CALL_MEDIA_DIRECTION_INVALID + 1;// "m=video\a=sendrecv" or "m=video"
+    public static final int VIDEO_CALL_MEDIA_DIRECTION_SENDONLY = VIDEO_CALL_MEDIA_DIRECTION_INVALID + 2;// "m=video\a=sendonly"
+    public static final int VIDEO_CALL_MEDIA_DIRECTION_RECVONLY = VIDEO_CALL_MEDIA_DIRECTION_INVALID + 3;// "m=video\a=recvonly"
 
     public ImsDriverCall(){
 
     }
 
-    public boolean isRequestUpgradeToVideo(){
+    public boolean isRequestUpgrade(){
         return (negStatus == PRESENTATION_REQUEST && mediaDescription != null && mediaDescription.contains("video"));
     }
 
@@ -50,6 +57,32 @@ public class  ImsDriverCall extends DriverCall{
 
     public boolean isVideoCall(){
         return !isVoice;
+    }
+
+    public int getVideoCallMediaDirection() {
+        if(mediaDescription == null || !mediaDescription.contains("video")){
+            Log.d(LOG_TAG,"mediaDescription = "+mediaDescription);
+            return VIDEO_CALL_MEDIA_DIRECTION_INVALID;
+        }
+
+        String videoCallMediaDirection = null;
+        Pattern p = Pattern.compile("a=.*?(only|sendrecv)");
+        Matcher m = p.matcher(mediaDescription);
+        while (m.find()) {
+            videoCallMediaDirection = m.group();
+            break;
+        }
+
+        Log.d(LOG_TAG,"videoCallMediaDirection = "+videoCallMediaDirection);
+        if (videoCallMediaDirection == null || videoCallMediaDirection.contains("sendrecv")) {
+            return VIDEO_CALL_MEDIA_DIRECTION_SENDRECV;
+        } else if (videoCallMediaDirection.contains("sendonly")) {
+            return VIDEO_CALL_MEDIA_DIRECTION_SENDONLY;
+        } else if (videoCallMediaDirection.contains("recvonly")) {
+            return VIDEO_CALL_MEDIA_DIRECTION_RECVONLY;
+        } else {
+            return VIDEO_CALL_MEDIA_DIRECTION_INVALID;
+        }
     }
 
     public ImsDriverCall(ImsDriverCall dc) {
@@ -292,20 +325,7 @@ public class  ImsDriverCall extends DriverCall{
             cliValidityPresent = dc.cliValidityPresent;
             hasUpdate = true;
         }
-        boolean oldVideoMode = isVoice;
-        boolean videoMode = mediaDescription != null && mediaDescription.contains("video") && !dc.mediaDescription.contains("cap:")
-                && ((negStatusPresent == PRESENTATION_VALID && negStatus == PRESENTATION_VALID)
-                        ||(negStatusPresent == PRESENTATION_VALID && negStatus == PRESENTATION_REQUEST && state == State.INCOMING)
-                        ||(negStatusPresent == PRESENTATION_VALID && negStatus == PRESENTATION_ACCEPT)
-                        ||(negStatusPresent == PRESENTATION_INVALID && csMode == 0));
-        if(videoMode || csMode == 2 || csMode >= 7){
-            isVoice = false;
-        } else {
-            isVoice = true;
-        }
-        if(oldVideoMode != isVoice){
-            hasUpdate = true;
-        }
+
         return hasUpdate;
     }
 

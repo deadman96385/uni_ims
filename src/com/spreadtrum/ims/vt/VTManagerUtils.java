@@ -207,18 +207,20 @@ public class VTManagerUtils {
         android.util.Log.i(TAG, string);
     }
 
+    /*TODO: remove for 8.1
     public static AlertDialog showVolteCallMediaUpdateAlert(Context context, final ImsRIL mCi, Message response,ImsVideoCallProvider vtprovide) {
-        /* SPRD: add for bug545171 @{ */
+        *//* SPRD: add for bug545171 @{ *//*
         final Message reponseMsg = new Message();
         if(response != null){
             reponseMsg.arg1 = response.arg1;
+            reponseMsg.arg2 = response.arg2;
         }
-        /* @} */
+        *//* @} *//*
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(context.getString(R.string.remote_request_change));
-        /* SPRD: Add feature of low battery for Reliance@{ */
-        builder.setMessage(/*TelephonyManagerEx.isBatteryLow() TODO:*/false? context.getString(R.string.low_battery_warning_media_alert_message):context.getString(R.string.choose_accept_reject));
-        /* @} */
+        *//* SPRD: Add feature of low battery for Reliance@{ *//*
+        builder.setMessage(*//*TelephonyManagerEx.isBatteryLow() TODO:*//*false? context.getString(R.string.low_battery_warning_media_alert_message):context.getString(R.string.choose_accept_reject));
+        *//* @} *//*
         builder.setPositiveButton(context.getString(R.string.remote_request_change_accept), new android.content.DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int which) {
                 mCi.responseVolteCallMediaChange(true, (reponseMsg != null) ? reponseMsg.arg1: 0,null);
@@ -244,7 +246,7 @@ public class VTManagerUtils {
         dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_KEYGUARD_DIALOG);
         dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
         return dialog;
-    }
+    }*/
     /*SPRD: add for bug673215 Vodafone new feature*/
     public static AlertDialog showVowifiRegisterToast(Context context) {
 
@@ -323,7 +325,7 @@ public class VTManagerUtils {
                 new android.content.DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         if (ril != null) {
-                            ril.requestVolteCallMediaChange(ImsRIL.CALL_MEDIA_CHANGE_ACTION_UPGRADE_TO_VIDEO, id, null);
+                            ril.requestVolteCallMediaChange(ImsRIL.MEDIA_REQUEST_DEFAULT, id, null);
                             log("Battery is low,user choose to downgrade to voice call.");
                         }
                         if (dialog != null) {

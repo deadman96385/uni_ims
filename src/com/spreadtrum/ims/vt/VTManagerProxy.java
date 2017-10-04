@@ -299,7 +299,7 @@ public class VTManagerProxy{
             return;
         }
         mVideoCallCameraManager.handleSetCamera(cameraId);
-        updateSessionModificationState();//bug493552
+        //updateSessionModificationState();//bug493552
     }
 
     /* SPRD:bug493552 @{ */

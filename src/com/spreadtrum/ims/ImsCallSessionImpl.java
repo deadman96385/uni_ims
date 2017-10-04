@@ -93,6 +93,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsConferenceHeld = false;
     private boolean mIsConferenceActived = false;
     private boolean mIsTxDisable = false;
+    private boolean mIsRxDisable = false;
     private boolean mIsLocalHold;
     private boolean mLocalConferenceUpdate;
     // SPRD: add for bug676047
@@ -160,6 +161,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if(dc == null){
             return;
         }
+        if(dc.negStatusPresent == dc.PRESENTATION_VALID && dc.negStatus == dc.PRESENTATION_REQUEST){
+            if(dc.state != ImsDriverCall.State.INCOMING){
+                return;
+            }
+        }
         if(mImsCallProfile == null) {
             mImsCallProfile = new ImsCallProfile();
         }
@@ -169,19 +175,37 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 ImsCallProfile.presentationToOIR(dc.numberPresentation));
         mImsCallProfile.setCallExtraInt(ImsCallProfile.EXTRA_CNAP,
                 ImsCallProfile.presentationToOIR(dc.namePresentation));
-        if(dc.isVideoCall()){
+        /*if(dc.isVideoCall()){
             if(dc.state == ImsDriverCall.State.HOLDING){//SPRD:add for bug604148
                 mIsTxDisable = false;
+                mIsRxDisable = false;
             }
             if(mIsTxDisable){
                 mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_RX;
-            } else {
+            } else if(mIsRxDisable){
+                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_TX;
+            }else {
                 mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
             }
         } else {
             mIsTxDisable = false;//SPRD:modify for bug602883
+            mIsRxDisable = false;
+            mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
+        }*/
+        if(dc.isVideoCall()){
+            if (dc.getVideoCallMediaDirection() == dc.VIDEO_CALL_MEDIA_DIRECTION_SENDRECV) {
+                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
+            } else if (dc.getVideoCallMediaDirection() == dc.VIDEO_CALL_MEDIA_DIRECTION_SENDONLY) {
+                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_TX;
+            } else if (dc.getVideoCallMediaDirection() == dc.VIDEO_CALL_MEDIA_DIRECTION_RECVONLY) {
+                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_RX;
+            } else {
+                Log.i(TAG,"dc.getVideoCallMediaDirection() = "+dc.getVideoCallMediaDirection());
+            }
+        } else {
             mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
         }
+        Log.d(TAG,"mImsCallProfile.mCallType = "+mImsCallProfile.mCallType);
         /* SPRD: add for new feature for bug 589158/607084 @{ */
         if(dc != null && dc.mediaDescription != null && dc.mediaDescription.contains("hd=1")){
             mImsCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB;
@@ -209,17 +233,22 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         /* @}*/
     }
 
-    public void updateVideoTxState(boolean disable){
-        Log.d(TAG, "updateVideoTxState-> mIsTxDisable:" + mIsTxDisable +" ->"+disable);
-        if(mImsDriverCall == null || mIsTxDisable == disable){
-            Log.d(TAG, "updateVideoTxState-> dc:" + mImsDriverCall);
+    public void updateVideoTxRxState(boolean disableTX ,boolean disableRX){
+        Log.d(TAG, "updateVideoTxRxState-> mIsTxDisable:" + mIsTxDisable +" ->"+disableTX);
+        Log.d(TAG, "updateVideoTxRxState-> mIsRxDisable:" + mIsRxDisable +" ->"+disableRX);
+        if(mImsDriverCall == null || (mIsTxDisable == disableTX && mIsRxDisable == disableRX)){
+            Log.d(TAG, "updateVideoTxRxState-> dc:" + mImsDriverCall);
             return;
         }
-        mIsTxDisable = disable;
+        mIsTxDisable = disableTX;
+        mIsRxDisable = disableRX;
         if(mImsDriverCall.isVideoCall()){
             if(mIsTxDisable){
                 mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_RX;
-            } else {
+            }else if(mIsRxDisable){
+                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_TX;
+            }
+            else {
                 mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
             }
         }
@@ -1338,7 +1367,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public void updateVideoProfile(ImsDriverCall vdc){
         Log.i(TAG,"updateVideoProfile...vdc="+vdc);
         if((vdc!= null) && (vdc.mediaDescription != null) && (vdc.mediaDescription.contains("profile"))
-                && (mImsCallProfile !=null) && (mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT)){
+                && (mImsCallProfile !=null) && vdc.isVideoCall()){
             int index = vdc.mediaDescription.indexOf("profile=");
             String qualityString = null;
             int quality = -1;

@@ -383,10 +383,22 @@ public final class ImsRIL {
         }
     }
 
-    public static final int CALL_MEDIA_CHANGE_ACTION_DOWNGRADE_TO_VOICE   = 0;
+    /*public static final int CALL_MEDIA_CHANGE_ACTION_DOWNGRADE_TO_VOICE   = 0;
     public static final int CALL_MEDIA_CHANGE_ACTION_UPGRADE_TO_VIDEO     = 1;
     public static final int CALL_MEDIA_CHANGE_ACTION_SET_TO_PAUSE         = 2;
-    public static final int CALL_MEDIA_CHANGE_ACTION_RESUME_FORM_PAUSE    = 3;
+    public static final int CALL_MEDIA_CHANGE_ACTION_RESUME_FORM_PAUSE    = 3;*/
+    //media request change
+    public static final int MEDIA_REQUEST_DEFAULT = 0;
+    public static final int MEDIA_REQUEST_AUDIO_UPGRADE_VIDEO_BIDIRECTIONAL = 1;
+    public static final int MEDIA_REQUEST_AUDIO_UPGRADE_VIDEO_TX = 2;
+    public static final int MEDIA_REQUEST_AUDIO_UPGRADE_VIDEO_RX = 3;
+    public static final int MEDIA_REQUEST_VIDEO_TX_UPGRADE_VIDEO_BIDIRECTIONAL = 4;
+    public static final int MEDIA_REQUEST_VIDEO_RX_UPGRADE_VIDEO_BIDIRECTIONAL = 5;
+    public static final int MEDIA_REQUEST_VIDEO_BIDIRECTIONAL_DOWNGRADE_AUDIO = 6;
+    public static final int MEDIA_REQUEST_VIDEO_TX_DOWNGRADE_AUDIO = 7;
+    public static final int MEDIA_REQUEST_VIDEO_RX_DOWNGRADE_AUDIO = 8;
+    public static final int MEDIA_REQUEST_VIDEO_BIDIRECTIONAL_DOWNGRADE_VIDEO_TX = 9;
+    public static final int MEDIA_REQUEST_VIDEO_BIDIRECTIONAL_DOWNGRADE_VIDEO_RX = 10;
 
     RadioState mRadioState;
     private final ClientWakelockTracker mClientWakelockTracker = new ClientWakelockTracker();
@@ -2289,14 +2301,9 @@ public final class ImsRIL {
                     mRILDefaultWorkSource);
 
             if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-            //TODO:should modify type
-            if(action == CALL_MEDIA_CHANGE_ACTION_SET_TO_PAUSE || action == CALL_MEDIA_CHANGE_ACTION_RESUME_FORM_PAUSE){
-                return;
-            }
-            boolean isVideo = (action == CALL_MEDIA_CHANGE_ACTION_UPGRADE_TO_VIDEO);
 
             try {
-                radioProxy.requestVolteCallMediaChange(rr.mSerial, callId , isVideo);
+                radioProxy.requestVolteCallMediaChange(rr.mSerial, callId , action);
             } catch (RemoteException | RuntimeException e) {
                 handleRadioProxyExceptionForRR(rr, "requestVolteCallMediaChange", e);
             }
@@ -2306,15 +2313,20 @@ public final class ImsRIL {
 
     public void
     responseVolteCallMediaChange(boolean isAccept, int callId, Message response) {
-        IExtRadio radioProxy = getRadioProxy(response);
+        IExtRadio radioProxy = getRadioProxy(null);
         if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE, response,
+            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE, null,
                     mRILDefaultWorkSource);
 
             if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
 
+            int mediaRequest = 1000;
+            if(response != null){
+                mediaRequest = response.arg1;
+            }
+
             try {
-                radioProxy.responseVolteCallMediaChange(rr.mSerial, callId , isAccept);
+                radioProxy.responseVolteCallMediaChange(rr.mSerial, callId , isAccept, mediaRequest);
             } catch (RemoteException | RuntimeException e) {
                 handleRadioProxyExceptionForRR(rr, "responseVolteCallMediaChange", e);
             }
