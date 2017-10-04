@@ -2186,10 +2186,7 @@ class MyVoWifiCallback implements VoWifiCallback {
             mPendingCPSelfManagement = false;
         }else{
             mIsCPImsPdnActived = false;
-            if(!mIsAPImsPdnActived){
-                mWifiRegistered = false;
-                updateImsFeature();
-            }
+
             //SPRD: add for bug642021
             isAirplaneModeOn = Settings.Global.getInt(getApplicationContext().getContentResolver(),
                     Settings.Global.AIRPLANE_MODE_ON, 0) > 0;
