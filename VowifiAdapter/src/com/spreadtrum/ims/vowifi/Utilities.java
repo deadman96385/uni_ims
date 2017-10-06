@@ -2,14 +2,20 @@ package com.spreadtrum.ims.vowifi;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.CursorWrapper;
+import android.os.SystemProperties;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.ims.ImsCallProfile;
+import com.android.ims.internal.IVoWifiCall;
+import com.android.ims.internal.IVoWifiRegister;
+import com.android.ims.internal.IVoWifiSecurity;
+import com.android.ims.internal.IVoWifiUT;
 import com.spreadtrum.ims.ImsConfigImpl;
 
 import java.util.ArrayList;
@@ -23,8 +29,18 @@ public class Utilities {
     // This value will be false if release.
     public static final boolean DEBUG = true;
 
+    public static final String SERVICE_PACKAGE = "com.spreadtrum.vowifi";
+    public static final String SERVICE_PACKAGE_SEC = "com.spreadtrum.vowifi.sec";
+    public static final String SERVICE_ACTION_SEC = IVoWifiSecurity.class.getCanonicalName();
+    public static final String SERVICE_ACTION_REG = IVoWifiRegister.class.getCanonicalName();
+    public static final String SERVICE_ACTION_CALL = IVoWifiCall.class.getCanonicalName();
+    public static final String SERVICE_ACTION_UT = IVoWifiUT.class.getCanonicalName();
+
     // Used to get the primary card id.
     private static final int DEFAULT_PHONE_ID   = 0;
+
+    // Used to enable or disable the secondary service for sos register.
+    private static final String PROP_KEY_ENABLE_SEC_SERVICE = "persist.vowifi.sec.ser.enabled";
 
     public static HashMap<Integer, VideoQuality> sVideoQualitys =
             new HashMap<Integer, VideoQuality>();
@@ -54,6 +70,18 @@ public class Utilities {
 
     public static String getTag(String tag) {
         return "[Adapter]" + tag;
+    }
+
+    public static boolean isSupportSOSSingleProcess(Context context) {
+        boolean secSerEnabled = SystemProperties.getBoolean(PROP_KEY_ENABLE_SEC_SERVICE, false);
+        if (secSerEnabled) {
+            PackageManager pm = context.getPackageManager();
+            return pm.isPackageAvailable(SERVICE_PACKAGE_SEC);
+        } else {
+            // Do not support sos single process.
+            Log.d(TAG, "The secondary vowifi server is disabled.");
+            return false;
+        }
     }
 
     public static String getString(String[] items) {
@@ -177,12 +205,19 @@ public class Utilities {
 
     public static class VolteNetworkType {
         public static final int IEEE_802_11 = -1;
+        public static final int NONE        = 0;
+        public static final int GERAN       = 1;
+        public static final int UTRAN_FDD   = 2;
+        public static final int UTRAN_TDD   = 3;
         public static final int E_UTRAN_FDD = 4; // 3gpp
         public static final int E_UTRAN_TDD = 5; // 3gpp
     }
 
     public static class VowifiNetworkType {
         public static final int IEEE_802_11 = 1;
+        public static final int GERAN       = 6;
+        public static final int UTRAN_FDD   = 7;
+        public static final int UTRAN_TDD   = 8;
         public static final int E_UTRAN_FDD = 9;  // 3gpp
         public static final int E_UTRAN_TDD = 10; // 3gpp
     }
@@ -655,21 +690,25 @@ public class Utilities {
 
         private ArrayList<Integer> mRequestSteps;
         private int mIndex;
+        private ImsCallSessionImpl mCallSession;
 
-        private ECBMRequest(int... steps) {
-            mIndex = -1;
+        private ECBMRequest(ImsCallSessionImpl callSession, int... steps) {
+            mCallSession = callSession;
+
+            mIndex = 0;
             mRequestSteps = new ArrayList<Integer>();
             for (int step : steps) {
                 mRequestSteps.add(step);
             }
         }
 
-        public static ECBMRequest get(boolean asNormalCall, boolean needRemoveOldS2b) {
-            // TODO: Do not support needn't remove old s2b now.
+        public static ECBMRequest get(ImsCallSessionImpl callSession, boolean asNormalCall,
+                boolean needRemoveOldS2b) {
             if (asNormalCall) {
-                return new ECBMRequest(ECBM_STEP_INVALID);
-            } else if (true /*needRemoveOldS2b*/) {
+                return new ECBMRequest(callSession, ECBM_STEP_INVALID);
+            } else if (needRemoveOldS2b) {
                 return new ECBMRequest(
+                        callSession,
                         ECBM_STEP_DEREGISTER_NORMAL,
                         ECBM_STEP_DEATTACH_NORMAL,
                         ECBM_STEP_ATTACH_SOS,
@@ -681,6 +720,7 @@ public class Utilities {
                         ECBM_STEP_REGISTER_NORMAL);
             } else {
                 return new ECBMRequest(
+                        callSession,
                         ECBM_STEP_ATTACH_SOS,
                         ECBM_STEP_REGISTER_SOS,
                         ECBM_STEP_START_EMERGENCY_CALL,
@@ -689,9 +729,8 @@ public class Utilities {
             }
         }
 
-        public int getEnterECBMStep() {
-            mIndex = 0;
-            return mRequestSteps.get(mIndex);
+        public ImsCallSessionImpl getCallSession() {
+            return mCallSession;
         }
 
         public int getCurStep() {
@@ -714,6 +753,15 @@ public class Utilities {
                 mIndex = (mRequestSteps.size() / 2) + 1;
             }
             return mRequestSteps.get(mIndex);
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder builder = new StringBuilder();
+            builder.append("call:" + mCallSession);
+            builder.append(", current step:" + getCurStep());
+            builder.append(", step size:" + mRequestSteps.size());
+            return super.toString();
         }
     }
 

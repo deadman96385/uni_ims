@@ -85,6 +85,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     private Context mContext;
     private CallCursor mCursor;
+    private ECBMRequest mECBMRequest;
     private VoWifiCallStateTracker mCallStateTracker;
     private VoWifiCallManager mCallManager;
     private IVoWifiCall mICall = null;
@@ -452,7 +453,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public void start(String callee, ImsCallProfile profile) throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Initiates an ims call with " + callee);
 
-        if (!mCallManager.isCallFunEnabled() || TextUtils.isEmpty(callee) || profile == null) {
+        if (TextUtils.isEmpty(callee) || profile == null) {
             handleStartActionFailed("Start the call failed. Check the callee or profile.");
             Toast.makeText(mContext, R.string.vowifi_call_retry, Toast.LENGTH_LONG).show();
             return;
@@ -460,19 +461,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
         // Update the participants and call profile.
         setCallee(callee);
-
-        Matcher m = PATTERN_SUPP_SERVICE.matcher(callee);
-        // Is this formatted like a standard supplementary service code?
-        if (m.matches()) {
-            startUssdCall(callee);
-            return;
-        }
-
-        // Check if emergency call.
-        boolean isEmergencyNumber = PhoneNumberUtils.isEmergencyNumber(callee);
-        String sosNumber = SystemProperties.get(PROP_KEY_FORCE_SOS_CALL, null);
-        boolean forceSos = callee.equals(sosNumber);
-        Log.d(TAG, "If the phone number is emergency number: " + isEmergencyNumber);
 
         // TODO: Update the profile but not replace.
         mCallProfile = profile;
@@ -485,7 +473,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE,
                 String.valueOf(ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN));
 
-        if (isEmergencyNumber || forceSos) {
+        // Check if emergency call.
+        boolean isEmergencyService = profile.mServiceType == ImsCallProfile.SERVICE_TYPE_EMERGENCY;
+        boolean isEmergencyNumber = PhoneNumberUtils.isEmergencyNumber(callee);
+        String sosNumber = SystemProperties.get(PROP_KEY_FORCE_SOS_CALL, null);
+        boolean forceSos = callee.equals(sosNumber);
+
+        if (isEmergencyService || isEmergencyNumber || forceSos) {
             startEmergencyCall(callee);
         } else {
             startCall(callee);
@@ -1172,6 +1166,32 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public boolean isMultiparty() {
         return mCallProfile == null ? false
                 : mCallProfile.getCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE, false);
+    }
+
+    public void updateCallManager(VoWifiCallManager callMgr) {
+        if (!mIsEmergency
+                || mECBMRequest == null
+                || getState() >= State.INITIATED) {
+            Log.w(TAG, "The call already initiated, can not change the call interface.");
+            return;
+        }
+
+        // As this call will be added to another call manager, needn't notify.
+        mCallManager.removeCall(this, false);
+        // If this call is emergency call, it should be already enter ECBM,
+        // we need remove the ECBM request before changed to use the new call manager.
+        mCallManager.removeECBMRequest();
+        // Remove the call interface changed listener.
+        mCallManager.unregisterCallInterfaceChanged(mICallChangedListener);
+        mICall = null;
+
+        // Update the values.
+        callMgr.registerCallInterfaceChanged(mICallChangedListener);
+        callMgr.enterECBMWithCallSession(mECBMRequest);
+        // As call manager changed, we need add this call to new manager,
+        // and remove it from the old manager.
+        callMgr.addCall(this);
+        mCallManager = callMgr;
     }
 
     public ImsVideoCallProviderImpl getVideoCallProviderImpl() {
@@ -1965,15 +1985,45 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             // Start an emergency call directly.
             startCall(callee);
         } else {
-            needRemoveOldS2b = mCursor != null ? mCursor.sosNeedRemoveOldS2b() : true;
+            if (!mCallManager.isCallFunEnabled()) {
+                // Call function is disabled, it means the normal s2b unavailable.
+                // So we needn't remove the old s2b.
+                needRemoveOldS2b = false;
+            } else {
+                // Check if need remove the old s2b for sos.
+                needRemoveOldS2b = mCursor != null ? mCursor.sosNeedRemoveOldS2b() : true;
+
+                if (!needRemoveOldS2b) {
+                    if (!Utilities.isSupportSOSSingleProcess(mContext)) {
+                        // Do not support sos single process, we'd like to handle
+                        // the emergency call as need remove old s2b.
+                        needRemoveOldS2b = true;
+                    }
+                }
+            }
         }
-        ECBMRequest request = ECBMRequest.get(sosAsNormal, needRemoveOldS2b);
-        mCallManager.enterECBMWithCallSession(this, request);
+        Log.d(TAG, "start the emergency call. sosAsNormal = " + sosAsNormal
+                + ", needRemoveOldS2b = " + needRemoveOldS2b);
+        mECBMRequest = ECBMRequest.get(this, sosAsNormal, needRemoveOldS2b);
+        mCallManager.enterECBMWithCallSession(mECBMRequest);
     }
 
     private void startCall(String callee) throws RemoteException {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Start the call with the callee: " + callee);
+        }
+
+        if (!mCallManager.isCallFunEnabled()) {
+            handleStartActionFailed("Start the call failed. Call function disabled.");
+            Toast.makeText(mContext, R.string.vowifi_call_retry, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        Matcher m = PATTERN_SUPP_SERVICE.matcher(callee);
+        // Is this formatted like a standard supplementary service code?
+        if (m.matches()) {
+            startUssdCall(callee);
+            return;
         }
 
         String peerNumber = callee;
@@ -2005,8 +2055,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
      * @param ussd uri to send
      */
     private void startUssdCall(String ussdMessage) throws RemoteException {
-        if (Utilities.DEBUG)
-            Log.i(TAG, "Start an ussd call: " + ussdMessage);
+        if (Utilities.DEBUG) Log.i(TAG, "Start as the ussd call: " + ussdMessage);
 
         int id = mICall.sessCall(ussdMessage, null, true, false, true, false);
         if (id == Result.INVALID_ID) {

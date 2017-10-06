@@ -19,6 +19,10 @@ import java.util.Map.Entry;
 public abstract class ServiceManager {
     private static final String TAG = Utilities.getTag(ServiceManager.class.getSimpleName());
 
+    protected String mActionName;
+    protected String mPackageName;
+    protected String mClassName;
+
     protected Context mContext;
     protected Intent mIntent;
     protected IBinder mServiceBinder;
@@ -79,21 +83,25 @@ public abstract class ServiceManager {
          }
     };
 
-    protected ServiceManager(Context context) {
+    protected ServiceManager(Context context, String pkg, String cls, String action) {
         if (context == null) throw new NullPointerException("The context is null.");
 
         mContext = context;
         mPendingActions = new PendingActionMap();
+
+        mPackageName = pkg;
+        mClassName = cls;
+        mActionName = action;
     }
 
-    protected void bindService(String action, String pkg, String cls) {
+    protected void bindService() {
         if (mServiceBinder != null) {
             Log.w(TAG, "The service already bind, needn't init again.");
             return;
         }
 
-        mIntent = new Intent(action);
-        mIntent.setComponent(new ComponentName(pkg, cls));
+        mIntent = new Intent(mActionName);
+        mIntent.setComponent(new ComponentName(mPackageName, mClassName));
         mContext.bindService(mIntent, mConnection, Context.BIND_AUTO_CREATE);
     }
 

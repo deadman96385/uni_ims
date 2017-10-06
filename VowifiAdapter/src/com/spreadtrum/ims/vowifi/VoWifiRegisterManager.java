@@ -42,9 +42,8 @@ public class VoWifiRegisterManager extends ServiceManager {
         void onDisconnected();
     }
 
-    private static final String SERVICE_ACTION = IVoWifiRegister.class.getCanonicalName();
-    private static final String SERVICE_PACKAGE = "com.spreadtrum.vowifi";
-    private static final String SERVICE_CLASS = "com.spreadtrum.vowifi.service.RegisterService";
+    private static final String SERVICE_CLASS =
+            Utilities.SERVICE_PACKAGE + ".service.RegisterService";
 
     private static final int MSG_ACTION_LOGIN = 1;
     private static final int MSG_ACTION_DE_REGISTER = 2;
@@ -57,11 +56,11 @@ public class VoWifiRegisterManager extends ServiceManager {
     private RegisterCallback mCallback = new RegisterCallback();
 
     protected VoWifiRegisterManager(Context context) {
-        super(context);
+        this(context, Utilities.SERVICE_PACKAGE, SERVICE_CLASS, Utilities.SERVICE_ACTION_REG);
     }
 
-    public void bindService() {
-        super.bindService(SERVICE_ACTION, SERVICE_PACKAGE, SERVICE_CLASS);
+    protected VoWifiRegisterManager(Context context, String pkg, String cls, String action) {
+        super(context, pkg, cls, action);
     }
 
     @Override
@@ -364,7 +363,14 @@ public class VoWifiRegisterManager extends ServiceManager {
     private int getVowifiNetworkType(int volteType) {
         switch (volteType) {
             case VolteNetworkType.IEEE_802_11:
+            case VolteNetworkType.NONE:
                 return VowifiNetworkType.IEEE_802_11;
+            case VolteNetworkType.GERAN:
+                return VowifiNetworkType.GERAN;
+            case VolteNetworkType.UTRAN_FDD:
+                return VowifiNetworkType.UTRAN_FDD;
+            case VolteNetworkType.UTRAN_TDD:
+                return VowifiNetworkType.UTRAN_TDD;
             case VolteNetworkType.E_UTRAN_FDD:
                 return VowifiNetworkType.E_UTRAN_FDD;
             case VolteNetworkType.E_UTRAN_TDD:

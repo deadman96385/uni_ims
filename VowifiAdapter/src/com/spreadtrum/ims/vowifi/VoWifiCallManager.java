@@ -55,7 +55,7 @@ public class VoWifiCallManager extends ServiceManager {
         public void onCallRTPReceived(boolean isVideoCall, boolean isReceived);
         public void onCallRTCPChanged(boolean isVideoCall, int lose, int jitter, int rtt);
         public void onAliveCallUpdate(boolean isVideoCall);
-        public void onEnterECBM(ImsCallSessionImpl callSession, ECBMRequest request);
+        public void onEnterECBM(ECBMRequest request);
         public void onExitECBM();
         public void onSRVCCFinished(boolean isSuccess);
     }
@@ -71,9 +71,7 @@ public class VoWifiCallManager extends ServiceManager {
 
     private static final int CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED = 150;
 
-    private static final String SERVICE_ACTION = IVoWifiCall.class.getCanonicalName();
-    private static final String SERVICE_PACKAGE = "com.spreadtrum.vowifi";
-    private static final String SERVICE_CLASS = "com.spreadtrum.vowifi.service.CallService";
+    private static final String SERVICE_CLASS = Utilities.SERVICE_PACKAGE + ".service.CallService";
 
     private static final String PROP_KEY_AUTO_ANSWER = "persist.sys.vowifi.autoanswer";
 
@@ -81,9 +79,7 @@ public class VoWifiCallManager extends ServiceManager {
     private int mRegisterState = RegisterState.STATE_IDLE;
     private boolean mInSRVCC = false;
 
-    private ImsCallSessionImpl mConferenceCallSession = null;
-    private ImsCallSessionImpl mEmergencyCallSession = null;
-
+    private ECBMRequest mECBMRequest;
     private CallListener mListener;
     private IncomingCallAction mIncomingCallAction = IncomingCallAction.NORMAL;
     private ArrayList<ImsCallSessionImpl> mSessionList = new ArrayList<ImsCallSessionImpl>();
@@ -229,7 +225,11 @@ public class VoWifiCallManager extends ServiceManager {
     }
 
     protected VoWifiCallManager(Context context) {
-        super(context);
+        this(context, Utilities.SERVICE_PACKAGE, SERVICE_CLASS, Utilities.SERVICE_ACTION_CALL);
+    }
+
+    protected VoWifiCallManager(Context context, String pkg, String cls, String action) {
+        super(context, pkg, cls, action);
 
         // New a thread to handle the SRVCC event.
         HandlerThread thread = new HandlerThread("SRVCC");
@@ -280,10 +280,6 @@ public class VoWifiCallManager extends ServiceManager {
             }
         }
         return handle;
-    }
-
-    public void bindService() {
-        super.bindService(SERVICE_ACTION, SERVICE_PACKAGE, SERVICE_CLASS);
     }
 
     public void registerListener(CallListener listener) {
@@ -502,6 +498,10 @@ public class VoWifiCallManager extends ServiceManager {
     }
 
     public void removeCall(ImsCallSessionImpl callSession) {
+        removeCall(callSession, true);
+    }
+
+    public void removeCall(ImsCallSessionImpl callSession, boolean needNotify) {
         if (Utilities.DEBUG) Log.i(TAG, "Remove the call[" + callSession + "] from the list.");
         if (callSession == null) {
             Log.e(TAG, "Can not remove this call[" + callSession + "] from list as it is null.");
@@ -512,15 +512,16 @@ public class VoWifiCallManager extends ServiceManager {
         if (mSessionList.remove(callSession)) {
             Log.d(TAG, "The call[" + callSession + "] removed from the list.");
 
-            // It means the call is end now.
-            if (mEmergencyCallSession != null
-                    && callSession.equals(mEmergencyCallSession)) {
-                // It means the emergency call end. Exit the ECBM.
-                if (mListener != null) mListener.onExitECBM();
-            }
+            if (mListener == null) return;
 
-            if (mListener != null) {
-                Log.d(TAG, "The call[" + callSession + "] onCallEnd.");
+            if (needNotify) {
+                // It means the call is end now.
+                if (mECBMRequest != null
+                        && callSession.equals(mECBMRequest.getCallSession())) {
+                    // It means the emergency call end. Exit the ECBM.
+                    mListener.onExitECBM();
+                }
+
                 mListener.onCallEnd(callSession);
             }
 
@@ -531,9 +532,13 @@ public class VoWifiCallManager extends ServiceManager {
         }
     }
 
-    public void enterECBMWithCallSession(ImsCallSessionImpl emCallSession, ECBMRequest request) {
-        mEmergencyCallSession = emCallSession;
-        if (mListener != null) mListener.onEnterECBM(mEmergencyCallSession, request);
+    public void removeECBMRequest() {
+        mECBMRequest = null;
+    }
+
+    public void enterECBMWithCallSession(ECBMRequest request) {
+        mECBMRequest = request;
+        if (mListener != null) mListener.onEnterECBM(mECBMRequest);
     }
 
     /**
@@ -1039,6 +1044,13 @@ public class VoWifiCallManager extends ServiceManager {
         callSession.updateState(State.TERMINATED);
         IImsCallSessionListener listener = callSession.getListener();
         if (listener != null) {
+            if (callSession.isEmergencyCall()
+                    && termReasonCode == ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED) {
+                // For the emergency call, if the terminate reason is CS retry, we need
+                // reset the terminate reason as the emergency call needn't CS retry.
+                termReasonCode = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
+            }
+
             ImsReasonInfo info = new ImsReasonInfo(termReasonCode, termReasonCode,
                     "The call terminated.");
             if (oldState < State.NEGOTIATING) {

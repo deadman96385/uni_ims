@@ -55,9 +55,8 @@ public class VoWifiSecurityManager extends ServiceManager {
 
     private static final int MSG_ACTION_ATTACH = 1;
 
-    private static final String SERVICE_ACTION = IVoWifiSecurity.class.getCanonicalName();
-    private static final String SERVICE_PACKAGE = "com.spreadtrum.vowifi";
-    private static final String SERVICE_CLASS = "com.spreadtrum.vowifi.service.SecurityService";
+    private static final String SERVICE_CLASS =
+            Utilities.SERVICE_PACKAGE + ".service.SecurityService";
 
     private IVoWifiSecurity mISecurity = null;
     private SecurityCallback mCallback = new SecurityCallback();
@@ -65,11 +64,11 @@ public class VoWifiSecurityManager extends ServiceManager {
             new HashMap<Integer, SecurityRequest>();
 
     protected VoWifiSecurityManager(Context context) {
-        super(context);
+        this(context, Utilities.SERVICE_PACKAGE, SERVICE_CLASS, Utilities.SERVICE_ACTION_SEC);
     }
 
-    public void bindService() {
-        super.bindService(SERVICE_ACTION, SERVICE_PACKAGE, SERVICE_CLASS);
+    protected VoWifiSecurityManager(Context context, String pkg, String cls, String action) {
+        super(context, pkg, cls, action);
     }
 
     @Override
@@ -129,7 +128,7 @@ public class VoWifiSecurityManager extends ServiceManager {
         if (!handle) {
             // Do not handle the attach action, add to pending list.
             if (TextUtils.isEmpty(localAddr)) localAddr = "";
-            addToPendingList(new PendingAction("attach", MSG_ACTION_ATTACH,
+            addToPendingList(new PendingAction(2 * 1000, "attach", MSG_ACTION_ATTACH,
                     Integer.valueOf(subId), Integer.valueOf(type), localAddr, listener));
         }
     }
