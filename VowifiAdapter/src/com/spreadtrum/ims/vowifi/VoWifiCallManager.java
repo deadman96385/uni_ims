@@ -95,7 +95,7 @@ public class VoWifiCallManager extends ServiceManager {
             new ArrayList<ICallChangedListener>();
     private MySerServiceCallback mVoWifiServiceCallback = new MySerServiceCallback();
 
-    private static final int MEDIA_CHANGED_TIMEOUT = 10000;
+    private static final int MEDIA_CHANGED_TIMEOUT = 10 * 1000; // 10s
     private static final int RELEASE_CALL_DELAY = 2 * 1000;
 
     private static final int MSG_HANDLE_EVENT = 0;
@@ -113,13 +113,23 @@ public class VoWifiCallManager extends ServiceManager {
                 case MSG_INVITE_CALL:
                     inviteCall((ImsCallSessionImpl) msg.obj);
                     break;
-                case MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT:    //Added for bug 662008
+                case MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT:
                     if (mAlertDialog != null
                             && mAlertDialog._dialog != null
                             && mAlertDialog._dialog.isShowing()) {
+                        Log.d(TAG, "Dismiss the alert due to timeout.");
                         int sessionId = msg.arg1;
                         dismissAlertDialog(sessionId);
-                        Log.d(TAG, "Popup dismissed due to timeout.");
+
+                        // Give the callback as request invalid.
+                        ImsCallSessionImpl callSession = getCallSession(String.valueOf(sessionId));
+                        ImsVideoCallProviderImpl provider = callSession.getVideoCallProviderImpl();
+                        if (provider != null) {
+                            provider.receiveSessionModifyResponse(
+                                    VideoProvider.SESSION_MODIFY_REQUEST_INVALID, null, null);
+                        }
+
+                        // Send the modify response as reject.
                         try {
                             mICall.sendSessionModifyResponse(sessionId, true, false);
                         } catch (RemoteException e) {
