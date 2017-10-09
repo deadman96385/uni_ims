@@ -922,7 +922,7 @@ public class VoWifiCallManager extends ServiceManager {
         ImsCallProfile newCallProfile = null;
         String callee = callSession.getCallee();
         if (!callee.equals(phoneNumber)) {
-            // The callee do not same the the phone number, it means there is DIV.
+            // The callee do not same as the phone number, it means there is DIV.
             // We need set the callee as the new phone number, and notify the update.
             newCallProfile = callSession.setCallee(phoneNumber);
         }
@@ -930,6 +930,9 @@ public class VoWifiCallManager extends ServiceManager {
         if (listener != null) {
             listener.callSessionProgressing(callSession, mediaProfile);
             if (newCallProfile != null) {
+                String oi = newCallProfile.getCallExtra(ImsCallProfile.EXTRA_OI);
+                Log.d(TAG, "Update the callee as EXTRA_OI to " + oi);
+
                 listener.callSessionUpdated(callSession, newCallProfile);
             }
         }
