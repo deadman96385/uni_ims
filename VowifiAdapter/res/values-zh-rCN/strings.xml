@@ -8,7 +8,7 @@
     <string name="vowifi_add_video_failed">升级请求被拒绝</string>
     <string name="vowifi_add_video_success">升级为视频通话</string>
     <string name="vowifi_remove_video_failed">降级失败</string>
-    <string name="vowifi_remove_video_success">降级为语音通话</string>
+    <string name="vowifi_remove_video_success">可视通话回落</string>
 
     <string name="vowifi_hold_success">保持通话成功</string>
     <string name="vowifi_hold_fail">保持通话失败</string>
