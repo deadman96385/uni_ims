@@ -1063,8 +1063,15 @@ public class VoWifiCallManager extends ServiceManager {
         // Update the call type, as if the user accept the video call as audio call,
         // isVideo will be false. Then we need update this to call profile.
         ImsCallProfile profile = callSession.getCallProfile();
+        boolean wasVideo = Utilities.isVideoCall(profile.mCallType);
         if (!isVideo) {
             profile.mCallType = ImsCallProfile.CALL_TYPE_VOICE;
+            if (wasVideo) {
+                // It means we start as video call, but remote accept as voice call.
+                // Prompt the toast to alert the user.
+                Toast.makeText(mContext, R.string.vowifi_remove_video_success,
+                        Toast.LENGTH_LONG).show();
+            }
         }
 
         IImsCallSessionListener listener = callSession.getListener();
