@@ -793,6 +793,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
     private void handleHoldActionFailed(String failMessage) throws RemoteException {
         Log.e(TAG, failMessage);
+        Toast.makeText(mContext, R.string.vowifi_call_retry, Toast.LENGTH_LONG).show();
         if (mListener != null) {
             mListener.callSessionHoldFailed(this, new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED,
                     ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
