@@ -1930,7 +1930,8 @@ class MyVoWifiCallback implements VoWifiCallback {
                                 mIsPendingRegisterVowifi = false;
                             }
                             Log.i(TAG,"onSessionEmpty-> mPendingAttachVowifiSuccess:" + mPendingAttachVowifiSuccess + " mPendingActivePdnSuccess:" + mPendingActivePdnSuccess + " mIsLoggingIn:" + mIsLoggingIn);
-                            if (mIsVolteCall && mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE && !mPendingAttachVowifiSuccess && !mPendingActivePdnSuccess) {
+                            //SPRD:modify by bug760002
+                            if (mIsVolteCall && (mFeatureSwitchRequest != null) && (mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE) && !mPendingAttachVowifiSuccess && !mPendingActivePdnSuccess) {
                                 mFeatureSwitchRequest = null;
                                 Log.i(TAG,"onSessionEmpty-> This is volte call,so mFeatureSwitchRequest has been emptyed.");
                             }
