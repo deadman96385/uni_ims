@@ -544,32 +544,27 @@ public class ImsService extends Service {
                                     ACTION_NOTIFY_VOWIFI_UNAVAILABLE /*eventCode*/,
                                     ImsRegister.getPrimaryCard(mPhoneCount)+1/*serviceId*/,
                                     ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE);
-                            if (mFeatureSwitchRequest!=null && mFeatureSwitchRequest.mEventCode==ACTION_START_HANDOVER && mIsCPImsPdnActived){
-                                Log.i(TAG, "ACTION_NOTIFY_VOWIFI_UNAVAILABLE -> operationSuccessed -> IMS_OPERATION_SET_VOWIFI_UNAVAILABLE : only notify CM");
+
+                            //SPRD:delete for bug758003
+                            if(!isOnlySendAT){
+                                //SPRD: add for bug645935
+                                int delaySend = Settings.Global.getInt(getApplicationContext().getContentResolver(),
+                                        Settings.Global.AIRPLANE_MODE_ON, 0) > 0 ? 0:500;
+                                if(mFeatureSwitchRequest == null ||
+                                        mFeatureSwitchRequest.mEventCode != ACTION_START_HANDOVER){
+                                    mWifiService.resetAll(msg.arg2 == 0 ? WifiState.DISCONNECTED : WifiState.CONNECTED,delaySend);
+                                } else {
+                                    mWifiService.resetAll(msg.arg2 == 0 ? WifiState.DISCONNECTED : WifiState.CONNECTED);
+                                }
+                            } else {
+                                Log.i(TAG, "ACTION_NOTIFY_VOWIFI_UNAVAILABLE -> operationSuccessed -> IMS_OPERATION_SET_VOWIFI_UNAVAILABLE");
                                 mImsServiceListenerEx.operationSuccessed(
                                         mReleaseVowifiRequest.mRequestId,
                                         ImsOperationType.IMS_OPERATION_SET_VOWIFI_UNAVAILABLE);
                                 mReleaseVowifiRequest = null;
-                            }else{
-                                if(!isOnlySendAT){
-                                    //SPRD: add for bug645935
-                                    int delaySend = Settings.Global.getInt(getApplicationContext().getContentResolver(),
-                                            Settings.Global.AIRPLANE_MODE_ON, 0) > 0 ? 0:500;
-                                    if(mFeatureSwitchRequest == null ||
-                                            mFeatureSwitchRequest.mEventCode != ACTION_START_HANDOVER){
-                                        mWifiService.resetAll(msg.arg2 == 0 ? WifiState.DISCONNECTED : WifiState.CONNECTED,delaySend);
-                                    } else {
-                                        mWifiService.resetAll(msg.arg2 == 0 ? WifiState.DISCONNECTED : WifiState.CONNECTED);
-                                    }
-                                } else {
-                                    Log.i(TAG, "ACTION_NOTIFY_VOWIFI_UNAVAILABLE -> operationSuccessed -> IMS_OPERATION_SET_VOWIFI_UNAVAILABLE");
-                                    mImsServiceListenerEx.operationSuccessed(
-                                            mReleaseVowifiRequest.mRequestId,
-                                            ImsOperationType.IMS_OPERATION_SET_VOWIFI_UNAVAILABLE);
-                                    mReleaseVowifiRequest = null;
-                                }
-                                Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> wifi state: " + msg.arg2);
                             }
+                            Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> wifi state: " + msg.arg2);
+
                             if(!mIsCalling){
                                 ImsServiceImpl imsService = mImsServiceImplMap.get(
                                         Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
