@@ -212,6 +212,7 @@ public class VTManagerUtils {
         final Message reponseMsg = new Message();
         if(response != null){
             reponseMsg.arg1 = response.arg1;
+            reponseMsg.arg2 = response.arg2;
         }
         /* @} */
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
@@ -323,7 +324,7 @@ public class VTManagerUtils {
                 new android.content.DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         if (ril != null) {
-                            ril.requestVolteCallMediaChange(true, null);
+                            ril.requestVolteCallMediaChange(ImsVideoCallProvider.MEDIA_REQUEST_DEFAULT, null);
                             log("Battery is low,user choose to downgrade to voice call.");
                         }
                         if (dialog != null) {

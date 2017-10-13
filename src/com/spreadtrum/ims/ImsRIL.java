@@ -2319,6 +2319,7 @@ public final class ImsRIL {
                     ((dc.negStatusPresent == 1 && dc.negStatus == 1)
                             ||(dc.negStatusPresent == 1 && dc.negStatus == 2 && dc.state == ImsDriverCall.State.INCOMING)
                             ||(dc.negStatusPresent == 1 && dc.negStatus == 3)
+                            ||(dc.negStatusPresent == 1 && dc.negStatus == 4)
                             ||(dc.negStatusPresent == 0 && csMode == 0));
             if(videoMode || csMode == 2 || csMode >= 7){
                 dc.isVoice = false;
@@ -2426,7 +2427,7 @@ public final class ImsRIL {
 
 
     public void
-    requestVolteCallMediaChange(boolean isVideo, Message response) {
+    requestVolteCallMediaChange(int mediaRequest, Message response) {
         RILRequest rr
         = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE , null);
 
@@ -2437,7 +2438,7 @@ public final class ImsRIL {
             rr.mParcel.writeInt(1);
         }
         /* @} */
-        rr.mParcel.writeInt(isVideo?1:0);
+        rr.mParcel.writeInt(mediaRequest);
 
         if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
 
@@ -2450,11 +2451,13 @@ public final class ImsRIL {
         RILRequest rr
         = RILRequest.obtain(ImsRILConstants.RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE, null);
 
-        rr.mParcel.writeInt(2);
+        rr.mParcel.writeInt(3);
         if(response != null){
             rr.mParcel.writeInt(response.arg1);
+            rr.mParcel.writeInt(response.arg2);
         }else{
             rr.mParcel.writeInt(1);
+            rr.mParcel.writeInt(1000);
         }
         rr.mParcel.writeInt(isAccept?1:0);
 
