@@ -1755,10 +1755,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                 if (mListener != null) {
                     mListener.callSessionUpdateFailed(this, new ImsReasonInfo());
                 }
-                // Show toast for failed action.
-                int toastTextResId = isVideo ? R.string.vowifi_add_video_failed
-                        : R.string.vowifi_remove_video_failed;
-                Toast.makeText(mContext, toastTextResId, Toast.LENGTH_LONG).show();
             }
             return res;
         } catch (RemoteException e) {
