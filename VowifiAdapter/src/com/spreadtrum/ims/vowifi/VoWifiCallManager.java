@@ -1225,6 +1225,27 @@ public class VoWifiCallManager extends ServiceManager {
             return;
         }
 
+        // If there is more than one call, and the UE enabled "DSDA". UI will reject
+        // the upgrade action, so we'd like to handle it as reject here. And needn't to
+        // display the upgrade request dialog.
+        if (getCallCount() > 1 && ImsManagerEx.isDualVoLTEActive()) {
+            Log.d(TAG, "DSDA enabled, and there is more than one call, reject the request.");
+            if (mICall == null) {
+                Log.e(TAG, "Can not send the session modify request for reject.");
+                return;
+            }
+
+            // If the user reject the upgrade action, it should be keep as voice call,
+            // so isVideo is false.
+            try {
+                mICall.sendSessionModifyResponse(
+                        Integer.valueOf(callSession.getCallId()), true, false);
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to send reject response. e: " + e);
+            }
+            return;
+        }
+
         // Receive the add video request, we need prompt one dialog to alert the user.
         // And the user could accept or reject this action.
         mAlertDialog = getVideoChangeRequestDialog(
