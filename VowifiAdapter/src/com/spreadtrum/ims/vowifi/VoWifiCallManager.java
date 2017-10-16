@@ -1748,6 +1748,14 @@ public class VoWifiCallManager extends ServiceManager {
                     return;
                 }
 
+                // Give the callback as request invalid.
+                ImsCallSessionImpl callSession = getCallSession(String.valueOf(sessionId));
+                ImsVideoCallProviderImpl provider = callSession.getVideoCallProviderImpl();
+                if (provider != null) {
+                    provider.receiveSessionModifyResponse(
+                            VideoProvider.SESSION_MODIFY_REQUEST_INVALID, null, null);
+                }
+
                 // If the user reject the upgrade action, it should be keep as voice call,
                 // so isVideo is false. And if the user reject the downgrade action, it
                 // should be keep as video call, so isVideo is true.
