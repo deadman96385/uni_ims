@@ -1140,12 +1140,19 @@ public class ImsServiceImpl extends MMTelFeature {
                 mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_UT_OVER_WIFI]
                         = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
             }
+            synchronized (mImsRegisterListeners) {
+                for (IImsRegistrationListener l : mImsRegisterListeners.values()) {
+                    l.registrationFeatureCapabilityChanged(
+                            ImsServiceClass.MMTEL,mEnabledFeatures, mDisabledFeatures);
+                }
+            }
             if(mListener == null){
                 Log.w(TAG,"updateImsFeatures mListener is null!");
                 return;
             }
             mListener.registrationFeatureCapabilityChanged(
                     ImsServiceClass.MMTEL,mEnabledFeatures, mDisabledFeatures);
+
         } catch (RemoteException e){
             e.printStackTrace();
         }
@@ -1262,5 +1269,17 @@ public class ImsServiceImpl extends MMTelFeature {
     // SPRD Add for bug696648
     public boolean hasCall() {
         return mImsServiceCallTracker.hasCall();
+    }
+
+    public void enableWiFiParamReport(){
+        String[] cmd=new String[1];
+        cmd[0] = "AT+WIFIPARAM=1,0,0,0,5";
+        mCi.invokeOemRilRequestStrings(cmd, null);
+    }
+
+    public void disableWiFiParamReport(){
+        String[] cmd=new String[1];
+        cmd[0] = "AT+WIFIPARAM=0,0,0,0,0";
+        mCi.invokeOemRilRequestStrings(cmd, null);
     }
 }
