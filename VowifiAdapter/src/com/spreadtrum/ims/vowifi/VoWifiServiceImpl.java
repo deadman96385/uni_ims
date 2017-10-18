@@ -895,7 +895,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     // Shouldn't be here, do nothing, ignore this event.
                     Log.w(TAG, "Do nothing for reset action as reset step is: " + mResetStep);
                 }
-            } if (mEcbmStep != ECBM_STEP_INVALID) {
+            } else if (mEcbmStep != ECBM_STEP_INVALID) {
                 Log.d(TAG, "Get the register state changed to logout in ECBM.");
                 if (mEcbmStep == ECBM_STEP_DEREGISTER_FOR_SOS) {
                     sendECBMTimeoutMsg(ECBM_STEP_DEATTACH_FOR_SOS);
