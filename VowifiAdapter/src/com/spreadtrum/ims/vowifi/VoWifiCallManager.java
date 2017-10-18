@@ -54,13 +54,13 @@ public class VoWifiCallManager extends ServiceManager {
 
     public interface CallListener {
         public void onCallIncoming(ImsCallSessionImpl callSession);
-        public void onCallIsEmergency(ImsCallSessionImpl callSession);
         public void onCallEnd(ImsCallSessionImpl callSession);
         public void onCallRTPReceived(boolean isVideoCall, boolean isReceived);
         public void onCallRTCPChanged(boolean isVideoCall, int lose, int jitter, int rtt);
         public void onAliveCallUpdate(boolean isVideoCall);
         public void onEnterECBM(ImsCallSessionImpl callSession);
         public void onExitECBM();
+        public void onSRVCCFinished(boolean isSuccess);
     }
 
     public interface ICallChangedListener {
@@ -223,6 +223,9 @@ public class VoWifiCallManager extends ServiceManager {
                     // Clear the SRVCC session list.
                     mInfoList.clear();
                     mSRVCCSessionList.clear();
+                    if (mListener != null) {
+                        mListener.onSRVCCFinished(true);
+                    }
                     break;
                 case MSG_SRVCC_FAILED:
                 case MSG_SRVCC_CANCEL:
@@ -234,6 +237,9 @@ public class VoWifiCallManager extends ServiceManager {
                     }
                     mInfoList.clear();
                     mSRVCCSessionList.clear();
+                    if (mListener != null) {
+                        mListener.onSRVCCFinished(false);
+                    }
                     break;
             }
         }
