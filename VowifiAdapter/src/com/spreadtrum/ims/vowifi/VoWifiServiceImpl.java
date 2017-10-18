@@ -106,9 +106,10 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private static final int MSG_REREGISTER = 7;
     private static final int MSG_UPDATE_DATAROUTER_STATE = 8;
     private static final int MSG_TERMINATE_CALLS = 9;
+    private static final int MSG_SRVCC_SUCCESS = 10;
 
-    private static final int MSG_ECBM = 10;
-    private static final int MSG_ECBM_TIMEOUT = 11;
+    private static final int MSG_ECBM = 11;
+    private static final int MSG_ECBM_TIMEOUT = 12;
     private class MyHandler extends Handler {
         public MyHandler(Looper looper) {
             super(looper);
@@ -163,6 +164,11 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     } catch (RemoteException e) {
                         Log.e(TAG, "Catch the RemoteException when terminate calls. e: " + e);
                     }
+                    break;
+                case MSG_SRVCC_SUCCESS:
+                    // If the SRVCC success, handle it as register logout.
+                    Log.d(TAG, "Handle the SRVCC success as register logout now.");
+                    registerLogout(0);
                     break;
                 case MSG_ECBM:
                     mEcbmStep = msg.arg1;
@@ -739,14 +745,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         }
 
         @Override
-        public void onCallIsEmergency(ImsCallSessionImpl callSession) {
-            // It means we received the network reply as this call is emergency call. We need
-            // notify this to ImsService, and it will transfer this call to CP to handle.
-            Log.d(TAG, "The call " + callSession + " is emergency call. Notify the result!");
-//            if (mCallback != null) mCallback.onCallIsEmergency(callSession);
-        }
-
-        @Override
         public void onCallEnd(ImsCallSessionImpl callSession) {
             if (mCallMgr.getCallCount() < 1 && mCallback != null) {
                 mCallback.onAllCallsEnd();
@@ -811,6 +809,13 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             Message msg = mHandler.obtainMessage(MSG_ECBM);
             msg.arg1 = ECBM_STEP_DEREGISTER;
             mHandler.sendMessage(msg);
+        }
+
+        @Override
+        public void onSRVCCFinished(boolean isSuccess) {
+            if (isSuccess) {
+                mHandler.sendEmptyMessageDelayed(MSG_SRVCC_SUCCESS, 5 * 1000);
+            }
         }
     }
 
