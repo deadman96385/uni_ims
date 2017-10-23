@@ -21,6 +21,7 @@ import android.os.Message;
 import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.os.RemoteException;
+import android.telephony.PhoneNumberUtils;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.telephony.TelephonyManagerEx;
@@ -230,6 +231,7 @@ public class ImsService extends Service {
     private boolean mPendingCPSelfManagement = false;
     private int mCallEndType = -1;
     private int mInCallPhoneId = -1;
+    private boolean mIsEmergencyCallonCP = false;
 
     private class ImsServiceRequest {
         public int mRequestId;
@@ -902,9 +904,17 @@ public class ImsService extends Service {
                         }
                     }
                 }
+                /*SPRD: Modify for bug753958{@*/
+                boolean isEmergency = PhoneNumberUtils.isEmergencyNumber(incomingNumber);
+                if(!mIsWifiCalling && isEmergency && isInCall){
+                    mIsEmergencyCallonCP = true;
+                }else{
+                    mIsEmergencyCallonCP = false;
+                }
+                /*@}*/
                 updateInCallState(isInCall);
                 iLog("onCallStateChanged->isInCall:"+isInCall+" mIsWifiCalling:"+mIsWifiCalling
-                        +" inCallPhoneId:"+mInCallPhoneId);
+                        +" inCallPhoneId:"+mInCallPhoneId +" mIsEmergencyCallonCP="+mIsEmergencyCallonCP);
             }
         };
         mTelephonyManager.listen(mPhoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
@@ -2585,20 +2595,20 @@ class MyVoWifiCallback implements VoWifiCallback {
     }
 
     public void updateInCallState(boolean isInCall){
-        Log.i(TAG,"updateInCallState->mIsVolteCall:"+mIsVolteCall +" mIsVowifiCall:"+mIsVowifiCall + " isInCall:"+isInCall);
+        Log.i(TAG,"updateInCallState->mIsVolteCall:"+mIsVolteCall +" mIsVowifiCall:"+mIsVowifiCall + " isInCall:"+isInCall+"  mIsEmergencyCallonCP: "+mIsEmergencyCallonCP);
         if(mIsCalling != isInCall){
             mIsCalling = isInCall;
             if(mIsCalling &&
                     (mCurrentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI
-                    || mInCallPhoneId != ImsRegister.getPrimaryCard(mPhoneCount))){
+                    || mInCallPhoneId != ImsRegister.getPrimaryCard(mPhoneCount) ||mIsEmergencyCallonCP)){//SPRD: Modify for bug753958
                 mWifiService.updateIncomingCallAction(IncomingCallAction.REJECT);
             } else {
                 mWifiService.updateIncomingCallAction(IncomingCallAction.NORMAL);
             }
         }
-        if((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI
-                && isInCall != mIsWifiCalling)
-                || (!isInCall && mIsWifiCalling)){
+
+        if ((!mIsEmergencyCallonCP && mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI && isInCall != mIsWifiCalling)
+                || (!isInCall && mIsWifiCalling)) {//SPRD: Modify for bug753958
             mIsWifiCalling = isInCall;
             for (Map.Entry<Integer, ImsServiceImpl> entry : mImsServiceImplMap.entrySet()) {
                 entry.getValue().notifyWifiCalling(mIsWifiCalling);
