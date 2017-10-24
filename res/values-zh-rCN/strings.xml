@@ -53,4 +53,5 @@
     <string name="vowifi_connected_disable">关闭</string>
     <string name="vowifi_connected_checkbox_text">不再提示</string>
     <string name="vowifi_connected_message">当前是vowifi网络，紧急呼叫可能无法正常工作，继续使用vowifi服务或是关闭wifi calling?</string>
+    <string name="vowifi_regist_fail_content">当前网络不支持vowifi,请在五分钟后重新使用这个服务</string>
 </resources>
