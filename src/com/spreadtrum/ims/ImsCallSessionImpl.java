@@ -1270,6 +1270,27 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         return mImsDriverCall.isMpty && mImsDriverCall.mptyState == 2;
     }
 
+    /**
+     * Sends Rtt Message
+     */
+    @Override
+    public void sendRttMessage(String rttMessage) {
+    }
+
+    /**
+     * Sends RTT Upgrade request
+     */
+    @Override
+    public void sendRttModifyRequest(ImsCallProfile to) {
+    }
+
+    /**
+     * Sends RTT Upgrade response
+     */
+    @Override
+    public void sendRttModifyResponse(boolean response) {
+    }
+
     public void hangup(){
         if(isImsSessionInvalid()){
             Log.w(TAG, "hangup-> ImsSessionInvalid!");
