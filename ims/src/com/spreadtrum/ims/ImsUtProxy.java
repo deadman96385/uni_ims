@@ -655,7 +655,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         CarrierConfigManager carrierConfig =
                 (CarrierConfigManager) mContext.getSystemService(Context.CARRIER_CONFIG_SERVICE);
         if (carrierConfig != null) {
-            PersistableBundle config = carrierConfig.getDefaultConfig();
+            PersistableBundle config = carrierConfig.getConfigForDefaultPhone();
             if (config != null){
                 priorityPlmns = config.getString(
                         CarrierConfigManager.KEY_UT_PRIORITY, "");
