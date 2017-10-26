@@ -12166,18 +12166,46 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         }
         /* @} */
         case RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE: {
-            char cmd[30] = {0};
+            char cmd[128] = {0};
             p_response = NULL;
             int callId = ((int *)data)[0];
-            int isVideo = ((int *)data)[1];
-            if(isVideo) {
+            int mediaRequest = ((int *)data)[1];
+            /*if(isVideo) {
                 snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,2,\"m=audio\"", callId);
             } else {
                 snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,2,\"m=video\"", callId);
+            }*/
+            switch(mediaRequest){
+                case MEDIA_REQUEST_AUDIO_UPGRADE_VIDEO_TX:
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,2,\"m=video/a=sendonly\"", callId);
+                break;
+                case MEDIA_REQUEST_AUDIO_UPGRADE_VIDEO_RX:
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,2,\"m=video/a=recvonly\"", callId);
+                break;
+                case MEDIA_REQUEST_AUDIO_UPGRADE_VIDEO_BIDIRECTIONAL:
+                case MEDIA_REQUEST_VIDEO_TX_UPGRADE_VIDEO_BIDIRECTIONAL:
+                case MEDIA_REQUEST_VIDEO_RX_UPGRADE_VIDEO_BIDIRECTIONAL:
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,2,\"m=video\"", callId);
+                break;
+
+                case MEDIA_REQUEST_VIDEO_BIDIRECTIONAL_DOWNGRADE_VIDEO_TX:
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,1,\"m=video/a=sendonly\"", callId);
+                break;
+                case MEDIA_REQUEST_VIDEO_BIDIRECTIONAL_DOWNGRADE_VIDEO_RX:
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,1,\"m=video/a=recvonly\"", callId);
+                break;
+                case MEDIA_REQUEST_VIDEO_TX_DOWNGRADE_AUDIO:
+                case MEDIA_REQUEST_VIDEO_RX_DOWNGRADE_AUDIO:
+                case MEDIA_REQUEST_VIDEO_BIDIRECTIONAL_DOWNGRADE_AUDIO:
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,1,\"m=audio\"", callId);
+                break;
+                default:
+                snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,1,\"m=audio\"", callId);
+                break;
             }
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0) {
-                RILLOGD("RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE:%d",isVideo);
+                //RILLOGD("RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE:%d",isVideo);
                 RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
             } else {
                 RILLOGD("RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE failure!");
@@ -12188,14 +12216,40 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
         }
         case RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE: {
-            char cmd[20] = {0};
+            char cmd[128] = {0};
             p_response = NULL;
             int callId = ((int *)data)[0];
-            int isAccept = ((int *)data)[1];
-            if(isAccept) {
+            int mVideoDetalsState = ((int *)data)[1];
+            int isAccept = ((int *)data)[2];
+            /*if(isAccept) {
                 snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,3", callId);
             } else {
                 snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,4", callId);
+            }*/
+            if (isAccept) {
+                switch(mVideoDetalsState){
+                    case VIDEO_CALL_MEDIA_DESCRIPTION_SENDRECV:
+                    snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,3,\"m=video\"", callId);
+                    break;
+                    case VIDEO_CALL_MEDIA_DESCRIPTION_SENDONLY:
+                    snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,3,\"m=video/a=sendonly\"", callId);
+                    break;
+                    case VIDEO_CALL_MEDIA_DESCRIPTION_RECVONLY:
+                    snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,3,\"m=video/a=recvonly\"", callId);
+                    break;
+                }
+            } else {
+                switch(mVideoDetalsState){
+                    case VIDEO_CALL_MEDIA_DESCRIPTION_SENDRECV:
+                    snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,4,\"m=video\"", callId);
+                    break;
+                    case VIDEO_CALL_MEDIA_DESCRIPTION_SENDONLY:
+                    snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,4,\"m=video/a=sendonly\"", callId);
+                    break;
+                    case VIDEO_CALL_MEDIA_DESCRIPTION_RECVONLY:
+                    snprintf(cmd, sizeof(cmd), "AT+CCMMD=%d,4,\"m=video/a=recvonly\"", callId);
+                    break;
+                }
             }
             err = at_send_command(ATch_type[channelID], cmd, &p_response);
             if (err < 0 || p_response->success == 0) {
