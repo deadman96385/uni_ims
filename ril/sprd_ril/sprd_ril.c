@@ -8260,11 +8260,11 @@ static void requestGetCellInfoList(void *data, size_t datalen, RIL_Token t,int c
     at_response_free(p_response);
     p_response = NULL;
     if(cell_type == RIL_CELL_INFO_TYPE_LTE){
-        err = at_send_command_singleline(ATch_type[channelID], "AT+SPQ4GNCELL", "+SPQ4GNCELL", &p_response);
+        err = at_send_command_singleline(ATch_type[channelID], "AT+SPQ4GNCELLEX=4,4", "+SPQ4GNCELL", &p_response);
     }else if(cell_type == RIL_CELL_INFO_TYPE_GSM){
         err = at_send_command_singleline(ATch_type[channelID], "AT+SPQ2GNCELL", "+SPQ2GNCELL", &p_response);
     }else {
-        err = at_send_command_singleline(ATch_type[channelID], "AT+SPQ3GNCELL", "+SPQ3GNCELL", &p_response);
+        err = at_send_command_singleline(ATch_type[channelID], "AT+SPQ3GNCELLEX=4,3", "+Q3GNCELL", &p_response);
     }
 
     if (err < 0 || p_response->success == 0) {
@@ -8275,51 +8275,28 @@ static void requestGetCellInfoList(void *data, size_t datalen, RIL_Token t,int c
     if (err < 0) {
         goto ERROR;
     }
-    err = at_tok_nextstr(&line, &skip);
-    if (err < 0) {
-        goto ERROR;
-    }
-    char *endptr;
-    pscPci = strtol(skip, &endptr, 16);
-    RILLOGD("requestGetCellInfoList pscPci %d",pscPci);
-    err = at_tok_nextint(&line, &sskip);
-    if (err < 0) {
-        goto ERROR;
-    }
-    RILLOGD("requestGetCellInfoList sskip %d",sskip);
-    err = at_tok_nextint(&line, &cell_num);
-    if (err < 0) {
-        goto ERROR;
-    }
-/*
-    RILLOGD("requestGetCellInfoList cell_num %d",cell_num);
-    if(cell_type == RIL_CELL_INFO_TYPE_LTE){
-        if(cell_num > 0){
-            err = at_tok_nextstr(&line, &skip);
-            if (err < 0) {
-                goto ERROR;
-            }
-            RILLOGD("requestGetCellInfoList  %s",skip);
-            err = at_tok_nextstr(&line, &skip);
-            if (err < 0) {
-                goto ERROR;
-            }
-            //cid = atoi(skip);
-            char *endptr;
-            cid = strtol(skip, &endptr, 16);
-            RILLOGD("requestGetCellInfoList cid 4G %d",cid);
-        }
-    }else{
+    if (cell_type == RIL_CELL_INFO_TYPE_LTE) {
         err = at_tok_nextstr(&line, &skip);
-        if (err < 0) {
-            goto ERROR;
-        }
-        //cid = atoi(skip);
-        char *endptr;
-        cid = strtol(skip, &endptr, 16);
-        RILLOGD("requestGetCellInfoList cid 2/3G %d",cid);
+        if (err < 0) goto ERROR;
+
+        err = at_tok_nextint(&line, &pscPci);
+        if (err < 0) goto ERROR;
+
+        RILLOGD("requestGetCellInfoList pscPci %d",pscPci);
+    } else if (cell_type == RIL_CELL_INFO_TYPE_WCDMA) {
+        err = at_tok_nextstr(&line, &skip);
+        if (err < 0) goto ERROR;
+
+        err = at_tok_nextint(&line, &sskip);
+        if (err < 0) goto ERROR;
+
+        err = at_tok_nextint(&line, &sskip);
+        if (err < 0) goto ERROR;
+
+        err = at_tok_nextint(&line, &pscPci);
+        if (err < 0) goto ERROR;
     }
-    */
+
     at_response_free(p_response);
     p_response = NULL;
     err = at_send_command_singleline(ATch_type[channelID], "AT+CESQ", "+CESQ:", &p_response);
@@ -8363,12 +8340,12 @@ static void requestGetCellInfoList(void *data, size_t datalen, RIL_Token t,int c
         response[0]->CellInfo.lte.cellIdentityLte.ci  = cid;
         response[0]->CellInfo.lte.cellIdentityLte.pci = pscPci;
         response[0]->CellInfo.lte.cellIdentityLte.tac = s_lac;
-        response[0]->CellInfo.lte.signalStrengthLte.cqi = 100;
+        response[0]->CellInfo.lte.signalStrengthLte.cqi = INT_MAX;
         response[0]->CellInfo.lte.signalStrengthLte.rsrp = rsrp;
         response[0]->CellInfo.lte.signalStrengthLte.rsrq = rsrq;
-        response[0]->CellInfo.lte.signalStrengthLte.rssnr = 100;
+        response[0]->CellInfo.lte.signalStrengthLte.rssnr = INT_MAX;
         response[0]->CellInfo.lte.signalStrengthLte.signalStrength = rsrp+140;
-        response[0]->CellInfo.lte.signalStrengthLte.timingAdvance  = 100 ;
+        response[0]->CellInfo.lte.signalStrengthLte.timingAdvance  = INT_MAX;
     }else if(cell_type == RIL_CELL_INFO_TYPE_GSM){  //2G
         response[0]->CellInfo.gsm.cellIdentityGsm.mcc =s_mcc;
         response[0]->CellInfo.gsm.cellIdentityGsm.mnc =s_mnc;
