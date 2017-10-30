@@ -1129,7 +1129,30 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if (mICall != null) {
             mICall.sendUSSDMessage(mCallId, ussdMessage);
         }
+    }
 
+    /**
+     * Sends Rtt Message
+     */
+    @Override
+    public void sendRttMessage(String rttMessage) {
+        // TODO
+    }
+
+    /**
+     * Sends RTT Upgrade request
+     */
+    @Override
+    public void sendRttModifyRequest(ImsCallProfile to) {
+        // TODO
+    }
+
+    /**
+     * Sends RTT Upgrade response
+     */
+    @Override
+    public void sendRttModifyResponse(boolean response) {
+        // TODO
     }
 
     /**
