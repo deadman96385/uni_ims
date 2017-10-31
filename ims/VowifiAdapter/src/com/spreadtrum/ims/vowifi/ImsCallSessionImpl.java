@@ -60,12 +60,26 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
     private static final String PARTICIPANTS_SEP = ";";
 
+    // It is defined in #ImsPhoneMmiCode.
+    // And could refer to TS 22.030 6.5.2 "Structure of the MMI"
+    private static final Pattern PATTERN_SUPP_SERVICE = Pattern.compile(
+            "((\\*|#|\\*#|\\*\\*|##)(\\d{2,3})(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*))?)?)?)?#)(.*)");
+    /*       1  2                    3          4  5       6   7         8    9     10  11             12
+
+             1 = Full string up to and including #
+             2 = action (activation/interrogation/registration/erasure)
+             3 = service code
+             5 = SIA
+             7 = SIB
+             9 = SIC
+             10 = dialing number
+    */
+
     private int mCallId = -1;
     private boolean mIsAlive = false;
     private boolean mIsConfHost = false;
     private boolean mAudioStart = false;
     private boolean mIsEmergency = false;
-    private boolean mInSRVCC = false;
 
     private Context mContext;
     private Location mSosLocation;
@@ -303,7 +317,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
     public void close() {
         if (Utilities.DEBUG) Log.i(TAG, "The call session(" + this + ") will be closed.");
 
-        if (mInSRVCC) {
+        if (mCallManager.isInSRVCC()) {
             Log.d(TAG, "In SRVCC process, this call session will be closed after SRVCC success.");
             return;
         }
@@ -779,6 +793,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
     private void handleHoldActionFailed(String failMessage) throws RemoteException {
         Log.e(TAG, failMessage);
+        Toast.makeText(mContext, R.string.vowifi_call_retry, Toast.LENGTH_LONG).show();
         if (mListener != null) {
             mListener.callSessionHoldFailed(this, new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED,
                     ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
@@ -1120,30 +1135,25 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
     }
 
-
     /**
      * Initiate an USSD call.
      *
-     * @param ussd uri  to send
+     * @param ussd uri to send
      */
-    public void startUssdCall(String ussdMessage) throws RemoteException {
-        if (Utilities.DEBUG) Log.i(TAG, "start an ussd call: " + ussdMessage);
-        // TODO: need change
-        if (mICall != null) {
-            //mCallId = mICall.sendUSSDMessage(mCallId, ussdMessage);
-            int id = 0;
-	     id = mICall.sessCall(ussdMessage, null, true, false, true, false);
-	     if (id == Result.INVALID_ID) {
-                handleStartActionFailed("Native start the ussd call failed.");
-            } else {
-               mCallId = id;
-		 updateState(State.INITIATED);
-               mIsAlive = true;
-               // Start action success, update the last call action as start.
-               updateRequestAction(VoWifiCallStateTracker.ACTION_START);
-            }
-       }
+    private void startUssdCall(String ussdMessage) throws RemoteException {
+        if (Utilities.DEBUG) Log.i(TAG, "Start an ussd call: " + ussdMessage);
 
+        int id = mICall.sessCall(ussdMessage, null, true, false, true, false);
+        if (id == Result.INVALID_ID) {
+            handleStartActionFailed("Native start the ussd call failed.");
+        } else {
+            mCallId = id;
+            updateState(State.INITIATED);
+            mIsAlive = true;
+
+            // Start action success, update the last call action as start.
+            updateRequestAction(VoWifiCallStateTracker.ACTION_START);
+        }
     }
 
     /**
@@ -1377,7 +1387,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
         if (infoList == null) return;
 
-        mInSRVCC = true;
         if (mParticipantSessions.size() > 0) {
             // If this call is conference, we need prepare she SRVCC call info for each child.
             Iterator<Entry<String, ImsCallSessionImpl>> iterator =
@@ -1451,9 +1460,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
 
         try {
-            // The call will be relaeased if the SRVCC success, update the mInSRVCC state.
-            mInSRVCC = false;
-
             int res = Result.FAIL;
             if (isConferenceCall()) {
                 res = mICall.confRelease(mCallId);
@@ -1493,9 +1499,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
 
         try {
-            // update the SRVCC result as SRVCC canceled or failed, update the mInSRVCC state.
-            mInSRVCC = false;
-
             int res = Result.FAIL;
             if (isConferenceCall()) {
                 res = mICall.confUpdateSRVCCResult(mCallId, srvccResult);
@@ -1754,10 +1757,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                 if (mListener != null) {
                     mListener.callSessionUpdateFailed(this, new ImsReasonInfo());
                 }
-                // Show toast for failed action.
-                int toastTextResId = isVideo ? R.string.vowifi_add_video_failed
-                        : R.string.vowifi_remove_video_failed;
-                Toast.makeText(mContext, toastTextResId, Toast.LENGTH_LONG).show();
             }
             return res;
         } catch (RemoteException e) {
@@ -1989,22 +1988,17 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         startCall(callee);
     }
 
-    private static Pattern sPatternSuppService = Pattern.compile(
-    "((\\*|#|\\*#|\\*\\*|##)(\\d{2,3})(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*))?)?)?)?#)(.*)");
-
     private void startCall(String callee) throws RemoteException {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Start the call with the callee: " + callee + ", mSosLocation: "
                     + mSosLocation);
         }
 
-         Matcher m;
-         m = sPatternSuppService.matcher(callee);
+        Matcher m = PATTERN_SUPP_SERVICE.matcher(callee);
         // Is this formatted like a standard supplementary service code?
         if (m.matches()) {
-	    Log.i(TAG, "Start the ussd");
-	    startUssdCall(callee);  //start USSD
-	    return;
+            startUssdCall(callee);
+            return;
         }
 
         // Start the call.

@@ -24,7 +24,6 @@
     <string name="vowifi_conf_invite_failed">Failed to invite the participant: </string>
     <string name="vowifi_conf_kick_failed">Failed to remove the participant</string>
     <string name="vowifi_conf_none_participant">"There isn't any participant, end the call"</string>
-    <string name="vowifi_conf_do_not_support">Do not support this action now</string>
-    <string name="vowifi_video_call_do_not_support">Do not support this action now.</string>
+    <string name="vowifi_conf_do_not_support">Do not support this action now.</string>
     <string name="vowifi_conf_can_not_invite_more">Can not invite another participant to the conference as it already contains 6 participants</string>
 </resources>

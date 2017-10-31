@@ -38,6 +38,7 @@ public class VoWifiSecurityManager extends ServiceManager {
     private static final String SERVICE_CLASS = "com.spreadtrum.vowifi.service.SecurityService";
 
     private int mState = -1;
+    private String mCurLocalAddr = null;
     private SecurityConfig mSecurityConfig = null;
     private SecurityListener mListener = null;
 
@@ -115,8 +116,8 @@ public class VoWifiSecurityManager extends ServiceManager {
                 break;
             }
             case MSG_ACTION_SET_VOLTE_ADDR: {
-                PendingAction action = (PendingAction) msg.obj;
-                setVolteUsedLocalAddr((String) action._params.get(0));
+                // Use the last saved local address.
+                setVolteUsedLocalAddr(mCurLocalAddr);
                 handle = true;
                 break;
             }
@@ -204,10 +205,12 @@ public class VoWifiSecurityManager extends ServiceManager {
     public void setVolteUsedLocalAddr(String addr) {
         if (Utilities.DEBUG) Log.i(TAG, "Set volte used local address to : " + addr);
 
+        mCurLocalAddr = addr;
+
         boolean handle = false;
         if (mISecurity != null) {
             try {
-                mISecurity.setVolteUsedLocalAddr(addr);
+                mISecurity.setVolteUsedLocalAddr(mCurLocalAddr);
                 handle = true;
             } catch (RemoteException e) {
                 Log.e(TAG, "Catch the remote exception when set volte addr. e: " + e);
@@ -215,7 +218,7 @@ public class VoWifiSecurityManager extends ServiceManager {
         }
         if (!handle) {
             // Do not handle the attach action, add to pending list.
-            addToPendingList(new PendingAction("set_volte_addr", MSG_ACTION_SET_VOLTE_ADDR, addr));
+            addToPendingList(new PendingAction("set_volte_addr", MSG_ACTION_SET_VOLTE_ADDR));
         }
     }
 

@@ -8,7 +8,7 @@
     <string name="vowifi_add_video_failed">升級請求被拒絕</string>
     <string name="vowifi_add_video_success">升級為視訊通話</string>
     <string name="vowifi_remove_video_failed">降級失敗</string>
-    <string name="vowifi_remove_video_success">降級為語音通話</string>
+    <string name="vowifi_remove_video_success">視訊通話回落</string>
 
     <string name="vowifi_hold_success">保持通話成功</string>
     <string name="vowifi_hold_fail">保持通話失敗</string>
@@ -25,6 +25,5 @@
     <string name="vowifi_conf_kick_failed">移除與會者失敗</string>
     <string name="vowifi_conf_none_participant">無任何與會者，通話結束</string>
     <string name="vowifi_conf_do_not_support">不支援一鍵發起會議</string>
-    <string name="vowifi_video_call_do_not_support">不支援視訊通話</string>
     <string name="vowifi_conf_can_not_invite_more">與會者已達到最大個數，無法繼續邀請與會者</string>
 </resources>

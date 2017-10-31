@@ -55,13 +55,13 @@ public class VoWifiCallManager extends ServiceManager {
 
     public interface CallListener {
         public void onCallIncoming(ImsCallSessionImpl callSession);
-        public void onCallIsEmergency(ImsCallSessionImpl callSession);
         public void onCallEnd(ImsCallSessionImpl callSession);
         public void onCallRTPReceived(boolean isVideoCall, boolean isReceived);
         public void onCallRTCPChanged(boolean isVideoCall, int lose, int jitter, int rtt);
         public void onAliveCallUpdate(boolean isVideoCall);
         public void onEnterECBM(ImsCallSessionImpl callSession);
         public void onExitECBM();
+        public void onSRVCCFinished(boolean isSuccess);
     }
 
     public interface ICallChangedListener {
@@ -81,6 +81,7 @@ public class VoWifiCallManager extends ServiceManager {
 
     private int mUseAudioStreamCount = 0;
     private int mRegisterState = RegisterState.STATE_IDLE;
+    private boolean mInSRVCC = false;
 
     private MyAlertDialog mAlertDialog = null;
     private ImsCallSessionImpl mConferenceCallSession = null;
@@ -96,7 +97,7 @@ public class VoWifiCallManager extends ServiceManager {
             new ArrayList<ICallChangedListener>();
     private MySerServiceCallback mVoWifiServiceCallback = new MySerServiceCallback();
 
-    private static final int MEDIA_CHANGED_TIMEOUT = 10000;
+    private static final int MEDIA_CHANGED_TIMEOUT = 10 * 1000; // 10s
     private static final int RELEASE_CALL_DELAY = 2 * 1000;
 
     private static final int MSG_HANDLE_EVENT = 0;
@@ -114,13 +115,23 @@ public class VoWifiCallManager extends ServiceManager {
                 case MSG_INVITE_CALL:
                     inviteCall((ImsCallSessionImpl) msg.obj);
                     break;
-                case MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT:    //Added for bug 662008
+                case MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT:
                     if (mAlertDialog != null
                             && mAlertDialog._dialog != null
                             && mAlertDialog._dialog.isShowing()) {
+                        Log.d(TAG, "Dismiss the alert due to timeout.");
                         int sessionId = msg.arg1;
                         dismissAlertDialog(sessionId);
-                        Log.d(TAG, "Popup dismissed due to timeout.");
+
+                        // Give the callback as request invalid.
+                        ImsCallSessionImpl callSession = getCallSession(String.valueOf(sessionId));
+                        ImsVideoCallProviderImpl provider = callSession.getVideoCallProviderImpl();
+                        if (provider != null) {
+                            provider.receiveSessionModifyResponse(
+                                    VideoProvider.SESSION_MODIFY_REQUEST_INVALID, null, null);
+                        }
+
+                        // Send the modify response as reject.
                         try {
                             mICall.sendSessionModifyResponse(sessionId, true, false);
                         } catch (RemoteException e) {
@@ -168,6 +179,9 @@ public class VoWifiCallManager extends ServiceManager {
             switch(msg.what) {
                 case MSG_SRVCC_START:
                     Log.d(TAG, "Will handle the SRVCC start event.");
+                    // Set as in SRVCC process.
+                    mInSRVCC = true;
+
                     // When SRVCC start, put all the call session to SRVCC session list.
                     mInfoList.clear();
                     mSRVCCSessionList.clear();
@@ -180,6 +194,9 @@ public class VoWifiCallManager extends ServiceManager {
                     break;
                 case MSG_SRVCC_SUCCESS:
                     Log.d(TAG, "Will handle the SRVCC success event.");
+                    // Set as leave the SRVCC process.
+                    mInSRVCC = false;
+
                     // If SRVCC success, we need do as this:
                     // 1. Sync the calls info to CP.
                     //    Inform UI-layer to update call UI for Video SRVCC.
@@ -216,9 +233,15 @@ public class VoWifiCallManager extends ServiceManager {
                     // Clear the SRVCC session list.
                     mInfoList.clear();
                     mSRVCCSessionList.clear();
+                    if (mListener != null) {
+                        mListener.onSRVCCFinished(true);
+                    }
                     break;
                 case MSG_SRVCC_FAILED:
                 case MSG_SRVCC_CANCEL:
+                    // Set as leave the SRVCC process.
+                    mInSRVCC = false;
+
                     Log.d(TAG, "Will handle the SRVCC failed/cancel event.");
                     for (ImsCallSessionImpl session : mSRVCCSessionList) {
                         int result = (msg.what == MSG_SRVCC_FAILED ? SRVCCResult.FAILURE
@@ -227,6 +250,9 @@ public class VoWifiCallManager extends ServiceManager {
                     }
                     mInfoList.clear();
                     mSRVCCSessionList.clear();
+                    if (mListener != null) {
+                        mListener.onSRVCCFinished(false);
+                    }
                     break;
             }
         }
@@ -558,6 +584,10 @@ public class VoWifiCallManager extends ServiceManager {
         return mSessionList.size();
     }
 
+    public boolean isInSRVCC() {
+        return mInSRVCC;
+    }
+
     /**
      * Get the call session relate to this special call id.
      * @param id the session with this call id.
@@ -886,14 +916,12 @@ public class VoWifiCallManager extends ServiceManager {
                     }
                     break;
                 }
-		 case JSONUtils.EVENT_CODE_USSD_INFO_RECEIVED: {
-		      boolean isVideo = jObject.optBoolean(JSONUtils.KEY_IS_VIDEO, false);
+                case JSONUtils.EVENT_CODE_USSD_INFO_RECEIVED: {
                     String info = jObject.optString(JSONUtils.KEY_USSD_INFO_RECEIVED, "");
-		      int mode = jObject.optInt(JSONUtils.KEY_USSD_MODE, -1);
-                    handleUssdInfoReceived(callSession, sessionId, info, mode);
+                    int mode = jObject.optInt(JSONUtils.KEY_USSD_MODE, -1);
+                    handleUssdInfoReceived(callSession, info, mode);
                     break;
                 }
-
                 default:
                     Log.w(TAG, "The event '" + eventName + "' do not handle, please check!");
             }
@@ -1058,8 +1086,15 @@ public class VoWifiCallManager extends ServiceManager {
         // Update the call type, as if the user accept the video call as audio call,
         // isVideo will be false. Then we need update this to call profile.
         ImsCallProfile profile = callSession.getCallProfile();
+        boolean wasVideo = Utilities.isVideoCall(profile.mCallType);
         if (!isVideo) {
             profile.mCallType = ImsCallProfile.CALL_TYPE_VOICE;
+            if (wasVideo) {
+                // It means we start as video call, but remote accept as voice call.
+                // Prompt the toast to alert the user.
+                Toast.makeText(mContext, R.string.vowifi_remove_video_success,
+                        Toast.LENGTH_LONG).show();
+            }
         }
 
         IImsCallSessionListener listener = callSession.getListener();
@@ -1217,21 +1252,16 @@ public class VoWifiCallManager extends ServiceManager {
 
         // Receive the add video request, we need prompt one dialog to alert the user.
         // And the user could accept or reject this action.
-        mAlertDialog = getVideoChangeRequestDialog(
-                Integer.valueOf(callSession.getCallId()), true /* add video is upgrade action */);
+        mAlertDialog = getVideoChangeRequestDialog(callSession, true /* upgrade action */);
         mAlertDialog._dialog.show();
 
         // For most situation, when we receive the upgrade video request, the screen is off.
         // And the user do not focus on the screen. So we'd like to give a tone alert when
         // the user receive this request.
-        // FIXME: As InCallUI will give the tone when it receive "SessionModifyResponse"
-        //        with the status is VideoProvider.SESSION_MODIFY_REQUEST_INVALID. Couldn't
-        //        very understand, why not use the "SessionModifyRequest"?
         ImsVideoCallProviderImpl videoProvider = callSession.getVideoCallProviderImpl();
         if (videoProvider != null) {
-            videoProvider.receiveSessionModifyResponse(
-                    VideoProvider.SESSION_MODIFY_REQUEST_INVALID /* used to play the tone */,
-                    null /* not used */, null /* not used */);
+            VideoProfile newProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
+            videoProvider.receiveSessionModifyRequest(newProfile);
         }
     }
 
@@ -1349,6 +1379,24 @@ public class VoWifiCallManager extends ServiceManager {
 
         if (mListener != null) {
             mListener.onCallRTCPChanged(isVideo, lose, jitter, rtt);
+        }
+    }
+
+    private void handleUssdInfoReceived(ImsCallSessionImpl callSession, String info, int mode) {
+        if (Utilities.DEBUG) Log.i(TAG, "Handle the received ussd info.");
+        if (callSession == null) {
+            Log.w(TAG, "[handleUssdInfoReceived] The call session is null");
+            return;
+        }
+
+        callSession.updateState(ImsCallSession.State.ESTABLISHED);
+        IImsCallSessionListener listener = callSession.getListener();
+        if (listener != null) {
+            try {
+                listener.callSessionUssdMessageReceived(callSession, mode, info);
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to send the ussd info. e: " + e);
+            }
         }
     }
 
@@ -1671,23 +1719,6 @@ public class VoWifiCallManager extends ServiceManager {
         if (mListener != null) mListener.onCallRTPReceived(isVideo, isReceived);
     }
 
-    private void handleUssdInfoReceived(ImsCallSessionImpl callSession, int sessionId, String info, int mode){
-        if (Utilities.DEBUG) Log.i(TAG, "Handle the received ussd info.");
-        if (callSession == null) {
-            Log.w(TAG, "[handleUssdInfoReceived] The call session is null");
-            return;
-        }
-        callSession.updateState(ImsCallSession.State.ESTABLISHED);
-        IImsCallSessionListener listener = callSession.getListener();
-        if (listener != null) {
-	     try {
-                    listener.callSessionUssdMessageReceived(callSession, mode, info);
-                } catch (RemoteException e) {
-                    Log.e(TAG, "Failed to send the ussd info. e: " + e);
-                }
-
-        }
-    }
     /**
      * This dialog will be shown when the call upgrade or downgrade.
      *
@@ -1695,9 +1726,10 @@ public class VoWifiCallManager extends ServiceManager {
      * @param isUpgrade
      * @return
      */
-    private MyAlertDialog getVideoChangeRequestDialog(final int sessionId,
+    private MyAlertDialog getVideoChangeRequestDialog(final ImsCallSessionImpl callSession,
             final boolean isUpgrade) {
         // Build the dialog.
+        final int sessionId = Integer.valueOf(callSession.getCallId());
         String title = "";
         String message = "";
         String acceptText = mContext.getString(R.string.remote_request_change_accept);
@@ -1707,10 +1739,11 @@ public class VoWifiCallManager extends ServiceManager {
             message = mContext.getString(R.string.vowifi_request_upgrade_text);
 
             // Send the timeout message to handle the request timeout event.
+            mHandler.removeMessages(MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT);
+
             Message msg = new Message();
             msg.what = MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT;
             msg.arg1 = sessionId;
-            mHandler.removeMessages(MSG_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT);
             mHandler.sendMessageDelayed(msg, MEDIA_CHANGED_TIMEOUT);
         } else {
             title = mContext.getString(R.string.vowifi_request_downgrade_title);
@@ -1745,6 +1778,13 @@ public class VoWifiCallManager extends ServiceManager {
                 if (mICall == null) {
                     Log.e(TAG, "Can not send the session modify request for reject.");
                     return;
+                }
+
+                // Give the callback as request invalid.
+                ImsVideoCallProviderImpl provider = callSession.getVideoCallProviderImpl();
+                if (provider != null) {
+                    provider.receiveSessionModifyResponse(
+                            VideoProvider.SESSION_MODIFY_REQUEST_INVALID, null, null);
                 }
 
                 // If the user reject the upgrade action, it should be keep as voice call,

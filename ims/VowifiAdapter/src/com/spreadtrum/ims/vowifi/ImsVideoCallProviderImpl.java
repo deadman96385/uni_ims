@@ -306,6 +306,13 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                     + ", to profile: " + toProfile);
         }
 
+        if (isWaitForModifyResponse()) {
+            // It means we already send the modify request, but do not receive the response now.
+            // So we'd like to ignore this request.
+            Log.d(TAG, "As there is a modify request in porcess, ignore this new request.");
+            return;
+        }
+
         boolean wasVideo = VideoProfile.isVideo(fromProfile.getVideoState());
         boolean isVideo = VideoProfile.isVideo(toProfile.getVideoState());
         if (wasVideo != isVideo) {
