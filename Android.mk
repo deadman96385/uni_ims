@@ -10,7 +10,7 @@ LOCAL_CERTIFICATE := platform
 
 LOCAL_JAVA_LIBRARIES := telephony-common ims-common radio_interactor_common
 
-LOCAL_STATIC_JAVA_LIBRARIES := \
+#LOCAL_STATIC_JAVA_LIBRARIES := \
     android.hardware.radio-V1.0-java-static \
     android.hardware.radio.deprecated-V1.0-java-static \
     vendor.sprd.hardware.radio-V1.0-java-static
