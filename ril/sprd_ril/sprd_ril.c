@@ -8264,7 +8264,7 @@ static void requestGetCellInfoList(void *data, size_t datalen, RIL_Token t,int c
     }else if(cell_type == RIL_CELL_INFO_TYPE_GSM){
         err = at_send_command_singleline(ATch_type[channelID], "AT+SPQ2GNCELL", "+SPQ2GNCELL", &p_response);
     }else {
-        err = at_send_command_singleline(ATch_type[channelID], "AT+SPQ3GNCELLEX=4,3", "+Q3GNCELL", &p_response);
+        err = at_send_command_singleline(ATch_type[channelID], "AT+SPQ3GNCELLEX=4,3", "+SPQ3GNCELL", &p_response);
     }
 
     if (err < 0 || p_response->success == 0) {
@@ -8344,7 +8344,7 @@ static void requestGetCellInfoList(void *data, size_t datalen, RIL_Token t,int c
         response[0]->CellInfo.lte.signalStrengthLte.rsrp = rsrp;
         response[0]->CellInfo.lte.signalStrengthLte.rsrq = rsrq;
         response[0]->CellInfo.lte.signalStrengthLte.rssnr = INT_MAX;
-        response[0]->CellInfo.lte.signalStrengthLte.signalStrength = rsrp+140;
+        response[0]->CellInfo.lte.signalStrengthLte.signalStrength = 140 - rsrp;
         response[0]->CellInfo.lte.signalStrengthLte.timingAdvance  = INT_MAX;
     }else if(cell_type == RIL_CELL_INFO_TYPE_GSM){  //2G
         response[0]->CellInfo.gsm.cellIdentityGsm.mcc =s_mcc;
