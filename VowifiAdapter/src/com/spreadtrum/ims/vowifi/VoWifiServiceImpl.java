@@ -929,14 +929,19 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             if (success) {
                 // As prepare success, start the login process now. And try from the IPv6;
                 SecurityConfig config = mSecurityMgr.getConfig();
-                mRegisterIP = RegisterIPAddress.getInstance(config._ip4, config._ip6,
-                        config._pcscf4, config._pcscf6, getUsedPcscfAddr(), config._dns4,
-                        config._dns6);
-                registerLogin(false);
-            } else {
-                // Prepare failed, give the register result as failed.
-                registerFailed();
+                if (config != null) {
+                    mRegisterIP = RegisterIPAddress.getInstance(config._ip4, config._ip6,
+                            config._pcscf4, config._pcscf6, getUsedPcscfAddr(), config._dns4,
+                            config._dns6);
+                    registerLogin(false);
+                    return;
+                } else {
+                    Log.d(TAG, "Prepare finished, but config is null");
+                }
             }
+
+            // Prepare failed, give the register result as failed.
+            registerFailed();
         }
 
         @Override
