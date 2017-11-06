@@ -1443,22 +1443,26 @@ public class ImsService extends Service {
         */
 //       @Override
        public int getCurrentImsVideoState(){
-//           CallManager cm = CallManager.getInstance();
-//           int videoState = VideoProfile.STATE_AUDIO_ONLY;
-//           Call call = null;
-//
-//           if(cm.hasActiveRingingCall()){
-//               call = cm.getFirstActiveRingingCall();
-//           } else if(cm.hasActiveFgCall()){
-//               call = cm.getActiveFgCall();
-//           } else if(cm.hasActiveBgCall()){
-//               call = cm.getFirstActiveBgCall();
-//           }
-//
-//           if(call != null && call.getLatestConnection() != null){
-//               videoState = call.getLatestConnection().getState();
-//           }
-          return 0;
+           /* SPRD: modify for 771659 @{ */
+           CallManager cm = CallManager.getInstance();
+           int videoState = VideoProfile.STATE_AUDIO_ONLY;
+           Call call = null;
+
+           if(cm.hasActiveRingingCall()){
+               call = cm.getFirstActiveRingingCall();
+           } else if(cm.hasActiveFgCall()){
+               call = cm.getActiveFgCall();
+           } else if(cm.hasActiveBgCall()){
+               call = cm.getFirstActiveBgCall();
+           }
+
+           if(call != null && call.getLatestConnection() != null){
+               if(call.getLatestConnection().isVideo()){
+                  videoState = VideoProfile.STATE_BIDIRECTIONAL;
+               }
+           }
+          return videoState;
+          /* @} */
        }
 
        @Override
