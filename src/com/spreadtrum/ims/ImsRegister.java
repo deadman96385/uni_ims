@@ -158,8 +158,10 @@ public class ImsRegister {
                 break;
             case EVENT_IMS_BEARER_ESTABLISTED:
                 ar = (AsyncResult) msg.obj;
-                if(ar.exception != null || ar.result == null || !(ar.result instanceof Integer)) {
-                    log("EVENT_IMS_BEARER_ESTABLISTED : ar.exception = "+ar.exception +" ar.result:"+ar.result);
+                // SPRD 772714
+//                if(ar.exception != null || ar.result == null || !(ar.result instanceof Integer)) {
+                if(ar.exception != null || ar.result == null) {
+                    log("EVENT_IMS_BEARER_ESTABLISTED : ar.exception = "+ar.exception);
                     CommandException.Error err=null;
                     if (ar.exception instanceof CommandException) {
                         err = ((CommandException)(ar.exception)).getCommandError();
@@ -172,17 +174,38 @@ public class ImsRegister {
                     }
                     break;
                 }
-                Integer conn = (Integer) ar.result;
-                log("EVENT_IMS_BEARER_ESTABLISTED : conn = "+conn);
-                if (conn.intValue() == 1) {
-                    mIMSBearerEstablished = true;
-                    mLastNumeric = "";
-                    if(ImsManagerEx.isDualVoLTEActive() && mPhoneId != getPrimaryCard()){
-                        enableIms();
+                /**
+                 * 772714 should adapter int[] status.
+                 * when use mCi.getImsBearerState, it will return int[] but not Integer
+                 */
+                try {
+                    Integer conn = new Integer(-1);
+                    if (ar.result instanceof Integer) {
+                        conn = (Integer) ar.result;
+                    } else {
+                        int[] connArray = (int[]) ar.result;
+                        conn = connArray[0];
                     }
-                } else //add for L+G dual volte, if secondary card no need to reset mIMSBearerEstablished
-                    if(mPhoneId == getPrimaryCard() && ImsManagerEx.isDualVoLTEActive()){
-                    mIMSBearerEstablished = false;
+                    log("EVENT_IMS_BEARER_ESTABLISTED : conn = " + conn);
+                    if (conn.intValue() == 1) {
+                        mIMSBearerEstablished = true;
+                        mLastNumeric = "";
+                        if (ImsManagerEx.isDualVoLTEActive() && mPhoneId != getPrimaryCard()) {
+                            enableIms();
+                        }
+                    } else // add for L+G dual volte, if secondary card no need
+                           // to reset mIMSBearerEstablished
+                    if (mPhoneId == getPrimaryCard() && ImsManagerEx.isDualVoLTEActive()) {
+                        mIMSBearerEstablished = false;
+                    } else if (conn.intValue() == 0) {
+                        //
+                        log("EVENT_IMS_BEARER_ESTABLISTED : conn.intValue() == 0: ");
+                        mLastNumeric = "";
+                    }
+                } catch (Exception e) {
+                    log("EVENT_IMS_BEARER_ESTABLISTED : exception: "
+                            + e.getMessage());
+                    e.printStackTrace();
                 }
                break;
             case EVENT_ENABLE_IMS:
