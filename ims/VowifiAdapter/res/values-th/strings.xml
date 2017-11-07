@@ -8,9 +8,9 @@
 <string name="vowifi_add_video_success">"ปลายทางยอมรับคำขอ"</string>
 <string name="vowifi_remove_video_failed">"ไม่สามารถลบวิดีโอได้"</string>
 <string name="vowifi_remove_video_success">"เปลี่ยนไปใช้การโทรปกติ"</string>
-<string name="vowifi_hold_success">"พักสายเรียบร้อย"</string>
+<string name="vowifi_hold_success">"พักสาย"</string>
 <string name="vowifi_hold_fail">"พักสายไม่สำเร็จ"</string>
-<string name="vowifi_resume_success">"เรียกสายคืนแล้ว"</string>
+<string name="vowifi_resume_success">"กำลังใช้สาย"</string>
 <string name="vowifi_resume_fail">"เรียกสายคืนไม่สำเร็จ"</string>
 <string name="vowifi_call_retry">"โปรดลองใหม่ในอีกสักครู่"</string>
 <string name="vowifi_call_is_focus">"เพิ่มลงในการประชุมสาย"</string>
