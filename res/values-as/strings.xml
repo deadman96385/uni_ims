@@ -28,18 +28,12 @@
 <string name="remote_reject_request">"ৰিম’ট অনুৰোধ বাতিল হৈছে"</string>
 <string name="remote_accept_request">"ৰিম’ট অনুৰোধ গ্ৰহণ হৈছে"</string>
 <string name="callFailed_fdn_only">"আউটগ’য়িং কলসমূহ FDN ৰ দ্বাৰা ৰদ কৰা হৈছে"</string>
-    <string name="camera_open_fail">"কেমেৰা খুলাত ব্যৰ্থ"</string>
-     <string name="ims_switch_failed">"নেটওৱাৰ্কৰ সমস্যা, অনুগ্ৰহ কৰি আকৌ চেষ্টা কৰক"</string>
-     <string name="videophone_fallback_menu_videocall">"ভিডিঅ’ কল"</string>
-     <string name="videophone_fallback_menu_voicecall">"ধ্বনি কল"</string>
-     <string name="videophone_fallback_menu_cancel">"নাকচ"</string>
-     <string name="videophone_fallback_question">"আপুনি কি কৰিব বিচাৰে?"</string>
-     <string name="low_battery_warning_media_alert_message">"আপোনাৰ বেটাৰীৰ স্তৰ 15% ৰ তলত আছে। অনুগ্ৰহ কৰি স্বীকাৰ কৰক বা অস্বীকাৰ কৰক পচন্দ কৰক।"</string>
+<string name="camera_open_fail">"কেমেৰা খুলাত ব্যৰ্থ"</string>
+<string name="ims_switch_failed">"নেটওৱাৰ্কৰ সমস্যা, অনুগ্ৰহ কৰি আকৌ চেষ্টা কৰক"</string>
+    <string name="low_battery_warning_media_alert_message">"আপোনাৰ বেটাৰীৰ স্তৰ 15% ৰ তলত আছে। অনুগ্ৰহ কৰি স্বীকাৰ কৰক বা অস্বীকাৰ কৰক পচন্দ কৰক।"</string>
      <string name="low_battery_warning_title">"নিম্ন বেটাৰী সঁকিয়নি"</string>
      <string name="low_battery_warning_message">"আপোনাৰ বেটাৰীৰ স্তৰ 15%-ৰ তললৈ গৈছে। আপুনি ভিডিঅ\' কলটো অব্যাহত ৰাখিব বিচাৰে নে ভইচ কললৈ ৰূপান্তৰ কৰিব বিচাৰে?"</string>
      <string name="low_battery_continue_video_call">"হয়"</string>
      <string name="low_battery_convert_to_voice_call">"ৰূপান্তৰ কৰক"</string>
 
-    <string name="vowifi_attation">"Vo WiFi মনোযোগ"</string>
-     <string name="vowifi_regist_fail_content">"নেটৱৰ্কে vowifi সমৰ্থন নকৰে"</string>
 </resources>

@@ -5,10 +5,10 @@
     <string name="vowifi_request_downgrade_title">Remote request to downgrade</string>
     <string name="vowifi_request_downgrade_text">Request to downgrade the current call to voice call, please choose accept or reject.</string>
 
-    <string name="vowifi_add_video_failed">Remote reject request.</string>
-    <string name="vowifi_add_video_success">Remote accept request.</string>
-    <string name="vowifi_remove_video_failed">Failed to remove the video.</string>
-    <string name="vowifi_remove_video_success">Video call fall-back.</string>
+    <string name="vowifi_add_video_failed">Remote reject request</string>
+    <string name="vowifi_add_video_success">Remote accept request</string>
+    <string name="vowifi_remove_video_failed">Failed to remove the video</string>
+    <string name="vowifi_remove_video_success">Video call fall-back</string>
 
     <string name="vowifi_hold_success">Hold success</string>
     <string name="vowifi_hold_fail">Hold fail</string>
@@ -17,13 +17,13 @@
 
     <string name="vowifi_call_retry">Please retry after a moment</string>
     <string name="vowifi_call_is_focus">Add to conference</string>
-    <string name="vowifi_conf_connect_timeout">Connect to conference server timeout.</string>
+    <string name="vowifi_conf_connect_timeout">Connect to conference server timeout</string>
     <string name="vowifi_conf_disconnect">Failed to setup conference</string>
     <string name="vowifi_conf_finished">Conference finished</string>
-    <string name="vowifi_conf_invite_request_failed">Failed to send the invite request. Conference can not be setup.</string>
+    <string name="vowifi_conf_invite_request_failed">Failed to send the invite request</string>
     <string name="vowifi_conf_invite_failed">Failed to invite the participant: </string>
     <string name="vowifi_conf_kick_failed">Failed to remove the participant</string>
-    <string name="vowifi_conf_none_participant">"There isn't any participant, end the call."</string>
+    <string name="vowifi_conf_none_participant">"There isn't any participant, end the call"</string>
     <string name="vowifi_conf_do_not_support">Do not support this action now.</string>
-    <string name="vowifi_conf_can_not_invite_more">Can not invite another participant to the conference as it already contains 6 participants.</string>
+    <string name="vowifi_conf_can_not_invite_more">Can not invite another participant to the conference as it already contains 6 participants</string>
 </resources>

@@ -2,10 +2,8 @@ package com.spreadtrum.ims.vowifi;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.database.Cursor;
-import android.database.CursorWrapper;
 import android.os.SystemProperties;
-import android.telephony.SubscriptionManager;
+import android.sim.SimManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
@@ -28,6 +26,7 @@ public class Utilities {
     private static final int DEFAULT_PHONE_ID   = 0;
     private static final int SLOTTWO_PHONE_ID   = 1;
     private static final String PROP_MODEM_WORKMODE = "persist.radio.modem.workmode";
+    private static String PROP_TEST_MODE = "persist.radio.ssda.testmode";
 
     public static HashMap<Integer, VideoQuality> sVideoQualitys =
             new HashMap<Integer, VideoQuality>();
@@ -74,44 +73,35 @@ public class Utilities {
         return builder.toString();
     }
 
-    public static int getPrimaryCard(Context context) {
-        TelephonyManager tm =
+    public static int getPrimaryCard(Context context){
+        TelephonyManager mTelephonyManager =
                 (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-        int phoneCount = tm.getPhoneCount();
-        if (phoneCount == 1) {
-            return DEFAULT_PHONE_ID;
+        int primaryCard = mTelephonyManager.getPrimaryCard();
+        if(SimManager.isValidPhoneId(primaryCard)){
+            return primaryCard;
         }
 
-        String prop = SystemProperties.get(PROP_MODEM_WORKMODE);
-        if (!TextUtils.isEmpty(prop)) {
-            String values[] = prop.split(",");
-            int[] workMode = new int[phoneCount];
-            for (int i = 0; i < phoneCount; i++) {
-                workMode[i] = Integer.parseInt(values[i]);
-            }
-
-            if (workMode[DEFAULT_PHONE_ID] == 10
-                    && workMode[SLOTTWO_PHONE_ID] != 10
-                    && workMode[SLOTTWO_PHONE_ID] != 254) {
-                return SLOTTWO_PHONE_ID;
-            } else if (workMode[DEFAULT_PHONE_ID] == 254
-                    && workMode[SLOTTWO_PHONE_ID] != 254) {
-                return SLOTTWO_PHONE_ID;
-            }
+        String radioTestMode;
+        int[] testMode = new int[2];
+        for(int i = 0; i < mTelephonyManager.getPhoneCount(); i++){
+            radioTestMode = i == 0 ? PROP_TEST_MODE: PROP_TEST_MODE + i;
+            testMode[i] = getTestMode(radioTestMode);
         }
 
-        return DEFAULT_PHONE_ID;
+        if(testMode[0] == 10){
+            if(testMode[1] != 10 && testMode[1] != 254){
+                return 1;
+            }
+        } else if(testMode[0] == 254){
+            if(testMode[1] != 254){
+                return 0;
+            }
+        }
+        return 0;
     }
 
-    public static int getPrimaryCardSubId(Context context) {
-        int phoneId = Utilities.getPrimaryCard(context);
-        int[] subId = SubscriptionManager.getSubId(phoneId);
-        if (subId == null || subId.length == 0) {
-            Log.e(TAG, "Can not get the sub id from the phone id: " + phoneId);
-            return -1;
-        }
-
-        return subId[0];
+    private static int getTestMode(String radioTestMode){
+        return SystemProperties.getInt(radioTestMode, -1);
     }
 
     public static boolean isVideoCall(int callType) {
@@ -155,6 +145,27 @@ public class Utilities {
         return null;
     }
 
+    public static boolean isSameCallee(String calleeNumber, String phoneNumber) {
+        if (TextUtils.isEmpty(calleeNumber)
+                || TextUtils.isEmpty(phoneNumber)) {
+            return false;
+        }
+
+        if (phoneNumber.indexOf(calleeNumber) >= 0
+                || calleeNumber.indexOf(phoneNumber) >= 0) {
+            return true;
+        } else if (calleeNumber.startsWith("0")) {
+            // Sometimes, the phone number will be start will 0, we'd like to sub the string.
+            String tempCallee = calleeNumber.substring(1);
+            if (phoneNumber.indexOf(tempCallee) >= 0
+                    || tempCallee.indexOf(phoneNumber) >= 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // This defined is match the error used by CM. Please do not change.
     public static class UnsolicitedCode {
         public static final int SECURITY_DPD_DISCONNECTED = 1;
@@ -180,6 +191,12 @@ public class Utilities {
         public static final int IEEE_802_11 = 1;
         public static final int E_UTRAN_FDD = 9;  // 3gpp
         public static final int E_UTRAN_TDD = 10; // 3gpp
+    }
+
+    public static class AttachState {
+        public static final int STATE_IDLE        = 0;
+        public static final int STATE_PROGRESSING = 1;
+        public static final int STATE_CONNECTED   = 2;
     }
 
     public static class NativeErrorCode {
@@ -213,11 +230,6 @@ public class Utilities {
         public static final int SOS    = 2;
         public static final int XCAP   = 4;
         public static final int MMS    = 8;
-    }
-
-    public static class RegisterType {
-        public static final int NORMAL = 1;
-        public static final int SOS    = 2;
     }
 
     public static class CallStateForDataRouter {
@@ -284,6 +296,8 @@ public class Utilities {
     }
 
     public static class SecurityConfig {
+        public int _sessionId;
+
         public String _pcscf4;
         public String _pcscf6;
         public String _dns4;
@@ -291,11 +305,16 @@ public class Utilities {
         public String _ip4;
         public String _ip6;
         public boolean _prefIPv4;
+        public boolean _isSos;
 
         public int _useIPVersion = IPVersion.NONE;
 
-        public SecurityConfig(String pcscf4, String pcscf6, String dns4, String dns6, String ip4,
-                String ip6, boolean prefIPv4) {
+        public SecurityConfig(int sessionId) {
+            _sessionId = sessionId;
+        }
+
+        public void update(String pcscf4, String pcscf6, String dns4, String dns6, String ip4,
+                String ip6, boolean prefIPv4, boolean isSos) {
             _pcscf4 = pcscf4;
             _pcscf6 = pcscf6;
             _dns4 = dns4;
@@ -303,6 +322,7 @@ public class Utilities {
             _ip4 = ip4;
             _ip6 = ip6;
             _prefIPv4 = prefIPv4;
+            _isSos = isSos;
         }
 
         @Override
@@ -312,7 +332,154 @@ public class Utilities {
         }
     }
 
-    public static class RegisterConfig {
+    public static class SIMAccountInfo {
+        public int _subId;
+        public String _spn;
+        public String _imei;
+        public String _imsi;
+        public String _impi;
+        public String _impu;
+
+        // Used by s2b process.
+        public String _hplmn;
+        public String _vplmn;
+
+        // Used by register process.
+        public String _accountName;
+        public String _userName;
+        public String _authName;
+        public String _authPass;
+        public String _realm;
+
+        public static SIMAccountInfo generate(TelephonyManager tm, int subId) {
+            SIMAccountInfo info = new SIMAccountInfo();
+            info._subId = subId;
+
+            // Get the IMEI for the phone.
+            String imei = tm.getDeviceId();
+            if (!isIMEIValid(imei)) return null;
+
+            // Get the spn, IMSI, hplmn and vplmn.
+            info._spn = tm.getSimOperatorName();
+            info._imsi = tm.getSubscriberId();
+            info._hplmn = tm.getSimOperator();
+            info._vplmn = tm.getNetworkOperator();
+
+            info._accountName = imei;
+            info._imei = imei;
+
+            // Try to get the IMPU/IMPI first, if can not get the IMPU/IMPI, it means this card not
+            // may be ISIM, we'd like to use the IMSI instead.
+            boolean generated = false;
+            String impi = tm.getIsimImpi();
+            if (!TextUtils.isEmpty(impi)) {
+                Log.d(TAG, "IMPI is " + impi);
+                info._impi = impi;
+                info._authName = impi;
+                String[] temp = info._authName.split("@");
+                if (temp != null && temp.length == 2) {
+                    info._userName = temp[0];
+                    info._realm = temp[1];
+                    generated = true;
+                } else {
+                    Log.e(TAG, "The IMPI is invalid, IMPI: " + info._authName);
+                }
+
+                // Generate the plmn and imsi from impi.
+                int indexMCC = info._impi.indexOf("mcc");
+                int indexMNC = info._impi.indexOf("mnc");
+                if (indexMCC >= 0 && indexMNC >= 0) {
+                    String mcc = info._impi.substring(indexMCC + 3, indexMCC + 6);
+                    String mnc = info._impi.substring(indexMNC + 3, indexMCC - 1);
+                    if (mnc.length() == 3 && mnc.startsWith("00")) {
+                        mnc = mnc.substring(1);
+                    }
+                    String hplmn = mcc + mnc;
+                    if (!hplmn.equals(info._hplmn)) {
+                        // If the sim hplmn do not equals the hplmn generate from IMPI,
+                        // we need edit the values.
+                        Log.d(TAG, "HPLMN from [" + info._hplmn + "] to [" + hplmn + "].");
+                        Log.d(TAG, "IMSI from [" + info._imsi + "] to [" + info._userName + "].");
+                        info._hplmn = hplmn;
+                        info._imsi = info._userName;
+                    }
+                }
+            }
+
+            String[] impus = tm.getIsimImpu();
+            if (impus != null && impus.length > 0) {
+                // FIXME: Use the first one in the IMPU list, it may depend on the service
+                //        provider's decision.
+                Log.d(TAG, "IMPU array length is " + impus.length + ", choose first one: "
+                        + impus[0]);
+                info._impu = impus[0];
+            }
+
+            // If do not generate from the IMPI/IMPU, we need generate the info from the IMSI.
+            if (!generated) {
+                // Failed to generate from the IMPI, use IMSI instead.
+                if (!isIMSIValid(info._imsi)
+                        || TextUtils.isEmpty(info._hplmn)) {
+                    return null;
+                }
+
+                String mcc = info._hplmn.substring(0, 3);
+                String mnc = info._hplmn.length() == 5 ? "0" + info._hplmn.substring(3)
+                        : info._hplmn.substring(3);
+                Log.d(TAG, "Generate the SIM mcc is " + mcc + ", mnc is " + mnc);
+
+                info._userName = info._imsi;
+                info._realm = "ims.mnc" + mnc + ".mcc" + mcc + ".3gppnetwork.org";
+                info._authName = info._imsi + "@" + info._realm;
+                info._impu = "sip:" + info._authName;
+            }
+
+            return info;
+        }
+
+        private SIMAccountInfo() {
+            _authPass = "todo";    // Do not used, hard code here.
+        }
+
+        @Override
+        public String toString() {
+            return "SIMAccountInfo: subId[" + _subId
+                    + "], spn[" + _spn
+                    + "], imei[" + _imei
+                    + "], imsi[" + _imsi
+                    + "], impi[" + _impi
+                    + "], impu[" + _impu
+                    + "], hplmn[" + _hplmn
+                    + "], vplmn[" + _vplmn
+                    + "], accountName[" + _accountName
+                    + "], userName[" + _userName
+                    + "], authName[" + _authName
+                    + "], authPass[" + _authPass
+                    + "], realm[" + _realm + "]";
+        }
+
+        private static boolean isIMEIValid(String imei) {
+            if (TextUtils.isEmpty(imei) || !imei.matches("^[0-9]{15}$")) {
+                // The IMEI & IMSI is invalid. Do not process the login action.
+                Log.e(TAG, "The imei " + imei + " is invalid");
+                return false;
+            }
+
+            return true;
+        }
+
+        private static boolean isIMSIValid(String imsi) {
+            if (TextUtils.isEmpty(imsi) || !imsi.matches("^[0-9]{15}$")) {
+                // The IMEI & IMSI is invalid. Do not process the login action.
+                Log.e(TAG, "The imsi " + imsi + " is invalid");
+                return false;
+            }
+
+            return true;
+        }
+    }
+
+    public static class RegisterIPAddress {
         private static final String JSON_PCSCF_SEP = ";";
 
         private String mLocalIPv4;
@@ -328,45 +495,71 @@ public class Utilities {
         private String mUsedPcscfIP;
         private String mUsedDnsSerlIP;
 
-        public static RegisterConfig getInstance(String localIPv4, String localIPv6,
+        public static RegisterIPAddress getInstance(String localIPv4, String localIPv6,
                 String pcscfIPv4, String pcscfIPv6, String usedPcscfAddr, String dns4,
                 String dns6) {
             if (Utilities.DEBUG) {
                 Log.i(TAG, "Get the s2b ip address from localIPv4: " + localIPv4 + ", localIPv6: "
                         + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: "
-                        + pcscfIPv6 + ", dns4: " + dns4 + ", dns6: " + dns6);
+                        + pcscfIPv6 + ", pcscfdns4: " + dns4 + ", pcscfdns6: " + dns6);
             }
 
             if (TextUtils.isEmpty(dns4) && TextUtils.isEmpty(dns6)) {
-                Log.e(TAG, "Can not get the dns server address: pcscfdns4: " + dns4
+                Log.d(TAG, "Can not get the dns server address: pcscfdns4: " + dns4
                         + ", pcscfdns6: " + dns6);
             }
-            if ((TextUtils.isEmpty(localIPv4) || TextUtils.isEmpty(pcscfIPv4))
-                    && (TextUtils.isEmpty(localIPv6) || TextUtils.isEmpty(pcscfIPv6))
-                    && TextUtils.isEmpty(usedPcscfAddr)) {
-                Log.e(TAG,
-                        "Can not get the ip address: localIPv4: " + localIPv4 + ", localIPv6: "
-                                + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: "
-                                + pcscfIPv6 + ", usedPcscfAddr: " + usedPcscfAddr);
+
+            boolean b1 = (TextUtils.isEmpty(localIPv4) || TextUtils.isEmpty(pcscfIPv4));
+            boolean b2 = (TextUtils.isEmpty(localIPv6) || TextUtils.isEmpty(pcscfIPv6));
+            boolean b3 = TextUtils.isEmpty(usedPcscfAddr);
+            Log.d(TAG, "b1:" + b1 + ",b2:" + b2 + ",b3:" + b3);
+            if (b1 && b2 && b3) {
+                Log.e(TAG, "Can not get the ip address: localIPv4: " + localIPv4 + ", localIPv6: "
+                        + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: " + pcscfIPv6
+                        + ", usedPcscfAddr: " + usedPcscfAddr);
                 return null;
             }
 
-            String[] pcscfIPv4s =
-                    TextUtils.isEmpty(pcscfIPv4) ? null : pcscfIPv4.split(JSON_PCSCF_SEP);
-            String[] pcscfIPv6s =
-                    TextUtils.isEmpty(pcscfIPv6) ? null : pcscfIPv6.split(JSON_PCSCF_SEP);
-            if (TextUtils.isEmpty(usedPcscfAddr)) {
-                return new RegisterConfig(
-                        localIPv4, localIPv6, pcscfIPv4s, pcscfIPv6s, dns4, dns6);
+            if (TextUtils.isEmpty(pcscfIPv4) && TextUtils.isEmpty(pcscfIPv6)) {
+                if (!TextUtils.isEmpty(usedPcscfAddr)) {
+                    if (isIPv4(usedPcscfAddr)) {
+                        String[] newPcscfIPv4s = new String[1];
+                        newPcscfIPv4s[0] = usedPcscfAddr;
+                        return new RegisterIPAddress(localIPv4, localIPv6, newPcscfIPv4s, null,
+                                dns4, dns6);
+                    } else {
+                        String[] newPcscfIPv6s = new String[1];
+                        newPcscfIPv6s[0] = usedPcscfAddr;
+                        return new RegisterIPAddress(localIPv4, localIPv6, null, newPcscfIPv6s,
+                                dns4, dns6);
+                    }
+                } else {
+                    Log.d(TAG, "all pcscf addr is null");
+                    return null;
+                }
             } else {
-                String[] newPcscfIPv4s = addAddr(pcscfIPv4s, usedPcscfAddr, true);
-                String[] newPcscfIPv6s = addAddr(pcscfIPv6s, usedPcscfAddr, false);
-                return new RegisterConfig(
-                        localIPv4, localIPv6, newPcscfIPv4s, newPcscfIPv6s, dns4, dns6);
+                String[] pcscfIPv4s =
+                    TextUtils.isEmpty(pcscfIPv4) ? null : pcscfIPv4.split(JSON_PCSCF_SEP);
+                String[] pcscfIPv6s =
+                    TextUtils.isEmpty(pcscfIPv6) ? null : pcscfIPv6.split(JSON_PCSCF_SEP);
+                if (!TextUtils.isEmpty(usedPcscfAddr)) {
+                    if (isIPv4(usedPcscfAddr)) {
+                        String[] newPcscfIPv4s = rebuildAddr(pcscfIPv4s, usedPcscfAddr);
+                        return new RegisterIPAddress(localIPv4, localIPv6, newPcscfIPv4s,
+                                pcscfIPv6s, dns4, dns6);
+                    } else {
+                        String[] newPcscfIPv6s = rebuildAddr(pcscfIPv6s, usedPcscfAddr);
+                        return new RegisterIPAddress(localIPv4, localIPv6, pcscfIPv4s,
+                                newPcscfIPv6s, dns4, dns6);
+                    }
+                } else {
+                    return new RegisterIPAddress(localIPv4, localIPv6, pcscfIPv4s, pcscfIPv6s, dns4,
+                            dns6);
+                }
             }
         }
 
-        private RegisterConfig(String localIPv4, String localIPv6, String[] pcscfIPv4,
+        private RegisterIPAddress(String localIPv4, String localIPv6, String[] pcscfIPv4,
                 String[] pcscfIPv6, String dns4, String dns6) {
             mLocalIPv4 = localIPv4;
             mLocalIPv6 = localIPv6;
@@ -374,10 +567,6 @@ public class Utilities {
             mPcscfIPv6 = pcscfIPv6;
             mDnsSerIPv4 = dns4;
             mDnsSerIPv6 = dns6;
-        }
-
-        public boolean isCurUsedIPv4() {
-            return isIPv4(mUsedLocalIP);
         }
 
         public String getCurUsedLocalIP() {
@@ -488,11 +677,29 @@ public class Utilities {
             return newAddrs;
         }
 
+        private static String[] rebuildAddr(String[] oldAddrs, String firstAddr) {
+            if (oldAddrs == null
+                    || oldAddrs.length == 1
+                    || TextUtils.isEmpty(firstAddr)) {
+                return oldAddrs;
+            }
+
+            for (int i = 0; i < oldAddrs.length; i++) {
+                if (firstAddr.equals(oldAddrs[i])) {
+                    String oldFirstAddr = oldAddrs[0];
+                    oldAddrs[0] = firstAddr;
+                    oldAddrs[i] = oldFirstAddr;
+                    break;
+                }
+            }
+            return oldAddrs;
+        }
+
         @Override
         public String toString() {
             StringBuilder builder = new StringBuilder();
-            builder.append("localIPv4[" + mLocalIPv4 + "]");
-            builder.append(", localIPv6[" + mLocalIPv6 + "]");
+            builder.append("localIPv4 = " + mLocalIPv4);
+            builder.append(", localIPv6 = " + mLocalIPv6);
             if (mPcscfIPv4 != null) {
                 for (int i = 0; i < mPcscfIPv4.length; i++) {
                     builder.append(", pcscfIPv4[" + i + "] = " + mPcscfIPv4[i]);
@@ -503,8 +710,8 @@ public class Utilities {
                     builder.append(", pcscfIPv6[" + i + "] = " + mPcscfIPv6[i]);
                 }
             }
-            builder.append(", pcscfDnsSerIPv4[" + mDnsSerIPv4 + "]");
-            builder.append(", pcscfDnsSerIPv6[" + mDnsSerIPv6 + "]");
+            builder.append(", pcscfDnsSerIPv4 = " + mDnsSerIPv4);
+            builder.append(", pcscfDnsSerIPv6 = " + mDnsSerIPv6);
             return builder.toString();
         }
     }
@@ -534,173 +741,11 @@ public class Utilities {
         }
     }
 
-    /**
-     * For emergency service please refer to 3GPP TS 22.101 clause 10.
-     */
-    public static class EMUtils {
-        // The default based emergency service urn format
-        public static final String DEFAULT_EMERGENCY_SERVICE_URN = "urn:service:sos";
-        // Police
-        public static final String EMERGENCY_SERVICE_CATEGORY_BIT1 = "police";
-        // Ambulance
-        public static final String EMERGENCY_SERVICE_CATEGORY_BIT2 = "ambulance";
-        // Fire Brigade
-        public static final String EMERGENCY_SERVICE_CATEGORY_BIT3 = "fire";
-        // Marine Guard
-        public static final String EMERGENCY_SERVICE_CATEGORY_BIT4 = "marine";
-        // Mountain Rescue
-        public static final String EMERGENCY_SERVICE_CATEGORY_BIT5 = "mountain";
+    public static class UnsupportedCallTypeException extends Exception {
+        private static final long serialVersionUID = 6637697999534612205L;
 
-        /**
-         * byte to inverted bit
-         */
-        public static String byteToInvertedBit(byte b) {
-            return "" + (byte) ((b >> 0) & 0x1) + (byte) ((b >> 1) & 0x1) + (byte) ((b >> 2) & 0x1)
-                    + (byte) ((b >> 3) & 0x1) + (byte) ((b >> 4) & 0x1) + (byte) ((b >> 5) & 0x1)
-                    + (byte) ((b >> 6) & 0x1) + (byte) ((b >> 7) & 0x1);
-        }
-
-        public static String getEmergencyCallUrn(String category) {
-            if (DEBUG)
-                Log.i(TAG, "Get the emergency call's urn, category: " + category);
-            if (TextUtils.isEmpty(category)) {
-                Log.w(TAG, "The category is empty, return the default urn.");
-                return DEFAULT_EMERGENCY_SERVICE_URN;
-            }
-
-            String urnUri = DEFAULT_EMERGENCY_SERVICE_URN;
-            try {
-                int categoryValue = Integer.parseInt(category);
-                if ((categoryValue > 0) && (categoryValue < 128)) {
-                    byte categoryByte = (byte) categoryValue;
-                    String categoryBitString = byteToInvertedBit(categoryByte);
-                    if (categoryBitString.charAt(0) == '1') {
-                        urnUri = urnUri.concat(".").concat(EMERGENCY_SERVICE_CATEGORY_BIT1);
-                    }
-                    if (categoryBitString.charAt(1) == '1') {
-                        urnUri = urnUri.concat(".").concat(EMERGENCY_SERVICE_CATEGORY_BIT2);
-                    }
-                    if (categoryBitString.charAt(2) == '1') {
-                        urnUri = urnUri.concat(".").concat(EMERGENCY_SERVICE_CATEGORY_BIT3);
-                    }
-                    if (categoryBitString.charAt(3) == '1') {
-                        urnUri = urnUri.concat(".").concat(EMERGENCY_SERVICE_CATEGORY_BIT4);
-                    }
-                    if (categoryBitString.charAt(4) == '1') {
-                        urnUri = urnUri.concat(".").concat(EMERGENCY_SERVICE_CATEGORY_BIT5);
-                    }
-                }
-            } catch (NumberFormatException e) {
-                Log.e(TAG, "Failed to get emergency urn as catch the ex: " + e.toString());
-            }
-
-            return urnUri;
-        }
-
-        public static String getEmergencyCallCategory(String urnUri) {
-            if (Utilities.DEBUG)
-                Log.i(TAG, "Get the emergency call's category, urn: " + urnUri);
-            if (TextUtils.isEmpty(urnUri)) {
-                Log.w(TAG, "The urn uri is empty, return null.");
-                return null;
-            }
-
-            int category = 0;
-            String urnLowerCase = urnUri.toLowerCase();
-            if (urnLowerCase.startsWith(DEFAULT_EMERGENCY_SERVICE_URN)) {
-                if (urnLowerCase.indexOf(EMERGENCY_SERVICE_CATEGORY_BIT1) > 0) {
-                    category += 1;
-                }
-                if (urnLowerCase.indexOf(EMERGENCY_SERVICE_CATEGORY_BIT2) > 0) {
-                    category += 2;
-                }
-                if (urnLowerCase.indexOf(EMERGENCY_SERVICE_CATEGORY_BIT3) > 0) {
-                    category += 4;
-                }
-                if (urnLowerCase.indexOf(EMERGENCY_SERVICE_CATEGORY_BIT4) > 0) {
-                    category += 8;
-                }
-                if (urnLowerCase.indexOf(EMERGENCY_SERVICE_CATEGORY_BIT5) > 0) {
-                    category += 16;
-                }
-            }
-
-            return String.valueOf(category);
-        }
-    }
-
-    public static class ECBMRequest {
-        public static final int ECBM_STEP_INVALID = 0;
-
-        // For ECBM normal step.
-        public static final int ECBM_STEP_DEREGISTER_NORMAL = 1;
-        public static final int ECBM_STEP_DEATTACH_NORMAL = 2;
-        public static final int ECBM_STEP_ATTACH_SOS = 3;
-        public static final int ECBM_STEP_REGISTER_SOS = 4;
-        public static final int ECBM_STEP_START_EMERGENCY_CALL = 5;
-        public static final int ECBM_STEP_DEREGISTER_SOS = 6;
-        public static final int ECBM_STEP_DEATTACH_SOS = 7;
-        public static final int ECBM_STEP_ATTACH_NORMAL = 8;
-        public static final int ECBM_STEP_REGISTER_NORMAL = 9;
-
-        // For ECBM error step.
-        public static final int ECBM_STEP_FORCE_RESET = 10;
-
-        private ArrayList<Integer> mRequestSteps;
-        private int mIndex;
-
-        private ECBMRequest(int... steps) {
-            mIndex = -1;
-            mRequestSteps = new ArrayList<Integer>();
-            for (int step : steps) {
-                mRequestSteps.add(step);
-            }
-        }
-
-        public static ECBMRequest get(boolean needRemoveOldS2b) {
-            // TODO: Do not support needn't remove old s2b now.
-            if (true /*needRemoveOldS2b*/) {
-                return new ECBMRequest(
-                        ECBM_STEP_DEREGISTER_NORMAL,
-                        ECBM_STEP_DEATTACH_NORMAL,
-                        ECBM_STEP_ATTACH_SOS,
-                        ECBM_STEP_REGISTER_SOS,
-                        ECBM_STEP_START_EMERGENCY_CALL,
-                        ECBM_STEP_DEREGISTER_SOS,
-                        ECBM_STEP_DEATTACH_SOS,
-                        ECBM_STEP_ATTACH_NORMAL,
-                        ECBM_STEP_REGISTER_NORMAL);
-            } else {
-                return new ECBMRequest(
-                        ECBM_STEP_ATTACH_SOS,
-                        ECBM_STEP_REGISTER_SOS,
-                        ECBM_STEP_START_EMERGENCY_CALL,
-                        ECBM_STEP_DEREGISTER_SOS,
-                        ECBM_STEP_DEATTACH_SOS);
-            }
-        }
-
-        public int getEnterECBMStep() {
-            mIndex = 0;
-            return mRequestSteps.get(mIndex);
-        }
-
-        public int getCurStep() {
-            return mRequestSteps.get(mIndex);
-        }
-
-        public int getNextStep() {
-            mIndex = mIndex + 1;
-            if (mIndex >= mRequestSteps.size()) {
-                return ECBM_STEP_INVALID;
-            } else {
-                return mRequestSteps.get(mIndex);
-            }
-        }
-
-        public int getExitECBMStep() {
-            mIndex = (mRequestSteps.size() / 2) + 1;
-            return mRequestSteps.get(mIndex);
+        public UnsupportedCallTypeException(int callType) {
+            super("The call type " + callType + " do not exist.");
         }
     }
 
@@ -773,58 +818,6 @@ public class Utilities {
         }
     }
 
-    public static class ProviderUtils {
-        public static final String CONTENT_URI = "content://com.spreadtrum.vowifi.accountsettings";
-
-        // Defined support get configuration items.
-        public static final String FUN_SECURITY = "security";
-        public static final String FUN_REGISTER = "register";
-        public static final String FUN_CALL     = "call";
-        public static final String FUN_MESSAGE  = "message";
-        public static final String FUN_XCAP     = "xcap";
-    }
-
-    public static class CallCursor extends CursorWrapper {
-        private Cursor mCursor;
-
-        private static final String COL_WITH_LOCATION      = "withLocation";
-        private static final String COL_SOS_AS_NORMAL_CALL = "sosAsNormal";
-        private static final String COL_SOS_REMOVE_OLD_S2B = "sosRemoveOldS2b";
-
-        private static int sIndexWithLocation = -1;
-        private static int sIndexSosAsNormalCall = -1;
-        private static int sIndexSosRemoveOldS2b = -1;
-
-        public CallCursor(Cursor cursor) {
-            super(cursor);
-            mCursor = cursor;
-
-            if (sIndexWithLocation < 0) {
-                sIndexWithLocation = mCursor.getColumnIndexOrThrow(COL_WITH_LOCATION);
-                sIndexSosAsNormalCall = mCursor.getColumnIndexOrThrow(COL_SOS_AS_NORMAL_CALL);
-                sIndexSosRemoveOldS2b = mCursor.getColumnIndexOrThrow(COL_SOS_REMOVE_OLD_S2B);
-            }
-        }
-
-        public boolean needWithLocation() {
-            // Will be only one item.
-            mCursor.moveToFirst();
-            return mCursor.getInt(sIndexWithLocation) > 0;
-        }
-
-        public boolean sosAsNormalCall() {
-            // Will be only one item.
-            mCursor.moveToFirst();
-            return mCursor.getInt(sIndexSosAsNormalCall) > 0;
-        }
-
-        public boolean sosNeedRemoveOldS2b() {
-            // Will be only one item.
-            mCursor.moveToFirst();
-            return mCursor.getInt(sIndexSosRemoveOldS2b) > 0;
-        }
-    }
-
     public static class JSONUtils {
         // Callback constants
         public static final String KEY_EVENT_CODE = "event_code";
@@ -836,8 +829,9 @@ public class Utilities {
         public static final int STATE_CODE_SECURITY_INVALID_ID       = -1;
         public static final int STATE_CODE_SECURITY_AUTH_FAILED      = -2;
         public static final int STATE_CODE_SECURITY_LOCAL_IP_IS_NULL = -3;
-        public static final int STATE_CODE_SECURITY_NO_REQUEST       = -4;
-        public static final int STATE_CODE_SECURITY_STOP_TIMEOUT     = -5;
+        public static final int STATE_CODE_SECURITY_DNS_IS_NULL      = -4;
+        public static final int STATE_CODE_SECURITY_PCSCF_IS_NULL    = -5;
+        public static final int STATE_CODE_SECURITY_STOP_TIMEOUT     = -6;
 
         public final static int SECURITY_EVENT_CODE_BASE = 0;
         public final static int EVENT_CODE_ATTACH_SUCCESSED = SECURITY_EVENT_CODE_BASE + 1;
@@ -851,6 +845,7 @@ public class Utilities {
         public final static String EVENT_ATTACH_STOPPED = "attach_stopped";
 
         // Keys for security callback
+        public final static String KEY_ERROR_CODE = "error_code";
         public final static String KEY_PROGRESS_STATE = "progress_state";
         public final static String KEY_LOCAL_IP4 = "local_ip4";
         public final static String KEY_LOCAL_IP6 = "local_ip6";
@@ -859,7 +854,8 @@ public class Utilities {
         public final static String KEY_DNS_IP4 = "dns_ip4";
         public final static String KEY_DNS_IP6 = "dns_ip6";
         public final static String KEY_PREF_IP4 = "pref_ip4";
-        public final static String KEY_TYPE = "type";
+        public final static String KEY_HANDOVER = "is_handover";
+        public final static String KEY_SOS = "is_sos";
 
         public final static int USE_IP4 = 0;
         public final static int USE_IP6 = 1;
@@ -901,9 +897,9 @@ public class Utilities {
         public static final String KEY_RTCP_JITTER = "rtcp_jitter";
         public static final String KEY_RTCP_RTT = "rtcp_rtt";
         public static final String KEY_CONF_PART_NEW_STATUS = "conf_part_new_status";
-        public static final String KEY_ECALL_IND_URN_URI = "emergency_call_ind_urn_uri";
-        public static final String KEY_ECALL_IND_REASON = "emergency_call_ind_reason";
-        public static final String KEY_ECALL_IND_ACTION_TYPE = "emergency_call_ind_action_type";
+        public static final String KEY_EMERGENCY_CALL_IND_URN_URI = "emergency_call_ind_urn_uri";
+        public static final String KEY_EMERGENCY_CALL_IND_REASON = "emergency_call_ind_reason";
+        public static final String KEY_EMERGENCY_CALL_IND_ACTION_TYPE = "emergency_call_ind_action_type";
         public static final String KEY_USSD_INFO_RECEIVED = "ussd_info_received";
         public static final String KEY_USSD_MODE = "ussd_mode";
 
@@ -1046,5 +1042,19 @@ public class Utilities {
         public static final String RULE_MEDIA_AUDIO = "audio";
         public static final String RULE_MEDIA_VIDEO = "video";
     }
+
+    // for emergency service see 3GPP TS 22.101 clause 10
+    // the default based emergency service urn format
+    public static final String DEFAULT_EMERGENCY_SERVICE_URN = "urn:service:sos";
+    // Police
+    public static final String EMERGENCY_SERVICE_CATEGORY_BIT1 = "police";
+    // Ambulance
+    public static final String EMERGENCY_SERVICE_CATEGORY_BIT2 = "ambulance";
+    // Fire Brigade
+    public static final String EMERGENCY_SERVICE_CATEGORY_BIT3 = "fire";
+    // Marine Guard
+    public static final String EMERGENCY_SERVICE_CATEGORY_BIT4 = "marine";
+    // Mountain Rescue
+    public static final String EMERGENCY_SERVICE_CATEGORY_BIT5 = "mountain";
 
 }

@@ -28,18 +28,12 @@
 <string name="remote_reject_request">"দূরবর্তী অনুরোধ অস্বীকার করা হয়েছে"</string>
 <string name="remote_accept_request">"দূরবর্তী অনুরোধ গ্রহণ করা হয়েছে"</string>
 <string name="callFailed_fdn_only">"FDN এর মাধ্যমে আউটগোয়িং কলগুলি সীমিত করা আছে"</string>
-    <string name="camera_open_fail">"ক্যামেরা চালু করা ব্যর্থ হয়েছে"</string>
-     <string name="ims_switch_failed">"নেটওয়ার্কের ত্রুটি, অনুগ্রহ করে পরে চেষ্টা করুন"</string>
-     <string name="videophone_fallback_menu_videocall">ভিডিও কল</string>
-     <string name="videophone_fallback_menu_voicecall">ভয়েস কল </string>
-     <string name="videophone_fallback_menu_cancel">বাতিল</string>
-     <string name="videophone_fallback_question">"আপনি কি করতে চান?"</string>
-     <string name="low_battery_warning_media_alert_message">"আপনার ব্যাটরীর স্তর 15% - এর নিচে। অনুগ্রহ করে গ্রহণ করা বা খারিজ করা বেছে নিন।"</string>
-     <string name="low_battery_warning_title">"কম ব্যাটরীর সতর্কতা"</string>
-     <string name="low_battery_warning_message">"আপনার ব্যাটরীর মাত্রা 15% - এর নিচে। আপনি ভিডিও কলটি চালিয়ে যেতে চান না ভয়েস কলে রূপান্তরিত করতে চান?"</string>
+<string name="camera_open_fail">"ক্যামেরা চালু করা ব্যর্থ হয়েছে"</string>
+<string name="ims_switch_failed">"নেটওয়ার্কের ত্রুটি, অনুগ্রহ করে পরে চেষ্টা করুন"</string>
+    <string name="low_battery_warning_media_alert_message">"আপনার ব্যাটারির মাত্রা 15% - এর নিচে। অনুগ্রহ করে স্বীকার অথবা প্রত্যাখ্যান বেছে নিন।"</string>
+     <string name="low_battery_warning_title">"ব্যাটারি কম থাকার সতর্কতা"</string>
+     <string name="low_battery_warning_message">"আপনার ব্যাটারির মাত্রা 15% এর নিচে। আপনি কি ভিডিও কলটি জারী রাখতে চান নাকি ভয়েস কলে পরিবর্তন করবেন?"</string>
      <string name="low_battery_continue_video_call">হ্যাঁ</string>
-     <string name="low_battery_convert_to_voice_call">"রূপান্তরিত করুন"</string>
+     <string name="low_battery_convert_to_voice_call">"পরিবর্তন করুন"</string>
 
-    <string name="vowifi_attation">"Vowifi মনোযোগ"</string>
-     <string name="vowifi_regist_fail_content">"নেটওয়ার্ক Vowifi সমর্থন করেনা"</string>
 </resources>

@@ -41,29 +41,20 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     public static final int VT_RESOLUTION_QVGA_15 = 9;             //320*240 Frame rate:15
     public static final int VT_RESOLUTION_QVGA_30 = 10;            //320*240 Frame rate:30
 
-    public static class VideoQualityConstants {
-        public static final int FEATURE_VT_RESOLUTION = 50;
-        public static final int NETWORK_VT_RESOLUTION = 51;
-    }
-
-    private ImsRIL mCi;
+    private CommandsInterface mCi;
     private ImsHandler mHandler;
     private Context mContext;
     private SharedPreferences mSharedPreferences;
     private static final String VIDEO_CALL_RESOLUTION = "vt_resolution";
     private int mCameraResolution = VT_RESOLUTION_VGA_REVERSED_30;
     public int mDefaultVtResolution = VT_RESOLUTION_VGA_REVERSED_30;
-    private ImsServiceImpl mImsServiceImpl = null;
+
     /**
      * Creates the Ims Config interface object for a sub.
      * @param senderRxr
      */
-    public ImsConfigImpl(ImsRIL ci,Context context,ImsServiceImpl imsService) {
-        if (SystemProperties.getBoolean("persist.sys.videodefault", false)) {
-            mDefaultVtResolution = VT_RESOLUTION_QVGA_REVERSED_15;
-        }
+    public ImsConfigImpl(CommandsInterface ci,Context context) {
         mCi = ci;
-        mImsServiceImpl = imsService;
         mHandler = new ImsHandler(context.getMainLooper());
         mContext = context;
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
@@ -166,10 +157,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
                 case EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE:
                     String[] cmd=new String[1];
                     cmd[0] = "AT+CDEFMP=1,\""+mCameraResolution+"\"";
-                    if (SystemProperties.getBoolean("persist.sys.videodefault", false) 
-                            && (mSharedPreferences.getInt(VT_RESOLUTION_VALUE, -1) == -1)) {
-                        cmd[0] = "AT+CDEFMP=1,\"3\"";
-                    }
                     mCi.invokeOemRilRequestStrings(cmd, null);
                     break;
                 default:
@@ -245,12 +232,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      */
     @Override
     public void getFeatureValue(int feature, int network, ImsConfigListener listener){
-        if(feature == VideoQualityConstants.FEATURE_VT_RESOLUTION
-                && network == VideoQualityConstants.NETWORK_VT_RESOLUTION){
-            if(listener != null){
-                getVideoQuality(listener);
-            }
-        }
     }
 
     /**
@@ -266,18 +247,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      */
     @Override
     public void setFeatureValue(int feature, int network, int value, ImsConfigListener listener){
-        Log.d(TAG, "setFeatureValue: feature = " + feature + ", network =" + network +
-                ", value =" + value + ", listener =" + listener);
-        if(feature == VideoQualityConstants.FEATURE_VT_RESOLUTION
-                && network == VideoQualityConstants.NETWORK_VT_RESOLUTION){
-            if(listener != null){
-                setVideoQuality(value,listener);
-            }
-        }else if(feature == ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE){//SPRD: add for bug712024
-            if(listener != null && mImsServiceImpl != null){
-                mImsServiceImpl.updateImsFeatureForAllService();
-            }
-        }
     }
 
     /**

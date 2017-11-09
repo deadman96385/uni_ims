@@ -28,16 +28,7 @@
 <string name="remote_reject_request">"Attālinātās piekļuves pieprasījums atteikts"</string>
 <string name="remote_accept_request">"Attālinātās piekļuves pieprasījums pieņemts"</string>
 <string name="callFailed_fdn_only">"FDN ierobežo izejošos zvanus"</string>
-    <string name="camera_open_fail">"Kameras atvēršana neveiksmīga"</string>
-     <string name="ims_switch_failed">"Tīkla kļūda, lūdzu, mēģiniet atkal vēlāk"</string>
-     <string name="videophone_fallback_menu_videocall">"Videozvans"</string>
-     <string name="videophone_fallback_menu_voicecall">Balss zvans</string>
-     <string name="videophone_fallback_menu_cancel">"Atcelt"</string>
-     <string name="videophone_fallback_question">"Ko jūs vēlaties darīt?"</string>
-     <string name="low_battery_warning_media_alert_message">"Jūsu baterijas līmenis ir zem 15%.Lūdzu, izvēlieties vai pieņemt, vai atteikt."</string>
-     <string name="low_battery_warning_title">"Zemas beterijas līmeņa brīdinājums"</string>
-     <string name="low_battery_warning_message">"Jūsu baterijas līmenis ir zem 15%.Vai vēlaties turpināt ar video zvanu, vai konvertēt uz balss zvanu?"</string>
-     <string name="low_battery_continue_video_call">"Jā"</string>
-     <string name="low_battery_convert_to_voice_call">"Konvertēt"</string>
+<string name="camera_open_fail">"Kameras atvēršana neveiksmīga"</string>
+<string name="ims_switch_failed">"Tīkla kļūda, lūdzu, mēģiniet atkal vēlāk"</string>
 
 </resources>

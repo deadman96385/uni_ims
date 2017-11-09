@@ -28,6 +28,12 @@
 <string name="remote_reject_request">"Demande de prise de main rejetée"</string>
 <string name="remote_accept_request">"Demande de prise de main acceptée"</string>
 <string name="callFailed_fdn_only">"Restriction des appels sortant par FDN"</string>
-    <string name="low_battery_warning_media_alert_message">"Votre niveau de batterie est inférieur à 15%. Veuillez choisir d\'accepter ou de rejeter."</string>
+<string name="camera_open_fail">"Echec d’ouverture de caméra"</string>
+<string name="ims_switch_failed">"Erreur de réseau, veuillez essayer à nouveau plus tard"</string>
 
+    <string name="low_battery_warning_media_alert_message">"Votre niveau de batterie est inférieur à 15%. Veuillez choisir d\'accepter ou de rejeter."</string>
+     <string name="low_battery_warning_title">"Avertissement de batterie faible"</string>
+     <string name="low_battery_warning_message">"Votre niveau de batterie est inférieur à 15%. Voulez-vous continuer avec l\'appel vidéo ou convertir en appel vocal?"</string>
+     <string name="low_battery_continue_video_call">"Oui"</string>
+     <string name="low_battery_convert_to_voice_call">"Convertir"</string>
 </resources>

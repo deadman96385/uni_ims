@@ -28,4 +28,7 @@
 <string name="remote_reject_request">"Panglayo nga hangyo gibalibaran"</string>
 <string name="remote_accept_request">"Panglayo nga hangyo gidawat"</string>
 <string name="callFailed_fdn_only">"Mga tawag nga pagawas gidili sa FDN"</string>
+<string name="camera_open_fail">"Pag-abli sa Kamera pakyas"</string>
+<string name="ims_switch_failed">"Sayop ang network, palihug sulayi og usab unya "</string>
+
 </resources>

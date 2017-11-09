@@ -28,16 +28,7 @@
 <string name="remote_reject_request">"Permintaan jauh telah ditolak"</string>
 <string name="remote_accept_request">"Permintaan jauh telah diterima"</string>
 <string name="callFailed_fdn_only">"Panggilan jauh dilarang oleh FDN"</string>
-    <string name="camera_open_fail">"Gagal membuka kamera"</string>
-     <string name="ims_switch_failed">"Ralat rangkaian, sila cuba lagi kemudian"</string>
-     <string name="videophone_fallback_menu_videocall">Panggilan Video</string>
-     <string name="videophone_fallback_menu_voicecall">Panggilan Suara</string>
-     <string name="videophone_fallback_menu_cancel">Batal</string>
-     <string name="videophone_fallback_question">"Apa yang kamu mahu lakukan?"</string>
-     <string name="low_battery_warning_media_alert_message">"Tahap bateri anda lemah iaitu di bawah 15%.Sila pilih terima atau tolak."</string>
-     <string name="low_battery_warning_title">"Amaran Bateri Lemah"</string>
-     <string name="low_battery_warning_message">"Tahap bateri anda di bawah 15%.Adakah anda ingin meneruskan panggilan video atau tukarkannya ke panggilan suara?"</string>
-     <string name="low_battery_continue_video_call">Ya</string>
-     <string name="low_battery_convert_to_voice_call">"Tukar"</string>
+<string name="camera_open_fail">"Gagal membuka kamera"</string>
+<string name="ims_switch_failed">"Ralat rangkaian, sila cuba lagi kemudian"</string>
 
 </resources>

@@ -6,9 +6,9 @@ import com.android.internal.telephony.CommandsInterface;
 
 public class ImsEcbmImpl extends IImsEcbm.Stub {
 
-    private ImsRIL mCi;
+    private CommandsInterface mCi;
 
-    public ImsEcbmImpl(ImsRIL ci){
+    public ImsEcbmImpl(CommandsInterface ci){
         mCi = ci;
     }
 

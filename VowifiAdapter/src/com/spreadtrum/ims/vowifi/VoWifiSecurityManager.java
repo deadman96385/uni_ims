@@ -7,35 +7,43 @@ import android.os.RemoteException;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.android.ims.internal.IVoWifiSecurity;
-import com.android.ims.internal.IVoWifiSecurityCallback;
+import com.spreadtrum.ims.vowifi.Utilities.AttachState;
 import com.spreadtrum.ims.vowifi.Utilities.IPVersion;
 import com.spreadtrum.ims.vowifi.Utilities.JSONUtils;
 import com.spreadtrum.ims.vowifi.Utilities.NativeErrorCode;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.S2bType;
+import com.spreadtrum.ims.vowifi.Utilities.SIMAccountInfo;
 import com.spreadtrum.ims.vowifi.Utilities.SecurityConfig;
+import com.spreadtrum.vowifi.service.ISecurityService;
+import com.spreadtrum.vowifi.service.ISecurityServiceCallback;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.HashMap;
-import java.util.Iterator;
+import java.util.ArrayList;
 
 public class VoWifiSecurityManager extends ServiceManager {
     private static final String TAG = Utilities.getTag(VoWifiSecurityManager.class.getSimpleName());
 
     private static final int MSG_ACTION_ATTACH = 1;
+    private static final int MSG_ACTION_DEATTACH = 2;
+    private static final int MSG_ACTION_FORCE_STOP = 3;
+    private static final int MSG_ACTION_SET_VOLTE_ADDR = 4;
 
-    private static final String SERVICE_ACTION = IVoWifiSecurity.class.getCanonicalName();
+    private final static String SERVICE_ACTION =
+            "com.spreadtrum.vowifi.service.ISecurityService";
     private static final String SERVICE_PACKAGE = "com.spreadtrum.vowifi";
     private static final String SERVICE_CLASS = "com.spreadtrum.vowifi.service.SecurityService";
 
-    private IVoWifiSecurity mISecurity = null;
+    private int mState = -1;
+    private String mCurLocalAddr = null;
+    private SecurityConfig mSecurityConfig = null;
+    private SecurityListener mListener = null;
+
+    private ISecurityService mISecurity = null;
     private SecurityCallback mCallback = new SecurityCallback();
-    private HashMap<Integer, SecurityRequest> mRequestMap =
-            new HashMap<Integer, SecurityRequest>();
 
     protected VoWifiSecurityManager(Context context) {
         super(context);
@@ -45,17 +53,39 @@ public class VoWifiSecurityManager extends ServiceManager {
         super.bindService(SERVICE_ACTION, SERVICE_PACKAGE, SERVICE_CLASS);
     }
 
+    public void registerListener(SecurityListener listener) {
+        if (Utilities.DEBUG) Log.i(TAG, "Register the listener: " + listener);
+        if (listener == null) {
+            Log.e(TAG, "Can not register the callback as it is null.");
+            return;
+        }
+
+        mListener = listener;
+    }
+
+    public void unregisterListener() {
+        if (Utilities.DEBUG) Log.i(TAG, "Unregister the listener: " + mListener);
+        mListener = null;
+    }
+
     @Override
     protected void onServiceChanged() {
         try {
             mISecurity = null;
             if (mServiceBinder != null) {
-                mISecurity = IVoWifiSecurity.Stub.asInterface(mServiceBinder);
+                mISecurity = ISecurityService.Stub.asInterface(mServiceBinder);
                 mISecurity.registerCallback(mCallback);
             } else {
-                Log.d(TAG, "The security service disconnect. Update the attach state.");
-                notifyAllStopped();
-                clearPendingList();
+                Log.d(TAG, "The security service disconnect. Notify the service disconnected.");
+                if (mListener != null) {
+                    mListener.onDisconnected();
+                }
+
+                mState = AttachState.STATE_IDLE;
+                // Clear all the pending action except MSG_ACTION_SET_VOLTE_ADDR.
+                ArrayList<Integer> notRemove = new ArrayList<Integer>();
+                notRemove.add(MSG_ACTION_SET_VOLTE_ADDR);
+                clearPendingList(notRemove);
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Can not register callback as catch the RemoteException. e: " + e);
@@ -66,32 +96,69 @@ public class VoWifiSecurityManager extends ServiceManager {
     protected boolean handlePendingAction(Message msg) {
         if (Utilities.DEBUG) Log.i(TAG, "Handle the pending action, msg: " + msg);
 
-        if (msg.what == MSG_ACTION_ATTACH) {
-            PendingAction action = (PendingAction) msg.obj;
-            attach((Integer) action._params.get(0), (Integer) action._params.get(1),
-                    (SecurityListener) action._params.get(2));
-            return true;
+        boolean handle = false;
+        switch (msg.what) {
+            case MSG_ACTION_ATTACH: {
+                PendingAction action = (PendingAction) msg.obj;
+                attach((Integer) action._params.get(0), (SIMAccountInfo) action._params.get(1));
+                handle = true;
+                break;
+            }
+            case MSG_ACTION_DEATTACH: {
+                PendingAction action = (PendingAction) msg.obj;
+                deattach((Boolean) action._params.get(0));
+                handle = true;
+                break;
+            }
+            case MSG_ACTION_FORCE_STOP: {
+                forceStop();
+                handle = true;
+                break;
+            }
+            case MSG_ACTION_SET_VOLTE_ADDR: {
+                // Use the last saved local address.
+                setVolteUsedLocalAddr(mCurLocalAddr);
+                handle = true;
+                break;
+            }
         }
 
-        return false;
+        return handle;
     }
 
-    public void attach(int subId, int type, SecurityListener listener) {
+    public void attach(SIMAccountInfo info) {
+        attach(S2bType.NORMAL, info);
+    }
+
+    public void attachForSos(SIMAccountInfo info) {
+        attach(S2bType.SOS, info);
+    }
+
+    private void attach(int type, SIMAccountInfo info) {
         if (Utilities.DEBUG) {
-            Log.i(TAG, "Start the s2b attach. type: " + type + ", subId: " + subId);
+            Log.i(TAG, "Start the s2b attach. type: " + type + ", sim info: " + info);
+        }
+        if (info == null) {
+            Log.e(TAG, "Can not start attach as the config is null.");
+            attachFailed(0);
+            return;
         }
 
         boolean handle = false;
         if (mISecurity != null) {
             try {
-                // If the s2b state is idle, start the attach action.
-                int sessionId = mISecurity.start(type, subId);
-                if (sessionId == Result.INVALID_ID) {
-                    // It means attach failed.
-                    listener.onFailed(0);
+                if (mState <= AttachState.STATE_IDLE) {
+                    // If the s2b state is idle, start the attach action.
+                    int sessionId = mISecurity.start(
+                            type, info._subId, info._imsi, info._hplmn, info._vplmn, info._imei);
+                    if (sessionId == Result.INVALID_ID) {
+                        // It means attach failed.
+                        attachFailed(0);
+                    } else {
+                        mSecurityConfig = new SecurityConfig(sessionId);
+                    }
                 } else {
-                    SecurityRequest request = new SecurityRequest(sessionId, subId, type, listener);
-                    mRequestMap.put(Integer.valueOf(sessionId), request);
+                    Log.e(TAG, "Can not start attach as the current state is: " + mState);
                 }
                 handle = true;
             } catch (RemoteException e) {
@@ -100,57 +167,62 @@ public class VoWifiSecurityManager extends ServiceManager {
         }
         if (!handle) {
             // Do not handle the attach action, add to pending list.
-            addToPendingList(new PendingAction("attach", MSG_ACTION_ATTACH, Integer.valueOf(type),
-                    Integer.valueOf(subId), listener));
+            addToPendingList(
+                    new PendingAction("attach", MSG_ACTION_ATTACH, Integer.valueOf(type), info));
         }
     }
 
-    public void deattach(int subId, int s2bType, boolean isHandover) {
-        deattach(findRequest(subId, s2bType), isHandover);
-    }
-
-    public void deattach(int sessionId, boolean isHandover) {
-        deattach(findRequest(sessionId), isHandover);
-    }
-
-    private void deattach(SecurityRequest request, boolean isHandover) {
+    public void deattach(boolean isHandover) {
         if (Utilities.DEBUG) Log.i(TAG, "Try to de-attach, is handover: " + isHandover);
-        if (request == null) {
-            Log.e(TAG, "Failed to deattach as the request is null.");
-            return;
+
+        boolean handle = false;
+        if (mISecurity != null) {
+            try {
+                if (mSecurityConfig != null) {
+                    mISecurity.stop(mSecurityConfig._sessionId, isHandover);
+                } else {
+                    // Handle it as stop finished.
+                    attachStopped(isHandover, 0);
+                }
+                handle = true;
+            } catch (RemoteException e) {
+                Log.e(TAG, "Catch the remote exception when start the s2b deattach. e: " + e);
+            }
         }
-
-        if (mISecurity == null) {
-            Log.e(TAG, "Failed to deattach as the security interface is null.");
-            return;
-        }
-
-        try {
-            mISecurity.stop(request.mSessionId, isHandover);
-        } catch (RemoteException e) {
-            Log.e(TAG, "Catch the remote exception when start the s2b deattach. e: " + e);
-        }
-    }
-
-    public void forceStop(int subId, SecurityListener listener) {
-        if (Utilities.DEBUG) Log.i(TAG, "Force stop the s2b. Do as de-attach for normal type.");
-
-        SecurityRequest request = findRequest(subId, S2bType.NORMAL);
-        if (request == null) {
-            Log.d(TAG, "Do not find the matched request for sub[" + subId
-                    + "], and it means it already stopped, give the result now.");
-            listener.onStopped(false, 0);
-        } else {
-            deattach(findRequest(subId, S2bType.NORMAL), false);
+        if (!handle) {
+            // Do not handle the attach action, add to pending list.
+            addToPendingList(new PendingAction("de-attach", MSG_ACTION_DEATTACH,
+                    Boolean.valueOf(isHandover)));
         }
     }
 
-    public boolean setIPVersion(int subId, int s2bType, int ipVersion) {
-        SecurityRequest request = findRequest(subId, s2bType);
-        return request != null ? setIPVersion(request.mSessionId, ipVersion) : false;
+    public void forceStop() {
+        if (Utilities.DEBUG) Log.i(TAG, "Force stop the s2b. Do as de-attach for no handover.");
+
+        deattach(false);
     }
 
-    private boolean setIPVersion(int sessionId, int ipVersion) {
+    public void setVolteUsedLocalAddr(String addr) {
+        if (Utilities.DEBUG) Log.i(TAG, "Set volte used local address to : " + addr);
+
+        mCurLocalAddr = addr;
+
+        boolean handle = false;
+        if (mISecurity != null) {
+            try {
+                mISecurity.setVolteUsedLocalAddr(mCurLocalAddr);
+                handle = true;
+            } catch (RemoteException e) {
+                Log.e(TAG, "Catch the remote exception when set volte addr. e: " + e);
+            }
+        }
+        if (!handle) {
+            // Do not handle the attach action, add to pending list.
+            addToPendingList(new PendingAction("set_volte_addr", MSG_ACTION_SET_VOLTE_ADDR));
+        }
+    }
+
+    public boolean setIPVersion(int ipVersion) {
         if (Utilities.DEBUG) Log.i(TAG, "Set the IP version: " + ipVersion);
 
         if (mISecurity == null) {
@@ -159,83 +231,50 @@ public class VoWifiSecurityManager extends ServiceManager {
         }
 
         try {
-            return mISecurity.switchLoginIpVersion(sessionId, ipVersion);
+            if (ipVersion == IPVersion.NONE) {
+                mISecurity.deleteTunelIpsec(mSecurityConfig._sessionId);
+                // Will be always true.
+                return true;
+            } else {
+                return mISecurity.switchLoginIpVersion(mSecurityConfig._sessionId, ipVersion);
+            }
         } catch (RemoteException e) {
             Log.e(TAG, "Catc the remote exception when set the IP version. e: " + e);
             return false;
         }
     }
 
-    public SecurityConfig getConfig(int subId, int type) {
-        SecurityRequest request = findRequest(subId, type);
-        return request == null ? null : request.mConfig;
+    public SecurityConfig getConfig() {
+        return mSecurityConfig;
     }
 
-    public SecurityConfig getConfig(int sessionId) {
-        SecurityRequest request = findRequest(sessionId);
-        return request == null ? null : request.mConfig;
+    public int getCurSecurityState() {
+        return mState;
     }
 
-    private SecurityRequest findRequest(int sessionId) {
-        if (mRequestMap.size() < 1) return null;
-
-        return mRequestMap.get(Integer.valueOf(sessionId));
+    private void attachSuccess() {
+        if (mListener != null) mListener.onSuccessed();
+        mState = AttachState.STATE_CONNECTED;
     }
 
-    private SecurityRequest findRequest(int subId, int type) {
-        if (mRequestMap.size() < 1) return null;
-
-        Iterator<SecurityRequest> it = mRequestMap.values().iterator();
-        while (it.hasNext()) {
-            SecurityRequest request = it.next();
-            if (request.matched(subId, type)) {
-                return request;
-            }
-        }
-
-        // Do not find any matched request, return null.
-        return null;
+    private void attachFailed(int errorCode) {
+        if (mListener != null) mListener.onFailed(errorCode);
+        mState = AttachState.STATE_IDLE;
+        mSecurityConfig = null;
     }
 
-    private void notifyAllStopped() {
-        Iterator<SecurityRequest> it = mRequestMap.values().iterator();
-        while (it.hasNext()) {
-            SecurityRequest request = it.next();
-            attachStopped(request, false, 0);
-        }
+    private void attachProcessing(int stateCode) {
+        if (mListener != null) mListener.onProgress(stateCode);
+        mState = AttachState.STATE_PROGRESSING;
     }
 
-    private void attachSuccess(SecurityRequest request) {
-        if (request != null && request.mListener != null) {
-            request.mListener.onSuccessed(request.mSessionId);
-        }
+    private void attachStopped(boolean forHandover, int errorCode) {
+        if (mListener != null) mListener.onStopped(forHandover, errorCode);
+        mState = AttachState.STATE_IDLE;
+        mSecurityConfig = null;
     }
 
-    private void attachFailed(SecurityRequest request, int errorCode) {
-        if (request != null) {
-            if (request.mListener != null) {
-                request.mListener.onFailed(errorCode);
-            }
-            mRequestMap.remove(Integer.valueOf(request.mSessionId));
-        }
-    }
-
-    private void attachProcessing(SecurityRequest request, int stateCode) {
-        if (request != null && request.mListener != null) {
-            request.mListener.onProgress(stateCode);
-        }
-    }
-
-    private void attachStopped(SecurityRequest request, boolean forHandover, int errorCode) {
-        if (request != null) {
-            if (request.mListener != null) {
-                request.mListener.onStopped(forHandover, errorCode);
-            }
-            mRequestMap.remove(Integer.valueOf(request.mSessionId));
-        }
-    }
-
-    private class SecurityCallback extends IVoWifiSecurityCallback.Stub {
+    private class SecurityCallback extends ISecurityServiceCallback.Stub {
 
         @Override
         public void onS2bStateChanged(String json) throws RemoteException {
@@ -248,17 +287,11 @@ public class VoWifiSecurityManager extends ServiceManager {
 
             try {
                 JSONObject jObject = new JSONObject(json);
-                int sessionId = jObject.optInt(JSONUtils.KEY_SESSION_ID, -1);
-                SecurityRequest request = findRequest(sessionId);
-                if (request == null) {
-                    Log.e(TAG, "Can not find request for the sessionId: " + sessionId);
-                    return;
-                }
-
                 int eventCode = jObject.optInt(JSONUtils.KEY_EVENT_CODE);
                 switch (eventCode) {
                     case JSONUtils.EVENT_CODE_ATTACH_SUCCESSED: {
-                        Log.d(TAG, "Attach success for session: " + sessionId);
+                        Log.d(TAG, "S2b attach success.");
+                        int sessionId = jObject.optInt(JSONUtils.KEY_SESSION_ID, -1);
                         String localIP4 = jObject.optString(JSONUtils.KEY_LOCAL_IP4, null);
                         String localIP6 = jObject.optString(JSONUtils.KEY_LOCAL_IP6, null);
                         String pcscfIP4 = jObject.optString(JSONUtils.KEY_PCSCF_IP4, null);
@@ -266,41 +299,50 @@ public class VoWifiSecurityManager extends ServiceManager {
                         String dnsIP4 = jObject.optString(JSONUtils.KEY_DNS_IP4, null);
                         String dnsIP6 = jObject.optString(JSONUtils.KEY_DNS_IP6, null);
                         boolean prefIPv4 = jObject.optBoolean(JSONUtils.KEY_PREF_IP4, false);
-
-                        SecurityConfig config = new SecurityConfig(pcscfIP4, pcscfIP6, dnsIP4,
-                                dnsIP6, localIP4, localIP6, prefIPv4);
-                        // For handover attach or xcap attach, we need set the IP version as
-                        // preferred first, then notify the result and update the state.
-                        int useIPVersion = prefIPv4 ? IPVersion.IP_V4 : IPVersion.IP_V6;
-                        if (setIPVersion(sessionId, useIPVersion)) {
-                            config._useIPVersion = useIPVersion;
-                            request.updateConfig(config);
-                            attachSuccess(request);
-                        } else {
-                            // Set IP version failed.
-                            attachFailed(request, 0);
+                        boolean isSos = jObject.optBoolean(JSONUtils.KEY_SOS, false);
+                        if (sessionId < 0) {
+                            Log.w(TAG, "Get the attach success callback, but the sessionId is: "
+                                    + sessionId);
+                            break;
                         }
 
+                        if (mSecurityConfig == null) {
+                            mSecurityConfig = new SecurityConfig(sessionId);
+                        }
+                        mSecurityConfig.update(pcscfIP4, pcscfIP6, dnsIP4, dnsIP6, localIP4,
+                                localIP6, prefIPv4, isSos);
+
+                        // Switch the IP version as preferred first, then notify the result and
+                        // update the state.
+                        int useIPVersion =
+                                mSecurityConfig._prefIPv4 ? IPVersion.IP_V4 : IPVersion.IP_V6;
+                        if (setIPVersion(useIPVersion)) {
+                            mSecurityConfig._useIPVersion = useIPVersion;
+                            attachSuccess();
+                        } else {
+                            attachFailed(0);
+                        }
                         break;
                     }
                     case JSONUtils.EVENT_CODE_ATTACH_FAILED: {
                         int errorCode = jObject.optInt(JSONUtils.KEY_STATE_CODE);
-                        Log.d(TAG, "Attach failed, errorCode: " + errorCode);
-                        attachFailed(request, errorCode);
+                        Log.d(TAG, "S2b attach failed, errorCode: " + errorCode);
+                        attachFailed(errorCode);
                         break;
                     }
                     case JSONUtils.EVENT_CODE_ATTACH_PROGRESSING: {
                         int state = jObject.optInt(JSONUtils.KEY_PROGRESS_STATE);
-                        Log.d(TAG, "Attach progress state changed to " + state);
-                        attachProcessing(request, state);
+                        Log.d(TAG, "S2b attach progress state changed to " + state);
+                        attachProcessing(state);
                         break;
                     }
                     case JSONUtils.EVENT_CODE_ATTACH_STOPPED: {
                         int errorCode = jObject.optInt(JSONUtils.KEY_STATE_CODE);
                         boolean forHandover = (errorCode == NativeErrorCode.IKE_HANDOVER_STOP);
-                        Log.d(TAG, "Attach stopped, errorCode: " + errorCode + ", for handover: "
+                        Log.d(TAG, "S2b attach stopped, errorCode: " + errorCode + ", for handover: "
                                 + forHandover);
-                        attachStopped(request, forHandover, errorCode);
+
+                        attachStopped(forHandover, errorCode);
                         break;
                     }
                 }
@@ -308,46 +350,6 @@ public class VoWifiSecurityManager extends ServiceManager {
                 Log.e(TAG, "Failed to parse the security callback as catch the JSONException, e: "
                         + e);
             }
-        }
-    }
-
-    private class SecurityRequest {
-        public int mSessionId;
-        public int mSubId;
-        public int mType;
-
-        public SecurityConfig mConfig;
-        public SecurityListener mListener;
-
-        public SecurityRequest(int sessionId, int subId, int type, SecurityListener listener) {
-            mSessionId = sessionId;
-            mSubId = subId;
-            mType = type;
-            mListener = listener;
-        }
-
-        public void updateConfig(SecurityConfig config) {
-            mConfig = config;
-        }
-
-        public boolean matched(int subId, int type) {
-            return mSubId == subId && mType == type;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj instanceof SecurityRequest) {
-                SecurityRequest request = (SecurityRequest) obj;
-                if (request == this) {
-                    return true;
-                } else if (this.mSessionId == request.mSessionId) {
-                    return true;
-                } else if (this.mSubId == request.mSubId && this.mType == request.mType) {
-                    return true;
-                }
-            }
-
-            return super.equals(obj);
         }
     }
 
@@ -365,7 +367,7 @@ public class VoWifiSecurityManager extends ServiceManager {
          * @param config:Contains the pcscf address, DNS address, IP address, and other information
          *            distribution
          */
-        void onSuccessed(int sessionId);
+        void onSuccessed();
 
         /**
          * Attachment failure callback
@@ -378,6 +380,8 @@ public class VoWifiSecurityManager extends ServiceManager {
          * Attached to stop callback, call stop IS2b () will trigger the callback
          */
         void onStopped(boolean forHandover, int errorCode);
+
+        void onDisconnected();
     }
 
 }

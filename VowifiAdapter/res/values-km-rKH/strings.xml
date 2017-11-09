@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="vowifi_request_upgrade_title">"ការស្នើសុំធ្វើអោយប្រសើរពីចម្ងាយ"</string>
+<string name="vowifi_request_upgrade_text">"ស្នើសុំទៅធ្វើអោយការហៅបច្ចុប្បន្នកាន់តែប្រើសើរទៅជាការហៅវីដេអូ សូមជ្រើសរើសទទួលឬបដិសេធ។"</string>
+<string name="vowifi_request_downgrade_title">"ស្នើសុំធ្វើអោយអន់ពីចម្ងាយ"</string>
+<string name="vowifi_request_downgrade_text">"ស្នើសុំទៅធ្វើអន់ការហៅបច្ចុប្បន្នកាន់តែប្រើសើរទៅជាសម្លេង សូមជ្រើសរើសទទួលឬបដិសេធ។"</string>
+<string name="vowifi_add_video_failed">"ការបដិសេដសំណើរពីចម្ងាយ"</string>
+<string name="vowifi_add_video_success">"ការទទួលសំណើរពីចម្ងាយ"</string>
+<string name="vowifi_remove_video_failed">"បរាជ័យក្នុងការលុបវីដេអូចោល"</string>
+<string name="vowifi_remove_video_success">"ការហៅជាវីដេអូទម្លាក់កម្រិតច្បាស់"</string>
+<string name="vowifi_hold_success">"ផ្អាកការហៅជោគជ័យ"</string>
+<string name="vowifi_hold_fail">"ផ្អាកការហៅបរាជ័យ"</string>
+<string name="vowifi_resume_success">"ការបន្តបានជោគជ័យ"</string>
+<string name="vowifi_resume_fail">"ការបន្តបានបរាជ័យ"</string>
+<string name="vowifi_call_retry">"សូមសាកល្បម្តងទៀតបន្តិចទៀតនេះ"</string>
+<string name="vowifi_call_is_focus">"បន្ថែមទៅក្នុងការហៅតាមទូរស័ព្ទ"</string>
+<string name="vowifi_conf_connect_timeout">"ការតភ្ជាប់ទៅកាន់សេវើការហៅតាមទូរស័ព្ទណាមួយហួសពេល"</string>
+<string name="vowifi_conf_disconnect">"បានបរាជ័យក្នុងការបង្កើតការប្រជុំតាមទូរស័ព្ទ"</string>
+<string name="vowifi_conf_finished">"ការប្រជុំតាមទូរស័ព្ទត្រូវបានបញ្ចប់"</string>
+<string name="vowifi_conf_invite_request_failed">"បរាជ័យក្នុងការអញ្ជើញអ្នកចូលរួម។ ការប្រជុំតាមទូរស័ព្ទមិនអាចធ្វើឡើងបានទេ។"</string>
+<string name="vowifi_conf_invite_failed">"បរាជ័យក្នុងការអញ្ជើញអ្នកចូលរួម"</string>
+<string name="vowifi_conf_kick_failed">"បរាជ័យក្នុងការលុបអ្នកចូលរួមចោល"</string>
+<string name="vowifi_conf_none_participant">"មិនមានអ្នកចូលរួមណាមួយឡើង បញ្ចប់ការហៅ។"</string>
+<string name="vowifi_conf_do_not_support">"មិនគាំទ្រសកម្មភាពនេះទេពេលនេះ"</string>
+<string name="vowifi_video_call_do_not_support">"មិនគាំទ្រសកម្មភាពនេះទេពេលនេះ"</string>
+</resources>

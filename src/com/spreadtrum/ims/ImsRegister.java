@@ -5,59 +5,53 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
+import android.database.ContentObserver;
 import android.os.Message;
 import android.os.Handler;
 import android.os.SystemProperties;
-
+import android.sim.SimManager;
+import com.android.internal.telephony.CommandsInterface.RadioState;
 import com.android.internal.telephony.Phone;
+import com.android.internal.telephony.gsm.GSMPhone;
 import com.android.internal.telephony.PhoneFactory;
-import com.android.internal.telephony.GsmCdmaPhone;
+import com.android.internal.telephony.PhoneProxy;
+import com.android.internal.telephony.CommandException;
+import com.android.internal.telephony.CommandsInterface;
 import android.telephony.TelephonyManager;
 import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.uicc.UiccCardApplication;
 import com.android.internal.telephony.uicc.UiccController;
+import com.sprd.internal.telephony.uicc.MsUiccController;
+//import com.android.internal.telephony.TeleUtils;
 import com.android.internal.telephony.uicc.IccRecords;
-import com.android.internal.telephony.uicc.IccRefreshResponse;
 import com.android.internal.telephony.uicc.IsimUiccRecords;
+import com.android.internal.telephony.uicc.IccRefreshResponse;
+
 import android.os.AsyncResult;
 import android.os.Looper;
 import android.util.Log;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.IccCardConstants;
-import com.android.internal.telephony.CommandException;
-import android.telephony.SubscriptionManager;
+//import android.telephony.SubscriptionManager;
 import android.provider.Settings;
-import android.content.res.Resources;
+import android.telephony.VoLteServiceState;
+import com.android.ims.ImsManager;
+import com.sprd.internal.telephony.VolteConfig;
 import android.text.TextUtils;
-import com.android.internal.telephony.VolteConfig;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
-import android.os.Environment;
-import android.util.Xml;
-import com.android.internal.util.XmlUtils;
 import android.telephony.ServiceState;
-import com.android.ims.internal.ImsManagerEx;
 
 public class ImsRegister {
     private static final String TAG = "ImsRegister";
     private static final boolean DBG = true;
-    private static final String MODEM_WORKMODE_PROP = "persist.radio.modem.workmode";
 
     private Context mContext;
-    private ImsRIL mCi;
-    private GsmCdmaPhone mPhone;
-    private int mPhoneCount;
-    private ImsService mImsService;
+    private CommandsInterface mCi;
+    private GSMPhone mPhone;
 
     private boolean mInitISIMDone;
     private boolean mIMSBearerEstablished;
-    private boolean mSIMLoaded;
     private TelephonyManager mTelephonyManager;
     private int mPhoneId;
     private BaseHandler mHandler;
@@ -68,47 +62,42 @@ public class ImsRegister {
     private VolteConfig mVolteConfig;
     private String mNumeric;
     private String mLastNumeric="";
+    private boolean mSIMLoaded;
     private int mRetryCount = 0;
-    private static final int DEFAULT_PHONE_ID   = 0;
-    private static final int SLOTTWO_PHONE_ID   = 1;
+    private ImsService mImsService;
+    private boolean mFirstNotify;
 
-    private HashMap<String, String> mCarrierSpnMap;
-    static final String PARTNER_SPN_OVERRIDE_PATH ="etc/spn-conf.xml";
-    static final String OEM_SPN_OVERRIDE_PATH = "telephony/spn-conf.xml";
+    protected static final int EVENT_ICC_CHANGED                       = 103;
+    protected static final int EVENT_RECORDS_LOADED                    = 104;
+    protected static final int EVENT_RADIO_STATE_CHANGED               = 105;
+    protected static final int EVENT_INIT_ISIM_DONE                    = 106;
+    protected static final int EVENT_IMS_BEARER_ESTABLISTED            = 107;
+    protected static final int EVENT_ENABLE_IMS                        = 108;
+    protected static final int EVENT_SIM_REFRESH                       = 109;
 
+    private static String PROP_TEST_MODE = "persist.radio.ssda.testmode";
 
-    private static final int EVENT_ICC_CHANGED                       = 201;
-    private static final int EVENT_RECORDS_LOADED                    = 202;
-    private static final int EVENT_RADIO_STATE_CHANGED               = 203;
-    private static final int EVENT_INIT_ISIM_DONE                    = 204;
-    private static final int EVENT_IMS_BEARER_ESTABLISTED            = 205;
-    private static final int EVENT_ENABLE_IMS                        = 206;
-    private static final int EVENT_RADIO_CAPABILITY_CHANGED          = 207;
-    //SPRD: Add for Bug 634502
-    private static final int EVENT_SIM_REFRESH                       = 208;
-
-    public ImsRegister(GsmCdmaPhone phone , Context context, ImsRIL ci) {
+    public ImsRegister(GSMPhone phone , Context context, CommandsInterface ci) {
         mPhone = phone;
         mContext = context;
         mImsService = (ImsService)context;
         mCi = ci;
-        mTelephonyManager = TelephonyManager.from(mContext);
+        //mTelephonyManager = TelephonyManager.from(mContext);
         mPhoneId = mPhone.getPhoneId();
-        mPhoneCount = mTelephonyManager.getPhoneCount();
-        mHandler = new BaseHandler(mContext.getMainLooper());
-
-        mUiccController = UiccController.getInstance();
+        mTelephonyManager = (TelephonyManager)mContext.getSystemService(TelephonyManager.getServiceName(Context.TELEPHONY_SERVICE, mPhoneId));
         mVolteConfig = VolteConfig.getInstance();
+        mHandler = new BaseHandler(mContext.getMainLooper());
+        /*IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
+        mContext.registerReceiver(mReceiver, intentFilter);*/
+        mUiccController = MsUiccController.getInstance(mPhoneId);
         mUiccController.registerForIccChanged(mHandler, EVENT_ICC_CHANGED, null);
         mCi.registerForRadioStateChanged(mHandler, EVENT_RADIO_STATE_CHANGED, null);
-        mCi.registerForImsBearerStateChanged(mHandler, EVENT_IMS_BEARER_ESTABLISTED, null);
+        mCi.registerForConnImsen(mHandler, EVENT_IMS_BEARER_ESTABLISTED, null);
         mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
         mCi.registerForIccRefresh(mHandler, EVENT_SIM_REFRESH, null);
-        mPhone.registerForRadioCapabilityChanged(mHandler, EVENT_RADIO_CAPABILITY_CHANGED, null);
-        if(ImsManagerEx.isDualVoLTEActive()){
-            mCarrierSpnMap = new HashMap<String, String>();
-            loadSpnOverrides();
-        }
+        mFirstNotify = true;
+        Log.i(TAG,"ImsRegister onCreate->phoneId:"+mPhoneId);
     }
 
     private class BaseHandler extends Handler {
@@ -117,144 +106,124 @@ public class ImsRegister {
         }
         @Override
         public void handleMessage(Message msg) {
-           log("handleMessage msg=" + msg);
+            log("handleMessage msg=" + msg);
             AsyncResult ar = (AsyncResult) msg.obj;
             switch (msg.what) {
-            case EVENT_ICC_CHANGED:
-                onUpdateIccAvailability();
-                break;
-            case EVENT_RECORDS_LOADED:
-                log("EVENT_RECORDS_LOADED");
-                mSIMLoaded = true;
-                initISIM();
-                break;
-            case EVENT_RADIO_STATE_CHANGED:
-                if (!mPhone.isRadioOn()) {
-                    mInitISIMDone = false;
-                    //add for L+G dual volte, if secondary card no need to reset mIMSBearerEstablished
-                    if(mPhoneId == getPrimaryCard() || !ImsManagerEx.isDualVoLTEActive()){
-                        mIMSBearerEstablished = false;
-                    }
-                    mLastNumeric="";
-                    mCurrentImsRegistered = false;
-                } else {
-                    log("EVENT_RADIO_STATE_CHANGED -> radio is on");
+                case EVENT_ICC_CHANGED:
+                    onUpdateIccAvailability();
+                    break;
+                case EVENT_RECORDS_LOADED:
+                    log("EVENT_RECORDS_LOADED");
+                    mSIMLoaded = true;
                     initISIM();
-                    SetUserAgent();//SPRD:add for user agent future 670075
-                }
-                break;
-            case EVENT_INIT_ISIM_DONE:
-                log("EVENT_INIT_ISIM_DONE");
-                ar = (AsyncResult) msg.obj;
-                int[] initResult = (int[]) ar.result;
-                if(ar.exception != null) {
-                    log("EVENT_INIT_ISIM_DONE ar.exception");
                     break;
-                }
-                mInitISIMDone = true;
-                if(mImsService.allowEnableIms() || (ImsManagerEx.isDualVoLTEActive() && mPhoneId != getPrimaryCard())){
-                    enableIms();
-                }
-                break;
-            case EVENT_IMS_BEARER_ESTABLISTED:
-                ar = (AsyncResult) msg.obj;
-                if(ar.exception != null || ar.result == null || !(ar.result instanceof Integer)) {
-                    log("EVENT_IMS_BEARER_ESTABLISTED : ar.exception = "+ar.exception +" ar.result:"+ar.result);
-                    CommandException.Error err=null;
-                    if (ar.exception instanceof CommandException) {
-                        err = ((CommandException)(ar.exception)).getCommandError();
-                    }
-                    if (err == CommandException.Error.RADIO_NOT_AVAILABLE) {
-                        if (mRetryCount < 8) {
-                            mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
-                            mRetryCount++;
-                        }
+                case EVENT_RADIO_STATE_CHANGED:
+                    if (mCi.getRadioState() == CommandsInterface.RadioState.RADIO_UNAVAILABLE
+                    || mCi.getRadioState() == CommandsInterface.RadioState.RADIO_OFF) {
+                        mInitISIMDone = false;
+                        mIMSBearerEstablished = false;
+                        mLastNumeric = "";
+                        mCurrentImsRegistered = false;
+                    } else {
+                        log("VOLTE EVENT_RADIO_STATE_CHANGED -> radio is on");
+                        initISIM();
                     }
                     break;
-                }
-                Integer conn = (Integer) ar.result;
-                log("EVENT_IMS_BEARER_ESTABLISTED : conn = "+conn);
-                if (conn.intValue() == 1) {
-                    mIMSBearerEstablished = true;
-                    mLastNumeric = "";
-                    if(ImsManagerEx.isDualVoLTEActive() && mPhoneId != getPrimaryCard()){
+                case EVENT_INIT_ISIM_DONE:
+                    log("EVENT_INIT_ISIM_DONE");
+                    ar = (AsyncResult) msg.obj;
+                    int[] initResult = (int[]) ar.result;
+                    if(ar.exception != null) {
+                        log("EVENT_INIT_ISIM_DONE ar.exception");
+                        break;
+                    }
+                    mInitISIMDone = true;
+                    if(mImsService.allowEnableIms()){
                         enableIms();
                     }
-                } else //add for L+G dual volte, if secondary card no need to reset mIMSBearerEstablished
-                    if(mPhoneId == getPrimaryCard() && ImsManagerEx.isDualVoLTEActive()){
-                    mIMSBearerEstablished = false;
-                }
-               break;
-            case EVENT_ENABLE_IMS:
-                log("EVENT_ENABLE_IMS");
-                mNumeric = mTelephonyManager.getNetworkOperatorForPhone(mPhoneId);
-                boolean isSimConfig = getSimConfig();
-                log("current mNumeric = "+mNumeric);
-                if(mPhoneId == getPrimaryCard()){
+                    break;
+                case EVENT_IMS_BEARER_ESTABLISTED:
+                    ar = (AsyncResult) msg.obj;
+                    if(ar.exception != null) {
+                        CommandException.Error err=null;
+                        if (ar.exception instanceof CommandException) {
+                            err = ((CommandException)(ar.exception)).getCommandError();
+                        }
+                        if (err == CommandException.Error.RADIO_NOT_AVAILABLE) {
+                            if (mRetryCount < 8) {
+                                mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
+                                mRetryCount++;
+                            }
+                        }
+                        break;
+                    }
+                    int[] conn = (int[]) ar.result;
+                    log("EVENT_CONN_IMSEN : conn = "+conn[0]);
+                    if (conn[0] == 1) {
+                        mIMSBearerEstablished = true;
+                        mLastNumeric = "";
+                    }
+                    break;
+                case EVENT_ENABLE_IMS:
+                    mNumeric = mTelephonyManager.getNetworkOperator();
                     mVolteConfig.loadVolteConfig(mContext);
-                    log("PrimaryCard : mLastNumeric = "+mLastNumeric);
+                    boolean isSimConfig = getSimConfig();
+                    log("EVENT_ENABLE_IMS : mNumeric = "+ mNumeric + "  mLastNumeric = " + mLastNumeric);
                     if(!(mLastNumeric.equals(mNumeric))) {
                         if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric)) && mImsService.allowEnableIms()){
-                              SystemProperties.set("gsm.ims.enable" + mPhoneId, "1");
                               mCi.enableIms(null);
                         } else if(isSimConfig && getNetworkConfig(mLastNumeric) && !(getNetworkConfig(mNumeric))){
-                              SystemProperties.set("gsm.ims.enable" + mPhoneId, "0");
                               mCi.disableIms(null);
                         }
                         mLastNumeric = mNumeric;
                     }
-                }else if(dualVoLTEActive()){
-                    //need disable ims when primary card not register to whilte list network?
-                    log("Secondary Card, mLastNumeric = " + mLastNumeric);
-                    if(!(mLastNumeric.equals(mNumeric))){
-                        mLastNumeric = mNumeric;
+                    break;
+                case EVENT_SIM_REFRESH:
+                    log("EVENT_SIM_REFRESH");
+                    ar = (AsyncResult)msg.obj;
+                    if (ar != null && ar.exception == null) {
+                        IccRefreshResponse resp = (IccRefreshResponse)ar.result;
+                        if(resp != null && (resp.refreshResult == IccRefreshResponse.REFRESH_RESULT_INIT
+                                || resp.refreshResult == IccRefreshResponse.REFRESH_RESULT_RESET)){//uicc init
+                            log("Uicc initialized, need to init ISIM again.");
+                            mInitISIMDone = false;
+                            mLastNumeric = "";
+                        }
+                    } else {
+                        log("Sim REFRESH with exception: " + ar.exception);
                     }
-                    if(dualVoLTEActive()){
-                        SystemProperties.set("gsm.ims.enable" + mPhoneId, "1");
-                        mCi.enableIms(null);
-                    }
-                }
-                break;
-            case EVENT_RADIO_CAPABILITY_CHANGED:
-                if (mPhoneId != getPrimaryCard()) {
-                    //SPRD: Bug 671074 If dual volte active, need to reset some variables.
-                    if(!ImsManagerEx.isDualVoLTEActive()){
-                        mInitISIMDone = false;
-                    }
-                    mIMSBearerEstablished = false;
-                    mLastNumeric = "";
-                    mCurrentImsRegistered = false;
-                } else {
-                    log("EVENT_RADIO_CAPABILITY_CHANGED -> initisim");
-                    initISIM();
-                }
-                break;
-                /* SPRD: Add for Bug 634502 Need to init ISIM after uicc has been initialized @{ */
-            case EVENT_SIM_REFRESH:
-                log("EVENT_SIM_REFRESH");
-                ar = (AsyncResult)msg.obj;
-                if (ar != null && ar.exception == null) {
-                    IccRefreshResponse resp = (IccRefreshResponse)ar.result;
-                    if(resp!= null && resp.refreshResult == IccRefreshResponse.REFRESH_RESULT_INIT){//uicc init
-                        log("Uicc initialized, need to init ISIM again.");
-                        mInitISIMDone = false;
-                        mLastNumeric="";
-                    }
-                } else {
-                    log("Sim REFRESH with exception: " + ar.exception);
-                }
-                break;
-                /* @} */
-            default:
-                break;
+                    break;
+                default:
+                    break;
             }
         }
     };
+    /*private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            int phoneId = intent.getIntExtra(PhoneConstants.PHONE_KEY,
+                    SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+
+            if (action.equals(TelephonyIntents.ACTION_SIM_STATE_CHANGED)) {
+                String state = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);
+                log("action = " + action + ", state = " + state + ", phoneId = " + phoneId);
+                if (IccCardConstants.INTENT_VALUE_ICC_LOADED.equals(state)) {
+                    if (mPhone.isRadioOn()) {
+                        log("sim loaded and radio is on");
+                        initISIM();
+                    }
+                }
+            }
+        }
+    };*/
 
     private void initISIM() {
-        if (mSIMLoaded && mPhone.isRadioOn() && !mInitISIMDone
-                && mTelephonyManager.getSimState(mPhoneId) == TelephonyManager.SIM_STATE_READY
-                && (mPhoneId == getPrimaryCard() || ImsManagerEx.isDualVoLTEActive())) {
+        if (!mInitISIMDone
+                && mPhoneId == getPrimaryCard()
+                && mTelephonyManager.getSimState() == TelephonyManager.SIM_STATE_READY
+                && mSIMLoaded
+                && !(mCi.getRadioState() == CommandsInterface.RadioState.RADIO_UNAVAILABLE
+                        || mCi.getRadioState() == CommandsInterface.RadioState.RADIO_OFF)) {
             String impi = null;
             String impu = null;
             String domain = null;
@@ -262,12 +231,11 @@ public class ImsRegister {
             String bspAddr = null;
             String instanceId = null;
             String conferenceUri = null;
-            UiccController uc = UiccController.getInstance();
+            UiccController uc = MsUiccController.getInstance(mPhoneId);
             IccRecords iccRecords = null;
             String operatorNumberic = null;
             if (uc != null) {
-                iccRecords = uc.getIccRecords(mPhoneId,
-                        UiccController.APP_FAM_3GPP);
+                iccRecords = uc.getIccRecords(UiccController.APP_FAM_3GPP);
                 if (iccRecords != null
                         && iccRecords.getOperatorNumeric() != null
                         && iccRecords.getOperatorNumeric().length() > 0) {
@@ -276,7 +244,7 @@ public class ImsRegister {
                     if (mnc != null && mnc.length() == 2) {
                         mnc = "0" + mnc;
                     }
-
+                    /* SPRD: modify for CONFERENCEURI/NAF AND BSF @{*/
                     mVolteConfig.loadVolteConfig(mContext);
                     Map<String, String> data = new HashMap<String, String>();
                     if(mVolteConfig.containsCarrier(operatorNumberic)){
@@ -286,6 +254,7 @@ public class ImsRegister {
                     xCap = getImsConfigUri(VolteConfig.KEY_XCAP, data, operatorNumberic, mnc);
                     bspAddr = getImsConfigUri(VolteConfig.KEY_BSF, data, operatorNumberic, mnc);
                     conferenceUri = getImsConfigUri(VolteConfig.KEY_CONFURI, data, operatorNumberic, mnc);
+                    /* @}*/
                     impi = iccRecords.getIMSI() + "@" + domain;
                     impu = "sip:" + impi;
                     log("impu = " + impu);
@@ -310,84 +279,124 @@ public class ImsRegister {
                     bspAddr, mHandler.obtainMessage(EVENT_INIT_ISIM_DONE));
         }
     }
-
-    public void notifyImsStateChanged(boolean imsRegistered) {
-    	log("--notifyImsStateChanged : imsRegistered = " + imsRegistered + " | mCurrentImsRegistered = " + mCurrentImsRegistered);
-        if( mCurrentImsRegistered != imsRegistered) {
+    /* SPRD:Modify for bug576993 @{ */
+    public synchronized void notifyImsStateChanged(boolean imsRegistered, boolean isImsFeatureChanged) {
+        boolean isPrimaryCard = mPhone.getPhoneId() == mTelephonyManager.getPrimaryCard();
+        Log.i(TAG, "notifyImsStateChanged mCurrentImsRegistered:" + mCurrentImsRegistered
+                 + " imsRegistered:" + imsRegistered + " isPrimaryCard:" + isPrimaryCard
+                 + " isImsFeatureChanged:" + isImsFeatureChanged);
+        if(mCurrentImsRegistered != imsRegistered || isImsFeatureChanged || mFirstNotify) {
+            mFirstNotify = false;
             mCurrentImsRegistered = imsRegistered;
-            /**
-             * SPRD bug644157 should limit action to primary card
-             * so remove if(){}
-             */
-//            if( mPhoneId == getPrimaryCard()) {
-			if (mPhone.isRadioOn()
-					&& getServiceState().getState() != ServiceState.STATE_IN_SERVICE) {
-				log("voice regstate not in service, will call ImsNotifier to notifyServiceStateChanged");
-				mPhone.notifyServiceStateChanged(getServiceState());
+            if(isPrimaryCard) {
+                sendVolteServiceStateChanged();
+                if (!(mCi.getRadioState() == CommandsInterface.RadioState.RADIO_UNAVAILABLE
+                        || mCi.getRadioState() == CommandsInterface.RadioState.RADIO_OFF)
+                        && getServiceState().getState() != ServiceState.STATE_IN_SERVICE) {
+                    log("voice regstate not in service, will call ImsNotifier to notifyServiceStateChanged");
+                    mPhone.notifyServiceStateChangedForIms(getServiceState());
+                }
             }
-//            }
+        }
+    }
+    /* @} */
+
+    private void sendVolteServiceStateChanged() {
+        VoLteServiceState volteSS = new VoLteServiceState();
+        volteSS.setImsState(mCurrentImsRegistered ? 1 : 0);
+        mPhone.notifyVoLteServiceStateChanged(volteSS);
+    }
+
+    public void enableIms() {
+        Log.i(TAG, "enableIms ->mIMSBearerEstablished:" + mIMSBearerEstablished + " mInitISIMDone:" + mInitISIMDone);
+        if(mIMSBearerEstablished && mInitISIMDone) {
+        mHandler.sendMessage(mHandler.obtainMessage(EVENT_ENABLE_IMS));
         }
     }
 
-    private int getPrimaryCard() {
-        if (mPhoneCount == 1) {
-            return DEFAULT_PHONE_ID;
+    private void log(String s) {
+        if (DBG) {
+            Log.d(TAG, "[ImsRegister" + mPhoneId + "] " + s);
         }
-
-        String prop = SystemProperties.get(MODEM_WORKMODE_PROP);
-        if ((prop != null) && (prop.length() > 0)) {
-            String values[] = prop.split(",");
-            int[] workMode = new int[mPhoneCount];
-            for(int i = 0; i < mPhoneCount; i++) {
-                workMode[i] = Integer.parseInt(values[i]);
-            }
-            return getPrimaryCardFromProp(workMode);
-        }
-        return DEFAULT_PHONE_ID;
     }
 
-    public static int getPrimaryCard(int phoneCount) {
-        if (phoneCount == 1) {
-            return DEFAULT_PHONE_ID;
+    /* SPRD: add for SIM Config and Network Config for VOLTE @{ */
+    private boolean getNetworkConfig(String numeric){
+        if(mVolteConfig.containsCarrier(numeric)){
+            return mVolteConfig.getVolteEnable(numeric);
         }
-
-        String prop = SystemProperties.get(MODEM_WORKMODE_PROP);
-        if ((prop != null) && (prop.length() > 0)) {
-            String values[] = prop.split(",");
-            int[] workMode = new int[phoneCount];
-            for(int i = 0; i < phoneCount; i++) {
-                workMode[i] = Integer.parseInt(values[i]);
-            }
-            return getPrimaryCardFromProp(workMode);
-        }
-        return DEFAULT_PHONE_ID;
+        return false;
     }
 
-    private static int getPrimaryCardFromProp(int[] workMode) {
-        switch (workMode[DEFAULT_PHONE_ID]) {
-        case 10:
-            if(workMode[SLOTTWO_PHONE_ID] != 10 && workMode[SLOTTWO_PHONE_ID] != 254) {
-                return SLOTTWO_PHONE_ID;
-            }
-            break;
-        case 254:
-            if(workMode[SLOTTWO_PHONE_ID] != 254) {
-                return SLOTTWO_PHONE_ID;
-            }
-            break;
-        // L+W mode SRPD: 675103
-        case 255:
-            if (workMode[SLOTTWO_PHONE_ID] == 9
-                || workMode[SLOTTWO_PHONE_ID] == 6
-                || workMode[SLOTTWO_PHONE_ID] == 7) {
-
-                return SLOTTWO_PHONE_ID;
-            }
-            break;
+    private boolean getSimConfig(){
+        String numeric = mTelephonyManager.getSimOperator();
+        log("getSimConfig() numeric = " + numeric);
+        if(mVolteConfig.containsCarrier(numeric)){
+            return mVolteConfig.getVolteEnable(numeric);
         }
-        return DEFAULT_PHONE_ID;
+        return false;
+    }
+    /* @} */
+    /* SPRD: modify for CONFERENCEURI/NAF AND BSF @{*/
+    private String getImsConfigUri(String key, Map<String, String> data, String operatorNumberic, String mnc){
+        String imsConfigUri = null;
+
+        if("domain".equals(key)){
+            imsConfigUri = (data == null || TextUtils.isEmpty(data.get(key)) ? "ims.mnc" + mnc + ".mcc"
+                    + operatorNumberic.substring(0, 3) + ".3gppnetwork.org" : data.get(key));
+        } else if("xcap".equals(key)){
+            imsConfigUri = (data == null || TextUtils.isEmpty(data.get(key)) ? "xcap." + "ims.mnc" + mnc + ".mcc"
+                    + operatorNumberic.substring(0, 3) + ".pub.3gppnetwork.org" : data.get(key));
+        } else if("bsf".equals(key)){
+            imsConfigUri = (data == null || TextUtils.isEmpty(data.get(key)) ? "bsf." + "mnc" + mnc + ".mcc"
+                    + operatorNumberic.substring(0, 3) + ".pub.3gppnetwork.org" : data.get(key));
+        } else if("confuri".equals(key)){
+            imsConfigUri = (data == null || TextUtils.isEmpty(data.get(key)) ? "sip:mmtel@conf-factory.ims.mnc" + mnc + ".mcc"
+                    + operatorNumberic.substring(0, 3) + ".3gppnetwork.org" : data.get(key));
+        }
+        return imsConfigUri;
+    }
+    /* @} */
+
+    /* SPRD: Bug 570819 Sometimes radio state is on and AT+SPTESTMODEM is correct sent, but 'service_primary_card' value in database may be -1.
+     * In this sisuation, we should get the primarycard by the prop. @{*/
+    private int getPrimaryCard(){
+        int primaryCard = mTelephonyManager.getPrimaryCard();
+        if(SimManager.isValidPhoneId(primaryCard)){
+            return primaryCard;
+        }
+
+        String radioTestMode;
+        int[] testMode = new int[2];
+        for(int i = 0; i < mTelephonyManager.getPhoneCount(); i++){
+            radioTestMode = i == 0 ? PROP_TEST_MODE: PROP_TEST_MODE + i;
+            testMode[i] = getTestMode(radioTestMode);
+        }
+
+        if(testMode[0] == 10){
+            if(testMode[1] != 10 && testMode[1] != 254){
+                return 1;
+            }
+        } else if(testMode[0] == 254){
+            if(testMode[1] != 254){
+                return 0;
+            }
+        }
+        return 0;
     }
 
+    private int getTestMode(String radioTestMode){
+        return SystemProperties.getInt(radioTestMode, -1);
+    }
+    /* @} */
+
+    private ServiceState getServiceState() {
+        if (mPhone.getServiceStateTracker() != null) {
+            return mPhone.getServiceStateTracker().mSS;
+        } else {
+            return new ServiceState();
+        }
+    }
     private void onUpdateIccAvailability() {
         if (mUiccController == null ) {
             return;
@@ -418,206 +427,10 @@ public class ImsRegister {
     }
 
     private UiccCardApplication getUiccCardApplication() {
-        return mUiccController.getUiccCardApplication(mPhoneId,
-                UiccController.APP_FAM_3GPP);
-    }
-
-    private void log(String s) {
-        if (DBG) {
-            Log.d(TAG, "[ImsRegister" + mPhoneId + "] " + s);
-        }
-    }
-
-    public void enableIms() {
-        log("enableIms ->mIMSBearerEstablished:" + mIMSBearerEstablished + " mInitISIMDone:" + mInitISIMDone);
-        if(mIMSBearerEstablished && mInitISIMDone) {
-            mHandler.sendMessage(mHandler.obtainMessage(EVENT_ENABLE_IMS));
-        }
-    }
-
-    private boolean getNetworkConfig(String numeric){
-        if(mVolteConfig.containsCarrier(numeric)){
-            return mVolteConfig.getVolteEnable(numeric);
-        }
-        return false;
-    }
-
-    private boolean getSimConfig(){
-        String numeric = mTelephonyManager.getSimOperatorNumericForPhone(mPhoneId);
-        log("getSimConfig() numeric = " + numeric);
-        if(mVolteConfig.containsCarrier(numeric)){
-            return mVolteConfig.getVolteEnable(numeric);
-        }
-        return false;
-    }
-
-    private String getImsConfigUri(String key, Map<String, String> data, String operatorNumberic, String mnc){
-        String imsConfigUri = null;
-
-        if("domain".equals(key)){
-            imsConfigUri = (data == null || TextUtils.isEmpty(data.get(key)) ? "ims.mnc" + mnc + ".mcc"
-                    + operatorNumberic.substring(0, 3) + ".3gppnetwork.org" : data.get(key));
-        } else if("xcap".equals(key)){
-            imsConfigUri = (data == null || TextUtils.isEmpty(data.get(key)) ? "xcap." + "ims.mnc" + mnc + ".mcc"
-                    + operatorNumberic.substring(0, 3) + ".pub.3gppnetwork.org" : data.get(key));
-        } else if("bsf".equals(key)){
-            imsConfigUri = (data == null || TextUtils.isEmpty(data.get(key)) ? "bsf." + "mnc" + mnc + ".mcc"
-                    + operatorNumberic.substring(0, 3) + ".pub.3gppnetwork.org" : data.get(key));
-        } else if("confuri".equals(key)){
-            imsConfigUri = (data == null || TextUtils.isEmpty(data.get(key)) ? "sip:mmtel@conf-factory.ims.mnc" + mnc + ".mcc"
-                    + operatorNumberic.substring(0, 3) + ".3gppnetwork.org" : data.get(key));
-        }
-        return imsConfigUri;
-    }
-
-    private ServiceState getServiceState() {
-        if (mPhone.getServiceStateTracker() != null) {
-            return mPhone.getServiceStateTracker().mSS;
-        } else {
-            return new ServiceState();
-        }
+        return mUiccController.getUiccCardApplication(UiccController.APP_FAM_3GPP);
     }
 
     public void onImsPDNReady(){
         mIMSBearerEstablished = true;
     }
-
-    private boolean dualVoLTEActive() {
-        if (!ImsManagerEx.isDualVoLTEActive()) {
-            log("not support Dual volte");
-            return false;
-        }
-        // SPRD: Add for DSDA Dual VoLTE switch
-        if(mCarrierSpnMap == null) {
-            mCarrierSpnMap = new HashMap<String, String>();
-            loadSpnOverrides();
-        }
-        int primaryCard = getPrimaryCard();
-        String primaryOperator = null;
-        String secondOperator = null;
-        IccRecords priIccRecords = mUiccController.getIccRecords(primaryCard,
-                UiccController.APP_FAM_3GPP);
-        IccRecords secIccRecords = mUiccController.getIccRecords(mPhoneId,
-                UiccController.APP_FAM_3GPP);
-        if (priIccRecords != null
-                && priIccRecords.getOperatorNumeric() != null
-                && priIccRecords.getOperatorNumeric().length() > 0) {
-            if (mCarrierSpnMap.containsKey(priIccRecords.getOperatorNumeric())) {
-                primaryOperator = mCarrierSpnMap.get(priIccRecords.getOperatorNumeric());
-            }
-        }
-        if (secIccRecords != null
-                && secIccRecords.getOperatorNumeric() != null
-                && secIccRecords.getOperatorNumeric().length() > 0) {
-            if (mCarrierSpnMap.containsKey(secIccRecords.getOperatorNumeric())) {
-                secondOperator = mCarrierSpnMap.get(secIccRecords.getOperatorNumeric());
-            }
-        }
-        log("primaryOperator = " + primaryOperator);
-        log("secondOperator = " + secondOperator);
-        boolean sameOperator = secondOperator != null && primaryOperator != null
-                && secondOperator.length() > 0 && primaryOperator.length() > 0
-                && (secondOperator.equals(primaryOperator) ||
-                        isRelianceCard(primaryOperator) && isRelianceCard(secondOperator));
-       try{
-        if (sameOperator) {
-            log("same operator, check mcc");
-            primaryOperator = priIccRecords != null
-                    && priIccRecords.getOperatorNumeric() != null
-                    && priIccRecords.getOperatorNumeric().length() > 3 ?priIccRecords.getOperatorNumeric().substring(0, 3): null;
-            secondOperator = secIccRecords != null
-                    && secIccRecords.getOperatorNumeric() != null
-                    && secIccRecords.getOperatorNumeric().length() > 3 ?secIccRecords.getOperatorNumeric().substring(0, 3): null;
-            sameOperator = secondOperator != null && primaryOperator != null
-                    && secondOperator.equals(primaryOperator);
-        }
-        }catch(StringIndexOutOfBoundsException e){
-            e.printStackTrace();
-            return false;
-        }
-        log("sameOperator = " + sameOperator);
-        return sameOperator;
-    }
-
-    private boolean isRelianceCard(String operatorName){
-        if(operatorName != null &&(operatorName.equalsIgnoreCase("Reliance")
-                || operatorName.equalsIgnoreCase("Jio"))){
-            return true;
-        }
-        return false;
-    }
-
-    private void loadSpnOverrides() {
-        FileReader spnReader;
-
-        File spnFile = new File(Environment.getRootDirectory(),
-                PARTNER_SPN_OVERRIDE_PATH);
-        File oemSpnFile = new File(Environment.getOemDirectory(),
-                OEM_SPN_OVERRIDE_PATH);
-
-        if (oemSpnFile.exists()) {
-            // OEM image exist SPN xml, get the timestamp from OEM & System image for comparison.
-            long oemSpnTime = oemSpnFile.lastModified();
-            long sysSpnTime = spnFile.lastModified();
-            log("SPN Timestamp: oemTime = " + oemSpnTime + " sysTime = " + sysSpnTime);
-
-            // To get the newer version of SPN from OEM image
-            if (oemSpnTime > sysSpnTime) {
-                log("SPN in OEM image is newer than System image");
-                spnFile = oemSpnFile;
-            }
-        } else {
-            // No SPN in OEM image, so load it from system image.
-            log("No SPN in OEM image = " + oemSpnFile.getPath() +
-                " Load SPN from system image");
-        }
-
-        try {
-            spnReader = new FileReader(spnFile);
-        } catch (FileNotFoundException e) {
-            log("Can not open " + spnFile.getAbsolutePath());
-            return;
-        }
-
-        try {
-            XmlPullParser parser = Xml.newPullParser();
-            parser.setInput(spnReader);
-
-            XmlUtils.beginDocument(parser, "spnOverrides");
-
-            while (true) {
-                XmlUtils.nextElement(parser);
-
-                String name = parser.getName();
-                if (!"spnOverride".equals(name)) {
-                    break;
-                }
-
-                String numeric = parser.getAttributeValue(null, "numeric");
-                String data    = parser.getAttributeValue(null, "spn");
-
-                mCarrierSpnMap.put(numeric, data);
-            }
-            spnReader.close();
-        } catch (XmlPullParserException e) {
-            log("Exception in spn-conf parser " + e);
-        } catch (IOException e) {
-            log("Exception in spn-conf parser " + e);
-        }
-    }
-    /**
-     * SPRD:add for user agent future
-     * userAgent: deviceName_SW version
-     ***/
-    private void SetUserAgent() {
-        String userAgent = SystemProperties.get("ro.config.useragent", "SPRD VOLTE");
-        if ("SPRD VOLTE".equals(userAgent)) {
-            return;
-        }
-        String[] cmd = new String[1];
-        cmd[0] = "AT+SPENGMDVOLTE=22,1," + "\"" + userAgent + "\"";
-        log("SetUserAgent :" + cmd[0]);
-        mCi.invokeOemRilRequestStrings(cmd, null);
-    }/* @} */
-
 }

@@ -28,16 +28,7 @@
 <string name="remote_reject_request">"Далечинското барање е одбиено"</string>
 <string name="remote_accept_request">"Далечинското барање е прифатено"</string>
 <string name="callFailed_fdn_only">"Појдовните повици се ограничени соFDN"</string>
-    <string name="camera_open_fail">"Неуспешно отворање на камерата"</string>
-     <string name="ims_switch_failed">"Мрежна грешка, ве молиме обидете се повторно подоцна"</string>
-     <string name="videophone_fallback_menu_videocall">Видео повик</string>
-     <string name="videophone_fallback_menu_voicecall">Гласовен повик</string>
-     <string name="videophone_fallback_menu_cancel">Откажи</string>
-     <string name="videophone_fallback_question">Што сакате да нарпавите?</string>
-     <string name="low_battery_warning_media_alert_message">"Нивото на вашата батерија е под 15%.Ве молиме изберете дали да се прифати или одбие."</string>
-     <string name="low_battery_warning_title">"Предупредување за слаба батерија"</string>
-     <string name="low_battery_warning_message">"Нивото на вашата батерија е под 15%.Сакате ли да продолжите со видео повикот или сакате да го конвертирате во гласовен повик?"</string>
-     <string name="low_battery_continue_video_call">Да</string>
-     <string name="low_battery_convert_to_voice_call">"Конвертирај"</string>
+<string name="camera_open_fail">"Неуспешно отворање на камерата"</string>
+<string name="ims_switch_failed">"Мрежна грешка, ве молиме обидете се повторно подоцна"</string>
 
 </resources>

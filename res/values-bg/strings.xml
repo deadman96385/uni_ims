@@ -28,16 +28,7 @@
 <string name="remote_reject_request">"Отхвърлена отдалечена заявка "</string>
 <string name="remote_accept_request">"Приета отдалечена заявка"</string>
 <string name="callFailed_fdn_only">"Изходящите повиквания са ограничени от FDN"</string>
-    <string name="camera_open_fail">"Неуспешно стартиране на камера"</string>
-     <string name="ims_switch_failed">"Грешка в мрежата, моля опитайте пак по-късно"</string>
-     <string name="videophone_fallback_menu_videocall">"Видеообаждане"</string>
-     <string name="videophone_fallback_menu_voicecall">Гласово обаждане</string>
-     <string name="videophone_fallback_menu_cancel">"Отказ"</string>
-     <string name="videophone_fallback_question">Какво желаете да направите?</string>
-     <string name="low_battery_warning_media_alert_message">"Нивото на батерията е под 15%.Моля изберете Приемам или Отказ."</string>
-     <string name="low_battery_warning_title">"Предупреждение за слаба батерия"</string>
-     <string name="low_battery_warning_message">"Нивото на батерията ви е под 15%. Желаете ли да продължите видео разговорър или да се конвертира в аудио повикване?"</string>
-     <string name="low_battery_continue_video_call">"Да"</string>
-     <string name="low_battery_convert_to_voice_call">"Конвертирай"</string>
+<string name="camera_open_fail">"Неуспешно стартиране на камера"</string>
+<string name="ims_switch_failed">"Грешка в мрежата, моля опитайте пак по-късно"</string>
 
 </resources>

@@ -28,16 +28,7 @@
 <string name="remote_reject_request">"Cererea de la distanță a fost respinsă"</string>
 <string name="remote_accept_request">"Cererea de la distanță a fost acceptată"</string>
 <string name="callFailed_fdn_only">"Apelurile formate sunt restricționate de către FDN"</string>
-    <string name="camera_open_fail">"Deschidere cameră eșuată"</string>
-     <string name="ims_switch_failed">"Eroare de rețea, reîncercați mai târziu"</string>
-     <string name="videophone_fallback_menu_videocall">Apel video</string>
-     <string name="videophone_fallback_menu_voicecall">Apel voce</string>
-     <string name="videophone_fallback_menu_cancel">Anulare</string>
-     <string name="videophone_fallback_question">"Ce doriţi să faceţi?"</string>
-     <string name="low_battery_warning_media_alert_message">"Nivelul bateriei este sub 15%. Acceptați sau respingeți."</string>
-     <string name="low_battery_warning_title">"Avertizare nivel redus baterie"</string>
-     <string name="low_battery_warning_message">"Nivelul bateriei este sub 15%. Continuați apelul video sau convertiți la apel vocal?"</string>
-     <string name="low_battery_continue_video_call">"Da"</string>
-     <string name="low_battery_convert_to_voice_call">"Convertire"</string>
+<string name="camera_open_fail">"Deschidere cameră eșuată"</string>
+<string name="ims_switch_failed">"Eroare de rețea, reîncercați mai târziu"</string>
 
 </resources>

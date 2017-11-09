@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+<string name="videophone_fallback_title">"वीडियो कॉल आय वापस"</string>
+<string name="videophone_failcause_1000">"पत्तिम वीडियो कॉल गय न सेओध पेठ पूरः ,मेहरबानी करित करिव केंह काल पततः बेय कूशिश"</string>
+<string name="videophone_failcause_1">"युस नंबर तुही रलोवु छु न सहुलियातन मंज़"</string>
+<string name="videophone_failcause_3">"ग्राख छु न मयस्सर"</string>
+<string name="videophone_failcause_8">"कॉल छि ख़ारिज करनः आमिच"</string>
+<string name="videophone_failcause_17">"ग्राख छु आवुर"</string>
+<string name="videophone_failcause_19">"ग्राख युस तुही रलोववः छु न जवाब दिवन"</string>
+<string name="videophone_failcause_27">"ग्राखस ताम हेक्व न वातिथ"</string>
+<string name="videophone_failcause_34">"कनेक्शन गो मुन्कता"</string>
+<string name="videophone_failcause_63_modify">"वीडियो फ़ोन हेकि न बहाल करनः"</string>
+<string name="videophone_failcause_79">"VT गोव बेसहार बेयि सीथ"</string>
+<string name="videophone_failcause_47">"माफ़ी,वीडियो कॉल छ न मयस्सर"</string>
+<string name="videophone_failcause_50">"VT छु बेसहार"</string>
+<string name="videophone_failcause_57_remote">"युस नंबर तुही रलोवः छु न मदद करन VT यस"</string>
+<string name="videophone_failcause_58">"VT गोव बेसहार बेयि सीथ"</string>
+<string name="videophone_failcause_157">"मोबाइल फोनन छु न शुरू कोर्मुत VT सहूलियात"</string>
+<string name="videophone_failcause_88">"ग्राखन चुन आवाज़ कॉल"</string>
+<string name="videophone_failcause_minus_1">"3G सहूलियात छ न मयस्सर"</string>
+<string name="videophone_failcause_default">"ग्राख छु न मयस्सर"</string>
+<string name="net_connection_disconnect">"नेट कनेक्शन फुट"</string>
+<string name="no_vt_service">"हेकि न वीडियो कॉल करिथ"</string>
+<string name="remote_request_change">"रिमोट आज्ज़ी मीडिया बदलाव"</string>
+<string name="choose_accept_reject">"मेहरबानी करित चुनिव मंज़ूर या रद्द करुन"</string>
+<string name="remote_request_change_accept">"मंजूरी"</string>
+<string name="remote_request_change_reject">"रद्द"</string>
+<string name="remote_reject_request">"रिमोट आज्ज़ी रद्द गमिच"</string>
+<string name="remote_accept_request">"रिमोट आज्ज़ी मंजूर गमिच"</string>
+<string name="callFailed_fdn_only">"नेबर ग्स्विन काल्ल्ह छि FDN देस पाबंद"</string>
+<string name="camera_open_fail">"कैमरा यल्लह गसून नाकाम"</string>
+<string name="ims_switch_failed">"नेटवर्क खराबी, मेहरबानी करिथ करिव पत बेय कूशिश"</string>
+<string name="low_battery_warning_media_alert_message">"तुहिंज़ बैटरी सतह छि 15%बोन.मेहरबानी करिथ चुनिव मंज़ूर या रद्द."</string>
+<string name="low_battery_warning_title">"कम बैटरी धमकी"</string>
+<string name="low_battery_warning_message">"तुहुन्ज़ बैटरी तह छु कम 15% खोत.तुही छिवा यसन जारी रोज़ून वीडियो कॉल सीथ या आवाज़ कॉल कुन बदलुन?"</string>
+<string name="low_battery_continue_video_call">"अवा"</string>
+<string name="low_battery_convert_to_voice_call">"तब्दील"</string>
+
+</resources>

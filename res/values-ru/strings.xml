@@ -28,16 +28,12 @@
 <string name="remote_reject_request">"Удаленный запрос отклонен"</string>
 <string name="remote_accept_request">"Удаленный запрос принят"</string>
 <string name="callFailed_fdn_only">"Исходящие звонки ограничены фиксированным набором"</string>
-    <string name="camera_open_fail">"Активировать режим камеры не удалось"</string>
-     <string name="ims_switch_failed">"Ошибка сети, пожалуйста, повторите попытку позже"</string>
-     <string name="videophone_fallback_menu_videocall">Видеозвонок</string>
-     <string name="videophone_fallback_menu_voicecall">Голосовой вызов</string>
-     <string name="videophone_fallback_menu_cancel">Отмена</string>
-     <string name="videophone_fallback_question">Что Вы хотите сделать?</string>
-     <string name="low_battery_warning_media_alert_message">""Заряд батареи ниже 15%. Пожалуйста, выберите принять или отклонить"."</string>
+<string name="camera_open_fail">"Активировать режим камеры не удалось"</string>
+<string name="ims_switch_failed">"Ошибка сети, пожалуйста, повторите попытку позже"</string>
+
+    <string name="low_battery_warning_media_alert_message">"Заряд батареи ниже 15%. Пожалуйста, выберите принять или отклонить".</string>
      <string name="low_battery_warning_title">"Предупреждение о низком заряде батареи"</string>
      <string name="low_battery_warning_message">"Уровень заряда батареи ниже 15%. Желаете продолжить видеовызов или перейти в голосовой режим?"</string>
      <string name="low_battery_continue_video_call">"Да"</string>
      <string name="low_battery_convert_to_voice_call">"Конвертировать"</string>
-
 </resources>

@@ -28,18 +28,12 @@
 <string name="remote_reject_request">"بعید درخواست مسترد کردی گئی"</string>
 <string name="remote_accept_request">"بعید درخواست قبول کر لی گئی"</string>
 <string name="callFailed_fdn_only">"باہر کی جانیوالی کالز کو FDN سے محدود کیا جاتا ہے"</string>
-    <string name="camera_open_fail">"کیمرہ کھولنے میں ناکامی"</string>
-     <string name="ims_switch_failed">"نیٹ ورک نقص، برائے مہربانی کچھ دیر بعد کوشش کریں"</string>
-     <string name="videophone_fallback_menu_videocall">"ویڈیو کال"</string>
-     <string name="videophone_fallback_menu_voicecall">صوتی کال</string>
-     <string name="videophone_fallback_menu_cancel">"منسوخ کریں"</string>
-     <string name="videophone_fallback_question">آپ کیا کرنا چاہتے ہیں</string>
-     <string name="low_battery_warning_media_alert_message">"آپ کی بیٹری کا لیول 15% سے کم ہے۔ براہ مہربانی قبول کریں یا مسترد کریں چنیں۔"</string>
+<string name="camera_open_fail">"کیمرہ کھولنے میں ناکامی"</string>
+<string name="ims_switch_failed">"نیٹ ورک نقص، برائے مہربانی کچھ دیر بعد کوشش کریں"</string>
+    <string name="low_battery_warning_media_alert_message">"آپ کی بیٹری کا لیول 15% سے کم ہے۔ براہ مہربانی قبول کریں یا مسترد کریں چنیں۔"</string>
      <string name="low_battery_warning_title">"کم بیٹری انتباہ"</string>
      <string name="low_battery_warning_message">"آپ کی بیٹری کا لیول 15% سے کم ہے۔ کیا آپ ویڈیو کال کے ساتھ جاری رکھنا یا وائس کال پر منتقل ہونا چاہتے ہیں؟"</string>
      <string name="low_battery_continue_video_call">"ہاں"</string>
      <string name="low_battery_convert_to_voice_call">"تبدیل کریں"</string>
 
-    <string name="vowifi_attation">" "Vowifi توجہ""</string>
-     <string name="vowifi_regist_fail_content">"نیٹ ورک vowifi کو سپورٹ نہیں کرتا"</string>
 </resources>

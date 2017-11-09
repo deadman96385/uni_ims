@@ -28,4 +28,5 @@
 <string name="remote_reject_request">"Zahtjev na daljinu je odbijen"</string>
 <string name="remote_accept_request">"Zahtjev na daljinu je prihvaćen"</string>
 <string name="callFailed_fdn_only">"Odlazni pozivi su zabranjeni sa FDN"</string>
+
 </resources>

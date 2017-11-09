@@ -5,16 +5,16 @@
 package com.spreadtrum.ims.vowifi;
 
 import android.content.Context;
-import android.database.Cursor;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.RemoteException;
 import android.os.SystemProperties;
-import android.telecom.VideoProfile;
 import android.telephony.PhoneNumberUtils;
-import android.telephony.ServiceState;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Surface;
@@ -27,32 +27,31 @@ import com.android.ims.ImsStreamMediaProfile;
 import com.android.ims.internal.IImsCallSession;
 import com.android.ims.internal.IImsCallSessionListener;
 import com.android.ims.internal.IImsVideoCallProvider;
-import com.android.ims.internal.IVoWifiCall;
 import com.android.ims.internal.ImsCallSession.State;
-import com.android.ims.internal.ImsSrvccCallInfo;
+import com.android.ims.ImsSrvccCallInfo;
+import com.android.internal.telephony.TelephonyProperties;
 import com.spreadtrum.ims.R;
-import com.spreadtrum.ims.vowifi.Utilities.CallCursor;
 import com.spreadtrum.ims.vowifi.Utilities.Camera;
-import com.spreadtrum.ims.vowifi.Utilities.ECBMRequest;
-import com.spreadtrum.ims.vowifi.Utilities.EMUtils;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
-import com.spreadtrum.ims.vowifi.Utilities.ProviderUtils;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.SRVCCSyncInfo;
+import com.spreadtrum.ims.vowifi.Utilities.VideoQuality;
 import com.spreadtrum.ims.vowifi.VoWifiCallManager.ICallChangedListener;
+import com.spreadtrum.vowifi.service.IVoWifiSerService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map.Entry;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
-public class ImsCallSessionImpl extends IImsCallSession.Stub {
+public class ImsCallSessionImpl extends IImsCallSession.Stub implements LocationListener {
     private static final String TAG = Utilities.getTag(ImsCallSessionImpl.class.getSimpleName());
 
-    // Used to force phone number as emergency call.
+    // Temp, used to test emergency call.
     private static final String PROP_KEY_FORCE_SOS_CALL = "persist.vowifi.force.soscall";
 
     private static final int MERGE_TIMEOUT = 15 * 1000;
@@ -81,13 +80,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsConfHost = false;
     private boolean mAudioStart = false;
     private boolean mIsEmergency = false;
-    private boolean mInSRVCC = false;
 
     private Context mContext;
-    private CallCursor mCursor;
+    private Location mSosLocation;
     private VoWifiCallStateTracker mCallStateTracker;
+    private LocationManager mLocationManager;
     private VoWifiCallManager mCallManager;
-    private IVoWifiCall mICall = null;
+    private IVoWifiSerService mICall = null;
 
     private IImsCallSessionListener mListener = null;
     private ImsStreamMediaProfile mImsStreamMediaProfile = null;
@@ -224,10 +223,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
     };
 
-    // To listener the IVoWifiCall changed.
+    // To listener the IVoWifiSerService changed.
     private ICallChangedListener mICallChangedListener = new ICallChangedListener() {
         @Override
-        public void onChanged(IVoWifiCall newCallInterface) {
+        public void onChanged(IVoWifiSerService newCallInterface) {
             if (newCallInterface != null) {
                 mICall = newCallInterface;
                 // If the pending action is not null, we need to handle the them.
@@ -261,7 +260,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             ImsCallProfile profile, IImsCallSessionListener listener,
             ImsVideoCallProviderImpl videoCallProvider, int callDir) {
         mContext = context;
-        mCursor = getCallCursor();
         mCallStateTracker = new VoWifiCallStateTracker(State.IDLE, callDir);
         mCallManager = callManager;
         mCallProfile = profile;
@@ -271,13 +269,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             // The video call provider is null, create it.
             mVideoCallProvider = new ImsVideoCallProviderImpl(mContext, callManager, this);
         }
-        VideoProfile videoProfile = new VideoProfile(Utilities.isVideoCall(mCallProfile.mCallType)
-                ? VideoProfile.STATE_BIDIRECTIONAL : VideoProfile.STATE_AUDIO_ONLY);
-        mVideoCallProvider.updateVideoProfile(videoProfile);
-
-        // Set radio technology to WLAN.
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_CALL_RAT_TYPE, ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN);
 
         // Register the service changed to get the IVowifiService.
         mCallManager.registerCallInterfaceChanged(mICallChangedListener);
@@ -298,6 +289,27 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         return builder.toString();
     }
 
+    @Override
+    public void onLocationChanged(Location location) {
+        if (Utilities.DEBUG) Log.i(TAG, "onLocationChanged");
+        mSosLocation = location;
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+        // Do nothing.
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+        // Do nothing.
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+        // Do nothing.
+    }
+
     /**
      * Closes the object. This object is not usable after being closed.
      */
@@ -305,15 +317,21 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public void close() {
         if (Utilities.DEBUG) Log.i(TAG, "The call session(" + this + ") will be closed.");
 
-        if (mInSRVCC) {
+        if (mCallManager.isInSRVCC()) {
             Log.d(TAG, "In SRVCC process, this call session will be closed after SRVCC success.");
             return;
         }
 
-        updateState(State.INVALID);
+        mCallProfile = null;
+        mListener = null;
+        mImsStreamMediaProfile = null;
+        mVideoCallProvider = null;
+        mCallStateTracker = null;
 
-        if (mCursor != null) {
-            mCursor.close();
+        if (mLocationManager != null) {
+            mLocationManager.removeUpdates(this);
+            mSosLocation = null;
+            mLocationManager = null;
         }
     }
 
@@ -458,37 +476,52 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
 
-        Matcher m = PATTERN_SUPP_SERVICE.matcher(callee);
-        // Is this formatted like a standard supplementary service code?
-        if (m.matches()) {
-            startUssdCall(callee);
-            return;
+        // Check if emergency call.
+        boolean isPhoneInEcmMode =
+                SystemProperties.getBoolean(TelephonyProperties.PROPERTY_INECM_MODE, false);
+        boolean isEmergencyNumber = PhoneNumberUtils.isEmergencyNumber(callee);
+        boolean forceSosCall = SystemProperties.getBoolean(PROP_KEY_FORCE_SOS_CALL, false);
+        Log.i(TAG, "Emergency isPhoneInEcmMode = " + isPhoneInEcmMode +
+                " isEmergencyNumber = " + isEmergencyNumber);
+
+        // todo: need location for some special Operator
+        boolean isNeedGeoLocation = false;
+        if (isEmergencyNumber || forceSosCall) {
+            isNeedGeoLocation = true;
+        }
+        if (isNeedGeoLocation) {
+            mLocationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+            List<String> providers = mLocationManager.getProviders(true);
+            String locationProvider = null;
+            if (providers.contains(LocationManager.GPS_PROVIDER)) {
+                locationProvider = LocationManager.GPS_PROVIDER;
+            } else if (providers.contains(LocationManager.NETWORK_PROVIDER)) {
+                locationProvider = LocationManager.NETWORK_PROVIDER;
+            } else {
+                Log.w(TAG, "Failed to get the location provider.!");
+            }
+            if (Utilities.DEBUG) {
+                Location netLocation = mLocationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                if (netLocation != null) Log.w(TAG, "NETWORK_PROVIDER:get Latitude = " + netLocation.getLatitude() + "get Longitude=" + netLocation.getLongitude());
+                Location passiveLocation = mLocationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
+                if (passiveLocation != null) Log.w(TAG, "PASSIVE_PROVIDER:get Latitude = " + passiveLocation.getLatitude() + "get Longitude=" + passiveLocation.getLongitude());
+                Location gpsLocation = mLocationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                if (gpsLocation != null) Log.w(TAG, "GPS LOCATION:get Latitude = " + gpsLocation.getLatitude() + "get Longitude=" + gpsLocation.getLongitude()); 
+            }
+            if (!TextUtils.isEmpty(locationProvider)) {
+                mSosLocation = mLocationManager.getLastKnownLocation(locationProvider);
+                mLocationManager.requestLocationUpdates(locationProvider, 1000, 2.0f, this);
+            } else {
+                mLocationManager = null;
+                mSosLocation = null;
+                Log.w(TAG, "Failed to get provider the location info!");
+            }
         }
 
-        // Check if emergency call.
-        boolean isEmergencyNumber = PhoneNumberUtils.isEmergencyNumber(callee);
-        String sosNumber = SystemProperties.get(PROP_KEY_FORCE_SOS_CALL, null);
-        boolean forceSos = callee.equals(sosNumber);
-        Log.d(TAG, "If the phone number is emergency number: " + isEmergencyNumber);
-
-        // Update the participants and call profile.
-        mParticipants.add(callee);
-
-        // TODO: Update the profile but not replace.
-        mCallProfile = profile;
-        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, callee);
-        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_CALL_RAT_TYPE, ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN);
-
-        if (isEmergencyNumber || forceSos) {
-            startEmergencyCall(callee);
+        if (isEmergencyNumber || forceSosCall) {
+            startEmergencyCall(callee, profile);
         } else {
-            startCall(callee);
+            startNormalCall(callee, profile);
         }
     }
 
@@ -543,12 +576,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, participants[0]);
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
         // TODO: why not {@link ImsCallProfile#OIR_DEFAULT}
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_CALL_RAT_TYPE, ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN);
+        mCallProfile.setCallExtraInt(ImsCallProfile.EXTRA_CNAP,
+                ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+        mCallProfile.setCallExtraInt(ImsCallProfile.EXTRA_OIR,
+                ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
 
         StringBuilder phoneNumbers = new StringBuilder();
         for (int i = 0; i < participants.length; i++) {
@@ -697,8 +728,20 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         ImsCallSessionImpl confSession = mCallManager.getConfCallSession();
         if (confSession != null) {
             ImsCallSessionImpl hostSession = confSession.getHostCallSession();
-            if (this.equals(hostSession)) {
-                // Terminate the conference call and the close it.
+            if (this.equals(confSession)
+                    && hostSession != null
+                    && hostSession.getState() > State.INVALID
+                    && hostSession.getState() < State.TERMINATED) {
+                // The conference call already connected, but the host call do not accept the
+                // invite. If terminate the conference call, we need terminate the host call.
+                hostSession.terminate(reason);
+                hostSession.close();
+            } else if (this.equals(hostSession)
+                    && confSession != null
+                    && confSession.getState() > State.INVALID
+                    && confSession.getState() < State.TERMINATED) {
+                // The conference call already outgoing but not connect. If terminate the host
+                // call, we need terminate the conference call and the close it.
                 confSession.terminate(reason);
                 confSession.close();
             }
@@ -750,6 +793,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     private void handleHoldActionFailed(String failMessage) throws RemoteException {
         Log.e(TAG, failMessage);
+        Toast.makeText(mContext, R.string.vowifi_call_retry, Toast.LENGTH_LONG).show();
         if (mListener != null) {
             mListener.callSessionHoldFailed(this, new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED,
                     ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
@@ -1092,6 +1136,27 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     /**
+     * Initiate an USSD call.
+     *
+     * @param ussd uri to send
+     */
+    private void startUssdCall(String ussdMessage) throws RemoteException {
+        if (Utilities.DEBUG) Log.i(TAG, "Start an ussd call: " + ussdMessage);
+
+        int id = mICall.sessCall(ussdMessage, null, true, false, true, false);
+        if (id == Result.INVALID_ID) {
+            handleStartActionFailed("Native start the ussd call failed.");
+        } else {
+            mCallId = id;
+            updateState(State.INITIATED);
+            mIsAlive = true;
+
+            // Start action success, update the last call action as start.
+            updateRequestAction(VoWifiCallStateTracker.ACTION_START);
+        }
+    }
+
+    /**
      * Returns a binder for the video call provider implementation contained within the IMS service
      * process. This binder is used by the VideoCallProvider subclass in Telephony which
      * intermediates between the propriety implementation and Telecomm/InCall.
@@ -1128,7 +1193,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if (TextUtils.isEmpty(phoneNumber)) return null;
 
         for (String participant : mParticipants) {
-            if (isSameCallee(participant, phoneNumber)) {
+            if (Utilities.isSameCallee(participant, phoneNumber)) {
                 return participant;
             }
         }
@@ -1168,6 +1233,19 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if (mCallStateTracker != null) mCallStateTracker.updateCallState(state);
     }
 
+    public void updateCallType(int newType) {
+        if (mCallProfile == null) return;
+
+        mCallProfile.mCallType = newType;
+        try {
+            if (mListener != null) {
+                mListener.callSessionUpdated(this, mCallProfile);
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to update the call type as catch the RemoteException e: " + e);
+        }
+    }
+
     public void updateRequestAction(int requestAction){
         if (mCallStateTracker != null)  mCallStateTracker.updateRequestAction(requestAction);
     }
@@ -1197,16 +1275,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         return mAudioStart;
     }
 
-    public boolean isEmergencyCall() {
-        return mIsEmergency;
-    }
-
     public String removeCallee(String phoneNumber) {
         if (TextUtils.isEmpty(phoneNumber)) return null;
 
         for (int i = 0; i < mParticipants.size(); i++) {
             String participant = mParticipants.get(i);
-            if (isSameCallee(participant, phoneNumber)) {
+            if (Utilities.isSameCallee(participant, phoneNumber)) {
                 mParticipants.remove(i);
                 return participant;
             }
@@ -1290,6 +1364,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mParticipantSessions.put(phoneNumber, callSession);
     }
 
+    public String getParticipantSessionId(String phoneNumber) {
+        ImsCallSessionImpl session = mParticipantSessions.get(phoneNumber);
+        if (session != null) {
+            return session.getCallId();
+        } else {
+            return String.valueOf(Result.INVALID_ID);
+        }
+    }
+
     public void removeParticipant(String phoneNumber) {
         if (TextUtils.isEmpty(phoneNumber)) {
             Log.e(TAG, "Can not remove the participant for the number: " + phoneNumber);
@@ -1304,7 +1387,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
         if (infoList == null) return;
 
-        mInSRVCC = true;
         if (mParticipantSessions.size() > 0) {
             // If this call is conference, we need prepare she SRVCC call info for each child.
             Iterator<Entry<String, ImsCallSessionImpl>> iterator =
@@ -1378,9 +1460,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
 
         try {
-            // The call will be relaeased if the SRVCC success, update the mInSRVCC state.
-            mInSRVCC = false;
-
             int res = Result.FAIL;
             if (isConferenceCall()) {
                 res = mICall.confRelease(mCallId);
@@ -1400,6 +1479,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             }
 
             // Even native failed, we'd like to remove this call from the list.
+            updateState(State.TERMINATED);
             mCallManager.removeCall(this);
             return res;
         } catch (RemoteException e) {
@@ -1419,9 +1499,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
 
         try {
-            // update the SRVCC result as SRVCC canceled or failed, update the mInSRVCC state.
-            mInSRVCC = false;
-
             int res = Result.FAIL;
             if (isConferenceCall()) {
                 res = mICall.confUpdateSRVCCResult(mCallId, srvccResult);
@@ -1680,10 +1757,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 if (mListener != null) {
                     mListener.callSessionUpdateFailed(this, new ImsReasonInfo());
                 }
-                // Show toast for failed action.
-                int toastTextResId = isVideo ? R.string.vowifi_add_video_failed
-                        : R.string.vowifi_remove_video_failed;
-                Toast.makeText(mContext, toastTextResId, Toast.LENGTH_LONG).show();
             }
             return res;
         } catch (RemoteException e) {
@@ -1790,15 +1863,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
         try {
             int res = Result.SUCCESS;
-            if (mICall != null && mCallId > 0) {
+            if (mICall != null) {
                 if (isConferenceCall()) {
                     res = mICall.confTerm(mCallId, reason);
                 } else {
                     res = mICall.sessTerm(mCallId, reason);
                 }
             } else {
-                Log.w(TAG, "Can not send the terminate action as call interface is null or id is "
-                        + mCallId);
+                Log.w(TAG, "Call interface is null, can not send the terminate action.");
             }
 
             if (res == Result.SUCCESS) {
@@ -1858,46 +1930,104 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
     }
 
-    private CallCursor getCallCursor() {
-        Uri callUri = Uri.parse(ProviderUtils.CONTENT_URI + "/" + ProviderUtils.FUN_CALL);
-        Cursor cursor = mContext.getContentResolver().query(callUri, null, null, null, null);
-        if (cursor == null || cursor.getCount() < 1) return null;
-
-        return new CallCursor(cursor);
-    }
-
-    private void startEmergencyCall(String callee) throws RemoteException {
+    private void startEmergencyCall(String callee, ImsCallProfile profile) {
         if (Utilities.DEBUG) Log.i(TAG, "Try to start the emergency call.");
 
-        // Set this call is emergency call.
         mIsEmergency = true;
+        mParticipants.add(callee);
 
-        boolean sosAsNormal = mCursor != null ? mCursor.sosAsNormalCall() : true;
-        if (sosAsNormal) {
-            // Start an emergency call directly.
-            startCall(callee);
+        mCallProfile = profile;
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, callee);
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
+        mCallProfile.setCallExtraInt(
+                ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+        mCallProfile.setCallExtraInt(
+                ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+
+        boolean isPhoneInEcmMode =
+                SystemProperties.getBoolean(TelephonyProperties.PROPERTY_INECM_MODE, false);
+
+        if (isPhoneInEcmMode) {
+            mCallManager.enterECBMWithCallSession(this);
         } else {
-            boolean needRemoveOldS2b = mCursor != null ? mCursor.sosNeedRemoveOldS2b() : false;
-            ECBMRequest request = ECBMRequest.get(needRemoveOldS2b);
-            mCallManager.enterECBMWithCallSession(this, request);
+            // make an emergency session directly without Em-PDN and Em-Register.
+            try {
+                startCall(callee);
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to start the emergency call as catch the e: " + e);
+            }
         }
+    }
+
+    private void startNormalCall(String callee, ImsCallProfile profile) throws RemoteException {
+        if (Utilities.DEBUG) Log.i(TAG, "Try to start the normal call.");
+
+        // As the vowifi service is null, need add this action to pending action.
+        if (mICall == null) {
+            synchronized (mPendingActions) {
+                String key = String.valueOf(System.currentTimeMillis());
+                PendingAction action = new PendingAction("start", MSG_START, callee, profile);
+                mPendingActions.put(key, action);
+            }
+            return;
+        }
+
+        // The vowifi service is not null, init the IMS call.
+        mParticipants.add(callee);
+
+        // TODO: update the profile
+        mCallProfile = profile;
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, callee);
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
+        // TODO: why not {@link ImsCallProfile#OIR_DEFAULT}
+        mCallProfile.setCallExtraInt(
+                ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+        mCallProfile.setCallExtraInt(
+                ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+
+        startCall(callee);
     }
 
     private void startCall(String callee) throws RemoteException {
         if (Utilities.DEBUG) {
-            Log.i(TAG, "Start the call with the callee: " + callee);
+            Log.i(TAG, "Start the call with the callee: " + callee + ", mSosLocation: "
+                    + mSosLocation);
         }
 
-        String peerNumber = callee;
-        if (mIsEmergency) {
-            peerNumber = EMUtils.getEmergencyCallUrn(
-                    mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO));
-            Log.d(TAG, "Start an emergency call with peerNumber: " + peerNumber);
+        Matcher m = PATTERN_SUPP_SERVICE.matcher(callee);
+        // Is this formatted like a standard supplementary service code?
+        if (m.matches()) {
+            startUssdCall(callee);
+            return;
         }
+
         // Start the call.
         boolean isVideoCall = Utilities.isVideoCall(mCallProfile.mCallType);
-        int id = mICall.sessCall(peerNumber, null, true, isVideoCall, false, mIsEmergency);
-        Log.d(TAG, "Start a call, and get the call id: " + id);
+
+        int id = Result.INVALID_ID;
+
+        // todo: need location for some special Operator
+        boolean isNeedGeoLocation = false;
+        if (mIsEmergency) {
+            isNeedGeoLocation = true;
+        }
+        if (isNeedGeoLocation) {
+            double latitude = mSosLocation == null ? 0 : mSosLocation.getLatitude();
+            double longitude = mSosLocation == null ? 0 : mSosLocation.getLongitude();
+            Log.i(TAG, "set session call with latitude= " + latitude + ";longitude=" + longitude);
+            mICall.sessCallSetGeolocation(latitude, longitude);
+        }
+
+        String peerNumber = callee; //default
+        if (mIsEmergency) {
+            peerNumber = mCallManager.getEmergencyCallUrn(
+                    mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO));
+            Log.d(TAG, "Start an emergency call.");
+        }
+        id = mICall.sessCall(peerNumber, null, true, isVideoCall, false, mIsEmergency);
+
+        Log.d(TAG, "Start a normal call, and get the call id: " + id);
+
         if (id == Result.INVALID_ID) {
             handleStartActionFailed("Native start the call failed.");
         } else {
@@ -1911,28 +2041,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
     }
 
-    /**
-     * Initiate an USSD call.
-     *
-     * @param ussd uri to send
-     */
-    private void startUssdCall(String ussdMessage) throws RemoteException {
-        if (Utilities.DEBUG)
-            Log.i(TAG, "Start an ussd call: " + ussdMessage);
-
-        int id = mICall.sessCall(ussdMessage, null, true, false, true, false);
-        if (id == Result.INVALID_ID) {
-            handleStartActionFailed("Native start the ussd call failed.");
-        } else {
-            mCallId = id;
-            updateState(State.INITIATED);
-            mIsAlive = true;
-
-            // Start action success, update the last call action as start.
-            updateRequestAction(VoWifiCallStateTracker.ACTION_START);
-        }
-    }
-
     private void inviteThisCallToConference(ImsCallSessionImpl confSession,
             IImsCallSessionListener hostlistener) throws RemoteException {
         if (Utilities.DEBUG) {
@@ -1940,7 +2048,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     + confSession.getCallId());
         }
 
-        // Invite the this call session as the participants.
+        // Invite this call session as the participants.
         int res = mICall.confAddMembers(
                 Integer.valueOf(confSession.getCallId()), null, new int[] { mCallId });
         if (res == Result.SUCCESS) {
@@ -2014,8 +2122,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
             imsCallProfile.setCallExtraInt(
                     ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-            imsCallProfile.setCallExtraInt(
-                    ImsCallProfile.EXTRA_CALL_RAT_TYPE, ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN);
 
             imsCallProfile.setCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE, true);
             ImsCallSessionImpl newConfSession =
@@ -2096,27 +2202,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 : mCallProfile.getCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE, false));
     }
 
-    private boolean isSameCallee(String calleeNumber, String phoneNumber) {
-        if (TextUtils.isEmpty(calleeNumber)
-                || TextUtils.isEmpty(phoneNumber)) {
-            return false;
-        }
-
-        if (phoneNumber.indexOf(calleeNumber) >= 0
-                || calleeNumber.indexOf(phoneNumber) >= 0) {
-            return true;
-        } else if (calleeNumber.startsWith("0")) {
-            // Sometimes, the phone number will be start will 0, we'd like to sub the string.
-            String tempCallee = calleeNumber.substring(1);
-            if (phoneNumber.indexOf(tempCallee) >= 0
-                    || tempCallee.indexOf(phoneNumber) >= 0) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private String[] findNeedRemove(String[] participants) {
         String[] remove = new String[participants.length];
         int index = 0;
@@ -2160,4 +2245,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
     }
 
+    public boolean getIsEmergency() {
+        return mIsEmergency;
+    }
 }

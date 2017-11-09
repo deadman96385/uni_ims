@@ -28,16 +28,7 @@
 <string name="remote_reject_request">"Kërkesa në distancë u refuzua"</string>
 <string name="remote_accept_request">"Kërkesa në distancë u pranua"</string>
 <string name="callFailed_fdn_only">"Telefonatat dalëse ndalohen nga FDN"</string>
-    <string name="camera_open_fail">"Hapja e kamerës dështoi"</string>
-     <string name="ims_switch_failed">"Gabim rrjeti, ju lutem provoni përsëri më vonë"</string>
-     <string name="videophone_fallback_menu_videocall">Telefonatë video</string>
-     <string name="videophone_fallback_menu_voicecall">Telefonatë me zë</string>
-     <string name="videophone_fallback_menu_cancel">Anulo</string>
-     <string name="videophone_fallback_question">Çfarë doni të bëni?</string>
-     <string name="low_battery_warning_media_alert_message">"Niveli i baterisë është nën 15%. Ju lutem zgjidhni nëse doni të pranoni ose refuzoni."</string>
-     <string name="low_battery_warning_title">"Paralajmërim i baterisë së ulët"</string>
-     <string name="low_battery_warning_message">"Niveli i baterisë është nën 15%. Doni që të vazhdoni me telefonatën video apo ta konvertoni në telefonatë me zë?"</string>
-     <string name="low_battery_continue_video_call">Po</string>
-     <string name="low_battery_convert_to_voice_call">"Konverto"</string>
+<string name="camera_open_fail">"Hapja e kamerës dështoi"</string>
+<string name="ims_switch_failed">"Gabim rrjeti, ju lutem provoni përsëri më vonë"</string>
 
 </resources>

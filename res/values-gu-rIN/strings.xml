@@ -28,18 +28,12 @@
 <string name="remote_reject_request">"રિમોટ સંબંધિત વિનંતી નકારે છે"</string>
 <string name="remote_accept_request">"રિમોટ સંબંધિત વિનંતી સ્વીકારવામાં આવે છે"</string>
 <string name="callFailed_fdn_only">"એફડીએન દ્વારા આઉટગોઈંગ કોલ્સ નિયંત્રિત છે"</string>
-    <string name="camera_open_fail">"કેમેરો ખોલવામાં નિષ્ફળ ગયો"</string>
-     <string name="ims_switch_failed">"નેટવર્કમાં ખામી, કૃપા કરી ફરી પ્રયાસ કરશો"</string>
-     <string name="videophone_fallback_menu_videocall">"વિડિયો કોલ"</string>
-     <string name="videophone_fallback_menu_voicecall">"વોઇસ કોલ"</string>
-     <string name="videophone_fallback_menu_cancel">"રદ્દ"</string>
-     <string name="videophone_fallback_question">"તમારે શું કરવું છે?"</string>
-     <string name="low_battery_warning_media_alert_message">"તમારી બેટરીનું સ્તર 15% થી ઓછું.કૃપા કરીને સ્વિકારવા અથવા નકારવાનું પસંદ કરો"</string>
-     <string name="low_battery_warning_title">"નીચી બેટરીની  ચેતવણી"</string>
-     <string name="low_battery_warning_message">"તમારી બૅટરીનું સ્તર 15%થી નીચે છે.શું તમે વિડિઓ કૉલ ચાલુ રાખવા માંગો છો કે પછી  વૉઇસ કૉલમાં  રૂપાંતરિત કરવા માંગો છો?"</string>
+<string name="camera_open_fail">"કેમેરો ખોલવામાં નિષ્ફળ ગયો"</string>
+<string name="ims_switch_failed">"નેટવર્કમાં ખામી, કૃપા કરી ફરી પ્રયાસ કરશો"</string>
+    <string name="low_battery_warning_media_alert_message">"તમારી બૅટરી 15% થી ઓછી છે. કૃપા કરીને સ્વીકાર અથવા અસ્વીકાર ચૂંટો."</string>
+     <string name="low_battery_warning_title">"ઓછી બૅટરીની ચેતવણી"</string>
+     <string name="low_battery_warning_message">"તમારી બૅટરી 15% થી ઓછી છે. શું તમે વિડિઓ કૉલ ચાલુ રાખવા અથવા વિડિઓ કૉલમાં ફેરવવા માગો છો?"</string>
      <string name="low_battery_continue_video_call">"હા"</string>
-     <string name="low_battery_convert_to_voice_call">"રૂપાંતર કરો"</string>
+     <string name="low_battery_convert_to_voice_call">"ફેરવો"</string>
 
-    <string name="vowifi_attation">"Vowifi ધ્યાન કેન્દ્રિત"</string>
-     <string name="vowifi_regist_fail_content">"નેટવર્ક Vowifi ટેકો આપતો નથી"</string>
 </resources>

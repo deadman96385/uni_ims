@@ -30,29 +30,15 @@
     <string name="callFailed_fdn_only">Outgoing calls are restricted by FDN</string>
     <string name="camera_open_fail">Camera open fail</string>
     <string name="ims_switch_failed">Network error, please try again later</string>
-    <string-array name="videophone_fallback_menu">
-        <item>@string/videophone_fallback_menu_videocall</item>
-        <item>@string/videophone_fallback_menu_voicecall</item>
-        <item>@string/videophone_fallback_menu_cancel</item>
-    </string-array>
-    <string name="videophone_fallback_menu_videocall">Video Call</string>
-    <string name="videophone_fallback_menu_voicecall">Voice Call</string>
-    <string name="videophone_fallback_menu_cancel">Cancel</string>
-    <string name="videophone_fallback_question">What do you want to do?</string>
-    <!-- SPRD: Add feature of low battery for Reliance @{ -->
+    <!-- SPRD: Add for bug579975 @{ -->
     <string name="low_battery_warning_media_alert_message">"Your battery level is below 15%.Please choose accept or reject."</string>
     <string name="low_battery_warning_title">"Low Battery Warning"</string>
     <string name="low_battery_warning_message">"Your battery level is below 15%.Do you want to continue with the video call or covert to voice call?"</string>
     <string name="low_battery_continue_video_call">"Yes"</string>
     <string name="low_battery_convert_to_voice_call">"Convert"</string>
-    <!-- @} -->
-    <string name="vowifi_register_error">Network does not support vowifi</string>
     <string name="handover_to_volte_success">Switching to VoLTE for better Voice quality</string>
+    <string name="vowifi_regist_fail_content">vowifi network issue, please reuse this service five minutes later</string>
     <string name="vowifi_attation">Vowifi attention</string>
-    <string name="vowifi_regist_fail_content">Network does not support vowifi</string>
-    <string name="vowifi_connected_title">Emergency calls via Wi-Fi Calling</string>
-    <string name="vowifi_connected_continue">Continue</string>
-    <string name="vowifi_connected_disable">Disable</string>
-    <string name="vowifi_connected_checkbox_text">do not show again</string>
-    <string name="vowifi_connected_message">Emergency calls are not possible via WiFi-Calling, The device switches auto to a cellular net work (2G/3G) to place an emergency call. Do you want to continue WiFi-Calling service or disable Wi-Fi calling?</string>
+    <string name="vowifi_register_error">Network does not support vowifi</string>
+    <!-- @} -->
 </resources>

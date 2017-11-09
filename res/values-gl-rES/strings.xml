@@ -28,16 +28,7 @@
 <string name="remote_reject_request">"Solicitude externa rexeitada"</string>
 <string name="remote_accept_request">"Solicitude externa aceptada"</string>
 <string name="callFailed_fdn_only">"As chamadas saínter están restrinxidas por FDN"</string>
-    <string name="camera_open_fail">"Error de apertura de cámara"</string>
-     <string name="ims_switch_failed">"Erro de rede, volva a inténtalo máis tarde"</string>
-     <string name="videophone_fallback_menu_videocall">VÍDEOCHAMADA</string>
-     <string name="videophone_fallback_menu_voicecall">Chamada de voz</string>
-     <string name="videophone_fallback_menu_cancel">cancelar</string>
-     <string name="videophone_fallback_question">¿Que quere facer?</string>
-     <string name="low_battery_warning_media_alert_message">"O nivel da batería é inferior ó 15%. Elixa aceptar ou eliminar."</string>
-     <string name="low_battery_warning_title">"Advertenza de batería baixa"</string>
-     <string name="low_battery_warning_message">""O nivel da súa batería é inferior 15%. ¿Desexa continuar coa chamada de vídeo o converter a chamada de voz?"</string>
-     <string name="low_battery_continue_video_call">Sí</string>
-     <string name="low_battery_convert_to_voice_call">"Converter"</string>
+<string name="camera_open_fail">"Error de apertura de cámara"</string>
+<string name="ims_switch_failed">"Erro de rede, volva a inténtalo máis tarde"</string>
 
 </resources>

@@ -30,15 +30,9 @@
 <string name="callFailed_fdn_only">"ଆଉଟଗୋ‌ଇଂ କଲ୍‌ଗୁଡିକ FDN ଦ୍ୱାରା କଟକଣାକୃତ"</string>
 <string name="camera_open_fail">"କ୍ୟାମେରା ଓପନ୍‌ ବିଫଳ"</string>
 <string name="ims_switch_failed">"ନେଟୱାର୍କ ତ୍ରୁଟି, ପରେ ଦୟାକରି ପୁନର୍ବାର ଚେଷ୍ଟାକରନ୍ତୁ"</string>
-<string name="videophone_fallback_menu_videocall">"ଭିଡିଓ ଡାକ"</string>
-<string name="videophone_fallback_menu_voicecall">"ଧ୍ୱନି ଡାକ"</string>
-<string name="videophone_fallback_menu_cancel">"ବାତିଲ କରନ୍ତୁ"</string>
-<string name="videophone_fallback_question">"ଆପଣ କଣ କରିବାକୁ ଚାହୁଁଛନ୍ତି?"</string>
 <string name="low_battery_warning_media_alert_message">"ଆପଣଙ୍କର ବ୍ୟାଟେରି ସ୍ତର 15%ରୁ ତଳେ ଅଛି | ଦୟାକରି ଆକ୍ସେପ୍ଟ କିମ୍ବା ରିଜେକ୍ଟ ବାଛନ୍ତୁ |"</string>
 <string name="low_battery_warning_title">"ଲୋ ବ୍ୟାଟେରୀ ଚେତାବନୀ"</string>
 <string name="low_battery_warning_message">"ଆପଣଙ୍କ ବ୍ୟାଟେରୀ ସ୍ତର 15%ରୁ ତଳକୁ ରହିଛି। ଆପଣ ଭିଡିଓ କଲ୍ ଜାରି ରଖିବା ପାଇଁ ଚାହାଁନ୍ତି କିମ୍ବା ଭଏସ୍ କଲ୍ କୁ ରୂପାନ୍ତରିତ କରିବା ପାଇଁ ଚାହାଁନ୍ତି?"</string>
 <string name="low_battery_continue_video_call">"ହଁ"</string>
 <string name="low_battery_convert_to_voice_call">"ରୂପାନ୍ତର କରନ୍ତୁ"</string>
-<string name="vowifi_attation">"ଭିଓୱାଇଫାଇ ପ୍ରତି ଧ୍ୟାନ ଦିଅନ୍ତୁ"</string>
-<string name="vowifi_regist_fail_content">"ନେଟୱର୍କ ଭିଓୱାଇଫାଇ ସପୋର୍ଟ କରୁନାହିଁ"</string>
 </resources>
