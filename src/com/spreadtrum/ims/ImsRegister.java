@@ -155,10 +155,16 @@ public class ImsRegister {
                 mNumeric = mTelephonyManager.getNetworkOperatorForPhone(mPhoneId);
                 mVolteConfig.loadVolteConfig(mContext);
                 boolean isSimConfig = getSimConfig();
+                log("EVENT_ENABLE_IMS : no need sim card HOME PLMN isSimConfig = " + isSimConfig);
+                log("EVENT_ENABLE_IMS : NetworkPLMNis mNumeric = " + mNumeric);
                 if(!(mLastNumeric.equals(mNumeric))) {
-                    if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric))){
+                    // no need sim card HOME PLMN 
+//                    if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric))){
+                    if(getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric))){
                           mCi.enableIms(null);
-                    } else if(isSimConfig && getNetworkConfig(mLastNumeric) && !(getNetworkConfig(mNumeric))){
+                    // no need sim card HOME PLMN
+//                    } else if(isSimConfig && getNetworkConfig(mLastNumeric) && !(getNetworkConfig(mNumeric))){
+                    } else if(getNetworkConfig(mLastNumeric) && !(getNetworkConfig(mNumeric))){
                           mCi.disableIms(null);
                     }
                     mLastNumeric = mNumeric;
