@@ -40,6 +40,8 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     private PowerManager.WakeLock mPartialWakeLock;
     private Message mCallIdMessage;
     private boolean mIsVideo;//SPRD:add for bug563112
+    public boolean mIsVoiceRingTone = false;//SPRD: add for bug677255
+    public boolean mIsOrigionVideo = false;
 
     /** volte media event code. */
     private static final int EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 500;
@@ -120,6 +122,9 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         createWakeLock(mContext.getApplicationContext());
         if(mImsCallSessionImpl.mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT){
            onVTConnectionEstablished(mImsCallSessionImpl);
+           log("ImsVideoCallProvider mIsOrigionVideo = true");
+           mIsOrigionVideo = true;
+           mIsVoiceRingTone = false;
         }
         mNegotiatedCallProfile.mCallType = mImsCallSessionImpl.mImsCallProfile.mCallType;
         mNegotiatedCallProfile.mMediaProfile.mAudioQuality =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mAudioQuality;
@@ -380,15 +385,27 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
              mIsVideo = true;//SPRD:add for bug563112
              responseProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
              onVTConnectionEstablished(session);
+
+             if(session.getState() == ImsCallSession.State.NEGOTIATING && !mIsOrigionVideo && !session.mImsDriverCall.isMT) {
+                 log("updateNegotiatedCallProfilee->set mIsVoiceRingTone = true");
+                 mIsVoiceRingTone = true;
+             }
          } else {
              /* SPRD:add for bug563112 @{ */
-             if(mIsVideo && (session != null && session.mImsDriverCall != null)){
+             if(mIsVideo && (session != null && session.mImsDriverCall != null)&&!mIsVoiceRingTone){
 
                  Toast.makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();//modify by bug593544
              }
              /* @} */
              onVTConnectionDisconnected(session);
          }
+
+         if (session.getState() == ImsCallSession.State.ESTABLISHED && mIsVoiceRingTone) {
+             //SPRD: add for bug677255
+             log("updateNegotiatedCallProfilee->set mIsVoiceRingTone false");
+             mIsVoiceRingTone = false;
+         }
+
          if (mLocalRequestProfile != null) {
              int result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_FAIL;
              if(mImsCallSessionImpl.getLocalRequestProfile().mCallType == imsCallProfile.mCallType
