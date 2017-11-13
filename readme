@@ -1,0 +1,7 @@
+if you modify Android.mk for ims,
+Please keep the following variables consistent with: vendor/sprd/proprietories-source/proprietories-prebuilt/Android.mk
+LOCAL_MODULE
+LOCAL_MODULE_TAGS
+LOCAL_MODULE_CLASS
+LOCAL_CERTIFICATE
+LOCAL_DEX_PREOPT

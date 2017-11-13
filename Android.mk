@@ -15,7 +15,8 @@ LOCAL_STATIC_JAVA_LIBRARIES := \
     android.hardware.radio.deprecated-V1.0-java-static \
     vendor.sprd.hardware.radio-V1.0-java-static
 
-LOCAL_DEX_PREOPT := nostripping
+LOCAL_PRIVILEGED_MODULE := true
+
 LOCAL_PROGUARD_ENABLED := disabled
 LOCAL_PROTOC_OPTIMIZE_TYPE := micro
 
