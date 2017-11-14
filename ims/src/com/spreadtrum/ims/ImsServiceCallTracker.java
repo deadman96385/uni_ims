@@ -514,4 +514,43 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     public int getServiceId(){
         return mServiceId;
     }
+
+    public boolean hasRingingCall(){
+        synchronized(mSessionList) {
+            for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it =
+                    mSessionList.entrySet().iterator(); it.hasNext();) {
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+                if (e.getValue().isRingingCall()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean isAllConferenceCallActive(){
+        synchronized(mSessionList) {
+            for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it =
+                    mSessionList.entrySet().iterator(); it.hasNext();) {
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+                if (e.getValue().isMultiparty() && !e.getValue().isActiveCall()) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    public boolean isAllConferenceCallHeld(){
+        synchronized(mSessionList) {
+            for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it =
+                    mSessionList.entrySet().iterator(); it.hasNext();) {
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+                if (e.getValue().isMultiparty() && !e.getValue().isBackgroundCall()) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 }

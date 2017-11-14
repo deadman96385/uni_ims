@@ -862,7 +862,35 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
      */
     @Override
     public void removeParticipants(String[] participants){
-
+        if(isImsSessionInvalid()){
+            Log.w(TAG, "removeParticipants-> ImsSessionInvalid!");
+            return;
+        }
+        Log.i(TAG, "removeParticipants-> participants:"+participants
+                + " isMultiparty():"+isMultiparty()
+                + " isForegroundCall():"+isForegroundCall()
+                + " isBackgroundCall():"+isBackgroundCall()
+                + " hasRingingCall():"+mImsServiceCallTracker.hasRingingCall());
+        if(participants != null && participants.length > 0
+                && "all".equals(participants[0])
+                && isMultiparty()){
+            if(isForegroundCall()){
+                if(mImsServiceCallTracker.isAllConferenceCallActive() && !mImsServiceCallTracker.hasRingingCall()){
+                    mCi.hangupForegroundResumeBackground(mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
+                } else {
+                    mImsServiceCallTracker.hangupAllMultipartyCall(true);
+                }
+            } else if(isBackgroundCall()){
+                if(mImsServiceCallTracker.isAllConferenceCallHeld() && !mImsServiceCallTracker.hasRingingCall()){
+                    mCi.hangupWaitingOrBackground(mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
+                } else {
+                    mImsServiceCallTracker.hangupAllMultipartyCall(false);
+                }
+            } else {
+                mCi.hangupConnection(mImsDriverCall.index,
+                        mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
+            }
+        }
     }
 
     /**
@@ -1000,6 +1028,17 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     public boolean isBackgroundCall(){
         return (mImsDriverCall != null && mImsDriverCall.state == ImsDriverCall.State.HOLDING);
+    }
+
+    public boolean isActiveCall(){
+        return (mImsDriverCall != null &&
+                mImsDriverCall.state == ImsDriverCall.State.ACTIVE);
+    }
+
+    public boolean isRingingCall(){
+        return (mImsDriverCall != null &&
+                (mImsDriverCall.state == ImsDriverCall.State.INCOMING
+                || mImsDriverCall.state == ImsDriverCall.State.WAITING));
     }
 
     /* SPRD: add for bug 552691 @{ */
