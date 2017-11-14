@@ -21,6 +21,8 @@ import com.android.internal.telephony.TeleUtils;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.IccRefreshResponse;
 import com.android.internal.telephony.uicc.IsimUiccRecords;
+import com.android.internal.telephony.uicc.UiccCardApplication;
+
 import android.os.AsyncResult;
 import android.os.Looper;
 import android.util.Log;
@@ -54,6 +56,14 @@ public class ImsRegister {
     private String mNumeric;
     private String mLastNumeric="";
 
+    // add for customer sim hot plugin
+    private boolean mSIMLoaded;
+    private UiccController mUiccController;
+    private IccRecords mIccRecords = null;
+    private UiccCardApplication mUiccApplcation = null;
+    private static final int EVENT_ICC_CHANGED                       = 201;
+    private static final int EVENT_RECORDS_LOADED                    = 202;
+
     protected static final int EVENT_RADIO_STATE_CHANGED               = 105;
     protected static final int EVENT_INIT_ISIM_DONE                    = 106;
     protected static final int EVENT_IMS_BEARER_ESTABLISTED            = 107;
@@ -79,6 +89,9 @@ public class ImsRegister {
         mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
         //SPRD: Add for Bug 628274
         mCi.registerForIccRefresh(mHandler, EVENT_SIM_REFRESH, null);
+        // add for customer sim hot plugin
+        mUiccController = UiccController.getInstance();
+        mUiccController.registerForIccChanged(mHandler, EVENT_ICC_CHANGED, null);
     }
 
     private class BaseHandler extends Handler {
@@ -90,6 +103,15 @@ public class ImsRegister {
             log("handleMessage msg=" + msg);
             AsyncResult ar = (AsyncResult) msg.obj;
             switch (msg.what) {
+                // add for customer sim hot plugin
+                case EVENT_ICC_CHANGED:
+                    onUpdateIccAvailability();
+                    break;
+                case EVENT_RECORDS_LOADED:
+                    log("EVENT_RECORDS_LOADED");
+                    mSIMLoaded = true;
+                    initISIM();
+                    break;
                 case EVENT_RADIO_STATE_CHANGED:
                     if (mPhone.isRadioOn()) {
                         log("EVENT_RADIO_STATE_CHANGED -> radio is on");
@@ -192,7 +214,13 @@ public class ImsRegister {
     };
 
     private void initISIM() {
-        if (!mInitISIMDone
+        log("nitISIM() : mInitISIMDone = " + mInitISIMDone
+                + " | mPhoneId = " + mPhoneId
+             // add for customer sim hot plugin
+                + " | mSIMLoaded = " + mSIMLoaded
+                + " | mTelephonyManager.getSimState(mPhoneId) = " + mTelephonyManager.getSimState(mPhoneId)
+                + " | getPrimaryCard() = " + getPrimaryCard());
+        if (mSIMLoaded && !mInitISIMDone
                 && mPhoneId == getPrimaryCard()
                 && mTelephonyManager.getSimState(mPhoneId) == TelephonyManager.SIM_STATE_READY) {
             String impi = null;
@@ -205,13 +233,16 @@ public class ImsRegister {
             UiccController uc = UiccController.getInstance();
             IccRecords iccRecords = null;
             String operatorNumberic = null;
+            log("initISIM() uc = " + uc);
             if (uc != null) {
                 iccRecords = uc.getIccRecords(mPhoneId,
                         UiccController.APP_FAM_3GPP);
+                log("initISIM() iccRecords = " + iccRecords);
                 if (iccRecords != null
                         && iccRecords.getOperatorNumeric() != null
                         && iccRecords.getOperatorNumeric().length() > 0) {
                     operatorNumberic = iccRecords.getOperatorNumeric();
+                    log("initISIM() operatorNumberic = " + operatorNumberic);
                     String mnc = operatorNumberic.substring(3);
                     if (mnc != null && mnc.length() == 2) {
                         mnc = "0" + mnc;
@@ -358,4 +389,40 @@ public class ImsRegister {
         return SystemProperties.getInt(radioTestMode, -1);
     }
     /* @} */
+
+    private void onUpdateIccAvailability() {
+        log("New card found mUiccController = " + mUiccController);
+        if (mUiccController == null ) {
+            return;
+        }
+
+        UiccCardApplication newUiccApplication = getUiccCardApplication();
+
+        if (mUiccApplcation != newUiccApplication) {
+            if (mUiccApplcation != null) {
+                log("Removing stale icc objects.");
+                if (mIccRecords != null) {
+                    mIccRecords.unregisterForRecordsLoaded(mHandler);
+                }
+                mIccRecords = null;
+                mUiccApplcation = null;
+                mInitISIMDone = false;
+                mSIMLoaded    = false;
+            }
+            if (newUiccApplication != null) {
+                log("New card found");
+                mUiccApplcation = newUiccApplication;
+                mIccRecords = mUiccApplcation.getIccRecords();
+                if (mIccRecords != null) {
+                    mIccRecords.registerForRecordsLoaded(mHandler, EVENT_RECORDS_LOADED, null);
+                }
+            }
+        }
+    }
+
+    private UiccCardApplication getUiccCardApplication() {
+        return mUiccController.getUiccCardApplication(mPhoneId,
+                UiccController.APP_FAM_3GPP);
+    }
+
 }
