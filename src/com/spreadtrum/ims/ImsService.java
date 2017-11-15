@@ -108,6 +108,7 @@ public class ImsService extends Service {
     private static final int EVENT_WIFI_RTP_RECEIVED = 212;
     private static final int EVENT_UPDATE_DATA_ROUTER_FINISHED = 213;
     private static final int EVENT_NOTIFY_CP_VOWIFI_ATTACH_SUCCESSED = 214;
+    private static final int ACTION_NOTIFY_VIDEO_CAPABILITY_CHANGE = 106;
 
     class ImsOperationType{
         public static final int IMS_OPERATION_SWITCH_TO_VOWIFI = 0;
@@ -842,6 +843,10 @@ public class ImsService extends Service {
                             Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
                     Impl.notifyImsHandoverStatus(ImsHandoverResult.IMS_HANDOVER_ATTACH_SUCCESS);
                     break;
+                case ACTION_NOTIFY_VIDEO_CAPABILITY_CHANGE: //SPRD: add for bug771875
+                    updateImsFeatureForAllService();
+                    break;
+
                 default:
                     break;
                 }
@@ -1637,6 +1642,9 @@ public class ImsService extends Service {
             }
             return id;
         }
+
+
+
         public int updateCLIRStatus(int action) {
             com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl =
                     mWifiService.getUtInterface();
@@ -1650,6 +1658,13 @@ public class ImsService extends Service {
                 }
             }
             return id;
+        }
+
+        //SPRD: add for bug 771875
+        @Override
+        public void notifyVideoCapabilityChange(){
+            mHandler.removeMessages(ACTION_NOTIFY_VIDEO_CAPABILITY_CHANGE);
+            mHandler.sendMessageDelayed(mHandler.obtainMessage(ACTION_NOTIFY_VIDEO_CAPABILITY_CHANGE),100);
         }
     };
 
