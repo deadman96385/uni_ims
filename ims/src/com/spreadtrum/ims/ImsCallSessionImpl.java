@@ -75,6 +75,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsMegerAction;
     private boolean mShouldNotifyMegerd;
     private boolean mIsConferenceHeld;
+    private static final String ACTION_CALL_ALERTING = "com.android.ACTION_CALL_ALERTING";
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             CommandsInterface ci, ImsServiceCallTracker callTracker){
@@ -165,6 +166,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 }
                 break;
             case ALERTING:
+                Intent intent = new Intent();
+                intent.setAction(ACTION_CALL_ALERTING);
+                mContext.sendBroadcast(intent);
                 if (mIsConferenceHeld) {
                     Log.d(TAG, "updateFromDc->this dc in held conference:" + dc);
                     break;
