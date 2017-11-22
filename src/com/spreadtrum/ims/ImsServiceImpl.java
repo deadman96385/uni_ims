@@ -746,6 +746,11 @@ public class ImsServiceImpl {
             Log.w(TAG,"addListener-> listener already remove!");
         }
     }
+    //SPRD: add for bug 771875
+    public void updateImsFeature(int feature, int value) {
+        Log.i(TAG, "updateImsFeatures->feature:" + feature + " value:" + value);
+        updateImsFeatures(mImsService.isVoLTEEnabled(), mImsService.isVoWifiEnabled());
+    }
 
     public void notifyRegisterStateChange() {
         // SPRD Add for DSDA bug707975 and bug719824:
@@ -888,6 +893,7 @@ public class ImsServiceImpl {
     /*@}*/
     /*SPRD: Add for bug586758{@*/
     public boolean isVolteSessionListEmpty() {
+        Log.i(TAG,"isVolteSessionListEmpty->isVolteSessionListEmpty...mImsServiceCallTracker: "+mImsServiceCallTracker);
         if (mImsServiceCallTracker != null) {
             Log.i(TAG,"isSessionListEmpty: " + mImsServiceCallTracker.isSessionListEmpty());
             return mImsServiceCallTracker.isSessionListEmpty();
@@ -945,7 +951,7 @@ public class ImsServiceImpl {
     }
 
     public void updateImsFeatures(boolean volteEnable, boolean wifiEnable){
-        Log.i(TAG,"updateImsFeatures->volteEnable:" + volteEnable + " wifiEnable:" + wifiEnable);
+        Log.i(TAG,"updateImsFeatures->volteEnable:" + volteEnable + " wifiEnable:" + wifiEnable+" id:"+mServiceId); //SPRD: add for bug 771875
         try{
             if(volteEnable){
                 mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
@@ -1045,5 +1051,10 @@ public class ImsServiceImpl {
 
     public void setVolteRegisterStateOld(boolean state){
         mVolteRegisterStateOld = state;
+    }
+
+    public boolean isImsEnabled() {
+        return ((mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE] == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)
+                || (mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI] == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
     }
 }
