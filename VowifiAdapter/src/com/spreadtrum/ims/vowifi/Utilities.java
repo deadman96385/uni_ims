@@ -2,8 +2,12 @@ package com.spreadtrum.ims.vowifi;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.net.Uri;
+import android.telephony.PhoneNumberUtils;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
+import android.telephony.TelephonyManagerEx;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -83,6 +87,17 @@ public class Utilities {
             return DEFAULT_PHONE_ID;
         }
         return primaryCard;
+    }
+
+    public static int getPrimaryCardSubId(Context context) {
+        int phoneId = getPrimaryCard(context);
+        int[] subId = SubscriptionManager.getSubId(phoneId);
+        if (subId == null || subId.length == 0) {
+            Log.e(TAG, "Can not get the sub id from the phone id: " + phoneId);
+            return -1;
+        }
+
+        return subId[0];
     }
 
     public static boolean isVideoCall(int callType) {
@@ -720,6 +735,80 @@ public class Utilities {
                 cameraName = isFront(cameraId) ? CAMERA_NAME_FRONT : CAMERA_NAME_BACK;
             }
             return cameraName;
+        }
+    }
+
+    public static class FDNHelper {
+        private static final String FDN_CONTENT_URI = "content://icc/fdn/subId/";
+        private static final String[] FDN_PROJECTION = new String[] {
+                "name", "number"
+        };
+        private static final int FDN_COL_NUMBER = 1;
+
+        private Context mContext;
+        private int mSubId;
+
+        public FDNHelper(Context context, int subId) {
+            mContext = context;
+            mSubId = subId;
+        }
+
+        public boolean isEnabled() {
+            return TelephonyManagerEx.from(mContext).getIccFdnEnabled(mSubId);
+        }
+
+        public boolean isAccept(String callee) {
+            if (TextUtils.isEmpty(callee)) {
+                Log.e(TAG, "The callee is empty, can not check if FDN accept.");
+                return false;
+            }
+
+            ArrayList<String> fdnList = getFDNList(mContext, mSubId);
+            if (fdnList == null || fdnList.size() < 1) {
+                // As the FDN list is empty, return false as do not accept.
+                Log.d(TAG, "FDN list is null or empty, do not accept the callee: " + callee);
+                return false;
+            }
+
+            for (String fdn : fdnList) {
+                if (PhoneNumberUtils.compare(callee, fdn)) {
+                    Log.d(TAG, "The callee[" + callee + "] matched the fdn number[" + fdn + "]");
+                    return true;
+                }
+            }
+
+            // It means do not find the matched FDN, return as do not accept.
+            Log.d(TAG, "Do not find any matched FDN number, do not accept the callee: " + callee);
+            return false;
+        }
+
+        private ArrayList<String> getFDNList(Context context, int subId) {
+            Cursor cursor = context.getContentResolver().query(
+                    Uri.parse(FDN_CONTENT_URI + subId), FDN_PROJECTION, null, null, null);
+            try {
+                if (cursor != null && cursor.getCount() > 0) {
+                    ArrayList<String> fdnList = new ArrayList<String>();
+                    while (cursor.moveToNext()) {
+                        String number = cursor.getString(FDN_COL_NUMBER);
+                        if (!TextUtils.isEmpty(number)) {
+                            fdnList.add(number);
+                            Log.d(TAG, "Add the fdn number[" + number + "] to list.");
+                        }
+                    }
+                    return fdnList;
+                } else {
+                    Log.w(TAG, "Query FDN list finished, but cursor's count is: "
+                            + (cursor == null ? "null" : cursor.getCount()));
+                }
+            } finally {
+                if (cursor != null) {
+                    cursor.close();
+                    cursor = null;
+                }
+            }
+
+            // Meet some error, return null.
+            return null;
         }
     }
 

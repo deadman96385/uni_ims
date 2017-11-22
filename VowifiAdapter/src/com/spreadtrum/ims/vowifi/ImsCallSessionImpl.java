@@ -32,6 +32,7 @@ import com.android.ims.internal.ImsSrvccCallInfo;
 import com.android.internal.telephony.TelephonyProperties;
 import com.spreadtrum.ims.R;
 import com.spreadtrum.ims.vowifi.Utilities.Camera;
+import com.spreadtrum.ims.vowifi.Utilities.FDNHelper;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.SRVCCSyncInfo;
@@ -133,10 +134,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                 if (mListener != null) {
                     try {
                         mListener.callSessionStartFailed(ImsCallSessionImpl.this,
-                                new ImsReasonInfo(
-                                        ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED,
-                                        ImsReasonInfo.CODE_UNSPECIFIED,
-                                        failMessage));
+                                new ImsReasonInfo(msg.arg1, msg.arg2, failMessage));
                     } catch (RemoteException e) {
                         Log.e(TAG, "Failed to give the call session start failed callback.");
                         Log.e(TAG, "Catch the RemoteException e: " + e);
@@ -651,13 +649,20 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
     }
 
     private void handleStartActionFailed(String failMessage) {
+        handleStartActionFailed(
+                ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED,
+                ImsReasonInfo.CODE_UNSPECIFIED,
+                failMessage);
+    }
+
+    private void handleStartActionFailed(int code, int extraCode, String failMessage) {
         // As start action failed, remove the call first.
         mCallManager.removeCall(this);
 
         // When #ImsCall received the call session start failed callback will set the call session
         // to null. Then sometimes it will meet the NullPointerException. So we'd like to delay
         // 500ms to send this callback to let the ImsCall handle the left logic.
-        Message msg = mHandler.obtainMessage(MSG_START_FAIL, failMessage);
+        Message msg = mHandler.obtainMessage(MSG_START_FAIL, code, extraCode, failMessage);
         mHandler.sendMessageDelayed(msg, 500);
     }
 
@@ -1997,6 +2002,19 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         if (m.matches()) {
             startUssdCall(callee);
             return;
+        }
+
+        if (!mIsEmergency) {
+            // To check if FDN enabled and accept. Only support primary card now.
+            FDNHelper fdnHelper = new FDNHelper(mContext, Utilities.getPrimaryCardSubId(mContext));
+            if (fdnHelper.isEnabled() && !fdnHelper.isAccept(callee)) {
+                // If the FDN enabled, but the callee do not accept. Handle it as start failed.
+                handleStartActionFailed(
+                        ImsReasonInfo.CODE_FDN_BLOCKED,
+                        ImsReasonInfo.CODE_UNSPECIFIED,
+                        "FDN enabled, but the callee do not accept.");
+                return;
+            }
         }
 
         // Start the call.
