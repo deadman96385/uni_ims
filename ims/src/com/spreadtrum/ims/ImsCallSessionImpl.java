@@ -75,6 +75,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsMegerAction;
     private boolean mShouldNotifyMegerd;
     private boolean mIsConferenceHeld;
+    private static final String ACTION_CALL_ALERTING = "com.android.ACTION_CALL_ALERTING";
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             CommandsInterface ci, ImsServiceCallTracker callTracker){
@@ -169,6 +170,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     Log.d(TAG, "updateFromDc->this dc in held conference:" + dc);
                     break;
                 }
+                Intent intent = new Intent();
+                intent.setAction(ACTION_CALL_ALERTING);
+                mContext.sendBroadcast(intent);
                 try {
                     mState = ImsCallSession.State.NEGOTIATING;
                     if (mImsDriverCall != null             // SPRD: add for bug553692
