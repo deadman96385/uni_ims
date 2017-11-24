@@ -1965,6 +1965,9 @@ class MyVoWifiCallback implements VoWifiCallback {
 
         @Override
         public void onSessionEmpty(int serviceId){
+            ImsServiceImpl imsService = mImsServiceImplMap.get(Integer
+                    .valueOf(serviceId));
+            boolean volteRegistered = (imsService != null) ? imsService.isImsRegisterState() : false;
             if((serviceId-1) == ImsRegister.getPrimaryCard(mPhoneCount)){
                 /*SPRD: Add for bug586758 and 595321{@*/
                 ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(serviceId));
@@ -2025,6 +2028,15 @@ class MyVoWifiCallback implements VoWifiCallback {
                 /*@}*/
                 Log.i(TAG,"onSessionEmpty->serviceId: " + serviceId + "mIsVolteCall: " + mIsVolteCall + " mIsVowifiCall:" + mIsVowifiCall
                         + "mInCallHandoverFeature: " + mInCallHandoverFeature);
+            }else{
+                ImsServiceImpl implPrimay = mImsServiceImplMap.get(Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
+                Log.i(TAG,"onSessionEmpty-> serviceId: "+serviceId + " mIsVolteCall:" + mIsVolteCall +"  imsService: "+imsService+"  volteRegistered: "+volteRegistered
+                       +"  implPrimay: "+implPrimay);
+                if(volteRegistered && (imsService != null && (imsService.isVolteSessionListEmpty())) && (implPrimay != null && (implPrimay.isVolteSessionListEmpty()))){
+                     if (mIsVolteCall) {
+                         mIsVolteCall = false;
+                     }
+                }
             }
         }
     }
