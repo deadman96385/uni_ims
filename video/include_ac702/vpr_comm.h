@@ -14,7 +14,7 @@
 #include "isip.h"
 
 #define VPR_NET_MAX_DATA_SIZE_OCTETS (2500)
-#define VPR_MAX_VIDEO_STREAMS        (2)
+#define VPR_MAX_VIDEO_STREAMS        (5)
 #define VPR_MAX_VOICE_STREAMS        (5)
 #define VPR_STRING_SZ                (256)
 
