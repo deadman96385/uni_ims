@@ -1135,12 +1135,14 @@ public class ImsService extends Service {
 
         Phone[] phones = PhoneFactory.getPhones();
         VTManagerProxy.init(this);
-        if (phones != null) {
-            for (Phone phone : phones) {
-                ImsServiceImpl impl = new ImsServiceImpl(phone, this,
-                        mWifiService);
-                impl.addListener(mVoLTERegisterListener);
-                mImsServiceImplMap.put(impl.getServiceId(), impl);
+        synchronized (mImsServiceImplMap) {
+            if (phones != null) {
+                for (Phone phone : phones) {
+                    ImsServiceImpl impl = new ImsServiceImpl(phone, this,
+                            mWifiService);
+                    impl.addListener(mVoLTERegisterListener);
+                    mImsServiceImplMap.put(impl.getServiceId(), impl);
+                }
             }
         }
         mTelephonyManager = (TelephonyManager) this
@@ -1297,13 +1299,15 @@ public class ImsService extends Service {
         public int open(int phoneId, int serviceClass,
                 PendingIntent incomingCallIntent,
                 IImsRegistrationListener listener) {
-            ImsServiceImpl impl = mImsServiceImplMap.get(Integer
-                    .valueOf(phoneId + 1));
-            if (impl != null) {
-                return impl.open(serviceClass, incomingCallIntent, listener);
+            synchronized (mImsServiceImplMap) {
+                ImsServiceImpl impl = mImsServiceImplMap.get(Integer
+                        .valueOf(phoneId + 1));
+                if (impl != null) {
+                    return impl.open(serviceClass, incomingCallIntent, listener);
+                }
+                Log.d(TAG, "Open returns serviceId " + phoneId + " ImsServiceImpl:"
+                        + impl);
             }
-            Log.d(TAG, "Open returns serviceId " + phoneId + " ImsServiceImpl:"
-                    + impl);
             return 0;
         }
 
@@ -1325,36 +1329,44 @@ public class ImsService extends Service {
 
         @Override
         public boolean isOpened(int serviceId) {
-            ImsServiceImpl impl = mImsServiceImplMap.get(Integer
-                    .valueOf(serviceId));
-            if (impl != null) {
-                return impl.isOpened();
+            synchronized (mImsServiceImplMap) {
+                ImsServiceImpl impl = mImsServiceImplMap.get(Integer
+                        .valueOf(serviceId));
+                if (impl != null) {
+                    return impl.isOpened();
+                }
+                return false;
             }
-            return false;
         }
 
         @Override
         public void setRegistrationListener(int serviceId,
                 IImsRegistrationListener listener) {
-            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
-                    serviceId));
-            if (service == null) {
-                Log.e(TAG, "Invalid ServiceId ");
-                return;
+            synchronized (mImsServiceImplMap) {
+                ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
+                        serviceId));
+                Log.d(TAG, "IImsService setRegistrationListener, id:" + serviceId + " service:" + service);
+                if (service == null) {
+                    Log.e(TAG, "Invalid ServiceId ");
+                    return;
+                }
+                service.setRegistrationListener(listener);
             }
-            service.setRegistrationListener(listener);
         }
 
         @Override
-        public void addRegistrationListener(int serviceId, int serviceType,
+        public void addRegistrationListener(int phoneId, int serviceType,
                 IImsRegistrationListener listener) {
-            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
-                    serviceId));
-            if (service == null) {
-                Log.e(TAG, "Invalid ServiceId ");
-                return;
+            synchronized (mImsServiceImplMap) {
+                ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
+                        phoneId + 1));
+                Log.d(TAG, "IImsService addRegistrationListener, id:" + phoneId + " service:" + service);
+                if (service == null) {
+                    Log.e(TAG, "Invalid ServiceId ");
+                    return;
+                }
+                service.addRegistrationListener(listener);
             }
-            service.addRegistrationListener(listener);
         }
 
         @Override
@@ -1386,13 +1398,15 @@ public class ImsService extends Service {
          */
         @Override
         public IImsUt getUtInterface(int serviceId) {
-            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
-                    serviceId));
-            if (service == null) {
-                Log.e(TAG, "Invalid ServiceId " + serviceId);
-                return null;
+            synchronized (mImsServiceImplMap) {
+                ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
+                        serviceId));
+                if (service == null) {
+                    Log.e(TAG, "Invalid ServiceId " + serviceId);
+                    return null;
+                }
+                return service.getUTProxy();
             }
-            return service.getUTProxy();
         }
 
         /**
@@ -1400,13 +1414,15 @@ public class ImsService extends Service {
          */
         @Override
         public IImsConfig getConfigInterface(int phoneId) {
-            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
-                    phoneId + 1));
-            if (service == null) {
-                Log.e(TAG, "getConfigInterface Invalid phoneId " + phoneId);
-                return null;
+            synchronized (mImsServiceImplMap) {
+                ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
+                        phoneId + 1));
+                if (service == null) {
+                    Log.e(TAG, "getConfigInterface Invalid phoneId " + phoneId);
+                    return null;
+                }
+                return service.getConfigInterface();
             }
-            return service.getConfigInterface();
         }
 
         /**
@@ -1414,17 +1430,19 @@ public class ImsService extends Service {
          */
         @Override
         public void turnOnIms(int phoneId) {
-            ImsServiceImpl impl = mImsServiceImplMap.get(Integer
-                    .valueOf(phoneId + 1));
-            if (impl == null
-                    || ImsRegister.getPrimaryCard(mPhoneCount) != phoneId) {
-                Log.w(TAG, "turnOnIms error:" + phoneId);
-                return;
-            }
-            if (ImsManager
-                    .isEnhanced4gLteModeSettingEnabledByUser(getApplicationContext())) {// SPRD:
-                                                                                        // bug644353
-                impl.turnOnIms();
+            synchronized (mImsServiceImplMap) {
+                ImsServiceImpl impl = mImsServiceImplMap.get(Integer
+                        .valueOf(phoneId + 1));
+                if (impl == null
+                        || ImsRegister.getPrimaryCard(mPhoneCount) != phoneId) {
+                    Log.w(TAG, "turnOnIms error:" + phoneId);
+                    return;
+                }
+                if (ImsManager
+                        .isEnhanced4gLteModeSettingEnabledByUser(getApplicationContext())) {// SPRD:
+                    // bug644353
+                    impl.turnOnIms();
+                }
             }
         }
 
@@ -1434,14 +1452,16 @@ public class ImsService extends Service {
          */
         @Override
         public void turnOffIms(int phoneId) {
-            ImsServiceImpl impl = mImsServiceImplMap.get(Integer
-                    .valueOf(phoneId + 1));
-            if (impl == null
-                    || ImsRegister.getPrimaryCard(mPhoneCount) != phoneId) {
-                Log.w(TAG, "turnOffIms error:" + phoneId);
-                return;
+            synchronized (mImsServiceImplMap) {
+                ImsServiceImpl impl = mImsServiceImplMap.get(Integer
+                        .valueOf(phoneId + 1));
+                if (impl == null
+                        || ImsRegister.getPrimaryCard(mPhoneCount) != phoneId) {
+                    Log.w(TAG, "turnOffIms error:" + phoneId);
+                    return;
+                }
+                impl.turnOffIms();
             }
-            impl.turnOffIms();
         }
 
         /**
@@ -1625,6 +1645,7 @@ public class ImsService extends Service {
             enforceReadPhoneStatePermission("addRegistrationListener");
             synchronized (mImsServiceImplMap) {
                 MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
+                Log.d(TAG, "IImsServiceController addRegistrationListener, slotId:" + slotId+" service:"+feature);
                 if (feature != null) {
                     feature.addRegistrationListener(listener);
                 }
@@ -1637,6 +1658,7 @@ public class ImsService extends Service {
             enforceReadPhoneStatePermission("removeRegistrationListener");
             synchronized (mImsServiceImplMap) {
                 MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
+                Log.d(TAG, "IImsServiceController removeRegistrationListener, slotId:" + slotId+" service:"+feature);
                 if (feature != null) {
                     feature.removeRegistrationListener(listener);
                 }

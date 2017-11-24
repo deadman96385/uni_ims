@@ -1103,7 +1103,7 @@ public class ImsServiceImpl extends MMTelFeature {
             if(volteEnable){
                 mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
                         = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
-                if(ImsManager.isVtEnabledByUser(mContext)){
+                if(ImsManager.isVtEnabledByUser(mContext) && ImsManager.isVtEnabledByPlatform(mContext)){
                 mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
                         = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE;
                 }else{
@@ -1123,7 +1123,7 @@ public class ImsServiceImpl extends MMTelFeature {
             if(wifiEnable){
                 mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI]
                         = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
-                if(ImsManager.isVtEnabledByUser(mContext)){
+                if(ImsManager.isVtEnabledByUser(mContext) && ImsManager.isVtEnabledByPlatform(mContext)){
                     mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
                             = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI;
                 }else{
