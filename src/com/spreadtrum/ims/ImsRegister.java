@@ -361,8 +361,12 @@ public class ImsRegister {
         if (mPhoneCount == 1) {
             return DEFAULT_PHONE_ID;
         }
-        return SubscriptionManager.getSlotId(SubscriptionManager
-                .getDefaultDataSubscriptionId());
+        int primaryCard = SubscriptionManager
+                .getSlotId(SubscriptionManager.getDefaultDataSubscriptionId());
+        if (primaryCard == -1) {
+            return DEFAULT_PHONE_ID;
+        }
+        return primaryCard;
 //        String prop = SystemProperties.get(MODEM_WORKMODE_PROP);
 //        log("-getPrimaryCard() prop = " + prop);
 //        if ((prop != null) && (prop.length() > 0)) {
@@ -378,11 +382,16 @@ public class ImsRegister {
 
     public static int getPrimaryCard(int phoneCount) {
         // SPRD add for dual LTE
-        return SubscriptionManager.getSlotId(SubscriptionManager
-                .getDefaultDataSubscriptionId());
-//        if (phoneCount == 1) {
-//            return DEFAULT_PHONE_ID;
-//        }
+        Log.d(TAG, "-getPrimaryCard(int phoneCount) phoneCount = " + phoneCount);
+        if (phoneCount == 1) {
+            return DEFAULT_PHONE_ID;
+        }
+        int primaryCard = SubscriptionManager
+                .getSlotId(SubscriptionManager.getDefaultDataSubscriptionId());
+        if (primaryCard == -1) {
+            return DEFAULT_PHONE_ID;
+        }
+        return primaryCard;
 
 //        String prop = SystemProperties.get(MODEM_WORKMODE_PROP);
 //        if ((prop != null) && (prop.length() > 0)) {
