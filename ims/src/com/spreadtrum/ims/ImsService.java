@@ -544,38 +544,32 @@ public class ImsService extends Service {
                         } else {
                             mReleaseVowifiRequest = new ImsServiceRequest(msg.arg1/*requestId*/,
                                     ACTION_NOTIFY_VOWIFI_UNAVAILABLE /*eventCode*/,
-                                    mTelephonyManager.getPrimaryCard()+1/*serviceId*/,
+                                    mTelephonyManager.getPrimaryCard() + 1/*serviceId*/,
                                     ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE);
-                            if (mFeatureSwitchRequest!=null && mFeatureSwitchRequest.mEventCode==ACTION_START_HANDOVER && mIsCPImsPdnActived){
-                                Log.i(TAG, "ACTION_NOTIFY_VOWIFI_UNAVAILABLE -> operationSuccessed -> IMS_OPERATION_SET_VOWIFI_UNAVAILABLE : only notify CM");
+
+                            if (!isOnlySendAT) {
+                                if (mFeatureSwitchRequest == null ||
+                                        mFeatureSwitchRequest.mEventCode != ACTION_START_HANDOVER) {
+                                    mWifiService.resetAll(msg.arg2 == 0 ? WifiState.DISCONNECTED : WifiState.CONNECTED, 500);
+                                } else {
+                                    mWifiService.resetAll(msg.arg2 == 0 ? WifiState.DISCONNECTED : WifiState.CONNECTED);
+                                }
+                            } else {
+                                Log.i(TAG, "ACTION_NOTIFY_VOWIFI_UNAVAILABLE -> operationSuccessed -> IMS_OPERATION_SET_VOWIFI_UNAVAILABLE");
                                 mImsServiceListenerEx.operationSuccessed(
                                         mReleaseVowifiRequest.mRequestId,
                                         ImsOperationType.IMS_OPERATION_SET_VOWIFI_UNAVAILABLE);
                                 mReleaseVowifiRequest = null;
-                            }else{
-                                if(!isOnlySendAT){
-                                    if(mFeatureSwitchRequest == null ||
-                                            mFeatureSwitchRequest.mEventCode != ACTION_START_HANDOVER){
-                                        mWifiService.resetAll(msg.arg2 == 0 ? WifiState.DISCONNECTED : WifiState.CONNECTED,500);
-                                    } else {
-                                        mWifiService.resetAll(msg.arg2 == 0 ? WifiState.DISCONNECTED : WifiState.CONNECTED);
-                                    }
-                                } else {
-                                    Log.i(TAG, "ACTION_NOTIFY_VOWIFI_UNAVAILABLE -> operationSuccessed -> IMS_OPERATION_SET_VOWIFI_UNAVAILABLE");
-                                    mImsServiceListenerEx.operationSuccessed(
-                                            mReleaseVowifiRequest.mRequestId,
-                                            ImsOperationType.IMS_OPERATION_SET_VOWIFI_UNAVAILABLE);
-                                    mReleaseVowifiRequest = null;
-                                }
-                                Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> wifi state: " + msg.arg2);
                             }
-                            if(!mIsCalling){
+                            Log.i(TAG, "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> wifi state: " + msg.arg2);
+
+                            if (!mIsCalling) {
                                 ImsServiceImpl imsService = mImsServiceImplMap.get(
-                                        Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
-                                if(imsService != null){
+                                        Integer.valueOf(mTelephonyManager.getPrimaryCard() + 1));
+                                if (imsService != null) {
                                     imsService.notifyVoWifiEnable(false);
                                     mPendingCPSelfManagement = true;
-                                    Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:" + mPendingCPSelfManagement);
+                                    Log.i(TAG, "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:" + mPendingCPSelfManagement);
                                 }
                             }
                             if (mFeatureSwitchRequest != null) {
