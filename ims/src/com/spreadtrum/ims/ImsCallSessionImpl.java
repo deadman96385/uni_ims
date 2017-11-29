@@ -70,7 +70,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     // SPRD: add for bug524928
     private boolean mIsMegerAction;
     private boolean mShouldNotifyMegerd;
-
+        // SPRD:Local RingBackTone Feature
+    private static final String ACTION_CALL_ALERTING = "com.android.ACTION_CALL_ALERTING";
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             CommandsInterface ci, ImsServiceCallTracker callTracker){
         mImsCallProfile = profile;
@@ -145,6 +146,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 }
                 break;
             case ALERTING:
+                /* SPRD: Local RingBackTone feature @{ */
+                Intent intent = new Intent();
+                intent.setAction(ACTION_CALL_ALERTING);
+                mContext.sendBroadcast(intent);
+                /* @} */
                 try{
                     mState = ImsCallSession.State.NEGOTIATING;
                     if (mImsDriverCall.state != ImsDriverCall.State.ALERTING
