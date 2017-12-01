@@ -31,4 +31,13 @@
 <string name="camera_open_fail">"කැමරාව විවෘත කිරීම අසමත්"</string>
 <string name="ims_switch_failed">"ජාලයේ දෝෂයකි, කරුණාකර පසුව නැවත උත්සාහ කරන්න."</string>
 
+    <string name="low_battery_warning_media_alert_message">"ඔබේ බැටරි මට්ටම 15%ට වඩා අඩුය.කරුණාකර පිළිගන්න හෝ ප්‍රතික්ෂේප කරන්න තෝරන්න."</string>
+     <string name="low_battery_warning_title">"අඩු බැටරි අනතුරු ඇඟවීම"</string>
+     <string name="low_battery_warning_message">"ඔබේ බැටරි මට්ටම 15%ට අඩුය. ඔබට වීඩියෝ ඇමතුම කරගෙන යාමට හෝ හඬ ඇමතුමට පරිවර්තනය කිරීමට අවශ්‍යද?"</string>
+     <string name="low_battery_continue_video_call">"ඔව්"</string>
+     <string name="low_battery_convert_to_voice_call">"පරිවර්තනය කරන්න"</string>
+     <string name="handover_to_volte_success">""වඩා ගුණාත්මක හඬක් සඳහා VoLTE වෙත මාරු වේ" "</string>
+     <string name="vowifi_regist_fail_content">"vowifi ජාල ගැටළුවක්, කරුණාකර මෙම සේවය මිනිත්තු පහකින් පසු යලි භාවිතා කරන්න"</string>
+     <string name="vowifi_attation">"Vowifi අවධානය"</string>
+     <string name="vowifi_register_error">"ජාලය vowifi සඳහා සහය නොදක්වයි"</string>
 </resources>
