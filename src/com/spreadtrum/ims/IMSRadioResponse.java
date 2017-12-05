@@ -280,14 +280,6 @@ public class IMSRadioResponse extends IIMSRadioResponse.Stub {
         responseVoid(info);
     }
 
-    public void getTPMRStateResponse(RadioResponseInfo info, int state){
-        responseInts(info, state);
-    }
-
-    public void setTPMRStateResponse(RadioResponseInfo info){
-        responseVoid(info);
-    }
-
     public void notifyVoWifiEnableResponse(RadioResponseInfo info){
         responseVoid(info);
     }
