@@ -82,11 +82,8 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                             && mContext != null) {
 
                         ImsRIL imsCi = (ImsRIL)msg.obj;
-                        String[] cmd = new String[1];
-                        cmd[0] = "AT+CCMMD=" + Integer.parseInt(mImsCallSessionImpl.getCallId()) + ",5";
                         if(imsCi != null){
-                            imsCi.invokeOemRilRequestStrings(cmd, null);
-                            Log.d(TAG, "EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT cmd[0]"+ cmd[0]);
+                            imsCi.callMediaChangeRequestTimeOut(Integer.parseInt(mImsCallSessionImpl.getCallId()), null);
                         }
                     }
                     mImsCallSessionImpl.getLocalRequestProfile().mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;

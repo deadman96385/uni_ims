@@ -1282,11 +1282,6 @@ public final class ImsRIL {
         mCi.invokeOemRilRequestRaw(data, response);
     }
 
-
-    public void invokeOemRilRequestStrings(String[] strings, Message response) {
-        mCi.invokeOemRilRequestStrings(strings, response);
-    }
-
     /**
      * Assign a specified band for RF configuration.
      *
@@ -2980,4 +2975,26 @@ public final class ImsRIL {
     public void registerForNotAvailable(Handler h, int what, Object obj) {
         mCi.registerForNotAvailable(h,what,obj);
     }
+
+    public void setVideoResolution(int resolution, Message result){
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.setVideoResolution(resolution, result);
+        }
+    }
+    public void enableLocalHold(boolean enable, Message result){
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.enableLocalHold(enable, result);
+        }
+    }
+    public void enableWiFiParamReport(boolean enable, Message result){
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.enableWiFiParamReport(enable, result);
+        }
+    }
+    public void callMediaChangeRequestTimeOut(int callId, Message result){
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.callMediaChangeRequestTimeOut(callId, result);
+        }
+    }
+
 }

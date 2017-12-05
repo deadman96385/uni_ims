@@ -659,7 +659,6 @@ public class ImsRegister {
         String[] cmd = new String[1];
         cmd[0] = "AT+SPENGMDVOLTE=22,1," + "\"" + userAgent + "\"";
         log("SetUserAgent :" + cmd[0]);
-        mCi.invokeOemRilRequestStrings(cmd, null);
     }/* @} */
 
 }

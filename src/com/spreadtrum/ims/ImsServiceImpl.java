@@ -1272,14 +1272,10 @@ public class ImsServiceImpl extends MMTelFeature {
     }
 
     public void enableWiFiParamReport(){
-        String[] cmd=new String[1];
-        cmd[0] = "AT+WIFIPARAM=1,0,0,0,5";
-        mCi.invokeOemRilRequestStrings(cmd, null);
+        mCi.enableWiFiParamReport(true,null);
     }
 
     public void disableWiFiParamReport(){
-        String[] cmd=new String[1];
-        cmd[0] = "AT+WIFIPARAM=0,0,0,0,0";
-        mCi.invokeOemRilRequestStrings(cmd, null);
+        mCi.enableWiFiParamReport(false, null);
     }
 }

@@ -164,13 +164,12 @@ public class ImsConfigImpl extends IImsConfig.Stub {
                     }
                     break;
                 case EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE:
-                    String[] cmd=new String[1];
-                    cmd[0] = "AT+CDEFMP=1,\""+mCameraResolution+"\"";
+                    int resolution = mCameraResolution;
                     if (SystemProperties.getBoolean("persist.sys.videodefault", false) 
                             && (mSharedPreferences.getInt(VT_RESOLUTION_VALUE, -1) == -1)) {
-                        cmd[0] = "AT+CDEFMP=1,\"3\"";
+                        resolution = 3;
                     }
-                    mCi.invokeOemRilRequestStrings(cmd, null);
+                    mCi.setVideoResolution(resolution,null);
                     break;
                 default:
                     Log.e(TAG, "handleMessage: unhandled message");

@@ -1668,11 +1668,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     public void enableLocalHold(boolean enable){
-        String[] cmd=new String[1];
-        if(enable){
-            cmd[0] = "AT+SPLOCALHOLD=1;";
-        }
-        mCi.invokeOemRilRequestStrings(cmd, null);
+        mCi.enableLocalHold(enable,null);
     }
 
     public void updateVideoState(){
