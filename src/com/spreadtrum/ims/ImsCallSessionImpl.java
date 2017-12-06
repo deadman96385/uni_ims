@@ -174,6 +174,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.i(TAG,"vdc.mediaDescription: " + dc.mediaDescription + " mRemoteCallProfile:"+mRemoteCallProfile);
         }
         /* @}*/
+        // SPRD: Fix bug#651203
+        if (dc != null && dc.isMpty) {
+            mImsCallProfile.setCallExtraBoolean(ImsCallProfile.EXTRA_MT_CONFERENCE_CALL, true);
+        }
     }
 
     public void updateVideoTxState(boolean disable){
