@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.SystemProperties;
 import android.sim.SimManager;
+import android.telecom.VideoProfile;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
@@ -104,8 +105,20 @@ public class Utilities {
         return SystemProperties.getInt(radioTestMode, -1);
     }
 
+    public static boolean isAudioCall(int callType) {
+        return callType == ImsCallProfile.CALL_TYPE_VOICE;
+    }
+
     public static boolean isVideoCall(int callType) {
         return callType != ImsCallProfile.CALL_TYPE_VOICE;
+    }
+
+    public static boolean isVideoTX(int callType) {
+        return callType == ImsCallProfile.CALL_TYPE_VT_TX;
+    }
+
+    public static boolean isVideoRX(int callType) {
+        return callType == ImsCallProfile.CALL_TYPE_VT_RX;
     }
 
     public static VideoQuality getDefaultVideoQuality(SharedPreferences preference) {
@@ -293,6 +306,118 @@ public class Utilities {
         public static final int SUCCESS = 1;
         public static final int CANCEL  = 2;
         public static final int FAILURE  = 3;
+    }
+
+    public static class VideoType {
+        public static final int NATIVE_VIDEO_TYPE_NONE = 0;
+        public static final int NATIVE_VIDEO_TYPE_BROADCAST_ONLY = 1;
+        public static final int NATIVE_VIDEO_TYPE_RECEIVED_ONLY = 2;
+        public static final int NATIVE_VIDEO_TYPE_BIDIRECT = 3;
+
+        public static int getNativeVideoType(int callType) {
+            switch (callType) {
+                case ImsCallProfile.CALL_TYPE_VOICE:
+                    return NATIVE_VIDEO_TYPE_NONE;
+                case ImsCallProfile.CALL_TYPE_VT_TX:
+                    return NATIVE_VIDEO_TYPE_BROADCAST_ONLY;
+                case ImsCallProfile.CALL_TYPE_VT_RX:
+                    return NATIVE_VIDEO_TYPE_RECEIVED_ONLY;
+                case ImsCallProfile.CALL_TYPE_VT:
+                    return NATIVE_VIDEO_TYPE_BIDIRECT;
+            }
+
+            return NATIVE_VIDEO_TYPE_NONE;
+        }
+
+        public static int getNativeVideoType(VideoProfile profile) {
+            if (profile == null) {
+                Log.e(TAG, "Failed to get the native video type as video profile is null.");
+                return NATIVE_VIDEO_TYPE_NONE;
+            }
+
+            boolean isVideo = VideoProfile.isVideo(profile.getVideoState());
+            if (isVideo) {
+                boolean isBidirectional = VideoProfile.isBidirectional(profile.getVideoState());
+                if (isBidirectional) {
+                    return NATIVE_VIDEO_TYPE_BIDIRECT;
+                } else {
+                    boolean isTrans = VideoProfile.isTransmissionEnabled(profile.getVideoState());
+                    if (isTrans) {
+                        return NATIVE_VIDEO_TYPE_BROADCAST_ONLY;
+                    } else {
+                        return NATIVE_VIDEO_TYPE_RECEIVED_ONLY;
+                    }
+                }
+            } else {
+                // Is audio only.
+                return NATIVE_VIDEO_TYPE_NONE;
+            }
+        }
+
+        public static int getCallType(int nativeVideoType) {
+            switch (nativeVideoType) {
+                case NATIVE_VIDEO_TYPE_NONE:
+                    return ImsCallProfile.CALL_TYPE_VOICE;
+                case NATIVE_VIDEO_TYPE_BROADCAST_ONLY:
+                    return ImsCallProfile.CALL_TYPE_VT_TX;
+                case NATIVE_VIDEO_TYPE_RECEIVED_ONLY:
+                    return ImsCallProfile.CALL_TYPE_VT_RX;
+                case NATIVE_VIDEO_TYPE_BIDIRECT:
+                    return ImsCallProfile.CALL_TYPE_VT;
+            }
+
+            return ImsCallProfile.CALL_TYPE_VOICE;
+        }
+
+        public static VideoProfile getVideoProfile(int nativeVideoType) {
+            int videoState = VideoProfile.STATE_AUDIO_ONLY;
+            switch (nativeVideoType) {
+                case NATIVE_VIDEO_TYPE_NONE:
+                    videoState = VideoProfile.STATE_AUDIO_ONLY;
+                    break;
+                case NATIVE_VIDEO_TYPE_BROADCAST_ONLY:
+                    videoState = VideoProfile.STATE_TX_ENABLED;
+                    break;
+                case NATIVE_VIDEO_TYPE_RECEIVED_ONLY:
+                    videoState = VideoProfile.STATE_RX_ENABLED;
+                    break;
+                case NATIVE_VIDEO_TYPE_BIDIRECT:
+                    videoState = VideoProfile.STATE_BIDIRECTIONAL;
+                    break;
+            }
+
+            return new VideoProfile(videoState);
+        }
+
+        public static boolean updateAccept(int oldVideoType, int newVideoType) {
+            switch (oldVideoType) {
+                case NATIVE_VIDEO_TYPE_NONE:
+                    return isInAcceptList(newVideoType,
+                            NATIVE_VIDEO_TYPE_BROADCAST_ONLY,
+                            NATIVE_VIDEO_TYPE_RECEIVED_ONLY,
+                            NATIVE_VIDEO_TYPE_BIDIRECT);
+                case NATIVE_VIDEO_TYPE_BROADCAST_ONLY:
+                case NATIVE_VIDEO_TYPE_RECEIVED_ONLY:
+                    return isInAcceptList(newVideoType,
+                            NATIVE_VIDEO_TYPE_NONE,
+                            NATIVE_VIDEO_TYPE_BIDIRECT);
+                case NATIVE_VIDEO_TYPE_BIDIRECT:
+                    return isInAcceptList(newVideoType,
+                            NATIVE_VIDEO_TYPE_NONE,
+                            NATIVE_VIDEO_TYPE_BROADCAST_ONLY,
+                            NATIVE_VIDEO_TYPE_RECEIVED_ONLY);
+            }
+
+            return false;
+        }
+
+        private static boolean isInAcceptList(int orgVideoType, int... list) {
+            for (int videoType : list) {
+                if (orgVideoType == videoType) return true;
+            }
+
+            return false;
+        }
     }
 
     public static class SecurityConfig {
@@ -876,6 +1001,7 @@ public class Utilities {
         public static final int EVENT_CODE_REREGISTER_OK = REGISTER_EVENT_CODE_BASE + 4;
         public static final int EVENT_CODE_REREGISTER_FAILED = REGISTER_EVENT_CODE_BASE + 5;
         public static final int EVENT_CODE_REGISTER_STATE_UPDATE = REGISTER_EVENT_CODE_BASE + 6;
+        public static final int EVENT_CODE_REQUEST_ACCESS_NET_INFO = REGISTER_EVENT_CODE_BASE + 7;
 
         public static final String EVENT_LOGIN_OK = "login_ok";
         public static final String EVENT_LOGIN_FAILED = "login_failed";
@@ -883,6 +1009,7 @@ public class Utilities {
         public static final String EVENT_REREGISTER_OK = "refresh_ok";
         public static final String EVENT_REREGISTER_FAILED = "refresh_failed";
         public static final String EVENT_REGISTER_STATE_UPDATE = "state_update";
+        public static final String EVENT_REQUEST_ACCESS_NET_INFO = "request_access_net_info";
 
         // Call & Conference
         public static final String KEY_ID = "id";
@@ -893,6 +1020,7 @@ public class Utilities {
         public static final String KEY_VIDEO_HEIGHT = "video_height";
         public static final String KEY_VIDEO_WIDTH = "video_width";
         public static final String KEY_VIDEO_LEVEL = "video_level";
+        public static final String KEY_VIDEO_TYPE = "video_type";
         public static final String KEY_RTP_RECEIVED = "rtp_received";
         public static final String KEY_RTCP_LOSE = "rtcp_lose";
         public static final String KEY_RTCP_JITTER = "rtcp_jitter";
@@ -917,10 +1045,12 @@ public class Utilities {
         public static final int EVENT_CODE_CALL_RESUME_FAILED = CALL_EVENT_CODE_BASE + 9;
         public static final int EVENT_CODE_CALL_HOLD_RECEIVED = CALL_EVENT_CODE_BASE + 10;
         public static final int EVENT_CODE_CALL_RESUME_RECEIVED = CALL_EVENT_CODE_BASE + 11;
-        public static final int EVENT_CODE_CALL_ADD_VIDEO_OK = CALL_EVENT_CODE_BASE + 12;
-        public static final int EVENT_CODE_CALL_ADD_VIDEO_FAILED = CALL_EVENT_CODE_BASE + 13;
-        public static final int EVENT_CODE_CALL_REMOVE_VIDEO_OK = CALL_EVENT_CODE_BASE + 14;
-        public static final int EVENT_CODE_CALL_REMOVE_VIDEO_FAILED = CALL_EVENT_CODE_BASE + 15;
+        public static final int EVENT_CODE_CALL_UPDATE_VIDEO_OK = CALL_EVENT_CODE_BASE + 12;
+        public static final int EVENT_CODE_CALL_UPDATE_VIDEO_FAILED = CALL_EVENT_CODE_BASE + 13;
+//        public static final int EVENT_CODE_CALL_ADD_VIDEO_OK = CALL_EVENT_CODE_BASE + 12;
+//        public static final int EVENT_CODE_CALL_ADD_VIDEO_FAILED = CALL_EVENT_CODE_BASE + 13;
+//        public static final int EVENT_CODE_CALL_REMOVE_VIDEO_OK = CALL_EVENT_CODE_BASE + 14;
+//        public static final int EVENT_CODE_CALL_REMOVE_VIDEO_FAILED = CALL_EVENT_CODE_BASE + 15;
         public static final int EVENT_CODE_CALL_ADD_VIDEO_REQUEST = CALL_EVENT_CODE_BASE + 16;
         public static final int EVENT_CODE_CALL_ADD_VIDEO_CANCEL = CALL_EVENT_CODE_BASE + 17;
         public static final int EVENT_CODE_CALL_RTP_RECEIVED = CALL_EVENT_CODE_BASE + 18;
@@ -940,10 +1070,12 @@ public class Utilities {
         public static final String EVENT_CALL_RESUME_FAILED = "call_resume_failed";
         public static final String EVENT_CALL_HOLD_RECEIVED = "call_hold_received";
         public static final String EVENT_CALL_RESUME_RECEIVED = "call_resume_received";
-        public static final String EVENT_CALL_ADD_VIDEO_OK = "call_add_video_ok";
-        public static final String EVENT_CALL_ADD_VIDEO_FAILED = "call_add_video_failed";
-        public static final String EVENT_CALL_REMOVE_VIDEO_OK = "call_remove_video_ok";
-        public static final String EVENT_CALL_REMOVE_VIDEO_FAILED = "call_remove_video_failed";
+        public static final String EVENT_CALL_UPDATE_VIDEO_OK = "call_update_video_ok";
+        public static final String EVENT_CALL_UPDATE_VIDEO_FAILED = "call_update_video_failed";
+//        public static final String EVENT_CALL_ADD_VIDEO_OK = "call_add_video_ok";
+//        public static final String EVENT_CALL_ADD_VIDEO_FAILED = "call_add_video_failed";
+//        public static final String EVENT_CALL_REMOVE_VIDEO_OK = "call_remove_video_ok";
+//        public static final String EVENT_CALL_REMOVE_VIDEO_FAILED = "call_remove_video_failed";
         public static final String EVENT_CALL_ADD_VIDEO_REQUEST = "call_add_video_request";
         public static final String EVENT_CALL_ADD_VIDEO_CANCEL = "call_add_video_cancel";
         public static final String EVENT_CALL_RTP_RECEIVED = "call_rtp_received";

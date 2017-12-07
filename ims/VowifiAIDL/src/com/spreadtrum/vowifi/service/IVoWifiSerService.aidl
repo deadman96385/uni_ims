@@ -85,7 +85,7 @@ interface IVoWifiSerService {
      * @return {@link Utils#RESULT_FAIL} as fail.
      *         {@link Utils#RESULT_SUCCESS} as success.
      */
-    int sessUpdate(int sessionId, boolean isAudio, boolean isVideo);
+    int sessUpdate(int sessionId, int videoType);
 
     int sessRelease(int sessionId);
 
@@ -244,9 +244,9 @@ interface IVoWifiSerService {
 
     int getDefaultVideoLevel();
 
-    int sendSessionModifyRequest(int sessionId, boolean bAudio, boolean bVideo);
+    int sendSessionModifyRequest(int sessionId, int videoType);
 
-    int sendSessionModifyResponse(int sessionId, boolean bAudio, boolean bVideo);
+    int sendSessionModifyResponse(int sessionId, int videoType);
 
     int getMediaLostRatio(int id, boolean isConference, boolean isVideo);
 

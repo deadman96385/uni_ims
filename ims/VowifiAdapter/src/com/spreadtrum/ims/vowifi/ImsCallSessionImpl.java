@@ -35,7 +35,7 @@ import com.spreadtrum.ims.vowifi.Utilities.Camera;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.SRVCCSyncInfo;
-import com.spreadtrum.ims.vowifi.Utilities.VideoQuality;
+import com.spreadtrum.ims.vowifi.Utilities.VideoType;
 import com.spreadtrum.ims.vowifi.VoWifiCallManager.ICallChangedListener;
 import com.spreadtrum.vowifi.service.IVoWifiSerService;
 
@@ -45,8 +45,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ImsCallSessionImpl extends IImsCallSession.Stub implements LocationListener {
     private static final String TAG = Utilities.getTag(ImsCallSessionImpl.class.getSimpleName());
@@ -951,7 +951,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             return;
         }
 
-        int res = mICall.sessUpdate(mCallId, true, Utilities.isVideoCall(callType));
+        int res = mICall.sessUpdate(mCallId, VideoType.getNativeVideoType(callType));
         if (res == Result.FAIL) {
             handleUpdateActionFailed("Native update result is " + res);
         } else {
@@ -1742,8 +1742,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
     }
 
-    public int sendModifyRequest(boolean isVideo) {
-        if (Utilities.DEBUG) Log.i(TAG, "Try to send the modify request, isVideo: " + isVideo);
+    public int sendModifyRequest(int newVideoType) {
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "Try to send the modify request, new video type: " + newVideoType);
+        }
 
         if (mICall == null) {
             Log.e(TAG, "Can not send the modify request as call interface is null.");
@@ -1751,7 +1753,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
 
         try {
-            int res = mICall.sendSessionModifyRequest(mCallId, true, isVideo);
+            int res = mICall.sendSessionModifyRequest(mCallId, newVideoType);
             if (res == Result.FAIL) {
                 Log.e(TAG, "Failed to send the modify request for the call: " + mCallId);
                 if (mListener != null) {
