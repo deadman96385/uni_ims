@@ -393,7 +393,6 @@ public class ImsService extends Service {
                         Log.i(TAG, "EVENT_WIFI_ATTACH_STOPED, mWifiRegistered:" + mWifiRegistered);
                         mIsAPImsPdnActived = false;
                         mAttachVowifiSuccess = false;//SPRD:Add for bug604833
-                        mWifiRegistered = false; //SPRD:add for bug659097
                         break;
                     case EVENT_WIFI_INCOMING_CALL:
                         ImsServiceImpl service = mImsServiceImplMap.get(
@@ -2288,10 +2287,7 @@ class MyVoWifiCallback implements VoWifiCallback {
             mPendingCPSelfManagement = false;
         }else{
             mIsCPImsPdnActived = false;
-            if(!mIsAPImsPdnActived){
-                mWifiRegistered = false;
-                updateImsFeature(serviceId);
-            }
+
             //SPRD: add for bug642021
             isAirplaneModeOn = Settings.Global.getInt(getApplicationContext().getContentResolver(),
                     Settings.Global.AIRPLANE_MODE_ON, 0) > 0;
@@ -2638,6 +2634,9 @@ class MyVoWifiCallback implements VoWifiCallback {
         if(phoneId == primaryPhoneId+1){
             updateImsFeature(phoneId);
             mWifiService.onSRVCCStateChanged(status);
+            if(mWifiRegistered) {
+                mWifiRegistered = false; // SPRD:add for bug659097
+            }
         }
     }
     public void onVideoStateChanged(int videoState){
