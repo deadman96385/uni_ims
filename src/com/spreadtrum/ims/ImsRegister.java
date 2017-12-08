@@ -202,12 +202,13 @@ public class ImsRegister {
             case EVENT_ENABLE_IMS:
                 log("EVENT_ENABLE_IMS");
                 mNumeric = mTelephonyManager.getNetworkOperatorForPhone(mPhoneId);
+                // add for 796527
+                mVolteConfig.loadVolteConfig(mContext);
                 boolean isSimConfig = getSimConfig();
                 log("current mNumeric = "+mNumeric);
                 // add for Dual LTE
 //                if(mPhoneId == getPrimaryCard()){
                 if (mTelephonyManagerEx.getLTECapabilityForPhone(mPhoneId)) {
-                    mVolteConfig.loadVolteConfig(mContext);
                     log("PrimaryCard : mLastNumeric = "+mLastNumeric);
                     if(!(mLastNumeric.equals(mNumeric))) {
                         if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric)) && mImsService.allowEnableIms(mPhoneId)){
