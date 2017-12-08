@@ -35,6 +35,7 @@ import com.spreadtrum.ims.vowifi.Utilities.Camera;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.SRVCCSyncInfo;
+import com.spreadtrum.ims.vowifi.Utilities.VideoType;
 import com.spreadtrum.ims.vowifi.VoWifiCallManager.ICallChangedListener;
 import com.spreadtrum.vowifi.service.IVoWifiSerService;
 
@@ -133,10 +134,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                 if (mListener != null) {
                     try {
                         mListener.callSessionStartFailed(ImsCallSessionImpl.this,
-                                new ImsReasonInfo(
-                                        ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED,
-                                        ImsReasonInfo.CODE_UNSPECIFIED,
-                                        failMessage));
+                                new ImsReasonInfo(msg.arg1, msg.arg2, failMessage));
                     } catch (RemoteException e) {
                         Log.e(TAG, "Failed to give the call session start failed callback.");
                         Log.e(TAG, "Catch the RemoteException e: " + e);
@@ -651,13 +649,20 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
     }
 
     private void handleStartActionFailed(String failMessage) {
+        handleStartActionFailed(
+                ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED,
+                ImsReasonInfo.CODE_UNSPECIFIED,
+                failMessage);
+    }
+
+    private void handleStartActionFailed(int code, int extraCode, String failMessage) {
         // As start action failed, remove the call first.
         mCallManager.removeCall(this);
 
         // When #ImsCall received the call session start failed callback will set the call session
         // to null. Then sometimes it will meet the NullPointerException. So we'd like to delay
         // 500ms to send this callback to let the ImsCall handle the left logic.
-        Message msg = mHandler.obtainMessage(MSG_START_FAIL, failMessage);
+        Message msg = mHandler.obtainMessage(MSG_START_FAIL, code, extraCode, failMessage);
         mHandler.sendMessageDelayed(msg, 500);
     }
 
@@ -951,7 +956,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             return;
         }
 
-        int res = mICall.sessUpdate(mCallId, true, Utilities.isVideoCall(callType));
+        int res = mICall.sessUpdate(mCallId, VideoType.getNativeVideoType(callType));
         if (res == Result.FAIL) {
             handleUpdateActionFailed("Native update result is " + res);
         } else {
@@ -1740,8 +1745,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
     }
 
-    public int sendModifyRequest(boolean isVideo) {
-        if (Utilities.DEBUG) Log.i(TAG, "Try to send the modify request, isVideo: " + isVideo);
+    public int sendModifyRequest(int newVideoType) {
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "Try to send the modify request, new video type: " + newVideoType);
+        }
 
         if (mICall == null) {
             Log.e(TAG, "Can not send the modify request as call interface is null.");
@@ -1749,7 +1756,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
 
         try {
-            int res = mICall.sendSessionModifyRequest(mCallId, true, isVideo);
+            int res = mICall.sendSessionModifyRequest(mCallId, newVideoType);
             if (res == Result.FAIL) {
                 Log.e(TAG, "Failed to send the modify request for the call: " + mCallId);
                 if (mListener != null) {
