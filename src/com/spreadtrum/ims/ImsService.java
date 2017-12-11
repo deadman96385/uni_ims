@@ -25,6 +25,7 @@ import android.os.SystemProperties;
 import android.os.RemoteException;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
+import android.telephony.TelephonyManagerEx;
 import android.telephony.PhoneStateListener;
 import android.telephony.VoLteServiceState;
 import android.telephony.ims.feature.ImsFeature;
@@ -207,6 +208,8 @@ public class ImsService extends Service {
     private int mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
     private int mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
     private TelephonyManager mTelephonyManager;
+    // add for Dual LTE
+    private TelephonyManagerEx mTelephonyManagerEx;
     private PhoneStateListener mPhoneStateListener;
     private int mPhoneCount = 2;
     private ImsServiceRequest mFeatureSwitchRequest;
@@ -358,9 +361,8 @@ public class ImsService extends Service {
                                 /* SPRD: Modify for bug595321 and 610503{@ */
                                 if (mIsCalling) {
                                     mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
-                                    updateImsFeature();
-                                    mWifiService
-                                            .updateDataRouterState(DataRouterState.CALL_VOWIFI);
+                                    updateImsFeature(mFeatureSwitchRequest.mServiceId);
+                                    mWifiService.updateDataRouterState(DataRouterState.CALL_VOWIFI);
                                     mIsPendingRegisterVowifi = true;
                                     if (mImsServiceListenerEx != null) {
                                         Log.i(TAG,
@@ -376,7 +378,7 @@ public class ImsService extends Service {
                                         service.enableWiFiParamReport();
                                     }
                                 } else {
-                                    updateImsFeature();
+                                    updateImsFeature(mFeatureSwitchRequest.mServiceId);
                                     mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
                                     if (mImsServiceListenerEx != null) {
                                         Log.i(TAG,
@@ -1145,8 +1147,8 @@ public class ImsService extends Service {
                 }
             }
         }
-        mTelephonyManager = (TelephonyManager) this
-                .getSystemService(Context.TELEPHONY_SERVICE);
+        mTelephonyManager = (TelephonyManager)this.getSystemService(Context.TELEPHONY_SERVICE);
+        mTelephonyManagerEx = TelephonyManagerEx.from(getApplicationContext());
         mPhoneCount = mTelephonyManager.getPhoneCount();
         mPhoneStateListener = new PhoneStateListener() {
             @Override
@@ -1429,20 +1431,25 @@ public class ImsService extends Service {
          * Used for turning on IMS when its in OFF state.
          */
         @Override
-        public void turnOnIms(int phoneId) {
-            synchronized (mImsServiceImplMap) {
-                ImsServiceImpl impl = mImsServiceImplMap.get(Integer
-                        .valueOf(phoneId + 1));
-                if (impl == null
-                        || ImsRegister.getPrimaryCard(mPhoneCount) != phoneId) {
-                    Log.w(TAG, "turnOnIms error:" + phoneId);
-                    return;
-                }
-                if (ImsManager
-                        .isEnhanced4gLteModeSettingEnabledByUser(getApplicationContext())) {// SPRD:
-                    // bug644353
-                    impl.turnOnIms();
-                }
+        public void turnOnIms(int phoneId){
+//            for(int i = 0; i < TelephonyManager.getDefault().getPhoneCount(); i++){
+//                ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(i+1));
+//                if(impl == null){
+//                    continue;
+//                }
+//                if(ImsManager.isEnhanced4gLteModeSettingEnabledByUser(getApplicationContext())){//SPRD: bug644353
+//                    impl.turnOnIms();
+//                }
+//            }
+            Log.d(TAG, "ImsService turnOnIms() phoneId = " + phoneId);
+            ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(phoneId + 1));
+            if (impl == null) {
+                return;
+            }
+            Log.d(TAG, "ImsService turnOnIms() impl = " + impl);
+            if (ImsManager.getInstance(getApplicationContext(), phoneId)
+                    .isEnhanced4gLteModeSettingEnabledByUserForSlot()) {
+                impl.turnOnIms();
             }
         }
 
@@ -1452,16 +1459,21 @@ public class ImsService extends Service {
          */
         @Override
         public void turnOffIms(int phoneId) {
-            synchronized (mImsServiceImplMap) {
-                ImsServiceImpl impl = mImsServiceImplMap.get(Integer
-                        .valueOf(phoneId + 1));
-                if (impl == null
-                        || ImsRegister.getPrimaryCard(mPhoneCount) != phoneId) {
-                    Log.w(TAG, "turnOffIms error:" + phoneId);
-                    return;
-                }
-                impl.turnOffIms();
+            Log.d(TAG, "ImsService turnOffIms() phoneId = " + phoneId);
+//            for(int i = 0; i < TelephonyManager.getDefault().getPhoneCount(); i++){
+//                ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(i+1));
+//                if(impl == null){
+//                    continue;
+//                }
+//                impl.turnOffIms();
+//            }
+            ImsServiceImpl impl = mImsServiceImplMap
+                    .get(Integer.valueOf(phoneId + 1));
+            Log.d(TAG, "ImsService turnOffIms() impl = " + impl);
+            if (impl == null) {
+                return;
             }
+            impl.turnOffIms();
         }
 
         /**
@@ -2032,10 +2044,12 @@ public class ImsService extends Service {
                 Thread.dumpStack();
                 return;
             }
+            Log.i(TAG," registerforImsRegisterStateChanged() -> ");
             synchronized (mImsRegisterListeners) {
                 if (!mImsRegisterListeners.keySet().contains(
                         listener.asBinder())) {
                     mImsRegisterListeners.put(listener.asBinder(), listener);
+                    Log.i(TAG," registerforImsRegisterStateChanged() -> notifyListenerWhenRegister");
                     notifyListenerWhenRegister(listener);
                 } else {
                     Log.w(TAG, "Listener already add :" + listener);
@@ -2409,9 +2423,13 @@ public class ImsService extends Service {
 
     };
 
-    private void notifyListenerWhenRegister(IImsRegisterListener listener) {
-        updateImsRegisterState();
-        boolean isImsRegistered = ((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE) || (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
+    private void notifyListenerWhenRegister(IImsRegisterListener listener){
+        Log.i(TAG," notifyListenerWhenRegister() -> ");
+        // SPRD 708609 when switch data card, VOLTE icon also display
+//        updateImsRegisterState();
+        boolean isImsRegistered = ((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)
+                || (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
+        Log.i(TAG," notifyListenerWhenRegister() -> isImsRegistered: "+isImsRegistered);
         synchronized (mImsRegisterListeners) {
             try {
                 listener.imsRegisterStateChange(isImsRegistered);
@@ -2423,7 +2441,13 @@ public class ImsService extends Service {
 
     public void notifyImsRegisterState() {
         updateImsRegisterState();
-        boolean isImsRegistered = ((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE) || (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
+        boolean isImsRegistered = ((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)
+                || (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
+        //SPRD: add for bug 771875
+        if(ImsManagerEx.isDualLteModem()){
+            Log.i(TAG," notifyImsRegisterState() -> isDualLteModem is ok ");
+            isImsRegistered  = isImsRegistered || mVolteRegistered;
+        }
         synchronized (mImsRegisterListeners) {
             /**
              * SPRD bug647508
@@ -2614,7 +2638,7 @@ public class ImsService extends Service {
                         if (ImsManagerEx.isDualVoLTEActive()) {
                             updateImsFeature(serviceId);
                         } else {
-                            updateImsFeature();
+                            updateImsFeature(serviceId);
                         }
                     }
                 } else {
@@ -2624,7 +2648,7 @@ public class ImsService extends Service {
                             if (ImsManagerEx.isDualVoLTEActive()) {
                                 updateImsFeature(serviceId);
                             } else {
-                                updateImsFeature();
+                                updateImsFeature(serviceId);
                             }
                         }
                     }
@@ -2646,7 +2670,7 @@ public class ImsService extends Service {
                             if (ImsManagerEx.isDualVoLTEActive()) {
                                 updateImsFeature(serviceId);
                             } else {
-                                updateImsFeature();
+                                updateImsFeature(serviceId);
                             }
                         }
                         mIsPendingRegisterVolte = false;
@@ -2821,12 +2845,18 @@ public class ImsService extends Service {
         ImsServiceImpl imsService = mImsServiceImplMap.get(Integer
                 .valueOf(serviceId));
         boolean isPrimaryCard = ImsRegister.getPrimaryCard(mPhoneCount) == (serviceId-1);
+        Log.i(TAG,"updateImsFeature --> isPrimaryCard = " + ImsRegister.getPrimaryCard(mPhoneCount) + " | serviceId-1 = " + (serviceId-1));
         boolean volteRegistered = (imsService != null) ? imsService.isImsRegisterState() : false;
+
         if (!isPrimaryCard && imsService != null) {
-            Log.i(TAG, "updateImsFeature->isPrimaryCard:" + isPrimaryCard
-                    + " volteRegistered:" + volteRegistered
-                    + " serviceId:" + serviceId);
-            if(ImsManagerEx.isDualVoLTEActive()) {
+            Log.i(TAG,
+                    "updateImsFeature->isPrimaryCard:" + isPrimaryCard
+                            + " volteRegistered:" + volteRegistered
+                            + " serviceId:" + serviceId
+                            + " | mTelephonyManagerEx.getLTECapabilityForPhone = "
+                            + mTelephonyManagerEx
+                                    .getLTECapabilityForPhone(serviceId - 1));
+            if(ImsManagerEx.isDualVoLTEActive() || mTelephonyManagerEx.getLTECapabilityForPhone(serviceId - 1)) {
                 imsService.updateImsFeatures(volteRegistered, false);
                 imsService.notifyImsRegister(volteRegistered);
                 notifyImsRegisterState();
@@ -3090,18 +3120,19 @@ public class ImsService extends Service {
         } catch (RemoteException e) {
             e.printStackTrace();
         }
-        // If the switch request is null, we will start the volte call as
-        // default.
-        if (mFeatureSwitchRequest == null
-                && state == ImsPDNStatus.IMS_PDN_READY) {
-            ImsServiceImpl service = mImsServiceImplMap.get(Integer
-                    .valueOf(ImsRegister.getPrimaryCard(mPhoneCount) + 1));
-            /* SPRD: Modify for bug599233{@ */
-            Log.i(TAG, "onImsPdnStatusChange->mIsPendingRegisterVolte:"
-                    + mIsPendingRegisterVolte + " service.isImsRegistered():"
-                    + service.isImsRegistered());
-            // If pdn is ready when handover from vowifi to volte but volte is
-            // not registered , never to turn on ims.
+        // If the switch request is null, we will start the volte call as default.
+        if (mFeatureSwitchRequest == null && state == ImsPDNStatus.IMS_PDN_READY) {
+            // add for Dual LTE
+            ImsServiceImpl service = null;
+            if (mTelephonyManagerEx.getLTECapabilityForPhone(serviceId - 1)) {
+                service = mImsServiceImplMap.get(Integer.valueOf(serviceId));
+            } else {
+                service = mImsServiceImplMap.get(Integer
+                        .valueOf(ImsRegister.getPrimaryCard(mPhoneCount) + 1));
+            }
+            /*SPRD: Modify for bug599233{@*/
+            Log.i(TAG,"onImsPdnStatusChange->mIsPendingRegisterVolte:" + mIsPendingRegisterVolte + " service.isImsRegistered():" + service.isImsRegistered());
+            // If pdn is ready when handover from vowifi to volte but volte is not registered , never to turn on ims.
             // If Volte is registered , never to turn on ims.
             Log.i(TAG, "onImsPdnStatusChange->mIsVolteCall:" + mIsVolteCall
                     + " mIsVowifiCall:" + mIsVowifiCall
@@ -3162,7 +3193,7 @@ public class ImsService extends Service {
                     if (mIsCalling) {
                         mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
                         mIsPendingRegisterVolte = true;
-                        updateImsFeature();
+                        updateImsFeature(serviceId);
                         if (mImsServiceListenerEx != null) {
                             try {
                                 Log.i(TAG,
@@ -3189,8 +3220,8 @@ public class ImsService extends Service {
                         }
                     } else {
                         mIsPendingRegisterVolte = true;
+                        updateImsFeature(serviceId);
                         mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
-                        updateImsFeature();
                         Log.i(TAG,
                                 "onImsPdnStatusChange -> mCurrentImsFeature:"
                                         + ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE
@@ -3341,12 +3372,19 @@ public class ImsService extends Service {
         }
     }
 
-    public boolean allowEnableIms() {
-        ImsServiceImpl service = mImsServiceImplMap.get(Integer
-                .valueOf(ImsRegister.getPrimaryCard(mPhoneCount) + 1));
-        Log.i(TAG, "allowEnableIms->service:" + service
-                + " mFeatureSwitchRequest:" + mFeatureSwitchRequest);
-        if (mFeatureSwitchRequest != null || service == null) {
+    public boolean allowEnableIms(int serviceId){
+//        ImsServiceImpl service = mImsServiceImplMap.get(
+//                Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
+        // add for Dual LTE
+        ImsServiceImpl service = null;
+        if (mTelephonyManagerEx.getLTECapabilityForPhone(serviceId)) {
+            service = mImsServiceImplMap.get(Integer.valueOf(serviceId + 1));
+        } else {
+            service = mImsServiceImplMap.get(
+                    Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
+        }
+        Log.i(TAG,"allowEnableIms->service:"+service +" mFeatureSwitchRequest:"+mFeatureSwitchRequest);
+        if(mFeatureSwitchRequest != null || service == null){
             return false;
         }
         if (mIsVolteCall || mIsVowifiCall || mIsAPImsPdnActived) {

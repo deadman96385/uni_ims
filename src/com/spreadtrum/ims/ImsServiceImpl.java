@@ -268,13 +268,13 @@ public class ImsServiceImpl extends MMTelFeature {
                     break;
                 case EVENT_IMS_STATE_DONE:
                     if (ar.exception == null && ar.result != null) {
-                        int[] responseArray = (int[])ar.result;
-                        if(responseArray != null && responseArray.length >1){
-                            mImsServiceState.mImsRegistered = (responseArray[0]== 1);
-                            mImsServiceState.mSrvccState = -1;
-                        }
-                        //if(ImsManagerEx.isDualVoLTEActive()){
-                        //}
+                        // to be done
+                        // SPRD 723085 mImsRegistered shouldn't be set twice time.
+//                        int[] responseArray = (int[])ar.result;
+//                        if(responseArray != null && responseArray.length >1){
+//                            mImsServiceState.mImsRegistered = (responseArray[0] != 0 && responseArray[1]== 1);
+//                            mImsServiceState.mSrvccState = -1;
+//                        }
                     } else {
                         Log.i(TAG,"EVENT_IMS_STATE_DONE->ar.exception mServiceId:"+mServiceId);
                         mImsServiceState.mImsRegistered = false;
@@ -897,6 +897,11 @@ public class ImsServiceImpl extends MMTelFeature {
             Log.w(TAG,"addListener-> listener already remove!");
         }
     }
+    //SPRD: add for bug 771875
+    public void updateImsFeature(int feature, int value) {
+        Log.i(TAG, "updateImsFeatures->feature:" + feature + " value:" + value);
+        updateImsFeatures(mImsService.isVoLTEEnabled(), mImsService.isVoWifiEnabled());
+    }
 
     public void notifyRegisterStateChange() {
         // SPRD Add for DSDA bug684926:
@@ -1235,12 +1240,6 @@ public class ImsServiceImpl extends MMTelFeature {
             }
         }
     }
-
-    /*sprd: add for bug712024 @{*/
-    public void updateImsFeature(int feature, int value) {
-        Log.i(TAG, "updateImsFeatures->feature:" + feature + " value:" + value);
-        updateImsFeatures(mImsService.isVoLTEEnabled(), mImsService.isVoWifiEnabled());
-    }/*@}*/
 
     public boolean isImsEnabled(){
         return ((mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
