@@ -110,6 +110,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
     private static final int MSG_ECBM = 11;
     private static final int MSG_ECBM_TIMEOUT = 12;
+    private static final int MSG_QUERY_CLIR_MODE = 13;
     private class MyHandler extends Handler {
         public MyHandler(Looper looper) {
             super(looper);
@@ -176,6 +177,10 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     break;
                 case MSG_ECBM_TIMEOUT:
                     handleMsgECBMTimeout(msg.arg1);
+                    break;
+                case MSG_QUERY_CLIR_MODE:
+                    Log.d(TAG, "Query the CLIR mode now.");
+                    queryCLIRStatus();
                     break;
             }
         }
@@ -254,6 +259,20 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             // Reset the security and sip stack.
             resetAll(WifiState.DISCONNECTED);
         }
+
+        private void queryCLIRStatus() {
+            try {
+                IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
+                if (imsServiceEx != null) {
+                    Log.d(TAG, "To get the CLIR mode from CP.");
+                    imsServiceEx.getCLIRStatus(Utilities.getPrimaryCard(mContext));
+                }
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to get the CLIR statue as catch the RemoteException: "
+                        + e.toString());
+            }
+        }
+
     }
 
     public VoWifiServiceImpl(Context context) {
@@ -596,6 +615,14 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         if (mCallMgr != null) mCallMgr.onSRVCCStateChanged(state);
     }
 
+    public int updateCurCLIRMode(int clirMode) {
+        if (getUtInterface() != null) {
+            getUtInterface().setCurCLIRMode(clirMode);
+        }
+
+        return Result.SUCCESS;
+    }
+
     private void init() {
         if (ImsManager.isWfcEnabledByPlatform(mContext)) {
             mPreferences = PreferenceManager.getDefaultSharedPreferences(mContext);
@@ -611,6 +638,9 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             mCallMgr.registerListener(mCallListener);
             mRegisterMgr.registerListener(mRegisterListener);
             mSecurityMgr.registerListener(mSecurityListener);
+
+            // Query the CLIR mode once, and the CLIR mode will be update by updateCurCLIRMode.
+            mHandler.sendEmptyMessageDelayed(MSG_QUERY_CLIR_MODE, 500);
         }
     }
 
@@ -951,8 +981,9 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
             // If the new state is registered, we need query the CLIR state from CP.
             // And if the query action success, telephony will update the CLIR via UtInterface.
-            if (newState == RegisterState.STATE_CONNECTED) {
-                queryCLIRStatus();
+            if (getUtInterface() != null
+                    && newState == RegisterState.STATE_CONNECTED) {
+                getUtInterface().updateCLIR();
             }
         }
 
@@ -1000,20 +1031,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             return "";
         }
 
-        private void queryCLIRStatus() {
-            try {
-                IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
-                if (imsServiceEx != null) {
-                    int id = imsServiceEx.getCLIRStatus(Utilities.getPrimaryCard(mContext));
-                    if (id < 0) {
-                        Log.w(TAG, "Can not to get CLIR status, please check!");
-                    }
-                }
-            } catch (RemoteException e) {
-                Log.e(TAG, "Failed to get the CLIR statue as catch the RemoteException: "
-                        + e.toString());
-            }
-        }
     }
 
     private class MySecurityListener implements SecurityListener {

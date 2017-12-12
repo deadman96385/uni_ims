@@ -1666,16 +1666,10 @@ public class ImsService extends Service {
 
 
         public int updateCLIRStatus(int action) {
-            com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl =
-                    mWifiService.getUtInterface();
             int id = -1;
             Log.i(TAG, "updateCLIRStatus action = " + action);
-            if (voWifiUtImpl != null) {
-                try {
-                    id = voWifiUtImpl.updateCLIR(action);
-                } catch (RemoteException e) {
-                    e.printStackTrace();;
-                }
+            if (mWifiService != null) {
+                id = mWifiService.updateCurCLIRMode(action);
             }
             return id;
         }

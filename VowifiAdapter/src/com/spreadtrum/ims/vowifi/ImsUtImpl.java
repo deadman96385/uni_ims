@@ -50,6 +50,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private static final int SERVICE_CLASS_VOICE = CommandsInterface.SERVICE_CLASS_VOICE;
     // FIXME: This value defined in CallForwardEditPreference but not CommandsInterface.
     private static final int SERVICE_CLASS_VIDEO = 2;
+    private static final int SERVICE_CLASS_ALL = SERVICE_CLASS_VOICE | SERVICE_CLASS_VIDEO;
 
     private Context mContext;
 
@@ -60,6 +61,8 @@ public class ImsUtImpl extends IImsUt.Stub {
     private VoWifiCallManager mCallManager = null;
     private IVoWifiSerService mICall = null;
     private MySerServiceCallback mSerServiceCallback = new MySerServiceCallback();
+
+    private static int sCurCLIRMode = -1;
 
     private static final int CMD_TIMEOUT = 30 * 1000; // 30s
 
@@ -206,6 +209,19 @@ public class ImsUtImpl extends IImsUt.Stub {
         mListenerEx = null;
     }
 
+    public void setCurCLIRMode(int clirMode) {
+        Log.d(TAG, "Set the current CLIR mode to " + clirMode);
+        sCurCLIRMode = clirMode;
+    }
+
+    public void updateCLIR() {
+        try {
+            updateCLIR(sCurCLIRMode);
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to update the CLIR mode[" + sCurCLIRMode + "] to sip.");
+        }
+    }
+
     /**
      * Retrieves the configuration of the call barring.
      */
@@ -343,6 +359,9 @@ public class ImsUtImpl extends IImsUt.Stub {
     @Override
     public int updateCLIR(int clirMode) throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Try to update CLIR to mode: " + clirMode);
+
+        // Once the CLIR mode changed, update the current mode.
+        setCurCLIRMode(clirMode);
 
         UTAction action = new UTAction("updateCLIR", MSG_ACTION_UPDATE_CLIR, CMD_TIMEOUT,
                 Boolean.valueOf(clirMode == ImsUtInterface.OIR_PRESENTATION_RESTRICTED));
@@ -728,7 +747,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                 Log.w(TAG, "The condition is abnormal, please check rule: " + rule.toString());
             }
             if (TextUtils.isEmpty(media)) {
-                info.mServiceClass = SERVICE_CLASS_VOICE | SERVICE_CLASS_VIDEO;
+                info.mServiceClass = SERVICE_CLASS_ALL;
             } else if (JSONUtils.RULE_MEDIA_AUDIO.equals(media)) {
                 info.mServiceClass = SERVICE_CLASS_VOICE;
             } else if (JSONUtils.RULE_MEDIA_VIDEO.equals(media)) {
@@ -1136,18 +1155,18 @@ public class ImsUtImpl extends IImsUt.Stub {
             synchronized (mCmds) {
                 Integer key = mCmds.getFirst();
                 UTAction action = mUTActions.get(key);
-                int[] info;
-                Log.d(TAG, "action._action is : " + action._action);
-                info = findCallBarringInfo(infolist,
+                Log.d(TAG, "Query call barring finished, action is " + action._action);
+                int[] info = findCallBarringInfo(infolist,
                         getConditionFromCBReason((String) action._params.get(0)));
                 // Find the call barring info for this action.
                 Log.d(TAG, "Success to query the call barring info: " + info);
-                if (info != null) {
+                if (info != null && info.length > 0) {
                     if (mListenerEx != null) {
                         mListenerEx.utConfigurationCallBarringResult(key, info);
                     }
                 } else {
-                    mListenerEx.utConfigurationCallBarringResult(key, null);
+                    mListenerEx.utConfigurationCallBarringFailed(
+                            key, null, ImsReasonInfo.CODE_UT_NETWORK_ERROR);
                 }
                 mUTActions.remove(key);
                 mCmds.remove(key);
