@@ -169,7 +169,7 @@ public class ImsServiceImpl {
         mServiceId = phone.getPhoneId() + 1;
         mImsRegister = new ImsRegister(mPhone, mContext, mCi);
         mImsServiceState = new ImsServiceState(false,IMS_REG_STATE_INACTIVE);
-        mImsConfigImpl = new ImsConfigImpl(mCi,context);
+        mImsConfigImpl = new ImsConfigImpl(mCi,context,mServiceId);
         mImsUtImpl = new ImsUtImpl(mCi,context,phone);
         com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl =  mWifiService.getUtInterface();
         mImsUtProxy = new ImsUtProxy(context, mImsUtImpl, voWifiUtImpl, mPhone);
