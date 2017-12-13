@@ -1073,15 +1073,22 @@ public class ImsService extends Service {
          */
         @Override
         public void turnOnIms(int phoneId){
-//            for(int i = 0; i < TelephonyManager.getDefault().getPhoneCount(); i++){
-//                ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(i+1));
-//                if(impl == null){
-//                    continue;
-//                }
-//                if(ImsManager.isEnhanced4gLteModeSettingEnabledByUser(getApplicationContext())){//SPRD: bug644353
-//                    impl.turnOnIms();
-//                }
-//            }
+            if (!ImsManagerEx.isDualLteModem()) {
+                Log.d(TAG, "ImsService turnOnIms() isNotDualLteModem ");
+                for (int i = 0; i < TelephonyManager.getDefault()
+                        .getPhoneCount(); i++) {
+                    ImsServiceImpl impl = mImsServiceImplMap
+                            .get(Integer.valueOf(i + 1));
+                    if (impl == null) {
+                        continue;
+                    }
+                    if (ImsManager.isEnhanced4gLteModeSettingEnabledByUser(
+                            getApplicationContext())) {// SPRD: bug644353
+                        impl.turnOnIms();
+                    }
+                }
+                return;
+            }
             Log.d(TAG, "ImsService turnOnIms() phoneId = " + phoneId);
             ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(phoneId + 1));
             if (impl == null) {
@@ -1100,14 +1107,18 @@ public class ImsService extends Service {
          */
         @Override
         public void turnOffIms(int phoneId) {
+            if (!ImsManagerEx.isDualLteModem()) {
+                Log.d(TAG, "ImsService turnOffIms() isNotDualLteModem ");
+                for (int i = 0; i < TelephonyManager.getDefault()
+                        .getPhoneCount(); i++) {
+                    ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(i + 1));
+                    if (impl == null) {
+                        continue;
+                    }
+                    impl.turnOffIms();
+                }
+            }
             Log.d(TAG, "ImsService turnOffIms() phoneId = " + phoneId);
-//            for(int i = 0; i < TelephonyManager.getDefault().getPhoneCount(); i++){
-//                ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(i+1));
-//                if(impl == null){
-//                    continue;
-//                }
-//                impl.turnOffIms();
-//            }
             ImsServiceImpl impl = mImsServiceImplMap
                     .get(Integer.valueOf(phoneId + 1));
             Log.d(TAG, "ImsService turnOffIms() impl = " + impl);
