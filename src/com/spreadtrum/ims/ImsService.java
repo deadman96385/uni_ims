@@ -1745,13 +1745,27 @@ public class ImsService extends Service {
                 throws RemoteException {
             enforceCallingOrSelfPermission(MODIFY_PHONE_STATE, "turnOnIms");
             synchronized (mImsServiceImplMap) {
+                if (!ImsManagerEx.isDualLteModem()) {
+
+                    Log.d(TAG,"turnOnIms() ImsManagerEx.isNotDualLteModem && ");
+                    Log.d(TAG, "turnOnIms() ImsManagerEx.isDualVoLTEActive : "
+                            + ImsManagerEx.isDualVoLTEActive());
+                    for (int i = 0; i < mImsServiceImplMap.size(); i++) {
+                        MMTelFeature mmTel = resolveMMTelFeature(i,
+                                featureType);
+                        if (mmTel != null) {
+                            mmTel.turnOnIms();
+                        }
+                    }
+                    return;
+                }
                 MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
                 if (feature != null) {
-                    Log.w(TAG, "turnOnIms() ImsManagerEx.isDualVoLTEActive: " + ImsManagerEx.isDualVoLTEActive());
-                    if (ImsRegister.getPrimaryCard(mPhoneCount) != slotId && !ImsManagerEx.isDualVoLTEActive()) {
-                        Log.w(TAG, "turnOnIms error  slotId:" + slotId);
-                        return;
-                    }
+                    Log.w(TAG, "turnOnIms() ImsManagerEx.isDualLteModem");
+//                    if (ImsRegister.getPrimaryCard(mPhoneCount) != slotId && !ImsManagerEx.isDualVoLTEActive()) {
+//                        Log.w(TAG, "turnOnIms error  slotId:" + slotId);
+//                        return;
+//                    }
                     feature.turnOnIms();
                 }
             }
@@ -1762,12 +1776,27 @@ public class ImsService extends Service {
                 throws RemoteException {
             enforceCallingOrSelfPermission(MODIFY_PHONE_STATE, "turnOffIms");
             synchronized (mImsServiceImplMap) {
+                if (!ImsManagerEx.isDualLteModem()) {
+
+                    Log.d(TAG,"turnOffIms() ImsManagerEx.isNotDualLteModem && ");
+                    Log.d(TAG, "turnOffIms() ImsManagerEx.isDualVoLTEActive : "
+                            + ImsManagerEx.isDualVoLTEActive());
+                    for (int i = 0; i < mImsServiceImplMap.size(); i++) {
+                        MMTelFeature mmTel = resolveMMTelFeature(i,
+                                featureType);
+                        if (mmTel != null) {
+                            mmTel.turnOffIms();
+                        }
+                    }
+                    return;
+                }
                 MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
                 if (feature != null) {
-                    if (ImsRegister.getPrimaryCard(mPhoneCount) != slotId) {
-                        Log.w(TAG, "turnOffIms error  slotId:" + slotId);
-                        return;
-                    }
+                    Log.w(TAG, "turnOffIms() ImsManagerEx.isDualLteModem");
+//                    if (ImsRegister.getPrimaryCard(mPhoneCount) != slotId) {
+//                        Log.w(TAG, "turnOffIms error  slotId:" + slotId);
+//                        return;
+//                    }
                     feature.turnOffIms();
                 }
             }
