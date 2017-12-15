@@ -1616,9 +1616,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     /* SPRD:Add for bug582072 @{ */
     public void notifyRemoteVideoProfile(AsyncResult ar) {
         SuppServiceNotification notification = (SuppServiceNotification) ar.result;
+
             switch (notification.code) {
             case SuppServiceNotification.MT_CODE_CALL_ON_HOLD:
-                mIsRemoteHold = true;//SPRD: modify by bug666088
+                if(notification.notificationType == 1){
+                   mIsRemoteHold = true;//SPRD: modify by bug666088 and modify for bug801672
+                }
                 mRemoteCallProfile = new ImsCallProfile(
                         ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VOICE);
                 break;
