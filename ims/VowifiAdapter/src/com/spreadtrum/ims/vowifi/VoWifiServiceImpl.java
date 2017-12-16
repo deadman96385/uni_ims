@@ -81,7 +81,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private boolean mNeedResetAfterCall = false;
 
     private Context mContext;
-    private TelephonyManager mTeleMgr = null;
     private SharedPreferences mPreferences = null;
     private VoWifiCallback mCallback = null;
     private SIMAccountInfo mSIMAccountInfo = null;
@@ -260,8 +259,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     public VoWifiServiceImpl(Context context) {
         mContext = context;
 
-        mTeleMgr = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-
         HandlerThread thread = new HandlerThread("VoWifi");
         thread.start();
         Looper looper = thread.getLooper();
@@ -374,14 +371,12 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private void attachInternal() {
         // Before start attach process, need get the SIM account info.
         // We will always use the primary card to attach and register now.
-        int phoneId = Utilities.getPrimaryCard(mContext);
-        String deviceId = mTeleMgr.getDeviceId();
-        if (TextUtils.isEmpty(deviceId)) {
-            Log.e(TAG, "Can not get the sub id from the phone id: " + phoneId);
+        mSIMAccountInfo = SIMAccountInfo.generate();
+        if (mSIMAccountInfo == null) {
+            Log.e(TAG, "Can not generate the attach account info.");
             if (mCallback != null) mCallback.onAttachFinished(false, 0);
             return;
         }
-        mSIMAccountInfo = SIMAccountInfo.generate(mTeleMgr, phoneId);
 
         if (mEcbmStep == ECBM_STEP_ATTACH_FOR_SOS) {
             mSecurityMgr.attachForSos(mSIMAccountInfo);

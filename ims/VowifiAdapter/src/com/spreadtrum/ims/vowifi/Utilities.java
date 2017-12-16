@@ -333,7 +333,7 @@ public class Utilities {
     }
 
     public static class SIMAccountInfo {
-        public int _subId;
+        public int _phoneId;
         public String _spn;
         public String _imei;
         public String _imsi;
@@ -351,11 +351,12 @@ public class Utilities {
         public String _authPass;
         public String _realm;
 
-        public static SIMAccountInfo generate(TelephonyManager tm, int subId) {
+        public static SIMAccountInfo generate() {
             SIMAccountInfo info = new SIMAccountInfo();
-            info._subId = subId;
+            info._phoneId = TelephonyManager.getDefaultPhoneId();
 
             // Get the IMEI for the phone.
+            TelephonyManager tm = TelephonyManager.getDefault(info._phoneId);
             String imei = tm.getDeviceId();
             if (!isIMEIValid(imei)) return null;
 
@@ -443,7 +444,7 @@ public class Utilities {
 
         @Override
         public String toString() {
-            return "SIMAccountInfo: subId[" + _subId
+            return "SIMAccountInfo: phoneId[" + _phoneId
                     + "], spn[" + _spn
                     + "], imei[" + _imei
                     + "], imsi[" + _imsi

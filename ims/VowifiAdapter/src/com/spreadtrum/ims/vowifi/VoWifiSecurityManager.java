@@ -150,7 +150,7 @@ public class VoWifiSecurityManager extends ServiceManager {
                 if (mState <= AttachState.STATE_IDLE) {
                     // If the s2b state is idle, start the attach action.
                     int sessionId = mISecurity.start(
-                            type, info._subId, info._imsi, info._hplmn, info._vplmn, info._imei);
+                            type, info._phoneId, info._imsi, info._hplmn, info._vplmn, info._imei);
                     if (sessionId == Result.INVALID_ID) {
                         // It means attach failed.
                         attachFailed(0);
