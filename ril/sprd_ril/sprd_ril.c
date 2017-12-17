@@ -9540,6 +9540,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_GET_IMS_BEARER_STATE
                 || request == RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY
                 || request == RIL_REQUEST_GET_SIMLOCK_STATUS
+                || request == RIL_REQUEST_SET_MUTE
+                || request == RIL_REQUEST_GET_MUTE
                 || (request == RIL_REQUEST_DIAL && s_isstkcall)
 #if defined (RIL_SPRD_EXTENSION)
 #if defined (RIL_SUPPORTED_OEMSOCKET)
@@ -9621,6 +9623,8 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                 || request == RIL_REQUEST_GSM_GET_BROADCAST_SMS_CONFIG
                 || request == RIL_REQUEST_GSM_SET_BROADCAST_SMS_CONFIG
                 || request == RIL_REQUEST_GSM_SMS_BROADCAST_ACTIVATION
+                || request == RIL_REQUEST_SET_MUTE
+                || request == RIL_REQUEST_GET_MUTE
                 /* SPRD: add for VoWifi @{ */
                 || request == RIL_REQUEST_GET_TPMR_STATE
                 || request == RIL_REQUEST_SET_TPMR_STATE
