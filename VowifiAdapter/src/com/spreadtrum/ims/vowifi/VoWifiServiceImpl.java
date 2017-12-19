@@ -399,6 +399,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             if (mCallback != null) mCallback.onAttachFinished(false, 0);
             return;
         }
+        Log.d(TAG, "Generate the sim account for sub: " + subId[0]);
         mSIMAccountInfo = SIMAccountInfo.generate(mTeleMgr, subId[0]);
 
         if (mEcbmStep == ECBM_STEP_ATTACH_FOR_SOS) {

@@ -2,7 +2,6 @@ package com.spreadtrum.ims.vowifi;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.SystemProperties;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
@@ -24,8 +23,6 @@ public class Utilities {
 
     // Used to get the primary card id.
     private static final int DEFAULT_PHONE_ID   = 0;
-    private static final int SLOTTWO_PHONE_ID   = 1;
-    private static final String PROP_MODEM_WORKMODE = "persist.radio.modem.workmode";
 
     public static HashMap<Integer, VideoQuality> sVideoQualitys =
             new HashMap<Integer, VideoQuality>();
@@ -80,25 +77,12 @@ public class Utilities {
             return DEFAULT_PHONE_ID;
         }
 
-        String prop = SystemProperties.get(PROP_MODEM_WORKMODE);
-        if (!TextUtils.isEmpty(prop)) {
-            String values[] = prop.split(",");
-            int[] workMode = new int[phoneCount];
-            for (int i = 0; i < phoneCount; i++) {
-                workMode[i] = Integer.parseInt(values[i]);
-            }
-
-            if (workMode[DEFAULT_PHONE_ID] == 10
-                    && workMode[SLOTTWO_PHONE_ID] != 10
-                    && workMode[SLOTTWO_PHONE_ID] != 254) {
-                return SLOTTWO_PHONE_ID;
-            } else if (workMode[DEFAULT_PHONE_ID] == 254
-                    && workMode[SLOTTWO_PHONE_ID] != 254) {
-                return SLOTTWO_PHONE_ID;
-            }
+        int primaryCard =
+                SubscriptionManager.getPhoneId(SubscriptionManager.getDefaultDataSubscriptionId());
+        if (primaryCard < 0) {
+            return DEFAULT_PHONE_ID;
         }
-
-        return DEFAULT_PHONE_ID;
+        return primaryCard;
     }
 
     public static boolean isVideoCall(int callType) {
