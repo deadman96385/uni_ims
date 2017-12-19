@@ -1120,7 +1120,7 @@ public class ImsService extends Service {
     @Override
     public void onCreate() {
         iLog("Ims Service onCreate.");
-        if (!ImsConfigImpl.isVolteEnabledBySystemProperties()) {
+        if (!ImsConfigImpl.isImsEnabledBySystemProperties()) {
             Log.w(TAG,
                     "Could Not Start Ims Service because volte disabled by system properties!");
             return;
@@ -1198,12 +1198,7 @@ public class ImsService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         iLog("Ims Service onBind:" + intent.getAction());
-        if (!ImsConfigImpl.isVolteEnabledBySystemProperties()) {
-            Log.w(TAG,
-                    "Could Not Start Ims Service because volte disabled by system properties!");
-            return null;
-        }
-        if (!ImsConfigImpl.isVolteEnabledBySystemProperties()) {
+        if (!ImsConfigImpl.isImsEnabledBySystemProperties()) {
             Log.w(TAG,
                     "Could Not Start Ims Service because volte disabled by system properties!");
             return null;
@@ -3415,8 +3410,9 @@ public class ImsService extends Service {
             service = mImsServiceImplMap.get(
                     Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
         }
-        Log.i(TAG,"allowEnableIms->service:"+service +" mFeatureSwitchRequest:"+mFeatureSwitchRequest);
-        if(mFeatureSwitchRequest != null || service == null){
+        Log.i(TAG,"allowEnableIms->service:"+service +" mFeatureSwitchRequest:"+mFeatureSwitchRequest
+                + " isVolteEnabledBySystemProperties:"+ ImsConfigImpl.isVolteEnabledBySystemProperties());
+        if(mFeatureSwitchRequest != null || service == null || !ImsConfigImpl.isVolteEnabledBySystemProperties()){
             return false;
         }
         if (mIsVolteCall || mIsVowifiCall || mIsAPImsPdnActived) {

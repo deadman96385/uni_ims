@@ -496,6 +496,10 @@ public class ImsRegister {
 
     public void enableIms() {
         log("enableIms ->mIMSBearerEstablished:" + mIMSBearerEstablished + " mInitISIMDone:" + mInitISIMDone);
+        if(!ImsConfigImpl.isVolteEnabledBySystemProperties()){
+            log("enableIms ->ImsConfigImpl.isVolteEnabledBySystemProperties():" + ImsConfigImpl.isVolteEnabledBySystemProperties());
+            return;
+        }
         if(mIMSBearerEstablished && mInitISIMDone) {
             mHandler.sendMessage(mHandler.obtainMessage(EVENT_ENABLE_IMS));
         }

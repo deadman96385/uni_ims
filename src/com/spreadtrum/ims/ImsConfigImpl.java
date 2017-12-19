@@ -339,6 +339,10 @@ public class ImsConfigImpl extends IImsConfig.Stub {
         return SystemProperties.getBoolean("persist.sys.volte.enable", false);
     }
 
+    public static boolean isImsEnabledBySystemProperties(){
+        return SystemProperties.getBoolean("persist.sys.volte.enable", false) || SystemProperties.getInt("persist.dbg.wfc_avail_ovr", 0) == 1;
+    }
+
     private OnSharedPreferenceChangeListener mSharedPreferenceListener = new OnSharedPreferenceChangeListener() {
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
             Log.d(TAG,"onSharedPreferenceChanged()->key:"+key);

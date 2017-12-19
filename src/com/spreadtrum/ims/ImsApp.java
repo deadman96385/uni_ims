@@ -14,7 +14,7 @@ public class ImsApp extends Application {
     public void onCreate() {
         super.onCreate();
         Log.i(TAG, "ImsApp Boot Successfully!");
-        if(!ImsConfigImpl.isVolteEnabledBySystemProperties()){
+        if(!ImsConfigImpl.isImsEnabledBySystemProperties()){
             Log.w(TAG, "Could Not Start Ims Service because volte disabled by system properties!");
             return;
         }
