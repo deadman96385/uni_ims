@@ -573,14 +573,12 @@ public class ImsService extends Service {
                             }
                             Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> wifi state: " + msg.arg2);
 
-                            if(!mIsCalling){
-                                ImsServiceImpl imsService = mImsServiceImplMap.get(
-                                        Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
-                                if(imsService != null){
-                                    imsService.notifyVoWifiEnable(false);
-                                    mPendingCPSelfManagement = true;
-                                    Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:" + mPendingCPSelfManagement);
-                                }
+                            ImsServiceImpl imsService = mImsServiceImplMap.get(
+                                    Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
+                            if(imsService != null){
+                                imsService.notifyVoWifiEnable(false);
+                                mPendingCPSelfManagement = true;
+                                Log.i(TAG,"ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:" + mPendingCPSelfManagement);
                             }
                             if (mFeatureSwitchRequest != null) {
                                 mFeatureSwitchRequest = null;
@@ -1882,10 +1880,8 @@ class MyVoWifiCallback implements VoWifiCallback {
                         +" mIsCalling:"+ mIsCalling + " mVolteRegistered:" + mVolteRegistered + " service.isImsRegistered():" + service.isImsRegistered()
                         + " mIsLoggingIn:" + mIsLoggingIn +" mIsPendingRegisterVolte:"+mIsPendingRegisterVolte);
                 if(service.getVolteRegisterState() == IMS_REG_STATE_REGISTERING
-                        || service.getVolteRegisterState() == IMS_REG_STATE_DEREGISTERING
-                        || (mIsVolteCall && service.isImsRegistered()) || mIsWifiCalling){
-                    Log.i(TAG,"VoLTERegisterListener-> pending status service.getVolteRegisterState():"+service.getVolteRegisterState()
-                            +" mIsVolteCall:"+mIsVolteCall +" mIsWifiCalling:"+mIsWifiCalling);
+                        || service.getVolteRegisterState() == IMS_REG_STATE_DEREGISTERING){
+                    Log.i(TAG,"VoLTERegisterListener-> pending status service.getVolteRegisterState():"+service.getVolteRegisterState());
                     return;
                 }
                 //SPRD:add for bug674494
