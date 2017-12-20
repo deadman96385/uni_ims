@@ -1116,7 +1116,7 @@ public class ImsServiceImpl extends MMTelFeature {
             if(volteEnable){
                 mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE]
                         = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
-                if(ImsManager.isVtEnabledByUser(mContext) && ImsManager.isVtEnabledByPlatform(mContext)){
+                if(ImsManager.getInstance(mContext,mPhone.getPhoneId()).isVtEnabledByUserForSlot() && ImsManager.isVtEnabledByPlatform(mContext)){//SPRD:modify for bug805161
                 mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE]
                         = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_LTE;
                 }else{
