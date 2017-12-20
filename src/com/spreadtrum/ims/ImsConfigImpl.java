@@ -54,11 +54,12 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     private int mCameraResolution = VT_RESOLUTION_VGA_REVERSED_30;
     public int mDefaultVtResolution = VT_RESOLUTION_VGA_REVERSED_30;
     private ImsServiceImpl mImsServiceImpl = null;
+    private int mImsServiceId;  // SPRD: bug805154
     /**
      * Creates the Ims Config interface object for a sub.
      * @param senderRxr
      */
-    public ImsConfigImpl(ImsRIL ci,Context context,ImsServiceImpl imsService) {
+    public ImsConfigImpl(ImsRIL ci,Context context,ImsServiceImpl imsService, int imsserviceid) {
         if (SystemProperties.getBoolean("persist.sys.videodefault", false)) {
             mDefaultVtResolution = VT_RESOLUTION_QVGA_REVERSED_15;
         }
@@ -71,6 +72,7 @@ public class ImsConfigImpl extends IImsConfig.Stub {
         mCameraResolution = mSharedPreferences.getInt(VIDEO_CALL_RESOLUTION, mDefaultVtResolution);
         mHandler.removeMessages(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE);
         mHandler.sendEmptyMessageDelayed(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE, 1000);
+        mImsServiceId = imsserviceid; // SPRD: bug805154
     }
 
     /**
@@ -300,7 +302,7 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      */
     @Override
     public void getVideoQuality(ImsConfigListener imsConfigListener) {
-        Log.d(TAG, "getVideoQuality");
+        Log.d(TAG, "  getVideoQuality  String:"+VT_RESOLUTION_VALUE+mImsServiceId); // SPRD: bug805154
         Message m = mHandler.obtainMessage(ACTION_GET_VT_RESOLUTION, getVideoQualityFromPreference(),
                 0, imsConfigListener);
         m.sendToTarget();
@@ -325,12 +327,12 @@ public class ImsConfigImpl extends IImsConfig.Stub {
 
     public void setVideoQualitytoPreference(int value){
         Editor editor = mSharedPreferences.edit();
-        editor.putInt(VT_RESOLUTION_VALUE,value);
+        editor.putInt(VT_RESOLUTION_VALUE+mImsServiceId,value);  // SPRD: bug805154
         editor.apply();
     }
 
     public int getVideoQualityFromPreference(){
-        return mSharedPreferences.getInt(VT_RESOLUTION_VALUE, mDefaultVtResolution);
+        return mSharedPreferences.getInt(VT_RESOLUTION_VALUE+mImsServiceId, mDefaultVtResolution);  // SPRD: bug805154
     }
 
     public static boolean isVolteEnabledBySystemProperties(){
