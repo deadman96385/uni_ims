@@ -2663,6 +2663,8 @@ public class ImsService extends Service {
                 if (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED
                         || service.getVolteRegisterState() == IMS_REG_STATE_REG_FAIL) {
                     mVolteRegistered = (service.getVolteRegisterState() == IMS_REG_STATE_REGISTERED);
+                    // SPRD: 730973
+                    service.setVolteRegisterStateOld(service.isImsRegistered());
                     if (!mIsLoggingIn) {
                         if (ImsManagerEx.isDualVoLTEActive()) {
                             updateImsFeature(serviceId);
@@ -2671,7 +2673,10 @@ public class ImsService extends Service {
                         }
                     }
                 } else {
-                    if (mVolteRegistered != service.isImsRegistered()) {
+                    // SPRD: 730973
+//                  if (mVolteRegistered != service.isImsRegistered()){
+                    if (service.getVolteRegisterStateOld() != service.isImsRegistered()) {
+                        service.setVolteRegisterStateOld(service.isImsRegistered());
                         mVolteRegistered = service.isImsRegistered();
                         if (!mIsLoggingIn) {
                             if (ImsManagerEx.isDualVoLTEActive()) {
