@@ -17,14 +17,14 @@ import com.android.ims.ImsUtInterface;
 import com.android.ims.internal.IImsUt;
 import com.android.ims.internal.IImsUtListener;
 import com.android.ims.internal.IImsUtListenerEx;
-import com.android.ims.internal.IVoWifiXCAP;
-import com.android.ims.internal.IVoWifiXCAPCallback;
+import com.android.ims.internal.IVoWifiUT;
+import com.android.ims.internal.IVoWifiUTCallback;
 import com.android.internal.telephony.CommandsInterface;
+import com.spreadtrum.ims.vowifi.Utilities.CallBarringInfo;
 import com.spreadtrum.ims.vowifi.Utilities.JSONUtils;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
-import com.spreadtrum.ims.vowifi.VoWifiXCAPManager.XCAPStateChangedListener;
-import com.spreadtrum.ims.vowifi.Utilities.CallBarringInfo;
+import com.spreadtrum.ims.vowifi.VoWifiUTManager.UTStateChangedListener;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -48,24 +48,26 @@ public class ImsUtImpl extends IImsUt.Stub {
     // FIXME: This value defined in CallForwardEditPreference but not CommandsInterface.
     private static final int SERVICE_CLASS_VIDEO = 2;
 
+    // If there isn't any CMD to disabled the UT after 1min.
+    private static final int DELAY_DISALBE_UT = 60 * 1000;
+
+    private static int sCurCLIRMode = -1;
+
     private Context mContext;
-    private boolean mXCAPEnabled;
+    private boolean mUtEnabled;
 
     private IImsUtListener mListener = null;
     private IImsUtListenerEx mListenerEx = null;
 
     private CmdManager mCmdManager = null;
-    private VoWifiXCAPManager mXCAPManager = null;
-    private IVoWifiXCAP mIXCAP = null;
-    private XCAPServiceCallback mXCAPServiceCallback = new XCAPServiceCallback();
-
-    // If there isn't any CMD to disabled the XCAP after 2min.
-    private static final int DELAY_DISALBE_XCAP = 2 * 60 * 1000;
+    private VoWifiUTManager mUtManager = null;
+    private IVoWifiUT mIUT = null;
+    private UtServiceCallback mUtServiceCallback = new UtServiceCallback();
 
     // Set the commands timeout as 1 minutes.
     private static final int CMD_TIMEOUT = 60 * 1000;
 
-    private static final int MSG_DISABLE_XCAP = -2;
+    private static final int MSG_DISABLE_UT = -2;
     private static final int MSG_HANDLE_EVENT = -1;
     private static final int MSG_CMD_TIMEOUT = 0;
 
@@ -86,9 +88,9 @@ public class ImsUtImpl extends IImsUt.Stub {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
-                case MSG_DISABLE_XCAP: {
-                    mXCAPManager.disabled();
-                    mXCAPEnabled = false;
+                case MSG_DISABLE_UT: {
+                    mUtManager.disabled();
+                    mUtEnabled = false;
                     break;
                 }
                 case MSG_HANDLE_EVENT: {
@@ -110,7 +112,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                 case MSG_ACTION_QUERY_CALL_BARRING:
                 case MSG_ACTION_QUERY_FACILITY_LOCK: {
                     UTAction action = (UTAction) msg.obj;
-                    int condition = getConditionFromCBReason((String) action._params.get(0));
+                    int condition = (Integer) action._params.get(0);
                     nativeQueryCallBarring(condition);
                     break;
                 }
@@ -124,12 +126,19 @@ public class ImsUtImpl extends IImsUt.Stub {
                     break;
                 }
                 case MSG_ACTION_UPDATE_CALL_BARRING:
-                case MSG_ACTION_SET_FACILITY_LOCK:
+                case MSG_ACTION_SET_FACILITY_LOCK: {
+                    UTAction action = (UTAction) msg.obj;
+                    int condition = (Integer) action._params.get(0);
+                    boolean enabled = (Boolean) action._params.get(1);
+                    String barringList = (String) action._params.get(2);
+                    int serviceClass = (Integer) action._params.get(3);
+                    nativeUpdateCallBarring(condition, enabled, barringList, serviceClass);
                     break;
+                }
                 case MSG_ACTION_UPDATE_CALL_FORWARD: {
                     UTAction action = (UTAction) msg.obj;
                     int utAction = getActionFromCFAction((Integer) action._params.get(0));
-                    int condition = getConditionFromCFReason((Integer) action._params.get(1));
+                    int condition = (Integer) action._params.get(1);
                     String number = (String) action._params.get(2);
                     int serviceClass = (Integer) action._params.get(3);
                     int timeSeconds = (Integer) action._params.get(4);
@@ -170,16 +179,16 @@ public class ImsUtImpl extends IImsUt.Stub {
     };
 
     // To listener the IVoWifiSerService changed.
-    private XCAPStateChangedListener mIXCAPChangedListener = new XCAPStateChangedListener() {
+    private UTStateChangedListener mIUTChangedListener = new UTStateChangedListener() {
 
         @Override
-        public void onInterfaceChanged(IVoWifiXCAP newInterface) {
-            mIXCAP = newInterface;
-            if (mIXCAP == null) return;
+        public void onInterfaceChanged(IVoWifiUT newInterface) {
+            mIUT = newInterface;
+            if (mIUT == null) return;
 
             // The new call Interface is not null now, register the callback.
             try {
-                mIXCAP.registerCallback(mXCAPServiceCallback);
+                mIUT.registerCallback(mUtServiceCallback);
             } catch (RemoteException e) {
                 Log.e(TAG, "Failed to register callback for UT as catch RemoteException: " + e);
             }
@@ -188,34 +197,34 @@ public class ImsUtImpl extends IImsUt.Stub {
         @Override
         public void onPrepareFinished(boolean success) {
             // As prepare finished, we could process the action now.
-            mXCAPEnabled = success;
+            mUtEnabled = success;
             mCmdManager.processPendingAction();
         }
 
         @Override
         public void onDisabled() {
-            mXCAPEnabled = false;
+            mUtEnabled = false;
 
-            // As xcap disabled, handle the cmd as failed.
+            // As UT disabled, handle the CMD as failed.
             ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR,
                     ImsReasonInfo.CODE_UNSPECIFIED);
             mCmdManager.onActionFailed(error);
         }
     };
 
-    protected ImsUtImpl(Context context, VoWifiXCAPManager xcapManager) {
+    protected ImsUtImpl(Context context, VoWifiUTManager utManager) {
         mContext = context;
         mCmdManager = new CmdManager();
-        mXCAPManager = xcapManager;
+        mUtManager = utManager;
 
         // Register the service changed to get the IVowifiService.
-        mXCAPManager.registerXCAPInterfaceChanged(mIXCAPChangedListener);
+        mUtManager.registerUTInterfaceChanged(mIUTChangedListener);
     }
 
     @Override
     protected void finalize() throws Throwable {
         // Un-register the service changed.
-        mXCAPManager.unregisterXCAPInterfaceChanged(mIXCAPChangedListener);
+        mUtManager.unregisterUTInterfaceChanged(mIUTChangedListener);
         super.finalize();
     }
 
@@ -226,6 +235,19 @@ public class ImsUtImpl extends IImsUt.Stub {
     public void close() {
         mListener = null;
         mListenerEx = null;
+    }
+
+    public void setCurCLIRMode(int clirMode) {
+        Log.d(TAG, "Set the current CLIR mode to " + clirMode);
+        sCurCLIRMode = clirMode;
+    }
+
+    public void updateCLIR() {
+        try {
+            updateCLIR(sCurCLIRMode);
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to update the CLIR mode[" + sCurCLIRMode + "] to sip.");
+        }
     }
 
     /**
@@ -317,14 +339,16 @@ public class ImsUtImpl extends IImsUt.Stub {
      * Updates the configuration of the call barring.
      */
     @Override
-    public int updateCallBarring(int cbType, int enable, String[] barrList) {
+    public int updateCallBarring(int cbType, int enable, String[] barringList) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Try to update the call barring with the type: " + cbType + ", enabled: "
-                    + enable + ", barrList: " + Utilities.getString(barrList));
+                    + enable + ", barringList: " + Utilities.getString(barringList));
         }
-        String tempString = "to do";
+
+        boolean enabled = (enable == CommandsInterface.CF_ACTION_ENABLE);
         UTAction action = new UTAction("updateCallBarring", MSG_ACTION_UPDATE_CALL_BARRING,
-                CMD_TIMEOUT, Integer.valueOf(cbType), Integer.valueOf(enable), tempString);
+                CMD_TIMEOUT, Integer.valueOf(cbType), Boolean.valueOf(enabled), "",
+                Integer.valueOf(SERVICE_CLASS_VOICE));
         return mCmdManager.addCmd(action);
     }
 
@@ -363,6 +387,9 @@ public class ImsUtImpl extends IImsUt.Stub {
     @Override
     public int updateCLIR(int clirMode) throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Try to update CLIR to mode: " + clirMode);
+
+        // Once the CLIR mode changed, update the current mode.
+        setCurCLIRMode(clirMode);
 
         UTAction action = new UTAction("updateCLIR", MSG_ACTION_UPDATE_CLIR, CMD_TIMEOUT,
                 Boolean.valueOf(clirMode == ImsUtInterface.OIR_PRESENTATION_RESTRICTED));
@@ -424,7 +451,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     + ", ruleSet: " + ruleSet);
         }
 
-        UTAction action = new UTAction("setCallForwardingOption",
+        UTAction action = new UTAction(true /* is extension action */, "setCallForwardingOption",
                 MSG_ACTION_UPDATE_CALL_FORWARDING_OPTION, CMD_TIMEOUT,
                 Integer.valueOf(cfAction), Integer.valueOf(reason), Integer.valueOf(serviceClass),
                 dialNumber, Integer.valueOf(timeSeconds), ruleSet);
@@ -440,7 +467,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     + ", service class: " + serviceClass + ", ruleSet: " + ruleSet);
         }
 
-        UTAction action = new UTAction("getCallForwardingOption",
+        UTAction action = new UTAction(true /* is extension action */, "getCallForwardingOption",
                 MSG_ACTION_QUERY_CALL_FORWARDING_OPTION, CMD_TIMEOUT,
                 Integer.valueOf(reason), Integer.valueOf(serviceClass), ruleSet);
         return mCmdManager.addCmd(action);
@@ -456,8 +483,10 @@ public class ImsUtImpl extends IImsUt.Stub {
                     + ", lock state: " + lockState + ", password: " + password);
         }
 
-        UTAction action = new UTAction("setFacilityLock", MSG_ACTION_SET_FACILITY_LOCK, CMD_TIMEOUT,
-                facility, Boolean.valueOf(lockState), password);
+        int condition = getConditionFromCBReason(facility);
+        UTAction action = new UTAction(true /* is extension action */, "setFacilityLock",
+                MSG_ACTION_SET_FACILITY_LOCK, CMD_TIMEOUT, Integer.valueOf(condition),
+                Boolean.valueOf(lockState), password, Integer.valueOf(serviceClass));
         return mCmdManager.addCmd(action);
     }
 
@@ -467,8 +496,10 @@ public class ImsUtImpl extends IImsUt.Stub {
                     + ", password: " + password + ", serviceclass: " + serviceClass);
         }
 
-        UTAction action = new UTAction("queryFacilityLock", MSG_ACTION_QUERY_FACILITY_LOCK,
-                CMD_TIMEOUT, facility, password, Integer.valueOf(serviceClass));
+        int condition = getConditionFromCBReason(facility);
+        UTAction action = new UTAction(true /* is extension action */, "queryFacilityLock",
+                MSG_ACTION_QUERY_FACILITY_LOCK, CMD_TIMEOUT, Integer.valueOf(condition), password,
+                Integer.valueOf(serviceClass));
         return mCmdManager.addCmd(action);
     }
 
@@ -478,8 +509,8 @@ public class ImsUtImpl extends IImsUt.Stub {
                     + ", new password: " + newPwd);
         }
 
-        UTAction action = new UTAction("changeBarringPassword", MSG_ACTION_CHANGE_LOCK_PWD,
-                CMD_TIMEOUT, facility, oldPwd, newPwd);
+        UTAction action = new UTAction(true /* is extension action */, "changeBarringPassword",
+                MSG_ACTION_CHANGE_LOCK_PWD, CMD_TIMEOUT, facility, oldPwd, newPwd);
         return mCmdManager.addCmd(action);
     }
 
@@ -488,8 +519,8 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         boolean success = false;
         try {
-            if (mIXCAP != null) {
-                int res = mIXCAP.queryCallBarring(condition);
+            if (mIUT != null) {
+                int res = mIUT.queryCallBarring(condition);
                 if (res == Result.SUCCESS) success = true;
             }
         } catch (RemoteException e) {
@@ -510,8 +541,8 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         boolean success = false;
         try {
-            if (mIXCAP != null) {
-                int res = mIXCAP.queryCallForward();
+            if (mIUT != null) {
+                int res = mIUT.queryCallForward();
                 if (res == Result.SUCCESS) success = true;
             }
         } catch (RemoteException e) {
@@ -532,8 +563,8 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         boolean success = false;
         try {
-            if (mIXCAP != null) {
-                int res = mIXCAP.queryCallWaiting();
+            if (mIUT != null) {
+                int res = mIUT.queryCallWaiting();
                 if (res == Result.SUCCESS) success = true;
             }
         } catch (RemoteException e) {
@@ -543,6 +574,39 @@ public class ImsUtImpl extends IImsUt.Stub {
         // If the action is failed, process action failed.
         if (!success) {
             Log.e(TAG, "Native failed to query the call waiting.");
+            ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR,
+                    ImsReasonInfo.CODE_UNSPECIFIED);
+            mCmdManager.onActionFailed(error);
+        }
+    }
+
+    private void nativeUpdateCallBarring(int cbCondition, boolean enable, String barringList,
+            int serviceClass) {
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "Native update the call barring options, condition: " + cbCondition
+                    + ", enable: " + enable + ", barringList: " + barringList + ", serviceClass: "
+                    + serviceClass);
+        }
+
+        boolean success = false;
+        try {
+            if (mIUT != null) {
+                String[] allowList = null;
+                if (!TextUtils.isEmpty(barringList)) {
+                    allowList = barringList.split(";");
+                } else {
+                    allowList = new String[] { "false" };
+                }
+                int res = mIUT.updateCallBarring(cbCondition, enable, allowList, serviceClass);
+                if (res == Result.SUCCESS) success = true;
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to query the call barring as catch the RemoteException: " + e);
+        }
+
+        // If the action is failed, process action failed.
+        if (!success) {
+            Log.e(TAG, "Native failed to update the call barring.");
             ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR,
                     ImsReasonInfo.CODE_UNSPECIFIED);
             mCmdManager.onActionFailed(error);
@@ -559,8 +623,8 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         boolean success = false;
         try {
-            if (mIXCAP != null) {
-                int res = mIXCAP.updateCallForward(
+            if (mIUT != null) {
+                int res = mIUT.updateCallForward(
                         action, condition, number, serviceClass, timeSeconds);
                 if (res == Result.SUCCESS) success = true;
             }
@@ -582,8 +646,8 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         boolean success = false;
         try {
-            if (mIXCAP != null) {
-                int res = mIXCAP.updateCallWaiting(enabled);
+            if (mIUT != null) {
+                int res = mIUT.updateCallWaiting(enabled);
                 if (res == Result.SUCCESS) success = true;
             }
         } catch (RemoteException e) {
@@ -608,8 +672,8 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         boolean success = false;
         try {
-            if (mIXCAP != null) {
-                int res = mIXCAP.updateCLIR(enabled);
+            if (mIUT != null) {
+                int res = mIUT.updateCLIR(enabled);
                 if (res == Result.SUCCESS) {
                     success = true;
                     handleUpdateActionOK();
@@ -649,13 +713,16 @@ public class ImsUtImpl extends IImsUt.Stub {
                     handleQueryCallWaitingOK(enabled);
                     break;
                 }
+                case JSONUtils.EVENT_CODE_UT_UPDATE_CB_OK:
                 case JSONUtils.EVENT_CODE_UT_UPDATE_CF_OK:
                 case JSONUtils.EVENT_CODE_UT_UPDATE_CW_OK: {
                     handleUpdateActionOK();
                     break;
                 }
+                case JSONUtils.EVENT_CODE_UT_QUERY_CB_FAILED:
                 case JSONUtils.EVENT_CODE_UT_QUERY_CF_FAILED:
                 case JSONUtils.EVENT_CODE_UT_QUERY_CW_FAILED:
+                case JSONUtils.EVENT_CODE_UT_UPDATE_CB_FAILED:
                 case JSONUtils.EVENT_CODE_UT_UPDATE_CF_FAILED:
                 case JSONUtils.EVENT_CODE_UT_UPDATE_CW_FAILED: {
                     int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
@@ -679,7 +746,7 @@ public class ImsUtImpl extends IImsUt.Stub {
 
     private void handleQueryCallBarringOK(ArrayList<CallBarringInfo> infoList)
             throws RemoteException {
-        if (Utilities.DEBUG) Log.i(TAG, "Query call forward finished, the result is OK.");
+        if (Utilities.DEBUG) Log.i(TAG, "Query call barring finished, the result is OK.");
 
         mCmdManager.onQueryCallBarringFinished(infoList);
     }
@@ -852,7 +919,8 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
     }
 
-    private int[] findCallBarringInfo(ArrayList<CallBarringInfo> infoList, int condition) {
+    private int[] findCallBarringInfo(ArrayList<CallBarringInfo> infoList, int condition,
+            int serviceClass) {
         int[] infos = new int[2];
         CallBarringInfo matchedInfo = null;
         for (CallBarringInfo info : infoList) {
@@ -864,7 +932,7 @@ public class ImsUtImpl extends IImsUt.Stub {
         if (matchedInfo != null) {
             Log.d(TAG, "Found the matched CB info: " + matchedInfo);
             infos[0] = matchedInfo.mStatus;
-            infos[1] = matchedInfo.mCondition;
+            infos[1] = serviceClass;
             return infos;
         } else {
             // Do not found the matched CB info, we'd like to give the result as deactivate.
@@ -940,8 +1008,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private class CmdManager {
         private static final int ACTION_TYPE_QUERY = 0;
         private static final int ACTION_TYPE_UPDATE = 1;
-        private static final int ACTION_TYPE_QUERY_EX = 2;
-        private static final int ACTION_TYPE_UPDATE_EX = 3;
+
         private boolean mHandleCmd = false;
 
         private AtomicInteger mCmdKeyMgr = null;
@@ -963,11 +1030,11 @@ public class ImsUtImpl extends IImsUt.Stub {
                 mUTActions.put(key, action);
             }
 
-            if (mXCAPEnabled) {
-                mHandler.removeMessages(MSG_DISABLE_XCAP);
+            if (mUtEnabled) {
+                mHandler.removeMessages(MSG_DISABLE_UT);
                 processPendingAction();
             } else {
-                mXCAPManager.prepare(Utilities.getPrimaryCardSubId(mContext));
+                mUtManager.prepare(Utilities.getPrimaryCardSubId(mContext));
             }
             return key;
         }
@@ -979,12 +1046,13 @@ public class ImsUtImpl extends IImsUt.Stub {
             }
 
             if (mCmds.size() < 1) {
-                Log.d(TAG, "There isn't any pending action, Disable the xcap.");
-                mHandler.sendEmptyMessageDelayed(MSG_DISABLE_XCAP, DELAY_DISALBE_XCAP);
+                Log.d(TAG, "There isn't any pending action, Disable the UT after "
+                        + DELAY_DISALBE_UT + "ms.");
+                mHandler.sendEmptyMessageDelayed(MSG_DISABLE_UT, DELAY_DISALBE_UT);
                 return;
             }
 
-            if (mXCAPEnabled) {
+            if (mUtEnabled) {
                 // Get the first cmd, send the pending action to handler.
                 mHandleCmd = true;
 
@@ -1005,7 +1073,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     mHandler.sendMessageDelayed(timeoutMsg, action._timeoutMillis);
                 }
             } else {
-                // As xcap disabled, handle the cmd as failed.
+                // As UT disabled, handle the CMD as failed.
                 ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR,
                         ImsReasonInfo.CODE_UNSPECIFIED);
                 onActionFailed(error);
@@ -1017,37 +1085,36 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
 
         public void onActionFailed(ImsReasonInfo error) {
-            if (mCmds.size() < 1) {
-                Log.e(TAG, "There isn't any pending action, shouldn't action failed.");
-                return;
-            }
-
             synchronized (mCmds) {
+                if (mCmds.size() < 1) return;
+
                 Integer key = mCmds.getFirst();
-                int actionType = getActionType(mUTActions.get(key)._action);
-                Log.d(TAG, "actionType is : " + actionType);
+                UTAction action = mUTActions.get(key);
                 try {
                     // Notify the action failed.
-                    if (mListenerEx != null) {
-                        switch (actionType) {
-                            case ACTION_TYPE_QUERY:
-                                mListener.utConfigurationQueryFailed(ImsUtImpl.this, key, error);
-                                break;
-                            case ACTION_TYPE_QUERY_EX:
-                                mListenerEx.utConfigurationQueryFailed(ImsUtImpl.this, key, error);
-                                break;
-                            case ACTION_TYPE_UPDATE:
-                                mListener.utConfigurationUpdateFailed(ImsUtImpl.this, key, error);
-                                break;
-                            case ACTION_TYPE_UPDATE_EX:
-                                mListenerEx.utConfigurationUpdateFailed(ImsUtImpl.this, key, error);
-                                break;
+                    int actionType = getActionType(action._action);
+                    if (actionType == ACTION_TYPE_QUERY) {
+                        Log.d(TAG, "Action failed for query action, and is extension: "
+                                + action._isExAction);
+                        if (action._isExAction && mListenerEx != null) {
+                            mListenerEx.utConfigurationQueryFailed(ImsUtImpl.this, key, error);
+                        } else if (mListener != null) {
+                            mListener.utConfigurationQueryFailed(ImsUtImpl.this, key, error);
+                        }
+                    } else if (actionType == ACTION_TYPE_UPDATE) {
+                        Log.d(TAG, "Action failed for update action, and is extension: "
+                                + action._isExAction);
+                        if (action._isExAction && mListenerEx != null) {
+                            mListenerEx.utConfigurationUpdateFailed(ImsUtImpl.this, key, error);
+                        } else if (mListener != null) {
+                            mListener.utConfigurationUpdateFailed(ImsUtImpl.this, key, error);
                         }
                     }
                 } catch (RemoteException e) {
                     Log.e(TAG, "Failed to notify the ut configuration acton failed result.");
                     Log.e(TAG, "Catch the RemoteException: " + e);
                 }
+
                 mUTActions.remove(key);
                 mCmds.remove(key);
                 mHandleCmd = false;
@@ -1059,17 +1126,17 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         public void onQueryCallForwardFinished(ArrayList<ImsCallForwardInfo> callForwardInfos)
                 throws RemoteException {
-            if (!mHandleCmd) {
-                Log.e(TAG, "Do not handle any cmd now, shouldn't query CF finished.");
-                return;
-            }
-
-            if (mCmds.size() < 1) {
-                Log.e(TAG, "There isn't any pending action, shouldn't query CF finished.");
-                return;
-            }
-
             synchronized (mCmds) {
+                if (!mHandleCmd) {
+                    Log.e(TAG, "Do not handle any cmd now, shouldn't query CF finished.");
+                    return;
+                }
+
+                if (mCmds.size() < 1) {
+                    Log.e(TAG, "There isn't any pending action, shouldn't query CF finished.");
+                    return;
+                }
+
                 Integer key = mCmds.getFirst();
                 UTAction action = mUTActions.get(key);
                 ImsCallForwardInfo info = null;
@@ -1132,31 +1199,34 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         public void onQueryCallBarringFinished(ArrayList<CallBarringInfo> infolist)
                 throws RemoteException {
-            if (!mHandleCmd) {
-                Log.e(TAG, "Do not handle any cmd now, shouldn't query CB finished.");
-                return;
-            }
-
-            if (mCmds.size() < 1) {
-                Log.e(TAG, "There isn't any pending action, shouldn't query CB finished.");
-                return;
-            }
             synchronized (mCmds) {
+                if (!mHandleCmd) {
+                    Log.e(TAG, "Do not handle any cmd now, shouldn't query CB finished.");
+                    return;
+                }
+
+                if (mCmds.size() < 1) {
+                    Log.e(TAG, "There isn't any pending action, shouldn't query CB finished.");
+                    return;
+                }
+
                 Integer key = mCmds.getFirst();
                 UTAction action = mUTActions.get(key);
-                int[] info;
-                Log.d(TAG, "action._action is : " + action._action);
-                info = findCallBarringInfo(infolist,
-                        getConditionFromCBReason((String) action._params.get(0)));
+                Log.d(TAG, "Query call barring finished, action is " + action._action);
+
+                int[] info = findCallBarringInfo(infolist, (Integer) action._params.get(0),
+                        (Integer) action._params.get(2));
                 // Find the call barring info for this action.
                 Log.d(TAG, "Success to query the call barring info: " + info);
-                if (info != null) {
+                if (info != null && info.length > 0) {
                     if (mListenerEx != null) {
                         mListenerEx.utConfigurationCallBarringResult(key, info);
                     }
                 } else {
-                    mListenerEx.utConfigurationCallBarringResult(key, null);
+                    mListenerEx.utConfigurationCallBarringFailed(
+                            key, null, ImsReasonInfo.CODE_UT_NETWORK_ERROR);
                 }
+
                 mUTActions.remove(key);
                 mCmds.remove(key);
                 mHandleCmd = false;
@@ -1166,17 +1236,17 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
 
         public void onQueryCallWaitingFinished(boolean enabled) throws RemoteException {
-            if (!mHandleCmd) {
-                Log.e(TAG, "Do not handle any cmd now, shouldn't query CW finished.");
-                return;
-            }
-
-            if (mCmds.size() < 1) {
-                Log.e(TAG, "There isn't any pending action, shouldn't query CW finished.");
-                return;
-            }
-
             synchronized (mCmds) {
+                if (!mHandleCmd) {
+                    Log.e(TAG, "Do not handle any cmd now, shouldn't query CW finished.");
+                    return;
+                }
+
+                if (mCmds.size() < 1) {
+                    Log.e(TAG, "There isn't any pending action, shouldn't query CW finished.");
+                    return;
+                }
+
                 Integer key = mCmds.getFirst();
                 if (mListener != null) {
                     ImsSsInfo info = new ImsSsInfo();
@@ -1196,15 +1266,20 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         public void onUpdateActionSuccessed()
                 throws RemoteException {
-            if (mCmds.size() < 1) {
-                Log.e(TAG, "There isn't any pending action, shouldn't update action finished.");
-                return;
-            }
-
             synchronized (mCmds) {
+                if (mCmds.size() < 1) {
+                    Log.e(TAG, "There isn't any pending action, shouldn't update action finished.");
+                    return;
+                }
+
                 Integer key = mCmds.getFirst();
-                if (mListener != null) {
-                    mListener.utConfigurationUpdated(ImsUtImpl.this, key);
+                UTAction action = mUTActions.get(key);
+                if (action != null) {
+                    if (action._isExAction && mListenerEx != null) {
+                        mListenerEx.utConfigurationUpdated(ImsUtImpl.this, key);
+                    } else if (mListener != null) {
+                        mListener.utConfigurationUpdated(ImsUtImpl.this, key);
+                    }
                 }
 
                 mUTActions.remove(key);
@@ -1221,17 +1296,15 @@ public class ImsUtImpl extends IImsUt.Stub {
                 case MSG_ACTION_QUERY_CALL_BARRING:
                 case MSG_ACTION_QUERY_CALL_FORWARD:
                 case MSG_ACTION_QUERY_CALL_WAITING:
-                    return ACTION_TYPE_QUERY;
                 case MSG_ACTION_QUERY_CALL_FORWARDING_OPTION:
                 case MSG_ACTION_QUERY_FACILITY_LOCK:
-                    return ACTION_TYPE_QUERY_EX;
+                    return ACTION_TYPE_QUERY;
                 case MSG_ACTION_UPDATE_CALL_BARRING:
                 case MSG_ACTION_UPDATE_CALL_FORWARD:
                 case MSG_ACTION_UPDATE_CALL_WAITING:
-                    return ACTION_TYPE_UPDATE;
                 case MSG_ACTION_UPDATE_CALL_FORWARDING_OPTION:
                 case MSG_ACTION_SET_FACILITY_LOCK:
-                    return ACTION_TYPE_UPDATE_EX;
+                    return ACTION_TYPE_UPDATE;
             }
 
             Log.e(TAG, "Shouldn't be here, do not defined this action now.");
@@ -1241,14 +1314,21 @@ public class ImsUtImpl extends IImsUt.Stub {
 
     private class UTAction extends PendingAction {
         public int _timeoutMillis;
+        public boolean _isExAction;
 
         public UTAction(String name, int action, int timeout, Object... params) {
+            this(false, name, action, timeout, params);
+        }
+
+        public UTAction(boolean isExAction, String name, int action, int timeout,
+                Object... params) {
             super(name, action, params);
             _timeoutMillis = timeout;
+            _isExAction = isExAction;
         }
     }
 
-    private class XCAPServiceCallback extends IVoWifiXCAPCallback.Stub {
+    private class UtServiceCallback extends IVoWifiUTCallback.Stub {
         @Override
         public void onEvent(String json) {
             if (Utilities.DEBUG) Log.i(TAG, "Get the vowifi ser event callback.");

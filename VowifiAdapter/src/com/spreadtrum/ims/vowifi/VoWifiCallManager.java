@@ -51,13 +51,13 @@ public class VoWifiCallManager extends ServiceManager {
 
     public interface CallListener {
         public void onCallIncoming(ImsCallSessionImpl callSession);
-        public void onCallIsEmergency(ImsCallSessionImpl callSession);
         public void onCallEnd(ImsCallSessionImpl callSession);
         public void onCallRTPReceived(boolean isVideoCall, boolean isReceived);
         public void onCallRTCPChanged(boolean isVideoCall, int lose, int jitter, int rtt);
         public void onAliveCallUpdate(boolean isVideoCall);
         public void onEnterECBM(ImsCallSessionImpl callSession, ECBMRequest request);
         public void onExitECBM();
+        public void onSRVCCFinished(boolean isSuccess);
     }
 
     public interface ICallChangedListener {
@@ -79,6 +79,7 @@ public class VoWifiCallManager extends ServiceManager {
 
     private int mUseAudioStreamCount = 0;
     private int mRegisterState = RegisterState.STATE_IDLE;
+    private boolean mInSRVCC = false;
 
     private ImsCallSessionImpl mConferenceCallSession = null;
     private ImsCallSessionImpl mEmergencyCallSession = null;
@@ -149,6 +150,9 @@ public class VoWifiCallManager extends ServiceManager {
             switch(msg.what) {
                 case MSG_SRVCC_START:
                     Log.d(TAG, "Will handle the SRVCC start event.");
+                    // Set as in SRVCC process.
+                    mInSRVCC = true;
+
                     // When SRVCC start, put all the call session to SRVCC session list.
                     mInfoList.clear();
                     mSRVCCSessionList.clear();
@@ -158,12 +162,15 @@ public class VoWifiCallManager extends ServiceManager {
                     for (ImsCallSessionImpl session : mSRVCCSessionList) {
                         session.prepareSRVCCSyncInfo(mInfoList, 0);
                     }
+
                     break;
                 case MSG_SRVCC_SUCCESS:
                     Log.d(TAG, "Will handle the SRVCC success event.");
+                    // Set as leave the SRVCC process.
+                    mInSRVCC = false;
+
                     // If SRVCC success, we need do as this:
                     // 1. Sync the calls info to CP.
-                    //    Inform UI-layer to update call UI for Video SRVCC.
                     // 2. Release the native call resource.
                     // 3. Give the callback to telephony if there is no response action,
                     //    and the failed reason should be ImsReasonInfo.CODE_LOCAL_HO_NOT_FEASIBLE.
@@ -191,14 +198,20 @@ public class VoWifiCallManager extends ServiceManager {
                         // Close this call session.
                         session.close();
                     }
-
                     // Clear the SRVCC session list.
                     mInfoList.clear();
                     mSRVCCSessionList.clear();
+
+                    if (mListener != null) {
+                        mListener.onSRVCCFinished(true);
+                    }
                     break;
                 case MSG_SRVCC_FAILED:
                 case MSG_SRVCC_CANCEL:
                     Log.d(TAG, "Will handle the SRVCC failed/cancel event.");
+                    // Set as leave the SRVCC process.
+                    mInSRVCC = false;
+
                     for (ImsCallSessionImpl session : mSRVCCSessionList) {
                         int result = (msg.what == MSG_SRVCC_FAILED ? SRVCCResult.FAILURE
                                 : SRVCCResult.CANCEL);
@@ -206,6 +219,10 @@ public class VoWifiCallManager extends ServiceManager {
                     }
                     mInfoList.clear();
                     mSRVCCSessionList.clear();
+
+                    if (mListener != null) {
+                        mListener.onSRVCCFinished(false);
+                    }
                     break;
             }
         }
@@ -500,11 +517,11 @@ public class VoWifiCallManager extends ServiceManager {
                     && callSession.equals(mEmergencyCallSession)) {
                 // It means the emergency call end. Exit the ECBM.
                 if (mListener != null) mListener.onExitECBM();
-            } else if (mListener != null) {
+            }
+
+            if (mListener != null) {
+                Log.d(TAG, "The call[" + callSession + "] onCallEnd.");
                 mListener.onCallEnd(callSession);
-                if (mEmergencyCallSession != null) {
-                    Log.e(TAG, "There is a call end, but not emergency call. Shouldn't be here.");
-                }
             }
 
             // After remove the session, if the session list is empty, we need stop the audio.
@@ -532,6 +549,10 @@ public class VoWifiCallManager extends ServiceManager {
 
     public int getCallCount() {
         return mSessionList.size();
+    }
+
+    public boolean isInSRVCC() {
+        return mInSRVCC;
     }
 
     /**

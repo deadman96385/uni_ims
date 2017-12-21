@@ -61,8 +61,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     private static final String PARTICIPANTS_SEP = ";";
 
-    // It is defined in #ImsPhoneMmiCode.
-    // And could refer to TS 22.030 6.5.2 "Structure of the MMI"
+    // Defined in {@link ImsPhoneMmiCode} and refer to TS 22.030 6.5.2 "Structure of the MMI".
     private static final Pattern PATTERN_SUPP_SERVICE = Pattern.compile(
             "((\\*|#|\\*#|\\*\\*|##)(\\d{2,3})(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*))?)?)?)?#)(.*)");
     /*       1  2                    3          4  5       6   7         8    9     10  11             12
@@ -81,7 +80,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsConfHost = false;
     private boolean mAudioStart = false;
     private boolean mIsEmergency = false;
-    private boolean mInSRVCC = false;
     private String mPrimaryCallee = null;
     private String mSecondaryCallee = null;
 
@@ -307,7 +305,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public void close() {
         if (Utilities.DEBUG) Log.i(TAG, "The call session(" + this + ") will be closed.");
 
-        if (mInSRVCC) {
+        if (mCallManager.isInSRVCC()) {
             Log.d(TAG, "In SRVCC process, this call session will be closed after SRVCC success.");
             return;
         }
@@ -1378,7 +1376,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
         if (infoList == null) return;
 
-        mInSRVCC = true;
         if (mParticipantSessions.size() > 0) {
             // If this call is conference, we need prepare she SRVCC call info for each child.
             Iterator<Entry<String, ImsCallSessionImpl>> iterator =
@@ -1452,9 +1449,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
 
         try {
-            // The call will be relaeased if the SRVCC success, update the mInSRVCC state.
-            mInSRVCC = false;
-
             int res = Result.FAIL;
             if (isConferenceCall()) {
                 res = mICall.confRelease(mCallId);
@@ -1494,9 +1488,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
 
         try {
-            // update the SRVCC result as SRVCC canceled or failed, update the mInSRVCC state.
-            mInSRVCC = false;
-
             int res = Result.FAIL;
             if (isConferenceCall()) {
                 res = mICall.confUpdateSRVCCResult(mCallId, srvccResult);

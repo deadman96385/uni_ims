@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.CursorWrapper;
-import android.os.SystemProperties;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
@@ -26,8 +25,6 @@ public class Utilities {
 
     // Used to get the primary card id.
     private static final int DEFAULT_PHONE_ID   = 0;
-    private static final int SLOTTWO_PHONE_ID   = 1;
-    private static final String PROP_MODEM_WORKMODE = "persist.radio.modem.workmode";
 
     public static HashMap<Integer, VideoQuality> sVideoQualitys =
             new HashMap<Integer, VideoQuality>();
@@ -82,29 +79,16 @@ public class Utilities {
             return DEFAULT_PHONE_ID;
         }
 
-        String prop = SystemProperties.get(PROP_MODEM_WORKMODE);
-        if (!TextUtils.isEmpty(prop)) {
-            String values[] = prop.split(",");
-            int[] workMode = new int[phoneCount];
-            for (int i = 0; i < phoneCount; i++) {
-                workMode[i] = Integer.parseInt(values[i]);
-            }
-
-            if (workMode[DEFAULT_PHONE_ID] == 10
-                    && workMode[SLOTTWO_PHONE_ID] != 10
-                    && workMode[SLOTTWO_PHONE_ID] != 254) {
-                return SLOTTWO_PHONE_ID;
-            } else if (workMode[DEFAULT_PHONE_ID] == 254
-                    && workMode[SLOTTWO_PHONE_ID] != 254) {
-                return SLOTTWO_PHONE_ID;
-            }
+        int primaryCard =
+                SubscriptionManager.getPhoneId(SubscriptionManager.getDefaultDataSubscriptionId());
+        if (primaryCard < 0) {
+            return DEFAULT_PHONE_ID;
         }
-
-        return DEFAULT_PHONE_ID;
+        return primaryCard;
     }
 
     public static int getPrimaryCardSubId(Context context) {
-        int phoneId = Utilities.getPrimaryCard(context);
+        int phoneId = getPrimaryCard(context);
         int[] subId = SubscriptionManager.getSubId(phoneId);
         if (subId == null || subId.length == 0) {
             Log.e(TAG, "Can not get the sub id from the phone id: " + phoneId);
@@ -232,7 +216,7 @@ public class Utilities {
     public static class S2bType {
         public static final int NORMAL = 1;
         public static final int SOS    = 2;
-        public static final int XCAP   = 4;
+        public static final int UT     = 4;
         public static final int MMS    = 8;
     }
 
@@ -734,11 +718,19 @@ public class Utilities {
     }
 
     public static class PendingAction {
+        private static final int RETRY_AFTER_MILLIS = 15 * 1000;
+
+        public int _retryAfterMillis;
         public String _name;
         public int _action;
         public ArrayList<Object> _params;
 
         public PendingAction(String name, int action, Object... params) {
+            this(RETRY_AFTER_MILLIS, name, action, params);
+        }
+
+        public PendingAction(int retryAfterMillis, String name, int action, Object... params) {
+            _retryAfterMillis = retryAfterMillis;
             _name = name;
             _action = action;
             _params = new ArrayList<Object>();
@@ -749,6 +741,12 @@ public class Utilities {
             } else {
                 Log.d(TAG, "The action '" + _name + "' do not contains the params.");
             }
+        }
+
+        @Override
+        public String toString() {
+            return "PendingAction [_retryAfterMillis=" + _retryAfterMillis + ", _name=" + _name
+                    + ", _action=" + _action + "]";
         }
     }
 
@@ -810,7 +808,7 @@ public class Utilities {
         public static final String FUN_REGISTER = "register";
         public static final String FUN_CALL     = "call";
         public static final String FUN_MESSAGE  = "message";
-        public static final String FUN_XCAP     = "xcap";
+        public static final String FUN_UT       = "ut";
     }
 
     public static class CallCursor extends CursorWrapper {

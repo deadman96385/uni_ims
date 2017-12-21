@@ -129,8 +129,8 @@ public class VoWifiSecurityManager extends ServiceManager {
         if (!handle) {
             // Do not handle the attach action, add to pending list.
             if (TextUtils.isEmpty(localAddr)) localAddr = "";
-            addToPendingList(new PendingAction("attach", MSG_ACTION_ATTACH, Integer.valueOf(type),
-                    Integer.valueOf(subId), localAddr, listener));
+            addToPendingList(new PendingAction("attach", MSG_ACTION_ATTACH,
+                    Integer.valueOf(subId), Integer.valueOf(type), localAddr, listener));
         }
     }
 
@@ -325,7 +325,7 @@ public class VoWifiSecurityManager extends ServiceManager {
 
                         SecurityConfig config = new SecurityConfig(pcscfIP4, pcscfIP6, dnsIP4,
                                 dnsIP6, localIP4, localIP6, prefIPv4, supportMobike);
-                        // For handover attach or xcap attach, we need set the IP version as
+                        // For handover attach or ut attach, we need set the IP version as
                         // preferred first, then notify the result and update the state.
                         int useIPVersion = prefIPv4 ? IPVersion.IP_V4 : IPVersion.IP_V6;
                         if (setIPVersion(sessionId, useIPVersion)) {

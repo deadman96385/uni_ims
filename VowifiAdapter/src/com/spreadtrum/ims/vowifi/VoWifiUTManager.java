@@ -6,7 +6,7 @@ import android.os.RemoteException;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.android.ims.internal.IVoWifiXCAP;
+import com.android.ims.internal.IVoWifiUT;
 import com.spreadtrum.ims.vowifi.Utilities.IPVersion;
 import com.spreadtrum.ims.vowifi.Utilities.RegisterState;
 import com.spreadtrum.ims.vowifi.Utilities.S2bType;
@@ -15,32 +15,33 @@ import com.spreadtrum.ims.vowifi.VoWifiSecurityManager.SecurityListener;
 
 import java.util.ArrayList;
 
-public class VoWifiXCAPManager extends ServiceManager {
-    private static final String TAG = Utilities.getTag(VoWifiXCAPManager.class.getSimpleName());
+public class VoWifiUTManager extends ServiceManager {
+    private static final String TAG = Utilities.getTag(VoWifiUTManager.class.getSimpleName());
 
-    public interface XCAPStateChangedListener {
-        public void onInterfaceChanged(IVoWifiXCAP newServiceInterface);
+    public interface UTStateChangedListener {
+        public void onInterfaceChanged(IVoWifiUT newServiceInterface);
         public void onPrepareFinished(boolean success);
         public void onDisabled();
     }
 
-    private static final String SERVICE_ACTION = IVoWifiXCAP.class.getCanonicalName();
+    private static final String SERVICE_ACTION = IVoWifiUT.class.getCanonicalName();
     private static final String SERVICE_PACKAGE = "com.spreadtrum.vowifi";
-    private static final String SERVICE_CLASS = "com.spreadtrum.vowifi.service.XCAPService";
+    private static final String SERVICE_CLASS = "com.spreadtrum.vowifi.service.UTService";
 
     private int mSessionId = -1;
     private int mRegisterState = RegisterState.STATE_IDLE;
     private int mCurIPVersion = IPVersion.NONE;
     private int mCurRegIPVersion = IPVersion.NONE;
+    private boolean mInAttaching = false;
     private SecurityConfig mSecurityConfig;
     private VoWifiSecurityManager mSecurityMgr;
     private MySecurityListener mSecurityListener;
 
-    private IVoWifiXCAP mIXCAP;
-    private ArrayList<XCAPStateChangedListener> mIXCAPChangedListeners =
-            new ArrayList<XCAPStateChangedListener>();
+    private IVoWifiUT mIUT;
+    private ArrayList<UTStateChangedListener> mIUTChangedListeners =
+            new ArrayList<UTStateChangedListener>();
 
-    protected VoWifiXCAPManager(Context context, VoWifiSecurityManager securityMgr) {
+    protected VoWifiUTManager(Context context, VoWifiSecurityManager securityMgr) {
         super(context);
         mSecurityMgr = securityMgr;
         mSecurityListener = new MySecurityListener();
@@ -52,41 +53,41 @@ public class VoWifiXCAPManager extends ServiceManager {
 
     @Override
     protected void onServiceChanged() {
-        mIXCAP = null;
+        mIUT = null;
         if (mServiceBinder != null) {
-            mIXCAP = IVoWifiXCAP.Stub.asInterface(mServiceBinder);
+            mIUT = IVoWifiUT.Stub.asInterface(mServiceBinder);
         }
-        if (mIXCAP == null && mSecurityConfig != null) {
+        if (mIUT == null && mSecurityConfig != null) {
             mSecurityMgr.deattach(mSessionId, false);
             resetConfig();
         }
 
         // Notify the interface changed.
-        for (XCAPStateChangedListener listener : mIXCAPChangedListeners) {
-            listener.onInterfaceChanged(mIXCAP);
+        for (UTStateChangedListener listener : mIUTChangedListeners) {
+            listener.onInterfaceChanged(mIUT);
         }
     }
 
-    public boolean registerXCAPInterfaceChanged(XCAPStateChangedListener listener) {
+    public boolean registerUTInterfaceChanged(UTStateChangedListener listener) {
         if (listener == null) {
-            Log.w(TAG, "Can not register the xcap interface changed as the listener is null.");
+            Log.w(TAG, "Can not register the ut interface changed as the listener is null.");
             return false;
         }
 
-        mIXCAPChangedListeners.add(listener);
+        mIUTChangedListeners.add(listener);
 
         // Notify the service changed immediately when register the listener.
-        listener.onInterfaceChanged(mIXCAP);
+        listener.onInterfaceChanged(mIUT);
         return true;
     }
 
-    public boolean unregisterXCAPInterfaceChanged(XCAPStateChangedListener listener) {
+    public boolean unregisterUTInterfaceChanged(UTStateChangedListener listener) {
         if (listener == null) {
-            Log.w(TAG, "Can not register the xcap interface changed as the listener is null.");
+            Log.w(TAG, "Can not register the ut interface changed as the listener is null.");
             return false;
         }
 
-        return mIXCAPChangedListeners.remove(listener);
+        return mIUTChangedListeners.remove(listener);
     }
 
     public void updateRegisterState(int newState, int ipVersion) {
@@ -97,15 +98,21 @@ public class VoWifiXCAPManager extends ServiceManager {
     }
 
     public void prepare(int subId) {
-        if (subId < 0 || mRegisterState != RegisterState.STATE_CONNECTED) {
-            // Do not register now. set as prepare failed.
-            resetConfig();
-            notifyPrepareResult(false);
-            return;
-        }
+        synchronized (TAG) {
+            if (subId < 0 || mRegisterState != RegisterState.STATE_CONNECTED) {
+                // Do not register now. set as prepare failed.
+                resetConfig();
+                notifyPrepareResult(false);
+                return;
+            } else if (mInAttaching) {
+                Log.d(TAG, "Already in attaching process, ignore the prepare action.");
+                return;
+            }
 
-        // Start the attach process for XCAP.
-        mSecurityMgr.attach(subId, S2bType.XCAP, null, mSecurityListener);
+            // Start the attach process for UT.
+            mInAttaching = true;
+            mSecurityMgr.attach(subId, S2bType.UT, null, mSecurityListener);
+        }
     }
 
     public void disabled() {
@@ -115,13 +122,13 @@ public class VoWifiXCAPManager extends ServiceManager {
     }
 
     private boolean updateSettings() {
-        if (mIXCAP == null || mSecurityConfig == null) {
+        if (mIUT == null || mSecurityConfig == null) {
             Log.e(TAG, "Failed to update the settings, please check!");
             return false;
         }
 
         try {
-            return mIXCAP.updateIPAddr(getLocalIP(), getDnsIP());
+            return mIUT.updateIPAddr(getLocalIP(), getDnsIP());
         } catch (RemoteException e) {
             Log.e(TAG, "Failed to update the IP address as catch the e: " + e.toString());
         }
@@ -148,19 +155,20 @@ public class VoWifiXCAPManager extends ServiceManager {
     }
 
     private void resetConfig() {
+        mInAttaching = false;
         mSessionId = -1;
         mSecurityConfig = null;
     }
 
     private void notifyPrepareResult(boolean success) {
-        for (XCAPStateChangedListener listener : mIXCAPChangedListeners) {
+        for (UTStateChangedListener listener : mIUTChangedListeners) {
             listener.onPrepareFinished(success);
         }
     }
 
     private void updateServiceState() {
         if (isDisabled()) {
-            for (XCAPStateChangedListener listener : mIXCAPChangedListeners) {
+            for (UTStateChangedListener listener : mIUTChangedListeners) {
                 listener.onDisabled();
             }
         }
@@ -180,7 +188,7 @@ public class VoWifiXCAPManager extends ServiceManager {
             mCurIPVersion = mSecurityConfig._useIPVersion;
 
             // If the register IP version do not same as the attach IP version.
-            // We'd like to adjust the XCAP IPVersion.
+            // We'd like to adjust the UT IPVersion.
             if (mCurIPVersion != mCurRegIPVersion) {
                 if (mCurRegIPVersion == IPVersion.IP_V4
                         && !TextUtils.isEmpty(mSecurityConfig._ip4)

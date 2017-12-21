@@ -171,9 +171,11 @@ public abstract class ServiceManager {
     private class PendingActionMap extends HashMap<Integer, PendingAction> {
         @Override
         public PendingAction put(Integer key, PendingAction action) {
+            Log.d(TAG, "Add a new pending action: " + action);
+
             PendingAction res = super.put(key, action);
             mHandler.removeMessages(MSG_PROCESS_PENDING_ACTION);
-            mHandler.sendEmptyMessageDelayed(MSG_PROCESS_PENDING_ACTION, 15 * 1000);
+            mHandler.sendEmptyMessageDelayed(MSG_PROCESS_PENDING_ACTION, action._retryAfterMillis);
             return res;
         }
     }

@@ -69,7 +69,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private ImsUtImpl mImsUt;
     private ImsEcbmImpl mImsEcbm;
     private VoWifiCallManager mCallMgr;
-    private VoWifiXCAPManager mXCAPMgr;
+    private VoWifiUTManager mUTMgr;
     private VoWifiRegisterManager mRegisterMgr;
     private VoWifiSecurityManager mSecurityMgr;
 
@@ -92,6 +92,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private static final int MSG_TERMINATE_CALLS = 10;
     private static final int MSG_ECBM = 11;
     private static final int MSG_ECBM_TIMEOUT = 12;
+    private static final int MSG_QUERY_CLIR_MODE = 13;
+    private static final int MSG_SRVCC_SUCCESS = 14;
 
     private class MyHandler extends Handler {
         public MyHandler(Looper looper) {
@@ -157,6 +159,14 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     break;
                 case MSG_ECBM_TIMEOUT:
                     handleMsgECBMTimeout(msg.arg1);
+                    break;
+                case MSG_QUERY_CLIR_MODE:
+                    queryCLIRStatus();
+                    break;
+                case MSG_SRVCC_SUCCESS:
+                    // If the SRVCC success, handle it as register logout.
+                    Log.d(TAG, "Handle the SRVCC success as register logout now.");
+                    registerLogout(0);
                     break;
             }
         }
@@ -240,7 +250,22 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
             // Reset the security and sip stack.
             resetAll(WifiState.DISCONNECTED);
+            registerLogout(0);
         }
+
+        private void queryCLIRStatus() {
+            try {
+                IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
+                if (imsServiceEx != null) {
+                    Log.d(TAG, "To get the CLIR mode from CP.");
+                    imsServiceEx.getCLIRStatus(Utilities.getPrimaryCard(mContext));
+                }
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to get the CLIR statue as catch the RemoteException: "
+                        + e.toString());
+            }
+        }
+
     }
 
     public VoWifiServiceImpl(Context context) {
@@ -298,10 +323,12 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
      * Ut interface for the supplementary service configuration.
      */
     public ImsUtImpl getUtInterface() {
-        if (!ImsManager.isWfcEnabledByPlatform(mContext)) return null;
+        if (mUTMgr == null || !ImsManager.isWfcEnabledByPlatform(mContext)) {
+            return null;
+        }
 
         if (mImsUt == null) {
-            mImsUt = new ImsUtImpl(mContext, mXCAPMgr);
+            mImsUt = new ImsUtImpl(mContext, mUTMgr);
         }
 
         return mImsUt;
@@ -619,6 +646,14 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         if (mCallMgr != null) mCallMgr.onSRVCCStateChanged(state);
     }
 
+    public int updateCurCLIRMode(int clirMode) {
+        if (getUtInterface() != null) {
+            getUtInterface().setCurCLIRMode(clirMode);
+        }
+
+        return Result.SUCCESS;
+    }
+
     private void init() {
         if (ImsManager.isWfcEnabledByPlatform(mContext)) {
             mPreferences = PreferenceManager.getDefaultSharedPreferences(mContext);
@@ -627,13 +662,16 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             mCallMgr = new VoWifiCallManager(mContext);
             mRegisterMgr = new VoWifiRegisterManager(mContext);
             mSecurityMgr = new VoWifiSecurityManager(mContext);
-            mXCAPMgr = new VoWifiXCAPManager(mContext, mSecurityMgr);
+            mUTMgr = new VoWifiUTManager(mContext, mSecurityMgr);
 
             mCallMgr.bindService();
-            mXCAPMgr.bindService();
+            mUTMgr.bindService();
             mRegisterMgr.bindService();
             mSecurityMgr.bindService();
             mCallMgr.registerListener(mCallListener);
+
+            // Query the CLIR mode once, and the CLIR mode will be update by updateCurCLIRMode.
+            mHandler.sendEmptyMessageDelayed(MSG_QUERY_CLIR_MODE, 500);
         }
     }
 
@@ -641,7 +679,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         if (ImsManager.isWfcEnabledByPlatform(mContext)) {
             // Unbind the service.
             mCallMgr.unbindService();
-            mXCAPMgr.unbindService();
+            mUTMgr.unbindService();
             mRegisterMgr.unbindService();
             mSecurityMgr.unbindService();
             mCallMgr.unregisterListener();
@@ -770,9 +808,17 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     private void exitECBM() {
-        if (mImsEcbm != null) mImsEcbm.updateEcbm(false, null);
+        if (mCallMgr != null) {
+            mCallMgr.updateIncomingCallAction(IncomingCallAction.NORMAL);
+        }
 
+        if (getEcbmInterface() != null) {
+            getEcbmInterface().updateEcbm(false, null);
+        }
+
+        mHandler.removeMessages(MSG_ECBM_TIMEOUT);
         mEcbmStep = ECBMRequest.ECBM_STEP_INVALID;
+        mECBMRequest = null;
     }
 
     private class MyCallListener implements CallListener {
@@ -782,14 +828,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 mCallback.onCallIncoming(
                         callSession.getCallId(), callSession.getCallProfile().mCallType);
             }
-        }
-
-        @Override
-        public void onCallIsEmergency(ImsCallSessionImpl callSession) {
-            // It means we received the network reply as this call is emergency call. We need
-            // notify this to ImsService, and it will transfer this call to CP to handle.
-            Log.d(TAG, "The call " + callSession + " is emergency call. Notify the result!");
-//            if (mCallback != null) mCallback.onCallIsEmergency(callSession);
         }
 
         @Override
@@ -837,15 +875,19 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             if (mCallMgr != null) mCallMgr.updateIncomingCallAction(IncomingCallAction.REJECT);
 
             ImsEcbmImpl imsEcbm = getEcbmInterface();
-            imsEcbm.updateEcbm(true, callSession);
-            mECBMRequest = request;
+            if (imsEcbm != null) {
+                imsEcbm.updateEcbm(true, callSession);
+                mECBMRequest = request;
 
-            int handleStep = request.getEnterECBMStep();
-            if (handleStep > ECBMRequest.ECBM_STEP_INVALID) {
-                sendECBMTimeoutMsg(handleStep);
-                Message msg = mHandler.obtainMessage(MSG_ECBM);
-                msg.arg1 = handleStep;
-                mHandler.sendMessage(msg);
+                int handleStep = request.getEnterECBMStep();
+                if (handleStep > ECBMRequest.ECBM_STEP_INVALID) {
+                    sendECBMTimeoutMsg(handleStep);
+                    Message msg = mHandler.obtainMessage(MSG_ECBM);
+                    msg.arg1 = handleStep;
+                    mHandler.sendMessage(msg);
+                }
+            } else {
+                Log.d(TAG, "Need enter ECBM, but imsEcbm is null.");
             }
         }
 
@@ -855,16 +897,28 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             if (mCallMgr != null) mCallMgr.updateIncomingCallAction(IncomingCallAction.NORMAL);
 
             ImsEcbmImpl imsEcbm = getEcbmInterface();
-            imsEcbm.updateEcbm(false, null);
+            if (imsEcbm != null && imsEcbm.isEcbm()) {
+                imsEcbm.updateEcbm(false, null);
 
-            int handleStep = mECBMRequest.getExitECBMStep();
-            if (handleStep > ECBMRequest.ECBM_STEP_INVALID) {
-                sendECBMTimeoutMsg(handleStep);
-                Message msg = mHandler.obtainMessage(MSG_ECBM);
-                msg.arg1 = handleStep;
-                mHandler.sendMessage(msg);
+                int handleStep = mECBMRequest.getExitECBMStep();
+                if (handleStep > ECBMRequest.ECBM_STEP_INVALID) {
+                    sendECBMTimeoutMsg(handleStep);
+                    Message msg = mHandler.obtainMessage(MSG_ECBM);
+                    msg.arg1 = handleStep;
+                    mHandler.sendMessage(msg);
+                }
+            } else {
+                Log.d(TAG, "Exit ECBM: But not in Ecbm.");
             }
         }
+
+        @Override
+        public void onSRVCCFinished(boolean isSuccess) {
+            if (isSuccess) {
+                mHandler.sendEmptyMessageDelayed(MSG_SRVCC_SUCCESS, 5 * 1000);
+            }
+        }
+
     }
 
     private class MyRegisterListener implements RegisterListener {
@@ -971,21 +1025,22 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         @Override
         public void onRegisterStateChanged(int newState, int errorCode) {
             // If the register state changed, update the register state to
-            // call manager & xcap manager.
+            // call manager & ut manager.
             if (mCallMgr != null) mCallMgr.updateRegisterState(newState);
-            if (mXCAPMgr != null) {
+            if (mUTMgr != null) {
                 RegisterConfig regConfig = mRegisterMgr.getCurRegisterConfig();
                 int ipVersion = IPVersion.NONE;
                 if (regConfig != null) {
                     ipVersion = regConfig.isCurUsedIPv4() ? IPVersion.IP_V4 : IPVersion.IP_V6;
                 }
-                mXCAPMgr.updateRegisterState(newState, ipVersion);
+                mUTMgr.updateRegisterState(newState, ipVersion);
             }
 
             // If the new state is registered, we need query the CLIR state from CP.
             // And if the query action success, telephony will update the CLIR via UtInterface.
-            if (newState == RegisterState.STATE_CONNECTED) {
-                queryCLIRStatus();
+            if (getUtInterface() != null
+                    && newState == RegisterState.STATE_CONNECTED) {
+                getUtInterface().updateCLIR();
             }
 
             if (errorCode == NativeErrorCode.SERVER_TIMEOUT) {
@@ -1029,20 +1084,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             mCmdRegisterState = CMD_STATE_INVALID;
         }
 
-        private void queryCLIRStatus() {
-            try {
-                IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
-                if (imsServiceEx != null) {
-                    int id = imsServiceEx.getCLIRStatus(Utilities.getPrimaryCard(mContext));
-                    if (id < 1) {
-                        Log.w(TAG, "Failed to get CLIR status, please check!");
-                    }
-                }
-            } catch (RemoteException e) {
-                Log.e(TAG, "Failed to get the CLIR statue as catch the RemoteException: "
-                        + e.toString());
-            }
-        }
     }
 
     private class MySecurityListener implements SecurityListener {
