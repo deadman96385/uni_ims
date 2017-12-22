@@ -687,7 +687,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         /* SPRD: add for bug713220 @{ */
                         try {
                             if (mImsDriverCall != null) {
-                                if ((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING)
+                                if((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING) && failCause.causeCode == 1024){
+                                    mDisconnCause = ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED_BY_NETWORK;
+                                 }else if ((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING)
                                         && (mDisconnCause != ImsReasonInfo.CODE_USER_DECLINE)) { ////add for set cause when reject incoming call
                                     mDisconnCause = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
                                 //SPRD: add for bug751898
