@@ -1190,6 +1190,13 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
         @Override
         public void onStopped(boolean forHandover, int errorCode) {
+            // As attach stopped, and if the platform do not support VOLTE, we'd like to
+            // update the used local address to null.
+            if (!ImsManager.isVolteEnabledByPlatform(mContext)) {
+                Log.d(mTag, "The platform do not support VOLTE, set the local addr to null.");
+                setUsedLocalAddr(null);
+            }
+
             if (!forHandover && mResetStep != RESET_STEP_INVALID) {
                 // If the stop action is for reset, we will notify the reset finished result.
                 if (mResetStep == RESET_STEP_DEREGISTER) {
