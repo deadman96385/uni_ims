@@ -451,7 +451,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             Log.e(TAG, "Please wait for attach success. Current attach state: "
                     + mSecurityMgr.getCurSecurityState() + ", security config: "
                     + mSecurityMgr.getConfig());
-            if (mCallback != null) mCallback.onReregisterFinished(false, 0);
+            registerFailed();
             return;
         }
 
@@ -734,7 +734,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             // Notify the register as register logout.
             registerLogout(0);
         } else if (mCallback != null) {
-            mCallback.onRegisterStateChanged(mRegisterMgr.getCurRegisterState(), 0);
+            mCallback.onRegisterStateChanged(RegisterState.STATE_IDLE, 0);
         }
 
         mRegisterMgr.forceStop();
