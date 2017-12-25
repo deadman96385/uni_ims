@@ -319,10 +319,6 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         for (int i = 0; imsDcList!= null && i < imsDcList.size(); i++) {
             ImsCallSessionImpl callSession = null;
             ImsDriverCall imsDc = imsDcList.get(i);
-            if(imsDc.csMode != 0){
-                Log.d(TAG, "handlePollCalls the ImsDriverCall is cs call");
-                continue;
-            }
             synchronized(mSessionList) {
                 callSession = mSessionList.get(Integer.toString(imsDc.index));
                 Log.d(TAG, "Find existing Session, index:"+imsDc.index +" callSession is null:"+(callSession== null));
