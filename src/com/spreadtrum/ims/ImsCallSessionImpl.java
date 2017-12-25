@@ -747,7 +747,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         return "0";
     }
-
+    //SPRD: add for bug760725
+    public String getCallNumber(){
+        if(mImsDriverCall != null){
+            return mImsDriverCall.number;
+        }
+        return "0";
+    }
     /**
      * Gets the call profile that this session is associated with
      *

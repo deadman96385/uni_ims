@@ -34,6 +34,8 @@ import android.content.SharedPreferences;
 import com.android.ims.ImsManager;
 
 import android.telephony.TelephonyManagerEx;
+import android.telephony.CarrierConfigManagerEx;
+import android.telephony.SubscriptionManager;
 
 public class VTManagerUtils {
     private static final String TAG = VTManagerUtils.class.getSimpleName();
@@ -207,15 +209,32 @@ public class VTManagerUtils {
         android.util.Log.i(TAG, string);
     }
 
-    public static AlertDialog showVolteCallMediaUpdateAlert(Context context, final ImsRIL mCi, Message response,ImsVideoCallProvider vtprovide) {
+    public static AlertDialog showVolteCallMediaUpdateAlert(Context context, final ImsRIL mCi, Message response,ImsVideoCallProvider vtprovide,String number) {
         /* SPRD: add for bug545171 @{ */
+        boolean mShowPhoneNumber = false;
         final Message reponseMsg = new Message();
         if(response != null){
             reponseMsg.arg1 = response.arg1;
         }
         /* @} */
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle(context.getString(R.string.remote_request_change));
+        /* SPRD: add for bug807542  */
+        int primeSubId = SubscriptionManager.getDefaultDataSubscriptionId();
+        CarrierConfigManagerEx configManager =
+                (CarrierConfigManagerEx) context.getSystemService("carrier_config_ex");
+        if (configManager.getConfigForSubId(primeSubId) != null) {
+            mShowPhoneNumber = configManager.getConfigForSubId(primeSubId).getBoolean(
+                    CarrierConfigManagerEx.KEY_CARRIER_SUPPORTS_SHOW_UPGRADE_PHONENUMBER);
+            log("VTManagerUtils_mShowPhoneNumber" + mShowPhoneNumber);
+        }
+
+        if(mShowPhoneNumber){
+            /* SPRD: add for bug760725  */
+            builder.setTitle(number + " " + context.getString(R.string.remote_request_change));
+        }
+        else{
+            builder.setTitle(context.getString(R.string.remote_request_change));
+        }
         /* SPRD: Add feature of low battery for Reliance@{ */
         builder.setMessage(TelephonyManagerEx.isBatteryLow()? context.getString(R.string.low_battery_warning_media_alert_message):context.getString(R.string.choose_accept_reject));
         /* @} */

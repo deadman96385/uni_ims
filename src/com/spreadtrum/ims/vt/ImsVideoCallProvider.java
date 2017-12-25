@@ -498,7 +498,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 else if(ImsCmccHelper.getInstance(mContext).rejectMediaChange(mImsCallSessionImpl,mCi,mCallIdMessage)){
                     log("handleVolteCallMediaChange-is cmcc project, has one active adn one hold call reject MediaChange");
                 }else{
-                    mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage,this);
+                    mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage,this,mImsCallSessionImpl.getCallNumber());
                     mVolteMediaUpdateDialog.show();
                 }
 
@@ -521,7 +521,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 if(mVolteMediaDegradeDialog != null){
                    mVolteMediaDegradeDialog.dismiss();
                 }
-                mVolteMediaDegradeDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage,this);
+                mVolteMediaDegradeDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,mCallIdMessage,this,mImsCallSessionImpl.getCallNumber());
                 mVolteMediaDegradeDialog.show();
             }
     }
