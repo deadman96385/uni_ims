@@ -29,6 +29,8 @@ import android.os.AsyncResult;
 import android.telephony.VoLteServiceState;
 import android.telephony.TelephonyManager;
 import com.android.ims.internal.ImsManagerEx;
+import android.telephony.CarrierConfigManagerEx;
+import android.telephony.SubscriptionManager;
 
 public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallProvider {
     private static final String TAG = ImsVideoCallProvider.class.getSimpleName();
@@ -117,7 +119,8 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                 case VoLteServiceState.HANDOVER_COMPLETED:
                     if(mIsVideo && (mContext != null)){
                        mIsVideo = false;
-                       Toast.makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
+                       //Toast.makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
+                       showTelcelRequestToast();
                     }
                     if(mVolteMediaUpdateDialog != null && mVolteMediaUpdateDialog.isShowing()){
                         receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
@@ -410,7 +413,8 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
              /* SPRD:add for bug563112 & 677255@{ */
              if(!isVideoCall(imsCallProfile.mCallType) && mIsVideo && (session != null && session.mImsDriverCall != null) ){
                  if(!mIsVoiceRingTone) {
-                     Toast.makeText(mContext, mContext.getResources().getString(R.string.videophone_fallback_title), Toast.LENGTH_LONG).show();
+                     //Toast.makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title), Toast.LENGTH_LONG).show();
+                     showTelcelRequestToast();
                  }
                  log("updateNegotiatedCallProfilee->makeText");
                  mIsVideo = false;
@@ -551,5 +555,20 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
         return calltype == ImsCallProfile.CALL_TYPE_VT
                 || calltype == ImsCallProfile.CALL_TYPE_VT_RX
                 || calltype == ImsCallProfile.CALL_TYPE_VT_TX;
+    }
+    /* SPRD: add for bug809098 */
+    public void showTelcelRequestToast(){
+         boolean mShowTelcelToast = true;
+         int primeSubId = SubscriptionManager.getDefaultDataSubscriptionId();
+         CarrierConfigManagerEx configManager =
+                 (CarrierConfigManagerEx) mContext.getSystemService("carrier_config_ex");
+         if (configManager.getConfigForSubId(primeSubId) != null) {
+             mShowTelcelToast = configManager.getConfigForSubId(primeSubId).getBoolean(
+                     CarrierConfigManagerEx.KEY_CALL_TELCEL_SHOW_TOAST);
+             log("ImsVideoCallProvider_mShowTelcelToast :" + mShowTelcelToast);
+         }
+         if(mShowTelcelToast){
+             Toast.makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
+         }
     }
 }
