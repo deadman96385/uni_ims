@@ -343,6 +343,11 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
         boolean isVideo = VideoProfile.isVideo(responseProfile.getVideoState());
         mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_RESPONSE, isVideo));
+
+        if (!isVideo) {
+            // Response as audio, need stop all the video.
+            stopAll();
+        }
     }
 
     @Override

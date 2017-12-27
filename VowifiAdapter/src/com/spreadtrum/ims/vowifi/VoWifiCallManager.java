@@ -1243,10 +1243,16 @@ public class VoWifiCallManager extends ServiceManager {
             if (listener != null) {
                 listener.callSessionUpdateFailed(callSession, new ImsReasonInfo());
             }
+
             if (videoCallProvider != null) {
+                if (eventCode == JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_FAILED) {
+                    // As failed to add video, we'd like to stop all the video.
+                    videoCallProvider.stopAll();
+                }
                 videoCallProvider.receiveSessionModifyResponse(
                         VideoProvider.SESSION_MODIFY_REQUEST_FAIL, null, null);
             }
+
             // Show toast for failed action.
             int toastTextResId = eventCode == JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_FAILED
                     ? R.string.vowifi_add_video_failed : R.string.vowifi_remove_video_failed;
