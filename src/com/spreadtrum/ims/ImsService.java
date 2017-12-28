@@ -358,7 +358,8 @@ public class ImsService extends Service {
                         mAttachVowifiSuccess = true;//SPRD:Add for bug604833
                         break;
                     case EVENT_WIFI_ATTACH_FAILED:
-                        Log.i(TAG,"EVENT_WIFI_ATTACH_FAILED-> mFeatureSwitchRequest:" + mFeatureSwitchRequest + " mAttachVowifiSuccess:" + mAttachVowifiSuccess);
+                        Log.i(TAG,"EVENT_WIFI_ATTACH_FAILED-> mFeatureSwitchRequest:" + mFeatureSwitchRequest + " mAttachVowifiSuccess:" + mAttachVowifiSuccess
+                        +" error code:"+ msg.arg1);
                         if(mImsServiceListenerEx != null){
                             if(mFeatureSwitchRequest != null){
                                 mImsServiceListenerEx.operationFailed(mFeatureSwitchRequest.mRequestId,
@@ -377,7 +378,7 @@ public class ImsService extends Service {
                                 Log.i(TAG,"EVENT_WIFI_ATTACH_FAILED-> operationFailed, clear mFeatureSwitchRequest.");
                                 mIsPendingRegisterVowifi = false;
                                 mFeatureSwitchRequest = null;
-                                if (msg.arg1 == 53766 && !mIsCalling) {//SPRD: add for bug661375 661372
+                                if ((msg.arg1 == 53766 || msg.arg1 == 53765) && !mIsCalling) {//SPRD: add for bug661375 661372
                                     service.setIMSRegAddress(null);
                                 }
                             }
@@ -1022,7 +1023,6 @@ public class ImsService extends Service {
             Log.i (TAG," getPendingCallSession-> serviceId: " + serviceId + "  callId: " + callId + " mIsVowifiCall: " + mIsVowifiCall
                     + " mIsVolteCall: " + mIsVolteCall + " isVoWifiEnabled(): " + isVoWifiEnabled() + " isVoLTEEnabled(): " + isVoLTEEnabled());
             mInCallPhoneId = serviceId-1;//SPRD:add for bug635699
-            updateInCallState(true);
             /*SPRD: Modify for bug586758{@*/
            if((isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall) || mIsVowifiCall){
                 mIsVowifiCall = true;
