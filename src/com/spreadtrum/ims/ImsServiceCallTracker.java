@@ -177,6 +177,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                     + " isVoLTEEnabled(): " + mImsService.isVoLTEEnabled()
                     + ", mState : " + state);
             if (mImsService.isVoLTEEnabled() && !mImsService.isVowifiCall() && !mImsService.isVolteCall()) {
+                mImsService.updateInCallState(true);
                 mWifiService.updateDataRouterState(DataRouterState.CALL_VOLTE);
             }
             /*@}*/
