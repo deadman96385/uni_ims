@@ -1705,9 +1705,14 @@ public class ImsService extends Service {
     private void notifyListenerWhenRegister(IImsRegisterListener listener){
         Log.i(TAG," notifyListenerWhenRegister() -> ");
         // SPRD 708609 when switch data card, VOLTE icon also display
-//        updateImsRegisterState();
+        updateImsRegisterState();
         boolean isImsRegistered = ((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)
                 || (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
+        //SPRD: add for bug 771875
+        if (ImsManagerEx.isDualLteModem()){
+            Log.i(TAG," notifyImsRegisterState() -> isDualLteModem is ok ");
+            isImsRegistered  = isImsRegistered || mVolteRegistered;
+        }
         Log.i(TAG," notifyListenerWhenRegister() -> isImsRegistered: "+isImsRegistered);
         synchronized (mImsRegisterListeners) {
             try{
