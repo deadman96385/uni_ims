@@ -996,7 +996,8 @@ public class ImsService extends Service {
                     + " isVoLTEEnabled(): " + isVoLTEEnabled()+"  serviceId: "+serviceId);
             mInCallPhoneId = serviceId-1;//SPRD:add for bug635699
             updateInCallState(true);
-            if ((isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall) || mIsVowifiCall) {
+            boolean isPrimaryCard = ImsRegister.getPrimaryCard(mPhoneCount) == (serviceId-1);
+            if ((isPrimaryCard && isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall) || mIsVowifiCall) {
                 if (isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall) {
                     mIsVowifiCall = true;
                     mWifiService.updateDataRouterState(DataRouterState.CALL_VOWIFI); //Add for data router
