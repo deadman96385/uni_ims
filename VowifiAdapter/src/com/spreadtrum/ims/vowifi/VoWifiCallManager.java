@@ -38,6 +38,7 @@ import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.SRVCCResult;
 import com.spreadtrum.ims.vowifi.Utilities.SRVCCSyncInfo;
 import com.spreadtrum.ims.vowifi.Utilities.VideoQuality;
+import com.spreadtrum.ims.vowifi.Utilities.VideoType;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.IncomingCallAction;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.WifiState;
 
@@ -810,15 +811,19 @@ public class VoWifiCallManager extends ServiceManager {
                     handleCallHoldOrResume(eventCode, callSession);
                     break;
                 }
-                case JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_OK:
-                case JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_FAILED:
-                case JSONUtils.EVENT_CODE_CALL_REMOVE_VIDEO_OK:
-                case JSONUtils.EVENT_CODE_CALL_REMOVE_VIDEO_FAILED: {
-                    handleCallUpdate(eventCode, callSession);
+                case JSONUtils.EVENT_CODE_CALL_UPDATE_VIDEO_OK: {
+                    int videoType = jObject.optInt(JSONUtils.KEY_VIDEO_TYPE);
+                    handleCallUpdate(callSession, videoType);
+                    break;
+                }
+                case JSONUtils.EVENT_CODE_CALL_UPDATE_VIDEO_FAILED: {
+                    int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE);
+                    handleCallUpdateFailed(callSession, stateCode);
                     break;
                 }
                 case JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_REQUEST: {
-                    handleCallAddVideoRequest(callSession);
+                    int videoType = jObject.optInt(JSONUtils.KEY_VIDEO_TYPE);
+                    handleCallAddVideoRequest(callSession, videoType);
                     break;
                 }
                 case JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_CANCEL: {
@@ -912,6 +917,11 @@ public class VoWifiCallManager extends ServiceManager {
                     String info = jObject.optString(JSONUtils.KEY_USSD_INFO_RECEIVED, "");
                     int mode = jObject.optInt(JSONUtils.KEY_USSD_MODE, -1);
                     handleUssdInfoReceived(callSession, info, mode);
+                    break;
+                }
+                case JSONUtils.EVENT_CODE_VOICE_CODEC: {
+                    String codecName = jObject.optString(JSONUtils.KEY_VOICE_CODEC, "");
+                    handleVoiceCodecNegociated(callSession, codecName);
                     break;
                 }
                 default:
@@ -1187,7 +1197,7 @@ public class VoWifiCallManager extends ServiceManager {
         }
     }
 
-    private void handleCallUpdate(int eventCode, ImsCallSessionImpl callSession)
+    private void handleCallUpdate(ImsCallSessionImpl callSession, int newVideoType)
             throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Handle the call update ok.");
         if (callSession == null) {
@@ -1195,72 +1205,102 @@ public class VoWifiCallManager extends ServiceManager {
             return;
         }
 
-        IImsCallSessionListener listener = callSession.getListener();
         ImsVideoCallProviderImpl videoCallProvider = callSession.getVideoCallProviderImpl();
-        if (eventCode == JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_OK
-                || eventCode == JSONUtils.EVENT_CODE_CALL_REMOVE_VIDEO_OK) {
-            // Update the call type success.
-            boolean isVideo = eventCode == JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_OK;
-            callSession.updateCallType(
-                    isVideo ? ImsCallProfile.CALL_TYPE_VT : ImsCallProfile.CALL_TYPE_VOICE);
+        if (videoCallProvider == null) {
+            Log.e(TAG, "The video call profile is null. Shouldn't be here, please check!!!");
+            return;
+        }
 
-            if (videoCallProvider != null) {
-                if (eventCode == JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_OK
-                        && videoCallProvider.isWaitForModifyResponse()) {
-                    // If we send the request to callee, and the callee accept the request, need
-                    // prompt the toast here.
-                    Toast.makeText(mContext, R.string.vowifi_add_video_success,
-                            Toast.LENGTH_LONG).show();
-                } else if (eventCode == JSONUtils.EVENT_CODE_CALL_REMOVE_VIDEO_OK) {
-                    // Show toast for remove video action.
-                    Toast.makeText(mContext, R.string.vowifi_remove_video_success,
-                            Toast.LENGTH_LONG).show();
+        int newCallType = VideoType.getCallType(newVideoType);
+        int oldCallType = callSession.getCallProfile().mCallType;
+        if (newCallType == oldCallType) {
+            Log.e(TAG, "It means there isn't any update. Please check videoType: " + newVideoType);
+            handleCallUpdateFailed(callSession, 0);
+            return;
+        }
 
-                    // As remove video ok, we'd like to stop all the video before the response.
-                    // If the surface destroyed, the remove render action will be blocked, and
-                    // the remove action will failed actually. So we'd like to stop all the video
-                    // before give the response.
-                    videoCallProvider.stopAll();
-                }
+        // The new call type is different from the old call type. Update the call type.
+        callSession.updateCallType(newCallType);
+        if (videoCallProvider.isWaitForModifyResponse()) {
+            int oldVideoType = VideoType.getNativeVideoType(oldCallType);
+            if (oldVideoType < newVideoType) {
+                // It means the new call type upgrade, and we'd like to prompt the toast
+                // as remote accept the upgrade request.
+                Toast.makeText(mContext, R.string.vowifi_request_update_success,
+                        Toast.LENGTH_LONG).show();
+            }
+        }
 
-                VideoProfile videoProfile = (isVideo
-                        ? new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL)
-                        : new VideoProfile(VideoProfile.STATE_AUDIO_ONLY));
-                // As the response is OK, the request profile will be same as the response.
-                videoCallProvider.receiveSessionModifyResponse(
-                        VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS,
-                        videoProfile /* request profile */,
-                        videoProfile /* response profile */);
-
-                if (callSession.isAlive() && mListener != null) {
-                    mListener.onAliveCallUpdate(isVideo);
-                }
-            } else {
-                Log.e(TAG, "The video call provider is null, can not give the response.");
+        if (Utilities.isAudioCall(oldCallType)) {
+            // Notify the call update from audio call to video call.
+            if (callSession.isAlive() && mListener != null) {
+                mListener.onAliveCallUpdate(true /* is video now */);
             }
         } else {
-            // Failed to update the call type.
-            if (listener != null) {
-                listener.callSessionUpdateFailed(callSession, new ImsReasonInfo());
+            // The old call type should be video call.
+
+            // As remove video, we'd like to stop all the video before the response.
+            // If the surface destroyed, the remove render action will be blocked, and
+            // the remove action will be failed actually. So we'd like to stop all the video
+            // or stop the reception or transmission before give the response.
+            if (Utilities.isAudioCall(newCallType)) {
+                // It means the new call type is audio call, and the old call type is video call.
+                // We'd like to prompt the toast as video call fall-back.
+                Toast.makeText(mContext, R.string.vowifi_remove_video_success, Toast.LENGTH_LONG)
+                        .show();
+                videoCallProvider.stopAll();
+            } else if (Utilities.isVideoTX(newCallType)) {
+                // Change from VT to VT_TX. It means we need stop the reception.
+                Toast.makeText(mContext, R.string.vowifi_update_to_tx_success, Toast.LENGTH_LONG)
+                        .show();
+                videoCallProvider.stopReception();
+            } else if (Utilities.isVideoRX(newCallType)) {
+                // Change from VT to VT_RX. It means we need stop the transmission.
+                Toast.makeText(mContext, R.string.vowifi_update_to_rx_success, Toast.LENGTH_LONG)
+                        .show();
+                videoCallProvider.stopTransmission();
+            }
+        }
+
+        VideoProfile newProfile = VideoType.getVideoProfile(newVideoType);
+        // As the response is success, the request profile will be same as the response.
+        videoCallProvider.receiveSessionModifyResponse(
+                VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS,
+                newProfile /* request profile */,
+                newProfile /* response profile */);
+    }
+
+    private void handleCallUpdateFailed(ImsCallSessionImpl callSession, int stateCode)
+            throws RemoteException {
+        if (Utilities.DEBUG) Log.i(TAG, "Handle the call update failed.");
+        if (callSession == null) {
+            Log.w(TAG, "[handleCallUpdateFailed] The call session is null.");
+            return;
+        }
+
+        // Failed to update the call type.
+        IImsCallSessionListener listener = callSession.getListener();
+        if (listener != null) {
+            ImsReasonInfo errorInfo = new ImsReasonInfo(ImsReasonInfo.CODE_MEDIA_UNSPECIFIED,
+                    stateCode, "Update failed as error code: " + stateCode);
+            listener.callSessionUpdateFailed(callSession, errorInfo);
+        }
+
+        ImsVideoCallProviderImpl videoCallProvider = callSession.getVideoCallProviderImpl();
+        if (videoCallProvider != null) {
+            if (videoCallProvider.isWaitForModifyResponse()) {
+                // Show toast for failed action.
+                Toast.makeText(mContext, R.string.vowifi_request_update_failed, Toast.LENGTH_LONG)
+                        .show();
             }
 
-            if (videoCallProvider != null) {
-                if (eventCode == JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_FAILED) {
-                    // As failed to add video, we'd like to stop all the video.
-                    videoCallProvider.stopAll();
-                }
-                videoCallProvider.receiveSessionModifyResponse(
-                        VideoProvider.SESSION_MODIFY_REQUEST_FAIL, null, null);
-            }
-
-            // Show toast for failed action.
-            int toastTextResId = eventCode == JSONUtils.EVENT_CODE_CALL_ADD_VIDEO_FAILED
-                    ? R.string.vowifi_add_video_failed : R.string.vowifi_remove_video_failed;
-            Toast.makeText(mContext, toastTextResId, Toast.LENGTH_LONG).show();
+            videoCallProvider.stopAll();
+            videoCallProvider.receiveSessionModifyResponse(
+                    VideoProvider.SESSION_MODIFY_REQUEST_FAIL, null, null);
         }
     }
 
-    private void handleCallAddVideoRequest(ImsCallSessionImpl callSession) {
+    private void handleCallAddVideoRequest(ImsCallSessionImpl callSession, int videoType) {
         if (Utilities.DEBUG) Log.i(TAG, "Handle the call add video request.");
         if (callSession == null) {
             Log.w(TAG, "[handleCallAddVideoRequest] The call session is null.");
@@ -1269,7 +1309,7 @@ public class VoWifiCallManager extends ServiceManager {
 
         ImsVideoCallProviderImpl videoProvider = callSession.getVideoCallProviderImpl();
         if (videoProvider != null) {
-            VideoProfile newProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
+            VideoProfile newProfile = VideoType.getVideoProfile(videoType);
             videoProvider.receiveSessionModifyRequest(newProfile);
         }
     }
@@ -1434,6 +1474,19 @@ public class VoWifiCallManager extends ServiceManager {
                 Log.e(TAG, "Failed to send the ussd info. e: " + e);
             }
         }
+    }
+    private void handleVoiceCodecNegociated(ImsCallSessionImpl callSession, String codecName) {
+        if (Utilities.DEBUG) Log.i(TAG, "Handle the voice codec negociated.");
+        if (callSession == null || TextUtils.isEmpty(codecName)) {
+            Log.w(TAG, "[handleVoiceCodecNegociated] The call session is null, or codecName is: "
+                    + codecName);
+            return;
+        }
+
+        // If the codec name contains "WB", it means the call quality is high quality
+        // and update the call's voice quality.
+        boolean isHighQuality = codecName.toUpperCase().contains("WB");
+        callSession.updateVoiceQuality(isHighQuality);
     }
 
     private void handleConfAlerted(ImsCallSessionImpl confSession) {

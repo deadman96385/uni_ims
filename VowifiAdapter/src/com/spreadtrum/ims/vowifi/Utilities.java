@@ -5,9 +5,13 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.CursorWrapper;
+import android.net.Uri;
 import android.os.SystemProperties;
+import android.telecom.VideoProfile;
+import android.telephony.PhoneNumberUtils;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
+import android.telephony.TelephonyManagerEx;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -126,8 +130,20 @@ public class Utilities {
         return subId[0];
     }
 
+    public static boolean isAudioCall(int callType) {
+        return callType == ImsCallProfile.CALL_TYPE_VOICE;
+    }
+
     public static boolean isVideoCall(int callType) {
         return callType != ImsCallProfile.CALL_TYPE_VOICE;
+    }
+
+    public static boolean isVideoTX(int callType) {
+        return callType == ImsCallProfile.CALL_TYPE_VT_TX;
+    }
+
+    public static boolean isVideoRX(int callType) {
+        return callType == ImsCallProfile.CALL_TYPE_VT_RX;
     }
 
     public static VideoQuality getDefaultVideoQuality(SharedPreferences preference) {
@@ -173,19 +189,7 @@ public class Utilities {
             return false;
         }
 
-        if (phoneNumber.indexOf(calleeNumber) >= 0
-                || calleeNumber.indexOf(phoneNumber) >= 0) {
-            return true;
-        } else if (calleeNumber.startsWith("0")) {
-            // Sometimes, the phone number will be start will 0, we'd like to sub the string.
-            String tempCallee = calleeNumber.substring(1);
-            if (phoneNumber.indexOf(tempCallee) >= 0
-                    || tempCallee.indexOf(phoneNumber) >= 0) {
-                return true;
-            }
-        }
-
-        return false;
+        return PhoneNumberUtils.compare(calleeNumber, phoneNumber);
     }
 
     // This defined is match the error used by CM. Please do not change.
@@ -680,10 +684,10 @@ public class Utilities {
         public static final int ECBM_STEP_ATTACH_SOS = 3;
         public static final int ECBM_STEP_REGISTER_SOS = 4;
         public static final int ECBM_STEP_START_EMERGENCY_CALL = 5;
-        public static final int ECBM_STEP_DEREGISTER_SOS = 6;
-        public static final int ECBM_STEP_DEATTACH_SOS = 7;
-        public static final int ECBM_STEP_ATTACH_NORMAL = 8;
-        public static final int ECBM_STEP_REGISTER_NORMAL = 9;
+        // Needn't de-register for SOS.
+        public static final int ECBM_STEP_DEATTACH_SOS = 6;
+        public static final int ECBM_STEP_ATTACH_NORMAL = 7;
+        public static final int ECBM_STEP_REGISTER_NORMAL = 8;
 
         // For ECBM error step.
         public static final int ECBM_STEP_FORCE_RESET = 10;
@@ -714,7 +718,6 @@ public class Utilities {
                         ECBM_STEP_ATTACH_SOS,
                         ECBM_STEP_REGISTER_SOS,
                         ECBM_STEP_START_EMERGENCY_CALL,
-                        ECBM_STEP_DEREGISTER_SOS,
                         ECBM_STEP_DEATTACH_SOS,
                         ECBM_STEP_ATTACH_NORMAL,
                         ECBM_STEP_REGISTER_NORMAL);
@@ -724,7 +727,6 @@ public class Utilities {
                         ECBM_STEP_ATTACH_SOS,
                         ECBM_STEP_REGISTER_SOS,
                         ECBM_STEP_START_EMERGENCY_CALL,
-                        ECBM_STEP_DEREGISTER_SOS,
                         ECBM_STEP_DEATTACH_SOS);
             }
         }
@@ -900,6 +902,192 @@ public class Utilities {
         }
     }
 
+    public static class VideoType {
+        public static final int NATIVE_VIDEO_TYPE_NONE = 0;
+        public static final int NATIVE_VIDEO_TYPE_BROADCAST_ONLY = 1;
+        public static final int NATIVE_VIDEO_TYPE_RECEIVED_ONLY = 2;
+        public static final int NATIVE_VIDEO_TYPE_BIDIRECT = 3;
+
+        public static int getNativeVideoType(int callType) {
+            switch (callType) {
+                case ImsCallProfile.CALL_TYPE_VOICE:
+                    return NATIVE_VIDEO_TYPE_NONE;
+                case ImsCallProfile.CALL_TYPE_VT_TX:
+                    return NATIVE_VIDEO_TYPE_BROADCAST_ONLY;
+                case ImsCallProfile.CALL_TYPE_VT_RX:
+                    return NATIVE_VIDEO_TYPE_RECEIVED_ONLY;
+                case ImsCallProfile.CALL_TYPE_VT:
+                    return NATIVE_VIDEO_TYPE_BIDIRECT;
+            }
+
+            return NATIVE_VIDEO_TYPE_NONE;
+        }
+
+        public static int getNativeVideoType(VideoProfile profile) {
+            if (profile == null) {
+                Log.e(TAG, "Failed to get the native video type as video profile is null.");
+                return NATIVE_VIDEO_TYPE_NONE;
+            }
+
+            boolean isVideo = VideoProfile.isVideo(profile.getVideoState());
+            if (isVideo) {
+                boolean isBidirectional = VideoProfile.isBidirectional(profile.getVideoState());
+                if (isBidirectional) {
+                    return NATIVE_VIDEO_TYPE_BIDIRECT;
+                } else {
+                    boolean isTrans = VideoProfile.isTransmissionEnabled(profile.getVideoState());
+                    if (isTrans) {
+                        return NATIVE_VIDEO_TYPE_BROADCAST_ONLY;
+                    } else {
+                        return NATIVE_VIDEO_TYPE_RECEIVED_ONLY;
+                    }
+                }
+            } else {
+                // Is audio only.
+                return NATIVE_VIDEO_TYPE_NONE;
+            }
+        }
+
+        public static int getCallType(int nativeVideoType) {
+            switch (nativeVideoType) {
+                case NATIVE_VIDEO_TYPE_NONE:
+                    return ImsCallProfile.CALL_TYPE_VOICE;
+                case NATIVE_VIDEO_TYPE_BROADCAST_ONLY:
+                    return ImsCallProfile.CALL_TYPE_VT_TX;
+                case NATIVE_VIDEO_TYPE_RECEIVED_ONLY:
+                    return ImsCallProfile.CALL_TYPE_VT_RX;
+                case NATIVE_VIDEO_TYPE_BIDIRECT:
+                    return ImsCallProfile.CALL_TYPE_VT;
+            }
+
+            return ImsCallProfile.CALL_TYPE_VOICE;
+        }
+
+        public static VideoProfile getVideoProfile(int nativeVideoType) {
+            int videoState = VideoProfile.STATE_AUDIO_ONLY;
+            switch (nativeVideoType) {
+                case NATIVE_VIDEO_TYPE_NONE:
+                    videoState = VideoProfile.STATE_AUDIO_ONLY;
+                    break;
+                case NATIVE_VIDEO_TYPE_BROADCAST_ONLY:
+                    videoState = VideoProfile.STATE_TX_ENABLED;
+                    break;
+                case NATIVE_VIDEO_TYPE_RECEIVED_ONLY:
+                    videoState = VideoProfile.STATE_RX_ENABLED;
+                    break;
+                case NATIVE_VIDEO_TYPE_BIDIRECT:
+                    videoState = VideoProfile.STATE_BIDIRECTIONAL;
+                    break;
+            }
+
+            return new VideoProfile(videoState);
+        }
+
+        public static boolean updateAccept(int oldVideoType, int newVideoType) {
+            switch (oldVideoType) {
+                case NATIVE_VIDEO_TYPE_NONE:
+                    return isInAcceptList(newVideoType,
+                            NATIVE_VIDEO_TYPE_BROADCAST_ONLY,
+                            NATIVE_VIDEO_TYPE_RECEIVED_ONLY,
+                            NATIVE_VIDEO_TYPE_BIDIRECT);
+                case NATIVE_VIDEO_TYPE_BROADCAST_ONLY:
+                case NATIVE_VIDEO_TYPE_RECEIVED_ONLY:
+                    return isInAcceptList(newVideoType,
+                            NATIVE_VIDEO_TYPE_NONE,
+                            NATIVE_VIDEO_TYPE_BIDIRECT);
+                case NATIVE_VIDEO_TYPE_BIDIRECT:
+                    return isInAcceptList(newVideoType,
+                            NATIVE_VIDEO_TYPE_NONE,
+                            NATIVE_VIDEO_TYPE_BROADCAST_ONLY,
+                            NATIVE_VIDEO_TYPE_RECEIVED_ONLY);
+            }
+
+            return false;
+        }
+
+        private static boolean isInAcceptList(int orgVideoType, int... list) {
+            for (int videoType : list) {
+                if (orgVideoType == videoType) return true;
+            }
+
+            return false;
+        }
+    }
+
+    public static class FDNHelper {
+        private static final String FDN_CONTENT_URI = "content://icc/fdn/subId/";
+        private static final String[] FDN_PROJECTION = new String[] {
+                "name", "number"
+        };
+        private static final int FDN_COL_NUMBER = 1;
+
+        private Context mContext;
+        private int mSubId;
+
+        public FDNHelper(Context context, int subId) {
+            mContext = context;
+            mSubId = subId;
+        }
+
+        public boolean isEnabled() {
+            return TelephonyManagerEx.from(mContext).getIccFdnEnabled(mSubId);
+        }
+
+        public boolean isAccept(String callee) {
+            if (TextUtils.isEmpty(callee)) {
+                Log.e(TAG, "The callee is empty, can not check if FDN accept.");
+                return false;
+            }
+
+            ArrayList<String> fdnList = getFDNList(mContext, mSubId);
+            if (fdnList == null || fdnList.size() < 1) {
+                // As the FDN list is empty, return false as do not accept.
+                Log.d(TAG, "FDN list is null or empty, do not accept the callee: " + callee);
+                return false;
+            }
+
+            for (String fdn : fdnList) {
+                if (PhoneNumberUtils.compare(callee, fdn)) {
+                    Log.d(TAG, "The callee[" + callee + "] matched the fdn number[" + fdn + "]");
+                    return true;
+                }
+            }
+
+            // It means do not find the matched FDN, return as do not accept.
+            Log.d(TAG, "Do not find any matched FDN number, do not accept the callee: " + callee);
+            return false;
+        }
+
+        private ArrayList<String> getFDNList(Context context, int subId) {
+            Cursor cursor = context.getContentResolver().query(
+                    Uri.parse(FDN_CONTENT_URI + subId), FDN_PROJECTION, null, null, null);
+            try {
+                if (cursor != null && cursor.getCount() > 0) {
+                    ArrayList<String> fdnList = new ArrayList<String>();
+                    while (cursor.moveToNext()) {
+                        String number = cursor.getString(FDN_COL_NUMBER);
+                        if (!TextUtils.isEmpty(number)) {
+                            fdnList.add(number);
+                            Log.d(TAG, "Add the fdn number[" + number + "] to list.");
+                        }
+                    }
+                    return fdnList;
+                } else {
+                    Log.w(TAG, "Query FDN list finished, but cursor's count is: "
+                            + (cursor == null ? "null" : cursor.getCount()));
+                }
+            } finally {
+                if (cursor != null) {
+                    cursor.close();
+                    cursor = null;
+                }
+            }
+
+            // Meet some error, return null.
+            return null;
+        }
+    }
+
     public static class JSONUtils {
         // Callback constants
         public static final String KEY_EVENT_CODE = "event_code";
@@ -972,6 +1160,7 @@ public class Utilities {
         public static final String KEY_VIDEO_HEIGHT = "video_height";
         public static final String KEY_VIDEO_WIDTH = "video_width";
         public static final String KEY_VIDEO_LEVEL = "video_level";
+        public static final String KEY_VIDEO_TYPE = "video_type";
         public static final String KEY_RTP_RECEIVED = "rtp_received";
         public static final String KEY_RTCP_LOSE = "rtcp_lose";
         public static final String KEY_RTCP_JITTER = "rtcp_jitter";
@@ -982,6 +1171,7 @@ public class Utilities {
         public static final String KEY_ECALL_IND_ACTION_TYPE = "emergency_call_ind_action_type";
         public static final String KEY_USSD_INFO_RECEIVED = "ussd_info_received";
         public static final String KEY_USSD_MODE = "ussd_mode";
+        public static final String KEY_VOICE_CODEC = "voice_codec";
 
         // Call
         public static final int CALL_EVENT_CODE_BASE = 100;
@@ -996,17 +1186,15 @@ public class Utilities {
         public static final int EVENT_CODE_CALL_RESUME_FAILED = CALL_EVENT_CODE_BASE + 9;
         public static final int EVENT_CODE_CALL_HOLD_RECEIVED = CALL_EVENT_CODE_BASE + 10;
         public static final int EVENT_CODE_CALL_RESUME_RECEIVED = CALL_EVENT_CODE_BASE + 11;
-        public static final int EVENT_CODE_CALL_ADD_VIDEO_OK = CALL_EVENT_CODE_BASE + 12;
-        public static final int EVENT_CODE_CALL_ADD_VIDEO_FAILED = CALL_EVENT_CODE_BASE + 13;
-        public static final int EVENT_CODE_CALL_REMOVE_VIDEO_OK = CALL_EVENT_CODE_BASE + 14;
-        public static final int EVENT_CODE_CALL_REMOVE_VIDEO_FAILED = CALL_EVENT_CODE_BASE + 15;
-        public static final int EVENT_CODE_CALL_ADD_VIDEO_REQUEST = CALL_EVENT_CODE_BASE + 16;
-        public static final int EVENT_CODE_CALL_ADD_VIDEO_CANCEL = CALL_EVENT_CODE_BASE + 17;
-        public static final int EVENT_CODE_CALL_RTP_RECEIVED = CALL_EVENT_CODE_BASE + 18;
-        public static final int EVENT_CODE_CALL_RTCP_CHANGED = CALL_EVENT_CODE_BASE + 19;
-        public static final int EVENT_CODE_CALL_IS_FOCUS = CALL_EVENT_CODE_BASE + 20;
-        public static final int EVENT_CODE_CALL_IS_EMERGENCY = CALL_EVENT_CODE_BASE + 21;
-        public static final int EVENT_CODE_USSD_INFO_RECEIVED = CALL_EVENT_CODE_BASE + 22;
+        public static final int EVENT_CODE_CALL_UPDATE_VIDEO_OK = CALL_EVENT_CODE_BASE + 12;
+        public static final int EVENT_CODE_CALL_UPDATE_VIDEO_FAILED = CALL_EVENT_CODE_BASE + 13;
+        public static final int EVENT_CODE_CALL_ADD_VIDEO_REQUEST = CALL_EVENT_CODE_BASE + 14;
+        public static final int EVENT_CODE_CALL_ADD_VIDEO_CANCEL = CALL_EVENT_CODE_BASE + 15;
+        public static final int EVENT_CODE_CALL_RTP_RECEIVED = CALL_EVENT_CODE_BASE + 16;
+        public static final int EVENT_CODE_CALL_RTCP_CHANGED = CALL_EVENT_CODE_BASE + 17;
+        public static final int EVENT_CODE_CALL_IS_FOCUS = CALL_EVENT_CODE_BASE + 18;
+        public static final int EVENT_CODE_CALL_IS_EMERGENCY = CALL_EVENT_CODE_BASE + 19;
+        public static final int EVENT_CODE_USSD_INFO_RECEIVED = CALL_EVENT_CODE_BASE + 20;
 
         public static final String EVENT_CALL_INCOMING = "call_incoming";
         public static final String EVENT_CALL_OUTGOING = "call_outgoing";
@@ -1019,10 +1207,8 @@ public class Utilities {
         public static final String EVENT_CALL_RESUME_FAILED = "call_resume_failed";
         public static final String EVENT_CALL_HOLD_RECEIVED = "call_hold_received";
         public static final String EVENT_CALL_RESUME_RECEIVED = "call_resume_received";
-        public static final String EVENT_CALL_ADD_VIDEO_OK = "call_add_video_ok";
-        public static final String EVENT_CALL_ADD_VIDEO_FAILED = "call_add_video_failed";
-        public static final String EVENT_CALL_REMOVE_VIDEO_OK = "call_remove_video_ok";
-        public static final String EVENT_CALL_REMOVE_VIDEO_FAILED = "call_remove_video_failed";
+        public static final String EVENT_CALL_UPDATE_VIDEO_OK = "call_update_video_ok";
+        public static final String EVENT_CALL_UPDATE_VIDEO_FAILED = "call_update_video_failed";
         public static final String EVENT_CALL_ADD_VIDEO_REQUEST = "call_add_video_request";
         public static final String EVENT_CALL_ADD_VIDEO_CANCEL = "call_add_video_cancel";
         public static final String EVENT_CALL_RTP_RECEIVED = "call_rtp_received";
@@ -1069,7 +1255,13 @@ public class Utilities {
         public static final String EVENT_CONF_RTP_RECEIVED = "conf_rtp_received";
         public static final String EVENT_CONF_RTCP_CHANGED = "conf_rtcp_changed";
 
-        // Video resize
+        // Voice
+        public static final int VOICE_EVENT_CODE_BASE = 280;
+        public static final int EVENT_CODE_VOICE_CODEC = VOICE_EVENT_CODE_BASE + 1;
+
+        public static final String EVENT_VOICE_CODEC = "voice_negociated_codec";
+
+        // Video
         public static final int VIDEO_EVENT_CODE_BASE = 300;
         public static final int EVENT_CODE_LOCAL_VIDEO_RESIZE = VIDEO_EVENT_CODE_BASE + 1;
         public static final int EVENT_CODE_REMOTE_VIDEO_RESIZE = VIDEO_EVENT_CODE_BASE + 2;

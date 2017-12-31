@@ -35,10 +35,12 @@ import com.spreadtrum.ims.vowifi.Utilities.CallCursor;
 import com.spreadtrum.ims.vowifi.Utilities.Camera;
 import com.spreadtrum.ims.vowifi.Utilities.ECBMRequest;
 import com.spreadtrum.ims.vowifi.Utilities.EMUtils;
+import com.spreadtrum.ims.vowifi.Utilities.FDNHelper;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.ProviderUtils;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.SRVCCSyncInfo;
+import com.spreadtrum.ims.vowifi.Utilities.VideoType;
 import com.spreadtrum.ims.vowifi.VoWifiCallManager.ICallChangedListener;
 
 import java.util.ArrayList;
@@ -119,10 +121,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 if (mListener != null) {
                     try {
                         mListener.callSessionStartFailed(ImsCallSessionImpl.this,
-                                new ImsReasonInfo(
-                                        ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED,
-                                        ImsReasonInfo.CODE_UNSPECIFIED,
-                                        failMessage));
+                                new ImsReasonInfo(msg.arg1, msg.arg2, failMessage));
                     } catch (RemoteException e) {
                         Log.e(TAG, "Failed to give the call session start failed callback.");
                         Log.e(TAG, "Catch the RemoteException e: " + e);
@@ -597,13 +596,20 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     private void handleStartActionFailed(String failMessage) {
+        handleStartActionFailed(
+                ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED,
+                ImsReasonInfo.CODE_UNSPECIFIED,
+                failMessage);
+    }
+
+    private void handleStartActionFailed(int code, int extraCode, String failMessage) {
         // As start action failed, remove the call first.
         mCallManager.removeCall(this);
 
         // When #ImsCall received the call session start failed callback will set the call session
         // to null. Then sometimes it will meet the NullPointerException. So we'd like to delay
         // 500ms to send this callback to let the ImsCall handle the left logic.
-        Message msg = mHandler.obtainMessage(MSG_START_FAIL, failMessage);
+        Message msg = mHandler.obtainMessage(MSG_START_FAIL, code, extraCode, failMessage);
         mHandler.sendMessageDelayed(msg, 500);
     }
 
@@ -897,7 +903,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
 
-        int res = mICall.sessUpdate(mCallId, true, Utilities.isVideoCall(callType));
+        int res = mICall.sessUpdate(mCallId, VideoType.getNativeVideoType(callType));
         if (res == Result.FAIL) {
             handleUpdateActionFailed("Native update result is " + res);
         } else {
@@ -1255,6 +1261,21 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if (mCallProfile == null) return;
 
         mCallProfile.mCallType = newType;
+        try {
+            if (mListener != null) {
+                mListener.callSessionUpdated(this, mCallProfile);
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to update the call type as catch the RemoteException e: " + e);
+        }
+    }
+
+    public void updateVoiceQuality(boolean highQuality) {
+        if (mCallProfile == null) return;
+
+        mCallProfile.mMediaProfile.mAudioQuality = highQuality
+                ? ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB
+                : ImsStreamMediaProfile.AUDIO_QUALITY_AMR;
         try {
             if (mListener != null) {
                 mListener.callSessionUpdated(this, mCallProfile);
@@ -1735,8 +1756,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
     }
 
-    public int sendModifyRequest(boolean isVideo) {
-        if (Utilities.DEBUG) Log.i(TAG, "Try to send the modify request, isVideo: " + isVideo);
+    public int sendModifyRequest(int newVideoType) {
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "Try to send the modify request, new video type: " + newVideoType);
+        }
 
         if (mICall == null) {
             Log.e(TAG, "Can not send the modify request as call interface is null.");
@@ -1744,16 +1767,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
 
         try {
-            int res = mICall.sendSessionModifyRequest(mCallId, true, isVideo);
+            int res = mICall.sendSessionModifyRequest(mCallId, newVideoType);
             if (res == Result.FAIL) {
                 Log.e(TAG, "Failed to send the modify request for the call: " + mCallId);
                 if (mListener != null) {
                     mListener.callSessionUpdateFailed(this, new ImsReasonInfo());
                 }
-                // Show toast for failed action.
-                int toastTextResId = isVideo ? R.string.vowifi_add_video_failed
-                        : R.string.vowifi_remove_video_failed;
-                Toast.makeText(mContext, toastTextResId, Toast.LENGTH_LONG).show();
             }
             return res;
         } catch (RemoteException e) {
@@ -1762,9 +1781,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
     }
 
-    public int sendModifyResponse(boolean isVideo) {
+    public int sendModifyResponse(int videoType) {
         if (Utilities.DEBUG) {
-            Log.i(TAG, "Send session modify response as isVideo[" + isVideo + "]");
+            Log.i(TAG, "Send session modify response as video type is: " + videoType);
         }
 
         if (mICall == null) {
@@ -1773,7 +1792,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
 
         try {
-            return mICall.sendSessionModifyResponse(mCallId, true, isVideo);
+            return mICall.sendSessionModifyResponse(mCallId, videoType);
         } catch (RemoteException e) {
             Log.e(TAG, "Failed to send the modify response. e: " + e);
             return Result.FAIL;
@@ -2008,6 +2027,19 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             // It means the call need start as USSD.
             startUssdCall(callee);
             return;
+        }
+
+        if (!mIsEmergency) {
+            // To check if FDN enabled and accept. Only support primary card now.
+            FDNHelper fdnHelper = new FDNHelper(mContext, Utilities.getPrimaryCardSubId(mContext));
+            if (fdnHelper.isEnabled() && !fdnHelper.isAccept(callee)) {
+                // If the FDN enabled, but the callee do not accept. Handle it as start failed.
+                handleStartActionFailed(
+                        ImsReasonInfo.CODE_FDN_BLOCKED,
+                        ImsReasonInfo.CODE_UNSPECIFIED,
+                        "FDN enabled, but the callee do not accept.");
+                return;
+            }
         }
 
         String peerNumber = callee;

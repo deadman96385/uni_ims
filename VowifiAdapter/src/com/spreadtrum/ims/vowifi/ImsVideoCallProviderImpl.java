@@ -18,11 +18,11 @@ import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.WindowManager;
 
-import com.android.ims.ImsCallProfile;
 import com.android.ims.internal.ImsVideoCallProvider;
 import com.spreadtrum.ims.vowifi.Utilities.Camera;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.VideoQuality;
+import com.spreadtrum.ims.vowifi.Utilities.VideoType;
 
 public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private static final String TAG =
@@ -204,8 +204,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                         break;
                     }
                     case MSG_SEND_MODIFY_REQUEST: {
-                        boolean isVideo = (Boolean) msg.obj;
-                        if (mCallSession.sendModifyRequest(isVideo) == Result.FAIL) {
+                        if (mCallSession.sendModifyRequest(msg.arg1) == Result.FAIL) {
                             Log.w(TAG, "Can not send the modify request now.");
                             receiveSessionModifyResponse(
                                     VideoProvider.SESSION_MODIFY_REQUEST_FAIL, null, null);
@@ -220,8 +219,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                         break;
                     }
                     case MSG_SEND_MODIFY_RESPONSE: {
-                        boolean isVideo = (Boolean) msg.obj;
-                        int res = mCallSession.sendModifyResponse(isVideo);
+                        int res = mCallSession.sendModifyResponse(msg.arg1);
                         if (res == Result.FAIL) {
                             Log.w(TAG, "Can not send the modify response now.");
                             receiveSessionModifyResponse(
@@ -301,38 +299,33 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                     + ", to profile: " + toProfile);
         }
 
-        boolean wasVideo = VideoProfile.isVideo(fromProfile.getVideoState());
-        boolean isVideo = VideoProfile.isVideo(toProfile.getVideoState());
-        if (wasVideo != isVideo) {
-            // For video type changed, we need send the modify request to server.
-            mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_REQUEST, isVideo));
+        if (isWaitForModifyResponse()) {
+            // It means we already send the modify request, but do not receive the response now.
+            // So we'd like to ignore this request.
+            Log.d(TAG, "As there is a modify request in porcess, ignore this new request.");
+            return;
+        }
+
+        int oldState = fromProfile.getVideoState();
+        int newState = toProfile.getVideoState();
+        boolean wasPaused = VideoProfile.isPaused(fromProfile.getVideoState());
+        boolean isPaused = VideoProfile.isPaused(toProfile.getVideoState());
+        Log.d(TAG, "oldState:" + oldState + ", newState:" + newState + ", wasPaused:" + wasPaused
+                + ", isPaused:" + isPaused);
+        if (oldState != newState && !wasPaused && !isPaused) {
+            // For video type update, we need send the modify request to server.
+            int nativeVideoType = VideoType.getNativeVideoType(toProfile);
+            Message msg = mHandler.obtainMessage(MSG_SEND_MODIFY_REQUEST);
+            msg.arg1 = nativeVideoType;
+            mHandler.sendMessage(msg);
+        } else if (wasPaused != isPaused) {
+            // We'd like to handle it as pause/start the video.
+            Log.d(TAG, "The new video paused state changed to " + isPaused);
+
+            // For pause changed, needn't send the modify request. So give the response here.
+            // TODO:
         } else {
-            // If the video type do not changed. we need handle the transmission changed.
-            boolean wasTrans = VideoProfile.isTransmissionEnabled(fromProfile.getVideoState());
-            boolean isTrans = VideoProfile.isTransmissionEnabled(toProfile.getVideoState());
-            if (wasTrans == isTrans) {
-                // FIXME: There must be some error in telephony, when the user press
-                //        "resume video", the wasTrans is same as isTrans.
-                Log.w(TAG, "The fromProfile is same as the toProfile's trans. It's abnormal.");
-                Log.w(TAG, "Ignore this abnormal, change the status as toProfile.");
-            }
-
-            // For transmission changed, needn't send the modify request. So give the
-            // response immediately.
-            receiveSessionModifyResponse(
-                    VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS, toProfile, toProfile);
-
-            if (isTrans) {
-                // It means start the video transmission. And "setCamera" will start the
-                // camera, so we need request the camera capabilities when camera start.
-                Log.d(TAG, "Start the video transmission successfully.");
-                mCallSession.updateCallType(ImsCallProfile.CALL_TYPE_VT);
-            } else {
-                // It means stop the video transmission. And this action will be handled
-                // when the camera set to null.
-                Log.d(TAG, "Stop the video transmission successfully.");
-                mCallSession.updateCallType(ImsCallProfile.CALL_TYPE_VT_RX);
-            }
+            Log.e(TAG, "There isn't any update for the video profile. Please check!!!");
         }
     }
 
@@ -342,12 +335,22 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
             Log.i(TAG, "On send session modify response. response profile: " + responseProfile);
         }
 
-        boolean isVideo = VideoProfile.isVideo(responseProfile.getVideoState());
-        mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_RESPONSE, isVideo));
+        int nativeVideoType = VideoType.getNativeVideoType(responseProfile);
+        mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_RESPONSE, nativeVideoType, -1));
 
-        if (!isVideo) {
-            // Response as audio, need stop all the video.
-            stopAll();
+        switch (nativeVideoType) {
+            case VideoType.NATIVE_VIDEO_TYPE_NONE:
+                stopAll();
+                break;
+            case VideoType.NATIVE_VIDEO_TYPE_RECEIVED_ONLY:
+                stopTransmission();
+                break;
+            case VideoType.NATIVE_VIDEO_TYPE_BROADCAST_ONLY:
+                stopReception();
+                break;
+            case VideoType.NATIVE_VIDEO_TYPE_BIDIRECT:
+                Log.d(TAG, "Response as normal video call, do nothing.");
+                break;
         }
     }
 
@@ -471,17 +474,28 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
         return mWaitForModifyResponse;
     }
 
-    public void stopAll() {
+    public void stopReception() {
         synchronized (mContext) {
-            Log.d(TAG, "Stop all the video action.");
+            Log.d(TAG, "Stop the reception.");
             if (mDisplaySurface != null) {
                 mHandler.sendEmptyMessage(MSG_STOP_REMOTE_RENDER);
             }
+        }
+    }
 
+    public void stopTransmission() {
+        synchronized (mContext) {
+            Log.d(TAG, "Stop the transmission.");
             if (mCameraId != null) {
                 mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
             }
         }
+    }
+
+    public void stopAll() {
+        Log.d(TAG, "Stop all the video action.");
+        stopReception();
+        stopTransmission();
     }
 
     public void updateVideoQualityLevel(int newLevel) {

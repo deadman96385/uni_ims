@@ -244,7 +244,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             Log.d(mTag, "Handle the ECBM message as step: " + step);
 
             switch (step) {
-                case ECBMRequest.ECBM_STEP_DEREGISTER_SOS:
                 case ECBMRequest.ECBM_STEP_DEREGISTER_NORMAL:
                     deregisterInternal();
                     break;
@@ -1027,8 +1026,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 }
             } else if (mEcbmStep != ECBMRequest.ECBM_STEP_INVALID) {
                 Log.d(mTag, "Get the register state changed to logout in ECBM.");
-                if (mEcbmStep == ECBMRequest.ECBM_STEP_DEREGISTER_SOS
-                        || mEcbmStep == ECBMRequest.ECBM_STEP_DEREGISTER_NORMAL) {
+                if (mEcbmStep == ECBMRequest.ECBM_STEP_DEREGISTER_NORMAL) {
                     int nextStep = mECBMRequest.getNextStep();
                     sendECBMTimeoutMsg(nextStep);
                     Message msg = mHandler.obtainMessage(MSG_ECBM);

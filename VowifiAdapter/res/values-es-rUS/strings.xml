@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="vowifi_request_upgrade_title">"Solicitud remota para actualizar"</string>
-    <string name="vowifi_request_upgrade_text">"Solicitud para actualizar la llamada actual a vídeollamada, por favor elija aceptar o rechazar."</string>
-    <string name="vowifi_request_downgrade_title">"Solicitud remota de degradación"</string>
-    <string name="vowifi_request_downgrade_text">"Solicitud de degradación de la llamada actual a llamada de voz, elija aceptar o rechazar."</string>
-
-    <string name="vowifi_add_video_failed">"Rechazar solicitud remota"</string>
-    <string name="vowifi_add_video_success">"Aceptar solicitud remota"</string>
-    <string name="vowifi_remove_video_failed">"No se pudo eliminar el vídeo"</string>
+    <string name="vowifi_request_update_failed">"Rechazar solicitud remota"</string>
+    <string name="vowifi_request_update_success">"Aceptar solicitud remota"</string>
     <string name="vowifi_remove_video_success">"Cambiado por llamada de voz"</string>
 
     <string name="vowifi_hold_success">"Retención exitosa"</string>

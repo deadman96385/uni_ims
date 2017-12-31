@@ -1,24 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-<string name="vowifi_request_upgrade_title">"स्तरवृद्धि गर्नको लागि टाढैबाट अनुरोध"</string>
-<string name="vowifi_request_upgrade_text">"हालको कललाई भिडियो कलमा स्तरवृद्धि गर्न अनुरोध गर्नुहोस्, कृपया स्वीकार गर्नुहोस् वा अस्वीकार गर्नुहोस् चयन गर्नुहोस्।"</string>
-<string name="vowifi_request_downgrade_title">"डाउनग्रेड गर्नको लागि टाढैबाट अनुरोध"</string>
-<string name="vowifi_request_downgrade_text">"हालको कललाई भ्वाइस कलमा डाउनग्रेड गर्नको लागि अनुरोध गर्नुहोस्, कृपया स्वीकार गर्नुहोस् वा अस्वीकार गर्नुहोस् चयन गर्नुहोस्।"</string>
-<string name="vowifi_add_video_failed">"टाढैबाट अनुरोधको अस्विकार।"</string>
-<string name="vowifi_add_video_success">"टाढैबाट अनुरोधको स्वीकार।"</string>
-<string name="vowifi_remove_video_failed">"भिडियो हटाउन असफल भयो।"</string>
-<string name="vowifi_remove_video_success">"भिडियो कल पछि गयो।"</string>
-<string name="vowifi_hold_success">"सफलता होल्ड गर्नुहोस्"</string>
-<string name="vowifi_hold_fail">"असफलता होल्ड गर्नुहोस्"</string>
-<string name="vowifi_resume_success">"सफलता रिजुम गर्नुहोस्"</string>
-<string name="vowifi_resume_fail">"असफलता रिजुम गर्नुहोस्"</string>
-<string name="vowifi_call_retry">"कृपया केही क्षणपछि पुन: प्रयास गर्नुहोस्"</string>
-<string name="vowifi_call_is_focus">"वार्तालापमा थप्नुहोस्"</string>
-<string name="vowifi_conf_disconnect">"वार्तालाप सेटअप गर्न असफल भयो"</string>
-<string name="vowifi_conf_finished">"वार्तालाप समाप्त भयो"</string>
-<string name="vowifi_conf_invite_request_failed">"निमन्त्रणा अनुरो पठाउन असफल भयो। वार्तालापलाई सेटअप गर्न सकिँदैन।"</string>
-<string name="vowifi_conf_invite_failed">"सहभागीलाई निमन्त्रणा गर्न असफल भयो:"</string>
-<string name="vowifi_conf_kick_failed">"सहभागीलाई हटाउन असफल भयो"</string>
-<string name="vowifi_conf_none_participant">"कुनै पनि सहभागी छैनन्, कल समाप्त गर्नुहोस्।"</string>
-<string name="vowifi_conf_do_not_support">"अहिले नै यस कार्यलाई समर्थन नगर्नुहोस्।"</string>
+    <string name="vowifi_request_update_failed">"टाढैबाट अनुरोधको अस्विकार।"</string>
+    <string name="vowifi_request_update_success">"टाढैबाट अनुरोधको स्वीकार।"</string>
+    <string name="vowifi_remove_video_success">"भिडियो कल पछि गयो।"</string>
+
+    <string name="vowifi_hold_success">"सफलता होल्ड गर्नुहोस्"</string>
+    <string name="vowifi_hold_fail">"असफलता होल्ड गर्नुहोस्"</string>
+    <string name="vowifi_resume_success">"सफलता रिजुम गर्नुहोस्"</string>
+    <string name="vowifi_resume_fail">"असफलता रिजुम गर्नुहोस्"</string>
+
+    <string name="vowifi_call_retry">"कृपया केही क्षणपछि पुन: प्रयास गर्नुहोस्"</string>
+    <string name="vowifi_call_is_focus">"वार्तालापमा थप्नुहोस्"</string>
+    <string name="vowifi_conf_disconnect">"वार्तालाप सेटअप गर्न असफल भयो"</string>
+    <string name="vowifi_conf_finished">"वार्तालाप समाप्त भयो"</string>
+    <string name="vowifi_conf_invite_request_failed">"निमन्त्रणा अनुरो पठाउन असफल भयो। वार्तालापलाई सेटअप गर्न सकिँदैन।"</string>
+    <string name="vowifi_conf_invite_failed">"सहभागीलाई निमन्त्रणा गर्न असफल भयो:"</string>
+    <string name="vowifi_conf_kick_failed">"सहभागीलाई हटाउन असफल भयो"</string>
+    <string name="vowifi_conf_none_participant">"कुनै पनि सहभागी छैनन्, कल समाप्त गर्नुहोस्।"</string>
+    <string name="vowifi_conf_do_not_support">"अहिले नै यस कार्यलाई समर्थन नगर्नुहोस्।"</string>
 </resources>
