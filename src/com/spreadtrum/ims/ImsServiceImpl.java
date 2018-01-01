@@ -1136,7 +1136,7 @@ public class ImsServiceImpl extends MMTelFeature {
             if(wifiEnable){
                 mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI]
                         = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
-                if(ImsManager.isVtEnabledByUser(mContext) && ImsManager.isVtEnabledByPlatform(mContext)){
+                if(ImsManager.getInstance(mContext,mPhone.getPhoneId()).isVtEnabledByUserForSlot() && ImsManager.isVtEnabledByPlatform(mContext)){//SPRD:modify for bug810321
                     mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
                             = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI;
                 }else{
