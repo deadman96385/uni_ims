@@ -167,10 +167,21 @@ public class ImsConfigImpl extends IImsConfig.Stub {
                     break;
                 case EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE:
                     int resolution = mCameraResolution;
-                    if (SystemProperties.getBoolean("persist.sys.videodefault", false) 
-                            && (mSharedPreferences.getInt(VT_RESOLUTION_VALUE, -1) == -1)) {
-                        resolution = 3;
+                    try {
+                        int resolutionConfig = SystemProperties
+                                .getInt("persist.sys.videotelcel", -1);
+                        Log.i(TAG, "EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE ->resolutionConfig:"
+                                        + resolutionConfig);
+                        if (resolutionConfig != -1) {
+                            mCameraResolution = resolutionConfig;
+                            resolution = resolutionConfig;
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE Exception: "
+                                + e.getMessage());
+                        e.printStackTrace();
                     }
+                    Log.i(TAG, "EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE ->resolution = " + resolution);
                     mCi.setVideoResolution(resolution,null);
                     break;
                 default:
