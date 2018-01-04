@@ -28,6 +28,8 @@ import android.telephony.TelephonyManager;
 import android.telephony.TelephonyManagerEx;
 import android.telephony.PhoneStateListener;
 import android.telephony.VoLteServiceState;
+import android.telephony.CarrierConfigManagerEx;
+import android.telephony.SubscriptionManager;
 import android.telephony.ims.feature.ImsFeature;
 import android.telephony.ims.feature.MMTelFeature;
 import android.util.Log;
@@ -3230,9 +3232,10 @@ public class ImsService extends Service {
                                         .operationSuccessed(
                                                 mFeatureSwitchRequest.mRequestId,
                                                 ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOLTE);
-                                Toast.makeText(ImsService.this,
+                                showTelcelRequestToast();
+                                /*Toast.makeText(ImsService.this,
                                         R.string.handover_to_volte_success,
-                                        Toast.LENGTH_SHORT).show();
+                                        Toast.LENGTH_SHORT).show();*/
                             } catch (RemoteException e) {
                                 e.printStackTrace();
                             }
@@ -3262,9 +3265,10 @@ public class ImsService extends Service {
                                         .operationSuccessed(
                                                 mFeatureSwitchRequest.mRequestId,
                                                 ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOLTE);
-                                Toast.makeText(ImsService.this,
+                                showTelcelRequestToast();
+                                /*Toast.makeText(ImsService.this,
                                         R.string.handover_to_volte_success,
-                                        Toast.LENGTH_SHORT).show();
+                                        Toast.LENGTH_SHORT).show();*/
                             } catch (RemoteException e) {
                                 e.printStackTrace();
                             }
@@ -3523,5 +3527,20 @@ public class ImsService extends Service {
         }
         Log.i(TAG, "moreThanOnePhoneHasCall count=" + count);
         return count > 1;
+    }
+    /* SPRD: add for bug809098 */
+    public void showTelcelRequestToast(){
+         boolean mShowTelcelToast = true;
+         int primeSubId = SubscriptionManager.getDefaultDataSubscriptionId();
+         CarrierConfigManagerEx configManager =
+                 (CarrierConfigManagerEx) this.getSystemService("carrier_config_ex");
+         if (configManager.getConfigForSubId(primeSubId) != null) {
+             mShowTelcelToast = configManager.getConfigForSubId(primeSubId).getBoolean(
+                     CarrierConfigManagerEx.KEY_CALL_TELCEL_SHOW_TOAST);
+             Log.i(TAG,"mShowTelcelToast :" + mShowTelcelToast);
+         }
+         if(mShowTelcelToast){
+             Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_SHORT).show();
+         }
     }
 }
