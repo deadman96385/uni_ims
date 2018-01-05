@@ -174,7 +174,8 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                                     cameraCapabilities.getHeight(), cameraCapabilities.getWidth());
                         }
 
-                        if (!cameraCapabilitiesEquals(cameraCapabilities)) {
+                        if (mPreviewSurface == null
+                                || !cameraCapabilitiesEquals(cameraCapabilities)) {
                             if (cameraCapabilities != null) {
                                 Log.d(TAG, "Change the camera capability: width = "
                                         + cameraCapabilities.getWidth() + ", height = "
