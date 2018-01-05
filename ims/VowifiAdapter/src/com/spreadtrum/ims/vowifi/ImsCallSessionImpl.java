@@ -322,11 +322,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             return;
         }
 
-        mCallProfile = null;
-        mListener = null;
-        mImsStreamMediaProfile = null;
-        mVideoCallProvider = null;
-        mCallStateTracker = null;
+        updateState(State.INVALID);
 
         if (mLocationManager != null) {
             mLocationManager.removeUpdates(this);
