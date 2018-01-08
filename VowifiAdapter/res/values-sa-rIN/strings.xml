@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"दृश्याह्वाहनं कर्तुं वर्तमानाह्वाहनं अद्यतनाय विनतिं करोतु, कृपया स्वीकृतिः उत अस्वीकृतिः इति चिनोतु।"</string>
 <string name="vowifi_request_downgrade_title">"पुरातनीकर्तुं दूरस्थविनतिः"</string>
 <string name="vowifi_request_downgrade_text">"ध्वन्याह्वाहनं कर्तुं वर्तमानाह्वाहनं पुरातनाय विनतिं करोतु, कृपया स्वीकृतिः उत अस्वीकृतिः इति चिनोतु।"</string>
-<string name="vowifi_add_video_failed">"दूरस्था अस्वीकृताविनतिः।"</string>
+<string name="vowifi_request_update_failed">"दूरस्था अस्वीकृताविनतिः।"</string>
 <string name="vowifi_add_video_success">"दूरस्था स्वीकृताविनतिः।"</string>
 <string name="vowifi_remove_video_failed">"दृश्यचलितस्य अपाकरणे विफलः।"</string>
 <string name="vowifi_remove_video_success">"दृश्यचलितस्य विफलता।"</string>

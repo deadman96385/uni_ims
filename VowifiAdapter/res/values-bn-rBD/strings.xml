@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"বর্তমান কল কে ভিডিও কলে উন্নত করার অনুরোধ, দয়াকরে গ্রহণ বা প্রত্যাখ্যান নির্বাচন করুন।"</string>
 <string name="vowifi_request_downgrade_title">""ডাউনগ্রেড করতে দূরবর্তী অনুরোধ" "</string>
 <string name="vowifi_request_downgrade_text">"বর্তমান কল কে ভিডিও কলে ডাউনগ্রেড  করার অনুরোধ, দয়াকরে গ্রহণ বা প্রত্যাখ্যান নির্বাচন করুন।"</string>
-<string name="vowifi_add_video_failed">"দূরবর্তী প্রত্যাখ্যান অনুরধ।"</string>
+<string name="vowifi_request_update_failed">"দূরবর্তী প্রত্যাখ্যান অনুরধ।"</string>
 <string name="vowifi_add_video_success">"দূরবর্তী গ্রহণ অনুরধ।"</string>
 <string name="vowifi_remove_video_failed">"ভিডিও সরাতে ব্যর্থ।"</string>
 <string name="vowifi_remove_video_success">"ভিডিও কল ফল-ব্যক।"</string>

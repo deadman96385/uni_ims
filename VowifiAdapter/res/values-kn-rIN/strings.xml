@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"ಪ್ರಸ್ತುತ ಕರೆಗೆ ವೀಡಿಯೊ ಕರೆಗೆ ಅಪ್ಗ್ರೇಡ್ ಮಾಡಲು ವಿನಂತಿಸಿ, ದಯವಿಟ್ಟು ಸ್ವೀಕರಿಸಿ ಅಥವಾ ತಿರಸ್ಕರಿಸಿ ಆಯ್ಕೆ ಮಾಡಿ."</string>
 <string name="vowifi_request_downgrade_title">"ಡೌನ್ಗ್ರೇಡ್ ಮಾಡಲು ರಿಮೋಟ್ ವಿನಂತಿ"</string>
 <string name="vowifi_request_downgrade_text">"ಪ್ರಸ್ತುತ ಕರೆಯ ಕರೆಗೆ ಕರೆ ಮಾಡಲು ಡೌನ್ಗ್ರೇಡ್ ಮಾಡಲು ವಿನಂತಿಸಿ, ದಯವಿಟ್ಟು ಸ್ವೀಕರಿಸಿ ಅಥವಾ ತಿರಸ್ಕರಿಸಿ ಆಯ್ಕೆ ಮಾಡಿ."</string>
-<string name="vowifi_add_video_failed">"ರಿಮೋಟ್ ವಿನಂತಿಯನ್ನು ತಿರಸ್ಕರಿಸುತ್ತದೆ."</string>
+<string name="vowifi_request_update_failed">"ರಿಮೋಟ್ ವಿನಂತಿಯನ್ನು ತಿರಸ್ಕರಿಸುತ್ತದೆ."</string>
 <string name="vowifi_add_video_success">"ರಿಮೋಟ್ ಸ್ವೀಕೃತಿ ವಿನಂತಿ."</string>
 <string name="vowifi_remove_video_failed">"ವೀಡಿಯೋವನ್ನು ತೆಗೆದುಹಾಕಲು ವಿಫಲವಾಗಿದೆ."</string>
 <string name="vowifi_remove_video_success">"ವೀಡಿಯೊ ಕರೆ ಫಾಲ್-ಬ್ಯಾಕ್."</string>

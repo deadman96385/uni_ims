@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"वर्तमान कॉल को वीडियो कॉल में अपग्रेड करने का अनुरोध करें, कृपया स्वीकार करने या अस्वीकार करने का चयन करें।"</string>
 <string name="vowifi_request_downgrade_title">"डाउनग्रेड करने के लिए दूरस्थ अनुरोध"</string>
 <string name="vowifi_request_downgrade_text">"वर्तमान कॉल को वौइस् कॉल में डाउनग्रेड करने का अनुरोध करें, कृपया स्वीकार करने या अस्वीकार करने का चयन करेंरें।"</string>
-<string name="vowifi_add_video_failed">"रिमोट अस्वीकार अनुरोध।"</string>
+<string name="vowifi_request_update_failed">"रिमोट अस्वीकार अनुरोध।"</string>
 <string name="vowifi_add_video_success">"दूरस्थ स्वीकार अनुरोध।"</string>
 <string name="vowifi_remove_video_failed">"वीडियो को हटाने में असफल रहा।"</string>
 <string name="vowifi_remove_video_success">"वीडियो कॉल फ़ॉल-बैक।"</string>

@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">" عاجزی چھء کران وکینچ کال اپ گریڈ کرنچ ويڈیو کالء سیتھ، مہربانی کریتھ چنیو راضی یا رد۔"</string>
 <string name="vowifi_request_downgrade_title">" ریموٹ عاجزی کم کرنء کھترء"</string>
 <string name="vowifi_request_downgrade_text">" عاجزی کریو کم کرنء کھتر وکینچ کال وایس کالء منز، مہربانی کریتھ چنیو راضی یا رد۔"</string>
-<string name="vowifi_add_video_failed">" ریموٹ رد عاجزی۔"</string>
+<string name="vowifi_request_update_failed">" ریموٹ رد عاجزی۔"</string>
 <string name="vowifi_add_video_success">" ریموٹ راضی عاجزی۔"</string>
 <string name="vowifi_remove_video_failed">" ویڈیو ہٹاون گو ناکام۔"</string>
 <string name="vowifi_remove_video_success">" ویڈیو کال آۓ واپس۔"</string>

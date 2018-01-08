@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"ప్రస్తుత కాల్ ను వీడియో కాల్ కు పె౦చే౦దుకు అభ్యర్థన, అ౦గీకరి౦చ౦డి లేదా తిరస్కరి౦చ౦డి."</string>
 <string name="vowifi_request_downgrade_title">"స్థాయి తగ్గి౦చే౦దుకు రిమోట్ అభ్యర్థన"</string>
 <string name="vowifi_request_downgrade_text">"ప్రస్తుత కాల్ ను వీడియో కాల్ కు తగ్గి౦చే౦దుకు అభ్యర్థన, అ౦గీకరి౦చ౦డి లేదా తిరస్కరి౦చ౦డి."</string>
-<string name="vowifi_add_video_failed">"రిమోట్ అభ్యర్థన తిరస్కరి౦చబడి౦ది."</string>
+<string name="vowifi_request_update_failed">"రిమోట్ అభ్యర్థన తిరస్కరి౦చబడి౦ది."</string>
 <string name="vowifi_add_video_success">"రిమోట్ అభ్యర్థన అ౦గీకరి౦చబడి౦ది."</string>
 <string name="vowifi_remove_video_failed">"వీడియో తొలగి౦చడ౦ విఫలమయి౦ది."</string>
 <string name="vowifi_remove_video_success">"ఫాల్-బ్యాక్ వీడియో కాల్"</string>

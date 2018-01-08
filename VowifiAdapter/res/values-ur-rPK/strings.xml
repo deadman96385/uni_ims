@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"ویڈیو کال کے لئے موجودہ کال کو اپ گریڈ کرنے کی درخواست، براہ مہربانی قبول یا مسترد کرنے کا انتخاب کریں."</string>
 <string name="vowifi_request_downgrade_title">"کم کرنے کی ریموٹ درخواست"</string>
 <string name="vowifi_request_downgrade_text">"ووئس کال کے لئے موجودہ کال کو کم کرنے کی درخواست، براہ مہربانی قبول یا مسترد کرنے کا انتخاب کریں."</string>
-<string name="vowifi_add_video_failed">" مسترد کرنے کی ریموٹ درخواست."</string>
+<string name="vowifi_request_update_failed">" مسترد کرنے کی ریموٹ درخواست."</string>
 <string name="vowifi_add_video_success">" قبول کرنے کی ریموٹ درخواست."</string>
 <string name="vowifi_remove_video_failed">"ویڈیو ہٹانے میں ناکام."</string>
 <string name="vowifi_remove_video_success">"ویڈیو کال فال-بیک."</string>

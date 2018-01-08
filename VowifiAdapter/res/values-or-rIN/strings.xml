@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"ବର୍ତ୍ତମାନର କଲ୍ ଭଏସ୍ କଲ୍ କୁ ଅପଗ୍ରେଡ୍ କରିବା ପାଇଁ ଅନୁରୋଧ କରନ୍ତୁ, ଦୟାକରି ଗ୍ରହଣ କରନ୍ତୁ କିମ୍ବା ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ ଚୟନ କରନ୍ତୁ ।"</string>
 <string name="vowifi_request_downgrade_title">"ଡାଉନଗ୍ରେଡ୍ ପାଇଁ ଦୂରରୁ ଅନୁରୋଧ କରନ୍ତୁ"</string>
 <string name="vowifi_request_downgrade_text">"ବର୍ତ୍ତମାନର କଲ୍ ଭଏସ୍ କଲ୍ କୁ ଡାଉନଗ୍ରେଡ୍ କରିବା ପାଇଁ ଅନୁରୋଧ କରନ୍ତୁ, ଦୟାକରି ଗ୍ରହଣ କରନ୍ତୁ କିମ୍ବା ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ ଚୟନ କରନ୍ତୁ ।"</string>
-<string name="vowifi_add_video_failed">"ଦୂରରୁ ଅନୁରୋଧ ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ ।"</string>
+<string name="vowifi_request_update_failed">"ଦୂରରୁ ଅନୁରୋଧ ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ ।"</string>
 <string name="vowifi_add_video_success">"ଦୂରରୁ ଅନୁରୋଧ ଗ୍ରହଣ କରନ୍ତୁ ।"</string>
 <string name="vowifi_remove_video_failed">"ଭିଡିଓ ହଟାଇବାରେ ବିଫଳ ହୋଇଛି ।"</string>
 <string name="vowifi_remove_video_success">"ଭିଡିଓ କଲ୍ କୁ ଫେରନ୍ତୁ ।"</string>

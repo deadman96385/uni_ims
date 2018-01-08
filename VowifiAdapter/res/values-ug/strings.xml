@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">".ھازىرقى سۆزلىشىشنى سىنلىق سۆزلىشىشكە كۆتۈرۈشنى تەلەپ قىلىدۇ، قۇبۇللاشنى ياكى رەت قىلىشنى تاللاڭ"</string>
 <string name="vowifi_request_downgrade_title">"يىراق مۇساپىلىق دەرىجە چۈشۈرۈش تەلىپى"</string>
 <string name="vowifi_request_downgrade_text">".ھازىرقى سۆزلىشىشنى ئاۋازلىق سۆزلىشىشكە چۈشۈرۈشنى تەلەپ قىلىدۇ، قۇبۇللاشنى ياكى رەت قىلىشنى تاللاڭ"</string>
-<string name="vowifi_add_video_failed">"يىراق مۇساپىلىق رەت قىلىش تەلىپى"</string>
+<string name="vowifi_request_update_failed">"يىراق مۇساپىلىق رەت قىلىش تەلىپى"</string>
 <string name="vowifi_add_video_success">"يىراق مۇساپىلىق قۇبۇللاش تەلىپى"</string>
 <string name="vowifi_remove_video_failed">".سىننى يۆتكەش مەغلۇپ بولدى"</string>
 <string name="vowifi_remove_video_success">".سىنلىق سۆزلىشىشنىڭ دەرىجىسى تۆۋەنلىدى"</string>

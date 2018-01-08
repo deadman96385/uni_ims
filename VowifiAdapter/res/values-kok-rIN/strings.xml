@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"सद्याचो कॉल व्हिडियो कॉलात अद्यावत करपाची विनंती, स्विकार वा अस्विकार वेंचात."</string>
 <string name="vowifi_request_downgrade_title">"डावनग्रेड करुंक रिमोट विनंती"</string>
 <string name="vowifi_request_downgrade_text">"सद्याचो कॉल हॉयस कॉलात डावनग्रेड करपाची विनंती, स्विकार वा अस्विकार वेंचात."</string>
-<string name="vowifi_add_video_failed">"रिमोट विनंती अस्विकार."</string>
+<string name="vowifi_request_update_failed">"रिमोट विनंती अस्विकार."</string>
 <string name="vowifi_add_video_success">"रिमोट विनंती स्विकार."</string>
 <string name="vowifi_remove_video_failed">"व्हिडियो काडुंन वडोवंक अपेशी."</string>
 <string name="vowifi_remove_video_success">"व्हिडियो कॉल फॉल-बॅक."</string>

@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"বৰ্তমানৰ কলটো ভিডিঅ’ কললৈ ডাউনগ্ৰেড কৰাৰ বাবে অনুৰোধ কৰক, অনুগ্ৰহ কৰি গ্ৰহণ বা বাতিল বাচনি কৰক৷"</string>
 <string name="vowifi_request_downgrade_title">"ডাউনগ্ৰেড কৰিবলৈ অনুৰোধ স্থাপন কৰক"</string>
 <string name="vowifi_request_downgrade_text">"বৰ্তমানৰ কলটো ভইচ কললৈ ডাউনগ্ৰেড কৰাৰ বাবে অনুৰোধ কৰক, অনুগ্ৰহ কৰি গ্ৰহণ বা বাতিল বাচনি কৰক৷"</string>
-<string name="vowifi_add_video_failed">"ৰিম’ট বাতিলৰ অনুৰোধ৷"</string>
+<string name="vowifi_request_update_failed">"ৰিম’ট বাতিলৰ অনুৰোধ৷"</string>
 <string name="vowifi_add_video_success">"ৰিম’ট গ্ৰহণৰ অনুৰোধ৷"</string>
 <string name="vowifi_remove_video_failed">"ভিডিঅ’টো আঁতৰোৱাত ব্যৰ্থ হৈছে৷"</string>
 <string name="vowifi_remove_video_success">"ভিডিঅ’ কল ফল-বেক হৈছে৷"</string>

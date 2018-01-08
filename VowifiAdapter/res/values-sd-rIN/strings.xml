@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"هلندڙ ڪال کي مٿاهين درجي جي ويڊيو ڪال ڪرڻ جي درخواست ڪريو، مهرباني ڪري قبول ڪريو يا منسوخ ڪريو جي چونڊ ڪريو."</string>
 <string name="vowifi_request_downgrade_title">"هيٺين درجي ۾ ڪرڻ جي ڏورانهين درخواست"</string>
 <string name="vowifi_request_downgrade_text">"هلندڙ ڪال کي هيٺين درجي جي آوازي ڪال ڪرڻ جي درخواست ڪريو، مهرباني ڪري قبول ڪريو يا منسوخ ڪريو جي چونڊ ڪريو."</string>
-<string name="vowifi_add_video_failed">"ڏور جي درخواست جي منسوخي"</string>
+<string name="vowifi_request_update_failed">"ڏور جي درخواست جي منسوخي"</string>
 <string name="vowifi_add_video_success">"ڏور جي درخواست جي قبوليت"</string>
 <string name="vowifi_remove_video_failed">"ويڊيو کي مٽائڻ ۾ ناڪامي ٿي وئي."</string>
 <string name="vowifi_remove_video_success">"ويڊيو ڪال واپس ٿي وئي."</string>

@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"ਮੌਜੂਦਾ ਕਾਲ ਨੂੰ ਵੀਡੀਓ ਕਾਲ \'ਤੇ ਅਪਗ੍ਰੇਡ ਕਰਨ ਲਈ ਬੇਨਤੀ ਕਰੋ, ਕਿਰਪਾ ਕਰਕੇ ਸਵੀਕਾਰ ਜਾਂ ਅਸਵੀਕਾਰ ਕਰਨ ਦੀ ਚੋਣ ਕਰੋ।"</string>
 <string name="vowifi_request_downgrade_title">"ਡਾਊਨਗ੍ਰੇਡ ਕਰਨ ਲਈ ਰਿਮੋਟ ਬੇਨਤੀ ਕਰੋ"</string>
 <string name="vowifi_request_downgrade_text">"ਮੌਜੂਦਾ ਕਾਲ ਨੂੰ ਵੌਇਸ ਕਾਲ \'ਤੇ ਡਾਊਨਗ੍ਰੇਡ ਕਰਨ ਲਈ ਬੇਨਤੀ ਕਰੋ, ਕਿਰਪਾ ਕਰਕੇ ਸਵੀਕਾਰ ਜਾਂ ਅਸਵੀਕਾਰ ਕਰਨ ਦੀ ਚੋਣ ਕਰੋ।"</string>
-<string name="vowifi_add_video_failed">"ਅਸਵੀਕਾਰ ਕਰਨ ਲਈ ਰਿਮੋਟ ਬੇਨਤੀ।"</string>
+<string name="vowifi_request_update_failed">"ਅਸਵੀਕਾਰ ਕਰਨ ਲਈ ਰਿਮੋਟ ਬੇਨਤੀ।"</string>
 <string name="vowifi_add_video_success">"ਸਵੀਕਾਰ ਕਰਨ ਲਈ ਰਿਮੋਟ ਬੇਨਤੀ।"</string>
 <string name="vowifi_remove_video_failed">"ਵੀਡੀਓ ਨੂੰ ਹਟਾਉਣ ਵਿੱਚ ਅਸਫਲ ਰਿਹਾ ਹੈ।"</string>
 <string name="vowifi_remove_video_success">"ਵੀਡੀਓ ਕਾਲ ਬੰਦ ਹੋ ਗਈ ਹੈ।"</string>

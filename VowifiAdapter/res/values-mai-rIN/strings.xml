@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"वर्तमान काँल केरविडियो काँलमे उन्नति करबाक आग्रह करू, कृपाकय स्वीकार वा अस्विकार करू केर चयन करू।"</string>
 <string name="vowifi_request_downgrade_title">"अवनतिक रिमोट आग्रह"</string>
 <string name="vowifi_request_downgrade_text">"वर्तमान काँल केर आवाज काँलमे अवनति करबाक आग्रह करू, कृपाकय स्वीकार वा अस्विकार करू केर चयन करू।"</string>
-<string name="vowifi_add_video_failed">"रिमोटक अस्वीकार करबाक आग्रह।"</string>
+<string name="vowifi_request_update_failed">"रिमोटक अस्वीकार करबाक आग्रह।"</string>
 <string name="vowifi_add_video_success">"रिमोटक स्वीकार करबाक आग्रह।"</string>
 <string name="vowifi_remove_video_failed">"विडियो हटेबामे असफल भेल।"</string>
 <string name="vowifi_remove_video_success">"विडियो-काँल पाछु हटि गेल।"</string>

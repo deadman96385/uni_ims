@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"நடப்பு அழைப்பை வீடியோ அழைப்பிற்கு தரமுயர்த்தக் கோருவதற்கு, ஏற்றிடு அல்லது நிராகரி என்பதைத் தேர்வுசெய்யுங்கள்."</string>
 <string name="vowifi_request_downgrade_title">"தரமிறக்குவதற்கான தொலைதூர கோரிக்கை"</string>
 <string name="vowifi_request_downgrade_text">"நடப்பு அழைப்பை வீடியோ அழைப்பிற்கு தரமிறக்கக் கோருவதற்கு, ஏற்றிடு அல்லது நிராகரி என்பதைத் தேர்வுசெய்யுங்கள்."</string>
-<string name="vowifi_add_video_failed">"தொலைதூர நிராகரிப்புக் கோரிக்கை."</string>
+<string name="vowifi_request_update_failed">"தொலைதூர நிராகரிப்புக் கோரிக்கை."</string>
 <string name="vowifi_add_video_success">"தொலைதூர ஏற்புக் கோரிக்கை."</string>
 <string name="vowifi_remove_video_failed">"வீடியோவை அகற்றுவது தோல்வியுற்றது."</string>
 <string name="vowifi_remove_video_success">"வீடியோ அழைப்பு பின்னோக்கு."</string>

@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">" વર્તમાન વિડિયો કોલ માટે હાલનો કોલ અપગ્રેડ કરવા વિનંતી, કૃપા કરી સ્વીકારો અથવા ઈન્કાર કરો."</string>
 <string name="vowifi_request_downgrade_title">"ડાઉનગ્રેડ કરવા રિમોટ રિક્વેસ્ટ"</string>
 <string name="vowifi_request_downgrade_text">"વોઈસ કોલ માટે હાલના કોલને ડાઉનગ્રેડ કરવા વિનંતી,કૃપા કરી સ્વીકારો અથવા ઈન્કાર કરો"</string>
-<string name="vowifi_add_video_failed">"રિમોટ રિજેક્ટ રિક્વેસ્ટ"</string>
+<string name="vowifi_request_update_failed">"રિમોટ રિજેક્ટ રિક્વેસ્ટ"</string>
 <string name="vowifi_add_video_success">"રિમોટ એક્સેપ્ટ રિક્વેસ્ટ"</string>
 <string name="vowifi_remove_video_failed">"વિડિયો દૂર કરવામાં નિષ્ફળતા મળી છે"</string>
 <string name="vowifi_remove_video_success">"વિડીયો કોલ ફોલ-બેક"</string>

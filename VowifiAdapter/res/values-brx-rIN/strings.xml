@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"सोलिफु कलखौ फोजौनानै भिडिअ\' कल खालामनो खावलायनाय, अननानै नाजावनाय एबा नेवसिनायखौ बासि।"</string>
 <string name="vowifi_request_downgrade_title">"गाहायाव लाबोनो गोथौ जायगानि खावलायनाय"</string>
 <string name="vowifi_request_downgrade_text">"सोलिफु कलखौ फाहायनानै भइस कल खालामनो खावलायनाय, अननानै नाजावनाय एबा नेवसिनायखौ बासि।"</string>
-<string name="vowifi_add_video_failed">"गोथौ जायगानि नेवसिनाय खावलायनाय।"</string>
+<string name="vowifi_request_update_failed">"गोथौ जायगानि नेवसिनाय खावलायनाय।"</string>
 <string name="vowifi_add_video_success">"गोथौ जायगानि गनायथिनाय खावलायनाय।"</string>
 <string name="vowifi_remove_video_failed">"भिडिअ\'खौ बोखारनो हायाखै।"</string>
 <string name="vowifi_remove_video_success">"भिडिअ\' कला गोग्लैफिनबाय।"</string>

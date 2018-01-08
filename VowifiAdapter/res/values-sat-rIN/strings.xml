@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"मेनाक् कॉल दो आड़ाङ कॉल रे होसोर आड़गो लागित् ते नेहोर मे, दायाकाते सिकार मे से ओसिकार मे।"</string>
 <string name="vowifi_request_downgrade_title">"साङ्गिञ नेहोर ओसिकार मे"</string>
 <string name="vowifi_request_downgrade_text">"मेनाक् कॉल दो आड़ाङ कॉल रे होसोर आड़गो लागित् ते नेहोर मे, दायाकाते सिकार मे से ओसिकार मे।"</string>
-<string name="vowifi_add_video_failed">"साङ्गिञ नेहोर ओसिकार।"</string>
+<string name="vowifi_request_update_failed">"साङ्गिञ नेहोर ओसिकार।"</string>
 <string name="vowifi_add_video_success">"साङ्गिञ नेहोर सिकार।"</string>
 <string name="vowifi_remove_video_failed">"वीडियो ओचोक् रे बेसोमोल।"</string>
 <string name="vowifi_remove_video_success">"वीडियो कॉल ञुर रुवाड़ेना।"</string>

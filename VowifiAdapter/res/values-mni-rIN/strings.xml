@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"হৌজিক্কি কোল অদু ভোইস কোলদা অপগ্রেদ তৌনবা হায়জবা, লৌ য়াব্রা নত্ত্রগা য়াদব্রা খনবিয়ু."</string>
 <string name="vowifi_request_downgrade_title">"দাওনগ্রেদ তৌনবা রিমোট হায়জবা"</string>
 <string name="vowifi_request_downgrade_text">"হৌজিক্কি কোল অদু ভোইস কোলদা দাওনগ্রেদ তৌনবা হায়জবা, লৌ য়াব্রা নত্ত্রগা য়াদব্রা খনবিয়ু."</string>
-<string name="vowifi_add_video_failed">"রিমোট লৌদনবা হায়জবা."</string>
+<string name="vowifi_request_update_failed">"রিমোট লৌদনবা হায়জবা."</string>
 <string name="vowifi_add_video_success">"রিমোট লৌশিন্নবা হায়জবা."</string>
 <string name="vowifi_remove_video_failed">"ভিদিওশীং অদু লৌথোকপা ঙমদে."</string>
 <string name="vowifi_remove_video_success">"ভিদিও কোল ফোল-বেক."</string>
