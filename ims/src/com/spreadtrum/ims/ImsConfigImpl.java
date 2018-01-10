@@ -156,6 +156,19 @@ public class ImsConfigImpl extends IImsConfig.Stub {
                     break;
                 case EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE:
                     String[] cmd=new String[1];
+                    try {
+                        int resolutionConfig = SystemProperties
+                                .getInt("persist.sys.videotelcel", -1);
+                        Log.i(TAG, "EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE ->resolutionConfig:"
+                                + resolutionConfig);
+                        if (resolutionConfig != -1) {
+                            mCameraResolution = resolutionConfig;
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE Exception: "
+                                + e.getMessage());
+                        e.printStackTrace();
+                    }
                     cmd[0] = "AT+CDEFMP=1,\""+mCameraResolution+"\"";
                     mCi.invokeOemRilRequestStrings(cmd, null);
                     break;
