@@ -45,8 +45,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
 
 public class ImsCallSessionImpl extends IImsCallSession.Stub implements LocationListener {
     private static final String TAG = Utilities.getTag(ImsCallSessionImpl.class.getSimpleName());
@@ -59,21 +57,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
     private static final boolean SUPPORT_START_CONFERENCE = false;
 
     private static final String PARTICIPANTS_SEP = ";";
-
-    // It is defined in #ImsPhoneMmiCode.
-    // And could refer to TS 22.030 6.5.2 "Structure of the MMI"
-    private static final Pattern PATTERN_SUPP_SERVICE = Pattern.compile(
-            "((\\*|#|\\*#|\\*\\*|##)(\\d{2,3})(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*)(\\*([^*#]*))?)?)?)?#)(.*)");
-    /*       1  2                    3          4  5       6   7         8    9     10  11             12
-
-             1 = Full string up to and including #
-             2 = action (activation/interrogation/registration/erasure)
-             3 = service code
-             5 = SIA
-             7 = SIB
-             9 = SIC
-             10 = dialing number
-    */
 
     private int mCallId = -1;
     private boolean mIsAlive = false;
@@ -322,11 +305,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             return;
         }
 
-        mCallProfile = null;
-        mListener = null;
-        mImsStreamMediaProfile = null;
-        mVideoCallProvider = null;
-        mCallStateTracker = null;
+        updateState(State.INVALID);
 
         if (mLocationManager != null) {
             mLocationManager.removeUpdates(this);
@@ -1994,9 +1973,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                     + mSosLocation);
         }
 
-        Matcher m = PATTERN_SUPP_SERVICE.matcher(callee);
-        // Is this formatted like a standard supplementary service code?
-        if (m.matches()) {
+        int dialType = mCallProfile.getCallExtraInt(ImsCallProfile.EXTRA_DIALSTRING);
+        if (dialType == ImsCallProfile.DIALSTRING_USSD) {
+            // It means the call need start as USSD.
             startUssdCall(callee);
             return;
         }
