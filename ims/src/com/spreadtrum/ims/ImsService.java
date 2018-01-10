@@ -21,10 +21,13 @@ import android.os.Message;
 import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.os.RemoteException;
+import android.os.PersistableBundle;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.telephony.PhoneStateListener;
 import android.telephony.VoLteServiceState;
+import android.telephony.CarrierConfigManager;
+import android.telephony.PhoneNumberUtils;
 import android.util.Log;
 import android.widget.Toast;
 import android.telecom.VideoProfile;
@@ -2230,7 +2233,8 @@ class MyVoWifiCallback implements VoWifiCallback {
                                 Log.i(TAG, "onImsPdnStatusChange -> operationSuccessed-> IMS_OPERATION_HANDOVER_TO_VOLTE");
                                 mImsServiceListenerEx.operationSuccessed(mFeatureSwitchRequest.mRequestId,
                                         ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOLTE);
-                                Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_SHORT).show();
+                                //Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_SHORT).show();
+                                showTelcelRequestToast();
                             } catch (RemoteException e) {
                                 e.printStackTrace();
                             }
@@ -2253,7 +2257,8 @@ class MyVoWifiCallback implements VoWifiCallback {
                                 Log.i(TAG, "onImsPdnStatusChange -> operationSuccessed-> IMS_OPERATION_HANDOVER_TO_VOLTE");
                                 mImsServiceListenerEx.operationSuccessed(mFeatureSwitchRequest.mRequestId,
                                         ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOLTE);
-                                Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_SHORT).show();
+                                //Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_SHORT).show();
+                                showTelcelRequestToast();
                             } catch (RemoteException e) {
                                 e.printStackTrace();
                             }
@@ -2438,6 +2443,22 @@ class MyVoWifiCallback implements VoWifiCallback {
         if(phoneId == primaryPhoneId+1){
             updateImsFeature();
             mWifiService.onSRVCCStateChanged(status);
+        }
+    }
+    public void showTelcelRequestToast(){
+        /* SPRD: add for bug809098 */
+        boolean showTelcelToast = true;
+        CarrierConfigManager cfgManager =
+               (CarrierConfigManager) ImsService.this.getSystemService(Context.CARRIER_CONFIG_SERVICE);
+        if (cfgManager != null) {
+            PersistableBundle config = cfgManager.getConfigForDefaultPhone();
+            if (config != null){
+                showTelcelToast = config.getBoolean(CarrierConfigManager.KEY_CALL_TELCEL_SHOW_TOAST);
+            }
+        }
+        iLog("showTelcelToast" + showTelcelToast);
+        if(showTelcelToast){
+            Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_SHORT).show();
         }
     }
 }
