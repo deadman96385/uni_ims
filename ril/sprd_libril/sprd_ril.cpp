@@ -7056,6 +7056,7 @@ requestToString(int request) {
 
         case RIL_REQUEST_SHUTDOWN: return "SHUTDOWN";
         case RIL_UNSOL_RADIO_CAPABILITY: return "RIL_UNSOL_RADIO_CAPABILITY";
+        case RIL_EXT_UNSOL_EARLY_MEDIA: return "UNSOL_EARLY_MEDIA";
         default: return "<unknown request>";
     }
 }
