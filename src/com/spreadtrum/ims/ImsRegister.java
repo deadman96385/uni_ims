@@ -322,7 +322,16 @@ public class ImsRegister {
                     log("xCap = " + xCap);
                     log("bspAddr = " + bspAddr);
                     log("conferenceUri = " + conferenceUri);
-                    String imei = mPhone.getDeviceId();
+//                    String imei = mPhone.getDeviceId();
+                    String imei = null;
+                    if(isAnySimAbsent()){
+                        log("Only one SIM, use IMEI 1");
+                        Phone[] phones = PhoneFactory.getPhones();
+                        GsmCdmaPhone phone = (GsmCdmaPhone)phones[0];
+                        imei = phone.getDeviceId();
+                    } else {
+                        imei = mPhone.getDeviceId();
+                    }
                     if (imei != null) {
                         instanceId = "urn:gsma:imei:" + imei.substring(0, 8)
                                 + "-" + imei.substring(8, 14) + "-"
@@ -684,4 +693,13 @@ public class ImsRegister {
         mCi.invokeOemRilRequestStrings(cmd, null);
     }/* @} */
 
+    private boolean isAnySimAbsent() {
+        TelephonyManager[] teleManager = new TelephonyManager[mTelephonyManager.getPhoneCount()];
+        for (int i = 0; i < mTelephonyManager.getPhoneCount(); i++) {
+            if (mTelephonyManager.hasIccCard(i)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
