@@ -31,4 +31,13 @@
 <string name="camera_open_fail">"Camera openen mislukt"</string>
 <string name="ims_switch_failed">"Netwerkfout, probeer later opnieuw"</string>
 
+    <string name="low_battery_warning_media_alert_message">"Je batterij lager is dan 15%. Gelieve te kiezen aanvaarden of weigeren."</string>
+     <string name="low_battery_warning_title">"Lage Batterij Waarschuwing"</string>
+     <string name="low_battery_warning_message">"Je batterijvermogen is lager dan 15% .Wil je doorgaan met de video-oproep of overschakelen naar spraakoproep?"</string>
+     <string name="low_battery_continue_video_call">"Ja"</string>
+     <string name="low_battery_convert_to_voice_call">"Converteer"</string>
+     <string name="handover_to_volte_success">"Omschakeling naar VoLTE voor betere spraakkwaliteit"</string>
+     <string name="vowifi_regist_fail_content">"Probleem met vowifi-netwerk. Probeer deze service opnieuw te gebruiken na vijf minuten."</string>
+     <string name="vowifi_attation">"Vowifi-waarschuwing"</string>
+     <string name="vowifi_register_error">"Netwerk ondersteunt vowifi niet"</string>
 </resources>

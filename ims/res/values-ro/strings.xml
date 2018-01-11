@@ -31,4 +31,13 @@
 <string name="camera_open_fail">"Deschidere cameră eșuată"</string>
 <string name="ims_switch_failed">"Eroare de rețea, reîncercați mai târziu"</string>
 
+    <string name="low_battery_warning_media_alert_message">"Nivelul bateriei este sub 15%. Acceptați sau respingeți."</string>
+     <string name="low_battery_warning_title">"Avertizare nivel redus baterie"</string>
+     <string name="low_battery_warning_message">"Nivelul bateriei este sub 15%. Continuați apelul video sau convertiți la apel vocal?"</string>
+     <string name="low_battery_continue_video_call">"Da"</string>
+     <string name="low_battery_convert_to_voice_call">"Convertire"</string>
+     <string name="handover_to_volte_success">"Comutarea la VoLTE pentru o calitate vocală mai bună"</string>
+     <string name="vowifi_regist_fail_content">"problemă cu rețeaua vowifi, reutilizați acest serviciu după cinci minute"</string>
+     <string name="vowifi_attation">"Atenționare vowifi"</string>
+     <string name="vowifi_register_error">"Rețeaua nu este compatibilă cu vowifi"</string>
 </resources>

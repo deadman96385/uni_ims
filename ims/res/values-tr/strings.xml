@@ -31,4 +31,13 @@
 <string name="camera_open_fail">"Kamera açma başarısızlığı"</string>
 <string name="ims_switch_failed">" Ağ hatası, lütfen daha sonra yeniden deneyin "</string>
 
+    <string name="low_battery_warning_media_alert_message">"Pil seviyeniz %15\'in altında. Lütfen kabul etme veya reddetmeyi seçin."</string>
+     <string name="low_battery_warning_title">"Düşük pil uyarısı"</string>
+     <string name="low_battery_warning_message">"Pil seviyeniz % 15\'in altında  Görüntülü arama ile devam etmek istiyor musunuz yoksa sesli aramaya mı geçmek istiyorsunuz?"</string>
+     <string name="low_battery_continue_video_call">"Evet"</string>
+     <string name="low_battery_convert_to_voice_call">"Dönüştür"</string>
+     <string name="handover_to_volte_success">"Daha iyi Ses kalitesi için VoLTE\'ye geçiliyor"</string>
+     <string name="vowifi_regist_fail_content">"vowifi ağı sorunu, lütfen bu servisi beş dakika sonra tekrar kullanın"</string>
+     <string name="vowifi_attation">"Vowifi dikkat"</string>
+     <string name="vowifi_register_error">"Ağ vowifi desteklemiyor"</string>
 </resources>
