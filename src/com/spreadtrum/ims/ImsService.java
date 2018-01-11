@@ -2477,7 +2477,7 @@ public class ImsService extends Service {
         }
         synchronized (mImsRegisterListeners) {
             /**
-             * SPRD bug647508
+             * SPRD bug647508 & 815956
              */
             for (IImsRegisterListener l : mImsRegisterListeners.values()) {
                 try {
@@ -2485,6 +2485,8 @@ public class ImsService extends Service {
                 } catch (RemoteException e) {
                     iLog("DeadObjectException : l = " + l);
                     continue;
+                } catch (NullPointerException e) {
+                    iLog("NullPointerException : l = " + l);
                 }
             }
         }
