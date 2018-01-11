@@ -31,4 +31,13 @@
 <string name="camera_open_fail">"A kamera nyitása sikertelen"</string>
 <string name="ims_switch_failed">"Hálózati hiba, kérem, próbálja újra később...""</string>
 
+    <string name="low_battery_warning_media_alert_message">"Az akkumulátorszint 15 % alatt van. Elfogadja vagy elutasítja?"</string>
+     <string name="low_battery_warning_title">"Alacsony töltöttség figyelmeztetés"</string>
+     <string name="low_battery_warning_message">"Az akkumulátor 15% alatt van. Folytatja a videóhívást, vagy átvált hanghívásra?"</string>
+     <string name="low_battery_continue_video_call">"Igen"</string>
+     <string name="low_battery_convert_to_voice_call">"Átváltás"</string>
+     <string name="handover_to_volte_success">"A jobb hangminőség érdekében váltás VoLTE-módra"</string>
+     <string name="vowifi_regist_fail_content">"Voice over Wi-Fi hálózati hiba, próbálja meg öt perc múlva újra használni a szolgáltatást"</string>
+     <string name="vowifi_attation">"Voice over Wi-Fi figyelmeztetés"</string>
+     <string name="vowifi_register_error">"A hálózat nem támogatja a Voice over Wi-Fi funkciót"</string>
 </resources>
