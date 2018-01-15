@@ -125,196 +125,212 @@ public class VoWifiRegisterManager extends ServiceManager {
 
     public void prepareForLogin(int subId, boolean isSupportSRVCC, RegisterConfig config,
             RegisterListener listener) {
-        if (Utilities.DEBUG) Log.i(TAG, "Prepare the info before login, subId: " + subId);
-        if (subId < 0) {
-            Log.e(TAG, "Can not get the account info as sub id is: " + subId);
-            if (listener != null) listener.onPrepareFinished(false);
-            return;
-        }
-
-        boolean handle = false;
-        if (mIRegister != null) {
-            try {
-                // Reset first, then prepare.
-                mRequest = null;
-                int res = mIRegister.cliReset();
-                updateRegisterState(RegisterState.STATE_IDLE);
-                if (res == Result.FAIL) {
-                    Log.w(TAG, "Reset action failed, notify as prepare failed.");
-                    if (listener != null) listener.onPrepareFinished(false);
-                    return;
-                }
-
-                // Prepare for login, need open account, start client and update settings.
-                boolean success = false;
-                if (cliOpen(subId) && cliStart() && cliUpdateSettings(isSupportSRVCC)) {
-                    success = true;
-                    mRequest = new RegisterRequest(subId, config, listener);
-                }
-                if (listener != null) listener.onPrepareFinished(success);
-
-                handle = true;
-            } catch (RemoteException e) {
-                Log.e(TAG, "Failed to prepare for login as catch the RemoteException, e: " + e);
+        synchronized (TAG) {
+            if (Utilities.DEBUG) Log.i(TAG, "Prepare the info before login, subId: " + subId);
+            if (subId < 0) {
+                Log.e(TAG, "Can not get the account info as sub id is: " + subId);
+                if (listener != null) listener.onPrepareFinished(false);
+                return;
             }
-        }
 
-        if (!handle) {
-            // If we catch the remote exception or register interface is null, handle is false.
-            // And we will add this action to pending list.
-            addToPendingList(new PendingAction("prepareForLogin", MSG_ACTION_PREPARE_FOR_LOGIN,
-                    Integer.valueOf(subId), Boolean.valueOf(isSupportSRVCC), config, listener));
+            boolean handle = false;
+            if (mIRegister != null) {
+                try {
+                    // Reset first, then prepare.
+                    mRequest = null;
+                    int res = mIRegister.cliReset();
+                    updateRegisterState(RegisterState.STATE_IDLE);
+                    if (res == Result.FAIL) {
+                        Log.w(TAG, "Reset action failed, notify as prepare failed.");
+                        if (listener != null) listener.onPrepareFinished(false);
+                        return;
+                    }
+
+                    // Prepare for login, need open account, start client and update settings.
+                    boolean success = false;
+                    if (cliOpen(subId) && cliStart() && cliUpdateSettings(isSupportSRVCC)) {
+                        success = true;
+                        mRequest = new RegisterRequest(subId, config, listener);
+                    }
+                    if (listener != null) listener.onPrepareFinished(success);
+
+                    handle = true;
+                } catch (RemoteException e) {
+                    Log.e(TAG, "Failed to prepare for login as catch the RemoteException, e: " + e);
+                }
+            }
+
+            if (!handle) {
+                // If we catch the remote exception or register interface is null, handle is false.
+                // And we will add this action to pending list.
+                addToPendingList(new PendingAction("prepareForLogin", MSG_ACTION_PREPARE_FOR_LOGIN,
+                        Integer.valueOf(subId), Boolean.valueOf(isSupportSRVCC), config, listener));
+            }
         }
     }
 
     public void login(boolean forSos, boolean isIPv4, String localIP, String pcscfIP,
             String dnsSerIP, boolean isRelogin) {
-        if (Utilities.DEBUG) {
-            Log.i(TAG, "Try to login to the ims, for sos: " + forSos + ", is IPv4: " + isIPv4
-                    + ", current register state: " + mRequest.mState + ", re-login: " + isRelogin);
-            Log.i(TAG, "Login with the local ip: " + localIP + ", pcscf ip: " + pcscfIP
-                    + ", dns server ip: " + dnsSerIP);
-        }
-
-        if (mRequest.mState == RegisterState.STATE_CONNECTED) {
-            // Already registered notify the register state.
-            if (mRequest.mListener != null) mRequest.mListener.onLoginFinished(true, 0, 0);
-            return;
-        } else if (mRequest.mState == RegisterState.STATE_PROGRESSING) {
-            // Already in the register process, do nothing.
-            return;
-        } else if (mRequest == null) {
-            // Make sure already prepare for login, otherwise the login process can not start.
-            Log.e(TAG, "Do not prepare for login, please check!");
-            return;
-        }
-
-        // The current register status is false.
-        boolean handle = false;
-        if (mIRegister != null) {
-            try {
-                updateRegisterState(RegisterState.STATE_PROGRESSING);
-                int res = mIRegister.cliLogin(forSos, isIPv4, localIP, pcscfIP, dnsSerIP, isRelogin);
-                if (res == Result.FAIL) {
-                    Log.e(TAG, "Login to the ims service failed, Please check!");
-                    updateRegisterState(RegisterState.STATE_IDLE);
-                    // Register failed, give the callback.
-                    if (mRequest.mListener != null) mRequest.mListener.onLoginFinished(false, 0, 0);
-                }
-                handle = true;
-            } catch (RemoteException e) {
-                updateRegisterState(RegisterState.STATE_IDLE);
-                Log.e(TAG, "Catch the remote exception when login, e: " + e);
+        synchronized (TAG) {
+            if (mRequest == null) {
+                // Make sure already prepare for login, otherwise the login process can not start.
+                Log.e(TAG, "Do not prepare for login, please check!");
+                return;
             }
-        }
 
-        if (!handle) {
-            // Do not handle the register action, add to pending list.
-            PendingAction action = new PendingAction("login", MSG_ACTION_LOGIN,
-                    Boolean.valueOf(forSos), Boolean.valueOf(isIPv4), localIP, pcscfIP, dnsSerIP,
-                    Boolean.valueOf(isRelogin));
+            if (Utilities.DEBUG) {
+                Log.i(TAG, "Try to login to the ims, for sos: " + forSos + ", is IPv4: " + isIPv4
+                        + ", current register state: " + mRequest.mState);
+                Log.i(TAG, "Login with the local ip: " + localIP + ", pcscf ip: " + pcscfIP
+                        + ", dns server ip: " + dnsSerIP);
+            }
 
-            addToPendingList(action);
+            if (mRequest.mState == RegisterState.STATE_CONNECTED) {
+                // Already registered notify the register state.
+                if (mRequest.mListener != null) mRequest.mListener.onLoginFinished(true, 0, 0);
+                return;
+            } else if (mRequest.mState == RegisterState.STATE_PROGRESSING) {
+                // Already in the register process, do nothing.
+                return;
+            }
+
+            // The current register status is false.
+            boolean handle = false;
+            if (mIRegister != null) {
+                try {
+                    updateRegisterState(RegisterState.STATE_PROGRESSING);
+                    int res = mIRegister.cliLogin(
+                            forSos, isIPv4, localIP, pcscfIP, dnsSerIP, isRelogin);
+                    if (res == Result.FAIL) {
+                        Log.e(TAG, "Login to the ims service failed, Please check!");
+                        updateRegisterState(RegisterState.STATE_IDLE);
+                        // Register failed, give the callback.
+                        if (mRequest.mListener != null) {
+                            mRequest.mListener.onLoginFinished(false, 0, 0);
+                        }
+                    }
+                    handle = true;
+                } catch (RemoteException e) {
+                    updateRegisterState(RegisterState.STATE_IDLE);
+                    Log.e(TAG, "Catch the remote exception when login, e: " + e);
+                }
+            }
+
+            if (!handle) {
+                // Do not handle the register action, add to pending list.
+                PendingAction action = new PendingAction("login", MSG_ACTION_LOGIN,
+                        Boolean.valueOf(forSos), Boolean.valueOf(isIPv4), localIP, pcscfIP,
+                        dnsSerIP, Boolean.valueOf(isRelogin));
+
+                addToPendingList(action);
+            }
         }
     }
 
     public void deregister(RegisterListener listener) {
-        if (Utilities.DEBUG) {
-            Log.i(TAG, "Try to logout from the ims.");
-        }
+        synchronized (TAG) {
+            if (Utilities.DEBUG) {
+                Log.i(TAG, "Try to logout from the ims.");
+            }
 
-        if (mRequest == null) {
-            forceStop(listener);
-        } else if (mRequest.mState == RegisterState.STATE_IDLE) {
-            // The current status is idle or unknown, give the callback immediately.
-            if (mRequest.mListener != null) mRequest.mListener.onLogout(0);
-        } else if (mRequest.mState == RegisterState.STATE_PROGRESSING) {
-            // Already in the register progress, we'd like to cancel current process.
-            forceStop(mRequest.mListener);
-        } else if (mRequest.mState == RegisterState.STATE_CONNECTED) {
-            // The current register status is true;
+            if (mRequest == null) {
+                forceStop(listener);
+            } else if (mRequest.mState == RegisterState.STATE_IDLE) {
+                // The current status is idle or unknown, give the callback immediately.
+                if (mRequest.mListener != null) mRequest.mListener.onLogout(0);
+            } else if (mRequest.mState == RegisterState.STATE_PROGRESSING) {
+                // Already in the register progress, we'd like to cancel current process.
+                forceStop(mRequest.mListener);
+            } else if (mRequest.mState == RegisterState.STATE_CONNECTED) {
+                // The current register status is true;
+                boolean handle = false;
+                if (mIRegister != null) {
+                    try {
+                        int res = mIRegister.cliLogout();
+                        if (res == Result.FAIL) {
+                            // Logout failed, shouldn't be here.
+                            Log.w(TAG, "Logout from the ims service failed. Please check!");
+                        } else {
+                            handle = true;
+                            updateRegisterState(RegisterState.STATE_PROGRESSING);
+                        }
+                    } catch (RemoteException e) {
+                        Log.e(TAG, "Catch the remote exception when unregister, e: " + e);
+                    }
+                }
+                if (!handle) {
+                    // Do not handle the unregister action, add to pending list.
+                    addToPendingList(
+                            new PendingAction("de-register", MSG_ACTION_DE_REGISTER, listener));
+                }
+            } else {
+                // Shouldn't be here.
+                Log.e(TAG, "Try to logout from the ims, shouldn't be here. register state: "
+                        + mRequest.mState);
+            }
+        }
+    }
+
+    public void reRegister(int type, String info) {
+        synchronized (TAG) {
+            if (Utilities.DEBUG) {
+                Log.i(TAG, "Re-register, with the type: " + type + ", info: " + info);
+            }
+
+            if (mRequest == null
+                    || mRequest.mState != RegisterState.STATE_CONNECTED
+                    || TextUtils.isEmpty(info)) {
+                // The current register state is false, can not re-register.
+                Log.e(TAG, "Failed to re-register, please check!");
+                return;
+            }
+
             boolean handle = false;
             if (mIRegister != null) {
                 try {
-                    int res = mIRegister.cliLogout();
+                    int res = mIRegister.cliRefresh(getVowifiNetworkType(type), info);
                     if (res == Result.FAIL) {
                         // Logout failed, shouldn't be here.
-                        Log.w(TAG, "Logout from the ims service failed. Please check!");
-                    } else {
-                        handle = true;
-                        updateRegisterState(RegisterState.STATE_PROGRESSING);
+                        Log.w(TAG, "Re-register to the ims service failed. Please check!");
+                    }
+                    handle = true;
+                } catch (RemoteException e) {
+                    Log.e(TAG, "Catch the remote exception when re-register, e: " + e);
+                }
+            }
+            if (!handle) {
+                // Do not handle the re-register action, add to pending list.
+                PendingAction action = new PendingAction("re-register", MSG_ACTION_RE_REGISTER,
+                        Integer.valueOf(type), info);
+                addToPendingList(action);
+            }
+        }
+    }
+
+    public boolean forceStop(RegisterListener listener) {
+        synchronized (TAG) {
+            if (Utilities.DEBUG) {
+                Log.i(TAG, "Force stop current register process.");
+            }
+
+            if (mIRegister != null) {
+                try {
+                    int res = mIRegister.cliReset();
+                    if (res == Result.FAIL) {
+                        Log.e(TAG, "Failed to reset the sip stack, notify as reset block.");
+                        if (listener != null) listener.onResetBlocked();
                     }
                 } catch (RemoteException e) {
                     Log.e(TAG, "Catch the remote exception when unregister, e: " + e);
                 }
             }
-            if (!handle) {
-                // Do not handle the unregister action, add to pending list.
-                addToPendingList(new PendingAction("de-register", MSG_ACTION_DE_REGISTER, listener));
-            }
-        } else {
-            // Shouldn't be here.
-            Log.e(TAG, "Try to logout from the ims, shouldn't be here. register state: "
-                    + mRequest.mState);
-        }
-    }
 
-    public void reRegister(int type, String info) {
-        if (Utilities.DEBUG) {
-            Log.i(TAG, "Re-register, with the type: " + type + ", info: " + info);
+            // For force stop, we'd like do not handle the failed action, and set the register
+            // state to idle immediately.
+            updateRegisterState(RegisterState.STATE_IDLE);
+            mRequest = null;
+            return true;
         }
-
-        if (mRequest == null
-                || mRequest.mState != RegisterState.STATE_CONNECTED
-                || TextUtils.isEmpty(info)) {
-            // The current register state is false, can not re-register.
-            Log.e(TAG, "Failed to re-register, please check!");
-            return;
-        }
-
-        boolean handle = false;
-        if (mIRegister != null) {
-            try {
-                int res = mIRegister.cliRefresh(getVowifiNetworkType(type), info);
-                if (res == Result.FAIL) {
-                    // Logout failed, shouldn't be here.
-                    Log.w(TAG, "Re-register to the ims service failed. Please check!");
-                }
-                handle = true;
-            } catch (RemoteException e) {
-                Log.e(TAG, "Catch the remote exception when re-register, e: " + e);
-            }
-        }
-        if (!handle) {
-            // Do not handle the re-register action, add to pending list.
-            PendingAction action = new PendingAction("re-register", MSG_ACTION_RE_REGISTER,
-                    Integer.valueOf(type), info);
-            addToPendingList(action);
-        }
-    }
-
-    public boolean forceStop(RegisterListener listener) {
-        if (Utilities.DEBUG) {
-            Log.i(TAG, "Force stop current register process.");
-        }
-
-        if (mIRegister != null) {
-            try {
-                int res = mIRegister.cliReset();
-                if (res == Result.FAIL) {
-                    Log.e(TAG, "Failed to reset the sip stack, notify as reset block.");
-                    if (listener != null) listener.onResetBlocked();
-                }
-            } catch (RemoteException e) {
-                Log.e(TAG, "Catch the remote exception when unregister, e: " + e);
-            }
-        }
-
-        // For force stop, we'd like do not handle the failed action, and set the register state
-        // to idle immediately.
-        updateRegisterState(RegisterState.STATE_IDLE);
-        mRequest = null;
-        return true;
     }
 
     public int getCurRegisterState() {
@@ -410,67 +426,69 @@ public class VoWifiRegisterManager extends ServiceManager {
     private class RegisterCallback extends IVoWifiRegisterCallback.Stub {
         @Override
         public void onRegisterStateChanged(String json) throws RemoteException {
-            if (Utilities.DEBUG) Log.i(TAG, "Get the register state changed callback: " + json);
+            synchronized (TAG) {
+                if (Utilities.DEBUG) Log.i(TAG, "Get the register state changed callback: " + json);
 
-            if (mRequest == null || TextUtils.isEmpty(json)) {
-                Log.e(TAG, "Can not handle the callback, please check the request or response.");
-                return;
-            }
-
-            try {
-                JSONObject jObject = new JSONObject(json);
-                int eventCode = jObject.optInt(
-                        JSONUtils.KEY_EVENT_CODE, JSONUtils.REGISTER_EVENT_CODE_BASE);
-                String eventName = jObject.optString(JSONUtils.KEY_EVENT_NAME);
-                Log.d(TAG, "Handle the register event: " + eventName);
-
-                switch (eventCode) {
-                    case JSONUtils.EVENT_CODE_LOGIN_OK:
-                        // Update the register state to connected, and notify the state changed.
-                        updateRegisterState(RegisterState.STATE_CONNECTED);
-                        if (mRequest.mListener != null) {
-                            mRequest.mListener.onLoginFinished(true, 0, 0);
-                        }
-                        break;
-                    case JSONUtils.EVENT_CODE_LOGIN_FAILED:
-                        // Update the register state to unknown, and notify the state changed.
-                        updateRegisterState(RegisterState.STATE_IDLE);
-                        if (mRequest.mListener != null) {
-                            int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
-                            int retryAfter = jObject.optInt(JSONUtils.KEY_RETRY_AFTER, 0);
-                            mRequest.mListener.onLoginFinished(false, stateCode, retryAfter);
-                        }
-                        break;
-                    case JSONUtils.EVENT_CODE_LOGOUTED:
-                        // Update the register state to idle, and reset the sip stack.
-                        updateRegisterState(RegisterState.STATE_IDLE);
-                        if (mRequest.mListener != null) {
-                            int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
-                            mRequest.mListener.onLogout(stateCode);
-                            mRequest = null;
-                        }
-                        break;
-                    case JSONUtils.EVENT_CODE_REREGISTER_OK:
-                        if (mRequest.mListener != null) {
-                            mRequest.mListener.onRefreshRegFinished(true, 0);
-                        }
-                        break;
-                    case JSONUtils.EVENT_CODE_REREGISTER_FAILED:
-                        if (mRequest.mListener != null) {
-                            int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
-                            mRequest.mListener.onRefreshRegFinished(false, stateCode);
-                        }
-                        break;
-                    case JSONUtils.EVENT_CODE_REGISTER_STATE_UPDATE:
-                        // Update the register state, and notify the state changed.
-                        if (mRequest.mListener != null) {
-                            int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
-                            mRequest.mListener.onRegisterStateChanged(mRequest.mState, stateCode);
-                        }
-                        break;
+                if (mRequest == null || TextUtils.isEmpty(json)) {
+                    Log.e(TAG, "Can not handle the callback, please check the request or response.");
+                    return;
                 }
-            } catch (JSONException e) {
-                Log.e(TAG, "");
+
+                try {
+                    JSONObject jObject = new JSONObject(json);
+                    int eventCode = jObject.optInt(
+                            JSONUtils.KEY_EVENT_CODE, JSONUtils.REGISTER_EVENT_CODE_BASE);
+                    String eventName = jObject.optString(JSONUtils.KEY_EVENT_NAME);
+                    Log.d(TAG, "Handle the register event: " + eventName);
+
+                    switch (eventCode) {
+                        case JSONUtils.EVENT_CODE_LOGIN_OK:
+                            // Update the register state to connected, and notify the state changed.
+                            updateRegisterState(RegisterState.STATE_CONNECTED);
+                            if (mRequest.mListener != null) {
+                                mRequest.mListener.onLoginFinished(true, 0, 0);
+                            }
+                            break;
+                        case JSONUtils.EVENT_CODE_LOGIN_FAILED:
+                            // Update the register state to unknown, and notify the state changed.
+                            updateRegisterState(RegisterState.STATE_IDLE);
+                            if (mRequest.mListener != null) {
+                                int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
+                                int retryAfter = jObject.optInt(JSONUtils.KEY_RETRY_AFTER, 0);
+                                mRequest.mListener.onLoginFinished(false, stateCode, retryAfter);
+                            }
+                            break;
+                        case JSONUtils.EVENT_CODE_LOGOUTED:
+                            // Update the register state to idle, and reset the sip stack.
+                            updateRegisterState(RegisterState.STATE_IDLE);
+                            if (mRequest.mListener != null) {
+                                int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
+                                mRequest.mListener.onLogout(stateCode);
+                                mRequest = null;
+                            }
+                            break;
+                        case JSONUtils.EVENT_CODE_REREGISTER_OK:
+                            if (mRequest.mListener != null) {
+                                mRequest.mListener.onRefreshRegFinished(true, 0);
+                            }
+                            break;
+                        case JSONUtils.EVENT_CODE_REREGISTER_FAILED:
+                            if (mRequest.mListener != null) {
+                                int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
+                                mRequest.mListener.onRefreshRegFinished(false, stateCode);
+                            }
+                            break;
+                        case JSONUtils.EVENT_CODE_REGISTER_STATE_UPDATE:
+                            // Update the register state, and notify the state changed.
+                            if (mRequest.mListener != null) {
+                                int code = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
+                                mRequest.mListener.onRegisterStateChanged(mRequest.mState, code);
+                            }
+                            break;
+                    }
+                } catch (JSONException e) {
+                    Log.e(TAG, "Failed to handle register state changed callback as ex: " + e);
+                }
             }
         }
     }
