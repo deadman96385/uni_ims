@@ -2764,10 +2764,10 @@ public class ImsService extends Service {
 
         @Override
         public void onSessionEmpty(int serviceId) {
+            ImsServiceImpl impl = mImsServiceImplMap.get(Integer
+                    .valueOf(serviceId));
             if ((serviceId - 1) == ImsRegister.getPrimaryCard(mPhoneCount)) {
                 /* SPRD: Add for bug586758 and 595321{@ */
-                ImsServiceImpl impl = mImsServiceImplMap.get(Integer
-                        .valueOf(serviceId));
                 if (impl != null) {
                     if (impl.isVolteSessionListEmpty()
                             && impl.isVowifiSessionListEmpty()) {
@@ -2841,6 +2841,16 @@ public class ImsService extends Service {
                         + "mIsVolteCall: " + mIsVolteCall + " mIsVowifiCall:"
                         + mIsVowifiCall + "mInCallHandoverFeature: "
                         + mInCallHandoverFeature);
+            } else {
+                /* SPRD: Add for bug807691 {@ */
+                ImsServiceImpl implPrimay = mImsServiceImplMap.get(Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
+                Log.i(TAG,"onSessionEmpty-> serviceId: "+serviceId + " mIsVolteCall:" + mIsVolteCall +"  impl: "+ impl +"  implPrimay: "+implPrimay);
+                if((impl != null && (impl.isVolteSessionListEmpty())) && (implPrimay != null && (implPrimay.isVolteSessionListEmpty()))){
+                     if (mIsVolteCall) {
+                         mIsVolteCall = false;
+                     }
+                }
+                /* @} */
             }
         }
     }
