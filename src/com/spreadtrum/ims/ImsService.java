@@ -766,7 +766,7 @@ public class ImsService extends Service {
                         int errorCode = msg.arg2;
                         if (releaseResult == ImsStackResetResult.SUCCESS) {
                             mWifiRegistered = false;
-                            updateImsFeature();
+                            updateImsFeatureForAllService();// SPRD:Add for bug816979
                         }
                         if (mReleaseVowifiRequest != null) {
                             if (mImsServiceListenerEx != null) {
