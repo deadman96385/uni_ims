@@ -145,13 +145,17 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     break;
                 case MSG_UPDATE_DATAROUTER_STATE:
                     int state = msg.arg1;
-                    mCallMgr.updateDataRouterState(state);
+                    if (mCallMgr != null) {
+                        mCallMgr.updateDataRouterState(state);
+                    }
                     if (mCallback != null) mCallback.onUpdateDRStateFinished();
                     break;
                 case MSG_TERMINATE_CALLS:
                     WifiState wifiState = (WifiState) msg.obj;
                     try {
-                        mCallMgr.terminateCalls(wifiState);
+                        if (mCallMgr != null) {
+                            mCallMgr.terminateCalls(wifiState);
+                        }
                     } catch (RemoteException e) {
                         Log.e(mTag, "Catch the RemoteException when terminate calls. e: " + e);
                     }
@@ -342,7 +346,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         // If the video quality changed, we need update the video quality.
-        if (ImsConfigImpl.VT_RESOLUTION_VALUE.equals(key)) {
+        if (ImsConfigImpl.VT_RESOLUTION_VALUE.equals(key) && mCallMgr != null) {
             // The video quality is changed.
             mCallMgr.updateVideoQuality(Utilities.getDefaultVideoQuality(mPreferences));
         }
