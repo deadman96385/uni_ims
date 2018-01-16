@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"ស្នើសុំទៅធ្វើអោយការហៅបច្ចុប្បន្នកាន់តែប្រើសើរទៅជាការហៅវីដេអូ សូមជ្រើសរើសទទួលឬបដិសេធ។"</string>
 <string name="vowifi_request_downgrade_title">"ស្នើសុំធ្វើអោយអន់ពីចម្ងាយ"</string>
 <string name="vowifi_request_downgrade_text">"ស្នើសុំទៅធ្វើអន់ការហៅបច្ចុប្បន្នកាន់តែប្រើសើរទៅជាសម្លេង សូមជ្រើសរើសទទួលឬបដិសេធ។"</string>
-<string name="vowifi_add_video_failed">"ការបដិសេដសំណើរពីចម្ងាយ"</string>
+<string name="vowifi_request_update_failed">"ការបដិសេដសំណើរពីចម្ងាយ"</string>
 <string name="vowifi_add_video_success">"ការទទួលសំណើរពីចម្ងាយ"</string>
 <string name="vowifi_remove_video_failed">"បរាជ័យក្នុងការលុបវីដេអូចោល"</string>
 <string name="vowifi_remove_video_success">"ការហៅជាវីដេអូទម្លាក់កម្រិតច្បាស់"</string>

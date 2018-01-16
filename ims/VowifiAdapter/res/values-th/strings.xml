@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"มีคำขอเพื่อให้อัพเกรดการโทรในปัจจุบันเป็นการโทรวิดีโอ โปรดเลือกว่าจะยอมรับหรือปฏิเสธ"</string>
 <string name="vowifi_request_downgrade_title">"ปลายทางขอให้ดาวน์เกรด"</string>
 <string name="vowifi_request_downgrade_text">"มีคำขอเพื่อให้ดาวน์เกรดการโทรในปัจจุบันเป็นการโทรปกติ โปรดเลือกว่าจะยอมรับหรือปฏิเสธ"</string>
-<string name="vowifi_add_video_failed">"ปลายทางปฏิเสธคำขอ"</string>
+<string name="vowifi_request_update_failed">"ปลายทางปฏิเสธคำขอ"</string>
 <string name="vowifi_add_video_success">"ปลายทางยอมรับคำขอ"</string>
 <string name="vowifi_remove_video_failed">"ไม่สามารถลบวิดีโอได้"</string>
 <string name="vowifi_remove_video_success">"เปลี่ยนไปใช้การโทรปกติ"</string>

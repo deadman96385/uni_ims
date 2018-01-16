@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="vowifi_request_upgrade_title">对方请求升级</string>
+    <string name="vowifi_request_upgrade_title">对方请求更新</string>
     <string name="vowifi_request_upgrade_text">请求升级为视频通话，请选择接受或拒绝。</string>
-    <string name="vowifi_request_downgrade_title">对方请求降级</string>
+    <string name="vowifi_request_update_rx_text">请求更新为仅接受视频，请选择接受或拒绝。</string>
+    <string name="vowifi_request_update_tx_text">请求更新为仅发送视频，请选择接受或拒绝。</string>
+    <string name="vowifi_request_downgrade_title">对方请求更新</string>
     <string name="vowifi_request_downgrade_text">请求降级为语音通话，请选择接受或拒绝。</string>
 
-    <string name="vowifi_add_video_failed">升级请求被拒绝</string>
-    <string name="vowifi_add_video_success">升级为视频通话</string>
-    <string name="vowifi_remove_video_failed">降级失败</string>
+    <string name="vowifi_request_update_failed">对方拒绝请求</string>
+    <string name="vowifi_add_video_success">对方接受请求</string>
     <string name="vowifi_remove_video_success">可视通话回落</string>
 
     <string name="vowifi_hold_success">保持通话成功</string>

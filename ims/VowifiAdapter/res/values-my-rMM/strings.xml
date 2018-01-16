@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"ဗြီဒီယိုဖုန္းသို ့ အပ္ဂရိတ္လုပ္ရန္ ေတာင္းဆို, ေက်းဇူးျပဳ၍ လက္ခံ သို ့မဟုတ္ ျငင္းပယ္ ေရြးခ်ယ္ပါ."</string>
 <string name="vowifi_request_downgrade_title">"ေဒါင္းဂရိတ္ရန္ ေတာင္းဆို"</string>
 <string name="vowifi_request_downgrade_text">"ဗြီဒီယိုဖုန္းသို ့ ေဒါင္းဂရိတ္လုပ္ရန္ ေတာင္းဆို, ေက်းဇူးျပဳ၍ လက္ခံ သို ့မဟုတ္ ျငင္းပယ္ ေရြးခ်ယ္ပါ."</string>
-<string name="vowifi_add_video_failed">"ျငင္းပယ္ရန္ ေတာင္းဆို."</string>
+<string name="vowifi_request_update_failed">"ျငင္းပယ္ရန္ ေတာင္းဆို."</string>
 <string name="vowifi_add_video_success">"လက္ခံရန္ ေတာင္းဆို."</string>
 <string name="vowifi_remove_video_failed">"ဗြီဒီယို ဖယ္မရ."</string>
 <string name="vowifi_remove_video_success">"ဗြီဒီယို ဖုန္း လိုင္းက်ေန."</string>

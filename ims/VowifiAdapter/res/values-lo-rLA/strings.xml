@@ -4,7 +4,7 @@
 <string name="vowifi_request_upgrade_text">"ຂໍຮ້ອງເພື່ອອັບເກດການໂທໃນຂະນະນີ້ໃຫ້ເປັນການໂທວິດີໂອ, ກະລຸນາເລືອກຍອມຮັບ ຫຼື ປະຕິເສດ."</string>
 <string name="vowifi_request_downgrade_title">"ການຂໍຮ້ອງຄວບຄຸມຈາກໄລຍະທາງໄກເພື່ອລາດລົງ"</string>
 <string name="vowifi_request_downgrade_text">"ຂໍຮ້ອງເພື່ອລາດລົງການໂທໃນຂະນະນີ້ໃຫ້ເປັນການໂທວິດີໂອ, ກະລຸນາເລືອກຍອມຮັບ ຫຼື ປະຕິເສດ."</string>
-<string name="vowifi_add_video_failed">"ປະຕິເສດການຂໍຮ້ອງຄວບຄຸມຈາກໄລຍະທາງໄກ."</string>
+<string name="vowifi_request_update_failed">"ປະຕິເສດການຂໍຮ້ອງຄວບຄຸມຈາກໄລຍະທາງໄກ."</string>
 <string name="vowifi_add_video_success">"ຍອມຮັບການຂໍຮ້ອງຄວບຄຸມຈາກໄລຍະທາງໄກ."</string>
 <string name="vowifi_remove_video_failed">"ການລຶບວີດີໂອລົ້ມເຫຼວ"</string>
 <string name="vowifi_remove_video_success">"ຫຼຸດລົງການໂທວີດີໂອ."</string>
