@@ -3184,6 +3184,9 @@ public class ImsService extends Service {
                 Log.d(TAG,
                         "Switch request is null, but the pdn start, will enable the ims.");
                 service.enableImsWhenPDNReady();
+            } else if (mInCallPhoneId != -1 && mInCallPhoneId != (serviceId - 1)) {//SPRD: add for bug817433
+                Log.d(TAG, "other sim  pdn start, will enable the ims.");
+                service.enableImsWhenPDNReady();
             }
             /* @} */
         } else if (mFeatureSwitchRequest != null
