@@ -1188,7 +1188,7 @@ public class VoWifiCallManager extends ServiceManager {
         }
     }
 
-    private void handleCallUpdate(ImsCallSessionImpl callSession, int videoType)
+    private void handleCallUpdate(ImsCallSessionImpl callSession, int newVideoType)
             throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Handle the call update ok.");
         if (callSession == null) {
@@ -1202,52 +1202,59 @@ public class VoWifiCallManager extends ServiceManager {
             return;
         }
 
-        int newCallType = VideoType.getCallType(videoType);
+        int newCallType = VideoType.getCallType(newVideoType);
         int oldCallType = callSession.getCallProfile().mCallType;
         if (newCallType == oldCallType) {
-            Log.e(TAG, "It means there isn't any update. Please check videoType: " + videoType);
+            Log.e(TAG, "It means there isn't any update. Please check videoType: " + newVideoType);
             handleCallUpdateFailed(callSession, 0);
             return;
         }
 
         // The new call type is different from the old call type. Update the call type.
         callSession.updateCallType(newCallType);
-        if (Utilities.isAudioCall(newCallType)) {
-            // It means the new call type is audio call, and the old call type is video call.
-            // We'd like to prompt the toast as video call fall-back.
-            Toast.makeText(mContext, R.string.vowifi_remove_video_success, Toast.LENGTH_LONG)
-                    .show();
 
-            // As remove video, we'd like to stop all the video before the response.
-            // If the surface destroyed, the remove render action will be blocked, and
-            // the remove action will be failed actually. So we'd like to stop all the video
-            // before give the response.
-            videoCallProvider.stopAll();
-        } else if (Utilities.isAudioCall(oldCallType)) {
-            // It means the new call type is video call, and the old call type is audio call.
-            // We'd like to prompt the toast as remote accept the upgrade request.
-            Toast.makeText(mContext, R.string.vowifi_add_video_success, Toast.LENGTH_LONG).show();
+        if (videoCallProvider.isWaitForModifyResponse()) {
+            int oldVideoType = VideoType.getNativeVideoType(oldCallType);
+            if (oldVideoType < newVideoType) {
+                // It means the new call type upgrade, and we'd like to prompt the toast
+                // as remote accept the upgrade request.
+                Toast.makeText(mContext, R.string.vowifi_request_update_success,
+                        Toast.LENGTH_LONG).show();
+            }
+        }
 
+        if (Utilities.isAudioCall(oldCallType)) {
             // Notify the call update from audio call to video call.
             if (callSession.isAlive() && mListener != null) {
                 mListener.onAliveCallUpdate(true /* is video now */);
             }
         } else {
-            // It means the new call type is similar as old call type. Only update the TX or RX.
+            // The old call type should be video call.
 
-            // If the surface destroyed, the remove render action will be blocked, and the remove
-            // action will be failed actually.
-            // So we'd like to stop the reception or transmission before give the response. 
-            if (Utilities.isVideoTX(newCallType)) {
+            // As remove video, we'd like to stop all the video before the response.
+            // If the surface destroyed, the remove render action will be blocked, and
+            // the remove action will be failed actually. So we'd like to stop all the video
+            // or stop the reception or transmission before give the response.
+            if (Utilities.isAudioCall(newCallType)) {
+                // It means the new call type is audio call, and the old call type is video call.
+                // We'd like to prompt the toast as video call fall-back.
+                Toast.makeText(mContext, R.string.vowifi_remove_video_success, Toast.LENGTH_LONG)
+                        .show();
+                videoCallProvider.stopAll();
+            } else if (Utilities.isVideoTX(newCallType)) {
                 // Change from VT to VT_TX. It means we need stop the reception.
+                Toast.makeText(mContext, R.string.vowifi_update_to_tx_success, Toast.LENGTH_LONG)
+                        .show();
                 videoCallProvider.stopReception();
             } else if (Utilities.isVideoRX(newCallType)) {
                 // Change from VT to VT_RX. It means we need stop the transmission.
+                Toast.makeText(mContext, R.string.vowifi_update_to_rx_success, Toast.LENGTH_LONG)
+                        .show();
                 videoCallProvider.stopTransmission();
             }
         }
 
-        VideoProfile newProfile = VideoType.getVideoProfile(videoType);
+        VideoProfile newProfile = VideoType.getVideoProfile(newVideoType);
         // As the response is success, the request profile will be same as the response.
         videoCallProvider.receiveSessionModifyResponse(
                 VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS,
@@ -1273,12 +1280,15 @@ public class VoWifiCallManager extends ServiceManager {
 
         ImsVideoCallProviderImpl videoCallProvider = callSession.getVideoCallProviderImpl();
         if (videoCallProvider != null) {
+            if (videoCallProvider.isWaitForModifyResponse()) {
+                // Show toast for failed action.
+                Toast.makeText(mContext, R.string.vowifi_request_update_failed, Toast.LENGTH_LONG)
+                        .show();
+            }
+
             videoCallProvider.receiveSessionModifyResponse(
                     VideoProvider.SESSION_MODIFY_REQUEST_FAIL, null, null);
         }
-
-        // Show toast for failed action.
-        Toast.makeText(mContext, R.string.vowifi_request_update_failed, Toast.LENGTH_LONG).show();
     }
 
     private void handleCallAddVideoRequest(ImsCallSessionImpl callSession, int videoType) {

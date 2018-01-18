@@ -1,26 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-<string name="vowifi_request_upgrade_title">"ການຂໍຮ້ອງຄວບຄຸມຈາກໄລຍະທາງໄກເພື່ອອັບເກດ"</string>
-<string name="vowifi_request_upgrade_text">"ຂໍຮ້ອງເພື່ອອັບເກດການໂທໃນຂະນະນີ້ໃຫ້ເປັນການໂທວິດີໂອ, ກະລຸນາເລືອກຍອມຮັບ ຫຼື ປະຕິເສດ."</string>
-<string name="vowifi_request_downgrade_title">"ການຂໍຮ້ອງຄວບຄຸມຈາກໄລຍະທາງໄກເພື່ອລາດລົງ"</string>
-<string name="vowifi_request_downgrade_text">"ຂໍຮ້ອງເພື່ອລາດລົງການໂທໃນຂະນະນີ້ໃຫ້ເປັນການໂທວິດີໂອ, ກະລຸນາເລືອກຍອມຮັບ ຫຼື ປະຕິເສດ."</string>
-<string name="vowifi_request_update_failed">"ປະຕິເສດການຂໍຮ້ອງຄວບຄຸມຈາກໄລຍະທາງໄກ."</string>
-<string name="vowifi_add_video_success">"ຍອມຮັບການຂໍຮ້ອງຄວບຄຸມຈາກໄລຍະທາງໄກ."</string>
-<string name="vowifi_remove_video_failed">"ການລຶບວີດີໂອລົ້ມເຫຼວ"</string>
-<string name="vowifi_remove_video_success">"ຫຼຸດລົງການໂທວີດີໂອ."</string>
-<string name="vowifi_hold_success">"ການຖືສາຍສໍາເລັດ"</string>
-<string name="vowifi_hold_fail">"ການຖືສາຍລົ້ມເຫຼວ"</string>
-<string name="vowifi_resume_success">"ການເລີ່ມຕົ້ນໃໝ່ສໍາເລັດ"</string>
-<string name="vowifi_resume_fail">"ການເລີ່ມຕົ້ນໃໝ່ລົ້ມເຫຼວ"</string>
-<string name="vowifi_call_retry">"ກະລຸນາລໍຖ້ານ້ອຍໜຶ່ງຈຶ່ງລອງໃໝ່ອີກ"</string>
-<string name="vowifi_call_is_focus">"ເພີ່ມເຖິງສາຍການປະຊຸມ"</string>
-<string name="vowifi_conf_connect_timeout">"ເຊື່ອມຕໍ່ກັບເຊີຟເວີສາຍກອງປະຊຸມລົ້ມເຫຼວ"</string>
-<string name="vowifi_conf_disconnect">"ການສ້າງຕັ້ງສາຍກອງປະຊຸມລົ້ມເຫຼວ"</string>
-<string name="vowifi_conf_finished">"ສາຍກອງປະຊຸມສໍາເລັດ"</string>
-<string name="vowifi_conf_invite_request_failed">"ການສົ່ງຄໍາຮ້ອງຂໍເຊີນລົ້ມເຫຼວ. ບໍ່ສາມາດສ້າງຕັ້ງສາຍກອງປະຊຸມ."</string>
-<string name="vowifi_conf_invite_failed">"ການເຊື້ອເຊີນຜູ້ເຂົ້າຮ່ວມລົ້ມເຫຼວ:"</string>
-<string name="vowifi_conf_kick_failed">"ການລຶບຜູ້ເຂົ້າຮ່ວມລົ້ມເຫຼວ:"</string>
-<string name="vowifi_conf_none_participant">"ບໍ່ມີຜູ້ເຂົ້າຮ່ວມ, ສິ້ນສຸດສາຍກອງປະຊຸມໄດ້."</string>
-<string name="vowifi_conf_do_not_support">"ບໍ່ສະຫນັບສະຫນູນການປະຕິບັດງານໃນຂະນະນີ້."</string>
-<string name="vowifi_video_call_do_not_support">"ບໍ່ສະຫນັບສະຫນູນການປະຕິບັດງານໃນຂະນະນີ້."</string>
+    <string name="vowifi_request_upgrade_title">"ການຂໍຮ້ອງຄວບຄຸມຈາກໄລຍະທາງໄກເພື່ອອັບເກດ"</string>
+    <string name="vowifi_request_upgrade_text">"ຂໍຮ້ອງເພື່ອອັບເກດການໂທໃນຂະນະນີ້ໃຫ້ເປັນການໂທວິດີໂອ, ກະລຸນາເລືອກຍອມຮັບ ຫຼື ປະຕິເສດ."</string>
+
+    <string name="vowifi_request_update_failed">"ປະຕິເສດການຂໍຮ້ອງຄວບຄຸມຈາກໄລຍະທາງໄກ."</string>
+    <string name="vowifi_request_update_success">"ຍອມຮັບການຂໍຮ້ອງຄວບຄຸມຈາກໄລຍະທາງໄກ."</string>
+    <string name="vowifi_remove_video_success">"ຫຼຸດລົງການໂທວີດີໂອ."</string>
+
+    <string name="vowifi_hold_success">"ການຖືສາຍສໍາເລັດ"</string>
+    <string name="vowifi_hold_fail">"ການຖືສາຍລົ້ມເຫຼວ"</string>
+    <string name="vowifi_resume_success">"ການເລີ່ມຕົ້ນໃໝ່ສໍາເລັດ"</string>
+    <string name="vowifi_resume_fail">"ການເລີ່ມຕົ້ນໃໝ່ລົ້ມເຫຼວ"</string>
+    <string name="vowifi_call_retry">"ກະລຸນາລໍຖ້ານ້ອຍໜຶ່ງຈຶ່ງລອງໃໝ່ອີກ"</string>
+    <string name="vowifi_call_is_focus">"ເພີ່ມເຖິງສາຍການປະຊຸມ"</string>
+    <string name="vowifi_conf_connect_timeout">"ເຊື່ອມຕໍ່ກັບເຊີຟເວີສາຍກອງປະຊຸມລົ້ມເຫຼວ"</string>
+    <string name="vowifi_conf_disconnect">"ການສ້າງຕັ້ງສາຍກອງປະຊຸມລົ້ມເຫຼວ"</string>
+    <string name="vowifi_conf_finished">"ສາຍກອງປະຊຸມສໍາເລັດ"</string>
+    <string name="vowifi_conf_invite_request_failed">"ການສົ່ງຄໍາຮ້ອງຂໍເຊີນລົ້ມເຫຼວ. ບໍ່ສາມາດສ້າງຕັ້ງສາຍກອງປະຊຸມ."</string>
+    <string name="vowifi_conf_invite_failed">"ການເຊື້ອເຊີນຜູ້ເຂົ້າຮ່ວມລົ້ມເຫຼວ:"</string>
+    <string name="vowifi_conf_kick_failed">"ການລຶບຜູ້ເຂົ້າຮ່ວມລົ້ມເຫຼວ:"</string>
+    <string name="vowifi_conf_none_participant">"ບໍ່ມີຜູ້ເຂົ້າຮ່ວມ, ສິ້ນສຸດສາຍກອງປະຊຸມໄດ້."</string>
+    <string name="vowifi_conf_do_not_support">"ບໍ່ສະຫນັບສະຫນູນການປະຕິບັດງານໃນຂະນະນີ້."</string>
+    <string name="vowifi_video_call_do_not_support">"ບໍ່ສະຫນັບສະຫນູນການປະຕິບັດງານໃນຂະນະນີ້."</string>
 </resources>

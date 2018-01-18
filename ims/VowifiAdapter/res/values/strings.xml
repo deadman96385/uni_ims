@@ -4,12 +4,12 @@
     <string name="vowifi_request_upgrade_text">" requested to upgrade to video call, please choose accept or reject."</string>
     <string name="vowifi_request_update_rx_text">" requested to update as reception only video call, please choose accept or reject."</string>
     <string name="vowifi_request_update_tx_text">" requested to update as transmission only video call, please choose accept or reject."</string>
-    <string name="vowifi_request_downgrade_title">Remote request to downgrade</string>
-    <string name="vowifi_request_downgrade_text">" request to downgrade the current call to voice call, please choose accept or reject."</string>
 
     <string name="vowifi_request_update_failed">Remote reject request</string>
-    <string name="vowifi_add_video_success">Remote accept request</string>
+    <string name="vowifi_request_update_success">Remote accept request</string>
     <string name="vowifi_remove_video_success">Video call fall-back</string>
+    <string name="vowifi_update_to_rx_success">Video reception only</string>
+    <string name="vowifi_update_to_tx_success">Video transmission only</string>
 
     <string name="vowifi_hold_success">Hold success</string>
     <string name="vowifi_hold_fail">Hold fail</string>
