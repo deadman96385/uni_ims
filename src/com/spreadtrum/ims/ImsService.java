@@ -2456,7 +2456,12 @@ public class ImsService extends Service {
 //        updateImsRegisterState();
         boolean isImsRegistered = ((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE)
                 || (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI));
-        Log.i(TAG," notifyListenerWhenRegister() -> isImsRegistered: "+isImsRegistered);
+        //SPRD: add for bug 823104
+        if(ImsManagerEx.isDualLteModem()){
+            Log.i(TAG," notifyListenerWhenRegister() -> isDualLteModem is ok ");
+            isImsRegistered  = isImsRegistered || mVolteRegistered;
+        }
+        Log.i(TAG," notifyListenerWhenRegister() -> isImsRegistered: "+isImsRegistered+" mVolteRegistered:"+mVolteRegistered);
         synchronized (mImsRegisterListeners) {
             try {
                 listener.imsRegisterStateChange(isImsRegistered);
