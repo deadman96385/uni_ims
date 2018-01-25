@@ -6185,7 +6185,9 @@ typedef struct {
 #define RIL_EXT_UNSOL_BAND_INFO                     (RIL_EXT_UNSOL_RESPONSE_BASE + 1)
 #define RIL_EXT_UNSOL_ECC_NETWORKLIST_CHANGED       (RIL_EXT_UNSOL_RESPONSE_BASE + 2)
 #define RIL_EXT_UNSOL_EARLY_MEDIA                   (RIL_EXT_UNSOL_RESPONSE_BASE + 3)
-#define RIL_EXT_UNSOL_RESPONSE_LAST                 RIL_EXT_UNSOL_EARLY_MEDIA
+#define RIL_EXT_UNSOL_RAU_NOTIFY                    (RIL_EXT_UNSOL_RESPONSE_BASE + 4)
+#define RIL_EXT_UNSOL_CLEAR_CODE_FALLBACK           (RIL_EXT_UNSOL_RESPONSE_BASE + 5)
+#define RIL_EXT_UNSOL_RESPONSE_LAST                 RIL_EXT_UNSOL_CLEAR_CODE_FALLBACK
 #endif
 /*****************************************************************************/
 

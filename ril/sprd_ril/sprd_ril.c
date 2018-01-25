@@ -14454,7 +14454,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         }
 
         if(!strcmp(response, "RAU SUCCESS")) {
-            RIL_onUnsolicitedResponse(RIL_UNSOL_GPRS_RAU, NULL, 0);
+            RIL_onUnsolicitedResponse(RIL_EXT_UNSOL_RAU_NOTIFY, NULL, 0);
         } else {
             RILLOGD("%s does not support", response);
         }
@@ -14635,7 +14635,7 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
         RILLOGD("SPERROR type = %d, err_code = %d", type, err_code);
         if (err_code == 336) {
-            RIL_onUnsolicitedResponse (RIL_UNSOL_CLEAR_CODE_FALLBACK, NULL, 0);
+            RIL_onUnsolicitedResponse (RIL_EXT_UNSOL_CLEAR_CODE_FALLBACK, NULL, 0);
         } else if ((type == 5) && (ussdRun == 1)) {/* 5: for SS */
             ussdError = 1;
         }
