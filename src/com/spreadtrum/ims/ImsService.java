@@ -3125,6 +3125,16 @@ public class ImsService extends Service {
 
     public void onImsPdnStatusChange(int serviceId, int state) {
         boolean isAirplaneModeOn = false;
+        // SPRD: add for bug822996
+        if(ImsRegister.getPrimaryCard(mPhoneCount) != (serviceId-1)){
+            Log.i(TAG,"onImsPdnStatusChange->this is secondary card, serviceId:"+serviceId +" state:" + state);
+            if(state == ImsPDNStatus.IMS_PDN_READY) {
+                ImsServiceImpl service = mImsServiceImplMap.get(serviceId);
+                service.enableImsWhenPDNReady();
+            }
+            return;
+        }
+
         if (state == ImsPDNStatus.IMS_PDN_READY) {
             mIsAPImsPdnActived = false;
             mIsCPImsPdnActived = true;
@@ -3424,34 +3434,44 @@ public class ImsService extends Service {
         }
     }
 
-    public boolean allowEnableIms(int serviceId){
+    public boolean allowEnableIms(int phoneId){
 //        ImsServiceImpl service = mImsServiceImplMap.get(
 //                Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
         // add for Dual LTE
         ImsServiceImpl service = null;
-        if (mTelephonyManagerEx.getLTECapabilityForPhone(serviceId)) {
-            service = mImsServiceImplMap.get(Integer.valueOf(serviceId + 1));
+        if (mTelephonyManagerEx.getLTECapabilityForPhone(phoneId)) {
+            service = mImsServiceImplMap.get(Integer.valueOf(phoneId + 1));
         } else {
             service = mImsServiceImplMap.get(
                     Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
         }
         Log.i(TAG,"allowEnableIms->service:"+service +" mFeatureSwitchRequest:"+mFeatureSwitchRequest
                 + " isVolteEnabledBySystemProperties:"+ ImsConfigImpl.isVolteEnabledBySystemProperties());
-        if(mFeatureSwitchRequest != null || service == null || !ImsConfigImpl.isVolteEnabledBySystemProperties()){
-            return false;
-        }
-        if (mIsVolteCall || mIsVowifiCall || mIsAPImsPdnActived) {
-            Log.i(TAG, "allowEnableIms->mIsVolteCall:" + mIsVolteCall
-                    + " mIsVowifiCall:" + mIsVowifiCall
-                    + " mIsAPImsPdnActived:" + mIsAPImsPdnActived);
-            return false;
-        }
-        Log.i(TAG, "allowEnableIms->mIsPendingRegisterVolte:"
-                + mIsPendingRegisterVolte + " service.isImsRegistered():"
-                + service.isImsRegistered());
-        if (!((mIsPendingRegisterVolte && !service.isImsRegistered()) || service
-                .isImsRegistered())) {
-            return true;
+        // SPRD: change for bug822996
+        if(phoneId == ImsRegister.getPrimaryCard(mPhoneCount)) {
+            if (mFeatureSwitchRequest != null || service == null || !ImsConfigImpl.isVolteEnabledBySystemProperties()) {
+                return false;
+            }
+            if (mIsVolteCall || mIsVowifiCall || mIsAPImsPdnActived) {
+                Log.i(TAG, "allowEnableIms->mIsVolteCall:" + mIsVolteCall
+                        + " mIsVowifiCall:" + mIsVowifiCall
+                        + " mIsAPImsPdnActived:" + mIsAPImsPdnActived);
+                return false;
+            }
+            Log.i(TAG, "allowEnableIms->mIsPendingRegisterVolte:"
+                    + mIsPendingRegisterVolte + " service.isImsRegistered():"
+                    + service.isImsRegistered());
+            if (!((mIsPendingRegisterVolte && !service.isImsRegistered()) || service
+                    .isImsRegistered())) {
+                return true;
+            }
+        }else {
+            if (service == null || !ImsConfigImpl.isVolteEnabledBySystemProperties()) {
+                return false;
+            }else if(!service.isImsRegistered()){
+                Log.i(TAG," service.isImsRegistered():"+service.isImsRegistered());
+                return true;
+            }
         }
         return false;
     }
