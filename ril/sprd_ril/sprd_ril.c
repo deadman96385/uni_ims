@@ -210,7 +210,6 @@ static void excuteSrvccPendingOperate();
 #define ECC_LIST_FAKE_PROP "ril.ecclist.fake"
 
 static int getEccRecordCategory(char *number);
-static void reopenSimCardAndProtocolStack(void *param);
 static void dialEmergencyWhileCallFailed(void *param);
 
 static void redialWhileCallFailed(void *param);
@@ -14561,7 +14560,6 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
         if (SIM_RESET == result) {
             s_ImsISIM = -1;
-            RIL_requestTimedCallback (reopenSimCardAndProtocolStack, NULL, NULL);
         }
         response->result = result;
         RIL_onUnsolicitedResponse(RIL_UNSOL_SIM_REFRESH, response, sizeof(RIL_SimRefreshResponse_v7));
@@ -16759,17 +16757,6 @@ static void excuteSrvccPendingOperate(void *param){
 
 }
 /* @} */
-
-static void reopenSimCardAndProtocolStack(void *param){
-    int channelID;
-    channelID = getChannel();
-
-    at_send_command(ATch_type[channelID], "AT+SFUN=5", NULL);
-    at_send_command(ATch_type[channelID], "AT+SFUN=3", NULL);
-    at_send_command(ATch_type[channelID], "AT+SFUN=2", NULL);
-    at_send_command(ATch_type[channelID], "AT+SFUN=4", NULL);
-    putChannel(channelID);
-}
 
 static void dialEmergencyWhileCallFailed(void *param) {
     if (param != NULL) {
