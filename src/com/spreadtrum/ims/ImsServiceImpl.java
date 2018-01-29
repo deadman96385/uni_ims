@@ -184,7 +184,7 @@ public class ImsServiceImpl extends MMTelFeature {
         mImsRegister = new ImsRegister(mPhone, mContext, mCi);
         mImsServiceState = new ImsServiceState(false,IMS_REG_STATE_INACTIVE);
         mImsConfigImpl = new ImsConfigImpl(mCi,context,this,mServiceId); // SPRD: bug805154
-        mImsUtImpl = new ImsUtImpl(mCi,context,phone);
+        mImsUtImpl = new ImsUtImpl(mCi,context,phone,this);
         com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl =  mWifiService.getUtInterface();
         mImsUtProxy = new ImsUtProxy(context, mImsUtImpl, voWifiUtImpl, phone);
         mImsEcbmImpl = new ImsEcbmImpl(mCi);
@@ -1315,5 +1315,9 @@ public class ImsServiceImpl extends MMTelFeature {
 
     public void setVolteRegisterStateOld(boolean state){
         mVolteRegisterStateOld = state;
+    }
+
+    public void onCallWaitingStatusUpdateForVoWifi(int status){
+        mImsService.onCallWaitingStatusUpdateForVoWifi(status);
     }
 }
