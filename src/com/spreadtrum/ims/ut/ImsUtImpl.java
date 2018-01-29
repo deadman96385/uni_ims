@@ -11,7 +11,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.os.PersistableBundle;
 import android.os.RemoteException;
+import android.telephony.CarrierConfigManagerEx;
 import android.util.Log;
 import com.android.ims.internal.IImsServiceEx;
 import com.android.ims.internal.ImsManagerEx;
@@ -1044,13 +1046,20 @@ public class ImsUtImpl extends IImsUt.Stub {
     }
 
     private void requestNetwork(Bundle bundle) {
-        int subId = mPhone.getSubId();
         Message request = mHandler.obtainMessage(EVENT_REQUEST_NETWORK_DONE);
         request.setData(bundle);
+        if (!isUtEnabled()) {
+            mHandler.sendMessage(request);
+            return;
+        }
+        int subId = mPhone.getSubId();
         mDcNetworkManager.requestNetwork(subId, request);
     }
 
     private void releaseNetwork() {
+        if (!isUtEnabled()) {
+            return;
+        }
         mDcNetworkManager.releaseNetworkRequest();
     }
 
@@ -1368,5 +1377,21 @@ public class ImsUtImpl extends IImsUt.Stub {
         int serviceClass = bundle.getInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
         mCi.queryCallWaiting(serviceClass,
                 mHandler.obtainMessage(ACTION_GET_CW_STATUS_FOR_VOWIFI, id, 0, this));
+    }
+
+    public boolean isUtEnabled() {
+        CarrierConfigManagerEx carrierConfig = CarrierConfigManagerEx.from(mPhone.getContext());
+        int ratPrefer = 0;
+        if (carrierConfig != null) {
+            PersistableBundle config = carrierConfig.getConfigForPhoneId(mPhone.getPhoneId());
+            if (config != null){
+               ratPrefer = config.getInt(CarrierConfigManagerEx.KEY_NETWORK_RAT_PREFER_INT, 0);
+               Log.i(TAG, "Rat from configure file is " + ratPrefer);
+            }
+        }
+        if (ratPrefer == 2) {
+            return false;
+        }
+        return true;
     }
 }
