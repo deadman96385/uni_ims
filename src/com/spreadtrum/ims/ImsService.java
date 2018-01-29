@@ -2416,19 +2416,9 @@ public class ImsService extends Service {
         }
 
         public int updateCLIRStatus(int action) {
-            com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl = mWifiService
-                    .getUtInterface();
-            int id = -1;
             Log.i(TAG, "updateCLIRStatus action = " + action);
-            if (voWifiUtImpl != null) {
-                try {
-                    id = voWifiUtImpl.updateCLIR(action);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                    ;
-                }
-            }
-            return id;
+            SystemProperties.set("gsm.ss.clir", String.valueOf(action));
+            return 1;
         }
 
         @Override
@@ -2436,6 +2426,24 @@ public class ImsService extends Service {
             mHandler.removeMessages(ACTION_NOTIFY_VIDEO_CAPABILITY_CHANGE);
             mHandler.sendMessageDelayed(mHandler
                     .obtainMessage(ACTION_NOTIFY_VIDEO_CAPABILITY_CHANGE), 100);
+        }
+
+        /**
+         * used for get CW status for vowifi
+         * para phone id
+         *
+         **/
+        @Override
+        public void getCallWaitingStatus(int phoneId){
+            ImsServiceImpl imsService = mImsServiceImplMap.get(Integer
+                    .valueOf(phoneId + 1));
+            Log.i(TAG, "getCallWaitingStatus phoneId = " + phoneId);
+            if (imsService != null) {
+                ImsUtImpl ut = imsService.getUtImpl();
+                if (ut != null) {
+                    ut.getCallWaitingStatusForVoWifi();
+                }
+            }
         }
 
         /**
@@ -3629,4 +3637,9 @@ public class ImsService extends Service {
             }
         }
     };
+
+    public void onCallWaitingStatusUpdateForVoWifi(int status){
+        Log.d(TAG, "onCallWaitingStatusUpdateForVoWifi, status: " + status);
+        SystemProperties.set("gsm.ss.call_waiting", String.valueOf(status));
+    }
 }
