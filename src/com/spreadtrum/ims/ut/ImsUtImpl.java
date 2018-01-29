@@ -28,6 +28,7 @@ import com.android.ims.ImsUtInterface;
 import com.android.ims.ImsCallForwardInfo;
 import com.android.ims.internal.ImsCallForwardInfoEx;
 import com.android.ims.internal.IImsUtListenerEx;
+import com.spreadtrum.ims.ImsServiceImpl;
 import com.spreadtrum.ims.ImsRIL;
 import com.android.internal.telephony.Phone;
 import android.telephony.RadioAccessFamily;
@@ -71,6 +72,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private static final int ACTION_QUERY_CB_EX= 19;
     private static final int ACTION_CHANGE_CB_PW= 20;
     private static final int ACTION_GET_CLIR_STATUS  = 21;
+    private static final int ACTION_GET_CW_STATUS_FOR_VOWIFI  = 22;
 
     private static final int EVENT_REQUEST_NETWORK_DONE = 100;
 
@@ -94,18 +96,20 @@ public class ImsUtImpl extends IImsUt.Stub {
     private ImsRIL mCi;
     private ImsHandler mHandler;
     private Context mContext;
+    private ImsServiceImpl mImsServiceImpl;
     private IImsUtListener mImsUtListener;
     private IImsUtListenerEx mImsUtListenerEx;
     private int mRequestId = -1;
     private Object mLock = new Object();
     private DcNetworkManager mDcNetworkManager = null;
     private List<Integer> mRequestedNetwork = new ArrayList<Integer>();
-    public ImsUtImpl(ImsRIL ci,Context context, Phone phone){
+    public ImsUtImpl(ImsRIL ci,Context context, Phone phone, ImsServiceImpl service){
         mCi = ci;
         mContext = context;
         mHandler = new ImsHandler(mContext.getMainLooper(), (IImsUt)this);
         mPhone = phone;
         mDcNetworkManager = new DcNetworkManager(mContext);
+        mImsServiceImpl = service;
     }
 
     /**
@@ -591,6 +595,25 @@ public class ImsUtImpl extends IImsUt.Stub {
                     releaseNetwork();
                     break;
                 }
+                case ACTION_GET_CW_STATUS_FOR_VOWIFI:{
+                    if(ar != null){
+                        if (ar.exception != null) {
+                            int info = ImsReasonInfo.CODE_UT_NETWORK_ERROR;
+                            if (ar.exception instanceof CommandException) {
+                                info = getImsReasonInfoFromCommandException((CommandException) ar.exception);
+                            }
+                        } else {
+                            int infoArray[] = (int[]) ar.result;
+                            if(infoArray.length == 0 || ar.userObj instanceof Throwable){
+                            } else {
+                                mImsServiceImpl.onCallWaitingStatusUpdateForVoWifi(infoArray[0]);
+                                Log.i(TAG,"ACTION_UPDATE_CW_STATUS_FOR_WIFI->mStatus:" + infoArray[0]);
+                            }
+                        }
+                    }
+                    releaseNetwork();
+                    break;
+                }
                 default:
                     break;
             }
@@ -1011,6 +1034,15 @@ public class ImsUtImpl extends IImsUt.Stub {
         return id;
     }
 
+    public int getCallWaitingStatusForVoWifi() {
+        int id = getReuestId();
+        Bundle bundle = new Bundle();
+        bundle.putInt(EXTRA_ACTION, ACTION_GET_CW_STATUS_FOR_VOWIFI);
+        bundle.putInt(EXTRA_ID, id);
+        requestNetwork(bundle);
+        return id;
+    }
+
     private void requestNetwork(Bundle bundle) {
         int subId = mPhone.getSubId();
         Message request = mHandler.obtainMessage(EVENT_REQUEST_NETWORK_DONE);
@@ -1087,6 +1119,9 @@ public class ImsUtImpl extends IImsUt.Stub {
                 break;
             case ACTION_GET_CLIR_STATUS:
                 getCLIRStatus(bundle);
+                break;
+            case ACTION_GET_CW_STATUS_FOR_VOWIFI:
+                queryCallWaitingForVoWifi(bundle);
                 break;
             default:
                 break;
@@ -1327,4 +1362,11 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
     }
 
+    private void queryCallWaitingForVoWifi(Bundle bundle) {
+        Log.d(TAG, "onexcue queryCallWaiting = " + bundle.toString());
+        int id = bundle.getInt(EXTRA_ID, -1);
+        int serviceClass = bundle.getInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
+        mCi.queryCallWaiting(serviceClass,
+                mHandler.obtainMessage(ACTION_GET_CW_STATUS_FOR_VOWIFI, id, 0, this));
+    }
 }
