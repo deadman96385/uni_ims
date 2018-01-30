@@ -18,4 +18,7 @@
     <string name="vowifi_conf_kick_failed">"प्रतिभागी को हटाने में असफल रहा"</string>
     <string name="vowifi_conf_none_participant">"कोई भागीदार नहीं है, कॉल समाप्त करें।"</string>
     <string name="vowifi_conf_do_not_support">"इस समय इस क्रिया का समर्थन नहीं किया जाता।"</string>
+    <string name="vowifi_conf_connect_timeout">"कान्फ्रेंस सर्वर से जुड़ने की समय-सीमा समाप्त"</string>
+     <string name="vowifi_conf_can_not_invite_more">"कान्फ्रेंस में किसी अन्य सहभागी को आमंत्रित नहीं कर सकते क्योंकि इसमें पहले से ही 6 सहभागी हैं"</string>
+
 </resources>
