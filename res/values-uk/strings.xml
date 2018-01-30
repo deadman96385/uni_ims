@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">"да"</string>
      <string name="low_battery_convert_to_voice_call">"Конвертувати"</string>
 
+    <string name="handover_to_volte_success">"Перехід на VoLTE для кращої якості голосового зв\'язку"</string>
+     <string name="vowifi_attation">"VoWiFi: увага"</string>
+     <string name="vowifi_regist_fail_content">"Мережа не підтримує VoWiFi"</string>
+     <string name="vowifi_connected_title">"Екстрені виклики через службу викликів по Wi-Fi"</string>
+     <string name="vowifi_connected_continue">"Продовжити"</string>
+     <string name="vowifi_connected_disable">"Вимкнути"</string>
+     <string name="vowifi_connected_checkbox_text">"Більше не показувати"</string>
+     <string name="vowifi_connected_message">"Екстрені виклики через службу викликів по WiFi неможливі, пристрій автоматично перемикається на мобільну мережу (2G/3G), щоб здійснити екстрений виклик. Бажаєте продовжити роботу зі службою викликів по WiFi або вимкнути цю службу?"</string>
 </resources>

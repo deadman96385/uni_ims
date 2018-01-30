@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">"Evet"</string>
      <string name="low_battery_convert_to_voice_call">"Dönüştür"</string>
 
+    <string name="handover_to_volte_success">"Daha iyi Ses kalitesi için VoLTE ağına geçiş yapılıyor"</string>
+     <string name="vowifi_attation">"Vowifi dikkat"</string>
+     <string name="vowifi_regist_fail_content">"Ağ vowifi özelliğini desteklemiyor"</string>
+     <string name="vowifi_connected_title">"Wi-Fi Arama üzerinden acil durum aramaları"</string>
+     <string name="vowifi_connected_continue">"Devam"</string>
+     <string name="vowifi_connected_disable">"Devre dışı bırak"</string>
+     <string name="vowifi_connected_checkbox_text">"Bir daha gösterme"</string>
+     <string name="vowifi_connected_message">""Acil durum aramaları Wi-Fi Arama üzerinden mümkün değildir; Acil durum araması yapmak için cihaz otomatik olarak hücresel ağa (2G/3G) geçiş yapıyor. Wi-Fi Arama hizmetine devam etmek istiyor musunuz ya da Wi-Fi aramayı devre dışı bırakmak istiyor musunuz?"</string>
 </resources>

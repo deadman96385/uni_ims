@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">"Có"</string>
      <string name="low_battery_convert_to_voice_call">"Chuyển đổi"</string>
 
+    <string name="handover_to_volte_success">"Chuyển sang VoLTE để có chất lượng giọng nói tốt hơn"</string>
+     <string name="vowifi_attation">"Gợi nhắc Vowifi"</string>
+     <string name="vowifi_regist_fail_content">"Mạng không hỗ trợ vowifi"</string>
+     <string name="vowifi_connected_title">"Cuộc gọi khẩn cấp bằng gọi qua Wi-Fi"</string>
+     <string name="vowifi_connected_continue">"Tiếp tục"</string>
+     <string name="vowifi_connected_disable">"Tắt"</string>
+     <string name="vowifi_connected_checkbox_text">"Không hiển thị lại"</string>
+     <string name="vowifi_connected_message">"Không thể thực hiện cuộc gọi khẩn cấp bằng gọi qua Wi-Fi, Thiết bị tự chuyển sang mạng di động (2G/3G) để thực hiện cuộc gọi khẩn cấp. Bạn muốn tiếp tục dịch vụ gọi qua Wi-Fi hay tắt gọi qua Wi-Fi?"</string>
 </resources>

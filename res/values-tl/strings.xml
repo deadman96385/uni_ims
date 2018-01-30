@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">"Oo"</string>
      <string name="low_battery_convert_to_voice_call">"Lumipat"</string>
 
+    <string name="handover_to_volte_success">"Paglipat sa VoLTE para sa mas mabuting kalidad ng Boses"</string>
+     <string name="vowifi_attation">"Vowifi atensyon"</string>
+     <string name="vowifi_regist_fail_content">"Ang network ay di sumusuporta ng vowifi"</string>
+     <string name="vowifi_connected_title">"Mga emergency na tawag sa pamamagitan ng Pagtawag gamit ang Wi-Fi"</string>
+     <string name="vowifi_connected_continue">"Magpatuloy"</string>
+     <string name="vowifi_connected_disable">"I-disable"</string>
+     <string name="vowifi_connected_checkbox_text">"Huwag nang ipakitang muli"</string>
+     <string name="vowifi_connected_message">"Hindi posible ang mga emergency na tawag sa pamamagitan ng Pagtawag gamit ang WiFi, Lumilipat ang device mula sa auto papunta sa isang cellular network (2G/3G) para gumawa ng emergency na tawag. Gusto mo bang ituloy ang serbisyo sa Pagtawag gamit ang WiFi or i-disable ang pagtawag gamit ang Wi-Fi?"</string>
 </resources>

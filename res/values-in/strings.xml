@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">Ya</string>
      <string name="low_battery_convert_to_voice_call">"Mengkonversi"</string>
 
+    <string name="handover_to_volte_success">"Beralih ke volte untuk kualitas suara yang lebih baik"</string>
+     <string name="vowifi_attation">"Tampilan Vowifi"</string>
+     <string name="vowifi_regist_fail_content">"Jaringan tidak mendukung vowifi"</string>
+     <string name="vowifi_connected_title">"Panggilan darurat via Panggilan Wi-Fi"</string>
+     <string name="vowifi_connected_continue">"Lanjutkan"</string>
+     <string name="vowifi_connected_disable">"Nonaktifkan"</string>
+     <string name="vowifi_connected_checkbox_text">"Jangan tampilkan lagi"</string>
+     <string name="vowifi_connected_message">"Panggilan darurat tidak dapat dilakukan via Panggilan WiFi, Perangkat otomatis beralih ke jaringan seluler (2G/3G) untuk melakukan panggilan darurat. Apakah Anda ingin melanjutkan layanan Panggilan WiFi atau menonaktifkan panggilan Wi-Fi?"</string>
 </resources>

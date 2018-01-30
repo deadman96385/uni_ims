@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">Ndio</string>
      <string name="low_battery_convert_to_voice_call">"Geuza"</string>
 
+    <string name="handover_to_volte_success">"Kubadilisha kwa VoLTE kwa ubora wa Sauti"</string>
+     <string name="vowifi_attation">"umakini wa Vowifi"</string>
+     <string name="vowifi_regist_fail_content">"Mtandao haiwezi kuauni mkono vowifi"</string>
+     <string name="vowifi_connected_title">"Simu za dharura kupitia Wi-Fi Calling"</string>
+     <string name="vowifi_connected_continue">"Endelea"</string>
+     <string name="vowifi_connected_disable">"Zima"</string>
+     <string name="vowifi_connected_checkbox_text">"Usionyeshe tena"</string>
+     <string name="vowifi_connected_message">"Simu za dharura haziwezekani kupitia Wi-Fi Calling, kifaa hubadilisha kiotomatiki kwa mtandao wa simu (2G/3G) ili upige simu ya dharura. Unataka kuendelea na huduma ya Wi-Fi Calling au kuilemaza?"</string>
 </resources>

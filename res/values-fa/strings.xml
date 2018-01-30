@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">بله</string>
      <string name="low_battery_convert_to_voice_call">"تبدیل"</string>
 
+    <string name="handover_to_volte_success">در حال رفتن به VoLTE برای کیفیت صدای بهتر</string>
+     <string name="vowifi_attation">توجه vowifi</string>
+     <string name="vowifi_regist_fail_content">شبکه از vowifi پشتیبانی نمی‌کند</string>
+     <string name="vowifi_connected_title">"تماس اضطراری از طریق برقراری تماس Wi-Fi"</string>
+     <string name="vowifi_connected_continue">"ادامه"</string>
+     <string name="vowifi_connected_disable">"غیرفعال‌ کردن"</string>
+     <string name="vowifi_connected_checkbox_text">"دیگر نشان داده نشود"</string>
+     <string name="vowifi_connected_message">"تماس‌های اضطراری از طریق تماس Wi-Fi امکان‌پذیر نیست، دستگاه به منظور برقراری تماس اضطراری به‌طور خودکار به یک شبکه سلولی تلفن همراه (2G/3G) جابجا می‌شود. آیا می‌خواهید خدمات تماس Wi-Fi را ادامه بدهید یا تماس Wi-Fi را غیرفعال می‌کنید؟"</string>
 </resources>

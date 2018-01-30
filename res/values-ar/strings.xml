@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">"نعم"</string>
      <string name="low_battery_convert_to_voice_call">"تحويل"</string>
 
+    <string name="handover_to_volte_success">"الانتقال لمكالمة VoLTE لجودة صوت أفضل"</string>
+     <string name="vowifi_attation">"مطالبة vowifi"</string>
+     <string name="vowifi_regist_fail_content">"الشبكة لا تدعم vowifi"</string>
+     <string name="vowifi_connected_title">"مكالمات الطوارئ من خلال الاتصال عبر Wi-Fi"</string>
+     <string name="vowifi_connected_continue">متابعة</string>
+     <string name="vowifi_connected_disable">"تعطيل"</string>
+     <string name="vowifi_connected_checkbox_text">"عدم عرض ذلك مجددًا"</string>
+     <string name="vowifi_connected_message">"لا يمكن إجراء مكالمات طوارئ من خلال الاتصال عبر WiFi، سيقوم الجهاز بتبديل الإعداد تلقائي إلى شبكة خلوية (2G/3G) لإجراء مكالمة طوارئ. هل تريد الاستمرار في خدمة الاتصال عبر WiFi أو تعطيل خدمة الاتصال عبر Wi-Fi؟"</string>
 </resources>
