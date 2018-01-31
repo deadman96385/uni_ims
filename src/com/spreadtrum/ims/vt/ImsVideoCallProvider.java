@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.os.UserHandle;
 import android.telecom.VideoProfile;
 import android.view.Surface;
+import android.view.WindowManager;
 import android.util.Log;
 import com.android.internal.telephony.Connection;
 import com.spreadtrum.ims.ImsCallSessionImpl;
@@ -645,7 +646,20 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
              log("ImsVideoCallProvider_mShowTelcelToast :" + mShowTelcelToast);
          }
          if(mShowTelcelToast){
-             Toast.makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
+             //SPRD:fix for bug 825045
+             makeText(mContext,mContext.getResources().getString(R.string.videophone_fallback_title),Toast.LENGTH_LONG).show();
          }
+    }
+
+    /**
+     * Add method to show toast at LockScreen.
+     */
+    public Toast makeText(Context context, CharSequence text, int duration) {
+        Toast toast = Toast.makeText(context, text, duration);
+        toast.getWindowParams().flags = WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED;
+        return toast;
     }
 }
