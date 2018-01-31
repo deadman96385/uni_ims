@@ -1257,8 +1257,9 @@ public class ImsService extends Service {
                 + isVoWifiEnabled() + " isVoLTEEnabled(): " + isVoLTEEnabled());
         mInCallPhoneId = serviceId - 1;// SPRD:add for bug635699
         updateInCallState(true);
-        /* SPRD: Modify for bug586758{@ */
-        if ((isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall)
+        /* SPRD: Modify for bug586758 and bug827022 {@ */
+        boolean isPrimaryCard = ImsRegister.getPrimaryCard(mPhoneCount) == (serviceId-1);
+        if ((isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall && isPrimaryCard)
                 || mIsVowifiCall) {
             mIsVowifiCall = true;
             IImsCallSession session = mWifiService
@@ -3477,6 +3478,8 @@ public class ImsService extends Service {
     }
 
     public void updateInCallState(boolean isInCall) {
+        Log.i(TAG,"updateInCallState->mIsVolteCall:"+mIsVolteCall +" mIsVowifiCall:"+mIsVowifiCall
+                + " isInCall:"+isInCall+" mIsWifiCalling:"+mIsWifiCalling);
         if (mIsCalling != isInCall) {
             mIsCalling = isInCall;
             if (mIsCalling
@@ -3489,7 +3492,7 @@ public class ImsService extends Service {
                         .updateIncomingCallAction(IncomingCallAction.NORMAL);
             }
         }
-        if ((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI && isInCall != mIsWifiCalling)
+        if ((mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI && isInCall != mIsWifiCalling && mIsVowifiCall)
                 || (!isInCall && mIsWifiCalling)) {
             mIsWifiCalling = isInCall;
             for (Map.Entry<Integer, ImsServiceImpl> entry : mImsServiceImplMap
