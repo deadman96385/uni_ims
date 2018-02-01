@@ -457,6 +457,16 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
          ImsCallProfile imsCallProfile = session.getCallProfile();
          VideoProfile responseProfile = new VideoProfile(VideoProfile.STATE_AUDIO_ONLY);
          log("updateNegotiatedCallProfilee->mCallType="+imsCallProfile.mCallType+" session state = "+session.getState()+ "mIsVoiceRingTone ="+mIsVoiceRingTone);
+         //SPRD:fix for bug 827280
+         if (mLocalRequestProfile != null) {
+             int result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_FAIL;
+             if(mImsCallSessionImpl.getLocalRequestProfile().mCallType == imsCallProfile.mCallType){
+                 result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS;
+             }
+             receiveSessionModifyResponse(result, mLocalRequestProfile, responseProfile);
+             //mLocalRequestProfile = null;
+             showRequestStateToast();
+         }
          //SPRD:fix for bug 597075
          if(isVideoCall(imsCallProfile.mCallType)
                  && (session != null && session.mImsDriverCall != null && session.mImsDriverCall.state != ImsDriverCall.State.HOLDING)){
@@ -488,15 +498,6 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
              mIsVoiceRingTone = false;
          }
 
-         if (mLocalRequestProfile != null) {
-             int result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_FAIL;
-             if(mImsCallSessionImpl.getLocalRequestProfile().mCallType == imsCallProfile.mCallType){
-                 result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS;
-             }
-             receiveSessionModifyResponse(result, mLocalRequestProfile, responseProfile);
-             mLocalRequestProfile = null;
-             showRequestStateToast();
-         }
          if(mNegotiatedCallProfile.mCallType != imsCallProfile.mCallType){
              mNegotiatedCallProfile.mCallType = imsCallProfile.mCallType;
          }
