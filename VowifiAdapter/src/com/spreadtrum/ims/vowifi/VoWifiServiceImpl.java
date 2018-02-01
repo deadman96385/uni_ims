@@ -81,7 +81,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private boolean mNeedResetAfterCall = false;
 
     private Context mContext;
-    private TelephonyManager mTeleMgr = null;
     private SharedPreferences mPreferences = null;
     private VoWifiCallback mCallback = null;
     private SIMAccountInfo mSIMAccountInfo = null;
@@ -260,8 +259,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     public VoWifiServiceImpl(Context context) {
         mContext = context;
 
-        mTeleMgr = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-
         HandlerThread thread = new HandlerThread("VoWifi");
         thread.start();
         Looper looper = thread.getLooper();
@@ -374,14 +371,12 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private void attachInternal() {
         // Before start attach process, need get the SIM account info.
         // We will always use the primary card to attach and register now.
-        int phoneId = Utilities.getPrimaryCard(mContext);
-        String deviceId = mTeleMgr.getDeviceId();
-        if (TextUtils.isEmpty(deviceId)) {
-            Log.e(TAG, "Can not get the sub id from the phone id: " + phoneId);
+        mSIMAccountInfo = SIMAccountInfo.generate();
+        if (mSIMAccountInfo == null) {
+            Log.e(TAG, "Can not generate the attach account info.");
             if (mCallback != null) mCallback.onAttachFinished(false, 0);
             return;
         }
-        mSIMAccountInfo = SIMAccountInfo.generate(mTeleMgr, phoneId);
 
         if (mEcbmStep == ECBM_STEP_ATTACH_FOR_SOS) {
             mSecurityMgr.attachForSos(mSIMAccountInfo);
@@ -428,11 +423,11 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private void registerPrepare() {
         // Check the security state, if it is attached. We could start the register process.
         if (mSecurityMgr.getCurSecurityState() != AttachState.STATE_CONNECTED
-                && mSecurityMgr.getConfig() == null) {
+                || mSecurityMgr.getConfig() == null) {
             Log.e(TAG, "Please wait for attach success. Current attach state: "
                     + mSecurityMgr.getCurSecurityState() + ", security config: "
                     + mSecurityMgr.getConfig());
-            if (mCallback != null) mCallback.onReregisterFinished(false, 0);
+            registerFailed();
             return;
         }
 
@@ -930,14 +925,19 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             if (success) {
                 // As prepare success, start the login process now. And try from the IPv6;
                 SecurityConfig config = mSecurityMgr.getConfig();
-                mRegisterIP = RegisterIPAddress.getInstance(config._ip4, config._ip6,
-                        config._pcscf4, config._pcscf6, getUsedPcscfAddr(), config._dns4,
-                        config._dns6);
-                registerLogin(false);
-            } else {
-                // Prepare failed, give the register result as failed.
-                registerFailed();
+                if (config != null) {
+                    mRegisterIP = RegisterIPAddress.getInstance(config._ip4, config._ip6,
+                            config._pcscf4, config._pcscf6, getUsedPcscfAddr(), config._dns4,
+                            config._dns6);
+                    registerLogin(false);
+                    return;
+                } else {
+                    Log.d(TAG, "Prepare finished, but config is null");
+                }
             }
+
+            // Prepare failed, give the register result as failed.
+            registerFailed();
         }
 
         @Override

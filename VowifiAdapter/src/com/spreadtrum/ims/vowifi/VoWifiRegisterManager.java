@@ -406,7 +406,7 @@ public class VoWifiRegisterManager extends ServiceManager {
             return false;
         }
 
-        int res = mIRegister.cliUpdateSettings(info._subId, info._spn, info._imei, info._userName,
+        int res = mIRegister.cliUpdateSettings(info._phoneId, info._spn, info._imei, info._userName,
                 info._authName, info._authPass, info._realm, info._impu, isSupportSRVCC);
         return res == Result.SUCCESS;
     }

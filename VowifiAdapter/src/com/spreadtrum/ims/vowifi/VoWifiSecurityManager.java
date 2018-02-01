@@ -150,7 +150,7 @@ public class VoWifiSecurityManager extends ServiceManager {
                 if (mState <= AttachState.STATE_IDLE) {
                     // If the s2b state is idle, start the attach action.
                     int sessionId = mISecurity.start(
-                            type, info._subId, info._imsi, info._hplmn, info._vplmn, info._imei);
+                            type, info._phoneId, info._imsi, info._hplmn, info._vplmn, info._imei);
                     if (sessionId == Result.INVALID_ID) {
                         // It means attach failed.
                         attachFailed(0);
@@ -337,12 +337,20 @@ public class VoWifiSecurityManager extends ServiceManager {
                         break;
                     }
                     case JSONUtils.EVENT_CODE_ATTACH_STOPPED: {
-                        int errorCode = jObject.optInt(JSONUtils.KEY_STATE_CODE);
-                        boolean forHandover = (errorCode == NativeErrorCode.IKE_HANDOVER_STOP);
-                        Log.d(TAG, "S2b attach stopped, errorCode: " + errorCode + ", for handover: "
-                                + forHandover);
+                        // As received attach stopped, need check if the stop action is
+                        // relate to current attach request.
+                        int sessionId = jObject.optInt(JSONUtils.KEY_SESSION_ID, -1);
+                        if (mSecurityConfig != null && sessionId == mSecurityConfig._sessionId) {
+                            int errorCode = jObject.optInt(JSONUtils.KEY_STATE_CODE);
+                            boolean forHandover = (errorCode == NativeErrorCode.IKE_HANDOVER_STOP);
+                            Log.d(TAG, "S2b attach stopped, errorCode: " + errorCode
+                                    + ", for handover: " + forHandover);
 
-                        attachStopped(forHandover, errorCode);
+                            attachStopped(forHandover, errorCode);
+                        } else {
+                            Log.d(TAG, "Ignore the attach stopped callback as the cur attach is: "
+                                    + mSecurityConfig);
+                        }
                         break;
                     }
                 }
