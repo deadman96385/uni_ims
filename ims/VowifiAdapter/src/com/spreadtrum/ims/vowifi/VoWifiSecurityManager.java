@@ -337,12 +337,20 @@ public class VoWifiSecurityManager extends ServiceManager {
                         break;
                     }
                     case JSONUtils.EVENT_CODE_ATTACH_STOPPED: {
-                        int errorCode = jObject.optInt(JSONUtils.KEY_STATE_CODE);
-                        boolean forHandover = (errorCode == NativeErrorCode.IKE_HANDOVER_STOP);
-                        Log.d(TAG, "S2b attach stopped, errorCode: " + errorCode + ", for handover: "
-                                + forHandover);
+                        // As received attach stopped, need check if the stop action is
+                        // relate to current attach request.
+                        int sessionId = jObject.optInt(JSONUtils.KEY_SESSION_ID, -1);
+                        if (mSecurityConfig != null && sessionId == mSecurityConfig._sessionId) {
+                            int errorCode = jObject.optInt(JSONUtils.KEY_STATE_CODE);
+                            boolean forHandover = (errorCode == NativeErrorCode.IKE_HANDOVER_STOP);
+                            Log.d(TAG, "S2b attach stopped, errorCode: " + errorCode
+                                    + ", for handover: " + forHandover);
 
-                        attachStopped(forHandover, errorCode);
+                            attachStopped(forHandover, errorCode);
+                        } else {
+                            Log.d(TAG, "Ignore the attach stopped callback as the cur attach is: "
+                                    + mSecurityConfig);
+                        }
                         break;
                     }
                 }

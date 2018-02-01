@@ -423,11 +423,11 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     private void registerPrepare() {
         // Check the security state, if it is attached. We could start the register process.
         if (mSecurityMgr.getCurSecurityState() != AttachState.STATE_CONNECTED
-                && mSecurityMgr.getConfig() == null) {
+                || mSecurityMgr.getConfig() == null) {
             Log.e(TAG, "Please wait for attach success. Current attach state: "
                     + mSecurityMgr.getCurSecurityState() + ", security config: "
                     + mSecurityMgr.getConfig());
-            if (mCallback != null) mCallback.onReregisterFinished(false, 0);
+            registerFailed();
             return;
         }
 
@@ -925,14 +925,19 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             if (success) {
                 // As prepare success, start the login process now. And try from the IPv6;
                 SecurityConfig config = mSecurityMgr.getConfig();
-                mRegisterIP = RegisterIPAddress.getInstance(config._ip4, config._ip6,
-                        config._pcscf4, config._pcscf6, getUsedPcscfAddr(), config._dns4,
-                        config._dns6);
-                registerLogin(false);
-            } else {
-                // Prepare failed, give the register result as failed.
-                registerFailed();
+                if (config != null) {
+                    mRegisterIP = RegisterIPAddress.getInstance(config._ip4, config._ip6,
+                            config._pcscf4, config._pcscf6, getUsedPcscfAddr(), config._dns4,
+                            config._dns6);
+                    registerLogin(false);
+                    return;
+                } else {
+                    Log.d(TAG, "Prepare finished, but config is null");
+                }
             }
+
+            // Prepare failed, give the register result as failed.
+            registerFailed();
         }
 
         @Override
