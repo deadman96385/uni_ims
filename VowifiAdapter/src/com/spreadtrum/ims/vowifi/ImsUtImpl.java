@@ -47,6 +47,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private static final int SERVICE_CLASS_VOICE = CommandsInterface.SERVICE_CLASS_VOICE;
     // FIXME: This value defined in CallForwardEditPreference but not CommandsInterface.
     private static final int SERVICE_CLASS_VIDEO = 2;
+    private static final int SERVICE_CLASS_ALL = SERVICE_CLASS_VOICE | SERVICE_CLASS_VIDEO;
 
     // If there isn't any CMD to disabled the UT after 1min.
     private static final int DELAY_DISALBE_UT = 60 * 1000;
@@ -106,6 +107,9 @@ public class ImsUtImpl extends IImsUt.Stub {
                         ImsReasonInfo error = new ImsReasonInfo(ImsReasonInfo.CODE_UT_NETWORK_ERROR,
                                 ImsReasonInfo.CODE_UNSPECIFIED);
                         mCmdManager.onActionFailed(error);
+                    } else {
+                        Log.d(TAG, "Ignore the cmd timeout as timeout key is " + timeoutKey
+                                + ", but the first cmd key is " + key);
                     }
                     break;
                 }
@@ -801,7 +805,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                 Log.w(TAG, "The condition is abnormal, please check rule: " + rule.toString());
             }
             if (TextUtils.isEmpty(media)) {
-                info.mServiceClass = SERVICE_CLASS_VOICE | SERVICE_CLASS_VIDEO;
+                info.mServiceClass = SERVICE_CLASS_ALL;
             } else if (JSONUtils.RULE_MEDIA_AUDIO.equals(media)) {
                 info.mServiceClass = SERVICE_CLASS_VOICE;
             } else if (JSONUtils.RULE_MEDIA_VIDEO.equals(media)) {
@@ -848,75 +852,162 @@ public class ImsUtImpl extends IImsUt.Stub {
         return infoList;
     }
 
-    private ImsCallForwardInfo findCallForwardInfo(ArrayList<ImsCallForwardInfo> infoList,
-            int condition, String number, int serviceClass, String ruleset) {
-        // TODO ruleset removed on 7.0
+    private ImsCallForwardInfo[] getFromEx(ImsCallForwardInfoEx[] infoExs) {
+        if (infoExs == null || infoExs.length < 1) {
+            Log.d(TAG, "There isn't extention call forward info.");
+            return null;
+        }
 
-        ImsCallForwardInfo matchedInfo = null;
+        ImsCallForwardInfo[] infos = new ImsCallForwardInfo[infoExs.length];
+        for (int i = 0; i < infoExs.length; i++) {
+            ImsCallForwardInfo info = new ImsCallForwardInfo();
+            info.mCondition = infoExs[i].mCondition;
+            info.mStatus = infoExs[i].mStatus;
+            info.mToA = infoExs[i].mToA;
+            info.mServiceClass = infoExs[i].mServiceClass;
+            info.mNumber = infoExs[i].mNumber;
+            info.mTimeSeconds = infoExs[i].mTimeSeconds;
+
+            infos[i] = info;
+        }
+
+        return infos;
+    }
+
+    private ImsCallForwardInfoEx[] findCallForwardInfoEx(ArrayList<ImsCallForwardInfo> infoList,
+            int condition, String number, int serviceClass, String ruleset) {
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "Try to find the call forward info ex for condition[" + condition
+                    + "] serviceClass[" + serviceClass + "]");
+        }
+
+        ArrayList<ImsCallForwardInfoEx> infos = new ArrayList<ImsCallForwardInfoEx>();
+        ArrayList<String> items = getCFContainsItems(condition, serviceClass);
         for (ImsCallForwardInfo info : infoList) {
-            if (info.mCondition == condition
+            if (isCFConditionMatched(condition, info.mCondition)
                     && (TextUtils.isEmpty(number) || number.equals(info.mNumber))
-                    && (serviceClass < 0 || (serviceClass & info.mServiceClass) > 0)) {
-                matchedInfo = info;
+                    && (isAllSerClass(serviceClass) || (serviceClass & info.mServiceClass) > 0)) {
+                if (isAllSerClass(serviceClass) && info.mServiceClass == SERVICE_CLASS_ALL) {
+                    // It means this info matched video and audio class. And we need create two
+                    // info as video service class and audio service class.
+                    items.remove(getCFItem(info.mCondition, SERVICE_CLASS_VOICE));
+                    infos.add(cloneCFInfoEx(info, SERVICE_CLASS_VOICE, ruleset));
+                    items.remove(getCFItem(info.mCondition, SERVICE_CLASS_VIDEO));
+                    infos.add(cloneCFInfoEx(info, SERVICE_CLASS_VIDEO, ruleset));
+                    Log.d(TAG, "Found CF info for condition[" + info.mCondition + "].");
+                } else {
+                    // It means this info only matched one service class.
+                    int newServiceClass =
+                            isAllSerClass(serviceClass) ? info.mServiceClass : serviceClass;
+                    items.remove(getCFItem(info.mCondition, newServiceClass));
+                    infos.add(cloneCFInfoEx(info, newServiceClass, ruleset));
+                    Log.d(TAG, "Found CF info for condition[" + info.mCondition
+                            + "] serviceClass[" + newServiceClass + "].");
+                }
             }
         }
 
-        if (matchedInfo != null) {
-            Log.d(TAG, "Found the matched CF info: " + matchedInfo);
-            return matchedInfo;
+        if (items.size() > 0) {
+            for (String item : items) {
+                // Do not found the matched CF info, we'd like to give the result as deactivate
+                int[] temp = getInfoFromItem(item);
+                ImsCallForwardInfoEx newInfo = new ImsCallForwardInfoEx();
+                newInfo.mToA = 0x81; // 0x81 means Unknown.
+                newInfo.mTimeSeconds = 20;
+                newInfo.mCondition = temp[0];
+                newInfo.mServiceClass = temp[1];
+                newInfo.mNumber = number;
+                newInfo.mStatus = 0; // Set it as deactivate
+                newInfo.mNumberType = 0;
+                newInfo.mRuleset = ruleset;
+                Log.d(TAG, "Build the deactive CF infoEx: " + newInfo);
+                infos.add(newInfo);
+            }
+        }
+
+        if (infos.size() <= 0) {
+            Log.w(TAG, "Do not find any CF info. Please check!");
+            return null;
+        }
+
+        ImsCallForwardInfoEx[] res = new ImsCallForwardInfoEx[infos.size()];
+        infos.toArray(res);
+        return res;
+    }
+
+    private ArrayList<String> getCFContainsItems(int condition, int serviceClass) {
+        // Build the condition list.
+        ArrayList<Integer> conditionList = new ArrayList<Integer>();
+        if (condition == ImsUtInterface.CDIV_CF_ALL
+                || condition == ImsUtInterface.CDIV_CF_ALL_CONDITIONAL) {
+            // If the condition is CF_ALL, it means we need give all the condition result.
+            if (condition == ImsUtInterface.CDIV_CF_ALL) {
+                conditionList.add(Integer.valueOf(ImsUtInterface.CDIV_CF_UNCONDITIONAL));
+            }
+            conditionList.add(Integer.valueOf(ImsUtInterface.CDIV_CF_BUSY));
+            conditionList.add(Integer.valueOf(ImsUtInterface.CDIV_CF_NO_REPLY));
+            conditionList.add(Integer.valueOf(ImsUtInterface.CDIV_CF_NOT_REACHABLE));
+            conditionList.add(Integer.valueOf(ImsUtInterface.CDIV_CF_NOT_LOGGED_IN));
         } else {
-            // Do not found the matched CF info, we'd like to give the result as deactivate.
-            ImsCallForwardInfo newInfo = new ImsCallForwardInfo();
-            newInfo.mToA = 0x81; // 0x81 means Unknown.
-            newInfo.mTimeSeconds = 20;
-            newInfo.mCondition = condition;
-            newInfo.mServiceClass = serviceClass;
-            newInfo.mNumber = number;
-            newInfo.mStatus = 0; // Set it as deactivate
-            Log.d(TAG, "Build the CF info: " + newInfo);
-            return newInfo;
+            conditionList.add(Integer.valueOf(condition));
+        }
+
+        // Build the service class list.
+        ArrayList<Integer> serviceClassList = new ArrayList<Integer>();
+        if (isAllSerClass(serviceClass)) {
+            serviceClassList.add(Integer.valueOf(SERVICE_CLASS_VOICE));
+            serviceClassList.add(Integer.valueOf(SERVICE_CLASS_VIDEO));
+        } else {
+            serviceClassList.add(serviceClass);
+        }
+
+        // Build the keys.
+        ArrayList<String> keyList = new ArrayList<String>();
+        for (Integer cond : conditionList) {
+            for (Integer serClass : serviceClassList) {
+                keyList.add(getCFItem(cond, serClass));
+            }
+        }
+
+        Log.d(TAG, "The CF must contains items size is: " + keyList.size());
+        return keyList;
+    }
+
+    private String getCFItem(Integer condition, Integer serviceClass) {
+        return condition + "," + serviceClass;
+    }
+
+    private int[] getInfoFromItem(String key) {
+        String[] temp = key.split(",");
+        return new int[] { Integer.valueOf(temp[0]), Integer.valueOf(temp[1]) };
+    }
+
+    private boolean isCFConditionMatched(int queryCondition, int infoCondition) {
+        if (queryCondition == ImsUtInterface.CDIV_CF_ALL) {
+            // If the query condition is CF_ALL, set it as matched.
+            return true;
+        } else if (queryCondition == ImsUtInterface.CDIV_CF_ALL_CONDITIONAL
+                && infoCondition != ImsUtInterface.CDIV_CF_UNCONDITIONAL) {
+            // If the query condition is CF_ALL_CONDITIONAL, and info condition
+            // isn't UNCONDITIONAL, set it as matched.
+            return true;
+        } else {
+            return queryCondition == infoCondition;
         }
     }
 
-    private ImsCallForwardInfoEx findCallForwardInfoEx(ArrayList<ImsCallForwardInfo> infoList,
-            int condition, String number, int serviceClass, String ruleset) {
-        // TODO ruleset removed on 7.0
-
-        ImsCallForwardInfo matchedInfo = null;
+    private ImsCallForwardInfoEx cloneCFInfoEx(ImsCallForwardInfo info, int serviceClass,
+            String ruleset) {
         ImsCallForwardInfoEx newInfo = new ImsCallForwardInfoEx();
-        for (ImsCallForwardInfo info : infoList) {
-            if (info.mCondition == condition
-                    && (TextUtils.isEmpty(number) || number.equals(info.mNumber))
-                    && (serviceClass < 0 || (serviceClass & info.mServiceClass) > 0)) {
-                matchedInfo = info;
-            }
-        }
-
-        if (matchedInfo != null) {
-            Log.d(TAG, "Found the matched CF infoEx: " + matchedInfo);
-            newInfo.mToA = matchedInfo.mToA; // 0x81 means Unknown.
-            newInfo.mTimeSeconds = matchedInfo.mTimeSeconds;
-            newInfo.mCondition = matchedInfo.mCondition;
-            newInfo.mServiceClass = matchedInfo.mServiceClass;
-            newInfo.mNumber = matchedInfo.mNumber;
-            newInfo.mStatus = matchedInfo.mStatus; // Set it as deactivate
-            newInfo.mNumberType = 0;
-            newInfo.mRuleset = ruleset;
-            Log.d(TAG, "Build the CF infoEx: " + newInfo);
-            return newInfo;
-        } else {
-            // Do not found the matched CF info, we'd like to give the result as deactivate
-            newInfo.mToA = 0x81; // 0x81 means Unknown.
-            newInfo.mTimeSeconds = 20;
-            newInfo.mCondition = condition;
-            newInfo.mServiceClass = serviceClass;
-            newInfo.mNumber = number;
-            newInfo.mStatus = 0; // Set it as deactivate
-            newInfo.mNumberType = 0;
-            newInfo.mRuleset = ruleset;
-            Log.d(TAG, "Build the CF infoEx: " + newInfo);
-            return newInfo;
-        }
+        newInfo.mToA = info.mToA;
+        newInfo.mTimeSeconds = info.mTimeSeconds;
+        newInfo.mCondition = info.mCondition;
+        newInfo.mServiceClass = serviceClass;
+        newInfo.mNumber = info.mNumber;
+        newInfo.mStatus = info.mStatus; // Set it as deactivate
+        newInfo.mNumberType = 0;
+        newInfo.mRuleset = ruleset;
+        return newInfo;
     }
 
     private int[] findCallBarringInfo(ArrayList<CallBarringInfo> infoList, int condition,
@@ -1003,6 +1094,10 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
 
         return ImsUtInterface.INVALID;
+    }
+
+    private boolean isAllSerClass(int serviceClass) {
+        return serviceClass != SERVICE_CLASS_VOICE && serviceClass != SERVICE_CLASS_VIDEO;
     }
 
     private class CmdManager {
@@ -1139,49 +1234,48 @@ public class ImsUtImpl extends IImsUt.Stub {
 
                 Integer key = mCmds.getFirst();
                 UTAction action = mUTActions.get(key);
-                ImsCallForwardInfo info = null;
-                ImsCallForwardInfoEx infoEx = null;
-                Log.d(TAG, "action._action is: " + action._action);
+                Log.d(TAG, "Query CF finished, action._action is: " + action._action);
                 if (action._action == MSG_ACTION_QUERY_CALL_FORWARD) {
-                    info = findCallForwardInfo(callForwardInfos,
-                            (Integer) action._params.get(0), // condition
-                            (String) action._params.get(1), // number
-                            -1, // For query call forward action, do not give the service class
-                            null);
-                    if (info != null) {
+                    ImsCallForwardInfo[] infos = getFromEx(
+                            findCallForwardInfoEx(callForwardInfos,
+                                    (Integer) action._params.get(0), // condition
+                                    (String) action._params.get(1), // number
+                                    SERVICE_CLASS_ALL,
+                                    null));
+                    if (infos != null) {
                         // Find the call forward info for this action.
-                        Log.d(TAG, "Success to query the call forward info: " + info);
+                        Log.d(TAG, "Success to query the call forward infos: " + infos);
                         if (mListener != null) {
                             mListener.utConfigurationCallForwardQueried(
-                                    ImsUtImpl.this, key, new ImsCallForwardInfo[] { info });
+                                    ImsUtImpl.this, key, infos);
                         }
                     } else {
                         // Can not find the call forward info for this action.
                         Log.w(TAG, "Failed to query call forward as can not found matched item.");
                         if (mListener != null) {
-                            mListener.utConfigurationQueryFailed(ImsUtImpl.this, key,
-                                    new ImsReasonInfo());
+                            mListener.utConfigurationQueryFailed(
+                                    ImsUtImpl.this, key, new ImsReasonInfo());
                         }
                     }
                 } else if (action._action == MSG_ACTION_QUERY_CALL_FORWARDING_OPTION) {
-                    infoEx = findCallForwardInfoEx(callForwardInfos,
-                            getConditionFromCFReason((Integer) action._params.get(0)), null,
-                            (Integer) action._params.get(1), (String) action._params.get(2));
-                    if (infoEx != null) {
+                    ImsCallForwardInfoEx[] infoExs = findCallForwardInfoEx(callForwardInfos,
+                            getConditionFromCFReason((Integer) action._params.get(0)),
+                            null,
+                            (Integer) action._params.get(1),
+                            (String) action._params.get(2));
+                    if (infoExs != null && infoExs.length > 0) {
                         // Find the call forward info for this action.
-                        Log.d(TAG, "Success to query the call forward infoEx: " + infoEx);
+                        Log.d(TAG, "Success to query the call forward infoExs: " + infoExs);
                         if (mListenerEx != null) {
-                            mListenerEx.utConfigurationCallForwardQueried(ImsUtImpl.this, key,
-                                    new ImsCallForwardInfoEx[] {
-                                            infoEx
-                                    });
+                            mListenerEx.utConfigurationCallForwardQueried(
+                                    ImsUtImpl.this, key, infoExs);
                         }
                     } else {
                         // Can not find the call forward info for this action.
                         Log.w(TAG, "Failed to query call forward as can not found matched item.");
                         if (mListenerEx != null) {
-                            mListenerEx.utConfigurationQueryFailed(ImsUtImpl.this, key,
-                                    new ImsReasonInfo());
+                            mListenerEx.utConfigurationQueryFailed(
+                                    ImsUtImpl.this, key, new ImsReasonInfo());
                         }
                     }
                 } else {
