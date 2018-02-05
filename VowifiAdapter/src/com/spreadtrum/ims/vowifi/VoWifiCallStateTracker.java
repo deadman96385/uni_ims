@@ -87,6 +87,10 @@ public class VoWifiCallStateTracker {
         return mDriection;
     }
 
+    public boolean isMOCall() {
+        return mDriection == SRVCCSyncInfo.CallDirection.MO;
+    }
+
     public int getSRVCCCallHoldState() {
         if (mRequestAction == ACTION_HOLD
                 && (mActionResponse == JSONUtils.EVENT_CODE_CALL_HOLD_OK

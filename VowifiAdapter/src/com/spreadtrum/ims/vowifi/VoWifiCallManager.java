@@ -523,7 +523,10 @@ public class VoWifiCallManager extends ServiceManager {
                     mListener.onExitECBM();
                 }
 
-                mListener.onCallEnd(callSession);
+                if (callSession.isUserAcknowledge()) {
+                    // If the user acknowledge the call, notify the call end event.
+                    mListener.onCallEnd(callSession);
+                }
             }
 
             // After remove the session, if the session list is empty, we need stop the audio.
@@ -1019,7 +1022,10 @@ public class VoWifiCallManager extends ServiceManager {
             callSession.reject(ImsReasonInfo.CODE_USER_DECLINE);
         } else {
             // Send the incoming call callback.
-            if (mListener != null) mListener.onCallIncoming(callSession);
+            if (mListener != null) {
+                mListener.onCallIncoming(callSession);
+                callSession.incomingNotified();
+            }
 
             IImsCallSessionListener listener = callSession.getListener();
             if (listener != null) {

@@ -66,6 +66,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsConfHost = false;
     private boolean mAudioStart = false;
     private boolean mIsEmergency = false;
+    private boolean mIsIncomingNotify = false;
+
     private String mPrimaryCallee = null;
     private String mSecondaryCallee = null;
 
@@ -1934,6 +1936,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         } catch (RemoteException e) {
             Log.e(TAG, "Can not terminate the call as catch the RemoteException: " + e);
         }
+    }
+
+    public void incomingNotified() {
+        mIsIncomingNotify = true;
+    }
+
+    public boolean isUserAcknowledge() {
+        // If the call is MO, the user should be acknowledged it.
+        return mCallStateTracker.isMOCall() || mIsIncomingNotify;
     }
 
     public void processNoResponseAction() {

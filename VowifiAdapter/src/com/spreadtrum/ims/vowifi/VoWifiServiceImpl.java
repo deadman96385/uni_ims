@@ -518,7 +518,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         SecurityConfig securityConfir = mSecurityMgr.getConfig(mSubId, s2bType);
         if (securityConfir == null) {
             Log.e(mTag, "Before register, need attach success, please check the attach state!");
-            if (mCallback != null) mCallback.onReregisterFinished(false, 0);
+            registerFailed();
             return;
         }
 
@@ -910,11 +910,12 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             }
 
             if (mCallMgr.getCallCount() < 1 && mCallback != null) {
+                Log.d(mTag, "The call[" + callSession + "] end, and there isn't any other call.");
                 mCallback.onAllCallsEnd();
+
                 // Check if need reset after all the calls end.
                 if (mNeedLogoutAfterCall) {
                     mNeedLogoutAfterCall = false;
-
                     // Notify as register logout.
                     registerLogout(0);
                 }
