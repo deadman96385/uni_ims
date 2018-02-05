@@ -1,6 +1,7 @@
 package com.spreadtrum.ims;
 
 
+import android.telephony.Rlog;
 import android.util.Log;
 
 import com.android.internal.telephony.ATParseEx;
@@ -344,7 +345,8 @@ public class  ImsDriverCall extends DriverCall{
                 + "numberType="+mptyState+" ,"
                 + "numberType="+numberType + ","
                 + "toa=" + TOA + ","
-                + "number=" + number
+                //SPRD：encryption　for number, Bug#823616
+                + "number=" + Rlog.pii(LOG_TAG, number)
                 + "prioritypresent="+prioritypresent + ","
                 + "priority="+priority + ","
                 + "cliValidityPresent="+cliValidityPresent + ","
