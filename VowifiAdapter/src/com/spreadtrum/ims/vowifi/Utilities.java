@@ -189,7 +189,23 @@ public class Utilities {
             return false;
         }
 
-        return PhoneNumberUtils.compare(calleeNumber, phoneNumber);
+        if (PhoneNumberUtils.compare(calleeNumber, phoneNumber)) {
+            return true;
+        } else {
+            if (phoneNumber.indexOf(calleeNumber) >= 0
+                    || calleeNumber.indexOf(phoneNumber) >= 0) {
+                return true;
+            } else if (calleeNumber.startsWith("0")) {
+                // Sometimes, the phone number will be start will 0, we'd like to sub the string.
+                String tempCallee = calleeNumber.substring(1);
+                if (phoneNumber.indexOf(tempCallee) >= 0
+                        || tempCallee.indexOf(phoneNumber) >= 0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     // This defined is match the error used by CM. Please do not change.
@@ -383,16 +399,6 @@ public class Utilities {
                         + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: "
                         + pcscfIPv6 + ", usedPcscfAddr: " + usedPcscfAddr + ", dns4: " + dns4
                         + ", dns6: " + dns6);
-            }
-
-            if ((TextUtils.isEmpty(localIPv4) || TextUtils.isEmpty(pcscfIPv4))
-                    && (TextUtils.isEmpty(localIPv6) || TextUtils.isEmpty(pcscfIPv6))
-                    && TextUtils.isEmpty(usedPcscfAddr)) {
-                Log.e(TAG,
-                        "Can not get the ip address: localIPv4: " + localIPv4 + ", localIPv6: "
-                                + localIPv6 + ", pcscfIPv4: " + pcscfIPv4 + ", pcscfIPv6: "
-                                + pcscfIPv6 + ", usedPcscfAddr: " + usedPcscfAddr);
-                return null;
             }
 
             String[] pcscfIPv4s =
