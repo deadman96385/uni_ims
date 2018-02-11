@@ -44,6 +44,9 @@ import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.CallManager;
 import com.android.internal.telephony.Call;
 
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
+import com.android.internal.telephony.TelephonyIntents;
 import com.android.ims.ImsException;
 import com.android.ims.ImsManager;
 import com.android.ims.ImsReasonInfo;
@@ -248,6 +251,7 @@ public class ImsService extends Service {
     private int mCallEndType = -1;
     private int mInCallPhoneId = -1;
     private NotificationChannel mVowifiChannel;
+    private int mMakeCallPrimaryCardServiceId = -1;
     private class ImsServiceRequest {
         public int mRequestId;
         public int mEventCode;
@@ -1168,7 +1172,12 @@ public class ImsService extends Service {
                             }
                         }
                     }
+                }else {
+                    //SPRD: add for bug825528
+                    if (mMakeCallPrimaryCardServiceId != -1)
+                        mMakeCallPrimaryCardServiceId = -1;
                 }
+
                 updateInCallState(isInCall);
                 iLog("onCallStateChanged->isInCall:" + isInCall
                         + " mIsWifiCalling:" + mIsWifiCalling
@@ -1178,6 +1187,11 @@ public class ImsService extends Service {
         mTelephonyManager.listen(mPhoneStateListener,
                 PhoneStateListener.LISTEN_CALL_STATE);
         createNotificationChannel();// SPRD: modify for bug762807
+        //SPRD: add for bug825528
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(TelephonyIntents.ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED);
+        intentFilter.setPriority(Integer.MAX_VALUE);
+        this.registerReceiver(mReceiver, intentFilter);
     }
 
     public NotificationChannel createNotificationChannel(){// SPRD: modify for bug762807
@@ -1246,6 +1260,10 @@ public class ImsService extends Service {
                                                                            // router
         }
         Log.e(TAG, "createCallSession-> startVoLteCall");
+        //SPRD: add for bug825528
+        if(mTelephonyManagerEx.getDataEnabledDuringVolteCall()) {
+            mMakeCallPrimaryCardServiceId = ImsRegister.getPrimaryCard(mPhoneCount);
+        }
         return service.createCallSession(serviceId, profile, listener);
     }
 
@@ -1271,6 +1289,10 @@ public class ImsService extends Service {
                     serviceId));
             if (service.getPendingCallSession(callId) != null) {
                 Log.i(TAG, "Volte unknow call");
+                //SPRD: add for bug825528
+                if(mTelephonyManagerEx.getDataEnabledDuringVolteCall()) {
+                    mMakeCallPrimaryCardServiceId = ImsRegister.getPrimaryCard(mPhoneCount);
+                }
                 mIsVolteCall = true;
                 return service.getPendingCallSession(callId);
             }
@@ -1284,6 +1306,10 @@ public class ImsService extends Service {
         }// SPRD:modify by bug650141
         if ((isVoLTEEnabled() || service.getPendingCallSession(callId) != null)
                 && !mIsVowifiCall && !mIsVolteCall) {
+            //SPRD: add for bug825528
+            if(mTelephonyManagerEx.getDataEnabledDuringVolteCall()) {
+                mMakeCallPrimaryCardServiceId = ImsRegister.getPrimaryCard(mPhoneCount);
+            }
             mIsVolteCall = true;
         }
         Log.i(TAG,
@@ -2772,7 +2798,9 @@ public class ImsService extends Service {
         public void onSessionEmpty(int serviceId) {
             ImsServiceImpl impl = mImsServiceImplMap.get(Integer
                     .valueOf(serviceId));
-            if ((serviceId - 1) == ImsRegister.getPrimaryCard(mPhoneCount)) {
+            //SPRD: Modify for bug825528
+            if((!mTelephonyManagerEx.getDataEnabledDuringVolteCall() && (serviceId - 1) == ImsRegister.getPrimaryCard(mPhoneCount))
+                    || (mTelephonyManagerEx.getDataEnabledDuringVolteCall() && (serviceId-1) == mMakeCallPrimaryCardServiceId)){
                 /* SPRD: Add for bug586758 and 595321{@ */
                 if (impl != null) {
                     if (impl.isVolteSessionListEmpty()
@@ -2858,6 +2886,9 @@ public class ImsService extends Service {
                 }
                 /* @} */
             }
+            //SPRD: add for bug825528
+            if(mMakeCallPrimaryCardServiceId != -1)
+                mMakeCallPrimaryCardServiceId = -1;
         }
     }
 
@@ -3586,4 +3617,20 @@ public class ImsService extends Service {
              Toast.makeText(ImsService.this, R.string.handover_to_volte_success,Toast.LENGTH_SHORT).show();
          }
     }
+
+    //SPRD: add for bug825528
+    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if ((TelephonyIntents.ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED).equals(action)) {
+                int primaryPhoneId = ImsRegister.getPrimaryCard(mPhoneCount);
+                ImsServiceImpl imsService = mImsServiceImplMap.get(Integer
+                        .valueOf(primaryPhoneId +1));
+                if(isImsEnabled() && imsService != null && !imsService.isImsEnabled()) {
+                    mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                    Log.i(TAG,"ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED, clear mCurrentImsFeature." );
+                }
+            }
+        }
+    };
 }
