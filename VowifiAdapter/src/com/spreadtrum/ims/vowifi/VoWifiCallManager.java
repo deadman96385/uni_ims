@@ -32,7 +32,6 @@ import com.spreadtrum.ims.vowifi.Utilities.CallStateForDataRouter;
 import com.spreadtrum.ims.vowifi.Utilities.ECBMRequest;
 import com.spreadtrum.ims.vowifi.Utilities.EMUtils;
 import com.spreadtrum.ims.vowifi.Utilities.JSONUtils;
-import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.RegisterState;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.SRVCCResult;
@@ -67,9 +66,6 @@ public class VoWifiCallManager extends ServiceManager {
 
     private static final String TAG = Utilities.getTag(VoWifiCallManager.class.getSimpleName());
 
-    private static final int MSG_ACTION_START_AUDIO_STREAM = 1;
-    private static final int MSG_ACTION_STOP_AUDIO_STREAM  = 2;
-
     private static final int CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED = 150;
 
     private static final String SERVICE_CLASS = Utilities.SERVICE_PACKAGE + ".service.CallService";
@@ -96,7 +92,7 @@ public class VoWifiCallManager extends ServiceManager {
     private static final int MSG_HANDLE_EVENT = 0;
     private static final int MSG_INVITE_CALL = 1;
     private static final int MSG_RELEASE_CALL = 2;
-
+    private static final int MSG_AUTO_ANSWER = 3;
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -119,6 +115,9 @@ public class VoWifiCallManager extends ServiceManager {
                             Log.e(TAG, "Failed to handle release call as catch e: " + e);
                         }
                     }
+                    break;
+                case MSG_AUTO_ANSWER:
+                    answerCall((ImsCallSessionImpl) msg.obj);
                     break;
             }
         }
@@ -265,24 +264,6 @@ public class VoWifiCallManager extends ServiceManager {
         }
     }
 
-    @Override
-    protected boolean handlePendingAction(Message msg) {
-        if (Utilities.DEBUG) Log.i(TAG, "Handle the pending action, msg: " + msg);
-
-        boolean handle = false;
-        switch (msg.what) {
-            case MSG_ACTION_START_AUDIO_STREAM: {
-                startAudioStream();
-                break;
-            }
-            case MSG_ACTION_STOP_AUDIO_STREAM: {
-                stopAudioStream();
-                break;
-            }
-        }
-        return handle;
-    }
-
     public void registerListener(CallListener listener) {
         if (listener == null) {
             Log.e(TAG, "Can not register the listener as it is null.");
@@ -341,6 +322,14 @@ public class VoWifiCallManager extends ServiceManager {
             Log.d(TAG, "Terminate the call: " + callSession);
             callSession.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
             handleCallTermed(callSession, ImsReasonInfo.CODE_USER_TERMINATED);
+        }
+    }
+
+    public void updateCallsRatType(int type) {
+        if (Utilities.DEBUG) Log.i(TAG, "Try to update all the calls' type to: " + type);
+
+        for (ImsCallSessionImpl callSession : mSessionList) {
+            callSession.updateCallRatType(type);
         }
     }
 
@@ -435,9 +424,6 @@ public class VoWifiCallManager extends ServiceManager {
                 mICall.startAudioStream();
             } catch (RemoteException e) {
                 Log.e(TAG, "Catch the remote exception when start the audio stream, e: " + e);
-                // The start action is failed, need add this action to pending list.
-                addToPendingList(
-                        new PendingAction("startAudioStream", MSG_ACTION_START_AUDIO_STREAM));
             }
         }
     }
@@ -458,18 +444,12 @@ public class VoWifiCallManager extends ServiceManager {
         }
 
         Log.d(TAG, "There isn't any call use the audio stream, need stop audio stream now.");
-        boolean handle = false;
         if (mICall != null) {
             try {
                 mICall.stopAudioStream();
-                handle = true;
             } catch (RemoteException e) {
                 Log.e(TAG, "Catch the remote exception when stop the audio stream, e: " + e);
             }
-        }
-        if (!handle) {
-            // The stop action is failed, need add this action to pending list.
-            addToPendingList(new PendingAction("stopAudioStream", MSG_ACTION_STOP_AUDIO_STREAM));
         }
     }
 
@@ -746,6 +726,53 @@ public class VoWifiCallManager extends ServiceManager {
         }
     }
 
+    private void answerCall(ImsCallSessionImpl callSession) {
+        Log.d(TAG, "Auto answer the call: " + callSession);
+
+        if (callSession == null) {
+            Log.e(TAG, "Failed to answer the call as it is null.");
+            return;
+        }
+
+        // To check the current call count.
+        // 1. If there isn't any call, we could answer it immediately.
+        // 2. If there is only one active call, we need hold the active call first.
+        // 3. If there are two calls, need terminate the hold call, and hold the active call first.
+        try {
+            switch (getCallCount()) {
+                case 1:
+                    // There is one call, it should be the new incoming call.
+                    callSession.autoAnswer();
+                    break;
+                case 2:
+                    // Hold the active call.
+                    ImsCallSessionImpl aliveCall = getAliveCallSession();
+                    aliveCall.hold(aliveCall.getHoldMediaProfile());
+
+                    // Answer the incoming call.
+                    callSession.autoAnswer();
+                    break;
+                case 3:
+                    for (ImsCallSessionImpl call : mSessionList) {
+                        if (!call.isAlive()) {
+                            // Terminate the hold call.
+                            call.terminate(ImsReasonInfo.CODE_USER_TERMINATED);
+                        } else if (call != callSession) {
+                            // It is the active call, hold it.
+                            call.hold(call.getHoldMediaProfile());
+                        }
+                    }
+                    callSession.autoAnswer();
+                    break;
+                default:
+                    Log.e(TAG, "Shouldn't be here, the call count: " + getCallCount());
+                    break;
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to auto answer the call as catch the ex: " + e.toString());
+        }
+    }
+
     private void handleEvent(String json) {
         try {
             JSONObject jObject = new JSONObject(json);
@@ -965,9 +992,11 @@ public class VoWifiCallManager extends ServiceManager {
             // We need set the callee as the new phone number, and notify the update.
             newCallProfile = callSession.setCallee(phoneNumber);
         }
+
         IImsCallSessionListener listener = callSession.getListener();
         if (listener != null) {
             listener.callSessionProgressing(callSession, mediaProfile);
+
             if (newCallProfile != null) {
                 String oi = newCallProfile.getCallExtra(ImsCallProfile.EXTRA_OI);
                 Log.d(TAG, "Update the callee as EXTRA_OI to " + oi);
@@ -1027,15 +1056,10 @@ public class VoWifiCallManager extends ServiceManager {
                 callSession.incomingNotified();
             }
 
-            IImsCallSessionListener listener = callSession.getListener();
-            if (listener != null) {
-                listener.callSessionProgressing(callSession, callSession.getMediaProfile());
-            }
-
             // If the user enable the auto answer prop, we need answer this call immediately.
             boolean isAutoAnswer = SystemProperties.getBoolean(PROP_KEY_AUTO_ANSWER, false);
             if (isAutoAnswer) {
-                callSession.accept(callProfile.mCallType, mediaProfile);
+                mHandler.sendMessage(mHandler.obtainMessage(MSG_AUTO_ANSWER, callSession));
             }
         }
     }
@@ -1227,6 +1251,7 @@ public class VoWifiCallManager extends ServiceManager {
 
         // The new call type is different from the old call type. Update the call type.
         callSession.updateCallType(newCallType);
+
         if (videoCallProvider.isWaitForModifyResponse()) {
             int oldVideoType = VideoType.getNativeVideoType(oldCallType);
             if (oldVideoType < newVideoType) {
@@ -1481,6 +1506,7 @@ public class VoWifiCallManager extends ServiceManager {
             }
         }
     }
+
     private void handleVoiceCodecNegociated(ImsCallSessionImpl callSession, String codecName) {
         if (Utilities.DEBUG) Log.i(TAG, "Handle the voice codec negociated.");
         if (callSession == null || TextUtils.isEmpty(codecName)) {

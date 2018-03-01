@@ -36,7 +36,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.spreadtrum.ims.ImsService;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl;
-import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.DataRouterState;
+import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.CallRatState;
 
 import com.android.ims.ImsReasonInfo;
 import android.os.SystemProperties;
@@ -182,7 +182,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                     + " isVoLTEEnabled(): " + mImsService.isVoLTEEnabled());
             if (mImsService.isVoLTEEnabled() && !mImsService.isVowifiCall() && !mImsService.isVolteCall()) {
                 mImsService.updateInCallState(true);
-                mWifiService.updateDataRouterState(DataRouterState.CALL_VOLTE);
+                mWifiService.updateCallRatState(CallRatState.CALL_VOLTE);
             }
             /*@}*/
             mIncomingCallIntent.send(mContext, ImsManager.INCOMING_CALL_RESULT_CODE,intent);
