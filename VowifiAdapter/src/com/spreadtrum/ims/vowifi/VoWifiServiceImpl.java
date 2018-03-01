@@ -11,6 +11,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
+import android.telephony.ServiceState;
 import android.util.Log;
 
 import com.android.ims.ImsCallProfile;
@@ -89,7 +90,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     protected static final int MSG_REGISTER = 6;
     protected static final int MSG_DEREGISTER = 7;
     protected static final int MSG_REREGISTER = 8;
-    protected static final int MSG_UPDATE_DATAROUTER_STATE = 9;
+    protected static final int MSG_UPDATE_CALL_RAT_STATE = 9;
     protected static final int MSG_TERMINATE_CALLS = 10;
     protected static final int MSG_ECBM = 11;
     protected static final int MSG_ECBM_TIMEOUT = 12;
@@ -143,12 +144,17 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     String info = (String) msg.obj;
                     reRegisterInternal(type, info);
                     break;
-                case MSG_UPDATE_DATAROUTER_STATE:
-                    int state = msg.arg1;
-                    if (mCallMgr != null) {
-                        mCallMgr.updateDataRouterState(state);
-                    }
+                case MSG_UPDATE_CALL_RAT_STATE:
+                    // Update the data router state.
+                    int dataRouterState = msg.arg1;
+                    if (mCallMgr != null) mCallMgr.updateDataRouterState(dataRouterState);
                     if (mCallback != null) mCallback.onUpdateDRStateFinished();
+
+                    // Update the calls' rat type.
+                    int ratType = msg.arg2;
+                    if (ratType > ServiceState.RIL_RADIO_TECHNOLOGY_UNKNOWN && mCallMgr != null) {
+                        mCallMgr.updateCallsRatType(ratType);
+                    }
                     break;
                 case MSG_TERMINATE_CALLS:
                     WifiState wifiState = (WifiState) msg.obj;
@@ -672,28 +678,33 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         if (mCallMgr != null) mCallMgr.updateIncomingCallAction(action);
     }
 
-    public void updateDataRouterState(DataRouterState dataRouterState) {
-        if (dataRouterState == null) {
-            throw new NullPointerException("The data router state couldn't be null.");
+    public void updateCallRatState(CallRatState state) {
+        if (state == null) {
+            throw new NullPointerException("The call rat type couldn't be null.");
         }
 
-        Message msg = mHandler.obtainMessage(MSG_UPDATE_DATAROUTER_STATE);
-        int delay = 0;
-        switch (dataRouterState) {
+        int callStateForDataRouter = CallStateForDataRouter.NONE;
+        int callRatType = ServiceState.RIL_RADIO_TECHNOLOGY_UNKNOWN;
+        int updateDataRouterDelay = 0;
+        switch (state) {
             case CALL_VOLTE:
-                msg.arg1 = CallStateForDataRouter.VOLTE;
+                callStateForDataRouter = CallStateForDataRouter.VOLTE;
+                callRatType = ServiceState.RIL_RADIO_TECHNOLOGY_LTE;
                 break;
             case CALL_VOWIFI:
-                msg.arg1 = CallStateForDataRouter.VOWIFI;
+                callStateForDataRouter = CallStateForDataRouter.VOWIFI;
+                callRatType = ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN;
                 break;
             case CALL_NONE:
-                msg.arg1 = CallStateForDataRouter.NONE;
+                callStateForDataRouter = CallStateForDataRouter.NONE;
                 // For call none state will be delay 1s, and it is caused by sometimes the "BYE"
                 // can not be sent successfully as data router switch after this state update.
-                delay = 1000; // 1s
+                updateDataRouterDelay = 1000; // 1s
                 break;
         }
-        mHandler.sendMessageDelayed(msg, delay);
+
+        mHandler.sendMessageDelayed(mHandler.obtainMessage(MSG_UPDATE_CALL_RAT_STATE,
+                callStateForDataRouter, callRatType), updateDataRouterDelay);
     }
 
     public void setUsedLocalAddr(String addr) {
@@ -1313,7 +1324,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         CONNECTED, DISCONNECTED
     }
 
-    public enum DataRouterState {
+    public enum CallRatState {
         CALL_VOLTE, CALL_VOWIFI, CALL_NONE
     }
 

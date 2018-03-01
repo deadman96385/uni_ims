@@ -79,7 +79,7 @@ import com.android.ims.internal.IImsFeatureStatusCallback;
 import com.spreadtrum.ims.vowifi.Utilities.RegisterState;
 import com.spreadtrum.ims.vowifi.Utilities.SecurityConfig;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl;
-import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.DataRouterState;
+import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.CallRatState;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.IncomingCallAction;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.VoWifiCallback;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.WifiState;
@@ -368,7 +368,7 @@ public class ImsService extends Service {
                                 if (mIsCalling) {
                                     mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
                                     updateImsFeature(mFeatureSwitchRequest.mServiceId);
-                                    mWifiService.updateDataRouterState(DataRouterState.CALL_VOWIFI);
+                                    mWifiService.updateCallRatState(CallRatState.CALL_VOWIFI);
                                     mIsPendingRegisterVowifi = true;
                                     if (mImsServiceListenerEx != null) {
                                         Log.i(TAG,
@@ -400,7 +400,7 @@ public class ImsService extends Service {
                                     }
                                     mPendingAttachVowifiSuccess = false;
                                     mWifiService
-                                            .updateDataRouterState(DataRouterState.CALL_NONE);
+                                            .updateCallRatState(CallRatState.CALL_NONE);
                                 }
                                 Log.i(TAG,
                                         "EVENT_WIFI_ATTACH_SUCCESSED ->mFeatureSwitchRequest.mEventCode:"
@@ -447,7 +447,7 @@ public class ImsService extends Service {
                                         && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER) {
                                     mPendingAttachVowifiSuccess = false;
                                     mWifiService
-                                            .updateDataRouterState(DataRouterState.CALL_NONE);
+                                            .updateCallRatState(CallRatState.CALL_NONE);
                                 }
                                 Log.i(TAG,
                                         "EVENT_WIFI_ATTACH_FAILED-> operationFailed, clear mFeatureSwitchRequest.");
@@ -542,7 +542,7 @@ public class ImsService extends Service {
                                             if (!mPendingAttachVowifiSuccess
                                                     && !mPendingActivePdnSuccess) {
                                                 mWifiService
-                                                        .updateDataRouterState(DataRouterState.CALL_NONE);
+                                                        .updateCallRatState(CallRatState.CALL_NONE);
                                             }
                                             if (mIsVowifiCall
                                                     && mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI
@@ -579,7 +579,7 @@ public class ImsService extends Service {
                                         mCallEndType = CallEndEvent.WIFI_CALL_END;
                                         mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
                                         mWifiService
-                                                .updateDataRouterState(DataRouterState.CALL_NONE);
+                                                .updateCallRatState(CallRatState.CALL_NONE);
                                     }
                                 }
                             }
@@ -891,7 +891,7 @@ public class ImsService extends Service {
                                             + mIsCalling);
                             if (!mIsCalling) {
                                 mWifiService
-                                        .updateDataRouterState(DataRouterState.CALL_NONE);
+                                        .updateCallRatState(CallRatState.CALL_NONE);
                             }
                         } else {
                             if (mImsServiceListenerEx != null) {
@@ -1235,7 +1235,7 @@ public class ImsService extends Service {
                 || mIsVowifiCall) {
             if (isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall) {
                 mIsVowifiCall = true;
-                mWifiService.updateDataRouterState(DataRouterState.CALL_VOWIFI); // Add
+                mWifiService.updateCallRatState(CallRatState.CALL_VOWIFI); // Add
                                                                                  // for
                                                                                  // data
                                                                                  // router
@@ -1251,7 +1251,7 @@ public class ImsService extends Service {
         }
         if (isVoLTEEnabled() && !mIsVowifiCall && !mIsVolteCall) {
             mIsVolteCall = true;
-            mWifiService.updateDataRouterState(DataRouterState.CALL_VOLTE);// Add
+            mWifiService.updateCallRatState(CallRatState.CALL_VOLTE);// Add
                                                                            // for
                                                                            // data
                                                                            // router
@@ -2854,7 +2854,7 @@ public class ImsService extends Service {
                         if (!mPendingAttachVowifiSuccess
                                 && !mPendingActivePdnSuccess) {
                             mWifiService
-                                    .updateDataRouterState(DataRouterState.CALL_NONE);
+                                    .updateCallRatState(CallRatState.CALL_NONE);
                         }
                         /* @} */
                         if (mIsVowifiCall) {
@@ -3129,7 +3129,7 @@ public class ImsService extends Service {
                         if (!mIsCalling && mPendingActivePdnSuccess) {
                             mPendingActivePdnSuccess = false;
                             mWifiService
-                                    .updateDataRouterState(DataRouterState.CALL_NONE);
+                                    .updateCallRatState(CallRatState.CALL_NONE);
                             Log.i(TAG,
                                     "onImsHandoverStateChange->ACTION_START_HANDOVER fail,mPendingActivePdnSuccess is true!");
                         }
@@ -3255,7 +3255,7 @@ public class ImsService extends Service {
                         && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER) {
                     mPendingActivePdnSuccess = false;
                     mWifiService
-                            .updateDataRouterState(DataRouterState.CALL_NONE);
+                            .updateCallRatState(CallRatState.CALL_NONE);
                 }
                 mFeatureSwitchRequest = null;
                 mIsPendingRegisterVolte = false;
@@ -3301,7 +3301,7 @@ public class ImsService extends Service {
                         mWifiService.deattach(true);
                         mPendingActivePdnSuccess = false;
                         mWifiService
-                                .updateDataRouterState(DataRouterState.CALL_VOLTE);
+                                .updateCallRatState(CallRatState.CALL_VOLTE);
                         if(mIsVolteCall){
                             ImsServiceImpl reportService = mImsServiceImplMap.get(
                                     Integer.valueOf(mFeatureSwitchRequest.mServiceId));
@@ -3334,7 +3334,7 @@ public class ImsService extends Service {
                         mWifiService.deattach(true);
                         mPendingActivePdnSuccess = false;
                         mWifiService
-                                .updateDataRouterState(DataRouterState.CALL_NONE);
+                                .updateCallRatState(CallRatState.CALL_NONE);
                     }
                     /* @} */
                 }
