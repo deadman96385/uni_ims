@@ -58,7 +58,7 @@ import com.spreadtrum.ims.data.ApnUtils;
 import com.android.internal.telephony.VolteConfig;
 import android.text.TextUtils;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl;
-import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.DataRouterState;
+import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.CallRatState;
 
 import com.android.ims.internal.IImsFeatureStatusCallback;
 import com.android.ims.internal.IImsMultiEndpoint;
@@ -986,7 +986,7 @@ public class ImsServiceImpl extends MMTelFeature {
                     + " isVoWifiEnabled(): " + mImsService.isVoWifiEnabled()
                     + " isVoLTEEnabled(): " + mImsService.isVoLTEEnabled());
             if (mImsService.isVoWifiEnabled() && !mImsService.isVowifiCall() && !mImsService.isVolteCall()) {
-                mWifiService.updateDataRouterState(DataRouterState.CALL_VOWIFI);
+                mWifiService.updateCallRatState(CallRatState.CALL_VOWIFI);
             }
             /*@}*/
             mIncomingCallIntent.send(mContext, ImsManager.INCOMING_CALL_RESULT_CODE,intent);

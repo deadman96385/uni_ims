@@ -1272,6 +1272,19 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
     }
 
+    public void updateCallRatType(int ratType) {
+        if (mCallProfile == null) return;
+
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE, String.valueOf(ratType));
+        try {
+            if (mListener != null) {
+                mListener.callSessionUpdated(this, mCallProfile);
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to update the call's rat type as catch the RemoteException e: " + e);
+        }
+    }
+
     public void updateVoiceQuality(boolean highQuality) {
         if (mCallProfile == null) return;
 
@@ -1977,6 +1990,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     public String getConfUSER() {
         return mPrimaryCallee + "@" + mCallId;
+    }
+
+    public void autoAnswer() throws RemoteException {
+        accept(mCallProfile.mCallType, mCallProfile.mMediaProfile);
     }
 
     private CallCursor getCallCursor() {
