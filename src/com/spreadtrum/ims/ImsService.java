@@ -428,7 +428,8 @@ public class ImsService extends Service {
                                 "EVENT_WIFI_ATTACH_FAILED-> mFeatureSwitchRequest:"
                                         + mFeatureSwitchRequest
                                         + " mAttachVowifiSuccess:"
-                                        + mAttachVowifiSuccess);
+                                        + mAttachVowifiSuccess
+                                        + " error code:"+ msg.arg1);
                         if (mImsServiceListenerEx != null) {
                             if (mFeatureSwitchRequest != null) {
                                 mImsServiceListenerEx
@@ -452,10 +453,8 @@ public class ImsService extends Service {
                                         "EVENT_WIFI_ATTACH_FAILED-> operationFailed, clear mFeatureSwitchRequest.");
                                 mIsPendingRegisterVowifi = false;
                                 mFeatureSwitchRequest = null;
-                                if (msg.arg1 == 53766 && !mIsCalling) {// SPRD: add
-                                                                       // for
-                                                                       // bug661375
-                                                                       // 661372
+                                if ((msg.arg1 == 53766 || msg.arg1 == 53765)&& !mIsCalling) {// SPRD: add
+                                                                       // for bug661375 661372 808280
                                     service.setIMSRegAddress(null);
                                 }
                             }
@@ -731,17 +730,15 @@ public class ImsService extends Service {
                                     "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> wifi state: "
                                             + msg.arg2);
 
-                            if (!mIsCalling) {
-                                ImsServiceImpl imsService = mImsServiceImplMap
-                                        .get(Integer.valueOf(ImsRegister
-                                                .getPrimaryCard(mPhoneCount) + 1));
-                                if (imsService != null) {
-                                    imsService.notifyVoWifiEnable(false);
-                                    mPendingCPSelfManagement = true;
-                                    Log.i(TAG,
-                                            "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:"
-                                                    + mPendingCPSelfManagement);
-                                }
+                            ImsServiceImpl imsService = mImsServiceImplMap
+                                    .get(Integer.valueOf(ImsRegister
+                                            .getPrimaryCard(mPhoneCount) + 1));
+                            if (imsService != null) {
+                                imsService.notifyVoWifiEnable(false);
+                                mPendingCPSelfManagement = true;
+                                Log.i(TAG,
+                                        "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:"
+                                                + mPendingCPSelfManagement);
                             }
                             if (mFeatureSwitchRequest != null) {
                                 mFeatureSwitchRequest = null;
@@ -1274,7 +1271,6 @@ public class ImsService extends Service {
                 + " mIsVolteCall: " + mIsVolteCall + " isVoWifiEnabled(): "
                 + isVoWifiEnabled() + " isVoLTEEnabled(): " + isVoLTEEnabled());
         mInCallPhoneId = serviceId - 1;// SPRD:add for bug635699
-        updateInCallState(true);
         /* SPRD: Modify for bug586758 and bug827022 {@ */
         boolean isPrimaryCard = ImsRegister.getPrimaryCard(mPhoneCount) == (serviceId-1);
         if ((isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall && isPrimaryCard)
