@@ -1161,6 +1161,10 @@ public class ImsServiceImpl extends MMTelFeature {
                             ImsServiceClass.MMTEL,mEnabledFeatures, mDisabledFeatures);
                 }
             }
+
+            //wifi capability caused by a handover for bug837323 { */
+            updateImsCallProfile(wifiEnable);
+
             if(mListener == null){
                 Log.w(TAG,"updateImsFeatures mListener is null!");
                 return;
@@ -1172,6 +1176,18 @@ public class ImsServiceImpl extends MMTelFeature {
             e.printStackTrace();
         }
     }
+
+    /* SPRD: wifi capability caused by a handover for bug837323 { */
+    public void updateImsCallProfile(boolean wifiEnable){
+        if(mImsServiceCallTracker != null){
+            mImsServiceCallTracker.updateImsCallProfile(wifiEnable);
+            Log.i(TAG," updateImsCallProfile->ok");
+        }else{
+            Log.i(TAG," updateImsCallProfile->mImsServiceCallTracker is null");
+        }
+    }
+    /*@}*/
+
     public int getVolteRegisterState() {
         Log.i(TAG,"getVolteRegisterState->VolteRegisterState:" + mImsServiceState.mRegState);
         return mImsServiceState.mRegState;

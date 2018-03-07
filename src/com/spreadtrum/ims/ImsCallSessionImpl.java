@@ -8,6 +8,7 @@ import java.util.Iterator;
 import com.android.internal.telephony.CommandsInterface;
 import com.spreadtrum.ims.ImsDriverCall;
 import com.android.internal.telephony.LastCallFailCause;
+import android.telephony.ServiceState;
 
 import com.android.ims.ImsStreamMediaProfile;
 import com.android.ims.ImsCallProfile;
@@ -1749,4 +1750,25 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         return mImsServiceCallTracker.isHasInLocalConferenceSession();
     }
     /* @} */
+
+    /* SPRD: add for bug837323 @{ */
+    public void updateImsCallProfile(boolean wifiEnable){
+        if(mImsCallProfile != null) {
+            if(wifiEnable) {
+                mImsCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE,
+                        String.valueOf(ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN));
+            } else {
+                mImsCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE,"");
+            }
+            try{
+                if(mIImsCallSessionListener != null){
+                    mIImsCallSessionListener.callSessionUpdated((IImsCallSession)this, mImsCallProfile);
+                }
+            } catch(RemoteException e){
+                e.printStackTrace();
+            }
+        }
+    }
+    /* @} */
+
 }
