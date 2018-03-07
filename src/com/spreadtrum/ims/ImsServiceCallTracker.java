@@ -787,6 +787,20 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         return isEmpty;
     }
 
+    /* SPRD: fix for bug837323 @{ */
+    public void updateImsCallProfile(boolean wifiEnable) {
+        synchronized(mSessionList) {
+            for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it =
+                    mSessionList.entrySet().iterator(); it.hasNext();) {
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+                ImsCallSessionImpl session = e.getValue();
+                session.updateImsCallProfile(wifiEnable);
+                Log.d(TAG, "updateImsCallProfile->session: " + session);
+            }
+        }
+    }
+    /* @} */
+
     public void terminateVolteCall() {
         synchronized(mSessionList) {
             for (Iterator<Map.Entry<String, ImsCallSessionImpl>> it =
