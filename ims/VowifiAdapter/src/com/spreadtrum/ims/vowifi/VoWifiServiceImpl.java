@@ -135,7 +135,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     securityForceStop();
                     break;
                 case MSG_ATTACH:
-                    attachInternal();
+                    attachInternal((Boolean) msg.obj);
                     break;
                 case MSG_DEATTACH:
                     boolean forHandover = (Boolean) msg.obj;
@@ -222,7 +222,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     break;
                 case ECBM_STEP_ATTACH_FOR_SOS:
                 case ECBM_STEP_ATTACH:
-                    attachInternal();
+                    attachInternal(false /* is not handover */);
                     break;
                 case ECBM_STEP_REGISTER_FOR_SOS:
                 case ECBM_STEP_REGISTER:
@@ -364,11 +364,15 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     public void attach() {
-        mCmdAttachState = CMD_STATE_PROGRESS;
-        mHandler.sendEmptyMessage(MSG_ATTACH);
+        attach(false);
     }
 
-    private void attachInternal() {
+    public void attach(boolean isHandover) {
+        mCmdAttachState = CMD_STATE_PROGRESS;
+        mHandler.sendMessage(mHandler.obtainMessage(MSG_ATTACH, isHandover));
+    }
+
+    private void attachInternal(boolean isHandover) {
         // Before start attach process, need get the SIM account info.
         // We will always use the primary card to attach and register now.
         mSIMAccountInfo = SIMAccountInfo.generate();
@@ -381,7 +385,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         if (mEcbmStep == ECBM_STEP_ATTACH_FOR_SOS) {
             mSecurityMgr.attachForSos(mSIMAccountInfo);
         } else {
-            mSecurityMgr.attach(mSIMAccountInfo);
+            mSecurityMgr.attach(mSIMAccountInfo, isHandover);
         }
     }
 
@@ -699,7 +703,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             // Notify the register as register logout.
             registerLogout(0);
         } else if (mCallback != null) {
-            mCallback.onRegisterStateChanged(mRegisterMgr.getCurRegisterState(), 0);
+            mCallback.onRegisterStateChanged(RegisterState.STATE_IDLE, 0);
         }
 
         mRegisterMgr.forceStop();
@@ -743,11 +747,12 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         @Override
         public void onCallEnd(ImsCallSessionImpl callSession) {
             if (mCallMgr.getCallCount() < 1 && mCallback != null) {
+                Log.d(TAG, "The call[" + callSession + "] end, and there isn't any other call.");
                 mCallback.onAllCallsEnd();
+
                 // Check if need reset after all the calls end.
                 if (mNeedResetAfterCall) {
                     mNeedResetAfterCall = false;
-
                     // Notify as register logout.
                     registerLogout(0);
                 }

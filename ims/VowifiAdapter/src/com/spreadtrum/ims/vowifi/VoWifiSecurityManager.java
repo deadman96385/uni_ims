@@ -100,7 +100,8 @@ public class VoWifiSecurityManager extends ServiceManager {
         switch (msg.what) {
             case MSG_ACTION_ATTACH: {
                 PendingAction action = (PendingAction) msg.obj;
-                attach((Integer) action._params.get(0), (SIMAccountInfo) action._params.get(1));
+                attach((Boolean) action._params.get(0), (Integer) action._params.get(1),
+                        (SIMAccountInfo) action._params.get(2));
                 handle = true;
                 break;
             }
@@ -126,15 +127,15 @@ public class VoWifiSecurityManager extends ServiceManager {
         return handle;
     }
 
-    public void attach(SIMAccountInfo info) {
-        attach(S2bType.NORMAL, info);
+    public void attach(SIMAccountInfo info, boolean isHandover) {
+        attach(isHandover, S2bType.NORMAL, info);
     }
 
     public void attachForSos(SIMAccountInfo info) {
-        attach(S2bType.SOS, info);
+        attach(false, S2bType.SOS, info);
     }
 
-    private void attach(int type, SIMAccountInfo info) {
+    private void attach(boolean isHandover, int type, SIMAccountInfo info) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Start the s2b attach. type: " + type + ", sim info: " + info);
         }
@@ -149,7 +150,7 @@ public class VoWifiSecurityManager extends ServiceManager {
             try {
                 if (mState <= AttachState.STATE_IDLE) {
                     // If the s2b state is idle, start the attach action.
-                    int sessionId = mISecurity.start(
+                    int sessionId = mISecurity.start(isHandover,
                             type, info._phoneId, info._imsi, info._hplmn, info._vplmn, info._imei);
                     if (sessionId == Result.INVALID_ID) {
                         // It means attach failed.
@@ -167,15 +168,14 @@ public class VoWifiSecurityManager extends ServiceManager {
         }
         if (!handle) {
             // Do not handle the attach action, add to pending list.
-            addToPendingList(
-                    new PendingAction("attach", MSG_ACTION_ATTACH, Integer.valueOf(type), info));
+            addToPendingList(new PendingAction("attach", MSG_ACTION_ATTACH,
+                    Boolean.valueOf(isHandover), Integer.valueOf(type), info));
         }
     }
 
     public void deattach(boolean isHandover) {
         if (Utilities.DEBUG) Log.i(TAG, "Try to de-attach, is handover: " + isHandover);
 
-        boolean handle = false;
         if (mISecurity != null) {
             try {
                 if (mSecurityConfig != null) {
@@ -184,15 +184,12 @@ public class VoWifiSecurityManager extends ServiceManager {
                     // Handle it as stop finished.
                     attachStopped(isHandover, 0);
                 }
-                handle = true;
             } catch (RemoteException e) {
                 Log.e(TAG, "Catch the remote exception when start the s2b deattach. e: " + e);
             }
-        }
-        if (!handle) {
-            // Do not handle the attach action, add to pending list.
-            addToPendingList(new PendingAction("de-attach", MSG_ACTION_DEATTACH,
-                    Boolean.valueOf(isHandover)));
+        } else {
+            // As service do not connect, handle it as stop finished.
+            attachStopped(isHandover, 0);
         }
     }
 
