@@ -40,4 +40,12 @@
      <string name="low_battery_warning_message">"កម្រិតថ្មរបស់លោកអ្នកទាបជាង15%។តើលោកអ្នកចង់បន្តការហៅវីដេអូរប្តូរទៅជាការហៅជាសម្លងវិញ?"</string>
      <string name="low_battery_continue_video_call">"បាទ/ចាស"</string>
      <string name="low_battery_convert_to_voice_call">"បម្លែង"</string>
+    <string name="handover_to_volte_success">"កំពុងប្តូរទៅជាVoLTEសម្រាប់គុណភាពសម្លេងកាន់តែប្រសើរ"</string>
+     <string name="vowifi_attation">"ការរំលឹកពីvowifi"</string>
+     <string name="vowifi_regist_fail_content">"បណ្តាញមិនគាំទ្រvowifiទេ"</string>
+     <string name="vowifi_connected_title">"ការហៅ​ពេលមាន​អាសន្ន​​ដោយ​​ការហៅ​តាម​ Wi-Fi"</string>
+     <string name="vowifi_connected_continue">"បន្ត"</string>
+     <string name="vowifi_connected_disable">"បើកដំណើរការ"</string>
+     <string name="vowifi_connected_checkbox_text">"កុំបង្ហាញបង្ហាញម្ដងទៀត"</string>
+     <string name="vowifi_connected_message">"ការហៅ​ពេល​មាន​អាសន្ន​មិនអាច​ធ្វើតាមការហៅតាម WiFi បាន​ទេ។ ឧបករណ៍​ប្ដូរ​ទៅ​ជា​បណ្ដាញ​ចល័ត (2G/3G) ដើម្បី ធ្វើការ​ហៅ​ពេល​មាន​អាសន្ន។ តើ​អ្នក​ចង់​បន្ត​សេវាកម្ម​ហៅតាម WiFi ឬ បិទ​ការហៅតាម Wi-Fi?"</string>
 </resources>

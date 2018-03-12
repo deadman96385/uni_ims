@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">"မွန္သည္"</string>
      <string name="low_battery_convert_to_voice_call">"ေျပာင္းပါ"</string>
 
+    <string name="handover_to_volte_success">"အသံအရည္အေသြးပိုေကာင္းရန္ VoLTE ဖြင့္ပါ"</string>
+     <string name="vowifi_attation">"Vowifi သတိေပးခ်က္"</string>
+     <string name="vowifi_regist_fail_content">"ကြန္ရက္ vowifi မေထာက္ပံ့"</string>
+     <string name="vowifi_connected_title">"Wi-Fi ေခၚဆိုမႈျဖင့္ေခၚေသာ အေရးေပၚဖုန္းမ်ား"</string>
+     <string name="vowifi_connected_continue">"ဆက္လက္္"</string>
+     <string name="vowifi_connected_disable">"မလုပ္ေဆာင္ႏိုင္ပါ"</string>
+     <string name="vowifi_connected_checkbox_text">"ထပ္၍ မျပပါႏွင့္"</string>
+     <string name="vowifi_connected_message">"အေရးေပၚဖုန္းမ်ားကို Wi-Fi-ေခၚဆိုမႈျဖင့္ ေခၚရန္မျဖစ္ႏိုင္ပါ။ အေရးေပၚဖုန္းေခၚရန္ စက္သည္ ဆယ္လူလာ ကြန္ရက္တစ္ခု (2G/3G) သို႔ ေအာ္တို ေျပာင္းေပးသည္။ Wi-Fi-ဖုန္းေခၚဆို ဝန္ေဆာင္မႈကို သင္ ဆက္လုပ္ခ်င္ပါသလား သို႔မဟုတ္ Wi-Fi ဖုန္းေခၚျခင္းကို ပိတ္လုိပါသလား။"</string>
 </resources>
