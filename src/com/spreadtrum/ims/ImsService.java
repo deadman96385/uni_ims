@@ -409,10 +409,6 @@ public class ImsService extends Service {
                                             Integer.valueOf(mFeatureSwitchRequest.mServiceId));
                                     if (currentService != null) {
                                         if (currentService.isVolteSessionListEmpty() && currentService.isVowifiSessionListEmpty()) {
-                                            if(mCurrentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
-                                                Log.i(TAG,"EVENT_WIFI_ALL_CALLS_END->mCurrentImsFeature:"+mCurrentImsFeature);
-                                                updateInCallState(false);
-                                            }
                                             mCallEndType = CallEndEvent.WIFI_CALL_END;
                                             if (mInCallHandoverFeature != mFeatureSwitchRequest.mTargetType) {
                                                 if (mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
@@ -438,6 +434,11 @@ public class ImsService extends Service {
                                             if(mIsVowifiCall && mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI
                                                     && mFeatureSwitchRequest != null && !mPendingAttachVowifiSuccess && !mPendingActivePdnSuccess) {
                                                 mFeatureSwitchRequest = null;
+                                            }
+                                            // SPRD:fix for bug840308
+                                            if(mCurrentImsFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
+                                                Log.i(TAG,"EVENT_WIFI_ALL_CALLS_END->mCurrentImsFeature:"+mCurrentImsFeature);
+                                                updateInCallState(false);
                                             }
                                         }
                                     } else {
@@ -2417,8 +2418,9 @@ class MyVoWifiCallback implements VoWifiCallback {
                 && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
             imsService.setSrvccState(-1);
         }
-        // SPRD add for bug 826630
-        if (!isInCall) {
+        // SPRD add for bug 826630 and bug840308
+        iLog("updateInCallState->mWifiRegistered:"+mWifiRegistered+" mVolteRegistered:"+mVolteRegistered +" mCurrentImsFeature:"+mCurrentImsFeature);
+        if (!isInCall && !mWifiRegistered && !mVolteRegistered && (mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN)) {
             if (mIsVowifiCall) {
                 mIsVowifiCall = false;
             } else if (mIsVolteCall) {
@@ -2431,7 +2433,7 @@ class MyVoWifiCallback implements VoWifiCallback {
         }
 
         iLog("updateInCallState->isInCall:"+isInCall+" mIsWifiCalling:"+mIsWifiCalling
-                +" inCallPhoneId:"+mInCallPhoneId + " mIsVolteCall:" + mIsVolteCall);
+                +" inCallPhoneId:"+mInCallPhoneId + " mIsVolteCall:" + mIsVolteCall+" mIsVowifiCall:"+mIsVowifiCall);
     }
 
     public void notifySrvccCapbility(int cap){
