@@ -557,8 +557,9 @@ public class VideoCallCameraManager {
         mIsVideoQualityReceived = true;
         Log.i(TAG,"updateVideoQuality->qualityChange:"+qualityChange
                 + " mCameraId:"+mCameraId +" mLocalSurface:"+mVideoCallEngine.mLocalSurface);
+        //add for SPRD:Bug 833989
         if(qualityChange && mCameraId != null){
-            if(!mIsOpened){
+            if(!mIsOpened  && !mCameraId.equals(String.valueOf(-1))){
                 openVideoCamera();
             } else {
                 updateVideoCameraQuality();
