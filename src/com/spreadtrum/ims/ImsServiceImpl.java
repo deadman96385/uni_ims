@@ -334,9 +334,14 @@ public class ImsServiceImpl {
                     }
                     break;
                 case EVENT_SET_VOICE_CALL_AVAILABILITY_DONE:
-                    if(ar.exception != null){
+                    /* SPRD: Add for bug837696. @{ */
+                    if(mPhone.isRadioAvailable() && ar.exception != null && ar.userObj != null){
                         Log.i(TAG,"EVENT_SET_VOICE_CALL_AVAILABILITY_DONE: exception");
+                        int value = ((Integer) ar.userObj).intValue();
+                        android.provider.Settings.Global.putInt(mContext.getContentResolver(),
+                            android.provider.Settings.Global.ENHANCED_4G_MODE_ENABLED, value);
                         Toast.makeText(mContext.getApplicationContext(), mContext.getString(R.string.ims_switch_failed), Toast.LENGTH_SHORT).show();
+                        /* @} */
                     }
                     break;
                 case EVENT_RADIO_STATE_CHANGED:
@@ -608,12 +613,12 @@ public class ImsServiceImpl {
 
     public void turnOnIms(){
         Log.i(TAG,"turnOnIms.");
-        mCi.setImsVoiceCallAvailability(1 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE));
+        mCi.setImsVoiceCallAvailability(1 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE,ImsConfig.FeatureValueConstants.OFF));
     }
 
     public void turnOffIms(){
         Log.i(TAG,"turnOffIms.");
-        mCi.setImsVoiceCallAvailability(0 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE));
+        mCi.setImsVoiceCallAvailability(0 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE,ImsConfig.FeatureValueConstants.ON));
     }
 
 //    class SessionListListener implements ImsServiceCallTracker.SessionListListener {
