@@ -94,15 +94,17 @@ public class VoWifiSecurityManager extends ServiceManager {
 
         if (msg.what == MSG_ACTION_ATTACH) {
             PendingAction action = (PendingAction) msg.obj;
-            attach((Integer) action._params.get(0), (Integer) action._params.get(1),
-                    (String) action._params.get(2), (SecurityListener) action._params.get(3));
+            attach((Boolean) action._params.get(0), (Integer) action._params.get(1),
+                    (Integer) action._params.get(2), (String) action._params.get(3),
+                    (SecurityListener) action._params.get(4));
             return true;
         }
 
         return false;
     }
 
-    public void attach(int subId, int type, String localAddr, SecurityListener listener) {
+    public void attach(boolean isHandover, int subId, int type, String localAddr,
+            SecurityListener listener) {
         if (Utilities.DEBUG) {
             Log.i(TAG, "Start the s2b attach. type: " + type + ", subId: " + subId);
         }
@@ -111,8 +113,8 @@ public class VoWifiSecurityManager extends ServiceManager {
         if (mISecurity != null) {
             try {
                 // If the s2b state is idle, start the attach action.
-                int sessionId = mISecurity.startWithAddr(
-                        type, subId, TextUtils.isEmpty(localAddr) ? "" : localAddr);
+                int sessionId = mISecurity.startWithAddr(isHandover, type, subId,
+                        TextUtils.isEmpty(localAddr) ? "" : localAddr);
                 if (sessionId == Result.INVALID_ID) {
                     // It means attach failed.
                     listener.onFailed(0);
@@ -129,7 +131,8 @@ public class VoWifiSecurityManager extends ServiceManager {
             // Do not handle the attach action, add to pending list.
             if (TextUtils.isEmpty(localAddr)) localAddr = "";
             addToPendingList(new PendingAction(2 * 1000, "attach", MSG_ACTION_ATTACH,
-                    Integer.valueOf(subId), Integer.valueOf(type), localAddr, listener));
+                    Boolean.valueOf(isHandover), Integer.valueOf(subId), Integer.valueOf(type),
+                    localAddr, listener));
         }
     }
 

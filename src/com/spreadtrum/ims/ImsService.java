@@ -3110,7 +3110,7 @@ public class ImsService extends Service {
                 } else if (mFeatureSwitchRequest.mTargetType == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {
                     if (state == IMS_HANDOVER_ACTION_CONFIRMED) {
                         if (SystemProperties.getBoolean(PROP_S2B_ENABLED, true)) {
-                            mWifiService.attach();
+                            mWifiService.attach((mFeatureSwitchRequest.mEventCode == ACTION_SWITCH_IMS_FEATURE) ? false : true);
                         } else {
                             mWifiService.register();
                         }
@@ -3142,7 +3142,7 @@ public class ImsService extends Service {
                     if (state == IMS_HANDOVER_ACTION_CONFIRMED
                             && SystemProperties.getBoolean(PROP_S2B_ENABLED,
                                     true)) {
-                        mWifiService.attach();
+                        mWifiService.attach((mFeatureSwitchRequest.mEventCode == ACTION_SWITCH_IMS_FEATURE) ? false : true);
                     }
                 }
             }
