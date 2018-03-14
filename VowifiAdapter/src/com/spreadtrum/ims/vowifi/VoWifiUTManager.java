@@ -105,7 +105,7 @@ public class VoWifiUTManager extends ServiceManager {
 
             // Start the attach process for UT.
             mInAttaching = true;
-            mSecurityMgr.attach(subId, S2bType.UT, null, mSecurityListener);
+            mSecurityMgr.attach(false, subId, S2bType.UT, null, mSecurityListener);
         }
     }
 
