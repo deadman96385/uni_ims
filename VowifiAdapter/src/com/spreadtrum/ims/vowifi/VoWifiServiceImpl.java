@@ -124,7 +124,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     securityForceStop();
                     break;
                 case MSG_ATTACH:
-                    attachInternal();
+                    attachInternal((Boolean) msg.obj);
                     break;
                 case MSG_DEATTACH:
                     boolean forHandover = (Boolean) msg.obj;
@@ -265,7 +265,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                         break;
                     }
                 case ECBMRequest.ECBM_STEP_ATTACH_NORMAL:
-                    attachInternal();
+                    attachInternal(false /* is not handover */);
                     break;
                 case ECBMRequest.ECBM_STEP_REGISTER_SOS:
                 case ECBMRequest.ECBM_STEP_REGISTER_NORMAL:
@@ -449,11 +449,15 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     public void attach() {
-        mCmdAttachState = CMD_STATE_PROGRESS;
-        mHandler.sendEmptyMessage(MSG_ATTACH);
+        attach(false);
     }
 
-    private void attachInternal() {
+    public void attach(boolean isHandover) {
+        mCmdAttachState = CMD_STATE_PROGRESS;
+        mHandler.sendMessage(mHandler.obtainMessage(MSG_ATTACH, isHandover));
+    }
+
+    private void attachInternal(boolean isHandover) {
         // Before start attach process, need get the SIM account info.
         // We will always use the primary card to attach and register now.
         mSubId = Utilities.getPrimaryCardSubId(mContext);
@@ -464,7 +468,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         }
 
         int s2bType = mEcbmStep == ECBMRequest.ECBM_STEP_ATTACH_SOS ? S2bType.SOS : S2bType.NORMAL;
-        mSecurityMgr.attach(mSubId, s2bType, mUsedLocalAddr, mSecurityListener);
+        mSecurityMgr.attach(isHandover, mSubId, s2bType, mUsedLocalAddr, mSecurityListener);
     }
 
     public void deattach() {
@@ -920,7 +924,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 onSOSCallTerminated();
             }
 
-            if (mCallMgr.getCallCount() < 1 && mCallback != null) {
+            if (mCallback != null && mCallMgr.getCallCount() < 1) {
                 Log.d(mTag, "The call[" + callSession + "] end, and there isn't any other call.");
                 mCallback.onAllCallsEnd();
 
