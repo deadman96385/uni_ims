@@ -18,6 +18,7 @@ import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.telephony.TeleUtils;
 import com.android.internal.telephony.uicc.IccRecords;
+import com.android.internal.telephony.uicc.IccRefreshResponse;
 import com.android.internal.telephony.uicc.IsimUiccRecords;
 import android.os.AsyncResult;
 import android.os.Looper;
@@ -56,6 +57,8 @@ public class ImsRegister {
     protected static final int EVENT_IMS_BEARER_ESTABLISTED            = 107;
     protected static final int EVENT_ENABLE_IMS                        = 108;
 
+    private static final int EVENT_SIM_REFRESH                       = 208;
+
     public ImsRegister(GSMPhone phone , Context context, CommandsInterface ci) {
         mPhone = phone;
         mContext = context;
@@ -70,6 +73,7 @@ public class ImsRegister {
         mCi.registerForRadioStateChanged(mHandler, EVENT_RADIO_STATE_CHANGED, null);
         mCi.registerForConnImsen(mHandler, EVENT_IMS_BEARER_ESTABLISTED, null);
         mCi.getImsBearerState(mHandler.obtainMessage(EVENT_IMS_BEARER_ESTABLISTED));
+        mCi.registerForIccRefresh(mHandler, EVENT_SIM_REFRESH, null);
     }
 
     private class BaseHandler extends Handler {
@@ -131,8 +135,11 @@ public class ImsRegister {
                     break;
                 case EVENT_ENABLE_IMS:
                     mNumeric = mTelephonyManager.getNetworkOperatorForPhone(mPhoneId);
+                    log("EVENT_ENABLE_IMS : mNumeric = " + mNumeric);
+                    log("EVENT_ENABLE_IMS : mLastNumeric = " + mLastNumeric);
                     mVolteConfig.loadVolteConfig(mContext);
                     boolean isSimConfig = getSimConfig();
+                    log("EVENT_ENABLE_IMS : isSimConfig = " + isSimConfig);
                     if(!(mLastNumeric.equals(mNumeric))) {
                         if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric))){
                               mCi.enableIms(null);
@@ -140,6 +147,23 @@ public class ImsRegister {
                               mCi.disableIms(null);
                         }
                         mLastNumeric = mNumeric;
+                    }
+                    break;
+                case EVENT_SIM_REFRESH:
+                    log("EVENT_SIM_REFRESH");
+                    ar = (AsyncResult)msg.obj;
+                    if (ar != null && ar.exception == null) {
+                        IccRefreshResponse resp = (IccRefreshResponse)ar.result;
+                        if (resp != null) {
+                            log("resp = " + resp.toString());
+                        }
+                        if(resp!= null && resp.refreshResult == IccRefreshResponse.REFRESH_RESULT_INIT){//uicc init
+                            log("Uicc initialized, need to init ISIM again.");
+                            mInitISIMDone = false;
+                            mLastNumeric="";
+                        }
+                    } else {
+                        log("Sim REFRESH with exception: " + ar.exception);
                     }
                     break;
                 default:
@@ -167,6 +191,11 @@ public class ImsRegister {
     };
 
     private void initISIM() {
+        log("initISIM() : mInitISIMDone = " + mInitISIMDone
+                + " | mTelephonyManager.getSimState = "
+                + mTelephonyManager.getSimState(mPhoneId) + " | mPhoneId = "
+                + mPhoneId + " | getPrimaryCard = "
+                + mTelephonyManager.getPrimaryCard());
         if (!mInitISIMDone
                 && mPhoneId == mTelephonyManager.getPrimaryCard()
                 && mTelephonyManager.getSimState(mPhoneId) == TelephonyManager.SIM_STATE_READY) {
@@ -217,7 +246,11 @@ public class ImsRegister {
                                 + imei.substring(14);
                     }
                     log("instanceId = " + instanceId);
+                } else {
+                    log("iccRecords is null!");
                 }
+            } else {
+                log("UiccController is null!");
             }
             mCi.initISIM(conferenceUri, instanceId, impu, impi, domain, xCap,
                     bspAddr, mHandler.obtainMessage(EVENT_INIT_ISIM_DONE));
@@ -238,8 +271,10 @@ public class ImsRegister {
     }
 
     public void enableIms() {
-        if(mIMSBearerEstablished && mInitISIMDone) {
-        mHandler.sendMessage(mHandler.obtainMessage(EVENT_ENABLE_IMS));
+        log("enableIms() : mIMSBearerEstablished = " + mIMSBearerEstablished
+                + " | mInitISIMDone = " + mInitISIMDone);
+        if (mIMSBearerEstablished && mInitISIMDone) {
+            mHandler.sendMessage(mHandler.obtainMessage(EVENT_ENABLE_IMS));
         }
     }
 
