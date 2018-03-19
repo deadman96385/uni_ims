@@ -29,6 +29,9 @@ public class Utilities {
     private static final String PROP_MODEM_WORKMODE = "persist.radio.modem.workmode";
     private static String PROP_TEST_MODE = "persist.radio.ssda.testmode";
 
+    // Used to get the current CW state.
+    private static final String PROP_KEY_SS_CW = "gsm.ss.call_waiting";
+
     public static HashMap<Integer, VideoQuality> sVideoQualitys =
             new HashMap<Integer, VideoQuality>();
     static {
@@ -72,6 +75,10 @@ public class Utilities {
         }
         builder.append("]");
         return builder.toString();
+    }
+
+    public static boolean isCallWaitingEnabled() {
+        return SystemProperties.getBoolean(PROP_KEY_SS_CW, true);
     }
 
     public static int getPrimaryCard(Context context){

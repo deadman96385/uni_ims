@@ -88,6 +88,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
     private ImsUtImpl mImsUt;
     private ImsEcbmImpl mImsEcbm;
+    private UtSyncManager mUtSyncMgr;
     private VoWifiCallManager mCallMgr;
     private VoWifiRegisterManager mRegisterMgr;
     private VoWifiSecurityManager mSecurityMgr;
@@ -611,6 +612,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             mCallMgr.registerListener(mCallListener);
             mRegisterMgr.registerListener(mRegisterListener);
             mSecurityMgr.registerListener(mSecurityListener);
+
+            mUtSyncMgr = UtSyncManager.getInstance(mContext);
         }
     }
 
@@ -864,6 +867,9 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                                 + "The ECBM step: " + mEcbmStep);
                     }
                 } else {
+                    // When register success, sync the UT items.
+                    if (mUtSyncMgr != null) mUtSyncMgr.sync();
+
                     registerSuccess(stateCode);
                 }
             } else if (!success && stateCode == NativeErrorCode.REG_SERVER_FORBIDDEN) {
@@ -949,12 +955,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onRegisterStateChanged(int newState) {
             // If the register state changed, update the register state to call manager.
             if (mCallMgr != null) mCallMgr.updateRegisterState(newState);
-
-            // If the new state is registered, we need query the CLIR state from CP.
-            // And if the query action success, telephony will update the CLIR via UtInterface.
-            if (newState == RegisterState.STATE_CONNECTED) {
-                queryCLIRStatus();
-            }
         }
 
         @Override
@@ -1001,20 +1001,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             return "";
         }
 
-        private void queryCLIRStatus() {
-//            try {
-//                IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
-//                if (imsServiceEx != null) {
-//                    int id = imsServiceEx.getCLIRStatus(Utilities.getPrimaryCard(mContext));
-//                    if (id < 1) {
-//                        Log.w(TAG, "Failed to get CLIR status, please check!");
-//                    }
-//                }
-//            } catch (RemoteException e) {
-//                Log.e(TAG, "Failed to get the CLIR statue as catch the RemoteException: "
-//                        + e.toString());
-//            }
-        }
     }
 
     private class MySecurityListener implements SecurityListener {

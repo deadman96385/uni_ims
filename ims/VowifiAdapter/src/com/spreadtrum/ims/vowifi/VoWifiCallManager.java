@@ -1018,7 +1018,8 @@ public class VoWifiCallManager extends ServiceManager {
         // Note: The reject action will be set when the secondary card is in the calling,
         //       then we need reject all the incoming call from the VOWIFI.
         if (!isCallFunEnabled()
-                || mIncomingCallAction == IncomingCallAction.REJECT) {
+                || mIncomingCallAction == IncomingCallAction.REJECT
+                || (!Utilities.isCallWaitingEnabled() && getCallCount() > 1)) {
             callSession.reject(ImsReasonInfo.CODE_USER_DECLINE);
         } else {
             // Send the incoming call callback.
