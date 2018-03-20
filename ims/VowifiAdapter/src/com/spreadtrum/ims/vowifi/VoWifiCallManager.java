@@ -1352,17 +1352,18 @@ public class VoWifiCallManager extends ServiceManager {
         if (listener != null) {
             if (callSession.getIsEmergency()) {
                 ImsReasonInfo info = new ImsReasonInfo(ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE,
-                    ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE, reason);
+                        ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE, reason);
                 listener.callSessionStartFailed(callSession, info);
             } else {
                 // receive 380 alternativce service for a normal call
-                if (Utilities.DEBUG) Log.i(TAG, "Handle the call is emergency. urnUri =" + urnUri);
-                ImsReasonInfo info;
-                String category = getEmergencyCallCategory(urnUri);
-                if (category != null) {
+                ImsReasonInfo info = null;
+                int category = getEmergencyCallCategory(urnUri);
+                if (category >= 0) {
                     // need to retry an emergency call by cellular
-                    info = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED,
-                            ImsReasonInfo.EXTRA_CODE_CALL_RETRY_NORMAL, category);
+                    info = new ImsReasonInfo(
+                            ImsReasonInfo.CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED,
+                            ImsReasonInfo.EXTRA_CODE_CALL_RETRY_NORMAL,
+                            String.valueOf(category));
                 } else {
                     // need to retry an normal call by cellular
                     info = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED,
@@ -1937,19 +1938,19 @@ public class VoWifiCallManager extends ServiceManager {
                     if (Utilities.DEBUG) Log.i(TAG, "getEmergencyCallUrn: categoryBitString= " + categoryBitString);
 
                     if (categoryBitString.charAt(0) == '1') {
-                        urnUri = urnUri.concat(".").concat(Utilities.EMERGENCY_SERVICE_CATEGORY_BIT1);
+                        urnUri = urnUri.concat(".").concat(Utilities.EMERGENCY_CATEGORY_POLICE);
                     }
                     if (categoryBitString.charAt(1) == '1') {
-                        urnUri = urnUri.concat(".").concat(Utilities.EMERGENCY_SERVICE_CATEGORY_BIT2);
+                        urnUri = urnUri.concat(".").concat(Utilities.EMERGENCY_CATEGORY_AMBULANCE);
                     }
                     if (categoryBitString.charAt(2) == '1') {
-                        urnUri = urnUri.concat(".").concat(Utilities.EMERGENCY_SERVICE_CATEGORY_BIT3);
+                        urnUri = urnUri.concat(".").concat(Utilities.EMERGENCY_CATEGORY_FIRE);
                     }
                     if (categoryBitString.charAt(3) == '1') {
-                        urnUri = urnUri.concat(".").concat(Utilities.EMERGENCY_SERVICE_CATEGORY_BIT4);
+                        urnUri = urnUri.concat(".").concat(Utilities.EMERGENCY_CATEGORY_MARINE);
                     }
                     if (categoryBitString.charAt(4) == '1') {
-                        urnUri = urnUri.concat(".").concat(Utilities.EMERGENCY_SERVICE_CATEGORY_BIT5);
+                        urnUri = urnUri.concat(".").concat(Utilities.EMERGENCY_CATEGORY_MOUNTAIN);
                     }
                 } else {
                     // use the default URN.
@@ -1963,36 +1964,35 @@ public class VoWifiCallManager extends ServiceManager {
         return urnUri;
     }
 
-    public String getEmergencyCallCategory(String urnUri){
-        if (Utilities.DEBUG) Log.i(TAG, "getEmergencyCallCategory: urn= " + urnUri);
-        String categoryStr = null;
+    public int getEmergencyCallCategory(String urnUri){
+        if (Utilities.DEBUG) Log.i(TAG, "Get the emergency call's category from urn: " + urnUri);
+
+        int category = -1;
 
         if ((urnUri != null) && (urnUri.length() > 0)) {
-            int category = 0;
             String urnLowerCase = urnUri.toLowerCase();
-            if (urnLowerCase.startsWith(Utilities.DEFAULT_EMERGENCY_SERVICE_URN)) {
-                if (urnLowerCase.indexOf(Utilities.EMERGENCY_SERVICE_CATEGORY_BIT1) > 0){
-                    category += 1;
+            if (urnLowerCase.equals(Utilities.DEFAULT_EMERGENCY_SERVICE_URN)) {
+                return 0;
+            } else if (urnLowerCase.startsWith(Utilities.DEFAULT_EMERGENCY_SERVICE_URN)) {
+                if (urnLowerCase.indexOf(Utilities.EMERGENCY_CATEGORY_POLICE) > 0){
+                    category = category | Utilities.CATEGORY_VALUE_POLICE;
                 }
-                if (urnLowerCase.indexOf(Utilities.EMERGENCY_SERVICE_CATEGORY_BIT2) > 0){
-                    category += 2;
+                if (urnLowerCase.indexOf(Utilities.EMERGENCY_CATEGORY_AMBULANCE) > 0){
+                    category = category | Utilities.CATEGORY_VALUE_AMBULANCE;
                 }
-                if (urnLowerCase.indexOf(Utilities.EMERGENCY_SERVICE_CATEGORY_BIT3) > 0){
-                    category += 4;
+                if (urnLowerCase.indexOf(Utilities.EMERGENCY_CATEGORY_FIRE) > 0){
+                    category = category | Utilities.CATEGORY_VALUE_FIRE;
                 }
-                if (urnLowerCase.indexOf(Utilities.EMERGENCY_SERVICE_CATEGORY_BIT4) > 0){
-                    category += 8;
+                if (urnLowerCase.indexOf(Utilities.EMERGENCY_CATEGORY_MARINE) > 0){
+                    category = category | Utilities.CATEGORY_VALUE_MARINE;
                 }
-                if (urnLowerCase.indexOf(Utilities.EMERGENCY_SERVICE_CATEGORY_BIT5) > 0){
-                    category += 16;
+                if (urnLowerCase.indexOf(Utilities.EMERGENCY_CATEGORY_MOUNTAIN) > 0){
+                    category = category | Utilities.CATEGORY_VALUE_MOUNTAIN;
                 }
-                categoryStr = String.valueOf(category);
-            } else {
-                // invalid URN means it is not an emergengcy call.
+                Log.d(TAG, "Get the emergency call's category as: " + category);
             }
         }
 
-        if (Utilities.DEBUG) Log.i(TAG, "getEmergencyCallUrn: category= " + categoryStr);
-        return categoryStr;
+        return category;
     }
 }

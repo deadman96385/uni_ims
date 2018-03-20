@@ -1176,18 +1176,23 @@ public class Utilities {
         public static final String RULE_MEDIA_VIDEO = "video";
     }
 
-    // for emergency service see 3GPP TS 22.101 clause 10
-    // the default based emergency service urn format
+    // For emergency service see 3GPP TS 22.101 clause 10
+    // The default based emergency service urn format
     public static final String DEFAULT_EMERGENCY_SERVICE_URN = "urn:service:sos";
     // Police
-    public static final String EMERGENCY_SERVICE_CATEGORY_BIT1 = "police";
+    public static final String EMERGENCY_CATEGORY_POLICE = "police";
     // Ambulance
-    public static final String EMERGENCY_SERVICE_CATEGORY_BIT2 = "ambulance";
+    public static final String EMERGENCY_CATEGORY_AMBULANCE = "ambulance";
     // Fire Brigade
-    public static final String EMERGENCY_SERVICE_CATEGORY_BIT3 = "fire";
+    public static final String EMERGENCY_CATEGORY_FIRE = "fire";
     // Marine Guard
-    public static final String EMERGENCY_SERVICE_CATEGORY_BIT4 = "marine";
+    public static final String EMERGENCY_CATEGORY_MARINE = "marine";
     // Mountain Rescue
-    public static final String EMERGENCY_SERVICE_CATEGORY_BIT5 = "mountain";
+    public static final String EMERGENCY_CATEGORY_MOUNTAIN = "mountain";
 
+    public static final int CATEGORY_VALUE_POLICE = 1;
+    public static final int CATEGORY_VALUE_AMBULANCE = 2;
+    public static final int CATEGORY_VALUE_FIRE = 4;
+    public static final int CATEGORY_VALUE_MARINE = 8;
+    public static final int CATEGORY_VALUE_MOUNTAIN = 16;
 }
