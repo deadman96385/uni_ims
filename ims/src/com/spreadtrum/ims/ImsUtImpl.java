@@ -45,17 +45,21 @@ public class ImsUtImpl extends IImsUt.Stub {
     private static final int ACTION_UPDATE_CB_EX= 18;
     private static final int ACTION_QUERY_CB_EX= 19;
     private static final int ACTION_CHANGE_CB_PW= 20;
+    private static final int ACTION_GET_CLIR_STATUS  = 21;
+    private static final int ACTION_GET_CW_STATUS_FOR_VOWIFI  = 22;
     private CommandsInterface mCi;
     private ImsHandler mHandler;
     private Context mContext;
+    private ImsServiceImpl mImsServiceImpl;
     private IImsUtListener mImsUtListener;
     private int mRequestId = -1;
     private Object mLock = new Object();
 
-    public ImsUtImpl(CommandsInterface ci,Context context){
+    public ImsUtImpl(CommandsInterface ci,Context context, ImsServiceImpl service){
         mCi = ci;
         mContext = context;
         mHandler = new ImsHandler(mContext.getMainLooper());
+        mImsServiceImpl = service;
     }
 
     /**
@@ -427,6 +431,40 @@ public class ImsUtImpl extends IImsUt.Stub {
                         e.printStackTrace();
                     }
                     break;
+                case ACTION_GET_CLIR_STATUS:{
+                    if(ar != null){
+                            if (ar.exception != null) {
+                            } else {
+                                int[] clirResp = (int[]) ar.result;
+                                int action = ImsUtInterface.OIR_PRESENTATION_NOT_RESTRICTED;
+                                if (clirResp.length >= 2) {
+                                    Log.i(TAG,"ACTION_QUERY_CLIR->clirResp[0]:" + clirResp[0] + ", clirResp[1]" + clirResp[1]);
+                                    if (clirResp[0] == 1 && clirResp[1] == 4) {
+                                        action = ImsUtInterface.OIR_PRESENTATION_RESTRICTED;
+                                    }
+                                    Log.i(TAG,"ACTION_QUERY_CLIR->clirInfo:" + action);
+                                }
+                                    mImsServiceImpl.onCLIRStatusUpdateForVoWifi(action);
+                            }
+                        } else {
+                        }
+                    break;
+                }
+                case ACTION_GET_CW_STATUS_FOR_VOWIFI:{
+                    if(ar != null){
+                        if (ar.exception != null) {
+                        } else {
+                            int infoArray[] = (int[]) ar.result;
+                            if(infoArray.length == 0 || ar.userObj instanceof Throwable){
+                            } else {
+                                mImsServiceImpl.onCallWaitingStatusUpdateForVoWifi(infoArray[0]);
+                                Log.i(TAG,"ACTION_UPDATE_CW_STATUS_FOR_WIFI->mStatus:" + infoArray[0]);
+                            }
+                        }
+                    } else {
+                    }
+                    break;
+                }
                 default:
                     break;
             }
@@ -708,6 +746,19 @@ public class ImsUtImpl extends IImsUt.Stub {
         int id = getReuestId();
         mCi.queryFacilityLock(facility, password, serviceClass,
                 mHandler.obtainMessage(ACTION_QUERY_CB_EX, id, 0, this));
+        return id;
+    }
+
+    public int getCallWaitingStatusForVoWifi() {
+        int id = getReuestId();
+        mCi.queryCallWaiting(CommandsInterface.SERVICE_CLASS_VOICE,
+                mHandler.obtainMessage(ACTION_GET_CW_STATUS_FOR_VOWIFI, id, 0, this));
+        return id;
+    }
+
+    public int getCLIRStatusForVoWifi() {
+        int id = getReuestId();
+        mCi.getCLIR(mHandler.obtainMessage(ACTION_GET_CLIR_STATUS, id, 0, this));
         return id;
     }
 }
