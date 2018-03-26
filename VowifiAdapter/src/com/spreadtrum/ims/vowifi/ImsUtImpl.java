@@ -52,8 +52,6 @@ public class ImsUtImpl extends IImsUt.Stub {
     // If there isn't any CMD to disabled the UT after 1min.
     private static final int DELAY_DISALBE_UT = 60 * 1000;
 
-    private static int sCurCLIRMode = -1;
-
     private Context mContext;
     private boolean mUtEnabled;
 
@@ -241,19 +239,6 @@ public class ImsUtImpl extends IImsUt.Stub {
         mListenerEx = null;
     }
 
-    public void setCurCLIRMode(int clirMode) {
-        Log.d(TAG, "Set the current CLIR mode to " + clirMode);
-        sCurCLIRMode = clirMode;
-    }
-
-    public void updateCLIR() {
-        try {
-            updateCLIR(sCurCLIRMode);
-        } catch (RemoteException e) {
-            Log.e(TAG, "Failed to update the CLIR mode[" + sCurCLIRMode + "] to sip.");
-        }
-    }
-
     /**
      * Retrieves the configuration of the call barring.
      */
@@ -391,9 +376,6 @@ public class ImsUtImpl extends IImsUt.Stub {
     @Override
     public int updateCLIR(int clirMode) throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Try to update CLIR to mode: " + clirMode);
-
-        // Once the CLIR mode changed, update the current mode.
-        setCurCLIRMode(clirMode);
 
         UTAction action = new UTAction("updateCLIR", MSG_ACTION_UPDATE_CLIR, CMD_TIMEOUT,
                 Boolean.valueOf(clirMode == ImsUtInterface.OIR_PRESENTATION_RESTRICTED));
