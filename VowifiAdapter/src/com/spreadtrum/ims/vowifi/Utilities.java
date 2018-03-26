@@ -45,6 +45,8 @@ public class Utilities {
 
     // Used to enable or disable the secondary service for sos register.
     private static final String PROP_KEY_ENABLE_SEC_SERVICE = "persist.vowifi.sec.ser.enabled";
+    // Used to get the call waiting status.
+    private static final String PROP_KEY_SS_CW = "gsm.ss.call_waiting";
 
     public static HashMap<Integer, VideoQuality> sVideoQualitys =
             new HashMap<Integer, VideoQuality>();
@@ -86,6 +88,10 @@ public class Utilities {
             Log.d(TAG, "The secondary vowifi server is disabled.");
             return false;
         }
+    }
+
+    public static boolean isCallWaitingEnabled() {
+        return SystemProperties.getBoolean(PROP_KEY_SS_CW, true);
     }
 
     public static String getString(String[] items) {
@@ -650,8 +656,8 @@ public class Utilities {
         }
 
         public static String getEmergencyCallCategory(String urnUri) {
-            if (Utilities.DEBUG)
-                Log.i(TAG, "Get the emergency call's category, urn: " + urnUri);
+            if (Utilities.DEBUG) Log.i(TAG, "Get the emergency call's category, urn: " + urnUri);
+
             if (TextUtils.isEmpty(urnUri)) {
                 Log.w(TAG, "The urn uri is empty, return null.");
                 return null;
