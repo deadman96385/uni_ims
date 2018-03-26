@@ -69,6 +69,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
     protected ImsUtImpl mImsUt;
     protected ImsEcbmImpl mImsEcbm;
+    protected UtSyncManager mUtSyncMgr;
     protected VoWifiCallManager mCallMgr;
     protected VoWifiUTManager mUTMgr;
     protected VoWifiRegisterManager mRegisterMgr;
@@ -94,10 +95,9 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     protected static final int MSG_TERMINATE_CALLS = 10;
     protected static final int MSG_ECBM = 11;
     protected static final int MSG_ECBM_TIMEOUT = 12;
-    protected static final int MSG_QUERY_CLIR_MODE = 13;
-    protected static final int MSG_SRVCC_SUCCESS = 14;
-    protected static final int MSG_ENTER_ECBM = 15;
-    protected static final int MSG_EXIT_ECBM = 16;
+    protected static final int MSG_SRVCC_SUCCESS = 13;
+    protected static final int MSG_ENTER_ECBM = 14;
+    protected static final int MSG_EXIT_ECBM = 15;
 
     protected class MyHandler extends Handler {
         public MyHandler(Looper looper) {
@@ -172,9 +172,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     break;
                 case MSG_ECBM_TIMEOUT:
                     handleMsgECBMTimeout(msg.arg1);
-                    break;
-                case MSG_QUERY_CLIR_MODE:
-                    queryCLIRStatus();
                     break;
                 case MSG_SRVCC_SUCCESS:
                     // If the SRVCC success, handle it as register logout.
@@ -299,19 +296,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             // Notify as register logout, and reset the security and sip stack.
             resetAll(WifiState.DISCONNECTED);
             registerLogout(0);
-        }
-
-        private void queryCLIRStatus() {
-            try {
-                IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
-                if (imsServiceEx != null) {
-                    Log.d(mTag, "To get the CLIR mode from CP.");
-                    imsServiceEx.getCLIRStatus(Utilities.getPrimaryCard(mContext));
-                }
-            } catch (RemoteException e) {
-                Log.e(mTag, "Failed to get the CLIR statue as catch the RemoteException: "
-                        + e.toString());
-            }
         }
 
     }
@@ -724,14 +708,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         if (mCallMgr != null) mCallMgr.onSRVCCStateChanged(state);
     }
 
-    public int updateCurCLIRMode(int clirMode) {
-        if (getUtInterface() != null) {
-            getUtInterface().setCurCLIRMode(clirMode);
-        }
-
-        return Result.SUCCESS;
-    }
-
     private void init() {
         if (ImsManager.isWfcEnabledByPlatform(mContext)) {
             mPreferences = PreferenceManager.getDefaultSharedPreferences(mContext);
@@ -749,8 +725,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             mSecurityMgr.bindService();
             mCallMgr.registerListener(mCallListener);
 
-            // Query the CLIR mode once, and the CLIR mode will be update by updateCurCLIRMode.
-            mHandler.sendEmptyMessageDelayed(MSG_QUERY_CLIR_MODE, 500);
+            mUtSyncMgr = UtSyncManager.getInstance(mContext);
         }
     }
 
@@ -1013,6 +988,9 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                                 + "The ECBM step: " + mEcbmStep);
                     }
                 } else {
+                    // When register success, sync the UT items.
+                    if (mUtSyncMgr != null) mUtSyncMgr.sync();
+
                     registerSuccess(stateCode);
                 }
             } else if (!success && stateCode == NativeErrorCode.REG_SERVER_FORBIDDEN) {
@@ -1106,13 +1084,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     ipVersion = regConfig.isCurUsedIPv4() ? IPVersion.IP_V4 : IPVersion.IP_V6;
                 }
                 mUTMgr.updateRegisterState(newState, ipVersion);
-            }
-
-            // If the new state is registered, we need query the CLIR state from CP.
-            // And if the query action success, telephony will update the CLIR via UtInterface.
-            if (getUtInterface() != null
-                    && newState == RegisterState.STATE_CONNECTED) {
-                getUtInterface().updateCLIR();
             }
 
             if (errorCode == NativeErrorCode.SERVER_TIMEOUT) {
