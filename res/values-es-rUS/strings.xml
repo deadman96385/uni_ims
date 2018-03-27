@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">"Sí"</string>
      <string name="low_battery_convert_to_voice_call">"Convertir"</string>
 
+    <string name="handover_to_volte_success">"Cambiar a VoLTE para obtener una mejor calidad de voz"</string>
+     <string name="vowifi_attation">"Atención Vowifi"</string>
+     <string name="vowifi_regist_fail_content">"La red no admite vowifi"</string>
+     <string name="vowifi_connected_title">"Llamadas de emergencia a través de llamadas vía wifi"</string>
+     <string name="vowifi_connected_continue">"Continuar"</string>
+     <string name="vowifi_connected_disable">"Inhabilitar"</string>
+     <string name="vowifi_connected_checkbox_text">"No volver a mostrar"</string>
+     <string name="vowifi_connected_message">"Las llamadas de emergencia no se pueden realizar a través de llamadas vía wifi. El dispositivo cambia automáticamente a una red celular (2G/3G) para realizar una llamada de ese tipo. ¿Desea continuar con el servicio de llamada vía wifi o desea desactivarlo?"</string>
 </resources>
