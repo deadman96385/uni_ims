@@ -39,4 +39,12 @@
 <string name="low_battery_warning_message">"O seu nível de bateria está inferior a 15%. Deseja continuar com a chamada de vídeo ou converter para chamada de voz?"</string>
 <string name="low_battery_continue_video_call">"Sim"</string>
 <string name="low_battery_convert_to_voice_call">"Converter"</string>
+    <string name="handover_to_volte_success">"Altere para VoLTE para melhorar a qualidade de voz"</string>
+     <string name="vowifi_attation">"Atenção Vowifi"</string>
+     <string name="vowifi_regist_fail_content">"A rede não suporta vowifi"</string>
+     <string name="vowifi_connected_title">"Chamadas de emergência através de Wi-Fi"</string>
+     <string name="vowifi_connected_continue">"Continuar"</string>
+     <string name="vowifi_connected_disable">"Desativar"</string>
+     <string name="vowifi_connected_checkbox_text">"Não mostrar novamente"</string>
+     <string name="vowifi_connected_message">"Não é possível efetuar chamadas de emergência via Chamada Wi-Fi, o dispositivo muda automaticamente para a rede móvel (2G/3G) para fazer uma chamada de emergência. Deseja continuar a usar o serviço de Chamada Wi-Fi ou desativá-lo?"</string>
 </resources>
