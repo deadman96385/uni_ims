@@ -450,11 +450,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         // TODO: Update the profile but not replace.
         mCallProfile = profile;
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, callee);
-        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE,
                 String.valueOf(ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN));
 
@@ -518,14 +513,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
         // TODO: update the profile
         mCallProfile = profile;
-        // TODO: As this is conference, the oi set as null?
-        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, participants[0]);
-        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
-        // TODO: why not {@link ImsCallProfile#OIR_DEFAULT}
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE,
                 String.valueOf(ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN));
 
@@ -2077,8 +2064,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.d(TAG, "Start an emergency call with peerNumber: " + peerNumber);
         }
         // Start the call.
+        int clirMode =
+                mCallProfile.getCallExtraInt(ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_DEFAULT);
         boolean isVideoCall = Utilities.isVideoCall(mCallProfile.mCallType);
-        int id = mICall.sessCall(peerNumber, null, true, isVideoCall, false, mIsEmergency);
+        int id = mICall.sessCall(
+                peerNumber, String.valueOf(clirMode), true, isVideoCall, false, mIsEmergency);
         Log.d(TAG, "Start a call, and get the call id: " + id);
         if (id == Result.INVALID_ID) {
             handleStartActionFailed("Native start the call failed.");
