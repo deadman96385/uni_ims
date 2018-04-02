@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">"Igen"</string>
      <string name="low_battery_convert_to_voice_call">"Átváltás"</string>
 
+    <string name="handover_to_volte_success">"A jobb hangminőség érdekében váltás VoLTE-módra"</string>
+     <string name="vowifi_attation">"Voice over Wi-Fi figyelmeztetés"</string>
+     <string name="vowifi_regist_fail_content">"A hálózat nem támogatja a Voice over Wi-Fi funkciót"</string>
+     <string name="vowifi_connected_title">"Segélyhívások Wi-Fi alapú hívással"</string>
+     <string name="vowifi_connected_continue">"Folytatás"</string>
+     <string name="vowifi_connected_disable">"Letiltás"</string>
+     <string name="vowifi_connected_checkbox_text">"Ne jelenjen meg újra"</string>
+     <string name="vowifi_connected_message">"A segélyhívások nem lehetségesek Wi-Fi-híváson keresztül. Az eszköz automatikusan mobilhálózatra (2G/3G) vált a segélyhíváshoz. Kívánja folytatni a WiFi-hívás szolgáltatást vagy letiltja a Wi-Fi hívást?"</string>
 </resources>

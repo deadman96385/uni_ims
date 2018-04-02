@@ -42,4 +42,10 @@
 
     <string name="vowifi_attation">"Vowifi கவனம்"</string>
      <string name="vowifi_regist_fail_content">"நெட்வொர்க், vowifi -ஐ ஆதரிக்கவில்லை"</string>
+    <string name="handover_to_volte_success">"சிறந்த குரல் தரத்திற்காக வோல்ட்டுக்கு மாறுதல்"</string>
+     <string name="vowifi_connected_title">"Wi-Fi காலிங் வாயிலாக அவசர அழைப்புகள்"</string>
+     <string name="vowifi_connected_continue">தொடரவும்</string>
+     <string name="vowifi_connected_disable">செயலிழக்க செய்க</string>
+     <string name="vowifi_connected_checkbox_text">"மீண்டும் காட்டாதே"</string>
+     <string name="vowifi_connected_message">"Wi-Fi காலிங் வாயிலாக அவசர அழைப்புகள் சாத்தியமில்லை. அவசரகால அழைப்பை மேற்கொள்ள சாதனம் (2G/3G) நெட்வொர்க்கிற்கு தானாக மாறுகிறது. நீங்கள் Wi-Fi காலிங் சேவையை தொடர வேண்டுமா அல்லது Wi-Fi காலிங் சேவையை துண்டிக்க வேண்டுமா?"</string>
 </resources>

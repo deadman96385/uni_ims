@@ -42,4 +42,10 @@
 
     <string name="vowifi_attation">"Vowifi মনোযোগ"</string>
      <string name="vowifi_regist_fail_content">"নেটওয়ার্ক Vowifi সমর্থন করেনা"</string>
+    <string name="handover_to_volte_success">"ভাল মানের কণ্ঠস্বরের জন্য VoLTE-রে পরিবর্তিত হচ্ছে"</string>
+     <string name="vowifi_connected_title">"Wi-Fi calling এর মাধ্যমে আপদকালীন কল করা"</string>
+     <string name="vowifi_connected_continue">"অব্যাহত"</string>
+     <string name="vowifi_connected_disable">"অক্ষম করুন"</string>
+     <string name="vowifi_connected_checkbox_text">"পূনরায় দেখাবেন না"</string>
+     <string name="vowifi_connected_message">"Wi-Fi কলিং মাধ্যমে আপদকালীন কল করা সম্ভব নয়। যন্ত্রটি আপদকালীন কল করার জন্য স্বয়ংক্রিয়ভাবে সেলুলার নেটওয়ার্কে (2G/3G) পাল্টে যাবে। আপনি কি Wi-Fi কলিং পরিষেবা চালাতে চান না Wi-Fi কলিং নিস্ক্রিয় করতে চান?"</string>
 </resources>
