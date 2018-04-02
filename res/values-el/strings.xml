@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">"Ναι"</string>
      <string name="low_battery_convert_to_voice_call">"Μετάβαση"</string>
 
+    <string name="handover_to_volte_success">"Αλλαγή σε VoLTE για καλύτερη ποιότητα φωνής"</string>
+     <string name="vowifi_attation">"Προσοχή Vowifi"</string>
+     <string name="vowifi_regist_fail_content">"Το δίκτυο δεν υποστηρίζει vowifi"</string>
+     <string name="vowifi_connected_title">"Κλήσεις έκτακτης ανάγκης μέσω κλήσης Wi-Fi"</string>
+     <string name="vowifi_connected_continue">"Συνέχεια"</string>
+     <string name="vowifi_connected_disable">"Απενεργοποίηση"</string>
+     <string name="vowifi_connected_checkbox_text">"Να μην εμφανιστεί ξανά"</string>
+     <string name="vowifi_connected_message">"Δεν είναι δυνατή η πραγματοποίηση κλήσεων έκτακτης ανάγκης μέσω κλήσεων WiFi. Η συσκευή κάνει αυτόματη αλλαγή σε δίκτυο κινητής τηλεφωνίας (2G/3G) για την πραγματοποίηση κλήσης έκτακτης ανάγκης. Θέλετε να συνεχίσετε την υπηρεσία κλήσεων WiFi ή να απενεργοποιήσετε τις κλήσεις Wi-Fi;"</string>
 </resources>

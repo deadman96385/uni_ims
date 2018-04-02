@@ -42,4 +42,10 @@
 
     <string name="vowifi_attation">" "Vowifi توجہ""</string>
      <string name="vowifi_regist_fail_content">"نیٹ ورک vowifi کو سپورٹ نہیں کرتا"</string>
+    <string name="handover_to_volte_success">"آواز کی بہتر کوالٹی کے لیے VoLTE پر سوئچ ہورہا ہے"</string>
+     <string name="vowifi_connected_title">"Wi-Fi کالنگ کے ذریعہ ہنگامی کالز"</string>
+     <string name="vowifi_connected_continue">"جاری رکھیں"</string>
+     <string name="vowifi_connected_disable">"غیر فعال کریں"</string>
+     <string name="vowifi_connected_checkbox_text">"پھر سے نہ دکھائيں"</string>
+     <string name="vowifi_connected_message">"WiFi- کالنگ کے ذریعہ ہنگامی کال ممکن نہیں ہے، ڈیوائس آٹو کو سیلولر نیٹ ورک (2G/3G) میں بدل دیتا ہے تاکہ ہنگامی کال کی جا سکے۔ کیا آپ WiFi- کالنگ سروس جاری رکھنا چاہتے ہیں یا اسے بند کرنا چاہتے ہیں؟"</string>
 </resources>

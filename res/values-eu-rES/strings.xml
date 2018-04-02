@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">"Bai"</string>
      <string name="low_battery_convert_to_voice_call">"Bihurtu"</string>
 
+    <string name="handover_to_volte_success">"VoLTE-ra aldatzen, ahots-kalitatea hobetzeko"</string>
+     <string name="vowifi_attation">"Vowifi arreta"</string>
+     <string name="vowifi_regist_fail_content">"Sareak ez du vowifi onartzen"</string>
+     <string name="vowifi_connected_title">"Larrialdiko deiak Wi-Fi deien bidez"</string>
+     <string name="vowifi_connected_continue">Jarraitu</string>
+     <string name="vowifi_connected_disable">Ezgaitu</string>
+     <string name="vowifi_connected_checkbox_text">"Ez erakutsi berriz"</string>
+     <string name="vowifi_connected_message">"Ezin da larrialdiko deirik egin Wi-Fi deien bidez, Gailua automatikoki aldatzen da sare mugikor batera (2G/3G) larrialdiko deia egiteko. Wi-Fi deiekin jarraitu nahi duzu edo Wi-Fi deiak desgaitu nahi dituzu?"</string>
 </resources>
