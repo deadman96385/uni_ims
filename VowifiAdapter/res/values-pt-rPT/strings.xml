@@ -23,4 +23,9 @@
 <string name="vowifi_conf_none_participant">"Não está presente nenhum participante, terminar a chamada"</string>
 <string name="vowifi_conf_do_not_support">"Ação não suportada no momento"</string>
 <string name="vowifi_conf_can_not_invite_more">"Não é possível convidar outro participante para a conferência, visto já estarem presentes 6 participantes"</string>
+    <string name="vowifi_request_update_failed">"Pedido de rejeição remoto"</string>
+     <string name="vowifi_request_update_success">"Pedido de aceitação remoto"</string>
+     <string name="vowifi_update_to_rx_success">"Receção de vídeo apenas"</string>
+     <string name="vowifi_update_to_tx_success">"Transmissão de vídeo apenas"</string>
+
 </resources>

@@ -18,4 +18,9 @@
     <string name="vowifi_conf_kick_failed">"مندوبین کو ہٹانے مین ناکام "</string>
     <string name="vowifi_conf_none_participant">"کسی نے شرکت نہیں کی، کال ختم کریں."</string>
     <string name="vowifi_conf_do_not_support">" اب اس کارروائی کی حمایت نہ کریں."</string>
+    <string name="vowifi_update_to_rx_success">"صرف ویڈیو استقبال کے لئے"</string>
+     <string name="vowifi_update_to_tx_success">"صرف ویڈیو ٹرانسمیشن کے لئے"</string>
+     <string name="vowifi_conf_connect_timeout">"کانفرنس خدمت ٹائم آؤٹ سے رابطہ کریں"</string>
+     <string name="vowifi_conf_can_not_invite_more">"کانفرنس میں دوسرے لوگوں کو نہیں بلایا جا سکتا کیونکہ اس میں پہلے سے ہی 6 شرکاء موجود ہیں"</string>
+
 </resources>
