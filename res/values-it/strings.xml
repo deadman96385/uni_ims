@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">Sì</string>
      <string name="low_battery_convert_to_voice_call">"Convertire"</string>
 
+    <string name="handover_to_volte_success">"Passaggio a VOLTE per una migliore qualità della voce"</string>
+     <string name="vowifi_attation">"Attenzione vowifi"</string>
+     <string name="vowifi_regist_fail_content">"la rete non supporta vowifi"</string>
+     <string name="vowifi_connected_title">"Chiamate di emergenza tramite la funzione Chiamata Wi-Fi"</string>
+     <string name="vowifi_connected_continue">"Continua"</string>
+     <string name="vowifi_connected_disable">"Disattiva"</string>
+     <string name="vowifi_connected_checkbox_text">"Non mostrare più"</string>
+     <string name="vowifi_connected_message">"Impossibile effettuare chiamate di emergenza tramite Chiamata WiFi. Il dispositivo passa automaticamente a una rete cellulare (2G/3G) per effettuare una chiamata di emergenza. Continuare il servizio Chiamata WiFi o disattivare Chiamata Wi-Fi?"</string>
 </resources>

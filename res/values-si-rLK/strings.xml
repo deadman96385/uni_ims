@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">"ඔව්"</string>
      <string name="low_battery_convert_to_voice_call">"පරිවර්තනය කරන්න"</string>
 
+    <string name="handover_to_volte_success">"වඩා ගුණාත්මක හඬක් සඳහා VoLTE වෙත මාරු වේ" </string>
+     <string name="vowifi_attation">"Vowifi අවධානය"</string>
+     <string name="vowifi_regist_fail_content">"ජාලය vowifi සඳහා සහය නොදක්වයි"</string>
+     <string name="vowifi_connected_title">"Wi-Fi ඇමතුම් හරහා හදිසි ඇමතුම්"</string>
+     <string name="vowifi_connected_continue">"දිගටම කර ගෙන යන්න"</string>
+     <string name="vowifi_connected_disable">"අක්‍රිය කරන්න"</string>
+     <string name="vowifi_connected_checkbox_text">"නැවත නොපෙන්වන්න"</string>
+     <string name="vowifi_connected_message">"WiFiඇමතුම් හරහා හදිස්සි ඇමතුම් සිදුකල නොහැක, හදිස්සි ඇමතුම් ලබා ගැනීමේදී උපාංගය ස්වයංක්‍රියව දුරකතන ජාල (2G/3G) වෙත මාරුවෙයි.ඔබට අවශ්‍ය WiFi-ඇමතුම් සේවාව සමග ඉදිරියට යෑමටද නැතහොත් Wi-Fi ඇමතුම් අත්හිටුවීමටද?"</string>
 </resources>
