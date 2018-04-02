@@ -18,4 +18,9 @@
     <string name="vowifi_conf_kick_failed">"ભાગ લેનારને દૂર કરવામાં નિષ્ફળતા મળી છે"</string>
     <string name="vowifi_conf_none_participant">"આ સાથે કોઈ જ ભાગ લેનાર નથી, કોલ પૂર્ણ કરો"</string>
     <string name="vowifi_conf_do_not_support">"હવે આ કાર્યને ટેકો ન આપો"</string>
+    <string name="vowifi_update_to_rx_success">"ફક્ત વિડિયો રિસિપ્શન"</string>
+     <string name="vowifi_update_to_tx_success">"ફક્ત વિડિયો ટ્રાન્સમિશન"</string>
+     <string name="vowifi_conf_connect_timeout">"કોન્ફરન્સ સર્વર ટાઈમઆઉટ સાથે જોડો"</string>
+     <string name="vowifi_conf_can_not_invite_more">"અન્ય ભાગીદારને કોન્ફરન્સમાં આમંત્રિત કરી શકાય નહીં કારણ કે તે 6 ભાગીદારોથી અગાઉથી બનેલ છે"</string>
+
 </resources>
