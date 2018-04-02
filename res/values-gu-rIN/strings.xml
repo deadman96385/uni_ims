@@ -42,4 +42,10 @@
 
     <string name="vowifi_attation">"Vowifi ધ્યાન કેન્દ્રિત"</string>
      <string name="vowifi_regist_fail_content">"નેટવર્ક Vowifi ટેકો આપતો નથી"</string>
+    <string name="handover_to_volte_success">"વધુ સારી વોઈસ ગુણવત્તા માટે VoLTE પર જાવ"</string>
+     <string name="vowifi_connected_title">"Wi-Fi કોલિંગ મારફતે ઈમર્જન્સિ કોલ્સ"</string>
+     <string name="vowifi_connected_continue">ચાલુ રાખો</string>
+     <string name="vowifi_connected_disable">નિષ્ક્રીય</string>
+     <string name="vowifi_connected_checkbox_text">"ફરી વખત દર્શાવશો નહીં"</string>
+     <string name="vowifi_connected_message">"WiFi-કોલિંગ મારફતે ઈમર્જન્સિ કોલ્સ શક્ય નથી, ઈમર્જન્સિ કોલ રજૂ કરવા ઉપકરણ ઓટોથી સેલ્યુલર નેટવર્ક (2G/3G)માં બદલેલ છે.શું તમારે Wi-Fi કોલિંગ સર્વિસ અથવા Wi-Fi કોલિંગ અક્ષમ છે?"</string>
 </resources>

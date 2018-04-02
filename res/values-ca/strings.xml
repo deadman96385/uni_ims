@@ -40,4 +40,12 @@
      <string name="low_battery_continue_video_call">"Sí"</string>
      <string name="low_battery_convert_to_voice_call">"Convertir"</string>
 
+    <string name="handover_to_volte_success">"S\'està canviant a la VoLTE per a millorar la qualitat de veu"</string>
+     <string name="vowifi_attation">"Atenció Vowifi"</string>
+     <string name="vowifi_regist_fail_content">"La xarxa no és compatible amb Vowifi"</string>
+     <string name="vowifi_connected_title">"Trucades d\'emergència mitjançant les trucades Wi-Fi"</string>
+     <string name="vowifi_connected_continue">"Continua"</string>
+     <string name="vowifi_connected_disable">"Desactiva"</string>
+     <string name="vowifi_connected_checkbox_text">"No ho tornis a mostrar"</string>
+     <string name="vowifi_connected_message">"No es poden realitzar trucades d\'emergència mitjançant les trucades Wi-Fi. El dispositiu canvia automàticament a la xarxa mòbil (2G/3G) per realitzar trucades d\'emergència. Voleu continuar amb el servei de trucades Wi-Fi o voleu desactivar-lo?"</string>
 </resources>
