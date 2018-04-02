@@ -1919,11 +1919,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
         mCallProfile = profile;
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, callee);
-        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
 
         boolean isPhoneInEcmMode =
                 SystemProperties.getBoolean(TelephonyProperties.PROPERTY_INECM_MODE, false);
@@ -1956,15 +1951,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         // The vowifi service is not null, init the IMS call.
         mParticipants.add(callee);
 
-        // TODO: update the profile
         mCallProfile = profile;
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, callee);
-        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
-        // TODO: why not {@link ImsCallProfile#OIR_DEFAULT}
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
 
         startCall(callee);
     }
@@ -2005,7 +1993,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                     mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO));
             Log.d(TAG, "Start an emergency call.");
         }
-        id = mICall.sessCall(peerNumber, null, true, isVideoCall, false, mIsEmergency);
+        int clirMode =
+                mCallProfile.getCallExtraInt(ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_DEFAULT);
+        id = mICall.sessCall(
+                peerNumber, String.valueOf(clirMode), true, isVideoCall, false, mIsEmergency);
 
         Log.d(TAG, "Start a normal call, and get the call id: " + id);
 
