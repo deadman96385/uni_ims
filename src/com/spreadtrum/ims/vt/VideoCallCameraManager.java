@@ -205,8 +205,11 @@ public class VideoCallCameraManager {
                     // released and we need to open the camera.
                     String cameraId = getCamerID();
                     if(cameraId != null){
+                        if(Integer.parseInt(cameraId) == -1){//SPRD: Modify for bug851181
+                           return;
+                        }
                         /* SPRD: Modify for bug571839 @ { */
-                        if (mVideoCallEngine.setCameraId(Integer.parseInt(cameraId)) != 0) {
+                        else if (mVideoCallEngine.setCameraId(Integer.parseInt(cameraId)) != 0) {
                             mHandler.removeMessages(EVENT_CAMERA_FAIL);
                             mHandler.sendEmptyMessageDelayed(EVENT_CAMERA_FAIL,200);
                             return;
