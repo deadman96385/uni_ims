@@ -15,6 +15,9 @@ import android.view.WindowManager;
 import com.spreadtrum.ims.ImsConfigImpl;
 import android.widget.Toast;
 import com.spreadtrum.ims.R;
+import android.content.ContentResolver;
+import android.database.ContentObserver;
+import android.provider.Settings;
 
 public class VideoCallCameraManager {
     private static String TAG = VideoCallCameraManager.class.getSimpleName();
@@ -25,6 +28,11 @@ public class VideoCallCameraManager {
     private static final int EVENT_CHANGE_ORIENTATION = 1000;
     private static final short OPERATION_SUCCESS = 0;
     private static final int EVENT_CAMERA_FAIL = 100;//SPRD:Add for bug571839
+
+    // ON:  settings put system accelerometer_rotation 1
+    // OFF: settings put system accelerometer_rotation 0
+    private static final int ORIENTATION_SETTING_ON = 1; //SPRD: bug846042
+    private static final int ORIENTATION_SETTING_OFF = 0;
 
     public static final String CAMERA_PARAMETERS_BRIGHTNESS = "brightness";
     public static final String CAMERA_PARAMETERS_CONTRAST = "contrast";
@@ -50,6 +58,7 @@ public class VideoCallCameraManager {
     private VTManagerProxy mVTManagerProxy;
     private Thread mOperateCameraThread;
     private MyOrientationEventListener mOrientationListener;
+    private RotationObserver mOrientationSettingListener;
 
     private String mCameraId;
     private int mCameraTimes = START_CAMERA_TIMES;
@@ -70,6 +79,7 @@ public class VideoCallCameraManager {
     private WindowManager mWinMana;
     private int mScreenRotation = 0;
     /*@}*/
+    private int mOrientationSetting = ORIENTATION_SETTING_ON; //SPRD: bug846042
 
     private Handler mHandler = new Handler() {
         @Override
@@ -103,6 +113,14 @@ public class VideoCallCameraManager {
         mVideoQuality = mVideoCallEngine.getCameraResolution();
         mContext = context;//SPRD:Add for bug571839
         mWinMana = ((WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE));//SPRD: bug729242
+        //SPRD: add for bug846042
+        if(mContext != null) {
+            mOrientationSetting = Settings.System.getInt(mContext.getContentResolver(),
+                    Settings.System.ACCELEROMETER_ROTATION, 0);
+            mOrientationSettingListener = new RotationObserver(mHandler);
+            mOrientationSettingListener.startObserver();
+        }
+
     }
 
     /**
@@ -214,7 +232,7 @@ public class VideoCallCameraManager {
                             mHandler.sendEmptyMessageDelayed(EVENT_CAMERA_FAIL,200);
                             return;
                         } else {
-                            mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation, mScreenRotation);//SPRD: bug729242
+                            mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation, mScreenRotation,mOrientationSetting);//SPRD: bug729242, bug846042
                         }
                         /* @ } */
                     }
@@ -354,6 +372,7 @@ public class VideoCallCameraManager {
     public void releaseVideoCamera() {
         // SPRD: remove camera orientationListener for bug 427421
         mOrientationListener.disable();
+        mOrientationSettingListener.stopObserver();  //SPRD: bug846042
         /* SPRD: modify for bug 546928 @ { */
         if (mOperateCameraThread != null) {
             try {
@@ -548,7 +567,7 @@ public class VideoCallCameraManager {
     }
 
     private void updateCameraPara() {
-        mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation, mScreenRotation);//SPRD: bug729242
+        mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation, mScreenRotation,mOrientationSetting);//SPRD: bug729242,bug846042
     }
 
     public void updateVideoQuality(int videoQuality){
@@ -590,5 +609,60 @@ public class VideoCallCameraManager {
 
         Log.i(TAG, "updateVideoCameraQuality: " + mOperateCameraThread);
         mOperateCameraThread.start();
+    }
+
+    //SPRD: add for bug846042
+    private class RotationObserver extends ContentObserver {
+
+        ContentResolver mResolver;
+        boolean mIsStartObserver;
+
+        public RotationObserver(Handler handler) {
+            super(handler);
+            if (mContext != null) {
+                mResolver = mContext.getContentResolver();
+            }
+        }
+
+        // called when rotation setting changed
+        @Override
+        public void onChange(boolean selfChange) {
+            // TODO Auto-generated method stub
+            super.onChange(selfChange);
+
+            // rotation update
+            Log.i(TAG, "onChange selfChange=" + selfChange );
+            // get rotation setting 1-open 0-close
+            mOrientationSetting = Settings.System.getInt(mContext.getContentResolver(),
+                    Settings.System.ACCELEROMETER_ROTATION, 0);
+            if(mVideoCallEngine != null) {
+                if(mOrientationSetting == ORIENTATION_SETTING_OFF) {
+                    mScreenRotation = 0;
+                    Log.i(TAG,"OrientationSettingClosed(0), force change mScreenRotation to 0");
+                }else {
+                    mScreenRotation = mWinMana.getDefaultDisplay().getRotation();
+                }
+                Log.i(TAG,"OrientationSettingChanged->setPreviewDisplayOrientation,"+"mDeviceRotation: "+mDeviceRotation+" mScreenRotation: "+mScreenRotation+" mOrientationSetting: "+mOrientationSetting);
+                mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation, mScreenRotation,mOrientationSetting);
+            }
+        }
+
+        public void startObserver() {
+            Log.i(TAG, "startObserver mResolver=" + mResolver + " mIsStartObserver ="+ mIsStartObserver);
+            if (mResolver != null && !mIsStartObserver) {
+                mIsStartObserver = true;
+                mResolver.registerContentObserver(
+                        Settings.System.getUriFor(Settings.System.ACCELEROMETER_ROTATION), false,
+                        this);
+            }
+        }
+
+        public void stopObserver() {
+            Log.i(TAG, "stopObserver mIsStartObserver =" + mIsStartObserver);
+            if (mIsStartObserver) {
+                mResolver.unregisterContentObserver(this);
+                mIsStartObserver = false;
+            }
+        }
     }
 }
