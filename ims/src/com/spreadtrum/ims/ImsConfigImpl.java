@@ -170,6 +170,8 @@ public class ImsConfigImpl extends IImsConfig.Stub {
                         e.printStackTrace();
                     }
                     cmd[0] = "AT+CDEFMP=1,\""+mCameraResolution+"\"";
+                    Log.i(TAG, "EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE ->cmd:"
+                            + cmd[0]);
                     mCi.invokeOemRilRequestStrings(cmd, null);
                     break;
                 default:

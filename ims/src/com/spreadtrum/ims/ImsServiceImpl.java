@@ -20,7 +20,6 @@ import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.widget.Toast;
-
 import android.provider.Telephony;
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.IccUtils;
@@ -48,6 +47,7 @@ import com.android.ims.internal.IImsUt;
 import com.android.ims.internal.IImsConfig;
 import com.android.ims.internal.ImsCallSession;
 import com.android.internal.telephony.uicc.UiccController;
+import com.sprd.internal.telephony.VolteConfig;
 import com.sprd.internal.telephony.uicc.MsUiccController;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.DctConstants;
@@ -64,6 +64,7 @@ import com.android.ims.internal.IImsServiceListenerEx;
 import android.content.ComponentName;
 import android.content.ServiceConnection;
 import android.telephony.VoLteServiceState;
+import android.text.TextUtils;
 
 
 public class ImsServiceImpl {
@@ -205,6 +206,7 @@ public class ImsServiceImpl {
         //add for Bug 707696
         mCi.registerForSrvccStateChanged(mHandler, EVENT_SRVCC_STATE_CHANGED, null);
         mCi.getImsRegAddress(mHandler.obtainMessage(EVENT_IMS_GET_IMS_REG_ADDRESS));
+        mVolteConfig = VolteConfig.getInstance();
     }
 
     /**
@@ -395,7 +397,7 @@ public class ImsServiceImpl {
                     if (state != null && state.getDataRegState() == ServiceState.STATE_IN_SERVICE
                             && state.getRilDataRadioTechnology() == ServiceState.RIL_RADIO_TECHNOLOGY_LTE){
                         mImsRegister.enableIms();
-                        //setVideoResolution(state);
+                        setVideoResolution(state);
                     }
                     break;
                 case EVENT_IMS_GET_IMS_REG_ADDRESS:
@@ -1039,5 +1041,31 @@ public class ImsServiceImpl {
 
     public void onCLIRStatusUpdateForVoWifi(int status){
         mImsService.onCLIRStatusUpdateForVoWifi(status);
+    }
+
+    private VolteConfig mVolteConfig;
+    public void setVideoResolution(ServiceState state){
+        String registOperatorNumeric = mTelephonyManager.getSimOperator();
+
+        Log.i(TAG,"registOperatorNumeric = " + registOperatorNumeric);
+        if(registOperatorNumeric == null){
+            return;
+        }
+        String operatorCameraResolution = null;
+        if (mVolteConfig == null){
+            mVolteConfig = VolteConfig.getInstance();
+        }
+        mVolteConfig.loadVolteConfig(mContext);
+        if (mVolteConfig.containsCarrier(registOperatorNumeric)) {
+            operatorCameraResolution = mVolteConfig
+                    .getCameraResolution(registOperatorNumeric);
+        }
+        Log.i(TAG,"operatorCameraResolution = " + operatorCameraResolution);
+        if(operatorCameraResolution == null || TextUtils.isEmpty(operatorCameraResolution)){
+            return;
+        }
+        mImsConfigImpl.mDefaultVtResolution = Integer.parseInt(operatorCameraResolution);
+        Log.i(TAG, "ImsServiceImpl ==> setVideoResolution mDefaultVtResolution = " + operatorCameraResolution);
+        mImsConfigImpl.setVideoQualitytoPreference(Integer.parseInt(operatorCameraResolution));
     }
 }
