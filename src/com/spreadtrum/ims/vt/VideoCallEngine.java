@@ -429,7 +429,7 @@ public class VideoCallEngine {
 
     public static native void setCameraPreviewSize(int size);
 
-    public static native void setPreviewDisplayOrientation(int rotation, int screenRotation);//SPRD: bug729242
+    public static native void setPreviewDisplayOrientation(int rotation, int screenRotation,int orientationSetting);//SPRD: bug729242, bug846042
 
     public static native void startPreview();
 
