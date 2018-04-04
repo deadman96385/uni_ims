@@ -1919,6 +1919,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
         mCallProfile = profile;
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, callee);
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
+        mCallProfile.setCallExtraInt(
+                ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+        mCallProfile.setCallExtraInt(
+                ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
 
         boolean isPhoneInEcmMode =
                 SystemProperties.getBoolean(TelephonyProperties.PROPERTY_INECM_MODE, false);
@@ -1953,6 +1958,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
 
         mCallProfile = profile;
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, callee);
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
+        mCallProfile.setCallExtraInt(
+                ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
 
         startCall(callee);
     }
@@ -1993,19 +2001,24 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                     mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO));
             Log.d(TAG, "Start an emergency call.");
         }
+
         int clirMode =
                 mCallProfile.getCallExtraInt(ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_DEFAULT);
         id = mICall.sessCall(
                 peerNumber, String.valueOf(clirMode), true, isVideoCall, false, mIsEmergency);
-
         Log.d(TAG, "Start a normal call, and get the call id: " + id);
 
         if (id == Result.INVALID_ID) {
             handleStartActionFailed("Native start the call failed.");
         } else {
             mCallId = id;
-            updateState(State.INITIATED);
             mIsAlive = true;
+            // FIXME: As {link ImsPhoneConnection#updateAddressDisplay} function removed
+            //        incoming call checking, so we need always set the EXTRA_OIR as
+            //        OIR_PRESENTATION_NOT_RESTRICTED used to display the phone number.
+            mCallProfile.setCallExtraInt(
+                    ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+            updateState(State.INITIATED);
             startAudio();
 
             // Start action success, update the last call action as start.
