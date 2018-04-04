@@ -1777,5 +1777,21 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
     }
     /* @} */
+    /* SPRD: add for bug850940 @{ */
+    public boolean getIsPendingTerminate(){
+        return mIsPendingTerminate;
+    }
+    public void terminatePendingCall(int reason, int index){
+        if(isImsSessionInvalid()){
+            Log.w(TAG, "terminate-> ImsSessionInvalid!");
+            return;
+        }
+        mDisconnCause = reason;
+
+        mCi.hangupConnection(index,
+                mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
+        mIsPendingTerminate = false;
+    }
+    /* @} */
 
 }
