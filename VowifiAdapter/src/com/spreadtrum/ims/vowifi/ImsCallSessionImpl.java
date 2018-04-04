@@ -450,6 +450,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         // TODO: Update the profile but not replace.
         mCallProfile = profile;
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, callee);
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
+        mCallProfile.setCallExtraInt(
+                ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE,
                 String.valueOf(ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN));
 
@@ -2074,8 +2077,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             handleStartActionFailed("Native start the call failed.");
         } else {
             mCallId = id;
-            updateState(State.INITIATED);
             mIsAlive = true;
+            // FIXME: As {link ImsPhoneConnection#updateAddressDisplay} function removed
+            //        incoming call checking, so we need always set the EXTRA_OIR as
+            //        OIR_PRESENTATION_NOT_RESTRICTED used to display the phone number.
+            mCallProfile.setCallExtraInt(
+                    ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+            updateState(State.INITIATED);
             startAudio();
 
             // Start action success, update the last call action as start.
