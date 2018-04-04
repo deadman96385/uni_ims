@@ -322,6 +322,22 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             ImsDriverCall imsDc = imsDcList.get(i);
             if(imsDc.csMode != 0){
                 Log.d(TAG, "handlePollCalls the ImsDriverCall is cs call");
+                /* SPRD: add for bug850940 @{ */
+                synchronized(mPendingSessionList) {
+                    for(int k=0;k<mPendingSessionList.size();k++){
+                        if (imsDc.state == ImsDriverCall.State.DIALING || imsDc.state ==ImsDriverCall.State.ALERTING
+                                || (!imsDc.isMT && imsDc.state ==ImsDriverCall.State.ACTIVE)) {
+                            ImsCallSessionImpl pendingCallSession = mPendingSessionList.get(i);
+                            if(pendingCallSession != null
+                                    && pendingCallSession.getIsPendingTerminate()){
+                                Log.d(TAG, "handlePollCalls disconnect isPendingTerminate Session, pendingCallSession:" + pendingCallSession);
+                                pendingCallSession.terminatePendingCall(ImsReasonInfo.CODE_USER_TERMINATED, imsDc.index);
+                                break;
+                            }
+                        }
+                    }
+                }
+                /* @} */
                 continue;
             }
             synchronized(mSessionList) {
