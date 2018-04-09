@@ -1986,6 +1986,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         accept(mCallProfile.mCallType, mCallProfile.mMediaProfile);
     }
 
+    public boolean isUssdCall() {
+        int dialType = mCallProfile.getCallExtraInt(ImsCallProfile.EXTRA_DIALSTRING);
+        return dialType == ImsCallProfile.DIALSTRING_USSD;
+    }
+
     private CallCursor getCallCursor() {
         Uri callUri = Uri.parse(ProviderUtils.CONTENT_URI + "/" + ProviderUtils.FUN_CALL);
         Cursor cursor = mContext.getContentResolver().query(callUri, null, null, null, null);
@@ -2040,8 +2045,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
 
-        int dialType = mCallProfile.getCallExtraInt(ImsCallProfile.EXTRA_DIALSTRING);
-        if (dialType == ImsCallProfile.DIALSTRING_USSD) {
+        if (isUssdCall()) {
             // It means the call need start as USSD.
             startUssdCall(callee);
             return;
