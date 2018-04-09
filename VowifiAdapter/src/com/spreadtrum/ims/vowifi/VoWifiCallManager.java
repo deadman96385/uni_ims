@@ -27,6 +27,7 @@ import com.android.ims.internal.ImsCallSession;
 import com.android.ims.internal.ImsSrvccCallInfo;
 import com.android.ims.internal.ImsCallSession.State;
 import com.android.ims.internal.ImsManagerEx;
+import com.android.internal.telephony.CommandsInterface;
 import com.spreadtrum.ims.R;
 import com.spreadtrum.ims.vowifi.Utilities.CallStateForDataRouter;
 import com.spreadtrum.ims.vowifi.Utilities.ECBMRequest;
@@ -1085,13 +1086,18 @@ public class VoWifiCallManager extends ServiceManager {
         callSession.updateState(State.TERMINATED);
         IImsCallSessionListener listener = callSession.getListener();
         if (listener != null) {
+            if (callSession.isUssdCall()) {
+                Log.d(TAG, "As ussd start failed, give the ussd msg received as not support.");
+                listener.callSessionUssdMessageReceived(callSession,
+                        CommandsInterface.USSD_MODE_NOT_SUPPORTED, "Start ussd failed.");
+            }
+
             if (callSession.isEmergencyCall()
                     && termReasonCode == ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED) {
                 // For the emergency call, if the terminate reason is CS retry, we need
                 // reset the terminate reason as the emergency call needn't CS retry.
                 termReasonCode = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
             }
-
             ImsReasonInfo info = new ImsReasonInfo(termReasonCode, termReasonCode,
                     "The call terminated.");
             if (oldState < State.NEGOTIATING) {
