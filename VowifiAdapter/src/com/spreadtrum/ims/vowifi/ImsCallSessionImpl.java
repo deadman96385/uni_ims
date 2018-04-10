@@ -1420,7 +1420,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         } else {
             // Prepare this call session's call info.
             ImsSrvccCallInfo info = new ImsSrvccCallInfo();
-            info.mCallId = mCallId;
+            // Call id only accept from 0 to 5.
+            info.mCallId = infoList.size();
             info.mDir = mCallStateTracker.getSRVCCCallDirection();
             info.mCallState = mCallStateTracker.getSRVCCCallState();
             info.mHoldState = mCallStateTracker.getSRVCCCallHoldState();
