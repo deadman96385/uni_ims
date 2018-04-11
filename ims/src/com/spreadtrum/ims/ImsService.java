@@ -1077,7 +1077,8 @@ public class ImsService extends Service {
                     continue;
                 }
 //                if(ImsManager.isEnhanced4gLteModeSettingEnabledByUser(getApplicationContext())){//SPRD: bug644353
-//                    impl.turnOnIms();
+                Log.i(TAG, "turnOnIms() : " + i);
+                impl.turnOnIms();
 //                }
             }
         }
