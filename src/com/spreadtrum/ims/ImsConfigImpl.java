@@ -51,8 +51,8 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     private Context mContext;
     private SharedPreferences mSharedPreferences;
     private static final String VIDEO_CALL_RESOLUTION = "vt_resolution";
-    private int mCameraResolution = VT_RESOLUTION_VGA_REVERSED_30;
-    public int mDefaultVtResolution = VT_RESOLUTION_VGA_REVERSED_30;
+    private int mCameraResolution = VT_RESOLUTION_QVGA_REVERSED_15;
+    public int mDefaultVtResolution = VT_RESOLUTION_QVGA_REVERSED_15;
 
     /**
      * Creates the Ims Config interface object for a sub.
@@ -161,7 +161,9 @@ public class ImsConfigImpl extends IImsConfig.Stub {
                     break;
                 case EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE:
                     String[] cmd=new String[1];
+                    mCameraResolution = VT_RESOLUTION_QVGA_REVERSED_15;
                     cmd[0] = "AT+CDEFMP=1,\""+mCameraResolution+"\"";
+                    Log.i(TAG,"EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE->cmd[0]:"+cmd[0]);
                     mCi.invokeOemRilRequestStrings(cmd, null);
                     break;
                 default:
