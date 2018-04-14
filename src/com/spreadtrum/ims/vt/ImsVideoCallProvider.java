@@ -3,6 +3,7 @@ package com.spreadtrum.ims.vt;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Handler;
+import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.telecom.VideoProfile;
 import android.view.Surface;
@@ -56,6 +57,8 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     private static final int EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 500;
     private static final int EVENT_SRVCC_STATE_CHANGED = 100;
     private static final int EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT = 101;//SPRD: add for bug674565
+    //SPRD: add for bug 846738
+    boolean mIsSupportTxRxVideo = SystemProperties.getBoolean("persist.sys.txrx_vt", false);
 
     //media request change
     /*public static final int MEDIA_REQUEST_DEFAULT = 0;
@@ -322,6 +325,15 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
 
         log("mediaRequest = "+mediaRequest);
         if (mediaRequest != ImsRIL.MEDIA_REQUEST_DEFAULT) {
+            /* SPRD: add for bug 846738 @{ */
+            if(!mIsSupportTxRxVideo &&
+                    (mediaRequest == ImsRIL.MEDIA_REQUEST_VIDEO_BIDIRECTIONAL_DOWNGRADE_VIDEO_RX ||
+                            mediaRequest == ImsRIL.MEDIA_REQUEST_VIDEO_RX_UPGRADE_VIDEO_BIDIRECTIONAL)){
+                mImsCallSessionImpl.updateVideoTxRxState(!toProfile.isTransmissionEnabled(toProfile.getVideoState()),
+                        !toProfile.isTransmissionEnabled(toProfile.getVideoState()));
+                return;
+            }
+            /* @}*/
             mLocalRequestProfile = toProfile;
             mImsCallSessionImpl.getLocalRequestProfile().mCallType = requestImsCallProfile.mCallType;
             mCi.requestVolteCallMediaChange(mediaRequest, Integer.parseInt(mImsCallSessionImpl.getCallId()),null);
@@ -567,7 +579,14 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                     log("handleVolteCallMediaChange-is cmcc project, has one active adn one hold call reject MediaChange");
                     mCi.responseVolteCallMediaChange(false, Integer.parseInt(mImsCallSessionImpl.getCallId()), mCallIdMessage);
                     return;
-                }else{
+                }
+                /* SPRD: add for bug 846738 @{ */
+                else if(!mIsSupportTxRxVideo
+                        && isVideoCall(mImsCallSessionImpl.mImsCallProfile.mCallType)
+                        && videoCallMediaDirection == session.mImsDriverCall.VIDEO_CALL_MEDIA_DIRECTION_SENDRECV){
+                    mCi.responseVolteCallMediaChange(true, Integer.parseInt(mImsCallSessionImpl.getCallId()), mCallIdMessage);
+                }/* @}*/
+                else{
                     /*TODO: remove for 8.0
                     mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,null,this);
                     mVolteMediaUpdateDialog.show();
