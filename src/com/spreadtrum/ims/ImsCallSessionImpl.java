@@ -108,6 +108,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private boolean mIsCmccNetwork;
     // SPRD Feature Porting: Local RingBackTone Feature.
     private static final String ACTION_CALL_ALERTING = "com.android.ACTION_CALL_ALERTING";
+    //SPRD: add for bug 846738
+    boolean mIsSupportTxRxVideo = SystemProperties.getBoolean("persist.sys.txrx_vt", false);
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
@@ -176,37 +178,40 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 ImsCallProfile.presentationToOIR(dc.numberPresentation));
         mImsCallProfile.setCallExtraInt(ImsCallProfile.EXTRA_CNAP,
                 ImsCallProfile.presentationToOIR(dc.namePresentation));
-        /*if(dc.isVideoCall()){
-            if(dc.state == ImsDriverCall.State.HOLDING){//SPRD:add for bug604148
-                mIsTxDisable = false;
+        /* SPRD: add for bug 846738 @{ */
+        if(dc.isVideoCall()){
+            if(!mIsSupportTxRxVideo){
+                if(dc.state == ImsDriverCall.State.HOLDING){//SPRD:add for bug604148
+                    mIsTxDisable = false;
+                    mIsRxDisable = false;
+                }
+                if(mIsTxDisable){
+                    mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_RX;
+                } else if(mIsRxDisable){
+                    mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_TX;
+                }else {
+                    mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
+                }
+            }else{
+                if (dc.getVideoCallMediaDirection() == dc.VIDEO_CALL_MEDIA_DIRECTION_SENDRECV) {
+                    mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
+                } else if (dc.getVideoCallMediaDirection() == dc.VIDEO_CALL_MEDIA_DIRECTION_SENDONLY) {
+                    mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_TX;
+                } else if (dc.getVideoCallMediaDirection() == dc.VIDEO_CALL_MEDIA_DIRECTION_RECVONLY) {
+                    mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_RX;
+                } else {
+                    Log.i(TAG,"dc.getVideoCallMediaDirection() = "+dc.getVideoCallMediaDirection());
+                }
+            }
+        }else{
+            if(!mIsSupportTxRxVideo){
+                mIsTxDisable = false;//SPRD:modify for bug602883
                 mIsRxDisable = false;
             }
-            if(mIsTxDisable){
-                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_RX;
-            } else if(mIsRxDisable){
-                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_TX;
-            }else {
-                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
-            }
-        } else {
-            mIsTxDisable = false;//SPRD:modify for bug602883
-            mIsRxDisable = false;
-            mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
-        }*/
-        if(dc.isVideoCall()){
-            if (dc.getVideoCallMediaDirection() == dc.VIDEO_CALL_MEDIA_DIRECTION_SENDRECV) {
-                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
-            } else if (dc.getVideoCallMediaDirection() == dc.VIDEO_CALL_MEDIA_DIRECTION_SENDONLY) {
-                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_TX;
-            } else if (dc.getVideoCallMediaDirection() == dc.VIDEO_CALL_MEDIA_DIRECTION_RECVONLY) {
-                mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_RX;
-            } else {
-                Log.i(TAG,"dc.getVideoCallMediaDirection() = "+dc.getVideoCallMediaDirection());
-            }
-        } else {
             mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
         }
         Log.d(TAG,"mImsCallProfile.mCallType = "+mImsCallProfile.mCallType);
+        /* @}*/
         /* SPRD: add for new feature for bug 589158/607084 @{ */
         if(dc != null && dc.mediaDescription != null && dc.mediaDescription.contains("hd=1")){
             mImsCallProfile.mMediaProfile.mAudioQuality = ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB;
