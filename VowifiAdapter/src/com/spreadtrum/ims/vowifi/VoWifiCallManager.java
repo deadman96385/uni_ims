@@ -1250,6 +1250,26 @@ public class VoWifiCallManager extends ServiceManager {
             return;
         }
 
+        // If do not support video call, need reject the request.
+        boolean videoSupport = SystemProperties.getBoolean("persist.sys.support.vt", true);
+        if (!videoSupport) {
+            Log.d(TAG, "Do not support video call, reject the request.");
+            if (mICall == null) {
+                Log.e(TAG, "Can not send the session modify request for reject.");
+                return;
+            }
+
+            // If the user reject the upgrade action, it should be keep as voice call,
+            // so isVideo is false.
+            try {
+                mICall.sendSessionModifyResponse(Integer.valueOf(callSession.getCallId()),
+                        true, false);
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to send reject response. e: " + e);
+            }
+            return;
+        }
+
         // Receive the add video request, we need prompt one dialog to alert the user.
         // And the user could accept or reject this action.
         mAlertDialog = getVideoChangeRequestDialog(callSession, true /* upgrade action */);
