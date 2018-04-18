@@ -8,6 +8,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
+import android.os.SystemProperties;
 import android.preference.PreferenceManager;
 import android.telecom.Connection.VideoProvider;
 import android.telecom.VideoProfile;
@@ -18,6 +19,7 @@ import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.WindowManager;
 
+import com.android.ims.ImsCallProfile;
 import com.android.ims.internal.ImsVideoCallProvider;
 import com.spreadtrum.ims.vowifi.Utilities.Camera;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
@@ -27,6 +29,8 @@ import com.spreadtrum.ims.vowifi.Utilities.VideoType;
 public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private static final String TAG =
             Utilities.getTag(ImsVideoCallProviderImpl.class.getSimpleName());
+
+    private static final String PROP_KEY_SUPPORT_TXRX_UPDATE = "persist.sys.txrx_vt";
 
     private Context mContext;
 
@@ -59,6 +63,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private static final int MSG_SEND_MODIFY_REQUEST = 8;
     private static final int MSG_SET_PAUSE_IMAGE = 9;
     private static final int MSG_SEND_MODIFY_RESPONSE = 10;
+    private static final int MSG_SEND_MODIFY_SUCCESS_RESPONSE = 11;
     private class MyHandler extends Handler {
         private int mRotateRetryTimes = 0;
 
@@ -227,6 +232,21 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                         }
                         break;
                     }
+                    case MSG_SEND_MODIFY_SUCCESS_RESPONSE: {
+                        VideoProfile profile = (VideoProfile) msg.obj;
+                        receiveSessionModifyResponse(
+                                VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS, profile, profile);
+
+                        // If the video type do not changed. we need handle the transmission changed.
+                        boolean isTrans =
+                                VideoProfile.isTransmissionEnabled(profile.getVideoState());
+                        if (isTrans) {
+                            mCallSession.updateCallType(ImsCallProfile.CALL_TYPE_VT);
+                        } else {
+                            mCallSession.updateCallType(ImsCallProfile.CALL_TYPE_VT_RX);
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -313,17 +333,43 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
         Log.d(TAG, "oldState:" + oldState + ", newState:" + newState + ", wasPaused:" + wasPaused
                 + ", isPaused:" + isPaused);
         if (oldState != newState && !wasPaused && !isPaused) {
-            // For video type update, we need send the modify request to server.
-            int nativeVideoType = VideoType.getNativeVideoType(toProfile);
-            Message msg = mHandler.obtainMessage(MSG_SEND_MODIFY_REQUEST);
-            msg.arg1 = nativeVideoType;
-            mHandler.sendMessage(msg);
+            if (isSupportTXRXUpdate()) {
+                // For video type update, we need send the modify request to server.
+                int nativeVideoType = VideoType.getNativeVideoType(toProfile);
+                Message msg = mHandler.obtainMessage(MSG_SEND_MODIFY_REQUEST);
+                msg.arg1 = nativeVideoType;
+                mHandler.sendMessage(msg);
+            } else {
+                Log.d(TAG, "As do not support TXRX update, handle as pause state change action.");
+                // Need handle the transmission changed as pause state change.
+                boolean wasTrans = VideoProfile.isTransmissionEnabled(fromProfile.getVideoState());
+                boolean isTrans = VideoProfile.isTransmissionEnabled(toProfile.getVideoState());
+                if (wasTrans == isTrans) {
+                    // FIXME: There must be some error in telephony, when the user press
+                    //        "resume video", the wasTrans is same as isTrans.
+                    Log.w(TAG, "The fromProfile is same as the toProfile's trans. It's abnormal.");
+                    Log.w(TAG, "Ignore this abnormal, change the status as toProfile.");
+                }
+
+                // For pause state changed, needn't send the modify request. So give the
+                // response immediately.
+                if (isTrans) {
+                    // It means start the video transmission. And "setCamera" will start the
+                    // camera, so we need request the camera capabilities
+                    Log.d(TAG, "Start the video transmission successfully.");
+                    mHandler.sendMessage(
+                            mHandler.obtainMessage(MSG_SEND_MODIFY_SUCCESS_RESPONSE, toProfile));
+                } else {
+                    // It means stop the video transmission. And this action will be handled
+                    // when the camera set to null.
+                    Log.d(TAG, "Stop the video transmission successfully.");
+                    mHandler.sendMessage(
+                            mHandler.obtainMessage(MSG_SEND_MODIFY_SUCCESS_RESPONSE, toProfile));
+                }
+            }
         } else if (wasPaused != isPaused) {
             // We'd like to handle it as pause/start the video.
-            Log.d(TAG, "The new video paused state changed to " + isPaused);
-
-            // For pause changed, needn't send the modify request. So give the response here.
-            // TODO:
+            Log.d(TAG, "The new video paused state changed to " + isPaused + ", DO NOT HANDLE!");
         } else {
             Log.e(TAG, "There isn't any update for the video profile. Please check!!!");
         }
@@ -516,6 +562,10 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                 }
             }
         }
+    }
+
+    private boolean isSupportTXRXUpdate() {
+        return SystemProperties.getBoolean(PROP_KEY_SUPPORT_TXRX_UPDATE, false);
     }
 
     private boolean cameraCapabilitiesEquals(CameraCapabilities capabilities) {
