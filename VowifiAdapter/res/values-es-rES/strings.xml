@@ -23,4 +23,5 @@
 <string name="vowifi_conf_none_participant">"No hay participantes, terminar la llamada"</string>
 <string name="vowifi_conf_do_not_support">"Esta acción no se admite ahora"</string>
 <string name="vowifi_conf_can_not_invite_more">"No se puede invitar a más participantes a la conferencia, porque ya contiene seis"</string>
+
 </resources>
