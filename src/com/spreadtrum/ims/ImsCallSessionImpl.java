@@ -198,7 +198,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 }else {
                     mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
                 }
-            }else{
+            }else if(!mIsRemoteHold){ //SPRD: add for bug 851187
                 if (dc.getVideoCallMediaDirection() == dc.VIDEO_CALL_MEDIA_DIRECTION_SENDRECV) {
                     mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
                 } else if (dc.getVideoCallMediaDirection() == dc.VIDEO_CALL_MEDIA_DIRECTION_SENDONLY) {
@@ -1693,11 +1693,29 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 }
                 mRemoteCallProfile = new ImsCallProfile(
                         ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VOICE);
+                /* SPRD: add for bug 851187@*/
+                try{
+                    if(mIImsCallSessionListener != null){
+                        mIImsCallSessionListener.callSessionHoldReceived((IImsCallSession)this, mImsCallProfile);
+                    }
+                } catch(RemoteException e){
+                    e.printStackTrace();
+                }
+                /*@}*/
                 break;
             case SuppServiceNotification.MT_CODE_CALL_RETRIEVED:
                 mIsRemoteHold = false;//SPRD: modify by bug666088
                 mRemoteCallProfile = new ImsCallProfile(
                         ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE);
+                /* SPRD: add for bug 851187@*/
+                try{
+                    if(mIImsCallSessionListener != null){
+                        mIImsCallSessionListener.callSessionResumeReceived((IImsCallSession)this, mImsCallProfile);
+                    }
+                } catch(RemoteException e){
+                    e.printStackTrace();
+                }
+                /*@}*/
                 break;
             }
     }
