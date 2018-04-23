@@ -646,7 +646,8 @@ public class ImsUtProxy extends IImsUt.Stub {
     }
 
     private boolean isVowifiUtEnable() {
-        if (mVoWifiUtImpl != null && mPriority == PRIORITY_VOWIFI_UT) {
+        mImsService = (ImsService) mContext;
+        if (mVoWifiUtImpl != null && mPriority == PRIORITY_VOWIFI_UT && mImsService.isVoWifiEnabled()) {
             return true;
         }
         return  false;
