@@ -328,22 +328,18 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
         int oldState = fromProfile.getVideoState();
         int newState = toProfile.getVideoState();
-        boolean wasPaused = VideoProfile.isPaused(fromProfile.getVideoState());
-        boolean isPaused = VideoProfile.isPaused(toProfile.getVideoState());
+        boolean wasPaused = VideoProfile.isPaused(oldState);
+        boolean isPaused = VideoProfile.isPaused(newState);
         Log.d(TAG, "oldState:" + oldState + ", newState:" + newState + ", wasPaused:" + wasPaused
                 + ", isPaused:" + isPaused);
         if (oldState != newState && !wasPaused && !isPaused) {
-            if (isSupportTXRXUpdate()) {
-                // For video type update, we need send the modify request to server.
-                int nativeVideoType = VideoType.getNativeVideoType(toProfile);
-                Message msg = mHandler.obtainMessage(MSG_SEND_MODIFY_REQUEST);
-                msg.arg1 = nativeVideoType;
-                mHandler.sendMessage(msg);
-            } else {
+            if (!isSupportTXRXUpdate()
+                    && oldState > VideoProfile.STATE_AUDIO_ONLY
+                    && newState > VideoProfile.STATE_AUDIO_ONLY) {
                 Log.d(TAG, "As do not support TXRX update, handle as pause state change action.");
                 // Need handle the transmission changed as pause state change.
-                boolean wasTrans = VideoProfile.isTransmissionEnabled(fromProfile.getVideoState());
-                boolean isTrans = VideoProfile.isTransmissionEnabled(toProfile.getVideoState());
+                boolean wasTrans = VideoProfile.isTransmissionEnabled(oldState);
+                boolean isTrans = VideoProfile.isTransmissionEnabled(newState);
                 if (wasTrans == isTrans) {
                     // FIXME: There must be some error in telephony, when the user press
                     //        "resume video", the wasTrans is same as isTrans.
@@ -366,6 +362,12 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                     mHandler.sendMessage(
                             mHandler.obtainMessage(MSG_SEND_MODIFY_SUCCESS_RESPONSE, toProfile));
                 }
+            } else {
+                // For video type update, we need send the modify request to server.
+                int nativeVideoType = VideoType.getNativeVideoType(toProfile);
+                Message msg = mHandler.obtainMessage(MSG_SEND_MODIFY_REQUEST);
+                msg.arg1 = nativeVideoType;
+                mHandler.sendMessage(msg);
             }
         } else if (wasPaused != isPaused) {
             // We'd like to handle it as pause/start the video.
