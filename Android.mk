@@ -29,6 +29,8 @@ LOCAL_AAPT_FLAGS := --auto-add-overlay
 
 LOCAL_DEX_PREOPT := false
 
+LOCAL_SDK_VERSION := current
+
 include $(BUILD_PACKAGE)
 
 include $(call all-makefiles-under,$(LOCAL_PATH))
