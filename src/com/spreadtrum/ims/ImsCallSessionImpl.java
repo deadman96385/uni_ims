@@ -241,13 +241,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         // SPRD: Fix bug#651203 & 807149
         if (dc != null && dc.isMpty) {
             mImsCallProfile.setCallExtraBoolean(EXTRA_MT_CONFERENCE_CALL, true);
-            if (mIImsCallSessionListener != null && !mConferenceHost) { //SPRD: add for bug844991
-                try {
-                    mIImsCallSessionListener.callSessionMultipartyStateChanged(this, true);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-            }
         }
         /* @}*/
     }
