@@ -283,7 +283,7 @@ public class ImsUtImpl extends IImsUt.Stub {
      */
     @Override
     public int queryCLIR() throws RemoteException {
-        Log.w(TAG, "Do not support query CLIR now.");
+        Log.w(TAG, "As CLIR based on UE, handle query CLIR as failed.");
         return ImsUtInterface.INVALID;
     }
 
@@ -375,11 +375,8 @@ public class ImsUtImpl extends IImsUt.Stub {
      */
     @Override
     public int updateCLIR(int clirMode) throws RemoteException {
-        if (Utilities.DEBUG) Log.i(TAG, "Try to update CLIR to mode: " + clirMode);
-
-        UTAction action = new UTAction("updateCLIR", MSG_ACTION_UPDATE_CLIR, CMD_TIMEOUT,
-                Boolean.valueOf(clirMode == ImsUtInterface.OIR_PRESENTATION_RESTRICTED));
-        return mCmdManager.addCmd(action);
+        Log.w(TAG, "As CLIR based on UE, handle update CLIR as failed.");
+        return ImsUtInterface.INVALID;
     }
 
     /**
