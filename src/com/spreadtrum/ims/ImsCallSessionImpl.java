@@ -187,10 +187,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         /* SPRD: add for bug 846738 @{ */
         if(dc.isVideoCall()){
             if(!mIsSupportTxRxVideo){
-                if(dc.state == ImsDriverCall.State.HOLDING){//SPRD:add for bug604148
-                    mIsTxDisable = false;
-                    mIsRxDisable = false;
-                }
                 if(mIsTxDisable){
                     mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_RX;
                 } else if(mIsRxDisable){
@@ -264,6 +260,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
             }
         }
+        Log.d(TAG, "updateVideoTxRxState-> mImsCallProfile.mCallType:" + mImsCallProfile.mCallType);
         updateVideoState();
         try{
             if(mIImsCallSessionListener != null){
