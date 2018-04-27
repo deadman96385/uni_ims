@@ -1461,4 +1461,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public boolean isMegerActionHost(){
         return mIsMegerActionHost;
     }
+
+    public void setRemoteVideoProfile(ImsCallProfile profile){
+        mRemoteCallProfile = profile;
+    }
 }

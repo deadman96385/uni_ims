@@ -48,6 +48,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final int EVENT_IMS_CALL_STATE_CHANGED        = 5;
     private static final int EVENT_POLL_CURRENT_CALLS            = 6;
     private static final int EVENT_POLL_CURRENT_CALLS_RESULT     = 7;
+    private static final int EVENT_REMOTE_VIDEO_CAP              = 8;
 
     private PendingIntent mIncomingCallIntent;
     private ImsRIL mCi;
@@ -91,6 +92,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         filter.addAction(Intent.ACTION_USER_SWITCHED);
         mContext.registerReceiver(mBroadcastReceiver, filter);
         /* @} */
+        mCi.registerForRemoteVideoCap(mHandler,EVENT_REMOTE_VIDEO_CAP,null);
     }
 
     /**
@@ -105,6 +107,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             AsyncResult ar = (AsyncResult) msg.obj;
             Log.i(TAG, "handleMessage: "+msg.what);
             switch (msg.what) {
+                case EVENT_REMOTE_VIDEO_CAP:
+                    notifyRemoteVideoCapForMedia((AsyncResult) msg.obj);
+                    break;
                 case EVENT_CALL_STATE_CHANGE:
                     removeMessages(EVENT_POLL_CURRENT_CALLS);
                     sendEmptyMessageDelayed(EVENT_POLL_CURRENT_CALLS,500);
@@ -695,4 +700,29 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         return mCurrentUserId;
     }
     /* @} */
+
+    public void notifyRemoteVideoCapForMedia(AsyncResult ar) {
+        if (ar != null && ar.result != null) {
+            String result = (String) ar.result;
+            int index = Integer.parseInt(result.substring(0, result.indexOf(",")));
+            boolean isVideo = result.contains("video");
+            Log.i(TAG, "notifyRemoteVideoCapForMedia result = " + result + " index=" + index
+                    + " isvideo=" + isVideo);
+            synchronized (mSessionList) {
+                ImsCallProfile profile;
+                ImsCallSessionImpl callSession = mSessionList.get(Integer.toString(index));
+                if (callSession != null) {
+                    Log.i(TAG, "notifyRemoteVideoCapForMedia find callSession : " + callSession);
+                    if (isVideo) {
+                        profile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL,
+                                ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE);
+                    } else {
+                        profile = new ImsCallProfile(ImsCallProfile.SERVICE_TYPE_NORMAL,
+                                ImsCallProfile.CALL_TYPE_VOICE);
+                    }
+                    callSession.setRemoteVideoProfile(profile);
+                }
+            }
+        }
+    }
 }

@@ -1688,6 +1688,7 @@ public final class ImsRIL {
             case ImsRILConstants.RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED: ret = responseVoid(p); break;
             case ImsRILConstants.RIL_UNSOL_RESPONSE_IMS_BEARER_ESTABLISTED: ret = responseInts(p); break;
             case ImsRILConstants.RIL_UNSOL_RESPONSE_VIDEO_QUALITY: ret = responseInts(p); break;
+            case ImsRILConstants.RIL_UNSOL_VT_CAPABILITY: ret = responseRemoteVideoCapResult(p); break;
             default:
                 throw new RuntimeException("Unrecognized unsol response: " + response);
                 //break; (implied)
@@ -1710,6 +1711,11 @@ public final class ImsRIL {
             case ImsRILConstants.RIL_UNSOL_RESPONSE_VIDEO_QUALITY:
                 if (mImsVideoQosRegistrant != null) {
                     mImsVideoQosRegistrant.notifyRegistrant(new AsyncResult(null, ret, null));
+                }
+                break;
+            case ImsRILConstants.RIL_UNSOL_VT_CAPABILITY:
+                if (mRemoteVideoCapRegistrant != null) {
+                    mRemoteVideoCapRegistrant.notifyRegistrant(new AsyncResult(null, ret, null));
                 }
                 break;
         }
@@ -1952,6 +1958,7 @@ public final class ImsRIL {
                 return "UNSOL_SRVCC_STATE_NOTIFY";
             case ImsRILConstants.RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED: return " RIL_UNSOL_RESPONSE_IMS_CALL_STATE_CHANGED";
             case ImsRILConstants.RIL_UNSOL_RESPONSE_IMS_BEARER_ESTABLISTED: return "RIL_UNSOL_RESPONSE_IMS_BEARER_ESTABLISTED";
+            case ImsRILConstants.RIL_UNSOL_VT_CAPABILITY: return "RIL_UNSOL_VT_CAPABILITY";
             default: return "<unknown response>";
         }
     }
@@ -2635,5 +2642,21 @@ public final class ImsRIL {
 
     public void unSetOnSuppServiceNotification(Handler h) {
         mCi.unSetOnSuppServiceNotification(h);
+    }
+
+    protected Registrant mRemoteVideoCapRegistrant;
+    public void registerForRemoteVideoCap(Handler h, int what, Object obj) {
+        mRemoteVideoCapRegistrant = new Registrant(h, what, obj);
+    }
+
+    public void unregisterForRemoteVideoCap(Handler h) {
+        mRemoteVideoCapRegistrant.clear();
+    }
+
+    private Object responseRemoteVideoCapResult(Parcel p){
+        int index = p.readInt();
+        String result = p.readString();
+        riljLog("responseRemoteVideoCapResult index="+ index + " result=" + result);
+        return index+","+result;
     }
 }
