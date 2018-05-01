@@ -343,6 +343,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             mImsCallSessionImpl.getLocalRequestProfile().mCallType = requestImsCallProfile.mCallType;
             mCi.requestVolteCallMediaChange(mediaRequest, Integer.parseInt(mImsCallSessionImpl.getCallId()),null);
             if (isUpgrade) {
+                onVTConnectionEstablished(mImsCallSessionImpl);//SPRD:add for bug864361
                 //SPRD: add for bug674565
                 if (mContext != null) {
                     Message msg = new Message();
@@ -377,19 +378,19 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
 
         if(responseProfile.getVideoState() == mLoacalRequstProfile.getVideoState()){
             mCi.responseVolteCallMediaChange(true, Integer.parseInt(mImsCallSessionImpl.getCallId()), mCallIdMessage);
-            receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
-                    null,null);
+//            receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+//                    null,null);
         }else{
             mCi.responseVolteCallMediaChange(false, Integer.parseInt(mImsCallSessionImpl.getCallId()), mCallIdMessage);
-            receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
-                    null,null);
+//            receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+//                    null,null);
         }
     }
 
     public void updateVideoQuality(VideoProfile responseProfile) {
-        log("onSendSessionModifyResponse->responseProfile:" + responseProfile);
+        log("updateVideoQuality->responseProfile:" + responseProfile);
         if(responseProfile != null){
-            log("onSendSessionModifyRequest.updateVideoQuality-> quality:"+ responseProfile.getQuality());
+            log("updateVideoQuality.updateVideoQuality-> quality:"+ responseProfile.getQuality());
             mHandler.obtainMessage(mVTManagerProxy.EVENT_ON_UPDATE_DEVICE_QUALITY, new Integer(responseProfile.getQuality())).sendToTarget();
         }
     }
@@ -485,6 +486,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
              showRequestStateToast();
              mLocalRequestProfile = null;
          }
+
          //SPRD:fix for bug 597075
          if(isVideoCall(imsCallProfile.mCallType)
                  && (session != null && session.mImsDriverCall != null && session.mImsDriverCall.state != ImsDriverCall.State.HOLDING)){
@@ -620,6 +622,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                     log("handleVolteCallMediaChange->mCallIdMessage.arg1 = "+mCallIdMessage.arg1);
                     return;
                 }
+                onVTConnectionEstablished(mImsCallSessionImpl);//SPRD: add fro bug864391
                 receiveSessionModifyRequest(mLoacalRequstProfile);
 
             }/*TODO: remove for 8.1
