@@ -477,8 +477,8 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                  result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS;
              }
              receiveSessionModifyResponse(result, mLocalRequestProfile, responseProfile);
-             //mLocalRequestProfile = null;
              showRequestStateToast();
+             mLocalRequestProfile = null;
          }
          //SPRD:fix for bug 597075
          if(isVideoCall(imsCallProfile.mCallType)
