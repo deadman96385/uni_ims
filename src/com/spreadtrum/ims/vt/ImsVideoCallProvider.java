@@ -329,6 +329,11 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             if(!mIsSupportTxRxVideo &&
                     (mediaRequest == ImsRIL.MEDIA_REQUEST_VIDEO_BIDIRECTIONAL_DOWNGRADE_VIDEO_RX ||
                             mediaRequest == ImsRIL.MEDIA_REQUEST_VIDEO_RX_UPGRADE_VIDEO_BIDIRECTIONAL)){
+
+                if (mediaRequest == ImsRIL.MEDIA_REQUEST_VIDEO_RX_UPGRADE_VIDEO_BIDIRECTIONAL) {
+                    receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS,
+                            null, null);
+                }
                 mImsCallSessionImpl.updateVideoTxRxState(!toProfile.isTransmissionEnabled(toProfile.getVideoState()),
                         !toProfile.isTransmissionEnabled(toProfile.getVideoState()));
                 return;
