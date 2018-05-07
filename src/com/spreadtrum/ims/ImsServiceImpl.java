@@ -205,6 +205,7 @@ public class ImsServiceImpl {
         //add for Bug 707696
         mCi.registerForSrvccStateChanged(mHandler, EVENT_SRVCC_STATE_CHANGED, null);
         mCi.getImsRegAddress(mHandler.obtainMessage(EVENT_IMS_GET_IMS_REG_ADDRESS));
+        mHandler.obtainMessage(EVENT_IMS_STATE_CHANGED, new AsyncResult(null,new int[]{0},null)).sendToTarget();//add for sim hotplug issue
     }
 
     /**
