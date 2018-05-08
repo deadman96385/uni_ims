@@ -61,7 +61,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     public static final int CODE_LOCAL_CALL_IMS_HANDOVER_RETRY = 151;
 
-
     public static final String EXTRA_MT_CONFERENCE_CALL = "is_mt_conf_call";
 
     private static final int EVENT_SSN = 101;//SPRD:Add for bug582072
@@ -116,6 +115,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     /* @} */
     //SPRD: add for bug 846738
     boolean mIsSupportTxRxVideo = SystemProperties.getBoolean("persist.sys.txrx_vt", false);
+  //SPRD: add for bug858168
+    boolean mVideoHasDowngrade;
+    private static final int SPECIAL_CALL_TYPE = 99;
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
@@ -966,9 +968,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
         /*SPRD:bug523375 add voice accept video call @{*/
-        if(callType == ImsCallProfile.CALL_TYPE_VOICE && (mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT)){
+        if(mVideoHasDowngrade && (callType != SPECIAL_CALL_TYPE)){
+           mVideoHasDowngrade = false;
+        }else if((callType == SPECIAL_CALL_TYPE) || (callType == ImsCallProfile.CALL_TYPE_VOICE) && (mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT)){
             Log.i(TAG, "voice accept video call!");
             mCi.requestVolteCallFallBackToVoice(Integer.valueOf(getCallId()),mHandler.obtainMessage(ACTION_COMPLETE_ACCEPT_AS_AUDIO,this));
+            if(callType == SPECIAL_CALL_TYPE){
+               mVideoHasDowngrade = true;
+               return;
+            }
         }/*@}*/
 
         mImsCallProfile.mMediaProfile = profile;
