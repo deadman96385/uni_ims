@@ -1987,35 +1987,23 @@ class MyVoWifiCallback implements VoWifiCallback {
         if(mInCallHandoverFeature != ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN){
             if(mInCallHandoverFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
-                if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature
-                        || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered
-                        || mPreVolteRegState != volteRegState);
+                if(imsService != null) imsService.notifyImsRegister(true, true);
             } else if (imsService != null && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-                imsService.notifyImsRegister(false, currentImsFeature != mCurrentImsFeature
-                        || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered
-                        || mPreVolteRegState != volteRegState);
+                imsService.notifyImsRegister(false, true);
             }else {
                 mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
-                if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature
-                        || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered
-                        || mPreVolteRegState != volteRegState);
+                if(imsService != null) imsService.notifyImsRegister(true, true);
             }
         } else if(mVolteRegistered) {
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
-            if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature
-                    || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered
-                    || mPreVolteRegState != volteRegState);
+            if(imsService != null) imsService.notifyImsRegister(true, true);
         } else if(mWifiRegistered){
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
-            if(imsService != null) imsService.notifyImsRegister(true, currentImsFeature != mCurrentImsFeature
-                    || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered
-                    || mPreVolteRegState != volteRegState);
+            if(imsService != null) imsService.notifyImsRegister(true, true);
         } else {
             mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-            if(imsService != null) imsService.notifyImsRegister(false, currentImsFeature != mCurrentImsFeature
-                    || mPreVolteRegistered != mVolteRegistered || mPreWifiRegistered != mWifiRegistered
-                    || mPreVolteRegState != volteRegState);
+            if(imsService != null) imsService.notifyImsRegister(false, true);
         }
         if(imsService != null) {
             imsService.updateImsFeatures(mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE,
