@@ -3627,13 +3627,8 @@ public class ImsService extends Service {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if ((TelephonyIntents.ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED).equals(action)) {
-                int primaryPhoneId = ImsRegister.getPrimaryCard(mPhoneCount);
-                ImsServiceImpl imsService = mImsServiceImplMap.get(Integer
-                        .valueOf(primaryPhoneId +1));
-                if(isImsEnabled() && imsService != null && !imsService.isImsEnabled()) {
-                    mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-                    Log.i(TAG,"ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED, clear mCurrentImsFeature." );
-                }
+                Log.i(TAG,"ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED, update Ims Feature For All Service." );  //SPRD: add for bug866765
+                updateImsFeatureForAllService();
             }
         }
     };
