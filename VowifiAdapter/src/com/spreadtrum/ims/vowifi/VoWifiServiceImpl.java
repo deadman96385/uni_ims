@@ -1080,7 +1080,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             if (mUTMgr != null) {
                 RegisterConfig regConfig = mRegisterMgr.getCurRegisterConfig();
                 int ipVersion = IPVersion.NONE;
-                if (regConfig != null) {
+                if (regConfig != null && newState == RegisterState.STATE_CONNECTED) {
                     ipVersion = regConfig.isCurUsedIPv4() ? IPVersion.IP_V4 : IPVersion.IP_V6;
                 }
                 mUTMgr.updateRegisterState(newState, ipVersion);
