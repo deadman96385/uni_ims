@@ -69,7 +69,8 @@ public class ImsConfigImpl extends IImsConfig.Stub {
         mContext = context;
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
         mSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferenceListener);
-        mCameraResolution = mSharedPreferences.getInt(VIDEO_CALL_RESOLUTION, mDefaultVtResolution);
+        // SPRD 864003
+        mCameraResolution = mSharedPreferences.getInt(VIDEO_CALL_RESOLUTION+imsserviceid, mDefaultVtResolution);
         mHandler.removeMessages(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE);
         mHandler.sendEmptyMessageDelayed(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE, 1000);
         mImsServiceId = imsserviceid; // SPRD: bug805154
