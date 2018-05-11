@@ -2144,9 +2144,18 @@ public class ImsService extends Service {
          */
         @Override
         public String getCurPcscfAddress() {
+            Log.i(TAG,"getCurPcscfAddress mIsVolteCall="+mIsVolteCall+" mIsVowifiCall="+mIsVowifiCall);
             String address = null;
-            if (mWifiService != null) {
-                address = mWifiService.getCurPcscfAddress();
+            if(mIsVolteCall || (isVoLTEEnabled() && !mIsVowifiCall && !mIsVolteCall)){
+                ImsServiceImpl imsService = mImsServiceImplMap.get(
+                        Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
+                if(imsService != null){
+                    address = imsService.getImsPcscfAddress();
+                }
+            }else if(mIsVowifiCall || (isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall)){
+                if(mWifiService != null){
+                    address = mWifiService.getCurPcscfAddress();
+                }
             }
             return address;
         }
@@ -2200,10 +2209,20 @@ public class ImsService extends Service {
          */
         @Override
         public String getCurLocalAddress() {
-            if (mWifiService != null) {
-                return mWifiService.getCurLocalAddress();
+            Log.i(TAG,"getCurLocalAddress mIsVolteCall="+mIsVolteCall+" mIsVowifiCall="+mIsVowifiCall);
+            String address = null;
+            if(mIsVolteCall || (isVoLTEEnabled() && !mIsVowifiCall && !mIsVolteCall)){
+                ImsServiceImpl imsService = mImsServiceImplMap.get(
+                        Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
+                if(imsService != null){
+                    address = imsService.getIMSRegAddress();
+                }
+            }else if(mIsVowifiCall || (isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall)){
+                if(mWifiService != null){
+                    address = mWifiService.getCurLocalAddress();
+                }
             }
-            return "";
+            return address;
         }
 
         /**
