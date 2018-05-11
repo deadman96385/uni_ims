@@ -1684,19 +1684,20 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         /* @} */
 
-            switch (notification.code) {
+        if (notification.notificationType == 0) return;  //SPRD:modify by bug 786859.869743
+        switch (notification.code) {
             case SuppServiceNotification.MT_CODE_CALL_ON_HOLD:
-                if(notification.notificationType == 1){
-                   mIsRemoteHold = true;//SPRD: modify by bug666088 and modify for bug801672
+                if (notification.notificationType == 1) {
+                    mIsRemoteHold = true;//SPRD: modify by bug666088 and modify for bug801672
                 }
                 mRemoteCallProfile = new ImsCallProfile(
                         ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VOICE);
                 /* SPRD: add for bug 851187@*/
-                try{
-                    if(mIImsCallSessionListener != null){
-                        mIImsCallSessionListener.callSessionHoldReceived((IImsCallSession)this, mImsCallProfile);
+                try {
+                    if (mIImsCallSessionListener != null) {
+                        mIImsCallSessionListener.callSessionHoldReceived((IImsCallSession) this, mImsCallProfile);
                     }
-                } catch(RemoteException e){
+                } catch (RemoteException e) {
                     e.printStackTrace();
                 }
                 /*@}*/
@@ -1706,16 +1707,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 mRemoteCallProfile = new ImsCallProfile(
                         ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE);
                 /* SPRD: add for bug 851187@*/
-                try{
-                    if(mIImsCallSessionListener != null){
-                        mIImsCallSessionListener.callSessionResumeReceived((IImsCallSession)this, mImsCallProfile);
+                try {
+                    if (mIImsCallSessionListener != null) {
+                        mIImsCallSessionListener.callSessionResumeReceived((IImsCallSession) this, mImsCallProfile);
                     }
-                } catch(RemoteException e){
+                } catch (RemoteException e) {
                     e.printStackTrace();
                 }
                 /*@}*/
                 break;
-            }
+        }
     }
     /* @} */
 
