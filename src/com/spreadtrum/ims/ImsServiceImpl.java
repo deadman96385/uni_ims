@@ -233,7 +233,11 @@ public class ImsServiceImpl extends MMTelFeature {
                         mImsServiceState.mRegState = responseArray.intValue();
                         mImsServiceState.mImsRegistered = (mImsServiceState.mRegState == IMS_REG_STATE_REGISTERED
                                 ? true : false);
-                        Log.i(TAG,"EVENT_IMS_STATE_CHANGED->mRegState:"+mImsServiceState.mRegState);
+                        // SPRD 869523
+                        mImsServiceState.mSrvccState = -1;
+                        Log.i(TAG, "EVENT_IMS_STATE_CHANGED->mRegState = "
+                            + mImsServiceState.mRegState + " | mSrvccState = "
+                            + mImsServiceState.mSrvccState);
                         switch(mImsServiceState.mRegState){
                             case IMS_REG_STATE_INACTIVE:
                                 break;
