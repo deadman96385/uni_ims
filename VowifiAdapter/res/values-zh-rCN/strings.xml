@@ -10,6 +10,8 @@
     <string name="vowifi_hold_fail">保持通话失败</string>
     <string name="vowifi_resume_success">恢复通话成功</string>
     <string name="vowifi_resume_fail">恢复通话失败</string>
+    <string name="vowifi_hold_received">呼叫被保持</string>
+    <string name="vowifi_resume_received">呼叫被激活</string>
 
     <string name="vowifi_call_retry">请稍后再试</string>
     <string name="vowifi_call_is_focus">加入会议</string>
