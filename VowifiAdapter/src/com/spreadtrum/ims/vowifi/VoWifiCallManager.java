@@ -1214,11 +1214,13 @@ public class VoWifiCallManager extends ServiceManager {
             }
             case JSONUtils.EVENT_CODE_CALL_HOLD_RECEIVED:
             case JSONUtils.EVENT_CODE_CONF_HOLD_RECEIVED: {
+                toastTextResId = R.string.vowifi_hold_received;
                 listener.callSessionHoldReceived(callSession, callSession.getCallProfile());
                 break;
             }
             case JSONUtils.EVENT_CODE_CALL_RESUME_RECEIVED:
             case JSONUtils.EVENT_CODE_CONF_RESUME_RECEIVED: {
+                toastTextResId = R.string.vowifi_resume_received;
                 listener.callSessionResumeReceived(callSession, callSession.getCallProfile());
                 break;
             }
