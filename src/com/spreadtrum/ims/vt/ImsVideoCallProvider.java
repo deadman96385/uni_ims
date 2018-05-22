@@ -590,6 +590,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                         && isVideoCall(mImsCallSessionImpl.mImsCallProfile.mCallType)
                         && videoCallMediaDirection == session.mImsDriverCall.VIDEO_CALL_MEDIA_DIRECTION_SENDRECV){
                     mCi.responseVolteCallMediaChange(true, Integer.parseInt(mImsCallSessionImpl.getCallId()), mCallIdMessage);
+                    return;
                 }/* @}*/
                 else{
                     /*TODO: remove for 8.0
