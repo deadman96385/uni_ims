@@ -816,8 +816,11 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     private void registerSuccess(int stateCode) {
-        // As login success, we need set the video quality.
-        mCallMgr.updateVideoQuality(Utilities.getDefaultVideoQuality(mPreferences));
+        if (mCallMgr != null) {
+            // As login success, we need set the video quality, and reset the rat type.
+            mCallMgr.updateVideoQuality(Utilities.getDefaultVideoQuality(mPreferences));
+            mCallMgr.resetCallRatType();
+        }
 
         mCmdRegisterState = CMD_STATE_FINISHED;
         if (mCallback != null) {

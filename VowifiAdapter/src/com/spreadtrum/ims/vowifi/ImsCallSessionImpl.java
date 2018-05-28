@@ -245,7 +245,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     protected ImsCallSessionImpl(Context context, VoWifiCallManager callManager,
             ImsCallProfile profile, IImsCallSessionListener listener,
-            ImsVideoCallProviderImpl videoCallProvider, int callDir) {
+            ImsVideoCallProviderImpl videoCallProvider, int callDir, int callRatType) {
         mContext = context;
         mCursor = getCallCursor();
         mCallStateTracker = new VoWifiCallStateTracker(State.IDLE, callDir);
@@ -262,8 +262,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mVideoCallProvider.updateVideoProfile(videoProfile);
 
         // Set radio technology to WLAN.
-        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE,
-                String.valueOf(ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN));
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE, String.valueOf(callRatType));
 
         // Register the service changed to get the IVowifiService.
         mCallManager.registerCallInterfaceChanged(mICallChangedListener);

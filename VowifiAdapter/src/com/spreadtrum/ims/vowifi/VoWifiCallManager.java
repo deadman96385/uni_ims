@@ -11,6 +11,7 @@ import android.os.RemoteException;
 import android.os.SystemProperties;
 import android.telecom.VideoProfile;
 import android.telecom.Connection.VideoProvider;
+import android.telephony.ServiceState;
 import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
@@ -75,6 +76,7 @@ public class VoWifiCallManager extends ServiceManager {
 
     private int mUseAudioStreamCount = 0;
     private int mRegisterState = RegisterState.STATE_IDLE;
+    private int mCurRatType = ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN;
     private boolean mInSRVCC = false;
 
     private ECBMRequest mECBMRequest;
@@ -326,9 +328,14 @@ public class VoWifiCallManager extends ServiceManager {
         }
     }
 
+    public void resetCallRatType() {
+        mCurRatType = ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN;
+    }
+
     public void updateCallsRatType(int type) {
         if (Utilities.DEBUG) Log.i(TAG, "Try to update all the calls' type to: " + type);
 
+        mCurRatType = type;
         for (ImsCallSessionImpl callSession : mSessionList) {
             callSession.updateCallRatType(type);
         }
@@ -669,7 +676,7 @@ public class VoWifiCallManager extends ServiceManager {
             IImsCallSessionListener listener, ImsVideoCallProviderImpl videoCallProvider,
             int callDir) {
         ImsCallSessionImpl session = new ImsCallSessionImpl(mContext, this, profile, listener,
-                videoCallProvider, callDir);
+                videoCallProvider, callDir, mCurRatType);
 
         // Add this call session to the list.
         addCall(session);
