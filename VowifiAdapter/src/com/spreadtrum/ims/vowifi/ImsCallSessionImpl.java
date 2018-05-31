@@ -20,15 +20,15 @@ import android.util.Log;
 import android.view.Surface;
 import android.widget.Toast;
 
-import com.android.ims.ImsCallProfile;
-import com.android.ims.ImsConferenceState;
-import com.android.ims.ImsReasonInfo;
-import com.android.ims.ImsStreamMediaProfile;
+import android.telephony.ims.ImsCallProfile;
+import android.telephony.ims.ImsConferenceState;
+import android.telephony.ims.ImsReasonInfo;
+import android.telephony.ims.ImsStreamMediaProfile;
 import com.android.ims.internal.IImsCallSession;
 import com.android.ims.internal.IImsCallSessionListener;
 import com.android.ims.internal.IImsVideoCallProvider;
 import com.android.ims.internal.IVoWifiCall;
-import com.android.ims.internal.ImsCallSession.State;
+import android.telephony.ims.ImsCallSession.State;
 import com.android.ims.internal.ImsSrvccCallInfo;
 import com.spreadtrum.ims.R;
 import com.spreadtrum.ims.vowifi.Utilities.CallCursor;
@@ -285,6 +285,20 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     /**
+     * AndroidP start@{:
+     */
+    @Override
+    public void deflect(String deflectNumber){
+        //TODO:
+    }
+
+    @Override
+    public void setListener(android.telephony.ims.aidl.IImsCallSessionListener listener){
+        //TODO:
+    }
+    /* AndroidP end@} */
+
+    /**
      * Closes the object. This object is not usable after being closed.
      */
     @Override
@@ -383,7 +397,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
      *
      * @param listener to listen to the session events of this object
      */
-    @Override
+    //TODO:@Override
     public void setListener(IImsCallSessionListener listener) {
         if (Utilities.DEBUG) Log.i(TAG, "Set the listener: " + listener);
 
@@ -1351,7 +1365,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     public ImsConferenceState getConfParticipantsState() {
         ImsConferenceState state = new ImsConferenceState();
-        state.mParticipants = mConfParticipantStates;
+        state.mParticipants.clear();
+        state.mParticipants.putAll(mConfParticipantStates);
         return state;
     }
 

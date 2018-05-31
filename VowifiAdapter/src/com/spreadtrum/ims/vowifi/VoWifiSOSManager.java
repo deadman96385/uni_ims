@@ -4,7 +4,7 @@ import android.content.Context;
 import android.os.RemoteException;
 import android.util.Log;
 
-import com.android.ims.ImsReasonInfo;
+import android.telephony.ims.ImsReasonInfo;
 import com.spreadtrum.ims.vowifi.Utilities.ECBMRequest;
 
 public class VoWifiSOSManager extends VoWifiServiceImpl {

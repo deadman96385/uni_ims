@@ -11,11 +11,11 @@ import android.telecom.VideoProfile;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
-import android.telephony.TelephonyManagerEx;
+//import android.telephony.TelephonyManagerEx;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.android.ims.ImsCallProfile;
+import android.telephony.ims.ImsCallProfile;
 import com.android.ims.internal.IVoWifiCall;
 import com.android.ims.internal.IVoWifiRegister;
 import com.android.ims.internal.IVoWifiSecurity;
@@ -1042,7 +1042,7 @@ public class Utilities {
         }
 
         public boolean isEnabled() {
-            return TelephonyManagerEx.from(mContext).getIccFdnEnabled(mSubId);
+            return /*TODO: TelephonyManagerEx.from(mContext).getIccFdnEnabled(mSubId)*/false;
         }
 
         public boolean isAccept(String callee) {

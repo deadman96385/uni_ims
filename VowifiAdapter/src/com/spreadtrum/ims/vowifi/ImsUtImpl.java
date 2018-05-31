@@ -9,10 +9,10 @@ import android.os.RemoteException;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.android.ims.ImsCallForwardInfo;
+import android.telephony.ims.ImsCallForwardInfo;
 import com.android.ims.internal.ImsCallForwardInfoEx;
-import com.android.ims.ImsReasonInfo;
-import com.android.ims.ImsSsInfo;
+import android.telephony.ims.ImsReasonInfo;
+import android.telephony.ims.ImsSsInfo;
 import com.android.ims.ImsUtInterface;
 import com.android.ims.internal.IImsUt;
 import com.android.ims.internal.IImsUtListener;
@@ -223,6 +223,23 @@ public class ImsUtImpl extends IImsUt.Stub {
         mUtManager.registerUTInterfaceChanged(mIUTChangedListener);
     }
 
+    /**
+     * AndroidP start@{:
+     */
+    @Override
+    public int updateCallBarringForServiceClass(int cbType, int action,
+             String[] barrList, int serviceClass) throws RemoteException {
+        //TODO
+        return -1;
+    }
+
+    @Override
+    public int queryCallBarringForServiceClass(int cbType, int serviceClass){
+        //TODO
+        return -1;
+    }
+    /* AndroidP end@} */
+
     @Override
     protected void finalize() throws Throwable {
         // Un-register the service changed.
@@ -283,7 +300,7 @@ public class ImsUtImpl extends IImsUt.Stub {
      */
     @Override
     public int queryCLIR() throws RemoteException {
-        Log.w(TAG, "Do not support query CLIR now.");
+        Log.w(TAG, "As CLIR based on UE, handle query CLIR as failed.");
         return ImsUtInterface.INVALID;
     }
 
@@ -375,11 +392,8 @@ public class ImsUtImpl extends IImsUt.Stub {
      */
     @Override
     public int updateCLIR(int clirMode) throws RemoteException {
-        if (Utilities.DEBUG) Log.i(TAG, "Try to update CLIR to mode: " + clirMode);
-
-        UTAction action = new UTAction("updateCLIR", MSG_ACTION_UPDATE_CLIR, CMD_TIMEOUT,
-                Boolean.valueOf(clirMode == ImsUtInterface.OIR_PRESENTATION_RESTRICTED));
-        return mCmdManager.addCmd(action);
+        Log.w(TAG, "As CLIR based on UE, handle update CLIR as failed.");
+        return ImsUtInterface.INVALID;
     }
 
     /**

@@ -14,11 +14,11 @@ import android.preference.PreferenceManager;
 import android.telephony.ServiceState;
 import android.util.Log;
 
-import com.android.ims.ImsCallProfile;
+import android.telephony.ims.ImsCallProfile;
 import com.android.ims.ImsManager;
 import com.android.ims.internal.IImsCallSessionListener;
 import com.android.ims.internal.IImsServiceEx;
-import com.android.ims.internal.ImsCallSession.State;
+import android.telephony.ims.ImsCallSession.State;
 import com.android.ims.internal.ImsManagerEx;
 import com.spreadtrum.ims.ImsConfigImpl;
 import com.spreadtrum.ims.vowifi.Utilities.CallStateForDataRouter;
@@ -1080,7 +1080,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             if (mUTMgr != null) {
                 RegisterConfig regConfig = mRegisterMgr.getCurRegisterConfig();
                 int ipVersion = IPVersion.NONE;
-                if (regConfig != null) {
+                if (regConfig != null && newState == RegisterState.STATE_CONNECTED) {
                     ipVersion = regConfig.isCurUsedIPv4() ? IPVersion.IP_V4 : IPVersion.IP_V6;
                 }
                 mUTMgr.updateRegisterState(newState, ipVersion);

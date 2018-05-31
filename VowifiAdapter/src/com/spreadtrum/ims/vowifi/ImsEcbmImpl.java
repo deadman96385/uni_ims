@@ -4,7 +4,7 @@ import android.content.Context;
 import android.os.RemoteException;
 import android.util.Log;
 
-import com.android.ims.ImsReasonInfo;
+import android.telephony.ims.ImsReasonInfo;
 import com.android.ims.internal.IImsEcbm;
 import com.android.ims.internal.IImsEcbmListener;
 
