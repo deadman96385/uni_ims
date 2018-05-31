@@ -25,13 +25,14 @@ import android.os.SystemProperties;
 import android.os.RemoteException;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
-import android.telephony.TelephonyManagerEx;
+//TODO: import android.telephony.TelephonyManagerEx;
 import android.telephony.PhoneStateListener;
 import android.telephony.VoLteServiceState;
+import android.telephony.CarrierConfigManager;
 import android.telephony.CarrierConfigManagerEx;
 import android.telephony.SubscriptionManager;
 import android.telephony.ims.feature.ImsFeature;
-import android.telephony.ims.feature.MMTelFeature;
+import android.telephony.ims.feature.MmTelFeature;
 import android.util.Log;
 import android.util.SparseArray;
 import android.widget.Toast;
@@ -47,23 +48,19 @@ import com.android.internal.telephony.Call;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
 import com.android.internal.telephony.TelephonyIntents;
+
+
 import com.android.ims.ImsException;
 import com.android.ims.ImsManager;
-import com.android.ims.ImsReasonInfo;
 import com.android.ims.ImsServiceClass;
-import com.android.ims.ImsCallProfile;
 import com.android.ims.ImsConfig;
 import com.android.ims.internal.IImsCallSession;
-import com.android.ims.internal.IImsCallSessionListener;
+import android.telephony.ims.aidl.IImsCallSessionListener;
 import com.android.ims.internal.IImsRegistrationListener;
 import com.android.ims.internal.IImsEcbm;
 import com.android.ims.internal.IImsService;
 import com.android.ims.internal.IImsUt;
 import com.android.ims.internal.IImsUtEx;
-import com.android.ims.internal.IImsConfig;
-import com.android.ims.internal.ImsCallSession;
-import com.spreadtrum.ims.ImsCallSessionImpl.Listener;
-import com.spreadtrum.ims.vt.VTManagerProxy;
 import com.android.ims.internal.IImsServiceEx;
 import com.android.ims.internal.IImsPdnStateListener;
 import com.android.ims.internal.IImsServiceListenerEx;
@@ -73,9 +70,30 @@ import com.android.ims.internal.ImsManagerEx;
 import com.android.ims.internal.IImsMultiEndpoint;
 import com.android.ims.internal.IImsExternalCallStateListener;
 import com.android.ims.internal.ImsSrvccCallInfo;
-import com.android.ims.internal.IImsServiceController;
-import com.android.ims.internal.IImsServiceFeatureListener;
 import com.android.ims.internal.IImsFeatureStatusCallback;
+
+import android.telephony.ims.ImsCallProfile;
+import android.telephony.ims.ImsCallSession;
+import android.telephony.ims.ImsCallForwardInfo;
+import android.telephony.ims.ImsConferenceState;
+import android.telephony.ims.ImsReasonInfo;
+import android.telephony.ims.ImsSsData;
+import android.telephony.ims.ImsStreamMediaProfile;
+import android.telephony.ims.ImsSuppServiceNotification;
+import android.telephony.ims.ImsVideoCallProvider;
+import android.telephony.ims.aidl.IImsConfig;
+import android.telephony.ims.aidl.IImsConfigCallback;
+import android.telephony.ims.aidl.IImsMmTelFeature;
+import android.telephony.ims.aidl.IImsRcsFeature;
+import android.telephony.ims.aidl.IImsRegistration;
+import android.telephony.ims.aidl.IImsRegistrationCallback;
+import android.telephony.ims.aidl.IImsServiceController;
+import android.telephony.ims.aidl.IImsSmsListener;
+import android.telephony.ims.stub.ImsFeatureConfiguration;
+import android.telephony.ims.aidl.IImsServiceControllerListener;
+
+import com.spreadtrum.ims.ImsCallSessionImpl.Listener;
+import com.spreadtrum.ims.vt.VTManagerProxy;
 import com.spreadtrum.ims.vowifi.Utilities.RegisterState;
 import com.spreadtrum.ims.vowifi.Utilities.SecurityConfig;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl;
@@ -198,6 +216,12 @@ public class ImsService extends Service {
         public static final int SUCCESS = 1;
     }
 
+    /**
+     * AndroidP start@{:
+     */
+    private IImsServiceControllerListener mIImsServiceControllerListener;
+    /* AndroidP end@} */
+
     // Only add for cmcc test, if this prop is FALSE, we needn't s2b function.
     // TODO: Need remove this after development.
     private static final String PROP_S2B_ENABLED = "persist.sys.s2b.enabled";
@@ -214,7 +238,7 @@ public class ImsService extends Service {
     private int mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
     private TelephonyManager mTelephonyManager;
     // add for Dual LTE
-    private TelephonyManagerEx mTelephonyManagerEx;
+    //TODO: private TelephonyManagerEx mTelephonyManagerEx;
     private PhoneStateListener mPhoneStateListener;
     private int mPhoneCount = 2;
     private ImsServiceRequest mFeatureSwitchRequest;
@@ -480,7 +504,9 @@ public class ImsService extends Service {
                         ImsServiceImpl service = mImsServiceImplMap
                                 .get(Integer.valueOf(ImsRegister
                                         .getPrimaryCard(mPhoneCount) + 1));
-                        service.sendIncomingCallIntent((String) msg.obj);
+
+                        //TODO: need imsCallSession boject
+                        // service.sendIncomingCallIntent((String) msg.obj);
                         mInCallPhoneId = ImsRegister.getPrimaryCard(mPhoneCount);// sprd:add
                                                                                  // for
                                                                                  // bug635699
@@ -1129,7 +1155,6 @@ public class ImsService extends Service {
             return;
         }
         super.onCreate();
-        ServiceManager.addService("ims", mImsBinder);
         ServiceManager.addService(ImsManagerEx.IMS_SERVICE_EX,
                 mImsServiceExBinder);
         ServiceManager.addService(ImsManagerEx.IMS_UT_EX, mImsUtExBinder);
@@ -1151,7 +1176,7 @@ public class ImsService extends Service {
             }
         }
         mTelephonyManager = (TelephonyManager)this.getSystemService(Context.TELEPHONY_SERVICE);
-        mTelephonyManagerEx = TelephonyManagerEx.from(getApplicationContext());
+        //TODO:mTelephonyManagerEx = TelephonyManagerEx.from(getApplicationContext());
         mPhoneCount = mTelephonyManager.getPhoneCount();
         mPhoneStateListener = new PhoneStateListener() {
             @Override
@@ -1219,7 +1244,7 @@ public class ImsService extends Service {
         if ("android.telephony.ims.ImsService".equals(intent.getAction())) {
             return mImsServiceController;
         }
-        return mImsBinder;
+        return mImsServiceController;
     }
 
     public IImsCallSession createCallSessionInternal(int serviceId,
@@ -1241,7 +1266,7 @@ public class ImsService extends Service {
                                                                                  // router
             }
             Log.e(TAG, "createCallSession-> startVoWifiCall");
-            return mWifiService.createCallSession(profile, listener);
+            //TODO:return mWifiService.createCallSession(profile, listener);
         }
         /* @} */
         ImsServiceImpl service = mImsServiceImplMap.get(new Integer(serviceId));
@@ -1258,10 +1283,10 @@ public class ImsService extends Service {
         }
         Log.e(TAG, "createCallSession-> startVoLteCall");
         //SPRD: add for bug825528
-        if(mTelephonyManagerEx.getDataEnabledDuringVolteCall()) {
+        /*TODO:if(mTelephonyManagerEx.getDataEnabledDuringVolteCall()) {
             mMakeCallPrimaryCardServiceId = ImsRegister.getPrimaryCard(mPhoneCount);
-        }
-        return service.createCallSession(serviceId, profile, listener);
+        }*/
+        return service.createCallSessionInterface(serviceId, profile, listener);
     }
 
     public IImsCallSession getPendingCallSessionInternal(int serviceId,
@@ -1286,9 +1311,9 @@ public class ImsService extends Service {
             if (service.getPendingCallSession(callId) != null) {
                 Log.i(TAG, "Volte unknow call");
                 //SPRD: add for bug825528
-                if(mTelephonyManagerEx.getDataEnabledDuringVolteCall()) {
+                /*TODO:if(mTelephonyManagerEx.getDataEnabledDuringVolteCall()) {
                     mMakeCallPrimaryCardServiceId = ImsRegister.getPrimaryCard(mPhoneCount);
-                }
+                }*/
                 mIsVolteCall = true;
                 return service.getPendingCallSession(callId);
             }
@@ -1303,9 +1328,9 @@ public class ImsService extends Service {
         if ((isVoLTEEnabled() || service.getPendingCallSession(callId) != null)
                 && !mIsVowifiCall && !mIsVolteCall) {
             //SPRD: add for bug825528
-            if(mTelephonyManagerEx.getDataEnabledDuringVolteCall()) {
+            /*TODO:if(mTelephonyManagerEx.getDataEnabledDuringVolteCall()) {
                 mMakeCallPrimaryCardServiceId = ImsRegister.getPrimaryCard(mPhoneCount);
-            }
+            }*/
             mIsVolteCall = true;
         }
         Log.i(TAG,
@@ -1313,227 +1338,6 @@ public class ImsService extends Service {
                         + service.getPendingCallSession(callId));
         return service.getPendingCallSession(callId);
     }
-
-    /*
-     * Implement the methods of the IImsService interface in this stub
-     */
-    private final IImsService.Stub mImsBinder = new IImsService.Stub() {
-        @Override
-        public int open(int phoneId, int serviceClass,
-                PendingIntent incomingCallIntent,
-                IImsRegistrationListener listener) {
-            synchronized (mImsServiceImplMap) {
-                ImsServiceImpl impl = mImsServiceImplMap.get(Integer
-                        .valueOf(phoneId + 1));
-                if (impl != null) {
-                    return impl.open(serviceClass, incomingCallIntent, listener);
-                }
-                Log.d(TAG, "Open returns serviceId " + phoneId + " ImsServiceImpl:"
-                        + impl);
-            }
-            return 0;
-        }
-
-        @Override
-        public void close(int serviceId) {
-            ImsServiceImpl impl = mImsServiceImplMap.get(Integer
-                    .valueOf(serviceId));
-            if (impl != null) {
-                impl.close();
-            }
-            Log.d(TAG, "close returns serviceId:" + serviceId
-                    + " ImsServiceImpl:" + impl);
-        }
-
-        @Override
-        public boolean isConnected(int serviceId, int serviceType, int callType) {
-            return true;
-        }
-
-        @Override
-        public boolean isOpened(int serviceId) {
-            synchronized (mImsServiceImplMap) {
-                ImsServiceImpl impl = mImsServiceImplMap.get(Integer
-                        .valueOf(serviceId));
-                if (impl != null) {
-                    return impl.isOpened();
-                }
-                return false;
-            }
-        }
-
-        @Override
-        public void setRegistrationListener(int serviceId,
-                IImsRegistrationListener listener) {
-            synchronized (mImsServiceImplMap) {
-                ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
-                        serviceId));
-                Log.d(TAG, "IImsService setRegistrationListener, id:" + serviceId + " service:" + service);
-                if (service == null) {
-                    Log.e(TAG, "Invalid ServiceId ");
-                    return;
-                }
-                service.setRegistrationListener(listener);
-            }
-        }
-
-        @Override
-        public void addRegistrationListener(int phoneId, int serviceType,
-                IImsRegistrationListener listener) {
-            synchronized (mImsServiceImplMap) {
-                ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
-                        phoneId + 1));
-                Log.d(TAG, "IImsService addRegistrationListener, id:" + phoneId + " service:" + service);
-                if (service == null) {
-                    Log.e(TAG, "Invalid ServiceId ");
-                    return;
-                }
-                service.addRegistrationListener(listener);
-            }
-        }
-
-        @Override
-        public ImsCallProfile createCallProfile(int serviceId, int serviceType,
-                int callType) {
-            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
-                    serviceId));
-            if (service == null) {
-                Log.e(TAG, "Invalid ServiceId ");
-                return null;
-            }
-            return service.createCallProfile(serviceType, callType);
-        }
-
-        @Override
-        public IImsCallSession createCallSession(int serviceId,
-                ImsCallProfile profile, IImsCallSessionListener listener) {
-            return createCallSessionInternal(serviceId, profile, listener);
-        }
-
-        @Override
-        public IImsCallSession getPendingCallSession(int serviceId,
-                String callId) {
-            return getPendingCallSessionInternal(serviceId, callId);
-        }
-
-        /**
-         * Ut interface for the supplementary service configuration.
-         */
-        @Override
-        public IImsUt getUtInterface(int serviceId) {
-            synchronized (mImsServiceImplMap) {
-                ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
-                        serviceId));
-                if (service == null) {
-                    Log.e(TAG, "Invalid ServiceId " + serviceId);
-                    return null;
-                }
-                return service.getUTProxy();
-            }
-        }
-
-        /**
-         * Config interface to get/set IMS service/capability parameters.
-         */
-        @Override
-        public IImsConfig getConfigInterface(int phoneId) {
-            synchronized (mImsServiceImplMap) {
-                ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
-                        phoneId + 1));
-                if (service == null) {
-                    Log.e(TAG, "getConfigInterface Invalid phoneId " + phoneId);
-                    return null;
-                }
-                return service.getConfigInterface();
-            }
-        }
-
-        /**
-         * Used for turning on IMS when its in OFF state.
-         */
-        @Override
-        public void turnOnIms(int phoneId){
-//            for(int i = 0; i < TelephonyManager.getDefault().getPhoneCount(); i++){
-//                ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(i+1));
-//                if(impl == null){
-//                    continue;
-//                }
-//                if(ImsManager.isEnhanced4gLteModeSettingEnabledByUser(getApplicationContext())){//SPRD: bug644353
-//                    impl.turnOnIms();
-//                }
-//            }
-            Log.d(TAG, "ImsService turnOnIms() phoneId = " + phoneId);
-            ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(phoneId + 1));
-            if (impl == null) {
-                return;
-            }
-            Log.d(TAG, "ImsService turnOnIms() impl = " + impl);
-            if (ImsManager.getInstance(getApplicationContext(), phoneId)
-                    .isEnhanced4gLteModeSettingEnabledByUserForSlot()) {
-                impl.turnOnIms();
-            }
-        }
-
-        /**
-         * Used for turning off IMS when its in ON state. When IMS is OFF, device will behave as
-         * CSFB'ed.
-         */
-        @Override
-        public void turnOffIms(int phoneId) {
-            Log.d(TAG, "ImsService turnOffIms() phoneId = " + phoneId);
-//            for(int i = 0; i < TelephonyManager.getDefault().getPhoneCount(); i++){
-//                ImsServiceImpl impl = mImsServiceImplMap.get(Integer.valueOf(i+1));
-//                if(impl == null){
-//                    continue;
-//                }
-//                impl.turnOffIms();
-//            }
-            ImsServiceImpl impl = mImsServiceImplMap
-                    .get(Integer.valueOf(phoneId + 1));
-            Log.d(TAG, "ImsService turnOffIms() impl = " + impl);
-            if (impl == null) {
-                return;
-            }
-            impl.turnOffIms();
-        }
-
-        /**
-         * ECBM interface for Emergency callback notifications
-         */
-        @Override
-        public IImsEcbm getEcbmInterface(int serviceId) {
-            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
-                    serviceId));
-            if (service == null) {
-                Log.e(TAG, "getEcbmInterface: Invalid argument " + service);
-                return null;
-            }
-            return service.getEcbmInterface();
-        }
-
-        /**
-         * Used to set current TTY Mode.
-         */
-        @Override
-        public void setUiTTYMode(int serviceId, int uiTtyMode,
-                Message onComplete) {
-            ImsServiceImpl service = mImsServiceImplMap.get(new Integer(
-                    serviceId));
-            if (service == null) {
-                Log.e(TAG, "Invalid arguments " + serviceId);
-                return;
-            }
-            service.setUiTTYMode(serviceId, uiTtyMode, onComplete);
-        }
-
-        /**
-         * MultiEndpoint interface for DEP.
-         */
-        @Override
-        public IImsMultiEndpoint getMultiEndpointInterface(int serviceId) {
-            return mImsMultiEndpointBinder;
-        }
-    };
 
     /**
      * Called from the ImsResolver to create the requested ImsFeature, as defined by the slot and
@@ -1544,13 +1348,11 @@ public class ImsService extends Service {
      *            defined in {@link ImsFeature}.
      */
     // Be sure to lock on mFeatures before accessing this method
-    private void onCreateImsFeatureInternal(int slotId, int featureType,
-            IImsFeatureStatusCallback c) {
-        Log.i(TAG, "onCreateImsFeatureInternal-> slotId: " + slotId
-                + " featureType:" + featureType);
+    private IImsMmTelFeature onCreateImsFeatureInternal(int slotId, IImsFeatureStatusCallback c) {
+        Log.i(TAG, "onCreateImsFeatureInternal-> slotId: " + slotId);
         ImsServiceImpl service = mImsServiceImplMap
                 .get(new Integer(slotId + 1));
-        service.onCreateImsFeature(c);
+        return service.onCreateImsFeature(c);
     }
 
     /**
@@ -1568,10 +1370,10 @@ public class ImsService extends Service {
     }
 
     // Be sure to lock on mFeatures before accessing this method
-    private MMTelFeature resolveMMTelFeature(int slotId, int featureType) {
+    private ImsServiceImpl getMMTelFeature(int slotId) {
         ImsServiceImpl service = mImsServiceImplMap
                 .get(new Integer(slotId + 1));
-        return (MMTelFeature) service;
+        return service;
     }
 
     /**
@@ -1585,15 +1387,38 @@ public class ImsService extends Service {
     }
 
     protected final IBinder mImsServiceController = new IImsServiceController.Stub() {
+        @Override
+        public void setListener(IImsServiceControllerListener l){
+            Log.i(TAG, "mImsServiceController-> setListener: " + l);
+            mIImsServiceControllerListener = l;
+        }
 
         @Override
-        public void createImsFeature(int slotId, int feature,
-                IImsFeatureStatusCallback c) throws RemoteException {
+        public IImsMmTelFeature createMmTelFeature(int slotId,  IImsFeatureStatusCallback c){
             synchronized (mImsServiceImplMap) {
-                enforceCallingOrSelfPermission(MODIFY_PHONE_STATE,
-                        "createImsFeature");
-                onCreateImsFeatureInternal(slotId, feature, c);
+                return onCreateImsFeatureInternal(slotId, c);
             }
+        }
+
+        @Override
+        public IImsRcsFeature createRcsFeature(int slotId,  IImsFeatureStatusCallback c){
+            Log.i(TAG, "createRcsFeature-> slotId: " + slotId+ " IImsFeatureStatusCallback:"+c);
+            return null;
+        }
+
+        @Override
+        public ImsFeatureConfiguration querySupportedImsFeatures(){
+            ImsFeatureConfiguration.Builder build = new ImsFeatureConfiguration.Builder();
+            for(int i=0;i<mPhoneCount;i++) {
+                build.addFeature(i, ImsFeature.FEATURE_MMTEL);
+                build.addFeature(i, ImsFeature.FEATURE_EMERGENCY_MMTEL);
+            }
+            return build.build();
+        }
+
+        @Override
+        public void notifyImsServiceReadyForFeatureCreation(){
+            //onServiceConnected callback
         }
 
         @Override
@@ -1607,153 +1432,10 @@ public class ImsService extends Service {
         }
 
         @Override
-        public int startSession(int slotId, int featureType,
-                PendingIntent incomingCallIntent,
-                IImsRegistrationListener listener) throws RemoteException {
-            enforceCallingOrSelfPermission(MODIFY_PHONE_STATE, "startSession");
-            synchronized (mImsServiceImplMap) {
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
-                if (feature != null) {
-                    return feature.startSession(incomingCallIntent, listener);
-                }
-            }
-            return 0;
-        }
-
-        @Override
-        public void endSession(int slotId, int featureType, int sessionId)
+        public IImsConfig getConfig(int slotId)
                 throws RemoteException {
             synchronized (mImsServiceImplMap) {
-                enforceCallingOrSelfPermission(MODIFY_PHONE_STATE, "endSession");
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
-                if (feature != null) {
-                    feature.endSession(sessionId);
-                }
-            }
-        }
-
-        @Override
-        public boolean isConnected(int slotId, int featureType,
-                int callSessionType, int callType) throws RemoteException {
-            enforceReadPhoneStatePermission("isConnected");
-            synchronized (mImsServiceImplMap) {
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
-                if (feature != null) {
-                    return feature.isConnected(callSessionType, callType);
-                }
-            }
-            return false;
-        }
-
-        @Override
-        public boolean isOpened(int slotId, int featureType)
-                throws RemoteException {
-            enforceReadPhoneStatePermission("isOpened");
-            synchronized (mImsServiceImplMap) {
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
-                if (feature != null) {
-                    return feature.isOpened();
-                }
-            }
-            return false;
-        }
-
-        @Override
-        public int getFeatureStatus(int slotId, int featureType)
-                throws RemoteException {
-            enforceReadPhoneStatePermission("getFeatureStatus");
-            int status = ImsFeature.STATE_NOT_AVAILABLE;
-            synchronized (mImsServiceImplMap) {
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
-                if (feature != null) {
-                    status = feature.getFeatureState();
-                }
-            }
-            return status;
-        }
-
-        @Override
-        public void addRegistrationListener(int slotId, int featureType,
-                IImsRegistrationListener listener) throws RemoteException {
-            enforceReadPhoneStatePermission("addRegistrationListener");
-            synchronized (mImsServiceImplMap) {
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
-                Log.d(TAG, "IImsServiceController addRegistrationListener, slotId:" + slotId+" service:"+feature);
-                if (feature != null) {
-                    feature.addRegistrationListener(listener);
-                }
-            }
-        }
-
-        @Override
-        public void removeRegistrationListener(int slotId, int featureType,
-                IImsRegistrationListener listener) throws RemoteException {
-            enforceReadPhoneStatePermission("removeRegistrationListener");
-            synchronized (mImsServiceImplMap) {
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
-                Log.d(TAG, "IImsServiceController removeRegistrationListener, slotId:" + slotId+" service:"+feature);
-                if (feature != null) {
-                    feature.removeRegistrationListener(listener);
-                }
-            }
-        }
-
-        @Override
-        public ImsCallProfile createCallProfile(int slotId, int featureType,
-                int sessionId, int callSessionType, int callType)
-                throws RemoteException {
-            enforceCallingOrSelfPermission(MODIFY_PHONE_STATE,
-                    "createCallProfile");
-            synchronized (mImsServiceImplMap) {
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
-                if (feature != null) {
-                    return feature.createCallProfile(sessionId,
-                            callSessionType, callType);
-                }
-            }
-            return null;
-        }
-
-        @Override
-        public IImsCallSession createCallSession(int slotId, int featureType,
-                int sessionId, ImsCallProfile profile,
-                IImsCallSessionListener listener) throws RemoteException {
-            Log.i(TAG, "createCallSession->slotId: " + slotId
-                    + " featureType: " + featureType + " sessionId: "
-                    + sessionId + " profile: " + profile);
-            return createCallSessionInternal(slotId + 1, profile, listener);
-        }
-
-        @Override
-        public IImsCallSession getPendingCallSession(int slotId,
-                int featureType, int sessionId, String callId)
-                throws RemoteException {
-            Log.i(TAG, "getPendingCallSession->slotId: " + slotId
-                    + " featureType: " + featureType + " sessionId: "
-                    + sessionId + " callId: " + callId);
-            return getPendingCallSessionInternal(slotId + 1, callId);
-        }
-
-        @Override
-        public IImsUt getUtInterface(int slotId, int featureType)
-                throws RemoteException {
-            enforceCallingOrSelfPermission(MODIFY_PHONE_STATE, "getUtInterface");
-            synchronized (mImsServiceImplMap) {
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
-                if (feature != null) {
-                    return feature.getUtInterface();
-                }
-            }
-            return null;
-        }
-
-        @Override
-        public IImsConfig getConfigInterface(int slotId, int featureType)
-                throws RemoteException {
-            enforceCallingOrSelfPermission(MODIFY_PHONE_STATE,
-                    "getConfigInterface");
-            synchronized (mImsServiceImplMap) {
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
+                ImsServiceImpl feature = getMMTelFeature(slotId);
                 if (feature != null) {
                     return feature.getConfigInterface();
                 }
@@ -1762,107 +1444,40 @@ public class ImsService extends Service {
         }
 
         @Override
-        public void turnOnIms(int slotId, int featureType)
+        public IImsRegistration getRegistration(int slotId)
+                throws RemoteException {
+            synchronized (mImsServiceImplMap) {
+                ImsServiceImpl feature = getMMTelFeature(slotId);
+                if (feature != null) {
+                    return feature.getRegistration();
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public void enableIms(int slotId)
                 throws RemoteException {
             enforceCallingOrSelfPermission(MODIFY_PHONE_STATE, "turnOnIms");
             synchronized (mImsServiceImplMap) {
-                if (!ImsManagerEx.isDualLteModem()) {
-
-                    Log.d(TAG,"turnOnIms() ImsManagerEx.isNotDualLteModem && ");
-                    Log.d(TAG, "turnOnIms() ImsManagerEx.isDualVoLTEActive : "
-                            + ImsManagerEx.isDualVoLTEActive());
-                    for (int i = 0; i < mImsServiceImplMap.size(); i++) {
-                        MMTelFeature mmTel = resolveMMTelFeature(i,
-                                featureType);
-                        if (mmTel != null) {
-                            mmTel.turnOnIms();
-                        }
-                    }
-                    return;
-                }
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
+                ImsServiceImpl feature = getMMTelFeature(slotId);
                 if (feature != null) {
-                    Log.w(TAG, "turnOnIms() ImsManagerEx.isDualLteModem");
-//                    if (ImsRegister.getPrimaryCard(mPhoneCount) != slotId && !ImsManagerEx.isDualVoLTEActive()) {
-//                        Log.w(TAG, "turnOnIms error  slotId:" + slotId);
-//                        return;
-//                    }
                     feature.turnOnIms();
                 }
             }
         }
 
         @Override
-        public void turnOffIms(int slotId, int featureType)
+        public void disableIms(int slotId)
                 throws RemoteException {
             enforceCallingOrSelfPermission(MODIFY_PHONE_STATE, "turnOffIms");
             synchronized (mImsServiceImplMap) {
-                if (!ImsManagerEx.isDualLteModem()) {
-
-                    Log.d(TAG,"turnOffIms() ImsManagerEx.isNotDualLteModem && ");
-                    Log.d(TAG, "turnOffIms() ImsManagerEx.isDualVoLTEActive : "
-                            + ImsManagerEx.isDualVoLTEActive());
-                    for (int i = 0; i < mImsServiceImplMap.size(); i++) {
-                        MMTelFeature mmTel = resolveMMTelFeature(i,
-                                featureType);
-                        if (mmTel != null) {
-                            mmTel.turnOffIms();
-                        }
-                    }
-                    return;
-                }
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
+                ImsServiceImpl feature = getMMTelFeature(slotId);
                 if (feature != null) {
-                    Log.w(TAG, "turnOffIms() ImsManagerEx.isDualLteModem");
-//                    if (ImsRegister.getPrimaryCard(mPhoneCount) != slotId) {
-//                        Log.w(TAG, "turnOffIms error  slotId:" + slotId);
-//                        return;
-//                    }
                     feature.turnOffIms();
                 }
             }
         }
-
-        @Override
-        public IImsEcbm getEcbmInterface(int slotId, int featureType)
-                throws RemoteException {
-            enforceCallingOrSelfPermission(MODIFY_PHONE_STATE,
-                    "getEcbmInterface");
-            synchronized (mImsServiceImplMap) {
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
-                if (feature != null) {
-                    return feature.getEcbmInterface();
-                }
-            }
-            return null;
-        }
-
-        @Override
-        public void setUiTTYMode(int slotId, int featureType, int uiTtyMode,
-                Message onComplete) throws RemoteException {
-            enforceCallingOrSelfPermission(MODIFY_PHONE_STATE, "setUiTTYMode");
-            synchronized (mImsServiceImplMap) {
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
-                if (feature != null) {
-                    feature.setUiTTYMode(uiTtyMode, onComplete);
-                }
-            }
-        }
-
-        @Override
-        public IImsMultiEndpoint getMultiEndpointInterface(int slotId,
-                int featureType) throws RemoteException {
-            enforceCallingOrSelfPermission(MODIFY_PHONE_STATE,
-                    "getMultiEndpointInterface");
-            synchronized (mImsServiceImplMap) {
-                MMTelFeature feature = resolveMMTelFeature(slotId, featureType);
-                if (feature != null) {
-                    return feature.getMultiEndpointInterface();
-                }
-            }
-            return null;
-        }
-
     };
 
     private final IImsUtEx.Stub mImsUtExBinder = new IImsUtEx.Stub() {
@@ -2144,9 +1759,18 @@ public class ImsService extends Service {
          */
         @Override
         public String getCurPcscfAddress() {
+            Log.i(TAG,"getCurPcscfAddress mIsVolteCall="+mIsVolteCall+" mIsVowifiCall="+mIsVowifiCall);
             String address = null;
-            if (mWifiService != null) {
-                address = mWifiService.getCurPcscfAddress();
+            if(mIsVolteCall || (isVoLTEEnabled() && !mIsVowifiCall && !mIsVolteCall)){
+                ImsServiceImpl imsService = mImsServiceImplMap.get(
+                        Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
+                if(imsService != null){
+                    address = imsService.getImsPcscfAddress();
+                }
+            }else if(mIsVowifiCall || (isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall)){
+                if(mWifiService != null){
+                    address = mWifiService.getCurPcscfAddress();
+                }
             }
             return address;
         }
@@ -2200,10 +1824,20 @@ public class ImsService extends Service {
          */
         @Override
         public String getCurLocalAddress() {
-            if (mWifiService != null) {
-                return mWifiService.getCurLocalAddress();
+            Log.i(TAG,"getCurLocalAddress mIsVolteCall="+mIsVolteCall+" mIsVowifiCall="+mIsVowifiCall);
+            String address = null;
+            if(mIsVolteCall || (isVoLTEEnabled() && !mIsVowifiCall && !mIsVolteCall)){
+                ImsServiceImpl imsService = mImsServiceImplMap.get(
+                        Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
+                if(imsService != null){
+                    address = imsService.getIMSRegAddress();
+                }
+            }else if(mIsVowifiCall || (isVoWifiEnabled() && !mIsVowifiCall && !mIsVolteCall)){
+                if(mWifiService != null){
+                    address = mWifiService.getCurLocalAddress();
+                }
             }
-            return "";
+            return address;
         }
 
         /**
@@ -2803,8 +2437,9 @@ public class ImsService extends Service {
             ImsServiceImpl impl = mImsServiceImplMap.get(Integer
                     .valueOf(serviceId));
             //SPRD: Modify for bug825528
-            if((!mTelephonyManagerEx.getDataEnabledDuringVolteCall() && (serviceId - 1) == ImsRegister.getPrimaryCard(mPhoneCount))
-                    || (mTelephonyManagerEx.getDataEnabledDuringVolteCall() && (serviceId-1) == mMakeCallPrimaryCardServiceId)){
+            if(/*TODO:(!mTelephonyManagerEx.getDataEnabledDuringVolteCall() &&*/ (serviceId - 1) == ImsRegister.getPrimaryCard(mPhoneCount)//)
+                   /*TODO: || (mTelephonyManagerEx.getDataEnabledDuringVolteCall() && (serviceId-1) == mMakeCallPrimaryCardServiceId)*/ ){
+
                 /* SPRD: Add for bug586758 and 595321{@ */
                 if (impl != null) {
                     if (impl.isVolteSessionListEmpty()
@@ -2937,11 +2572,11 @@ public class ImsService extends Service {
                             + " volteRegistered:" + volteRegistered
                             + " serviceId:" + serviceId
                             + " | mTelephonyManagerEx.getLTECapabilityForPhone = "
-                            + mTelephonyManagerEx
-                                    .getLTECapabilityForPhone(serviceId - 1));
-            if(ImsManagerEx.isDualVoLTEActive() || mTelephonyManagerEx.getLTECapabilityForPhone(serviceId - 1)) {
+                            /*TODO: + mTelephonyManagerEx
+                                    .getLTECapabilityForPhone(serviceId - 1)*/);
+            if(ImsManagerEx.isDualVoLTEActive() /*TODO: || mTelephonyManagerEx.getLTECapabilityForPhone(serviceId - 1)*/) {
                 imsService.updateImsFeatures(volteRegistered, false);
-                imsService.notifyImsRegister(volteRegistered);
+                imsService.notifyImsRegister(volteRegistered,false);
                 notifyImsRegisterState();
             } else {
                 if(imsService.isImsEnabled()) {
@@ -3001,7 +2636,7 @@ public class ImsService extends Service {
                     imsService.setImsPcscfAddress(addr);
                 }
             }
-            imsService.notifyImsRegister(isImsRegistered);
+            imsService.notifyImsRegister(isImsRegistered, mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE);
             notifyImsRegisterState();
         }
 
@@ -3217,12 +2852,13 @@ public class ImsService extends Service {
         if (mFeatureSwitchRequest == null && state == ImsPDNStatus.IMS_PDN_READY) {
             // add for Dual LTE
             ImsServiceImpl service = null;
-            if (mTelephonyManagerEx.getLTECapabilityForPhone(serviceId - 1)) {
+            /*TODO:if (mTelephonyManagerEx.getLTECapabilityForPhone(serviceId - 1)) {
                 service = mImsServiceImplMap.get(Integer.valueOf(serviceId));
             } else {
+            */
                 service = mImsServiceImplMap.get(Integer
                         .valueOf(ImsRegister.getPrimaryCard(mPhoneCount) + 1));
-            }
+            //}
             /*SPRD: Modify for bug599233{@*/
             Log.i(TAG,"onImsPdnStatusChange->mIsPendingRegisterVolte:" + mIsPendingRegisterVolte + " service.isImsRegistered():" + service.isImsRegistered());
             // If pdn is ready when handover from vowifi to volte but volte is not registered , never to turn on ims.
@@ -3475,12 +3111,12 @@ public class ImsService extends Service {
 //                Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
         // add for Dual LTE
         ImsServiceImpl service = null;
-        if (mTelephonyManagerEx.getLTECapabilityForPhone(phoneId)) {
+        /*TODO:if (mTelephonyManagerEx.getLTECapabilityForPhone(phoneId)) {
             service = mImsServiceImplMap.get(Integer.valueOf(phoneId + 1));
-        } else {
+        } else {*/
             service = mImsServiceImplMap.get(
                     Integer.valueOf(ImsRegister.getPrimaryCard(mPhoneCount)+1));
-        }
+        //}
         Log.i(TAG,"allowEnableIms->service:"+service +" mFeatureSwitchRequest:"+mFeatureSwitchRequest
                 + " isVolteEnabledBySystemProperties:"+ ImsConfigImpl.isVolteEnabledBySystemProperties());
         // SPRD: change for bug822996
@@ -3610,8 +3246,8 @@ public class ImsService extends Service {
     public void showTelcelRequestToast(){
          boolean mShowTelcelToast = true;
          int primeSubId = SubscriptionManager.getDefaultDataSubscriptionId();
-         CarrierConfigManagerEx configManager =
-                 (CarrierConfigManagerEx) this.getSystemService("carrier_config_ex");
+        CarrierConfigManager configManager = (CarrierConfigManager) this.getSystemService(
+                Context.CARRIER_CONFIG_SERVICE);
          if (configManager.getConfigForSubId(primeSubId) != null) {
              mShowTelcelToast = configManager.getConfigForSubId(primeSubId).getBoolean(
                      CarrierConfigManagerEx.KEY_CALL_TELCEL_SHOW_TOAST);
@@ -3627,13 +3263,8 @@ public class ImsService extends Service {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if ((TelephonyIntents.ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED).equals(action)) {
-                int primaryPhoneId = ImsRegister.getPrimaryCard(mPhoneCount);
-                ImsServiceImpl imsService = mImsServiceImplMap.get(Integer
-                        .valueOf(primaryPhoneId +1));
-                if(isImsEnabled() && imsService != null && !imsService.isImsEnabled()) {
-                    mCurrentImsFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
-                    Log.i(TAG,"ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED, clear mCurrentImsFeature." );
-                }
+                Log.i(TAG,"ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED, update Ims Feature For All Service." );  //SPRD: add for bug866765
+                updateImsFeatureForAllService();
             }
         }
     };

@@ -179,10 +179,7 @@ public class VideoCallCameraManager {
      * drawing preview frames to the screen.
      */
     public void initCameraAndStartPreview() {
-        if(!mIsVideoQualityReceived){
-            Log.w(TAG,"initCameraAndStartPreview()->mIsVideoQualityReceived:"+mIsVideoQualityReceived);
-            return;
-        }
+
         if (mOperateCameraThread != null) {
             try {
                 mOperateCameraThread.join();
@@ -344,10 +341,7 @@ public class VideoCallCameraManager {
 
     public void handleSetCameraPreSurface(Surface surface) {
         Log.i(TAG, "handleSetCameraPreSurface surface is "+surface + " mIsOpened:"+mIsOpened);
-        if(!mIsVideoQualityReceived){
-            Log.w(TAG,"handleSetCameraPreSurface()->mIsVideoQualityReceived:"+mIsVideoQualityReceived);
-            return;
-        }
+
         // SPRD: add for bug 732419
         if(mCameraId != null) {
             if (!mIsOpened && !mCameraId.equals(String.valueOf(-1))) {
@@ -584,7 +578,11 @@ public class VideoCallCameraManager {
             if(!mIsOpened){
                 openVideoCamera();
             } else {
-                updateVideoCameraQuality();
+                //updateVideoCameraQuality();
+                if(mVideoCallEngine != null){
+                    mVideoCallEngine.setCameraPreviewSize(mVideoQuality);
+                    setPreviewSurfaceSize(mVideoQuality);
+                }
             }
         }
     }

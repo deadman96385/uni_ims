@@ -7,6 +7,7 @@ import android.util.Log;
 import android.os.Message;
 import com.spreadtrum.ims.R;
 import com.spreadtrum.ims.ImsRIL;
+import android.telephony.CarrierConfigManager;
 import android.telephony.CarrierConfigManagerEx;
 import android.telephony.SubscriptionManager;
 
@@ -33,7 +34,8 @@ public class ImsCmccHelper {
     }
 
     public boolean isCmccNetwork() {
-        CarrierConfigManagerEx configManager = CarrierConfigManagerEx.from(mContext);
+        CarrierConfigManager configManager = (CarrierConfigManager) mContext.getSystemService(
+                Context.CARRIER_CONFIG_SERVICE);
         int mDefaultDataSubId = SubscriptionManager.from(mContext).getDefaultDataSubscriptionId();
         if (configManager != null && configManager.getConfigForSubId(mDefaultDataSubId) != null) {
             return configManager.getConfigForSubId(mDefaultDataSubId).getBoolean(

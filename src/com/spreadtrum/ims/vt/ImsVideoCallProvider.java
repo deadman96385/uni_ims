@@ -14,7 +14,7 @@ import com.spreadtrum.ims.ImsCallSessionImpl;
 import com.spreadtrum.ims.ImsCmccHelper;
 import com.spreadtrum.ims.ImsRIL;
 import com.spreadtrum.ims.ImsServiceCallTracker;
-import com.android.ims.ImsCallProfile;
+import android.telephony.ims.ImsCallProfile;
 import com.android.internal.telephony.CommandsInterface;
 import android.app.AlertDialog;
 import android.telecom.VideoProfile.CameraCapabilities;
@@ -24,17 +24,18 @@ import android.os.Message;
 import android.widget.Toast;
 import com.spreadtrum.ims.R;
 import com.spreadtrum.ims.ImsDriverCall;
-import com.android.ims.internal.ImsCallSession;
+import android.telephony.ims.ImsCallSession;
 import android.os.SystemClock;
 import android.app.KeyguardManager;
 import android.os.AsyncResult;
 import android.telephony.VoLteServiceState;
 import android.telephony.TelephonyManager;
+import android.telephony.CarrierConfigManager;
 import android.telephony.CarrierConfigManagerEx;
 import android.telephony.SubscriptionManager;
 import com.android.ims.internal.ImsManagerEx;
 
-public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallProvider {
+public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProvider {
     private static final String TAG = ImsVideoCallProvider.class.getSimpleName();
     private VTManagerProxy mVTManagerProxy;
     private Handler mHandler;
@@ -329,6 +330,11 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             if(!mIsSupportTxRxVideo &&
                     (mediaRequest == ImsRIL.MEDIA_REQUEST_VIDEO_BIDIRECTIONAL_DOWNGRADE_VIDEO_RX ||
                             mediaRequest == ImsRIL.MEDIA_REQUEST_VIDEO_RX_UPGRADE_VIDEO_BIDIRECTIONAL)){
+
+                if (mediaRequest == ImsRIL.MEDIA_REQUEST_VIDEO_RX_UPGRADE_VIDEO_BIDIRECTIONAL) {
+                    receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS,
+                            null, null);
+                }
                 mImsCallSessionImpl.updateVideoTxRxState(!toProfile.isTransmissionEnabled(toProfile.getVideoState()),
                         !toProfile.isTransmissionEnabled(toProfile.getVideoState()));
                 return;
@@ -338,6 +344,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
             mImsCallSessionImpl.getLocalRequestProfile().mCallType = requestImsCallProfile.mCallType;
             mCi.requestVolteCallMediaChange(mediaRequest, Integer.parseInt(mImsCallSessionImpl.getCallId()),null);
             if (isUpgrade) {
+                onVTConnectionEstablished(mImsCallSessionImpl);//SPRD:add for bug864361
                 //SPRD: add for bug674565
                 if (mContext != null) {
                     Message msg = new Message();
@@ -372,19 +379,19 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
 
         if(responseProfile.getVideoState() == mLoacalRequstProfile.getVideoState()){
             mCi.responseVolteCallMediaChange(true, Integer.parseInt(mImsCallSessionImpl.getCallId()), mCallIdMessage);
-            receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
-                    null,null);
+//            receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+//                    null,null);
         }else{
             mCi.responseVolteCallMediaChange(false, Integer.parseInt(mImsCallSessionImpl.getCallId()), mCallIdMessage);
-            receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
-                    null,null);
+//            receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+//                    null,null);
         }
     }
 
     public void updateVideoQuality(VideoProfile responseProfile) {
-        log("onSendSessionModifyResponse->responseProfile:" + responseProfile);
+        log("updateVideoQuality->responseProfile:" + responseProfile);
         if(responseProfile != null){
-            log("onSendSessionModifyRequest.updateVideoQuality-> quality:"+ responseProfile.getQuality());
+            log("updateVideoQuality.updateVideoQuality-> quality:"+ responseProfile.getQuality());
             mHandler.obtainMessage(mVTManagerProxy.EVENT_ON_UPDATE_DEVICE_QUALITY, new Integer(responseProfile.getQuality())).sendToTarget();
         }
     }
@@ -477,9 +484,10 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                  result = android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS;
              }
              receiveSessionModifyResponse(result, mLocalRequestProfile, responseProfile);
-             //mLocalRequestProfile = null;
              showRequestStateToast();
+             mLocalRequestProfile = null;
          }
+
          //SPRD:fix for bug 597075
          if(isVideoCall(imsCallProfile.mCallType)
                  && (session != null && session.mImsDriverCall != null && session.mImsDriverCall.state != ImsDriverCall.State.HOLDING)){
@@ -554,10 +562,6 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     public void handleVolteCallMediaChange(ImsCallSessionImpl session){
         log("handleVolteCallMediaChange->session="+session);
             if(session.mImsDriverCall != null && session.mImsDriverCall.isRequestUpgrade()){
-                /*TODO: remove for 8.1
-                if(mVolteMediaUpdateDialog != null){
-                   mVolteMediaUpdateDialog.dismiss();
-                }*/
                 int videoCallMediaDirection = session.mImsDriverCall.getVideoCallMediaDirection();
                 if(videoCallMediaDirection != session.mImsDriverCall.VIDEO_CALL_MEDIA_DIRECTION_INVALID){
                     mCallIdMessage.arg1 = videoCallMediaDirection;
@@ -586,12 +590,7 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                         && videoCallMediaDirection == session.mImsDriverCall.VIDEO_CALL_MEDIA_DIRECTION_SENDRECV){
                     mCi.responseVolteCallMediaChange(true, Integer.parseInt(mImsCallSessionImpl.getCallId()), mCallIdMessage);
                 }/* @}*/
-                else{
-                    /*TODO: remove for 8.0
-                    mVolteMediaUpdateDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,null,this);
-                    mVolteMediaUpdateDialog.show();
-                   */
-                }
+
 
                 Message msg = new Message();
                 msg.what = EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT;
@@ -615,16 +614,10 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
                     log("handleVolteCallMediaChange->mCallIdMessage.arg1 = "+mCallIdMessage.arg1);
                     return;
                 }
+                onVTConnectionEstablished(mImsCallSessionImpl);//SPRD: add fro bug864391
                 receiveSessionModifyRequest(mLoacalRequstProfile);
 
-            }/*TODO: remove for 8.1
-            else if(session.mImsDriverCall != null && session.mImsDriverCall.isRequestDowngradeToVoice()){
-                if(mVolteMediaDegradeDialog != null){
-                   mVolteMediaDegradeDialog.dismiss();
-                }
-                mVolteMediaDegradeDialog = VTManagerUtils.showVolteCallMediaUpdateAlert(mContext.getApplicationContext(),mCi,null,this);
-                mVolteMediaDegradeDialog.show();
-            }*/
+            }
     }
 
     @Override
@@ -657,8 +650,8 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
     public void showTelcelRequestToast(){
          boolean mShowTelcelToast = true;
          int primeSubId = SubscriptionManager.getDefaultDataSubscriptionId();
-         CarrierConfigManagerEx configManager =
-                 (CarrierConfigManagerEx) mContext.getSystemService("carrier_config_ex");
+        CarrierConfigManager configManager = (CarrierConfigManager) mContext.getSystemService(
+                Context.CARRIER_CONFIG_SERVICE);
          if (configManager.getConfigForSubId(primeSubId) != null) {
              mShowTelcelToast = configManager.getConfigForSubId(primeSubId).getBoolean(
                      CarrierConfigManagerEx.KEY_CALL_TELCEL_SHOW_TOAST);

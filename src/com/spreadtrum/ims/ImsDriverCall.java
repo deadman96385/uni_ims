@@ -9,7 +9,7 @@ import com.android.internal.telephony.ATResponseParser;
 import com.android.internal.telephony.DriverCall;
 import com.android.internal.telephony.UUSInfo;
 import com.android.internal.telephony.PhoneConstants;
-import com.android.ims.ImsConferenceState;
+import android.telephony.ims.ImsConferenceState;
 
 import android.telephony.PhoneNumberUtils;
 

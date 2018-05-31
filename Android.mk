@@ -11,9 +11,12 @@ LOCAL_CERTIFICATE := platform
 LOCAL_JAVA_LIBRARIES := telephony-common ims-common radio_interactor_common
 
 LOCAL_STATIC_JAVA_LIBRARIES := \
-    android.hardware.radio-V1.0-java-static \
-    android.hardware.radio.deprecated-V1.0-java-static \
-    vendor.sprd.hardware.radio-V1.0-java-static
+        android.hardware.radio-V1.0-java \
+        android.hardware.radio-V1.1-java \
+        android.hardware.radio-V1.2-java \
+        android.hardware.radio.config-V1.0-java \
+        android.hardware.radio.deprecated-V1.0-java \
+        android.hidl.base-V1.0-java
 
 LOCAL_PRIVILEGED_MODULE := true
 
@@ -29,7 +32,7 @@ LOCAL_AAPT_FLAGS := --auto-add-overlay
 
 LOCAL_DEX_PREOPT := false
 
-LOCAL_SDK_VERSION := current
+LOCAL_PRIVATE_PLATFORM_APIS := true
 
 include $(BUILD_PACKAGE)
 

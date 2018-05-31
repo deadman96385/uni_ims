@@ -1,25 +1,28 @@
 package com.spreadtrum.ims.ut;
 
 import java.util.HashMap;
-import com.android.ims.ImsCallForwardInfo;
-import com.android.ims.ImsReasonInfo;
-import com.android.ims.ImsSsInfo;
+import android.telephony.ims.ImsCallForwardInfo;
+import android.telephony.ims.ImsReasonInfo;
+import android.telephony.ims.ImsSsInfo;
+import android.telephony.ims.ImsSsData;
+import com.android.ims.ImsManager;
 import com.android.ims.internal.IImsUt;
 import com.android.ims.internal.IImsUtListener;
 import com.android.ims.internal.ImsCallForwardInfoEx;
+
 import android.os.Bundle;
 import android.content.Context;
 import android.os.RemoteException;
 import com.spreadtrum.ims.ImsService;
-import com.android.ims.ImsManager;
 import com.spreadtrum.ims.vowifi.ImsUtImpl;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import com.android.internal.telephony.Phone;
-import android.telephony.TelephonyManagerEx;
+//import android.telephony.TelephonyManagerEx;
 import android.util.Log;
 import com.android.ims.internal.IImsUtListenerEx;
 import com.android.internal.telephony.CommandsInterface;
+import android.telephony.CarrierConfigManager;
 import android.telephony.CarrierConfigManagerEx;
 import static com.android.internal.telephony.CommandsInterface.SERVICE_CLASS_VOICE;
 import static com.android.internal.telephony.CommandsInterface.SERVICE_CLASS_NONE;
@@ -473,6 +476,7 @@ public class ImsUtProxy extends IImsUt.Stub {
      */
     public void setListener(IImsUtListener listener) {
         mListener = listener;
+        /*TODO:
         TelephonyManager tm = TelephonyManager.from(mContext);
         String carrier = tm.getSimOperatorNumericForPhone(mPhone.getPhoneId());
         TelephonyManagerEx tmEx = TelephonyManagerEx.from(mContext);
@@ -496,6 +500,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         if (!TextUtils.isEmpty(carrier)) {
             getUTConfig(carrier);
         }
+        */
         try {
             if (isVowifiUtEnable()) {
                 mVoWifiUtImpl.setListener(mImsUtListener);
@@ -646,14 +651,74 @@ public class ImsUtProxy extends IImsUt.Stub {
     }
 
     private boolean isVowifiUtEnable() {
-        if (mVoWifiUtImpl != null && mPriority == PRIORITY_VOWIFI_UT) {
+        mImsService = (ImsService) mContext;
+        if (mVoWifiUtImpl != null && mPriority == PRIORITY_VOWIFI_UT && mImsService.isVoWifiEnabled()) {
             return true;
         }
         return  false;
     }
 
+    /**
+     * AndroidP start@{:
+     */
+    @Override
+    public int updateCallBarringForServiceClass(int cbType, int action,
+                                                String[] barrList, int serviceClass) throws RemoteException {
+        int id = INVALID_ID;
+        if (isVowifiUtEnable()) {
+            //TODO:vowifi add service class
+            id = mVoWifiUtImpl.updateCallBarring(cbType, action, barrList);
+            if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
+                Bundle bundle = new Bundle();
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < barrList.length; i++) {
+                    sb.append(barrList[i]);
+                    sb.append(",");
+                }
+                bundle.putInt(EXTRA_ACTION, ACTION_UPDATE_CB);
+                bundle.putInt(EXTRA_FACILITY, cbType);
+                bundle.putInt(EXTRA_LOCK_STATE, action);
+                bundle.putString(EXTRA_BARR_LIST, sb.toString());
+                bundle.putInt(EXTRA_SERVICE_CLASS, serviceClass);
+                mPendingMap.put(id, bundle);
+            }
+            if (id < 0 && mQueryOnVoLTE) {
+                id = mVoLTEUtImpl.updateCallBarringForServiceClass(cbType, action, barrList,serviceClass);
+            }
+        } else {
+            id = mVoLTEUtImpl.updateCallBarringForServiceClass(cbType, action, barrList,serviceClass);
+        }
+        log("updateCB id = " + id);
+        return id;
+    }
+
+    @Override
+    public int queryCallBarringForServiceClass(int cbType, int serviceClass){
+        int id = INVALID_ID;
+        if (isVowifiUtEnable()) {
+            //TODO:vowifi add service class
+            id = mVoWifiUtImpl.queryCallBarring(cbType);
+            if (id > VOWIFI_QUERY_ID && mQueryOnVoLTE) {
+                Bundle bundle = new Bundle();
+                bundle.putInt(EXTRA_ACTION, ACTION_QUERY_CB);
+                bundle.putInt(EXTRA_FACILITY, cbType);
+                bundle.putInt(EXTRA_SERVICE_CLASS, serviceClass);
+                mPendingMap.put(id, bundle);
+            }
+            if (id < 0 && mQueryOnVoLTE) {
+                id = mVoLTEUtImpl.queryCallBarringForServiceClass(cbType,serviceClass);
+            }
+        } else {
+            id = mVoLTEUtImpl.queryCallBarringForServiceClass(cbType,serviceClass);
+        }
+        log("queryCB id = " + id);
+        return id;
+    }
+    /* AndroidP end@} */
+
     public void setListenerEx(IImsUtListenerEx listenerEx) {
         mListenerEx = listenerEx;
+        /*TODO:
         TelephonyManager tm = TelephonyManager.from(mContext);
         String carrier = tm.getSimOperatorNumericForPhone(mPhone.getPhoneId());
         TelephonyManagerEx tmEx = TelephonyManagerEx.from(mContext);
@@ -677,6 +742,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         if (!TextUtils.isEmpty(carrier)) {
             getUTConfig(carrier);
         }
+        */
         log("setListenerEx");
         if (isVowifiUtEnable()) {
             mVoWifiUtImpl.setListenerEx(mImsUtListenerExBinder);
@@ -688,7 +754,8 @@ public class ImsUtProxy extends IImsUt.Stub {
         String priorityPlmns = "";
         String queryOnVoLTEPlmns = "";
         log("carrier = " + carrier);
-        CarrierConfigManagerEx carrierConfig = CarrierConfigManagerEx.from(mContext);
+        CarrierConfigManager carrierConfig = (CarrierConfigManager) mContext.getSystemService(
+                Context.CARRIER_CONFIG_SERVICE);
         if (carrierConfig != null) {
             PersistableBundle config = carrierConfig.getConfig();
             if (config != null){
@@ -1036,6 +1103,15 @@ public class ImsUtProxy extends IImsUt.Stub {
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
+        }
+
+        /**
+         * AndroidP start@{:
+         * Notifies client when Supplementary Service indication is received
+         */
+        @Override
+        public void onSupplementaryServiceIndication(ImsSsData ssData) {
+            //TODO:
         }
     };
 

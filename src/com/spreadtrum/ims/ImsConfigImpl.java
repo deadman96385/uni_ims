@@ -1,5 +1,6 @@
 package com.spreadtrum.ims;
 
+import java.util.concurrent.ConcurrentHashMap;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -9,10 +10,12 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.os.SystemProperties;
+import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import com.android.ims.ImsConfigListener;
-import com.android.ims.internal.IImsConfig;
+import android.telephony.ims.aidl.IImsConfig;
+import android.telephony.ims.aidl.IImsConfigCallback;
 import com.android.ims.ImsConfig;
 import com.android.internal.telephony.CommandsInterface;
 import android.telephony.TelephonyManager;
@@ -55,6 +58,103 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     public int mDefaultVtResolution = VT_RESOLUTION_VGA_REVERSED_30;
     private ImsServiceImpl mImsServiceImpl = null;
     private int mImsServiceId;  // SPRD: bug805154
+
+    /**
+     * AndroidP start@{:
+     */
+    private ConcurrentHashMap<IBinder, IImsConfigCallback> mIImsConfigCallbacks = new ConcurrentHashMap<IBinder, IImsConfigCallback>();
+
+    @Override
+    public void addImsConfigCallback(IImsConfigCallback c){
+        if (c == null) {
+            Log.w(TAG,"addImsConfigCallback->Listener is null!");
+            Thread.dumpStack();
+            return;
+        }
+        synchronized (mIImsConfigCallbacks) {
+            if (!mIImsConfigCallbacks.keySet().contains(c.asBinder())) {
+                mIImsConfigCallbacks.put(c.asBinder(), c);
+            } else {
+                Log.w(TAG,"addImsConfigCallback Listener already add :" + c);
+            }
+        }
+    }
+
+    @Override
+    public void removeImsConfigCallback(IImsConfigCallback c){
+        if (c == null) {
+            Log.w(TAG,"removeImsConfigCallback->Listener is null!");
+            Thread.dumpStack();
+            return;
+        }
+        synchronized (mIImsConfigCallbacks) {
+            if (mIImsConfigCallbacks.keySet().contains(c.asBinder())) {
+                mIImsConfigCallbacks.remove(c.asBinder());
+            } else {
+                Log.w(TAG,"removeImsConfigCallback already remove :" + c);
+            }
+        }
+    }
+
+    public void notifyIntConfigChanged(int item, int value){
+        synchronized (mIImsConfigCallbacks) {
+            for (IImsConfigCallback l : mIImsConfigCallbacks.values()) {
+                try{
+                    l.onIntConfigChanged(item,value);
+                } catch(RemoteException e){
+                    e.printStackTrace();
+                    continue;
+                }
+            }
+        }
+    }
+
+    public void notifyStringConfigChanged(int item, String value){
+        synchronized (mIImsConfigCallbacks) {
+            for (IImsConfigCallback l : mIImsConfigCallbacks.values()) {
+                try{
+                    l.onStringConfigChanged(item,value);
+                } catch(RemoteException e){
+                    e.printStackTrace();
+                    continue;
+                }
+            }
+        }
+    }
+
+    @Override
+    public int getConfigInt(int item){
+        if(item == ImsConfig.ConfigConstants.VIDEO_QUALITY) {
+            int quality = getVideoQualityFromPreference();
+            Log.d(TAG, "getVideoQuality qualiy = " + quality);
+            return quality;
+        }
+        return ImsConfig.OperationStatusConstants.UNKNOWN;
+    }
+
+    @Override
+    public String getConfigString(int item){
+        return null;
+    }
+
+    // Return result code defined in ImsConfig#OperationStatusConstants
+    @Override
+    public int setConfigInt(int item, int value){
+        if(item == ImsConfig.ConfigConstants.VIDEO_QUALITY) {
+            Log.d(TAG, "setVideoQuality qualiy = " + value);
+            setVideoQualitytoPreference(value);
+            return ImsConfig.OperationStatusConstants.SUCCESS;
+        };
+        return ImsConfig.OperationStatusConstants.UNKNOWN;
+    }
+
+    // Return result code defined in ImsConfig#OperationStatusConstants
+    @Override
+    public int setConfigString(int item, String value){
+        return ImsConfig.OperationStatusConstants.UNKNOWN;
+    }
+    /* AndroidP end@} */
+
     /**
      * Creates the Ims Config interface object for a sub.
      * @param senderRxr
@@ -69,7 +169,8 @@ public class ImsConfigImpl extends IImsConfig.Stub {
         mContext = context;
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
         mSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferenceListener);
-        mCameraResolution = mSharedPreferences.getInt(VIDEO_CALL_RESOLUTION, mDefaultVtResolution);
+        // SPRD 864003
+        mCameraResolution = mSharedPreferences.getInt(VIDEO_CALL_RESOLUTION+imsserviceid, mDefaultVtResolution);
         mHandler.removeMessages(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE);
         mHandler.sendEmptyMessageDelayed(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE, 1000);
         mImsServiceId = imsserviceid; // SPRD: bug805154
@@ -200,7 +301,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      * @param item, as defined in com.android.ims.ImsConfig#ConfigConstants.
      * @return value in Integer format.
      */
-    @Override
     public int getProvisionedValue(int item){
         return 0;
     }
@@ -212,7 +312,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      * @param item, as defined in com.android.ims.ImsConfig#ConfigConstants.
      * @return value in String format.
      */
-    @Override
     public String getProvisionedStringValue(int item){
         return null;
     }
@@ -226,7 +325,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      * @param value in Integer format.
      * @return as defined in com.android.ims.ImsConfig#OperationStatusConstants.
      */
-    @Override
     public int setProvisionedValue(int item, int value){
         return 0;
     }
@@ -240,7 +338,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      * @param value in String format.
      * @return as defined in com.android.ims.ImsConfig#OperationStatusConstants.
      */
-    @Override
     public int setProvisionedStringValue(int item, String value){
         return 0;
     }
@@ -255,7 +352,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      * @param listener. feature value returned asynchronously through listener.
      * @return void
      */
-    @Override
     public void getFeatureValue(int feature, int network, ImsConfigListener listener){
         if(feature == VideoQualityConstants.FEATURE_VT_RESOLUTION
                 && network == VideoQualityConstants.NETWORK_VT_RESOLUTION){
@@ -276,7 +372,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      * @param listener, provided if caller needs to be notified for set result.
      * @return void
      */
-    @Override
     public void setFeatureValue(int feature, int network, int value, ImsConfigListener listener){
         Log.d(TAG, "setFeatureValue: feature = " + feature + ", network =" + network +
                 ", value =" + value + ", listener =" + listener);
@@ -298,7 +393,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      *
      * @return void
      */
-    @Override
     public boolean getVolteProvisioned(){
         return isVolteEnabledBySystemProperties();
     }
@@ -311,7 +405,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      * @param listener. Video quality value returned asynchronously through listener.
      * @return void
      */
-    @Override
     public void getVideoQuality(ImsConfigListener imsConfigListener) {
         Log.d(TAG, "  getVideoQuality  String:"+VT_RESOLUTION_VALUE+mImsServiceId); // SPRD: bug805154
         Message m = mHandler.obtainMessage(ACTION_GET_VT_RESOLUTION, getVideoQualityFromPreference(),
@@ -328,7 +421,6 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      *
      * @throws ImsException if calling the IMS service results in an error.
      */
-    @Override
     public void setVideoQuality(int quality, ImsConfigListener imsConfigListener) {
         Log.d(TAG, "setVideoQuality qualiy = " + quality);
         setVideoQualitytoPreference(quality);

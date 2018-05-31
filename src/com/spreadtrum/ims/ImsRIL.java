@@ -47,7 +47,6 @@ import android.os.Registrant;
 import android.os.RegistrantList;
 import android.os.RemoteException;
 import android.os.SystemProperties;
-import android.os.PowerManager.WakeLock;
 import android.os.Registrant;
 import android.os.SystemClock;
 import android.os.WorkSource;
@@ -69,7 +68,6 @@ import android.text.TextUtils;
 import android.util.SparseArray;
 import android.view.Display;
 
-import com.android.internal.telephony.ClientWakelockTracker;
 import com.android.internal.telephony.RIL;
 import com.android.internal.telephony.dataconnection.ApnSetting;
 import com.android.internal.telephony.gsm.SmsBroadcastConfigInfo;
@@ -85,9 +83,7 @@ import com.android.internal.telephony.CommandsInterface.RadioState;
 import com.android.internal.telephony.cdma.CdmaCallWaitingNotification;
 import com.android.internal.telephony.cdma.CdmaInformationRecords;
 import com.android.internal.telephony.cdma.CdmaSmsBroadcastConfigInfo;
-import com.android.internal.telephony.dataconnection.DcFailCause;
-import com.android.internal.telephony.dataconnection.DataCallResponse;
-import com.android.internal.telephony.dataconnection.DataProfile;
+import android.telephony.data.DataProfile;
 import com.android.internal.telephony.RadioCapability;
 import com.android.internal.telephony.TelephonyDevController;
 import com.android.internal.telephony.HardwareConfig;
@@ -102,10 +98,11 @@ import com.android.internal.telephony.LastCallFailCause;
 import com.android.internal.telephony.CommandException;
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.TelephonyProperties;
-import com.android.ims.ImsCallForwardInfo;
+import android.telephony.ims.ImsCallForwardInfo;
 import com.android.ims.internal.ImsCallForwardInfoEx;
 import com.android.sprd.telephony.RadioInteractor;
 import com.android.sprd.telephony.RadioInteractorCore;
+import com.android.sprd.telephony.RadioInteractorHandler;
 import com.android.sprd.telephony.RadioInteractorFactory;
 import static com.android.sprd.telephony.RIConstants.RI_REQUEST_VIDEOPHONE_DIAL;
 import static com.android.sprd.telephony.RIConstants.RI_REQUEST_QUERY_COLR;
@@ -164,11 +161,6 @@ import vendor.sprd.hardware.radio.V1_0.CallForwardInfoUri;
 import vendor.sprd.hardware.radio.V1_0.CallVoLTE;
 import vendor.sprd.hardware.radio.V1_0.ExtPersoSubstate;
 import vendor.sprd.hardware.radio.V1_0.ExtRadioErrno;
-import vendor.sprd.hardware.radio.V1_0.IExtRadio;
-import vendor.sprd.hardware.radio.V1_0.IExtRadioIndication;
-import vendor.sprd.hardware.radio.V1_0.IExtRadioResponse;
-import vendor.sprd.hardware.radio.V1_0.IIMSRadioIndication;
-import vendor.sprd.hardware.radio.V1_0.IIMSRadioResponse;
 import vendor.sprd.hardware.radio.V1_0.ImsHandoverToVoWifiResult;
 import vendor.sprd.hardware.radio.V1_0.ImsHandoverType;
 import vendor.sprd.hardware.radio.V1_0.ImsNetworkInfo;
@@ -180,163 +172,6 @@ import vendor.sprd.hardware.radio.V1_0.VideoPhoneCodec;
 import vendor.sprd.hardware.radio.V1_0.VideoPhoneDial;
 import vendor.sprd.hardware.radio.V1_0.VideoPhoneDSCI;
 
-/**
- * {@hide}
- */
-class RILRequest {
-    static final String LOG_TAG = "RilRequest";
-
-    //***** Class Variables
-    static Random sRandom = new Random();
-    static AtomicInteger sNextSerial = new AtomicInteger(0);
-    private static Object sPoolSync = new Object();
-    private static RILRequest sPool = null;
-    private static int sPoolSize = 0;
-    private static final int MAX_POOL_SIZE = 4;
-
-    //***** Instance Variables
-    int mSerial;
-    int mRequest;
-    Message mResult;
-    RILRequest mNext;
-    int mWakeLockType;
-    WorkSource mWorkSource;
-    String mClientId;
-    // time in ms when RIL request was made
-    long mStartTimeMs;
-
-    /**
-     * Retrieves a new RILRequest instance from the pool.
-     *
-     * @param request RIL_REQUEST_*
-     * @param result sent when operation completes
-     * @return a RILRequest instance from the pool.
-     */
-    private static RILRequest obtain(int request, Message result) {
-        RILRequest rr = null;
-
-        synchronized(sPoolSync) {
-            if (sPool != null) {
-                rr = sPool;
-                sPool = rr.mNext;
-                rr.mNext = null;
-                sPoolSize--;
-            }
-        }
-
-        if (rr == null) {
-            rr = new RILRequest();
-        }
-
-        rr.mSerial = sNextSerial.getAndIncrement();
-
-        rr.mRequest = request;
-        rr.mResult = result;
-
-        rr.mWakeLockType = ImsRIL.INVALID_WAKELOCK;
-        rr.mWorkSource = null;
-        rr.mStartTimeMs = SystemClock.elapsedRealtime();
-        if (result != null && result.getTarget() == null) {
-            throw new NullPointerException("Message target must not be null");
-        }
-
-        return rr;
-    }
-
-
-    /**
-     * Retrieves a new RILRequest instance from the pool and sets the clientId
-     *
-     * @param request RIL_REQUEST_*
-     * @param result sent when operation completes
-     * @param workSource WorkSource to track the client
-     * @return a RILRequest instance from the pool.
-     */
-    static RILRequest obtain(int request, Message result, WorkSource workSource) {
-        RILRequest rr = null;
-
-        rr = obtain(request, result);
-        if(workSource != null) {
-            rr.mWorkSource = workSource;
-            rr.mClientId = String.valueOf(workSource.get(0)) + ":" + workSource.getName(0);
-        } else {
-            Rlog.e(LOG_TAG, "null workSource " + request);
-        }
-
-        return rr;
-    }
-
-    /**
-     * Returns a RILRequest instance to the pool.
-     *
-     * Note: This should only be called once per use.
-     */
-    void release() {
-        synchronized (sPoolSync) {
-            if (sPoolSize < MAX_POOL_SIZE) {
-                mNext = sPool;
-                sPool = this;
-                sPoolSize++;
-                mResult = null;
-                if(mWakeLockType != ImsRIL.INVALID_WAKELOCK) {
-                    //This is OK for some wakelock types and not others
-                    if(mWakeLockType == ImsRIL.FOR_WAKELOCK) {
-                        Rlog.e(LOG_TAG, "RILRequest releasing with held wake lock: "
-                                + serialString());
-                    }
-                }
-            }
-        }
-    }
-
-    private RILRequest() {
-    }
-
-    static void
-    resetSerial() {
-        // use a random so that on recovery we probably don't mix old requests
-        // with new.
-        sNextSerial.set(sRandom.nextInt());
-    }
-
-    String
-    serialString() {
-        //Cheesy way to do %04d
-        StringBuilder sb = new StringBuilder(8);
-        String sn;
-
-        long adjustedSerial = (((long)mSerial) - Integer.MIN_VALUE)%10000;
-
-        sn = Long.toString(adjustedSerial);
-
-        //sb.append("J[");
-        sb.append('[');
-        for (int i = 0, s = sn.length() ; i < 4 - s; i++) {
-            sb.append('0');
-        }
-
-        sb.append(sn);
-        sb.append(']');
-        return sb.toString();
-    }
-
-    void
-    onError(int error, Object ret) {
-        CommandException ex;
-
-        ex = CommandException.fromRilErrno(error);
-
-         Rlog.d(LOG_TAG, serialString() + "< "
-                + ImsRIL.imsRequestToString(mRequest)
-                + " error: " + ex + " ret=" + ImsRIL.retToString(mRequest, ret));
-
-        if (mResult != null) {
-            AsyncResult.forMessage(mResult, ret, ex);
-            mResult.sendToTarget();
-        }
-    }
-}
-
 
 /**
  * RIL implementation of the CommandsInterface.
@@ -346,47 +181,10 @@ class RILRequest {
 public final class ImsRIL {
     static final String RILJ_LOG_TAG = "ImsRILJ";
     static final boolean RILJ_LOGD = true;
-    static final boolean RILJ_LOGV = false; // STOPSHIP if true
-    static final int RADIO_SCREEN_UNSET = -1;
-    static final int RADIO_SCREEN_OFF = 0;
-    static final int RADIO_SCREEN_ON = 1;
+    static final boolean RILJ_LOGV = false;
 
-    // Have a separate wakelock instance for Ack
-    static final String RILJ_ACK_WAKELOCK_NAME = "IMS_RIL_ACK_WL";
-    static final int RIL_HISTOGRAM_BUCKET_COUNT = 5;
 
-    /**
-     * Wake lock timeout should be longer than the longest timeout in
-     * the vendor ril.
-     */
-    private static final int DEFAULT_WAKE_LOCK_TIMEOUT_MS = 60000;
 
-    // Wake lock default timeout associated with ack
-    private static final int DEFAULT_ACK_WAKE_LOCK_TIMEOUT_MS = 200;
-
-    private static final int DEFAULT_BLOCKING_MESSAGE_RESPONSE_TIMEOUT_MS = 2000;
-
-    // ussd format type.
-    private static final int GSM_TYPE = 15;
-    private static final int UCS2_TYPE = 72;
-    enum RadioState {
-        RADIO_OFF,         /* Radio explicitly powered off (eg CFUN=0) */
-        RADIO_UNAVAILABLE, /* Radio unavailable (eg, resetting or not booted) */
-        RADIO_ON;          /* Radio is on */
-
-        public boolean isOn() /* and available...*/ {
-            return this == RADIO_ON;
-        }
-
-        public boolean isAvailable() {
-            return this != RADIO_UNAVAILABLE;
-        }
-    }
-
-    /*public static final int CALL_MEDIA_CHANGE_ACTION_DOWNGRADE_TO_VOICE   = 0;
-    public static final int CALL_MEDIA_CHANGE_ACTION_UPGRADE_TO_VIDEO     = 1;
-    public static final int CALL_MEDIA_CHANGE_ACTION_SET_TO_PAUSE         = 2;
-    public static final int CALL_MEDIA_CHANGE_ACTION_RESUME_FORM_PAUSE    = 3;*/
     //media request change
     public static final int MEDIA_REQUEST_DEFAULT = 0;
     public static final int MEDIA_REQUEST_AUDIO_UPGRADE_VIDEO_BIDIRECTIONAL = 1;
@@ -399,15 +197,6 @@ public final class ImsRIL {
     public static final int MEDIA_REQUEST_VIDEO_RX_DOWNGRADE_AUDIO = 8;
     public static final int MEDIA_REQUEST_VIDEO_BIDIRECTIONAL_DOWNGRADE_VIDEO_TX = 9;
     public static final int MEDIA_REQUEST_VIDEO_BIDIRECTIONAL_DOWNGRADE_VIDEO_RX = 10;
-
-    RadioState mRadioState;
-    private final ClientWakelockTracker mClientWakelockTracker = new ClientWakelockTracker();
-
-    /**
-     * Wake lock timeout should be longer than the longest timeout in
-     * the vendor ril.
-     */
-    private static final int DEFAULT_WAKE_LOCK_TIMEOUT = 60000;
 
     // Used for call barring methods below
     static final String CB_FACILITY_BAOC         = "AO";
@@ -446,256 +235,34 @@ public final class ImsRIL {
     static final int SERVICE_CLASS_PAD      = (1 << 7);
     static final int SERVICE_CLASS_MAX      = (1 << 7); // Max SERVICE_CLASS value
 
-    // Variables used to differentiate ack messages from request while calling clearWakeLock()
-    public static final int INVALID_WAKELOCK = -1;
-    public static final int FOR_WAKELOCK = 0;
-    public static final int FOR_ACK_WAKELOCK = 1;
-
     CommandsInterface mCi;
     Context mContext;
     RadioInteractorCore mRadioInteractor;
+    RadioInteractorHandler mRadioInteractorHandler;
+
 
     //***** Instance Variables
 
-    final WakeLock mWakeLock;           // Wake lock associated with request/response
-    final WakeLock mAckWakeLock;        // Wake lock associated with ack sent
-    final int mWakeLockTimeout;         // Timeout associated with request/response
-    final int mAckWakeLockTimeout;      // Timeout associated with ack sent
-    // The number of wakelock requests currently active.  Don't release the lock
-    // until dec'd to 0
-    int mWakeLockCount;
-
-    // Variables used to identify releasing of WL on wakelock timeouts
-    volatile int mWlSequenceNum = 0;
-    volatile int mAckWlSequenceNum = 0;
-
-    SparseArray<RILRequest> mRequestList = new SparseArray<RILRequest>();
-    static SparseArray<TelephonyHistogram> mRilTimeHistograms = new
-            SparseArray<TelephonyHistogram>();
-
-    Object[]     mLastNITZTimeInfo;
-
-    // When we are testing emergency calls
-    AtomicBoolean mTestingEmergencyCall = new AtomicBoolean(false);
-
     final Integer mPhoneId;
-
-    /* default work source which will blame phone process */
-    private WorkSource mRILDefaultWorkSource;
-
-    /* Worksource containing all applications causing wakelock to be held */
-    private WorkSource mActiveWakelockWorkSource;
 
     /** Telephony metrics instance for logging metrics event */
     private TelephonyMetrics mMetrics = TelephonyMetrics.getInstance();
-
-    boolean mIsMobileNetworkSupported;
-    IMSRadioResponse mRadioResponse;
-    IMSRadioIndication mRadioIndication;
-    volatile IExtRadio mRadioProxy = null;
-    final AtomicLong mRadioProxyCookie = new AtomicLong(0);
-    final RadioProxyDeathRecipient mRadioProxyDeathRecipient;
     final RilHandler mRilHandler;
 
-    //***** Events
-    static final int EVENT_WAKE_LOCK_TIMEOUT    = 2;
-    static final int EVENT_ACK_WAKE_LOCK_TIMEOUT    = 4;
-    static final int EVENT_BLOCKING_RESPONSE_TIMEOUT = 5;
-    static final int EVENT_RADIO_PROXY_DEAD     = 6;
 
     //***** Constants
-
-    static final String[] HIDL_SERVICE_NAME = {"slot1", "slot2", "slot3"};
-
-    static final int IRADIO_GET_SERVICE_DELAY_MILLIS = 4 * 1000;
-
-    public static List<TelephonyHistogram> getTelephonyRILTimingHistograms() {
-        List<TelephonyHistogram> list;
-        synchronized (mRilTimeHistograms) {
-            list = new ArrayList<>(mRilTimeHistograms.size());
-            for (int i = 0; i < mRilTimeHistograms.size(); i++) {
-                TelephonyHistogram entry = new TelephonyHistogram(mRilTimeHistograms.valueAt(i));
-                list.add(entry);
-            }
-        }
-        return list;
-    }
 
     class RilHandler extends Handler {
         //***** Handler implementation
         @Override public void
         handleMessage(Message msg) {
-            RILRequest rr;
 
             switch (msg.what) {
-                case EVENT_WAKE_LOCK_TIMEOUT:
-                    // Haven't heard back from the last request.  Assume we're
-                    // not getting a response and  release the wake lock.
-
-                    // The timer of WAKE_LOCK_TIMEOUT is reset with each
-                    // new send request. So when WAKE_LOCK_TIMEOUT occurs
-                    // all requests in mRequestList already waited at
-                    // least DEFAULT_WAKE_LOCK_TIMEOUT_MS but no response.
-                    //
-                    // Note: Keep mRequestList so that delayed response
-                    // can still be handled when response finally comes.
-
-                    synchronized (mRequestList) {
-                        if (msg.arg1 == mWlSequenceNum && clearWakeLock(FOR_WAKELOCK)) {
-                            if (RILJ_LOGD) {
-                                int count = mRequestList.size();
-                                Rlog.d(RILJ_LOG_TAG, "WAKE_LOCK_TIMEOUT " +
-                                        " mRequestList=" + count);
-                                for (int i = 0; i < count; i++) {
-                                    rr = mRequestList.valueAt(i);
-                                    Rlog.d(RILJ_LOG_TAG, i + ": [" + rr.mSerial + "] "
-                                            + imsRequestToString(rr.mRequest));
-                                }
-                            }
-                        }
-                    }
-                    break;
-
-                case EVENT_ACK_WAKE_LOCK_TIMEOUT:
-                    if (msg.arg1 == mAckWlSequenceNum && clearWakeLock(FOR_ACK_WAKELOCK)) {
-                        if (RILJ_LOGV) {
-                            Rlog.d(RILJ_LOG_TAG, "ACK_WAKE_LOCK_TIMEOUT");
-                        }
-                    }
-                    break;
-
-                case EVENT_BLOCKING_RESPONSE_TIMEOUT:
-                    int serial = msg.arg1;
-                    rr = findAndRemoveRequestFromList(serial);
-                    // If the request has already been processed, do nothing
-                    if(rr == null) {
-                        break;
-                    }
-
-                    //build a response if expected
-                    if (rr.mResult != null) {
-                        Object timeoutResponse = getResponseForTimedOutRILRequest(rr);
-                        AsyncResult.forMessage( rr.mResult, timeoutResponse, null);
-                        rr.mResult.sendToTarget();
-                        mMetrics.writeOnRilTimeoutResponse(mPhoneId, rr.mSerial, rr.mRequest);
-                    }
-
-                    decrementWakeLock(rr);
-                    rr.release();
-                    break;
-
-                case EVENT_RADIO_PROXY_DEAD:
-                    riljLog("handleMessage: EVENT_RADIO_PROXY_DEAD cookie = " + msg.obj +
-                            " mRadioProxyCookie = " + mRadioProxyCookie.get());
-                    if ((long) msg.obj == mRadioProxyCookie.get()) {
-                        resetProxyAndRequestList();
-
-                        // todo: rild should be back up since message was sent with a delay. this is
-                        // a hack.
-                        getRadioProxy(null);
-                    }
+                default:
+                    riljLog("handleMessage: default what = " + msg.what);
                     break;
             }
         }
-    }
-
-    /**
-     * In order to prevent calls to Telephony from waiting indefinitely
-     * low-latency blocking calls will eventually time out. In the event of
-     * a timeout, this function generates a response that is returned to the
-     * higher layers to unblock the call. This is in lieu of a meaningful
-     * response.
-     * @param rr The RIL Request that has timed out.
-     * @return A default object, such as the one generated by a normal response
-     * that is returned to the higher layers.
-     **/
-    private static Object getResponseForTimedOutRILRequest(RILRequest rr) {
-        if (rr == null ) return null;
-
-        Object timeoutResponse = null;
-        switch(rr.mRequest) {
-            case RIL_REQUEST_GET_ACTIVITY_INFO:
-                timeoutResponse = new ModemActivityInfo(
-                        0, 0, 0, new int [ModemActivityInfo.TX_POWER_LEVELS], 0, 0);
-                break;
-        };
-        return timeoutResponse;
-    }
-
-    final class RadioProxyDeathRecipient implements HwBinder.DeathRecipient {
-        @Override
-        public void serviceDied(long cookie) {
-            // Deal with service going away
-            riljLog("serviceDied");
-            // todo: temp hack to send delayed message so that rild is back up by then
-            //mRilHandler.sendMessage(mRilHandler.obtainMessage(EVENT_RADIO_PROXY_DEAD, cookie));
-            mRilHandler.sendMessageDelayed(
-                    mRilHandler.obtainMessage(EVENT_RADIO_PROXY_DEAD, cookie),
-                    IRADIO_GET_SERVICE_DELAY_MILLIS);
-        }
-    }
-
-    private void resetProxyAndRequestList() {
-        mRadioProxy = null;
-
-        // increment the cookie so that death notification can be ignored
-        mRadioProxyCookie.incrementAndGet();
-
-        mRadioState = RadioState.RADIO_UNAVAILABLE;
-
-        RILRequest.resetSerial();
-        // Clear request list on close
-        clearRequestList(RADIO_NOT_AVAILABLE, false);
-
-        // todo: need to get service right away so setResponseFunctions() can be called for
-        // unsolicited indications. getService() is not a blocking call, so it doesn't help to call
-        // it here. Current hack is to call getService() on death notification after a delay.
-    }
-
-    private IExtRadio getRadioProxy(Message result) {
-        if (!mIsMobileNetworkSupported) {
-            if (RILJ_LOGV) riljLog("getRadioProxy: Not calling getService(): wifi-only");
-            if (result != null) {
-                AsyncResult.forMessage(result, null,
-                        CommandException.fromRilErrno(RADIO_NOT_AVAILABLE));
-                result.sendToTarget();
-            }
-            return null;
-        }
-
-        if (mRadioProxy != null) {
-            return mRadioProxy;
-        }
-
-        try {
-            mRadioProxy = IExtRadio.getService(HIDL_SERVICE_NAME[mPhoneId == null ? 0 : mPhoneId]);
-            if (mRadioProxy != null) {
-                mRadioProxy.linkToDeath(mRadioProxyDeathRecipient,
-                        mRadioProxyCookie.incrementAndGet());
-                mRadioProxy.setIMSResponseFunctions(mRadioResponse, mRadioIndication);
-            } else {
-                riljLoge("getRadioProxy: mRadioProxy == null");
-            }
-        } catch (RemoteException | RuntimeException e) {
-            mRadioProxy = null;
-            riljLoge("RadioProxy getService/setResponseFunctions: " + e);
-        }
-
-        if (mRadioProxy == null) {
-            if (result != null) {
-                AsyncResult.forMessage(result, null,
-                        CommandException.fromRilErrno(RADIO_NOT_AVAILABLE));
-                result.sendToTarget();
-            }
-
-            // if service is not up, treat it like death notification to try to get service again
-            mRilHandler.sendMessageDelayed(
-                    mRilHandler.obtainMessage(EVENT_RADIO_PROXY_DEAD,
-                            mRadioProxyCookie.incrementAndGet()),
-                    IRADIO_GET_SERVICE_DELAY_MILLIS);
-        }
-
-        return mRadioProxy;
     }
 
     //***** Constructors
@@ -705,32 +272,10 @@ public final class ImsRIL {
         mPhoneId = instanceId;
         riljLog("ImsRIL: init mPhoneId=" + instanceId + ")");
 
-        ConnectivityManager cm = (ConnectivityManager)context.getSystemService(
-                Context.CONNECTIVITY_SERVICE);
-        mIsMobileNetworkSupported = cm.isNetworkSupported(ConnectivityManager.TYPE_MOBILE);
-
-        mRadioResponse = new IMSRadioResponse(this);
-        mRadioIndication = new IMSRadioIndication(this);
-
         mRilHandler = new RilHandler();
-        mRadioProxyDeathRecipient = new RadioProxyDeathRecipient();
-
-        PowerManager pm = (PowerManager)context.getSystemService(Context.POWER_SERVICE);
-        mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, RILJ_LOG_TAG);
-        mWakeLock.setReferenceCounted(false);
-        mAckWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, RILJ_ACK_WAKELOCK_NAME);
-        mAckWakeLock.setReferenceCounted(false);
-        mWakeLockTimeout = SystemProperties.getInt(TelephonyProperties.PROPERTY_WAKE_LOCK_TIMEOUT,
-                DEFAULT_WAKE_LOCK_TIMEOUT_MS);
-        mAckWakeLockTimeout = SystemProperties.getInt(
-                TelephonyProperties.PROPERTY_WAKE_LOCK_TIMEOUT, DEFAULT_ACK_WAKE_LOCK_TIMEOUT_MS);
-        mWakeLockCount = 0;
-        mRILDefaultWorkSource = new WorkSource(context.getApplicationInfo().uid,
-                context.getPackageName());
-
-        // set radio callback; needed to set RadioIndication callback (should be done after
-        // wakelock stuff is initialized above as callbacks are received on separate binder threads)
-        getRadioProxy(null);
+        if(getRadioInteractor() == null){
+            RadioInteractorFactory.init(context);
+        }
     }
 
     private RadioInteractorCore getRadioInteractor(){
@@ -740,30 +285,11 @@ public final class ImsRIL {
         return mRadioInteractor;
     }
 
-    private void addRequest(RILRequest rr) {
-        acquireWakeLock(rr, FOR_WAKELOCK);
-        synchronized (mRequestList) {
-            rr.mStartTimeMs = SystemClock.elapsedRealtime();
-            mRequestList.append(rr.mSerial, rr);
+    private RadioInteractorHandler getRadioInteractorHandler() {
+        if(mRadioInteractorHandler == null && RadioInteractorFactory.getInstance() != null) {
+            mRadioInteractorHandler = RadioInteractorFactory.getInstance().getRadioInteractorHandler(mPhoneId == null ? 0 : mPhoneId);
         }
-    }
-
-    private RILRequest obtainRequest(int request, Message result, WorkSource workSource) {
-        RILRequest rr = RILRequest.obtain(request, result, workSource);
-        addRequest(rr);
-        return rr;
-    }
-
-    private void handleRadioProxyExceptionForRR(RILRequest rr, String caller, Exception e) {
-        riljLog(caller + ": " + e);
-        resetProxyAndRequestList();
-
-        // service most likely died, handle exception like death notification to try to get service
-        // again
-        mRilHandler.sendMessageDelayed(
-                mRilHandler.obtainMessage(EVENT_RADIO_PROXY_DEAD,
-                        mRadioProxyCookie.incrementAndGet()),
-                IRADIO_GET_SERVICE_DELAY_MILLIS);
+        return mRadioInteractorHandler;
     }
 
     private String convertNullToEmptyString(String string) {
@@ -1242,19 +768,12 @@ public final class ImsRIL {
     public void
     queryFacilityLockForAppExt(String facility, String password, int serviceClass,
                                Message response) {
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_QUERY_FACILITY_LOCK_EXT, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.getFacilityLockForAppExt(rr.mSerial, convertNullToEmptyString(facility),
-                        convertNullToEmptyString(password), serviceClass, "");
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "queryFacilityLockForAppExt", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.queryFacilityLockForAppExt(convertNullToEmptyString(facility),
+                    convertNullToEmptyString(password), serviceClass, response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_QUERY_FACILITY_LOCK_EXT));
+        } else {
+            riljLog("queryFacilityLockForAppExt, RadioInteractor is null");
         }
     }
 
@@ -1290,8 +809,10 @@ public final class ImsRIL {
     }
 
 
-    public void invokeOemRilRequestRaw(byte[] data, Message response) {
-        mCi.invokeOemRilRequestRaw(data, response);
+    public void invokeOemRilRequestRaw(String cmd, Message response) {
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.sendCmdAsync(cmd,response);
+        }
     }
 
     /**
@@ -1438,368 +959,6 @@ public final class ImsRIL {
     }
 
 //***** google default Private Methods
-
-    /**
-     * This is a helper function to be called when a RadioIndication callback is called.
-     * It takes care of acquiring wakelock and sending ack if needed.
-     * @param indicationType RadioIndicationType received
-     */
-    void processIndication(int indicationType) {
-        if (indicationType == RadioIndicationType.UNSOLICITED_ACK_EXP) {
-            sendAck();
-            if (RILJ_LOGD) riljLog("Unsol response received; Sending ack to ril.cpp");
-        } else {
-            // ack is not expected to be sent back. Nothing is required to be done here.
-        }
-    }
-
-    void processRequestAck(int serial) {
-        RILRequest rr;
-        synchronized (mRequestList) {
-            rr = mRequestList.get(serial);
-        }
-        if (rr == null) {
-            Rlog.w(RILJ_LOG_TAG, "processRequestAck: Unexpected solicited ack response! "
-                    + "serial: " + serial);
-        } else {
-            decrementWakeLock(rr);
-            if (RILJ_LOGD) {
-                riljLog(rr.serialString() + " Ack < " + imsRequestToString(rr.mRequest));
-            }
-        }
-    }
-
-    /**
-     * This is a helper function to be called when a RadioResponse callback is called.
-     * It takes care of acks, wakelocks, and finds and returns RILRequest corresponding to the
-     * response if one is found.
-     * @param responseInfo RadioResponseInfo received in response callback
-     * @return RILRequest corresponding to the response
-     */
-    RILRequest processResponse(RadioResponseInfo responseInfo) {
-        int serial = responseInfo.serial;
-        int error = responseInfo.error;
-        int type = responseInfo.type;
-
-        RILRequest rr = null;
-
-        if (type == RadioResponseType.SOLICITED_ACK) {
-            synchronized (mRequestList) {
-                rr = mRequestList.get(serial);
-            }
-            if (rr == null) {
-                Rlog.w(RILJ_LOG_TAG, "Unexpected solicited ack response! sn: " + serial);
-            } else {
-                decrementWakeLock(rr);
-                if (RILJ_LOGD) {
-                    riljLog(rr.serialString() + " Ack < " + imsRequestToString(rr.mRequest));
-                }
-            }
-            return rr;
-        }
-
-        rr = findAndRemoveRequestFromList(serial);
-        if (rr == null) {
-            Rlog.e(RILJ_LOG_TAG, "processResponse: Unexpected response! serial: " + serial
-                    + " error: " + error);
-            return null;
-        }
-
-        // Time logging for RIL command and storing it in TelephonyHistogram.
-        addToRilHistogram(rr);
-
-        if (type == RadioResponseType.SOLICITED_ACK_EXP) {
-            sendAck();
-            if (RILJ_LOGD) {
-                riljLog("Response received for " + rr.serialString() + " "
-                        + imsRequestToString(rr.mRequest) + " Sending ack to ril.cpp");
-            }
-        } else {
-            // ack sent for SOLICITED_ACK_EXP above; nothing to do for SOLICITED response
-        }
-
-
-        if (error != RadioError.NONE) {
-            switch (rr.mRequest) {
-                case RIL_REQUEST_ENTER_SIM_PIN:
-                case RIL_REQUEST_ENTER_SIM_PIN2:
-                case RIL_REQUEST_CHANGE_SIM_PIN:
-                case RIL_REQUEST_CHANGE_SIM_PIN2:
-                case RIL_REQUEST_SET_FACILITY_LOCK:
-                        if (RILJ_LOGD) {
-                            riljLog("ON some errors fakeSimStatusChanged");
-                        }
-                    break;
-
-            }
-        } else {
-            switch (rr.mRequest) {
-                case RIL_REQUEST_HANGUP_FOREGROUND_RESUME_BACKGROUND:
-                    if (mTestingEmergencyCall.getAndSet(false)) {
-                        riljLog("testing emergency call, notify ECM Registrants");
-                    }
-            }
-        }
-        return rr;
-    }
-
-    /**
-     * This is a helper function to be called at the end of all RadioResponse callbacks.
-     * It takes care of sending error response, logging, decrementing wakelock if needed, and
-     * releases the request from memory pool.
-     * @param rr RILRequest for which response callback was called
-     * @param responseInfo RadioResponseInfo received in the callback
-     * @param ret object to be returned to request sender
-     */
-    void processResponseDone(RILRequest rr, RadioResponseInfo responseInfo, Object ret) {
-        if (responseInfo.error == 0) {
-            if (RILJ_LOGD) {
-                riljLog(rr.serialString() + "< " + imsRequestToString(rr.mRequest)
-                        + " " + retToString(rr.mRequest, ret));
-            }
-        } else {
-            if (RILJ_LOGD) {
-                riljLog(rr.serialString() + "< " + imsRequestToString(rr.mRequest)
-                        + " error " + responseInfo.error);
-            }
-            rr.onError(responseInfo.error, ret);
-        }
-        mMetrics.writeOnRilSolicitedResponse(mPhoneId, rr.mSerial, responseInfo.error,
-                rr.mRequest, ret);
-        if (rr != null) {
-            if (responseInfo.type == RadioResponseType.SOLICITED) {
-                decrementWakeLock(rr);
-            }
-            rr.release();
-        }
-    }
-
-    /**
-     * Function to send ack and acquire related wakelock
-     */
-    private void sendAck() {
-        // TODO: Remove rr and clean up acquireWakelock for response and ack
-        RILRequest rr = RILRequest.obtain(RIL_RESPONSE_ACKNOWLEDGEMENT, null,
-                mRILDefaultWorkSource);
-        acquireWakeLock(rr, FOR_ACK_WAKELOCK);
-        IExtRadio radioProxy = getRadioProxy(null);
-        if (radioProxy != null) {
-            try {
-                radioProxy.responseAcknowledgement();
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "sendAck", e);
-                riljLoge("sendAck: " + e);
-            }
-        } else {
-            Rlog.e(RILJ_LOG_TAG, "Error trying to send ack, radioProxy = null");
-        }
-        rr.release();
-    }
-
-    private WorkSource getDeafultWorkSourceIfInvalid(WorkSource workSource) {
-        if (workSource == null) {
-            workSource = mRILDefaultWorkSource;
-        }
-
-        return workSource;
-    }
-
-    private String getWorkSourceClientId(WorkSource workSource) {
-        if (workSource != null) {
-            return String.valueOf(workSource.get(0)) + ":" + workSource.getName(0);
-        }
-
-        return null;
-    }
-
-    /**
-     * Holds a PARTIAL_WAKE_LOCK whenever
-     * a) There is outstanding RIL request sent to RIL deamon and no replied
-     * b) There is a request pending to be sent out.
-     *
-     * There is a WAKE_LOCK_TIMEOUT to release the lock, though it shouldn't
-     * happen often.
-     */
-
-    private void acquireWakeLock(RILRequest rr, int wakeLockType) {
-        synchronized (rr) {
-            if (rr.mWakeLockType != INVALID_WAKELOCK) {
-                Rlog.d(RILJ_LOG_TAG, "Failed to aquire wakelock for " + rr.serialString());
-                return;
-            }
-
-            switch(wakeLockType) {
-                case FOR_WAKELOCK:
-                    synchronized (mWakeLock) {
-                        mWakeLock.acquire();
-                        mWakeLockCount++;
-                        mWlSequenceNum++;
-
-                        String clientId = getWorkSourceClientId(rr.mWorkSource);
-                        if (!mClientWakelockTracker.isClientActive(clientId)) {
-                            if (mActiveWakelockWorkSource != null) {
-                                mActiveWakelockWorkSource.add(rr.mWorkSource);
-                            } else {
-                                mActiveWakelockWorkSource = rr.mWorkSource;
-                            }
-                            mWakeLock.setWorkSource(mActiveWakelockWorkSource);
-                        }
-
-                        mClientWakelockTracker.startTracking(rr.mClientId,
-                                rr.mRequest, rr.mSerial, mWakeLockCount);
-
-                        Message msg = mRilHandler.obtainMessage(EVENT_WAKE_LOCK_TIMEOUT);
-                        msg.arg1 = mWlSequenceNum;
-                        mRilHandler.sendMessageDelayed(msg, mWakeLockTimeout);
-                    }
-                    break;
-                case FOR_ACK_WAKELOCK:
-                    synchronized (mAckWakeLock) {
-                        mAckWakeLock.acquire();
-                        mAckWlSequenceNum++;
-
-                        Message msg = mRilHandler.obtainMessage(EVENT_ACK_WAKE_LOCK_TIMEOUT);
-                        msg.arg1 = mAckWlSequenceNum;
-                        mRilHandler.sendMessageDelayed(msg, mAckWakeLockTimeout);
-                    }
-                    break;
-                default: //WTF
-                    Rlog.w(RILJ_LOG_TAG, "Acquiring Invalid Wakelock type " + wakeLockType);
-                    return;
-            }
-            rr.mWakeLockType = wakeLockType;
-        }
-    }
-
-    private void decrementWakeLock(RILRequest rr) {
-        synchronized (rr) {
-            switch(rr.mWakeLockType) {
-                case FOR_WAKELOCK:
-                    synchronized (mWakeLock) {
-                        mClientWakelockTracker.stopTracking(rr.mClientId,
-                                rr.mRequest, rr.mSerial,
-                                (mWakeLockCount > 1) ? mWakeLockCount - 1 : 0);
-                        String clientId = getWorkSourceClientId(rr.mWorkSource);;
-                        if (!mClientWakelockTracker.isClientActive(clientId)
-                                && (mActiveWakelockWorkSource != null)) {
-                            mActiveWakelockWorkSource.remove(rr.mWorkSource);
-                            if (mActiveWakelockWorkSource.size() == 0) {
-                                mActiveWakelockWorkSource = null;
-                            }
-                            mWakeLock.setWorkSource(mActiveWakelockWorkSource);
-                        }
-
-                        if (mWakeLockCount > 1) {
-                            mWakeLockCount--;
-                        } else {
-                            mWakeLockCount = 0;
-                            mWakeLock.release();
-                        }
-                    }
-                    break;
-                case FOR_ACK_WAKELOCK:
-                    //We do not decrement the ACK wakelock
-                    break;
-                case INVALID_WAKELOCK:
-                    break;
-                default:
-                    Rlog.w(RILJ_LOG_TAG, "Decrementing Invalid Wakelock type " + rr.mWakeLockType);
-            }
-            rr.mWakeLockType = INVALID_WAKELOCK;
-        }
-    }
-
-    private boolean clearWakeLock(int wakeLockType) {
-        if (wakeLockType == FOR_WAKELOCK) {
-            synchronized (mWakeLock) {
-                if (mWakeLockCount == 0 && !mWakeLock.isHeld()) return false;
-                Rlog.d(RILJ_LOG_TAG, "NOTE: mWakeLockCount is " + mWakeLockCount
-                        + "at time of clearing");
-                mWakeLockCount = 0;
-                mWakeLock.release();
-                mClientWakelockTracker.stopTrackingAll();
-                mActiveWakelockWorkSource = null;
-                return true;
-            }
-        } else {
-            synchronized (mAckWakeLock) {
-                if (!mAckWakeLock.isHeld()) return false;
-                mAckWakeLock.release();
-                return true;
-            }
-        }
-    }
-
-    /**
-     * Release each request in mRequestList then clear the list
-     * @param error is the RIL_Errno sent back
-     * @param loggable true means to print all requests in mRequestList
-     */
-    private void clearRequestList(int error, boolean loggable) {
-        RILRequest rr;
-        synchronized (mRequestList) {
-            int count = mRequestList.size();
-            if (RILJ_LOGD && loggable) {
-                Rlog.d(RILJ_LOG_TAG, "clearRequestList " + " mWakeLockCount="
-                        + mWakeLockCount + " mRequestList=" + count);
-            }
-
-            for (int i = 0; i < count; i++) {
-                rr = mRequestList.valueAt(i);
-                if (RILJ_LOGD && loggable) {
-                    Rlog.d(RILJ_LOG_TAG, i + ": [" + rr.mSerial + "] "
-                            + imsRequestToString(rr.mRequest));
-                }
-                rr.onError(error, null);
-                decrementWakeLock(rr);
-                rr.release();
-            }
-            mRequestList.clear();
-        }
-    }
-
-    private RILRequest findAndRemoveRequestFromList(int serial) {
-        RILRequest rr = null;
-        synchronized (mRequestList) {
-            rr = mRequestList.get(serial);
-            if (rr != null) {
-                mRequestList.remove(serial);
-            }
-        }
-
-        return rr;
-    }
-
-    private void addToRilHistogram(RILRequest rr) {
-        long endTime = SystemClock.elapsedRealtime();
-        int totalTime = (int) (endTime - rr.mStartTimeMs);
-
-        synchronized (mRilTimeHistograms) {
-            TelephonyHistogram entry = mRilTimeHistograms.get(rr.mRequest);
-            if (entry == null) {
-                // We would have total #RIL_HISTOGRAM_BUCKET_COUNT range buckets for RIL commands
-                entry = new TelephonyHistogram(TelephonyHistogram.TELEPHONY_CATEGORY_RIL,
-                        rr.mRequest, RIL_HISTOGRAM_BUCKET_COUNT);
-                mRilTimeHistograms.put(rr.mRequest, entry);
-            }
-            entry.addTimeTaken(totalTime);
-        }
-    }
-
-    RadioCapability makeStaticRadioCapability() {
-        // default to UNKNOWN so we fail fast.
-        int raf = RadioAccessFamily.RAF_UNKNOWN;
-
-        String rafString = mContext.getResources().getString(
-                com.android.internal.R.string.config_radio_access_family);
-        if (!TextUtils.isEmpty(rafString)) {
-            raf = RadioAccessFamily.rafTypeFromString(rafString);
-        }
-        RadioCapability rc = new RadioCapability(mPhoneId.intValue(), 0, 0, raf,
-                "", RadioCapability.RC_STATUS_SUCCESS);
-        if (RILJ_LOGD) riljLog("Faking RIL_REQUEST_GET_RADIO_CAPABILITY response using " + raf);
-        return rc;
-    }
 
     static String retToString(int req, Object ret) {
         if (ret == null) return "";
@@ -2107,66 +1266,27 @@ public final class ImsRIL {
         mCi.exitEmergencyCallbackMode(response);
     }
 
-
-    public void requestIsimAuthentication(String nonce, Message response) {
-        mCi.requestIsimAuthentication(nonce, response);
-    }
-
-
     public void requestIccSimAuthentication(int authContext, String data, String aid,
             Message response) {
         mCi.requestIccSimAuthentication(authContext, data, aid, response);
     }
 
     public void setInitialAttachSOSApn(DataProfile dataProfileInfo, Message result){
-        IExtRadio radioProxy = getRadioProxy(result);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_SET_SOS_INITIAL_ATTACH_APN, result,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.setInitialAttachSOSApn(rr.mSerial, convertToHalDataProfile(dataProfileInfo));
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "setInitialAttachSOSApn", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.setInitialAttachSOSApn(dataProfileInfo,result);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_SET_SOS_INITIAL_ATTACH_APN));
+        } else {
+            riljLog("setInitialAttachSOSApn, RadioInteractor is null");
         }
     }
 
     public void setIMSInitialAttachApn(DataProfile dataProfileInfo, Message result){
-        IExtRadio radioProxy = getRadioProxy(result);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN, result,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.setIMSInitialAttachApn(rr.mSerial, convertToHalDataProfile(dataProfileInfo));
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "setIMSInitialAttachApn", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.setIMSInitialAttachApn(dataProfileInfo,result);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_SET_IMS_INITIAL_ATTACH_APN));
+        } else {
+            riljLog("setIMSInitialAttachApn, RadioInteractor is null");
         }
-    }
-
-    public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
-        pw.println("RIL: " + this);
-        pw.println(" mWakeLock=" + mWakeLock);
-        pw.println(" mWakeLockTimeout=" + mWakeLockTimeout);
-        synchronized (mRequestList) {
-            synchronized (mWakeLock) {
-                pw.println(" mWakeLockCount=" + mWakeLockCount);
-            }
-            int count = mRequestList.size();
-            pw.println(" mRequestList count=" + count);
-            for (int i = 0; i < count; i++) {
-                RILRequest rr = mRequestList.valueAt(i);
-                pw.println("  [" + rr.mSerial + "] " + imsRequestToString(rr.mRequest));
-            }
-        }
-        pw.println(" mLastNITZTimeInfo=" + Arrays.toString(mLastNITZTimeInfo));
-        pw.println(" mTestingEmergencyCall=" + mTestingEmergencyCall.get());
     }
 
     public static ArrayList<Byte> primitiveArrayToArrayList(byte[] arr) {
@@ -2190,60 +1310,40 @@ public final class ImsRIL {
         riljLog("ril--dialVP: address = " + address);
         if(getRadioInteractor() != null) {
             mRadioInteractor.videoPhoneDial(address, sub_address, clirMode, result);
+        } else {
+            riljLog("dialVP, RadioInteractor is null");
         }
     }
 
 
     public void
     getImsCurrentCalls (Message result) {
-        IExtRadio radioProxy = getRadioProxy(result);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_GET_IMS_CURRENT_CALLS, result,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.getIMSCurrentCalls(rr.mSerial);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "getIMSCurrentCalls", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.getImsCurrentCalls(result);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_GET_IMS_CURRENT_CALLS));
+        } else {
+            riljLog("getIMSCurrentCalls, RadioInteractor is null");
         }
     }
 
     public void
     setImsVoiceCallAvailability(int state, Message response) {
-
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.setIMSVoiceCallAvailability(rr.mSerial, state);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "setImsVoiceCallAvailability", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.setImsVoiceCallAvailability(state,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_SET_IMS_VOICE_CALL_AVAILABILITY));
+        } else {
+            riljLog("getIMSCurrentCalls, RadioInteractor is null");
         }
     }
 
 
     public void
     getImsVoiceCallAvailability(Message response){
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.getIMSVoiceCallAvailability(rr.mSerial);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "getImsVoiceCallAvailability", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.getImsVoiceCallAvailability(response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_GET_IMS_VOICE_CALL_AVAILABILITY));
+        } else {
+            riljLog("getImsVoiceCallAvailability, RadioInteractor is null");
         }
     }
 
@@ -2251,251 +1351,131 @@ public final class ImsRIL {
     public void initISIM(String confUri, String instanceId, String impu,
             String impi, String domain, String xCap, String bspAddr,
             Message response) {
-
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_INIT_ISIM, response,
-                    mRILDefaultWorkSource);
-            ArrayList<String> list = new ArrayList<String>();
-            list.add(confUri);
-            list.add(instanceId);
-            list.add(impu);
-            list.add(impi);
-            list.add(domain);
-            list.add(xCap);
-            list.add(bspAddr);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.initISIM(rr.mSerial, list);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "initISIM", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.initISIM(confUri,instanceId,impu,impi,domain,xCap,bspAddr,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_INIT_ISIM));
+        } else {
+            riljLog("initISIM, RadioInteractor is null");
         }
     }
 
     public void disableIms(Message response){
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_DISABLE_IMS, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.disableIMS(rr.mSerial);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "disableIms", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.disableIms(response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_DISABLE_IMS));
+        } else {
+            riljLog("disableIms, RadioInteractor is null");
         }
     }
 
 
     public void
     requestVolteCallMediaChange(int action, int callId, Message response) {
-
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.requestVolteCallMediaChange(rr.mSerial, callId , action);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "requestVolteCallMediaChange", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.requestVolteCallMediaChange(action,callId,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_CALL_REQUEST_MEDIA_CHANGE));
+        } else {
+            riljLog("requestVolteCallMediaChange, RadioInteractor is null");
         }
     }
 
 
     public void
     responseVolteCallMediaChange(boolean isAccept, int callId, Message response) {
-        IExtRadio radioProxy = getRadioProxy(null);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE, null,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            int mediaRequest = 1000;
-            if(response != null){
-                mediaRequest = response.arg1;
-            }
-
-            try {
-                radioProxy.responseVolteCallMediaChange(rr.mSerial, callId , isAccept, mediaRequest);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "responseVolteCallMediaChange", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.responseVolteCallMediaChange(isAccept,callId,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_CALL_RESPONSE_MEDIA_CHANGE));
+        } else {
+            riljLog("responseVolteCallMediaChange, RadioInteractor is null");
         }
     }
 
 
     public void setImsSmscAddress(String smsc, Message response){
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_SET_IMS_SMSC, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.setIMSSmscAddress(rr.mSerial, smsc);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "setImsSmscAddress", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.setImsSmscAddress(smsc,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_SET_IMS_SMSC));
+        } else {
+            riljLog("setImsSmscAddress, RadioInteractor is null");
         }
     }
 
 
     public void requestVolteCallFallBackToVoice(int callId, Message response) {
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.volteCallFallBackToVoice(rr.mSerial, callId);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "requestVolteCallFallBackToVoice", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.requestVolteCallFallBackToVoice(callId,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE));
+        } else {
+            riljLog("requestVolteCallFallBackToVoice, RadioInteractor is null");
         }
     }
 
     public void
     requestInitialGroupCall(String numbers, Message response) {
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_INITIAL_GROUP_CALL, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.IMSInitialGroupCall(rr.mSerial, numbers);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "requestInitialGroupCall", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.requestInitialGroupCall(numbers,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_CALL_FALL_BACK_TO_VOICE)+" RadioInteractor is null");
         }
     }
 
 
     public void
     requestAddGroupCall(String numbers, Message response) {
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_ADD_TO_GROUP_CALL, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.IMSAddGroupCall(rr.mSerial, numbers);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "requestAddGroupCall", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.requestAddGroupCall(numbers,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_ADD_TO_GROUP_CALL));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_ADD_TO_GROUP_CALL)+" RadioInteractor is null");
         }
     }
 
     public void
     setCallForward(int action, int cfReason, int serviceClass,
             String number, int timeSeconds, String ruleSet, Message response) {
-        CallForwardInfoUri info = new CallForwardInfoUri();
-        info.status = action;
-        info.reason = cfReason;
-        //number type
-        if(number != null && PhoneNumberUtils.isUriNumber(number)){
-            info.numberType = 1;
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.setCallForward(action,cfReason,serviceClass,number,timeSeconds,ruleSet,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_SET_CALL_FORWARD_URI));
         } else {
-            info.numberType = 2;
-        }
-        info.ton = PhoneNumberUtils.toaFromString(number);
-        info.serviceClass = serviceClass;
-        info.number = number;
-        info.timeSeconds = timeSeconds;
-        info.ruleset = ruleSet;
-
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_SET_CALL_FORWARD_URI, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.setCallForwardUri(rr.mSerial, info);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "setCallForward", e);
-            }
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_SET_CALL_FORWARD_URI)+" RadioInteractor is null");
         }
     }
 
     public void
     queryCallForwardStatus(int cfReason, int serviceClass,
             String number, String ruleSet, Message response) {
-
-        CallForwardInfoUri info = new CallForwardInfoUri();
-        info.reason = cfReason;//TODO:check this param
-        //number type
-        if(number != null && PhoneNumberUtils.isUriNumber(number)){
-            info.numberType = 1;
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.queryCallForwardStatus(cfReason,serviceClass,number,ruleSet,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI));
         } else {
-            info.numberType = 2;
-        }
-        info.ton = PhoneNumberUtils.toaFromString(number);
-        info.serviceClass = serviceClass;
-        info.number = number;
-        info.ruleset = ruleSet;
-        info.status = 2; //Bug710475:
-                         //AT+CCFCU <mode>: integer type :2---query status
-        info.timeSeconds = 0;
-        if (RILJ_LOGD) riljLog("[queryCallForwardStatus]CallForwardInfoUri status: 2");
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.queryCallForwardStatus(rr.mSerial, info);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "queryCallForwardStatus", e);
-            }
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_QUERY_CALL_FORWARD_STATUS_URI)+" RadioInteractor is null");
         }
     }
 
     public void enableIms(Message response) {
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_ENABLE_IMS, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.enableIMS(rr.mSerial);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "enableIMS", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.enableIms(response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_ENABLE_IMS));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_ENABLE_IMS)+" RadioInteractor is null");
         }
     }
 
-    protected RegistrantList mImsCallStateRegistrants = new RegistrantList();
-
     public void registerForImsCallStateChanged(Handler h, int what, Object obj) {
-        Registrant r = new Registrant (h, what, obj);
-
-        mImsCallStateRegistrants.add(r);
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.registerForImsCallStateChanged(h,what,obj);
+        } else {
+            riljLog("registerForImsCallStateChanged, RadioInteractor is null");
+        }
     }
 
     public void unregisterForImsCallStateChanged(Handler h) {
-        mImsCallStateRegistrants.remove(h);
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.unregisterForImsCallStateChanged(h);
+        } else {
+            riljLog("unregisterForImsCallStateChanged, RadioInteractor is null");
+        }
     }
 
     public void registerForRadioStateChanged(Handler h, int what, Object obj) {
@@ -2559,38 +1539,44 @@ public final class ImsRIL {
         }
     }
 
-    protected RegistrantList mImsBearerStateRegistrant = new RegistrantList();
     public void registerForImsBearerStateChanged(Handler h, int what, Object obj) {
-        Registrant r = new Registrant (h, what, obj);
-        mImsBearerStateRegistrant.add(r);
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.registerForImsBearerStateChanged(h,what,obj);
+        } else {
+            riljLog("registerForImsBearerStateChanged, RadioInteractor is null");
+        }
     }
 
     public void unregisterForImsBearerStateChanged(Handler h) {
-        mImsBearerStateRegistrant.remove(h);
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.unregisterForImsBearerStateChanged(h);
+        } else {
+            riljLog("unregisterForImsBearerStateChanged, RadioInteractor is null");
+        }
     }
 
-    protected Registrant mImsVideoQosRegistrant;
     public void registerForImsVideoQos(Handler h, int what, Object obj) {
-        mImsVideoQosRegistrant = new Registrant(h, what, obj);
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.registerForImsVideoQos(h,what,obj);
+        } else {
+            riljLog("registerForImsVideoQos, RadioInteractor is null");
+        }
     }
 
     public void unregisterForImsVideoQos(Handler h) {
-        mImsVideoQosRegistrant.clear();
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.unregisterForImsVideoQos(h);
+        } else {
+            riljLog("unregisterForImsVideoQos, RadioInteractor is null");
+        }
     }
 
     public void getImsBearerState(Message response) {
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_GET_IMS_BEARER_STATE, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.getIMSBearerState(rr.mSerial);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "getImsBearerState", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.getImsBearerState(response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_GET_IMS_BEARER_STATE));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_GET_IMS_BEARER_STATE)+" RadioInteractor is null");
         }
     }
     /* @} */
@@ -2604,111 +1590,130 @@ public final class ImsRIL {
     }
 
     public void notifyVoWifiEnable(boolean enable, Message response) {
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_WIFI_ENABLE, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.notifyVoWifiEnable(rr.mSerial, enable);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "notifyVoWifiEnable", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.notifyVoWifiEnable(enable,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_WIFI_ENABLE));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_WIFI_ENABLE)+" RadioInteractor is null");
         }
     }
 
     public void notifyVoWifiCallStateChanged(boolean incall, Message response){
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.notifyVoWifiCallStateChanged(rr.mSerial, incall);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "notifyWifiCallState", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.notifyVoWifiCallStateChanged(incall,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_WIFI_CALL_STATE_CHANGE)+" RadioInteractor is null");
         }
     }
 
     public void notifyDataRouter(Message response){
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_UPDATE_DATA_ROUTER, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.notifyDataRouterUpdate(rr.mSerial);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "notifyDataRouter", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.notifyDataRouter(response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_UPDATE_DATA_ROUTER));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_UPDATE_DATA_ROUTER)+" RadioInteractor is null");
         }
     }
 
     /* SPRD: add for VoWiFi
      */
-    protected Registrant mImsHandoverRequestRegistrant;
-    protected Registrant mImsHandoverStatusRegistrant;
-    protected Registrant mImsNetworkInfoRegistrant;
-    protected Registrant mImsRegAddressRegistrant;
-    protected Registrant mImsWiFiParamRegistrant;
-    protected RegistrantList mImsNetworkStateChangedRegistrants = new RegistrantList();
-
     public void registerForImsNetworkStateChanged(Handler h, int what, Object obj) {
-        Registrant r = new Registrant (h, what, obj);
-        mImsNetworkStateChangedRegistrants.add(r);
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.registerForImsNetworkStateChanged(h,what,obj);
+        } else {
+            riljLog("registerForImsNetworkStateChanged, RadioInteractor is null");
+        }
     }
 
     public void unregisterForImsNetworkStateChanged(Handler h) {
-        mImsNetworkStateChangedRegistrants.remove(h);
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.unregisterForImsNetworkStateChanged(h);
+        } else {
+            riljLog("registerForImsNetworkStateChanged, RadioInteractor is null");
+        }
     }
 
     public void registerImsHandoverRequest(Handler h, int what, Object obj){
-        mImsHandoverRequestRegistrant = new Registrant(h, what, obj);
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.registerImsHandoverRequest(h,what,obj);
+        } else {
+            riljLog("registerImsHandoverRequest, RadioInteractor is null");
+        }
     }
 
 
     public void unregisterImsHandoverRequest(Handler h){
-        mImsHandoverRequestRegistrant.clear();
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.unregisterImsHandoverRequest(h);
+        } else {
+            riljLog("unregisterImsHandoverRequest, RadioInteractor is null");
+        }
     }
 
     public void registerImsHandoverStatus(Handler h, int what, Object obj){
-        mImsHandoverStatusRegistrant = new Registrant(h, what, obj);
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.registerImsHandoverStatus(h,what,obj);
+        } else {
+            riljLog("registerImsHandoverStatus, RadioInteractor is null");
+        }
     }
 
     public void unregisterImsHandoverStatus(Handler h){
-        mImsHandoverStatusRegistrant.clear();
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.unregisterImsHandoverStatus(h);
+        } else {
+            riljLog("unregisterImsHandoverStatus, RadioInteractor is null");
+        }
     }
 
     public void registerImsNetworkInfo(Handler h, int what, Object obj){
-        mImsNetworkInfoRegistrant = new Registrant(h, what, obj);
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.registerImsNetworkInfo(h,what,obj);
+        } else {
+            riljLog("registerImsNetworkInfo, RadioInteractor is null");
+        }
     }
 
     public void unregisterImsNetworkInfo(Handler h){
-        mImsNetworkInfoRegistrant.clear();
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.unregisterImsNetworkInfo(h);
+        } else {
+            riljLog("unregisterImsNetworkInfo, RadioInteractor is null");
+        }
     }
 
     public void registerImsRegAddress(Handler h, int what, Object obj) {
-        mImsRegAddressRegistrant = new Registrant(h, what, obj);
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.registerImsRegAddress(h,what,obj);
+        } else {
+            riljLog("registerImsRegAddress, RadioInteractor is null");
+        }
     }
 
     public void unregisterImsRegAddress(Handler h){
-        mImsRegAddressRegistrant.clear();
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.unregisterImsRegAddress(h);
+        } else {
+            riljLog("unregisterImsRegAddress, RadioInteractor is null");
+        }
     }
 
     public void registerImsWiFiParam(Handler h, int what, Object obj){
-        mImsWiFiParamRegistrant = new Registrant(h, what, obj);
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.registerImsWiFiParam(h,what,obj);
+        } else {
+            riljLog("registerImsWiFiParam, RadioInteractor is null");
+        }
     }
 
 
     public void unregisterImsWiFiParam(Handler h){
-        mImsWiFiParamRegistrant.clear();
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.unregisterImsWiFiParam(h);
+        } else {
+            riljLog("unregisterImsWiFiParam, RadioInteractor is null");
+        }
     }
 
     public void registerForIccRefresh(Handler h, int what, Object obj){
@@ -2716,218 +1721,121 @@ public final class ImsRIL {
     }
 
     public void requestImsHandover(int type, Message response) {
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_HANDOVER, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.IMSHandover(rr.mSerial, type);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "requestImsHandover", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.requestImsHandover(type,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_HANDOVER));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_HANDOVER)+" RadioInteractor is null");
         }
     }
 
     public void notifyImsHandoverStatus(int status, Message response){
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_HANDOVER_STATUS_UPDATE, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.notifyIMSHandoverStatusUpdate(rr.mSerial, status);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "notifyImsHandoverStatus", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.notifyImsHandoverStatus(status,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_HANDOVER_STATUS_UPDATE));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_HANDOVER_STATUS_UPDATE)+" RadioInteractor is null");
         }
     }
 
     public void notifyImsNetworkInfo(int type, String info, Message response){
-        ImsNetworkInfo imsNetworkInfo = new ImsNetworkInfo();
-        imsNetworkInfo.info = info;
-        imsNetworkInfo.type = type;
-
-
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_NETWORK_INFO_CHANGE, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.notifyIMSNetworkInfoChanged(rr.mSerial, imsNetworkInfo);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "notifyIMSNetworkInfoChanged", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.notifyImsNetworkInfo(type,info,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_NETWORK_INFO_CHANGE));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_NETWORK_INFO_CHANGE)+" RadioInteractor is null");
         }
     }
 
     public void notifyImsCallEnd(int type, Message response){
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_HANDOVER_CALL_END, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.notifyIMSCallEnd(rr.mSerial, type);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "notifyImsCallEnd", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.notifyImsCallEnd(type,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_NETWORK_INFO_CHANGE));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_NETWORK_INFO_CHANGE)+" RadioInteractor is null");
         }
     }
 
     public void imsHoldSingleCall(int callid, boolean enable, Message response){
-
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_HOLD_SINGLE_CALL, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.IMSHoldSingleCall(rr.mSerial, callid, enable);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "imsHoldSingleCall", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.imsHoldSingleCall(callid,enable,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_HOLD_SINGLE_CALL));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_HOLD_SINGLE_CALL)+" RadioInteractor is null");
         }
     }
 
     public void imsMuteSingleCall(int callid, boolean enable, Message response){
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_MUTE_SINGLE_CALL, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.IMSMuteSingleCall(rr.mSerial, callid, enable);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "imsMuteSingleCall", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.imsMuteSingleCall(callid,enable,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_MUTE_SINGLE_CALL));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_MUTE_SINGLE_CALL)+" RadioInteractor is null");
         }
     }
 
     public void imsSilenceSingleCall(int callid, boolean enable, Message response){
-
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_SILENCE_SINGLE_CALL, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.IMSSilenceSingleCall(rr.mSerial, callid, enable);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "imsMuteSingleCall", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.imsSilenceSingleCall(callid,enable,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_SILENCE_SINGLE_CALL));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_SILENCE_SINGLE_CALL)+" RadioInteractor is null");
         }
     }
 
     public void imsEnableLocalConference(boolean enable, Message response){
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_ENABLE_LOCAL_CONFERENCE, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.IMSEnableLocalConference(rr.mSerial, enable);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "imsEnableLocalConference", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.imsEnableLocalConference(enable,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_ENABLE_LOCAL_CONFERENCE));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_ENABLE_LOCAL_CONFERENCE)+" RadioInteractor is null");
         }
     }
 
     public void notifyHandoverCallInfo(String callInfo,Message response) {
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.notifyHandoverCallInfo(rr.mSerial, callInfo);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "notifyHandoverCallInfo", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.notifyHandoverCallInfo(callInfo,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_IMS_NOTIFY_HANDOVER_CALL_INFO)+" RadioInteractor is null");
         }
     }
 
     //SPRD:add for bug671964
     public void setImsPcscfAddress(String addr,Message response){
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_SET_IMS_PCSCF_ADDR, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.setIMSPcscfAddress(rr.mSerial, addr);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "setImsPcscfAddress", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.setImsPcscfAddress(addr,response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_SET_IMS_PCSCF_ADDR));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_SET_IMS_PCSCF_ADDR)+" RadioInteractor is null");
         }
     }
 
     public void getSrvccCapbility(Message response) {
-        IExtRadio radioProxy = getRadioProxy(response);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY, response,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.getSrvccCapbility(rr.mSerial);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "getSrvccCapbility", e);
-            }
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.getSrvccCapbility(response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_GET_IMS_SRVCC_CAPBILITY)+" RadioInteractor is null");
         }
     }
 
     public void
-    getImsPcscfAddress(Message result) {
-        IExtRadio radioProxy = getRadioProxy(result);
-        if (radioProxy != null) {
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_GET_IMS_PCSCF_ADDR, result,
-                    mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.getIMSPcscfAddress(rr.mSerial);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "getIMSPcscfAddress", e);
-            }
+    getImsPcscfAddress(Message response) {
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.getImsPcscfAddress(response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_GET_IMS_PCSCF_ADDR));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_GET_IMS_PCSCF_ADDR)+" RadioInteractor is null");
         }
     }
 
-    public void getImsRegAddress(Message result){
-        IExtRadio radioProxy = getRadioProxy(result);
-        if(radioProxy != null){
-            RILRequest rr = obtainRequest(ImsRILConstants.RIL_REQUEST_GET_IMS_REGADDR,result,mRILDefaultWorkSource);
-
-            if (RILJ_LOGD) riljLog(rr.serialString() + "> " + imsRequestToString(rr.mRequest));
-
-            try {
-                radioProxy.getImsRegAddress(rr.mSerial);
-            } catch (RemoteException | RuntimeException e) {
-                handleRadioProxyExceptionForRR(rr, "getImsRegAddress", e);
-            }
+    public void getImsRegAddress(Message response){
+        if(getRadioInteractor() != null) {
+            mRadioInteractor.getImsRegAddress(response);
+            if (RILJ_LOGD) riljLog( "> " + imsRequestToString(ImsRILConstants.RIL_REQUEST_GET_IMS_REGADDR));
+        } else {
+            riljLog(imsRequestToString(ImsRILConstants.RIL_REQUEST_GET_IMS_REGADDR)+" RadioInteractor is null");
         }
     }
 
@@ -2935,6 +1843,8 @@ public final class ImsRIL {
     updateCLIP(int enable, Message response) {
         if (getRadioInteractor() != null) {
             mRadioInteractor.updateCLIP(enable, response);
+        }else {
+            riljLog("updateCLIP RadioInteractor is null");
         }
     }
     /**
@@ -2945,23 +1855,23 @@ public final class ImsRIL {
     private static DataProfileInfo convertToHalDataProfile(DataProfile dp) {
         DataProfileInfo dpi = new DataProfileInfo();
 
-        dpi.profileId = dp.profileId;
-        dpi.apn = dp.apn;
-        dpi.protocol = dp.protocol;
-        dpi.roamingProtocol = dp.roamingProtocol;
-        dpi.authType = dp.authType;
-        dpi.user = dp.user;
-        dpi.password = dp.password;
-        dpi.type = dp.type;
-        dpi.maxConnsTime = dp.maxConnsTime;
-        dpi.maxConns = dp.maxConns;
-        dpi.waitTime = dp.waitTime;
-        dpi.enabled = dp.enabled;
-        dpi.supportedApnTypesBitmap = dp.supportedApnTypesBitmap;
-        dpi.bearerBitmap = dp.bearerBitmap;
-        dpi.mtu = dp.mtu;
-        dpi.mvnoType = convertToHalMvnoType(dp.mvnoType);
-        dpi.mvnoMatchData = dp.mvnoMatchData;
+        dpi.profileId = dp.getProfileId();
+        dpi.apn = dp.getApn();
+        dpi.protocol = dp.getProtocol();
+        dpi.roamingProtocol = dp.getRoamingProtocol();
+        dpi.authType = dp.getAuthType();
+        dpi.user = dp.getUserName();
+        dpi.password = dp.getPassword();
+        dpi.type = dp.getType();
+        dpi.maxConnsTime = dp.getMaxConnsTime();
+        dpi.maxConns = dp.getMaxConns();
+        dpi.waitTime = dp.getWaitTime();
+        dpi.enabled = dp.isEnabled();
+        dpi.supportedApnTypesBitmap = dp.getSupportedApnTypesBitmap();
+        dpi.bearerBitmap = dp.getBearerBitmap();
+        dpi.mtu = dp.getMtu();
+        dpi.mvnoType = convertToHalMvnoType(dp.getMvnoType());
+        dpi.mvnoMatchData = dp.getMvnoMatchData();
 
         return dpi;
     }
@@ -2991,22 +1901,29 @@ public final class ImsRIL {
     public void setVideoResolution(int resolution, Message result){
         if(getRadioInteractor() != null) {
             mRadioInteractor.setVideoResolution(resolution, result);
+        } else {
+            riljLog("setVideoResolution, RadioInteractor is null");
         }
     }
     public void enableLocalHold(boolean enable, Message result){
         if(getRadioInteractor() != null) {
             mRadioInteractor.enableLocalHold(enable, result);
+        } else {
+            riljLog("enableLocalHold, RadioInteractor is null");
         }
     }
     public void enableWiFiParamReport(boolean enable, Message result){
         if(getRadioInteractor() != null) {
             mRadioInteractor.enableWiFiParamReport(enable, result);
+        } else {
+            riljLog("enableWiFiParamReport, RadioInteractor is null");
         }
     }
     public void callMediaChangeRequestTimeOut(int callId, Message result){
         if(getRadioInteractor() != null) {
             mRadioInteractor.callMediaChangeRequestTimeOut(callId, result);
+        } else {
+            riljLog("callMediaChangeRequestTimeOut, RadioInteractor is null");
         }
     }
-
 }

@@ -11,7 +11,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.os.PersistableBundle;
 import android.os.RemoteException;
+import android.telephony.CarrierConfigManager;
+import android.telephony.CarrierConfigManagerEx;
 import android.util.Log;
 import com.android.ims.internal.IImsServiceEx;
 import com.android.ims.internal.ImsManagerEx;
@@ -20,19 +23,22 @@ import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.CommandException;
 import com.android.internal.telephony.CommandException.Error;
 import com.android.internal.telephony.imsphone.ImsPhoneMmiCode;
+
+import com.android.ims.ImsUtInterface;
 import com.android.ims.internal.IImsUt;
 import com.android.ims.internal.IImsUtListener;
-import com.android.ims.ImsReasonInfo;
-import com.android.ims.ImsSsInfo;
-import com.android.ims.ImsUtInterface;
-import com.android.ims.ImsCallForwardInfo;
+import android.telephony.ims.ImsReasonInfo;
+import android.telephony.ims.ImsSsInfo;
+import android.telephony.ims.ImsCallForwardInfo;
+
 import com.android.ims.internal.ImsCallForwardInfoEx;
 import com.android.ims.internal.IImsUtListenerEx;
 import com.spreadtrum.ims.ImsServiceImpl;
 import com.spreadtrum.ims.ImsRIL;
 import com.android.internal.telephony.Phone;
 import android.telephony.RadioAccessFamily;
-import com.android.internal.telephony.dataconnection.DcNetworkManager;
+import vendor.sprd.hardware.radio.V1_0.CallForwardInfoUri;
+//import com.android.internal.telephony.dataconnection.DcNetworkManager;
 import android.os.Bundle;
 import android.telephony.SubscriptionManager;
 import static com.android.internal.telephony.CommandsInterface.CF_ACTION_DISABLE;
@@ -91,6 +97,7 @@ public class ImsUtImpl extends IImsUt.Stub {
     private static final String EXTRA_CLIR_MODE = "clirMode";
     private static final String EXTRA_RESULT = "result";
     private static final String EXTRA_ENABLE = "enable";
+    private static final String EXTRA_UT_ENABLE = "utEnable";
 
     private Phone mPhone;
     private ImsRIL mCi;
@@ -101,14 +108,14 @@ public class ImsUtImpl extends IImsUt.Stub {
     private IImsUtListenerEx mImsUtListenerEx;
     private int mRequestId = -1;
     private Object mLock = new Object();
-    private DcNetworkManager mDcNetworkManager = null;
+    //TODO:private DcNetworkManager mDcNetworkManager = null;
     private List<Integer> mRequestedNetwork = new ArrayList<Integer>();
     public ImsUtImpl(ImsRIL ci,Context context, Phone phone, ImsServiceImpl service){
         mCi = ci;
         mContext = context;
         mHandler = new ImsHandler(mContext.getMainLooper(), (IImsUt)this);
         mPhone = phone;
-        mDcNetworkManager = new DcNetworkManager(mContext);
+        //TODO:mDcNetworkManager = new DcNetworkManager(mContext);
         mImsServiceImpl = service;
     }
 
@@ -162,7 +169,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     } catch(RemoteException e){
                         e.printStackTrace();
                     }
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_QUERY_CF:
                     try {
@@ -212,7 +219,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     } catch(RemoteException e){
                         e.printStackTrace();
                     }
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_QUERY_CW:
                     try {
@@ -253,7 +260,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     } catch(RemoteException e){
                         e.printStackTrace();
                     }
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_QUERY_CLIR:
                     try {
@@ -284,19 +291,19 @@ public class ImsUtImpl extends IImsUt.Stub {
                     } catch(RemoteException e){
                         e.printStackTrace();
                     }
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_QUERY_CLIP:
                     processQueryResult(msg);
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_QUERY_COLR:
                     processQueryResult(msg);
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_QUERY_COLP:
                     processQueryResult(msg);
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_TRANSACT:
                     break;
@@ -322,7 +329,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     } catch(RemoteException e){
                         e.printStackTrace();
                     }
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_UPDATE_CF:
                     try {
@@ -346,7 +353,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     } catch(RemoteException e){
                         e.printStackTrace();
                     }
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_UPDATE_CW:
                     try {
@@ -370,7 +377,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     } catch(RemoteException e){
                         e.printStackTrace();
                     }
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_UPDATE_CLIR:
                     try {
@@ -394,7 +401,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     } catch(RemoteException e){
                         e.printStackTrace();
                     }
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_UPDATE_CLIP:
                     try {
@@ -418,7 +425,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     } catch(RemoteException e){
                         e.printStackTrace();
                     }
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_UPDATE_CLOR:
                 case ACTION_UPDATE_COLP:
@@ -435,7 +442,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                                         msg.arg1,
                                         new ImsReasonInfo(info, 0));
                             } else {
-                                ImsCallForwardInfoEx infos[] = (ImsCallForwardInfoEx[]) ar.result;
+                                ImsCallForwardInfoEx infos[] = responseCallForwardInfo((ArrayList<CallForwardInfoUri>) ar.result) ;
                                 if(ar.userObj instanceof Throwable){
                                     mImsUtListenerEx.utConfigurationQueryFailed((IImsUt)ar.userObj,
                                             msg.arg1,
@@ -468,7 +475,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                         e.printStackTrace();
                     }
                     if (mRequestedNetwork.remove(Integer.valueOf(ACTION_QUERY_CF_EX))) {
-                        releaseNetwork();
+                        releaseNetwork(msg.arg2);
                     }
                     break;
                 case ACTION_UPDATE_CF_EX:
@@ -505,7 +512,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     	Log.i(TAG,"nullpointerException" + e.getMessage());
                     }
                     if (mRequestedNetwork.remove(Integer.valueOf(ACTION_UPDATE_CF_EX))) {
-                        releaseNetwork();
+                        releaseNetwork(msg.arg2);
                     }
                     break;
                 case EVENT_REQUEST_NETWORK_DONE:
@@ -536,7 +543,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     } catch (RemoteException e) {
                         e.printStackTrace();
                     }
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_QUERY_CB_EX:
                     try {
@@ -562,7 +569,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                     } catch (RemoteException e) {
                         e.printStackTrace();
                     }
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_CHANGE_CB_PW:
                     try {
@@ -588,11 +595,11 @@ public class ImsUtImpl extends IImsUt.Stub {
                     } catch (RemoteException e) {
                         e.printStackTrace();
                     }
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 case ACTION_GET_CLIR_STATUS:{
                     updateCLIRStatus(ar);
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 }
                 case ACTION_GET_CW_STATUS_FOR_VOWIFI:{
@@ -611,7 +618,7 @@ public class ImsUtImpl extends IImsUt.Stub {
                             }
                         }
                     }
-                    releaseNetwork();
+                    releaseNetwork(msg.arg2);
                     break;
                 }
                 default:
@@ -1044,14 +1051,23 @@ public class ImsUtImpl extends IImsUt.Stub {
     }
 
     private void requestNetwork(Bundle bundle) {
-        int subId = mPhone.getSubId();
         Message request = mHandler.obtainMessage(EVENT_REQUEST_NETWORK_DONE);
+        boolean isUtEnabled = isUtEnabled();
+        bundle.putBoolean(EXTRA_UT_ENABLE, isUtEnabled);
         request.setData(bundle);
-        mDcNetworkManager.requestNetwork(subId, request);
+        if (!isUtEnabled) {
+            mHandler.sendMessage(request);
+            return;
+        }
+        int subId = mPhone.getSubId();
+        //TODO:mDcNetworkManager.requestNetwork(subId, request);
     }
 
-    private void releaseNetwork() {
-        mDcNetworkManager.releaseNetworkRequest();
+    private void releaseNetwork(int utEnabled) {
+        if (utEnabled == 0) {
+            return;
+        }
+        //TODO:mDcNetworkManager.releaseNetworkRequest();
     }
 
     private void onRequestNetworkDone(Bundle bundle) {
@@ -1135,8 +1151,9 @@ public class ImsUtImpl extends IImsUt.Stub {
         String facility = bundle.getString(EXTRA_FACILITY, "");
         String password = bundle.getString(EXTRA_PASSWORD, "");
         int serviceClass = bundle.getInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         mCi.queryFacilityLockForAppExt(facility, password, serviceClass,
-                mHandler.obtainMessage(ACTION_QUERY_CB, id, 0, this));
+                mHandler.obtainMessage(ACTION_QUERY_CB, id, utEnabled ? 1 : 0, this));
     }
 
     private void queryCallForward(Bundle bundle) {
@@ -1145,40 +1162,46 @@ public class ImsUtImpl extends IImsUt.Stub {
         int condition = bundle.getInt(EXTRA_CFREASON, -1);
         String number = bundle.getString(EXTRA_DIALING_NUM, "");
         int serviceClass = bundle.getInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         mCi.queryCallForwardStatus(condition, serviceClass, number,
-                mHandler.obtainMessage(ACTION_QUERY_CF, id, 0, this));
+                mHandler.obtainMessage(ACTION_QUERY_CF, id, utEnabled ? 1 : 0, this));
     }
 
     private void queryCallWaiting(Bundle bundle) {
         Log.d(TAG, "onexcue queryCallWaiting = " + bundle.toString());
         int id = bundle.getInt(EXTRA_ID, -1);
         int serviceClass = bundle.getInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         mCi.queryCallWaiting(serviceClass,
-                mHandler.obtainMessage(ACTION_QUERY_CW, id, 0, this));
+                mHandler.obtainMessage(ACTION_QUERY_CW, id, utEnabled ? 1 : 0, this));
     }
 
     private void queryCLIR(Bundle bundle) {
         Log.d(TAG, "onexcue queryCLIR = " + bundle.toString());
         int id = bundle.getInt(EXTRA_ID, -1);
-        mCi.getCLIR(mHandler.obtainMessage(ACTION_QUERY_CLIR, id, 0, this));
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
+        mCi.getCLIR(mHandler.obtainMessage(ACTION_QUERY_CLIR, id, utEnabled ? 1 : 0, this));
     }
 
     private void queryCLIP(Bundle bundle) {
         Log.d(TAG, "onexcue queryCLIP = " + bundle.toString());
         int id = bundle.getInt(EXTRA_ID, -1);
-        mCi.queryCLIP(mHandler.obtainMessage(ACTION_QUERY_CLIP, id, 0, this));
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
+        mCi.queryCLIP(mHandler.obtainMessage(ACTION_QUERY_CLIP, id, utEnabled ? 1 : 0, this));
     }
 
     private void queryCOLP(Bundle bundle) {
         Log.d(TAG, "onexcue queryCOLP = " + bundle.toString());
         int id = bundle.getInt(EXTRA_ID, -1);
-        mCi.queryCOLP(mHandler.obtainMessage(ACTION_QUERY_COLP, id, 0, this));
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
+        mCi.queryCOLP(mHandler.obtainMessage(ACTION_QUERY_COLP, id, utEnabled ? 1 : 0, this));
     }
 
     private void queryCOLR(Bundle bundle) {
         Log.d(TAG, "onexcue queryCOLR = " + bundle.toString());
         int id = bundle.getInt(EXTRA_ID, -1);
-        mCi.queryCOLR(mHandler.obtainMessage(ACTION_QUERY_COLR, id, 0, this));
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
+        mCi.queryCOLR(mHandler.obtainMessage(ACTION_QUERY_COLR, id, utEnabled ? 1 : 0, this));
     }
 
     private void updateCallBarring(Bundle bundle) {
@@ -1188,8 +1211,9 @@ public class ImsUtImpl extends IImsUt.Stub {
         boolean lockState = bundle.getBoolean(EXTRA_LOCK_STATE, false);
         String password = bundle.getString(EXTRA_PASSWORD, "");
         int serviceClass = bundle.getInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         mCi.setFacilityLock (facility, lockState, password, serviceClass,
-                mHandler.obtainMessage(ACTION_UPDATE_CB, id, 0, this));
+                mHandler.obtainMessage(ACTION_UPDATE_CB, id, utEnabled ? 1 : 0, this));
     }
 
     private void updateCallForward(Bundle bundle) {
@@ -1200,12 +1224,13 @@ public class ImsUtImpl extends IImsUt.Stub {
         int serviceClass = bundle.getInt(EXTRA_SERVICE_CLASS, -1);
         String number = bundle.getString(EXTRA_DIALING_NUM, "");
         int timeSeconds = bundle.getInt(EXTRA_TIMER_SECONDS, -1);
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         mCi.setCallForward(action,
                 condition,
                 serviceClass,
                 number,
                 timeSeconds,
-                mHandler.obtainMessage(ACTION_UPDATE_CF, id, 0, this));
+                mHandler.obtainMessage(ACTION_UPDATE_CF, id, utEnabled ? 1 : 0, this));
     }
 
     private void updateCallWaiting(Bundle bundle) {
@@ -1213,16 +1238,18 @@ public class ImsUtImpl extends IImsUt.Stub {
         int id = bundle.getInt(EXTRA_ID, -1);
         boolean enable = bundle.getBoolean(EXTRA_LOCK_STATE, false);
         int serviceClass = bundle.getInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         mCi.setCallWaiting(enable, serviceClass,
-                mHandler.obtainMessage(ACTION_UPDATE_CW, id, 0, this));
+                mHandler.obtainMessage(ACTION_UPDATE_CW, id, utEnabled ? 1 : 0, this));
     }
 
     private void updateCLIR(Bundle bundle){
         Log.d(TAG, "onexcue updateCLIR = " + bundle.toString());
         int id = bundle.getInt(EXTRA_ID, -1);
         int clirMode = bundle.getInt(EXTRA_CLIR_MODE, -1);
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         mCi.setCLIR(clirMode,
-                mHandler.obtainMessage(ACTION_UPDATE_CLIR, id, 0, this));
+                mHandler.obtainMessage(ACTION_UPDATE_CLIR, id, utEnabled ? 1 : 0, this));
     }
 
     private void setCallForwardingOption(Bundle bundle) {
@@ -1235,6 +1262,7 @@ public class ImsUtImpl extends IImsUt.Stub {
         int timerSeconds = bundle.getInt(EXTRA_TIMER_SECONDS, -1);
         String dialingNumber = bundle.getString(EXTRA_DIALING_NUM, "");
         String ruleSet = bundle.getString(EXTRA_RULE_SET, "");
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         if(commandInterfaceCFReason == CF_REASON_UNCONDITIONAL){
             if((commandInterfaceCFAction == CF_ACTION_ENABLE)
                     || commandInterfaceCFAction == CF_ACTION_REGISTRATION){
@@ -1250,7 +1278,7 @@ public class ImsUtImpl extends IImsUt.Stub {
         cf.mServiceClass = serviceClass;
         mCi.setCallForward(commandInterfaceCFAction, commandInterfaceCFReason, serviceClass,
                 dialingNumber, timerSeconds, ruleSet,
-                mHandler.obtainMessage(ACTION_UPDATE_CF_EX, id, 0,cf));
+                mHandler.obtainMessage(ACTION_UPDATE_CF_EX, id, utEnabled ? 1 : 0,cf));
     }
 
     private void getCallForwardingOption(Bundle bundle) {
@@ -1260,8 +1288,9 @@ public class ImsUtImpl extends IImsUt.Stub {
         int serviceClass = bundle.getInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
         String ruleSet = bundle.getString(EXTRA_RULE_SET, "");
         String number = bundle.getString(EXTRA_DIALING_NUM, "");
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         mCi.queryCallForwardStatus(commandInterfaceCFReason, serviceClass,
-                number, ruleSet, mHandler.obtainMessage(ACTION_QUERY_CF_EX, id, 0, this));
+                number, ruleSet, mHandler.obtainMessage(ACTION_QUERY_CF_EX, id, utEnabled ? 1 : 0, this));
     }
 
     private void changeBarringPassword(Bundle bundle) {
@@ -1270,8 +1299,9 @@ public class ImsUtImpl extends IImsUt.Stub {
         String facility = bundle.getString(EXTRA_FACILITY, "");
         String oldPwd = bundle.getString(EXTRA_OLD_PASSWORD, "");
         String newPwd = bundle.getString(EXTRA_PASSWORD, "");
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         mCi.changeBarringPassword(facility, oldPwd, newPwd,
-                mHandler.obtainMessage(ACTION_CHANGE_CB_PW, id, 0, this));
+                mHandler.obtainMessage(ACTION_CHANGE_CB_PW, id, utEnabled ? 1 : 0, this));
     }
 
     private void setFacilityLock(Bundle bundle) {
@@ -1281,8 +1311,9 @@ public class ImsUtImpl extends IImsUt.Stub {
         String facility = bundle.getString(EXTRA_FACILITY, "");
         String password = bundle.getString(EXTRA_PASSWORD, "");
         boolean lockState = bundle.getBoolean(EXTRA_LOCK_STATE, false);
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         mCi.setFacilityLock(facility, lockState, password,
-                serviceClass, mHandler.obtainMessage(ACTION_UPDATE_CB_EX, id, 0, this));
+                serviceClass, mHandler.obtainMessage(ACTION_UPDATE_CB_EX, id, utEnabled ? 1 : 0, this));
     }
 
     private void queryFacilityLock(Bundle bundle) {
@@ -1291,13 +1322,15 @@ public class ImsUtImpl extends IImsUt.Stub {
         int serviceClass = bundle.getInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
         String facility = bundle.getString(EXTRA_FACILITY, "");
         String password = bundle.getString(EXTRA_PASSWORD, "");
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         mCi.queryFacilityLock(facility, password, serviceClass,
-                mHandler.obtainMessage(ACTION_QUERY_CB_EX, id, 0, this));
+                mHandler.obtainMessage(ACTION_QUERY_CB_EX, id, utEnabled ? 1 : 0, this));
     }
     private void getCLIRStatus(Bundle bundle) {
         Log.d(TAG, "onexcue getCLIRStatus = " + bundle.toString());
         int id = bundle.getInt(EXTRA_ID, -1);
-        mCi.getCLIR(mHandler.obtainMessage(ACTION_GET_CLIR_STATUS, id, 0, this));
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
+        mCi.getCLIR(mHandler.obtainMessage(ACTION_GET_CLIR_STATUS, id, utEnabled ? 1 : 0, this));
     }
 
     private void updateCLIRStatus(AsyncResult ar) {
@@ -1328,7 +1361,8 @@ public class ImsUtImpl extends IImsUt.Stub {
         Log.d(TAG, "onexcue updateCLIP = " + bundle.toString());
         int id = bundle.getInt(EXTRA_ID, -1);
         int enable = bundle.getInt(EXTRA_ENABLE, 0);
-        mCi.updateCLIP(enable, mHandler.obtainMessage(ACTION_UPDATE_CLIP, id, 0, this));
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
+        mCi.updateCLIP(enable, mHandler.obtainMessage(ACTION_UPDATE_CLIP, id, utEnabled ? 1 : 0, this));
     }
     private void processQueryResult(Message msg) {
         AsyncResult ar = (AsyncResult) msg.obj;
@@ -1366,7 +1400,80 @@ public class ImsUtImpl extends IImsUt.Stub {
         Log.d(TAG, "onexcue queryCallWaiting = " + bundle.toString());
         int id = bundle.getInt(EXTRA_ID, -1);
         int serviceClass = bundle.getInt(EXTRA_SERVICE_CLASS, CommandsInterface.SERVICE_CLASS_VOICE);
+        boolean utEnabled = bundle.getBoolean(EXTRA_UT_ENABLE, true);
         mCi.queryCallWaiting(serviceClass,
-                mHandler.obtainMessage(ACTION_GET_CW_STATUS_FOR_VOWIFI, id, 0, this));
+                mHandler.obtainMessage(ACTION_GET_CW_STATUS_FOR_VOWIFI, id, utEnabled ? 1 : 0, this));
     }
+
+    public boolean isUtEnabled() {
+        if (!(mPhone.isRadioOn())) {
+            return false;
+        }
+        CarrierConfigManager carrierConfig = (CarrierConfigManager) mContext.getSystemService(
+                Context.CARRIER_CONFIG_SERVICE);
+        int ratPrefer = 0;
+        if (carrierConfig != null) {
+            PersistableBundle config = carrierConfig.getConfigForPhoneId(mPhone.getPhoneId());
+            if (config != null){
+               ratPrefer = config.getInt(CarrierConfigManagerEx.KEY_NETWORK_RAT_PREFER_INT, 0);
+               Log.i(TAG, "Rat from configure file is " + ratPrefer);
+            }
+        }
+        if (ratPrefer == 2) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * AndroidP start@{:
+     */
+    @Override
+    public int updateCallBarringForServiceClass(int cbType, int action,
+                                                String[] barrList, int serviceClass) throws RemoteException {
+        int id = getReuestId();
+        boolean enable = false;
+        if(action == CommandsInterface.CF_ACTION_ENABLE){
+            enable = true;
+        }
+        Bundle bundle = new Bundle();
+        bundle.putInt(EXTRA_ACTION, ACTION_UPDATE_CB);
+        bundle.putInt(EXTRA_ID, id);
+        bundle.putString(EXTRA_FACILITY, typeToString(cbType));
+        bundle.putBoolean(EXTRA_LOCK_STATE, enable);
+        bundle.putString(EXTRA_PASSWORD, "");
+        bundle.putInt(EXTRA_SERVICE_CLASS, serviceClass);
+        requestNetwork(bundle);
+        return id;
+    }
+
+    @Override
+    public int queryCallBarringForServiceClass(int cbType, int serviceClass){
+        int id = getReuestId();
+        Bundle bundle = new Bundle();
+        bundle.putInt(EXTRA_ACTION, ACTION_QUERY_CB);
+        bundle.putInt(EXTRA_ID, id);
+        bundle.putString(EXTRA_FACILITY, typeToString(cbType));
+        bundle.putString(EXTRA_PASSWORD, "");
+        bundle.putInt(EXTRA_SERVICE_CLASS, serviceClass);
+        requestNetwork(bundle);
+        return id;
+    }
+
+    private ImsCallForwardInfoEx[] responseCallForwardInfo(ArrayList<CallForwardInfoUri> callForwardInfos) {
+        ImsCallForwardInfoEx[] ret = new ImsCallForwardInfoEx[callForwardInfos.size()];
+        for (int i = 0; i < callForwardInfos.size(); i++) {
+            ret[i] = new ImsCallForwardInfoEx();
+            ret[i].mStatus = callForwardInfos.get(i).status;
+            ret[i].mCondition = callForwardInfos.get(i).reason;
+            ret[i].mNumberType = callForwardInfos.get(i).numberType;
+            ret[i].mToA = callForwardInfos.get(i).ton;
+            ret[i].mNumber = callForwardInfos.get(i).number;
+            ret[i].mServiceClass = callForwardInfos.get(i).serviceClass;
+            ret[i].mRuleset = callForwardInfos.get(i).ruleset;
+            ret[i].mTimeSeconds = callForwardInfos.get(i).timeSeconds;
+        }
+        return ret;
+    }
+    /* AndroidP end@} */
 }

@@ -10,14 +10,15 @@ import com.spreadtrum.ims.ImsDriverCall;
 import com.android.internal.telephony.LastCallFailCause;
 import android.telephony.ServiceState;
 
-import com.android.ims.ImsStreamMediaProfile;
-import com.android.ims.ImsCallProfile;
-import com.android.ims.ImsReasonInfo;
-import com.android.ims.ImsConferenceState;
-import com.android.ims.internal.ImsCallSession;
+import android.telephony.ims.ImsStreamMediaProfile;
+import android.telephony.ims.ImsCallProfile;
+import android.telephony.ims.ImsReasonInfo;
+import android.telephony.ims.ImsConferenceState;
+import android.telephony.ims.ImsCallSession;
 import com.android.ims.internal.IImsCallSession;
-import com.android.ims.internal.IImsCallSessionListener;
+import android.telephony.ims.aidl.IImsCallSessionListener;
 import com.android.ims.internal.IImsVideoCallProvider;
+
 import com.spreadtrum.ims.vt.ImsVideoCallProvider;
 import com.spreadtrum.ims.vt.VTManagerUtils;
 
@@ -60,7 +61,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final int ACTION_COMPLETE_ACCEPT_AS_AUDIO = 15;
 
     public static final int CODE_LOCAL_CALL_IMS_HANDOVER_RETRY = 151;
-
 
     public static final String EXTRA_MT_CONFERENCE_CALL = "is_mt_conf_call";
 
@@ -116,11 +116,28 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     /* @} */
     //SPRD: add for bug 846738
     boolean mIsSupportTxRxVideo = SystemProperties.getBoolean("persist.sys.txrx_vt", false);
+  //SPRD: add for bug858168
+    boolean mVideoHasDowngrade;
+    private static final int SPECIAL_CALL_TYPE = 99;
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
         mImsCallProfile = profile;
         mIImsCallSessionListener = listener;
+        mContext = context;
+        mCi = ci;
+        mImsServiceCallTracker = callTracker;
+        mHandler = new ImsHandler(context.getMainLooper(),this);
+        mImsVideoCallProvider = new ImsVideoCallProvider(this,ci,mContext) ;
+        mCi.setOnSuppServiceNotification(mHandler,EVENT_SSN,null);//SPRD:Add for bug582072
+        mVideoState = ImsCallProfile
+                .getVideoStateFromImsCallProfile(mImsCallProfile);
+        mIsCmccNetwork = ImsCmccHelper.getInstance(mContext).isCmccNetwork();
+    }
+
+    public ImsCallSessionImpl(ImsCallProfile profile,  Context context,
+                              ImsRIL ci, ImsServiceCallTracker callTracker){
+        mImsCallProfile = profile;
         mContext = context;
         mCi = ci;
         mImsServiceCallTracker = callTracker;
@@ -150,7 +167,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     public ImsCallSessionImpl(ImsDriverCall dc, Context context,
-            ImsRIL ci, ImsServiceCallTracker callTracker){
+                              ImsRIL ci, ImsServiceCallTracker callTracker){
         mImsDriverCall = new ImsDriverCall(dc);
         updateImsCallProfileFromDC(dc);
         mContext = context;
@@ -163,7 +180,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mVideoState = ImsCallProfile
                 .getVideoStateFromImsCallProfile(mImsCallProfile);
         mIsCmccNetwork = ImsCmccHelper.getInstance(mContext).isCmccNetwork();
-
     }
 
     private void updateImsCallProfileFromDC(ImsDriverCall dc){
@@ -187,10 +203,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         /* SPRD: add for bug 846738 @{ */
         if(dc.isVideoCall()){
             if(!mIsSupportTxRxVideo){
-                if(dc.state == ImsDriverCall.State.HOLDING){//SPRD:add for bug604148
-                    mIsTxDisable = false;
-                    mIsRxDisable = false;
-                }
                 if(mIsTxDisable){
                     mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT_RX;
                 } else if(mIsRxDisable){
@@ -198,7 +210,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 }else {
                     mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
                 }
-            }else{
+            }else if(!mIsRemoteHold){ //SPRD: add for bug 851187
                 if (dc.getVideoCallMediaDirection() == dc.VIDEO_CALL_MEDIA_DIRECTION_SENDRECV) {
                     mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
                 } else if (dc.getVideoCallMediaDirection() == dc.VIDEO_CALL_MEDIA_DIRECTION_SENDONLY) {
@@ -241,13 +253,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         // SPRD: Fix bug#651203 & 807149
         if (dc != null && dc.isMpty) {
             mImsCallProfile.setCallExtraBoolean(EXTRA_MT_CONFERENCE_CALL, true);
-            if (mIImsCallSessionListener != null && !mConferenceHost) { //SPRD: add for bug844991
-                try {
-                    mIImsCallSessionListener.callSessionMultipartyStateChanged(this, true);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-            }
         }
         /* @}*/
     }
@@ -271,10 +276,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 mImsCallProfile.mCallType = ImsCallProfile.CALL_TYPE_VT;
             }
         }
+        Log.d(TAG, "updateVideoTxRxState-> mImsCallProfile.mCallType:" + mImsCallProfile.mCallType);
         updateVideoState();
         try{
             if(mIImsCallSessionListener != null){
-                mIImsCallSessionListener.callSessionUpdated((IImsCallSession)this, mImsCallProfile);
+                mIImsCallSessionListener.callSessionUpdated(mImsCallProfile);
             }
         } catch(RemoteException e){
             e.printStackTrace();
@@ -346,7 +352,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             case DIALING:
                 try{
                     if (mIImsCallSessionListener != null) {
-                        mIImsCallSessionListener.callSessionProgressing((IImsCallSession) this,
+                        mIImsCallSessionListener.callSessionProgressing(
                                 mImsCallProfile.mMediaProfile);
                     }
                 } catch(RemoteException e){
@@ -363,7 +369,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     mState = ImsCallSession.State.NEGOTIATING;
                     if (!(mImsDriverCall != null && mImsDriverCall.state == ImsDriverCall.State.ALERTING)
                             && mIImsCallSessionListener != null) {
-                        mIImsCallSessionListener.callSessionProgressing((IImsCallSession) this,
+                        mIImsCallSessionListener.callSessionProgressing(
                                 mImsCallProfile.mMediaProfile);
                     }
                 } catch(RemoteException e){
@@ -380,13 +386,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     if (mIImsCallSessionListener != null) {
                         if(mImsDriverCall != null && mImsDriverCall.state == ImsDriverCall.State.HOLDING
                                 || conferenceResumed){
-                            mIImsCallSessionListener.callSessionResumed((IImsCallSession)this, mImsCallProfile);
+                            mIImsCallSessionListener.callSessionResumed(mImsCallProfile);
                         } else if (mImsDriverCall != null && ((mImsDriverCall.state == ImsDriverCall.State.DIALING)
                                 || (mImsDriverCall.state == ImsDriverCall.State.ALERTING)
                                 || (mImsDriverCall.state == ImsDriverCall.State.INCOMING)
                                 || (mImsDriverCall.state == ImsDriverCall.State.WAITING))
                                 || (mImsDriverCall == null)) {
-                            mIImsCallSessionListener.callSessionStarted((IImsCallSession) this,mImsCallProfile);
+                            mIImsCallSessionListener.callSessionInitiated(mImsCallProfile);
                         }
                     }
                 } catch(RemoteException e){
@@ -401,7 +407,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 try{
                     if (mIImsCallSessionListener != null &&
                             (mImsDriverCall.state != ImsDriverCall.State.HOLDING || conferenceHeldStateChange)) {
-                        mIImsCallSessionListener.callSessionHeld((IImsCallSession)this, mImsCallProfile);
+                        mIImsCallSessionListener.callSessionHeld(mImsCallProfile);
                     }
                 } catch(RemoteException e){
                     e.printStackTrace();
@@ -415,7 +421,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 mState = ImsCallSession.State.TERMINATED;
                 try{
                     if (mIImsCallSessionListener != null){
-                        mIImsCallSessionListener.callSessionTerminated((IImsCallSession) this,
+                        mIImsCallSessionListener.callSessionTerminated(
                                 new ImsReasonInfo(mDisconnCause, 0));
                     }
                 } catch(RemoteException e){
@@ -445,7 +451,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         try{
             if(hasUpdate && knownState
                     && mIImsCallSessionListener != null){
-                mIImsCallSessionListener.callSessionUpdated((IImsCallSession)this, mImsCallProfile);
+                mIImsCallSessionListener.callSessionUpdated(mImsCallProfile);
             }
             if(hasUpdate || !knownState){
                 notifySessionUpdate();
@@ -547,7 +553,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     if (ar != null && ar.exception != null && mIImsCallSessionListener != null) {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_DIAL error!");
                         try{
-                            mIImsCallSessionListener.callSessionStartFailed(mImsCallSessionImpl,
+                            mIImsCallSessionListener.callSessionInitiatedFailed(
                                     new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,"Dial Failed"));
                         } catch(RemoteException e){
                             e.printStackTrace();
@@ -564,7 +570,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         }
                         if(ar.userObj != null && mIImsCallSessionListener != null) {
                             try{
-                                mIImsCallSessionListener.callSessionHoldFailed((IImsCallSession)ar.userObj,
+                                mIImsCallSessionListener.callSessionHoldFailed(
                                         new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,"Hold Failed"));
                             } catch(RemoteException e){
                                 e.printStackTrace();
@@ -579,7 +585,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_RESUME error!");
                         if(ar.userObj != null && mIImsCallSessionListener != null) {
                             try{
-                                mIImsCallSessionListener.callSessionResumeFailed((IImsCallSession)ar.userObj,
+                                mIImsCallSessionListener.callSessionResumeFailed(
                                         new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,"Resume Failed"));
                             } catch(RemoteException e){
                                 e.printStackTrace();
@@ -603,7 +609,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_REJECT error!");
                         if(ar.userObj != null && mIImsCallSessionListener != null) {
                             try{
-                                mIImsCallSessionListener.callSessionStartFailed((IImsCallSession)ar.userObj,
+                                mIImsCallSessionListener.callSessionInitiatedFailed(
                                         new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,"Reject Failed"));
                             } catch(RemoteException e){
                                 e.printStackTrace();
@@ -627,7 +633,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         mImsServiceCallTracker.onCallMergeFailed((ImsCallSessionImpl)ar.userObj);
                         if(ar.userObj != null && mIImsCallSessionListener != null) {
                             try{
-                                mIImsCallSessionListener.callSessionMergeFailed((IImsCallSession)ar.userObj,
+                                mIImsCallSessionListener.callSessionMergeFailed(
                                         new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,
                                                 "Merge Failed"));
                             } catch(RemoteException e){
@@ -647,7 +653,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     if (ar != null && ar.exception != null) {
                         if(ar.userObj != null && mIImsCallSessionListener != null) {
                             try{
-                                mIImsCallSessionListener.callSessionStartFailed((IImsCallSession)mImsCallSessionImpl,
+                                mIImsCallSessionListener.callSessionInitiatedFailed(
                                         new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,
                                                 "Dial Conference Failed"));
                             } catch(RemoteException e){
@@ -662,12 +668,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                             if (ar != null && ar.exception != null) {
                                 Log.w(TAG,"handleMessage->ACTION_COMPLETE_ADD_PARTICIPANT error!");
                                 mIImsCallSessionListener.callSessionInviteParticipantsRequestFailed(
-                                        (IImsCallSession)mImsCallSessionImpl,new ImsReasonInfo(
+                                                new ImsReasonInfo(
                                                 ImsReasonInfo.CODE_UNSPECIFIED, 0,
                                                 "Dial Conference Failed"));
                             } else {
-                                mIImsCallSessionListener.callSessionInviteParticipantsRequestDelivered(
-                                        (IImsCallSession)ar.userObj);
+                                mIImsCallSessionListener.callSessionInviteParticipantsRequestDelivered();
                             }
                         }
                     } catch(RemoteException e){
@@ -701,7 +706,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         try {
                             if (mImsDriverCall != null) {
                                 if((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING) && failCause.causeCode == 1024){
-                                    mDisconnCause = ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED_BY_NETWORK;
+                                    mDisconnCause = ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED;
                                  }else if ((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING)
                                         && (mDisconnCause != ImsReasonInfo.CODE_USER_DECLINE)) { ////add for set cause when reject incoming call
                                     mDisconnCause = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
@@ -710,7 +715,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                                     mDisconnCause = ImsReasonInfo.CODE_SIP_BUSY;
                                 }
                                 Log.w(TAG, "callSessionTerminated  mDisconnCause=" + mDisconnCause);
-                                mIImsCallSessionListener.callSessionTerminated(mImsCallSessionImpl,
+                                mIImsCallSessionListener.callSessionTerminated(
                                         new ImsReasonInfo(mDisconnCause, 0));
                                 return;
                             }
@@ -732,7 +737,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         }
 
                         try {
-                            mIImsCallSessionListener.callSessionStartFailed(mImsCallSessionImpl, reasonInfo);
+                            mIImsCallSessionListener.callSessionInitiatedFailed(reasonInfo);
                         } catch (RemoteException e) {
                             e.printStackTrace();
                         }
@@ -753,6 +758,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     break;
             }
         }
+    }
+
+    @Override
+    public void deflect(String deflectNumber){
+        mCi.explicitCallTransfer(mHandler.obtainMessage(ACTION_COMPLETE_DEFLECT,this));
     }
 
     /**
@@ -976,9 +986,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return;
         }
         /*SPRD:bug523375 add voice accept video call @{*/
-        if(callType == ImsCallProfile.CALL_TYPE_VOICE && (mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT)){
+        if(mVideoHasDowngrade && (callType != SPECIAL_CALL_TYPE)){
+           mVideoHasDowngrade = false;
+        }else if((callType == SPECIAL_CALL_TYPE) || (callType == ImsCallProfile.CALL_TYPE_VOICE) && (mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT)){
             Log.i(TAG, "voice accept video call!");
             mCi.requestVolteCallFallBackToVoice(Integer.valueOf(getCallId()),mHandler.obtainMessage(ACTION_COMPLETE_ACCEPT_AS_AUDIO,this));
+            if(callType == SPECIAL_CALL_TYPE){
+               mVideoHasDowngrade = true;
+               return;
+            }
         }/*@}*/
 
         mImsCallProfile.mMediaProfile = profile;
@@ -1080,7 +1096,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             try{
                 Log.w(TAG, "hold-> mIsMegerAction!");
                 if(mIImsCallSessionListener != null){
-                    mIImsCallSessionListener.callSessionHoldFailed(this,
+                    mIImsCallSessionListener.callSessionHoldFailed(
                             new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,"Hold Failed"));
                 }
             } catch(RemoteException e){
@@ -1543,7 +1559,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         try {
             if(mIImsCallSessionListener != null){
-                mIImsCallSessionListener.callSessionConferenceStateUpdated((IImsCallSession) this, mImsConferenceState);
+                mIImsCallSessionListener.callSessionConferenceStateUpdated(mImsConferenceState);
             }
         } catch (RemoteException e) {
             e.printStackTrace();
@@ -1660,7 +1676,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mState = ImsCallSession.State.TERMINATED;
         try{
             if (mIImsCallSessionListener != null){
-                mIImsCallSessionListener.callSessionTerminated((IImsCallSession)this,
+                mIImsCallSessionListener.callSessionTerminated(
                         new ImsReasonInfo(ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED, 0));
             }
             Log.d(TAG, "disconnectForConferenceMember->this is 3 way conference member.");
@@ -1686,20 +1702,39 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         /* @} */
 
-            switch (notification.code) {
-            case SuppServiceNotification.MT_CODE_CALL_ON_HOLD:
-                if(notification.notificationType == 1){
-                   mIsRemoteHold = true;//SPRD: modify by bug666088 and modify for bug801672
+        if (notification.notificationType == 0) return;  //SPRD:modify by bug 786859.869743
+        switch (notification.code) {
+            case SuppServiceNotification.CODE_2_CALL_ON_HOLD:
+                if (notification.notificationType == 1) {
+                    mIsRemoteHold = true;//SPRD: modify by bug666088 and modify for bug801672
                 }
                 mRemoteCallProfile = new ImsCallProfile(
                         ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VOICE);
+                /* SPRD: add for bug 851187@*/
+                try {
+                    if (mIImsCallSessionListener != null) {
+                        mIImsCallSessionListener.callSessionHoldReceived(mImsCallProfile);
+                    }
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+                /*@}*/
                 break;
-            case SuppServiceNotification.MT_CODE_CALL_RETRIEVED:
+            case SuppServiceNotification.CODE_2_CALL_RETRIEVED:
                 mIsRemoteHold = false;//SPRD: modify by bug666088
                 mRemoteCallProfile = new ImsCallProfile(
                         ImsCallProfile.SERVICE_TYPE_NORMAL, ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE);
+                /* SPRD: add for bug 851187@*/
+                try {
+                    if (mIImsCallSessionListener != null) {
+                        mIImsCallSessionListener.callSessionResumeReceived(mImsCallProfile);
+                    }
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+                /*@}*/
                 break;
-            }
+        }
     }
     /* @} */
 
@@ -1774,7 +1809,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             }
             try{
                 if(mIImsCallSessionListener != null){
-                    mIImsCallSessionListener.callSessionUpdated((IImsCallSession)this, mImsCallProfile);
+                    mIImsCallSessionListener.callSessionUpdated(mImsCallProfile);
                 }
             } catch(RemoteException e){
                 e.printStackTrace();

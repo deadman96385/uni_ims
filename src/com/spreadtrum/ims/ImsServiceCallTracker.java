@@ -13,6 +13,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -25,20 +26,24 @@ import com.android.internal.telephony.CommandsInterface;
 import com.spreadtrum.ims.ImsDriverCall;
 import com.android.ims.internal.ImsManagerEx;
 
-import com.android.ims.ImsCallProfile;
+import android.telephony.ims.ImsCallProfile;
+import android.telephony.ims.ImsConferenceState;
+import android.telephony.ims.ImsReasonInfo;
+import android.telephony.ims.ImsCallSession;
 import com.android.ims.ImsManager;
 import com.android.ims.ImsServiceClass;
-import com.android.ims.internal.IImsCallSessionListener;
+import com.android.ims.internal.IImsCallSession;
+import android.telephony.ims.aidl.IImsCallSessionListener;
 import com.android.ims.internal.IImsRegistrationListener;
-import com.android.ims.internal.ImsCallSession;
-import com.android.ims.ImsConferenceState;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.spreadtrum.ims.ImsService;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl;
 import com.spreadtrum.ims.vowifi.VoWifiServiceImpl.CallRatState;
+import vendor.sprd.hardware.radio.V1_0.CallVoLTE;
+import android.telephony.PhoneNumberUtils;
 
-import com.android.ims.ImsReasonInfo;
+
 import android.os.SystemProperties;
 
 public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
@@ -168,12 +173,10 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
 
     public void sendNewSessionIntent(ImsCallSessionImpl session, int index, boolean unknownSession,
             ImsDriverCall.State state, String number) {
-        try {
-            Intent intent = new Intent();
-            intent.putExtra(ImsManager.EXTRA_CALL_ID, Integer.toString(index));
-            intent.putExtra(ImsManager.EXTRA_USSD, false);
-            intent.putExtra(ImsManager.EXTRA_SERVICE_ID, mServiceId);
-            intent.putExtra(ImsManager.EXTRA_IS_UNKNOWN_CALL, unknownSession);
+            Bundle extras = new Bundle();
+            extras.putBoolean(ImsManager.EXTRA_USSD, false);
+            extras.putBoolean(ImsManager.EXTRA_IS_UNKNOWN_CALL, unknownSession);
+            extras.putString(ImsManager.EXTRA_CALL_ID, Integer.toString(index));
             /*SPRD: Modify for bug586758{@*/
             Log.i (TAG,"sendNewSessionIntent-> startVolteCall"
                     + " mIsVowifiCall: " + mImsService.isVowifiCall()
@@ -185,15 +188,27 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                 mWifiService.updateCallRatState(CallRatState.CALL_VOLTE);
             }
             /*@}*/
-            mIncomingCallIntent.send(mContext, ImsManager.INCOMING_CALL_RESULT_CODE,intent);
-        } catch (PendingIntent.CanceledException e) {
-            Log.e(TAG, "PendingIntent Canceled " + e);
-        }
+            mImsServiceImpl.notifyIncomingCallSession((IImsCallSession)session,extras);
     }
 
     public ImsCallSessionImpl createCallSession(ImsCallProfile profile,
             IImsCallSessionListener listener) {
         ImsCallSessionImpl session = new ImsCallSessionImpl(profile, listener, mContext, mCi, this);
+        session.addListener(this);
+        synchronized(mPendingSessionList) {
+            mPendingSessionList.add(session);
+        }
+        synchronized(mSessionList) {
+            boolean isConference = profile.getCallExtraBoolean(ImsCallProfile.EXTRA_CONFERENCE);
+            if(isConference){
+                mConferenceSession = session;
+            }
+        }
+        return session;
+    }
+
+    public ImsCallSessionImpl createCallSession(ImsCallProfile profile) {
+        ImsCallSessionImpl session = new ImsCallSessionImpl(profile, mContext, mCi, this);
         session.addListener(this);
         synchronized(mPendingSessionList) {
             mPendingSessionList.add(session);
@@ -298,11 +313,77 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                 == CommandException.Error.RADIO_NOT_AVAILABLE;
     }
 
+    private ArrayList<ImsDriverCall> getImsCallList(ArrayList<CallVoLTE> calls) {
+        int num = calls.size();
+        ArrayList<ImsDriverCall> dcCalls = new ArrayList<ImsDriverCall>(num);
+        ImsDriverCall dc;
+
+        for (int i = 0; i < num; i++) {
+            dc = new ImsDriverCall();
+            /* parameter from +CLCCS:
+             * [+CLCCS: <ccid1>,<dir>,<neg_status_present>,<neg_status>,<SDP_md>,
+             * <cs_mode>,<ccstatus>,<mpty>,[,<numbertype>,<ton>,<number>
+             * [,<priority_present>,<priority>[,<CLI_validity_present>,<CLI_validity>]]]
+             * @{*/
+            dc.index = calls.get(i).index;
+            dc.isMT = (calls.get(i).isMT != 0);
+            dc.negStatusPresent = calls.get(i).negStatusPresent;
+            dc.negStatus = calls.get(i).negStatus;
+            dc.mediaDescription = calls.get(i).mediaDescription;
+            dc.csMode = calls.get(i).csMode;
+            dc.state = ImsDriverCall.stateFromCLCCS(calls.get(i).state);
+            boolean videoMediaPresent = false;
+            if(dc.mediaDescription != null && dc.mediaDescription.contains("video") && !dc.mediaDescription.contains("cap:")){
+                videoMediaPresent = true;
+            }
+            boolean videoMode = videoMediaPresent &&
+                    ((dc.negStatusPresent == 1 && dc.negStatus == 1)
+                            ||(dc.negStatusPresent == 1 && dc.negStatus == 2 && dc.state == ImsDriverCall.State.INCOMING)
+                            ||(dc.negStatusPresent == 1 && dc.negStatus == 3)
+                            ||(dc.negStatusPresent == 1 && dc.negStatus == 4)
+                            ||(dc.negStatusPresent == 0 && dc.csMode == 0));
+            if(videoMode || dc.csMode == 2 || dc.csMode >= 7){
+                dc.isVoice = false;
+            } else {
+                dc.isVoice = true;
+            }
+            int mpty = calls.get(i).mpty;
+            dc.mptyState = mpty;
+            dc.isMpty = (0 != mpty);
+            dc.numberType = calls.get(i).numberType;
+            dc.TOA = calls.get(i).toa;
+            dc.number = calls.get(i).number;
+            dc.prioritypresent = calls.get(i).prioritypresent;
+            dc.priority = calls.get(i).priority;
+            dc.cliValidityPresent = calls.get(i).cliValidityPresent;
+            dc.numberPresentation = ImsDriverCall.presentationFromCLIP(calls.get(i).numberPresentation);
+
+            dc.als = calls.get(i).als;
+            dc.isVoicePrivacy = (calls.get(i).isVoicePrivacy == 1);
+            dc.name = calls.get(i).name;
+            dc.namePresentation = calls.get(i).namePresentation;
+
+            // Make sure there's a leading + on addresses with a TOA of 145
+            dc.number = PhoneNumberUtils.stringFromStringAndTOA(dc.number, dc.TOA);
+            Log.d(TAG,"responseCallListEx: dc=" +dc.toString());
+            dcCalls.add(dc);
+
+            if (dc.isVoicePrivacy) {
+                Log.d(TAG,"InCall VoicePrivacy is enabled");
+            } else {
+                Log.d(TAG,"InCall VoicePrivacy is disabled");
+            }
+        }
+
+        Collections.sort(dcCalls);
+        return dcCalls;
+    }
+
     private void handlePollCalls(AsyncResult ar){
         ArrayList<ImsDriverCall> imsDcList;
         Map <String, ImsDriverCall> validDriverCall = new HashMap<String, ImsDriverCall>();
         if (ar.exception == null) {
-            imsDcList = (ArrayList<ImsDriverCall>)ar.result;
+            imsDcList = getImsCallList((java.util.ArrayList<CallVoLTE>) ar.result);
         } else if (isCommandExceptionRadioNotAvailable(ar.exception)) {
             // just a dummy empty ArrayList to cause the loop
             // to hang up all the calls
@@ -476,7 +557,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         ArrayList<ImsDriverCall> imsDcList;
         Map <String, ImsDriverCall> validDriverCall = new HashMap<String, ImsDriverCall>();
         if (ar.exception == null) {
-            imsDcList = (ArrayList<ImsDriverCall>)ar.result;
+            imsDcList = getImsCallList((java.util.ArrayList<CallVoLTE>) ar.result);
         } else if (isCommandExceptionRadioNotAvailable(ar.exception)) {
             // just a dummy empty ArrayList to cause the loop
             // to hang up all the calls
@@ -492,7 +573,9 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             ImsDriverCall imsDc = imsDcList.get(i);
             synchronized(mSessionList) {
                 callSession = mSessionList.get(Integer.toString(imsDc.index));
-                Log.d(TAG, "Find existing Session, index:"+imsDc.index);
+                if(callSession != null) {
+                    Log.d(TAG, "Find existing Session, index:" + imsDc.index);
+                }
             }
             if (callSession == null && mPendingSessionList != null) {
                 synchronized(mPendingSessionList) {
@@ -873,4 +956,6 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     public boolean moreThanOnePhoneHasCall() {
         return mImsService.moreThanOnePhoneHasCall();
     }
+
+
 }

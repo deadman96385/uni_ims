@@ -13,7 +13,7 @@ import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.GsmCdmaPhone;
 import android.telephony.TelephonyManager;
-import android.telephony.TelephonyManagerEx;
+//import android.telephony.TelephonyManagerEx;
 import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.uicc.UiccCardApplication;
 import com.android.internal.telephony.uicc.UiccController;
@@ -61,7 +61,7 @@ public class ImsRegister {
     private boolean mSIMLoaded;
     private TelephonyManager mTelephonyManager;
  // add for Dual LTE
-    private TelephonyManagerEx mTelephonyManagerEx;
+    //TODO:private TelephonyManagerEx mTelephonyManagerEx;
     private int mPhoneId;
     private BaseHandler mHandler;
     private boolean mCurrentImsRegistered;
@@ -100,7 +100,7 @@ public class ImsRegister {
         mPhoneCount = mTelephonyManager.getPhoneCount();
         mHandler = new BaseHandler(mContext.getMainLooper());
         // add for Dual LTE
-        mTelephonyManagerEx = TelephonyManagerEx.from(context);
+        /*TODO:mTelephonyManagerEx = TelephonyManagerEx.from(context);*/
         mUiccController = UiccController.getInstance();
         mVolteConfig = VolteConfig.getInstance();
         mUiccController.registerForIccChanged(mHandler, EVENT_ICC_CHANGED, null);
@@ -138,9 +138,11 @@ public class ImsRegister {
                     //add for L+G dual volte, if secondary card no need to reset mIMSBearerEstablished
                     // add for Dual LTE
 //                    if(mPhoneId == getPrimaryCard() || !ImsManagerEx.isDualVoLTEActive()){
-                    if (mTelephonyManagerEx.getLTECapabilityForPhone(mPhoneId)) {
+
+                    if (/*TODO:mTelephonyManagerEx.getLTECapabilityForPhone(mPhoneId)*/mPhoneId == getPrimaryCard() || !ImsManagerEx.isDualVoLTEActive()) {
                         mIMSBearerEstablished = false;
                     }
+
                     mLastNumeric="";
                     mCurrentImsRegistered = false;
                 } else {
@@ -162,8 +164,8 @@ public class ImsRegister {
 //                if(mImsService.allowEnableIms() || (ImsManagerEx.isDualVoLTEActive() && mPhoneId != getPrimaryCard())){
                 if (mImsService.allowEnableIms(mPhoneId)
                         || (ImsManagerEx.isDualVoLTEActive()
-                                && !mTelephonyManagerEx
-                                        .getLTECapabilityForPhone(mPhoneId))) {
+                               /*TODO: && !mTelephonyManagerEx
+                                        .getLTECapabilityForPhone(mPhoneId)*/)) {
                     enableIms();
                 }
                 break;
@@ -207,7 +209,7 @@ public class ImsRegister {
                     } else // add for L+G dual volte, if secondary card no need
                            // to reset mIMSBearerEstablished
                     // add for Dual LTE
-                    if (mTelephonyManagerEx.getLTECapabilityForPhone(mPhoneId) && ImsManagerEx.isDualVoLTEActive()) {
+                    if (/*TODO:mTelephonyManagerEx.getLTECapabilityForPhone(mPhoneId) && */ImsManagerEx.isDualVoLTEActive()) {
                         mIMSBearerEstablished = false;
                     } else if (conn.intValue() == 0) {
                         //
@@ -229,7 +231,7 @@ public class ImsRegister {
                 log("current mNumeric = "+mNumeric);
                 // add for Dual LTE
 //                if(mPhoneId == getPrimaryCard()){
-                if (mTelephonyManagerEx.getLTECapabilityForPhone(mPhoneId)) {
+                if (/*TODO:mTelephonyManagerEx.getLTECapabilityForPhone(mPhoneId)*/mPhoneId == getPrimaryCard()) {
                     log("PrimaryCard : mLastNumeric = "+mLastNumeric);
                     if(!(mLastNumeric.equals(mNumeric))) {
                         if(isSimConfig && getNetworkConfig(mNumeric) && !(getNetworkConfig(mLastNumeric)) && mImsService.allowEnableIms(mPhoneId)){
@@ -255,7 +257,7 @@ public class ImsRegister {
                 break;
             case EVENT_RADIO_CAPABILITY_CHANGED:
                 // add for Dual LTE
-                if (!mTelephonyManagerEx.getLTECapabilityForPhone(mPhoneId)) {
+                if (/*!mTelephonyManagerEx.getLTECapabilityForPhone(mPhoneId)*/mPhoneId != getPrimaryCard()) {
 //                if (mPhoneId != getPrimaryCard()) {
                     //SPRD: Bug 671074 If dual volte active, need to reset some variables.
                     if(!ImsManagerEx.isDualVoLTEActive()){
@@ -298,12 +300,12 @@ public class ImsRegister {
                 + mTelephonyManager.getSimState(mPhoneId) + " | mPhoneId = "
                 + mPhoneId
                 + " | mTelephonyManagerEx.getLTECapabilityForPhone(mPhoneId) = "
-                + mTelephonyManagerEx.getLTECapabilityForPhone(mPhoneId));
+                /*TODO:+ mTelephonyManagerEx.getLTECapabilityForPhone(mPhoneId)*/);
         if (mSIMLoaded && mPhone.isRadioOn() && !mInitISIMDone
                 && mTelephonyManager.getSimState(mPhoneId) == TelephonyManager.SIM_STATE_READY
                      // add for Dual LTE
 //                && (mPhoneId == getPrimaryCard() || ImsManagerEx.isDualVoLTEActive())) {
-                && (mTelephonyManagerEx.getLTECapabilityForPhone(mPhoneId) || ImsManagerEx.isDualVoLTEActive())) {
+                && (/*TODO:mTelephonyManagerEx.getLTECapabilityForPhone(mPhoneId)*/mPhoneId == getPrimaryCard() || ImsManagerEx.isDualVoLTEActive())) {
             String impi = null;
             String impu = null;
             String domain = null;
