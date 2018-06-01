@@ -9,6 +9,7 @@ import android.util.Log;
 
 import com.android.ims.internal.IVoWifiSecurity;
 import com.android.ims.internal.IVoWifiSecurityCallback;
+
 import com.spreadtrum.ims.vowifi.Utilities.IPVersion;
 import com.spreadtrum.ims.vowifi.Utilities.JSONUtils;
 import com.spreadtrum.ims.vowifi.Utilities.NativeErrorCode;
@@ -106,7 +107,8 @@ public class VoWifiSecurityManager extends ServiceManager {
     public void attach(boolean isHandover, int subId, int type, String localAddr,
             SecurityListener listener) {
         if (Utilities.DEBUG) {
-            Log.i(TAG, "Start the s2b attach. type: " + type + ", subId: " + subId);
+            Log.i(TAG, "Start the s2b attach. type: " + type + ", subId: " + subId
+                    + ", localAddr: " + localAddr);
         }
 
         boolean handle = false;

@@ -1,8 +1,8 @@
 package com.spreadtrum.ims.vowifi;
 
+import android.telephony.ims.ImsCallSession.State;
 import android.util.Log;
 
-import android.telephony.ims.ImsCallSession.State;
 import com.spreadtrum.ims.vowifi.Utilities.JSONUtils;
 import com.spreadtrum.ims.vowifi.Utilities.SRVCCSyncInfo;
 

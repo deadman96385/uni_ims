@@ -11,23 +11,24 @@ import android.os.RemoteException;
 import android.os.SystemProperties;
 import android.telecom.VideoProfile;
 import android.telecom.Connection.VideoProvider;
+import android.telephony.ServiceState;
+import android.telephony.ims.ImsCallProfile;
+import android.telephony.ims.ImsCallSession.State;
+import android.telephony.ims.ImsConferenceState;
+import android.telephony.ims.ImsReasonInfo;
+import android.telephony.ims.ImsStreamMediaProfile;
+import android.telephony.ims.aidl.IImsCallSessionListener;
 import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
-import android.telephony.ims.ImsCallProfile;
-import android.telephony.ims.ImsConferenceState;
-import android.telephony.ims.ImsReasonInfo;
-import android.telephony.ims.ImsStreamMediaProfile;
-import com.android.ims.internal.IImsCallSessionListener;
 import com.android.ims.internal.IImsServiceEx;
+import com.android.ims.internal.ImsSrvccCallInfo;
+import com.android.ims.internal.ImsManagerEx;
 import com.android.ims.internal.IVoWifiCall;
 import com.android.ims.internal.IVoWifiCallCallback;
-import android.telephony.ims.ImsCallSession;
-import com.android.ims.internal.ImsSrvccCallInfo;
-import android.telephony.ims.ImsCallSession.State;
-import com.android.ims.internal.ImsManagerEx;
 import com.android.internal.telephony.CommandsInterface;
+
 import com.spreadtrum.ims.R;
 import com.spreadtrum.ims.vowifi.Utilities.CallStateForDataRouter;
 import com.spreadtrum.ims.vowifi.Utilities.ECBMRequest;
@@ -75,6 +76,7 @@ public class VoWifiCallManager extends ServiceManager {
 
     private int mUseAudioStreamCount = 0;
     private int mRegisterState = RegisterState.STATE_IDLE;
+    private int mCurRatType = ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN;
     private boolean mInSRVCC = false;
 
     private ECBMRequest mECBMRequest;
@@ -326,9 +328,14 @@ public class VoWifiCallManager extends ServiceManager {
         }
     }
 
+    public void resetCallRatType() {
+        mCurRatType = ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN;
+    }
+
     public void updateCallsRatType(int type) {
         if (Utilities.DEBUG) Log.i(TAG, "Try to update all the calls' type to: " + type);
 
+        mCurRatType = type;
         for (ImsCallSessionImpl callSession : mSessionList) {
             callSession.updateCallRatType(type);
         }
@@ -669,7 +676,7 @@ public class VoWifiCallManager extends ServiceManager {
             IImsCallSessionListener listener, ImsVideoCallProviderImpl videoCallProvider,
             int callDir) {
         ImsCallSessionImpl session = new ImsCallSessionImpl(mContext, this, profile, listener,
-                videoCallProvider, callDir);
+                videoCallProvider, callDir, mCurRatType);
 
         // Add this call session to the list.
         addCall(session);
@@ -700,7 +707,7 @@ public class VoWifiCallManager extends ServiceManager {
                         confSession.resume(confSession.getResumeMediaProfile());
 
                         confSession.updateAliveState(true);
-                        confListener.callSessionResumed(confSession, confSession.getCallProfile());
+                        confListener.callSessionResumed(confSession.getCallProfile());
                     }
                 }
                 return;
@@ -884,7 +891,8 @@ public class VoWifiCallManager extends ServiceManager {
                     break;
                 }
                 case JSONUtils.EVENT_CODE_CONF_CONNECTED: {
-                    handleConfConnected(callSession);
+                    boolean isVideo = jObject.optBoolean(JSONUtils.KEY_IS_VIDEO, false);
+                    handleConfConnected(callSession, isVideo);
                     break;
                 }
                 case JSONUtils.EVENT_CODE_CONF_DISCONNECTED: {
@@ -973,17 +981,15 @@ public class VoWifiCallManager extends ServiceManager {
             return;
         }
 
-        ImsStreamMediaProfile mediaProfile = null;
+        ImsStreamMediaProfile mediaProfile = callSession.getMediaProfile();
+        mediaProfile.mAudioDirection = ImsStreamMediaProfile.DIRECTION_SEND_RECEIVE;
         if (isVideo) {
-            mediaProfile = new ImsStreamMediaProfile(
-                    ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB,
-                    ImsStreamMediaProfile.DIRECTION_SEND_RECEIVE,
-                    ImsStreamMediaProfile.VIDEO_QUALITY_QCIF,
-                    ImsStreamMediaProfile.DIRECTION_SEND_RECEIVE);
+            mediaProfile.mVideoDirection = ImsStreamMediaProfile.DIRECTION_SEND_RECEIVE;
+            mediaProfile.mVideoQuality = ImsStreamMediaProfile.VIDEO_QUALITY_QVGA_PORTRAIT;
         } else {
-            mediaProfile = new ImsStreamMediaProfile();
+            mediaProfile.mVideoDirection = ImsStreamMediaProfile.DIRECTION_INVALID;
+            mediaProfile.mVideoQuality = ImsStreamMediaProfile.VIDEO_QUALITY_NONE;
         }
-        callSession.updateMediaProfile(mediaProfile);
         callSession.updateState(State.NEGOTIATING);
 
         ImsCallProfile newCallProfile = null;
@@ -996,13 +1002,13 @@ public class VoWifiCallManager extends ServiceManager {
 
         IImsCallSessionListener listener = callSession.getListener();
         if (listener != null) {
-            listener.callSessionProgressing(callSession, mediaProfile);
+            listener.callSessionProgressing(mediaProfile);
 
             if (newCallProfile != null) {
                 String oi = newCallProfile.getCallExtra(ImsCallProfile.EXTRA_OI);
                 Log.d(TAG, "Update the callee as EXTRA_OI to " + oi);
 
-                listener.callSessionUpdated(callSession, newCallProfile);
+                listener.callSessionUpdated(newCallProfile);
             }
         }
     }
@@ -1088,7 +1094,7 @@ public class VoWifiCallManager extends ServiceManager {
         if (listener != null) {
             if (callSession.isUssdCall()) {
                 Log.d(TAG, "As ussd start failed, give the ussd msg received as not support.");
-                listener.callSessionUssdMessageReceived(callSession,
+                listener.callSessionUssdMessageReceived(
                         CommandsInterface.USSD_MODE_NOT_SUPPORTED, "Start ussd failed.");
             }
 
@@ -1103,7 +1109,7 @@ public class VoWifiCallManager extends ServiceManager {
             if (oldState < State.NEGOTIATING) {
                 // It means the call do not ringing now, so we need give the call session start
                 // failed call back.
-                listener.callSessionStartFailed(callSession, info);
+                listener.callSessionInitiatedFailed(info);
             } else {
                 ImsCallSessionImpl confSession = callSession.getConfCallSession();
                 if (confSession != null) {
@@ -1115,7 +1121,7 @@ public class VoWifiCallManager extends ServiceManager {
                 }
 
                 // Terminate the call as normal.
-                listener.callSessionTerminated(callSession, info);
+                listener.callSessionTerminated(info);
 
                 // After give the callback, close this call session if it is a participant
                 // of a conference.
@@ -1134,7 +1140,7 @@ public class VoWifiCallManager extends ServiceManager {
             return;
         }
 
-        callSession.updateState(ImsCallSession.State.ESTABLISHED);
+        callSession.updateState(State.ESTABLISHED);
 
         // Update the call type, as if the user accept the video call as audio call,
         // isVideo will be false. Then we need update this to call profile.
@@ -1159,7 +1165,7 @@ public class VoWifiCallManager extends ServiceManager {
 
         IImsCallSessionListener listener = callSession.getListener();
         if (listener != null) {
-            listener.callSessionStarted(callSession, profile);
+            listener.callSessionInitiated(profile);
         }
     }
 
@@ -1186,7 +1192,7 @@ public class VoWifiCallManager extends ServiceManager {
                 if (videoProvider != null) videoProvider.stopAll();
 
                 callSession.updateAliveState(false /* held, do not alive */);
-                listener.callSessionHeld(callSession, callSession.getCallProfile());
+                listener.callSessionHeld(callSession.getCallProfile());
                 break;
             }
             case JSONUtils.EVENT_CODE_CALL_HOLD_FAILED:
@@ -1194,14 +1200,14 @@ public class VoWifiCallManager extends ServiceManager {
                 toastTextResId = R.string.vowifi_hold_fail;
                 ImsReasonInfo holdFailedInfo = new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED,
                         ImsReasonInfo.CODE_UNSPECIFIED, "Unknown reason");
-                listener.callSessionHoldFailed(callSession, holdFailedInfo);
+                listener.callSessionHoldFailed(holdFailedInfo);
                 break;
             }
             case JSONUtils.EVENT_CODE_CALL_RESUME_OK:
             case JSONUtils.EVENT_CODE_CONF_RESUME_OK: {
                 toastTextResId = R.string.vowifi_resume_success;
                 callSession.updateAliveState(true /* resumed, alive now */);
-                listener.callSessionResumed(callSession, callSession.getCallProfile());
+                listener.callSessionResumed(callSession.getCallProfile());
                 break;
             }
             case JSONUtils.EVENT_CODE_CALL_RESUME_FAILED:
@@ -1209,17 +1215,19 @@ public class VoWifiCallManager extends ServiceManager {
                 toastTextResId = R.string.vowifi_resume_fail;
                 ImsReasonInfo resumeFailedInfo = new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED,
                         ImsReasonInfo.CODE_UNSPECIFIED, "Unknown reason");
-                listener.callSessionResumeFailed(callSession, resumeFailedInfo);
+                listener.callSessionResumeFailed(resumeFailedInfo);
                 break;
             }
             case JSONUtils.EVENT_CODE_CALL_HOLD_RECEIVED:
             case JSONUtils.EVENT_CODE_CONF_HOLD_RECEIVED: {
-                listener.callSessionHoldReceived(callSession, callSession.getCallProfile());
+                toastTextResId = R.string.vowifi_hold_received;
+                listener.callSessionHoldReceived(callSession.getCallProfile());
                 break;
             }
             case JSONUtils.EVENT_CODE_CALL_RESUME_RECEIVED:
             case JSONUtils.EVENT_CODE_CONF_RESUME_RECEIVED: {
-                listener.callSessionResumeReceived(callSession, callSession.getCallProfile());
+                toastTextResId = R.string.vowifi_resume_received;
+                listener.callSessionResumeReceived(callSession.getCallProfile());
                 break;
             }
             default: {
@@ -1321,7 +1329,7 @@ public class VoWifiCallManager extends ServiceManager {
         if (listener != null) {
             ImsReasonInfo errorInfo = new ImsReasonInfo(ImsReasonInfo.CODE_MEDIA_UNSPECIFIED,
                     stateCode, "Update failed as error code: " + stateCode);
-            listener.callSessionUpdateFailed(callSession, errorInfo);
+            listener.callSessionUpdateFailed(errorInfo);
         }
 
         ImsVideoCallProviderImpl videoCallProvider = callSession.getVideoCallProviderImpl();
@@ -1379,7 +1387,7 @@ public class VoWifiCallManager extends ServiceManager {
 
         IImsCallSessionListener listener = callSession.getListener();
         if (listener != null) {
-            listener.callSessionMultipartyStateChanged(callSession, true);
+            listener.callSessionMultipartyStateChanged(true);
         }
     }
 
@@ -1396,7 +1404,7 @@ public class VoWifiCallManager extends ServiceManager {
             if (callSession.isEmergencyCall()) {
                 ImsReasonInfo info = new ImsReasonInfo(ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE,
                     ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE, reason);
-                listener.callSessionStartFailed(callSession, info);
+                listener.callSessionInitiatedFailed(info);
             } else {
                 // Receive 380 from service for a normal call
                 Log.d(TAG, "Start a normal call, but get 380 from service, urnUri: " + urnUri);
@@ -1411,7 +1419,7 @@ public class VoWifiCallManager extends ServiceManager {
                     info = new ImsReasonInfo(ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED,
                             ImsReasonInfo.CODE_LOCAL_CALL_CS_RETRY_REQUIRED, reason);
                 }
-                listener.callSessionStartFailed(callSession, info);
+                listener.callSessionInitiatedFailed(info);
             }
         }
     }
@@ -1503,11 +1511,11 @@ public class VoWifiCallManager extends ServiceManager {
             return;
         }
 
-        callSession.updateState(ImsCallSession.State.ESTABLISHED);
+        callSession.updateState(State.ESTABLISHED);
         IImsCallSessionListener listener = callSession.getListener();
         if (listener != null) {
             try {
-                listener.callSessionUssdMessageReceived(callSession, mode, info);
+                listener.callSessionUssdMessageReceived(mode, info);
             } catch (RemoteException e) {
                 Log.e(TAG, "Failed to send the ussd info. e: " + e);
             }
@@ -1538,7 +1546,7 @@ public class VoWifiCallManager extends ServiceManager {
         confSession.updateState(State.NEGOTIATING);
     }
 
-    private void handleConfConnected(ImsCallSessionImpl confSession)
+    private void handleConfConnected(ImsCallSessionImpl confSession, boolean isVideo)
             throws NumberFormatException, RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Handle the conference connected.");
         if (confSession == null && mICall != null) {
@@ -1566,21 +1574,31 @@ public class VoWifiCallManager extends ServiceManager {
         IImsCallSessionListener confListener = confSession.getListener();
         // Notify the multi-party state changed.
         if (confListener != null) {
-            confListener.callSessionMultipartyStateChanged(confSession, true);
+            confListener.callSessionMultipartyStateChanged(true);
         }
 
         boolean hostIsVideo = Utilities.isVideoCall(hostCallSession.getCallProfile().mCallType);
-        boolean confIsVideo = Utilities.isVideoCall(confSession.getCallProfile().mCallType);
-        if (!hostIsVideo && confIsVideo) {
+        if (!hostIsVideo && isVideo) {
             // It means the host isn't video call, but the conference is video call. We need
             // update the conference to video here.
-            if (confListener != null) {
-                confListener.callSessionUpdated(confSession, confSession.getCallProfile());
-            }
+            confSession.updateCallType(ImsCallProfile.CALL_TYPE_VT);
 
             ImsVideoCallProviderImpl videoCallProvider = confSession.getVideoCallProviderImpl();
             if (videoCallProvider != null) {
                 VideoProfile videoProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
+                videoCallProvider.receiveSessionModifyResponse(
+                        VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS,
+                        videoProfile /* request profile */,
+                        videoProfile /* response profile */);
+            }
+        } else if (hostIsVideo && !isVideo) {
+            // It means the host is video call, but the conference is downgrade. We need
+            // update the conference call to audio here.
+            confSession.updateCallType(ImsCallProfile.CALL_TYPE_VOICE);
+
+            ImsVideoCallProviderImpl videoCallProvider = confSession.getVideoCallProviderImpl();
+            if (videoCallProvider != null) {
+                VideoProfile videoProfile = new VideoProfile(VideoProfile.STATE_AUDIO_ONLY);
                 videoCallProvider.receiveSessionModifyResponse(
                         VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS,
                         videoProfile /* request profile */,
@@ -1617,7 +1635,7 @@ public class VoWifiCallManager extends ServiceManager {
         // Notify the conference participants' state.
         if (confListener != null) {
             confListener.callSessionConferenceStateUpdated(
-                    confSession, confSession.getConfParticipantsState());
+                    confSession.getConfParticipantsState());
         }
 
         // Start to invite the calls.
@@ -1641,7 +1659,7 @@ public class VoWifiCallManager extends ServiceManager {
             if (hostListener != null) {
                 Log.d(TAG, "Notify the merge failed.");
                 ImsReasonInfo info = new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, stateCode);
-                hostListener.callSessionMergeFailed(confSession, info);
+                hostListener.callSessionMergeFailed(info);
 
                 // FIXME: As the call may be held or resumed before merge which can not tracked by
                 //        ImsCallTracker, so before we give the merge failed callback, we'd like to
@@ -1649,9 +1667,9 @@ public class VoWifiCallManager extends ServiceManager {
                 //        Another, if this issue should be fixed by framework?
                 ImsCallProfile callProfile = hostCallSession.getCallProfile();
                 if (hostCallSession.isAlive()) {
-                    hostListener.callSessionResumed(hostCallSession, callProfile);
+                    hostListener.callSessionResumed(callProfile);
                 } else {
-                    hostListener.callSessionHeld(hostCallSession, callProfile);
+                    hostListener.callSessionHeld(callProfile);
                 }
             }
         }
@@ -1791,7 +1809,7 @@ public class VoWifiCallManager extends ServiceManager {
             IImsCallSessionListener confListener = confSession.getListener();
             if (confListener != null) {
                 confListener.callSessionConferenceStateUpdated(
-                        confSession, confSession.getConfParticipantsState());
+                        confSession.getConfParticipantsState());
             }
         }
 

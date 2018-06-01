@@ -2,6 +2,7 @@ package com.spreadtrum.ims.vowifi;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.net.Uri;
 
 import com.spreadtrum.ims.vowifi.Utilities.ProviderUtils;
@@ -91,6 +92,22 @@ public class VoWifiConfiguration {
             Uri.parse(ProviderUtils.CONTENT_URI + "/" + ProviderUtils.FUN_REGISTER);
     private static final Uri URI_CALL =
             Uri.parse(ProviderUtils.CONTENT_URI + "/" + ProviderUtils.FUN_CALL);
+
+    public static boolean isRegRequestPANI(Context context) {
+        Cursor cursor = context.getContentResolver().query(URI_REG, null, null, null, null);
+        try {
+            if (cursor != null && cursor.moveToFirst()) {
+                int index = cursor.getColumnIndexOrThrow("withPANI");
+                return cursor.getInt(index) == 1 ? true : false;
+            }
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        return false;
+    }
 
     public static boolean updateIkeFQDN(Context context, String fqdn) {
         ContentValues values = new ContentValues();

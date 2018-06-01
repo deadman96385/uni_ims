@@ -11,15 +11,18 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
+import android.telephony.ims.ImsCallProfile;
+import android.telephony.ims.ImsCallSession.State;
+import android.telephony.ims.aidl.IImsCallSessionListener;
 import android.telephony.ServiceState;
 import android.util.Log;
+import android.text.TextUtils;
 
-import android.telephony.ims.ImsCallProfile;
 import com.android.ims.ImsManager;
-import com.android.ims.internal.IImsCallSessionListener;
+import com.android.ims.internal.IImsCallSession;
 import com.android.ims.internal.IImsServiceEx;
-import android.telephony.ims.ImsCallSession.State;
 import com.android.ims.internal.ImsManagerEx;
+
 import com.spreadtrum.ims.ImsConfigImpl;
 import com.spreadtrum.ims.vowifi.Utilities.CallStateForDataRouter;
 import com.spreadtrum.ims.vowifi.Utilities.CallType;
@@ -816,8 +819,14 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     private void registerSuccess(int stateCode) {
-        // As login success, we need set the video quality.
-        mCallMgr.updateVideoQuality(Utilities.getDefaultVideoQuality(mPreferences));
+        // When register success, sync the UT items.
+        if (mUtSyncMgr != null) mUtSyncMgr.sync();
+
+        if (mCallMgr != null) {
+            // As login success, we need set the video quality, and reset the rat type.
+            mCallMgr.updateVideoQuality(Utilities.getDefaultVideoQuality(mPreferences));
+            mCallMgr.resetCallRatType();
+        }
 
         mCmdRegisterState = CMD_STATE_FINISHED;
         if (mCallback != null) {
@@ -887,8 +896,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         @Override
         public void onCallIncoming(ImsCallSessionImpl callSession) {
             if (mCallback != null && callSession != null) {
-                mCallback.onCallIncoming(
-                        callSession.getCallId(), callSession.getCallProfile().mCallType);
+                mCallback.onCallIncoming(callSession);
             }
         }
 
@@ -988,9 +996,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                                 + "The ECBM step: " + mEcbmStep);
                     }
                 } else {
-                    // When register success, sync the UT items.
-                    if (mUtSyncMgr != null) mUtSyncMgr.sync();
-
                     registerSuccess(stateCode);
                 }
             } else if (!success && stateCode == NativeErrorCode.REG_SERVER_FORBIDDEN) {
@@ -1151,8 +1156,22 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                             + mEcbmStep);
                 }
             } else if (mCallback != null) {
-                mCmdAttachState = CMD_STATE_FINISHED;
-                mCallback.onAttachFinished(true, 0);
+                SecurityConfig config = mSecurityMgr.getConfig(sessionId);
+                String usedPcscfAddr = getUsedPcscfAddr();
+                if ((TextUtils.isEmpty(config._ip4) || TextUtils.isEmpty(config._pcscf4))
+                        && (TextUtils.isEmpty(config._ip6) || TextUtils.isEmpty(config._pcscf6))
+                        && TextUtils.isEmpty(usedPcscfAddr)) {
+                    // Handle as attach failed.
+                    Log.d(mTag, "Handle as attach failed, localIPv4: " + config._ip4
+                            + ", localIPv6: " + config._ip6 + ", pcscfIPv4: " + config._pcscf4
+                            + ", pcscfIPv6: " + config._pcscf6 + ", usedPcscfAddr: "
+                            + usedPcscfAddr);
+                    mCmdAttachState = CMD_STATE_INVALID;
+                    mCallback.onAttachFinished(false, 0);
+                } else {
+                    mCmdAttachState = CMD_STATE_FINISHED;
+                    mCallback.onAttachFinished(true, 0);
+                }
             }
         }
 
@@ -1332,7 +1351,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
          * @param callId The only identity of the phone
          * @param type See the definition of ImsCallProfile
          */
-        public void onCallIncoming(String callId, int type);
+        public void onCallIncoming(IImsCallSession callSession);
 
         public void onAliveCallUpdate(boolean isVideoCall);
 

@@ -13,14 +13,15 @@ import android.preference.PreferenceManager;
 import android.telecom.Connection.VideoProvider;
 import android.telecom.VideoProfile;
 import android.telecom.VideoProfile.CameraCapabilities;
+import android.telephony.ims.ImsCallProfile;
+import android.telephony.ims.ImsStreamMediaProfile;
+import android.telephony.ims.ImsVideoCallProvider;
 import android.util.Log;
 import android.view.Display;
 import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.WindowManager;
 
-import android.telephony.ims.ImsCallProfile;
-import android.telephony.ims.ImsVideoCallProvider;
 import com.spreadtrum.ims.vowifi.Utilities.Camera;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.VideoQuality;
@@ -172,8 +173,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
 
                         CameraCapabilities cameraCapabilities = getCameraCapabilities();
                         // If the device rotate to 90 or 270, we need exchange the height and width.
-                        if ((mDeviceOrientation == 90 || mDeviceOrientation == 270)
-                                && cameraCapabilities != null) {
+                        if (cameraCapabilities != null && isLandscape()) {
                             Log.d(TAG, "The current orientation is 90 or 270, adjest capability.");
                             cameraCapabilities = new CameraCapabilities(
                                     cameraCapabilities.getHeight(), cameraCapabilities.getWidth());
@@ -564,6 +564,35 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                 }
             }
         }
+    }
+
+    public int getCurImsVideoQuality() {
+        switch (mVideoQualityLevel) {
+            case 31:
+            case 22:
+            case 30:
+                if (isLandscape()) {
+                    return ImsStreamMediaProfile.VIDEO_QUALITY_VGA_LANDSCAPE;
+                } else {
+                    return ImsStreamMediaProfile.VIDEO_QUALITY_VGA_PORTRAIT;
+                }
+            case 12:
+            case 13:
+            case 14:
+                if (isLandscape()) {
+                    return ImsStreamMediaProfile.VIDEO_QUALITY_QVGA_LANDSCAPE;
+                } else {
+                    return ImsStreamMediaProfile.VIDEO_QUALITY_QVGA_PORTRAIT;
+                }
+            case 11:
+                return ImsStreamMediaProfile.VIDEO_QUALITY_QCIF;
+        }
+
+        return ImsStreamMediaProfile.VIDEO_QUALITY_NONE;
+    }
+
+    private boolean isLandscape() {
+        return mDeviceOrientation == 90 || mDeviceOrientation == 270;
     }
 
     private boolean isSupportTXRXUpdate() {

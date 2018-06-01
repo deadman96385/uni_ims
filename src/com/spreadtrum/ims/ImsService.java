@@ -505,8 +505,8 @@ public class ImsService extends Service {
                                 .get(Integer.valueOf(ImsRegister
                                         .getPrimaryCard(mPhoneCount) + 1));
 
-                        //TODO: need imsCallSession boject
-                        // service.sendIncomingCallIntent((String) msg.obj);
+                        IImsCallSession callSession = (IImsCallSession) msg.obj;
+                        service.sendIncomingCallIntent(callSession, callSession.getCallId());
                         mInCallPhoneId = ImsRegister.getPrimaryCard(mPhoneCount);// sprd:add
                                                                                  // for
                                                                                  // bug635699
@@ -1265,8 +1265,7 @@ public class ImsService extends Service {
                                                                                  // data
                                                                                  // router
             }
-            Log.e(TAG, "createCallSession-> startVoWifiCall");
-            //TODO:return mWifiService.createCallSession(profile, listener);
+            return mWifiService.createCallSession(profile, listener);
         }
         /* @} */
         ImsServiceImpl service = mImsServiceImplMap.get(new Integer(serviceId));
@@ -2240,8 +2239,8 @@ public class ImsService extends Service {
         /* @} */
 
         @Override
-        public void onCallIncoming(String callId, int type) {
-            mHandler.obtainMessage(EVENT_WIFI_INCOMING_CALL, type, -1, callId)
+        public void onCallIncoming(IImsCallSession callSession) {
+            mHandler.obtainMessage(EVENT_WIFI_INCOMING_CALL, -1, -1, callSession)
                     .sendToTarget();
         }
 

@@ -15,21 +15,22 @@ import android.os.SystemProperties;
 import android.telecom.VideoProfile;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.ServiceState;
+import android.telephony.ims.ImsCallProfile;
+import android.telephony.ims.ImsCallSession.State;
+import android.telephony.ims.ImsConferenceState;
+import android.telephony.ims.ImsReasonInfo;
+import android.telephony.ims.ImsStreamMediaProfile;
+import android.telephony.ims.aidl.IImsCallSessionListener;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Surface;
 import android.widget.Toast;
 
-import android.telephony.ims.ImsCallProfile;
-import android.telephony.ims.ImsConferenceState;
-import android.telephony.ims.ImsReasonInfo;
-import android.telephony.ims.ImsStreamMediaProfile;
 import com.android.ims.internal.IImsCallSession;
-import com.android.ims.internal.IImsCallSessionListener;
 import com.android.ims.internal.IImsVideoCallProvider;
-import com.android.ims.internal.IVoWifiCall;
-import android.telephony.ims.ImsCallSession.State;
 import com.android.ims.internal.ImsSrvccCallInfo;
+import com.android.ims.internal.IVoWifiCall;
+
 import com.spreadtrum.ims.R;
 import com.spreadtrum.ims.vowifi.Utilities.CallCursor;
 import com.spreadtrum.ims.vowifi.Utilities.Camera;
@@ -79,7 +80,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private IVoWifiCall mICall = null;
 
     private IImsCallSessionListener mListener = null;
-    private ImsStreamMediaProfile mImsStreamMediaProfile = null;
     private ImsVideoCallProviderImpl mVideoCallProvider = null;
 
     private ImsCallSessionImpl mConfCallSession = null;
@@ -122,7 +122,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 Log.e(TAG, failMessage);
                 if (mListener != null) {
                     try {
-                        mListener.callSessionStartFailed(ImsCallSessionImpl.this,
+                        mListener.callSessionInitiatedFailed(
                                 new ImsReasonInfo(msg.arg1, msg.arg2, failMessage));
                     } catch (RemoteException e) {
                         Log.e(TAG, "Failed to give the call session start failed callback.");
@@ -245,7 +245,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     protected ImsCallSessionImpl(Context context, VoWifiCallManager callManager,
             ImsCallProfile profile, IImsCallSessionListener listener,
-            ImsVideoCallProviderImpl videoCallProvider, int callDir) {
+            ImsVideoCallProviderImpl videoCallProvider, int callDir, int callRatType) {
         mContext = context;
         mCursor = getCallCursor();
         mCallStateTracker = new VoWifiCallStateTracker(State.IDLE, callDir);
@@ -262,8 +262,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mVideoCallProvider.updateVideoProfile(videoProfile);
 
         // Set radio technology to WLAN.
-        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE,
-                String.valueOf(ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN));
+        mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE, String.valueOf(callRatType));
 
         // Register the service changed to get the IVowifiService.
         mCallManager.registerCallInterfaceChanged(mICallChangedListener);
@@ -283,20 +282,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 .append(", isAlive = " + mIsAlive + "]");
         return builder.toString();
     }
-
-    /**
-     * AndroidP start@{:
-     */
-    @Override
-    public void deflect(String deflectNumber){
-        //TODO:
-    }
-
-    @Override
-    public void setListener(android.telephony.ims.aidl.IImsCallSessionListener listener){
-        //TODO:
-    }
-    /* AndroidP end@} */
 
     /**
      * Closes the object. This object is not usable after being closed.
@@ -397,10 +382,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
      *
      * @param listener to listen to the session events of this object
      */
-    //TODO:@Override
+    @Override
     public void setListener(IImsCallSessionListener listener) {
-        if (Utilities.DEBUG) Log.i(TAG, "Set the listener: " + listener);
-
         mListener = listener;
     }
 
@@ -481,6 +464,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         } else {
             startCall(callee);
         }
+    }
+
+    @Override
+    public void deflect(String deflectNumber){
+        // TODO:
     }
 
     /**
@@ -651,7 +639,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
             // As the result is OK, terminate the call session.
             if (mListener != null) {
-                mListener.callSessionTerminated(this,
+                mListener.callSessionTerminated(
                         new ImsReasonInfo(reason, reason, "reason: " + reason));
             }
             mCallManager.removeCall(this);
@@ -739,7 +727,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
         if (res == Result.SUCCESS) {
             // Hold success will be handled in the callback.
-            mImsStreamMediaProfile = profile;
+            mCallProfile.mMediaProfile = profile;
 
             // Hold action success, update the last call action as hold.
             updateRequestAction(VoWifiCallStateTracker.ACTION_HOLD);
@@ -753,7 +741,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         Log.e(TAG, failMessage);
         Toast.makeText(mContext, R.string.vowifi_call_retry, Toast.LENGTH_LONG).show();
         if (mListener != null) {
-            mListener.callSessionHoldFailed(this, new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED,
+            mListener.callSessionHoldFailed(new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED,
                     ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
         }
     }
@@ -792,7 +780,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
         if (res == Result.SUCCESS) {
             // Resume result will be handled in the callback.
-            mImsStreamMediaProfile = profile;
+            mCallProfile.mMediaProfile = profile;
 
             // Resume action success, update the last call action as resume.
             updateRequestAction(VoWifiCallStateTracker.ACTION_RESUME);
@@ -805,7 +793,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private void handleResumeActionFailed(String failMessage) throws RemoteException {
         Log.e(TAG, failMessage);
         if (mListener != null) {
-            mListener.callSessionResumeFailed(this, new ImsReasonInfo(
+            mListener.callSessionResumeFailed(new ImsReasonInfo(
                     ImsReasonInfo.CODE_UNSPECIFIED, ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
         }
     }
@@ -868,7 +856,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private void handleMergeActionFailed(String failMessage) throws RemoteException {
         Log.e(TAG, failMessage);
         if (mListener != null) {
-            mListener.callSessionMergeFailed(this, new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED,
+            mListener.callSessionMergeFailed(new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED,
                     ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
 
             // FIXME: As the call may be held or resumed before merge which can not tracked by
@@ -876,9 +864,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             //        give this callback refer to current state.
             //        Another, if this issue should be fixed by framework?
             if (mIsAlive) {
-                mListener.callSessionResumed(this, mCallProfile);
+                mListener.callSessionResumed(mCallProfile);
             } else {
-                mListener.callSessionHeld(this, mCallProfile);
+                mListener.callSessionHeld(mCallProfile);
             }
         }
     }
@@ -914,14 +902,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             handleUpdateActionFailed("Native update result is " + res);
         } else {
             // TODO: change to update the media profile.
-            mImsStreamMediaProfile = profile;
+            mCallProfile.mMediaProfile = profile;
         }
     }
 
     private void handleUpdateActionFailed(String failMessage) throws RemoteException {
         Log.e(TAG, failMessage);
         if (mListener != null) {
-            mListener.callSessionUpdateFailed(this, new ImsReasonInfo(
+            mListener.callSessionUpdateFailed(new ImsReasonInfo(
                     ImsReasonInfo.CODE_UNSPECIFIED, ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
         }
     }
@@ -983,7 +971,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private void handleInviteParticipantsFailed(String failMessage) throws RemoteException {
         Log.e(TAG, failMessage);
         if (mListener != null) {
-            mListener.callSessionInviteParticipantsRequestFailed(this, new ImsReasonInfo(
+            mListener.callSessionInviteParticipantsRequestFailed(new ImsReasonInfo(
                     ImsReasonInfo.CODE_UNSPECIFIED, ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
         }
     }
@@ -1043,7 +1031,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
                 // Give the state update notify.
                 if (mListener != null) {
-                    mListener.callSessionConferenceStateUpdated(this, getConfParticipantsState());
+                    mListener.callSessionConferenceStateUpdated(getConfParticipantsState());
                 }
             } else if (ret == Result.FAIL) {
                 Toast.makeText(mContext, R.string.vowifi_conf_kick_failed, Toast.LENGTH_LONG)
@@ -1058,7 +1046,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         // Show the failed toast.
         Toast.makeText(mContext, R.string.vowifi_conf_kick_failed, Toast.LENGTH_LONG).show();
         if (mListener != null) {
-            mListener.callSessionRemoveParticipantsRequestFailed(this, new ImsReasonInfo(
+            mListener.callSessionRemoveParticipantsRequestFailed(new ImsReasonInfo(
                     ImsReasonInfo.CODE_UNSPECIFIED, ImsReasonInfo.CODE_UNSPECIFIED, failMessage));
         }
     }
@@ -1195,7 +1183,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     public ImsStreamMediaProfile getMediaProfile() {
-        return mImsStreamMediaProfile;
+        return mCallProfile.mMediaProfile;
     }
 
     public ImsCallProfile setCallee(String phoneNumber) {
@@ -1244,7 +1232,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
     public void updateMediaProfile(ImsStreamMediaProfile profile) {
         // TODO: update or replace?
-        mImsStreamMediaProfile = profile;
+        mCallProfile.mMediaProfile = profile;
     }
 
     public IImsCallSessionListener getListener() {
@@ -1269,7 +1257,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCallProfile.mCallType = newType;
         try {
             if (mListener != null) {
-                mListener.callSessionUpdated(this, mCallProfile);
+                mListener.callSessionUpdated(mCallProfile);
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Failed to update the call type as catch the RemoteException e: " + e);
@@ -1282,7 +1270,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CALL_RAT_TYPE, String.valueOf(ratType));
         try {
             if (mListener != null) {
-                mListener.callSessionUpdated(this, mCallProfile);
+                mListener.callSessionUpdated(mCallProfile);
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Failed to update the call's rat type as catch the RemoteException e: " + e);
@@ -1295,9 +1283,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCallProfile.mMediaProfile.mAudioQuality = highQuality
                 ? ImsStreamMediaProfile.AUDIO_QUALITY_AMR_WB
                 : ImsStreamMediaProfile.AUDIO_QUALITY_AMR;
+        mLocalCallProfile.mMediaProfile.mAudioQuality = mCallProfile.mMediaProfile.mAudioQuality;
+        mRemoteCallProfile.mMediaProfile.mAudioQuality = mCallProfile.mMediaProfile.mAudioQuality;
+
         try {
             if (mListener != null) {
-                mListener.callSessionUpdated(this, mCallProfile);
+                mListener.callSessionUpdated(mCallProfile);
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Failed to update the call type as catch the RemoteException e: " + e);
@@ -1317,7 +1308,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     public boolean isHeld() {
-        return mImsStreamMediaProfile.mAudioDirection == ImsStreamMediaProfile.DIRECTION_SEND;
+        return mCallProfile.mMediaProfile.mAudioDirection == ImsStreamMediaProfile.DIRECTION_SEND;
     }
 
     public void updateIsConfHost(boolean isHost) {
@@ -1457,8 +1448,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return mediaProfile;
         }
 
-        mediaProfile.mAudioQuality = mImsStreamMediaProfile.mAudioQuality;
-        mediaProfile.mVideoQuality = mImsStreamMediaProfile.mVideoQuality;
+        mediaProfile.mAudioQuality = mCallProfile.mMediaProfile.mAudioQuality;
+        mediaProfile.mVideoQuality = mCallProfile.mMediaProfile.mVideoQuality;
         mediaProfile.mAudioDirection = ImsStreamMediaProfile.DIRECTION_SEND;
 
         if (mediaProfile.mVideoQuality != ImsStreamMediaProfile.VIDEO_QUALITY_NONE) {
@@ -1475,8 +1466,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             return mediaProfile;
         }
 
-        mediaProfile.mAudioQuality = mImsStreamMediaProfile.mAudioQuality;
-        mediaProfile.mVideoQuality = mImsStreamMediaProfile.mVideoQuality;
+        mediaProfile.mAudioQuality = mCallProfile.mMediaProfile.mAudioQuality;
+        mediaProfile.mVideoQuality = mCallProfile.mMediaProfile.mVideoQuality;
         mediaProfile.mAudioDirection = ImsStreamMediaProfile.DIRECTION_SEND_RECEIVE;
 
         if (mediaProfile.mVideoQuality != ImsStreamMediaProfile.VIDEO_QUALITY_NONE) {
@@ -1792,7 +1783,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             if (res == Result.FAIL) {
                 Log.e(TAG, "Failed to send the modify request for the call: " + mCallId);
                 if (mListener != null) {
-                    mListener.callSessionUpdateFailed(this, new ImsReasonInfo());
+                    mListener.callSessionUpdateFailed(new ImsReasonInfo());
                 }
             }
             return res;
@@ -1943,9 +1934,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     if (oldState < State.NEGOTIATING) {
                         // It means the call do not ringing now, so we need give the call session
                         // start failed call back.
-                        mListener.callSessionStartFailed(this, info);
+                        mListener.callSessionInitiatedFailed(info);
                     } else {
-                        mListener.callSessionTerminated(this, info);
+                        mListener.callSessionTerminated(info);
                     }
                 }
                 mCallManager.removeCall(this);
@@ -1979,15 +1970,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
 
             switch (mCallStateTracker.getSRVCCNoResponseAction()) {
                 case VoWifiCallStateTracker.ACTION_ACCEPT:
-                    mListener.callSessionStartFailed(ImsCallSessionImpl.this, failedReason);
+                    mListener.callSessionInitiatedFailed(failedReason);
                     break;
                 case VoWifiCallStateTracker.ACTION_REJECT:
                 case VoWifiCallStateTracker.ACTION_TERMINATE:
-                    mListener.callSessionTerminated(ImsCallSessionImpl.this, failedReason);
+                    mListener.callSessionTerminated(failedReason);
                 case VoWifiCallStateTracker.ACTION_HOLD:
-                    mListener.callSessionHoldFailed(ImsCallSessionImpl.this, failedReason);
+                    mListener.callSessionHoldFailed(failedReason);
                 case VoWifiCallStateTracker.ACTION_RESUME:
-                    mListener.callSessionResumeFailed(ImsCallSessionImpl.this, failedReason);
+                    mListener.callSessionResumeFailed(failedReason);
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Failed to process the no response action as catch the exception: " + e);
@@ -2156,7 +2147,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             IImsCallSessionListener confListener = confSession.getListener();
             if (confListener != null) {
                 // Invite participants success.
-                confListener.callSessionInviteParticipantsRequestDelivered(confSession);
+                confListener.callSessionInviteParticipantsRequestDelivered();
             }
 
             mConfCallSession = confSession;
@@ -2176,7 +2167,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             confSession.updateConfParticipants(user, bundle);
             if (confListener != null) {
                 confListener.callSessionConferenceStateUpdated(
-                        confSession, confSession.getConfParticipantsState());
+                        confSession.getConfParticipantsState());
             }
         } else {
             // Failed to invite this call to conference. Prompt the toast to alert the user.
@@ -2228,14 +2219,14 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             ImsCallSessionImpl newConfSession =
                     mCallManager.createMOCallSession(imsCallProfile, null);
             newConfSession.setCallId(confId);
-            newConfSession.updateMediaProfile(mImsStreamMediaProfile);
+            newConfSession.updateMediaProfile(mCallProfile.mMediaProfile);
             newConfSession.setHostCallSession(this);
             newConfSession.updateState(State.INITIATED);
             newConfSession.updateIsConfHost(true);
             newConfSession.startAudio();
 
             if (mListener != null) {
-                mListener.callSessionMergeStarted(this, newConfSession, imsCallProfile);
+                mListener.callSessionMergeStarted(newConfSession, imsCallProfile);
             }
             mHandler.sendEmptyMessageDelayed(MSG_MERGE_FAILED, MERGE_TIMEOUT);
         }

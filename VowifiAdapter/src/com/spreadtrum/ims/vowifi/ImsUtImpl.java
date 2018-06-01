@@ -6,20 +6,21 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.RemoteException;
+import android.telephony.ims.ImsCallForwardInfo;
+import android.telephony.ims.ImsReasonInfo;
+import android.telephony.ims.ImsSsInfo;
 import android.text.TextUtils;
 import android.util.Log;
 
-import android.telephony.ims.ImsCallForwardInfo;
-import com.android.ims.internal.ImsCallForwardInfoEx;
-import android.telephony.ims.ImsReasonInfo;
-import android.telephony.ims.ImsSsInfo;
 import com.android.ims.ImsUtInterface;
 import com.android.ims.internal.IImsUt;
 import com.android.ims.internal.IImsUtListener;
 import com.android.ims.internal.IImsUtListenerEx;
 import com.android.ims.internal.IVoWifiUT;
 import com.android.ims.internal.IVoWifiUTCallback;
+import com.android.ims.internal.ImsCallForwardInfoEx;
 import com.android.internal.telephony.CommandsInterface;
+
 import com.spreadtrum.ims.vowifi.Utilities.CallBarringInfo;
 import com.spreadtrum.ims.vowifi.Utilities.JSONUtils;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
@@ -223,23 +224,6 @@ public class ImsUtImpl extends IImsUt.Stub {
         mUtManager.registerUTInterfaceChanged(mIUTChangedListener);
     }
 
-    /**
-     * AndroidP start@{:
-     */
-    @Override
-    public int updateCallBarringForServiceClass(int cbType, int action,
-             String[] barrList, int serviceClass) throws RemoteException {
-        //TODO
-        return -1;
-    }
-
-    @Override
-    public int queryCallBarringForServiceClass(int cbType, int serviceClass){
-        //TODO
-        return -1;
-    }
-    /* AndroidP end@} */
-
     @Override
     protected void finalize() throws Throwable {
         // Un-register the service changed.
@@ -266,6 +250,12 @@ public class ImsUtImpl extends IImsUt.Stub {
         UTAction action = new UTAction("queryCallBarring", MSG_ACTION_QUERY_CALL_BARRING,
                 CMD_TIMEOUT, Integer.valueOf(cbType));
         return mCmdManager.addCmd(action);
+    }
+
+    @Override
+    public int queryCallBarringForServiceClass(int cbType, int serviceClass){
+        // TODO
+        return -1;
     }
 
     /**
@@ -351,11 +341,27 @@ public class ImsUtImpl extends IImsUt.Stub {
                     + enable + ", barringList: " + Utilities.getString(barringList));
         }
 
+        // For update call barring action, it will handle if user input MMI code in dialer.
+        // So we'd like to query first to get the CB result before put action.
         boolean enabled = (enable == CommandsInterface.CF_ACTION_ENABLE);
-        UTAction action = new UTAction("updateCallBarring", MSG_ACTION_UPDATE_CALL_BARRING,
+        UTAction updateAction = new UTAction("updateCallBarring", MSG_ACTION_UPDATE_CALL_BARRING,
                 CMD_TIMEOUT, Integer.valueOf(cbType), Boolean.valueOf(enabled), "",
                 Integer.valueOf(SERVICE_CLASS_VOICE));
-        return mCmdManager.addCmd(action);
+
+        UTAction queryAction = new UTAction(false /* needn't feedback */,
+                false /* isn't extension */, "queryCallBarring", MSG_ACTION_QUERY_CALL_BARRING,
+                CMD_TIMEOUT, updateAction, Integer.valueOf(cbType));
+
+        // Handle query CB first, and then update the CB settings.
+        mCmdManager.addCmd(queryAction);
+        return mCmdManager.addCmd(updateAction);
+    }
+
+    @Override
+    public int updateCallBarringForServiceClass(int cbType, int action,
+             String[] barrList, int serviceClass) throws RemoteException {
+        // TODO
+        return -1;
     }
 
     /**
@@ -1013,11 +1019,13 @@ public class ImsUtImpl extends IImsUt.Stub {
         for (CallBarringInfo info : infoList) {
             if (info.mCondition == condition) {
                 matchedInfo = info;
+                break;
             }
         }
 
         if (matchedInfo != null) {
-            Log.d(TAG, "Found the matched CB info: " + matchedInfo);
+            Log.d(TAG, "Found the matched CB info: [condition=" + matchedInfo.mCondition
+                    + ", status=" + matchedInfo.mStatus + ", serviceClass=" + serviceClass + "]");
             infos[0] = matchedInfo.mStatus;
             infos[1] = serviceClass;
             return infos;
@@ -1067,9 +1075,11 @@ public class ImsUtImpl extends IImsUt.Stub {
         } else if (sc.equals(CommandsInterface.CB_FACILITY_BA_ALL)) {
             return ImsUtInterface.CB_BA_ALL;
         } else if (sc.equals(CommandsInterface.CB_FACILITY_BA_MO)) {
+            // FIXME: return as ImsUtInterface.CB_BA_MO
             return ImsUtInterface.CB_BAOC;
         } else if (sc.equals(CommandsInterface.CB_FACILITY_BA_MT)) {
-            return ImsUtInterface.CB_BA_MT;
+            // FIXME: return as ImsUtInterface.CB_BA_MT
+            return ImsUtInterface.CB_BAIC;
         } else {
             throw new RuntimeException ("invalid call barring sc");
         }
@@ -1119,14 +1129,22 @@ public class ImsUtImpl extends IImsUt.Stub {
             synchronized (mCmds) {
                 mCmds.add(key);
                 mUTActions.put(key, action);
+
+                action._key = key;
             }
 
             if (mUtEnabled) {
                 mHandler.removeMessages(MSG_DISABLE_UT);
                 processPendingAction();
             } else {
-                mUtManager.prepare(Utilities.getPrimaryCardSubId(mContext));
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mUtManager.prepare(Utilities.getPrimaryCardSubId(mContext));
+                    }
+                }).start();
             }
+
             return key;
         }
 
@@ -1176,43 +1194,62 @@ public class ImsUtImpl extends IImsUt.Stub {
         }
 
         public void onActionFailed(ImsReasonInfo error) {
+            // Handle the action failed for the first action.
+            onActionFailed(error, null);
+
+            // After action failed, we need try to start the next pending action.
+            processPendingAction();
+        }
+
+        private void onActionFailed(ImsReasonInfo error, UTAction specialAction) {
             synchronized (mCmds) {
                 if (mCmds.size() < 1) return;
 
-                Integer key = mCmds.getFirst();
-                UTAction action = mUTActions.get(key);
+                if (specialAction == null) {
+                    Integer key = mCmds.getFirst();
+                    specialAction = mUTActions.get(key);
+                }
+
                 try {
                     // Notify the action failed.
-                    int actionType = getActionType(action._action);
-                    if (actionType == ACTION_TYPE_QUERY) {
-                        Log.d(TAG, "Action failed for query action, and is extension: "
-                                + action._isExAction);
-                        if (action._isExAction && mListenerEx != null) {
-                            mListenerEx.utConfigurationQueryFailed(ImsUtImpl.this, key, error);
-                        } else if (mListener != null) {
-                            mListener.utConfigurationQueryFailed(ImsUtImpl.this, key, error);
+                    if (specialAction._needFeedback) {
+                        int actionType = getActionType(specialAction._action);
+                        if (actionType == ACTION_TYPE_QUERY) {
+                            Log.d(TAG, "Action failed for query action, and is extension: "
+                                    + specialAction._isExAction);
+                            if (specialAction._isExAction && mListenerEx != null) {
+                                mListenerEx.utConfigurationQueryFailed(
+                                        ImsUtImpl.this, specialAction._key, error);
+                            } else if (mListener != null) {
+                                mListener.utConfigurationQueryFailed(
+                                        ImsUtImpl.this, specialAction._key, error);
+                            }
+                        } else if (actionType == ACTION_TYPE_UPDATE) {
+                            Log.d(TAG, "Action failed for update action, and is extension: "
+                                    + specialAction._isExAction);
+                            if (specialAction._isExAction && mListenerEx != null) {
+                                mListenerEx.utConfigurationUpdateFailed(
+                                        ImsUtImpl.this, specialAction._key, error);
+                            } else if (mListener != null) {
+                                mListener.utConfigurationUpdateFailed(
+                                        ImsUtImpl.this, specialAction._key, error);
+                            }
                         }
-                    } else if (actionType == ACTION_TYPE_UPDATE) {
-                        Log.d(TAG, "Action failed for update action, and is extension: "
-                                + action._isExAction);
-                        if (action._isExAction && mListenerEx != null) {
-                            mListenerEx.utConfigurationUpdateFailed(ImsUtImpl.this, key, error);
-                        } else if (mListener != null) {
-                            mListener.utConfigurationUpdateFailed(ImsUtImpl.this, key, error);
-                        }
+                    }
+
+                    UTAction relateAction = specialAction._relateUTAction;
+                    if (relateAction != null) {
+                        onActionFailed(error, relateAction);
                     }
                 } catch (RemoteException e) {
                     Log.e(TAG, "Failed to notify the ut configuration acton failed result.");
                     Log.e(TAG, "Catch the RemoteException: " + e);
                 }
 
-                mUTActions.remove(key);
-                mCmds.remove(key);
+                mUTActions.remove(specialAction._key);
+                mCmds.remove(specialAction._key);
                 mHandleCmd = false;
             }
-
-            // After action failed, we need try to start the next pending action.
-            processPendingAction();
         }
 
         public void onQueryCallForwardFinished(ArrayList<ImsCallForwardInfo> callForwardInfos)
@@ -1304,23 +1341,32 @@ public class ImsUtImpl extends IImsUt.Stub {
                 UTAction action = mUTActions.get(key);
                 Log.d(TAG, "Query call barring finished, action is " + action._action);
 
-                int[] info = findCallBarringInfo(infolist, (Integer) action._params.get(0),
-                        (Integer) action._params.get(2));
-                // Find the call barring info for this action.
-                Log.d(TAG, "Success to query the call barring info: " + info);
-                if (info != null && info.length > 0) {
-                    if (mListenerEx != null) {
-                        mListenerEx.utConfigurationCallBarringResult(key, info);
+                if (action._needFeedback) {
+                    int condition = (Integer) action._params.get(0);
+                    int serviceClass = (Integer) action._params.get(2);
+                    int[] info = findCallBarringInfo(infolist, condition, serviceClass);
+                    // Find the call barring info for this action.
+                    if (info != null && info.length > 0) {
+                        if (mListenerEx != null) {
+                            mListenerEx.utConfigurationCallBarringResult(key, info);
+                            Log.d(TAG, "Success to query the call barring for condition["
+                                    + condition + "] and the state is: " + info[0]);
+                        }
+                    } else {
+                        if (mListenerEx != null) {
+                            mListenerEx.utConfigurationCallBarringFailed(
+                                    key, null, ImsReasonInfo.CODE_UT_NETWORK_ERROR);
+                            Log.w(TAG, "Failed to query the call barring for condition["
+                                    + condition + "] as can not find matched info.");
+                        }
                     }
-                } else {
-                    mListenerEx.utConfigurationCallBarringFailed(
-                            key, null, ImsReasonInfo.CODE_UT_NETWORK_ERROR);
                 }
 
                 mUTActions.remove(key);
                 mCmds.remove(key);
                 mHandleCmd = false;
             }
+
             // After action finished, we need try to start the next pending action.
             processPendingAction();
         }
@@ -1365,8 +1411,10 @@ public class ImsUtImpl extends IImsUt.Stub {
                 Integer key = mCmds.getFirst();
                 UTAction action = mUTActions.get(key);
                 if (action != null) {
-                    if (action._isExAction && mListenerEx != null) {
-                        mListenerEx.utConfigurationUpdated(ImsUtImpl.this, key);
+                    if (action._isExAction) {
+                        if (mListenerEx != null) {
+                            mListenerEx.utConfigurationUpdated(ImsUtImpl.this, key);
+                        }
                     } else if (mListener != null) {
                         mListener.utConfigurationUpdated(ImsUtImpl.this, key);
                     }
@@ -1405,6 +1453,9 @@ public class ImsUtImpl extends IImsUt.Stub {
     private class UTAction extends PendingAction {
         public int _timeoutMillis;
         public boolean _isExAction;
+        public boolean _needFeedback;
+        public Integer _key;
+        public UTAction _relateUTAction;
 
         public UTAction(String name, int action, int timeout, Object... params) {
             this(false, name, action, timeout, params);
@@ -1412,9 +1463,16 @@ public class ImsUtImpl extends IImsUt.Stub {
 
         public UTAction(boolean isExAction, String name, int action, int timeout,
                 Object... params) {
+            this(true, isExAction, name, action, timeout, null, params);
+        }
+
+        public UTAction(boolean needFeedback, boolean isExAction, String name, int action,
+                int timeout, UTAction relateAction, Object... params) {
             super(name, action, params);
             _timeoutMillis = timeout;
             _isExAction = isExAction;
+            _needFeedback = needFeedback;
+            _relateUTAction = relateAction;
         }
     }
 
