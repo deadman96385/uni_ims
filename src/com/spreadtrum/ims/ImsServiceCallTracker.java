@@ -958,4 +958,15 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     }
 
 
+    public boolean isAllCallsActive(){
+        synchronized(mSessionList){
+            for(Iterator<Map.Entry<String, ImsCallSessionImpl>> it = mSessionList.entrySet().iterator(); it.hasNext();){
+                Map.Entry<String, ImsCallSessionImpl> e = it.next();
+                if(!e.getValue().isActiveCall()){
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 }

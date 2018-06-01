@@ -5,6 +5,7 @@ import android.telephony.ims.ImsCallForwardInfo;
 import android.telephony.ims.ImsReasonInfo;
 import android.telephony.ims.ImsSsInfo;
 import android.telephony.ims.ImsSsData;
+import com.android.internal.telephony.uicc.IsimRecords;
 import com.android.ims.ImsManager;
 import com.android.ims.internal.IImsUt;
 import com.android.ims.internal.IImsUtListener;
@@ -18,7 +19,6 @@ import com.spreadtrum.ims.vowifi.ImsUtImpl;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import com.android.internal.telephony.Phone;
-//import android.telephony.TelephonyManagerEx;
 import android.util.Log;
 import com.android.ims.internal.IImsUtListenerEx;
 import com.android.internal.telephony.CommandsInterface;
@@ -476,11 +476,14 @@ public class ImsUtProxy extends IImsUt.Stub {
      */
     public void setListener(IImsUtListener listener) {
         mListener = listener;
-        /*TODO:
+
         TelephonyManager tm = TelephonyManager.from(mContext);
         String carrier = tm.getSimOperatorNumericForPhone(mPhone.getPhoneId());
-        TelephonyManagerEx tmEx = TelephonyManagerEx.from(mContext);
-        String impi = tmEx.getIsimImpi(mPhone.getSubId());
+        String impi = null;
+        IsimRecords isim = mPhone.getIsimRecords();
+        if (isim != null) {
+            impi = isim.getIsimImpi();
+        }
         log("listener impi = " + impi + ", carrier = " + carrier);
         if (!TextUtils.isEmpty(impi)) {
             int indexMCC = impi.indexOf("mcc");
@@ -500,7 +503,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         if (!TextUtils.isEmpty(carrier)) {
             getUTConfig(carrier);
         }
-        */
+
         try {
             if (isVowifiUtEnable()) {
                 mVoWifiUtImpl.setListener(mImsUtListener);
@@ -718,11 +721,13 @@ public class ImsUtProxy extends IImsUt.Stub {
 
     public void setListenerEx(IImsUtListenerEx listenerEx) {
         mListenerEx = listenerEx;
-        /*TODO:
         TelephonyManager tm = TelephonyManager.from(mContext);
         String carrier = tm.getSimOperatorNumericForPhone(mPhone.getPhoneId());
-        TelephonyManagerEx tmEx = TelephonyManagerEx.from(mContext);
-        String impi = tmEx.getIsimImpi(mPhone.getSubId());
+        String impi = null;
+        IsimRecords isim = mPhone.getIsimRecords();
+        if (isim != null) {
+            impi = isim.getIsimImpi();
+        }
         log("listenerEx impi = " + impi + ", carrier = " + carrier);
         if (!TextUtils.isEmpty(impi)) {
             int indexMCC = impi.indexOf("mcc");
@@ -742,7 +747,6 @@ public class ImsUtProxy extends IImsUt.Stub {
         if (!TextUtils.isEmpty(carrier)) {
             getUTConfig(carrier);
         }
-        */
         log("setListenerEx");
         if (isVowifiUtEnable()) {
             mVoWifiUtImpl.setListenerEx(mImsUtListenerExBinder);
