@@ -333,8 +333,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                 synchronized(mPendingSessionList) {
                     int index = -1;
                     for(int j=0;j<mPendingSessionList.size();j++){
-                        if (imsDc.state == ImsDriverCall.State.DIALING || imsDc.state ==ImsDriverCall.State.ALERTING
-                                || (!imsDc.isMT && imsDc.state ==ImsDriverCall.State.ACTIVE)) {
+                        if ((imsDc.state == ImsDriverCall.State.DIALING || imsDc.state == ImsDriverCall.State.ALERTING
+                                || (!imsDc.isMT && imsDc.state == ImsDriverCall.State.ACTIVE)) && !isConferenceMember(imsDc)) {
                             ImsCallSessionImpl session = mPendingSessionList.get(j);
                             if(session.getState() == ImsCallSession.State.INVALID){//SPRD: add for bug663110
                                 Log.d(TAG, "PendingSession found session is INVALID remove");
@@ -832,6 +832,16 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             mImsService.onVideoStateChanged(videoState);
         }
     }
+
+    /*SPRD:add for bug878546 @{*/
+    public boolean isConferenceMember(ImsDriverCall dc) {
+        boolean isSame = false;
+        if (mConferenceSession != null && dc.isMpty) {
+            isSame = mConferenceSession.inSameConference(dc);
+            Log.d(TAG, "isConferenceMember->isSame: " + isSame);
+        }
+        return isSame;
+    }/*@}*/
 
     /* SPRD: add for bug676047 @{ */
     public boolean isHasInLocalConferenceSession(){
