@@ -44,7 +44,7 @@ import android.os.SystemProperties;
 public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     private static final String TAG = ImsServiceCallTracker.class.getSimpleName();
     private static final boolean DBG_POLL = false;
-    private static final int POLL_DELAY_MSEC = 100;
+    private static final int POLL_DELAY_MSEC = 200;
 
     private static final int EVENT_CALL_STATE_CHANGE             = 1;
     private static final int EVENT_GET_CURRENT_CALLS             = 2;
