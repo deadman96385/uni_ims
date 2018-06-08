@@ -265,7 +265,7 @@ public class VTManagerUtils {
     }
 
     /* SPRD: Add feature of low battery for Reliance @{ */
-    public static AlertDialog showLowBatteryMediaChangeAlert(final Context context, final int id, final ImsRIL ril) {
+    public static AlertDialog showLowBatteryMediaChangeAlert(final Context context, final int id, final ImsRIL ril, final int mediaRequest) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(context.getString(R.string.low_battery_warning_title));
         builder.setMessage(context.getString(R.string.low_battery_warning_message));
@@ -283,7 +283,7 @@ public class VTManagerUtils {
                 new android.content.DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         if (ril != null) {
-                            ril.requestVolteCallMediaChange(ImsRIL.MEDIA_REQUEST_DEFAULT, id, null);
+                            ril.requestVolteCallMediaChange(mediaRequest, id, null);
                             log("Battery is low,user choose to downgrade to voice call.");
                         }
                         if (dialog != null) {

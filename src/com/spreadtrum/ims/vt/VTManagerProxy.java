@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.AsyncResult;
+import android.os.BatteryManager;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
@@ -171,13 +172,19 @@ public class VTManagerProxy{
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(Intent.ACTION_BATTERY_LOW) /*TODO: && TelephonyManagerEx.isBatteryLow()*/) {
+            if (intent.getAction().equals(Intent.ACTION_BATTERY_CHANGED) /*TODO: && TelephonyManagerEx.isBatteryLow()*/) {
+                int batteryLevel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
+                log("batteryLevel =" + batteryLevel);
+                if(batteryLevel == 15 && mActiveImsCallSessionImpl != null
+                        && mActiveImsCallSessionImpl.mImsDriverCall.state == ImsDriverCall.State.ACTIVE){
                     if (mVolteMediaDialog != null) {
                         mVolteMediaDialog.dismiss();
                     }
                     mVolteMediaDialog = VTManagerUtils.showLowBatteryMediaChangeAlert(context,
-                            (mActiveImsCallSessionImpl != null)? Integer.parseInt(mActiveImsCallSessionImpl.getCallId()) : 0,mRIL);
+                            (mActiveImsCallSessionImpl != null)? Integer.parseInt(mActiveImsCallSessionImpl.getCallId()) : 0,mRIL,
+                            (mActiveImsCallSessionImpl != null)? mActiveImsCallSessionImpl.getMediaRequest() : ImsRIL.MEDIA_REQUEST_DEFAULT);
                     mVolteMediaDialog.show();
+                }
             }
         }
     };
@@ -185,7 +192,7 @@ public class VTManagerProxy{
     public void registerForLowBatteryNotify(ImsRIL ril) {
         mRIL = ril;
         mIntentFilter = new IntentFilter();
-        mIntentFilter.addAction(Intent.ACTION_BATTERY_LOW);
+        mIntentFilter.addAction(Intent.ACTION_BATTERY_CHANGED);
         mContext.registerReceiver(mReceiver, mIntentFilter);
         mIsBroadcastReceiverRegisterd = true;
         mRIL.registerForImsVideoQos(mHandler, EVENT_IMS_VIDEO_QOS, null);

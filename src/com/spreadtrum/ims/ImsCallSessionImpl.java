@@ -1869,6 +1869,19 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mIsPendingTerminate = false;
     }
     /* @} */
+    public int getMediaRequest(){
+        int mediaRequest = ImsRIL.MEDIA_REQUEST_DEFAULT;
+        if(mImsCallProfile != null){
+            if(mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT){
+                mediaRequest = ImsRIL.MEDIA_REQUEST_VIDEO_BIDIRECTIONAL_DOWNGRADE_AUDIO;
+            }else if(mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT_TX){
+                mediaRequest = ImsRIL.MEDIA_REQUEST_VIDEO_TX_DOWNGRADE_AUDIO;
+            }else if(mImsCallProfile.mCallType == ImsCallProfile.CALL_TYPE_VT_RX){
+                mediaRequest = ImsRIL.MEDIA_REQUEST_VIDEO_RX_DOWNGRADE_AUDIO;
+            }
+        }
+        return mediaRequest;
+    }
 
     private boolean isMtConference(ImsDriverCall dc){
         if(mImsDriverCall == null || dc == null || mImsConferenceState == null){

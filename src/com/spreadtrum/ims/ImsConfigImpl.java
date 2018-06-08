@@ -161,7 +161,7 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      * @param senderRxr
      */
     public ImsConfigImpl(ImsRIL ci,Context context,ImsServiceImpl imsService, int imsserviceid) {
-        if (SystemProperties.getBoolean("persist.sys.videodefault", false)) {
+        if (SystemProperties.getInt("persist.sys.ims.vt_resolution", -1) == VT_RESOLUTION_QVGA_REVERSED_15) {
             mDefaultVtResolution = VT_RESOLUTION_QVGA_REVERSED_15;
         }
         mCi = ci;
