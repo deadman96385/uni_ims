@@ -38,7 +38,7 @@ import com.spreadtrum.ims.ImsRIL;
 import com.android.internal.telephony.Phone;
 import android.telephony.RadioAccessFamily;
 import vendor.sprd.hardware.radio.V1_0.CallForwardInfoUri;
-//import com.android.internal.telephony.dataconnection.DcNetworkManager;
+import com.android.internal.telephony.dataconnection.DcNetworkManager;
 import android.os.Bundle;
 import android.telephony.SubscriptionManager;
 import static com.android.internal.telephony.CommandsInterface.CF_ACTION_DISABLE;
@@ -108,14 +108,14 @@ public class ImsUtImpl extends IImsUt.Stub {
     private IImsUtListenerEx mImsUtListenerEx;
     private int mRequestId = -1;
     private Object mLock = new Object();
-    //TODO:private DcNetworkManager mDcNetworkManager = null;
+    private DcNetworkManager mDcNetworkManager = null;
     private List<Integer> mRequestedNetwork = new ArrayList<Integer>();
     public ImsUtImpl(ImsRIL ci,Context context, Phone phone, ImsServiceImpl service){
         mCi = ci;
         mContext = context;
         mHandler = new ImsHandler(mContext.getMainLooper(), (IImsUt)this);
         mPhone = phone;
-        //TODO:mDcNetworkManager = new DcNetworkManager(mContext);
+        mDcNetworkManager = new DcNetworkManager(mContext);
         mImsServiceImpl = service;
     }
 
@@ -1060,14 +1060,14 @@ public class ImsUtImpl extends IImsUt.Stub {
             return;
         }
         int subId = mPhone.getSubId();
-        //TODO:mDcNetworkManager.requestNetwork(subId, request);
+        mDcNetworkManager.requestNetwork(subId, request);
     }
 
     private void releaseNetwork(int utEnabled) {
         if (utEnabled == 0) {
             return;
         }
-        //TODO:mDcNetworkManager.releaseNetworkRequest();
+        mDcNetworkManager.releaseNetworkRequest();
     }
 
     private void onRequestNetworkDone(Bundle bundle) {

@@ -112,6 +112,31 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         /* @} */
     }
 
+    private String messageToString(int message){
+        switch(message){
+            case EVENT_CALL_STATE_CHANGE:
+                return "EVENT_CALL_STATE_CHANGE";
+            case EVENT_GET_CURRENT_CALLS:
+                return "EVENT_GET_CURRENT_CALLS";
+            case EVENT_OPERATION_COMPLETE:
+                return "EVENT_OPERATION_COMPLETE";
+            case EVENT_POLL_CALLS_RESULT:
+                return "EVENT_POLL_CALLS_RESULT";
+            case EVENT_IMS_CALL_STATE_CHANGED:
+                return "EVENT_IMS_CALL_STATE_CHANGED";
+            case EVENT_POLL_CURRENT_CALLS:
+                return "EVENT_POLL_CURRENT_CALLS";
+            case EVENT_POLL_CURRENT_CALLS_RESULT:
+                return "EVENT_POLL_CURRENT_CALLS_RESULT";
+            case EVENT_GET_CURRENT_CALLS_DELAY:
+                return "EVENT_GET_CURRENT_CALLS_DELAY";
+            case EVENT_RADIO_NOT_AVAILABLE:
+                return "EVENT_RADIO_NOT_AVAILABLE";
+            default:
+                return "unkwon message:"+message;
+        }
+    }
+
     /**
      * Used to listen to events.
      */
@@ -122,7 +147,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         @Override
         public void handleMessage(Message msg) {
             AsyncResult ar = (AsyncResult) msg.obj;
-            Log.i(TAG, "handleMessage: "+msg.what);
+            Log.i(TAG, "handleMessage: "+messageToString(msg.what));
             switch (msg.what) {
                 case EVENT_CALL_STATE_CHANGE:
                     removeMessages(EVENT_POLL_CURRENT_CALLS);
@@ -208,6 +233,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     }
 
     public ImsCallSessionImpl createCallSession(ImsCallProfile profile) {
+        mHandler.removeMessages(EVENT_GET_CURRENT_CALLS_DELAY);
         ImsCallSessionImpl session = new ImsCallSessionImpl(profile, mContext, mCi, this);
         session.addListener(this);
         synchronized(mPendingSessionList) {
@@ -431,7 +457,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                     int index = -1;
                     for(int j=0;j<mPendingSessionList.size();j++){
                         if (imsDc.state == ImsDriverCall.State.DIALING || imsDc.state ==ImsDriverCall.State.ALERTING
-                                || (!imsDc.isMT && imsDc.state ==ImsDriverCall.State.ACTIVE)) {
+                                || (!imsDc.isMT && imsDc.state ==ImsDriverCall.State.ACTIVE) && !isConferenceMember(imsDc)) {
                             ImsCallSessionImpl session = mPendingSessionList.get(j);
                             if(session.getState() == ImsCallSession.State.INVALID){//SPRD: add for bug663110
                                 Log.d(TAG, "PendingSession found session is INVALID remove");
@@ -968,5 +994,15 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             }
         }
         return true;
+    }
+
+
+    public boolean isConferenceMember(ImsDriverCall dc) {
+        boolean isSame = false;
+        if (mConferenceSession != null && dc.isMpty) {
+            isSame = mConferenceSession.inSameConference(dc);
+            Log.d(TAG, "isConferenceMember->isSame: " + isSame);
+        }
+        return isSame;
     }
 }

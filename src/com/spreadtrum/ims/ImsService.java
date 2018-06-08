@@ -1286,7 +1286,7 @@ public class ImsService extends Service {
         /*TODO:if(mTelephonyManagerEx.getDataEnabledDuringVolteCall()) {
             mMakeCallPrimaryCardServiceId = ImsRegister.getPrimaryCard(mPhoneCount);
         }*/
-        return service.createCallSessionInterface(serviceId, profile, listener);
+        return service.createCallSessionInternal(profile);
     }
 
     public IImsCallSession getPendingCallSessionInternal(int serviceId,

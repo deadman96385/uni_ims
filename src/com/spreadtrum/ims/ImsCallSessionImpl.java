@@ -539,6 +539,44 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
     }
 
+    private String messageToString(int message){
+        switch(message){
+            case ACTION_COMPLETE_DIAL:
+                return "ACTION_COMPLETE_DIAL";
+            case ACTION_COMPLETE_HOLD:
+                return "ACTION_COMPLETE_HOLD";
+            case ACTION_COMPLETE_RESUME:
+                return "ACTION_COMPLETE_RESUME";
+            case ACTION_COMPLETE_ACCEPT:
+                return "ACTION_COMPLETE_ACCEPT";
+            case ACTION_COMPLETE_HANGUP:
+                return "ACTION_COMPLETE_HANGUP";
+            case ACTION_COMPLETE_REJECT:
+                return "ACTION_COMPLETE_REJECT";
+            case ACTION_COMPLETE_DEFLECT:
+                return "ACTION_COMPLETE_DEFLECT";
+            case ACTION_COMPLETE_MERGE:
+                return "ACTION_COMPLETE_MERGE";
+            case ACTION_COMPLETE_CONFERENCE:
+                return "ACTION_COMPLETE_CONFERENCE";
+            case ACTION_COMPLETE_ADD_PARTICIPANT:
+                return "ACTION_COMPLETE_ADD_PARTICIPANT";
+            case ACTION_COMPLETE_RINGBACK_TONE:
+                return "ACTION_COMPLETE_RINGBACK_TONE";
+            case ACTION_COMPLETE_REMOVE_PARTICIPANT:
+                return "ACTION_COMPLETE_REMOVE_PARTICIPANT";
+            case ACTION_COMPLETE_GET_CALL_FAIL_CAUSE:
+                return "ACTION_COMPLETE_GET_CALL_FAIL_CAUSE";
+            case ACTION_COMPLETE_SEND_USSD:
+                return "ACTION_COMPLETE_SEND_USSD";
+            case ACTION_COMPLETE_ACCEPT_AS_AUDIO:
+                return "ACTION_COMPLETE_ACCEPT_AS_AUDIO";
+            default:
+                return "unkwon message:"+message;
+        }
+    }
+
+
     private class ImsHandler extends Handler {
         private ImsCallSessionImpl mImsCallSessionImpl;
         ImsHandler(Looper looper,ImsCallSessionImpl imsCallSessionImpl) {
@@ -548,17 +586,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         @Override
         public void handleMessage(Message msg) {
             AsyncResult ar = (AsyncResult) msg.obj;
-            Log.i(TAG,"handleMessage->message:"+msg.what);
+            Log.i(TAG,"handleMessage->message:"+ messageToString(msg.what));
             switch (msg.what) {
                 case ACTION_COMPLETE_DIAL:
                     if (ar != null && ar.exception != null && mIImsCallSessionListener != null) {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_DIAL error!");
-                        try{
-                            mIImsCallSessionListener.callSessionInitiatedFailed(
-                                    new ImsReasonInfo(ImsReasonInfo.CODE_UNSPECIFIED, 0,"Dial Failed"));
-                        } catch(RemoteException e){
-                            e.printStackTrace();
-                        }
+                        mCi.getLastCallFailCause(mHandler.obtainMessage(ACTION_COMPLETE_GET_CALL_FAIL_CAUSE,this));
                     }
                     //SPRD: add for bug525777
                     mImsServiceCallTracker.pollCallsAfterOperationComplete();
@@ -1715,6 +1748,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 try {
                     if (mIImsCallSessionListener != null) {
                         mIImsCallSessionListener.callSessionHoldReceived(mImsCallProfile);
+                        mIImsCallSessionListener.callSessionUpdated(mImsCallProfile);
                     }
                 } catch (RemoteException e) {
                     e.printStackTrace();
@@ -1729,6 +1763,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 try {
                     if (mIImsCallSessionListener != null) {
                         mIImsCallSessionListener.callSessionResumeReceived(mImsCallProfile);
+                        mIImsCallSessionListener.callSessionUpdated(mImsCallProfile);
                     }
                 } catch (RemoteException e) {
                     e.printStackTrace();

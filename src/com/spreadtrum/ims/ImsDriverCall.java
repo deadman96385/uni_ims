@@ -282,7 +282,7 @@ public class  ImsDriverCall extends DriverCall{
             numberPresentation = dc.numberPresentation;
             hasUpdate = true;
         }
-        if(name != dc.name){
+        if(!equalsHandlesNulls(name,dc.name)){
             name = dc.name;
             hasUpdate = true;
         }
@@ -302,7 +302,7 @@ public class  ImsDriverCall extends DriverCall{
             negStatus = dc.negStatus;
             hasUpdate = true;
         }
-        if(mediaDescription != dc.mediaDescription){
+        if(!equalsHandlesNulls(mediaDescription,dc.mediaDescription)){
             mediaDescription = dc.mediaDescription;
             hasUpdate = true;
         }
@@ -328,6 +328,10 @@ public class  ImsDriverCall extends DriverCall{
         }
 
         return hasUpdate;
+    }
+
+    public boolean equalsHandlesNulls(Object a, Object b) {
+        return (a == null) ? (b == null) : a.equals (b);
     }
 
     @Override

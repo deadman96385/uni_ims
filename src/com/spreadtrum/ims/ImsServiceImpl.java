@@ -197,17 +197,17 @@ public class ImsServiceImpl extends MmTelFeature {
     @Override
     public IImsCallSession createCallSessionInterface(ImsCallProfile profile) {
         log("createCallSessionInterface->profile:" + profile);
-        if(mImsServiceCallTracker != null){
-            return mImsServiceCallTracker.createCallSession(profile);
-        } else {
-            return null;
-        }
+        return mImsService.createCallSessionInternal(mServiceId,profile,null);
     }
 
     public IImsCallSession createCallSessionInterface(int serviceId, ImsCallProfile profile, IImsCallSessionListener listener) {
         log("createCallSessionInterface->profile:" + profile);
+        return createCallSessionInternal(profile);
+    }
+
+    public IImsCallSession createCallSessionInternal(ImsCallProfile profile) {
         if(mImsServiceCallTracker != null){
-            return mImsServiceCallTracker.createCallSession(profile, listener);
+            return mImsServiceCallTracker.createCallSession(profile);
         } else {
             return null;
         }
