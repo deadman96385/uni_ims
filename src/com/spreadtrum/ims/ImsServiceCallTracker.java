@@ -126,14 +126,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                 case EVENT_GET_CURRENT_CALLS:
                 case EVENT_IMS_CALL_STATE_CHANGED:
                 case EVENT_RADIO_NOT_AVAILABLE:
-                    if(hasMessages(POLL_DELAY_MSEC) || hasMessages(EVENT_GET_CURRENT_CALLS_DELAY)){
-                        removeMessages(POLL_DELAY_MSEC);
-                        removeMessages(EVENT_GET_CURRENT_CALLS_DELAY);
-                        sendEmptyMessageDelayed(EVENT_GET_CURRENT_CALLS_DELAY,POLL_DELAY_MSEC);
-                    } else {
-                        sendEmptyMessageDelayed(POLL_DELAY_MSEC,POLL_DELAY_MSEC);
-                        pollCallsWhenSafe();
-                    }
+                    pollCallsWhenSafe();
                     break;
                 case EVENT_OPERATION_COMPLETE:
                     operationComplete();
@@ -234,6 +227,11 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             if (checkNoOperationsPending()) {
                 if (mLastRelevantPoll != null) {
                     Log.i(TAG, "pollCallsWhenSafe: mLastRelevantPoll " + mLastRelevantPoll.what);
+                    if (mLastRelevantPoll.what == EVENT_POLL_CALLS_RESULT) {
+                        pollCallsAfterDelay();
+                        return;
+                    }
+
                 }
                 mLastRelevantPoll = mHandler.obtainMessage(EVENT_POLL_CALLS_RESULT);
                 mCi.getImsCurrentCalls  (mLastRelevantPoll);
@@ -285,6 +283,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     }
 
     protected void pollCallsAfterDelay() {
+        Log.i(TAG, "pollCallsAfterDelay");
+
         Message msg = mHandler.obtainMessage();
 
         msg.what = EVENT_IMS_CALL_STATE_CHANGED;
