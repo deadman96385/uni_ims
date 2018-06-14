@@ -944,7 +944,7 @@ public class ImsServiceImpl extends MMTelFeature {
         return mImsRegister;
     }
 
-    public void notifyImsRegister(boolean isRegistered){
+    public void notifyImsRegister(boolean isRegistered, boolean isWifiRegistered){   // SPRD: Modify for bug880865
         try{
             // SPRD: 730973
             if(isRegistered){
@@ -971,9 +971,15 @@ public class ImsServiceImpl extends MMTelFeature {
                 }
             }
             Log.i(TAG,"notifyImsRegister->isRegistered:" + isRegistered
+                    + " isWifiRegistered:"+isWifiRegistered
                     + " isImsEnabled():"+mImsService.isImsEnabled()
                     + " mImsService.isVoLTEEnabled():"+mImsService.isVoLTEEnabled()
                     + " mImsService.isVoWifiEnabled():"+mImsService.isVoWifiEnabled());
+
+            // SPRD: Add for bug880865
+            TelephonyManager.setTelephonyProperty(mServiceId-1, "gsm.sys.vowifi.state",
+                                                  isWifiRegistered ? "1" :"0");
+
             Log.i(TAG,"notifyImsRegister->mServiceState:" + isRegistered);
             mImsRegister.notifyImsStateChanged(isRegistered);
         } catch (RemoteException e){
