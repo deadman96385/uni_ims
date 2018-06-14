@@ -8,6 +8,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
+import android.os.SystemProperties;
 import android.preference.PreferenceManager;
 import android.telecom.VideoProvider;
 import android.telecom.VideoProfile;
@@ -24,10 +25,13 @@ import com.spreadtrum.ims.R;
 import com.spreadtrum.ims.vowifi.Utilities.Camera;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.VideoQuality;
+import com.spreadtrum.ims.vowifi.Utilities.VideoType;
 
 public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private static final String TAG =
             Utilities.getTag(ImsVideoCallProviderImpl.class.getSimpleName());
+
+    private static final String PROP_KEY_SUPPORT_TXRX_UPDATE = "persist.sys.txrx_vt";
 
     private Context mContext;
 
@@ -60,6 +64,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private static final int MSG_SEND_MODIFY_REQUEST = 8;
     private static final int MSG_SET_PAUSE_IMAGE = 9;
     private static final int MSG_SEND_MODIFY_RESPONSE = 10;
+    private static final int MSG_SEND_MODIFY_SUCCESS_RESPONSE = 11;
     private class MyHandler extends Handler {
         private int mRotateRetryTimes = 0;
 
@@ -204,8 +209,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                         break;
                     }
                     case MSG_SEND_MODIFY_REQUEST: {
-                        boolean isVideo = (Boolean) msg.obj;
-                        if (mCallSession.sendModifyRequest(isVideo) == Result.FAIL) {
+                        if (mCallSession.sendModifyRequest(msg.arg1) == Result.FAIL) {
                             Log.w(TAG, "Can not send the modify request now.");
                             receiveSessionModifyResponse(
                                     VideoProvider.SESSION_MODIFY_REQUEST_FAIL, null, null);
@@ -220,6 +224,15 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                         break;
                     }
                     case MSG_SEND_MODIFY_RESPONSE: {
+                        int res = mCallSession.sendModifyResponse(msg.arg1);
+                        if (res == Result.FAIL) {
+                            Log.w(TAG, "Can not send the modify response now.");
+                            receiveSessionModifyResponse(
+                                    VideoProvider.SESSION_MODIFY_REQUEST_FAIL, null, null);
+                        }
+                        break;
+                    }
+                    case MSG_SEND_MODIFY_SUCCESS_RESPONSE: {
                         VideoProfile profile = (VideoProfile) msg.obj;
                         receiveSessionModifyResponse(
                                 VideoProvider.SESSION_MODIFY_REQUEST_SUCCESS, profile, profile);
@@ -313,41 +326,80 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
             return;
         }
 
-        boolean wasVideo = VideoProfile.isVideo(fromProfile.getVideoState());
-        boolean isVideo = VideoProfile.isVideo(toProfile.getVideoState());
-        if (wasVideo != isVideo) {
-            // For video type changed, we need send the modify request to server.
-            mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_REQUEST, isVideo));
-        } else {
-            // If the video type do not changed. we need handle the transmission changed.
-            boolean wasTrans = VideoProfile.isTransmissionEnabled(fromProfile.getVideoState());
-            boolean isTrans = VideoProfile.isTransmissionEnabled(toProfile.getVideoState());
-            if (wasTrans == isTrans) {
-                // FIXME: There must be some error in telephony, when the user press
-                //        "resume video", the wasTrans is same as isTrans.
-                Log.w(TAG, "The fromProfile is same as the toProfile's trans. It's abnormal.");
-                Log.w(TAG, "Ignore this abnormal, change the status as toProfile.");
-            }
+        int oldState = fromProfile.getVideoState();
+        int newState = toProfile.getVideoState();
+        boolean wasPaused = VideoProfile.isPaused(oldState);
+        boolean isPaused = VideoProfile.isPaused(newState);
+        Log.d(TAG, "oldState:" + oldState + ", newState:" + newState + ", wasPaused:" + wasPaused
+                + ", isPaused:" + isPaused);
+        if (oldState != newState && !wasPaused && !isPaused) {
+            if (!isSupportTXRXUpdate()
+                    && oldState > VideoProfile.STATE_AUDIO_ONLY
+                    && newState > VideoProfile.STATE_AUDIO_ONLY) {
+                Log.d(TAG, "As do not support TXRX update, handle as pause state change action.");
+                // Need handle the transmission changed as pause state change.
+                boolean wasTrans = VideoProfile.isTransmissionEnabled(oldState);
+                boolean isTrans = VideoProfile.isTransmissionEnabled(newState);
+                if (wasTrans == isTrans) {
+                    // FIXME: There must be some error in telephony, when the user press
+                    //        "resume video", the wasTrans is same as isTrans.
+                    Log.w(TAG, "The fromProfile is same as the toProfile's trans. It's abnormal.");
+                    Log.w(TAG, "Ignore this abnormal, change the status as toProfile.");
+                }
 
-            // For transmission changed, needn't send the modify request. So give the
-            // response immediately.
-            if (isTrans) {
-                // It means start the video transmission. And "setCamera" will start the
-                // camera, so we need request the camera capabilities
-                Log.d(TAG, "Start the video transmission successfully.");
-                mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_RESPONSE, toProfile));
+                // For pause state changed, needn't send the modify request. So give the
+                // response immediately.
+                if (isTrans) {
+                    // It means start the video transmission. And "setCamera" will start the
+                    // camera, so we need request the camera capabilities
+                    Log.d(TAG, "Start the video transmission successfully.");
+                    mHandler.sendMessage(
+                            mHandler.obtainMessage(MSG_SEND_MODIFY_SUCCESS_RESPONSE, toProfile));
+                } else {
+                    // It means stop the video transmission. And this action will be handled
+                    // when the camera set to null.
+                    Log.d(TAG, "Stop the video transmission successfully.");
+                    mHandler.sendMessage(
+                            mHandler.obtainMessage(MSG_SEND_MODIFY_SUCCESS_RESPONSE, toProfile));
+                }
             } else {
-                // It means stop the video transmission. And this action will be handled
-                // when the camera set to null.
-                Log.d(TAG, "Stop the video transmission successfully.");
-                mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_RESPONSE, toProfile));
+                // For video type update, we need send the modify request to server.
+                int nativeVideoType = VideoType.getNativeVideoType(toProfile);
+                Message msg = mHandler.obtainMessage(MSG_SEND_MODIFY_REQUEST);
+                msg.arg1 = nativeVideoType;
+                mHandler.sendMessage(msg);
             }
+        } else if (wasPaused != isPaused) {
+            // We'd like to handle it as pause/start the video.
+            Log.d(TAG, "The new video paused state changed to " + isPaused + ", DO NOT HANDLE!");
+        } else {
+            Log.e(TAG, "There isn't any update for the video profile. Please check!!!");
         }
     }
 
     @Override
     public void onSendSessionModifyResponse(VideoProfile responseProfile) {
-        Log.d(TAG, "On send session modify response. Do not handle.");
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "On send session modify response. response profile: " + responseProfile);
+        }
+
+        int nativeVideoType = VideoType.getNativeVideoType(responseProfile);
+        mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_RESPONSE, nativeVideoType, -1));
+
+        switch (nativeVideoType) {
+            case VideoType.NATIVE_VIDEO_TYPE_NONE:
+                stopAll();
+                break;
+            case VideoType.NATIVE_VIDEO_TYPE_RECEIVED_ONLY:
+                stopTransmission();
+                break;
+            case VideoType.NATIVE_VIDEO_TYPE_BROADCAST_ONLY:
+                stopReception();
+                break;
+            case VideoType.NATIVE_VIDEO_TYPE_BIDIRECT:
+                Log.d(TAG, "Response as normal video call, do nothing.");
+                break;
+        }
     }
 
     @Override
@@ -470,17 +522,28 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
         return mWaitForModifyResponse;
     }
 
-    public void stopAll() {
+    public void stopReception() {
         synchronized (mContext) {
-            Log.d(TAG, "Stop all the video action.");
+            Log.d(TAG, "Stop the reception.");
             if (mDisplaySurface != null) {
                 mHandler.sendEmptyMessage(MSG_STOP_REMOTE_RENDER);
             }
+        }
+    }
 
+    public void stopTransmission() {
+        synchronized (mContext) {
+            Log.d(TAG, "Stop the transmission.");
             if (mCameraId != null) {
                 mHandler.sendEmptyMessage(MSG_STOP_CAMERA);
             }
         }
+    }
+
+    public void stopAll() {
+        Log.d(TAG, "Stop all the video action.");
+        stopReception();
+        stopTransmission();
     }
 
     public void updateVideoQualityLevel(int newLevel) {
@@ -501,6 +564,10 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                 }
             }
         }
+    }
+
+    private boolean isSupportTXRXUpdate() {
+        return SystemProperties.getBoolean(PROP_KEY_SUPPORT_TXRX_UPDATE, false);
     }
 
     private boolean cameraCapabilitiesEquals(CameraCapabilities capabilities) {

@@ -35,7 +35,7 @@ import com.spreadtrum.ims.vowifi.Utilities.Camera;
 import com.spreadtrum.ims.vowifi.Utilities.PendingAction;
 import com.spreadtrum.ims.vowifi.Utilities.Result;
 import com.spreadtrum.ims.vowifi.Utilities.SRVCCSyncInfo;
-import com.spreadtrum.ims.vowifi.Utilities.VideoQuality;
+import com.spreadtrum.ims.vowifi.Utilities.VideoType;
 import com.spreadtrum.ims.vowifi.VoWifiCallManager.ICallChangedListener;
 import com.spreadtrum.vowifi.service.IVoWifiSerService;
 
@@ -63,6 +63,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
     private boolean mIsConfHost = false;
     private boolean mAudioStart = false;
     private boolean mIsEmergency = false;
+    private boolean mIsTerminating = false;
 
     private Context mContext;
     private Location mSosLocation;
@@ -701,6 +702,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
 
         // Terminate the call
+        mIsTerminating = true;
         terminateCall(reason);
 
         // As user terminate the call, we need to check if there is conference call.
@@ -930,7 +932,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             return;
         }
 
-        int res = mICall.sessUpdate(mCallId, true, Utilities.isVideoCall(callType));
+        int res = mICall.sessUpdate(mCallId, VideoType.getNativeVideoType(callType));
         if (res == Result.FAIL) {
             handleUpdateActionFailed("Native update result is " + res);
         } else {
@@ -1721,8 +1723,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
     }
 
-    public int sendModifyRequest(boolean isVideo) {
-        if (Utilities.DEBUG) Log.i(TAG, "Try to send the modify request, isVideo: " + isVideo);
+    public int sendModifyRequest(int newVideoType) {
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "Try to send the modify request, new video type: " + newVideoType);
+        }
 
         if (mICall == null) {
             Log.e(TAG, "Can not send the modify request as call interface is null.");
@@ -1730,7 +1734,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
 
         try {
-            int res = mICall.sendSessionModifyRequest(mCallId, true, isVideo);
+            int res = mICall.sendSessionModifyRequest(mCallId, newVideoType);
             if (res == Result.FAIL) {
                 Log.e(TAG, "Failed to send the modify request for the call: " + mCallId);
                 if (mListener != null) {
@@ -1740,6 +1744,24 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
             return res;
         } catch (RemoteException e) {
             Log.e(TAG, "Failed to send the modify request as catch RemoteException e: " + e);
+            return Result.FAIL;
+        }
+    }
+
+    public int sendModifyResponse(int videoType) {
+        if (Utilities.DEBUG) {
+            Log.i(TAG, "Send session modify response as video type is: " + videoType);
+        }
+
+        if (mICall == null) {
+            Log.e(TAG, "Can not send session modify response as call interface is null.");
+            return Result.FAIL;
+        }
+
+        try {
+            return mICall.sendSessionModifyResponse(mCallId, videoType);
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to send the modify response. e: " + e);
             return Result.FAIL;
         }
     }
@@ -1881,6 +1903,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         }
     }
 
+    public boolean isTerminating() {
+        return mIsTerminating;
+    }
+
     public void processNoResponseAction() {
         if (Utilities.DEBUG) Log.i(TAG, "Process no response action.");
 
@@ -1954,15 +1980,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
         // The vowifi service is not null, init the IMS call.
         mParticipants.add(callee);
 
-        // TODO: update the profile
         mCallProfile = profile;
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_OI, callee);
         mCallProfile.setCallExtra(ImsCallProfile.EXTRA_CNA, null);
-        // TODO: why not {@link ImsCallProfile#OIR_DEFAULT}
         mCallProfile.setCallExtraInt(
                 ImsCallProfile.EXTRA_CNAP, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
-        mCallProfile.setCallExtraInt(
-                ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
 
         startCall(callee);
     }
@@ -2003,16 +2025,24 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub implements Location
                     mCallProfile.getCallExtra(ImsCallProfile.EXTRA_ADDITIONAL_CALL_INFO));
             Log.d(TAG, "Start an emergency call.");
         }
-        id = mICall.sessCall(peerNumber, null, true, isVideoCall, false, mIsEmergency);
 
+        int clirMode =
+                mCallProfile.getCallExtraInt(ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_DEFAULT);
+        id = mICall.sessCall(
+                peerNumber, String.valueOf(clirMode), true, isVideoCall, false, mIsEmergency);
         Log.d(TAG, "Start a normal call, and get the call id: " + id);
 
         if (id == Result.INVALID_ID) {
             handleStartActionFailed("Native start the call failed.");
         } else {
             mCallId = id;
-            updateState(State.INITIATED);
             mIsAlive = true;
+            // FIXME: As {link ImsPhoneConnection#updateAddressDisplay} function removed
+            //        incoming call checking, so we need always set the EXTRA_OIR as
+            //        OIR_PRESENTATION_NOT_RESTRICTED used to display the phone number.
+            mCallProfile.setCallExtraInt(
+                    ImsCallProfile.EXTRA_OIR, ImsCallProfile.OIR_PRESENTATION_NOT_RESTRICTED);
+            updateState(State.INITIATED);
             startAudio();
 
             // Start action success, update the last call action as start.

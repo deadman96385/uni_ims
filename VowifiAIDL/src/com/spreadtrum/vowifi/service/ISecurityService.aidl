@@ -8,7 +8,7 @@ interface ISecurityService {
 
     void unregisterCallback(ISecurityServiceCallback callback);
 
-    int start(int type, int subId, String imsi, String hplmn, String vplmn, String imei);
+    int start(boolean isHandover, int type, int subId, String imsi, String hplmn, String vplmn, String imei);
 
     void stop(int sessionId, boolean forHandover);
 

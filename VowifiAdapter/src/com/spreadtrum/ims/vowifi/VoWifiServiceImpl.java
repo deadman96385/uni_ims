@@ -88,6 +88,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
 
     private ImsUtImpl mImsUt;
     private ImsEcbmImpl mImsEcbm;
+    private UtSyncManager mUtSyncMgr;
     private VoWifiCallManager mCallMgr;
     private VoWifiRegisterManager mRegisterMgr;
     private VoWifiSecurityManager mSecurityMgr;
@@ -135,7 +136,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     securityForceStop();
                     break;
                 case MSG_ATTACH:
-                    attachInternal();
+                    attachInternal((Boolean) msg.obj);
                     break;
                 case MSG_DEATTACH:
                     boolean forHandover = (Boolean) msg.obj;
@@ -222,7 +223,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                     break;
                 case ECBM_STEP_ATTACH_FOR_SOS:
                 case ECBM_STEP_ATTACH:
-                    attachInternal();
+                    attachInternal(false /* is not handover */);
                     break;
                 case ECBM_STEP_REGISTER_FOR_SOS:
                 case ECBM_STEP_REGISTER:
@@ -364,11 +365,15 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     }
 
     public void attach() {
-        mCmdAttachState = CMD_STATE_PROGRESS;
-        mHandler.sendEmptyMessage(MSG_ATTACH);
+        attach(false);
     }
 
-    private void attachInternal() {
+    public void attach(boolean isHandover) {
+        mCmdAttachState = CMD_STATE_PROGRESS;
+        mHandler.sendMessage(mHandler.obtainMessage(MSG_ATTACH, isHandover));
+    }
+
+    private void attachInternal(boolean isHandover) {
         // Before start attach process, need get the SIM account info.
         // We will always use the primary card to attach and register now.
         mSIMAccountInfo = SIMAccountInfo.generate();
@@ -381,7 +386,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         if (mEcbmStep == ECBM_STEP_ATTACH_FOR_SOS) {
             mSecurityMgr.attachForSos(mSIMAccountInfo);
         } else {
-            mSecurityMgr.attach(mSIMAccountInfo);
+            mSecurityMgr.attach(mSIMAccountInfo, isHandover);
         }
     }
 
@@ -607,6 +612,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             mCallMgr.registerListener(mCallListener);
             mRegisterMgr.registerListener(mRegisterListener);
             mSecurityMgr.registerListener(mSecurityListener);
+
+            mUtSyncMgr = UtSyncManager.getInstance(mContext);
         }
     }
 
@@ -699,7 +706,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             // Notify the register as register logout.
             registerLogout(0);
         } else if (mCallback != null) {
-            mCallback.onRegisterStateChanged(mRegisterMgr.getCurRegisterState(), 0);
+            mCallback.onRegisterStateChanged(RegisterState.STATE_IDLE, 0);
         }
 
         mRegisterMgr.forceStop();
@@ -743,11 +750,12 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         @Override
         public void onCallEnd(ImsCallSessionImpl callSession) {
             if (mCallMgr.getCallCount() < 1 && mCallback != null) {
+                Log.d(TAG, "The call[" + callSession + "] end, and there isn't any other call.");
                 mCallback.onAllCallsEnd();
+
                 // Check if need reset after all the calls end.
                 if (mNeedResetAfterCall) {
                     mNeedResetAfterCall = false;
-
                     // Notify as register logout.
                     registerLogout(0);
                 }
@@ -859,6 +867,9 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                                 + "The ECBM step: " + mEcbmStep);
                     }
                 } else {
+                    // When register success, sync the UT items.
+                    if (mUtSyncMgr != null) mUtSyncMgr.sync();
+
                     registerSuccess(stateCode);
                 }
             } else if (!success && stateCode == NativeErrorCode.REG_SERVER_FORBIDDEN) {
@@ -944,12 +955,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onRegisterStateChanged(int newState) {
             // If the register state changed, update the register state to call manager.
             if (mCallMgr != null) mCallMgr.updateRegisterState(newState);
-
-            // If the new state is registered, we need query the CLIR state from CP.
-            // And if the query action success, telephony will update the CLIR via UtInterface.
-            if (newState == RegisterState.STATE_CONNECTED) {
-                queryCLIRStatus();
-            }
         }
 
         @Override
@@ -996,20 +1001,6 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             return "";
         }
 
-        private void queryCLIRStatus() {
-//            try {
-//                IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
-//                if (imsServiceEx != null) {
-//                    int id = imsServiceEx.getCLIRStatus(Utilities.getPrimaryCard(mContext));
-//                    if (id < 1) {
-//                        Log.w(TAG, "Failed to get CLIR status, please check!");
-//                    }
-//                }
-//            } catch (RemoteException e) {
-//                Log.e(TAG, "Failed to get the CLIR statue as catch the RemoteException: "
-//                        + e.toString());
-//            }
-        }
     }
 
     private class MySecurityListener implements SecurityListener {
