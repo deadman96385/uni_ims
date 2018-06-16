@@ -8,6 +8,9 @@ import java.util.Iterator;
 import com.android.internal.telephony.CommandsInterface;
 import com.spreadtrum.ims.ImsDriverCall;
 import com.android.internal.telephony.LastCallFailCause;
+
+import android.telephony.CarrierConfigManager;
+import android.telephony.CarrierConfigManagerEx;
 import android.telephony.ServiceState;
 
 import android.telephony.ims.ImsStreamMediaProfile;
@@ -33,6 +36,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.os.SystemProperties;
+import android.telephony.SubscriptionManager;
 import android.util.Log;
 import java.util.concurrent.CopyOnWriteArrayList;
 import android.telecom.VideoProfile;
@@ -114,8 +118,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final String SUPP_SERV_CODE_EXTRA = "supp_serv_code";
     private static final String SUPP_SERV_NOTIFICATION_TYPE_EXTRA = "supp_serv_notification_type";
     /* @} */
-    //SPRD: add for bug 846738
-    boolean mIsSupportTxRxVideo = SystemProperties.getBoolean("persist.sys.txrx_vt", false);
+    //SPRD: add for bug 846738, 905754
+    boolean mIsSupportTxRxVideo;
   //SPRD: add for bug858168
     boolean mVideoHasDowngrade;
     private static final int SPECIAL_CALL_TYPE = 99;
@@ -204,6 +208,15 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 ImsCallProfile.presentationToOIR(dc.numberPresentation));
         mImsCallProfile.setCallExtraInt(ImsCallProfile.EXTRA_CNAP,
                 ImsCallProfile.presentationToOIR(dc.namePresentation));
+        /* SPRD: add for bug 905754 @{ */
+        int phoneId = getServiceId() - 1;
+        CarrierConfigManager configManager = (CarrierConfigManager) mContext.getSystemService(
+                Context.CARRIER_CONFIG_SERVICE);
+        if (configManager.getConfigForPhoneId(phoneId) != null) {
+            mIsSupportTxRxVideo = configManager.getConfigForPhoneId(phoneId).getBoolean(
+                CarrierConfigManagerEx.KEY_SUPPORT_TXRX_VT_CALL_BOOL);
+        }
+        /* @}*/
         /* SPRD: add for bug 846738 @{ */
         if(dc.isVideoCall()){
             if(!mIsSupportTxRxVideo){

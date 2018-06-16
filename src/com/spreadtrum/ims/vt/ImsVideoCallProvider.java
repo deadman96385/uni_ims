@@ -3,7 +3,6 @@ package com.spreadtrum.ims.vt;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Handler;
-import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.telecom.VideoProfile;
 import android.view.Surface;
@@ -59,8 +58,8 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
     private static final int EVENT_VOLTE_CALL_REMOTE_REQUEST_MEDIA_CHANGED_TIMEOUT = 500;
     private static final int EVENT_SRVCC_STATE_CHANGED = 100;
     private static final int EVENT_VOLTE_CALL_REQUEST_MEDIA_CHANGED_TIMEOUT = 101;//SPRD: add for bug674565
-    //SPRD: add for bug 846738
-    boolean mIsSupportTxRxVideo = SystemProperties.getBoolean("persist.sys.txrx_vt", false);
+    //SPRD: add for bug 846738, 905754
+    private boolean mIsSupportTxRxVideo;
 
     //media request change
     /*public static final int MEDIA_REQUEST_DEFAULT = 0;
@@ -175,6 +174,15 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
         mNegotiatedCallProfile.mMediaProfile.mVideoDirection =  mImsCallSessionImpl.mImsCallProfile.mMediaProfile.mVideoDirection;
         mCi.registerForSrvccStateChanged(mVTHandler, EVENT_SRVCC_STATE_CHANGED, null);//SPRD:add for bug563112
         mCallIdMessage = new Message();
+        /* SPRD: add for bug 905754 @{ */
+        int phoneId = mImsCallSessionImpl.getServiceId() - 1;
+        CarrierConfigManager configManager = (CarrierConfigManager) mContext.getSystemService(
+                Context.CARRIER_CONFIG_SERVICE);
+        if (configManager.getConfigForPhoneId(phoneId) != null) {
+            mIsSupportTxRxVideo = configManager.getConfigForPhoneId(phoneId).getBoolean(
+                CarrierConfigManagerEx.KEY_SUPPORT_TXRX_VT_CALL_BOOL);
+        }
+        /* @}*/
     }
 
     public void onVTConnectionEstablished(ImsCallSessionImpl mImsCallSessionImpl){
