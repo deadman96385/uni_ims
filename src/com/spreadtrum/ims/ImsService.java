@@ -1977,6 +1977,11 @@ class MyVoWifiCallback implements VoWifiCallback {
     public void updateImsFeature(){
         int volteRegState = -1;
         updateImsRegisterState();
+        for (Map.Entry<Integer, ImsServiceImpl> entry : mImsServiceImplMap.entrySet()) {
+            if(entry.getKey() != (mTelephonyManager.getPrimaryCard()+1)){
+                entry.getValue().updateImsFeatures(false,false);
+            }
+        }
         ImsServiceImpl imsService = mImsServiceImplMap.get(
                 Integer.valueOf(mTelephonyManager.getPrimaryCard()+1));
         if(imsService != null){
