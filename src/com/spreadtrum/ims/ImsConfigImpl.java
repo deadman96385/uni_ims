@@ -143,6 +143,7 @@ public class ImsConfigImpl extends IImsConfig.Stub {
         if(item == ImsConfig.ConfigConstants.VIDEO_QUALITY) {
             Log.d(TAG, "setVideoQuality qualiy = " + value);
             setVideoQualitytoPreference(value);
+
             return ImsConfig.OperationStatusConstants.SUCCESS;
         };
         return ImsConfig.OperationStatusConstants.UNKNOWN;
@@ -439,11 +440,11 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     }
 
     public static boolean isVolteEnabledBySystemProperties(){
-        return SystemProperties.getBoolean("persist.sys.volte.enable", false);
+        return SystemProperties.getBoolean("persist.vendor.sys.volte.enable", false);
     }
 
     public static boolean isImsEnabledBySystemProperties(){
-        return SystemProperties.getBoolean("persist.sys.volte.enable", false) || SystemProperties.getInt("persist.dbg.wfc_avail_ovr", 0) == 1;
+        return SystemProperties.getBoolean("persist.vendor.sys.volte.enable", false) || SystemProperties.getInt("persist.dbg.wfc_avail_ovr", 0) == 1;
     }
 
     private OnSharedPreferenceChangeListener mSharedPreferenceListener = new OnSharedPreferenceChangeListener() {

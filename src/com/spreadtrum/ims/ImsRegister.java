@@ -48,7 +48,6 @@ import com.android.ims.internal.ImsManagerEx;
 public class ImsRegister {
     private static final String TAG = "ImsRegister";
     private static final boolean DBG = true;
-    private static final String MODEM_WORKMODE_PROP = "persist.radio.modem.workmode";
 
     private Context mContext;
     private ImsRIL mCi;
@@ -379,17 +378,6 @@ public class ImsRegister {
             return DEFAULT_PHONE_ID;
         }
         return primaryCard;
-//        String prop = SystemProperties.get(MODEM_WORKMODE_PROP);
-//        log("-getPrimaryCard() prop = " + prop);
-//        if ((prop != null) && (prop.length() > 0)) {
-//            String values[] = prop.split(",");
-//            int[] workMode = new int[mPhoneCount];
-//            for(int i = 0; i < mPhoneCount; i++) {
-//                workMode[i] = Integer.parseInt(values[i]);
-//            }
-//            return getPrimaryCardFromProp(workMode);
-//        }
-//        return DEFAULT_PHONE_ID;
     }
 
     public static int getPrimaryCard(int phoneCount) {
@@ -404,17 +392,6 @@ public class ImsRegister {
             return DEFAULT_PHONE_ID;
         }
         return primaryCard;
-
-//        String prop = SystemProperties.get(MODEM_WORKMODE_PROP);
-//        if ((prop != null) && (prop.length() > 0)) {
-//            String values[] = prop.split(",");
-//            int[] workMode = new int[phoneCount];
-//            for(int i = 0; i < phoneCount; i++) {
-//                workMode[i] = Integer.parseInt(values[i]);
-//            }
-//            return getPrimaryCardFromProp(workMode);
-//        }
-//        return DEFAULT_PHONE_ID;
     }
 
     private static int getPrimaryCardFromProp(int[] workMode) {
