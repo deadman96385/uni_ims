@@ -20,6 +20,7 @@ import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.widget.Toast;
+import com.android.internal.telephony.CommandException;
 
 import android.provider.Telephony;
 import com.android.internal.telephony.CommandsInterface;
@@ -271,6 +272,16 @@ public class ImsServiceImpl {
                         }
                         Log.i(TAG,"EVENT_IMS_STATE_DONE->mImsRegistered:" + mImsServiceState.mImsRegistered);
                     } else {
+                        //add for unisoc 886032
+                        if (ar.exception!= null) {
+                            CommandException.Error err=null;
+                            if (ar.exception instanceof CommandException) {
+                                err = ((CommandException)(ar.exception)).getCommandError();
+                            }
+                           if (err == CommandException.Error.RADIO_NOT_AVAILABLE) {
+                               mImsService.updateImsFeature();
+                           }
+                        }
                         mImsServiceState.mImsRegistered = false;
                         notifyRegisterStateChange();
                         Log.i(TAG,"EVENT_IMS_STATE_DONE: error");
@@ -1041,5 +1052,4 @@ public class ImsServiceImpl {
     public void onCLIRStatusUpdateForVoWifi(int status){
         mImsService.onCLIRStatusUpdateForVoWifi(status);
     }
-
 }
