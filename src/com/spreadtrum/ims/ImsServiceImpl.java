@@ -175,7 +175,7 @@ public class ImsServiceImpl {
         mImsRegister = new ImsRegister(mPhone, mContext, mCi);
         mImsServiceState = new ImsServiceState(false,IMS_REG_STATE_INACTIVE);
         mImsConfigImpl = new ImsConfigImpl(mCi,context);
-        mImsUtImpl = new ImsUtImpl(mCi,context);
+        mImsUtImpl = new ImsUtImpl(mCi,context,this);
         com.spreadtrum.ims.vowifi.ImsUtImpl voWifiUtImpl =  mWifiService.getUtInterface();
         mImsUtProxy = new ImsUtProxy(context, mImsUtImpl, voWifiUtImpl, mPhone);
         mImsEcbmImpl = new ImsEcbmImpl(mCi);
@@ -1033,4 +1033,13 @@ public class ImsServiceImpl {
         cmd[0] = "AT+WIFIPARAM=0,0,0,0,0";
         mCi.invokeOemRilRequestStrings(cmd, null);
     }
+
+    public void onCallWaitingStatusUpdateForVoWifi(int status){
+        mImsService.onCallWaitingStatusUpdateForVoWifi(status);
+    }
+
+    public void onCLIRStatusUpdateForVoWifi(int status){
+        mImsService.onCLIRStatusUpdateForVoWifi(status);
+    }
+
 }

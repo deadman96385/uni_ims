@@ -1591,6 +1591,42 @@ public class ImsService extends Service {
             }
             return requestType;
         }
+
+        /**
+         * used for get CW status for vowifi
+         * para phone id
+         *
+         **/
+        @Override
+        public void getCallWaitingStatus(int phoneId){
+            ImsServiceImpl imsService = mImsServiceImplMap.get(Integer
+                    .valueOf(phoneId + 1));
+            Log.i(TAG, "getCallWaitingStatus phoneId = " + phoneId);
+            if (imsService != null) {
+                ImsUtImpl ut = imsService.getUtImpl();
+                if (ut != null) {
+                    ut.getCallWaitingStatusForVoWifi();
+                }
+            }
+        }
+
+        /**
+         * used for get CLIR status for vowifi
+         * para phone id
+         *
+         **/
+        @Override
+        public void getCLIRStatus(int phoneId){
+            ImsServiceImpl imsService = mImsServiceImplMap.get(Integer
+                    .valueOf(phoneId + 1));
+            Log.i(TAG, "getCLIRStatus phoneId = " + phoneId);
+            if (imsService != null) {
+                ImsUtImpl ut = imsService.getUtImpl();
+                if (ut != null) {
+                    ut.getCLIRStatusForVoWifi();
+                }
+            }
+        }
    };
 
     private final IImsMultiEndpoint.Stub mImsMultiEndpointBinder = new IImsMultiEndpoint.Stub()  {
@@ -2452,5 +2488,15 @@ class MyVoWifiCallback implements VoWifiCallback {
             updateImsFeature();
             mWifiService.onSRVCCStateChanged(status);
         }
+    }
+
+    public void onCallWaitingStatusUpdateForVoWifi(int status){
+        Log.d(TAG, "onCallWaitingStatusUpdateForVoWifi, status: " + status);
+        SystemProperties.set("gsm.ss.call_waiting", String.valueOf(status));
+    }
+
+    public void onCLIRStatusUpdateForVoWifi(int status){
+        Log.d(TAG, "onCallWaitingStatusUpdateForVoWifi, status: " + status);
+        SystemProperties.set("gsm.ss.clir", String.valueOf(status));
     }
 }
