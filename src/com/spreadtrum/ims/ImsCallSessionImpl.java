@@ -251,7 +251,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Log.i(TAG,"vdc.mediaDescription: " + dc.mediaDescription + " mRemoteCallProfile:"+mRemoteCallProfile);
         }
         // SPRD: Fix bug#651203 & 807149
-        if (dc != null && dc.isMpty) {
+        if (dc != null && isMtConference(dc)) {
             mImsCallProfile.setCallExtraBoolean(EXTRA_MT_CONFERENCE_CALL, true);
         }
         /* @}*/
@@ -1870,4 +1870,16 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
     /* @} */
 
+    private boolean isMtConference(ImsDriverCall dc){
+        if(mImsDriverCall == null || dc == null || mImsConferenceState == null){
+            return false;
+        }
+        if( mImsConferenceState.mParticipants != null && mImsConferenceState.mParticipants.containsKey(dc.index)){
+            return false;
+        }
+        if(dc.mptyState == 1){
+            return true;
+        }
+        return false;
+    }
 }
