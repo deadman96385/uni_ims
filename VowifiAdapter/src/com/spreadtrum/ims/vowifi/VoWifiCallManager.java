@@ -70,8 +70,6 @@ public class VoWifiCallManager extends ServiceManager {
 
     private static final int CODE_LOCAL_CALL_CS_EMERGENCY_RETRY_REQUIRED = 150;
 
-    private static final String SERVICE_CLASS = Utilities.SERVICE_PACKAGE + ".service.CallService";
-
     private static final String PROP_KEY_AUTO_ANSWER = "persist.sys.vowifi.autoanswer";
 
     private int mUseAudioStreamCount = 0;
@@ -88,7 +86,7 @@ public class VoWifiCallManager extends ServiceManager {
     private IVoWifiCall mICall;
     private ArrayList<ICallChangedListener> mICallChangedListeners =
             new ArrayList<ICallChangedListener>();
-    private MySerServiceCallback mVoWifiServiceCallback = new MySerServiceCallback();
+    private MyCallCallback mCallCallback = new MyCallCallback();
 
     private static final int RELEASE_CALL_DELAY = 2 * 1000;
 
@@ -228,7 +226,8 @@ public class VoWifiCallManager extends ServiceManager {
     }
 
     protected VoWifiCallManager(Context context) {
-        this(context, Utilities.SERVICE_PACKAGE, SERVICE_CLASS, Utilities.SERVICE_ACTION_CALL);
+        this(context, Utilities.SERVICE_PACKAGE, Utilities.SERVICE_CLASS_CALL,
+                Utilities.SERVICE_ACTION_CALL);
     }
 
     protected VoWifiCallManager(Context context, String pkg, String cls, String action) {
@@ -243,7 +242,7 @@ public class VoWifiCallManager extends ServiceManager {
 
     @Override
     protected void finalize() throws Throwable {
-        if (mICall != null) mICall.unregisterCallback(mVoWifiServiceCallback);
+        if (mICall != null) mICall.unregisterCallback(mCallCallback);
         super.finalize();
     }
 
@@ -253,7 +252,7 @@ public class VoWifiCallManager extends ServiceManager {
             mICall = null;
             if (mServiceBinder != null) {
                 mICall = IVoWifiCall.Stub.asInterface(mServiceBinder);
-                mICall.registerCallback(mVoWifiServiceCallback);
+                mICall.registerCallback(mCallCallback);
             } else {
                 clearPendingList();
             }
@@ -1832,7 +1831,7 @@ public class VoWifiCallManager extends ServiceManager {
         return null;
     }
 
-    private class MySerServiceCallback extends IVoWifiCallCallback.Stub {
+    private class MyCallCallback extends IVoWifiCallCallback.Stub {
         @Override
         public void onEvent(String json) {
             if (Utilities.DEBUG) Log.i(TAG, "Get the vowifi ser event callback.");

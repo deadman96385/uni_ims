@@ -19,6 +19,7 @@ import android.util.Log;
 import com.android.ims.internal.IVoWifiCall;
 import com.android.ims.internal.IVoWifiRegister;
 import com.android.ims.internal.IVoWifiSecurity;
+import com.android.ims.internal.IVoWifiSms;
 import com.android.ims.internal.IVoWifiUT;
 
 import com.spreadtrum.ims.ImsConfigImpl;
@@ -36,9 +37,17 @@ public class Utilities {
 
     public static final String SERVICE_PACKAGE = "com.spreadtrum.vowifi";
     public static final String SERVICE_PACKAGE_SEC = "com.spreadtrum.vowifi.sec";
+
+    public static final String SERVICE_CLASS_SEC = SERVICE_PACKAGE + ".service.SecurityService";
+    public static final String SERVICE_CLASS_REG = SERVICE_PACKAGE + ".service.RegisterService";
+    public static final String SERVICE_CLASS_CALL = SERVICE_PACKAGE + ".service.CallService";
+    public static final String SERVICE_CLASS_SMS = SERVICE_PACKAGE + ".service.SmsService";
+    public static final String SERVICE_CLASS_UT = SERVICE_PACKAGE + ".service.UTService";
+
     public static final String SERVICE_ACTION_SEC = IVoWifiSecurity.class.getCanonicalName();
     public static final String SERVICE_ACTION_REG = IVoWifiRegister.class.getCanonicalName();
     public static final String SERVICE_ACTION_CALL = IVoWifiCall.class.getCanonicalName();
+    public static final String SERVICE_ACTION_SMS = IVoWifiSms.class.getCanonicalName();
     public static final String SERVICE_ACTION_UT = IVoWifiUT.class.getCanonicalName();
 
     // Used to get the primary card id.
@@ -1105,6 +1114,7 @@ public class Utilities {
         // Callback constants
         public static final String KEY_EVENT_CODE = "event_code";
         public static final String KEY_EVENT_NAME = "event_name";
+        public static final String KEY_CALLBACK_HASHCODE = "callback_hashcode";
 
         // Security
         public static final String KEY_SESSION_ID = "session_id";
@@ -1326,6 +1336,22 @@ public class Utilities {
         // Query call forward result of media
         public static final String RULE_MEDIA_AUDIO = "audio";
         public static final String RULE_MEDIA_VIDEO = "video";
+
+        // Sms
+        public static final String KEY_SMS_TOKEN = "token";
+        public static final String KEY_SMS_MESSAGE_REF = "messageRef";
+        public static final String KEY_SMS_RESULT = "result";
+        public static final String KEY_SMS_REASON = "reason";
+        public static final String KEY_SMS_PDU = "pdu";
+
+        public static final int SMS_EVENT_CODE_BASE = 400;
+        public static final int EVENT_CODE_SMS_SEND_FINISHED = SMS_EVENT_CODE_BASE + 1;
+        public static final int EVENT_CODE_SMS_STATUS_REPORT_RECEIVED = SMS_EVENT_CODE_BASE + 2;
+        public static final int EVENT_CODE_SMS_RECEIVED = SMS_EVENT_CODE_BASE + 3;
+
+        public static final String EVENT_SMS_SEND_FINISHED = "sms_send_finished";
+        public static final String EVENT_SMS_STATUS_REPORT_RECEIVED = "sms_status_report_received";
+        public static final String EVENT_SMS_RECEIVED = "sms_received";
     }
 
 }

@@ -14,6 +14,7 @@ import android.preference.PreferenceManager;
 import android.telephony.ims.ImsCallProfile;
 import android.telephony.ims.ImsCallSession.State;
 import android.telephony.ims.aidl.IImsCallSessionListener;
+import android.telephony.ims.stub.ImsSmsImplBase;
 import android.telephony.ServiceState;
 import android.util.Log;
 import android.text.TextUtils;
@@ -74,6 +75,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
     protected ImsEcbmImpl mImsEcbm;
     protected UtSyncManager mUtSyncMgr;
     protected VoWifiCallManager mCallMgr;
+    protected VoWifiSmsManager mSmsMgr;
     protected VoWifiUTManager mUTMgr;
     protected VoWifiRegisterManager mRegisterMgr;
     protected VoWifiSecurityManager mSecurityMgr;
@@ -402,6 +404,10 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         return mImsEcbm;
     }
 
+    public ImsSmsImplBase getSmsImplementation() {
+        return mSmsMgr == null ? null : mSmsMgr.getSmsImplementation();
+    }
+
     public void resetAll(WifiState state) {
         resetAll(state, 0/* Do not delay */);
     }
@@ -717,12 +723,14 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
             mPreferences.registerOnSharedPreferenceChangeListener(this);
 
             mCallMgr = new VoWifiCallManager(mContext);
+            mSmsMgr = new VoWifiSmsManager(mContext);
             mRegisterMgr = new VoWifiRegisterManager(mContext);
             mSecurityMgr = new VoWifiSecurityManager(mContext);
             mUTMgr = new VoWifiUTManager(mContext, mSecurityMgr);
             mSOSMgr = new VoWifiSOSManager(mContext);
 
             mCallMgr.bindService();
+            mSmsMgr.bindService();
             mUTMgr.bindService();
             mRegisterMgr.bindService();
             mSecurityMgr.bindService();
@@ -736,6 +744,7 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         if (ImsManager.isWfcEnabledByPlatform(mContext)) {
             // Unbind the service.
             mCallMgr.unbindService();
+            mSmsMgr.unbindService();
             mUTMgr.unbindService();
             mRegisterMgr.unbindService();
             mSecurityMgr.unbindService();

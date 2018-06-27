@@ -43,8 +43,9 @@ public class VoWifiRegisterManager extends ServiceManager {
         void onDisconnected();
     }
 
-    private static final String SERVICE_CLASS =
-            Utilities.SERVICE_PACKAGE + ".service.RegisterService";
+    // Only handle less than 2 minutes retry-after error here.
+    // TODO: handle the retry-after later.
+    private static final int HANDLE_RETRY_AFTER_MILLIS = 0 /* 5 * 60 * 1000 */;
 
     private static final int MSG_ACTION_LOGIN = 1;
     private static final int MSG_ACTION_DE_REGISTER = 2;
@@ -57,7 +58,8 @@ public class VoWifiRegisterManager extends ServiceManager {
     private RegisterCallback mCallback = new RegisterCallback();
 
     protected VoWifiRegisterManager(Context context) {
-        this(context, Utilities.SERVICE_PACKAGE, SERVICE_CLASS, Utilities.SERVICE_ACTION_REG);
+        this(context, Utilities.SERVICE_PACKAGE, Utilities.SERVICE_CLASS_REG,
+                Utilities.SERVICE_ACTION_REG);
     }
 
     protected VoWifiRegisterManager(Context context, String pkg, String cls, String action) {
@@ -128,8 +130,9 @@ public class VoWifiRegisterManager extends ServiceManager {
             RegisterListener listener) {
         synchronized (TAG) {
             if (Utilities.DEBUG) Log.i(TAG, "Prepare the info before login, subId: " + subId);
-            if (subId < 0) {
-                Log.e(TAG, "Can not get the account info as sub id is: " + subId);
+            if (subId < 0 || listener == null) {
+                Log.e(TAG, "Can not get the account info as sub id[" + subId
+                        + "] or listener is null.");
                 if (listener != null) listener.onPrepareFinished(false);
                 return;
             }
@@ -139,8 +142,8 @@ public class VoWifiRegisterManager extends ServiceManager {
                 try {
                     // Reset first, then prepare.
                     mRequest = null;
+
                     int res = mIRegister.cliReset();
-                    updateRegisterState(RegisterState.STATE_IDLE);
                     if (res == Result.FAIL) {
                         Log.w(TAG, "Reset action failed, notify as prepare failed.");
                         if (listener != null) listener.onPrepareFinished(false);
@@ -148,12 +151,18 @@ public class VoWifiRegisterManager extends ServiceManager {
                     }
 
                     // Prepare for login, need open account, start client and update settings.
-                    boolean success = false;
                     if (cliOpen(subId) && cliStart() && cliUpdateSettings(isSupportSRVCC)) {
-                        success = true;
                         mRequest = new RegisterRequest(subId, config, listener);
+                        mRequest.mNeedPANI = VoWifiConfiguration.isRegRequestPANI(mContext);
+                        if (mRequest.mNeedPANI) {
+                            // Need notify as prepare finished after update the access net info.
+                            requestAccessNetInfo();
+                        } else {
+                            listener.onPrepareFinished(true);
+                        }
+                    } else {
+                        listener.onPrepareFinished(false);
                     }
-                    if (listener != null) listener.onPrepareFinished(success);
 
                     handle = true;
                 } catch (RemoteException e) {
@@ -186,22 +195,32 @@ public class VoWifiRegisterManager extends ServiceManager {
                         + ", dns server ip: " + dnsSerIP);
             }
 
-            if (mRequest.mState == RegisterState.STATE_CONNECTED) {
+            if (!isRelogin && mRequest.mState == RegisterState.STATE_CONNECTED) {
                 // Already registered notify the register state.
                 if (mRequest.mListener != null) mRequest.mListener.onLoginFinished(true, 0, 0);
                 return;
             } else if (mRequest.mState == RegisterState.STATE_PROGRESSING) {
                 // Already in the register process, do nothing.
                 return;
+            } else {
+                mRequest.mIsSOS = forSos;
             }
 
             // The current register status is false.
             boolean handle = false;
-            if (mIRegister != null) {
+            if (mIRegister != null
+                    && (isRelogin || !mRequest.mNeedPANI || mRequest.mNetInfo != null)) {
                 try {
                     updateRegisterState(RegisterState.STATE_PROGRESSING);
+                    int type = VowifiNetworkType.IEEE_802_11;
+                    String info = "";
+                    if (mRequest.mNeedPANI && mRequest.mNetInfo != null) {
+                        type = mRequest.mNetInfo._type;
+                        info = mRequest.mNetInfo._info;
+                    }
+
                     int res = mIRegister.cliLogin(
-                            forSos, isIPv4, localIP, pcscfIP, dnsSerIP, isRelogin);
+                            forSos, isIPv4, localIP, pcscfIP, dnsSerIP, type, info, isRelogin);
                     if (res == Result.FAIL) {
                         Log.e(TAG, "Login to the ims service failed, Please check!");
                         updateRegisterState(RegisterState.STATE_IDLE);
@@ -213,13 +232,14 @@ public class VoWifiRegisterManager extends ServiceManager {
                     handle = true;
                 } catch (RemoteException e) {
                     updateRegisterState(RegisterState.STATE_IDLE);
+                    mRequest = null;
                     Log.e(TAG, "Catch the remote exception when login, e: " + e);
                 }
             }
 
             if (!handle) {
                 // Do not handle the register action, add to pending list.
-                PendingAction action = new PendingAction("login", MSG_ACTION_LOGIN,
+                PendingAction action = new PendingAction(1 * 1000, "login", MSG_ACTION_LOGIN,
                         Boolean.valueOf(forSos), Boolean.valueOf(isIPv4), localIP, pcscfIP,
                         dnsSerIP, Boolean.valueOf(isRelogin));
 
@@ -289,7 +309,8 @@ public class VoWifiRegisterManager extends ServiceManager {
             boolean handle = false;
             if (mIRegister != null) {
                 try {
-                    int res = mIRegister.cliRefresh(getVowifiNetworkType(type), info);
+                    AccessNetInfo netInfo = new AccessNetInfo(type, info);
+                    int res = mIRegister.cliRefresh(netInfo._type, netInfo._info);
                     if (res == Result.FAIL) {
                         // Logout failed, shouldn't be here.
                         Log.w(TAG, "Re-register to the ims service failed. Please check!");
@@ -342,6 +363,17 @@ public class VoWifiRegisterManager extends ServiceManager {
         return mRequest == null ? null : mRequest.mRegisterConfig;
     }
 
+    public void updateAccessNetInfo(int type, String info) {
+        Log.d(TAG, "As needPreAccessNetInfo[" + mRequest.mNeedPANI
+                + "] update the type as: " + type + ", info as: " + info);
+        if (mRequest != null && mRequest.mNeedPANI) {
+            mRequest.mNetInfo = new AccessNetInfo(type, info);
+            if (mRequest.mListener != null) {
+                mRequest.mListener.onPrepareFinished(true);
+            }
+        }
+    }
+
     private boolean cliOpen(int subId) throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Try to open the account.");
 
@@ -377,27 +409,6 @@ public class VoWifiRegisterManager extends ServiceManager {
         return res == Result.SUCCESS;
     }
 
-    private int getVowifiNetworkType(int volteType) {
-        switch (volteType) {
-            case VolteNetworkType.IEEE_802_11:
-            case VolteNetworkType.NONE:
-                return VowifiNetworkType.IEEE_802_11;
-            case VolteNetworkType.GERAN:
-                return VowifiNetworkType.GERAN;
-            case VolteNetworkType.UTRAN_FDD:
-                return VowifiNetworkType.UTRAN_FDD;
-            case VolteNetworkType.UTRAN_TDD:
-                return VowifiNetworkType.UTRAN_TDD;
-            case VolteNetworkType.E_UTRAN_FDD:
-                return VowifiNetworkType.E_UTRAN_FDD;
-            case VolteNetworkType.E_UTRAN_TDD:
-                return VowifiNetworkType.E_UTRAN_TDD;
-            default:
-                Log.e(TAG, "Do not support this volte network type now, type: " + volteType);
-                return VowifiNetworkType.IEEE_802_11;
-        }
-    }
-
     private void updateRegisterState(int newState) {
         updateRegisterState(newState, 0);
     }
@@ -411,9 +422,34 @@ public class VoWifiRegisterManager extends ServiceManager {
         }
     }
 
+    private void requestAccessNetInfo() {
+        /*
+        // New a thread to request the access net info.
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
+                if (imsServiceEx != null) {
+                    try {
+                        Log.d(TAG, "Get the access net info.");
+                        imsServiceEx.getImsPaniInfor();
+                    } catch (RemoteException e) {
+                        Log.e(TAG, "Failed to get the access net info as exception: " + e);
+                    }
+                } else {
+                    Log.e(TAG, "Can not get the ims ex service.");
+                }
+            }
+        }).start();
+        */
+    }
+
     private class RegisterRequest {
         public int mSubId;
         public int mState;
+        public boolean mIsSOS;
+        public boolean mNeedPANI = false;
+        public AccessNetInfo mNetInfo = null;
         public RegisterConfig mRegisterConfig;
         public RegisterListener mListener;
 
@@ -453,10 +489,25 @@ public class VoWifiRegisterManager extends ServiceManager {
                         case JSONUtils.EVENT_CODE_LOGIN_FAILED:
                             // Update the register state to unknown, and notify the state changed.
                             updateRegisterState(RegisterState.STATE_IDLE);
-                            if (mRequest.mListener != null) {
+                            int retryAfter = jObject.optInt(JSONUtils.KEY_RETRY_AFTER, 0) * 1000;
+                            if (mRequest != null
+                                    && retryAfter > 0
+                                    && retryAfter <= HANDLE_RETRY_AFTER_MILLIS) {
+                                Log.d(TAG, "Handle as login failed for retry after: " + retryAfter);
+                                PendingAction action = new PendingAction(
+                                        retryAfter,
+                                        "login",
+                                        MSG_ACTION_LOGIN,
+                                        Boolean.valueOf(mRequest.mIsSOS),
+                                        Boolean.valueOf(mRequest.mRegisterConfig.isCurUsedIPv4()),
+                                        mRequest.mRegisterConfig.getCurUsedLocalIP(),
+                                        mRequest.mRegisterConfig.getCurUsedPcscfIP(),
+                                        mRequest.mRegisterConfig.getCurUsedDnsSerIP(),
+                                        Boolean.valueOf(false));
+                                addToPendingList(action);
+                            } else if (mRequest != null && mRequest.mListener != null) {
                                 int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
-                                int retryAfter = jObject.optInt(JSONUtils.KEY_RETRY_AFTER, 0);
-                                mRequest.mListener.onLoginFinished(false, stateCode, retryAfter);
+                                mRequest.mListener.onLoginFinished(false, stateCode, 0);
                             }
                             break;
                         case JSONUtils.EVENT_CODE_LOGOUTED:
@@ -465,8 +516,8 @@ public class VoWifiRegisterManager extends ServiceManager {
                             if (mRequest.mListener != null) {
                                 int stateCode = jObject.optInt(JSONUtils.KEY_STATE_CODE, 0);
                                 mRequest.mListener.onLogout(stateCode);
-                                mRequest = null;
                             }
+                            mRequest = null;
                             break;
                         case JSONUtils.EVENT_CODE_REREGISTER_OK:
                             if (mRequest.mListener != null) {
@@ -492,6 +543,42 @@ public class VoWifiRegisterManager extends ServiceManager {
                 }
             }
         }
+
     }
 
+    private class AccessNetInfo {
+        public int _type;
+        public String _info;
+
+        public AccessNetInfo(int eNodeType, String info) {
+            _type = getVowifiNetworkType(eNodeType);
+            _info = info;
+        }
+
+        private int getVowifiNetworkType(int volteType) {
+            switch (volteType) {
+                case VolteNetworkType.IEEE_802_11:
+                case VolteNetworkType.NONE:
+                    return VowifiNetworkType.IEEE_802_11;
+                case VolteNetworkType.GERAN:
+                    return VowifiNetworkType.GERAN;
+                case VolteNetworkType.UTRAN_FDD:
+                    return VowifiNetworkType.UTRAN_FDD;
+                case VolteNetworkType.UTRAN_TDD:
+                    return VowifiNetworkType.UTRAN_TDD;
+                case VolteNetworkType.E_UTRAN_FDD:
+                    return VowifiNetworkType.E_UTRAN_FDD;
+                case VolteNetworkType.E_UTRAN_TDD:
+                    return VowifiNetworkType.E_UTRAN_TDD;
+                default:
+                    Log.e(TAG, "Do not support this volte network type now, type: " + volteType);
+                    return VowifiNetworkType.IEEE_802_11;
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "AccessNetInfo [type=" + _type + ", info=" + _info + "]";
+        }
+    }
 }

@@ -24,8 +24,6 @@ public class VoWifiUTManager extends ServiceManager {
         public void onDisabled();
     }
 
-    private static final String SERVICE_CLASS = Utilities.SERVICE_PACKAGE + ".service.UTService";
-
     private int mSessionId = -1;
     private int mRegisterState = RegisterState.STATE_IDLE;
     private int mCurIPVersion = IPVersion.NONE;
@@ -40,7 +38,9 @@ public class VoWifiUTManager extends ServiceManager {
             new ArrayList<UTStateChangedListener>();
 
     protected VoWifiUTManager(Context context, VoWifiSecurityManager securityMgr) {
-        super(context, Utilities.SERVICE_PACKAGE, SERVICE_CLASS, Utilities.SERVICE_ACTION_UT);
+        super(context, Utilities.SERVICE_PACKAGE, Utilities.SERVICE_CLASS_UT,
+                Utilities.SERVICE_ACTION_UT);
+
         mSecurityMgr = securityMgr;
         mSecurityListener = new MySecurityListener();
     }

@@ -56,16 +56,14 @@ public class VoWifiSecurityManager extends ServiceManager {
 
     private static final int MSG_ACTION_ATTACH = 1;
 
-    private static final String SERVICE_CLASS =
-            Utilities.SERVICE_PACKAGE + ".service.SecurityService";
-
     private IVoWifiSecurity mISecurity = null;
     private SecurityCallback mCallback = new SecurityCallback();
     private HashMap<Integer, SecurityRequest> mRequestMap =
             new HashMap<Integer, SecurityRequest>();
 
     protected VoWifiSecurityManager(Context context) {
-        this(context, Utilities.SERVICE_PACKAGE, SERVICE_CLASS, Utilities.SERVICE_ACTION_SEC);
+        this(context, Utilities.SERVICE_PACKAGE, Utilities.SERVICE_CLASS_SEC,
+                Utilities.SERVICE_ACTION_SEC);
     }
 
     protected VoWifiSecurityManager(Context context, String pkg, String cls, String action) {
