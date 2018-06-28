@@ -1884,10 +1884,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
 
     private boolean isMtConference(ImsDriverCall dc){
-        if(mImsDriverCall == null || dc == null || mImsConferenceState == null){
+        if(mImsDriverCall == null || dc == null){
             return false;
         }
-        if( mImsConferenceState.mParticipants != null && mImsConferenceState.mParticipants.containsKey(dc.index)){
+        if(mImsConferenceState != null
+                && mImsConferenceState.mParticipants != null
+                && mImsConferenceState.mParticipants.containsKey(dc.index)){
             return false;
         }
         if(dc.mptyState == 1){
