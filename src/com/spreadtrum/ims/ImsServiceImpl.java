@@ -263,7 +263,11 @@ public class ImsServiceImpl extends MmTelFeature {
     @Override
     public ImsSmsImplBase getSmsImplementation() {
         //TODO: should implement ImsSmsImplBase
-        return new ImsSmsImplBase();
+        if(mWifiService != null){
+            return mWifiService.getSmsImplementation();
+        }else{
+            return null;
+        }
     }
     /* AndroidP end@} */
 
@@ -1272,6 +1276,7 @@ public class ImsServiceImpl extends MmTelFeature {
                         = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI;
                 mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_VOICE);
                 mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_UT);
+                mVowifiCapabilities.addCapabilities(MmTelCapabilities.CAPABILITY_TYPE_SMS);
                 if(imsManager.isVtEnabledByUser() && imsManager.isVtEnabledByPlatform()){//SPRD:modify for bug810321
                     mEnabledFeatures[ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI]
                             = ImsConfig.FeatureConstants.FEATURE_TYPE_VIDEO_OVER_WIFI;
