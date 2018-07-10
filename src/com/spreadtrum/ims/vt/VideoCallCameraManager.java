@@ -233,7 +233,6 @@ public class VideoCallCameraManager {
                         }
                         /* @ } */
                     }
-                    mVideoCallEngine.setCameraPreviewSize(mVideoQuality);
                     setPreviewSurfaceSize(mVideoQuality);
                     if(mVideoCallEngine !=null && mVideoCallEngine.mLocalSurface != null){
                         mVideoCallEngine.setImsLocalSurface(mVideoCallEngine.mLocalSurface);
@@ -578,9 +577,7 @@ public class VideoCallCameraManager {
             if(!mIsOpened){
                 openVideoCamera();
             } else {
-                //updateVideoCameraQuality();
                 if(mVideoCallEngine != null){
-                    mVideoCallEngine.setCameraPreviewSize(mVideoQuality);
                     setPreviewSurfaceSize(mVideoQuality);
                 }
             }

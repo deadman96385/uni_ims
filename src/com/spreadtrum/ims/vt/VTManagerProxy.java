@@ -232,9 +232,6 @@ public class VTManagerProxy{
                     synchronized (syncObj) {
                         mVideoCallEngine = new VideoCallEngine(ril, mContext,
                                 (ImsConfigImpl)mImsService.getConfigInterface(serviceId));
-                        if(mImsVideoQos != 0){
-                            mVideoCallEngine.setUplinkQos(mImsVideoQos);
-                        }
                         syncObj.notifyAll();
                     }
                     log("create mVideoCallEngine done");
@@ -503,9 +500,6 @@ public class VTManagerProxy{
         if(result.length >= 4){
             mImsVideoQos = result[3];
             log("handleImsQosReport : qos = "+mImsVideoQos);
-            if(mVideoCallEngine != null){
-                mVideoCallEngine.setUplinkQos(mImsVideoQos);
-            }
         }
         log("handleImsQosReport : result.length = "+result.length + " mVideoCallEngine:"+ mVideoCallEngine);
     }
