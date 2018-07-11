@@ -266,7 +266,8 @@ public class ImsServiceImpl extends MmTelFeature {
         if(mWifiService != null){
             return mWifiService.getSmsImplementation();
         }else{
-            return null;
+            log("getSmsImplementation mWifiService is null");
+            return new ImsSmsImplBase();
         }
     }
     /* AndroidP end@} */
