@@ -1892,7 +1892,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                 && mImsConferenceState.mParticipants.containsKey(dc.index)){
             return false;
         }
-        if(dc.mptyState == 1){
+        if(dc.isMpty){
             return true;
         }
         return false;
