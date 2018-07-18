@@ -507,7 +507,7 @@ public final class ImsRIL {
 
     static final String[] HIDL_SERVICE_NAME = {"slot1", "slot2", "slot3"};
 
-    static final int IRADIO_GET_SERVICE_DELAY_MILLIS = 4 * 1000;
+    static final int IRADIO_GET_SERVICE_DELAY_MILLIS = 6 * 1000;
 
     public static List<TelephonyHistogram> getTelephonyRILTimingHistograms() {
         List<TelephonyHistogram> list;
@@ -642,6 +642,8 @@ public final class ImsRIL {
         mRadioProxyCookie.incrementAndGet();
 
         mRadioState = RadioState.RADIO_UNAVAILABLE;
+
+        mNotAvailRegistrants.notifyRegistrants();
 
         RILRequest.resetSerial();
         // Clear request list on close
@@ -2984,9 +2986,18 @@ public final class ImsRIL {
         }
     }
 
+    /*SPRD: add for bug899924 @{*/
+    protected RegistrantList mNotAvailRegistrants = new RegistrantList();
+
     public void registerForNotAvailable(Handler h, int what, Object obj) {
-        mCi.registerForNotAvailable(h,what,obj);
+        Registrant r = new Registrant(h, what, obj);
+        mNotAvailRegistrants.add(r);
     }
+
+    public void unRegisterForNotAvailable(Handler h) {
+        mNotAvailRegistrants.remove(h);
+    }
+    /*@}*/
 
     public void setVideoResolution(int resolution, Message result){
         if(getRadioInteractor() != null) {

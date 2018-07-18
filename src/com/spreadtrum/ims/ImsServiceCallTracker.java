@@ -790,6 +790,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
     protected void finalize() throws Throwable {
         mContext.unregisterReceiver(mBroadcastReceiver);
         super.finalize();
+
+        mCi.unRegisterForNotAvailable(mHandler);
     }
     public int getCurrentUserId(){
         return mCurrentUserId;
