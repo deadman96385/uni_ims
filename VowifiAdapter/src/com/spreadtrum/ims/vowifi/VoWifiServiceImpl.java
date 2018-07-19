@@ -404,8 +404,8 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         return mImsEcbm;
     }
 
-    public ImsSmsImplBase getSmsImplementation() {
-        return mSmsMgr == null ? new ImsSmsImplBase() : mSmsMgr.getSmsImplementation();
+    public ImsSmsImplBase getSmsImplementation(int phoneId) {
+        return mSmsMgr == null ? new ImsSmsImplBase() : mSmsMgr.getSmsImplementation(phoneId);
     }
 
     public void resetAll(WifiState state) {

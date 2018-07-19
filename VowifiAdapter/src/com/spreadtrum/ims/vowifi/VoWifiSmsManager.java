@@ -8,6 +8,7 @@ import android.os.Message;
 import android.os.RemoteException;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.SmsManager;
+import android.telephony.SmsManagerEx;
 import android.telephony.ims.stub.ImsSmsImplBase;
 import android.text.TextUtils;
 import android.util.Log;
@@ -25,6 +26,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class VoWifiSmsManager extends ServiceManager {
     public interface ISmsChangedListener {
@@ -35,9 +37,9 @@ public class VoWifiSmsManager extends ServiceManager {
 
     private Context mContext;
     private IVoWifiSms mISms;
-    private ImsSmsImpl mSmsImpl;
     private MySmsCallback mSmsCallback = new MySmsCallback();
     private ArrayList<Sms> mSmsList= new ArrayList<Sms>();
+    private HashMap<Integer, ImsSmsImpl> mSmsImpls = new HashMap<Integer, ImsSmsImpl>();
 
     private static final int MSG_HANDLE_EVENT = 1;
     private class MyHandler extends Handler {
@@ -62,7 +64,6 @@ public class VoWifiSmsManager extends ServiceManager {
         super(context, pkg, cls, action);
 
         mContext = context;
-        mSmsImpl = new ImsSmsImpl(this);
 
         HandlerThread thread = new HandlerThread("SmsManager");
         thread.start();
@@ -85,11 +86,30 @@ public class VoWifiSmsManager extends ServiceManager {
         }
     }
 
-    public ImsSmsImplBase getSmsImplementation() {
-        return mSmsImpl;
+    public ImsSmsImplBase getSmsImplementation(int phoneId) {
+        ImsSmsImpl smsImpl = null;
+        if (mSmsImpls.size() < 1) {
+            smsImpl = new ImsSmsImpl(this, phoneId);
+            mSmsImpls.put(Integer.valueOf(phoneId), smsImpl);
+        } else {
+            smsImpl = mSmsImpls.get(Integer.valueOf(phoneId));
+            if (smsImpl == null) {
+                smsImpl = new ImsSmsImpl(this, phoneId);
+                mSmsImpls.put(Integer.valueOf(phoneId), smsImpl);
+            }
+        }
+
+        return smsImpl;
     }
 
     private void handleEvent(String json) {
+        // As the VOWIFI enabled on the primary card. So handle the events on the primary card.
+        ImsSmsImpl smsImpl = mSmsImpls.get(Integer.valueOf(Utilities.getPrimaryCard(mContext)));
+        if (smsImpl == null) {
+            Log.e(TAG, "Can not handle the sms event now! Implemention is null.");
+            return;
+        }
+
         try {
             JSONObject jObject = new JSONObject(json);
             String eventName = jObject.optString(JSONUtils.KEY_EVENT_NAME, "");
@@ -112,7 +132,7 @@ public class VoWifiSmsManager extends ServiceManager {
                         // Handle as error and it will fallback to CS, remove from the map.
                         mSmsList.remove(new Sms(token));
                     }
-                    mSmsImpl.onSendSmsResult(token, messageRef, sendStatus, errorCode);
+                    smsImpl.onSendSmsResult(token, messageRef, sendStatus, errorCode);
                     break;
                 }
                 case JSONUtils.EVENT_CODE_SMS_RECEIVED: {
@@ -125,7 +145,7 @@ public class VoWifiSmsManager extends ServiceManager {
                     int token = generateToken();
                     Sms sms = new Sms(token, -1, Sms.DIR_RECEIVED, Sms.STATUS_RECEIVED, -1, false);
                     mSmsList.add(sms);
-                    mSmsImpl.onSmsReceived(token, mSmsImpl.getSmsFormat(),
+                    smsImpl.onSmsReceived(token, smsImpl.getSmsFormat(),
                             IccUtils.hexStringToBytes(pdu));
                     break;
                 }
@@ -151,8 +171,8 @@ public class VoWifiSmsManager extends ServiceManager {
                     int messageRefFromJSON = jObject.optInt(JSONUtils.KEY_SMS_MESSAGE_REF);
                     Log.d(TAG, "saved msgRef: " + smsMsg.mMessageRef + ", messageRefFromJSON: "
                             + messageRefFromJSON);
-                    mSmsImpl.onSmsStatusReportReceived(
-                            token, smsMsg.mMessageRef, mSmsImpl.getSmsFormat(), pduByte);
+                    smsImpl.onSmsStatusReportReceived(
+                            token, smsMsg.mMessageRef, smsImpl.getSmsFormat(), pduByte);
                     break;
                 }
             }
@@ -163,7 +183,7 @@ public class VoWifiSmsManager extends ServiceManager {
 
     private int generateToken() {
         String tokenStr = String.valueOf(System.currentTimeMillis());
-        return Integer.valueOf(tokenStr.substring(3));
+        return Integer.valueOf(tokenStr.substring(4));
     }
 
     private Sms findSmsByToken(int token) {
@@ -202,12 +222,13 @@ public class VoWifiSmsManager extends ServiceManager {
 
     private class ImsSmsImpl extends ImsSmsImplBase {
 
+        private int mPhoneId;
+        private boolean mReady = false;
         private VoWifiSmsManager mSmsMgr;
 
-        private boolean mReady = false;
-
-        protected ImsSmsImpl(VoWifiSmsManager smsMgr) {
+        protected ImsSmsImpl(VoWifiSmsManager smsMgr, int phoneId) {
             mSmsMgr = smsMgr;
+            mPhoneId = phoneId;
         }
 
         @Override
@@ -275,10 +296,16 @@ public class VoWifiSmsManager extends ServiceManager {
             }
 
             try {
-                byte[] smscByte = IccUtils.hexStringToBytes(smsc);
-                int length = smscByte[0];
-                String numberSMSC = PhoneNumberUtils.calledPartyBCDToString(smscByte, 1, length);
-
+                // FIXME: As the smsc string will be create as "new String(smsc)" in
+                // ImsSmsDispatcher, so we'd like to get the smsc self.
+                // As normal, it should use IccUtils.bytesToHexString, and the smsc number
+                // could get as this:
+                // byte[] smscByte = IccUtils.hexStringToBytes(smsc);
+                // int length = smscByte[0];
+                // String numberSMSC = PhoneNumberUtils.calledPartyBCDToString(smscByte, 1, length);
+                int subId = Utilities.getSubId(mPhoneId);
+                String numberSMSC = SmsManagerEx.getDefault().getSmscForSubscriber(subId);
+                Log.d(TAG, "Send sms with smsc: " + numberSMSC);
                 int id = mISms.sendSms(token, messageRef,
                         1 /* Retry will be handled by framework, native needn't retry. */,
                         numberSMSC, IccUtils.bytesToHexString(pdu));

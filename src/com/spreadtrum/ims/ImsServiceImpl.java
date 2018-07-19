@@ -263,8 +263,8 @@ public class ImsServiceImpl extends MmTelFeature {
     @Override
     public ImsSmsImplBase getSmsImplementation() {
         //TODO: should implement ImsSmsImplBase
-        if(mWifiService != null){
-            return mWifiService.getSmsImplementation();
+        if(mWifiService != null && mPhone != null){
+            return mWifiService.getSmsImplementation(mPhone.getPhoneId());
         }else{
             log("getSmsImplementation mWifiService is null");
             return new ImsSmsImplBase();

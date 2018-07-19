@@ -119,6 +119,16 @@ public class Utilities {
         return builder.toString();
     }
 
+    public static int getSubId(int phoneId) {
+        int[] subId = SubscriptionManager.getSubId(phoneId);
+        if (subId == null || subId.length == 0) {
+            Log.e(TAG, "Can not get the sub id from the phone id: " + phoneId);
+            return -1;
+        }
+
+        return subId[0];
+    }
+
     public static int getPrimaryCard(Context context) {
         TelephonyManager tm =
                 (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
@@ -136,14 +146,7 @@ public class Utilities {
     }
 
     public static int getPrimaryCardSubId(Context context) {
-        int phoneId = getPrimaryCard(context);
-        int[] subId = SubscriptionManager.getSubId(phoneId);
-        if (subId == null || subId.length == 0) {
-            Log.e(TAG, "Can not get the sub id from the phone id: " + phoneId);
-            return -1;
-        }
-
-        return subId[0];
+        return getSubId(getPrimaryCard(context));
     }
 
     public static boolean isAudioCall(int callType) {
