@@ -132,7 +132,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCi.setOnSuppServiceNotification(mHandler,EVENT_SSN,null);//SPRD:Add for bug582072
         mVideoState = ImsCallProfile
                 .getVideoStateFromImsCallProfile(mImsCallProfile);
-        mIsCmccNetwork = ImsCmccHelper.getInstance(mContext).isCmccNetwork();
+        //add for unisoc bug 900271
+        mIsCmccNetwork = ImsCmccHelper.getInstance(mContext).isCmccNetwork(getServiceId());
     }
 
     public ImsCallSessionImpl(ImsCallProfile profile,  Context context,
@@ -146,7 +147,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCi.setOnSuppServiceNotification(mHandler,EVENT_SSN,null);//SPRD:Add for bug582072
         mVideoState = ImsCallProfile
                 .getVideoStateFromImsCallProfile(mImsCallProfile);
-        mIsCmccNetwork = ImsCmccHelper.getInstance(mContext).isCmccNetwork();
+        //add for unisoc bug 900271
+        mIsCmccNetwork = ImsCmccHelper.getInstance(mContext).isCmccNetwork(getServiceId());
     }
 
     public ImsCallSessionImpl(ImsDriverCall dc, IImsCallSessionListener listener, Context context,
@@ -163,7 +165,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCi.setOnSuppServiceNotification(mHandler,EVENT_SSN,null);//SPRD:Add for bug582072
         mVideoState = ImsCallProfile
                 .getVideoStateFromImsCallProfile(mImsCallProfile);
-        mIsCmccNetwork = ImsCmccHelper.getInstance(mContext).isCmccNetwork();
+        //add for unisoc bug 900271
+        mIsCmccNetwork = ImsCmccHelper.getInstance(mContext).isCmccNetwork(getServiceId());
     }
 
     public ImsCallSessionImpl(ImsDriverCall dc, Context context,
@@ -179,7 +182,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mCi.setOnSuppServiceNotification(mHandler,EVENT_SSN,null);//SPRD:Add for bug582072
         mVideoState = ImsCallProfile
                 .getVideoStateFromImsCallProfile(mImsCallProfile);
-        mIsCmccNetwork = ImsCmccHelper.getInstance(mContext).isCmccNetwork();
+        //add for unisoc bug 900271
+        mIsCmccNetwork = ImsCmccHelper.getInstance(mContext).isCmccNetwork(getServiceId());
     }
 
     private void updateImsCallProfileFromDC(ImsDriverCall dc){

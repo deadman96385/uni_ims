@@ -33,19 +33,19 @@ public class ImsCmccHelper {
         mContext = context;
     }
 
-    public boolean isCmccNetwork() {
-        CarrierConfigManager configManager = (CarrierConfigManager) mContext.getSystemService(
-                Context.CARRIER_CONFIG_SERVICE);
-        int mDefaultDataSubId = SubscriptionManager.from(mContext).getDefaultDataSubscriptionId();
-        if (configManager != null && configManager.getConfigForSubId(mDefaultDataSubId) != null) {
-            return configManager.getConfigForSubId(mDefaultDataSubId).getBoolean(
+    //add for unisoc bug 900271
+    public boolean isCmccNetwork(int serviceId) {
+        CarrierConfigManager configManager = (CarrierConfigManager)mContext.getSystemService(mContext.CARRIER_CONFIG_SERVICE);
+        if (configManager != null && configManager.getConfigForPhoneId(serviceId-1) != null) {
+            return configManager.getConfigForPhoneId(serviceId-1).getBoolean(
                     CarrierConfigManagerEx.KEY_CARRIER_SUPPORTS_VIDEO_CALL_ONLY);
         }
         return false;
     }
 
     public boolean rejectMediaChange(ImsCallSessionImpl session) {
-        if (isCmccNetwork() && session != null && session.isHasBackgroundCallAndActiveCall()) {
+        //add for unisoc bug 900271
+        if (isCmccNetwork(session.getServiceId()) && session != null && session.isHasBackgroundCallAndActiveCall()) {
             return true;
         }
         return false;
