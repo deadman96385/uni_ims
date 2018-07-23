@@ -1736,7 +1736,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         /* @} */
 
-        if (notification.notificationType == 0) return;  //SPRD:modify by bug 786859.869743
+        //SPRD:modify by bug 786859.869743.880656
+        if (notification.notificationType == 0 || (notification.index != 0 && (Integer.valueOf(getCallId()) != notification.index))) return;
         switch (notification.code) {
             case SuppServiceNotification.CODE_2_CALL_ON_HOLD:
                 if (notification.notificationType == 1) {
