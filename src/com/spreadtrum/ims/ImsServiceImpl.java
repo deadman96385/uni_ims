@@ -240,6 +240,12 @@ public class ImsServiceImpl extends MmTelFeature {
                 mVowifiCapabilities.removeCapabilities(pair.getCapability());
             }
         }
+        //add for unisoc 900059
+        if(mVolteCapabilities.isCapable(MmTelCapabilities.CAPABILITY_TYPE_VOICE)){
+            mCi.setImsVoiceCallAvailability(1 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, ImsConfig.FeatureValueConstants.OFF));
+        } else {
+            mCi.setImsVoiceCallAvailability(0 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, ImsConfig.FeatureValueConstants.ON));
+        }
 
         if(isVoWifiEnabled()) {
             notifyCapabilitiesStatusChanged(mVowifiCapabilities);
@@ -682,13 +688,11 @@ public class ImsServiceImpl extends MmTelFeature {
     public void turnOnIms() {
         log("turnOnIms.");
         //add for bug 612670
-        mCi.setImsVoiceCallAvailability(1 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, ImsConfig.FeatureValueConstants.OFF));
     }
 
     public void turnOffIms() {
         log("turnOffIms.");
         //add for bug 612670
-        mCi.setImsVoiceCallAvailability(0 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, ImsConfig.FeatureValueConstants.ON));
     }
 
     @Override
