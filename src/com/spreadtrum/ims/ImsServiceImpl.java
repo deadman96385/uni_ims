@@ -19,6 +19,7 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.AsyncResult;
 import android.telephony.ServiceState;
+import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.VoLteServiceState;
 import android.telephony.ims.feature.ImsFeature;
@@ -542,13 +543,10 @@ public class ImsServiceImpl extends MmTelFeature {
                         //SPRD: Bug 623247
                         int value = ((Integer) ar.userObj).intValue();
                         if (DBG) log("value = " + value);
-                        /* SPRD: Bug 826164  @{ */
-                        /* SPRD: Bug 845558  @{ */
-                        android.provider.Settings.Global.putInt(
-                                mContext.getContentResolver(),
-                                android.provider.Settings.Global.ENHANCED_4G_MODE_ENABLED + "_" +
-                                mPhone.getPhoneId(), value);
-                        /*@}*/
+                        /* SPRD: AndroidP change save function, use property 
+                         * follow ImsManager @{ */
+                        SubscriptionManager.setSubscriptionProperty(getSubId(),
+                                SubscriptionManager.ENHANCED_4G_MODE_ENABLED, String.valueOf(value));
                         /*@}*/
                         Toast.makeText(mContext.getApplicationContext(), mContext.getString(R.string.ims_switch_failed), Toast.LENGTH_SHORT).show();
                     }
@@ -1479,5 +1477,15 @@ public class ImsServiceImpl extends MmTelFeature {
 
     public void log(String info){
         Log.i(TAG,"["+mServiceId+"]:" + info);
+    }
+
+    // SPRD add for dual LTE
+    private int getSubId() {
+        int[] subIds = SubscriptionManager.getSubId(mPhone.getPhoneId());
+        int subId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
+        if (subIds != null && subIds.length >= 1) {
+            subId = subIds[0];
+        }
+        return subId;
     }
 }
