@@ -1057,7 +1057,7 @@ public class ImsServiceImpl extends MmTelFeature {
         return mImsRegister;
     }
 
-    public void notifyImsRegister(boolean isRegistered, boolean isVolte){
+    public void notifyImsRegister(boolean isRegistered, boolean isVolte, boolean isWifiRegistered){   // UNISOC: Modify for bug880865
         try{
             // SPRD: 730973
             if(isRegistered){
@@ -1077,10 +1077,16 @@ public class ImsServiceImpl extends MmTelFeature {
             }
 
             log("notifyImsRegister->isRegistered:" + isRegistered
+                    + " isWifiRegistered:"+isWifiRegistered
                     + " isImsEnabled():"+mImsService.isImsEnabled()
                     + " mImsService.isVoLTEEnabled():"+mImsService.isVoLTEEnabled()
                     + " mImsService.isVoWifiEnabled():"+mImsService.isVoWifiEnabled());
             log("notifyImsRegister->mServiceState:" + isRegistered);
+
+            // UNISOC: Add for bug880865
+            TelephonyManager.setTelephonyProperty(mServiceId-1, "gsm.sys.vowifi.state",
+                                                  isWifiRegistered ? "1" :"0");
+
             mImsRegister.notifyImsStateChanged(isRegistered);
             if(mListener == null){
                 log("notifyImsRegister->mListener is null!");

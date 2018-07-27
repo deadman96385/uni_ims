@@ -2553,6 +2553,29 @@ public class ImsService extends Service {
         }
     }
 
+    /* UNISOC: Add for bug880865{@ */
+    public void updateImsFeatureForDataChange() {
+        synchronized (mImsRegisterListeners) {
+
+            int primaryPhoneId = ImsRegister.getPrimaryCard(mPhoneCount);
+            ImsServiceImpl imsService = mImsServiceImplMap.get(Integer.valueOf(primaryPhoneId +1));
+            if(imsService != null) {
+                //update Ims Feature for primary card
+                updateImsFeature(imsService.getServiceId());
+            }
+
+            for (Integer id : mImsServiceImplMap.keySet()) {
+                if(id != (primaryPhoneId +1))
+                {
+                   //update Ims Feature for secondary card
+                   imsService = mImsServiceImplMap.get(id);
+                   updateImsFeature(imsService.getServiceId());
+                }
+            }
+        }
+    }
+    /* @} */
+
     public void updateImsFeature(int serviceId) {
         ImsServiceImpl imsService = mImsServiceImplMap.get(Integer
                 .valueOf(serviceId));
@@ -2564,7 +2587,7 @@ public class ImsService extends Service {
         if (!isPrimaryCard && imsService != null) {
             if(ImsManagerEx.isDualVoLTEActive() || getLTECapabilityForPhone(serviceId - 1)) {
                 imsService.updateImsFeatures(volteRegistered, false);
-                imsService.notifyImsRegister(volteRegistered,false);
+                imsService.notifyImsRegister(volteRegistered,false, false); // UNISOC: Modify for bug880865
                 notifyImsRegisterState();
             } else {
                 if(imsService.isImsEnabled()) {
@@ -2623,7 +2646,7 @@ public class ImsService extends Service {
                     imsService.setImsPcscfAddress(addr);
                 }
             }
-            imsService.notifyImsRegister(isImsRegistered, mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE);
+            imsService.notifyImsRegister(isImsRegistered, mCurrentImsFeature == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE, mWifiRegistered); // UNISOC: Modify for bug880865
             notifyImsRegisterState();
         }
 
@@ -3193,7 +3216,6 @@ public class ImsService extends Service {
         iLog("notifySrvccState->phoneId:" + phoneId + " primaryPhoneId:"
                 + primaryPhoneId + " status:" + status);
         if (phoneId == primaryPhoneId + 1) {
-            updateImsFeature();
             mWifiService.onSRVCCStateChanged(status);
             if (status == VoLteServiceState.HANDOVER_COMPLETED){
                 mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
@@ -3201,6 +3223,7 @@ public class ImsService extends Service {
                     mWifiRegistered = false; // SPRD:add for bug659097
                 }
             }
+            updateImsFeature();  /* UNISOC: Modify for bug880865 */
         }
     }
 
@@ -3247,8 +3270,8 @@ public class ImsService extends Service {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if ((TelephonyIntents.ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED).equals(action)) {
-                Log.i(TAG,"ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED, update Ims Feature For All Service." );  //SPRD: add for bug866765
-                updateImsFeatureForAllService();
+                Log.i(TAG,"ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED, update Ims Feature For Data Change." );
+                updateImsFeatureForDataChange(); //UNISOC: add for bug866765,bug880865
             }
         }
     };
