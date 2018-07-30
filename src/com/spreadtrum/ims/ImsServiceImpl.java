@@ -130,13 +130,14 @@ public class ImsServiceImpl extends MmTelFeature {
     private ImsServiceCallTracker mImsServiceCallTracker;
     private ImsHandler mHandler;
     private UiccController mUiccController;
+    private ArrayList<ApnSetting> mAllApnSettings = null;
     private AtomicReference<IccRecords> mIccRecords = new AtomicReference<IccRecords>();
     private ApnChangeObserver mApnChangeObserver = null;
     private ImsRegister mImsRegister = null;
     private ArrayList<Listener> mListeners = new ArrayList<Listener>();
     private ImsService mImsService;
     private VolteConfig mVolteConfig;
-    private String mNWNumeric = "";
+    private boolean mSetSosApn = true;
     private VoWifiServiceImpl mWifiService;//Add for data router
     private ImsUtProxy mImsUtProxy = null;
     private String mImsRegAddress = "";
@@ -808,14 +809,13 @@ public class ImsServiceImpl extends MmTelFeature {
     }
     private void onRecordsLoaded() {
         if (DBG) log("onRecordsLoaded: createAllApnList");
+        createAllApnList();
+        setInitialAttachIMSApn();
+    }
+    private void createAllApnList(){
+        mAllApnSettings = new ArrayList<ApnSetting>();
         IccRecords r = mIccRecords.get();
         String operator = (r != null) ? r.getOperatorNumeric() : "";
-        ArrayList<ApnSetting> apnSettings = createAllApnList(operator);
-        setInitialAttachIMSApn(apnSettings);
-    }
-    private ArrayList<ApnSetting> createAllApnList(String operator){
-        ArrayList<ApnSetting> allApnSettings = new ArrayList<ApnSetting>();
-
         if (operator != null) {
             String selection = "numeric = '" + operator + "'";
             String orderBy = "_id";
@@ -826,16 +826,15 @@ public class ImsServiceImpl extends MmTelFeature {
 
             if (cursor != null) {
                 if (cursor.getCount() > 0) {
-                     allApnSettings = ApnUtils.createApnList(cursor);
+                    mAllApnSettings = ApnUtils.createApnList(cursor);
                 }
                 cursor.close();
             }
         }
-        return allApnSettings;
     }
-    private void setInitialAttachIMSApn(ArrayList<ApnSetting> apnSettings){
+    private void setInitialAttachIMSApn(){
         ApnSetting apn = null;
-        for (ApnSetting a : apnSettings) {
+        for (ApnSetting a : mAllApnSettings) {
             if (ArrayUtils.contains(a.types, PhoneConstants.APN_TYPE_IMS)) {
                 apn = a;
                 break;
@@ -861,10 +860,8 @@ public class ImsServiceImpl extends MmTelFeature {
      */
     private void onApnChanged() {
         if (DBG) log("onApnChanged: createAllApnList");
-        IccRecords r = mIccRecords.get();
-        String operator = (r != null) ? r.getOperatorNumeric() : "";
-        ArrayList<ApnSetting> apnSettings = createAllApnList(operator);
-        setInitialAttachIMSApn(apnSettings);
+        createAllApnList();
+        setInitialAttachIMSApn();
     }
 
     public int getServiceId(){
@@ -950,33 +947,32 @@ public class ImsServiceImpl extends MmTelFeature {
         mImsConfigImpl.setVideoQualitytoPreference(Integer.parseInt(operatorCameraResolution));
     }
 
-    /* SPRD: 630048 add sos apn for yes 4G @{*/
+    /* UNISOC: 630048 add sos apn for yes 4G @{*/
     public void setInitialAttachSosApn(ServiceState state){
         String carrier = state.getOperatorNumeric();
-        if (!TextUtils.isEmpty(carrier) && !carrier.equals(mNWNumeric)) {
-            ArrayList<ApnSetting> apnSettings = createAllApnList(carrier);
-            ApnSetting apn = null;
-            for (ApnSetting a : apnSettings) {
-                if (ArrayUtils.contains(a.types, PhoneConstants.APN_TYPE_EMERGENCY)) {
-                    apn = a;
-                    break;
+        if (carrier != null && !carrier.isEmpty()) {
+            String carrierApn = mVolteConfig.getApn(carrier);
+            if (carrierApn != null && !carrierApn.isEmpty()) {
+                if (DBG) log("SosApn: apn=" + carrierApn + ", set sos apn = " + mSetSosApn);
+                if (mSetSosApn) {
+                    mSetSosApn = false;
+                    String[] emergency = {"emergency"};
+                    ApnSetting apn = new ApnSetting(0, carrier, "", carrierApn, "", "", "", "", "", "", "", 0,
+                            emergency, "IPV4V6", "IPV4V6", true, 0, 0, 0, false, 0, 0, 0, 0, "", "");
+                    DataProfile dp = new DataProfile(apn.profileId, apn.apn, apn.protocol,
+                            apn.authType, apn.user, apn.password, apn.bearerBitmask == 0
+                            ? DataProfile.TYPE_COMMON : (ServiceState.bearerBitmapHasCdma(apn.bearerBitmask)
+                            ? DataProfile.TYPE_3GPP2 : DataProfile.TYPE_3GPP),
+                            apn.maxConnsTime, apn.maxConns, apn.waitTime, apn.carrierEnabled, apn.typesBitmap,
+                            apn.roamingProtocol, apn.bearerBitmask, apn.mtu, apn.mvnoType, apn.mvnoMatchData,
+                            apn.modemCognitive);
+
+                    mCi.setInitialAttachSOSApn(dp, null);
                 }
             }
-            if (apn == null) {
-                if (DBG) log("X There in no available emergemcy apn");
-            } else {
-                if (DBG) log("X selected emergemcy Apn=" + apn);
-                DataProfile dp = new DataProfile(apn.profileId, apn.apn, apn.protocol,
-                                        apn.authType, apn.user, apn.password, apn.bearerBitmask == 0
-                                                ? DataProfile.TYPE_COMMON : (ServiceState.bearerBitmapHasCdma(apn.bearerBitmask)
-                                                ? DataProfile.TYPE_3GPP2 : DataProfile.TYPE_3GPP),
-                                        apn.maxConnsTime, apn.maxConns, apn.waitTime, apn.carrierEnabled, apn.typesBitmap,
-                                        apn.roamingProtocol, apn.bearerBitmask, apn.mtu, apn.mvnoType, apn.mvnoMatchData,
-                                        apn.modemCognitive);
-                mCi.setInitialAttachSOSApn(dp, null);
-
-            }
-            mNWNumeric = carrier;
+        } else {
+            if (DBG) log("carrier is null");
+            mSetSosApn = true;
         }
     }
     /* @} */
