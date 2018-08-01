@@ -1398,7 +1398,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if (mImsDriverCall == null) {
             return false;
         }
-        return mImsDriverCall.isMpty && mImsDriverCall.mptyState == 2;
+        return mImsDriverCall.isMpty && mImsDriverCall.mptyState == 1;
     }
 
     /**
