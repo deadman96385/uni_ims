@@ -394,8 +394,8 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
 //                    null,null);
         }else{
             mCi.responseVolteCallMediaChange(false, Integer.parseInt(mImsCallSessionImpl.getCallId()), mCallIdMessage);
-//            receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
-//                    null,null);
+            receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
+                    null,null);//UNISOC:modify for bug905689
         }
     }
 
