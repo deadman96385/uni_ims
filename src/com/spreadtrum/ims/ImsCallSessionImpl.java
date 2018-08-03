@@ -158,11 +158,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public ImsCallSessionImpl(ImsDriverCall dc, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
         mImsDriverCall = new ImsDriverCall(dc);
-        updateImsCallProfileFromDC(dc);
+        mImsServiceCallTracker = callTracker;//modify for unisoc by bug 911254
         mIImsCallSessionListener = listener;
         mContext = context;
         mCi = ci;
-        mImsServiceCallTracker = callTracker;
+        updateImsCallProfileFromDC(dc);
         mHandler = new ImsHandler(context.getMainLooper(),this);
         mImsVideoCallProvider = new ImsVideoCallProvider(this,ci,mContext) ;
         updateVideoProfile(mImsDriverCall);
@@ -176,10 +176,10 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     public ImsCallSessionImpl(ImsDriverCall dc, Context context,
                               ImsRIL ci, ImsServiceCallTracker callTracker){
         mImsDriverCall = new ImsDriverCall(dc);
-        updateImsCallProfileFromDC(dc);
+        mImsServiceCallTracker = callTracker;//modify for unisoc by bug 911254
         mContext = context;
         mCi = ci;
-        mImsServiceCallTracker = callTracker;
+        updateImsCallProfileFromDC(dc);
         mHandler = new ImsHandler(context.getMainLooper(),this);
         mImsVideoCallProvider = new ImsVideoCallProvider(this,ci,mContext) ;
         updateVideoProfile(mImsDriverCall);
