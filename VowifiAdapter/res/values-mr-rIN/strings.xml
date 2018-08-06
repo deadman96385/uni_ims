@@ -18,4 +18,11 @@
     <string name="vowifi_conf_kick_failed">"सहभागीला काढून टाकण्यास विफल."</string>
     <string name="vowifi_conf_none_participant">"एकही सहभागी नाही आहे, कॉल संपवा."</string>
     <string name="vowifi_conf_do_not_support">"या कृतीला आत्ता होऊ देऊ नका"</string>
+    <string name="vowifi_update_to_rx_success">"केवळ व्हिडिओ रिसेप्शन"</string>
+     <string name="vowifi_update_to_tx_success">"केवळ व्हिडिओ ट्रान्समिशन"</string>
+     <string name="vowifi_hold_received">"कॉल होल्डवर आहे"</string>
+     <string name="vowifi_resume_received">"कॉल पुन: प्राप्त केला"</string>
+     <string name="vowifi_conf_connect_timeout">"कॉन्फरन्स सर्व्हर टाईमआउटला कनेक्ट करा"</string>
+     <string name="vowifi_conf_can_not_invite_more">"दुसऱ्या सहभागीला कॉन्फरन्स कॉलमध्ये आमंत्रित करू शकत नाही कारण त्यात आधीच 6 सहभागी आहेत"</string>
+
 </resources>

@@ -21,4 +21,6 @@
     <string name="vowifi_conf_connect_timeout">"கான்பரன்ஸ் சர்வருடனான இணைப்பு நேரம் முடிந்து விட்டது"</string>
      <string name="vowifi_conf_can_not_invite_more">"ஏற்கெனவே 6 பேர் இணைந்திருப்பதால், இந்த கான்பரன்ஸ் அழைப்பில் இன்னொருவரை வரவேற்க இயலாது"</string>
 
+    <string name="vowifi_update_to_rx_success">"வீடியோ பெறுதல் மட்டும்"</string>
+     <string name="vowifi_update_to_tx_success">"வீடியோ ஒளிபரப்பு மட்டும்"</string>
 </resources>

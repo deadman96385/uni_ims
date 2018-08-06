@@ -19,4 +19,10 @@
     <string name="vowifi_conf_kick_failed">"শরুক য়াবা মী অদু লৌথোকপা ঙমদে"</string>
     <string name="vowifi_conf_none_participant">"শরুক য়াবা মী অমত্তা লৈতে, কোল অদু লোইশিল্লু."</string>
     <string name="vowifi_conf_do_not_support">"এক্সন অসি হৌজিক সপোর্ট তৌগনু."</string>
+    <string name="vowifi_update_to_rx_success">"ভিদিও রিসেপ্সন খক্তং"</string>
+     <string name="vowifi_update_to_tx_success">"ভিদিও ত্রান্সমিশন খক্তং"</string>
+     <string name="vowifi_hold_received">"কোল পায়দুনা থম্মি"</string>
+     <string name="vowifi_resume_received">"কোল থিরগা ফংলে"</string>
+     <string name="vowifi_conf_can_not_invite_more">"কনফরেন্স অদুদা অতোপ্পা শরুক য়ানবা বার্তন তৌবা য়াদ্রে মরমদি মী 6 হান্না য়াওদুনা লৈরে"</string>
+
 </resources>

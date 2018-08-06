@@ -19,4 +19,10 @@
     <string name="vowifi_conf_kick_failed">"सहभागी हटेबामे असफल भेल"</string>
     <string name="vowifi_conf_none_participant">"एतय कोनो सहभागी नहि अछि, काँल समाप्त करू।"</string>
     <string name="vowifi_conf_do_not_support">"एखन एहि क्रिया केर समर्थन नहि करू।"</string>
+    <string name="vowifi_update_to_rx_success">"विडियो प्राप्ति मात्र"</string>
+     <string name="vowifi_update_to_tx_success">"विडियो प्रसारण मात्र"</string>
+     <string name="vowifi_hold_received">"रोकल कॉल"</string>
+     <string name="vowifi_resume_received">"वापस आयल कॉल"</string>
+     <string name="vowifi_conf_can_not_invite_more">"दोसर सहभागी केर वार्तालापमे आमंत्रीत नहि कय सकैत छी कारण एहिमे पहिनेसँ 6 टा सहभागी अछि"</string>
+
 </resources>

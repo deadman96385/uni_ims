@@ -18,4 +18,11 @@
     <string name="vowifi_conf_kick_failed">"ਭਾਗੀਦਾਰ ਨੂੰ ਹਟਾਉਣ ਵਿੱਚ ਅਸਫਲ ਰਿਹਾ ਹੈ"</string>
     <string name="vowifi_conf_none_participant">"ਅਜੇ ਕੋਈ ਵੀ ਭਾਗੀਦਾਰ ਨਹੀਂ ਹੈ, ਕਾਲ ਨੂੰ ਬੰਦ ਕਰ ਦਿਓ।"</string>
     <string name="vowifi_conf_do_not_support">"ਹੁਣੇ ਇਸ ਕਿਰਿਆ ਦਾ ਸਮਰਥਨ ਨਾ ਕਰੋ।"</string>
+    <string name="vowifi_update_to_rx_success">"ਕੇਵਲ ਵੀਡੀਓ ਪ੍ਰਾਪਤ ਕਰੋ"</string>
+     <string name="vowifi_update_to_tx_success">"ਕੇਵਲ ਵੀਡੀਓ ਭੇਜੋ"</string>
+     <string name="vowifi_hold_received">"ਕਾਲ ਹੋਲਡ ਕੀਤੀ"</string>
+     <string name="vowifi_resume_received">ਕਾੱਲ ਪੁਨਰ ਪ੍ਰਾਪਤ ਕੀਤੀ ਗਈ</string>
+     <string name="vowifi_conf_connect_timeout">"ਕਾਨਫਰੰਸ ਸਰਵਰ ਨਾਲ ਕਨੈਕਟ ਕਰਨ ਦੀ ਸਮਾਂ ਸੀਮਾ ਲੰਘ ਗਈ ਹੈ"</string>
+     <string name="vowifi_conf_can_not_invite_more">"ਕਿਸੇ ਹੋਰ ਭਾਗੀਦਾਰ ਨੂੰ ਕਾਨਫਰੰਸ ਵਿੱਚ ਸ਼ਾਮਿਲ ਨਹੀਂ ਕਰ ਸਕਦਾ ਕਿਉਂਕਿ ਇਸ ਵਿੱਚ ਪਹਿਲਾਂ ਹੀ 6 ਭਾਗੀਦਾਰ ਹਨ"</string>
+
 </resources>

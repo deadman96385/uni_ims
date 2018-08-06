@@ -19,4 +19,10 @@
     <string name="vowifi_conf_kick_failed">"ଅଂଶଗ୍ରହଣକାରୀ ହଟାଇବାରେ ବିଫଳ ହୋଇଛି"</string>
     <string name="vowifi_conf_none_participant">"କୌଣସି ଅଂଶଗ୍ରହଣକାରୀ ନାହାଁନ୍ତି, କଲ୍ ଶେଷ କରନ୍ତୁ ।"</string>
     <string name="vowifi_conf_do_not_support">"ବର୍ତ୍ତମାନ ଏହି ଆକସନ୍ କୁ ସପୋର୍ଟ କରନ୍ତୁ ନାହିଁ ।"</string>
+    <string name="vowifi_update_to_rx_success">"କେବଳ ଭିଡିଓ ଗ୍ରହଣ "</string>
+     <string name="vowifi_update_to_tx_success">"କେବଳ ଭିଡିଓ ସଂଚରଣ "</string>
+     <string name="vowifi_hold_received">"ଡାକ ଅଟକାଯାଇଛି"</string>
+     <string name="vowifi_resume_received">"ଡାକ ପୁନରୁଦ୍ଧାରିତ ହୋଇଛି"</string>
+     <string name="vowifi_conf_can_not_invite_more">"କେହି ଅନ୍ୟ ପ୍ରତିଭାଗୀ କୁ ସମ୍ମେଳନ ପାଇଁ ଆମନ୍ତ୍ରଣ କରିହେବ ନାହିଁ କାରଣ ପୂର୍ବରୁ ହିଁ 6 ଜଣ ପ୍ରତିଭାଗୀ ଅଛନ୍ତି|"</string>
+
 </resources>

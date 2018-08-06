@@ -19,4 +19,10 @@
     <string name="vowifi_conf_kick_failed">"वांटेकार जाल्ल्यांक काडूंक अपेशी"</string>
     <string name="vowifi_conf_none_participant">"थंय कोणच वांटेकार ना, कॉल सोपयात."</string>
     <string name="vowifi_conf_do_not_support">"हे कृतीक आतां तेंको दिनाकात."</string>
+    <string name="vowifi_update_to_rx_success">"व्हिडियो रिसॅप्शन फकत"</string>
+     <string name="vowifi_update_to_tx_success">"व्हिडियो ट्रान्समिशन फकत"</string>
+     <string name="vowifi_hold_received">"कॉल प्रतिक्षेंत"</string>
+     <string name="vowifi_resume_received">"कॉल मेळयला"</string>
+     <string name="vowifi_conf_can_not_invite_more">"कॉन्फरन्सा खातीर आनीक कोणाक सहभागी करून घेवपाक शकनात, कारण आदीच 6 जाण वांटेकार जाल्यात"</string>
+
 </resources>

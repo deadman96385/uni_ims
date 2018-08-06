@@ -19,4 +19,10 @@
     <string name="vowifi_conf_kick_failed">"ओकोय हे सेलेदोक् बानुक् कोवा, कॉल चाबायेना"</string>
     <string name="vowifi_conf_none_participant">"ओकोय गे सेलेदोक् को बानुक् कोवा, कॉल मुचाद मे।"</string>
     <string name="vowifi_conf_do_not_support">"नित् नोवा कामी रेयाक् बाय हेंसारीयाक् काना।"</string>
+    <string name="vowifi_update_to_rx_success">"एकेन  बिडियो  दाराम"</string>
+     <string name="vowifi_update_to_tx_success">"एकेन बिडियो उचा़ड़"</string>
+     <string name="vowifi_hold_received">"कॉल साब"</string>
+     <string name="vowifi_resume_received">"कॉल रिट्राइभेड"</string>
+     <string name="vowifi_conf_can_not_invite_more">"कोन फ्रेंस रे एटाक् समेलात को बाम नेवता दाड़ेयाक् आ कोवा ओका रे माड़ाङ खोन 6 सा़मिलात को मेनाक् कोवा"</string>
+
 </resources>

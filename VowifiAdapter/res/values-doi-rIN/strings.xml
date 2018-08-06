@@ -19,4 +19,10 @@
     <string name="vowifi_conf_kick_failed">"प्रतिभागी हटाने च असफल"</string>
     <string name="vowifi_conf_none_participant">"कोई प्रतिभागी नेईं ऐ, काल खत्म करो।"</string>
     <string name="vowifi_conf_do_not_support">"इसलै इस प्रक्रिया दा समर्थन नेईं करो।"</string>
+    <string name="vowifi_update_to_rx_success">"वीडियो रिसेप्शन सिर्फ"</string>
+     <string name="vowifi_update_to_tx_success">"वीडियो ट्रांसमिशन सिर्फ"</string>
+     <string name="vowifi_hold_received">"काल आयोजित"</string>
+     <string name="vowifi_resume_received">"काल लैती गेई"</string>
+     <string name="vowifi_conf_can_not_invite_more">"होर प्रतिभागी गी कांफ्रेंस च साद्दा नेईं देई सकदा कीजे इस च पैह्​ले थमां गै 6 प्रतिभागी शामल न"</string>
+
 </resources>

@@ -21,4 +21,6 @@
     <string name="vowifi_conf_connect_timeout">"কনফারেন্স সার্ভার টাইমআউটে সংযোগ করুন"</string>
      <string name="vowifi_conf_can_not_invite_more">"যেহেতু ইতিমধ্যেই 6 জন অংশগ্রহণকারী আছে তাই আর কোন অংশগ্রহণকারীকে আমন্ত্রণ করা যাবে না"</string>
 
+    <string name="vowifi_update_to_rx_success">"শুধু ভিডিও গ্রহণ"</string>
+     <string name="vowifi_update_to_tx_success">"শুধু ভিডিও প্রেরণ"</string>
 </resources>

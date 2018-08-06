@@ -19,4 +19,10 @@
     <string name="vowifi_conf_kick_failed">"बाहागो लाग्राखौ बोखारनो नागिरनाया फेलें जाबाय"</string>
     <string name="vowifi_conf_none_participant">"रावबो बाहागो लाग्रा गैया, कलखौ फोजोबदो।"</string>
     <string name="vowifi_conf_do_not_support">"बे खामानिखौ दायो मददथि दाहो"</string>
+    <string name="vowifi_update_to_rx_success">"भिडिअल\'रायदावनाय"</string>
+     <string name="vowifi_update_to_tx_success">"भिडिअ बारस्लायहोनायल"</string>
+     <string name="vowifi_hold_received">"कलखौ हल्डाव दोनदों"</string>
+     <string name="vowifi_resume_received">"कल जाफिनदों"</string>
+     <string name="vowifi_conf_can_not_invite_more">"सा 6 बाहागो लाग्राफोर दंखायो हिसाबै जथुममायाव गुबुन बाहागो-लाग्रा लिंहरनो हाया"</string>
+
 </resources>

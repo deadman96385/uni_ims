@@ -19,4 +19,10 @@
     <string name="vowifi_conf_kick_failed">" شرکت کرن وال ہٹاون گۓ ناکام"</string>
     <string name="vowifi_conf_none_participant">" اتء چھنء کہان تء شرکت کرن وول، ژٹیو کال۔"</string>
     <string name="vowifi_conf_do_not_support">" یتھ کامء مء دییو ساتھ ونی۔"</string>
+    <string name="vowifi_update_to_rx_success">" ویڈیو رٹن صرف"</string>
+     <string name="vowifi_update_to_tx_success">" ویڈیو سوزون صرف"</string>
+     <string name="vowifi_hold_received">"کال قوبو كرن"</string>
+     <string name="vowifi_resume_received">"کال دبار رٹن"</string>
+     <string name="vowifi_conf_can_not_invite_more">" ہیکنء بیکس حصء نین والس داوت دیتھ کانفرنس کالء کھتر تیکیازء اتء چھء برونٹھے 6 حصء نین وایل"</string>
+
 </resources>

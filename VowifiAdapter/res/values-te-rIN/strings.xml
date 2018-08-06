@@ -18,4 +18,11 @@
     <string name="vowifi_conf_kick_failed">"పాల్గొనేవారిని తొలగి౦చడ౦ విఫల౦"</string>
     <string name="vowifi_conf_none_participant">"పాల్గొనేవారు ఎవరూ లేరు, కాల్ ఆపివేయ౦డి"</string>
     <string name="vowifi_conf_do_not_support">"ఈ చర్యకు మద్దతు ఇవ్వక౦డి."</string>
+    <string name="vowifi_update_to_rx_success">"వీడియో రిసెప్షన్ మాత్రమే"</string>
+     <string name="vowifi_update_to_tx_success">"వీడియో ట్రాన్స్ మిషన్ మాత్రమే"</string>
+     <string name="vowifi_hold_received">"కాల్ ఆపబడింది"</string>
+     <string name="vowifi_resume_received">"కాల్ రిట్రీవ్ చేయబడింది"</string>
+     <string name="vowifi_conf_connect_timeout">"ముగీసిన కాన్ఫరెన్స్ సర్వర్ కు కనెక్ట్ చేయుము"</string>
+     <string name="vowifi_conf_can_not_invite_more">"ఇప్పటికే 6 గురు పాల్గొని ఉన్నoదున కాన్ఫరెన్స్ కు వేరొక వ్యక్తి ని అనుమతించలేము"</string>
+
 </resources>
