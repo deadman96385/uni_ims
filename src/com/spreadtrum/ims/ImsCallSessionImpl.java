@@ -1087,13 +1087,13 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         mDisconnCause = reason;
         if(mConferenceHost){
             boolean hasRinging = mImsServiceCallTracker.hasRingingCall();
-            boolean allActive = isAllConferenceCallActive();
+            boolean conferenceActive = isConferenceCallActive();
             boolean allHeld = isAllConferenceCallHeld();
             Log.i(TAG, "terminate conference->hasRinging:"+hasRinging
-                    +" isAllConferenceCallActive():"+allActive
+                    +" isConferenceCallActive():"+conferenceActive
                     +" isAllConferenceCallHeld():"+allHeld);
             if(isForegroundCall()){
-                if(allActive && !hasRinging){
+                if(conferenceActive && !hasRinging){
                     mCi.hangupForegroundResumeBackground(mHandler.obtainMessage(ACTION_COMPLETE_HANGUP,this));
                 } else {
                     hangupAllConferenceCall();
@@ -1681,9 +1681,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
     }
 
-    public boolean isAllConferenceCallActive(){
+    public boolean isConferenceCallActive(){
         if(mImsConferenceState == null){
-            Log.w(TAG, "isAllConferenceCallActive->mImsConferenceState is null:"+(mImsConferenceState == null));
+            Log.w(TAG, "isConferenceCallActive->mImsConferenceState is null:"+(mImsConferenceState == null));
             return false;
         }
         for (Iterator<Map.Entry<String, Bundle>> it =
@@ -1691,12 +1691,11 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
             Map.Entry<String, Bundle> e = it.next();
             String status = e.getValue().getString(ImsConferenceState.STATUS);
             if(status != null &&
-                    ImsDriverCall.ConferenceStringToState(status) != ImsDriverCall.State.ACTIVE &&
-                    ImsDriverCall.ConferenceStringToState(status) != ImsDriverCall.State.DISCONNECTED){
-                return false;
+                    ImsDriverCall.ConferenceStringToState(status) == ImsDriverCall.State.ACTIVE){
+                return true;
             }
         }
-        return true;
+        return false;
     }
 
     public boolean isAllConferenceCallHeld(){

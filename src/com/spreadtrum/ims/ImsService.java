@@ -3219,6 +3219,8 @@ public class ImsService extends Service {
             mWifiService.onSRVCCStateChanged(status);
             if (status == VoLteServiceState.HANDOVER_COMPLETED){
                 mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_UNKNOWN;
+                mFeatureSwitchRequest = null;
+                mIsPendingRegisterVowifi = false;
                 if(mWifiRegistered) {
                     mWifiRegistered = false; // SPRD:add for bug659097
                 }
