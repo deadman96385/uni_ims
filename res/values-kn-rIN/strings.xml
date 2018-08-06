@@ -42,4 +42,10 @@
 
     <string name="vowifi_attation">"Vowifi ಗಮನ"</string>
      <string name="vowifi_regist_fail_content">"ನೆಟ್ವರ್ಕ್ vowifi ಬೆಂಬಲಿಸುವುದಿಲ್ಲ"</string>
+    <string name="handover_to_volte_success">"ಉತ್ತಮವಾದ ವಾಯ್ಸ್ ಕ್ವಾಲಿಟಿಗಾಗಿ VoLTE ಗೆ ಸ್ವಿಚ್ ಮಾಡಲಾಗುತ್ತಿದೆ"</string>
+     <string name="vowifi_connected_title">"Wi-Fi ಕರೆಯ ಮೂಲಕ ತುರ್ತು ಕರೆಗಳನ್ನು ಮಾಡುವುದು"</string>
+     <string name="vowifi_connected_continue">"ಮುಂದುವರೆಯಿರಿ"</string>
+     <string name="vowifi_connected_disable">"ಅಸಕ್ರಿಯಗೊಳಿಸು"</string>
+     <string name="vowifi_connected_checkbox_text">"ಮತ್ತೆ ತೋರಿಸಬೇಡ"</string>
+     <string name="vowifi_connected_message">"Wi-Fi ಕರೆಯ ಮೂಲಕ ತುರ್ತು ಕರೆಗಳನ್ನು ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ,ತುರ್ತು ಕರೆ ಮಾಡಲು ಸೆಲ್ಯುಲರ್ ನೆಟ್ವರ್ಕ್ (2G/3G)ಗೆ ಸಾಧನವು ಸ್ವಯಂ ಆಗಿ ಬದಲಾವಣೆ ಹೊಂದುತ್ತದೆ. ನೀವು Wi-Fi-ಕರೆ ಮಾಡುವ ಸೇವೆಯನ್ನು ಮುಂದುವರಿಸಲು ಬಯಸುತ್ತೀರಾ ಅಥವಾ Wi-Fi ಕರೆ ಮಾಡುವಿಕೆಯನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಬೇಕೆ? ""</string>
 </resources>

@@ -42,4 +42,10 @@
 
     <string name="vowifi_attation">"Vowifi ਲਈ ਸਾਵਧਾਨੀ"</string>
      <string name="vowifi_regist_fail_content">"ਨੈੱਟਵਰਕ vowifi ਦਾ ਸਮਰਥਨ ਨਹੀਂ ਕਰਦਾ ਹੈ"</string>
+    <string name="handover_to_volte_success">"ਇੱਕ ਬਿਹਤਰ ਆਵਾਜ਼ ਦੀ ਗੁਣਵੱਤਾ ਲਈ ਇਸ ਨੂੰ ਬਦਲਣਾ VoLTE"</string>
+     <string name="vowifi_connected_title">"Wi-Fi ਕਾਲਿੰਗ ਦੇ ਰਾਹੀਂ ਐਮਰਜੈਂਸੀ ਕਾਲਾਂ"</string>
+     <string name="vowifi_connected_continue">ਜਾਰੀ ਰੱਖੋ</string>
+     <string name="vowifi_connected_disable">ਅਸਕ੍ਰਿਅ ਕਰੋ</string>
+     <string name="vowifi_connected_checkbox_text">"ਦੋਬਾਰਾ ਨਾ ਦਿਖਾਓ"</string>
+     <string name="vowifi_connected_message">"ਐਮਰਜੈਂਸੀ ਕਾਲਾਂ WiFi-ਕਾਲਿੰਗ ਦੇ ਰਾਹੀਂ ਸੰਭਵ ਨਹੀਂ ਹਨ, ਐਮਰਜੈਂਸੀ ਕਾਲ ਕਰਨ ਲਈ ਡਿਵਾਈਸ ਆਟੋ ਤੋਂ ਸੈਲੂਲਰ ਨੈਟਵਰਕ (2G/3G) \'ਤੇ ਸਵਿੱਚ ਕਰਦਾ ਹੈ। ਕੀ ਤੁਸੀਂ WiFi-ਕਾਲਿੰਗ ਸੇਵਾ ਜਾਰੀ ਰੱਖਣਾ ਚਾਹੁੰਦੇ ਹੋ ਜਾਂ Wi-Fi ਕਾਲਿੰਗ ਨੂੰ ਅਯੋਗ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ?"</string>
 </resources>

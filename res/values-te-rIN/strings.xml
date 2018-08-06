@@ -42,4 +42,10 @@
 
     <string name="vowifi_attation">"వొవైఫై అటెన్షన్"</string>
      <string name="vowifi_regist_fail_content">"నెట్ వర్క్ వొవైఫై కి అనుమతి౦చదు"</string>
+    <string name="handover_to_volte_success">"గొంతుకలో స్పష్టత ఉండేందుకు వోల్ట్ కు మారడం"</string>
+     <string name="vowifi_connected_title">"వై ఫై కాలింగ్ ద్వారా అత్యవసర కాల్స్"</string>
+     <string name="vowifi_connected_continue">"కొనసాగుము"</string>
+     <string name="vowifi_connected_disable">"నిలిపివేయి"</string>
+     <string name="vowifi_connected_checkbox_text">"మళ్లీ చుపించకండి"</string>
+     <string name="vowifi_connected_message">"అత్యవసర కాల్స్ వై ఫై ద్వారా సాధ్యపడదు,అత్యవసర కాల్స్ చేయటానికి  పరికరం ఆటోమేటిక్ గా సెల్యులర్ నెట్ వర్క్(2G/3G)కి స్విచ్ చేస్తుంది. మీ వై ఫై కాల్ సర్వీస్ ను కొనసాగించాలనుకుంటున్నారా లేదా వై ఫై కాల్స్ ను నిలిపివేయాలనుకుంటున్నారా?"</string>
 </resources>

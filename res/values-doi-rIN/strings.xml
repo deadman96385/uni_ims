@@ -41,4 +41,11 @@
 <string name="low_battery_convert_to_voice_call">"बदलो"</string>
 <string name="vowifi_attation">"Vowifi ध्यान"</string>
 <string name="vowifi_regist_fail_content">"नेटवर्क vowifi दा समर्थन नेईं करदा"</string>
+    <string name="handover_to_volte_success">"बेह्‌तर वायस क्वालिटी लेई VoLTE च स्विच करना"</string>
+     <string name="vowifi_connected_title">"Wi-Fi कालिंग राहें अपातकाली काल"</string>
+     <string name="vowifi_connected_continue">"जारी रक्खो"</string>
+     <string name="vowifi_connected_disable">"नकारा"</string>
+     <string name="vowifi_connected_checkbox_text">"परतियै फ्ही नेईं दस्सेओ"</string>
+     <string name="vowifi_connected_message">"WiFi-कालिंग राहें अपातकाली कालां मुमकन नेईं न, डिवाइस इक अपातकाली काल करने लेई सेलुलर नेटवर्क (2G/3G) च आटो स्विच करदा ऐ। क्या तुस WiFi-कालिंग सेवा जारी रक्खना चांह्​दे ओ जां Wi-Fi कालिंग नकारा करना चांह्​दे ओ?"</string>
+
 </resources>

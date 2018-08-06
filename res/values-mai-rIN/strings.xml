@@ -41,4 +41,11 @@
 <string name="low_battery_convert_to_voice_call">"बदलू"</string>
 <string name="vowifi_attation">"भोविफाइ सावधानी"</string>
 <string name="vowifi_regist_fail_content">"नेटवर्क भोविफाइ केर समर्थन नहि करैत अछि"</string>
+    <string name="handover_to_volte_success">"नीक ध्वनि स्तरक लेल VolTeपर जाइत"</string>
+     <string name="vowifi_connected_title">"Wi-Fi कलिंग केर माध्यमसँ आपातकालिन काँल"</string>
+     <string name="vowifi_connected_continue">"जारी"</string>
+     <string name="vowifi_connected_disable">"बंद कय देल"</string>
+     <string name="vowifi_connected_checkbox_text">"दोसर बेर नहिं देखाऊ"</string>
+     <string name="vowifi_connected_message">"WiFi-काँलिंग केर माध्यमसँ आपातकालिन काँल जरुरी नहि अछि, एकटा आपातकालिन काँल करबाक लेल उपकरण स्वतह सेलुलर नेटवर्क पर बदलि गेल अछि (2G/3G)। की अहाँ WiFi-काँलिंग सेवा करैत रहय चाहैत छी वा Wi-Fi काँलिंग केर असमर्थ करय चाहैत छी?"</string>
+
 </resources>

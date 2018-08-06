@@ -41,4 +41,11 @@
 <string name="low_battery_convert_to_voice_call">"ওল্লু"</string>
 <string name="vowifi_attation">"Vowifi পুক্নিং চিংশিনবা"</string>
 <string name="vowifi_regist_fail_content">"নেটৱার্ক অদুনা vowifi সপোর্ট তৌদে"</string>
+    <string name="handover_to_volte_success">"হেন্না ফবা ভোইস ক্বালিতিগী VoLTE দা হোংলি"</string>
+     <string name="vowifi_connected_title">"Wi-Fi কোল্লিং ফাওনা ইমর্জেন্সি কোলশীং"</string>
+     <string name="vowifi_connected_continue">"মখা চত্থৌ"</string>
+     <string name="vowifi_connected_disable">"য়াহনগনু"</string>
+     <string name="vowifi_connected_checkbox_text">"হন্না উৎকনু"</string>
+     <string name="vowifi_connected_message">"ইমর্জেন্সি কোলশীং WiFi-কোল্লিং ফাওনা তৌবা ওইথোক্তে, ইমর্জেন্সি কোল অমা থম্নবা দিভাইস অদুনা সেল্লুলর নেতৱার্ক (2G/3G) অমদা মশা মথন্তা ওনজৈ. নহাক WiFi-কোল্লিং সার্ভিস মখা চত্থবা পাম্ব্রা নত্ত্রগা Wi-Fi কোল্লিং য়াহন্দবা পাম্ব্রা?"</string>
+
 </resources>

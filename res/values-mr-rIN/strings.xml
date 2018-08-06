@@ -42,4 +42,10 @@
 
     <string name="vowifi_attation">"Vowifi लक्षवेध"</string>
      <string name="vowifi_regist_fail_content">"नेटवर्क vowifi सह काम करत नाही"</string>
+    <string name="handover_to_volte_success">"अधिक चांगल्या व्हॉईस गुणवत्तेसाठी VoLTE ला परिवर्तित होत आहे"</string>
+     <string name="vowifi_connected_title">"वाय-फाय कॉलिंगद्वारे आपत्कालीन कॉल"</string>
+     <string name="vowifi_connected_continue">"चालू ठेवा"</string>
+     <string name="vowifi_connected_disable">"अक्षम"</string>
+     <string name="vowifi_connected_checkbox_text">"पुन्हा दाखवू नका"</string>
+     <string name="vowifi_connected_message">"आपणास वाय-फाय कॉलिंगद्वारे आपत्कालीन कॉल करणे शक्य नाही, आपत्कालीन कॉलसाठी उपकरण एका सेल्युलर नेटवर्कला (2G/3G) स्वयंचलितपणे स्विच करतो. आपण WiFi- कॉलिंग सेवा सुरू ठेवू इच्छिता किंवा WiFi कॉलिंग अक्षम करू इच्छिता?"</string>
 </resources>

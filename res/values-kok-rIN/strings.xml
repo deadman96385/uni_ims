@@ -41,4 +41,11 @@
 <string name="low_battery_convert_to_voice_call">"रुपांतरीत"</string>
 <string name="vowifi_attation">"Vowifi लक्षवेदी"</string>
 <string name="vowifi_regist_fail_content">"नॅटवर्क vowifi क तेंको दिना"</string>
+    <string name="handover_to_volte_success">"आवाजाच्या बर्‍या दर्ज्या खातीर VoLTE त बदलता"</string>
+     <string name="vowifi_connected_title">"Wi-Fi कॉलिंगा वरवीं आपत्कालीन कॉल"</string>
+     <string name="vowifi_connected_continue">"चालू"</string>
+     <string name="vowifi_connected_disable">"अक्षम"</string>
+     <string name="vowifi_connected_checkbox_text">"हे परतून दाखय नाका"</string>
+     <string name="vowifi_connected_message">"WiFi-कॉलिंगा वरवीं आपत्कालीन कॉल शक्य ना. आपत्कालीन कॉल करपा खातीर यंत्र आपसूकच सॅल्युलर नॅटवर्कात बदलता (2G/3G). तुमका WiFi-कॉलींग सेवा फुडें चालू दवरपाची आसा कांय Wi-Fi कॉलींग अक्षम करपाचे आसा?"</string>
+
 </resources>

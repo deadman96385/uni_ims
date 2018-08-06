@@ -42,4 +42,10 @@
 
     <string name="vowifi_attation">"Vo WiFi মনোযোগ"</string>
      <string name="vowifi_regist_fail_content">"নেটৱৰ্কে vowifi সমৰ্থন নকৰে"</string>
+    <string name="handover_to_volte_success">"ভল্টিলৈ সলনি কৰা হৈছে উচ্চ স্বৰৰ গুণমানৰ বাবে"</string>
+     <string name="vowifi_connected_title">"Wi-Fi কলিংৰ জৰিয়তে জৰুৰীকালীন ক’লসমূহ কৰা"</string>
+     <string name="vowifi_connected_continue">"অব্যাহত ৰাখক"</string>
+     <string name="vowifi_connected_disable">"অক্ষম"</string>
+     <string name="vowifi_connected_checkbox_text">"পুনৰ নেদেখুৱাব"</string>
+     <string name="vowifi_connected_message">"Wi-Fi কলিংৰ জৰিয়তে জৰুৰীকালীন ক’লসমূহ কৰা সম্ভৱপৰ নহয়, জৰুৰীকালীন ক’লসমূহ কৰিবলৈ ডিভাইচটো চেলুলাৰ নেটৱৰ্ক(2G/3G) অটো চুটচ হয় | আপুনি Wi-Fi-কলিং সেৱা বা Wi-Fi অক্ষম কলিং বাহাল ৰাখিব বিচাৰেনে?"</string>
 </resources>

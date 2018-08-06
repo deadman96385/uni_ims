@@ -41,4 +41,11 @@
 <string name="low_battery_convert_to_voice_call">"ରୂପାନ୍ତର କରନ୍ତୁ"</string>
 <string name="vowifi_attation">"ଭିଓୱାଇଫାଇ ପ୍ରତି ଧ୍ୟାନ ଦିଅନ୍ତୁ"</string>
 <string name="vowifi_regist_fail_content">"ନେଟୱର୍କ ଭିଓୱାଇଫାଇ ସପୋର୍ଟ କରୁନାହିଁ"</string>
+    <string name="handover_to_volte_success">"ଉତ୍ତମ ଶବ୍ଦର ମାନ ପାଇଁ VoLTEକୁ ବଦଳ କରାଯାଉଛି" </string>
+     <string name="vowifi_connected_title">"Wi-Fiକଲିଂ ଦ୍ୱାରା ଆପାତକାଳୀନ କଲ"</string>
+     <string name="vowifi_connected_continue">"କ୍ରମଜାରି"</string>
+     <string name="vowifi_connected_disable">"ଡିଜେବଲ୍"</string>
+     <string name="vowifi_connected_checkbox_text">"ପୁଣି ଦେଖାନ୍ତୁ ନାହିଁ"</string>
+     <string name="vowifi_connected_message">"Wi-Fiକଲିଂ ଦ୍ୱାରା ଆପାତକାଳୀନ କଲ ସମ୍ଭବ ନୁହେଁ "ଆପାତକାଳୀନ କଲ କରିବା ପାଇଁ ଡିଭାଇସ ଟି ସେଲୁଲାର ନେଟୱର୍କ(3G/4G)କୁ ଆପେ ସ୍ୱିଚ କରିବ|ଆପଣ Wi-Fiକଲିଂ ସେବା ଜାରି ରଖିବାକୁ ଚାହୁଁଛନ୍ତି କିମ୍ବା  Wi-Fiକଲିଂ କୁ ଅକ୍ଷମ କରିବାକୁ  ଚାହୁଁଛନ୍ତି|"</string>
+
 </resources>
