@@ -252,6 +252,7 @@ public class ImsService extends Service {
     private int mInCallPhoneId = -1;
     private NotificationChannel mVowifiChannel;
     private int mMakeCallPrimaryCardServiceId = -1;
+    private int mVowifiReisteredServiceId = -1;
     private class ImsServiceRequest {
         public int mRequestId;
         public int mEventCode;
@@ -616,6 +617,8 @@ public class ImsService extends Service {
                                         + mFeatureSwitchRequest + " mIsLoggingIn:"
                                         + mIsLoggingIn);
                         mWifiRegistered = result.booleanValue();
+                        mVowifiReisteredServiceId = Integer
+                                .valueOf(ImsRegister.getPrimaryCard(mPhoneCount) + 1);
                         mIsLoggingIn = false;
                         updateImsFeature();
                         if (mFeatureSwitchRequest != null) {
@@ -730,21 +733,24 @@ public class ImsService extends Service {
                                     "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> wifi state: "
                                             + msg.arg2);
 
-                            ImsServiceImpl imsService = mImsServiceImplMap
-                                    .get(Integer.valueOf(ImsRegister
-                                            .getPrimaryCard(mPhoneCount) + 1));
-                            if (imsService != null) {
-                                imsService.notifyVoWifiEnable(false);
-                                mPendingCPSelfManagement = true;
-                                Log.i(TAG,
-                                        "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:"
-                                                + mPendingCPSelfManagement);
+
+                            //SPRD:Modify by bug911201
+                            for (int i = 1; i <= mImsServiceImplMap.size(); i++) {
+                                ImsServiceImpl imsService = mImsServiceImplMap.get(i);
+
+                                if (imsService != null && mVowifiReisteredServiceId == i) {
+                                    imsService.notifyVoWifiEnable(false);
+                                    mPendingCPSelfManagement = true;
+                                    Log.i(TAG,
+                                            "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:"
+                                                    + mPendingCPSelfManagement);
+                                }
                             }
+
                             if (mFeatureSwitchRequest != null) {
                                 mFeatureSwitchRequest = null;
                             }
-                            mIsPendingRegisterVolte = false;// SPRD: add for
-                                                            // bug723080
+                            mIsPendingRegisterVolte = false;// SPRD: add for bug723080
                         }
                         if (mPendingAttachVowifiSuccess) {
                             Log.i(TAG,
@@ -2949,6 +2955,11 @@ public class ImsService extends Service {
         boolean isPrimaryCard = ImsRegister.getPrimaryCard(mPhoneCount) == (serviceId-1);
         Log.i(TAG,"updateImsFeature --> isPrimaryCard = " + ImsRegister.getPrimaryCard(mPhoneCount) + " | serviceId-1 = " + (serviceId-1));
         boolean volteRegistered = (imsService != null) ? imsService.isImsRegisterState() : false;
+        //SPRD: add for bug911201
+        if (ImsRegister.getPrimaryCard(mPhoneCount) + 1 != mVowifiReisteredServiceId && mWifiRegistered) {
+            Log.i(TAG, "updateImsFeature primaryCard is not same as Vowifi registered Card, not update. mVowifiReisteredServiceId = " + mVowifiReisteredServiceId);
+            return;
+        }
 
         if (!isPrimaryCard && imsService != null) {
             Log.i(TAG,
@@ -3646,7 +3657,7 @@ public class ImsService extends Service {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if ((TelephonyIntents.ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED).equals(action)) {
-                Log.i(TAG,"ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED, update Ims Feature For All Service." );  //SPRD: add for bug866765
+                Log.i(TAG, "ACTION_DEFAULT_DATA_SUBSCRIPTION_CHANGED, update Ims Feature For All Service.");//SPRD: add for  bug866765
                 updateImsFeatureForAllService();
             }
         }
