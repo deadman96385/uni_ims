@@ -189,26 +189,6 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
         }
     };
 
-    public void sendNewSessionIntent(ImsCallSessionImpl session, int index, boolean unknownSession,
-            ImsDriverCall.State state, String number) {
-            Bundle extras = new Bundle();
-            extras.putBoolean(ImsManager.EXTRA_USSD, false);
-            extras.putBoolean(ImsManager.EXTRA_IS_UNKNOWN_CALL, unknownSession);
-            extras.putString(ImsManager.EXTRA_CALL_ID, Integer.toString(index));
-            /*SPRD: Modify for bug586758{@*/
-            Log.i (TAG,"sendNewSessionIntent-> startVolteCall"
-                    + " mIsVowifiCall: " + mImsService.isVowifiCall()
-                    + " mIsVolteCall: " + mImsService.isVolteCall()
-                    + " isVoWifiEnabled(): " + mImsService.isVoWifiEnabled()
-                    + " isVoLTEEnabled(): " + mImsService.isVoLTEEnabled());
-            if (mImsService.isVoLTEEnabled() && !mImsService.isVowifiCall() && !mImsService.isVolteCall()) {
-                mImsService.updateInCallState(true);
-                mWifiService.updateCallRatState(CallRatState.CALL_VOLTE);
-            }
-            /*@}*/
-            mImsServiceImpl.notifyIncomingCallSession((IImsCallSession)session,extras);
-    }
-
     public ImsCallSessionImpl createCallSession(ImsCallProfile profile,
             IImsCallSessionListener listener) {
         ImsCallSessionImpl session = new ImsCallSessionImpl(profile, listener, mContext, mCi, this);
@@ -514,7 +494,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                     addSessionToList(Integer.valueOf(imsDc.index), callSession);
                     if (imsDc.isMT) {
                         Log.d(TAG, "This is a MT Call.");
-                        sendNewSessionIntent(callSession, imsDc.index, false, imsDc.state, imsDc.number);
+                        mImsServiceImpl.sendIncomingCallIntent((IImsCallSession)callSession, Integer.toString(imsDc.index), false, true); // UNISOC: MOdify for bug909030
                     } else if (imsDc.isMpty) {
                         Log.d(TAG, "This is a invalid conference session!");
                         shouldNotify = false;
@@ -523,7 +503,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                         shouldNotify = true;
                     }
                     if (shouldNotify) {
-                        sendNewSessionIntent(callSession, imsDc.index, true, imsDc.state, imsDc.number);
+                        mImsServiceImpl.sendIncomingCallIntent((IImsCallSession)callSession, Integer.toString(imsDc.index), true, true); // UNISOC: MOdify for bug909030
                     }
                 }
             }

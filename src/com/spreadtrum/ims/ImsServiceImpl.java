@@ -1108,21 +1108,40 @@ public class ImsServiceImpl extends MmTelFeature {
         }
     }
 
-    public void sendIncomingCallIntent(IImsCallSession c,String callId) {
+    public void sendIncomingCallIntent(IImsCallSession c, String callId, boolean unknownSession, boolean isVolteCall) { // UNISOC: Modify for bug909030
         Bundle extras = new Bundle();
         extras.putBoolean(ImsManager.EXTRA_USSD, false);
-        extras.putBoolean(ImsManager.EXTRA_IS_UNKNOWN_CALL, false);
+        extras.putBoolean(ImsManager.EXTRA_IS_UNKNOWN_CALL, unknownSession); // UNISOC: Modify for bug909030
         extras.putString(ImsManager.EXTRA_CALL_ID, callId);
             /*SPRD: Modify for bug586758{@*/
-        log("sendIncomingCallIntent-> startVoWifiCall"
+        log("sendIncomingCallIntent-> " + (isVolteCall ? "startVolteCall" : "startVoWifiCall") // UNISOC: Modify for bug909030
                 + " mIsVowifiCall: " + mImsService.isVowifiCall()
                 + " mIsVolteCall: " + mImsService.isVolteCall()
                 + " isVoWifiEnabled(): " + mImsService.isVoWifiEnabled()
                 + " isVoLTEEnabled(): " + mImsService.isVoLTEEnabled());
-        if (mImsService.isVoWifiEnabled() && !mImsService.isVowifiCall() && !mImsService.isVolteCall()) {
-            mWifiService.updateCallRatState(CallRatState.CALL_VOWIFI);
-        }
+
+        /*UNISOC: Add for bug909030{@*/
+        mImsService.setInCallPhoneId(mServiceId - 1);
+        mImsService.updateInCallState(true);
+
+        int phoneCount = TelephonyManager.from(mContext).getPhoneCount();
+        boolean isPrimaryCard = (ImsRegister.getPrimaryCard(phoneCount) == (mServiceId - 1));
+
+        if(isPrimaryCard) {
+            /*VoLTE Call*/
+            if (mImsService.isVoLTEEnabled() && !mImsService.isVowifiCall() && !mImsService.isVolteCall()) {
+                mImsService.setCallType(ImsService.CallType.VOLTE_CALL);
+                mWifiService.updateCallRatState(CallRatState.CALL_VOLTE);
+            }
+
+            /*VoWifi Call*/
+            if (mImsService.isVoWifiEnabled() && !mImsService.isVowifiCall() && !mImsService.isVolteCall()) {
+                mImsService.setCallType(ImsService.CallType.WIFI_CALL); // UNISOC: Add for bug909030
+                mWifiService.updateCallRatState(CallRatState.CALL_VOWIFI);
+            }
             /*@}*/
+        }
+        /*@}*/
         notifyIncomingCallSession(c,extras);
     }
 

@@ -507,11 +507,7 @@ public class ImsService extends Service {
                                         .getPrimaryCard(mPhoneCount) + 1));
 
                         IImsCallSession callSession = (IImsCallSession) msg.obj;
-                        service.sendIncomingCallIntent(callSession, callSession.getCallId());
-                        mInCallPhoneId = ImsRegister.getPrimaryCard(mPhoneCount);// sprd:add
-                                                                                 // for
-                                                                                 // bug635699
-                        updateInCallState(true);
+                        service.sendIncomingCallIntent(callSession, callSession.getCallId(), false, false); // UNISOC: Modify for bug909030
                         Log.i(TAG, "EVENT_WIFI_INCOMING_CALL-> callId:" + msg.obj);
                         break;
                     case EVENT_WIFI_ALL_CALLS_END:
@@ -1576,6 +1572,20 @@ public class ImsService extends Service {
         }
         return service.getConfigInterface();
     }
+
+    /*UNISOC: Add for bug909030{@*/
+    public void setCallType(int callType) {
+        if (callType == CallType.VOLTE_CALL) {
+            mIsVolteCall = true;
+        } else if (callType == CallType.WIFI_CALL) {
+            mIsVowifiCall = true;
+        }
+    }
+
+    public void setInCallPhoneId(int phoneId) {
+        mInCallPhoneId = phoneId;
+    }
+    /*@}*/
 
     private final IImsServiceEx.Stub mImsServiceExBinder = new IImsServiceEx.Stub() {
 
