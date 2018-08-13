@@ -19,4 +19,10 @@
     <string name="vowifi_conf_kick_failed">"شريڪِ ڪار کي هٽائڻ ۾ ناڪامي ٿي وئي"</string>
     <string name="vowifi_conf_none_participant">"ڪو شريڪِ ڪار ڪونهي، ڪال ختم ڪريو."</string>
     <string name="vowifi_conf_do_not_support">"هن عمل جي هينئر سهولت نه ڏيو."</string>
+    <string name="vowifi_update_to_rx_success">"ويڊيو صرف وصول ڪرڻ لاءِ"</string>
+     <string name="vowifi_update_to_tx_success">"ويڊيو ٽرانميشن صرف"</string>
+     <string name="vowifi_hold_received">ڪال ملتوي ڪئي وئي"</string>
+     <string name="vowifi_resume_received">" ڪال بحال ٿي وئي"</string>
+     <string name="vowifi_conf_can_not_invite_more">"ڪانفرنس ۾ حصو وٺندڙ کي دعوت نه ٿي ڏئي سگھجي ڇوته پھريان ئي حصو وٺندڙ جو تعداد 6 آھي"</string>
+
 </resources>
