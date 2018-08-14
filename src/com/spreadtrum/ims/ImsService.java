@@ -2940,6 +2940,7 @@ public class ImsService extends Service {
                         }
                     }
                 } else if (mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER) {
+                    int oldImsFeatrue = mCurrentImsFeature;
                     /* SPRD: Modify for bug595321{@ */
                     if (mIsCalling) {
                         mInCallHandoverFeature = ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_LTE;
@@ -2953,7 +2954,9 @@ public class ImsService extends Service {
                                         .operationSuccessed(
                                                 mFeatureSwitchRequest.mRequestId,
                                                 ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOLTE);
-                                showTelcelRequestToast();
+                                if(oldImsFeatrue == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {//UNISOC: add for bug915555
+                                    showTelcelRequestToast();
+                                }
                                 /*Toast.makeText(ImsService.this,
                                         R.string.handover_to_volte_success,
                                         Toast.LENGTH_SHORT).show();*/
@@ -2986,7 +2989,9 @@ public class ImsService extends Service {
                                         .operationSuccessed(
                                                 mFeatureSwitchRequest.mRequestId,
                                                 ImsOperationType.IMS_OPERATION_HANDOVER_TO_VOLTE);
-                                showTelcelRequestToast();
+                                if(oldImsFeatrue == ImsConfig.FeatureConstants.FEATURE_TYPE_VOICE_OVER_WIFI) {//UNISOC: add for bug915555
+                                    showTelcelRequestToast();
+                                }
                                 /*Toast.makeText(ImsService.this,
                                         R.string.handover_to_volte_success,
                                         Toast.LENGTH_SHORT).show();*/
