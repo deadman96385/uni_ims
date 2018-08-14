@@ -155,6 +155,9 @@ public class ImsServiceImpl extends MmTelFeature {
     private ConcurrentHashMap<IBinder, IImsRegistrationCallback> mIImsRegistrationCallbacks = new ConcurrentHashMap<IBinder, IImsRegistrationCallback>();
     private MmTelCapabilities mVolteCapabilities = new MmTelCapabilities();
     private MmTelCapabilities mVowifiCapabilities = new MmTelCapabilities();
+    //add for unisoc 911545
+    private MmTelCapabilities mDeviceVolteCapabilities = new MmTelCapabilities();
+    private MmTelCapabilities mDeviceVowifiCapabilities = new MmTelCapabilities();
 
     public IImsRegistration getRegistration(){
         return mImsRegistration;
@@ -229,30 +232,34 @@ public class ImsServiceImpl extends MmTelFeature {
         log("changeEnabledCapabilities->enableCap:" + enableCap + "/n disableCap:"+disableCap);
         for(CapabilityChangeRequest.CapabilityPair pair: enableCap) {
             if (pair.getRadioTech() == ImsRegistrationImplBase.REGISTRATION_TECH_LTE) {
-                mVolteCapabilities.addCapabilities(pair.getCapability());
+                //add for unisoc 911545
+                mDeviceVolteCapabilities.addCapabilities(pair.getCapability());
             } else if (pair.getRadioTech() == ImsRegistrationImplBase.REGISTRATION_TECH_IWLAN) {
-                mVowifiCapabilities.addCapabilities(pair.getCapability());
+                mDeviceVowifiCapabilities.addCapabilities(pair.getCapability());
             }
         }
 
         for(CapabilityChangeRequest.CapabilityPair pair: disableCap) {
             if (pair.getRadioTech() == ImsRegistrationImplBase.REGISTRATION_TECH_LTE) {
-                mVolteCapabilities.removeCapabilities(pair.getCapability());
+                //add for unisoc 911545
+                mDeviceVolteCapabilities.removeCapabilities(pair.getCapability());
             } else if (pair.getRadioTech() == ImsRegistrationImplBase.REGISTRATION_TECH_IWLAN) {
-                mVowifiCapabilities.removeCapabilities(pair.getCapability());
+                mDeviceVowifiCapabilities.removeCapabilities(pair.getCapability());
             }
         }
-        //add for unisoc 900059
-        if(mVolteCapabilities.isCapable(MmTelCapabilities.CAPABILITY_TYPE_VOICE)){
+        //add for unisoc 900059,911545
+        if(mDeviceVolteCapabilities.isCapable(MmTelCapabilities.CAPABILITY_TYPE_VOICE)){
+            log("changeEnabledCapabilities-> setImsVoiceCallAvailability on");
             mCi.setImsVoiceCallAvailability(1 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, ImsConfig.FeatureValueConstants.OFF));
         } else {
+            log("changeEnabledCapabilities-> setImsVoiceCallAvailability off");
             mCi.setImsVoiceCallAvailability(0 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE, ImsConfig.FeatureValueConstants.ON));
         }
 
         if(isVoWifiEnabled()) {
-            notifyCapabilitiesStatusChanged(mVowifiCapabilities);
+            notifyCapabilitiesStatusChanged(mDeviceVowifiCapabilities);
         } else {
-            notifyCapabilitiesStatusChanged(mVolteCapabilities);
+            notifyCapabilitiesStatusChanged(mDeviceVolteCapabilities);
         }
     }
 
@@ -260,9 +267,9 @@ public class ImsServiceImpl extends MmTelFeature {
     @Override
     public boolean queryCapabilityConfiguration(int capability, int radioTech) {
         if(radioTech == ImsRegistrationImplBase.REGISTRATION_TECH_LTE){
-            mVolteCapabilities.isCapable(capability);
+            mDeviceVolteCapabilities.isCapable(capability);
         } else if(radioTech == ImsRegistrationImplBase.REGISTRATION_TECH_IWLAN){
-            mVowifiCapabilities.isCapable(capability);
+            mDeviceVowifiCapabilities.isCapable(capability);
         }
         return false;
     }
