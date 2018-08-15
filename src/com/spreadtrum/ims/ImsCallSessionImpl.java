@@ -123,6 +123,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
   //SPRD: add for bug858168
     boolean mVideoHasDowngrade;
     private static final int SPECIAL_CALL_TYPE = 99;
+    private boolean mConferenceDriverCallUpdated = false;
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
@@ -1914,4 +1915,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         }
         return false;
     }
+    /* SPRD:add for bug916545@{ */
+    public void updateConferenceDriverCallChange(boolean conferenceDriverCallUpdated){
+        mConferenceDriverCallUpdated = conferenceDriverCallUpdated;
+    }
+    public boolean getConferenceDriverCallUpdated(){
+        return mConferenceDriverCallUpdated;
+    }
+    /* @} */
 }

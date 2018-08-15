@@ -666,6 +666,7 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                 if (newHostId != -1) {
                     mSessionList.put(String.valueOf(newHostId), mConferenceSession);
                     mConferenceSession.mImsDriverCall = validDriverCall.get(String.valueOf(newHostId));
+                    mConferenceSession.updateConferenceDriverCallChange(true);//SPRD:add for bug916545
                     Log.d(TAG, "removeInvalidSessionFromList->" + mConferenceSession.mImsDriverCall);
                 }
             }/*@}*/

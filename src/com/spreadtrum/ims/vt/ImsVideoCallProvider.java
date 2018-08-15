@@ -511,9 +511,9 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
                  mIsVoiceRingTone = true;
              }
          } else {
-             /* SPRD:add for bug563112 & 677255@{ */
+             /* SPRD:add for bug563112 & 677255 & 916545@{ */
              if(!isVideoCall(imsCallProfile.mCallType) && mIsVideo && (session != null && session.mImsDriverCall != null) ){
-                 if(!mIsVoiceRingTone) {
+                 if(!mIsVoiceRingTone && !session.getConferenceDriverCallUpdated()) {
                      //Toast.makeText(mContext, mContext.getResources().getString(R.string.videophone_fallback_title), Toast.LENGTH_LONG).show();
                      showTelcelRequestToast();
                  }
@@ -529,6 +529,10 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
              //SPRD: add for bug677255
              log("updateNegotiatedCallProfilee->set mIsVoiceRingTone false");
              mIsVoiceRingTone = false;
+         }
+
+         if(session.getConferenceDriverCallUpdated()){
+             session.updateConferenceDriverCallChange(false);
          }
 
          if(mNegotiatedCallProfile.mCallType != imsCallProfile.mCallType){
