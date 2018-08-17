@@ -425,12 +425,8 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                 /* @} */
                 continue;
             }
-            synchronized(mSessionList) {
-                callSession = mSessionList.get(Integer.toString(imsDc.index));
-                Log.d(TAG, "Find existing Session, index:"+imsDc.index +" callSession is null:"+(callSession== null));
-            }
 
-            if(callSession == null){
+            //if(callSession == null){
                 synchronized(mPendingSessionList) {
                     int index = -1;
                     for(int j=0;j<mPendingSessionList.size();j++){
@@ -441,7 +437,13 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                                 Log.d(TAG, "PendingSession found session is INVALID remove");
                                 continue;
                             }
-                            Log.d(TAG, "PendingSession found, index:"+imsDc.index+" session:" + session);
+                            ImsCallSessionImpl removeSession = mSessionList.get(Integer.toString(imsDc.index));
+                            Log.d(TAG, "PendingSession found, index:"+imsDc.index+" session:" + session + " removeSession:" + removeSession);
+                            if(removeSession != null){
+                                removeSession.notifySessionDisconnected();
+                                notifySessionDisonnected(removeSession);
+                                mSessionList.remove(imsDc.index);
+                            }
                             addSessionToList(Integer.valueOf(imsDc.index), session);
                             callSession = session;
                             if(session.isConferenceHost()){
@@ -458,6 +460,13 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
                         Log.d(TAG, "PendingSession remove, index:"+imsDc.index);
                         mPendingSessionList.remove(index);
                     }
+                }
+            //}
+
+            if(callSession == null){
+                synchronized(mSessionList) {
+                    callSession = mSessionList.get(Integer.toString(imsDc.index));
+                    Log.d(TAG, "Find existing Session, index:"+imsDc.index +" callSession is null:"+(callSession== null));
                 }
             }
 
