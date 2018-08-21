@@ -71,6 +71,7 @@ public class VideoCallEngine {
 
     private int mCodecCount = 0;
     private int mCurrentCodecType = VIDEO_TYPE_H263;
+    private Float mCameraZoomValue;
 
     public enum CodecState  {
         CODEC_IDLE ,
@@ -185,6 +186,28 @@ public class VideoCallEngine {
         }else
         this.setCamera(cam, mCameraResolution);
     }
+
+    //UNISOC:add feature for bug903360
+    public void setImsCameraZoom(Float value){
+        mCameraZoomValue = value;
+        log("setImsCameraZoom value: " + value);
+        setValueToVce(mCameraZoomValue);
+    }
+
+    public Float getCameraZoomValue() {
+        return mCameraZoomValue;
+    }
+
+    public void setValueToVce(Float value) {
+        if(value >= 90.0 && value < 91.0){
+            int camValue = ((int) (value * 10)) % 900;
+            this.setFaceBeautyLevel(camValue);
+        } else if(value >= 80.0 && value < 81.0){
+            int camValue = ((int) (value * 10)) % 800;
+            this.setFlashMode(camValue);
+        }
+    }
+
     public static final int MEDIA_CALLEVENT_CAMERACLOSE = 100;
     public static final int MEDIA_CALLEVENT_CAMERAOPEN = 101;
     public static final int MEDIA_CALLEVENT_STRING = 102;
@@ -436,4 +459,9 @@ public class VideoCallEngine {
     public static native void stopPreview();
 
     public static native void setUplinkQos(int qos);
+    /* face beauty level 0-5 */
+    public static native int setFaceBeautyLevel(int level);
+
+    /* mode: 0(off), 1(on), 2(auto)*/
+    public static native int setFlashMode(int mode);
 }

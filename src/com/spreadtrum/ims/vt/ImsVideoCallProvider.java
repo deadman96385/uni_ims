@@ -241,7 +241,8 @@ public class ImsVideoCallProvider extends com.android.ims.internal.ImsVideoCallP
      */
     @Override
     public void onSetZoom(float value) {
-
+        mHandler.obtainMessage(mVTManagerProxy.EVENT_ON_SET_CAMERA_ZOOM, new Float(value))
+        .sendToTarget();//UNISOC:add feature for bug903360
     }
 
     /**

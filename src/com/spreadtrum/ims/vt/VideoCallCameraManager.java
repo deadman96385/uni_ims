@@ -232,6 +232,11 @@ public class VideoCallCameraManager {
                             mHandler.sendEmptyMessageDelayed(EVENT_CAMERA_FAIL,200);
                             return;
                         } else {
+                            Float cameraZoomValue = mVideoCallEngine.getCameraZoomValue();
+                            Log.i(TAG, "openCamera() success cameraZoomValue: " + cameraZoomValue);
+                            if (cameraZoomValue != null) {
+                                mVideoCallEngine.setValueToVce(cameraZoomValue);
+                            }
                             mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation, mScreenRotation,mOrientationSetting);//SPRD: bug729242, bug846042
                         }
                         /* @ } */

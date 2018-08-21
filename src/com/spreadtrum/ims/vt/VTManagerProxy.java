@@ -50,7 +50,7 @@ public class VTManagerProxy{
     public static final int EVENT_ON_SET_PAUSE_IMAGE = 203;
     public static final int EVENT_ON_SET_DEVICE_ORIENTATION = 204;
     public static final int EVENT_ON_UPDATE_DEVICE_QUALITY = 205;
-
+    public static final int EVENT_ON_SET_CAMERA_ZOOM = 206;
 
     /** video call cp event code. */
     private static final int EVENT_VIDEO_CALL_CODEC = 300;
@@ -161,6 +161,11 @@ public class VTManagerProxy{
                 case EVENT_IMS_VIDEO_QOS:
                     handleImsQosReport((AsyncResult) msg.obj);
                     break;
+                /* SPRD: Add feature for 903360 @{ */
+                case EVENT_ON_SET_CAMERA_ZOOM:
+                    handleCameraZoom((Float) msg.obj);
+                    break;
+                /* @} */
                 default:
                     log("handleMessage,unkwon message:what =" + msg.what);
                     break;
@@ -516,4 +521,13 @@ public class VTManagerProxy{
      * >= 1 && PackageManager.PERMISSION_GRANTED == grantResults[0]) { mHasCameraPermission = true;
      * } } }
      */
+
+    /* UNISOC: Add feature for 903360 @{ */
+    private void handleCameraZoom(Float value) {
+        log("handleCameraZoom->value=" + value);
+        if (mVideoCallEngine != null) {
+            mVideoCallEngine.setImsCameraZoom(value);
+        }
+    }
+    /* @} */
 }
