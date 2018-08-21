@@ -141,8 +141,8 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     @Override
     public int setConfigInt(int item, int value){
         if(item == ImsConfig.ConfigConstants.VIDEO_QUALITY) {
-            Log.d(TAG, "setVideoQuality qualiy = " + value);
-            setVideoQualitytoPreference(value);
+            Log.d(TAG, "setVideoQuality from screen qualiy = " + value);
+            setVideoQualityPreference(value);
 
             return ImsConfig.OperationStatusConstants.SUCCESS;
         };
@@ -423,16 +423,29 @@ public class ImsConfigImpl extends IImsConfig.Stub {
      * @throws ImsException if calling the IMS service results in an error.
      */
     public void setVideoQuality(int quality, ImsConfigListener imsConfigListener) {
-        Log.d(TAG, "setVideoQuality qualiy = " + quality);
-        setVideoQualitytoPreference(quality);
+        Log.d(TAG, "setVideoQuality from screen! qualiy = " + quality);
+        setVideoQualityPreference(quality);
         Message m = mHandler.obtainMessage(ACTION_SET_VT_RESOLUTION, quality, 0, imsConfigListener);
         m.sendToTarget();
     }
 
-    public void setVideoQualitytoPreference(int value){
+    public void setVideoQualityPreference(int value){
         Editor editor = mSharedPreferences.edit();
-        editor.putInt(VT_RESOLUTION_VALUE+mImsServiceId,value);  // SPRD: bug805154
+        editor.putInt(VT_RESOLUTION_VALUE + mImsServiceId, value);  // SPRD: bug805154
         editor.apply();
+    }
+
+    // SPRD:909828
+    public void sendVideoQualitytoIMS(int value) {
+        int vtResolution = mSharedPreferences.getInt(
+                VT_RESOLUTION_VALUE + mImsServiceId, -1);
+        Log.d(TAG, "sendVideoQualitytoIMS : vtResolution = " + vtResolution
+                        + " | mDefaultVtResolution = " + mDefaultVtResolution);
+        mCameraResolution = value;
+        if (vtResolution == -1) {
+            mHandler.removeMessages(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE);
+            mHandler.sendEmptyMessageDelayed(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE, 1000);
+        }
     }
 
     public int getVideoQualityFromPreference(){
@@ -449,7 +462,7 @@ public class ImsConfigImpl extends IImsConfig.Stub {
 
     private OnSharedPreferenceChangeListener mSharedPreferenceListener = new OnSharedPreferenceChangeListener() {
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-            Log.d(TAG,"onSharedPreferenceChanged()->key:"+key);
+            Log.d(TAG,"onSharedPreferenceChanged()->key:"+key + " | mImsServiceId = " + mImsServiceId);
             if((VIDEO_CALL_RESOLUTION+mImsServiceId).equals(key)){//SPRD:modify by bug814655
                 mCameraResolution = sharedPreferences.getInt(VIDEO_CALL_RESOLUTION+mImsServiceId, mDefaultVtResolution);
                 mHandler.removeMessages(EVENT_VOLTE_CALL_DEDINE_MEDIA_TYPE);

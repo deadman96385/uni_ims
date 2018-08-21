@@ -951,7 +951,9 @@ public class ImsServiceImpl extends MmTelFeature {
         }
         mImsConfigImpl.mDefaultVtResolution = Integer.parseInt(operatorCameraResolution);
         log("ImsServiceImpl ==> setVideoResolution mDefaultVtResolution = " + operatorCameraResolution);
-        mImsConfigImpl.setVideoQualitytoPreference(Integer.parseInt(operatorCameraResolution));
+        // SPRD:909828
+        mImsConfigImpl.sendVideoQualitytoIMS(Integer.parseInt(operatorCameraResolution));
+//        mImsConfigImpl.setVideoQualitytoPreference(Integer.parseInt(operatorCameraResolution));
     }
 
     /* UNISOC: 630048 add sos apn for yes 4G @{*/
