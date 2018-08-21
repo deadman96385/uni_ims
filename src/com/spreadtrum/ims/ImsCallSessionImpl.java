@@ -124,6 +124,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     boolean mVideoHasDowngrade;
     private static final int SPECIAL_CALL_TYPE = 99;
     private boolean mConferenceDriverCallUpdated = false;
+    private static final int CALL_ANSWERED_ELSEWHERE = 61441;//UNISOC:add for feature
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
@@ -757,8 +758,8 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         /* SPRD: add for bug713220 @{ */
                         try {
                             if (mImsDriverCall != null) {
-                                if((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING) && failCause.causeCode == 1024){
-                                    mDisconnCause = ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED;
+                                if((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING) && failCause.causeCode == CALL_ANSWERED_ELSEWHERE){
+                                    mDisconnCause = ImsReasonInfo.CODE_ANSWERED_ELSEWHERE;
                                  }else if ((mImsDriverCall.state == ImsDriverCall.State.INCOMING || mImsDriverCall.state == ImsDriverCall.State.WAITING)
                                         && (mDisconnCause != ImsReasonInfo.CODE_USER_DECLINE)) { ////add for set cause when reject incoming call
                                     mDisconnCause = ImsReasonInfo.CODE_USER_TERMINATED_BY_REMOTE;
