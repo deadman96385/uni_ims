@@ -51,8 +51,8 @@ public class ImsConfigImpl extends IImsConfig.Stub {
     private Context mContext;
     private SharedPreferences mSharedPreferences;
     private static final String VIDEO_CALL_RESOLUTION = "vt_resolution";
-    private int mCameraResolution = VT_RESOLUTION_VGA_REVERSED_30;
-    public int mDefaultVtResolution = VT_RESOLUTION_VGA_REVERSED_30;
+    private int mCameraResolution = VT_RESOLUTION_VGA_REVERSED_15;
+    public int mDefaultVtResolution = VT_RESOLUTION_VGA_REVERSED_15;
     private ImsServiceImpl mImsServiceImpl = null;
     private int mImsServiceId;  // SPRD: bug805154
     /**
