@@ -345,6 +345,13 @@ public class ImsServiceImpl extends MmTelFeature {
             mImsServiceCallTracker.addListener(listListener);
         }
 
+        /* UNISOC: add for bug916375 @{ */
+        Intent intent = new Intent(ImsManager.ACTION_IMS_SERVICE_UP);
+        intent.putExtra(ImsManager.EXTRA_PHONE_ID, phone.getPhoneId());
+        mContext.sendStickyBroadcast(intent);
+        mContext.sendBroadcast(intent);
+        /*@}*/
+
         mCi.registerForImsBearerStateChanged(mHandler, EVENT_IMS_PND_STATE_CHANGED, null);
         mCi.registerForImsNetworkStateChanged(mHandler, EVENT_IMS_STATE_CHANGED, null);
         mCi.registerForSrvccStateChanged(mHandler, EVENT_SRVCC_STATE_CHANGED, null);
