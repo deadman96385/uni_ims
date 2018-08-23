@@ -176,6 +176,7 @@ public class VTManagerProxy{
                 int batteryLevel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
                 log("batteryLevel =" + batteryLevel);
                 if(batteryLevel == 15 && mActiveImsCallSessionImpl != null
+                        && mActiveImsCallSessionImpl.mImsDriverCall != null
                         && mActiveImsCallSessionImpl.mImsDriverCall.state == ImsDriverCall.State.ACTIVE){
                     if (mVolteMediaDialog != null) {
                         mVolteMediaDialog.dismiss();
