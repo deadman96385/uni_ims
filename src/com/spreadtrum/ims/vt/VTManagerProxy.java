@@ -174,10 +174,12 @@ public class VTManagerProxy{
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(Intent.ACTION_BATTERY_CHANGED) /*TODO: && TelephonyManagerEx.isBatteryLow()*/) {
                 int batteryLevel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
-                log("batteryLevel =" + batteryLevel);
+                boolean isShowLowBattery = context.getResources().getBoolean(com.android.internal.R.bool.config_show_low_battery_dialog);
+                log("batteryLevel =" + batteryLevel + " isShowLowBattery = " + isShowLowBattery);
                 if(batteryLevel == 15 && mActiveImsCallSessionImpl != null
                         && mActiveImsCallSessionImpl.mImsDriverCall != null
-                        && mActiveImsCallSessionImpl.mImsDriverCall.state == ImsDriverCall.State.ACTIVE){
+                        && mActiveImsCallSessionImpl.mImsDriverCall.state == ImsDriverCall.State.ACTIVE
+                        && isShowLowBattery){
                     if (mVolteMediaDialog != null) {
                         mVolteMediaDialog.dismiss();
                     }
