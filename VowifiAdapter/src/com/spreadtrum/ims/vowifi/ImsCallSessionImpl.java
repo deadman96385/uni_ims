@@ -114,6 +114,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final int MSG_EXTEND_TO_CONF = 11;
     private static final int MSG_START_FAIL     = 12;
     private static final int MSG_MERGE_FAILED   = 13;
+    private static final int MSG_SEND_DTMF_FINISHED = 14;
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -129,6 +130,25 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                         Log.e(TAG, "Catch the RemoteException e: " + e);
                     }
                 }
+                return;
+            } else if (msg.what == MSG_MERGE_FAILED) {
+                try {
+                    // Give a toast for connect timeout.
+                    String text = mContext.getString(R.string.vowifi_conf_connect_timeout);
+                    Toast.makeText(mContext, text, Toast.LENGTH_LONG).show();
+                    // Handle as merge action failed.
+                    handleMergeActionFailed(text);
+                    // If the call is held, resume this call.
+                    if (!mIsAlive) {
+                        resume(getResumeMediaProfile());
+                    }
+                } catch (RemoteException e) {
+                    Log.e(TAG, "Failed to handle merge failed event as catch the ex.");
+                }
+                return;
+            } else if (msg.what == MSG_SEND_DTMF_FINISHED) {
+                Message result = (Message) msg.obj;
+                result.sendToTarget();
                 return;
             }
 
@@ -186,17 +206,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     case MSG_EXTEND_TO_CONF:
                         String participants = (String) action._params.get(0);
                         extendToConference(participants.split(PARTICIPANTS_SEP));
-                        break;
-                    case MSG_MERGE_FAILED:
-                        // Give a toast for connect timeout.
-                        String text = mContext.getString(R.string.vowifi_conf_connect_timeout);
-                        Toast.makeText(mContext, text, Toast.LENGTH_LONG).show();
-                        // Handle as merge action failed.
-                        handleMergeActionFailed(text);
-                        // If the call is held, resume this call.
-                        if (!mIsAlive) {
-                            resume(getResumeMediaProfile());
-                        }
                         break;
                 }
             } catch (RemoteException e) {
@@ -1066,6 +1075,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         if (mICall != null) {
             mICall.sessDtmf(mCallId, getDtmfType(c));
         }
+
+        // Send event finished, send the result to target.
+        Message msg = new Message();
+        msg.what = MSG_SEND_DTMF_FINISHED;
+        msg.obj = result;
+        mHandler.sendMessageDelayed(msg, 500);
     }
 
     /**
