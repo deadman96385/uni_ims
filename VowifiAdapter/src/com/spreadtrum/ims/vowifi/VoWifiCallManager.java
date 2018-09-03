@@ -1850,6 +1850,7 @@ public class VoWifiCallManager extends ServiceManager {
                 } catch (RemoteException e) {
                     Log.e(TAG, "Failed to send the accept response. e: " + e);
                 }
+                dialog.dismiss();
             }
         });
         builder.setNegativeButton(rejectText, new DialogInterface.OnClickListener() {
@@ -1875,6 +1876,7 @@ public class VoWifiCallManager extends ServiceManager {
                 } catch (RemoteException e) {
                     Log.e(TAG, "Failed to send reject response. e: " + e);
                 }
+                dialog.dismiss();
             }
         });
         builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
