@@ -496,7 +496,6 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
              }
              receiveSessionModifyResponse(result, mLocalRequestProfile, responseProfile);
              showRequestStateToast();
-             mLocalRequestProfile = null;
          }
 
          //SPRD:fix for bug 597075
@@ -652,9 +651,11 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
         if (mImsCallSessionImpl.mImsDriverCall != null && mImsCallSessionImpl.mImsDriverCall.isReuestAccept()) {
             Toast.makeText(mContext.getApplicationContext(),
                     mContext.getString(R.string.remote_accept_request), Toast.LENGTH_SHORT).show();
+            mLocalRequestProfile = null; //Unisoc:fix for bug 917060
         } else if(mImsCallSessionImpl.mImsDriverCall != null && mImsCallSessionImpl.mImsDriverCall.isReuestReject()){
             Toast.makeText(mContext.getApplicationContext(),
                     mContext.getString(R.string.remote_reject_request), Toast.LENGTH_SHORT).show();
+            mLocalRequestProfile = null; //Unisoc:fix for bug 917060
         }
     }
 
