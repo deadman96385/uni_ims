@@ -66,7 +66,7 @@ public class VideoCallCameraManager {
     private boolean mThreadRunning;
     public int mWidth = 176;
     public int mHeight = 144;
-    private int mDeviceRotation = 0;
+    private int mDeviceRotation = 270; //Unisoc set default value for Bug926855
     private boolean mIsFirstInit = true;
     private boolean mIsSurfacePreviewFailed = false;
     private int mVideoQuality;
@@ -232,6 +232,7 @@ public class VideoCallCameraManager {
                             mHandler.sendEmptyMessageDelayed(EVENT_CAMERA_FAIL,200);
                             return;
                         } else {
+                            Log.i(TAG, "openCamera(), setPreviewDisplayOrientation mScreenRotation: " + mScreenRotation+ " mDeviceRotation: "+mDeviceRotation);
                             mVideoCallEngine.setPreviewDisplayOrientation(mDeviceRotation, mScreenRotation,mOrientationSetting);//SPRD: bug729242, bug846042
                         }
                         /* @ } */
