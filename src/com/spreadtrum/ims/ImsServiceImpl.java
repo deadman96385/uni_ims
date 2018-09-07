@@ -13,9 +13,11 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
+import android.os.PersistableBundle;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.AsyncResult;
+import android.telephony.CarrierConfigManager;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -626,11 +628,40 @@ public class ImsServiceImpl {
     public void turnOnIms(){
         Log.i(TAG,"turnOnIms.");
         mCi.setImsVoiceCallAvailability(1 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE,ImsConfig.FeatureValueConstants.OFF));
+        setPreferredNetworkRAT(true);
     }
 
     public void turnOffIms(){
         Log.i(TAG,"turnOffIms.");
         mCi.setImsVoiceCallAvailability(0 , mHandler.obtainMessage(EVENT_SET_VOICE_CALL_AVAILABILITY_DONE,ImsConfig.FeatureValueConstants.ON));
+        setPreferredNetworkRAT(false);
+    }
+
+    private void setPreferredNetworkRAT(boolean imsOn) {
+
+        int networkPref = 0;
+        boolean setRat = false;
+        CarrierConfigManager cfgManager =
+                (CarrierConfigManager) mContext.getSystemService(Context.CARRIER_CONFIG_SERVICE);
+        if (cfgManager != null) {
+            PersistableBundle config = cfgManager.getConfigForPhoneId(mServiceId - 1);
+            if (config != null) {
+                setRat = config.getBoolean(CarrierConfigManager.KEY_NETWORK_RAT_ON_SWITCH_IMS);
+                if (setRat) {
+                    networkPref = config.getInt(CarrierConfigManager.KEY_NETWORK_RAT_PREFER);
+                }
+            }
+        }
+        Log.i(TAG, "setPreferredNetworkRAT: networkPref = " + networkPref + " setRat = " + setRat);
+        if (setRat) {
+            if (!imsOn) {
+               networkPref = 2;
+            }
+            String[] cmd = new String[1];
+            cmd[0] = "AT+SPOPRCAP=1,1," + networkPref;
+            Log.i(TAG, "setPreferredNetworkRAT: " + cmd[0]);
+            mCi.invokeOemRilRequestStrings(cmd, null);
+        }
     }
 
 //    class SessionListListener implements ImsServiceCallTracker.SessionListListener {
