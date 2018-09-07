@@ -42,4 +42,10 @@
 
     <string name="vowifi_attation">"Vowifi അറ്റൻഷൻ"</string>
      <string name="vowifi_regist_fail_content">"നെറ്റ്വർക്ക് vowifi സപ്പോർട്ട് ചെയ്യുന്നില്ല"</string>
+    <string name="handover_to_volte_success">"മെച്ചപ്പെട്ട വോയ്സ് നിലവാരത്തിനായി VoLTE  (വോൾട്ട്) എന്നതിലേക്ക് മാറുന്നു"</string>
+     <string name="vowifi_connected_title">"Wi-Fi കോളിംഗ് വഴിയുള്ള അടിയന്തര കോളുകൾ"</string>
+     <string name="vowifi_connected_continue">"തുടരുക"</string>
+     <string name="vowifi_connected_disable">"പ്രവര്‍ത്തനരഹിതമാക്കുക"</string>
+     <string name="vowifi_connected_checkbox_text">"വീണ്ടും കാണിക്കാതിരിക്കുക"</string>
+     <string name="vowifi_connected_message">"WiFi-Calling വഴി,അടിയന്തര കോളുകൾ സാധ്യമല്ല. ഉപകരണം ഒരു അടിയന്തിര കോളിനായി ഓട്ടോയിൽ നിന്ന് സെല്ലുലാർ നെറ്റുവർക്കിലേക്ക്(2G/3G) മാറുന്നതായിരിക്കും.നിങ്ങൾ WiFi-Calling കോളിംഗ് സേവനം തുടരാനോ WiFi-Calling പ്രവർത്തനരഹിതമാക്കാനോ ആഗ്രഹിക്കുന്നുണ്ടോ?"</string>
 </resources>
