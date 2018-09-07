@@ -18,4 +18,11 @@
     <string name="vowifi_conf_kick_failed">"പങ്കാളിയെ റിമൂവ് ചെയ്യുന്നതില്‍ പരാജയപ്പെട്ടു"</string>
     <string name="vowifi_conf_none_participant">"പങ്കാളിയില്ലാത്തതിനാല്‍ കോള്‍ അവസാനിപ്പിക്കുക."</string>
     <string name="vowifi_conf_do_not_support">"ഈ ആക്ഷന്‍ ഇപ്പോള്‍ സപ്പോര്‍ട്ട് ചെയ്യില്ല."</string>
+    <string name="vowifi_update_to_rx_success">"വീഡിയോ സ്വീകരണം മാത്രം"</string>
+     <string name="vowifi_update_to_tx_success">"വീഡിയോ പ്രക്ഷേപണം മാത്രം"</string>
+     <string name="vowifi_hold_received">"കോള്‍ ഉള്‍ക്കൊള്ളിച്ചിരിക്കുന്നു"</string>
+     <string name="vowifi_resume_received">"കോള്‍ വീണ്ടെടുത്തിരിക്കുന്നു"</string>
+     <string name="vowifi_conf_connect_timeout">"കോൺഫറൻസിലേക്ക് കണക്റ്റ് ചെയ്യുക. സെർവർ ടൈം ഔട്ട്‌ ആയി."</string>
+     <string name="vowifi_conf_can_not_invite_more">"ഇതിനകം 6 പങ്കാളികള്‍ ഉള്ളതിനാല്‍, മറ്റൊരു പങ്കാളിയെ കോണ്‍ഫറന്‍സിലേക്ക് ക്ഷണിക്കാന്‍ കഴിയില്ല."</string>
+
 </resources>
