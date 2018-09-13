@@ -53,6 +53,8 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private CameraCapabilities mCameraCapabilities = null;
     private MyOrientationListener mOrientationListener = null;
 
+    private static final int MODIFY_REQUEST_TIMEOUT = 15 * 1000; // 15s
+
     private static final int MSG_ROTATE = 0;
     private static final int MSG_START_CAMERA = 1;
     private static final int MSG_STOP_CAMERA = 2;
@@ -61,10 +63,13 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     private static final int MSG_SET_PREVIEW_SURFACE = 5;
     private static final int MSG_REQUEST_CAMERA_CAPABILITIES = 6;
     private static final int MSG_STOP_REMOTE_RENDER = 7;
-    private static final int MSG_SEND_MODIFY_REQUEST = 8;
-    private static final int MSG_SET_PAUSE_IMAGE = 9;
+    private static final int MSG_SET_PAUSE_IMAGE = 8;
+
+    private static final int MSG_SEND_MODIFY_REQUEST = 9;
     private static final int MSG_SEND_MODIFY_RESPONSE = 10;
     private static final int MSG_SEND_MODIFY_SUCCESS_RESPONSE = 11;
+    private static final int MSG_REJECT_MODIFY_REQUEST = 12;
+
     private class MyHandler extends Handler {
         private int mRotateRetryTimes = 0;
 
@@ -208,6 +213,10 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                         }
                         break;
                     }
+                    case MSG_SET_PAUSE_IMAGE: {
+                        mCallSession.setPauseImage((Uri) msg.obj);
+                        break;
+                    }
                     case MSG_SEND_MODIFY_REQUEST: {
                         if (mCallSession.sendModifyRequest(msg.arg1) == Result.FAIL) {
                             Log.w(TAG, "Can not send the modify request now.");
@@ -217,10 +226,6 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                             // Send the modify request successfully.
                             mWaitForModifyResponse = true;
                         }
-                        break;
-                    }
-                    case MSG_SET_PAUSE_IMAGE: {
-                        mCallSession.setPauseImage((Uri) msg.obj);
                         break;
                     }
                     case MSG_SEND_MODIFY_RESPONSE: {
@@ -245,6 +250,15 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
                         } else {
                             mCallSession.updateCallType(ImsCallProfile.CALL_TYPE_VT_RX);
                         }
+                        break;
+                    }
+                    case MSG_REJECT_MODIFY_REQUEST: {
+                        // Handle the request as timeout.
+                        receiveSessionModifyResponse(
+                                VideoProvider.SESSION_MODIFY_REQUEST_TIMED_OUT, null, null);
+
+                        // Send the modify response as reject to keep as voice call.
+                        mCallSession.sendModifyResponse(VideoType.NATIVE_VIDEO_TYPE_NONE);
                         break;
                     }
                 }
@@ -283,16 +297,22 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
     }
 
     @Override
+    public void receiveSessionModifyRequest(VideoProfile VideoProfile) {
+        super.receiveSessionModifyRequest(VideoProfile);
+
+        // When we received the modify request, we suppose the user will handle this
+        // request in 15s. If the user do not give the response, we'd like to handle
+        // this request as reject.
+        mHandler.sendEmptyMessageDelayed(MSG_REJECT_MODIFY_REQUEST, MODIFY_REQUEST_TIMEOUT);
+    }
+
+    @Override
     public void receiveSessionModifyResponse(int status, VideoProfile requestProfile,
             VideoProfile responseProfile) {
         super.receiveSessionModifyResponse(status, requestProfile, responseProfile);
 
-        // As the status "VideoProvider.SESSION_MODIFY_REQUEST_INVALID" used to play the tone.
-        // So do not change "mWaitForModifyResponse" here.
-        if (status != VideoProvider.SESSION_MODIFY_REQUEST_INVALID) {
-            mWaitForModifyResponse = false;
-            mVideoProfile = responseProfile;
-        }
+        mWaitForModifyResponse = false;
+        mVideoProfile = responseProfile;
     }
 
     /**
@@ -384,6 +404,7 @@ public class ImsVideoCallProviderImpl extends ImsVideoCallProvider {
         }
 
         int nativeVideoType = VideoType.getNativeVideoType(responseProfile);
+        mHandler.removeMessages(MSG_REJECT_MODIFY_REQUEST);
         mHandler.sendMessage(mHandler.obtainMessage(MSG_SEND_MODIFY_RESPONSE, nativeVideoType, -1));
 
         switch (nativeVideoType) {
