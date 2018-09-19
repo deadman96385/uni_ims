@@ -558,11 +558,17 @@ public class ImsServiceImpl extends MmTelFeature {
                         //SPRD: Bug 623247
                         int value = ((Integer) ar.userObj).intValue();
                         if (DBG) log("value = " + value);
-                        /* SPRD: AndroidP change save function, use property 
+                        /* SPRD: AndroidP change save function, use property
                          * follow ImsManager @{ */
                         SubscriptionManager.setSubscriptionProperty(getSubId(),
                                 SubscriptionManager.ENHANCED_4G_MODE_ENABLED, String.valueOf(value));
                         /*@}*/
+                        /*UNISOC:modify for IMS add for bug 930747 {*/
+                        android.provider.Settings.Global.putInt(mContext.getContentResolver(),
+                                android.provider.Settings.Global.ENHANCED_4G_MODE_ENABLED,
+                                value);
+                        /*@}*/
+
                         Toast.makeText(mContext.getApplicationContext(), mContext.getString(R.string.ims_switch_failed), Toast.LENGTH_SHORT).show();
                     }
                     break;
