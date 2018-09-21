@@ -754,6 +754,16 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         }
     }
 
+    private void onNativeReset() {
+        if (ImsManager.isWfcEnabledByPlatform(mContext)) {
+            mCallMgr.onNativeReset();
+            mSmsMgr.onNativeReset();
+            mRegisterMgr.onNativeReset();
+            mSecurityMgr.onNativeReset();
+            mUTMgr.onNativeReset();
+        }
+    }
+
     private String getUsedPcscfAddr() {
         try {
             IImsServiceEx imsServiceEx = ImsManagerEx.getIImsServiceEx();
@@ -1056,11 +1066,15 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         }
 
         @Override
-        public void onPrepareFinished(boolean success) {
+        public void onPrepareFinished(boolean success, boolean isResetFailed) {
             if (success) {
                 // As prepare success, start the login process now.
                 registerLogin(false);
             } else {
+                if (isResetFailed) {
+                    Log.w(mTag, "Prepare login failed caused by reset failed, native will reset.");
+                    onNativeReset();
+                }
                 // Prepare failed, give the register result as failed.
                 registerFailed();
             }
@@ -1117,27 +1131,29 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
                 Log.d(mTag, "Reset blocked, and the current reset step is " + mResetStep);
                 resetFinished();
             }
+
+            Log.w(mTag, "Reset blocked, native will reset.");
+            onNativeReset();
         }
 
         @Override
         public void onDisconnected() {
             Log.d(mTag, "Register service disconnected, and current register cmd state is: "
                     + mCmdRegisterState);
-            if (mCallback == null || mRegisterMgr == null) return;
-
-            switch (mCmdRegisterState) {
-                case CMD_STATE_INVALID:
-                    // Do nothing as there isn't any register command.
-                    break;
-                case CMD_STATE_FINISHED:
-                    mCallback.onUnsolicitedUpdate(UnsolicitedCode.SIP_LOGOUT);
-                    // And same as in progress, need notify the register state change to idle.
-                    // Needn't break here.
-                case CMD_STATE_PROGRESS:
-                    mCallback.onRegisterStateChanged(RegisterState.STATE_IDLE, 0);
-                    break;
+            if (mCallback != null && mRegisterMgr != null) {
+                switch (mCmdRegisterState) {
+                    case CMD_STATE_INVALID:
+                        // Do nothing as there isn't any register command.
+                        break;
+                    case CMD_STATE_FINISHED:
+                        mCallback.onUnsolicitedUpdate(UnsolicitedCode.SIP_LOGOUT);
+                        // And same as in progress, need notify the register state change to idle.
+                        // Needn't break here.
+                    case CMD_STATE_PROGRESS:
+                        mCallback.onRegisterStateChanged(RegisterState.STATE_IDLE, 0);
+                        break;
+                }
             }
-
             mCmdRegisterState = CMD_STATE_INVALID;
         }
 
@@ -1271,19 +1287,20 @@ public class VoWifiServiceImpl implements OnSharedPreferenceChangeListener {
         public void onDisconnected() {
             Log.d(mTag, "Security service disconnected, and current attach cmd state is: "
                     + mCmdAttachState);
-            if (mCallback == null) return;
-
-            switch (mCmdAttachState) {
-                case CMD_STATE_INVALID:
-                case CMD_STATE_PROGRESS:
-                    mCallback.onAttachFinished(false, 0);
-                    break;
-                case CMD_STATE_FINISHED:
-                    mCallback.onAttachStopped(0);
-                    mCallback.onUnsolicitedUpdate(UnsolicitedCode.SECURITY_STOP);
-                    break;
+            if (mCallback != null && mSecurityMgr != null) {
+                switch (mCmdAttachState) {
+                    case CMD_STATE_INVALID:
+                        // There isn't attach cmd, do nothing.
+                        break;
+                    case CMD_STATE_PROGRESS:
+                        mCallback.onAttachFinished(false, 0);
+                        break;
+                    case CMD_STATE_FINISHED:
+                        mCallback.onAttachStopped(0);
+                        mCallback.onUnsolicitedUpdate(UnsolicitedCode.SECURITY_STOP);
+                        break;
+                }
             }
-
             mCmdAttachState = CMD_STATE_INVALID;
         }
     }

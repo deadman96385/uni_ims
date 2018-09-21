@@ -33,11 +33,12 @@ public abstract class ServiceManager {
         public void onServiceDisconnected(ComponentName name) {
             if (Utilities.DEBUG) Log.i(TAG, "The service " + name + " disconnected.");
             mServiceBinder = null;
+            onNativeReset();
             onServiceChanged();
 
             // Re-bind the service if the service disconnected.
-            Log.d(TAG, "As service disconnected, will rebind the service after 30s.");
-            mHandler.sendEmptyMessageDelayed(MSG_REBIND_SERVICE, 30 * 1000);
+            Log.d(TAG, "As service disconnected, will rebind the service after 10s.");
+            mHandler.sendEmptyMessageDelayed(MSG_REBIND_SERVICE, 10 * 1000);
         }
 
         @Override
@@ -94,6 +95,9 @@ public abstract class ServiceManager {
         mActionName = action;
     }
 
+    abstract protected void onNativeReset();
+    abstract protected void onServiceChanged();
+
     protected void bindService() {
         if (mServiceBinder != null) {
             Log.w(TAG, "The service already bind, needn't init again.");
@@ -113,10 +117,6 @@ public abstract class ServiceManager {
 
     protected void unbindService() {
         mContext.unbindService(mConnection);
-    }
-
-    protected void onServiceChanged() {
-        // Do nothing here.
     }
 
     private void processPendingAction() {

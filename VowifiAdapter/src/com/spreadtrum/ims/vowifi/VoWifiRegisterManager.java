@@ -29,7 +29,7 @@ public class VoWifiRegisterManager extends ServiceManager {
 
         void onLogout(int stateCode);
 
-        void onPrepareFinished(boolean success);
+        void onPrepareFinished(boolean success, boolean nativeCrash);
 
         /**
          * Refresh the registration result callback
@@ -67,6 +67,20 @@ public class VoWifiRegisterManager extends ServiceManager {
     }
 
     @Override
+    protected void onNativeReset() {
+        Log.d(TAG, "The register service reset. Notify as the service disconnected.");
+        // As the register service disconnected, we'd like to update the register
+        // state and notify as service disconnected
+        if (mRequest != null && mRequest.mListener != null) {
+            mRequest.mListener.onDisconnected();
+        }
+        updateRegisterState(RegisterState.STATE_IDLE);
+
+        mIRegister = null;
+        mRequest = null;
+    }
+
+    @Override
     protected void onServiceChanged() {
         try {
             mIRegister = null;
@@ -74,13 +88,6 @@ public class VoWifiRegisterManager extends ServiceManager {
                 mIRegister = IVoWifiRegister.Stub.asInterface(mServiceBinder);
                 mIRegister.registerCallback(mCallback);
             } else {
-                Log.d(TAG, "The register service disconnect. Notify the service disconnected.");
-                // As the register service disconnected, we'd like to update the register
-                // state and notify as service disconnected
-                if (mRequest != null && mRequest.mListener != null) {
-                    mRequest.mListener.onDisconnected();
-                }
-                updateRegisterState(RegisterState.STATE_IDLE);
                 clearPendingList();
             }
         } catch (RemoteException e) {
@@ -130,51 +137,40 @@ public class VoWifiRegisterManager extends ServiceManager {
             RegisterListener listener) {
         synchronized (TAG) {
             if (Utilities.DEBUG) Log.i(TAG, "Prepare the info before login, subId: " + subId);
-            if (subId < 0 || listener == null) {
+            if (subId < 0 || mIRegister == null) {
                 Log.e(TAG, "Can not get the account info as sub id[" + subId
-                        + "] or listener is null.");
-                if (listener != null) listener.onPrepareFinished(false);
+                        + "] or mIRegister is null.");
+                if (listener != null) listener.onPrepareFinished(false, false);
                 return;
             }
 
-            boolean handle = false;
-            if (mIRegister != null) {
-                try {
-                    // Reset first, then prepare.
-                    mRequest = null;
+            try {
+                // Reset first, then prepare.
+                mRequest = null;
 
-                    int res = mIRegister.cliReset();
-                    if (res == Result.FAIL) {
-                        Log.w(TAG, "Reset action failed, notify as prepare failed.");
-                        if (listener != null) listener.onPrepareFinished(false);
-                        return;
-                    }
-
-                    // Prepare for login, need open account, start client and update settings.
-                    if (cliOpen(subId) && cliStart() && cliUpdateSettings(isSupportSRVCC)) {
-                        mRequest = new RegisterRequest(subId, config, listener);
-                        mRequest.mNeedPANI = VoWifiConfiguration.isRegRequestPANI(mContext);
-                        if (mRequest.mNeedPANI) {
-                            // Need notify as prepare finished after update the access net info.
-                            requestAccessNetInfo();
-                        } else {
-                            listener.onPrepareFinished(true);
-                        }
-                    } else {
-                        listener.onPrepareFinished(false);
-                    }
-
-                    handle = true;
-                } catch (RemoteException e) {
-                    Log.e(TAG, "Failed to prepare for login as catch the RemoteException, e: " + e);
+                int res = mIRegister.cliReset();
+                if (res == Result.FAIL) {
+                    Log.w(TAG, "Reset action failed, notify as prepare failed.");
+                    if (listener != null) listener.onPrepareFinished(false, true);
+                    return;
                 }
-            }
 
-            if (!handle) {
-                // If we catch the remote exception or register interface is null, handle is false.
-                // And we will add this action to pending list.
-                addToPendingList(new PendingAction("prepareForLogin", MSG_ACTION_PREPARE_FOR_LOGIN,
-                        Integer.valueOf(subId), Boolean.valueOf(isSupportSRVCC), config, listener));
+                // Prepare for login, need open account, start client and update settings.
+                if (cliOpen(subId) && cliStart() && cliUpdateSettings(isSupportSRVCC)) {
+                    mRequest = new RegisterRequest(subId, config, listener);
+                    mRequest.mNeedPANI = VoWifiConfiguration.isRegRequestPANI(mContext);
+                    if (mRequest.mNeedPANI) {
+                        // Need notify as prepare finished after update the access net info.
+                        requestAccessNetInfo();
+                    } else {
+                        listener.onPrepareFinished(true, false);
+                    }
+                } else {
+                    listener.onPrepareFinished(false, false);
+                }
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to prepare for login as catch the RemoteException, e: " + e);
+                if (listener != null) listener.onPrepareFinished(false, true);
             }
         }
     }
@@ -207,9 +203,13 @@ public class VoWifiRegisterManager extends ServiceManager {
             }
 
             // The current register status is false.
-            boolean handle = false;
-            if (mIRegister != null
-                    && (isRelogin || !mRequest.mNeedPANI || mRequest.mNetInfo != null)) {
+            if (mIRegister == null) {
+                Log.e(TAG, "When login, the IRegister is null!");
+                if (mRequest.mListener != null) mRequest.mListener.onLoginFinished(false, 0, 0);
+                return;
+            }
+
+            if (isRelogin || !mRequest.mNeedPANI || mRequest.mNetInfo != null) {
                 try {
                     updateRegisterState(RegisterState.STATE_PROGRESSING);
                     int type = VowifiNetworkType.IEEE_802_11;
@@ -229,21 +229,12 @@ public class VoWifiRegisterManager extends ServiceManager {
                             mRequest.mListener.onLoginFinished(false, 0, 0);
                         }
                     }
-                    handle = true;
                 } catch (RemoteException e) {
-                    updateRegisterState(RegisterState.STATE_IDLE);
-                    mRequest = null;
                     Log.e(TAG, "Catch the remote exception when login, e: " + e);
+                    updateRegisterState(RegisterState.STATE_IDLE);
+                    // After the state update finished, set the request to null.
+                    mRequest = null;
                 }
-            }
-
-            if (!handle) {
-                // Do not handle the register action, add to pending list.
-                PendingAction action = new PendingAction(1 * 1000, "login", MSG_ACTION_LOGIN,
-                        Boolean.valueOf(forSos), Boolean.valueOf(isIPv4), localIP, pcscfIP,
-                        dnsSerIP, Boolean.valueOf(isRelogin));
-
-                addToPendingList(action);
             }
         }
     }
@@ -264,7 +255,6 @@ public class VoWifiRegisterManager extends ServiceManager {
                 forceStop(mRequest.mListener);
             } else if (mRequest.mState == RegisterState.STATE_CONNECTED) {
                 // The current register status is true;
-                boolean handle = false;
                 if (mIRegister != null) {
                     try {
                         int res = mIRegister.cliLogout();
@@ -272,17 +262,14 @@ public class VoWifiRegisterManager extends ServiceManager {
                             // Logout failed, shouldn't be here.
                             Log.w(TAG, "Logout from the ims service failed. Please check!");
                         } else {
-                            handle = true;
                             updateRegisterState(RegisterState.STATE_PROGRESSING);
                         }
                     } catch (RemoteException e) {
                         Log.e(TAG, "Catch the remote exception when unregister, e: " + e);
+                        if (mRequest.mListener != null) mRequest.mListener.onLogout(0);
+                        updateRegisterState(RegisterState.STATE_IDLE);
+                        mRequest = null;
                     }
-                }
-                if (!handle) {
-                    // Do not handle the unregister action, add to pending list.
-                    addToPendingList(
-                            new PendingAction("de-register", MSG_ACTION_DE_REGISTER, listener));
                 }
             } else {
                 // Shouldn't be here.
@@ -306,25 +293,21 @@ public class VoWifiRegisterManager extends ServiceManager {
                 return;
             }
 
-            boolean handle = false;
-            if (mIRegister != null) {
-                try {
-                    AccessNetInfo netInfo = new AccessNetInfo(type, info);
-                    int res = mIRegister.cliRefresh(netInfo._type, netInfo._info);
-                    if (res == Result.FAIL) {
-                        // Logout failed, shouldn't be here.
-                        Log.w(TAG, "Re-register to the ims service failed. Please check!");
-                    }
-                    handle = true;
-                } catch (RemoteException e) {
-                    Log.e(TAG, "Catch the remote exception when re-register, e: " + e);
-                }
+            if (mIRegister == null) {
+                Log.e(TAG, "Failed to re-register as IRegister is null!");
+                return;
             }
-            if (!handle) {
-                // Do not handle the re-register action, add to pending list.
-                PendingAction action = new PendingAction("re-register", MSG_ACTION_RE_REGISTER,
-                        Integer.valueOf(type), info);
-                addToPendingList(action);
+
+            try {
+                AccessNetInfo netInfo = new AccessNetInfo(type, info);
+                int res = mIRegister.cliRefresh(netInfo._type, netInfo._info);
+                if (res == Result.FAIL) {
+                    // Logout failed, shouldn't be here.
+                    Log.w(TAG, "Re-register to the ims service failed. Please check!");
+                }
+            } catch (RemoteException e) {
+                Log.e(TAG, "Catch the remote exception when re-register, e: " + e);
+                if (mRequest.mListener != null) mRequest.mListener.onLogout(0);
             }
         }
     }
@@ -344,6 +327,7 @@ public class VoWifiRegisterManager extends ServiceManager {
                     }
                 } catch (RemoteException e) {
                     Log.e(TAG, "Catch the remote exception when unregister, e: " + e);
+                    if (listener != null) listener.onResetBlocked();
                 }
             }
 
@@ -369,7 +353,7 @@ public class VoWifiRegisterManager extends ServiceManager {
         if (mRequest != null && mRequest.mNeedPANI) {
             mRequest.mNetInfo = new AccessNetInfo(type, info);
             if (mRequest.mListener != null) {
-                mRequest.mListener.onPrepareFinished(true);
+                mRequest.mListener.onPrepareFinished(true, false);
             }
         }
     }

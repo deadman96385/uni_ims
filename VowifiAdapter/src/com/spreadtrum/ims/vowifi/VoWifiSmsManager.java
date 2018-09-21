@@ -72,6 +72,12 @@ public class VoWifiSmsManager extends ServiceManager {
     }
 
     @Override
+    protected void onNativeReset() {
+        mISms = null;
+        mSmsList.clear();
+    }
+
+    @Override
     protected void onServiceChanged() {
         try {
             mISms = null;

@@ -71,6 +71,15 @@ public class VoWifiSecurityManager extends ServiceManager {
     }
 
     @Override
+    protected void onNativeReset() {
+        Log.d(TAG, "The security service reset. Notify as the service disconnected.");
+        notifyAllDisconnected();
+
+        mISecurity = null;
+        mRequestMap.clear();
+    }
+
+    @Override
     protected void onServiceChanged() {
         try {
             mISecurity = null;
@@ -78,8 +87,6 @@ public class VoWifiSecurityManager extends ServiceManager {
                 mISecurity = IVoWifiSecurity.Stub.asInterface(mServiceBinder);
                 mISecurity.registerCallback(mCallback);
             } else {
-                Log.d(TAG, "The security service disconnect. Notify the service disconnected.");
-                notifyAllDisconnected();
                 clearPendingList();
             }
         } catch (RemoteException e) {
@@ -109,30 +116,28 @@ public class VoWifiSecurityManager extends ServiceManager {
                     + ", localAddr: " + localAddr);
         }
 
-        boolean handle = false;
-        if (mISecurity != null) {
-            try {
-                // If the s2b state is idle, start the attach action.
-                int sessionId = mISecurity.startWithAddr(isHandover, type, subId,
-                        TextUtils.isEmpty(localAddr) ? "" : localAddr);
-                if (sessionId == Result.INVALID_ID) {
-                    // It means attach failed.
-                    listener.onFailed(0);
-                } else {
-                    SecurityRequest request = new SecurityRequest(sessionId, subId, type, listener);
-                    mRequestMap.put(Integer.valueOf(sessionId), request);
-                }
-                handle = true;
-            } catch (RemoteException e) {
-                Log.e(TAG, "Catch the remote exception when start the s2b attach. e: " + e);
-            }
-        }
-        if (!handle) {
+        if (mISecurity == null) {
             // Do not handle the attach action, add to pending list.
-            if (TextUtils.isEmpty(localAddr)) localAddr = "";
             addToPendingList(new PendingAction(2 * 1000, "attach", MSG_ACTION_ATTACH,
                     Boolean.valueOf(isHandover), Integer.valueOf(subId), Integer.valueOf(type),
-                    localAddr, listener));
+                    TextUtils.isEmpty(localAddr) ? "" : localAddr, listener));
+            return;
+        }
+
+        try {
+            // If the s2b state is idle, start the attach action.
+            int sessionId = mISecurity.startWithAddr(isHandover, type, subId,
+                    TextUtils.isEmpty(localAddr) ? "" : localAddr);
+            if (sessionId == Result.INVALID_ID) {
+                // It means attach failed.
+                listener.onFailed(0);
+            } else {
+                SecurityRequest request = new SecurityRequest(sessionId, subId, type, listener);
+                mRequestMap.put(Integer.valueOf(sessionId), request);
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "Catch the remote exception when start the s2b attach. e: " + e);
+            listener.onFailed(0);
         }
     }
 
@@ -160,6 +165,7 @@ public class VoWifiSecurityManager extends ServiceManager {
 
         if (mISecurity == null) {
             Log.e(TAG, "Failed to deattach as the security interface is null.");
+            request.mListener.onStopped(isHandover, 0);
             return;
         }
 
@@ -167,6 +173,7 @@ public class VoWifiSecurityManager extends ServiceManager {
             mISecurity.stop(request.mSessionId, isHandover);
         } catch (RemoteException e) {
             Log.e(TAG, "Catch the remote exception when start the s2b deattach. e: " + e);
+            request.mListener.onStopped(isHandover, 0);
         }
     }
 

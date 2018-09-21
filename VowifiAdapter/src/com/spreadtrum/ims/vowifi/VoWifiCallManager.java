@@ -247,6 +247,24 @@ public class VoWifiCallManager extends ServiceManager {
     }
 
     @Override
+    protected void onNativeReset() {
+        mICall = null;
+        for (ICallChangedListener listener : mICallChangedListeners) {
+            listener.onChanged(mICall);
+        }
+
+        mRegisterState = RegisterState.STATE_IDLE;
+        mECBMRequest = null;
+        try {
+            for (ImsCallSessionImpl callSession : mSessionList) {
+                handleCallTermed(callSession, ImsReasonInfo.CODE_USER_TERMINATED);
+            }
+        } catch (RemoteException ex) {
+            Log.e(TAG, "Failed to handle as calls term as catch the ex: " + ex.toString());
+        }
+    }
+
+    @Override
     protected void onServiceChanged() {
         try {
             mICall = null;

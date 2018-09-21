@@ -46,14 +46,24 @@ public class VoWifiUTManager extends ServiceManager {
     }
 
     @Override
+    protected void onNativeReset() {
+        if (mIUT == null && mSecurityConfig != null) {
+            mSecurityMgr.deattach(mSessionId, false);
+            resetConfig();
+        }
+        mRegisterState = RegisterState.STATE_IDLE;
+
+        mIUT = null;
+        for (UTStateChangedListener listener : mIUTChangedListeners) {
+            listener.onInterfaceChanged(mIUT);
+        }
+    }
+
+    @Override
     protected void onServiceChanged() {
         mIUT = null;
         if (mServiceBinder != null) {
             mIUT = IVoWifiUT.Stub.asInterface(mServiceBinder);
-        }
-        if (mIUT == null && mSecurityConfig != null) {
-            mSecurityMgr.deattach(mSessionId, false);
-            resetConfig();
         }
 
         // Notify the interface changed.
