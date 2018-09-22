@@ -39,10 +39,10 @@
      <string name="low_battery_warning_message">"ระดับแบตเตอรี่ของคุณอยู่ด้านล่าง 15% .ต้องการที่จะดำเนินการต่อด้วยการโทรวิดีโอหรือแปลงให้เสียงเรียก?"</string>
      <string name="low_battery_continue_video_call">ใช่</string>
      <string name="low_battery_convert_to_voice_call">"แปลง"</string>
-
+     <string name="vowifi_register_error">"ระบบ WiFi calling ขัดข้อง, กรุณาเปิดใช้อีกครั้งภายหลัง 5 นาที"</string>
     <string name="handover_to_volte_success">"เปลี่ยนไปใช้ VoLTE เพื่อคุณภาพเสียงที่ดีกว่า"</string>
      <string name="vowifi_attation">"มีคำขอใช้ VoWi-Fi"</string>
-     <string name="vowifi_regist_fail_content">"เครือข่ายไม่รองรับ VoWi-Fi"</string>
+     <string name="vowifi_regist_fail_content">"ระบบ WiFi calling ขัดข้อง, กรุณาเปิดใช้อีกครั้งภายหลัง 5 นาที"</string>
      <string name="vowifi_connected_title">"การโทรฉุกเฉินโดยใช้การโทรผ่าน Wi-Fi"</string>
      <string name="vowifi_connected_continue">"ดำเนินการต่อ"</string>
      <string name="vowifi_connected_disable">"ปิดใช้"</string>
