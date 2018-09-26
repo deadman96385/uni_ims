@@ -489,15 +489,16 @@ public class ImsUtProxy extends IImsUt.Stub {
                 } else {
                     carrier = mccValue + mncValue;
                 }
-             log("listener impi carrier = " + carrier);
+                log("listener impi carrier = " + carrier);
             }
         }
 
         if (!TextUtils.isEmpty(carrier)) {
             getUTConfig(carrier);
         }
+        log("setListenerEx");
         try {
-            if (isVowifiUtEnable()) {
+            if (mVoWifiUtImpl != null) {//UNISOC: modify by bug940056
                 mVoWifiUtImpl.setListener(mImsUtListener);
             }
             mVoLTEUtImpl.setListener(mImsUtListener);
@@ -679,7 +680,7 @@ public class ImsUtProxy extends IImsUt.Stub {
             getUTConfig(carrier);
         }
         log("setListenerEx");
-        if (isVowifiUtEnable()) {
+        if (mVoWifiUtImpl != null) {//UNISOC: modify by bug940056
             mVoWifiUtImpl.setListenerEx(mImsUtListenerExBinder);
         }
         mVoLTEUtImpl.setListenerEx(mImsUtListenerExBinder);
