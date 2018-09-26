@@ -1557,6 +1557,19 @@ public class VoWifiCallManager extends ServiceManager {
             String participant = callSession.getCallee();
             confSession.addCallee(participant);
             confSession.addAsWaitForInvite(callSession);
+
+            Bundle bundle = new Bundle();
+            bundle.putString(ImsConferenceState.USER, participant);
+            bundle.putString(ImsConferenceState.DISPLAY_TEXT, participant);
+            bundle.putString(ImsConferenceState.ENDPOINT, "");
+            bundle.putString(ImsConferenceState.STATUS, ImsConferenceState.STATUS_PENDING);
+            confSession.updateConfParticipants(participant, bundle);
+        }
+
+        // Notify the conference participants' state.
+        if (confListener != null) {
+            confListener.callSessionConferenceStateUpdated(
+                    confSession, confSession.getConfParticipantsState());
         }
 
         // Start to invite the calls.
