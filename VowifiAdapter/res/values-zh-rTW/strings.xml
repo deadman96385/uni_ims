@@ -8,7 +8,7 @@
 
     <string name="vowifi_hold_success">保持通話成功</string>
     <string name="vowifi_hold_fail">保持通話失敗</string>
-    <string name="vowifi_resume_success">恢復通話成功</string>
+    <string name="vowifi_resume_success">呼叫被啟動</string>
     <string name="vowifi_resume_fail">恢復通話失敗</string>
     <string name="vowifi_hold_received">呼叫被保持</string>
     <string name="vowifi_resume_received">呼叫被啟動</string>
