@@ -93,6 +93,7 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
                         }
                         receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
                                 null,null); //SPRD:add for bug610607
+                        releaseWakeLock(); //Unisoc: add for bug931789
                     }
                     break;
                  /* SPRD:add for bug563112 @{ */
@@ -120,6 +121,7 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
                     mImsCallSessionImpl.getLocalRequestProfile().mCallType = ImsCallProfile.CALL_TYPE_VOICE_N_VIDEO;
                     receiveSessionModifyResponse(android.telecom.Connection.VideoProvider.SESSION_MODIFY_REQUEST_INVALID,
                             null,null);
+                    releaseWakeLock(); //Unisoc: add for bug931789
                 }
                 break;
                 default:
@@ -446,7 +448,7 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
     }
 
     private void acquireWakeLock() {
-        log("acquireWakeLock, isHeld:"+mPartialWakeLock.isHeld());
+        log("acquireWakeLock, isHeld:"+mPartialWakeLock.isHeld()+" mPartialWakeLock："+(mPartialWakeLock == null ? null: mPartialWakeLock));
         synchronized (mPartialWakeLock) {
             if (!mPartialWakeLock.isHeld()) {
                 mPartialWakeLock.acquire();
@@ -455,7 +457,7 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
     }
 
     private void releaseWakeLock() {
-        log("releaseWakeLock : "+mPartialWakeLock.isHeld());
+        log("releaseWakeLock : "+mPartialWakeLock.isHeld()+" mPartialWakeLock："+(mPartialWakeLock == null ? null: mPartialWakeLock));
         synchronized (mPartialWakeLock) {
             if (mPartialWakeLock.isHeld()) {
                 log("releaseWakeLock");
@@ -656,6 +658,7 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
             Toast.makeText(mContext.getApplicationContext(),
                     mContext.getString(R.string.remote_reject_request), Toast.LENGTH_SHORT).show();
             mLocalRequestProfile = null; //Unisoc:fix for bug 917060
+            releaseWakeLock(); //Unisoc: add for bug931789
         }
     }
 
