@@ -986,6 +986,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         } else {
             mCi.dial(mCallee,clir,null,mHandler.obtainMessage(ACTION_COMPLETE_DIAL,this));
         }
+        mImsServiceCallTracker.pollCallsWhenSafe();//UNISOC:add for bug938770
         mVideoState = ImsCallProfile
                 .getVideoStateFromImsCallProfile(mImsCallProfile);
     }
