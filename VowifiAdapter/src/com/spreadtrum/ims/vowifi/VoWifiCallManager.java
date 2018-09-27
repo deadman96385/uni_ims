@@ -1573,6 +1573,7 @@ public class VoWifiCallManager extends ServiceManager {
         IImsCallSessionListener confListener = confSession.getListener();
         // Notify the multi-party state changed.
         if (confListener != null) {
+            confListener.callSessionUpdated(confSession.getCallProfile());
             confListener.callSessionMultipartyStateChanged(true);
         }
 
