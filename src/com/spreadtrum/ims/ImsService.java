@@ -2829,12 +2829,20 @@ public class ImsService extends Service {
                     if (impl.isVolteSessionListEmpty()
                             && impl.isVowifiSessionListEmpty()) {
                         mCallEndType = CallEndEvent.VOLTE_CALL_END;
-                        /* SPRD: Modify for bug595321 and 610799{@ */
+                        /* SPRD: Modify for bug595321 and 610799 and 940503{@ */
                         Log.i(TAG, "onSessionEmpty-> mFeatureSwitchRequest:"
                                 + mFeatureSwitchRequest + " mIsVowifiCall:"
                                 + mIsVowifiCall + " mIsVolteCall:"
                                 + mIsVolteCall + " mInCallHandoverFeature"
-                                + mInCallHandoverFeature);
+                                + mInCallHandoverFeature
+                                +" mIsPendingRegisterVowifi: "+mIsPendingRegisterVowifi
+                                +" mIsAPImsPdnActived: "+mIsAPImsPdnActived
+                                +" mIsCPImsPdnActived: "+mIsCPImsPdnActived
+                                +" impl.isImsRegistered(): "+(impl.isImsRegistered()));
+                        if(mFeatureSwitchRequest == null && mIsVolteCall && !mIsPendingRegisterVowifi && !impl.isImsRegistered()
+                                && !mIsAPImsPdnActived && mIsCPImsPdnActived){
+                           impl.enableImsWhenPDNReady();
+                        }
                         if (mFeatureSwitchRequest != null
                                 && mFeatureSwitchRequest.mEventCode == ACTION_START_HANDOVER
                                 && serviceId == mFeatureSwitchRequest.mServiceId) {
