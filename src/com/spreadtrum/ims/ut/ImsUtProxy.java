@@ -505,7 +505,7 @@ public class ImsUtProxy extends IImsUt.Stub {
         }
 
         try {
-            if (isVowifiUtEnable()) {
+            if (mVoWifiUtImpl != null) {
                 mVoWifiUtImpl.setListener(mImsUtListener);
             }
             mVoLTEUtImpl.setListener(mImsUtListener);
@@ -748,7 +748,7 @@ public class ImsUtProxy extends IImsUt.Stub {
             getUTConfig(carrier);
         }
         log("setListenerEx");
-        if (isVowifiUtEnable()) {
+        if (mVoWifiUtImpl != null) {
             mVoWifiUtImpl.setListenerEx(mImsUtListenerExBinder);
         }
         mVoLTEUtImpl.setListenerEx(mImsUtListenerExBinder);
