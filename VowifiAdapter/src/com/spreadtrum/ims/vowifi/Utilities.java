@@ -541,22 +541,29 @@ public class Utilities {
         }
 
         private static String[] rebuildAddr(String[] oldAddrs, String firstAddr, boolean asIPv4) {
-            if (oldAddrs == null
-                    || oldAddrs.length == 1
-                    || TextUtils.isEmpty(firstAddr)
+            if (TextUtils.isEmpty(firstAddr)
                     || isIPv4(firstAddr) != asIPv4) {
                 return oldAddrs;
             }
 
-            for (int i = 0; i < oldAddrs.length; i++) {
-                if (firstAddr.equals(oldAddrs[i])) {
-                    String oldFirstAddr = oldAddrs[0];
-                    oldAddrs[0] = firstAddr;
-                    oldAddrs[i] = oldFirstAddr;
-                    break;
+            if (oldAddrs == null || oldAddrs.length == 0) {
+                return new String[] { firstAddr };
+            } else {
+                String[] newAddrs = new String[oldAddrs.length + 1];
+                for (int i = 0; i < oldAddrs.length; i++) {
+                    if (firstAddr.equals(oldAddrs[i])) {
+                        String oldFirstAddr = oldAddrs[0];
+                        oldAddrs[0] = firstAddr;
+                        oldAddrs[i] = oldFirstAddr;
+                        return oldAddrs;
+                    }
+                    newAddrs[i] = oldAddrs[i];
                 }
+
+                // It means do not find matched address, append it to the last.
+                newAddrs[oldAddrs.length] = firstAddr;
+                return newAddrs;
             }
-            return oldAddrs;
         }
 
         @Override
