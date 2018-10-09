@@ -126,9 +126,12 @@ public class VoWifiRegisterManager extends ServiceManager {
     public void prepareForLogin(int subId, boolean isSupportSRVCC, RegisterConfig config,
             RegisterListener listener) {
         synchronized (TAG) {
-            if (Utilities.DEBUG) Log.i(TAG, "Prepare the info before login, subId: " + subId);
-            if (subId < 0) {
-                Log.e(TAG, "Can not get the account info as sub id is: " + subId);
+            if (Utilities.DEBUG) {
+                Log.i(TAG, "Prepare before login, subId: " + subId + ", config: " + config);
+            }
+            if (subId < 0 || listener == null) {
+                Log.e(TAG, "Can not get the account info as sub id[" + subId
+                        + "] or listener is null.");
                 if (listener != null) listener.onPrepareFinished(false);
                 return;
             }
