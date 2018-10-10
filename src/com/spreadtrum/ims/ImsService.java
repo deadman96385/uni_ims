@@ -277,6 +277,7 @@ public class ImsService extends Service {
     private int mInCallPhoneId = -1;
     private NotificationChannel mVowifiChannel;
     private int mMakeCallPrimaryCardServiceId = -1;
+    private int mVowifiReisteredServiceId = -1;
     private class ImsServiceRequest {
         public int mRequestId;
         public int mEventCode;
@@ -639,6 +640,8 @@ public class ImsService extends Service {
                                         + mFeatureSwitchRequest + " mIsLoggingIn:"
                                         + mIsLoggingIn);
                         mWifiRegistered = result.booleanValue();
+                        mVowifiReisteredServiceId = Integer
+                                .valueOf(ImsRegister.getPrimaryCard(mPhoneCount) + 1);//UNISOC:add for bug947058
                         mIsLoggingIn = false;
                         updateImsFeature();
                         if (mFeatureSwitchRequest != null) {
@@ -753,16 +756,20 @@ public class ImsService extends Service {
                                     "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> wifi state: "
                                             + msg.arg2);
 
-                            ImsServiceImpl imsService = mImsServiceImplMap
-                                    .get(Integer.valueOf(ImsRegister
-                                            .getPrimaryCard(mPhoneCount) + 1));
-                            if (imsService != null) {
-                                imsService.notifyVoWifiEnable(false);
-                                mPendingCPSelfManagement = true;
-                                Log.i(TAG,
-                                        "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:"
-                                                + mPendingCPSelfManagement);
+                            //UNISOC: modify by bug947058
+                            for(int i = 1;i<=mImsServiceImplMap.size();i++){
+
+                                ImsServiceImpl imsService = mImsServiceImplMap.get(i);
+                                if (imsService != null && mVowifiReisteredServiceId == i) {
+                                    imsService.notifyVoWifiEnable(false);
+                                    mPendingCPSelfManagement = true;
+                                    Log.i(TAG,
+                                            "ACTION_NOTIFY_VOWIFI_UNAVAILABLE-> notifyVoWifiUnavaliable. mPendingCPSelfManagement:"
+                                                    + mPendingCPSelfManagement);
+                                }
                             }
+
+
                             if (mFeatureSwitchRequest != null) {
                                 mFeatureSwitchRequest = null;
                             }
@@ -2593,6 +2600,12 @@ public class ImsService extends Service {
         boolean volteRegistered = (imsService != null) ? imsService.isImsRegisterState() : false;
         Log.i(TAG,"updateImsFeature --> isPrimaryCard = " + ImsRegister.getPrimaryCard(mPhoneCount) + " | serviceId-1 = " + (serviceId-1)
             +" volteRegistered:"+volteRegistered +" getLTECapabilityForPhone:"+getLTECapabilityForPhone(serviceId - 1));
+
+        //SPRD: add for bug947058
+        if (ImsRegister.getPrimaryCard(mPhoneCount) + 1 != mVowifiReisteredServiceId && mWifiRegistered) {
+            Log.i(TAG, "updateImsFeature primaryCard is not same as Vowifi registered Card, not update. mVowifiReisteredServiceId = " + mVowifiReisteredServiceId);
+            return;
+        }
 
         if (!isPrimaryCard && imsService != null) {
             if(ImsManagerEx.isDualVoLTEActive() || getLTECapabilityForPhone(serviceId - 1)) {
