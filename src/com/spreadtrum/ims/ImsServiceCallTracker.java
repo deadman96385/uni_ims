@@ -637,9 +637,12 @@ public class ImsServiceCallTracker implements ImsCallSessionImpl.Listener {
             if(mPendingSessionList.size() >0){
                 for(int i=0;i<mPendingSessionList.size();i++){
                     ImsCallSessionImpl session = mPendingSessionList.get(i);
-                    Log.d(TAG, "remove Invalid Pending Session, index:"+i+" session:" + session);
-                    session.notifySessionDisconnected();
-                    notifySessionDisonnected(session);
+                    //UNISOC:add for bug947278
+                    if(session.isDialFail()){
+                        Log.d(TAG, "remove Invalid Pending Session, index:"+i+" session:" + session);
+                        session.notifySessionDisconnected();
+                        notifySessionDisonnected(session);
+                    }
                 }
                 mPendingSessionList.clear();
             }

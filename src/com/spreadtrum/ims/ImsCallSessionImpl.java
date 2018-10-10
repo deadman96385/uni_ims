@@ -125,6 +125,7 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     private static final int SPECIAL_CALL_TYPE = 99;
     private boolean mConferenceDriverCallUpdated = false;
     private static final int CALL_ANSWERED_ELSEWHERE = 61441;//UNISOC:add for feature
+    private boolean mDialFail;
 
     public ImsCallSessionImpl(ImsCallProfile profile, IImsCallSessionListener listener, Context context,
             ImsRIL ci, ImsServiceCallTracker callTracker){
@@ -610,6 +611,9 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
                     if (ar != null && ar.exception != null && mIImsCallSessionListener != null) {
                         Log.w(TAG,"handleMessage->ACTION_COMPLETE_DIAL error!");
                         mCi.getLastCallFailCause(mHandler.obtainMessage(ACTION_COMPLETE_GET_CALL_FAIL_CAUSE,this));
+                        mDialFail = true;//UNISOC:add for bug947278
+                    } else {
+                        mDialFail = false;//UNISOC:add for bug947278
                     }
                     //SPRD: add for bug525777
                     mImsServiceCallTracker.pollCallsAfterOperationComplete();
@@ -986,7 +990,6 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
         } else {
             mCi.dial(mCallee,clir,null,mHandler.obtainMessage(ACTION_COMPLETE_DIAL,this));
         }
-        mImsServiceCallTracker.pollCallsWhenSafe();//UNISOC:add for bug938770
         mVideoState = ImsCallProfile
                 .getVideoStateFromImsCallProfile(mImsCallProfile);
     }
@@ -1922,6 +1925,12 @@ public class ImsCallSessionImpl extends IImsCallSession.Stub {
     }
     public boolean getConferenceDriverCallUpdated(){
         return mConferenceDriverCallUpdated;
+    }
+    /* @} */
+
+    /* UNISOC:add for bug947278@{ */
+    public boolean isDialFail(){
+        return mDialFail;
     }
     /* @} */
 }
