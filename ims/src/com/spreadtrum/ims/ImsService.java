@@ -2423,12 +2423,22 @@ class MyVoWifiCallback implements VoWifiCallback {
                 && imsService.getSrvccState() == VoLteServiceState.HANDOVER_COMPLETED){
             imsService.setSrvccState(-1);
         }
+
+        // SPRD add for bug 826630
+        if (!isInCall) {
+            if (mIsVowifiCall) {
+                mIsVowifiCall = false;
+            } else if (mIsVolteCall) {
+                mIsVolteCall = false;
+            }
+        }
+
         if(!isInCall && imsService != null){
             imsService.disableWiFiParamReport();
         }
 
         iLog("updateInCallState->isInCall:"+isInCall+" mIsWifiCalling:"+mIsWifiCalling
-                +" inCallPhoneId:"+mInCallPhoneId);
+                +" inCallPhoneId:"+mInCallPhoneId + " mIsVolteCall:" + mIsVolteCall);
     }
 
     public void notifySrvccCapbility(int cap){
