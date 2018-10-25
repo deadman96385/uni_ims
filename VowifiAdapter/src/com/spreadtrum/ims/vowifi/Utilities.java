@@ -1181,6 +1181,7 @@ public class Utilities {
         public static final String KEY_ID = "id";
         public static final String KEY_ALERT_TYPE = "alert_type";
         public static final String KEY_IS_VIDEO = "is_video";
+        public static final String KEY_PEER_SUPPORT_VIDEO = "peer_support_video";
         public static final String KEY_PHONE_NUM = "phone_num";
         public static final String KEY_SIP_URI = "sip_uri";
         public static final String KEY_VIDEO_HEIGHT = "video_height";

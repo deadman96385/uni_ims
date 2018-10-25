@@ -248,19 +248,19 @@ public class VoWifiCallManager extends ServiceManager {
 
     @Override
     protected void onNativeReset() {
-        mICall = null;
-        for (ICallChangedListener listener : mICallChangedListeners) {
-            listener.onChanged(mICall);
-        }
-
-        mRegisterState = RegisterState.STATE_IDLE;
-        mECBMRequest = null;
         try {
             for (ImsCallSessionImpl callSession : mSessionList) {
                 handleCallTermed(callSession, ImsReasonInfo.CODE_USER_TERMINATED);
             }
         } catch (RemoteException ex) {
             Log.e(TAG, "Failed to handle as calls term as catch the ex: " + ex.toString());
+        }
+
+        mRegisterState = RegisterState.STATE_IDLE;
+        mECBMRequest = null;
+        mICall = null;
+        for (ICallChangedListener listener : mICallChangedListeners) {
+            listener.onChanged(mICall);
         }
     }
 
@@ -842,7 +842,9 @@ public class VoWifiCallManager extends ServiceManager {
                 case JSONUtils.EVENT_CODE_CALL_TALKING: {
                     String phoneNumber = jObject.optString(JSONUtils.KEY_PHONE_NUM);
                     boolean isVideo = jObject.optBoolean(JSONUtils.KEY_IS_VIDEO, false);
-                    handleCallTalking(callSession, phoneNumber, isVideo);
+                    boolean isPeerSupportVideo =
+                            jObject.optBoolean(JSONUtils.KEY_PEER_SUPPORT_VIDEO, true);
+                    handleCallTalking(callSession, phoneNumber, isVideo, isPeerSupportVideo);
                     break;
                 }
                 case JSONUtils.EVENT_CODE_CALL_TERMINATE: {
@@ -1150,7 +1152,7 @@ public class VoWifiCallManager extends ServiceManager {
     }
 
     private void handleCallTalking(ImsCallSessionImpl callSession, String phoneNumber,
-            boolean isVideo) throws RemoteException {
+            boolean isVideo, boolean isPeerSupportVideo) throws RemoteException {
         if (Utilities.DEBUG) Log.i(TAG, "Handle the talking call.");
         if (callSession == null) {
             Log.w(TAG, "[handleCallTalking] The call session is null.");
@@ -1162,9 +1164,19 @@ public class VoWifiCallManager extends ServiceManager {
         // Update the call type, as if the user accept the video call as audio call,
         // isVideo will be false. Then we need update this to call profile.
         ImsCallProfile profile = callSession.getCallProfile();
+        ImsCallProfile remoteProfile = callSession.getRemoteCallProfile();
         boolean wasVideo = Utilities.isVideoCall(profile.mCallType);
         if (!isVideo) {
             profile.mCallType = ImsCallProfile.CALL_TYPE_VOICE;
+            // Update remote call type.
+            if (isPeerSupportVideo) {
+                // Peer support video.
+                remoteProfile.mCallType = ImsCallProfile.CALL_TYPE_VIDEO_N_VOICE;
+            } else {
+                // Peer do not support video.
+                remoteProfile.mCallType = ImsCallProfile.CALL_TYPE_VOICE;
+            }
+
             if (wasVideo) {
                 // It means we start as video call, but remote accept as voice call.
                 // Prompt the toast to alert the user.
