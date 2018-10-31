@@ -521,10 +521,12 @@ public class ImsVideoCallProvider extends android.telephony.ims.ImsVideoCallProv
                  }
                  log("updateNegotiatedCallProfilee->makeText");
                  mIsVideo = false;
-                 //SPRD:add for Bug 900332
-                 onVTConnectionDisconnected(session);
              }
              /* @} */
+             //Unisoc: add for Bug 900332 957157
+             if(!isVideoCall(imsCallProfile.mCallType) && (session != null && session.mImsDriverCall != null) ){
+                 onVTConnectionDisconnected(session);
+             }
          }
 
          if (session.getState() == ImsCallSession.State.ESTABLISHED && mIsVoiceRingTone) {
